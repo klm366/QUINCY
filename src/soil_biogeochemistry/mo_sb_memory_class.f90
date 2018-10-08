@@ -142,7 +142,8 @@ MODULE mo_sb_memory_class
     TYPE(t_jsb_var_real3d)    :: carbon14     !< 14carbon concentration of pool [pmol m-3]
     TYPE(t_jsb_var_real3d)    :: nitrogen15   !< 15nitrogen concentration of pool [mol m-3]
   CONTAINS
-    PROCEDURE  :: init => init_t_slm_struct_sb_element
+    PROCEDURE :: Init       => Init_t_slm_struct_sb_element
+    PROCEDURE :: Add_vars   => Add_element_variables_to_memory
   END TYPE t_slm_struct_sb_element
 
 
@@ -164,7 +165,8 @@ MODULE mo_sb_memory_class
     TYPE(t_slm_struct_sb_element)  :: residue             !< necromass of fungi, microbial and mycorrhiza
     TYPE(t_slm_struct_sb_element)  :: residue_assoc       !< minerally associated microbial necromass 
   CONTAINS
-    PROCEDURE  :: init => init_t_slm_struct_sb_pool
+    PROCEDURE :: Init           => Init_t_slm_struct_sb_pool
+    PROCEDURE :: Add_elements   => Add_pool_elements_to_memory
   END TYPE t_slm_struct_sb_pool
 
 
@@ -1031,7 +1033,7 @@ CONTAINS
   !> Initialisation t_slm_struct_sb_element with a scalar
   !!
   !-----------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL SUBROUTINE init_t_slm_struct_sb_element(this,s)
+  PURE ELEMENTAL SUBROUTINE Init_t_slm_struct_sb_element(this,s)
     IMPLICIT NONE
     ! 0.1 InOut
     CLASS(t_slm_struct_sb_element),INTENT(inout) :: this 
@@ -1043,13 +1045,13 @@ CONTAINS
     this%carbon13%ptr(:,:,:)   = s
     this%carbon14%ptr(:,:,:)   = s
     this%nitrogen15%ptr(:,:,:) = s
-  END SUBROUTINE init_t_slm_struct_sb_element 
+  END SUBROUTINE Init_t_slm_struct_sb_element 
 
   !-----------------------------------------------------------------------------------------------------
   !> Initialisation t_slm_struct_sb_pool with a scalar
   !!
   !-----------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL SUBROUTINE init_t_slm_struct_sb_pool(this,s)
+  PURE ELEMENTAL SUBROUTINE Init_t_slm_struct_sb_pool(this,s)
     IMPLICIT NONE
     ! 0.1 InOut
     CLASS(t_slm_struct_sb_pool),INTENT(inout) :: this 
@@ -1065,49 +1067,262 @@ CONTAINS
     CALL this%microbial%init(s)
     CALL this%residue%init(s)
     CALL this%residue_assoc%init(s)
-  END SUBROUTINE init_t_slm_struct_sb_pool 
+  END SUBROUTINE Init_t_slm_struct_sb_pool 
 
 
   !-----------------------------------------------------------------------------------------------------
-  !> initialize memory for the processes in: soil
+  !> Add all variables of an element TYPE to the process memory
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE Add_element_variables_to_memory(this, prefix, suffix, lct_ids, model_id, unit)
+
+    USE mo_slm_varlist,       ONLY: jsb_add_var
+    USE mo_jsb_io,            ONLY: grib_bits
+    USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2
+    USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
+    USE mo_jsb_model_class,   ONLY: t_jsb_model
+    
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1.InOut
+    CLASS(t_slm_struct_sb_element),  INTENT(inout) :: this 
+    CHARACTER(len=*),                INTENT(in)    :: prefix          !> process name
+    CHARACTER(len=*),                INTENT(in)    :: suffix          !> tile name
+    INTEGER,                         INTENT(in)    :: lct_ids !(:)    !> in jsbach4: vector of land cover type IDs
+    INTEGER,                         INTENT(in)    :: model_id        !> model ID model\%id
+    CHARACTER(len=*),                INTENT(in)    :: unit            !> unit of the variables in the elements
+    ! ---------------------------
+    ! 0.2 Local
+    TYPE(t_jsb_grid),  POINTER  :: hgrid                        ! Horizontal grid
+    TYPE(t_jsb_vgrid), POINTER  :: surface                      ! Vertical grid
+    INTEGER                     :: table
+    CHARACTER(len=50)           :: var_name
+    CHARACTER(len=100)          :: var_name_long
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Add_element_variables_to_memory'
+    table = 1
+
+
+    ! run add_var()
+    var_name      = TRIM(this%name)//'_carbon'
+    var_name_long = 'Carbon in soil biogeochemistry '//TRIM(this%name)
+    CALL jsb_add_var(this, TRIM(var_name), this%carbon, &
+          hgrid, surface, &
+          t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
+          t_grib1(table, 255, grib_bits), &
+          t_grib2(255, 255, 255, grib_bits), &
+          prefix, suffix, &
+          initval_r=0.0_wp)     ! initvalue
+    var_name      = TRIM(this%name)//'_nitrogen'
+    var_name_long = 'Nitrogen in soil biogeochemistry '//TRIM(this%name)
+    CALL jsb_add_var(this, TRIM(var_name), this%nitrogen, &
+          hgrid, surface, &
+          t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
+          t_grib1(table, 255, grib_bits), &
+          t_grib2(255, 255, 255, grib_bits), &
+          prefix, suffix, &
+          initval_r=0.0_wp)     ! initvalue
+    var_name      = TRIM(this%name)//'_phosphorus'
+    var_name_long = 'Phosphorus in soil biogeochemistry '//TRIM(this%name)
+    CALL jsb_add_var(this, TRIM(var_name), this%phosphorus, &
+          hgrid, surface, &
+          t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
+          t_grib1(table, 255, grib_bits), &
+          t_grib2(255, 255, 255, grib_bits), &
+          prefix, suffix, &
+          initval_r=0.0_wp)     ! initvalue
+    var_name      = TRIM(this%name)//'_carbon13'
+    var_name_long = 'Carbon13 in soil biogeochemistry '//TRIM(this%name)
+    CALL jsb_add_var(this, TRIM(var_name), this%carbon13, &
+          hgrid, surface, &
+          t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
+          t_grib1(table, 255, grib_bits), &
+          t_grib2(255, 255, 255, grib_bits), &
+          prefix, suffix, &
+          initval_r=0.0_wp)     ! initvalue
+    var_name      = TRIM(this%name)//'_carbon14'
+    var_name_long = 'Carbon14 in soil biogeochemistry '//TRIM(this%name)
+    CALL jsb_add_var(this, TRIM(var_name), this%carbon14, &
+          hgrid, surface, &
+          t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
+          t_grib1(table, 255, grib_bits), &
+          t_grib2(255, 255, 255, grib_bits), &
+          prefix, suffix, &
+          initval_r=0.0_wp)     ! initvalue
+    var_name      = TRIM(this%name)//'_nitrogen15'
+    var_name_long = 'Nitrogen15 in soil biogeochemistry '//TRIM(this%name)
+    CALL jsb_add_var(this, TRIM(var_name), this%nitrogen15, &
+          hgrid, surface, &
+          t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
+          t_grib1(table, 255, grib_bits), &
+          t_grib2(255, 255, 255, grib_bits), &
+          prefix, suffix, &
+          initval_r=0.0_wp)     ! initvalue
+  END SUBROUTINE Add_element_variables_to_memory
+
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Add all elements of a pool TYPE to the process memory
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE Add_pool_elements_to_memory(this, prefix, suffix, lct_ids, model_id, unit)
+  
+    USE mo_slm_varlist,       ONLY: jsb_add_var
+    USE mo_jsb_io,            ONLY: grib_bits
+    USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2
+    USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
+    USE mo_jsb_model_class,   ONLY: t_jsb_model
+  
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1.InOut
+    CLASS(t_slm_struct_sb_pool),     INTENT(inout) :: this 
+    CHARACTER(len=*),                INTENT(in)    :: prefix          !> process name
+    CHARACTER(len=*),                INTENT(in)    :: suffix          !> tile name
+    INTEGER,                         INTENT(in)    :: lct_ids !(:)    !> in jsbach4: vector of land cover type IDs
+    INTEGER,                         INTENT(in)    :: model_id        !> model ID model\%id
+    CHARACTER(len=*),                INTENT(in)    :: unit            !> unit of the variables in the elements
+    ! ---------------------------
+    ! 0.2 Local
+    TYPE(t_jsb_grid),  POINTER  :: hgrid                        ! Horizontal grid
+    TYPE(t_jsb_vgrid), POINTER  :: surface                      ! Vertical grid
+    INTEGER                     :: table
+    CHARACTER(len=40)           :: element_name
+    CHARACTER(len=80)           :: element_name_long    
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Add_pool_elements_to_memory'
+    table = 1
+  
+  
+    ! run add_var()
+    element_name      = TRIM(this%name)//'_dom'
+    element_name_long = 'Dissolved organic matter element of SB'//TRIM(this%name)
+    CALL jsb_add_var(this, TRIM(element_name), this%dom, &
+          hgrid, surface, &
+          t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
+          t_grib1(table, 255, grib_bits), &
+          t_grib2(255, 255, 255, grib_bits), &
+          prefix, suffix)
+    element_name      = TRIM(this%name)//'_dom_assoc'
+    element_name_long = 'Minerally associated disolved organic matter element of SB'//TRIM(this%name)
+    CALL jsb_add_var(this, TRIM(element_name), this%dom_assoc, &
+          hgrid, surface, &
+          t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
+          t_grib1(table, 255, grib_bits), &
+          t_grib2(255, 255, 255, grib_bits), &
+          prefix, suffix)
+    element_name      = TRIM(this%name)//'_soluable_litter'
+    element_name_long = 'Metabolic litter (sugars, cellulose etc.) element of SB'//TRIM(this%name)
+    CALL jsb_add_var(this, TRIM(element_name), this%soluable_litter, &
+          hgrid, surface, &
+          t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
+          t_grib1(table, 255, grib_bits), &
+          t_grib2(255, 255, 255, grib_bits), &
+          prefix, suffix)
+    element_name      = TRIM(this%name)//'_polymeric_litter'
+    element_name_long = 'Structural litter (lignified litter) element of SB'//TRIM(this%name)
+    CALL jsb_add_var(this, TRIM(element_name), this%polymeric_litter, &
+          hgrid, surface, &
+          t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
+          t_grib1(table, 255, grib_bits), &
+          t_grib2(255, 255, 255, grib_bits), &
+          prefix, suffix)
+    element_name      = TRIM(this%name)//'_woody_litter'
+    element_name_long = 'Physically protected wood litter element of SB'//TRIM(this%name)
+    CALL jsb_add_var(this, TRIM(element_name), this%woody_litter, &
+          hgrid, surface, &
+          t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
+          t_grib1(table, 255, grib_bits), &
+          t_grib2(255, 255, 255, grib_bits), &
+          prefix, suffix)
+    element_name      = TRIM(this%name)//'_fungi'
+    element_name_long = 'Saprophytic fungal biomass element of SB'//TRIM(this%name)
+    CALL jsb_add_var(this, TRIM(element_name), this%fungi, &
+          hgrid, surface, &
+          t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
+          t_grib1(table, 255, grib_bits), &
+          t_grib2(255, 255, 255, grib_bits), &
+          prefix, suffix)
+    element_name      = TRIM(this%name)//'_mycorrhiza'
+    element_name_long = 'Mycorrhizal fungal biomass element of SB'//TRIM(this%name)
+    CALL jsb_add_var(this, TRIM(element_name), this%mycorrhiza, &
+          hgrid, surface, &
+          t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
+          t_grib1(table, 255, grib_bits), &
+          t_grib2(255, 255, 255, grib_bits), &
+          prefix, suffix)
+    element_name      = TRIM(this%name)//'_microbial'
+    element_name_long = 'Microbial biomass (bacteria) element of SB'//TRIM(this%name)
+    CALL jsb_add_var(this, TRIM(element_name), this%microbial, &
+          hgrid, surface, &
+          t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
+          t_grib1(table, 255, grib_bits), &
+          t_grib2(255, 255, 255, grib_bits), &
+          prefix, suffix)
+    element_name      = TRIM(this%name)//'_residue'
+    element_name_long = 'Necromass of fungi, microbial and mycorrhiza element of SB'//TRIM(this%name)
+    CALL jsb_add_var(this, TRIM(element_name), this%residue, &
+          hgrid, surface, &
+          t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
+          t_grib1(table, 255, grib_bits), &
+          t_grib2(255, 255, 255, grib_bits), &
+          prefix, suffix)
+    element_name      = TRIM(this%name)//'_residue_assoc'
+    element_name_long = 'Minerally associated microbial necromass element of SB'//TRIM(this%name)
+    CALL jsb_add_var(this, TRIM(element_name), this%residue_assoc, &
+          hgrid, surface, &
+          t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
+          t_grib1(table, 255, grib_bits), &
+          t_grib2(255, 255, 255, grib_bits), &
+          prefix, suffix)  
+  END SUBROUTINE Add_pool_elements_to_memory
+
+
+  !-----------------------------------------------------------------------------------------------------
+  !> initialize memory for the SB_ process
   !!
   !!  
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_sb_memory(mem, prefix, suffix, lct_ids, model_id)
 
 !    USE mo_jsb_varlist,       ONLY: t_jsb_varlist, jsb_add_var
-    USE mo_jsb_io,            ONLY: grib_bits
-!    USE mo_jsb_io,            ONLY: TSTEP_CONSTANT, tables
-    USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2
+    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2    !, TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
 !    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
     USE mo_jsb_model_class,   ONLY: t_jsb_model
 
+    IMPLICIT NONE
+    ! ---------------------------
     ! 0.1.InOut
     CLASS(t_sb_memory), INTENT(inout), TARGET :: mem             !> soil memory
-    CHARACTER(len=*),     INTENT(in)            :: prefix          !> ?
-    CHARACTER(len=*),     INTENT(in)            :: suffix          !> ?
-    INTEGER,              INTENT(in)            :: lct_ids !(:)    !> in jsbach4: vector of land cover type IDs
-    INTEGER,              INTENT(in)            :: model_id        !> model ID model\%id
+    CHARACTER(len=*),   INTENT(in)            :: prefix          !> process name
+    CHARACTER(len=*),   INTENT(in)            :: suffix          !> tile name
+    INTEGER,            INTENT(in)            :: lct_ids !(:)    !> in jsbach4: vector of land cover type IDs
+    INTEGER,            INTENT(in)            :: model_id        !> model ID model\%id
+    ! ---------------------------
     ! 0.2 Local
-    TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
-!    TYPE(t_jsb_vgrid), POINTER :: canopy_layer                 ! Vertical grid
-    TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
+    TYPE(t_jsb_model), POINTER  :: model
+    TYPE(t_jsb_grid),  POINTER  :: hgrid                        ! Horizontal grid
+!    TYPE(t_jsb_vgrid), POINTER  :: soil_layer                  ! Vertical grid
+    TYPE(t_jsb_vgrid), POINTER  :: surface                      ! Vertical grid
     INTEGER :: table
-
+    CHARACTER(len=30)           :: unit_sb_pool
+    CHARACTER(len=30)           :: unit_sb_flux
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_sb_memory'
 
-    model => Get_model(model_id)
 
+    model => Get_model(model_id)
 !    table = tables(1)
     table = 1
-
 !    hgrid   => Get_grid(mem%grid_id)
 !    surface => Get_vgrid('surface')
-!    canopy_layer => Get_vgrid('canopy_layer')
+!    soil_layer => Get_vgrid('soil_layer')
+    unit_sb_pool = "mol m-3"
+    unit_sb_flux = "mol m-3 timestep-1"
 
 
+
+    !> 1.0 sb memory init
+    !! 
+    !! 
     IF (.NOT. ASSOCIATED(mem%nh4_solute%ptr)) THEN
 
       !> add variables to soil memory soil\%VAR
@@ -2211,2116 +2426,121 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
 
-      !> simple TYPE (t_jsb_struct)
+      !-----------------------------------------------------------------------------------------------------
+      !> sb elements TYPE (t_jsb_struct)
       !! 
       !! jsb_add_var -> slm_add_struct()
       !! 
-      CALL jsb_add_var(mem, 'sb_delta_pools', mem%delta_pools, &
+      !-----------------------------------------------------------------------------------------------------
+      CALL jsb_add_var(mem, 'delta_pools', mem%delta_pools, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('delta_pools', TRIM(unit_sb_pool), 'Delta_pools element in soil biogeochemistry'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix)
 
-      CALL jsb_add_var(mem, 'sb_mycorrhiza_export', mem%mycorrhiza_export, &
+      CALL jsb_add_var(mem, 'mycorrhiza_export', mem%mycorrhiza_export, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('mycorrhiza_export', TRIM(unit_sb_flux), 'Mycorrhiza_export element in soil biogeochemistry'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix)
 
+      !> add variables to the elements
+      !! 
+      !! sb\%elements\%VAR
+      !! 
+      CALL mem%delta_pools%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_pool))
+      CALL mem%mycorrhiza_export%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
 
-      !> nested TYPE (t_jsb_n_struct)
+
+      !-----------------------------------------------------------------------------------------------------
+      !> sb pools (nested) TYPE (t_jsb_n_struct)
       !! 
       !! jsb_add_var -> slm_add_n_struct()
       !! 
-      CALL jsb_add_var(mem, 'sb_pool'           , mem%pool, &
+      !-----------------------------------------------------------------------------------------------------
+      CALL jsb_add_var(mem, 'pool'           , mem%pool, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('pool', TRIM(unit_sb_pool), 'Pool soil biogeochemistry pool'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix)
-      CALL jsb_add_var(mem, 'sb_formation'      , mem%formation, &
+      CALL jsb_add_var(mem, 'formation'      , mem%formation, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('formation', TRIM(unit_sb_flux), 'Formation soil biogeochemistry flux'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix)
-      CALL jsb_add_var(mem, 'sb_loss'  , mem%loss, &
+      CALL jsb_add_var(mem, 'loss'           , mem%loss, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('loss', TRIM(unit_sb_flux), 'Loss soil biogeochemistry flux'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix)
-      CALL jsb_add_var(mem, 'sb_transport'      , mem%transport, &
+      CALL jsb_add_var(mem, 'transport'      , mem%transport, &
             hgrid, surface, &
-            t_cf('', '', ''), &
+            t_cf('transport', TRIM(unit_sb_flux), 'Transport soil biogeochemistry flux'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix)
 
-      !> level 2 TYPE (l2_struct) nested within the above nested TYPE structures (t_jsb_n_struct)
+      !> add element TYPEs to the pools
       !! 
       !! jsb_add_var -> slm_add_l2_struct()
       !! 
-      CALL jsb_add_var(mem%pool,    'sb_pool_dom',                mem%pool%dom, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix) 
-      CALL jsb_add_var(mem%pool,    'sb_pool_dom_assoc',          mem%pool%dom_assoc, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
-      CALL jsb_add_var(mem%pool,    'sb_pool_soluable_litter',    mem%pool%soluable_litter, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix) 
-      CALL jsb_add_var(mem%pool,    'sb_pool_polymeric_litter',   mem%pool%polymeric_litter, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix) 
-      CALL jsb_add_var(mem%pool,    'sb_pool_woody_litter',       mem%pool%woody_litter, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix) 
-      CALL jsb_add_var(mem%pool,    'sb_pool_fungi',              mem%pool%fungi, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix) 
-      CALL jsb_add_var(mem%pool,    'sb_pool_mycorrhiza',         mem%pool%mycorrhiza, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix) 
-      CALL jsb_add_var(mem%pool,    'sb_pool_microbial',          mem%pool%microbial, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix) 
-      CALL jsb_add_var(mem%pool,    'sb_pool_residue',            mem%pool%residue, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix) 
-      CALL jsb_add_var(mem%pool,    'sb_pool_residue_assoc',      mem%pool%residue_assoc, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)  
+      CALL mem%pool%Add_elements(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_pool))
+      CALL mem%formation%Add_elements(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
+      CALL mem%loss%Add_elements(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
+      CALL mem%transport%Add_elements(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
 
-      CALL jsb_add_var(mem%formation,    'sb_formation_dom',                mem%formation%dom, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix) 
-      CALL jsb_add_var(mem%formation,    'sb_formation_dom_assoc',          mem%formation%dom_assoc, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
-      CALL jsb_add_var(mem%formation,    'sb_formation_soluable_litter',    mem%formation%soluable_litter, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix) 
-      CALL jsb_add_var(mem%formation,    'sb_formation_polymeric_litter',   mem%formation%polymeric_litter, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix) 
-      CALL jsb_add_var(mem%formation,    'sb_formation_woody_litter',       mem%formation%woody_litter, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix) 
-      CALL jsb_add_var(mem%formation,    'sb_formation_fungi',              mem%formation%fungi, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix) 
-      CALL jsb_add_var(mem%formation,    'sb_formation_mycorrhiza',         mem%formation%mycorrhiza, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix) 
-      CALL jsb_add_var(mem%formation,    'sb_formation_microbial',          mem%formation%microbial, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix) 
-      CALL jsb_add_var(mem%formation,    'sb_formation_residue',            mem%formation%residue, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix) 
-      CALL jsb_add_var(mem%formation,    'sb_formation_residue_assoc',      mem%formation%residue_assoc, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)  
-
-      CALL jsb_add_var(mem%loss,    'sb_loss_dom',                mem%loss%dom, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix) 
-      CALL jsb_add_var(mem%loss,    'sb_loss_dom_assoc',          mem%loss%dom_assoc, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
-      CALL jsb_add_var(mem%loss,    'sb_loss_soluable_litter',    mem%loss%soluable_litter, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix) 
-      CALL jsb_add_var(mem%loss,    'sb_loss_polymeric_litter',   mem%loss%polymeric_litter, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix) 
-      CALL jsb_add_var(mem%loss,    'sb_loss_woody_litter',       mem%loss%woody_litter, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix) 
-      CALL jsb_add_var(mem%loss,    'sb_loss_fungi',              mem%loss%fungi, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix) 
-      CALL jsb_add_var(mem%loss,    'sb_loss_mycorrhiza',         mem%loss%mycorrhiza, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix) 
-      CALL jsb_add_var(mem%loss,    'sb_loss_microbial',          mem%loss%microbial, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix) 
-      CALL jsb_add_var(mem%loss,    'sb_loss_residue',            mem%loss%residue, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix) 
-      CALL jsb_add_var(mem%loss,    'sb_loss_residue_assoc',      mem%loss%residue_assoc, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)  
-
-      CALL jsb_add_var(mem%transport,    'sb_transport_dom',                mem%transport%dom, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix) 
-      CALL jsb_add_var(mem%transport,    'sb_transport_dom_assoc',          mem%transport%dom_assoc, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
-      CALL jsb_add_var(mem%transport,    'sb_transport_soluable_litter',    mem%transport%soluable_litter, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix) 
-      CALL jsb_add_var(mem%transport,    'sb_transport_polymeric_litter',   mem%transport%polymeric_litter, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix) 
-      CALL jsb_add_var(mem%transport,    'sb_transport_woody_litter',       mem%transport%woody_litter, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix) 
-      CALL jsb_add_var(mem%transport,    'sb_transport_fungi',              mem%transport%fungi, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix) 
-      CALL jsb_add_var(mem%transport,    'sb_transport_mycorrhiza',         mem%transport%mycorrhiza, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix) 
-      CALL jsb_add_var(mem%transport,    'sb_transport_microbial',          mem%transport%microbial, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix) 
-      CALL jsb_add_var(mem%transport,    'sb_transport_residue',            mem%transport%residue, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix) 
-      CALL jsb_add_var(mem%transport,    'sb_transport_residue_assoc',      mem%transport%residue_assoc, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)  
-
-      !> add variables to the structs and the l2 structs
+      !> add variables to the elements in the pools
       !!
-      !! soil\%t_jsb_struct\%VAR
+      !! sb\%pool\%elements\%VAR
       !! 
-      !! soil\%t_jsb_n_struct\%t_jsb_struct\%VAR
-      !! 
-      CALL jsb_add_var(mem%pool%dom, 'sb_pool_dom_carbon', mem%pool%dom%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%dom, 'sb_pool_dom_nitrogen', mem%pool%dom%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%dom, 'sb_pool_dom_phosphorus', mem%pool%dom%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%dom, 'sb_pool_dom_carbon13', mem%pool%dom%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%dom, 'sb_pool_dom_carbon14', mem%pool%dom%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%dom, 'sb_pool_dom_nitrogen15', mem%pool%dom%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%pool%dom_assoc, 'sb_pool_dom_assoc_carbon', mem%pool%dom_assoc%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%dom_assoc, 'sb_pool_dom_assoc_nitrogen', mem%pool%dom_assoc%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%dom_assoc, 'sb_pool_dom_assoc_phosphorus', mem%pool%dom_assoc%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%dom_assoc, 'sb_pool_dom_assoc_carbon13', mem%pool%dom_assoc%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%dom_assoc, 'sb_pool_dom_assoc_carbon14', mem%pool%dom_assoc%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%dom_assoc, 'sb_pool_dom_assoc_nitrogen15', mem%pool%dom_assoc%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%pool%soluable_litter, 'sb_pool_soluable_litter_carbon', mem%pool%soluable_litter%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%soluable_litter, 'sb_pool_soluable_litter_nitrogen', mem%pool%soluable_litter%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%soluable_litter, 'sb_pool_soluable_litter_phosphorus', mem%pool%soluable_litter%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%soluable_litter, 'sb_pool_soluable_litter_carbon13', mem%pool%soluable_litter%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%soluable_litter, 'sb_pool_soluable_litter_carbon14', mem%pool%soluable_litter%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%soluable_litter, 'sb_pool_soluable_litter_nitrogen15', mem%pool%soluable_litter%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%pool%polymeric_litter, 'sb_pool_polymeric_litter_carbon', mem%pool%polymeric_litter%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%polymeric_litter, 'sb_pool_polymeric_litter_nitrogen', mem%pool%polymeric_litter%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%polymeric_litter, 'sb_pool_polymeric_litter_phosphorus', mem%pool%polymeric_litter%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%polymeric_litter, 'sb_pool_polymeric_litter_carbon13', mem%pool%polymeric_litter%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%polymeric_litter, 'sb_pool_polymeric_litter_carbon14', mem%pool%polymeric_litter%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%polymeric_litter, 'sb_pool_polymeric_litter_nitrogen15', mem%pool%polymeric_litter%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%pool%woody_litter, 'sb_pool_woody_litter_carbon', mem%pool%woody_litter%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%woody_litter, 'sb_pool_woody_litter_nitrogen', mem%pool%woody_litter%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%woody_litter, 'sb_pool_woody_litter_phosphorus', mem%pool%woody_litter%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%woody_litter, 'sb_pool_woody_litter_carbon13', mem%pool%woody_litter%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%woody_litter, 'sb_pool_woody_litter_carbon14', mem%pool%woody_litter%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%woody_litter, 'sb_pool_woody_litter_nitrogen15', mem%pool%woody_litter%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%pool%fungi, 'sb_pool_fungi_carbon', mem%pool%fungi%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%fungi, 'sb_pool_fungi_nitrogen', mem%pool%fungi%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%fungi, 'sb_pool_fungi_phosphorus', mem%pool%fungi%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%fungi, 'sb_pool_fungi_carbon13', mem%pool%fungi%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%fungi, 'sb_pool_fungi_carbon14', mem%pool%fungi%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%fungi, 'sb_pool_fungi_nitrogen15', mem%pool%fungi%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%pool%mycorrhiza, 'sb_pool_mycorrhiza_carbon', mem%pool%mycorrhiza%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%mycorrhiza, 'sb_pool_mycorrhiza_nitrogen', mem%pool%mycorrhiza%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%mycorrhiza, 'sb_pool_mycorrhiza_phosphorus', mem%pool%mycorrhiza%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%mycorrhiza, 'sb_pool_mycorrhiza_carbon13', mem%pool%mycorrhiza%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%mycorrhiza, 'sb_pool_mycorrhiza_carbon14', mem%pool%mycorrhiza%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%mycorrhiza, 'sb_pool_mycorrhiza_nitrogen15', mem%pool%mycorrhiza%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%pool%microbial, 'sb_pool_microbial_carbon', mem%pool%microbial%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%microbial, 'sb_pool_microbial_nitrogen', mem%pool%microbial%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%microbial, 'sb_pool_microbial_phosphorus', mem%pool%microbial%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%microbial, 'sb_pool_microbial_carbon13', mem%pool%microbial%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%microbial, 'sb_pool_microbial_carbon14', mem%pool%microbial%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%microbial, 'sb_pool_microbial_nitrogen15', mem%pool%microbial%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%pool%residue, 'sb_pool_residue_carbon', mem%pool%residue%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%residue, 'sb_pool_residue_nitrogen', mem%pool%residue%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%residue, 'sb_pool_residue_phosphorus', mem%pool%residue%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%residue, 'sb_pool_residue_carbon13', mem%pool%residue%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%residue, 'sb_pool_residue_carbon14', mem%pool%residue%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%residue, 'sb_pool_residue_nitrogen15', mem%pool%residue%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%pool%residue_assoc, 'sb_pool_residue_assoc_carbon', mem%pool%residue_assoc%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%residue_assoc, 'sb_pool_residue_assoc_nitrogen', mem%pool%residue_assoc%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%residue_assoc, 'sb_pool_residue_assoc_phosphorus', mem%pool%residue_assoc%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%residue_assoc, 'sb_pool_residue_assoc_carbon13', mem%pool%residue_assoc%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%residue_assoc, 'sb_pool_residue_assoc_carbon14', mem%pool%residue_assoc%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%pool%residue_assoc, 'sb_pool_residue_assoc_nitrogen15', mem%pool%residue_assoc%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
+      CALL mem%pool%dom%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_pool))
+      CALL mem%pool%dom_assoc%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_pool))
+      CALL mem%pool%soluable_litter%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_pool))
+      CALL mem%pool%polymeric_litter%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_pool))
+      CALL mem%pool%woody_litter%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_pool))
+      CALL mem%pool%fungi%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_pool))
+      CALL mem%pool%mycorrhiza%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_pool))
+      CALL mem%pool%microbial%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_pool))
+      CALL mem%pool%residue%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_pool))
+      CALL mem%pool%residue_assoc%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_pool))
 
-! formation
-      CALL jsb_add_var(mem%formation%dom, 'sb_formation_dom_carbon', mem%formation%dom%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%dom, 'sb_formation_dom_nitrogen', mem%formation%dom%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%dom, 'sb_formation_dom_phosphorus', mem%formation%dom%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%dom, 'sb_formation_dom_carbon13', mem%formation%dom%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%dom, 'sb_formation_dom_carbon14', mem%formation%dom%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%dom, 'sb_formation_dom_nitrogen15', mem%formation%dom%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%formation%dom_assoc, 'sb_formation_dom_assoc_carbon', mem%formation%dom_assoc%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%dom_assoc, 'sb_formation_dom_assoc_nitrogen', mem%formation%dom_assoc%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%dom_assoc, 'sb_formation_dom_assoc_phosphorus', mem%formation%dom_assoc%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%dom_assoc, 'sb_formation_dom_assoc_carbon13', mem%formation%dom_assoc%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%dom_assoc, 'sb_formation_dom_assoc_carbon14', mem%formation%dom_assoc%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%dom_assoc, 'sb_formation_dom_assoc_nitrogen15', mem%formation%dom_assoc%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%formation%soluable_litter, 'sb_formation_soluable_litter_carbon', mem%formation%soluable_litter%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%soluable_litter, 'sb_formation_soluable_litter_nitrogen', mem%formation%soluable_litter%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%soluable_litter, 'sb_formation_soluable_litter_phosphorus', mem%formation%soluable_litter%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%soluable_litter, 'sb_formation_soluable_litter_carbon13', mem%formation%soluable_litter%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%soluable_litter, 'sb_formation_soluable_litter_carbon14', mem%formation%soluable_litter%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%soluable_litter, 'sb_formation_soluable_litter_nitrogen15', mem%formation%soluable_litter%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%formation%polymeric_litter, 'sb_formation_polymeric_litter_carbon', mem%formation%polymeric_litter%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%polymeric_litter, 'sb_formation_polymeric_litter_nitrogen', mem%formation%polymeric_litter%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%polymeric_litter, 'sb_formation_polymeric_litter_phosphorus', mem%formation%polymeric_litter%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%polymeric_litter, 'sb_formation_polymeric_litter_carbon13', mem%formation%polymeric_litter%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%polymeric_litter, 'sb_formation_polymeric_litter_carbon14', mem%formation%polymeric_litter%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%polymeric_litter, 'sb_formation_polymeric_litter_nitrogen15', mem%formation%polymeric_litter%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%formation%woody_litter, 'sb_formation_woody_litter_carbon', mem%formation%woody_litter%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%woody_litter, 'sb_formation_woody_litter_nitrogen', mem%formation%woody_litter%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%woody_litter, 'sb_formation_woody_litter_phosphorus', mem%formation%woody_litter%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%woody_litter, 'sb_formation_woody_litter_carbon13', mem%formation%woody_litter%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%woody_litter, 'sb_formation_woody_litter_carbon14', mem%formation%woody_litter%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%woody_litter, 'sb_formation_woody_litter_nitrogen15', mem%formation%woody_litter%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%formation%fungi, 'sb_formation_fungi_carbon', mem%formation%fungi%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%fungi, 'sb_formation_fungi_nitrogen', mem%formation%fungi%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%fungi, 'sb_formation_fungi_phosphorus', mem%formation%fungi%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%fungi, 'sb_formation_fungi_carbon13', mem%formation%fungi%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%fungi, 'sb_formation_fungi_carbon14', mem%formation%fungi%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%fungi, 'sb_formation_fungi_nitrogen15', mem%formation%fungi%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%formation%mycorrhiza, 'sb_formation_mycorrhiza_carbon', mem%formation%mycorrhiza%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%mycorrhiza, 'sb_formation_mycorrhiza_nitrogen', mem%formation%mycorrhiza%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%mycorrhiza, 'sb_formation_mycorrhiza_phosphorus', mem%formation%mycorrhiza%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%mycorrhiza, 'sb_formation_mycorrhiza_carbon13', mem%formation%mycorrhiza%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%mycorrhiza, 'sb_formation_mycorrhiza_carbon14', mem%formation%mycorrhiza%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%mycorrhiza, 'sb_formation_mycorrhiza_nitrogen15', mem%formation%mycorrhiza%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%formation%microbial, 'sb_formation_microbial_carbon', mem%formation%microbial%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%microbial, 'sb_formation_microbial_nitrogen', mem%formation%microbial%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%microbial, 'sb_formation_microbial_phosphorus', mem%formation%microbial%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%microbial, 'sb_formation_microbial_carbon13', mem%formation%microbial%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%microbial, 'sb_formation_microbial_carbon14', mem%formation%microbial%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%microbial, 'sb_formation_microbial_nitrogen15', mem%formation%microbial%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%formation%residue, 'sb_formation_residue_carbon', mem%formation%residue%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%residue, 'sb_formation_residue_nitrogen', mem%formation%residue%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%residue, 'sb_formation_residue_phosphorus', mem%formation%residue%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%residue, 'sb_formation_residue_carbon13', mem%formation%residue%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%residue, 'sb_formation_residue_carbon14', mem%formation%residue%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%residue, 'sb_formation_residue_nitrogen15', mem%formation%residue%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%formation%residue_assoc, 'sb_formation_residue_assoc_carbon', mem%formation%residue_assoc%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%residue_assoc, 'sb_formation_residue_assoc_nitrogen', mem%formation%residue_assoc%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%residue_assoc, 'sb_formation_residue_assoc_phosphorus', mem%formation%residue_assoc%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%residue_assoc, 'sb_formation_residue_assoc_carbon13', mem%formation%residue_assoc%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%residue_assoc, 'sb_formation_residue_assoc_carbon14', mem%formation%residue_assoc%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%formation%residue_assoc, 'sb_formation_residue_assoc_nitrogen15', mem%formation%residue_assoc%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-
-!loss
-      CALL jsb_add_var(mem%loss%dom, 'sb_loss_dom_carbon', mem%loss%dom%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%dom, 'sb_loss_dom_nitrogen', mem%loss%dom%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%dom, 'sb_loss_dom_phosphorus', mem%loss%dom%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%dom, 'sb_loss_dom_carbon13', mem%loss%dom%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%dom, 'sb_loss_dom_carbon14', mem%loss%dom%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%dom, 'sb_loss_dom_nitrogen15', mem%loss%dom%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%loss%dom_assoc, 'sb_loss_dom_assoc_carbon', mem%loss%dom_assoc%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%dom_assoc, 'sb_loss_dom_assoc_nitrogen', mem%loss%dom_assoc%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%dom_assoc, 'sb_loss_dom_assoc_phosphorus', mem%loss%dom_assoc%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%dom_assoc, 'sb_loss_dom_assoc_carbon13', mem%loss%dom_assoc%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%dom_assoc, 'sb_loss_dom_assoc_carbon14', mem%loss%dom_assoc%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%dom_assoc, 'sb_loss_dom_assoc_nitrogen15', mem%loss%dom_assoc%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%loss%soluable_litter, 'sb_loss_soluable_litter_carbon', mem%loss%soluable_litter%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%soluable_litter, 'sb_loss_soluable_litter_nitrogen', mem%loss%soluable_litter%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%soluable_litter, 'sb_loss_soluable_litter_phosphorus', mem%loss%soluable_litter%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%soluable_litter, 'sb_loss_soluable_litter_carbon13', mem%loss%soluable_litter%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%soluable_litter, 'sb_loss_soluable_litter_carbon14', mem%loss%soluable_litter%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%soluable_litter, 'sb_loss_soluable_litter_nitrogen15', mem%loss%soluable_litter%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%loss%polymeric_litter, 'sb_loss_polymeric_litter_carbon', mem%loss%polymeric_litter%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%polymeric_litter, 'sb_loss_polymeric_litter_nitrogen', mem%loss%polymeric_litter%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%polymeric_litter, 'sb_loss_polymeric_litter_phosphorus', mem%loss%polymeric_litter%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%polymeric_litter, 'sb_loss_polymeric_litter_carbon13', mem%loss%polymeric_litter%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%polymeric_litter, 'sb_loss_polymeric_litter_carbon14', mem%loss%polymeric_litter%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%polymeric_litter, 'sb_loss_polymeric_litter_nitrogen15', mem%loss%polymeric_litter%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%loss%woody_litter, 'sb_loss_woody_litter_carbon', mem%loss%woody_litter%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%woody_litter, 'sb_loss_woody_litter_nitrogen', mem%loss%woody_litter%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%woody_litter, 'sb_loss_woody_litter_phosphorus', mem%loss%woody_litter%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%woody_litter, 'sb_loss_woody_litter_carbon13', mem%loss%woody_litter%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%woody_litter, 'sb_loss_woody_litter_carbon14', mem%loss%woody_litter%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%woody_litter, 'sb_loss_woody_litter_nitrogen15', mem%loss%woody_litter%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%loss%fungi, 'sb_loss_fungi_carbon', mem%loss%fungi%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%fungi, 'sb_loss_fungi_nitrogen', mem%loss%fungi%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%fungi, 'sb_loss_fungi_phosphorus', mem%loss%fungi%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%fungi, 'sb_loss_fungi_carbon13', mem%loss%fungi%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%fungi, 'sb_loss_fungi_carbon14', mem%loss%fungi%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%fungi, 'sb_loss_fungi_nitrogen15', mem%loss%fungi%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%loss%mycorrhiza, 'sb_loss_mycorrhiza_carbon', mem%loss%mycorrhiza%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%mycorrhiza, 'sb_loss_mycorrhiza_nitrogen', mem%loss%mycorrhiza%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%mycorrhiza, 'sb_loss_mycorrhiza_phosphorus', mem%loss%mycorrhiza%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%mycorrhiza, 'sb_loss_mycorrhiza_carbon13', mem%loss%mycorrhiza%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%mycorrhiza, 'sb_loss_mycorrhiza_carbon14', mem%loss%mycorrhiza%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%mycorrhiza, 'sb_loss_mycorrhiza_nitrogen15', mem%loss%mycorrhiza%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%loss%microbial, 'sb_loss_microbial_carbon', mem%loss%microbial%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%microbial, 'sb_loss_microbial_nitrogen', mem%loss%microbial%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%microbial, 'sb_loss_microbial_phosphorus', mem%loss%microbial%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%microbial, 'sb_loss_microbial_carbon13', mem%loss%microbial%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%microbial, 'sb_loss_microbial_carbon14', mem%loss%microbial%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%microbial, 'sb_loss_microbial_nitrogen15', mem%loss%microbial%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%loss%residue, 'sb_loss_residue_carbon', mem%loss%residue%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%residue, 'sb_loss_residue_nitrogen', mem%loss%residue%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%residue, 'sb_loss_residue_phosphorus', mem%loss%residue%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%residue, 'sb_loss_residue_carbon13', mem%loss%residue%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%residue, 'sb_loss_residue_carbon14', mem%loss%residue%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%residue, 'sb_loss_residue_nitrogen15', mem%loss%residue%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%loss%residue_assoc, 'sb_loss_residue_assoc_carbon', mem%loss%residue_assoc%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%residue_assoc, 'sb_loss_residue_assoc_nitrogen', mem%loss%residue_assoc%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%residue_assoc, 'sb_loss_residue_assoc_phosphorus', mem%loss%residue_assoc%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%residue_assoc, 'sb_loss_residue_assoc_carbon13', mem%loss%residue_assoc%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%residue_assoc, 'sb_loss_residue_assoc_carbon14', mem%loss%residue_assoc%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%loss%residue_assoc, 'sb_loss_residue_assoc_nitrogen15', mem%loss%residue_assoc%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-
-! Transport
-      CALL jsb_add_var(mem%transport%dom, 'sb_transport_dom_carbon', mem%transport%dom%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%dom, 'sb_transport_dom_nitrogen', mem%transport%dom%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%dom, 'sb_transport_dom_phosphorus', mem%transport%dom%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%dom, 'sb_transport_dom_carbon13', mem%transport%dom%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%dom, 'sb_transport_dom_carbon14', mem%transport%dom%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%dom, 'sb_transport_dom_nitrogen15', mem%transport%dom%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%transport%dom_assoc, 'sb_transport_dom_assoc_carbon', mem%transport%dom_assoc%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%dom_assoc, 'sb_transport_dom_assoc_nitrogen', mem%transport%dom_assoc%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%dom_assoc, 'sb_transport_dom_assoc_phosphorus', mem%transport%dom_assoc%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%dom_assoc, 'sb_transport_dom_assoc_carbon13', mem%transport%dom_assoc%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%dom_assoc, 'sb_transport_dom_assoc_carbon14', mem%transport%dom_assoc%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%dom_assoc, 'sb_transport_dom_assoc_nitrogen15', mem%transport%dom_assoc%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%transport%soluable_litter, 'sb_transport_soluable_litter_carbon', mem%transport%soluable_litter%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%soluable_litter, 'sb_transport_soluable_litter_nitrogen', mem%transport%soluable_litter%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%soluable_litter, 'sb_transport_soluable_litter_phosphorus', mem%transport%soluable_litter%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%soluable_litter, 'sb_transport_soluable_litter_carbon13', mem%transport%soluable_litter%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%soluable_litter, 'sb_transport_soluable_litter_carbon14', mem%transport%soluable_litter%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%soluable_litter, 'sb_transport_soluable_litter_nitrogen15', mem%transport%soluable_litter%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%transport%polymeric_litter, 'sb_transport_polymeric_litter_carbon', mem%transport%polymeric_litter%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%polymeric_litter, 'sb_transport_polymeric_litter_nitrogen', mem%transport%polymeric_litter%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%polymeric_litter, 'sb_transport_polymeric_litter_phosphorus', mem%transport%polymeric_litter%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%polymeric_litter, 'sb_transport_polymeric_litter_carbon13', mem%transport%polymeric_litter%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%polymeric_litter, 'sb_transport_polymeric_litter_carbon14', mem%transport%polymeric_litter%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%polymeric_litter, 'sb_transport_polymeric_litter_nitrogen15', mem%transport%polymeric_litter%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%transport%woody_litter, 'sb_transport_woody_litter_carbon', mem%transport%woody_litter%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%woody_litter, 'sb_transport_woody_litter_nitrogen', mem%transport%woody_litter%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%woody_litter, 'sb_transport_woody_litter_phosphorus', mem%transport%woody_litter%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%woody_litter, 'sb_transport_woody_litter_carbon13', mem%transport%woody_litter%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%woody_litter, 'sb_transport_woody_litter_carbon14', mem%transport%woody_litter%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%woody_litter, 'sb_transport_woody_litter_nitrogen15', mem%transport%woody_litter%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%transport%fungi, 'sb_transport_fungi_carbon', mem%transport%fungi%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%fungi, 'sb_transport_fungi_nitrogen', mem%transport%fungi%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%fungi, 'sb_transport_fungi_phosphorus', mem%transport%fungi%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%fungi, 'sb_transport_fungi_carbon13', mem%transport%fungi%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%fungi, 'sb_transport_fungi_carbon14', mem%transport%fungi%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%fungi, 'sb_transport_fungi_nitrogen15', mem%transport%fungi%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%transport%mycorrhiza, 'sb_transport_mycorrhiza_carbon', mem%transport%mycorrhiza%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%mycorrhiza, 'sb_transport_mycorrhiza_nitrogen', mem%transport%mycorrhiza%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%mycorrhiza, 'sb_transport_mycorrhiza_phosphorus', mem%transport%mycorrhiza%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%mycorrhiza, 'sb_transport_mycorrhiza_carbon13', mem%transport%mycorrhiza%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%mycorrhiza, 'sb_transport_mycorrhiza_carbon14', mem%transport%mycorrhiza%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%mycorrhiza, 'sb_transport_mycorrhiza_nitrogen15', mem%transport%mycorrhiza%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%transport%microbial, 'sb_transport_microbial_carbon', mem%transport%microbial%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%microbial, 'sb_transport_microbial_nitrogen', mem%transport%microbial%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%microbial, 'sb_transport_microbial_phosphorus', mem%transport%microbial%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%microbial, 'sb_transport_microbial_carbon13', mem%transport%microbial%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%microbial, 'sb_transport_microbial_carbon14', mem%transport%microbial%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%microbial, 'sb_transport_microbial_nitrogen15', mem%transport%microbial%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%transport%residue, 'sb_transport_residue_carbon', mem%transport%residue%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%residue, 'sb_transport_residue_nitrogen', mem%transport%residue%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%residue, 'sb_transport_residue_phosphorus', mem%transport%residue%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%residue, 'sb_transport_residue_carbon13', mem%transport%residue%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%residue, 'sb_transport_residue_carbon14', mem%transport%residue%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%residue, 'sb_transport_residue_nitrogen15', mem%transport%residue%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
- 
-      CALL jsb_add_var(mem%transport%residue_assoc, 'sb_transport_residue_assoc_carbon', mem%transport%residue_assoc%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%residue_assoc, 'sb_transport_residue_assoc_nitrogen', mem%transport%residue_assoc%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%residue_assoc, 'sb_transport_residue_assoc_phosphorus', mem%transport%residue_assoc%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%residue_assoc, 'sb_transport_residue_assoc_carbon13', mem%transport%residue_assoc%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%residue_assoc, 'sb_transport_residue_assoc_carbon14', mem%transport%residue_assoc%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%transport%residue_assoc, 'sb_transport_residue_assoc_nitrogen15', mem%transport%residue_assoc%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-
-      CALL jsb_add_var(mem%delta_pools, 'sb_delta_pools_carbon', mem%delta_pools%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%delta_pools, 'sb_delta_pools_nitrogen', mem%delta_pools%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%delta_pools, 'sb_delta_pools_phosphorus', mem%delta_pools%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%delta_pools, 'sb_delta_pools_carbon13', mem%delta_pools%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%delta_pools, 'sb_delta_pools_carbon14', mem%delta_pools%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%delta_pools, 'sb_delta_pools_nitrogen15', mem%delta_pools%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-
-      CALL jsb_add_var(mem%mycorrhiza_export, 'sb_mycorrhiza_export_carbon', mem%mycorrhiza_export%carbon, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%mycorrhiza_export, 'sb_mycorrhiza_export_nitrogen', mem%mycorrhiza_export%nitrogen, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%mycorrhiza_export, 'sb_mycorrhiza_export_phosphorus', mem%mycorrhiza_export%phosphorus, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%mycorrhiza_export, 'sb_mycorrhiza_export_carbon13', mem%mycorrhiza_export%carbon13, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%mycorrhiza_export, 'sb_mycorrhiza_export_carbon14', mem%mycorrhiza_export%carbon14, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
-      CALL jsb_add_var(mem%mycorrhiza_export, 'sb_mycorrhiza_export_nitrogen15', mem%mycorrhiza_export%nitrogen15, &
-            hgrid, surface, &
-            t_cf('', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp)     ! initvalue
+      CALL mem%formation%dom%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
+      CALL mem%formation%dom_assoc%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
+      CALL mem%formation%soluable_litter%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
+      CALL mem%formation%polymeric_litter%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
+      CALL mem%formation%woody_litter%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
+      CALL mem%formation%fungi%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
+      CALL mem%formation%mycorrhiza%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
+      CALL mem%formation%microbial%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
+      CALL mem%formation%residue%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
+      CALL mem%formation%residue_assoc%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
+      
+      CALL mem%loss%dom%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
+      CALL mem%loss%dom_assoc%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
+      CALL mem%loss%soluable_litter%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
+      CALL mem%loss%polymeric_litter%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
+      CALL mem%loss%woody_litter%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
+      CALL mem%loss%fungi%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
+      CALL mem%loss%mycorrhiza%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
+      CALL mem%loss%microbial%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
+      CALL mem%loss%residue%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
+      CALL mem%loss%residue_assoc%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
+      
+      CALL mem%transport%dom%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
+      CALL mem%transport%dom_assoc%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
+      CALL mem%transport%soluable_litter%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
+      CALL mem%transport%polymeric_litter%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
+      CALL mem%transport%woody_litter%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
+      CALL mem%transport%fungi%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
+      CALL mem%transport%mycorrhiza%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
+      CALL mem%transport%microbial%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
+      CALL mem%transport%residue%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
+      CALL mem%transport%residue_assoc%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
 
     END IF
 
