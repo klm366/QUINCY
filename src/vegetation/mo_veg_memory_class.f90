@@ -178,103 +178,103 @@ MODULE mo_veg_memory_class
     !! 
     ! basic plant 2D
     TYPE(t_jsb_var_real2d)          :: &   
-                                    height            , &            !< plant height in m
-                                    diameter          , &            !< plant diameter in m
-                                    dens_ind          , &            !< density of individuals (#/m2) 
+                                    height            , &            !< plant height [m]
+                                    diameter          , &            !< plant diameter [m]
+                                    dens_ind          , &            !< density of individuals [# m-2]
                                     lai               , &            !< actual leaf area index
                                     target_cn_leaf    , &            !< target foliar C:N ratio
                                     target_np_leaf    , &            !< target foliar N:P ratio 
                                     mean_leaf_age     , &            !< average foliage age in days 
-                                    cohort_age        , &            !< age of the cohort in years, used with veg_dynamics_scheme="cohort"
-                                    f_n_demand        , &            !< relative plant demand for N; see update_vegsoil_bgc
-                                    f_p_demand        , &            !< relative plant demand for P; see update_vegsoil_bgc
+                                    cohort_age        , &            !< age of the cohort in years, used with veg_dynamics_scheme cohort
+                                    f_n_demand        , &            !< relative plant demand for N
+                                    f_p_demand        , &            !< relative plant demand for P
                                     beta_sinklim_ps   , &            !< scaling factor to account for a direct sink limitation contraint on photosynthesis
-                                    dphi              , &            !< plant-soil water potential gradient (MPa)
+                                    dphi              , &            !< plant-soil water potential gradient [MPa]
                                     growth_req_n      , &            !< moles N required for a unit of C growth under current allocation fractions 
                                     growth_req_p      , &            !< moles P required for a unit of N growth under current allocation fractions 
                                     leaf_cn_direction , &            !< indicates direction of change in leaf CN ratio to maximise NPP
                                     target_lai        , &            !< LAI implied from sap wood area
-                                    kstar_labile                     !< labile pool turnover rate assuming only temperature and moisture constraints (no stoichiometry)
+                                    kstar_labile                     !< labile pool turnover rate assuming only temperature and moisture constraints, no stoichiometry
 
     ! used as logical: 0 = FALSE / 1 = TRUE
     TYPE(t_jsb_var_real2d)          :: &
-                                    do_cohort_harvest                !< logical to identify whether the cohort may be harvested (only for veg_dynamics_scheme="cohort")
+                                    do_cohort_harvest                !< logical to identify whether the cohort may be harvested, in veg_dynamics_scheme cohort
 
     ! basic plant 3D 
     TYPE(t_jsb_var_real3d)          :: &
-                                    root_fraction_sl     !< fractions of root per layer, with DIMENSION(nsoil_sb) !
+                                    root_fraction_sl                 !< fractions of root per layer
 
     ! target C:N and N:P ratios for various non-leaf tissues (mol/mol)
     TYPE(t_jsb_var_real2d)          :: &
-                                    target_cn_fine_root       , &
-                                    target_cn_coarse_root     , &
-                                    target_cn_sap_wood        , &
-                                    target_cn_fruit           , &
-                                    target_np_fine_root       , &
-                                    target_np_coarse_root     , &
-                                    target_np_sap_wood        , &
-                                    target_np_fruit
+                                    target_cn_fine_root       , &   !< 
+                                    target_cn_coarse_root     , &   !< 
+                                    target_cn_sap_wood        , &   !< 
+                                    target_cn_fruit           , &   !< 
+                                    target_np_fine_root       , &   !< 
+                                    target_np_coarse_root     , &   !< 
+                                    target_np_sap_wood        , &   !< 
+                                    target_np_fruit                 !< 
 
     ! canopy layers
     TYPE(t_jsb_var_real3d)          :: &   ! DIMENSION(ncanopy)
-                                    leaf_nitrogen_cl         , &       !< N in canopy layer (mmol / m2 (LAI))
-                                    fn_chl_cl        , &       !< fraction of N in chlorophyll (pigments only!)
-                                    fn_et_cl         , &       !< fraction of N in electron transport 
-                                    fn_rub_cl        , &       !< fraction of N in Rubisco 
-                                    fn_pepc_cl       , &       !< fraction of N in PEP carboylase (C4 plants only)
-                                    fn_oth_cl        , &       !< fraction of N not associated with photosynthesis 
-                                    fleaf_sunlit_cl   , &       !< fraction of layer which is sunlit
-                                    lai_cl            , &       !< leaf area in the canopy layer 
-                                    cumm_lai_cl                 !< cummulative leaf area above the mid-point of the canopy layer 
+                                    leaf_nitrogen_cl  , &           !< N in canopy layer [mmol m-2 LAI]
+                                    fn_chl_cl         , &           !< fraction of N in chlorophyll, pigments only
+                                    fn_et_cl          , &           !< fraction of N in electron transport 
+                                    fn_rub_cl         , &           !< fraction of N in Rubisco 
+                                    fn_pepc_cl        , &           !< fraction of N in PEP carboylase, C4 plants only
+                                    fn_oth_cl         , &           !< fraction of N not associated with photosynthesis 
+                                    fleaf_sunlit_cl   , &           !< fraction of layer which is sunlit
+                                    lai_cl            , &           !< leaf area in the canopy layer 
+                                    cumm_lai_cl                     !< cummulative leaf area above the mid-point of the canopy layer 
 
     ! fluxes
     TYPE(t_jsb_var_real2d)          :: &   
-                                    maint_respiration_pot     , & !< potential maintenance respiration (µmol CO2 m-2 s-1)
-                                    maint_respiration         , & !< maintenance respiration (µmol CO2 m-2 s-1)
-                                    maint_respiration_c13     , & !< maintenance respiration (µmol 13CO2 m-2 s-1)
-                                    maint_respiration_c14     , & !< maintenance respiration (µmol 14CO2 m-2 s-1)
-                                    growth_respiration        , & !< growth respiration (µmol CO2 m-2 s-1)
-                                    growth_respiration_c13    , & !< growth respiration (µmol 13CO2 m-2 s-1)
-                                    growth_respiration_c14    , & !< growth respiration (µmol 14CO2 m-2 s-1)
-                                    n_transform_respiration   , & !< respiration associated with N transformation (µmol CO2 m-2 s-1)
-                                    n_fixation_respiration    , & !< respiration associated with N fixation (µmol CO2 m-2 s-1)
-                                    n_processing_respiration  , &       !< respiration associated with N processing (µmol CO2 m-2 s-1)
-                                    n_processing_respiration_c13 , &  !< respiration associated with N processing (µmol 13CO2 m-2 s-1)
-                                    n_processing_respiration_c14 , &  !< respiration associated with N processing (µmol 14CO2 m-2 s-1)
-                                    npp                       , & !< net primary production (µmol CO2 m-2 s-1)
-                                    npp_c13                   , & !< net primary production (µmol 13CO2 m-2 s-1)
-                                    npp_c14                   , & !< net primary production (µmol 14CO2 m-2 s-1)
-                                    uptake_nh4                , & !< NH4 uptake from soil (µmol N m-2 s-1) 
-                                    uptake_nh4_n15            , & !< 15NH4 uptake from soil (µmol N m-2 s-1)
-                                    uptake_no3                , & !< NO3 uptake from soil (µmol N m-2 s-1)
-                                    uptake_no3_n15            , & !< 15NO3 uptake from soil (µmol N m-2 s-1)
-                                    uptake_po4                , & !< PO4 uptake from soil (µmol P m-2 s-1) 
-                                    n_fixation                , & !< symbiontic N fixation (µmol N m-2 s-1)
-                                    n_fixation_n15            , & !< symbiontic N fixation (µmol 15N m-2 s-1)
-                                    recycling_leaf_n          , & !< net flux of N from leaf to labile (senescence and maintenance) (mol m-2 timestep-1)
-                                    recycling_leaf_n15        , & !< net flux of 15N from leaf to labile (senescence and maintenance) (mol m-2 timestep-1) 
-                                    recycling_leaf_p          , & !< net flux of P from leaf to labile (senescence and maintenance) (mol m-2 timestep-1)
-                                    recycling_fine_root_n     , & !< net flux of N from fine roots to labile (senescence and maintenance) (mol m-2 timestep-1)
-                                    recycling_fine_root_n15   , & !< net flux of 15N from fine roots to labile (senescence and maintenance) (mol m-2 timestep-1) 
-                                    recycling_fine_root_p     , & !< net flux of P from fine roots to labile (senescence and maintenance) (mol m-2 timestep-1)
-                                    recycling_heart_wood_n      , & !< net flux of N from sapwood to labile (senescence and maintenance) (mol m-2 timestep-1)
-                                    recycling_heart_wood_n15    , & !< net flux of 15N from sapwood to labile (senescence and maintenance) (mol m-2 timestep-1) 
-                                    recycling_heart_wood_p      , & !< net flux of P from sapwood to labile (senescence and maintenance) (mol m-2 timestep-1)
-                                    net_growth                      !< npp minus turnover (µmol CO2 m-2 s-1)
+                                    maint_respiration_pot         , & !< potential maintenance respiration [µmol CO2 m-2 s-1]
+                                    maint_respiration             , & !< maintenance respiration [µmol CO2 m-2 s-1]
+                                    maint_respiration_c13         , & !< maintenance respiration [µmol 13CO2 m-2 s-1]
+                                    maint_respiration_c14         , & !< maintenance respiration [µmol 14CO2 m-2 s-1]
+                                    growth_respiration            , & !< growth respiration [µmol CO2 m-2 s-1]
+                                    growth_respiration_c13        , & !< growth respiration [µmol 13CO2 m-2 s-1]
+                                    growth_respiration_c14        , & !< growth respiration [µmol 14CO2 m-2 s-1]
+                                    n_transform_respiration       , & !< respiration associated with N transformation [µmol CO2 m-2 s-1]
+                                    n_fixation_respiration        , & !< respiration associated with N fixation [µmol CO2 m-2 s-1]
+                                    n_processing_respiration      , & !< respiration associated with N processing [µmol CO2 m-2 s-1]
+                                    n_processing_respiration_c13  , & !< respiration associated with N processing [µmol 13CO2 m-2 s-1]
+                                    n_processing_respiration_c14  , & !< respiration associated with N processing [µmol 14CO2 m-2 s-1]
+                                    npp                           , & !< net primary production [µmol CO2 m-2 s-1]
+                                    npp_c13                       , & !< net primary production [µmol 13CO2 m-2 s-1]
+                                    npp_c14                       , & !< net primary production [µmol 14CO2 m-2 s-1]
+                                    uptake_nh4                    , & !< NH4 uptake from soil [µmol N m-2 s-1)]
+                                    uptake_nh4_n15                , & !< 15NH4 uptake from soil [µmol N m-2 s-1]
+                                    uptake_no3                    , & !< NO3 uptake from soil [µmol N m-2 s-1]
+                                    uptake_no3_n15                , & !< 15NO3 uptake from soil [µmol N m-2 s-1]
+                                    uptake_po4                    , & !< PO4 uptake from soil [µmol P m-2 s-1)]
+                                    n_fixation                    , & !< symbiontic N fixation [µmol N m-2 s-1]
+                                    n_fixation_n15                , & !< symbiontic N fixation [µmol 15N m-2 s-1]
+                                    recycling_leaf_n              , & !< net flux of N from leaf to labile (senescence and maintenance) [mol m-2 timestep-1]
+                                    recycling_leaf_n15            , & !< net flux of 15N from leaf to labile (senescence and maintenance) [mol m-2 timestep-1]
+                                    recycling_leaf_p              , & !< net flux of P from leaf to labile (senescence and maintenance) [mol m-2 timestep-1]
+                                    recycling_fine_root_n         , & !< net flux of N from fine roots to labile (senescence and maintenance) [mol m-2 timestep-1]
+                                    recycling_fine_root_n15       , & !< net flux of 15N from fine roots to labile (senescence and maintenance) [mol m-2 timestep-1]
+                                    recycling_fine_root_p         , & !< net flux of P from fine roots to labile (senescence and maintenance) [mol m-2 timestep-1]
+                                    recycling_heart_wood_n        , & !< net flux of N from sapwood to labile (senescence and maintenance) [mol m-2 timestep-1]
+                                    recycling_heart_wood_n15      , & !< net flux of 15N from sapwood to labile (senescence and maintenance) [mol m-2 timestep-1]
+                                    recycling_heart_wood_p        , & !< net flux of P from sapwood to labile (senescence and maintenance) [mol m-2 timestep-1]
+                                    net_growth                        !< npp minus turnover [µmol CO2 m-2 s-1]
 
     ! everything else 2D
     TYPE(t_jsb_var_real2d)          :: &   
-                                    fmaint_rate               , & !< current N-specific maintentance respiration (~µmol C/mol N / s ) 
+                                    fmaint_rate               , & !< current N-specific maintentance respiration [~µmol C mol-1 N s-1]
                                     unit_npp                  , & !< incremental change in NPP. Needed for optimal allocation
                                     unit_transpiration        , & !< incremental change in transpiration. Needed for optimal allocation
                                     unit_uptake_n_pot         , & !< incremental change in potential N uptake per unit root carbon, needed for N uptake calculation 
                                     unit_uptake_p_pot         , & !< incremental change in potential P uptake per unit root carbon, currently unused 
-                                    unit_uptake_n_act         , & !< incremental change in actual N uptake oer unit root carbon, needed for optimal allocation
+                                    unit_uptake_n_act         , & !< incremental change in actual N uptake per unit root carbon, needed for optimal allocation
                                     unit_uptake_p_act         , & !< incremental change in actual P uptake per unit root carbon, needed for optimal allocation
-                                    delta_dens_ind            , & !< change in density of individuals (#/m2/timestep)
-                                    cost_n_uptake_root        , & !< actual cost for N uptake by roots (mol C/mol N)
-                                    cost_n_fixation           , & !< actual cost for N uptake through fixation (mol C/mol N)
-                                    mortality_rate            , & !< background_mort_rate_tree / grass converted to 1/timestep
+                                    delta_dens_ind            , & !< change in density of individuals [# m-2 timestep-1]
+                                    cost_n_uptake_root        , & !< actual cost for N uptake by roots [mol C mol-1 N]
+                                    cost_n_fixation           , & !< actual cost for N uptake through fixation [mol C mol-1 N]
+                                    mortality_rate            , & !< background_mort_rate_tree / grass [timestep-1]
                                     k1_opt                    , & !< coefficient for optimal leaf:root ratio
                                     k2_opt                    , & !< coefficient for optimal leaf:root ratio
                                     leaf2sapwood_mass_ratio   , & !< leaf to shoot mass ratio
@@ -301,14 +301,14 @@ MODULE mo_veg_memory_class
                                     beta_sinklim_ps_daytime_dacc  , & !<  average of the previous day
                                     t_jmax_opt_daytime_dacc           !<  value accumulated over current day 
     TYPE(t_jsb_var_real2d)          :: &   
-                                    daytime_counter  !< number of timesteps of current day with light available & daytime_avrg variables were added up
+                                    daytime_counter                   !< number of timesteps of current day with light available
 
     !> moving averages
     !! 
     ! 1.1 memory of conditions for the labile pool dynamics
     TYPE(t_jsb_var_real2d)          :: &   
-                                    gpp_tlabile_mavg               , &  !< gpp  (µmol m-2 s-1)
-                                    maint_respiration_tlabile_mavg , &  !< maintenance respiration (µmol m-2 s-1)
+                                    gpp_tlabile_mavg               , &  !< gpp  [µmol m-2 s-1]
+                                    maint_respiration_tlabile_mavg , &  !< maintenance respiration [µmol m-2 s-1]
                                     growth_req_n_tlabile_mavg      , &  !< moles N required for a unit of C growth under current allocation fractions
                                     growth_req_p_tlabile_mavg           !< moles P required for a unit of N growth under current allocation fractions
     ! 1.2 memory of conditions for phenology calculations
@@ -316,12 +316,12 @@ MODULE mo_veg_memory_class
                                     t_air_tphen_mavg                    !< air temp mavg for phenology calc
     ! 1.3 memory for plant uptake (average demand over a couple of days to get rid of diurnal C cycle)
     TYPE(t_jsb_var_real2d)          :: &   
-                                    npp_tuptake_mavg               , &  !< npp of the last week (µmol m-2 s-1)
+                                    npp_tuptake_mavg               , &  !< npp of the last week [µmol m-2 s-1]
                                     demand_uptake_n_tuptake_mavg   , &  !< scalar of Vmax for root N uptake 
                                     demand_uptake_p_tuptake_mavg   , &  !< scalar of Vmax for root P uptake
                                     growth_req_n_tuptake_mavg      , &  !< moles N required for a unit of C growth under current allocation fractions
                                     growth_req_p_tuptake_mavg      , &  !< moles P required for a unit of N growth under current allocation fractions
-                                    cost_n_fixation_tuptake_mavg        !< moving average of N fixation cost (mol C / mol N)
+                                    cost_n_fixation_tuptake_mavg        !< moving average of N fixation cost [mol C mol-1 N]
     ! 1.4 memory of conditions for photosynthesis for the optimisation of foliar N fractions 
     TYPE(t_jsb_var_real3d)          :: &   ! DIMENSION(ncanopy)
                                     fleaf_sunlit_tfrac_mavg_cl          !< fraction of sunlit leaves
@@ -339,49 +339,49 @@ MODULE mo_veg_memory_class
                                     press_srf_tcnl_mavg            , &  !< air pressure at surface
                                     co2_mixing_ratio_tcnl_mavg     , &  !< co2 mixing ratio of the air
                                     ga_tcnl_mavg                   , &  !< aerodynamic resistance
-                                    beta_sinklim_ps_tcnl_mavg      , &     !< scaling factor to account for soil moisture constraints on conductance
+                                    beta_sinklim_ps_tcnl_mavg      , &  !< scaling factor to account for soil moisture constraints on conductance
                                     uptake_n_tcnl_mavg             , &  !< root N uptake
                                     growth_cn_tcnl_mavg            , &  !< new growth CN ratio
-                                    growth_np_tcnl_mavg            , &
-                                    npp_tcnl_mavg                  , &     !< NPP
-                                    reserve_nitrogen_tcnl_mavg     , &
-                                    reserve_carbon_tcnl_mavg       , &
-                                    labile_nitrogen_tcnl_mavg      , &
-                                    labile_carbon_tcnl_mavg        , &
-                                    labile_phosphorus_tcnl_mavg
+                                    growth_np_tcnl_mavg            , &  !< 
+                                    npp_tcnl_mavg                  , &  !< NPP
+                                    reserve_nitrogen_tcnl_mavg     , &  !< 
+                                    reserve_carbon_tcnl_mavg       , &  !< 
+                                    labile_nitrogen_tcnl_mavg      , &  !< 
+                                    labile_carbon_tcnl_mavg        , &  !< 
+                                    labile_phosphorus_tcnl_mavg         !< 
 
     ! 1.6 memory of conditions for photosynthesis for the optimisation of biomass allocation fractions
     TYPE(t_jsb_var_real2d)          :: &   
-                                    npp_talloc_mavg                , &  !< NPP (µmol m-2 s-1) (averaging time-scale: tau_allocation)
+                                    npp_talloc_mavg                , &  !< NPP [µmol m-2 s-1]
                                     n_fixation_talloc_mavg         , &  !< N fixation averaged at the allocation timescale
                                     transpiration_talloc_mavg      , &  !< average transpiration at allocation time-scale
-                                    unit_npp_talloc_mavg           , &  !< rate of change in NPP with  increment in leaf mass, mumol C mol-1
+                                    unit_npp_talloc_mavg           , &  !< rate of change in NPP with  increment in leaf mass [µmol C mol-1]
                                     unit_transpiration_talloc_mavg , &  !< rate of tranpiration change per unit LAI change?
-                                    unit_uptake_n_talloc_mavg  , &  !< actual rate of N uptkae per unit root, mumol N mol-1 (averaging time-scale: tau_allocation)
-                                    unit_uptake_p_talloc_mavg  , &  !< actual rate of P uptake per unit root, mumol P mol-1 (time-scale of accumulation: tau_allocation)
-                                    dphi_talloc_mavg               , &  !< leaf-soil water potential gradient (MPa)  (averaging time-scale: tau_allocation)
+                                    unit_uptake_n_talloc_mavg      , &  !< actual rate of N uptkae per unit root [µmol N mol-1]
+                                    unit_uptake_p_talloc_mavg      , &  !< actual rate of P uptake per unit root [µmol P mol-1]
+                                    dphi_talloc_mavg               , &  !< leaf-soil water potential gradient [MPa]
                                     growth_cn_talloc_mavg          , &  !< plant growth cn ratio, equivalent to 1/growth_req_n
                                     growth_cp_talloc_mavg          , &  !< plant growth cp ratio, equivalent to 1/(growthreq_n*growth_req_p)
                                     labile_carbon_talloc_mavg      , &  !< moving average of labile carbon pool neeeded for allometry calculations
                                     labile_nitrogen_talloc_mavg    , &  !< moving average of labile nitrogen pool neeeded for allometry calculations
-                                    labile_phosphorus_talloc_mavg   ,&  !< moving average of labile phosphorus pool neeeded for allometry calculations
-                                    reserve_carbon_talloc_mavg  ,&  !< moving average of reserve carbon needed for optimal allocation
-                                    reserve_nitrogen_talloc_mavg,&  !< moving average of reserve nitrogen needed for optimal allocation
-                                    reserve_phosphorus_talloc_mavg,&  !< moving average of reserve phosphorus needed for optimal allocation
-                                    w_root_lim_talloc_mavg                      !< moving average of 
+                                    labile_phosphorus_talloc_mavg  , &  !< moving average of labile phosphorus pool neeeded for allometry calculations
+                                    reserve_carbon_talloc_mavg     , &  !< moving average of reserve carbon needed for optimal allocation
+                                    reserve_nitrogen_talloc_mavg   , &  !< moving average of reserve nitrogen needed for optimal allocation
+                                    reserve_phosphorus_talloc_mavg , &  !< moving average of reserve phosphorus needed for optimal allocation
+                                    w_root_lim_talloc_mavg              !< moving average of ...
                                     
                                     
     ! 1.7 memory over root life time 
     TYPE(t_jsb_var_real2d)          :: &   
                                     leaf2root_troot_mavg           , &  !< leaf to root mass ratio
-                                    unit_npp_troot_mavg            , &  !< rate of change in NPP with  increment in leaf mass, mumol C mol-1
-                                    unit_uptake_n_pot_troot_mavg   , &  !< rate of N uptkae per unit root, mumol N mol-1 (time-scale of accumulation: tau_root)
-                                    unit_uptake_p_pot_troot_mavg   , &  !< rate of P uptake per unit root, mumol P mol-1 (time-scale of accumulation: tau_root)
-                                    fmaint_rate_troot_mavg              !< moving average of N-specific maintentance respiration (~µmol C/mol N / s ) 
+                                    unit_npp_troot_mavg            , &  !< rate of change in NPP with increment in leaf mass [µmol C mol-1]
+                                    unit_uptake_n_pot_troot_mavg   , &  !< rate of N uptkae per unit root [µmol N mol-1]
+                                    unit_uptake_p_pot_troot_mavg   , &  !< rate of P uptake per unit root [µmol P mol-1]
+                                    fmaint_rate_troot_mavg              !< moving average of N-specific maintentance respiration [~µmol C mol-1 N s-1]
     ! 1.8 memory over timescale of vegetation dynamics 
     TYPE(t_jsb_var_real2d)          :: &   
-                                    an_boc_tvegdyn_mavg            , &  !< net photosynthesis at bottom of canopy (lowest canopy layer existing)
-                                    net_growth_tvegdyn_mavg        , &  !< net growth (npp minus turnover) µmol C / m2 / s
+                                    an_boc_tvegdyn_mavg            , &  !< net photosynthesis at bottom of canopy, lowest canopy layer existing
+                                    net_growth_tvegdyn_mavg        , &  !< net growth, npp minus turnover [µmol C m-2 s-1]
                                     lai_tvegdyn_mavg                    !< lai at vegdynamics timescale
     ! 1.9 memory of variables for respiration accclimation 
     TYPE(t_jsb_var_real2d)          :: &   
