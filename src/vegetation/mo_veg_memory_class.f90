@@ -1225,7 +1225,7 @@ CONTAINS
       !!  
       CALL jsb_add_var(mem, 'height', mem%height, &
             hgrid, surface, &
-            t_cf('height', '', ''), &
+            t_cf('height', 'm', 'plant height'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1233,7 +1233,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'diameter', mem%diameter, &
             hgrid, surface, &
-            t_cf('diameter', '', ''), &
+            t_cf('diameter', 'm', 'plant diameter'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1241,7 +1241,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'dens_ind', mem%dens_ind, &
             hgrid, surface, &
-            t_cf('dens_ind', '', ''), &
+            t_cf('dens_ind', '# m-2', 'density of individuals'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1249,7 +1249,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'lai', mem%lai, &
             hgrid, surface, &
-            t_cf('lai', '', ''), &
+            t_cf('lai', '', 'actual leaf area index'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1257,7 +1257,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'target_cn_leaf', mem%target_cn_leaf, &
             hgrid, surface, &
-            t_cf('target_cn_leaf', '', ''), &
+            t_cf('target_cn_leaf', '', 'target foliar C:N ratio'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1265,7 +1265,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'target_np_leaf', mem%target_np_leaf, &
             hgrid, surface, &
-            t_cf('target_np_leaf', '', ''), &
+            t_cf('target_np_leaf', '', 'target foliar N:P ratio '), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1273,7 +1273,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'mean_leaf_age', mem%mean_leaf_age, &
             hgrid, surface, &
-            t_cf('mean_leaf_age', '', ''), &
+            t_cf('mean_leaf_age', '', 'average foliage age in days '), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1281,7 +1281,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'cohort_age', mem%cohort_age, &
             hgrid, surface, &
-            t_cf('cohort_age', '', ''), &
+            t_cf('cohort_age', '', 'age of the cohort in years, used with veg_dynamics_scheme cohort'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1289,7 +1289,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'f_n_demand', mem%f_n_demand, &
             hgrid, surface, &
-            t_cf('f_n_demand', '', ''), &
+            t_cf('f_n_demand', '', 'relative plant demand for N'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1297,7 +1297,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'f_p_demand', mem%f_p_demand, &
             hgrid, surface, &
-            t_cf('f_p_demand', '', ''), &
+            t_cf('f_p_demand', '', 'relative plant demand for P'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1305,7 +1305,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'beta_sinklim_ps', mem%beta_sinklim_ps, &
             hgrid, surface, &
-            t_cf('beta_sinklim_ps', '', ''), &
+            t_cf('beta_sinklim_ps', '', 'scaling factor to account for a direct sink limitation contraint on photosynthesis'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1313,7 +1313,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'dphi', mem%dphi, &
             hgrid, surface, &
-            t_cf('dphi', '', ''), &
+            t_cf('dphi', 'MPa', 'plant-soil water potential gradient'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1321,7 +1321,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'growth_req_n', mem%growth_req_n, &
             hgrid, surface, &
-            t_cf('growth_req_n', '', ''), &
+            t_cf('growth_req_n', '', 'moles N required for a unit of C growth under current allocation fractions '), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1329,7 +1329,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'growth_req_p', mem%growth_req_p, &
             hgrid, surface, &
-            t_cf('growth_req_p', '', ''), &
+            t_cf('growth_req_p', '', 'moles P required for a unit of N growth under current allocation fractions '), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1337,7 +1337,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'leaf_cn_direction', mem%leaf_cn_direction, &
             hgrid, surface, &
-            t_cf('leaf_cn_direction', '', ''), &
+            t_cf('leaf_cn_direction', '', 'indicates direction of change in leaf CN ratio to maximise NPP'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1345,7 +1345,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'target_lai', mem%target_lai, &
             hgrid, surface, &
-            t_cf('target_lai', '', ''), &
+            t_cf('target_lai', '', 'LAI implied from sap wood area'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1353,7 +1353,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'kstar_labile', mem%kstar_labile, &
             hgrid, surface, &
-            t_cf('kstar_labile', '', ''), &
+            t_cf('kstar_labile', '', 'labile pool turnover rate assuming only temperature and moisture constraints, no stoichiometry'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1361,7 +1361,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'do_cohort_harvest', mem%do_cohort_harvest, &
             hgrid, surface, &
-            t_cf('do_cohort_harvest', '', ''), &
+            t_cf('do_cohort_harvest', '', 'logical to identify whether the cohort may be harvested, in veg_dynamics_scheme cohort'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1369,7 +1369,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'root_fraction_sl', mem%root_fraction_sl, &
             hgrid, surface, &
-            t_cf('root_fraction_sl', '', ''), &
+            t_cf('root_fraction_sl', '', 'fractions of root per layer'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1377,7 +1377,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'target_cn_fine_root', mem%target_cn_fine_root, &
             hgrid, surface, &
-            t_cf('target_cn_fine_root', '', ''), &
+            t_cf('target_cn_fine_root', '', ' '), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1385,7 +1385,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'target_cn_coarse_root', mem%target_cn_coarse_root, &
             hgrid, surface, &
-            t_cf('target_cn_coarse_root', '', ''), &
+            t_cf('target_cn_coarse_root', '', ' '), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1393,7 +1393,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'target_cn_sap_wood', mem%target_cn_sap_wood, &
             hgrid, surface, &
-            t_cf('target_cn_sap_wood', '', ''), &
+            t_cf('target_cn_sap_wood', '', ' '), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1401,7 +1401,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'target_cn_fruit', mem%target_cn_fruit, &
             hgrid, surface, &
-            t_cf('target_cn_fruit', '', ''), &
+            t_cf('target_cn_fruit', '', ' '), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1409,7 +1409,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'target_np_fine_root', mem%target_np_fine_root, &
             hgrid, surface, &
-            t_cf('target_np_fine_root', '', ''), &
+            t_cf('target_np_fine_root', '', ' '), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1417,7 +1417,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'target_np_coarse_root', mem%target_np_coarse_root, &
             hgrid, surface, &
-            t_cf('target_np_coarse_root', '', ''), &
+            t_cf('target_np_coarse_root', '', ' '), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1425,7 +1425,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'target_np_sap_wood', mem%target_np_sap_wood, &
             hgrid, surface, &
-            t_cf('target_np_sap_wood', '', ''), &
+            t_cf('target_np_sap_wood', '', ' '), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1433,7 +1433,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'target_np_fruit', mem%target_np_fruit, &
             hgrid, surface, &
-            t_cf('target_np_fruit', '', ''), &
+            t_cf('target_np_fruit', '', ' '), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1441,7 +1441,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'leaf_nitrogen_cl', mem%leaf_nitrogen_cl, &
             hgrid, surface, &
-            t_cf('leaf_nitrogen_cl', '', ''), &
+            t_cf('leaf_nitrogen_cl', 'mmol m-2 LAI', 'N in canopy layer'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1449,7 +1449,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'fn_chl_cl', mem%fn_chl_cl, &
             hgrid, surface, &
-            t_cf('fn_chl_cl', '', ''), &
+            t_cf('fn_chl_cl', '', 'fraction of N in chlorophyll, pigments only'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1457,7 +1457,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'fn_et_cl', mem%fn_et_cl, &
             hgrid, surface, &
-            t_cf('fn_et_cl', '', ''), &
+            t_cf('fn_et_cl', '', 'fraction of N in electron transport '), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1465,7 +1465,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'fn_rub_cl', mem%fn_rub_cl, &
             hgrid, surface, &
-            t_cf('fn_rub_cl', '', ''), &
+            t_cf('fn_rub_cl', '', 'fraction of N in Rubisco '), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1473,7 +1473,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'fn_pepc_cl', mem%fn_pepc_cl, &
             hgrid, surface, &
-            t_cf('fn_pepc_cl', '', ''), &
+            t_cf('fn_pepc_cl', '', 'fraction of N in PEP carboylase, C4 plants only'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1481,7 +1481,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'fn_oth_cl', mem%fn_oth_cl, &
             hgrid, surface, &
-            t_cf('fn_oth_cl', '', ''), &
+            t_cf('fn_oth_cl', '', 'fraction of N not associated with photosynthesis '), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1489,7 +1489,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'fleaf_sunlit_cl', mem%fleaf_sunlit_cl, &
             hgrid, surface, &
-            t_cf('fleaf_sunlit_cl', '', ''), &
+            t_cf('fleaf_sunlit_cl', '', 'fraction of layer which is sunlit'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1497,7 +1497,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'lai_cl', mem%lai_cl, &
             hgrid, surface, &
-            t_cf('lai_cl', '', ''), &
+            t_cf('lai_cl', '', 'leaf area in the canopy layer '), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1505,7 +1505,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'cumm_lai_cl', mem%cumm_lai_cl, &
             hgrid, surface, &
-            t_cf('cumm_lai_cl', '', ''), &
+            t_cf('cumm_lai_cl', '', 'cummulative leaf area above the mid-point of the canopy layer '), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1513,7 +1513,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'maint_respiration_pot', mem%maint_respiration_pot, &
             hgrid, surface, &
-            t_cf('maint_respiration_pot', '', ''), &
+            t_cf('maint_respiration_pot', 'µmol CO2 m-2 s-1', 'potential maintenance respiration'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1521,7 +1521,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'maint_respiration', mem%maint_respiration, &
             hgrid, surface, &
-            t_cf('maint_respiration', '', ''), &
+            t_cf('maint_respiration', 'µmol CO2 m-2 s-1', 'maintenance respiration'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1529,7 +1529,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'maint_respiration_c13', mem%maint_respiration_c13, &
             hgrid, surface, &
-            t_cf('maint_respiration_c13', '', ''), &
+            t_cf('maint_respiration_c13', 'µmol 13CO2 m-2 s-1', 'maintenance respiration'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1537,7 +1537,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'maint_respiration_c14', mem%maint_respiration_c14, &
             hgrid, surface, &
-            t_cf('maint_respiration_c14', '', ''), &
+            t_cf('maint_respiration_c14', 'µmol 14CO2 m-2 s-1', 'maintenance respiration'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1545,7 +1545,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'growth_respiration', mem%growth_respiration, &
             hgrid, surface, &
-            t_cf('growth_respiration', '', ''), &
+            t_cf('growth_respiration', 'µmol CO2 m-2 s-1', 'growth respiration'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1553,7 +1553,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'growth_respiration_c13', mem%growth_respiration_c13, &
             hgrid, surface, &
-            t_cf('growth_respiration_c13', '', ''), &
+            t_cf('growth_respiration_c13', 'µmol 13CO2 m-2 s-1', 'growth respiration'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1561,7 +1561,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'growth_respiration_c14', mem%growth_respiration_c14, &
             hgrid, surface, &
-            t_cf('growth_respiration_c14', '', ''), &
+            t_cf('growth_respiration_c14', 'µmol 14CO2 m-2 s-1', 'growth respiration'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1569,7 +1569,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'n_transform_respiration', mem%n_transform_respiration, &
             hgrid, surface, &
-            t_cf('n_transform_respiration', '', ''), &
+            t_cf('n_transform_respiration', 'µmol CO2 m-2 s-1', 'respiration associated with N transformation'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1577,7 +1577,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'n_fixation_respiration', mem%n_fixation_respiration, &
             hgrid, surface, &
-            t_cf('n_fixation_respiration', '', ''), &
+            t_cf('n_fixation_respiration', 'µmol CO2 m-2 s-1', 'respiration associated with N fixation'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1585,7 +1585,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'n_processing_respiration', mem%n_processing_respiration, &
             hgrid, surface, &
-            t_cf('n_processing_respiration', '', ''), &
+            t_cf('n_processing_respiration', 'µmol CO2 m-2 s-1', 'respiration associated with N processing'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1593,7 +1593,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'n_processing_respiration_c13', mem%n_processing_respiration_c13, &
             hgrid, surface, &
-            t_cf('n_processing_respiration_c13', '', ''), &
+            t_cf('n_processing_respiration_c13', 'µmol 13CO2 m-2 s-1', 'respiration associated with N processing'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1601,7 +1601,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'n_processing_respiration_c14', mem%n_processing_respiration_c14, &
             hgrid, surface, &
-            t_cf('n_processing_respiration_c14', '', ''), &
+            t_cf('n_processing_respiration_c14', 'µmol 14CO2 m-2 s-1', 'respiration associated with N processing'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1609,7 +1609,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'npp', mem%npp, &
             hgrid, surface, &
-            t_cf('npp', '', ''), &
+            t_cf('npp', 'µmol CO2 m-2 s-1', 'net primary production'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1617,7 +1617,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'npp_c13', mem%npp_c13, &
             hgrid, surface, &
-            t_cf('npp_c13', '', ''), &
+            t_cf('npp_c13', 'µmol 13CO2 m-2 s-1', 'net primary production'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1625,7 +1625,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'npp_c14', mem%npp_c14, &
             hgrid, surface, &
-            t_cf('npp_c14', '', ''), &
+            t_cf('npp_c14', 'µmol 14CO2 m-2 s-1', 'net primary production'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1633,7 +1633,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'uptake_nh4', mem%uptake_nh4, &
             hgrid, surface, &
-            t_cf('uptake_nh4', '', ''), &
+            t_cf('uptake_nh4', 'µmol N m-2 s-1)', 'NH4 uptake from soil'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1641,7 +1641,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'uptake_nh4_n15', mem%uptake_nh4_n15, &
             hgrid, surface, &
-            t_cf('uptake_nh4_n15', '', ''), &
+            t_cf('uptake_nh4_n15', 'µmol N m-2 s-1', '15NH4 uptake from soil'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1649,7 +1649,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'uptake_no3', mem%uptake_no3, &
             hgrid, surface, &
-            t_cf('uptake_no3', '', ''), &
+            t_cf('uptake_no3', 'µmol N m-2 s-1', 'NO3 uptake from soil'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1657,7 +1657,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'uptake_no3_n15', mem%uptake_no3_n15, &
             hgrid, surface, &
-            t_cf('uptake_no3_n15', '', ''), &
+            t_cf('uptake_no3_n15', 'µmol N m-2 s-1', '15NO3 uptake from soil'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1665,7 +1665,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'uptake_po4', mem%uptake_po4, &
             hgrid, surface, &
-            t_cf('uptake_po4', '', ''), &
+            t_cf('uptake_po4', 'µmol P m-2 s-1)', 'PO4 uptake from soil'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1673,7 +1673,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'n_fixation', mem%n_fixation, &
             hgrid, surface, &
-            t_cf('n_fixation', '', ''), &
+            t_cf('n_fixation', 'µmol N m-2 s-1', 'symbiontic N fixation'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1681,7 +1681,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'n_fixation_n15', mem%n_fixation_n15, &
             hgrid, surface, &
-            t_cf('n_fixation_n15', '', ''), &
+            t_cf('n_fixation_n15', 'µmol 15N m-2 s-1', 'symbiontic N fixation'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1689,7 +1689,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'recycling_leaf_n', mem%recycling_leaf_n, &
             hgrid, surface, &
-            t_cf('recycling_leaf_n', '', ''), &
+            t_cf('recycling_leaf_n', 'mol m-2 timestep-1', 'net flux of N from leaf to labile (senescence and maintenance)'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1697,7 +1697,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'recycling_leaf_n15', mem%recycling_leaf_n15, &
             hgrid, surface, &
-            t_cf('recycling_leaf_n15', '', ''), &
+            t_cf('recycling_leaf_n15', 'mol m-2 timestep-1', 'net flux of 15N from leaf to labile (senescence and maintenance)'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1705,7 +1705,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'recycling_leaf_p', mem%recycling_leaf_p, &
             hgrid, surface, &
-            t_cf('recycling_leaf_p', '', ''), &
+            t_cf('recycling_leaf_p', 'mol m-2 timestep-1', 'net flux of P from leaf to labile (senescence and maintenance)'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1713,7 +1713,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'recycling_fine_root_n', mem%recycling_fine_root_n, &
             hgrid, surface, &
-            t_cf('recycling_fine_root_n', '', ''), &
+            t_cf('recycling_fine_root_n', 'mol m-2 timestep-1', 'net flux of N from fine roots to labile (senescence and maintenance)'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1721,7 +1721,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'recycling_fine_root_n15', mem%recycling_fine_root_n15, &
             hgrid, surface, &
-            t_cf('recycling_fine_root_n15', '', ''), &
+            t_cf('recycling_fine_root_n15', 'mol m-2 timestep-1', 'net flux of 15N from fine roots to labile (senescence and maintenance)'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1729,7 +1729,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'recycling_fine_root_p', mem%recycling_fine_root_p, &
             hgrid, surface, &
-            t_cf('recycling_fine_root_p', '', ''), &
+            t_cf('recycling_fine_root_p', 'mol m-2 timestep-1', 'net flux of P from fine roots to labile (senescence and maintenance)'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1737,7 +1737,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'recycling_heart_wood_n', mem%recycling_heart_wood_n, &
             hgrid, surface, &
-            t_cf('recycling_heart_wood_n', '', ''), &
+            t_cf('recycling_heart_wood_n', 'mol m-2 timestep-1', 'net flux of N from sapwood to labile (senescence and maintenance)'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1745,7 +1745,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'recycling_heart_wood_n15', mem%recycling_heart_wood_n15, &
             hgrid, surface, &
-            t_cf('recycling_heart_wood_n15', '', ''), &
+            t_cf('recycling_heart_wood_n15', 'mol m-2 timestep-1', 'net flux of 15N from sapwood to labile (senescence and maintenance)'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1753,7 +1753,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'recycling_heart_wood_p', mem%recycling_heart_wood_p, &
             hgrid, surface, &
-            t_cf('recycling_heart_wood_p', '', ''), &
+            t_cf('recycling_heart_wood_p', 'mol m-2 timestep-1', 'net flux of P from sapwood to labile (senescence and maintenance)'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1761,7 +1761,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'net_growth', mem%net_growth, &
             hgrid, surface, &
-            t_cf('net_growth', '', ''), &
+            t_cf('net_growth', 'µmol CO2 m-2 s-1', 'npp minus turnover'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1769,7 +1769,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'fmaint_rate', mem%fmaint_rate, &
             hgrid, surface, &
-            t_cf('fmaint_rate', '', ''), &
+            t_cf('fmaint_rate', '~µmol C mol-1 N s-1', 'current N-specific maintentance respiration'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1777,7 +1777,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'unit_npp', mem%unit_npp, &
             hgrid, surface, &
-            t_cf('unit_npp', '', ''), &
+            t_cf('unit_npp', '', 'incremental change in NPP. Needed for optimal allocation'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1785,7 +1785,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'unit_transpiration', mem%unit_transpiration, &
             hgrid, surface, &
-            t_cf('unit_transpiration', '', ''), &
+            t_cf('unit_transpiration', '', 'incremental change in transpiration. Needed for optimal allocation'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1793,7 +1793,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'unit_uptake_n_pot', mem%unit_uptake_n_pot, &
             hgrid, surface, &
-            t_cf('unit_uptake_n_pot', '', ''), &
+            t_cf('unit_uptake_n_pot', '', 'incremental change in potential N uptake per unit root carbon, needed for N uptake calculation '), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1801,7 +1801,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'unit_uptake_p_pot', mem%unit_uptake_p_pot, &
             hgrid, surface, &
-            t_cf('unit_uptake_p_pot', '', ''), &
+            t_cf('unit_uptake_p_pot', '', 'incremental change in potential P uptake per unit root carbon, currently unused '), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1809,7 +1809,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'unit_uptake_n_act', mem%unit_uptake_n_act, &
             hgrid, surface, &
-            t_cf('unit_uptake_n_act', '', ''), &
+            t_cf('unit_uptake_n_act', '', 'incremental change in actual N uptake per unit root carbon, needed for optimal allocation'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1817,7 +1817,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'unit_uptake_p_act', mem%unit_uptake_p_act, &
             hgrid, surface, &
-            t_cf('unit_uptake_p_act', '', ''), &
+            t_cf('unit_uptake_p_act', '', 'incremental change in actual P uptake per unit root carbon, needed for optimal allocation'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1825,7 +1825,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'delta_dens_ind', mem%delta_dens_ind, &
             hgrid, surface, &
-            t_cf('delta_dens_ind', '', ''), &
+            t_cf('delta_dens_ind', '# m-2 timestep-1', 'change in density of individuals'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1833,7 +1833,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'cost_n_uptake_root', mem%cost_n_uptake_root, &
             hgrid, surface, &
-            t_cf('cost_n_uptake_root', '', ''), &
+            t_cf('cost_n_uptake_root', 'mol C mol-1 N', 'actual cost for N uptake by roots'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1841,7 +1841,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'cost_n_fixation', mem%cost_n_fixation, &
             hgrid, surface, &
-            t_cf('cost_n_fixation', '', ''), &
+            t_cf('cost_n_fixation', 'mol C mol-1 N', 'actual cost for N uptake through fixation'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1849,7 +1849,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'mortality_rate', mem%mortality_rate, &
             hgrid, surface, &
-            t_cf('mortality_rate', '', ''), &
+            t_cf('mortality_rate', 'timestep-1', 'background_mort_rate_tree / grass'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1857,7 +1857,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'k1_opt', mem%k1_opt, &
             hgrid, surface, &
-            t_cf('k1_opt', '', ''), &
+            t_cf('k1_opt', '', 'coefficient for optimal leaf:root ratio'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1865,7 +1865,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'k2_opt', mem%k2_opt, &
             hgrid, surface, &
-            t_cf('k2_opt', '', ''), &
+            t_cf('k2_opt', '', 'coefficient for optimal leaf:root ratio'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1873,7 +1873,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'leaf2sapwood_mass_ratio', mem%leaf2sapwood_mass_ratio, &
             hgrid, surface, &
-            t_cf('leaf2sapwood_mass_ratio', '', ''), &
+            t_cf('leaf2sapwood_mass_ratio', '', 'leaf to shoot mass ratio'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1881,7 +1881,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'leaf2root_mass_ratio', mem%leaf2root_mass_ratio, &
             hgrid, surface, &
-            t_cf('leaf2root_mass_ratio', '', ''), &
+            t_cf('leaf2root_mass_ratio', '', 'leaf to root mass ratio'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1889,7 +1889,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'fleaf_sunlit_daytime_cl', mem%fleaf_sunlit_daytime_cl, &
             hgrid, surface, &
-            t_cf('fleaf_sunlit_daytime_cl', '', ''), &
+            t_cf('fleaf_sunlit_daytime_cl', '', 'average of the previous day'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1897,7 +1897,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 't_air_daytime', mem%t_air_daytime, &
             hgrid, surface, &
-            t_cf('t_air_daytime', '', ''), &
+            t_cf('t_air_daytime', '', 'average of the previous day'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1905,7 +1905,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'press_srf_daytime', mem%press_srf_daytime, &
             hgrid, surface, &
-            t_cf('press_srf_daytime', '', ''), &
+            t_cf('press_srf_daytime', '', 'average of the previous day'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1913,7 +1913,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'co2_mixing_ratio_daytime', mem%co2_mixing_ratio_daytime, &
             hgrid, surface, &
-            t_cf('co2_mixing_ratio_daytime', '', ''), &
+            t_cf('co2_mixing_ratio_daytime', '', 'average of the previous day'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1921,7 +1921,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'ga_daytime', mem%ga_daytime, &
             hgrid, surface, &
-            t_cf('ga_daytime', '', ''), &
+            t_cf('ga_daytime', '', 'average of the previous day'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1929,7 +1929,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'beta_sinklim_ps_daytime', mem%beta_sinklim_ps_daytime, &
             hgrid, surface, &
-            t_cf('beta_sinklim_ps_daytime', '', ''), &
+            t_cf('beta_sinklim_ps_daytime', '', 'average of the previous day'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1937,7 +1937,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 't_jmax_opt_daytime', mem%t_jmax_opt_daytime, &
             hgrid, surface, &
-            t_cf('t_jmax_opt_daytime', '', ''), &
+            t_cf('t_jmax_opt_daytime', '', 'average of the previous day'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1945,7 +1945,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'fleaf_sunlit_daytime_dacc_cl', mem%fleaf_sunlit_daytime_dacc_cl, &
             hgrid, surface, &
-            t_cf('fleaf_sunlit_daytime_dacc_cl', '', ''), &
+            t_cf('fleaf_sunlit_daytime_dacc_cl', '', 'value accumulated over current day'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1953,7 +1953,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 't_air_daytime_dacc', mem%t_air_daytime_dacc, &
             hgrid, surface, &
-            t_cf('t_air_daytime_dacc', '', ''), &
+            t_cf('t_air_daytime_dacc', '', 'average of the previous day'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1961,7 +1961,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'press_srf_daytime_dacc', mem%press_srf_daytime_dacc, &
             hgrid, surface, &
-            t_cf('press_srf_daytime_dacc', '', ''), &
+            t_cf('press_srf_daytime_dacc', '', 'average of the previous day'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1969,7 +1969,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'co2_mixing_ratio_daytime_dacc', mem%co2_mixing_ratio_daytime_dacc, &
             hgrid, surface, &
-            t_cf('co2_mixing_ratio_daytime_dacc', '', ''), &
+            t_cf('co2_mixing_ratio_daytime_dacc', '', 'average of the previous day'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1977,7 +1977,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'ga_daytime_dacc', mem%ga_daytime_dacc, &
             hgrid, surface, &
-            t_cf('ga_daytime_dacc', '', ''), &
+            t_cf('ga_daytime_dacc', '', 'average of the previous day'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1985,7 +1985,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'beta_sinklim_ps_daytime_dacc', mem%beta_sinklim_ps_daytime_dacc, &
             hgrid, surface, &
-            t_cf('beta_sinklim_ps_daytime_dacc', '', ''), &
+            t_cf('beta_sinklim_ps_daytime_dacc', '', 'average of the previous day'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1993,7 +1993,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 't_jmax_opt_daytime_dacc', mem%t_jmax_opt_daytime_dacc, &
             hgrid, surface, &
-            t_cf('t_jmax_opt_daytime_dacc', '', ''), &
+            t_cf('t_jmax_opt_daytime_dacc', '', 'value accumulated over current day '), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2001,7 +2001,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'daytime_counter', mem%daytime_counter, &
             hgrid, surface, &
-            t_cf('daytime_counter', '', ''), &
+            t_cf('daytime_counter', '', 'number of timesteps of current day with light available'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2009,7 +2009,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'gpp_tlabile_mavg', mem%gpp_tlabile_mavg, &
             hgrid, surface, &
-            t_cf('gpp_tlabile_mavg', '', ''), &
+            t_cf('gpp_tlabile_mavg', 'µmol m-2 s-1', 'gpp '), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2017,7 +2017,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'maint_respiration_tlabile_mavg', mem%maint_respiration_tlabile_mavg, &
             hgrid, surface, &
-            t_cf('maint_respiration_tlabile_mavg', '', ''), &
+            t_cf('maint_respiration_tlabile_mavg', 'µmol m-2 s-1', 'maintenance respiration'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2025,7 +2025,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'growth_req_n_tlabile_mavg', mem%growth_req_n_tlabile_mavg, &
             hgrid, surface, &
-            t_cf('growth_req_n_tlabile_mavg', '', ''), &
+            t_cf('growth_req_n_tlabile_mavg', '', 'moles N required for a unit of C growth under current allocation fractions'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2033,7 +2033,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'growth_req_p_tlabile_mavg', mem%growth_req_p_tlabile_mavg, &
             hgrid, surface, &
-            t_cf('growth_req_p_tlabile_mavg', '', ''), &
+            t_cf('growth_req_p_tlabile_mavg', '', 'moles P required for a unit of N growth under current allocation fractions'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2041,7 +2041,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 't_air_tphen_mavg', mem%t_air_tphen_mavg, &
             hgrid, surface, &
-            t_cf('t_air_tphen_mavg', '', ''), &
+            t_cf('t_air_tphen_mavg', '', 'air temp mavg for phenology calc'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2049,7 +2049,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'npp_tuptake_mavg', mem%npp_tuptake_mavg, &
             hgrid, surface, &
-            t_cf('npp_tuptake_mavg', '', ''), &
+            t_cf('npp_tuptake_mavg', 'µmol m-2 s-1', 'npp of the last week'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2057,7 +2057,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'demand_uptake_n_tuptake_mavg', mem%demand_uptake_n_tuptake_mavg, &
             hgrid, surface, &
-            t_cf('demand_uptake_n_tuptake_mavg', '', ''), &
+            t_cf('demand_uptake_n_tuptake_mavg', '', 'scalar of Vmax for root N uptake '), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2065,7 +2065,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'demand_uptake_p_tuptake_mavg', mem%demand_uptake_p_tuptake_mavg, &
             hgrid, surface, &
-            t_cf('demand_uptake_p_tuptake_mavg', '', ''), &
+            t_cf('demand_uptake_p_tuptake_mavg', '', 'scalar of Vmax for root P uptake'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2073,7 +2073,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'growth_req_n_tuptake_mavg', mem%growth_req_n_tuptake_mavg, &
             hgrid, surface, &
-            t_cf('growth_req_n_tuptake_mavg', '', ''), &
+            t_cf('growth_req_n_tuptake_mavg', '', 'moles N required for a unit of C growth under current allocation fractions'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2081,7 +2081,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'growth_req_p_tuptake_mavg', mem%growth_req_p_tuptake_mavg, &
             hgrid, surface, &
-            t_cf('growth_req_p_tuptake_mavg', '', ''), &
+            t_cf('growth_req_p_tuptake_mavg', '', 'moles P required for a unit of N growth under current allocation fractions'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2089,7 +2089,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'cost_n_fixation_tuptake_mavg', mem%cost_n_fixation_tuptake_mavg, &
             hgrid, surface, &
-            t_cf('cost_n_fixation_tuptake_mavg', '', ''), &
+            t_cf('cost_n_fixation_tuptake_mavg', 'mol C mol-1 N', 'moving average of N fixation cost'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2097,7 +2097,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'fleaf_sunlit_tfrac_mavg_cl', mem%fleaf_sunlit_tfrac_mavg_cl, &
             hgrid, surface, &
-            t_cf('fleaf_sunlit_tfrac_mavg_cl', '', ''), &
+            t_cf('fleaf_sunlit_tfrac_mavg_cl', '', 'fraction of sunlit leaves'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2105,7 +2105,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 't_air_tfrac_mavg', mem%t_air_tfrac_mavg, &
             hgrid, surface, &
-            t_cf('t_air_tfrac_mavg', '', ''), &
+            t_cf('t_air_tfrac_mavg', '', 'air temp'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2113,7 +2113,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'press_srf_tfrac_mavg', mem%press_srf_tfrac_mavg, &
             hgrid, surface, &
-            t_cf('press_srf_tfrac_mavg', '', ''), &
+            t_cf('press_srf_tfrac_mavg', '', 'air pressure at surface'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2121,7 +2121,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'co2_mixing_ratio_tfrac_mavg', mem%co2_mixing_ratio_tfrac_mavg, &
             hgrid, surface, &
-            t_cf('co2_mixing_ratio_tfrac_mavg', '', ''), &
+            t_cf('co2_mixing_ratio_tfrac_mavg', '', 'co2 mixing ratio of the air'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2129,7 +2129,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'ga_tfrac_mavg', mem%ga_tfrac_mavg, &
             hgrid, surface, &
-            t_cf('ga_tfrac_mavg', '', ''), &
+            t_cf('ga_tfrac_mavg', '', 'aerodynamic resistance'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2137,7 +2137,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'beta_sinklim_ps_tfrac_mavg', mem%beta_sinklim_ps_tfrac_mavg, &
             hgrid, surface, &
-            t_cf('beta_sinklim_ps_tfrac_mavg', '', ''), &
+            t_cf('beta_sinklim_ps_tfrac_mavg', '', 'scaling factor to account for soil moisture constraints on photosynthesis '), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2145,7 +2145,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'fleaf_sunlit_tcnl_mavg_cl', mem%fleaf_sunlit_tcnl_mavg_cl, &
             hgrid, surface, &
-            t_cf('fleaf_sunlit_tcnl_mavg_cl', '', ''), &
+            t_cf('fleaf_sunlit_tcnl_mavg_cl', '', 'fraction of sunlit leaves'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2153,7 +2153,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 't_air_tcnl_mavg', mem%t_air_tcnl_mavg, &
             hgrid, surface, &
-            t_cf('t_air_tcnl_mavg', '', ''), &
+            t_cf('t_air_tcnl_mavg', '', 'air temp'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2161,7 +2161,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'press_srf_tcnl_mavg', mem%press_srf_tcnl_mavg, &
             hgrid, surface, &
-            t_cf('press_srf_tcnl_mavg', '', ''), &
+            t_cf('press_srf_tcnl_mavg', '', 'air pressure at surface'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2169,7 +2169,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'co2_mixing_ratio_tcnl_mavg', mem%co2_mixing_ratio_tcnl_mavg, &
             hgrid, surface, &
-            t_cf('co2_mixing_ratio_tcnl_mavg', '', ''), &
+            t_cf('co2_mixing_ratio_tcnl_mavg', '', 'co2 mixing ratio of the air'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2177,7 +2177,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'ga_tcnl_mavg', mem%ga_tcnl_mavg, &
             hgrid, surface, &
-            t_cf('ga_tcnl_mavg', '', ''), &
+            t_cf('ga_tcnl_mavg', '', 'aerodynamic resistance'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2185,7 +2185,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'beta_sinklim_ps_tcnl_mavg', mem%beta_sinklim_ps_tcnl_mavg, &
             hgrid, surface, &
-            t_cf('beta_sinklim_ps_tcnl_mavg', '', ''), &
+            t_cf('beta_sinklim_ps_tcnl_mavg', '', 'scaling factor to account for soil moisture constraints on conductance'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2193,7 +2193,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'uptake_n_tcnl_mavg', mem%uptake_n_tcnl_mavg, &
             hgrid, surface, &
-            t_cf('uptake_n_tcnl_mavg', '', ''), &
+            t_cf('uptake_n_tcnl_mavg', '', 'root N uptake'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2201,7 +2201,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'growth_cn_tcnl_mavg', mem%growth_cn_tcnl_mavg, &
             hgrid, surface, &
-            t_cf('growth_cn_tcnl_mavg', '', ''), &
+            t_cf('growth_cn_tcnl_mavg', '', 'new growth CN ratio'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2209,7 +2209,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'growth_np_tcnl_mavg', mem%growth_np_tcnl_mavg, &
             hgrid, surface, &
-            t_cf('growth_np_tcnl_mavg', '', ''), &
+            t_cf('growth_np_tcnl_mavg', '', ' '), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2217,7 +2217,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'npp_tcnl_mavg', mem%npp_tcnl_mavg, &
             hgrid, surface, &
-            t_cf('npp_tcnl_mavg', '', ''), &
+            t_cf('npp_tcnl_mavg', '', 'NPP'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2225,7 +2225,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'reserve_nitrogen_tcnl_mavg', mem%reserve_nitrogen_tcnl_mavg, &
             hgrid, surface, &
-            t_cf('reserve_nitrogen_tcnl_mavg', '', ''), &
+            t_cf('reserve_nitrogen_tcnl_mavg', '', ' '), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2233,7 +2233,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'reserve_carbon_tcnl_mavg', mem%reserve_carbon_tcnl_mavg, &
             hgrid, surface, &
-            t_cf('reserve_carbon_tcnl_mavg', '', ''), &
+            t_cf('reserve_carbon_tcnl_mavg', '', ' '), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2241,7 +2241,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'labile_nitrogen_tcnl_mavg', mem%labile_nitrogen_tcnl_mavg, &
             hgrid, surface, &
-            t_cf('labile_nitrogen_tcnl_mavg', '', ''), &
+            t_cf('labile_nitrogen_tcnl_mavg', '', ' '), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2249,7 +2249,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'labile_carbon_tcnl_mavg', mem%labile_carbon_tcnl_mavg, &
             hgrid, surface, &
-            t_cf('labile_carbon_tcnl_mavg', '', ''), &
+            t_cf('labile_carbon_tcnl_mavg', '', ' '), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2257,7 +2257,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'labile_phosphorus_tcnl_mavg', mem%labile_phosphorus_tcnl_mavg, &
             hgrid, surface, &
-            t_cf('labile_phosphorus_tcnl_mavg', '', ''), &
+            t_cf('labile_phosphorus_tcnl_mavg', '', ' '), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2266,7 +2266,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'npp_talloc_mavg', mem%npp_talloc_mavg, &
             hgrid, surface, &
-            t_cf('npp_talloc_mavg', '', ''), &
+            t_cf('npp_talloc_mavg', 'µmol m-2 s-1', 'NPP'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2274,7 +2274,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'n_fixation_talloc_mavg', mem%n_fixation_talloc_mavg, &
             hgrid, surface, &
-            t_cf('n_fixation_talloc_mavg', '', ''), &
+            t_cf('n_fixation_talloc_mavg', '', 'N fixation averaged at the allocation timescale'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2282,7 +2282,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'transpiration_talloc_mavg', mem%transpiration_talloc_mavg, &
             hgrid, surface, &
-            t_cf('transpiration_talloc_mavg', '', ''), &
+            t_cf('transpiration_talloc_mavg', '', 'average transpiration at allocation time-scale'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2290,7 +2290,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'unit_npp_talloc_mavg', mem%unit_npp_talloc_mavg, &
             hgrid, surface, &
-            t_cf('unit_npp_talloc_mavg', '', ''), &
+            t_cf('unit_npp_talloc_mavg', 'µmol C mol-1', 'rate of change in NPP with  increment in leaf mass'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2298,7 +2298,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'unit_transpiration_talloc_mavg', mem%unit_transpiration_talloc_mavg, &
             hgrid, surface, &
-            t_cf('unit_transpiration_talloc_mavg', '', ''), &
+            t_cf('unit_transpiration_talloc_mavg', '', 'rate of tranpiration change per unit LAI change?'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2306,7 +2306,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'unit_uptake_n_talloc_mavg', mem%unit_uptake_n_talloc_mavg, &
             hgrid, surface, &
-            t_cf('unit_uptake_n_talloc_mavg', '', ''), &
+            t_cf('unit_uptake_n_talloc_mavg', 'µmol N mol-1', 'actual rate of N uptkae per unit root'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2314,7 +2314,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'unit_uptake_p_talloc_mavg', mem%unit_uptake_p_talloc_mavg, &
             hgrid, surface, &
-            t_cf('unit_uptake_p_talloc_mavg', '', ''), &
+            t_cf('unit_uptake_p_talloc_mavg', 'µmol P mol-1', 'actual rate of P uptake per unit root'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2322,7 +2322,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'dphi_talloc_mavg', mem%dphi_talloc_mavg, &
             hgrid, surface, &
-            t_cf('dphi_talloc_mavg', '', ''), &
+            t_cf('dphi_talloc_mavg', 'MPa', 'leaf-soil water potential gradient'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2330,7 +2330,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'growth_cn_talloc_mavg', mem%growth_cn_talloc_mavg, &
             hgrid, surface, &
-            t_cf('growth_cn_talloc_mavg', '', ''), &
+            t_cf('growth_cn_talloc_mavg', '', 'plant growth cn ratio, equivalent to 1/growth_req_n'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2338,7 +2338,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'growth_cp_talloc_mavg', mem%growth_cp_talloc_mavg, &
             hgrid, surface, &
-            t_cf('growth_cp_talloc_mavg', '', ''), &
+            t_cf('growth_cp_talloc_mavg', '', 'plant growth cp ratio, equivalent to 1/(growthreq_n*growth_req_p)'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2346,7 +2346,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'labile_carbon_talloc_mavg', mem%labile_carbon_talloc_mavg, &
             hgrid, surface, &
-            t_cf('labile_carbon_talloc_mavg', '', ''), &
+            t_cf('labile_carbon_talloc_mavg', '', 'moving average of labile carbon pool neeeded for allometry calculations'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2354,7 +2354,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'labile_nitrogen_talloc_mavg', mem%labile_nitrogen_talloc_mavg, &
             hgrid, surface, &
-            t_cf('labile_nitrogen_talloc_mavg', '', ''), &
+            t_cf('labile_nitrogen_talloc_mavg', '', 'moving average of labile nitrogen pool neeeded for allometry calculations'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2362,7 +2362,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'labile_phosphorus_talloc_mavg', mem%labile_phosphorus_talloc_mavg, &
             hgrid, surface, &
-            t_cf('labile_phosphorus_talloc_mavg', '', ''), &
+            t_cf('labile_phosphorus_talloc_mavg', '', 'moving average of labile phosphorus pool neeeded for allometry calculations'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2370,7 +2370,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'reserve_carbon_talloc_mavg', mem%reserve_carbon_talloc_mavg, &
             hgrid, surface, &
-            t_cf('reserve_carbon_talloc_mavg', '', ''), &
+            t_cf('reserve_carbon_talloc_mavg', '', 'moving average of reserve carbon needed for optimal allocation'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2378,7 +2378,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'reserve_nitrogen_talloc_mavg', mem%reserve_nitrogen_talloc_mavg, &
             hgrid, surface, &
-            t_cf('reserve_nitrogen_talloc_mavg', '', ''), &
+            t_cf('reserve_nitrogen_talloc_mavg', '', 'moving average of reserve nitrogen needed for optimal allocation'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2386,7 +2386,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'reserve_phosphorus_talloc_mavg', mem%reserve_phosphorus_talloc_mavg, &
             hgrid, surface, &
-            t_cf('reserve_phosphorus_talloc_mavg', '', ''), &
+            t_cf('reserve_phosphorus_talloc_mavg', '', 'moving average of reserve phosphorus needed for optimal allocation'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2394,7 +2394,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'w_root_lim_talloc_mavg', mem%w_root_lim_talloc_mavg, &
             hgrid, surface, &
-            t_cf('w_root_lim_talloc_mavg', '', ''), &
+            t_cf('w_root_lim_talloc_mavg', '', 'moving average of ...'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2402,7 +2402,7 @@ CONTAINS
       
       CALL jsb_add_var(mem, 'leaf2root_troot_mavg', mem%leaf2root_troot_mavg, &
             hgrid, surface, &
-            t_cf('leaf2root_troot_mavg', '', ''), &
+            t_cf('leaf2root_troot_mavg', '', 'leaf to root mass ratio'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2410,7 +2410,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'unit_npp_troot_mavg', mem%unit_npp_troot_mavg, &
             hgrid, surface, &
-            t_cf('unit_npp_troot_mavg', '', ''), &
+            t_cf('unit_npp_troot_mavg', 'µmol C mol-1', 'rate of change in NPP with increment in leaf mass'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2418,7 +2418,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'unit_uptake_n_pot_troot_mavg', mem%unit_uptake_n_pot_troot_mavg, &
             hgrid, surface, &
-            t_cf('unit_uptake_n_pot_troot_mavg', '', ''), &
+            t_cf('unit_uptake_n_pot_troot_mavg', 'µmol N mol-1', 'rate of N uptkae per unit root'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2426,7 +2426,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'unit_uptake_p_pot_troot_mavg', mem%unit_uptake_p_pot_troot_mavg, &
             hgrid, surface, &
-            t_cf('unit_uptake_p_pot_troot_mavg', '', ''), &
+            t_cf('unit_uptake_p_pot_troot_mavg', 'µmol P mol-1', 'rate of P uptake per unit root'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2434,7 +2434,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'fmaint_rate_troot_mavg', mem%fmaint_rate_troot_mavg, &
             hgrid, surface, &
-            t_cf('fmaint_rate_troot_mavg', '', ''), &
+            t_cf('fmaint_rate_troot_mavg', '~µmol C mol-1 N s-1', 'moving average of N-specific maintentance respiration'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2442,7 +2442,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'an_boc_tvegdyn_mavg', mem%an_boc_tvegdyn_mavg, &
             hgrid, surface, &
-            t_cf('an_boc_tvegdyn_mavg', '', ''), &
+            t_cf('an_boc_tvegdyn_mavg', '', 'net photosynthesis at bottom of canopy, lowest canopy layer existing'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2450,7 +2450,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'net_growth_tvegdyn_mavg', mem%net_growth_tvegdyn_mavg, &
             hgrid, surface, &
-            t_cf('net_growth_tvegdyn_mavg', '', ''), &
+            t_cf('net_growth_tvegdyn_mavg', 'µmol C m-2 s-1', 'net growth, npp minus turnover'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2458,7 +2458,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'lai_tvegdyn_mavg', mem%lai_tvegdyn_mavg, &
             hgrid, surface, &
-            t_cf('lai_tvegdyn_mavg', '', ''), &
+            t_cf('lai_tvegdyn_mavg', '', 'lai at vegdynamics timescale'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2466,7 +2466,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 't_air_tacclim_mavg', mem%t_air_tacclim_mavg, &
             hgrid, surface, &
-            t_cf('t_air_tacclim_mavg', '', ''), &
+            t_cf('t_air_tacclim_mavg', '', 'average air temperature for respiration acclimation'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2474,7 +2474,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 't_soil_root_tacclim_mavg', mem%t_soil_root_tacclim_mavg, &
             hgrid, surface, &
-            t_cf('t_soil_root_tacclim_mavg', '', ''), &
+            t_cf('t_soil_root_tacclim_mavg', '', 'average root temperature for respiration acclimation'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2482,7 +2482,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 't_air_week_mavg', mem%t_air_week_mavg, &
             hgrid, surface, &
-            t_cf('t_air_week_mavg', '', ''), &
+            t_cf('t_air_week_mavg', '', 'avrg air temperature across 7 days'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2490,7 +2490,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 't_air_month_mavg', mem%t_air_month_mavg, &
             hgrid, surface, &
-            t_cf('t_air_month_mavg', '', ''), &
+            t_cf('t_air_month_mavg', '', 'avrg air temperature across 30 days'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2498,7 +2498,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 't_jmax_opt_mavg', mem%t_jmax_opt_mavg, &
             hgrid, surface, &
-            t_cf('t_jmax_opt_mavg', '', ''), &
+            t_cf('t_jmax_opt_mavg', '', 'optimim temperature for electron transport of photosynthesis'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
