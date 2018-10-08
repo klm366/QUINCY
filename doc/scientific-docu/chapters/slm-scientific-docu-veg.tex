@@ -330,6 +330,7 @@ $k^{\Phi}_{store}$ & k in storage response function to storage size & \texttt{k\
 \end{tabularx}
 \end{sidewaystable}
 
+
 \begin{sidewaystable}
 \begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
 \hline 
@@ -348,6 +349,53 @@ $\chi_{wood}^{N:P}$ & relative N:P of woody biomass compared to leaves & \texttt
 \hline 
 \end{tabularx}
 \end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline 
+
+\multicolumn{6}{l}{\bf Parameters concerning N uptake calculations (part 1/2)}\\
+\hline
+• & fraction of maximum labile nitrogen concentration at which uptake is reduced to 50\% & \texttt{kappa\_f\_demand\_nc} & • & • & 0.75 & • \\
+• & fraction of maximum labile phosphorus  concentration at which uptake is reduced to 50\% & \texttt{kappa\_f\_demand\_pn} & • & • & 0.9 & • \\
+• & k in nutrient uptake response funktion to labile nutrient concentration & \texttt{k\_f\_demand} & • & • & 2.0 & • \\
+• & maximum cost of N fixation at low and high temperatures & \texttt{cost\_n\_fixation\_max} & mol C $mol^{-1}$ N & • & 20.40812 & • \\
+• & mimumum cost of N fixation at 25 degC & \texttt{cost\_n\_fixation\_min} & mol C $mol^{-1}$ N & • & 9.329426 & • \\
+• & factor in temperature response function of nitrogenase activity & \texttt{k1\_temp\_bnf} & • & • & 1.25 & • \\
+• & factor in temperature response function of nitrogenase activity & \texttt{k2\_temp\_bnf} & • & • & -3.62 & • \\
+• & factor in temperature response function of nitrogenase activity & \texttt{k3\_temp\_bnf} & • & • & 0.27 & • \\
+• & factor in temperature response function of nitrogenase activity & \texttt{k4\_temp\_bnf} & • & • & 50.3 & • \\
+• & N transformation costs of converting NH4 to organic N & \texttt{transform\_cost\_nh4} & mol C $mol^{-1}$ N & • & 1.982503 & • \\
+• & N transformation costs of converting NO3 to organic N & \texttt{transform\_cost\_no3} & mol C $mol^{-1}$ N & • & 2.68221 & • \\
+• & N transformation costs of converting organic N to organic N & \texttt{transform\_cost\_org} & mol C $mol^{-1}$ N & • & 1.166178 & • \\
+%• & • & \texttt{•} & • & • & • & • \\
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|X|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline 
+
+\multicolumn{6}{l}{\bf Parameters concerning N uptake calculations (part 2/2)}\\
+\hline
+• & fraction of NO3 uptake based on transformation costs & \texttt{f\_nacq\_no3} & • & • & 0.575 & • \\
+• & fraction of NH4 uptake based on transformation costs & \texttt{f\_nacq\_nh4} & • & • & 0.425 & • \\
+• & maximum rate of N fixation & \texttt{vmax\_bnf} & $\mu$mol N $mol^{-1}$ C fine root $s^{-1}$ & • & 0.003059011 & • \\
+• & half\_saturating cost of the response of N & \texttt{k\_bnf} & mol C $mol^{-1}$ N & • & 58.30891 & • \\
+• & factor for BNF response in resistance approach & \texttt{offset\_bnf} & mol C $mol^{-1}$ N & • & 14.30901 & • \\
+• & fractionation of N15 due to N fixation & \texttt{eta\_nfixation} & per mill & • & 3.0 & Robinson, Tree 2001 \\
+%• & • & \texttt{•} & • & • & • & • \\
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
 
 \begin{sidewaystable}
 \begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
