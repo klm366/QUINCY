@@ -274,29 +274,29 @@ MODULE mo_sb_memory_class
                                     mycorrhiza_uptake_no3_n15_sl, &  !< mycorrhiza uptake of N15  [mol m-3 s-1] 
                                     mycorrhiza_uptake_norg_sl,    &  !< mycorrhiza uptake of N    [mol m-3 s-1]
                                     mycorrhiza_uptake_norg_n15_sl,&  !< mycorrhiza uptake of N15  [mol m-3 s-1] 
-                                    mycorrhiza_uptake_po4_sl,   &  !< mycorrhiza uptake of P  [mol m-3 s-1] 
-                                    volatilisation_nh4,       &  !< volatilisation of NH4  [µmol m-3 s-1]
-                                    volatilisation_nh4_n15, &    !< volatilisation of 15NH4  [µmol m-3 s-1]
-                                    nitrification_no3, &         !< nitrification NO3 [µmol m-3 s-1]
-                                    nitrification_no3_n15, &     !< nitrification 15NO3 [µmol m-3 s-1]
-                                    nitrification_noy, &         !< nitrification to NOy  [µmol m-3 s-1]
-                                    nitrification_noy_n15, &     !< nitrification to 15NOy  [µmol m-3 s-1]
-                                    nitrification_n2o, &         !< nitrification to N2O [µmol m-3 s-1]
-                                    nitrification_n2o_n15, &     !< nitrification to 15N2O [µmol m-3 s-1]
-                                    denitrification_noy, &       !< nitrification NOy [µmol m-3 s-1]
-                                    denitrification_n2o_n15, &   !< nitrification to 15N2O  [µmol m-3 s-1]
-                                    denitrification_n2o, &       !< nitrification to N2O  [µmol m-3 s-1]
-                                    denitrification_noy_n15, &   !< nitrification 15NOy [µmol m-3 s-1]
-                                    denitrification_n2, &        !< denitrification to N2  [µmol m-3 s1]
-                                    denitrification_n2_n15, &    !< denitrification to 15N2  [µmol m-3 s1]
-                                    asymb_n_fixation, &          !< asymboitic N fixation [µmol m-3 s-1]
-                                    asymb_n_fixation_n15, &      !< asymboitic 15N fixation [µmol m-3 s-1]
-                                    weathering_po4, &            !< phosphorus weathering rate [µmol P/m3/s]
-                                    occlusion_po4, &             !< phosphorus occlusion rate, assoc_slow --> occluded [µmol P/m3/s]
-                                    slow_sorption_po4, &         !< phosphorus desorption rate, assoc_fast <--> assoc_slow [µmol P/m3/s]
-                                    fast_adsorption_po4, &       !< phosphorus adsorption rate, solute <--> assoc_fast [µmol P/m3/s]
-                                    biochem_mineralisation_po4, & !< phosphorus biochemical mineralization rate, [µmol P/m3/s]
-                                    gross_mineralisation_po4     !< phosphorus gross (biological) mineralization rate, [µmol P/m3/s]
+                                    mycorrhiza_uptake_po4_sl,   &    !< mycorrhiza uptake of P  [mol m-3 s-1] 
+                                    volatilisation_nh4,       &      !< volatilisation of NH4  [µmol m-3 s-1]
+                                    volatilisation_nh4_n15, &        !< volatilisation of 15NH4  [µmol m-3 s-1]
+                                    nitrification_no3, &             !< nitrification NO3 [µmol m-3 s-1]
+                                    nitrification_no3_n15, &         !< nitrification 15NO3 [µmol m-3 s-1]
+                                    nitrification_noy, &             !< nitrification to NOy  [µmol m-3 s-1]
+                                    nitrification_noy_n15, &         !< nitrification to 15NOy  [µmol m-3 s-1]
+                                    nitrification_n2o, &             !< nitrification to N2O [µmol m-3 s-1]
+                                    nitrification_n2o_n15, &         !< nitrification to 15N2O [µmol m-3 s-1]
+                                    denitrification_noy, &           !< nitrification NOy [µmol m-3 s-1]
+                                    denitrification_n2o_n15, &       !< nitrification to 15N2O  [µmol m-3 s-1]
+                                    denitrification_n2o, &           !< nitrification to N2O  [µmol m-3 s-1]
+                                    denitrification_noy_n15, &       !< nitrification 15NOy [µmol m-3 s-1]
+                                    denitrification_n2, &            !< denitrification to N2  [µmol m-3 s-1]
+                                    denitrification_n2_n15, &        !< denitrification to 15N2  [µmol m-3 s-1]
+                                    asymb_n_fixation, &              !< asymboitic N fixation [µmol m-3 s-1]
+                                    asymb_n_fixation_n15, &          !< asymboitic 15N fixation [µmol m-3 s-1]
+                                    weathering_po4, &                !< phosphorus weathering rate [µmol m-3 s-1]
+                                    occlusion_po4, &                 !< phosphorus occlusion rate, assoc_slow --> occluded [µmol m-3 s-1]
+                                    slow_sorption_po4, &             !< phosphorus desorption rate, assoc_fast <--> assoc_slow [µmol m-3 s-1]
+                                    fast_adsorption_po4, &           !< phosphorus adsorption rate, solute <--> assoc_fast [µmol m-3 s-1]
+                                    biochem_mineralisation_po4, &    !< phosphorus biochemical mineralization rate [µmol m-3 s-1]
+                                    gross_mineralisation_po4         !< phosphorus gross (biological) mineralization rate [µmol m-3 s-1]
 
     ! 2D transport fluxes for communication with groundwater and atmosphere
     TYPE(t_jsb_var_real2d)          :: & 
@@ -322,16 +322,16 @@ MODULE mo_sb_memory_class
                        
     ! 3D 
     TYPE(t_jsb_var_real3d)          :: &
-                                    qmax_org, &                   !< sorption capacity of dom of mineral soil [kg C kg-1 mineral soil]
-                                    qmax_po4, &                   !< sorption capacity of po4 of mineral soil [mol P m-3 soil]
-                                    km_adsorpt_po4_sl, &          !< half saturation of po4 sorption isotherm [mol P m-3 soil]
-                                    k_bioturb, &                  !< diffusion rate resulting from bioturbation
-                                    bulk_dens_corr_sl, &          !< organic fraction corrected bulk-density of the soil [kg m-3]
-                                    bulk_soil_carbon_sl, &        !< bulk soil density of carbon [kg m-3] 
-                                    particle_fluxrate, &          !< burial rate due to organic matter fall and decay [s-1?] 
-                                    anaerobic_volume_fraction_sl, &  !< anaerobic volume fraction [--]
-                                    microbial_cue_eff, &          !< instantaneous microbial CUE given NP constraints
-                                    microbial_cue_eff_tmic_mavg    !< time-averaged microbial CUE given NP constraints 
+                                    qmax_org, &                       !< sorption capacity of dom of mineral soil [kg C kg-1 mineral soil]
+                                    qmax_po4, &                       !< sorption capacity of po4 of mineral soil [mol P m-3 soil]
+                                    km_adsorpt_po4_sl, &              !< half saturation of po4 sorption isotherm [mol P m-3 soil]
+                                    k_bioturb, &                      !< diffusion rate resulting from bioturbation
+                                    bulk_dens_corr_sl, &              !< organic fraction corrected bulk-density of the soil [kg m-3]
+                                    bulk_soil_carbon_sl, &            !< bulk soil density of carbon [kg m-3] 
+                                    particle_fluxrate, &              !< burial rate due to organic matter fall and decay [s-1?] 
+                                    anaerobic_volume_fraction_sl, &   !< anaerobic volume fraction [--]
+                                    microbial_cue_eff, &              !< instantaneous microbial CUE given NP constraints
+                                    microbial_cue_eff_tmic_mavg       !< time-averaged microbial CUE given NP constraints 
  
 
     ! 3D soil properties
@@ -2025,9 +2025,9 @@ CONTAINS
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL jsb_add_var(mem, 'denitrification_noy_n15', mem%denitrification_noy_n15, &
+      CALL jsb_add_var(mem, 'denitrification_n2o_n15', mem%denitrification_n2o_n15, &
             hgrid, surface, &
-            t_cf('denitrification_noy_n15', '', ''), &
+            t_cf('denitrification_n2o_n15', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2041,9 +2041,9 @@ CONTAINS
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL jsb_add_var(mem, 'denitrification_n2o_n15', mem%denitrification_n2o_n15, &
+      CALL jsb_add_var(mem, 'denitrification_noy_n15', mem%denitrification_noy_n15, &
             hgrid, surface, &
-            t_cf('denitrification_n2o_n15', '', ''), &
+            t_cf('denitrification_noy_n15', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2129,6 +2129,167 @@ CONTAINS
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
+      CALL jsb_add_var(mem, 'leaching_dom_carbon', mem%leaching_dom_carbon, &
+            hgrid, surface, &
+            t_cf('leaching_dom_carbon', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'leaching_dom_nitrogen', mem%leaching_dom_nitrogen, &
+            hgrid, surface, &
+            t_cf('leaching_dom_nitrogen', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'leaching_dom_phosphorus', mem%leaching_dom_phosphorus, &
+            hgrid, surface, &
+            t_cf('leaching_dom_phosphorus', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'leaching_dom_carbon13', mem%leaching_dom_carbon13, &
+            hgrid, surface, &
+            t_cf('leaching_dom_carbon13', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'leaching_dom_carbon14', mem%leaching_dom_carbon14, &
+            hgrid, surface, &
+            t_cf('leaching_dom_carbon14', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'leaching_dom_nitrogen15', mem%leaching_dom_nitrogen15, &
+            hgrid, surface, &
+            t_cf('leaching_dom_nitrogen15', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'leaching_nh4_solute', mem%leaching_nh4_solute, &
+            hgrid, surface, &
+            t_cf('leaching_nh4_solute', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+
+      CALL jsb_add_var(mem, 'leaching_no3_solute', mem%leaching_no3_solute, &
+            hgrid, surface, &
+            t_cf('leaching_no3_solute', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'leaching_po4_solute', mem%leaching_po4_solute, &
+            hgrid, surface, &
+            t_cf('leaching_po4_solute', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'leaching_nh4_n15_solute', mem%leaching_nh4_n15_solute, &
+            hgrid, surface, &
+            t_cf('leaching_nh4_n15_solute', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'leaching_no3_n15_solute', mem%leaching_no3_n15_solute, &
+            hgrid, surface, &
+            t_cf('leaching_no3_n15_solute', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'emission_nh3', mem%emission_nh3, &
+            hgrid, surface, &
+            t_cf('emission_nh3', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'emission_noy', mem%emission_noy, &
+            hgrid, surface, &
+            t_cf('emission_noy', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'emission_n2o', mem%emission_n2o, &
+            hgrid, surface, &
+            t_cf('emission_n2o', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'emission_n2', mem%emission_n2, &
+            hgrid, surface, &
+            t_cf('emission_n2', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'emission_nh3_n15', mem%emission_nh3_n15, &
+            hgrid, surface, &
+            t_cf('emission_nh3_n15', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'emission_noy_n15', mem%emission_noy_n15, &
+            hgrid, surface, &
+            t_cf('emission_noy_n15', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'emission_n2o_n15', mem%emission_n2o_n15, &
+            hgrid, surface, &
+            t_cf('emission_n2o_n15', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'emission_n2_n15', mem%emission_n2_n15, &
+            hgrid, surface, &
+            t_cf('emission_n2_n15', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'qmax_org', mem%qmax_org, &
+            hgrid, surface, &
+            t_cf('qmax_org', '', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
       CALL jsb_add_var(mem, 'qmax_po4', mem%qmax_po4, &
             hgrid, surface, &
             t_cf('qmax_po4', '', ''), &
@@ -2140,14 +2301,6 @@ CONTAINS
       CALL jsb_add_var(mem, 'km_adsorpt_po4_sl', mem%km_adsorpt_po4_sl, &
             hgrid, surface, &
             t_cf('km_adsorpt_po4_sl', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'qmax_org', mem%qmax_org, &
-            hgrid, surface, &
-            t_cf('qmax_org', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2220,158 +2373,6 @@ CONTAINS
       CALL jsb_add_var(mem, 'lithology_class_sl', mem%lithology_class_sl, &
             hgrid, surface, &
             t_cf('lithology_class_sl', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'leaching_dom_carbon', mem%leaching_dom_carbon, &
-            hgrid, surface, &
-            t_cf('leaching_dom_carbon', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'leaching_dom_nitrogen', mem%leaching_dom_nitrogen, &
-            hgrid, surface, &
-            t_cf('leaching_dom_nitrogen', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'leaching_dom_phosphorus', mem%leaching_dom_phosphorus, &
-            hgrid, surface, &
-            t_cf('leaching_dom_phosphorus', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'leaching_dom_carbon13', mem%leaching_dom_carbon13, &
-            hgrid, surface, &
-            t_cf('leaching_dom_carbon13', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'leaching_dom_carbon14', mem%leaching_dom_carbon14, &
-            hgrid, surface, &
-            t_cf('leaching_dom_carbon14', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'leaching_dom_nitrogen15', mem%leaching_dom_nitrogen15, &
-            hgrid, surface, &
-            t_cf('leaching_dom_nitrogen15', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'leaching_nh4_solute', mem%leaching_nh4_solute, &
-            hgrid, surface, &
-            t_cf('leaching_nh4_solute', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'leaching_nh4_n15_solute', mem%leaching_nh4_n15_solute, &
-            hgrid, surface, &
-            t_cf('leaching_nh4_n15_solute', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'leaching_no3_solute', mem%leaching_no3_solute, &
-            hgrid, surface, &
-            t_cf('leaching_no3_solute', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'leaching_no3_n15_solute', mem%leaching_no3_n15_solute, &
-            hgrid, surface, &
-            t_cf('leaching_no3_n15_solute', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'leaching_po4_solute', mem%leaching_po4_solute, &
-            hgrid, surface, &
-            t_cf('leaching_po4_solute', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'emission_nh3', mem%emission_nh3, &
-            hgrid, surface, &
-            t_cf('emission_nh3', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'emission_nh3_n15', mem%emission_nh3_n15, &
-            hgrid, surface, &
-            t_cf('emission_nh3_n15', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'emission_noy', mem%emission_noy, &
-            hgrid, surface, &
-            t_cf('emission_noy', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'emission_noy_n15', mem%emission_noy_n15, &
-            hgrid, surface, &
-            t_cf('emission_noy_n15', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'emission_n2o', mem%emission_n2o, &
-            hgrid, surface, &
-            t_cf('emission_n2o', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'emission_n2o_n15', mem%emission_n2o_n15, &
-            hgrid, surface, &
-            t_cf('emission_n2o_n15', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'emission_n2', mem%emission_n2, &
-            hgrid, surface, &
-            t_cf('emission_n2', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'emission_n2_n15', mem%emission_n2_n15, &
-            hgrid, surface, &
-            t_cf('emission_n2_n15', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
