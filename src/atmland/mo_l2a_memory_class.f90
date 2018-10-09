@@ -13,18 +13,15 @@ MODULE mo_l2a_memory_class
 
   USE mo_kind,                   ONLY: wp
   USE mo_exception,              ONLY: message
+  USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
-  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
-  USE mo_slm_varlist,            ONLY: jsb_add_var   ! replace by mo_jsb_varlist later
+  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d              ! *slmjsb4
+  USE mo_slm_varlist,            ONLY: jsb_add_var   ! replace by mo_jsb_varlist later  *slmtemp
 
-! jsbach4
+! jsbach4 needed for lakes
 !  USE mo_util,              ONLY: One_of
-
-  USE mo_jsb_model_class,   ONLY: t_jsb_model
-  USE mo_jsb_class,         ONLY: Get_model
-!  USE mo_jsb_memory_class,  ONLY: t_jsb_memory
-!  USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d
 !  USE mo_jsb_lct_class,     ONLY: LAKE_TYPE
+
 
   IMPLICIT NONE
   PRIVATE
@@ -32,54 +29,64 @@ MODULE mo_l2a_memory_class
 
   INTEGER, PARAMETER :: max_no_of_vars = 30
 
+
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Type definition for l2a memory
+  !! 
+  !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_memory) :: t_l2a_memory
 
     TYPE(t_jsb_var_real2d) :: &
-                              t_srf                 , &
-                              t_eff_srf             , &
-                              qsat_srf              , &
-                              fact_q_air            , &
-                              fact_qsat_srf         , &
-                              zh_srf                , &
-                              zm_srf                , &
-                              alb_vis_dif           , &
-                              alb_nir_dif           , &
-                              alb_vis_dir           , &
-                              alb_nir_dir           , &
-                              albedo                , &   ! added from SLM, not existent in jsbach4 20160823
-                              sensible_heat_flx     , &   ! added from SLM, not existent in jsbach4 20160823
-                              latent_heat_flx       , &   ! added from SLM, not existent in jsbach4 20160823
-                              ground_heat_flx       , &   ! added from SLM, not existent in jsbach4 20160823
-                              ground_heat_flx_old   , &   ! added from SLM, not existent in jsbach4 20160823
-                              net_radiation         , &   ! added from SLM, not existent in jsbach4 20160823
-                              vpd                   , &   ! added from SLM, not existent in jsbach4 20160823
-                              ! For lakes:
-                              latent_hflx_wtr       , &
-                              sensible_hflx_wtr     , &
-                              latent_hflx_ice       , &
-                              sensible_hflx_ice
+                              t_srf                 , &  !> 
+                              t_eff_srf             , &  !> 
+                              qsat_srf              , &  !> 
+                              fact_q_air            , &  !> 
+                              fact_qsat_srf         , &  !> 
+                              zh_srf                , &  !> 
+                              zm_srf                , &  !> 
+                              alb_vis_dif           , &  !> 
+                              alb_nir_dif           , &  !> 
+                              alb_vis_dir           , &  !> 
+                              alb_nir_dir                !> 
+
+    ! added from SLM, not existent in jsbach4 20160823
+    TYPE(t_jsb_var_real2d) :: &                              
+                              albedo                , &  !>    
+                              sensible_heat_flx     , &  !>    
+                              latent_heat_flx       , &  !>    
+                              ground_heat_flx       , &  !>    
+                              ground_heat_flx_old   , &  !>    
+                              net_radiation         , &  !>    
+                              vpd                        !> 
+
+    ! For lakes
+    TYPE(t_jsb_var_real2d) :: &                              
+                              latent_hflx_wtr       , &  !> 
+                              sensible_hflx_wtr     , &  !> 
+                              latent_hflx_ice       , &  !> 
+                              sensible_hflx_ice          !> 
 
   CONTAINS
     PROCEDURE :: Init => Init_l2a_memory
   END TYPE t_l2a_memory
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_atmland_memory_class'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_l2a_memory_class'
 
 CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
-  !> initialize memory (variables) for: l2a
+  !> initialize l2a process memory variables
   !!
-  !! 
   !! 
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_l2a_memory(mem, prefix, suffix, lct_ids, model_id) ! jsbach4
 
-! jsbach4
 !    USE mo_jsb_varlist,       ONLY: jsb_add_var
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2   ! , tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
 !    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
+    USE mo_jsb_model_class,   ONLY: t_jsb_model
 
     IMPLICIT NONE
     ! ---------------------------
@@ -87,27 +94,28 @@ CONTAINS
     CLASS(t_l2a_memory),   INTENT(inout), TARGET :: mem
     CHARACTER(len=*),      INTENT(in)            :: prefix
     CHARACTER(len=*),      INTENT(in)            :: suffix
-    INTEGER,               INTENT(in)            :: lct_ids
-!    INTEGER,               INTENT(in)            :: lct_ids(:)  ! jsbach4
+    INTEGER,               INTENT(in)            :: lct_ids !(:)    !> in jsbach4: vector of land cover type IDs
     INTEGER,               INTENT(in)            :: model_id
     ! ---------------------------
     ! 0.2 Local
-! jsbach4
-    TYPE(t_jsb_model),       POINTER :: model
-    TYPE(t_jsb_grid),        POINTER :: hgrid
-    TYPE(t_jsb_vgrid),       POINTER :: surface
-    INTEGER                          :: table
+    TYPE(t_jsb_model),      POINTER   :: model 
+    TYPE(t_jsb_grid),       POINTER   :: hgrid 
+    TYPE(t_jsb_vgrid),      POINTER   :: surface  
+    INTEGER                           :: table
+    CHARACTER(len=*),       PARAMETER :: routine = TRIM(modname)//':Init_a2l_memory'
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_l2a_memory'
-
-! jsbach4
     model => Get_model(model_id) 
+
 !    table = tables(1)  
     table = 1
 
 !    hgrid => Get_grid(mem%grid_id) 
 !    surface => Get_vgrid('surface') 
 
+
+    !! allocate variables
+    !! 
+    !! 
     CALL jsb_add_var( mem, 't_srf', mem%t_srf, &
             hgrid, surface, &
             t_cf('t_srf', '', ''), &
@@ -286,7 +294,7 @@ CONTAINS
             prefix, suffix, &
             initval_r=0.0_wp )
 
-!    END IF
+!    END IF   ! IF lakes
 
   END SUBROUTINE Init_l2a_memory
 

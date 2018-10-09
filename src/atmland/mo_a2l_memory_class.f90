@@ -13,18 +13,15 @@ MODULE mo_a2l_memory_class
 
   USE mo_kind,                   ONLY: wp
   USE mo_exception,              ONLY: message
+  USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
-  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
-  USE mo_slm_varlist,            ONLY: jsb_add_var   ! replace by mo_jsb_varlist later
+  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d              ! *slmjsb4
+  USE mo_slm_varlist,            ONLY: jsb_add_var   ! replace by mo_jsb_varlist later  *slmtemp
 
-! jsbach4
+! jsbach4 needed for lakes
 !  USE mo_util,              ONLY: One_of
-
-  USE mo_jsb_model_class,   ONLY: t_jsb_model
-  USE mo_jsb_class,         ONLY: Get_model
-!  USE mo_jsb_memory_class,  ONLY: t_jsb_memory
-!  USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d
 !  USE mo_jsb_lct_class,     ONLY: LAKE_TYPE
+
 
   IMPLICIT NONE
   PRIVATE
@@ -32,56 +29,75 @@ MODULE mo_a2l_memory_class
 
   INTEGER, PARAMETER :: max_no_of_vars = 60
 
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Type definition for a2l memory
+  !! 
+  !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_memory) :: t_a2l_memory
 
     TYPE(t_jsb_var_real2d) :: &
-                              t_air              , &
-                              q_air              , &
-                              rain               , &
-                              snow               , &
-                              wind_air           , &
-                              wind_10m           , &
-                              lw_srf_down        , &
-                              swvis_srf_down     , &
-                              swnir_srf_down     , &
-                              swpar_srf_down     , &
-                              swpar_fdiffuse     , &  ! jsbach4: frac_par_diffuse
-                              press_srf          , &
-                              drag_srf           , &
-                              t_acoef            , &
-                              t_bcoef            , &
-                              q_acoef            , &
-                              q_bcoef            , &
-                              pch                , &
-                              cos_zenith_angle   , &
-!                              CO2_air            , &   ! jsbach4 variables, replaced by co2_mixing_ratio  _c13  _c14
-!                              CO2_air_mol        , &   !
-                              co2_mixing_ratio     , &  ! from SLM, replacing CO2_air and CO2_air_mol from jsbach4
-                              co2_mixing_ratio_C13 , &  ! from SLM, replacing CO2_air and CO2_air_mol from jsbach4
-                              co2_mixing_ratio_C14 , &  ! from SLM, replacing CO2_air and CO2_air_mol from jsbach4
-                              ga                   , &  !> @todo ga in t_a2l_memory: is a variable from SLM, which may be moved elsewhere
-                              nhx_deposition     , &    ! mumol/m2/sec  - new with r507 ticket #175
-                              noy_deposition     , &    ! mumol/m2/sec  - new with r507 ticket #175
-                              nhx_n15_deposition , &    ! mumol/m2/sec 
-                              noy_n15_deposition , &    ! mumol/m2/sec
-                              p_deposition       , &    ! mumol/m2/sec  - new with r... ticket #261
-                              ! For lakes:
-                              albedo_lwtr        , &
-                              drag_wtr           , &
-                              drag_ice           , &
-                              t_acoef_wtr        , &
-                              t_bcoef_wtr        , &
-                              q_acoef_wtr        , &
-                              q_bcoef_wtr        , &
-                              t_acoef_ice        , &
-                              t_bcoef_ice        , &
-                              q_acoef_ice        , &
-                              q_bcoef_ice
+                              t_air                 , &  !>  
+                              q_air                 , &  !>  
+                              rain                  , &  !>  
+                              snow                  , &  !>  
+                              wind_air              , &  !>  
+                              wind_10m              , &  !>  
+                              lw_srf_down           , &  !>  
+                              swvis_srf_down        , &  !>  
+                              swnir_srf_down        , &  !>  
+                              swpar_srf_down        , &  !>  
+                              swpar_fdiffuse        , &  !>  
+                              press_srf             , &  !>  
+                              drag_srf              , &  !>  
+                              t_acoef               , &  !>  
+                              t_bcoef               , &  !>  
+                              q_acoef               , &  !>  
+                              q_bcoef               , &  !>  
+                              pch                   , &  !>  
+                              cos_zenith_angle           !>  
 
+    ! CO2
+    TYPE(t_jsb_var_real2d) :: &
+                              ! jsbach4 variables, replaced by co2_mixing_ratio  _c13  _c14
+                              ! CO2_air               , &  !> 
+                              ! CO2_air_mol           , &  !> 
+                              
+                              ! from SLM, replacing CO2_air and CO2_air_mol from jsbach4
+                              co2_mixing_ratio      , &  !> 
+                              co2_mixing_ratio_C13  , &  !> 
+                              co2_mixing_ratio_C14       !> 
+                              
+    ! ga    @todo  ga in t_a2l_memory is a variable from SLM, which may be moved elsewhere
+    TYPE(t_jsb_var_real2d) :: &
+                              ga                         !>  
+
+    ! Deposition
+    TYPE(t_jsb_var_real2d) :: &                                                            
+                              nhx_deposition        , &  !>                        [mumol m-2 sec-1]
+                              noy_deposition        , &  !>                        [mumol m-2 sec-1]
+                              nhx_n15_deposition    , &  !>                        [mumol m-2 sec-1]
+                              noy_n15_deposition    , &  !>                        [mumol m-2 sec-1]
+                              p_deposition               !>                        [mumol m-2 sec-1]
+
+    ! For lakes
+    TYPE(t_jsb_var_real2d) :: &                              
+                              albedo_lwtr           , &  !> 
+                              drag_wtr              , &  !> 
+                              drag_ice              , &  !> 
+                              t_acoef_wtr           , &  !> 
+                              t_bcoef_wtr           , &  !> 
+                              q_acoef_wtr           , &  !> 
+                              q_bcoef_wtr           , &  !> 
+                              t_acoef_ice           , &  !> 
+                              t_bcoef_ice           , &  !> 
+                              q_acoef_ice           , &  !> 
+                              q_bcoef_ice                !> 
+
+    ! For calculation of the timestep after local midnight (1st timestep of the new day)
     TYPE(t_jsb_var_real2d) :: &
                               prev_one_cos_zenith_angle   , &   ! cos_zenith_angle of the previous timestep
                               prev_two_cos_zenith_angle         ! cos_zenith_angle of the before previous timestep
-
 
   CONTAINS
     PROCEDURE :: Init => Init_a2l_memory
@@ -92,18 +108,18 @@ MODULE mo_a2l_memory_class
 CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
-  !> initialize memory (variables) for: a2l
+  !> initialize a2l process memory variables
   !!
-  !! 
   !! 
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_a2l_memory(mem, prefix, suffix, lct_ids, model_id) ! jsbach4
 
-! jsbach4
 !    USE mo_jsb_varlist,       ONLY: jsb_add_var
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2   ! , tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
 !    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
+    USE mo_jsb_model_class,   ONLY: t_jsb_model
+
 
     ! needed to calc SLM init values:
     USE mo_atmland_constants, ONLY: def_wind, def_co2_deltaC13, def_co2_deltaC14, def_t_air, standard_press_srf, def_vpd, &
@@ -118,8 +134,7 @@ CONTAINS
     CLASS(t_a2l_memory),   INTENT(inout), TARGET :: mem
     CHARACTER(len=*),      INTENT(in)            :: prefix
     CHARACTER(len=*),      INTENT(in)            :: suffix
-    INTEGER,               INTENT(in)            :: lct_ids
-!    INTEGER,               INTENT(in)            :: lct_ids(:)  ! jsbach4
+    INTEGER,               INTENT(in)            :: lct_ids !(:)    !> in jsbach4: vector of land cover type IDs
     INTEGER,               INTENT(in)            :: model_id
     ! ---------------------------
     ! 0.2 Local
@@ -140,16 +155,14 @@ CONTAINS
                 co2_mixing_ratio_init, &
                 co2_mixing_ratio_c13_init, &
                 co2_mixing_ratio_c14_init
-! jsbach4
-    TYPE(t_jsb_model),       POINTER :: model 
-    TYPE(t_jsb_grid),        POINTER :: hgrid 
-    TYPE(t_jsb_vgrid),       POINTER :: surface  
-    INTEGER                          :: table
+    TYPE(t_jsb_model),      POINTER   :: model 
+    TYPE(t_jsb_grid),       POINTER   :: hgrid 
+    TYPE(t_jsb_vgrid),      POINTER   :: surface  
+    INTEGER                           :: table
+    CHARACTER(len=*),       PARAMETER :: routine = TRIM(modname)//':Init_a2l_memory'
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_a2l_memory'
-
-! jsbach4
     model => Get_model(model_id) 
+
 !    table = tables(1)  
     table = 1
 
@@ -516,7 +529,7 @@ CONTAINS
             prefix, suffix, &
             initval_r=0.07_wp )
 
-!    END IF
+!    END IF   ! IF lakes
 
     CALL jsb_add_var( mem, 'prev_one_cos_zenith_angle', mem%prev_one_cos_zenith_angle, &
             hgrid, surface, &
