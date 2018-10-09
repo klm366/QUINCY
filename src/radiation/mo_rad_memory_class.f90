@@ -52,22 +52,22 @@ MODULE mo_rad_memory_class
       & arad_nir_soil            !< radiation in NIR range absorbed by the soil
 
     ! Additional variables for vegetation
-    TYPE(t_jsb_var_real2d)  :: &
-      & alb_vis_can,           & !< Albedo of canopy (without snow cover) in VIS range.
-      & alb_nir_can,           & !< Albedo of canopy (without snow cover) in NIR range. 
-                                 !< If use_alb_canopy=.TRUE. taken from bc_land_phys.nc file, else from lctlib-File (AlbedoCanopyNIR)
-      & arad_vis_can,          & !< radiation in VIS range absorbed by the canopy      
-      & arad_nir_can,          & !< radiation in NIR range absorbed by the canopy
-      & rfr_ratio_boc,         & !< red to far-red ratio at the bottom of the canopy
-      & rfr_ratio_boc_tvegdyn_mavg !< red to far-red ratio at the bottom of the canopy at the time-scale of vegetation dynamics
+    TYPE(t_jsb_var_real2d)  ::      &
+      & alb_vis_can,                & !< Albedo of canopy (without snow cover) in VIS range.
+      & alb_nir_can,                & !< Albedo of canopy (without snow cover) in NIR range. 
+                                      !< If use_alb_canopy=.TRUE. taken from bc_land_phys.nc file, else from lctlib-File (AlbedoCanopyNIR)
+      & arad_vis_can,               & !< radiation in VIS range absorbed by the canopy      
+      & arad_nir_can,               & !< radiation in NIR range absorbed by the canopy
+      & rfr_ratio_boc,              & !< red to far-red ratio at the bottom of the canopy
+      & rfr_ratio_boc_tvegdyn_mavg    !< red to far-red ratio at the bottom of the canopy
 
 
     TYPE(t_jsb_var_real2d)  :: &
                             appfd                           !< absorbed Photosynthetically Active Photon Flux Density
 
     TYPE(t_jsb_var_real3d)  :: &   ! DIMENSION(ncanopy)
-                            ppfd_sunlit_cl              , & !< Photosynthetically Active Photon Flux Density on sunlit leaves (µmol m-2 s-1)
-                            ppfd_shaded_cl              , & !< Photosynthetically Active Photon Flux Density on shaded leaves (µmol m-2 s-1)
+                            ppfd_sunlit_cl              , & !< Photosynthetically Active Photon Flux Density on sunlit leaves [µmol m-2 s-1]
+                            ppfd_shaded_cl              , & !< Photosynthetically Active Photon Flux Density on shaded leaves [µmol m-2 s-1]
                             ppfd_sunlit_daytime_cl      , & !<  average of the previous day
                             ppfd_shaded_daytime_cl      , & !<  average of the previous day
                             ppfd_sunlit_daytime_dacc_cl , & !<  value accumulated over current day
@@ -78,12 +78,12 @@ MODULE mo_rad_memory_class
                             ppfd_shaded_tcnl_mavg_cl        !< Photosynthetically Active Photon Flux Density on shaded leaves
 
     TYPE(t_jsb_var_real3d)  :: &   ! DIMENSION(ncanopy)
-                            arad_sunlit_vis_cl   , &
-                            arad_shaded_vis_cl   , &
-                            fleaf_sunlit_vis_cl  , & 
-                            arad_sunlit_nir_cl   , &
-                            arad_shaded_nir_cl   , &
-                            fleaf_sunlit_nir_cl
+                            arad_sunlit_vis_cl   , & !< 
+                            arad_shaded_vis_cl   , & !< 
+                            fleaf_sunlit_vis_cl  , & !< 
+                            arad_sunlit_nir_cl   , & !< 
+                            arad_shaded_nir_cl   , & !< 
+                            fleaf_sunlit_nir_cl      !< 
 
   CONTAINS
     PROCEDURE :: Init => Init_rad_memory
@@ -96,7 +96,7 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  !> initialize memory (variables) for the process: radiation
+  !> initialize RAD_ process memory variables
   !!
   !! 
   !-----------------------------------------------------------------------------------------------------
@@ -140,7 +140,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'sw_srf_net', mem%sw_srf_net, &
             hgrid, surface, &
-            t_cf('sw_srf_net', '', ''), &
+            t_cf('sw_srf_net', '', 'net shortwave radiation at surface'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -148,7 +148,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'swvis_srf_net', mem%swvis_srf_net, &
             hgrid, surface, &
-            t_cf('swvis_srf_net', '', ''), &
+            t_cf('swvis_srf_net', '', 'net shortwave radiation at surface in visible range'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -156,7 +156,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'swnir_srf_net', mem%swnir_srf_net, &
             hgrid, surface, &
-            t_cf('swnir_srf_net', '', ''), &
+            t_cf('swnir_srf_net', '', 'net shortwave radiation at surface in NIR range'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -164,7 +164,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'lw_srf_net', mem%lw_srf_net, &
             hgrid, surface, &
-            t_cf('lw_srf_net', '', ''), &
+            t_cf('lw_srf_net', '', 'net longwave radiation at surface'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -172,7 +172,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'rad_srf_net', mem%rad_srf_net, &
             hgrid, surface, &
-            t_cf('rad_srf_net', '', ''), &
+            t_cf('rad_srf_net', '', 'net radiation at surface'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -180,7 +180,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'alb_vis', mem%alb_vis, &
             hgrid, surface, &
-            t_cf('alb_vis', '', ''), &
+            t_cf('alb_vis', '', 'Albedo of the whole tile in the VIS (visible) range'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -188,7 +188,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'alb_nir', mem%alb_nir, &
             hgrid, surface, &
-            t_cf('alb_nir', '', ''), &
+            t_cf('alb_nir', '', 'Albedo of the whole tile in the NIR (near-infrared) range'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -196,7 +196,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'alb_vis_snow', mem%alb_vis_snow, &
             hgrid, surface, &
-            t_cf('alb_vis_snow', '', ''), &
+            t_cf('alb_vis_snow', '', 'Albedo of snow in the VIS range'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -204,7 +204,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'alb_nir_snow', mem%alb_nir_snow, &
             hgrid, surface, &
-            t_cf('alb_nir_snow', '', ''), &
+            t_cf('alb_nir_snow', '', 'Albedo of snow in the NIR range'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -212,7 +212,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'alb_vis_soil', mem%alb_vis_soil, &
             hgrid, surface, &
-            t_cf('alb_vis_soil', '', ''), &
+            t_cf('alb_vis_soil', '', 'Albedo in VIS range of soil'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -220,7 +220,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'alb_nir_soil', mem%alb_nir_soil, &
             hgrid, surface, &
-            t_cf('alb_nir_soil', '', ''), &
+            t_cf('alb_nir_soil', '', 'Albedo in VIS range of soil'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -228,7 +228,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'arad_vis_soil', mem%arad_vis_soil, &
             hgrid, surface, &
-            t_cf('arad_vis_soil', '', ''), &
+            t_cf('arad_vis_soil', '', 'radiation in VIS range absorbed by the soil'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -236,7 +236,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'arad_nir_soil', mem%arad_nir_soil, &
             hgrid, surface, &
-            t_cf('arad_nir_soil', '', ''), &
+            t_cf('arad_nir_soil', '', 'radiation in NIR range absorbed by the soil'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -244,7 +244,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'alb_vis_can', mem%alb_vis_can, &
             hgrid, surface, &
-            t_cf('alb_vis_can', '', ''), &
+            t_cf('alb_vis_can', '', 'Albedo of canopy (without snow cover) in VIS range'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -252,7 +252,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'alb_nir_can', mem%alb_nir_can, &
             hgrid, surface, &
-            t_cf('alb_nir_can', '', ''), &
+            t_cf('alb_nir_can', '', 'Albedo of canopy (without snow cover) in NIR range'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -260,7 +260,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'arad_vis_can', mem%arad_vis_can, &
             hgrid, surface, &
-            t_cf('arad_vis_can', '', ''), &
+            t_cf('arad_vis_can', '', 'radiation in VIS range absorbed by the canopy'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -268,15 +268,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'arad_nir_can', mem%arad_nir_can, &
             hgrid, surface, &
-            t_cf('arad_nir_can', '', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'appfd', mem%appfd, &
-            hgrid, surface, &
-            t_cf('appfd', '', ''), &
+            t_cf('arad_nir_can', '', 'radiation in NIR range absorbed by the canopy'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -284,7 +276,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'rfr_ratio_boc', mem%rfr_ratio_boc, &
             hgrid, surface, &
-            t_cf('rfr_ratio_boc', '', ''), &
+            t_cf('rfr_ratio_boc', '', 'red to far-red ratio at the bottom of the canopy'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -292,7 +284,15 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'rfr_ratio_boc_tvegdyn_mavg', mem%rfr_ratio_boc_tvegdyn_mavg, &
             hgrid, surface, &
-            t_cf('rfr_ratio_boc_tvegdyn_mavg', '', ''), &
+            t_cf('rfr_ratio_boc_tvegdyn_mavg', '', 'red to far-red ratio at the bottom of the canopy'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL jsb_add_var(mem, 'appfd', mem%appfd, &
+            hgrid, surface, &
+            t_cf('appfd', '', 'absorbed Photosynthetically Active Photon Flux Density'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -300,7 +300,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'ppfd_sunlit_cl', mem%ppfd_sunlit_cl, &
             hgrid, surface, &
-            t_cf('ppfd_sunlit_cl', '', ''), &
+            t_cf('ppfd_sunlit_cl', 'µmol m-2 s-1', 'Photosynthetically Active Photon Flux Density on sunlit leaves'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -308,7 +308,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'ppfd_shaded_cl', mem%ppfd_shaded_cl, &
             hgrid, surface, &
-            t_cf('ppfd_shaded_cl', '', ''), &
+            t_cf('ppfd_shaded_cl', 'µmol m-2 s-1', 'Photosynthetically Active Photon Flux Density on shaded leaves'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -316,7 +316,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'ppfd_sunlit_daytime_cl', mem%ppfd_sunlit_daytime_cl, &
             hgrid, surface, &
-            t_cf('ppfd_sunlit_daytime_cl', '', ''), &
+            t_cf('ppfd_sunlit_daytime_cl', '', 'average of the previous day'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -324,7 +324,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'ppfd_shaded_daytime_cl', mem%ppfd_shaded_daytime_cl, &
             hgrid, surface, &
-            t_cf('ppfd_shaded_daytime_cl', '', ''), &
+            t_cf('ppfd_shaded_daytime_cl', '', 'average of the previous day'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -332,7 +332,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'ppfd_sunlit_daytime_dacc_cl', mem%ppfd_sunlit_daytime_dacc_cl, &
             hgrid, surface, &
-            t_cf('ppfd_sunlit_daytime_dacc_cl', '', ''), &
+            t_cf('ppfd_sunlit_daytime_dacc_cl', '', 'value accumulated over current day'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -340,7 +340,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'ppfd_shaded_daytime_dacc_cl', mem%ppfd_shaded_daytime_dacc_cl, &
             hgrid, surface, &
-            t_cf('ppfd_shaded_daytime_dacc_cl', '', ''), &
+            t_cf('ppfd_shaded_daytime_dacc_cl', '', 'value accumulated over current day'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -348,7 +348,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'ppfd_sunlit_tfrac_mavg_cl', mem%ppfd_sunlit_tfrac_mavg_cl, &
             hgrid, surface, &
-            t_cf('ppfd_sunlit_tfrac_mavg_cl', '', ''), &
+            t_cf('ppfd_sunlit_tfrac_mavg_cl', '', 'Photosynthetically Active Photon Flux Density on sunlit leaves'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -356,7 +356,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'ppfd_shaded_tfrac_mavg_cl', mem%ppfd_shaded_tfrac_mavg_cl, &
             hgrid, surface, &
-            t_cf('ppfd_shaded_tfrac_mavg_cl', '', ''), &
+            t_cf('ppfd_shaded_tfrac_mavg_cl', '', 'Photosynthetically Active Photon Flux Density on shaded leaves'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -364,7 +364,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'ppfd_sunlit_tcnl_mavg_cl', mem%ppfd_sunlit_tcnl_mavg_cl, &
             hgrid, surface, &
-            t_cf('ppfd_sunlit_tcnl_mavg_cl', '', ''), &
+            t_cf('ppfd_sunlit_tcnl_mavg_cl', '', 'Photosynthetically Active Photon Flux Density on sunlit leaves'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -372,7 +372,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'ppfd_shaded_tcnl_mavg_cl', mem%ppfd_shaded_tcnl_mavg_cl, &
             hgrid, surface, &
-            t_cf('ppfd_shaded_tcnl_mavg_cl', '', ''), &
+            t_cf('ppfd_shaded_tcnl_mavg_cl', '', 'Photosynthetically Active Photon Flux Density on shaded leaves'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
