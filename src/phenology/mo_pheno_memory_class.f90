@@ -39,8 +39,8 @@ MODULE mo_pheno_memory_class
 
 
     TYPE(t_jsb_var_real2d)          :: &
-                                    gdd                 , & !< growing degree days above 5°C
-                                    nd_dormance         , & !< number of days since last growing season 
+                                    gdd                 , & !< growing degree days above 5°C [# days]
+                                    nd_dormance         , & !< number of days since last growing season [# days]
                                     lai_max                 !< maximum lai - from site specific lai data
 
 
@@ -103,7 +103,7 @@ CONTAINS
       !!  
       CALL jsb_add_var(mem, 'growing_season', mem%growing_season, &
             hgrid, surface, &
-            t_cf('growing_season', '', ''), &
+            t_cf('growing_season', '', 'logical to identify whether the plant is in the growing season'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -111,7 +111,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'gdd', mem%gdd, &
             hgrid, surface, &
-            t_cf('gdd', '', ''), &
+            t_cf('gdd', '# days', 'growing degree days above 5 degC'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -119,7 +119,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'nd_dormance', mem%nd_dormance, &
             hgrid, surface, &
-            t_cf('nd_dormance', '', ''), &
+            t_cf('nd_dormance', '# days', 'number of days since last growing season'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -127,7 +127,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'lai_max', mem%lai_max, &
             hgrid, surface, &
-            t_cf('lai_max', '', ''), &
+            t_cf('lai_max', '', 'maximum lai (site specific)'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
