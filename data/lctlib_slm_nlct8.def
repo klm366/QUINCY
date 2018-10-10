@@ -89,11 +89,11 @@ cn_leaf 16.89 13.73 21.32 21.32 12.09 19.37 17.84 14.14
         
 #cn_leaf_min: Minimum leaf N for dynamic stoichiometry  (mgN/gDW)        
 # Tuned from OCN        
-cn_leaf_min 10.56 10.56 10.56 10.56 6.42 10.56 10.56 10.56
+cn_leaf_min 35.0 35.0 35.0 35.0 20.0 30.0 35.0 28.0
         
 #cn_leaf_max: Maximum leaf N for dynamic stoichiometry  (mgN/gDW)        
 # Tuned from OCN        
-cn_leaf_max 30.0 30.0 30.0 30.0 17.0 30.0 30.0 30.0
+cn_leaf_max 12.4 12.4 12.4 12.4 7.4 15.5 12.0 10.0
         
 #np_leaf: default leaf phosphorus concentration (mgP/gDW)          
 # From Kattge et al. 2011, Table 5, converted internally from phosphorus concentration (mg/gDW) to NP mol N / mol P        
@@ -101,11 +101,11 @@ np_leaf 0.86 0.84 1.44 1.44 1.23 1.83 1.43 1.36
         
 #np_leaf_min: minimum leaf phosphorus concentration (mgP/gDW)        
 # Set to 0.5 of fixed np_leaf value, converted internally from phosphorus concentration (mg/gDW) to NP mol N / mol P        
-np_leaf_min 0.43 0.42 0.72 0.72 0.62 0.92 0.72 0.68
+np_leaf_min 1.29 1.26 2.16 2.16 1.85 2.75 2.15 2.04
         
 #np_leaf_max: maximum leaf phosphorus concentration (mgP/gDW)        
 # Set to 1.5 of fixed np_leaf value, converted internally from phosphorus concentration (mg/gDW) to NP mol N / mol P        
-np_leaf_max 1.29 1.26 2.16 2.16 1.85 2.75 2.15 2.04
+np_leaf_max 0.43 0.42 0.72 0.72 0.62 0.92 0.72 0.68
         
 #k0_fn_struc: fraction of leaf N not used for photosynthesis (Friend 1997)        
 # temporarily tuned to match Amax/N in Kattge etal. 2012, Table 5        
