@@ -55,7 +55,7 @@ CONTAINS
   !! creates model and grid \n 
   !! runs init_model_common() for all other init and config tasks
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE init_model_standalone(nproca, nprocb, npedim, model_id, l_forcing, nsoil_sb, iblk, ics, ice, nc, model_name)
+  SUBROUTINE init_model_standalone(nproca, nprocb, npedim, model_id, l_forcing, nsoil_sb, iblk, nproma, ics, ice, nc, model_name)
 
     USE mo_jsb_grid_class,   ONLY: t_jsb_grid, new_grid
     USE mo_jsb_grid,         ONLY: Register_grid
@@ -68,7 +68,11 @@ CONTAINS
     LOGICAL,INTENT(out)                    :: l_forcing            !< IF .TRUE. THEN update_forcing(), update_a2l(), update_l2a()
     INTEGER,INTENT(out)                    :: nsoil_sb             !< number of soil layers used in SB_ - equal to nsoil_water
                                                                    !!  necessary for open_pool_output_files() & init_output_writing_pool()
-    INTEGER,INTENT(in)                     :: iblk, ics, ice, nc   !< block number and chunk size
+    INTEGER,INTENT(in)                     :: iblk                 !< block number
+    INTEGER,INTENT(in)                     :: nproma               !< number of points in the chunk (each with same latitude); multiple chunks per block
+    INTEGER,INTENT(in)                     :: ics                  !< start number of point in the chunk, the model currently works on
+    INTEGER,INTENT(in)                     :: ice                  !< last  number of point in the chunk, the model currently works on
+    INTEGER,INTENT(in)                     :: nc                   !< number of points the model currently works on: ics+ice-1
     CHARACTER(len=*), OPTIONAL, INTENT(in) :: model_name
     ! ---------------------------
     ! 0.2 Local
@@ -98,7 +102,7 @@ CONTAINS
 
     !> 3.0 run model init and config
     !! 
-    CALL init_model_common(model, l_forcing, nsoil_sb, iblk, ics, ice, nc, model_id)
+    CALL init_model_common(model, l_forcing, nsoil_sb, iblk, nproma, ics, ice, nc, model_id)
     ! delete local pointer 
     NULLIFY(model)
   END SUBROUTINE init_model_standalone
@@ -109,7 +113,7 @@ CONTAINS
   !! 
   !! subtask of init_model_standalone() \n 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE init_model_common(model, l_forcing, nsoil_sb, iblk, ics, ice, nc, model_id)
+  SUBROUTINE init_model_common(model, l_forcing, nsoil_sb, iblk, nproma, ics, ice, nc, model_id)
 
     ! base
     USE mo_jsb_process_factory,   ONLY: max_no_of_processes, Create_process
@@ -159,7 +163,8 @@ CONTAINS
     LOGICAL,INTENT(out)                       :: l_forcing            !< IF .TRUE. THEN update_forcing(), update_a2l(), update_l2a()
     INTEGER,INTENT(out)                       :: nsoil_sb             !< number of soil layers used in SB_ - equal to nsoil_water
                                                                       !!  necessary for open_pool_output_files() & init_output_writing_pool()
-    INTEGER,INTENT(in)                        :: iblk, ics, ice, nc   !< *slmtmp iBlock, iChunkStart, iChunkEnd, number of chunks
+    INTEGER,INTENT(in)                        :: iblk, nproma         !< block number, number of points per chunk   *slmtmp
+    INTEGER,INTENT(in)                        :: ics, ice, nc         !< first & last & number of points in the chunk the model currently works on  *slmtmp
     INTEGER,INTENT(in)                        :: model_id
     ! ---------------------------
     ! 0.2 Local
@@ -220,11 +225,12 @@ CONTAINS
     !> 3.0 model init 
     !! 
     model%options%dtime        = model%config%dtime ! length of one time step
-    model%options%steplen      = model%config%dtime ! ..
-    model%options%iblk         = iblk               ! Number of current chunk that consists of multiple grid boxes
-    model%options%ics          = ics                ! Index of chunk start
-    model%options%ice          = ice                ! Index of chunk end
-    model%options%nc           = nc                 ! Length of chunk  (end-number - start-number + 1)
+    model%options%steplen      = model%config%dtime ! 
+    model%options%iblk         = iblk               ! 
+    model%options%nproma       = nproma             ! 
+    model%options%ics          = ics                ! 
+    model%options%ice          = ice                ! 
+    model%options%nc           = nc                 ! 
     model%options%nsoil_energy = dsl4jsb_Config(SSE_)%nsoil_energy  ! number of soil layers for soil energy calculations
     model%options%nsoil_water  = dsl4jsb_Config(SSE_)%nsoil_water   ! number of soil layers for soil moisture calculations
     model%options%nsoil_sb     = dsl4jsb_Config(SSE_)%nsoil_water   ! number of soil layers used in SB_ - equals nsoil_water

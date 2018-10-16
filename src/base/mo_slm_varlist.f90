@@ -227,15 +227,16 @@ CONTAINS
     ! 0.2 Local
     INTEGER                       :: pos_of_var
     TYPE(t_jsb_model), POINTER    :: model
-    INTEGER                       :: ice, ics, iblk   ! *slmtemp
+    INTEGER                       :: ice, ics, nproma, iblk   ! *slmtemp
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_struct_element_real2d'
 
-    model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
-    ice  = model%options%ice    ! *slmtemp
-    ics  = model%options%ics    ! *slmtemp
-    iblk = model%options%iblk   ! *slmtemp
+    model   => Get_model(1)        ! model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
+    ice     = model%options%ice    ! *slmtemp
+    ics     = model%options%ics    ! *slmtemp
+    nproma  = model%options%nproma ! *slmtemp
+    iblk    = model%options%iblk   ! *slmtemp
 
-    ALLOCATE(var%field(ics:ice,iblk,1,1,1))
+    ALLOCATE(var%field(nproma,iblk,1,1,1))
     var%ptr => var%field(:,:,1,1,1)
 
     var%name = TRIM(name)
@@ -258,7 +259,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   !> add 3D variable to struct or l2_struct
   !!
-  !!  t_jsb_struct:struct <- t_jsb_var_real2d:var
+  !!  t_jsb_struct:struct <- t_jsb_var_real3d:var
   !!    
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE slm_add_struct_element_r3d( &
@@ -289,17 +290,18 @@ CONTAINS
     ! 0.2 Local
     INTEGER                       :: pos_of_var
     TYPE(t_jsb_model), POINTER    :: model
-    INTEGER                       :: ice, ics, iblk   ! *slmtemp
-    INTEGER                       :: nlevel           ! number of levels at Z-Axis (canopy & soil)
+    INTEGER                       :: ice, ics, nproma, iblk   ! *slmtemp
+    INTEGER                       :: nlevel                   ! number of levels at Z-Axis (canopy & soil)
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_struct_element_r3d'
 
     dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_config(SSE_)
 
-    model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
-    ice  = model%options%ice    ! *slmtemp
-    ics  = model%options%ics    ! *slmtemp
-    iblk = model%options%iblk   ! *slmtemp
+    model   => Get_model(1)        ! model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
+    ice     = model%options%ice    ! *slmtemp
+    ics     = model%options%ics    ! *slmtemp
+    nproma  = model%options%nproma ! *slmtemp
+    iblk    = model%options%iblk   ! *slmtemp
 
     dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_config(SSE_)
@@ -316,7 +318,7 @@ CONTAINS
         CALL finish(TRIM(routine), 'A variable that is not in memory of soil, sb, veg, rad, assimi, pheno aims beeing 3D, '//TRIM(name))
     END SELECT
 
-    ALLOCATE(var%field(ics:ice,1:nlevel,iblk,1,1))
+    ALLOCATE(var%field(nproma,nlevel,iblk,1,1))
     var%ptr => var%field(:,:,:,1,1)
     
     var%name = TRIM(name)
@@ -371,15 +373,16 @@ CONTAINS
     ! 0.2 Local
     INTEGER                       :: pos_of_var
     TYPE(t_jsb_model), POINTER    :: model
-    INTEGER                       :: ice, ics, iblk   ! *slmtemp
+    INTEGER                       :: ice, ics, nproma, iblk   ! *slmtemp
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_var_list_element_r2d'
 
-    model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
-    ice  = model%options%ice    ! *slmtemp
-    ics  = model%options%ics    ! *slmtemp
-    iblk = model%options%iblk   ! *slmtemp
+    model   => Get_model(1)        ! model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
+    ice     = model%options%ice    ! *slmtemp
+    ics     = model%options%ics    ! *slmtemp
+    nproma  = model%options%nproma ! *slmtemp
+    iblk    = model%options%iblk   ! *slmtemp
 
-    ALLOCATE(var%field(ics:ice,iblk,1,1,1))
+    ALLOCATE(var%field(nproma,iblk,1,1,1))
     var%ptr => var%field(:,:,1,1,1)
 
     var%name = TRIM(name)
@@ -436,17 +439,18 @@ CONTAINS
     ! 0.2 Local
     INTEGER                       :: pos_of_var
     TYPE(t_jsb_model), POINTER    :: model
-    INTEGER                       :: ice, ics, iblk   ! *slmtemp
-    INTEGER                       :: nlevel           ! number of levels at Z-Axis (canopy & soil)
+    INTEGER                       :: ice, ics, nproma, iblk   ! *slmtemp
+    INTEGER                       :: nlevel                   ! number of levels at Z-Axis (canopy & soil)
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_var_list_element_r3d'
 
     dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_config(SSE_)
 
-    model => Get_model(1)  !     model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
-    ice  = model%options%ice    ! *slmtemp
-    ics  = model%options%ics    ! *slmtemp
-    iblk = model%options%iblk   ! *slmtemp
+    model   => Get_model(1)        ! model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
+    ice     = model%options%ice    ! *slmtemp
+    ics     = model%options%ics    ! *slmtemp
+    nproma  = model%options%nproma ! *slmtemp
+    iblk    = model%options%iblk   ! *slmtemp
 
     dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_config(SSE_)
@@ -472,7 +476,7 @@ CONTAINS
       !   nlevel = dsl4jsb_Config(ASSIMI_)%ncanopy
     END SELECT
 
-    ALLOCATE(var%field(ics:ice,1:nlevel,iblk,1,1))
+    ALLOCATE(var%field(nproma,nlevel,iblk,1,1))
     var%ptr => var%field(:,:,:,1,1)
 
     var%name = TRIM(name)

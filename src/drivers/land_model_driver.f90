@@ -48,8 +48,8 @@ PROGRAM land_model_driver
   !! 
   LOGICAL       :: l_forcing                          ! IF .TRUE. THEN run forcing routines (e.g. update_forcing(), update_a2l(), update_l2a())
   INTEGER       :: transient_spinup_itimestep_period  ! count the number of timesteps covering one repeated spinup period
-  INTEGER       :: iblk, ics, ice, nc   !< *slmtmp may be an input from JSBACH4 later in SLM dev
-  INTEGER       :: nsoil_sb             !< necessary for open_pool_output_files() & init_output_writing_pool()
+  INTEGER       :: iblk, nproma, ics, ice, nc         !< *slmtmp may be an input from JSBACH4 later in SLM dev
+  INTEGER       :: nsoil_sb                           !< necessary for open_pool_output_files() & init_output_writing_pool()
                                                         !!  number of soil layers used in SB_ - equal to nsoil_water
   INTEGER       :: nproca                             ! number of processors for jsbach
   INTEGER       :: nprocb                             ! has to be one
@@ -140,8 +140,9 @@ PROGRAM land_model_driver
   npedim   = -1
   model_id = 1
   iblk     = 1
-  ics      = 1
-  ice      = 1
+  nproma   = 1      ! note: nproma may not be smaller than ice; this is differently in jsbach4, and only a restriction to SLM !
+  ics      = 1      ! 
+  ice      = 1      ! note: ice must be smaller or equal to nproma; this is differently in jsbach4, and only a restriction to SLM !
   nc       = ice - ics + 1                 ! (end-number - start-number + 1)
   nsoil_sb = -1                            ! namelist parameter
 
@@ -149,7 +150,7 @@ PROGRAM land_model_driver
   CALL init_base() 
   
   !! 1.3  model init
-  CALL init_model(nproca, nprocb, npedim, model_id, l_forcing, nsoil_sb, iblk, ics, ice, nc)
+  CALL init_model(nproca, nprocb, npedim, model_id, l_forcing, nsoil_sb, iblk, nproma, ics, ice, nc)
 
   !! 1.4  get model and tile
   model => get_model(model_id)

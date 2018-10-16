@@ -26,9 +26,10 @@ MODULE mo_jsb_task_class
     REAL(wp) :: dtime   = -1._wp  !< length of one time step
     REAL(wp) :: steplen = -1._wp  !< ...
     INTEGER  :: iblk    = -1      !< Number of current block (chunk)
-    INTEGER  :: ics     = -1      !< Index of chunk start
-    INTEGER  :: ice     = -1      !< Index of chunk end
-    INTEGER  :: nc      = -1      !< Length of chunk; nc = ice - ics + 1
+    INTEGER  :: nproma  = -1      !< number of points per chunk
+    INTEGER  :: ics     = -1      !< first point in the chunk the model currently works on
+    INTEGER  :: ice     = -1      !< last  point in the chunk the model currently works on
+    INTEGER  :: nc      = -1      !< nc = ice - ics + 1
     INTEGER  :: nsoil_energy = -1 !< number of soil layers for soil energy calculations
     INTEGER  :: nsoil_water  = -1 !< number of soil layers for soil moisture calculations
     INTEGER  :: nsoil_sb     = -1 !< currently this value equals nsoil_water
