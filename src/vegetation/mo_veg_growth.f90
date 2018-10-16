@@ -58,13 +58,11 @@ CONTAINS
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4slm_Use_memory_a_veg
-    USE mo_veg_memory_class,        ONLY: veg_pool, veg_growth, veg_falloc, veg_exudation, veg_reserve_use
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
-    dsl4jsb_Use_memory(SSE_)       !  USE mo_sse_memory_class,     ONLY: t_sse_memory
+    dsl4jsb_Use_memory(SSE_)        !  USE mo_sse_memory_class,      ONLY: t_sse_memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
     dsl4slm_Use_memory_a_sb
-    USE mo_sb_memory_class,         ONLY: sb_pool, sb_mycorrhiza_export
 
     IMPLICIT NONE
     ! ---------------------------
@@ -241,6 +239,22 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: fn_pepc_cl
     dsl4jsb_Real3D_onChunk      :: fn_oth_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tcnl_mavg_cl
+    ! Declare pool structures in memory
+#define Def_veg_pool
+#define Def_veg_growth
+#define Def_veg_falloc
+#define Def_veg_exudation
+#define Def_veg_reserve_use
+#define Def_sb_pool
+#define Def_sb_mycorrhiza_export
+#include "slm_pools_alloc_incl.f90"
+#undef Def_veg_pool
+#undef Def_veg_growth
+#undef Def_veg_falloc
+#undef Def_veg_exudation
+#undef Def_veg_reserve_use
+#undef Def_sb_pool
+#undef Def_sb_mycorrhiza_export
     ! Get local variables from options argument
     iblk      = options%iblk
     ics       = options%ics
@@ -418,7 +432,7 @@ CONTAINS
 #define Get_veg_reserve_use
 #define Get_sb_pool
 #define Get_sb_mycorrhiza_export
-#include "slm_pools_a_incl.f90"
+#include "slm_pools_alloc_incl.f90"
 #undef Get_veg_pool
 #undef Get_veg_growth
 #undef Get_veg_falloc
@@ -797,7 +811,7 @@ CONTAINS
 #define Passback_veg_reserve_use
 #define Passback_sb_pool
 #define Passback_sb_mycorrhiza_export
-#include "slm_pools_a_incl.f90"
+#include "slm_pools_alloc_incl.f90"
 #undef Passback_veg_pool
 #undef Passback_veg_growth
 #undef Passback_veg_falloc
