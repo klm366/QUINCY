@@ -31,59 +31,54 @@ MODULE mo_rad_memory_class
   TYPE, EXTENDS(t_jsb_memory) :: t_rad_memory
 
     TYPE(t_jsb_var_real2d)  :: &
-      & sw_srf_net,            & !< net shortwave radiation at surface
-      & swvis_srf_net,         & !< net shortwave radiation at surface in visible range
-      & swnir_srf_net,         & !< net shortwave radiation at surface in NIR range
-      & lw_srf_net,            & !< net longwave radiation at surface
-      & rad_srf_net              !< net radiation at surface
+      & sw_srf_net,            & !< net shortwave radiation at surface (W m-2)
+      & swvis_srf_net,         & !< net shortwave radiation at surface in visible range (W m-2)
+      & swnir_srf_net,         & !< net shortwave radiation at surface in NIR range (W m-2)
+      & lw_srf_net,            & !< net longwave radiation at surface (W m-2)
+      & rad_srf_net              !< net radiation at surface (W m-2)
 
     TYPE(t_jsb_var_real2d)  :: & 
-      & alb_vis,               & !< Albedo of the whole tile in the VIS (visible) range
-      & alb_nir,               & !< Albedo of the whole tile in the NIR (near-infrared) range
-      & alb_vis_snow,          & !< Albedo of snow in the VIS range
-      & alb_nir_snow             !< Albedo of snow in the NIR range                               
+      & alb_vis,               & !< Albedo of the whole tile in the VIS (visible) range ()
+      & alb_nir,               & !< Albedo of the whole tile in the NIR (near-infrared) range ()
+      & alb_vis_snow,          & !< Albedo of snow in the VIS range ()
+      & alb_nir_snow             !< Albedo of snow in the NIR range ()                            
 
     ! Additional variables for soil
     TYPE(t_jsb_var_real2d)  :: &
-      & alb_vis_soil,          & !< Albedo in VIS range of soil
-                                 ! Initialized from default:
-      & alb_nir_soil,          & !< Albedo in VIS range of soil
-      & arad_vis_soil,         & !< radiation in VIS range absorbed by the soil
-      & arad_nir_soil            !< radiation in NIR range absorbed by the soil
+      & alb_vis_soil,          & !< Albedo in VIS range of soil ()
+      & alb_nir_soil,          & !< Albedo in VIS range of soil ()
+      & arad_vis_soil,         & !< radiation in VIS range absorbed by the soil (W m-2)
+      & arad_nir_soil            !< radiation in NIR range absorbed by the soil (W m-2)
 
     ! Additional variables for vegetation
     TYPE(t_jsb_var_real2d)  ::      &
-      & alb_vis_can,                & !< Albedo of canopy (without snow cover) in VIS range.
-      & alb_nir_can,                & !< Albedo of canopy (without snow cover) in NIR range. 
-                                      !< If use_alb_canopy=.TRUE. taken from bc_land_phys.nc file, else from lctlib-File (AlbedoCanopyNIR)
-      & arad_vis_can,               & !< radiation in VIS range absorbed by the canopy      
-      & arad_nir_can,               & !< radiation in NIR range absorbed by the canopy
-      & rfr_ratio_boc,              & !< red to far-red ratio at the bottom of the canopy
-      & rfr_ratio_boc_tvegdyn_mavg    !< red to far-red ratio at the bottom of the canopy
-
-
-    TYPE(t_jsb_var_real2d)  :: &
-                            appfd                           !< absorbed Photosynthetically Active Photon Flux Density
+      & alb_vis_can,                & !< Albedo of canopy (without snow cover) in VIS range. ()
+      & alb_nir_can,                & !< Albedo of canopy (without snow cover) in NIR range. ()
+      & arad_vis_can,               & !< radiation in VIS range absorbed by the canopy (W m-2) 
+      & arad_nir_can,               & !< radiation in NIR range absorbed by the canopy (W m-2)
+      & appfd,                      & !< absorbed Photosynthetically Active Photon Flux Density (µmol m-2 s-1)
+      & rfr_ratio_boc,              & !< red to far-red ratio at the bottom of the canopy ()
+      & rfr_ratio_boc_tvegdyn_mavg    !< red to far-red ratio at the bottom of the canopy ()
 
     TYPE(t_jsb_var_real3d)  :: &   ! DIMENSION(ncanopy)
                             ppfd_sunlit_cl              , & !< Photosynthetically Active Photon Flux Density on sunlit leaves [µmol m-2 s-1]
                             ppfd_shaded_cl              , & !< Photosynthetically Active Photon Flux Density on shaded leaves [µmol m-2 s-1]
-                            ppfd_sunlit_daytime_cl      , & !<  average of the previous day
-                            ppfd_shaded_daytime_cl      , & !<  average of the previous day
-                            ppfd_sunlit_daytime_dacc_cl , & !<  value accumulated over current day
-                            ppfd_shaded_daytime_dacc_cl , & !<  value accumulated over current day
-                            ppfd_sunlit_tfrac_mavg_cl   , & !< Photosynthetically Active Photon Flux Density on sunlit leaves
-                            ppfd_shaded_tfrac_mavg_cl   , & !< Photosynthetically Active Photon Flux Density on shaded leaves
-                            ppfd_sunlit_tcnl_mavg_cl    , & !< Photosynthetically Active Photon Flux Density on sunlit leaves
-                            ppfd_shaded_tcnl_mavg_cl        !< Photosynthetically Active Photon Flux Density on shaded leaves
+                            ppfd_sunlit_daytime_cl      , & !< average PPFD on sunlit leaves of the previous day [µmol m-2 s-1]
+                            ppfd_shaded_daytime_cl      , & !< average PPFD on shaded leaves of the previous day [µmol m-2 s-1]
+                            ppfd_sunlit_daytime_dacc_cl , & !< daily accumulated PPFD on sunlit leaves [µmol m-2 d-1] 
+                            ppfd_shaded_daytime_dacc_cl , & !< daily accumulated PPFD on shaded leaves of the previous day [µmol m-2 d-1]
+                            ppfd_sunlit_tfrac_mavg_cl   , & !< average PPFD on sunlit leaves at tfrac-timescale [µmol m-2 s-1] 
+                            ppfd_shaded_tfrac_mavg_cl   , & !< average PPFD on shaded leaves at tfrac-timescale [µmol m-2 s-1]
+                            ppfd_sunlit_tcnl_mavg_cl    , & !< average PPFD on sunlit leaves at tcnl-timescale [µmol m-2 s-1]
+                            ppfd_shaded_tcnl_mavg_cl        !< average PPFD on shaded leaves at tcnl-timescale [µmol m-2 s-1]
 
     TYPE(t_jsb_var_real3d)  :: &   ! DIMENSION(ncanopy)
-                            arad_sunlit_vis_cl   , & !< 
-                            arad_shaded_vis_cl   , & !< 
-                            fleaf_sunlit_vis_cl  , & !< 
-                            arad_sunlit_nir_cl   , & !< 
-                            arad_shaded_nir_cl   , & !< 
-                            fleaf_sunlit_nir_cl      !< 
+                            arad_sunlit_vis_cl   , & !< absorbed radiation in visible band on sunlit leaves (W m-2)  
+                            arad_shaded_vis_cl   , & !< absorbed radiation in visible band on shaded leaves (W m-2)
+                            fleaf_sunlit_vis_cl  , & !< fraction of leaves that are sunlit in VIS band () 
+                            arad_sunlit_nir_cl   , & !< absorbed radiation in NIR band on sunlit leaves (W m-2)
+                            arad_shaded_nir_cl   , & !< absorbed radiation in NIR band on shaded leaves (W m-2)
+                            fleaf_sunlit_nir_cl      !< fraction of leaves that are sunlit in NIR band () 
 
   CONTAINS
     PROCEDURE :: Init => Init_rad_memory
