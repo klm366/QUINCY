@@ -37,25 +37,25 @@ MODULE mo_a2l_memory_class
   TYPE, EXTENDS(t_jsb_memory) :: t_a2l_memory
 
     TYPE(t_jsb_var_real2d) :: &
-                              t_air                 , &  !>  
-                              q_air                 , &  !>  
-                              rain                  , &  !>  
-                              snow                  , &  !>  
-                              wind_air              , &  !>  
-                              wind_10m              , &  !>  
-                              lw_srf_down           , &  !>  
-                              swvis_srf_down        , &  !>  
-                              swnir_srf_down        , &  !>  
-                              swpar_srf_down        , &  !>  
-                              swpar_fdiffuse        , &  !>  
-                              press_srf             , &  !>  
-                              drag_srf              , &  !>  
-                              t_acoef               , &  !>  
-                              t_bcoef               , &  !>  
-                              q_acoef               , &  !>  
-                              q_bcoef               , &  !>  
-                              pch                   , &  !>  
-                              cos_zenith_angle           !>  
+                              t_air                 , &  !> 2m air temperature (K) 
+                              q_air                 , &  !> 2m air specific humidity (g g-1) 
+                              rain                  , &  !> liquid water precipitation (kg m-2 s-1)
+                              snow                  , &  !> solid water precipitation (kg m-2 s-1)
+                              wind_air              , &  !> 2m air wind speed (m s-1) 
+                              wind_10m              , &  !> 10m air wind speed (m s-1) 
+                              lw_srf_down           , &  !> longwave surface downward flux (W m-2) 
+                              swvis_srf_down        , &  !> shortwave surface downward flux in the visible band (W m-2)
+                              swnir_srf_down        , &  !> shortwave surface downward flux in the near infrared band (W m-2) 
+                              swpar_srf_down        , &  !> shortwave surface downward flux in the PAR band (W m-2) 
+                              swpar_fdiffuse        , &  !> fraction of shortwave surface downward flux that is diffuse 
+                              press_srf             , &  !> surface air pressure (Pa)
+                              drag_srf              , &  !> total surface drag () 
+                              t_acoef               , &  !> Richtmeyer-Morten coefficient A for temperature () 
+                              t_bcoef               , &  !> Richtmeyer-Morten coefficient B for temperature ()
+                              q_acoef               , &  !> Richtmeyer-Morten coefficient A for specific humidity () 
+                              q_bcoef               , &  !> Richtmeyer-Morten coefficient B for specific humidity ()
+                              pch                   , &  !> total surface drag () 
+                              cos_zenith_angle           !> Cosine of solar zenith angle 
 
     ! CO2
     TYPE(t_jsb_var_real2d) :: &
@@ -64,35 +64,35 @@ MODULE mo_a2l_memory_class
                               ! CO2_air_mol           , &  !> 
                               
                               ! from SLM, replacing CO2_air and CO2_air_mol from jsbach4
-                              co2_mixing_ratio      , &  !> 
-                              co2_mixing_ratio_C13  , &  !> 
-                              co2_mixing_ratio_C14       !> 
+                              co2_mixing_ratio      , &  !> surface air co2 mixing ratio (ppm) 
+                              co2_mixing_ratio_C13  , &  !> surface air 13co2 mixing ratio (ppm)
+                              co2_mixing_ratio_C14       !> surface air 14co2 mixing ratio (scaled)
                               
     ! ga    @todo  ga in t_a2l_memory is a variable from SLM, which may be moved elsewhere
     TYPE(t_jsb_var_real2d) :: &
-                              ga                         !>  
+                              ga                         !> aerodynamic conductance (m s-1)
 
     ! Deposition
     TYPE(t_jsb_var_real2d) :: &                                                            
-                              nhx_deposition        , &  !>                        [mumol m-2 sec-1]
-                              noy_deposition        , &  !>                        [mumol m-2 sec-1]
-                              nhx_n15_deposition    , &  !>                        [mumol m-2 sec-1]
-                              noy_n15_deposition    , &  !>                        [mumol m-2 sec-1]
-                              p_deposition               !>                        [mumol m-2 sec-1]
+                              nhx_deposition        , &  !> surface downward reduced nitrogen deposition velocity [mumol m-2 sec-1]
+                              noy_deposition        , &  !> surface downward oxidised nitrogen deposition velocity [mumol m-2 sec-1]
+                              nhx_n15_deposition    , &  !> surface downward reduced nitrogen-15 deposition velocity [mumol m-2 sec-1]
+                              noy_n15_deposition    , &  !> surface downward oxidised nitrogen-15 deposition velocity [mumol m-2 sec-1]
+                              p_deposition               !> surface downward reduced phosphoruns deposition velocity [mumol m-2 sec-1]
 
     ! For lakes
     TYPE(t_jsb_var_real2d) :: &                              
-                              albedo_lwtr           , &  !> 
-                              drag_wtr              , &  !> 
-                              drag_ice              , &  !> 
-                              t_acoef_wtr           , &  !> 
-                              t_bcoef_wtr           , &  !> 
-                              q_acoef_wtr           , &  !> 
-                              q_bcoef_wtr           , &  !> 
-                              t_acoef_ice           , &  !> 
-                              t_bcoef_ice           , &  !> 
-                              q_acoef_ice           , &  !> 
-                              q_bcoef_ice                !> 
+                              albedo_lwtr           , &  !> lake albedo ()
+                              drag_wtr              , &  !> drag coefficient over water ()
+                              drag_ice              , &  !> drag coefficient over ice ()
+                              t_acoef_wtr           , &  !> Richtmeyer-Morten coefficient A for temperature over water ()
+                              t_bcoef_wtr           , &  !> Richtmeyer-Morten coefficient A for temperature over water ()
+                              q_acoef_wtr           , &  !> Richtmeyer-Morten coefficient A for specific humidity over water ()
+                              q_bcoef_wtr           , &  !> Richtmeyer-Morten coefficient A for specific humidity over water ()
+                              t_acoef_ice           , &  !> Richtmeyer-Morten coefficient A for temperature over ice ()
+                              t_bcoef_ice           , &  !> Richtmeyer-Morten coefficient A for temperature over ice ()
+                              q_acoef_ice           , &  !> Richtmeyer-Morten coefficient A for specific humidity over ice ()
+                              q_bcoef_ice                !> Richtmeyer-Morten coefficient A for specific humidity over ice ()
 
     ! For calculation of the timestep after local midnight (1st timestep of the new day)
     TYPE(t_jsb_var_real2d) :: &

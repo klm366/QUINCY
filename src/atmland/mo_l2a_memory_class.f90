@@ -38,34 +38,34 @@ MODULE mo_l2a_memory_class
   TYPE, EXTENDS(t_jsb_memory) :: t_l2a_memory
 
     TYPE(t_jsb_var_real2d) :: &
-                              t_srf                 , &  !> 
-                              t_eff_srf             , &  !> 
-                              qsat_srf              , &  !> 
-                              fact_q_air            , &  !> 
-                              fact_qsat_srf         , &  !> 
-                              zh_srf                , &  !> 
-                              zm_srf                , &  !> 
-                              alb_vis_dif           , &  !> 
-                              alb_nir_dif           , &  !> 
-                              alb_vis_dir           , &  !> 
-                              alb_nir_dir                !> 
+                              t_srf                 , &  !> surface temperature (K) 
+                              t_eff_srf             , &  !> effective surface temperature (K)
+                              qsat_srf              , &  !> surface saturated specific humidity (g g-1)
+                              fact_q_air            , &  !> factor representing air at actual water content ()
+                              fact_qsat_srf         , &  !> factor representing air at saturating water content ()
+                              zh_srf                , &  !> roughnesslength for heat transfer (m)
+                              zm_srf                , &  !> roughnesslength for momentum transfer (m)
+                              alb_vis_dif           , &  !> surface albedo for diffuse radiation in the visible band ()
+                              alb_nir_dif           , &  !> surface albedo for diffuse radiation in the near infrared band ()
+                              alb_vis_dir           , &  !> surface albedo for direct radiation in the visible band ()
+                              alb_nir_dir                !> surface albedo for direct radiation in the near infrared band ()
 
     ! added from SLM, not existent in jsbach4 20160823
     TYPE(t_jsb_var_real2d) :: &                              
-                              albedo                , &  !>    
-                              sensible_heat_flx     , &  !>    
-                              latent_heat_flx       , &  !>    
-                              ground_heat_flx       , &  !>    
-                              ground_heat_flx_old   , &  !>    
-                              net_radiation         , &  !>    
-                              vpd                        !> 
+                              albedo                , &  !> total surface albedo ()   
+                              sensible_heat_flx     , &  !> sensible heat flux (W m-2)   
+                              latent_heat_flx       , &  !> latent heat flux (W m-2)
+                              ground_heat_flx       , &  !> ground heat flux (W m-2)   
+                              ground_heat_flx_old   , &  !> ground heat flux of previous timestep (W m-2)  
+                              net_radiation         , &  !> surface net radiation (W m-2)   
+                              vpd                        !> 2m air vapour pressure deficit (Pa)
 
     ! For lakes
     TYPE(t_jsb_var_real2d) :: &                              
-                              latent_hflx_wtr       , &  !> 
-                              sensible_hflx_wtr     , &  !> 
-                              latent_hflx_ice       , &  !> 
-                              sensible_hflx_ice          !> 
+                              latent_hflx_wtr       , &  !> latent heat flux over water (W m-2)
+                              sensible_hflx_wtr     , &  !> sensible heat flux over water (W m-2)
+                              latent_hflx_ice       , &  !> latent heat flux over ice (W m-2)
+                              sensible_hflx_ice          !> sensible heat flux over ice (W m-2)
 
   CONTAINS
     PROCEDURE :: Init => Init_l2a_memory
