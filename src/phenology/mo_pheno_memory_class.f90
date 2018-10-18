@@ -39,9 +39,9 @@ MODULE mo_pheno_memory_class
 
 
     TYPE(t_jsb_var_real2d)          :: &
-                                    gdd                 , & !< growing degree days above 5°C [# days]
+                                    gdd                 , & !< growing degree days above 5°C [K day]
                                     nd_dormance         , & !< number of days since last growing season [# days]
-                                    lai_max                 !< maximum lai - from site specific lai data
+                                    lai_max                 !< maximum lai - from site specific lai data [m2 m-2]
 
 
   CONTAINS
