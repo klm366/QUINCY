@@ -38,34 +38,34 @@ MODULE mo_l2a_memory_class
   TYPE, EXTENDS(t_jsb_memory) :: t_l2a_memory
 
     TYPE(t_jsb_var_real2d) :: &
-                              t_srf                 , &  !> surface temperature (K) 
-                              t_eff_srf             , &  !> effective surface temperature (K)
-                              qsat_srf              , &  !> surface saturated specific humidity (g g-1)
-                              fact_q_air            , &  !> factor representing air at actual water content ()
-                              fact_qsat_srf         , &  !> factor representing air at saturating water content ()
-                              zh_srf                , &  !> roughnesslength for heat transfer (m)
-                              zm_srf                , &  !> roughnesslength for momentum transfer (m)
-                              alb_vis_dif           , &  !> surface albedo for diffuse radiation in the visible band ()
-                              alb_nir_dif           , &  !> surface albedo for diffuse radiation in the near infrared band ()
-                              alb_vis_dir           , &  !> surface albedo for direct radiation in the visible band ()
-                              alb_nir_dir                !> surface albedo for direct radiation in the near infrared band ()
+                              t_srf                 , &  !> surface temperature [K]
+                              t_eff_srf             , &  !> effective surface temperature [K]
+                              qsat_srf              , &  !> surface saturated specific humidity [g g-1]
+                              fact_q_air            , &  !> factor representing air at actual water content [unitless]
+                              fact_qsat_srf         , &  !> factor representing air at saturating water content [unitless]
+                              zh_srf                , &  !> roughnesslength for heat transfer [m]
+                              zm_srf                , &  !> roughnesslength for momentum transfer [m]
+                              alb_vis_dif           , &  !> surface albedo for diffuse radiation in the visible band [unitless]
+                              alb_nir_dif           , &  !> surface albedo for diffuse radiation in the near infrared band [unitless]
+                              alb_vis_dir           , &  !> surface albedo for direct radiation in the visible band [unitless]
+                              alb_nir_dir                !> surface albedo for direct radiation in the near infrared band [unitless]
 
     ! added from SLM, not existent in jsbach4 20160823
     TYPE(t_jsb_var_real2d) :: &                              
-                              albedo                , &  !> total surface albedo ()   
-                              sensible_heat_flx     , &  !> sensible heat flux (W m-2)   
-                              latent_heat_flx       , &  !> latent heat flux (W m-2)
-                              ground_heat_flx       , &  !> ground heat flux (W m-2)   
-                              ground_heat_flx_old   , &  !> ground heat flux of previous timestep (W m-2)  
-                              net_radiation         , &  !> surface net radiation (W m-2)   
-                              vpd                        !> 2m air vapour pressure deficit (Pa)
+                              albedo                , &  !> total surface albedo [unitless]
+                              sensible_heat_flx     , &  !> sensible heat flux [W m-2]
+                              latent_heat_flx       , &  !> latent heat flux [W m-2]
+                              ground_heat_flx       , &  !> ground heat flux [W m-2]
+                              ground_heat_flx_old   , &  !> ground heat flux of previous timestep [W m-2]
+                              net_radiation         , &  !> surface net radiation [W m-2]
+                              vpd                        !> 2m air vapour pressure deficit [Pa]
 
     ! For lakes
     TYPE(t_jsb_var_real2d) :: &                              
-                              latent_hflx_wtr       , &  !> latent heat flux over water (W m-2)
-                              sensible_hflx_wtr     , &  !> sensible heat flux over water (W m-2)
-                              latent_hflx_ice       , &  !> latent heat flux over ice (W m-2)
-                              sensible_hflx_ice          !> sensible heat flux over ice (W m-2)
+                              latent_hflx_wtr       , &  !> latent heat flux over water [W m-2]
+                              sensible_hflx_wtr     , &  !> sensible heat flux over water [W m-2]
+                              latent_hflx_ice       , &  !> latent heat flux over ice [W m-2]
+                              sensible_hflx_ice          !> sensible heat flux over ice [W m-2]
 
   CONTAINS
     PROCEDURE :: Init => Init_l2a_memory
@@ -118,7 +118,7 @@ CONTAINS
     !! 
     CALL jsb_add_var( mem, 't_srf', mem%t_srf, &
             hgrid, surface, &
-            t_cf('t_srf', '', ''), &
+            t_cf('t_srf', 'K', 'surface temperature'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -126,7 +126,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 't_eff_srf', mem%t_eff_srf, &
             hgrid, surface, &
-            t_cf('t_eff_srf', '', ''), &
+            t_cf('t_eff_srf', 'K', 'effective surface temperature'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -134,7 +134,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'qsat_srf', mem%qsat_srf, &
             hgrid, surface, &
-            t_cf('qsat_srf', '', ''), &
+            t_cf('qsat_srf', 'g g-1', 'surface saturated specific humidity'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -142,7 +142,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'fact_q_air', mem%fact_q_air, &
             hgrid, surface, &
-            t_cf('fact_q_air', '', ''), &
+            t_cf('fact_q_air', 'unitless', 'factor representing air at actual water content'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -150,7 +150,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'fact_qsat_srf', mem%fact_qsat_srf, &
             hgrid, surface, &
-            t_cf('fact_qsat_srf', '', ''), &
+            t_cf('fact_qsat_srf', 'unitless', 'factor representing air at saturating water content'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -158,7 +158,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'zh_srf', mem%zh_srf, &
             hgrid, surface, &
-            t_cf('zh_srf', '', ''), &
+            t_cf('zh_srf', 'm', 'roughnesslength for heat transfer'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -166,7 +166,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'zm_srf', mem%zm_srf, &
             hgrid, surface, &
-            t_cf('zm_srf', '', ''), &
+            t_cf('zm_srf', 'm', 'roughnesslength for momentum transfer'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -174,7 +174,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'alb_vis_dif', mem%alb_vis_dif, &
             hgrid, surface, &
-            t_cf('alb_vis_dif', '', ''), &
+            t_cf('alb_vis_dif', 'unitless', 'surface albedo for diffuse radiation in the visible band'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -182,7 +182,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'alb_nir_dif', mem%alb_nir_dif, &
             hgrid, surface, &
-            t_cf('alb_nir_dif', '', ''), &
+            t_cf('alb_nir_dif', 'unitless', 'surface albedo for diffuse radiation in the near infrared band'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -190,7 +190,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'alb_vis_dir', mem%alb_vis_dir, &
             hgrid, surface, &
-            t_cf('alb_vis_dir', '', ''), &
+            t_cf('alb_vis_dir', 'unitless', 'surface albedo for direct radiation in the visible band'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -198,7 +198,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'alb_nir_dir', mem%alb_nir_dir, &
             hgrid, surface, &
-            t_cf('alb_nir_dir', '', ''), &
+            t_cf('alb_nir_dir', 'unitless', 'surface albedo for direct radiation in the near infrared band'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -206,7 +206,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'albedo', mem%albedo, &
             hgrid, surface, &
-            t_cf('albedo', '', ''), &
+            t_cf('albedo', 'unitless', 'total surface albedo'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -214,7 +214,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'sensible_heat_flx', mem%sensible_heat_flx, &
             hgrid, surface, &
-            t_cf('sensible_heat_flx', '', ''), &
+            t_cf('sensible_heat_flx', 'W m-2', 'sensible heat flux'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -222,7 +222,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'latent_heat_flx', mem%latent_heat_flx, &
             hgrid, surface, &
-            t_cf('latent_heat_flx', '', ''), &
+            t_cf('latent_heat_flx', 'W m-2', 'latent heat flux'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -230,7 +230,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'ground_heat_flx', mem%ground_heat_flx, &
             hgrid, surface, &
-            t_cf('ground_heat_flx', '', ''), &
+            t_cf('ground_heat_flx', 'W m-2', 'ground heat flux'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -238,7 +238,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'ground_heat_flx_old', mem%ground_heat_flx_old, &
             hgrid, surface, &
-            t_cf('ground_heat_flx_old', '', ''), &
+            t_cf('ground_heat_flx_old', 'W m-2', 'ground heat flux of previous timestep'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -246,7 +246,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'net_radiation', mem%net_radiation, &
             hgrid, surface, &
-            t_cf('net_radiation', '', ''), &
+            t_cf('net_radiation', 'W m-2', 'surface net radiation'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -254,7 +254,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'vpd', mem%vpd, &
             hgrid, surface, &
-            t_cf('vpd', '', ''), &
+            t_cf('vpd', 'Pa', '2m air vapour pressure deficit'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -264,7 +264,7 @@ CONTAINS
 
       CALL jsb_add_var( mem, 'latent_hflx_wtr', mem%latent_hflx_wtr, &
             hgrid, surface, &
-            t_cf('latent_hflx_wtr', '', ''), &
+            t_cf('latent_hflx_wtr', 'W m-2', 'latent heat flux over water'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -272,7 +272,7 @@ CONTAINS
 
       CALL jsb_add_var( mem, 'sensible_hflx_wtr', mem%sensible_hflx_wtr, &
             hgrid, surface, &
-            t_cf('sensible_hflx_wtr', '', ''), &
+            t_cf('sensible_hflx_wtr', 'W m-2', 'sensible heat flux over water'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -280,7 +280,7 @@ CONTAINS
 
       CALL jsb_add_var( mem, 'latent_hflx_ice', mem%latent_hflx_ice, &
             hgrid, surface, &
-            t_cf('latent_hflx_ice', '', ''), &
+            t_cf('latent_hflx_ice', 'W m-2', 'latent heat flux over ice'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -288,7 +288,7 @@ CONTAINS
 
       CALL jsb_add_var( mem, 'sensible_hflx_ice', mem%sensible_hflx_ice, &
             hgrid, surface, &
-            t_cf('sensible_hflx_ice', '', ''), &
+            t_cf('sensible_hflx_ice', 'W m-2', 'sensible heat flux over ice'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
