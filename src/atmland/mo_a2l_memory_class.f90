@@ -55,7 +55,7 @@ MODULE mo_a2l_memory_class
                               q_acoef               , &  !> Richtmeyer-Morten coefficient A for specific humidity [unitless] 
                               q_bcoef               , &  !> Richtmeyer-Morten coefficient B for specific humidity [unitless]
                               pch                   , &  !> total surface drag [unitless] 
-                              cos_zenith_angle           !> Cosine of solar zenith angle [degree]
+                              cos_zenith_angle           !> Cosine of solar zenith angle [unitless]
 
     ! CO2
     TYPE(t_jsb_var_real2d) :: &
@@ -96,8 +96,8 @@ MODULE mo_a2l_memory_class
 
     ! For calculation of the timestep after local midnight (1st timestep of the new day)
     TYPE(t_jsb_var_real2d) :: &
-                              prev_one_cos_zenith_angle   , &   !> cos_zenith_angle of the previous timestep [degree]
-                              prev_two_cos_zenith_angle         !> cos_zenith_angle of the before previous timestep [degree]
+                              prev_one_cos_zenith_angle   , &   !> cos_zenith_angle of the previous timestep [unitless]
+                              prev_two_cos_zenith_angle         !> cos_zenith_angle of the before previous timestep [unitless]
 
   CONTAINS
     PROCEDURE :: Init => Init_a2l_memory
@@ -201,7 +201,7 @@ CONTAINS
     !! 
     CALL jsb_add_var( mem, 't_air', mem%t_air, &
             hgrid, surface, &
-            t_cf('t_air', '2m air temperature', 'K'), &
+            t_cf('t_air', 'K', '2m air temperature'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -209,7 +209,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'q_air', mem%q_air, &
             hgrid, surface, &
-            t_cf('q_air', '2m air specific humidity', 'g g-1'), &
+            t_cf('q_air', 'g g-1', '2m air specific humidity'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -217,7 +217,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'rain', mem%rain, &
             hgrid, surface, &
-            t_cf('rain', 'liquid water precipitation', 'kg m-2 s-1'), &
+            t_cf('rain', 'kg m-2 s-1', 'liquid water precipitation'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -225,7 +225,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'snow', mem%snow, &
             hgrid, surface, &
-            t_cf('snow', 'solid water precipitation', 'kg m-2 s-1'), &
+            t_cf('snow', 'kg m-2 s-1', 'solid water precipitation'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -233,7 +233,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'wind_air', mem%wind_air, &
             hgrid, surface, &
-            t_cf('wind_air', '2m air wind speed', 'm s-1'), &
+            t_cf('wind_air', 'm s-1', '2m air wind speed'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -241,7 +241,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'wind_10m', mem%wind_10m, &
             hgrid, surface, &
-            t_cf('wind_10m', '10m air wind speed', 'm s-1'), &
+            t_cf('wind_10m', 'm s-1', '10m air wind speed'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -249,7 +249,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'lw_srf_down', mem%lw_srf_down, &
             hgrid, surface, &
-            t_cf('lw_srf_down', 'longwave surface downward flux', 'W m-2'), &
+            t_cf('lw_srf_down', 'W m-2', 'longwave surface downward flux'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -257,7 +257,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'swvis_srf_down', mem%swvis_srf_down, &
             hgrid, surface, &
-            t_cf('swvis_srf_down', 'shortwave surface downward flux in the visible band', 'W m-2'), &
+            t_cf('swvis_srf_down', 'W m-2', 'shortwave surface downward flux in the visible band'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -265,7 +265,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'swnir_srf_down', mem%swnir_srf_down, &
             hgrid, surface, &
-            t_cf('swnir_srf_down', 'shortwave surface downward flux in the near infrared band', 'W m-2'), &
+            t_cf('swnir_srf_down', 'W m-2', 'shortwave surface downward flux in the near infrared band'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -273,7 +273,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'swpar_srf_down', mem%swpar_srf_down, &
             hgrid, surface, &
-            t_cf('swpar_srf_down', 'shortwave surface downward flux in the PAR band', 'W m-2'), &
+            t_cf('swpar_srf_down', 'W m-2', 'shortwave surface downward flux in the PAR band'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -281,7 +281,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'swpar_fdiffuse', mem%swpar_fdiffuse, &
             hgrid, surface, &
-            t_cf('swpar_fdiffuse', 'fraction of shortwave surface downward flux that is diffuse', 'fraction'), &
+            t_cf('swpar_fdiffuse', 'fraction', 'fraction of shortwave surface downward flux that is diffuse'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -289,7 +289,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'press_srf', mem%press_srf, &
             hgrid, surface, &
-            t_cf('press_srf', 'surface air pressure', 'Pa'), &
+            t_cf('press_srf', 'Pa', 'surface air pressure'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -297,7 +297,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'drag_srf', mem%drag_srf, &
             hgrid, surface, &
-            t_cf('drag_srf', 'total surface drag', 'unitless'), &
+            t_cf('drag_srf', 'unitless', 'total surface drag'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -305,7 +305,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 't_acoef', mem%t_acoef, &
             hgrid, surface, &
-            t_cf('t_acoef', 'Richtmeyer-Morten coefficient A for temperature', 'unitless'), &
+            t_cf('t_acoef', 'unitless', 'Richtmeyer-Morten coefficient A for temperature'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -313,7 +313,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 't_bcoef', mem%t_bcoef, &
             hgrid, surface, &
-            t_cf('t_bcoef', 'Richtmeyer-Morten coefficient B for temperature', 'unitless'), &
+            t_cf('t_bcoef', 'unitless', 'Richtmeyer-Morten coefficient B for temperature'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -321,7 +321,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'q_acoef', mem%q_acoef, &
             hgrid, surface, &
-            t_cf('q_acoef', 'Richtmeyer-Morten coefficient A for specific humidity', 'unitless'), &
+            t_cf('q_acoef', 'unitless', 'Richtmeyer-Morten coefficient A for specific humidity'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -329,7 +329,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'q_bcoef', mem%q_bcoef, &
             hgrid, surface, &
-            t_cf('q_bcoef', 'Richtmeyer-Morten coefficient B for specific humidity', 'unitless'), &
+            t_cf('q_bcoef', 'unitless', 'Richtmeyer-Morten coefficient B for specific humidity'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -337,7 +337,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'pch', mem%pch, &
             hgrid, surface, &
-            t_cf('pch', 'total surface drag', 'unitless'), &
+            t_cf('pch', 'unitless', 'total surface drag'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -345,7 +345,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'cos_zenith_angle', mem%cos_zenith_angle, &
             hgrid, surface, &
-            t_cf('cos_zenith_angle', 'Cosine of solar zenith angle', 'degree'), &
+            t_cf('cos_zenith_angle', 'unitless', 'Cosine of solar zenith angle'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -369,7 +369,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'co2_mixing_ratio', mem%co2_mixing_ratio, &
             hgrid, surface, &
-            t_cf('co2_mixing_ratio', 'surface air co2 mixing ratio', 'ppm'), &
+            t_cf('co2_mixing_ratio', 'ppm', 'surface air co2 mixing ratio'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -377,7 +377,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'co2_mixing_ratio_c13', mem%co2_mixing_ratio_c13, &
             hgrid, surface, &
-            t_cf('co2_mixing_ratio_C13', 'surface air 13co2 mixing ratio', 'ppm'), &
+            t_cf('co2_mixing_ratio_C13', 'ppm', 'surface air 13co2 mixing ratio'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -385,7 +385,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'co2_mixing_ratio_C14', mem%co2_mixing_ratio_c14, &
             hgrid, surface, &
-            t_cf('co2_mixing_ratio_c14', 'surface air 14co2 mixing ratio', 'scaled'), &
+            t_cf('co2_mixing_ratio_c14', 'scaled', 'surface air 14co2 mixing ratio'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -393,7 +393,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'ga', mem%ga, &
             hgrid, surface, &
-            t_cf('ga', 'aerodynamic conductance', 'm s-1'), &
+            t_cf('ga', 'm s-1', 'aerodynamic conductance'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -401,7 +401,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'nhx_deposition', mem%nhx_deposition, &
             hgrid, surface, &
-            t_cf('nhx_deposition', 'surface downward reduced nitrogen deposition velocity', 'mumol m-2 sec-1'), &
+            t_cf('nhx_deposition', 'mumol m-2 sec-1', 'surface downward reduced nitrogen deposition velocity'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -409,7 +409,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'noy_deposition', mem%noy_deposition, &
             hgrid, surface, &
-            t_cf('noy_deposition', 'surface downward oxidised nitrogen deposition velocity', 'mumol m-2 sec-1'), &
+            t_cf('noy_deposition', 'mumol m-2 sec-1', 'surface downward oxidised nitrogen deposition velocity'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -417,7 +417,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'nhx_n15_deposition', mem%nhx_n15_deposition, &
             hgrid, surface, &
-            t_cf('nhx_n15_deposition', 'surface downward reduced nitrogen-15 deposition velocity', 'mumol m-2 sec-1'), &
+            t_cf('nhx_n15_deposition', 'mumol m-2 sec-1', 'surface downward reduced nitrogen-15 deposition velocity'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -425,7 +425,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'noy_n15_deposition', mem%noy_n15_deposition, &
             hgrid, surface, &
-            t_cf('noy_n15_deposition', 'surface downward oxidised nitrogen-15 deposition velocity', 'mumol m-2 sec-1'), &
+            t_cf('noy_n15_deposition', 'mumol m-2 sec-1', 'surface downward oxidised nitrogen-15 deposition velocity'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -433,7 +433,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'p_deposition', mem%p_deposition, &
             hgrid, surface, &
-            t_cf('p_deposition', 'surface downward reduced phosphoruns deposition velocity', 'mumol m-2 sec-1'), &
+            t_cf('p_deposition', 'mumol m-2 sec-1', 'surface downward reduced phosphoruns deposition velocity'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -443,7 +443,7 @@ CONTAINS
 
       CALL jsb_add_var( mem, 'albedo_lwtr', mem%albedo_lwtr, &
             hgrid, surface, &
-            t_cf('albedo_lwtr', 'lake albedo', 'unitless'), &
+            t_cf('albedo_lwtr', 'unitless', 'lake albedo'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -451,7 +451,7 @@ CONTAINS
 
       CALL jsb_add_var( mem, 'drag_wtr', mem%drag_wtr, &
             hgrid, surface, &
-            t_cf('drag_wtr', 'drag coefficient over water', 'unitless'), &
+            t_cf('drag_wtr', 'unitless', 'drag coefficient over water'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -459,7 +459,7 @@ CONTAINS
 
       CALL  jsb_add_var( mem, 'drag_ice', mem%drag_ice, &
             hgrid, surface, &
-            t_cf('drag_ice', 'drag coefficient over ice', 'unitless'), &
+            t_cf('drag_ice', 'unitless', 'drag coefficient over ice'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -467,7 +467,7 @@ CONTAINS
 
       CALL jsb_add_var( mem, 't_acoef_wtr', mem%t_acoef_wtr, &
             hgrid, surface, &
-            t_cf('t_acoef_wtr', 'Richtmeyer-Morten coefficient A for temperature over water', 'unitless'), &
+            t_cf('t_acoef_wtr', 'unitless', 'Richtmeyer-Morten coefficient A for temperature over water'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -475,7 +475,7 @@ CONTAINS
 
       CALL jsb_add_var( mem, 't_bcoef_wtr', mem%t_bcoef_wtr, &
             hgrid, surface, &
-            t_cf('t_bcoef_wtr', 'Richtmeyer-Morten coefficient A for temperature over water', 'unitless'), &
+            t_cf('t_bcoef_wtr', 'unitless', 'Richtmeyer-Morten coefficient A for temperature over water'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -483,7 +483,7 @@ CONTAINS
 
       CALL jsb_add_var( mem, 'q_acoef_wtr', mem%q_acoef_wtr, &
             hgrid, surface, &
-            t_cf('q_acoef_wtr', 'Richtmeyer-Morten coefficient A for specific humidity over water', 'unitless'), &
+            t_cf('q_acoef_wtr', 'unitless', 'Richtmeyer-Morten coefficient A for specific humidity over water'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -491,7 +491,7 @@ CONTAINS
 
       CALL jsb_add_var( mem, 'q_bcoef_wtr', mem%q_bcoef_wtr, &
             hgrid, surface, &
-            t_cf('q_bcoef_wtr', 'Richtmeyer-Morten coefficient A for specific humidity over water', 'unitless'), &
+            t_cf('q_bcoef_wtr', 'unitless', 'Richtmeyer-Morten coefficient A for specific humidity over water'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -499,7 +499,7 @@ CONTAINS
 
       CALL jsb_add_var( mem, 't_acoef_ice', mem%t_acoef_ice, &
             hgrid, surface, &
-            t_cf('t_acoef_ice', 'Richtmeyer-Morten coefficient A for temperature over ice', 'unitless'), &
+            t_cf('t_acoef_ice', 'unitless', 'Richtmeyer-Morten coefficient A for temperature over ice'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -507,7 +507,7 @@ CONTAINS
 
       CALL jsb_add_var( mem, 't_bcoef_ice', mem%t_bcoef_ice, &
             hgrid, surface, &
-            t_cf('t_bcoef_ice', 'Richtmeyer-Morten coefficient A for temperature over ice', 'unitless'), &
+            t_cf('t_bcoef_ice', 'unitless', 'Richtmeyer-Morten coefficient A for temperature over ice'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -515,7 +515,7 @@ CONTAINS
 
       CALL jsb_add_var( mem, 'q_acoef_ice', mem%q_acoef_ice, &
             hgrid, surface, &
-            t_cf('q_acoef_ice', 'Richtmeyer-Morten coefficient A for specific humidity over ice', 'unitless'), &
+            t_cf('q_acoef_ice', 'unitless', 'Richtmeyer-Morten coefficient A for specific humidity over ice'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -523,7 +523,7 @@ CONTAINS
 
       CALL jsb_add_var( mem, 'q_bcoef_ice', mem%q_bcoef_ice, &
             hgrid, surface, &
-            t_cf('q_bcoef_ice', 'Richtmeyer-Morten coefficient A for specific humidity over ice', 'unitless'), &
+            t_cf('q_bcoef_ice', 'unitless', 'Richtmeyer-Morten coefficient A for specific humidity over ice'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -533,7 +533,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'prev_one_cos_zenith_angle', mem%prev_one_cos_zenith_angle, &
             hgrid, surface, &
-            t_cf('prev_one_cos_zenith_angle', 'cos_zenith_angle of the previous timestep', 'degree'), &
+            t_cf('prev_one_cos_zenith_angle', 'unitless', 'cos_zenith_angle of the previous timestep'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -541,7 +541,7 @@ CONTAINS
 
     CALL jsb_add_var( mem, 'prev_two_cos_zenith_angle', mem%prev_two_cos_zenith_angle, &
             hgrid, surface, &
-            t_cf('prev_two_cos_zenith_angle', 'cos_zenith_angle of the before previous timestep', 'degree'), &
+            t_cf('prev_two_cos_zenith_angle', 'unitless', 'cos_zenith_angle of the before previous timestep'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
