@@ -53,7 +53,7 @@ MODULE mo_assimi_memory_class
                               beta_soil_gs              , &  !< scaling factor to account for soil moisture constraints on conductance [unitless]
                               canopy_cond               , &  !< canopy-integrated conductance for water [m s-1]
                               co2_conc_leaf             , &  !< canopy-integrated internal leaf CO2 concentration [ppm]
-                              t_jmax_opt                     !< optimal temperature for electron transport of photosynthesis
+                              t_jmax_opt                     !< optimal temperature for electron transport of photosynthesis [°C]
 
     TYPE(t_jsb_var_real3d)    :: &
                               canopy_cond_cl            , &  !< conductance for water per canopy layer [m s-1]

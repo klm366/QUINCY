@@ -36,6 +36,7 @@ CONTAINS
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_assimi_constants
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(ASSIMI_)    
@@ -147,7 +148,7 @@ CONTAINS
     beta_soil_gs_tfrac_mavg(:)      = 1.0_wp
     beta_soil_gs_tcnl_mavg(:)       = 1.0_wp
 
-    t_jmax_opt(:)                   = 1.0_wp
+    t_jmax_opt(:)                   = t_jmax_opt_min 
 
   END SUBROUTINE assimi_init
 
