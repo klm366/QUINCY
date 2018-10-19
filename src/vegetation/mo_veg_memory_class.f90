@@ -181,19 +181,19 @@ MODULE mo_veg_memory_class
                                     height            , &            !< plant height [m]
                                     diameter          , &            !< plant diameter [m]
                                     dens_ind          , &            !< density of individuals [# m-2]
-                                    lai               , &            !< actual leaf area index
+                                    lai               , &            !< actual leaf area index [m2 m-2]
                                     target_cn_leaf    , &            !< target foliar C:N ratio
                                     target_np_leaf    , &            !< target foliar N:P ratio 
                                     mean_leaf_age     , &            !< average foliage age in days 
                                     cohort_age        , &            !< age of the cohort in years, used with veg_dynamics_scheme cohort
                                     f_n_demand        , &            !< relative plant demand for N
                                     f_p_demand        , &            !< relative plant demand for P
-                                    beta_sinklim_ps   , &            !< scaling factor to account for a direct sink limitation contraint on photosynthesis
+                                    beta_sinklim_ps   , &            !< scaling factor to account for a direct sink limitation contraint on photosynthesis [unitless]
                                     dphi              , &            !< plant-soil water potential gradient [MPa]
                                     growth_req_n      , &            !< moles N required for a unit of C growth under current allocation fractions 
                                     growth_req_p      , &            !< moles P required for a unit of N growth under current allocation fractions 
                                     leaf_cn_direction , &            !< indicates direction of change in leaf CN ratio to maximise NPP
-                                    target_lai        , &            !< LAI implied from sap wood area
+                                    target_lai        , &            !< LAI implied from sap wood area [m2 m-2]
                                     kstar_labile                     !< labile pool turnover rate assuming only temperature and moisture constraints, no stoichiometry
 
     ! used as logical: 0 = FALSE / 1 = TRUE
@@ -224,8 +224,8 @@ MODULE mo_veg_memory_class
                                     fn_pepc_cl        , &           !< fraction of N in PEP carboylase, C4 plants only
                                     fn_oth_cl         , &           !< fraction of N not associated with photosynthesis 
                                     fleaf_sunlit_cl   , &           !< fraction of layer which is sunlit
-                                    lai_cl            , &           !< leaf area in the canopy layer 
-                                    cumm_lai_cl                     !< cummulative leaf area above the mid-point of the canopy layer 
+                                    lai_cl            , &           !< leaf area in the canopy layer [m2 m-2]
+                                    cumm_lai_cl                     !< cummulative leaf area above the mid-point of the canopy layer [m2 m-2]
 
     ! fluxes
     TYPE(t_jsb_var_real2d)          :: &   
@@ -265,12 +265,12 @@ MODULE mo_veg_memory_class
     ! everything else 2D
     TYPE(t_jsb_var_real2d)          :: &   
                                     fmaint_rate               , & !< current N-specific maintentance respiration [~µmol C mol-1 N s-1]
-                                    unit_npp                  , & !< incremental change in NPP. Needed for optimal allocation
-                                    unit_transpiration        , & !< incremental change in transpiration. Needed for optimal allocation
-                                    unit_uptake_n_pot         , & !< incremental change in potential N uptake per unit root carbon, needed for N uptake calculation 
-                                    unit_uptake_p_pot         , & !< incremental change in potential P uptake per unit root carbon, currently unused 
-                                    unit_uptake_n_act         , & !< incremental change in actual N uptake per unit root carbon, needed for optimal allocation
-                                    unit_uptake_p_act         , & !< incremental change in actual P uptake per unit root carbon, needed for optimal allocation
+                                    unit_npp                  , & !< incremental change in NPP [µmol CO2 m-2 s-1]
+                                    unit_transpiration        , & !< incremental change in transpiration 
+                                    unit_uptake_n_pot         , & !< incremental change in potential N uptake per unit root carbon [µmol N m-2 s-1]
+                                    unit_uptake_p_pot         , & !< incremental change in potential P uptake per unit root carbon [µmol P m-2 s-1]
+                                    unit_uptake_n_act         , & !< incremental change in actual N uptake per unit root carbon [µmol N m-2 s-1]
+                                    unit_uptake_p_act         , & !< incremental change in actual P uptake per unit root carbon [µmol P m-2 s-1]
                                     delta_dens_ind            , & !< change in density of individuals [# m-2 timestep-1]
                                     cost_n_uptake_root        , & !< actual cost for N uptake by roots [mol C mol-1 N]
                                     cost_n_fixation           , & !< actual cost for N uptake through fixation [mol C mol-1 N]
@@ -283,25 +283,28 @@ MODULE mo_veg_memory_class
     !> daytime averages
     !! 
     TYPE(t_jsb_var_real3d)          :: &   ! DIMENSION(ncanopy)
-                                    fleaf_sunlit_daytime_cl          !<  average of the previous day
+                                    fleaf_sunlit_daytime_cl          !< fraction of layer which is sunlit average of the previous day
     TYPE(t_jsb_var_real2d)          :: &   
-                                    t_air_daytime             , &    !<  average of the previous day
-                                    press_srf_daytime         , &    !<  average of the previous day
-                                    co2_mixing_ratio_daytime  , &    !<  average of the previous day
-                                    ga_daytime                , &    !<  average of the previous day
-                                    beta_sinklim_ps_daytime   , &    !<  average of the previous day
-                                    t_jmax_opt_daytime               !<  average of the previous day
+                                    t_air_daytime             , &    !< air temperature average of the previous day [K]
+                                    press_srf_daytime         , &    !< air pressure at surface average of the previous day [Pa]
+                                    co2_mixing_ratio_daytime  , &    !< co2 mixing ratio of the air average of the previous day [co2 in ppm]
+                                    ga_daytime                , &    !< aerodynamic conductance average of the previous day [m s-1]
+                                    beta_sinklim_ps_daytime   , &    !< scaling factor to account for soil moisture constraints on photosynthesis average of the previous day [unitless]
+                                    t_jmax_opt_daytime               !< optimal temperature for electron transport of photosynthesis average of the previous day
+
+    !> accumlated over current daytime
+    !! 
     TYPE(t_jsb_var_real3d)          :: &   ! DIMENSION(ncanopy)
-                                    fleaf_sunlit_daytime_dacc_cl     !<  value accumulated over current day
+                                    fleaf_sunlit_daytime_dacc_cl     !< fraction of layer which is sunlit value accumulated over current day
     TYPE(t_jsb_var_real2d)          :: &   
-                                    t_air_daytime_dacc            , & !<  average of the previous day
-                                    press_srf_daytime_dacc        , & !<  average of the previous day
-                                    co2_mixing_ratio_daytime_dacc , & !<  average of the previous day
-                                    ga_daytime_dacc               , & !<  average of the previous day
-                                    beta_sinklim_ps_daytime_dacc  , & !<  average of the previous day
-                                    t_jmax_opt_daytime_dacc           !<  value accumulated over current day 
+                                    t_air_daytime_dacc            , & !< air temperature average of the previous day [K]
+                                    press_srf_daytime_dacc        , & !< air pressure at surface average of the previous day [Pa]
+                                    co2_mixing_ratio_daytime_dacc , & !< co2 mixing ratio of the air average of the previous day [co2 in ppm]
+                                    ga_daytime_dacc               , & !< aerodynamic conductance average of the previous day [m s-1]
+                                    beta_sinklim_ps_daytime_dacc  , & !< scaling factor to account for soil moisture constraints on photosynthesis average of the previous day [unitless]
+                                    t_jmax_opt_daytime_dacc           !< optimal temperature for electron transport of photosynthesis value accumulated over current day 
     TYPE(t_jsb_var_real2d)          :: &   
-                                    daytime_counter                   !< number of timesteps of current day with light available
+                                    daytime_counter                   !< number of timesteps of current day with light available [#]
 
     !> moving averages
     !! 
@@ -309,89 +312,89 @@ MODULE mo_veg_memory_class
     TYPE(t_jsb_var_real2d)          :: &   
                                     gpp_tlabile_mavg               , &  !< gpp  [µmol m-2 s-1]
                                     maint_respiration_tlabile_mavg , &  !< maintenance respiration [µmol m-2 s-1]
-                                    growth_req_n_tlabile_mavg      , &  !< moles N required for a unit of C growth under current allocation fractions
-                                    growth_req_p_tlabile_mavg           !< moles P required for a unit of N growth under current allocation fractions
+                                    growth_req_n_tlabile_mavg      , &  !< moles N required for a unit of C growth under current allocation fractions time-averaged
+                                    growth_req_p_tlabile_mavg           !< moles P required for a unit of N growth under current allocation fractions time-averaged
     ! 1.2 memory of conditions for phenology calculations
     TYPE(t_jsb_var_real2d)          :: &   
-                                    t_air_tphen_mavg                    !< air temp mavg for phenology calc
+                                    t_air_tphen_mavg                    !< air temperature time-averaged [K]
     ! 1.3 memory for plant uptake (average demand over a couple of days to get rid of diurnal C cycle)
     TYPE(t_jsb_var_real2d)          :: &   
                                     npp_tuptake_mavg               , &  !< npp of the last week [µmol m-2 s-1]
-                                    demand_uptake_n_tuptake_mavg   , &  !< scalar of Vmax for root N uptake 
-                                    demand_uptake_p_tuptake_mavg   , &  !< scalar of Vmax for root P uptake
-                                    growth_req_n_tuptake_mavg      , &  !< moles N required for a unit of C growth under current allocation fractions
-                                    growth_req_p_tuptake_mavg      , &  !< moles P required for a unit of N growth under current allocation fractions
+                                    demand_uptake_n_tuptake_mavg   , &  !< scalar of Vmax for root N uptake time-averaged [unitless]
+                                    demand_uptake_p_tuptake_mavg   , &  !< scalar of Vmax for root P uptake time-averaged [unitless]
+                                    growth_req_n_tuptake_mavg      , &  !< moles N required for a unit of C growth under current allocation fractions time-averaged
+                                    growth_req_p_tuptake_mavg      , &  !< moles P required for a unit of N growth under current allocation fractions time-averaged
                                     cost_n_fixation_tuptake_mavg        !< moving average of N fixation cost [mol C mol-1 N]
     ! 1.4 memory of conditions for photosynthesis for the optimisation of foliar N fractions 
     TYPE(t_jsb_var_real3d)          :: &   ! DIMENSION(ncanopy)
-                                    fleaf_sunlit_tfrac_mavg_cl          !< fraction of sunlit leaves
+                                    fleaf_sunlit_tfrac_mavg_cl          !< fraction of layer which is sunlit time-averaged
     TYPE(t_jsb_var_real2d)          :: &   
-                                    t_air_tfrac_mavg               , &  !< air temp
-                                    press_srf_tfrac_mavg           , &  !< air pressure at surface
-                                    co2_mixing_ratio_tfrac_mavg    , &  !< co2 mixing ratio of the air
-                                    ga_tfrac_mavg                  , &  !< aerodynamic conductance
-                                    beta_sinklim_ps_tfrac_mavg          !< scaling factor to account for soil moisture constraints on photosynthesis 
+                                    t_air_tfrac_mavg               , &  !< air temperature time-averaged [K]
+                                    press_srf_tfrac_mavg           , &  !< air pressure at surface time-averaged [Pa]
+                                    co2_mixing_ratio_tfrac_mavg    , &  !< co2 mixing ratio of the air time-averaged [co2 in ppm]
+                                    ga_tfrac_mavg                  , &  !< aerodynamic conductance time-averaged [m s-1]
+                                    beta_sinklim_ps_tfrac_mavg          !< scaling factor to account for soil moisture constraints on photosynthesis time-averaged [unitless]
     ! 1.5 memory of conditions for photosynthesis for the optimisation of foliar N  
     TYPE(t_jsb_var_real3d)          :: &   ! DIMENSION(ncanopy)
-                                    fleaf_sunlit_tcnl_mavg_cl           !< fraction of sunlit leaves
+                                    fleaf_sunlit_tcnl_mavg_cl           !< fraction of layer which is sunlit time-averaged
     TYPE(t_jsb_var_real2d)          :: &   
-                                    t_air_tcnl_mavg                , &  !< air temp
-                                    press_srf_tcnl_mavg            , &  !< air pressure at surface
-                                    co2_mixing_ratio_tcnl_mavg     , &  !< co2 mixing ratio of the air
-                                    ga_tcnl_mavg                   , &  !< aerodynamic conductance
-                                    beta_sinklim_ps_tcnl_mavg      , &  !< scaling factor to account for soil moisture constraints on conductance
-                                    uptake_n_tcnl_mavg             , &  !< root N uptake
-                                    growth_cn_tcnl_mavg            , &  !< new growth CN ratio
-                                    growth_np_tcnl_mavg            , &  !< 
-                                    npp_tcnl_mavg                  , &  !< NPP
-                                    reserve_nitrogen_tcnl_mavg     , &  !< 
-                                    reserve_carbon_tcnl_mavg       , &  !< 
-                                    labile_nitrogen_tcnl_mavg      , &  !< 
-                                    labile_carbon_tcnl_mavg        , &  !< 
-                                    labile_phosphorus_tcnl_mavg         !< 
+                                    t_air_tcnl_mavg                , &  !< air temperature time-averaged [K]
+                                    press_srf_tcnl_mavg            , &  !< air pressure at surface time-averaged [Pa]
+                                    co2_mixing_ratio_tcnl_mavg     , &  !< co2 mixing ratio of the air time-averaged [co2 in ppm]
+                                    ga_tcnl_mavg                   , &  !< aerodynamic conductance time-averaged [m s-1]
+                                    beta_sinklim_ps_tcnl_mavg      , &  !< scaling factor to account for soil moisture constraints on conductance time-averaged [unitless]
+                                    uptake_n_tcnl_mavg             , &  !< root N uptake time-averaged [µmol N m-2 s-1]
+                                    growth_cn_tcnl_mavg            , &  !< new growth CN ratio time-averaged
+                                    growth_np_tcnl_mavg            , &  !< new growth NP ratio time-averaged
+                                    npp_tcnl_mavg                  , &  !< NPP time-averaged
+                                    reserve_nitrogen_tcnl_mavg     , &  !<  time-averaged
+                                    reserve_carbon_tcnl_mavg       , &  !<  time-averaged
+                                    labile_nitrogen_tcnl_mavg      , &  !<  time-averaged
+                                    labile_carbon_tcnl_mavg        , &  !<  time-averaged
+                                    labile_phosphorus_tcnl_mavg         !<  time-averaged
 
     ! 1.6 memory of conditions for photosynthesis for the optimisation of biomass allocation fractions
     TYPE(t_jsb_var_real2d)          :: &   
                                     npp_talloc_mavg                , &  !< NPP [µmol m-2 s-1]
-                                    n_fixation_talloc_mavg         , &  !< N fixation averaged at the allocation timescale
-                                    transpiration_talloc_mavg      , &  !< average transpiration at allocation time-scale
+                                    n_fixation_talloc_mavg         , &  !< N fixation time-averaged
+                                    transpiration_talloc_mavg      , &  !< transpiration time-averaged
                                     unit_npp_talloc_mavg           , &  !< rate of change in NPP with  increment in leaf mass [µmol C mol-1]
-                                    unit_transpiration_talloc_mavg , &  !< rate of tranpiration change per unit LAI change?
+                                    unit_transpiration_talloc_mavg , &  !< incremental change in transpiration time-averaged
                                     unit_uptake_n_talloc_mavg      , &  !< actual rate of N uptkae per unit root [µmol N mol-1]
                                     unit_uptake_p_talloc_mavg      , &  !< actual rate of P uptake per unit root [µmol P mol-1]
                                     dphi_talloc_mavg               , &  !< leaf-soil water potential gradient [MPa]
-                                    growth_cn_talloc_mavg          , &  !< plant growth cn ratio, equivalent to 1/growth_req_n
-                                    growth_cp_talloc_mavg          , &  !< plant growth cp ratio, equivalent to 1/(growthreq_n*growth_req_p)
-                                    labile_carbon_talloc_mavg      , &  !< moving average of labile carbon pool neeeded for allometry calculations
-                                    labile_nitrogen_talloc_mavg    , &  !< moving average of labile nitrogen pool neeeded for allometry calculations
-                                    labile_phosphorus_talloc_mavg  , &  !< moving average of labile phosphorus pool neeeded for allometry calculations
-                                    reserve_carbon_talloc_mavg     , &  !< moving average of reserve carbon needed for optimal allocation
-                                    reserve_nitrogen_talloc_mavg   , &  !< moving average of reserve nitrogen needed for optimal allocation
-                                    reserve_phosphorus_talloc_mavg , &  !< moving average of reserve phosphorus needed for optimal allocation
-                                    w_root_lim_talloc_mavg              !< moving average of ...
+                                    growth_cn_talloc_mavg          , &  !< plant growth cn ratio, equivalent to 1/growth_req_n time-averaged
+                                    growth_cp_talloc_mavg          , &  !< plant growth cp ratio, equivalent to 1/(growthreq_n*growth_req_p) time-averaged
+                                    labile_carbon_talloc_mavg      , &  !< labile carbon pool neeeded for allometry calculations time-averaged
+                                    labile_nitrogen_talloc_mavg    , &  !< labile nitrogen pool neeeded for allometry calculations time-averaged
+                                    labile_phosphorus_talloc_mavg  , &  !< labile phosphorus pool neeeded for allometry calculations time-averaged
+                                    reserve_carbon_talloc_mavg     , &  !< reserve carbon needed for optimal allocation time-averaged
+                                    reserve_nitrogen_talloc_mavg   , &  !< reserve nitrogen needed for optimal allocation time-averaged
+                                    reserve_phosphorus_talloc_mavg , &  !< reserve phosphorus needed for optimal allocation time-averaged
+                                    w_root_lim_talloc_mavg              !< root water limitation below which root allocation starts responding time-averaged
                                     
                                     
     ! 1.7 memory over root life time 
     TYPE(t_jsb_var_real2d)          :: &   
-                                    leaf2root_troot_mavg           , &  !< leaf to root mass ratio
+                                    leaf2root_troot_mavg           , &  !< leaf to root mass ratio time-averaged
                                     unit_npp_troot_mavg            , &  !< rate of change in NPP with increment in leaf mass [µmol C mol-1]
                                     unit_uptake_n_pot_troot_mavg   , &  !< rate of N uptkae per unit root [µmol N mol-1]
                                     unit_uptake_p_pot_troot_mavg   , &  !< rate of P uptake per unit root [µmol P mol-1]
                                     fmaint_rate_troot_mavg              !< moving average of N-specific maintentance respiration [~µmol C mol-1 N s-1]
     ! 1.8 memory over timescale of vegetation dynamics 
     TYPE(t_jsb_var_real2d)          :: &   
-                                    an_boc_tvegdyn_mavg            , &  !< net photosynthesis at bottom of canopy, lowest canopy layer existing
+                                    an_boc_tvegdyn_mavg            , &  !< net photosynthesis at bottom of canopy, lowest canopy layer existing time-averaged [µmol m-2 s-1]
                                     net_growth_tvegdyn_mavg        , &  !< net growth, npp minus turnover [µmol C m-2 s-1]
-                                    lai_tvegdyn_mavg                    !< lai at vegdynamics timescale
+                                    lai_tvegdyn_mavg                    !< lai time-averaged [m2 m-2]
     ! 1.9 memory of variables for respiration accclimation 
     TYPE(t_jsb_var_real2d)          :: &   
-                                    t_air_tacclim_mavg             , &  !< average air temperature for respiration acclimation
-                                    t_soil_root_tacclim_mavg            !< average root temperature for respiration acclimation
+                                    t_air_tacclim_mavg             , &  !< air temperature for respiration acclimation time-averaged [K]
+                                    t_soil_root_tacclim_mavg            !< root temperature for respiration acclimation time-averaged
     ! 1.10 memory of certain variables, temperature, ...
     TYPE(t_jsb_var_real2d)          :: &   
-                                    t_air_week_mavg                , &  !< avrg air temperature across 7 days
-                                    t_air_month_mavg               , &  !< avrg air temperature across 30 days
-                                    t_jmax_opt_mavg                     !< optimim temperature for electron transport of photosynthesis
+                                    t_air_week_mavg                , &  !< air temperature time-averaged [K]
+                                    t_air_month_mavg               , &  !< air temperature time-averaged [K]
+                                    t_jmax_opt_mavg                     !< optimal temperature for electron transport of photosynthesis time-averaged
 
     !> structures
     !! 
@@ -1249,7 +1252,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'lai', mem%lai, &
             hgrid, surface, &
-            t_cf('lai', '', 'actual leaf area index'), &
+            t_cf('lai', 'm2 m-2', 'actual leaf area index'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1345,7 +1348,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'target_lai', mem%target_lai, &
             hgrid, surface, &
-            t_cf('target_lai', '', 'LAI implied from sap wood area'), &
+            t_cf('target_lai', 'm2 m-2', 'LAI implied from sap wood area'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1497,7 +1500,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'lai_cl', mem%lai_cl, &
             hgrid, surface, &
-            t_cf('lai_cl', '', 'leaf area in the canopy layer '), &
+            t_cf('lai_cl', 'm2 m-2', 'leaf area in the canopy layer '), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1505,7 +1508,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'cumm_lai_cl', mem%cumm_lai_cl, &
             hgrid, surface, &
-            t_cf('cumm_lai_cl', '', 'cummulative leaf area above the mid-point of the canopy layer '), &
+            t_cf('cumm_lai_cl', 'm2 m-2', 'cummulative leaf area above the mid-point of the canopy layer '), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1929,7 +1932,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'beta_sinklim_ps_daytime', mem%beta_sinklim_ps_daytime, &
             hgrid, surface, &
-            t_cf('beta_sinklim_ps_daytime', '', 'average of the previous day'), &
+            t_cf('beta_sinklim_ps_daytime', 'unitless', 'average of the previous day'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2458,7 +2461,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'lai_tvegdyn_mavg', mem%lai_tvegdyn_mavg, &
             hgrid, surface, &
-            t_cf('lai_tvegdyn_mavg', '', 'lai at vegdynamics timescale'), &
+            t_cf('lai_tvegdyn_mavg', 'm2 m-2', 'lai at vegdynamics timescale'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
