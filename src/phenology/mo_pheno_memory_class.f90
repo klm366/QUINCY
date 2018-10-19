@@ -103,7 +103,7 @@ CONTAINS
       !!  
       CALL jsb_add_var(mem, 'growing_season', mem%growing_season, &
             hgrid, surface, &
-            t_cf('growing_season', '', 'logical to identify whether the plant is in the growing season'), &
+            t_cf('growing_season', 'logical', 'logical to identify whether the plant is in the growing season'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -111,7 +111,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'gdd', mem%gdd, &
             hgrid, surface, &
-            t_cf('gdd', '# days', 'growing degree days above 5 degC'), &
+            t_cf('gdd', 'K days', 'growing degree days above 5 degC'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -127,7 +127,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'lai_max', mem%lai_max, &
             hgrid, surface, &
-            t_cf('lai_max', '', 'maximum lai (site specific)'), &
+            t_cf('lai_max', 'm2 m-2', 'maximum lai (site specific)'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
