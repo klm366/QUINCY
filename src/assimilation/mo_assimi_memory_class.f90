@@ -47,13 +47,13 @@ MODULE mo_assimi_memory_class
 
     ! other 
     TYPE(t_jsb_var_real2d)    :: &
-                              beta_air                  , &  !< scaling factor to account for air humidity effects on conductance
-                              beta_soa                  , &  !< scaling factor to account for spring in coniferous forests
-                              beta_soil_ps              , &  !< scaling factor to account for soil moisture constraints on photosynthesis
-                              beta_soil_gs              , &  !< scaling factor to account for soil moisture constraints on conductance
+                              beta_air                  , &  !< scaling factor to account for air humidity effects on conductance [unitless]
+                              beta_soa                  , &  !< scaling factor to account for spring in coniferous forests [unitless]
+                              beta_soil_ps              , &  !< scaling factor to account for soil moisture constraints on photosynthesis [unitless]
+                              beta_soil_gs              , &  !< scaling factor to account for soil moisture constraints on conductance [unitless]
                               canopy_cond               , &  !< canopy-integrated conductance for water [m s-1]
                               co2_conc_leaf             , &  !< canopy-integrated internal leaf CO2 concentration [ppm]
-                              t_jmax_opt                     !< optimal temperature for electron transport 
+                              t_jmax_opt                     !< optimal temperature for electron transport of photosynthesis
 
     TYPE(t_jsb_var_real3d)    :: &
                               canopy_cond_cl            , &  !< conductance for water per canopy layer [m s-1]
@@ -66,25 +66,25 @@ MODULE mo_assimi_memory_class
 
     ! averaging
     TYPE(t_jsb_var_real2d)    :: &
-                              soa_tsoa_mavg                  !< state of acclimation, used in calculation of beta_soa    
+                              soa_tsoa_mavg                  !< state of acclimation, used in calculation of beta_soa time-averaged
 
     TYPE(t_jsb_var_real2d)    :: &
-                              beta_air_daytime          , &  !< average of the previous day
-                              beta_air_daytime_dacc     , &  !< average of the previous day
-                              beta_air_tfrac_mavg       , &  !< scaling factor to account for air humidity effects on conductance
-                              beta_air_tcnl_mavg        , &  !< scaling factor to account for air humidity effects on conductance
-                              beta_soa_tphen_mavg            !< average of scaling factor to account for spring in coniferous forests
+                              beta_air_daytime          , &  !< scaling factor to account for air humidity effects on conductance average of the previous day [unitless]
+                              beta_air_daytime_dacc     , &  !< scaling factor to account for air humidity effects on conductance average of the previous day [unitless]
+                              beta_air_tfrac_mavg       , &  !< scaling factor to account for air humidity effects on conductance time-averaged [unitless]
+                              beta_air_tcnl_mavg        , &  !< scaling factor to account for air humidity effects on conductance time-averaged [unitless]
+                              beta_soa_tphen_mavg            !< scaling factor to account for spring in coniferous forests time-averaged [unitless]
 
     TYPE(t_jsb_var_real2d)    :: &
-                              beta_soil_ps_daytime      , &  !< average of the previous day
-                              beta_soil_ps_daytime_dacc , &  !< average of the previous day
-                              beta_soil_ps_tfrac_mavg   , &  !< scaling factor to account for soil moisture constraints on photosynthesis 
-                              beta_soil_ps_tcnl_mavg    , &  !< scaling factor to account for soil moisture constraints on conductance
-                              beta_soil_gs_daytime      , &  !< average of the previous day
-                              beta_soil_gs_daytime_dacc , &  !< average of the previous day
-                              beta_soil_gs_tphen_mavg   , &  !< scaling factor to account for soil moisture constraints on conductance
-                              beta_soil_gs_tfrac_mavg   , &  !< scaling factor to account for soil moisture constraints on conductance
-                              beta_soil_gs_tcnl_mavg         !< scaling factor to account for soil moisture constraints on conductance
+                              beta_soil_ps_daytime      , &  !< scaling factor to account for soil moisture constraints on photosynthesis average of the previous day [unitless]
+                              beta_soil_ps_daytime_dacc , &  !< scaling factor to account for soil moisture constraints on photosynthesis average of the previous day [unitless]
+                              beta_soil_ps_tfrac_mavg   , &  !< scaling factor to account for soil moisture constraints on photosynthesis time-averaged [unitless]
+                              beta_soil_ps_tcnl_mavg    , &  !< scaling factor to account for soil moisture constraints on conductance time-averaged [unitless]
+                              beta_soil_gs_daytime      , &  !< scaling factor to account for soil moisture constraints on conductance average of the previous day [unitless]
+                              beta_soil_gs_daytime_dacc , &  !< scaling factor to account for soil moisture constraints on conductance average of the previous day [unitless]
+                              beta_soil_gs_tphen_mavg   , &  !< scaling factor to account for soil moisture constraints on conductance time-averaged [unitless]
+                              beta_soil_gs_tfrac_mavg   , &  !< scaling factor to account for soil moisture constraints on conductance time-averaged [unitless]
+                              beta_soil_gs_tcnl_mavg         !< scaling factor to account for soil moisture constraints on conductance time-averaged [unitless]
 
 
   CONTAINS
@@ -220,7 +220,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'beta_air', mem%beta_air, &
             hgrid, surface, &
-            t_cf('beta_air', '', 'scaling factor to account for air humidity effects on conductance'), &
+            t_cf('beta_air', 'unitless', 'scaling factor to account for air humidity effects on conductance'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -228,7 +228,7 @@ CONTAINS
  
       CALL jsb_add_var(mem, 'beta_soa', mem%beta_soa, &
             hgrid, surface, &
-            t_cf('beta_soa', '', 'scaling factor to account for spring in coniferous forests'), &
+            t_cf('beta_soa', 'unitless', 'scaling factor to account for spring in coniferous forests'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -236,7 +236,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'beta_soil_ps', mem%beta_soil_ps, &
             hgrid, surface, &
-            t_cf('beta_soil_ps', '', 'scaling factor to account for soil moisture constraints on photosynthesis'), &
+            t_cf('beta_soil_ps', 'unitless', 'scaling factor to account for soil moisture constraints on photosynthesis'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -244,7 +244,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'beta_soil_gs', mem%beta_soil_gs, &
             hgrid, surface, &
-            t_cf('beta_soil_gs', '', 'scaling factor to account for soil moisture constraints on conductance'), &
+            t_cf('beta_soil_gs', 'unitless', 'scaling factor to account for soil moisture constraints on conductance'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -268,7 +268,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 't_jmax_opt', mem%t_jmax_opt, &
             hgrid, surface, &
-            t_cf('t_jmax_opt', '', 'optimal temperature for electron transport'), &
+            t_cf('t_jmax_opt', '', 'optimal temperature for electron transport of photosynthesis'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -308,7 +308,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'soa_tsoa_mavg', mem%soa_tsoa_mavg, &
             hgrid, surface, &
-            t_cf('soa_tsoa_mavg', '', 'state of acclimation, used in calculation of beta_soa'), &
+            t_cf('soa_tsoa_mavg', '', 'state of acclimation, used in calculation of beta_soa time-averaged'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -316,7 +316,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'beta_air_daytime', mem%beta_air_daytime, &
             hgrid, surface, &
-            t_cf('beta_air_daytime', '', 'average of the previous day'), &
+            t_cf('beta_air_daytime', 'unitless', 'scaling factor to account for air humidity effects on conductance average of the previous day'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -324,7 +324,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'beta_air_daytime_dacc', mem%beta_air_daytime_dacc, &
             hgrid, surface, &
-            t_cf('beta_air_daytime_dacc', '', 'average of the previous day'), &
+            t_cf('beta_air_daytime_dacc', 'unitless', 'scaling factor to account for air humidity effects on conductance average of the previous day'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -332,7 +332,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'beta_air_tfrac_mavg', mem%beta_air_tfrac_mavg, &
             hgrid, surface, &
-            t_cf('beta_air_tfrac_mavg', '', 'scaling factor to account for air humidity effects on conductance'), &
+            t_cf('beta_air_tfrac_mavg', 'unitless', 'scaling factor to account for air humidity effects on conductance time-averaged'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -340,7 +340,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'beta_air_tcnl_mavg', mem%beta_air_tcnl_mavg, &
             hgrid, surface, &
-            t_cf('beta_air_tcnl_mavg', '', 'scaling factor to account for air humidity effects on conductance'), &
+            t_cf('beta_air_tcnl_mavg', 'unitless', 'scaling factor to account for air humidity effects on conductance time-averaged'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -348,7 +348,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'beta_soa_tphen_mavg', mem%beta_soa_tphen_mavg, &
             hgrid, surface, &
-            t_cf('beta_soa_tphen_mavg', '', 'average of scaling factor to account for spring in coniferous forests'), &
+            t_cf('beta_soa_tphen_mavg', 'unitless', 'scaling factor to account for spring in coniferous forests time-averaged'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -356,7 +356,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'beta_soil_ps_daytime', mem%beta_soil_ps_daytime, &
             hgrid, surface, &
-            t_cf('beta_soil_ps_daytime', '', 'average of the previous day'), &
+            t_cf('beta_soil_ps_daytime', 'unitless', 'scaling factor to account for soil moisture constraints on photosynthesis average of the previous day'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -364,7 +364,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'beta_soil_ps_daytime_dacc', mem%beta_soil_ps_daytime_dacc, &
             hgrid, surface, &
-            t_cf('beta_soil_ps_daytime_dacc', '', 'average of the previous day'), &
+            t_cf('beta_soil_ps_daytime_dacc', 'unitless', 'scaling factor to account for soil moisture constraints on photosynthesis average of the previous day'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -372,7 +372,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'beta_soil_ps_tfrac_mavg', mem%beta_soil_ps_tfrac_mavg, &
             hgrid, surface, &
-            t_cf('beta_soil_ps_tfrac_mavg', '', 'scaling factor to account for soil moisture constraints on photosynthesis'), &
+            t_cf('beta_soil_ps_tfrac_mavg', 'unitless', 'scaling factor to account for soil moisture constraints on photosynthesis time-averaged'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -380,7 +380,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'beta_soil_ps_tcnl_mavg', mem%beta_soil_ps_tcnl_mavg, &
             hgrid, surface, &
-            t_cf('beta_soil_ps_tcnl_mavg', '', 'scaling factor to account for soil moisture constraints on conductance'), &
+            t_cf('beta_soil_ps_tcnl_mavg', 'unitless', 'scaling factor to account for soil moisture constraints on conductance time-averaged'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -388,7 +388,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'beta_soil_gs_daytime', mem%beta_soil_gs_daytime, &
             hgrid, surface, &
-            t_cf('beta_soil_gs_daytime', '', 'average of the previous day'), &
+            t_cf('beta_soil_gs_daytime', 'unitless', 'scaling factor to account for soil moisture constraints on conductance average of the previous day'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -396,7 +396,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'beta_soil_gs_daytime_dacc', mem%beta_soil_gs_daytime_dacc, &
             hgrid, surface, &
-            t_cf('beta_soil_gs_daytime_dacc', '', 'average of the previous day'), &
+            t_cf('beta_soil_gs_daytime_dacc', 'unitless', 'scaling factor to account for soil moisture constraints on conductance average of the previous day'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -404,7 +404,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'beta_soil_gs_tphen_mavg', mem%beta_soil_gs_tphen_mavg, &
             hgrid, surface, &
-            t_cf('beta_soil_gs_tphen_mavg', '', 'scaling factor to account for soil moisture constraints on conductance'), &
+            t_cf('beta_soil_gs_tphen_mavg', 'unitless', 'scaling factor to account for soil moisture constraints on conductance time-averaged'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -412,7 +412,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'beta_soil_gs_tfrac_mavg', mem%beta_soil_gs_tfrac_mavg, &
             hgrid, surface, &
-            t_cf('beta_soil_gs_tfrac_mavg', '', 'scaling factor to account for soil moisture constraints on conductance'), &
+            t_cf('beta_soil_gs_tfrac_mavg', 'unitless', 'scaling factor to account for soil moisture constraints on conductance time-averaged'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -420,7 +420,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'beta_soil_gs_tcnl_mavg', mem%beta_soil_gs_tcnl_mavg, &
             hgrid, surface, &
-            t_cf('beta_soil_gs_tcnl_mavg', '', 'scaling factor to account for soil moisture constraints on conductance'), &
+            t_cf('beta_soil_gs_tcnl_mavg', 'unitless', 'scaling factor to account for soil moisture constraints on conductance time-averaged'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
