@@ -98,7 +98,7 @@ MODULE mo_fage_process
         thisMaxAge = int(cohort_max_age(j,iThisAgeCohort))
         thisAreaSum = SUM(fract_per_age(j,thisMinAge:thisMaxAge))
 
-        IF(thisAreaSum - fract(j) .GT. 1.e-14_wp) THEN !TODO-JN make 1.e-14_wp a constant somewhere
+        IF(ABS(thisAreaSum - fract(j)) .GT. 1.e-14_wp) THEN !TODO-JN make 1.e-14_wp a constant somewhere
           WRITE (message_text,*) ' fract (', fract(j), &
              & ') and fage sum (', thisAreaSum , ') missmatch for age cohort ', iThisAgeCohort, &
              & '-- pft ', pftid
