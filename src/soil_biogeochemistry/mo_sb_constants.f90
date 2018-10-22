@@ -81,6 +81,7 @@ MODULE mo_sb_constants
   ! additional microbial parameters for JSM implementation
   REAL(wp), SAVE :: & 
       fc_woody2polymeric, &             !< fraction of woody litter transformed into polymeric litter (JSM version) 
+      fc_soluable2dom, &                !< fraction of soluable litter transformed into dom pool (JSM version) 
       k_mort_microbial, &               !< mortality rate of microbes [s-1]
       min_mic_biomass, &                !< minimum microbial biomass density (stopping mortality) [mol C/m3]
       vmax_mic_uptake, &                !< maximum uptake rates of microbes [s-1] 
@@ -293,6 +294,7 @@ CONTAINS
    
     ! additional microbial parameters for JSM implementation
     fc_woody2polymeric            = 0.3_wp                                 !  
+    fc_soluable2dom               = 0.9                                    !
     k_mort_microbial              = 7.48_wp * 1.e-8_wp                                ! 
     min_mic_biomass               = 0.01_wp                                           ! 
     vmax_mic_uptake               = 3495.18053_wp / one_year / one_day * 1000000._wp  ! 

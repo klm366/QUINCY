@@ -372,7 +372,7 @@ CONTAINS
     !!
     !> 2.1 decay of soluable litter
     !!
-    CALL calc_litter_turnover(options, tau_soluable_litter, 0.0_wp, &
+    CALL calc_litter_turnover(options, tau_soluable_litter, fc_soluable2dom, &
                               !rtm_depolymerisation(:,:),rmm_depolymerisation(:,:), &    currently not used
                               sb_pool%soluable_litter,sb_loss%soluable_litter,sb_formation%dom, &
                               het_respiration(:,:),het_respiration_c13(:,:),het_respiration_c14(:,:))
