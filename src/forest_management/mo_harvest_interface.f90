@@ -261,8 +261,8 @@ CONTAINS
             & c_green(:),                & ! inout
             & c_woods(:),                & ! inout
             & c_reserve(:),              & ! inout
-            & dummy1(:),                     & ! inout
-            & dummy2(:),                     & ! inout
+            & dummy1(:),                 & ! inout
+            & dummy2(:),                 & ! inout
             & c_acid_ag1(:),            & ! inout
             & c_water_ag1(:),           & ! inout
             & c_ethanol_ag1(:),         & ! inout
