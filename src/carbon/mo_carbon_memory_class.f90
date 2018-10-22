@@ -1152,7 +1152,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
         & prefix, suffix,                                                                  &
         & output_level=BASIC,                                                                                &
-        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & loutput=.true., lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
 
       CALL jsb_add_var( mem, 'root_exudates_ta', mem%root_exudates_ta,       &
@@ -1296,21 +1296,6 @@ CONTAINS
             & prefix, suffix,                                                    &
             & lrestart=.TRUE., initval_r=0.0_wp)
 
-      ENDIF
-
-      IF (model%processes(FAGE_)%p%config%active) THEN
-
-        IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
-          CALL jsb_add_var( mem, 'delta_current_max_green_rp', mem%delta_current_max_green_rp, hgrid, surface, &
-            & t_cf('delta_current_max_green_rp', 'mol(C) m-2(parent))', 'Change in current max green.'),         &
-            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
-            & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
-
-          CALL jsb_add_var( mem, 'delta_veg_carbon_at_max_green_rp', mem%delta_veg_carbon_at_max_green_rp, hgrid, surface, &
-            & t_cf('delta_veg_carbon_at_max_green_rp', 'mol(C) m-2(parent))', 'Change in veg at current max green.'),      &
-            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
-            & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
-
           CALL jsb_add_var( mem,'delta_annual_avg_NPP_rp', mem%delta_annual_avg_NPP_rp, &
             & hgrid, surface,                                                    &
             & t_cf('delta_annual_avg_NPP_rp', 'mol(C) m-2(canopy) y-1', 'Change in NPP increment with annual weighting'), &
@@ -1329,6 +1314,20 @@ CONTAINS
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
             & prefix, suffix,                                                    &
             & lrestart=.TRUE., initval_r=0.0_wp)
+      ENDIF
+
+      IF (model%processes(FAGE_)%p%config%active) THEN
+
+        IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
+          CALL jsb_add_var( mem, 'delta_current_max_green_rp', mem%delta_current_max_green_rp, hgrid, surface, &
+            & t_cf('delta_current_max_green_rp', 'mol(C) m-2(parent))', 'Change in current max green.'),         &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+            & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+
+          CALL jsb_add_var( mem, 'delta_veg_carbon_at_max_green_rp', mem%delta_veg_carbon_at_max_green_rp, hgrid, surface, &
+            & t_cf('delta_veg_carbon_at_max_green_rp', 'mol(C) m-2(parent))', 'Change in veg at current max green.'),      &
+            & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+            & prefix, suffix, loutput = .FALSE., lrestart=.FALSE., initval_r=0.0_wp )
         ENDIF
 
 !TODO-JN-COHORTS: change unit when absolute areas are implemented
