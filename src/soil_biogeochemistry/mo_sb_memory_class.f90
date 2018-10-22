@@ -341,12 +341,12 @@ MODULE mo_sb_memory_class
 
     ! 2D total fluxes for mass balance checks in soil_biogeochemistry model
     TYPE(t_jsb_var_real2d)          :: & 
-                                    total_flux_carbon, &          !< carbon mass balance checks in soil_biogeochemistry model
-                                    total_flux_nitrogen, &        !< nitrogen mass balance checks in soil_biogeochemistry model
-                                    total_flux_phosphorus, &      !< phosphorus mass balance checks in soil_biogeochemistry model
-                                    total_flux_carbon13, &        !< carbon13 mass balance checks in soil_biogeochemistry model
-                                    total_flux_carbon14, &        !< carbon14 mass balance checks in soil_biogeochemistry model
-                                    total_flux_nitrogen15         !< nitrogen15 mass balance checks in soil_biogeochemistry model
+                                    total_flux_carbon, &          !< carbon mass balance checks in soil_biogeochemistry model [mol C m-2 s-1]
+                                    total_flux_nitrogen, &        !< nitrogen mass balance checks in soil_biogeochemistry model [mol N m-2 s-1]
+                                    total_flux_phosphorus, &      !< phosphorus mass balance checks in soil_biogeochemistry model [mol P m-2 s-1]
+                                    total_flux_carbon13, &        !< carbon13 mass balance checks in soil_biogeochemistry model [mol C13 m-2 s-1]
+                                    total_flux_carbon14, &        !< carbon14 mass balance checks in soil_biogeochemistry model [mol C14 m-2 s-1]
+                                    total_flux_nitrogen15         !< nitrogen15 mass balance checks in soil_biogeochemistry model [mol N15 m-2 s-1]
 
    TYPE(t_slm_struct_sb_element)    :: &   ! simple structure for elements: t_jsb_struct
                                     delta_pools, &              !< for mass balance checks in soil_biogeochemistry model
@@ -2380,7 +2380,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'total_flux_carbon', mem%total_flux_carbon, &
             hgrid, surface, &
-            t_cf('total_flux_carbon', '', 'carbon mass balance checks in soil_biogeochemistry model'), &
+            t_cf('total_flux_carbon', 'mol C m-2 s-1', 'carbon mass balance checks in soil_biogeochemistry model'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2388,7 +2388,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'total_flux_nitrogen', mem%total_flux_nitrogen, &
             hgrid, surface, &
-            t_cf('total_flux_nitrogen', '', 'nitrogen mass balance checks in soil_biogeochemistry model'), &
+            t_cf('total_flux_nitrogen', 'mol N m-2 s-1', 'nitrogen mass balance checks in soil_biogeochemistry model'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2396,7 +2396,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'total_flux_phosphorus', mem%total_flux_phosphorus, &
             hgrid, surface, &
-            t_cf('total_flux_phosphorus', '', 'phosphorus mass balance checks in soil_biogeochemistry model'), &
+            t_cf('total_flux_phosphorus', 'mol P m-2 s-1', 'phosphorus mass balance checks in soil_biogeochemistry model'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2404,7 +2404,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'total_flux_carbon13', mem%total_flux_carbon13, &
             hgrid, surface, &
-            t_cf('total_flux_carbon13', '', 'carbon13 mass balance checks in soil_biogeochemistry model'), &
+            t_cf('total_flux_carbon13', 'mol C13 m-2 s-1', 'carbon13 mass balance checks in soil_biogeochemistry model'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2412,7 +2412,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'total_flux_carbon14', mem%total_flux_carbon14, &
             hgrid, surface, &
-            t_cf('total_flux_carbon14', '', 'carbon14 mass balance checks in soil_biogeochemistry model'), &
+            t_cf('total_flux_carbon14', 'mol C14 m-2 s-1', 'carbon14 mass balance checks in soil_biogeochemistry model'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2420,7 +2420,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'total_flux_nitrogen15', mem%total_flux_nitrogen15, &
             hgrid, surface, &
-            t_cf('total_flux_nitrogen15', '', 'nitrogen15 mass balance checks in soil_biogeochemistry model'), &
+            t_cf('total_flux_nitrogen15', 'mol N15 m-2 s-1', 'nitrogen15 mass balance checks in soil_biogeochemistry model'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &

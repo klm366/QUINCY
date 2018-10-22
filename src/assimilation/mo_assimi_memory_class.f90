@@ -268,7 +268,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 't_jmax_opt', mem%t_jmax_opt, &
             hgrid, surface, &
-            t_cf('t_jmax_opt', '', 'optimal temperature for electron transport of photosynthesis'), &
+            t_cf('t_jmax_opt', 'deg C', 'optimal temperature for electron transport of photosynthesis'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
