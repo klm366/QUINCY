@@ -219,6 +219,8 @@ CONTAINS
     ncohorts = dsl4jsb_Config(FAGE_)%ncohorts
     max_age = dsl4jsb_Config(FAGE_)%max_age
 
+    tile%l_delta_area_change(ics:ice, iblk) = .FALSE.
+
     IF(is_newyear()) THEN  ! year has changed - i.e. age - i.e. shift fractions!
       tile%l_delta_area_change(ics:ice, iblk) = .TRUE.
 
@@ -324,9 +326,6 @@ CONTAINS
 
       ! update the area per age tracking vector - for ageing this can be done for all children at once
       CALL recalc_fract_per_age_upon_ageing(nc, dsl4jsb_Config(FAGE_)%max_age, fract_per_age(:,:), mean_age(:))
-
-    ELSE
-      tile%l_delta_area_change(ics:ice, iblk) = .FALSE.
     END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -443,6 +442,8 @@ CONTAINS
     ncohorts = dsl4jsb_Config(FAGE_)%ncohorts
     max_age = dsl4jsb_Config(FAGE_)%max_age
 
+    tile%l_delta_area_change(ics:ice, iblk) = .FALSE.
+
     IF(is_newday()) THEN
       tile%l_delta_area_change(ics:ice, iblk) = .TRUE.
 
@@ -532,9 +533,6 @@ CONTAINS
 
       !recalculate mean age
       mean_age (:) = get_mean_age(fract_per_age)
-
-    ELSE
-      tile%l_delta_area_change(ics:ice, iblk) = .FALSE.
     ENDIF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -656,6 +654,7 @@ CONTAINS
     max_age = dsl4jsb_Config(FAGE_)%max_age
 
     tile%l_delta_area_change(ics:ice, iblk) = .FALSE.
+    
     IF(is_newyear()) THEN
       harvested_area(:) = 0._wp
 
@@ -700,25 +699,27 @@ CONTAINS
             !  (All other children will only have area changes, but keep their densities)
             currentChild%l_update_c(ics:ice, iblk) = .FALSE.
 
-            ! Determine area to be harvested from this age cohort
-            harvestFromThisAgeCohort = 0._wp
-            CALL recalc_fract_per_age_and_determine_area_to_harvest_from_cohort(dsl4jsb_Config(HARV_)%harv_kind, nc, &
-              & max_age, cohort_max_age(:,i), cohort_max_age(:,i-1), fract_per_age(:,:), &
-              & harvestFromThisAgeCohort(:), stillToHarvest(:))
-             
-            harvested_area(:) = harvested_area(:) + harvestFromThisAgeCohort(:)
+            IF (ANY(stillToHarvest(:) .GT. 0._wp)) THEN
+              ! Determine area to be harvested from this age cohort
+              harvestFromThisAgeCohort = 0._wp
+              CALL recalc_fract_per_age_and_determine_area_to_harvest_from_cohort(dsl4jsb_Config(HARV_)%harv_kind, nc, &
+                & max_age, cohort_max_age(:,i), cohort_max_age(:,i-1), fract_per_age(:,:), &
+                & harvestFromThisAgeCohort(:), stillToHarvest(:))
+               
+              harvested_area(:) = harvested_area(:) + harvestFromThisAgeCohort(:)
 
-            ! reduce current tiles delta fraction  
-            currentChild%delta_fract(ics:ice, iblk) = currentChild%delta_fract(ics:ice, iblk) - harvestFromThisAgeCohort(:)
-            ! and add it to the first childs delta
-            firstChild%delta_fract(ics:ice, iblk) = firstChild%delta_fract(ics:ice, iblk) + harvestFromThisAgeCohort(:)
+              ! reduce current tiles delta fraction  
+              currentChild%delta_fract(ics:ice, iblk) = currentChild%delta_fract(ics:ice, iblk) - harvestFromThisAgeCohort(:)
+              ! and add it to the first childs delta
+              firstChild%delta_fract(ics:ice, iblk) = firstChild%delta_fract(ics:ice, iblk) + harvestFromThisAgeCohort(:)
 
-            ! b) carbon consequences 
-            CALL currentChild%Get_fraction(ics, ice, iblk, fract=source_fract(:))
-            CALL recalc_delta_carbon_rp_upon_disturbance( &
-              currentChild, firstChild, l_sourceisfirstChild, options, harvestFromThisAgeCohort(:), source_fract(:), CLEARCUT)
+              ! b) carbon consequences 
+              CALL currentChild%Get_fraction(ics, ice, iblk, fract=source_fract(:))
+              CALL recalc_delta_carbon_rp_upon_disturbance( &
+                currentChild, firstChild, l_sourceisfirstChild, options, harvestFromThisAgeCohort(:), source_fract(:), CLEARCUT)
 
-            ! c) TODO-JN-COHORTS what else to shift? 
+              ! c) TODO-JN-COHORTS what else to shift? 
+            ENDIF
 
             ! Go to next child
             currentChild => currentChild%Get_prev_sibling_tile()
