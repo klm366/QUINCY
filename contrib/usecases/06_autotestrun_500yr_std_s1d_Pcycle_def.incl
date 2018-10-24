@@ -1,10 +1,10 @@
-# default SLM usecase: 06_autotestrun_500yr_std_jsm_def
+# default SLM usecase: 06_autotestrun_500yr_std_s1d_Pcycle_def
 # 
 # used by the script: ./contrib/additional_scripts/automated_slm_testrun.sh
 # for automated test runs of SLM
 # 
 
-slmModel="soil"
+slmModel="land"
 forcingDataSet="fluxnet"
 forcingMode="static"
 singleSiteName=""
@@ -13,8 +13,10 @@ specialFluxnetOutput="F"
 compareSimCRUNCEPvsGFDB="F"
 paramSensitivitySim="F"
 
-sb_model_scheme="jsm"
-flag_sb_prescribe_po4="T"
+sb_model_scheme="simple_1d"
+flag_sb_prescribe_po4="F"
+biomass_alloc_scheme="dynamic"
+leaf_stoichom_scheme="dynamic"
 soil_depth=9.5
 nsoil_layer=15
 
@@ -25,4 +27,6 @@ output_start_first_day_year=1
 output_end_last_day_year=500
 
 useSiteSpecificAWC="T"
+n_deposition_scheme="dynamic"
+p_deposition_scheme="dynamic"
 queue="io_perform"

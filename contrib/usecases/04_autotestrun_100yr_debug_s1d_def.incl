@@ -15,8 +15,10 @@ paramSensitivitySim="F"
 
 sb_model_scheme="simple_1d"
 flag_sb_prescribe_po4="T"
+biomass_alloc_scheme="dynamic"
+leaf_stoichom_scheme="dynamic"
 soil_depth=9.5
-nsoil_layer=9
+nsoil_layer=15
 
 simulation_length_number=100
 output_interval_pool="weekly"
@@ -25,4 +27,6 @@ output_start_first_day_year=1
 output_end_last_day_year=100
 
 useSiteSpecificAWC="T"
+n_deposition_scheme="dynamic"
+p_deposition_scheme="dynamic"
 queue="io_perform"
