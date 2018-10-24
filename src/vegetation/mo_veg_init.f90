@@ -53,6 +53,7 @@ CONTAINS
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)                ! USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4slm_Use_memory_a_veg                ! USE mo_veg_memory_class,      ONLY: t_veg_element_a, t_veg_pool_a
+    USE mo_veg_memory_class,                ONLY: veg_pool
 
     IMPLICIT NONE
     ! ---------------------------
@@ -152,10 +153,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: fn_oth_cl
     dsl4jsb_Real3D_onChunk      :: lai_cl
     dsl4jsb_Real3D_onChunk      :: leaf_nitrogen_cl
-    ! Declare pool structures in memory
-#define Def_veg_pool
-#include "slm_pools_alloc_incl.f90"
-#undef Def_veg_pool
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -254,7 +251,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)
     ! Get process memory pool structures
 #define Get_veg_pool
-#include "slm_pools_alloc_incl.f90"
+#include "slm_pools_a_incl.f90"
 #undef Get_veg_pool
 
 
@@ -486,7 +483,7 @@ CONTAINS
 
 ! Pass back values to process memory
 #define Passback_veg_pool
-#include "slm_pools_alloc_incl.f90"
+#include "slm_pools_a_incl.f90"
 #undef Passback_veg_pool
 
   END SUBROUTINE veg_init

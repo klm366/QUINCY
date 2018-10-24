@@ -56,9 +56,11 @@ CONTAINS
     ! Use of process memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
     dsl4slm_Use_memory_a_sb
-    dsl4jsb_Use_memory(SSE_)        !  USE mo_sse_memory_class,      ONLY: t_sse_memory
+    USE mo_sb_memory_class,       ONLY: sb_pool, sb_formation, sb_loss, sb_transport
+    dsl4jsb_Use_memory(SSE_)       !  USE mo_sse_memory_class,     ONLY: t_sse_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_sse_memory
     dsl4slm_Use_memory_a_veg        !  USE mo_veg_memory_class,      ONLY: t_veg_element_a, t_veg_pool_a
+    USE mo_veg_memory_class,      ONLY: veg_pool, veg_litterfall
     dsl4jsb_Use_memory(A2L_)
 
     IMPLICIT NONE
@@ -168,20 +170,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: km_adsorpt_po4_sl
     dsl4jsb_Real3D_onChunk :: bulk_dens_corr_sl 
     dsl4jsb_Real3D_onChunk :: particle_fluxrate 
-    ! Declare pool structures in memory
-#define Def_veg_pool    
-#define Def_veg_litterfall
-#define Def_sb_pool
-#define Def_sb_formation
-#define Def_sb_loss
-#define Def_sb_transport
-#include "slm_pools_alloc_incl.f90"
-#undef Def_veg_pool
-#undef Def_veg_litterfall
-#undef Def_sb_pool
-#undef Def_sb_formation
-#undef Def_sb_loss
-#undef Def_sb_transport
     ! Get local variables from options argument
     iblk      = options%iblk
     ics       = options%ics
@@ -294,7 +282,7 @@ CONTAINS
 #define Get_sb_formation
 #define Get_sb_loss
 #define Get_sb_transport
-#include "slm_pools_alloc_incl.f90"
+#include "slm_pools_a_incl.f90"
 #undef Get_veg_litterfall
 #undef Get_sb_pool
 #undef Get_sb_formation
@@ -514,7 +502,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
 #define Passback_sb_formation
 #define Passback_sb_loss
 #define Passback_sb_transport
-#include "slm_pools_alloc_incl.f90"
+#include "slm_pools_a_incl.f90"
 #undef Passback_veg_litterfall
 #undef Passback_sb_pool
 #undef Passback_sb_formation
