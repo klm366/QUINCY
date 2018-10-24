@@ -44,7 +44,7 @@ CONTAINS
     USE mo_assimi_constants,                ONLY: CiCa_default_C3, CiCa_default_C4, ic3phot, ic4phot
     USE mo_assimi_update_canopy_fluxes,     ONLY: discrimination_ps
     USE mo_sb_jsm_processes
-    USE mo_sse_util,                       ONLY: calc_qmax_texture
+    USE mo_sse_util,                        ONLY: calc_qmax_texture
     USE mo_sb_jsm_transport
     USE mo_veg_constants,                   ONLY: itree
     USE mo_sb_constants                     ! e.g.  nh4_solute_prescribe, no3_solute_prescribe, po4_solute_prescribe
@@ -56,7 +56,6 @@ CONTAINS
     ! USE PROC_memory
     dsl4jsb_Use_memory(SB_)
     dsl4slm_Use_memory_a_sb
-    USE mo_sb_memory_class,       ONLY: sb_pool
     dsl4jsb_Use_memory(SSE_)
     dsl4jsb_Use_memory(VEG_)
 
@@ -114,6 +113,10 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: lithology_class_sl
     dsl4jsb_Real3D_onChunk :: po4_primary
     dsl4jsb_Real3D_onChunk :: microbial_cue_eff_tmic_mavg
+    ! Declare pool structures in memory
+#define Def_sb_pool
+#include "slm_pools_alloc_incl.f90"
+#undef Def_sb_pool
     ! Get local variables from options argument
     iblk      = options%iblk
     ics       = options%ics
@@ -167,7 +170,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       microbial_cue_eff_tmic_mavg)
     ! Get process memory pool structures
 #define Get_sb_pool
-#include "slm_pools_a_incl.f90"
+#include "slm_pools_alloc_incl.f90"
 #undef Get_sb_pool
 
 
@@ -427,7 +430,7 @@ CONTAINS
 
 ! Pass back values to process memory
 #define Passback_sb_pool
-#include "slm_pools_a_incl.f90"
+#include "slm_pools_alloc_incl.f90"
 #undef Passback_sb_pool
 
   END SUBROUTINE sb_init

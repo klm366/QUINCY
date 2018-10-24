@@ -454,7 +454,6 @@ CONTAINS
     dsl4jsb_Use_memory(A2L_)        !  USE mo_a2l_memory_class,      ONLY: t_a2l_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4slm_Use_memory_a_veg        !  USE mo_veg_memory_class,      ONLY: t_veg_element_a, t_veg_pool_a
-    USE mo_veg_memory_class,        ONLY: veg_pool
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
@@ -628,6 +627,10 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: t_soil_root
     dsl4jsb_Real2D_onChunk      :: w_soil_root
     dsl4jsb_Real2D_onChunk      :: w_soil_root_fc
+    ! Declare pool structures in memory
+#define Def_veg_pool
+#include "slm_pools_alloc_incl.f90"
+#undef Def_veg_pool
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -797,7 +800,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root)
     ! Get process memory pool structures
 #define Get_veg_pool
-#include "slm_pools_a_incl.f90"
+#include "slm_pools_alloc_incl.f90"
 #undef Get_veg_pool
 
 
@@ -1064,7 +1067,7 @@ CONTAINS
 
 ! Pass back values to process memory
 #define Passback_veg_pool
-#include "slm_pools_a_incl.f90"
+#include "slm_pools_alloc_incl.f90"
 #undef Passback_veg_pool
 
   END SUBROUTINE calc_moving_averages

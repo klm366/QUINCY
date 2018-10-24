@@ -105,8 +105,8 @@ CONTAINS
     dsl4jsb_Use_memory(SSE_)       !  USE mo_sse_memory_class,     ONLY: t_sse_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4slm_Use_memory_a_veg
-    USE mo_veg_memory_class,      ONLY: veg_pool, veg_litterfall
 
+    IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile                           !< one tile with data structure for one lct
@@ -219,6 +219,12 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: t_soil_sl
     dsl4jsb_Real3D_onChunk      :: w_soil_sl
     dsl4jsb_Real3D_onChunk      :: percolation_sl
+    ! Declare pool structures in memory
+#define Def_veg_pool
+#define Def_veg_litterfall
+#include "slm_pools_alloc_incl.f90"
+#undef Def_veg_litterfall
+#undef Def_veg_pool
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
 !    IF (.NOT. tile%Is_process_active(xx_)) RETURN
@@ -244,7 +250,7 @@ CONTAINS
     ! Get process memory pool structures
     dsl4slm_get_vegpool_var(pool,fine_root,carbon)
 #define Get_veg_litterfall
-#include "slm_pools_a_incl.f90"
+#include "slm_pools_alloc_incl.f90"
 #undef Get_veg_litterfall
 
 
@@ -645,7 +651,7 @@ CONTAINS
 ! Pass back values to process memory
 dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
 #define Passback_veg_litterfall
-#include "slm_pools_a_incl.f90"
+#include "slm_pools_alloc_incl.f90"
 #undef Passback_veg_litterfall
 
   END SUBROUTINE update_forcing
