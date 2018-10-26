@@ -34,18 +34,14 @@ MODULE mo_assimi_constants
 
   ! Parameters used in the photosynthesis routine (temperature sensitivies of PS processes)
   REAL(wp), SAVE :: &
-      ! Temperature sensitivity and baseline of Michaelis-Menten constant of Rubisco for CO2 (unit?)
-      E0kc    ,     & !< Baseline of Michaelis-Menten constant of Rubisco for CO2 (unit?)
-      E1kc    ,     & !< Temperature sensitivity of Michaelis-Menten constant of Rubisco for CO2 (unit?)
-      ! Temperature sensitivity and baseline of Michealis-Menten Kintetics for Rubisco-oxigination     
-      E0ko    ,     & !< Baseline of Michealis-Menten Kintetics for Rubisco-oxigination
-      E1ko    ,     & !< Temperature sensitivity of Michealis-Menten Kintetics for Rubisco-oxigination
-      ! Temperature sensitivity and baseline of photosynthetic compensation point
-      E0pcp   ,     & !< Baseline of photosynthetic compensation point
-      E1pcp   ,     & !< Temperature sensitivity of photosynthetic compensation point
-      ! Temperature sensitivity and baseline of Rubisco
-      E0v     ,     & !< Baseline of Rubisco
-      E1v     ,     & !< Temperature sensitivity of Rubisco
+      E0kc    ,     & !< Scaling constant for Kc (unitless) 
+      E1kc    ,     & !< Activation energy of Kc (J mol-1) 
+      E0ko    ,     & !< Scaling constant for Ko (unitless)
+      E1ko    ,     & !< Activation energy of Ko (J mol-1)
+      E0pcp   ,     & !< Scaling constant for the photosynthetic compensation point (unitless)
+      E1pcp   ,     & !< Activation energy of the photosynthetic compensation point (J mol-1)
+      E0v     ,     & !< Scaling constant for Rubisco (unitless)
+      E1v     ,     & !< Activation energy of Rubisco (J mol-1)
       ! Temperature sensitivity of Electron transport
       t_jmax_offset, & !< Offset of the Tjmax~Tair relationship
       t_jmax_slope, &  !< slope of the Tjmax~Tair relationship (candidate for PFT specific parameterisation?)
@@ -127,20 +123,20 @@ CONTAINS
       k1_fn_struc   = 71.4_wp * molar_mass_N / 1000000._wp 
 
   ! Parameters used in the photosynthesis routine (temperature sensitivies of PS processes)
-      E0kc            = 38.05_wp 
-      E1kc            = 79430.0_wp 
-      E0ko            = 20.3_wp 
-      E1ko            = 36380.0_wp 
-      E0pcp           = 19.02_wp 
-      E1pcp           = 37830.0_wp 
-      E0v             = 26.35_wp 
-      E1v             = 65330.0_wp
-      t_jmax_offset   = 17.0_wp
-      t_jmax_slope    = 0.35_wp
+      E0kc            = 38.05_wp    ! Bernacchi 2001 
+      E1kc            = 79430.0_wp  ! Bernacchi 2001
+      E0ko            = 20.3_wp     ! Bernacchi 2001
+      E1ko            = 36380.0_wp  ! Bernacchi 2001
+      E0pcp           = 19.02_wp    ! Bernacchi 2001
+      E1pcp           = 37830.0_wp  ! Bernacchi 2001
+      E0v             = 26.35_wp    ! Bernacchi 2001
+      E1v             = 65330.0_wp  ! Bernacchi 2001
+      t_jmax_offset   = 17.0_wp     ! Friend 2009
+      t_jmax_slope    = 0.35_wp     ! Friend 2009
       t_jmax_opt_min  = t_jmax_offset 
-      t_jmax_opt_max  = 38.0_wp
-      Tref_pepc       = 25._wp 
-      Tbase_pepc      = 10._wp 
+      t_jmax_opt_max  = 38.0_wp     ! Friend 2009
+      Tref_pepc       = 25._wp      ! Friend 2009
+      Tbase_pepc      = 10._wp      ! Friend 2009
       alpha_i         = 0.85_wp * 0.066_wp  
       pO2             = 20.9_wp 
       CiCa_default_C3 = 0.7_wp
