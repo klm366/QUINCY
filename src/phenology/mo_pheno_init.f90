@@ -135,20 +135,22 @@ CONTAINS
 
     CALL input_file%Close()
 
-    !JN 10.01.18: for now: set the maxLai for non forest types to the one from the Lctlib
-    !             later one might think about allometric relation ships in other multi annual plants, too?
-    IF ( (dsl4jsb_Config(PHENO_)%l_forestRegrowth) .AND. (.NOT. dsl4jsb_Lctlib_param(ForestFlag)) ) THEN
-      dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom) = dsl4jsb_Lctlib_param(MaxLAI)
-    END IF
+    IF (tile%lcts(1)%lib_id /= 0)  THEN ! only if the present tile is a pft
+      !JN 10.01.18: for now: set the maxLai for non forest types to the one from the Lctlib
+      !             later one might think about allometric relation ships in other multi annual plants, too?
+      IF ( (dsl4jsb_Config(PHENO_)%l_forestRegrowth) .AND. (.NOT. dsl4jsb_Lctlib_param(ForestFlag)) ) THEN
+        dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom) = dsl4jsb_Lctlib_param(MaxLAI)
+      END IF
 
-    !JN 10.01.18: with l_forestRegrowth the maxLAI can change over time for forest pfts
-    IF ( (dsl4jsb_Config(PHENO_)%l_forestRegrowth) .AND. (dsl4jsb_Lctlib_param(ForestFlag)) ) THEN
-      dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =   &
-        & 1.0_wp - exp(-dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom) / dsl4jsb_Lctlib_param(clumpinessFactor))
-    !@todo: do not rely on the lib_id but use a flag instead?
-    ELSE IF (tile%lcts(1)%lib_id /= 0)  THEN ! only if the present tile is a pft
-      dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =   &
-        & 1.0_wp - exp(-dsl4jsb_Lctlib_param(MaxLAI) / dsl4jsb_Lctlib_param(clumpinessFactor))
+      !JN 10.01.18: with l_forestRegrowth the maxLAI can change over time for forest pfts
+      IF ( (dsl4jsb_Config(PHENO_)%l_forestRegrowth) .AND. (dsl4jsb_Lctlib_param(ForestFlag)) ) THEN
+        dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =   &
+          & 1.0_wp - exp(-dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom) / dsl4jsb_Lctlib_param(clumpinessFactor))
+      !@todo: do not rely on the lib_id but use a flag instead?
+      ELSE
+        dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =   &
+          & 1.0_wp - exp(-dsl4jsb_Lctlib_param(MaxLAI) / dsl4jsb_Lctlib_param(clumpinessFactor))
+      END IF
     END IF
 
   END SUBROUTINE pheno_init_bc
