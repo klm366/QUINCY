@@ -1010,10 +1010,12 @@ CONTAINS
                                         canopy_layer_depth            , &
                                         growing_season                , &
                                         veg_pool_leaf_carbon          , & 
-                                        veg_pool_leaf_nitrogen        , & 
+                                        veg_pool_leaf_nitrogen        , &
+                                        veg_pool_root_carbon          , &
                                         lai                           , &
                                         t_jmax_opt_mavg               , &
                                         target_cn_leaf                , &
+                                        target_cn_fine_root           , &
                                         t_air_tacclim_mavg            , &
                                         t_air_tcnl_mavg               , &
                                         ga_tcnl_mavg                  , &
@@ -1035,8 +1037,7 @@ CONTAINS
                                         uptake_n                      , &
                                         growth_cn                     , &
                                         npp                           , &
-                                        reserve_carbon                , &
-                                        reserve_nitrogen              , &
+                                        fmaint_rate                   , &
                                         labile_carbon                 , &
                                         labile_nitrogen               , & ! in
                                         leaf_cn_direction             )   ! inout
@@ -1045,6 +1046,7 @@ CONTAINS
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
     USE mo_base_constants,        ONLY: dtime, one_day, one_year
     USE mo_veg_constants,         ONLY: delta_n_leaf
+    USE mo_shared_constants,      ONLY: mavg_period_tgrowth
     USE mo_pheno_constants,       ONLY: ievergreen, iraingreen, isummergreen, iperennial
 
     IMPLICIT NONE
@@ -1057,10 +1059,13 @@ CONTAINS
     REAL(wp),DIMENSION(ncanopy),            INTENT(in)    :: canopy_layer_depth             !< depth of each single canopy layer
     REAL(wp),DIMENSION(options%nc),         INTENT(in)    :: growing_season                 !< growing season
     REAL(wp),DIMENSION(options%nc),         INTENT(in)    :: veg_pool_leaf_carbon       , &
-                                                             veg_pool_leaf_nitrogen
+                                                             veg_pool_leaf_nitrogen     , &
+                                                             veg_pool_root_carbon       
+         
     REAL(wp),DIMENSION(options%nc),         INTENT(in)    :: lai                        , &
                                                              t_jmax_opt_mavg            , &
                                                              target_cn_leaf             , &
+                                                             target_cn_fine_root        , &
                                                              t_air_tacclim_mavg         , &
                                                              t_air_tcnl_mavg            , &
                                                              ga_tcnl_mavg               , &
@@ -1082,15 +1087,14 @@ CONTAINS
     REAL(wp),DIMENSION(options%nc),         INTENT(in)    :: uptake_n                   , &
                                                              growth_cn                  , &
                                                              npp                        , &
-                                                             reserve_carbon             , &
-                                                             reserve_nitrogen           , &
+                                                             fmaint_rate                , &
                                                              labile_carbon              , &
                                                              labile_nitrogen
     REAL(wp),DIMENSION(options%nc),         INTENT(inout) :: leaf_cn_direction
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp), DIMENSION(options%nc)                       :: leaf_nitrogen_new
-    REAL(wp), DIMENSION(options%nc,ncanopy)               :: leaf_nitrogen_new_cl, &
+    REAL(wp),DIMENSION(options%nc)                        :: leaf_nitrogen_new, root_nitrogen_new
+    REAL(wp),DIMENSION(options%nc,ncanopy)                :: leaf_nitrogen_new_cl, &
                                                              fn_oth_new_cl, &
                                                              fn_chl_new_cl, &
                                                              fn_et_new_cl, &
@@ -1098,14 +1102,14 @@ CONTAINS
                                                              fn_pepc_new_cl, &
                                                              lai_new_cl, &
                                                              cumm_lai_new_cl
-    REAL(wp), DIMENSION(options%nc,ncanopy)               :: loc_ppfd_sunlit_cl   , &
+    REAL(wp),DIMENSION(options%nc,ncanopy)                :: loc_ppfd_sunlit_cl   , &
                                                              loc_ppfd_shaded_cl   , &
                                                              loc_fleaf_sunlit_cl
-    REAL(wp), DIMENSION(3)                                :: npp_direction             ! three states: lower, neutral, higher; one of which is selected per cl
+    REAL(wp),DIMENSION(3)                                 :: npp_direction
     REAL(wp)                                              :: anl, agl, rl
     REAL(wp)                                              :: hlp1
     REAL(wp)                                              :: direction
-    REAL(wp), DIMENSION(options%nc)                       :: ns_carbon, ns_nitrogen, beta_sinklim_ps_local
+    REAL(wp), DIMENSION(options%nc)                       :: beta_sinklim_ps_local
     INTEGER                                               :: icanopy, dd, ipoint    ! looping
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_dir_optimal_cn_leaf'
 
@@ -1122,44 +1126,38 @@ CONTAINS
     loc_ppfd_shaded_cl(:,:)   = ppfd_shaded_tcnl_mavg_cl(:,:)
     loc_fleaf_sunlit_cl(:,:)  = fleaf_sunlit_tcnl_mavg_cl(:,:)
     beta_sinklim_ps_local(:)  = 1._wp
-
-    SELECT CASE (lctlib%phenology_type)
-      CASE (ievergreen)
-         ! general case: labile pool concentrations are important for uptake
-         ns_carbon(:)     = labile_carbon(:)
-         ns_nitrogen(:)   = labile_nitrogen(:)
-      CASE (iraingreen, isummergreen, iperennial)
-         ! for decidous PFTs, include the reserve pool, as otherwise the end-of-the-growing season
-         ! retrieval of nutrients causes no nutrient uptake during the dormant period, even if 
-         ! the plants are nutrient stressed
-         ns_carbon(:)     = (labile_carbon(:)     + reserve_carbon(:))
-         ns_nitrogen(:)   = (labile_nitrogen(:)   + reserve_nitrogen(:))
-    END SELECT
+    
+    fn_chl_new_cl(:,:)   = fn_chl_cl(:,:)
+    fn_et_new_cl(:,:)    = fn_et_cl(:,:)
+    fn_rub_new_cl(:,:)   = fn_rub_cl(:,:)
 
 
-
-    !> 1.0 calc leaf_cn_direction(:) for each point in the chunk looping over canopy layers
-    !!  only during growing_season
+    !> 1.0 ...
     !!
     DO ipoint=1,options%nc
-    IF(growing_season(ipoint) > test_false_true)THEN
-    IF(veg_pool_leaf_nitrogen(ipoint) > eps4)THEN
-
-      fn_chl_new_cl(ipoint,:)                 = fn_chl_cl(ipoint,:)
-      fn_et_new_cl(ipoint,:)                  = fn_et_cl(ipoint,:)
-      fn_rub_new_cl(ipoint,:)                 = fn_rub_cl(ipoint,:)
-
-
-      !> Calculate photosynthesis with lower, current and higher target leaf N to determine optimal canopy N
-      !!
-      npp_direction(:) = 0.0_wp
-      DO dd = 1,3
-        direction                 = REAL(dd,KIND=wp) - 2.0_wp
-        leaf_nitrogen_new(ipoint) = veg_pool_leaf_carbon(ipoint) / target_cn_leaf(ipoint) * &
-                                    (1.0_wp + direction * delta_n_leaf * dtime/one_day)
-
-        ! update N distribution in the canopy
-        CALL calc_canopy_layers( &
+       ! Only change leaf N during the growing season
+       IF(growing_season(ipoint) > test_false_true)THEN
+          ! Only change leaf N if leaves present
+          IF(veg_pool_leaf_nitrogen(ipoint) > eps4)THEN
+             !> Check the N status of the plant. If there is not enough N for growth, decrease leaf N
+             IF ((uptake_n(ipoint) *  mavg_period_tgrowth * one_year*one_day*1e-6_wp + labile_nitrogen(ipoint)) * growth_cn(ipoint) < &
+                  (npp(ipoint)*  mavg_period_tgrowth * 1e-6_wp * one_year*one_day + labile_carbon(ipoint))) THEN
+                leaf_cn_direction(ipoint) = -1._wp
+                
+             ELSE
+                
+                !> Check for C optimality i.e. if increasing leaf N increases NPP
+                !!
+                npp_direction(:) = 0.0_wp
+                DO dd = 1,3
+                   direction                 = REAL(dd,KIND=wp) - 2.0_wp
+                   leaf_nitrogen_new(ipoint) = veg_pool_leaf_carbon(ipoint) / target_cn_leaf(ipoint) * &
+                        (1.0_wp + direction * delta_n_leaf * dtime/one_day)
+                   root_nitrogen_new(ipoint) = veg_pool_root_carbon(ipoint) / target_cn_fine_root(ipoint) * &
+                        (1.0_wp + direction * delta_n_leaf * dtime/one_day)
+                   
+                ! update N distribution in the canopy
+                CALL calc_canopy_layers( &
                           options                 = options                                 , & ! in
                           lctlib                  = lctlib                                  , &
                           ncanopy                 = ncanopy                                 , &
@@ -1180,21 +1178,21 @@ CONTAINS
                           fn_oth_cl               = fn_oth_new_cl(ipoint,:)                 , &
                           inquire_n_fractions     = .TRUE.                                    )
 
-        ! adjust N fractions for any changes in canopy N distribtuion
-        ! for optimal fractions this is only a aproximation
-        IF (lai(ipoint) > eps8) THEN
-          ! avoid division by zero for plants that have no leaf nitrogen
-          WHERE (leaf_nitrogen_new_cl(ipoint,:) > eps8 .AND. fn_oth_cl(ipoint,:) < 1._wp)
-           fn_rub_new_cl(ipoint,:)  = fn_rub_cl(ipoint,:)  * (1._wp - fn_oth_new_cl(ipoint,:)) / (1._wp - fn_oth_cl(ipoint,:))
-           fn_et_new_cl(ipoint,:)   = fn_et_cl(ipoint,:)   * (1._wp - fn_oth_new_cl(ipoint,:)) / (1._wp - fn_oth_cl(ipoint,:))
-           fn_pepc_new_cl(ipoint,:) = fn_pepc_cl(ipoint,:) * (1._wp - fn_oth_new_cl(ipoint,:)) / (1._wp - fn_oth_cl(ipoint,:))
-           fn_chl_new_cl(ipoint,:)  = fn_chl_cl(ipoint,:)  * (1._wp - fn_oth_new_cl(ipoint,:)) / (1._wp - fn_oth_cl(ipoint,:))
-          END WHERE
-        END IF
+                ! adjust N fractions for any changes in canopy N distribtuion
+                ! for optimal fractions this is only a aproximation
+                IF (lai(ipoint) > eps8) THEN
+                   ! avoid division by zero for plants that have no leaf nitrogen
+                   WHERE (leaf_nitrogen_new_cl(ipoint,:) > eps8 .AND. fn_oth_cl(ipoint,:) < 1._wp)
+                      fn_rub_new_cl(ipoint,:)  = fn_rub_cl(ipoint,:)  * (1._wp - fn_oth_new_cl(ipoint,:)) / (1._wp - fn_oth_cl(ipoint,:))
+                      fn_et_new_cl(ipoint,:)   = fn_et_cl(ipoint,:)   * (1._wp - fn_oth_new_cl(ipoint,:)) / (1._wp - fn_oth_cl(ipoint,:))
+                      fn_pepc_new_cl(ipoint,:) = fn_pepc_cl(ipoint,:) * (1._wp - fn_oth_new_cl(ipoint,:)) / (1._wp - fn_oth_cl(ipoint,:))
+                      fn_chl_new_cl(ipoint,:)  = fn_chl_cl(ipoint,:)  * (1._wp - fn_oth_new_cl(ipoint,:)) / (1._wp - fn_oth_cl(ipoint,:))
+                   END WHERE
+                END IF
 
-        ! calculate photosynthesis for each layer
-        DO icanopy =1, ncanopy
-          CALL calc_photosynthesis( &
+                ! calculate photosynthesis for each layer
+                DO icanopy =1, ncanopy
+                   CALL calc_photosynthesis( &
                        lctlib%gmin                                   , & ! lctlib
                        lctlib%g0                                     , &
                        lctlib%g1                                     , &
@@ -1226,23 +1224,22 @@ CONTAINS
                        hlp1,hlp1,hlp1,hlp1,hlp1                        )
 
           npp_direction(dd) = npp_direction(dd) + anl * lai_new_cl(ipoint,icanopy)
-        ENDDO
+       ENDDO
+       ! adjust for change in fine root respiration
+       npp_direction(dd) = npp_direction(dd) - root_nitrogen_new(ipoint) * fmaint_rate(ipoint)
       ENDDO  ! dd = 1,3
 
       ! Direction of change in leaf N. Actual leaf N is modified in interfacte routine
-      ! MAXLOC(x(:),1) works along the 1st dimension of x(:), where x(:) actually has only one dimension; this avoids a compile error for non-conforming shapes
-      leaf_cn_direction(ipoint) = (REAL(MAXLOC(npp_direction(:), 1), KIND=wp) - 2.0_wp)
+      !! @todo:veg_canopy:calc_dir_optimal_cn_leaf:potentially dangerous use of MAXLOC - ascertain functioning in 4D
+      leaf_cn_direction(ipoint) = (REAL(MAXLOC(npp_direction, 1),KIND=wp) - 2.0_wp)
 
-      IF ((uptake_n(ipoint) * lctlib%tau_fine_root * one_year*one_day*1e-6_wp + ns_nitrogen(ipoint)) * growth_cn(ipoint) < &
-          (npp(ipoint)*lctlib%tau_leaf * 1e-6_wp * one_year*one_day + ns_carbon(ipoint))) THEN
-          leaf_cn_direction(ipoint) = 0._wp
       ENDIF
-
-    ELSE    ! IF(veg_pool_leaf_nitrogen(ipoint) > eps4)
+      
+   ELSE    ! IF(veg_pool_leaf_nitrogen(ipoint) > eps4)
       leaf_cn_direction(ipoint) = 0.0_wp
-    END IF  ! IF(veg_pool_leaf_nitrogen(ipoint) > eps4)
-    END IF  ! IF(growing_season(ipoint) > test_false_true)
-  END DO  ! ipoint=1,options%nc
+   END IF  ! IF(veg_pool_leaf_nitrogen(ipoint) > eps4)
+END IF  ! IF(growing_season(ipoint) > test_false_true)
+END DO  ! ipoint=1,options%nc
 
   END SUBROUTINE calc_dir_optimal_cn_leaf
   

@@ -264,7 +264,7 @@ MODULE mo_veg_memory_class
 
     ! everything else 2D
     TYPE(t_jsb_var_real2d)          :: &   
-                                    fmaint_rate               , & !< current N-specific maintentance respiration [~µmol C mol-1 N s-1]
+                                    fmaint_rate_root          , & !< current N-specific maintentance respiration [~µmol C mol-1 N s-1]
                                     unit_npp                  , & !< incremental change in NPP [µmol CO2 m-2 s-1]
                                     unit_transpiration        , & !< incremental change in transpiration [kg m-2 s-1]
                                     unit_uptake_n_pot         , & !< incremental change in potential N uptake per unit root carbon [µmol N m-2 s-1]
@@ -347,8 +347,7 @@ MODULE mo_veg_memory_class
                                     growth_cn_tcnl_mavg            , &  !< new growth CN ratio time-averaged [mol C mol-1 N]
                                     growth_np_tcnl_mavg            , &  !< new growth NP ratio time-averaged [mol N mol-1 P]
                                     npp_tcnl_mavg                  , &  !< NPP time-averaged [µmol CO2 m-2 s-1]
-                                    reserve_nitrogen_tcnl_mavg     , &  !< reserve nitrogen vegetation pool time-averaged [mol N m-2]
-                                    reserve_carbon_tcnl_mavg       , &  !< reserve carbon vegetation pool time-averaged [mol C m-2]
+                                    fmaint_rate_tcnl_mavg          , &  !< maintenance respiration rate per unit N for roots
                                     labile_nitrogen_tcnl_mavg      , &  !< labile nitrogen vegetation pool time-averaged [mol N m-2]
                                     labile_carbon_tcnl_mavg        , &  !< labile carbon vegetation pool time-averaged [mol C m-2]
                                     labile_phosphorus_tcnl_mavg         !< labile phosphorus vegetation pool time-averaged [mol P m-2]
@@ -1770,9 +1769,9 @@ CONTAINS
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
   
-      CALL jsb_add_var(mem, 'fmaint_rate', mem%fmaint_rate, &
+      CALL jsb_add_var(mem, 'fmaint_rate_root', mem%fmaint_rate_root, &
             hgrid, surface, &
-            t_cf('fmaint_rate', '~µmol C mol-1 N s-1', 'current N-specific maintentance respiration'), &
+            t_cf('fmaint_rate_root', '~µmol C mol-1 N s-1', 'current N-specific maintentance respiration'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2226,17 +2225,9 @@ CONTAINS
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL jsb_add_var(mem, 'reserve_nitrogen_tcnl_mavg', mem%reserve_nitrogen_tcnl_mavg, &
+      CALL jsb_add_var(mem, 'fmaint_rate_tcnl_mavg', mem%fmaint_rate_tcnl_mavg, &
             hgrid, surface, &
-            t_cf('reserve_nitrogen_tcnl_mavg', '', ' '), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'reserve_carbon_tcnl_mavg', mem%reserve_carbon_tcnl_mavg, &
-            hgrid, surface, &
-            t_cf('reserve_carbon_tcnl_mavg', '', ' '), &
+            t_cf('fmaint_rate_tcnl_mavg', '~µmol C mol-1 N s-1', 'N-specific maintentance respiration for optmal leaf N'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &

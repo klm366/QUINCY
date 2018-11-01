@@ -151,7 +151,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: unit_npp
     dsl4jsb_Real2D_onChunk      :: unit_transpiration
     dsl4jsb_Real2D_onChunk      :: kstar_labile
-    dsl4jsb_Real2D_onChunk      :: fmaint_rate
+    dsl4jsb_Real2D_onChunk      :: fmaint_rate_root
     dsl4jsb_Real2D_onChunk      :: fmaint_rate_troot_mavg
     dsl4jsb_Real2D_onChunk      :: unit_npp_troot_mavg
     dsl4jsb_Real2D_onChunk      :: unit_uptake_n_pot_troot_mavg
@@ -176,8 +176,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: growth_cn_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: growth_np_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: npp_tcnl_mavg
-    dsl4jsb_Real2D_onChunk      :: reserve_carbon_tcnl_mavg
-    dsl4jsb_Real2D_onChunk      :: reserve_nitrogen_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: fmaint_rate_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: labile_carbon_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: labile_nitrogen_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: labile_phosphorus_tcnl_mavg
@@ -321,7 +320,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_npp)                           !   out
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_transpiration)                 !   out
     dsl4jsb_Get_var2D_onChunk(VEG_, kstar_labile)                       ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, fmaint_rate)                        ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, fmaint_rate_root)                   ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, fmaint_rate_troot_mavg)             ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_npp_troot_mavg)                ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_pot_troot_mavg)       ! in
@@ -346,8 +345,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_cn_tcnl_mavg)                ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_np_tcnl_mavg)                ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, npp_tcnl_mavg)                      ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, reserve_carbon_tcnl_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, reserve_nitrogen_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, fmaint_rate_tcnl_mavg)                      ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, labile_carbon_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, labile_nitrogen_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, labile_phosphorus_tcnl_mavg)
@@ -448,7 +446,7 @@ CONTAINS
                                                             veg_pool%fine_root%nitrogen(:)              , &
                                                             veg_pool%coarse_root%nitrogen(:)            ) + & 
                                maint_respiration_leaf(:) 
-    fmaint_rate(:) = fmaint_rate_base * temperature_response_respiration(t_air(:), t_air_tacclim_mavg(:))
+    fmaint_rate_root(:) = fmaint_rate_base * temperature_response_respiration(t_soil_root(:), t_soil_root_tacclim_mavg(:))
 
     !> 1.2 calculate utrient demand scalars
     !! 
@@ -526,10 +524,12 @@ CONTAINS
                                         dsl4jsb_Config(ASSIMI_)%canopy_layer_depth(:)  , &
                                         growing_season(:)                              , &
                                         veg_pool%leaf%carbon(:)                        , &  
-                                        veg_pool%leaf%nitrogen(:)                      , & 
+                                        veg_pool%leaf%nitrogen(:)                      , &
+                                        veg_pool%fine_root%carbon(:)                   , &
                                         lai(:)                                         , &
                                         t_jmax_opt_mavg(:)                             , &
                                         target_cn_leaf(:)                              , &
+                                        target_cn_fine_root(:)                         , &
                                         t_air_tacclim_mavg(:)                          , &
                                         t_air_tcnl_mavg(:)                             , &
                                         ga_tcnl_mavg(:)                                , &
@@ -551,8 +551,7 @@ CONTAINS
                                         uptake_n_tcnl_mavg(:)                          , &
                                         growth_cn_tcnl_mavg(:)                         , &
                                         npp_tcnl_mavg(:)                               , &
-                                        reserve_carbon_tcnl_mavg(:)                    , &
-                                        reserve_nitrogen_tcnl_mavg(:)                  , &
+                                        fmaint_rate_tcnl_mavg(:)                       , &
                                         labile_carbon_tcnl_mavg(:)                     , &
                                         labile_nitrogen_tcnl_mavg(:)                   , & ! in
                                         leaf_cn_direction(:)                           )   ! inout
@@ -1402,8 +1401,7 @@ CONTAINS
        CASE ("optimal")
           ! update leaf CN target. leaf_cn_direction has values of -1, 0 or 1
           target_cn_leaf = target_cn_leaf * (1.0_wp - leaf_cn_direction * delta_n_leaf * dtime/one_day)
-          ! root target CN is independent of optimal target
-          target_cn_fine_root = cn_leaf / root2leaf_cn
+
        CASE ("dynamic")
           
              IF (labile_carbon / MAX(eps8, labile_nitrogen) >= cn_growth) THEN
@@ -1418,16 +1416,13 @@ CONTAINS
           ! Apply CN modifier calculated above to actual change in leaf CN target, given by the maximum change per timestep
           target_cn_leaf = target_cn_leaf * (1._wp +  delta_cn  * f_growing_leaf * delta_n_leaf * dtime/one_day)
 
-          ! Root target CN is fucniton fo new leaf target
-          target_cn_fine_root = target_cn_leaf / root2leaf_cn
-       CASE DEFAULT
-          target_cn_fine_root = target_cn_leaf / root2leaf_cn
+ 
        END SELECT
     ENDIF
 
     !> 2.0 determine C:N of other plant tissues
     !!
-  
+    target_cn_fine_root = target_cn_leaf / root2leaf_cn
     SELECT CASE(growthform)
       CASE (itree) ! trees
          target_cn_coarse_root  = cn_leaf / wood2leaf_cn

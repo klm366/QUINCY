@@ -546,7 +546,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: unit_uptake_p_act
     dsl4jsb_Real2D_onChunk      :: unit_uptake_n_pot
     dsl4jsb_Real2D_onChunk      :: unit_uptake_p_pot
-    dsl4jsb_Real2D_onChunk      :: fmaint_rate
+    dsl4jsb_Real2D_onChunk      :: fmaint_rate_root
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt_daytime
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_daytime
     dsl4jsb_Real2D_onChunk      :: ga_daytime
@@ -595,8 +595,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: growth_cn_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: growth_np_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: npp_tcnl_mavg
-    dsl4jsb_Real2D_onChunk      :: reserve_carbon_tcnl_mavg
-    dsl4jsb_Real2D_onChunk      :: reserve_nitrogen_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: fmaint_rate_tcnl_mavg    
     dsl4jsb_Real2D_onChunk      :: labile_carbon_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: labile_nitrogen_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: labile_phosphorus_tcnl_mavg
@@ -713,7 +712,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_p_pot)
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4)
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3)
-    dsl4jsb_Get_var2D_onChunk(VEG_, fmaint_rate)
+    dsl4jsb_Get_var2D_onChunk(VEG_, fmaint_rate_root)
     dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_daytime)
     dsl4jsb_Get_var2D_onChunk(VEG_, co2_mixing_ratio_daytime)
     dsl4jsb_Get_var2D_onChunk(VEG_, ga_daytime)
@@ -762,8 +761,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_cn_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_np_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, npp_tcnl_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, reserve_carbon_tcnl_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, reserve_nitrogen_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, fmaint_rate_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, labile_carbon_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, labile_nitrogen_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, labile_phosphorus_tcnl_mavg)
@@ -911,6 +909,9 @@ CONTAINS
     uptake_n_tcnl_mavg               = calc_mavg(uptake_n_tcnl_mavg, &
                                                   unit_uptake_n_pot(:)*veg_pool%fine_root%carbon + n_fixation(:), &
                                                   mavg_period_tgrowth, do_calc=l_growing_season(:))
+    fmaint_rate_tcnl_mavg            = calc_mavg(fmaint_rate_tcnl_mavg, &
+                                                  fmaint_rate_root(:), &
+                                                  mavg_period_tgrowth, do_calc=l_growing_season(:))
 
     WHERE (growth_req_n(:) > 0._wp)
        hlp(:) = 1._wp/growth_req_n(:)
@@ -925,18 +926,16 @@ CONTAINS
        hlp(:) = 0._wp
     ENDWHERE
     growth_np_tcnl_mavg(:)  = calc_mavg(growth_np_tcnl_mavg(:), hlp(:), mavg_period_tcnl,  do_calc=l_growing_season(:))
-    
-    npp_tcnl_mavg(:)        = calc_mavg(npp_tcnl_mavg(:),       npp(:), mavg_period_tcnl,  do_calc=l_growing_season(:))
+
+    hlp(:)              = gross_assimilation(:) / MAX(eps8, beta_sinklim_ps(:)) - & 
+         growth_respiration(:) - maint_respiration(:) - n_processing_respiration(:) 
+    npp_tcnl_mavg(:)        = calc_mavg(npp_tcnl_mavg(:),       hlp(:), mavg_period_tcnl,  do_calc=l_growing_season(:))
    
     labile_carbon_tcnl_mavg(:)        = calc_mavg(labile_carbon_tcnl_mavg(:), veg_pool%labile%carbon, &
                                                       mavg_period_tcnl, do_calc=l_growing_season(:))
     labile_nitrogen_tcnl_mavg(:)      = calc_mavg(labile_nitrogen_tcnl_mavg(:), veg_pool%labile%nitrogen, &
          mavg_period_tcnl, do_calc=l_growing_season(:))
     labile_phosphorus_tcnl_mavg(:)    = calc_mavg(labile_phosphorus_tcnl_mavg(:), veg_pool%labile%phosphorus, &
-                                                      mavg_period_tcnl, do_calc=l_growing_season(:))
-    reserve_carbon_tcnl_mavg(:)       = calc_mavg(reserve_carbon_tcnl_mavg(:), veg_pool%reserve%carbon, &
-                                                      mavg_period_tcnl, do_calc=l_growing_season(:))
-    reserve_nitrogen_tcnl_mavg(:)     = calc_mavg(reserve_nitrogen_tcnl_mavg(:), veg_pool%reserve%nitrogen, &
                                                       mavg_period_tcnl, do_calc=l_growing_season(:))
     
     !> 1.6 time-scale of plant allocation calculation (veg process)
@@ -1030,7 +1029,7 @@ CONTAINS
                                                do_calc=l_growing_season(:), avg_period_unit='year')
     unit_uptake_p_pot_troot_mavg(:)  = calc_mavg(unit_uptake_p_pot_troot_mavg(:), unit_uptake_p_pot(:), lctlib%tau_fine_root, &
                                                do_calc=l_growing_season(:), avg_period_unit='year')
-    fmaint_rate_troot_mavg(:)        = calc_mavg(fmaint_rate_troot_mavg(:), fmaint_rate(:), lctlib%tau_fine_root, &
+    fmaint_rate_troot_mavg(:)        = calc_mavg(fmaint_rate_troot_mavg(:), fmaint_rate_root(:), lctlib%tau_fine_root, &
                                                do_calc=l_growing_season(:), avg_period_unit='year')
 
     !> 1.8 averages at the vegetation dynamics time-scale
