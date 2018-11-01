@@ -23,7 +23,7 @@ slmModel="land"
 ##>> sites <<###########################################################################################
 ## select set of sites: FLUXNET or CRUNCEPv7
 # forcing data and fluxnet/cruncep/face site info *list.dat for the specific set of sites: /Net/Groups/BGI/data/Model/SLM1/input/point/ 
-# options: fluxnet cruncep face manip
+# options: fluxnet cruncep face manip fert
 forcingDataSet="fluxnet"
 # forcing with or without a transient (like spinup) phase before the actual simulation starts
 # options: static transient
@@ -41,7 +41,7 @@ customSiteListFileName=""
 # this option must be empty (i.e., singleSiteName="" ) to run multiple sites !
 # Site-ID must be consistent with the forcingDataSet option above, i.e., fluxnet, cruncep, face, manip
 # you can get the Site-ID from the 1st column of the particular site-list info file in /Net/Groups/BGI/data/Model/SLM1/input/point/"forcingDataSet"/
-# examples: [FLUX] "DE-Hai" "FI-Hyy" "ZA-Kru"  [CRUN] "BHS_01" "HAI_01" "ILO_05"  [FACE] "DK-AMB" "OR-ELE"  [MANIP] "ES-MaG" "ES-MaT"
+# examples: [FLUX] "DE-Hai" "FI-Hyy" "ZA-Kru"  [CRUN] "BHS_01" "HAI_01" "ILO_05"  [FACE] "DK-AMB" "OR-ELE"  [MANIP] "ES-MaG" "ES-MaT"  [FERT] "HAR-CON" "HAR-HIG" "HAR-LOW"
 singleSiteName=""
 
 
@@ -67,7 +67,7 @@ spinupLengthGFDB=500
 # you can run a set of sensitivity simulations for one site
 # T (True) or F (False) [large caps]
 paramSensitivitySim="F"
-# please provide the Site-ID   (examples:  [FLUX] "DE-Hai" "FI-Hyy" "ZA-Kru"  [CRUN] "BHS_01" "HAI_01" "ILO_05"  [FACE] "DK-AMB" "OR-ELE"  [MANIP] "ES-MaG" "ES-MaT")
+# please provide the Site-ID   (examples:  [FLUX] "DE-Hai" "FI-Hyy" "ZA-Kru"  [CRUN] "BHS_01" "HAI_01" "ILO_05"  [FACE] "DK-AMB" "OR-ELE"  [MANIP] "ES-MaG" "ES-MaT"  [FERT] "HAR-CON" "HAR-HIG" "HAR-LOW")
 paramSensitivitySiteName="DE-Hai"
 
 
@@ -186,6 +186,10 @@ while getopts ":e:f:c:m:s:r:y:b:z:n:u:h" opt; do
       echo "   forcingDataSet=manip"
       forcingDataSet="manip"
       ;;
+    "fe")
+      echo "   forcingDataSet=fert"
+      forcingDataSet="fert"
+      ;;
     esac
     ;;
   "c")
@@ -303,6 +307,7 @@ while getopts ":e:f:c:m:s:r:y:b:z:n:u:h" opt; do
     echo "       cr: CRUNCEPv7"
     echo "       fa: FACE sites"
     echo "       ma: MANIP tree and grassland sites"
+    echo "       fe: FERT sites (fertilization)"
     echo " -c set the customSiteList"
     echo "    Arguments to -c:"
     echo "       T: using the custom site list"
@@ -444,7 +449,7 @@ fi
 return 0
 }
 # lists to validate against
-validateForcingDataSet="fluxnet cruncep face manip"
+validateForcingDataSet="fluxnet cruncep face manip fert"
 validateForcingMode="static transient"
 validateSiteSelection="all cue spp"
 validateSlmModel="land plant soil canopy"
@@ -621,11 +626,15 @@ case "$forcingDataSet" in
 "manip")
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/MANIP/"
   siteDataObsFold="no such evaluation data"  # but this variable must contain something
-  ;;  
+  ;;
+"fert")
+  siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/FERT/"
+  siteDataObsFold="no such evaluation data"  # but this variable must contain something
+  ;;
 esac
 # no soil forcing for MANIP
 if [ "$slmModel" == "soil" ]; then
-  if [ "$forcingDataSet" == "manip" ]; then
+  if [ "$forcingDataSet" == "manip" ] || [ "$forcingDataSet" == "fert" ]; then
     echo " Sorry, no soil forcing available for ""$forcingDataSet"" sites yet."
     echo " EXIT!"
     exit 1
@@ -784,6 +793,17 @@ else # the default case: $customSiteList == "F"
       echo " EXIT!"
       exit 1
       #siteListFileName="manip_sites_xxxx-2017_list.dat"
+    fi
+    ;;
+  "fert")
+    if [ $forcingMode == "static" ]
+     then
+      siteListFileName="fert_sites_1901-2015_list.dat"
+      echo " "
+      echo " Note: you are running a static simulation with a FERT site using forcing 1901-2015 by default."
+      echo " "
+    else
+      siteListFileName="fert_sites_1901-2015_list.dat"
     fi
     ;;
   esac
@@ -954,6 +974,14 @@ case "$forcingDataSet" in
     echo " EXIT1"
     exit 1
     forcingModeFileID="_xxxx"
+  fi
+  ;;
+"fert")
+  if [ $forcingMode == "static" ]
+   then
+    forcingModeFileID="_1901"
+  else
+    forcingModeFileID="_1901"
   fi
   ;;
 esac
