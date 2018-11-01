@@ -765,7 +765,6 @@ CONTAINS
                                      TRIM(dsl4jsb_Config(SB_)%sb_bnf_scheme), & 
                                      soil_depth_sl(:,:), &
                                      rtm_decomposition_act(:,:), &
-                                     rmm_decomposition_act(:,:), &
                                      nh4_solute(:,:), &
                                      no3_solute(:,:), &
                                      sb_pool%microbial%carbon(:,:), &
@@ -3249,17 +3248,16 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
   !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_asymbiontic_n_fixation(options, &
-                                         lctlib, &                                      ! in
+                                         lctlib, &                            ! in
                                          sb_bnf_scheme, &
                                          soil_depth_sl, &
                                          rtm_fixation_act, &
-                                         rmm_fixation_act, &
                                          nh4_solute, &
                                          no3_solute, &
                                          sb_pool_microbial_carbon, &
                                          root_fraction_act_sl, & 
-                                         asymb_n_fixation, &                                ! out
-                                         asymb_n_fixation_n15)                              ! out
+                                         asymb_n_fixation, &                  ! inout
+                                         asymb_n_fixation_n15)                ! inout
 
     USE mo_shared_isotope,     ONLY: calc_mixing_ratio_N15N14
     USE mo_sb_constants,       ONLY: soil_n_threshold_bnf, standard_bnf_max_rate
@@ -3273,7 +3271,6 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     CHARACTER(len=*),                                 INTENT(in)    :: sb_bnf_scheme               !< sb n fixation scheme  
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: soil_depth_sl, &            !< soil depth per layer [m] 
                                                                        rtm_fixation_act, &         !< temperature rate modifier  
-                                                                       rmm_fixation_act, &         !< moisture rate modifier  
                                                                        nh4_solute, &               !< NH4 concentration [mol m-3]
                                                                        no3_solute, &               !< NO3 concentration [mol m-3]
                                                                        sb_pool_microbial_carbon, & !< microbial carbon pool [mol m-3]
@@ -3282,10 +3279,12 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                                        asymb_n_fixation_n15        !< asymbiontic rate of 15N fixation [umol m-3 s-1]
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: hlp1_2d,hlp2_2d
-    REAL(wp), DIMENSION(options%nc) :: hlp1,hlp2
-    INTEGER :: isoil
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb)  :: hlp1_2d, hlp2_2d
+    REAL(wp), DIMENSION(options%nc)                   :: hlp1, hlp2
+    INTEGER                                           :: isoil
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_asymbiontic_n_fixation'
+
+
 
     !> 1.0 determine total soil mineral N (mol / m2)
     !!
