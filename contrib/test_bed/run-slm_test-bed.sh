@@ -73,9 +73,9 @@ plant_functional_type_id=5      # 1 - 8
 
 # forcing input
 flag_oneYearForcing="F"         # T (True) or F (False): whether to use (repeatedly) only the 1st year of the climate forcing input file
-forcingDataSet="fluxnet"        # options: fluxnet cruncep face manip none (for 'none' provide: test_bed/climate.dat [land plant canopy] or soil_forcing_litterfall.dat & soil_forcing_soilphysics.dat [soil])
+forcingDataSet="fluxnet"        # options: fluxnet cruncep face manip fert none (for 'none' provide: test_bed/climate.dat [land plant canopy] or soil_forcing_litterfall.dat & soil_forcing_soilphysics.dat [soil])
 siteName="DE-Hai"               # get the Site-ID from the 1st column of the particular "site list .dat"
-                                # examples: [FLUX] "DE-Hai" "FI-Hyy" "ZA-Kru"  [CRUN] "HAI_01" "ILO_05" "NAU_02"  [FACE] "DK-AMB" "OR-ELE"  [MANIP] "ES-MaG" "ES-MaT"
+                                # examples: [FLUX] "DE-Hai" "FI-Hyy" "ZA-Kru"  [CRUN] "HAI_01" "ILO_05" "NAU_02"  [FACE] "DK-AMB" "OR-ELE"  [MANIP] "ES-MaG" "ES-MaT"  [FERT] "HAR-CON" "HAR-HIG" "HAR-LOW"
 soil_awc_prescribe=300.0        # float !
 soil_theta_prescribe=1.0        # float !
 longitude=0.0                   # float !
@@ -127,6 +127,10 @@ while getopts ":p:m:i:f:s:y:b:z:h" opt; do
     "ma")
       echo "   forcingDataSet=manip"
       forcingDataSet="manip"
+      ;;
+    "fe")
+      echo "   forcingDataSet=fert"
+      forcingDataSet="fert"
       ;;
     "no")
       echo "   forcingDataSet=none"
@@ -226,6 +230,7 @@ while getopts ":p:m:i:f:s:y:b:z:h" opt; do
     echo "       cr: CRUNCEPv7"
     echo "       fa: FACE sites"
     echo "       ma: MANIP tree and grassland sites"
+    echo "       fe: FERT sites (fertilization)"
     echo "       no: none; using climate.dat file in test_bed folder"
     echo " -s set the soil model"
     echo "    Arguments to -s:"
@@ -293,7 +298,7 @@ validateOutputInterval="timestep daily weekly monthly yearly"
 validatePlantFunctionalTypeID="1 2 3 4 5 6 7 8"
 validateOptionForcing="constant generate readfile"
 validateSetPFTAutomatically="yes no"
-validateForcingDataSet="fluxnet cruncep face manip none"
+validateForcingDataSet="fluxnet cruncep face manip fert none"
 validateSb_adsorp_scheme="eca_full eca_part eca_none"
 
 ## validate user-defined model-options ##
@@ -359,10 +364,13 @@ case "$forcingDataSet" in
 "manip")
   siteDataSet="MANIP/"
   ;;
+"fert")
+  siteDataSet="FERT/"
+  ;;
 esac
 # no soil forcing for MANIP
 if [ "$slmModel" == "soil" ]; then
-  if [ "$forcingDataSet" == "manip" ]; then
+  if [ "$forcingDataSet" == "manip" ] || [ "$forcingDataSet" == "fert" ] ; then
     echo " Sorry, no soil forcing available for ""$forcingDataSet"" sites yet."
     echo " EXIT!"
     exit 1
@@ -410,6 +418,11 @@ case "$forcingDataSet" in
 "manip")
   allSiteInfoFile="$siteDataDirBase""$siteDataSet"manip_sites_2009-2017_list.dat
   ;;
+"fert")
+  allSiteInfoFile="$siteDataDirBase""$siteDataSet"fert_sites_1901-2015_list.dat
+  echo " "
+  echo " Note: you are running a FERT site using forcing 1901-2015 by default."
+  ;;
 esac
 
 
@@ -447,6 +460,9 @@ case "$forcingDataSet" in
   ;;
 "manip")
   siteNameStatMetForc="$siteName""_2009"              # ES-MaG_2009-2017.dat & ES-MaT_2009-2017.dat
+  ;;
+"fert")
+  siteNameStatMetForc="$siteName""_1901"              # HAR-CON_1901-2015.dat (only transient forcing files)
   ;;
 esac
 
@@ -514,14 +530,14 @@ if [ $slmModel != "test_canopy" ] # copy a climate.dat file for all models but t
           else # land plant canopy
             cp ./"$forceLandMetFile"    ./"$slmModel"/"$forceLandMetFile"
         fi 
-      # forcingDataSet == fluxnet / cruncep / face / manip
+      # forcingDataSet == fluxnet / cruncep / face / manip / fert
       else 
         if [ $slmModel == "soil" ]
           then
             # use a shorter site name for cruncep forcing 
             if [ "$forcingDataSet" == "cruncep" ]; then
               siteNameSoilForceID=$(echo "$siteName" | cut -c1-3)   # e.g. ILO_05 -> ILO
-            else # fluxnet / face
+            else # fluxnet / face / fert
               siteNameSoilForceID="$siteName"
             fi
             # copy files
