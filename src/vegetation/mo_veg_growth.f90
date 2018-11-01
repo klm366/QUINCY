@@ -630,8 +630,7 @@ CONTAINS
     
     !> 3.2 calculate allometry    
     !!
-    CALL calc_allometry(lctlib%phenology_type                             , &  ! lctlib
-                        lctlib%growthform                                 , &
+    CALL calc_allometry(lctlib%growthform                                 , &  ! lctlib
                         lctlib%allom_k1                                   , &
                         lctlib%allom_k2                                   , &
                         lctlib%sla                                        , &
@@ -1488,8 +1487,7 @@ CONTAINS
   !!
   !! calculates maximum LAI given current root and sapwood mass
   !-----------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL SUBROUTINE calc_allometry( phenology_type                , &  ! lctlib
-                                            growthform                    , &
+  PURE ELEMENTAL SUBROUTINE calc_allometry( growthform                    , &  ! lctlib
                                             allom_k1                      , &
                                             allom_k2                      , &
                                             sla                           , &
@@ -1538,8 +1536,7 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    INTEGER,               INTENT(in)  :: phenology_type         , &   !< land-cover-type library parameter
-                                          growthform                   !< land-cover-type library parameter
+    INTEGER,               INTENT(in)  :: growthform                   !< land-cover-type library parameter
     REAL(wp),              INTENT(in)  :: allom_k1               , &   !< land-cover-type library parameter
                                           allom_k2               , &   !< land-cover-type library parameter
                                           sla                    , &   !< land-cover-type library parameter
@@ -1587,30 +1584,19 @@ CONTAINS
     REAL(wp)             :: k1_opt_n  , &
                             k1_opt_p
     REAL(wp)             :: n_l2r_scal, p_l2r_scal, w_l2r_scal
-    REAL(wp)             :: ns_carbon,ns_nitrogen,ns_phosphorus
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_allometry'
 
 
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
     
-!@todo: if this works well, then the ns_X and the reserve_pool_X should be removed from this routine as they would be obsolete
-    !SELECT CASE (phenology_type)
-    !  CASE (ievergreen)
-         ! general case: labile pool concentrations are important for uptake
-         ns_carbon     = labile_carbon
-         ns_nitrogen   = labile_nitrogen
-         ns_phosphorus = labile_phosphorus
-    !  CASE (iraingreen,isummergreen,iperennial)
-         ! for decidous PFTs, include the reserve pool, as otherwise the end-of-the-growing season
-         ! retrieval of nutrients causes no nutrient uptake during the dormant period, even if 
-         ! the plants are nutrient stressed
-    !     ns_carbon     = (labile_carbon     + reserve_carbon)
-    !     ns_nitrogen   = (labile_nitrogen   + reserve_nitrogen)
-    !     ns_phosphorus = (labile_phosphorus + reserve_phosphorus)
-    !END SELECT
 
     !> 1.0 case growthform
     !! 
     SELECT CASE (growthform)
+
       !> 1.1 trees
       !! 
       CASE (itree)
@@ -1645,9 +1631,9 @@ CONTAINS
              !! Difference between BNF schemes - for optimal scheme fixation depends on root mass
              SELECT CASE (bnf_scheme)
              CASE("optimal")
-                k1_opt_n = (npp * tau_leaf * one_year * one_day + (ns_carbon - (ns_nitrogen) * growth_cn) * 1.e6_wp) / & 
+                k1_opt_n = (npp * tau_leaf * one_year * one_day + (labile_carbon - (labile_nitrogen) * growth_cn) * 1.e6_wp) / & 
                            MAX((unit_uptake_n + n_fixation) * growth_cn * tau_fine_root * one_year * one_day, eps8)
-                k1_opt_p = (npp * tau_leaf * one_year * one_day + (ns_carbon - (ns_phosphorus) * growth_cp) * 1.e6_wp) / & 
+                k1_opt_p = (npp * tau_leaf * one_year * one_day + (labile_carbon - (labile_phosphorus) * growth_cp) * 1.e6_wp) / & 
                            MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
                 IF ( k1_opt_n >= k1_opt_p) THEN 
                    ! if N is more limiting than P
@@ -1661,12 +1647,12 @@ CONTAINS
                 ENDIF
              CASE DEFAULT 
                 k1_opt_n = (npp*tau_leaf*one_year*one_day + &
-                            (ns_carbon - (ns_nitrogen) * growth_cn) * 1.e6_wp - &
+                            (labile_carbon - (labile_nitrogen) * growth_cn) * 1.e6_wp - &
                             n_fixation * growth_cn * tau_fine_root * one_year * one_day) / & 
                            MAX(unit_uptake_n * growth_cn * tau_fine_root * one_year * one_day, eps8)
                  
                 k1_opt_p = (npp*tau_leaf*one_year*one_day + &
-                            (ns_carbon - (ns_phosphorus) * growth_cp) * 1.e6_wp) / & 
+                            (labile_carbon - (labile_phosphorus) * growth_cp) * 1.e6_wp) / & 
                            MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
                 IF ( k1_opt_n >= k1_opt_p) THEN 
                    ! if N is more limiting than P
@@ -1699,8 +1685,8 @@ CONTAINS
              ENDIF
           CASE("dynamic")
              ! empirical scalling of leaf to root ratio based on nitrogen, phosphorus and water availability
-             n_l2r_scal = growth_cn / MAX(eps8, ns_carbon / MAX(eps8, ns_nitrogen))
-             p_l2r_scal = growth_cp / MAX(eps8, ns_carbon / MAX(eps8, ns_phosphorus))
+             n_l2r_scal = growth_cn / MAX(eps8, labile_carbon / MAX(eps8, labile_nitrogen))
+             p_l2r_scal = growth_cp / MAX(eps8, labile_carbon / MAX(eps8, labile_phosphorus))
              w_l2r_scal = w_root_lim / w_root_lim_max
              ! actual ratio is given by the minimum of the three factors
              leaf2root_mass_ratio = MAX(leaf2root_min_ratio, MIN(leaf2root_max_ratio, &
@@ -1716,7 +1702,8 @@ CONTAINS
              ! ad 2: nitrogen/phosphorus sensitivity still needed
              leaf2root_mass_ratio = k_rtos * leaf2sapwood_mass_ratio
         END SELECT  ! biomass_alloc_scheme
-      !> 1.1 grass
+
+      !> 1.2 grass
       !! 
       CASE (igrass)
         ! leaf to stem mass ratio
@@ -1726,9 +1713,9 @@ CONTAINS
           CASE("optimal")
             SELECT CASE (bnf_scheme)
               CASE("optimal")
-                 k1_opt_n = (npp * tau_leaf * one_year * one_day + (ns_carbon - (ns_nitrogen) * growth_cn) * 1.e6_wp) / & 
+                 k1_opt_n = (npp * tau_leaf * one_year * one_day + (labile_carbon - (labile_nitrogen) * growth_cn) * 1.e6_wp) / & 
                             MAX((unit_uptake_n + n_fixation) * growth_cn * tau_fine_root * one_year * one_day, eps8)
-                 k1_opt_p = (npp * tau_leaf * one_year * one_day + (ns_carbon - (ns_phosphorus) * growth_cp) * 1.e6_wp) / & 
+                 k1_opt_p = (npp * tau_leaf * one_year * one_day + (labile_carbon - (labile_phosphorus) * growth_cp) * 1.e6_wp) / & 
                             MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
                  IF ( k1_opt_n >= k1_opt_p) THEN 
                     ! if N is more limiting than P
@@ -1741,10 +1728,10 @@ CONTAINS
                              MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
                  ENDIF
               CASE DEFAULT 
-                 k1_opt_n = (npp * tau_leaf * one_year * one_day + (ns_carbon - (ns_nitrogen) * growth_cn) * 1.e6_wp - &
+                 k1_opt_n = (npp * tau_leaf * one_year * one_day + (labile_carbon - (labile_nitrogen) * growth_cn) * 1.e6_wp - &
                              n_fixation * growth_cn * tau_fine_root * one_year * one_day) / & 
                             MAX(MAX(unit_uptake_n, 0.05_wp) * growth_cn*tau_fine_root*one_year*one_day, eps8)
-                 k1_opt_p = (npp * tau_leaf * one_year * one_day + (ns_carbon - (ns_phosphorus) * growth_cp) * 1.e6_wp) / & 
+                 k1_opt_p = (npp * tau_leaf * one_year * one_day + (labile_carbon - (labile_phosphorus) * growth_cp) * 1.e6_wp) / & 
                             MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
                  IF ( k1_opt_n >= k1_opt_p) THEN 
                     ! if N is more limiting than P
@@ -1770,8 +1757,8 @@ CONTAINS
             ENDIF 
          CASE("dynamic")
               ! empirical scalling of leaf to root ratio based on nitrogen, phosphorus and water availability
-             n_l2r_scal = growth_cn / MAX(eps8, ns_carbon / MAX(eps8, ns_nitrogen))
-             p_l2r_scal = growth_cp / MAX(eps8, ns_carbon / MAX(eps8, ns_phosphorus))
+             n_l2r_scal = growth_cn / MAX(eps8, labile_carbon / MAX(eps8, labile_nitrogen))
+             p_l2r_scal = growth_cp / MAX(eps8, labile_carbon / MAX(eps8, labile_phosphorus))
              w_l2r_scal = w_root_lim / w_root_lim_max
              ! actual ratio is given by the minimum of the three factors
              leaf2root_mass_ratio = MAX(leaf2root_min_ratio, MIN(leaf2root_max_ratio, &
@@ -1780,7 +1767,7 @@ CONTAINS
             leaf2root_mass_ratio = sm2lm_grass * k_rtos 
         END SELECT ! biomass_alloc_scheme
 
-    ENDSELECT ! growthform
+    ENDSELECT ! SELECT CASE (growthform)
 
   END SUBROUTINE calc_allometry 
 
