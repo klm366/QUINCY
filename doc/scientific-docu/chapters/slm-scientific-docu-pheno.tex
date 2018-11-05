@@ -40,6 +40,26 @@ Growing degree days ($GDD_{act}$) are accumulated relative to a PFT-specific tem
 
 Senescence is generally only introduced once the leaf age has become larger than a PFT-specific threshold ($leaf\_age_{min}$). 
 
+
+% ----------------------- TABLES with PARAMETERS ----------------------- %
+
+\begin{sidewaystable}
+\section{Parameters}\label{tab:pheno:param}
+
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|X|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline 
+\multicolumn{6}{l}{\bf Phenology parameters}\\
+\hline
+$t_{air}^{GDD}$ & temperature threshold for the accumulation of growing degree days & \texttt{gdd\_t\_air\_threshold} & degC & • & 5.0 & • \\
+%• & • & \texttt{•} & • & • & • & • \\
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+
 \pagebreak
 
 \newpage

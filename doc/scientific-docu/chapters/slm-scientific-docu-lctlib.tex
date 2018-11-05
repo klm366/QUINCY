@@ -67,7 +67,6 @@ $\tau_{mycorrhiza}$  & turnover time of mycorrhizal fungi & \texttt{tau\_mycorrh
  • & seed size & \texttt{seed\_size} & mol C & • & • \\
 $\beta_{soil}^{flush}$ & soil moisture limitation factor on stomatal conductance inducing leaf flushing & \texttt{beta\_soil\_flush} & • & • & • \\
 $\beta_{soil}^{sen}$ & soil moisture limitation factor on stomatal conductance inducing leaf senescence & \texttt{beta\_soil\_senescence} & • & • & • \\
-$t_{air}^{GDD}$ & temperature threshold for the accumulation of growing degree days & \texttt{gdd\_t\_air\_threshold} & degC & • & • \\
 $GDD_{req}^{max}$ & maximum GDD requirement (degC days) in the absence of chilling & \texttt{gdd\_req\_max} & degC days & • & • \\
 $k_{GDD}^{dormance} $ & scaling factor in the GDD to number of dormant days relationship & \texttt{k\_gdd\_dormance} & days$^{-1}$ & • & • \\
 $t_{air}^{sen} $ & weekly air temperature threshold inducing senescence of leaves & \texttt{t\_air\_senescence} & degC & • & • \\
@@ -177,7 +176,6 @@ Parameter name in code & PFT specific values (1-8) & Notes \\
 \texttt{seed\_size} & 0.5 0.5 0.5 0.5 0.5 0.5 0.1 0.1 & • \\
 \texttt{beta\_soil\_flush} & 0.0 0.0 0.0 0.98 0.0 0.0 0.9 0.9 & • \\
 \texttt{beta\_soil\_senescence} & 0.0 0.0 0.0 0.5 0.0 0.0 0.01 0.01 & • \\
-\texttt{gdd\_t\_air\_threshold} & 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0 & converted at runtime to Kelvin \\
 \texttt{gdd\_req\_max} & 0.0 0.0 0.0 800.0 0.0 800.0 10.0 10.0 & • \\
 \texttt{k\_gdd\_dormance} & 0.0 0.0 0.0 0.007 0.0 0.0098 0.1 0.1 & • \\
 \texttt{t\_air\_senescence} & 0.0 0.0 0.0 8.5 0.0 5.0 0.0 0.0 & converted at runtime to Kelvin \\
