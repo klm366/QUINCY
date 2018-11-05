@@ -1442,11 +1442,12 @@ CONTAINS
     SELECT CASE(slm_model_name)
       CASE('land','plant') ! additional to CASE('land')
         ! vegfluxN [mol N / m2 / interval]
-        WRITE(lun,'(2a)') 'Time Uptake_NH4 Uptake_NO3 RecyclingN ReserveUseN ', &
-                          'FixationN Fixation_dN15 Uptake_NH4_dN15 Uptake_NO3_dN15 GrowthN'
+        WRITE(lun,'(3a)') 'Time Uptake_NH4 Uptake_NO3 RecyclingN ReserveUseN ', &
+                          'FixationN Fixation_dN15 Uptake_NH4_dN15 Uptake_NO3_dN15 GrowthN ', &
+                          'Growth_sapwood_N Growth_sapwood_dN15'
         lun=lun+1
         ! vegfluxP [mol P / m2 / interval]
-        WRITE(lun,'(a)') 'Time Uptake_PO4 RecyclingP ReserveUseP GrowthP'
+        WRITE(lun,'(a)') 'Time Uptake_PO4 RecyclingP ReserveUseP GrowthP Growth_sapwood_P'
         lun=lun+1
     END SELECT
 
@@ -1456,10 +1457,12 @@ CONTAINS
     SELECT CASE(slm_model_name)
       CASE('land','plant','canopy')
         ! vegfluxC [mol C / m2 / interval]
-        WRITE(lun,'(a)') 'Time GPP GrowthResp MaintResp NTransformResp NFixationResp NPP ReserveUseC RootExudationC GrowthC'
+        WRITE(lun,'(2a)') 'Time GPP GrowthResp MaintResp NTransformResp NFixationResp NPP ReserveUseC RootExudationC GrowthC ', &
+                          'Growth_sapwood_C'
         lun=lun+1 
         ! vegfluxdC13DC14
-        WRITE(lun,'(a)') 'Time GPP_dC13 GrowthResp_dC13 MaintResp_dC13 GPP_DC14 GrowthResp_DC14 MaintResp_DC14'
+        WRITE(lun,'(2a)') 'Time GPP_dC13 GrowthResp_dC13 MaintResp_dC13 Growth_sapwood_dC13 ', &
+                          'GPP_DC14 GrowthResp_DC14 MaintResp_DC14 Growth_sapwood_DC14'
         lun=lun+1
         ! vegfluxH2O [kg/m2/interval, ... , m/interval, m/interval ]
         WRITE(lun,'(a)') 'Time Precip PET Evaporation Interception Transpiration Runoff Drainage GC GA'
@@ -1707,6 +1710,12 @@ CONTAINS
     REAL(wp), SAVE                        :: growth_c_acc        = 0.0_wp
     REAL(wp), SAVE                        :: growth_n_acc        = 0.0_wp
     REAL(wp), SAVE                        :: growth_p_acc        = 0.0_wp
+    REAL(wp), SAVE                        :: growth_wood_c_acc   = 0.0_wp
+    REAL(wp), SAVE                        :: growth_wood_n_acc   = 0.0_wp
+    REAL(wp), SAVE                        :: growth_wood_p_acc   = 0.0_wp
+    REAL(wp), SAVE                        :: growth_wood_c13_acc = 0.0_wp
+    REAL(wp), SAVE                        :: growth_wood_c14_acc = 0.0_wp
+    REAL(wp), SAVE                        :: growth_wood_n15_acc = 0.0_wp
     ! soil - local accumulation variables (partly also used for land output)
     REAL(wp), SAVE                        :: litterfallC_acc     = 0.0_wp
     REAL(wp), SAVE                        :: litterfallC13_acc   = 0.0_wp
@@ -1809,7 +1818,7 @@ CONTAINS
                                              transport_DOP_lay_acc = 0.0_wp
     INTEGER                               :: lun                        !< locical unit number
     REAL(wp)                              :: hlp1
-    REAL(wp)                              :: dC13gpp, dC13rg, dC13rm, dC13litterfall, dC13het_resp, dC13leaching
+    REAL(wp)                              :: dC13gpp, dC13rg, dC13rm, dC13wgr, dC13litterfall, dC13het_resp, dC13leaching
     REAL(wp)                              :: dC13atm
     LOGICAL                               :: l_flux_calc_acc_output, &  !< do variable accumulation and enable output
                                              l_flux_output_interval     !< do output at this timestep and set accumulation variables to zero
@@ -2194,6 +2203,9 @@ CONTAINS
                                                              veg_growth%labile%carbon(ipoi)      + & 
                                                              veg_growth%reserve%carbon(ipoi)     + & 
                                                              veg_growth%fruit%carbon(ipoi)) * dtime_one *1000000._wp/dtime
+             growth_wood_c_acc    = growth_wood_c_acc     + veg_growth%sap_wood%carbon(ipoi) * dtime_one *1000000._wp/dtime
+             growth_wood_c13_acc  = growth_wood_c13_acc   + veg_growth%sap_wood%carbon13(ipoi) * dtime_one *1000000._wp/dtime
+             growth_wood_c14_acc  = growth_wood_c14_acc   + veg_growth%sap_wood%carbon14(ipoi) * dtime_one *1000000._wp/dtime
              gpp_C13_acc          = gpp_C13_acc           + gross_assimilation_C13(ipoi)    * dtime_one
              growth_resp_C13_acc  = growth_resp_C13_acc   + growth_respiration_c13(ipoi)    * dtime_one
              maint_resp_C13_acc   = maint_resp_C13_acc    + maint_respiration_c13(ipoi)     * dtime_one
@@ -2210,7 +2222,7 @@ CONTAINS
              res_use_n_acc        = res_use_n_acc         + veg_reserve_use%nitrogen(ipoi)  * dtime_one *1000000._wp/dtime
              n_fixation_acc       = n_fixation_acc        + n_fixation(ipoi)                * dtime_one 
              n_fixation_n15_acc   = n_fixation_n15_acc    + n_fixation_n15(ipoi)            * dtime_one
-              growth_n_acc         = growth_n_acc         + (veg_growth%leaf%nitrogen(ipoi)        + & 
+             growth_n_acc         = growth_n_acc          + (veg_growth%leaf%nitrogen(ipoi)        + & 
                                                              veg_growth%fine_root%nitrogen(ipoi)   + &
                                                              veg_growth%coarse_root%nitrogen(ipoi) + & 
                                                              veg_growth%sap_wood%nitrogen(ipoi)    + & 
@@ -2218,6 +2230,8 @@ CONTAINS
                                                              veg_growth%labile%nitrogen(ipoi)      + & 
                                                              veg_growth%reserve%nitrogen(ipoi)     + & 
                                                              veg_growth%fruit%nitrogen(ipoi)) * dtime_one *1000000._wp/dtime
+             growth_wood_n_acc    = growth_wood_n_acc     + veg_growth%sap_wood%nitrogen(ipoi) * dtime_one *1000000._wp/dtime
+             growth_wood_n15_acc  = growth_wood_n15_acc   + veg_growth%sap_wood%nitrogen15(ipoi) * dtime_one *1000000._wp/dtime
              uptake_po4_acc       = uptake_po4_acc        + uptake_po4(ipoi)                * dtime_one
              recycling_p_acc      = recycling_p_acc       + (recycling_leaf_p(ipoi) + recycling_fine_root_p(ipoi) + &
                                                              recycling_heart_wood_p(ipoi))  * dtime_one *1000000._wp/dtime
@@ -2229,6 +2243,7 @@ CONTAINS
                                                              veg_growth%labile%phosphorus(ipoi)      + & 
                                                              veg_growth%reserve%phosphorus(ipoi)     + & 
                                                              veg_growth%fruit%phosphorus(ipoi)) * dtime_one *1000000._wp/dtime     
+             growth_wood_p_acc    = growth_wood_p_acc     + veg_growth%sap_wood%phosphorus(ipoi) * dtime_one *1000000._wp/dtime
              res_use_p_acc        = res_use_p_acc         + veg_reserve_use%phosphorus(ipoi)  * dtime_one *1000000._wp/dtime
              IF(output_interval_flux < 1.0_wp) THEN  ! if interval == timestep (output_interval_flux is smaller 1.0 only for timestep interval)
                 precip_acc       = precip_acc        + (rain(ipoi) + snow(ipoi))  
@@ -2307,16 +2322,17 @@ CONTAINS
                SELECT CASE(TRIM(model%config%slm_model_name))
                  CASE('land','plant')
                    ! vegfluxN
-                   write(lun,'(10F18.6)') time_d, uptake_nh4_acc, uptake_no3_acc, recycling_n_acc   , & 
+                   write(lun,'(12F18.6)') time_d, uptake_nh4_acc, uptake_no3_acc, recycling_n_acc   , & 
                                           res_use_n_acc, n_fixation_acc, & 
                                           calc_delta_N15(n_fixation_acc,n_fixation_n15_acc), &
                                           calc_delta_N15(uptake_nh4_acc,uptake_nh4_n15_acc), &
                                           calc_delta_N15(uptake_no3_acc,uptake_no3_n15_acc), &
-                                          growth_n_acc
+                                          growth_n_acc, growth_wood_n_acc, &
+                                          calc_delta_N15(growth_wood_n_acc, growth_wood_n15_acc)
 
                    lun=lun+1
                    ! vegfluxP
-                   write(lun,'(5F18.6)') time_d, uptake_po4_acc, recycling_p_acc, res_use_p_acc, growth_p_acc
+                   write(lun,'(6F18.6)') time_d, uptake_po4_acc, recycling_p_acc, res_use_p_acc, growth_p_acc, growth_wood_p_acc
                    lun=lun+1
                END SELECT
 
@@ -2326,18 +2342,20 @@ CONTAINS
                SELECT CASE(TRIM(model%config%slm_model_name))
                  CASE('land','plant','canopy')
                    ! vegfluxC
-                   write(lun,'(10F18.6)') time_d, gpp_acc, growth_resp_acc, maint_resp_acc , &
+                   write(lun,'(11F18.6)') time_d, gpp_acc, growth_resp_acc, maint_resp_acc , &
                                           n_transform_resp_acc,n_fixation_resp_acc         , & 
-                                          npp_acc, res_use_c_acc, exudationC_acc, growth_c_acc
+                                          npp_acc, res_use_c_acc, exudationC_acc, growth_c_acc, growth_wood_c_acc
                    lun=lun+1
                    ! vegfluxdC13DC14
                    dC13gpp = calc_delta_C13(gpp_acc,gpp_C13_acc)
                    dC13rg  = calc_delta_C13(growth_resp_acc,growth_resp_C13_acc)
                    dC13rm  = calc_delta_C13(maint_resp_acc,maint_resp_C13_acc) 
-                   write(lun,'(7F18.6)') time_d, dC13gpp, dC13rg, dC13rm                            , & 
+                   dC13wgr = calc_delta_C13(growth_wood_c_acc, growth_wood_c13_acc)
+                   write(lun,'(9F18.6)') time_d, dC13gpp, dC13rg, dC13rm, dC13wgr                   , & 
                                          calc_delta_C14(gpp_acc,gpp_C14_acc,dC13gpp)                , & 
                                          calc_delta_C14(growth_resp_acc,growth_resp_C14_acc,dC13rg) , & 
-                                         calc_delta_C14(maint_resp_acc,maint_resp_C14_acc,dC13rm)
+                                         calc_delta_C14(maint_resp_acc,maint_resp_C14_acc,dC13rm)   , &
+                                         calc_delta_C14(growth_wood_c_acc, growth_wood_c14_acc, growth_wood_c13_acc)
                    lun=lun+1
                    ! vegfluxH2O
                    write(lun,'(12F18.8)') time_d, precip_acc, pet_acc, evaporation_acc, interception_acc, & 
@@ -2383,6 +2401,9 @@ CONTAINS
                npp_acc                    = 0.0_wp
                res_use_c_acc              = 0.0_wp
                growth_c_acc               = 0.0_wp
+               growth_wood_c_acc          = 0.0_wp
+               growth_wood_c13_acc        = 0.0_wp
+               growth_wood_c14_acc        = 0.0_wp
                gpp_C13_acc                = 0.0_wp
                growth_resp_C13_acc        = 0.0_wp
                maint_resp_C13_acc         = 0.0_wp
@@ -2392,12 +2413,14 @@ CONTAINS
                recycling_n_acc            = 0.0_wp
                res_use_n_acc              = 0.0_wp
                growth_n_acc               = 0.0_wp
+               growth_wood_n15_acc        = 0.0_wp
                n_fixation_acc             = 0.0_wp
                n_fixation_n15_acc         = 0.0_wp
                uptake_po4_acc             = 0.0_wp
                recycling_p_acc            = 0.0_wp
                res_use_p_acc              = 0.0_wp
                growth_p_acc               = 0.0_wp
+               growth_wood_p_acc          = 0.0_wp
                precip_acc                 = 0.0_wp
                evaporation_acc            = 0.0_wp
                interception_acc           = 0.0_wp
