@@ -141,6 +141,7 @@ MODULE mo_veg_constants
       min_diameter                , & !< minimum diameter for crown area calculation (m)
       k_crown_area                , & !< scaling parameter in crownarea to diameter relationship
       k_rp                        , & !< scaling exponent in crownarea to diameter relationship
+      k_fpc                       , & !< ... see ticket #475
       fpc_max                         !< maximum foliage projective cover
 
   ! other
@@ -297,6 +298,7 @@ CONTAINS
       min_diameter                = 0.01_wp
       k_crown_area                = 100._wp
       k_rp                        = 1.6_wp
+      k_fpc                       = 0.5_wp
       fpc_max                     = 0.95_wp
 
   ! other

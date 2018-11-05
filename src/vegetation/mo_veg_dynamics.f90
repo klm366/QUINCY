@@ -287,7 +287,7 @@ CONTAINS
 
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
-    USE mo_veg_constants,         ONLY: max_crown_area, min_diameter, k_crown_area, k_rp, itree
+    USE mo_veg_constants,         ONLY: max_crown_area, min_diameter, k_crown_area, k_rp, k_fpc, itree
 
     IMPLICIT NONE
     ! ---------------------------
@@ -314,7 +314,7 @@ CONTAINS
       lai_ind(:)    = veg_pool_sap_wood_carbon(:) / dens_ind(:) / lctlib%wood_density / height(:) * lctlib%k_latosa / & 
                       crown_area(:)
       ! foliage projective cover is then the product of density and individual crown area
-      fpc(:)        = crown_area(:) * dens_ind(:) * (1._wp - exp(-0.5_wp * lai_ind(:)))
+      fpc(:)        = crown_area(:) * dens_ind(:) * (1._wp - exp(-k_fpc * lai_ind(:)))
     ELSEWHERE
       lai_ind(:) = 0.0_wp 
       fpc(:)     = 0.0_wp
