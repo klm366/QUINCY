@@ -15,6 +15,14 @@ MODULE mo_pheno_constants
   IMPLICIT NONE
   PUBLIC
 
+
+  !< phenology parameters
+  !! 
+  REAL(wp), SAVE ::   & 
+      gdd_t_air_threshold             !< temperature threshold for the accumulation of growing degree days [deg K]
+
+
+
   !< some useful numbers for easy identification of photosynthetic pathways and growth forms
   !! need to be parameters (i.e. constant across model runtime)
   !! 
@@ -34,6 +42,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE init_pheno_constants
 
+    USE mo_shared_constants,      ONLY: Tzero
+
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
@@ -43,10 +53,9 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_pheno_constants'
 
     
-    ! 
-    ! currently doing nothing, but called in model_init anyway
-    ! PFT specific parameters you may find in the lctlib file
-    ! 
+
+
+    gdd_t_air_threshold       = 5.0_wp + Tzero            !< ... citation
 
 
   END SUBROUTINE init_pheno_constants

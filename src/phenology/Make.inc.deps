@@ -51,7 +51,8 @@ mo_pheno_config_class.o: \
   mo_jsb_config_class.o
 
 mo_pheno_constants.o: \
-  mo_kind.o
+  mo_kind.o \
+  mo_shared_constants.o
 
 mo_pheno_init.o: \
   mo_kind.o \

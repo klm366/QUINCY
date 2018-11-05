@@ -5,7 +5,7 @@
   ! tba
 /
 &PHENOLOGY_CTL
-  ! tba
+  gdd_t_air_threshold=NAN
 /
 &RADIATION_CTL
   ! tba
@@ -123,7 +123,6 @@
   seed_size_p1=NAN
   beta_soil_flush_p1=NAN
   beta_soil_senescence_p1=NAN
-  gdd_t_air_threshold_p1=NAN
   gdd_req_max_p1=NAN
   k_gdd_dormance_p1=NAN
   t_air_senescence_p1=NAN
@@ -177,7 +176,6 @@
   seed_size_p2=NAN
   beta_soil_flush_p2=NAN
   beta_soil_senescence_p2=NAN
-  gdd_t_air_threshold_p2=NAN
   gdd_req_max_p2=NAN
   k_gdd_dormance_p2=NAN
   t_air_senescence_p2=NAN
@@ -231,7 +229,6 @@
   seed_size_p3=NAN
   beta_soil_flush_p3=NAN
   beta_soil_senescence_p3=NAN
-  gdd_t_air_threshold_p3=NAN
   gdd_req_max_p3=NAN
   k_gdd_dormance_p3=NAN
   t_air_senescence_p3=NAN
@@ -285,7 +282,6 @@
   seed_size_p4=NAN
   beta_soil_flush_p4=NAN
   beta_soil_senescence_p4=NAN
-  gdd_t_air_threshold_p4=NAN
   gdd_req_max_p4=NAN
   k_gdd_dormance_p4=NAN
   t_air_senescence_p4=NAN
@@ -339,7 +335,6 @@
   seed_size_p5=NAN
   beta_soil_flush_p5=NAN
   beta_soil_senescence_p5=NAN
-  gdd_t_air_threshold_p5=NAN
   gdd_req_max_p5=NAN
   k_gdd_dormance_p5=NAN
   t_air_senescence_p5=NAN
@@ -393,7 +388,6 @@
   seed_size_p6=NAN
   beta_soil_flush_p6=NAN
   beta_soil_senescence_p6=NAN
-  gdd_t_air_threshold_p6=NAN
   gdd_req_max_p6=NAN
   k_gdd_dormance_p6=NAN
   t_air_senescence_p6=NAN
@@ -447,7 +441,6 @@
   seed_size_p7=NAN
   beta_soil_flush_p7=NAN
   beta_soil_senescence_p7=NAN
-  gdd_t_air_threshold_p7=NAN
   gdd_req_max_p7=NAN
   k_gdd_dormance_p7=NAN
   t_air_senescence_p7=NAN
@@ -501,7 +494,6 @@
   seed_size_p8=NAN
   beta_soil_flush_p8=NAN
   beta_soil_senescence_p8=NAN
-  gdd_t_air_threshold_p8=NAN
   gdd_req_max_p8=NAN
   k_gdd_dormance_p8=NAN
   t_air_senescence_p8=NAN

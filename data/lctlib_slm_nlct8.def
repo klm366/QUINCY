@@ -205,10 +205,6 @@ beta_soil_flush 0.0 0.0 0.0 0.98 0.0 0.0 0.9 0.9
 #beta_soil_senescence: soil moisture limitation factor on stomatal conductance inducing leaf senescence        
 beta_soil_senescence 0.0 0.0 0.0 0.5 0.0 0.0 0.01 0.01
         
-#gdd_t_air_threshold: temperature threshold for the accumulation of growing degree days (°C)        
-# converted internally to K        
-gdd_t_air_threshold 5.0 5.0 5.0 5.0 5.0 5.0 5.0 5.0
-        
 #gdd_req_max: maximum GDD requirement (degC days) in the absence of chilling        
 gdd_req_max 0.0 0.0 0.0 800.0 0.0 800.0 10.0 10.0
         

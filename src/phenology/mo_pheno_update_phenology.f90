@@ -145,7 +145,6 @@ CONTAINS
                         lctlib%cn_leaf                     , &
                         lctlib%np_leaf                     , &
                         lctlib%gdd_req_max                 , &
-                        lctlib%gdd_t_air_threshold         , &
                         lctlib%k_gdd_dormance              , &
                         lctlib%beta_soil_senescence        , &
                         lctlib%t_air_senescence            , &
@@ -180,7 +179,6 @@ CONTAINS
                                       cn_leaf                         , &
                                       np_leaf                         , &
                                       gdd_req_max                     , &
-                                      gdd_t_air_threshold             , &
                                       k_gdd_dormance                  , &
                                       beta_soil_senescence            , &
                                       t_air_senescence                , &
@@ -201,7 +199,8 @@ CONTAINS
 
     USE mo_base_constants,          ONLY: dtime, one_day
     USE mo_shared_constants,        ONLY: Tzero
-    USE mo_pheno_constants,         ONLY: ievergreen, iraingreen, isummergreen, iperennial
+    USE mo_pheno_constants,         ONLY: ievergreen, iraingreen, isummergreen, iperennial, &
+                                          gdd_t_air_threshold
 
     IMPLICIT NONE
     ! ---------------------------
@@ -211,7 +210,6 @@ CONTAINS
                                                    cn_leaf                         , & !< land-cover-type library parameter
                                                    np_leaf                         , & !< land-cover-type library parameter
                                                    gdd_req_max                     , & !< land-cover-type library parameter
-                                                   gdd_t_air_threshold             , & !< land-cover-type library parameter
                                                    k_gdd_dormance                  , & !< land-cover-type library parameter
                                                    beta_soil_senescence            , & !< land-cover-type library parameter
                                                    t_air_senescence                , & !< land-cover-type library parameter

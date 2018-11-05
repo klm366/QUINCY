@@ -25,6 +25,8 @@ MODULE mo_shared_set_parameters
   TYPE t_parameters_slm_from_file
     !LOGICAL            :: active   ! de/activate this TYPE (this is non-functional for now 20161004)
     CHARACTER(LEN=30)  :: filename = 'parameter_slm_run.list'                 ! filename 
+    ! PHENOLOGY_CTL
+    REAL(wp)           :: gdd_t_air_threshold
     ! SHARED_CTL
     REAL(wp)           :: mavg_period_tlabile
     REAL(wp)           :: mavg_period_tphen
@@ -153,7 +155,6 @@ MODULE mo_shared_set_parameters
     ! Phenology parameters
     REAL(wp)            :: beta_soil_flush
     REAL(wp)            :: beta_soil_senescence
-    REAL(wp)            :: gdd_t_air_threshold
     REAL(wp)            :: gdd_req_max
     REAL(wp)            :: k_gdd_dormance
     REAL(wp)            :: t_air_senescence
@@ -207,6 +208,8 @@ CONTAINS
     CLASS(t_parameters_slm_from_file), INTENT(inout) :: this
     ! ---------------------------
     ! 0.2 Local
+    ! PHENOLOGY_CTL
+    REAL(wp)           :: gdd_t_air_threshold
     ! SHARED_CTL
     REAL(wp)           :: mavg_period_tlabile
     REAL(wp)           :: mavg_period_tphen
@@ -285,6 +288,8 @@ CONTAINS
 
     ! Namelist definition of section parameters
     ! 
+    NAMELIST /phenology_ctl/      &      
+        gdd_t_air_threshold
     NAMELIST /shared_ctl/         &  
         mavg_period_tlabile       , &
         mavg_period_tphen         , &
@@ -369,6 +374,8 @@ CONTAINS
 
     ! Set defaults
     ! 
+    ! PHENOLOGY_CTL
+    gdd_t_air_threshold         = missval
     ! SHARED_CTL
     mavg_period_tlabile         = missval
     mavg_period_tphen           = missval
@@ -444,6 +451,11 @@ CONTAINS
 
     ! read the namelist
     ! 
+    ! &PHENOLOGY_CTL
+    nml_handler = open_nml(TRIM(this%filename))
+    nml_unit = position_nml('PHENOLOGY_CTL', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, phenology_ctl)
+    CALL close_nml(nml_handler)
     ! &SHARED_CTL
     nml_handler = open_nml(TRIM(this%filename))
     nml_unit = position_nml('SHARED_CTL', nml_handler, STATUS=istat)
@@ -462,6 +474,8 @@ CONTAINS
 
     ! pass values as read from file
     ! 
+    ! PHENOLOGY_CTL
+    this%gdd_t_air_threshold         = gdd_t_air_threshold
     ! SHARED_CTL
     this%mavg_period_tlabile         = mavg_period_tlabile
     this%mavg_period_tphen           = mavg_period_tphen
@@ -547,6 +561,7 @@ CONTAINS
 
     USE mo_base_constants,                  ONLY: one_day, one_year, dtime
     !USE mo_assimi_constants
+    USE mo_pheno_constants
     !USE mo_atmland_constants
     !USE mo_rad_constants
     USE mo_shared_constants
@@ -571,6 +586,8 @@ CONTAINS
     !! 
     !! template: IF (ABS(this%x    - missval) > eps8)   x   = this%x
     !! 
+    ! PHENOLOGY_CTL
+    IF (ABS(this%gdd_t_air_threshold    - missval) > eps8)  gdd_t_air_threshold   = this%gdd_t_air_threshold + Tzero
     ! SHARED_CTL
     IF (ABS(this%mavg_period_tlabile    - missval) > eps8)  mavg_period_tlabile   = this%mavg_period_tlabile
     IF (ABS(this%mavg_period_tphen      - missval) > eps8)  mavg_period_tphen     = this%mavg_period_tphen
@@ -727,7 +744,6 @@ CONTAINS
     REAL(wp)            :: seed_size_p1
     REAL(wp)            :: beta_soil_flush_p1
     REAL(wp)            :: beta_soil_senescence_p1
-    REAL(wp)            :: gdd_t_air_threshold_p1
     REAL(wp)            :: gdd_req_max_p1
     REAL(wp)            :: k_gdd_dormance_p1
     REAL(wp)            :: t_air_senescence_p1
@@ -782,7 +798,6 @@ CONTAINS
     REAL(wp)            :: seed_size_p2
     REAL(wp)            :: beta_soil_flush_p2
     REAL(wp)            :: beta_soil_senescence_p2
-    REAL(wp)            :: gdd_t_air_threshold_p2
     REAL(wp)            :: gdd_req_max_p2
     REAL(wp)            :: k_gdd_dormance_p2
     REAL(wp)            :: t_air_senescence_p2
@@ -837,7 +852,6 @@ CONTAINS
     REAL(wp)            :: seed_size_p3
     REAL(wp)            :: beta_soil_flush_p3
     REAL(wp)            :: beta_soil_senescence_p3
-    REAL(wp)            :: gdd_t_air_threshold_p3
     REAL(wp)            :: gdd_req_max_p3
     REAL(wp)            :: k_gdd_dormance_p3
     REAL(wp)            :: t_air_senescence_p3
@@ -892,7 +906,6 @@ CONTAINS
     REAL(wp)            :: seed_size_p4
     REAL(wp)            :: beta_soil_flush_p4
     REAL(wp)            :: beta_soil_senescence_p4
-    REAL(wp)            :: gdd_t_air_threshold_p4
     REAL(wp)            :: gdd_req_max_p4
     REAL(wp)            :: k_gdd_dormance_p4
     REAL(wp)            :: t_air_senescence_p4
@@ -947,7 +960,6 @@ CONTAINS
     REAL(wp)            :: seed_size_p5
     REAL(wp)            :: beta_soil_flush_p5
     REAL(wp)            :: beta_soil_senescence_p5
-    REAL(wp)            :: gdd_t_air_threshold_p5
     REAL(wp)            :: gdd_req_max_p5
     REAL(wp)            :: k_gdd_dormance_p5
     REAL(wp)            :: t_air_senescence_p5
@@ -1002,7 +1014,6 @@ CONTAINS
     REAL(wp)            :: seed_size_p6
     REAL(wp)            :: beta_soil_flush_p6
     REAL(wp)            :: beta_soil_senescence_p6
-    REAL(wp)            :: gdd_t_air_threshold_p6
     REAL(wp)            :: gdd_req_max_p6
     REAL(wp)            :: k_gdd_dormance_p6
     REAL(wp)            :: t_air_senescence_p6
@@ -1057,7 +1068,6 @@ CONTAINS
     REAL(wp)            :: seed_size_p7
     REAL(wp)            :: beta_soil_flush_p7
     REAL(wp)            :: beta_soil_senescence_p7
-    REAL(wp)            :: gdd_t_air_threshold_p7
     REAL(wp)            :: gdd_req_max_p7
     REAL(wp)            :: k_gdd_dormance_p7
     REAL(wp)            :: t_air_senescence_p7
@@ -1112,7 +1122,6 @@ CONTAINS
     REAL(wp)            :: seed_size_p8
     REAL(wp)            :: beta_soil_flush_p8
     REAL(wp)            :: beta_soil_senescence_p8
-    REAL(wp)            :: gdd_t_air_threshold_p8
     REAL(wp)            :: gdd_req_max_p8
     REAL(wp)            :: k_gdd_dormance_p8
     REAL(wp)            :: t_air_senescence_p8
@@ -1173,7 +1182,6 @@ CONTAINS
           seed_size_p1, &
           beta_soil_flush_p1, &
           beta_soil_senescence_p1, &
-          gdd_t_air_threshold_p1, &
           gdd_req_max_p1, &
           k_gdd_dormance_p1, &
           t_air_senescence_p1, &
@@ -1229,7 +1237,6 @@ CONTAINS
           seed_size_p2, &
           beta_soil_flush_p2, &
           beta_soil_senescence_p2, &
-          gdd_t_air_threshold_p2, &
           gdd_req_max_p2, &
           k_gdd_dormance_p2, &
           t_air_senescence_p2, &
@@ -1285,7 +1292,6 @@ CONTAINS
           seed_size_p3, &
           beta_soil_flush_p3, &
           beta_soil_senescence_p3, &
-          gdd_t_air_threshold_p3, &
           gdd_req_max_p3, &
           k_gdd_dormance_p3, &
           t_air_senescence_p3, &
@@ -1341,7 +1347,6 @@ CONTAINS
           seed_size_p4, &
           beta_soil_flush_p4, &
           beta_soil_senescence_p4, &
-          gdd_t_air_threshold_p4, &
           gdd_req_max_p4, &
           k_gdd_dormance_p4, &
           t_air_senescence_p4, &
@@ -1397,7 +1402,6 @@ CONTAINS
           seed_size_p5, &
           beta_soil_flush_p5, &
           beta_soil_senescence_p5, &
-          gdd_t_air_threshold_p5, &
           gdd_req_max_p5, &
           k_gdd_dormance_p5, &
           t_air_senescence_p5, &
@@ -1453,7 +1457,6 @@ CONTAINS
           seed_size_p6, &
           beta_soil_flush_p6, &
           beta_soil_senescence_p6, &
-          gdd_t_air_threshold_p6, &
           gdd_req_max_p6, &
           k_gdd_dormance_p6, &
           t_air_senescence_p6, &
@@ -1509,7 +1512,6 @@ CONTAINS
           seed_size_p7, &
           beta_soil_flush_p7, &
           beta_soil_senescence_p7, &
-          gdd_t_air_threshold_p7, &
           gdd_req_max_p7, &
           k_gdd_dormance_p7, &
           t_air_senescence_p7, &
@@ -1565,7 +1567,6 @@ CONTAINS
           seed_size_p8, &
           beta_soil_flush_p8, &
           beta_soil_senescence_p8, &
-          gdd_t_air_threshold_p8, &
           gdd_req_max_p8, &
           k_gdd_dormance_p8, &
           t_air_senescence_p8, &
@@ -1630,7 +1631,6 @@ CONTAINS
     seed_size_p1      = missval
     beta_soil_flush_p1      = missval
     beta_soil_senescence_p1      = missval
-    gdd_t_air_threshold_p1      = missval
     gdd_req_max_p1      = missval
     k_gdd_dormance_p1      = missval
     t_air_senescence_p1      = missval
@@ -1685,7 +1685,6 @@ CONTAINS
     seed_size_p2      = missval
     beta_soil_flush_p2      = missval
     beta_soil_senescence_p2      = missval
-    gdd_t_air_threshold_p2      = missval
     gdd_req_max_p2      = missval
     k_gdd_dormance_p2      = missval
     t_air_senescence_p2      = missval
@@ -1740,7 +1739,6 @@ CONTAINS
     seed_size_p3      = missval
     beta_soil_flush_p3      = missval
     beta_soil_senescence_p3      = missval
-    gdd_t_air_threshold_p3      = missval
     gdd_req_max_p3      = missval
     k_gdd_dormance_p3      = missval
     t_air_senescence_p3      = missval
@@ -1795,7 +1793,6 @@ CONTAINS
     seed_size_p4      = missval
     beta_soil_flush_p4      = missval
     beta_soil_senescence_p4      = missval
-    gdd_t_air_threshold_p4      = missval
     gdd_req_max_p4      = missval
     k_gdd_dormance_p4      = missval
     t_air_senescence_p4      = missval
@@ -1850,7 +1847,6 @@ CONTAINS
     seed_size_p5      = missval
     beta_soil_flush_p5      = missval
     beta_soil_senescence_p5      = missval
-    gdd_t_air_threshold_p5      = missval
     gdd_req_max_p5      = missval
     k_gdd_dormance_p5      = missval
     t_air_senescence_p5      = missval
@@ -1905,7 +1901,6 @@ CONTAINS
     seed_size_p6      = missval
     beta_soil_flush_p6      = missval
     beta_soil_senescence_p6      = missval
-    gdd_t_air_threshold_p6      = missval
     gdd_req_max_p6      = missval
     k_gdd_dormance_p6      = missval
     t_air_senescence_p6      = missval
@@ -1960,7 +1955,6 @@ CONTAINS
     seed_size_p7      = missval
     beta_soil_flush_p7      = missval
     beta_soil_senescence_p7      = missval
-    gdd_t_air_threshold_p7      = missval
     gdd_req_max_p7      = missval
     k_gdd_dormance_p7      = missval
     t_air_senescence_p7      = missval
@@ -2015,7 +2009,6 @@ CONTAINS
     seed_size_p8      = missval
     beta_soil_flush_p8      = missval
     beta_soil_senescence_p8      = missval
-    gdd_t_air_threshold_p8      = missval
     gdd_req_max_p8      = missval
     k_gdd_dormance_p8      = missval
     t_air_senescence_p8      = missval
@@ -2118,7 +2111,6 @@ CONTAINS
     param_pft1_from_file%seed_size   = seed_size_p1
     param_pft1_from_file%beta_soil_flush   = beta_soil_flush_p1
     param_pft1_from_file%beta_soil_senescence   = beta_soil_senescence_p1
-    param_pft1_from_file%gdd_t_air_threshold   = gdd_t_air_threshold_p1
     param_pft1_from_file%gdd_req_max   = gdd_req_max_p1
     param_pft1_from_file%k_gdd_dormance   = k_gdd_dormance_p1
     param_pft1_from_file%t_air_senescence   = t_air_senescence_p1
@@ -2173,7 +2165,6 @@ CONTAINS
     param_pft2_from_file%seed_size   = seed_size_p2
     param_pft2_from_file%beta_soil_flush   = beta_soil_flush_p2
     param_pft2_from_file%beta_soil_senescence   = beta_soil_senescence_p2
-    param_pft2_from_file%gdd_t_air_threshold   = gdd_t_air_threshold_p2
     param_pft2_from_file%gdd_req_max   = gdd_req_max_p2
     param_pft2_from_file%k_gdd_dormance   = k_gdd_dormance_p2
     param_pft2_from_file%t_air_senescence   = t_air_senescence_p2
@@ -2228,7 +2219,6 @@ CONTAINS
     param_pft3_from_file%seed_size   = seed_size_p3
     param_pft3_from_file%beta_soil_flush   = beta_soil_flush_p3
     param_pft3_from_file%beta_soil_senescence   = beta_soil_senescence_p3
-    param_pft3_from_file%gdd_t_air_threshold   = gdd_t_air_threshold_p3
     param_pft3_from_file%gdd_req_max   = gdd_req_max_p3
     param_pft3_from_file%k_gdd_dormance   = k_gdd_dormance_p3
     param_pft3_from_file%t_air_senescence   = t_air_senescence_p3
@@ -2283,7 +2273,6 @@ CONTAINS
     param_pft4_from_file%seed_size   = seed_size_p4
     param_pft4_from_file%beta_soil_flush   = beta_soil_flush_p4
     param_pft4_from_file%beta_soil_senescence   = beta_soil_senescence_p4
-    param_pft4_from_file%gdd_t_air_threshold   = gdd_t_air_threshold_p4
     param_pft4_from_file%gdd_req_max   = gdd_req_max_p4
     param_pft4_from_file%k_gdd_dormance   = k_gdd_dormance_p4
     param_pft4_from_file%t_air_senescence   = t_air_senescence_p4
@@ -2338,7 +2327,6 @@ CONTAINS
     param_pft5_from_file%seed_size   = seed_size_p5
     param_pft5_from_file%beta_soil_flush   = beta_soil_flush_p5
     param_pft5_from_file%beta_soil_senescence   = beta_soil_senescence_p5
-    param_pft5_from_file%gdd_t_air_threshold   = gdd_t_air_threshold_p5
     param_pft5_from_file%gdd_req_max   = gdd_req_max_p5
     param_pft5_from_file%k_gdd_dormance   = k_gdd_dormance_p5
     param_pft5_from_file%t_air_senescence   = t_air_senescence_p5
@@ -2393,7 +2381,6 @@ CONTAINS
     param_pft6_from_file%seed_size   = seed_size_p6
     param_pft6_from_file%beta_soil_flush   = beta_soil_flush_p6
     param_pft6_from_file%beta_soil_senescence   = beta_soil_senescence_p6
-    param_pft6_from_file%gdd_t_air_threshold   = gdd_t_air_threshold_p6
     param_pft6_from_file%gdd_req_max   = gdd_req_max_p6
     param_pft6_from_file%k_gdd_dormance   = k_gdd_dormance_p6
     param_pft6_from_file%t_air_senescence   = t_air_senescence_p6
@@ -2448,7 +2435,6 @@ CONTAINS
     param_pft7_from_file%seed_size   = seed_size_p7
     param_pft7_from_file%beta_soil_flush   = beta_soil_flush_p7
     param_pft7_from_file%beta_soil_senescence   = beta_soil_senescence_p7
-    param_pft7_from_file%gdd_t_air_threshold   = gdd_t_air_threshold_p7
     param_pft7_from_file%gdd_req_max   = gdd_req_max_p7
     param_pft7_from_file%k_gdd_dormance   = k_gdd_dormance_p7
     param_pft7_from_file%t_air_senescence   = t_air_senescence_p7
@@ -2503,7 +2489,6 @@ CONTAINS
     param_pft8_from_file%seed_size   = seed_size_p8
     param_pft8_from_file%beta_soil_flush   = beta_soil_flush_p8
     param_pft8_from_file%beta_soil_senescence   = beta_soil_senescence_p8
-    param_pft8_from_file%gdd_t_air_threshold   = gdd_t_air_threshold_p8
     param_pft8_from_file%gdd_req_max   = gdd_req_max_p8
     param_pft8_from_file%k_gdd_dormance   = k_gdd_dormance_p8
     param_pft8_from_file%t_air_senescence   = t_air_senescence_p8
@@ -2690,8 +2675,6 @@ CONTAINS
        lctlib%beta_soil_flush = param_pft_from_file%beta_soil_flush
     IF (ABS(param_pft_from_file%beta_soil_senescence      - missval) > eps8) &
        lctlib%beta_soil_senescence = param_pft_from_file%beta_soil_senescence
-    IF (ABS(param_pft_from_file%gdd_t_air_threshold       - missval) > eps8) &
-       lctlib%gdd_t_air_threshold = param_pft_from_file%gdd_t_air_threshold + Tzero
     IF (ABS(param_pft_from_file%gdd_req_max               - missval) > eps8) &
        lctlib%gdd_req_max = param_pft_from_file%gdd_req_max
     IF (ABS(param_pft_from_file%k_gdd_dormance            - missval) > eps8) &

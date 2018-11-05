@@ -254,7 +254,7 @@ CONTAINS
     CALL init_veg_constants           ! uses Tzero                    defined in mo_shared_constants
     CALL init_sse_constants
     CALL init_sb_constants
-    CALL init_pheno_constants
+    CALL init_pheno_constants         ! uses Tzero                    defined in mo_shared_constants
 
     !> 5.1 Process-constants & pft-specific lcltib-parameter modification for parameter sensitivity analysis
     !! see 7.1 for LCTLIB parameters

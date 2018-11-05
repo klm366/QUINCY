@@ -91,7 +91,6 @@ MODULE mo_jsb_lctlib_class
 ! Phenology parameters
     REAL(wp) :: beta_soil_flush       , &
                 beta_soil_senescence  , &
-                gdd_t_air_threshold   , &
                 gdd_req_max           , &
                 k_gdd_dormance        , &
                 t_air_senescence      , &
@@ -351,8 +350,6 @@ CONTAINS
             READ(line(pos:length),*) lctlib(1:nlct)%beta_soil_flush
           CASE ('beta_soil_senescence')
             READ(line(pos:length),*) lctlib(1:nlct)%beta_soil_senescence
-          CASE ('gdd_t_air_threshold')
-            READ(line(pos:length),*) lctlib(1:nlct)%gdd_t_air_threshold
           CASE ('gdd_req_max')
             READ(line(pos:length),*) lctlib(1:nlct)%gdd_req_max
           CASE ('k_gdd_dormance')
@@ -449,10 +446,6 @@ CONTAINS
         !! bnf_base
           DO i=1,nlct
            lctlib(i)%bnf_base = lctlib(i)%bnf_base / molar_mass_N / one_day / one_year * 1.e6_wp
-          END DO
-        !! gdd_t_air_threshold
-          DO i=1,nlct
-            lctlib(i)%gdd_t_air_threshold = lctlib(i)%gdd_t_air_threshold + Tzero
           END DO
         !! t_air_senescence
           DO i=1,nlct
