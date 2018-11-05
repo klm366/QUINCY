@@ -567,6 +567,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: leaf2root_troot_mavg
     dsl4jsb_Real2D_onChunk      :: growth_cp_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: growth_cn_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: growth_np_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: unit_npp_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: n_fixation_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: npp_talloc_mavg
@@ -733,6 +734,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, leaf2root_troot_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_cp_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_cn_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_np_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_npp_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, npp_talloc_mavg)
@@ -1011,6 +1013,13 @@ CONTAINS
              hlp(:) = 0._wp
           END WHERE
           growth_cp_talloc_mavg(:)  = calc_mavg(growth_cp_talloc_mavg(:), hlp(:), mavg_period_hlp, do_calc=l_growing_season(:))
+
+          WHERE(growth_req_p(:) > 0._wp)
+             hlp(:) = 1._wp/(growth_req_p(:))
+          ELSEWHERE
+             hlp(:) = 0._wp
+          END WHERE
+          growth_np_talloc_mavg(:)  = calc_mavg(growth_np_talloc_mavg(:), hlp(:), mavg_period_hlp, do_calc=l_growing_season(:))
 
     !> 1.7 averages at the time-scale of root life-time
     !!

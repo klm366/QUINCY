@@ -364,6 +364,7 @@ MODULE mo_veg_memory_class
                                     dphi_talloc_mavg               , &  !< leaf-soil water potential gradient [MPa]
                                     growth_cn_talloc_mavg          , &  !< plant growth cn ratio, equivalent to 1/growth_req_n time-averaged [mol C mol-1 N]
                                     growth_cp_talloc_mavg          , &  !< plant growth cp ratio, equivalent to 1/(growthreq_n*growth_req_p) time-averaged [mol C mol-1 P]
+                                    growth_np_talloc_mavg          , &  !< plant growth np ratio, equivalent to 1/(growth_req_p) time-averaged [mol N mol-1 P]
                                     labile_carbon_talloc_mavg      , &  !< labile carbon pool neeeded for allometry calculations time-averaged [mol C m-2]
                                     labile_nitrogen_talloc_mavg    , &  !< labile nitrogen pool neeeded for allometry calculations time-averaged [mol N m-2]
                                     labile_phosphorus_talloc_mavg  , &  !< labile phosphorus pool neeeded for allometry calculations time-averaged [mol P m-2]
@@ -2333,6 +2334,14 @@ CONTAINS
       CALL jsb_add_var(mem, 'growth_cp_talloc_mavg', mem%growth_cp_talloc_mavg, &
             hgrid, surface, &
             t_cf('growth_cp_talloc_mavg', '', 'plant growth cp ratio, equivalent to 1/(growthreq_n*growth_req_p)'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'growth_np_talloc_mavg', mem%growth_np_talloc_mavg, &
+            hgrid, surface, &
+            t_cf('growth_np_talloc_mavg', '', 'plant growth hp ratio, equivalent to 1/(growth_req_p)'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &

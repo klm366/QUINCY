@@ -188,7 +188,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: reserve_phosphorus_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: w_root_lim_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: growth_cn_talloc_mavg
-    dsl4jsb_Real2D_onChunk      :: growth_cp_talloc_mavg 
+    dsl4jsb_Real2D_onChunk      :: growth_cp_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: growth_np_talloc_mavg 
     dsl4jsb_Real2D_onChunk      :: npp_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: unit_npp_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: transpiration_talloc_mavg
@@ -358,6 +359,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, w_root_lim_talloc_mavg)     ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_cn_talloc_mavg)              ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_cp_talloc_mavg)              ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_np_talloc_mavg)              ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, npp_talloc_mavg)                    ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_npp_talloc_mavg)               ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, transpiration_talloc_mavg)          ! in
@@ -653,7 +655,8 @@ CONTAINS
                         reserve_nitrogen_talloc_mavg(:)                   , &
                         reserve_phosphorus_talloc_mavg(:)                 , &
                         growth_cn_talloc_mavg(:)                          , &
-                        growth_cp_talloc_mavg(:)                          , & 
+                        growth_cp_talloc_mavg(:)                          , &
+                        growth_np_talloc_mavg(:)                          , & 
                         npp_talloc_mavg(:)                                , &
                         unit_npp_talloc_mavg(:)                           , &
                         transpiration_talloc_mavg(:)                      , &
@@ -1507,6 +1510,7 @@ CONTAINS
                                             reserve_phosphorus            , &
                                             growth_cn                     , &
                                             growth_cp                     , &
+                                            growth_np                     , &
                                             npp                           , &
                                             unit_npp                      , &
                                             transpiration                 , &
@@ -1556,6 +1560,7 @@ CONTAINS
     REAL(wp),              INTENT(in)  :: reserve_phosphorus           !< reserve phosphorus (mol P)
     REAL(wp),              INTENT(in)  :: growth_cn                    !< C:N of whole plant growth increment
     REAL(wp),              INTENT(in)  :: growth_cp                    !< C:P of whole plant growth increment
+    REAL(wp),              INTENT(in)  :: growth_np                    !< N:P of whole plant growth increment
     REAL(wp),              INTENT(in)  :: npp                          !< current average NPP (µmol C m-2 s-1)
     REAL(wp),              INTENT(in)  :: unit_npp                     !< increase in NPP for unit increase in leaf mass (µmol C m-2 s-1 mol-1 leaf C)
     REAL(wp),              INTENT(in)  :: transpiration                !< average transpiration flux (kg m-2 s-1)
@@ -1681,7 +1686,7 @@ CONTAINS
           CASE("dynamic")
              ! empirical scalling of leaf to root ratio based on nitrogen, phosphorus and water availability
              n_l2r_scal = growth_cn / MAX(eps8, labile_carbon / MAX(eps8, labile_nitrogen))
-             p_l2r_scal = growth_cp / MAX(eps8, labile_carbon / MAX(eps8, labile_phosphorus))
+             p_l2r_scal = growth_np / MAX(eps8, labile_nitrogen / MAX(eps8, labile_phosphorus))
              w_l2r_scal = w_root_lim / w_root_lim_max
              ! actual ratio is given by the minimum of the three factors
              leaf2root_mass_ratio = MAX(leaf2root_min_ratio, MIN(leaf2root_max_ratio, &
@@ -1753,7 +1758,7 @@ CONTAINS
          CASE("dynamic")
               ! empirical scalling of leaf to root ratio based on nitrogen, phosphorus and water availability
              n_l2r_scal = growth_cn / MAX(eps8, labile_carbon / MAX(eps8, labile_nitrogen))
-             p_l2r_scal = growth_cp / MAX(eps8, labile_carbon / MAX(eps8, labile_phosphorus))
+             p_l2r_scal = growth_np / MAX(eps8, labile_nitrogen / MAX(eps8, labile_phosphorus))
              w_l2r_scal = w_root_lim / w_root_lim_max
              ! actual ratio is given by the minimum of the three factors
              leaf2root_mass_ratio = MAX(leaf2root_min_ratio, MIN(leaf2root_max_ratio, &
