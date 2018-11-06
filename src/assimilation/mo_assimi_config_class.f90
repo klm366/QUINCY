@@ -79,7 +79,7 @@ CONTAINS
                                    icanopy
     REAL(wp)                    :: dAPAR
     REAL(wp)                    :: k_canopy_layer                !< extinction coefficient to calculate canopy layer depth
-    TYPE(t_jsb_vgrid), POINTER  :: canopy_layer
+    TYPE(t_jsb_vgrid), POINTER  :: vgrid_canopy
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_assimi_config'
 
     NAMELIST /assimilation_ctl/    &
@@ -153,14 +153,14 @@ CONTAINS
 
     !< Create vertical axis
     !! 
-    canopy_layer  => new_vgrid('canopy_layer', ZAXIS_GENERIC, config%ncanopy, &
+    vgrid_canopy  => new_vgrid('canopy_layer', ZAXIS_GENERIC, config%ncanopy, &
                       longname='Number of canopy layers from ASSIMI_ QUINCY', &
                       ! units='m2 m-2', &
                       ! levels=   , &
                       ! lbounds=  , & 
                       ! ubounds=  , &
                       dz=config%canopy_layer_depth)
-    CALL register_vgrid(canopy_layer)
+    CALL register_vgrid(vgrid_canopy)
 
   END SUBROUTINE Init_assimi_config
 

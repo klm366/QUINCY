@@ -204,7 +204,7 @@ CONTAINS
     ! run configuration for each process  (mo_jsb_process_class:Configure_process() -> t_PROC_config:Init -> mo_PROC_config_class:Init_PROC_config)
     !  incl. creating vertical grids:
     !   canopy_layer  in ASSIMI_  (ncanopy is part of the &ASSIMILATION_CTL namelist)
-    !   sb_soil_layer in SSE_     (number of soil layers is part of the &SSE_CTL namelist)
+    !   soil_layer_sb in SSE_     (number of soil layers is part of the &SSE_CTL namelist)
     CALL model%Configure_processes()
     !> 1.3 Get selected process configs
     dsl4jsb_Get_config(VEG_)

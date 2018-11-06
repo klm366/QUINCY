@@ -89,7 +89,7 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     REAL(wp)                    :: k_soil_profile       ! for soil layer calculations
     REAL(wp)                    :: min_layer_depth      ! for soil layer calculations
-    TYPE(t_jsb_vgrid), POINTER  :: sb_soil_layer
+    TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_sb
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_sse_config'
     
     NAMELIST /sse_ctl/       & 
@@ -213,14 +213,14 @@ CONTAINS
 
     !< Create vertical axis
     !! 
-    sb_soil_layer => new_vgrid('sb_soil_layer', ZAXIS_GENERIC, config%nsoil_water, &
+    vgrid_soil_sb => new_vgrid('soil_layer_sb', ZAXIS_GENERIC, config%nsoil_water, &
                       longname='Number of soil layers from SSE_ QUINCY', &
                       units='m', &
                       ! levels=   , &
                       ! lbounds=  , & 
                       ! ubounds=  , &
                       dz=config%dz_water(:))
-    CALL register_vgrid(sb_soil_layer)
+    CALL register_vgrid(vgrid_soil_sb)
 
   END SUBROUTINE Init_sse_config
 
