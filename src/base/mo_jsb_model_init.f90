@@ -95,7 +95,7 @@ CONTAINS
     !> 2.0 grid
     !! 
     ! create grid, currently for only one point
-    grid => new_grid(1.0_wp,1.0_wp)
+    grid => new_grid(1.0_wp,1.0_wp)  ! arguments are dummy lon & lat (new_grid_from_lonlat())
     ! register grid 
     CALL register_grid(grid)
     model%grid_id = grid%id
@@ -123,7 +123,7 @@ CONTAINS
     USE mo_jsb4_forcing,          ONLY: Init_forcing, forcing_options
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_grid_class,        ONLY: t_jsb_grid
-    USE mo_jsb_grid,              ONLY: Get_Grid
+    USE mo_jsb_grid,              ONLY: Get_grid
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb_lctlib_class,      ONLY: Read_lctlib
     USE mo_jsb_config_class,      ONLY: new_model_config
@@ -194,12 +194,17 @@ CONTAINS
     !> 1.1 model config
     !!
     model%config => new_model_config(model%namelist_filename)
-    !> 1.2 process config
+    !> 1.2 process config (includes vertical_grid init)
     !!
+    ! allocate an object for each process
     ALLOCATE(model%processes(max_no_of_processes))
     DO iproc=1,max_no_of_processes
       model%processes(iproc)%p => Create_process(iproc, model%id, TRIM(model%namelist_filename))
     END DO
+    ! run configuration for each process  (mo_jsb_process_class:Configure_process() -> t_PROC_config:Init -> mo_PROC_config_class:Init_PROC_config)
+    !  incl. creating vertical grids:
+    !   canopy_layer  in ASSIMI_  (ncanopy is part of the &ASSIMILATION_CTL namelist)
+    !   sb_soil_layer in SSE_     (number of soil layers is part of the &SSE_CTL namelist)
     CALL model%Configure_processes()
     !> 1.3 Get selected process configs
     dsl4jsb_Get_config(VEG_)

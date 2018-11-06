@@ -58,10 +58,15 @@ CONTAINS
 !    USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
 !    using the old JSBACH3 functions instead of wrappers implemented in JSBACH4 -> mo_jsb_namelist_iface
     USE mo_namelist,           ONLY: open_nml, POSITIONED, position_nml, close_nml  ! read model options from file
+    USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
+    USE mo_jsb_grid,           ONLY: Register_vgrid
+    USE mo_jsb_grid_class,     ONLY: ZAXIS_GENERIC   ! in JSBACH4 used from mo_jsb_io    *slmtemp
 
+    IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     CLASS(t_assimi_config), INTENT(inout) :: config    !< config type for assimi
-
+    ! ---------------------------
     ! 0.2 Local
     ! variables for reading from namlist, identical to variable-name in namelist
     LOGICAL                     :: active
@@ -74,6 +79,7 @@ CONTAINS
                                    icanopy
     REAL(wp)                    :: dAPAR
     REAL(wp)                    :: k_canopy_layer                !< extinction coefficient to calculate canopy layer depth
+    TYPE(t_jsb_vgrid), POINTER  :: canopy_layer
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_assimi_config'
 
     NAMELIST /assimilation_ctl/    &
@@ -143,8 +149,18 @@ CONTAINS
       CASE DEFAULT
         WRITE(message_text,'(2a)') 'invalid canopy_layer_scheme',canopy_layer_scheme
         CALL finish("mo_assimi_config_class:Init_assimi_config",message_text) 
-      
     END SELECT
+
+    !< Create vertical axis
+    !! 
+    canopy_layer  => new_vgrid('canopy_layer', ZAXIS_GENERIC, config%ncanopy, &
+                      longname='Number of canopy layers from ASSIMI_ QUINCY', &
+                      ! units='m2 m-2', &
+                      ! levels=   , &
+                      ! lbounds=  , & 
+                      ! ubounds=  , &
+                      dz=config%canopy_layer_depth)
+    CALL register_vgrid(canopy_layer)
 
   END SUBROUTINE Init_assimi_config
 

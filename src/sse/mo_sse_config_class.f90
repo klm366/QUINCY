@@ -59,6 +59,9 @@ CONTAINS
   SUBROUTINE Init_sse_config(config)
 
     USE mo_namelist,           ONLY: open_nml, POSITIONED, position_nml, close_nml  ! read model options from file
+    USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
+    USE mo_jsb_grid,           ONLY: Register_vgrid
+    USE mo_jsb_grid_class,     ONLY: ZAXIS_GENERIC   ! in JSBACH4 used from mo_jsb_io    *slmtemp
 
     IMPLICIT NONE
     ! ---------------------------
@@ -84,10 +87,11 @@ CONTAINS
     REAL(wp)                    :: bulk_density
     INTEGER                     :: isoil   ! looping
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
-    ! local variables for soil layer calculations
-    REAL(wp)                    :: k_soil_profile  = 0.25_wp
-    REAL(wp)                    :: min_layer_depth = 0.065_wp
-
+    REAL(wp)                    :: k_soil_profile       ! for soil layer calculations
+    REAL(wp)                    :: min_layer_depth      ! for soil layer calculations
+    TYPE(t_jsb_vgrid), POINTER  :: sb_soil_layer
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_sse_config'
+    
     NAMELIST /sse_ctl/       & 
                           active                  , &
                           ic_filename             , &
@@ -109,7 +113,9 @@ CONTAINS
     ! variables for reading model-options from namelist
     INTEGER :: nml_handler, nml_unit, istat
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_sse_config'
+    ! variabales for soil layer calculations
+    k_soil_profile  = 0.25_wp
+    min_layer_depth = 0.065_wp
 
     CALL message(TRIM(routine), 'Starting sse configuration')
 
@@ -204,6 +210,17 @@ CONTAINS
        CALL finish("mo_sse_config_class:init_sse_config",message_text)
     END IF
     config%bulk_density              = bulk_density
+
+    !< Create vertical axis
+    !! 
+    sb_soil_layer => new_vgrid('sb_soil_layer', ZAXIS_GENERIC, config%nsoil_water, &
+                      longname='Number of soil layers from SSE_ QUINCY', &
+                      units='m', &
+                      ! levels=   , &
+                      ! lbounds=  , & 
+                      ! ubounds=  , &
+                      dz=config%dz_water(:))
+    CALL register_vgrid(sb_soil_layer)
 
   END SUBROUTINE Init_sse_config
 

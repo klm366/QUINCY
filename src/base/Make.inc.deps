@@ -156,7 +156,7 @@ mo_jsb_base.o: \
 mo_jsb_grid.o: \
   mo_exception.o \
   mo_jsb_grid_class.o \
-  mo_jsb_control.o
+  mo_jsb_vertical_axes.o
 
 mo_jsb_model_usecases.o: \
   mo_jsb_model_class.o \
@@ -194,3 +194,6 @@ mo_jsb_tile_class.o: \
   mo_jsb_memory_class.o \
   mo_jsb_lct_class.o \
   mo_jsb_var_class.o
+
+mo_jsb_vertical_axes.o: \
+  mo_jsb_grid_class.o

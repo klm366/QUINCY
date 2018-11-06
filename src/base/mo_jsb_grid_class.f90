@@ -12,14 +12,33 @@ MODULE mo_jsb_grid_class
 
   USE mo_kind,               ONLY: wp
   USE mo_io_units,           ONLY: filename_max
-  USE mo_exception,          ONLY: message_text, message
+  USE mo_exception,          ONLY: message_text, message, finish
   USE mo_jsb_domain_iface,   ONLY: t_patch, pe_decomposed
+  ! USE mo_jsb_domain_iface,   ONLY: t_patch, p_patch, pe_decomposed,               &
+  !                                  get_grid_filename_domain => get_grid_filename, &
+  !                                  get_ntotal_domain        => get_ntotal,        &
+  !                                  get_ntotal_g_domain      => get_ntotal_g,      &
+  !                                  get_dims_g_domain        => get_dims_g,        &
+  !                                  get_nlat_g_domain        => get_nlat_g,        &
+  !                                  get_nproma_domain        => get_nproma,        &
+  !                                  get_nblks_domain         => get_nblks,         &
+  !                                  get_lon_domain           => get_lon,           &
+  !                                  get_lat_domain           => get_lat,           &
+  !                                  get_area_domain          => get_area
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: t_jsb_grid, t_jsb_grid_ptr, t_jsb_vgrid, t_jsb_vgrid_ptr
-  PUBLIC :: new_grid
+  PUBLIC :: new_grid, delete_grid, new_vgrid, delete_vgrid
+  PUBLIC :: get_nblks, get_nproma, t_jsb_subset
+  ! PUBLIC :: get_blk_start, get_blk_end, get_col_start, get_col_end
+
+  !! QUINCY added to make vgrids work easily     *slmtemp
+  PUBLIC :: ZAXIS_GENERIC
+  INTEGER, parameter :: ZAXIS_GENERIC = 1   ! in JSBACH4 used from ICON via "USE mo_jsb_io, ONLY: ZAXIS_GENERIC" ->  mo_jsb_io_iface
+                                            ! ICON: ./icon-les/support/mo_cdi.f90:150:  integer(c_int), public, parameter :: ZAXIS_GENERIC = 1
+
 
   TYPE t_jsb_grid
     INTEGER                      :: id = 0
@@ -49,18 +68,25 @@ MODULE mo_jsb_grid_class
     TYPE(t_jsb_grid), POINTER :: p => NULL()
   END TYPE t_jsb_grid_ptr
 
+  TYPE t_jsb_subset
+    INTEGER :: block
+    INTEGER :: start_index
+    INTEGER :: end_index
+  END TYPE t_jsb_subset
+
   TYPE t_jsb_vgrid
     INTEGER ::           id           = 0
     CHARACTER(len=20) :: name         = ''
     CHARACTER(len=50) :: longname     = ''
     CHARACTER(len=10) :: units        = ''
     INTEGER :: n_levels               = 0
-    REAL(wp), ALLOCATABLE :: levels(:)
-    REAL(wp), ALLOCATABLE :: lbounds(:)
-    REAL(wp), ALLOCATABLE :: ubounds(:)
-    REAL(wp), ALLOCATABLE :: dz(:)
-    INTEGER :: cdiZaxisID             = 0
-    INTEGER :: echamZaxisID           = 0
+    REAL(wp), ALLOCATABLE :: levels(:)        ! center of the layer (could be defined as needed though)
+    REAL(wp), ALLOCATABLE :: lbounds(:)       ! layer lower bound; per default into output
+    REAL(wp), ALLOCATABLE :: ubounds(:)       ! layer upper bound; per default into output
+    REAL(wp), ALLOCATABLE :: dz(:)            ! layer thickness; does not go into output per default
+    INTEGER :: cdi_axis_type          = 0
+    INTEGER :: ZaxisID                = 0   ! ICON: zaxis type (ZA_*), ECHAM: cdi zaxis id
+    INTEGER :: echamZaxisIdx          = 0   ! ICON: N/A, ECHAM: levelindx for dimension
   END TYPE t_jsb_vgrid
 
   TYPE t_jsb_vgrid_ptr
@@ -68,19 +94,119 @@ MODULE mo_jsb_grid_class
   END TYPE t_jsb_vgrid_ptr
 
   INTERFACE new_grid
+    ! MODULE PROCEDURE new_grid_from_file
+    ! MODULE PROCEDURE new_grid_from_host
     MODULE PROCEDURE new_grid_from_lonlat
   END INTERFACE new_grid
 
-
   INTEGER, SAVE :: ngrid_count = 0
-  
+
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_grid_class'
 
 CONTAINS
 
+  !>
+  !! Grid constructor
 
-  !> Grid constructor
-  !! 
+!   FUNCTION new_grid_from_host(patch, decomp) RESULT(grid)
+! 
+!     TYPE(t_patch),       OPTIONAL, INTENT(in) :: patch          !< used with icon
+!     TYPE(pe_decomposed), OPTIONAL, INTENT(in) :: decomp         !< used with echam
+!     TYPE(t_jsb_grid), POINTER                 :: grid
+! 
+!     TYPE(t_jsb_grid), POINTER       :: new
+! 
+!     CHARACTER(len=*), PARAMETER :: routine = modname//':new_grid_from_host'
+! 
+!     ! CALL message(TRIM(routine), 'starting construction of new JSBACH grid instance from host model')
+! 
+!     IF (PRESENT(patch) .AND. PRESENT(decomp)) &
+!       CALL finish(TRIM(routine), 'Only one of patch or decomposition can be specified')
+! 
+!     IF (.NOT. PRESENT(patch) .AND. .NOT. PRESENT(decomp)) &
+!       CALL finish(TRIM(routine), 'Either patch or decomposition must be specified')
+! 
+!     ALLOCATE(new)
+! 
+!     ngrid_count = ngrid_count + 1
+!     new%id = ngrid_count
+! !!$    new%name = name
+! 
+!     IF (PRESENT(patch)) THEN
+!       new%patch => p_patch(patch%id)
+!       ALLOCATE(new%decomposition)
+!       new%decomposition%nlon = -1
+!     ELSE
+!       ALLOCATE(new%decomposition)
+!       new%decomposition = decomp
+!       ALLOCATE(new%patch)
+!       new%patch%id = -1
+!     END IF
+! 
+!     new%filename = get_grid_filename_domain(patch, decomp)
+!     new%ntotal   = get_ntotal_domain       (patch, decomp)
+!     new%ntotal_g = get_ntotal_g_domain     (patch, decomp)
+!     new%dims_g(1:2) = get_dims_g_domain    (patch, decomp)
+!     new%nlat_g   = get_nlat_g_domain       (patch, decomp)
+!     new%nblks    = get_nblks_domain        (patch, decomp)
+!     new%nproma   = get_nproma_domain       (patch, decomp)
+!     new%npromz   = new%ntotal - new%nproma * (new%nblks - 1)
+!     new%lon     => get_lon_domain          (patch, decomp)
+!     new%lat     => get_lat_domain          (patch, decomp)
+!     new%area    => get_area_domain         (patch, decomp)
+!     ALLOCATE(new%lsm(new%nproma,new%nblks), new%lsf(new%nproma,new%nblks))
+!     new%lsm(:,:) = .TRUE.
+!     new%lsf(:,:) = 1.0_wp
+! 
+!     new%configured = .TRUE.
+! 
+!     grid => new
+! 
+!     ! CALL message(TRIM(routine), 'construction of JSBACH grid completed.')
+! 
+!   END FUNCTION new_grid_from_host
+! 
+!   FUNCTION new_grid_from_file(filename, name) RESULT(grid)
+! 
+!     ! USE mo_jsb_io_netcdf,      ONLY: ncfile_has_dim
+!     ! USE mo_jsb_parallel, ONLY: my_process_is_stdio
+! 
+!     CHARACTER(LEN=*), INTENT(in)    :: filename
+!     CHARACTER(LEN=*), INTENT(in)    :: name
+!     TYPE(t_jsb_grid), POINTER       :: grid
+! 
+!     TYPE(t_jsb_grid), POINTER       :: new
+! 
+!     CHARACTER(len=*), PARAMETER :: routine = modname//':new_grid_from_file'
+! 
+!     CALL message(TRIM(routine), 'starting construction of new JSBACH grid instance from file:')
+!     CALL message('     ', TRIM(filename))
+! 
+!     ALLOCATE(new)
+! 
+!     ngrid_count = ngrid_count + 1
+!     new%id = ngrid_count
+!     new%name = name
+!     new%filename = filename
+! 
+!     ! IF (my_process_is_stdio()) THEN
+! 
+!     !   IF (ncfile_has_dim(TRIM(filename), 'lon_cell_centre')) THEN
+!     !     ! ICON grid
+!     !   ELSE
+!     !     ! ECHAM grid
+!     !   END IF
+! 
+!     ! END IF
+! 
+!     new%configured = .TRUE.
+! 
+!     grid => new
+! 
+!     CALL message(TRIM(routine), 'construction of JSBACH grid completed.')
+! 
+!   END FUNCTION new_grid_from_file
+
   FUNCTION new_grid_from_lonlat(lon, lat) RESULT(grid)
 
     IMPLICIT NONE
@@ -95,15 +221,34 @@ CONTAINS
 
     ALLOCATE(new)
 
-    ngrid_count = ngrid_count + 1 
-    new%id = ngrid_count 
-
     allocate(new%lon(1,1))
     allocate(new%lat(1,1))
 
     grid => new
   END FUNCTION new_grid_from_lonlat
-  
+
+  SUBROUTINE delete_grid(self)
+
+#ifdef HAVE_F2003
+    TYPE(t_jsb_grid), POINTER, INTENT(inout) :: self
+#else
+    TYPE(t_jsb_grid), POINTER :: self
+#endif
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':delete_grid'
+
+    CALL message(TRIM(routine), 'starting destruction of JSBACH grid instance.')
+
+    IF (ASSOCIATED(self%lsm)) DEALLOCATE(self%lsm)
+    IF (ASSOCIATED(self%lsf)) DEALLOCATE(self%lsf)
+    IF (ASSOCIATED(self%lon)) DEALLOCATE(self%lon)
+    IF (ASSOCIATED(self%lat)) DEALLOCATE(self%lat)
+
+    DEALLOCATE(self)
+
+    CALL message(TRIM(routine), 'destruction of JSBACH grid completed.')
+
+  END SUBROUTINE delete_grid
 
   !>
   !! Print method for grid instance.
@@ -137,6 +282,263 @@ CONTAINS
     END IF
 
   END SUBROUTINE Print_grid
+
+  INTEGER FUNCTION get_nblks(self)
+
+#ifdef HAVE_F2003
+    TYPE(t_jsb_grid), POINTER, INTENT(in) :: self
+#else
+    TYPE(t_jsb_grid), POINTER             :: self
+#endif
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_nblks'
+
+    get_nblks = self%nblks
+
+  END FUNCTION get_nblks
+
+  INTEGER FUNCTION get_nproma(self)
+
+#ifdef HAVE_F2003
+    TYPE(t_jsb_grid), POINTER, INTENT(in) :: self
+#else
+    TYPE(t_jsb_grid), POINTER             :: self
+#endif
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_nproma'
+
+    get_nproma = self%nproma
+
+  END FUNCTION get_nproma
+
+  ! INTEGER FUNCTION get_blk_start(grid)
+  ! 
+  !   USE mo_jsb_domain_iface, ONLY: get_blk_start_domain => get_blk_start
+  ! 
+  !   TYPE(t_jsb_grid), INTENT(in) :: grid
+  ! 
+  !   CHARACTER(len=*), PARAMETER :: routine = modname//':get_blk_start'
+  ! 
+  !   IF (grid%patch%id >= 0) THEN
+  !     get_blk_start = get_blk_start_domain(patch=grid%patch)
+  !   ELSE IF (grid%decomposition%nlon >= 0) THEN
+  !     get_blk_start = get_blk_start_domain(decomp=grid%decomposition)
+  !   ELSE
+  !     CALL finish(TRIM(routine), 'Something went wrong.')
+  !   END IF
+  ! 
+  ! END FUNCTION get_blk_start
+  ! 
+  ! INTEGER FUNCTION get_blk_end(grid)
+  ! 
+  !   USE mo_jsb_domain_iface, ONLY: get_blk_end_domain => get_blk_end
+  ! 
+  !   TYPE(t_jsb_grid), INTENT(in) :: grid
+  ! 
+  !   CHARACTER(len=*), PARAMETER :: routine = modname//':get_blk_end'
+  ! 
+  !   IF (grid%patch%id >= 0) THEN
+  !     get_blk_end = get_blk_end_domain(patch=grid%patch)
+  !   ELSE IF (grid%decomposition%nlon >= 0) THEN
+  !     get_blk_end = get_blk_end_domain(decomp=grid%decomposition)
+  !   ELSE
+  !     CALL finish(TRIM(routine), 'Something went wrong.')
+  !   END IF
+  ! 
+  ! END FUNCTION get_blk_end
+  ! 
+  ! INTEGER FUNCTION get_col_start(iblk, grid)
+  ! 
+  !   USE mo_jsb_domain_iface, ONLY: get_col_start_domain => get_col_start
+  ! 
+  !   INTEGER,          INTENT(in) :: iblk
+  !   TYPE(t_jsb_grid), INTENT(in) :: grid
+  ! 
+  !   CHARACTER(len=*), PARAMETER :: routine = modname//':get_col_start'
+  ! 
+  !   IF (grid%patch%id >= 0) THEN
+  !     get_col_start = get_col_start_domain(iblk, patch=grid%patch)
+  !   ELSE IF (grid%decomposition%nlon >= 0) THEN
+  !     get_col_start = get_col_start_domain(iblk, decomp=grid%decomposition)
+  !   ELSE
+  !     CALL finish(TRIM(routine), 'Something went wrong.')
+  !   END IF
+  ! 
+  ! END FUNCTION get_col_start
+  ! 
+  ! INTEGER FUNCTION get_col_end(iblk, grid)
+  ! 
+  !   USE mo_jsb_domain_iface, ONLY: get_col_end_domain => get_col_end
+  ! 
+  !   INTEGER,          INTENT(in) :: iblk
+  !   TYPE(t_jsb_grid), INTENT(in) :: grid
+  ! 
+  !   CHARACTER(len=*), PARAMETER :: routine = modname//':get_col_end'
+  ! 
+  !   IF (grid%patch%id >= 0) THEN
+  !     get_col_end = get_col_end_domain(iblk, patch=grid%patch)
+  !   ELSE IF (grid%decomposition%nlon >= 0) THEN
+  !     get_col_end = get_col_end_domain(iblk, decomp=grid%decomposition)
+  !   ELSE
+  !     CALL finish(TRIM(routine), 'Something went wrong.')
+  !   END IF
+  ! 
+  ! END FUNCTION get_col_end
+
+  FUNCTION new_vgrid(name, cdi_axis_type, length, longname, units, levels, lbounds, ubounds, dz) RESULT(new)
+
+
+    CHARACTER(len=*),           INTENT(in) :: name
+    INTEGER,                    INTENT(in) :: cdi_axis_type
+    INTEGER,                    INTENT(in) :: length
+    CHARACTER(len=*), OPTIONAL, INTENT(in) :: longname
+    CHARACTER(len=*), OPTIONAL, INTENT(in) :: units
+    REAL(wp),         OPTIONAL, INTENT(in) :: levels(length)
+    REAL(wp),         OPTIONAL, INTENT(in) :: lbounds(length)
+    REAL(wp),         OPTIONAL, INTENT(in) :: ubounds(length)
+    REAL(wp),         OPTIONAL, INTENT(in) :: dz(length)
+
+    TYPE(t_jsb_vgrid), POINTER :: new
+
+    INTEGER :: i, idx
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':new_vgrid'
+
+    IF (TRIM(name) == '') CALL finish(TRIM(routine), 'Must specify axis name')
+    IF (length < 1) CALL finish(TRIM(routine), TRIM(name)//' - length < 1')
+
+    ALLOCATE(new)
+
+    new%cdi_axis_type = cdi_axis_type
+    new%name = TRIM(name)
+    new%n_levels = length
+
+    IF (PRESENT(longname)) THEN
+      new%longname = TRIM(longname)
+    ELSE
+      new%longname = ''
+    END IF
+    IF (PRESENT(units)) THEN
+      new%units  = TRIM(units)
+    ELSE
+      new%units = ''
+    END IF
+
+    ALLOCATE(new%levels(length), new%lbounds(length), new%ubounds(length), new%dz(length))
+    new%levels (:) = 0._wp
+    new%lbounds(:) = 0._wp
+    new%ubounds(:) = 0._wp
+    new%dz     (:) = 0._wp
+
+    IF (PRESENT(levels))  new%levels (:) = levels(:)
+    IF (PRESENT(lbounds)) new%lbounds(:) = lbounds(:)
+    IF (PRESENT(ubounds)) new%ubounds(:) = ubounds(:)
+    IF (PRESENT(dz)) THEN
+      IF (ANY(dz(:) <= 0._wp)) CALL finish(TRIM(routine), 'Dz must be larger than zero')
+      new%dz     (:) = dz(:)
+    END IF
+
+    IF (PRESENT(lbounds) .AND. PRESENT(ubounds)) THEN
+      IF (ANY(ubounds(:) < lbounds(:))) CALL finish(TRIM(routine), 'Ubounds must be larger than Lbounds')
+      IF (PRESENT(dz)) THEN
+        IF (ANY(ABS((ubounds(:)-lbounds(:))-dz(:)) > EPSILON(1._wp))) CALL finish(TRIM(routine), 'Dz != Ubounds-Lbounds')
+      ELSE
+        new%dz(:) = ubounds(:) - lbounds(:)
+      END IF
+      IF (.NOT. PRESENT(levels)) THEN
+        new%levels(:) = 0.5_wp * (lbounds(:) + ubounds(:))
+      END IF
+    ELSE IF (PRESENT(lbounds)) THEN
+      IF (PRESENT(dz)) THEN
+        new%ubounds(:) = lbounds(:) + dz(:)
+        IF (.NOT. PRESENT(levels)) THEN
+          new%levels(:) = 0.5_wp * (lbounds(:) + new%ubounds(:))
+        END IF
+      ELSE IF (PRESENT(levels)) THEN
+        new%ubounds(:) = levels(:) + (levels(:) - lbounds(:))
+        new%dz(:) = new%ubounds(:) - lbounds(:)
+      ELSE
+        CALL finish(TRIM(routine), 'Lbounds present ... specify either Levels or Dz!')
+      END IF
+    ELSE IF (PRESENT(ubounds)) THEN
+      IF (PRESENT(dz)) THEN
+        new%lbounds(:) = ubounds(:) - dz(:)
+        IF (.NOT. PRESENT(levels)) THEN
+          new%levels(:) = 0.5_wp * (new%lbounds(:) + ubounds(:))
+        END IF
+      ELSE IF (PRESENT(levels)) THEN
+        new%lbounds(:) = levels(:) - (ubounds(:) - levels(:))
+        new%dz(:) = ubounds(:) - new%lbounds(:)
+      ELSE
+        CALL finish(TRIM(routine), 'Ubounds present ... specify either Levels or Dz!')
+      END IF
+    ELSE
+      IF (PRESENT(levels) .AND. PRESENT(dz)) THEN
+        new%lbounds(:) = levels
+      ELSE IF (PRESENT(dz)) THEN
+        new%lbounds(1) = 0._wp
+        new%lbounds(2:length) = dz(1:length-1)
+        new%ubounds(:) = new%lbounds(:) + dz(:)
+      ELSE IF (PRESENT(levels)) THEN
+        IF (length > 1) THEN ! Multi-level axis
+          new%lbounds(1) = 0._wp
+          DO i=2,length
+            new%lbounds(i) = levels(i-1) + (levels(i-1) - new%lbounds(i-1))
+          END DO
+          new%ubounds(:) = levels(:) + (levels(:) - new%lbounds(:))
+          new%dz(:) = new%ubounds(:) - new%lbounds(:)
+        ELSE ! Single level axis (level specified)
+          new%lbounds(1) = levels(1)
+          new%ubounds(1) = levels(1)
+          new%dz(1)      = 0._wp
+        END IF
+      ELSE
+        IF (length > 1) THEN ! Multi-level axis
+          DO i=1,length
+            new%levels(i) = REAL(i,wp)
+            new%lbounds(i) = REAL(i,wp)
+            new%ubounds(i) = REAL(i+1,wp)
+            new%dz(i) = 1._wp
+          END DO
+        ELSE ! Single level axis (level not specified)
+          new%levels(1) = 0._wp
+          new%lbounds(1) = 0._wp
+          new%ubounds(1) = 0._wp
+          new%dz(1)      = 0._wp
+        END IF
+      END IF
+    END IF
+
+  END FUNCTION new_vgrid
+
+  SUBROUTINE delete_vgrid(self)
+
+    ! USE mo_jsb_io_iface, ONLY: Destroy_zaxis
+
+#ifdef HAVE_F2003
+    TYPE(t_jsb_vgrid), POINTER, INTENT(inout) :: self
+#else
+    TYPE(t_jsb_vgrid), POINTER :: self
+#endif
+
+    INTEGER :: i, idx
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':delete_vgrid'
+
+    IF (self%id == 0) RETURN
+
+    CALL message(TRIM(routine), 'starting destruction of JSBACH vgrid instance.')
+
+    IF (ALLOCATED(self%levels))  DEALLOCATE(self%levels)
+    IF (ALLOCATED(self%lbounds)) DEALLOCATE(self%lbounds)
+    IF (ALLOCATED(self%ubounds)) DEALLOCATE(self%ubounds)
+    IF (ALLOCATED(self%dz))      DEALLOCATE(self%dz)
+
+    DEALLOCATE(self)
+
+    CALL message(TRIM(routine), 'destruction of JSBACH vgrid completed.')
+
+  END SUBROUTINE delete_vgrid
 
 #endif
 END MODULE mo_jsb_grid_class

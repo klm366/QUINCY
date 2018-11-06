@@ -34,6 +34,8 @@ mo_sse_config_class.o: \
   mo_namelist.o \
   mo_exception.o \
   mo_io_units.o \
+  mo_jsb_grid.o \
+  mo_jsb_grid_class.o \
   mo_jsb_config_class.o
 
 mo_sse_init.o: \
