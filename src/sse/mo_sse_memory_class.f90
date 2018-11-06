@@ -96,7 +96,7 @@ MODULE mo_sse_memory_class
     TYPE(t_jsb_var_real3d)          :: & 
                                     heat_capa_sl,         &  !< soil heat capacity [J kg-1]
                                     bulk_dens_sl,         &  !< soil bulk density [kg m-3]
-                                    therm_cond_sl            !< soil thermal conductivity [W m-2 K-1)
+                                    therm_cond_sl            !< soil thermal conductivity [W m-2 K-1]
     TYPE(t_jsb_var_real3d)          :: & 
                                     sand_sl             , &  !< soil sand proportion
                                     silt_sl             , &  !< soil silt proportion
@@ -147,19 +147,20 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: vgrid_soil_sb                ! Vertical grid
     TYPE(t_jsb_vgrid), POINTER :: vgrid_surface                ! Vertical grid
     INTEGER                    :: table
-
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_sse_memory'
-
-    model => Get_model(model_id)
-
-!    table = tables(1)
-    table = 1
-
-!    hgrid   => Get_grid(mem%grid_id)
+    ! ---------------------------
+    ! 0.5 Get Memory
+    ! Get Process and Model variables
+    model         => Get_model(model_id)
+    table         = 1     ! in jsbach4 this line is: table = tables(1)     *slmtemp
+!    hgrid         => Get_grid(mem%grid_id)
     vgrid_surface => Get_vgrid('surface')
     vgrid_soil_sb => Get_vgrid('soil_layer_sb')
 
 
+
+    !> 1.0  init memory
+    !! 
     IF (.NOT. ASSOCIATED(mem%soil_depth%ptr)) THEN
 
       !> add variables to sse memory sse\%VAR
@@ -199,7 +200,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'soil_depth_sl', mem%soil_depth_sl, &
-            hgrid, vgrid_surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('soil_depth_sl', 'm', 'Depth of each soil layer that can be saturated with water, until bedrock'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -295,7 +296,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'percolation_sl', mem%percolation_sl, &
-            hgrid, vgrid_surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('percolation_sl', 'fraction s-1', 'fraction of mass transferred to below layer'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -303,7 +304,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'drainage_sl', mem%drainage_sl, &
-            hgrid, vgrid_surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('drainage_sl', 'kg m-2 s-1', 'drainage of soil layers'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -311,7 +312,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'w_soil_sl', mem%w_soil_sl, &
-            hgrid, vgrid_surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('w_soil_sl', 'm', 'Water content in soil layers'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -319,7 +320,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'w_soil_sat_sl', mem%w_soil_sat_sl, &
-            hgrid, vgrid_surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('w_soil_sat_sl', 'm', 'Water content of soil layers at saturation'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -327,7 +328,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'w_soil_fc_sl', mem%w_soil_fc_sl, &
-            hgrid, vgrid_surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('w_soil_fc_sl', 'm', 'Water content of soil layers at field capacity'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -335,7 +336,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'w_soil_pwp_sl', mem%w_soil_pwp_sl, &
-            hgrid, vgrid_surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('w_soil_pwp_sl', 'm', 'Water content of soil layers at permanent wilting point'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -343,7 +344,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'saxtonA', mem%saxtonA, &
-            hgrid, vgrid_surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('saxtonA', '', 'coefficient in moisture-tension relationship'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -351,7 +352,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'saxtonB', mem%saxtonB, &
-            hgrid, vgrid_surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('saxtonB', '', 'coefficient in moisture-tension relationship'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -359,7 +360,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'saxtonC', mem%saxtonC, &
-            hgrid, vgrid_surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('saxtonC', '', 'exponent of moisture-conductivity relationship'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -367,7 +368,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'kdiff_sat_sl', mem%kdiff_sat_sl, &
-            hgrid, vgrid_surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('kdiff_sat_sl', 'm s-1', 'saturated hydraulic conductivity'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -399,7 +400,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'w_soil_pot_sl', mem%w_soil_pot_sl, &
-            hgrid, vgrid_surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('w_soil_pot_sl', 'MPa', 'soil water potential per layer'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -407,7 +408,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 't_soil_sl', mem%t_soil_sl, &
-            hgrid, vgrid_surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('t_soil_sl', 'K', 'soil temperature'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -415,7 +416,7 @@ CONTAINS
             initval_r=273.15_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'heat_capa_sl', mem%heat_capa_sl, &
-            hgrid, vgrid_surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('heat_capa_sl', 'J kg-1', 'soil heat capacity'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -423,7 +424,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'bulk_dens_sl', mem%bulk_dens_sl, &
-            hgrid, vgrid_surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('bulk_dens_sl', 'kg m-3', 'soil bulk density'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -431,7 +432,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'therm_cond_sl', mem%therm_cond_sl, &
-            hgrid, vgrid_surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('therm_cond_sl', 'W m-2 K-1', 'soil thermal conductivity'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -439,7 +440,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'sand_sl', mem%sand_sl, &
-            hgrid, vgrid_surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('sand_sl', '', 'soil sand proportion'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -447,7 +448,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
             
       CALL jsb_add_var(mem, 'silt_sl', mem%silt_sl, &
-            hgrid, vgrid_surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('silt_sl', '', 'soil silt proportion'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -455,7 +456,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
             
       CALL jsb_add_var(mem, 'clay_sl', mem%clay_sl, &
-            hgrid, vgrid_surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('clay_sl', '', 'soil clay proportion'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -463,7 +464,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'qmax_org_min_sl', mem%qmax_org_min_sl, &
-            hgrid, vgrid_surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('qmax_org_min_sl', 'mol C kg-1 mineral soil', 'maximum OM sorption capacity of mineral soil'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -471,7 +472,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'qmax_po4_min_sl', mem%qmax_po4_min_sl, &
-            hgrid, vgrid_surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('qmax_po4_min_sl', 'mol P kg-1 SOM', 'maximum po4 sorption capacity of SOM'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -479,7 +480,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'qmax_po4_om_sl', mem%qmax_po4_om_sl, &
-            hgrid, vgrid_surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('qmax_po4_om_sl', 'mol P kg-1 mineral soil', 'maximum po4 sorption capacity of mineral soil'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
