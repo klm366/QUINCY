@@ -136,16 +136,16 @@ CONTAINS
     ! ---------------------------
     ! 0.1.InOut
     CLASS(t_sse_memory), INTENT(inout), TARGET  :: mem             !> sse memory
-    CHARACTER(len=*),     INTENT(in)            :: prefix          !> ?
-    CHARACTER(len=*),     INTENT(in)            :: suffix          !> ?
+    CHARACTER(len=*),     INTENT(in)            :: prefix          !> process name
+    CHARACTER(len=*),     INTENT(in)            :: suffix          !> tile name
     INTEGER,              INTENT(in)            :: lct_ids !(:)    !> in jsbach4: vector of land cover type IDs
     INTEGER,              INTENT(in)            :: model_id        !> model ID model\%id
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
-    TYPE(t_jsb_vgrid), POINTER :: vgrid_soil_sb                ! Vertical grid
     TYPE(t_jsb_vgrid), POINTER :: vgrid_surface                ! Vertical grid
+    TYPE(t_jsb_vgrid), POINTER :: vgrid_soil_sb                ! Vertical grid
     INTEGER                    :: table
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_sse_memory'
     ! ---------------------------
