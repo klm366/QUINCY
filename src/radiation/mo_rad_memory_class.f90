@@ -121,7 +121,6 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_rad_memory'
     ! ---------------------------
     ! 0.5 Get Memory
-    ! Get Process and Model variables
     model         => Get_model(model_id)
     table         = 1     ! in jsbach4 this line is: table = tables(1)     *slmtemp
 !    hgrid         => Get_grid(mem%grid_id)
