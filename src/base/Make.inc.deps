@@ -148,10 +148,12 @@ mo_jsb_grid_class.o: \
   mo_jsb_domain_iface.o
 
 mo_jsb_base.o: \
+  mo_exception.o \
   mo_jsb_class.o \
   mo_jsb_control.o \
-  mo_exception.o \
-  mo_jsb_model_class.o
+  mo_jsb_model_class.o \
+  mo_jsb_grid.o \
+  mo_jsb_grid_class.o
 
 mo_jsb_grid.o: \
   mo_exception.o \

@@ -35,10 +35,10 @@ MODULE mo_jsb_grid_class
   ! PUBLIC :: get_blk_start, get_blk_end, get_col_start, get_col_end
 
   !! QUINCY added to make vgrids work easily     *slmtemp
-  PUBLIC :: ZAXIS_GENERIC
+  PUBLIC :: ZAXIS_GENERIC, ZAXIS_SURFACE
   INTEGER, parameter :: ZAXIS_GENERIC = 1   ! in JSBACH4 used from ICON via "USE mo_jsb_io, ONLY: ZAXIS_GENERIC" ->  mo_jsb_io_iface
                                             ! ICON: ./icon-les/support/mo_cdi.f90:150:  integer(c_int), public, parameter :: ZAXIS_GENERIC = 1
-
+  INTEGER, parameter :: ZAXIS_SURFACE = 0   ! same as above
 
   TYPE t_jsb_grid
     INTEGER                      :: id = 0

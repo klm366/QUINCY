@@ -28,10 +28,14 @@ CONTAINS
 
     USE mo_jsb_control,         ONLY: get_no_of_models
     USE mo_jsb_model_class,     ONLY: t_jsb_model, new_model
+    USE mo_jsb_grid_class,      ONLY: t_jsb_vgrid, new_vgrid
+    USE mo_jsb_grid,            ONLY: Register_vgrid
+    USE mo_jsb_grid_class,      ONLY: ZAXIS_SURFACE   ! in JSBACH4 used from mo_jsb_io    *slmtemp
 
     CHARACTER(len=*), INTENT(in), OPTIONAL :: master_namelist_filename
 
     TYPE(t_jsb_model), POINTER :: current => NULL()
+    TYPE(t_jsb_vgrid), POINTER :: vgrid_surface                      ! Vertical grid
 
     INTEGER :: no_of_models, model_id
 
@@ -46,6 +50,10 @@ CONTAINS
     model_id = 1
       current => new_model(model_id, "slm_nm", "slm_snm", "slm_descr", "namelist.slm") ! model_id, name, shortname, description, namelist_filename
       jsbach%models(model_id)%m => current
+
+    vgrid_surface => new_vgrid('surface', ZAXIS_SURFACE, 1)  ! vertical grid with one layer - needed for all 2D variables
+    CALL register_vgrid(vgrid_surface)
+
 
     IF (debug_on()) CALL message(TRIM(routine), 'done basic initialization')
 
