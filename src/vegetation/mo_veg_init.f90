@@ -94,6 +94,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: dphi_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: growth_cn_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: growth_cp_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: growth_np_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: labile_carbon_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: labile_nitrogen_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: labile_phosphorus_talloc_mavg
@@ -190,6 +191,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, dphi_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_cn_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_cp_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_np_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, labile_carbon_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, labile_nitrogen_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, labile_phosphorus_talloc_mavg)
@@ -419,6 +421,7 @@ CONTAINS
     growth_cn_talloc_mavg(:)            = 60.0_wp
     unit_npp_talloc_mavg(:)             = unit_uptake_n_talloc_mavg(:) * growth_cn_talloc_mavg(:)
     growth_cp_talloc_mavg(:)            = 2000.0_wp
+    growth_np_talloc_mavg(:)            = growth_cp_talloc_mavg(:) / growth_cn_talloc_mavg(:)
     labile_carbon_talloc_mavg(:)        = 0.0_wp
     labile_nitrogen_talloc_mavg(:)      = 0.0_wp
     labile_phosphorus_talloc_mavg(:)    = 0.0_wp
