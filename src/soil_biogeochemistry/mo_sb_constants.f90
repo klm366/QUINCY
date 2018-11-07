@@ -268,7 +268,7 @@ CONTAINS
     k_desorpt_det             = 2065.491_wp / one_year / one_day                            ! 
     k_adsorpt_nh4             = 0.0_wp                                                      !  
     k_desorpt_nh4             = 0.0_wp                                                      !  
-    k_adsorpt_po4             = 0.022_wp * 8._wp/9._wp / 30.0_wp / one_day                  ! [s-1], simple model, Yang et al. 2014, corrected for the global average,
+    k_adsorpt_po4             = 0.022_wp * 8._wp / 9._wp / 30.0_wp / one_day                ! [s-1], simple model, Yang et al. 2014, corrected for the global average,
                                                                                             ! assuming labile and slow P in equilibrium (Yang et al. 2013)
     k_desorpt_po4             = 0.022_wp / 30.0_wp / one_day                                ! [s-1], simple model, Yang et al. 2014 * 100
     k_adsorpt_f_po4           = 2000._wp * 57.9_wp / 3600._wp                               ! [kg soil mol-1 P s-1], based on Van der Zee et al. 1989
@@ -294,7 +294,7 @@ CONTAINS
    
     ! additional microbial parameters for JSM implementation
     fc_woody2polymeric            = 0.3_wp                                 !  
-    fc_soluable2dom               = 0.9                                    !
+    fc_soluable2dom               = 0.9_wp                                 !
     k_mort_microbial              = 7.48_wp * 1.e-8_wp                                ! 
     min_mic_biomass               = 0.01_wp                                           ! 
     vmax_mic_uptake               = 3495.18053_wp / one_year / one_day * 1000000._wp  ! 
@@ -375,7 +375,7 @@ CONTAINS
     vmax_nitrification     = 0.4_wp / one_day * 1.e6_wp       ! Xu-Ri & Prentice, 2008, 10% / day at 20°C
     vmax_denitrification   = 0.1_wp / one_day * 1.e6_wp       ! Xu-Ri & Prentice, 2008, 10% / day
     km_denitrification_c   = 20.0_wp                          ! .. ?
-    km_denitrification_no3 = 0.083 * 1000.0_wp / molar_mass_N ! Xu-Ri & Prentice, 2008
+    km_denitrification_no3 = 0.083_wp * 1000.0_wp / molar_mass_N ! Xu-Ri & Prentice, 2008
     f_denit_noy            = 0.002_wp                         ! Xu-Ri & Prentice, 2008
     f_denit_n2o            = 0.02_wp                          ! Xu-Ri & Prentice, 2008
     ea_gasdiffusion        = 47000._wp                        ! Xu-Ri & Prentice, 2008, to fit their function
