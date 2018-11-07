@@ -862,7 +862,7 @@ CONTAINS
                 veg_total_biomass%phosphorus(ipoi)
               lun=lun+1
               ! vegpooldN15
-                write(lun,'(12F12.6)') time_d, &
+                write(lun,'(12F14.6)') time_d, &
                 calc_delta_N15(veg_pool%leaf%nitrogen(ipoi),veg_pool%leaf%nitrogen15(ipoi)), &
                 calc_delta_N15(veg_pool%fine_root%nitrogen(ipoi),veg_pool%fine_root%nitrogen15(ipoi)), &
                 calc_delta_N15(veg_pool%sap_wood%nitrogen(ipoi),veg_pool%sap_wood%nitrogen15(ipoi)), &
