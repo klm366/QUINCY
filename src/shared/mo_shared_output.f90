@@ -2413,6 +2413,7 @@ CONTAINS
                recycling_n_acc            = 0.0_wp
                res_use_n_acc              = 0.0_wp
                growth_n_acc               = 0.0_wp
+               growth_wood_n_acc          = 0.0_wp
                growth_wood_n15_acc        = 0.0_wp
                n_fixation_acc             = 0.0_wp
                n_fixation_n15_acc         = 0.0_wp
