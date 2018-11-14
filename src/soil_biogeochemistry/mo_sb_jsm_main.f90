@@ -44,8 +44,9 @@ CONTAINS
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_shared_isotope,        ONLY: calc_fractionation
     USE mo_sb_constants
+    USE mo_sb_litter_processes,   ONLY: calc_litter_partitioning
     USE mo_sb_jsm_processes,      ONLY: calc_inorganic_uptake, calc_po4_uptake_ECA, calc_litter_turnover, calc_depolymerisation, &
-                                        calc_transfer_litterfall_pools, calc_microbial_growth, calc_flux_po4, &
+                                        calc_microbial_growth, calc_flux_po4, &
                                         calc_microbial_turnover, calc_om_sorption, calc_adsorption_po4
     USE mo_sb_jsm_transport,      ONLY: calc_liquid_phase_transport_wrapper, calc_bioturbation_transport_wrapper, &
                                         calc_bioturbation_rate, calc_particle_fluxrate, calc_particle_transport_wrapper
@@ -400,12 +401,16 @@ CONTAINS
                                sb_pool%microbial%carbon(:,:), & 
                                sb_pool%residue,sb_loss%residue,sb_formation%dom)
 
-    !> 2.5 update litter pools with recent litter fall
-    CALL calc_transfer_litterfall_pools(options,soil_depth_sl(:,:), & 
-                                        root_fraction_sl(:,:), veg_litterfall, sb_formation%soluable_litter, & 
-                                        sb_formation%polymeric_litter, sb_formation%woody_litter)
-                                             
+    !> 2.5 Update soil litter pools with litter fall
+    !!
+    CALL calc_litter_partitioning(options                 , &
+                                  lctlib                  , &  
+                                  soil_depth_sl(:,:)      , &
+                                  root_fraction_sl(:,:)   , &
+                                  veg_litterfall          , &
+                                  sb_formation            )
 
+                                             
     !> 3.0 Microbial fluxes
     !!
     !> 3.1 microbial growth

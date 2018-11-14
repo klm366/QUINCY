@@ -20,8 +20,7 @@ MODULE mo_sb_jsm_processes
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: calc_transfer_litterfall_pools,calc_litter_turnover, calc_depolymerisation, & 
-            calc_microbial_turnover,calc_microbial_growth, &
+  PUBLIC :: calc_litter_turnover, calc_depolymerisation, calc_microbial_turnover, calc_microbial_growth, &
             calc_bulk_soil_carbon, calc_bulk_density_correction, calc_qmax_bulk_density_correction, &
             calc_om_sorption, &
             calc_inorganic_uptake, calc_po4_uptake_ECA, calc_flux_po4, calc_adsorption_po4
@@ -30,218 +29,9 @@ MODULE mo_sb_jsm_processes
 
 CONTAINS
 
-  !-----------------------------------------------------------------------------------------------------
-  ! Sub Task called from update_sb_pools
-  !
-  !-----------------------------------------------------------------------------------------------------
-  !> Calculates the transfer of vegetation litter fall to JSM litter pools
-  !! still requires some thought as to the stoichiometry of the litter and the fraction of soluable litter 
-  !! provides the litterfall interface between vegetation and soil_biogeochemistry
-  !!
-  !! Input: litterfall from vegetation, root distribution, soil layer depth
-  !!
-  !! Output: increase in soluable, polymeric, and woody litter
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_transfer_litterfall_pools(options,soil_depth_sl,root_fraction_sl,veg_litterfall, &
-                                  formation_soluable_litter,formation_polymeric_litter,formation_woody_litter)
-                                 
-    USE mo_sb_constants,                  ONLY: f_soluable_fine_root, f_soluable_leaf, f_soluable_fruit, f_soluable_seed_bed
-    dsl4slm_Use_memory_a_veg
-    dsl4slm_Use_memory_a_sb
-
-    IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
-    TYPE(t_jsb_task_options),                         INTENT(in)    :: options                    !< model options
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: soil_depth_sl              !< depth of soil layer [m]
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: root_fraction_sl           !< fraction of roots per layer 
-    TYPE(t_veg_pool_a),                               INTENT(in)    :: veg_litterfall             !< litter input from vegetation [mol/m2/time step] 
-    TYPE(t_sb_element_a),                             INTENT(inout) :: formation_soluable_litter
-    TYPE(t_sb_element_a),                             INTENT(inout) :: formation_polymeric_litter
-    TYPE(t_sb_element_a),                             INTENT(inout) :: formation_woody_litter
-    ! ---------------------------
-    ! 0.2 Local 
-    INTEGER                                                 :: isoil
-    REAL(wp), DIMENSION(options%nc)                         :: hlp1
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_transfer_litterfall_pools'
-    ! ---------------------------
-    ! 0.3 Declare Memory
-    ! ... 
-
-
-    ! ------------------------------------------------------------------------------------------------------------
-    ! Go science
-    ! ------------------------------------------------------------------------------------------------------------
-
-
-    !> 1.0 pure soluable litter -> labile + reserve?
-    !!
-    formation_soluable_litter%carbon(:,1) = formation_soluable_litter%carbon(:,1) + &
-        (veg_litterfall%labile%carbon(:) + veg_litterfall%reserve%carbon(:)) / soil_depth_sl(:,1)
-    formation_soluable_litter%nitrogen(:,1) = formation_soluable_litter%nitrogen(:,1) + &
-        (veg_litterfall%labile%nitrogen(:) + veg_litterfall%reserve%nitrogen(:)) / soil_depth_sl(:,1)
-    formation_soluable_litter%phosphorus(:,1) = formation_soluable_litter%phosphorus(:,1) + &
-        (veg_litterfall%labile%phosphorus(:) + veg_litterfall%reserve%phosphorus(:)) / soil_depth_sl(:,1)
-    formation_soluable_litter%carbon13(:,1) = formation_soluable_litter%carbon13(:,1) + &
-        (veg_litterfall%labile%carbon13(:) + veg_litterfall%reserve%carbon13(:)) / soil_depth_sl(:,1)
-    formation_soluable_litter%carbon14(:,1) = formation_soluable_litter%carbon14(:,1) + &
-        (veg_litterfall%labile%carbon14(:) + veg_litterfall%reserve%carbon14(:)) / soil_depth_sl(:,1)
-    formation_soluable_litter%nitrogen15(:,1) = formation_soluable_litter%nitrogen15(:,1) + &
-        (veg_litterfall%labile%nitrogen15(:) + veg_litterfall%reserve%nitrogen15(:)) / soil_depth_sl(:,1)
-
-    !> 2.0 mixed soluable and polymeric stuff
-    !! 
-    !> 2.1 leaves, still needs a way to split nutrients between soluable and polymeric..., and calculate the fraction going DOM
-    hlp1(:) = f_soluable_leaf 
-    formation_soluable_litter%carbon(:,1) = formation_soluable_litter%carbon(:,1) + &
-        hlp1(:) * veg_litterfall%leaf%carbon(:) / soil_depth_sl(:,1)
-    formation_polymeric_litter%carbon(:,1) = formation_polymeric_litter%carbon(:,1) + &
-        (1._wp - hlp1(:)) * veg_litterfall%leaf%carbon(:) / soil_depth_sl(:,1)
-    formation_soluable_litter%nitrogen(:,1) = formation_soluable_litter%nitrogen(:,1) + &
-        hlp1(:) * veg_litterfall%leaf%nitrogen(:) / soil_depth_sl(:,1)
-    formation_polymeric_litter%nitrogen(:,1) = formation_polymeric_litter%nitrogen(:,1) + &
-        (1._wp - hlp1(:)) * veg_litterfall%leaf%nitrogen(:) / soil_depth_sl(:,1)
-    formation_soluable_litter%phosphorus(:,1) = formation_soluable_litter%phosphorus(:,1) + &
-        hlp1(:) * veg_litterfall%leaf%phosphorus(:) / soil_depth_sl(:,1)
-    formation_polymeric_litter%phosphorus(:,1) = formation_polymeric_litter%phosphorus(:,1) + &
-        (1._wp - hlp1(:)) * veg_litterfall%leaf%phosphorus(:) / soil_depth_sl(:,1)
-    formation_soluable_litter%carbon13(:,1) = formation_soluable_litter%carbon13(:,1) + &
-        hlp1(:) * veg_litterfall%leaf%carbon13(:) / soil_depth_sl(:,1)
-    formation_polymeric_litter%carbon13(:,1) = formation_polymeric_litter%carbon13(:,1) + &
-        (1._wp - hlp1(:)) * veg_litterfall%leaf%carbon13(:) / soil_depth_sl(:,1)
-    formation_soluable_litter%carbon14(:,1) = formation_soluable_litter%carbon14(:,1) + &
-        hlp1(:) * veg_litterfall%leaf%carbon14(:) / soil_depth_sl(:,1)
-    formation_polymeric_litter%carbon14(:,1) = formation_polymeric_litter%carbon14(:,1) + &
-        (1._wp - hlp1(:)) * veg_litterfall%leaf%carbon14(:) / soil_depth_sl(:,1)
-    formation_soluable_litter%nitrogen15(:,1) = formation_soluable_litter%nitrogen15(:,1) + &
-        hlp1(:) * veg_litterfall%leaf%nitrogen15(:) / soil_depth_sl(:,1)
-    formation_polymeric_litter%nitrogen15(:,1) = formation_polymeric_litter%nitrogen15(:,1) + &
-        (1._wp - hlp1(:)) * veg_litterfall%leaf%nitrogen15(:) / soil_depth_sl(:,1)
-
-    !> 2.2 fruit, still needs a way to split nutrients between soluable and polymeric..., and calculate the fraction going DOM
-    !!
-    hlp1(:) = f_soluable_fruit 
-    formation_soluable_litter%carbon(:,1) = formation_soluable_litter%carbon(:,1) + &
-        hlp1(:) * veg_litterfall%fruit%carbon(:) / soil_depth_sl(:,1)
-    formation_polymeric_litter%carbon(:,1) = formation_polymeric_litter%carbon(:,1) + &
-        (1._wp - hlp1(:)) * veg_litterfall%fruit%carbon(:) / soil_depth_sl(:,1)
-    formation_soluable_litter%nitrogen(:,1) = formation_soluable_litter%nitrogen(:,1) + &
-        hlp1(:) * veg_litterfall%fruit%nitrogen(:) / soil_depth_sl(:,1)
-    formation_polymeric_litter%nitrogen(:,1) = formation_polymeric_litter%nitrogen(:,1) + &
-        (1._wp - hlp1(:)) * veg_litterfall%fruit%nitrogen(:) / soil_depth_sl(:,1)
-    formation_soluable_litter%phosphorus(:,1) = formation_soluable_litter%phosphorus(:,1) + &
-        hlp1(:) * veg_litterfall%fruit%phosphorus(:) / soil_depth_sl(:,1)
-    formation_polymeric_litter%phosphorus(:,1) = formation_polymeric_litter%phosphorus(:,1) + &
-        (1._wp - hlp1(:)) * veg_litterfall%fruit%phosphorus(:) / soil_depth_sl(:,1)
-    formation_soluable_litter%carbon13(:,1) = formation_soluable_litter%carbon13(:,1) + &
-        hlp1(:) * veg_litterfall%fruit%carbon13(:) / soil_depth_sl(:,1)
-    formation_polymeric_litter%carbon13(:,1) = formation_polymeric_litter%carbon13(:,1) + &
-        (1._wp - hlp1(:)) * veg_litterfall%fruit%carbon13(:) / soil_depth_sl(:,1)
-    formation_soluable_litter%carbon14(:,1) = formation_soluable_litter%carbon14(:,1) + &
-        hlp1(:) * veg_litterfall%fruit%carbon14(:) / soil_depth_sl(:,1)
-    formation_polymeric_litter%carbon14(:,1) = formation_polymeric_litter%carbon14(:,1) + &
-        (1._wp - hlp1(:)) * veg_litterfall%fruit%carbon14(:) / soil_depth_sl(:,1)
-    formation_soluable_litter%nitrogen15(:,1) = formation_soluable_litter%nitrogen15(:,1) + &
-        hlp1(:) * veg_litterfall%fruit%nitrogen15(:) / soil_depth_sl(:,1)
-    formation_polymeric_litter%nitrogen15(:,1) = formation_polymeric_litter%nitrogen15(:,1) + &
-        (1._wp - hlp1(:)) * veg_litterfall%fruit%nitrogen15(:) / soil_depth_sl(:,1)
-
-    !> 2.3 seed_bed, still needs a way to split nutrients between soluable and polymeric..., and calculate the fraction going DOM
-    !!
-    hlp1(:) = f_soluable_seed_bed 
-    formation_soluable_litter%carbon(:,1) = formation_soluable_litter%carbon(:,1) + &
-        hlp1(:) * veg_litterfall%seed_bed%carbon(:) / soil_depth_sl(:,1)
-    formation_polymeric_litter%carbon(:,1) = formation_polymeric_litter%carbon(:,1) + &
-        (1._wp - hlp1(:)) * veg_litterfall%seed_bed%carbon(:) / soil_depth_sl(:,1)
-    formation_soluable_litter%nitrogen(:,1) = formation_soluable_litter%nitrogen(:,1) + &
-        hlp1(:) * veg_litterfall%seed_bed%nitrogen(:) / soil_depth_sl(:,1)
-    formation_polymeric_litter%nitrogen(:,1) = formation_polymeric_litter%nitrogen(:,1) + &
-        (1._wp - hlp1(:)) * veg_litterfall%seed_bed%nitrogen(:) / soil_depth_sl(:,1)
-    formation_soluable_litter%phosphorus(:,1) = formation_soluable_litter%phosphorus(:,1) + &
-        hlp1(:) * veg_litterfall%seed_bed%phosphorus(:) / soil_depth_sl(:,1)
-    formation_polymeric_litter%phosphorus(:,1) = formation_polymeric_litter%phosphorus(:,1) + &
-        (1._wp - hlp1(:)) * veg_litterfall%seed_bed%phosphorus(:) / soil_depth_sl(:,1)
-    formation_soluable_litter%carbon13(:,1) = formation_soluable_litter%carbon13(:,1) + &
-        hlp1(:) * veg_litterfall%seed_bed%carbon13(:) / soil_depth_sl(:,1)
-    formation_polymeric_litter%carbon13(:,1) = formation_polymeric_litter%carbon13(:,1) + &
-        (1._wp - hlp1(:)) * veg_litterfall%seed_bed%carbon13(:) / soil_depth_sl(:,1)
-    formation_soluable_litter%carbon14(:,1) = formation_soluable_litter%carbon14(:,1) + &
-        hlp1(:) * veg_litterfall%seed_bed%carbon14(:) / soil_depth_sl(:,1)
-    formation_polymeric_litter%carbon14(:,1) = formation_polymeric_litter%carbon14(:,1) + &
-        (1._wp - hlp1(:)) * veg_litterfall%seed_bed%carbon14(:) / soil_depth_sl(:,1)
-    formation_soluable_litter%nitrogen15(:,1) = formation_soluable_litter%nitrogen15(:,1) + &
-        hlp1(:) * veg_litterfall%seed_bed%nitrogen15(:) / soil_depth_sl(:,1)
-    formation_polymeric_litter%nitrogen15(:,1) = formation_polymeric_litter%nitrogen15(:,1) + &
-        (1._wp - hlp1(:)) * veg_litterfall%seed_bed%nitrogen15(:) / soil_depth_sl(:,1)
-
-    !> 3.0 roots
-    !!
-    DO isoil = 1,options%nsoil_sb
-       !> 3.1 fine roots
-       !! still needs a way to split nutrients between soluable and polymeric..., and calculate the fraction going DOM
-       hlp1(:) = f_soluable_fine_root 
-       WHERE(soil_depth_sl(:,isoil) > eps8)
-          formation_soluable_litter%carbon(:,isoil) = formation_soluable_litter%carbon(:,isoil) + &
-              hlp1(:) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%carbon(:) / soil_depth_sl(:,isoil)
-          formation_polymeric_litter%carbon(:,isoil) = formation_polymeric_litter%carbon(:,isoil) + &
-              (1._wp - hlp1(:)) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%carbon(:) / soil_depth_sl(:,isoil)
-          formation_soluable_litter%nitrogen(:,isoil) = formation_soluable_litter%nitrogen(:,isoil) + &
-              hlp1(:) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%nitrogen(:) / soil_depth_sl(:,isoil)
-          formation_polymeric_litter%nitrogen(:,isoil) = formation_polymeric_litter%nitrogen(:,isoil) + &
-              (1._wp - hlp1(:)) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%nitrogen(:) / soil_depth_sl(:,isoil)
-          formation_soluable_litter%phosphorus(:,isoil) = formation_soluable_litter%phosphorus(:,isoil) + &
-              hlp1(:) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%phosphorus(:) / soil_depth_sl(:,isoil)
-          formation_polymeric_litter%phosphorus(:,isoil) = formation_polymeric_litter%phosphorus(:,isoil) + &
-              (1._wp - hlp1(:)) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%phosphorus(:) / soil_depth_sl(:,isoil)
-          formation_soluable_litter%carbon13(:,isoil) = formation_soluable_litter%carbon13(:,isoil) + &
-              hlp1(:) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%carbon13(:) / soil_depth_sl(:,isoil)
-          formation_polymeric_litter%carbon13(:,isoil) = formation_polymeric_litter%carbon13(:,isoil) + &
-              (1._wp - hlp1(:)) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%carbon13(:) / soil_depth_sl(:,isoil)
-          formation_soluable_litter%carbon14(:,isoil) = formation_soluable_litter%carbon14(:,isoil) + &
-              hlp1(:) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%carbon14(:) / soil_depth_sl(:,isoil)
-          formation_polymeric_litter%carbon14(:,isoil) = formation_polymeric_litter%carbon14(:,isoil) + &
-              (1._wp - hlp1(:)) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%carbon14(:) / soil_depth_sl(:,isoil)
-          formation_soluable_litter%nitrogen15(:,isoil) = formation_soluable_litter%nitrogen15(:,isoil) + &
-              hlp1(:) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%nitrogen15(:) / soil_depth_sl(:,isoil)
-          formation_polymeric_litter%nitrogen15(:,isoil) = formation_polymeric_litter%nitrogen15(:,isoil) + &
-              (1._wp - hlp1(:)) * root_fraction_sl(:,isoil) * veg_litterfall%fine_root%nitrogen15(:) / soil_depth_sl(:,isoil)
-
-          !> 3.2 woody litter below ground 
-          !!
-          formation_woody_litter%carbon(:,isoil) = formation_woody_litter%carbon(:,isoil) + & 
-             root_fraction_sl(:,isoil) * veg_litterfall%coarse_root%carbon(:) / soil_depth_sl(:,isoil)
-          formation_woody_litter%nitrogen(:,isoil) = formation_woody_litter%nitrogen(:,isoil) + & 
-             root_fraction_sl(:,isoil) * veg_litterfall%coarse_root%nitrogen(:) / soil_depth_sl(:,isoil)
-          formation_woody_litter%phosphorus(:,isoil) = formation_woody_litter%phosphorus(:,isoil) + & 
-             root_fraction_sl(:,isoil) * veg_litterfall%coarse_root%phosphorus(:) / soil_depth_sl(:,isoil)
-          formation_woody_litter%carbon13(:,isoil) = formation_woody_litter%carbon13(:,isoil) + & 
-             root_fraction_sl(:,isoil) * veg_litterfall%coarse_root%carbon13(:) / soil_depth_sl(:,isoil)
-          formation_woody_litter%carbon14(:,isoil) = formation_woody_litter%carbon14(:,isoil) + & 
-             root_fraction_sl(:,isoil) * veg_litterfall%coarse_root%carbon14(:) / soil_depth_sl(:,isoil)
-          formation_woody_litter%nitrogen15(:,isoil) = formation_woody_litter%nitrogen15(:,isoil) + & 
-             root_fraction_sl(:,isoil) * veg_litterfall%coarse_root%nitrogen15(:) / soil_depth_sl(:,isoil)
-       ENDWHERE
-    ENDDO
-
-    !> 4.0 woody litter above ground 
-    !!
-    formation_woody_litter%carbon(:,1) = formation_woody_litter%carbon(:,1) + & 
-        (veg_litterfall%sap_wood%carbon(:) + veg_litterfall%heart_wood%carbon(:)) / soil_depth_sl(:,1)
-    formation_woody_litter%nitrogen(:,1) = formation_woody_litter%nitrogen(:,1) + & 
-        (veg_litterfall%sap_wood%nitrogen(:) + veg_litterfall%heart_wood%nitrogen(:)) / soil_depth_sl(:,1)
-    formation_woody_litter%phosphorus(:,1) = formation_woody_litter%phosphorus(:,1) + & 
-        (veg_litterfall%sap_wood%phosphorus(:) + veg_litterfall%heart_wood%phosphorus(:)) / soil_depth_sl(:,1)
-    formation_woody_litter%carbon13(:,1) = formation_woody_litter%carbon13(:,1) + & 
-        (veg_litterfall%sap_wood%carbon13(:) + veg_litterfall%heart_wood%carbon13(:)) / soil_depth_sl(:,1)
-    formation_woody_litter%carbon14(:,1) = formation_woody_litter%carbon14(:,1) + & 
-        (veg_litterfall%sap_wood%carbon14(:) + veg_litterfall%heart_wood%carbon14(:)) / soil_depth_sl(:,1)
-    formation_woody_litter%nitrogen15(:,1) = formation_woody_litter%nitrogen15(:,1) + & 
-        (veg_litterfall%sap_wood%nitrogen15(:) + veg_litterfall%heart_wood%nitrogen15(:)) / soil_depth_sl(:,1)
-
-  END SUBROUTINE calc_transfer_litterfall_pools 
 
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task called from update_sb_pools
+  ! Sub Task called from update_sb_jsm
   ! 
   !
   !-----------------------------------------------------------------------------------------------------
@@ -333,7 +123,7 @@ CONTAINS
   END SUBROUTINE calc_litter_turnover
 
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task called from update_sb_pools
+  ! Sub Task called from update_sb_jsm
   !
   !-----------------------------------------------------------------------------------------------------
   !> calculate sinks of the bio-available inorganic nutrient pools
@@ -507,7 +297,7 @@ CONTAINS
   END SUBROUTINE calc_flux_po4
 
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task called from update_sb_pools
+  ! Sub Task called from update_sb_jsm
   !
   !-----------------------------------------------------------------------------------------------------
   !> calculate sinks of the bio-available inorganic po4 pools
@@ -580,7 +370,7 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task called from update_sb_pools
+  ! Sub Task called from update_sb_pools and update_sb_jsm
   !
   !-----------------------------------------------------------------------------------------------------
   !> calculate the adsorption rate of po4 based on
@@ -833,7 +623,7 @@ CONTAINS
   
   
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task called from update_sb_pools
+  ! Sub Task called from update_sb_jsm
   !
   !-----------------------------------------------------------------------------------------------------
   !> calculate turnover of the microbial pool
@@ -918,7 +708,7 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task called from update_sb_pools
+  ! Sub Task called from update_sb_jsm
   !
   !-----------------------------------------------------------------------------------------------------
   !> calculate growth of the microbial pool 
@@ -1173,7 +963,7 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task called from update_sb_pools
+  ! Sub Task called from update_sb_jsm
   !
   !-----------------------------------------------------------------------------------------------------
   !> calculate depolymerisation rate of polymeric litter and microbial residue 
@@ -1262,7 +1052,7 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task called from update_sb_pools 
+  ! Called in update_sb_pools and mo_sb_init
   !
   !-----------------------------------------------------------------------------------------------------
   !> calculates the bulk density of the soil corrected by its organic component 
@@ -1300,7 +1090,7 @@ CONTAINS
   END FUNCTION calc_bulk_density_correction 
 
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task called from update_sb_pools 
+  ! Called in update_sb_pools and mo_sb_init
   !
   !-----------------------------------------------------------------------------------------------------
   !> calculates the maximum sorption capacity for organic material of a soil layer
@@ -1341,7 +1131,7 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task called from update_sb_pools 
+  ! Called in update_sb_pools and mo_sb_init
   !
   !-----------------------------------------------------------------------------------------------------
   !> calculates bulk soil carbon used for the calculation of soil bulk density and sorption capacity 
@@ -1389,7 +1179,7 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task called from update_sb_pools 
+  ! Called in mo_sb_jsm_processes:calc_adsorption_po4
   !
   !-----------------------------------------------------------------------------------------------------
   !> calculates po4 adsorption rate based on the Langmuir equilibrium condition
@@ -1472,7 +1262,7 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task called from update_sb_pools
+  ! Sub Task called from update_sb_jsm
   !
   !-----------------------------------------------------------------------------------------------------
   !> calculates sorption and desorption of organic material
