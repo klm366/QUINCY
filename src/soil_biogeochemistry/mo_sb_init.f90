@@ -114,6 +114,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: lithology_class_sl
     dsl4jsb_Real3D_onChunk :: po4_primary
     dsl4jsb_Real3D_onChunk :: microbial_cue_eff_tmic_mavg
+    dsl4jsb_Real3D_onChunk :: vmax_weath_mineral_sl
     ! Get local variables from options argument
     iblk      = options%iblk
     ics       = options%ics
@@ -165,6 +166,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       lithology_class_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       po4_primary)
     dsl4jsb_Get_var3D_onChunk(SB_,       microbial_cue_eff_tmic_mavg)
+    dsl4jsb_Get_var3D_onChunk(SB_,       vmax_weath_mineral_sl)
     ! Get process memory pool structures
 #define Get_sb_pool
 #include "slm_pools_a_incl.f90"
@@ -176,6 +178,8 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
+    !>   C3 / C4 plants
+    !! 
     IF(lctlib%ps_pathway == ic3phot)THEN
        hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
     ELSE
@@ -190,10 +194,12 @@ CONTAINS
     ENDIF
     frac_c14 = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14-hlp1)
 
+
     !> 1.0 all soil models
     !! 
     ph_sl(:,:)              = dsl4jsb_Config(SB_)%soil_ph
     lithology_class_sl(:,:) = dsl4jsb_Config(SB_)%lithology_class
+
 
     !> 2.0 differentiate soil model init
     !! 
@@ -423,7 +429,11 @@ CONTAINS
  
     END SELECT
 
-    microbial_cue_eff_tmic_mavg(:,:) = microbial_cue_max
+
+    !> 3.0 other SB_ variables - all soil models
+    !! 
+    microbial_cue_eff_tmic_mavg(:,:)  = microbial_cue_max
+    vmax_weath_mineral_sl(:,:)        = k_weath_mineral                       ! (parameter from mo_sb_constants)
 
 ! Pass back values to process memory
 #define Passback_sb_pool

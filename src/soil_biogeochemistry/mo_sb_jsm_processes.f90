@@ -202,12 +202,12 @@ CONTAINS
                                             residue_po4, residue_assoc_po4, &
                                             loss_polymeric_litter_po4, loss_dom_assoc_po4, &
                                             loss_residue_po4, loss_residue_assoc_po4, & 
-                                            solute, assoc_fast, assoc_slow, po4_primary, bulk_dens_corr_sl, &
+                                            solute, assoc_fast, assoc_slow, po4_primary, bulk_dens_corr_sl, vmax_weath_mineral_sl, &
                                             biochem_min_po4, gross_mineralisation_po4, weathering_po4, occlusion_po4, slow_sorption_po4)
 
 
     USE mo_sb_constants,        ONLY: vmax_biochem_po4, km_mic_biochem_po4, km_mic_uptake, vmax_mic_uptake, microbial_pue, &
-                                      k_weath_mineral, k_occlude_po4, k_desorpt_po4, k_adsorpt_po4, km_dip_biochem_po4
+                                      k_occlude_po4, k_desorpt_po4, k_adsorpt_po4, km_dip_biochem_po4
     USE mo_base_constants,      ONLY: dtime
 
     IMPLICIT NONE
@@ -234,6 +234,7 @@ CONTAINS
     REAL(wp), INTENT(in)            :: assoc_fast                !< fast minerally associated PO4 pool [mol/m3]
     REAL(wp), INTENT(in)            :: po4_primary               !< primary PO4 pool [mol/m3]
     REAL(wp), INTENT(in)            :: bulk_dens_corr_sl         !< OM corrected soil bulk density [kg/mol]
+    REAL(wp), INTENT(in)            :: vmax_weath_mineral_sl     !< weathering coefficient of mineral soil [mol P m-3 s-1]
     REAL(wp), INTENT(inout)         :: loss_polymeric_litter_po4 !< loss of PO4 in the polymeric litter pool [mol/m3]
     REAL(wp), INTENT(inout)         :: loss_dom_assoc_po4        !< loss of PO4 in the mineral associated dom pool [mol/m3]
     REAL(wp), INTENT(inout)         :: loss_residue_po4          !< loss of PO4 in the microbial necromass pool [mol/m3]
@@ -286,7 +287,7 @@ CONTAINS
 
     !> 3.0 Pi fluxes between different mineral P pools
     !! weathering, occlusion and slow exchange between sorbed and labile P pools
-    weathering_po4 = rtm_hsc / rmm_hsc * k_weath_mineral * bulk_dens_corr_sl * 1.e6_wp
+    weathering_po4 = rtm_hsc / rmm_hsc * vmax_weath_mineral_sl * bulk_dens_corr_sl * 1.e6_wp
     IF (weathering_po4 /1.e6_wp > po4_primary / dtime) weathering_po4 = po4_primary / dtime * 1.e6_wp
     occlusion_po4 = assoc_slow * k_occlude_po4 * 1.e6_wp
 

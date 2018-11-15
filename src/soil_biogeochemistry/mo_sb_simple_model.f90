@@ -96,7 +96,7 @@ CONTAINS
                                              rtm_gasdiffusion_act, &
                                              rmm_gasdiffusion_act, &
                                              p_deposition_act, &
-                                             k_weath_mineral_act, &
+                                             vmax_weath_mineral_act_sl, &
                                              k_adsorpt_po4_act, &
                                              k_desorpt_po4_act, &
                                              km_dip_biochem_po4_act, &
@@ -239,6 +239,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: denitrification_n2o_n15 
     dsl4jsb_Real3D_onChunk :: denitrification_n2_n15 
     dsl4jsb_Real3D_onChunk :: asymb_n_fixation_n15 
+    dsl4jsb_Real3D_onChunk :: vmax_weath_mineral_sl
     ! Get local variables from options argument
     iblk      = options%iblk
     ics       = options%ics
@@ -379,6 +380,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2o_n15) 
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2_n15) 
     dsl4jsb_Get_var3D_onChunk(SB_,       asymb_n_fixation_n15)            ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       vmax_weath_mineral_sl)
     ! Get process memory pool structures or individual variables from pools
     dsl4slm_get_vegpool_var(pool,fine_root,carbon)
 #define Get_veg_litterfall
@@ -432,7 +434,8 @@ CONTAINS
                                bulk_dens_corr_sl(:,:), &
                                p_deposition(:), &
                                anaerobic_volume_fraction_sl(:,:), &
-                               root_fraction_act_sl(:,:), &
+                               vmax_weath_mineral_sl(:,:), &          ! in
+                               root_fraction_act_sl(:,:), &           ! out
                                km1_uptake_nh4_act(:,:), &
                                km2_uptake_nh4_act(:,:), &
                                km1_uptake_no3_act(:,:), &
@@ -452,7 +455,7 @@ CONTAINS
                                rtm_gasdiffusion_act(:,:), &
                                rmm_gasdiffusion_act(:,:), &
                                p_deposition_act(:,:), &
-                               k_weath_mineral_act(:,:), &
+                               vmax_weath_mineral_act_sl(:,:), &
                                k_adsorpt_po4_act(:,:), &
                                k_desorpt_po4_act(:,:), &
                                km_dip_biochem_po4_act(:,:), &
@@ -611,7 +614,7 @@ CONTAINS
                                     po4_assoc_slow(:,:), &
                                     po4_occluded(:,:), &
                                     po4_primary(:,:), &
-                                    k_weath_mineral_act(:,:), &
+                                    vmax_weath_mineral_act_sl(:,:), &
                                     k_adsorpt_po4_act(:,:), &
                                     k_desorpt_po4_act(:,:), &
                                     sb_pool%residue%phosphorus(:,:), & 
@@ -927,6 +930,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                     bulk_dens_corr_sl, &
                                     p_deposition, &
                                     anaerobic_volume_fraction_sl, &
+                                    vmax_weath_mineral_sl, &
                                     root_fraction_act_sl, &              ! out
                                     km1_uptake_nh4_act, &
                                     km2_uptake_nh4_act, &
@@ -947,7 +951,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                     rtm_gasdiffusion_act, &
                                     rmm_gasdiffusion_act, &
                                     p_deposition_act, &
-                                    k_weath_mineral_act, &
+                                    vmax_weath_mineral_act_sl, &
                                     k_adsorpt_po4_act, &
                                     k_desorpt_po4_act, &
                                     km_dip_biochem_po4_act, &
@@ -955,7 +959,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
 
     USE mo_sb_constants,            ONLY: km_denitrification_c, km_denitrification_no3, km1_up_nh4, km1_up_no3, & 
                                           km1_up_po4, km2_up_nh4, km2_up_no3, km2_up_po4,microbial_cn_max,microbial_cn_min, &
-                                          f_mic_cn, k_weath_mineral, k_desorpt_po4, k_adsorpt_po4, km_dip_biochem_po4
+                                          f_mic_cn, k_desorpt_po4, k_adsorpt_po4, km_dip_biochem_po4
 
     IMPLICIT NONE
     ! 0.1 InOut
@@ -985,7 +989,8 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                                 rmm_sorption, &              !< moisture response scalar for po4 sorption
                                                                 rmm_desorption, &            !< moisture response scalar for po4 desorption
                                                                 bulk_dens_corr_sl, &         !< bulk density of the soil layer, [kg/m3]
-                                                                anaerobic_volume_fraction_sl !< anaerobic volume fraction
+                                                                anaerobic_volume_fraction_sl, &   !< anaerobic volume fraction
+                                                                vmax_weath_mineral_sl             !< weathering coefficient of mineral soil [mol P m-3 s-1]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(out) :: &
                                                                 root_fraction_act_sl, &      !< actual fraction of root mass in layer
                                                                 km1_uptake_nh4_act, &        !< actual km1 for NH4 uptake [m3 / mol]
@@ -1007,7 +1012,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                                 rtm_gasdiffusion_act, &      !< actual temperature response scalar for gas diffusion
                                                                 rmm_gasdiffusion_act, &      !< actual moisture response scalar for gas diffusion
                                                                 p_deposition_act, &          !< actual p deposition, [mol m-3 timestep-1]
-                                                                k_weath_mineral_act, &       !< actual weathering rate for primary P [mol P kg-1 s-1]
+                                                                vmax_weath_mineral_act_sl, & !< actual weathering rate for primary P [mol P kg-1 s-1]
                                                                 k_adsorpt_po4_act, &         !< actual adsorption rate for fast_assoc_po4 [s-1]
                                                                 k_desorpt_po4_act, &         !< actual desorption rate for slow_assoc_po4 [s-1]
                                                                 km_dip_biochem_po4_act, &    !< actual km for soluble P control on biochem_mineralisation_po4
@@ -1069,7 +1074,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
       rmm_sorption_act(:) = 0.0_wp
       rtm_desorption_act(:) = 0.0_wp 
       rmm_desorption_act(:) = 0.0_wp
-      k_weath_mineral_act(:,:) = 0.0_wp 
+      vmax_weath_mineral_act_sl(:,:) = 0.0_wp 
       k_adsorpt_po4_act(:,:) = 0.0_wp 
       k_desorpt_po4_act(:,:) = 0.0_wp 
       DO isoil = 1,options%nsoil_sb
@@ -1106,7 +1111,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
          rmm_desorption_act(:) = rmm_desorption_act(:) + & 
                                          rmm_desorption(:,isoil) * root_fraction_sl(:,isoil) 
       ENDDO
-      k_weath_mineral_act(:,1) = rtm_hsc_act(:) / rmm_hsc_act(:) * k_weath_mineral
+      vmax_weath_mineral_act_sl(:,1) = rtm_hsc_act(:) / rmm_hsc_act(:) * vmax_weath_mineral_sl(:,1)
       k_adsorpt_po4_act(:,1) = rtm_sorption_act(:) * k_adsorpt_po4
       k_desorpt_po4_act(:,1) = rtm_desorption_act(:) * k_desorpt_po4
     !> 2.0 Case of 1d model, simply copy values
@@ -1134,7 +1139,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
       rtm_denitrification_act(:,:) = rtm_denitrification(:,:)
       rtm_gasdiffusion_act(:,:) = rtm_gasdiffusion(:,:)
       rmm_gasdiffusion_act(:,:) = rmm_gasdiffusion(:,:) 
-      k_weath_mineral_act(:,:) = rtm_hsc(:,:) / rmm_hsc(:,:) * k_weath_mineral
+      vmax_weath_mineral_act_sl(:,:) = rtm_hsc(:,:) / rmm_hsc(:,:) * vmax_weath_mineral_sl(:,:)
       k_adsorpt_po4_act(:,:) = rtm_sorption(:,:) * k_adsorpt_po4
       k_desorpt_po4_act(:,:) = rtm_desorption(:,:) * k_desorpt_po4
       anaerobic_volume_fraction_act(:,:) = anaerobic_volume_fraction_sl(:,:) 
@@ -1722,7 +1727,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                    po4_assoc_slow, &
                                                    po4_occluded, &
                                                    po4_primary, &
-                                                   k_weath_mineral_act, &
+                                                   vmax_weath_mineral_act_sl, &
                                                    k_adsorpt_po4_act, &
                                                    k_desorpt_po4_act, &
                                                    sb_pool_residue_phosphorus, & 
@@ -1749,7 +1754,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                                      po4_assoc_slow, &          !< slow minerally associated PO4 pool [mol/m3]
                                                                      po4_occluded, &            !< occluded PO4 pool [mol/m3]
                                                                      po4_primary, &             !< primary PO4 pool [mol/m3]
-                                                                     k_weath_mineral_act, &     !< actual weathering rate for primary P [mol P kg-1 s-1]
+                                                                     vmax_weath_mineral_act_sl, & !< actual weathering rate for primary P [mol P kg-1 s-1]
                                                                      k_adsorpt_po4_act, &       !< actual adsorption rate for fast_assoc_po4 [s-1]
                                                                      k_desorpt_po4_act, &       !< actual desorption rate for slow_assoc_po4 [s-1]
                                                                      sb_pool_residue_phosphorus !< slow SOM P pool [mol / m3] 
@@ -1764,7 +1769,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
 
     !> 1.0 Calculate P weathering rate from Primary P pool (mol /m3 / timestep)
     !!
-    weathering_po4(:,:) = k_weath_mineral_act(:,:) * bulk_dens_corr_sl(:,:) * root_carbon_sl(:,:) / & 
+    weathering_po4(:,:) = vmax_weath_mineral_act_sl(:,:) * bulk_dens_corr_sl(:,:) * root_carbon_sl(:,:) / & 
                           (km_rootc_weath_po4 + root_carbon_sl(:,:)) * dtime
     WHERE (weathering_po4(:,:) > po4_primary(:,:)) 
       weathering_po4(:,:) = po4_primary(:,:)

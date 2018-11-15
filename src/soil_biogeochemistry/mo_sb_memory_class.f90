@@ -336,8 +336,9 @@ MODULE mo_sb_memory_class
 
     ! 3D soil properties
     TYPE(t_jsb_var_real3d)          :: &
-                                    ph_sl               , &       !< ph per soil layer
-                                    lithology_class_sl            !< ..
+                                    ph_sl, &                          !< ph per soil layer
+                                    lithology_class_sl, &             !< ..  [unitless]
+                                    vmax_weath_mineral_sl             !< weathering coefficient of mineral soil [mol P m-3 s-1]
 
     ! 2D total fluxes for mass balance checks in soil_biogeochemistry model
     TYPE(t_jsb_var_real2d)          :: & 
@@ -2372,7 +2373,15 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'lithology_class_sl', mem%lithology_class_sl, &
             hgrid, surface, &
-            t_cf('lithology_class_sl', '', ''), &
+            t_cf('lithology_class_sl', 'unitless', ''), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'vmax_weath_mineral_sl', mem%vmax_weath_mineral_sl, &
+            hgrid, surface, &
+            t_cf('vmax_weath_mineral_sl', 'mol P m-3 s-1', 'weathering coefficient of mineral soil'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &

@@ -170,6 +170,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: qmax_po4
     dsl4jsb_Real3D_onChunk :: km_adsorpt_po4_sl
     dsl4jsb_Real3D_onChunk :: bulk_dens_corr_sl 
+    dsl4jsb_Real3D_onChunk :: vmax_weath_mineral_sl
     dsl4jsb_Real3D_onChunk :: particle_fluxrate 
     ! Get local variables from options argument
     iblk      = options%iblk
@@ -275,6 +276,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_po4)                    ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       km_adsorpt_po4_sl)           ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_dens_corr_sl)           ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       vmax_weath_mineral_sl)       ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       particle_fluxrate)           ! out
     ! Get process memory pool structures
     dsl4slm_get_vegpool_var(pool,fine_root,carbon)
@@ -347,6 +349,7 @@ CONTAINS
                             sb_loss%polymeric_litter%phosphorus(:,:), sb_loss%dom_assoc%phosphorus(:,:), &
                             sb_loss%residue%phosphorus(:,:), sb_loss%residue_assoc%phosphorus(:,:), & 
                             po4_solute(:,:), po4_assoc_fast(:,:), po4_assoc_slow(:,:), po4_primary(:,:), bulk_dens_corr_sl(:,:), &
+                            vmax_weath_mineral_sl(:,:), &
                             biochem_mineralisation_po4(:,:), gross_mineralisation_po4(:,:), weathering_po4(:,:), &
                             occlusion_po4(:,:), slow_sorption_po4(:,:))
 
