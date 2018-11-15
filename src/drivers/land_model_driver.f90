@@ -26,7 +26,7 @@ PROGRAM land_model_driver
   USE mo_jsb_model_class,         ONLY: t_jsb_model
   USE mo_jsb_base,                ONLY: init_base
   ! forcing
-  USE mo_jsb4_forcing,            ONLY: forcing_options
+  USE mo_jsb4_forcing,            ONLY: forcing_options, calc_output_time_interval_pool
   ! atmland
   USE mo_atmland_forcing,         ONLY: update_forcing, open_forcing_input_file, close_forcing_input_file ! valid for land plant canopy and soil
   ! vegetation
@@ -57,6 +57,14 @@ PROGRAM land_model_driver
   INTEGER       :: npedim                             ! Working dimension for blocks in each domain.
                                                       ! Default (-1): each domain is processed in one call
   INTEGER       :: model_id
+  ! output control
+  LOGICAL       :: l_output, &                        ! output is enabled (flux accumulation is done and l_output_interval_match is checked for being TRUE)
+                   l_output_interval_match            ! the specific output interval is a match with current time, hence output is written
+  REAL(wp)      :: output_interval_pool_act, &        ! the actual interval number used at the current timestep
+                   output_interval_pool, &            ! output interval of pools as a number (the same is used for flux output), converted from character
+                   output_interval_pool_spinup        ! output interval of pools as a number valid for spinup period
+  REAL(wp)      :: transient_spinup_timesteps         ! timesteps of spinup (transient forcing) as positive number, needed for output control
+  
   REAL(wp), ALLOCATABLE, DIMENSION(:)  :: &     !! a2l memory - INTENT(in) - start
                                   t_air              , &
                                   q_air              , &
@@ -159,9 +167,8 @@ PROGRAM land_model_driver
 
   !! 2.0 -----------------------------------------------------------------------------------------------
   !! 
-  !! Forcing and Output files init
+  !! allocate forcing variables (atmland)
   !! 
-  ! allocate forcing variables (atmland)
   !! a2l memory
   ALLOCATE(t_air(nc))                                           
   ALLOCATE(q_air(nc))                                           
@@ -225,56 +232,88 @@ PROGRAM land_model_driver
   ALLOCATE(sensible_hflx_wtr(nc))                              
   ALLOCATE(latent_hflx_ice(nc))                                
   ALLOCATE(sensible_hflx_ice(nc))
+
+  !! 2.1 -----------------------------------------------------------------------------------------------
+  !! 
+  !! open forcing files
+  !! 
   ! open forcing input files (and read the header into dummy variables); see mo_atmland_forcing
   ! l_forcing is set in init_slm() depending on the specific SLM model
   ! for SLM soil different input is used than for land plant canopy
   IF (l_forcing) THEN
     CALL open_forcing_input_file(TRIM(model%config%slm_model_name))
   END IF
+
+
+  !! 3.0 -----------------------------------------------------------------------------------------------
+  !! 
+  !! settings for the static/transient forcing_mode
+  !! 
+  ! get output interval of pools as a number
+  output_interval_pool_act    = 0.0_wp
+  output_interval_pool        = calc_output_time_interval_pool(model%config%output_interval_pool)
+  output_interval_pool_spinup = calc_output_time_interval_pool(model%config%output_interval_pool_spinup)
+  ! init with default values
+  model%config%l_transient_forcing_mode          = .FALSE.
+  model%config%l_transient_spinup                = .FALSE.
+  model%config%l_transient_spinup_rewind_forcing = .FALSE.
+  model%config%l_static_forcing_mode             = .FALSE.
+  itimestep                         = 0         ! default start of time loop
+  transient_spinup_itimestep_period = 0  
+  transient_spinup_timesteps        = 0         ! is used only during l_transient_spinup
+  ! set simulation values
+  IF ( TRIM(forcing_options%forcing_mode) == "static" ) THEN
+    model%config%l_static_forcing_mode     = .TRUE.
+    output_interval_pool_act               = output_interval_pool
+  ELSEIF ( TRIM(forcing_options%forcing_mode) == "transient" ) THEN
+    ! set logicals to TRUE
+    model%config%l_transient_forcing_mode  = .TRUE.
+    model%config%l_transient_spinup        = .TRUE.  ! transient forcing_mode starts with spinup; is set to FALSE during runtime when spinup is done
+    ! output interval for spinup
+    output_interval_pool_act          = output_interval_pool_spinup
+    ! number of spinup timesteps
+    itimestep                         = itimestep - forcing_options%transient_spinup_timesteps_all
+    transient_spinup_timesteps        = itimestep * -1.0_wp
+    ! init spinup period counter
+    transient_spinup_itimestep_period = 0
+  ENDIF
+
+
+  !! 4.0 -----------------------------------------------------------------------------------------------
+  !! 
+  !! open output files
+  !! need to be done after 'output_interval_pool_act' is defined above
+  !! test_canopy: special case, runs for just one timestep and pool/flux output routines are not called
+  !! 
   ! Initialise output and flux accumulation, and open output files; see mo_shared_output
   ! the output routine for SLM canopy is located in mo_land_model_interface -> canopy_model_write_data()
   SELECT CASE(TRIM(model%config%slm_model_name))
     CASE('land','plant','soil','canopy')
-      CALL open_pool_output_files(tile, iblk, ics, ice, nc, nsoil_sb)
-      CALL open_flux_output_files(tile, iblk, ics, ice, nc, nsoil_sb)
+      ! open output files for static more or for transient spinup if output may be created (i.e. output interval is not 'none')
+      IF (model%config%l_static_forcing_mode) THEN
+        CALL open_pool_output_files(tile, iblk, ics, ice, nc, nsoil_sb, TRIM(model%config%output_interval_pool), '')
+        CALL open_flux_output_files(tile, iblk, ics, ice, nc, nsoil_sb, TRIM(model%config%output_interval_flux), '')
+      ELSEIF (model%config%l_transient_forcing_mode .AND. output_interval_pool_act > 0.0_wp) THEN
+        CALL open_pool_output_files(tile, iblk, ics, ice, nc, nsoil_sb, TRIM(model%config%output_interval_pool_spinup), 'spinup_')
+        CALL open_flux_output_files(tile, iblk, ics, ice, nc, nsoil_sb, TRIM(model%config%output_interval_flux_spinup), 'spinup_')
+      ENDIF
+      ! create soil forcing (output is created for a year after spinup; control is in mo_shared:output:write_soil_forcing)
       IF (model%config%flag_generate_soil_forcing) THEN
         CALL open_output_files_soil_forcing(tile, iblk, ics, ice, nc, nsoil_sb)
-      END IF
+      ENDIF
     CASE('test_canopy')
       ntimestep = 0     ! simulation starts with zero, and loop asks for 'IF (itimestep .GT. ntimestep) EXIT'
   END SELECT
 
 
-  !! 3.0 -----------------------------------------------------------------------------------------------
-  !! 
-  !! settings for the transient forcing_mode
-  !! 
-  ! init with default values
-  model%config%l_transient_forcing_mode          = .FALSE.
-  model%config%l_transient_spinup                = .FALSE.
-  model%config%l_transient_spinup_rewind_forcing = .FALSE.
-  itimestep                         = 0         ! default start of time loop
-  transient_spinup_itimestep_period = 0  
-  ! set simulation values
-  IF ( TRIM(forcing_options%forcing_mode) == "transient" ) THEN
-    ! set logicals to TRUE
-    model%config%l_transient_forcing_mode  = .TRUE.
-    model%config%l_transient_spinup        = .TRUE.  ! transient forcing_mode always starts with a spinup
-    ! number of spinup timesteps
-    itimestep = itimestep - forcing_options%transient_spinup_timesteps_all
-    ! init spinup period counter
-    transient_spinup_itimestep_period = 0
-  END IF
-
-
-  !! 4.0 -----------------------------------------------------------------------------------------------
+  !! 5.0 -----------------------------------------------------------------------------------------------
   !! 
   !! Time loop calling the land model interface
   !! 
   DO
     IF (itimestep .GT. ntimestep) EXIT
     
-    !! 4.1 advance simulation-timer and check timer for new year (year counter)
+    !! 5.1 advance simulation-timer and check timer for new year (year counter)
     !! 
     !! for timing data of the forcing input see forcing_options\%forcing_*
     !!
@@ -290,12 +329,12 @@ PROGRAM land_model_driver
     END IF
 
 
-    !! 4.2 advance timestep of this loop
+    !! 5.2 advance timestep of this loop
     !! init itimestep with 0, the timestep 1 means running from 0 to 1, equally to time_day (sec 4.1)
     itimestep = itimestep + 1   ! increment DO loop counter
 
 
-    !! 4.3 control variables for transient forcing_mode
+    !! 5.3 control for transient forcing_mode
     !! 
     !! 
     IF (model%config%l_transient_forcing_mode) THEN
@@ -303,34 +342,117 @@ PROGRAM land_model_driver
       ! control spinup
       IF (model%config%l_transient_spinup) THEN
         transient_spinup_itimestep_period = transient_spinup_itimestep_period + 1
-        ! if one spinup period has finished
+        ! if one spinup period (i.e. repetitive part of the spinup) has finished
         IF (transient_spinup_itimestep_period .GT. forcing_options%transient_spinup_timesteps_repeat) THEN
-          transient_spinup_itimestep_period             = 1
+          transient_spinup_itimestep_period              = 1
           model%config%l_transient_spinup_rewind_forcing = .TRUE.
         END IF
-        ! if complete spinup has ended and the simulation should start
+        ! if spinup is completed and the simulation should start
         IF (itimestep .EQ. 1) THEN
           model%config%l_transient_spinup_rewind_forcing = .TRUE.
           model%config%l_transient_spinup                = .FALSE.           ! do not enter the "control spinup" IF statement anymore
-          time_day                                      = timestep_prop_day ! equals 1.0 at the last simulated timestep of the day
-          time_year                                     = 1                 ! the 1st year of a simulation == 1 (not zero)
+          time_day                                       = timestep_prop_day ! equals 1.0 at the last simulated timestep of the day
+          time_year                                      = 1                 ! the 1st year of a simulation == 1 (not zero)
+          ! close spinup output files if output was created (i.e. spinup output interval is not 'none')
+          IF (output_interval_pool_act > 0.0_wp) THEN
+            CALL close_output_files
+          ENDIF
+          ! change output interval
+          output_interval_pool_act                       = output_interval_pool
+          ! open new output files
+          CALL open_pool_output_files(tile, iblk, ics, ice, nc, nsoil_sb, TRIM(model%config%output_interval_pool), '')
+          CALL open_flux_output_files(tile, iblk, ics, ice, nc, nsoil_sb, TRIM(model%config%output_interval_flux), '')
         END IF
       END IF
     END IF
+
+
+    !! 5.4 output control
+    !!  does consider:  static & transient
+    !!                  spinup & actual simulation
+    !!  
+    l_output                = .FALSE.      ! is generally set to FALSE tested below if TRUE at this timestep
+    !! static
+    IF (model%config%l_static_forcing_mode) THEN
+      ! output period
+      IF (time_year >= model%config%output_start_first_day_year .AND. time_year <= model%config%output_end_last_day_year) THEN
+        ! might be set back to FALSE if fluxnet_output_status == 3 (i.e. fluxnet diagnostics output finished)
+        l_output = .TRUE.
+      ENDIF        
+      ! fluxnet diagnostics output
+      IF (model%config%fluxnet_output) THEN
+        ! activate output during the last full forcing period (within 'ntimestep'), independent of the general output 'output_start_..' & 'output_end_...' options
+        IF (fluxnet_output_status < 3.0_wp) THEN
+          l_output = .TRUE.
+        ! set l_output (back) to FALSE if the last full forcing period is finished (after the last full forcing period no further output is created and fluxnet_output_status = 3)
+        ELSE
+          l_output = .FALSE.
+        ENDIF
+      ENDIF
+    !! transient
+    ELSEIF (model%config%l_transient_forcing_mode) THEN
+      ! spinup
+      IF (model%config%l_transient_spinup) THEN
+        ! if output may be generated during spinup (i.e. output interval is not 'none')
+        IF (output_interval_pool_act > 0.0_wp) THEN
+          l_output = .TRUE.
+        ENDIF
+      ! actual simulation after spinup
+      ELSE
+      ! differ between fluxnet diagnostics output and other transient runs
+      ! fluxnet is special because the last full forcing period (within 'ntimestep') should be written out at timestep interval, and this period differs across sites
+        ! fluxnet diagnostics - after spinup output is always created but at different intervals 
+        IF (model%config%fluxnet_output) THEN
+          ! if active and not finished yet (finished == after the last full forcing period no further output is created)
+          IF (fluxnet_output_status < 3.0_wp) THEN
+            l_output = .TRUE.
+          ENDIF
+        ! any other than fluxnet diagnostics, create output for a given start/end output period
+        ELSE
+          ! output period
+          IF (time_year >= model%config%output_start_first_day_year .AND. time_year <= model%config%output_end_last_day_year) THEN
+            l_output = .TRUE.
+          ENDIF
+        ENDIF
+      ENDIF
+    ENDIF
+    !!  match output interval
+    !! 
+    l_output_interval_match = .FALSE.      ! is generally set to FALSE tested below if TRUE at this timestep
+    IF (l_output) THEN
+      ! if interval is smaller than 'daily' then set to TRUE always, because then it can only be timestep
+      IF (output_interval_pool_act < 1.0_wp) THEN
+        l_output_interval_match = .TRUE.
+      ! transient spinup
+      ! during spinup the timesteps are a negative number, which is compensated by adding the spinup length to time_day
+      ELSEIF (model%config%l_transient_spinup) THEN
+        IF (MODULO(time_day + transient_spinup_timesteps, output_interval_pool_act) < eps4 .OR. &
+          ABS(output_interval_pool_act - MODULO(time_day + transient_spinup_timesteps, output_interval_pool_act)) < eps4) THEN
+          l_output_interval_match = .TRUE.
+        ENDIF
+      ! static simulation or transient simulation after spinup
+      ELSE
+        IF (MODULO(time_day, output_interval_pool_act) < eps4 .OR. &
+          ABS(output_interval_pool_act - MODULO(time_day, output_interval_pool_act)) < eps4) THEN
+          l_output_interval_match = .TRUE.
+        ENDIF
+      ENDIF
+    ENDIF
+
     
-    
-    !! 4.4 set orbital parameters and update time-variant forcing
+    !! 5.5 set orbital parameters and update time-variant forcing
     !! 
     !! l_forcing is set in init_slm() depending on the specific SLM model
     !! 
     IF (l_forcing) THEN
-      CALL update_forcing(  tile , & ! necessary for soil: veg%litterfall vegsoil%moisture
-                            ics     , &
-                            ice     , &
-                            nc      , &
-                            iblk    , &
-                            nsoil_sb, &
-                            time_day, & 
+      CALL update_forcing(  tile      , & ! necessary for soil: veg%litterfall vegsoil%moisture
+                            ics       , &
+                            ice       , &
+                            nc        , &
+                            iblk      , &
+                            nsoil_sb  , &
+                            itimestep , &
+                            time_day  , & 
                                   !! forcing (read from file and passed to a2l memory via the land_model_interface)
                                   !! in update_forcing() defined as: REAL(wp), OPTIONAL, INTENT(out) :: VAR(:)  ! assumed shape
                                   t_air                   = t_air(:)              , &
@@ -377,10 +499,13 @@ PROGRAM land_model_driver
     END IF
 
     
-    !! 4.5 land model interface
+    !! 5.6 land model interface
     !! 
     CALL land_model_interface(tile, &
                               l_forcing, &
+                              l_output, &
+                              l_output_interval_match, &
+                              output_interval_pool_act, &  ! used for flux output: output_interval_flux
                               time_day, &
                               time_year, &
                               timestep_prop_day, &
@@ -451,7 +576,7 @@ PROGRAM land_model_driver
                                   !! l2a memory - end
                                 &  ) ! land_model_interface()
 
-    !! 4.6 special case: fluxnet output
+    !! 5.7 special case: fluxnet output
     !! 
     IF(model%config%fluxnet_output) THEN
       IF (itimestep == fluxnet_output_start) THEN         ! start of fluxnet output (at each timestep)
@@ -459,8 +584,10 @@ PROGRAM land_model_driver
           CALL close_output_files 
           model%config%output_interval_pool   = 'timestep' 
           model%config%output_interval_flux   = 'timestep' 
-          CALL open_pool_output_files(tile, iblk, ics, ice, nc, nsoil_sb)
-          CALL open_flux_output_files(tile, iblk, ics, ice, nc, nsoil_sb)
+          output_interval_pool                = calc_output_time_interval_pool(model%config%output_interval_pool)
+          output_interval_pool_act            = output_interval_pool
+          CALL open_pool_output_files(tile, iblk, ics, ice, nc, nsoil_sb, TRIM(model%config%output_interval_pool), '')
+          CALL open_flux_output_files(tile, iblk, ics, ice, nc, nsoil_sb, TRIM(model%config%output_interval_flux), '')
 
       ELSE IF (itimestep == fluxnet_output_stop) THEN     ! stop of fluxnet output; NO output after this timestep anyway
           fluxnet_output_status = 3                       ! status update: writing output data finished
@@ -472,7 +599,7 @@ PROGRAM land_model_driver
   END DO  ! end time loop 
 
 
-  !! 5.0 -----------------------------------------------------------------------------------------------
+  !! 6.0 -----------------------------------------------------------------------------------------------
   !! 
   !! Close output and forcing files
   !! 
@@ -483,7 +610,7 @@ PROGRAM land_model_driver
   END IF
 
 
-  !! 6.0 -----------------------------------------------------------------------------------------------
+  !! 7.0 -----------------------------------------------------------------------------------------------
   !! 
   !! DEALLOCATE variables
   CALL Deallocate_var_sb_pools_elements_a     ! mo_sb_memory_class

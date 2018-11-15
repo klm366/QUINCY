@@ -382,32 +382,30 @@ CONTAINS
     timestep_prop_day = dtime/one_day                                 !! proportion of one day that is simulated with one timestep
 
 
-    !> 10.0 Initialise: Fluxnet specific simulation output
-    !!
-    !! the last full "forcing period" is written into extra output files with half-hourly write-out of values
-    !!
+    !> 10.0 Initialise: output of fluxnet diagnostics simulation
+    !! 
+    !! output is created as defined by the 'output_interval_pool' & 'output_start_..' & 'output_end_...' options \n
+    !! and the last full "forcing period" is written into new output files with half-hourly write-out of values
+    !! 
+    !> 10.1 deactivate per default
     fluxnet_output_status = 0
+    !> 10.2 activate output and check settings
     IF (model%config%fluxnet_output) THEN
+      !! activate fluxnet diagnostics output
       fluxnet_output_status = 1
-      ! check whether simulation length covers at least one complete fluxnet forcing period (i.e. fluxnet_output_length)
+      
+      !! check whether simulation length covers at least one complete fluxnet forcing period (i.e. fluxnet_output_length)
       fluxnet_output_length = NINT(model%config%fluxnet_output_length * one_year * one_day / model%config%dtime)
-      IF (fluxnet_output_length > ntimestep) THEN
-        CALL finish('land_model_driver-init_routine','Simulation is too short for fluxnet output of one full forcing period')
+      IF (ntimestep < (fluxnet_output_length * 2.0_wp)) THEN
+        CALL finish(routine,'Simulation length is too short for fluxnet diagnostics output (at least 2 full forcing periods are needed).')
       END IF
 
-      ! calc timestep when fluxnet output starts (get the before last full output period that starts within ntimestep)
+      !! calc start and stop timestep
+      ! fluxnet diagnostics output covers the last full forcing period within ntimestep
+      ! calc timestep when fluxnet output starts (get the before last full forcing period that starts within ntimestep)
       fluxnet_output_start  = fluxnet_output_length * FLOOR( (REAL(ntimestep) / REAL(fluxnet_output_length)) -1.0_wp ) 
       ! calc timestep when fluxnet output stops
       fluxnet_output_stop   = fluxnet_output_start + fluxnet_output_length
-
-      ! check whether general output start and stop covers the 'Fluxnet specific simulation output'
-      IF ( (model%config%output_end_last_day_year * one_year * one_day / model%config%dtime) < fluxnet_output_stop) THEN
-        CALL finish('land_model_driver-init_routine','Simulation output does not cover the last full forcing period')
-      END IF
-      IF ( (((model%config%output_start_first_day_year - 1) * one_year * one_day + 1) / model%config%dtime) > &
-           fluxnet_output_start) THEN
-        CALL finish('land_model_driver-init_routine','Simulation output does not cover the last full forcing period')
-      END IF
     END IF
   END SUBROUTINE init_model_common
 

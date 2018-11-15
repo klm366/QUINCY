@@ -35,16 +35,18 @@ MODULE mo_jsb_config_class
 
     !! SLM added !!
     !! BASE_CTL
-    REAL(wp)          :: dtime                             !< length of one time step in seconds; base_ctl namelist: dtime_step_length_sec
+    REAL(wp)          :: dtime                              !< length of one time step in seconds; base_ctl namelist: dtime_step_length_sec
     CHARACTER(len=20) :: slm_model_name
-    CHARACTER(8)      :: output_interval_pool, &
-                         output_interval_flux
-    INTEGER           :: output_start_first_day_year, &  !< output start at the 1st  day of this year
-                         output_end_last_day_year        !< output stop  at the last day of this year
-    LOGICAL           :: fluxnet_output
-    INTEGER           :: fluxnet_output_length
-    LOGICAL           :: flag_generate_soil_forcing       !< all litterfall pools + some soilphysics 
-                                                          !! at period: model%config%output_start_first_day_year .. output_end_last_day_year
+    CHARACTER(8)      :: output_interval_pool, &            !< interval at which output is generated during model runs not including spinup
+                         output_interval_flux               !< interval at which output is generated during model runs not including spinup - the pool value is used
+    CHARACTER(8)      :: output_interval_pool_spinup, &     !< interval at which output is generated during spinup
+                         output_interval_flux_spinup        !< interval at which output is generated during spinup - the pool value is used
+    INTEGER           :: output_start_first_day_year, &     !< output start at the 1st  day of this year
+                         output_end_last_day_year           !< output stop  at the last day of this year
+    LOGICAL           :: fluxnet_output                     !< 
+    INTEGER           :: fluxnet_output_length              !< 
+    LOGICAL           :: flag_generate_soil_forcing         !< all litterfall pools + some soilphysics 
+                                                            !! at period: model%config%output_start_first_day_year .. output_end_last_day_year
     LOGICAL           :: set_parameter_values_from_file
     LOGICAL           :: flag_climate_forcing_one_year
     LOGICAL           :: flag_stand_harvest
@@ -57,6 +59,7 @@ MODULE mo_jsb_config_class
     LOGICAL           :: l_transient_forcing_mode, &        !< set to TRUE if forcing_options%forcing_mode == transient
                          l_transient_spinup, &              !< TRUE for forcing_mode=='transient' and model spinup, otherwise FALSE
                          l_transient_spinup_rewind_forcing  !< TRUE at the timestep after one transient spinup period has finished (e.g. after 1930 for 1901-1930)
+    LOGICAL           :: l_static_forcing_mode              !< set to TRUE if forcing_options%forcing_mode == static
   END TYPE t_jsb_model_config
 
   ! Abstract type for process configurations
@@ -114,6 +117,8 @@ CONTAINS
     CHARACTER(len=20)           :: slm_model_name
     CHARACTER(8)                :: output_interval_pool          , &
                                    output_interval_flux
+    CHARACTER(8)                :: output_interval_pool_spinup   , & 
+                                   output_interval_flux_spinup       
     INTEGER                     :: output_start_first_day_year   , &
                                    output_end_last_day_year
     LOGICAL                     :: fluxnet_output
@@ -137,6 +142,8 @@ CONTAINS
         slm_model_name                        , &
         output_interval_pool                  , &
         output_interval_flux                  , &
+        output_interval_pool_spinup           , &
+        output_interval_flux_spinup           , &
         output_start_first_day_year           , &
         output_end_last_day_year              , &
         fluxnet_output                        , &
@@ -168,8 +175,10 @@ CONTAINS
     ! BASE_CTL
     dtime_step_length_sec                   = 1800.0_wp
     slm_model_name                          = 'land'
-    output_interval_pool                    = 'weekly' ! timestep daily weekly monthly yearly
-    output_interval_flux                    = 'weekly' ! timestep daily weekly monthly yearly
+    output_interval_pool                    = 'weekly'    ! timestep daily weekly monthly yearly
+    output_interval_flux                    = 'weekly'    ! timestep daily weekly monthly yearly
+    output_interval_pool_spinup             = 'yearly'    ! usually ~500 yrs are covered, so 'yearly' would be reasonable
+    output_interval_flux_spinup             = 'yearly'    ! usually ~500 yrs are covered, so 'yearly' would be reasonable
     output_start_first_day_year             = 1
     output_end_last_day_year                = 10
     fluxnet_output                          = .FALSE.     ! .TRUE. .FALSE.
@@ -214,6 +223,8 @@ CONTAINS
     model_config%slm_model_name                         = slm_model_name
     model_config%output_interval_pool                   = output_interval_pool
     model_config%output_interval_flux                   = output_interval_flux
+    model_config%output_interval_pool_spinup            = output_interval_pool_spinup
+    model_config%output_interval_flux_spinup            = output_interval_flux_spinup
     model_config%output_start_first_day_year            = output_start_first_day_year
     model_config%output_end_last_day_year               = output_end_last_day_year
     model_config%fluxnet_output                         = fluxnet_output

@@ -32,10 +32,13 @@ CONTAINS
   !!
   !! selection of the model via the namlist.slm - BASE_CTL:slm_model_name
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE land_model_interface(tile, &                ! one tile
-                                  l_forcing, &           ! forcing on/off
-                                  time_day, time_year, &
-                                  timestep_prop_day  , &
+  SUBROUTINE land_model_interface(tile                      , &
+                                  l_forcing                 , &
+                                  l_output                  , &
+                                  l_output_interval_match   , &
+                                  output_interval_flux      , &
+                                  time_day, time_year       , &
+                                  timestep_prop_day         , &
                                   !! a2l memory - INTENT(in) - start
                                   t_air              , &
                                   q_air              , &
@@ -131,11 +134,14 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile              !< one tile with data structure for one lct
-    LOGICAL,                    INTENT(in)        :: l_forcing         !< IF .TRUE. THEN update_forcing(), update_a2l(), update_l2a()
-    REAL(wp),                   INTENT(in)        :: time_day          !< displays the 'real simulation time' in days; time_day == 1.0 after one day has passed
-    INTEGER,                    INTENT(in)        :: time_year         !< displays the 'real simulation time' in years; the 1st year of a simulation == 1 (not zero)
-    REAL(wp),                   INTENT(in)        :: timestep_prop_day !< proportion of one day that is simulated with one timestep (dtime/one_day)
+    CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile                     !< one tile with data structure for one lct
+    LOGICAL,                    INTENT(in)        :: l_forcing, &             !< IF .TRUE. THEN update_forcing(), update_a2l(), update_l2a()
+                                                     l_output, &              !< TRUE of output is enabled at all (i.e., fluxes are accumulated)
+                                                     l_output_interval_match  !< TRUE if output may be created at the current timestep
+    REAL(wp),                   INTENT(in)        :: output_interval_flux     !< flux output interval
+    REAL(wp),                   INTENT(in)        :: time_day                 !< displays the 'real simulation time' in days; time_day == 1.0 after one day has passed
+    INTEGER,                    INTENT(in)        :: time_year                !< displays the 'real simulation time' in years; the 1st year of a simulation == 1 (not zero)
+    REAL(wp),                   INTENT(in)        :: timestep_prop_day        !< proportion of one day that is simulated with one timestep (dtime/one_day)
     REAL(wp),                   INTENT(in)        :: &                 !! a2l memory - INTENT(in) - start
                                   t_air(:)              , &
                                   q_air(:)              , &
@@ -278,7 +284,7 @@ CONTAINS
     !> 2.0 Run the tasks defined for the specific SLM model
     !! 
     !! land plant soil canopy \n 
-    !! test_canopy is a species case and runs for only one timestep
+    !! test_canopy is a special case and runs for only one timestep
     !! 
     SELECT CASE(TRIM(model%config%slm_model_name))
     !! land ---------------------------------------------------------------------------------------
@@ -311,23 +317,11 @@ CONTAINS
       CALL update_veg_pools       (tile, model%options)
       CALL update_sb_pools        (tile, model%options)
 
-      !! accumulation over time - daytime & moving average
+      !! variable accumulation over time - daytime & moving average
       !!
       CALL update_time_averages(tile, model%options, time_day, timestep_prop_day)    ! see shared
 
-      !! output pool: write output in certain intervals, see mo_shared_output
-      !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
-      !! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
-      !!
-      CALL write_output_pool(tile, model%options, time_day, time_year)
-
-      !! output flux: write output in certain intervals, see mo_shared_output
-      !!
-      !!
-      CALL write_output_flux(tile, model%options, time_day, time_year)
-
       !! output litterfall and soilphysics: usually this would be output at each timstep
-      !!
       !!
       IF (model%config%flag_generate_soil_forcing) THEN
         CALL write_soil_forcing(tile, model%options, time_day, time_year)
@@ -354,23 +348,11 @@ CONTAINS
       CALL update_veg_growth      (tile, model%options)
       CALL update_veg_pools       (tile, model%options)
 
-      !! accumulation over time - daytime & moving average
+      !! variable accumulation over time - daytime & moving average
       !!
       CALL update_time_averages(tile, model%options, time_day, timestep_prop_day)    ! see shared
 
-      !! output pool: write output in certain intervals, see mo_shared_output
-      !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
-      !! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
-      !!
-      CALL write_output_pool(tile, model%options, time_day, time_year)
-
-      !! output flux: write output in certain intervals, see mo_shared_output
-      !!
-      !!
-      CALL write_output_flux(tile, model%options, time_day, time_year)
-
       !! output litterfall and soilphysics: usually this would be output at each timstep
-      !!
       !!
       IF (model%config%flag_generate_soil_forcing) THEN
         CALL write_soil_forcing(tile, model%options, time_day, time_year)
@@ -397,17 +379,6 @@ CONTAINS
       !!
       CALL update_time_averages(tile, model%options, time_day, timestep_prop_day)    ! see shared
 
-      !! output pool: write output in certain intervals, see mo_shared_output
-      !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
-      !! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
-      !!
-      CALL write_output_pool(tile, model%options, time_day, time_year)
-
-      !! output flux: write output in certain intervals, see mo_shared_output
-      !!
-      !!
-      CALL write_output_flux(tile, model%options, time_day, time_year)
-
     CASE('canopy')
     !! canopy -------------------------------------------------------------------------------------
 
@@ -429,17 +400,6 @@ CONTAINS
       !!
       CALL update_time_averages(tile, model%options, time_day, timestep_prop_day)    ! see shared
       
-      !! output pool: write output in certain intervals, see mo_shared_output
-      !! note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
-      !! note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
-      !!
-      CALL write_output_pool(tile, model%options, time_day, time_year)
-      
-      !! output flux: write output in certain intervals, see mo_shared_output
-      !! ! only some flux files are written, see CASE statements in shared_output
-      !!
-      CALL write_output_flux(tile, model%options, time_day, time_year)
-
     CASE('test_canopy')
     !! test_canopy --------------------------------------------------------------------------------
       CALL run_test_canopy_model  (tile, model%options)
@@ -448,6 +408,30 @@ CONTAINS
       CALL finish('land_model_interface','Invalid SLM model name. Try either land, plant, soil, canopy or test_canopy.')
     END SELECT  ! select SLM model !
 
+
+    !> 2.1 Run output routines for land, plant, soil, canopy
+    !! 
+    !!
+    IF (l_output) THEN 
+      SELECT CASE(TRIM(model%config%slm_model_name))
+      CASE('land','plant','soil','canopy')
+
+        !! output pool: write output in certain intervals, see mo_shared_output
+        !!  note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
+        !!  note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
+        !! 
+        IF (l_output_interval_match) THEN
+          CALL write_output_pool(tile, model%options, time_day)
+        ENDIF
+        !! output flux: write output in certain intervals, see mo_shared_output
+        !!  if output is enabled, flux variables are accumulated
+        !!  output is written when the interval is a match with current timestep
+        !! 
+        CALL write_output_flux(tile, model%options, time_day, output_interval_flux, &
+                              l_flux_output_interval=l_output_interval_match)
+
+      END SELECT  ! select SLM model !
+    ENDIF                            
 
     !> 3.0 pass atmland variables from l2a memory back to the driver
     !! 

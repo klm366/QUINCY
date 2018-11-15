@@ -46,21 +46,27 @@ singleSiteName=""
 
 
 ##>> special runs <<####################################################################################
-##(1) run Fluxnet simulations with data output at each timestep for the last complete forcing period before the end of the "simulation_length_number" you specify below
+##(1) fluxnet diagnostics output 
+# run Fluxnet simulations creating timestep output for the last full forcing period within the simulation runtime 'simulation_length_number'
+# in addition output is created at the interval 'output_interval_pool' (must not be "timestep") from 'output_start_...' to 'output_end_...'
 # T (True) or F (False) [large caps]
 # when set to "T" simulations and extra scripts will be run by the run.slm.sh for each of the fluxnet sites you specify above (i.e., all sites, customSiteList, one site: singleSiteName)
 # scripts are: convert_slm2FLUXNET.R & generate_FLUXNET_diagnostics.R
 specialFluxnetOutput="F"
 
-##(2) compare simulated model results of CRUNCEP sites with Global Forest Data Base data (/Net/Groups/BGI/data/Model/SLM1/evaluation/point/GFDB/global_forest_database_21092016.csv)
+##(2) cruncep vs gfdb comparison
+# compare simulated model results of CRUNCEP sites with Global Forest Data Base data (/Net/Groups/BGI/data/Model/SLM1/evaluation/point/GFDB/global_forest_database_21092016.csv)
 # T (True) or F (False) [large caps]
 # when set to "T" options are set to: forcingDataSet="cruncep", output_interval_pool/flux="daily", paramSensitivitySim="F", specialFluxnetOutput="F"
+# output is created only from 'output_start_...' to 'output_end_...'
+# default output interval is "daily" (set output_interval_pool="daily" & output_interval_flux="daily")
 # the cleanup_slm_hpc_run.sh starts two R scripts: sim_cruncep_vs_gfdb-process_daily.R & sim_cruncep_vs_gfdb-create_figs.R & sim_cruncep_all_vs_gfdb-create_figs.R
-# you can run simulations for all/some CRUNCEPv7 sites of the "cue" set (cue_gfdb_sites*.dat) ; for only some sites (customSiteList="F/T"), or for just one site (singleSiteName="Site-ID")
-# data for comparison is all of the the daily model output following the spinupLengthGFDB
+# you can run simulations for the site-sets 'all' and 'cue' CRUNCEPv7, or for only some/one site(s) of it (use customSiteList="F/T"; or singleSiteName="Site-ID")
+# model-data comparison works only if output_interval_pool/flux="daily" (see sim_cruncep_vs_gfdb-process_daily.R)
 compareSimCRUNCEPvsGFDB="F"
-# years of spin-up before output is saved (all output is used for simulation vs GFDB comparision)
-# in case of forcingMode is set to "transient" then transient_spinup_years=spinupLengthGFDB
+# years of spin-up (static and transient forcing) before output is saved (all output is used for simulation vs GFDB comparision)
+# forcingMode static:    simulation_length_number is increased and 'output_start_...' & 'output_end_...' are shifted by the years defined as spinup
+# forcingMode transient: transient_spinup_years=spinupLengthGFDB
 spinupLengthGFDB=500
 
 ##(3) parameter sensitivity simulations
@@ -130,6 +136,9 @@ transient_spinup_start_year=1901      # default 1901; start year of spinup perio
 transient_spinup_end_year=1930        # default 1930; last  year of spinup period
 transient_spinup_years=500            # default 500; overall years of spinup repeating "spinup period" multiple times
 transient_simulation_start_year=1901  # default 1901; simulation start with forcing at this year and ends after simulation_length_number
+output_interval_pool_spinup="none"    # none daily weekly monthly yearly (only for transient forcingMode; if you'd need timestep please talk to Jan or Sönke)
+output_interval_flux_spinup="none"    # none daily weekly monthly yearly (only for transient forcingMode; if you'd need timestep please talk to Jan or Sönke)
+flag_transientSim_CO2const="F"        # T (True) or F (False): if TRUE the first value of CO2 (dC13 DC14) from 1901 is used as constant for the full simulation after spinup (i.e. no variation in CO2 dC13 DC14)
 
 # forcing input
 flag_oneYearForcing="F"         # T (True) or F (False): whether to use (repeatedly) only the 1st year of the climate forcing input file
@@ -467,6 +476,7 @@ validateQueue="all io BTM mpi_large io_perform short"
 validateEmailNotification="yes no"
 validateFlags="F T"
 validateOutputInterval="timestep daily weekly monthly yearly"
+validateOutputIntervalSpinup="none daily weekly monthly yearly"
 validateOptionForcing="constant generate readfile"
 
 
@@ -589,6 +599,9 @@ validateUserConfigValues "$leaf_stoichom_scheme" "$validateLeafStoichomScheme" "
 validateUserConfigValues "$flag_optimal_Nfraction" "$validateFlags" "flag_optimal_Nfraction"
 validateUserConfigValues "$output_interval_pool" "$validateOutputInterval" "output_interval_pool"
 validateUserConfigValues "$output_interval_flux" "$validateOutputInterval" "output_interval_flux"
+validateUserConfigValues "$output_interval_pool_spinup" "$validateOutputIntervalSpinup" "output_interval_pool_spinup"
+validateUserConfigValues "$output_interval_flux_spinup" "$validateOutputIntervalSpinup" "output_interval_flux_spinup"
+validateUserConfigValues "$flag_transientSim_CO2const" "$validateFlags" "flag_transientSim_CO2const"
 validateUserConfigValues "$flag_oneYearForcing" "$validateFlags" "flag_oneYearForcing"
 validateUserConfigValues "$flag_read_dC13" "$validateFlags" "flag_read_dC13"
 validateUserConfigValues "$flag_read_DC14" "$validateFlags" "flag_read_DC14"
@@ -819,8 +832,8 @@ if [ $compareSimCRUNCEPvsGFDB == "T" ]; then
   siteSelection="cue"
   paramSensitivitySim="F"
   specialFluxnetOutput="F"
-  output_interval_pool="daily"
-  output_interval_flux="daily"
+  # output_interval_pool="daily"
+  # output_interval_flux="daily"
   if [ $forcingMode == "static" ]
    then
     # output starts right after the spinup has finished (output is used for simulation vs GFDB comparision)
@@ -1433,6 +1446,12 @@ if [ $flag_sb_jsm_OM_sorption == T ]
   else
     changeNamelistValue flag_sb_jsm_OM_sorption ".FALSE."
 fi
+if [ $flag_transientSim_CO2const == T ]
+  then
+    changeNamelistValue flag_transient_sim_co2_const ".TRUE."
+  else
+    changeNamelistValue flag_transient_sim_co2_const ".FALSE."
+fi
 if [ $flag_oneYearForcing == T ]
   then
     changeNamelistValue flag_climate_forcing_one_year ".TRUE."
@@ -1448,6 +1467,8 @@ fi
 changeNamelistValue simulation_length_number "$simulation_length_number"
 changeNamelistValue output_interval_pool "$output_interval_pool"
 changeNamelistValue output_interval_flux "$output_interval_flux"
+changeNamelistValue output_interval_pool_spinup "$output_interval_pool_spinup"
+changeNamelistValue output_interval_flux_spinup "$output_interval_flux_spinup"
 changeNamelistValue output_start_first_day_year "$output_start_first_day_year"
 changeNamelistValue output_end_last_day_year "$output_end_last_day_year"
 changeNamelistValue soil_awc_prescribe "$soil_awc_prescribe"

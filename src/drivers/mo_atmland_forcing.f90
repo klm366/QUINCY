@@ -43,6 +43,7 @@ CONTAINS
                               nc                 , &  ! in
                               iblk               , &  ! in
                               nsoil_sb           , &  ! in
+                              timestep           , &  ! in
                               time               , &  ! in
                                   t_air              , &  ! out
                                   q_air              , &  ! out
@@ -112,7 +113,8 @@ CONTAINS
     ! 0.1 InOut
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile                           !< one tile with data structure for one lct
     INTEGER                   , INTENT(in)    :: ics, ice, nc, iblk, nsoil_sb   !< info on block, chunk and soil layer number
-    REAL(wp)                  , INTENT(in)    :: time                           !< current time (not timestep !)
+    INTEGER                   , INTENT(in)    :: timestep                       !< timestep; first timestep of static simulation and simulation after transient spinup is 1
+    REAL(wp)                  , INTENT(in)    :: time                           !< current time in days (not timestep !)
     REAL(wp), OPTIONAL        , INTENT(out)   :: &                 !! these are all variables from a2l memory; with assumed shape VAR(1:nc)
                                       t_air(:)              , &    !< ..
                                       q_air(:)              , &    !< ..
@@ -389,21 +391,39 @@ CONTAINS
       swvis_srf_down_r        = frac_vis_swtot_srf * swvis_srf_down_r 
       swpar_srf_down(:)       = frac_par_swvis_srf * swvis_srf_down_r
       swpar_fdiffuse(:)       = calc_sw_fdiffuse(swnir_srf_down(:) + swvis_srf_down_r, sw_toa_down(:), cos_zenith_angle(:)) ! elemental function: calc_sw_fdiffuse()
-
-      co2_mixing_ratio(:)     = co2_mixing_ratio_r
-      IF (forcing_options%flag_read_dC13) THEN
+      
+      !! CO2
+      ! save the values of the first timestep 
+      IF (timestep == 1) THEN
+        forcing_options%co2_mixing_ratio_1st_timestep = co2_mixing_ratio_r
+        forcing_options%co2_dC13_1st_timestep         = co2_dC13_r
+        forcing_options%co2_DC14_1st_timestep         = co2_DC14_r
+      ENDIF
+      ! if CO2 is constant during simulation: overwrite the forcing values with the value read at the first timestep
+      IF (forcing_options%flag_transient_sim_co2_const .AND. model%config%l_transient_spinup == .FALSE.) THEN
+        co2_mixing_ratio_r  = forcing_options%co2_mixing_ratio_1st_timestep    
+        co2_dC13_r          = forcing_options%co2_dC13_1st_timestep
+        co2_DC14_r          = forcing_options%co2_DC14_1st_timestep
+      ENDIF
+      ! pass CO2 value, either the one from file or the one from 1st timestep
+      co2_mixing_ratio(:)     = co2_mixing_ratio_r      
+      ! calc dC13 and DC14, using either a) the CO2 from file or the CO2 from 1st timestep, or b) the default dC13 & DC14 values
+      IF (forcing_options%flag_read_dC13 .OR. &
+          (forcing_options%flag_transient_sim_co2_const .AND. model%config%l_transient_spinup == .FALSE.)) THEN
         hlp1(:)               = calc_mixing_ratio_C13C12(co2_dC13_r)
       ELSE
         hlp1(:)               = calc_mixing_ratio_C13C12(def_co2_deltaC13)
       END IF
       co2_mixing_ratio_C13(:) = co2_mixing_ratio(:) / (1._wp + 1._wp/hlp1(:))
-      IF (forcing_options%flag_read_DC14) THEN
+      IF (forcing_options%flag_read_DC14 .OR. &
+          (forcing_options%flag_transient_sim_co2_const .AND. model%config%l_transient_spinup == .FALSE.)) THEN
         hlp1(:)               = calc_mixing_ratio_C14C(co2_dC13_r, co2_DC14_r)
       ELSE
         hlp1(:)               = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14)
       END IF
       co2_mixing_ratio_C14(:) = hlp1(:) * co2_mixing_ratio(:) 
 
+      !! deposition
       SELECT CASE (TRIM(forcing_options%n_deposition_scheme))
         CASE ("none")
           nhx_deposition(:)   = 0.0_wp
@@ -426,7 +446,8 @@ CONTAINS
         CASE ("dynamic")
           p_deposition(:)     = p_deposition_r / molar_mass_P * 1000.0_wp / one_day      ! mg/m2/day -> mumol/m2/sec
       ENDSELECT
-      ! For lakes:    
+
+      !! For lakes
       ! currently no values read from file or calculated, just zet to zero
       ! albedo_lwtr(:)     =         albedo_lwtr(:)    
       ! drag_wtr(:)        =         drag_wtr(:)       

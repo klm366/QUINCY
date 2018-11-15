@@ -33,46 +33,13 @@ MODULE mo_shared_output
   !-----------------------------------------------------------------------------------------------------
   !> Define local variables
   !! 
-  !! output interval for pools and fluxes
+  !! 
   !-----------------------------------------------------------------------------------------------------
-  REAL(wp), SAVE, PRIVATE   :: output_interval_pool   ! interval as proportion of one day or number of days ('dtime/one_day' or is a mulitple of it)
-  REAL(wp), SAVE, PRIVATE   :: output_interval_flux   ! interval as proportion of one day or number of days ('dtime/one_day' or is a mulitple of it)
   INTEGER, PRIVATE          :: ipoi = 1               ! the point in ics:ice of which data will be written to file; per default = 1
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_shared_output'
 
 CONTAINS
-
-  !-----------------------------------------------------------------------------------------------------
-  !> the input interval string is transformed into a number, which is used for timely model output
-  !! 
-  !! valid for pool output, but applied for pools and flux output
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION calc_output_time_interval_pool(output_interval_pool) RESULT(interval_number)
-
-    USE mo_base_constants,          ONLY: one_day, dtime
-
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CHARACTER(len=*)  ,INTENT(in) :: output_interval_pool
-    REAL(wp)                      :: interval_number        !< number output
-
-    !> 1.0 create interval_number depending on pool/flux
-    !!
-    SELECT CASE(output_interval_pool)
-      CASE('timestep')
-        interval_number = dtime/one_day  ! length of one time step as advanced in 'time' 
-      CASE('daily')
-        interval_number = 1.0_wp
-      CASE('weekly')
-        interval_number = 7.0_wp
-      CASE('monthly')
-        interval_number = 30.0_wp
-      CASE('yearly')
-        interval_number = 365.0_wp
-    END SELECT
-  END FUNCTION calc_output_time_interval_pool
-
 
   !-----------------------------------------------------------------------------------------------------!
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -88,7 +55,7 @@ CONTAINS
   !! 
   !! lun: start at 100 with a current max of 129 as flux outputs starts with lun 130
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE open_pool_output_files(tile, iblk, ics, ice, nc, nsoil_sb)
+  SUBROUTINE open_pool_output_files(tile, iblk, ics, ice, nc, nsoil_sb, output_interval_pool, spinup_id)
 
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
@@ -109,6 +76,8 @@ CONTAINS
                                                    ice, &
                                                    nc, &
                                                    nsoil_sb
+    CHARACTER(len=*), INTENT(in)                :: output_interval_pool
+    CHARACTER(len=*), INTENT(in)                :: spinup_id
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER       :: model
@@ -134,65 +103,59 @@ CONTAINS
     !> 1.0 init
     !! 
     max_lun_pool          = 129
-    output_interval_pool  = 0.0_wp
 
-    !> 1.1 transform interval string to interval number (e.g. week -> 7)
-    !! 
-    output_interval_pool = calc_output_time_interval_pool(TRIM(model%config%output_interval_pool))
-
-
-    !> 2.1 define open() statements for file output
+    !> 2.0 define open() statements for file output
     !! 
     !! 
     lun = 100 
     SELECT CASE(TRIM(model%config%slm_model_name))
       CASE('land','plant')
          ! vegpoolC
-         fname = 'vegpoolC'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
+         fname = 'vegpoolC'//'_'//TRIM(spinup_id)//TRIM(output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
          ! vegpooldC13DC14
-         fname = 'vegpooldC13DC14'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
+         fname = 'vegpooldC13DC14'//'_'//TRIM(spinup_id)//TRIM(output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
          ! vegpoolN
-         fname = 'vegpoolN'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
+         fname = 'vegpoolN'//'_'//TRIM(spinup_id)//TRIM(output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
          ! vegpoolP
-         fname = 'vegpoolP'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
+         fname = 'vegpoolP'//'_'//TRIM(spinup_id)//TRIM(output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
          ! vegpooldN15
-         fname = 'vegpooldN15'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
+         fname = 'vegpooldN15'//'_'//TRIM(spinup_id)//TRIM(output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
          ! soilpoolPhysics
-         fname = 'soilpoolPhysics'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
+         fname = 'soilpoolPhysics'//'_'//TRIM(spinup_id)//TRIM(output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
          ! soilpoolPhysics_lay
-         fname = 'soilpoolPhysics_lay'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
+         fname = 'soilpoolPhysics_lay'//'_'//TRIM(spinup_id)//TRIM(output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
          ! soilpoolOrg
-         fname = 'soilpoolOrg'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
+         fname = 'soilpoolOrg'//'_'//TRIM(spinup_id)//TRIM(output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
          ! soilpoolInOrg
-         fname = 'soilpoolInOrg'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
+         fname = 'soilpoolInOrg'//'_'//TRIM(spinup_id)//TRIM(output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
          ! ecopoolCNP
-         fname = 'ecopoolCNP'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
+         fname = 'ecopoolCNP'//'_'//TRIM(spinup_id)//TRIM(output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
          ! soilpooldC13DC14dN15
-         fname = 'soilpooldC13DC14dN15'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
+         fname = 'soilpooldC13DC14dN15'//'_'//TRIM(spinup_id)//TRIM(output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
          ! veg_diagnostics
-         fname = 'veg_diagnostics'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
+         fname = 'veg_diagnostics'//'_'//TRIM(spinup_id)//TRIM(output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
     END SELECT
@@ -203,7 +166,7 @@ CONTAINS
     SELECT CASE(TRIM(model%config%slm_model_name))
       CASE('land','plant','canopy')
         ! veg_canopy
-        fname = 'veg_canopy'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
+        fname = 'veg_canopy'//'_'//TRIM(spinup_id)//TRIM(output_interval_pool)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
     END SELECT
@@ -216,46 +179,46 @@ CONTAINS
         SELECT CASE(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
           CASE('simple_1d','jsm')
             ! soilpoolCOrg_lay
-            fname = 'soilpoolCOrg_lay'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
+            fname = 'soilpoolCOrg_lay'//'_'//TRIM(spinup_id)//TRIM(output_interval_pool)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
             ! soilpoolNOrg_lay
-            fname = 'soilpoolNOrg_lay'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
+            fname = 'soilpoolNOrg_lay'//'_'//TRIM(spinup_id)//TRIM(output_interval_pool)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
             ! soilpoolPOrg_lay
-            fname = 'soilpoolPOrg_lay'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
+            fname = 'soilpoolPOrg_lay'//'_'//TRIM(spinup_id)//TRIM(output_interval_pool)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
             ! soilpoolInNOrg_lay
-            fname = 'soilpoolInNOrg_lay'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
+            fname = 'soilpoolInNOrg_lay'//'_'//TRIM(spinup_id)//TRIM(output_interval_pool)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
             ! soilpoolInPOrg_lay
-            fname = 'soilpoolInPOrg_lay'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
+            fname = 'soilpoolInPOrg_lay'//'_'//TRIM(spinup_id)//TRIM(output_interval_pool)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
             ! soilpooldC13org_lay
-            fname = 'soilpooldC13org_lay'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
+            fname = 'soilpooldC13org_lay'//'_'//TRIM(spinup_id)//TRIM(output_interval_pool)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
             ! soilpoolDC14org_lay
-            fname = 'soilpoolDC14org_lay'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
+            fname = 'soilpoolDC14org_lay'//'_'//TRIM(spinup_id)//TRIM(output_interval_pool)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
             ! soilpooldN15org_lay
-            fname = 'soilpooldN15org_lay'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
+            fname = 'soilpooldN15org_lay'//'_'//TRIM(spinup_id)//TRIM(output_interval_pool)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
             ! soil_diagnostics_lay
-            fname = 'soil_diagnostics_lay'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
+            fname = 'soil_diagnostics_lay'//'_'//TRIM(spinup_id)//TRIM(output_interval_pool)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
         END SELECT
     END SELECT
 
 
-    !> 2.2  test if lun for pools is too big
+    !> 2.1  test if lun for pools is too big
     !! 
     IF (lun > max_lun_pool) THEN
        WRITE(message_text,'(a)') 'lun of pools is too big, reaching values that are reserved for lun of flux output'
@@ -542,7 +505,7 @@ CONTAINS
   !! 
   !! write-interval accordingly to namelist
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE write_output_pool(tile, options, time_d, time_y)
+  SUBROUTINE write_output_pool(tile, options, time_d)
 
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
@@ -572,7 +535,6 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(in) :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in) :: options      !< model options
     REAL(wp),                   INTENT(in) :: time_d       !< time in days
-    INTEGER,                    INTENT(in) :: time_y       !< time in years; the 1st year of a simulation == year 1 (not zero)
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER      :: model
@@ -773,35 +735,12 @@ CONTAINS
     ! set to FALSE as default
     l_land_plant_canopy_out = .FALSE.
     l_soil_output           = .FALSE.
-    ! test if TRUE
+    ! set TRUE according to the model that is used
     SELECT CASE(TRIM(model%config%slm_model_name))
       CASE('land','plant','canopy')
-        ! special fluxnet simulations; run only if 'special case: fluxnet output' is not active, or active & after spinup
-        IF (fluxnet_output_status < 3) THEN 
-          ! after spinup, when doing transient simulations
-          ! output start & end
-          IF(.NOT. model%config%l_transient_spinup .AND. &
-             & time_y >= model%config%output_start_first_day_year .AND. time_y <= model%config%output_end_last_day_year) THEN
-            ! matching output_interval
-            IF(MODULO(time_d, output_interval_pool) < eps4 .OR. &
-               & ABS(output_interval_pool - MODULO(time_d, output_interval_pool)) < eps4) THEN
-              ! set TRUE
-              l_land_plant_canopy_out = .TRUE.
-            END IF
-          END IF
-        END IF
+        l_land_plant_canopy_out = .TRUE.
       CASE('soil')
-        ! after spinup, when doing transient simulations
-        ! output start & end
-        IF(.NOT. model%config%l_transient_spinup .AND. &
-           & time_y >= model%config%output_start_first_day_year .AND. time_y <= model%config%output_end_last_day_year) THEN
-          ! matching output_interval
-          IF(MODULO(time_d, output_interval_pool) < eps4 .OR. &
-             & ABS(output_interval_pool - MODULO(time_d, output_interval_pool)) < eps4) THEN
-            ! set TRUE
-            l_soil_output = .TRUE.
-          END IF
-        END IF
+        l_soil_output           = .TRUE.
     END SELECT
 
 
@@ -1228,6 +1167,7 @@ CONTAINS
   END SUBROUTINE write_output_pool
 
 
+
   !-----------------------------------------------------------------------------------------------------!
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !! section II Fluxes                                                                                 !!
@@ -1242,7 +1182,7 @@ CONTAINS
   !! 
   !! lun: start at 100 + 30
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE open_flux_output_files(tile, iblk, ics, ice, nc, nsoil_sb)
+  SUBROUTINE open_flux_output_files(tile, iblk, ics, ice, nc, nsoil_sb, output_interval_flux, spinup_id)
 
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
@@ -1262,7 +1202,9 @@ CONTAINS
                                                    ics, &
                                                    ice, &
                                                    nc, &
-                                                   nsoil_sb 
+                                                   nsoil_sb
+    CHARACTER(len=*), INTENT(in)                :: output_interval_flux 
+    CHARACTER(len=*), INTENT(in)                :: spinup_id
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER       :: model
@@ -1284,15 +1226,8 @@ CONTAINS
     dsl4jsb_Get_config(SB_)
 
 
-    !> 1.0 init
-    output_interval_flux = 0.0_wp
 
-    !> 1.1 transform interval string to interval number (e.g. week -> 7)
-    !! 
-    output_interval_flux = calc_output_time_interval_pool(TRIM(model%config%output_interval_pool))
-
-
-    !> 2.0 define open() statements for file output
+    !> 1.0 define open() statements for file output
     !! 
     !! 
     lun = 100 + 30    ! -> max of 30 files for pool output
@@ -1302,7 +1237,7 @@ CONTAINS
     SELECT CASE(TRIM(model%config%slm_model_name))
       CASE('land')  ! for "land & soil" see below
         ! mycofluxCNP
-        fname = 'mycofluxCNP'//'_'//TRIM(model%config%output_interval_flux)//'.txt'
+        fname = 'mycofluxCNP'//'_'//TRIM(spinup_id)//TRIM(spinup_id)//TRIM(output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
     END SELECT
@@ -1313,11 +1248,11 @@ CONTAINS
     SELECT CASE(TRIM(model%config%slm_model_name))
       CASE('land','plant') ! additional to CASE('land')
         ! vegfluxN
-        fname = 'vegfluxN'//'_'//TRIM(model%config%output_interval_flux)//'.txt'
+        fname = 'vegfluxN'//'_'//TRIM(spinup_id)//TRIM(output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
         ! vegfluxP
-        fname = 'vegfluxP'//'_'//TRIM(model%config%output_interval_flux)//'.txt'
+        fname = 'vegfluxP'//'_'//TRIM(spinup_id)//TRIM(output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
     END SELECT
@@ -1328,23 +1263,23 @@ CONTAINS
     SELECT CASE(TRIM(model%config%slm_model_name))
       CASE('land','plant','canopy')
         ! vegfluxC
-        fname = 'vegfluxC'//'_'//TRIM(model%config%output_interval_flux)//'.txt'
+        fname = 'vegfluxC'//'_'//TRIM(spinup_id)//TRIM(output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
         ! vegfluxdC13DC14
-        fname = 'vegfluxdC13DC14'//'_'//TRIM(model%config%output_interval_flux)//'.txt'
+        fname = 'vegfluxdC13DC14'//'_'//TRIM(spinup_id)//TRIM(output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1        
         ! vegfluxH2O
-        fname = 'vegfluxH2O'//'_'//TRIM(model%config%output_interval_flux)//'.txt'
+        fname = 'vegfluxH2O'//'_'//TRIM(spinup_id)//TRIM(output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
         ! vegfluxEnergy
-        fname = 'vegfluxEnergy'//'_'//TRIM(model%config%output_interval_flux)//'.txt'
+        fname = 'vegfluxEnergy'//'_'//TRIM(spinup_id)//TRIM(output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
         ! atm_forcing
-        fname = 'atm_forcing'//'_'//TRIM(model%config%output_interval_pool)//'.txt'
+        fname = 'atm_forcing'//'_'//TRIM(spinup_id)//TRIM(output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
     END SELECT
@@ -1357,45 +1292,45 @@ CONTAINS
       CASE('land','soil')
         !! all soil models (simple_0d and simple_1d and jsm)
         ! soilfluxCdC13DC14
-        fname = 'soilfluxCdC13DC14'//'_'//TRIM(model%config%output_interval_flux)//'.txt'
+        fname = 'soilfluxCdC13DC14'//'_'//TRIM(spinup_id)//TRIM(output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
         ! soilfluxN
-        fname = 'soilfluxN'//'_'//TRIM(model%config%output_interval_flux)//'.txt'
+        fname = 'soilfluxN'//'_'//TRIM(spinup_id)//TRIM(output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
         ! soilfluxP
-        fname = 'soilfluxP'//'_'//TRIM(model%config%output_interval_flux)//'.txt'
+        fname = 'soilfluxP'//'_'//TRIM(spinup_id)//TRIM(output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
         ! soilfluxdN
-        fname = 'soilfluxdN'//'_'//TRIM(model%config%output_interval_flux)//'.txt'
+        fname = 'soilfluxdN'//'_'//TRIM(spinup_id)//TRIM(output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
         ! sb_massBalance
-        fname = 'sb_massBalance'//'_'//TRIM(model%config%output_interval_flux)//'.txt'
+        fname = 'sb_massBalance'//'_'//TRIM(spinup_id)//TRIM(output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
         !! simple_1d & jsm layer-data
         SELECT CASE(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
           CASE('simple_1d','jsm')
             ! soilfluxC_lay
-            fname = 'soilfluxC_lay'//'_'//TRIM(model%config%output_interval_flux)//'.txt'
+            fname = 'soilfluxC_lay'//'_'//TRIM(spinup_id)//TRIM(output_interval_flux)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
             ! soilfluxN_lay
-            fname = 'soilfluxN_lay'//'_'//TRIM(model%config%output_interval_flux)//'.txt'
+            fname = 'soilfluxN_lay'//'_'//TRIM(spinup_id)//TRIM(output_interval_flux)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
             ! soilfluxP_lay
-            fname = 'soilfluxP_lay'//'_'//TRIM(model%config%output_interval_flux)//'.txt'
+            fname = 'soilfluxP_lay'//'_'//TRIM(spinup_id)//TRIM(output_interval_flux)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
         END SELECT
     END SELECT
 
 
-    !> 3.0 write column headers into output files
+    !> 2.0 write column headers into output files
     !! 
     !! 
     CALL init_output_writing_flux(nsoil_sb, dsl4jsb_Config(SB_)%sb_model_scheme, TRIM(model%config%slm_model_name))
@@ -1614,7 +1549,7 @@ CONTAINS
   !! 
   !! write-interval accordingly to namelist
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE write_output_flux(tile, options, time_d, time_y)
+  SUBROUTINE write_output_flux(tile, options, time_d, output_interval_flux, l_flux_output_interval)
 
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
@@ -1648,14 +1583,16 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile           !< one tile with data structure for one lct
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options        !< model options
-    REAL(wp),                   INTENT(in)    :: time_d         !< time in days
-    INTEGER,                    INTENT(in)    :: time_y         !< time in years; the 1st year of a simulation == year 1 (not zero)
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile                     !< one tile with data structure for one lct
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options                  !< model options
+    REAL(wp),                   INTENT(in)    :: time_d, &                !< time in days
+                                                 output_interval_flux
+    LOGICAL,                    INTENT(in)    :: l_flux_output_interval
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib             !< land-cover-type library - parameter across pft's
+    LOGICAL :: l_flux_calc_acc_output                           !< this is set to TRUE by default (below) because this routine is called only if it is TRUE
     ! local accumulation variables
       ! Note: the *_acc variables are initialized only the first time the subroutine is called. 
       ! On subsequent calls the old value of *_acc is retained.
@@ -1820,8 +1757,6 @@ CONTAINS
     REAL(wp)                              :: hlp1
     REAL(wp)                              :: dC13gpp, dC13rg, dC13rm, dC13wgr, dC13litterfall, dC13het_resp, dC13leaching
     REAL(wp)                              :: dC13atm
-    LOGICAL                               :: l_flux_calc_acc_output, &  !< do variable accumulation and enable output
-                                             l_flux_output_interval     !< do output at this timestep and set accumulation variables to zero
     REAL(wp), SAVE                        :: dtime_one = 1.0_wp         !< just 1.0, but might get modified below
     INTEGER                               :: iblk, ics, ice, nc, nsoil_sb
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':write_output_flux'
@@ -2130,37 +2065,11 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
 
 
-    !< 1.0 test if anything would be calculated or/and written out at this timestep
+    !< 1.0 modify 'dtime_one' factor accordingly to output interval
     !! 
-    ! set to FALSE as default
-    l_flux_calc_acc_output = .FALSE.
-    l_flux_output_interval = .FALSE.
-    !! test if TRUE
-    ! after spinup, when doing transient simulations
-    ! output start & end
-    IF(.NOT. model%config%l_transient_spinup .AND. &
-       & time_y >= model%config%output_start_first_day_year .AND. time_y <= model%config%output_end_last_day_year) THEN
-      ! set TRUE
-      l_flux_calc_acc_output = .TRUE.
-    END IF
-    ! special fluxnet output
-    SELECT CASE(TRIM(model%config%slm_model_name))
-      CASE('land','plant','canopy')
-        IF (l_flux_calc_acc_output .AND. fluxnet_output_status < 3) THEN  ! if l_flux_calc_acc_output==TRUE and fluxnet_output_status < 3
-          l_flux_calc_acc_output = .TRUE.
-        ELSE
-          l_flux_calc_acc_output = .FALSE.
-        END IF
-    END SELECT
-    ! matching output_interval
-    IF(MODULO(time_d, output_interval_flux) < eps4 .OR. &
-       & ABS(output_interval_flux - MODULO(time_d, output_interval_flux)) < eps4) THEN
-      ! set TRUE
-      l_flux_output_interval = .TRUE.
-    END IF
-    ! accumulate fluxes across the timesteps of one interval:
-    ! for timestep-interval leave it to seconds (which is the basic timestep for fluxes), i.e. multiply by 1 \n
-    ! for any interval larger timestep multiply by dtime_one
+    !! accumulate fluxes across the timesteps of one interval: \n
+    !!  for timestep-interval leave it to seconds (which is the basic timestep for fluxes), i.e. multiply by 1 \n
+    !!  for any interval larger timestep multiply by dtime_one
     IF(output_interval_flux < 1.0_wp) THEN
       dtime_one = 1.0_wp                 ! interval = one timestep
     ELSE
@@ -2173,14 +2082,13 @@ CONTAINS
     !! land/plant/canopy
     !! land/soil  (simple_0d/simple_1d/jsm  &  simple_1d/jsm)
     !! 
+    ! set accumulation to TRUE always, because this routine is called only if it is TRUE
+    l_flux_calc_acc_output = .TRUE.
     ! set starting-lun for write
     lun = 100 + 30
     SELECT CASE(TRIM(model%config%slm_model_name))
       CASE('land','plant','canopy')
 
-        !! run this routine ONLY if 'special case: fluxnet output' is not active, or active but not finished
-        !! same for write_output_pool
-        IF (fluxnet_output_status < 3) THEN   ! this switch includes the rest of this routine
            !! accumulate fluxes across the timesteps of one interval
            !! 
            IF(l_flux_calc_acc_output) THEN
@@ -2459,7 +2367,6 @@ CONTAINS
                co2_mixing_ratio_C14_acc   = 0.0_wp
              END IF ! l_flux_output_interval
            END IF   ! l_flux_calc_acc_output
-        END IF      ! on/off switch specific to 'special case: fluxnet output'
     END SELECT      ! land/plant/canopy
 
 
