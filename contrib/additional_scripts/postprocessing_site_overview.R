@@ -14,7 +14,8 @@ simOutFile <- "vegpoolC"
 
 ###################################################################################################
 
-print(" Create one .pdf file with figs from one output file for all sites. default is vegpoolC.  ")
+print("                                                                                          ")
+print(" Create one .pdf file with figs from one output file for all sites.                       ")
 print("   The default is vegpoolC for SLM land/plant/canopy, and soilfluxCdC13DC14 for SLM soil. ")
 
 ## detect sites within the folder this script is located
@@ -85,3 +86,5 @@ for (s in 1:nsite) {
 
 
 garbage <- dev.off()
+
+print(" Done.                                                                                    ")

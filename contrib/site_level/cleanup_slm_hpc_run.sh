@@ -108,6 +108,7 @@ fi
 cp "$simFold"default_files/postprocessing_site_overview.R  "$simFold"
 cd "$simFold"
 Rscript --vanilla ./postprocessing_site_overview.R
+sleep 2 && sync
 
 
 ## create one .pdf file from the postprocessing .pdf of all sites ##
@@ -119,7 +120,7 @@ count=100
 for site in $(ls -d ./*/)
  do
   siteBase=$(basename $site)  # just: HAR_01 SAS_04 TAP_67
-  if [ $siteBase != "x_binary" ] && [ $siteBase != "pdftmp" ] && [ $siteBase != "parameter_list" ]
+  if [ $siteBase != "x_binary" ] && [ $siteBase != "pdftmp" ] && [ $siteBase != "parameter_list" ] && [ $siteBase != "default_files" ] && [ $siteBase != "error" ] && [ $siteBase != "out" ]
   then
     ((count++))
     cp ./"$siteBase"/postprocessing/*plots.pdf  ./pdftmp/"$count"b.pdf
