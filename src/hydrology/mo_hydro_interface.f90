@@ -41,7 +41,7 @@ MODULE mo_hydro_interface
   dsl4jsb_Use_processes SEB_, SSE_, TURB_, PHENO_, A2L_, HYDRO_
 
   ! Use of process configurations
-  dsl4jsb_Use_config(SEB_)
+  !dsl4jsb_Use_config(SEB_)
   dsl4jsb_Use_config(SSE_)
   dsl4jsb_Use_config(HYDRO_)
 
@@ -983,7 +983,6 @@ CONTAINS
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
-    nc    = options%nc
 
     IF (.NOT. tile%Is_process_calculated(HYDRO_)) RETURN
 
@@ -1446,7 +1445,6 @@ CONTAINS
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (.NOT. tile%Is_process_calculated(HYDRO_) .OR. .NOT. tile%is_vegetation) RETURN
 
@@ -1741,8 +1739,6 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    model => Get_model(tile%owner_model_id)
-
     dsl4jsb_Get_memory(HYDRO_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
@@ -1802,12 +1798,10 @@ CONTAINS
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (.NOT. tile%Is_process_calculated(HYDRO_) .OR. .NOT. tile%is_vegetation) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
     model => Get_model(tile%owner_model_id)
 
     use_tmx = model%config%use_tmx
@@ -1935,7 +1929,7 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc, ic
     REAL(wp) :: steplen, alpha
 
-    TYPE(t_jsb_model), POINTER :: model
+    !TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_evaporation'
 
@@ -1950,7 +1944,7 @@ CONTAINS
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    model => Get_model(tile%owner_model_id)
+    !model => Get_model(tile%owner_model_id)
 
     ! Get reference to variables for current block
     !
@@ -2284,7 +2278,6 @@ CONTAINS
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-    nc      = options%nc
     dtime   = options%dtime
     steplen = options%steplen
     alpha   = options%alpha
@@ -2581,7 +2574,6 @@ CONTAINS
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
-    nc    = options%nc
     dtime = options%dtime
     is_experiment_start = is_time_experiment_start(options%current_datetime)
 

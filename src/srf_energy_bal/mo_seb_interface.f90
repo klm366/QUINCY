@@ -34,7 +34,7 @@ MODULE mo_seb_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   dsl4jsb_Use_processes SEB_, HYDRO_, SSE_
-  dsl4jsb_Use_config(SEB_)
+  !dsl4jsb_Use_config(SEB_)
   dsl4jsb_Use_config(SSE_)
 
   dsl4jsb_Use_memory(SEB_)
@@ -200,8 +200,6 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_energy'
 
     IF (.NOT. tile%Is_process_calculated(SEB_)) RETURN
-
-    model => Get_model(tile%owner_model_id)
 
     IF (tile%is_lake) THEN
       CALL update_surface_energy_lake(tile, options)
@@ -510,8 +508,6 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    model => Get_model(tile%owner_model_id)
-
     dsl4jsb_Get_memory(SEB_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
@@ -541,13 +537,9 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    TYPE(t_jsb_model), POINTER :: model
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_fluxes'
 
     IF (.NOT. tile%Is_process_calculated(SEB_)) RETURN
-
-    model => Get_model(tile%owner_model_id)
 
     IF (tile%contains_lake) THEN
       CALL update_surface_fluxes_lake(tile, options)

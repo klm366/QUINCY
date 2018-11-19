@@ -192,7 +192,7 @@ CONTAINS
       cpd_or_cvd = cpd
     END IF
 
-    dsl4jsb_Get_config(SEB_)
+    !dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_config(SSE_)
 
     ! Get reference to variables for current block
@@ -761,14 +761,13 @@ CONTAINS
     REAL(wp) :: eps
     LOGICAL  :: use_tmx
 
-    TYPE(t_jsb_model), POINTER :: model
+    !TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_asselin_land'
 
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -852,14 +851,13 @@ CONTAINS
     REAL(wp) :: steplen, alpha
     LOGICAL  :: use_tmx
 
-    TYPE(t_jsb_model), POINTER :: model
+    !TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_fluxes_land'
 
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-    nc      = options%nc
     steplen = options%steplen
     alpha   = options%alpha
 

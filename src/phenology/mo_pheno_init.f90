@@ -208,6 +208,10 @@ CONTAINS
     dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max) = pheno_init_vars%fract_fpc_max
     !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max)) ASYNC(1)
 
+    ! avoid compiler warnings about pointers not being dereferenced
+    IF (ASSOCIATED(ptr_2D)) CONTINUE
+    NULLIFY(ptr_2D)
+
     IF (tile%lcts(1)%lib_id /= 0)  THEN ! only if the present tile is a pft
       !JN 10.01.18: for now: set the maxLai for non forest types to the one from the Lctlib
       !             later one might think about allometric relation ships in other multi annual plants, too?

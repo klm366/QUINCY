@@ -822,7 +822,6 @@ CONTAINS
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
 

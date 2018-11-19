@@ -312,8 +312,6 @@ CONTAINS
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
-    nc    = options%nc
-    dtime = options%dtime
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     model => Get_model(tile%owner_model_id)
@@ -1397,6 +1395,8 @@ END SUBROUTINE recalc_carbon_per_tile_vars
       & cflux_c_greenwood_2_litter(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(root_exudates)) CALL get_per_tile(root_exudates_ta(:), &
       & root_exudates(:), veg_fract_correction(:), fract_fpc_max(:))
+    IF (PRESENT(cflux_herb_2_atm)) CALL get_per_tile(cflux_herb_2_atm_ta(:), &
+      & cflux_herb_2_atm(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(cflux_c_green_2_herb)) CALL get_per_tile(cflux_c_green_2_herb_ta(:), &
       & cflux_c_green_2_herb(:), veg_fract_correction(:), fract_fpc_max(:))
 

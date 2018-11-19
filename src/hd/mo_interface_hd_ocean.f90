@@ -173,7 +173,7 @@ CONTAINS
     REAL(wp), ALLOCATABLE :: buffer(:,:)
     INTEGER               :: collection_size, nbr_pointsets, nbr_subdomains
     INTEGER               :: info, ierror !< return values form cpl_put/get calls
-    INTEGER               :: iblk, n, nn, nlen
+    INTEGER               :: iblk, n, nn !, nlen
 
     n =options%nc ! only to avoid compiler warnings
 

@@ -98,6 +98,13 @@ CONTAINS
         PRINT*, get_year_day(final_date)
       END IF
 
+      ! just to avoid compiler warnings about variable set but never referenced
+      IF (.FALSE.) THEN
+        PRINT*, start_date%date%year
+        PRINT*, final_date%date%year
+        PRINT*, current_date%date%year
+      END IF
+
       ! Check if Asselin time filter is used and print message
       eps = get_asselin_coef()
       IF (eps > 0._wp) THEN

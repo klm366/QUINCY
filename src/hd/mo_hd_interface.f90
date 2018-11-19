@@ -369,6 +369,8 @@ CONTAINS
 
     IF (options%nc > 0) CONTINUE ! only to avoid compiler warnings
 
+    IF (options%nc > 0) CONTINUE ! only to avoid compiler warnings
+
     model => Get_model(tile%owner_model_id)
 
     grid => Get_grid(model%grid_id)

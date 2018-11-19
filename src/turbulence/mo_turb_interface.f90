@@ -37,7 +37,7 @@ MODULE mo_turb_interface
   dsl4jsb_Use_processes TURB_, SEB_, HYDRO_, PHENO_, ASSIMI_, SSE_, A2L_
 
   ! Use process configurations
-  dsl4jsb_Use_config(TURB_)
+  !dsl4jsb_Use_config(TURB_)
   dsl4jsb_Use_config(HYDRO_)
   dsl4jsb_Use_config(SEB_)
 
@@ -405,7 +405,6 @@ CONTAINS
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-    nc      = options%nc
 
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(TURB_)) RETURN
@@ -613,7 +612,6 @@ CONTAINS
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -719,7 +717,6 @@ CONTAINS
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (.NOT. tile%Is_process_calculated(TURB_)) RETURN
 
