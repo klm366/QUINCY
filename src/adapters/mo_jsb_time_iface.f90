@@ -14,7 +14,6 @@ MODULE mo_jsb_time_iface
 
   USE mo_kind,               ONLY: wp
   USE mo_exception,          ONLY: finish, message, message_text
-  USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel, mpi_comm
 
 #ifdef __ICON__
   USE mtime,                     ONLY: t_datetime => datetime, newDatetime, deallocateDatetime,      &
@@ -24,7 +23,7 @@ MODULE mo_jsb_time_iface
     &                                  getNoOfDaysInMonthDateTime, getNoOfDaysInYearDateTime,        &
     &                                  getTotalMilliSecondsTimeDelta, no_of_sec_in_a_day,            &
     &                                  getNoOfSecondsElapsedInDayDateTime, getTotalSecondsTimeDelta, &
-    &                                  divideDatetimeDifferenceInSeconds, isCurrentEventActive
+    &                                  divideDatetimeDifferenceInSeconds !, isCurrentEventActive
   USE mo_time_config,            ONLY: time_config !configure_time
   USE mo_time_nml,               ONLY: read_time_namelist
   USE mo_dynamics_config,        ONLY: iequations
@@ -34,7 +33,6 @@ MODULE mo_jsb_time_iface
   USE mo_bcs_time_interpolation, ONLY: t_time_interpolation_weights,              &
     &                                  calculate_time_interpolation_weights
   USE mo_echam_phy_config,       ONLY: echam_phy_tc, dt_zero
-  USE mo_master_config,          ONLY: isRestart
   USE mo_run_config,             ONLY: l_timer_host => ltimer
 #else
   USE mo_time_conversion, ONLY: t_datetime => time_days, &
@@ -47,6 +45,7 @@ MODULE mo_jsb_time_iface
   USE mo_control,         ONLY: l_timer_host => ltimer
 
 #ifdef STANDALONE
+  USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel, mpi_comm
   USE mo_time_event,      ONLY: io_time_event, TIME_INC_DAYS, TIME_INC_MONTHS, TRIG_FIRST, TRIG_LAST
   USE mo_time_control,    ONLY: lresume, dt_start, dt_resume, dt_stop, delta_time, no_cycles, &
                                 no_days, no_steps, putdata, putrerun, trigfiles, p_bcast_event
@@ -83,6 +82,9 @@ CONTAINS
     CHARACTER(len=*), OPTIONAL, INTENT(IN) :: model_shortname
 
     ! CALL configure_time
+    ! avoid compiler warnings about dummy arguments not being used
+    IF (PRESENT(model_shortname)) CONTINUE
+
     RETURN
 
   END SUBROUTINE configure_time_and_events

@@ -19,8 +19,7 @@ MODULE mo_hydro_memory_class
   USE mo_jsb_memory_class, ONLY: t_jsb_memory
   USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
   USE mo_jsb_lct_class,    ONLY: LAND_TYPE, BARE_TYPE, VEG_TYPE, LAKE_TYPE, GLACIER_TYPE
-  USE mo_jsb_process_class, ONLY: ASSIMI_
-  USE mo_jsb_varlist,      ONLY: BASIC, MEDIUM, FULL
+  USE mo_jsb_varlist,      ONLY: BASIC !, MEDIUM, FULL
 
   ! Use of prcesses in this module
   dsl4jsb_Use_processes HYDRO_, SSE_
@@ -163,7 +162,7 @@ CONTAINS
 
   SUBROUTINE Init_hydro_memory(mem, prefix, suffix, lct_ids, model_id)
 
-    USE mo_jsb_varlist,       ONLY: t_jsb_varlist, jsb_add_var, VARNAME_LEN
+    USE mo_jsb_varlist,       ONLY: jsb_add_var
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
                                     TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid

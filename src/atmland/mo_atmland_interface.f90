@@ -16,9 +16,8 @@ MODULE mo_atmland_interface
   USE mo_jsb_control,        ONLY: jsbach_runs_standalone
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_lct_class,      ONLY: LAKE_TYPE
-  USE mo_jsb_memory_class,   ONLY: t_jsb_memory, t_jsb_memory_p
-  USE mo_jsb_config_class,   ONLY: t_jsb_config
-  USE mo_jsb_process_class,  ONLY: t_jsb_process
+  !USE mo_jsb_config_class,   ONLY: t_jsb_config
+  !USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
 
   dsl4jsb_Use_processes A2L_, SEB_, TURB_, HYDRO_, RAD_, CARBON_
@@ -186,6 +185,12 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_land2atm'
 
+    ! avoid compiler warnings about dummy arguments not being used
+    IF (PRESENT(alb_nir_dif_wtr)) CONTINUE
+    IF (PRESENT(alb_nir_dir_wtr)) CONTINUE
+    IF (PRESENT(alb_vis_dif_wtr)) CONTINUE
+    IF (PRESENT(alb_vis_dir_wtr)) CONTINUE
+
     IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
 
     iblk = options%iblk
@@ -233,8 +238,10 @@ CONTAINS
       IF (PRESENT(evapotrans))    evapotrans(:)       = fact_land(:) * dsl4jsb_var2D_onChunk(HYDRO_, evapotrans_lnd)
       IF (PRESENT(latent_hflx))   latent_hflx(:)      = fact_land(:) * dsl4jsb_var2D_onChunk(SEB_,   latent_hflx_lnd)
       IF (PRESENT(sensible_hflx)) sensible_hflx(:)    = fact_land(:) * dsl4jsb_var2D_onChunk(SEB_,   sensible_hflx_lnd)
-      IF (PRESENT(grnd_hflx))     grnd_hflx(:)        =                dsl4jsb_var2D_onChunk(SEB_,   forc_hflx)    ! TODO Not used in atm yet, and
-      IF (PRESENT(grnd_hcap))     grnd_hcap(:)        =                dsl4jsb_var2D_onChunk(SEB_,   heat_cap_old) ! not computed for lake
+      IF (PRESENT(grnd_hflx))     grnd_hflx(:)        =                dsl4jsb_var2D_onChunk(SEB_,   forc_hflx)    ! TODO Not used
+      IF (PRESENT(grnd_hcap))     grnd_hcap(:)        =                dsl4jsb_var2D_onChunk(SEB_,   heat_cap_old) ! in atm yet and
+                                                                                                                   ! not computed
+                                                                                                                   ! for lake
       IF (PRESENT(rough_h_srf))   rough_h_srf(:)      =                dsl4jsb_var2D_onChunk(TURB_,  rough_h)
       IF (PRESENT(rough_m_srf))   rough_m_srf(:)      =                dsl4jsb_var2D_onChunk(TURB_,  rough_m)
       IF (PRESENT(q_snocpymlt))   q_snocpymlt(:)      = fact_land(:) * dsl4jsb_var2D_onChunk(HYDRO_, q_snocpymlt)
@@ -280,8 +287,8 @@ CONTAINS
       IF (PRESENT(evapotrans))      evapotrans(:)       = dsl4jsb_var2D_onChunk(HYDRO_, evapotrans_lnd)
       IF (PRESENT(latent_hflx))     latent_hflx(:)      = dsl4jsb_var2D_onChunk(SEB_,   latent_hflx_lnd)
       IF (PRESENT(sensible_hflx))   sensible_hflx(:)    = dsl4jsb_var2D_onChunk(SEB_,   sensible_hflx_lnd)
-      IF (PRESENT(grnd_hflx))       grnd_hflx(:)        = dsl4jsb_var2D_onChunk(SEB_,   forc_hflx)    ! TODO Not used in atm yet, and
-      IF (PRESENT(grnd_hcap))       grnd_hcap(:)        = dsl4jsb_var2D_onChunk(SEB_,   heat_cap_old) ! not computed for lake
+      IF (PRESENT(grnd_hflx))       grnd_hflx(:)        = dsl4jsb_var2D_onChunk(SEB_,   forc_hflx)    ! TODO Not used in atm yet,
+      IF (PRESENT(grnd_hcap))       grnd_hcap(:)        = dsl4jsb_var2D_onChunk(SEB_,   heat_cap_old) ! and not computed for lake
       IF (PRESENT(rough_h_srf))     rough_h_srf(:)      = dsl4jsb_var2D_onChunk(TURB_,  rough_h)
       IF (PRESENT(rough_m_srf))     rough_m_srf(:)      = dsl4jsb_var2D_onChunk(TURB_,  rough_m)
       IF (PRESENT(q_snocpymlt))     q_snocpymlt(:)      = dsl4jsb_var2D_onChunk(HYDRO_, q_snocpymlt)

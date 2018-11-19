@@ -21,7 +21,6 @@ MODULE mo_turb_interface
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
-  USE mo_jsb_config_class,   ONLY: t_jsb_config
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
@@ -29,7 +28,7 @@ MODULE mo_turb_interface
   dsl4jsb_Use_processes TURB_, SEB_, HYDRO_, PHENO_, ASSIMI_, SSE_, A2L_
 
   ! Use process configurations
-  dsl4jsb_Use_config(TURB_)
+  !dsl4jsb_Use_config(TURB_)
   dsl4jsb_Use_config(HYDRO_)
 
   ! Use process memories
@@ -153,9 +152,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: fract_snow_lice
 
     ! Local variables
-    INTEGER  :: iblk, ics, ice, nc
-
-    TYPE(t_jsb_model), POINTER :: model
+    INTEGER  :: iblk, ics, ice
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_roughness'
 
@@ -163,14 +160,11 @@ CONTAINS
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-    nc      = options%nc
 
     ! If process is not active on this tile, do nothing
     IF (.NOT. tile%Is_process_active(TURB_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    model => Get_model(tile%owner_model_id)
 
     ! Get process memories
     dsl4jsb_Get_memory(TURB_)
@@ -216,22 +210,17 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    TYPE(t_jsb_model), POINTER :: model
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_roughness'
 
     ! Local variables
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice
 
     ! Get local variables from options argument
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_memory(TURB_)
 
@@ -253,7 +242,7 @@ CONTAINS
   !!
   SUBROUTINE update_humidity_scaling(tile, options)
 
-    USE mo_jsb_physical_constants, ONLY: rhoh2o
+    !USE mo_jsb_physical_constants, ONLY: rhoh2o
     USE mo_sse_process,            ONLY: relative_humidity_soil
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -302,7 +291,7 @@ CONTAINS
     LOGICAL :: &
       mask(options%nc)
 
-    INTEGER :: iblk, ics, ice, nc
+    INTEGER :: iblk, ics, ice
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -312,7 +301,6 @@ CONTAINS
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (.NOT. tile%Is_process_active(TURB_) .OR. tile%contains_lake) RETURN
 
@@ -441,22 +429,17 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    TYPE(t_jsb_model), POINTER :: model
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_humidity_scaling'
 
     ! Local variables
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice
 
     ! Get local variables from options argument
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_memory(TURB_)
 

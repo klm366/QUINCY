@@ -53,14 +53,14 @@ CONTAINS
 
     LOGICAL, INTENT(in), OPTIONAL :: standalone !< true: offline JSBACH, false: ECHAM/JSBACH
 
-    LOGICAL             :: l_standalone !< true: offline JSBACH, false: ECHAM/JSBACH
-    CHARACTER (len=  8) :: ydate        !< Date of simulation
-    CHARACTER (len= 10) :: ytime        !< Time of simulation
-    CHARACTER (len=256) :: os_name      !< Name of OS for simulation
-    CHARACTER (len=256) :: user_name    !< User that runs simulation
-    CHARACTER (len=256) :: host_name    !< Host name for simulation
+    !LOGICAL             :: l_standalone !< true: offline JSBACH, false: ECHAM/JSBACH
+    !CHARACTER (len=  8) :: ydate        !< Date of simulation
+    !CHARACTER (len= 10) :: ytime        !< Time of simulation
+    !CHARACTER (len=256) :: os_name      !< Name of OS for simulation
+    !CHARACTER (len=256) :: user_name    !< User that runs simulation
+    !CHARACTER (len=256) :: host_name    !< Host name for simulation
 
-    INTEGER :: i_lena, i_lenb, i_lenc
+    !INTEGER :: i_lena, i_lenb, i_lenc
     INTEGER :: i
 
     !  External subroutines
@@ -68,8 +68,9 @@ CONTAINS
 
     !  Executable statements
 
-    l_standalone = .FALSE.
-    IF (PRESENT(standalone)) l_standalone = standalone
+    !l_standalone = .FALSE.
+    !IF (PRESENT(standalone)) l_standalone = standalone
+    IF (PRESENT(standalone)) CONTINUE ! to avoid compiler warnings about dummy arguments not being used
 
     ! Get model name from environment
     IF (my_process_is_stdio()) THEN

@@ -55,10 +55,10 @@ CONTAINS
     ws_root  (:) = 0._wp
     DO i=1,n
       bottom(:)    = bottom(:) + dz(:,i)
-      WHERE(root_depth(:) >= bottom(:))                         ! Root zone extends to below current layer
+      WHERE(root_depth(:) >= bottom(:))                        ! Root zone extends to below current layer
         ws_root(:) = ws_root(:) + ws(:,i)
       ELSEWHERE (root_depth(:) > bottom_m1(:))                 ! Root zone above current layer but below previous layer, i.e.
-        ws_root(:) = ws_root(:) + ws(:,i) * (root_depth(:) - bottom_m1(:)) / dz(:,i) !   root zone partially extends into current layer
+        ws_root(:) = ws_root(:) + ws(:,i) * (root_depth(:) - bottom_m1(:)) / dz(:,i) ! Root z. partially extends into current layer
       END WHERE
       bottom_m1(:) = bottom_m1(:) + dz(:,i)
     END DO

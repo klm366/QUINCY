@@ -17,15 +17,13 @@ MODULE mo_seb_land
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
-  USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
   USE mo_jsb_lct_class,      ONLY: GLACIER_TYPE, Contains_lct
   USE mo_jsb_control,        ONLY: debug_on
   USE mo_jsb_time,           ONLY: is_time_experiment_start
 
   dsl4jsb_Use_processes SEB_, RAD_, TURB_, A2L_, SSE_, HYDRO_
-  dsl4jsb_Use_config(SEB_)
-  dsl4jsb_Use_config(HYDRO_)
+  !dsl4jsb_Use_config(SEB_)
   dsl4jsb_Use_config(SSE_)
 
   dsl4jsb_Use_memory(A2L_)
@@ -53,15 +51,14 @@ CONTAINS
     USE mo_phy_schemes,            ONLY: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, tpfac2, tpfac3
     USE mo_sse_constants,          ONLY: snow_depth_min
-    USE mo_jsb_time,               ONLY: get_asselin_coef, is_newday, timeStep_in_days, time_steps_per_day
+    USE mo_jsb_time,               ONLY: is_newday, time_steps_per_day ! get_asselin_coef, timeStep_in_days
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Local variables
     !
-    dsl4jsb_Def_config(SEB_)
-    dsl4jsb_Def_config(HYDRO_)
+    !dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(RAD_)
@@ -78,7 +75,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: day_temp_max
     dsl4jsb_Real2D_onChunk :: day_temp_sum
     dsl4jsb_Real2D_onChunk :: previous_day_temp_mean
-    dsl4jsb_Real2D_onChunk :: previous_day_NPP_pot_rate_ca
+    !dsl4jsb_Real2D_onChunk :: previous_day_NPP_pot_rate_ca
     dsl4jsb_Real2D_onChunk :: previous_day_temp_min
     dsl4jsb_Real2D_onChunk :: previous_day_temp_max
     dsl4jsb_Real2D_onChunk :: F_pseudo_soil_temp
@@ -134,8 +131,7 @@ CONTAINS
       has_snow_layer
 
     INTEGER :: iblk, ics, ice, nc
-    REAL(wp) :: steplen !, dtime
-    REAL(wp) :: eps
+    REAL(wp) :: steplen
     INTEGER  :: ilct
 
     TYPE(t_jsb_model), POINTER :: model
@@ -147,13 +143,12 @@ CONTAINS
     ice  = options%ice
     nc   = options%nc
     steplen = options%steplen
-    !dtime   = options%dtime
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
 
-    dsl4jsb_Get_config(SEB_)
+    !dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_config(SSE_)
 
     ! Get reference to variables for current block
@@ -366,8 +361,8 @@ CONTAINS
     &            psnew)
 
     USE mo_jsb_physical_constants, ONLY: &
-      & cpd, &
-      & cpvd1, &
+      !& cpd, &
+      !& cpvd1, &
       & zemiss_def, &
       & stbo, &
       & alv,  &
@@ -386,10 +381,10 @@ CONTAINS
     !
     REAL(wp) :: zcolin(klon), zcohfl(klon), zcoind(klon), zicp(klon), zca(klon), zcs(klon)
     REAL(wp) :: pdt
-    REAL(wp) :: pc16
+    !REAL(wp) :: pc16
 
     pdt     = cvdifts * steplen
-    pc16    = cpd * cpvd1
+    !pc16    = cpd * cpvd1
 
     !
     zicp(:) = 1._wp / pcp(:)
@@ -422,7 +417,7 @@ CONTAINS
 
     ! Local variables
     !
-    dsl4jsb_Def_config(SEB_)
+    !dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(SEB_)
 
     ! Pointers to variables in memory
@@ -435,26 +430,24 @@ CONTAINS
 
     ! Locally allocated variables
     !
-    INTEGER :: iblk, ics, ice, nc
+    INTEGER :: iblk, ics, ice
     REAL(wp) :: eps
 
-    TYPE(t_jsb_model), POINTER :: model
+    !TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_asselin_land'
 
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    model => Get_model(tile%owner_model_id)
-
-    dsl4jsb_Get_config(SEB_)
+    !model => Get_model(tile%owner_model_id)
 
     ! Get reference to variables for current block
     !
+    !dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_memory(SEB_)
 
     dsl4jsb_Get_var2D_onChunk(SEB_,      t)              ! out
@@ -478,7 +471,7 @@ CONTAINS
 
   SUBROUTINE update_surface_fluxes_land(tile, options)
 
-    USE mo_phy_schemes,            ONLY: q_effective, surface_dry_static_energy, heat_transfer_coef
+    USE mo_phy_schemes,            ONLY: heat_transfer_coef
     USE mo_jsb_physical_constants, ONLY: alv, als
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -509,24 +502,23 @@ CONTAINS
       & s_air          (options%nc),   &  !< Dry static energy at lowest atmospheric level
       & heat_tcoef     (options%nc)       !< Heat transfer coefficient (rho*C_h*|v|)
 
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice
     REAL(wp) :: steplen
 
-    TYPE(t_jsb_model), POINTER :: model
+    !TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_fluxes_land'
 
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-    nc      = options%nc
     steplen = options%steplen
 
     IF (.NOT. tile%Is_process_active(SEB_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    model => Get_model(tile%owner_model_id)
+    !model => Get_model(tile%owner_model_id)
 
     ! Get reference to variables for current block
     !

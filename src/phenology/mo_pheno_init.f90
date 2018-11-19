@@ -39,23 +39,7 @@ CONTAINS
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
-    ! Local variables
-    TYPE(t_jsb_model), POINTER  :: model
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init'
-
-    ! Declare pointers for process configuration and memory
-    dsl4jsb_Def_memory(PHENO_)
-    dsl4jsb_Get_memory(PHENO_)
-    !dsl4jsb_Def_config(PHENO_)
-    !dsl4jsb_Get_config(PHENO_)
-
-    ! Declare pointers for variables in memory
-
-    ! ---------------------------
-    ! Go
-
-    model => get_model(tile%owner_model_id)
 
     CALL pheno_init_bc(tile)
     CALL pheno_init_ic(tile)
@@ -131,9 +115,11 @@ CONTAINS
     dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max) = &
       MERGE(dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max), 0._wp, dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max) >= 0._wp)
 
-    NULLIFY(ptr_2D)
-
     CALL input_file%Close()
+
+    ! avoid compiler warnings about pointers not being dereferenced
+    IF (ASSOCIATED(ptr_2D)) CONTINUE
+    NULLIFY(ptr_2D)
 
     IF (tile%lcts(1)%lib_id /= 0)  THEN ! only if the present tile is a pft
       !JN 10.01.18: for now: set the maxLai for non forest types to the one from the Lctlib

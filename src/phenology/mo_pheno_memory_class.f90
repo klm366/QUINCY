@@ -19,9 +19,9 @@ MODULE mo_pheno_memory_class
   USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_lct_class,          ONLY: VEG_TYPE, LAND_TYPE
-  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
-  USE mo_jsb_varlist,            ONLY: BASIC, MEDIUM, FULL
-  USE mo_jsb_physical_constants, ONLY: tmelt
+  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d
+  USE mo_jsb_varlist,            ONLY: BASIC, FULL !, MEDIUM
+  !USE mo_jsb_physical_constants, ONLY: tmelt
 
   ! Use of processes in this module
   dsl4jsb_Use_processes PHENO_
@@ -118,9 +118,8 @@ CONTAINS
   SUBROUTINE Init_pheno_memory(mem, prefix, suffix, lct_ids, model_id)
 
     ! Declarations
-    USE mo_jsb_varlist,       ONLY: t_jsb_varlist, jsb_add_var
-    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
-                                    TSTEP_CONSTANT, tables
+    USE mo_jsb_varlist,       ONLY: jsb_add_var
+    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
 
@@ -136,7 +135,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
-    TYPE(t_jsb_vgrid), POINTER :: surface, canopy_layer        ! Vertical grid
+    TYPE(t_jsb_vgrid), POINTER :: surface !, canopy_layer        ! Vertical grid
     INTEGER :: table
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_pheno_memory'
@@ -151,7 +150,7 @@ CONTAINS
     ! Set pointers to variables in the "grid"
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
-    canopy_layer => Get_vgrid('canopy_layer')
+    !canopy_layer => Get_vgrid('canopy_layer')
 
     dsl4jsb_Get_config(PHENO_)
 

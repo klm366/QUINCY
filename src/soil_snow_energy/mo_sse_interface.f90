@@ -11,7 +11,7 @@ MODULE mo_sse_interface
 #ifndef __NO_JSBACH__
 
   USE mo_kind,            ONLY: wp
-  USE mo_exception,       ONLY: message, finish
+  USE mo_exception,       ONLY: message
 
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_jsb_time,        ONLY: is_time_experiment_start
@@ -21,15 +21,12 @@ MODULE mo_sse_interface
   USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid
   USE mo_jsb_grid,           ONLY: Get_vgrid
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
-  USE mo_jsb_memory_class,   ONLY: t_jsb_memory, t_jsb_memory_p
-  USE mo_jsb_config_class,   ONLY: t_jsb_config
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
-  dsl4jsb_Use_processes SSE_, SEB_, A2L_, HYDRO_
+  dsl4jsb_Use_processes SSE_, SEB_, HYDRO_ 
   dsl4jsb_Use_config(SSE_)
   dsl4jsb_Use_config(HYDRO_)
-  dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(HYDRO_)
@@ -123,11 +120,10 @@ CONTAINS
 
     ! Local variables
     !
+    TYPE(t_jsb_model), POINTER :: model
     dsl4jsb_Def_config(SSE_)
-    dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(SEB_)
-    dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(HYDRO_)
 
     ! Pointers to variables in memory
@@ -172,18 +168,12 @@ CONTAINS
     INTEGER, DIMENSION(options%nc) :: &
       & itop, itop_old
 
-    LOGICAL :: &
-      is_glacier(options%nc)
-
-    INTEGER :: jllog, isnow
+    INTEGER :: isnow
 
     LOGICAL  :: lstart
-    LOGICAL  :: l_tpe_open = .FALSE.
-    LOGICAL  :: l_tpe_closed = .FALSE.
     INTEGER  :: iblk, ics, ice, nc
-    REAL(wp) :: dtime, steplen
+    REAL(wp) :: dtime
 
-    TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_vgrid), POINTER :: soil_e, snow_e
     INTEGER                    :: nsoil, nsnow
 
@@ -194,16 +184,12 @@ CONTAINS
     ice   = options%ice
     nc    = options%nc
     dtime = options%dtime
-    steplen = options%steplen
 
     IF (.NOT. tile%Is_process_active(SSE_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
     model => Get_model(tile%owner_model_id)
-
     dsl4jsb_Get_config(SSE_)
-    dsl4jsb_Get_config(HYDRO_)
 
     soil_e => Get_vgrid('soil_depth_energy')
     nsoil = soil_e%n_levels
@@ -216,7 +202,6 @@ CONTAINS
     !
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(SEB_)
-    dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(HYDRO_)
 
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil)            ! inout
@@ -447,22 +432,19 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     TYPE(t_jsb_model), POINTER :: model
-
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(HYDRO_)
-    dsl4jsb_Def_memory(SEB_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_soil_and_snow_temperature'
 
-    INTEGER :: iblk, ics, ice, nc
+    INTEGER :: iblk, ics, ice
 
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -497,15 +479,14 @@ CONTAINS
 
   SUBROUTINE update_soil_and_snow_properties(tile, options)
 
-    USE mo_jsb_physical_constants, ONLY: ci, cs, dens_snow_min
-    USE mo_sse_constants,          ONLY: vol_hcap_ice, vol_hcap_snow, vol_hcap_snow_min, hcond_ice, hcond_snow, hcond_snow_min
+    USE mo_jsb_physical_constants, ONLY: ci, dens_snow_min ! , cs
+    USE mo_sse_constants,          ONLY: vol_hcap_ice, vol_hcap_snow, hcond_ice, hcond_snow, hcond_snow_min !, vol_hcap_snow_min
     USE mo_sse_process,            ONLY: calc_vol_heat_capacity, calc_thermal_conductivity
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Local variables
-    !
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_config(HYDRO_)
@@ -641,8 +622,9 @@ CONTAINS
           WHERE (snow_soil_dens(:) > dens_snow_min)          ! "old" or mixture of old and fresh snow
             vol_heat_cap_snow(:) = ci * snow_soil_dens(:)                               ! Use specific heat of ice (Verseghy 1991)
             ! heat_cond_snow   (:) = 2.576e-6_wp * snow_soil_dens(:) ** 2._wp + 0.074_wp                      ! Verseghy (1991)
-            ! heat_cond_snow   (:) = 2.9e-6_wp*snow_soil_dens(:)**2._wp                                         ! Goodrich (1982)
-            heat_cond_snow   (:) = 2.5e-6_wp*snow_soil_dens(:)**2._wp - 0.123e-3_wp*snow_soil_dens(:) + 0.024_wp ! Calonne et al. (2011)
+            ! heat_cond_snow   (:) = 2.9e-6_wp*snow_soil_dens(:)**2._wp                                       ! Goodrich (1982)
+            ! Calonne et al. (2011):
+            heat_cond_snow   (:) = 2.5e-6_wp*snow_soil_dens(:)**2._wp - 0.123e-3_wp*snow_soil_dens(:) + 0.024_wp
           ELSE WHERE                                         ! fresh snow
             ! @todo: these minimum values from mo_sse_constants.f90 don't match with the above equations and minimum snow density
             ! vol_heat_cap_snow(:) = vol_hcap_snow_min
@@ -675,24 +657,19 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    TYPE(t_jsb_model), POINTER :: model
-
     dsl4jsb_Def_memory(SSE_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_soil_and_snow_properties'
 
-    INTEGER :: iblk, ics, ice, nc
+    INTEGER :: iblk, ics, ice
 
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_memory(SSE_)
 

@@ -20,28 +20,21 @@ MODULE mo_pheno_interface
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, finish
 
-  USE mo_jsb_grid_class,     ONLY: t_jsb_grid
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
-  USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module (USE mo_jsb_process_class, ONLY: )
-  dsl4jsb_Use_processes SEB_, A2L_, RAD_, HYDRO_, ASSIMI_, PHENO_, CARBON_
+  dsl4jsb_Use_processes SEB_, A2L_, HYDRO_, ASSIMI_, PHENO_, CARBON_
 
   ! Use of process configurations (t_<process>_config)
-  dsl4jsb_Use_config(SEB_)
-  dsl4jsb_Use_config(RAD_)
-  dsl4jsb_Use_config(ASSIMI_)
-  dsl4jsb_Use_config(HYDRO_)
   dsl4jsb_Use_config(PHENO_)
 
   ! Use of process memories (t_<process>_memory)
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(SEB_)
-  dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(HYDRO_)
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(ASSIMI_)
@@ -144,16 +137,13 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    TYPE(t_jsb_model), POINTER             :: model
     dsl4jsb_Def_config(PHENO_)
-
-    TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_phenology'
 
     IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
-
     model => Get_model(tile%owner_model_id)
-
     dsl4jsb_Get_config(PHENO_)
 
     IF (tile%lcts(1)%lib_id == 0 .AND. TRIM(dsl4jsb_Config(PHENO_)%scheme) /= 'climatology') THEN
@@ -189,7 +179,7 @@ CONTAINS
                                        calc_crop_phenology, calc_raingreen_phenology, calc_grass_phenology, &
                                        track_max_green_pool, derive_maxlai_according_to_allometric_relationships
     USE mo_jsb_time_iface,       ONLY: get_time_current, get_year_day
-    USE mo_jsb_time,             ONLY: is_newyear, is_newday, timeStep_in_days, time_steps_per_day
+    USE mo_jsb_time,             ONLY: is_newyear, is_newday, timeStep_in_days
     USE mo_pheno_constants,      ONLY: PhenoParam
     USE mo_jsb_grid_class,       ONLY: t_jsb_grid
     USE mo_jsb_grid,             ONLY: Get_grid
@@ -201,7 +191,7 @@ CONTAINS
 
     ! Local variables
     TYPE(t_jsb_model), POINTER             :: model
-    INTEGER                                :: iblk, ics, ice, nc
+    INTEGER                                :: iblk, ics, ice
     REAL(wp)                               :: dtime
 
     INTEGER                                :: day_of_year
@@ -215,9 +205,7 @@ CONTAINS
     TYPE(t_jsb_grid),  POINTER             :: grid
 
     ! Declare pointers for process configuration and memory
-    dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_config(PHENO_)
-    dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(HYDRO_)
@@ -226,7 +214,7 @@ CONTAINS
     dsl4jsb_Def_memory(CARBON_) ! JN 10.01.18 only required with l_forestRegrowth = true
 
     ! Declare pointers for variables in memory
-    INTEGER                :: ncanopy     ! number of canopy layers
+    !INTEGER                :: ncanopy     ! number of canopy layers
 
     !INTEGER, POINTER                 :: acc_counter ! counter for each delta_time step since the last variable output
     !LOGICAL, POINTER                 :: use_alb_veg_simple
@@ -251,7 +239,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: chill_days_EG
     dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real2D_onChunk :: day_NPP_sum
-    dsl4jsb_Real2D_onChunk :: previous_day_NPP_rate
+    !dsl4jsb_Real2D_onChunk :: previous_day_NPP_rate
     dsl4jsb_Real2D_onChunk :: previous_day_temp_min
     dsl4jsb_Real2D_onChunk :: previous_day_temp_max
     dsl4jsb_Real2D_onChunk :: previous_day_NPP_pot_rate_ca
@@ -281,7 +269,6 @@ CONTAINS
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-    nc      = options%nc
     dtime   = options%dtime
 
     ! If process is not active on this tile, do nothing
@@ -294,14 +281,13 @@ CONTAINS
 
     ! Set pointers to process configs and memory
     dsl4jsb_Get_config(PHENO_)
-    dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(ASSIMI_)
 
-    ncanopy =  dsl4jsb_Config(ASSIMI_)%ncanopy
+    !ncanopy =  dsl4jsb_Config(ASSIMI_)%ncanopy
 
     grid    => Get_grid(model%grid_id)
     lat     => grid%lat(ics:ice, iblk)
@@ -378,8 +364,8 @@ CONTAINS
     day_of_year  = INT(get_year_day(get_time_current()))
 
     w_soil_filling = w_soil_rel  ! Initialization of w_soil_filling for crops and raingreen
-                                 ! R: As in JSBACH3 all soil layers are set to the same relative_moisture(GP,tile) and only the average over
-                                 !    all layers or the uppermost layer is used, we do not need soil layers in the phenology.
+                                 ! R: As in JS3 all soil layers are set to the same relative_moisture(GP,tile) and only the average
+                                 !    over all layers or the uppermost layer is used, we do not need soil layers in the phenology.
 
     ! R: Note, in JSBACH3 the timestep was 1 day. Except of the former update_growth_phase which is now in the calc_XXX_phenology
     !    procedures the phenology including get_letItDie and get_letItGrow can be called several times a day. Within the
@@ -389,9 +375,9 @@ CONTAINS
     !    once for the whole hsm (tile%name == 'box'):
     ! R: Die Berechnungen von update_previous_day_variables in JSBACH3 muß man bis auf NPP nicht für jedes Tile machen. Daher
     !    habe ich die Berechnungen von NPP von den anderen Berechnungen in update_previous_day_variables für JSBACH4 getrennt.
-    !    Die Berechnungen die nicht für jedes Tile gemacht werden müssen sind in calc_previous_day_variables und die NPP-Berechnungen sind
-    !    in calc_previous_day_NPP. Außerdem ist calc_previous_day_variables nun dem SEB Prozess zugeordnet. calc_pseudo_soil_temp habe ich
-    !    auch dem SEB Prozess zugeordnet.
+    !    Die Berechnungen die nicht für jedes Tile gemacht werden müssen sind in calc_previous_day_variables und die NPP-
+    !    Berechnungen sind in calc_previous_day_NPP. Außerdem ist calc_previous_day_variables nun dem SEB Prozess zugeordnet.
+    !    calc_pseudo_soil_temp habe ich auch dem SEB Prozess zugeordnet.
 
     ! R: wird jedes mal (d.h. für jedes Tile) aufgerufen:
     CALL calc_previous_day_NPP(          &
@@ -501,14 +487,14 @@ CONTAINS
     ! R: The following PHENO_ process shall be calculated only on the lowest child tiles (=ON_LEAFS).
     !    This is set within the FUNCTION Construct_tile and makes further statements here unnecessary.
 
-    IF (dsl4jsb_Lctlib_param(PhenologyType) ==  2) THEN  ! none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grasses: 4; crops: 5
+    ! none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grasses: 4; crops: 5
+    IF (dsl4jsb_Lctlib_param(PhenologyType) ==  2) THEN
 
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... summergreen ...')
       CALL calc_summergreen_phenology(    &
          & day_of_year,                   & ! <- in
          & l_newday,                      & ! <- in
          & timestep,                      & ! <- in
-         & NPP_pot_rate_ca(:),            & ! <- in
          & lat(:),                        & ! <- in
          & previous_day_temp_mean(:),     & ! <- in
          & pseudo_soil_temp(:),           & ! <- in
@@ -522,14 +508,14 @@ CONTAINS
 
     END IF
 
-    IF (dsl4jsb_Lctlib_param(PhenologyType) ==  1) THEN  ! none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grasses: 4; crops: 5
+    ! none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grasses: 4; crops: 5
+    IF (dsl4jsb_Lctlib_param(PhenologyType) ==  1) THEN
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... evergreen ...')
        CALL calc_evergreen_phenology(     &
          & day_of_year,                   & ! <- in
          & l_newday,                      & ! <- in
          & timestep,                      & ! <- in
          & lat(:),                        & ! <- in
-         & previous_day_temp_mean(:),     & ! <- in
          & pseudo_soil_temp(:),           & ! <- in
          & LaiMax_corrected(:),           & ! <- in
          & days_since_growth_begin_EG(:), & ! <- inout
@@ -540,7 +526,8 @@ CONTAINS
          & )
     END IF
 
-    IF (dsl4jsb_Lctlib_param(PhenologyType) ==  5) THEN  ! none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grasses: 4; crops: 5
+    ! none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grasses: 4; crops: 5
+    IF (dsl4jsb_Lctlib_param(PhenologyType) ==  5) THEN
        ! R: (Abweichungen zu JSBACH3 nur beim LAI und dort erst nach 9. Stelle nach Komma.)
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... crop ...')
       CALL calc_crop_phenology(            &
@@ -563,7 +550,8 @@ CONTAINS
         & )
     END IF
 
-    IF (dsl4jsb_Lctlib_param(PhenologyType) ==  3) THEN  ! none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grasses: 4; crops: 5
+    ! none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grasses: 4; crops: 5
+    IF (dsl4jsb_Lctlib_param(PhenologyType) ==  3) THEN
 
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... raingreen ...')
       CALL calc_raingreen_phenology(        &
@@ -575,7 +563,8 @@ CONTAINS
         & )
     END IF
 
-    IF (dsl4jsb_Lctlib_param(PhenologyType) ==  4) THEN  ! none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grasses: 4; crops: 5
+    ! none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grasses: 4; crops: 5
+    IF (dsl4jsb_Lctlib_param(PhenologyType) ==  4) THEN
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... grasses ...')
        CALL calc_grass_phenology(           &
          & t_air_in_Celcius(:),             & ! <- in
@@ -613,8 +602,6 @@ CONTAINS
     REAL(wp) :: wgt1, wgt2
     INTEGER  :: nmw1,nmw2
 
-    TYPE(t_jsb_model), POINTER  :: model
-
     dsl4jsb_Def_memory(PHENO_)
 
     ! Declare pointers to variables in memory
@@ -633,7 +620,6 @@ CONTAINS
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_memory(PHENO_)
 
@@ -661,8 +647,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    TYPE(t_jsb_model), POINTER                :: model
-
+    TYPE(t_jsb_model), POINTER             :: model
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_memory(PHENO_)
 
@@ -671,23 +656,17 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_phenology'
 
     ! Local variables
-    INTEGER  :: iblk, ics, ice, nc
-    !X if necessary: REAL(wp) :: dtime, steplen
+    INTEGER  :: iblk, ics, ice
 
     ! Get local variables from options argument
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
-    !X if necessary: dtime   = options%dtime
-    !X if necessary: steplen = options%steplen
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
-
     dsl4jsb_Get_config(PHENO_)
-
     dsl4jsb_Get_memory(PHENO_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
@@ -706,7 +685,7 @@ CONTAINS
     ENDIF
 
     !X Implementation: Start your process scheme here...
-    !R: Das ist ein Provisorium bisher. Es muss noch festgelegt werden ob und wie die einzelnen pheno Tasks aggregiert werden sollen.
+    !R: Das ist ein Provisorium bisher. Es muss noch festgelegt werden ob u. wie die einzeln. pheno Tasks aggregiert werden sollen.
 
     IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'logrop') THEN
 
@@ -738,7 +717,7 @@ CONTAINS
     REAL(wp), POINTER      :: fract_fpc_mon(:,:)
 
 
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice
     REAL(wp) :: wgt1, wgt2
     INTEGER  :: nmw1,nmw2
 
@@ -752,7 +731,6 @@ CONTAINS
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
 
@@ -793,24 +771,19 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    TYPE(t_jsb_model), POINTER :: model
-
     dsl4jsb_Def_memory(PHENO_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_fpc'
 
-    INTEGER :: iblk, ics, ice, nc
+    INTEGER :: iblk, ics, ice
 
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_memory(PHENO_)
 
