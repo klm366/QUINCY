@@ -25,6 +25,8 @@ MODULE mo_l2a_memory_class
   dsl4jsb_Use_processes CARBON_
 #endif
 
+  dsl4jsb_Use_processes CARBON_
+
   IMPLICIT NONE
   PRIVATE
 
@@ -259,6 +261,25 @@ CONTAINS
         & initval_r = 0.0_wp)
 
     END IF ! lake
+
+    IF (model%processes(CARBON_)%p%config%active) THEN
+      CALL jsb_add_var( mem, 'carbon_conservation_test', mem%carbon_conservation_test, &
+        & hgrid, surface,                                                              &
+        & t_cf('carbon_conservation_test', '', 'Carbon conservation test'),            &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & loutput = .TRUE., lrestart=.TRUE.,                                           &
+        & initval_r=-999.0_wp )
+
+      CALL jsb_add_var( mem, 'yday_c_state_sum', mem%yday_c_state_sum, &
+        & hgrid, surface,                                                                          &
+        & t_cf('yday_c_state_sum', '', 'yday c state sum required for carbon conservation test'),  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & loutput = .TRUE., lrestart=.TRUE.,                                          &
+        & initval_r=0.0_wp )
+
+    END IF
 
   END SUBROUTINE Init_l2a_memory
 

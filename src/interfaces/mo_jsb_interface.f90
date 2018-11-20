@@ -38,6 +38,8 @@ MODULE mo_jsb_interface
 
   dsl4jsb_Use_processes CARBON_, ALCC_
 
+  dsl4jsb_Use_processes CARBON_
+
   IMPLICIT NONE
   PRIVATE
 
