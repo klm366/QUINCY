@@ -49,10 +49,10 @@ CONTAINS
     INTEGER                     :: fuel_algorithm
 
     NAMELIST /jsb_fuel_nml/     &
-         active,                &
-         ic_filename,           &
-         bc_filename,           &
-         fuel_algorithm
+        & active,               &
+        & ic_filename,          &
+        & bc_filename,          &
+        & fuel_algorithm
 
     INTEGER :: nml_handler, nml_unit, istat
 

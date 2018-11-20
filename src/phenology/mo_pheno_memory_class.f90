@@ -164,7 +164,7 @@ CONTAINS
         & t_cf('leaf_area_index', '', ''),                                     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
-        & output_level=BASIC, &
+        & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
       ALLOCATE(mem%lai_mon      (hgrid%nproma, hgrid%nblks, 0:13))
@@ -175,7 +175,7 @@ CONTAINS
         & t_cf('foliage_projected_cover', '', ''),                             &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
-        & output_level=BASIC, &
+        & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'fract_fpc_max', mem%fract_fpc_max,               &
@@ -183,7 +183,7 @@ CONTAINS
         & t_cf('maximum_fpc', '', ''),                                         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
-        & output_level=BASIC, &
+        & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'fract_forest', mem%fract_forest,                 &
@@ -191,7 +191,7 @@ CONTAINS
         & t_cf('forest_fraction', '', ''),                                     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
-        & output_level=BASIC, &
+        & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'veg_fract_correction', mem%veg_fract_correction, &
@@ -227,24 +227,24 @@ CONTAINS
           & initval_r=-1.0_wp )
 
         CALL jsb_add_var( mem,'growth_days_eg', mem%days_since_growth_begin_EG, &
-          & hgrid, surface,                                                                 &
-          & t_cf('days_since_growth_begin_EverGreen', '', ''),                              &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),              &
-          & prefix, suffix,                                                                 &
+          & hgrid, surface,                                                     &
+          & t_cf('days_since_growth_begin_EverGreen', '', ''),                  &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+          & prefix, suffix,                                                     &
           & initval_r=0.0_wp )
 
         CALL jsb_add_var( mem,'growth_days_sg', mem%days_since_growth_begin_SG, &
-          & hgrid, surface,                                                                 &
-          & t_cf('days_since_growth_begin_SummerGreen', '', ''),                            &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),              &
-          & prefix, suffix,                                                                 &
+          & hgrid, surface,                                                     &
+          & t_cf('days_since_growth_begin_SummerGreen', '', ''),                &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+          & prefix, suffix,                                                     &
           & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
 
-        CALL jsb_add_var( mem,'yday_npp_pot_rate', mem%previous_day_NPP_pot_rate_ca,     &
-          & hgrid, surface,                                                              &
-          & t_cf('yday_NPP_pot_rate_ca', 'prev day NPP_pot_rate_ca', ''),                &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-          & prefix, suffix,                                                              &
+        CALL jsb_add_var( mem,'yday_npp_pot_rate', mem%previous_day_NPP_pot_rate_ca, &
+          & hgrid, surface,                                                          &
+          & t_cf('yday_NPP_pot_rate_ca', 'prev day NPP_pot_rate_ca', ''),            &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
+          & prefix, suffix,                                                          &
           & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp )
 
         ! CALL jsb_add_var( mem,'laimax_dyn', mem%laiMax_dyn,                    &

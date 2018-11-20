@@ -273,7 +273,7 @@ CONTAINS
     IF (ASSOCIATED(return_pointer)) CONTINUE
     NULLIFY(return_pointer)
 
-  END SUBROUTINE carbon_reaD_cpools
+  END SUBROUTINE carbon_read_cpools
 
 #endif
 END MODULE mo_carbon_init

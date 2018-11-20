@@ -170,9 +170,9 @@ CONTAINS
     CALL input_file%Close()
 
     soil_vgrid  => new_vgrid('soil_depth_energy', ZAXIS_DEPTH_BELOW_LAND, nsoil, &
-      & levels  = mids                 (1:nsoil  ),                         &
-      & lbounds = depths               (1:nsoil  ),                         &
-      & ubounds = depths               (2:nsoil+1),                         &
+      & levels  = mids                 (1:nsoil  ),                              &
+      & lbounds = depths               (1:nsoil  ),                              &
+      & ubounds = depths               (2:nsoil+1),                              &
       & units='m')
     CALL register_vgrid(soil_vgrid)
     WRITE(message_text, *) 'Soil levels in soil energy (upper) [m]: ', soil_vgrid%lbounds
@@ -186,8 +186,8 @@ CONTAINS
     DEALLOCATE(depths, mids)
 
     IF (l_snow) THEN
-      IF (dz_snow(1) < snow_depth_min) &
-        & CALL finish(TRIM(routine), 'Depth of first snow layer should be larger than snow_depth_min='&
+      IF (dz_snow(1) < snow_depth_min)                                                                 &
+        & CALL finish(TRIM(routine), 'Depth of first snow layer should be larger than snow_depth_min=' &
         &                            //real2string(snow_depth_min))
       ALLOCATE(depths(nsnow+1))
       ALLOCATE(mids(nsnow))

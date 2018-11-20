@@ -177,7 +177,7 @@ def process_file(inputfile, outputfile, verbose=False, cwd=None):
     with io.open(inputfile, 'r', encoding="utf-8") as infile:
         with (io.open(outputfile, 'w', encoding="utf-8") if outputfile != '' else sys.stdout) as outfile:
             outfile.write(u'!\n! This file was automatically generated from:\n')
-            outfile.write(u'!         ' + os.path.realpath(os.path.abspath(inputfile)) + u'\n')
+            outfile.write(u'!    ' + os.path.realpath(os.path.abspath(inputfile)) + u'\n')
             outfile.write(u'!    with md5 hash: ' + hasher.hexdigest() + u'\n!\n')
             if verbose:
                 if cwd:
