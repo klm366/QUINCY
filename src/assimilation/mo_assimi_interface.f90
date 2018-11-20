@@ -507,7 +507,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: dark_respiration_cl
     dsl4jsb_Real2D_onChunk :: dark_respiration
     dsl4jsb_Real2D_onChunk :: NPP_pot_rate_ca
-    dsl4jsb_Real3D_onChunk :: assimi_scaling_fact_cl ! Input.
+    dsl4jsb_Real3D_onChunk :: assimi_scaling_fact_cl ! Input
+    dsl4jsb_Real2D_onChunk :: fract_fpc_max          ! in
     dsl4jsb_Real3D_onChunk :: canopy_cond_cl         ! InOut for water limited case here.
     dsl4jsb_Real3D_onChunk :: gross_assimilation_cl  ! Output.
     dsl4jsb_Real3D_onChunk :: carbox_rate_max_cl     ! Output. Maximum carboxylation rate of canopy layer (=VCmax)
@@ -557,6 +558,7 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(PHENO_,    veg_fract_correction)    ! in
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   assimi_scaling_fact_cl)  ! in
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    fract_fpc_max )          ! in
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   canopy_cond_cl)          ! inout
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   canopy_cond_over_time)   ! inout
 
@@ -628,7 +630,7 @@ CONTAINS
     ! convert from leaf area of layer to canopy ground area
     gross_assimilation_ca(:) = SUM(gross_assimilation_cl(:,:) * lai_cl(:,:),DIM=2)
     ! convert from canopy area to tile box area
-    gross_assimilation(:) = gross_assimilation_ca(:) * veg_fract_correction(:)
+    gross_assimilation(:) = gross_assimilation_ca(:) * veg_fract_correction(:) * fract_fpc_max(:)
 
     ! Same for dark_respiration_ca
     ! R: dies ist eine alternative Schreibweise die verwendet wurde da der PGI Kompiler probleme gemacht hat.
@@ -638,7 +640,8 @@ CONTAINS
     !END DO
 
     dark_respiration_ca(:) = SUM(dark_respiration_cl(:,:) * lai_cl(:,:),DIM=2)
-    dark_respiration(:) =  dark_respiration_ca(:)  * veg_fract_correction(:) ! convert from canopy area to tile box area
+    ! convert from canopy area to tile box area
+    dark_respiration(:) =  dark_respiration_ca(:)  * veg_fract_correction(:) * fract_fpc_max(:)
 
     CALL calc_NPP_pot_rate(gross_assimilation_ca, dark_respiration_ca, NPP_pot_rate_ca)
 
