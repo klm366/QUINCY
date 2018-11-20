@@ -23,6 +23,8 @@ MODULE mo_jsb_interface
   USE mo_atmland_interface,   ONLY: update_atm2land, update_land2atm
   USE mo_jsb_parallel,        ONLY: Get_omp_thread, Is_omp_inside_serial !, get_my_global_mpi_id
 
+  dsl4jsb_Use_processes CARBON_
+
   IMPLICIT NONE
   PRIVATE
 
@@ -340,9 +342,14 @@ CONTAINS
 
   SUBROUTINE jsbach_start_timestep(model_id)
 
+    USE mo_jsb_time,          ONLY: is_newday
+    USE mo_carbon_interface,  ONLY: yday_carbon_conservation_test
+
     INTEGER,  INTENT(in) :: model_id
 
-    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_model),           POINTER :: model
+    CLASS(t_jsb_tile_abstract),  POINTER :: tile
+
     INTEGER :: no_omp_thread
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_start_timestep'
@@ -361,6 +368,14 @@ CONTAINS
     ! Reset all tiles at the beginning of the timestep
     CALL model%Reset_tiles()
 
+    ! Carbon conservation test    
+    tile => model%Get_top_tile()
+    IF (model%processes(CARBON_)%p%config%active) THEN
+      IF(is_newday()) THEN
+        CALL yday_carbon_conservation_test(tile, model%options(no_omp_thread))
+      END IF
+    END IF
+    
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
 
   END SUBROUTINE jsbach_start_timestep
