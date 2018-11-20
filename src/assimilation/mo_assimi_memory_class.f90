@@ -364,3 +364,4 @@ CONTAINS
 
 #endif
 END MODULE mo_assimi_memory_class
+
