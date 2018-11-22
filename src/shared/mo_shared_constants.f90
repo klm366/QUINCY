@@ -60,23 +60,23 @@ MODULE mo_shared_constants
   !! 
   !! moving average period lengths (you can add new parameters here)
   !! the period may be defined in days per default (but different units are possible, see calc_mavg() below)
-                                                                 ! generic memory time-scales:
-    REAL(wp),SAVE :: mavg_period_weekly            = 7.0_wp        !< 7 days; constant across the model
-    REAL(wp),SAVE :: mavg_period_monthly           = 30.0_wp       !< 30 days; constant across the model
-    REAL(wp),SAVE :: mavg_period_yearly            = 365.0_wp      !< 365 days
-                                                                 ! specific memory time-scales of/for:
-    REAL(wp),SAVE :: mavg_period_tsoa              = 2.0_wp        !< memory time_scale for state of acclimation
-    REAL(wp),SAVE :: mavg_period_tuptake           = 3.0_wp        !< nutrient uptake processes (demand, BNF) 
-    REAL(wp),SAVE :: mavg_period_tlabile           = 7.0_wp        !< labile pool 
-    REAL(wp),SAVE :: mavg_period_tphen             = 7.0_wp        !< phenological processes 
-    REAL(wp),SAVE :: mavg_period_tfrac             = 10.0_wp       !< leaf N fractions
-    REAL(wp),SAVE :: mavg_period_tcnl              = 20.0_wp       !< leaf stoichiometry 
-    REAL(wp),SAVE :: mavg_period_talloc            = 30.0_wp       !< biomass allocation
-    REAL(wp),SAVE :: mavg_period_talloc_dynamic    = 365.0_wp * 30.0_wp       !< biomass allocation for empirical dynamic allocation
-    REAL(wp),SAVE :: mavg_period_tacclim           = 30.0_wp       !< respiration acclimation
-    REAL(wp),SAVE :: mavg_period_tmic              = 30.0_wp       !< microbial community acclimation
-    REAL(wp),SAVE :: mavg_period_tgrowth           = 365.0_wp      !< vegetation growth (?)
-    REAL(wp),SAVE :: mavg_period_tvegdyn           = 365.0_wp      !< vegetation dynamics processes 
+                                                                        ! generic memory time-scales:
+    REAL(wp),SAVE :: mavg_period_weekly            = 7.0_wp                 !< 7 days; constant across the model
+    REAL(wp),SAVE :: mavg_period_monthly           = 30.0_wp                !< 30 days; constant across the model
+    REAL(wp),SAVE :: mavg_period_yearly            = 365.0_wp               !< 365 days
+                                                                        ! specific memory time-scales of/for:
+    REAL(wp),SAVE :: mavg_period_tsoa              = 2.0_wp                 !< memory time_scale for state of acclimation
+    REAL(wp),SAVE :: mavg_period_tuptake           = 3.0_wp                 !< nutrient uptake processes (demand, BNF) 
+    REAL(wp),SAVE :: mavg_period_tlabile           = 7.0_wp                 !< labile pool 
+    REAL(wp),SAVE :: mavg_period_tphen             = 7.0_wp                 !< phenological processes 
+    REAL(wp),SAVE :: mavg_period_tfrac             = 10.0_wp                !< leaf N fractions
+    REAL(wp),SAVE :: mavg_period_tcnl              = 20.0_wp                !< leaf stoichiometry 
+    REAL(wp),SAVE :: mavg_period_talloc            = 30.0_wp                !< biomass allocation
+    REAL(wp),SAVE :: mavg_period_talloc_dynamic    = 365.0_wp * 30.0_wp     !< biomass allocation for empirical dynamic allocation
+    REAL(wp),SAVE :: mavg_period_tacclim           = 30.0_wp                !< respiration acclimation
+    REAL(wp),SAVE :: mavg_period_tmic              = 30.0_wp                !< microbial community acclimation
+    REAL(wp),SAVE :: mavg_period_tgrowth           = 365.0_wp               !< vegetation growth
+    REAL(wp),SAVE :: mavg_period_tvegdyn           = 365.0_wp               !< vegetation dynamics processes 
 
 !    REAL(wp),SAVE :: mavg_period_xxx         = xxx.0_wp       !< xxx
 !    REAL(wp),SAVE :: mavg_period_xxx         = xxx.0_wp       !< xxx
