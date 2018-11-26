@@ -384,6 +384,7 @@ CONTAINS
 
       !! init/reset fluxes (with/to zero)
       !!
+      CALL reset_assimi_fluxes    (tile, model%options)  ! mo_assimi_util
       CALL reset_veg_fluxes       (tile, model%options)  ! mo_veg_util
       CALL reset_sse_fluxes       (tile, model%options)  ! mo_sse_util
 
