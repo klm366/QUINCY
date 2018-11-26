@@ -52,12 +52,12 @@ CONTAINS
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
-    dsl4jsb_Use_memory(SSE_)       !  USE mo_sse_memory_class,     ONLY: t_sse_memory
+    dsl4jsb_Use_memory(SSE_)        !  USE mo_sse_memory_class,      ONLY: t_sse_memory
 
     ! Process interfaces:
     USE mo_atmland_interface                ! update_a2l
     USE mo_rad_interface                    ! update_radiation
-    USE mo_assimi_interface                 ! update_canopy_fluxes
+    USE mo_assimi_interface                 ! update_canopy_fluxes, reset_assimi_fluxes
     ! get parameters defined in init_slm_test_canopy()
 
     IMPLICIT NONE
@@ -107,7 +107,7 @@ CONTAINS
     REAL(wp),SAVE :: ref_co2_mixing_ratio = 380.0_wp  ! co2 in ppm
     REAL(wp),SAVE :: ref_wind = 1.0_wp                ! wind in m/s
     REAL(wp),SAVE :: ref_ga = 0.4_wp                  ! aerodynamic conductance in m/s
-    REAL(wp),SAVE :: ref_theta = 1._wp                ! soil water availability in fraction of AWC
+    REAL(wp),SAVE :: ref_soil_root_pot = 0._wp        ! soil water potential, ref for test_canopy model
     REAL(wp),SAVE :: ref_lai = 3._wp                  ! LAI
     REAL(wp),SAVE :: ref_nleaf = 2.0_wp               ! N leaf per unit leaf area in gN/m2
     INTEGER       :: ipoi, ichunk                     ! number of the chunk: ipoi 1:nc / ichunk ics:ice
@@ -126,11 +126,12 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: net_assimilation 
     dsl4jsb_Real2D_onChunk      :: canopy_cond
     dsl4jsb_Real2D_onChunk      :: co2_conc_leaf
+    dsl4jsb_Real2D_onChunk      :: soa_tsoa_mavg
     ! RAD_
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tfrac_mavg_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_tfrac_mavg_cl
     ! SSE_
-    dsl4jsb_Real2D_onChunk      :: w_soil_root_theta 
+    dsl4jsb_Real2D_onChunk      :: w_soil_root_pot 
     ! VEG_
     dsl4jsb_Real2D_onChunk      :: lai 
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt_mavg
@@ -176,11 +177,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, net_assimilation)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, canopy_cond)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, co2_conc_leaf)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, soa_tsoa_mavg)
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)      ! in
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl)      ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_theta)
+    dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_pot)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(VEG_, lai)
     dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)
@@ -231,6 +233,7 @@ CONTAINS
     q_bcoef(:)          = 0.0_wp
     pch(:)              = 0.0_wp
     cos_zenith_angle(:) = ref_cos_angle
+    soa_tsoa_mavg(:)    = 7.0_wp        ! is initialized in assimi init with -10.0_wp as the model starts in winter
     !latitude                  = 50.0_wp
     !longitude                 = 0.0_wp
 
@@ -255,7 +258,6 @@ CONTAINS
     !> 1.2 Initialisation of soil and vegetation (so far relevant)
     !!
     !!
-    w_soil_root_theta(:) = ref_theta
     lai(:)   = ref_lai
     IF(ref_pft==0) THEN
       veg__mem%pool%leaf%nitrogen%ptr(:,iblk)     = ref_nleaf / molar_mass_N * lai(:)
@@ -308,7 +310,8 @@ CONTAINS
            swpar_srf_down = swpar_srf_down(:))
 
      !! canopy calculation fluxes
-     CALL reset_veg_fluxes(tile,options)      !< mo_veg_util
+     CALL reset_veg_fluxes(tile,options)             !< mo_veg_util
+     CALL reset_assimi_fluxes(tile, model%options)   !< mo_assimi_util
      CALL update_radiation(tile,options)      !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 
@@ -348,7 +351,8 @@ CONTAINS
            q_air = q_air)
 
      !! canopy calculation fluxes
-     CALL reset_veg_fluxes(tile,options)      !< mo_veg_util
+     CALL reset_veg_fluxes(tile,options)             !< mo_veg_util
+     CALL reset_assimi_fluxes(tile, model%options)   !< mo_assimi_util
      CALL update_radiation(tile,options)      !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 
@@ -379,7 +383,8 @@ CONTAINS
            co2_mixing_ratio = co2_mixing_ratio)
 
      !! canopy calculation fluxes
-     CALL reset_veg_fluxes(tile,options)      !< mo_veg_util
+     CALL reset_veg_fluxes(tile,options)             !< mo_veg_util
+     CALL reset_assimi_fluxes(tile, model%options)   !< mo_assimi_util
      CALL update_radiation(tile,options)      !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 
@@ -405,7 +410,8 @@ CONTAINS
                           q_air = q_air)
 
      !! canopy calculation fluxes
-     CALL reset_veg_fluxes(tile,options)      !< mo_veg_util
+     CALL reset_veg_fluxes(tile,options)             !< mo_veg_util
+     CALL reset_assimi_fluxes(tile, model%options)   !< mo_assimi_util
      CALL update_radiation(tile,options)      !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 
@@ -422,35 +428,35 @@ CONTAINS
                           options , &
                           q_air = q_air)
 
-  !> 2.5 Theta (0-100 %)
+  !> 2.5 soil water potential (0 to -4)
   !!
   !!
   lun = lun + 1
-  WRITE(lun,*) 'THETA A GC CI'
-  w_soil_root_theta(:) = 0.0_wp
-  DO i = 1,100
+  WRITE(lun,*) 'SW_pot A GC CI'
+  w_soil_root_pot(:) = ref_soil_root_pot
+  DO i = 1,80
 
-     w_soil_root_theta(:) = w_soil_root_theta(:) + 0.01_wp
+     w_soil_root_pot(:) = w_soil_root_pot(:) - 0.05_wp
 
      !! canopy calculation fluxes
-     CALL reset_veg_fluxes(tile,options)      !< mo_veg_util
+     CALL reset_veg_fluxes(tile,options)             !< mo_veg_util
+     CALL reset_assimi_fluxes(tile, model%options)   !< mo_assimi_util
      CALL update_radiation(tile,options)      !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 
-     WRITE(lun,'(4F16.7)') w_soil_root_theta(ipoi) *100._wp, &
+     WRITE(lun,'(4F16.7)') w_soil_root_pot(ipoi) *100._wp, &
            net_assimilation(ipoi), canopy_cond(ipoi) *1000._wp, &
            co2_conc_leaf(ipoi)/co2_mixing_ratio(ipoi)
 
   END DO
-  w_soil_root_theta(:) = ref_theta
+  w_soil_root_pot(:) = ref_soil_root_pot
 
-  !> 2.6 LAI (0-11)
+  !> 2.6 LAI (increase from 0 to 11)
   !!
   !!
   lun = lun + 1
   WRITE(lun,*) 'LAI A GC CI'
   lai(:) = 0.0_wp
-! @todo test_canopy_model -> over what are you looping here ? "i" does not change any as far as I can see (Jan 20160927)
   DO i = 1,22
 
      lai(:) = lai(:) + 0.5_wp
@@ -477,7 +483,8 @@ CONTAINS
                               inquire_n_fractions = .TRUE.)
 
      !! canopy calculation fluxes
-     CALL reset_veg_fluxes(tile,options)      !< mo_veg_util
+     CALL reset_veg_fluxes(tile,options)             !< mo_veg_util
+     CALL reset_assimi_fluxes(tile, model%options)   !< mo_assimi_util
      CALL update_radiation(tile,options)      !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 
@@ -518,7 +525,8 @@ CONTAINS
                               inquire_n_fractions = .TRUE.)
 
      !! canopy calculation fluxes
-     CALL reset_veg_fluxes(tile,options)      !< mo_veg_util
+     CALL reset_veg_fluxes(tile,options)             !< mo_veg_util
+     CALL reset_assimi_fluxes(tile, model%options)   !< mo_assimi_util
      CALL update_radiation(tile,options)      !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 
@@ -563,7 +571,8 @@ CONTAINS
                               inquire_n_fractions = .TRUE.)
 
      !! canopy calculation fluxes
-     CALL reset_veg_fluxes(tile,options)      !< mo_veg_util
+     CALL reset_veg_fluxes(tile,options)             !< mo_veg_util
+     CALL reset_assimi_fluxes(tile, model%options)   !< mo_assimi_util
      CALL update_radiation(tile,options)      !< mo_rad_update_radiation
      CALL update_canopy_fluxes(tile,options)  !< mo_assimi_update_canopy_fluxes
 
