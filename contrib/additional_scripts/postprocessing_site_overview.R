@@ -52,7 +52,8 @@ if(grepl("flux", simOutFile)) {
 
 # read the SLM model from the namelist, set a diff default output for SLM soil
 slmModel <- trim(namelist[trim(namelist[,1])=="slm_model_name",2])
-if(slmModel == "soil" & simOutFile == "vegpoolC") simOutFile <- "soilfluxCdC13DC14"
+if(slmModel == "soil"   & simOutFile == "vegpoolC") simOutFile <- "soilfluxCdC13DC14"
+if(slmModel == "canopy" & simOutFile == "vegpoolC") simOutFile <- "vegfluxC"
 
 ## open output file
 pdf(paste0(simOutFile, "_site_overview.pdf"), paper="a4", height=10, width=8, pointsize=12, 

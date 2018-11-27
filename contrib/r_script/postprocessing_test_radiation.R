@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 
-# postprocessing of output data
+# postprocessing of output data from QUINCY test_radiation model
 # called from contrib/test_bed/run-slm_test-bed.sh
 
 # message
