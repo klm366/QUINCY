@@ -79,6 +79,11 @@ MODULE mo_rad_memory_class
                             arad_shaded_nir_cl   , & !< absorbed radiation in NIR band on shaded leaves [W m-2]
                             fleaf_sunlit_nir_cl      !< fraction of leaves that are sunlit in NIR band [unitless]
 
+    ! 3D Radiative transfer variables (appended by _sp for spectral_bands)
+    TYPE(t_jsb_var_real3d)  :: &   ! DIMENSION(nspec)
+                            canopy_reflectance_sp    !< top of the canopy directional reflectance factor [unitless]
+
+
   CONTAINS
     PROCEDURE :: Init => Init_rad_memory
   END TYPE t_rad_memory
@@ -117,15 +122,17 @@ CONTAINS
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: vgrid_surface                ! Vertical grid
     TYPE(t_jsb_vgrid), POINTER :: vgrid_canopy                 ! Vertical grid
+    TYPE(t_jsb_vgrid), POINTER :: vgrid_spectral               ! Vertical grid used to display the sprectal bands of light
     INTEGER                    :: table
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_rad_memory'
     ! ---------------------------
     ! 0.5 Get Memory
-    model         => Get_model(model_id)
-    table         = 1     ! in jsbach4 this line is: table = tables(1)     *slmtemp
-!    hgrid         => Get_grid(mem%grid_id)
-    vgrid_surface => Get_vgrid('surface')
-    vgrid_canopy  => Get_vgrid('canopy_layer')
+    model           => Get_model(model_id)
+    table           = 1     ! in jsbach4 this line is: table = tables(1)     *slmtemp
+!    hgrid           => Get_grid(mem%grid_id)
+    vgrid_surface   => Get_vgrid('surface')
+    vgrid_canopy    => Get_vgrid('canopy_layer')
+    vgrid_spectral  => Get_vgrid('spectral_bands')
 
 
 
@@ -421,6 +428,13 @@ CONTAINS
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
+      CALL jsb_add_var(mem, 'canopy_reflectance_sp', mem%canopy_reflectance_sp, &
+            hgrid, vgrid_spectral, &
+            t_cf('canopy_reflectance_sp', 'unitless', 'top of the canopy directional reflectance factor'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
 
     END IF
 

@@ -119,6 +119,7 @@ CONTAINS
     USE mo_atmland_interface,             ONLY: update_a2l, update_l2a
     USE mo_shared_output,                 ONLY: write_output_pool, write_output_flux, write_soil_forcing
     USE mo_test_canopy_model,             ONLY: run_test_canopy_model
+    USE mo_test_radiation_model,          ONLY: run_test_radiation_model
 
     ! Process interfaces:
     USE mo_rad_interface
@@ -404,6 +405,10 @@ CONTAINS
     CASE('test_canopy')
     !! test_canopy --------------------------------------------------------------------------------
       CALL run_test_canopy_model  (tile, model%options)
+
+    CASE('test_radiation')
+    !! test_radiation -----------------------------------------------------------------------------
+      CALL run_test_radiation_model (tile, model%options)
 
     CASE DEFAULT
       CALL finish('land_model_interface','Invalid SLM model name. Try either land, plant, soil, canopy or test_canopy.')

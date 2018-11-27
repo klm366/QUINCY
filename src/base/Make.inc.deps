@@ -123,6 +123,7 @@ mo_slm_varlist.o: \
   mo_jsb_model_class.o \
   mo_assimi_config_class.o \
   mo_sse_config_class.o \
+  mo_rad_config_class.o \
   mo_jsb_memory_class.o \
   mo_jsb_grid_class.o \
   mo_jsb_io.o

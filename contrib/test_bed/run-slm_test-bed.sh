@@ -13,7 +13,7 @@
 ########################################################################################################
 
 # model
-slmModel="land"   # specific SLM model [default: "land"]; possible values: land plant soil canopy test_canopy
+slmModel="land"   # specific SLM model [default: "land"]; possible values: land plant soil canopy test_canopy test_radiation
 
 # flags: T (True) or F (False) [large caps]
 # plant-soil model options
@@ -220,7 +220,7 @@ while getopts ":p:m:i:f:s:y:b:z:h" opt; do
     echo "       note: setPFTAutomatically is set to: no"
     echo " -m set slmModel"
     echo "    Arguments to -m:"
-    echo "       land plant soil canopy"
+    echo "       land plant soil canopy test_canopy test_radiation"
     echo " -i set siteName, i.e., siteID"
     echo "    Arguments to -i:"
     echo "       a valid siteName, such as, [FLUX] DE-Hai ZA-Kru  [CRUN] BHS_01 ILO_05  [FACE] DK-AMB OR-ELE"
@@ -282,7 +282,7 @@ fi
 return 0
 }
 # lists to validate against
-validateSlmModel="land plant soil canopy test_canopy"
+validateSlmModel="land plant soil canopy test_canopy test_radiation"
 validateBNFScheme="none fixed standard optimal resistance unlimited"
 validateMycScheme="no am ecm"
 validateNDepositionScheme="none constant dynamic"
@@ -467,9 +467,8 @@ case "$forcingDataSet" in
 esac
 
 
-## test_canopy model and forcingDataSet none ##
-if [ $slmModel != "test_canopy" ] 
- then
+## test_canopy/test_radiation model and forcingDataSet none ##
+if [ $slmModel != "test_canopy" ] && [ $slmModel != "test_radiation" ]; then
   # no site data-set
   if [ "$forcingDataSet" == "none" ]  # if forcing data are neither Fluxnet nor Cruncep dataset
   then  # local forcing file
@@ -502,7 +501,7 @@ if [ $slmModel != "test_canopy" ]
     setPFTAutomatically="no"   # for forcingDataSet = none
   fi  # end: forcingDataSet == "none"
 else  
-  setPFTAutomatically="no"   # for test_canopy model
+  setPFTAutomatically="no"   # for test_canopy/test_radiation model
 fi
 
 
@@ -518,8 +517,7 @@ cp ../../data/lctlib_slm_nlct8.def            ./"$slmModel"
 
 
 ## copy forcing file(s)
-if [ $slmModel != "test_canopy" ] # copy a climate.dat file for all models but test_canopy
-  then
+if [ $slmModel != "test_canopy" ] && [ $slmModel != "test_radiation" ]; then      # copy a climate.dat file for all models but test_canopy & test_radiation
     # forcingDataSet == none (local forcing file needed)
     if [ "$forcingDataSet" == "none" ]
       then
@@ -727,7 +725,7 @@ changeNamelistValue nsoil_water "$nsoil_layer"
 changeNamelistValue set_parameter_values_from_file ".FALSE."   # set to default FALSE because parameter update is not applicable here in test_bed
 
 ## set site-specific information (not for test_canopy)
-if [ "$forcingDataSet" != "none" ] && [ "$slmModel" != "test_canopy" ]
+if [ "$forcingDataSet" != "none" ] && [ "$slmModel" != "test_canopy" ] && [ "$slmModel" != "test_radiation" ]
   then
     # get data of the particular site
     siteData=$(grep "$siteName" "$allSiteInfoFile")
@@ -791,7 +789,7 @@ if [ "$forcingDataSet" != "none" ] && [ "$slmModel" != "test_canopy" ]
       changeNamelistValue plant_functional_type_id "$plant_functional_type_id"
     fi
 
-  else  # forcingDataSet == none
+  else  # forcingDataSet == none || test_canopy || test_radiation
     changeNamelistValue plant_functional_type_id "$plant_functional_type_id"
     changeNamelistValue longitude "$longitude"
     changeNamelistValue latitude "$latitude"

@@ -27,6 +27,7 @@ mo_land_model_interface.o: \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
   mo_test_canopy_model.o \
+  mo_test_radiation_model.o \
   mo_shared_update_time_averages.o \
   mo_shared_output.o \
   mo_sb_config_class.o \
@@ -37,29 +38,6 @@ mo_land_model_interface.o: \
   mo_sse_interface.o \
   mo_sb_interface.o \
   mo_pheno_interface.o
-
-mo_test_canopy_model.o: \
-  mo_kind.o \
-  mo_jsb_tile_class.o \
-  mo_jsb_task_class.o \
-  mo_jsb_model_class.o \
-  mo_jsb_lctlib_class.o \
-  mo_jsb_process_class.o \
-  mo_jsb_class.o \
-  mo_rad_constants.o \
-  mo_atmland_constants.o \
-  mo_atmland_util.o \
-  mo_veg_util.o \
-  mo_shared_constants.o \
-  mo_assimi_config_class.o \
-  mo_atmland_interface.o \
-  mo_rad_interface.o \
-  mo_veg_canopy.o \
-  mo_assimi_interface.o \
-  mo_veg_memory_class.o \
-  mo_rad_memory_class.o \
-  mo_assimi_memory_class.o \
-  mo_sse_memory_class.o
 
 mo_atmland_forcing.o: \
   mo_kind.o \
@@ -88,3 +66,47 @@ mo_jsb4_forcing.o: \
   mo_namelist.o \
   mo_jsb_class.o \
   mo_jsb_model_class.o
+
+mo_test_canopy_model.o: \
+  mo_kind.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
+  mo_jsb_model_class.o \
+  mo_jsb_lctlib_class.o \
+  mo_jsb_process_class.o \
+  mo_jsb_class.o \
+  mo_rad_constants.o \
+  mo_atmland_constants.o \
+  mo_atmland_util.o \
+  mo_veg_util.o \
+  mo_shared_constants.o \
+  mo_assimi_config_class.o \
+  mo_atmland_interface.o \
+  mo_rad_interface.o \
+  mo_veg_canopy.o \
+  mo_assimi_interface.o \
+  mo_veg_memory_class.o \
+  mo_rad_memory_class.o \
+  mo_assimi_memory_class.o \
+  mo_sse_memory_class.o
+
+mo_test_radiation_model.o: \
+  mo_kind.o \
+  mo_jsb_class.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
+  mo_jsb_model_class.o \
+  mo_jsb_grid.o \
+  mo_jsb_grid_class.o \
+  mo_jsb_lctlib_class.o \
+  mo_jsb_process_class.o \
+  mo_atmland_constants.o \
+  mo_atmland_util.o \
+  mo_shared_constants.o \
+  mo_veg_canopy.o \
+  mo_rad_scope.o \
+  mo_assimi_config_class.o \
+  mo_rad_memory_class.o \
+  mo_veg_memory_class.o \
+  mo_sse_memory_class.o \
+  mo_atmland_interface.o

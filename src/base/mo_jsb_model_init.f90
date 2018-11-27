@@ -205,6 +205,7 @@ CONTAINS
     !  incl. creating vertical grids:
     !   canopy_layer  in ASSIMI_  (ncanopy is part of the &ASSIMILATION_CTL namelist)
     !   soil_layer_sb in SSE_     (number of soil layers is part of the &SSE_CTL namelist)
+    !   spectral_bands in RAD_    (number of spectral bands the light is divided into, vector length is currently hardcoded in rad_config)
     CALL model%Configure_processes()
     !> 1.3 Get selected process configs
     dsl4jsb_Get_config(VEG_)
@@ -335,31 +336,38 @@ CONTAINS
       !! a certain sequence of proc_init (i.e. the below sequence) is needed to correctly setup the processes, because of some 
       !!  dependencies across two or three processes
       ! test model name
-      IF (one_of(model%config%slm_model_name, [character(len=20) :: 'land','plant','soil','canopy','test_canopy' ]) == -1) THEN
-        CALL finish(routine,'Invalid SLM model name. Try either land, plant, soil, canopy or test_canopy.')
+      IF (one_of(model%config%slm_model_name, [character(len=20) :: &
+          'land','plant','soil','canopy','test_canopy','test_radiation' ]) == -1) THEN
+        CALL finish(routine,'Invalid SLM model name. Try either land, plant, soil, canopy, test_canopy or test_radiation.')
       END IF
       ! pheno_init
-      IF (one_of(model%config%slm_model_name, [character(len=20) :: 'land','plant','canopy' ]) > 0) THEN
+      IF (one_of(model%config%slm_model_name, [character(len=20) :: &
+          'land','plant','canopy' ]) > 0) THEN
         CALL pheno_init(tile, model%options)
       END IF
       ! assimi_init
-      IF (one_of(model%config%slm_model_name, [character(len=20) :: 'land','plant','canopy','test_canopy' ]) > 0) THEN
+      IF (one_of(model%config%slm_model_name, [character(len=20) :: &
+          'land','plant','canopy','test_canopy','test_radiation' ]) > 0) THEN
         CALL assimi_init(tile, model%options)
       END IF
       ! rad_init
-      IF (one_of(model%config%slm_model_name, [character(len=20) :: 'land','plant','canopy','test_canopy' ]) > 0) THEN
+      IF (one_of(model%config%slm_model_name, [character(len=20) :: &
+          'land','plant','canopy','test_canopy','test_radiation' ]) > 0) THEN
         CALL rad_init(tile, model%options)
       END IF
       ! veg_init
-      IF (one_of(model%config%slm_model_name, [character(len=20) :: 'land','plant','soil','canopy','test_canopy' ]) > 0) THEN
+      IF (one_of(model%config%slm_model_name, [character(len=20) :: &
+          'land','plant','soil','canopy','test_canopy','test_radiation' ]) > 0) THEN
         CALL veg_init(tile, model%options)
       END IF
       ! sse_init
-      IF (one_of(model%config%slm_model_name, [character(len=20) :: 'land','plant','soil','canopy' ]) > 0) THEN
+      IF (one_of(model%config%slm_model_name, [character(len=20) :: &
+          'land','plant','soil','canopy' ]) > 0) THEN
         CALL sse_init(tile, model%options)
       END IF
       ! sb_init (needs sse_init to be finished)
-      IF (one_of(model%config%slm_model_name, [character(len=20) :: 'land','plant','soil' ]) > 0) THEN
+      IF (one_of(model%config%slm_model_name, [character(len=20) :: &
+          'land','plant','soil' ]) > 0) THEN
         CALL sb_init(tile, model%options)
       END IF
       ! next tile

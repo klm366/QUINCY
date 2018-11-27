@@ -419,6 +419,7 @@ CONTAINS
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(ASSIMI_)
     dsl4jsb_Use_config(SSE_)
+    dsl4jsb_Use_config(RAD_)
 
     IMPLICIT NONE
     ! ---------------------------
@@ -445,6 +446,7 @@ CONTAINS
 
     dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_config(SSE_)
+    dsl4jsb_Def_config(RAD_)
 
     model   => Get_model(1)        ! model => Get_model(model_id)   *slmtemp hardcoded model ID !!!
     ice     = model%options%ice    ! *slmtemp
@@ -454,6 +456,7 @@ CONTAINS
 
     dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_config(SSE_)
+    dsl4jsb_Get_config(RAD_)
 
 
     ! select nlevel according to process id 
@@ -472,6 +475,8 @@ CONTAINS
     SELECT CASE(TRIM(name))
       CASE('root_fraction_sl') ! variables from veg_memory with nsoil_water (nsoil_sb) DIMENSION
         nlevel = dsl4jsb_Config(SSE_)%nsoil_water
+      CASE('canopy_reflectance_sp') ! variable from rad_memory with DIMENSION(nspec)
+        nlevel = dsl4jsb_Config(RAD_)%nspec
       ! CASE('...') ! ... 
       !   nlevel = dsl4jsb_Config(ASSIMI_)%ncanopy
     END SELECT

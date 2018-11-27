@@ -28,9 +28,7 @@ MODULE mo_rad_config_class
   !! currently it does mainly: reading parameters from namelist
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_config) :: t_rad_config
-    !
-    ! no additional variables yet (additional to the ones defined in t_jsb_config)
-    !
+    INTEGER                 :: nspec                        !< number of spectral bands of the light
   CONTAINS
     PROCEDURE :: Init => Init_rad_config
   END type t_rad_config
@@ -46,7 +44,10 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_rad_config(config)
 
-    USE mo_namelist,          ONLY: open_nml, POSITIONED, position_nml, close_nml
+    USE mo_namelist,           ONLY: open_nml, POSITIONED, position_nml, close_nml
+    USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
+    USE mo_jsb_grid,           ONLY: Register_vgrid
+    USE mo_jsb_grid_class,     ONLY: ZAXIS_GENERIC   ! in JSBACH4 used from mo_jsb_io    *slmtemp
 
     IMPLICIT NONE
     ! ---------------------------
@@ -57,11 +58,15 @@ CONTAINS
     ! variables for reading from namlist, identical to variable-name in namelist
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
+    INTEGER                     :: nspec
+    TYPE(t_jsb_vgrid), POINTER  :: vgrid_spectral
+    
 
     NAMELIST /radiation_ctl/      &
          active,                      &
          ic_filename,                 &
          bc_filename
+
 
     ! variables for reading model-options from namelist
     INTEGER :: nml_handler, nml_unit, istat
@@ -74,6 +79,7 @@ CONTAINS
     active              = .TRUE.
     bc_filename         = 'bc_land_rad.nc'  !R: gibts im Moment noch nicht
     ic_filename         = 'ic_land_rad.nc'  !R: gibts im Moment noch nicht
+    nspec               = 2162
 
     ! read the namelist
     ! &RADIATION_CTL
@@ -88,6 +94,19 @@ CONTAINS
     config%active              = active
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
+    config%nspec               = nspec
+
+
+    !< Create the 3rd dimension of spectral bands of the light for RAD_ variables using a vertical axis
+    !! 
+    vgrid_spectral  => new_vgrid('spectral_bands', ZAXIS_GENERIC, config%nspec, &
+                      longname='Number of spectral bands the light is divided into, from RAD_ QUINCY') !, &
+                      ! units=''  , &
+                      ! levels=   , &
+                      ! lbounds=  , & 
+                      ! ubounds=  , &
+                      ! dz=       )
+    CALL register_vgrid(vgrid_spectral)
 
   END SUBROUTINE Init_rad_config
 

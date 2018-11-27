@@ -370,9 +370,9 @@ CONTAINS
         ENDSELECT
 
 
-      !> 1.2 Canopy & Test_Canopy
+      !> 1.2 Canopy & Test_Canopy & Test_Radiation
       !!
-      CASE('canopy','test_canopy')
+    CASE('canopy','test_canopy','test_radiation')
         ref_lai   = 6.0_wp  !! the ref_lai of 6.0 works great for all sites that are not too dry; but use 0.5_wp for dry sites like ZA-Kru
         ref_nleaf = 2.0_wp
         lai(:)    = ref_lai
@@ -396,7 +396,7 @@ CONTAINS
       !> 1.3 Default (simply for error catching)
       !!
       CASE DEFAULT
-        CALL finish('veg_init','Invalid SLM model name. Use either land, plant, soil, canopy or test_canopy.')
+        CALL finish('veg_init','Invalid SLM model name. Use either land, plant, soil, canopy, test_canopy or test_radiation.')
      ENDSELECT
 
 

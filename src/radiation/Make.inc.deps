@@ -52,6 +52,8 @@ mo_rad_config_class.o: \
   mo_namelist.o \
   mo_exception.o \
   mo_io_units.o \
+  mo_jsb_grid.o \
+  mo_jsb_grid_class.o \
   mo_jsb_config_class.o
 
 mo_rad_memory_class.o: \
@@ -65,3 +67,7 @@ mo_rad_memory_class.o: \
   mo_jsb_memory_class.o \
   mo_jsb_var_class.o \
   mo_slm_varlist.o
+
+mo_rad_scope.o: \
+  mo_kind.o \
+  mo_jsb_task_class.o

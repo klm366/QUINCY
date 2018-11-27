@@ -283,7 +283,7 @@ PROGRAM land_model_driver
   !! 
   !! open output files
   !! need to be done after 'output_interval_pool_act' is defined above
-  !! test_canopy: special case, runs for just one timestep and pool/flux output routines are not called
+  !! test_canopy & test_radiation: special case, runs for just one timestep and pool/flux output routines are not called
   !! 
   ! Initialise output and flux accumulation, and open output files; see mo_shared_output
   ! the output routine for SLM canopy is located in mo_land_model_interface -> canopy_model_write_data()
@@ -301,7 +301,7 @@ PROGRAM land_model_driver
       IF (model%config%flag_generate_soil_forcing) THEN
         CALL open_output_files_soil_forcing(tile, iblk, ics, ice, nc, nsoil_sb)
       ENDIF
-    CASE('test_canopy')
+    CASE('test_canopy','test_radiation')
       ntimestep = 0     ! simulation starts with zero, and loop asks for 'IF (itimestep .GT. ntimestep) EXIT'
   END SELECT
 
