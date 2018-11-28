@@ -104,6 +104,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs_tfrac_mavg
     ! PHENO_
     dsl4jsb_Real2D_onChunk      :: growing_season 
+    dsl4jsb_Real2D_onChunk      :: lai_max
     ! SSE_ 2D
     dsl4jsb_Real2D_onChunk      :: w_soil_root_pot
     ! SSE_ 3D
@@ -202,6 +203,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tfrac_mavg)     ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)               ! in
+    dsl4jsb_Get_var2D_onChunk(PHENO_, lai_max)                      ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_pot)                ! in
     dsl4jsb_Get_var3D_onChunk(SSE_, soil_depth_sl)                  ! in
@@ -393,14 +395,14 @@ CONTAINS
    
        ! diagnose required change in leaf C given phenology to attain prescribed LAI max
        WHERE(growing_season(:) > test_false_true)
-          veg_growth%leaf%carbon(:) = dsl4jsb_Config(PHENO_)%lai_max / lctlib%sla * &
+          veg_growth%leaf%carbon(:) = lai_max(:) / lctlib%sla * &
                                       (1._wp - exp(-k_leafon_canopy * &
-                                       (dsl4jsb_Config(PHENO_)%lai_max - lai(:)) / dsl4jsb_Config(PHENO_)%lai_max)) * &
+                                       (lai_max(:) - lai(:)) / lai_max(:))) * &
                                       dtime / one_day 
        ELSEWHERE
           veg_litterfall%leaf%carbon(:) = MAX(veg_pool%leaf%carbon(:), & 
                                               lai(:)/lctlib%sla * max_leaf_shedding_rate * dtime / one_day * & 
-                                              dsl4jsb_Config(PHENO_)%lai_max / &
+                                              lai_max(:) / &
                                               MAX(eps4, lai(:)))
        ENDWHERE
  
