@@ -20,7 +20,12 @@ MODULE mo_jsb_config_class
 
   PUBLIC :: t_jsb_config, t_jsb_config_p, t_jsb_model_config, new_model_config
 
-  ! Type for model configuration
+
+  !-----------------------------------------------------------------------------------------------------
+  !> model configuration TYPE
+  !! 
+  !! 
+  !-----------------------------------------------------------------------------------------------------
   TYPE t_jsb_model_config
     CHARACTER(len=filename_max)    :: grid_filename
     CHARACTER(len=filename_max)    :: fract_filename
@@ -33,7 +38,7 @@ MODULE mo_jsb_config_class
     LOGICAL                        :: l_compat401      ! Use configuration compatible with jsbach 4.01
     CHARACTER(len=10), ALLOCATABLE :: output_tiles(:)  ! List of tile names for which output should be generated
 
-    !! SLM added !!
+    !! QUINCY added !!
     !! BASE_CTL
     REAL(wp)          :: dtime                              !< length of one time step in seconds; base_ctl namelist: dtime_step_length_sec
     CHARACTER(len=20) :: slm_model_name
@@ -62,7 +67,12 @@ MODULE mo_jsb_config_class
     LOGICAL           :: l_static_forcing_mode              !< set to TRUE if forcing_options%forcing_mode == static
   END TYPE t_jsb_model_config
 
-  ! Abstract type for process configurations
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Abstract TYPE for process and model configuration
+  !! 
+  !! 
+  !-----------------------------------------------------------------------------------------------------
   TYPE, ABSTRACT :: t_jsb_config
     LOGICAL :: active
     CHARACTER(len=filename_max) :: ic_filename
@@ -77,7 +87,7 @@ MODULE mo_jsb_config_class
     CLASS(t_jsb_config), POINTER :: p
   END TYPE t_jsb_config_p
 
-  ! JE *slmtemp
+  ! note from JanEngel *slmtemp
   ! https://de.wikibooks.org/wiki/Fortran:_Fortran_2003:_Zeiger#Abstraktes_Interface
   ! defines that the TYPE itself is passed to the procedure (i.e. t_*_config -> init_config subroutine) 
   ABSTRACT INTERFACE
@@ -89,8 +99,15 @@ MODULE mo_jsb_config_class
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_config_class'
 
+
 CONTAINS
 
+
+  !-----------------------------------------------------------------------------------------------------
+  !> create and init model config
+  !! 
+  !! 
+  !-----------------------------------------------------------------------------------------------------
   FUNCTION new_model_config(namelist_filename) RESULT(model_config)
 
     !USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
