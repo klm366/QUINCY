@@ -126,13 +126,16 @@ CONTAINS
     !!
 
 
-    !> 0.9 initialise output
+
+
+    !> 0.9 initialise output (to ensure that 0.0 is returned in case of the below statements is TRUE)
     !! 
     lai_cl(:,:)           = 0._wp
     cumm_lai_cl(:,:)      = 0._wp
     leaf_nitrogen_cl(:,:) = 0._wp
 
     !> 0.9.1  set pathway specific constants 
+    !! 
     IF(lctlib%ps_pathway == ic4phot) THEN
         jmax2vcmax = jmax2vcmax_C4
         k0_fn_chl  = k0_fn_chl_C4
@@ -150,12 +153,15 @@ CONTAINS
     optimise_n_fractions = flag_optimal_Nfraction
     IF (PRESENT(inquire_n_fractions)) optimise_n_fractions = .NOT.inquire_n_fractions
 
-    ! note, all variables are of DIMENSION(options%nc) but compiler gives an error if '(:)' is added here
+    !> 0.9.3  check presence of all arguments that are OPTIONAL but needed for 'CALL optimise_canopy_n_fractions()' \n
+    !!         only in case optimise_n_fractions = TRUE \n
+    !!         note, all variables are of DIMENSION(options%nc) but compiler gives an error if '(:)' is added here
     IF(optimise_n_fractions)THEN
        IF(.NOT.PRESENT(t_air)            .OR..NOT.PRESENT(t_acclim)         .OR..NOT.PRESENT(press_srf)    .OR. &
           .NOT.PRESENT(co2_mixing_ratio) .OR..NOT.PRESENT(ga)               .OR. &
+          .NOT.PRESENT(beta_air)         .OR..NOT.PRESENT(beta_soa)         .OR. &
           .NOT.PRESENT(beta_soil_ps)     .OR..NOT.PRESENT(beta_sinklim_ps)  .OR..NOT.PRESENT(beta_soil_gs) .OR. &
-          .NOT.PRESENT(beta_air)         .OR..NOT.PRESENT(t_jmax_opt)) THEN
+          .NOT.PRESENT(t_jmax_opt)) THEN
 
           WRITE(message_text,'(a)') 'called to optimise N fractions, but without [climate] variables'
           CALL finish("mo_veg_canopy:calc_canopy_layer",message_text)
