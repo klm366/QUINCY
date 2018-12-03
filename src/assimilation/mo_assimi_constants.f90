@@ -150,9 +150,9 @@ CONTAINS
       discr_ps_a_C13 = 4.4_wp   
       discr_ps_b_C13 = 27.0_wp 
       discr_ps_c_C13 = 5.7_wp 
-      discr_ps_a_C14 = discr_ps_a_C13 * 1.97_wp 
-      discr_ps_b_C14 = discr_ps_b_C13 * 1.89_wp 
-      discr_ps_c_C14 = discr_ps_c_C13 * 1.89_wp 
+      discr_ps_a_C14 = 1.97_wp * discr_ps_a_C13
+      discr_ps_b_C14 = 1.89_wp * discr_ps_b_C13
+      discr_ps_c_C14 = 1.89_wp * discr_ps_c_C13
       discr_ps_phi   = 0.16_wp 
 
     ! parameters for canopy profile and canopy light extinction (parameters describing the canopy profile of N)
