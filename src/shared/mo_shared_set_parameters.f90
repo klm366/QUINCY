@@ -875,7 +875,11 @@ CONTAINS
                                     "t_jmax_slope", proportional_parameter_changes, dependency_recalculation, &
                                     t_jmax_slope)
                                     
-    CALL Set_quincy_parameter_value(this%t_jmax_opt_min, &
+    IF (ABS(this%t_jmax_offset - missval) > eps8) THEN
+        dependency_recalculation = .TRUE.
+        t_jmax_opt_min           = t_jmax_offset   ! copied from mo_assimi_constants
+    ENDIF
+    CALL Set_quincy_parameter_value(t_jmax_offset, &   ! default: t_jmax_opt_min = t_jmax_offset | hence, only proportional changes may have an effect
                                     this%t_jmax_opt_min, &
                                     "t_jmax_opt_min", proportional_parameter_changes, dependency_recalculation, &
                                     t_jmax_opt_min)
@@ -962,6 +966,7 @@ CONTAINS
 
     IF (ABS(this%discr_ps_a_C13 - missval) > eps8) THEN
         dependency_recalculation = .TRUE.
+        discr_ps_a_C14           = 1.97_wp * discr_ps_a_C13   ! copied from mo_assimi_constants
     ENDIF
     CALL Set_quincy_parameter_value(this%discr_ps_a_C14 * discr_ps_a_C13, &
                                     this%discr_ps_a_C14, &
@@ -970,6 +975,7 @@ CONTAINS
 
     IF (ABS(this%discr_ps_b_C13 - missval) > eps8) THEN
         dependency_recalculation = .TRUE.
+        discr_ps_b_C14           = 1.89_wp * discr_ps_b_C13   ! copied from mo_assimi_constants
     ENDIF
     CALL Set_quincy_parameter_value(this%discr_ps_b_C14 * discr_ps_b_C13, &
                                     this%discr_ps_b_C14, &
@@ -978,6 +984,7 @@ CONTAINS
                                     
     IF (ABS(this%discr_ps_c_C13 - missval) > eps8) THEN
         dependency_recalculation = .TRUE.
+        discr_ps_c_C14           = 1.89_wp * discr_ps_c_C13   ! copied from mo_assimi_constants
     ENDIF
     CALL Set_quincy_parameter_value(this%discr_ps_c_C14 * discr_ps_c_C13, &
                                     this%discr_ps_c_C14, &
