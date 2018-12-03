@@ -4,7 +4,7 @@
 #     one file with a set of figures will be created per parameter in parameter_table.txt
 # 
 # run: from within the exp_xx/parameter_list/ folder 
-#      Rscript --vanilla ./parameter_summary_figs.R
+#      Rscript --vanilla ./create_parameter_summary_figs.R
 #
 # note: Each figure shows the variation in results for a particular output variable covering 
 #       the full parameter space created with the LHS and considering all parameters. 
