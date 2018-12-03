@@ -264,7 +264,9 @@ CONTAINS
 
     !> 5.1 Process-constants & pft-specific lcltib-parameter modification for parameter sensitivity analysis
     !! see 7.1 for LCTLIB parameters
-    IF (model%config%set_parameter_values_from_file) CALL parameters_slm_from_file%set_param
+    IF (model%config%set_parameter_values_from_file) THEN
+      CALL parameters_slm_from_file%set_param(model%config%set_parameter_values_proportional)
+    ENDIF
 
 
     !> 6.0 Memory init -> pool and element structures in veg_ and sb_ memory with ALLOCATABLE variables with operator overload

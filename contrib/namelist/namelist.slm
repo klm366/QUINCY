@@ -103,8 +103,9 @@
   ! flags
   ! generate forcing file for the standalone soil model (veg%litterfall pool plus rate modifiers) per timestep [FALSE TRUE]
   flag_generate_soil_forcing=.FALSE.
-  ! set parameter values from file [FALSE TRUE]
+  ! set parameter values from file [FALSE TRUE] and use absolute (new) values or make proportional changes
   set_parameter_values_from_file=.FALSE.
+  set_parameter_values_proportional=.FALSE.
   ! use only the 1st year of climate input [FALSE TRUE]
   flag_climate_forcing_one_year=.FALSE.
   ! site specific stand harvest

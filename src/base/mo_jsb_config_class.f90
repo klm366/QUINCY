@@ -52,7 +52,8 @@ MODULE mo_jsb_config_class
     INTEGER           :: fluxnet_output_length              !< 
     LOGICAL           :: flag_generate_soil_forcing         !< all litterfall pools + some soilphysics 
                                                             !! at period: model%config%output_start_first_day_year .. output_end_last_day_year
-    LOGICAL           :: set_parameter_values_from_file
+    LOGICAL           :: set_parameter_values_from_file     !< set values of (some) parameters to values given by namelist (parameter_slm_run.list)
+    LOGICAL           :: set_parameter_values_proportional  !< if TRUE: change the default (hardcoded) parameter values by proportion as defined in namelist
     LOGICAL           :: flag_climate_forcing_one_year
     LOGICAL           :: flag_stand_harvest
     INTEGER           :: stand_replacing_year
@@ -142,6 +143,7 @@ CONTAINS
     INTEGER                     :: fluxnet_output_length
     LOGICAL                     :: flag_generate_soil_forcing                 !< all litterfall pools + some soilphysics
     LOGICAL                     :: set_parameter_values_from_file
+    LOGICAL                     :: set_parameter_values_proportional
     LOGICAL                     :: flag_climate_forcing_one_year
     LOGICAL                     :: flag_stand_harvest
     INTEGER                     :: stand_replacing_year
@@ -167,6 +169,7 @@ CONTAINS
         fluxnet_output_length                 , &
         flag_generate_soil_forcing            , &
         set_parameter_values_from_file        , &
+        set_parameter_values_proportional     , &
         flag_climate_forcing_one_year         , &
         flag_stand_harvest                    , &
         stand_replacing_year
@@ -202,6 +205,7 @@ CONTAINS
     fluxnet_output_length                   = 2
     flag_generate_soil_forcing              = .FALSE.     ! .TRUE. .FALSE.
     set_parameter_values_from_file          = .FALSE.     ! .TRUE. .FALSE.
+    set_parameter_values_proportional       = .FALSE.     ! .TRUE. .FALSE.
     flag_climate_forcing_one_year           = .FALSE.     ! .TRUE. .FALSE.
     flag_stand_harvest                      = .FALSE.     ! .TRUE. .FALSE.
     stand_replacing_year                    = 1500        ! the year 1500
@@ -248,6 +252,7 @@ CONTAINS
     model_config%fluxnet_output_length                  = fluxnet_output_length
     model_config%flag_generate_soil_forcing             = flag_generate_soil_forcing
     model_config%set_parameter_values_from_file         = set_parameter_values_from_file
+    model_config%set_parameter_values_proportional      = set_parameter_values_proportional
     model_config%flag_climate_forcing_one_year          = flag_climate_forcing_one_year
     model_config%flag_stand_harvest                     = flag_stand_harvest              ! might be modified below IF (config%stand_replacing_year .LT. 1901)
     model_config%stand_replacing_year                   = stand_replacing_year

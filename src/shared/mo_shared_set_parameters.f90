@@ -25,6 +25,45 @@ MODULE mo_shared_set_parameters
   TYPE t_parameters_slm_from_file
     !LOGICAL            :: active   ! de/activate this TYPE (this is non-functional for now 20161004)
     CHARACTER(LEN=30)  :: filename = 'parameter_slm_run.list'                 ! filename 
+    ! ASSIMILATION_CTL
+    REAL(wp)           :: jmax2n
+    REAL(wp)           :: vcmax2n
+    REAL(wp)           :: pepc2n
+    REAL(wp)           :: chl2n
+    REAL(wp)           :: k1_fn_struc
+    REAL(wp)           :: E0kc
+    REAL(wp)           :: E1kc
+    REAL(wp)           :: E0ko
+    REAL(wp)           :: E1ko
+    REAL(wp)           :: E0pcp
+    REAL(wp)           :: E1pcp
+    REAL(wp)           :: E0v
+    REAL(wp)           :: E1v
+    REAL(wp)           :: t_jmax_offset
+    REAL(wp)           :: t_jmax_slope
+    REAL(wp)           :: t_jmax_opt_min
+    REAL(wp)           :: t_jmax_opt_max
+    REAL(wp)           :: Tref_pepc
+    REAL(wp)           :: Tbase_pepc
+    REAL(wp)           :: alpha_i
+    REAL(wp)           :: pO2
+    REAL(wp)           :: CiCa_default_C3
+    REAL(wp)           :: CiCa_default_C4
+    REAL(wp)           :: ps_it_max
+    REAL(wp)           :: ci_max
+    REAL(wp)           :: Dwv2co2_air
+    REAL(wp)           :: Dwv2co2_turb
+    REAL(wp)           :: discr_ps_a_C13
+    REAL(wp)           :: discr_ps_b_C13
+    REAL(wp)           :: discr_ps_c_C13
+    REAL(wp)           :: discr_ps_a_C14
+    REAL(wp)           :: discr_ps_b_C14
+    REAL(wp)           :: discr_ps_c_C14
+    REAL(wp)           :: discr_ps_phi
+    REAL(wp)           :: ka
+    REAL(wp)           :: kn
+    REAL(wp)           :: soa_min_temp
+    REAL(wp)           :: soa_max_temp
     ! PHENOLOGY_CTL
     REAL(wp)           :: gdd_t_air_threshold
     ! SHARED_CTL
@@ -208,6 +247,45 @@ CONTAINS
     CLASS(t_parameters_slm_from_file), INTENT(inout) :: this
     ! ---------------------------
     ! 0.2 Local
+    ! ASSIMILATION_CTL
+    REAL(wp)           :: jmax2n
+    REAL(wp)           :: vcmax2n
+    REAL(wp)           :: pepc2n
+    REAL(wp)           :: chl2n
+    REAL(wp)           :: k1_fn_struc
+    REAL(wp)           :: E0kc
+    REAL(wp)           :: E1kc
+    REAL(wp)           :: E0ko
+    REAL(wp)           :: E1ko
+    REAL(wp)           :: E0pcp
+    REAL(wp)           :: E1pcp
+    REAL(wp)           :: E0v
+    REAL(wp)           :: E1v
+    REAL(wp)           :: t_jmax_offset
+    REAL(wp)           :: t_jmax_slope
+    REAL(wp)           :: t_jmax_opt_min
+    REAL(wp)           :: t_jmax_opt_max
+    REAL(wp)           :: Tref_pepc
+    REAL(wp)           :: Tbase_pepc
+    REAL(wp)           :: alpha_i
+    REAL(wp)           :: pO2
+    REAL(wp)           :: CiCa_default_C3
+    REAL(wp)           :: CiCa_default_C4
+    REAL(wp)           :: ps_it_max
+    REAL(wp)           :: ci_max
+    REAL(wp)           :: Dwv2co2_air
+    REAL(wp)           :: Dwv2co2_turb
+    REAL(wp)           :: discr_ps_a_C13
+    REAL(wp)           :: discr_ps_b_C13
+    REAL(wp)           :: discr_ps_c_C13
+    REAL(wp)           :: discr_ps_a_C14
+    REAL(wp)           :: discr_ps_b_C14
+    REAL(wp)           :: discr_ps_c_C14
+    REAL(wp)           :: discr_ps_phi
+    REAL(wp)           :: ka
+    REAL(wp)           :: kn
+    REAL(wp)           :: soa_min_temp
+    REAL(wp)           :: soa_max_temp
     ! PHENOLOGY_CTL
     REAL(wp)           :: gdd_t_air_threshold
     ! SHARED_CTL
@@ -288,9 +366,50 @@ CONTAINS
 
     ! Namelist definition of section parameters
     ! 
-    NAMELIST /phenology_ctl/      &      
+    NAMELIST /assimilation_ctl/   &
+        jmax2n                    , &
+        vcmax2n                   , &
+        pepc2n                    , &
+        chl2n                     , &
+        k1_fn_struc               , &
+        E0kc                      , &
+        E1kc                      , &
+        E0ko                      , &
+        E1ko                      , &
+        E0pcp                     , &
+        E1pcp                     , &
+        E0v                       , &
+        E1v                       , &
+        t_jmax_offset             , &
+        t_jmax_slope              , &
+        t_jmax_opt_min            , &
+        t_jmax_opt_max            , &
+        Tref_pepc                 , &
+        Tbase_pepc                , &
+        alpha_i                   , &
+        pO2                       , &
+        CiCa_default_C3           , &
+        CiCa_default_C4           , &
+        ps_it_max                 , &
+        ci_max                    , &
+        Dwv2co2_air               , &
+        Dwv2co2_turb              , &
+        discr_ps_a_C13            , &
+        discr_ps_b_C13            , &
+        discr_ps_c_C13            , &
+        discr_ps_a_C14            , &
+        discr_ps_b_C14            , &
+        discr_ps_c_C14            , &
+        discr_ps_phi              , &
+        ka                        , &
+        kn                        , &
+        soa_min_temp              , &
+        soa_max_temp              
+
+    NAMELIST /phenology_ctl/      &
         gdd_t_air_threshold
-    NAMELIST /shared_ctl/         &  
+
+    NAMELIST /shared_ctl/         &
         mavg_period_tlabile       , &
         mavg_period_tphen         , &
         mavg_period_tuptake       , &
@@ -374,6 +493,45 @@ CONTAINS
 
     ! Set defaults
     ! 
+    ! ASSIMILATION_CTL
+    jmax2n                      = missval
+    vcmax2n                     = missval
+    pepc2n                      = missval
+    chl2n                       = missval
+    k1_fn_struc                 = missval
+    E0kc                        = missval
+    E1kc                        = missval
+    E0ko                        = missval
+    E1ko                        = missval
+    E0pcp                       = missval
+    E1pcp                       = missval
+    E0v                         = missval
+    E1v                         = missval
+    t_jmax_offset               = missval
+    t_jmax_slope                = missval
+    t_jmax_opt_min              = missval
+    t_jmax_opt_max              = missval
+    Tref_pepc                   = missval
+    Tbase_pepc                  = missval
+    alpha_i                     = missval
+    pO2                         = missval
+    CiCa_default_C3             = missval
+    CiCa_default_C4             = missval
+    ps_it_max                   = missval
+    ci_max                      = missval
+    Dwv2co2_air                 = missval
+    Dwv2co2_turb                = missval
+    discr_ps_a_C13              = missval
+    discr_ps_b_C13              = missval
+    discr_ps_c_C13              = missval
+    discr_ps_a_C14              = missval
+    discr_ps_b_C14              = missval
+    discr_ps_c_C14              = missval
+    discr_ps_phi                = missval
+    ka                          = missval
+    kn                          = missval
+    soa_min_temp                = missval
+    soa_max_temp                = missval
     ! PHENOLOGY_CTL
     gdd_t_air_threshold         = missval
     ! SHARED_CTL
@@ -451,6 +609,11 @@ CONTAINS
 
     ! read the namelist
     ! 
+    ! &ASSIMILATION_CTL
+    nml_handler = open_nml(TRIM(this%filename))
+    nml_unit = position_nml('ASSIMILATION_CTL', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, assimilation_ctl)
+    CALL close_nml(nml_handler)
     ! &PHENOLOGY_CTL
     nml_handler = open_nml(TRIM(this%filename))
     nml_unit = position_nml('PHENOLOGY_CTL', nml_handler, STATUS=istat)
@@ -474,6 +637,45 @@ CONTAINS
 
     ! pass values as read from file
     ! 
+    ! ASSIMILATION_CTL
+    this%jmax2n                      = jmax2n          
+    this%vcmax2n                     = vcmax2n         
+    this%pepc2n                      = pepc2n          
+    this%chl2n                       = chl2n           
+    this%k1_fn_struc                 = k1_fn_struc     
+    this%E0kc                        = E0kc            
+    this%E1kc                        = E1kc            
+    this%E0ko                        = E0ko            
+    this%E1ko                        = E1ko            
+    this%E0pcp                       = E0pcp           
+    this%E1pcp                       = E1pcp           
+    this%E0v                         = E0v             
+    this%E1v                         = E1v             
+    this%t_jmax_offset               = t_jmax_offset   
+    this%t_jmax_slope                = t_jmax_slope    
+    this%t_jmax_opt_min              = t_jmax_opt_min  
+    this%t_jmax_opt_max              = t_jmax_opt_max  
+    this%Tref_pepc                   = Tref_pepc       
+    this%Tbase_pepc                  = Tbase_pepc      
+    this%alpha_i                     = alpha_i         
+    this%pO2                         = pO2             
+    this%CiCa_default_C3             = CiCa_default_C3 
+    this%CiCa_default_C4             = CiCa_default_C4 
+    this%ps_it_max                   = ps_it_max       
+    this%ci_max                      = ci_max          
+    this%Dwv2co2_air                 = Dwv2co2_air     
+    this%Dwv2co2_turb                = Dwv2co2_turb    
+    this%discr_ps_a_C13              = discr_ps_a_C13  
+    this%discr_ps_b_C13              = discr_ps_b_C13  
+    this%discr_ps_c_C13              = discr_ps_c_C13  
+    this%discr_ps_a_C14              = discr_ps_a_C14  
+    this%discr_ps_b_C14              = discr_ps_b_C14  
+    this%discr_ps_c_C14              = discr_ps_c_C14  
+    this%discr_ps_phi                = discr_ps_phi    
+    this%ka                          = ka              
+    this%kn                          = kn              
+    this%soa_min_temp                = soa_min_temp    
+    this%soa_max_temp                = soa_max_temp    
     ! PHENOLOGY_CTL
     this%gdd_t_air_threshold         = gdd_t_air_threshold
     ! SHARED_CTL
@@ -557,15 +759,15 @@ CONTAINS
   !! 
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE set_parameter_slm_values_with_list_values(this)
+  SUBROUTINE set_parameter_slm_values_with_list_values(this, proportional_parameter_changes)
 
     USE mo_base_constants,                  ONLY: one_day, one_year, dtime
-    !USE mo_assimi_constants
+    USE mo_assimi_constants
     USE mo_pheno_constants
     !USE mo_atmland_constants
-    !USE mo_rad_constants
+    USE mo_rad_constants
     USE mo_shared_constants
-    !USE mo_sse_constants
+    USE mo_sse_constants
     USE mo_sb_constants
     USE mo_veg_constants
 
@@ -573,8 +775,10 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     CLASS(t_parameters_slm_from_file), INTENT(inout) :: this
+    LOGICAL                          , INTENT(in)    :: proportional_parameter_changes
     ! ---------------------------
     ! 0.2 Local
+    LOGICAL                     :: dependency_recalculation   ! set TRUE for parameters that need to be re-calculated because a parameter it depends on got a new value
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':set_parameter_slm_values_with_list_values'
 
 
@@ -584,8 +788,229 @@ CONTAINS
 
     !> 2.0 replace parameter values from mo_PROC_constants for parameters provided by parameter_slm_run.list
     !! 
-    !! template: IF (ABS(this%x    - missval) > eps8)   x   = this%x
+    !! dependency check: IF ((ABS(this%x    - missval) > eps8) .OR. &
+    !!                       (ABS(this%y    - missval) > eps8)) THEN
+    !!                       dependency_recalculation = .TRUE.
+    !!                   ENDIF
     !! 
+    !! routine:  SUBROUTINE Set_quincy_parameter_value(nml_abs_val, nml_prop_chng, proportional, dependency, def_val)
+    !!    CALL Set_quincy_parameter_value(this%xyz, &         ! or "this%xyz */+- any other parameter"
+    !!                                    this%xyz, &         ! just the parameter as defined in the namelist parameter_slm_run.list
+    !!                                    proportional_parameter_changes, dependency_recalculation, &
+    !!                                    xyz)                ! the original/default parameter variable as declared in mo_PROC_constants
+    !! 
+    ! ASSIMILATION_CTL
+    CALL Set_quincy_parameter_value(this%jmax2n / 4.0_wp, &
+                                    this%jmax2n, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    jmax2n)
+                                    
+    CALL Set_quincy_parameter_value(this%vcmax2n, &
+                                    this%vcmax2n, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    vcmax2n)
+                                    
+    CALL Set_quincy_parameter_value(this%pepc2n, &
+                                    this%pepc2n, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    pepc2n)
+                                    
+    CALL Set_quincy_parameter_value(this%chl2n / 39.8_wp, &
+                                    this%chl2n, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    chl2n)
+                                    
+    CALL Set_quincy_parameter_value(this%k1_fn_struc * molar_mass_N / 1000000._wp, &
+                                    this%k1_fn_struc, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    k1_fn_struc)
+                                    
+    CALL Set_quincy_parameter_value(this%E0kc, &
+                                    this%E0kc, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    E0kc)
+                                    
+    CALL Set_quincy_parameter_value(this%E1kc, &
+                                    this%E1kc, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    E1kc)
+                                    
+    CALL Set_quincy_parameter_value(this%E0ko, &
+                                    this%E0ko, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    E0ko)
+                                    
+    CALL Set_quincy_parameter_value(this%E1ko, &
+                                    this%E1ko, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    E1ko)
+                                    
+    CALL Set_quincy_parameter_value(this%E0pcp, &
+                                    this%E0pcp, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    E0pcp)
+                                    
+    CALL Set_quincy_parameter_value(this%E1pcp, &
+                                    this%E1pcp, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    E1pcp)
+                                    
+    CALL Set_quincy_parameter_value(this%E0v, &
+                                    this%E0v, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    E0v)
+                                    
+    CALL Set_quincy_parameter_value(this%E1v, &
+                                    this%E1v, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    E1v)
+                                    
+    CALL Set_quincy_parameter_value(this%t_jmax_offset, &
+                                    this%t_jmax_offset, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    t_jmax_offset)
+                                    
+    CALL Set_quincy_parameter_value(this%t_jmax_slope, &
+                                    this%t_jmax_slope, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    t_jmax_slope)
+                                    
+    CALL Set_quincy_parameter_value(this%t_jmax_opt_min, &
+                                    this%t_jmax_opt_min, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    t_jmax_opt_min)
+                                    
+    CALL Set_quincy_parameter_value(this%t_jmax_opt_max, &
+                                    this%t_jmax_opt_max, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    t_jmax_opt_max)
+                                    
+    CALL Set_quincy_parameter_value(this%Tref_pepc, &
+                                    this%Tref_pepc, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    Tref_pepc)
+                                    
+    CALL Set_quincy_parameter_value(this%Tbase_pepc, &
+                                    this%Tbase_pepc, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    Tbase_pepc)
+                                    
+    CALL Set_quincy_parameter_value(this%alpha_i, &
+                                    this%alpha_i, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    alpha_i)
+                                    
+    CALL Set_quincy_parameter_value(this%pO2, &
+                                    this%pO2, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    pO2)
+                                    
+    CALL Set_quincy_parameter_value(this%CiCa_default_C3, &
+                                    this%CiCa_default_C3, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    CiCa_default_C3)
+                                    
+    CALL Set_quincy_parameter_value(this%CiCa_default_C4, &
+                                    this%CiCa_default_C4, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    CiCa_default_C4)
+                                    
+    CALL Set_quincy_parameter_value(this%ps_it_max, &
+                                    this%ps_it_max, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    ps_it_max)
+                                    
+    CALL Set_quincy_parameter_value(this%ci_max, &
+                                    this%ci_max, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    ci_max)
+                                    
+    ! current assumption: parameters from mo_shared_constants are not modified
+    ! IF ((ABS(this%Dwv  - missval) > eps8) .OR. &
+    !     (ABS(this%Dco2 - missval) > eps8)) THEN
+    !     dependency_recalculation = .TRUE.
+    ! ENDIF
+    CALL Set_quincy_parameter_value(Dwv / Dco2, &                       ! default: Dwv2co2_air = Dwv / Dco2 | hence, only proportional changes may have an effect
+                                    this%Dwv2co2_air, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    Dwv2co2_air)
+
+    ! current assumption: parameters from mo_shared_constants are not modified
+    ! IF ((ABS(this%Dwv  - missval) > eps8) .OR. &
+    !     (ABS(this%Dco2 - missval) > eps8)) THEN
+    !     dependency_recalculation = .TRUE.
+    ! ENDIF
+    CALL Set_quincy_parameter_value(( Dwv / Dco2  ) ** (2._wp/3._wp), & ! default: Dwv2co2_turb = ( Dwv / Dco2  ) ** (2._wp/3._wp) | hence, only proportional changes may have an effect
+                                    this%Dwv2co2_turb, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    Dwv2co2_turb)
+                                    
+    CALL Set_quincy_parameter_value(this%discr_ps_a_C13, &
+                                    this%discr_ps_a_C13, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    discr_ps_a_C13)
+                                    
+    CALL Set_quincy_parameter_value(this%discr_ps_b_C13, &
+                                    this%discr_ps_b_C13, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    discr_ps_b_C13)
+                                    
+    CALL Set_quincy_parameter_value(this%discr_ps_c_C13, &
+                                    this%discr_ps_c_C13, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    discr_ps_c_C13)
+
+    IF (ABS(this%discr_ps_a_C13 - missval) > eps8) THEN
+        dependency_recalculation = .TRUE.
+    ENDIF
+    CALL Set_quincy_parameter_value(this%discr_ps_a_C14 * discr_ps_a_C13, &
+                                    this%discr_ps_a_C14, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    discr_ps_a_C14)
+
+    IF (ABS(this%discr_ps_b_C13 - missval) > eps8) THEN
+        dependency_recalculation = .TRUE.
+    ENDIF
+    CALL Set_quincy_parameter_value(this%discr_ps_b_C14 * discr_ps_b_C13, &
+                                    this%discr_ps_b_C14, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    discr_ps_b_C14)
+                                    
+    IF (ABS(this%discr_ps_c_C13 - missval) > eps8) THEN
+        dependency_recalculation = .TRUE.
+    ENDIF
+    CALL Set_quincy_parameter_value(this%discr_ps_c_C14 * discr_ps_c_C13, &
+                                    this%discr_ps_c_C14, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    discr_ps_c_C14)
+                                    
+    CALL Set_quincy_parameter_value(this%discr_ps_phi, &
+                                    this%discr_ps_phi, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    discr_ps_phi)
+                                    
+    CALL Set_quincy_parameter_value(this%ka, &
+                                    this%ka, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    ka)
+                                    
+    CALL Set_quincy_parameter_value(this%kn, &
+                                    this%kn, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    kn)
+                                    
+    CALL Set_quincy_parameter_value(this%soa_min_temp, &
+                                    this%soa_min_temp, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    soa_min_temp)
+                                    
+    CALL Set_quincy_parameter_value(this%soa_max_temp, &
+                                    this%soa_max_temp, &
+                                    proportional_parameter_changes, dependency_recalculation, &
+                                    soa_max_temp)
+                                    
+
+
     ! PHENOLOGY_CTL
     IF (ABS(this%gdd_t_air_threshold    - missval) > eps8)  gdd_t_air_threshold   = this%gdd_t_air_threshold + Tzero
     ! SHARED_CTL
@@ -2740,5 +3165,57 @@ CONTAINS
   END SUBROUTINE replace_pft_specific_lctlib_parameter_values
 
 
+
+  !-----------------------------------------------------------------------------------------------------
+  !> return new QUINCY parameter value as defined by namellist \n
+  !!  namelist created from generate_parameter_table.sh: parameter_slm_run.list \n
+  !!  i.e., replace hard coded parameter value
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE Set_quincy_parameter_value(nml_abs_val, nml_prop_chng, proportional, dependency, def_val)
+
+    USE mo_kind,                ONLY: wp, eps8
+    USE mo_jsb_io,              ONLY: missval  ! = -9.E+15_wp
+
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut
+    REAL(wp), INTENT(in)      :: nml_abs_val         !< new value from namelist; potential re-calc with other parameters already included (as done in mo_PROC_constants) !
+    REAL(wp), INTENT(in)      :: nml_prop_chng       !< proportional change of def_val x from namelist [0 < x < 2]
+    LOGICAL , INTENT(in)      :: proportional        !< logical: proportional-change calculation should be used
+    LOGICAL , INTENT(inout)   :: dependency          !< logical: this parameter velaue may be re-calculated because of a dependency to another param that has been changed 
+    REAL(wp), INTENT(inout)   :: def_val             !< default parameter value as hardcoded in the mo_PROC_constants
+
+    ! ---------------------------
+    ! 0.2 Local
+    REAL(wp)             :: param_value_diff    ! for negative def_val the absolute change-value is calculated
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Set_quincy_parameter_value'
+
+
+    !> 1.0 re-calc def_val if namelist value differs from missval (i.e., a new namelist value is set) \n 
+    !!      i.e., if a new value was defined in the namelist (parameter_slm_run.list) for this parameter \n
+    !!      need to use the nml_prop_chng variable here, because the nml_abs_val might be changed because it has always "potential other parameters already included"
+    IF ((ABS(nml_prop_chng - missval) > eps8) .OR. dependency) THEN
+      ! differ between the two cases: just use the new value / change the (hardcoded) default value by x%
+      IF (proportional) THEN
+        ! differ between negative and positive parameter values (because, e.g., 0.9 * -3.0 = -2.7 but should be -3.3)
+        IF (def_val < 0.0_wp) THEN
+          param_value_diff = def_val * ABS(1.0_wp - nml_prop_chng)
+          IF (nml_prop_chng < 1.0) THEN
+            def_val = def_val - param_value_diff
+          ELSE
+            def_val = def_val + param_value_diff
+          ENDIF
+        ELSE
+          def_val = def_val * nml_prop_chng
+        ENDIF
+      ELSE
+        def_val = nml_abs_val
+      ENDIF
+    ENDIF
+    
+    !> 2.0 set parameter dependency back to the default value
+    !!
+    dependency = .FALSE.
+  END SUBROUTINE Set_quincy_parameter_value
 
 END MODULE mo_shared_set_parameters

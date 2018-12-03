@@ -70,9 +70,10 @@ compareSimCRUNCEPvsGFDB="F"
 spinupLengthGFDB=500
 
 ##(3) parameter sensitivity simulations
-# you can run a set of sensitivity simulations for one site
-# T (True) or F (False) [large caps]
+# you can run a set of sensitivity simulations for one site; T (True) or F (False) [large caps]
 paramSensitivitySim="F"
+# you can give absolute values ("F") or proportional changes within range [0 < x < 2] ("T")
+paramChangesProportional="F"
 # please provide the Site-ID   (examples:  [FLUX] "DE-Hai" "FI-Hyy" "ZA-Kru"  [CRUN] "BHS_01" "HAI_01" "ILO_05"  [FACE] "DK-AMB" "OR-ELE"  [MANIP] "ES-MaG" "ES-MaT"  [FERT] "HAR-CON" "HAR-HIG" "HAR-LOW")
 paramSensitivitySiteName="DE-Hai"
 
@@ -607,6 +608,7 @@ validateUserConfigValues "$flag_read_dC13" "$validateFlags" "flag_read_dC13"
 validateUserConfigValues "$flag_read_DC14" "$validateFlags" "flag_read_DC14"
 validateUserConfigValues "$useSiteSpecificAWC" "$validateFlags" "useSiteSpecificAWC"
 validateUserConfigValues "$paramSensitivitySim" "$validateFlags" "paramSensitivitySim"
+validateUserConfigValues "$paramChangesProportional" "$validateFlags" "paramChangesProportional"
 validateUserConfigValues "$compareSimCRUNCEPvsGFDB" "$validateFlags" "compareSimCRUNCEPvsGFDB"
 
 
@@ -694,6 +696,11 @@ if [ $paramSensitivitySim == "T" ]; then
   echo ""
   echo " You aim at parameter sensitivity simulations for the site: ""$paramSensitivitySiteName"
   echo " Simulations will be done for each of the parameter combination you specified in contrib/parameter_list/parameter_table.txt"
+  if [ $paramChangesProportional == "T" ]; then
+    echo " Parameter values will be changed by a certain proportion [0<x<2] (i.e. you set paramChangesProportional=T)"
+  else
+    echo " Parameter values will be changed using absolute values as defined in parameter_table.txt (i.e. you set paramChangesProportional=F)"
+  fi
   singleSiteName=""
 fi
 # test default and custom site list
@@ -1390,6 +1397,12 @@ if [ $paramSensitivitySim == T ]
     changeNamelistValue set_parameter_values_from_file ".TRUE."
   else
     changeNamelistValue set_parameter_values_from_file ".FALSE."
+fi
+if [ "$paramChangesProportional" == "T" ]
+  then
+    changeNamelistValue set_parameter_values_proportional ".TRUE."
+  else
+    changeNamelistValue set_parameter_values_proportional ".FALSE."
 fi
 if [ $flag_stand_harvest == T ]
   then

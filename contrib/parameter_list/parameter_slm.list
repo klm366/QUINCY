@@ -1,5 +1,42 @@
 &ASSIMILATION_CTL
-  ! tba
+  jmax2n=NAN
+  vcmax2n=NAN
+  pepc2n=NAN
+  chl2n=NAN
+  k1_fn_struc=NAN
+  E0kc=NAN
+  E1kc=NAN
+  E0ko=NAN
+  E1ko=NAN
+  E0pcp=NAN
+  E1pcp=NAN
+  E0v=NAN
+  E1v=NAN
+  t_jmax_offset=NAN
+  t_jmax_slope=NAN
+  t_jmax_opt_min=NAN
+  t_jmax_opt_max=NAN
+  Tref_pepc=NAN
+  Tbase_pepc=NAN
+  alpha_i=NAN
+  pO2=NAN
+  CiCa_default_C3=NAN
+  CiCa_default_C4=NAN
+  ps_it_max=NAN
+  ci_max=NAN
+  Dwv2co2_air=NAN
+  Dwv2co2_turb=NAN
+  discr_ps_a_C13=NAN
+  discr_ps_b_C13=NAN
+  discr_ps_c_C13=NAN
+  discr_ps_a_C14=NAN
+  discr_ps_b_C14=NAN
+  discr_ps_c_C14=NAN
+  discr_ps_phi=NAN
+  ka=NAN
+  kn=NAN
+  soa_min_temp=NAN
+  soa_max_temp=NAN
 /
 &ATMLAND_CTL
   ! tba
