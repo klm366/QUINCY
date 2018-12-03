@@ -1026,7 +1026,11 @@ CONTAINS
 
 
     ! PHENOLOGY_CTL
-    IF (ABS(this%gdd_t_air_threshold    - missval) > eps8)  gdd_t_air_threshold   = this%gdd_t_air_threshold + Tzero
+    CALL Set_quincy_parameter_value(this%gdd_t_air_threshold + Tzero, &
+                                    this%gdd_t_air_threshold, &
+                                    "gdd_t_air_threshold", proportional_parameter_changes, dependency_recalculation, &
+                                    gdd_t_air_threshold)
+    
     ! SHARED_CTL
     IF (ABS(this%mavg_period_tlabile    - missval) > eps8)  mavg_period_tlabile   = this%mavg_period_tlabile
     IF (ABS(this%mavg_period_tphen      - missval) > eps8)  mavg_period_tphen     = this%mavg_period_tphen
