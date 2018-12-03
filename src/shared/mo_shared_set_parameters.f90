@@ -66,6 +66,19 @@ MODULE mo_shared_set_parameters
     REAL(wp)           :: soa_max_temp
     ! PHENOLOGY_CTL
     REAL(wp)           :: gdd_t_air_threshold
+    ! RADIATION_CTL
+    REAL(wp)           :: kbl0_vis
+    REAL(wp)           :: kdf0_vis
+    REAL(wp)           :: kbl0_nir
+    REAL(wp)           :: kdf0_nir
+    REAL(wp)           :: rho2sbeta
+    REAL(wp)           :: k_csf
+    REAL(wp)           :: min_cos_zenith_angle_rad
+    REAL(wp)           :: def_alb_vis_soil
+    REAL(wp)           :: def_alb_nir_soil
+    REAL(wp)           :: rad2ppfd
+    REAL(wp)           :: rfr_ratio_toc
+    REAL(wp)           :: k_r2fr_chl
     ! SHARED_CTL
     REAL(wp)           :: mavg_period_tlabile
     REAL(wp)           :: mavg_period_tphen
@@ -288,6 +301,19 @@ CONTAINS
     REAL(wp)           :: soa_max_temp
     ! PHENOLOGY_CTL
     REAL(wp)           :: gdd_t_air_threshold
+    ! RADIATION_CTL
+    REAL(wp)           :: kbl0_vis
+    REAL(wp)           :: kdf0_vis
+    REAL(wp)           :: kbl0_nir
+    REAL(wp)           :: kdf0_nir
+    REAL(wp)           :: rho2sbeta
+    REAL(wp)           :: k_csf
+    REAL(wp)           :: min_cos_zenith_angle_rad
+    REAL(wp)           :: def_alb_vis_soil
+    REAL(wp)           :: def_alb_nir_soil
+    REAL(wp)           :: rad2ppfd
+    REAL(wp)           :: rfr_ratio_toc
+    REAL(wp)           :: k_r2fr_chl
     ! SHARED_CTL
     REAL(wp)           :: mavg_period_tlabile
     REAL(wp)           :: mavg_period_tphen
@@ -408,6 +434,20 @@ CONTAINS
 
     NAMELIST /phenology_ctl/      &
         gdd_t_air_threshold
+
+    NAMELIST /radiation_ctl/      &
+        kbl0_vis                  , &
+        kdf0_vis                  , &
+        kbl0_nir                  , &
+        kdf0_nir                  , &
+        rho2sbeta                 , &
+        k_csf                     , &
+        min_cos_zenith_angle_rad  , &
+        def_alb_vis_soil          , &
+        def_alb_nir_soil          , &
+        rad2ppfd                  , &
+        rfr_ratio_toc             , &
+        k_r2fr_chl              
 
     NAMELIST /shared_ctl/         &
         mavg_period_tlabile       , &
@@ -534,6 +574,19 @@ CONTAINS
     soa_max_temp                = missval
     ! PHENOLOGY_CTL
     gdd_t_air_threshold         = missval
+    ! RADIATION_CTL
+    kbl0_vis                    = missval
+    kdf0_vis                    = missval
+    kbl0_nir                    = missval
+    kdf0_nir                    = missval
+    rho2sbeta                   = missval
+    k_csf                       = missval
+    min_cos_zenith_angle_rad    = missval
+    def_alb_vis_soil            = missval
+    def_alb_nir_soil            = missval
+    rad2ppfd                    = missval
+    rfr_ratio_toc               = missval
+    k_r2fr_chl                  = missval
     ! SHARED_CTL
     mavg_period_tlabile         = missval
     mavg_period_tphen           = missval
@@ -619,6 +672,11 @@ CONTAINS
     nml_unit = position_nml('PHENOLOGY_CTL', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, phenology_ctl)
     CALL close_nml(nml_handler)
+    ! RADIATION_CTL
+    nml_handler = open_nml(TRIM(this%filename))
+    nml_unit = position_nml('RADIATION_CTL', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, radiation_ctl)
+    CALL close_nml(nml_handler)
     ! &SHARED_CTL
     nml_handler = open_nml(TRIM(this%filename))
     nml_unit = position_nml('SHARED_CTL', nml_handler, STATUS=istat)
@@ -678,6 +736,19 @@ CONTAINS
     this%soa_max_temp                = soa_max_temp    
     ! PHENOLOGY_CTL
     this%gdd_t_air_threshold         = gdd_t_air_threshold
+    ! RADIATION_CTL
+    this%kbl0_vis                    = kbl0_vis
+    this%kdf0_vis                    = kdf0_vis
+    this%kbl0_nir                    = kbl0_nir
+    this%kdf0_nir                    = kdf0_nir
+    this%rho2sbeta                   = rho2sbeta
+    this%k_csf                       = k_csf
+    this%min_cos_zenith_angle_rad    = min_cos_zenith_angle_rad
+    this%def_alb_vis_soil            = def_alb_vis_soil
+    this%def_alb_nir_soil            = def_alb_nir_soil
+    this%rad2ppfd                    = rad2ppfd
+    this%rfr_ratio_toc               = rfr_ratio_toc
+    this%k_r2fr_chl                  = k_r2fr_chl
     ! SHARED_CTL
     this%mavg_period_tlabile         = mavg_period_tlabile
     this%mavg_period_tphen           = mavg_period_tphen
@@ -798,6 +869,21 @@ CONTAINS
     !!                                    this%xyz, &         ! just the parameter as defined in the namelist parameter_slm_run.list
     !!                                    "parameter name", proportional_parameter_changes, dependency_recalculation, &
     !!                                    xyz)                ! the original/default parameter variable as declared in mo_PROC_constants
+    !! 
+    ! CALL Set_quincy_parameter_value(this%xyz, &
+    !                                 this%xyz, &
+    !                                 "xyz", proportional_parameter_changes, dependency_recalculation, &
+    !                                 xyz)
+    ! 
+    ! CALL Set_quincy_parameter_value(this%xyz, &
+    !                                 this%xyz, &
+    !                                 "xyz", proportional_parameter_changes, dependency_recalculation, &
+    !                                 xyz)
+    ! 
+    ! CALL Set_quincy_parameter_value(this%xyz, &
+    !                                 this%xyz, &
+    !                                 "xyz", proportional_parameter_changes, dependency_recalculation, &
+    !                                 xyz)
     !! 
     ! ASSIMILATION_CTL
     CALL Set_quincy_parameter_value(this%jmax2n / 4.0_wp, &
@@ -1016,27 +1102,70 @@ CONTAINS
                                     "soa_max_temp", proportional_parameter_changes, dependency_recalculation, &
                                     soa_max_temp)
 
-    ! CALL Set_quincy_parameter_value(this%xyz, &
-    !                                 this%xyz, &
-    !                                 "xyz", proportional_parameter_changes, dependency_recalculation, &
-    !                                 xyz)
-    ! 
-    ! CALL Set_quincy_parameter_value(this%xyz, &
-    !                                 this%xyz, &
-    !                                 "xyz", proportional_parameter_changes, dependency_recalculation, &
-    !                                 xyz)
-    ! 
-    ! CALL Set_quincy_parameter_value(this%xyz, &
-    !                                 this%xyz, &
-    !                                 "xyz", proportional_parameter_changes, dependency_recalculation, &
-    !                                 xyz)
-
-
     ! PHENOLOGY_CTL
     CALL Set_quincy_parameter_value(this%gdd_t_air_threshold + Tzero, &
                                     this%gdd_t_air_threshold, &
                                     "gdd_t_air_threshold", proportional_parameter_changes, dependency_recalculation, &
                                     gdd_t_air_threshold)
+
+    ! RADIATION_CTL
+    CALL Set_quincy_parameter_value(this%kbl0_vis, &
+                                    this%kbl0_vis, &
+                                    "kbl0_vis", proportional_parameter_changes, dependency_recalculation, &
+                                    kbl0_vis)
+    
+    CALL Set_quincy_parameter_value(this%kdf0_vis, &
+                                    this%kdf0_vis, &
+                                    "kdf0_vis", proportional_parameter_changes, dependency_recalculation, &
+                                    kdf0_vis)
+    
+    CALL Set_quincy_parameter_value(this%kbl0_nir, &
+                                    this%kbl0_nir, &
+                                    "kbl0_nir", proportional_parameter_changes, dependency_recalculation, &
+                                    kbl0_nir)
+
+    CALL Set_quincy_parameter_value(this%kdf0_nir, &
+                                    this%kdf0_nir, &
+                                    "kdf0_nir", proportional_parameter_changes, dependency_recalculation, &
+                                    kdf0_nir)
+    
+    CALL Set_quincy_parameter_value(this%rho2sbeta, &
+                                    this%rho2sbeta, &
+                                    "rho2sbeta", proportional_parameter_changes, dependency_recalculation, &
+                                    rho2sbeta)
+    
+    CALL Set_quincy_parameter_value(this%k_csf, &
+                                    this%k_csf, &
+                                    "k_csf", proportional_parameter_changes, dependency_recalculation, &
+                                    k_csf)
+    CALL Set_quincy_parameter_value(this%min_cos_zenith_angle_rad, &
+                                    this%min_cos_zenith_angle_rad, &
+                                    "min_cos_zenith_angle_rad", proportional_parameter_changes, dependency_recalculation, &
+                                    min_cos_zenith_angle_rad)
+    
+    CALL Set_quincy_parameter_value(this%def_alb_vis_soil, &
+                                    this%def_alb_vis_soil, &
+                                    "def_alb_vis_soil", proportional_parameter_changes, dependency_recalculation, &
+                                    def_alb_vis_soil)
+    
+    CALL Set_quincy_parameter_value(this%def_alb_nir_soil, &
+                                    this%def_alb_nir_soil, &
+                                    "def_alb_nir_soil", proportional_parameter_changes, dependency_recalculation, &
+                                    def_alb_nir_soil)
+    CALL Set_quincy_parameter_value(this%rad2ppfd, &
+                                    this%rad2ppfd, &
+                                    "rad2ppfd", proportional_parameter_changes, dependency_recalculation, &
+                                    rad2ppfd)
+    
+    CALL Set_quincy_parameter_value(this%rfr_ratio_toc, &
+                                    this%rfr_ratio_toc, &
+                                    "rfr_ratio_toc", proportional_parameter_changes, dependency_recalculation, &
+                                    rfr_ratio_toc)
+    
+    CALL Set_quincy_parameter_value(this%k_r2fr_chl - 0.012_wp, &
+                                    this%k_r2fr_chl, &
+                                    "k_r2fr_chl", proportional_parameter_changes, dependency_recalculation, &
+                                    k_r2fr_chl)
     
     ! SHARED_CTL
     IF (ABS(this%mavg_period_tlabile    - missval) > eps8)  mavg_period_tlabile   = this%mavg_period_tlabile

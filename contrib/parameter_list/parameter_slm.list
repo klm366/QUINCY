@@ -45,7 +45,18 @@
   gdd_t_air_threshold=NAN
 /
 &RADIATION_CTL
-  ! tba
+  kbl0_vis=NAN
+  kdf0_vis=NAN
+  kbl0_nir=NAN
+  kdf0_nir=NAN
+  rho2sbeta=NAN
+  k_csf=NAN
+  min_cos_zenith_angle_rad=NAN
+  def_alb_vis_soil=NAN
+  def_alb_nir_soil=NAN
+  rad2ppfd=NAN
+  rfr_ratio_toc=NAN
+  k_r2fr_chl=NAN
 /
 &SHARED_CTL
   mavg_period_tlabile=NAN
