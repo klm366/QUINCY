@@ -796,133 +796,133 @@ CONTAINS
     !! routine:  SUBROUTINE Set_quincy_parameter_value(nml_abs_val, nml_prop_chng, proportional, dependency, def_val)
     !!    CALL Set_quincy_parameter_value(this%xyz, &         ! or "this%xyz */+- any other parameter"
     !!                                    this%xyz, &         ! just the parameter as defined in the namelist parameter_slm_run.list
-    !!                                    proportional_parameter_changes, dependency_recalculation, &
+    !!                                    "parameter name", proportional_parameter_changes, dependency_recalculation, &
     !!                                    xyz)                ! the original/default parameter variable as declared in mo_PROC_constants
     !! 
     ! ASSIMILATION_CTL
     CALL Set_quincy_parameter_value(this%jmax2n / 4.0_wp, &
                                     this%jmax2n, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "jmax2n", proportional_parameter_changes, dependency_recalculation, &
                                     jmax2n)
                                     
     CALL Set_quincy_parameter_value(this%vcmax2n, &
                                     this%vcmax2n, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "vcmax2n", proportional_parameter_changes, dependency_recalculation, &
                                     vcmax2n)
                                     
     CALL Set_quincy_parameter_value(this%pepc2n, &
                                     this%pepc2n, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "pepc2n", proportional_parameter_changes, dependency_recalculation, &
                                     pepc2n)
                                     
     CALL Set_quincy_parameter_value(this%chl2n / 39.8_wp, &
                                     this%chl2n, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "chl2n", proportional_parameter_changes, dependency_recalculation, &
                                     chl2n)
                                     
     CALL Set_quincy_parameter_value(this%k1_fn_struc * molar_mass_N / 1000000._wp, &
                                     this%k1_fn_struc, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "k1_fn_struc", proportional_parameter_changes, dependency_recalculation, &
                                     k1_fn_struc)
                                     
     CALL Set_quincy_parameter_value(this%E0kc, &
                                     this%E0kc, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "E0kc", proportional_parameter_changes, dependency_recalculation, &
                                     E0kc)
                                     
     CALL Set_quincy_parameter_value(this%E1kc, &
                                     this%E1kc, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "E1kc", proportional_parameter_changes, dependency_recalculation, &
                                     E1kc)
                                     
     CALL Set_quincy_parameter_value(this%E0ko, &
                                     this%E0ko, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "E0ko", proportional_parameter_changes, dependency_recalculation, &
                                     E0ko)
                                     
     CALL Set_quincy_parameter_value(this%E1ko, &
                                     this%E1ko, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "E1ko", proportional_parameter_changes, dependency_recalculation, &
                                     E1ko)
                                     
     CALL Set_quincy_parameter_value(this%E0pcp, &
                                     this%E0pcp, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "E0pcp", proportional_parameter_changes, dependency_recalculation, &
                                     E0pcp)
                                     
     CALL Set_quincy_parameter_value(this%E1pcp, &
                                     this%E1pcp, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "E1pcp", proportional_parameter_changes, dependency_recalculation, &
                                     E1pcp)
                                     
     CALL Set_quincy_parameter_value(this%E0v, &
                                     this%E0v, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "E0v", proportional_parameter_changes, dependency_recalculation, &
                                     E0v)
                                     
     CALL Set_quincy_parameter_value(this%E1v, &
                                     this%E1v, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "E1v", proportional_parameter_changes, dependency_recalculation, &
                                     E1v)
                                     
     CALL Set_quincy_parameter_value(this%t_jmax_offset, &
                                     this%t_jmax_offset, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "t_jmax_offset", proportional_parameter_changes, dependency_recalculation, &
                                     t_jmax_offset)
                                     
     CALL Set_quincy_parameter_value(this%t_jmax_slope, &
                                     this%t_jmax_slope, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "t_jmax_slope", proportional_parameter_changes, dependency_recalculation, &
                                     t_jmax_slope)
                                     
     CALL Set_quincy_parameter_value(this%t_jmax_opt_min, &
                                     this%t_jmax_opt_min, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "t_jmax_opt_min", proportional_parameter_changes, dependency_recalculation, &
                                     t_jmax_opt_min)
                                     
     CALL Set_quincy_parameter_value(this%t_jmax_opt_max, &
                                     this%t_jmax_opt_max, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "t_jmax_opt_max", proportional_parameter_changes, dependency_recalculation, &
                                     t_jmax_opt_max)
                                     
     CALL Set_quincy_parameter_value(this%Tref_pepc, &
                                     this%Tref_pepc, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "Tref_pepc", proportional_parameter_changes, dependency_recalculation, &
                                     Tref_pepc)
                                     
     CALL Set_quincy_parameter_value(this%Tbase_pepc, &
                                     this%Tbase_pepc, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "Tbase_pepc", proportional_parameter_changes, dependency_recalculation, &
                                     Tbase_pepc)
                                     
     CALL Set_quincy_parameter_value(this%alpha_i, &
                                     this%alpha_i, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "alpha_i", proportional_parameter_changes, dependency_recalculation, &
                                     alpha_i)
                                     
     CALL Set_quincy_parameter_value(this%pO2, &
                                     this%pO2, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "pO2", proportional_parameter_changes, dependency_recalculation, &
                                     pO2)
                                     
     CALL Set_quincy_parameter_value(this%CiCa_default_C3, &
                                     this%CiCa_default_C3, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "CiCa_default_C3", proportional_parameter_changes, dependency_recalculation, &
                                     CiCa_default_C3)
                                     
     CALL Set_quincy_parameter_value(this%CiCa_default_C4, &
                                     this%CiCa_default_C4, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "CiCa_default_C4", proportional_parameter_changes, dependency_recalculation, &
                                     CiCa_default_C4)
                                     
     CALL Set_quincy_parameter_value(this%ps_it_max, &
                                     this%ps_it_max, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "ps_it_max", proportional_parameter_changes, dependency_recalculation, &
                                     ps_it_max)
                                     
     CALL Set_quincy_parameter_value(this%ci_max, &
                                     this%ci_max, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "ci_max", proportional_parameter_changes, dependency_recalculation, &
                                     ci_max)
                                     
     ! current assumption: parameters from mo_shared_constants are not modified
@@ -932,7 +932,7 @@ CONTAINS
     ! ENDIF
     CALL Set_quincy_parameter_value(Dwv / Dco2, &                       ! default: Dwv2co2_air = Dwv / Dco2 | hence, only proportional changes may have an effect
                                     this%Dwv2co2_air, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "Dwv2co2_air", proportional_parameter_changes, dependency_recalculation, &
                                     Dwv2co2_air)
 
     ! current assumption: parameters from mo_shared_constants are not modified
@@ -942,22 +942,22 @@ CONTAINS
     ! ENDIF
     CALL Set_quincy_parameter_value(( Dwv / Dco2  ) ** (2._wp/3._wp), & ! default: Dwv2co2_turb = ( Dwv / Dco2  ) ** (2._wp/3._wp) | hence, only proportional changes may have an effect
                                     this%Dwv2co2_turb, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "Dwv2co2_turb", proportional_parameter_changes, dependency_recalculation, &
                                     Dwv2co2_turb)
                                     
     CALL Set_quincy_parameter_value(this%discr_ps_a_C13, &
                                     this%discr_ps_a_C13, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "discr_ps_a_C13", proportional_parameter_changes, dependency_recalculation, &
                                     discr_ps_a_C13)
                                     
     CALL Set_quincy_parameter_value(this%discr_ps_b_C13, &
                                     this%discr_ps_b_C13, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "discr_ps_b_C13", proportional_parameter_changes, dependency_recalculation, &
                                     discr_ps_b_C13)
                                     
     CALL Set_quincy_parameter_value(this%discr_ps_c_C13, &
                                     this%discr_ps_c_C13, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "discr_ps_c_C13", proportional_parameter_changes, dependency_recalculation, &
                                     discr_ps_c_C13)
 
     IF (ABS(this%discr_ps_a_C13 - missval) > eps8) THEN
@@ -965,7 +965,7 @@ CONTAINS
     ENDIF
     CALL Set_quincy_parameter_value(this%discr_ps_a_C14 * discr_ps_a_C13, &
                                     this%discr_ps_a_C14, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "discr_ps_a_C14", proportional_parameter_changes, dependency_recalculation, &
                                     discr_ps_a_C14)
 
     IF (ABS(this%discr_ps_b_C13 - missval) > eps8) THEN
@@ -973,7 +973,7 @@ CONTAINS
     ENDIF
     CALL Set_quincy_parameter_value(this%discr_ps_b_C14 * discr_ps_b_C13, &
                                     this%discr_ps_b_C14, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "discr_ps_b_C14", proportional_parameter_changes, dependency_recalculation, &
                                     discr_ps_b_C14)
                                     
     IF (ABS(this%discr_ps_c_C13 - missval) > eps8) THEN
@@ -981,34 +981,48 @@ CONTAINS
     ENDIF
     CALL Set_quincy_parameter_value(this%discr_ps_c_C14 * discr_ps_c_C13, &
                                     this%discr_ps_c_C14, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "discr_ps_c_C14", proportional_parameter_changes, dependency_recalculation, &
                                     discr_ps_c_C14)
                                     
     CALL Set_quincy_parameter_value(this%discr_ps_phi, &
                                     this%discr_ps_phi, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "discr_ps_phi", proportional_parameter_changes, dependency_recalculation, &
                                     discr_ps_phi)
                                     
     CALL Set_quincy_parameter_value(this%ka, &
                                     this%ka, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "ka", proportional_parameter_changes, dependency_recalculation, &
                                     ka)
                                     
     CALL Set_quincy_parameter_value(this%kn, &
                                     this%kn, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "kn", proportional_parameter_changes, dependency_recalculation, &
                                     kn)
                                     
     CALL Set_quincy_parameter_value(this%soa_min_temp, &
                                     this%soa_min_temp, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "soa_min_temp", proportional_parameter_changes, dependency_recalculation, &
                                     soa_min_temp)
                                     
     CALL Set_quincy_parameter_value(this%soa_max_temp, &
                                     this%soa_max_temp, &
-                                    proportional_parameter_changes, dependency_recalculation, &
+                                    "soa_max_temp", proportional_parameter_changes, dependency_recalculation, &
                                     soa_max_temp)
-                                    
+
+    ! CALL Set_quincy_parameter_value(this%xyz, &
+    !                                 this%xyz, &
+    !                                 "xyz", proportional_parameter_changes, dependency_recalculation, &
+    !                                 xyz)
+    ! 
+    ! CALL Set_quincy_parameter_value(this%xyz, &
+    !                                 this%xyz, &
+    !                                 "xyz", proportional_parameter_changes, dependency_recalculation, &
+    !                                 xyz)
+    ! 
+    ! CALL Set_quincy_parameter_value(this%xyz, &
+    !                                 this%xyz, &
+    !                                 "xyz", proportional_parameter_changes, dependency_recalculation, &
+    !                                 xyz)
 
 
     ! PHENOLOGY_CTL
@@ -3171,7 +3185,7 @@ CONTAINS
   !!  namelist created from generate_parameter_table.sh: parameter_slm_run.list \n
   !!  i.e., replace hard coded parameter value
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE Set_quincy_parameter_value(nml_abs_val, nml_prop_chng, proportional, dependency, def_val)
+  SUBROUTINE Set_quincy_parameter_value(nml_abs_val, nml_prop_chng, param_name, proportional, dependency, def_val)
 
     USE mo_kind,                ONLY: wp, eps8
     USE mo_jsb_io,              ONLY: missval  ! = -9.E+15_wp
@@ -3179,11 +3193,12 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    REAL(wp), INTENT(in)      :: nml_abs_val         !< new value from namelist; potential re-calc with other parameters already included (as done in mo_PROC_constants) !
-    REAL(wp), INTENT(in)      :: nml_prop_chng       !< proportional change of def_val x from namelist [0 < x < 2]
-    LOGICAL , INTENT(in)      :: proportional        !< logical: proportional-change calculation should be used
-    LOGICAL , INTENT(inout)   :: dependency          !< logical: this parameter velaue may be re-calculated because of a dependency to another param that has been changed 
-    REAL(wp), INTENT(inout)   :: def_val             !< default parameter value as hardcoded in the mo_PROC_constants
+    REAL(wp),         INTENT(in)    :: nml_abs_val        !< new value from namelist; potential re-calc with other parameters already included (as done in mo_PROC_constants) !
+    REAL(wp),         INTENT(in)    :: nml_prop_chng      !< proportional change of def_val x from namelist [0 < x < 2]
+    CHARACTER(LEN=*), INTENT(in)    :: param_name         !< name of the parameter for writing the new value to file
+    LOGICAL,          INTENT(in)    :: proportional       !< logical: calulate new value using proportional change
+    LOGICAL,          INTENT(inout) :: dependency         !< logical: this parameter value may be re-calculated because of a dependency to another param that has been changed 
+    REAL(wp),         INTENT(inout) :: def_val            !< default parameter value as hardcoded in the mo_PROC_constants
 
     ! ---------------------------
     ! 0.2 Local
@@ -3216,6 +3231,11 @@ CONTAINS
     !> 2.0 set parameter dependency back to the default value
     !!
     dependency = .FALSE.
+    
+    !> 3.0 write new value into file
+    !!
+    ! ...
+    
   END SUBROUTINE Set_quincy_parameter_value
 
 END MODULE mo_shared_set_parameters
