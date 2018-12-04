@@ -95,6 +95,38 @@ MODULE mo_shared_set_parameters
     REAL(wp)           :: mavg_period_tmic
     REAL(wp)           :: mavg_period_tgrowth
     REAL(wp)           :: mavg_period_tvegdyn
+    ! SSE_CTL
+    REAL(wp)           :: soil_heat_cap
+    REAL(wp)           :: soil_therm_cond
+    REAL(wp)           :: InterceptionEfficiency
+    REAL(wp)           :: w_skin_max
+    REAL(wp)           :: drain_frac
+    REAL(wp)           :: fdrain_runoff
+    REAL(wp)           :: wpot_pwp
+    REAL(wp)           :: wpot_fc
+    REAL(wp)           :: wpot_min
+    REAL(wp)           :: k_pwp_a
+    REAL(wp)           :: k_pwp_c
+    REAL(wp)           :: k_pwp_s
+    REAL(wp)           :: k_pwp_sc
+    REAL(wp)           :: k_pwp_at
+    REAL(wp)           :: k_pwp_bt
+    REAL(wp)           :: k_fc_a
+    REAL(wp)           :: k_fc_c
+    REAL(wp)           :: k_fc_s
+    REAL(wp)           :: k_fc_sc
+    REAL(wp)           :: k_fc_at
+    REAL(wp)           :: k_fc_bt
+    REAL(wp)           :: k_fc_ct
+    REAL(wp)           :: k_sat_a
+    REAL(wp)           :: k_sat_c
+    REAL(wp)           :: k_sat_s
+    REAL(wp)           :: k_sat_sc
+    REAL(wp)           :: k_sat_at
+    REAL(wp)           :: k_sat_bt
+    REAL(wp)           :: k_sat_ct
+    REAL(wp)           :: k_sat_dt
+    REAL(wp)           :: kdiff_sat_max
     ! VEGETATION_CTL
     REAL(wp)           :: delta_n_fraction
     REAL(wp)           :: delta_n_leaf
@@ -336,6 +368,38 @@ CONTAINS
     REAL(wp)           :: mavg_period_tmic
     REAL(wp)           :: mavg_period_tgrowth
     REAL(wp)           :: mavg_period_tvegdyn
+    ! SSE_CTL
+    REAL(wp)           :: soil_heat_cap
+    REAL(wp)           :: soil_therm_cond
+    REAL(wp)           :: InterceptionEfficiency
+    REAL(wp)           :: w_skin_max
+    REAL(wp)           :: drain_frac
+    REAL(wp)           :: fdrain_runoff
+    REAL(wp)           :: wpot_pwp
+    REAL(wp)           :: wpot_fc
+    REAL(wp)           :: wpot_min
+    REAL(wp)           :: k_pwp_a
+    REAL(wp)           :: k_pwp_c
+    REAL(wp)           :: k_pwp_s
+    REAL(wp)           :: k_pwp_sc
+    REAL(wp)           :: k_pwp_at
+    REAL(wp)           :: k_pwp_bt
+    REAL(wp)           :: k_fc_a
+    REAL(wp)           :: k_fc_c
+    REAL(wp)           :: k_fc_s
+    REAL(wp)           :: k_fc_sc
+    REAL(wp)           :: k_fc_at
+    REAL(wp)           :: k_fc_bt
+    REAL(wp)           :: k_fc_ct
+    REAL(wp)           :: k_sat_a
+    REAL(wp)           :: k_sat_c
+    REAL(wp)           :: k_sat_s
+    REAL(wp)           :: k_sat_sc
+    REAL(wp)           :: k_sat_at
+    REAL(wp)           :: k_sat_bt
+    REAL(wp)           :: k_sat_ct
+    REAL(wp)           :: k_sat_dt
+    REAL(wp)           :: kdiff_sat_max
     ! VEGETATION_CTL
     REAL(wp)           :: delta_n_fraction
     REAL(wp)           :: delta_n_leaf
@@ -477,6 +541,39 @@ CONTAINS
         mavg_period_tmic          , &
         mavg_period_tgrowth       , &
         mavg_period_tvegdyn       
+
+    NAMELIST /sse_ctl/            &  
+        soil_heat_cap             , &
+        soil_therm_cond           , &
+        InterceptionEfficiency    , &
+        w_skin_max                , &
+        drain_frac                , &
+        fdrain_runoff             , &
+        wpot_pwp                  , &
+        wpot_fc                   , &
+        wpot_min                  , &
+        k_pwp_a                   , &
+        k_pwp_c                   , &
+        k_pwp_s                   , &
+        k_pwp_sc                  , &
+        k_pwp_at                  , &
+        k_pwp_bt                  , &
+        k_fc_a                    , &
+        k_fc_c                    , &
+        k_fc_s                    , &
+        k_fc_sc                   , &
+        k_fc_at                   , &
+        k_fc_bt                   , &
+        k_fc_ct                   , &
+        k_sat_a                   , &
+        k_sat_c                   , &
+        k_sat_s                   , &
+        k_sat_sc                  , &
+        k_sat_at                  , &
+        k_sat_bt                  , &
+        k_sat_ct                  , &
+        k_sat_dt                  , &
+        kdiff_sat_max             
 
     NAMELIST /vegetation_ctl/     &  
         delta_n_fraction          , &
@@ -621,6 +718,38 @@ CONTAINS
     mavg_period_tmic            = missval
     mavg_period_tgrowth         = missval
     mavg_period_tvegdyn         = missval
+    ! SSE_CTL
+    soil_heat_cap               = missval
+    soil_therm_cond             = missval
+    InterceptionEfficiency      = missval
+    w_skin_max                  = missval
+    drain_frac                  = missval
+    fdrain_runoff               = missval
+    wpot_pwp                    = missval
+    wpot_fc                     = missval
+    wpot_min                    = missval
+    k_pwp_a                     = missval
+    k_pwp_c                     = missval
+    k_pwp_s                     = missval
+    k_pwp_sc                    = missval
+    k_pwp_at                    = missval
+    k_pwp_bt                    = missval
+    k_fc_a                      = missval
+    k_fc_c                      = missval
+    k_fc_s                      = missval
+    k_fc_sc                     = missval
+    k_fc_at                     = missval
+    k_fc_bt                     = missval
+    k_fc_ct                     = missval
+    k_sat_a                     = missval
+    k_sat_c                     = missval
+    k_sat_s                     = missval
+    k_sat_sc                    = missval
+    k_sat_at                    = missval
+    k_sat_bt                    = missval
+    k_sat_ct                    = missval
+    k_sat_dt                    = missval
+    kdiff_sat_max               = missval
     ! VEGETATION_CTL
     delta_n_fraction            = missval
     delta_n_leaf                = missval
@@ -706,6 +835,11 @@ CONTAINS
     nml_unit = position_nml('SHARED_CTL', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, shared_ctl)
     CALL close_nml(nml_handler)
+    ! &SSE_CTL
+    nml_handler = open_nml(TRIM(this%filename))
+    nml_unit = position_nml('SSE_CTL', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, sse_ctl)
+    CALL close_nml(nml_handler)
     ! &VEGETATION_CTL
     nml_handler = open_nml(TRIM(this%filename))
     nml_unit = position_nml('VEGETATION_CTL', nml_handler, STATUS=istat)
@@ -789,6 +923,38 @@ CONTAINS
     this%mavg_period_tmic            = mavg_period_tmic
     this%mavg_period_tgrowth         = mavg_period_tgrowth
     this%mavg_period_tvegdyn         = mavg_period_tvegdyn
+    ! SSE_CTL
+    this%soil_heat_cap               = soil_heat_cap
+    this%soil_therm_cond             = soil_therm_cond
+    this%InterceptionEfficiency      = InterceptionEfficiency
+    this%w_skin_max                  = w_skin_max
+    this%drain_frac                  = drain_frac
+    this%fdrain_runoff               = fdrain_runoff
+    this%wpot_pwp                    = wpot_pwp
+    this%wpot_fc                     = wpot_fc
+    this%wpot_min                    = wpot_min
+    this%k_pwp_a                     = k_pwp_a
+    this%k_pwp_c                     = k_pwp_c
+    this%k_pwp_s                     = k_pwp_s
+    this%k_pwp_sc                    = k_pwp_sc
+    this%k_pwp_at                    = k_pwp_at
+    this%k_pwp_bt                    = k_pwp_bt
+    this%k_fc_a                      = k_fc_a
+    this%k_fc_c                      = k_fc_c
+    this%k_fc_s                      = k_fc_s
+    this%k_fc_sc                     = k_fc_sc
+    this%k_fc_at                     = k_fc_at
+    this%k_fc_bt                     = k_fc_bt
+    this%k_fc_ct                     = k_fc_ct
+    this%k_sat_a                     = k_sat_a
+    this%k_sat_c                     = k_sat_c
+    this%k_sat_s                     = k_sat_s
+    this%k_sat_sc                    = k_sat_sc
+    this%k_sat_at                    = k_sat_at
+    this%k_sat_bt                    = k_sat_bt
+    this%k_sat_ct                    = k_sat_ct
+    this%k_sat_dt                    = k_sat_dt
+    this%kdiff_sat_max               = kdiff_sat_max
     ! VEGETATION_CTL
     this%delta_n_fraction            = delta_n_fraction
     this%delta_n_leaf                = delta_n_leaf
@@ -1272,6 +1438,162 @@ CONTAINS
                                     this%mavg_period_tvegdyn, &
                                     "mavg_period_tvegdyn", proportional_parameter_changes, dependency_recalculation, &
                                     mavg_period_tvegdyn)
+
+    ! SSE_CTL
+    CALL Set_quincy_parameter_value(this%soil_heat_cap, &
+                                    this%soil_heat_cap, &
+                                    "soil_heat_cap", proportional_parameter_changes, dependency_recalculation, &
+                                    soil_heat_cap)
+
+    CALL Set_quincy_parameter_value(this%soil_therm_cond, &
+                                    this%soil_therm_cond, &
+                                    "soil_therm_cond", proportional_parameter_changes, dependency_recalculation, &
+                                    soil_therm_cond)
+    
+    CALL Set_quincy_parameter_value(this%InterceptionEfficiency, &
+                                    this%InterceptionEfficiency, &
+                                    "InterceptionEfficiency", proportional_parameter_changes, dependency_recalculation, &
+                                    InterceptionEfficiency)
+    
+    CALL Set_quincy_parameter_value(this%w_skin_max, &
+                                    this%w_skin_max, &
+                                    "w_skin_max", proportional_parameter_changes, dependency_recalculation, &
+                                    w_skin_max)
+
+    CALL Set_quincy_parameter_value(this%drain_frac, &
+                                    this%drain_frac, &
+                                    "drain_frac", proportional_parameter_changes, dependency_recalculation, &
+                                    drain_frac)
+
+    CALL Set_quincy_parameter_value(this%fdrain_runoff, &
+                                    this%fdrain_runoff, &
+                                    "fdrain_runoff", proportional_parameter_changes, dependency_recalculation, &
+                                    fdrain_runoff)
+    
+    CALL Set_quincy_parameter_value(this%wpot_pwp, &
+                                    this%wpot_pwp, &
+                                    "wpot_pwp", proportional_parameter_changes, dependency_recalculation, &
+                                    wpot_pwp)
+
+    CALL Set_quincy_parameter_value(this%wpot_fc, &
+                                    this%wpot_fc, &
+                                    "wpot_fc", proportional_parameter_changes, dependency_recalculation, &
+                                    wpot_fc)
+
+    CALL Set_quincy_parameter_value(this%wpot_min, &
+                                    this%wpot_min, &
+                                    "wpot_min", proportional_parameter_changes, dependency_recalculation, &
+                                    wpot_min)
+    
+    CALL Set_quincy_parameter_value(this%k_pwp_a, &
+                                    this%k_pwp_a, &
+                                    "k_pwp_a", proportional_parameter_changes, dependency_recalculation, &
+                                    k_pwp_a)
+
+    CALL Set_quincy_parameter_value(this%k_pwp_c, &
+                                    this%k_pwp_c, &
+                                    "k_pwp_c", proportional_parameter_changes, dependency_recalculation, &
+                                    k_pwp_c)
+
+    CALL Set_quincy_parameter_value(this%k_pwp_s, &
+                                    this%k_pwp_s, &
+                                    "k_pwp_s", proportional_parameter_changes, dependency_recalculation, &
+                                    k_pwp_s)
+    
+    CALL Set_quincy_parameter_value(this%k_pwp_sc, &
+                                    this%k_pwp_sc, &
+                                    "k_pwp_sc", proportional_parameter_changes, dependency_recalculation, &
+                                    k_pwp_sc)
+
+    CALL Set_quincy_parameter_value(this%k_pwp_at, &
+                                    this%k_pwp_at, &
+                                    "k_pwp_at", proportional_parameter_changes, dependency_recalculation, &
+                                    k_pwp_at)
+
+    CALL Set_quincy_parameter_value(this%k_pwp_bt, &
+                                    this%k_pwp_bt, &
+                                    "k_pwp_bt", proportional_parameter_changes, dependency_recalculation, &
+                                    k_pwp_bt)
+    
+    CALL Set_quincy_parameter_value(this%k_fc_a, &
+                                    this%k_fc_a, &
+                                    "k_fc_a", proportional_parameter_changes, dependency_recalculation, &
+                                    k_fc_a)
+
+    CALL Set_quincy_parameter_value(this%k_fc_c, &
+                                    this%k_fc_c, &
+                                    "k_fc_c", proportional_parameter_changes, dependency_recalculation, &
+                                    k_fc_c)
+
+    CALL Set_quincy_parameter_value(this%k_fc_s, &
+                                    this%k_fc_s, &
+                                    "k_fc_s", proportional_parameter_changes, dependency_recalculation, &
+                                    k_fc_s)
+    
+    CALL Set_quincy_parameter_value(this%k_fc_sc, &
+                                    this%k_fc_sc, &
+                                    "k_fc_sc", proportional_parameter_changes, dependency_recalculation, &
+                                    k_fc_sc)
+
+    CALL Set_quincy_parameter_value(this%k_fc_at, &
+                                    this%k_fc_at, &
+                                    "k_fc_at", proportional_parameter_changes, dependency_recalculation, &
+                                    k_fc_at)
+
+    CALL Set_quincy_parameter_value(this%k_fc_bt, &
+                                    this%k_fc_bt, &
+                                    "k_fc_bt", proportional_parameter_changes, dependency_recalculation, &
+                                    k_fc_bt)
+    
+    CALL Set_quincy_parameter_value(this%k_fc_ct, &
+                                    this%k_fc_ct, &
+                                    "k_fc_ct", proportional_parameter_changes, dependency_recalculation, &
+                                    k_fc_ct)
+
+    CALL Set_quincy_parameter_value(this%k_sat_a, &
+                                    this%k_sat_a, &
+                                    "k_sat_a", proportional_parameter_changes, dependency_recalculation, &
+                                    k_sat_a)
+
+    CALL Set_quincy_parameter_value(this%k_sat_c, &
+                                    this%k_sat_c, &
+                                    "k_sat_c", proportional_parameter_changes, dependency_recalculation, &
+                                    k_sat_c)
+    
+    CALL Set_quincy_parameter_value(this%k_sat_s, &
+                                    this%k_sat_s, &
+                                    "k_sat_s", proportional_parameter_changes, dependency_recalculation, &
+                                    k_sat_s)
+
+    CALL Set_quincy_parameter_value(this%k_sat_sc, &
+                                    this%k_sat_sc, &
+                                    "k_sat_sc", proportional_parameter_changes, dependency_recalculation, &
+                                    k_sat_sc)
+
+    CALL Set_quincy_parameter_value(this%k_sat_at, &
+                                    this%k_sat_at, &
+                                    "k_sat_at", proportional_parameter_changes, dependency_recalculation, &
+                                    k_sat_at)
+    
+    CALL Set_quincy_parameter_value(this%k_sat_bt, &
+                                    this%k_sat_bt, &
+                                    "k_sat_bt", proportional_parameter_changes, dependency_recalculation, &
+                                    k_sat_bt)
+
+    CALL Set_quincy_parameter_value(this%k_sat_ct, &
+                                    this%k_sat_ct, &
+                                    "k_sat_ct", proportional_parameter_changes, dependency_recalculation, &
+                                    k_sat_ct)
+
+    CALL Set_quincy_parameter_value(this%k_sat_dt, &
+                                    this%k_sat_dt, &
+                                    "k_sat_dt", proportional_parameter_changes, dependency_recalculation, &
+                                    k_sat_dt)
+
+    CALL Set_quincy_parameter_value(this%kdiff_sat_max  / 1000.0_wp / 3600._wp, &
+                                    this%kdiff_sat_max, &
+                                    "kdiff_sat_max", proportional_parameter_changes, dependency_recalculation, &
+                                    kdiff_sat_max)
 
     ! VEGETATION_CTL
     IF (ABS(this%delta_n_fraction       - missval) > eps8)  delta_n_fraction      = this%delta_n_fraction

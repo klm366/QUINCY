@@ -75,6 +75,50 @@
   mavg_period_tgrowth=NAN
   mavg_period_tvegdyn=NAN
 /
+&SSE_CTL
+  soil_heat_cap=NAN
+  soil_therm_cond=NAN
+  InterceptionEfficiency=NAN
+  w_skin_max=NAN
+  drain_frac=NAN
+  fdrain_runoff=NAN
+  wpot_pwp=NAN
+  wpot_fc=NAN
+  wpot_min=NAN
+  k_pwp_a=NAN
+  k_pwp_c=NAN
+  k_pwp_s=NAN
+  k_pwp_sc=NAN
+  k_pwp_at=NAN
+  k_pwp_bt=NAN
+  k_fc_a=NAN
+  k_fc_c=NAN
+  k_fc_s=NAN
+  k_fc_sc=NAN
+  k_fc_at=NAN
+  k_fc_bt=NAN
+  k_fc_ct=NAN
+  k_sat_a=NAN
+  k_sat_c=NAN
+  k_sat_s=NAN
+  k_sat_sc=NAN
+  k_sat_at=NAN
+  k_sat_bt=NAN
+  k_sat_ct=NAN
+  k_sat_dt=NAN
+  kdiff_sat_max=NAN
+/
+&VEGETATION_CTL
+  delta_n_fraction=NAN
+  delta_n_leaf=NAN
+  cost_n_fixation_max=NAN
+  cost_n_fixation_min=NAN
+  vmax_bnf=NAN
+  k_bnf=NAN
+  offset_bnf=NAN
+  f_resp_acclim=NAN 
+  fmaint_rate_base=NAN
+/
 &SB_CTL
   floss_nmin=NAN
   tau_fast=NAN
@@ -128,20 +172,6 @@
   km_dip_biochem_po4=NAN
   km_rootc_biochem_po4=NAN
   km_rootc_weath_po4=NAN
-/
-&SSE_CTL
-  ! tba
-/
-&VEGETATION_CTL
-  delta_n_fraction=NAN
-  delta_n_leaf=NAN
-  cost_n_fixation_max=NAN
-  cost_n_fixation_min=NAN
-  vmax_bnf=NAN
-  k_bnf=NAN
-  offset_bnf=NAN
-  f_resp_acclim=NAN 
-  fmaint_rate_base=NAN
 /
 &LCTLIB_PFT1_CTL
   sla_p1=NAN
