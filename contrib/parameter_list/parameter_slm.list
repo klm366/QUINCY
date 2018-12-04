@@ -59,15 +59,21 @@
   k_r2fr_chl=NAN
 /
 &SHARED_CTL
+  mavg_period_weekly=NAN
+  mavg_period_monthly=NAN
+  mavg_period_yearly=NAN
+  mavg_period_tsoa=NAN
+  mavg_period_tuptake=NAN
   mavg_period_tlabile=NAN
   mavg_period_tphen=NAN
-  mavg_period_tuptake=NAN
   mavg_period_tfrac=NAN
   mavg_period_tcnl=NAN
   mavg_period_talloc=NAN
-  mavg_period_tvegdyn=NAN
+  mavg_period_talloc_dynamic=NAN
   mavg_period_tacclim=NAN
   mavg_period_tmic=NAN
+  mavg_period_tgrowth=NAN
+  mavg_period_tvegdyn=NAN
 /
 &SB_CTL
   floss_nmin=NAN

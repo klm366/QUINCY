@@ -80,15 +80,21 @@ MODULE mo_shared_set_parameters
     REAL(wp)           :: rfr_ratio_toc
     REAL(wp)           :: k_r2fr_chl
     ! SHARED_CTL
+    REAL(wp)           :: mavg_period_weekly
+    REAL(wp)           :: mavg_period_monthly
+    REAL(wp)           :: mavg_period_yearly
+    REAL(wp)           :: mavg_period_tsoa
+    REAL(wp)           :: mavg_period_tuptake
     REAL(wp)           :: mavg_period_tlabile
     REAL(wp)           :: mavg_period_tphen
-    REAL(wp)           :: mavg_period_tuptake
     REAL(wp)           :: mavg_period_tfrac
     REAL(wp)           :: mavg_period_tcnl
     REAL(wp)           :: mavg_period_talloc
-    REAL(wp)           :: mavg_period_tvegdyn
+    REAL(wp)           :: mavg_period_talloc_dynamic
     REAL(wp)           :: mavg_period_tacclim
     REAL(wp)           :: mavg_period_tmic
+    REAL(wp)           :: mavg_period_tgrowth
+    REAL(wp)           :: mavg_period_tvegdyn
     ! VEGETATION_CTL
     REAL(wp)           :: delta_n_fraction
     REAL(wp)           :: delta_n_leaf
@@ -315,15 +321,21 @@ CONTAINS
     REAL(wp)           :: rfr_ratio_toc
     REAL(wp)           :: k_r2fr_chl
     ! SHARED_CTL
+    REAL(wp)           :: mavg_period_weekly
+    REAL(wp)           :: mavg_period_monthly
+    REAL(wp)           :: mavg_period_yearly
+    REAL(wp)           :: mavg_period_tsoa
+    REAL(wp)           :: mavg_period_tuptake
     REAL(wp)           :: mavg_period_tlabile
     REAL(wp)           :: mavg_period_tphen
-    REAL(wp)           :: mavg_period_tuptake
     REAL(wp)           :: mavg_period_tfrac
     REAL(wp)           :: mavg_period_tcnl
     REAL(wp)           :: mavg_period_talloc
-    REAL(wp)           :: mavg_period_tvegdyn
+    REAL(wp)           :: mavg_period_talloc_dynamic
     REAL(wp)           :: mavg_period_tacclim
     REAL(wp)           :: mavg_period_tmic
+    REAL(wp)           :: mavg_period_tgrowth
+    REAL(wp)           :: mavg_period_tvegdyn
     ! VEGETATION_CTL
     REAL(wp)           :: delta_n_fraction
     REAL(wp)           :: delta_n_leaf
@@ -450,15 +462,21 @@ CONTAINS
         k_r2fr_chl              
 
     NAMELIST /shared_ctl/         &
+        mavg_period_weekly        , &
+        mavg_period_monthly       , &
+        mavg_period_yearly        , &
+        mavg_period_tsoa          , &
+        mavg_period_tuptake       , &
         mavg_period_tlabile       , &
         mavg_period_tphen         , &
-        mavg_period_tuptake       , &
         mavg_period_tfrac         , &
         mavg_period_tcnl          , &
         mavg_period_talloc        , &
-        mavg_period_tvegdyn       , &
+        mavg_period_talloc_dynamic, &
         mavg_period_tacclim       , &
-        mavg_period_tmic
+        mavg_period_tmic          , &
+        mavg_period_tgrowth       , &
+        mavg_period_tvegdyn       
 
     NAMELIST /vegetation_ctl/     &  
         delta_n_fraction          , &
@@ -588,15 +606,21 @@ CONTAINS
     rfr_ratio_toc               = missval
     k_r2fr_chl                  = missval
     ! SHARED_CTL
+    mavg_period_weekly          = missval
+    mavg_period_monthly         = missval
+    mavg_period_yearly          = missval
+    mavg_period_tsoa            = missval
+    mavg_period_tuptake         = missval
     mavg_period_tlabile         = missval
     mavg_period_tphen           = missval
-    mavg_period_tuptake         = missval
     mavg_period_tfrac           = missval
     mavg_period_tcnl            = missval
     mavg_period_talloc          = missval
-    mavg_period_tvegdyn         = missval
+    mavg_period_talloc_dynamic  = missval
     mavg_period_tacclim         = missval
     mavg_period_tmic            = missval
+    mavg_period_tgrowth         = missval
+    mavg_period_tvegdyn         = missval
     ! VEGETATION_CTL
     delta_n_fraction            = missval
     delta_n_leaf                = missval
@@ -750,15 +774,21 @@ CONTAINS
     this%rfr_ratio_toc               = rfr_ratio_toc
     this%k_r2fr_chl                  = k_r2fr_chl
     ! SHARED_CTL
+    this%mavg_period_weekly          = mavg_period_weekly
+    this%mavg_period_monthly         = mavg_period_monthly
+    this%mavg_period_yearly          = mavg_period_yearly
+    this%mavg_period_tsoa            = mavg_period_tsoa
+    this%mavg_period_tuptake         = mavg_period_tuptake
     this%mavg_period_tlabile         = mavg_period_tlabile
     this%mavg_period_tphen           = mavg_period_tphen
-    this%mavg_period_tuptake         = mavg_period_tuptake
     this%mavg_period_tfrac           = mavg_period_tfrac
     this%mavg_period_tcnl            = mavg_period_tcnl
     this%mavg_period_talloc          = mavg_period_talloc
-    this%mavg_period_tvegdyn         = mavg_period_tvegdyn
+    this%mavg_period_talloc_dynamic  = mavg_period_talloc_dynamic
     this%mavg_period_tacclim         = mavg_period_tacclim
     this%mavg_period_tmic            = mavg_period_tmic
+    this%mavg_period_tgrowth         = mavg_period_tgrowth
+    this%mavg_period_tvegdyn         = mavg_period_tvegdyn
     ! VEGETATION_CTL
     this%delta_n_fraction            = delta_n_fraction
     this%delta_n_leaf                = delta_n_leaf
@@ -1168,16 +1198,81 @@ CONTAINS
                                     k_r2fr_chl)
     
     ! SHARED_CTL
-    IF (ABS(this%mavg_period_tlabile    - missval) > eps8)  mavg_period_tlabile   = this%mavg_period_tlabile
-    IF (ABS(this%mavg_period_tphen      - missval) > eps8)  mavg_period_tphen     = this%mavg_period_tphen
-    IF (ABS(this%mavg_period_tuptake    - missval) > eps8)  mavg_period_tuptake   = this%mavg_period_tuptake
-    IF (ABS(this%mavg_period_tfrac      - missval) > eps8)  mavg_period_tfrac     = this%mavg_period_tfrac
-    IF (ABS(this%mavg_period_tcnl       - missval) > eps8)  mavg_period_tcnl      = this%mavg_period_tcnl
-    IF (ABS(this%mavg_period_talloc     - missval) > eps8)  mavg_period_talloc    = this%mavg_period_talloc
-    IF (ABS(this%mavg_period_tvegdyn    - missval) > eps8)  mavg_period_tvegdyn   = this%mavg_period_tvegdyn
-    IF (ABS(this%mavg_period_tacclim    - missval) > eps8)  mavg_period_tacclim   = this%mavg_period_tacclim
-    IF (ABS(this%mavg_period_tmic       - missval) > eps8)  mavg_period_tmic      = this%mavg_period_tmic
+    CALL Set_quincy_parameter_value(this%mavg_period_weekly, &
+                                    this%mavg_period_weekly, &
+                                    "mavg_period_weekly", proportional_parameter_changes, dependency_recalculation, &
+                                    mavg_period_weekly)
     
+    CALL Set_quincy_parameter_value(this%mavg_period_monthly, &
+                                    this%mavg_period_monthly, &
+                                    "mavg_period_monthly", proportional_parameter_changes, dependency_recalculation, &
+                                    mavg_period_monthly)
+    
+    CALL Set_quincy_parameter_value(this%mavg_period_yearly, &
+                                    this%mavg_period_yearly, &
+                                    "mavg_period_yearly", proportional_parameter_changes, dependency_recalculation, &
+                                    mavg_period_yearly)
+
+    CALL Set_quincy_parameter_value(this%mavg_period_tsoa, &
+                                    this%mavg_period_tsoa, &
+                                    "mavg_period_tsoa", proportional_parameter_changes, dependency_recalculation, &
+                                    mavg_period_tsoa)
+    
+    CALL Set_quincy_parameter_value(this%mavg_period_tuptake, &
+                                    this%mavg_period_tuptake, &
+                                    "mavg_period_tuptake", proportional_parameter_changes, dependency_recalculation, &
+                                    mavg_period_tuptake)
+    
+    CALL Set_quincy_parameter_value(this%mavg_period_tlabile, &
+                                    this%mavg_period_tlabile, &
+                                    "mavg_period_tlabile", proportional_parameter_changes, dependency_recalculation, &
+                                    mavg_period_tlabile)
+
+    CALL Set_quincy_parameter_value(this%mavg_period_tphen, &
+                                    this%mavg_period_tphen, &
+                                    "mavg_period_tphen", proportional_parameter_changes, dependency_recalculation, &
+                                    mavg_period_tphen)
+    
+    CALL Set_quincy_parameter_value(this%mavg_period_tfrac, &
+                                    this%mavg_period_tfrac, &
+                                    "mavg_period_tfrac", proportional_parameter_changes, dependency_recalculation, &
+                                    mavg_period_tfrac)
+    
+    CALL Set_quincy_parameter_value(this%mavg_period_tcnl, &
+                                    this%mavg_period_tcnl, &
+                                    "mavg_period_tcnl", proportional_parameter_changes, dependency_recalculation, &
+                                    mavg_period_tcnl)
+
+    CALL Set_quincy_parameter_value(this%mavg_period_talloc, &
+                                    this%mavg_period_talloc, &
+                                    "mavg_period_talloc", proportional_parameter_changes, dependency_recalculation, &
+                                    mavg_period_talloc)
+    
+    CALL Set_quincy_parameter_value(this%mavg_period_talloc_dynamic * 365.0_wp, &  ! default value: 30.0_wp * 365.0_wp (i.e., 30 years)
+                                    this%mavg_period_talloc_dynamic, &
+                                    "mavg_period_talloc_dynamic", proportional_parameter_changes, dependency_recalculation, &
+                                    mavg_period_talloc_dynamic)
+    
+    CALL Set_quincy_parameter_value(this%mavg_period_tacclim, &
+                                    this%mavg_period_tacclim, &
+                                    "mavg_period_tacclim", proportional_parameter_changes, dependency_recalculation, &
+                                    mavg_period_tacclim)
+
+    CALL Set_quincy_parameter_value(this%mavg_period_tmic, &
+                                    this%mavg_period_tmic, &
+                                    "mavg_period_tmic", proportional_parameter_changes, dependency_recalculation, &
+                                    mavg_period_tmic)
+    
+    CALL Set_quincy_parameter_value(this%mavg_period_tgrowth, &
+                                    this%mavg_period_tgrowth, &
+                                    "mavg_period_tgrowth", proportional_parameter_changes, dependency_recalculation, &
+                                    mavg_period_tgrowth)
+    
+    CALL Set_quincy_parameter_value(this%mavg_period_tvegdyn, &
+                                    this%mavg_period_tvegdyn, &
+                                    "mavg_period_tvegdyn", proportional_parameter_changes, dependency_recalculation, &
+                                    mavg_period_tvegdyn)
+
     ! VEGETATION_CTL
     IF (ABS(this%delta_n_fraction       - missval) > eps8)  delta_n_fraction      = this%delta_n_fraction
     IF (ABS(this%delta_n_leaf           - missval) > eps8)  delta_n_leaf          = this%delta_n_leaf

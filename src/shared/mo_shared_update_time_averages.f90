@@ -441,8 +441,8 @@ CONTAINS
     USE mo_jsb_class,               ONLY: Get_model
     USE mo_shared_constants,        ONLY: mavg_period_weekly, mavg_period_monthly, &
                                           mavg_period_tlabile, mavg_period_tphen, mavg_period_tuptake, mavg_period_tfrac, &
-                                          mavg_period_tcnl, mavg_period_tgrowth, mavg_period_talloc, mavg_period_talloc_dynamic, mavg_period_tvegdyn, &
-                                          mavg_period_tacclim, mavg_period_tmic, mavg_period_tsoa, &
+                                          mavg_period_tcnl, mavg_period_tgrowth, mavg_period_talloc, mavg_period_talloc_dynamic, &
+                                          mavg_period_tvegdyn, mavg_period_tacclim, mavg_period_tmic, mavg_period_tsoa, &
                                           Tzero
 
     ! Use of process configurations (t_PROC_config)
@@ -468,10 +468,10 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options            !< model options
     ! ---------------------------
     ! 0.2 Local
-    TYPE(t_jsb_model),      POINTER         :: model             !< instance of the model
-    TYPE(t_lctlib_element), POINTER         :: lctlib            !< land-cover-type library - parameter across pft's
-    REAl(wp),DIMENSION(options%nc)          :: hlp, mavg_period_hlp               !< helper
-    LOGICAL ,DIMENSION(options%nc)          :: l_growing_season  !< growing_season LOGICAL needed for calc_mavg(), see section 0.9
+    TYPE(t_jsb_model),      POINTER         :: model                !< instance of the model
+    TYPE(t_lctlib_element), POINTER         :: lctlib               !< land-cover-type library - parameter across pft's
+    REAl(wp),DIMENSION(options%nc)          :: hlp, mavg_period_hlp !< helper
+    LOGICAL ,DIMENSION(options%nc)          :: l_growing_season     !< growing_season LOGICAL needed for calc_mavg(), see section 0.9
     INTEGER                                 :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_moving_averages'
     ! ---------------------------
@@ -817,8 +817,13 @@ CONTAINS
 
 
     !> 1.0
-    !! calc_mavg(current average, new value, length of avg_period, do_calc=.FALSE., avg_period_unit='day')
+    !! calc_mavg(current average, new value, length of avg_period, do_calc=LOGICAL, avg_period_unit='day')
     !!           returns: new current average
+    !! 
+    !! note: the unit of the averaging period is 'day' by default but can also be 'week' or 'year'
+    !!       avg_period_unit='day'
+    !!       avg_period_unit='week'
+    !!       avg_period_unit='year'
 
     !> 1.1 averages at the timescale of the labile pool
     !! 

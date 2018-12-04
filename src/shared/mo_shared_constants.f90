@@ -8,7 +8,7 @@
 !!
 MODULE mo_shared_constants
  
-  USE mo_kind,   ONLY: wp
+  USE mo_kind,                  ONLY: wp
 
   IMPLICIT NONE
   PUBLIC
@@ -59,7 +59,9 @@ MODULE mo_shared_constants
   !! needed for mo_shared_update_time_averages:update_time_averages()
   !! 
   !! moving average period lengths (you can add new parameters here)
-  !! the period may be defined in days per default (but different units are possible, see calc_mavg() below)
+  !!   the default unit of the averaging period is 'day'
+  !!   but can also be 'week' or 'year' ( see mo_shared_update_time_averages:calc_mavg() )
+  !! 
                                                                         ! generic memory time-scales:
     REAL(wp),SAVE :: mavg_period_weekly            = 7.0_wp                 !< 7 days; constant across the model
     REAL(wp),SAVE :: mavg_period_monthly           = 30.0_wp                !< 30 days; constant across the model
@@ -72,7 +74,7 @@ MODULE mo_shared_constants
     REAL(wp),SAVE :: mavg_period_tfrac             = 10.0_wp                !< leaf N fractions
     REAL(wp),SAVE :: mavg_period_tcnl              = 20.0_wp                !< leaf stoichiometry 
     REAL(wp),SAVE :: mavg_period_talloc            = 30.0_wp                !< biomass allocation
-    REAL(wp),SAVE :: mavg_period_talloc_dynamic    = 365.0_wp * 30.0_wp     !< biomass allocation for empirical dynamic allocation
+    REAL(wp),SAVE :: mavg_period_talloc_dynamic    = 30.0_wp * 365.0_wp     !< biomass allocation for empirical dynamic allocation (30 years)
     REAL(wp),SAVE :: mavg_period_tacclim           = 30.0_wp                !< respiration acclimation
     REAL(wp),SAVE :: mavg_period_tmic              = 30.0_wp                !< microbial community acclimation
     REAL(wp),SAVE :: mavg_period_tgrowth           = 365.0_wp               !< vegetation growth
