@@ -198,81 +198,81 @@ CONTAINS
 
 
   ! Respiration parameters
-      fresp_growth      = 0.25_wp
-      fmaint_rate_base  = 1._wp 
-      fmaint_rate_wood  = fmaint_rate_base * 0.25_wp
-      t_maint_k1        = 308.56_wp  
-      t_maint_k2        = 56.02_wp 
-      t_maint_k3        = 227.13_wp 
-      f_resp_acclim     = -0.008_wp
-      t_acclim_zero     = 283.15_wp 
+      fresp_growth                = 0.25_wp
+      fmaint_rate_base            = 1._wp 
+      fmaint_rate_wood            = 0.25_wp * fmaint_rate_base
+      t_maint_k1                  = 308.56_wp  
+      t_maint_k2                  = 56.02_wp 
+      t_maint_k3                  = 227.13_wp 
+      f_resp_acclim               = -0.008_wp
+      t_acclim_zero               = 283.15_wp 
 
   ! Parameters describing the PS ~ An relationship (describing photosynthetic activity )
-      k0_fn_pepc_C3     = 0.0_wp 
-      k0_fn_pepc_C4     = 0.045_wp 
-      jmax2vcmax_C3     = 1.92_wp / 4._wp
-      jmax2vcmax_C4     = 1.4_wp  
+      k0_fn_pepc_C3               = 0.0_wp 
+      k0_fn_pepc_C4               = 0.045_wp 
+      jmax2vcmax_C3               = 1.92_wp / 4._wp
+      jmax2vcmax_C4               = 1.4_wp  
 
   ! Labile pool parameters 
-      tau_labile              = 5.0_wp  
-      lambda_labile_temp      = 0.5_wp 
-      k_labile_temp           = 2.0_wp 
-      lambda_labile_theta     = 10.0_wp
-      k_labile_theta          = 2.0_wp 
-      lambda_phiphen          = 1.3_wp 
-      k_phiphen               = 8.0_wp 
-      lambda_phimaint         = 4.0_wp 
-      k_phimaint              = 1.2_wp 
-      lambda_phimaint_nut     = 1.6_wp 
-      k_phimaint_nut          = 3._wp 
-      lambda_phistore         = 2._wp
-      k_phistore              = 3._wp 
-      knut_labile             = 1.2_wp 
-      lambda_sinklim_ps       = 0.1_wp
-      k_sinklim_ps            = 2.0_wp 
-      k_cnp_sinklim_ps        = 4.0_wp 
-      beta_sinklim_ps_min     = 0.25_wp 
-      fstore_leaf_max         = 0.02_wp
-      fstore_fine_root_max    = 0.2_wp
-      fstore_sap_wood_max     = 0.15_wp
-      k_phi_interact          = 0.75_wp
+      tau_labile                  = 5.0_wp  
+      lambda_labile_temp          = 0.5_wp 
+      k_labile_temp               = 2.0_wp 
+      lambda_labile_theta         = 10.0_wp
+      k_labile_theta              = 2.0_wp 
+      lambda_phiphen              = 1.3_wp 
+      k_phiphen                   = 8.0_wp 
+      lambda_phimaint             = 4.0_wp 
+      k_phimaint                  = 1.2_wp 
+      lambda_phimaint_nut         = 1.6_wp 
+      k_phimaint_nut              = 3._wp 
+      lambda_phistore             = 2._wp
+      k_phistore                  = 3._wp 
+      knut_labile                 = 1.2_wp 
+      lambda_sinklim_ps           = 0.1_wp
+      k_sinklim_ps                = 2.0_wp 
+      k_cnp_sinklim_ps            = 4.0_wp 
+      beta_sinklim_ps_min         = 0.25_wp 
+      fstore_leaf_max             = 0.02_wp
+      fstore_fine_root_max        = 0.2_wp
+      fstore_sap_wood_max         = 0.15_wp
+      k_phi_interact              = 0.75_wp
 
 
   ! Resorption parameters
-      resorp_fract_leaf       = 0.5_wp  
-      resorp_fract_wood       = 0.2_wp 
-      root2leaf_cn            = 0.85_wp 
-      wood2leaf_cn            = 0.145_wp 
-      root2leaf_np            = 1.0_wp 
-      wood2leaf_np            = 1.0_wp 
-      tau_nutrient_recycling  = 10._wp
+      resorp_fract_leaf           = 0.5_wp  
+      resorp_fract_wood           = 0.2_wp 
+      root2leaf_cn                = 0.85_wp 
+      wood2leaf_cn                = 0.145_wp 
+      root2leaf_np                = 1.0_wp 
+      wood2leaf_np                = 1.0_wp 
+      tau_nutrient_recycling      = 10._wp
 
   ! N uptake parameters
-      kappa_f_demand_nc   = 0.75_wp 
-      kappa_f_demand_pn   = 0.9_wp 
-      k_f_demand          = 2.0_wp
-      cost_n_fixation_max = 17.5_wp   / (molar_mass_C/molar_mass_N) 
-      cost_n_fixation_min = 8.0_wp    / (molar_mass_C/molar_mass_N) 
-      k1_temp_bnf         = 1.25_wp
-      k2_temp_bnf         = -3.62_wp
-      k3_temp_bnf         = 0.27_wp
-      k4_temp_bnf         = 50.3_wp
-      transform_cost_nh4  = 1.7_wp    / (molar_mass_C/molar_mass_N)
-      transform_cost_no3  = 2.3_wp    / (molar_mass_C/molar_mass_N)
-      transform_cost_org  = 1.0_wp    / (molar_mass_C/molar_mass_N)
-      f_nacq_nh4          = transform_cost_no3 / (transform_cost_no3 + transform_cost_nh4)
-      f_nacq_no3          = transform_cost_nh4 / (transform_cost_no3 + transform_cost_nh4)
-      vmax_bnf            = 5.0_wp * 0.0225_wp / (molar_mass_N/molar_mass_C) / (one_day*one_year) *1.e6_wp
-      k_bnf               = 50.0_wp   / (molar_mass_C/molar_Mass_N)
-      offset_bnf          = 6.0_wp * (f_nacq_nh4 * transform_cost_nh4 + f_nacq_no3 * transform_cost_no3)
-      eta_nfixation       = 3.0_wp  ! Robinson, Tree 2001
+      kappa_f_demand_nc           = 0.75_wp 
+      kappa_f_demand_pn           = 0.9_wp 
+      k_f_demand                  = 2.0_wp
+      cost_n_fixation_max         = 17.5_wp   / (molar_mass_C/molar_mass_N) 
+      cost_n_fixation_min         = 8.0_wp    / (molar_mass_C/molar_mass_N) 
+      k1_temp_bnf                 = 1.25_wp
+      k2_temp_bnf                 = -3.62_wp
+      k3_temp_bnf                 = 0.27_wp
+      k4_temp_bnf                 = 50.3_wp
+      transform_cost_nh4          = 1.7_wp    / (molar_mass_C/molar_mass_N)
+      transform_cost_no3          = 2.3_wp    / (molar_mass_C/molar_mass_N)
+      transform_cost_org          = 1.0_wp    / (molar_mass_C/molar_mass_N)
+      f_nacq_nh4                  = transform_cost_no3 / (transform_cost_no3 + transform_cost_nh4)
+      f_nacq_no3                  = transform_cost_nh4 / (transform_cost_no3 + transform_cost_nh4)
+      vmax_bnf                    = 5.0_wp * 0.0225_wp / (molar_mass_N/molar_mass_C) / (one_day*one_year) * 1.e6_wp
+      k_bnf                       = 50.0_wp   / (molar_mass_C/molar_Mass_N)
+      offset_bnf                  = 6.0_wp * (f_nacq_nh4 * transform_cost_nh4 + f_nacq_no3 * transform_cost_no3)
+      eta_nfixation               = 3.0_wp                   ! Robinson, Tree 2001
 
   ! parameters to describe the varying fraction of N in chlorophyll through the canopy
-      k0_fn_chl_C3        = 6.0_wp
-      k0_fn_chl_C4        = 15.0_wp
-      k1_fn_chl_C3        = 3.6_wp
-      k1_fn_chl_C4        = 4.4_wp
-      kfn_chl             = 0.7_wp
+      k0_fn_chl_C3                = 6.0_wp
+      k0_fn_chl_C4                = 15.0_wp
+      k1_fn_chl_C3                = 3.6_wp
+      k1_fn_chl_C4                = 4.4_wp
+      kfn_chl                     = 0.7_wp
 
   ! parameters used for phenology calculations
       min_lai                     = 0.1_wp
@@ -315,8 +315,8 @@ CONTAINS
 
   ! parameters for changes in canopy N fractions
 !@todo:should this be 1/20days?
-      delta_n_fraction            = 0.048_wp  ! 0.001_wp (changed to account for multiplication with dtime/one_day in the code)
-      delta_n_leaf                = 0.0048_wp  ! 0.0001 (changed to account for multiplication with dtime/one_day in the code)   
+      delta_n_fraction            = 0.048_wp        ! 0.001_wp (changed to account for multiplication with dtime/one_day in the code)
+      delta_n_leaf                = 0.0048_wp       ! 0.0001 (changed to account for multiplication with dtime/one_day in the code)   
 
   END SUBROUTINE init_veg_constants
 
