@@ -128,15 +128,105 @@ MODULE mo_shared_set_parameters
     REAL(wp)           :: k_sat_dt
     REAL(wp)           :: kdiff_sat_max
     ! VEGETATION_CTL
-    REAL(wp)           :: delta_n_fraction
-    REAL(wp)           :: delta_n_leaf
+    REAL(wp)           :: fresp_growth
+    REAL(wp)           :: fmaint_rate_base
+    REAL(wp)           :: fmaint_rate_wood
+    REAL(wp)           :: t_maint_k1
+    REAL(wp)           :: t_maint_k2
+    REAL(wp)           :: t_maint_k3
+    REAL(wp)           :: f_resp_acclim
+    REAL(wp)           :: t_acclim_zero
+    REAL(wp)           :: k0_fn_pepc_C3
+    REAL(wp)           :: k0_fn_pepc_C4
+    REAL(wp)           :: jmax2vcmax_C3
+    REAL(wp)           :: jmax2vcmax_C4
+    REAL(wp)           :: tau_labile
+    REAL(wp)           :: lambda_labile_temp
+    REAL(wp)           :: k_labile_temp
+    REAL(wp)           :: lambda_labile_theta
+    REAL(wp)           :: k_labile_theta
+    REAL(wp)           :: lambda_phiphen
+    REAL(wp)           :: k_phiphen
+    REAL(wp)           :: lambda_phimaint
+    REAL(wp)           :: k_phimaint
+    REAL(wp)           :: lambda_phimaint_nut
+    REAL(wp)           :: k_phimaint_nut
+    REAL(wp)           :: lambda_phistore
+    REAL(wp)           :: k_phistore
+    REAL(wp)           :: knut_labile
+    REAL(wp)           :: lambda_sinklim_ps
+    REAL(wp)           :: k_sinklim_ps
+    REAL(wp)           :: k_cnp_sinklim_ps
+    REAL(wp)           :: beta_sinklim_ps_min
+    REAL(wp)           :: fstore_leaf_max
+    REAL(wp)           :: fstore_fine_root_max
+    REAL(wp)           :: fstore_sap_wood_max
+    REAL(wp)           :: k_phi_interact
+    REAL(wp)           :: resorp_fract_leaf
+    REAL(wp)           :: resorp_fract_wood
+    REAL(wp)           :: root2leaf_cn
+    REAL(wp)           :: wood2leaf_cn
+    REAL(wp)           :: root2leaf_np
+    REAL(wp)           :: wood2leaf_np
+    REAL(wp)           :: tau_nutrient_recycling
+    REAL(wp)           :: kappa_f_demand_nc
+    REAL(wp)           :: kappa_f_demand_pn
+    REAL(wp)           :: k_f_demand
     REAL(wp)           :: cost_n_fixation_max
     REAL(wp)           :: cost_n_fixation_min
-    REAL(wp)           :: vmax_bnf                        !< maximum rate of N fixation
-    REAL(wp)           :: k_bnf                           !< half_saturating cost of the response of N fixation
-    REAL(wp)           :: offset_bnf                      !< parameter used for bnf-scheme 'resistor'
-    REAL(wp)           :: f_resp_acclim
-    REAL(wp)           :: fmaint_rate_base
+    REAL(wp)           :: k1_temp_bnf
+    REAL(wp)           :: k2_temp_bnf
+    REAL(wp)           :: k3_temp_bnf
+    REAL(wp)           :: k4_temp_bnf
+    REAL(wp)           :: transform_cost_nh4
+    REAL(wp)           :: transform_cost_no3
+    REAL(wp)           :: transform_cost_org
+    REAL(wp)           :: f_nacq_nh4
+    REAL(wp)           :: f_nacq_no3
+    REAL(wp)           :: vmax_bnf
+    REAL(wp)           :: k_bnf
+    REAL(wp)           :: offset_bnf
+    REAL(wp)           :: eta_nfixation
+    REAL(wp)           :: k0_fn_chl_C3
+    REAL(wp)           :: k0_fn_chl_C4
+    REAL(wp)           :: k1_fn_chl_C3
+    REAL(wp)           :: k1_fn_chl_C4
+    REAL(wp)           :: kfn_chl
+    REAL(wp)           :: min_lai
+    REAL(wp)           :: target_lai_max
+    REAL(wp)           :: max_leaf_shedding_rate
+    REAL(wp)           :: k_leafon_canopy
+    REAL(wp)           :: background_mort_rate_tree
+    REAL(wp)           :: background_mort_rate_grass
+    REAL(wp)           :: lambda_mort_light
+    REAL(wp)           :: k_mort_light
+    REAL(wp)           :: lambda_est_temp
+    REAL(wp)           :: k_est_temp
+    REAL(wp)           :: lambda_est_moist
+    REAL(wp)           :: k_est_moist
+    REAL(wp)           :: wood_extraction_rate
+    REAL(wp)           :: k1_mort_greff
+    REAL(wp)           :: k2_mort_greff
+    REAL(wp)           :: k3_mort_greff
+    REAL(wp)           :: min_greff
+    REAL(wp)           :: max_crown_area
+    REAL(wp)           :: min_diameter
+    REAL(wp)           :: k_crown_area
+    REAL(wp)           :: k_rp
+    REAL(wp)           :: k_fpc
+    REAL(wp)           :: fpc_max
+    REAL(wp)           :: carbon_per_dryweight_leaf
+    REAL(wp)           :: min_height
+    REAL(wp)           :: sm2lm_grass
+    REAL(wp)           :: lambda_fruit_alloc
+    REAL(wp)           :: k1_fruit_alloc
+    REAL(wp)           :: k3_fruit_alloc
+    REAL(wp)           :: k4_fruit_alloc
+    REAL(wp)           :: w_root_lim_max
+    REAL(wp)           :: leaf2root_min_ratio
+    REAL(wp)           :: leaf2root_max_ratio
+    REAL(wp)           :: delta_n_fraction
+    REAL(wp)           :: delta_n_leaf
     ! SB_CTL
     REAL(wp)           :: floss_nmin
     REAL(wp)           :: tau_fast
@@ -401,15 +491,105 @@ CONTAINS
     REAL(wp)           :: k_sat_dt
     REAL(wp)           :: kdiff_sat_max
     ! VEGETATION_CTL
-    REAL(wp)           :: delta_n_fraction
-    REAL(wp)           :: delta_n_leaf
+    REAL(wp)           :: fresp_growth
+    REAL(wp)           :: fmaint_rate_base
+    REAL(wp)           :: fmaint_rate_wood
+    REAL(wp)           :: t_maint_k1
+    REAL(wp)           :: t_maint_k2
+    REAL(wp)           :: t_maint_k3
+    REAL(wp)           :: f_resp_acclim
+    REAL(wp)           :: t_acclim_zero
+    REAL(wp)           :: k0_fn_pepc_C3
+    REAL(wp)           :: k0_fn_pepc_C4
+    REAL(wp)           :: jmax2vcmax_C3
+    REAL(wp)           :: jmax2vcmax_C4
+    REAL(wp)           :: tau_labile
+    REAL(wp)           :: lambda_labile_temp
+    REAL(wp)           :: k_labile_temp
+    REAL(wp)           :: lambda_labile_theta
+    REAL(wp)           :: k_labile_theta
+    REAL(wp)           :: lambda_phiphen
+    REAL(wp)           :: k_phiphen
+    REAL(wp)           :: lambda_phimaint
+    REAL(wp)           :: k_phimaint
+    REAL(wp)           :: lambda_phimaint_nut
+    REAL(wp)           :: k_phimaint_nut
+    REAL(wp)           :: lambda_phistore
+    REAL(wp)           :: k_phistore
+    REAL(wp)           :: knut_labile
+    REAL(wp)           :: lambda_sinklim_ps
+    REAL(wp)           :: k_sinklim_ps
+    REAL(wp)           :: k_cnp_sinklim_ps
+    REAL(wp)           :: beta_sinklim_ps_min
+    REAL(wp)           :: fstore_leaf_max
+    REAL(wp)           :: fstore_fine_root_max
+    REAL(wp)           :: fstore_sap_wood_max
+    REAL(wp)           :: k_phi_interact
+    REAL(wp)           :: resorp_fract_leaf
+    REAL(wp)           :: resorp_fract_wood
+    REAL(wp)           :: root2leaf_cn
+    REAL(wp)           :: wood2leaf_cn
+    REAL(wp)           :: root2leaf_np
+    REAL(wp)           :: wood2leaf_np
+    REAL(wp)           :: tau_nutrient_recycling
+    REAL(wp)           :: kappa_f_demand_nc
+    REAL(wp)           :: kappa_f_demand_pn
+    REAL(wp)           :: k_f_demand
     REAL(wp)           :: cost_n_fixation_max
     REAL(wp)           :: cost_n_fixation_min
+    REAL(wp)           :: k1_temp_bnf
+    REAL(wp)           :: k2_temp_bnf
+    REAL(wp)           :: k3_temp_bnf
+    REAL(wp)           :: k4_temp_bnf
+    REAL(wp)           :: transform_cost_nh4
+    REAL(wp)           :: transform_cost_no3
+    REAL(wp)           :: transform_cost_org
+    REAL(wp)           :: f_nacq_nh4
+    REAL(wp)           :: f_nacq_no3
     REAL(wp)           :: vmax_bnf
     REAL(wp)           :: k_bnf
     REAL(wp)           :: offset_bnf
-    REAL(wp)           :: f_resp_acclim
-    REAL(wp)           :: fmaint_rate_base
+    REAL(wp)           :: eta_nfixation
+    REAL(wp)           :: k0_fn_chl_C3
+    REAL(wp)           :: k0_fn_chl_C4
+    REAL(wp)           :: k1_fn_chl_C3
+    REAL(wp)           :: k1_fn_chl_C4
+    REAL(wp)           :: kfn_chl
+    REAL(wp)           :: min_lai
+    REAL(wp)           :: target_lai_max
+    REAL(wp)           :: max_leaf_shedding_rate
+    REAL(wp)           :: k_leafon_canopy
+    REAL(wp)           :: background_mort_rate_tree
+    REAL(wp)           :: background_mort_rate_grass
+    REAL(wp)           :: lambda_mort_light
+    REAL(wp)           :: k_mort_light
+    REAL(wp)           :: lambda_est_temp
+    REAL(wp)           :: k_est_temp
+    REAL(wp)           :: lambda_est_moist
+    REAL(wp)           :: k_est_moist
+    REAL(wp)           :: wood_extraction_rate
+    REAL(wp)           :: k1_mort_greff
+    REAL(wp)           :: k2_mort_greff
+    REAL(wp)           :: k3_mort_greff
+    REAL(wp)           :: min_greff
+    REAL(wp)           :: max_crown_area
+    REAL(wp)           :: min_diameter
+    REAL(wp)           :: k_crown_area
+    REAL(wp)           :: k_rp
+    REAL(wp)           :: k_fpc
+    REAL(wp)           :: fpc_max
+    REAL(wp)           :: carbon_per_dryweight_leaf
+    REAL(wp)           :: min_height
+    REAL(wp)           :: sm2lm_grass
+    REAL(wp)           :: lambda_fruit_alloc
+    REAL(wp)           :: k1_fruit_alloc
+    REAL(wp)           :: k3_fruit_alloc
+    REAL(wp)           :: k4_fruit_alloc
+    REAL(wp)           :: w_root_lim_max
+    REAL(wp)           :: leaf2root_min_ratio
+    REAL(wp)           :: leaf2root_max_ratio
+    REAL(wp)           :: delta_n_fraction
+    REAL(wp)           :: delta_n_leaf
     ! SB_CTL
     REAL(wp)           :: floss_nmin
     REAL(wp)           :: tau_fast
@@ -576,15 +756,105 @@ CONTAINS
         kdiff_sat_max             
 
     NAMELIST /vegetation_ctl/     &  
-        delta_n_fraction          , &
-        delta_n_leaf              , &
+        fresp_growth              , &
+        fmaint_rate_base          , &
+        fmaint_rate_wood          , &
+        t_maint_k1                , &
+        t_maint_k2                , &
+        t_maint_k3                , &
+        f_resp_acclim             , &
+        t_acclim_zero             , &
+        k0_fn_pepc_C3             , &
+        k0_fn_pepc_C4             , &
+        jmax2vcmax_C3             , &
+        jmax2vcmax_C4             , &
+        tau_labile                , &
+        lambda_labile_temp        , &
+        k_labile_temp             , &
+        lambda_labile_theta       , &
+        k_labile_theta            , &
+        lambda_phiphen            , &
+        k_phiphen                 , &
+        lambda_phimaint           , &
+        k_phimaint                , &
+        lambda_phimaint_nut       , &
+        k_phimaint_nut            , &
+        lambda_phistore           , &
+        k_phistore                , &
+        knut_labile               , &
+        lambda_sinklim_ps         , &
+        k_sinklim_ps              , &
+        k_cnp_sinklim_ps          , &
+        beta_sinklim_ps_min       , &
+        fstore_leaf_max           , &
+        fstore_fine_root_max      , &
+        fstore_sap_wood_max       , &
+        k_phi_interact            , &
+        resorp_fract_leaf         , &
+        resorp_fract_wood         , &
+        root2leaf_cn              , &
+        wood2leaf_cn              , &
+        root2leaf_np              , &
+        wood2leaf_np              , &
+        tau_nutrient_recycling    , &
+        kappa_f_demand_nc         , &
+        kappa_f_demand_pn         , &
+        k_f_demand                , &
         cost_n_fixation_max       , &
         cost_n_fixation_min       , &
+        k1_temp_bnf               , &
+        k2_temp_bnf               , &
+        k3_temp_bnf               , &
+        k4_temp_bnf               , &
+        transform_cost_nh4        , &
+        transform_cost_no3        , &
+        transform_cost_org        , &
+        f_nacq_nh4                , &
+        f_nacq_no3                , &
         vmax_bnf                  , &
         k_bnf                     , &
         offset_bnf                , &
-        f_resp_acclim             , &
-        fmaint_rate_base
+        eta_nfixation             , &
+        k0_fn_chl_C3              , &
+        k0_fn_chl_C4              , &
+        k1_fn_chl_C3              , &
+        k1_fn_chl_C4              , &
+        kfn_chl                   , &
+        min_lai                   , &
+        target_lai_max            , &
+        max_leaf_shedding_rate    , &
+        k_leafon_canopy           , &
+        background_mort_rate_tree , &
+        background_mort_rate_grass, &
+        lambda_mort_light         , &
+        k_mort_light              , &
+        lambda_est_temp           , &
+        k_est_temp                , &
+        lambda_est_moist          , &
+        k_est_moist               , &
+        wood_extraction_rate      , &
+        k1_mort_greff             , &
+        k2_mort_greff             , &
+        k3_mort_greff             , &
+        min_greff                 , &
+        max_crown_area            , &
+        min_diameter              , &
+        k_crown_area              , &
+        k_rp                      , &
+        k_fpc                     , &
+        fpc_max                   , &
+        carbon_per_dryweight_leaf , &
+        min_height                , &
+        sm2lm_grass               , &
+        lambda_fruit_alloc        , &
+        k1_fruit_alloc            , &
+        k3_fruit_alloc            , &
+        k4_fruit_alloc            , &
+        w_root_lim_max            , &
+        leaf2root_min_ratio       , &
+        leaf2root_max_ratio       , &
+        delta_n_fraction          , &
+        delta_n_leaf              
 
     NAMELIST /sb_ctl/             &
         floss_nmin                , &
@@ -751,15 +1021,105 @@ CONTAINS
     k_sat_dt                    = missval
     kdiff_sat_max               = missval
     ! VEGETATION_CTL
-    delta_n_fraction            = missval
-    delta_n_leaf                = missval
+    fresp_growth                = missval
+    fmaint_rate_base            = missval
+    fmaint_rate_wood            = missval
+    t_maint_k1                  = missval
+    t_maint_k2                  = missval
+    t_maint_k3                  = missval
+    f_resp_acclim               = missval
+    t_acclim_zero               = missval
+    k0_fn_pepc_C3               = missval
+    k0_fn_pepc_C4               = missval
+    jmax2vcmax_C3               = missval
+    jmax2vcmax_C4               = missval
+    tau_labile                  = missval
+    lambda_labile_temp          = missval
+    k_labile_temp               = missval
+    lambda_labile_theta         = missval
+    k_labile_theta              = missval
+    lambda_phiphen              = missval
+    k_phiphen                   = missval
+    lambda_phimaint             = missval
+    k_phimaint                  = missval
+    lambda_phimaint_nut         = missval
+    k_phimaint_nut              = missval
+    lambda_phistore             = missval
+    k_phistore                  = missval
+    knut_labile                 = missval
+    lambda_sinklim_ps           = missval
+    k_sinklim_ps                = missval
+    k_cnp_sinklim_ps            = missval
+    beta_sinklim_ps_min         = missval
+    fstore_leaf_max             = missval
+    fstore_fine_root_max        = missval
+    fstore_sap_wood_max         = missval
+    k_phi_interact              = missval
+    resorp_fract_leaf           = missval
+    resorp_fract_wood           = missval
+    root2leaf_cn                = missval
+    wood2leaf_cn                = missval
+    root2leaf_np                = missval
+    wood2leaf_np                = missval
+    tau_nutrient_recycling      = missval
+    kappa_f_demand_nc           = missval
+    kappa_f_demand_pn           = missval
+    k_f_demand                  = missval
     cost_n_fixation_max         = missval
     cost_n_fixation_min         = missval
+    k1_temp_bnf                 = missval
+    k2_temp_bnf                 = missval
+    k3_temp_bnf                 = missval
+    k4_temp_bnf                 = missval
+    transform_cost_nh4          = missval
+    transform_cost_no3          = missval
+    transform_cost_org          = missval
+    f_nacq_nh4                  = missval
+    f_nacq_no3                  = missval
     vmax_bnf                    = missval
     k_bnf                       = missval
     offset_bnf                  = missval
-    f_resp_acclim               = missval
-    fmaint_rate_base            = missval
+    eta_nfixation               = missval
+    k0_fn_chl_C3                = missval
+    k0_fn_chl_C4                = missval
+    k1_fn_chl_C3                = missval
+    k1_fn_chl_C4                = missval
+    kfn_chl                     = missval
+    min_lai                     = missval
+    target_lai_max              = missval
+    max_leaf_shedding_rate      = missval
+    k_leafon_canopy             = missval
+    background_mort_rate_tree   = missval
+    background_mort_rate_grass  = missval
+    lambda_mort_light           = missval
+    k_mort_light                = missval
+    lambda_est_temp             = missval
+    k_est_temp                  = missval
+    lambda_est_moist            = missval
+    k_est_moist                 = missval
+    wood_extraction_rate        = missval
+    k1_mort_greff               = missval
+    k2_mort_greff               = missval
+    k3_mort_greff               = missval
+    min_greff                   = missval
+    max_crown_area              = missval
+    min_diameter                = missval
+    k_crown_area                = missval
+    k_rp                        = missval
+    k_fpc                       = missval
+    fpc_max                     = missval
+    carbon_per_dryweight_leaf   = missval
+    min_height                  = missval
+    sm2lm_grass                 = missval
+    lambda_fruit_alloc          = missval
+    k1_fruit_alloc              = missval
+    k3_fruit_alloc              = missval
+    k4_fruit_alloc              = missval
+    w_root_lim_max              = missval
+    leaf2root_min_ratio         = missval
+    leaf2root_max_ratio         = missval
+    delta_n_fraction            = missval
+    delta_n_leaf                = missval
     ! SB_CTL
     floss_nmin                  = missval
     tau_fast                    = missval
@@ -956,15 +1316,105 @@ CONTAINS
     this%k_sat_dt                    = k_sat_dt
     this%kdiff_sat_max               = kdiff_sat_max
     ! VEGETATION_CTL
-    this%delta_n_fraction            = delta_n_fraction
-    this%delta_n_leaf                = delta_n_leaf
+    this%fresp_growth                = fresp_growth
+    this%fmaint_rate_base            = fmaint_rate_base
+    this%fmaint_rate_wood            = fmaint_rate_wood
+    this%t_maint_k1                  = t_maint_k1
+    this%t_maint_k2                  = t_maint_k2
+    this%t_maint_k3                  = t_maint_k3
+    this%f_resp_acclim               = f_resp_acclim
+    this%t_acclim_zero               = t_acclim_zero
+    this%k0_fn_pepc_C3               = k0_fn_pepc_C3
+    this%k0_fn_pepc_C4               = k0_fn_pepc_C4
+    this%jmax2vcmax_C3               = jmax2vcmax_C3
+    this%jmax2vcmax_C4               = jmax2vcmax_C4
+    this%tau_labile                  = tau_labile
+    this%lambda_labile_temp          = lambda_labile_temp
+    this%k_labile_temp               = k_labile_temp
+    this%lambda_labile_theta         = lambda_labile_theta
+    this%k_labile_theta              = k_labile_theta
+    this%lambda_phiphen              = lambda_phiphen
+    this%k_phiphen                   = k_phiphen
+    this%lambda_phimaint             = lambda_phimaint
+    this%k_phimaint                  = k_phimaint
+    this%lambda_phimaint_nut         = lambda_phimaint_nut
+    this%k_phimaint_nut              = k_phimaint_nut
+    this%lambda_phistore             = lambda_phistore
+    this%k_phistore                  = k_phistore
+    this%knut_labile                 = knut_labile
+    this%lambda_sinklim_ps           = lambda_sinklim_ps
+    this%k_sinklim_ps                = k_sinklim_ps
+    this%k_cnp_sinklim_ps            = k_cnp_sinklim_ps
+    this%beta_sinklim_ps_min         = beta_sinklim_ps_min
+    this%fstore_leaf_max             = fstore_leaf_max
+    this%fstore_fine_root_max        = fstore_fine_root_max
+    this%fstore_sap_wood_max         = fstore_sap_wood_max
+    this%k_phi_interact              = k_phi_interact
+    this%resorp_fract_leaf           = resorp_fract_leaf
+    this%resorp_fract_wood           = resorp_fract_wood
+    this%root2leaf_cn                = root2leaf_cn
+    this%wood2leaf_cn                = wood2leaf_cn
+    this%root2leaf_np                = root2leaf_np
+    this%wood2leaf_np                = wood2leaf_np
+    this%tau_nutrient_recycling      = tau_nutrient_recycling
+    this%kappa_f_demand_nc           = kappa_f_demand_nc
+    this%kappa_f_demand_pn           = kappa_f_demand_pn
+    this%k_f_demand                  = k_f_demand
     this%cost_n_fixation_max         = cost_n_fixation_max
     this%cost_n_fixation_min         = cost_n_fixation_min
+    this%k1_temp_bnf                 = k1_temp_bnf
+    this%k2_temp_bnf                 = k2_temp_bnf
+    this%k3_temp_bnf                 = k3_temp_bnf
+    this%k4_temp_bnf                 = k4_temp_bnf
+    this%transform_cost_nh4          = transform_cost_nh4
+    this%transform_cost_no3          = transform_cost_no3
+    this%transform_cost_org          = transform_cost_org
+    this%f_nacq_nh4                  = f_nacq_nh4
+    this%f_nacq_no3                  = f_nacq_no3
     this%vmax_bnf                    = vmax_bnf
     this%k_bnf                       = k_bnf
     this%offset_bnf                  = offset_bnf
-    this%f_resp_acclim               = f_resp_acclim
-    this%fmaint_rate_base            = fmaint_rate_base 
+    this%eta_nfixation               = eta_nfixation
+    this%k0_fn_chl_C3                = k0_fn_chl_C3
+    this%k0_fn_chl_C4                = k0_fn_chl_C4
+    this%k1_fn_chl_C3                = k1_fn_chl_C3
+    this%k1_fn_chl_C4                = k1_fn_chl_C4
+    this%kfn_chl                     = kfn_chl
+    this%min_lai                     = min_lai
+    this%target_lai_max              = target_lai_max
+    this%max_leaf_shedding_rate      = max_leaf_shedding_rate
+    this%k_leafon_canopy             = k_leafon_canopy
+    this%background_mort_rate_tree   = background_mort_rate_tree
+    this%background_mort_rate_grass  = background_mort_rate_grass
+    this%lambda_mort_light           = lambda_mort_light
+    this%k_mort_light                = k_mort_light
+    this%lambda_est_temp             = lambda_est_temp
+    this%k_est_temp                  = k_est_temp
+    this%lambda_est_moist            = lambda_est_moist
+    this%k_est_moist                 = k_est_moist
+    this%wood_extraction_rate        = wood_extraction_rate
+    this%k1_mort_greff               = k1_mort_greff
+    this%k2_mort_greff               = k2_mort_greff
+    this%k3_mort_greff               = k3_mort_greff
+    this%min_greff                   = min_greff
+    this%max_crown_area              = max_crown_area
+    this%min_diameter                = min_diameter
+    this%k_crown_area                = k_crown_area
+    this%k_rp                        = k_rp
+    this%k_fpc                       = k_fpc
+    this%fpc_max                     = fpc_max
+    this%carbon_per_dryweight_leaf   = carbon_per_dryweight_leaf
+    this%min_height                  = min_height
+    this%sm2lm_grass                 = sm2lm_grass
+    this%lambda_fruit_alloc          = lambda_fruit_alloc
+    this%k1_fruit_alloc              = k1_fruit_alloc
+    this%k3_fruit_alloc              = k3_fruit_alloc
+    this%k4_fruit_alloc              = k4_fruit_alloc
+    this%w_root_lim_max              = w_root_lim_max
+    this%leaf2root_min_ratio         = leaf2root_min_ratio
+    this%leaf2root_max_ratio         = leaf2root_max_ratio
+    this%delta_n_fraction            = delta_n_fraction
+    this%delta_n_leaf                = delta_n_leaf
     ! SB_CTL
     this%floss_nmin                  = floss_nmin
     this%tau_fast                    = tau_fast
@@ -1596,23 +2046,521 @@ CONTAINS
                                     kdiff_sat_max)
 
     ! VEGETATION_CTL
-    IF (ABS(this%delta_n_fraction       - missval) > eps8)  delta_n_fraction      = this%delta_n_fraction
-    IF (ABS(this%delta_n_leaf           - missval) > eps8)  delta_n_leaf          = this%delta_n_leaf
-    IF (ABS(this%cost_n_fixation_max    - missval) > eps8)  cost_n_fixation_max   = this%cost_n_fixation_max / &
-                                                                                      (molar_mass_C/molar_mass_N)
-    IF (ABS(this%cost_n_fixation_min    - missval) > eps8)  cost_n_fixation_min   = this%cost_n_fixation_min / &
-                                                                                      (molar_mass_C/molar_mass_N)
-    IF (ABS(this%vmax_bnf               - missval) > eps8)  vmax_bnf              = this%vmax_bnf * 0.0225_wp / &
-                                                                                      (molar_mass_N/molar_mass_C) / &
-                                                                                      (one_day*one_year) * 1.e6_wp
-    IF (ABS(this%k_bnf                  - missval) > eps8)  k_bnf                 = this%k_bnf / &
-                                                                                      (molar_mass_C/molar_Mass_N)
-    IF (ABS(this%offset_bnf             - missval) > eps8)  offset_bnf            = this%offset_bnf * & 
-                                                                                      (f_nacq_nh4 * transform_cost_nh4 + &
-                                                                                       f_nacq_no3 * transform_cost_no3)
+    CALL Set_quincy_parameter_value(this%fresp_growth, &
+                                    this%fresp_growth, &
+                                    "fresp_growth", proportional_parameter_changes, dependency_recalculation, &
+                                    fresp_growth)
+    
+    CALL Set_quincy_parameter_value(this%fmaint_rate_base, &
+                                    this%fmaint_rate_base, &
+                                    "fmaint_rate_base", proportional_parameter_changes, dependency_recalculation, &
+                                    fmaint_rate_base)
+    
+    IF (ABS(this%fmaint_rate_base - missval) > eps8) THEN
+        dependency_recalculation = .TRUE.
+        fmaint_rate_wood         = 0.25_wp * fmaint_rate_base   ! copied from mo_veg_constants
+    ENDIF
+    CALL Set_quincy_parameter_value(this%fmaint_rate_wood  * fmaint_rate_base, &
+                                    this%fmaint_rate_wood, &
+                                    "fmaint_rate_wood", proportional_parameter_changes, dependency_recalculation, &
+                                    fmaint_rate_wood)
 
-    IF (ABS(this%f_resp_acclim          - missval) > eps8)  f_resp_acclim         = this%f_resp_acclim
-    IF (ABS(this%fmaint_rate_base       - missval) > eps8)  fmaint_rate_base      = this%fmaint_rate_base
+    CALL Set_quincy_parameter_value(this%t_maint_k1, &
+                                    this%t_maint_k1, &
+                                    "t_maint_k1", proportional_parameter_changes, dependency_recalculation, &
+                                    t_maint_k1)
+    
+    CALL Set_quincy_parameter_value(this%t_maint_k2, &
+                                    this%t_maint_k2, &
+                                    "t_maint_k2", proportional_parameter_changes, dependency_recalculation, &
+                                    t_maint_k2)
+    
+    CALL Set_quincy_parameter_value(this%t_maint_k3, &
+                                    this%t_maint_k3, &
+                                    "t_maint_k3", proportional_parameter_changes, dependency_recalculation, &
+                                    t_maint_k3)
+
+    CALL Set_quincy_parameter_value(this%f_resp_acclim, &
+                                    this%f_resp_acclim, &
+                                    "f_resp_acclim", proportional_parameter_changes, dependency_recalculation, &
+                                    f_resp_acclim)
+    
+    CALL Set_quincy_parameter_value(this%t_acclim_zero, &
+                                    this%t_acclim_zero, &
+                                    "t_acclim_zero", proportional_parameter_changes, dependency_recalculation, &
+                                    t_acclim_zero)
+    
+    CALL Set_quincy_parameter_value(this%k0_fn_pepc_C3, &
+                                    this%k0_fn_pepc_C3, &
+                                    "k0_fn_pepc_C3", proportional_parameter_changes, dependency_recalculation, &
+                                    k0_fn_pepc_C3)
+
+    CALL Set_quincy_parameter_value(this%k0_fn_pepc_C4, &
+                                    this%k0_fn_pepc_C4, &
+                                    "k0_fn_pepc_C4", proportional_parameter_changes, dependency_recalculation, &
+                                    k0_fn_pepc_C4)
+
+    CALL Set_quincy_parameter_value(this%jmax2vcmax_C3 / 4._wp, &
+                                    this%jmax2vcmax_C3, &
+                                    "jmax2vcmax_C3", proportional_parameter_changes, dependency_recalculation, &
+                                    jmax2vcmax_C3)
+    
+    CALL Set_quincy_parameter_value(this%jmax2vcmax_C4, &
+                                    this%jmax2vcmax_C4, &
+                                    "jmax2vcmax_C4", proportional_parameter_changes, dependency_recalculation, &
+                                    jmax2vcmax_C4)
+    
+    CALL Set_quincy_parameter_value(this%tau_labile, &
+                                    this%tau_labile, &
+                                    "tau_labile", proportional_parameter_changes, dependency_recalculation, &
+                                    tau_labile)
+
+    CALL Set_quincy_parameter_value(this%lambda_labile_temp, &
+                                    this%lambda_labile_temp, &
+                                    "lambda_labile_temp", proportional_parameter_changes, dependency_recalculation, &
+                                    lambda_labile_temp)
+    
+    CALL Set_quincy_parameter_value(this%k_labile_temp, &
+                                    this%k_labile_temp, &
+                                    "k_labile_temp", proportional_parameter_changes, dependency_recalculation, &
+                                    k_labile_temp)
+    
+    CALL Set_quincy_parameter_value(this%lambda_labile_theta, &
+                                    this%lambda_labile_theta, &
+                                    "lambda_labile_theta", proportional_parameter_changes, dependency_recalculation, &
+                                    lambda_labile_theta)
+
+    CALL Set_quincy_parameter_value(this%k_labile_theta, &
+                                    this%k_labile_theta, &
+                                    "k_labile_theta", proportional_parameter_changes, dependency_recalculation, &
+                                    k_labile_theta)
+    
+    CALL Set_quincy_parameter_value(this%lambda_phiphen, &
+                                    this%lambda_phiphen, &
+                                    "lambda_phiphen", proportional_parameter_changes, dependency_recalculation, &
+                                    lambda_phiphen)
+    
+    CALL Set_quincy_parameter_value(this%k_phiphen, &
+                                    this%k_phiphen, &
+                                    "k_phiphen", proportional_parameter_changes, dependency_recalculation, &
+                                    k_phiphen)
+
+    CALL Set_quincy_parameter_value(this%lambda_phimaint, &
+                                    this%lambda_phimaint, &
+                                    "lambda_phimaint", proportional_parameter_changes, dependency_recalculation, &
+                                    lambda_phimaint)
+
+    CALL Set_quincy_parameter_value(this%k_phimaint, &
+                                    this%k_phimaint, &
+                                    "k_phimaint", proportional_parameter_changes, dependency_recalculation, &
+                                    k_phimaint)
+    
+    CALL Set_quincy_parameter_value(this%lambda_phimaint_nut, &
+                                    this%lambda_phimaint_nut, &
+                                    "lambda_phimaint_nut", proportional_parameter_changes, dependency_recalculation, &
+                                    lambda_phimaint_nut)
+    
+    CALL Set_quincy_parameter_value(this%k_phimaint_nut, &
+                                    this%k_phimaint_nut, &
+                                    "k_phimaint_nut", proportional_parameter_changes, dependency_recalculation, &
+                                    k_phimaint_nut)
+
+    CALL Set_quincy_parameter_value(this%lambda_phistore, &
+                                    this%lambda_phistore, &
+                                    "lambda_phistore", proportional_parameter_changes, dependency_recalculation, &
+                                    lambda_phistore)
+    
+    CALL Set_quincy_parameter_value(this%k_phistore, &
+                                    this%k_phistore, &
+                                    "k_phistore", proportional_parameter_changes, dependency_recalculation, &
+                                    k_phistore)
+    
+    CALL Set_quincy_parameter_value(this%knut_labile, &
+                                    this%knut_labile, &
+                                    "knut_labile", proportional_parameter_changes, dependency_recalculation, &
+                                    knut_labile)
+
+    CALL Set_quincy_parameter_value(this%lambda_sinklim_ps, &
+                                    this%lambda_sinklim_ps, &
+                                    "lambda_sinklim_ps", proportional_parameter_changes, dependency_recalculation, &
+                                    lambda_sinklim_ps)
+    
+    CALL Set_quincy_parameter_value(this%k_sinklim_ps, &
+                                    this%k_sinklim_ps, &
+                                    "k_sinklim_ps", proportional_parameter_changes, dependency_recalculation, &
+                                    k_sinklim_ps)
+    
+    CALL Set_quincy_parameter_value(this%k_cnp_sinklim_ps, &
+                                    this%k_cnp_sinklim_ps, &
+                                    "k_cnp_sinklim_ps", proportional_parameter_changes, dependency_recalculation, &
+                                    k_cnp_sinklim_ps)
+
+    CALL Set_quincy_parameter_value(this%beta_sinklim_ps_min, &
+                                    this%beta_sinklim_ps_min, &
+                                    "beta_sinklim_ps_min", proportional_parameter_changes, dependency_recalculation, &
+                                    beta_sinklim_ps_min)
+
+    CALL Set_quincy_parameter_value(this%fstore_leaf_max, &
+                                    this%fstore_leaf_max, &
+                                    "fstore_leaf_max", proportional_parameter_changes, dependency_recalculation, &
+                                    fstore_leaf_max)
+    
+    CALL Set_quincy_parameter_value(this%fstore_fine_root_max, &
+                                    this%fstore_fine_root_max, &
+                                    "fstore_fine_root_max", proportional_parameter_changes, dependency_recalculation, &
+                                    fstore_fine_root_max)
+    
+    CALL Set_quincy_parameter_value(this%fstore_sap_wood_max, &
+                                    this%fstore_sap_wood_max, &
+                                    "fstore_sap_wood_max", proportional_parameter_changes, dependency_recalculation, &
+                                    fstore_sap_wood_max)
+
+    CALL Set_quincy_parameter_value(this%k_phi_interact, &
+                                    this%k_phi_interact, &
+                                    "k_phi_interact", proportional_parameter_changes, dependency_recalculation, &
+                                    k_phi_interact)
+    
+    CALL Set_quincy_parameter_value(this%resorp_fract_leaf, &
+                                    this%resorp_fract_leaf, &
+                                    "resorp_fract_leaf", proportional_parameter_changes, dependency_recalculation, &
+                                    resorp_fract_leaf)
+    
+    CALL Set_quincy_parameter_value(this%resorp_fract_wood, &
+                                    this%resorp_fract_wood, &
+                                    "resorp_fract_wood", proportional_parameter_changes, dependency_recalculation, &
+                                    resorp_fract_wood)
+
+    CALL Set_quincy_parameter_value(this%root2leaf_cn, &
+                                    this%root2leaf_cn, &
+                                    "root2leaf_cn", proportional_parameter_changes, dependency_recalculation, &
+                                    root2leaf_cn)
+    
+    CALL Set_quincy_parameter_value(this%wood2leaf_cn, &
+                                    this%wood2leaf_cn, &
+                                    "wood2leaf_cn", proportional_parameter_changes, dependency_recalculation, &
+                                    wood2leaf_cn)
+    
+    CALL Set_quincy_parameter_value(this%root2leaf_np, &
+                                    this%root2leaf_np, &
+                                    "root2leaf_np", proportional_parameter_changes, dependency_recalculation, &
+                                    root2leaf_np)
+
+    CALL Set_quincy_parameter_value(this%wood2leaf_np, &
+                                    this%wood2leaf_np, &
+                                    "wood2leaf_np", proportional_parameter_changes, dependency_recalculation, &
+                                    wood2leaf_np)
+
+    CALL Set_quincy_parameter_value(this%tau_nutrient_recycling, &
+                                    this%tau_nutrient_recycling, &
+                                    "tau_nutrient_recycling", proportional_parameter_changes, dependency_recalculation, &
+                                    tau_nutrient_recycling)
+    
+    CALL Set_quincy_parameter_value(this%kappa_f_demand_nc, &
+                                    this%kappa_f_demand_nc, &
+                                    "kappa_f_demand_nc", proportional_parameter_changes, dependency_recalculation, &
+                                    kappa_f_demand_nc)
+    
+    CALL Set_quincy_parameter_value(this%kappa_f_demand_pn, &
+                                    this%kappa_f_demand_pn, &
+                                    "kappa_f_demand_pn", proportional_parameter_changes, dependency_recalculation, &
+                                    kappa_f_demand_pn)
+
+    CALL Set_quincy_parameter_value(this%k_f_demand, &
+                                    this%k_f_demand, &
+                                    "k_f_demand", proportional_parameter_changes, dependency_recalculation, &
+                                    k_f_demand)
+    
+    CALL Set_quincy_parameter_value(this%cost_n_fixation_max / (molar_mass_C/molar_mass_N), &
+                                    this%cost_n_fixation_max, &
+                                    "cost_n_fixation_max", proportional_parameter_changes, dependency_recalculation, &
+                                    cost_n_fixation_max)
+    
+    CALL Set_quincy_parameter_value(this%cost_n_fixation_min / (molar_mass_C/molar_mass_N), &
+                                    this%cost_n_fixation_min, &
+                                    "cost_n_fixation_min", proportional_parameter_changes, dependency_recalculation, &
+                                    cost_n_fixation_min)
+
+    CALL Set_quincy_parameter_value(this%k1_temp_bnf, &
+                                    this%k1_temp_bnf, &
+                                    "k1_temp_bnf", proportional_parameter_changes, dependency_recalculation, &
+                                    k1_temp_bnf)
+    
+    CALL Set_quincy_parameter_value(this%k2_temp_bnf, &
+                                    this%k2_temp_bnf, &
+                                    "k2_temp_bnf", proportional_parameter_changes, dependency_recalculation, &
+                                    k2_temp_bnf)
+    
+    CALL Set_quincy_parameter_value(this%k3_temp_bnf, &
+                                    this%k3_temp_bnf, &
+                                    "k3_temp_bnf", proportional_parameter_changes, dependency_recalculation, &
+                                    k3_temp_bnf)
+
+    CALL Set_quincy_parameter_value(this%k4_temp_bnf, &
+                                    this%k4_temp_bnf, &
+                                    "k4_temp_bnf", proportional_parameter_changes, dependency_recalculation, &
+                                    k4_temp_bnf)
+
+    CALL Set_quincy_parameter_value(this%transform_cost_nh4 / (molar_mass_C/molar_mass_N), &
+                                    this%transform_cost_nh4, &
+                                    "transform_cost_nh4", proportional_parameter_changes, dependency_recalculation, &
+                                    transform_cost_nh4)
+    
+    CALL Set_quincy_parameter_value(this%transform_cost_no3 / (molar_mass_C/molar_mass_N), &
+                                    this%transform_cost_no3, &
+                                    "transform_cost_no3", proportional_parameter_changes, dependency_recalculation, &
+                                    transform_cost_no3)
+    
+    CALL Set_quincy_parameter_value(this%transform_cost_org / (molar_mass_C/molar_mass_N), &
+                                    this%transform_cost_org, &
+                                    "transform_cost_org", proportional_parameter_changes, dependency_recalculation, &
+                                    transform_cost_org)
+
+    IF ((ABS(this%transform_cost_no3 - missval) > eps8) .OR. & 
+        (ABS(this%transform_cost_nh4 - missval) > eps8)) THEN
+        dependency_recalculation = .TRUE.
+        f_nacq_nh4               = transform_cost_no3 / (transform_cost_no3 + transform_cost_nh4)   ! copied from mo_veg_constants
+    ENDIF
+    CALL Set_quincy_parameter_value(transform_cost_no3 / (transform_cost_no3 + transform_cost_nh4), &   ! only proportional changes may have an effect
+                                    this%f_nacq_nh4, &
+                                    "f_nacq_nh4", proportional_parameter_changes, dependency_recalculation, &
+                                    f_nacq_nh4)
+
+    IF ((ABS(this%transform_cost_no3 - missval) > eps8) .OR. & 
+        (ABS(this%transform_cost_nh4 - missval) > eps8)) THEN
+        dependency_recalculation = .TRUE.
+        f_nacq_no3               = transform_cost_nh4 / (transform_cost_no3 + transform_cost_nh4)   ! copied from mo_veg_constants
+    ENDIF    
+    CALL Set_quincy_parameter_value(transform_cost_nh4 / (transform_cost_no3 + transform_cost_nh4), &   ! only proportional changes may have an effect
+                                    this%f_nacq_no3, &
+                                    "f_nacq_no3", proportional_parameter_changes, dependency_recalculation, &
+                                    f_nacq_no3)
+    
+    CALL Set_quincy_parameter_value(this%vmax_bnf * 0.0225_wp / (molar_mass_N/molar_mass_C) / (one_day*one_year) * 1.e6_wp, &
+                                    this%vmax_bnf, &
+                                    "vmax_bnf", proportional_parameter_changes, dependency_recalculation, &
+                                    vmax_bnf)
+
+    CALL Set_quincy_parameter_value(this%k_bnf / (molar_mass_C/molar_Mass_N), &
+                                    this%k_bnf, &
+                                    "k_bnf", proportional_parameter_changes, dependency_recalculation, &
+                                    k_bnf)
+
+    IF ((ABS(this%transform_cost_no3 - missval) > eps8) .OR. & 
+        (ABS(this%transform_cost_nh4 - missval) > eps8) .OR. & 
+        (ABS(this%f_nacq_no3         - missval) > eps8) .OR. & 
+        (ABS(this%f_nacq_nh4         - missval) > eps8)) THEN
+        dependency_recalculation = .TRUE.
+        offset_bnf               = 6.0_wp * (f_nacq_nh4 * transform_cost_nh4 + f_nacq_no3 * transform_cost_no3)   ! copied from mo_veg_constants
+    ENDIF    
+    CALL Set_quincy_parameter_value(this%offset_bnf * (f_nacq_nh4 * transform_cost_nh4 + f_nacq_no3 * transform_cost_no3), &
+                                    this%offset_bnf, &
+                                    "offset_bnf", proportional_parameter_changes, dependency_recalculation, &
+                                    offset_bnf)
+    
+    CALL Set_quincy_parameter_value(this%eta_nfixation, &
+                                    this%eta_nfixation, &
+                                    "eta_nfixation", proportional_parameter_changes, dependency_recalculation, &
+                                    eta_nfixation)
+
+    CALL Set_quincy_parameter_value(this%k0_fn_chl_C3, &
+                                    this%k0_fn_chl_C3, &
+                                    "k0_fn_chl_C3", proportional_parameter_changes, dependency_recalculation, &
+                                    k0_fn_chl_C3)
+
+    CALL Set_quincy_parameter_value(this%k0_fn_chl_C4, &
+                                    this%k0_fn_chl_C4, &
+                                    "k0_fn_chl_C4", proportional_parameter_changes, dependency_recalculation, &
+                                    k0_fn_chl_C4)
+    
+    CALL Set_quincy_parameter_value(this%k1_fn_chl_C3, &
+                                    this%k1_fn_chl_C3, &
+                                    "k1_fn_chl_C3", proportional_parameter_changes, dependency_recalculation, &
+                                    k1_fn_chl_C3)
+    
+    CALL Set_quincy_parameter_value(this%k1_fn_chl_C4, &
+                                    this%k1_fn_chl_C4, &
+                                    "k1_fn_chl_C4", proportional_parameter_changes, dependency_recalculation, &
+                                    k1_fn_chl_C4)
+
+    CALL Set_quincy_parameter_value(this%kfn_chl, &
+                                    this%kfn_chl, &
+                                    "kfn_chl", proportional_parameter_changes, dependency_recalculation, &
+                                    kfn_chl)
+    
+    CALL Set_quincy_parameter_value(this%min_lai, &
+                                    this%min_lai, &
+                                    "min_lai", proportional_parameter_changes, dependency_recalculation, &
+                                    min_lai)
+    
+    CALL Set_quincy_parameter_value(this%target_lai_max, &
+                                    this%target_lai_max, &
+                                    "target_lai_max", proportional_parameter_changes, dependency_recalculation, &
+                                    target_lai_max)
+
+    CALL Set_quincy_parameter_value(this%max_leaf_shedding_rate, &
+                                    this%max_leaf_shedding_rate, &
+                                    "max_leaf_shedding_rate", proportional_parameter_changes, dependency_recalculation, &
+                                    max_leaf_shedding_rate)
+    
+    CALL Set_quincy_parameter_value(this%k_leafon_canopy, &
+                                    this%k_leafon_canopy, &
+                                    "k_leafon_canopy", proportional_parameter_changes, dependency_recalculation, &
+                                    k_leafon_canopy)
+    
+    CALL Set_quincy_parameter_value(this%background_mort_rate_tree, &
+                                    this%background_mort_rate_tree, &
+                                    "background_mort_rate_tree", proportional_parameter_changes, dependency_recalculation, &
+                                    background_mort_rate_tree)
+
+    CALL Set_quincy_parameter_value(this%background_mort_rate_grass, &
+                                    this%background_mort_rate_grass, &
+                                    "background_mort_rate_grass", proportional_parameter_changes, dependency_recalculation, &
+                                    background_mort_rate_grass)
+
+    CALL Set_quincy_parameter_value(this%lambda_mort_light, &
+                                    this%lambda_mort_light, &
+                                    "lambda_mort_light", proportional_parameter_changes, dependency_recalculation, &
+                                    lambda_mort_light)
+    
+    CALL Set_quincy_parameter_value(this%k_mort_light, &
+                                    this%k_mort_light, &
+                                    "k_mort_light", proportional_parameter_changes, dependency_recalculation, &
+                                    k_mort_light)
+    
+    CALL Set_quincy_parameter_value(this%lambda_est_temp, &
+                                    this%lambda_est_temp, &
+                                    "lambda_est_temp", proportional_parameter_changes, dependency_recalculation, &
+                                    lambda_est_temp)
+
+    CALL Set_quincy_parameter_value(this%k_est_temp, &
+                                    this%k_est_temp, &
+                                    "k_est_temp", proportional_parameter_changes, dependency_recalculation, &
+                                    k_est_temp)
+    
+    CALL Set_quincy_parameter_value(this%lambda_est_moist, &
+                                    this%lambda_est_moist, &
+                                    "lambda_est_moist", proportional_parameter_changes, dependency_recalculation, &
+                                    lambda_est_moist)
+    
+    CALL Set_quincy_parameter_value(this%k_est_moist, &
+                                    this%k_est_moist, &
+                                    "k_est_moist", proportional_parameter_changes, dependency_recalculation, &
+                                    k_est_moist)
+
+    CALL Set_quincy_parameter_value(this%wood_extraction_rate, &
+                                    this%wood_extraction_rate, &
+                                    "wood_extraction_rate", proportional_parameter_changes, dependency_recalculation, &
+                                    wood_extraction_rate)
+    
+    CALL Set_quincy_parameter_value(this%k1_mort_greff, &
+                                    this%k1_mort_greff, &
+                                    "k1_mort_greff", proportional_parameter_changes, dependency_recalculation, &
+                                    k1_mort_greff)
+    
+    CALL Set_quincy_parameter_value(this%k2_mort_greff, &
+                                    this%k2_mort_greff, &
+                                    "k2_mort_greff", proportional_parameter_changes, dependency_recalculation, &
+                                    k2_mort_greff)
+
+    CALL Set_quincy_parameter_value(this%k3_mort_greff, &
+                                    this%k3_mort_greff, &
+                                    "k3_mort_greff", proportional_parameter_changes, dependency_recalculation, &
+                                    k3_mort_greff)
+
+    CALL Set_quincy_parameter_value(this%min_greff, &
+                                    this%min_greff, &
+                                    "min_greff", proportional_parameter_changes, dependency_recalculation, &
+                                    min_greff)
+    
+    CALL Set_quincy_parameter_value(this%max_crown_area, &
+                                    this%max_crown_area, &
+                                    "max_crown_area", proportional_parameter_changes, dependency_recalculation, &
+                                    max_crown_area)
+    
+    CALL Set_quincy_parameter_value(this%min_diameter, &
+                                    this%min_diameter, &
+                                    "min_diameter", proportional_parameter_changes, dependency_recalculation, &
+                                    min_diameter)
+
+    CALL Set_quincy_parameter_value(this%k_crown_area, &
+                                    this%k_crown_area, &
+                                    "k_crown_area", proportional_parameter_changes, dependency_recalculation, &
+                                    k_crown_area)
+    
+    CALL Set_quincy_parameter_value(this%k_rp, &
+                                    this%k_rp, &
+                                    "k_rp", proportional_parameter_changes, dependency_recalculation, &
+                                    k_rp)
+    
+    CALL Set_quincy_parameter_value(this%k_fpc, &
+                                    this%k_fpc, &
+                                    "k_fpc", proportional_parameter_changes, dependency_recalculation, &
+                                    k_fpc)
+
+    CALL Set_quincy_parameter_value(this%fpc_max, &
+                                    this%fpc_max, &
+                                    "fpc_max", proportional_parameter_changes, dependency_recalculation, &
+                                    fpc_max)
+    
+    CALL Set_quincy_parameter_value(this%carbon_per_dryweight_leaf, &
+                                    this%carbon_per_dryweight_leaf, &
+                                    "carbon_per_dryweight_leaf", proportional_parameter_changes, dependency_recalculation, &
+                                    carbon_per_dryweight_leaf)
+    
+    CALL Set_quincy_parameter_value(this%min_height, &
+                                    this%min_height, &
+                                    "min_height", proportional_parameter_changes, dependency_recalculation, &
+                                    min_height)
+
+    CALL Set_quincy_parameter_value(this%sm2lm_grass, &
+                                    this%sm2lm_grass, &
+                                    "sm2lm_grass", proportional_parameter_changes, dependency_recalculation, &
+                                    sm2lm_grass)
+
+    CALL Set_quincy_parameter_value(this%lambda_fruit_alloc, &
+                                    this%lambda_fruit_alloc, &
+                                    "lambda_fruit_alloc", proportional_parameter_changes, dependency_recalculation, &
+                                    lambda_fruit_alloc)
+    
+    CALL Set_quincy_parameter_value(this%k1_fruit_alloc, &
+                                    this%k1_fruit_alloc, &
+                                    "k1_fruit_alloc", proportional_parameter_changes, dependency_recalculation, &
+                                    k1_fruit_alloc)
+    
+    CALL Set_quincy_parameter_value(this%k3_fruit_alloc, &
+                                    this%k3_fruit_alloc, &
+                                    "k3_fruit_alloc", proportional_parameter_changes, dependency_recalculation, &
+                                    k3_fruit_alloc)
+
+    CALL Set_quincy_parameter_value(this%k4_fruit_alloc, &
+                                    this%k4_fruit_alloc, &
+                                    "k4_fruit_alloc", proportional_parameter_changes, dependency_recalculation, &
+                                    k4_fruit_alloc)
+    
+    CALL Set_quincy_parameter_value(this%w_root_lim_max, &
+                                    this%w_root_lim_max, &
+                                    "w_root_lim_max", proportional_parameter_changes, dependency_recalculation, &
+                                    w_root_lim_max)
+    
+    CALL Set_quincy_parameter_value(this%leaf2root_min_ratio, &
+                                    this%leaf2root_min_ratio, &
+                                    "leaf2root_min_ratio", proportional_parameter_changes, dependency_recalculation, &
+                                    leaf2root_min_ratio)
+
+    CALL Set_quincy_parameter_value(this%leaf2root_max_ratio, &
+                                    this%leaf2root_max_ratio, &
+                                    "leaf2root_max_ratio", proportional_parameter_changes, dependency_recalculation, &
+                                    leaf2root_max_ratio)
+    
+    CALL Set_quincy_parameter_value(this%delta_n_fraction, &
+                                    this%delta_n_fraction, &
+                                    "delta_n_fraction", proportional_parameter_changes, dependency_recalculation, &
+                                    delta_n_fraction)
+    
+    CALL Set_quincy_parameter_value(this%delta_n_leaf, &
+                                    this%delta_n_leaf, &
+                                    "delta_n_leaf", proportional_parameter_changes, dependency_recalculation, &
+                                    delta_n_leaf)
 
     ! SB_CTL
     IF (ABS(this%floss_nmin             - missval) > eps8)  floss_nmin             = this%floss_nmin
