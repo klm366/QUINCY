@@ -42,6 +42,7 @@ mainTask=3
 # Main Task 3 options:
 m3ProbDistr="n"       # [u]niform  [n]ormal distribution of values
 m3NormalSD=0.1        # SD of the normal distribution -> applied to values within range [0,1]
+LHSgenerations=5000   # a higher number improves the distribution in parameter-space: should be between 1000:20000
 
 # Input file for this script
 #   defaults to: ./generate_parameter_table_input.txt
@@ -467,8 +468,8 @@ f_showNumberSetsPrepParamlistD
 ## create $paramTable
 echo " "
 echo " Now the values are sampled for each of the parameters using R."
-echo " That might take some minutes! depending on the number of parameters and parameter sets."
-echo " (For three parameters and 80 parameter sets it takes two and a half minutes at pc027.)"
+echo " That might take some minutes! Depending on: number of parameters & parameter sets & value of LHSgenerations."
+echo " "
 # R script  # for debug use: R --slave --no-save << EOF
 R --slave --silent --no-save << EOF
 setwd("$workingDir")
@@ -483,7 +484,7 @@ inputFile <- inputFile[1:(nrow(inputFile)-1),]  # remove the last row containing
 # run LHS
 sampleMatrix <- geneticLHS($paramSets,
                            $paramNumber,
-                           pop=50, gen=20000, pMut=0.2, criterium="S", verbose=F)
+                           pop=50, gen=$LHSgenerations, pMut=0.2, criterium="S", verbose=F)
 
 # if distribution is different from uniform
 # transform values into another distribution
