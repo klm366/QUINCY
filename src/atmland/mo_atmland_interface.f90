@@ -264,7 +264,7 @@ CONTAINS
       IF (PRESENT(evapo_ice))         evapo_ice(:)         = fact_lake(:) * dsl4jsb_var2D_onChunk(HYDRO_, evapo_ice)
       IF (PRESENT(latent_hflx_ice))   latent_hflx_ice(:)   = fact_lake(:) * dsl4jsb_var2D_onChunk(SEB_,   latent_hflx_ice)
       IF (PRESENT(sensible_hflx_ice)) sensible_hflx_ice(:) = fact_lake(:) * dsl4jsb_var2D_onChunk(SEB_,   sensible_hflx_ice)
-      IF (PRESENT(ice_fract_lake))    ice_fract_lake(:)    = fact_lake(:) * dsl4jsb_var2D_onChunk(SEB_,   fract_lice)
+      IF (PRESENT(ice_fract_lake))    ice_fract_lake(:)    =                dsl4jsb_var2D_onChunk(SEB_,   fract_lice)
       IF (PRESENT(albedo_lwtr))       albedo_lwtr(:)       =                dsl4jsb_var2D_onChunk(RAD_,   albedo_lwtr)
       IF (PRESENT(albedo_lice))       albedo_lice(:)       =                dsl4jsb_var2D_onChunk(RAD_,   albedo_lice)
 
