@@ -228,58 +228,157 @@ MODULE mo_shared_set_parameters
     REAL(wp)           :: delta_n_fraction
     REAL(wp)           :: delta_n_leaf
     ! SB_CTL
-    REAL(wp)           :: floss_nmin
+    REAL(wp)           :: tau_soluable_litter
+    REAL(wp)           :: tau_metabolic_litter
+    REAL(wp)           :: tau_structural_litter
+    REAL(wp)           :: tau_woody_litter
     REAL(wp)           :: tau_fast
     REAL(wp)           :: tau_slow
-    REAL(wp)           :: tau_structural_litter
-    REAL(wp)           :: microbial_cue
-    REAL(wp)           :: microbial_cue_min
-    REAL(wp)           :: microbial_cue_max
-    REAL(wp)           :: mycorrhiza_cue        
-    REAL(wp)           :: mycorrhiza_cn         
-    REAL(wp)           :: mycorrhiza_np         
-    REAL(wp)           :: f_maxresp_myc         
-    REAL(wp)           :: f_surface_myc2fineroot
+    REAL(wp)           :: tau_biomineralisation
+    REAL(wp)           :: t_ref_tresponse
+    REAL(wp)           :: ea_depolymerisation
+    REAL(wp)           :: ea_mic_uptake
+    REAL(wp)           :: ea_sorption
+    REAL(wp)           :: ea_desorption
+    REAL(wp)           :: ea_hsc
+    REAL(wp)           :: ea_decomposition
+    REAL(wp)           :: ed_decomposition
+    REAL(wp)           :: t_ref_decomposition
+    REAL(wp)           :: k1_afps
+    REAL(wp)           :: kmr_depolymerisation
+    REAL(wp)           :: kmr_mic_uptake
+    REAL(wp)           :: kmr_hsc
+    REAL(wp)           :: kmr_sorption
+    REAL(wp)           :: kmr_decomposition
     REAL(wp)           :: k_diff_org
+    REAL(wp)           :: rho_bulk_org
+    REAL(wp)           :: carbon_per_dryweight_SOM
+    REAL(wp)           :: qmax_po4_fine_particle
     REAL(wp)           :: k_adsorpt_dom
     REAL(wp)           :: k_desorpt_dom
     REAL(wp)           :: k_adsorpt_det
     REAL(wp)           :: k_desorpt_det
-    ! additional jsm parameters
-    REAL(wp)           :: vmax_mic_uptake, &
-                          vmax_mic_uptake_nh4, &    
-                          km_mic_uptake_nh4, &      
-                          vmax_mic_uptake_no3, &    
-                          km_mic_uptake_no3, &      
-                          f_mic_carrier_n, &        
-                          vmax_plant_uptake_nh4, &  
-                          km_plant_uptake_nh4, &    
-                          vmax_plant_uptake_no3, &  
-                          km_plant_uptake_no3, &    
-                          f_plant_carrier_n, &      
-                          vmax_mic_uptake_po4, &    
-                          km_mic_uptake_po4, &      
-                          vmax_plant_uptake_po4, &  
-                          km_plant_uptake_po4, &    
-                          k_mic_uptake_nh4, &       
-                          k_plant_uptake_nh4, &     
-                          k_mic_uptake_no3, &       
-                          k_plant_uptake_no3, &     
-                          k_mic_uptake_po4, &       
-                          k_plant_uptake_po4, &     
-                          f_mic_carrier_po4, &      
-                          f_plant_carrier_po4, &    
-                          qmax_po4_mineral, &       
-                          km_adsorpt_mineral_po4, &
-                          km_adsorpt_OM_po4, &
-                          k_weath_mineral, &
-                          eq_sorp_mineral_po4, &
-                          k_occlude_po4, &
-                          vmax_biochem_po4, &
-                          km_mic_biochem_po4, &
-                          km_dip_biochem_po4, &
-                          km_rootc_biochem_po4, &
-                          km_rootc_weath_po4
+    REAL(wp)           :: k_adsorpt_nh4
+    REAL(wp)           :: k_desorpt_nh4
+    REAL(wp)           :: k_adsorpt_po4
+    REAL(wp)           :: k_desorpt_po4
+    REAL(wp)           :: k_adsorpt_f_po4
+    REAL(wp)           :: k_desorp_f_po4
+    REAL(wp)           :: k_desorp_s_po4
+    REAL(wp)           :: k_adsorpt_s_po4
+    REAL(wp)           :: microbial_cn
+    REAL(wp)           :: microbial_np
+    REAL(wp)           :: microbial_nue
+    REAL(wp)           :: microbial_pue
+    REAL(wp)           :: microbial_cue
+    REAL(wp)           :: microbial_cue_max
+    REAL(wp)           :: microbial_cue_min
+    REAL(wp)           :: microbial_cn_max
+    REAL(wp)           :: microbial_cn_min
+    REAL(wp)           :: f_mic_cn
+    REAL(wp)           :: frac_woody2dec_litter
+    REAL(wp)           :: frac_litter2fast_som
+    REAL(wp)           :: frac_fast2slow_som
+    REAL(wp)           :: frac_slow2fast_som
+    REAL(wp)           :: fc_woody2polymeric
+    REAL(wp)           :: fc_soluable2dom
+    REAL(wp)           :: k_mort_microbial
+    REAL(wp)           :: min_mic_biomass
+    REAL(wp)           :: vmax_mic_uptake
+    REAL(wp)           :: km_mic_uptake
+    REAL(wp)           :: km_depolymerisation
+    REAL(wp)           :: vmax_depolymerisation_residue
+    REAL(wp)           :: vmax_depolymerisation_litter
+    REAL(wp)           :: f_soluable_residue
+    REAL(wp)           :: f_soluable_leaf
+    REAL(wp)           :: f_soluable_fine_root
+    REAL(wp)           :: f_soluable_fruit
+    REAL(wp)           :: f_soluable_seed_bed
+    REAL(wp)           :: fc_soluable_max
+    REAL(wp)           :: k_fc_soluable
+    REAL(wp)           :: k_fn_soluable
+    REAL(wp)           :: k_fp_soluable
+    REAL(wp)           :: lc_leaf_max
+    REAL(wp)           :: lc_leaf2sla
+    REAL(wp)           :: lc_fine_root
+    REAL(wp)           :: lc_coarse_root
+    REAL(wp)           :: lc_woody_litter
+    REAL(wp)           :: lc_fruit
+    REAL(wp)           :: lc_seed_bed
+    REAL(wp)           :: mycorrhiza_cue
+    REAL(wp)           :: mycorrhiza_cn
+    REAL(wp)           :: mycorrhiza_np
+    REAL(wp)           :: f_maxresp_myc
+    REAL(wp)           :: f_surface_myc2fineroot
+    REAL(wp)           :: km1_up_nh4
+    REAL(wp)           :: km2_up_nh4
+    REAL(wp)           :: km1_up_no3
+    REAL(wp)           :: km2_up_no3
+    REAL(wp)           :: km1_up_po4
+    REAL(wp)           :: km2_up_po4
+    REAL(wp)           :: vmax_mic_uptake_nh4
+    REAL(wp)           :: km_mic_uptake_nh4
+    REAL(wp)           :: vmax_mic_uptake_no3
+    REAL(wp)           :: km_mic_uptake_no3
+    REAL(wp)           :: f_mic_carrier_n
+    REAL(wp)           :: vmax_plant_uptake_nh4
+    REAL(wp)           :: km_plant_uptake_nh4
+    REAL(wp)           :: vmax_plant_uptake_no3
+    REAL(wp)           :: km_plant_uptake_no3
+    REAL(wp)           :: f_plant_carrier_n
+    REAL(wp)           :: vmax_mic_uptake_po4
+    REAL(wp)           :: km_mic_uptake_po4
+    REAL(wp)           :: vmax_plant_uptake_po4
+    REAL(wp)           :: km_plant_uptake_po4
+    REAL(wp)           :: k_mic_uptake_nh4
+    REAL(wp)           :: k_plant_uptake_nh4
+    REAL(wp)           :: k_mic_uptake_no3
+    REAL(wp)           :: k_plant_uptake_no3
+    REAL(wp)           :: k_mic_uptake_po4
+    REAL(wp)           :: k_plant_uptake_po4
+    REAL(wp)           :: f_mic_carrier_po4
+    REAL(wp)           :: f_plant_carrier_po4
+    REAL(wp)           :: qmax_po4_mineral
+    REAL(wp)           :: km_adsorpt_mineral_po4
+    REAL(wp)           :: km_adsorpt_OM_po4
+    REAL(wp)           :: ea_nitrification
+    REAL(wp)           :: ed_nitrification
+    REAL(wp)           :: t_opt_nitrification
+    REAL(wp)           :: f_nit_noy
+    REAL(wp)           :: f_nit_n2o
+    REAL(wp)           :: ea_denitrification
+    REAL(wp)           :: vmax_nitrification
+    REAL(wp)           :: vmax_denitrification
+    REAL(wp)           :: km_denitrification_c
+    REAL(wp)           :: km_denitrification_no3
+    REAL(wp)           :: f_denit_noy
+    REAL(wp)           :: f_denit_n2o
+    REAL(wp)           :: ea_gasdiffusion
+    REAL(wp)           :: lambda_anvf
+    REAL(wp)           :: k_anvf
+    REAL(wp)           :: floss_nmin
+    REAL(wp)           :: fnit_nmin
+    REAL(wp)           :: fleach_nh4
+    REAL(wp)           :: fleach_po4
+    REAL(wp)           :: soil_n_threshold_bnf
+    REAL(wp)           :: standard_bnf_max_rate
+    REAL(wp)           :: eta_mic_uptake_nh4
+    REAL(wp)           :: eta_mic_uptake_no3
+    REAL(wp)           :: eta_plant_uptake_nh4
+    REAL(wp)           :: eta_plant_uptake_no3
+    REAL(wp)           :: eta_nitrification
+    REAL(wp)           :: eta_nitrate_production
+    REAL(wp)           :: eta_denitrification
+    REAL(wp)           :: eta_ammonification
+    REAL(wp)           :: eta_volatilisation_nh3
+    REAL(wp)           :: k_weath_mineral
+    REAL(wp)           :: eq_sorp_mineral_po4
+    REAL(wp)           :: k_occlude_po4
+    REAL(wp)           :: vmax_biochem_po4
+    REAL(wp)           :: km_mic_biochem_po4
+    REAL(wp)           :: km_dip_biochem_po4
+    REAL(wp)           :: km_rootc_biochem_po4
+    REAL(wp)           :: km_rootc_weath_po4
   CONTAINS
     PROCEDURE :: read_param => read_parameter_slm_list
     PROCEDURE :: set_param  => set_parameter_slm_values_with_list_values
@@ -591,58 +690,157 @@ CONTAINS
     REAL(wp)           :: delta_n_fraction
     REAL(wp)           :: delta_n_leaf
     ! SB_CTL
-    REAL(wp)           :: floss_nmin
+    REAL(wp)           :: tau_soluable_litter
+    REAL(wp)           :: tau_metabolic_litter
+    REAL(wp)           :: tau_structural_litter
+    REAL(wp)           :: tau_woody_litter
     REAL(wp)           :: tau_fast
     REAL(wp)           :: tau_slow
-    REAL(wp)           :: tau_structural_litter
-    REAL(wp)           :: microbial_cue
-    REAL(wp)           :: microbial_cue_min
-    REAL(wp)           :: microbial_cue_max
-    REAL(wp)           :: mycorrhiza_cue        
-    REAL(wp)           :: mycorrhiza_cn         
-    REAL(wp)           :: mycorrhiza_np         
-    REAL(wp)           :: f_maxresp_myc         
-    REAL(wp)           :: f_surface_myc2fineroot
+    REAL(wp)           :: tau_biomineralisation
+    REAL(wp)           :: t_ref_tresponse
+    REAL(wp)           :: ea_depolymerisation
+    REAL(wp)           :: ea_mic_uptake
+    REAL(wp)           :: ea_sorption
+    REAL(wp)           :: ea_desorption
+    REAL(wp)           :: ea_hsc
+    REAL(wp)           :: ea_decomposition
+    REAL(wp)           :: ed_decomposition
+    REAL(wp)           :: t_ref_decomposition
+    REAL(wp)           :: k1_afps
+    REAL(wp)           :: kmr_depolymerisation
+    REAL(wp)           :: kmr_mic_uptake
+    REAL(wp)           :: kmr_hsc
+    REAL(wp)           :: kmr_sorption
+    REAL(wp)           :: kmr_decomposition
     REAL(wp)           :: k_diff_org
+    REAL(wp)           :: rho_bulk_org
+    REAL(wp)           :: carbon_per_dryweight_SOM
+    REAL(wp)           :: qmax_po4_fine_particle
     REAL(wp)           :: k_adsorpt_dom
     REAL(wp)           :: k_desorpt_dom
     REAL(wp)           :: k_adsorpt_det
     REAL(wp)           :: k_desorpt_det
-    ! additional jsm parameters
-    REAL(wp)           :: vmax_mic_uptake, &
-                          vmax_mic_uptake_nh4, &    
-                          km_mic_uptake_nh4, &      
-                          vmax_mic_uptake_no3, &    
-                          km_mic_uptake_no3, &      
-                          f_mic_carrier_n, &        
-                          vmax_plant_uptake_nh4, &  
-                          km_plant_uptake_nh4, &    
-                          vmax_plant_uptake_no3, &  
-                          km_plant_uptake_no3, &    
-                          f_plant_carrier_n, &      
-                          vmax_mic_uptake_po4, &    
-                          km_mic_uptake_po4, &      
-                          vmax_plant_uptake_po4, &  
-                          km_plant_uptake_po4, &    
-                          k_mic_uptake_nh4, &       
-                          k_plant_uptake_nh4, &     
-                          k_mic_uptake_no3, &       
-                          k_plant_uptake_no3, &     
-                          k_mic_uptake_po4, &       
-                          k_plant_uptake_po4, &     
-                          f_mic_carrier_po4, &      
-                          f_plant_carrier_po4, &    
-                          qmax_po4_mineral, &       
-                          km_adsorpt_mineral_po4, &
-                          km_adsorpt_OM_po4, &
-                          k_weath_mineral, &
-                          eq_sorp_mineral_po4, &
-                          k_occlude_po4, &
-                          vmax_biochem_po4, &
-                          km_mic_biochem_po4, &
-                          km_dip_biochem_po4, &
-                          km_rootc_biochem_po4, &
-                          km_rootc_weath_po4
+    REAL(wp)           :: k_adsorpt_nh4
+    REAL(wp)           :: k_desorpt_nh4
+    REAL(wp)           :: k_adsorpt_po4
+    REAL(wp)           :: k_desorpt_po4
+    REAL(wp)           :: k_adsorpt_f_po4
+    REAL(wp)           :: k_desorp_f_po4
+    REAL(wp)           :: k_desorp_s_po4
+    REAL(wp)           :: k_adsorpt_s_po4
+    REAL(wp)           :: microbial_cn
+    REAL(wp)           :: microbial_np
+    REAL(wp)           :: microbial_nue
+    REAL(wp)           :: microbial_pue
+    REAL(wp)           :: microbial_cue
+    REAL(wp)           :: microbial_cue_max
+    REAL(wp)           :: microbial_cue_min
+    REAL(wp)           :: microbial_cn_max
+    REAL(wp)           :: microbial_cn_min
+    REAL(wp)           :: f_mic_cn
+    REAL(wp)           :: frac_woody2dec_litter
+    REAL(wp)           :: frac_litter2fast_som
+    REAL(wp)           :: frac_fast2slow_som
+    REAL(wp)           :: frac_slow2fast_som
+    REAL(wp)           :: fc_woody2polymeric
+    REAL(wp)           :: fc_soluable2dom
+    REAL(wp)           :: k_mort_microbial
+    REAL(wp)           :: min_mic_biomass
+    REAL(wp)           :: vmax_mic_uptake
+    REAL(wp)           :: km_mic_uptake
+    REAL(wp)           :: km_depolymerisation
+    REAL(wp)           :: vmax_depolymerisation_residue
+    REAL(wp)           :: vmax_depolymerisation_litter
+    REAL(wp)           :: f_soluable_residue
+    REAL(wp)           :: f_soluable_leaf
+    REAL(wp)           :: f_soluable_fine_root
+    REAL(wp)           :: f_soluable_fruit
+    REAL(wp)           :: f_soluable_seed_bed
+    REAL(wp)           :: fc_soluable_max
+    REAL(wp)           :: k_fc_soluable
+    REAL(wp)           :: k_fn_soluable
+    REAL(wp)           :: k_fp_soluable
+    REAL(wp)           :: lc_leaf_max
+    REAL(wp)           :: lc_leaf2sla
+    REAL(wp)           :: lc_fine_root
+    REAL(wp)           :: lc_coarse_root
+    REAL(wp)           :: lc_woody_litter
+    REAL(wp)           :: lc_fruit
+    REAL(wp)           :: lc_seed_bed
+    REAL(wp)           :: mycorrhiza_cue
+    REAL(wp)           :: mycorrhiza_cn
+    REAL(wp)           :: mycorrhiza_np
+    REAL(wp)           :: f_maxresp_myc
+    REAL(wp)           :: f_surface_myc2fineroot
+    REAL(wp)           :: km1_up_nh4
+    REAL(wp)           :: km2_up_nh4
+    REAL(wp)           :: km1_up_no3
+    REAL(wp)           :: km2_up_no3
+    REAL(wp)           :: km1_up_po4
+    REAL(wp)           :: km2_up_po4
+    REAL(wp)           :: vmax_mic_uptake_nh4
+    REAL(wp)           :: km_mic_uptake_nh4
+    REAL(wp)           :: vmax_mic_uptake_no3
+    REAL(wp)           :: km_mic_uptake_no3
+    REAL(wp)           :: f_mic_carrier_n
+    REAL(wp)           :: vmax_plant_uptake_nh4
+    REAL(wp)           :: km_plant_uptake_nh4
+    REAL(wp)           :: vmax_plant_uptake_no3
+    REAL(wp)           :: km_plant_uptake_no3
+    REAL(wp)           :: f_plant_carrier_n
+    REAL(wp)           :: vmax_mic_uptake_po4
+    REAL(wp)           :: km_mic_uptake_po4
+    REAL(wp)           :: vmax_plant_uptake_po4
+    REAL(wp)           :: km_plant_uptake_po4
+    REAL(wp)           :: k_mic_uptake_nh4
+    REAL(wp)           :: k_plant_uptake_nh4
+    REAL(wp)           :: k_mic_uptake_no3
+    REAL(wp)           :: k_plant_uptake_no3
+    REAL(wp)           :: k_mic_uptake_po4
+    REAL(wp)           :: k_plant_uptake_po4
+    REAL(wp)           :: f_mic_carrier_po4
+    REAL(wp)           :: f_plant_carrier_po4
+    REAL(wp)           :: qmax_po4_mineral
+    REAL(wp)           :: km_adsorpt_mineral_po4
+    REAL(wp)           :: km_adsorpt_OM_po4
+    REAL(wp)           :: ea_nitrification
+    REAL(wp)           :: ed_nitrification
+    REAL(wp)           :: t_opt_nitrification
+    REAL(wp)           :: f_nit_noy
+    REAL(wp)           :: f_nit_n2o
+    REAL(wp)           :: ea_denitrification
+    REAL(wp)           :: vmax_nitrification
+    REAL(wp)           :: vmax_denitrification
+    REAL(wp)           :: km_denitrification_c
+    REAL(wp)           :: km_denitrification_no3
+    REAL(wp)           :: f_denit_noy
+    REAL(wp)           :: f_denit_n2o
+    REAL(wp)           :: ea_gasdiffusion
+    REAL(wp)           :: lambda_anvf
+    REAL(wp)           :: k_anvf
+    REAL(wp)           :: floss_nmin
+    REAL(wp)           :: fnit_nmin
+    REAL(wp)           :: fleach_nh4
+    REAL(wp)           :: fleach_po4
+    REAL(wp)           :: soil_n_threshold_bnf
+    REAL(wp)           :: standard_bnf_max_rate
+    REAL(wp)           :: eta_mic_uptake_nh4
+    REAL(wp)           :: eta_mic_uptake_no3
+    REAL(wp)           :: eta_plant_uptake_nh4
+    REAL(wp)           :: eta_plant_uptake_no3
+    REAL(wp)           :: eta_nitrification
+    REAL(wp)           :: eta_nitrate_production
+    REAL(wp)           :: eta_denitrification
+    REAL(wp)           :: eta_ammonification
+    REAL(wp)           :: eta_volatilisation_nh3
+    REAL(wp)           :: k_weath_mineral
+    REAL(wp)           :: eq_sorp_mineral_po4
+    REAL(wp)           :: k_occlude_po4
+    REAL(wp)           :: vmax_biochem_po4
+    REAL(wp)           :: km_mic_biochem_po4
+    REAL(wp)           :: km_dip_biochem_po4
+    REAL(wp)           :: km_rootc_biochem_po4
+    REAL(wp)           :: km_rootc_weath_po4
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':read_parameter_slm_list'
 
@@ -857,57 +1055,157 @@ CONTAINS
         delta_n_leaf              
 
     NAMELIST /sb_ctl/             &
-        floss_nmin                , &
-        tau_fast                  , &
-        tau_slow                  , &
-        tau_structural_litter     , &
-        microbial_cue             , & 
-        microbial_cue_min         , &      
-        microbial_cue_max         , &
-        mycorrhiza_cue            , &
-        mycorrhiza_cn             , &
-        mycorrhiza_np             , &
-        f_maxresp_myc             , &
-        f_surface_myc2fineroot    , &
-        k_diff_org                , &
-        k_adsorpt_dom             , &
-        k_desorpt_dom             , &
-        k_adsorpt_det             , &
-        k_desorpt_det             , &
-        vmax_mic_uptake           , &
-        vmax_mic_uptake_nh4       , &    
-        km_mic_uptake_nh4         , &      
-        vmax_mic_uptake_no3       , &    
-        km_mic_uptake_no3         , &      
-        f_mic_carrier_n           , &        
-        vmax_plant_uptake_nh4     , &  
-        km_plant_uptake_nh4       , &    
-        vmax_plant_uptake_no3     , &  
-        km_plant_uptake_no3       , &    
-        f_plant_carrier_n         , &      
-        vmax_mic_uptake_po4       , &    
-        km_mic_uptake_po4         , &      
-        vmax_plant_uptake_po4     , &  
-        km_plant_uptake_po4       , &    
-        k_mic_uptake_nh4          , &       
-        k_plant_uptake_nh4        , &     
-        k_mic_uptake_no3          , &       
-        k_plant_uptake_no3        , &     
-        k_mic_uptake_po4          , &       
-        k_plant_uptake_po4        , &     
-        f_mic_carrier_po4         , &      
-        f_plant_carrier_po4       , &    
-        qmax_po4_mineral          , &       
-        km_adsorpt_mineral_po4    , &
-        km_adsorpt_OM_po4         , &
-        k_weath_mineral           , &
-        eq_sorp_mineral_po4       , &
-        k_occlude_po4             , &
-        vmax_biochem_po4          , &
-        km_mic_biochem_po4        , &
-        km_dip_biochem_po4        , &
-        km_rootc_biochem_po4      , &
-        km_rootc_weath_po4
+        tau_soluable_litter           , &
+        tau_metabolic_litter          , &
+        tau_structural_litter         , &
+        tau_woody_litter              , &
+        tau_fast                      , &
+        tau_slow                      , &
+        tau_biomineralisation         , &
+        t_ref_tresponse               , &
+        ea_depolymerisation           , &
+        ea_mic_uptake                 , &
+        ea_sorption                   , &
+        ea_desorption                 , &
+        ea_hsc                        , &
+        ea_decomposition              , &
+        ed_decomposition              , &
+        t_ref_decomposition           , &
+        k1_afps                       , &
+        kmr_depolymerisation          , &
+        kmr_mic_uptake                , &
+        kmr_hsc                       , &
+        kmr_sorption                  , &
+        kmr_decomposition             , &
+        k_diff_org                    , &
+        rho_bulk_org                  , &
+        carbon_per_dryweight_SOM      , &
+        qmax_po4_fine_particle        , &
+        k_adsorpt_dom                 , &
+        k_desorpt_dom                 , &
+        k_adsorpt_det                 , &
+        k_desorpt_det                 , &
+        k_adsorpt_nh4                 , &
+        k_desorpt_nh4                 , &
+        k_adsorpt_po4                 , &
+        k_desorpt_po4                 , &
+        k_adsorpt_f_po4               , &
+        k_desorp_f_po4                , &
+        k_desorp_s_po4                , &
+        k_adsorpt_s_po4               , &
+        microbial_cn                  , &
+        microbial_np                  , &
+        microbial_nue                 , &
+        microbial_pue                 , &
+        microbial_cue                 , &
+        microbial_cue_max             , &
+        microbial_cue_min             , &
+        microbial_cn_max              , &
+        microbial_cn_min              , &
+        f_mic_cn                      , &
+        frac_woody2dec_litter         , &
+        frac_litter2fast_som          , &
+        frac_fast2slow_som            , &
+        frac_slow2fast_som            , &
+        fc_woody2polymeric            , &
+        fc_soluable2dom               , &
+        k_mort_microbial              , &
+        min_mic_biomass               , &
+        vmax_mic_uptake               , &
+        km_mic_uptake                 , &
+        km_depolymerisation           , &
+        vmax_depolymerisation_residue , &
+        vmax_depolymerisation_litter  , &
+        f_soluable_residue            , &
+        f_soluable_leaf               , &
+        f_soluable_fine_root          , &
+        f_soluable_fruit              , &
+        f_soluable_seed_bed           , &
+        fc_soluable_max               , &
+        k_fc_soluable                 , &
+        k_fn_soluable                 , &
+        k_fp_soluable                 , &
+        lc_leaf_max                   , &
+        lc_leaf2sla                   , &
+        lc_fine_root                  , &
+        lc_coarse_root                , &
+        lc_woody_litter               , &
+        lc_fruit                      , &
+        lc_seed_bed                   , &
+        mycorrhiza_cue                , &
+        mycorrhiza_cn                 , &
+        mycorrhiza_np                 , &
+        f_maxresp_myc                 , &
+        f_surface_myc2fineroot        , &
+        km1_up_nh4                    , &
+        km2_up_nh4                    , &
+        km1_up_no3                    , &
+        km2_up_no3                    , &
+        km1_up_po4                    , &
+        km2_up_po4                    , &
+        vmax_mic_uptake_nh4           , &
+        km_mic_uptake_nh4             , &
+        vmax_mic_uptake_no3           , &
+        km_mic_uptake_no3             , &
+        f_mic_carrier_n               , &
+        vmax_plant_uptake_nh4         , &
+        km_plant_uptake_nh4           , &
+        vmax_plant_uptake_no3         , &
+        km_plant_uptake_no3           , &
+        f_plant_carrier_n             , &
+        vmax_mic_uptake_po4           , &
+        km_mic_uptake_po4             , &
+        vmax_plant_uptake_po4         , &
+        km_plant_uptake_po4           , &
+        k_mic_uptake_nh4              , &
+        k_plant_uptake_nh4            , &
+        k_mic_uptake_no3              , &
+        k_plant_uptake_no3            , &
+        k_mic_uptake_po4              , &
+        k_plant_uptake_po4            , &
+        f_mic_carrier_po4             , &
+        f_plant_carrier_po4           , &
+        qmax_po4_mineral              , &
+        km_adsorpt_mineral_po4        , &
+        km_adsorpt_OM_po4             , &
+        ea_nitrification              , &
+        ed_nitrification              , &
+        t_opt_nitrification           , &
+        f_nit_noy                     , &
+        f_nit_n2o                     , &
+        ea_denitrification            , &
+        vmax_nitrification            , &
+        vmax_denitrification          , &
+        km_denitrification_c          , &
+        km_denitrification_no3        , &
+        f_denit_noy                   , &
+        f_denit_n2o                   , &
+        ea_gasdiffusion               , &
+        lambda_anvf                   , &
+        k_anvf                        , &
+        floss_nmin                    , &
+        fnit_nmin                     , &
+        fleach_nh4                    , &
+        fleach_po4                    , &
+        soil_n_threshold_bnf          , &
+        standard_bnf_max_rate         , &
+        eta_mic_uptake_nh4            , &
+        eta_mic_uptake_no3            , &
+        eta_plant_uptake_nh4          , &
+        eta_plant_uptake_no3          , &
+        eta_nitrification             , &
+        eta_nitrate_production        , &
+        eta_denitrification           , &
+        eta_ammonification            , &
+        eta_volatilisation_nh3        , &
+        k_weath_mineral               , &
+        eq_sorp_mineral_po4           , &
+        k_occlude_po4                 , &
+        vmax_biochem_po4              , &
+        km_mic_biochem_po4            , &
+        km_dip_biochem_po4            , &
+        km_rootc_biochem_po4          , &
+        km_rootc_weath_po4          
 
 
     ! variables for reading model-options from namelist
@@ -1121,57 +1419,157 @@ CONTAINS
     delta_n_fraction            = missval
     delta_n_leaf                = missval
     ! SB_CTL
-    floss_nmin                  = missval
-    tau_fast                    = missval
-    tau_slow                    = missval
-    tau_structural_litter       = missval
-    microbial_cue               = missval
-    microbial_cue_min           = missval
-    microbial_cue_max           = missval
-    mycorrhiza_cue              = missval
-    mycorrhiza_cn               = missval
-    mycorrhiza_np               = missval
-    f_maxresp_myc               = missval
-    f_surface_myc2fineroot      = missval
-    k_diff_org                  = missval
-    k_adsorpt_dom               = missval
-    k_desorpt_dom               = missval
-    k_adsorpt_det               = missval
-    k_desorpt_det               = missval
-    vmax_mic_uptake             = missval    
-    vmax_mic_uptake_nh4         = missval    
-    km_mic_uptake_nh4           = missval      
-    vmax_mic_uptake_no3         = missval    
-    km_mic_uptake_no3           = missval      
-    f_mic_carrier_n             = missval        
-    vmax_plant_uptake_nh4       = missval  
-    km_plant_uptake_nh4         = missval    
-    vmax_plant_uptake_no3       = missval  
-    km_plant_uptake_no3         = missval    
-    f_plant_carrier_n           = missval      
-    vmax_mic_uptake_po4         = missval    
-    km_mic_uptake_po4           = missval      
-    vmax_plant_uptake_po4       = missval  
-    km_plant_uptake_po4         = missval    
-    k_mic_uptake_nh4            = missval       
-    k_plant_uptake_nh4          = missval     
-    k_mic_uptake_no3            = missval       
-    k_plant_uptake_no3          = missval     
-    k_mic_uptake_po4            = missval       
-    k_plant_uptake_po4          = missval     
-    f_mic_carrier_po4           = missval      
-    f_plant_carrier_po4         = missval    
-    qmax_po4_mineral            = missval       
-    km_adsorpt_mineral_po4      = missval
-    km_adsorpt_OM_po4           = missval
-    k_weath_mineral             = missval
-    eq_sorp_mineral_po4         = missval
-    k_occlude_po4               = missval
-    vmax_biochem_po4            = missval
-    km_mic_biochem_po4          = missval
-    km_dip_biochem_po4          = missval
-    km_rootc_biochem_po4        = missval
-    km_rootc_weath_po4          = missval
+    tau_soluable_litter           = missval
+    tau_metabolic_litter          = missval
+    tau_structural_litter         = missval
+    tau_woody_litter              = missval
+    tau_fast                      = missval
+    tau_slow                      = missval
+    tau_biomineralisation         = missval
+    t_ref_tresponse               = missval
+    ea_depolymerisation           = missval
+    ea_mic_uptake                 = missval
+    ea_sorption                   = missval
+    ea_desorption                 = missval
+    ea_hsc                        = missval
+    ea_decomposition              = missval
+    ed_decomposition              = missval
+    t_ref_decomposition           = missval
+    k1_afps                       = missval
+    kmr_depolymerisation          = missval
+    kmr_mic_uptake                = missval
+    kmr_hsc                       = missval
+    kmr_sorption                  = missval
+    kmr_decomposition             = missval
+    k_diff_org                    = missval
+    rho_bulk_org                  = missval
+    carbon_per_dryweight_SOM      = missval
+    qmax_po4_fine_particle        = missval
+    k_adsorpt_dom                 = missval
+    k_desorpt_dom                 = missval
+    k_adsorpt_det                 = missval
+    k_desorpt_det                 = missval
+    k_adsorpt_nh4                 = missval
+    k_desorpt_nh4                 = missval
+    k_adsorpt_po4                 = missval
+    k_desorpt_po4                 = missval
+    k_adsorpt_f_po4               = missval
+    k_desorp_f_po4                = missval
+    k_desorp_s_po4                = missval
+    k_adsorpt_s_po4               = missval
+    microbial_cn                  = missval
+    microbial_np                  = missval
+    microbial_nue                 = missval
+    microbial_pue                 = missval
+    microbial_cue                 = missval
+    microbial_cue_max             = missval
+    microbial_cue_min             = missval
+    microbial_cn_max              = missval
+    microbial_cn_min              = missval
+    f_mic_cn                      = missval
+    frac_woody2dec_litter         = missval
+    frac_litter2fast_som          = missval
+    frac_fast2slow_som            = missval
+    frac_slow2fast_som            = missval
+    fc_woody2polymeric            = missval
+    fc_soluable2dom               = missval
+    k_mort_microbial              = missval
+    min_mic_biomass               = missval
+    vmax_mic_uptake               = missval
+    km_mic_uptake                 = missval
+    km_depolymerisation           = missval
+    vmax_depolymerisation_residue = missval
+    vmax_depolymerisation_litter  = missval
+    f_soluable_residue            = missval
+    f_soluable_leaf               = missval
+    f_soluable_fine_root          = missval
+    f_soluable_fruit              = missval
+    f_soluable_seed_bed           = missval
+    fc_soluable_max               = missval
+    k_fc_soluable                 = missval
+    k_fn_soluable                 = missval
+    k_fp_soluable                 = missval
+    lc_leaf_max                   = missval
+    lc_leaf2sla                   = missval
+    lc_fine_root                  = missval
+    lc_coarse_root                = missval
+    lc_woody_litter               = missval
+    lc_fruit                      = missval
+    lc_seed_bed                   = missval
+    mycorrhiza_cue                = missval
+    mycorrhiza_cn                 = missval
+    mycorrhiza_np                 = missval
+    f_maxresp_myc                 = missval
+    f_surface_myc2fineroot        = missval
+    km1_up_nh4                    = missval
+    km2_up_nh4                    = missval
+    km1_up_no3                    = missval
+    km2_up_no3                    = missval
+    km1_up_po4                    = missval
+    km2_up_po4                    = missval
+    vmax_mic_uptake_nh4           = missval
+    km_mic_uptake_nh4             = missval
+    vmax_mic_uptake_no3           = missval
+    km_mic_uptake_no3             = missval
+    f_mic_carrier_n               = missval
+    vmax_plant_uptake_nh4         = missval
+    km_plant_uptake_nh4           = missval
+    vmax_plant_uptake_no3         = missval
+    km_plant_uptake_no3           = missval
+    f_plant_carrier_n             = missval
+    vmax_mic_uptake_po4           = missval
+    km_mic_uptake_po4             = missval
+    vmax_plant_uptake_po4         = missval
+    km_plant_uptake_po4           = missval
+    k_mic_uptake_nh4              = missval
+    k_plant_uptake_nh4            = missval
+    k_mic_uptake_no3              = missval
+    k_plant_uptake_no3            = missval
+    k_mic_uptake_po4              = missval
+    k_plant_uptake_po4            = missval
+    f_mic_carrier_po4             = missval
+    f_plant_carrier_po4           = missval
+    qmax_po4_mineral              = missval
+    km_adsorpt_mineral_po4        = missval
+    km_adsorpt_OM_po4             = missval
+    ea_nitrification              = missval
+    ed_nitrification              = missval
+    t_opt_nitrification           = missval
+    f_nit_noy                     = missval
+    f_nit_n2o                     = missval
+    ea_denitrification            = missval
+    vmax_nitrification            = missval
+    vmax_denitrification          = missval
+    km_denitrification_c          = missval
+    km_denitrification_no3        = missval
+    f_denit_noy                   = missval
+    f_denit_n2o                   = missval
+    ea_gasdiffusion               = missval
+    lambda_anvf                   = missval
+    k_anvf                        = missval
+    floss_nmin                    = missval
+    fnit_nmin                     = missval
+    fleach_nh4                    = missval
+    fleach_po4                    = missval
+    soil_n_threshold_bnf          = missval
+    standard_bnf_max_rate         = missval
+    eta_mic_uptake_nh4            = missval
+    eta_mic_uptake_no3            = missval
+    eta_plant_uptake_nh4          = missval
+    eta_plant_uptake_no3          = missval
+    eta_nitrification             = missval
+    eta_nitrate_production        = missval
+    eta_denitrification           = missval
+    eta_ammonification            = missval
+    eta_volatilisation_nh3        = missval
+    k_weath_mineral               = missval
+    eq_sorp_mineral_po4           = missval
+    k_occlude_po4                 = missval
+    vmax_biochem_po4              = missval
+    km_mic_biochem_po4            = missval
+    km_dip_biochem_po4            = missval
+    km_rootc_biochem_po4          = missval
+    km_rootc_weath_po4            = missval
 
     ! read the namelist
     ! 
@@ -1416,57 +1814,157 @@ CONTAINS
     this%delta_n_fraction            = delta_n_fraction
     this%delta_n_leaf                = delta_n_leaf
     ! SB_CTL
-    this%floss_nmin                  = floss_nmin
-    this%tau_fast                    = tau_fast
-    this%tau_slow                    = tau_slow
-    this%tau_structural_litter       = tau_structural_litter
-    this%microbial_cue               = microbial_cue
-    this%microbial_cue_min           = microbial_cue_min
-    this%microbial_cue_max           = microbial_cue_max
-    this%mycorrhiza_cue              = mycorrhiza_cue        
-    this%mycorrhiza_cn               = mycorrhiza_cn         
-    this%mycorrhiza_np               = mycorrhiza_np         
-    this%f_maxresp_myc               = f_maxresp_myc         
-    this%f_surface_myc2fineroot      = f_surface_myc2fineroot
-    this%k_diff_org                  = k_diff_org
-    this%k_adsorpt_dom               = k_adsorpt_dom  
-    this%k_desorpt_dom               = k_desorpt_dom  
-    this%k_adsorpt_det               = k_adsorpt_det  
-    this%k_desorpt_det               = k_desorpt_det  
-    this%vmax_mic_uptake             = vmax_mic_uptake
-    this%vmax_mic_uptake_nh4         = vmax_mic_uptake_nh4       
-    this%km_mic_uptake_nh4           = km_mic_uptake_nh4           
-    this%vmax_mic_uptake_no3         = vmax_mic_uptake_no3       
-    this%km_mic_uptake_no3           = km_mic_uptake_no3           
-    this%f_mic_carrier_n             = f_mic_carrier_n               
-    this%vmax_plant_uptake_nh4       = vmax_plant_uptake_nh4   
-    this%km_plant_uptake_nh4         = km_plant_uptake_nh4       
-    this%vmax_plant_uptake_no3       = vmax_plant_uptake_no3   
-    this%km_plant_uptake_no3         = km_plant_uptake_no3       
-    this%f_plant_carrier_n           = f_plant_carrier_n           
-    this%vmax_mic_uptake_po4         = vmax_mic_uptake_po4       
-    this%km_mic_uptake_po4           = km_mic_uptake_po4           
-    this%vmax_plant_uptake_po4       = vmax_plant_uptake_po4   
-    this%km_plant_uptake_po4         = km_plant_uptake_po4       
-    this%k_mic_uptake_nh4            = k_mic_uptake_nh4             
-    this%k_plant_uptake_nh4          = k_plant_uptake_nh4         
-    this%k_mic_uptake_no3            = k_mic_uptake_no3             
-    this%k_plant_uptake_no3          = k_plant_uptake_no3         
-    this%k_mic_uptake_po4            = k_mic_uptake_po4             
-    this%k_plant_uptake_po4          = k_plant_uptake_po4         
-    this%f_mic_carrier_po4           = f_mic_carrier_po4           
-    this%f_plant_carrier_po4         = f_plant_carrier_po4       
-    this%qmax_po4_mineral            = qmax_po4_mineral             
-    this%km_adsorpt_mineral_po4      = km_adsorpt_mineral_po4
-    this%km_adsorpt_OM_po4           = km_adsorpt_OM_po4
-    this%k_weath_mineral             = k_weath_mineral
-    this%eq_sorp_mineral_po4         = eq_sorp_mineral_po4
-    this%k_occlude_po4               = k_occlude_po4
-    this%vmax_biochem_po4            = vmax_biochem_po4
-    this%km_mic_biochem_po4          = km_mic_biochem_po4
-    this%km_dip_biochem_po4          = km_dip_biochem_po4
-    this%km_rootc_biochem_po4        = km_rootc_biochem_po4
-    this%km_rootc_weath_po4          = km_rootc_weath_po4
+    this%tau_soluable_litter           = tau_soluable_litter
+    this%tau_metabolic_litter          = tau_metabolic_litter
+    this%tau_structural_litter         = tau_structural_litter
+    this%tau_woody_litter              = tau_woody_litter
+    this%tau_fast                      = tau_fast
+    this%tau_slow                      = tau_slow
+    this%tau_biomineralisation         = tau_biomineralisation
+    this%t_ref_tresponse               = t_ref_tresponse
+    this%ea_depolymerisation           = ea_depolymerisation
+    this%ea_mic_uptake                 = ea_mic_uptake
+    this%ea_sorption                   = ea_sorption
+    this%ea_desorption                 = ea_desorption
+    this%ea_hsc                        = ea_hsc
+    this%ea_decomposition              = ea_decomposition
+    this%ed_decomposition              = ed_decomposition
+    this%t_ref_decomposition           = t_ref_decomposition
+    this%k1_afps                       = k1_afps
+    this%kmr_depolymerisation          = kmr_depolymerisation
+    this%kmr_mic_uptake                = kmr_mic_uptake
+    this%kmr_hsc                       = kmr_hsc
+    this%kmr_sorption                  = kmr_sorption
+    this%kmr_decomposition             = kmr_decomposition
+    this%k_diff_org                    = k_diff_org
+    this%rho_bulk_org                  = rho_bulk_org
+    this%carbon_per_dryweight_SOM      = carbon_per_dryweight_SOM
+    this%qmax_po4_fine_particle        = qmax_po4_fine_particle
+    this%k_adsorpt_dom                 = k_adsorpt_dom
+    this%k_desorpt_dom                 = k_desorpt_dom
+    this%k_adsorpt_det                 = k_adsorpt_det
+    this%k_desorpt_det                 = k_desorpt_det
+    this%k_adsorpt_nh4                 = k_adsorpt_nh4
+    this%k_desorpt_nh4                 = k_desorpt_nh4
+    this%k_adsorpt_po4                 = k_adsorpt_po4
+    this%k_desorpt_po4                 = k_desorpt_po4
+    this%k_adsorpt_f_po4               = k_adsorpt_f_po4
+    this%k_desorp_f_po4                = k_desorp_f_po4
+    this%k_desorp_s_po4                = k_desorp_s_po4
+    this%k_adsorpt_s_po4               = k_adsorpt_s_po4
+    this%microbial_cn                  = microbial_cn
+    this%microbial_np                  = microbial_np
+    this%microbial_nue                 = microbial_nue
+    this%microbial_pue                 = microbial_pue
+    this%microbial_cue                 = microbial_cue
+    this%microbial_cue_max             = microbial_cue_max
+    this%microbial_cue_min             = microbial_cue_min
+    this%microbial_cn_max              = microbial_cn_max
+    this%microbial_cn_min              = microbial_cn_min
+    this%f_mic_cn                      = f_mic_cn
+    this%frac_woody2dec_litter         = frac_woody2dec_litter
+    this%frac_litter2fast_som          = frac_litter2fast_som
+    this%frac_fast2slow_som            = frac_fast2slow_som
+    this%frac_slow2fast_som            = frac_slow2fast_som
+    this%fc_woody2polymeric            = fc_woody2polymeric
+    this%fc_soluable2dom               = fc_soluable2dom
+    this%k_mort_microbial              = k_mort_microbial
+    this%min_mic_biomass               = min_mic_biomass
+    this%vmax_mic_uptake               = vmax_mic_uptake
+    this%km_mic_uptake                 = km_mic_uptake
+    this%km_depolymerisation           = km_depolymerisation
+    this%vmax_depolymerisation_residue = vmax_depolymerisation_residue
+    this%vmax_depolymerisation_litter  = vmax_depolymerisation_litter
+    this%f_soluable_residue            = f_soluable_residue
+    this%f_soluable_leaf               = f_soluable_leaf
+    this%f_soluable_fine_root          = f_soluable_fine_root
+    this%f_soluable_fruit              = f_soluable_fruit
+    this%f_soluable_seed_bed           = f_soluable_seed_bed
+    this%fc_soluable_max               = fc_soluable_max
+    this%k_fc_soluable                 = k_fc_soluable
+    this%k_fn_soluable                 = k_fn_soluable
+    this%k_fp_soluable                 = k_fp_soluable
+    this%lc_leaf_max                   = lc_leaf_max
+    this%lc_leaf2sla                   = lc_leaf2sla
+    this%lc_fine_root                  = lc_fine_root
+    this%lc_coarse_root                = lc_coarse_root
+    this%lc_woody_litter               = lc_woody_litter
+    this%lc_fruit                      = lc_fruit
+    this%lc_seed_bed                   = lc_seed_bed
+    this%mycorrhiza_cue                = mycorrhiza_cue
+    this%mycorrhiza_cn                 = mycorrhiza_cn
+    this%mycorrhiza_np                 = mycorrhiza_np
+    this%f_maxresp_myc                 = f_maxresp_myc
+    this%f_surface_myc2fineroot        = f_surface_myc2fineroot
+    this%km1_up_nh4                    = km1_up_nh4
+    this%km2_up_nh4                    = km2_up_nh4
+    this%km1_up_no3                    = km1_up_no3
+    this%km2_up_no3                    = km2_up_no3
+    this%km1_up_po4                    = km1_up_po4
+    this%km2_up_po4                    = km2_up_po4
+    this%vmax_mic_uptake_nh4           = vmax_mic_uptake_nh4
+    this%km_mic_uptake_nh4             = km_mic_uptake_nh4
+    this%vmax_mic_uptake_no3           = vmax_mic_uptake_no3
+    this%km_mic_uptake_no3             = km_mic_uptake_no3
+    this%f_mic_carrier_n               = f_mic_carrier_n
+    this%vmax_plant_uptake_nh4         = vmax_plant_uptake_nh4
+    this%km_plant_uptake_nh4           = km_plant_uptake_nh4
+    this%vmax_plant_uptake_no3         = vmax_plant_uptake_no3
+    this%km_plant_uptake_no3           = km_plant_uptake_no3
+    this%f_plant_carrier_n             = f_plant_carrier_n
+    this%vmax_mic_uptake_po4           = vmax_mic_uptake_po4
+    this%km_mic_uptake_po4             = km_mic_uptake_po4
+    this%vmax_plant_uptake_po4         = vmax_plant_uptake_po4
+    this%km_plant_uptake_po4           = km_plant_uptake_po4
+    this%k_mic_uptake_nh4              = k_mic_uptake_nh4
+    this%k_plant_uptake_nh4            = k_plant_uptake_nh4
+    this%k_mic_uptake_no3              = k_mic_uptake_no3
+    this%k_plant_uptake_no3            = k_plant_uptake_no3
+    this%k_mic_uptake_po4              = k_mic_uptake_po4
+    this%k_plant_uptake_po4            = k_plant_uptake_po4
+    this%f_mic_carrier_po4             = f_mic_carrier_po4
+    this%f_plant_carrier_po4           = f_plant_carrier_po4
+    this%qmax_po4_mineral              = qmax_po4_mineral
+    this%km_adsorpt_mineral_po4        = km_adsorpt_mineral_po4
+    this%km_adsorpt_OM_po4             = km_adsorpt_OM_po4
+    this%ea_nitrification              = ea_nitrification
+    this%ed_nitrification              = ed_nitrification
+    this%t_opt_nitrification           = t_opt_nitrification
+    this%f_nit_noy                     = f_nit_noy
+    this%f_nit_n2o                     = f_nit_n2o
+    this%ea_denitrification            = ea_denitrification
+    this%vmax_nitrification            = vmax_nitrification
+    this%vmax_denitrification          = vmax_denitrification
+    this%km_denitrification_c          = km_denitrification_c
+    this%km_denitrification_no3        = km_denitrification_no3
+    this%f_denit_noy                   = f_denit_noy
+    this%f_denit_n2o                   = f_denit_n2o
+    this%ea_gasdiffusion               = ea_gasdiffusion
+    this%lambda_anvf                   = lambda_anvf
+    this%k_anvf                        = k_anvf
+    this%floss_nmin                    = floss_nmin
+    this%fnit_nmin                     = fnit_nmin
+    this%fleach_nh4                    = fleach_nh4
+    this%fleach_po4                    = fleach_po4
+    this%soil_n_threshold_bnf          = soil_n_threshold_bnf
+    this%standard_bnf_max_rate         = standard_bnf_max_rate
+    this%eta_mic_uptake_nh4            = eta_mic_uptake_nh4
+    this%eta_mic_uptake_no3            = eta_mic_uptake_no3
+    this%eta_plant_uptake_nh4          = eta_plant_uptake_nh4
+    this%eta_plant_uptake_no3          = eta_plant_uptake_no3
+    this%eta_nitrification             = eta_nitrification
+    this%eta_nitrate_production        = eta_nitrate_production
+    this%eta_denitrification           = eta_denitrification
+    this%eta_ammonification            = eta_ammonification
+    this%eta_volatilisation_nh3        = eta_volatilisation_nh3
+    this%k_weath_mineral               = k_weath_mineral
+    this%eq_sorp_mineral_po4           = eq_sorp_mineral_po4
+    this%k_occlude_po4                 = k_occlude_po4
+    this%vmax_biochem_po4              = vmax_biochem_po4
+    this%km_mic_biochem_po4            = km_mic_biochem_po4
+    this%km_dip_biochem_po4            = km_dip_biochem_po4
+    this%km_rootc_biochem_po4          = km_rootc_biochem_po4
+    this%km_rootc_weath_po4            = km_rootc_weath_po4
 
   END SUBROUTINE read_parameter_slm_list
 
@@ -2563,76 +3061,760 @@ CONTAINS
                                     delta_n_leaf)
 
     ! SB_CTL
-    IF (ABS(this%floss_nmin             - missval) > eps8)  floss_nmin             = this%floss_nmin
-    IF (ABS(this%tau_fast               - missval) > eps8)  tau_fast               = this%tau_fast    * one_year * one_day
-    IF (ABS(this%tau_slow               - missval) > eps8)  tau_slow               = this%tau_slow    * one_year * one_day
-    IF (ABS(this%tau_structural_litter  - missval) > eps8)  tau_structural_litter  = this%tau_structural_litter * &
-                                                                                       one_year * one_day
-    IF (ABS(this%microbial_cue          - missval) > eps8)  microbial_cue          = this%microbial_cue
-    IF (ABS(this%microbial_cue_min      - missval) > eps8)  microbial_cue_min      = this%microbial_cue_min
-    IF (ABS(this%microbial_cue_max      - missval) > eps8)  microbial_cue_max      = this%microbial_cue_max
-
-    IF (ABS(this%mycorrhiza_cue         - missval) > eps8)  mycorrhiza_cue         = this%mycorrhiza_cue
-    IF (ABS(this%mycorrhiza_cn          - missval) > eps8)  mycorrhiza_cn          = this%mycorrhiza_cn * molar_mass_N / &
-                                                                                       molar_mass_C
-    IF (ABS(this%mycorrhiza_np          - missval) > eps8)  mycorrhiza_np          = this%mycorrhiza_np * molar_mass_P / &
-                                                                                       molar_mass_N
-    IF (ABS(this%f_maxresp_myc          - missval) > eps8)  f_maxresp_myc          = this%f_maxresp_myc
-    IF (ABS(this%f_surface_myc2fineroot - missval) > eps8)  f_surface_myc2fineroot = this%f_surface_myc2fineroot
-    IF (ABS(this%k_diff_org             - missval) > eps8)  k_diff_org             = this%k_diff_org / one_year / one_day
-    IF (ABS(this%k_adsorpt_dom          - missval) > eps8)  k_adsorpt_dom          = this%k_adsorpt_dom / one_year / one_day * &
-                                                                                       molar_mass_C  / 1000._wp
-    IF (ABS(this%k_desorpt_dom          - missval) > eps8)  k_desorpt_dom          = this%k_desorpt_dom / one_year / one_day
-    IF (ABS(this%k_adsorpt_det          - missval) > eps8)  k_adsorpt_det          = this%k_adsorpt_det / one_year / one_day * &
-                                                                                       molar_mass_C / 1000._wp
-    IF (ABS(this%k_desorpt_det          - missval) > eps8)  k_desorpt_det          = this%k_desorpt_det / one_year / one_day
+    CALL Set_quincy_parameter_value(this%tau_soluable_litter * one_day, &
+                                    this%tau_soluable_litter, &
+                                    "tau_soluable_litter", proportional_parameter_changes, dependency_recalculation, &
+                                    tau_soluable_litter)
     
-    IF (ABS(this%vmax_mic_uptake        - missval) > eps8)  vmax_mic_uptake        = this%vmax_mic_uptake / &
-                                                                                       one_year / one_day * 1000000._wp
-    IF (ABS(this%vmax_mic_uptake_nh4    - missval) > eps8)  vmax_mic_uptake_nh4    = this%vmax_mic_uptake_nh4 / &
-                                                                                       3600._wp * molar_mass_C
-    IF (ABS(this%km_mic_uptake_nh4      - missval) > eps8)  km_mic_uptake_nh4      = this%km_mic_uptake_nh4 / molar_mass_N
-    IF (ABS(this%vmax_mic_uptake_no3    - missval) > eps8)  vmax_mic_uptake_no3    = this%vmax_mic_uptake_no3 / &
-                                                                                       3600._wp * molar_mass_C
-    IF (ABS(this%km_mic_uptake_no3      - missval) > eps8)  km_mic_uptake_no3      = this%km_mic_uptake_no3 / molar_mass_N
-    IF (ABS(this%f_mic_carrier_n        - missval) > eps8)  f_mic_carrier_n        = this%f_mic_carrier_n
-    IF (ABS(this%vmax_plant_uptake_nh4  - missval) > eps8)  vmax_plant_uptake_nh4  = this%vmax_plant_uptake_nh4 / &
-                                                                                       3600._wp * molar_mass_C
-    IF (ABS(this%km_plant_uptake_nh4    - missval) > eps8)  km_plant_uptake_nh4    = this%km_plant_uptake_nh4 / molar_mass_N
-    IF (ABS(this%vmax_plant_uptake_no3  - missval) > eps8)  vmax_plant_uptake_no3  = this%vmax_plant_uptake_no3 / &
-                                                                                       3600._wp * molar_mass_C
-    IF (ABS(this%km_plant_uptake_no3    - missval) > eps8)  km_plant_uptake_no3    = this%km_plant_uptake_no3 / molar_mass_N
-    IF (ABS(this%f_plant_carrier_n      - missval) > eps8)  f_plant_carrier_n      = this%f_plant_carrier_n
-    IF (ABS(this%vmax_mic_uptake_po4    - missval) > eps8)  vmax_mic_uptake_po4    = this%vmax_mic_uptake_po4 / &
-                                                                                       3600._wp * molar_mass_C
-    IF (ABS(this%km_mic_uptake_po4      - missval) > eps8)  km_mic_uptake_po4      = this%km_mic_uptake_po4 / molar_mass_P
-    IF (ABS(this%vmax_plant_uptake_po4  - missval) > eps8)  vmax_plant_uptake_po4  = this%vmax_plant_uptake_po4 / &
-                                                                                       3600._wp * molar_mass_C
-    IF (ABS(this%km_plant_uptake_po4    - missval) > eps8)  km_plant_uptake_po4    = this%km_plant_uptake_po4 / molar_mass_P
-    IF (ABS(this%k_mic_uptake_nh4       - missval) > eps8)  k_mic_uptake_nh4       = this%k_mic_uptake_nh4 / one_day
-    IF (ABS(this%k_plant_uptake_nh4     - missval) > eps8)  k_plant_uptake_nh4     = this%k_plant_uptake_nh4 / one_day
-    IF (ABS(this%k_mic_uptake_no3       - missval) > eps8)  k_mic_uptake_no3       = this%k_mic_uptake_no3 / one_day
-    IF (ABS(this%k_plant_uptake_no3     - missval) > eps8)  k_plant_uptake_no3     = this%k_plant_uptake_no3 / one_day
-    IF (ABS(this%k_mic_uptake_po4       - missval) > eps8)  k_mic_uptake_po4       = this%k_mic_uptake_po4 / one_day
-    IF (ABS(this%k_plant_uptake_po4     - missval) > eps8)  k_plant_uptake_po4     = this%k_plant_uptake_po4 / one_day
-    IF (ABS(this%f_mic_carrier_po4      - missval) > eps8)  f_mic_carrier_po4      = this%f_mic_carrier_po4
-    IF (ABS(this%f_plant_carrier_po4    - missval) > eps8)  f_plant_carrier_po4    = this%f_plant_carrier_po4
-    IF (ABS(this%qmax_po4_mineral       - missval) > eps8)  qmax_po4_mineral       = this%qmax_po4_mineral / molar_mass_P
-    IF (ABS(this%km_adsorpt_mineral_po4 - missval) > eps8)  km_adsorpt_mineral_po4 = this%km_adsorpt_mineral_po4 / 1000._wp / &
-                                                                                       molar_mass_P
-    IF (ABS(this%km_adsorpt_OM_po4      - missval) > eps8)  km_adsorpt_OM_po4      = this%km_adsorpt_OM_po4 / 1000._wp / &
-                                                                                       molar_mass_P
-    IF (ABS(this%k_weath_mineral        - missval) > eps8)  k_weath_mineral        = this%k_weath_mineral / molar_mass_P / &
-                                                                                       1254._wp / one_year /one_day
-    IF (ABS(this%eq_sorp_mineral_po4    - missval) > eps8)  eq_sorp_mineral_po4    = this%eq_sorp_mineral_po4 / molar_mass_P
-    IF (ABS(this%k_occlude_po4          - missval) > eps8)  k_occlude_po4          = this%k_occlude_po4 / 1000000._wp / &
-                                                                                       30._wp / one_day
-    IF (ABS(this%vmax_biochem_po4       - missval) > eps8)  vmax_biochem_po4       = this%vmax_biochem_po4 / 40.0_wp / one_day
-    IF (ABS(this%km_mic_biochem_po4     - missval) > eps8)  km_mic_biochem_po4     = this%km_mic_biochem_po4  / molar_mass_C
-    IF (ABS(this%km_dip_biochem_po4     - missval) > eps8)  km_dip_biochem_po4     = this%km_dip_biochem_po4
-    IF (ABS(this%km_rootc_biochem_po4   - missval) > eps8)  km_rootc_biochem_po4   = this%km_rootc_biochem_po4
-    IF (ABS(this%km_rootc_weath_po4     - missval) > eps8)  km_rootc_weath_po4     = this%km_rootc_weath_po4
+    CALL Set_quincy_parameter_value(this%tau_metabolic_litter * one_year * one_day, &
+                                    this%tau_metabolic_litter, &
+                                    "tau_metabolic_litter", proportional_parameter_changes, dependency_recalculation, &
+                                    tau_metabolic_litter)
+    
+    CALL Set_quincy_parameter_value(this%tau_structural_litter * one_year * one_day, &
+                                    this%tau_structural_litter, &
+                                    "tau_structural_litter", proportional_parameter_changes, dependency_recalculation, &
+                                    tau_structural_litter)
 
+    CALL Set_quincy_parameter_value(this%tau_woody_litter * one_year * one_day, &
+                                    this%tau_woody_litter, &
+                                    "tau_woody_litter", proportional_parameter_changes, dependency_recalculation, &
+                                    tau_woody_litter)
+    
+    CALL Set_quincy_parameter_value(this%tau_fast * one_year * one_day, &
+                                    this%tau_fast, &
+                                    "tau_fast", proportional_parameter_changes, dependency_recalculation, &
+                                    tau_fast)
+    
+    CALL Set_quincy_parameter_value(this%tau_slow * one_year * one_day, &
+                                    this%tau_slow, &
+                                    "tau_slow", proportional_parameter_changes, dependency_recalculation, &
+                                    tau_slow)
+
+    CALL Set_quincy_parameter_value(this%tau_biomineralisation * one_year * one_day, &
+                                    this%tau_biomineralisation, &
+                                    "tau_biomineralisation", proportional_parameter_changes, dependency_recalculation, &
+                                    tau_biomineralisation)
+    
+    CALL Set_quincy_parameter_value(this%t_ref_tresponse, &
+                                    this%t_ref_tresponse, &
+                                    "t_ref_tresponse", proportional_parameter_changes, dependency_recalculation, &
+                                    t_ref_tresponse)
+
+    CALL Set_quincy_parameter_value(this%ea_depolymerisation, &
+                                    this%ea_depolymerisation, &
+                                    "ea_depolymerisation", proportional_parameter_changes, dependency_recalculation, &
+                                    ea_depolymerisation)
+    
+    CALL Set_quincy_parameter_value(this%ea_mic_uptake, &
+                                    this%ea_mic_uptake, &
+                                    "ea_mic_uptake", proportional_parameter_changes, dependency_recalculation, &
+                                    ea_mic_uptake)
+    
+    CALL Set_quincy_parameter_value(this%ea_sorption, &
+                                    this%ea_sorption, &
+                                    "ea_sorption", proportional_parameter_changes, dependency_recalculation, &
+                                    ea_sorption)
+
+    CALL Set_quincy_parameter_value(this%ea_desorption, &
+                                    this%ea_desorption, &
+                                    "ea_desorption", proportional_parameter_changes, dependency_recalculation, &
+                                    ea_desorption)
+    
+    CALL Set_quincy_parameter_value(this%ea_hsc, &
+                                    this%ea_hsc, &
+                                    "ea_hsc", proportional_parameter_changes, dependency_recalculation, &
+                                    ea_hsc)
+
+    CALL Set_quincy_parameter_value(this%ea_decomposition, &
+                                    this%ea_decomposition, &
+                                    "ea_decomposition", proportional_parameter_changes, dependency_recalculation, &
+                                    ea_decomposition)
+    
+    CALL Set_quincy_parameter_value(this%ed_decomposition, &
+                                    this%ed_decomposition, &
+                                    "ed_decomposition", proportional_parameter_changes, dependency_recalculation, &
+                                    ed_decomposition)
+    
+    CALL Set_quincy_parameter_value(this%t_ref_decomposition, &
+                                    this%t_ref_decomposition, &
+                                    "t_ref_decomposition", proportional_parameter_changes, dependency_recalculation, &
+                                    t_ref_decomposition)
+
+    CALL Set_quincy_parameter_value(this%k1_afps / 3._wp, &
+                                    this%k1_afps, &
+                                    "k1_afps", proportional_parameter_changes, dependency_recalculation, &
+                                    k1_afps)
+    
+    CALL Set_quincy_parameter_value(this%kmr_depolymerisation, &
+                                    this%kmr_depolymerisation, &
+                                    "kmr_depolymerisation", proportional_parameter_changes, dependency_recalculation, &
+                                    kmr_depolymerisation)
+
+    CALL Set_quincy_parameter_value(this%kmr_mic_uptake, &
+                                    this%kmr_mic_uptake, &
+                                    "kmr_mic_uptake", proportional_parameter_changes, dependency_recalculation, &
+                                    kmr_mic_uptake)
+    
+    CALL Set_quincy_parameter_value(this%kmr_hsc, &
+                                    this%kmr_hsc, &
+                                    "kmr_hsc", proportional_parameter_changes, dependency_recalculation, &
+                                    kmr_hsc)
+    
+    CALL Set_quincy_parameter_value(this%kmr_sorption, &
+                                    this%kmr_sorption, &
+                                    "kmr_sorption", proportional_parameter_changes, dependency_recalculation, &
+                                    kmr_sorption)
+
+    CALL Set_quincy_parameter_value(this%kmr_decomposition, &
+                                    this%kmr_decomposition, &
+                                    "kmr_decomposition", proportional_parameter_changes, dependency_recalculation, &
+                                    kmr_decomposition)
+    
+    CALL Set_quincy_parameter_value(this%k_diff_org / one_year / one_day, &
+                                    this%k_diff_org, &
+                                    "k_diff_org", proportional_parameter_changes, dependency_recalculation, &
+                                    k_diff_org)
+
+    CALL Set_quincy_parameter_value(this%rho_bulk_org, &
+                                    this%rho_bulk_org, &
+                                    "rho_bulk_org", proportional_parameter_changes, dependency_recalculation, &
+                                    rho_bulk_org)
+    
+    CALL Set_quincy_parameter_value(this%carbon_per_dryweight_SOM, &
+                                    this%carbon_per_dryweight_SOM, &
+                                    "carbon_per_dryweight_SOM", proportional_parameter_changes, dependency_recalculation, &
+                                    carbon_per_dryweight_SOM)
+    
+    CALL Set_quincy_parameter_value(this%qmax_po4_fine_particle / molar_mass_P, &
+                                    this%qmax_po4_fine_particle, &
+                                    "qmax_po4_fine_particle", proportional_parameter_changes, dependency_recalculation, &
+                                    qmax_po4_fine_particle)
+
+    CALL Set_quincy_parameter_value(this%k_adsorpt_dom / one_year / one_day * molar_mass_C / 1000._wp, &
+                                    this%k_adsorpt_dom, &
+                                    "k_adsorpt_dom", proportional_parameter_changes, dependency_recalculation, &
+                                    k_adsorpt_dom)
+    
+    CALL Set_quincy_parameter_value(this%k_desorpt_dom / one_year / one_day, &
+                                    this%k_desorpt_dom, &
+                                    "k_desorpt_dom", proportional_parameter_changes, dependency_recalculation, &
+                                    k_desorpt_dom)
+
+    CALL Set_quincy_parameter_value(this%k_adsorpt_det / one_year / one_day * molar_mass_C / 1000._wp, &
+                                    this%k_adsorpt_det, &
+                                    "k_adsorpt_det", proportional_parameter_changes, dependency_recalculation, &
+                                    k_adsorpt_det)
+    
+    CALL Set_quincy_parameter_value(this%k_desorpt_det / one_year / one_day, &
+                                    this%k_desorpt_det, &
+                                    "k_desorpt_det", proportional_parameter_changes, dependency_recalculation, &
+                                    k_desorpt_det)
+    
+    CALL Set_quincy_parameter_value(this%k_adsorpt_nh4, &
+                                    this%k_adsorpt_nh4, &
+                                    "k_adsorpt_nh4", proportional_parameter_changes, dependency_recalculation, &
+                                    k_adsorpt_nh4)
+
+    CALL Set_quincy_parameter_value(this%k_desorpt_nh4, &
+                                    this%k_desorpt_nh4, &
+                                    "k_desorpt_nh4", proportional_parameter_changes, dependency_recalculation, &
+                                    k_desorpt_nh4)
+    
+    CALL Set_quincy_parameter_value(this%k_adsorpt_po4 * 8._wp / 9._wp / 30.0_wp / one_day, &
+                                    this%k_adsorpt_po4, &
+                                    "k_adsorpt_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    k_adsorpt_po4)
+
+    CALL Set_quincy_parameter_value(this%k_desorpt_po4 / 30.0_wp / one_day, &
+                                    this%k_desorpt_po4, &
+                                    "k_desorpt_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    k_desorpt_po4)
+    
+    CALL Set_quincy_parameter_value(this%k_adsorpt_f_po4 * 57.9_wp / 3600._wp, &
+                                    this%k_adsorpt_f_po4, &
+                                    "k_adsorpt_f_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    k_adsorpt_f_po4)
+    
+    CALL Set_quincy_parameter_value(this%k_desorp_f_po4 / 3600._wp, &
+                                    this%k_desorp_f_po4, &
+                                    "k_desorp_f_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    k_desorp_f_po4)
+
+    CALL Set_quincy_parameter_value(this%k_desorp_s_po4, &
+                                    this%k_desorp_s_po4, &
+                                    "k_desorp_s_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    k_desorp_s_po4)
+    
+    CALL Set_quincy_parameter_value(this%k_adsorpt_s_po4, &
+                                    this%k_adsorpt_s_po4, &
+                                    "k_adsorpt_s_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    k_adsorpt_s_po4)
+
+    CALL Set_quincy_parameter_value(this%microbial_cn * molar_mass_N / molar_mass_C, &
+                                    this%microbial_cn, &
+                                    "microbial_cn", proportional_parameter_changes, dependency_recalculation, &
+                                    microbial_cn)
+    
+    CALL Set_quincy_parameter_value(this%microbial_np * molar_mass_P / molar_mass_N, &
+                                    this%microbial_np, &
+                                    "microbial_np", proportional_parameter_changes, dependency_recalculation, &
+                                    microbial_np)
+    
+    CALL Set_quincy_parameter_value(this%microbial_nue, &
+                                    this%microbial_nue, &
+                                    "microbial_nue", proportional_parameter_changes, dependency_recalculation, &
+                                    microbial_nue)
+
+    CALL Set_quincy_parameter_value(this%microbial_pue, &
+                                    this%microbial_pue, &
+                                    "microbial_pue", proportional_parameter_changes, dependency_recalculation, &
+                                    microbial_pue)
+    
+    CALL Set_quincy_parameter_value(this%microbial_cue, &
+                                    this%microbial_cue, &
+                                    "microbial_cue", proportional_parameter_changes, dependency_recalculation, &
+                                    microbial_cue)
+
+    CALL Set_quincy_parameter_value(this%microbial_cue_max, &
+                                    this%microbial_cue_max, &
+                                    "microbial_cue_max", proportional_parameter_changes, dependency_recalculation, &
+                                    microbial_cue_max)
+    
+    CALL Set_quincy_parameter_value(this%microbial_cue_min, &
+                                    this%microbial_cue_min, &
+                                    "microbial_cue_min", proportional_parameter_changes, dependency_recalculation, &
+                                    microbial_cue_min)
+    
+    CALL Set_quincy_parameter_value(this%microbial_cn_max * molar_mass_N / molar_mass_C, &
+                                    this%microbial_cn_max, &
+                                    "microbial_cn_max", proportional_parameter_changes, dependency_recalculation, &
+                                    microbial_cn_max)
+
+    CALL Set_quincy_parameter_value(this%microbial_cn_min * molar_mass_N / molar_mass_C, &
+                                    this%microbial_cn_min, &
+                                    "microbial_cn_min", proportional_parameter_changes, dependency_recalculation, &
+                                    microbial_cn_min)
+    
+    CALL Set_quincy_parameter_value(this%f_mic_cn, &
+                                    this%f_mic_cn, &
+                                    "f_mic_cn", proportional_parameter_changes, dependency_recalculation, &
+                                    f_mic_cn)
+
+    CALL Set_quincy_parameter_value(this%frac_woody2dec_litter, &
+                                    this%frac_woody2dec_litter, &
+                                    "frac_woody2dec_litter", proportional_parameter_changes, dependency_recalculation, &
+                                    frac_woody2dec_litter)
+    
+    CALL Set_quincy_parameter_value(this%frac_litter2fast_som, &
+                                    this%frac_litter2fast_som, &
+                                    "frac_litter2fast_som", proportional_parameter_changes, dependency_recalculation, &
+                                    frac_litter2fast_som)
+    
+    CALL Set_quincy_parameter_value(this%frac_fast2slow_som, &
+                                    this%frac_fast2slow_som, &
+                                    "frac_fast2slow_som", proportional_parameter_changes, dependency_recalculation, &
+                                    frac_fast2slow_som)
+
+    CALL Set_quincy_parameter_value(this%frac_slow2fast_som, &
+                                    this%frac_slow2fast_som, &
+                                    "frac_slow2fast_som", proportional_parameter_changes, dependency_recalculation, &
+                                    frac_slow2fast_som)
+    
+    CALL Set_quincy_parameter_value(this%fc_woody2polymeric, &
+                                    this%fc_woody2polymeric, &
+                                    "fc_woody2polymeric", proportional_parameter_changes, dependency_recalculation, &
+                                    fc_woody2polymeric)
+
+    CALL Set_quincy_parameter_value(this%fc_soluable2dom, &
+                                    this%fc_soluable2dom, &
+                                    "fc_soluable2dom", proportional_parameter_changes, dependency_recalculation, &
+                                    fc_soluable2dom)
+    
+    CALL Set_quincy_parameter_value(this%k_mort_microbial * 1.e-8_wp, &
+                                    this%k_mort_microbial, &
+                                    "k_mort_microbial", proportional_parameter_changes, dependency_recalculation, &
+                                    k_mort_microbial)
+    
+    CALL Set_quincy_parameter_value(this%min_mic_biomass, &
+                                    this%min_mic_biomass, &
+                                    "min_mic_biomass", proportional_parameter_changes, dependency_recalculation, &
+                                    min_mic_biomass)
+
+    CALL Set_quincy_parameter_value(this%vmax_mic_uptake / one_year / one_day * 1000000._wp, &
+                                    this%vmax_mic_uptake, &
+                                    "vmax_mic_uptake", proportional_parameter_changes, dependency_recalculation, &
+                                    vmax_mic_uptake)
+    
+    CALL Set_quincy_parameter_value(this%km_mic_uptake / molar_mass_C * 1000_wp, &
+                                    this%km_mic_uptake, &
+                                    "km_mic_uptake", proportional_parameter_changes, dependency_recalculation, &
+                                    km_mic_uptake)
+
+    CALL Set_quincy_parameter_value(this%km_depolymerisation / molar_mass_C * 1000_wp, &
+                                    this%km_depolymerisation, &
+                                    "km_depolymerisation", proportional_parameter_changes, dependency_recalculation, &
+                                    km_depolymerisation)
+    
+    CALL Set_quincy_parameter_value(this%vmax_depolymerisation_residue / one_year / one_day, &
+                                    this%vmax_depolymerisation_residue, &
+                                    "vmax_depolymerisation_residue", proportional_parameter_changes, dependency_recalculation, &
+                                    vmax_depolymerisation_residue)
+    
+    CALL Set_quincy_parameter_value(this%vmax_depolymerisation_litter / one_year / one_day, &
+                                    this%vmax_depolymerisation_litter, &
+                                    "vmax_depolymerisation_litter", proportional_parameter_changes, dependency_recalculation, &
+                                    vmax_depolymerisation_litter)
+
+    CALL Set_quincy_parameter_value(this%f_soluable_residue, &
+                                    this%f_soluable_residue, &
+                                    "f_soluable_residue", proportional_parameter_changes, dependency_recalculation, &
+                                    f_soluable_residue)
+    
+    CALL Set_quincy_parameter_value(this%f_soluable_leaf, &
+                                    this%f_soluable_leaf, &
+                                    "f_soluable_leaf", proportional_parameter_changes, dependency_recalculation, &
+                                    f_soluable_leaf)
+
+    CALL Set_quincy_parameter_value(this%f_soluable_fine_root, &
+                                    this%f_soluable_fine_root, &
+                                    "f_soluable_fine_root", proportional_parameter_changes, dependency_recalculation, &
+                                    f_soluable_fine_root)
+    
+    CALL Set_quincy_parameter_value(this%f_soluable_fruit, &
+                                    this%f_soluable_fruit, &
+                                    "f_soluable_fruit", proportional_parameter_changes, dependency_recalculation, &
+                                    f_soluable_fruit)
+    
+    CALL Set_quincy_parameter_value(this%f_soluable_seed_bed, &
+                                    this%f_soluable_seed_bed, &
+                                    "f_soluable_seed_bed", proportional_parameter_changes, dependency_recalculation, &
+                                    f_soluable_seed_bed)
+
+    CALL Set_quincy_parameter_value(this%fc_soluable_max, &
+                                    this%fc_soluable_max, &
+                                    "fc_soluable_max", proportional_parameter_changes, dependency_recalculation, &
+                                    fc_soluable_max)
+    
+    CALL Set_quincy_parameter_value(this%k_fc_soluable, &
+                                    this%k_fc_soluable, &
+                                    "k_fc_soluable", proportional_parameter_changes, dependency_recalculation, &
+                                    k_fc_soluable)
+
+    CALL Set_quincy_parameter_value(this%k_fn_soluable, &
+                                    this%k_fn_soluable, &
+                                    "k_fn_soluable", proportional_parameter_changes, dependency_recalculation, &
+                                    k_fn_soluable)
+    
+    CALL Set_quincy_parameter_value(this%k_fp_soluable, &
+                                    this%k_fp_soluable, &
+                                    "k_fp_soluable", proportional_parameter_changes, dependency_recalculation, &
+                                    k_fp_soluable)
+    
+    CALL Set_quincy_parameter_value(this%lc_leaf_max / molar_mass_C * molar_mass_N, &
+                                    this%lc_leaf_max, &
+                                    "lc_leaf_max", proportional_parameter_changes, dependency_recalculation, &
+                                    lc_leaf_max)
+
+    CALL Set_quincy_parameter_value(this%lc_leaf2sla / molar_mass_C * molar_mass_N, &
+                                    this%lc_leaf2sla, &
+                                    "lc_leaf2sla", proportional_parameter_changes, dependency_recalculation, &
+                                    lc_leaf2sla)
+    
+    CALL Set_quincy_parameter_value(this%lc_fine_root / molar_mass_C * molar_mass_N, &
+                                    this%lc_fine_root, &
+                                    "lc_fine_root", proportional_parameter_changes, dependency_recalculation, &
+                                    lc_fine_root)
+
+    CALL Set_quincy_parameter_value(this%lc_coarse_root / molar_mass_C * molar_mass_N, &
+                                    this%lc_coarse_root, &
+                                    "lc_coarse_root", proportional_parameter_changes, dependency_recalculation, &
+                                    lc_coarse_root)
+    
+    CALL Set_quincy_parameter_value(this%lc_woody_litter / molar_mass_C * molar_mass_N, &
+                                    this%lc_woody_litter, &
+                                    "lc_woody_litter", proportional_parameter_changes, dependency_recalculation, &
+                                    lc_woody_litter)
+    
+    CALL Set_quincy_parameter_value(this%lc_fruit / molar_mass_C * molar_mass_N, &
+                                    this%lc_fruit, &
+                                    "lc_fruit", proportional_parameter_changes, dependency_recalculation, &
+                                    lc_fruit)
+
+    CALL Set_quincy_parameter_value(this%lc_seed_bed / molar_mass_C * molar_mass_N, &
+                                    this%lc_seed_bed, &
+                                    "lc_seed_bed", proportional_parameter_changes, dependency_recalculation, &
+                                    lc_seed_bed)
+    
+    CALL Set_quincy_parameter_value(this%mycorrhiza_cue, &
+                                    this%mycorrhiza_cue, &
+                                    "mycorrhiza_cue", proportional_parameter_changes, dependency_recalculation, &
+                                    mycorrhiza_cue)
+
+    CALL Set_quincy_parameter_value(this%mycorrhiza_cn * molar_mass_N / molar_mass_C, &
+                                    this%mycorrhiza_cn, &
+                                    "mycorrhiza_cn", proportional_parameter_changes, dependency_recalculation, &
+                                    mycorrhiza_cn)
+    
+    CALL Set_quincy_parameter_value(this%mycorrhiza_np * molar_mass_P / molar_mass_N, &
+                                    this%mycorrhiza_np, &
+                                    "mycorrhiza_np", proportional_parameter_changes, dependency_recalculation, &
+                                    mycorrhiza_np)
+    
+    CALL Set_quincy_parameter_value(this%f_maxresp_myc, &
+                                    this%f_maxresp_myc, &
+                                    "f_maxresp_myc", proportional_parameter_changes, dependency_recalculation, &
+                                    f_maxresp_myc)
+
+    CALL Set_quincy_parameter_value(this%f_surface_myc2fineroot, &
+                                    this%f_surface_myc2fineroot, &
+                                    "f_surface_myc2fineroot", proportional_parameter_changes, dependency_recalculation, &
+                                    f_surface_myc2fineroot)
+    
+    CALL Set_quincy_parameter_value(this%km1_up_nh4, &
+                                    this%km1_up_nh4, &
+                                    "km1_up_nh4", proportional_parameter_changes, dependency_recalculation, &
+                                    km1_up_nh4)
+
+    CALL Set_quincy_parameter_value(this%km2_up_nh4, &
+                                    this%km2_up_nh4, &
+                                    "km2_up_nh4", proportional_parameter_changes, dependency_recalculation, &
+                                    km2_up_nh4)
+    
+    CALL Set_quincy_parameter_value(this%km1_up_no3, &
+                                    this%km1_up_no3, &
+                                    "km1_up_no3", proportional_parameter_changes, dependency_recalculation, &
+                                    km1_up_no3)
+    
+    CALL Set_quincy_parameter_value(this%km2_up_no3, &
+                                    this%km2_up_no3, &
+                                    "km2_up_no3", proportional_parameter_changes, dependency_recalculation, &
+                                    km2_up_no3)
+
+    CALL Set_quincy_parameter_value(this%km1_up_po4 / 0.0003_wp, &
+                                    this%km1_up_po4, &
+                                    "km1_up_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    km1_up_po4)
+    
+    CALL Set_quincy_parameter_value(this%km2_up_po4 / 1000000._wp, &
+                                    this%km2_up_po4, &
+                                    "km2_up_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    km2_up_po4)
+
+    CALL Set_quincy_parameter_value(this%vmax_mic_uptake_nh4 / 3600._wp * molar_mass_C, &
+                                    this%vmax_mic_uptake_nh4, &
+                                    "vmax_mic_uptake_nh4", proportional_parameter_changes, dependency_recalculation, &
+                                    vmax_mic_uptake_nh4)
+    
+    CALL Set_quincy_parameter_value(this%km_mic_uptake_nh4 / molar_mass_N, &
+                                    this%km_mic_uptake_nh4, &
+                                    "km_mic_uptake_nh4", proportional_parameter_changes, dependency_recalculation, &
+                                    km_mic_uptake_nh4)
+    
+    CALL Set_quincy_parameter_value(this%vmax_mic_uptake_no3 / 3600._wp * molar_mass_C, &
+                                    this%vmax_mic_uptake_no3, &
+                                    "vmax_mic_uptake_no3", proportional_parameter_changes, dependency_recalculation, &
+                                    vmax_mic_uptake_no3)
+
+    CALL Set_quincy_parameter_value(this%km_mic_uptake_no3 / molar_mass_N, &
+                                    this%km_mic_uptake_no3, &
+                                    "km_mic_uptake_no3", proportional_parameter_changes, dependency_recalculation, &
+                                    km_mic_uptake_no3)
+    
+    CALL Set_quincy_parameter_value(this%f_mic_carrier_n, &
+                                    this%f_mic_carrier_n, &
+                                    "f_mic_carrier_n", proportional_parameter_changes, dependency_recalculation, &
+                                    f_mic_carrier_n)
+
+    CALL Set_quincy_parameter_value(this%vmax_plant_uptake_nh4 / 3600._wp * molar_mass_C, &
+                                    this%vmax_plant_uptake_nh4, &
+                                    "vmax_plant_uptake_nh4", proportional_parameter_changes, dependency_recalculation, &
+                                    vmax_plant_uptake_nh4)
+    
+    CALL Set_quincy_parameter_value(this%km_plant_uptake_nh4 / molar_mass_N, &
+                                    this%km_plant_uptake_nh4, &
+                                    "km_plant_uptake_nh4", proportional_parameter_changes, dependency_recalculation, &
+                                    km_plant_uptake_nh4)
+    
+    CALL Set_quincy_parameter_value(this%vmax_plant_uptake_no3 / 3600._wp * molar_mass_C, &
+                                    this%vmax_plant_uptake_no3, &
+                                    "vmax_plant_uptake_no3", proportional_parameter_changes, dependency_recalculation, &
+                                    vmax_plant_uptake_no3)
+
+    CALL Set_quincy_parameter_value(this%km_plant_uptake_no3 / molar_mass_N, &
+                                    this%km_plant_uptake_no3, &
+                                    "km_plant_uptake_no3", proportional_parameter_changes, dependency_recalculation, &
+                                    km_plant_uptake_no3)
+    
+    CALL Set_quincy_parameter_value(this%f_plant_carrier_n, &
+                                    this%f_plant_carrier_n, &
+                                    "f_plant_carrier_n", proportional_parameter_changes, dependency_recalculation, &
+                                    f_plant_carrier_n)
+
+    CALL Set_quincy_parameter_value(this%vmax_mic_uptake_po4 / 3600._wp * molar_mass_C, &
+                                    this%vmax_mic_uptake_po4, &
+                                    "vmax_mic_uptake_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    vmax_mic_uptake_po4)
+    
+    CALL Set_quincy_parameter_value(this%km_mic_uptake_po4 / molar_mass_P, &
+                                    this%km_mic_uptake_po4, &
+                                    "km_mic_uptake_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    km_mic_uptake_po4)
+    
+    CALL Set_quincy_parameter_value(this%vmax_plant_uptake_po4 / 3600._wp * molar_mass_C, &
+                                    this%vmax_plant_uptake_po4, &
+                                    "vmax_plant_uptake_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    vmax_plant_uptake_po4)
+
+    CALL Set_quincy_parameter_value(this%km_plant_uptake_po4 / molar_mass_P, &
+                                    this%km_plant_uptake_po4, &
+                                    "km_plant_uptake_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    km_plant_uptake_po4)
+    
+    CALL Set_quincy_parameter_value(this%k_mic_uptake_nh4 / one_day, &
+                                    this%k_mic_uptake_nh4, &
+                                    "k_mic_uptake_nh4", proportional_parameter_changes, dependency_recalculation, &
+                                    k_mic_uptake_nh4)
+
+    CALL Set_quincy_parameter_value(this%k_plant_uptake_nh4 / one_day, &
+                                    this%k_plant_uptake_nh4, &
+                                    "k_plant_uptake_nh4", proportional_parameter_changes, dependency_recalculation, &
+                                    k_plant_uptake_nh4)
+    
+    CALL Set_quincy_parameter_value(this%k_mic_uptake_no3 / one_day, &
+                                    this%k_mic_uptake_no3, &
+                                    "k_mic_uptake_no3", proportional_parameter_changes, dependency_recalculation, &
+                                    k_mic_uptake_no3)
+    
+    CALL Set_quincy_parameter_value(this%k_plant_uptake_no3 / one_day, &
+                                    this%k_plant_uptake_no3, &
+                                    "k_plant_uptake_no3", proportional_parameter_changes, dependency_recalculation, &
+                                    k_plant_uptake_no3)
+
+    CALL Set_quincy_parameter_value(this%k_mic_uptake_po4 / one_day, &
+                                    this%k_mic_uptake_po4, &
+                                    "k_mic_uptake_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    k_mic_uptake_po4)
+    
+    CALL Set_quincy_parameter_value(this%k_plant_uptake_po4 / one_day, &
+                                    this%k_plant_uptake_po4, &
+                                    "k_plant_uptake_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    k_plant_uptake_po4)
+
+    CALL Set_quincy_parameter_value(this%f_mic_carrier_po4, &
+                                    this%f_mic_carrier_po4, &
+                                    "f_mic_carrier_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    f_mic_carrier_po4)
+    
+    CALL Set_quincy_parameter_value(this%f_plant_carrier_po4, &
+                                    this%f_plant_carrier_po4, &
+                                    "f_plant_carrier_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    f_plant_carrier_po4)
+    
+    CALL Set_quincy_parameter_value(this%qmax_po4_mineral / molar_mass_P, &
+                                    this%qmax_po4_mineral, &
+                                    "qmax_po4_mineral", proportional_parameter_changes, dependency_recalculation, &
+                                    qmax_po4_mineral)
+
+    CALL Set_quincy_parameter_value(this%km_adsorpt_mineral_po4 / molar_mass_P, &
+                                    this%km_adsorpt_mineral_po4, &
+                                    "km_adsorpt_mineral_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    km_adsorpt_mineral_po4)
+    
+    CALL Set_quincy_parameter_value(this%km_adsorpt_OM_po4 / molar_mass_P, &
+                                    this%km_adsorpt_OM_po4, &
+                                    "km_adsorpt_OM_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    km_adsorpt_OM_po4)
+
+    CALL Set_quincy_parameter_value(this%ea_nitrification, &
+                                    this%ea_nitrification, &
+                                    "ea_nitrification", proportional_parameter_changes, dependency_recalculation, &
+                                    ea_nitrification)
+    
+    CALL Set_quincy_parameter_value(this%ed_nitrification, &
+                                    this%ed_nitrification, &
+                                    "ed_nitrification", proportional_parameter_changes, dependency_recalculation, &
+                                    ed_nitrification)
+    
+    CALL Set_quincy_parameter_value(this%t_opt_nitrification, &
+                                    this%t_opt_nitrification, &
+                                    "t_opt_nitrification", proportional_parameter_changes, dependency_recalculation, &
+                                    t_opt_nitrification)
+
+    CALL Set_quincy_parameter_value(this%f_nit_noy, &
+                                    this%f_nit_noy, &
+                                    "f_nit_noy", proportional_parameter_changes, dependency_recalculation, &
+                                    f_nit_noy)
+    
+    CALL Set_quincy_parameter_value(this%f_nit_n2o, &
+                                    this%f_nit_n2o, &
+                                    "f_nit_n2o", proportional_parameter_changes, dependency_recalculation, &
+                                    f_nit_n2o)
+
+    CALL Set_quincy_parameter_value(this%ea_denitrification, &
+                                    this%ea_denitrification, &
+                                    "ea_denitrification", proportional_parameter_changes, dependency_recalculation, &
+                                    ea_denitrification)
+    
+    CALL Set_quincy_parameter_value(this%vmax_nitrification / one_day * 1.e6_wp, &
+                                    this%vmax_nitrification, &
+                                    "vmax_nitrification", proportional_parameter_changes, dependency_recalculation, &
+                                    vmax_nitrification)
+    
+    CALL Set_quincy_parameter_value(this%vmax_denitrification / one_day * 1.e6_wp, &
+                                    this%vmax_denitrification, &
+                                    "vmax_denitrification", proportional_parameter_changes, dependency_recalculation, &
+                                    vmax_denitrification)
+
+    CALL Set_quincy_parameter_value(this%km_denitrification_c, &
+                                    this%km_denitrification_c, &
+                                    "km_denitrification_c", proportional_parameter_changes, dependency_recalculation, &
+                                    km_denitrification_c)
+    
+    CALL Set_quincy_parameter_value(this%km_denitrification_no3 * 1000.0_wp / molar_mass_N, &
+                                    this%km_denitrification_no3, &
+                                    "km_denitrification_no3", proportional_parameter_changes, dependency_recalculation, &
+                                    km_denitrification_no3)
+
+    CALL Set_quincy_parameter_value(this%f_denit_noy, &
+                                    this%f_denit_noy, &
+                                    "f_denit_noy", proportional_parameter_changes, dependency_recalculation, &
+                                    f_denit_noy)
+    
+    CALL Set_quincy_parameter_value(this%f_denit_n2o, &
+                                    this%f_denit_n2o, &
+                                    "f_denit_n2o", proportional_parameter_changes, dependency_recalculation, &
+                                    f_denit_n2o)
+    
+    CALL Set_quincy_parameter_value(this%ea_gasdiffusion, &
+                                    this%ea_gasdiffusion, &
+                                    "ea_gasdiffusion", proportional_parameter_changes, dependency_recalculation, &
+                                    ea_gasdiffusion)
+
+    CALL Set_quincy_parameter_value(this%lambda_anvf, &
+                                    this%lambda_anvf, &
+                                    "lambda_anvf", proportional_parameter_changes, dependency_recalculation, &
+                                    lambda_anvf)
+    
+    CALL Set_quincy_parameter_value(this%k_anvf, &
+                                    this%k_anvf, &
+                                    "k_anvf", proportional_parameter_changes, dependency_recalculation, &
+                                    k_anvf)
+
+    CALL Set_quincy_parameter_value(this%floss_nmin, &
+                                    this%floss_nmin, &
+                                    "floss_nmin", proportional_parameter_changes, dependency_recalculation, &
+                                    floss_nmin)
+    
+    CALL Set_quincy_parameter_value(this%fnit_nmin, &
+                                    this%fnit_nmin, &
+                                    "fnit_nmin", proportional_parameter_changes, dependency_recalculation, &
+                                    fnit_nmin)
+    
+    CALL Set_quincy_parameter_value(this%fleach_nh4, &
+                                    this%fleach_nh4, &
+                                    "fleach_nh4", proportional_parameter_changes, dependency_recalculation, &
+                                    fleach_nh4)
+
+    CALL Set_quincy_parameter_value(this%fleach_po4, &
+                                    this%fleach_po4, &
+                                    "fleach_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    fleach_po4)
+    
+    CALL Set_quincy_parameter_value(this%soil_n_threshold_bnf, &
+                                    this%soil_n_threshold_bnf, &
+                                    "soil_n_threshold_bnf", proportional_parameter_changes, dependency_recalculation, &
+                                    soil_n_threshold_bnf)
+
+    CALL Set_quincy_parameter_value(this%standard_bnf_max_rate / molar_mass_N / one_year / one_day * 1000000.0_wp, &
+                                    this%standard_bnf_max_rate, &
+                                    "standard_bnf_max_rate", proportional_parameter_changes, dependency_recalculation, &
+                                    standard_bnf_max_rate)
+    
+    CALL Set_quincy_parameter_value(this%eta_mic_uptake_nh4, &
+                                    this%eta_mic_uptake_nh4, &
+                                    "eta_mic_uptake_nh4", proportional_parameter_changes, dependency_recalculation, &
+                                    eta_mic_uptake_nh4)
+    
+    CALL Set_quincy_parameter_value(this%eta_mic_uptake_no3, &
+                                    this%eta_mic_uptake_no3, &
+                                    "eta_mic_uptake_no3", proportional_parameter_changes, dependency_recalculation, &
+                                    eta_mic_uptake_no3)
+
+    CALL Set_quincy_parameter_value(this%eta_plant_uptake_nh4, &
+                                    this%eta_plant_uptake_nh4, &
+                                    "eta_plant_uptake_nh4", proportional_parameter_changes, dependency_recalculation, &
+                                    eta_plant_uptake_nh4)
+    
+    CALL Set_quincy_parameter_value(this%eta_plant_uptake_no3, &
+                                    this%eta_plant_uptake_no3, &
+                                    "eta_plant_uptake_no3", proportional_parameter_changes, dependency_recalculation, &
+                                    eta_plant_uptake_no3)
+
+    CALL Set_quincy_parameter_value(this%eta_nitrification, &
+                                    this%eta_nitrification, &
+                                    "eta_nitrification", proportional_parameter_changes, dependency_recalculation, &
+                                    eta_nitrification)
+    
+    CALL Set_quincy_parameter_value(this%eta_nitrate_production, &
+                                    this%eta_nitrate_production, &
+                                    "eta_nitrate_production", proportional_parameter_changes, dependency_recalculation, &
+                                    eta_nitrate_production)
+    
+    CALL Set_quincy_parameter_value(this%eta_denitrification, &
+                                    this%eta_denitrification, &
+                                    "eta_denitrification", proportional_parameter_changes, dependency_recalculation, &
+                                    eta_denitrification)
+
+    CALL Set_quincy_parameter_value(this%eta_ammonification, &
+                                    this%eta_ammonification, &
+                                    "eta_ammonification", proportional_parameter_changes, dependency_recalculation, &
+                                    eta_ammonification)
+    
+    CALL Set_quincy_parameter_value(this%eta_volatilisation_nh3, &
+                                    this%eta_volatilisation_nh3, &
+                                    "eta_volatilisation_nh3", proportional_parameter_changes, dependency_recalculation, &
+                                    eta_volatilisation_nh3)
+
+    CALL Set_quincy_parameter_value(this%k_weath_mineral / molar_mass_P / 1254._wp / one_year /one_day, &
+                                    this%k_weath_mineral, &
+                                    "k_weath_mineral", proportional_parameter_changes, dependency_recalculation, &
+                                    k_weath_mineral)
+    
+    CALL Set_quincy_parameter_value(this%eq_sorp_mineral_po4 / molar_mass_P, &
+                                    this%eq_sorp_mineral_po4, &
+                                    "eq_sorp_mineral_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    eq_sorp_mineral_po4)
+    
+    CALL Set_quincy_parameter_value(this%k_occlude_po4 / 1000000._wp / 30._wp / one_day, &
+                                    this%k_occlude_po4, &
+                                    "k_occlude_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    k_occlude_po4)
+
+    CALL Set_quincy_parameter_value(this%vmax_biochem_po4 / 40.0_wp / one_day, &
+                                    this%vmax_biochem_po4, &
+                                    "vmax_biochem_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    vmax_biochem_po4)
+    
+    CALL Set_quincy_parameter_value(this%km_mic_biochem_po4 / molar_mass_C, &
+                                    this%km_mic_biochem_po4, &
+                                    "km_mic_biochem_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    km_mic_biochem_po4)
+
+    CALL Set_quincy_parameter_value(this%km_dip_biochem_po4, &
+                                    this%km_dip_biochem_po4, &
+                                    "km_dip_biochem_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    km_dip_biochem_po4)
+    
+    CALL Set_quincy_parameter_value(this%km_rootc_biochem_po4, &
+                                    this%km_rootc_biochem_po4, &
+                                    "km_rootc_biochem_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    km_rootc_biochem_po4)
+    
+    CALL Set_quincy_parameter_value(this%km_rootc_weath_po4, &
+                                    this%km_rootc_weath_po4, &
+                                    "km_rootc_weath_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    km_rootc_weath_po4)
 
   END SUBROUTINE set_parameter_slm_values_with_list_values
 
