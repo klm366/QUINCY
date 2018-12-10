@@ -425,7 +425,7 @@ CONTAINS
         & t_cf('fract_lice', '', 'fraction of ice on lake'),                           &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'hflx_form_ice', mem%hflx_form_ice,                       &
         & hgrid, surface,                                                              &
