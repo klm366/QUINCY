@@ -20,7 +20,7 @@ MODULE mo_pheno_process
 
    PUBLIC :: calc_summergreen_phenology , calc_evergreen_phenology, calc_previous_day_NPP, &
              calc_crop_phenology, calc_raingreen_phenology, calc_grass_phenology, & !, get_letItDie, get_letItGrow, get_shedRate_RG
-             get_foliage_projected_cover, derive_maxLai_according_to_allometric_relationships, track_max_green_pool
+             get_foliage_projected_cover, derive_maxLai_according_to_allometric_relationships, track_max_green_pool, calc_jedi_phenology
 
    CHARACTER(len=*), PARAMETER :: modname = 'mo_pheno_process'
 
@@ -164,6 +164,48 @@ MODULE mo_pheno_process
 !
 ! theLand%Domain%lat(kidx0:kidx1)     <-> REAL(dp), INTENT(in) :: lat(:)                               <->           lat
                                           ! latitude of grid points(1:nidx)
+
+
+
+
+
+
+
+
+   !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+   ! A new phenology scheme for JeDi 
+   !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+
+  ELEMENTAL SUBROUTINE calc_jedi_phenology( TurnoverLeaf,    &  ! in
+                                             c_leaves,        &  ! in
+                                             lai              )  ! inout
+
+    REAL(wp), INTENT(IN)    ::  TurnoverLeaf       
+    REAL(wp), INTENT(IN)    ::  c_leaves
+                               
+    REAL(wp), INTENT(INOUT) ::   lai
+    
+    REAL(wp)                :: tau_leaves_0
+    REAL(wp)                :: sla
+    
+           
+
+       tau_leaves_0 = ( 365._wp / 12._wp ) * ( 10._wp ** (TurnoverLeaf * 2._wp) )                   
+                                
+       sla = ( 0.03_wp * ( 365._wp  / tau_leaves_0 ) ** ( 0.46_wp ) ) * 12.01_wp
+      ! sla = ( (288.4_wp * (30.4_wp ** (0.46_wp)) * ((365._wp)**(-0.46_wp))) * ( tau_leaves_0 / 365._wp ) ** ( -0.46_wp ) ) * 10000._wp / 12.01_wp  
+       
+       !lai = c_leaves * sla
+       lai=5._wp
+
+
+
+
+
+  END SUBROUTINE calc_jedi_phenology
+   !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+   
 
 
    ELEMENTAL SUBROUTINE calc_summergreen_phenology(day_of_year,            & ! <- in

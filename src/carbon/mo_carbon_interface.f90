@@ -27,7 +27,7 @@ MODULE mo_carbon_interface
   USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
-
+  
   ! Use of processes in this module (Get_carbon_memory and Get_carbon_config)
   dsl4jsb_Use_processes CARBON_, ASSIMI_, HYDRO_, PHENO_, RAD_, A2L_, DISTURB_
 
@@ -36,7 +36,8 @@ MODULE mo_carbon_interface
   dsl4jsb_Use_config(CARBON_)
   dsl4jsb_Use_config(DISTURB_)
   dsl4jsb_Use_config(PHENO_)
-
+  
+  
   ! Use of process memories (t_carbon_memory)
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(ASSIMI_)
@@ -44,6 +45,14 @@ MODULE mo_carbon_interface
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(CARBON_)
+
+  ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+  ! Use the ELEMENT FUNCTION from HYDRO for JeDi : get_water_stress_factor
+  ! 
+  dsl4jsb_Use_config(HYDRO_)
+  dsl4jsb_Use_memory(HYDRO_)
+  ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+  
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -118,9 +127,15 @@ CONTAINS
 
     ! Use declarations
     USE mo_jsb_grid,          ONLY: Get_grid
+    
     USE mo_carbon_process,    ONLY: calc_Cpools
+    USE mo_carbon_jedi_process, ONLY: calc_Ctradeoff,jedi_water_stress_factor
+    USE mo_jsb_physical_constants, ONLY : tmelt  
+    
     USE mo_jsb_time,          ONLY: is_newday, is_newyear, time_steps_per_day, is_time_experiment_start
     USE mo_carbon_constants,  ONLY: molarMassCO2_kg, sec_per_day, days_per_year
+    
+
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -137,6 +152,19 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc) :: MaxLai
     REAL(wp), DIMENSION(options%nc) :: old_c_state_sum, current_fluxes
     CHARACTER(len=*), PARAMETER  :: routine = modname//':update_C_NPP_pot_allocation'
+    ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+    ! Declare variavles for JeDi carbon allocation 
+    ! 
+    REAL(wp), parameter  :: c_CN_woody       = 0.00303_wp * (12.01_wp / 14.0067_wp)  ! molC/molN Ratio for Woody Tissue
+    REAL(wp), parameter  :: c_sapwood        = 0.05_wp
+    REAL(wp), parameter  :: c_Res_N          = 0.218_wp * ( 14.0067_wp / 12.01_wp )  !! specific respiration in molC/molN/d
+    REAL(wp), PARAMETER  :: Q10              = 1.8_wp          ! Empirical parameter for temperature dependence of
+                                                                !   heterotrophic respiration rate. This value is 
+                                                                !   taken from JB4.
+    
+    REAL(wp)                     :: P01,P02,P13,P15
+    ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
+    
 
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(ASSIMI_)
@@ -145,6 +173,12 @@ CONTAINS
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_config(CARBON_)
     dsl4jsb_Def_memory(CARBON_)
+    ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+    ! JeDi needs soil moisture from HYDRO process
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_config(HYDRO_)
+    ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+    
     !dsl4jsb_Def_config(A2L_)
     dsl4jsb_Def_memory(A2L_)
 
@@ -172,6 +206,39 @@ CONTAINS
                                                      ! allows plants to survive bad times[mol(C)/m^2(canopy)]
     dsl4jsb_Real2D_onChunk ::  c_woods           ! C-pool for stems, thick roots and other (dead) structural
                                                      !  material of living plants [mol(C)/m^2(canopy)]
+  
+    ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+    ! Variavles for JeDi carbon allocation 
+    !
+    dsl4jsb_Real2D_onChunk ::   c_storage               !     Storage carbon pool 
+    dsl4jsb_Real2D_onChunk ::   c_leaves                !      Leaves carbon pool             
+    dsl4jsb_Real2D_onChunk ::   c_fnroot                !   Fine root carbon pool
+    dsl4jsb_Real2D_onChunk ::   c_csroot                ! Coarse root carbon pool
+    dsl4jsb_Real2D_onChunk ::   c_seed                  !        Seed carbon pool
+    dsl4jsb_Real2D_onChunk ::   temp_c_seed                  !        Seed carbon pool
+    dsl4jsb_Real2D_onChunk ::   c_stem                  !        Stem carbon pool
+    dsl4jsb_Real2D_onChunk ::   ff_grow_Wsoil
+    dsl4jsb_Real2D_onChunk ::   ff_grow_T
+    dsl4jsb_Real2D_onChunk ::   ff_grow_G
+    dsl4jsb_Real2D_onChunk ::   ff_npp
+    dsl4jsb_Real2D_onChunk ::   flx_germ
+    dsl4jsb_Real2D_onChunk ::   Flg_die
+    dsl4jsb_Real2D_onChunk ::   MaintRes
+    dsl4jsb_Real2D_onChunk ::   MaintRes_sum
+    dsl4jsb_Real2D_onChunk ::   MaintRes_yDayMean
+    dsl4jsb_Real2D_onChunk ::   GrowthResp    
+    dsl4jsb_Real2D_onChunk ::   AutoRes
+    dsl4jsb_Real2D_onChunk ::   C_balan
+    dsl4jsb_Real2D_onChunk ::   C_delta
+    ! Taking relative soil moisture from the HYDRO process
+    dsl4jsb_Real2D_onChunk ::   w_soil_rel              
+    dsl4jsb_Real2D_onChunk ::   alpha_jedi
+    dsl4jsb_Real2D_onChunk ::   max_moist
+    dsl4jsb_Real2D_onChunk ::   w_soil_column
+    
+    ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
+    
+                                                        
     dsl4jsb_Real2D_onChunk ::  c_crop_harvest    ! C-pool for biomass harvested from crops [mol(C)/m^2(grid box)]
     dsl4jsb_Real2D_onChunk ::  c_litter_green_ag ! C-pool for above ground non-woody litter especially from leaves
                                                      !     [mol(C)/m^2(canopy)]
@@ -268,7 +335,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  cflux_npp_2_atm_ta       ! grid cell averages of net CO2 fluxes between
     dsl4jsb_Real2D_onChunk ::  cflux_soilresp_2_atm_ta  ! .. biosphere (due to NPP, soil respiration and
     dsl4jsb_Real2D_onChunk ::  cflux_herb_2_atm_ta ! .. grazing) and atmosphere [kg(CO2)/(m^2(ground) s)]
-
+    
+   
+    
 
     ! This is on tile area:
     dsl4jsb_Real2D_onChunk ::  soil_respiration_ta      ! out
@@ -313,6 +382,12 @@ CONTAINS
     dsl4jsb_Get_memory(CARBON_)
     dsl4jsb_Get_config(CARBON_)
     dsl4jsb_Get_memory(A2L_)
+    ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+    ! JeDi needs soil moisture from HYDRO process
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_config(HYDRO_)
+    ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+    
     !dsl4jsb_Get_config(A2L_)
 
     ! Set process variables
@@ -335,6 +410,37 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_green )               ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_reserve )             ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_woods )               ! inout
+    
+    ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+    ! Variavles for JeDi carbon allocation 
+    !
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   c_storage         )     !     Storage carbon pool 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   c_leaves          )     !      Leaves carbon pool             
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   c_fnroot          )     !   Fine root carbon pool
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   c_csroot          )     ! Coarse root carbon pool
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   c_seed            )     !        Seed carbon pool
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   temp_c_seed       )     !        Seed carbon pool
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   c_stem            )     !        Stem carbon pool
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_grow_Wsoil     )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_grow_T         )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_grow_G         )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_npp            )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   flx_germ          )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   Flg_die           )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   alpha_jedi        )
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_rel        ) 
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    max_moist         )
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_column     )
+    
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   MaintRes          )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   MaintRes_sum      )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   MaintRes_yDayMean )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   GrowthResp        )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   AutoRes           )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   C_balan           )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   C_delta           )
+    ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
+   
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_crop_harvest)         ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_litter_green_ag )     ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_litter_green_bg )     ! inout
@@ -406,7 +512,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,     t_air)                      ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,     rain)                       ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,     snow)                       ! in
-
+    
+    
     ! ---------------------------
     ! Go
 
@@ -461,7 +568,47 @@ CONTAINS
     pseudo_precip = precip_total * N_pseudo_precip  +  F_pseudo_precip * pseudo_precip
 
     lstart = is_time_experiment_start()
-
+    
+    
+    !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
+    ! TODO:  Growing condition for JeDi is computed here:
+    !   The growing condition flags are here because JeDi needs the memory from previous 
+    !    time steps. Christian suggests that instead of using the Euler method implementing in JeDi,
+    !   we can use the one implimented in JB4, such as pseudo temperature.
+    !   Therefore, it needs revision.   
+    !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!     
+    
+    
+    alpha_jedi(:) = jedi_water_stress_factor( w_soil_column(:), &
+                 &                                 max_moist(:), &             
+                 &       dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract)
+    
+      
+    P01 = dsl4jsb_Lctlib_param(GrowRspdMoist)
+    P02 = dsl4jsb_Lctlib_param(GrowRspdTemp)
+    P13 = dsl4jsb_Lctlib_param(SenesRspdNPP)
+    P15 = dsl4jsb_Lctlib_param(NitroStatus)  
+    
+    P01 = 10._wp ** ( 4.0_wp * P01 - 2.0_wp )
+    P02 = 10._wp ** ( 4.0_wp * P02 - 2.0_wp )
+    P13 = 10._wp ** ( 5.0_wp * P13 - 2.0_wp )
+    P15 = (0.9_wp * P15 + 0.1_wp) * 8.578_wp * 0.01_wp ! [NL] canopy nitrogen concentration follows Ollinger (2008) (Pavlick thesis P.89)
+                                                                  !  this number is converted to from gN/gC to molN / molC
+                                                                  
+    ff_grow_T     = ( ( t_air - tmelt ) + P01 * ff_grow_T ) / ( 1._wp + P01 )
+    ff_grow_G     = (  alpha_jedi  + P01 * ff_grow_G      ) / ( 1._wp + P01 ) ! Need to modify this to base soil wetness???? See P.80 Pavlick
+    ff_grow_Wsoil = (  alpha_jedi  + P02 * ff_grow_Wsoil  ) / ( 1._wp + P02 ) 
+    
+    ff_npp        = ( NPP_act_yDayMean  + P13 * ff_npp         ) / ( 1._wp + P13 )
+    MaintRes = 0._wp
+    MaintRes = c_sapwood * c_CN_woody * ( c_stem + c_csroot ) + P15 * ( c_leaves + c_fnroot ) 
+    MaintRes = MaintRes  * c_Res_N    * ( Q10 ** ( ( t_air - tmelt - 20._wp ) / 10._wp) ) 
+    
+    MaintRes = MaintRes / sec_per_day ! The maintanence respiration is computed in a daily manner in JeDi.
+                                      !    therefore, we have to change the unit into molC m^-2 s^-1
+    
+    !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!     
+    
     IF( .NOT. is_newday() .OR. lstart) THEN ! perform daily sums if WE ARE NOT STARTING A NEW DAY
                                             ! or if we JUST STARTED AN TOTALLY NEW EXPERIMENT
 
@@ -470,7 +617,13 @@ CONTAINS
       GPP_sum          = GPP_sum          + gross_assimilation_ca
       topSoilTemp_sum  = topSoilTemp_sum  + topSoilTemp ! 2d
       alpha_sum        = alpha_sum        + alpha
-
+      !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!     
+      ! Compute Maintenance respration for JeDi. This is computed outside clac_tradeoff to account for 
+      !   the average of previous-day value.
+      MaintRes_sum     = MaintRes_sum + MaintRes
+      !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!     
+      
+ 
     ELSE                                    ! A NEW DAY BEGINS and we DID NOT START AN
                                             ! TOTALLY NEW EXPERIMENT ==> perform carbon balance
 
@@ -491,6 +644,15 @@ CONTAINS
       alpha_sum           = alpha
       !NPP_pot_rate_ca_acc        = NPP_pot_rate_ca/time_steps_per_day() ! s.o.
 
+      !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!     
+      ! Compute Maintenance respration for JeDi. 
+      MaintRes_yDayMean   = MaintRes_sum / time_steps_per_day() 
+      MaintRes_sum        = MaintRes  ! This reset the value of MainRes_sum for the next day
+      !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!     
+      
+
+
+
       ! Save other variables (for yasso) as "previous days"
       pseudo_temp_yDay   = pseudo_temp
       pseudo_precip_yDay = pseudo_precip
@@ -508,7 +670,111 @@ CONTAINS
       CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum(:))
 
       ! Now update the C pools
-      CALL calc_Cpools( &
+      IF (TRIM(model%config%usecase) .eq. 'jsbach_jedi' ) THEN
+      
+        CALL calc_Ctradeoff( &
+        & LAI_yDayMean,                                & ! in
+        & LAI_yyDayMean,                               & ! in
+        & GPP_yDayMean,                                & ! in
+        & NPP_pot_yDayMean,                            & ! in
+        & topSoilTemp_yDayMean,                        & ! in
+        & alpha_yDayMean,                              & ! in
+        & dsl4jsb_Lctlib_param(LAI_shed_constant),     & ! in
+        & dsl4jsb_Lctlib_param(specificLeafArea_C),    & ! in
+        & dsl4jsb_Lctlib_param(PhenologyType),         & ! in
+        ! JeDi plant trait parameter comes in now <<<<<<<<<<<
+        & dsl4jsb_Lctlib_param(GrowRspdMoist),         & ! in
+        & dsl4jsb_Lctlib_param(GrowRspdTemp ),         & ! in
+        & dsl4jsb_Lctlib_param(CritiGrowTemp),         & ! in
+        & dsl4jsb_Lctlib_param(GermFrac     ),         & ! in
+        & dsl4jsb_Lctlib_param(Allo2Reproduc),         & ! in
+        & dsl4jsb_Lctlib_param(Allo2Abground),         & ! in
+        & dsl4jsb_Lctlib_param(Allo2Blground),         & ! in
+        & dsl4jsb_Lctlib_param(Allo2Storage ),         & ! in
+        & dsl4jsb_Lctlib_param(RelAllo2Abgrd),         & ! in
+        & dsl4jsb_Lctlib_param(RelAllo2Blgrd),         & ! in
+        & dsl4jsb_Lctlib_param(TurnoverStruc),         & ! in
+        & dsl4jsb_Lctlib_param(TurnoverLeaf ),         & ! in
+        & dsl4jsb_Lctlib_param(SenesRspdNPP ),         & ! in
+        & dsl4jsb_Lctlib_param(RelSenesAbgd ),         & ! in
+        & dsl4jsb_Lctlib_param(NitroStatus  ),         & ! in
+        ! JeDi plant trait parameter comes in now >>>>>>>>>>>
+        & time_steps_per_day(),                        & ! in
+        & dtime,                                       & ! in
+        & t_air,                                       & ! in
+  !  
+        & c_storage,                                   & ! inout
+        & c_leaves,                                    & ! inout
+        & c_fnroot,                                    & ! inout
+        & c_csroot,                                    & ! inout
+        & c_seed,                                      & ! inout
+        & temp_c_seed,                                 & ! inout
+        & c_stem,                                      & ! inout
+        & ff_grow_Wsoil,                               & ! inout
+        & ff_grow_T,                                   & ! inout
+        & ff_grow_G,                                   & ! inout
+        & ff_npp,                                      & ! inout
+        & Flg_die,                                     & ! inout
+        & flx_germ,                                    & ! out
+        & MaintRes_yDayMean,                           & ! in
+        & GrowthResp,                                  & ! out
+        & AutoRes,                                     & ! out
+        & C_balan,                                     & ! out
+        & C_delta,                                     & ! out
+  !  
+        & c_litter_green_ag,                           & ! inout
+        & c_litter_green_bg,                           & ! inout
+        & c_litter_wood_ag,                            & ! inout
+        & c_litter_wood_bg,                            & ! inout
+ !
+        & soil_respiration,                            & ! out
+ !
+        & cflux_c_greenwood_2_litter,                  & ! out
+ !
+        & NPP_act_yDayMean,                            & ! out
+ !
+    ! Yasso variables
+        &  temp2_30d        =  pseudo_temp_yDay,                      & ! in, optional, necessary with yasso
+        &  precip_30d       =  pseudo_precip_yDay,                    & ! in, optional, necessary with yasso
+                             !
+        &  c_acid_ag1       =  c_acid_ag1,                            & ! inout, optional, necessary with yasso
+        &  c_water_ag1      =  c_water_ag1,                           & ! inout, optional, necessary with yasso
+        &  c_ethanol_ag1    =  c_ethanol_ag1,                         & ! inout, optional, necessary with yasso
+        &  c_nonsoluble_ag1 =  c_nonsoluble_ag1,                      & ! inout, optional, necessary with yasso
+        &  c_acid_bg1       =  c_acid_bg1,                            & ! inout, optional, necessary with yasso
+        &  c_water_bg1      =  c_water_bg1,                           & ! inout, optional, necessary with yasso
+        &  c_ethanol_bg1    =  c_ethanol_bg1,                         & ! inout, optional, necessary with yasso
+        &  c_nonsoluble_bg1 =  c_nonsoluble_bg1,                      & ! inout, optional, necessary with yasso
+        &  c_humus_1        =  c_humus_1,                             & ! inout, optional, necessary with yasso
+        &  c_acid_ag2       =  c_acid_ag2,                            & ! inout, optional, necessary with yasso
+        &  c_water_ag2      =  c_water_ag2,                           & ! inout, optional, necessary with yasso
+        &  c_ethanol_ag2    =  c_ethanol_ag2,                         & ! inout, optional, necessary with yasso
+        &  c_nonsoluble_ag2 =  c_nonsoluble_ag2,                      & ! inout, optional, necessary with yasso
+        &  c_acid_bg2       =  c_acid_bg2,                            & ! inout, optional, necessary with yasso
+        &  c_water_bg2      =  c_water_bg2,                           & ! inout, optional, necessary with yasso
+        &  c_ethanol_bg2    =  c_ethanol_bg2,                         & ! inout, optional, necessary with yasso
+        &  c_nonsoluble_bg2 =  c_nonsoluble_bg2,                      & ! inout, optional, necessary with yasso
+        &  c_humus_2        =  c_humus_2,                             & ! inout, optional, necessary with yasso
+                              !
+        &  LeafLit_coef1    =  dsl4jsb_Lctlib_param(LeafLit_coef(1)), & ! in, optional, necessary with yasso
+        &  LeafLit_coef2    =  dsl4jsb_Lctlib_param(LeafLit_coef(2)), & ! in, optional, necessary with yasso
+        &  LeafLit_coef3    =  dsl4jsb_Lctlib_param(LeafLit_coef(3)), & ! in, optional, necessary with yasso
+        &  LeafLit_coef4    =  dsl4jsb_Lctlib_param(LeafLit_coef(4)), & ! in, optional, necessary with yasso
+        &  LeafLit_coef5    =  dsl4jsb_Lctlib_param(LeafLit_coef(5)), & ! in, optional, necessary with yasso
+        &  WoodLit_coef1    =  dsl4jsb_Lctlib_param(WoodLit_coef(1)), & ! in, optional, necessary with yasso
+        &  WoodLit_coef2    =  dsl4jsb_Lctlib_param(WoodLit_coef(2)), & ! in, optional, necessary with yasso
+        &  WoodLit_coef3    =  dsl4jsb_Lctlib_param(WoodLit_coef(3)), & ! in, optional, necessary with yasso
+        &  WoodLit_coef4    =  dsl4jsb_Lctlib_param(WoodLit_coef(4)), & ! in, optional, necessary with yasso
+        &  WoodLit_coef5    =  dsl4jsb_Lctlib_param(WoodLit_coef(5)), & ! in, optional, necessary with yasso
+        &  WoodLitterSize   =  dsl4jsb_Lctlib_param(WoodLitterSize)   & ! in, optional, necessary with yasso
+        & )
+      
+    !    print*, "c_acid_ag1= ",c_acid_ag1,"c_acid_bg1",c_acid_bg1,"c_acid_ag2",c_acid_ag2,"c_acid_bg2",c_acid_bg2
+      
+      
+      ELSE
+      
+        CALL calc_Cpools( &
         &  LAI_yDayMean,                                      & ! in
         &  LAI_yyDayMean,                                     & ! in
         &  MaxLai,                                            & ! in
@@ -591,7 +857,7 @@ CONTAINS
         &  WoodLit_coef5    =  dsl4jsb_Lctlib_param(WoodLit_coef(5)), & ! in, optional, necessary with yasso
         &  WoodLitterSize   =  dsl4jsb_Lctlib_param(WoodLitterSize)   & ! in, optional, necessary with yasso
         & )
-
+      END IF
       ! R: In JSBACH3 wurden alle C-pools auf canopy Fläche gezogen gerechnet. Ebenso die C Fluxe.
       !    Für den Output wurden alle Variablen auch in grid box umgerechnet und entsprechend doppelt angelegt.
       !    Besser wäre für JSBACH4 eigentlich auf Tile Fläche bezogen zu rechnen um alle variablen von JS4
@@ -617,6 +883,11 @@ CONTAINS
       CALL calculate_current_c_ag_1_and_bg_sums(tile, options)
       CALL recalc_per_tile_vars(tile, options,                                      &
         & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:),      &
+        ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+        ! Variavles for JeDi carbon allocation 
+        & c_leaves = c_leaves(:) , c_storage = c_storage(:) , c_fnroot = c_fnroot(:) , &
+        & c_csroot = c_csroot(:) , c_stem = c_stem(:)       , c_seed = c_seed(:)     , &
+        ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
         & c_crop_harvest = c_crop_harvest(:),                                       &
         & c_acid_ag1 = c_acid_ag1(:), c_water_ag1 = c_water_ag1(:),                 &
         & c_ethanol_ag1 = c_ethanol_ag1(:), c_nonsoluble_ag1 = c_nonsoluble_ag1(:), &
@@ -718,6 +989,19 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_green_bg_ta,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_wood_ag_ta,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_wood_bg_ta,   weighted_by_fract)
+    
+    ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+    ! Variavles for JeDi carbon allocation 
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_leaves_ta,            weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_stem_ta,              weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_seed_ta,              weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_storage_ta,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_fnroot_ta,            weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_csroot_ta,            weighted_by_fract)
+    ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+    
+    ! Variavles for JeDi carbon allocation 
+    
     !CBAL dsl4jsb_Aggregate_onChunk(CARBON_, c_slow_ta,        weighted_by_fract)
     ! ag1 and bg1
     dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_ag1_ta,         weighted_by_fract)
@@ -741,6 +1025,13 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, c_humus_2_ta,          weighted_by_fract)
     ! sums
     dsl4jsb_Aggregate_onChunk(CARBON_, C_sum_natural_ta,      weighted_by_fract)
+    ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+    ! Variavles which are interested to JeDi
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_ag_sum_1,            weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_bg_sum,              weighted_by_fract)
+    
+    ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+    
 !    dsl4jsb_Aggregate_onChunk(CARBON_, NPP_pot_sum_ta,        weighted_by_fract)
 !    dsl4jsb_Aggregate_onChunk(CARBON_, GPP_sum_ta,            weighted_by_fract)
     ! fluxes
@@ -802,7 +1093,18 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  c_reserve
     dsl4jsb_Real2D_onChunk ::  c_woods
     dsl4jsb_Real2D_onChunk ::  c_crop_harvest
-
+    
+    ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+    ! Variavles for JeDi carbon allocation 
+    !
+    dsl4jsb_Real2D_onChunk ::  c_storage        
+    dsl4jsb_Real2D_onChunk ::  c_leaves             
+    dsl4jsb_Real2D_onChunk ::  c_fnroot          
+    dsl4jsb_Real2D_onChunk ::  c_csroot       
+    dsl4jsb_Real2D_onChunk ::  c_seed          
+    dsl4jsb_Real2D_onChunk ::  c_stem        
+    ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
+    
     dsl4jsb_Real2D_onChunk ::  c_acid_ag1
     dsl4jsb_Real2D_onChunk ::  c_water_ag1
     dsl4jsb_Real2D_onChunk ::  c_ethanol_ag1
@@ -844,6 +1146,18 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_green )               ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_reserve )             ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_woods )               ! inout
+    
+     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+      ! Variavles for JeDi carbon allocation 
+     
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_leaves  )             ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_storage )             ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_stem    )             ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_fnroot  )             ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_csroot  )             ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_seed    )             ! inout
+     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+    
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_crop_harvest)         ! inout
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_ag1)            ! inout
@@ -869,6 +1183,19 @@ CONTAINS
     c_green           = c_green           * (oldRefArea / newRefArea)
     c_woods           = c_woods           * (oldRefArea / newRefArea)
     c_reserve         = c_reserve         * (oldRefArea / newRefArea)
+
+    ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+    ! Variavles for JeDi carbon allocation 
+         
+    c_leaves          = c_leaves          * (oldRefArea / newRefArea)
+    c_seed            = c_seed            * (oldRefArea / newRefArea)
+    c_stem            = c_stem            * (oldRefArea / newRefArea)
+    c_storage         = c_storage         * (oldRefArea / newRefArea)
+    c_fnroot          = c_fnroot          * (oldRefArea / newRefArea)
+    c_csroot          = c_csroot          * (oldRefArea / newRefArea)
+    
+    ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+     
     c_crop_harvest    = c_crop_harvest    * (oldRefArea / newRefArea)
 
     c_acid_ag1       = c_acid_ag1       * (oldRefArea / newRefArea)
@@ -893,6 +1220,11 @@ CONTAINS
     CALL calculate_current_c_ag_1_and_bg_sums(tile, options)
     CALL recalc_per_tile_vars(tile, options, &
       & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:), &
+      ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+      ! Variavles for JeDi carbon allocation 
+      & c_leaves = c_leaves(:) , c_storage = c_storage(:) , c_fnroot = c_fnroot(:) , &
+      & c_csroot = c_csroot(:) , c_stem = c_stem(:)       , c_seed = c_seed(:)     , &
+      ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
       & c_crop_harvest = c_crop_harvest(:), &
       & c_acid_ag1 = c_acid_ag1(:), c_water_ag1 = c_water_ag1(:), &
       & c_ethanol_ag1 = c_ethanol_ag1(:), c_nonsoluble_ag1 = c_nonsoluble_ag1(:), &
@@ -918,6 +1250,10 @@ CONTAINS
   !
   SUBROUTINE recalc_per_tile_vars(tile, options,                  &
       & c_green , c_woods, c_reserve, c_crop_harvest,             &
+      ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+      ! Variavles for JeDi carbon allocation 
+      & c_leaves , c_storage , c_fnroot , c_csroot , c_stem , c_seed , &
+      ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
       & c_acid_ag1, c_water_ag1, c_ethanol_ag1, c_nonsoluble_ag1, &
       & c_acid_bg1, c_water_bg1, c_ethanol_bg1, c_nonsoluble_bg1, &
       & c_acid_ag2, c_water_ag2, c_ethanol_ag2, c_nonsoluble_ag2, &
@@ -938,6 +1274,17 @@ CONTAINS
     REAL(wp),                   INTENT(in), OPTIONAL  :: c_woods(:)
     REAL(wp),                   INTENT(in), OPTIONAL  :: c_reserve(:)
     REAL(wp),                   INTENT(in), OPTIONAL  :: c_crop_harvest(:)
+! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+    ! Variavles for JeDi carbon allocation 
+    
+    REAL(wp),                   INTENT(in), OPTIONAL  :: c_leaves(:)
+    REAL(wp),                   INTENT(in), OPTIONAL  :: c_stem(:)
+    REAL(wp),                   INTENT(in), OPTIONAL  :: c_fnroot(:)
+    REAL(wp),                   INTENT(in), OPTIONAL  :: c_csroot(:)
+    REAL(wp),                   INTENT(in), OPTIONAL  :: c_seed(:)
+    REAL(wp),                   INTENT(in), OPTIONAL  :: c_storage(:)
+    
+! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
 
     REAL(wp),                   INTENT(in), OPTIONAL  :: c_acid_ag1(:)
     REAL(wp),                   INTENT(in), OPTIONAL  :: c_water_ag1(:)
@@ -984,6 +1331,18 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  c_reserve_ta
     dsl4jsb_Real2D_onChunk ::  c_woods_ta
     dsl4jsb_Real2D_onChunk ::  c_crop_harvest_ta
+
+! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+    ! Variavles for JeDi carbon allocation 
+    
+    dsl4jsb_Real2D_onChunk ::     c_storage_ta
+    dsl4jsb_Real2D_onChunk ::     c_seed_ta
+    dsl4jsb_Real2D_onChunk ::     c_stem_ta
+    dsl4jsb_Real2D_onChunk ::     c_leaves_ta
+    dsl4jsb_Real2D_onChunk ::     c_fnroot_ta
+    dsl4jsb_Real2D_onChunk ::     c_csroot_ta        
+                  
+! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
 
     dsl4jsb_Real2D_onChunk ::  c_acid_ag1_ta
     dsl4jsb_Real2D_onChunk ::  c_water_ag1_ta
@@ -1034,6 +1393,19 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_woods_ta )               ! opt out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_crop_harvest_ta)         ! opt out
 
+! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+    ! Variavles for JeDi carbon allocation 
+    
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_leaves_ta  )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_fnroot_ta  )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_csroot_ta  )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_stem_ta    )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_storage_ta )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_seed_ta    )
+    
+! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+
+
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_ag1_ta)            ! opt out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag1_ta)           ! opt out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_ag1_ta)         ! opt out
@@ -1074,6 +1446,19 @@ CONTAINS
     IF (PRESENT(c_green)) CALL get_per_tile(c_green_ta(:), c_green(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(c_woods)) CALL get_per_tile(c_woods_ta(:), c_woods(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(c_reserve)) CALL get_per_tile(c_reserve_ta(:), c_reserve(:), veg_fract_correction(:), fract_fpc_max(:))
+
+! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+    ! Variavles for JeDi carbon allocation 
+    
+    IF (PRESENT(c_leaves) )  CALL get_per_tile(c_leaves_ta(:) , c_leaves(:) , veg_fract_correction(:), fract_fpc_max(:))    
+    IF (PRESENT(c_stem)   )  CALL get_per_tile(c_stem_ta(:)   , c_stem(:)   , veg_fract_correction(:), fract_fpc_max(:))    
+    IF (PRESENT(c_fnroot) )  CALL get_per_tile(c_fnroot_ta(:) , c_fnroot(:) , veg_fract_correction(:), fract_fpc_max(:))    
+    IF (PRESENT(c_csroot) )  CALL get_per_tile(c_csroot_ta(:) , c_csroot(:) , veg_fract_correction(:), fract_fpc_max(:))
+    IF (PRESENT(c_seed)   )  CALL get_per_tile(c_seed_ta(:)   , c_seed(:)   , veg_fract_correction(:), fract_fpc_max(:))   
+    IF (PRESENT(c_storage))  CALL get_per_tile(c_storage_ta(:), c_storage(:), veg_fract_correction(:), fract_fpc_max(:))
+    
+! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+
 
     IF (PRESENT(c_crop_harvest)) CALL get_per_tile(c_crop_harvest_ta(:), &
       & c_crop_harvest(:), veg_fract_correction(:), fract_fpc_max(:))
@@ -1169,6 +1554,16 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  c_woods_ta
     dsl4jsb_Real2D_onChunk ::  c_crop_harvest_ta
 
+!! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+!    ! Variavles for JeDi carbon allocation 
+!    dsl4jsb_Real2D_onChunk ::     c_storage_ta
+!    dsl4jsb_Real2D_onChunk ::     c_seed_ta
+!    dsl4jsb_Real2D_onChunk ::     c_stem_ta
+!    dsl4jsb_Real2D_onChunk ::     c_leaves_ta
+!    dsl4jsb_Real2D_onChunk ::     c_fnroot_ta
+!    dsl4jsb_Real2D_onChunk ::     c_csroot_ta                      
+!! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+
     dsl4jsb_Real2D_onChunk ::  c_acid_ag1_ta
     dsl4jsb_Real2D_onChunk ::  c_water_ag1_ta
     dsl4jsb_Real2D_onChunk ::  c_ethanol_ag1_ta
@@ -1199,6 +1594,16 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_reserve_ta )             ! in
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_woods_ta )               ! in
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_crop_harvest_ta)         ! in
+    
+!! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+!    ! Variavles for JeDi carbon allocation 
+!    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_leaves_ta  )
+!    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_fnroot_ta  )
+!    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_csroot_ta  )
+!    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_stem_ta    )
+!    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_storage_ta )
+!    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_seed_ta    )
+!! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_ag1_ta)            ! in
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag1_ta)           ! in
@@ -1226,6 +1631,14 @@ CONTAINS
         & c_acid_bg1_ta + c_water_bg1_ta + c_ethanol_bg1_ta + c_nonsoluble_bg1_ta + &
         & c_acid_bg2_ta + c_water_bg2_ta + c_ethanol_bg2_ta + c_nonsoluble_bg2_ta + &
         & c_humus_1_ta  + c_humus_2_ta
+        
+   ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+    ! PHS: need to have carbon check for Jedi!
+    
+   ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+   
+     
+        
 
   END SUBROUTINE calculate_current_c_ta_state_sum
 

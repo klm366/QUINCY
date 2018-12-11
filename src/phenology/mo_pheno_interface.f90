@@ -165,6 +165,12 @@ CONTAINS
         CALL update_phenology_logrop(tile, options)
       CASE ('climatology')
         CALL update_phenology_climatology(tile, options)
+   !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+   ! A new phenology scheme is added for JeDi 
+   !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+      CASE ('jedi_phenology')
+        CALL update_phenology_jedi_phenology(tile,options)
+   !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       CASE DEFAULT
         CALL finish('Invalid scheme for phenology')
       END SELECT
@@ -646,6 +652,66 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_phenology_climatology
+
+
+   !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+   ! A new phenology scheme for JeDi 
+   !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+  
+  SUBROUTINE update_phenology_jedi_phenology(tile,options)
+  
+     USE mo_pheno_process,        ONLY: calc_jedi_phenology
+    
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_model), POINTER             :: model
+    INTEGER                                :: iblk, ics, ice, nc
+   ! REAL(wp)                               :: dtime
+  
+    dsl4jsb_Def_memory(PHENO_)
+    dsl4jsb_Def_memory(CARBON_)
+    
+    dsl4jsb_Real2D_onChunk :: lai
+    dsl4jsb_Real2D_onChunk :: c_leaves
+    
+    
+    
+    
+    CHARACTER(len=*), PARAMETER  :: routine = modname//':update_phenology_jedi'
+    ! Set local variables from options argument
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+   ! dtime   = options%dtime
+    
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    ! Set model
+    model => Get_model(tile%owner_model_id)
+
+
+
+
+
+    dsl4jsb_Get_memory(PHENO_)
+    dsl4jsb_Get_memory(CARBON_)
+
+
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    lai)                    ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   c_leaves)
+    
+    CALL calc_jedi_phenology(  &
+                               &  dsl4jsb_Lctlib_param(TurnoverLeaf),  &  ! in
+                               &  c_leaves,                             &  ! in
+                               &  lai                                   )  ! inout
+   write(*,*) 'c_leaves= ',c_leaves,'Tau_leaves= ',( 365._wp / 12._wp ) * ( 10._wp ** (dsl4jsb_Lctlib_param(TurnoverLeaf) * 2._wp) ) ,'lai= ',lai
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE update_phenology_jedi_phenology
+  !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
 
   ! -------------------------------------------------------------------------------------------------------
   !>

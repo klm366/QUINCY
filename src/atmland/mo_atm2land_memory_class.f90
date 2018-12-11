@@ -104,7 +104,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
-      & output_level=BASIC, &
+      & output_level=BASIC,loutput=.TRUE., &
       & initval_r=283.15_wp )  ! R: I just invented a value to start with...
 
     CALL jsb_add_var( mem, 'q_air', mem%q_air,                                            &
@@ -113,7 +113,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
       & lrestart=.FALSE.,                                                                 &
-      & output_level=BASIC, &
+      & output_level=BASIC,loutput=.TRUE., &
       & initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'rain', mem%rain,                        &
@@ -122,7 +122,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
-      & output_level=BASIC, &
+      & output_level=BASIC, loutput=.TRUE.,&
       & initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'snow', mem%snow,                        &

@@ -388,7 +388,7 @@ CONTAINS
       & t_cf('tile_fraction', '',                                                                          &
       &      'fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
-      & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                     &
+      & prefix, suffix,loutput=.TRUE., lrestart=.NOT. l_fixed_fractions,                                                     &
       & initval_r=0.0_wp, isteptype=isteptype)
     CALL this%Set_fract_ptr(tmp_fract)
 

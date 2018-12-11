@@ -143,7 +143,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & output_level=BASIC, &
-        & initval_r=280.0_wp )
+        & loutput=.TRUE.,initval_r=280.0_wp )
 
       CALL jsb_add_var( mem, 't_old', mem%t_old,                                       &
         & hgrid, surface,                                                              &
@@ -299,7 +299,7 @@ CONTAINS
         & t_cf('day_temp_sum', '', ''),                                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp )
+        & loutput=.FALSE., lrestart=.TRUE., initval_r=0._wp )
 
       CALL jsb_add_var( mem,'day_temp_min', mem%day_temp_min,                    &
         & hgrid, surface,                                                        &

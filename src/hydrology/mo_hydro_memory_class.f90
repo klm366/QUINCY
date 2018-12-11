@@ -235,7 +235,7 @@ CONTAINS
       & prefix, suffix,                                                                      &
       & lrestart=.TRUE.,                                                                     &
       & output_level=BASIC,                                                                  &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      & loutput=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       ! Potential evapotranspiration/sublimation
     CALL jsb_add_var( mem, 'evapopot', mem%evapopot,                                               &
@@ -385,7 +385,7 @@ CONTAINS
         & prefix, suffix,                                                                                         &
         & lrestart=.FALSE.,                                                                                       &
         & output_level=BASIC, &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & loutput=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL jsb_add_var( mem, 'q_snocpymlt', mem%q_snocpymlt,                     &
         & hgrid, surface,                                                        &
@@ -683,7 +683,7 @@ CONTAINS
           &  hgrid, surface,                                                          &
           &  t_cf('water_soil_relative', '', ''),                                     &
           &  t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
-          & prefix, suffix,                                                           &
+          & prefix, suffix,loutput=.TRUE.,                                            &
           & initval_r=0.0_wp )
 
     END IF
@@ -729,7 +729,7 @@ CONTAINS
         & t_cf('Water content in root zone of the soil', 'm water equivalent', ''),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
         & prefix, suffix,                                                            &
-        & lrestart=.FALSE.,                                                          &
+        & lrestart=.FALSE., loutput=.TRUE.  ,                                     &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL jsb_add_var( mem, 'w_soil_root_fc', mem%w_soil_root_fc,                                    &
@@ -737,7 +737,7 @@ CONTAINS
         & t_cf('Water content at field capacity in root zone of the soil', 'm water equivalent', ''), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                          &
         & prefix, suffix,                                                                             &
-        & lrestart=.FALSE.,                                                                           &
+        & lrestart=.FALSE.,   loutput=.TRUE.,                                                      &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL jsb_add_var( mem, 'w_soil_root_pwp', mem%w_soil_root_pwp,                                           &
@@ -745,7 +745,7 @@ CONTAINS
         & t_cf('Water content at permanent wilting point in root zone of the soil', 'm water equivalent', ''), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                   &
         & prefix, suffix,                                                                                      &
-        & lrestart=.FALSE.,                                                                                    &
+        & lrestart=.FALSE., loutput=.TRUE.,                                                                  &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL jsb_add_var( mem, 'water_stress', mem%water_stress,                &

@@ -52,6 +52,9 @@ CONTAINS
     CASE ('jsbach_pfts')
       CALL init_usecase_pfts(model)
 
+    CASE ('jsbach_jedi')           !PHS added
+      CALL init_usecase_jedi(model)  !PHS added
+      
     CASE DEFAULT
       CALL finish(TRIM(routine), 'JSBACH usecase not defined.')
 
@@ -118,28 +121,28 @@ CONTAINS
 
     INTEGER :: i
 
-    INTEGER, PARAMETER :: npft = 11
+    INTEGER, PARAMETER :: npft = 4
 
     CHARACTER(len=5), PARAMETER :: pft_shortnames(npft) = [character(len=5) ::  &
-      & 'pft01', 'pft02', 'pft03', 'pft04', 'pft05', 'pft06', &
-      & 'pft07', 'pft08', 'pft09', 'pft10', 'pft11' ]
+      & 'pft01', 'pft02', 'pft03', 'pft04']!, 'pft05', 'pft06', &
+      !& 'pft07', 'pft08', 'pft09', 'pft10', 'pft11' ]
 
     CHARACTER(len=30), PARAMETER :: pft_longnames(npft) = [character(len=30) :: &
       & 'Tropical broadleaf evergreen', &
       & 'Tropical broadleaf deciduous', &
       & 'Extra-tropical evergreen',     &
-      & 'Extra-tropical deciduous',     &
-      & 'Raingreen shrubs',             &
-      & 'Deciduous shrubs',             &
-      & 'C3 grass',                     &
-      & 'C4 grass',                     &
-      & 'C3 pasture',                   &
-      & 'C4 pasture',                   &
-      & 'C3 crops'                    ]
+      & 'Extra-tropical deciduous'     ]!&
+!      & 'Raingreen shrubs',             &
+ !     & 'Deciduous shrubs',             &
+ !     & 'C3 grass',                     &
+ !     & 'C4 grass',                     &
+ !     & 'C3 pasture',                   &
+ !     & 'C4 pasture',                   &
+ !     & 'C3 crops'                    ]
 
     ! Index of PFT into lctlib columns
     ! id is one less than in lctlib file because the first column (glacier) has been thrown away
-    INTEGER, PARAMETER :: pft_ids(npft) = (/ 1,2,3,4,9,10,11,12,14,15,19 /)
+    INTEGER, PARAMETER :: pft_ids(npft) = (/ 1,2,3,4/) !,9,10,11,12,14,15,19 /)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_usecase_pfts'
 
@@ -234,6 +237,113 @@ CONTAINS
     NULLIFY(pft_tile)
 
   END SUBROUTINE init_usecase_pfts
+
+  SUBROUTINE init_usecase_jedi(model)
+
+    TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
+
+    CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, veg_tile, pft_tile
+
+    INTEGER :: i
+
+    INTEGER, PARAMETER :: npft = 4  ! R: For the implementation of JEDI we use only one PFT/PGS
+
+    CHARACTER(len=5), PARAMETER :: pft_shortnames(npft) = [character(len=5) ::  &
+      & 'pft01', 'pft02', 'pft03', 'pft04']!, 'pft05', 'pft06',                   &
+      !& 'pft07', 'pft08', 'pft09', 'pft10', 'pft11' ]
+
+    CHARACTER(len=30), PARAMETER :: pft_longnames(npft) = [character(len=30) :: &
+      & 'Plant Growth Strategy 01',                                             &
+      & 'Plant Growth Strategy 02',                                             &
+      & 'Plant Growth Strategy 03',                                             &
+      & 'Plant Growth Strategy 04' ]
+!      & 'Plant Growth Strategy 04',                                             &
+!      & 'Plant Growth Strategy 05',                                             &
+!      & 'Plant Growth Strategy 06',                                             &
+!      & 'Plant Growth Strategy 07',                                             &
+!      & 'Plant Growth Strategy 08',                                             &
+!      & 'Plant Growth Strategy 09',                                             &
+!      & 'Plant Growth Strategy 10',                                             &
+!      & 'Plant Growth Strategy 11'   ]
+
+    ! Index of PFT into lctlib columns
+    ! id is one less than in lctlib file because the first column (glacier) has been thrown away
+!    INTEGER, PARAMETER :: pft_ids(npft) = (/ 1,2,3,4,9,10,11,12,14,15,19 /)
+    INTEGER, PARAMETER :: pft_ids(npft) = (/ 1,2,3,4/)
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':init_usecase_pfts'
+
+
+    ! Create root of the tile structure representing the whole grid box
+    box_tile => t_jsb_tile('box', 'Top tile', &
+      & processes      =(/A2L_,     L2A_,     RAD_  ,    TURB_    /), &
+      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
+      & model_id=model%id, grid_id=model%grid_id, fract_varname='notsea')
+    model%top => box_tile
+
+#ifndef __NO_JSBACH_HD__
+    IF (model%processes(HD_)%p%config%active) THEN
+      CALL box_tile%Set_process_action(HD_, ON_TILE_)
+    END IF
+#endif
+
+      IF (model%config%use_lakes) THEN
+        lake_tile => t_jsb_tile('lake', 'Lake tile', &
+          & processes=(/SEB_, HYDRO_/), process_actions=(/ON_TILE_, ON_TILE_/), &
+          & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile)
+        land_tile => t_jsb_tile('land', 'Land tile', &
+          & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
+          & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
+      ELSE
+        land_tile => t_jsb_tile('land', 'Land tile', &
+          & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
+          & lct=t_jsb_lct(LAND_TYPE), parent=box_tile, &
+          & fract_varname='equal')   ! Fraction = 1.
+      END IF
+
+        IF (model%config%use_glacier) THEN
+          glacier_tile => t_jsb_tile('glac', 'Glacier tile', &
+            & processes = (/HYDRO_, SSE_/), &
+            & process_actions = (/ON_TILE_, ON_TILE_/), &
+            & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile)
+            ! & lct=t_jsb_lct(GLACIER_TYPE, lib_id=1), parent=land_tile)
+        END IF
+
+          veg_tile => t_jsb_tile('veg', 'Veg tile', &
+            & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_   /), &
+            & process_actions = (/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
+            & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
+            & fract_varname='fract_veg')
+
+          IF (model%processes(CARBON_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(CARBON_, ON_LEAFS_, AGGREGATE_)
+          END IF
+          IF (model%processes(FUEL_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(FUEL_, ON_TILE_, AGGREGATE_)
+          END IF
+          IF (model%processes(DISTURB_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(DISTURB_, ON_LEAFS_, AGGREGATE_)
+          END IF
+       !   IF (model%processes(VC_)%p%config%active) THEN
+       !     CALL veg_tile%Set_process_action(VC_, ON_LEAFS_, AGGREGATE_)
+       !   END IF
+
+            DO i=1,npft
+              pft_tile => t_jsb_tile(pft_shortnames(i), TRIM(pft_longnames(i)), &
+               & lct=t_jsb_lct(VEG_TYPE, lib_id=pft_ids(i)), parent=veg_tile) ! R: Note the Plant Growth Strategy i has to have an entry
+                                                                              !    in an PGS specific lctlib file. This lib_id-Number i
+                                                                              !    has to be one less than in the lctlib file because
+                                                                              !    the first column in the file is thrown away!
+            END DO
+
+    NULLIFY(box_tile)
+    NULLIFY(lake_tile)
+    NULLIFY(land_tile)
+    NULLIFY(glacier_tile)
+    NULLIFY(veg_tile)
+    NULLIFY(pft_tile)
+
+  END SUBROUTINE init_usecase_jedi
 
 #endif
 END MODULE mo_jsb_model_usecases

@@ -138,7 +138,7 @@ CONTAINS
         &      'Gross photosynthesis on canopy ground area'),                        &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
         & prefix, suffix,                                                            &
-        & output_level=BASIC,                                                        &
+        & output_level=BASIC,loutput=.TRUE.,                                         &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'gross_assimilation', mem%gross_assimilation,                                            &
@@ -147,7 +147,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                          &
         & prefix, suffix,                                                                                             &
         & output_level=BASIC,                                                                                         &
-        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & loutput=.TRUE., lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'dark_respiration_ca', mem%dark_respiration_ca,                                                  &
         & hgrid, surface,                                                                                                     &
@@ -163,7 +163,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
         & prefix, suffix,                                                                                           &
         & output_level=BASIC,                                                                                       &
-        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & loutput=.TRUE., lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'npp_pot_rate_ca', mem%NPP_pot_rate_ca,                      &
         & hgrid, surface,                                                                 &

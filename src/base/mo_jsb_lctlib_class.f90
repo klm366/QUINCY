@@ -150,6 +150,29 @@ MODULE mo_jsb_lctlib_class
     REAL(wp) :: CanopyResistanceMin  !! Minimum canopy resistance (optional, only used in VIC scheme
                                                  !! and if BETHY is not used)
     REAL(wp) :: StemArea             !! Area of stems and branches of woody plants
+    
+    !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
+    !  JeDi plant trait parameter
+    
+    REAL(wp) :: GrowRspdMoist
+    REAL(wp) :: GrowRspdTemp 
+    REAL(wp) :: CritiGrowTemp
+    REAL(wp) :: GermFrac     
+    REAL(wp) :: Allo2Reproduc
+    REAL(wp) :: Allo2Abground
+    REAL(wp) :: Allo2Blground
+    REAL(wp) :: Allo2Storage 
+    REAL(wp) :: RelAllo2Abgrd
+    REAL(wp) :: RelAllo2Blgrd
+    REAL(wp) :: TurnoverStruc
+    REAL(wp) :: TurnoverLeaf 
+    REAL(wp) :: SenesRspdNPP 
+    REAL(wp) :: RelSenesAbgd 
+    REAL(wp) :: NitroStatus  
+    
+    !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=! 
+    
+    
   END TYPE t_lctlib_element
 
 CONTAINS
@@ -286,7 +309,27 @@ CONTAINS
     INTEGER            :: i
 
     INTEGER :: nlct, npft
-
+    
+    !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
+    !  JeDi plant trait parameter
+    
+    LOGICAL            :: exists_GrowRspdMoist          = .FALSE.
+    LOGICAL            :: exists_GrowRspdTemp           = .FALSE.
+    LOGICAL            :: exists_CritiGrowTemp          = .FALSE.
+    LOGICAL            :: exists_GermFrac               = .FALSE.
+    LOGICAL            :: exists_Allo2Reproduc          = .FALSE.
+    LOGICAL            :: exists_Allo2Abground          = .FALSE.
+    LOGICAL            :: exists_Allo2Blground          = .FALSE.
+    LOGICAL            :: exists_Allo2Storage           = .FALSE.
+    LOGICAL            :: exists_RelAllo2Abgrd          = .FALSE.
+    LOGICAL            :: exists_RelAllo2Blgrd          = .FALSE.
+    LOGICAL            :: exists_TurnoverStruc          = .FALSE.
+    LOGICAL            :: exists_TurnoverLeaf           = .FALSE.
+    LOGICAL            :: exists_SenesRspdNPP           = .FALSE.
+    LOGICAL            :: exists_RelSenesAbgd           = .FALSE.
+    LOGICAL            :: exists_NitroStatus            = .FALSE.
+    !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!   
+                        
     ! Determine name of landcover library file
 
     ! Read lctlib data and eventually allocate also memory for lctlib data on io-processor
@@ -644,6 +687,59 @@ CONTAINS
           CASE ('woodlittersize')                                ! PFT-specific wood liter size (needed for wood decomposition)
              READ(line(pos:length),*) lctlib(1:nlct)%WoodLitterSize
              exists_woodlittersize_coef = .TRUE.
+             
+             
+          !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
+          !   JeDi plant trait parameter 
+             
+             
+             CASE ('growrspdmoist')
+                READ(line(pos:length),*) lctlib(1:nlct)%GrowRspdMoist 
+                exists_GrowRspdMoist   = .TRUE.
+             CASE ('growrspdtemp')
+                READ(line(pos:length),*) lctlib(1:nlct)%GrowRspdTemp 
+                exists_GrowRspdTemp   = .TRUE.
+             CASE ('critigrowtemp')
+                READ(line(pos:length),*) lctlib(1:nlct)%CritiGrowTemp
+                exists_CritiGrowTemp   = .TRUE.
+             CASE ('germfrac')
+                READ(line(pos:length),*) lctlib(1:nlct)%GermFrac
+                exists_GermFrac   = .TRUE.
+             CASE ('allo2reproduc')
+                READ(line(pos:length),*) lctlib(1:nlct)%Allo2Reproduc
+                exists_Allo2Reproduc   = .TRUE.
+             CASE ('allo2abground')
+                READ(line(pos:length),*) lctlib(1:nlct)%Allo2Abground
+                exists_Allo2Abground   = .TRUE.
+             CASE ('allo2blground')
+                READ(line(pos:length),*) lctlib(1:nlct)%Allo2Blground
+                exists_Allo2Blground   = .TRUE.
+             CASE ('allo2storage')
+                READ(line(pos:length),*) lctlib(1:nlct)%Allo2Storage
+                exists_Allo2Storage   = .TRUE.
+             CASE ('relallo2abgrd')
+                READ(line(pos:length),*) lctlib(1:nlct)%RelAllo2Abgrd
+                exists_RelAllo2Abgrd   = .TRUE.
+             CASE ('relallo2blgrd')
+                READ(line(pos:length),*) lctlib(1:nlct)%RelAllo2Blgrd
+                exists_RelAllo2Blgrd   = .TRUE.
+             CASE ('turnoverstruc')
+                READ(line(pos:length),*) lctlib(1:nlct)%TurnoverStruc
+                exists_TurnoverStruc   = .TRUE.
+             CASE ('turnoverleaf')
+                READ(line(pos:length),*) lctlib(1:nlct)%TurnoverLeaf
+                exists_TurnoverLeaf   = .TRUE.
+             CASE ('senesrspdnpp')
+                READ(line(pos:length),*) lctlib(1:nlct)%SenesRspdNPP
+                exists_SenesRspdNPP   = .TRUE.
+             CASE ('relsenesabgd')
+                READ(line(pos:length),*) lctlib(1:nlct)%RelSenesAbgd
+                exists_RelSenesAbgd   = .TRUE.
+             CASE ('nitrostatus')
+                READ(line(pos:length),*) lctlib(1:nlct)%NitroStatus
+                exists_NitroStatus   = .TRUE.
+          !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
+        
           CASE default
              ! nothing to do
           END SELECT
@@ -805,7 +901,46 @@ CONTAINS
             CALL finish('init_lctlib','No data for LEAFLIT_COEF found in '//TRIM(lctlib_file_name))
        IF(.NOT. exists_litveg_coef) &
             CALL finish('init_lctlib','No data for LITVEG_COEF found in '//TRIM(lctlib_file_name))
-
+            
+       !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
+       !   JeDi plant trait parameter 
+       
+       IF(.NOT. exists_GrowRspdMoist ) &
+       CALL finish('init_lctlib','No data for GrowRspdMoist found in '//TRIM(lctlib_file_name))
+       IF(.NOT. exists_GrowRspdTemp  ) &
+       CALL finish('init_lctlib','No data for GrowRspdTemp found in '//TRIM(lctlib_file_name))
+       IF(.NOT. exists_CritiGrowTemp ) &
+       CALL finish('init_lctlib','No data for CritiGrowTemp  found in '//TRIM(lctlib_file_name))
+       IF(.NOT. exists_GermFrac      ) &
+       CALL finish('init_lctlib','No data for GermFrac found in '//TRIM(lctlib_file_name))
+       IF(.NOT. exists_Allo2Reproduc ) &
+       CALL finish('init_lctlib','No data for Allo2Reproduc found in '//TRIM(lctlib_file_name))
+       IF(.NOT. exists_Allo2Abground ) &
+       CALL finish('init_lctlib','No data for Allo2Abground found in '//TRIM(lctlib_file_name))
+       IF(.NOT. exists_Allo2Blground ) &
+       CALL finish('init_lctlib','No data for Allo2Blground found in '//TRIM(lctlib_file_name))
+       IF(.NOT. exists_Allo2Storage  ) &
+       CALL finish('init_lctlib','No data for Allo2Storage found in '//TRIM(lctlib_file_name))
+       IF(.NOT. exists_RelAllo2Abgrd ) &
+       CALL finish('init_lctlib','No data for RelAllo2Abgrd found in '//TRIM(lctlib_file_name))
+       IF(.NOT. exists_RelAllo2Blgrd ) &
+       CALL finish('init_lctlib','No data for RelAllo2Blgrd found in '//TRIM(lctlib_file_name))
+       IF(.NOT. exists_TurnoverStruc ) &
+       CALL finish('init_lctlib','No data for TurnoverStruc found in '//TRIM(lctlib_file_name))
+       IF(.NOT. exists_TurnoverLeaf  ) &
+       CALL finish('init_lctlib','No data for TurnoverLeaf found in '//TRIM(lctlib_file_name))
+       IF(.NOT. exists_SenesRspdNPP  ) &
+       CALL finish('init_lctlib','No data for SenesRspdNPP found in '//TRIM(lctlib_file_name))
+       IF(.NOT. exists_RelSenesAbgd  ) &
+       CALL finish('init_lctlib','No data for RelSenesAbgd found in '//TRIM(lctlib_file_name))
+       IF(.NOT. exists_NitroStatus   ) &
+       CALL finish('init_lctlib','No data for NitroStatus found in '//TRIM(lctlib_file_name))
+       
+       !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
+       
+       
+       
+       
        CLOSE(unit=lctlib_file_unit) !! Closing access to lctlib file
 
        !------------------------------------------------------------------------------------------
@@ -986,6 +1121,26 @@ CONTAINS
          CALL p_bcast(lctlib(:)%WoodLit_coef(i), p_io, mpi_comm)
        END DO
        CALL p_bcast(lctlib(:)%WoodLitterSize, p_io, mpi_comm)
+       !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
+       !   JeDi plant trait parameter 
+       CALL p_bcast(lctlib(:)%GrowRspdMoist, p_io, mpi_comm)
+       CALL p_bcast(lctlib(:)%GrowRspdTemp , p_io, mpi_comm) 
+       CALL p_bcast(lctlib(:)%CritiGrowTemp, p_io, mpi_comm)
+       CALL p_bcast(lctlib(:)%GermFrac     , p_io, mpi_comm)
+       CALL p_bcast(lctlib(:)%Allo2Reproduc, p_io, mpi_comm)
+       CALL p_bcast(lctlib(:)%Allo2Abground, p_io, mpi_comm)
+       CALL p_bcast(lctlib(:)%Allo2Blground, p_io, mpi_comm)
+       CALL p_bcast(lctlib(:)%Allo2Storage , p_io, mpi_comm)
+       CALL p_bcast(lctlib(:)%RelAllo2Abgrd, p_io, mpi_comm)
+       CALL p_bcast(lctlib(:)%RelAllo2Blgrd, p_io, mpi_comm)
+       CALL p_bcast(lctlib(:)%TurnoverStruc, p_io, mpi_comm)
+       CALL p_bcast(lctlib(:)%TurnoverLeaf , p_io, mpi_comm)
+       CALL p_bcast(lctlib(:)%SenesRspdNPP , p_io, mpi_comm)
+       CALL p_bcast(lctlib(:)%RelSenesAbgd , p_io, mpi_comm)
+       CALL p_bcast(lctlib(:)%NitroStatus  , p_io, mpi_comm)
+        !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
+       
+       
     END IF
 
     IF(npft>nlct) CALL finish('init_lctlib','npft larger than nlct: '//int2string(npft)//' > '//int2string(nlct))

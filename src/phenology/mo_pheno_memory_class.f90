@@ -166,7 +166,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & output_level=BASIC, &
-        & initval_r=0.0_wp )
+        & initval_r=0.0_wp,loutput=.TRUE. )
 
       ALLOCATE(mem%lai_mon      (hgrid%nproma, hgrid%nblks, 0:13))
       ALLOCATE(mem%fract_fpc_mon(hgrid%nproma, hgrid%nblks, 0:13))
@@ -239,7 +239,7 @@ CONTAINS
           & t_cf('days_since_growth_begin_SummerGreen', '', ''),                            &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),              &
           & prefix, suffix,                                                                 &
-          & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
+          & loutput=.FALSE., lrestart=.TRUE., initval_r=0.0_wp )
 
         CALL jsb_add_var( mem,'yday_npp_pot_rate', mem%previous_day_NPP_pot_rate_ca,     &
           & hgrid, surface,                                                              &
@@ -274,42 +274,42 @@ CONTAINS
           & t_cf('heat_sum_EG', '', ''),                                       &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & loutput=.TRUE., lrestart=.TRUE., initval_r=-99.0_wp)
+          & loutput=.FALSE., lrestart=.TRUE., initval_r=-99.0_wp)
 
         CALL jsb_add_var( mem,'heat_sum_sg', mem%heat_sum_SG,                  &
           & hgrid, surface,                                                    &
           & t_cf('heat_sum_SG', '', ''),                                       &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & loutput=.TRUE., lrestart=.TRUE., initval_r=-99.0_wp) ! has to be lower than -1
+          & loutput=.FALSE., lrestart=.TRUE., initval_r=-99.0_wp) ! has to be lower than -1
 
         CALL jsb_add_var( mem,'heat_sum_crp', mem%heat_sum_CRP,                &
           & hgrid, surface,                                                    &
           & t_cf('heat_sum_CRP', '', ''),                                      &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & loutput=.TRUE., lrestart=.TRUE., initval_r=9999.0_wp)
+          & loutput=.FALSE., lrestart=.TRUE., initval_r=9999.0_wp)
 
         CALL jsb_add_var( mem,'heat_sum_winter', mem%heat_sum_winter,          &
           & hgrid, surface,                                                    &
           & t_cf('heat_sum_winter', '', ''),                                   &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & loutput=.TRUE., lrestart=.TRUE., initval_r=-EPSILON(1._wp))
+          & loutput=.FALSE., lrestart=.TRUE., initval_r=-EPSILON(1._wp))
 
         CALL jsb_add_var( mem,'chill_days_eg', mem%chill_days_EG,              &
           & hgrid, surface,                                                    &
           & t_cf('chill_days_EG', '', ''),                                     &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp)
+          & loutput=.FALSE., lrestart=.TRUE., initval_r=0._wp)
 
         CALL jsb_add_var( mem,'chill_days_sg', mem%chill_days_SG,              &
           & hgrid, surface,                                                    &
           & t_cf('chill_days_SG', '', ''),                                     &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp)
+          & loutput=.FALSE., lrestart=.TRUE., initval_r=0._wp)
 
         IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
           CALL jsb_add_var( mem,'maxLAI_allom', mem%maxLAI_allom,                &
