@@ -6,14 +6,13 @@
 
 ## options ########################################################################################
 # path to experiment directory (e.g. "/Net/Groups/BGI/scratch/USER/slm/exp_name/")
-#expDir     <- "/Net/Groups/BGI/scratch/  /"   # must end with a slash ".../"  !
-expDir     <- "/home/jengel/remote/rt-bgi-scratch-je/slm/exp_hainich_mavgparam_sensi_r1644/"   # must end with a slash ".../"  !
+expDir     <- "/Net/Groups/BGI/scratch/  /"   # must end with a slash ".../"  !
 # output variable of which the partial correlation coefficient may be calculated (column name in output file)
 outVarName <- "GPP"
 # output file of output variabale; name without out-interval and ".txt" but must end with "_" examples: "vegfluxC_" or "soilfluxN_" 
 outFile    <- "vegfluxC_"
 # [T/F] run default set of output variables (overwriting the above definition of outVarName)
-outVarSet  <- "F"
+outVarSet  <- "T"
 # years used for averaging the ouput value (at the end of the simulation results available)
 avgYears   <- 10
 # [T/F] transform both parameter values and output-variable values into ranks [highest value = highest rank] (bypassing potential problems from non-linearities) 
@@ -22,20 +21,50 @@ rankTform  <- "T"
 
 
 ## default set of output variables ################################################################
-outVarNameSet <- c("GPP",
-                   "Leaf_CN",
-                   "Leaf_NP",
-                   "Total_C",
-                   "TotalSoilOrgC"
+outVarNameSet  <- c("GPP",                      # 1
+#                    "Leaf_CN",                  # 2  Leaf_C / Leaf_N
+#                    "Leaf_NP",                  # 3  Leaf_N / Leaf_P
+                    "Total_C",                  # 4
+                    "TotalSoilOrgC",            # 5
+#                    "FixationN",                # 6
+                    "NetMinNH4",                # 7
+                    "Net_Mineralisation_PO4"    # 8
+#                    "Nlosses",                  # 9   leaching + emmission | Emission_NOY Emission_N2O Emission_N2 LeachingNH4 LeachingNO3 LeachingDOM_N
+#                    "Plosses"                   # 10  leaching             | Leaching_PO4 LeachingDOM_P
 )
 
-outFileSet    <- c("vegfluxC_",
-                   "derivedLeafCN",   # the two input files needed here are hardcoded below
-                   "derivedLeafNP",   # the two input files needed here are hardcoded below
-                   "vegpoolC_",
-                   "ecopoolCNP_"
+outFileSet     <- c("vegfluxC_",                # 1
+#                    "derivedLeafCN",            # 2  vegpoolC_ & vegpoolN_  these two input files are hardcoded below
+#                    "derivedLeafNP",            # 3  vegpoolN_ & vegpoolP_  these two input files are hardcoded below
+                    "vegpoolC_",                # 4
+                    "ecopoolCNP_",              # 5
+#                    "vegfluxN_",                # 6
+                    "soilfluxN_",               # 7
+                    "soilfluxP_"                # 8
+#                    "soilfluxN_",               # 9  
+#                    "soilfluxP_"                # 10 
 )
 
+
+# unit conversion of output variables
+molar_mass_C <- 12.0112
+molar_mass_N <- 14.0072
+molar_mass_P <- 30.997
+weeks        <- 52
+months       <- 12
+outInterval  <- weeks    # update as needed
+
+outVarUnitConv <- c(molar_mass_C / 1000 * outInterval,    # 1  mol/m2/week -> kg/m2/yr
+#                    molar_mass_C / molar_mass_N,          # 2
+#                    molar_mass_N / molar_mass_P,          # 3
+                    molar_mass_C / 1000,                  # 4  mol C -> kg C
+                    molar_mass_C / 1000,                  # 5  mol C -> kg C
+#                    molar_mass_N * outInterval,           # 6  mol N/m2/week -> g/m2/yr
+                    molar_mass_N * outInterval,           # 7  mol N/m2/week -> g/m2/yr
+                    molar_mass_P * outInterval            # 8  mol P/m2/week -> g/m2/yr
+#                    molar_mass_N * outInterval            # 9  mol N/m2/week -> g/m2/yr
+#                    molar_mass_P * outInterval            # 10 mol P/m2/week -> g/m2/yr
+)
 
 
 
@@ -52,7 +81,6 @@ trim <- function (x) gsub("^\\s+|\\s+$", "", x)
 
 # various global variables
 outFileExt <- ".txt"
-
 
 
 # change into the exp directory
@@ -85,12 +113,6 @@ tstepPool <- trim(namelist[trim(namelist[,1])=="output_interval_pool",2])
 
 
 ###################
-# prepare reading the output-value data from all simulations into array
-
-# create df for avg values of output variable
-outVarAvgVal           <- data.frame(varName = numeric(), stringsAsFactors=F)
-colnames(outVarAvgVal) <- outVarName[1]
-
 # calc the number of lines from the output file that are used for averaging
  timeFac   <- 0    # scaling factor to get the correct number of rows
  if        (tstepPool == "weekly"){    timeFac <- 52
@@ -105,23 +127,37 @@ colnames(outVarAvgVal) <- outVarName[1]
 ##############################
 # loop over output variables #
 ##############################
+
+# use output-variable set if outVarSet=T
+if (outVarSet == "T"){
+  outVarName <- outVarNameSet
+  outFile    <- outFileSet
+}
+  
+# number of output variables to cover 
 nOutVar <- length(outVarName)
+
+###################
+# create df for the data of all output variables
+outVarAvgValSet <- data.frame(varName = numeric(), stringsAsFactors=F)
+
+###################
+# store all the pcc results from the parameters in a list of df
+pccResDFList <- list()
+
+
+# loop over output variables
 for (v in 1:nOutVar){
-  
 
-  ###################
-  # create df for the data of all output variables
-
-
-  ###################
-  # store all the pcc results from the parameters in a list of df
-  
+  # create df for avg values of output variable
+  outVarAvgVal           <- data.frame(varName = numeric(), stringsAsFactors=F)
+  colnames(outVarAvgVal) <- outVarName[v]
   
   ###################
   # read the output-value data from all simulations into array and calc the avg value
   for (i in 1:nSim){
-    print(paste0(" reading  ", dirList[i], "/output/", outFile, tstepPool, outFileExt, " <- ", outVarName[v]))
-    dat <- read.table(paste0(dirList[i], "/output/", outFile, tstepPool, outFileExt), header=T, sep="")
+    print(paste0(" reading  ", dirList[i], "/output/", outFile[v], tstepPool, outFileExt, " <- ", outVarName[v]))
+    dat <- read.table(paste0(dirList[i], "/output/", outFile[v], tstepPool, outFileExt), header=T, sep="")
     # get colnumber of outVarName[v]
     varColNumber <- which(colnames(dat) == outVarName[v])
     # test if enough data is available for defined avg-period
@@ -131,7 +167,11 @@ for (v in 1:nOutVar){
     # get avg value
     outVarAvgVal[i,1] <- mean(dat[rowS:rowE,varColNumber])
   }
-  
+
+  # add output-variable avg values to df befor rank-transformation is done
+  outVarAvgValSet[1:nSim,v]    <- outVarAvgVal[,1]
+  colnames(outVarAvgValSet)[v] <- colnames(outVarAvgVal)[1]
+    
    
   ###################
   # rank transform values of both parameters and output-variable
@@ -186,52 +226,89 @@ for (v in 1:nOutVar){
   pccResDF <- as.data.frame(pccResults)
   # sort with decreasing pcc_estimates
   pccResDF <- pccResDF[order(-pccResDF$pcc_estimate), ]
-  
+
+  # add this df to the list of df
+  pccResDFList[[v]] <- pccResDF
+    
 
 } ## end loop over output variables
 ###################################
 
 
 
-###################
-# visualisation and file output
 
-# write pdf file
-print(" create and write figure")
-pdf(paste0("parameter_list/pcc_", outVarName, outInfo, ".pdf"), paper="a4r", height=6.4, width=12, pointsize=12, 
+###################
+# unit conversion of output-variable values  (generally mol to gramm by multiplication with molar_massX)
+for (v in 1:nOutVar){
+  outVarAvgValSet[,v] <- outVarAvgValSet[,v] * outVarUnitConv[v]
+}
+
+
+###################
+# create and write figures
+print(" create and write figures")
+# output file-name identifier
+outFileID <- outVarName[1]
+if (outVarSet == "T"){
+  outFileID <- "outVarSet"
+}
+# create pdf
+pdf(paste0("parameter_list/pcc_", outFileID, outInfo, ".pdf"), paper="a4r", height=6.4, width=12, pointsize=12, 
     bg="white", family="Helvetica", version="1.6")
   par(mar=c(10.0,2.2,1.0,0.2) , oma=c(0.5,0.1,0.5,0.1)) # oma = outer margins (b, l, t, r)
-  plot(1:nrow(pccResDF), pccResDF$pcc_estimate, 
-     type="p", pch=15, cex=0.8,
-     ylim=c(-1,1),
-     main=paste0(outVarName, "   (* p<0.1)"),
-     ylab=paste0("Part. Correl. Coeff:   X-parameter ~ avg ", outVarName),
-     xlab=NA, #"QUINCY parameter",
-     xaxt="n",
-     mgp=c(1.2, 0.14, 0), tck=0.02
-     )
-  # plot a star for pcc_estimates < 0.1
-  xAdd <- 0.1
-  yAdd <- 0.04
-  for (s in 1:nrow(pccResDF)){
-    if (pccResDF$p_value[s] < 0.1){
-      points(s+xAdd, pccResDF$pcc_estimate[s]+yAdd, pch=8, cex=0.6, col="dodgerblue3")
+
+  # plot boxplots
+
+
+
+  # loop over output variables to plot pcc_estimate values
+  for (v in 1:nOutVar){
+    # get df
+    pccResDF <- pccResDFList[[v]]
+    # plot pcc_estimate values
+    plot(1:nrow(pccResDF), pccResDF$pcc_estimate, 
+       type="p", pch=15, cex=0.8,
+       ylim=c(-1,1),
+       main=paste0(outVarName[v], "   (* p<0.1)"),
+       ylab=paste0("Part. Correl. Coeff:   X-parameter ~ avg ", outVarName[v]),
+       xlab=NA, #"QUINCY parameter",
+       xaxt="n",
+       mgp=c(1.2, 0.14, 0), tck=0.02
+       )
+    # plot a star for pcc_estimates < 0.1
+    xAdd <- 0.1
+    yAdd <- 0.04
+    for (s in 1:nrow(pccResDF)){
+      if (pccResDF$p_value[s] < 0.1){
+        points(s+xAdd, pccResDF$pcc_estimate[s]+yAdd, pch=8, cex=0.6, col="dodgerblue3")
+      }
     }
-  }
-  #axis(1, at=1:nrow(pccResDF), labels=rownames(pccResDF))
-  axis(1, at=seq(1, nrow(pccResDF), by=1), labels = FALSE, tck=0.02)
-  text(seq(1, nrow(pccResDF), by=1), par("usr")[3] - 0.06, 
-     labels=rownames(pccResDF), srt=65, pos=2, xpd = TRUE,
-     cex=0.9)
-  abline(h=c(-1.0,-0.5,0,0.5,1.0), col="sienna",lw=0.6)
+    #axis(1, at=1:nrow(pccResDF), labels=rownames(pccResDF))
+    axis(1, at=seq(1, nrow(pccResDF), by=1), labels = FALSE, tck=0.02)
+    text(seq(1, nrow(pccResDF), by=1), par("usr")[3] - 0.06, 
+       labels=rownames(pccResDF), srt=65, pos=2, xpd = TRUE,
+       cex=0.9)
+    abline(h=c(-1.0,-0.5,0,0.5,1.0), col="sienna",lw=0.6)
+  } # end loop over output variables
 garbage <- dev.off()
 
-# write data file
-print(" write output file")
-pccResDFout              <- cbind(pccResDF,rownames(pccResDF))
-colnames(pccResDFout)[4] <- "QUINCY_param"
-write.table(pccResDFout, file=paste0("parameter_list/pcc_", outVarName, outInfo, ".csv"), append=F, 
+
+###################
+# data file output
+print(" write output files")
+# loop over output variables
+for (v in 1:nOutVar){
+  # get df
+  pccResDF <- pccResDFList[[v]]
+  # add new column with parameer names
+  pccResDFout              <- cbind(pccResDF,rownames(pccResDF))
+  colnames(pccResDFout)[4] <- "QUINCY_param"
+  write.table(pccResDFout, file=paste0("parameter_list/pcc_", outVarName[v], outInfo, ".csv"), append=F, 
             sep = ",", eol="\n", row.names=F, col.names=T)
+}
+
+
+
 
 
 print(" Done!")
