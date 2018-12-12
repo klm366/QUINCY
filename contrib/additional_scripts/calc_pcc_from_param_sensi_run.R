@@ -3,20 +3,33 @@
 ##  from results of a parameter sensitivity simulation run
 ## 
 
+###################################################################################################
+# helpers for unit conversion of output variables
+molar_mass_C <- 12.0112
+molar_mass_N <- 14.0072
+molar_mass_P <- 30.997
+weeks        <- 52
+months       <- 12
+outInterval  <- weeks    # update as needed
+###################################################################################################
+
+
 
 ## options ########################################################################################
 # path to experiment directory (e.g. "/Net/Groups/BGI/scratch/USER/slm/exp_name/")
-expDir     <- "/Net/Groups/BGI/scratch/  /"   # must end with a slash ".../"  !
+expDir         <- "/Net/Groups/BGI/scratch/  /"   # must end with a slash ".../"  !
 # output variable of which the partial correlation coefficient may be calculated (column name in output file)
-outVarName <- "GPP"
+outVarName     <- "GPP"
 # output file of output variabale; name without out-interval and ".txt" but must end with "_" examples: "vegfluxC_" or "soilfluxN_" 
-outFile    <- "vegfluxC_"
+outFile        <- "vegfluxC_"
+# factor for unit conversion of the output variable
+outVarUnitConv <- molar_mass_C / 1000 * outInterval
 # [T/F] run default set of output variables (overwriting the above definition of outVarName)
-outVarSet  <- "T"
+outVarSet      <- "T"
 # years used for averaging the ouput value (at the end of the simulation results available)
-avgYears   <- 10
+avgYears       <- 10
 # [T/F] transform both parameter values and output-variable values into ranks [highest value = highest rank] (bypassing potential problems from non-linearities) 
-rankTform  <- "T"
+rankTform      <- "T"
 
 
 
@@ -45,25 +58,16 @@ outFileSet     <- c("vegfluxC_",                # 1
 #                    "soilfluxP_"                # 10 
 )
 
-
-# unit conversion of output variables
-molar_mass_C <- 12.0112
-molar_mass_N <- 14.0072
-molar_mass_P <- 30.997
-weeks        <- 52
-months       <- 12
-outInterval  <- weeks    # update as needed
-
-outVarUnitConv <- c(molar_mass_C / 1000 * outInterval,    # 1  mol/m2/week -> kg/m2/yr
-#                    molar_mass_C / molar_mass_N,          # 2
-#                    molar_mass_N / molar_mass_P,          # 3
-                    molar_mass_C / 1000,                  # 4  mol C -> kg C
-                    molar_mass_C / 1000,                  # 5  mol C -> kg C
-#                    molar_mass_N * outInterval,           # 6  mol N/m2/week -> g/m2/yr
-                    molar_mass_N * outInterval,           # 7  mol N/m2/week -> g/m2/yr
-                    molar_mass_P * outInterval            # 8  mol P/m2/week -> g/m2/yr
-#                    molar_mass_N * outInterval            # 9  mol N/m2/week -> g/m2/yr
-#                    molar_mass_P * outInterval            # 10 mol P/m2/week -> g/m2/yr
+outVarUnitConvSet <- c(molar_mass_C / 1000 * outInterval,    # 1  mol/m2/week -> kg/m2/yr
+#                       molar_mass_C / molar_mass_N,          # 2
+#                       molar_mass_N / molar_mass_P,          # 3
+                       molar_mass_C / 1000,                  # 4  mol C -> kg C
+                       molar_mass_C / 1000,                  # 5  mol C -> kg C
+#                       molar_mass_N * outInterval,           # 6  mol N/m2/week -> g/m2/yr
+                       molar_mass_N * outInterval,           # 7  mol N/m2/week -> g/m2/yr
+                       molar_mass_P * outInterval            # 8  mol P/m2/week -> g/m2/yr
+#                       molar_mass_N * outInterval            # 9  mol N/m2/week -> g/m2/yr
+#                       molar_mass_P * outInterval            # 10 mol P/m2/week -> g/m2/yr
 )
 
 
@@ -130,8 +134,9 @@ tstepPool <- trim(namelist[trim(namelist[,1])=="output_interval_pool",2])
 
 # use output-variable set if outVarSet=T
 if (outVarSet == "T"){
-  outVarName <- outVarNameSet
-  outFile    <- outFileSet
+  outVarName     <- outVarNameSet
+  outFile        <- outFileSet
+  outVarUnitConv <- outVarUnitConvSet
 }
   
 # number of output variables to cover 
@@ -154,9 +159,12 @@ for (v in 1:nOutVar){
   colnames(outVarAvgVal) <- outVarName[v]
   
   ###################
-  # read the output-value data from all simulations into array and calc the avg value
+  # read the output-variable data from all simulations into array and calc the avg value of each
+  print(" reading the output-variable data from all simulations into array and calc the avg value of each")
+  print(paste0(" reading  ", dirList[1], "/output/", outFile[v], tstepPool, outFileExt, " <- ", outVarName[v]))
+  print(" ...")
   for (i in 1:nSim){
-    print(paste0(" reading  ", dirList[i], "/output/", outFile[v], tstepPool, outFileExt, " <- ", outVarName[v]))
+    #print(paste0(" reading  ", dirList[i], "/output/", outFile[v], tstepPool, outFileExt, " <- ", outVarName[v]))
     dat <- read.table(paste0(dirList[i], "/output/", outFile[v], tstepPool, outFileExt), header=T, sep="")
     # get colnumber of outVarName[v]
     varColNumber <- which(colnames(dat) == outVarName[v])
@@ -239,6 +247,7 @@ for (v in 1:nOutVar){
 
 ###################
 # unit conversion of output-variable values  (generally mol to gramm by multiplication with molar_massX)
+print(" applying unit conversion to output variables")
 for (v in 1:nOutVar){
   outVarAvgValSet[,v] <- outVarAvgValSet[,v] * outVarUnitConv[v]
 }
@@ -258,7 +267,16 @@ pdf(paste0("parameter_list/pcc_", outFileID, outInfo, ".pdf"), paper="a4r", heig
   par(mar=c(10.0,2.2,1.0,0.2) , oma=c(0.5,0.1,0.5,0.1)) # oma = outer margins (b, l, t, r)
 
   # plot boxplots
-
+  for (v in 1:nOutVar){
+    # normalize the values using the mean, so that the mean of all boxplots is one and the variation is kept
+    outVarAvgValSet[,v] <- outVarAvgValSet[,v] / mean(outVarAvgValSet[,v])
+  }
+  boxplot(outVarAvgValSet, 
+          main="Variation in output variables (each normalized by the mean)",
+          col="gray80",
+          range=0,                      # whiskers cover min and max value
+          xlab=" \n Boxplots show: median, 25th and 75th percentile, min/max values \n mean = line at 1.0")
+  abline(h=1.0, col="sienna", lw=0.6)  # mean value (is 1.0 because teh values are normalized using the mean)
 
 
   # loop over output variables to plot pcc_estimate values
