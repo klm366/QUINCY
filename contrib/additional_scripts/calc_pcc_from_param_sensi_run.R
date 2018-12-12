@@ -17,7 +17,7 @@ outInterval  <- weeks    # update as needed
 
 ## options ########################################################################################
 # path to experiment directory (e.g. "/Net/Groups/BGI/scratch/USER/slm/exp_name/")
-expDir         <- "/Net/Groups/BGI/scratch/  /"   # must end with a slash ".../"  !
+expDir     <- "/Net/Groups/BGI/scratch/  /"   # must end with a slash ".../"  !
 # output variable of which the partial correlation coefficient may be calculated (column name in output file)
 outVarName     <- "GPP"
 # output file of output variabale; name without out-interval and ".txt" but must end with "_" examples: "vegfluxC_" or "soilfluxN_" 
@@ -152,6 +152,7 @@ pccResDFList <- list()
 
 
 # loop over output variables
+print(" reading the output-variable data from all simulations into array and calc the avg value of each")
 for (v in 1:nOutVar){
 
   # create df for avg values of output variable
@@ -160,7 +161,6 @@ for (v in 1:nOutVar){
   
   ###################
   # read the output-variable data from all simulations into array and calc the avg value of each
-  print(" reading the output-variable data from all simulations into array and calc the avg value of each")
   print(paste0(" reading  ", dirList[1], "/output/", outFile[v], tstepPool, outFileExt, " <- ", outVarName[v]))
   print(" ...")
   for (i in 1:nSim){
@@ -238,7 +238,7 @@ for (v in 1:nOutVar){
   # add this df to the list of df
   pccResDFList[[v]] <- pccResDF
     
-
+  print("                                       ")
 } ## end loop over output variables
 ###################################
 
@@ -262,21 +262,38 @@ if (outVarSet == "T"){
   outFileID <- "outVarSet"
 }
 # create pdf
-pdf(paste0("parameter_list/pcc_", outFileID, outInfo, ".pdf"), paper="a4r", height=6.4, width=12, pointsize=12, 
+pdf(paste0("parameter_list/pcc_", outFileID, outInfo, ".pdf"), paper="a4r", height=6.4, width=12, pointsize=10, 
     bg="white", family="Helvetica", version="1.6")
   par(mar=c(10.0,2.2,1.0,0.2) , oma=c(0.5,0.1,0.5,0.1)) # oma = outer margins (b, l, t, r)
 
   # plot boxplots
+  meanAbsVal <- sapply(outVarAvgValSet, mean)
   for (v in 1:nOutVar){
     # normalize the values using the mean, so that the mean of all boxplots is one and the variation is kept
     outVarAvgValSet[,v] <- outVarAvgValSet[,v] / mean(outVarAvgValSet[,v])
   }
+  minRelVal <- min(outVarAvgValSet)
+  maxRelVal <- max(outVarAvgValSet)
   boxplot(outVarAvgValSet, 
+          ylim=c(minRelVal-abs(0.0006*minRelVal),maxRelVal+abs(0.0006*maxRelVal)),
           main="Variation in output variables (each normalized by the mean)",
           col="gray80",
           range=0,                      # whiskers cover min and max value
-          xlab=" \n Boxplots show: median, 25th and 75th percentile, min/max values \n mean = line at 1.0")
+          xlab=" \n Boxplots show: median, 25th and 75th percentile, min/max values \n mean = line at 1.0, and absolute mean values at x-axis",
+          xaxt="n")
   abline(h=1.0, col="sienna", lw=0.6)  # mean value (is 1.0 because teh values are normalized using the mean)
+  # x-axis labels: output-variable names & absolute mean values
+  axis(1,at=c(1:ncol(outVarAvgValSet)), labels=colnames(outVarAvgValSet), tick=F, tck=0.02, mgp=c(2,0.2,0))
+  # disable warnings to suppress the warning about mpg() using negative and positve values
+  options(warn=-1)
+  axis(1,at=c(1:ncol(outVarAvgValSet)), labels=round(meanAbsVal,2), tick=F, tck=0.02, mgp=c(2,-1.0,0))
+  # enable warnings
+  options(warn=0)
+  # another way to plot the absolute mean values
+  #text(seq(1, nrow(pccResDF), by=1), 
+  #     par("usr")[3] + abs(0.0005*minRelVal), 
+  #     labels=round(meanAbsVal,2),
+  #     srt=0, pos=1, xpd = TRUE, cex=0.9)
 
 
   # loop over output variables to plot pcc_estimate values
