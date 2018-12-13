@@ -1583,7 +1583,7 @@ CONTAINS
     nml_unit = position_nml('PHENOLOGY_CTL', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, phenology_ctl)
     CALL close_nml(nml_handler)
-    ! RADIATION_CTL
+    ! &RADIATION_CTL
     nml_handler = open_nml(TRIM(this%filename))
     nml_unit = position_nml('RADIATION_CTL', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, radiation_ctl)
@@ -2282,6 +2282,7 @@ CONTAINS
                                     this%k_csf, &
                                     "k_csf", proportional_parameter_changes, dependency_recalculation, &
                                     k_csf)
+
     CALL Set_quincy_parameter_value(this%min_cos_zenith_angle_rad, &
                                     this%min_cos_zenith_angle_rad, &
                                     "min_cos_zenith_angle_rad", proportional_parameter_changes, dependency_recalculation, &
@@ -2296,6 +2297,7 @@ CONTAINS
                                     this%def_alb_nir_soil, &
                                     "def_alb_nir_soil", proportional_parameter_changes, dependency_recalculation, &
                                     def_alb_nir_soil)
+    
     CALL Set_quincy_parameter_value(this%rad2ppfd, &
                                     this%rad2ppfd, &
                                     "rad2ppfd", proportional_parameter_changes, dependency_recalculation, &
