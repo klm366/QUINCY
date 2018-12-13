@@ -17,7 +17,7 @@ outInterval  <- weeks    # update as needed
 
 ## options ########################################################################################
 # path to experiment directory (e.g. "/Net/Groups/BGI/scratch/USER/slm/exp_name/")
-expDir     <- "/Net/Groups/BGI/scratch/  /"   # must end with a slash ".../"  !
+expDir     <- "/Net/Groups/BGI/scratch/USER...  /"   # must end with a slash ".../"  !
 # output variable of which the partial correlation coefficient may be calculated (column name in output file)
 outVarName     <- "GPP"
 # output file of output variabale; name without out-interval and ".txt" but must end with "_" examples: "vegfluxC_" or "soilfluxN_" 
@@ -35,39 +35,39 @@ rankTform      <- "T"
 
 ## default set of output variables ################################################################
 outVarNameSet  <- c("GPP",                      # 1
-#                    "Leaf_CN",                  # 2  Leaf_C / Leaf_N
-#                    "Leaf_NP",                  # 3  Leaf_N / Leaf_P
+                    "Leaf_CN",                  # 2  Leaf_C / Leaf_N
+                    "Leaf_NP",                  # 3  Leaf_N / Leaf_P
                     "Total_C",                  # 4
                     "TotalSoilOrgC",            # 5
-#                    "FixationN",                # 6
+#                    "FixationN",                # 6  symbiontic N fixation (variable veg_mem n_fixation)
                     "NetMinNH4",                # 7
-                    "Net_Mineralisation_PO4"    # 8
-#                    "Nlosses",                  # 9   leaching + emmission | Emission_NOY Emission_N2O Emission_N2 LeachingNH4 LeachingNO3 LeachingDOM_N
-#                    "Plosses"                   # 10  leaching             | Leaching_PO4 LeachingDOM_P
+                    "Net_Mineralisation_PO4",   # 8
+                    "Nlosses",                  # 9   leaching + emmission | Emission_NOY Emission_N2O Emission_N2 LeachingNH4 LeachingNO3 LeachingDOM_N
+                    "Plosses"                   # 10  leaching             | Leaching_PO4 LeachingDOM_P
 )
 
 outFileSet     <- c("vegfluxC_",                # 1
-#                    "derivedLeafCN",            # 2  vegpoolC_ & vegpoolN_  these two input files are hardcoded below
-#                    "derivedLeafNP",            # 3  vegpoolN_ & vegpoolP_  these two input files are hardcoded below
+                    "derivedLeafCN",            # 2  vegpoolC_ & vegpoolN_  these two input files are hardcoded below
+                    "derivedLeafNP",            # 3  vegpoolN_ & vegpoolP_  these two input files are hardcoded below
                     "vegpoolC_",                # 4
                     "ecopoolCNP_",              # 5
 #                    "vegfluxN_",                # 6
                     "soilfluxN_",               # 7
-                    "soilfluxP_"                # 8
-#                    "soilfluxN_",               # 9  
-#                    "soilfluxP_"                # 10 
+                    "soilfluxP_",               # 8
+                    "soilfluxN_",               # 9  
+                    "soilfluxP_"                # 10 
 )
 
 outVarUnitConvSet <- c(molar_mass_C / 1000 * outInterval,    # 1  mol/m2/week -> kg/m2/yr
-#                       molar_mass_C / molar_mass_N,          # 2
-#                       molar_mass_N / molar_mass_P,          # 3
+                       molar_mass_C / molar_mass_N,          # 2
+                       molar_mass_N / molar_mass_P,          # 3
                        molar_mass_C / 1000,                  # 4  mol C -> kg C
                        molar_mass_C / 1000,                  # 5  mol C -> kg C
 #                       molar_mass_N * outInterval,           # 6  mol N/m2/week -> g/m2/yr
                        molar_mass_N * outInterval,           # 7  mol N/m2/week -> g/m2/yr
-                       molar_mass_P * outInterval            # 8  mol P/m2/week -> g/m2/yr
-#                       molar_mass_N * outInterval            # 9  mol N/m2/week -> g/m2/yr
-#                       molar_mass_P * outInterval            # 10 mol P/m2/week -> g/m2/yr
+                       molar_mass_P * outInterval,           # 8  mol P/m2/week -> g/m2/yr
+                       molar_mass_N * outInterval,           # 9  mol N/m2/week -> g/m2/yr
+                       molar_mass_P * outInterval            # 10 mol P/m2/week -> g/m2/yr
 )
 
 
@@ -150,6 +150,16 @@ outVarAvgValSet <- data.frame(varName = numeric(), stringsAsFactors=F)
 # store all the pcc results from the parameters in a list of df
 pccResDFList <- list()
 
+###################
+# rank transform values of parameters already
+outInfo <- "_no_ranktform"
+if (rankTform == "T"){
+  print(" applying rank-transformation to parameter values")
+  outInfo <- "_with_ranktform"
+  # transform parameter values (sapply: apply function "rank" to each column/parameter)
+  paramTab <- as.data.frame(sapply(paramTab, rank))
+}
+
 
 # loop over output variables
 print(" reading the output-variable data from all simulations into array and calc the avg value of each")
@@ -161,36 +171,128 @@ for (v in 1:nOutVar){
   
   ###################
   # read the output-variable data from all simulations into array and calc the avg value of each
-  print(paste0(" reading  ", dirList[1], "/output/", outFile[v], tstepPool, outFileExt, " <- ", outVarName[v]))
-  print(" ...")
-  for (i in 1:nSim){
-    #print(paste0(" reading  ", dirList[i], "/output/", outFile[v], tstepPool, outFileExt, " <- ", outVarName[v]))
-    dat <- read.table(paste0(dirList[i], "/output/", outFile[v], tstepPool, outFileExt), header=T, sep="")
-    # get colnumber of outVarName[v]
-    varColNumber <- which(colnames(dat) == outVarName[v])
-    # test if enough data is available for defined avg-period
-    rowE <- nrow(dat)
-    if (rowE > spanRows){ rowS <- rowE - spanRows
-    } else              { rowS <- 1  }
-    # get avg value
-    outVarAvgVal[i,1] <- mean(dat[rowS:rowE,varColNumber])
+  # diff normal & derived variables (case 1 and 2)
+  derivedOutVar <- "F"
+  if (outVarName[v] == "Leaf_CN" || outVarName[v] == "Leaf_NP" || outVarName[v] == "Nlosses" || outVarName[v] == "Plosses"){
+    derivedOutVar <- "T"
   }
+  
+  # case 1: one variable (default case)
+  if (derivedOutVar == "F"){
+    print(paste0(" reading  ", dirList[1], "/output/", outFile[v], tstepPool, outFileExt, " <- ", outVarName[v]))
+    print(" ...")
+    for (i in 1:nSim){
+      #print(paste0(" reading  ", dirList[i], "/output/", outFile[v], tstepPool, outFileExt, " <- ", outVarName[v]))
+      dat <- read.table(paste0(dirList[i], "/output/", outFile[v], tstepPool, outFileExt), header=T, sep="")
+      # get colnumber of outVarName[v]
+      varColNumber <- which(colnames(dat) == outVarName[v])
+      # test if enough data is available for defined avg-period
+      rowE <- nrow(dat)
+      if (rowE > spanRows){ rowS <- rowE - spanRows
+      } else              { rowS <- 1  }
+      # get avg value
+      outVarAvgVal[i,1] <- mean(dat[rowS:rowE,varColNumber], na.rm=T)
+    } # end  for()
+  } # end  if()
 
+  # case 2: derived variable from more than one variables (and output files) ####################################################
+  if (derivedOutVar == "T"){                                                                                                   ##
+    # Leaf_CN
+    if (outVarName[v] == "Leaf_CN"){
+      outFileC    <- "vegpoolC_"
+      outFileN    <- "vegpoolN_"
+      outVarNameC <- "Leaf_C"
+      outVarNameN <- "Leaf_N"
+      print(paste0(" reading  ", dirList[1], "/output/", outFileC, tstepPool, outFileExt, " <- ", outVarNameC))
+      print(paste0(" reading  ", dirList[1], "/output/", outFileN, tstepPool, outFileExt, " <- ", outVarNameN))
+      print(" ...")
+      for (i in 1:nSim){
+        dat1 <- read.table(paste0(dirList[i], "/output/", outFileC, tstepPool, outFileExt), header=T, sep="")
+        varColNumber1 <- which(colnames(dat1) == outVarNameC)
+        dat2 <- read.table(paste0(dirList[i], "/output/", outFileN, tstepPool, outFileExt), header=T, sep="")
+        varColNumber2 <- which(colnames(dat2) == outVarNameN)
+        rowE <- nrow(dat1)
+        if (rowE > spanRows){ rowS <- rowE - spanRows
+        } else              { rowS <- 1  }
+        outVarAvgVal[i,1] <- mean(dat1[rowS:rowE,varColNumber1], na.rm=T) / mean(dat2[rowS:rowE,varColNumber2], na.rm=T)  # C/N
+      } # end  for()
+    } # end Leaf_CN
+    # Leaf_NP
+    if (outVarName[v] == "Leaf_NP"){
+      outFileN    <- "vegpoolN_"
+      outFileP    <- "vegpoolP_"
+      outVarNameN <- "Leaf_N"
+      outVarNameP <- "Leaf_P"
+      print(paste0(" reading  ", dirList[1], "/output/", outFileN, tstepPool, outFileExt, " <- ", outVarNameN))
+      print(paste0(" reading  ", dirList[1], "/output/", outFileP, tstepPool, outFileExt, " <- ", outVarNameP))
+      print(" ...")
+      for (i in 1:nSim){
+        dat1 <- read.table(paste0(dirList[i], "/output/", outFileN, tstepPool, outFileExt), header=T, sep="")
+        varColNumber1 <- which(colnames(dat1) == outVarNameN)
+        dat2 <- read.table(paste0(dirList[i], "/output/", outFileP, tstepPool, outFileExt), header=T, sep="")
+        varColNumber2 <- which(colnames(dat2) == outVarNameP)
+        rowE <- nrow(dat1)
+        if (rowE > spanRows){ rowS <- rowE - spanRows
+        } else              { rowS <- 1  }
+        outVarAvgVal[i,1] <- mean(dat1[rowS:rowE,varColNumber1], na.rm=T) / mean(dat2[rowS:rowE,varColNumber2], na.rm=T)  # N/P
+      } # end  for()
+    } # end Leaf_NP
+    # Nlosses
+    if (outVarName[v] == "Nlosses"){
+      outVarNames  <- c("Emission_NOY", "Emission_N2O", "Emission_N2", "LeachingNH4", "LeachingNO3", "LeachingDOM_N")
+      varColNumber <- c(rep(0,length(outVarNames)))
+      print(paste0(" reading  ", dirList[1], "/output/", outFile[v], tstepPool, outFileExt, " <- ", outVarNames))
+      print(" ...")
+      for (i in 1:nSim){
+        dat <- read.table(paste0(dirList[i], "/output/", outFile[v], tstepPool, outFileExt), header=T, sep="")
+        varColNumber[1] <- which(colnames(dat) == outVarNames[1])
+        varColNumber[2] <- which(colnames(dat) == outVarNames[2])
+        varColNumber[3] <- which(colnames(dat) == outVarNames[3])
+        varColNumber[4] <- which(colnames(dat) == outVarNames[4])
+        varColNumber[5] <- which(colnames(dat) == outVarNames[5])
+        varColNumber[6] <- which(colnames(dat) == outVarNames[6])
+        rowE <- nrow(dat)
+        if (rowE > spanRows){ rowS <- rowE - spanRows
+        } else              { rowS <- 1  }
+        outVarAvgVal[i,1] <- mean(dat[rowS:rowE,varColNumber[1]], na.rm=T) + 
+                             mean(dat[rowS:rowE,varColNumber[2]], na.rm=T) +
+                             mean(dat[rowS:rowE,varColNumber[3]], na.rm=T) +
+                             mean(dat[rowS:rowE,varColNumber[4]], na.rm=T) +
+                             mean(dat[rowS:rowE,varColNumber[5]], na.rm=T) +
+                             mean(dat[rowS:rowE,varColNumber[6]], na.rm=T)
+      } # end  for()
+    } # end Nlosses
+    # Plosses
+    if (outVarName[v] == "Plosses"){
+      outVarNames  <- c("Leaching_PO4", "LeachingDOM_P")
+      varColNumber <- c(rep(0,length(outVarNames)))
+      print(paste0(" reading  ", dirList[1], "/output/", outFile[v], tstepPool, outFileExt, " <- ", outVarNames))
+      print(" ...")
+      for (i in 1:nSim){
+        dat <- read.table(paste0(dirList[i], "/output/", outFile[v], tstepPool, outFileExt), header=T, sep="")
+        varColNumber[1] <- which(colnames(dat) == outVarNames[1])
+        varColNumber[2] <- which(colnames(dat) == outVarNames[2])
+        rowE <- nrow(dat)
+        if (rowE > spanRows){ rowS <- rowE - spanRows
+        } else              { rowS <- 1  }
+        outVarAvgVal[i,1] <- mean(dat[rowS:rowE,varColNumber[1]], na.rm=T) + 
+                             mean(dat[rowS:rowE,varColNumber[2]], na.rm=T)
+      } # end  for()
+    } # end Plosses
+  } # end  'if (derivedOutVar == "T"){'                                                                                        ##
+  # end case 2: derived variable from more than one variables (and output files) ################################################
+  
   # add output-variable avg values to df befor rank-transformation is done
   outVarAvgValSet[1:nSim,v]    <- outVarAvgVal[,1]
   colnames(outVarAvgValSet)[v] <- colnames(outVarAvgVal)[1]
     
    
   ###################
-  # rank transform values of both parameters and output-variable
-  outInfo <- "_no_ranktform"
+  # rank transform also the values of avg output-variable
   if (rankTform == "T"){
-   print(" applying rank-transformation")
-   outInfo <- "_with_ranktform"
+   print(" applying rank-transformation to avg values of output variables")
    # transform output variable
    outVarAvgVal[,1] <- rank(outVarAvgVal[,1])
-   # transform parameter values (sapply: apply function "rank" to each column/parameter)
-   paramTab <- as.data.frame(sapply(paramTab, rank))
   }
     
   
@@ -267,15 +369,15 @@ pdf(paste0("parameter_list/pcc_", outFileID, outInfo, ".pdf"), paper="a4r", heig
   par(mar=c(10.0,2.2,1.0,0.2) , oma=c(0.5,0.1,0.5,0.1)) # oma = outer margins (b, l, t, r)
 
   # plot boxplots
-  meanAbsVal <- sapply(outVarAvgValSet, mean)
+  meanAbsVal <- sapply(outVarAvgValSet, mean, na.rm=T)
   for (v in 1:nOutVar){
     # normalize the values using the mean, so that the mean of all boxplots is one and the variation is kept
-    outVarAvgValSet[,v] <- outVarAvgValSet[,v] / mean(outVarAvgValSet[,v])
+    outVarAvgValSet[,v] <- outVarAvgValSet[,v] / mean(outVarAvgValSet[,v],na.rm=T)
   }
-  minRelVal <- min(outVarAvgValSet)
-  maxRelVal <- max(outVarAvgValSet)
+  #minRelVal <- min(outVarAvgValSet)
+  #maxRelVal <- max(outVarAvgValSet)
   boxplot(outVarAvgValSet, 
-          ylim=c(minRelVal-abs(0.0006*minRelVal),maxRelVal+abs(0.0006*maxRelVal)),
+          #ylim=c(minRelVal-abs(0.0006*minRelVal),maxRelVal+abs(0.0006*maxRelVal)),
           main="Variation in output variables (each normalized by the mean)",
           col="gray80",
           range=0,                      # whiskers cover min and max value
@@ -314,8 +416,10 @@ pdf(paste0("parameter_list/pcc_", outFileID, outInfo, ".pdf"), paper="a4r", heig
     xAdd <- 0.1
     yAdd <- 0.04
     for (s in 1:nrow(pccResDF)){
-      if (pccResDF$p_value[s] < 0.1){
-        points(s+xAdd, pccResDF$pcc_estimate[s]+yAdd, pch=8, cex=0.6, col="dodgerblue3")
+      if (! is.nan(pccResDF$p_value[s]) && ! is.infinite(pccResDF$p_value[s])){
+        if (pccResDF$p_value[s] < 0.1){
+          points(s+xAdd, pccResDF$pcc_estimate[s]+yAdd, pch=8, cex=0.6, col="dodgerblue3")
+        }
       }
     }
     #axis(1, at=1:nrow(pccResDF), labels=rownames(pccResDF))
