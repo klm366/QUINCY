@@ -10,7 +10,7 @@ molar_mass_N <- 14.0072
 molar_mass_P <- 30.997
 weeks        <- 52
 months       <- 12
-outInterval  <- weeks    # update as needed
+outInterval  <- months    # update as needed
 ###################################################################################################
 
 
@@ -39,7 +39,7 @@ outVarNameSet  <- c("GPP",                      # 1
                     "Leaf_NP",                  # 3  Leaf_N / Leaf_P
                     "Total_C",                  # 4
                     "TotalSoilOrgC",            # 5
-#                    "FixationN",                # 6  symbiontic N fixation (variable veg_mem n_fixation)
+                    "Nfix_asymb",               # 6  asymbiontic N fixation only (SB var: SUM(asymb_n_fixation(ipoi,:)*soil_depth_sl(ipoi,:)))
                     "NetMinNH4",                # 7
                     "Net_Mineralisation_PO4",   # 8
                     "Nlosses",                  # 9   leaching + emmission | Emission_NOY Emission_N2O Emission_N2 LeachingNH4 LeachingNO3 LeachingDOM_N
@@ -51,7 +51,7 @@ outFileSet     <- c("vegfluxC_",                # 1
                     "derivedLeafNP",            # 3  vegpoolN_ & vegpoolP_  these two input files are hardcoded below
                     "vegpoolC_",                # 4
                     "ecopoolCNP_",              # 5
-#                    "vegfluxN_",                # 6
+                    "soilfluxN_",               # 6
                     "soilfluxN_",               # 7
                     "soilfluxP_",               # 8
                     "soilfluxN_",               # 9  
@@ -59,11 +59,11 @@ outFileSet     <- c("vegfluxC_",                # 1
 )
 
 outVarUnitConvSet <- c(molar_mass_C / 1000 * outInterval,    # 1  mol/m2/week -> kg/m2/yr
-                       molar_mass_C / molar_mass_N,          # 2
-                       molar_mass_N / molar_mass_P,          # 3
+                       molar_mass_C / molar_mass_N,          # 2  mol/mol -> g/g
+                       molar_mass_N / molar_mass_P,          # 3  mol/mol -> g/g
                        molar_mass_C / 1000,                  # 4  mol C -> kg C
                        molar_mass_C / 1000,                  # 5  mol C -> kg C
-#                       molar_mass_N * outInterval,           # 6  mol N/m2/week -> g/m2/yr
+                       molar_mass_N * outInterval,           # 6  mol N/m2/week -> g/m2/yr
                        molar_mass_N * outInterval,           # 7  mol N/m2/week -> g/m2/yr
                        molar_mass_P * outInterval,           # 8  mol P/m2/week -> g/m2/yr
                        molar_mass_N * outInterval,           # 9  mol N/m2/week -> g/m2/yr
