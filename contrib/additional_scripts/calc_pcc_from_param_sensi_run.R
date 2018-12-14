@@ -308,7 +308,7 @@ for (v in 1:nOutVar){
   rownames(pccResults) <- colnames(paramTab)
   
   # run loop over parameters
-  print(" running pcor.test() for each parameter")
+  print(" running pcor.test() for each parameter  (with warnings disabled)")
   for (i in 1:nParam){
     # get only the values (as df) of the one parameter which the pcc is calculated for
     paramVal    <- subset(paramTab, select = paramList[i])
@@ -316,11 +316,12 @@ for (v in 1:nOutVar){
     paramTabRem <- paramTab[ , !(names(paramTab) %in% paramList[i])]
     # disable warnings of which pcor.test() creates a lot
     options(warn=-1)
-    # run partial correlation analysis
-    pcc <- pcor.test(outVarAvgVal[,1],
-              paramVal[,1],
-              paramTabRem[,1:ncol(paramTabRem)],
-              method="pearson")
+    # run partial correlation analysis exclude all NA/NaN/Inf from the output values
+    inclOutVal <- which(! is.na(outVarAvgVal[,1]) & ! is.nan(outVarAvgVal[,1]) & ! is.infinite(outVarAvgVal[,1]))
+    pcc <- pcor.test(outVarAvgVal[inclOutVal,1],
+              paramVal[inclOutVal,1],
+              paramTabRem[inclOutVal,1:ncol(paramTabRem)],
+              method=c("pearson", "kendall", "spearman"))
     # enable warnings
     options(warn=0)
     # save partial correlation coefficient in the results array
@@ -364,7 +365,7 @@ if (outVarSet == "T"){
   outFileID <- "outVarSet"
 }
 # create pdf
-pdf(paste0("parameter_list/pcc_", outFileID, outInfo, ".pdf"), paper="a4r", height=6.4, width=12, pointsize=10, 
+pdf(paste0("parameter_list/pcc_", outFileID, outInfo, ".pdf"), paper="a4r", height=6.4, width=12, pointsize=8, 
     bg="white", family="Helvetica", version="1.6")
   par(mar=c(10.0,2.2,1.0,0.2) , oma=c(0.5,0.1,0.5,0.1)) # oma = outer margins (b, l, t, r)
 
@@ -416,7 +417,7 @@ pdf(paste0("parameter_list/pcc_", outFileID, outInfo, ".pdf"), paper="a4r", heig
     xAdd <- 0.1
     yAdd <- 0.04
     for (s in 1:nrow(pccResDF)){
-      if (! is.nan(pccResDF$p_value[s]) && ! is.infinite(pccResDF$p_value[s])){
+      if (! is.nan(pccResDF$p_value[s]) & ! is.infinite(pccResDF$p_value[s])){
         if (pccResDF$p_value[s] < 0.1){
           points(s+xAdd, pccResDF$pcc_estimate[s]+yAdd, pch=8, cex=0.6, col="dodgerblue3")
         }
@@ -426,7 +427,7 @@ pdf(paste0("parameter_list/pcc_", outFileID, outInfo, ".pdf"), paper="a4r", heig
     axis(1, at=seq(1, nrow(pccResDF), by=1), labels = FALSE, tck=0.02)
     text(seq(1, nrow(pccResDF), by=1), par("usr")[3] - 0.06, 
        labels=rownames(pccResDF), srt=65, pos=2, xpd = TRUE,
-       cex=0.9)
+       cex=1.0)
     abline(h=c(-1.0,-0.5,0,0.5,1.0), col="sienna",lw=0.6)
   } # end loop over output variables
 garbage <- dev.off()
