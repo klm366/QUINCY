@@ -414,7 +414,7 @@ pdf(paste0("parameter_list/pcc_", outFileID, outInfo, ".pdf"), paper="a4r", heig
   # min-max span of normalized output-variable values
   spanAbsVal <- c(rep(NA,nOutVar))
   for (v in 1:nOutVar){
-    spanAbsVal[v] <- abs(max(outVarAvgValSet[,v], na.rm=T) - min(outVarAvgValSet[,v]))
+    spanAbsVal[v] <- abs(max(outVarAvgValSet[,v], na.rm=T) - min(outVarAvgValSet[,v], na.rm=T))
   }
   # weighted mean of each parameter oer all output variables (weighted by the min-max span of the the output-variable)
   pccWeightMean <- c(rep(NA,nParam))
