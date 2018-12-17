@@ -147,6 +147,10 @@ nOutVar <- length(outVarName)
 outVarAvgValSet <- data.frame(varName = numeric(), stringsAsFactors=F)
 
 ###################
+# create df for the pcc results only, and keep it unsortet (the pccResDFList keeps the sortet values)
+pccResUsortDF   <- data.frame(varName = numeric(), stringsAsFactors=F)
+
+###################
 # store all the pcc results from the parameters in a list of df
 pccResDFList <- list()
 
@@ -333,6 +337,11 @@ for (v in 1:nOutVar){
     #  where -1 shows a perfect, linear negative correlation, and 1 shows a perfect, linear positive correlation.
   }
 
+  # transform results to df and store results unsorted (needed for the summary pcc figure)
+  pccResUsortDF[1:nParam,v]  <- as.data.frame(pccResults)[,1]
+  colnames(pccResUsortDF)[v] <- outVarName[v]
+  rownames(pccResUsortDF)    <- rownames(as.data.frame(pccResults))
+
   # transform results to df
   pccResDF <- as.data.frame(pccResults)
   # sort with decreasing pcc_estimates
@@ -369,10 +378,12 @@ pdf(paste0("parameter_list/pcc_", outFileID, outInfo, ".pdf"), paper="a4r", heig
     bg="white", family="Helvetica", version="1.6")
   par(mar=c(10.0,2.2,1.0,0.2) , oma=c(0.5,0.1,0.5,0.1)) # oma = outer margins (b, l, t, r)
 
-  # plot boxplots
+
+  # plot boxplots  
+  # mean of absolute output-variable values
   meanAbsVal <- sapply(outVarAvgValSet, mean, na.rm=T)
+  # normalize the values using the mean, so that the mean of all boxplots is one and the variation is kept
   for (v in 1:nOutVar){
-    # normalize the values using the mean, so that the mean of all boxplots is one and the variation is kept
     outVarAvgValSet[,v] <- outVarAvgValSet[,v] / mean(outVarAvgValSet[,v],na.rm=T)
   }
   #minRelVal <- min(outVarAvgValSet)
@@ -399,6 +410,41 @@ pdf(paste0("parameter_list/pcc_", outFileID, outInfo, ".pdf"), paper="a4r", heig
   #     srt=0, pos=1, xpd = TRUE, cex=0.9)
 
 
+  # summary pcc estimate values
+  # min-max span of normalized output-variable values
+  spanAbsVal <- c(rep(NA,nOutVar))
+  for (v in 1:nOutVar){
+    spanAbsVal[v] <- abs(max(outVarAvgValSet[,v], na.rm=T) - min(outVarAvgValSet[,v]))
+  }
+  # weighted mean of each parameter oer all output variables (weighted by the min-max span of the the output-variable)
+  pccWeightMean <- c(rep(NA,nParam))
+  for (n in 1:nParam){
+    pccWeightMean[n] <- weighted.mean(abs(pccResUsortDF[n,]), spanAbsVal)
+  }
+  # transform to df
+  pccWeightMeanDF           <- as.data.frame(pccWeightMean)
+  rownames(pccWeightMeanDF) <- rownames(pccResUsortDF)
+  # and now sort (needs a second helper-column to work)
+  pccWeightMeanDF              <- cbind.data.frame(pccWeightMeanDF,pccWeightMeanDF)
+  colnames(pccWeightMeanDF)[2] <- "helper"
+  pccWeightMeanDF              <- pccWeightMeanDF[order(-pccWeightMeanDF$pccWeightMean),]
+  # plot
+  plot(1:nrow(pccWeightMeanDF), pccWeightMeanDF$pccWeightMean,  
+       type="p", pch=15, cex=0.8,
+       ylim=c(0,1),
+       main="weighted mean of absolute! parameter pcc estimates (across output variables)",
+       ylab="Part. Correl. Coeff of parameters (weighted mean)",
+       xlab=NA, #"QUINCY parameter",
+       xaxt="n",
+       mgp=c(1.2, 0.14, 0), tck=0.02
+  )
+  axis(1, at=seq(1, nrow(pccWeightMeanDF), by=1), labels = FALSE, tck=0.02)
+  text(seq(1, nrow(pccWeightMeanDF), by=1), par("usr")[3] - 0.06, 
+       labels=rownames(pccWeightMeanDF), srt=65, pos=2, xpd = TRUE,
+       cex=1.0)
+  abline(h=c(0,0.25,0.5,0.75,1.0), col="sienna",lw=0.6)
+
+  
   # loop over output variables to plot pcc_estimate values
   for (v in 1:nOutVar){
     # get df
