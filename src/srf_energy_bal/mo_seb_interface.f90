@@ -240,12 +240,13 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SEB_, heat_cap,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, heat_cap_old,  weighted_by_fract)
 
-    dsl4jsb_Aggregate_onChunk(SEB_, t_lwtr,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, t_lice,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, s_wtr,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, s_ice,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, qsat_lwtr, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, qsat_lice, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, t_lwtr,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, t_lice,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, s_wtr,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, s_ice,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, qsat_lwtr,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, qsat_lice,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, fract_lice, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
