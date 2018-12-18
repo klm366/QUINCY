@@ -5655,24 +5655,31 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     INTEGER                     :: pft_id 
+    LOGICAL                     :: prop_parameter_changes
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':set_parameter_lctlib_values_with_list_values'
+
+
+
+    !> 0.9 init local variables
+    !! 
+    prop_parameter_changes = model%config%set_parameter_values_proportional
 
 
     !> 1.0 read parameter lctlib values from file
     !! 
     CALL read_parameter_lctlib_list
 
-    !> 2.0 replace parameter lctlib values for each PFT individually
+    !> 2.0 replace parameter lctlib values for the particular PFT X that is simulated
     !! 
     !! lctlib(4)%sla is needed for calculation of k_rtos
-    CALL replace_pft_specific_lctlib_parameter_values(model%lctlib(1), param_pft1_from_file, model%lctlib(4)%sla)
-    CALL replace_pft_specific_lctlib_parameter_values(model%lctlib(2), param_pft2_from_file, model%lctlib(4)%sla)
-    CALL replace_pft_specific_lctlib_parameter_values(model%lctlib(3), param_pft3_from_file, model%lctlib(4)%sla)
-    CALL replace_pft_specific_lctlib_parameter_values(model%lctlib(4), param_pft4_from_file, model%lctlib(4)%sla)
-    CALL replace_pft_specific_lctlib_parameter_values(model%lctlib(5), param_pft5_from_file, model%lctlib(4)%sla)
-    CALL replace_pft_specific_lctlib_parameter_values(model%lctlib(6), param_pft6_from_file, model%lctlib(4)%sla)
-    CALL replace_pft_specific_lctlib_parameter_values(model%lctlib(7), param_pft7_from_file, model%lctlib(4)%sla)
-    CALL replace_pft_specific_lctlib_parameter_values(model%lctlib(8), param_pft8_from_file, model%lctlib(4)%sla)
+    CALL change_lctlib_param_values_pft_x(model%lctlib(1), param_pft1_from_file, model%lctlib(4)%sla, prop_parameter_changes)
+    CALL change_lctlib_param_values_pft_x(model%lctlib(2), param_pft2_from_file, model%lctlib(4)%sla, prop_parameter_changes)
+    CALL change_lctlib_param_values_pft_x(model%lctlib(3), param_pft3_from_file, model%lctlib(4)%sla, prop_parameter_changes)
+    CALL change_lctlib_param_values_pft_x(model%lctlib(4), param_pft4_from_file, model%lctlib(4)%sla, prop_parameter_changes)
+    CALL change_lctlib_param_values_pft_x(model%lctlib(5), param_pft5_from_file, model%lctlib(4)%sla, prop_parameter_changes)
+    CALL change_lctlib_param_values_pft_x(model%lctlib(6), param_pft6_from_file, model%lctlib(4)%sla, prop_parameter_changes)
+    CALL change_lctlib_param_values_pft_x(model%lctlib(7), param_pft7_from_file, model%lctlib(4)%sla, prop_parameter_changes)
+    CALL change_lctlib_param_values_pft_x(model%lctlib(8), param_pft8_from_file, model%lctlib(4)%sla, prop_parameter_changes)
 
   END SUBROUTINE set_parameter_lctlib_values_with_list_values
 
@@ -5681,7 +5688,7 @@ CONTAINS
   !> replace hard coded lctlib parameter values for one PFT with values from file
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE replace_pft_specific_lctlib_parameter_values(lctlib, param_pft_from_file, pft4_sla)
+  SUBROUTINE change_lctlib_param_values_pft_x(lctlib, param_pft_from_file, pft4_sla, proportional_parameter_changes)
 
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_base_constants,          ONLY: one_day, one_year
@@ -5694,178 +5701,343 @@ CONTAINS
     TYPE(t_lctlib_element),               INTENT(inout) :: lctlib
     TYPE(t_parameters_lctlib_from_file),  INTENT(in)    :: param_pft_from_file
     REAL(wp),                             INTENT(in)    :: pft4_sla
+    LOGICAL,                              INTENT(in)    :: proportional_parameter_changes
     ! ---------------------------
     ! 0.2 Local
     REAL(wp)                    :: pft4_sla_hlp
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':replace_pft_specific_lctlib_parameter_values'
+    REAL(wp)                    :: k_rtos_hlp                 ! depends on itree/igrass
+    REAL(wp)                    :: c0_allom_hlp               ! depends on itree/igrass
+    LOGICAL                     :: dependency_recalculation   ! set TRUE for parameters that need to be re-calculated because a parameter it depends on got a new value
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':change_lctlib_param_values_pft_x'
 
 
-    !> 0.9 init local variable
+    !> 0.9 set sla_helper to the sla value of pft4 always
     !! 
     pft4_sla_hlp = pft4_sla
 
 
     !> 1.0 replace lctlib parameter-value for the particular PFT if a new value is provided
     !! 
-! example:
-!   IF (ABS(param_pft_from_file%frac_sapwood_branch       - missval) > eps8) &
-!      lctlib%frac_sapwood_branch = param_pft_from_file%frac_sapwood_branch
+    CALL Set_quincy_parameter_value(1._wp / carbon_per_dryweight_leaf / 1000.0_wp * molar_mass_C * param_pft_from_file%sla, &
+                                    param_pft_from_file%sla, &
+                                    "lctlib_sla", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%sla)
+    ! if the PFT of this simulation is 4 re-set the sla_helper variable (just in case the lctlib%sla was changed)
+    IF (lctlib%lctnumber == 4) pft4_sla_hlp = lctlib%sla
+    
+    CALL Set_quincy_parameter_value(param_pft_from_file%sigma_vis, &
+                                    param_pft_from_file%sigma_vis, &
+                                    "lctlib_sigma_vis", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%sigma_vis)
+    
+    CALL Set_quincy_parameter_value(param_pft_from_file%sigma_nir, &
+                                    param_pft_from_file%sigma_nir, &
+                                    "lctlib_sigma_nir", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%sigma_nir)
 
-    IF (ABS(param_pft_from_file%sla                       - missval) > eps8) THEN
-       lctlib%sla = 1._wp / carbon_per_dryweight_leaf / 1000.0_wp * molar_mass_C * param_pft_from_file%sla
-      ! change pft4_sla_hlp only of sla of PFT 4 was changed; see calculation of k_rtos below
-      IF (lctlib%lctnumber == 4) pft4_sla_hlp = lctlib%sla
-    ENDIF
-    IF (ABS(param_pft_from_file%sigma_vis                 - missval) > eps8) &
-       lctlib%sigma_vis = param_pft_from_file%sigma_vis
-    IF (ABS(param_pft_from_file%sigma_nir                 - missval) > eps8) &
-       lctlib%sigma_nir = param_pft_from_file%sigma_nir
-    IF (ABS(param_pft_from_file%omega_clumping            - missval) > eps8) &
-       lctlib%omega_clumping = param_pft_from_file%omega_clumping
-    IF (ABS(param_pft_from_file%crown_shape_factor        - missval) > eps8) &
-       lctlib%crown_shape_factor = param_pft_from_file%crown_shape_factor
-    IF (ABS(param_pft_from_file%cn_leaf                   - missval) > eps8) &
-       lctlib%cn_leaf = carbon_per_dryweight_leaf * 1000._wp * molar_mass_N / molar_mass_C / param_pft_from_file%cn_leaf
-    IF (ABS(param_pft_from_file%cn_leaf_min               - missval) > eps8) &
-       lctlib%cn_leaf_min = carbon_per_dryweight_leaf * 1000._wp * molar_mass_N / molar_mass_C / param_pft_from_file%cn_leaf_min
-    IF (ABS(param_pft_from_file%cn_leaf_max               - missval) > eps8) &
-       lctlib%cn_leaf_max = carbon_per_dryweight_leaf * 1000._wp * molar_mass_N / molar_mass_C / param_pft_from_file%cn_leaf_max
-    ! 1) np_leaf np_leaf_min np_leaf_max: variation in these parameters 
-    IF (ABS(param_pft_from_file%np_leaf                   - missval) > eps8) &
-       lctlib%np_leaf = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib%cn_leaf / & 
-                        param_pft_from_file%np_leaf
-    IF (ABS(param_pft_from_file%np_leaf_min               - missval) > eps8) &
-       lctlib%np_leaf_min = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib%cn_leaf / & 
-                            param_pft_from_file%np_leaf_min
-    IF (ABS(param_pft_from_file%np_leaf_max               - missval) > eps8) &
-       lctlib%np_leaf_max = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib%cn_leaf / & 
-                            param_pft_from_file%np_leaf_max
-    ! 2) np_leaf np_leaf_min np_leaf_max: variation in cn_leaf
-    IF (ABS(param_pft_from_file%cn_leaf                   - missval) > eps8) &
-       lctlib%np_leaf = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / param_pft_from_file%cn_leaf / & 
-                        lctlib%np_leaf
-    IF (ABS(param_pft_from_file%cn_leaf                   - missval) > eps8) &
-       lctlib%np_leaf_min = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / param_pft_from_file%cn_leaf / & 
-                            lctlib%np_leaf_min
-    IF (ABS(param_pft_from_file%cn_leaf                   - missval) > eps8) &
-       lctlib%np_leaf_max = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / param_pft_from_file%cn_leaf / & 
-                            lctlib%np_leaf_max
+    CALL Set_quincy_parameter_value(param_pft_from_file%omega_clumping, &
+                                    param_pft_from_file%omega_clumping, &
+                                    "lctlib_omega_clumping", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%omega_clumping)
+    
+    CALL Set_quincy_parameter_value(param_pft_from_file%crown_shape_factor, &
+                                    param_pft_from_file%crown_shape_factor, &
+                                    "lctlib_crown_shape_factor", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%crown_shape_factor)
+    
+    CALL Set_quincy_parameter_value(carbon_per_dryweight_leaf * 1000._wp * molar_mass_N / molar_mass_C / &
+                                      param_pft_from_file%cn_leaf, &
+                                    param_pft_from_file%cn_leaf, &
+                                    "lctlib_cn_leaf", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%cn_leaf)
 
-    IF (ABS(param_pft_from_file%k0_fn_struc               - missval) > eps8) &
-       lctlib%k0_fn_struc = param_pft_from_file%k0_fn_struc
-    ! fn_oth_min might not be changed directly but via k0_fn_struc
-    ! IF (ABS(param_pft_from_file%fn_oth_min                - missval) > eps8) &
-    !    lctlib%fn_oth_min = param_pft_from_file%fn_oth_min
-    IF (ABS(param_pft_from_file%k0_fn_struc               - missval) > eps8) &
-       lctlib%fn_oth_min = param_pft_from_file%k0_fn_struc - 5.0_wp / molar_mass_n * 0.5_wp * 1.e3_wp * 71.4_wp * &
-                           molar_mass_N / 1.e6_wp
-    IF (ABS(param_pft_from_file%t_jmax_opt                - missval) > eps8) &
-       lctlib%t_jmax_opt = param_pft_from_file%t_jmax_opt
-    IF (ABS(param_pft_from_file%t_jmax_omega              - missval) > eps8) &
-       lctlib%t_jmax_omega = param_pft_from_file%t_jmax_omega
-    IF (ABS(param_pft_from_file%g0                        - missval) > eps8) &
-       lctlib%g0 = param_pft_from_file%g0
-    IF (ABS(param_pft_from_file%g1                        - missval) > eps8) &
-       lctlib%g1 = param_pft_from_file%g1
-    IF (ABS(param_pft_from_file%gmin                      - missval) > eps8) &
-       lctlib%gmin = param_pft_from_file%gmin
-    IF (ABS(param_pft_from_file%tau_leaf                  - missval) > eps8) &
-       lctlib%tau_leaf = param_pft_from_file%tau_leaf / 12.0_wp
-    IF (ABS(param_pft_from_file%tau_fine_root             - missval) > eps8) &
-       lctlib%tau_fine_root = param_pft_from_file%tau_fine_root
-    IF (ABS(param_pft_from_file%tau_coarse_root           - missval) > eps8) &
-       lctlib%tau_coarse_root = param_pft_from_file%tau_coarse_root
-    IF (ABS(param_pft_from_file%tau_branch                - missval) > eps8) &
-       lctlib%tau_branch = param_pft_from_file%tau_branch
-    IF (ABS(param_pft_from_file%tau_sap_wood              - missval) > eps8) &
-       lctlib%tau_sap_wood = param_pft_from_file%tau_sap_wood
-    IF (ABS(param_pft_from_file%tau_fruit                 - missval) > eps8) &
-       lctlib%tau_fruit = param_pft_from_file%tau_fruit
-    IF (ABS(param_pft_from_file%tau_seed_litter           - missval) > eps8) &
-       lctlib%tau_seed_litter = param_pft_from_file%tau_seed_litter
-    IF (ABS(param_pft_from_file%tau_seed_est              - missval) > eps8) &
-       lctlib%tau_seed_est = param_pft_from_file%tau_seed_est
-    IF (ABS(param_pft_from_file%tau_mycorrhiza            - missval) > eps8) &
-       lctlib%tau_mycorrhiza = param_pft_from_file%tau_mycorrhiza
-    IF (ABS(param_pft_from_file%vmax_uptake_n             - missval) > eps8) &
-       lctlib%vmax_uptake_n = param_pft_from_file%vmax_uptake_n
-    IF (ABS(param_pft_from_file%vmax_uptake_p             - missval) > eps8) &
-       lctlib%vmax_uptake_p = param_pft_from_file%vmax_uptake_p
-    IF (ABS(param_pft_from_file%bnf_base                  - missval) > eps8) &
-       lctlib%bnf_base = param_pft_from_file%bnf_base / molar_mass_N / one_day / one_year * 1.e6_wp
-    IF (ABS(param_pft_from_file%lambda_est_light          - missval) > eps8) &
-       lctlib%lambda_est_light = param_pft_from_file%lambda_est_light
-    IF (ABS(param_pft_from_file%k_est_light               - missval) > eps8) &
-       lctlib%k_est_light = param_pft_from_file%k_est_light
-    IF (ABS(param_pft_from_file%seed_size                 - missval) > eps8) &
-       lctlib%seed_size = param_pft_from_file%seed_size
-    IF (ABS(param_pft_from_file%beta_soil_flush           - missval) > eps8) &
-       lctlib%beta_soil_flush = param_pft_from_file%beta_soil_flush
-    IF (ABS(param_pft_from_file%beta_soil_senescence      - missval) > eps8) &
-       lctlib%beta_soil_senescence = param_pft_from_file%beta_soil_senescence
-    IF (ABS(param_pft_from_file%gdd_req_max               - missval) > eps8) &
-       lctlib%gdd_req_max = param_pft_from_file%gdd_req_max
-    IF (ABS(param_pft_from_file%k_gdd_dormance            - missval) > eps8) &
-       lctlib%k_gdd_dormance = param_pft_from_file%k_gdd_dormance
-    IF (ABS(param_pft_from_file%t_air_senescence          - missval) > eps8) &
-       lctlib%t_air_senescence = param_pft_from_file%t_air_senescence + Tzero
-    IF (ABS(param_pft_from_file%min_leaf_age              - missval) > eps8) &
-       lctlib%min_leaf_age = param_pft_from_file%min_leaf_age
-    IF (ABS(param_pft_from_file%frac_sapwood_branch       - missval) > eps8) &
-       lctlib%frac_sapwood_branch = param_pft_from_file%frac_sapwood_branch
-    IF (ABS(param_pft_from_file%wood_density              - missval) > eps8) &
-       lctlib%wood_density = param_pft_from_file%wood_density * 1.e6_wp / molar_mass_C
-    IF (ABS(param_pft_from_file%k_latosa                  - missval) > eps8) &
-       lctlib%k_latosa = param_pft_from_file%k_latosa
-    IF (ABS(param_pft_from_file%k_crtos                   - missval) > eps8) &
-       lctlib%k_crtos = param_pft_from_file%k_crtos
-    ! k_rtos might not be changed directly but via other lctlib parameters; code moved to below considering dependencies to other lctlib parameters
-    ! IF (ABS(param_pft_from_file%k_rtos                    - missval) > eps8) &
-    !    lctlib%k_rtos = param_pft_from_file%k_rtos
-    IF (ABS(param_pft_from_file%k2_fruit_alloc            - missval) > eps8) &
-       lctlib%k2_fruit_alloc = param_pft_from_file%k2_fruit_alloc
-    IF (ABS(param_pft_from_file%allom_k1                  - missval) > eps8) &
-       lctlib%allom_k1 = param_pft_from_file%allom_k1
-    IF (ABS(param_pft_from_file%allom_k2                  - missval) > eps8) &
-       lctlib%allom_k2 = param_pft_from_file%allom_k2
-    IF (ABS(param_pft_from_file%phi_leaf_min              - missval) > eps8) &
-       lctlib%phi_leaf_min = param_pft_from_file%phi_leaf_min
-    IF (ABS(param_pft_from_file%k_root                    - missval) > eps8) &
-       lctlib%k_root = param_pft_from_file%k_root * molar_mass_C * 1.e-10_wp
-    IF (ABS(param_pft_from_file%k_sapwood                 - missval) > eps8) &
-       lctlib%k_sapwood = 1.e-3_wp * param_pft_from_file%k_sapwood
-    ! k_rtos
-    IF (ABS(param_pft_from_file%wood_density              - missval) > eps8 .OR. &
-        ABS(param_pft_from_file%k_latosa                  - missval) > eps8        ) THEN
-      IF(lctlib%growthform /= igrass) THEN
-         lctlib%k_rtos = 1.75_wp * (pft4_sla_hlp * lctlib%wood_density) / lctlib%k_latosa
-      ELSE
-         lctlib%k_rtos = 0.5_wp / sm2lm_grass
-      ENDIF
+    CALL Set_quincy_parameter_value(carbon_per_dryweight_leaf * 1000._wp * molar_mass_N / molar_mass_C / &
+                                      param_pft_from_file%cn_leaf_min, &
+                                    param_pft_from_file%cn_leaf_min, &
+                                    "lctlib_cn_leaf_min", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%cn_leaf_min)
+    
+    CALL Set_quincy_parameter_value(carbon_per_dryweight_leaf * 1000._wp * molar_mass_N / molar_mass_C / &
+                                      param_pft_from_file%cn_leaf_max, &
+                                    param_pft_from_file%cn_leaf_max, &
+                                    "lctlib_cn_leaf_max", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%cn_leaf_max)
+    
+    IF (ABS(param_pft_from_file%cn_leaf - missval) > eps8) THEN
+        dependency_recalculation = .TRUE.
+        lctlib%np_leaf           = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib%cn_leaf / &
+                                   lctlib%np_leaf
     ENDIF
-    ! c0_allom might not be changed directly but via other lctlib parameters:
-    ! IF (ABS(param_pft_from_file%c0_allom                  - missval) > eps8) &
-    !    lctlib%c0_allom = param_pft_from_file%c0_allom
+    CALL Set_quincy_parameter_value(carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib%cn_leaf / &
+                                      param_pft_from_file%np_leaf, &
+                                    param_pft_from_file%np_leaf, &
+                                    "lctlib_np_leaf", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%np_leaf)
+
+    IF (ABS(param_pft_from_file%cn_leaf - missval) > eps8) THEN
+        dependency_recalculation = .TRUE.
+        lctlib%np_leaf_min       = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib%cn_leaf / &
+                                   lctlib%np_leaf_min
+    ENDIF
+    CALL Set_quincy_parameter_value(carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib%cn_leaf / &
+                                      param_pft_from_file%np_leaf_min, &
+                                    param_pft_from_file%np_leaf_min, &
+                                    "lctlib_np_leaf_min", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%np_leaf_min)
+
+    IF (ABS(param_pft_from_file%cn_leaf - missval) > eps8) THEN
+        dependency_recalculation = .TRUE.
+        lctlib%np_leaf_max       = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib%cn_leaf / &
+                                   lctlib%np_leaf_max
+    ENDIF
+    CALL Set_quincy_parameter_value(carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib%cn_leaf / &
+                                      param_pft_from_file%np_leaf_max, &
+                                    param_pft_from_file%np_leaf_max, &
+                                    "lctlib_np_leaf_max", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%np_leaf_max)
+    
+    CALL Set_quincy_parameter_value(param_pft_from_file%k0_fn_struc, &
+                                    param_pft_from_file%k0_fn_struc, &
+                                    "lctlib_k0_fn_struc", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%k0_fn_struc)
+    
+    IF (ABS(param_pft_from_file%k0_fn_struc - missval) > eps8) THEN
+        dependency_recalculation = .TRUE.
+        lctlib%fn_oth_min        = param_pft_from_file%k0_fn_struc - 5.0_wp / molar_mass_n * 0.5_wp * 1.e3_wp * 71.4_wp * &
+                                   molar_mass_N / 1.e6_wp
+    ENDIF    
+    CALL Set_quincy_parameter_value(param_pft_from_file%k0_fn_struc - 5.0_wp / molar_mass_n * 0.5_wp * 1.e3_wp * 71.4_wp * &
+                                      molar_mass_N / 1.e6_wp, &
+                                    param_pft_from_file%fn_oth_min, &
+                                    "lctlib_fn_oth_min", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%fn_oth_min)
+
+    CALL Set_quincy_parameter_value(param_pft_from_file%t_jmax_opt, &
+                                    param_pft_from_file%t_jmax_opt, &
+                                    "lctlib_t_jmax_opt", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%t_jmax_opt)
+    
+    CALL Set_quincy_parameter_value(param_pft_from_file%t_jmax_omega, &
+                                    param_pft_from_file%t_jmax_omega, &
+                                    "lctlib_t_jmax_omega", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%t_jmax_omega)
+    
+    CALL Set_quincy_parameter_value(param_pft_from_file%g0, &
+                                    param_pft_from_file%g0, &
+                                    "lctlib_g0", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%g0)
+
+    CALL Set_quincy_parameter_value(param_pft_from_file%g1, &
+                                    param_pft_from_file%g1, &
+                                    "lctlib_g1", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%g1)
+    
+    CALL Set_quincy_parameter_value(param_pft_from_file%gmin, &
+                                    param_pft_from_file%gmin, &
+                                    "lctlib_gmin", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%gmin)
+    
+    CALL Set_quincy_parameter_value(param_pft_from_file%tau_leaf / 12.0_wp, &
+                                    param_pft_from_file%tau_leaf, &
+                                    "lctlib_tau_leaf", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%tau_leaf)
+
+    CALL Set_quincy_parameter_value(param_pft_from_file%tau_fine_root, &
+                                    param_pft_from_file%tau_fine_root, &
+                                    "lctlib_tau_fine_root", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%tau_fine_root)
+
+    CALL Set_quincy_parameter_value(param_pft_from_file%tau_coarse_root, &
+                                    param_pft_from_file%tau_coarse_root, &
+                                    "lctlib_tau_coarse_root", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%tau_coarse_root)
+    
+    CALL Set_quincy_parameter_value(param_pft_from_file%tau_branch, &
+                                    param_pft_from_file%tau_branch, &
+                                    "lctlib_tau_branch", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%tau_branch)
+    
+    CALL Set_quincy_parameter_value(param_pft_from_file%tau_sap_wood, &
+                                    param_pft_from_file%tau_sap_wood, &
+                                    "lctlib_tau_sap_wood", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%tau_sap_wood)
+
+    CALL Set_quincy_parameter_value(param_pft_from_file%tau_fruit, &
+                                    param_pft_from_file%tau_fruit, &
+                                    "lctlib_tau_fruit", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%tau_fruit)
+    
+    CALL Set_quincy_parameter_value(param_pft_from_file%tau_seed_litter, &
+                                    param_pft_from_file%tau_seed_litter, &
+                                    "lctlib_tau_seed_litter", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%tau_seed_litter)
+    
+    CALL Set_quincy_parameter_value(param_pft_from_file%tau_seed_est, &
+                                    param_pft_from_file%tau_seed_est, &
+                                    "lctlib_tau_seed_est", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%tau_seed_est)
+
+    CALL Set_quincy_parameter_value(param_pft_from_file%tau_mycorrhiza, &
+                                    param_pft_from_file%tau_mycorrhiza, &
+                                    "lctlib_tau_mycorrhiza", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%tau_mycorrhiza)
+    
+    CALL Set_quincy_parameter_value(param_pft_from_file%vmax_uptake_n, &
+                                    param_pft_from_file%vmax_uptake_n, &
+                                    "lctlib_vmax_uptake_n", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%vmax_uptake_n)
+    
+    CALL Set_quincy_parameter_value(param_pft_from_file%vmax_uptake_p, &
+                                    param_pft_from_file%vmax_uptake_p, &
+                                    "lctlib_vmax_uptake_p", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%vmax_uptake_p)
+
+    CALL Set_quincy_parameter_value(param_pft_from_file%bnf_base / molar_mass_N / one_day / one_year * 1.e6_wp, &
+                                    param_pft_from_file%bnf_base, &
+                                    "lctlib_bnf_base", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%bnf_base)
+
+    CALL Set_quincy_parameter_value(param_pft_from_file%lambda_est_light, &
+                                    param_pft_from_file%lambda_est_light, &
+                                    "lctlib_lambda_est_light", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%lambda_est_light)
+    
+    CALL Set_quincy_parameter_value(param_pft_from_file%k_est_light, &
+                                    param_pft_from_file%k_est_light, &
+                                    "lctlib_k_est_light", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%k_est_light)
+    
+    CALL Set_quincy_parameter_value(param_pft_from_file%seed_size, &
+                                    param_pft_from_file%seed_size, &
+                                    "lctlib_seed_size", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%seed_size)
+
+    CALL Set_quincy_parameter_value(param_pft_from_file%beta_soil_flush, &
+                                    param_pft_from_file%beta_soil_flush, &
+                                    "lctlib_beta_soil_flush", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%beta_soil_flush)
+    
+    CALL Set_quincy_parameter_value(param_pft_from_file%beta_soil_senescence, &
+                                    param_pft_from_file%beta_soil_senescence, &
+                                    "lctlib_beta_soil_senescence", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%beta_soil_senescence)
+    
+    CALL Set_quincy_parameter_value(param_pft_from_file%gdd_req_max, &
+                                    param_pft_from_file%gdd_req_max, &
+                                    "lctlib_gdd_req_max", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%gdd_req_max)
+
+    CALL Set_quincy_parameter_value(param_pft_from_file%k_gdd_dormance, &
+                                    param_pft_from_file%k_gdd_dormance, &
+                                    "lctlib_k_gdd_dormance", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%k_gdd_dormance)
+    
+    CALL Set_quincy_parameter_value(param_pft_from_file%t_air_senescence + Tzero, &
+                                    param_pft_from_file%t_air_senescence, &
+                                    "lctlib_t_air_senescence", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%t_air_senescence)
+    
+    CALL Set_quincy_parameter_value(param_pft_from_file%min_leaf_age, &
+                                    param_pft_from_file%min_leaf_age, &
+                                    "lctlib_min_leaf_age", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%min_leaf_age)
+
+    CALL Set_quincy_parameter_value(param_pft_from_file%frac_sapwood_branch, &
+                                    param_pft_from_file%frac_sapwood_branch, &
+                                    "lctlib_frac_sapwood_branch", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%frac_sapwood_branch)
+
+    CALL Set_quincy_parameter_value(param_pft_from_file%wood_density * 1.e6_wp / molar_mass_C, &
+                                    param_pft_from_file%wood_density, &
+                                    "lctlib_wood_density", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%wood_density)
+    
+    CALL Set_quincy_parameter_value(param_pft_from_file%k_latosa, &
+                                    param_pft_from_file%k_latosa, &
+                                    "lctlib_k_latosa", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%k_latosa)
+    
+    CALL Set_quincy_parameter_value(param_pft_from_file%k_crtos, &
+                                    param_pft_from_file%k_crtos, &
+                                    "lctlib_k_crtos", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%k_crtos)
+
+    IF(lctlib%growthform == itree) THEN
+      k_rtos_hlp = 1.75_wp * (pft4_sla_hlp * lctlib%wood_density) / lctlib%k_latosa
+    ELSE
+      k_rtos_hlp = 0.5_wp / sm2lm_grass
+    ENDIF
+    IF ((ABS(param_pft_from_file%wood_density - missval) > eps8) .OR. & 
+        (ABS(param_pft_from_file%k_latosa     - missval) > eps8)) THEN
+        dependency_recalculation = .TRUE.
+        lctlib%k_rtos            = k_rtos_hlp
+    ENDIF
+    CALL Set_quincy_parameter_value(k_rtos_hlp, &
+                                    param_pft_from_file%k_rtos, &
+                                    "lctlib_k_rtos", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%k_rtos)
+    
+    CALL Set_quincy_parameter_value(param_pft_from_file%k2_fruit_alloc, &
+                                    param_pft_from_file%k2_fruit_alloc, &
+                                    "lctlib_k2_fruit_alloc", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%k2_fruit_alloc)
+    
+    CALL Set_quincy_parameter_value(param_pft_from_file%allom_k1, &
+                                    param_pft_from_file%allom_k1, &
+                                    "lctlib_allom_k1", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%allom_k1)
+
+    CALL Set_quincy_parameter_value(param_pft_from_file%allom_k2, &
+                                    param_pft_from_file%allom_k2, &
+                                    "lctlib_allom_k2", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%allom_k2)
+    
+    CALL Set_quincy_parameter_value(param_pft_from_file%phi_leaf_min, &
+                                    param_pft_from_file%phi_leaf_min, &
+                                    "lctlib_phi_leaf_min", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%phi_leaf_min)
+    
+    CALL Set_quincy_parameter_value(param_pft_from_file%k_root * molar_mass_C * 1.e-10_wp, &
+                                    param_pft_from_file%k_root, &
+                                    "lctlib_k_root", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%k_root)
+
+    CALL Set_quincy_parameter_value(param_pft_from_file%k_sapwood * 1.e-3_wp, &
+                                    param_pft_from_file%k_sapwood, &
+                                    "lctlib_k_sapwood", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%k_sapwood)
+
+    IF(lctlib%growthform == itree) THEN
+      c0_allom_hlp = SQRT(lctlib%k_root / lctlib%k_sapwood * lctlib%tau_sap_wood / lctlib%tau_fine_root * &
+                             lctlib%wood_density) * & 
+                        lctlib%tau_fine_root / lctlib%tau_sap_wood
+    ELSE
+      c0_allom_hlp = 0.0_wp
+    ENDIF
     IF (ABS(param_pft_from_file%k_root                    - missval) > eps8 .OR. &
         ABS(param_pft_from_file%k_sapwood                 - missval) > eps8 .OR. &
         ABS(param_pft_from_file%tau_sap_wood              - missval) > eps8 .OR. &
         ABS(param_pft_from_file%tau_fine_root             - missval) > eps8 .OR. &
         ABS(param_pft_from_file%wood_density              - missval) > eps8        ) THEN
-      IF(lctlib%growthform == itree) THEN
-        lctlib%c0_allom = SQRT(lctlib%k_root / lctlib%k_sapwood * lctlib%tau_sap_wood / lctlib%tau_fine_root * &
-                               lctlib%wood_density) * & 
-                          lctlib%tau_fine_root / lctlib%tau_sap_wood
-      ELSE
-        lctlib%c0_allom = 0.0_wp
-      ENDIF
+      dependency_recalculation = .TRUE.
+      lctlib%c0_allom          = c0_allom_hlp
     ENDIF
-    IF (ABS(param_pft_from_file%fstore_target             - missval) > eps8) &
-       lctlib%fstore_target = param_pft_from_file%fstore_target
-    IF (ABS(param_pft_from_file%k_root_dist               - missval) > eps8) &
-       lctlib%k_root_dist = param_pft_from_file%k_root_dist
+    CALL Set_quincy_parameter_value(c0_allom_hlp, &
+                                    param_pft_from_file%c0_allom, &
+                                    "lctlib_c0_allom", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%c0_allom)
+    
+    CALL Set_quincy_parameter_value(param_pft_from_file%fstore_target, &
+                                    param_pft_from_file%fstore_target, &
+                                    "lctlib_fstore_target", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%fstore_target)
+    
+    CALL Set_quincy_parameter_value(param_pft_from_file%k_root_dist, &
+                                    param_pft_from_file%k_root_dist, &
+                                    "lctlib_k_root_dist", proportional_parameter_changes, dependency_recalculation, &
+                                    lctlib%k_root_dist)
 
-
-  END SUBROUTINE replace_pft_specific_lctlib_parameter_values
+  END SUBROUTINE change_lctlib_param_values_pft_x
 
 
 
