@@ -17,7 +17,7 @@ MODULE mo_jsb_time_iface
   USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel, mpi_comm
 
 #ifdef __ICON__
-  USE mtime,                     ONLY: t_datetime => datetime, newDatetime, deallocateDatetime,      &
+  USE mtime_hl,                  ONLY: t_datetime, newDatetime, deallocateDatetime,      &
     &                                  OPERATOR(+), OPERATOR(*), OPERATOR(==),                       &
     &                                  OPERATOR(<=), OPERATOR(>), OPERATOR(-),                       &
     &                                  divisionquotienttimespan, getDayOfYearFromDateTime,           &   
@@ -209,10 +209,9 @@ CONTAINS
     REAL(wp) :: ztime
 
 #ifdef __ICON__
-    TYPE(t_datetime), POINTER :: reference_dt
-    reference_dt => newDatetime("1980-06-01T00:00:00.000")
-    ztime = 0.001_wp*getTotalMilliSecondsTimeDelta(time_config%tc_dt_model, reference_dt)
-    CALL deallocateDatetime(reference_dt)
+    TYPE(t_datetime) :: reference_dt
+    reference_dt = t_datetime("1980-06-01T00:00:00.000")
+    ztime = 0.001_wp*time_config%tc_dt_model%toMilliSeconds(reference_dt)
 #else
     ztime = delta_time
 #endif
@@ -246,10 +245,10 @@ CONTAINS
 
 #ifdef __ICON__
     TYPE(divisionquotienttimespan) :: tq
-    
-    CALL divideDatetimeDifferenceInSeconds(time_config%tc_stopdate,    &
-         &                                 time_config%tc_startdate,   &
-         &                                 time_config%tc_dt_model, tq)
+    TYPE(t_timedelta) :: diff
+
+    diff   = time_config%tc_stopdate - time_config%tc_startdate
+    tq     = diff.divideInSecondsBy(time_config%tc_dt_model)
     isteps = INT(tq%quotient)
 #else
     CALL TC_get(start_date, start_day, start_second)
@@ -306,7 +305,7 @@ CONTAINS
   !! @brief Get time at previous time step
   !!
   FUNCTION get_time_previous() RESULT(previous)
-    TYPE(t_datetime) :: previous 
+    TYPE(t_datetime) :: previous
 #ifdef __ICON__
     previous = time_config%tc_current_date + (-1) * time_config%tc_dt_model 
 #else
@@ -346,8 +345,8 @@ CONTAINS
 
     current = get_time_current()
     IF (echam_phy_tc(model_id)%dt_rad > dt_zero) THEN
-      dt_rad = getTotalSecondsTimeDelta(echam_phy_tc(model_id)%dt_rad, current)
-      ltrig_rad_m1 = MOD(getNoOfSecondsElapsedInDayDateTime(current), dt_rad) == 0
+      dt_rad = echam_phy_tc(model_id)%dt_rad%toSeconds(current)
+      ltrig_rad_m1 = MOD(current%secondsElapsedInDay(), dt_rad) == 0
     ELSE
       ltrig_rad_m1 = .FALSE.
     END IF
@@ -434,12 +433,12 @@ CONTAINS
     TYPE(t_datetime),  INTENT(in)  :: this_datetime
     INTEGER, OPTIONAL, INTENT(out) :: year, month, day, hour, minute, second
 
-    IF (PRESENT(year))   year   = this_datetime%date%year
-    IF (PRESENT(month))  month  = this_datetime%date%month
-    IF (PRESENT(day))    day    = this_datetime%date%day
-    IF (PRESENT(hour))   hour   = this_datetime%time%hour
-    IF (PRESENT(minute)) minute = this_datetime%time%minute
-    IF (PRESENT(second)) second = this_datetime%time%second
+    IF (PRESENT(year))   year   = this_datetime%dt%date%year
+    IF (PRESENT(month))  month  = this_datetime%dt%date%month
+    IF (PRESENT(day))    day    = this_datetime%dt%date%day
+    IF (PRESENT(hour))   hour   = this_datetime%dt%time%hour
+    IF (PRESENT(minute)) minute = this_datetime%dt%time%minute
+    IF (PRESENT(second)) second = this_datetime%dt%time%second
 
   END SUBROUTINE get_date_components
 #endif
@@ -453,13 +452,17 @@ CONTAINS
   INTEGER FUNCTION get_year_length(yr)
     INTEGER, INTENT(in) :: yr
 
-    TYPE(t_datetime), POINTER :: datetime_tmp
+    TYPE(t_datetime) :: datetime_tmp
 
-    datetime_tmp => newDatetime(yr, 1, 1, 0, 0, 0, 0)
+    datetime_tmp%dt%date%year = yr
+    datetime_tmp%dt%date%month = 1
+    datetime_tmp%dt%date%day = 1
+    datetime_tmp%dt%time%hour = 0
+    datetime_tmp%dt%time%minute = 0
+    datetime_tmp%dt%time%second = 0
+    datetime_tmp%dt%time%ms = 0
 
-    get_year_length = getNoOfDaysInYearDateTime(datetime_tmp)
-
-    CALL deallocateDatetime(datetime_tmp)
+    get_year_length = datetime_tmp%daysInThisYear()
 
   END FUNCTION get_year_length
 #endif
@@ -473,13 +476,17 @@ CONTAINS
   INTEGER FUNCTION get_month_length(yr, mo)
     INTEGER, INTENT(in) :: yr, mo
 
-    TYPE(t_datetime), POINTER :: datetime_tmp
+    TYPE(t_datetime) :: datetime_tmp
 
-    datetime_tmp => newDatetime(yr, mo, 1, 0, 0, 0, 0)
+    datetime_tmp%dt%date%year = yr
+    datetime_tmp%dt%date%month = mo
+    datetime_tmp%dt%date%day = 1
+    datetime_tmp%dt%time%hour = 0
+    datetime_tmp%dt%time%minute = 0
+    datetime_tmp%dt%time%second = 0
+    datetime_tmp%dt%time%ms = 0
 
-    get_month_length = getNoOfDaysInMonthDateTime(datetime_tmp)
-
-    CALL deallocateDatetime(datetime_tmp)
+    get_month_length = datetime_tmp%daysInThisMonth()
 
   END FUNCTION get_month_length
 #endif
@@ -509,8 +516,8 @@ CONTAINS
     ! t_datetime points to mtimes datetime
     TYPE(t_datetime),  INTENT(in)  :: date
 
-    get_year_day = REAL(getDayOfYearFromDateTime(date), wp) &
-         &        +REAL(getNoOfSecondsElapsedInDayDateTime(date),wp) &
+    get_year_day = REAL(date%dayOfYear(), wp) &
+         &        +REAL(date%secondsElapsedInDay(),wp) &
          &        /REAL(no_of_sec_in_a_day,wp)
 
   END FUNCTION get_year_day
