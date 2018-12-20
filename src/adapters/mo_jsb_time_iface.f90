@@ -17,14 +17,8 @@ MODULE mo_jsb_time_iface
   USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel, mpi_comm
 
 #ifdef __ICON__
-  USE mtime_hl,                  ONLY: t_datetime, newDatetime, deallocateDatetime,      &
-    &                                  OPERATOR(+), OPERATOR(*), OPERATOR(==),                       &
-    &                                  OPERATOR(<=), OPERATOR(>), OPERATOR(-),                       &
-    &                                  divisionquotienttimespan, getDayOfYearFromDateTime,           &   
-    &                                  getNoOfDaysInMonthDateTime, getNoOfDaysInYearDateTime,        & 
-    &                                  getTotalMilliSecondsTimeDelta, no_of_sec_in_a_day,            &
-    &                                  getNoOfSecondsElapsedInDayDateTime, getTotalSecondsTimeDelta, &
-    &                                  divideDatetimeDifferenceInSeconds, isCurrentEventActive
+  USE mtime,                     ONLY: divisionquotienttimespan, NO_OF_SEC_IN_A_DAY
+  USE mtime_hl,                  ONLY: t_datetime, t_timedelta, OPERATOR(*)
   USE mo_time_config,            ONLY: time_config !configure_time
   USE mo_time_nml,               ONLY: read_time_namelist
   USE mo_dynamics_config,        ONLY: iequations
@@ -248,7 +242,7 @@ CONTAINS
     TYPE(t_timedelta) :: diff
 
     diff   = time_config%tc_stopdate - time_config%tc_startdate
-    tq     = diff.divideInSecondsBy(time_config%tc_dt_model)
+    tq     = diff%divideInSecondsBy(time_config%tc_dt_model)
     isteps = INT(tq%quotient)
 #else
     CALL TC_get(start_date, start_day, start_second)
@@ -346,7 +340,7 @@ CONTAINS
     current = get_time_current()
     IF (echam_phy_tc(model_id)%dt_rad > dt_zero) THEN
       dt_rad = echam_phy_tc(model_id)%dt_rad%toSeconds(current)
-      ltrig_rad_m1 = MOD(current%secondsElapsedInDay(), dt_rad) == 0
+      ltrig_rad_m1 = MOD(INT(current%secondsElapsedInDay()), dt_rad) == 0
     ELSE
       ltrig_rad_m1 = .FALSE.
     END IF
