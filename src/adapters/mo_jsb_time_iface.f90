@@ -242,7 +242,7 @@ CONTAINS
     TYPE(t_timedelta) :: diff
 
     diff   = time_config%tc_stopdate - time_config%tc_startdate
-    tq     = diff%divideInSecondsBy(time_config%tc_dt_model)
+    tq     = diff%divideInSecondsBy(time_config%tc_dt_model, referenceDateTime = time_config%tc_startdate)
     isteps = INT(tq%quotient)
 #else
     CALL TC_get(start_date, start_day, start_second)
