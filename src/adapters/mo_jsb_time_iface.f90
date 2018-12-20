@@ -340,7 +340,7 @@ CONTAINS
     current = get_time_current()
     IF (echam_phy_tc(model_id)%dt_rad > dt_zero) THEN
       dt_rad = echam_phy_tc(model_id)%dt_rad%toSeconds(current)
-      ltrig_rad_m1 = MOD(INT(current%secondsElapsedInDay()), dt_rad) == 0
+      ltrig_rad_m1 = MOD(INT(current%elapsedSecondsInDay()), dt_rad) == 0
     ELSE
       ltrig_rad_m1 = .FALSE.
     END IF
@@ -456,7 +456,7 @@ CONTAINS
     datetime_tmp%dt%time%second = 0
     datetime_tmp%dt%time%ms = 0
 
-    get_year_length = datetime_tmp%daysInThisYear()
+    get_year_length = datetime_tmp%daysInEntireYear()
 
   END FUNCTION get_year_length
 #endif
@@ -480,7 +480,7 @@ CONTAINS
     datetime_tmp%dt%time%second = 0
     datetime_tmp%dt%time%ms = 0
 
-    get_month_length = datetime_tmp%daysInThisMonth()
+    get_month_length = datetime_tmp%daysInEntireMonth()
 
   END FUNCTION get_month_length
 #endif
@@ -510,8 +510,8 @@ CONTAINS
     ! t_datetime points to mtimes datetime
     TYPE(t_datetime),  INTENT(in)  :: date
 
-    get_year_day = REAL(date%dayOfYear(), wp) &
-         &        +REAL(date%secondsElapsedInDay(),wp) &
+    get_year_day = REAL(date%elapsedDaysInYear(), wp) &
+         &        +REAL(date%elapsedSecondsInDay(),wp) &
          &        /REAL(no_of_sec_in_a_day,wp)
 
   END FUNCTION get_year_day
