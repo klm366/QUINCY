@@ -3138,8 +3138,8 @@ CONTAINS
                                     "ed_decomposition", proportional_parameter_changes, dependency_recalculation, &
                                     ed_decomposition)
     
-    CALL Set_quincy_parameter_value(this%t_ref_decomposition, &
-                                    this%t_ref_decomposition, &
+    CALL Set_quincy_parameter_value(this%t_ref_decomposition, &   ! in function calculated for proportional changes as:
+                                    this%t_ref_decomposition, &   ! def_val = 273.15 + (def_val - 273.15) * nml_prop_chng
                                     "t_ref_decomposition", proportional_parameter_changes, dependency_recalculation, &
                                     t_ref_decomposition)
 
@@ -3638,8 +3638,8 @@ CONTAINS
                                     "ed_nitrification", proportional_parameter_changes, dependency_recalculation, &
                                     ed_nitrification)
     
-    CALL Set_quincy_parameter_value(this%t_opt_nitrification, &
-                                    this%t_opt_nitrification, &
+    CALL Set_quincy_parameter_value(this%t_opt_nitrification, &   ! in function calculated for proportional changes as:
+                                    this%t_opt_nitrification, &   ! def_val = 273.15 + (def_val - 273.15) * nml_prop_chng
                                     "t_opt_nitrification", proportional_parameter_changes, dependency_recalculation, &
                                     t_opt_nitrification)
 
@@ -5806,11 +5806,12 @@ CONTAINS
         lctlib%fn_oth_min        = param_pft_from_file%k0_fn_struc - 5.0_wp / molar_mass_n * 0.5_wp * 1.e3_wp * 71.4_wp * &
                                    molar_mass_N / 1.e6_wp
     ENDIF    
-    CALL Set_quincy_parameter_value(param_pft_from_file%k0_fn_struc - 5.0_wp / molar_mass_n * 0.5_wp * 1.e3_wp * 71.4_wp * &
-                                      molar_mass_N / 1.e6_wp, &
-                                    param_pft_from_file%fn_oth_min, &
-                                    "lctlib_fn_oth_min", proportional_parameter_changes, dependency_recalculation, &
-                                    lctlib%fn_oth_min)
+    ! no additional changes 
+    ! CALL Set_quincy_parameter_value(param_pft_from_file%k0_fn_struc - 5.0_wp / molar_mass_n * 0.5_wp * 1.e3_wp * 71.4_wp * &
+    !                                   molar_mass_N / 1.e6_wp, &
+    !                                 param_pft_from_file%fn_oth_min, &
+    !                                 "lctlib_fn_oth_min", proportional_parameter_changes, dependency_recalculation, &
+    !                                 lctlib%fn_oth_min)
 
     CALL Set_quincy_parameter_value(param_pft_from_file%t_jmax_opt, &
                                     param_pft_from_file%t_jmax_opt, &
@@ -5916,11 +5917,15 @@ CONTAINS
                                     param_pft_from_file%beta_soil_flush, &
                                     "lctlib_beta_soil_flush", proportional_parameter_changes, dependency_recalculation, &
                                     lctlib%beta_soil_flush)
+    ! may not be > 1
+    IF (lctlib%beta_soil_flush > 1.0_wp) lctlib%beta_soil_flush = 1.0_wp
     
     CALL Set_quincy_parameter_value(param_pft_from_file%beta_soil_senescence, &
                                     param_pft_from_file%beta_soil_senescence, &
                                     "lctlib_beta_soil_senescence", proportional_parameter_changes, dependency_recalculation, &
                                     lctlib%beta_soil_senescence)
+    ! may not be > 1
+    IF (lctlib%beta_soil_senescence > 1.0_wp) lctlib%beta_soil_senescence = 1.0_wp
     
     CALL Set_quincy_parameter_value(param_pft_from_file%gdd_req_max, &
                                     param_pft_from_file%gdd_req_max, &
@@ -5946,6 +5951,8 @@ CONTAINS
                                     param_pft_from_file%frac_sapwood_branch, &
                                     "lctlib_frac_sapwood_branch", proportional_parameter_changes, dependency_recalculation, &
                                     lctlib%frac_sapwood_branch)
+    ! may not be > 1
+    IF (lctlib%frac_sapwood_branch > 1.0_wp) lctlib%frac_sapwood_branch = 1.0_wp
 
     CALL Set_quincy_parameter_value(param_pft_from_file%wood_density * 1.e6_wp / molar_mass_C, &
                                     param_pft_from_file%wood_density, &
@@ -5972,10 +5979,11 @@ CONTAINS
         dependency_recalculation = .TRUE.
         lctlib%k_rtos            = k_rtos_hlp
     ENDIF
-    CALL Set_quincy_parameter_value(k_rtos_hlp, &
-                                    param_pft_from_file%k_rtos, &
-                                    "lctlib_k_rtos", proportional_parameter_changes, dependency_recalculation, &
-                                    lctlib%k_rtos)
+    ! no additional changes 
+    ! CALL Set_quincy_parameter_value(k_rtos_hlp, &
+    !                                 param_pft_from_file%k_rtos, &
+    !                                 "lctlib_k_rtos", proportional_parameter_changes, dependency_recalculation, &
+    !                                 lctlib%k_rtos)
     
     CALL Set_quincy_parameter_value(param_pft_from_file%k2_fruit_alloc, &
                                     param_pft_from_file%k2_fruit_alloc, &
@@ -6022,10 +6030,11 @@ CONTAINS
       dependency_recalculation = .TRUE.
       lctlib%c0_allom          = c0_allom_hlp
     ENDIF
-    CALL Set_quincy_parameter_value(c0_allom_hlp, &
-                                    param_pft_from_file%c0_allom, &
-                                    "lctlib_c0_allom", proportional_parameter_changes, dependency_recalculation, &
-                                    lctlib%c0_allom)
+    ! no additional changes 
+    ! CALL Set_quincy_parameter_value(c0_allom_hlp, &
+    !                                 param_pft_from_file%c0_allom, &
+    !                                 "lctlib_c0_allom", proportional_parameter_changes, dependency_recalculation, &
+    !                                 lctlib%c0_allom)
     
     CALL Set_quincy_parameter_value(param_pft_from_file%fstore_target, &
                                     param_pft_from_file%fstore_target, &
@@ -6054,8 +6063,8 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    REAL(wp),         INTENT(in)    :: nml_abs_val        !< new value from namelist; potential re-calc with other parameters already included (as done in mo_PROC_constants) !
-    REAL(wp),         INTENT(in)    :: nml_prop_chng      !< proportional change of def_val x from namelist [0 < x < 2]
+    REAL(wp),         INTENT(in)    :: nml_abs_val        !< new value from namelist, potentially re-calculated with other parameters consistently with mo_PROC_constants
+    REAL(wp),         INTENT(in)    :: nml_prop_chng      !< new value from namelist, not changed, used here for proportional change of def_val x from namelist [0 < x < 2]
     CHARACTER(LEN=*), INTENT(in)    :: param_name         !< name of the parameter for writing the new value to file
     LOGICAL,          INTENT(in)    :: proportional       !< logical: calulate new value using proportional change
     LOGICAL,          INTENT(inout) :: dependency         !< logical: this parameter value may be re-calculated because of a dependency to another param that has been changed 
@@ -6073,17 +6082,24 @@ CONTAINS
     IF ((ABS(nml_prop_chng - missval) > eps8) .OR. dependency) THEN
       ! differ between the two cases: just use the new value / change the (hardcoded) default value by x%
       IF (proportional) THEN
-        ! differ between negative and positive parameter values (because, e.g., 0.9 * -3.0 = -2.7 but should be -3.3)
-        IF (def_val < 0.0_wp) THEN
-          param_value_diff = def_val * ABS(1.0_wp - nml_prop_chng)
-          IF (nml_prop_chng < 1.0) THEN
-            def_val = def_val - param_value_diff
-          ELSE
-            def_val = def_val + param_value_diff
-          ENDIF
-        ELSE
-          def_val = def_val * nml_prop_chng
-        ENDIF
+        ! special cases for some parameters, such as, temperatures given in K but modified based on the °C value
+        SELECT CASE(TRIM(param_name))
+          CASE('t_ref_decomposition','t_opt_nitrification')
+            ! values assumed to be in K but changed based on their °C value
+            def_val = 273.15 + (def_val - 273.15) * nml_prop_chng
+          CASE DEFAULT
+            ! differ between negative and positive parameter values (because, e.g., 0.9 * -3.0 = -2.7 but should be -3.3)
+            IF (def_val < 0.0_wp) THEN
+              param_value_diff = def_val * ABS(1.0_wp - nml_prop_chng)
+              IF (nml_prop_chng < 1.0) THEN
+                def_val = def_val - param_value_diff
+              ELSE
+                def_val = def_val + param_value_diff
+              ENDIF
+            ELSE
+              def_val = def_val * nml_prop_chng
+            ENDIF
+        END SELECT
       ELSE
         def_val = nml_abs_val
       ENDIF
