@@ -42,7 +42,7 @@ mainTask=3
 # Main Task 3 options:
 m3ProbDistr="n"       # [u]niform  [n]ormal distribution of values
 m3NormalSD=0.1        # SD of the normal distribution -> applied to values within range [0,1]
-LHSgenerations=5000   # a higher number improves the distribution in parameter-space: should be between 1000:20000
+LHSgenerations=2000   # a higher number improves the distribution in parameter-space: should be between 1000:20000
 
 # Input file for this script
 #   defaults to: ./generate_parameter_table_input.txt
@@ -150,9 +150,8 @@ if [ $paramNumber -gt 4 ]
         echo "        Please consider using Main Task 3 that applies the LHS and has no such limitations."
         exit 1
     fi
-  else
-    echo "The number of parameters you want to vary is: ""$paramNumber"
 fi
+echo "The number of parameters you want to vary is: ""$paramNumber"
 
 ## create an array with parameter names used as header in $paramTable ##
 paramTableHead[0]=0
