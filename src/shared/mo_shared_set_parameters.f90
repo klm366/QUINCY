@@ -5764,7 +5764,7 @@ CONTAINS
                                     lctlib%cn_leaf_max)
     
     IF (ABS(param_pft_from_file%cn_leaf - missval) > eps8) THEN
-        dependency_recalculation = .TRUE.
+        dependency_recalculation = .FALSE.
         lctlib%np_leaf           = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib%cn_leaf / &
                                    lctlib%np_leaf
     ENDIF
@@ -5775,7 +5775,7 @@ CONTAINS
                                     lctlib%np_leaf)
 
     IF (ABS(param_pft_from_file%cn_leaf - missval) > eps8) THEN
-        dependency_recalculation = .TRUE.
+        dependency_recalculation = .FALSE.
         lctlib%np_leaf_min       = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib%cn_leaf / &
                                    lctlib%np_leaf_min
     ENDIF
@@ -5786,7 +5786,7 @@ CONTAINS
                                     lctlib%np_leaf_min)
 
     IF (ABS(param_pft_from_file%cn_leaf - missval) > eps8) THEN
-        dependency_recalculation = .TRUE.
+        dependency_recalculation = .FALSE.
         lctlib%np_leaf_max       = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib%cn_leaf / &
                                    lctlib%np_leaf_max
     ENDIF
@@ -5803,11 +5803,11 @@ CONTAINS
     
     IF (ABS(param_pft_from_file%k0_fn_struc - missval) > eps8) THEN
         dependency_recalculation = .TRUE.
-        lctlib%fn_oth_min        = param_pft_from_file%k0_fn_struc - 5.0_wp / molar_mass_n * 0.5_wp * 1.e3_wp * 71.4_wp * &
+        lctlib%fn_oth_min        = lctlib%k0_fn_struc - 5.0_wp / molar_mass_N * 0.5_wp * 1.e3_wp * 71.4_wp * &
                                    molar_mass_N / 1.e6_wp
     ENDIF    
     ! no additional changes 
-    ! CALL Set_quincy_parameter_value(param_pft_from_file%k0_fn_struc - 5.0_wp / molar_mass_n * 0.5_wp * 1.e3_wp * 71.4_wp * &
+    ! CALL Set_quincy_parameter_value(param_pft_from_file%k0_fn_struc - 5.0_wp / molar_mass_N * 0.5_wp * 1.e3_wp * 71.4_wp * &
     !                                   molar_mass_N / 1.e6_wp, &
     !                                 param_pft_from_file%fn_oth_min, &
     !                                 "lctlib_fn_oth_min", proportional_parameter_changes, dependency_recalculation, &
@@ -5969,7 +5969,7 @@ CONTAINS
                                     "lctlib_k_crtos", proportional_parameter_changes, dependency_recalculation, &
                                     lctlib%k_crtos)
 
-    IF(lctlib%growthform == itree) THEN
+    IF(lctlib%growthform /= igrass) THEN
       k_rtos_hlp = 1.75_wp * (pft4_sla_hlp * lctlib%wood_density) / lctlib%k_latosa
     ELSE
       k_rtos_hlp = 0.5_wp / sm2lm_grass
@@ -6084,7 +6084,7 @@ CONTAINS
       IF (proportional) THEN
         ! special cases for some parameters, such as, temperatures given in K but modified based on the °C value
         SELECT CASE(TRIM(param_name))
-          CASE('t_ref_decomposition','t_opt_nitrification')
+        CASE('t_ref_decomposition','t_opt_nitrification','lctlib_t_air_senescence')
             ! values assumed to be in K but changed based on their °C value
             def_val = 273.15 + (def_val - 273.15) * nml_prop_chng
           CASE DEFAULT
