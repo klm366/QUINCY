@@ -1243,8 +1243,9 @@ if [ $paramSensitivitySim == "T" ]; then
   paramSensi_NumberCombinations=$(wc -l "$slmParamTable" | awk '{print $1}')
   paramSensi_NumberCombinations=$(($paramSensi_NumberCombinations -1))  # not counting the header of the table
   # validate number of parameter combinations
-  if [ $paramSensi_NumberCombinations -gt 994 ]; then
-    echo "EXIT !  You want to do ""$paramSensi_NumberCombinations"" simulations. That is too much. A number lower than 995 is necessary."
+  if [ $paramSensi_NumberCombinations -gt 1000 ]; then
+    echo "EXIT !  You want to do ""$paramSensi_NumberCombinations"" simulations."
+    echo "        This exceeds the max jobarray size. A number lower than 1001 is necessary."
     exit 1
    else
     echo " The number of combinations of parameter values (i.e. simulations) is: ""$paramSensi_NumberCombinations"
