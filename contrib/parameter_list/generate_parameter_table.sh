@@ -166,10 +166,10 @@ done
 ## a function that combines some steps of work for Main Tasks 1 2 3 ##
 function f_showNumberSetsPrepParamlistD {
 ## test and notification of the user about the number of variations ##
-if [ $paramValSets -gt 994 ]
+if [ $paramValSets -gt 1000 ]
   then
     echo "EXIT !  You want to run simulations for ""$paramValSets"" parameter sets."
-    echo "        That is too much. A number lower than 995 is necessary."
+    echo "        That is too much. A number lower than 1001 is necessary (to fit the max jobarray size)."
     exit 1
   else
     echo "The number of parameter sets (i.e. simulations) is: ""$paramValSets"
