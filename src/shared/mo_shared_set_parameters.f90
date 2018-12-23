@@ -5705,8 +5705,6 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     REAL(wp)                    :: pft4_sla_hlp
-    REAL(wp)                    :: k_rtos_hlp                 ! depends on itree/igrass
-    REAL(wp)                    :: c0_allom_hlp               ! depends on itree/igrass
     LOGICAL                     :: dependency_recalculation   ! set TRUE for parameters that need to be re-calculated because a parameter it depends on got a new value
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':change_lctlib_param_values_pft_x'
 
@@ -5763,33 +5761,21 @@ CONTAINS
                                     "lctlib_cn_leaf_max", proportional_parameter_changes, dependency_recalculation, &
                                     lctlib%cn_leaf_max)
     
-    IF (ABS(param_pft_from_file%cn_leaf - missval) > eps8) THEN
-        dependency_recalculation = .FALSE.
-        lctlib%np_leaf           = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib%cn_leaf / &
-                                   lctlib%np_leaf
-    ENDIF
+    ! not resolving the dependency to cn_leaf (as re-calc is not so easy, in case proportional changes are made, as the original input lctlib parameter is not available here)
     CALL Set_quincy_parameter_value(carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib%cn_leaf / &
                                       param_pft_from_file%np_leaf, &
                                     param_pft_from_file%np_leaf, &
                                     "lctlib_np_leaf", proportional_parameter_changes, dependency_recalculation, &
                                     lctlib%np_leaf)
 
-    IF (ABS(param_pft_from_file%cn_leaf - missval) > eps8) THEN
-        dependency_recalculation = .FALSE.
-        lctlib%np_leaf_min       = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib%cn_leaf / &
-                                   lctlib%np_leaf_min
-    ENDIF
+    ! not resolving the dependency to cn_leaf (as re-calc is not so easy, in case proportional changes are made, as the original input lctlib parameter is not available here)
     CALL Set_quincy_parameter_value(carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib%cn_leaf / &
                                       param_pft_from_file%np_leaf_min, &
                                     param_pft_from_file%np_leaf_min, &
                                     "lctlib_np_leaf_min", proportional_parameter_changes, dependency_recalculation, &
                                     lctlib%np_leaf_min)
 
-    IF (ABS(param_pft_from_file%cn_leaf - missval) > eps8) THEN
-        dependency_recalculation = .FALSE.
-        lctlib%np_leaf_max       = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib%cn_leaf / &
-                                   lctlib%np_leaf_max
-    ENDIF
+    ! not resolving the dependency to cn_leaf (as re-calc is not so easy, in case proportional changes are made, as the original input lctlib parameter is not available here)
     CALL Set_quincy_parameter_value(carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib%cn_leaf / &
                                       param_pft_from_file%np_leaf_max, &
                                     param_pft_from_file%np_leaf_max, &
@@ -5800,13 +5786,10 @@ CONTAINS
                                     param_pft_from_file%k0_fn_struc, &
                                     "lctlib_k0_fn_struc", proportional_parameter_changes, dependency_recalculation, &
                                     lctlib%k0_fn_struc)
-    
-    IF (ABS(param_pft_from_file%k0_fn_struc - missval) > eps8) THEN
-        dependency_recalculation = .TRUE.
-        lctlib%fn_oth_min        = lctlib%k0_fn_struc - 5.0_wp / molar_mass_N * 0.5_wp * 1.e3_wp * 71.4_wp * &
-                                   molar_mass_N / 1.e6_wp
-    ENDIF    
-    ! no additional changes 
+
+    ! is always recalculated in case any of its dependencies has changed (this generality is fine as fn_oth_min is not varied itself; otherwise dependency_recalculation would need to be set correctly)
+    lctlib%fn_oth_min = lctlib%k0_fn_struc - 5.0_wp / molar_mass_N * 0.5_wp * 1.e3_wp * 71.4_wp * molar_mass_N / 1.e6_wp
+    ! no additional parameter changes to fn_oth_min
     ! CALL Set_quincy_parameter_value(param_pft_from_file%k0_fn_struc - 5.0_wp / molar_mass_N * 0.5_wp * 1.e3_wp * 71.4_wp * &
     !                                   molar_mass_N / 1.e6_wp, &
     !                                 param_pft_from_file%fn_oth_min, &
@@ -5917,14 +5900,14 @@ CONTAINS
                                     param_pft_from_file%beta_soil_flush, &
                                     "lctlib_beta_soil_flush", proportional_parameter_changes, dependency_recalculation, &
                                     lctlib%beta_soil_flush)
-    ! may not be > 1
+    ! beta_soil_flush may not be > 1
     IF (lctlib%beta_soil_flush > 1.0_wp) lctlib%beta_soil_flush = 1.0_wp
     
     CALL Set_quincy_parameter_value(param_pft_from_file%beta_soil_senescence, &
                                     param_pft_from_file%beta_soil_senescence, &
                                     "lctlib_beta_soil_senescence", proportional_parameter_changes, dependency_recalculation, &
                                     lctlib%beta_soil_senescence)
-    ! may not be > 1
+    ! beta_soil_senescence may not be > 1
     IF (lctlib%beta_soil_senescence > 1.0_wp) lctlib%beta_soil_senescence = 1.0_wp
     
     CALL Set_quincy_parameter_value(param_pft_from_file%gdd_req_max, &
@@ -5951,7 +5934,7 @@ CONTAINS
                                     param_pft_from_file%frac_sapwood_branch, &
                                     "lctlib_frac_sapwood_branch", proportional_parameter_changes, dependency_recalculation, &
                                     lctlib%frac_sapwood_branch)
-    ! may not be > 1
+    ! frac_sapwood_branch may not be > 1
     IF (lctlib%frac_sapwood_branch > 1.0_wp) lctlib%frac_sapwood_branch = 1.0_wp
 
     CALL Set_quincy_parameter_value(param_pft_from_file%wood_density * 1.e6_wp / molar_mass_C, &
@@ -5969,17 +5952,13 @@ CONTAINS
                                     "lctlib_k_crtos", proportional_parameter_changes, dependency_recalculation, &
                                     lctlib%k_crtos)
 
+    ! is always recalculated in case any of its dependencies has changed (this generality is fine as k_rtos is not varied itself; otherwise dependency_recalculation would need to be set correctly)
     IF(lctlib%growthform /= igrass) THEN
-      k_rtos_hlp = 1.75_wp * (pft4_sla_hlp * lctlib%wood_density) / lctlib%k_latosa
+      lctlib%k_rtos = 1.75_wp * (pft4_sla_hlp * lctlib%wood_density) / lctlib%k_latosa
     ELSE
-      k_rtos_hlp = 0.5_wp / sm2lm_grass
+      lctlib%k_rtos = 0.5_wp / sm2lm_grass
     ENDIF
-    IF ((ABS(param_pft_from_file%wood_density - missval) > eps8) .OR. & 
-        (ABS(param_pft_from_file%k_latosa     - missval) > eps8)) THEN
-        dependency_recalculation = .TRUE.
-        lctlib%k_rtos            = k_rtos_hlp
-    ENDIF
-    ! no additional changes 
+    ! no additional parameter changes to k_rtos
     ! CALL Set_quincy_parameter_value(k_rtos_hlp, &
     !                                 param_pft_from_file%k_rtos, &
     !                                 "lctlib_k_rtos", proportional_parameter_changes, dependency_recalculation, &
@@ -6015,22 +5994,15 @@ CONTAINS
                                     "lctlib_k_sapwood", proportional_parameter_changes, dependency_recalculation, &
                                     lctlib%k_sapwood)
 
+    ! is always recalculated in case any of its dependencies has changed (this generality is fine as c0_allom is not varied itself; otherwise dependency_recalculation would need to be set correctly)
     IF(lctlib%growthform == itree) THEN
-      c0_allom_hlp = SQRT(lctlib%k_root / lctlib%k_sapwood * lctlib%tau_sap_wood / lctlib%tau_fine_root * &
+      lctlib%c0_allom = SQRT(lctlib%k_root / lctlib%k_sapwood * lctlib%tau_sap_wood / lctlib%tau_fine_root * &
                              lctlib%wood_density) * & 
                         lctlib%tau_fine_root / lctlib%tau_sap_wood
     ELSE
-      c0_allom_hlp = 0.0_wp
+      lctlib%c0_allom = 0.0_wp
     ENDIF
-    IF (ABS(param_pft_from_file%k_root                    - missval) > eps8 .OR. &
-        ABS(param_pft_from_file%k_sapwood                 - missval) > eps8 .OR. &
-        ABS(param_pft_from_file%tau_sap_wood              - missval) > eps8 .OR. &
-        ABS(param_pft_from_file%tau_fine_root             - missval) > eps8 .OR. &
-        ABS(param_pft_from_file%wood_density              - missval) > eps8        ) THEN
-      dependency_recalculation = .TRUE.
-      lctlib%c0_allom          = c0_allom_hlp
-    ENDIF
-    ! no additional changes 
+    ! no additional parameter changes to c0_allom
     ! CALL Set_quincy_parameter_value(c0_allom_hlp, &
     !                                 param_pft_from_file%c0_allom, &
     !                                 "lctlib_c0_allom", proportional_parameter_changes, dependency_recalculation, &
