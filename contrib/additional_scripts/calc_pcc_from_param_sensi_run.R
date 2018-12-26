@@ -395,7 +395,8 @@ pdf(paste0("parameter_list/pcc_", outFileID, outInfo, ".pdf"), paper="a4r", heig
           range=0,                      # whiskers cover min and max value
           xlab=" \n Boxplots show: median, 25th and 75th percentile, min/max values \n mean = line at 1.0, and absolute mean values at x-axis",
           xaxt="n")
-  abline(h=1.0, col="sienna", lw=0.6)  # mean value (is 1.0 because teh values are normalized using the mean)
+  abline(h=c(1.0), col="sienna", lw=0.6)  # mean value (is 1.0 because the values are normalized using the mean)
+  abline(h=c(0.0,0.5,1.5,2.0), col="gray80", lw=0.4)  # mean value (is 1.0 because the values are normalized using the mean)
   # x-axis labels: output-variable names & absolute mean values
   axis(1,at=c(1:ncol(outVarAvgValSet)), labels=colnames(outVarAvgValSet), tick=F, tck=0.02, mgp=c(2,0.2,0))
   # disable warnings to suppress the warning about mpg() using negative and positve values
