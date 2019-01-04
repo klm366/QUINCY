@@ -44,8 +44,6 @@ CONTAINS
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_shared_isotope,        ONLY: calc_fractionation
     USE mo_sb_constants
-    USE mo_shared_update_time_averages, ONLY: calc_mavg
-    USE mo_shared_constants,      ONLY: mavg_period_tenzyme
     USE mo_sb_litter_processes,   ONLY: calc_litter_partitioning
     USE mo_sb_jsm_processes,      ONLY: calc_inorganic_uptake, calc_sinking_flux_po4, calc_litter_turnover, calc_depolymerisation, &
                                         calc_microbial_growth, calc_sourcing_flux_po4, &
@@ -523,12 +521,6 @@ CONTAINS
                                net_mineralisation_no3(:,:),net_mineralisation_no3_n15(:,:), & 
                                net_mineralisation_po4(:,:),microbial_cue_eff(:,:),asymb_n_fixation(:,:))
 
-
-    !> 3.1.1 averages at the time-scale of microbial enzyme allocation
-    !!
-    enz_frac_poly_c_mavg(:,:)       = calc_mavg(enz_frac_poly_c_mavg(:,:), enz_frac_poly_c(:,:), mavg_period_tenzyme)
-    enz_frac_poly_n_mavg(:,:)       = calc_mavg(enz_frac_poly_n_mavg(:,:), enz_frac_poly_n(:,:), mavg_period_tenzyme)
-    enz_frac_poly_p_mavg(:,:)       = calc_mavg(enz_frac_poly_p_mavg(:,:), enz_frac_poly_p(:,:), mavg_period_tenzyme)
 
     !> 6.0 convert inorganic transport fluxes to µmol m3 s-1
     !!

@@ -1084,14 +1084,10 @@ CONTAINS
 
     !> 1.11
     !!
-    microbial_cue_eff_tmic_mavg(:,:) = calc_mavg(microbial_cue_eff_tmic_mavg(:,:),microbial_cue_eff(:,:), mavg_period_tmic)
-    enz_frac_poly_c_mavg(:,:)        = calc_mavg(enz_frac_poly_c_mavg(:,:), enz_frac_poly_c(:,:), &
-                                                 mavg_period_tenzyme)
-    enz_frac_poly_n_mavg(:,:)        = calc_mavg(enz_frac_poly_n_mavg(:,:), enz_frac_poly_n(:,:), &
-                                                 mavg_period_tenzyme)
-    enz_frac_poly_p_mavg(:,:)        = calc_mavg(enz_frac_poly_p_mavg(:,:), enz_frac_poly_p(:,:), &
-                                                 mavg_period_tenzyme)
-
+    microbial_cue_eff_tmic_mavg(:,:) = calc_mavg(microbial_cue_eff_tmic_mavg(:,:), microbial_cue_eff(:,:), mavg_period_tmic)
+    enz_frac_poly_c_mavg(:,:)        = calc_mavg(enz_frac_poly_c_mavg(:,:), enz_frac_poly_c(:,:), mavg_period_tenzyme)
+    enz_frac_poly_n_mavg(:,:)        = calc_mavg(enz_frac_poly_n_mavg(:,:), enz_frac_poly_n(:,:), mavg_period_tenzyme)
+    enz_frac_poly_p_mavg(:,:)        = calc_mavg(enz_frac_poly_p_mavg(:,:), enz_frac_poly_p(:,:), mavg_period_tenzyme)
 
 ! Pass back values to process memory
 #define Passback_veg_pool
