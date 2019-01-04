@@ -65,6 +65,8 @@ MODULE mo_sb_constants
    REAL(wp), SAVE :: &
       microbial_cn, &            !< molar ratio of C:N in microbes (testing only!)
       microbial_np, &            !< molar ratio of N:P in microbes (testing only!)
+      SOM_cn, &                  !< molar ratio of C:N in litter/SOM
+      SOM_np, &                  !< molar ratio of N:P in litter/SOM
       microbial_nue, &           !< microbial nitrogen use efficiency
       microbial_pue, &           !< microbial phosphorus use efficiency
       microbial_cue, &           !< microbial carbon-use efficiency
@@ -88,7 +90,9 @@ MODULE mo_sb_constants
       km_mic_uptake, &                  !< half-saturation DOM density for microbial DOM consumption 
       km_depolymerisation, &            !< half-saturation microbial biomass density for depolymerisation
       vmax_depolymerisation_residue, &  !< maximum depolymerisation rate of residue
-      vmax_depolymerisation_litter      !< maximum depolymerisation rate of polymeric litter
+      vmax_depolymerisation_litter, &   !< maximum depolymerisation rate of polymeric litter
+      fc_p_res2dom, &                   !< fraction of residue P retranslocated to dom
+      fc_n_res2dom                      !< fraction of residue n retranslocated to dom
 
    ! parameters controlling litter partitioning
    REAL(wp), SAVE :: & 
@@ -202,8 +206,8 @@ MODULE mo_sb_constants
       km_mic_biochem_po4, &      !< Half-saturation microbial biomass for PO4 biochemical mineralization [mol C m-3], MM kinetics (potentially also for ECA)
       km_dip_biochem_po4, &      !< Half-saturation solute P concentration for PO4 biochemical mineralization [mol C m-3], MM kinetics-alike
       km_rootc_biochem_po4, &    !< Half-saturation root C biomass for PO4 biochemical mineralization [mol C m-3], MM kinetics-alike
-      km_rootc_weath_po4         !< Half-saturation root C biomass for PO4 weathering [mol C m-3], MM kinetics-alike
-
+      km_rootc_weath_po4, &      !< Half-saturation root C biomass for PO4 weathering [mol C m-3], MM kinetics-alike
+      biomin_thres_PC            !< Threshold P:C ratio for biomineralisation
 
    !! only temporarily, mol / m2 !!
    REAL(wp), SAVE :: & 
@@ -262,23 +266,25 @@ CONTAINS
     rho_bulk_org              = 150.3935_wp                                                 ! 
     carbon_per_dryweight_SOM  = 0.4271_wp                                                   !! COMISSION for Hainich
     qmax_po4_fine_particle    = 0.5_wp / molar_mass_P                                       ! [mol P kg-1 soil], 
-    k_adsorpt_dom             = 843.391_wp / one_year / one_day * molar_mass_C  / 1000._wp  ! conversion to m3 / mol C / s
-    k_desorpt_dom             = 4301.741_wp / one_year / one_day                            ! 
-    k_adsorpt_det             = 6733.843_wp / one_year / one_day * molar_mass_C / 1000._wp  ! conversion to m3 / mol C / s
-    k_desorpt_det             = 2065.491_wp / one_year / one_day                            ! 
+    k_adsorpt_dom             = 59.9610_wp / one_year / one_day * molar_mass_C  / 1000._wp  ! conversion to m3 / mol C / s, Bernhard 20180913
+    k_desorpt_dom             = 508.2151_wp / one_year / one_day                            ! Bernhard 20180913
+    k_adsorpt_det             = 300.1012_wp / one_year / one_day * molar_mass_C / 100000._wp  ! conversion to m3 / mol C / s, Bernhard 20180913
+    k_desorpt_det             = 15.3957_wp / one_year / one_day / 100._wp                     ! Bernhard 20180913
     k_adsorpt_nh4             = 0.0_wp                                                      !  
     k_desorpt_nh4             = 0.0_wp                                                      !  
     k_adsorpt_po4             = 0.022_wp * 8._wp / 9._wp / 30.0_wp / one_day                ! [s-1], simple model, Yang et al. 2014, corrected for the global average,
                                                                                             ! assuming labile and slow P in equilibrium (Yang et al. 2013)
     k_desorpt_po4             = 0.022_wp / 30.0_wp / one_day                                ! [s-1], simple model, Yang et al. 2014 * 100
-    k_adsorpt_f_po4           = 2000._wp * 57.9_wp / 3600._wp                               ! [kg soil mol-1 P s-1], based on Van der Zee et al. 1989
-    k_desorp_f_po4            = 0.14_wp / 3600._wp                                          ! [s-1], Van der Zee et al. 1989
+    k_adsorpt_f_po4           = 12.9_wp / 3600._wp                                          ! [m3 mol-1 P s-1], based on Van der Zee et al. 1989
+    k_desorp_f_po4            = 0.14_wp / 3600._wp / 10._wp                                 ! [s-1], Van der Zee et al. 1989
     k_desorp_s_po4            = 0.0_wp                                                      ! [kg soil mol-1 P s-1], McGechan and Lewis 2002
     k_adsorpt_s_po4           = 0.0_wp                                                      ! [s-1], McGechan and Lewis 2002
 
     ! microbial parameters
-    microbial_cn            = 9._wp * molar_mass_N / molar_mass_C    ! textbook knowledge
-    microbial_np            = 14._wp * molar_mass_P / molar_mass_N   ! textbook knowledge
+    microbial_cn            = 13._wp * molar_mass_N / molar_mass_C   ! textbook knowledge
+    microbial_np            = 0.8_wp * molar_mass_P / molar_mass_N   ! textbook knowledge
+    SOM_cn                  = 9._wp  * molar_mass_N / molar_mass_C   ! textbook knowledge
+    SOM_np                  = 14._wp * molar_mass_P / molar_mass_N   ! textbook knowledge
     microbial_nue           = 0.8_wp                                 ! Manzoni et al. 2008
     microbial_pue           = 0.8_wp                                 ! Manzoni et al. 2008
     microbial_cue           = 0.392_wp                               ! COMISSION paper
@@ -297,11 +303,13 @@ CONTAINS
     fc_soluable2dom               = 0.9_wp                                 !
     k_mort_microbial              = 7.48_wp * 1.e-8_wp                                ! 
     min_mic_biomass               = 0.01_wp                                           ! 
-    vmax_mic_uptake               = 3495.18053_wp / one_year / one_day * 1000000._wp  ! 
-    km_mic_uptake                 = 1.02404788_wp / molar_mass_C * 1000_wp            ! conversion to mol C / m3
-    km_depolymerisation           = 0.08876_wp / molar_mass_C * 1000_wp               ! conversion to mol C / m3
-    vmax_depolymerisation_residue = 0.2316605_wp / one_year / one_day                 ! 
-    vmax_depolymerisation_litter  = 0.369800811690762_wp / one_year / one_day         ! beyond '_wp' precission ?; R calcs it as 1.172631e-08
+    vmax_mic_uptake               = 3495.18053_wp / one_year / one_day * 1000000._wp * 10._wp ! 
+    km_mic_uptake                 = 1.02404788_wp / molar_mass_C * 1000_wp            ! conversion to mol C m-3
+    vmax_depolymerisation_residue = 1.21_wp / one_year / one_day                      ! 0.2316605_wp 
+    vmax_depolymerisation_litter  = 1.5_wp / one_year / one_day                       ! 
+    km_depolymerisation           = 0.08876_wp / 2._wp / molar_mass_C * 1000_wp       ! conversion to mol C m-3   estimated
+    fc_p_res2dom                  = 0._wp
+    fc_n_res2dom                  = 0.1_wp
 
     ! parameters controlling litter partitioning
     f_soluable_residue   = 0.172_wp                                   ! 
@@ -337,29 +345,29 @@ CONTAINS
                                            ! assuming Km for low-affinity transporter is 300 µmol/L
     km2_up_po4 = 22.0_wp / 1000000._wp     ! mol/L, Kavka and Polle 2016
 
-   ! nutrient uptake kinetics & ECA approach: additional jsm parameters
-    vmax_mic_uptake_nh4     = 480.0_wp / 3600._wp * molar_mass_C          ! µmol / mol / s from Zhu et al. 2017, and references therein !temporarily 48 times 10 !
-    km_mic_uptake_nh4       = 1.2_wp / molar_mass_N                       ! mol / m3 from Zhu et al. 2017, and references therein    
-    vmax_mic_uptake_no3     = 390.0_wp / 3600._wp * molar_mass_C          ! µmol / mol / s from Zhu et al. 2017, and references therein         !temporarily 39 times 10 !
-    km_mic_uptake_no3       = 1.8_wp / molar_mass_N                       ! mol / m3 from Zhu et al. 2017, and references therein   
-    f_mic_carrier_n         = 0.05_wp                                     ! assuming 30% of the microbial enzymes are P transporter, based on Zhu et al. 2016
-    vmax_plant_uptake_nh4   = 9.7_wp / 3600._wp * molar_mass_C            ! µmol / mol / s from Zhu et al. 2017, and references therein
-    km_plant_uptake_nh4     = 0.18_wp / molar_mass_N                      ! mol / m3 from Zhu et al. 2017, and references therein 
-    vmax_plant_uptake_no3   = 8.0_wp / 3600._wp * molar_mass_C            ! µmol / mol / s from Zhu et al. 2017, and references therein
-    km_plant_uptake_no3     = 0.41_wp / molar_mass_N                      ! mol / m3 from Zhu et al. 2017, and references therein
-    f_plant_carrier_n       = 0.004_wp                                    ! assuming 30% of the microbial enzymes are P transporter, based on Zhu et al. 2016
-    vmax_mic_uptake_po4     = 48.0_wp / 3600._wp * molar_mass_C           ! µmol / mol / s
-    km_mic_uptake_po4       = 0.02_wp / molar_mass_P                      ! mol / m3
-    vmax_plant_uptake_po4   = 9.7_wp / 3600._wp * molar_mass_C            ! µmol / mol / s
+    ! additional jsm parameters 
+    vmax_mic_uptake_nh4     = 106.56_wp / 3600._wp * molar_mass_C         ! µmol / mol / s from Zhu et al. 2017, and references therein 
+    km_mic_uptake_nh4       = 0.18_wp / molar_mass_N                      ! mol / m3 from Zhu et al. 2017, and references therein    
+    vmax_mic_uptake_no3     = 86.58_wp / 3600._wp * molar_mass_C          ! µmol / mol / s from Zhu et al. 2017, and references therein 
+    km_mic_uptake_no3       = 0.41_wp / molar_mass_N                      ! mol / m3 from Zhu et al. 2017, and references therein   
+    f_mic_carrier_n         = 0.05_wp / 1000._wp                          ! assuming 30% of the microbial enzymes are P transporter, based on Zhu et al. 2016
+    vmax_plant_uptake_nh4   = 108.78_wp / 3600._wp * molar_mass_C         ! µmol / mol / s from Zhu et al. 2017, and references therein
+    km_plant_uptake_nh4     = 1.2_wp / molar_mass_N                       ! mol / m3 from Zhu et al. 2017, and references therein 
+    vmax_plant_uptake_no3   = 18.2_wp / 3600._wp * molar_mass_C           ! µmol / mol / s from Zhu et al. 2017, and references therein
+    km_plant_uptake_no3     = 1.8_wp / molar_mass_N                       ! mol / m3 from Zhu et al. 2017, and references therein
+    f_plant_carrier_n       = 1.25_wp / 10000._wp                         ! assuming 30% of the microbial enzymes are P transporter, based on Zhu et al. 2016
+    vmax_mic_uptake_po4     = 15.72_wp / 3600._wp * molar_mass_C          ! µmol / mol / s, based on Zhu et al. 2016, and references therein
+    km_mic_uptake_po4       = 0.02_wp / molar_mass_P                      ! mol / m3, Zhu et al. 2016
+    vmax_plant_uptake_po4   = 0.0222 / 60._wp * molar_mass_C              ! µmol / mol / s, Kavka and Polle 2016
     km_plant_uptake_po4     = 0.067_wp / molar_mass_P                     ! mol / m3
-    k_mic_uptake_nh4        = 1000._wp / one_day                          ! [s-1], Zhu et al. 2016
-    k_plant_uptake_nh4      = 120._wp / one_day                           ! [s-1], Zhu et al. 2016
-    k_mic_uptake_no3        = 1000._wp / one_day                          ! [s-1], Zhu et al. 2016
-    k_plant_uptake_no3      = 2._wp / one_day                             ! [s-1], Zhu et al. 2016
-    k_mic_uptake_po4        = 0.4_wp / one_day                            ! [s-1], Zhu et al. 2016, and references therein              !temporarily times 10, i.e., 10.0_wp * 400._wp / 10000._wp !
-    k_plant_uptake_po4      = 0.12_wp / one_day                           ! [s-1], Zhu et al. 2016, and references therein divided by 100._wp
-    f_mic_carrier_po4       = 0.0015_wp                                   ! assuming 30% of the microbial enzymes are P transporter, based on Zhu et al. 2016
-    f_plant_carrier_po4     = 0.00125_wp                                  ! assuming 10% of the plant enzymes are P transporter, based on Zhu et al. 2016
+    k_mic_uptake_nh4        = 0.32_wp * 24._wp / one_day                  ! [s-1], Zhu et al. 2016; 0.32 h-1, Zhu et al. 2017
+    k_plant_uptake_nh4      = 10.8_wp * 24._wp / one_day                  ! [s-1], Zhu et al. 2016; 10.8 h-1, Zhu et al. 2017
+    k_mic_uptake_no3        = 0.26_wp * 24._wp / one_day                  ! [s-1], Zhu et al. 2016; 0.26 h-1, Zhu et al. 2017
+    k_plant_uptake_no3      = 8.9_wp * 24._wp / one_day                   ! [s-1], Zhu et al. 2016; 8.9 h-1, Zhu et al. 2017
+    k_mic_uptake_po4        = 400._wp / one_day                           ! [s-1], Zhu et al. 2016, and references therein  
+    k_plant_uptake_po4      = 12._wp / one_day                            ! [s-1], Zhu et al. 2016, and references therein
+    f_mic_carrier_po4       = 0.05_wp / 1000._wp                          ! assuming 30% of the microbial enzymes are P transporter, based on Zhu et al. 2016
+    f_plant_carrier_po4     = 1.25_wp / 10000._wp                         ! assuming 10% of the plant enzymes are P transporter, based on Zhu et al. 2016
     qmax_po4_mineral        = 1.2_wp / molar_mass_P                       ! [mol P kg-1 soil], Olander and Vitousek 2005
     km_adsorpt_mineral_po4  = 0.070_wp / 1000._wp / molar_mass_P          ! [mol P kg-1 fine mineral soil], based on 0.332 [mol P L-1 soil solution]  
                                                                           ! from literature data analysis, with .33 m wc and 1560 kg/m3 bulk density
@@ -406,12 +414,12 @@ CONTAINS
     k_weath_mineral       = 0.1_wp / molar_mass_P / 1254._wp / one_year /one_day  ! [mol P kg-1 s-1], Wang et al. 2010 combining with BBR soil weight of 1m
     eq_sorp_mineral_po4   = 80._wp / molar_mass_P                                 ! [mol P m-3] ! random guess based on init value of assoc_slow
     k_occlude_po4         = 1.0_wp / 1000000._wp / 30._wp / one_day               ! [s-1], Yang et al. 2014
-    vmax_biochem_po4      = 1.0_wp / 40.0_wp / one_day                            ! [s-1], estimated from Bunemann et al. 2016, LUS site
-    km_mic_biochem_po4    = 0.1_wp / molar_mass_C                                 ! [mol C m-3] ! random number, equals to the usual microbe biomass (0.1 g C m-3)
+    vmax_biochem_po4      = 1.0_wp / 40.0_wp / one_day                            ! [mol P s-1], estimated from Bunemann et al. 2016, LUS site
+    km_mic_biochem_po4    = 0.01_wp / molar_mass_C                                ! [mol C m-3] ! random number, equals to the usual microbe biomass (0.1 g C m-3)
     km_dip_biochem_po4    = 0.001_wp                                              ! estimated
     km_rootc_biochem_po4  = 20._wp                                                ! 
     km_rootc_weath_po4    = 10._wp                                                !
-
+    biomin_thres_PC       = 1._wp / 2400._wp
     !! BLARPP only temporarily, mol / m2 !!
     nh4_solute_prescribe = 0.1_wp
     no3_solute_prescribe = 0.1_wp

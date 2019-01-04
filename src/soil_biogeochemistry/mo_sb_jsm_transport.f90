@@ -286,11 +286,11 @@ CONTAINS
                                         pool_residue_assoc%nitrogen15(:,:), transport_residue_assoc%nitrogen15(:,:))
 
     !> 2.0 inorganic pools 
-    CALL calc_bioturbation_transport(options,k_bioturb(:,:),soil_depth_sl(:,:),nh4_assoc(:,:),transport_nh4_assoc(:,:)) 
-    CALL calc_bioturbation_transport(options,k_bioturb(:,:),soil_depth_sl(:,:),po4_assoc_fast(:,:),transport_po4_assoc_fast(:,:)) 
-    CALL calc_bioturbation_transport(options,k_bioturb(:,:),soil_depth_sl(:,:),po4_assoc_slow(:,:),transport_po4_assoc_slow(:,:)) 
-    CALL calc_bioturbation_transport(options,k_bioturb(:,:),soil_depth_sl(:,:),po4_occluded(:,:),transport_po4_occluded(:,:)) 
-    CALL calc_bioturbation_transport(options,k_bioturb(:,:),soil_depth_sl(:,:),nh4_n15_assoc(:,:),transport_nh4_n15_assoc(:,:)) 
+    ! CALL calc_bioturbation_transport(options,k_bioturb(:,:),soil_depth_sl(:,:),nh4_assoc(:,:),transport_nh4_assoc(:,:)) 
+    ! CALL calc_bioturbation_transport(options,k_bioturb(:,:),soil_depth_sl(:,:),po4_assoc_fast(:,:),transport_po4_assoc_fast(:,:)) 
+    ! CALL calc_bioturbation_transport(options,k_bioturb(:,:),soil_depth_sl(:,:),po4_assoc_slow(:,:),transport_po4_assoc_slow(:,:)) 
+    ! CALL calc_bioturbation_transport(options,k_bioturb(:,:),soil_depth_sl(:,:),po4_occluded(:,:),transport_po4_occluded(:,:)) 
+    ! CALL calc_bioturbation_transport(options,k_bioturb(:,:),soil_depth_sl(:,:),nh4_n15_assoc(:,:),transport_nh4_n15_assoc(:,:)) 
 
   END SUBROUTINE calc_bioturbation_transport_wrapper
 
@@ -352,7 +352,7 @@ CONTAINS
            (carbon_per_dryweight_SOM / molar_mass_C * 1000._wp)
 
     DO isoil = 2,options%nsoil_sb
-       particle_fluxrate(:,isoil) = particle_fluxrate(:,isoil-1) + soil_depth_sl(:,isoil) * &
+       particle_fluxrate(:,isoil) = soil_depth_sl(:,isoil) * &
           (sb_formation%soluable_litter%carbon(:,isoil)  - sb_loss%soluable_litter%carbon(:,isoil) + &
            sb_formation%polymeric_litter%carbon(:,isoil) - sb_loss%polymeric_litter%carbon(:,isoil) + &
            sb_formation%woody_litter%carbon(:,isoil)     - sb_loss%woody_litter%carbon(:,isoil) + &

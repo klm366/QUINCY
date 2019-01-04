@@ -125,6 +125,11 @@ flag_sb_jsm_transport="F"         # ..
 flag_sb_jsm_litter_input="F"      # ..
 flag_sb_jsm_OM_sorption="F"       # ..
 
+# ECA and P cycle
+flag_sb_eca_upt_po4="T"           # TRUE: use the ECA approach for plant and microbe P uptake | FALSE: use non-ECA approach for plant and microbe P uptake
+flag_sb_cle_po4="T"               # TRUE: Langmuir equilibrium is constantly maintained between solute P and labile P | FALSE: Langmuir equilibrium is not maintained
+sb_adsorp_scheme="eca_full"       # eca_full; eca_part (only uptake, not for adsorption); eca_none
+
 # simulation length & output
 simulation_length_number=30       # default years for forcingMode: static = 30 | transient = 115 [transient: 01.01.1901 -> 31.12.2015 without spinup!]
 output_interval_pool="weekly"     # timestep daily weekly monthly yearly
@@ -478,7 +483,7 @@ validateEmailNotification="yes no"
 validateFlags="F T"
 validateOutputInterval="timestep daily weekly monthly yearly"
 validateOutputIntervalSpinup="none daily weekly monthly yearly"
-validateOptionForcing="constant generate readfile"
+validateSBAdsorpScheme="eca_full eca_part eca_none"
 
 
 ## set and create basic folders and files ##
@@ -595,6 +600,9 @@ validateUserConfigValues "$flag_t_jmax_acclimation" "$validateFlags" "flag_t_jma
 validateUserConfigValues "$flag_sb_jsm_transport" "$validateFlags" "flag_sb_jsm_transport"
 validateUserConfigValues "$flag_sb_jsm_litter_input" "$validateFlags" "flag_sb_jsm_litter_input"
 validateUserConfigValues "$flag_sb_jsm_OM_sorption" "$validateFlags" "flag_sb_jsm_OM_sorption"
+validateUserConfigValues "$flag_sb_eca_upt_po4" "$validateFlags" "flag_sb_eca_upt_po4"
+validateUserConfigValues "$flag_sb_cle_po4" "$validateFlags" "flag_sb_cle_po4"
+validateUserConfigValues "$sb_adsorp_scheme" "$validateSBAdsorpScheme" "sb_adsorp_scheme"
 validateUserConfigValues "$biomass_alloc_scheme" "$validateBiomassAllocScheme" "biomass_alloc_scheme"
 validateUserConfigValues "$leaf_stoichom_scheme" "$validateLeafStoichomScheme" "leaf_stoichom_scheme"
 validateUserConfigValues "$flag_optimal_Nfraction" "$validateFlags" "flag_optimal_Nfraction"
@@ -1345,6 +1353,19 @@ changeNamelistValue veg_dynamics_scheme "$veg_dynamics_scheme"
 changeNamelistValue biomass_alloc_scheme "$biomass_alloc_scheme"
 changeNamelistValue leaf_stoichom_scheme "$leaf_stoichom_scheme"
 changeNamelistValue cohort_harvest_interval "$cohort_harvest_interval"
+changeNamelistValue sb_adsorp_scheme "$sb_adsorp_scheme"
+if [ $flag_sb_eca_upt_po4 == T ]
+  then
+    changeNamelistValue flag_sb_ECA_upt_po4 ".TRUE."
+  else
+    changeNamelistValue flag_sb_ECA_upt_po4 ".FALSE."
+fi
+if [ $flag_sb_cle_po4 == T ]
+  then
+    changeNamelistValue flag_sb_CLE_po4 ".TRUE."
+  else
+    changeNamelistValue flag_sb_CLE_po4 ".FALSE."
+fi
 if [ $flag_mycorrhiza == T ]
   then
     changeNamelistValue flag_mycorrhiza ".TRUE."
@@ -1429,7 +1450,6 @@ if [ $flag_optimal_Nfraction == T ]
   else
     changeNamelistValue flag_optimal_Nfraction ".FALSE."
 fi
-
 if [ $flag_read_dC13 == T ]
   then
     changeNamelistValue flag_read_dC13 ".TRUE."

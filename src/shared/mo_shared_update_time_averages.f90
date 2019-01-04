@@ -24,7 +24,7 @@ MODULE mo_shared_update_time_averages
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: update_time_averages
+  PUBLIC :: update_time_averages, calc_mavg
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_shared_update_time_averages'
 
@@ -443,7 +443,7 @@ CONTAINS
                                           mavg_period_tlabile, mavg_period_tphen, mavg_period_tuptake, mavg_period_tfrac, &
                                           mavg_period_tcnl, mavg_period_tgrowth, mavg_period_talloc, mavg_period_talloc_dynamic, &
                                           mavg_period_tvegdyn, mavg_period_tacclim, mavg_period_tmic, mavg_period_tsoa, &
-                                          Tzero
+                                          mavg_period_tenzyme, Tzero
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(ASSIMI_)    
@@ -623,6 +623,12 @@ CONTAINS
     ! SB_
     dsl4jsb_Real3D_onChunk      :: microbial_cue_eff_tmic_mavg
     dsl4jsb_Real3D_onChunk      :: microbial_cue_eff
+    dsl4jsb_Real3D_onChunk      :: enz_frac_poly_c
+    dsl4jsb_Real3D_onChunk      :: enz_frac_poly_n
+    dsl4jsb_Real3D_onChunk      :: enz_frac_poly_p
+    dsl4jsb_Real3D_onChunk      :: enz_frac_poly_c_mavg
+    dsl4jsb_Real3D_onChunk      :: enz_frac_poly_n_mavg
+    dsl4jsb_Real3D_onChunk      :: enz_frac_poly_p_mavg
     ! SSE_
     dsl4jsb_Real2D_onChunk      :: transpiration
     dsl4jsb_Real2D_onChunk      :: t_soil_root
@@ -790,6 +796,12 @@ CONTAINS
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SB_, microbial_cue_eff_tmic_mavg)
     dsl4jsb_Get_var3D_onChunk(SB_, microbial_cue_eff)
+    dsl4jsb_Get_var3D_onChunk(SB_,  enz_frac_poly_c)
+    dsl4jsb_Get_var3D_onChunk(SB_,  enz_frac_poly_n)
+    dsl4jsb_Get_var3D_onChunk(SB_,  enz_frac_poly_p)
+    dsl4jsb_Get_var3D_onChunk(SB_,  enz_frac_poly_c_mavg)
+    dsl4jsb_Get_var3D_onChunk(SB_,  enz_frac_poly_n_mavg)
+    dsl4jsb_Get_var3D_onChunk(SB_,  enz_frac_poly_p_mavg)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SSE_, transpiration)
     dsl4jsb_Get_var2D_onChunk(SSE_, t_soil_root)
@@ -1073,6 +1085,12 @@ CONTAINS
     !> 1.11
     !!
     microbial_cue_eff_tmic_mavg(:,:) = calc_mavg(microbial_cue_eff_tmic_mavg(:,:),microbial_cue_eff(:,:), mavg_period_tmic)
+    enz_frac_poly_c_mavg(:,:)        = calc_mavg(enz_frac_poly_c_mavg(:,:), enz_frac_poly_c(:,:), &
+                                                 mavg_period_tenzyme)
+    enz_frac_poly_n_mavg(:,:)        = calc_mavg(enz_frac_poly_n_mavg(:,:), enz_frac_poly_n(:,:), &
+                                                 mavg_period_tenzyme)
+    enz_frac_poly_p_mavg(:,:)        = calc_mavg(enz_frac_poly_p_mavg(:,:), enz_frac_poly_p(:,:), &
+                                                 mavg_period_tenzyme)
 
 
 ! Pass back values to process memory

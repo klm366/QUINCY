@@ -87,6 +87,7 @@ MODULE mo_shared_set_parameters
     REAL(wp)           :: mavg_period_tuptake
     REAL(wp)           :: mavg_period_tlabile
     REAL(wp)           :: mavg_period_tphen
+    REAL(wp)           :: mavg_period_tenzyme
     REAL(wp)           :: mavg_period_tfrac
     REAL(wp)           :: mavg_period_tcnl
     REAL(wp)           :: mavg_period_talloc
@@ -268,6 +269,8 @@ MODULE mo_shared_set_parameters
     REAL(wp)           :: k_adsorpt_s_po4
     REAL(wp)           :: microbial_cn
     REAL(wp)           :: microbial_np
+    REAL(wp)           :: SOM_np
+    REAL(wp)           :: SOM_cn
     REAL(wp)           :: microbial_nue
     REAL(wp)           :: microbial_pue
     REAL(wp)           :: microbial_cue
@@ -379,6 +382,9 @@ MODULE mo_shared_set_parameters
     REAL(wp)           :: km_dip_biochem_po4
     REAL(wp)           :: km_rootc_biochem_po4
     REAL(wp)           :: km_rootc_weath_po4
+    REAL(wp)           :: biomin_thres_PC
+    REAL(wp)           :: fc_p_res2dom
+    REAL(wp)           :: fc_n_res2dom
   CONTAINS
     PROCEDURE :: read_param => read_parameter_slm_list
     PROCEDURE :: set_param  => set_parameter_slm_values_with_list_values
@@ -549,6 +555,7 @@ CONTAINS
     REAL(wp)           :: mavg_period_tuptake
     REAL(wp)           :: mavg_period_tlabile
     REAL(wp)           :: mavg_period_tphen
+    REAL(wp)           :: mavg_period_tenzyme
     REAL(wp)           :: mavg_period_tfrac
     REAL(wp)           :: mavg_period_tcnl
     REAL(wp)           :: mavg_period_talloc
@@ -730,6 +737,8 @@ CONTAINS
     REAL(wp)           :: k_adsorpt_s_po4
     REAL(wp)           :: microbial_cn
     REAL(wp)           :: microbial_np
+    REAL(wp)           :: SOM_np
+    REAL(wp)           :: SOM_cn
     REAL(wp)           :: microbial_nue
     REAL(wp)           :: microbial_pue
     REAL(wp)           :: microbial_cue
@@ -841,6 +850,9 @@ CONTAINS
     REAL(wp)           :: km_dip_biochem_po4
     REAL(wp)           :: km_rootc_biochem_po4
     REAL(wp)           :: km_rootc_weath_po4
+    REAL(wp)           :: biomin_thres_PC
+    REAL(wp)           :: fc_p_res2dom
+    REAL(wp)           :: fc_n_res2dom
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':read_parameter_slm_list'
 
@@ -911,6 +923,7 @@ CONTAINS
         mavg_period_tuptake       , &
         mavg_period_tlabile       , &
         mavg_period_tphen         , &
+        mavg_period_tenzyme       , &
         mavg_period_tfrac         , &
         mavg_period_tcnl          , &
         mavg_period_talloc        , &
@@ -1095,6 +1108,8 @@ CONTAINS
         k_adsorpt_s_po4               , &
         microbial_cn                  , &
         microbial_np                  , &
+        SOM_np                        , &
+        SOM_cn                        , &
         microbial_nue                 , &
         microbial_pue                 , &
         microbial_cue                 , &
@@ -1205,7 +1220,10 @@ CONTAINS
         km_mic_biochem_po4            , &
         km_dip_biochem_po4            , &
         km_rootc_biochem_po4          , &
-        km_rootc_weath_po4          
+        km_rootc_weath_po4            , &
+        biomin_thres_PC               , &
+        fc_p_res2dom                  , &
+        fc_n_res2dom                  
 
 
     ! variables for reading model-options from namelist
@@ -1278,6 +1296,7 @@ CONTAINS
     mavg_period_tuptake         = missval
     mavg_period_tlabile         = missval
     mavg_period_tphen           = missval
+    mavg_period_tenzyme         = missval
     mavg_period_tfrac           = missval
     mavg_period_tcnl            = missval
     mavg_period_talloc          = missval
@@ -1459,6 +1478,8 @@ CONTAINS
     k_adsorpt_s_po4               = missval
     microbial_cn                  = missval
     microbial_np                  = missval
+    SOM_np                        = missval
+    SOM_cn                        = missval
     microbial_nue                 = missval
     microbial_pue                 = missval
     microbial_cue                 = missval
@@ -1570,6 +1591,9 @@ CONTAINS
     km_dip_biochem_po4            = missval
     km_rootc_biochem_po4          = missval
     km_rootc_weath_po4            = missval
+    biomin_thres_PC               = missval
+    fc_p_res2dom                  = missval
+    fc_n_res2dom                  = missval
 
     ! read the namelist
     ! 
@@ -1673,6 +1697,7 @@ CONTAINS
     this%mavg_period_tuptake         = mavg_period_tuptake
     this%mavg_period_tlabile         = mavg_period_tlabile
     this%mavg_period_tphen           = mavg_period_tphen
+    this%mavg_period_tenzyme         = mavg_period_tenzyme
     this%mavg_period_tfrac           = mavg_period_tfrac
     this%mavg_period_tcnl            = mavg_period_tcnl
     this%mavg_period_talloc          = mavg_period_talloc
@@ -1854,6 +1879,8 @@ CONTAINS
     this%k_adsorpt_s_po4               = k_adsorpt_s_po4
     this%microbial_cn                  = microbial_cn
     this%microbial_np                  = microbial_np
+    this%SOM_np                        = SOM_np
+    this%SOM_cn                        = SOM_cn
     this%microbial_nue                 = microbial_nue
     this%microbial_pue                 = microbial_pue
     this%microbial_cue                 = microbial_cue
@@ -1965,6 +1992,9 @@ CONTAINS
     this%km_dip_biochem_po4            = km_dip_biochem_po4
     this%km_rootc_biochem_po4          = km_rootc_biochem_po4
     this%km_rootc_weath_po4            = km_rootc_weath_po4
+    this%biomin_thres_PC               = biomin_thres_PC
+    this%fc_p_res2dom                  = fc_p_res2dom
+    this%fc_n_res2dom                  = fc_n_res2dom
 
   END SUBROUTINE read_parameter_slm_list
 
@@ -2348,6 +2378,11 @@ CONTAINS
                                     this%mavg_period_tphen, &
                                     "mavg_period_tphen", proportional_parameter_changes, dependency_recalculation, &
                                     mavg_period_tphen)
+
+    CALL Set_quincy_parameter_value(this%mavg_period_tenzyme, &
+                                    this%mavg_period_tenzyme, &
+                                    "mavg_period_tenzyme", proportional_parameter_changes, dependency_recalculation, &
+                                    mavg_period_tenzyme)
     
     CALL Set_quincy_parameter_value(this%mavg_period_tfrac, &
                                     this%mavg_period_tfrac, &
@@ -3203,12 +3238,12 @@ CONTAINS
                                     "k_desorpt_dom", proportional_parameter_changes, dependency_recalculation, &
                                     k_desorpt_dom)
 
-    CALL Set_quincy_parameter_value(this%k_adsorpt_det / one_year / one_day * molar_mass_C / 1000._wp, &
+    CALL Set_quincy_parameter_value(this%k_adsorpt_det / one_year / one_day * molar_mass_C / 100000._wp, &
                                     this%k_adsorpt_det, &
                                     "k_adsorpt_det", proportional_parameter_changes, dependency_recalculation, &
                                     k_adsorpt_det)
     
-    CALL Set_quincy_parameter_value(this%k_desorpt_det / one_year / one_day, &
+    CALL Set_quincy_parameter_value(this%k_desorpt_det / one_year / one_day / 100._wp, &
                                     this%k_desorpt_det, &
                                     "k_desorpt_det", proportional_parameter_changes, dependency_recalculation, &
                                     k_desorpt_det)
@@ -3233,12 +3268,12 @@ CONTAINS
                                     "k_desorpt_po4", proportional_parameter_changes, dependency_recalculation, &
                                     k_desorpt_po4)
     
-    CALL Set_quincy_parameter_value(this%k_adsorpt_f_po4 * 57.9_wp / 3600._wp, &
+    CALL Set_quincy_parameter_value(this%k_adsorpt_f_po4 / 3600._wp, &
                                     this%k_adsorpt_f_po4, &
                                     "k_adsorpt_f_po4", proportional_parameter_changes, dependency_recalculation, &
                                     k_adsorpt_f_po4)
     
-    CALL Set_quincy_parameter_value(this%k_desorp_f_po4 / 3600._wp, &
+    CALL Set_quincy_parameter_value(this%k_desorp_f_po4 / 3600._wp / 10._wp, &
                                     this%k_desorp_f_po4, &
                                     "k_desorp_f_po4", proportional_parameter_changes, dependency_recalculation, &
                                     k_desorp_f_po4)
@@ -3262,6 +3297,16 @@ CONTAINS
                                     this%microbial_np, &
                                     "microbial_np", proportional_parameter_changes, dependency_recalculation, &
                                     microbial_np)
+    
+    CALL Set_quincy_parameter_value(this%SOM_np * molar_mass_P / molar_mass_N, &
+                                    this%SOM_np, &
+                                    "SOM_np", proportional_parameter_changes, dependency_recalculation, &
+                                    SOM_np)
+    
+    CALL Set_quincy_parameter_value(this%SOM_cn * molar_mass_N / molar_mass_C, &
+                                    this%SOM_cn, &
+                                    "SOM_cn", proportional_parameter_changes, dependency_recalculation, &
+                                    SOM_cn)
     
     CALL Set_quincy_parameter_value(this%microbial_nue, &
                                     this%microbial_nue, &
@@ -3343,7 +3388,7 @@ CONTAINS
                                     "min_mic_biomass", proportional_parameter_changes, dependency_recalculation, &
                                     min_mic_biomass)
 
-    CALL Set_quincy_parameter_value(this%vmax_mic_uptake / one_year / one_day * 1000000._wp, &
+    CALL Set_quincy_parameter_value(this%vmax_mic_uptake / one_year / one_day * 1000000._wp * 10._wp, &
                                     this%vmax_mic_uptake, &
                                     "vmax_mic_uptake", proportional_parameter_changes, dependency_recalculation, &
                                     vmax_mic_uptake)
@@ -3353,7 +3398,7 @@ CONTAINS
                                     "km_mic_uptake", proportional_parameter_changes, dependency_recalculation, &
                                     km_mic_uptake)
 
-    CALL Set_quincy_parameter_value(this%km_depolymerisation / molar_mass_C * 1000_wp, &
+    CALL Set_quincy_parameter_value(this%km_depolymerisation / 2._wp / molar_mass_C * 1000_wp, &
                                     this%km_depolymerisation, &
                                     "km_depolymerisation", proportional_parameter_changes, dependency_recalculation, &
                                     km_depolymerisation)
@@ -3523,7 +3568,7 @@ CONTAINS
                                     "km_mic_uptake_no3", proportional_parameter_changes, dependency_recalculation, &
                                     km_mic_uptake_no3)
     
-    CALL Set_quincy_parameter_value(this%f_mic_carrier_n, &
+    CALL Set_quincy_parameter_value(this%f_mic_carrier_n / 1000._wp, &
                                     this%f_mic_carrier_n, &
                                     "f_mic_carrier_n", proportional_parameter_changes, dependency_recalculation, &
                                     f_mic_carrier_n)
@@ -3548,7 +3593,7 @@ CONTAINS
                                     "km_plant_uptake_no3", proportional_parameter_changes, dependency_recalculation, &
                                     km_plant_uptake_no3)
     
-    CALL Set_quincy_parameter_value(this%f_plant_carrier_n, &
+    CALL Set_quincy_parameter_value(this%f_plant_carrier_n / 10000._wp, &
                                     this%f_plant_carrier_n, &
                                     "f_plant_carrier_n", proportional_parameter_changes, dependency_recalculation, &
                                     f_plant_carrier_n)
@@ -3563,7 +3608,7 @@ CONTAINS
                                     "km_mic_uptake_po4", proportional_parameter_changes, dependency_recalculation, &
                                     km_mic_uptake_po4)
     
-    CALL Set_quincy_parameter_value(this%vmax_plant_uptake_po4 / 3600._wp * molar_mass_C, &
+    CALL Set_quincy_parameter_value(this%vmax_plant_uptake_po4 / 60._wp * molar_mass_C, &
                                     this%vmax_plant_uptake_po4, &
                                     "vmax_plant_uptake_po4", proportional_parameter_changes, dependency_recalculation, &
                                     vmax_plant_uptake_po4)
@@ -3573,22 +3618,22 @@ CONTAINS
                                     "km_plant_uptake_po4", proportional_parameter_changes, dependency_recalculation, &
                                     km_plant_uptake_po4)
     
-    CALL Set_quincy_parameter_value(this%k_mic_uptake_nh4 / one_day, &
+    CALL Set_quincy_parameter_value(this%k_mic_uptake_nh4 * 24._wp / one_day, &
                                     this%k_mic_uptake_nh4, &
                                     "k_mic_uptake_nh4", proportional_parameter_changes, dependency_recalculation, &
                                     k_mic_uptake_nh4)
 
-    CALL Set_quincy_parameter_value(this%k_plant_uptake_nh4 / one_day, &
+    CALL Set_quincy_parameter_value(this%k_plant_uptake_nh4 * 24._wp / one_day, &
                                     this%k_plant_uptake_nh4, &
                                     "k_plant_uptake_nh4", proportional_parameter_changes, dependency_recalculation, &
                                     k_plant_uptake_nh4)
     
-    CALL Set_quincy_parameter_value(this%k_mic_uptake_no3 / one_day, &
+    CALL Set_quincy_parameter_value(this%k_mic_uptake_no3 * 24._wp / one_day, &
                                     this%k_mic_uptake_no3, &
                                     "k_mic_uptake_no3", proportional_parameter_changes, dependency_recalculation, &
                                     k_mic_uptake_no3)
     
-    CALL Set_quincy_parameter_value(this%k_plant_uptake_no3 / one_day, &
+    CALL Set_quincy_parameter_value(this%k_plant_uptake_no3 * 24._wp / one_day, &
                                     this%k_plant_uptake_no3, &
                                     "k_plant_uptake_no3", proportional_parameter_changes, dependency_recalculation, &
                                     k_plant_uptake_no3)
@@ -3603,12 +3648,12 @@ CONTAINS
                                     "k_plant_uptake_po4", proportional_parameter_changes, dependency_recalculation, &
                                     k_plant_uptake_po4)
 
-    CALL Set_quincy_parameter_value(this%f_mic_carrier_po4, &
+    CALL Set_quincy_parameter_value(this%f_mic_carrier_po4 / 1000._wp, &
                                     this%f_mic_carrier_po4, &
                                     "f_mic_carrier_po4", proportional_parameter_changes, dependency_recalculation, &
                                     f_mic_carrier_po4)
     
-    CALL Set_quincy_parameter_value(this%f_plant_carrier_po4, &
+    CALL Set_quincy_parameter_value(this%f_plant_carrier_po4 / 10000._wp, &
                                     this%f_plant_carrier_po4, &
                                     "f_plant_carrier_po4", proportional_parameter_changes, dependency_recalculation, &
                                     f_plant_carrier_po4)
@@ -3817,7 +3862,22 @@ CONTAINS
                                     this%km_rootc_weath_po4, &
                                     "km_rootc_weath_po4", proportional_parameter_changes, dependency_recalculation, &
                                     km_rootc_weath_po4)
-
+    
+    CALL Set_quincy_parameter_value(this%biomin_thres_PC / 2400._wp, &
+                                    this%biomin_thres_PC, &
+                                    "biomin_thres_PC", proportional_parameter_changes, dependency_recalculation, &
+                                    biomin_thres_PC)
+    
+    CALL Set_quincy_parameter_value(this%fc_p_res2dom, &
+                                    this%fc_p_res2dom, &
+                                    "fc_p_res2dom", proportional_parameter_changes, dependency_recalculation, &
+                                    fc_p_res2dom)
+    
+    CALL Set_quincy_parameter_value(this%fc_n_res2dom, &
+                                    this%fc_n_res2dom, &
+                                    "fc_n_res2dom", proportional_parameter_changes, dependency_recalculation, &
+                                    fc_n_res2dom)
+    
   END SUBROUTINE set_parameter_slm_values_with_list_values
 
 

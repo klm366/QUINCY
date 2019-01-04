@@ -66,6 +66,7 @@
   mavg_period_tuptake=NAN
   mavg_period_tlabile=NAN
   mavg_period_tphen=NAN
+  mavg_period_tenzyme=NAN
   mavg_period_tfrac=NAN
   mavg_period_tcnl=NAN
   mavg_period_talloc=NAN
@@ -361,6 +362,8 @@
   km_dip_biochem_po4=NAN
   km_rootc_biochem_po4=NAN
   km_rootc_weath_po4=NAN
+  fc_p_res2dom=NAN
+  fc_n_res2dom=NAN
 /
 &LCTLIB_PFT1_CTL
   sla_p1=NAN

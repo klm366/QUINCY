@@ -71,6 +71,7 @@ MODULE mo_shared_constants
     REAL(wp),SAVE :: mavg_period_tuptake           = 3.0_wp                 !< nutrient uptake processes (demand, BNF) 
     REAL(wp),SAVE :: mavg_period_tlabile           = 7.0_wp                 !< labile pool 
     REAL(wp),SAVE :: mavg_period_tphen             = 7.0_wp                 !< phenological processes 
+    REAL(wp),SAVE :: mavg_period_tenzyme           = 7.0_wp                 !< memory time-scale for enzyme allocation (SB_)
     REAL(wp),SAVE :: mavg_period_tfrac             = 10.0_wp                !< leaf N fractions
     REAL(wp),SAVE :: mavg_period_tcnl              = 20.0_wp                !< leaf stoichiometry 
     REAL(wp),SAVE :: mavg_period_talloc            = 30.0_wp                !< biomass allocation
@@ -79,7 +80,6 @@ MODULE mo_shared_constants
     REAL(wp),SAVE :: mavg_period_tmic              = 30.0_wp                !< microbial community acclimation
     REAL(wp),SAVE :: mavg_period_tgrowth           = 365.0_wp               !< vegetation growth
     REAL(wp),SAVE :: mavg_period_tvegdyn           = 365.0_wp               !< vegetation dynamics processes 
-
 !    REAL(wp),SAVE :: mavg_period_xxx         = xxx.0_wp       !< xxx
 !    REAL(wp),SAVE :: mavg_period_xxx         = xxx.0_wp       !< xxx
 !    REAL(wp),SAVE :: mavg_period_xxx         = xxx.0_wp       !< xxx

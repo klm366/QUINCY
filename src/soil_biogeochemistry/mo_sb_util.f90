@@ -112,8 +112,10 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: plant_uptake_po4_sl
     dsl4jsb_Real3D_onChunk :: weathering_po4
     dsl4jsb_Real3D_onChunk :: occlusion_po4
-    dsl4jsb_Real3D_onChunk :: slow_sorption_po4
-    dsl4jsb_Real3D_onChunk :: fast_adsorption_po4
+    dsl4jsb_Real3D_onChunk :: slow_exchange_po4
+    dsl4jsb_Real3D_onChunk :: fast_exchange_po4
+    dsl4jsb_Real3D_onChunk :: fast_desorp_po4
+    dsl4jsb_Real3D_onChunk :: fast_adsorpt_po4
     dsl4jsb_Real3D_onChunk :: biochem_mineralisation_po4
     dsl4jsb_Real3D_onChunk :: gross_mineralisation_po4
     dsl4jsb_Real3D_onChunk :: transport_nh4_solute 
@@ -198,8 +200,10 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_po4_sl)         ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       weathering_po4)              ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       occlusion_po4)               ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       slow_sorption_po4)           ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       fast_adsorption_po4)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       slow_exchange_po4)           ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       fast_exchange_po4)           ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       fast_desorp_po4)             ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       fast_adsorpt_po4)            ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       biochem_mineralisation_po4)  ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       gross_mineralisation_po4)    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       microbial_uptake_nh4_sl)     ! out
@@ -317,8 +321,10 @@ CONTAINS
     microbial_uptake_po4_sl(:,:)      = zero
     weathering_po4(:,:)               = zero
     occlusion_po4(:,:)                = zero
-    slow_sorption_po4(:,:)            = zero
-    fast_adsorption_po4(:,:)          = zero
+    slow_exchange_po4(:,:)            = zero
+    fast_exchange_po4(:,:)            = zero
+    fast_desorp_po4(:,:)              = zero
+    fast_adsorpt_po4(:,:)             = zero
     biochem_mineralisation_po4(:,:)   = zero
     gross_mineralisation_po4(:,:)     = zero
     mycorrhiza_uptake_nh4_sl(:,:)     = zero

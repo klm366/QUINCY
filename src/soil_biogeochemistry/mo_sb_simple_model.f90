@@ -77,7 +77,7 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb) ::      &
                                              apparent_mic_cn      , &
                                              root_fraction_act_sl , &      ! and below needed for switch between 0d and 1d
-                                             fine_root_carbon, &
+                                             fine_root_carbon_sl, &
                                              rtm_decomposition_act, &
                                              rmm_decomposition_act, & 
                                              rtm_plant_uptake_act, &
@@ -102,8 +102,9 @@ CONTAINS
                                              km_dip_biochem_po4_act, &
                                              qmax_po4_mineral_act, &
                                              anaerobic_volume_fraction_act
-    INTEGER                               :: nsoil_sb
-    INTEGER                               :: iblk, ics, ice, nc
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: arr_hlp1
+    INTEGER                                          :: nsoil_sb
+    INTEGER                                          :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_simple_model'
     ! ---------------------------
     ! 0.3 Memory allocation
@@ -183,7 +184,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_po4_sl
     dsl4jsb_Real3D_onChunk :: weathering_po4
     dsl4jsb_Real3D_onChunk :: occlusion_po4
-    dsl4jsb_Real3D_onChunk :: slow_sorption_po4
+    dsl4jsb_Real3D_onChunk :: slow_exchange_po4
     dsl4jsb_Real3D_onChunk :: biochem_mineralisation_po4
     dsl4jsb_Real3D_onChunk :: transport_nh4_solute
     dsl4jsb_Real3D_onChunk :: transport_no3_solute
@@ -331,7 +332,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_po4_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       weathering_po4)
     dsl4jsb_Get_var3D_onChunk(SB_,       occlusion_po4)
-    dsl4jsb_Get_var3D_onChunk(SB_,       slow_sorption_po4)
+    dsl4jsb_Get_var3D_onChunk(SB_,       slow_exchange_po4)
     dsl4jsb_Get_var3D_onChunk(SB_,       biochem_mineralisation_po4)
     dsl4jsb_Get_var3D_onChunk(SB_,       noy) 
     dsl4jsb_Get_var3D_onChunk(SB_,       n2o) 
@@ -596,9 +597,9 @@ CONTAINS
     !!
     DO isoil = 1,nsoil_sb
        WHERE(soil_depth_sl(:,isoil) > eps8)
-         fine_root_carbon(:,isoil) = root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) * veg_pool%fine_root%carbon(:)
+         fine_root_carbon_sl(:,isoil) = root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) * veg_pool%fine_root%carbon(:)
        ELSEWHERE
-         fine_root_carbon(:,isoil) = 0.0_wp
+         fine_root_carbon_sl(:,isoil) = 0.0_wp
        ENDWHERE
     ENDDO
      
@@ -608,7 +609,7 @@ CONTAINS
                                     rmm_decomposition_act(:,:), &
                                     km_dip_biochem_po4_act(:,:), &
                                     bulk_dens_corr_sl(:,:), & 
-                                    fine_root_carbon(:,:), &
+                                    fine_root_carbon_sl(:,:), &
                                     po4_solute(:,:), &
                                     po4_assoc_fast(:,:), &
                                     po4_assoc_slow(:,:), &
@@ -620,7 +621,7 @@ CONTAINS
                                     sb_pool%residue%phosphorus(:,:), & 
                                     weathering_po4(:,:), &
                                     occlusion_po4(:,:), &
-                                    slow_sorption_po4(:,:), &
+                                    slow_exchange_po4(:,:), &
                                     biochem_mineralisation_po4(:,:))
 
     !> 3.0 Actual fluxes of in and out of SOM 
@@ -641,7 +642,7 @@ CONTAINS
                                 transport_po4_assoc_fast(:,:), &
                                 weathering_po4(:,:), &
                                 p_deposition_act(:,:), &
-                                slow_sorption_po4(:,:), &
+                                slow_exchange_po4(:,:), &
                                 apparent_mic_cn(:,:), &
                                 km2_uptake_nh4_act(:,:), &
                                 plant_uptake_nh4_sl(:,:), &
@@ -757,6 +758,7 @@ CONTAINS
     !!
     CALL calc_litter_partitioning(options, &
                                   lctlib, &  
+                                  TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
                                   soil_depth_sl(:,:), &
                                   root_fraction_act_sl(:,:), &
                                   veg_litterfall, &
@@ -866,7 +868,7 @@ CONTAINS
 
     weathering_po4(:,:) = weathering_po4(:,:) / dtime * 1000000._wp
     occlusion_po4(:,:) = occlusion_po4(:,:) / dtime * 1000000._wp
-    slow_sorption_po4(:,:) = slow_sorption_po4(:,:) / dtime * 1000000._wp
+    slow_exchange_po4(:,:) = slow_exchange_po4(:,:) / dtime * 1000000._wp
     biochem_mineralisation_po4(:,:) = biochem_mineralisation_po4(:,:) / dtime * 1000000._wp
 
 ! Pass back values to process memory
@@ -1733,7 +1735,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                    sb_pool_residue_phosphorus, & 
                                                    weathering_po4, &
                                                    occlusion_po4, &
-                                                   slow_sorption_po4, &
+                                                   slow_exchange_po4, &
                                                    biochem_mineralisation_po4 )         ! out 
 
     USE mo_sb_constants,            ONLY: tau_biomineralisation, k_occlude_po4, km_rootc_biochem_po4, km_rootc_weath_po4
@@ -1760,7 +1762,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                                      sb_pool_residue_phosphorus !< slow SOM P pool [mol / m3] 
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(out) :: weathering_po4, &          !< phosphorus weathering rate [mol P / m3 / timestep]
                                                                      occlusion_po4, &           !< phosphorus occlusion rate, assoc_slow --> occluded [mol P / m3 / timestep]
-                                                                     slow_sorption_po4, &       !< phosphorus desorption rate, assoc_fast --> assoc_slow [mol P / m3 / timestep]
+                                                                     slow_exchange_po4, &       !< phosphorus desorption rate, assoc_fast --> assoc_slow [mol P / m3 / timestep]
                                                                      biochem_mineralisation_po4 !< potential biomineralisation rate [mol / m3 / timestep]
     ! 0.2 Local
     ! 
@@ -1779,7 +1781,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     !> 1.2 Calculate P slow adsorption rate (mol /m3 / timestep)
     hlp1(:,:)              = k_desorpt_po4_act(:,:) * po4_assoc_slow(:,:) * dtime
     hlp2(:,:)              = k_adsorpt_po4_act(:,:) * po4_assoc_fast(:,:) * dtime
-    slow_sorption_po4(:,:) = hlp2(:,:) - hlp1(:,:)  
+    slow_exchange_po4(:,:) = hlp2(:,:) - hlp1(:,:)  
 
     !> 2.0 Calculate potential P biomineralisation from slow organic P pool (mol /m3 / timestep)
     !!
@@ -1824,7 +1826,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                      transport_po4_assoc_fast, &
                                      weathering_po4, &
                                      p_deposition_act, &
-                                     slow_sorption_po4, &
+                                     slow_exchange_po4, &
                                      apparent_mic_cn , &
                                      km2_uptake_nh4_act, & 
                                      plant_uptake_nh4_sl, &
@@ -1841,7 +1843,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                      microbial_uptake_nh4_sl, &
                                      microbial_uptake_po4_sl)
 
-    USE mo_sb_constants,            ONLY: frac_litter2fast_som, microbial_cn, microbial_np, &
+    USE mo_sb_constants,            ONLY: frac_litter2fast_som, SOM_cn, SOM_np, &
                                           microbial_nue, microbial_pue
     dsl4slm_Use_memory_a_sb
 
@@ -1859,7 +1861,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                                        transport_po4_solute, &       !< transport of soluble PO4 [mol / m3 / timestep]
                                                                        transport_po4_assoc_fast, &   !< transport of labile PO4 [mol / m3 / timestep]
                                                                        weathering_po4, &             !< weathering of po4 [mol / m3 / timestep]
-                                                                       slow_sorption_po4, &          !< po4 desorption rate, assoc_fast --> assoc_slow [mol P / m3 / timestep]
+                                                                       slow_exchange_po4, &          !< po4 desorption rate, assoc_fast --> assoc_slow [mol P / m3 / timestep]
                                                                        p_deposition_act, &           !< actual P deposition rate, [mol / m3 / timestep]
                                                                        apparent_mic_cn, &            !< apparent microbial carbon-nitrogen ratio [mol/mol]
                                                                        km2_uptake_nh4_act            !< actual km2 for NH4 uptake [mol / m3]
@@ -1988,7 +1990,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     ENDWHERE 
 
     !> 3.0 calculate potential microbial P uptake from soluable pool (mol /m3 / timestep) 
-    microbial_uptake_po4_sl(:,:) = frac_litter2fast_som / apparent_mic_cn(:,:) / microbial_np * & 
+    microbial_uptake_po4_sl(:,:) = frac_litter2fast_som / apparent_mic_cn(:,:) / SOM_np * & 
                                     (sb_loss%soluable_litter%carbon(:,:) + &
                                      sb_loss%polymeric_litter%carbon(:,:)) - &
                                    microbial_pue * & 
@@ -2138,7 +2140,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                                        mycorrhiza_uptake_nh4_sl, & !< NH4 uptake by mycorrhiza [mol / m3 / timestep]
                                                                        mycorrhiza_uptake_no3_sl, & !< NO3 uptake by mycorrhiza [mol / m3 / timestep]
                                                                        microbial_uptake_nh4_sl, &        !< NH4 uptake by microbes [mol / m3 / timestep]
-                                                                       microbial_uptake_no3_sl, &        !< NH4 uptake by microbes [mol / m3 / timestep]
+                                                                       microbial_uptake_no3_sl, &        !< NO3 uptake by microbes [mol / m3 / timestep]
                                                                        nitrification_no3, &        !< nitrification to NO3 [mol / m3 / timestep]
                                                                        nitrification_noy, &        !< nitrification to NOy [mol / m3 / timestep]
                                                                        nitrification_n2o, &        !< nitrification to N2O [mol / m3 / timestep]
@@ -2304,7 +2306,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
  
     USE mo_shared_isotope,      ONLY: calc_fractionation
     USE mo_sb_constants,        ONLY: frac_litter2fast_som, frac_fast2slow_som, frac_slow2fast_som, &
-                                      microbial_np, microbial_cn, microbial_nue, microbial_pue, & 
+                                      SOM_np, SOM_cn, microbial_nue, microbial_pue, & 
                                       eta_ammonification
     dsl4slm_Use_memory_a_sb
 
@@ -2390,15 +2392,15 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     sb_formation%residue%carbon(:,:)     = sb_formation%residue%carbon(:,:) + & 
                                               frac_fast2slow_som * sb_loss%microbial%carbon(:,:)
     sb_formation%residue%nitrogen(:,:)   = sb_formation%residue%nitrogen(:,:) + & 
-                                              frac_fast2slow_som / microbial_cn * sb_loss%microbial%carbon(:,:)
+                                              frac_fast2slow_som / SOM_cn * sb_loss%microbial%carbon(:,:)
     sb_formation%residue%phosphorus(:,:) = sb_formation%residue%phosphorus(:,:) + & 
-                                              frac_fast2slow_som / microbial_cn / microbial_np * sb_loss%microbial%carbon(:,:)
+                                              frac_fast2slow_som / SOM_cn / SOM_np * sb_loss%microbial%carbon(:,:)
     sb_formation%residue%carbon13(:,:)   = sb_formation%residue%carbon13(:,:) + & 
                                               frac_fast2slow_som * sb_loss%microbial%carbon13(:,:)
     sb_formation%residue%carbon14(:,:)   = sb_formation%residue%carbon14(:,:) + & 
                                               frac_fast2slow_som * sb_loss%microbial%carbon14(:,:)
     ! store formation of slow 15N for later use 
-    hlp1(:,:) = frac_fast2slow_som / microbial_cn * sb_loss%microbial%carbon(:,:) * & 
+    hlp1(:,:) = frac_fast2slow_som / SOM_cn * sb_loss%microbial%carbon(:,:) * & 
                 calc_fractionation(sb_loss%microbial%nitrogen(:,:),sb_loss%microbial%nitrogen15(:,:),0.0_wp)
     sb_formation%residue%nitrogen15(:,:) = sb_formation%residue%nitrogen15(:,:) + hlp1(:,:) 
 
@@ -2406,12 +2408,12 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     het_respiration_c13(:,:) = het_respiration_c13(:,:) + (1._wp - frac_fast2slow_som) * sb_loss%microbial%carbon13(:,:)
     het_respiration_c14(:,:) = het_respiration_c14(:,:) + (1._wp - frac_fast2slow_som) * sb_loss%microbial%carbon14(:,:)
     net_mineralisation_nh4(:,:) = net_mineralisation_nh4(:,:) + sb_loss%microbial%nitrogen(:,:) - &
-                                                                frac_fast2slow_som / microbial_cn * sb_loss%microbial%carbon(:,:)
+                                                                frac_fast2slow_som / SOM_cn * sb_loss%microbial%carbon(:,:)
     net_mineralisation_po4(:,:) = net_mineralisation_po4(:,:) + sb_loss%microbial%phosphorus(:,:) - &
-                                                                frac_fast2slow_som / microbial_cn / microbial_np * &
+                                                                frac_fast2slow_som / SOM_cn / SOM_np * &
                                                                 sb_loss%microbial%carbon(:,:)
     ! store net mineralisation of 15N for later use
-    hlp2(:,:) = (sb_loss%microbial%nitrogen(:,:) - frac_fast2slow_som / microbial_cn * sb_loss%microbial%carbon(:,:)) * & 
+    hlp2(:,:) = (sb_loss%microbial%nitrogen(:,:) - frac_fast2slow_som / SOM_cn * sb_loss%microbial%carbon(:,:)) * & 
                 calc_fractionation(sb_loss%microbial%nitrogen(:,:), &
                                    sb_loss%microbial%nitrogen15(:,:),eta_ammonification)
     net_mineralisation_nh4_n15(:,:) = net_mineralisation_nh4_n15(:,:) + hlp2(:,:)
@@ -2427,7 +2429,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     sb_formation%microbial%nitrogen(:,:)   = sb_formation%microbial%nitrogen(:,:) + & 
                                                 frac_slow2fast_som / apparent_mic_cn(:,:) * sb_loss%residue%carbon(:,:)
     sb_formation%microbial%phosphorus(:,:) = sb_formation%microbial%phosphorus(:,:) + & 
-                                                frac_slow2fast_som / apparent_mic_cn(:,:) / microbial_np * &
+                                                frac_slow2fast_som / apparent_mic_cn(:,:) / SOM_np * &
                                                 sb_loss%residue%carbon(:,:)
     sb_formation%microbial%carbon13(:,:) = sb_formation%microbial%carbon13(:,:) + & 
                                                 frac_slow2fast_som * sb_loss%residue%carbon13(:,:)
@@ -2446,10 +2448,10 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                                 sb_loss%residue%carbon(:,:)
     ! update the loss of residue phosphorus due to biochem_mineralisation_po4, restricted by the CNP ratio of slow SOM
     biochem_mineralisation_po4(:,:) = MIN(biochem_mineralisation_po4(:,:), sb_loss%residue%phosphorus(:,:) - &
-                                         frac_slow2fast_som / apparent_mic_cn(:,:) / microbial_np * sb_loss%residue%carbon(:,:))
+                                         frac_slow2fast_som / apparent_mic_cn(:,:) / SOM_np * sb_loss%residue%carbon(:,:))
     net_mineralisation_po4(:,:)     = net_mineralisation_po4(:,:) + sb_loss%residue%phosphorus(:,:) - &
                                       biochem_mineralisation_po4(:,:) - frac_slow2fast_som / apparent_mic_cn(:,:) / &
-                                      microbial_np * sb_loss%residue%carbon(:,:)
+                                      SOM_np * sb_loss%residue%carbon(:,:)
     ! store net mineralisation of 15N for later use
     hlp2(:,:) = (sb_loss%residue%nitrogen(:,:) - frac_slow2fast_som / apparent_mic_cn(:,:) * sb_loss%residue%carbon(:,:)) * & 
                 calc_fractionation(sb_loss%residue%nitrogen(:,:), sb_loss%residue%nitrogen15(:,:),eta_ammonification)

@@ -31,7 +31,7 @@ MODULE mo_sb_memory_class
   PUBLIC :: sb_pool, sb_formation, sb_loss, sb_transport    ! *slmtemp
   PUBLIC :: sb_delta_pools, sb_mycorrhiza_export            ! *slmtemp
 
-  INTEGER, PARAMETER :: max_no_of_vars      = 150   !> TYPE t_jsb_var
+  INTEGER, PARAMETER :: max_no_of_vars      = 180  !> TYPE t_jsb_var        currently 149 variables (r1676 January 2019)
   INTEGER, PARAMETER :: max_no_of_structs   = 20   !> TYPE t_jsb_struct     *slmjsb4
   INTEGER, PARAMETER :: max_no_of_n_structs = 20   !> TYPE t_jsb_n_struct   *slmjsb4
 
@@ -291,12 +291,14 @@ MODULE mo_sb_memory_class
                                     denitrification_n2_n15, &        !< denitrification to 15N2  [µmol m-3 s-1]
                                     asymb_n_fixation, &              !< asymboitic N fixation [µmol m-3 s-1]
                                     asymb_n_fixation_n15, &          !< asymboitic 15N fixation [µmol m-3 s-1]
-                                    weathering_po4, &                !< phosphorus weathering rate [µmol m-3 s-1]
-                                    occlusion_po4, &                 !< phosphorus occlusion rate, assoc_slow --> occluded [µmol m-3 s-1]
-                                    slow_sorption_po4, &             !< phosphorus desorption rate, assoc_fast <--> assoc_slow [µmol m-3 s-1]
-                                    fast_adsorption_po4, &           !< phosphorus adsorption rate, solute <--> assoc_fast [µmol m-3 s-1]
-                                    biochem_mineralisation_po4, &    !< phosphorus biochemical mineralization rate [µmol m-3 s-1]
-                                    gross_mineralisation_po4         !< phosphorus gross (biological) mineralization rate [µmol m-3 s-1]
+                                    weathering_po4, &                !< phosphorus weathering rate [µmol P m-3 s-1]
+                                    occlusion_po4, &                 !< phosphorus occlusion rate, assoc_slow --> occluded [µmol P m-3 s-1]
+                                    slow_exchange_po4, &             !< phosphorus slow exchange rate, assoc_fast <--> assoc_slow [µmol P m-3 s-1]
+                                    fast_exchange_po4, &             !< phosphorus fast exchange rate, solute <--> assoc_fast [µmol P m-3 s-1]
+                                    fast_adsorpt_po4, &              !< phosphorus fast exchange rate, solute <--> assoc_fast [µmol P m-3 s-1]
+                                    fast_desorp_po4, &               !< phosphorus fast exchange rate, solute <--> assoc_fast [µmol P m-3 s-1]
+                                    biochem_mineralisation_po4, &    !< phosphorus biochemical mineralization rate [µmol P m-3 s-1]
+                                    gross_mineralisation_po4         !< phosphorus gross (biological) mineralization rate [µmol P m-3 s-1]
 
     ! 2D transport fluxes for communication with groundwater and atmosphere
     TYPE(t_jsb_var_real2d)          :: & 
@@ -325,11 +327,12 @@ MODULE mo_sb_memory_class
                                     qmax_org, &                       !< sorption capacity of dom of mineral soil [kg C kg-1 mineral soil]
                                     qmax_po4, &                       !< sorption capacity of po4 of mineral soil [mol P m-3 soil]
                                     km_adsorpt_po4_sl, &              !< half saturation of po4 sorption isotherm [mol P m-3 soil]
+                                    eca_hlp_po4, &                    !< denominator of ECA item for po4 adsorption [mol P m-3 soil]
                                     k_bioturb, &                      !< diffusion rate resulting from bioturbation
                                     bulk_dens_corr_sl, &              !< organic fraction corrected bulk-density of the soil [kg m-3]
                                     bulk_soil_carbon_sl, &            !< bulk soil density of carbon [kg m-3] 
                                     particle_fluxrate, &              !< burial rate due to organic matter fall and decay [s-1?] 
-                                    anaerobic_volume_fraction_sl, &   !< anaerobic volume fraction [--]
+                                    anaerobic_volume_fraction_sl, &   !< anaerobic volume fraction [unitless]
                                     microbial_cue_eff, &              !< instantaneous microbial CUE given NP constraints
                                     microbial_cue_eff_tmic_mavg       !< time-averaged microbial CUE given NP constraints 
  
@@ -338,7 +341,15 @@ MODULE mo_sb_memory_class
     TYPE(t_jsb_var_real3d)          :: &
                                     ph_sl, &                          !< ph per soil layer
                                     lithology_class_sl, &             !< ..  [unitless]
-                                    vmax_weath_mineral_sl             !< weathering coefficient of mineral soil [mol P m-3 s-1]
+                                    vmax_weath_mineral_sl, &          !< weathering coefficient of mineral soil [mol P m-3 s-1]
+                                    enzyme_frac_poly, &               !< fraction of depolymerisation enzyme which depolymerises poly litter [unitless]
+                                    enzyme_frac_residue, &            !< fraction of depolymerisation enzyme which depolymerises microbial residue [unitless]
+                                    enz_frac_poly_c, &                !< fraction of depolymerisation enzyme which depolymerises poly litter, determined by C [unitless]
+                                    enz_frac_poly_n, &                !< fraction of depolymerisation enzyme which depolymerises poly litter, determined by N [unitless]
+                                    enz_frac_poly_p,&                 !< fraction of depolymerisation enzyme which depolymerises poly litter, determined by P [unitless]
+                                    enz_frac_poly_c_mavg, &           !< moving average of enz_frac_poly_c [unitless]
+                                    enz_frac_poly_n_mavg, &           !< moving average of enz_frac_poly_n [unitless]
+                                    enz_frac_poly_p_mavg              !< moving average of enz_frac_poly_p [unitless]
 
     ! 2D total fluxes for mass balance checks in soil_biogeochemistry model
     TYPE(t_jsb_var_real2d)          :: & 
@@ -2098,17 +2109,33 @@ CONTAINS
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL jsb_add_var(mem, 'slow_sorption_po4', mem%slow_sorption_po4, &
+      CALL jsb_add_var(mem, 'slow_exchange_po4', mem%slow_exchange_po4, &
             hgrid, surface, &
-            t_cf('slow_sorption_po4', 'µmol m-3 s-1', 'phosphorus desorption rate, assoc_fast <--> assoc_slow'), &
+            t_cf('slow_exchange_po4', 'µmol P m-3 s-1', 'phosphorus slow exchange rate, assoc_fast <--> assoc_slow'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL jsb_add_var(mem, 'fast_adsorption_po4', mem%fast_adsorption_po4, &
+      CALL jsb_add_var(mem, 'fast_exchange_po4', mem%fast_exchange_po4, &
             hgrid, surface, &
-            t_cf('fast_adsorption_po4', 'µmol m-3 s-1', 'phosphorus adsorption rate, solute <--> assoc_fast'), &
+            t_cf('fast_exchange_po4', 'µmol P m-3 s-1', 'phosphorus fast exchange rate, solute <--> assoc_fast'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'fast_adsorpt_po4', mem%fast_adsorpt_po4, &
+            hgrid, surface, &
+            t_cf('fast_adsorpt_po4', 'µmol P m-3 s-1', 'phosphorus fast exchange rate, solute <--> assoc_fast'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'fast_desorp_po4', mem%fast_desorp_po4, &
+            hgrid, surface, &
+            t_cf('fast_desorp_po4', 'µmol P m-3 s-1', 'phosphorus fast exchange rate, solute <--> assoc_fast'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2307,6 +2334,14 @@ CONTAINS
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
+      CALL jsb_add_var(mem, 'eca_hlp_po4', mem%eca_hlp_po4, &
+            hgrid, surface, &
+            t_cf('eca_hlp_po4', 'mol P m-3 soil', 'denominator of the ECA item for adsorption'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
       CALL jsb_add_var(mem, 'k_bioturb', mem%k_bioturb, &
             hgrid, surface, &
             t_cf('k_bioturb', '', 'diffusion rate resulting from bioturbation'), &
@@ -2341,7 +2376,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'anaerobic_volume_fraction_sl', mem%anaerobic_volume_fraction_sl, &
             hgrid, surface, &
-            t_cf('anaerobic_volume_fraction_sl', '--', 'anaerobic volume fraction'), &
+            t_cf('anaerobic_volume_fraction_sl', 'unitless', 'anaerobic volume fraction'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2382,6 +2417,70 @@ CONTAINS
       CALL jsb_add_var(mem, 'vmax_weath_mineral_sl', mem%vmax_weath_mineral_sl, &
             hgrid, surface, &
             t_cf('vmax_weath_mineral_sl', 'mol P m-3 s-1', 'weathering coefficient of mineral soil'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'enzyme_frac_poly', mem%enzyme_frac_poly, &
+            hgrid, surface, &
+            t_cf('enzyme_frac_poly', 'unitless', 'fraction of depolymerisation enzyme which depolymerises poly litter'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'enzyme_frac_residue', mem%enzyme_frac_residue, &
+            hgrid, surface, &
+            t_cf('enzyme_frac_residue', 'unitless', 'fraction of depolymerisation enzyme which depolymerises microbial residue'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'enz_frac_poly_c', mem%enz_frac_poly_c, &
+            hgrid, surface, &
+            t_cf('enz_frac_poly_c', 'unitless', 'fraction of depolymerisation enzyme which depolymerises poly litter, determined by C'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'enz_frac_poly_n', mem%enz_frac_poly_n, &
+            hgrid, surface, &
+            t_cf('enz_frac_poly_n', 'unitless', 'fraction of depolymerisation enzyme which depolymerises poly litter, determined by N'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'enz_frac_poly_p', mem%enz_frac_poly_p, &
+            hgrid, surface, &
+            t_cf('enz_frac_poly_p', 'unitless', 'fraction of depolymerisation enzyme which depolymerises poly litter, determined by P'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'enz_frac_poly_c_mavg', mem%enz_frac_poly_c_mavg, &
+            hgrid, surface, &
+            t_cf('enz_frac_poly_c_mavg', 'unitless', 'moving average of enz_frac_poly_c'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'enz_frac_poly_n_mavg', mem%enz_frac_poly_n_mavg, &
+            hgrid, surface, &
+            t_cf('enz_frac_poly_n_mavg', 'unitless', 'moving average of enz_frac_poly_n'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'enz_frac_poly_p_mavg', mem%enz_frac_poly_p_mavg, &
+            hgrid, surface, &
+            t_cf('enz_frac_poly_p_mavg', 'unitless', 'moving average of enz_frac_poly_p'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &

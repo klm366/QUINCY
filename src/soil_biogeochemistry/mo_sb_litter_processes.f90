@@ -39,6 +39,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_litter_partitioning(options, &
                                       lctlib, & 
+                                      sb_model_scheme, &
                                       soil_depth_sl, &
                                       root_fraction_act_sl, &
                                       veg_litterfall, &
@@ -57,6 +58,7 @@ CONTAINS
     ! 0.1 InOut
     TYPE(t_jsb_task_options),                         INTENT(in)    :: options                    !< task options
     TYPE(t_lctlib_element),                           INTENT(in)    :: lctlib                     !< land-cover-type library - parameter across pft's
+    CHARACTER(len=*),                                 INTENT(in)    :: sb_model_scheme            !< soil model/module name
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: soil_depth_sl, &           !< depth per soil layer
                                                                        root_fraction_act_sl       !< root fraction per soil layer
     TYPE(t_veg_pool_a),                               INTENT(in)    :: veg_litterfall             !< vegetation litterfall pool
@@ -318,30 +320,70 @@ CONTAINS
            fn_soluable_coarse_root(:) * veg_litterfall%coarse_root%nitrogen15(:) ) * & 
            root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
 
-       sb_formation%polymeric_litter%carbon(:,isoil)    = sb_formation%polymeric_litter%carbon(:,isoil) + & 
-          ((1.0_wp - fc_soluable_fine_root(:))  * veg_litterfall%fine_root%carbon(:)     + &
-           (1.0_wp - fc_soluable_coarse_root(:)) * veg_litterfall%coarse_root%carbon(:) ) * & 
-           root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
-       sb_formation%polymeric_litter%nitrogen(:,isoil)    = sb_formation%polymeric_litter%nitrogen(:,isoil) + & 
-          ((1.0_wp - fn_soluable_fine_root(:))  * veg_litterfall%fine_root%nitrogen(:)     + &
-           (1.0_wp - fn_soluable_coarse_root(:)) * veg_litterfall%coarse_root%nitrogen(:) ) * & 
-           root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
-       sb_formation%polymeric_litter%phosphorus(:,isoil)    = sb_formation%polymeric_litter%phosphorus(:,isoil) + & 
-          ((1.0_wp - fp_soluable_fine_root(:))  * veg_litterfall%fine_root%phosphorus(:)     + &
-           (1.0_wp - fp_soluable_coarse_root(:)) * veg_litterfall%coarse_root%phosphorus(:) ) * & 
-           root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
-       sb_formation%polymeric_litter%carbon13(:,isoil)    = sb_formation%polymeric_litter%carbon13(:,isoil) + & 
-          ((1.0_wp - fc_soluable_fine_root(:))  * veg_litterfall%fine_root%carbon13(:)     + &
-           (1.0_wp - fc_soluable_coarse_root(:)) * veg_litterfall%coarse_root%carbon13(:) ) * & 
-           root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
-       sb_formation%polymeric_litter%carbon14(:,isoil)    = sb_formation%polymeric_litter%carbon14(:,isoil) + & 
-          ((1.0_wp - fc_soluable_fine_root(:))  * veg_litterfall%fine_root%carbon14(:)     + &
-           (1.0_wp - fc_soluable_coarse_root(:)) * veg_litterfall%coarse_root%carbon14(:) ) * & 
-           root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
-       sb_formation%polymeric_litter%nitrogen15(:,isoil)    = sb_formation%polymeric_litter%nitrogen15(:,isoil) + & 
-          ((1.0_wp - fn_soluable_fine_root(:))  * veg_litterfall%fine_root%nitrogen15(:)     + &
-           (1.0_wp - fn_soluable_coarse_root(:)) * veg_litterfall%coarse_root%nitrogen15(:) ) * & 
-           root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
+       IF (sb_model_scheme/="jsm") THEN
+          sb_formation%polymeric_litter%carbon(:,isoil)    = sb_formation%polymeric_litter%carbon(:,isoil) + & 
+             ((1.0_wp - fc_soluable_fine_root(:))  * veg_litterfall%fine_root%carbon(:)     + &
+              (1.0_wp - fc_soluable_coarse_root(:)) * veg_litterfall%coarse_root%carbon(:) ) * & 
+              root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
+          sb_formation%polymeric_litter%nitrogen(:,isoil)    = sb_formation%polymeric_litter%nitrogen(:,isoil) + & 
+             ((1.0_wp - fn_soluable_fine_root(:))  * veg_litterfall%fine_root%nitrogen(:)     + &
+              (1.0_wp - fn_soluable_coarse_root(:)) * veg_litterfall%coarse_root%nitrogen(:) ) * & 
+              root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
+          sb_formation%polymeric_litter%phosphorus(:,isoil)    = sb_formation%polymeric_litter%phosphorus(:,isoil) + & 
+             ((1.0_wp - fp_soluable_fine_root(:))  * veg_litterfall%fine_root%phosphorus(:)     + &
+              (1.0_wp - fp_soluable_coarse_root(:)) * veg_litterfall%coarse_root%phosphorus(:) ) * & 
+              root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
+          sb_formation%polymeric_litter%carbon13(:,isoil)    = sb_formation%polymeric_litter%carbon13(:,isoil) + & 
+             ((1.0_wp - fc_soluable_fine_root(:))  * veg_litterfall%fine_root%carbon13(:)     + &
+              (1.0_wp - fc_soluable_coarse_root(:)) * veg_litterfall%coarse_root%carbon13(:) ) * & 
+              root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
+          sb_formation%polymeric_litter%carbon14(:,isoil)    = sb_formation%polymeric_litter%carbon14(:,isoil) + & 
+             ((1.0_wp - fc_soluable_fine_root(:))  * veg_litterfall%fine_root%carbon14(:)     + &
+              (1.0_wp - fc_soluable_coarse_root(:)) * veg_litterfall%coarse_root%carbon14(:) ) * & 
+              root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
+          sb_formation%polymeric_litter%nitrogen15(:,isoil)    = sb_formation%polymeric_litter%nitrogen15(:,isoil) + & 
+             ((1.0_wp - fn_soluable_fine_root(:))  * veg_litterfall%fine_root%nitrogen15(:)     + &
+              (1.0_wp - fn_soluable_coarse_root(:)) * veg_litterfall%coarse_root%nitrogen15(:) ) * & 
+              root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
+       ELSE
+          sb_formation%polymeric_litter%carbon(:,isoil)    = sb_formation%polymeric_litter%carbon(:,isoil) + & 
+             ((1.0_wp - fc_soluable_fine_root(:))  * veg_litterfall%fine_root%carbon(:)) * & 
+              root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
+          sb_formation%polymeric_litter%nitrogen(:,isoil)    = sb_formation%polymeric_litter%nitrogen(:,isoil) + & 
+             ((1.0_wp - fn_soluable_fine_root(:))  * veg_litterfall%fine_root%nitrogen(:) ) * & 
+              root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
+          sb_formation%polymeric_litter%phosphorus(:,isoil)    = sb_formation%polymeric_litter%phosphorus(:,isoil) + & 
+             ((1.0_wp - fp_soluable_fine_root(:))  * veg_litterfall%fine_root%phosphorus(:)  ) * & 
+              root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
+          sb_formation%polymeric_litter%carbon13(:,isoil)    = sb_formation%polymeric_litter%carbon13(:,isoil) + & 
+             ((1.0_wp - fc_soluable_fine_root(:))  * veg_litterfall%fine_root%carbon13(:) ) * & 
+              root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
+          sb_formation%polymeric_litter%carbon14(:,isoil)    = sb_formation%polymeric_litter%carbon14(:,isoil) + & 
+             ((1.0_wp - fc_soluable_fine_root(:))  * veg_litterfall%fine_root%carbon14(:) ) * & 
+              root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
+          sb_formation%polymeric_litter%nitrogen15(:,isoil)    = sb_formation%polymeric_litter%nitrogen15(:,isoil) + & 
+             ((1.0_wp - fn_soluable_fine_root(:))  * veg_litterfall%fine_root%nitrogen15(:) ) * & 
+              root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
+
+          sb_formation%woody_litter%carbon(:,isoil)    = sb_formation%woody_litter%carbon(:,isoil) + & 
+             ((1.0_wp - fc_soluable_coarse_root(:)) * veg_litterfall%coarse_root%carbon(:) ) * & 
+              root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
+          sb_formation%woody_litter%nitrogen(:,isoil)    = sb_formation%woody_litter%nitrogen(:,isoil) + & 
+             ((1.0_wp - fn_soluable_coarse_root(:)) * veg_litterfall%coarse_root%nitrogen(:) ) * & 
+              root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
+          sb_formation%woody_litter%phosphorus(:,isoil)    = sb_formation%woody_litter%phosphorus(:,isoil) + & 
+             ((1.0_wp - fp_soluable_coarse_root(:)) * veg_litterfall%coarse_root%phosphorus(:) ) * & 
+              root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
+          sb_formation%woody_litter%carbon13(:,isoil)    = sb_formation%woody_litter%carbon13(:,isoil) + & 
+             ((1.0_wp - fc_soluable_coarse_root(:)) * veg_litterfall%coarse_root%carbon13(:) ) * & 
+              root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
+          sb_formation%woody_litter%carbon14(:,isoil)    = sb_formation%woody_litter%carbon14(:,isoil) + & 
+             ((1.0_wp - fc_soluable_coarse_root(:)) * veg_litterfall%coarse_root%carbon14(:) ) * & 
+              root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
+          sb_formation%woody_litter%nitrogen15(:,isoil)    = sb_formation%woody_litter%nitrogen15(:,isoil) + & 
+             ((1.0_wp - fn_soluable_coarse_root(:)) * veg_litterfall%coarse_root%nitrogen15(:) ) * & 
+              root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
+       ENDIF
     END DO  
 
   END SUBROUTINE calc_litter_partitioning
