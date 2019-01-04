@@ -70,7 +70,6 @@
   ! ECA flags
   flag_sb_ECA_upt_po4=.TRUE.
   flag_sb_CLE_po4=.TRUE.
-  flag_sb_LK_po4=.TRUE.
   ! parameter values
   usda_taxonomy_class=1
   nwrb_taxonomy_class=1
