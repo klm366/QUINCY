@@ -866,7 +866,7 @@ CONTAINS
     emission_n2o_n15(:) = emission_n2o_n15(:) / dtime * 1000000._wp
     emission_n2_n15(:) = emission_n2_n15(:) / dtime * 1000000._wp
 
-    weathering_po4(:,:) = weathering_po4(:,:) * dsl4jsb_Config(SB_)%k_weath_cor / dtime * 1000000._wp
+    weathering_po4(:,:) = weathering_po4(:,:) / dtime * 1000000._wp
     occlusion_po4(:,:) = occlusion_po4(:,:) / dtime * 1000000._wp
     slow_exchange_po4(:,:) = slow_exchange_po4(:,:) / dtime * 1000000._wp
     biochem_mineralisation_po4(:,:) = biochem_mineralisation_po4(:,:) / dtime * 1000000._wp
