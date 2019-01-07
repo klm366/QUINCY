@@ -62,6 +62,7 @@ MODULE mo_sb_config_class
     REAL(wp)              :: soil_p_occluded
     REAL(wp)              :: soil_p_primary
     REAL(wp)              :: qmax_org_fine_particle    !< maximum sorption capacity of OM to fine soil particle, mol C/ kg fine particle
+    REAL(wp)              :: k_weath_cor               !< correction factor of k_weath_mineral based on the USDA soil taxonomy
    CONTAINS
      PROCEDURE :: Init => Init_sb_config
   END type t_sb_config
@@ -114,6 +115,7 @@ CONTAINS
                                    soil_p_occluded,     &
                                    soil_p_primary
     REAL(wp)                    :: qmax_org_fine_particle
+    REAL(wp)                    :: k_weath_cor
 
     NAMELIST /soil_biogeochemistry_ctl/       & 
                       active                    , &
@@ -144,7 +146,8 @@ CONTAINS
                       soil_p_slow               , &
                       soil_p_occluded           , &
                       soil_p_primary            , &
-                      qmax_org_fine_particle
+                      qmax_org_fine_particle    , &
+                      k_weath_cor
 
     ! variables for reading model-options from namelist
     INTEGER  :: nml_handler, nml_unit, istat
@@ -183,6 +186,7 @@ CONTAINS
     soil_p_occluded             = 150._wp
     soil_p_primary              = 100._wp
     qmax_org_fine_particle      = 6.5537_wp
+    k_weath_cor                 = 1._wp
 
     ! read the namelist
     ! &SOIL_BIOGEOCHEMISTRY_CTL
@@ -224,6 +228,7 @@ CONTAINS
     config%soil_p_occluded                 = soil_p_occluded 
     config%soil_p_primary                  = soil_p_primary    
     config%qmax_org_fine_particle          = qmax_org_fine_particle
+    config%k_weath_cor                     = k_weath_cor
 
   END SUBROUTINE Init_sb_config
 

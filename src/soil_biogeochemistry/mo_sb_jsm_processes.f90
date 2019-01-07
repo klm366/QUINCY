@@ -374,7 +374,7 @@ CONTAINS
                                              rtm_plant_uptake, rmm_plant_uptake, km1_upt, km2_upt, &
                                              qmax_po4, km_adsorpt_po4_sl, assoc_fast, microbial_uptake, plant_uptake, &
                                              fast_desorp_po4, fast_adsorpt_po4, solute_ava, &
-                                             eca_hlp_po4, eca_hlp_mic, eca_hlp_plant)
+                                             eca_divisor_adsorp, eca_divisor_mic, eca_divisor_plant)
 
     USE mo_sb_constants,    ONLY: f_mic_carrier_po4, km_mic_uptake_po4, km_plant_uptake_po4, f_plant_carrier_po4, &
                                   k_mic_uptake_po4, k_plant_uptake_po4, vmax_mic_uptake_po4, vmax_plant_uptake_po4, k_adsorpt_f_po4, k_desorp_f_po4
@@ -404,9 +404,9 @@ CONTAINS
     REAL(wp)        , INTENT(inout) :: solute_ava                !< concentration of the available solvent to be taken up per second(µmol / m3 / s)
     REAL(wp)        , INTENT(inout) :: fast_desorp_po4           !< fast desorption flux (µmol / m3 / s)
     REAL(wp)        , INTENT(out)   :: fast_adsorpt_po4          !< fast adsorption flux (µmol / m3 / s)
-    REAL(wp)        , INTENT(inout) :: eca_hlp_po4, &            !< denominator of ECA item for po4 adsorption [mol P / m3]
-                                       eca_hlp_mic, &
-                                       eca_hlp_plant
+    REAL(wp)        , INTENT(inout) :: eca_divisor_adsorp, &     !< denominator of ECA item for po4 adsorption [mol P / m3]
+                                       eca_divisor_mic, &
+                                       eca_divisor_plant
 
     ! 0.2 Local
     REAL(wp)                                             :: hlp1, hlp2, hlp3, hlp4, hlp5, avail_sorption_sites
@@ -444,9 +444,9 @@ CONTAINS
                  km_adsorpt_po4_sl / km_mic_uptake_po4 * f_mic_carrier_po4 * microbial_carbon
           hlp4 = k_desorp_f_po4 / km_adsorpt_po4_sl * solute !k_adsorpt_f_po4 * solute
           fast_adsorpt_po4 = MIN(1._wp / dtime, hlp4 * hlp5 / hlp3) * avail_sorption_sites * 1.e6_wp
-          eca_hlp_po4      = hlp3
-          eca_hlp_mic      = hlp1
-          eca_hlp_plant    = hlp2
+          eca_divisor_adsorp = hlp3
+          eca_divisor_mic    = hlp1
+          eca_divisor_plant  = hlp2
         ENDIF
         microbial_uptake = MIN(rtm_mic_uptake * rmm_mic_uptake * k_mic_uptake_po4 * hlp5 * f_mic_carrier_po4 * &
                             microbial_carbon / hlp1, microbial_uptake)
@@ -1259,7 +1259,7 @@ CONTAINS
 
     !> based on the assumption that labile P is the sum of both,
     !! and they follow the Langmuir equilibrium
-    !! Labile_p - fast_po4 = fast_po4 * km / (Labile_p / eca_hlp_po4 * (Qmax - fast_po4))
+    !! Labile_p - fast_po4 = fast_po4 * km / (Labile_p / eca_divisor_adsorp * (Qmax - fast_po4))
     IF (PRESENT(eca_enz_hlp)) THEN
       hlp1     = Labile_p + km
       hlp2     = Labile_p * Labile_p + Labile_p * Qmax + (Labile_p + eca_enz_hlp) * km

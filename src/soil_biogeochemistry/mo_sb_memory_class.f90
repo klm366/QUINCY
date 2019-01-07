@@ -327,7 +327,7 @@ MODULE mo_sb_memory_class
                                     qmax_org, &                       !< sorption capacity of dom of mineral soil [kg C kg-1 mineral soil]
                                     qmax_po4, &                       !< sorption capacity of po4 of mineral soil [mol P m-3 soil]
                                     km_adsorpt_po4_sl, &              !< half saturation of po4 sorption isotherm [mol P m-3 soil]
-                                    eca_hlp_po4, &                    !< denominator of ECA item for po4 adsorption [mol P m-3 soil]
+                                    eca_divisor_adsorp, &             !< denominator of ECA item for po4 adsorption [mol P m-3 soil]
                                     k_bioturb, &                      !< diffusion rate resulting from bioturbation
                                     bulk_dens_corr_sl, &              !< organic fraction corrected bulk-density of the soil [kg m-3]
                                     bulk_soil_carbon_sl, &            !< bulk soil density of carbon [kg m-3] 
@@ -2334,9 +2334,9 @@ CONTAINS
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL jsb_add_var(mem, 'eca_hlp_po4', mem%eca_hlp_po4, &
+      CALL jsb_add_var(mem, 'eca_divisor_adsorp', mem%eca_divisor_adsorp, &
             hgrid, surface, &
-            t_cf('eca_hlp_po4', 'mol P m-3 soil', 'denominator of the ECA item for adsorption'), &
+            t_cf('eca_divisor_adsorp', 'mol P m-3 soil', 'denominator of the ECA item for adsorption'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &

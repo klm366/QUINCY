@@ -79,7 +79,7 @@ CONTAINS
 !!
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: fine_root_carbon_sl, p_deposition_sl, & 
                                                         km1_uptake_po4_act, km2_uptake_po4_act, &
-                                                        eca_hlp_mic, eca_hlp_plant, &
+                                                        eca_divisor_mic, eca_divisor_plant, &
                                                         arr_hlp1, arr_hlp2, arr_hlp3, arr_hlp4, arr_hlp5
 !!
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_jsm'
@@ -180,7 +180,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: qmax_org 
     dsl4jsb_Real3D_onChunk :: qmax_po4
     dsl4jsb_Real3D_onChunk :: km_adsorpt_po4_sl
-    dsl4jsb_Real3D_onChunk :: eca_hlp_po4
+    dsl4jsb_Real3D_onChunk :: eca_divisor_adsorp
     dsl4jsb_Real3D_onChunk :: bulk_dens_corr_sl 
     dsl4jsb_Real3D_onChunk :: vmax_weath_mineral_sl
     dsl4jsb_Real3D_onChunk :: particle_fluxrate 
@@ -300,7 +300,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_org)                    ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_po4)                    ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       km_adsorpt_po4_sl)           ! in
-    dsl4jsb_Get_var3D_onChunk(SB_,       eca_hlp_po4)                 ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       eca_divisor_adsorp)          ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_dens_corr_sl)           ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       vmax_weath_mineral_sl)       ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       particle_fluxrate)           ! out
@@ -508,7 +508,7 @@ CONTAINS
                                 rtm_plant_uptake(:,:), rmm_plant_uptake(:,:), km1_uptake_po4_act(:,:), km2_uptake_po4_act(:,:), &
                                 qmax_po4(:,:), km_adsorpt_po4_sl(:,:), po4_assoc_fast(:,:), microbial_uptake_po4_sl(:,:), &
                                 plant_uptake_po4_sl(:,:), fast_desorp_po4(:,:), fast_adsorpt_po4(:,:), arr_hlp1(:,:), &
-                                eca_hlp_po4(:,:), eca_hlp_mic, eca_hlp_plant)
+                                eca_divisor_adsorp(:,:), eca_divisor_mic, eca_divisor_plant)
 
     CALL calc_microbial_growth(options,TRIM(dsl4jsb_Config(SB_)%sb_bnf_scheme), &
                                sb_pool%dom,sb_pool%microbial, & 

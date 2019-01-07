@@ -218,7 +218,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: qmax_org
     dsl4jsb_Real3D_onChunk :: qmax_po4
     dsl4jsb_Real3D_onChunk :: km_adsorpt_po4_sl
-    dsl4jsb_Real3D_onChunk :: eca_hlp_po4
+    dsl4jsb_Real3D_onChunk :: eca_divisor_adsorp
     dsl4jsb_Real3D_onChunk :: bulk_dens_corr_sl
     dsl4jsb_Real3D_onChunk :: bulk_soil_carbon_sl
     ! Get local variables from options argument
@@ -371,7 +371,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_org)                    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_po4)                    ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       km_adsorpt_po4_sl)           ! inout
-    dsl4jsb_Get_var3D_onChunk(SB_,       eca_hlp_po4)                 ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       eca_divisor_adsorp)          ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_dens_corr_sl)           ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_soil_carbon_sl)         ! out
     ! Get process memory pool structures
@@ -582,7 +582,7 @@ CONTAINS
         .AND. dsl4jsb_Config(SB_)%flag_sb_CLE_po4) THEN
         km_adsorpt_po4_sl(:,:) = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:), &
                             km_adsorpt_OM_po4, km_adsorpt_mineral_po4)
-        ! hlp1(:,:) = km_adsorpt_po4_sl(:,:) / (po4_solute(:,:) + po4_assoc_fast(:,:)) * eca_hlp_po4(:,:)
+        ! hlp1(:,:) = km_adsorpt_po4_sl(:,:) / (po4_solute(:,:) + po4_assoc_fast(:,:)) * eca_divisor_adsorp(:,:)
         hlp1(:,:) = km_adsorpt_po4_sl(:,:)
     ELSE
         km_adsorpt_po4_sl(:,:) = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:), &
@@ -625,7 +625,7 @@ CONTAINS
                                        bulk_dens_corr_sl(:,:), &
                                        qmax_po4(:,:), &
                                        hlp1(:,:), &
-                                       eca_hlp_po4(:,:), &
+                                       eca_divisor_adsorp(:,:), &
                                        p_deposition_sl(:,:), &
                                        rtm_sorption(:,:), &
                                        rmm_sorption(:,:), &
@@ -858,7 +858,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                   bulk_dens_corr_sl, &
                                   qmax_po4_corr_sl, &
                                   km_adsorpt_po4_sl, &
-                                  eca_hlp_po4, &
+                                  eca_divisor_adsorp, &
                                   p_deposition_sl, &
                                   rtm_sorption, &
                                   rmm_sorption, &
@@ -897,7 +897,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                                        microbial_carbon_sl,&         !< microbial carbon of the soil layer [mol C / m3]
                                                                        qmax_po4_corr_sl, &           !< maximum sorption capacity of po4, [mol P/ m3]
                                                                        km_adsorpt_po4_sl, &          !< half saturation of po4 sorption capacity, [mol P/ m3]
-                                                                       eca_hlp_po4, &                !< denominator of ECA item for po4 adsorption [mol P / m3]
+                                                                       eca_divisor_adsorp, &         !< denominator of ECA item for po4 adsorption [mol P / m3]
                                                                        p_deposition_sl, &            !< actual P deposition rate, [µmol P / m3 / s]
                                                                        rtm_sorption, &               !< temperature response scalar for po4 sorption
                                                                        rtm_desorption, &             !< temperature response scalar for po4 desorption

@@ -110,7 +110,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: qmax_org
     dsl4jsb_Real3D_onChunk :: qmax_po4
     dsl4jsb_Real3D_onChunk :: km_adsorpt_po4_sl
-    dsl4jsb_Real3D_onChunk :: eca_hlp_po4
+    dsl4jsb_Real3D_onChunk :: eca_divisor_adsorp
     dsl4jsb_Real3D_onChunk :: k_bioturb
     dsl4jsb_Real3D_onChunk :: po4_assoc_fast
     dsl4jsb_Real3D_onChunk :: po4_assoc_slow
@@ -168,7 +168,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_org)
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_po4)
     dsl4jsb_Get_var3D_onChunk(SB_,       km_adsorpt_po4_sl)
-    dsl4jsb_Get_var3D_onChunk(SB_,       eca_hlp_po4)
+    dsl4jsb_Get_var3D_onChunk(SB_,       eca_divisor_adsorp)
     dsl4jsb_Get_var3D_onChunk(SB_,       k_bioturb)
     dsl4jsb_Get_var3D_onChunk(SB_,       po4_assoc_fast)
     dsl4jsb_Get_var3D_onChunk(SB_,       po4_assoc_slow)
@@ -465,7 +465,7 @@ CONTAINS
                                 dsl4jsb_Config(SB_)%soil_p_depth, dsl4jsb_Config(SB_)%flag_sb_CLE_po4, & 
                                 po4_solute(:,:), po4_assoc_fast(:,:), po4_assoc_slow(:,:), &
                                 po4_occluded(:,:), po4_primary(:,:), &
-                                qmax_po4(:,:),km_adsorpt_po4_sl(:,:),arr_hlp1(:,:),eca_hlp_po4(:,:))
+                                qmax_po4(:,:),km_adsorpt_po4_sl(:,:),arr_hlp1(:,:),eca_divisor_adsorp(:,:))
 
         ! initialise diffusion by bioturbation
         k_bioturb(:,:) = calc_bioturbation_rate(options,bulk_dens_corr_sl(:,:), root_fraction_sl(:,:), soil_depth_sl(:,:)) 
@@ -531,7 +531,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
   SUBROUTINE init_soil_pi_pools(options, sb_model_scheme, sb_adsorp_scheme, soil_depth_sl, bulk_dens_sl, &
                                soil_p_labile, soil_p_slow, soil_p_occluded, soil_p_primary, soil_p_depth, flag_sb_CLE_po4, &
                                po4_solute, po4_assoc_fast, po4_assoc_slow, po4_occluded, po4_primary, &
-                               qmax_po4,km, eca_enz_hlp, eca_hlp_po4)
+                               qmax_po4,km, eca_enz_hlp, eca_divisor_adsorp)
 
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_shared_constants,      ONLY: molar_mass_P
@@ -560,7 +560,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                                         po4_occluded, &    !< occluded PO4 pool per soil layer, [mol m-3]
                                                                         po4_primary        !< primary PO4 pool per soil layer, [mol m-3]
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in),  OPTIONAL  :: eca_enz_hlp        !< helper item for enzyme abundance in eca approach [mol P / m3]
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(out), OPTIONAL  :: eca_hlp_po4        !< denominator of ECA item for po4 adsorption [mol P / m3]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(out), OPTIONAL  :: eca_divisor_adsorp !< denominator of ECA item for po4 adsorption [mol P / m3]
     ! ---------------------------
     ! 0.2 Local
     INTEGER                                          :: i, nsoil_sb
@@ -668,9 +668,9 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     
       DO i=1,nsoil_sb
         IF (sb_model_scheme == 'jsm' .AND. sb_adsorp_scheme /= 'eca_none' ) THEN
-            po4_assoc_fast(:,i) = calc_fast_po4(arr_hlp1(:,i),qmax_po4(:,i),km(:,i), eca_enz_hlp(:,i))
-            po4_solute(:,i)     = arr_hlp1(:,i) - po4_assoc_fast(:,i)
-            eca_hlp_po4(:,i)    = arr_hlp1(:,i) - po4_assoc_fast(:,i) + eca_enz_hlp(:,i)
+            po4_assoc_fast(:,i)        = calc_fast_po4(arr_hlp1(:,i),qmax_po4(:,i),km(:,i), eca_enz_hlp(:,i))
+            po4_solute(:,i)            = arr_hlp1(:,i) - po4_assoc_fast(:,i)
+            eca_divisor_adsorp(:,i)    = arr_hlp1(:,i) - po4_assoc_fast(:,i) + eca_enz_hlp(:,i)
         ELSE
           po4_assoc_fast(:,i) = calc_fast_po4(arr_hlp1(:,i),qmax_po4(:,i),km(:,i))
           po4_solute(:,i)     = arr_hlp1(:,i) - po4_assoc_fast(:,i)
