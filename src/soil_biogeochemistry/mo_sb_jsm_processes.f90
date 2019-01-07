@@ -933,8 +933,8 @@ CONTAINS
   SUBROUTINE calc_depolymerisation_SESAM(options,rtm_hsc,rmm_hsc,rtm_depolymerisation,rmm_depolymerisation, &
                                          microbial_carbon, enzyme_frac_poly, enzyme_frac_residue, & 
                                          pool_polymeric,loss_polymeric,pool_residue,loss_residue,formation_dom, &
-                                         enz_frac_poly_c, enz_frac_poly_n, enz_frac_poly_p, &
-                                         enz_frac_poly_c_mavg, enz_frac_poly_n_mavg, enz_frac_poly_p_mavg)
+                                         enzyme_frac_poly_c, enzyme_frac_poly_n, enzyme_frac_poly_p, &
+                                         enzyme_frac_poly_c_mavg, enzyme_frac_poly_n_mavg, enzyme_frac_poly_p_mavg)
 
     dsl4slm_Use_memory_a_sb
 
@@ -945,25 +945,25 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_jsb_task_options),                         INTENT(in)    :: options               !< model options
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: rtm_hsc               !< temperature rate modifier for half-saturation constants
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: rmm_hsc               !< moisture rate modifier for half-saturation constants
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: rtm_depolymerisation  !< temperature rate modifier for depolymerisation
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: rmm_depolymerisation  !< moisture rate modifier for depolymerisation
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: microbial_carbon      !< microbial biomass carbon [mol C/m3]
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: enzyme_frac_poly      !< fraction of enzyme for poly litter depolymerisation
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: enzyme_frac_residue   !< fraction of enzyme for microbial residue depolymerisation
-    TYPE(t_sb_element_a),                             INTENT(in)    :: pool_polymeric        !< polymeric pool [mol/m3]
-    TYPE(t_sb_element_a),                             INTENT(inout) :: loss_polymeric        !< loss of polymeric pool [mol/m3/timestep]
-    TYPE(t_sb_element_a),                             INTENT(in)    :: pool_residue          !< residue pool [mol/m3]
-    TYPE(t_sb_element_a),                             INTENT(inout) :: loss_residue          !< loss of residue pool [mol/m3/timestep]
-    TYPE(t_sb_element_a),                             INTENT(inout) :: formation_dom         !< formation of DOM [mol/m3/timestep]
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: enz_frac_poly_c       !< temporal fraction of enzyme for poly litter depolymerisation, C
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: enz_frac_poly_n       !< temporal fraction of enzyme for poly litter depolymerisation, N
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: enz_frac_poly_p       !< temporal fraction of enzyme for poly litter depolymerisation, P
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: enz_frac_poly_c_mavg  !< mavg of enzyme for poly litter depolymerisation, C
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: enz_frac_poly_n_mavg  !< mavg of enzyme for poly litter depolymerisation, N
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: enz_frac_poly_p_mavg  !< mavg of enzyme for poly litter depolymerisation, P
+    TYPE(t_jsb_task_options),                         INTENT(in)    :: options                  !< model options
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: rtm_hsc                  !< temperature rate modifier for half-saturation constants
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: rmm_hsc                  !< moisture rate modifier for half-saturation constants
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: rtm_depolymerisation     !< temperature rate modifier for depolymerisation
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: rmm_depolymerisation     !< moisture rate modifier for depolymerisation
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: microbial_carbon         !< microbial biomass carbon [mol C/m3]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: enzyme_frac_poly         !< fraction of enzyme for poly litter depolymerisation
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: enzyme_frac_residue      !< fraction of enzyme for microbial residue depolymerisation
+    TYPE(t_sb_element_a),                             INTENT(in)    :: pool_polymeric           !< polymeric pool [mol/m3]
+    TYPE(t_sb_element_a),                             INTENT(inout) :: loss_polymeric           !< loss of polymeric pool [mol/m3/timestep]
+    TYPE(t_sb_element_a),                             INTENT(in)    :: pool_residue             !< residue pool [mol/m3]
+    TYPE(t_sb_element_a),                             INTENT(inout) :: loss_residue             !< loss of residue pool [mol/m3/timestep]
+    TYPE(t_sb_element_a),                             INTENT(inout) :: formation_dom            !< formation of DOM [mol/m3/timestep]
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: enzyme_frac_poly_c       !< temporal fraction of enzyme for poly litter depolymerisation, C
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: enzyme_frac_poly_n       !< temporal fraction of enzyme for poly litter depolymerisation, N
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: enzyme_frac_poly_p       !< temporal fraction of enzyme for poly litter depolymerisation, P
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: enzyme_frac_poly_c_mavg  !< mavg of enzyme for poly litter depolymerisation, C
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: enzyme_frac_poly_n_mavg  !< mavg of enzyme for poly litter depolymerisation, N
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: enzyme_frac_poly_p_mavg  !< mavg of enzyme for poly litter depolymerisation, P
     ! ---------------------------
     ! 0.2 Local 
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: hlp1, hlp2, hlp3, &
@@ -1071,18 +1071,18 @@ CONTAINS
 
     WHERE (poly_depolymerisation_rate > 0.0_wp .AND. poly_depolymerisation_rate> 0.0_wp)
       !! alpha_C
-      hlp1(:,:)            = poly_depolymerisation_rate(:,:) * pool_polymeric%carbon(:,:)
-      hlp2(:,:)            = residue_depolymerisation_rate(:,:) * pool_residue%carbon(:,:)
-      hlp3(:,:)            = km_depolymerisation * rtm_hsc(:,:) * rmm_hsc(:,:)
-      enz_frac_poly_c(:,:) = calc_enz_allocation(hlp1(:,:), hlp2(:,:), hlp3(:,:), microbial_carbon(:,:))
+      hlp1(:,:)               = poly_depolymerisation_rate(:,:) * pool_polymeric%carbon(:,:)
+      hlp2(:,:)               = residue_depolymerisation_rate(:,:) * pool_residue%carbon(:,:)
+      hlp3(:,:)               = km_depolymerisation * rtm_hsc(:,:) * rmm_hsc(:,:)
+      enzyme_frac_poly_c(:,:) = calc_enzyme_allocation(hlp1(:,:), hlp2(:,:), hlp3(:,:), microbial_carbon(:,:))
       !! alpha_N
-      hlp1(:,:)            = poly_depolymerisation_rate(:,:) * pool_polymeric%nitrogen(:,:)
-      hlp2(:,:)            = residue_depolymerisation_rate(:,:) * pool_residue%nitrogen(:,:)
-      enz_frac_poly_n(:,:) = calc_enz_allocation(hlp1(:,:), hlp2(:,:), hlp3(:,:), microbial_carbon(:,:))
+      hlp1(:,:)               = poly_depolymerisation_rate(:,:) * pool_polymeric%nitrogen(:,:)
+      hlp2(:,:)               = residue_depolymerisation_rate(:,:) * pool_residue%nitrogen(:,:)
+      enzyme_frac_poly_n(:,:) = calc_enzyme_allocation(hlp1(:,:), hlp2(:,:), hlp3(:,:), microbial_carbon(:,:))
       !! alpha_P
-      hlp1(:,:)            = poly_depolymerisation_rate(:,:) * pool_polymeric%phosphorus(:,:)
-      hlp2(:,:)            = residue_depolymerisation_rate(:,:) * pool_residue%phosphorus(:,:)
-      enz_frac_poly_p(:,:) = calc_enz_allocation(hlp1(:,:), hlp2(:,:), hlp3(:,:), microbial_carbon(:,:))
+      hlp1(:,:)               = poly_depolymerisation_rate(:,:) * pool_polymeric%phosphorus(:,:)
+      hlp2(:,:)               = residue_depolymerisation_rate(:,:) * pool_residue%phosphorus(:,:)
+      enzyme_frac_poly_p(:,:) = calc_enzyme_allocation(hlp1(:,:), hlp2(:,:), hlp3(:,:), microbial_carbon(:,:))
     ENDWHERE
     
     !> 6.0 calculate the enzyme partitioning based on depolymerized C, N, P
@@ -1092,11 +1092,11 @@ CONTAINS
 
     WHERE (hlp1(:,:)>0.0_wp .AND. hlp2(:,:)>0.0_wp .AND. hlp3(:,:)>0.0_wp)
       WHERE (hlp1(:,:) < hlp2(:,:) .AND. hlp1(:,:)<hlp3(:,:))
-        temp_depoly(:,:) = enz_frac_poly_c_mavg(:,:)
+        temp_depoly(:,:) = enzyme_frac_poly_c_mavg(:,:)
       ELSEWHERE (hlp2(:,:) < hlp1(:,:) .AND. hlp2(:,:)<hlp3(:,:))
-        temp_depoly(:,:) = enz_frac_poly_n_mavg(:,:)
+        temp_depoly(:,:) = enzyme_frac_poly_n_mavg(:,:)
       ELSEWHERE (hlp3(:,:) < hlp1(:,:) .AND. hlp3(:,:)<hlp2(:,:))
-        temp_depoly(:,:) = enz_frac_poly_p_mavg(:,:)
+        temp_depoly(:,:) = enzyme_frac_poly_p_mavg(:,:)
       ENDWHERE
       enzyme_frac_poly(:,:)    = MIN( MAX(enzyme_frac_poly(:,:) + (temp_depoly(:,:) - enzyme_frac_poly(:,:))&
                                  / mavg_period_tenzyme / one_day * dtime, 0.01_wp), 0.99_wp)
@@ -1242,15 +1242,15 @@ CONTAINS
   !!
   !! Output: fast_assoc_po4
   !-----------------------------------------------------------------------------------------------------
-  ELEMENTAL FUNCTION calc_fast_po4(Labile_p, Qmax, km, eca_enz_hlp) RESULT (fast_po4)
+  ELEMENTAL FUNCTION calc_fast_po4(Labile_p, Qmax, km, eca_enzyme_hlp) RESULT (fast_po4)
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    REAL(wp), INTENT(in) :: Labile_p    !< labile P pool of the soil layer [mol P / m3]
-    REAL(wp), INTENT(in) :: Qmax        !< maximium sorption capacity of po4 [mol P/ m3]
-    REAL(wp), INTENT(in) :: km          !< sorption affinity of po4 [mol P/ m3]
-    REAL(wp)             :: fast_po4    !< fast associated po4 of the soil layer [mol P / m3]
-    REAL(wp), INTENT(in), OPTIONAL :: eca_enz_hlp    !< helper item for enzyme abundance in eca approach [mol P / m3]
+    REAL(wp), INTENT(in) :: Labile_p                    !< labile P pool of the soil layer [mol P / m3]
+    REAL(wp), INTENT(in) :: Qmax                        !< maximium sorption capacity of po4 [mol P/ m3]
+    REAL(wp), INTENT(in) :: km                          !< sorption affinity of po4 [mol P/ m3]
+    REAL(wp)             :: fast_po4                    !< fast associated po4 of the soil layer [mol P / m3]
+    REAL(wp), INTENT(in), OPTIONAL :: eca_enzyme_hlp    !< helper item for enzyme abundance in eca approach [mol P / m3]
     ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_fast_po4'
@@ -1260,9 +1260,9 @@ CONTAINS
     !> based on the assumption that labile P is the sum of both,
     !! and they follow the Langmuir equilibrium
     !! Labile_p - fast_po4 = fast_po4 * km / (Labile_p / eca_divisor_adsorp * (Qmax - fast_po4))
-    IF (PRESENT(eca_enz_hlp)) THEN
+    IF (PRESENT(eca_enzyme_hlp)) THEN
       hlp1     = Labile_p + km
-      hlp2     = Labile_p * Labile_p + Labile_p * Qmax + (Labile_p + eca_enz_hlp) * km
+      hlp2     = Labile_p * Labile_p + Labile_p * Qmax + (Labile_p + eca_enzyme_hlp) * km
       hlp3     = Labile_p * Labile_p * Qmax
       fast_po4 = (hlp2 - sqrt(hlp2**2 - 4*hlp1*hlp3))/(2*hlp1)
     ELSE
@@ -1282,7 +1282,7 @@ CONTAINS
   !!
   !! Output: potential enzyme coefficient for C, N, P
   !-----------------------------------------------------------------------------------------------------
-  ELEMENTAL FUNCTION calc_enz_allocation(dL, dR, km, Cmic) RESULT (alpha)
+  ELEMENTAL FUNCTION calc_enzyme_allocation(dL, dR, km, Cmic) RESULT (alpha)
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
@@ -1294,7 +1294,7 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     REAL(wp)                    :: D    !< b**2-4*a*c in the quadratic equation
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_enz_allocation'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_enzyme_allocation'
 
     !> Solution of the equation:
     !! dL/dR=alpha(km+alpha*Cmic)/((1-alpha)*(km+Cmic*(1-alpha)))
@@ -1302,7 +1302,7 @@ CONTAINS
     D = 4*Cmic**2*dL*dR + 8*Cmic*km*dL*dR + km**2*dL**2 + 2*km**2*dL*dR + km**2*dR**2
     alpha = (dL*km+2*dL*Cmic+dR*km-sqrt(D))/(2*Cmic*(dL-dR))
 
-  END FUNCTION calc_enz_allocation
+  END FUNCTION calc_enzyme_allocation
 
 
   !-----------------------------------------------------------------------------------------------------

@@ -344,12 +344,12 @@ MODULE mo_sb_memory_class
                                     vmax_weath_mineral_sl, &          !< weathering coefficient of mineral soil [mol P m-3 s-1]
                                     enzyme_frac_poly, &               !< fraction of depolymerisation enzyme which depolymerises poly litter [unitless]
                                     enzyme_frac_residue, &            !< fraction of depolymerisation enzyme which depolymerises microbial residue [unitless]
-                                    enz_frac_poly_c, &                !< fraction of depolymerisation enzyme which depolymerises poly litter, determined by C [unitless]
-                                    enz_frac_poly_n, &                !< fraction of depolymerisation enzyme which depolymerises poly litter, determined by N [unitless]
-                                    enz_frac_poly_p,&                 !< fraction of depolymerisation enzyme which depolymerises poly litter, determined by P [unitless]
-                                    enz_frac_poly_c_mavg, &           !< moving average of enz_frac_poly_c [unitless]
-                                    enz_frac_poly_n_mavg, &           !< moving average of enz_frac_poly_n [unitless]
-                                    enz_frac_poly_p_mavg              !< moving average of enz_frac_poly_p [unitless]
+                                    enzyme_frac_poly_c, &             !< fraction of depolymerisation enzyme which depolymerises poly litter, determined by C [unitless]
+                                    enzyme_frac_poly_n, &             !< fraction of depolymerisation enzyme which depolymerises poly litter, determined by N [unitless]
+                                    enzyme_frac_poly_p,&              !< fraction of depolymerisation enzyme which depolymerises poly litter, determined by P [unitless]
+                                    enzyme_frac_poly_c_mavg, &        !< moving average of enzyme_frac_poly_c [unitless]
+                                    enzyme_frac_poly_n_mavg, &        !< moving average of enzyme_frac_poly_n [unitless]
+                                    enzyme_frac_poly_p_mavg           !< moving average of enzyme_frac_poly_p [unitless]
 
     ! 2D total fluxes for mass balance checks in soil_biogeochemistry model
     TYPE(t_jsb_var_real2d)          :: & 
@@ -2451,49 +2451,49 @@ CONTAINS
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL jsb_add_var(mem, 'enz_frac_poly_c', mem%enz_frac_poly_c, &
+      CALL jsb_add_var(mem, 'enzyme_frac_poly_c', mem%enzyme_frac_poly_c, &
             hgrid, vgrid_soil_sb, &
-            t_cf('enz_frac_poly_c', 'unitless', 'fraction of depolymerisation enzyme which depolymerises poly litter, determined by C'), &
+            t_cf('enzyme_frac_poly_c', 'unitless', 'fraction of depolymerisation enzyme which depolymerises poly litter, determined by C'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL jsb_add_var(mem, 'enz_frac_poly_n', mem%enz_frac_poly_n, &
+      CALL jsb_add_var(mem, 'enzyme_frac_poly_n', mem%enzyme_frac_poly_n, &
             hgrid, vgrid_soil_sb, &
-            t_cf('enz_frac_poly_n', 'unitless', 'fraction of depolymerisation enzyme which depolymerises poly litter, determined by N'), &
+            t_cf('enzyme_frac_poly_n', 'unitless', 'fraction of depolymerisation enzyme which depolymerises poly litter, determined by N'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL jsb_add_var(mem, 'enz_frac_poly_p', mem%enz_frac_poly_p, &
+      CALL jsb_add_var(mem, 'enzyme_frac_poly_p', mem%enzyme_frac_poly_p, &
             hgrid, vgrid_soil_sb, &
-            t_cf('enz_frac_poly_p', 'unitless', 'fraction of depolymerisation enzyme which depolymerises poly litter, determined by P'), &
+            t_cf('enzyme_frac_poly_p', 'unitless', 'fraction of depolymerisation enzyme which depolymerises poly litter, determined by P'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL jsb_add_var(mem, 'enz_frac_poly_c_mavg', mem%enz_frac_poly_c_mavg, &
+      CALL jsb_add_var(mem, 'enzyme_frac_poly_c_mavg', mem%enzyme_frac_poly_c_mavg, &
             hgrid, vgrid_soil_sb, &
-            t_cf('enz_frac_poly_c_mavg', 'unitless', 'moving average of enz_frac_poly_c'), &
+            t_cf('enzyme_frac_poly_c_mavg', 'unitless', 'moving average of enzyme_frac_poly_c'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL jsb_add_var(mem, 'enz_frac_poly_n_mavg', mem%enz_frac_poly_n_mavg, &
+      CALL jsb_add_var(mem, 'enzyme_frac_poly_n_mavg', mem%enzyme_frac_poly_n_mavg, &
             hgrid, vgrid_soil_sb, &
-            t_cf('enz_frac_poly_n_mavg', 'unitless', 'moving average of enz_frac_poly_n'), &
+            t_cf('enzyme_frac_poly_n_mavg', 'unitless', 'moving average of enzyme_frac_poly_n'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL jsb_add_var(mem, 'enz_frac_poly_p_mavg', mem%enz_frac_poly_p_mavg, &
+      CALL jsb_add_var(mem, 'enzyme_frac_poly_p_mavg', mem%enzyme_frac_poly_p_mavg, &
             hgrid, vgrid_soil_sb, &
-            t_cf('enz_frac_poly_p_mavg', 'unitless', 'moving average of enz_frac_poly_p'), &
+            t_cf('enzyme_frac_poly_p_mavg', 'unitless', 'moving average of enzyme_frac_poly_p'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &

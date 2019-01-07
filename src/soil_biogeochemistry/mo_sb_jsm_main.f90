@@ -186,12 +186,12 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: particle_fluxrate 
     dsl4jsb_Real3D_onChunk :: enzyme_frac_poly
     dsl4jsb_Real3D_onChunk :: enzyme_frac_residue
-    dsl4jsb_Real3D_onChunk :: enz_frac_poly_c
-    dsl4jsb_Real3D_onChunk :: enz_frac_poly_n
-    dsl4jsb_Real3D_onChunk :: enz_frac_poly_p
-    dsl4jsb_Real3D_onChunk :: enz_frac_poly_c_mavg
-    dsl4jsb_Real3D_onChunk :: enz_frac_poly_n_mavg
-    dsl4jsb_Real3D_onChunk :: enz_frac_poly_p_mavg
+    dsl4jsb_Real3D_onChunk :: enzyme_frac_poly_c
+    dsl4jsb_Real3D_onChunk :: enzyme_frac_poly_n
+    dsl4jsb_Real3D_onChunk :: enzyme_frac_poly_p
+    dsl4jsb_Real3D_onChunk :: enzyme_frac_poly_c_mavg
+    dsl4jsb_Real3D_onChunk :: enzyme_frac_poly_n_mavg
+    dsl4jsb_Real3D_onChunk :: enzyme_frac_poly_p_mavg
     ! Get local variables from options argument
     iblk      = options%iblk
     ics       = options%ics
@@ -306,12 +306,12 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       particle_fluxrate)           ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       enzyme_frac_poly)            ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       enzyme_frac_residue)         ! inout
-    dsl4jsb_Get_var3D_onChunk(SB_,       enz_frac_poly_c)             ! inout
-    dsl4jsb_Get_var3D_onChunk(SB_,       enz_frac_poly_n)             ! inout
-    dsl4jsb_Get_var3D_onChunk(SB_,       enz_frac_poly_p)             ! inout
-    dsl4jsb_Get_var3D_onChunk(SB_,       enz_frac_poly_c_mavg)        ! inout
-    dsl4jsb_Get_var3D_onChunk(SB_,       enz_frac_poly_n_mavg)        ! inout
-    dsl4jsb_Get_var3D_onChunk(SB_,       enz_frac_poly_p_mavg)        ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       enzyme_frac_poly_c)          ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       enzyme_frac_poly_n)          ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       enzyme_frac_poly_p)          ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       enzyme_frac_poly_c_mavg)     ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       enzyme_frac_poly_n_mavg)     ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       enzyme_frac_poly_p_mavg)     ! inout
     ! Get process memory pool structures
     dsl4slm_get_vegpool_var(pool,fine_root,carbon)
 #define Get_veg_litterfall
@@ -423,8 +423,8 @@ CONTAINS
                                     enzyme_frac_poly(:,:), enzyme_frac_residue(:,:), &
                                     sb_pool%polymeric_litter,sb_loss%polymeric_litter, &
                                     sb_pool%residue,sb_loss%residue,sb_formation%dom, &
-                                    enz_frac_poly_c, enz_frac_poly_n, enz_frac_poly_p,&
-                                    enz_frac_poly_c_mavg, enz_frac_poly_n_mavg, enz_frac_poly_p_mavg)
+                                    enzyme_frac_poly_c, enzyme_frac_poly_n, enzyme_frac_poly_p,&
+                                    enzyme_frac_poly_c_mavg, enzyme_frac_poly_n_mavg, enzyme_frac_poly_p_mavg)
 
     !> 2.5 Update soil litter pools with litter fall
     !!

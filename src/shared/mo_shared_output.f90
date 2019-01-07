@@ -648,12 +648,12 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: microbial_cue_eff_tmic_mavg 
     dsl4jsb_Real3D_onChunk      :: enzyme_frac_poly
     dsl4jsb_Real3D_onChunk      :: enzyme_frac_residue
-    dsl4jsb_Real3D_onChunk      :: enz_frac_poly_c
-    dsl4jsb_Real3D_onChunk      :: enz_frac_poly_n
-    dsl4jsb_Real3D_onChunk      :: enz_frac_poly_p
-    dsl4jsb_Real3D_onChunk      :: enz_frac_poly_c_mavg
-    dsl4jsb_Real3D_onChunk      :: enz_frac_poly_n_mavg
-    dsl4jsb_Real3D_onChunk      :: enz_frac_poly_p_mavg
+    dsl4jsb_Real3D_onChunk      :: enzyme_frac_poly_c
+    dsl4jsb_Real3D_onChunk      :: enzyme_frac_poly_n
+    dsl4jsb_Real3D_onChunk      :: enzyme_frac_poly_p
+    dsl4jsb_Real3D_onChunk      :: enzyme_frac_poly_c_mavg
+    dsl4jsb_Real3D_onChunk      :: enzyme_frac_poly_n_mavg
+    dsl4jsb_Real3D_onChunk      :: enzyme_frac_poly_p_mavg
     ! Get local variables from options argument
     iblk      = options%iblk
     ics       = options%ics
@@ -739,12 +739,12 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,  microbial_cue_eff_tmic_mavg)
     dsl4jsb_Get_var3D_onChunk(SB_,  enzyme_frac_poly)
     dsl4jsb_Get_var3D_onChunk(SB_,  enzyme_frac_residue)
-    dsl4jsb_Get_var3D_onChunk(SB_,  enz_frac_poly_c)
-    dsl4jsb_Get_var3D_onChunk(SB_,  enz_frac_poly_n)
-    dsl4jsb_Get_var3D_onChunk(SB_,  enz_frac_poly_p)
-    dsl4jsb_Get_var3D_onChunk(SB_,  enz_frac_poly_c_mavg)
-    dsl4jsb_Get_var3D_onChunk(SB_,  enz_frac_poly_n_mavg)
-    dsl4jsb_Get_var3D_onChunk(SB_,  enz_frac_poly_p_mavg)
+    dsl4jsb_Get_var3D_onChunk(SB_,  enzyme_frac_poly_c)
+    dsl4jsb_Get_var3D_onChunk(SB_,  enzyme_frac_poly_n)
+    dsl4jsb_Get_var3D_onChunk(SB_,  enzyme_frac_poly_p)
+    dsl4jsb_Get_var3D_onChunk(SB_,  enzyme_frac_poly_c_mavg)
+    dsl4jsb_Get_var3D_onChunk(SB_,  enzyme_frac_poly_n_mavg)
+    dsl4jsb_Get_var3D_onChunk(SB_,  enzyme_frac_poly_p_mavg)
     ! Get process memory pool structures
 #define Get_veg_pool
 #define Get_veg_total_biomass
@@ -1184,9 +1184,9 @@ CONTAINS
           write(lun,'(281F16.6)') time_d, qmax_org(ipoi,:), bulk_dens_corr_sl(ipoi,:), microbial_cue_eff_tmic_mavg(ipoi,:), &
                                  qmax_po4(ipoi,:), km_adsorpt_po4_sl(ipoi,:), &
                                  veg_pool%fine_root%carbon(ipoi) * root_fraction_sl(ipoi,:) / soil_depth_sl(ipoi,:), &
-                                 enzyme_frac_poly(ipoi,:), enzyme_frac_residue(ipoi,:), enz_frac_poly_c(ipoi,:), & 
-                                 enz_frac_poly_n(ipoi,:), enz_frac_poly_p(ipoi,:), enz_frac_poly_c_mavg(ipoi,:), &
-                                 enz_frac_poly_n_mavg(ipoi,:), enz_frac_poly_p_mavg(ipoi,:)
+                                 enzyme_frac_poly(ipoi,:), enzyme_frac_residue(ipoi,:), enzyme_frac_poly_c(ipoi,:), & 
+                                 enzyme_frac_poly_n(ipoi,:), enzyme_frac_poly_p(ipoi,:), enzyme_frac_poly_c_mavg(ipoi,:), &
+                                 enzyme_frac_poly_n_mavg(ipoi,:), enzyme_frac_poly_p_mavg(ipoi,:)
           lun=lun+1
         END SELECT  ! simple_1d/jsm
       END IF        ! l_land_plant_canopy_out .OR. l_soil_output
