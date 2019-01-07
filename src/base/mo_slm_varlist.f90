@@ -291,7 +291,6 @@ CONTAINS
     INTEGER                       :: pos_of_var
     TYPE(t_jsb_model), POINTER    :: model
     INTEGER                       :: ice, ics, nproma, iblk   ! *slmtemp
-    INTEGER                       :: nlevel                   ! number of levels at Z-Axis (canopy & soil)
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_struct_element_r3d'
 
     dsl4jsb_Def_config(ASSIMI_)
@@ -307,22 +306,11 @@ CONTAINS
     dsl4jsb_Get_config(SSE_)
 
 
-    ! select nlevel according to process id 
-    ! A2L_=1, L2A_=2, SSE_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
-    SELECT CASE(struct%owner_proc_id)
-      CASE(5, 12) ! soil, sb
-        nlevel = dsl4jsb_Config(SSE_)%nsoil_water
-      CASE(7, 9, 10, 11) ! veg, rad, assimi, pheno
-        nlevel = dsl4jsb_Config(ASSIMI_)%ncanopy
-      CASE DEFAULT
-        CALL finish(TRIM(routine), 'A variable that is not in memory of soil, sb, veg, rad, assimi, pheno aims beeing 3D, '//TRIM(name))
-    END SELECT
-
-    ALLOCATE(var%field(nproma,nlevel,iblk,1,1))
+    ALLOCATE(var%field(nproma, vgrid%n_levels, iblk, 1, 1))
     var%ptr => var%field(:,:,:,1,1)
     
     var%name = TRIM(name)
-    var%owner_proc_id = struct%owner_proc_id    ! A2L_=1, L2A_=2, SSE_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
+    var%owner_proc_id = struct%owner_proc_id 
 
     pos_of_var = struct%no_of_vars + 1
     IF (pos_of_var > struct%max_no_of_vars) THEN
@@ -333,7 +321,7 @@ CONTAINS
     END IF
 
     ! added for SLM compatibility (in JSBACH4 the allocation is done differently)   *slmtemp
-    var%ptr(ics:ice,1:nlevel,iblk) = initval_r
+    var%ptr(ics:ice, 1:vgrid%n_levels, iblk) = initval_r
 
   END SUBROUTINE slm_add_struct_element_r3d
 
@@ -441,7 +429,6 @@ CONTAINS
     INTEGER                       :: pos_of_var
     TYPE(t_jsb_model), POINTER    :: model
     INTEGER                       :: ice, ics, nproma, iblk   ! *slmtemp
-    INTEGER                       :: nlevel                   ! number of levels at Z-Axis (canopy & soil)
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':slm_add_var_list_element_r3d'
 
     dsl4jsb_Def_config(ASSIMI_)
@@ -459,33 +446,11 @@ CONTAINS
     dsl4jsb_Get_config(RAD_)
 
 
-    ! select nlevel according to process id 
-    ! A2L_=1, L2A_=2, SSE_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
-    SELECT CASE(mem%owner_proc_id)
-    CASE(5, 12) ! sse, sb
-        nlevel = dsl4jsb_Config(SSE_)%nsoil_water
-      CASE(7, 9, 10, 11) ! veg, rad, assimi, pheno
-        nlevel = dsl4jsb_Config(ASSIMI_)%ncanopy
-      CASE DEFAULT
-        CALL finish(TRIM(routine), 'A variable that is not in memory of soil, sb, veg, rad, assimi, pheno aims beeing 3D, '//TRIM(name))
-    END SELECT
-
-    ! some variables might differ from the DIMENSION of the process_memory they come from
-    ! each of these variables need to be explicitly handled by var%name using the following CASE statement
-    SELECT CASE(TRIM(name))
-      CASE('root_fraction_sl') ! variables from veg_memory with nsoil_water (nsoil_sb) DIMENSION
-        nlevel = dsl4jsb_Config(SSE_)%nsoil_water
-      CASE('canopy_reflectance_sp') ! variable from rad_memory with DIMENSION(nspec)
-        nlevel = dsl4jsb_Config(RAD_)%nspec
-      ! CASE('...') ! ... 
-      !   nlevel = dsl4jsb_Config(ASSIMI_)%ncanopy
-    END SELECT
-
-    ALLOCATE(var%field(nproma,nlevel,iblk,1,1))
+    ALLOCATE(var%field(nproma, vgrid%n_levels, iblk, 1, 1))
     var%ptr => var%field(:,:,:,1,1)
 
     var%name = TRIM(name)
-    var%owner_proc_id = mem%owner_proc_id    ! A2L_=1, L2A_=2, SSE_=5, VEG_=7, RAD_=9, ASSIMI_=10, PHENO_=11, SB_=12
+    var%owner_proc_id = mem%owner_proc_id
 
     pos_of_var = mem%no_of_vars + 1
     IF (pos_of_var > mem%max_no_of_vars) THEN
@@ -496,7 +461,7 @@ CONTAINS
     END IF
 
     ! added for SLM compatibility (in JSBACH4 the allocation is done differently)   *slmtemp
-    var%ptr(ics:ice,1:nlevel,iblk) = initval_r
+    var%ptr(ics:ice, 1:vgrid%n_levels, iblk) = initval_r
 
   END SUBROUTINE slm_add_var_list_element_r3d
 
