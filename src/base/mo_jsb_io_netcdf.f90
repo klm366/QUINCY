@@ -29,7 +29,7 @@ CONTAINS
 
     TYPE(t_jsb_grid),  POINTER :: grid
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsb_netcdf_open_input'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':jsb_netcdf_open_input'
 
     IF (PRESENT(grid_id)) THEN
       grid => Get_grid(grid_id)

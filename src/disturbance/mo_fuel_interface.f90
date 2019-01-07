@@ -74,10 +74,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_fuel::return_ptr)
-
-    return_ptr%name = 'fuel'
-    return_ptr%process_id = FUEL_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='fuel', process_id=FUEL_, owner_model_id=model_id)
 
   END FUNCTION Create_task_fuel
 
@@ -120,15 +117,16 @@ CONTAINS
 
     INTEGER :: iblk, ics, ice, nc
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_fuel'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_fuel'
 
     ! Declare process memories
     dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_memory(FUEL_)
+    dsl4jsb_Def_memory(PHENO_)
 
     dsl4jsb_Def_config(FUEL_)
 
-    dsl4jsb_Real2D_onChunk :: fuel                   ! Amount of fuel on which the fire was based.
+    dsl4jsb_Real2D_onChunk :: fuel                   ! Amount of fuel on which fire is based
     !
     dsl4jsb_Real2D_onChunk :: c_acid_ag1_ta
     dsl4jsb_Real2D_onChunk :: c_water_ag1_ta
@@ -138,6 +136,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: c_water_ag2_ta
     dsl4jsb_Real2D_onChunk :: c_ethanol_ag2_ta
     dsl4jsb_Real2D_onChunk :: c_nonsoluble_ag2_ta
+    dsl4jsb_Real2D_onChunk :: fract_fpc_max
     !
     ! Locally allocated vectors
     !
@@ -164,18 +163,20 @@ CONTAINS
     ! Get process memories
     dsl4jsb_Get_memory(FUEL_)
     dsl4jsb_Get_memory(CARBON_)
+    dsl4jsb_Get_memory(PHENO_)
 
     ! Get process variables
-    dsl4jsb_Get_var2D_onChunk(FUEL_,      fuel)                     ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_ag1_ta)         ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag1_ta)        ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_ag1_ta)      ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_ag1_ta)   ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_ag2_ta)         ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag2_ta)        ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_ag2_ta)      ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_ag2_ta)   ! in
+    dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max)         ! in
+    dsl4jsb_Get_var2D_onChunk(FUEL_,    fuel)                  ! out
 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_acid_ag1_ta)       ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_water_ag1_ta)      ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_ethanol_ag1_ta)    ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_nonsoluble_ag1_ta) ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_acid_ag2_ta)       ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_water_ag2_ta)      ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_ethanol_ag2_ta)    ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_nonsoluble_ag2_ta) ! in
 
     !
     ! ---------------------------
@@ -186,16 +187,17 @@ CONTAINS
       SELECT CASE (dsl4jsb_Config(FUEL_)%fuel_algorithm)
         CASE (1) !! jsbach algorithm
 
-          CALL calc_fuel_jsbach( &
-            & c_acid_ag1_ta(:),       & ! in
-            & c_water_ag1_ta(:),      & ! in
-            & c_ethanol_ag1_ta(:),    & ! in
-            & c_nonsoluble_ag1_ta(:), & ! in
-            & c_acid_ag2_ta(:),       & ! in
-            & c_water_ag2_ta(:),      & ! in
-            & c_ethanol_ag2_ta(:),    & ! in
-            & c_nonsoluble_ag2_ta(:), & ! in
-            & fuel(:)                      & ! out
+          CALL calc_fuel_jsbach(       &
+            & c_acid_ag1_ta(:),        & ! in
+            & c_water_ag1_ta(:),       & ! in
+            & c_ethanol_ag1_ta(:),     & ! in
+            & c_nonsoluble_ag1_ta(:),  & ! in
+            & c_acid_ag2_ta(:),        & ! in
+            & c_water_ag2_ta(:),       & ! in
+            & c_ethanol_ag2_ta(:),     & ! in
+            & c_nonsoluble_ag2_ta(:),  & ! in
+            & fract_fpc_max(:),        & ! in
+            & fuel(:)                  & ! out
             & )
 
         CASE (2) !! Arora & Boer algorithm
@@ -232,7 +234,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER                :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_fuel'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_fuel'
 
     INTEGER  :: iblk, ics, ice, nc
 

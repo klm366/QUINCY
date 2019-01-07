@@ -103,10 +103,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_surface_energy::return_ptr)
-
-    return_ptr%name = 'surface_energy'
-    return_ptr%process_id = SEB_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='surface_energy', process_id=SEB_, owner_model_id=model_id)
 
   END FUNCTION Create_task_surface_energy
 
@@ -122,10 +119,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_snowmelt_correction::return_ptr)
-
-    return_ptr%name = 'snowmelt_correction'
-    return_ptr%process_id = SEB_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='snowmelt_correction', process_id=SEB_, owner_model_id=model_id)
 
   END FUNCTION Create_task_snowmelt_correction
 
@@ -141,10 +135,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_asselin_filter::return_ptr)
-
-    return_ptr%name = 'asselin_filter'
-    return_ptr%process_id = SEB_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='asselin_filter', process_id=SEB_, owner_model_id=model_id)
 
   END FUNCTION Create_task_asselin_filter
 
@@ -160,10 +151,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_surface_fluxes::return_ptr)
-
-    return_ptr%name = 'surface_fluxes'
-    return_ptr%process_id = SEB_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='surface_fluxes', process_id=SEB_, owner_model_id=model_id)
 
   END FUNCTION Create_task_surface_fluxes
   
@@ -206,7 +194,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_energy'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_energy'
 
     IF (.NOT. tile%Is_process_active(SEB_)) RETURN
 
@@ -239,7 +227,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_surface_energy'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_surface_energy'
 
     INTEGER :: iblk, ics, ice
 
@@ -314,7 +302,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: soil_e, snow_e
     INTEGER                    :: nsoil, nsnow
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_snowmelt_correction'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_snowmelt_correction'
 
     IF (.NOT. tile%Is_process_active(SEB_) .OR. .NOT. tile%is_land) RETURN
 
@@ -407,7 +395,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_snowmelt_correction'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_snowmelt_correction'
 
     INTEGER :: iblk, ics, ice
 
@@ -449,7 +437,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_asselin'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_asselin'
 
     IF (.NOT. tile%Is_process_active(SEB_)) RETURN
 
@@ -486,7 +474,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_asselin'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_asselin'
 
     INTEGER :: iblk, ics, ice
 
@@ -526,7 +514,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_surface_fluxes'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_fluxes'
 
     IF (.NOT. tile%Is_process_active(SEB_)) RETURN
 
@@ -559,7 +547,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_surface_fluxes'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_surface_fluxes'
 
     INTEGER :: iblk, ics, ice
 

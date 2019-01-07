@@ -24,11 +24,11 @@ MODULE mo_assimi_process
 CONTAINS
 
   ELEMENTAL SUBROUTINE calc_assimilation_scaling_factors( &
-    & declination,            & ! in
-    & canopy_bound_lai,       & ! in
-    & lai,                    & ! in
-    & lat,                    & ! in
-    & assimi_scaling_fact_cl  & ! out
+    & declination,                                        & ! in
+    & canopy_bound_lai,                                   & ! in
+    & lai,                                                & ! in
+    & lat,                                                & ! in
+    & assimi_scaling_fact_cl                              & ! out
     & )
 
     ! Declarations
@@ -75,16 +75,16 @@ CONTAINS
 
 
   ELEMENTAL SUBROUTINE calc_assimilation_waterunlimited( &
-    & C4Flag,                  & ! in
-    & CarboxRate,              & ! in
-    & ETransport,              & ! in
-    & t_air,                   & ! in
-    & press_srf,               & ! in
-    & par_down_mol,            & ! in
-    & apar_per_lai_cl,         & ! in
-    & CO2_mol_mixing_ratio,    & ! in
-    & N_scaling_factors,       & ! in
-    & canopy_cond_cl           & ! out
+    & C4Flag,                                            & ! in
+    & CarboxRate,                                        & ! in
+    & ETransport,                                        & ! in
+    & t_air,                                             & ! in
+    & press_srf,                                         & ! in
+    & par_down_mol,                                      & ! in
+    & apar_per_lai_cl,                                   & ! in
+    & CO2_mol_mixing_ratio,                              & ! in
+    & N_scaling_factors,                                 & ! in
+    & canopy_cond_cl                                     & ! out
     )
 
     !-----------------------------------------------------------------------
@@ -108,49 +108,49 @@ CONTAINS
 
     ! Local variables
 
-    REAL(wp) ::    &
+    REAL(wp) ::           &
       & CO2_conc_leaf_cl, &
-      & T0,        & ! Temperature relative to 25 degree Celcius, i.e. T - 25
-      & T1,        & ! 25 degress Celsius expressed in Kelvin
-      & KC,        & ! Michaelis-Menten constant for CO2
-      & KO,        & ! Michaelis-Menten constant for O2
-      & GAM,       & ! COMPENSATION POINT WITHOUT DARK RESPIRATION [MOL(CO2) / MOL(AIR)]
-      & HITINHIB,  & ! Hight temperature inhibition
-                     ! Value to inhibit Assimilation and Respiration at temperatures above
-                     ! 55 Celsius from Collatz et al., Physiological and environmental regulation
-                     ! of stomatal conductance, photosynthesis and transpiration: a model that
-                     ! includes a laminar boundary layer,
-                     ! Agricultural and Forest Meteorology, 54, pp. 107-136, 1991
-      & DARKINHIB, & ! Dark inhibition
-                     ! Value to inhibit Dark-Respiration in light
-                     ! after Brooks and Farquhar, Effect of temperature on the CO2/O2 specifity on RBisCO
-                     ! and the rate of respiration in the light, Planta 165, 397-406, 1985
-                     ! It is fitted to inhibit the dark-respiration to 50% of it's uninhibited value
-                     ! up from 50 umol/m^2s total solar downward radiation, i.e. 25 umol/m^2s downward PAR
-                     ! (idea for improvement: darkinhib should be closer to 1 at very high latitudes)
-                     ! The FUNCTION is an own creation.
-      & K1,        & ! helper
-      & K2           ! helper
+      & T0,               & ! Temperature relative to 25 degree Celcius, i.e. T - 25
+      & T1,               & ! 25 degress Celsius expressed in Kelvin
+      & KC,               & ! Michaelis-Menten constant for CO2
+      & KO,               & ! Michaelis-Menten constant for O2
+      & GAM,              & ! COMPENSATION POINT WITHOUT DARK RESPIRATION [MOL(CO2) / MOL(AIR)]
+      & HITINHIB,         & ! Hight temperature inhibition
+                            ! Value to inhibit Assimilation and Respiration at temperatures above
+                            ! 55 Celsius from Collatz et al., Physiological and environmental regulation
+                            ! of stomatal conductance, photosynthesis and transpiration: a model that
+                            ! includes a laminar boundary layer,
+                            ! Agricultural and Forest Meteorology, 54, pp. 107-136, 1991
+      & DARKINHIB,        & ! Dark inhibition
+                            ! Value to inhibit Dark-Respiration in light
+                            ! after Brooks and Farquhar, Effect of temperature on the CO2/O2 specifity on RBisCO
+                            ! and the rate of respiration in the light, Planta 165, 397-406, 1985
+                            ! It is fitted to inhibit the dark-respiration to 50% of it's uninhibited value
+                            ! up from 50 umol/m^2s total solar downward radiation, i.e. 25 umol/m^2s downward PAR
+                            ! (idea for improvement: darkinhib should be closer to 1 at very high latitudes)
+                            ! The FUNCTION is an own creation.
+      & K1,               & ! helper
+      & K2                  ! helper
 
-    REAL(wp) ::    & ! variables with canopy layer
-      & VCMAX,     & ! MAXIMUM CARBOXYLATION RATE [MOL(CO2)/M^2 S]
-      & JMAX,      & ! MAXIMUM RATE OF ELECTRON TRANSPORT [MOL(CO2)/M^2 S]
-      & K,         & ! CO2 SPECIFICITY OF PECASE
-      & T,         & ! Canopy Temperature in Kelvin
-      & TC,        & ! Canopy Temperature (leaf) in Celsius.
-      & GASS,      & ! gross assimilation (formerly called A)
-      & DARK_RESP, & ! dark respiration (formerly called RD).
-      & JE,        & ! Electron transport rate (Knorr, Eq. 102c)
-      & JC,        & ! Carboxylation rate (Knorr, Eq. 102b)
-      & J0,        &
-      & J1,        &
-      & G0,        &
-      & W1,        & ! helper
-      & W2,        & ! helper
-      & B,         & ! helper
+    REAL(wp) ::           & ! variables with canopy layer
+      & VCMAX,            & ! MAXIMUM CARBOXYLATION RATE [MOL(CO2)/M^2 S]
+      & JMAX,             & ! MAXIMUM RATE OF ELECTRON TRANSPORT [MOL(CO2)/M^2 S]
+      & K,                & ! CO2 SPECIFICITY OF PECASE
+      & T,                & ! Canopy Temperature in Kelvin
+      & TC,               & ! Canopy Temperature (leaf) in Celsius.
+      & GASS,             & ! gross assimilation (formerly called A)
+      & DARK_RESP,        & ! dark respiration (formerly called RD).
+      & JE,               & ! Electron transport rate (Knorr, Eq. 102c)
+      & JC,               & ! Carboxylation rate (Knorr, Eq. 102b)
+      & J0,               &
+      & J1,               &
+      & G0,               &
+      & W1,               & ! helper
+      & W2,               & ! helper
+      & B,                & ! helper
       & C            ! helper
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_assimilation_waterunlimited'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':calc_assimilation_waterunlimited'
 
     ! Prepare CO2_conc_leaf_cl
     ! R: siehe mo_bethy.f90, Zeile 709
@@ -390,23 +390,23 @@ CONTAINS
   END SUBROUTINE calc_assimilation_waterunlimited
 
   ELEMENTAL SUBROUTINE calc_assimilation_waterlimited( &
-    & C4Flag,                  & ! in
-    & CarboxRate,              & ! in
-    & ETransport,              & ! in
-    & t_air,                   & ! in
-    & press_srf,               & ! in
-    & par_down_mol,            & ! in
-    & apar_per_lai_cl,         & ! in
-    & CO2_mol_mixing_ratio,    & ! in
-    & N_scaling_factors,       & ! in
-    & CO2_conc_leaf_cl,        & ! out
-    & canopy_cond_cl,          & ! in
-    & gross_assimilation_cl,   & ! out
-    & dark_respiration_cl,     & ! out
-    & carbox_rate_max_cl,      & ! out
-    & e_transport_rate_max_cl, & ! out
-    & carbox_rate_cl,          & ! out
-    & e_transport_rate_cl      & ! out
+    & C4Flag,                                          & ! in
+    & CarboxRate,                                      & ! in
+    & ETransport,                                      & ! in
+    & t_air,                                           & ! in
+    & press_srf,                                       & ! in
+    & par_down_mol,                                    & ! in
+    & apar_per_lai_cl,                                 & ! in
+    & CO2_mol_mixing_ratio,                            & ! in
+    & N_scaling_factors,                               & ! in
+    & CO2_conc_leaf_cl,                                & ! out
+    & canopy_cond_cl,                                  & ! in
+    & gross_assimilation_cl,                           & ! out
+    & dark_respiration_cl,                             & ! out
+    & carbox_rate_max_cl,                              & ! out
+    & e_transport_rate_max_cl,                         & ! out
+    & carbox_rate_cl,                                  & ! out
+    & e_transport_rate_cl                              & ! out
     & )
 
 
@@ -433,10 +433,10 @@ CONTAINS
     REAL(wp), INTENT(out) ::     &
       & CO2_conc_leaf_cl,        & ! CO2 concentration inside leaf [mol(CO2)/mol(Air)] (identical for all layers):
                                    ! Output only for the water limited case here
-      & gross_assimilation_cl,   & ! Gross assimilation of C per leaf area [MOL(CO2) / M^2(leaf area) S] and canopy layer
-      & dark_respiration_cl,     & ! Dark respiration per canopy layer
+      & gross_assimilation_cl,   & ! Gross assimilation of C per leaf area [ mol (CO2) / (m^2(leaf area) * s) ] and canopy layer
+      & dark_respiration_cl,     & ! Dark respiration per leaf area and per canopy layer
       & carbox_rate_max_cl,      & ! Maximum carboxylation rate of canopy layer (=VCmax)
-                                   ! [Mol(CO2)/m^2(canopy)/s]. carbox_rate_max_leaf adapted to canopy layer
+                                   ! [mol(CO2)/m^2(leaf area)/s]. carbox_rate_max_leaf adapted to canopy layer
                                    ! and actual temperature.
       & e_transport_rate_max_cl, & !
       & carbox_rate_cl,          & !
@@ -447,7 +447,7 @@ CONTAINS
 ! !     INTEGER                           :: icanopy
 ! !     INTEGER                           :: i
 
-    REAL(wp) ::           &
+    REAL(wp) ::    &
       & T0,        & ! Temperature relative to 25 degree Celcius, i.e. T - 25
       & T1,        & ! 25 degress Celsius expressed in Kelvin
       & KC,        & ! Michaelis-Menten constant for CO2
@@ -470,7 +470,7 @@ CONTAINS
       & K1,        & ! helper
       & K2           ! helper
 
-    REAL(wp) ::           & ! variables with canopy layer
+    REAL(wp) ::    & ! variables with canopy layer
       & VCMAX,     & ! MAXIMUM CARBOXYLATION RATE [MOL(CO2)/M^2 S]
       & JMAX,      & ! MAXIMUM RATE OF ELECTRON TRANSPORT [MOL(CO2)/M^2 S]
       & K,         & ! CO2 SPECIFICITY OF PECASE
@@ -488,7 +488,7 @@ CONTAINS
       & B,         & ! helper
       & C            ! helper
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_assimilation_waterlimited'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':calc_assimilation_waterlimited'
 
     !-----------------------------------------------------------------------
     ! DOES THIS PROCESS EXIST FOR THE CURRENT TILE?
@@ -733,24 +733,24 @@ CONTAINS
 
 
   ELEMENTAL SUBROUTINE calc_NPP_pot_rate( &
-    & gross_assimilation_ca, &
-    & dark_respiration_ca,   &
+    & gross_assimilation_ca,              &
+    & dark_respiration_ca,                &
     & NPP_pot_rate_ca )
 
     ! Use Declarations
     USE mo_assimi_constants,    ONLY: f_aut_leaf, cCost
 
     ! Arguments
-    REAL(wp),  INTENT(in) :: &
+    REAL(wp),  INTENT(in) ::   &
       & gross_assimilation_ca, & ! Gross primary product (where photorespiration has already  ..
-                              ! .. been accounted for) [mol(CO2)/(m^2 (canopy) s)]
-      & dark_respiration_ca      ! Dark respiration of leaves [mol(CO2)/(m^2 (canopy) s)]
+                                 ! .. been accounted for) [mol(CO2)/(m^2 (canopy ground) s)]
+      & dark_respiration_ca      ! Dark respiration of leaves [mol(CO2)/(m^2 (canopy ground) s)]
 
     REAL(wp),  INTENT(out) :: &
-      & NPP_pot_rate_ca            ! Net primary production rate [mol(CO2)/(m^2 (canopy) s)]
+      & NPP_pot_rate_ca            ! Net primary production rate [mol(CO2)/(m^2 (canopy ground) s)]
 
     ! Local variables
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_NPP_pot_rate'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':calc_NPP_pot_rate'
 
     REAL(wp),PARAMETER   :: hlp =  (cCost -1._wp) / cCost
     REAL(wp)             :: maintenanceRespiration ! R_m

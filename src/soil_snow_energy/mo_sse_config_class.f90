@@ -80,7 +80,7 @@ CONTAINS
 
     TYPE(t_jsb_vgrid), POINTER :: soil_vgrid, snow_vgrid
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_sse_config'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_sse_config'
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting soil and snow energy configuration')
 

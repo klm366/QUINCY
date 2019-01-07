@@ -81,10 +81,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_C_NPP_pot_allocation::return_ptr)
-
-    return_ptr%name = 'C_NPP_pot_allocation'
-    return_ptr%process_id = CARBON_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='C_NPP_pot_allocation', process_id=CARBON_, owner_model_id=model_id)
 
   END FUNCTION Create_task_C_NPP_pot_allocation
 
@@ -132,7 +129,7 @@ CONTAINS
     REAL(wp)                     :: dtime
     INTEGER                      :: i, itile
     REAL(wp), allocatable        :: precip_total(:)
-    CHARACTER(len=*), PARAMETER  :: routine = TRIM(modname)//':update_C_NPP_pot_allocation'
+    CHARACTER(len=*), PARAMETER  :: routine = modname//':update_C_NPP_pot_allocation'
 
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(ASSIMI_)
@@ -236,6 +233,7 @@ CONTAINS
                                                      !     pools) [mol(C)/m^2(canopy)]
 
     dsl4jsb_Real2D_onChunk ::  c_bg_sum          ! Sum of belowground Yasso pools  [mol(C)^2/m(canopy)]
+    dsl4jsb_Real2D_onChunk ::  c_ag_sum_1        ! Sum of aboveground green Yasso pools  [mol(C)^2/m(canopy)]
 
     !SIZE CLASS 1
     dsl4jsb_Real2D_onChunk ::  c_acid_ag1_ta     ! Yasso above ground litter-pool for acid soluble litter
@@ -411,7 +409,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg2)     ! inout 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2)            ! inout 
 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_bg_sum)             ! inout 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_bg_sum)             ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ag_sum_1)           ! inout
 
     !
     ! This is on tile area:
@@ -674,6 +673,8 @@ CONTAINS
       c_bg_sum =   c_acid_bg1 + c_water_bg1 + c_ethanol_bg1 + c_nonsoluble_bg1 + c_humus_1 &  ! Size class 1; green litter
         &        + c_acid_bg2 + c_water_bg2 + c_ethanol_bg2 + c_nonsoluble_bg2 + c_humus_2    ! Size class 2; woody litter
 
+      c_ag_sum_1 =  c_acid_ag1 + c_water_ag1 + c_ethanol_ag1 + c_nonsoluble_ag1 + c_humus_1
+
       ! R: In JSBACH3 wurden alle C-pools auf canopy Fläche gezogen gerechnet. Ebenso die C Fluxe.
       !    Für den Output wurden alle Variablen auch in grid box umgerechnet und entsprechend doppelt angelegt.
       !    Besser wäre für JSBACH4 eigentlich auf Tile Fläche bezogen zu rechnen um alle variablen von JS4
@@ -793,7 +794,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER                :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_C_NPP_pot_allocation'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_C_NPP_pot_allocation'
 
     INTEGER  :: iblk, ics, ice, nc
 
@@ -841,6 +842,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, c_humus_2,         weighted_by_fract)
     ! sums
     dsl4jsb_Aggregate_onChunk(CARBON_, c_bg_sum,              weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_ag_sum_1,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, C_sum_natural,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, NPP_pot_sum,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, GPP_sum,               weighted_by_fract)

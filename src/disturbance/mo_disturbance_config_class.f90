@@ -95,7 +95,7 @@ CONTAINS
 
     INTEGER :: nml_handler, nml_unit, istat
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_disturb_config'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_disturb_config'
 
     CALL message(TRIM(routine), 'Starting disturb configuration')
 
@@ -107,7 +107,10 @@ CONTAINS
     windbreak_algorithm    =  1
     lburn_pasture          = .FALSE.
     !
-    fire_litter_threshold  = 16.67_wp   ! minimal amount of litter [mol(C)/m^2(grid box)] for fire
+    fire_litter_threshold  = 27.87_wp   ! minimal amount of litter [mol(C)/m^2(grid box)] for fire
+                                        ! In JS3 this value was 16.67 because it was related to fuel per gridbox area.
+                                        ! In JS4 it is related to fuel per potential vegetated area of the veg tile,
+                                        ! which is on global average 0.5980 of the grid box area.
     fire_rel_hum_threshold = 70._wp     ! maximal relative humidity for fire
     fire_minimum_woody     =  0.002_wp  ! minimal fraction of act_fpc of woody PFT to be burned each year
     fire_minimum_grass     =  0.006_wp  ! minimal fraction of act_fpc of grass PFT to be burned each year

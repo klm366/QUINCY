@@ -24,10 +24,12 @@ MODULE mo_carbon_config_class
   PUBLIC :: t_carbon_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_carbon_config
-    LOGICAL                     :: read_cpools     ! Read Cpools from external File when model was 
-                                                   ! newly startet (Cpools were initialized with fixed values) or
-                                                   ! restarted (Cpools were initialized and afterwards overwritten with values from restartfile).
-    REAL(wp)                    :: fire_fract_wood_2_atmos 
+    LOGICAL  :: read_cpools ! Read Cpools from external file when experiment is newly started (cpools are
+                            ! initialized with values from file) or restarted (cpools from restart file are
+                            ! overwritten by values from file).
+                            ! ATTENTION: The run script has to take care that read_cpools is set to .FALSE.
+                            !            in the experiment jobs following the first one! Or re-set it manually!
+    REAL(wp) :: fire_fract_wood_2_atmos 
 
    CONTAINS
      PROCEDURE :: Init => Init_carbon_config
@@ -63,7 +65,7 @@ CONTAINS
 
     INTEGER :: nml_handler, nml_unit, istat
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_carbon_config'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_carbon_config'
 
     CALL message(TRIM(routine), 'Starting carbon configuration')
 

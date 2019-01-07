@@ -14,8 +14,8 @@ MODULE mo_jsb_interface
   USE mo_exception,           ONLY: message_text, message, finish
   USE mo_util_string,         ONLY: int2string
 
-  USE mo_jsb_control,         ONLY: debug_on, l_timer
-  USE mo_timer,               ONLY: timer_start, timer_stop, timer_jsbach
+  USE mo_jsb_control,         ONLY: debug_on, timer_on, l_timer_host, jsbach_runs_standalone, timer_jsbach
+  USE mo_timer,               ONLY: timer_start, timer_stop
   USE mo_jsb_class,           ONLY: Get_model
   USE mo_jsb_model_class,     ONLY: t_jsb_model
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
@@ -28,11 +28,10 @@ MODULE mo_jsb_interface
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: jsbach_interface, interface_full, jsbach_start_timestep, jsbach_finish_timestep
+  PUBLIC :: jsbach_interface, jsbach_start_timestep, jsbach_finish_timestep
 
   INTERFACE jsbach_interface
     MODULE PROCEDURE interface_full
-    ! MODULE PROCEDURE interface_standalone
     MODULE PROCEDURE interface_inquire
   END INTERFACE jsbach_interface
 
@@ -99,7 +98,7 @@ CONTAINS
 
     INTEGER :: p_pe
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':interface_full'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':interface_full'
 
     ! Arguments
     INTEGER, INTENT(in) :: &
@@ -190,6 +189,8 @@ CONTAINS
     ! ---------------------------
     ! Go
 
+    IF (timer_on() .OR. l_timer_host) CALL timer_start(timer_jsbach(model_id))
+
     no_omp_thread = Get_omp_thread()
 
     IF (write_interface_vars) THEN
@@ -197,8 +198,6 @@ CONTAINS
         & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, press_srf, drag_srf,    &
         & t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle)
     END IF
-
-    IF (l_timer) CALL timer_start(timer_jsbach)
 
     nc = ice - ics + 1
 
@@ -225,8 +224,7 @@ CONTAINS
       & rain               = rain(:),               &
       & snow               = snow(:),               &
       & wind_air           = wind_air(:),           &
-!!$      & wind_10m          = wind_10m(:),          &
-      & wind_10m           = wind_air(:)*0.8_wp,    & ! Temporary
+      & wind_10m           = wind_10m(:),           &
       & lw_srf_down        = lw_srf_down(:),        &
       & swvis_srf_down     = swvis_srf_down(:),     &
       & swnir_srf_down     = swnir_srf_down(:),     &
@@ -307,222 +305,16 @@ CONTAINS
     IF (debug_on('basic') .AND. iblk == 1) &
       & CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//' completed.')
 
-    IF (l_timer) CALL timer_stop(timer_jsbach)
+    IF (timer_on() .OR. l_timer_host) CALL timer_stop(timer_jsbach(model_id))
 
   END SUBROUTINE interface_full
 
-!   SUBROUTINE interface_standalone( &
-!     & model_id,         &
-!     & iblk, ics, ice, dtime, steplen, &
-!     & t_air,            &
-!     & q_air,            &
-!     & rain,             &  
-!     & snow,             &
-!     & wind_air,         &
-!     & wind_10m,         &
-!     & lw_srf_down,      &
-!     & swvis_srf_net,    &
-!     & swnir_srf_net,    &
-!     & swpar_srf_down,   &
-!     & fract_par_diffuse, &
-!     & press_srf,        &
-!     & drag_srf,         &
-!     & t_acoef,          &
-!     & t_bcoef,          &
-!     & q_acoef,          &
-!     & q_bcoef,          &
-!     & pch,              &
-!     & cos_zenith_angle, &
-!     & CO2_air,          &
-!     & t_srf,            &
-!     & t_eff_srf,        &
-!     & qsat_srf,         &
-!     & s_srf,            &
-!     & fact_q_air,       &
-!     & fact_qsat_srf,    &
-!     & evapotrans,       &
-!     & latent_hflx,      &
-!     & sensible_hflx,    &
-!     & grnd_hflx,        &
-!     & grnd_hcap,        &
-!     & rough_h_srf,      &
-!     & rough_m_srf,      &
-!     & q_snocpymlt,      &
-!     & alb_vis_dir,      &
-!     & alb_nir_dir,      &
-!     & alb_vis_dif,      &
-!     & alb_nir_dif,      &
-!     & evapopot                                                & !< out; optional
-!     & )
-! 
-!     USE mo_jsb_test,          ONLY: write_interface_vars, write_interface_variables
-! 
-!     INTEGER :: p_pe
-! 
-!     ! Arguments
-!     INTEGER, INTENT(in) :: &
-!       & model_id,          &
-!       & iblk,              &
-!       & ics,               &
-!       & ice
-! 
-!     REAL(wp), INTENT(in) :: dtime, steplen
-!     REAL(wp), INTENT(in) ::    &
-!       & t_air             (:), &
-!       & q_air             (:), &
-!       & rain              (:), &
-!       & snow              (:), &
-!       & wind_air          (:), &
-!       & wind_10m          (:), &
-!       & lw_srf_down       (:), &
-!       & swvis_srf_net     (:), &
-!       & swnir_srf_net     (:), &
-!       & swpar_srf_down    (:), &
-!       & fract_par_diffuse  (:), &
-!       & press_srf         (:), &
-!       & drag_srf          (:), &
-!       & t_acoef           (:), &
-!       & t_bcoef           (:), &
-!       & q_acoef           (:), &
-!       & q_bcoef           (:), &
-!       & pch               (:), &
-!       & cos_zenith_angle  (:), &
-!       & CO2_air           (:)
-!     REAL(wp), INTENT(out) ::   &
-!       & t_srf             (:), &
-!       & t_eff_srf         (:), &
-!       & qsat_srf          (:), &
-!       & s_srf             (:), &
-!       & fact_q_air        (:), &
-!       & fact_qsat_srf     (:), &
-!       & evapotrans        (:), &
-!       & latent_hflx       (:), &
-!       & sensible_hflx     (:), &
-!       & grnd_hflx         (:), &
-!       & grnd_hcap         (:), &
-!       & rough_h_srf       (:), &
-!       & rough_m_srf       (:), &
-!       & q_snocpymlt       (:), &
-!       & alb_vis_dir       (:), &
-!       & alb_nir_dir       (:), &
-!       & alb_vis_dif       (:), &
-!       & alb_nir_dif       (:)
-! 
-!     REAL(wp), INTENT(out), OPTIONAL :: evapopot(:)
-! 
-!     ! Local variables
-!     CLASS(t_jsb_model),          POINTER :: model
-!     CLASS(t_jsb_tile_abstract),  POINTER :: tile
-! 
-!     INTEGER :: nc
-!     INTEGER :: no_omp_thread
-! 
-!     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':interface_standalone'
-! 
-!     ! ---------------------------
-!     ! Go
-! 
-!     no_omp_thread = Get_omp_thread()
-! 
-!     IF (write_interface_vars) THEN
-!       CALL write_interface_variables(ics, ice, iblk, t_air, q_air, rain, snow, wind_air, wind_10m, &
-!         & lw_srf_down, swvis_srf_net, swnir_srf_net, swpar_srf_down, press_srf, drag_srf,    &
-!         & t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle)
-!     END IF
-! 
-!     CALL timer_start(timer_jsbach)
-! 
-!     nc = ice - ics + 1
-! 
-!     model => Get_model(model_id)
-! 
-! !!$    WRITE(message_text, '(A,I4,A,I6,A,I6)') 'Updating '//TRIM(model%name)// &
-! !!$      &                 ' for: block=', iblk, ', ics=', ics, ', ice=', ice
-! !!$    CALL message(TRIM(routine), message_text, all_print=.TRUE.)
-! !!$    p_pe = get_my_global_mpi_id()
-! !!$    CALL message( TRIM(routine), 'Updating '//TRIM(model%name)//' on PE '//int2string(p_pe)// &
-! !!$      &                          ', nblk='//int2string(iblk), all_print=.TRUE.)
-!     IF (debug_on('basic') .AND. iblk == 1) CALL message( TRIM(routine), 'Updating '//TRIM(model%name))
-! 
-!     ! Update options
-!     CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, dtime=dtime, steplen=steplen)
-! 
-!     ! Put atmospheric forcing into the a2l memory.
-!     tile => model%Get_top_tile()
-!     IF (tile%contains_lake) CALL finish(TRIM(routine), 'Standalone JSBACH interface doesn"t work with lakes yet!')
-!     CALL update_atm2land(                           &
-!       & tile,                                       &
-!       & model%options(no_omp_thread),               &
-!       & t_air              = t_air(:),              &
-!       & q_air              = q_air(:),              &
-!       & rain               = rain(:),               &
-!       & snow               = snow(:),               &
-!       & wind_air           = wind_air(:),           &
-! !!$      & wind_10m          = wind_10m(:),          &
-!       & wind_10m           = wind_air(:)*0.8_wp,    & ! Temporary
-!       & lw_srf_down        = lw_srf_down(:),        &
-!       & swvis_srf_net      = swvis_srf_net(:),      &
-!       & swnir_srf_net      = swnir_srf_net(:),      &
-!       & swpar_srf_down     = swpar_srf_down(:),     &
-!       & fract_par_diffuse   = fract_par_diffuse(:),   &
-!       & press_srf          = press_srf(:),          &
-!       & drag_srf           = drag_srf(:),           &
-!       & t_acoef            = t_acoef(:),            &
-!       & t_bcoef            = t_bcoef(:),            &
-!       & q_acoef            = q_acoef(:),            &
-!       & q_bcoef            = q_bcoef(:),            &
-!       & pch                = pch(:),                &
-!       & cos_zenith_angle   = cos_zenith_angle(:),   &
-!       & CO2_air            = CO2_air(:)             &
-!       & )
-!     NULLIFY(tile)
-! 
-!     ! Run tasks in queue
-!     CALL model%Run_tasks(debug_on('hsm') .AND. iblk == 1)
-! 
-!     ! Finally, give the required variables back to the atmosphere
-!     ! Note: evapopot is an optional parameter, so it has to be passed without the colon!
-!     tile => model%Get_top_tile()
-!     CALL update_land2atm(                     &
-!       & tile,                                 &
-!       & model%options(no_omp_thread),         &
-!       & t_srf           = t_srf(:),           &
-!       & t_eff_srf       = t_eff_srf(:),       &
-!       & qsat_srf        = qsat_srf(:),        &
-!       & s_srf           = s_srf(:),           &
-!       & fact_q_air      = fact_q_air(:),      &
-!       & fact_qsat_srf   = fact_qsat_srf(:),   &
-!       & evapopot        = evapopot,           &
-!       & evapotrans      = evapotrans(:),      &
-!       & latent_hflx     = latent_hflx(:),     &
-!       & sensible_hflx   = sensible_hflx(:),   &
-!       & grnd_hflx       = grnd_hflx(:),       &
-!       & grnd_hcap       = grnd_hcap,          &
-!       & rough_h_srf     = rough_h_srf(:),     &
-!       & rough_m_srf     = rough_m_srf(:),     &
-!       & q_snocpymlt     = q_snocpymlt(:),     &
-!       & alb_vis_dir     = alb_vis_dir(:),     &
-!       & alb_nir_dir     = alb_nir_dir(:),     &
-!       & alb_vis_dif     = alb_vis_dif(:),     &
-!       & alb_nir_dif     = alb_nir_dif(:)      &
-!       & )
-!     NULLIFY(tile)
-! 
-! !!$    IF (iblk == 1)                                                              &
-! !!$      & CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//          &
-! !!$      &                             ' on PE '//int2string(p_pe)//' completed.', &
-! !!$      &              all_print=.TRUE.)
-!     IF (debug_on('basic') .AND. iblk == 1) &
-!       & CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//' completed.')
-! 
-!     CALL timer_stop(timer_jsbach)
-! 
-!   END SUBROUTINE interface_standalone
-
+  !
+  ! Not used currently
   SUBROUTINE interface_inquire( model_id, iblk, ics, ice,         &
     & t_srf, t_eff_srf, qsat_srf, zh_srf, zm_srf, alb_vis, alb_nir)
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':interface_inquire'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':interface_inquire'
 
     INTEGER, INTENT(in) :: &
       & model_id,          &
@@ -545,7 +337,6 @@ CONTAINS
  
     USE mo_jsb_time,          ONLY: is_time_experiment_start
     USE mo_jsb_time_iface,    ONLY: is_time_restart
-    USE mo_carbon_init,       ONLY: carbon_start_cpools
     USE mo_util,              ONLY: one_of
     USE mo_jsb_process_class, ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
 
@@ -560,7 +351,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract),  POINTER :: tile
     INTEGER :: p_pe, no_omp_thread
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsbach_start_timestep'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_start_timestep'
 
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
 
@@ -576,37 +367,6 @@ CONTAINS
 
     ! Reset all tiles at the beginning of the timestep
     CALL model%Reset_tiles()
-
-    !-----------------------------------
-    ! Do stuff at beginning of totally new experiment or after restart from existing experiment
-    IF (is_time_experiment_start() .OR. is_time_restart()) THEN
-
-      ! Iterate over tiles
-      tile => model%Get_top_tile()
-      IF (.NOT. ASSOCIATED(tile)) CALL finish(TRIM(routine), 'Top tile not set')
-
-      DO WHILE (ASSOCIATED(tile))
-
-        IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
-          tile => model%Goto_next_tile()
-          CYCLE
-        END IF
-
-        ! Read carbon pools from file
-        IF (dsl4jsb_Config(CARBON_)%read_cpools) THEN
-          IF  (one_of(tile%process_action(CARBON_), &
-            &         (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0 &
-            & ) THEN                                      ! R: cpool file also contains aggregated tiles!
-            CALL carbon_start_cpools(tile)
-          END IF
-        END IF
-
-        tile => model%Goto_next_tile()
-      END DO
-
-    END IF ! start or restart of experiment
-    !
-    !-----------------------------------
 
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
 
@@ -626,7 +386,7 @@ CONTAINS
     TYPE(t_jsb_model),          POINTER :: model
     CLASS(t_jsb_tile_abstract),  POINTER :: tile
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsbach_finish_timestep'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_finish_timestep'
 
     INTEGER :: no_omp_thread
 

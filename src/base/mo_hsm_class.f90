@@ -515,7 +515,7 @@ CONTAINS
     CLASS(t_Message), INTENT(in),   POINTER :: msg
     CLASS(t_Message), POINTER       :: return_ptr
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Process_message_state'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Process_message_state'
 
     INTEGER :: no_omp_thread
 
@@ -730,7 +730,7 @@ CONTAINS
     INTEGER,      INTENT(in) :: path(:)
     CLASS(t_State), POINTER  :: return_ptr
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_state_hsm'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Get_state_hsm'
 
     INTEGER :: depth, i, j
 
@@ -765,7 +765,7 @@ CONTAINS
 
     LOGICAL :: l_debug
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Goto_state_hsm'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Goto_state_hsm'
 
     INTEGER :: no_omp_thread
 
@@ -805,7 +805,7 @@ CONTAINS
 
     CLASS(t_State), POINTER :: sstate, tstate
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_levels_to_LCA_hsm'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Get_levels_to_LCA_hsm'
 
     INTEGER :: no_omp_thread
 
@@ -845,7 +845,7 @@ CONTAINS
     CLASS(t_Hsm),   INTENT(inout)      :: this
     CLASS(t_State), INTENT(in), TARGET :: that
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Start_state_hsm'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Start_state_hsm'
 
     INTEGER :: no_omp_thread
 
@@ -872,7 +872,7 @@ CONTAINS
     CLASS(t_Message), POINTER :: start_msg, entry_msg
     CLASS(t_Message), POINTER :: tmp_msg
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Start_hsm'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Start_hsm'
 
     INTEGER :: no_omp_thread
 
@@ -935,7 +935,7 @@ CONTAINS
     !CLASS(t_Hsm),     POINTER :: hsm
     LOGICAL :: l_debug
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Process_message_hsm'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Process_message_hsm'
 
     INTEGER :: no_omp_thread
 
@@ -1085,7 +1085,7 @@ CONTAINS
     TYPE(t_State_p) :: entrypath(MAX_STATE_NESTING)
     INTEGER         :: i, j
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Process_entry_to_next'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Process_entry_to_next'
 
     INTEGER :: no_omp_thread
 
@@ -1144,7 +1144,7 @@ CONTAINS
     CLASS(t_State),   POINTER :: state
     INTEGER                   :: i
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Process_exit_to_lca'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Process_exit_to_lca'
 
     INTEGER :: no_omp_thread
 
@@ -1201,7 +1201,7 @@ CONTAINS
     INTEGER :: i
     LOGICAL :: l_debug
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Register_action_hsm'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Register_action_hsm'
 
     l_debug = .FALSE.
     IF (PRESENT(debug)) l_debug = debug
@@ -1227,7 +1227,7 @@ CONTAINS
 
     INTEGER :: i
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_action_hsm'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Get_action_hsm'
 
     !return_ptr => NULL()
 
@@ -1251,7 +1251,7 @@ CONTAINS
 
     INTEGER :: i
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Print_actions_hsm'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Print_actions_hsm'
 
     message_text = "State machine actions:"
     DO i=1,MAX_ACTIONS

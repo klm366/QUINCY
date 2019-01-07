@@ -11,6 +11,15 @@
 MODULE mo_jsb_model_init
 #ifndef __NO_JSBACH__
 
+  dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, FUEL_
+  dsl4jsb_Use_config(PHENO_)
+  dsl4jsb_Use_config(SSE_)
+  dsl4jsb_Use_config(HYDRO_)
+  dsl4jsb_Use_config(RAD_)
+  dsl4jsb_Use_config(CARBON_)
+  dsl4jsb_Use_config(DISTURB_)
+  dsl4jsb_Use_config(FUEL_)
+
   USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_control,      ONLY: get_no_of_models, debug_on
   USE mo_jsb_model_class,  ONLY: t_jsb_model
@@ -22,7 +31,7 @@ MODULE mo_jsb_model_init
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: jsbach_setup_grid, jsbach_init
+  PUBLIC :: jsbach_setup_grid, jsbach_init, jsbach_init_after_restart
 
   INTERFACE jsbach_setup_grid
     MODULE PROCEDURE setup_grid_standalone
@@ -55,7 +64,7 @@ CONTAINS
     TYPE(t_jsb_grid),   POINTER  :: grid
     TYPE(pe_decomposed) :: decomposition
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':setup_grid_standalone'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':setup_grid_standalone'
 
     INTEGER :: nlon, nlat
 
@@ -108,7 +117,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: grid
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':setup_grid_patch'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':setup_grid_patch'
 
     IF (patch%id < 0) &
       CALL finish(TRIM(routine), 'Improper call with invalid patch')
@@ -140,7 +149,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: grid
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':setup_grid_decomposition'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':setup_grid_decomposition'
 
     IF (decomposition%nlon < 0) &
       CALL finish(TRIM(routine), 'Improper call with invalid decomposition')
@@ -166,7 +175,6 @@ CONTAINS
     USE mo_jsb_model_class,     ONLY: print_model
     USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
     USE mo_jsb_lct_class,       ONLY: Contains_lct
-    USE mo_jsb_lctlib_class,    ONLY: Read_lctlib
     USE mo_seb_init,            ONLY: seb_init
     USE mo_turb_init,           ONLY: turb_init
     USE mo_sse_init,            ONLY: sse_init
@@ -182,15 +190,6 @@ CONTAINS
 #endif
     USE mo_jsb_io,              ONLY: cdiDefMissval, missval
     USE mo_util,                ONLY: one_of
-
-    dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, FUEL_
-    dsl4jsb_Use_config(PHENO_)
-    dsl4jsb_Use_config(SSE_)
-    dsl4jsb_Use_config(HYDRO_)
-    dsl4jsb_Use_config(RAD_)
-    dsl4jsb_Use_config(CARBON_)
-    dsl4jsb_Use_config(DISTURB_)
-    dsl4jsb_Use_config(FUEL_)
 
     INTEGER, INTENT(in) :: model_id
 
@@ -208,7 +207,7 @@ CONTAINS
     dsl4jsb_Def_config(DISTURB_)
     dsl4jsb_Def_config(FUEL_)
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':jsbach_init'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_init'
 
     no_omp_thread = Get_omp_thread()
 
@@ -219,9 +218,6 @@ CONTAINS
     CALL cdiDefMissval(missval)
 
     model => Get_model(model_id)
-
-    model%lctlib => Read_lctlib('lctlib_nlct21.def')
-    CALL message(TRIM(routine), 'Imported lctlib from '//'lctlib_nlct21.def')
 
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_config(SSE_)
@@ -486,6 +482,60 @@ CONTAINS
     END IF
 
   END SUBROUTINE jsbach_init
+
+  SUBROUTINE jsbach_init_after_restart(model_id)
+
+    USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
+    USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
+    USE mo_jsb_lct_class,       ONLY: Contains_lct
+    USE mo_carbon_init,         ONLY: carbon_read_cpools
+    USE mo_util,                ONLY: one_of
+
+    INTEGER, INTENT(in) :: model_id
+
+    TYPE(t_jsb_model), POINTER  :: model
+    CLASS(t_jsb_tile_abstract), POINTER :: tile, child
+    INTEGER                             :: iproc, ilct, jlct, i, no_children
+    REAL(wp), ALLOCATABLE               :: fract_tmp(:,:)
+    INTEGER                             :: no_omp_thread
+
+    dsl4jsb_Def_config(CARBON_)
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_init_after_restart'
+
+    no_omp_thread = Get_omp_thread()
+
+    IF (.NOT. Is_omp_inside_serial()) THEN
+      CALL finish(TRIM(routine), 'Should not be called within parallel OMP region')
+    END IF
+
+    model => Get_model(model_id)
+
+    dsl4jsb_Get_config(CARBON_)
+
+    ! Iterate over tiles and call initialization if necessary
+    CALL model%Reset_tiles()
+    tile => model%Get_top_tile()
+    IF (.NOT. ASSOCIATED(tile)) &
+      & CALL finish(TRIM(routine), 'Top tile not set')
+
+    DO WHILE (ASSOCIATED(tile))
+
+      IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
+        tile => model%Goto_next_tile()
+        CYCLE
+      END IF
+
+      ! TBD: Loop over processes instead of explicit
+      IF (one_of(tile%process_action(CARBON_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        IF (dsl4jsb_Config(CARBON_)%read_cpools) CALL carbon_read_cpools(tile)
+      END IF
+
+      tile => model%Goto_next_tile()
+
+    END DO
+
+  END SUBROUTINE jsbach_init_after_restart
 
 #endif
 END MODULE mo_jsb_model_init

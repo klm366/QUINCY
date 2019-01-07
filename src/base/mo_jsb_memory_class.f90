@@ -86,7 +86,7 @@ CONTAINS
 
     INTEGER :: i
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_var_real2d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Get_var_real2d'
 
     IF (.NOT. ASSOCIATED(this%vars(1)%p)) CALL finish(TRIM(routine), 'Invalid vector of vars')
 
@@ -115,7 +115,7 @@ CONTAINS
 
     INTEGER :: i
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_var_real3d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Get_var_real3d'
 
     var_ptr => NULL()
     DO i=1,this%no_of_vars
@@ -142,7 +142,7 @@ CONTAINS
 
     INTEGER :: i
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_var_position'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Get_var_position'
 
     IF (.NOT. ASSOCIATED(this%vars(1)%p)) CALL finish(TRIM(routine), 'Invalid vector of vars')
 
@@ -173,7 +173,7 @@ CONTAINS
 
     INTEGER :: i
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Collect_var_real2d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Collect_var_real2d'
 
     ALLOCATE(var_collected(ice-ics+1,no_children))
 
@@ -194,7 +194,7 @@ CONTAINS
 
     INTEGER :: i !, iproc
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Collect_var_real3d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Collect_var_real3d'
 
     ALLOCATE(var_collected(ice - ics + 1, &
       &                    SIZE(this%children(1)%p%vars(var%child_idx(1))%p%field, DIM=2), &
@@ -218,7 +218,7 @@ CONTAINS
 
     INTEGER :: i !, iproc
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':HandDown_var_real3d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':HandDown_var_real3d'
 
     DO i=1,no_children
       this%children(i)%p%vars(var%child_idx(i))%p%field(ics:ice, iblk, 1, 1, 1) = var_handdown(:,i)
@@ -240,7 +240,7 @@ CONTAINS
     ! local variables
     INTEGER :: i 
     REAL(wp), allocatable               :: var_collected(:,:)
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Average_over_children'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Average_over_children'
 
     ! Collect corresponding vars of subtiles
     DO i=1,no_children

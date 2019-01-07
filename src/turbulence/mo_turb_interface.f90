@@ -91,10 +91,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_surface_roughness::return_ptr)
-
-    return_ptr%name = 'surface_roughness'
-    return_ptr%process_id = TURB_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='surface_roughness', process_id=TURB_, owner_model_id=model_id)
 
   END FUNCTION Create_task_surface_roughness
 
@@ -110,10 +107,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_humidity_scaling::return_ptr)
-
-    return_ptr%name = 'humidity_scaling'
-    return_ptr%process_id = TURB_
-    return_ptr%owner_model_id = model_id
+    CALL return_ptr%Construct(name='humidity_scaling', process_id=TURB_, owner_model_id=model_id)
 
   END FUNCTION Create_task_humidity_scaling
 
@@ -163,7 +157,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_roughness'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_roughness'
 
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -224,7 +218,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_roughness'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_roughness'
 
     ! Local variables
     INTEGER  :: iblk, ics, ice, nc
@@ -312,7 +306,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_humidity_scaling'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_humidity_scaling'
 
     ! Get local variables from options argument
     iblk = options%iblk
@@ -449,7 +443,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':aggregate_humidity_scaling'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_humidity_scaling'
 
     ! Local variables
     INTEGER  :: iblk, ics, ice, nc

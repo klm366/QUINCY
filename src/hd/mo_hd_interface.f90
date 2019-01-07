@@ -72,12 +72,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_hd_local_outflow::return_ptr)
-
-    return_ptr%name = 'hd_local_outflow'
-    return_ptr%process_id = HD_
-    return_ptr%owner_model_id = model_id
-    ! !!$    return_ptr%Integrate => update_radiation_surface
-    ! !!$    return_ptr%Aggregate => aggregate_radiation_surface
+    CALL return_ptr%Construct(name='hd_local_outflow', process_id=HD_, owner_model_id=model_id)
 
   END FUNCTION Create_task_hd_local_outflow
 
@@ -126,7 +121,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_hd'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_hd'
 
     CHARACTER(len=32) :: routing_scheme
 
@@ -252,7 +247,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*),  PARAMETER  :: routine = TRIM(modname)//':hd_lateral_flow'
+    CHARACTER(len=*),  PARAMETER  :: routine = modname//':hd_lateral_flow'
 
     ! Pointers to variables in memory
     REAL(wp), POINTER :: area(:,:)
@@ -504,7 +499,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*),  PARAMETER  :: routine = TRIM(modname)//':hd_check_water_budget'
+    CHARACTER(len=*),  PARAMETER  :: routine = modname//':hd_check_water_budget'
 
     INTEGER :: nres_o_max, nres_b_max, nres_r_max
     INTEGER :: nproma, nblks

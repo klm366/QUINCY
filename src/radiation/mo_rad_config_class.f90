@@ -103,7 +103,7 @@ CONTAINS
 
     INTEGER :: nml_handler, nml_unit, istat
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_rad_config'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_rad_config'
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting radiation configuration')
 
@@ -116,7 +116,7 @@ CONTAINS
     use_alb_soil_organic_C    = ''
     use_alb_soil_litter       = .FALSE.
     use_alb_soil_scheme       = .FALSE.
-    use_alb_canopy            = .TRUE.
+    use_alb_canopy            = .FALSE.
     albedo_age_weight         = 0.5_wp
 
     ! Read namelist

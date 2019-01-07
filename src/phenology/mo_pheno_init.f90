@@ -43,7 +43,7 @@ CONTAINS
     ! Local variables
     TYPE(t_jsb_model), POINTER  :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':pheno_init'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init'
 
     ! Declare pointers for process configuration and memory
     dsl4jsb_Def_memory(PHENO_)
@@ -78,7 +78,7 @@ CONTAINS
 
     TYPE(t_input_file) :: input_file
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':pheno_init_bc'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_bc'
 
     model => get_model(tile%owner_model_id)
 
@@ -113,8 +113,8 @@ CONTAINS
     ! Forest fraction
     ! @todo: only used for use_alb_veg_simple=.TRUE.
     IF (debug_on()) CALL message(TRIM(routine), 'reading forest_fract ...')
-    ptr_2D => input_file%Read_2d(        &
-      & variable_name='forest_fract',            &
+    ptr_2D => input_file%Read_2d(      &
+      & variable_name='forest_fract',  &
       & fill_array = dsl4jsb_var_ptr(PHENO_, fract_forest))
     dsl4jsb_var2D_onDomain(PHENO_, fract_forest) = &
       MERGE(dsl4jsb_var2D_onDomain(PHENO_, fract_forest), 0._wp, dsl4jsb_var2D_onDomain(PHENO_, fract_forest) >= 0._wp)
@@ -125,8 +125,8 @@ CONTAINS
 
     ! Maximum foliage projected cover
     IF (debug_on()) CALL message(TRIM(routine), 'reading veg_ratio_max ...')
-    ptr_2D => input_file%Read_2d(        &
-      & variable_name='veg_ratio_max',           &
+    ptr_2D => input_file%Read_2d(      &
+      & variable_name='veg_ratio_max', &
       & fill_array = dsl4jsb_var_ptr(PHENO_, fract_fpc_max))
 
     dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max) = &
@@ -163,7 +163,7 @@ CONTAINS
     REAL(wp) :: wgt1, wgt2
     INTEGER  :: nmw1,nmw2
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':pheno_init_ic'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_ic'
 
     model => get_model(tile%owner_model_id)
 

@@ -109,7 +109,7 @@ CONTAINS
 
     TYPE(t_jsb_grid), POINTER       :: new
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':new_grid_from_host'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':new_grid_from_host'
 
     ! CALL message(TRIM(routine), 'starting construction of new JSBACH grid instance from host model')
 
@@ -151,17 +151,6 @@ CONTAINS
     new%lsm(:,:) = .TRUE.
     new%lsf(:,:) = 1.0_wp
 
-!!$    ALLOCATE(new%patch)
-!!$    new%patch%id = patch%id
-!!$    new%patch%n_patch_cells = patch%n_patch_cells
-!!$    new%patch%n_patch_cells_g = patch%n_patch_cells_g
-!!$    new%patch%nblks_c = patch%nblks_c
-!!$    new%patch%npromz_c = patch%npromz_c
-!!$    new%patch%grid_filename = patch%grid_filename
-!!$    new%patch%comm_pat_gather_c = patch%comm_pat_gather_c
-!!$    new%patch%cells%glb_index = patch%cells%glb_index
-
-
     new%configured = .TRUE.
 
     grid => new
@@ -172,8 +161,8 @@ CONTAINS
 
   FUNCTION new_grid_from_file(filename, name) RESULT(grid)
 
-!!$    USE mo_jsb_io_netcdf,      ONLY: ncfile_has_dim
-    USE mo_jsb_parallel, ONLY: my_process_is_stdio, p_io, p_bcast, mpi_comm
+    ! USE mo_jsb_io_netcdf,      ONLY: ncfile_has_dim
+    ! USE mo_jsb_parallel, ONLY: my_process_is_stdio
 
     CHARACTER(LEN=*), INTENT(in)    :: filename
     CHARACTER(LEN=*), INTENT(in)    :: name
@@ -181,7 +170,7 @@ CONTAINS
 
     TYPE(t_jsb_grid), POINTER       :: new
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':new_grid_from_file'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':new_grid_from_file'
 
     CALL message(TRIM(routine), 'starting construction of new JSBACH grid instance from file:')
     CALL message('     ', TRIM(filename))
@@ -193,17 +182,15 @@ CONTAINS
     new%name = name
     new%filename = filename
 
-!!$    IF (my_process_is_stdio()) THEN
-!!$
-!!$      IF (ncfile_has_dim(TRIM(filename), 'lon_cell_centre')) THEN
-!!$        ! ICON grid
-!!$      ELSE
-!!$        ! ECHAM grid
-!!$      END IF
-!!$
-!!$    END IF
+    ! IF (my_process_is_stdio()) THEN
 
-    !CALL p_bcast(, p_io, mpi_comm)
+    !   IF (ncfile_has_dim(TRIM(filename), 'lon_cell_centre')) THEN
+    !     ! ICON grid
+    !   ELSE
+    !     ! ECHAM grid
+    !   END IF
+
+    ! END IF
 
     new%configured = .TRUE.
 
@@ -221,7 +208,7 @@ CONTAINS
 
     TYPE(t_jsb_grid), POINTER       :: new
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':new_grid_from_lonlat'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':new_grid_from_lonlat'
 
     ALLOCATE(new)
 
@@ -237,7 +224,7 @@ CONTAINS
     TYPE(t_jsb_grid), POINTER :: self
 #endif
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':delete_grid'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':delete_grid'
 
     CALL message(TRIM(routine), 'starting destruction of JSBACH grid instance.')
 
@@ -261,7 +248,7 @@ CONTAINS
 
     CLASS(t_jsb_grid), INTENT(in) :: this
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Print_grid'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Print_grid'
 
     CALL message(TRIM(routine), 'print JSBACH grid description')
 
@@ -293,7 +280,7 @@ CONTAINS
     TYPE(t_jsb_grid), POINTER             :: self
 #endif
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_nblks'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_nblks'
 
     get_nblks = self%nblks
 
@@ -307,7 +294,7 @@ CONTAINS
     TYPE(t_jsb_grid), POINTER             :: self
 #endif
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_nproma'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_nproma'
 
     get_nproma = self%nproma
 
@@ -319,7 +306,7 @@ CONTAINS
 
     TYPE(t_jsb_grid), INTENT(in) :: grid
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_blk_start'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_blk_start'
 
     IF (grid%patch%id >= 0) THEN
       get_blk_start = get_blk_start_domain(patch=grid%patch)
@@ -337,7 +324,7 @@ CONTAINS
 
     TYPE(t_jsb_grid), INTENT(in) :: grid
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_blk_end'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_blk_end'
 
     IF (grid%patch%id >= 0) THEN
       get_blk_end = get_blk_end_domain(patch=grid%patch)
@@ -356,7 +343,7 @@ CONTAINS
     INTEGER,          INTENT(in) :: iblk
     TYPE(t_jsb_grid), INTENT(in) :: grid
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_col_start'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_col_start'
 
     IF (grid%patch%id >= 0) THEN
       get_col_start = get_col_start_domain(iblk, patch=grid%patch)
@@ -375,7 +362,7 @@ CONTAINS
     INTEGER,          INTENT(in) :: iblk
     TYPE(t_jsb_grid), INTENT(in) :: grid
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_col_end'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_col_end'
 
     IF (grid%patch%id >= 0) THEN
       get_col_end = get_col_end_domain(iblk, patch=grid%patch)
@@ -404,7 +391,7 @@ CONTAINS
 
     INTEGER :: i, idx
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':new_vgrid'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':new_vgrid'
 
     IF (TRIM(name) == '') CALL finish(TRIM(routine), 'Must specify axis name')
     IF (length < 1) CALL finish(TRIM(routine), TRIM(name)//' - length < 1')
@@ -525,7 +512,7 @@ CONTAINS
 
     INTEGER :: i, idx
 
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':delete_vgrid'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':delete_vgrid'
 
     IF (self%id == 0) RETURN
 
