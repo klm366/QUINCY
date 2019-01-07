@@ -1088,11 +1088,12 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Add_element_variables_to_memory(this, prefix, suffix, lct_ids, model_id, unit)
 
-    USE mo_slm_varlist,       ONLY: jsb_add_var
-    USE mo_jsb_io,            ONLY: grib_bits
-    USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2
+!    USE mo_jsb_varlist,       ONLY: t_jsb_varlist, jsb_add_var
+    USE mo_slm_varlist,       ONLY: jsb_add_var   ! replace by mo_jsb_varlist later    *slmtemp
+    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2   ! , TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
-    USE mo_jsb_model_class,   ONLY: t_jsb_model
+    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
+!    USE mo_jsb_model_class,   ONLY: t_jsb_model
     
     IMPLICIT NONE
     ! ---------------------------
@@ -1105,20 +1106,27 @@ CONTAINS
     CHARACTER(len=*),                INTENT(in)    :: unit            !> unit of the variables in the elements
     ! ---------------------------
     ! 0.2 Local
+!    TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: hgrid                        ! Horizontal grid
-    TYPE(t_jsb_vgrid), POINTER  :: surface                      ! Vertical grid
+    TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_sb                ! Vertical grid
     INTEGER                     :: table
     CHARACTER(len=50)           :: var_name
     CHARACTER(len=100)          :: var_name_long
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Add_element_variables_to_memory'
-    table = 1
+    ! ---------------------------
+    ! 0.5 Get Memory
+!    model         => Get_model(model_id)
+    table         = 1     ! in jsbach4 this line is: table = tables(1)     *slmtemp
+!    hgrid         => Get_grid(mem%grid_id)
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
 
 
-    ! run add_var()
+    !> 1.0 run add_var()
+    !! 
     var_name      = TRIM(this%name)//'_carbon'
     var_name_long = 'Carbon in soil biogeochemistry '//TRIM(this%name)
     CALL jsb_add_var(this, TRIM(var_name), this%carbon, &
-          hgrid, surface, &
+          hgrid, vgrid_soil_sb, &
           t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
           t_grib1(table, 255, grib_bits), &
           t_grib2(255, 255, 255, grib_bits), &
@@ -1127,7 +1135,7 @@ CONTAINS
     var_name      = TRIM(this%name)//'_nitrogen'
     var_name_long = 'Nitrogen in soil biogeochemistry '//TRIM(this%name)
     CALL jsb_add_var(this, TRIM(var_name), this%nitrogen, &
-          hgrid, surface, &
+          hgrid, vgrid_soil_sb, &
           t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
           t_grib1(table, 255, grib_bits), &
           t_grib2(255, 255, 255, grib_bits), &
@@ -1136,7 +1144,7 @@ CONTAINS
     var_name      = TRIM(this%name)//'_phosphorus'
     var_name_long = 'Phosphorus in soil biogeochemistry '//TRIM(this%name)
     CALL jsb_add_var(this, TRIM(var_name), this%phosphorus, &
-          hgrid, surface, &
+          hgrid, vgrid_soil_sb, &
           t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
           t_grib1(table, 255, grib_bits), &
           t_grib2(255, 255, 255, grib_bits), &
@@ -1145,7 +1153,7 @@ CONTAINS
     var_name      = TRIM(this%name)//'_carbon13'
     var_name_long = 'Carbon13 in soil biogeochemistry '//TRIM(this%name)
     CALL jsb_add_var(this, TRIM(var_name), this%carbon13, &
-          hgrid, surface, &
+          hgrid, vgrid_soil_sb, &
           t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
           t_grib1(table, 255, grib_bits), &
           t_grib2(255, 255, 255, grib_bits), &
@@ -1154,7 +1162,7 @@ CONTAINS
     var_name      = TRIM(this%name)//'_carbon14'
     var_name_long = 'Carbon14 in soil biogeochemistry '//TRIM(this%name)
     CALL jsb_add_var(this, TRIM(var_name), this%carbon14, &
-          hgrid, surface, &
+          hgrid, vgrid_soil_sb, &
           t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
           t_grib1(table, 255, grib_bits), &
           t_grib2(255, 255, 255, grib_bits), &
@@ -1163,7 +1171,7 @@ CONTAINS
     var_name      = TRIM(this%name)//'_nitrogen15'
     var_name_long = 'Nitrogen15 in soil biogeochemistry '//TRIM(this%name)
     CALL jsb_add_var(this, TRIM(var_name), this%nitrogen15, &
-          hgrid, surface, &
+          hgrid, vgrid_soil_sb, &
           t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
           t_grib1(table, 255, grib_bits), &
           t_grib2(255, 255, 255, grib_bits), &
@@ -1178,11 +1186,12 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Add_pool_elements_to_memory(this, prefix, suffix, lct_ids, model_id, unit)
   
-    USE mo_slm_varlist,       ONLY: jsb_add_var
-    USE mo_jsb_io,            ONLY: grib_bits
-    USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2
+!    USE mo_jsb_varlist,       ONLY: t_jsb_varlist, jsb_add_var
+    USE mo_slm_varlist,       ONLY: jsb_add_var   ! replace by mo_jsb_varlist later    *slmtemp
+    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2   ! , TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
-    USE mo_jsb_model_class,   ONLY: t_jsb_model
+    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
+!    USE mo_jsb_model_class,   ONLY: t_jsb_model
   
     IMPLICIT NONE
     ! ---------------------------
@@ -1195,20 +1204,25 @@ CONTAINS
     CHARACTER(len=*),                INTENT(in)    :: unit            !> unit of the variables in the elements
     ! ---------------------------
     ! 0.2 Local
+!    TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: hgrid                        ! Horizontal grid
-    TYPE(t_jsb_vgrid), POINTER  :: surface                      ! Vertical grid
+    TYPE(t_jsb_vgrid), POINTER  :: vgrid_surface                ! Vertical grid
     INTEGER                     :: table
     CHARACTER(len=40)           :: element_name
     CHARACTER(len=80)           :: element_name_long    
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Add_pool_elements_to_memory'
-    table = 1
-  
-  
-    ! run add_var()
+!    model         => Get_model(model_id)
+    table         = 1     ! in jsbach4 this line is: table = tables(1)     *slmtemp
+!    hgrid         => Get_grid(mem%grid_id)
+    vgrid_surface => Get_vgrid('surface')
+
+    
+    !> 1.0 run add_var()
+    !! 
     element_name      = TRIM(this%name)//'_dom'
     element_name_long = 'Dissolved organic matter element of SB'//TRIM(this%name)
     CALL jsb_add_var(this, TRIM(element_name), this%dom, &
-          hgrid, surface, &
+          hgrid, vgrid_surface, &
           t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
           t_grib1(table, 255, grib_bits), &
           t_grib2(255, 255, 255, grib_bits), &
@@ -1216,7 +1230,7 @@ CONTAINS
     element_name      = TRIM(this%name)//'_dom_assoc'
     element_name_long = 'Minerally associated disolved organic matter element of SB'//TRIM(this%name)
     CALL jsb_add_var(this, TRIM(element_name), this%dom_assoc, &
-          hgrid, surface, &
+          hgrid, vgrid_surface, &
           t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
           t_grib1(table, 255, grib_bits), &
           t_grib2(255, 255, 255, grib_bits), &
@@ -1224,7 +1238,7 @@ CONTAINS
     element_name      = TRIM(this%name)//'_soluable_litter'
     element_name_long = 'Metabolic litter (sugars, cellulose etc.) element of SB'//TRIM(this%name)
     CALL jsb_add_var(this, TRIM(element_name), this%soluable_litter, &
-          hgrid, surface, &
+          hgrid, vgrid_surface, &
           t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
           t_grib1(table, 255, grib_bits), &
           t_grib2(255, 255, 255, grib_bits), &
@@ -1232,7 +1246,7 @@ CONTAINS
     element_name      = TRIM(this%name)//'_polymeric_litter'
     element_name_long = 'Structural litter (lignified litter) element of SB'//TRIM(this%name)
     CALL jsb_add_var(this, TRIM(element_name), this%polymeric_litter, &
-          hgrid, surface, &
+          hgrid, vgrid_surface, &
           t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
           t_grib1(table, 255, grib_bits), &
           t_grib2(255, 255, 255, grib_bits), &
@@ -1240,7 +1254,7 @@ CONTAINS
     element_name      = TRIM(this%name)//'_woody_litter'
     element_name_long = 'Physically protected wood litter element of SB'//TRIM(this%name)
     CALL jsb_add_var(this, TRIM(element_name), this%woody_litter, &
-          hgrid, surface, &
+          hgrid, vgrid_surface, &
           t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
           t_grib1(table, 255, grib_bits), &
           t_grib2(255, 255, 255, grib_bits), &
@@ -1248,7 +1262,7 @@ CONTAINS
     element_name      = TRIM(this%name)//'_fungi'
     element_name_long = 'Saprophytic fungal biomass element of SB'//TRIM(this%name)
     CALL jsb_add_var(this, TRIM(element_name), this%fungi, &
-          hgrid, surface, &
+          hgrid, vgrid_surface, &
           t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
           t_grib1(table, 255, grib_bits), &
           t_grib2(255, 255, 255, grib_bits), &
@@ -1256,7 +1270,7 @@ CONTAINS
     element_name      = TRIM(this%name)//'_mycorrhiza'
     element_name_long = 'Mycorrhizal fungal biomass element of SB'//TRIM(this%name)
     CALL jsb_add_var(this, TRIM(element_name), this%mycorrhiza, &
-          hgrid, surface, &
+          hgrid, vgrid_surface, &
           t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
           t_grib1(table, 255, grib_bits), &
           t_grib2(255, 255, 255, grib_bits), &
@@ -1264,7 +1278,7 @@ CONTAINS
     element_name      = TRIM(this%name)//'_microbial'
     element_name_long = 'Microbial biomass (bacteria) element of SB'//TRIM(this%name)
     CALL jsb_add_var(this, TRIM(element_name), this%microbial, &
-          hgrid, surface, &
+          hgrid, vgrid_surface, &
           t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
           t_grib1(table, 255, grib_bits), &
           t_grib2(255, 255, 255, grib_bits), &
@@ -1272,7 +1286,7 @@ CONTAINS
     element_name      = TRIM(this%name)//'_residue'
     element_name_long = 'Necromass of fungi, microbial and mycorrhiza element of SB'//TRIM(this%name)
     CALL jsb_add_var(this, TRIM(element_name), this%residue, &
-          hgrid, surface, &
+          hgrid, vgrid_surface, &
           t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
           t_grib1(table, 255, grib_bits), &
           t_grib2(255, 255, 255, grib_bits), &
@@ -1280,7 +1294,7 @@ CONTAINS
     element_name      = TRIM(this%name)//'_residue_assoc'
     element_name_long = 'Minerally associated microbial necromass element of SB'//TRIM(this%name)
     CALL jsb_add_var(this, TRIM(element_name), this%residue_assoc, &
-          hgrid, surface, &
+          hgrid, vgrid_surface, &
           t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
           t_grib1(table, 255, grib_bits), &
           t_grib2(255, 255, 255, grib_bits), &
@@ -1296,40 +1310,39 @@ CONTAINS
   SUBROUTINE Init_sb_memory(mem, prefix, suffix, lct_ids, model_id)
 
 !    USE mo_jsb_varlist,       ONLY: t_jsb_varlist, jsb_add_var
-    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2    !, TSTEP_CONSTANT, tables
+    USE mo_slm_varlist,       ONLY: jsb_add_var   ! replace by mo_jsb_varlist later    *slmtemp
+    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2   ! , TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
-!    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
+    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
     USE mo_jsb_model_class,   ONLY: t_jsb_model
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1.InOut
-    CLASS(t_sb_memory), INTENT(inout), TARGET :: mem             !> soil memory
-    CHARACTER(len=*),   INTENT(in)            :: prefix          !> process name
-    CHARACTER(len=*),   INTENT(in)            :: suffix          !> tile name
-    INTEGER,            INTENT(in)            :: lct_ids !(:)    !> in jsbach4: vector of land cover type IDs
-    INTEGER,            INTENT(in)            :: model_id        !> model ID model\%id
+    CLASS(t_sb_memory),   INTENT(inout), TARGET :: mem             !> SB_ memory
+    CHARACTER(len=*),     INTENT(in)            :: prefix          !> process name
+    CHARACTER(len=*),     INTENT(in)            :: suffix          !> tile name
+    INTEGER,              INTENT(in)            :: lct_ids !(:)    !> in jsbach4: vector of land cover type IDs
+    INTEGER,              INTENT(in)            :: model_id        !> model ID model\%id
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: hgrid                        ! Horizontal grid
-!    TYPE(t_jsb_vgrid), POINTER  :: soil_layer                  ! Vertical grid
-    TYPE(t_jsb_vgrid), POINTER  :: surface                      ! Vertical grid
-    INTEGER :: table
+    TYPE(t_jsb_vgrid), POINTER  :: vgrid_surface                ! Vertical grid
+    TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_sb                ! Vertical grid
+    INTEGER                     :: table
     CHARACTER(len=30)           :: unit_sb_pool
     CHARACTER(len=30)           :: unit_sb_flux
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_sb_memory'
-
-
-    model => Get_model(model_id)
-!    table = tables(1)
-    table = 1
-!    hgrid   => Get_grid(mem%grid_id)
-!    surface => Get_vgrid('surface')
-!    soil_layer => Get_vgrid('soil_layer')
+    ! ---------------------------
+    ! 0.5 Get Memory
+    model         => Get_model(model_id)
+    table         = 1     ! in jsbach4 this line is: table = tables(1)     *slmtemp
+!    hgrid         => Get_grid(mem%grid_id)
+    vgrid_surface => Get_vgrid('surface')
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
     unit_sb_pool = "mol m-3"
     unit_sb_flux = "mol m-3 timestep-1"
-
 
 
     !> 1.0 sb memory init
@@ -1342,7 +1355,7 @@ CONTAINS
       !! soil\%VAR
       !!  
       CALL jsb_add_var(mem, 'nh4_solute', mem%nh4_solute, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('nh4_solute', 'mol m-3', 'ammonium in soil solution'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1350,7 +1363,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'nh4_assoc', mem%nh4_assoc, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('nh4_assoc', 'mol m-3', 'minerally associated ammonium'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1358,7 +1371,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'no3_solute', mem%no3_solute, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('no3_solute', 'mol m-3', 'nitrate in soil solution'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1366,7 +1379,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'noy', mem%noy, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('noy', 'mol m-3', 'NO_y'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1374,7 +1387,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'n2o', mem%n2o, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('n2o', 'mol m-3', 'N2O'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1382,7 +1395,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'n2', mem%n2, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('n2', 'mol m-3', 'N2'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1390,7 +1403,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'nh4_n15_solute', mem%nh4_n15_solute, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('nh4_n15_solute', 'mol m-3', 'N15-ammonium in soil solution'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1398,7 +1411,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'nh4_n15_assoc', mem%nh4_n15_assoc, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('nh4_n15_assoc', 'mol m-3', 'minerally associated N15-ammonium'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1406,7 +1419,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'no3_n15_solute', mem%no3_n15_solute, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('no3_n15_solute', 'mol m-3', 'N15-nitrate in soil solution'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1414,7 +1427,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'noy_n15', mem%noy_n15, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('noy_n15', 'mol m-3', 'N15-NO_y'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1422,7 +1435,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'n2o_n15', mem%n2o_n15, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('n2o_n15', 'mol m-3', 'N15-N2O'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1430,7 +1443,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'n2_n15', mem%n2_n15, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('n2_n15', 'mol m-3', 'N15-N2'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1438,7 +1451,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'po4_assoc_fast', mem%po4_assoc_fast, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('po4_assoc_fast', 'mol m-3', 'fast minerally associated phosphate'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1446,7 +1459,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'po4_assoc_slow', mem%po4_assoc_slow, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('po4_assoc_slow', 'mol m-3', 'slow minerally associated phosphate'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1454,7 +1467,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'po4_occluded', mem%po4_occluded, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('po4_occluded', 'mol m-3', 'occluded phosphate'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1462,7 +1475,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'po4_primary', mem%po4_primary, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('po4_primary', 'mol m-3', 'primary phosphate mineral'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1470,7 +1483,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'po4_solute', mem%po4_solute, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('po4_solute', 'mol m-3', 'phophate in soil solution'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1478,7 +1491,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'transport_nh4_solute', mem%transport_nh4_solute, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('transport_nh4_solute', 'mol m-3 timestep-1', 'transport of ammonium in soil solution'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1486,7 +1499,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'transport_nh4_assoc', mem%transport_nh4_assoc, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('transport_nh4_assoc', 'mol m-3 timestep-1', 'transport of minerally associated ammonium'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1494,7 +1507,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'transport_no3_solute', mem%transport_no3_solute, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('transport_no3_solute', 'mol m-3 timestep-1', 'transport of nitrate in soil solution'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1502,7 +1515,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'transport_noy', mem%transport_noy, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('transport_noy', 'mol m-3 timestep-1', 'transport of NO_y'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1510,7 +1523,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'transport_n2o', mem%transport_n2o, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('transport_n2o', 'mol m-3 timestep-1', 'transport of N2O'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1518,7 +1531,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'transport_n2', mem%transport_n2, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('transport_n2', 'mol m-3 timestep-1', 'transport of N2'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1526,7 +1539,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'transport_nh4_n15_solute', mem%transport_nh4_n15_solute, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('transport_nh4_n15_solute', 'mol m-3 timestep-1', 'transport of N15-ammonium in soil solution'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1534,7 +1547,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'transport_nh4_n15_assoc', mem%transport_nh4_n15_assoc, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('transport_nh4_n15_assoc', 'mol m-3 timestep-1', 'transport of minerally associated N15-ammonium'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1542,7 +1555,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'transport_no3_n15_solute', mem%transport_no3_n15_solute, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('transport_no3_n15_solute', 'mol m-3 timestep-1', 'transport of N15-nitrate in soil solution'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1550,7 +1563,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'transport_noy_n15', mem%transport_noy_n15, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('transport_noy_n15', 'mol m-3 timestep-1', 'transport of N15-NO_y'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1558,7 +1571,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'transport_n2o_n15', mem%transport_n2o_n15, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('transport_n2o_n15', 'mol m-3 timestep-1', 'transport of N15-N2O'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1566,7 +1579,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'transport_n2_n15', mem%transport_n2_n15, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('transport_n2_n15', 'mol m-3 timestep-1', 'transport of N15-N2'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1574,7 +1587,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'transport_po4_assoc_fast', mem%transport_po4_assoc_fast, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('transport_po4_assoc_fast', 'mol m-3 timestep-1', 'transport of fast minerally associated phosphate'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1582,7 +1595,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'transport_po4_assoc_slow', mem%transport_po4_assoc_slow, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('transport_po4_assoc_slow', 'mol m-3 timestep-1', 'transport of slow minerally associated phosphate'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1590,7 +1603,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'transport_po4_occluded', mem%transport_po4_occluded, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('transport_po4_occluded', 'mol m-3 timestep-1', 'transport of occluded phosphate'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1598,7 +1611,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'transport_po4_primary', mem%transport_po4_primary, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('transport_po4_primary', 'mol m-3 timestep-1', 'transport of primary phosphate'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1606,7 +1619,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue  
 
       CALL jsb_add_var(mem, 'transport_po4_solute', mem%transport_po4_solute, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('transport_po4_solute', 'mol m-3 timestep-1', 'transport of minerally associated phosphate'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1614,7 +1627,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'rtm_decomposition', mem%rtm_decomposition, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('rtm_decomposition', '--', 'rate modifier for decomposition processes'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1622,7 +1635,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'rtm_depolymerisation', mem%rtm_depolymerisation, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('rtm_depolymerisation', '--', 'rate modifier for depolymerisation processes'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1630,7 +1643,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'rtm_mic_uptake', mem%rtm_mic_uptake, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('rtm_mic_uptake', '--', 'rate modifier for microbial uptake'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1638,7 +1651,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'rtm_plant_uptake', mem%rtm_plant_uptake, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('rtm_plant_uptake', '--', 'rate modifier for plant uptake'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1646,7 +1659,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'rtm_sorption', mem%rtm_sorption, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('rtm_sorption', '--', 'rate modifier for sorption'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1654,7 +1667,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'rtm_desorption', mem%rtm_desorption, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('rtm_desorption', '--', 'rate modifier for desorption'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1662,7 +1675,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'rtm_hsc', mem%rtm_hsc, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('rtm_hsc', '--', 'rate modifier for half-saturation constants'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1670,7 +1683,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'rtm_nitrification', mem%rtm_nitrification, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('rtm_nitrification', '--', 'rate modifier for nitrification'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1678,7 +1691,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'rtm_denitrification', mem%rtm_denitrification, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('rtm_denitrification', '--', 'rate modifier for denitrification'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1686,7 +1699,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'rtm_gasdiffusion', mem%rtm_gasdiffusion, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('rtm_gasdiffusion', '--', 'rate modifier for gasdiffusion'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1694,7 +1707,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'rmm_decomposition', mem%rmm_decomposition, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('rmm_decomposition', '--', 'rate modifier for decomposition processes'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1702,7 +1715,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'rmm_depolymerisation', mem%rmm_depolymerisation, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('rmm_depolymerisation', '--', 'rate modifier for depolymerisation processes'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1710,7 +1723,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'rmm_mic_uptake', mem%rmm_mic_uptake, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('rmm_mic_uptake', '--', 'rate modifier for microbial uptake'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1718,7 +1731,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'rmm_plant_uptake', mem%rmm_plant_uptake, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('rmm_plant_uptake', '--', 'rate modifier for plant uptake'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1726,7 +1739,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'rmm_sorption', mem%rmm_sorption, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('rmm_sorption', '--', 'rate modifier for sorption'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1734,7 +1747,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'rmm_desorption', mem%rmm_desorption, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('rmm_desorption', '--', 'rate modifier for desorption'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1742,7 +1755,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'rmm_hsc', mem%rmm_hsc, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('rmm_hsc', '--', 'rate modifier for half-saturation constants'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1750,7 +1763,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'rmm_nitrification', mem%rmm_nitrification, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('rmm_nitrification', '--', 'rate modifier for nitrification'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1758,7 +1771,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'rmm_gasdiffusion', mem%rmm_gasdiffusion, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('rmm_gasdiffusion', '--', 'rate modifier for gasdiffusion'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1766,7 +1779,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'het_respiration', mem%het_respiration, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('het_respiration', 'mol m-3 s-1', 'heterotrophic respiration'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1774,7 +1787,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'het_respiration_c13', mem%het_respiration_c13, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('het_respiration_c13', 'mol m-3 s-1', 'c13 heterotrophic respiration'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1782,7 +1795,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'het_respiration_c14', mem%het_respiration_c14, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('het_respiration_c14', 'mol m-3 s-1', 'c14 heterotrophic respiration'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1790,7 +1803,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'net_mineralisation_nh4', mem%net_mineralisation_nh4, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('net_mineralisation_nh4', 'mol m-3 s-1', 'net mineralisation of N'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1798,7 +1811,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'net_mineralisation_nh4_n15', mem%net_mineralisation_nh4_n15, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('net_mineralisation_nh4_n15', 'mol m-3 s-1', 'net mineralisation of N15'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1806,7 +1819,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'net_mineralisation_no3', mem%net_mineralisation_no3, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('net_mineralisation_no3', 'mol m-3 s-1', 'net mineralisation of N'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1814,7 +1827,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'net_mineralisation_no3_n15', mem%net_mineralisation_no3_n15, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('net_mineralisation_no3_n15', 'mol m-3 s-1', 'net mineralisation of N15'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1822,7 +1835,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'net_mineralisation_po4', mem%net_mineralisation_po4, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('net_mineralisation_po4', 'mol m-3 s-1', 'net mineralisation of P'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1830,7 +1843,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'plant_uptake_nh4_sl', mem%plant_uptake_nh4_sl, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('plant_uptake_nh4_sl', 'mol m-3 s-1', 'plant uptake of N'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1838,7 +1851,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'plant_uptake_nh4_n15_sl', mem%plant_uptake_nh4_n15_sl, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('plant_uptake_nh4_n15_sl', 'mol m-3 s-1', 'plant uptake of N15'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1846,7 +1859,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'plant_uptake_no3_sl', mem%plant_uptake_no3_sl, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('plant_uptake_no3_sl', 'mol m-3 s-1', 'plant uptake of N'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1854,7 +1867,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'plant_uptake_no3_n15_sl', mem%plant_uptake_no3_n15_sl, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('plant_uptake_no3_n15_sl', 'mol m-3 s-1', 'plant uptake of N15'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1862,7 +1875,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'plant_uptake_po4_sl', mem%plant_uptake_po4_sl, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('plant_uptake_po4_sl', 'mol m-3 s-1', 'plant uptake of P'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1870,7 +1883,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'microbial_uptake_nh4_sl', mem%microbial_uptake_nh4_sl, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('microbial_uptake_nh4_sl', 'mol m-3 s-1', 'microbial uptake of N'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1878,7 +1891,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'microbial_uptake_nh4_n15_sl', mem%microbial_uptake_nh4_n15_sl, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('microbial_uptake_nh4_n15_sl', 'mol m-3 s-1', 'microbial uptake of N15'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1886,7 +1899,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'microbial_uptake_no3_sl', mem%microbial_uptake_no3_sl, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('microbial_uptake_no3_sl', 'mol m-3 s-1', 'microbial uptake of N'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1894,7 +1907,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'microbial_uptake_no3_n15_sl', mem%microbial_uptake_no3_n15_sl, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('microbial_uptake_no3_n15_sl', 'mol m-3 s-1', 'microbial uptake of N15'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1902,7 +1915,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'microbial_uptake_po4_sl', mem%microbial_uptake_po4_sl, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('microbial_uptake_po4_sl', 'mol m-3 s-1', 'microbial uptake of P'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1910,7 +1923,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'mycorrhiza_uptake_nh4_sl', mem%mycorrhiza_uptake_nh4_sl, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('mycorrhiza_uptake_nh4_sl', 'mol m-3 s-1', 'mycorrhiza uptake of N'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1918,7 +1931,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'mycorrhiza_uptake_nh4_n15_sl', mem%mycorrhiza_uptake_nh4_n15_sl, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('mycorrhiza_uptake_nh4_n15_sl', 'mol m-3 s-1', 'mycorrhiza uptake of N15'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1926,7 +1939,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'mycorrhiza_uptake_no3_sl', mem%mycorrhiza_uptake_no3_sl, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('mycorrhiza_uptake_no3_sl', 'mol m-3 s-1', 'mycorrhiza uptake of N'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1934,7 +1947,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'mycorrhiza_uptake_no3_n15_sl', mem%mycorrhiza_uptake_no3_n15_sl, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('mycorrhiza_uptake_no3_n15_sl', 'mol m-3 s-1', 'mycorrhiza uptake of N15'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1942,7 +1955,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'mycorrhiza_uptake_norg_sl', mem%mycorrhiza_uptake_norg_sl, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('mycorrhiza_uptake_norg_sl', 'mol m-3 s-1', 'mycorrhiza uptake of N'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1950,7 +1963,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'mycorrhiza_uptake_norg_n15_sl', mem%mycorrhiza_uptake_norg_n15_sl, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('mycorrhiza_uptake_norg_n15_sl', 'mol m-3 s-1', 'mycorrhiza uptake of N15'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1958,7 +1971,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'mycorrhiza_uptake_po4_sl', mem%mycorrhiza_uptake_po4_sl, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('mycorrhiza_uptake_po4_sl', 'mol m-3 s-1', 'mycorrhiza uptake of P'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1966,7 +1979,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'volatilisation_nh4', mem%volatilisation_nh4, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('volatilisation_nh4', 'µmol m-3 s-1', 'volatilisation of NH4'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1974,7 +1987,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'volatilisation_nh4_n15', mem%volatilisation_nh4_n15, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('volatilisation_nh4_n15', 'µmol m-3 s-1', 'volatilisation of 15NH4'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1982,7 +1995,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
   
       CALL jsb_add_var(mem, 'nitrification_no3', mem%nitrification_no3, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('nitrification_no3', 'µmol m-3 s-1', 'nitrification NO3'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1990,7 +2003,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'nitrification_no3_n15', mem%nitrification_no3_n15, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('nitrification_no3_n15', 'µmol m-3 s-1', 'nitrification 15NO3'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -1998,7 +2011,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'nitrification_noy', mem%nitrification_noy, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('nitrification_noy', 'µmol m-3 s-1', 'nitrification to NOy'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2006,7 +2019,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'nitrification_noy_n15', mem%nitrification_noy_n15, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('nitrification_noy_n15', 'µmol m-3 s-1', 'nitrification to 15NOy'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2014,7 +2027,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'nitrification_n2o', mem%nitrification_n2o, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('nitrification_n2o', 'µmol m-3 s-1', 'nitrification to N2O'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2022,7 +2035,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'nitrification_n2o_n15', mem%nitrification_n2o_n15, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('nitrification_n2o_n15', 'µmol m-3 s-1', 'nitrification to 15N2O'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2030,7 +2043,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'denitrification_noy', mem%denitrification_noy, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('denitrification_noy', 'µmol m-3 s-1', 'nitrification NOy'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2038,7 +2051,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'denitrification_n2o_n15', mem%denitrification_n2o_n15, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('denitrification_n2o_n15', 'µmol m-3 s-1', 'nitrification to 15N2O'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2046,7 +2059,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'denitrification_n2o', mem%denitrification_n2o, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('denitrification_n2o', 'µmol m-3 s-1', 'nitrification to N2O'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2054,7 +2067,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'denitrification_noy_n15', mem%denitrification_noy_n15, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('denitrification_noy_n15', 'µmol m-3 s-1', 'nitrification 15NOy'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2062,7 +2075,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'denitrification_n2', mem%denitrification_n2, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('denitrification_n2', 'µmol m-3 s-1', 'denitrification to N2'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2070,7 +2083,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'denitrification_n2_n15', mem%denitrification_n2_n15, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('denitrification_n2_n15', 'µmol m-3 s-1', 'denitrification to 15N2'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2078,7 +2091,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'asymb_n_fixation', mem%asymb_n_fixation, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('asymb_n_fixation', 'µmol m-3 s-1', 'asymboitic N fixation'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2086,7 +2099,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'asymb_n_fixation_n15', mem%asymb_n_fixation_n15, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('asymb_n_fixation_n15', 'µmol m-3 s-1', 'asymboitic 15N fixation'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2094,7 +2107,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'weathering_po4', mem%weathering_po4, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('weathering_po4', 'µmol m-3 s-1', 'phosphorus weathering rate'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2102,7 +2115,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'occlusion_po4', mem%occlusion_po4, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('occlusion_po4', 'µmol m-3 s-1', 'phosphorus occlusion rate, assoc_slow --> occluded'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2110,7 +2123,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'slow_exchange_po4', mem%slow_exchange_po4, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('slow_exchange_po4', 'µmol P m-3 s-1', 'phosphorus slow exchange rate, assoc_fast <--> assoc_slow'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2118,7 +2131,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'fast_exchange_po4', mem%fast_exchange_po4, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('fast_exchange_po4', 'µmol P m-3 s-1', 'phosphorus fast exchange rate, solute <--> assoc_fast'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2126,7 +2139,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'fast_adsorpt_po4', mem%fast_adsorpt_po4, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('fast_adsorpt_po4', 'µmol P m-3 s-1', 'phosphorus fast exchange rate, solute <--> assoc_fast'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2134,7 +2147,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'fast_desorp_po4', mem%fast_desorp_po4, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('fast_desorp_po4', 'µmol P m-3 s-1', 'phosphorus fast exchange rate, solute <--> assoc_fast'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2142,7 +2155,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'biochem_mineralisation_po4', mem%biochem_mineralisation_po4, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('biochem_mineralisation_po4', 'µmol m-3 s-1', 'phosphorus biochemical mineralization rate'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2150,7 +2163,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'gross_mineralisation_po4', mem%gross_mineralisation_po4, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('gross_mineralisation_po4', 'µmol m-3 s-1', 'phosphorus gross (biological) mineralization rate'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2158,7 +2171,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'leaching_dom_carbon', mem%leaching_dom_carbon, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('leaching_dom_carbon', 'µmol m-2 s-1', 'land to groundwater flux of DOM-C'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2166,7 +2179,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'leaching_dom_nitrogen', mem%leaching_dom_nitrogen, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('leaching_dom_nitrogen', 'µmol m-2 s-1', 'land to groundwater flux of DOM-N'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2174,7 +2187,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'leaching_dom_phosphorus', mem%leaching_dom_phosphorus, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('leaching_dom_phosphorus', 'µmol m-2 s-1', 'land to groundwater flux of DOM-P'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2182,7 +2195,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'leaching_dom_carbon13', mem%leaching_dom_carbon13, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('leaching_dom_carbon13', 'µmol m-2 s-1', 'land to groundwater flux of DOM-C13'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2190,7 +2203,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'leaching_dom_carbon14', mem%leaching_dom_carbon14, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('leaching_dom_carbon14', 'µmol m-2 s-1', 'land to groundwater flux of DOM-C14'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2198,7 +2211,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'leaching_dom_nitrogen15', mem%leaching_dom_nitrogen15, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('leaching_dom_nitrogen15', 'µmol m-2 s-1', 'land to groundwater flux of DOM-N15'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2206,7 +2219,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'leaching_nh4_solute', mem%leaching_nh4_solute, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('leaching_nh4_solute', 'µmol m-2 s-1', 'land to groundwater flux of NH4'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2215,7 +2228,7 @@ CONTAINS
 
 
       CALL jsb_add_var(mem, 'leaching_no3_solute', mem%leaching_no3_solute, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('leaching_no3_solute', 'µmol m-2 s-1', 'land to groundwater flux of NO3'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2223,7 +2236,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'leaching_po4_solute', mem%leaching_po4_solute, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('leaching_po4_solute', 'µmol m-2 s-1', 'land to groundwater flux of PO4'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2231,7 +2244,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'leaching_nh4_n15_solute', mem%leaching_nh4_n15_solute, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('leaching_nh4_n15_solute', 'µmol m-2 s-1', 'land to groundwater flux of 15NH4'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2239,7 +2252,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'leaching_no3_n15_solute', mem%leaching_no3_n15_solute, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('leaching_no3_n15_solute', 'µmol m-2 s-1', 'land to groundwater flux of 15NO3'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2247,7 +2260,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'emission_nh3', mem%emission_nh3, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('emission_nh3', 'µmol m-2 s-1', 'land to atmosphere flux of NH3'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2255,7 +2268,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'emission_noy', mem%emission_noy, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('emission_noy', 'µmol m-2 s-1', 'land to atmosphere flux of NOy'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2263,7 +2276,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'emission_n2o', mem%emission_n2o, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('emission_n2o', 'µmol m-2 s-1', 'land to atmosphere flux of N2O'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2271,7 +2284,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'emission_n2', mem%emission_n2, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('emission_n2', 'µmol m-2 s-1', 'land to atmosphere flux of N2'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2279,7 +2292,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'emission_nh3_n15', mem%emission_nh3_n15, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('emission_nh3_n15', 'µmol m-2 s-1', 'land to atmosphere flux of 15NH3'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2287,7 +2300,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'emission_noy_n15', mem%emission_noy_n15, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('emission_noy_n15', 'µmol m-2 s-1', 'land to atmosphere flux of 15NOy'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2295,7 +2308,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'emission_n2o_n15', mem%emission_n2o_n15, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('emission_n2o_n15', 'µmol m-2 s-1', 'land to atmosphere flux of 15N2O'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2303,7 +2316,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'emission_n2_n15', mem%emission_n2_n15, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('emission_n2_n15', 'µmol m-2 s-1', 'land to atmosphere flux of 15N2'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2311,7 +2324,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'qmax_org', mem%qmax_org, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('qmax_org', 'kg C kg-1 mineral soil', 'sorption capacity of dom of mineral soil'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2319,7 +2332,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'qmax_po4', mem%qmax_po4, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('qmax_po4', 'mol P m-3 soil', 'sorption capacity of po4 of mineral soil'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2327,7 +2340,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'km_adsorpt_po4_sl', mem%km_adsorpt_po4_sl, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('km_adsorpt_po4_sl', 'mol P m-3 soil', 'half saturation of po4 sorption isotherm'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2335,7 +2348,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'eca_divisor_adsorp', mem%eca_divisor_adsorp, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('eca_divisor_adsorp', 'mol P m-3 soil', 'denominator of the ECA item for adsorption'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2343,7 +2356,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'k_bioturb', mem%k_bioturb, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('k_bioturb', '', 'diffusion rate resulting from bioturbation'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2351,7 +2364,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'bulk_dens_corr_sl', mem%bulk_dens_corr_sl, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('bulk_dens_corr_sl', 'kg m-3', 'organic fraction corrected bulk-density of the soil'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2359,7 +2372,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'bulk_soil_carbon_sl', mem%bulk_soil_carbon_sl, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('bulk_soil_carbon_sl', 'kg m-3', 'bulk soil density of carbon'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2367,7 +2380,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'particle_fluxrate', mem%particle_fluxrate, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('particle_fluxrate', '', 'burial rate due to organic matter fall and decay'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2375,7 +2388,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'anaerobic_volume_fraction_sl', mem%anaerobic_volume_fraction_sl, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('anaerobic_volume_fraction_sl', 'unitless', 'anaerobic volume fraction'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2383,7 +2396,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'microbial_cue_eff', mem%microbial_cue_eff, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('microbial_cue_eff', '', 'instantaneous microbial CUE given NP constraints'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2391,7 +2404,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'microbial_cue_eff_tmic_mavg', mem%microbial_cue_eff_tmic_mavg, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('microbial_cue_eff_tmic_mavg', '', 'time-averaged microbial CUE given NP constraints'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2399,7 +2412,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'ph_sl', mem%ph_sl, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('ph_sl', '', 'ph per soil layer'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2407,7 +2420,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'lithology_class_sl', mem%lithology_class_sl, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('lithology_class_sl', 'unitless', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2415,7 +2428,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'vmax_weath_mineral_sl', mem%vmax_weath_mineral_sl, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('vmax_weath_mineral_sl', 'mol P m-3 s-1', 'weathering coefficient of mineral soil'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2423,7 +2436,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'enzyme_frac_poly', mem%enzyme_frac_poly, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('enzyme_frac_poly', 'unitless', 'fraction of depolymerisation enzyme which depolymerises poly litter'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2431,7 +2444,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'enzyme_frac_residue', mem%enzyme_frac_residue, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('enzyme_frac_residue', 'unitless', 'fraction of depolymerisation enzyme which depolymerises microbial residue'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2439,7 +2452,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'enz_frac_poly_c', mem%enz_frac_poly_c, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('enz_frac_poly_c', 'unitless', 'fraction of depolymerisation enzyme which depolymerises poly litter, determined by C'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2447,7 +2460,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'enz_frac_poly_n', mem%enz_frac_poly_n, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('enz_frac_poly_n', 'unitless', 'fraction of depolymerisation enzyme which depolymerises poly litter, determined by N'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2455,7 +2468,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'enz_frac_poly_p', mem%enz_frac_poly_p, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('enz_frac_poly_p', 'unitless', 'fraction of depolymerisation enzyme which depolymerises poly litter, determined by P'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2463,7 +2476,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'enz_frac_poly_c_mavg', mem%enz_frac_poly_c_mavg, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('enz_frac_poly_c_mavg', 'unitless', 'moving average of enz_frac_poly_c'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2471,7 +2484,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'enz_frac_poly_n_mavg', mem%enz_frac_poly_n_mavg, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('enz_frac_poly_n_mavg', 'unitless', 'moving average of enz_frac_poly_n'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2479,7 +2492,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'enz_frac_poly_p_mavg', mem%enz_frac_poly_p_mavg, &
-            hgrid, surface, &
+            hgrid, vgrid_soil_sb, &
             t_cf('enz_frac_poly_p_mavg', 'unitless', 'moving average of enz_frac_poly_p'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2487,7 +2500,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'total_flux_carbon', mem%total_flux_carbon, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('total_flux_carbon', 'mol C m-2 s-1', 'carbon mass balance checks in soil_biogeochemistry model'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2495,7 +2508,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'total_flux_nitrogen', mem%total_flux_nitrogen, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('total_flux_nitrogen', 'mol N m-2 s-1', 'nitrogen mass balance checks in soil_biogeochemistry model'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2503,7 +2516,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'total_flux_phosphorus', mem%total_flux_phosphorus, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('total_flux_phosphorus', 'mol P m-2 s-1', 'phosphorus mass balance checks in soil_biogeochemistry model'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2511,7 +2524,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'total_flux_carbon13', mem%total_flux_carbon13, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('total_flux_carbon13', 'mol C13 m-2 s-1', 'carbon13 mass balance checks in soil_biogeochemistry model'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2519,7 +2532,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'total_flux_carbon14', mem%total_flux_carbon14, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('total_flux_carbon14', 'mol C14 m-2 s-1', 'carbon14 mass balance checks in soil_biogeochemistry model'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2527,7 +2540,7 @@ CONTAINS
             initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'total_flux_nitrogen15', mem%total_flux_nitrogen15, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('total_flux_nitrogen15', 'mol N15 m-2 s-1', 'nitrogen15 mass balance checks in soil_biogeochemistry model'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2542,14 +2555,14 @@ CONTAINS
       !! 
       !-----------------------------------------------------------------------------------------------------
       CALL jsb_add_var(mem, 'delta_pools', mem%delta_pools, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('delta_pools', TRIM(unit_sb_pool), 'Delta_pools element in soil biogeochemistry'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix)
 
       CALL jsb_add_var(mem, 'mycorrhiza_export', mem%mycorrhiza_export, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('mycorrhiza_export', TRIM(unit_sb_flux), 'Mycorrhiza_export element in soil biogeochemistry'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -2570,25 +2583,25 @@ CONTAINS
       !! 
       !-----------------------------------------------------------------------------------------------------
       CALL jsb_add_var(mem, 'pool'           , mem%pool, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('pool', TRIM(unit_sb_pool), 'Pool soil biogeochemistry pool'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix)
       CALL jsb_add_var(mem, 'formation'      , mem%formation, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('formation', TRIM(unit_sb_flux), 'Formation soil biogeochemistry flux'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix)
       CALL jsb_add_var(mem, 'loss'           , mem%loss, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('loss', TRIM(unit_sb_flux), 'Loss soil biogeochemistry flux'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix)
       CALL jsb_add_var(mem, 'transport'      , mem%transport, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('transport', TRIM(unit_sb_flux), 'Transport soil biogeochemistry flux'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
