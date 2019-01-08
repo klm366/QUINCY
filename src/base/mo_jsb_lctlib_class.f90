@@ -169,7 +169,8 @@ MODULE mo_jsb_lctlib_class
     REAL(wp) :: SenesRspdNPP 
     REAL(wp) :: RelSenesAbgd 
     REAL(wp) :: NitroStatus  
-    
+    REAL(wp) :: JeDiCarboxRate
+    REAL(wp) :: JeDiSLA
     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=! 
     
     
@@ -328,6 +329,13 @@ CONTAINS
     LOGICAL            :: exists_SenesRspdNPP           = .FALSE.
     LOGICAL            :: exists_RelSenesAbgd           = .FALSE.
     LOGICAL            :: exists_NitroStatus            = .FALSE.
+    
+    ! local variable for JeDi:
+    
+    REAL(wp),ALLOCATABLE :: P01(:),P02(:),P03(:),P04(:),P05(:),P06(:),P07(:),P08(:),P09(:),P10(:)
+    REAL(wp),ALLOCATABLE :: P11(:),P12(:),P13(:),P14(:),P15(:),Pdenom(:)
+     
+        
     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!   
                         
     ! Determine name of landcover library file
@@ -378,6 +386,28 @@ CONTAINS
     IF (my_process_is_mpi_parallel()) CALL p_bcast(nlct, p_io, mpi_comm)
 
     ALLOCATE(lctlib(nlct))
+    
+     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
+     !   JeDi plant trait parameter 
+    OPEN(35,file='Jedi_parameter.txt')
+    ALLOCATE(P01(nlct))
+    ALLOCATE(P02(nlct))
+    ALLOCATE(P03(nlct))
+    ALLOCATE(P04(nlct))
+    ALLOCATE(P05(nlct))
+    ALLOCATE(P06(nlct))
+    ALLOCATE(P07(nlct))
+    ALLOCATE(P08(nlct))
+    ALLOCATE(P09(nlct))
+    ALLOCATE(P10(nlct))
+    ALLOCATE(P11(nlct))
+    ALLOCATE(P12(nlct))
+    ALLOCATE(P13(nlct))
+    ALLOCATE(P14(nlct))
+    ALLOCATE(P15(nlct))
+    ALLOCATE(Pdenom(nlct))
+     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
+          
 
     IF (my_process_is_stdio()) THEN
 
@@ -694,55 +724,84 @@ CONTAINS
              
              
              CASE ('growrspdmoist')
-                READ(line(pos:length),*) lctlib(1:nlct)%GrowRspdMoist 
-                exists_GrowRspdMoist   = .TRUE.
+                READ(line(pos:length),*) P01(1:nlct)                
+                lctlib(1:nlct)%GrowRspdMoist = 10._wp ** ( 4.0_wp * P01(1:nlct)  - 2.0_wp )                
+                exists_GrowRspdMoist   = .TRUE.             
+                WRITE(35,"(A,21(1x,f12.4))") 'GrowRspdMoist ',lctlib(1:nlct)%GrowRspdMoist
              CASE ('growrspdtemp')
-                READ(line(pos:length),*) lctlib(1:nlct)%GrowRspdTemp 
+                READ(line(pos:length),*) P02(1:nlct)                
+                lctlib(1:nlct)%GrowRspdTemp = 10._wp ** ( 4.0_wp * P02(1:nlct)  - 2.0_wp )
                 exists_GrowRspdTemp   = .TRUE.
+                WRITE(35,"(A,21(1x,f12.4))") 'GrowRspdTemp ',lctlib(1:nlct)%GrowRspdTemp                
              CASE ('critigrowtemp')
-                READ(line(pos:length),*) lctlib(1:nlct)%CritiGrowTemp
+                READ(line(pos:length),*) P03(1:nlct)                
+                lctlib(1:nlct)%CritiGrowTemp = P03(1:nlct)    * ( 10.0_wp - ( -5.0_wp ) )                
                 exists_CritiGrowTemp   = .TRUE.
+                WRITE(35,"(A,21(1x,f12.4))") 'CritiGrowTemp ',lctlib(1:nlct)%CritiGrowTemp
              CASE ('germfrac')
-                READ(line(pos:length),*) lctlib(1:nlct)%GermFrac
+                READ(line(pos:length),*) P04(1:nlct)               
+                lctlib(1:nlct)%GermFrac = 10._wp ** ( 3.0_wp * P04(1:nlct)  - 3.0_wp)                
                 exists_GermFrac   = .TRUE.
+                WRITE(35,"(A,21(1x,f12.4))") 'GermFrac ',lctlib(1:nlct)%GermFrac
              CASE ('allo2reproduc')
-                READ(line(pos:length),*) lctlib(1:nlct)%Allo2Reproduc
+                READ(line(pos:length),*) P05(1:nlct)               
                 exists_Allo2Reproduc   = .TRUE.
+                
              CASE ('allo2abground')
-                READ(line(pos:length),*) lctlib(1:nlct)%Allo2Abground
+                READ(line(pos:length),*) P06(1:nlct)
                 exists_Allo2Abground   = .TRUE.
+                
              CASE ('allo2blground')
-                READ(line(pos:length),*) lctlib(1:nlct)%Allo2Blground
+                READ(line(pos:length),*) P07(1:nlct)
                 exists_Allo2Blground   = .TRUE.
+                
              CASE ('allo2storage')
-                READ(line(pos:length),*) lctlib(1:nlct)%Allo2Storage
+                READ(line(pos:length),*) P08(1:nlct)
                 exists_Allo2Storage   = .TRUE.
+                
              CASE ('relallo2abgrd')
                 READ(line(pos:length),*) lctlib(1:nlct)%RelAllo2Abgrd
                 exists_RelAllo2Abgrd   = .TRUE.
+                WRITE(35,"(A,21(1x,f12.4))") 'RelAllo2Abgrd ',lctlib(1:nlct)%RelAllo2Abgrd
              CASE ('relallo2blgrd')
                 READ(line(pos:length),*) lctlib(1:nlct)%RelAllo2Blgrd
-                exists_RelAllo2Blgrd   = .TRUE.
-             CASE ('turnoverstruc')
-                READ(line(pos:length),*) lctlib(1:nlct)%TurnoverStruc
+                exists_RelAllo2Blgrd   = .TRUE.             
+                WRITE(35,"(A,21(1x,f12.4))") 'RelAllo2Blgrd ',lctlib(1:nlct)%RelAllo2Blgrd
+             CASE ('turnoverstruc')             
+                READ(line(pos:length),*) P11(1:nlct)
+                lctlib(1:nlct)%TurnoverStruc = 365._wp * (79._wp * P11(1:nlct) + 1._wp )
                 exists_TurnoverStruc   = .TRUE.
+                WRITE(35,"(A,21(1x,f12.4))") 'TurnoverStruc ',lctlib(1:nlct)%TurnoverStruc
              CASE ('turnoverleaf')
-                READ(line(pos:length),*) lctlib(1:nlct)%TurnoverLeaf
+                READ(line(pos:length),*) P12(1:nlct)
+                lctlib(1:nlct)%TurnoverLeaf = ( 365._wp / 12._wp ) * ( 10._wp ** (P12(1:nlct) * 2._wp) )
                 exists_TurnoverLeaf   = .TRUE.
+                WRITE(35,"(A,21(1x,f12.4))") 'TurnoverLeaf ',lctlib(1:nlct)%TurnoverLeaf
              CASE ('senesrspdnpp')
-                READ(line(pos:length),*) lctlib(1:nlct)%SenesRspdNPP
+                READ(line(pos:length),*) P13(1:nlct)
+                lctlib(1:nlct)%SenesRspdNPP = 10._wp ** ( 4.0_wp * P13(1:nlct) - 1.0_wp )
                 exists_SenesRspdNPP   = .TRUE.
+                WRITE(35,"(A,21(1x,f12.4))") 'SenesRspdNPP ',lctlib(1:nlct)%SenesRspdNPP
              CASE ('relsenesabgd')
-                READ(line(pos:length),*) lctlib(1:nlct)%RelSenesAbgd
+                READ(line(pos:length),*) P14(1:nlct)
+                lctlib(1:nlct)%RelSenesAbgd = 10._wp ** ( 8.0_wp * P14(1:nlct) - 7.0_wp )
                 exists_RelSenesAbgd   = .TRUE.
+                WRITE(35,"(A,21(1x,f12.4))") 'RelSenesAbgd ',lctlib(1:nlct)%RelSenesAbgd
              CASE ('nitrostatus')
-                READ(line(pos:length),*) lctlib(1:nlct)%NitroStatus
-                exists_NitroStatus   = .TRUE.
+                READ(line(pos:length),*) P15(1:nlct)
+                lctlib(1:nlct)%NitroStatus = (0.9_wp * P15(1:nlct) + 0.1_wp) * 8.578_wp * 0.01_wp  ! [NL] molN / molC canopy nitrogen concentration follows Ollinger (2008) (Pavlick thesis P.89)               
+                exists_NitroStatus   = .TRUE.                                                       
+                WRITE(35,"(A,21(1x,f12.4))") 'NitroStatus ',lctlib(1:nlct)%NitroStatus
           !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
         
           CASE default
              ! nothing to do
           END SELECT
+          
+          
+          
+          
+          
        END DO
        DEALLOCATE(itmp)
 
@@ -943,6 +1002,41 @@ CONTAINS
        
        CLOSE(unit=lctlib_file_unit) !! Closing access to lctlib file
 
+
+       !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
+       ! JeDi parameter for allocation factors
+       !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
+       
+       IF ( exists_Allo2Reproduc .AND. exists_Allo2Abground .AND. exists_Allo2Blground .AND. exists_Allo2Storage ) THEN
+        Pdenom(1:nlct) = P05(1:nlct) + P06(1:nlct) + P07(1:nlct) + P08(1:nlct)
+        lctlib(1:nlct)%Allo2Reproduc = P05(1:nlct) / Pdenom(1:nlct)
+        lctlib(1:nlct)%Allo2Abground = P06(1:nlct) / Pdenom(1:nlct)
+        lctlib(1:nlct)%Allo2Blground = P07(1:nlct) / Pdenom(1:nlct)
+        lctlib(1:nlct)%Allo2Storage  = P08(1:nlct) / Pdenom(1:nlct)
+        WRITE(35,"(A,21(1x,f12.4))") 'Allo2Reproduc ',lctlib(1:nlct)%Allo2Reproduc 
+        WRITE(35,"(A,21(1x,f12.4))") 'Allo2Abground ',lctlib(1:nlct)%Allo2Abground 
+        WRITE(35,"(A,21(1x,f12.4))") 'Allo2Blground ',lctlib(1:nlct)%Allo2Blground 
+        WRITE(35,"(A,21(1x,f12.4))") 'Allo2Storage  ',lctlib(1:nlct)%Allo2Storage  
+        
+       ELSE
+         CALL finish('init_lctlib','No data for one of the allocation factor found in '//TRIM(lctlib_file_name))
+       ENDIF
+       
+       IF (exists_NitroStatus) THEN
+       lctlib(1:nlct)%JeDiSLA = ( 0.102083_wp * ( ( lctlib(1:nlct)%TurnoverLeaf / 365._wp ) ** ( -0.46_wp ) ) )    ! This number 3 is added by pinhsin because the 
+                                                                                                                       ! lai calculated based on Reich et al. 1997 are two times smaller than JeDi !!!
+       
+       lctlib(1:nlct)%JeDiCarboxRate = 12.01_wp * ( 10._wp**0.13_wp ) * ( 10._wp ** -3._wp) * ( lctlib(1:nlct)%NitroStatus * 1000._wp * 14._wp / 12.01_wp)**1.42_wp / lctlib(1:nlct)%JeDiSLA
+       
+       WRITE(35,"(A,21(1x,f12.6))") 'JeDiCarboxRate ',lctlib(1:nlct)%JeDiCarboxRate
+       WRITE(35,"(A,21(1x,f12.4))") 'JeDiSLA ',   lctlib(1:nlct)%JeDiSLA
+       ENDIF
+       
+       CLOSE(35)
+       !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
+       
+
+
        !------------------------------------------------------------------------------------------
        ! kalle, 151004
        ! Set carbox rate to  [Mol(CO2)/m^2/s]
@@ -1138,6 +1232,8 @@ CONTAINS
        CALL p_bcast(lctlib(:)%SenesRspdNPP , p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%RelSenesAbgd , p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%NitroStatus  , p_io, mpi_comm)
+       CALL p_bcast(lctlib(:)%JeDiCarboxRate, p_io, mpi_comm)
+       CALL p_bcast(lctlib(:)%JeDiSLA       , p_io, mpi_comm)
         !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
        
        

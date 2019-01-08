@@ -702,10 +702,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,   c_leaves)
     
     CALL calc_jedi_phenology(  &
-                               &  dsl4jsb_Lctlib_param(TurnoverLeaf),  &  ! in
+                               &  dsl4jsb_Lctlib_param(JeDiSLA),       &  ! in
                                &  c_leaves,                             &  ! in
                                &  lai                                   )  ! inout
-   write(*,*) 'c_leaves= ',c_leaves,'Tau_leaves= ',( 365._wp / 12._wp ) * ( 10._wp ** (dsl4jsb_Lctlib_param(TurnoverLeaf) * 2._wp) ) ,'lai= ',lai
+   
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

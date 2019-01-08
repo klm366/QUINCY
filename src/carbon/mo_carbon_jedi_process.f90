@@ -92,13 +92,14 @@ CONTAINS
     & t_air,                      & ! in
   !  
     & c_storage,                  & ! inout
+    & c_storage_temp,             & ! out
     & c_leaves,                   & ! inout
     & c_fnroot,                   & ! inout
     & c_csroot,                   & ! inout
     & c_seed,                     & ! inout
     & temp_c_seed,                & ! inout
     & c_stem,                     & ! inout
-    & ff_grow_Wsoil,              & ! in
+    & ff_grow_W,                  & ! in
     & ff_grow_T,                  & ! in
     & ff_grow_G,                  & ! in
     & ff_npp,                     & ! inout
@@ -160,7 +161,7 @@ CONTAINS
     USE mo_carbon_constants,       ONLY : fract_green_aboveGround, fract_wood_aboveGround
     USE mo_jsb_physical_constants, ONLY : tmelt     ! tmelt =273.15_wp
     USE mo_carbon_constants,       ONLY : sec_per_day, days_per_year, sec_per_year
-
+    
     ! Arguments
     REAL(wp), INTENT(in)    :: LAI                    ! Yesterdays mean LAI
     REAL(wp), INTENT(in)    :: LAI_previous           ! The day before yesterdays mean LAI
@@ -189,13 +190,14 @@ CONTAINS
     REAL(wp), INTENT(in)     :: SenesRspdNPP          ! Jedi parameter -- P13 Senescence response time to productivity conditions 
     REAL(wp), INTENT(in)     :: RelSenesAbgd          ! Jedi parameter -- P14 Relative senescence aboveground            
     REAL(wp), INTENT(in)     :: NitroStatus           ! Jedi parameter -- P15 Plant nitrogen status                       
-    INTEGER,  INTENT(in)    :: time_steps_per_day
-    REAL(wp), INTENT(in)    :: dtime
-    REAL(wp), INTENT(in)    :: t_air                  !  Atmosphere temperature (lowest layer) in Kelvin!
+    INTEGER,  INTENT(in)     :: time_steps_per_day
+    REAL(wp), INTENT(in)     :: dtime
+    REAL(wp), INTENT(in)     :: t_air                  !  Atmosphere temperature (lowest layer) in Kelvin!
     !
     ! JeDi carbon allocation 
     REAL(wp), INTENT(inout) :: c_storage            ! Stored carbon pool: on input last value; updated on output
-                                                     !    [mol(C)/m^2(canopy)]                                                     
+                                                     !    [mol(C)/m^2(canopy)]   
+    REAL(wp), INTENT(out) ::  c_storage_temp                                                                      
     REAL(wp), INTENT(inout) :: c_leaves           ! Leaves carbon pool: on input last value; updated on output
                                                      !    [mol(C)/m^2(canopy)]
     REAL(wp), INTENT(inout) :: c_seed             ! Seed carbon pool: on input last value; updated on output
@@ -210,7 +212,7 @@ CONTAINS
                                                      !    [mol(C)/m^2(canopy)]        
     REAL(wp), INTENT(in) :: ff_grow_T
     REAL(wp), INTENT(in) :: ff_grow_G
-    REAL(wp), INTENT(in) :: ff_grow_Wsoil                                             
+    REAL(wp), INTENT(in) :: ff_grow_W                                             
     REAL(wp), INTENT(inout) :: ff_npp
     REAL(wp), INTENT(out)   :: flx_germ  
     REAL(wp), INTENT(inout) :: Flg_die                                                            
@@ -284,11 +286,11 @@ CONTAINS
     ! locals
     
     ! JeDi carbon allocation 
+
     
-    REAL(wp), PARAMETER  :: PA0_seed = 1.0_wp / 365._wp ! if the seed pool is zero at the begining then add virtual carbon into it
     !real(wp) :: r8_tiny = 0.0123456
-    REAL(wp) :: P01 , P02 , P03 , P04 , P05 , P06 , P07 , Pdenom
-    REAL(wp) :: P08 , P09 , P10 , P11 , P12 , P13 , P14 , P15
+    REAL(wp), PARAMETER  :: PA0_seed = 1.0_wp / 365._wp ! Virtual carbon for seed pool
+    
     REAL(wp) :: A_seed , A_storage
     REAL(wp) :: AG_struct, AG_growth
     REAL(wp) :: BG_struct, BG_growth
@@ -305,7 +307,7 @@ CONTAINS
     REAL(wp), PARAMETER  :: c_GRes_seed      = 1.0_wp / (1.0_wp + 0.66_wp)    
     REAL(wp), PARAMETER  :: c_tau_seed       = 10._wp * 365._wp !  seed decomposition time scale (years), value is taken from JeDi 
     REAL(wp), PARAMETER  :: c_tau_sen        = 10._wp 
-    REAL(wp), parameter  :: cTiny            = 1.E-6_wp        
+    REAL(wp), parameter  :: cTiny            = 1.E-8_wp        
    
    
    
@@ -365,8 +367,8 @@ CONTAINS
     !soilResp_rate_pot        = 0.0_wp
     NPP_act_yDayMean         = 0.0_wp
       
-  
-
+    
+    
     ! modified soil moist. such that heterotrophic respiration is zero below alpha_critical
     alpha_mod = MAX(alpha_min, (alpha_yDayMean - alpha_critical) / (1._wp - alpha_critical))
 
@@ -423,40 +425,7 @@ CONTAINS
     zLoss_seed = 0._wp
     !r8_tiny = tiny(r8_tiny)  ! Maybe it is different in our station. This is the smallest positive number in the data type of r8_tiny ?/????
     
-    P01 =  GrowRspdMoist
-    P02 =  GrowRspdTemp 
-    P03 =  CritiGrowTemp
-    P04 =  GermFrac     
-    P05 =  Allo2Reproduc
-    P06 =  Allo2Abground
-    P07 =  Allo2Blground
-    P08 =  Allo2Storage 
-    P09 =  RelAllo2Abgrd
-    P10 =  RelAllo2Blgrd
-    P11 =  TurnoverStruc
-    P12 =  TurnoverLeaf 
-    P13 =  SenesRspdNPP 
-    P14 =  RelSenesAbgd 
-    P15 =  NitroStatus  
-   
-  
-    P01 = 10._wp ** ( 4.0_wp * P01 - 2.0_wp )
-    P02 = 10._wp ** ( 4.0_wp * P02 - 2.0_wp )
-    P03 = P03     * ( 10.0_wp - ( -5.0_wp ) )
-    P04 = 10._wp ** ( 3.0_wp * P04 - 3.0_wp)
-    
-    Pdenom = P05 + P06 + P07 + P08
-    P05 = P05 / Pdenom
-    P06 = P06 / Pdenom
-    P07 = P07 / Pdenom
-    
-    P11 =  365._wp * (79._wp * P11 + 1._wp )
-    P12 = ( 365._wp / 12._wp ) * ( 10._wp ** (P12 * 2._wp) )  ! This is taken from JeDi, different to Eq. A7 why???
-    P13 = 10._wp ** ( 4.0_wp * P13 - 1.0_wp )
-    P14 = 10._wp ** ( 8.0_wp * P14 - 7.0_wp ) ! This is taken from JeDi, no where found in Pavlick(2013) why???
-    
-    
-    
+     
     
     AutoRes = MaintRes_yDayMean * sec_per_day
     NPP     = GPP_yDayMean * sec_per_day  - AutoRes
@@ -473,37 +442,41 @@ CONTAINS
     Flg_grow_W = 0._wp
     Flg_grow_G = 0._wp
     
-    IF ( ff_grow_T     .ge. P03    ) Flg_grow_T = 1.0_wp
-    IF ( ff_grow_Wsoil .ge. 0.5_wp ) Flg_grow_W = 1.0_wp
-    IF ( ff_grow_G     .ge. 0.5_wp ) Flg_grow_G = 1.0_wp  ! This needs to be modified 
+    IF ( ff_grow_T     .ge.  CritiGrowTemp   ) Flg_grow_T = 1.0_wp
+    IF ( ff_grow_W     .ge. 0.5_wp           ) Flg_grow_W = 1.0_wp
+    IF ( ff_grow_G     .ge. 0.5_wp           ) Flg_grow_G = 1.0_wp  ! This needs to be modified 
     
     Flg_grow   = Flg_grow_T * Flg_grow_W
     Flg_grow_G = Flg_grow_T * Flg_grow_G
+    
+    
+    
     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-! Germination condition !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-!
     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=! 
-     
-    IF ( Flg_die .eq. 0._wp  ) THEN   
-      
-      IF ( c_seed .lt. cTiny ) THEN
-      
-      c_seed = c_seed +  PA0_seed ! add virtual carbon into seed pool when its empty
-      temp_c_seed=temp_c_seed + 1  ! This is just to see how many times does this loop is entered. will be remove later
-      
-      END IF
-    END IF
+     !IF ( lstart ) THEN
+        IF ( Flg_die .eq. 0._wp  ) THEN         
+          IF ( c_seed .lt. cTiny .and. temp_c_seed .lt. 1._wp) THEN
+          
+          c_seed = c_seed +  PA0_seed ! add virtual carbon into seed pool when its empty
+          temp_c_seed=temp_c_seed + 1  ! This is just to see how many times does this loop is entered. will be remove later
+          
+          END IF
+        END IF
+    !ENDIF
+    
     
     IF ( Flg_die .eq. 0._wp )  THEN  ! If the species is alive
     
   
     
-    flx_germ   = Flg_grow_G * P04 * c_seed ! if germination is favorable then carbon flows from seed to storage pool 
+    flx_germ   = Flg_grow_G * GermFrac * c_seed ! if germination is favorable then carbon flows from seed to storage pool 
     c_storage  = c_storage + flx_germ
-    c_seed     = c_seed    - flx_germ  ! TODO: have to include turnover rate for seed 
+    c_seed     = c_seed    - flx_germ  
     
     
     zLoss_seed =  c_seed   / c_tau_seed  ! Why the decay of seed is only computed outside the loop?
-    c_seed     = c_seed    - zLoss_seed  !  need to think about when the seed will decay maybe only when its after 150 year of simulation or when its not spinup simulation??
+    c_seed     =  c_seed   - zLoss_seed  !  need to think about when the seed will decay maybe only when its after 150 year of simulation or when its not spinup simulation??
     
     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-! Carbon allocation factors !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-!
@@ -513,11 +486,11 @@ CONTAINS
     
     
     
-    AG_growth  = Flg_grow * P06 
-    BG_growth  = Flg_grow * P07 
+    AG_growth  = Flg_grow * Allo2Abground
+    BG_growth  = Flg_grow * Allo2Blground
     
-    AG_struct  = Flg_grow * P09 * fract_veg
-    BG_struct  = Flg_grow * P10 * fract_veg
+    AG_struct  = Flg_grow * RelAllo2Abgrd * fract_veg
+    BG_struct  = Flg_grow * RelAllo2Blgrd * fract_veg
  
  
  
@@ -531,18 +504,18 @@ CONTAINS
     
     
     
-      IF ( c_storage .ge. 0._wp ) THEN
+      IF ( c_storage .gt. 0._wp ) THEN
     
 	    Flg_seed = 0._wp
         IF ( NPP  .gt. 0._wp  ) Flg_seed = 1.0_wp ! OR NPP_yDayMean ???
         
-        A_seed    = Flg_grow * Flg_seed * P05
+        A_seed    = Flg_grow * Flg_seed * Allo2Reproduc
         
         c_storage = c_storage + NPP
         
+        c_storage_temp = c_storage
         
-        
-        zAlloc        = MAX(0._wp,c_storage)
+        zAlloc        = MAX(0._wp,c_storage)  !  To make sure that no negative c_storage distributed to the pools
         
         zAlloc_seed   = zAlloc * A_seed                            * c_GRes_seed 
         zAlloc_leaves = zAlloc * AG_growth * ( 1._wp - AG_struct ) * c_GRes_leaves
@@ -575,14 +548,14 @@ CONTAINS
         IF ( ff_npp .lt. 0._wp .and. NPP .lt. 0._wp) Flg_senesc  = 1.0_wp - Flg_grow   ! See remarks below.
         ! No idea why the flag for senescence is using:  1 - flag_grow  
         ! I took the calculation from JeDi.
-        ! I guess senescence happens, when: (1) Non-growing condition (2) GPP>0 but NPP<0, which may suggest that plants spend many energy respiring
+        ! I guess senescence happens, when: (1) Non-growing condition (2) NPP<0, which may suggest that plants spend many energy respiring
         !                                   (3) C_storage>0           (4) ff_npp<0 
         
         
-        tau_stem   = P11
-        tau_csroot = P11
-        tau_leaves = 1._wp / ( (1._wp / P12) + ( 1._wp / c_tau_sen ) * Flg_senesc *           P14   )
-        tau_fnroot = 1._wp / ( (1._wp / P12) + ( 1._wp / c_tau_sen ) * Flg_senesc * ( 1._wp - P14 ) )
+        tau_stem   = TurnoverStruc
+        tau_csroot = TurnoverStruc
+        tau_leaves = 1._wp / ( (1._wp / TurnoverLeaf ) + ( 1._wp / c_tau_sen ) * Flg_senesc *             RelSenesAbgd )
+        tau_fnroot = 1._wp / ( (1._wp / TurnoverLeaf ) + ( 1._wp / c_tau_sen ) * Flg_senesc * ( 1._wp -   RelSenesAbgd) )
         
         
         
@@ -621,29 +594,35 @@ CONTAINS
         !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-! Death of plants     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-!
         !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=! 
         
-        
-!          IF (c_storage .le. cTiny ) THEN
-            
-!            zLoss_leaves = zLoss_leaves + c_leaves
-!            zLoss_stem   = zLoss_stem   + c_stem
-!            zLoss_csroot = zLoss_csroot + c_csroot  + c_seed ! I dont know where should dead seed carbon go so i put into coarse root's litter pool first
-!            zLoss_fnroot = zLoss_fnroot + c_fnroot
-            
-!            c_storage = 0._wp   ! Should the storage carbon go to some litter pools?
-!            c_seed    = 0._wp
-!            c_leaves  = 0._wp
-!            c_stem    = 0._wp
-!            c_csroot  = 0._wp
-!            c_fnroot  = 0._wp
-!            Flg_die   = 1._wp
-!          ENDIF
-          
-          NPP_act_yDayMean = ( GPP_yDayMean * sec_per_day  - AutoRes ) / (  sec_per_day )
+        NPP_act_yDayMean = ( GPP_yDayMean * sec_per_day  - AutoRes ) / (  sec_per_day )
           
           
      
           GrowthResp = GrowthResp /  sec_per_day 
           AutoRes    = AutoRes    /  sec_per_day 
+          
+        
+        
+        
+    !      IF ( (curyear .gt. crit_year) .and. (c_storage .le. cTiny) ) THEN
+          IF (  (c_storage .le. cTiny) ) THEN
+            
+            zLoss_leaves = zLoss_leaves + c_leaves
+            zLoss_stem   = zLoss_stem   + c_stem
+            zLoss_csroot = zLoss_csroot + c_csroot  + c_seed ! I dont know where should dead seed carbon go so i put into coarse root's litter pool first
+            zLoss_fnroot = zLoss_fnroot + c_fnroot
+            
+            c_storage = 0._wp   ! Should the storage carbon go to some litter pools?
+            c_seed    = 0._wp
+            c_leaves  = 0._wp
+            c_stem    = 0._wp
+            c_csroot  = 0._wp
+            c_fnroot  = 0._wp
+            Flg_die   = 1._wp
+            
+          ENDIF
+        
+        
           leafLitter          =  zLoss_leaves + zLoss_fnroot 
           C_2_litter_woodPool =  zLoss_stem   + zLoss_csroot 
     
@@ -652,9 +631,8 @@ CONTAINS
     
           cflux_c_greenwood_2_litter =  zLoss_leaves + zLoss_fnroot + zLoss_stem + zLoss_csroot + zLoss_seed 
           
-   
-          
         
+
         ENDIF
         
        
@@ -679,8 +657,7 @@ CONTAINS
 
 
 
-   C_delta =  ( c_storage + c_seed + c_leaves + c_stem + c_csroot + c_fnroot ) - C_total
-   
+   C_delta =  ( c_storage + c_seed + c_leaves + c_stem + c_csroot + c_fnroot ) - C_total  ! this is the difference of assimilated carbon added into c-pools in this timestep
    
 
    C_balan = GPP_yDayMean         *  sec_per_day  &
@@ -688,9 +665,8 @@ CONTAINS
            & - GrowthResp         *  sec_per_day  &
            & - ( zLoss_leaves + zLoss_fnroot + zLoss_stem + zLoss_csroot + zLoss_seed ) 
 
-                                         
-                                                                             
-                                                                              
+     fract_green_AG_jedi  = 0.5_wp       !  if the fraction is zero, there is nan problem for the litter pool,                                                     
+     fract_wood_AG_jedi   = 0.5_wp       !  it is now temporary set to 0.5                                                               
 
 
     !! ============== COMPUTE SOIL RESPIRATION ===================================================================

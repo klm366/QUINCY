@@ -131,8 +131,10 @@ CONTAINS
     USE mo_carbon_process,    ONLY: calc_Cpools
     USE mo_carbon_jedi_process, ONLY: calc_Ctradeoff,jedi_water_stress_factor
     USE mo_jsb_physical_constants, ONLY : tmelt  
-    
-    USE mo_jsb_time,          ONLY: is_newday, is_newyear, time_steps_per_day, is_time_experiment_start
+    USE mo_jsb_control,        ONLY:  jsbach_is_restarted
+    USE mo_jsb_time,          ONLY: t_datetime,is_newday, is_newyear, time_steps_per_day, &
+                                 &  is_time_experiment_start, get_year_at_model_start,     &
+                                 &  get_time_start, get_year,get_time_current
     USE mo_carbon_constants,  ONLY: molarMassCO2_kg, sec_per_day, days_per_year
     
 
@@ -145,6 +147,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER   :: model
     TYPE(t_jsb_grid),  POINTER   :: grid
     LOGICAL                      :: lstart
+
     INTEGER                      :: ics, ice, iblk, nc
     REAL(wp)                     :: dtime
     INTEGER                      :: i, itile
@@ -155,14 +158,18 @@ CONTAINS
     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
     ! Declare variavles for JeDi carbon allocation 
     ! 
+    TYPE(t_datetime)             :: inidate,current
+    INTEGER                      :: iniyear
+    LOGICAL                      :: lrestart
+
     REAL(wp), parameter  :: c_CN_woody       = 0.00303_wp * (12.01_wp / 14.0067_wp)  ! molC/molN Ratio for Woody Tissue
     REAL(wp), parameter  :: c_sapwood        = 0.05_wp
     REAL(wp), parameter  :: c_Res_N          = 0.218_wp * ( 14.0067_wp / 12.01_wp )  !! specific respiration in molC/molN/d
     REAL(wp), PARAMETER  :: Q10              = 1.8_wp          ! Empirical parameter for temperature dependence of
                                                                 !   heterotrophic respiration rate. This value is 
                                                                 !   taken from JB4.
-    
-    REAL(wp)                     :: P01,P02,P13,P15
+    REAL(wp), parameter  :: cTiny            = 1.E-8_wp
+   
     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
     
 
@@ -211,13 +218,14 @@ CONTAINS
     ! Variavles for JeDi carbon allocation 
     !
     dsl4jsb_Real2D_onChunk ::   c_storage               !     Storage carbon pool 
+    dsl4jsb_Real2D_onChunk ::   c_storage_temp
     dsl4jsb_Real2D_onChunk ::   c_leaves                !      Leaves carbon pool             
     dsl4jsb_Real2D_onChunk ::   c_fnroot                !   Fine root carbon pool
     dsl4jsb_Real2D_onChunk ::   c_csroot                ! Coarse root carbon pool
     dsl4jsb_Real2D_onChunk ::   c_seed                  !        Seed carbon pool
     dsl4jsb_Real2D_onChunk ::   temp_c_seed                  !        Seed carbon pool
     dsl4jsb_Real2D_onChunk ::   c_stem                  !        Stem carbon pool
-    dsl4jsb_Real2D_onChunk ::   ff_grow_Wsoil
+    dsl4jsb_Real2D_onChunk ::   ff_grow_W    
     dsl4jsb_Real2D_onChunk ::   ff_grow_T
     dsl4jsb_Real2D_onChunk ::   ff_grow_G
     dsl4jsb_Real2D_onChunk ::   ff_npp
@@ -415,13 +423,14 @@ CONTAINS
     ! Variavles for JeDi carbon allocation 
     !
     dsl4jsb_Get_var2D_onChunk(CARBON_,   c_storage         )     !     Storage carbon pool 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   c_storage_temp    )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   c_leaves          )     !      Leaves carbon pool             
     dsl4jsb_Get_var2D_onChunk(CARBON_,   c_fnroot          )     !   Fine root carbon pool
     dsl4jsb_Get_var2D_onChunk(CARBON_,   c_csroot          )     ! Coarse root carbon pool
     dsl4jsb_Get_var2D_onChunk(CARBON_,   c_seed            )     !        Seed carbon pool
     dsl4jsb_Get_var2D_onChunk(CARBON_,   temp_c_seed       )     !        Seed carbon pool
     dsl4jsb_Get_var2D_onChunk(CARBON_,   c_stem            )     !        Stem carbon pool
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_grow_Wsoil     )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_grow_W         )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_grow_T         )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_grow_G         )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_npp            )
@@ -572,7 +581,7 @@ CONTAINS
     
     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
     ! TODO:  Growing condition for JeDi is computed here:
-    !   The growing condition flags are here because JeDi needs the memory from previous 
+    !   The growing condition flags are computed here because JeDi needs the memory from the previous 
     !    time steps. Christian suggests that instead of using the Euler method implementing in JeDi,
     !   we can use the one implimented in JB4, such as pseudo temperature.
     !   Therefore, it needs revision.   
@@ -584,30 +593,40 @@ CONTAINS
                  &       dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract)
     
       
-    P01 = dsl4jsb_Lctlib_param(GrowRspdMoist)
-    P02 = dsl4jsb_Lctlib_param(GrowRspdTemp)
-    P13 = dsl4jsb_Lctlib_param(SenesRspdNPP)
-    P15 = dsl4jsb_Lctlib_param(NitroStatus)  
-    
-    P01 = 10._wp ** ( 4.0_wp * P01 - 2.0_wp )
-    P02 = 10._wp ** ( 4.0_wp * P02 - 2.0_wp )
-    P13 = 10._wp ** ( 5.0_wp * P13 - 2.0_wp )
-    P15 = (0.9_wp * P15 + 0.1_wp) * 8.578_wp * 0.01_wp ! [NL] canopy nitrogen concentration follows Ollinger (2008) (Pavlick thesis P.89)
-                                                                  !  this number is converted to from gN/gC to molN / molC
+ 
                                                                   
-    ff_grow_T     = ( ( t_air - tmelt ) + P01 * ff_grow_T ) / ( 1._wp + P01 )
-    ff_grow_G     = (  alpha_jedi  + P01 * ff_grow_G      ) / ( 1._wp + P01 ) ! Need to modify this to base soil wetness???? See P.80 Pavlick
-    ff_grow_Wsoil = (  alpha_jedi  + P02 * ff_grow_Wsoil  ) / ( 1._wp + P02 ) 
+    ff_grow_T     = ( ( t_air - tmelt ) + dsl4jsb_Lctlib_param(GrowRspdTemp) * ff_grow_T      ) / ( 1._wp + dsl4jsb_Lctlib_param(GrowRspdTemp) )
+    ff_grow_G     = (  alpha_jedi       + dsl4jsb_Lctlib_param(GrowRspdMoist) * ff_grow_G      ) / ( 1._wp + dsl4jsb_Lctlib_param(GrowRspdMoist) )
+    ff_grow_W     = (  alpha_jedi       + dsl4jsb_Lctlib_param(GrowRspdMoist) * ff_grow_W      ) / ( 1._wp + dsl4jsb_Lctlib_param(GrowRspdMoist) )     
+    ff_npp        = ( NPP_act_yDayMean  + dsl4jsb_Lctlib_param(SenesRspdNPP) * ff_npp         ) / ( 1._wp + dsl4jsb_Lctlib_param(SenesRspdNPP) )
     
-    ff_npp        = ( NPP_act_yDayMean  + P13 * ff_npp         ) / ( 1._wp + P13 )
     MaintRes = 0._wp
-    MaintRes = c_sapwood * c_CN_woody * ( c_stem + c_csroot ) + P15 * ( c_leaves + c_fnroot ) 
-    MaintRes = MaintRes  * c_Res_N    * ( Q10 ** ( ( t_air - tmelt - 20._wp ) / 10._wp) ) 
+    MaintRes = c_sapwood * c_CN_woody * ( c_stem + c_csroot ) + dsl4jsb_Lctlib_param(NitroStatus) * ( c_leaves + c_fnroot ) 
+    MaintRes = MaintRes  * c_Res_N    * ( 1.4_wp ** ( ( t_air - tmelt - 20._wp ) / 10._wp) ) ! JeDi uses 1.4 for Q10 value
     
     MaintRes = MaintRes / sec_per_day ! The maintanence respiration is computed in a daily manner in JeDi.
-                                      !    therefore, we have to change the unit into molC m^-2 s^-1
-    
+                                      
+!    IF ( lstart ) THEN
+!        IF ( Flg_die .eq. 0._wp  ) THEN         
+!          IF ( c_seed .lt. cTiny ) THEN
+          
+!          c_seed = c_seed +  PA0_seed ! add virtual carbon into seed pool when its empty
+!          temp_c_seed=temp_c_seed + 1  ! This is just to see how many times does this loop is entered. will be remove later
+          
+!          END IF
+!        END IF
+!    ENDIF
+
+
+    inidate = get_time_start()
+    iniyear = get_year(inidate)
+    lrestart= jsbach_is_restarted()
+  
+        
     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!     
+    
+    
+    
     
     IF( .NOT. is_newday() .OR. lstart) THEN ! perform daily sums if WE ARE NOT STARTING A NEW DAY
                                             ! or if we JUST STARTED AN TOTALLY NEW EXPERIMENT
@@ -704,13 +723,14 @@ CONTAINS
         & t_air,                                       & ! in
   !  
         & c_storage,                                   & ! inout
+        & c_storage_temp,                              & ! out
         & c_leaves,                                    & ! inout
         & c_fnroot,                                    & ! inout
         & c_csroot,                                    & ! inout
         & c_seed,                                      & ! inout
         & temp_c_seed,                                 & ! inout
         & c_stem,                                      & ! inout
-        & ff_grow_Wsoil,                               & ! inout
+        & ff_grow_W,                               & ! inout
         & ff_grow_T,                                   & ! inout
         & ff_grow_G,                                   & ! inout
         & ff_npp,                                      & ! inout
@@ -1716,10 +1736,9 @@ CONTAINS
     c_bg_sum = c_acid_bg1 + c_water_bg1 + c_ethanol_bg1 + c_nonsoluble_bg1 + &
              & c_acid_bg2 + c_water_bg2 + c_ethanol_bg2 + c_nonsoluble_bg2 + &
              & c_humus_1  + c_humus_2
-
     c_ag_sum_1 =  c_acid_ag1 + c_water_ag1 + c_ethanol_ag1 + c_nonsoluble_ag1 + c_humus_1
-
-  END SUBROUTINE calculate_current_c_ag_1_and_bg_sums
+    
+   END SUBROUTINE calculate_current_c_ag_1_and_bg_sums
 
 
   ! ================================================================================================================================

@@ -236,6 +236,7 @@ MODULE mo_carbon_memory_class
    
    TYPE(t_jsb_var_real2d) ::         &
        c_storage,                    &
+       c_storage_temp,               &
        c_seed,                       &
        temp_c_seed,                       &
        c_stem,                       &
@@ -254,7 +255,7 @@ MODULE mo_carbon_memory_class
     TYPE(t_jsb_var_real2d) ::         &
         ff_grow_T,                     &
         ff_grow_G,                     &
-        ff_grow_Wsoil,                 &
+        ff_grow_W,                 &
         ff_npp,                        &
         Flg_die,                       &
         alpha_jedi,                    &
@@ -488,6 +489,14 @@ CONTAINS
         & prefix, suffix,                                                                        &
         & output_level=BASIC,loutput=.FALSE.,                                                      &
         & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) 
+      
+      CALL jsb_add_var( mem, 'c_storage_temp', mem%c_storage_temp,                                     &
+        & hgrid, surface,                                                                        &
+        & t_cf('c_storage_temp', 'mol(C) m-2(canopy)', 'Storage pool (before allocation )for checking.'),    &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+        & prefix, suffix,                                                                        &
+        & output_level=BASIC,loutput=.TRUE.,                                                      &
+        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) 
         
       CALL jsb_add_var( mem, 'c_seed', mem%c_seed,                                     &
         & hgrid, surface,                                                                        &
@@ -601,9 +610,9 @@ CONTAINS
         & output_level=BASIC,loutput=.TRUE.,                                                      &
         & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.FALSE. )  
        
-      CALL jsb_add_var( mem, 'ff_grow_Wsoil', mem%ff_grow_Wsoil,                                      &
+      CALL jsb_add_var( mem, 'ff_grow_W', mem%ff_grow_W,                                      &
         & hgrid, surface,                                                                        &
-        & t_cf('ff_grow_Wsoil', 'Growing condition respect to soil wetness.'),    &
+        & t_cf('ff_grow_W', 'Growing condition respect to soil wetness.'),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix,                                                                        &
         & output_level=BASIC,loutput=.TRUE.,                                                      &
@@ -1093,7 +1102,7 @@ CONTAINS
         & t_cf('c_litter_green_ag_ta', 'mol(C) m-2', 'C-Pool for above ground non-woody litter (leaves).'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                    &
         & prefix, suffix,                                                                                       &
-        & output_level=BASIC,                                                                            &
+        & output_level=BASIC, loutput=.FALSE.,                                                                 &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval in JSBACH3 is 60.0_wp
 
       CALL jsb_add_var( mem, 'c_litter_grn_bg_ta', mem%c_litter_green_bg_ta,                                  &
@@ -1101,7 +1110,7 @@ CONTAINS
         & t_cf('c_litter_green_bg_ta', 'mol(C) m-2', 'C-Pool for below ground non-woody litter (fine roots).'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
         & prefix, suffix,                                                                                           &
-        & output_level=BASIC,                                                                            &
+        & output_level=BASIC, loutput=.FALSE.,                                                                   &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval in JSBACH3 is 60.0_wp
 
       CALL jsb_add_var( mem, 'c_litter_wood_ag_ta', mem%c_litter_wood_ag_ta,                  &
@@ -1109,7 +1118,7 @@ CONTAINS
         & t_cf('c_litter_wood_ag_ta', 'mol(C) m-2', 'C-Pool for above ground woody litter.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                      &
         & prefix, suffix,                                                                         &
-        & output_level=BASIC,                                                                            &
+        & output_level=BASIC, loutput=.FALSE.,                                                           &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval in JSBACH3 is 180.0_wp!
 
       CALL jsb_add_var( mem, 'c_litter_wood_bg_ta', mem%c_litter_wood_bg_ta,                  &
@@ -1117,7 +1126,7 @@ CONTAINS
         & t_cf('c_litter_wood_bg_ta', 'mol(C) m-2', 'C-Pool for below ground woody litter.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                      &
         & prefix, suffix,                                                                         &
-        & output_level=BASIC,                                                                            &
+        & output_level=BASIC, loutput=.FALSE.,                                                            &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval in JSBACH3 is 180.0_wp
 
 !CBAL       CALL jsb_add_var( mem, 'c_slow_ta', mem%c_slow_ta,                                          &

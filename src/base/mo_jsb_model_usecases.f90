@@ -246,30 +246,44 @@ CONTAINS
 
     INTEGER :: i
 
-    INTEGER, PARAMETER :: npft = 4  ! R: For the implementation of JEDI we use only one PFT/PGS
+    INTEGER, PARAMETER :: npft = 20  ! R: For the implementation of JEDI we use only one PFT/PGS
 
     CHARACTER(len=5), PARAMETER :: pft_shortnames(npft) = [character(len=5) ::  &
-      & 'pft01', 'pft02', 'pft03', 'pft04']!, 'pft05', 'pft06',                   &
-      !& 'pft07', 'pft08', 'pft09', 'pft10', 'pft11' ]
+      & 'pft01', 'pft02', 'pft03', 'pft04', 'pft05', 'pft06',                   &
+      & 'pft07', 'pft08', 'pft09', 'pft10', 'pft11',                           &
+      & 'pft12', 'pft13', 'pft14', 'pft15', 'pft16', 'pft17',                   &
+      & 'pft18', 'pft19', 'pft20']                                            
+      
+      
 
     CHARACTER(len=30), PARAMETER :: pft_longnames(npft) = [character(len=30) :: &
       & 'Plant Growth Strategy 01',                                             &
       & 'Plant Growth Strategy 02',                                             &
       & 'Plant Growth Strategy 03',                                             &
-      & 'Plant Growth Strategy 04' ]
-!      & 'Plant Growth Strategy 04',                                             &
-!      & 'Plant Growth Strategy 05',                                             &
-!      & 'Plant Growth Strategy 06',                                             &
-!      & 'Plant Growth Strategy 07',                                             &
-!      & 'Plant Growth Strategy 08',                                             &
-!      & 'Plant Growth Strategy 09',                                             &
-!      & 'Plant Growth Strategy 10',                                             &
-!      & 'Plant Growth Strategy 11'   ]
+      & 'Plant Growth Strategy 04',                                             &
+      & 'Plant Growth Strategy 05',                                             &
+      & 'Plant Growth Strategy 06',                                             &
+      & 'Plant Growth Strategy 07',                                             &
+      & 'Plant Growth Strategy 08',                                             &
+      & 'Plant Growth Strategy 09',                                             &
+      & 'Plant Growth Strategy 10',                                             &
+      & 'Plant Growth Strategy 11',                                             &
+      & 'Plant Growth Strategy 12',                                             &
+      & 'Plant Growth Strategy 13',                                             &
+      & 'Plant Growth Strategy 14',                                             &
+      & 'Plant Growth Strategy 15',                                             &
+      & 'Plant Growth Strategy 16',                                             &
+      & 'Plant Growth Strategy 17',                                             &
+      & 'Plant Growth Strategy 18',                                             &
+      & 'Plant Growth Strategy 19',                                             &
+      & 'Plant Growth Strategy 20']
+      
+      
+      
 
     ! Index of PFT into lctlib columns
     ! id is one less than in lctlib file because the first column (glacier) has been thrown away
-!    INTEGER, PARAMETER :: pft_ids(npft) = (/ 1,2,3,4,9,10,11,12,14,15,19 /)
-    INTEGER, PARAMETER :: pft_ids(npft) = (/ 1,2,3,4/)
+    INTEGER, PARAMETER :: pft_ids(npft) = (/ 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20/)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_usecase_pfts'
 
