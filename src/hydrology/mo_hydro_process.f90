@@ -939,6 +939,7 @@ CONTAINS
 
     ! percolation per time step must be smaller than the usable soil layer water content
     DO i = 1, nsoil
+      ws_min_drain(:) = 0._wp
       WHERE (dsoil(:,i) > 0._wp .AND. percolation(:,i) > 0._wp)
         ws_min_drain(:) = zwdmin * field_cap_l(:,i)              ! minimum soil moisture for drainage
         WHERE (ws_l(:,i)-percolation(:,i) < ws_min_drain(:))     ! more percolation than water available
@@ -1102,7 +1103,11 @@ CONTAINS
 
     DO jk =1, nsoil
 
-      deficit_l(:) = 0._wp
+      deficit_l(:)   = 0._wp
+      rootfract(:)   = 0._wp
+      fixed    (:)   = 0._wp
+      trans_layer(:) = 0._wp
+      remaining  (:) = 0._wp
 
       ! grid cell not sealed and positive transpiration (not dew)
       !    take water equally from all over the root zone
