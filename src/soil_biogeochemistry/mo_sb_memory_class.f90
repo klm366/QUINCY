@@ -1093,7 +1093,7 @@ CONTAINS
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2   ! , TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
-!    USE mo_jsb_model_class,   ONLY: t_jsb_model
+    USE mo_jsb_model_class,   ONLY: t_jsb_model
     
     IMPLICIT NONE
     ! ---------------------------
@@ -1106,7 +1106,7 @@ CONTAINS
     CHARACTER(len=*),                INTENT(in)    :: unit            !> unit of the variables in the elements
     ! ---------------------------
     ! 0.2 Local
-!    TYPE(t_jsb_model), POINTER  :: model
+    TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_sb                ! Vertical grid
     INTEGER                     :: table
@@ -1115,10 +1115,11 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Add_element_variables_to_memory'
     ! ---------------------------
     ! 0.5 Get Memory
-!    model         => Get_model(model_id)
+    model         => Get_model(model_id)
     table         = 1     ! in jsbach4 this line is: table = tables(1)     *slmtemp
-!    hgrid         => Get_grid(mem%grid_id)
+    hgrid         => Get_grid(model%grid_id)
     vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+
 
 
     !> 1.0 run add_var()
@@ -1191,7 +1192,7 @@ CONTAINS
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2   ! , TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
-!    USE mo_jsb_model_class,   ONLY: t_jsb_model
+    USE mo_jsb_model_class,   ONLY: t_jsb_model
   
     IMPLICIT NONE
     ! ---------------------------
@@ -1204,16 +1205,16 @@ CONTAINS
     CHARACTER(len=*),                INTENT(in)    :: unit            !> unit of the variables in the elements
     ! ---------------------------
     ! 0.2 Local
-!    TYPE(t_jsb_model), POINTER  :: model
+    TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER  :: vgrid_surface                ! Vertical grid
     INTEGER                     :: table
     CHARACTER(len=40)           :: element_name
     CHARACTER(len=80)           :: element_name_long    
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Add_pool_elements_to_memory'
-!    model         => Get_model(model_id)
+    model         => Get_model(model_id)
     table         = 1     ! in jsbach4 this line is: table = tables(1)     *slmtemp
-!    hgrid         => Get_grid(mem%grid_id)
+    hgrid         => Get_grid(model%grid_id)
     vgrid_surface => Get_vgrid('surface')
 
     
@@ -1338,7 +1339,7 @@ CONTAINS
     ! 0.5 Get Memory
     model         => Get_model(model_id)
     table         = 1     ! in jsbach4 this line is: table = tables(1)     *slmtemp
-!    hgrid         => Get_grid(mem%grid_id)
+    hgrid         => Get_grid(model%grid_id)
     vgrid_surface => Get_vgrid('surface')
     vgrid_soil_sb => Get_vgrid('soil_layer_sb')
     unit_sb_pool = "mol m-3"

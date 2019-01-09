@@ -995,6 +995,7 @@ CONTAINS
     CHARACTER(len=*),                INTENT(in)    :: unit            !> unit of the variables in the elements
     ! ---------------------------
     ! 0.2 Local
+    TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER  :: vgrid_surface                ! Vertical grid
     INTEGER                     :: table
@@ -1003,8 +1004,9 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Add_element_variables_to_memory'
     ! ---------------------------
     ! 0.5 Get Memory
+    model         => Get_model(model_id)
     table         = 1     ! in jsbach4 this line is: table = tables(1)     *slmtemp
-!    hgrid         => Get_grid(mem%grid_id)
+    hgrid         => Get_grid(model%grid_id)
     vgrid_surface => Get_vgrid('surface')
 
 
@@ -1089,6 +1091,7 @@ CONTAINS
     CHARACTER(len=*),                INTENT(in)    :: unit            !> unit of the variables in the elements
     ! ---------------------------
     ! 0.2 Local
+    TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER  :: vgrid_surface                ! Vertical grid
     INTEGER                     :: table
@@ -1097,8 +1100,9 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Add_pool_elements_to_memory'
     ! ---------------------------
     ! 0.5 Get Memory
+    model         => Get_model(model_id)
     table         = 1     ! in jsbach4 this line is: table = tables(1)     *slmtemp
-!    hgrid         => Get_grid(mem%grid_id)
+    hgrid         => Get_grid(model%grid_id)
     vgrid_surface => Get_vgrid('surface')
 
 
@@ -1215,7 +1219,7 @@ CONTAINS
     ! 0.5 Get Memory
     model         => Get_model(model_id)
     table         = 1     ! in jsbach4 this line is: table = tables(1)     *slmtemp
-!    hgrid         => Get_grid(mem%grid_id)
+    hgrid         => Get_grid(model%grid_id)
     vgrid_surface => Get_vgrid('surface')
     vgrid_canopy  => Get_vgrid('canopy_layer')
     vgrid_soil_sb => Get_vgrid('soil_layer_sb')

@@ -159,7 +159,7 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model), POINTER     :: model                  ! the model structure
-    TYPE(t_jsb_grid),  POINTER     :: grid
+    TYPE(t_jsb_grid),  POINTER     :: hgrid                  ! horizontal grid
     ! READ() input variables for: land plant canopy and soil (these variable names can differ from column names in forcing files)
     REAL(wp) ::      swvis_srf_down_r,   lw_srf_down_r, t_air_r,    q_air_r,    &
                      press_srf_r,        rain_r,        snow_r,     wind_air_r, &
@@ -230,7 +230,7 @@ CONTAINS
     ! 0.5 Get Memory
     model  => Get_model(tile%owner_model_id)
 !    lctlib => model%lctlib(tile%lcts%lib_id) 
-    grid   => Get_grid(model%grid_id)
+    hgrid  => Get_grid(model%grid_id)
     ! Get process config
 !    dsl4jsb_Get_config(xx_)
     ! Get process memories
@@ -386,7 +386,7 @@ CONTAINS
 
       lw_srf_down(:)          = lw_srf_down_r
       swvis_srf_down(:)       = swvis_srf_down_r
-      cos_zenith_angle(:)     = calc_solar_angle(grid%lat(1,1), grid%lon(1,1), time) 
+      cos_zenith_angle(:)     = calc_solar_angle(hgrid%lat(1,1), hgrid%lon(1,1), time) 
       swnir_srf_down(:)       = (1._wp - frac_vis_swtot_srf ) * swvis_srf_down_r 
       swvis_srf_down_r        = frac_vis_swtot_srf * swvis_srf_down_r 
       swpar_srf_down(:)       = frac_par_swvis_srf * swvis_srf_down_r

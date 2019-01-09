@@ -86,7 +86,7 @@ CONTAINS
     ! 0.5 Get Memory
     model         => Get_model(model_id)
     table         = 1     ! in jsbach4 this line is: table = tables(1)     *slmtemp
-!    hgrid         => Get_grid(mem%grid_id)
+    hgrid         => Get_grid(model%grid_id)
     vgrid_surface => Get_vgrid('surface')
 
 

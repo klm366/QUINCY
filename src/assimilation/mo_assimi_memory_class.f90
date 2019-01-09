@@ -103,7 +103,7 @@ CONTAINS
   SUBROUTINE Init_assimi_memory(mem, prefix, suffix, lct_ids, model_id)
 
 !    USE mo_jsb_varlist,       ONLY: t_jsb_varlist, jsb_add_var
-    USE mo_slm_varlist,       ONLY: jsb_add_var   ! replace by mo_jsb_varlist later    *slmtemp
+    USE mo_slm_varlist,       ONLY: jsb_add_var   ! replace by mo_jsb_varlist later    *quincytemp
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2   ! , TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
@@ -128,8 +128,8 @@ CONTAINS
     ! ---------------------------
     ! 0.5 Get Memory
     model         => Get_model(model_id)
-    table         = 1     ! in jsbach4 this line is: table = tables(1)     *slmtemp
-!    hgrid         => Get_grid(mem%grid_id)
+    table         = 1     ! in jsbach4 this line is: table = tables(1)     *quincytemp
+    hgrid         => Get_grid(model%grid_id)
     vgrid_surface => Get_vgrid('surface')
     vgrid_canopy  => Get_vgrid('canopy_layer')
 
