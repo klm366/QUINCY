@@ -193,8 +193,8 @@ CONTAINS
 
     ! Set defaults
     ! BASE_CTL
-    dtime_step_length_sec                   = 1800.0_wp
-    slm_model_name                          = 'land'
+    dtime_step_length_sec                   = 1800.0_wp   ! length of one time step in seconds
+    slm_model_name                          = 'land'      ! default is the coupled veg-soil model, a.k.a. land
     output_interval_pool                    = 'weekly'    ! timestep daily weekly monthly yearly
     output_interval_flux                    = 'weekly'    ! timestep daily weekly monthly yearly
     output_interval_pool_spinup             = 'yearly'    ! usually ~500 yrs are covered, so 'yearly' would be reasonable
@@ -213,16 +213,16 @@ CONTAINS
     latitude                                = 50.91       ! about the MPI-BGC Jena
     longitude                               = 11.56       ! about the MPI-BGC Jena
     ! JSBACH4
-    use_lakes       = .TRUE.
-    use_glacier     = .TRUE.
-    l_compat401     = .FALSE.
-    grid_filename   = ''
-    grid_name       = ''
-    usecase         = ''
-    tpe_scheme      = ''
-    hsm_mode        = 'simple'
-    fract_filename  = 'bc_land_frac.nc'
-    output_tiles(:) = ''
+    use_lakes                               = .FALSE.
+    use_glacier                             = .FALSE.
+    l_compat401                             = .FALSE.
+    grid_filename                           = ''
+    grid_name                               = ''
+    usecase                                 = ''
+    tpe_scheme                              = ''
+    hsm_mode                                = 'simple'
+    fract_filename                          = 'bc_land_frac.nc'
+    output_tiles(:)                         = ''
 
     ! Read namelist
     nml_handler = open_nml(TRIM(namelist_filename))

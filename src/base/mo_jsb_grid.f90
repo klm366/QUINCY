@@ -18,8 +18,6 @@ CONTAINS
 
   SUBROUTINE Register_grid(grid)
 
-    USE mo_jsb_vertical_axes, ONLY: jsbach_vgrids
-
     TYPE(t_jsb_grid),  POINTER, INTENT(in)    :: grid
 
     INTEGER :: i, n

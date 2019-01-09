@@ -1,14 +1,12 @@
 !>
-!! @brief 
-!!  driver for the stand-alone land model \n
-!!  kind of replacement for JSBACH4
+!! @brief driver for the stand-alone QUINCY model
 !!
 !! @author
 !!  Sönke Zaehle, MPI-BGC Jena 
 !!
 !! @par Revision History
-!!  First version by Sönke Zaehle (2015-12-04) \n
-!!  Reworked by Jan Engel (2016 July)
+!!  First version by Sönke Zaehle (2015-12-04) 
+!!  Reworked by Jan Engel (multiple times)
 !!
 PROGRAM land_model_driver
 
@@ -19,12 +17,13 @@ PROGRAM land_model_driver
   ! base
   USE mo_base_constants,          ONLY: one_year
   USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
-  USE mo_jsb_model_init,          ONLY: init_model, &          ! 'init_model' is an interface
+  USE mo_jsb_model_init,          ONLY: jsbach_setup_grid, &      ! interface to e.g. setup_grid_standalone
+                                        quincy_init, &            ! JSBACH4: jsbach_init
                                         time_day, time_year, ntimestep, itimestep, timestep_prop_day, &
                                         fluxnet_output_start, fluxnet_output_stop, fluxnet_output_status
   USE mo_jsb_class,               ONLY: get_model
   USE mo_jsb_model_class,         ONLY: t_jsb_model
-  USE mo_jsb_base,                ONLY: init_base
+  USE mo_jsb_base,                ONLY: setup_model_vgrid_procconf, quincy_proc_parameter_init, jsbach_setup_tiles
   ! forcing
   USE mo_jsb4_forcing,            ONLY: forcing_options, calc_output_time_interval_pool
   ! atmland
@@ -136,7 +135,7 @@ PROGRAM land_model_driver
 
   !! 1.0 -----------------------------------------------------------------------------------------------
   !! 
-  !! Create Tile and Model & run Init & Define iblk, ics, ice, ...
+  !! setup model, configure and init processes and grids
   !! 
   TYPE(t_jsb_model)         , POINTER :: model  !< local pointer to model
   CLASS(t_jsb_tile_abstract), POINTER :: tile   !< local data structure for dynamic vegetation and soil variables
@@ -146,7 +145,7 @@ PROGRAM land_model_driver
   nprocb   = 1
   nprocio  = 0
   npedim   = -1
-  model_id = 1
+  model_id = 1      ! must be consistent with model_idx set in setup_model_vgrid_procconf()
   iblk     = 1
   nproma   = 1      ! note: nproma may not be smaller than ice; this is differently in jsbach4, and only a restriction to SLM !
   ics      = 1      ! 
@@ -154,15 +153,25 @@ PROGRAM land_model_driver
   nc       = ice - ics + 1                 ! (end-number - start-number + 1)
   nsoil_sb = -1                            ! namelist parameter
 
-  !! 1.2  create new model: jsbach%models(model_id)%m => current    ('current' is of TYPE(t_jsb_model))
-  CALL init_base() 
-  
-  !! 1.3  model init
-  CALL init_model(nproca, nprocb, npedim, model_id, l_forcing, nsoil_sb, iblk, nproma, ics, ice, nc)
-
-  !! 1.4  get model and tile
+  !! 1.2  set up the model with vgrid and process configs (jsbach%models(model_id)%m => model  with 'model' of TYPE(t_jsb_model))
+  CALL setup_model_vgrid_procconf("namelist.slm")
   model => get_model(model_id)
-  tile  => model%Get_top_tile()
+
+  !! 1.3 init of horizontal grid
+  CALL jsbach_setup_grid(model%id, "hgrid0")    ! model%id, horizontal grid name
+
+  !! 1.4 init process parameters (and modify parameter values for param-sensi)
+  CALL quincy_proc_parameter_init(model%id)
+
+  !! 1.5 set up tiles, read lctlib (and modify parameter values for param-sensi) and init usecase
+  CALL jsbach_setup_tiles(model%id)
+
+  !! 1.6 quincy-model init
+  !!     and init of: forcing, SB_ & VEG_ pools, tiles, time, fluxnet diagnostics
+  CALL quincy_init(model%id, iblk, nproma, ics, ice, nc, &    ! in
+                   l_forcing, nsoil_sb)                       ! out
+  tile => model%Get_top_tile()
+
 
 
   !! 2.0 -----------------------------------------------------------------------------------------------
@@ -273,7 +282,7 @@ PROGRAM land_model_driver
     output_interval_pool_act          = output_interval_pool_spinup
     ! number of spinup timesteps
     itimestep                         = itimestep - forcing_options%transient_spinup_timesteps_all
-    transient_spinup_timesteps        = itimestep * -1.0_wp
+    transient_spinup_timesteps        = itimestep * (-1.0_wp)
     ! init spinup period counter
     transient_spinup_itimestep_period = 0
   ENDIF

@@ -1,13 +1,13 @@
 !>
-!! @brief Contains methods for JSBACH initializations.
+!! @brief
+!!  Contains methods for QUINCY initializations.
 !!
 !! @author
-!!  Jan Engel, MPI-BGC Jena
+!!  Reiner Schnur, MPI-Met
 !!
 !! @par Revision History
-!! First version by Jan Engel (2016-07-22); starting with custom SLM init, moving to default JSBACH4 init later
-!! Second version by Jan Engel (20161213): moving veg process init routines to mo_veg_init
-!! Third version by Steffen Richter & JE (June 2018): split model init into init_model_standalone & init_model_common according to JSBACH4 code
+!!  tailored the JSBACH4 model-init module to fit QUINCY by Jan Engel MPI-BGC
+!! 
 !!
 MODULE mo_jsb_model_init
 #ifndef __NO_JSBACH__
@@ -16,13 +16,11 @@ MODULE mo_jsb_model_init
 
   USE mo_kind,             ONLY: wp
   USE mo_exception,        ONLY: message_text, message, finish
-  USE mo_jsb_base,         ONLY: jsbach
-  USE mo_jsb_model_class,  ONLY: t_jsb_model
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: init_model
+  PUBLIC :: jsbach_setup_grid, quincy_init
 
   PUBLIC :: time_day, time_year, ntimestep, itimestep, timestep_prop_day
   PUBLIC :: fluxnet_output_start, fluxnet_output_stop, fluxnet_output_status
@@ -40,97 +38,80 @@ MODULE mo_jsb_model_init
   INTEGER  :: fluxnet_output_status        !< a simple status var to inform other processes about it
                                            !! 0: not activiated at all [default], 1: active, 2: currently writing, 3: finished
 
-  INTERFACE init_model
-    MODULE PROCEDURE init_model_standalone
-  END INTERFACE init_model
+  INTERFACE jsbach_setup_grid
+    MODULE PROCEDURE setup_grid_standalone
+    ! MODULE PROCEDURE setup_grid_patch
+    ! MODULE PROCEDURE setup_grid_decomposition
+  END INTERFACE jsbach_setup_grid
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_model_init'
 
 CONTAINS
 
-
   !-----------------------------------------------------------------------------------------------------
-  !> standalone model init
+  !> set up the horizontal grid for the standalone model
   !! 
-  !! creates model and grid \n 
-  !! runs init_model_common() for all other init and config tasks
+  !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE init_model_standalone(nproca, nprocb, npedim, model_id, l_forcing, nsoil_sb, iblk, nproma, ics, ice, nc, model_name)
+  SUBROUTINE setup_grid_standalone(model_id, grid_name)
 
-    USE mo_jsb_grid_class,   ONLY: t_jsb_grid, new_grid
-    USE mo_jsb_grid,         ONLY: Register_grid
+    USE mo_jsb_model_class,       ONLY: t_jsb_model
+    USE mo_jsb_class,             ONLY: Get_model
+    USE mo_jsb_grid_class,        ONLY: t_jsb_grid, new_grid
+    USE mo_jsb_grid,              ONLY: Register_grid
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    INTEGER,                    INTENT(in) :: nproca, nprocb, &
-                                              npedim, model_id
-    LOGICAL,INTENT(out)                    :: l_forcing            !< IF .TRUE. THEN update_forcing(), update_a2l(), update_l2a()
-    INTEGER,INTENT(out)                    :: nsoil_sb             !< number of soil layers used in SB_ - equal to nsoil_water
-                                                                   !!  necessary for open_pool_output_files() & init_output_writing_pool()
-    INTEGER,INTENT(in)                     :: iblk                 !< block number
-    INTEGER,INTENT(in)                     :: nproma               !< number of points in the chunk (each with same latitude); multiple chunks per block
-    INTEGER,INTENT(in)                     :: ics                  !< start number of point in the chunk, the model currently works on
-    INTEGER,INTENT(in)                     :: ice                  !< last  number of point in the chunk, the model currently works on
-    INTEGER,INTENT(in)                     :: nc                   !< number of points the model currently works on: ics+ice-1
-    CHARACTER(len=*), OPTIONAL, INTENT(in) :: model_name
+    INTEGER,                    INTENT(in) :: model_id
+    CHARACTER(len=*),           INTENT(in) :: grid_name
     ! ---------------------------
     ! 0.2 Local
-    TYPE(t_jsb_model),  POINTER            :: model
-    TYPE(t_jsb_grid),   POINTER            :: grid
-    INTEGER                                :: nlon, nlat
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_model_standalone'
+    TYPE(t_jsb_model),  POINTER   :: model
+    TYPE(t_jsb_grid),   POINTER   :: grid
+    CHARACTER(len=*), PARAMETER   :: routine = modname//':setup_grid_standalone'
+    ! ---------------------------
+    ! 0.5 Get Memory
+    model => Get_model(model_id)
 
 
-    !> 1.0 model
+    !< 0.9
     !! 
-    ! create one model
-    model => jsbach%models(model_id)%m
-    ! check if this model got the correct namelist (if model name is provided)
-    IF (PRESENT(model_name)) THEN
-      IF (ADJUSTL(TRIM(model_name)) /= ADJUSTL(TRIM(model%name))) &
-        CALL finish(TRIM(routine), 'Model ID and name are inconsistent with namelist config.')
-    END IF
+    CALL message(TRIM(routine), 'Standalone model currently only works with ECHAM')
 
-    !> 2.0 grid
+
+    !< 1.0 create horizontal grid
     !! 
-    ! create grid, currently for only one point
-    grid => new_grid(1.0_wp,1.0_wp)  ! arguments are dummy lon & lat (new_grid_from_lonlat())
-    ! register grid 
+    grid      => new_grid(model%config%lon, model%config%lat) ! calls via an interface: FUNCTION new_grid_from_lonlat(lon, lat) RESULT(grid)
+    grid%id   = 1                                             ! *quincytmp
+    grid%name = grid_name                                     ! *quincytmp
     CALL register_grid(grid)
     model%grid_id = grid%id
 
-    !> 3.0 run model init and config
-    !! 
-    CALL init_model_common(model, l_forcing, nsoil_sb, iblk, nproma, ics, ice, nc, model_id)
-    ! delete local pointer 
     NULLIFY(model)
-  END SUBROUTINE init_model_standalone
+
+  END SUBROUTINE setup_grid_standalone
 
 
   !-----------------------------------------------------------------------------------------------------
-  !> init_model_common
+  !> init quincy model
   !! 
-  !! subtask of init_model_standalone() \n 
+  !! and init of: forcing, SB_ & VEG_ pools, tiles, time, fluxnet diagnostics
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE init_model_common(model, l_forcing, nsoil_sb, iblk, nproma, ics, ice, nc, model_id)
+  SUBROUTINE quincy_init(model_id, iblk, nproma, ics, ice, nc, l_forcing, nsoil_sb)
 
     ! base
-    USE mo_jsb_process_factory,   ONLY: max_no_of_processes, Create_process
+    USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_lct_class,         ONLY: Contains_lct
     USE mo_jsb_model_usecases,    ONLY: init_usecase
     USE mo_jsb4_forcing,          ONLY: Init_forcing, forcing_options
     USE mo_jsb_class,             ONLY: Get_model
-    USE mo_jsb_grid_class,        ONLY: t_jsb_grid
     USE mo_jsb_grid,              ONLY: Get_grid
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
-    USE mo_jsb_lctlib_class,      ONLY: Read_lctlib
-    USE mo_jsb_config_class,      ONLY: new_model_config
+    USE mo_base_constants,        ONLY: dtime, one_year, one_day
     ! shared 
     USE mo_util,                  ONLY: one_of
-    USE mo_shared_set_parameters, ONLY: parameters_slm_from_file, &                   !< object of TYPE t_parameters_slm_from_file
-                                        set_parameter_lctlib_values_with_list_values  !< it's a subroutine
     ! process memory
     USE mo_sb_memory_class,       ONLY: Init_sb_pools_elements_a
     USE mo_veg_memory_class,      ONLY: Init_veg_pools_elements_a
@@ -141,94 +122,52 @@ CONTAINS
     USE mo_rad_init,              ONLY: rad_init
     USE mo_assimi_init,           ONLY: assimi_init
     USE mo_pheno_init,            ONLY: pheno_init
-    ! process constants
-    USE mo_base_constants         ! e.g. dtime
-    USE mo_shared_constants,      ONLY: init_shared_constants
-    USE mo_atmland_constants,     ONLY: init_atmland_constants
-    USE mo_rad_constants,         ONLY: init_rad_constants
-    USE mo_assimi_constants,      ONLY: init_assimi_constants
-    USE mo_pheno_constants,       ONLY: init_pheno_constants
-    USE mo_veg_constants,         ONLY: init_veg_constants
-    USE mo_sse_constants,         ONLY: init_sse_constants
-    USE mo_sb_constants,          ONLY: init_sb_constants
-    ! process config
+    ! process configurations (t_PROC_config)
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_config(SSE_)
-    dsl4jsb_Use_config(SB_)
     
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
-    LOGICAL,INTENT(out)                       :: l_forcing            !< IF .TRUE. THEN update_forcing(), update_a2l(), update_l2a()
-    INTEGER,INTENT(out)                       :: nsoil_sb             !< number of soil layers used in SB_ - equal to nsoil_water
-                                                                      !!  necessary for open_pool_output_files() & init_output_writing_pool()
-    INTEGER,INTENT(in)                        :: iblk, nproma         !< block number, number of points per chunk   *slmtmp
-    INTEGER,INTENT(in)                        :: ics, ice, nc         !< first & last & number of points in the chunk the model currently works on  *slmtmp
-    INTEGER,INTENT(in)                        :: model_id
+    INTEGER ,INTENT(in)                       :: model_id
+    INTEGER ,INTENT(in)                       :: iblk, nproma         !< block number, number of points per chunk   *slmtmp
+    INTEGER ,INTENT(in)                       :: ics, ice, nc         !< first & last & number of points in the chunk the model currently works on  *slmtmp
+    LOGICAL ,INTENT(out)                      :: l_forcing            !< IF .TRUE. THEN update_forcing(), update_a2l(), update_l2a()
+    INTEGER ,INTENT(out)                      :: nsoil_sb             !< number of soil layers used in SB_ - needed for open_pool_output_files() & init_output_writing_pool()
     ! ---------------------------
     ! 0.2 Local
-    CLASS(t_jsb_tile_abstract), POINTER       :: tile, child          !< data structure for dynamic vegetation and soil variables
-    INTEGER                                   :: iproc, ilct, jlct, &
-                                                 i, no_children
-    REAL(wp),                   ALLOCATABLE   :: fract_tmp(:,:)
+    TYPE(t_jsb_model), POINTER                :: model
+    CLASS(t_jsb_tile_abstract), POINTER       :: tile
     INTEGER                                   :: no_omp_thread
-    TYPE(t_jsb_grid),           POINTER       :: grid
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_model_common'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':quincy_init'
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(SSE_)
-    dsl4jsb_Def_config(SB_)
-    ! the according Get_config is called below
+    ! ---------------------------
+    ! 0.4 Process Activity, Debug Option
+    ! 
+    ! ---------------------------
+    ! 0.5 Get Memory
+    model  => Get_model(model_id)
+    ! Get process config
+    dsl4jsb_Get_config(VEG_)
+    dsl4jsb_Get_config(SSE_)
 
 
     !> 0.9 init local variables
     !! 
+    CALL message(TRIM(routine), 'starting model init')
     no_omp_thread = 1
 
 
-    !> 1.0 configuration
-    !!
-    !> 1.1 model config
-    !!
-    model%config => new_model_config(model%namelist_filename)
-    !> 1.2 process config (includes vertical_grid init)
-    !!
-    ! allocate an object for each process
-    ALLOCATE(model%processes(max_no_of_processes))
-    DO iproc=1,max_no_of_processes
-      model%processes(iproc)%p => Create_process(iproc, model%id, TRIM(model%namelist_filename))
-    END DO
-    ! run configuration for each process  (mo_jsb_process_class:Configure_process() -> t_PROC_config:Init -> mo_PROC_config_class:Init_PROC_config)
-    !  incl. creating vertical grids:
-    !   canopy_layer  in ASSIMI_  (ncanopy is part of the &ASSIMILATION_CTL namelist)
-    !   soil_layer_sb in SSE_     (number of soil layers is part of the &SSE_CTL namelist)
-    !   spectral_bands in RAD_    (number of spectral bands the light is divided into, vector length is currently hardcoded in rad_config)
-    CALL model%Configure_processes()
-    !> 1.3 Get selected process configs
-    dsl4jsb_Get_config(VEG_)
-    dsl4jsb_Get_config(SSE_)
-    dsl4jsb_Get_config(SB_)
-    !> 1.4 error catching
-    !! 
-    SELECT CASE (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
-      CASE ("jsm")
-        IF(TRIM(model%config%slm_model_name) /= "soil") THEN
-          WRITE(message_text,'(3a)') 'setting sb_model_scheme to ',TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), & 
-                                     ' currently only works for the standalone soil model'
-          CALL finish(routine, message_text) 
-        ENDIF 
-    ENDSELECT
-    
-    
-    !> 2.0 forcing config
+    !> 1.0 forcing config
     !! 
     CALL Init_forcing(model_id)
 
 
-    !> 3.0 model init 
+    !> 2.0 model options
     !! 
     model%options%dtime        = model%config%dtime ! length of one time step
     model%options%steplen      = model%config%dtime ! 
@@ -243,54 +182,14 @@ CONTAINS
     nsoil_sb                   = dsl4jsb_Config(SSE_)%nsoil_water   ! SUBROUTINE output for land_model_driver -> open_pool_output_files()
 
 
-    !> 4.0 Grid init
-    !!
-    grid => Get_grid(model%grid_id)
-    grid%lat = model%config%lat
-    grid%lon = model%config%lon
-
-
-    !> 5.0 Process-constants init
-    !!
-    CALL init_base_constants          ! may be 1st of the 'init constants'
-    CALL init_shared_constants        ! may be 2nd of the 'init constants'
-    CALL init_rad_constants           ! may be 3rd of the 'init constants'
-    CALL init_atmland_constants       ! uses hourday                  defined in mo_base_constants
-    CALL init_assimi_constants        ! uses molar_mass_N, Dwv, Dco2  defined in mo_shared_constants
-    CALL init_veg_constants           ! uses Tzero                    defined in mo_shared_constants
-    CALL init_sse_constants
-    CALL init_sb_constants
-    CALL init_pheno_constants         ! uses Tzero                    defined in mo_shared_constants
-
-    !> 5.1 Process-constants & pft-specific lcltib-parameter modification for parameter sensitivity analysis
-    !! see 7.1 for LCTLIB parameters
-    IF (model%config%set_parameter_values_from_file) THEN
-      CALL parameters_slm_from_file%set_param(model%config%set_parameter_values_proportional)
-    ENDIF
-
-
-    !> 6.0 Memory init -> pool and element structures in veg_ and sb_ memory with ALLOCATABLE variables with operator overload
+    !> 3.0 SB_ & VEG_ pools (pool and element structures in veg_ and sb_ memory with ALLOCATABLE variables with operator overload)
     !!
     CALL Init_sb_pools_elements_a(ics, ice, nc, iblk, nsoil_sb)
     CALL Init_veg_pools_elements_a(ics, ice, nc, iblk)
 
 
-    !> 7.0 lctlib init and read
+    !> 4.0 Init tiles
     !!
-    !! Important! Read_lctlib() needs config and constants init to be finished !
-    !!
-    model%lctlib => Read_lctlib('lctlib_slm_nlct8.def')
-    CALL message(TRIM(routine), 'Imported lctlib from '//'lctlib_slm_nlct8.def')
-
-    !> 7.1 PFT-specific lcltib-parameter modification for parameter sensitivity analysis
-    !! see 5.1 for mo_PROC_constants
-    IF (model%config%set_parameter_values_from_file) CALL set_parameter_lctlib_values_with_list_values(model)
-
-
-    !> 8.0 Init tiles
-    !!
-    ! Shortcut model configuration through usecase
-    CALL init_usecase(model)
     ! At this point, the model configuration and tile structure is set up.
     ! We continue with initializing the memory structure and different model processes.
     ! Iterate over tiles and call initialization if necessary
@@ -298,7 +197,7 @@ CONTAINS
     tile => model%Get_top_tile()
     IF (.NOT. ASSOCIATED(tile)) CALL finish(TRIM(routine), 'Top tile not set')
 
-    !> 8.1 loop over tiles
+    !> 4.1 loop over tiles
     !! 
     DO WHILE (ASSOCIATED(tile))
 
@@ -307,17 +206,17 @@ CONTAINS
         CYCLE
       END IF
 
-      !> 8.2 Initialize tile memory and read tile fractions
+      !> 4.2 Initialize tile memory and read tile fractions
       !! @todo: once we have land use change or dynveg, l_fixed_fractions needs to be adapted <- JSBACH4
       CALL tile%Init(TRIM(model%shortname), '', TRIM(tile%name), l_fixed_fractions=.TRUE.)
 
-      !> 8.3 tile init
+      !> 4.3 tile init
       !! @todo model_init -> init lcts of the tile via PROCEDURE Construct_jsb_lct  *slmtemp  ?
-      tile%owner_model_id = model_id                      ! *slmtemp
+      tile%owner_model_id = model%id                      ! *slmtemp
       ! lcts
       tile%lcts%id        = 2                             ! VEG_TYPE     2 == Vegetated
       tile%lcts%name      = "veg"                         ! Short name for lct
-      tile%lcts%long_name = "slm vegetation"              ! Long name for lct
+      tile%lcts%long_name = "quincy_vegetation"           ! Long name for lct
       tile%lcts%lib_id    = dsl4jsb_Config(VEG_)%pft_id   ! pftID == column number in model%lctlib == ID of lct in lctlib (JSBACH4)
 
       !! this option is outdated; forcing is always used, but not for test_canopy, as the below CASE indicates :)
@@ -331,7 +230,7 @@ CONTAINS
           l_forcing = .FALSE.
       END SELECT
 
-      !> 8.4 run process init
+      !> 4.4 run process init
       !! 
       !! one_of() returns -1 if NONE of the SLM model names are found, but the 1st found SLM model name get the number 1 (no enum just loop)
       !! 
@@ -376,14 +275,14 @@ CONTAINS
       tile => model%Goto_next_tile()
     END DO
 
-    !> 8.5 Iterate over tiles again and set lct fractions (after ALL tile fractions have been set above)
+    !> 4.5 Iterate over tiles again and set lct fractions (after ALL tile fractions have been set above)
     !! 
     CALL model%Reset_tiles()
     tile => model%Get_top_tile()
     IF (.NOT. ASSOCIATED(tile)) CALL finish(TRIM(routine), 'Top tile not set')
 
 
-    !> 9.0 Time init for e.g. the time loop in the land_model_driver
+    !> 5.0 Time init for e.g. the time loop in the land_model_driver
     !!
     time_day          = 0.0_wp                                        !! equals 1.0 after one day has passed (i.e. start with zero)
     time_year         = 1                                             !! the 1st year of a simulation == 1 (not zero)
@@ -392,12 +291,12 @@ CONTAINS
     timestep_prop_day = dtime/one_day                                 !! proportion of one day that is simulated with one timestep
 
 
-    !> 10.0 Initialise: output of fluxnet diagnostics simulation
+    !> 6.0 Initialise: output of fluxnet diagnostics simulation
     !! 
     !! output is created as defined by the 'output_interval_pool' & 'output_start_..' & 'output_end_...' options \n
     !! and the last full "forcing period" is written into new output files with half-hourly write-out of values
     !! 
-    !> 10.1 deactivate per default
+    !> 6.1 deactivate per default
     fluxnet_output_status = 0
     !> 10.2 activate output and check settings
     IF (model%config%fluxnet_output) THEN
@@ -417,7 +316,7 @@ CONTAINS
       ! calc timestep when fluxnet output stops
       fluxnet_output_stop   = fluxnet_output_start + fluxnet_output_length
     END IF
-  END SUBROUTINE init_model_common
+  END SUBROUTINE quincy_init
 
 #endif
 END MODULE mo_jsb_model_init

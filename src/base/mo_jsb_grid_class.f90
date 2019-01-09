@@ -223,6 +223,9 @@ CONTAINS
 
     allocate(new%lon(1,1))
     allocate(new%lat(1,1))
+    
+    new%lon = lon
+    new%lat = lat
 
     grid => new
   END FUNCTION new_grid_from_lonlat
