@@ -16,7 +16,6 @@ MODULE mo_l2a_memory_class
   USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d              ! *slmjsb4
-  USE mo_slm_varlist,            ONLY: jsb_add_var   ! replace by mo_jsb_varlist later  *slmtemp
 
 ! jsbach4 needed for lakes
 !  USE mo_util,              ONLY: One_of
@@ -28,7 +27,6 @@ MODULE mo_l2a_memory_class
   PUBLIC :: t_l2a_memory, max_no_of_vars
 
   INTEGER, PARAMETER :: max_no_of_vars = 30
-
 
 
   !-----------------------------------------------------------------------------------------------------
@@ -82,8 +80,9 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_l2a_memory(mem, prefix, suffix, lct_ids, model_id) ! jsbach4
 
-!    USE mo_jsb_varlist,       ONLY: jsb_add_var
-    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2   ! , tables
+!    USE mo_jsb_varlist,       ONLY: t_jsb_varlist, jsb_add_var
+    USE mo_slm_varlist,       ONLY: jsb_add_var   ! replace by mo_jsb_varlist later    *quincytemp
+    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2   ! , TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
     USE mo_jsb_model_class,   ONLY: t_jsb_model
@@ -91,33 +90,30 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    CLASS(t_l2a_memory),   INTENT(inout), TARGET :: mem
-    CHARACTER(len=*),      INTENT(in)            :: prefix
-    CHARACTER(len=*),      INTENT(in)            :: suffix
-    INTEGER,               INTENT(in)            :: lct_ids !(:)    !> in jsbach4: vector of land cover type IDs
-    INTEGER,               INTENT(in)            :: model_id
+    CLASS(t_l2a_memory),  INTENT(inout), TARGET :: mem             !> l2a memory
+    CHARACTER(len=*),     INTENT(in)            :: prefix          !> process name
+    CHARACTER(len=*),     INTENT(in)            :: suffix          !> tile name
+    INTEGER,              INTENT(in)            :: lct_ids !(:)    !> in jsbach4: vector of land cover type IDs
+    INTEGER,              INTENT(in)            :: model_id        !> model ID model\%id
     ! ---------------------------
     ! 0.2 Local
-    TYPE(t_jsb_model),      POINTER   :: model 
-    TYPE(t_jsb_grid),       POINTER   :: hgrid 
-    TYPE(t_jsb_vgrid),      POINTER   :: surface  
-    INTEGER                           :: table
-    CHARACTER(len=*),       PARAMETER :: routine = TRIM(modname)//':Init_a2l_memory'
-
-    model => Get_model(model_id) 
-
-!    table = tables(1)  
-    table = 1
-
+    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
+    TYPE(t_jsb_vgrid), POINTER :: vgrid_surface                ! Vertical grid
+    INTEGER                    :: table
+    CHARACTER(len=*),PARAMETER :: routine = TRIM(modname)//':Init_a2l_memory'
+    ! ---------------------------
+    ! 0.5 Get Memory
+    model         => Get_model(model_id)
+    table         = 1     ! in jsbach4 this line is: table = tables(1)     *quincytemp
     hgrid         => Get_grid(model%grid_id)
-!    surface => Get_vgrid('surface') 
+    vgrid_surface => Get_vgrid('surface')
 
 
-    !! allocate variables
-    !! 
+    !> 1.0  init memory
     !! 
     CALL jsb_add_var( mem, 't_srf', mem%t_srf, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('t_srf', 'K', 'surface temperature'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -125,7 +121,7 @@ CONTAINS
             initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 't_eff_srf', mem%t_eff_srf, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('t_eff_srf', 'K', 'effective surface temperature'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -133,7 +129,7 @@ CONTAINS
             initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'qsat_srf', mem%qsat_srf, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('qsat_srf', 'g g-1', 'surface saturated specific humidity'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -141,7 +137,7 @@ CONTAINS
             initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'fact_q_air', mem%fact_q_air, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('fact_q_air', 'unitless', 'factor representing air at actual water content'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -149,7 +145,7 @@ CONTAINS
             initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'fact_qsat_srf', mem%fact_qsat_srf, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('fact_qsat_srf', 'unitless', 'factor representing air at saturating water content'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -157,7 +153,7 @@ CONTAINS
             initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'zh_srf', mem%zh_srf, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('zh_srf', 'm', 'roughnesslength for heat transfer'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -165,7 +161,7 @@ CONTAINS
             initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'zm_srf', mem%zm_srf, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('zm_srf', 'm', 'roughnesslength for momentum transfer'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -173,7 +169,7 @@ CONTAINS
             initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'alb_vis_dif', mem%alb_vis_dif, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('alb_vis_dif', 'unitless', 'surface albedo for diffuse radiation in the visible band'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -181,7 +177,7 @@ CONTAINS
             initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'alb_nir_dif', mem%alb_nir_dif, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('alb_nir_dif', 'unitless', 'surface albedo for diffuse radiation in the near infrared band'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -189,7 +185,7 @@ CONTAINS
             initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'alb_vis_dir', mem%alb_vis_dir, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('alb_vis_dir', 'unitless', 'surface albedo for direct radiation in the visible band'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -197,7 +193,7 @@ CONTAINS
             initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'alb_nir_dir', mem%alb_nir_dir, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('alb_nir_dir', 'unitless', 'surface albedo for direct radiation in the near infrared band'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -205,7 +201,7 @@ CONTAINS
             initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'albedo', mem%albedo, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('albedo', 'unitless', 'total surface albedo'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -213,7 +209,7 @@ CONTAINS
             initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'sensible_heat_flx', mem%sensible_heat_flx, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('sensible_heat_flx', 'W m-2', 'sensible heat flux'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -221,7 +217,7 @@ CONTAINS
             initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'latent_heat_flx', mem%latent_heat_flx, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('latent_heat_flx', 'W m-2', 'latent heat flux'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -229,7 +225,7 @@ CONTAINS
             initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'ground_heat_flx', mem%ground_heat_flx, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('ground_heat_flx', 'W m-2', 'ground heat flux'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -237,7 +233,7 @@ CONTAINS
             initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'ground_heat_flx_old', mem%ground_heat_flx_old, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('ground_heat_flx_old', 'W m-2', 'ground heat flux of previous timestep'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -245,7 +241,7 @@ CONTAINS
             initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'net_radiation', mem%net_radiation, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('net_radiation', 'W m-2', 'surface net radiation'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -253,7 +249,7 @@ CONTAINS
             initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'vpd', mem%vpd, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('vpd', 'Pa', '2m air vapour pressure deficit'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -263,7 +259,7 @@ CONTAINS
 !    IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%latent_hflx_wtr%ptr)) THEN
 
       CALL jsb_add_var( mem, 'latent_hflx_wtr', mem%latent_hflx_wtr, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('latent_hflx_wtr', 'W m-2', 'latent heat flux over water'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -271,7 +267,7 @@ CONTAINS
             initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'sensible_hflx_wtr', mem%sensible_hflx_wtr, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('sensible_hflx_wtr', 'W m-2', 'sensible heat flux over water'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -279,7 +275,7 @@ CONTAINS
             initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'latent_hflx_ice', mem%latent_hflx_ice, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('latent_hflx_ice', 'W m-2', 'latent heat flux over ice'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
@@ -287,7 +283,7 @@ CONTAINS
             initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'sensible_hflx_ice', mem%sensible_hflx_ice, &
-            hgrid, surface, &
+            hgrid, vgrid_surface, &
             t_cf('sensible_hflx_ice', 'W m-2', 'sensible heat flux over ice'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
