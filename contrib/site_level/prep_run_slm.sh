@@ -1310,7 +1310,7 @@ if [ $compareSimCRUNCEPvsGFDB == "T" ]; then
 fi
 
 ## syncronize all data with the file system ##
-sync
+sleep 1 && sync
 
 
 ## define a function that manipulates the namelist && change namelist according to options ##
@@ -1322,9 +1322,18 @@ sync
  # $slmNamelist refers to the namelist file name, assuming the namelist file is located in the current folder !
 function changeNamelistValue {
 oldValue=$(grep -w $1 "$simFoldDefaultFiles""$slmNamelistFilename" | awk -F "=" '{print $2}' | tr -d '"') # get the old value that should be replaced
-lineNum=$(grep -wn $1 "$simFoldDefaultFiles""$slmNamelistFilename" | cut -d : -f 1)          # get line number of variable $1
-sed -i "$lineNum"s/$oldValue/$2/ "$simFoldDefaultFiles""$slmNamelistFilename"                # replace the old value in line $lineNum with $2
-sync
+lineNum=$(grep -wn $1 "$simFoldDefaultFiles""$slmNamelistFilename" | cut -d : -f 1)                       # get line number of variable $1
+sed -i "$lineNum"s/$oldValue/$2/ "$simFoldDefaultFiles""$slmNamelistFilename"                             # replace the old value in line $lineNum with $2
+# explicitly testing and error catching to avoid using sync
+sleep 0.1
+newValue=$(grep -w $1 "$simFoldDefaultFiles""$slmNamelistFilename" | awk -F "=" '{print $2}' | tr -d '"') # get the new value of this variable
+if [ "$2" != "$newValue" ]; then
+  sleep 2
+  newValue=$(grep -w $1 "$simFoldDefaultFiles""$slmNamelistFilename" | awk -F "=" '{print $2}' | tr -d '"') # get the new value of this variable
+  if [ "$2" != "$newValue" ]; then
+    sync
+  fi
+fi
 return 0                                                         # get return value with: return_value=$?
 }
  # examples:

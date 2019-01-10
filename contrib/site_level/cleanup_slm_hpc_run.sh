@@ -99,7 +99,7 @@ fi
 if [ "$specialFluxnetOutput" == T ]; then
   echo " sim_fluxnet_diagnostics-process_timestep.R"
   Rscript --vanilla "$simFold"default_files/sim_fluxnet_diagnostics-process_timestep.R $simFold  # creates two .csv files
-  sync
+  sleep 2
   echo " finished barplot figure creation of the fluxnet diagnostics"
 fi
 
@@ -108,7 +108,7 @@ fi
 cp "$simFold"default_files/postprocessing_site_overview.R  "$simFold"
 cd "$simFold"
 Rscript --vanilla ./postprocessing_site_overview.R
-sleep 2 && sync
+sleep 2
 
 
 ## create one .pdf file from the postprocessing .pdf of all sites ##
@@ -133,9 +133,9 @@ if [ $nSimDir -lt 105 ]; then
       echo " "              >> ./pdftmp/temp.txt
       echo "~color{1 0 0}"  >> ./pdftmp/temp.txt     # https://stackoverflow.com/questions/18422738/how-to-change-text-color-in-output-from-enscript
       echo $siteBase        >> ./pdftmp/temp.txt
-      sync
+      sleep 1
       enscript -e~ -q -B -f Courier20 -p ./pdftmp/"$count"a.ps ./pdftmp/temp.txt
-      sync
+      sleep 1
       ps2pdf ./pdftmp/"$count"a.ps ./pdftmp/"$count"a.pdf
     fi
   done
@@ -145,6 +145,7 @@ fi
 
 
 ## remove some folders not needed anymore ##
+sync
 rm -r "$simFold"default_files        # includes this cleanup script
 rm -r "$simFold"error
 rm -r "$simFold"out

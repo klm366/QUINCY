@@ -18,6 +18,10 @@ jobName=$1                # a user specific alphanumeric string: "exp_""$experim
 simDefaultFiles=$2        # name of folder with binary namelist lctlib R-Script in $bgiScratchUserFold/slm/$jobName
 singleSiteName=$3         # only provided if a single site should be simulated (not for param sensitivity), else a job array will be run
 
+## set a random sleep time (1 to 90 sec) to not let each instance of this run_slm.sh run at exactly the same time
+# this helps to reduce the max load of canossa.bgc-jena.mpg.de thereby improving BGC-Filesystem stability
+wait=$(( $RANDOM % 90 )) 
+sleep $wait
 
 ## basic folders ##
 username=$(whoami)
@@ -95,7 +99,28 @@ fi
 ##############################################################################
 ## job specific actions start here ###########################################
 ##############################################################################
-# define a site-specific job-folder within the simulation folder
+
+## define a function that checks whether folder is present replacing 'sync'
+# function argument $1 is the folder to be checked
+function checkDirPresent {
+ if [ ! -d "$1" ]; then
+   sleep 2
+   if [ ! -d "$1" ]; then
+     sleep 2
+     mkdir -p "$1"
+     if [ ! -d "$1" ]; then
+       sleep 2
+       sync
+       if [ ! -d "$1" ]; then
+         echo " EXIT! Directory ""$1"" could not be created (run_slm.sh)."
+       fi
+     fi
+   fi
+ fi
+return 0                                                         # get return value with: return_value=$?
+}
+
+## define a site-specific job-folder within the simulation folder
 siteName="$(awk '{print $1}' <<< "$siteData")"
 jobFold="$simFold""$siteName""/"
 # for parameter sensitivity simulations prepend a number (where 1001 == 1st set of parameter value combinations in parameter_table.txt)
@@ -107,7 +132,7 @@ fi
 ## create job specific folder using the absolute path ##
 # "$bgiScratchUserFold""$jobName""/""$(awk '{print $1}' <<< "$siteData")""/"
 mkdir -p "$jobFold"
-sync
+checkDirPresent "$jobFold"
 
 ## cd into job specific folder ##
 cd "$jobFold"           ## cd into job specific folder ##
@@ -115,7 +140,8 @@ jobErrFold="./error/"
 jobOutFold="./std_out/"
 mkdir -p "$jobErrFold"  # folder for error files of this job
 mkdir -p "$jobOutFold"  # folder for files with std output of this job
-sync
+checkDirPresent "$jobErrFold"
+checkDirPresent "$jobOutFold"
 
 ## copy files specific to this job into the job folder ##
 # namelist, binary, lctlib, R-Script
@@ -188,7 +214,8 @@ case "$pftName" in
     echo "EXIT!  no such PFT is known by the run_slm.sh script: ""$pftName"
     exit 
 esac
-sync
+sleep 2s && sync
+
 
 ######################################################################
 ## manipulate the namelist - parameters specific to this job / site ##
@@ -199,6 +226,16 @@ function changeNamelistValue {
 oldValue=$(grep -w $1 ./"$slmNamelist" | awk -F "=" '{print $2}' | tr -d '"') # get the old value that should be replaced
 lineNum=$(grep -wn $1 ./"$slmNamelist" | cut -d : -f 1)          # get line number of variable $1
 sed -i "$lineNum"s/$oldValue/$2/ ./"$slmNamelist"                # replace the old value in line $lineNum with $2
+# explicitly testing and error catching to avoid using sync
+sleep 0.1
+newValue=$(grep -w $1 ./"$slmNamelist" | awk -F "=" '{print $2}' | tr -d '"') # get the new value of this variable
+if [ "$2" != "$newValue" ]; then
+  sleep 2
+  newValue=$(grep -w $1 ./"$slmNamelist" | awk -F "=" '{print $2}' | tr -d '"') # get the new value of this variable
+  if [ "$2" != "$newValue" ]; then
+    sync
+  fi
+fi
 return 0                                                         # get return value with: return_value=$?
 }
  # examples:
@@ -279,8 +316,8 @@ if [ $doParamSensitivitySim == "T" ]; then
 fi
 
 ## sync all data with the filesystem ##
-sync
-sleep 5s
+sleep 5s && sync
+
 
 #############################################################################################
 ## move the job folder to the local scratch/ at the HPC node and work from there           ##
@@ -301,8 +338,7 @@ if [ "$scratchSpace" -gt "15000000" ]
   ## copy all files (but not the folder) here
   cp -r   "$jobFold"* ./ 
   ## make sure all folders and files are copied to local scratch
-  sync
-  sleep 10s
+  sleep 10s && sync
   ## remove all copied files from network/scratch
   rm -rf  "$jobFold"*
 fi
@@ -316,7 +352,7 @@ startTime=$(date -u +%F_%X_%Z)
 
 ## get finish-time of simulation
 finishTime=$(date -u +%F_%X_%Z)
-sync
+sleep 2
 
 ## run the postprocessing R Script ##
 Rscript ./"$slmRscript"
@@ -332,13 +368,16 @@ rm ./*.dat                  #  forcing file(s) (climate.dat for SLM land)
 rm ./"$slmRscript"          #  R script for postprocessing
 rm ./"$slmBinary"           #  the binary
 [ $specialFluxnetOutput == "T" ] && rm ./"$slmRscript4fluxfile" ./"$slmRscript4fluxdiag"  # equal to: if [ ... ]; then ...; fi
-sync
+sleep 2
 
 ## sort job specific files ##
 mkdir -p ./input
 mkdir -p ./output
 mkdir -p ./postprocessing
-sync
+checkDirPresent ./input
+checkDirPresent ./output
+checkDirPresent ./postprocessing
+
 mv ./"$slmNamelist"         ./input               #  namelist.slm
 mv ./"$slmLctlib"           ./input               #  usually this would be: lctlib_slm_nlct8.def
 mv ./*.txt                  ./output              #  the output files SLM created at runtime
@@ -370,7 +409,7 @@ if [ "$localScratch" == "TRUE" ]
   cd "$jobFold"
   cp -r   /scratch/"$username"/"$jobName""$jobIndex""$siteName"/* ./
   sync         # sync the copied data, so that it is actually written to the harddrive
-  sleep 1      # an extra layer of security to ensure the data has been copied before removing job-folder from local scratch
+  sleep 2      # an extra layer of security to ensure the data has been copied before removing job-folder from local scratch
   # remove job-folder from local scratch
   rm -rf  /scratch/"$username"/"$jobName""$jobIndex""$siteName"
  else
