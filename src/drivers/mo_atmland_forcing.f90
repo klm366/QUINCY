@@ -400,7 +400,8 @@ CONTAINS
         forcing_options%co2_DC14_1st_timestep         = co2_DC14_r
       ENDIF
       ! if CO2 is constant during simulation: overwrite the forcing values with the value read at the first timestep
-      IF (forcing_options%flag_transient_sim_co2_const .AND. model%config%l_transient_spinup == .FALSE.) THEN
+      ! (note: '.AND. .NOT. model%config%l_transient_spinup' mean 'and l_transient_spinup is false', i.e., after spinup)
+      IF (forcing_options%flag_transient_sim_co2_const .AND. .NOT. model%config%l_transient_spinup) THEN
         co2_mixing_ratio_r  = forcing_options%co2_mixing_ratio_1st_timestep    
         co2_dC13_r          = forcing_options%co2_dC13_1st_timestep
         co2_DC14_r          = forcing_options%co2_DC14_1st_timestep
@@ -409,14 +410,14 @@ CONTAINS
       co2_mixing_ratio(:)     = co2_mixing_ratio_r      
       ! calc dC13 and DC14, using either a) the CO2 from file or the CO2 from 1st timestep, or b) the default dC13 & DC14 values
       IF (forcing_options%flag_read_dC13 .OR. &
-          (forcing_options%flag_transient_sim_co2_const .AND. model%config%l_transient_spinup == .FALSE.)) THEN
+          (forcing_options%flag_transient_sim_co2_const .AND. .NOT. model%config%l_transient_spinup)) THEN
         hlp1(:)               = calc_mixing_ratio_C13C12(co2_dC13_r)
       ELSE
         hlp1(:)               = calc_mixing_ratio_C13C12(def_co2_deltaC13)
       END IF
       co2_mixing_ratio_C13(:) = co2_mixing_ratio(:) / (1._wp + 1._wp/hlp1(:))
       IF (forcing_options%flag_read_DC14 .OR. &
-          (forcing_options%flag_transient_sim_co2_const .AND. model%config%l_transient_spinup == .FALSE.)) THEN
+          (forcing_options%flag_transient_sim_co2_const .AND. .NOT. model%config%l_transient_spinup)) THEN
         hlp1(:)               = calc_mixing_ratio_C14C(co2_dC13_r, co2_DC14_r)
       ELSE
         hlp1(:)               = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14)
