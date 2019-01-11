@@ -939,8 +939,8 @@ CONTAINS
     dsl4slm_Use_memory_a_sb
 
     USE mo_sb_constants
-    USE mo_base_constants,        ONLY: dtime, one_day
-    USE mo_shared_constants,      ONLY: mavg_period_tenzyme
+    USE mo_base_constants,                  ONLY: dtime, one_day
+    USE mo_quincy_update_time_averages,     ONLY: mavg_period_tenzyme
 
     IMPLICIT NONE
     ! ---------------------------

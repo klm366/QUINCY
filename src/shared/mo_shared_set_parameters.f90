@@ -444,7 +444,7 @@ MODULE mo_shared_set_parameters
     REAL(wp)            :: k_gdd_dormance
     REAL(wp)            :: t_air_senescence
     REAL(wp)            :: min_leaf_age
-    ! Allocation paramters
+    ! Allocation parameters
     REAL(wp)            :: frac_sapwood_branch
     REAL(wp)            :: wood_density
     REAL(wp)            :: k_latosa
@@ -2011,7 +2011,8 @@ CONTAINS
     USE mo_pheno_constants
     !USE mo_atmland_constants
     USE mo_rad_constants
-    USE mo_shared_constants
+    USE mo_shared_constants,                ONLY: molar_mass_C, molar_mass_N, molar_mass_P, Dwv, Dco2, Tzero
+    USE mo_quincy_update_time_averages      ! includes the mavg_period_* parameters
     USE mo_sse_constants
     USE mo_sb_constants
     USE mo_veg_constants

@@ -54,37 +54,6 @@ MODULE mo_shared_constants
     AvogadroC_times_lambda_C14 , &  !< Avogadro Number * decay constant of C14 to reduce the use of the very large/small AvogadroC/lambda_C14 
     scale_correction_c14            !< conversion from mol to pico-mol for C14 (for numerical precision) 
 
-
-  !!----------------------------------------------------------------------------------------------------
-  !! needed for mo_shared_update_time_averages:update_time_averages()
-  !! 
-  !! moving average period lengths (you can add new parameters here)
-  !!   the default unit of the averaging period is 'day'
-  !!   but can also be 'week' or 'year' ( see mo_shared_update_time_averages:calc_mavg() )
-  !! 
-                                                                        ! generic memory time-scales:
-    REAL(wp),SAVE :: mavg_period_weekly            = 7.0_wp                 !< 7 days; constant across the model
-    REAL(wp),SAVE :: mavg_period_monthly           = 30.0_wp                !< 30 days; constant across the model
-    REAL(wp),SAVE :: mavg_period_yearly            = 365.0_wp               !< 365 days
-                                                                        ! specific memory time-scales of/for:
-    REAL(wp),SAVE :: mavg_period_tsoa              = 2.0_wp                 !< memory time_scale for state of acclimation
-    REAL(wp),SAVE :: mavg_period_tuptake           = 3.0_wp                 !< nutrient uptake processes (demand, BNF) 
-    REAL(wp),SAVE :: mavg_period_tlabile           = 7.0_wp                 !< labile pool 
-    REAL(wp),SAVE :: mavg_period_tphen             = 7.0_wp                 !< phenological processes 
-    REAL(wp),SAVE :: mavg_period_tenzyme           = 7.0_wp                 !< memory time-scale for enzyme allocation (SB_)
-    REAL(wp),SAVE :: mavg_period_tfrac             = 10.0_wp                !< leaf N fractions
-    REAL(wp),SAVE :: mavg_period_tcnl              = 20.0_wp                !< leaf stoichiometry 
-    REAL(wp),SAVE :: mavg_period_talloc            = 30.0_wp                !< biomass allocation
-    REAL(wp),SAVE :: mavg_period_talloc_dynamic    = 30.0_wp * 365.0_wp     !< biomass allocation for empirical dynamic allocation (30 years)
-    REAL(wp),SAVE :: mavg_period_tacclim           = 30.0_wp                !< respiration acclimation
-    REAL(wp),SAVE :: mavg_period_tmic              = 30.0_wp                !< microbial community acclimation
-    REAL(wp),SAVE :: mavg_period_tgrowth           = 365.0_wp               !< vegetation growth
-    REAL(wp),SAVE :: mavg_period_tvegdyn           = 365.0_wp               !< vegetation dynamics processes 
-!    REAL(wp),SAVE :: mavg_period_xxx         = xxx.0_wp       !< xxx
-!    REAL(wp),SAVE :: mavg_period_xxx         = xxx.0_wp       !< xxx
-!    REAL(wp),SAVE :: mavg_period_xxx         = xxx.0_wp       !< xxx
-  !!----------------------------------------------------------------------------------------------------
-
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_shared_constants'
 
 CONTAINS

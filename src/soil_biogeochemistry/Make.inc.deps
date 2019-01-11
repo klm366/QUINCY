@@ -131,6 +131,7 @@ mo_sb_jsm_processes.o: \
   mo_kind.o \
   mo_exception.o \
   mo_jsb_task_class.o \
+  mo_quincy_update_time_averages.o \
   mo_base_constants.o \
   mo_shared_constants.o \
   mo_sb_constants.o \

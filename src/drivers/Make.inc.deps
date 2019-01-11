@@ -28,7 +28,7 @@ mo_land_model_interface.o: \
   mo_jsb_process_class.o \
   mo_test_canopy_model.o \
   mo_test_radiation_model.o \
-  mo_shared_update_time_averages.o \
+  mo_quincy_update_time_averages.o \
   mo_shared_output.o \
   mo_sb_config_class.o \
   mo_rad_interface.o \

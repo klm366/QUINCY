@@ -1,6 +1,6 @@
 !>
 !! @brief
-!!    generic routines providing various ways for the averaging of variables over time for all model processes
+!!    generic and specific routines providing various ways for the averaging of variables over time for all model processes
 !!
 !! @author
 !!    Jan Engel, MPI-BGC Jena
@@ -8,11 +8,13 @@
 !! @par Revision History
 !!    First version by Jan Engel (2016-09-01) - the basic routines were previously implemented in SLM mo_veg_memory
 !!    2nd version by Jan Engel (20170120) - model structure moved from Main-Task into the Sub-Tasks
+!!    3rd version by Jan Engel (20190111) - renamed mo_shared* to mo_quincy* as it is a QUINCY specific module
 !!
-MODULE mo_shared_update_time_averages
+MODULE mo_quincy_update_time_averages
 
 #include "dsl_jsbach.inc"
 
+  USE mo_kind,                    ONLY: wp
   USE mo_jsb_control,             ONLY: debug_on
   USE mo_exception,               ONLY: message, finish
   USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
@@ -23,10 +25,42 @@ MODULE mo_shared_update_time_averages
 
 
   IMPLICIT NONE
-  PRIVATE
-  PUBLIC :: update_time_averages, calc_mavg
+  PUBLIC
+  PRIVATE :: calc_daytime_averages, calc_moving_averages, calc_mavg
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_shared_update_time_averages'
+  !!----------------------------------------------------------------------------------------------------
+  !! moving average period lengths
+  !!   you can add new parameters here, please sort by increasing numbers
+  !!   the default unit of the averaging period is 'day'
+  !!   but can also be 'week' or 'year' ( see mo_quincy_update_time_averages:calc_mavg() )
+  !! 
+  ! generic memory time-scales:
+    REAL(wp),SAVE :: mavg_period_weekly            = 7.0_wp               !< 7 days; constant across the model
+    REAL(wp),SAVE :: mavg_period_monthly           = 30.0_wp              !< 30 days; constant across the model
+    REAL(wp),SAVE :: mavg_period_yearly            = 365.0_wp             !< 365 days
+!    REAL(wp),SAVE :: mavg_period_xxx         = xxx.0_wp       !< xxx
+!    REAL(wp),SAVE :: mavg_period_xxx         = xxx.0_wp       !< xxx
+    
+  ! specific memory time-scales of/for:
+    REAL(wp),SAVE :: mavg_period_tsoa              = 2.0_wp               !< memory time_scale for state of acclimation
+    REAL(wp),SAVE :: mavg_period_tuptake           = 3.0_wp               !< nutrient uptake processes (demand, BNF) 
+    REAL(wp),SAVE :: mavg_period_tlabile           = 7.0_wp               !< labile pool 
+    REAL(wp),SAVE :: mavg_period_tphen             = 7.0_wp               !< phenological processes 
+    REAL(wp),SAVE :: mavg_period_tenzyme           = 7.0_wp               !< memory time-scale for enzyme allocation (SB_)
+    REAL(wp),SAVE :: mavg_period_tfrac             = 10.0_wp              !< leaf N fractions
+    REAL(wp),SAVE :: mavg_period_tcnl              = 20.0_wp              !< leaf stoichiometry 
+    REAL(wp),SAVE :: mavg_period_talloc            = 30.0_wp              !< biomass allocation
+    REAL(wp),SAVE :: mavg_period_talloc_dynamic    = 30.0_wp * 365.0_wp   !< biomass allocation for empirical dynamic allocation (30 years)
+    REAL(wp),SAVE :: mavg_period_tacclim           = 30.0_wp              !< respiration acclimation
+    REAL(wp),SAVE :: mavg_period_tmic              = 30.0_wp              !< microbial community acclimation
+    REAL(wp),SAVE :: mavg_period_tgrowth           = 365.0_wp             !< vegetation growth
+    REAL(wp),SAVE :: mavg_period_tvegdyn           = 365.0_wp             !< vegetation dynamics processes 
+!    REAL(wp),SAVE :: mavg_period_xxx         = xxx.0_wp       !< xxx
+!    REAL(wp),SAVE :: mavg_period_xxx         = xxx.0_wp       !< xxx
+  !!----------------------------------------------------------------------------------------------------
+
+
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_quincy_update_time_averages'
 
 CONTAINS
 
@@ -411,7 +445,7 @@ CONTAINS
       CASE('year')
         avg_period2seconds = avg_period2seconds * one_year ! (one_year == 365.0_wp days)
 !      CASE DEFAULT
-!        CALL finish('mo_shared_update_time_averages','Invalid option for avg_period_unit argument to calc_mavg(). Use either day, week, or year.')
+!        CALL finish('mo_quincy_update_time_averages','Invalid option for avg_period_unit argument to calc_mavg(). Use either day, week, or year.')
       END SELECT  ! select SLM model !
     END IF
 
@@ -439,11 +473,7 @@ CONTAINS
 
     USE mo_kind,                    ONLY: wp, eps8, test_false_true
     USE mo_jsb_class,               ONLY: Get_model
-    USE mo_shared_constants,        ONLY: mavg_period_weekly, mavg_period_monthly, &
-                                          mavg_period_tlabile, mavg_period_tphen, mavg_period_tuptake, mavg_period_tfrac, &
-                                          mavg_period_tcnl, mavg_period_tgrowth, mavg_period_talloc, mavg_period_talloc_dynamic, &
-                                          mavg_period_tvegdyn, mavg_period_tacclim, mavg_period_tmic, mavg_period_tsoa, &
-                                          mavg_period_tenzyme, Tzero
+    USE mo_shared_constants,        ONLY: Tzero
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(ASSIMI_)    
@@ -1097,4 +1127,4 @@ CONTAINS
   END SUBROUTINE calc_moving_averages
 
 
-END MODULE mo_shared_update_time_averages
+END MODULE mo_quincy_update_time_averages

@@ -115,7 +115,7 @@ CONTAINS
                                                 Get_process_name
     USE mo_hsm_class,                     ONLY: t_Message
     USE mo_jsb4_forcing,                  ONLY: forcing_options
-    USE mo_shared_update_time_averages,   ONLY: update_time_averages  ! includes daytime and moving average
+    USE mo_quincy_update_time_averages,   ONLY: update_time_averages  ! includes daytime and moving average
     USE mo_atmland_interface,             ONLY: update_a2l, update_l2a
     USE mo_shared_output,                 ONLY: write_output_pool, write_output_flux, write_soil_forcing
     USE mo_test_canopy_model,             ONLY: run_test_canopy_model

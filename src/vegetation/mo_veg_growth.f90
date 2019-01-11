@@ -1528,7 +1528,7 @@ CONTAINS
                                             k2_opt )                    
 
     USE mo_base_constants,          ONLY: pi
-    USE mo_shared_constants,        ONLY: rhoh2o, mavg_period_tgrowth
+    USE mo_shared_constants,        ONLY: rhoh2o
     USE mo_veg_constants,           ONLY: min_height, itree, igrass, sm2lm_grass, w_root_lim_max, leaf2root_min_ratio, leaf2root_max_ratio
     USE mo_pheno_constants,         ONLY: ievergreen, iraingreen, isummergreen, iperennial
 
