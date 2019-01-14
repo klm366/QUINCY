@@ -135,7 +135,7 @@ CONTAINS
 
     USE mo_jsb_model_class,           ONLY: t_jsb_model
     USE mo_jsb_class,                 ONLY: Get_model
-    USE mo_shared_set_parameters,     ONLY: parameters_slm_from_file
+    USE mo_quincy_set_parameters,     ONLY: parameters_slm_from_file
     USE mo_jsb_math_constants,        ONLY: init_jsb_math_constants
     USE mo_jsb_phys_constants,        ONLY: init_jsb_phys_constants
     USE mo_atmland_constants,         ONLY: init_atmland_constants
@@ -196,7 +196,7 @@ CONTAINS
     USE mo_jsb_class,                 ONLY: Get_model
     USE mo_jsb_model_usecases,        ONLY: init_usecase
     USE mo_jsb_lctlib_class,          ONLY: Read_lctlib
-    USE mo_shared_set_parameters,     ONLY: set_parameter_lctlib_values_with_list_values
+    USE mo_quincy_set_parameters,     ONLY: set_parameter_lctlib_values_with_list_values
 
     IMPLICIT NONE
     ! ---------------------------

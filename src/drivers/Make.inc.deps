@@ -9,7 +9,7 @@ land_model_driver.o: \
   mo_jsb_model_init.o \
   mo_jsb4_forcing.o \
   mo_atmland_forcing.o \
-  mo_shared_output.o \
+  mo_quincy_output.o \
   mo_sb_memory_class.o \
   mo_veg_memory_class.o
 
@@ -29,7 +29,7 @@ mo_land_model_interface.o: \
   mo_test_canopy_model.o \
   mo_test_radiation_model.o \
   mo_quincy_update_time_averages.o \
-  mo_shared_output.o \
+  mo_quincy_output.o \
   mo_sb_config_class.o \
   mo_rad_interface.o \
   mo_veg_interface.o \

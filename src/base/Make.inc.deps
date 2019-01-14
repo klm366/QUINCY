@@ -149,7 +149,7 @@ mo_jsb_base.o: \
   mo_jsb_grid_class.o \
   mo_jsb_model_usecases.o \
   mo_jsb_lctlib_class.o \
-  mo_shared_set_parameters.o \
+  mo_quincy_set_parameters.o \
   mo_sb_config_class.o \
   mo_jsb_math_constants.o \
   mo_jsb_phys_constants.o \

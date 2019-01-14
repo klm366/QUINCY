@@ -117,7 +117,7 @@ CONTAINS
     USE mo_jsb4_forcing,                  ONLY: forcing_options
     USE mo_quincy_update_time_averages,   ONLY: update_time_averages  ! includes daytime and moving average
     USE mo_atmland_interface,             ONLY: update_a2l, update_l2a
-    USE mo_shared_output,                 ONLY: write_output_pool, write_output_flux, write_soil_forcing
+    USE mo_quincy_output,                 ONLY: write_output_pool, write_output_flux, write_soil_forcing
     USE mo_test_canopy_model,             ONLY: run_test_canopy_model
     USE mo_test_radiation_model,          ONLY: run_test_radiation_model
 
@@ -422,14 +422,14 @@ CONTAINS
       SELECT CASE(TRIM(model%config%slm_model_name))
       CASE('land','plant','soil','canopy')
 
-        !! output pool: write output in certain intervals, see mo_shared_output
+        !! output pool: write output in certain intervals, see mo_quincy_output
         !!  note: weekly interval ends with 364 in a year, and starts with 7 in the next year -> 8 days
         !!  note: monthly interval is defined as 30 days, thus, ends with 360 and start in the next year with 30 -> 35 days
         !! 
         IF (l_output_interval_match) THEN
           CALL write_output_pool(tile, model%options, time_day)
         ENDIF
-        !! output flux: write output in certain intervals, see mo_shared_output
+        !! output flux: write output in certain intervals, see mo_quincy_output
         !!  if output is enabled, flux variables are accumulated
         !!  output is written when the interval is a match with current timestep
         !! 

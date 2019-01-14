@@ -42,7 +42,7 @@ mo_quincy_update_time_averages.o: \
   mo_sse_memory_class.o \
   mo_sb_memory_class.o 
 
-mo_shared_set_parameters.o: \
+mo_quincy_set_parameters.o: \
   mo_kind.o \
   mo_namelist.o \
   mo_exception.o \
@@ -59,7 +59,7 @@ mo_shared_set_parameters.o: \
   mo_sb_constants.o \
   mo_veg_constants.o
 
-mo_shared_output.o: \
+mo_quincy_output.o: \
   mo_kind.o \
   mo_jsb_control.o \
   mo_exception.o \

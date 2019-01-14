@@ -29,14 +29,15 @@ PROGRAM land_model_driver
   ! atmland
   USE mo_atmland_forcing,         ONLY: update_forcing, open_forcing_input_file, close_forcing_input_file ! valid for land plant canopy and soil
   ! vegetation
-  USE mo_shared_output,           ONLY: open_pool_output_files, &
+  USE mo_veg_memory_class,        ONLY: Deallocate_var_veg_pools_elements_a
+  ! sb
+  USE mo_sb_memory_class,         ONLY: Deallocate_var_sb_pools_elements_a
+  ! output
+  USE mo_quincy_output,           ONLY: open_pool_output_files, &
                                         open_flux_output_files, &
                                         open_output_files_soil_forcing, &
                                         close_output_files, &
                                         close_output_files_soil_forcing
-  USE mo_veg_memory_class,        ONLY: Deallocate_var_veg_pools_elements_a
-  ! sb
-  USE mo_sb_memory_class,         ONLY: Deallocate_var_sb_pools_elements_a
 
 
   IMPLICIT NONE
@@ -294,7 +295,7 @@ PROGRAM land_model_driver
   !! need to be done after 'output_interval_pool_act' is defined above
   !! test_canopy & test_radiation: special case, runs for just one timestep and pool/flux output routines are not called
   !! 
-  ! Initialise output and flux accumulation, and open output files; see mo_shared_output
+  ! Initialise output and flux accumulation, and open output files; see mo_quincy_output
   ! the output routine for SLM canopy is located in mo_land_model_interface -> canopy_model_write_data()
   SELECT CASE(TRIM(model%config%slm_model_name))
     CASE('land','plant','soil','canopy')

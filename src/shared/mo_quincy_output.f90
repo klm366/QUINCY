@@ -7,13 +7,14 @@
 !! @par Revision History
 !! First version by Jan Engel (2016-03-14)
 !! Second version by Jan Engel (20170630): remove ALLOCATE (only one tile is used), and init *_acc VAR and pools within its routines
+!! 3rd version: rename from mo_shared_output to mo_quincy_output by Jan Engel (20190114)
 !! 
 !! @par Three Main Sections
 !! section I Pools 
 !! section II Fluxes 
 !! section III Soil forcing
 !! 
-MODULE mo_shared_output
+MODULE mo_quincy_output
   !! this module may be not necessary anymore when QUINCY is linked with JSBACH !!
 
 #include "dsl_jsbach.inc"
@@ -37,7 +38,7 @@ MODULE mo_shared_output
   !-----------------------------------------------------------------------------------------------------
   INTEGER, PRIVATE          :: ipoi = 1               ! the point in ics:ice of which data will be written to file; per default = 1
 
-  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_shared_output'
+  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_quincy_output'
 
 CONTAINS
 
@@ -3266,4 +3267,4 @@ CONTAINS
 
   END SUBROUTINE close_output_files_soil_forcing
 
-END MODULE mo_shared_output
+END MODULE mo_quincy_output

@@ -6,8 +6,9 @@
 !!
 !! @par Revision History
 !! First version by Jan Engel (2016-10-04)
+!! 2nd version: rename from mo_shared_set_parameters to mo_quincy_set_parameters by Jan Engel (20190114)
 !!
-MODULE mo_shared_set_parameters
+MODULE mo_quincy_set_parameters
 
   USE mo_kind,                ONLY: wp
   USE mo_exception,           ONLY: message_text, message, finish
@@ -473,7 +474,7 @@ MODULE mo_shared_set_parameters
                                          param_pft8_from_file
 
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_shared_set_parameters'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_quincy_set_parameters'
 
 CONTAINS
 
@@ -6149,4 +6150,4 @@ CONTAINS
     
   END SUBROUTINE Set_quincy_parameter_value
 
-END MODULE mo_shared_set_parameters
+END MODULE mo_quincy_set_parameters
