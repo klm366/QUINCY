@@ -822,7 +822,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_meristem_activity(t_air,w_soil_root_theta,growing_season) RESULT(kstar_labile)
 
-    USE mo_kind,              ONLY: wp, test_false_true   
+    USE mo_kind,              ONLY: wp
+    USE mo_jsb_impl_constants,ONLY: test_false_true
     USE mo_jsb_phys_constants,ONLY: Tzero
     USE mo_veg_constants,     ONLY: lambda_labile_temp  , &
                                     lambda_labile_theta , &
@@ -1345,6 +1346,7 @@ CONTAINS
                                                   target_np_fruit           )
 
     USE mo_jsb_math_constants,      ONLY: dtime, one_day
+    USE mo_jsb_impl_constants,      ONLY: test_false_true
     USE mo_veg_constants          ! e.g. delta_n_leaf
     USE mo_pheno_constants,         ONLY: ievergreen, iraingreen, isummergreen, iperennial
 
@@ -1991,6 +1993,7 @@ CONTAINS
 
     USE mo_kind,                  ONLY: wp, eps8
     USE mo_jsb_math_constants,    ONLY: one_day, dtime
+    USE mo_jsb_impl_constants,    ONLY: test_false_true
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_veg_constants,         ONLY: tau_labile, &

@@ -12,7 +12,8 @@ MODULE mo_veg_canopy
 
 #include "dsl_jsbach.inc"
 
-  USE mo_kind,                        ONLY: wp, eps4, eps8, eps12, test_false_true
+  USE mo_kind,                        ONLY: wp, eps4, eps8, eps12
+  USE mo_jsb_impl_constants,          ONLY: test_false_true
   USE mo_jsb_lctlib_class,            ONLY: t_lctlib_element
   USE mo_exception,                   ONLY: message_text, finish
   USE mo_assimi_update_canopy_fluxes, ONLY: calc_photosynthesis

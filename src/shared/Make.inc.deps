@@ -4,6 +4,9 @@ mo_jsb_phys_constants.o: \
 mo_jsb_math_constants.o: \
   mo_kind.o
 
+mo_jsb_impl_constants.o: \
+  mo_kind.o
+
 mo_util.o: \
   mo_kind.o
 
@@ -24,6 +27,7 @@ mo_quincy_update_time_averages.o: \
   mo_jsb_lctlib_class.o \
   mo_jsb_phys_constants.o \
   mo_jsb_math_constants.o \
+  mo_jsb_impl_constants.o \
   mo_jsb_model_class.o \
   mo_jsb_tile_class.o \
   mo_jsb_task_class.o \

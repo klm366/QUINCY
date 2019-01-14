@@ -46,15 +46,12 @@ MODULE mo_kind
 
   INTEGER, PARAMETER :: wp = dp
 
+  ! QUINCY math constants 
   REAL(wp), PARAMETER :: eps12 = 0.000000000001_wp
   REAL(wp), PARAMETER :: eps8  = 0.00000001_wp
   REAL(wp), PARAMETER :: eps4  = 0.0001_wp
+  REAL(wp), PARAMETER :: zero  = 0.0_wp    !< just zero
 
-  ! SLM convenience       *slmjsb4
-  REAL(wp), PARAMETER :: zero             = 0.0_wp    !< just zero
-  REAL(wp), PARAMETER :: false            = 0.0_wp    !< just zero
-  REAL(wp), PARAMETER :: true             = 1.0_wp    !< just one
-  REAL(wp), PARAMETER :: test_false_true  = 0.5_wp    !< just 0.5, inbetween false and true, for easy IF (FALSE/TRUE)
 
   ! Integer section
 

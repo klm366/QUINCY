@@ -471,7 +471,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_moving_averages(tile, options)
 
-    USE mo_kind,                    ONLY: wp, eps8, test_false_true
+    USE mo_kind,                    ONLY: wp, eps8
+    USE mo_jsb_impl_constants,      ONLY: test_false_true
     USE mo_jsb_class,               ONLY: Get_model
     USE mo_jsb_phys_constants,      ONLY: Tzero
 

@@ -9,7 +9,8 @@
 !!
 MODULE mo_veg_memory_class
 
-  USE mo_kind,                   ONLY: wp, false
+  USE mo_kind,                   ONLY: wp
+  USE mo_jsb_impl_constants,     ONLY: false
   USE mo_exception,              ONLY: message
   USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory

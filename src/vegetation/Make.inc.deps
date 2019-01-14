@@ -25,7 +25,8 @@ mo_veg_memory_class.o: \
   mo_jsb_class.o \
   mo_jsb_memory_class.o \
   mo_jsb_var_class.o \
-  mo_slm_varlist.o
+  mo_slm_varlist.o \
+  mo_jsb_impl_constants.o
 
 mo_veg_growth.o: \
   mo_kind.o \
@@ -33,6 +34,7 @@ mo_veg_growth.o: \
   mo_jsb_control.o \
   mo_exception.o \
   mo_jsb_math_constants.o \
+  mo_jsb_impl_constants.o \
   mo_jsb_tile_class.o \
   mo_jsb_task_class.o \
   mo_jsb_model_class.o \
@@ -66,6 +68,7 @@ mo_veg_turnover.o: \
   mo_jsb_tile_class.o \
   mo_jsb_task_class.o \
   mo_jsb_math_constants.o \
+  mo_jsb_impl_constants.o \
   mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
@@ -88,6 +91,7 @@ mo_veg_dynamics.o: \
   mo_jsb_tile_class.o \
   mo_jsb_task_class.o \
   mo_jsb_math_constants.o \
+  mo_jsb_impl_constants.o \
   mo_jsb4_forcing.o \
   mo_assimi_config_class.o \
   mo_jsb_model_class.o \
@@ -122,6 +126,7 @@ mo_veg_update_pools.o: \
   mo_jsb_task_class.o \
   mo_jsb_model_class.o \
   mo_jsb_math_constants.o \
+  mo_jsb_impl_constants.o \
   mo_assimi_constants.o \
   mo_atmland_constants.o \
   mo_assimi_config_class.o \
@@ -146,6 +151,7 @@ mo_veg_canopy.o: \
   mo_kind.o \
   mo_exception.o \
   mo_jsb_math_constants.o \
+  mo_jsb_impl_constants.o \
   mo_jsb_task_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \

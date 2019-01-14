@@ -12,7 +12,8 @@ MODULE mo_pheno_init
 
 #include "dsl_jsbach.inc"
 
-  USE mo_kind,                    ONLY: wp, true, false
+  USE mo_kind,                    ONLY: wp
+  USE mo_jsb_impl_constants,      ONLY: true, false
   USE mo_exception,               ONLY: message
   USE mo_jsb_control,             ONLY: debug_on
 

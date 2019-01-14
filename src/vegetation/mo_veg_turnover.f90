@@ -209,7 +209,8 @@ CONTAINS
                                       recycling_leaf_n15                , &
                                       recycling_fine_root_n15           )
 
-    USE mo_kind,                  ONLY: wp, eps8, test_false_true
+    USE mo_kind,                  ONLY: wp, eps8
+    USE mo_jsb_impl_constants,    ONLY: test_false_true
     USE mo_jsb_math_constants,    ONLY: dtime, one_day
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
@@ -337,7 +338,8 @@ CONTAINS
                             net_growth                , &
                             veg_litterfall            )
 
-    USE mo_kind,                  ONLY: wp, eps4, test_false_true
+    USE mo_kind,                  ONLY: wp, eps4
+    USE mo_jsb_impl_constants,    ONLY: test_false_true
     USE mo_jsb_math_constants,    ONLY: dtime, one_day, one_year
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element

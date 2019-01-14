@@ -11,7 +11,8 @@ MODULE mo_veg_dynamics
 
 #include "dsl_jsbach.inc"
 
-  USE mo_kind,                 ONLY: wp, eps4, eps8, false, true, test_false_true
+  USE mo_kind,                 ONLY: wp, eps4, eps8
+  USE mo_jsb_impl_constants,   ONLY: true, false, test_false_true
   USE mo_jsb_control,          ONLY: debug_on
   USE mo_exception,            ONLY: message
 
