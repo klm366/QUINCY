@@ -13,7 +13,7 @@ MODULE mo_sse_config_class
 
   USE mo_exception,         ONLY: message_text, message, finish
   USE mo_io_units,          ONLY: filename_max
-  USE mo_kind,              ONLY: wp, eps8
+  USE mo_kind,              ONLY: wp
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
   IMPLICIT NONE
@@ -62,6 +62,7 @@ CONTAINS
     USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,           ONLY: Register_vgrid
     USE mo_jsb_grid_class,     ONLY: ZAXIS_GENERIC   ! in JSBACH4 used from mo_jsb_io    *slmtemp
+    USE mo_jsb_math_constants, ONLY: eps8
 
     IMPLICIT NONE
     ! ---------------------------

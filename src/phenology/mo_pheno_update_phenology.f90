@@ -12,7 +12,7 @@ MODULE mo_pheno_update_phenology
 
 #include "dsl_jsbach.inc"
 
-  USE mo_kind,                ONLY: wp, eps4
+  USE mo_kind,                ONLY: wp
   USE mo_jsb_impl_constants,  ONLY: true, false, test_false_true
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_exception,           ONLY: message

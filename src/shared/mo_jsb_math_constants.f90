@@ -24,6 +24,11 @@ MODULE mo_jsb_math_constants
   REAL(wp), SAVE        :: deg2rad                !< conversion of degree to radians
   REAL(wp), PARAMETER   :: degcircle  = 360._wp   !< degrees per circle
   REAL(wp), PARAMETER   :: hourday    = 24.0_wp   !< hours per day
+  ! QUINCY math helpers
+  REAL(wp), PARAMETER   :: eps12 = 0.000000000001_wp
+  REAL(wp), PARAMETER   :: eps8  = 0.00000001_wp
+  REAL(wp), PARAMETER   :: eps4  = 0.0001_wp
+  REAL(wp), PARAMETER   :: zero  = 0.0_wp           !< just zero
   
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_jsb_math_constants'

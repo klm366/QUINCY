@@ -12,7 +12,8 @@ MODULE mo_veg_canopy
 
 #include "dsl_jsbach.inc"
 
-  USE mo_kind,                        ONLY: wp, eps4, eps8, eps12
+  USE mo_kind,                        ONLY: wp
+  USE mo_jsb_math_constants,          ONLY: eps8
   USE mo_jsb_impl_constants,          ONLY: test_false_true
   USE mo_jsb_lctlib_class,            ONLY: t_lctlib_element
   USE mo_exception,                   ONLY: message_text, finish
@@ -74,6 +75,7 @@ CONTAINS
                                           jmax2vcmax_C3, k0_fn_chl_C3, k1_fn_chl_C3, k0_fn_pepc_C3, kfn_chl
     USE mo_assimi_constants,        ONLY: kn, chl2n, ic4phot, jmax2n, k1_fn_struc, vcmax2n
     USE mo_jsb_phys_constants,      ONLY: molar_mass_C, molar_mass_N, molar_mass_P
+    USE mo_jsb_math_constants,      ONLY: eps12
 
     IMPLICIT NONE
     ! ---------------------------
@@ -1051,7 +1053,7 @@ CONTAINS
 
     USE mo_jsb_task_class,                ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,              ONLY: t_lctlib_element    
-    USE mo_jsb_math_constants,            ONLY: dtime, one_day, one_year
+    USE mo_jsb_math_constants,            ONLY: dtime, one_day, one_year, eps4
     USE mo_veg_constants,                 ONLY: delta_n_leaf
     USE mo_quincy_update_time_averages,   ONLY: mavg_period_tgrowth
     USE mo_pheno_constants,               ONLY: ievergreen, iraingreen, isummergreen, iperennial

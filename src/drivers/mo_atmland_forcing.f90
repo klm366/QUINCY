@@ -12,7 +12,7 @@ MODULE mo_atmland_forcing
 
 #include "dsl_jsbach.inc"
 
-  USE mo_kind,                  ONLY: wp, eps8
+  USE mo_kind,                  ONLY: wp
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message
 
@@ -94,7 +94,7 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_phys_constants,    ONLY: molar_mass_N, molar_mass_P, grav
-    USE mo_jsb_math_constants,    ONLY: one_day
+    USE mo_jsb_math_constants,    ONLY: one_day, eps8
     USE mo_jsb4_forcing,          ONLY: forcing_options
     USE mo_shared_isotope,        ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C, calc_delta_C13, calc_delta_C14, &
                                         calc_mixing_ratio_N15N14

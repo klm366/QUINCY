@@ -11,7 +11,7 @@ MODULE mo_sb_rate_modifier
 
 #include "dsl_jsbach.inc"
 
-  USE mo_kind,            ONLY: wp, eps8, eps4
+  USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, message_text, finish
   USE mo_jsb_control,     ONLY: debug_on
 
@@ -214,6 +214,7 @@ CONTAINS
   ELEMENTAL FUNCTION calc_temperature_rate_modifier(t_soil_sl,Ea) RESULT(rate_modifier)
 
     USE mo_jsb_phys_constants,  ONLY: r_gas
+    USE mo_jsb_math_constants,  ONLY: eps8
     USE mo_sb_constants,        ONLY: t_ref_tresponse 
 
     IMPLICIT NONE
@@ -258,6 +259,7 @@ CONTAINS
   ELEMENTAL FUNCTION calc_peaked_temperature_rate_modifier(t_soil_sl,Ea,Ed,t_opt) RESULT(rate_modifier)
 
     USE mo_jsb_phys_constants,  ONLY: r_gas
+    USE mo_jsb_math_constants,  ONLY: eps8
     USE mo_sb_constants,        ONLY: t_ref_tresponse 
 
     IMPLICIT NONE
@@ -299,6 +301,7 @@ CONTAINS
   ELEMENTAL FUNCTION calc_oxygen_rate_modifier(w_soil_sl,w_soil_fc_sl,param) RESULT(rate_modifier)
 
     USE mo_sb_constants,        ONLY: k1_afps 
+    USE mo_jsb_math_constants,  ONLY: eps8
 
     IMPLICIT NONE
     ! ---------------------------
@@ -341,6 +344,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   ELEMENTAL FUNCTION calc_convert_bulk_to_liquid(w_soil_sl, soil_depth_sl, param) RESULT(factor)
 
+    USE mo_jsb_math_constants,  ONLY: eps8
+
     IMPLICIT NONE
     ! ---------------------------
     !0.1 InOut
@@ -381,6 +386,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   ELEMENTAL FUNCTION calc_substrate_rate_modifier(w_soil_sl,w_soil_fc_sl,param) RESULT(rate_modifier)
 
+    USE mo_jsb_math_constants,  ONLY: eps8
+
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
@@ -420,6 +427,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   ELEMENTAL FUNCTION calc_anaerobic_volume_fraction(w_soil_sl,w_soil_sat_sl,lambda,k) RESULT(rate_modifier)
 
+    USE mo_jsb_math_constants,    ONLY: eps4
+
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
@@ -453,6 +462,8 @@ CONTAINS
   !! Output: rate modifier (unitless) 
   !-----------------------------------------------------------------------------------------------------
   ELEMENTAL FUNCTION calc_moisture_modifier(w_soil_sl,w_soil_fc_sl) RESULT(rate_modifier)
+
+    USE mo_jsb_math_constants,  ONLY: eps8
 
     IMPLICIT NONE
     ! ---------------------------

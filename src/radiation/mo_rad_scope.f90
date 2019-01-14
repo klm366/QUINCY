@@ -13,7 +13,7 @@ MODULE mo_rad_scope
 
 #include "dsl_jsbach.inc"
 
-  USE mo_kind,                  ONLY: wp, eps8
+  USE mo_kind,                  ONLY: wp
 
   IMPLICIT NONE
 

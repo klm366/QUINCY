@@ -11,7 +11,7 @@ MODULE mo_sse_update_turbulence
 
 #include "dsl_jsbach.inc"
 
-  USE mo_kind,                  ONLY: wp, eps8
+  USE mo_kind,                  ONLY: wp
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message
 

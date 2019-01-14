@@ -9,7 +9,8 @@
 !!
 MODULE mo_shared_isotope
  
-  USE mo_kind,                 ONLY: wp, eps8
+  USE mo_kind,                 ONLY: wp
+  USE mo_jsb_math_constants,   ONLY: eps8
 
   IMPLICIT NONE
   PRIVATE

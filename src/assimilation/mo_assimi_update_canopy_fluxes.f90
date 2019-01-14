@@ -12,7 +12,8 @@ MODULE mo_assimi_update_canopy_fluxes
 
 #include "dsl_jsbach.inc"
 
-  USE mo_kind,                  ONLY: wp, eps4, eps8
+  USE mo_kind,                  ONLY: wp
+  USE mo_jsb_math_constants,    ONLY: eps4, eps8
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message
 

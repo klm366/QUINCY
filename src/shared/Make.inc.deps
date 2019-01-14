@@ -16,6 +16,7 @@ mo_phy_schemes.o: \
 
 mo_shared_isotope.o: \
   mo_kind.o \
+  mo_jsb_math_constants.o \
   mo_jsb_phys_constants.o
 
 mo_quincy_update_time_averages.o: \

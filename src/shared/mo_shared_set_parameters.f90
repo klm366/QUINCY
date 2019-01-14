@@ -9,7 +9,7 @@
 !!
 MODULE mo_shared_set_parameters
 
-  USE mo_kind,                ONLY: wp, eps8
+  USE mo_kind,                ONLY: wp
   USE mo_exception,           ONLY: message_text, message, finish
   USE mo_jsb_io,              ONLY: missval  ! = -9.E+15_wp
 
@@ -2006,7 +2006,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE set_parameter_slm_values_with_list_values(this, proportional_parameter_changes)
 
-    USE mo_jsb_math_constants,              ONLY: one_day, one_year, dtime
+    USE mo_jsb_math_constants,              ONLY: one_day, one_year, dtime, eps8
     USE mo_assimi_constants
     USE mo_pheno_constants
     !USE mo_atmland_constants
@@ -6090,7 +6090,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Set_quincy_parameter_value(nml_abs_val, nml_prop_chng, param_name, proportional, dependency, def_val)
 
-    USE mo_kind,                ONLY: wp, eps8
+    USE mo_kind,                ONLY: wp
+    USE mo_jsb_math_constants,  ONLY: eps8
     USE mo_jsb_io,              ONLY: missval  ! = -9.E+15_wp
 
     IMPLICIT NONE

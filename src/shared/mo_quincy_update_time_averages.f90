@@ -129,7 +129,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_daytime_averages(tile, options, time_day, timestep_prop_day)
 
-    USE mo_kind,                    ONLY: wp, eps8
+    USE mo_kind,                    ONLY: wp
+    USE mo_jsb_math_constants,      ONLY: eps8
     USE mo_jsb_class,               ONLY: Get_model
 
     ! Use of process configurations (t_PROC_config)
@@ -471,9 +472,10 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_moving_averages(tile, options)
 
-    USE mo_kind,                    ONLY: wp, eps8
-    USE mo_jsb_impl_constants,      ONLY: test_false_true
     USE mo_jsb_class,               ONLY: Get_model
+    USE mo_kind,                    ONLY: wp
+    USE mo_jsb_impl_constants,      ONLY: test_false_true
+    USE mo_jsb_math_constants,      ONLY: eps8
     USE mo_jsb_phys_constants,      ONLY: Tzero
 
     ! Use of process configurations (t_PROC_config)

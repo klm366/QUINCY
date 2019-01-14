@@ -18,7 +18,7 @@ MODULE mo_shared_output
 
 #include "dsl_jsbach.inc"
 
-  USE mo_kind,                  ONLY: wp, eps4, eps8
+  USE mo_kind,                  ONLY: wp
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message_text, message, finish
   USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
@@ -531,6 +531,7 @@ CONTAINS
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_veg_constants,         ONLY: itree
+    USE mo_jsb_math_constants,    ONLY: eps8
     USE mo_shared_isotope,        ONLY: calc_delta_C13,calc_delta_C14,calc_delta_N15
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
 
@@ -1606,7 +1607,7 @@ CONTAINS
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
-    USE mo_jsb_math_constants,    ONLY: dtime
+    USE mo_jsb_math_constants,    ONLY: dtime, eps8
     USE mo_rad_constants,         ONLY: rad2ppfd
     USE mo_shared_isotope,        ONLY: calc_delta_C13, calc_delta_C14, calc_delta_N15
     USE mo_sse_config_class,      ONLY: max_soil_layers

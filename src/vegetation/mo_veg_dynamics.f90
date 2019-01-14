@@ -11,7 +11,7 @@ MODULE mo_veg_dynamics
 
 #include "dsl_jsbach.inc"
 
-  USE mo_kind,                 ONLY: wp, eps4, eps8
+  USE mo_kind,                 ONLY: wp
   USE mo_jsb_impl_constants,   ONLY: true, false, test_false_true
   USE mo_jsb_control,          ONLY: debug_on
   USE mo_exception,            ONLY: message
@@ -39,7 +39,7 @@ CONTAINS
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
-    USE mo_jsb_math_constants,    ONLY: one_year, one_day
+    USE mo_jsb_math_constants,    ONLY: one_year, one_day, eps4
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb4_forcing,          ONLY: forcing_options
@@ -289,6 +289,7 @@ CONTAINS
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_veg_constants,         ONLY: max_crown_area, min_diameter, k_crown_area, k_rp, k_fpc, itree
+    USE mo_jsb_math_constants,    ONLY: eps4
 
     IMPLICIT NONE
     ! ---------------------------
@@ -343,7 +344,7 @@ CONTAINS
                                 veg_litterfall            , &
                                 mortality_rate )
 
-    USE mo_jsb_math_constants,    ONLY: one_day, one_year, dtime
+    USE mo_jsb_math_constants,    ONLY: one_day, one_year, dtime, eps8
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_veg_constants,         ONLY: min_greff, k1_mort_greff, k2_mort_greff, k3_mort_greff, fpc_max, &
                                         itree, igrass, background_mort_rate_tree, background_mort_rate_grass
@@ -526,7 +527,7 @@ CONTAINS
 
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
-    USE mo_jsb_math_constants,    ONLY: dtime, one_day, one_year
+    USE mo_jsb_math_constants,    ONLY: dtime, one_day, one_year, eps8
     USE mo_rad_constants,         ONLY: rfr_ratio_toc 
     USE mo_veg_constants,         ONLY: fpc_max, lambda_est_temp, k_est_temp, lambda_est_moist, k_est_moist
     USE mo_jsb_phys_constants,    ONLY: Tzero

@@ -13,7 +13,7 @@ MODULE mo_sb_simple_model
 
 #include "dsl_jsbach.inc"
 
-  USE mo_kind,                  ONLY: wp, eps8, eps4
+  USE mo_kind,                  ONLY: wp
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message, message_text, finish
   USE mo_jsb_class,             ONLY: Get_model
@@ -22,7 +22,7 @@ MODULE mo_sb_simple_model
   USE mo_jsb_model_class,       ONLY: t_jsb_model
   USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
   USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
-  USE mo_jsb_math_constants,    ONLY: dtime, one_day, one_year
+  USE mo_jsb_math_constants,    ONLY: dtime, one_day, one_year, eps8
 
   IMPLICIT NONE
 
@@ -2955,7 +2955,8 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
 
     USE mo_shared_isotope,     ONLY: calc_mixing_ratio_N15N14
     USE mo_sb_constants,       ONLY: soil_n_threshold_bnf, standard_bnf_max_rate
-    USe mo_veg_constants,      ONLY: eta_nfixation
+    USE mo_veg_constants,      ONLY: eta_nfixation
+    USE mo_jsb_math_constants, ONLY: eps4
 
     IMPLICIT NONE
     ! ---------------------------

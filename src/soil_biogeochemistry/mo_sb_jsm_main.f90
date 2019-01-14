@@ -11,7 +11,7 @@ MODULE mo_sb_jsm_main
 
 #include "dsl_jsbach.inc"
 
-  USE mo_kind,            ONLY: wp, eps8, eps4
+  USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, message_text, finish
   USE mo_jsb_control,     ONLY: debug_on
 
@@ -39,7 +39,7 @@ CONTAINS
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
-    USE mo_jsb_math_constants,    ONLY: dtime
+    USE mo_jsb_math_constants,    ONLY: dtime, eps8
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_shared_isotope,        ONLY: calc_fractionation

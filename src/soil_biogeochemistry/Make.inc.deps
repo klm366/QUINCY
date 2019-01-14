@@ -24,6 +24,7 @@ mo_sb_litter_processes.o: \
   mo_kind.o \
   mo_jsb_task_class.o \
   mo_jsb_lctlib_class.o \
+  mo_jsb_math_constants.o \
   mo_sb_constants.o \
   mo_sb_memory_class.o \
   mo_veg_constants.o \
@@ -60,6 +61,7 @@ mo_sb_init.o: \
   mo_jsb_process_class.o \
   mo_shared_isotope.o \
   mo_jsb_phys_constants.o \
+  mo_jsb_math_constants.o \
   mo_assimi_constants.o \
   mo_assimi_update_canopy_fluxes.o \
   mo_sse_config_class.o \
@@ -123,6 +125,8 @@ mo_sb_rate_modifier.o: \
   mo_jsb_task_class.o \
   mo_jsb_model_class.o \
   mo_jsb_lctlib_class.o \
+  mo_jsb_math_constants.o \
+  mo_jsb_phys_constants.o \
   mo_sse_memory_class.o \
   mo_sb_memory_class.o \
   mo_sb_constants.o
@@ -182,4 +186,5 @@ mo_sb_util.o: \
   mo_jsb_model_class.o \
   mo_jsb_class.o \
   mo_jsb_process_class.o \
+  mo_jsb_math_constants.o \
   mo_sb_memory_class.o

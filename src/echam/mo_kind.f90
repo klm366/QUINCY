@@ -46,12 +46,6 @@ MODULE mo_kind
 
   INTEGER, PARAMETER :: wp = dp
 
-  ! QUINCY math constants 
-  REAL(wp), PARAMETER :: eps12 = 0.000000000001_wp
-  REAL(wp), PARAMETER :: eps8  = 0.00000001_wp
-  REAL(wp), PARAMETER :: eps4  = 0.0001_wp
-  REAL(wp), PARAMETER :: zero  = 0.0_wp    !< just zero
-
 
   ! Integer section
 

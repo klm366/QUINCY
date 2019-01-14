@@ -12,7 +12,7 @@ MODULE mo_pheno_config_class
 
   USE mo_exception,         ONLY: message, finish, message_text
   USE mo_io_units,          ONLY: filename_max
-  USE mo_kind,              ONLY: wp, eps4
+  USE mo_kind,              ONLY: wp
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
   IMPLICIT NONE

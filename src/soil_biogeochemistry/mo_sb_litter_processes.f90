@@ -12,7 +12,7 @@ MODULE mo_sb_litter_processes
 
 #include "dsl_jsbach.inc"
 
-  USE mo_kind,            ONLY: wp, eps8
+  USE mo_kind,            ONLY: wp
 
   IMPLICIT NONE
 
@@ -48,6 +48,7 @@ CONTAINS
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element    
     USE mo_veg_constants,           ONLY: itree, igrass
+    USE mo_jsb_math_constants,      ONLY: eps8
     USE mo_sb_constants,            ONLY: fc_soluable_max,k_fc_soluable,k_fn_soluable,k_fp_soluable, &
                                           lc_leaf_max,lc_leaf2sla,lc_fine_root,lc_coarse_root,lc_fruit,lc_seed_bed 
     dsl4slm_Use_memory_a_veg

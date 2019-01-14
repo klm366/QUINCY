@@ -22,6 +22,7 @@ mo_assimi_update_canopy_fluxes.o: \
   mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
+  mo_jsb_math_constants.o \
   mo_a2l_memory_class.o \
   mo_atmland_constants.o \
   mo_atmland_util.o \
@@ -62,7 +63,8 @@ mo_assimi_config_class.o: \
   mo_jsb_control.o \
   mo_jsb_grid.o \
   mo_jsb_grid_class.o \
-  mo_jsb_config_class.o
+  mo_jsb_config_class.o \
+  mo_jsb_math_constants.o
 
 mo_assimi_init.o: \
   mo_kind.o \
@@ -87,4 +89,5 @@ mo_assimi_util.o: \
   mo_jsb_task_class.o \
   mo_jsb_model_class.o \
   mo_jsb_process_class.o \
+  mo_jsb_math_constants.o \
   mo_assimi_memory_class.o

@@ -11,7 +11,7 @@ MODULE mo_sb_jsm_transport
 
 #include "dsl_jsbach.inc"
 
-  USE mo_kind,                  ONLY: wp, eps4, eps8
+  USE mo_kind,                  ONLY: wp
   USE mo_exception,             ONLY: message, finish
   USE mo_jsb_task_class,        ONLY: t_jsb_task_options
   USE mo_jsb_math_constants,    ONLY: dtime
@@ -311,6 +311,7 @@ CONTAINS
 
     USE mo_sb_constants,          ONLY: carbon_per_dryweight_SOM, rho_bulk_org
     USE mo_jsb_phys_constants,    ONLY: molar_mass_C
+    USE mo_jsb_math_constants,    ONLY: eps8
     dsl4slm_Use_memory_a_sb
 
     IMPLICIT NONE
@@ -736,7 +737,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   FUNCTION calc_bioturbation_rate(options,soil_depth_sl,bulk_dens_corr_sl,root_fraction_sl) RESULT(k_bioturb)
 
-    USE mo_sb_constants, ONLY: k_diff_org
+    USE mo_sb_constants,          ONLY: k_diff_org
+    USE mo_jsb_math_constants,    ONLY: eps8
 
     IMPLICIT NONE
     ! ---------------------------
@@ -791,6 +793,8 @@ CONTAINS
   !! Output: vertical transport rate (mol/m2/timestep) 
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_bioturbation_transport(options,k_bioturb,soil_depth_sl,pool,transport)
+
+    USE mo_jsb_math_constants,    ONLY: eps8
 
     IMPLICIT NONE
     ! ---------------------------
