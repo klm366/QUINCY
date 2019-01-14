@@ -14,7 +14,7 @@ mo_phy_schemes.o: \
   mo_kind.o \
   mo_jsb_phys_constants.o
 
-mo_shared_isotope.o: \
+mo_isotope_util.o: \
   mo_kind.o \
   mo_jsb_math_constants.o \
   mo_jsb_phys_constants.o
@@ -72,7 +72,7 @@ mo_shared_output.o: \
   mo_jsb_model_init.o \
   mo_jsb_process_class.o \
   mo_jsb4_forcing.o \
-  mo_shared_isotope.o \
+  mo_isotope_util.o \
   mo_rad_constants.o \
   mo_veg_constants.o \
   mo_assimi_config_class.o \

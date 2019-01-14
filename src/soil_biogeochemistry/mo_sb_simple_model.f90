@@ -2125,7 +2125,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                           denitrification_n2o_n15, &      
                                           denitrification_n2_n15) 
  
-    USE mo_shared_isotope, ONLY: calc_fractionation 
+    USE mo_isotope_util,   ONLY: calc_fractionation 
     USE mo_sb_constants,   ONLY: eta_plant_uptake_nh4,eta_plant_uptake_no3,eta_mic_uptake_nh4,eta_mic_uptake_no3, & 
                                  eta_nitrate_production,eta_nitrification,eta_denitrification
 
@@ -2304,7 +2304,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                 biochem_mineralisation_po4, &
                                 sb_formation  )
  
-    USE mo_shared_isotope,      ONLY: calc_fractionation
+    USE mo_isotope_util,        ONLY: calc_fractionation
     USE mo_sb_constants,        ONLY: frac_litter2fast_som, frac_fast2slow_som, frac_slow2fast_som, &
                                       SOM_np, SOM_cn, microbial_nue, microbial_pue, & 
                                       eta_ammonification
@@ -2953,7 +2953,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                          asymb_n_fixation, &                  ! inout
                                          asymb_n_fixation_n15)                ! inout
 
-    USE mo_shared_isotope,     ONLY: calc_mixing_ratio_N15N14
+    USE mo_isotope_util,       ONLY: calc_mixing_ratio_N15N14
     USE mo_sb_constants,       ONLY: soil_n_threshold_bnf, standard_bnf_max_rate
     USE mo_veg_constants,      ONLY: eta_nfixation
     USE mo_jsb_math_constants, ONLY: eps4

@@ -594,7 +594,7 @@ CONTAINS
                                    net_mineralisation_no3,net_mineralisation_no3_n15,net_mineralisation_po4, &
                                    microbial_cue_eff,asymb_n_fixation)
 
-    USE mo_shared_isotope,        ONLY: calc_fractionation
+    USE mo_isotope_util,          ONLY: calc_fractionation
     USE mo_sb_constants,          ONLY: vmax_mic_uptake,km_mic_uptake,microbial_cue,microbial_nue,microbial_pue, & 
                                         microbial_cn,microbial_np,eta_ammonification,microbial_cue_min,microbial_cue_max
     USE mo_jsb_math_constants,        ONLY: dtime

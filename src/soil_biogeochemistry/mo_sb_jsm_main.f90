@@ -42,7 +42,7 @@ CONTAINS
     USE mo_jsb_math_constants,    ONLY: dtime, eps8
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
-    USE mo_shared_isotope,        ONLY: calc_fractionation
+    USE mo_isotope_util,          ONLY: calc_fractionation
     USE mo_sb_constants
     USE mo_sb_litter_processes,   ONLY: calc_litter_partitioning
     USE mo_sb_jsm_processes,      ONLY: calc_inorganic_uptake, calc_sinking_flux_po4, calc_litter_turnover, calc_depolymerisation, &

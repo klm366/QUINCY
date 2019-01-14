@@ -532,7 +532,7 @@ CONTAINS
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_veg_constants,         ONLY: itree
     USE mo_jsb_math_constants,    ONLY: eps8
-    USE mo_shared_isotope,        ONLY: calc_delta_C13,calc_delta_C14,calc_delta_N15
+    USE mo_isotope_util,          ONLY: calc_delta_C13,calc_delta_C14,calc_delta_N15
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
 
     ! Use of process configurations (t_PROC_config)
@@ -1609,7 +1609,7 @@ CONTAINS
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_math_constants,    ONLY: dtime, eps8
     USE mo_rad_constants,         ONLY: rad2ppfd
-    USE mo_shared_isotope,        ONLY: calc_delta_C13, calc_delta_C14, calc_delta_N15
+    USE mo_isotope_util,          ONLY: calc_delta_C13, calc_delta_C14, calc_delta_N15
     USE mo_sse_config_class,      ONLY: max_soil_layers
     USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
     USE mo_atmland_constants,     ONLY: eps_vpd
@@ -2974,7 +2974,7 @@ CONTAINS
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
-    USE mo_shared_isotope,        ONLY: calc_delta_C13,calc_delta_C14,calc_delta_N15
+    USE mo_isotope_util,          ONLY: calc_delta_C13,calc_delta_C14,calc_delta_N15
 
     ! Use of process memories
     dsl4jsb_Use_memory(A2L_)        !  USE mo_a2l_memory_class,      ONLY: t_a2l_memory

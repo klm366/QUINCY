@@ -47,7 +47,7 @@ CONTAINS
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_atmland_constants,     ONLY: min_wind
     USE mo_jsb_phys_constants,    ONLY: r_gas, Tzero
-    USE mo_shared_isotope,        ONLY: calc_fractionation
+    USE mo_isotope_util,          ONLY: calc_fractionation
     USE mo_phy_schemes
     USE mo_assimi_constants,      ONLY: jmax2n, vcmax2n, E0v, E1v, t_jmax_offset, t_jmax_slope, t_jmax_opt_min, t_jmax_opt_max
 

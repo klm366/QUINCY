@@ -42,6 +42,7 @@ mo_veg_growth.o: \
   mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
+  mo_isotope_util.o \
   mo_a2l_memory_class.o \
   mo_assimi_constants.o \
   mo_assimi_config_class.o \
@@ -147,7 +148,8 @@ mo_veg_update_pools.o: \
   mo_veg_constants.o \
   mo_veg_growth.o \
   mo_sb_memory_class.o \
-  mo_assimi_update_canopy_fluxes.o
+  mo_assimi_update_canopy_fluxes.o \
+  mo_isotope_util.o
 
 mo_veg_canopy.o: \
   mo_kind.o \
@@ -180,7 +182,7 @@ mo_veg_init.o: \
   mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
-  mo_shared_isotope.o \
+  mo_isotope_util.o \
   mo_jsb_math_constants.o \
   mo_jsb_phys_constants.o \
   mo_assimi_constants.o \

@@ -993,7 +993,7 @@ CONTAINS
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element    
     USE mo_jsb_phys_constants,      ONLY: Tzero, molar_mass_C, molar_mass_N
-    USE mo_shared_isotope,          ONLY: calc_mixing_ratio_N15N14
+    USE mo_isotope_util,            ONLY: calc_mixing_ratio_N15N14
     USE mo_jsb_math_constants,      ONLY: dtime, one_day, one_year, eps8
     USE mo_veg_constants,           ONLY: vmax_bnf, k_bnf, offset_bnf, eta_nfixation, transform_cost_nh4, transform_cost_no3, &
                                           fresp_growth, cost_n_fixation_max, cost_n_fixation_min, & 

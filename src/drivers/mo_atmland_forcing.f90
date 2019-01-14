@@ -96,7 +96,7 @@ CONTAINS
     USE mo_jsb_phys_constants,    ONLY: molar_mass_N, molar_mass_P, grav
     USE mo_jsb_math_constants,    ONLY: one_day, eps8
     USE mo_jsb4_forcing,          ONLY: forcing_options
-    USE mo_shared_isotope,        ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C, calc_delta_C13, calc_delta_C14, &
+    USE mo_isotope_util,          ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C, calc_delta_C13, calc_delta_C14, &
                                         calc_mixing_ratio_N15N14
     USE mo_atmland_util,          ONLY: update_orbital_parameters, calc_solar_angle, calc_sw_fdiffuse, calc_spec_humidity_sat
     USE mo_atmland_constants,     ONLY: def_co2_deltaC13, def_co2_deltaC14, def_n_deposition, def_p_deposition, &

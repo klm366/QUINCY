@@ -84,7 +84,7 @@ CONTAINS
   SUBROUTINE init_atmland_constants
 
     USE mo_jsb_math_constants,    ONLY: hourday
-    USE mo_shared_isotope,        ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C
+    USE mo_isotope_util,          ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C
 
     IMPLICIT NONE
     ! ---------------------------

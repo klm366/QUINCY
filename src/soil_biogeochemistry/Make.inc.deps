@@ -59,7 +59,7 @@ mo_sb_init.o: \
   mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
-  mo_shared_isotope.o \
+  mo_isotope_util.o \
   mo_jsb_phys_constants.o \
   mo_jsb_math_constants.o \
   mo_assimi_constants.o \
@@ -84,7 +84,7 @@ mo_sb_jsm_main.o: \
   mo_jsb_math_constants.o \
   mo_jsb_model_class.o \
   mo_jsb_lctlib_class.o \
-  mo_shared_isotope.o \
+  mo_isotope_util.o \
   mo_sb_constants.o \
   mo_sb_config_class.o \
   mo_sb_litter_processes.o \
@@ -106,7 +106,7 @@ mo_sb_update_pools.o: \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
   mo_jsb_phys_constants.o \
-  mo_shared_isotope.o \
+  mo_isotope_util.o \
   mo_a2l_memory_class.o \
   mo_veg_memory_class.o \
   mo_sse_memory_class.o \
@@ -142,7 +142,8 @@ mo_sb_jsm_processes.o: \
   mo_sb_config_class.o \
   mo_sb_jsm_transport.o \
   mo_sb_memory_class.o \
-  mo_jsb_lctlib_class.o
+  mo_jsb_lctlib_class.o \
+  mo_isotope_util.o
 
 mo_sb_jsm_transport.o: \
   mo_kind.o \
@@ -174,7 +175,8 @@ mo_sb_simple_model.o: \
   mo_sb_litter_processes.o \
   mo_sb_jsm_transport.o \
   mo_sb_config_class.o \
-  mo_sb_memory_class.o
+  mo_sb_memory_class.o \
+  mo_isotope_util.o
 
 mo_sb_util.o: \
   mo_kind.o \

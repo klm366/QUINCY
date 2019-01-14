@@ -6,8 +6,9 @@
 !!
 !! @par Revision History
 !! First version by Sönke Zaehle (2016-05-27)
+!! 2nd version: rename mo_shared_isotope to mo_isotope_util by Jan Engel (20190114)
 !!
-MODULE mo_shared_isotope
+MODULE mo_isotope_util
  
   USE mo_kind,                 ONLY: wp
   USE mo_jsb_math_constants,   ONLY: eps8
@@ -19,7 +20,7 @@ MODULE mo_shared_isotope
             calc_delta_N15, calc_mixing_ratio_N15N14,   &
             calc_fractionation
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_shared_isotope'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_isotope_util'
 
 CONTAINS 
 
@@ -263,4 +264,4 @@ CONTAINS
      ENDIF
   END FUNCTION calc_fractionation
 
-END MODULE mo_shared_isotope
+END MODULE mo_isotope_util

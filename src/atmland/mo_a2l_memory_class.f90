@@ -123,7 +123,7 @@ CONTAINS
     USE mo_atmland_constants, ONLY: def_wind, def_co2_deltaC13, def_co2_deltaC14, def_t_air, standard_press_srf, def_vpd, &
                                     eps_vpd, def_co2_mixing_ratio, def_swdown, frac_vis_swtot_srf, frac_par_swvis_srf, &
                                     def_fdiffuse, def_cos_angle
-    USE mo_shared_isotope,    ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C
+    USE mo_isotope_util,      ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C
     USE mo_atmland_util,      ONLY: calc_spec_humidity_sat
 
     IMPLICIT NONE
@@ -166,7 +166,7 @@ CONTAINS
     vgrid_surface => Get_vgrid('surface')
 
 
-    !> 0.9 SLM specific: initially calculate some init values from constants (also using routines from mo_shared_isotope)
+    !> 0.9 SLM specific: initially calculate some init values from constants (also using routines from mo_isotope_util)
     !! 
     C13C12_mixing_ratio   = calc_mixing_ratio_C13C12(def_co2_deltaC13) 
     C14C_mixing_ratio     = calc_mixing_ratio_C14C(def_co2_deltaC13,def_co2_deltaC14)

@@ -48,7 +48,7 @@ CONTAINS
     USE mo_sb_constants
     USE mo_sb_jsm_processes,      ONLY: calc_bulk_soil_carbon, calc_bulk_density_correction, &
                                         calc_qmax_bulk_density_correction, calc_fast_po4
-    USE mo_shared_isotope,        ONLY: calc_mixing_ratio_N15N14
+    USE mo_isotope_util,          ONLY: calc_mixing_ratio_N15N14
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(SB_)
