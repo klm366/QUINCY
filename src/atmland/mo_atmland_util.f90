@@ -26,7 +26,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   FUNCTION calc_solar_angle(latitude,longitude,time) RESULT(cos_zenith_angle)
 
-    USE mo_base_constants,        ONLY: deg2rad,degcircle,hourday,pi 
+    USE mo_jsb_math_constants,    ONLY: deg2rad,degcircle,hourday,pi 
     USE mo_atmland_constants,     ONLY: declination,angle_at_GMT,reference_longitude_GMT
 
     IMPLICIT NONE
@@ -176,7 +176,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_orbital_parameters(time,declination,sw_toa_down) 
 
-    USE mo_base_constants,        ONLY: deg2rad 
+    USE mo_jsb_math_constants,    ONLY: deg2rad 
     USE mo_atmland_constants,     ONLY: obliquity, perihel, eccentricity, solar_constant
 
     IMPLICIT NONE

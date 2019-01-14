@@ -17,7 +17,7 @@ mo_sb_interface.o: \
 
 mo_sb_constants.o: \
   mo_kind.o \
-  mo_base_constants.o \
+  mo_jsb_math_constants.o \
   mo_jsb_phys_constants.o
 
 mo_sb_litter_processes.o: \
@@ -79,7 +79,7 @@ mo_sb_jsm_main.o: \
   mo_jsb_process_class.o \
   mo_jsb_tile_class.o \
   mo_jsb_task_class.o \
-  mo_base_constants.o \
+  mo_jsb_math_constants.o \
   mo_jsb_model_class.o \
   mo_jsb_lctlib_class.o \
   mo_shared_isotope.o \
@@ -99,7 +99,7 @@ mo_sb_update_pools.o: \
   mo_jsb_tile_class.o \
   mo_jsb_task_class.o \
   mo_jsb_model_class.o \
-  mo_base_constants.o \
+  mo_jsb_math_constants.o \
   mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
@@ -132,7 +132,7 @@ mo_sb_jsm_processes.o: \
   mo_exception.o \
   mo_jsb_task_class.o \
   mo_quincy_update_time_averages.o \
-  mo_base_constants.o \
+  mo_jsb_math_constants.o \
   mo_jsb_phys_constants.o \
   mo_sb_constants.o \
   mo_sb_config_class.o \
@@ -144,7 +144,7 @@ mo_sb_jsm_transport.o: \
   mo_kind.o \
   mo_exception.o \
   mo_jsb_task_class.o \
-  mo_base_constants.o \
+  mo_jsb_math_constants.o \
   mo_jsb_phys_constants.o \
   mo_sb_constants.o \
   mo_sb_config_class.o \
@@ -157,7 +157,7 @@ mo_sb_simple_model.o: \
   mo_jsb_tile_class.o \
   mo_jsb_task_class.o \
   mo_jsb_model_class.o \
-  mo_base_constants.o \
+  mo_jsb_math_constants.o \
   mo_jsb_class.o \
   mo_jsb_model_class.o \
   mo_jsb_lctlib_class.o \

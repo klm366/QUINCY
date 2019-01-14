@@ -1,7 +1,7 @@
 land_model_driver.o: \
   mo_kind.o \
   mo_land_model_interface.o \
-  mo_base_constants.o \
+  mo_jsb_math_constants.o \
   mo_jsb_tile_class.o \
   mo_jsb_class.o \
   mo_jsb_model_class.o \
@@ -21,7 +21,7 @@ mo_land_model_interface.o: \
   mo_jsb_tile_class.o \
   mo_jsb_task_class.o \
   mo_hsm_class.o \
-  mo_base_constants.o \
+  mo_jsb_math_constants.o \
   mo_jsb4_forcing.o \
   mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
@@ -46,7 +46,7 @@ mo_atmland_forcing.o: \
   mo_exception.o \
   mo_jsb_class.o \
   mo_jsb_process_class.o \
-  mo_base_constants.o \
+  mo_jsb_math_constants.o \
   mo_jsb_model_class.o \
   mo_jsb_grid_class.o \
   mo_jsb_grid.o \
@@ -62,7 +62,7 @@ mo_atmland_forcing.o: \
 mo_jsb4_forcing.o: \
   mo_kind.o \
   mo_exception.o \
-  mo_base_constants.o \
+  mo_jsb_math_constants.o \
   mo_namelist.o \
   mo_jsb_class.o \
   mo_jsb_model_class.o

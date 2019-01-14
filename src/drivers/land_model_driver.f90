@@ -15,7 +15,7 @@ PROGRAM land_model_driver
   ! land model
   USE mo_land_model_interface,    ONLY: land_model_interface 
   ! base
-  USE mo_base_constants,          ONLY: one_year
+  USE mo_jsb_math_constants,      ONLY: one_year
   USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
   USE mo_jsb_model_init,          ONLY: jsbach_setup_grid, &      ! interface to e.g. setup_grid_standalone
                                         quincy_init, &            ! JSBACH4: jsbach_init
@@ -333,7 +333,7 @@ PROGRAM land_model_driver
     !! 
     time_day  = time_day  + timestep_prop_day         ! time in days
     IF(time_day > one_year) THEN
-      time_day  = time_day - one_year   ! largest value of time ~ 365; see mo_base_constants
+      time_day  = time_day - one_year   ! largest value of time ~ 365; see mo_jsb_math_constants
       time_year = time_year + 1
     END IF
 

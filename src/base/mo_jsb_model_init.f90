@@ -108,7 +108,7 @@ CONTAINS
     USE mo_jsb4_forcing,          ONLY: Init_forcing, forcing_options
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
-    USE mo_base_constants,        ONLY: dtime, one_year, one_day
+    USE mo_jsb_math_constants,    ONLY: dtime, one_year, one_day
     ! shared 
     USE mo_util,                  ONLY: one_of
     ! process memory
@@ -285,7 +285,7 @@ CONTAINS
     !!
     time_day          = 0.0_wp                                        !! equals 1.0 after one day has passed (i.e. start with zero)
     time_year         = 1                                             !! the 1st year of a simulation == 1 (not zero)
-    dtime             = model%config%dtime                            !! time step length in seconds, default: 1800.0 == 30 minutes, mo_base_constants
+    dtime             = model%config%dtime                            !! time step length in seconds, default: 1800.0 == 30 minutes, mo_jsb_math_constants
     ntimestep         = forcing_options%Timesteps(model%config%dtime) !! number of time steps (considers the simulation_mode static & transient)
     timestep_prop_day = dtime/one_day                                 !! proportion of one day that is simulated with one timestep
 

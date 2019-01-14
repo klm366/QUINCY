@@ -201,7 +201,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   FUNCTION Get_timstep_number(this, dtime) RESULT(timesteps)
 
-    USE mo_base_constants,                  ONLY: one_day, one_year  ! length of one year in days, length of one day in seconds
+    USE mo_jsb_math_constants,              ONLY: one_day, one_year  ! length of one year in days, length of one day in seconds
 
     IMPLICIT NONE 
     ! ---------------------------
@@ -250,7 +250,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   FUNCTION calc_output_time_interval_pool(output_interval_pool) RESULT(interval_number)
 
-    USE mo_base_constants,          ONLY: one_day, dtime
+    USE mo_jsb_math_constants,      ONLY: one_day, dtime
 
     IMPLICIT NONE
     ! ---------------------------

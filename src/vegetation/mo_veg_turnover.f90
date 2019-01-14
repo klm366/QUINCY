@@ -210,7 +210,7 @@ CONTAINS
                                       recycling_fine_root_n15           )
 
     USE mo_kind,                  ONLY: wp, eps8, test_false_true
-    USE mo_base_constants,        ONLY: dtime, one_day
+    USE mo_jsb_math_constants,    ONLY: dtime, one_day
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_veg_constants,         ONLY: tau_nutrient_recycling, tau_labile
@@ -338,7 +338,7 @@ CONTAINS
                             veg_litterfall            )
 
     USE mo_kind,                  ONLY: wp, eps4, test_false_true
-    USE mo_base_constants,        ONLY: dtime, one_day, one_year
+    USE mo_jsb_math_constants,    ONLY: dtime, one_day, one_year
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_veg_constants,         ONLY: max_leaf_shedding_rate, igrass, itree

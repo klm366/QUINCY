@@ -406,7 +406,7 @@ CONTAINS
   PURE ELEMENTAL FUNCTION calc_mavg(current_avg, new_value, avg_period_length, do_calc, avg_period_unit) RESULT(new_avg)
 
     USE mo_kind,                ONLY: wp
-    USE mo_base_constants,      ONLY: dtime, one_day, one_year
+    USE mo_jsb_math_constants,  ONLY: dtime, one_day, one_year
 
     IMPLICIT NONE
     ! ---------------------------

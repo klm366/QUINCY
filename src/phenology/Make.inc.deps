@@ -25,7 +25,7 @@ mo_pheno_update_phenology.o: \
   mo_jsb_process_class.o \
   mo_pheno_constants.o \
   mo_jsb_phys_constants.o \
-  mo_base_constants.o \
+  mo_jsb_math_constants.o \
   mo_a2l_memory_class.o \
   mo_assimi_memory_class.o \
   mo_veg_memory_class.o \

@@ -296,7 +296,7 @@ CONTAINS
 
     USE mo_jsb_task_class,            ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,          ONLY: t_lctlib_element
-    USE mo_base_constants,            ONLY: dtime
+    USE mo_jsb_math_constants,        ONLY: dtime
     USE mo_atmland_constants,         ONLY: min_wind, max_wind 
     USE mo_atmland_util,              ONLY: calc_spec_humidity_sat
     USE mo_sse_constants,             ONLY: w_skin_max
@@ -556,7 +556,7 @@ CONTAINS
 
     USE mo_jsb_task_class,              ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,            ONLY: t_lctlib_element    
-    USE mo_base_constants,              ONLY: dtime
+    USE mo_jsb_math_constants,          ONLY: dtime
     USE mo_jsb_phys_constants,          ONLY: grav
     USE mo_assimi_update_canopy_fluxes, ONLY: calc_soil_moisture_stress
     USE mo_sse_constants,               ONLY: drain_frac, fdrain_runoff, InterceptionEfficiency, w_skin_max, wpot_min

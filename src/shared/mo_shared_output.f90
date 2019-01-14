@@ -1606,7 +1606,7 @@ CONTAINS
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
-    USE mo_base_constants,        ONLY: dtime
+    USE mo_jsb_math_constants,    ONLY: dtime
     USE mo_rad_constants,         ONLY: rad2ppfd
     USE mo_shared_isotope,        ONLY: calc_delta_C13, calc_delta_C14, calc_delta_N15
     USE mo_sse_config_class,      ONLY: max_soil_layers

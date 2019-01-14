@@ -15,7 +15,6 @@ MODULE mo_veg_growth
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message
   USE mo_exception,             ONLY: message_text, finish
-  USE mo_base_constants
   USE mo_jsb_task_class,        ONLY: t_jsb_task_options
 
 
@@ -993,6 +992,7 @@ CONTAINS
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element    
     USE mo_jsb_phys_constants,      ONLY: Tzero, molar_mass_C, molar_mass_N
     USE mo_shared_isotope,          ONLY: calc_mixing_ratio_N15N14
+    USE mo_jsb_math_constants,      ONLY: dtime, one_day, one_year
     USE mo_veg_constants,           ONLY: vmax_bnf, k_bnf, offset_bnf, eta_nfixation, transform_cost_nh4, transform_cost_no3, &
                                           fresp_growth, cost_n_fixation_max, cost_n_fixation_min, & 
                                           k1_temp_bnf, k2_temp_bnf,  k3_temp_bnf,  k4_temp_bnf, tau_labile
@@ -1344,7 +1344,7 @@ CONTAINS
                                                   target_np_sap_wood      , &
                                                   target_np_fruit           )
 
-    USE mo_base_constants,        ONLY: dtime, one_day
+    USE mo_jsb_math_constants,      ONLY: dtime, one_day
     USE mo_veg_constants          ! e.g. delta_n_leaf
     USE mo_pheno_constants,         ONLY: ievergreen, iraingreen, isummergreen, iperennial
 
@@ -1527,7 +1527,7 @@ CONTAINS
                                             k1_opt                        , &
                                             k2_opt )                    
 
-    USE mo_base_constants,          ONLY: pi
+    USE mo_jsb_math_constants,      ONLY: one_day, one_year
     USE mo_jsb_phys_constants,      ONLY: rhoh2o
     USE mo_veg_constants,           ONLY: min_height, itree, igrass, sm2lm_grass, w_root_lim_max, leaf2root_min_ratio, leaf2root_max_ratio
     USE mo_pheno_constants,         ONLY: ievergreen, iraingreen, isummergreen, iperennial
@@ -1868,7 +1868,7 @@ CONTAINS
                                                   target_reserve_pool_phosphorus )  
 
 
-    USE mo_base_constants,        ONLY: one_day
+    USE mo_jsb_math_constants,    ONLY: one_day
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_veg_constants,         ONLY: tau_labile, fresp_growth, resorp_fract_leaf, igrass, &
@@ -1990,7 +1990,7 @@ CONTAINS
                                   veg_reserve_use               ) 
 
     USE mo_kind,                  ONLY: wp, eps8
-    USE mo_base_constants,        ONLY: one_day, dtime
+    USE mo_jsb_math_constants,    ONLY: one_day, dtime
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_veg_constants,         ONLY: tau_labile, &
@@ -2297,7 +2297,7 @@ CONTAINS
                                       growth_req_p )       
 
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
-    USE mo_base_constants,          ONLY: dtime, one_day
+    USE mo_jsb_math_constants,      ONLY: dtime, one_day
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_veg_constants,           ONLY: itree, igrass, &
                                           lambda_fruit_alloc, k1_fruit_alloc, k3_fruit_alloc, k4_fruit_alloc
@@ -2614,7 +2614,7 @@ CONTAINS
                                 growth_respiration  )  
 
     USE mo_kind,                  ONLY: wp, eps8
-    USE mo_base_constants,        ONLY: one_day, dtime
+    USE mo_jsb_math_constants,    ONLY: one_day, dtime
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_veg_constants,         ONLY: knut_labile, tau_labile, fresp_growth
     dsl4slm_Use_memory_a_veg
@@ -2774,7 +2774,7 @@ CONTAINS
                                                             dens_ind)           &
                                                             RESULT(diameter)
 
-    USE mo_base_constants,          ONLY: pi
+    USE mo_jsb_math_constants,      ONLY: pi
 
     IMPLICIT NONE
     ! ---------------------------

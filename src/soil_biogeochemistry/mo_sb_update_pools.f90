@@ -42,7 +42,7 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_base_constants,        ONLY: dtime
+    USE mo_jsb_math_constants,    ONLY: dtime
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
     USE mo_jsb_phys_constants,    ONLY: lambda_C14
     USE mo_sb_constants

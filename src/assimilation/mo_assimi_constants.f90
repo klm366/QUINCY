@@ -62,7 +62,7 @@ MODULE mo_assimi_constants
       ! initial guess of the leaf Ci to Ca ratio
       CiCa_default_C3 ,     & !< default Ci:Ca for C3 plants
       CiCa_default_C4 ,     & !< default Ci:Ca for C4 plants
-      ! maximum number of iteration in photosynthesis calculation (should probably be in mo_base_constants)
+      ! maximum number of iteration in photosynthesis calculation (should probably be in mo_X_constants)
       ps_it_max       ,     & !< maximum iteration of PS calculation
       ci_max          ,     & !< saturating Ci in Pa C4 plants
       ! ratio of the molecular diffusion constants of water and CO2 in air (Nobel, Plant Phys. 2005, p 380)

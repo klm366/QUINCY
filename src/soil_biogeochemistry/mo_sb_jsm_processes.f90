@@ -11,11 +11,11 @@ MODULE mo_sb_jsm_processes
 
 #include "dsl_jsbach.inc"
 
-  USE mo_kind,             ONLY: wp, eps4, eps8
-  USE mo_exception,        ONLY: message, finish
-  USE mo_jsb_task_class,   ONLY: t_jsb_task_options
-  USE mo_base_constants,   ONLY: dtime
-  USE mo_jsb_lctlib_class, ONLY: t_lctlib_element 
+  USE mo_kind,                ONLY: wp, eps4, eps8
+  USE mo_exception,           ONLY: message, finish
+  USE mo_jsb_task_class,      ONLY: t_jsb_task_options
+  USE mo_jsb_math_constants,  ONLY: dtime
+  USE mo_jsb_lctlib_class,    ONLY: t_lctlib_element 
 
 
   IMPLICIT NONE
@@ -597,7 +597,7 @@ CONTAINS
     USE mo_shared_isotope,        ONLY: calc_fractionation
     USE mo_sb_constants,          ONLY: vmax_mic_uptake,km_mic_uptake,microbial_cue,microbial_nue,microbial_pue, & 
                                         microbial_cn,microbial_np,eta_ammonification,microbial_cue_min,microbial_cue_max
-    USE mo_base_constants,        ONLY: dtime
+    USE mo_jsb_math_constants,        ONLY: dtime
     dsl4slm_Use_memory_a_sb
 
     IMPLICIT NONE
@@ -939,7 +939,7 @@ CONTAINS
     dsl4slm_Use_memory_a_sb
 
     USE mo_sb_constants
-    USE mo_base_constants,                  ONLY: dtime, one_day
+    USE mo_jsb_math_constants,              ONLY: dtime, one_day
     USE mo_quincy_update_time_averages,     ONLY: mavg_period_tenzyme
 
     IMPLICIT NONE

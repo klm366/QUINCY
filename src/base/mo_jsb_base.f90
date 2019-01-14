@@ -136,7 +136,7 @@ CONTAINS
     USE mo_jsb_model_class,           ONLY: t_jsb_model
     USE mo_jsb_class,                 ONLY: Get_model
     USE mo_shared_set_parameters,     ONLY: parameters_slm_from_file
-    USE mo_base_constants,            ONLY: init_base_constants
+    USE mo_jsb_math_constants,        ONLY: init_jsb_math_constants
     USE mo_jsb_phys_constants,        ONLY: init_jsb_phys_constants
     USE mo_atmland_constants,         ONLY: init_atmland_constants
     USE mo_rad_constants,             ONLY: init_rad_constants
@@ -162,10 +162,10 @@ CONTAINS
 
     !> 1.0 parameter init
     !!
-    CALL init_base_constants          ! may be 1st of the 'init constants'
+    CALL init_jsb_math_constants      ! may be 1st of the 'init constants'
     CALL init_jsb_phys_constants      ! may be 2nd of the 'init constants'
     CALL init_rad_constants           ! may be 3rd of the 'init constants'
-    CALL init_atmland_constants       ! uses hourday                  defined in mo_base_constants
+    CALL init_atmland_constants       ! uses hourday                  defined in mo_jsb_math_constants
     CALL init_assimi_constants        ! uses molar_mass_N, Dwv, Dco2  defined in mo_jsb_phys_constants
     CALL init_veg_constants           ! uses Tzero                    defined in mo_jsb_phys_constants
     CALL init_sse_constants

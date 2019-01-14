@@ -2006,7 +2006,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE set_parameter_slm_values_with_list_values(this, proportional_parameter_changes)
 
-    USE mo_base_constants,                  ONLY: one_day, one_year, dtime
+    USE mo_jsb_math_constants,              ONLY: one_day, one_year, dtime
     USE mo_assimi_constants
     USE mo_pheno_constants
     !USE mo_atmland_constants
@@ -5752,7 +5752,7 @@ CONTAINS
   SUBROUTINE change_lctlib_param_values_pft_x(lctlib, param_pft_from_file, pft4_sla, proportional_parameter_changes)
 
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_base_constants,          ONLY: one_day, one_year
+    USE mo_jsb_math_constants,      ONLY: one_day, one_year
     USE mo_jsb_phys_constants,      ONLY: molar_mass_C, molar_mass_N, molar_mass_P, Dwv, Dco2, Tzero 
     USE mo_veg_constants,           ONLY: carbon_per_dryweight_leaf, sm2lm_grass, igrass, itree
 

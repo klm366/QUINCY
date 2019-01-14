@@ -1,6 +1,9 @@
 mo_jsb_phys_constants.o: \
   mo_kind.o
 
+mo_jsb_math_constants.o: \
+  mo_kind.o
+
 mo_util.o: \
   mo_kind.o
 
@@ -20,7 +23,7 @@ mo_quincy_update_time_averages.o: \
   mo_jsb_process_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_phys_constants.o \
-  mo_base_constants.o \
+  mo_jsb_math_constants.o \
   mo_jsb_model_class.o \
   mo_jsb_tile_class.o \
   mo_jsb_task_class.o \
@@ -42,7 +45,7 @@ mo_shared_set_parameters.o: \
   mo_jsb_model_class.o \
   mo_jsb_lctlib_class.o \
   mo_quincy_update_time_averages.o \
-  mo_base_constants.o \
+  mo_jsb_math_constants.o \
   mo_assimi_constants.o \
   mo_pheno_constants.o \
   mo_rad_constants.o \
@@ -58,7 +61,7 @@ mo_shared_output.o: \
   mo_jsb_model_class.o \
   mo_jsb_tile_class.o \
   mo_jsb_task_class.o \
-  mo_base_constants.o \
+  mo_jsb_math_constants.o \
   mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_model_init.o \

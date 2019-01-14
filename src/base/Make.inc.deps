@@ -4,7 +4,7 @@ mo_jsb_control.o: \
 mo_jsb_class.o: \
   mo_jsb_model_class.o
 
-mo_base_constants.o: \
+mo_jsb_math_constants.o: \
   mo_kind.o
 
 mo_base_util.o: \
@@ -30,7 +30,7 @@ mo_jsb_memory_class.o: \
 mo_jsb_lctlib_class.o: \
   mo_kind.o \
   mo_exception.o \
-  mo_base_constants.o \
+  mo_jsb_math_constants.o \
   mo_jsb_phys_constants.o \
   mo_veg_constants.o \
   mo_util.o
@@ -84,7 +84,7 @@ mo_jsb_model_init.o: \
   mo_jsb_class.o \
   mo_jsb_grid.o \
   mo_jsb_process_class.o \
-  mo_base_constants.o \
+  mo_jsb_math_constants.o \
   mo_util.o \
   mo_sb_memory_class.o \
   mo_veg_memory_class.o \
@@ -151,7 +151,7 @@ mo_jsb_base.o: \
   mo_jsb_lctlib_class.o \
   mo_shared_set_parameters.o \
   mo_sb_config_class.o \
-  mo_base_constants.o \
+  mo_jsb_math_constants.o \
   mo_jsb_phys_constants.o \
   mo_atmland_constants.o \
   mo_rad_constants.o \

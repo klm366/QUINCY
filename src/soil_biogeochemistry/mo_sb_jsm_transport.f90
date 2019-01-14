@@ -11,10 +11,10 @@ MODULE mo_sb_jsm_transport
 
 #include "dsl_jsbach.inc"
 
-  USE mo_kind,            ONLY: wp, eps4, eps8
-  USE mo_exception,       ONLY: message, finish
-  USE mo_jsb_task_class,  ONLY: t_jsb_task_options
-  USE mo_base_constants,  ONLY: dtime
+  USE mo_kind,                  ONLY: wp, eps4, eps8
+  USE mo_exception,             ONLY: message, finish
+  USE mo_jsb_task_class,        ONLY: t_jsb_task_options
+  USE mo_jsb_math_constants,    ONLY: dtime
 
 
   IMPLICIT NONE

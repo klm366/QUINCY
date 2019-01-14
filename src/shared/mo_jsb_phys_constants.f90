@@ -1,11 +1,12 @@
-!! @brief Contains general parameters required for land calculations 
+!! @brief 
+!!  Contains physical constants
 !!
 !! @author
 !!  Sönke Zaehle, MPI-BGC Jena 
 !!
 !! @par Revision History
 !! First version by Sönke Zaehle (2015-12-04)
-!! 2nd version: renamed to mo_jsb_phys_constants by jan Engel (20190114)
+!! 2nd version: renamed to mo_jsb_phys_constants by Jan Engel (20190114)
 !!
 MODULE mo_jsb_phys_constants
  
@@ -60,7 +61,7 @@ MODULE mo_jsb_phys_constants
 CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
-  !> initialize phisical parameters
+  !> initialize physical parameters
   !! 
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE init_jsb_phys_constants

@@ -409,7 +409,7 @@ CONTAINS
                                     fn_et_cl                  , &
                                     fn_pepc_cl)
 
-    USE mo_base_constants,      ONLY: dtime, one_day
+    USE mo_jsb_math_constants,  ONLY: dtime, one_day
     USE mo_veg_constants,       ONLY: delta_n_fraction
 
     IMPLICIT NONE
@@ -1050,7 +1050,7 @@ CONTAINS
 
     USE mo_jsb_task_class,                ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,              ONLY: t_lctlib_element    
-    USE mo_base_constants,                ONLY: dtime, one_day, one_year
+    USE mo_jsb_math_constants,            ONLY: dtime, one_day, one_year
     USE mo_veg_constants,                 ONLY: delta_n_leaf
     USE mo_quincy_update_time_averages,   ONLY: mavg_period_tgrowth
     USE mo_pheno_constants,               ONLY: ievergreen, iraingreen, isummergreen, iperennial
