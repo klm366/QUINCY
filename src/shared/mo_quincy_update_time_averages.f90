@@ -473,7 +473,7 @@ CONTAINS
 
     USE mo_kind,                    ONLY: wp, eps8, test_false_true
     USE mo_jsb_class,               ONLY: Get_model
-    USE mo_shared_constants,        ONLY: Tzero
+    USE mo_jsb_phys_constants,      ONLY: Tzero
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(ASSIMI_)    

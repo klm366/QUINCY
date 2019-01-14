@@ -44,7 +44,7 @@ CONTAINS
     USE mo_jsb_process_class,             ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_atmland_constants,             ONLY: frac_vis_swtot_srf, frac_par_swvis_srf, eps_vpd, standard_press_srf, def_co2_mixing_ratio
     USE mo_atmland_util,                  ONLY: calc_spec_humidity_sat
-    USE mo_shared_constants,              ONLY: molar_mass_N, Tzero, cvdifts, grav
+    USE mo_jsb_phys_constants,            ONLY: molar_mass_N, Tzero, cvdifts, grav
     USE mo_veg_canopy,                    ONLY: calc_canopy_layers
     USE mo_rad_scope,                     ONLY: calc_radiative_transfer
 

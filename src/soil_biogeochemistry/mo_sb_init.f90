@@ -40,7 +40,7 @@ CONTAINS
                                         def_co2_deltaC13, def_co2_deltaC14
     USE mo_shared_isotope,        ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C, calc_mixing_ratio_N15N14, &
                                         calc_fractionation
-    USE mo_shared_constants,                ONLY: molar_mass_C, molar_mass_N, molar_mass_P
+    USE mo_jsb_phys_constants,              ONLY: molar_mass_C, molar_mass_N, molar_mass_P
     USE mo_assimi_constants,                ONLY: CiCa_default_C3, CiCa_default_C4, ic3phot, ic4phot
     USE mo_assimi_update_canopy_fluxes,     ONLY: discrimination_ps
     USE mo_sb_jsm_processes
@@ -534,7 +534,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                qmax_po4,km, eca_enzyme_hlp, eca_divisor_adsorp)
 
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
-    USE mo_shared_constants,      ONLY: molar_mass_P
+    USE mo_jsb_phys_constants,    ONLY: molar_mass_P
     USE mo_sb_constants
     USE mo_sb_jsm_processes,      ONLY: calc_fast_po4
 

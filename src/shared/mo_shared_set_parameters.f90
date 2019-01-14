@@ -2011,7 +2011,7 @@ CONTAINS
     USE mo_pheno_constants
     !USE mo_atmland_constants
     USE mo_rad_constants
-    USE mo_shared_constants,                ONLY: molar_mass_C, molar_mass_N, molar_mass_P, Dwv, Dco2, Tzero
+    USE mo_jsb_phys_constants,              ONLY: molar_mass_C, molar_mass_N, molar_mass_P, Dwv, Dco2, Tzero
     USE mo_quincy_update_time_averages      ! includes the mavg_period_* parameters
     USE mo_sse_constants
     USE mo_sb_constants
@@ -2190,7 +2190,7 @@ CONTAINS
                                     "ci_max", proportional_parameter_changes, dependency_recalculation, &
                                     ci_max)
                                     
-    ! current assumption: parameters from mo_shared_constants are not modified
+    ! current assumption: parameters from mo_jsb_phys_constants are not modified
     ! IF ((ABS(this%Dwv  - missval) > eps8) .OR. &
     !     (ABS(this%Dco2 - missval) > eps8)) THEN
     !     dependency_recalculation = .TRUE.
@@ -2200,7 +2200,7 @@ CONTAINS
                                     "Dwv2co2_air", proportional_parameter_changes, dependency_recalculation, &
                                     Dwv2co2_air)
 
-    ! current assumption: parameters from mo_shared_constants are not modified
+    ! current assumption: parameters from mo_jsb_phys_constants are not modified
     ! IF ((ABS(this%Dwv  - missval) > eps8) .OR. &
     !     (ABS(this%Dco2 - missval) > eps8)) THEN
     !     dependency_recalculation = .TRUE.
@@ -5753,7 +5753,7 @@ CONTAINS
 
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_base_constants,          ONLY: one_day, one_year
-    USE mo_shared_constants,        ONLY: molar_mass_C, molar_mass_N, molar_mass_P, Dwv, Dco2, Tzero 
+    USE mo_jsb_phys_constants,      ONLY: molar_mass_C, molar_mass_N, molar_mass_P, Dwv, Dco2, Tzero 
     USE mo_veg_constants,           ONLY: carbon_per_dryweight_leaf, sm2lm_grass, igrass, itree
 
     IMPLICIT NONE

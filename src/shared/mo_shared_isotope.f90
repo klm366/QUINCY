@@ -31,7 +31,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_delta_C13(element, isotope) RESULT(delta)
 
-    USE mo_shared_constants, ONLY: PDB_STANDARD_C13
+    USE mo_jsb_phys_constants, ONLY: PDB_STANDARD_C13
 
     IMPLICIT NONE
     ! ---------------------------
@@ -62,7 +62,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_mixing_ratio_C13C12(delta) RESULT(mixing_ratio)
 
-    USE mo_shared_constants, ONLY: PDB_STANDARD_C13
+    USE mo_jsb_phys_constants, ONLY: PDB_STANDARD_C13
     
     IMPLICIT NONE
     ! ---------------------------
@@ -90,7 +90,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_delta_C14(element, isotope, delta_C13) RESULT(delta)
 
-    USE mo_shared_constants,    ONLY: AvogadroC_times_lambda_C14, molar_mass_C, AAB_STANDARD_C14, scale_correction_C14 
+    USE mo_jsb_phys_constants,    ONLY: AvogadroC_times_lambda_C14, molar_mass_C, AAB_STANDARD_C14, scale_correction_C14 
     
     IMPLICIT NONE
     ! ---------------------------
@@ -125,7 +125,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_mixing_ratio_C14C(delta_C13,Delta_C14) RESULT(mixing_ratio)
 
-    USE mo_shared_constants,        ONLY: AvogadroC_times_lambda_C14, molar_mass_C, AAB_STANDARD_C14, scale_correction_C14 
+    USE mo_jsb_phys_constants,        ONLY: AvogadroC_times_lambda_C14, molar_mass_C, AAB_STANDARD_C14, scale_correction_C14 
     
     IMPLICIT NONE
     ! ---------------------------
@@ -155,7 +155,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_delta_N15(element, isotope) RESULT(delta)
 
-    USE mo_shared_constants, ONLY: ATM_STANDARD_N15
+    USE mo_jsb_phys_constants, ONLY: ATM_STANDARD_N15
     
     IMPLICIT NONE
     ! ---------------------------
@@ -186,7 +186,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_mixing_ratio_N15N14(delta) RESULT(mixing_ratio)
 
-    USE mo_shared_constants, ONLY: ATM_STANDARD_N15
+    USE mo_jsb_phys_constants, ONLY: ATM_STANDARD_N15
     
     IMPLICIT NONE
     ! ---------------------------

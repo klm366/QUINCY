@@ -45,7 +45,7 @@ CONTAINS
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_atmland_constants,     ONLY: min_wind
-    USE mo_shared_constants,      ONLY: r_gas, Tzero
+    USE mo_jsb_phys_constants,    ONLY: r_gas, Tzero
     USE mo_shared_isotope,        ONLY: calc_fractionation
     USE mo_phy_schemes
     USE mo_assimi_constants,      ONLY: jmax2n, vcmax2n, E0v, E1v, t_jmax_offset, t_jmax_slope, t_jmax_opt_min, t_jmax_opt_max
@@ -366,7 +366,7 @@ CONTAINS
                                             m_pepc)
 
   USE mo_veg_constants,       ONLY: fmaint_rate_base  
-  USE mo_shared_constants,    ONLY: r_gas, Tzero
+  USE mo_jsb_phys_constants,  ONLY: r_gas, Tzero
   USE mo_assimi_constants,    ONLY: E0kc, E1kc, E0ko, E1ko, E0pcp, E1pcp, E0v, E1v, CiCa_default_C3, CiCa_default_C4, &
                                     ps_it_max, ci_max, alpha_i, Tref_pepc, Tbase_pepc, pO2, jmax2n, vcmax2n, ka, pepc2n, &
                                     chl2n, Dwv2co2_air, Dwv2co2_turb, ic3phot, ic4phot

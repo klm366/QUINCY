@@ -301,7 +301,7 @@ CONTAINS
     USE mo_atmland_util,              ONLY: calc_spec_humidity_sat
     USE mo_sse_constants,             ONLY: w_skin_max
     USE mo_sse_update_turbulence,     ONLY: calc_filtered_drag_coefficient
-    USE mo_shared_constants,          ONLY: r_gas_dryair, LatentHeatVaporization, stbo, zemiss_def, grav, cvdifts, cpd, cpvd1
+    USE mo_jsb_phys_constants,        ONLY: r_gas_dryair, LatentHeatVaporization, stbo, zemiss_def, grav, cvdifts, cpd, cpvd1
     USE mo_phy_schemes,               ONLY: heat_transfer_coef, surface_dry_static_energy
     
 
@@ -557,7 +557,7 @@ CONTAINS
     USE mo_jsb_task_class,              ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,            ONLY: t_lctlib_element    
     USE mo_base_constants,              ONLY: dtime
-    USE mo_shared_constants,            ONLY: grav
+    USE mo_jsb_phys_constants,          ONLY: grav
     USE mo_assimi_update_canopy_fluxes, ONLY: calc_soil_moisture_stress
     USE mo_sse_constants,               ONLY: drain_frac, fdrain_runoff, InterceptionEfficiency, w_skin_max, wpot_min
 
@@ -827,7 +827,7 @@ CONTAINS
 !!                                                cair,csat,snow_cover_fract,heat_capa_srf) RESULT (dry_static_energy_new)
 !!
 !!    USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
-!!    USE mo_shared_constants, ONLY: LatentHeatVaporization,LatentHeatSublimation,cvdifts,stbo,zemiss_def
+!!    USE mo_jsb_phys_constants,    ONLY: LatentHeatVaporization,LatentHeatSublimation,cvdifts,stbo,zemiss_def
 !!
 !!    IMPLICIT NONE
 !!    ! ---------------------------

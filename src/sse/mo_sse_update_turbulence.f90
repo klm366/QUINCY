@@ -43,7 +43,7 @@ CONTAINS
     USE mo_base_constants,        ONLY: dtime
     USE mo_atmland_constants,     ONLY: min_wind, max_wind 
     USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
-    USE mo_shared_constants,      ONLY: grav, r_gas_vapour, r_gas_dryair, cpd, cpvd1, ckap, cvdifts
+    USE mo_jsb_phys_constants,    ONLY: grav, r_gas_vapour, r_gas_dryair, cpd, cpvd1, ckap, cvdifts
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(SSE_)
@@ -216,7 +216,7 @@ CONTAINS
 
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
-    USE mo_shared_constants,      ONLY: grav, r_gas_vapour, r_gas_dryair, cpd, cpvd1, ckap, cvdifts
+    USE mo_jsb_phys_constants,    ONLY: grav, r_gas_vapour, r_gas_dryair, cpd, cpvd1, ckap, cvdifts
 
     IMPLICIT NONE
     ! ---------------------------
@@ -326,7 +326,7 @@ CONTAINS
 
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_phy_schemes,           ONLY: heat_transfer_coef
-    USE mo_shared_constants,      ONLY: grav, r_gas_vapour, r_gas_dryair, ckap, cvdifts
+    USE mo_jsb_phys_constants,    ONLY: grav, r_gas_vapour, r_gas_dryair, ckap, cvdifts
 
     IMPLICIT NONE
     ! ---------------------------

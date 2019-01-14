@@ -310,7 +310,7 @@ CONTAINS
   FUNCTION calc_particle_fluxrate(options,soil_depth_sl,bulk_dens_corr_sl,sb_formation,sb_loss) RESULT (particle_fluxrate)
 
     USE mo_sb_constants,          ONLY: carbon_per_dryweight_SOM, rho_bulk_org
-    USE mo_shared_constants,      ONLY: molar_mass_C
+    USE mo_jsb_phys_constants,    ONLY: molar_mass_C
     dsl4slm_Use_memory_a_sb
 
     IMPLICIT NONE

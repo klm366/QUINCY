@@ -41,7 +41,7 @@ CONTAINS
     USE mo_assimi_constants,                ONLY: CiCa_default_C3, CiCa_default_C4, ic3phot, ic4phot
     USE mo_atmland_constants,               ONLY: def_co2_mixing_ratio, def_co2_mixing_ratio_C13, def_co2_mixing_ratio_C14, &
                                                   standard_press_srf, def_co2_deltaC13, def_co2_deltaC14
-    USE mo_shared_constants,                ONLY: molar_mass_N
+    USE mo_jsb_phys_constants,              ONLY: molar_mass_N
     USE mo_veg_constants,                   ONLY: fresp_growth, background_mort_rate_tree, background_mort_rate_grass, w_root_lim_max
     USE mo_shared_isotope,                  ONLY: calc_fractionation,calc_mixing_ratio_N15N14,calc_mixing_ratio_C14C
     USE mo_assimi_update_canopy_fluxes,     ONLY: discrimination_ps

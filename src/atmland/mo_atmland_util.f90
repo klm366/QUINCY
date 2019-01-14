@@ -128,7 +128,7 @@ CONTAINS
   PURE ELEMENTAL FUNCTION calc_spec_humidity_sat(temp,press_srf) RESULT(q_sat)
 
     USE mo_atmland_constants,       ONLY: eps_vpd
-    USE mo_shared_constants,        ONLY: Tzero
+    USE mo_jsb_phys_constants,      ONLY: Tzero
 
     IMPLICIT NONE 
     ! ---------------------------

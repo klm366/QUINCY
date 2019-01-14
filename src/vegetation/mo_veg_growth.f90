@@ -824,7 +824,7 @@ CONTAINS
   PURE ELEMENTAL FUNCTION calc_meristem_activity(t_air,w_soil_root_theta,growing_season) RESULT(kstar_labile)
 
     USE mo_kind,              ONLY: wp, test_false_true   
-    USE mo_shared_constants,  ONLY: Tzero
+    USE mo_jsb_phys_constants,ONLY: Tzero
     USE mo_veg_constants,     ONLY: lambda_labile_temp  , &
                                     lambda_labile_theta , &
                                     k_labile_temp       , & 
@@ -991,7 +991,7 @@ CONTAINS
     USE mo_kind,                    ONLY: wp, eps8
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element    
-    USE mo_shared_constants,        ONLY: Tzero, molar_mass_C, molar_mass_N
+    USE mo_jsb_phys_constants,      ONLY: Tzero, molar_mass_C, molar_mass_N
     USE mo_shared_isotope,          ONLY: calc_mixing_ratio_N15N14
     USE mo_veg_constants,           ONLY: vmax_bnf, k_bnf, offset_bnf, eta_nfixation, transform_cost_nh4, transform_cost_no3, &
                                           fresp_growth, cost_n_fixation_max, cost_n_fixation_min, & 
@@ -1528,7 +1528,7 @@ CONTAINS
                                             k2_opt )                    
 
     USE mo_base_constants,          ONLY: pi
-    USE mo_shared_constants,        ONLY: rhoh2o
+    USE mo_jsb_phys_constants,      ONLY: rhoh2o
     USE mo_veg_constants,           ONLY: min_height, itree, igrass, sm2lm_grass, w_root_lim_max, leaf2root_min_ratio, leaf2root_max_ratio
     USE mo_pheno_constants,         ONLY: ievergreen, iraingreen, isummergreen, iperennial
 

@@ -160,7 +160,7 @@ CONTAINS
 
     ! USE statements necessary for modifying input values of lctlib parameters
     USE mo_base_constants,          ONLY: one_day, one_year
-    USE mo_shared_constants,        ONLY: molar_mass_C, molar_mass_N, molar_mass_P, Dwv, Dco2, Tzero 
+    USE mo_jsb_phys_constants,      ONLY: molar_mass_C, molar_mass_N, molar_mass_P, Dwv, Dco2, Tzero 
     USE mo_veg_constants,           ONLY: carbon_per_dryweight_leaf, sm2lm_grass, igrass, itree
 
     CHARACTER(len=*), INTENT(in) :: lctlib_file_name

@@ -72,7 +72,7 @@ CONTAINS
                                           jmax2vcmax_C4, k0_fn_chl_C4, k1_fn_chl_C4, k0_fn_pepc_C4, &
                                           jmax2vcmax_C3, k0_fn_chl_C3, k1_fn_chl_C3, k0_fn_pepc_C3, kfn_chl
     USE mo_assimi_constants,        ONLY: kn, chl2n, ic4phot, jmax2n, k1_fn_struc, vcmax2n
-    USE mo_shared_constants,        ONLY: molar_mass_C, molar_mass_N, molar_mass_P
+    USE mo_jsb_phys_constants,      ONLY: molar_mass_C, molar_mass_N, molar_mass_P
 
     IMPLICIT NONE
     ! ---------------------------
@@ -803,7 +803,7 @@ CONTAINS
 
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
-    USE mo_shared_constants,      ONLY: r_gas_dryair
+    USE mo_jsb_phys_constants,    ONLY: r_gas_dryair
     USE mo_rad_constants,         ONLY: rad2ppfd, kbl0_vis
     USE mo_assimi_constants,      ONLY: ic3phot, ic4phot
 

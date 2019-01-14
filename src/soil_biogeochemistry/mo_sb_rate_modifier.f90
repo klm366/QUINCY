@@ -213,7 +213,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   ELEMENTAL FUNCTION calc_temperature_rate_modifier(t_soil_sl,Ea) RESULT(rate_modifier)
 
-    USE mo_shared_constants,    ONLY: r_gas
+    USE mo_jsb_phys_constants,  ONLY: r_gas
     USE mo_sb_constants,        ONLY: t_ref_tresponse 
 
     IMPLICIT NONE
@@ -257,7 +257,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   ELEMENTAL FUNCTION calc_peaked_temperature_rate_modifier(t_soil_sl,Ea,Ed,t_opt) RESULT(rate_modifier)
 
-    USE mo_shared_constants,    ONLY: r_gas
+    USE mo_jsb_phys_constants,  ONLY: r_gas
     USE mo_sb_constants,        ONLY: t_ref_tresponse 
 
     IMPLICIT NONE

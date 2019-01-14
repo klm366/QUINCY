@@ -528,7 +528,7 @@ CONTAINS
     USE mo_base_constants,        ONLY: dtime, one_day, one_year
     USE mo_rad_constants,         ONLY: rfr_ratio_toc 
     USE mo_veg_constants,         ONLY: fpc_max, lambda_est_temp, k_est_temp, lambda_est_moist, k_est_moist
-    USE mo_shared_constants,      ONLY: Tzero
+    USE mo_jsb_phys_constants,    ONLY: Tzero
     dsl4slm_Use_memory_a_veg
 
     IMPLICIT NONE

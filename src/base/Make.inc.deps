@@ -31,7 +31,7 @@ mo_jsb_lctlib_class.o: \
   mo_kind.o \
   mo_exception.o \
   mo_base_constants.o \
-  mo_shared_constants.o \
+  mo_jsb_phys_constants.o \
   mo_veg_constants.o \
   mo_util.o
 
@@ -152,7 +152,7 @@ mo_jsb_base.o: \
   mo_shared_set_parameters.o \
   mo_sb_config_class.o \
   mo_base_constants.o \
-  mo_shared_constants.o \
+  mo_jsb_phys_constants.o \
   mo_atmland_constants.o \
   mo_rad_constants.o \
   mo_assimi_constants.o \

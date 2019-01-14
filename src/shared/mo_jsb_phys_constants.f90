@@ -5,8 +5,9 @@
 !!
 !! @par Revision History
 !! First version by Sönke Zaehle (2015-12-04)
+!! 2nd version: renamed to mo_jsb_phys_constants by jan Engel (20190114)
 !!
-MODULE mo_shared_constants
+MODULE mo_jsb_phys_constants
  
   USE mo_kind,                  ONLY: wp
 
@@ -21,7 +22,7 @@ MODULE mo_shared_constants
     Dwv          ,  &           !< diffusion coefficient for water vapour in air (m2 s-1) 
     Dco2         ,  &           !< diffusion coefficient for CO2 in air (m2 s-1) 
     Tzero        ,  &           !< melting point in K -> conversion factor for degreeC
-!ECHAM
+  !ECHAM
     grav         ,  &           !< gravitational acceleration ( m / s2 )
     rhoh2o       ,  &           !< density of liquid water (kg/m3)
     stbo         ,  &           !< Stephan-Boltzmann constant             [W/(m2 K4)]
@@ -54,15 +55,15 @@ MODULE mo_shared_constants
     AvogadroC_times_lambda_C14 , &  !< Avogadro Number * decay constant of C14 to reduce the use of the very large/small AvogadroC/lambda_C14 
     scale_correction_c14            !< conversion from mol to pico-mol for C14 (for numerical precision) 
 
-  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_shared_constants'
+  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_jsb_phys_constants'
 
 CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
-  !> initialize constants from shared
+  !> initialize phisical parameters
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE init_shared_constants
+  SUBROUTINE init_jsb_phys_constants
 
     IMPLICIT NONE
     ! ---------------------------
@@ -70,7 +71,7 @@ CONTAINS
     ! 
     ! ---------------------------
     ! 0.2 Local
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_shared_constants'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_jsb_phys_constants'
 
 
     ! physical constants
@@ -109,6 +110,6 @@ CONTAINS
     AvogadroC_times_lambda_C14  = 6.022_wp * 3.8332_wp * 1.e11_wp  ! used in e.g. calc_delta_C14() & calc_mixing_ratio_C14C()
     scale_correction_c14        = 1.e12_wp                         !1000000000000._wp   
 
-  END SUBROUTINE init_shared_constants
+  END SUBROUTINE init_jsb_phys_constants
 
-END MODULE mo_shared_constants
+END MODULE mo_jsb_phys_constants

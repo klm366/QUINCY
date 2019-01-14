@@ -224,7 +224,7 @@ CONTAINS
   SUBROUTINE init_sb_constants
 
     USE mo_base_constants,            ONLY: one_day, one_year
-    USE mo_shared_constants,          ONLY: molar_mass_C, molar_mass_N, molar_mass_P
+    USE mo_jsb_phys_constants,        ONLY: molar_mass_C, molar_mass_N, molar_mass_P
  
     IMPLICIT NONE
     ! ---------------------------

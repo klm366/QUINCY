@@ -1118,7 +1118,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   ELEMENTAL FUNCTION calc_bulk_density_correction(bulk_soil_carbon_sl,bulk_dens_sl) RESULT(bulk_dens_corr_sl)
 
-    USE mo_shared_constants,      ONLY: molar_mass_C 
+    USE mo_jsb_phys_constants,    ONLY: molar_mass_C 
     USE mo_sb_constants,          ONLY: rho_bulk_org, carbon_per_dryweight_SOM 
 
     IMPLICIT NONE
@@ -1156,7 +1156,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   ELEMENTAL FUNCTION calc_qmax_bulk_density_correction(bulk_soil_carbon_sl, bulk_dens_sl, qmax_om, qmax_min) RESULT(qmax)
 
-    USE mo_shared_constants,      ONLY: molar_mass_C
+    USE mo_jsb_phys_constants,    ONLY: molar_mass_C
     USE mo_sb_constants,          ONLY: carbon_per_dryweight_SOM, rho_bulk_org
 
     IMPLICIT NONE

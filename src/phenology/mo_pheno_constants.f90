@@ -42,7 +42,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE init_pheno_constants
 
-    USE mo_shared_constants,      ONLY: Tzero
+    USE mo_jsb_phys_constants,    ONLY: Tzero
 
     IMPLICIT NONE
     ! ---------------------------

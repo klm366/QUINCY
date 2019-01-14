@@ -198,7 +198,7 @@ CONTAINS
                                       gdd )
 
     USE mo_base_constants,          ONLY: dtime, one_day
-    USE mo_shared_constants,        ONLY: Tzero
+    USE mo_jsb_phys_constants,      ONLY: Tzero
     USE mo_pheno_constants,         ONLY: ievergreen, iraingreen, isummergreen, iperennial, &
                                           gdd_t_air_threshold
 

@@ -93,7 +93,7 @@ CONTAINS
     USE mo_jsb_grid,              ONLY: Get_Grid
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_shared_constants,      ONLY: molar_mass_N, molar_mass_P, grav
+    USE mo_jsb_phys_constants,    ONLY: molar_mass_N, molar_mass_P, grav
     USE mo_base_constants,        ONLY: one_day
     USE mo_jsb4_forcing,          ONLY: forcing_options
     USE mo_shared_isotope,        ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C, calc_delta_C13, calc_delta_C14, &

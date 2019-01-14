@@ -18,7 +18,7 @@ mo_sb_interface.o: \
 mo_sb_constants.o: \
   mo_kind.o \
   mo_base_constants.o \
-  mo_shared_constants.o
+  mo_jsb_phys_constants.o
 
 mo_sb_litter_processes.o: \
   mo_kind.o \
@@ -59,7 +59,7 @@ mo_sb_init.o: \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
   mo_shared_isotope.o \
-  mo_shared_constants.o \
+  mo_jsb_phys_constants.o \
   mo_assimi_constants.o \
   mo_assimi_update_canopy_fluxes.o \
   mo_sse_config_class.o \
@@ -103,7 +103,7 @@ mo_sb_update_pools.o: \
   mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
-  mo_shared_constants.o \
+  mo_jsb_phys_constants.o \
   mo_shared_isotope.o \
   mo_a2l_memory_class.o \
   mo_veg_memory_class.o \
@@ -133,7 +133,7 @@ mo_sb_jsm_processes.o: \
   mo_jsb_task_class.o \
   mo_quincy_update_time_averages.o \
   mo_base_constants.o \
-  mo_shared_constants.o \
+  mo_jsb_phys_constants.o \
   mo_sb_constants.o \
   mo_sb_config_class.o \
   mo_sb_jsm_transport.o \
@@ -145,7 +145,7 @@ mo_sb_jsm_transport.o: \
   mo_exception.o \
   mo_jsb_task_class.o \
   mo_base_constants.o \
-  mo_shared_constants.o \
+  mo_jsb_phys_constants.o \
   mo_sb_constants.o \
   mo_sb_config_class.o \
   mo_sb_memory_class.o
@@ -163,7 +163,7 @@ mo_sb_simple_model.o: \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
   mo_sse_memory_class.o \
-  mo_shared_constants.o \
+  mo_jsb_phys_constants.o \
   mo_veg_constants.o \
   mo_veg_memory_class.o \
   mo_sb_constants.o \

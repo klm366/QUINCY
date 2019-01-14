@@ -42,7 +42,7 @@ CONTAINS
     USE mo_atmland_constants,     ONLY: frac_vis_swtot_srf, frac_par_swvis_srf,eps_vpd, standard_press_srf, def_co2_mixing_ratio
     USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
     USE mo_veg_util,              ONLY: reset_veg_fluxes
-    USE mo_shared_constants,      ONLY: molar_mass_N, Tzero, cvdifts, grav
+    USE mo_jsb_phys_constants,    ONLY: molar_mass_N, Tzero, cvdifts, grav
     USE mo_veg_canopy             ! ..
 
     ! Use of process configurations (t_PROC_config)

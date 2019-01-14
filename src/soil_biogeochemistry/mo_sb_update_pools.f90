@@ -44,7 +44,7 @@ CONTAINS
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_base_constants,        ONLY: dtime
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
-    USE mo_shared_constants,      ONLY: lambda_C14
+    USE mo_jsb_phys_constants,    ONLY: lambda_C14
     USE mo_sb_constants
     USE mo_sb_jsm_processes,      ONLY: calc_bulk_soil_carbon, calc_bulk_density_correction, &
                                         calc_qmax_bulk_density_correction, calc_fast_po4

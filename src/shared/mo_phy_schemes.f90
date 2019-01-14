@@ -78,7 +78,7 @@ CONTAINS
   REAL(wp) ELEMENTAL FUNCTION surface_dry_static_energy(t_srf, qsat_srf)
 
 !    USE mo_jsb_physical_constants, ONLY: &
-    USE mo_shared_constants, ONLY: &
+    USE mo_jsb_phys_constants, ONLY: &
       & cpd,       & !< Specific heat of dry air at constant pressure
       & cpvd1        !< cpv/cpd-1
 
@@ -99,7 +99,7 @@ CONTAINS
   REAL(wp) ELEMENTAL FUNCTION thermal_radiation(t_srf)
 
 !    USE mo_jsb_physical_constants, ONLY: &
-    USE mo_shared_constants, ONLY: &
+    USE mo_jsb_phys_constants, ONLY: &
       stbo,       &  !< Stefan-Boltzmann constant
       zemiss_def     !< Surface emissivity
 
@@ -118,7 +118,7 @@ CONTAINS
   REAL(wp) ELEMENTAL FUNCTION lwnet_from_lwdown(lwdown, t_srf)
 
 !    USE mo_physical_constants, ONLY: &
-    USE mo_shared_constants, ONLY: &
+    USE mo_jsb_phys_constants, ONLY: &
       stbo,       &  !< Stefan-Boltzmann constant
       zemiss_def     !< Surface emissivity
 
@@ -138,7 +138,7 @@ CONTAINS
   REAL(wp) ELEMENTAL FUNCTION heat_transfer_coef(drag, steplen)
 
 !    USE mo_jsb_physical_constants, ONLY: &
-    USE mo_shared_constants, ONLY: &
+    USE mo_jsb_phys_constants, ONLY: &
       grav, cvdifts
 
     REAL(wp), INTENT(in) :: &

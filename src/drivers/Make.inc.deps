@@ -53,7 +53,7 @@ mo_atmland_forcing.o: \
   mo_jsb_tile_class.o \
   mo_jsb4_forcing.o \
   mo_shared_isotope.o \
-  mo_shared_constants.o \
+  mo_jsb_phys_constants.o \
   mo_atmland_util.o \
   mo_atmland_constants.o \
   mo_sse_memory_class.o \
@@ -79,7 +79,7 @@ mo_test_canopy_model.o: \
   mo_atmland_constants.o \
   mo_atmland_util.o \
   mo_veg_util.o \
-  mo_shared_constants.o \
+  mo_jsb_phys_constants.o \
   mo_assimi_config_class.o \
   mo_atmland_interface.o \
   mo_rad_interface.o \
@@ -102,7 +102,7 @@ mo_test_radiation_model.o: \
   mo_jsb_process_class.o \
   mo_atmland_constants.o \
   mo_atmland_util.o \
-  mo_shared_constants.o \
+  mo_jsb_phys_constants.o \
   mo_veg_canopy.o \
   mo_rad_scope.o \
   mo_assimi_config_class.o \

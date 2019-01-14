@@ -41,7 +41,7 @@ CONTAINS
     USE mo_jsb_model_class,                 ONLY: t_jsb_model
     USE mo_base_constants,                  ONLY: dtime, one_day
     USE mo_jsb_process_class,               ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
-    USE mo_shared_constants,                ONLY: lambda_C14, rhoh2o, grav
+    USE mo_jsb_phys_constants,              ONLY: lambda_C14, rhoh2o, grav
     USE mo_shared_isotope,                  ONLY: calc_mixing_ratio_N15N14, calc_fractionation, calc_mixing_ratio_C14C
     USE mo_rad_constants,                   ONLY: rfr_ratio_toc 
     USE mo_veg_canopy,                      ONLY: calc_canopy_layers
