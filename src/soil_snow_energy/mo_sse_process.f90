@@ -12,7 +12,6 @@ MODULE mo_sse_process
 
   USE mo_jsb_physical_constants, ONLY: rhoh2o
   USE mo_kind,      ONLY: wp
-  USE mo_exception, ONLY: message
 
   IMPLICIT NONE
   PRIVATE
@@ -210,8 +209,8 @@ CONTAINS
 
     moisture = MIN(ws, fc)
     IF (moisture > 0._wp) THEN
-      relative_humidity_soil = 0.5_wp * (1._wp - COS(moisture * pi / fc)) ! relative_humidity increases with higher moisture and lower fc
-                                                                     ! Note, fc has to be  >= than moisture!
+      relative_humidity_soil = 0.5_wp * (1._wp - COS(moisture * pi / fc)) ! relative_humidity increases with higher moisture and
+                                                                          !  lower fc. Note, fc has to be  >= than moisture!
     ELSE
       relative_humidity_soil = 0._wp
     END IF
@@ -246,7 +245,6 @@ CONTAINS
     USE mo_jsb_time,       ONLY: t_datetime, get_time_start, get_year, &
                                  get_year_length, get_month_length, get_day_length, get_year_day
     USE mo_math_constants, ONLY: pi
-    USE mo_exception,      ONLY: finish
 
     REAL(wp), INTENT(in)  :: cmid(:)     !< Depths of soil layer mid points
     REAL(wp), INTENT(in)  :: tclim(:,:)  !< Climatological monthly surface temperature
@@ -454,7 +452,7 @@ CONTAINS
     REAL(wp) :: z1(nidx)
     REAL(wp) :: zd1(nsoil)
     REAL(wp) :: zdz1(nidx,nsoil), zdz2(nidx,nsoil)
-    REAL(wp) :: heat_cap(nidx,nsoil), liquid_max(nidx,nsoil), freezemelt(nidx,nsoil)
+    REAL(wp) :: heat_cap(nidx,nsoil), liquid_max(nidx,nsoil) !, freezemelt(nidx,nsoil)
 
     !-----------------------------------------------------------------------------------------------
     !  Computation of useful constants
@@ -727,9 +725,9 @@ CONTAINS
     IF (.NOT. lstart) THEN
       t_snow(:,:) = 0._wp
       DO jk=1,nsnow
-        WHERE (itop(:) <= jk .AND. jk <= itop_old(:))           ! zero+ new snow layers: layers from new top layer to top prev layer
+        WHERE (itop(:) <= jk .AND. jk <= itop_old(:))          ! zero+ new snow layers: layers from new top layer to top prev layer
           t_snow(:,jk) = t_srf_unfilt(:)
-        ELSE WHERE (itop(:) > itop_old(:) .AND. jk == itop(:))  ! snow present but fewer snow layers : new top layer
+        ELSE WHERE (itop(:) > itop_old(:) .AND. jk == itop(:)) ! snow present but fewer snow layers : new top layer
           t_snow(:,jk) = t_srf_unfilt(:)
         END WHERE
       END DO

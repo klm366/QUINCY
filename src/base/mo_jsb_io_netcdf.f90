@@ -1,11 +1,7 @@
 MODULE mo_jsb_io_netcdf
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,      ONLY: wp
-  USE mo_exception, ONLY: finish, message
-
-  USE mo_jsb_io_netcdf_iface, ONLY: nf_open, nf_inq_dimid, nf_inq_varid, nf_close, &
-    NF_NOWRITE, NF_NOERR, nf, t_input_file, netcdf_open_input, netcdf_close_file
+  USE mo_jsb_io_netcdf_iface, ONLY: t_input_file, netcdf_open_input
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid
   USE mo_jsb_grid,           ONLY: Get_grid
 
@@ -13,9 +9,6 @@ MODULE mo_jsb_io_netcdf
 
   PRIVATE
 
-!!$  PUBLIC :: t_input_file, jsb_netcdf_open_input, &
-!!$            jsb_netcdf_read_2d_time, jsb_netcdf_read_2d, jsb_netcdf_read_2d_extdim, &
-!!$            ncfile_has_dim, ncfile_has_var
   PUBLIC :: t_input_file, jsb_netcdf_open_input
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_io_netcdf'

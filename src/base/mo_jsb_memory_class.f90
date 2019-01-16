@@ -14,7 +14,7 @@ MODULE mo_jsb_memory_class
   USE mo_exception,         ONLY: finish
   USE mo_jsb_config_class,  ONLY: t_jsb_config
   USE mo_jsb_var_class,     ONLY: t_jsb_var_p, t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d, REAL2D, REAL3D
-  USE mo_util,              ONLY: real2string, int2string
+  USE mo_util,              ONLY: int2string
 
   IMPLICIT NONE
   PRIVATE

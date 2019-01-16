@@ -16,7 +16,6 @@ MODULE mo_seb_lake
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
-  USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
   USE mo_jsb_control,        ONLY: debug_on
 
@@ -39,8 +38,7 @@ CONTAINS
 
   SUBROUTINE update_surface_energy_lake(tile, options)
 
-    USE mo_phy_schemes,            ONLY: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef
-    USE mo_jsb_physical_constants, ONLY: tmelt
+    USE mo_phy_schemes,            ONLY: qsat, surface_dry_static_energy
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -72,7 +70,6 @@ CONTAINS
       & hflx_cond_ice, &
       & hflx_melt_lice, &
       & hflx_melt_snow, &
-      & rad_srf_net, &
       & fract_lice, &
       & depth_lice, &
       & fract_snow_lice, &
@@ -85,16 +82,15 @@ CONTAINS
     REAL(wp) :: &
       hcap_wtr(options%nc), &
       hcap_ice(options%nc), &
-      t_freeze(options%nc), &
       zero(options%nc)
     LOGICAL :: &
       & l_ice(options%nc),           & ! Indicator for ice cover
       & l_ice_formation(options%nc), &
       & l_ice_melting(options%nc)
 
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice
     REAL(wp) :: dtime
-    REAL(wp) :: &
+    REAL(wp) ::   &
       & ml_depth, &      !< Depth of lake mixed layer
       & min_ice_depth    !< Minimum ice thickness to start ice formation
 
@@ -105,7 +101,6 @@ CONTAINS
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
-    nc    = options%nc
     dtime = options%dtime
 
     IF (.NOT. tile%Is_process_active(SEB_) .OR. .NOT. tile%contains_lake) RETURN
@@ -308,7 +303,7 @@ CONTAINS
   ELEMENTAL PURE SUBROUTINE calc_lake_ice_temp(t_lice, hcap_ice, hflx_cond_ice, hflx_melt_snow, hflx_melt_lice, &
     &                                          hflx, lhflx, snowfall, hi, hs, fs, hi_min, dtime)
 
-    USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, rhoi, clw, rhoi, rhos, als, alf, ki, ks, ci, cs
+    USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, rhoi, rhoi, rhos, als, alf, ki, ks, ci, cs !, clw
 
     REAL(wp), INTENT(inout) :: t_lice
     REAL(wp), INTENT(out)   :: hcap_ice       !< Heat capacity of thin ice surface layer
@@ -444,7 +439,7 @@ CONTAINS
 
   SUBROUTINE update_surface_fluxes_lake(tile, options)
 
-    USE mo_phy_schemes,            ONLY: q_effective, surface_dry_static_energy, heat_transfer_coef
+    USE mo_phy_schemes,            ONLY: heat_transfer_coef ! q_effective, surface_dry_static_energy
     USE mo_jsb_physical_constants, ONLY: alv, als
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -480,17 +475,16 @@ CONTAINS
       & s_air      (options%nc), &  !< Dry static energy at lowest atmospheric level
       & heat_tcoef (options%nc)     !< Heat transfer coefficient (rho*C_h*|v|)
 
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice
     REAL(wp) :: steplen
 
-    TYPE(t_jsb_model), POINTER :: model
+    !TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_fluxes_lake'
 
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-    nc      = options%nc
     steplen = options%steplen
 
     IF (.NOT. tile%Is_process_active(SEB_)) RETURN
@@ -498,7 +492,7 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     ! Get model
-    model => Get_model(tile%owner_model_id)
+    !model => Get_model(tile%owner_model_id)
 
     ! Get reference to variables for current block
     !

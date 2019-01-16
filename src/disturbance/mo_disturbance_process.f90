@@ -11,9 +11,7 @@ MODULE mo_disturb_process
 #ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp
-  USE mo_exception, ONLY: message
-
-  USE mo_exception,        ONLY: message, finish
+  USE mo_exception, ONLY: finish
 
   IMPLICIT NONE
   PRIVATE

@@ -11,7 +11,7 @@ MODULE mo_hydro_process
 #ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp
-  USE mo_exception, ONLY: finish, message, message_text, em_warn
+  USE mo_exception, ONLY: finish, message_text
 
   IMPLICIT NONE
   PRIVATE
@@ -36,7 +36,7 @@ MODULE mo_hydro_process
 
 CONTAINS
   !
-  ! ================================================================================================================================
+  ! ===============================================================================================================================
   !>
   !! @brief   Compute surface hydrology on glacier-free land
   !!
@@ -219,7 +219,8 @@ CONTAINS
     !  Budget of water in skin reservoir (canopy and ground)
     !-----------------------------------------------------------
     ! Interception of rain
-    rain_to_skinres = MIN(rain_in_m * InterceptionEfficiency, MAX(skinres_max - skinres, 0._wp)) ! Part of rain goes to skin reservoir
+    rain_to_skinres = MIN(rain_in_m * InterceptionEfficiency, MAX(skinres_max - skinres, 0._wp)) ! Part of rain goes to skin
+                                                                                                 ! reservoir
     ! Note: the MAX in following line is only to account for apparent precision error (small negative values)
     water_to_soil = water_to_soil + MAX(rain_in_m - rain_to_skinres, 0._wp)        ! Rest of rain goes to soil
     skinres_pre_rain = skinres
@@ -265,7 +266,7 @@ CONTAINS
 
   END SUBROUTINE calc_surface_hydrology_land
 
-  ! ================================================================================================================================
+  ! ===============================================================================================================================
   !>
   !! @brief   calc surface hydrology on glaciers
   !!
@@ -299,7 +300,6 @@ CONTAINS
     & pme_glacier)
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf
-    USE mo_hydro_constants,        ONLY: InterceptionEfficiency
 
     LOGICAL,  INTENT(in) :: lstart
     REAL(wp), INTENT(in) ::       &
@@ -316,10 +316,7 @@ CONTAINS
       & rain_in_m,           & !< amount of rainfall within time step [m]
       & new_snow,            & !< amount of snowfall within time step [m]
       & evapotrans_in_m,     & !< amount of evapotranspiration within time step [m]
-      & evapo_snow_in_m,     & !< amount of sublimation from snow within time step [m]
       & snow_melt_pot_in_m,  & !< potential amount of snow melt [m]
-      & new_snow_soil,       & !< amount of snowfall to soil within time step [m]
-      & exp_t, exp_w,        & !< exponents needed for unloading of snow due to temperature / wind
       & evapo_snow_pot_in_m, & !< potential snow evaporation
       & pme_glacier_in_m,    & !< P-E in m
       & glacier_runoff_in_m, & !< Runoff in m
@@ -414,7 +411,8 @@ CONTAINS
     & nidx, nsoil, dz, nlat, delta_time, ltpe_closed, ltpe_open,                                                 &
     & soil_depth_l, root_depth_l, fract_org_l,                                                                   &
     & hyd_cond_sat_l, matrix_pot_l, bclapp_l, pore_size_index_l, vol_porosity_l, vol_field_cap_l, vol_p_wilt_l,  &
-    & sfract_srf, wfract_srf, ws_max_mineral, oro_stddev, t_soil, water_to_soil, evapotrans_soil, trans,         &
+    !& sfract_srf, wfract_srf,
+    & ws_max_mineral, oro_stddev, t_soil, water_to_soil, evapotrans_soil, trans,                                 &
     ! inout
     & ws, ws_l, soil_ice_l, w_soil_overflow,                                                                     &
     ! out
@@ -436,8 +434,9 @@ CONTAINS
     REAL(wp), INTENT(in), DIMENSION(nidx, nsoil) :: &
       & soil_depth_l, root_depth_l, fract_org_l,    &
       & hyd_cond_sat_l, matrix_pot_l, bclapp_l, pore_size_index_l, vol_porosity_l, vol_field_cap_l, vol_p_wilt_l
-    REAL(wp), INTENT(in), DIMENSION(nidx) ::                                       &
-      & sfract_srf, wfract_srf, ws_max_mineral, oro_stddev, t_soil, water_to_soil, &
+    REAL(wp), INTENT(in), DIMENSION(nidx) ::               &
+      !& sfract_srf, wfract_srf, 
+      & ws_max_mineral, oro_stddev, t_soil, water_to_soil, &
       & evapotrans_soil, trans
     REAL(wp), INTENT(inout), DIMENSION(nidx) :: &
       & ws, w_soil_overflow
@@ -463,7 +462,6 @@ CONTAINS
 
     REAL(wp) ::              &
       & ws_max(nidx),        & ! water holding capacity of the soil [m]
-      & ws_crit(nidx),       & ! soil moisture above which drainage strongly increases
       & ws_min_drain(nidx),  & ! minimum soil moisture for drainage
       & ws_incl_ice(nidx),   & ! soil moisture including ice [m]
       & ice_rootzone(nidx)     ! amount of ice in the rootzone [m]
@@ -539,18 +537,18 @@ CONTAINS
           infilt(jl) = 0._wp
         ELSE
           ws_incl_ice(jl) = ws(jl) + ice_rootzone(jl)                    ! soil water including ice
-          IF (water_to_soil(jl) > 0._wp .AND. ws_incl_ice(jl) > ws_min_drain(jl)) THEN  ! soil water content above limit for drainage
+          IF (water_to_soil(jl) > 0._wp .AND. ws_incl_ice(jl) > ws_min_drain(jl)) THEN ! soilwater content above limit for drainage
 
             ws_rel = MIN(1._wp, ws_incl_ice(jl) / ws_max(jl))            !  relative soil moisture
             zvol   = (1._wp - ws_rel)**zbm - water_to_soil(jl)/zconw1          ! ???
 
-            runoff(jl) = water_to_soil(jl) - (ws_max(jl)-ws_incl_ice(jl))    ! if >0: amount of water exceeding water holding capacity
+            runoff(jl) = water_to_soil(jl) - (ws_max(jl)-ws_incl_ice(jl)) ! if >0: amount of water exceeding water holding capacity
             IF (zvol > 0._wp) runoff(jl) = runoff(jl) + ws_max(jl)*zvol**zb1
-            runoff(jl) = MAX(MIN(runoff(jl), water_to_soil(jl)), 0._wp)      ! no negative runoff, runoff limited by available water
-            infilt(jl) = water_to_soil(jl) - runoff(jl)                      ! water not going into runoff is infiltrated
+            runoff(jl) = MAX(MIN(runoff(jl), water_to_soil(jl)), 0._wp)   ! no negative runoff, runoff limited by available water
+            infilt(jl) = water_to_soil(jl) - runoff(jl)                   ! water not going into runoff is infiltrated
           ELSE
-            runoff(jl) = 0._wp                                           ! no runoff as soil is too dry
-            infilt(jl) = water_to_soil(jl)                                   ! all water infiltrated
+            runoff(jl) = 0._wp                                            ! no runoff as soil is too dry
+            infilt(jl) = water_to_soil(jl)                                ! all water infiltrated
           END IF
         END IF
       END IF
@@ -659,7 +657,6 @@ CONTAINS
 
     REAL(wp) :: zmvg_l(nidx,nsoil)            ! exponent M in Van Genuchten scheme = pore_size_index / (pore_size_index + 1)
 
-    INTEGER :: jl
 
     ! define reduction factor of hydraulic conductivity with depth (for percolation)
     IF (iredu == 1) THEN

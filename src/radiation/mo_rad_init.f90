@@ -17,7 +17,6 @@ MODULE mo_rad_init
   USE mo_jsb_model_class,   ONLY: t_jsb_model
   USE mo_jsb_class,         ONLY: Get_model
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
-  USE mo_jsb_config_class,  ONLY: t_jsb_config_p
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
 
   dsl4jsb_Use_processes RAD_
@@ -54,15 +53,15 @@ CONTAINS
 
     !-----------------------------------------------------------------------
     !  LOCAL VARIABLES
-    TYPE(t_jsb_model),       POINTER :: model
+    !TYPE(t_jsb_model),       POINTER :: model
     dsl4jsb_Def_memory(RAD_)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':rad_init_bc'
 
+    !model => get_model(tile%owner_model_id)
+
     !-----------------------------------------------------------------------
     ! CONTENT
-
-    model => get_model(tile%owner_model_id)
 
     ! Get radiation memory of the tile
     dsl4jsb_Get_memory(RAD_)
@@ -77,8 +76,6 @@ CONTAINS
 
   RECURSIVE SUBROUTINE rad_init_ic(tile)
 
-!    USE mo_rad_process, ONLY: init_radiation_temperature
-!    USE mo_rad_util,    ONLY: radiation_depth_to_layers_2d
     USE mo_rad_constants,  ONLY: AlbedoCanopySnow_age, AlbedoCanopySnow_temp, AlbedoVisInitial, AlbedoNirInitial, &
       &                          AlbedoGlacierVisMax, AlbedoGlacierNirMax, AlbedoLakeWater
 
@@ -88,15 +85,13 @@ CONTAINS
     dsl4jsb_Def_config(RAD_)
     dsl4jsb_Def_memory(RAD_)
 
-    INTEGER :: iradiation
     REAL(wp), POINTER ::         &
-      & return_pointer  (:,  :), & !< temporary pointer
-      & return_pointer3d(:,:,:)
+      & return_pointer  (:,  :) !, & !< temporary pointer
+      !& return_pointer3d(:,:,:)
     REAL(WP) :: &
       albedo_age_weight
 
     TYPE(t_input_file) :: input_file
-    INTEGER :: i, n1, n2
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':rad_init_ic'
 
@@ -114,7 +109,6 @@ CONTAINS
 
     ! Initialize physical state
     !
-
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(RAD_)%bc_filename), model%grid_id)
 
     ! TBD: adapt names of variables in input files to names in memory
@@ -195,6 +189,10 @@ CONTAINS
     END IF
 
     CALL input_file%Close()
+
+    ! avoid compiler warnings about pointers not being dereferenced
+    IF (ASSOCIATED(return_pointer)) CONTINUE
+    NULLIFY(return_pointer)
 
   END SUBROUTINE rad_init_ic
 

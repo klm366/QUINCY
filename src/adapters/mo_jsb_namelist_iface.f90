@@ -82,6 +82,8 @@ CONTAINS
     CALL position_nml_icon(name, lrewind=lrewind, status=status)
 
     position_nml = nnml
+    ! avoid compiler warnings about dummy arguments not being used
+    IF (nml_handler > 0) CONTINUE
 #else
     position_nml = position_nml_echam(name, nml_handler, rewind=lrewind, status=status)
 #endif

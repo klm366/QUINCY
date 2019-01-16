@@ -20,28 +20,22 @@ MODULE mo_disturb_interface
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, finish
 
-  USE mo_jsb_grid_class,     ONLY: t_jsb_grid
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
-  USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module (Get_disturb_memory and Get_disturb_config)
-  dsl4jsb_Use_processes DISTURB_, FUEL_, ASSIMI_, HYDRO_, PHENO_, RAD_, A2L_, CARBON_, SEB_
+  dsl4jsb_Use_processes DISTURB_, FUEL_, ASSIMI_, A2L_, CARBON_, SEB_
 
   ! Use of process configurations (t_disturb_config)
-  dsl4jsb_Use_config(ASSIMI_)
   dsl4jsb_Use_config(DISTURB_)
   dsl4jsb_Use_config(CARBON_)
 
   ! Use of process memories (t_disturb_memory)
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(ASSIMI_)
-  dsl4jsb_Use_memory(HYDRO_)
-  dsl4jsb_Use_memory(PHENO_)
-  dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(DISTURB_)
   dsl4jsb_Use_memory(FUEL_)
   dsl4jsb_Use_memory(CARBON_)
@@ -124,7 +118,7 @@ CONTAINS
     USE mo_carbon_process,        ONLY: relocate_carbon_fire, relocate_carbon_damage
     USE mo_carbon_interface,      ONLY: recalc_per_tile_vars, calculate_current_c_ag_1_and_bg_sums, &
                                       & calculate_current_c_ta_state_sum, check_carbon_conservation
-    USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract, t_jsb_aggregator_weighted_by_fract
+    USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_time,              ONLY: is_time_experiment_start, time_steps_per_day, is_newday
     USE mo_disturbance_constants, ONLY: persist_rel_hum, persist_wind_10m
 
@@ -136,13 +130,12 @@ CONTAINS
     TYPE(t_jsb_model), POINTER                :: model
     REAL(wp), DIMENSION(options%nc)           :: old_c_state_sum, dummy_flux
 
-    INTEGER :: iblk, ics, ice, nc
+    INTEGER :: iblk, nc, ics, ice
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_natural_disturbances'
 
     ! Declare process memories
     dsl4jsb_Def_memory(A2L_)
-    dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_memory(DISTURB_)
@@ -205,8 +198,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: c_humus_2
     dsl4jsb_Real2D_onChunk :: cflux_fire_all_2_atm
     !
-    dsl4jsb_Real2D_onChunk :: veg_fract_correction
-    dsl4jsb_Real2D_onChunk :: fract_fpc_max
     dsl4jsb_Real2D_onChunk :: cover_fract_pot
     !
     dsl4jsb_Real2D_onChunk :: cflux_fire_all_2_atm_ta
@@ -216,7 +207,7 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc) :: &
       & q_rel_air
 
-    LOGICAL  :: pft_mask    ! True for pfts to which the disturbance should be applied.
+    !LOGICAL  :: pft_mask ! True for pfts to which the disturbance should be applied.
     REAL(wp) :: persist ! Factor (as fraction) determining the persistance of q_rel_air_climbuf
                         ! relative to the time-step-actual q_rel_air
     REAL(wp) :: fire_minimum, fire_tau
@@ -232,8 +223,7 @@ CONTAINS
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    ! Get model
-    model   => Get_model(tile%owner_model_id)
+    model => Get_model(tile%owner_model_id)
 
     ! Get process configurations
     dsl4jsb_Get_config(DISTURB_)
@@ -243,7 +233,7 @@ CONTAINS
     dsl4jsb_Get_memory(DISTURB_)
     dsl4jsb_Get_memory(FUEL_)
     dsl4jsb_Get_memory(CARBON_)
-    dsl4jsb_Get_memory(PHENO_)
+    !dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(SEB_)
@@ -293,8 +283,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,    c_humus_1)               ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,    c_humus_2)               ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,    cflux_fire_all_2_atm)    ! inout
-    dsl4jsb_Get_var2D_onChunk(PHENO_,     veg_fract_correction )   ! in
-    dsl4jsb_Get_var2D_onChunk(PHENO_,     fract_fpc_max )          ! in
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,    cover_fract_pot)         ! in
 
     !ta variable required for the carbon conservation test
@@ -554,25 +542,19 @@ CONTAINS
 
     dsl4jsb_Def_memory(DISTURB_)
     dsl4jsb_Def_memory(CARBON_)
-    !dsl4jsb_Def_config(DISTURB_)
 
     CLASS(t_jsb_aggregator), POINTER          :: weighted_by_fract
 
-    TYPE(t_jsb_model), POINTER                :: model
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_natural_disturbance'
 
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice
 
     ! Get local variables from options argument
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_memory(DISTURB_)
     dsl4jsb_Get_memory(CARBON_)

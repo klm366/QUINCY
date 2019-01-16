@@ -10,7 +10,6 @@
 MODULE mo_jsb_vertical_axes
 #ifndef __NO_JSBACH__
 
-  USE mo_exception,               ONLY: message
   USE mo_jsb_vertical_axes_iface, ONLY: t_verticalAxisList, Setup_jsb_vertical_axis, &
     &                                   t_Vgrid, Set_jsb_restart_vgrid
   USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid, t_jsb_vgrid_ptr

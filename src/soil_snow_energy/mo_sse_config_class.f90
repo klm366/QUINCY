@@ -62,7 +62,7 @@ CONTAINS
     REAL(wp) :: w_soil_critical
     INTEGER  :: nsnow
     REAL(wp) :: dz_snow(max_snow_layers)
-    CHARACTER(len=filename_max) :: ic_filename, bc_filename, bc_sso_filename
+    CHARACTER(len=filename_max) :: ic_filename, bc_filename
 
     NAMELIST /jsb_sse_nml/                      &
       & active,                                 &

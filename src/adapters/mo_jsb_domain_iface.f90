@@ -549,12 +549,11 @@ CONTAINS
   !!
   SUBROUTINE get_nlon_nlat_from_file(grid_filename, return_nlon, return_nlat) !filename
 
-    USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel, mpi_comm
-
 #ifndef __ICON__
-    USE mo_control,   ONLY: nlon, ngl, nhgl, nvclev, vct
-    USE mo_io,        ONLY: IO_READ, IO_open, IO_close
-    USE mo_netCDF,    ONLY: file_info, io_inq_dimid, io_inq_dimlen
+    USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel, mpi_comm
+    USE mo_control,            ONLY: nlon, ngl, nhgl, nvclev, vct
+    USE mo_io,                 ONLY: IO_READ, IO_open, IO_close
+    USE mo_netCDF,             ONLY: file_info, io_inq_dimid, io_inq_dimlen
 #endif
 
     CHARACTER(len=*), INTENT(in) :: grid_filename
@@ -570,6 +569,13 @@ CONTAINS
     INTEGER :: read_nlon, read_nlat
 
 #ifdef __ICON__
+    ! avoid compiler warnings about dummy arguments not being used
+    write(*,*) grid_filename
+    read_nlon = 0
+    read_nlat = 0
+    return_nlon = read_nlon
+    return_nlat = read_nlat
+
     CALL finish(TRIM(routine), 'not implemented for use with ICON')
 #else
 
@@ -592,6 +598,7 @@ CONTAINS
 
     !Assertion: number of lats needs to be even
     IF (.NOT. MOD(read_nlat,2) .EQ. 0) CALL finish(TRIM(routine), 'number of lats needs to be even.')
+
 
     return_nlon = read_nlon
     return_nlat = read_nlat
@@ -620,15 +627,14 @@ CONTAINS
   !!
   SUBROUTINE get_lons_and_lats_from_file(grid_filename, nproma, nblks) !filename
 
-    USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, my_process_is_mpi_parallel
-
 #ifndef __ICON__
-    USE mo_io,         ONLY: IO_READ, IO_open, IO_close
-    USE mo_netCDF,     ONLY: file_info, nf_get_vara_double, nf_inq_varid, nf_check
-    USE mo_tr_scatter, ONLY: scatter_field
-    USE mo_control,    ONLY: nlon, ngl
+    USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio !, p_io, my_process_is_mpi_parallel
+    USE mo_io,                 ONLY: IO_READ, IO_open, IO_close
+    USE mo_netCDF,             ONLY: file_info, nf_get_vara_double, nf_inq_varid, nf_check
+    USE mo_tr_scatter,         ONLY: scatter_field
+    USE mo_control,            ONLY: nlon, ngl
 
-    USE mo_geoloc,     ONLY: philon_2d, philat_2d
+    USE mo_geoloc,             ONLY: philon_2d, philat_2d
 #endif
 
     CHARACTER(len=*), INTENT(IN) :: grid_filename
@@ -643,6 +649,9 @@ CONTAINS
 #endif
 
 #ifdef __ICON__
+    ! avoid compiler warnings about dummy arguments not being used
+    write(*,*) grid_filename, nblks, nproma
+
     CALL finish(TRIM(routine), 'not implemented for use with ICON')
 #else
     ALLOCATE(read_lons(nlon))
@@ -688,7 +697,7 @@ CONTAINS
   SUBROUTINE jsbalone_init_decomp (nlon, nlat, nproca, nprocb, npedim, decomposition)
 
 #ifndef __ICON__
-    USE mo_decomposition, ONLY : decompose, local_decomposition, global_decomposition
+    USE mo_decomposition, ONLY : decompose, local_decomposition
     USE mo_mpi,           ONLY : p_nprocs, p_parallel_io, p_pe
     USE mo_transpose,     ONLY : indx
     USE mo_io_units,      ONLY : nout
@@ -706,6 +715,15 @@ CONTAINS
 
 
 #ifdef __ICON__
+    ! avoid compiler warnings about dummy arguments not being used
+    IF (nlon > 0) CONTINUE
+    IF (nlat > 0) CONTINUE
+    IF (nproca > 0) CONTINUE
+    IF (nprocb > 0) CONTINUE
+    IF (npedim > 0) CONTINUE
+    global_decomposition(1)%nlon=-1
+    decomposition%nlon = global_decomposition(1)%nlon
+
     CALL finish(TRIM(routine), 'not implemented for use with ICON')
 #else
     lrot          = .TRUE.  ! true: no rotation of longitudes

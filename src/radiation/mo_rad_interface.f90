@@ -22,19 +22,15 @@ MODULE mo_rad_interface
   USE mo_jsb_model_class,     ONLY: t_jsb_model
   USE mo_jsb_class,           ONLY: Get_model
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract, t_jsb_aggregator
-  USE mo_jsb_config_class,    ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,   ONLY: t_jsb_process
   USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_jsb_task_options
-  !USE mo_jsb_aggregate_class, ONLY: t_jsb_aggregator
 
   ! Use of processes in this module
   dsl4jsb_Use_processes SEB_, PHENO_, A2L_, RAD_, HYDRO_, ASSIMI_, CARBON_
 
   ! Use process configurations
-  dsl4jsb_Use_config(SEB_)
   dsl4jsb_Use_config(RAD_)
   dsl4jsb_Use_config(ASSIMI_)
-  dsl4jsb_Use_config(CARBON_)
 
   ! Use of process memories
   dsl4jsb_Use_memory(A2L_)
@@ -175,7 +171,6 @@ CONTAINS
     TYPE(t_jsb_task_options), INTENT(in) :: options
 
     ! Declare pointers to process configs and memory
-    dsl4jsb_Def_config(RAD_)
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(RAD_)
@@ -207,9 +202,7 @@ CONTAINS
       & sw_net_lwtr(options%nc), &
       & sw_net_lice(options%nc)
 
-    INTEGER :: iblk, ics, ice, nc
-
-    TYPE(t_jsb_model), POINTER :: model
+    INTEGER :: iblk , ics, ice
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_radiation'
 
@@ -217,14 +210,11 @@ CONTAINS
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     ! If process is not active on this tile, do nothing
     IF (.NOT. tile%Is_process_active(RAD_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(RAD_)
@@ -325,19 +315,15 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    TYPE(t_jsb_model), POINTER :: model
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_surface_radiation'
 
-    INTEGER :: iblk, ics, ice
+    INTEGER :: iblk , ics, ice
 
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_memory(RAD_)
 
@@ -376,15 +362,13 @@ CONTAINS
     ! Local variables
     INTEGER                           :: icanopy
 
-    INTEGER                           :: iblk, ics, ice, nc
+    INTEGER                           :: iblk , ics, ice
     REAL(wp)                          :: dtime
 
     REAL(wp)                          :: canopy_bound_lai_delta
 
-    REAL(wp), DIMENSION(options%nc)   :: B4_layer_above ! R: cannot be scalar as it will be used as inout argument for elemental procedure
+    REAL(wp), DIMENSION(options%nc)   :: B4_layer_above ! R: cannot be scalar as it will be used as inout argum. for elemen. proce.
                                                         !    and thus has to have the same dimensions as the other out arguments.
-
-    TYPE(t_jsb_model), POINTER :: model
 
     ! Declare pointers for process configuration and memory
     dsl4jsb_Def_config(RAD_)
@@ -393,6 +377,7 @@ CONTAINS
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(A2L_)
 
+    TYPE(t_jsb_model), POINTER :: model
     INTEGER :: ncanopy               ! number of canopy layers
     !INTEGER, POINTER       :: acc_counter           ! counter for each delta_time step since the last variable output
     LOGICAL :: use_alb_veg_simple    !
@@ -401,7 +386,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: par                   ! Downward PAR flux in [W/m^2], Photosynth. Active Radiation (400-700nm)
     dsl4jsb_Real2D_onChunk :: par_down_mol          ! Downward PAR flux in mol (photons)/(m^2 s)
     dsl4jsb_Real2D_onChunk :: par_down_mol_nacc     ! PAR accumulated [MOL PHOTONS/M^2 ]
-    dsl4jsb_Real2D_onChunk :: par_down_mol_tavg     ! PAR [MOL PHOTONS/M^2 S] (time mean value)
+    !dsl4jsb_Real2D_onChunk :: par_down_mol_tavg     ! PAR [MOL PHOTONS/M^2 S] (time mean value)
     dsl4jsb_Real2D_onChunk :: soil_reflectivity_par ! Soil reflectivity within the PAR spectrum [-]
     dsl4jsb_Real2D_onChunk :: alb_vis_soil          ! Soil albedo in the visible range
     dsl4jsb_Real2D_onChunk :: lai                   ! Leaf area index [-]
@@ -416,7 +401,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: apar_per_lai_cl       ! Absorbed PAR of canopy layer
     dsl4jsb_Real3D_onChunk :: lai_cl                ! Leaf area index of canopy layer
     dsl4jsb_Real3D_onChunk :: apar_per_lai_cl_nacc  ! Absorbed PAR accumulated [MOL PHOTONS/M^2 ]
-    dsl4jsb_Real3D_onChunk :: apar_per_lai_cl_tavg  ! Absorbed PAR [MOL PHOTONS/M^2 S] (time mean value)
+    !dsl4jsb_Real3D_onChunk :: apar_per_lai_cl_tavg  ! Absorbed PAR [MOL PHOTONS/M^2 S] (time mean value)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_radiation_par'
 
@@ -424,17 +409,14 @@ CONTAINS
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
-    nc    = options%nc
     dtime = options%dtime ! time step in seconds e.g. for one day=86400
 
     IF (.NOT. tile%is_vegetation) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    ! Get model
-    model => Get_model(tile%owner_model_id)
-
     ! Get pointers to process configs and memory
+    model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_config(RAD_)
     dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_memory(RAD_)
@@ -461,14 +443,14 @@ CONTAINS
     ! R: These variables could also be local as they are not used outside this procedure in the moment.
     !    However I want it in the std model output and thus it has to be in the memory
     dsl4jsb_Get_var2D_onChunk(RAD_,   par_down_mol_nacc)     ! inout
-    dsl4jsb_Get_var2D_onChunk(RAD_,   par_down_mol_tavg)     ! inout
+    !dsl4jsb_Get_var2D_onChunk(RAD_,   par_down_mol_tavg)     ! inout
     dsl4jsb_Get_var2D_onChunk(RAD_,   soil_reflectivity_par) ! inout
     dsl4jsb_Get_var3D_onChunk(RAD_,   lai_cl)                ! inout
     dsl4jsb_Get_var3D_onChunk(RAD_,   faPAR_cl)              ! inout
     ! used outside for assimilation:
     dsl4jsb_Get_var3D_onChunk(RAD_,   apar_per_lai_cl)       ! inout
     dsl4jsb_Get_var3D_onChunk(RAD_,   apar_per_lai_cl_nacc)  ! inout
-    dsl4jsb_Get_var3D_onChunk(RAD_,   apar_per_lai_cl_tavg)  ! inout
+    !dsl4jsb_Get_var3D_onChunk(RAD_,   apar_per_lai_cl_tavg)  ! inout
     dsl4jsb_Get_var2D_onChunk(RAD_,   apar_nacc)             ! inout
 
     dsl4jsb_Get_var2D_onChunk(RAD_,   faPAR)                 ! out
@@ -487,9 +469,11 @@ CONTAINS
     ! R:  fract_par_direct = in ECHAM jsswdifpar, which is zsw_par_fract_diffuse = fract_diffuse_par  =sw_par_fract_direct
     fract_par_direct = 1._wp - fract_par_diffuse
 
-    B4_layer_above(:) = 7777777._wp ! Used to transfer variable B4 from one canopy layer to the next. Startvalue only to indicate first layer
+    B4_layer_above(:) = 7777777._wp ! Used to transfer variable B4 from one canopy layer to the next. Startvalue only to indicate
+                                    ! first layer
     DO icanopy=1,ncanopy
-       ! Compute faPAR_cl (absorbed photsynthetic active radiation for each canopy layer) and lai_cl (leaf area index for each canopy layer)
+       ! Compute faPAR_cl (absorbed photsynthetic active radiation for each canopy layer) and lai_cl (leaf area index for each
+       ! canopy layer)
        canopy_bound_lai_delta = canopy_bound_lai(icanopy) - canopy_bound_lai(icanopy-1)
 
        CALL calc_par(                 &
@@ -531,7 +515,8 @@ CONTAINS
 
     ! Create faPAR
     DO icanopy=1,ncanopy
-      faPAR(:) = faPAR(:) + faPAR_cl(:,icanopy) ! faPAR_cl is always the fraction relativ to incoming radiation on the top of the whole canopy
+      faPAR(:) = faPAR(:) + faPAR_cl(:,icanopy) ! faPAR_cl is always the fraction relativ to incoming radiation on the top of the
+                                                ! whole canopy
     END DO
 
 
@@ -566,20 +551,15 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    TYPE(t_jsb_model), POINTER :: model
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_radiation_par'
 
-    INTEGER :: iblk, ics, ice, nc
+    INTEGER :: iblk !, ics, ice
 
     iblk = options%iblk
-    ics  = options%ics
-    ice  = options%ice
-    nc   = options%nc
+    !ics  = options%ics
+    !ice  = options%ice
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    model => Get_model(tile%owner_model_id)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -609,16 +589,12 @@ CONTAINS
 
     ! Local variables
     TYPE(t_jsb_model), POINTER   :: model
-    INTEGER                      :: iblk, ics, ice, nc
-    REAL(wp)                     :: dtime
+    INTEGER                      :: iblk, nc , ics, ice
 
     LOGICAL                      :: &
-                                    & l_day(options%nc), &
-                                    &  ForestFlag  ! to be taken from the lctlib ("true" for forest landcover types)
+                                    & l_day(options%nc)
 
-    REAL(wp)                     :: StemArea             ! to be taken from the lctlib. (Area of stems and branches of woody plants.)
-
-    CHARACTER(len=*), PARAMETER    :: routine = modname//':update_albedo'
+    CHARACTER(len=*), PARAMETER  :: routine = modname//':update_albedo'
 
     ! Declare pointers to process configuration and memory
     dsl4jsb_Def_config(RAD_)
@@ -687,7 +663,6 @@ CONTAINS
     ics   = options%ics
     ice   = options%ice
     nc    = options%nc
-    dtime = options%dtime ! time step in seconds e.g. for one day=86400
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -922,14 +897,14 @@ CONTAINS
           & lai(:),                         & ! in
           & fract_fpc_max(:),               & ! in
           & cos_zenith_angle(:),            & ! in
-          & dsl4jsb_Lctlib_param(StemArea), & ! in
+          & dsl4jsb_Lctlib_param(StemArea), & ! in (Area of stems and branches of woody plants.)
           & sky_view_fract(:),              & ! inout
           & sky_view_fract_stem(:)          & ! inout
           & )
 
         CALL Merge_albedos_of_vegtile(        &
           & l_day(:),                         & ! in
-          & dsl4jsb_Lctlib_param(ForestFlag), & ! in
+          & dsl4jsb_Lctlib_param(ForestFlag), & ! in  ("true" for forest landcover types)
           & sky_view_fract(:),                & ! in
           & sky_view_fract_stem(:),           & ! in
           & AlbedoCanopySnow,                 & ! in
@@ -984,12 +959,11 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_albedo'
 
-    INTEGER :: iblk, ics, ice, nc
+    INTEGER :: iblk, ics, ice
 
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 

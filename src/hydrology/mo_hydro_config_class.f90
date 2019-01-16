@@ -11,7 +11,7 @@ MODULE mo_hydro_config_class
 #ifndef __NO_JSBACH__
 
   USE mo_exception,         ONLY: message_text, message, finish
-  USE mo_util,              ONLY: real2string, logical2string, int2string
+  USE mo_util,              ONLY: real2string
   USE mo_io_units,          ONLY: filename_max
   USE mo_kind,              ONLY: wp
   USE mo_jsb_control,       ONLY: debug_on

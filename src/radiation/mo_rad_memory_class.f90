@@ -14,14 +14,11 @@ MODULE mo_rad_memory_class
   USE mo_kind, ONLY: wp
   USE mo_util, ONLY: One_of
 
-  USE mo_jsb_model_class,  ONLY: t_jsb_model
-  USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_memory_class, ONLY: t_jsb_memory
   USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
   USE mo_jsb_lct_class,    ONLY: BARE_TYPE, VEG_TYPE, LAND_TYPE, GLACIER_TYPE, LAKE_TYPE
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes RAD_
 
   IMPLICIT NONE
   PRIVATE
@@ -124,7 +121,7 @@ CONTAINS
 
   SUBROUTINE Init_rad_memory(mem, prefix, suffix, lct_ids, model_id)
 
-    USE mo_jsb_varlist,       ONLY: jsb_add_var, BASIC, MEDIUM, FULL
+    USE mo_jsb_varlist,       ONLY: jsb_add_var, BASIC, MEDIUM !, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
                                     TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
@@ -138,15 +135,12 @@ CONTAINS
     INTEGER,             INTENT(in)    :: lct_ids(:)
     INTEGER,             INTENT(in)    :: model_id
 
-    TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface, canopy_layer        ! Vertical grid
     INTEGER :: table
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_rad_memory'
-
-    model => Get_model(model_id)
-
+    IF (model_id > 0) CONTINUE ! avoid compiler warning about dummy argument not being used
     table = tables(1)
 
     hgrid        => Get_grid(mem%grid_id)

@@ -22,7 +22,7 @@ MODULE mo_assimi_interface
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
-  USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
+  !USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
@@ -193,7 +193,7 @@ CONTAINS
     ! Local variables
     TYPE(t_jsb_model), POINTER   :: model
     TYPE(t_jsb_grid),  POINTER   :: grid
-    INTEGER                      :: iblk, ics, ice, nc
+    INTEGER                      :: iblk, ics, ice !, nc
     REAL(wp)                     :: lat(options%nc)
     REAL(wp)                     :: declination ! Solar Declination angle
     INTEGER                      :: i
@@ -215,7 +215,7 @@ CONTAINS
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-    nc      = options%nc
+    !nc      = options%nc
 
     ! If process is not active on this tile, do nothing
     IF (.NOT. tile%Is_process_active(ASSIMI_)) RETURN
@@ -282,21 +282,17 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    TYPE(t_jsb_model), POINTER                :: model
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_assimilation_scaling_factors'
 
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice !, nc
 
     ! Get local variables from options argument
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
+    !nc   = options%nc
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_memory(ASSIMI_)
 
@@ -326,15 +322,15 @@ CONTAINS
 
     ! Local variables
     TYPE(t_jsb_model), POINTER                :: model
-    REAL(wp)                                  :: dtime
-    INTEGER                                   :: iblk, ics, ice, nc
+    !REAL(wp)                                  :: dtime
+    INTEGER                                   :: iblk, ics, ice !, nc
     INTEGER                                   :: icanopy
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_canopy_cond_unstressed'
 
     ! Declare process memories
     dsl4jsb_Def_memory(ASSIMI_)
-    dsl4jsb_Def_memory(HYDRO_)
+    !dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(A2L_)
 
@@ -351,7 +347,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: par_down_mol          ! Downward PAR flux in mol (photons)/(m^2 s)
     dsl4jsb_Real3D_onChunk :: apar_per_lai_cl       ! Input. Absorbed PAR of canopy layer.
     dsl4jsb_Real2D_onChunk :: canopy_cond           ! Canopy conductance no limitation
-    dsl4jsb_Real2D_onChunk :: canopy_cond_limited   ! Canopy conductance water limited
+    !dsl4jsb_Real2D_onChunk :: canopy_cond_limited   ! Canopy conductance water limited
 
     dsl4jsb_Real2D_onChunk :: CO2_air_mol           ! CO2 particle mixing ratio [molCO2/molDryAir]
 
@@ -361,25 +357,22 @@ CONTAINS
 
 
     ! Get local variables from options argument
-    dtime   = options%dtime
+    !dtime   = options%dtime
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-    nc      = options%nc
+    !nc      = options%nc
 
     ! If process is not active on this tile, do nothing
     IF (.NOT. tile%Is_process_active(ASSIMI_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    ! Get model
     model => Get_model(tile%owner_model_id)
-
     dsl4jsb_Get_config(ASSIMI_)
 
     ! Get process memories
     dsl4jsb_Get_memory(ASSIMI_)
-    dsl4jsb_Get_memory(HYDRO_)
+    !dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(A2L_)
 
@@ -433,28 +426,24 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     dsl4jsb_Def_memory(ASSIMI_)
-    dsl4jsb_Def_memory(HYDRO_)
+    !dsl4jsb_Def_memory(HYDRO_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    TYPE(t_jsb_model), POINTER                :: model
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_canopy_cond_unstressed'
 
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice !, nc
 
     ! Get local variables from options argument
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
+    !nc   = options%nc
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    model => Get_model(tile%owner_model_id)
-
     dsl4jsb_Get_memory(ASSIMI_)
-    dsl4jsb_Get_memory(HYDRO_)
+    !dsl4jsb_Get_memory(HYDRO_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
@@ -482,10 +471,10 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Local variables
-    TYPE(t_jsb_model), POINTER                :: model
-    REAL(wp) :: dtime
-    INTEGER  :: iblk, ics, ice, nc
-    INTEGER                             :: icanopy
+    TYPE(t_jsb_model), POINTER :: model
+    REAL(wp)                   :: dtime
+    INTEGER                    :: iblk, ics, ice !, nc
+    INTEGER                    :: icanopy
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_assimilation'
 
@@ -536,17 +525,15 @@ CONTAINS
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-    nc      = options%nc
+    !nc      = options%nc
 
     ! If process is not active on this tile, do nothing
     IF (.NOT. tile%Is_process_active(ASSIMI_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    ! Set model
-    model => Get_model(tile%owner_model_id)
-
     ! Set process config and memories
+    model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_config(ASSIMI_)
 
     ncanopy = dsl4jsb_Config(ASSIMI_)%ncanopy
@@ -638,8 +625,10 @@ CONTAINS
     !   gross_assimilation(:) = gross_assimilation(:) + gross_assimilation_cl(:,icanopy) * lai_cl(:,icanopy)
     !END DO
 
-    gross_assimilation_ca(:) = SUM(gross_assimilation_cl(:,:) * lai_cl(:,:),DIM=2) ! convert from leaf area of layer to canopy ground area
-    gross_assimilation(:) = gross_assimilation_ca(:) * veg_fract_correction(:) ! convert from canopy area to tile box area
+    ! convert from leaf area of layer to canopy ground area
+    gross_assimilation_ca(:) = SUM(gross_assimilation_cl(:,:) * lai_cl(:,:),DIM=2)
+    ! convert from canopy area to tile box area
+    gross_assimilation(:) = gross_assimilation_ca(:) * veg_fract_correction(:)
 
     ! Same for dark_respiration_ca
     ! R: dies ist eine alternative Schreibweise die verwendet wurde da der PGI Kompiler probleme gemacht hat.
@@ -669,14 +658,13 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
-    TYPE(t_jsb_model), POINTER                :: model
 
     dsl4jsb_Def_memory(ASSIMI_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
     ! Local variables
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice !, nc
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_assimilation'
 
@@ -684,11 +672,9 @@ CONTAINS
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
+    !nc   = options%nc
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_memory(ASSIMI_)
 

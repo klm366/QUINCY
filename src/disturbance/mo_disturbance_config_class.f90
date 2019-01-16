@@ -12,7 +12,7 @@ MODULE mo_disturb_config_class
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
 
-  USE mo_exception,         ONLY: message_text, message, finish
+  USE mo_exception,         ONLY: message
   USE mo_io_units,          ONLY: filename_max
   USE mo_kind,              ONLY: wp
   USE mo_jsb_config_class,  ONLY: t_jsb_config

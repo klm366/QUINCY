@@ -10,8 +10,9 @@
 MODULE mo_jsb_utils_iface
 #ifndef __NO_JSBACH__
 
+#ifndef __ICON__
   USE mo_kind,            ONLY: wp
-  USE mo_exception,       ONLY: finish, message, message_text
+#endif
 
 #ifdef __ICON__
   USE mo_fortran_tools, ONLY: assign_if_present
