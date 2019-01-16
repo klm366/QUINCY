@@ -95,7 +95,6 @@ CONTAINS
     INTEGER,              INTENT(in), OPTIONAL :: output_level        ! minimum level of output groups this var belongs to
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
 
-    REAL(wp), POINTER :: p5(:,:,:,:,:)
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
     CHARACTER(len=50) :: name_loc
     TYPE(t_cf_var)    :: cf_loc
@@ -129,7 +128,6 @@ CONTAINS
 
     ALLOCATE(var%field(ldims(1),ldims(2),1,1,1))
     var%ptr => var%field(:,:,1,1,1)
-    p5 => var%field
 
     IF (mem%in_var_groups) THEN                                  ! Should this tile memory be part of any var groups?
       ALLOCATE(groups(3+MERGE(2, 0, PRESENT(output_level))))
@@ -155,7 +153,7 @@ CONTAINS
       loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       ! lmiss=lmiss_loc, missval_r=missval_r_loc)
-      lmiss=lmiss_loc, missval_r=missval_r_loc, p5=p5, in_groups=groups, &
+      lmiss=lmiss_loc, missval_r=missval_r_loc, p5=var%field, in_groups=groups, &
       verbose=verbose)
 
     var%name = TRIM(name)
@@ -211,7 +209,6 @@ CONTAINS
     INTEGER,              INTENT(in), OPTIONAL :: output_level        ! minimum level of output groups this var belongs to
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
 
-    REAL(wp), POINTER :: p5(:,:,:,:,:)
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
     CHARACTER(len=50) :: name_loc
     TYPE(t_cf_var)    :: cf_loc
@@ -261,7 +258,6 @@ CONTAINS
 
     ALLOCATE(var%field(ldims(1),ldims(2),ldims(3),1,1))
     var%ptr => var%field(:,:,:,1,1)
-    p5 => var%field
 
     IF (mem%in_var_groups) THEN                                  ! Should this tile memory be part of any var groups?
       ALLOCATE(groups(3+MERGE(2, 0, PRESENT(output_level))))
@@ -287,7 +283,7 @@ CONTAINS
       loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       ! lmiss=lmiss_loc, missval_r=missval_r_loc)
-      lmiss=lmiss_loc, missval_r=missval_r_loc, p5=p5, in_groups=groups, verbose=verbose)
+      lmiss=lmiss_loc, missval_r=missval_r_loc, p5=var%field, in_groups=groups, verbose=verbose)
 
     var%name = TRIM(name)
     var%full_name = TRIM(name_loc)
