@@ -439,6 +439,18 @@ CONTAINS
       END IF
       IF (input_file%Has_var(TRIM(name_loc))) THEN
         return_pointer => input_file%Read_2d(variable_name=TRIM(name_loc))
+        !
+        ! TODO: For security, as a workaround, set lake fractions in coastal points that are 
+        ! partially land and partially ocean to zero, and corresponding land fraction to one.
+        IF (this%name == 'lake') THEN
+          CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
+          return_pointer(:,:) = MERGE(return_pointer(:,:), 0._wp, tmp_fract(:,:) >= 1._wp)
+        END IF
+        IF (this%name == 'land') THEN
+          CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
+          return_pointer(:,:) = MERGE(return_pointer(:,:), 1._wp, tmp_fract(:,:) >= 1._wp)
+        END IF
+        !
         CALL this%Set_fraction(fract=return_pointer(:,:))
       ELSE
         CALL finish(TRIM(routine), 'Fraction '//TRIM(name_loc)//' for tile '//TRIM(this%name)// &

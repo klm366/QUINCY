@@ -33,7 +33,11 @@ MODULE mo_jsb_var_class
 !#pragma GCC diagnostic ignored "-Wsurprising"
 
   TYPE, EXTENDS(t_jsb_var) :: t_jsb_var_real2d
-    REAL(wp), POINTER :: ptr(:,:) => NULL()
+    REAL(wp), POINTER &
+#ifdef HAVE_FC_ATTRIBUTE_CONTIGUOUS
+     , CONTIGUOUS &
+#endif
+      :: ptr(:,:) => NULL()
   CONTAINS
     ! PROCEDURE :: Add_real2d                       ! Add two variables of type t_jsb_var_real2d
     ! PROCEDURE :: Add_real2d_and_scalar            ! Add varialbe of type t_jsb_var_real2d with REAL scalar
