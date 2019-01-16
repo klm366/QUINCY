@@ -88,12 +88,12 @@ CONTAINS
     USE mo_sse_constants,          ONLY: snow_depth_min
 
     LOGICAL,  INTENT(in) :: lstart, l_dynsnow
-    REAL(wp), INTENT(in) :: &
+    REAL(wp), INTENT(in) ::                                                         &
       & delta_time, t_srf_unfilt, wind_10m, t_air, skinres_canopy_max, skinres_max, &
       & sfract_srf, wfract_srf, hcap_grnd, evapotrans, evapopot, trans, rain, snow
     REAL(wp), INTENT(inout) :: &
       & skinres, snow_soil, canopy_snow, snow_soil_dens
-    REAL(wp), INTENT(out)   :: &
+    REAL(wp), INTENT(out)   ::                   &
       & q_snocpymlt, snow_accum, snow_melt_soil, &
       & evapotrans_soil, evapo_skin, evapo_snow, water_to_soil, evapo_deficit
     !
@@ -119,16 +119,16 @@ CONTAINS
       & evapotrans_no_snow,   & !< evapotranspiration without snow evaporation [m]
       & evapo_snow_pot_in_m,  & !< potential snow evaporation
       & evapo_skin_pot_in_m,  & !< potential evaporation from wet surface (skin reservoir)
-      & rain_to_skinres,      & ! amount of rain going into the skin reservoir
-      & skinres_pre_rain        ! amount of water in the skin reservoir prior to the update [m]
+      & rain_to_skinres,      & !< amount of rain going into the skin reservoir
+      & skinres_pre_rain        !< amount of water in the skin reservoir prior to the update [m]
 
 
     !
     !  Parameters  - compare chapter 2 "Land Physics" of the JSBACH3 documentation
     !
-    REAL(wp), PARAMETER :: zc1 = tmelt - 3._wp !< [K]
-    REAL(wp), PARAMETER :: zc2=1.87E5_wp       !< [Ks]
-    REAL(wp), PARAMETER :: zc3=1.56E5_wp       !< [m]
+    REAL(wp), PARAMETER :: zc1 = tmelt - 3._wp ! [K]
+    REAL(wp), PARAMETER :: zc2=1.87E5_wp       ! [Ks]
+    REAL(wp), PARAMETER :: zc3=1.56E5_wp       ! [m]
 
     snow_accum = 0._wp
     snow_soil_old = snow_soil
@@ -449,7 +449,7 @@ CONTAINS
 
     ! Local variables
     REAL(wp) ::                       &
-      !< variables for infiltration calculation
+      ! variables for infiltration calculation
       & sigma_0,                      & !< minimum value
       & sigma_max,                    & !< resolution-dependent maximum
       & steepness,                    & !< sub-grid scale steepness of the orography
@@ -458,7 +458,7 @@ CONTAINS
       & evapo_soil_in_m(nidx),        & !< evaporation from the soil (without transpiration) [m]
       & trans_in_m(nidx),             & !< transpiration within time step [m]
       & ws_rel,                       & !< relative soil moisture (0: wilting point, 1: field capacity)
-      & infilt(nidx)            !< infiltration [m]
+      & infilt(nidx)                    !< infiltration [m]
 
     REAL(wp) ::              &
       & ws_max(nidx),        & ! water holding capacity of the soil [m]
@@ -696,9 +696,9 @@ CONTAINS
       WHERE (field_cap_l(:,i) > zfcmin .AND. field_cap_l(:,i) > p_wilt_l(:,i))
         ws_rel(:) = MAX(ws_l(:,i) - p_wilt_l(:,i), 0._wp) / (field_cap_l(:,i) - p_wilt_l(:,i))
         ws_rel(:) = MIN(ws_rel(:), 1._wp)
-        percolation(:,i) =  hyd_cond_sat_l(:,i)*zkredu(i) * SQRT(ws_rel(:)) &
-                           * (1._wp - (1._wp - ws_rel(:)**(1._wp/zmvg_l(:,i)))**zmvg_l(:,i))**2._wp &
-                           * delta_time     ! [m/s] -> [m]
+        percolation(:,i) =  hyd_cond_sat_l(:,i)*zkredu(i) * SQRT(ws_rel(:))                           &
+          &                  * (1._wp - (1._wp - ws_rel(:)**(1._wp/zmvg_l(:,i)))**zmvg_l(:,i))**2._wp &
+          &                  * delta_time     ! [m/s] -> [m]
       ELSEWHERE
         percolation(:,i) = 0._wp
       END WHERE
@@ -789,13 +789,13 @@ CONTAINS
       ws_rel(:) = 0._wp
         WHERE (ws_l(:,i) > 0._wp)
           ws_rel(:) =  ws_l(:,i) / dsoil(:,i)  &
-                      / (vol_porosity_l(:,i) - (soil_ice(:,i) / dsoil(:,i)))
+            &           / (vol_porosity_l(:,i) - (soil_ice(:,i) / dsoil(:,i)))
         END WHERE
 
       diffus_l(:,i) = 0._wp
       WHERE (ws_rel(:) > zfcmin)
         diffus_l(:,i) =  bclapp_l(:,i) * hyd_cond_sat_l(:,i) * matrix_pot_l(:,i)  &
-                        / (ws_l(:,i) / dsoil(:,i)) *  ws_rel(:) ** (bclapp_l(:,i)+3._wp)
+          &               / (ws_l(:,i) / dsoil(:,i)) *  ws_rel(:) ** (bclapp_l(:,i)+3._wp)
       END WHERE
     END DO
 
@@ -804,8 +804,8 @@ CONTAINS
       WHERE (diffus_l(:,i+1) == 0._wp .OR. diffus_l(:,i) == 0._wp)
         diffusivity(:,i) = 0._wp
       ELSEWHERE
-        diffusivity(:,i) = diffus_l(:,i+1) * diffus_l(:,i) / &
-                        ((diffus_l(:,i+1)*dsoil(:,i) + diffus_l(:,i)*dsoil(:,i+1))/(dsoil(:,i+1)+dsoil(:,i)))
+        diffusivity(:,i) = diffus_l(:,i+1) * diffus_l(:,i) &
+          &                 / ((diffus_l(:,i+1)*dsoil(:,i) + diffus_l(:,i)*dsoil(:,i+1))/(dsoil(:,i+1)+dsoil(:,i)))
       END WHERE
     END DO
 
@@ -926,9 +926,9 @@ CONTAINS
     !----------------------------------------------------------------------------------------------
     ! debugging output for grid cell jllog
     IF (ilog == 2 .OR. ilog == 3) THEN
-      write(*,'(A10,1X, 11(E16.9E2, 1X) )')  &
-        "SOILHYD1: ", hyd_cond_sat_l(jllog,1:nsoil)*1000._wp, ws_l(jllog,1:nsoil)*1000._wp,  &
-        field_cap_l(jllog,1:nsoil)*1000._wp
+      write(*,'(A10,1X, 11(E16.9E2, 1X) )')                                                    &
+        & "SOILHYD1: ", hyd_cond_sat_l(jllog,1:nsoil)*1000._wp, ws_l(jllog,1:nsoil)*1000._wp,  &
+        & field_cap_l(jllog,1:nsoil)*1000._wp
     END IF
     !----------------------------------------------------------------------------------------------
 
@@ -1018,8 +1018,17 @@ CONTAINS
 
   END SUBROUTINE soilhyd
 
-  SUBROUTINE digest_evapotrans(nidx, nsoil, droot, dsoil, &
-       field_cap_l, trans_in_m, evapo_soil, ws_l, soil_ice)
+  SUBROUTINE digest_evapotrans( &
+    & nidx,                     &
+    & nsoil,                    &
+    & droot,                    &
+    & dsoil,                    &
+    & field_cap_l,              &
+    & trans_in_m,               &
+    & evapo_soil,               &
+    & ws_l, soil_ice            &
+    & )
+
     !----------------------------------------------------------------------------------------------
     !  The routine is based on routine soilchange by Stefan Hagemann. It replaces the part for
     !  evapotranspiration changes (isch=1)
@@ -1040,7 +1049,7 @@ CONTAINS
     REAL(wp), INTENT(in)     :: dsoil(nidx, nsoil)      ! soil depth until bedrock within layer [m]
     REAL(wp), INTENT(in)     :: field_cap_l(nidx,nsoil) ! field capacity of the layer
     REAL(wp), INTENT(in)     :: trans_in_m(nidx)        ! transpiration [m]
-    REAL(wp), INTENT(in)     :: evapo_soil(nidx)         ! bare soil evaporation [m]
+    REAL(wp), INTENT(in)     :: evapo_soil(nidx)        ! bare soil evaporation [m]
 
     REAL(wp), INTENT(inout)  :: ws_l(nidx,nsoil)        ! water content of the soil layer [m]
     REAL(wp), INTENT(inout)  :: soil_ice(nidx,nsoil)    ! ice content of the soil layer [m]
@@ -1048,7 +1057,7 @@ CONTAINS
     ! local variables
 
     INTEGER  :: jk
-    REAL(wp) :: deficit_evapo(nidx)   ! water deficit due to evaporation
+    REAL(wp) :: deficit_evapo(nidx)  ! water deficit due to evaporation
     REAL(wp) :: deficit_trans(nidx)  ! water deficit due to tranpiration
     REAL(wp) :: deficit_l(nidx)      ! water deficit within a soil layer
     REAL(wp) :: remaining(nidx)      ! water remaining in the soil layer
@@ -1075,9 +1084,9 @@ CONTAINS
     deficit_evapo(:) = 0._wp   ! water missing for evaporation due to limited soil water
     WHERE (evapo_soil(:) < 0._wp)            ! pos. evaporation flux (not dew)
       ws_l(:,1) = ws_l(:,1) + evapo_soil(:)  ! take water from uppermost soil layer
-      WHERE (ws_l(:,1) < 0._wp)             ! if there is not enough soil water
+      WHERE (ws_l(:,1) < 0._wp)              ! if there is not enough soil water
         deficit_evapo(:) = ws_l(:,1)         !    this is the amount of water missing
-        ws_l(:,1) = 0._wp                   !    soil moisture cannot be negative
+        ws_l(:,1) = 0._wp                    !    soil moisture cannot be negative
       END WHERE
     END WHERE
 
@@ -1178,7 +1187,17 @@ CONTAINS
   !------------------------------------------------------------------------------------------------
 
   !------------------------------------------------------------------------------------------------
-  SUBROUTINE digest_infilt (nidx, nsoil, ltpe_closed, field_cap_l, infilt, ws_l, drainage, w_soil_overflow)
+  SUBROUTINE digest_infilt ( &
+    & nidx,                  &
+    & nsoil,                 &
+    & ltpe_closed,           &
+    & field_cap_l,           &
+    & infilt,                &
+    & ws_l,                  &
+    & drainage,              &
+    & w_soil_overflow        &
+    & )
+
   !------------------------------------------------------------------------------------------------
   !  The routine is based on routine soilchange by Stefan Hagemann. It replaces the part for
   !  infiltration changes (isch=2)
@@ -1353,26 +1372,26 @@ CONTAINS
     USE mo_phy_schemes,            ONLY: heat_transfer_coef, qsat
     USE mo_jsb_physical_constants, ONLY: rhoh2o
 
-    REAL(wp),  INTENT(in)    ::                &
-                                dtime,         &
-                                steplen,       &
-                                oro_stddev,    &
-                                t_srf,         &
-                                press_srf,     &
-                                drag_srf,      &
-                                q_air,         &
-                                wsr_max,       &
-                                w_skin,        &
-                                w_snow_soil
+    REAL(wp), INTENT(in) :: &
+      & dtime,              &
+      & steplen,            &
+      & oro_stddev,         &
+      & t_srf,              &
+      & press_srf,          &
+      & drag_srf,           &
+      & q_air,              &
+      & wsr_max,            &
+      & w_skin,             &
+      & w_snow_soil
 
-    REAL(wp),  INTENT(out)   ::                &
-                               fract_water,    &
-                               fract_snow_soil
+    REAL(wp), INTENT(out) :: &
+      & fract_water,         &
+      & fract_snow_soil
 
-    REAL(wp) ::              &
-               t_srf_old,    &
-               qsat_srf_old, &
-               evapo_pot
+    REAL(wp) ::       &
+      & t_srf_old,    &
+      & qsat_srf_old, &
+      & evapo_pot
 
     IF (wsr_max > EPSILON(1._wp)) THEN
       fract_water = MIN(1._wp, w_skin / wsr_max)

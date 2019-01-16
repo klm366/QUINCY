@@ -116,19 +116,19 @@ CONTAINS
     ! Locally allocated vectors
     !
     REAL(wp), DIMENSION(options%nc)  :: &
-      fract,            &
-      qsat_srf_old,     &
-      s_old,            &
-      dQdT,             & !< Sensitivity of saturated surface specific humidity to temperature
-      t2s_conv,         & !< Conversion factor from temperature to dry static energy (C_pd * (1+(delta-1)*q_v))
-      heat_tcoef,       & !< Heat transfer coefficient (rho*C_h*|v|)
-      t_star,           &
-      liquid_max,       &
-      t_air_in_Celcius
+     & fract,                           &
+     & qsat_srf_old,                    &
+     & s_old,                           &
+     & dQdT,                            & !< Sensitivity of saturated surface specific humidity to temperature
+     & t2s_conv,                        & !< Conversion factor from temperature to dry static energy (C_pd * (1+(delta-1)*q_v))
+     & heat_tcoef,                      & !< Heat transfer coefficient (rho*C_h*|v|)
+     & t_star,                          &
+     & liquid_max,                      &
+     & t_air_in_Celcius
 
     LOGICAL, DIMENSION(options%nc) :: &
-      is_glacier, &
-      has_snow_layer
+     & is_glacier,                    &
+     & has_snow_layer
 
     INTEGER :: iblk, ics, ice, nc
     REAL(wp) :: steplen
@@ -498,9 +498,9 @@ CONTAINS
 
     ! Locally allocated vectors
     !
-    REAL(wp) ::                &
-      & s_air          (options%nc),   &  !< Dry static energy at lowest atmospheric level
-      & heat_tcoef     (options%nc)       !< Heat transfer coefficient (rho*C_h*|v|)
+    REAL(wp) ::                      &
+      & s_air          (options%nc), &  !< Dry static energy at lowest atmospheric level
+      & heat_tcoef     (options%nc)     !< Heat transfer coefficient (rho*C_h*|v|)
 
     INTEGER  :: iblk, ics, ice
     REAL(wp) :: steplen
@@ -566,16 +566,17 @@ CONTAINS
 
     ! Updates the mean day temperature ("previous_day_temp_mean(:)") from air temperature and the mean day NPP-rate
   ! (field previous_day_NPP(:,:)
-  ELEMENTAL SUBROUTINE calc_previous_day_variables(is_newday,              & ! Input
-                                                   t_air_in_Celcius,       & ! Input
-                                                   !dtime,                  & ! Input
-                                                   time_steps_per_day,     & ! Input
-                                                   previous_day_temp_mean, & ! InOut
-                                                   day_temp_sum,           & ! InOut
-                                                   previous_day_temp_min,  & ! InOut
-                                                   day_temp_min,           & ! InOut
-                                                   previous_day_temp_max,  & ! InOut
-                                                   day_temp_max )            ! InOut
+  ELEMENTAL SUBROUTINE calc_previous_day_variables( &
+    & is_newday,                                    & ! Input
+    & t_air_in_Celcius,                             & ! Input
+    ! & dtime,                                        & ! Input
+    & time_steps_per_day,                           & ! Input
+    & previous_day_temp_mean,                       & ! InOut
+    & day_temp_sum,                                 & ! InOut
+    & previous_day_temp_min,                        & ! InOut
+    & day_temp_min,                                 & ! InOut
+    & previous_day_temp_max,                        & ! InOut
+    &  day_temp_max )                                 ! InOut
 
     !-----------------------------------------------------------------------
     !  DECLARATIONS
@@ -651,16 +652,17 @@ CONTAINS
   !
   ! Remark: Instead of air-temperature one could try to use the bottom temperature to compute the pseudo_soil_temp.
   !
-  ELEMENTAL SUBROUTINE calc_pseudo_soil_temp(t_air_in_Celcius,   & ! Input
-                                             N_pseudo_soil_temp, & ! Input
-                                             F_pseudo_soil_temp, & ! Input
-                                             pseudo_soil_temp    & ! InOut
-                                             )
+  ELEMENTAL SUBROUTINE calc_pseudo_soil_temp( &
+    & t_air_in_Celcius,                       & ! Input
+    & N_pseudo_soil_temp,                     & ! Input
+    & F_pseudo_soil_temp,                     & ! Input
+    & pseudo_soil_temp                        & ! InOut
+    & )
 
-    REAL(wp),  intent(in)    ::                     &
-                                t_air_in_Celcius,   &
-                                N_pseudo_soil_temp, &
-                                F_pseudo_soil_temp
+    REAL(wp), intent(in) :: &
+     & t_air_in_Celcius,    &
+     & N_pseudo_soil_temp,  &
+     & F_pseudo_soil_temp
 
     REAL(wp),  intent(inout) :: pseudo_soil_temp
 

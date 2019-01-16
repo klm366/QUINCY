@@ -16,7 +16,7 @@ MODULE mo_sse_constants
   IMPLICIT NONE
   PUBLIC
 
-  REAL(wp), PARAMETER :: &
+  REAL(wp), PARAMETER ::                    &
     ! Parameters for solid soil particulate
     & hcond_dry_soil     = 0.05_wp,         & !< Dry soil heat conductivity (O'Donnel et al 2009)             [W/m/K]
     ! Parameters for liquid water

@@ -45,30 +45,30 @@ MODULE mo_hydro_memory_class
       & snowmelt,             & !< Snow melt                                                            [kg m-2 s-1]
       & evapopot,             & !< Potential evaporation                                                [kg m-2 s-1]
       & evapotrans,           & !< Evapotranspiration independent of the type of tile                   [kg m-2 s-1]
-                                ! e.g. for the lake tile it is evapopot and for the land tile it is evapotrans_lnd.
-      & water_flux,           & ! Total water flux                                                      [m3/s]
-      & water_content,        & ! Total water content                                                   [m3]
-      & water_budget            ! Water budget error                                                    [m3]
+                                !< e.g. for the lake tile it is evapopot and for the land tile it is evapotrans_lnd.
+      & water_flux,           & !< Total water flux                                                      [m3/s]
+      & water_content,        & !< Total water content                                                   [m3]
+      & water_budget            !< Water budget error                                                    [m3]
 
     TYPE(t_jsb_var_real2d) :: &
-      & runoff,           & !< surface runoff
-      & drainage,         & !< drainage
-      & discharge,        & !< discharge (local)
-      & discharge_ocean,  & !< discharge to the ocean
-      & internal_drain      !< internal drain
+      & runoff,               & !< surface runoff
+      & drainage,             & !< drainage
+      & discharge,            & !< discharge (local)
+      & discharge_ocean,      & !< discharge to the ocean
+      & internal_drain          !< internal drain
 
     TYPE(t_jsb_var_real2d) :: &
-      & elevation           ,    & !< Elevation
-      & oro_stddev                 !< Standard deviation of orography
+      & elevation,            & !< Elevation
+      & oro_stddev              !< Standard deviation of orography
 
     ! Additional variables for land type
     TYPE(t_jsb_var_real2d) :: &
-      & fract_snow_soil,  & !< Snow fraction on soil                                               []
-      & w_snow_soil,      & !< Water content of snow reservoir of soil                             [m water equivalent]
-      ! & w_snow_soil_old,  & !< Water content of snow reservoir of soil (old)                     [m water equivalent]
-      & snow_soil_dens,   & !< Density of snow on soil                                             [kg m-3]
-      & evapotrans_lnd,   & !< Evapotranspiration over vegetation and bare soil type               [kg m-2 s-1]
-      & q_snocpymlt         !< Heating by melting of snow on canopy                                [W m-2]
+      & fract_snow_soil,      & !< Snow fraction on soil                                               []
+      & w_snow_soil,          & !< Water content of snow reservoir of soil                             [m water equivalent]
+      ! & w_snow_soil_old,      & !< Water content of snow reservoir of soil (old)                     [m water equivalent]
+      & snow_soil_dens,       & !< Density of snow on soil                                             [kg m-3]
+      & evapotrans_lnd,       & !< Evapotranspiration over vegetation and bare soil type               [kg m-2 s-1]
+      & q_snocpymlt             !< Heating by melting of snow on canopy                                [W m-2]
 
     ! Additional variables for soil
 
@@ -88,58 +88,58 @@ MODULE mo_hydro_memory_class
       & hyd_cond_sat            !< Saturated hydraulic conductivity [m/s]
 
     TYPE(t_jsb_var_real2d) :: &
-      & fract_water,      & !< Wet (skin reservoir) fraction of tile (soil and canopy)                  []
-      & w_skin,           & !< Water content in skin reservoir (soil and canopy)                        [m]
-      & snow_accum,       & !< Snow accumulation at non-glacier/non-lake land points                    [m water equivalent]
-      & evapotrans_soil,  & !< Evapotranspiration from soil w/o snow and skin evaporation               [kg m-2 s-1]
-      !& evapo_soil,        & !< Evaporation from ground                                                  [kg m-2 s-1]
-      & evapo_skin,        & !< Evaporation from skin reservoir                                          [kg m-2 s-1]
-      & evapo_deficit,     & !< Evaporation deficit flux due to inconsistent treatment of snow evap.     [m water equivalent]
-      & water_excess,     & !< Water available for infiltration into the soil                           [m water equivalent]
-      & w_soil_overflow,  & !< Water content of reservoir for w_soil_overflown soil water (terraplanet) [m]
-      & w_soil_column,    & !< Water content in the whole soil column (root zone)                       [m]
-      & w_soil_rel          !< Filling of the soil water bucket relative to MaxMoisture (=field capacity?) TODO
+      & fract_water,          & !< Wet (skin reservoir) fraction of tile (soil and canopy)                  []
+      & w_skin,               & !< Water content in skin reservoir (soil and canopy)                        [m]
+      & snow_accum,           & !< Snow accumulation at non-glacier/non-lake land points                    [m water equivalent]
+      & evapotrans_soil,      & !< Evapotranspiration from soil w/o snow and skin evaporation               [kg m-2 s-1]
+      !& evapo_soil,           & !< Evaporation from ground                                                  [kg m-2 s-1]
+      & evapo_skin,           & !< Evaporation from skin reservoir                                          [kg m-2 s-1]
+      & evapo_deficit,        & !< Evaporation deficit flux due to inconsistent treatment of snow evap.     [m water equivalent]
+      & water_excess,         & !< Water available for infiltration into the soil                           [m water equivalent]
+      & w_soil_overflow,      & !< Water content of reservoir for w_soil_overflown soil water (terraplanet) [m]
+      & w_soil_column,        & !< Water content in the whole soil column (root zone)                       [m]
+      & w_soil_rel              !< Filling of the soil water bucket relative to MaxMoisture (=field capacity?) TODO
 
     TYPE(t_jsb_var_real3d) :: &
-      & vol_field_cap_sl,   & !< Volumetric soil field capacity                                           [m/m]
-      & vol_p_wilt_sl,      & !< Volumetric permanent wilting point                                       [m/m]
-      & vol_porosity_sl,    & !< Volumetric porosity of mineral                                           [m/m]
-      & pore_size_index_sl, & !< Soil pore size distribution index                                        []
-      & bclapp_sl,          & !< Exponent B in Clapp and Hornberger
-      & matrix_pot_sl,      & !< Matrix potential                                                         [m]
-      & hyd_cond_sat_sl,    & !< Saturated hydraulic conductivity                                         [m/s]
-      & w_soil_sl,          & !< Water content in soil layers                                             [m]
-      & w_ice_sl,           & !< Ice content in soil layers                                               [m]
-      & w_soil_freeze_sl,   & !< Flux from freezing water in soil layers                                  [kg m-2 s-1]
-      & w_ice_melt_sl,      & !< Flux from melting ice in soil layers                                     [kg m-2 s-1]
-      & w_soil_sat_sl,      & !< Water content of soil layers at saturation (derived from soil porosity)  [m]
-      & w_soil_fc_sl,       & !< Water content of soil layers at field capacity
-                              !! (derived from volumetric field capacity)                                 [m]
-      & w_soil_pwp_sl         !< Water content of soil layers at permanent wilting point
-                              !! (derived from vol. perm wilt point)                                      [m]
+      & vol_field_cap_sl,     & !< Volumetric soil field capacity                                           [m/m]
+      & vol_p_wilt_sl,        & !< Volumetric permanent wilting point                                       [m/m]
+      & vol_porosity_sl,      & !< Volumetric porosity of mineral                                           [m/m]
+      & pore_size_index_sl,   & !< Soil pore size distribution index                                        []
+      & bclapp_sl,            & !< Exponent B in Clapp and Hornberger
+      & matrix_pot_sl,        & !< Matrix potential                                                         [m]
+      & hyd_cond_sat_sl,      & !< Saturated hydraulic conductivity                                         [m/s]
+      & w_soil_sl,            & !< Water content in soil layers                                             [m]
+      & w_ice_sl,             & !< Ice content in soil layers                                               [m]
+      & w_soil_freeze_sl,     & !< Flux from freezing water in soil layers                                  [kg m-2 s-1]
+      & w_ice_melt_sl,        & !< Flux from melting ice in soil layers                                     [kg m-2 s-1]
+      & w_soil_sat_sl,        & !< Water content of soil layers at saturation (derived from soil porosity)  [m]
+      & w_soil_fc_sl,         & !< Water content of soil layers at field capacity
+                                !! (derived from volumetric field capacity)                                 [m]
+      & w_soil_pwp_sl           !< Water content of soil layers at permanent wilting point
+                                !! (derived from vol. perm wilt point)                                      [m]
 
     ! Additional variables for PFT lct_type
 
     ! Parameters
     TYPE(t_jsb_var_real3d) :: &
-      & root_depth_sl          !< Rooted depth per soil layer (until rooting depth) [m]
+      & root_depth_sl           !< Rooted depth per soil layer (until rooting depth) [m]
     TYPE(t_jsb_var_real2d) :: &
-      & root_depth,          &  !< Rooting depth [m]
-      & fract_snow_can,   & !< Snow fraction on canopy                                                  []
-      & w_snow_can,       & !< Water content of snow reservoir on canopy                                [m water equivalent]
-      & w_soil_root,      & !< Water content in root zone of the soil                                   [m]
-      & w_soil_root_fc,   & !< Water content at field capacity in root zone of the soil                 [m]
-      & w_soil_root_pwp,  & !< Water content at permanent wilting point in root zone of the soil        [m]
-      & water_stress,     & !< Water stress factor of canopy                        (1: no water stress, 0: infinite stress)
-      & canopy_cond,         & ! Canopy conductance without water limit  [m/s] (mean value)
-      & canopy_cond_limited, & ! Canopy conductance water limit [m/s] (mean value)
-      & trans               !< Transpiration
+      & root_depth,           & !< Rooting depth [m]
+      & fract_snow_can,       & !< Snow fraction on canopy                                                  []
+      & w_snow_can,           & !< Water content of snow reservoir on canopy                                [m water equivalent]
+      & w_soil_root,          & !< Water content in root zone of the soil                                   [m]
+      & w_soil_root_fc,       & !< Water content at field capacity in root zone of the soil                 [m]
+      & w_soil_root_pwp,      & !< Water content at permanent wilting point in root zone of the soil        [m]
+      & water_stress,         & !< Water stress factor of canopy                        (1: no water stress, 0: infinite stress)
+      & canopy_cond,          & !< Canopy conductance without water limit  [m/s] (mean value)
+      & canopy_cond_limited,  & !< Canopy conductance water limit [m/s] (mean value)
+      & trans                   !< Transpiration
 
     ! Additional variables for GLACIER lct_type
     TYPE(t_jsb_var_real2d) :: &
-      & fract_snow_glac,  & !< Snow fraction on glacier                                                 []
-      & w_glac,           & !< Glacier depth including snow on glacier                                  [m water equivalent]
-      & runoff_glac         !< Runoff from glacier (rain+melt, no calving)                              [m water equivalent]
+      & fract_snow_glac,      & !< Snow fraction on glacier                                                 []
+      & w_glac,               & !< Glacier depth including snow on glacier                                  [m water equivalent]
+      & runoff_glac             !< Runoff from glacier (rain+melt, no calving)                              [m water equivalent]
 
     ! Additional variables if no separate glacier lct_type is used and glaciers are treated as part of SOIL lct_type
     TYPE(t_jsb_var_real2d) :: &
@@ -147,10 +147,10 @@ MODULE mo_hydro_memory_class
 
     ! Additional variables for LAKE lct_type
     TYPE(t_jsb_var_real2d) :: &
-      & evapo_wtr,        & !< Evaporation over lake water
-      & evapo_ice,        & !< Evaporation over lake ice
-      & fract_snow_lice,  & !< Fraction of swow on lake ice                                             []
-      & w_snow_lice         !< Water content of snow on lake ice                                        [m water equivalent]
+      & evapo_wtr,            & !< Evaporation over lake water
+      & evapo_ice,            & !< Evaporation over lake ice
+      & fract_snow_lice,      & !< Fraction of swow on lake ice                                             []
+      & w_snow_lice             !< Water content of snow on lake ice                                        [m water equivalent]
 
   CONTAINS
     PROCEDURE :: Init => Init_hydro_memory
@@ -164,13 +164,13 @@ CONTAINS
 
     USE mo_jsb_varlist,       ONLY: jsb_add_var
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
-                                    TSTEP_CONSTANT, tables
+                                    & TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
 
     USE mo_jsb_physical_constants, ONLY: &
-      & dens_snow, &   ! Density of snow (l_dynsnow=.FALSE.)
-      & dens_snow_min  ! Density of fresh snow (l_dynsnow=.TRUE.)
+      & dens_snow,                       & ! Density of snow (l_dynsnow=.FALSE.)
+      & dens_snow_min                      ! Density of fresh snow (l_dynsnow=.TRUE.)
 
     CLASS(t_hydro_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),      INTENT(in)    :: prefix
@@ -345,7 +345,7 @@ CONTAINS
       &   .OR. One_of(BARE_TYPE,    lct_ids(:)) > 0 &
       &   .OR. One_of(GLACIER_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(LAND_TYPE,    lct_ids(:)) > 0 &
-      &  )                                       &
+      &  )                                          &
       &  .AND. .NOT. ASSOCIATED(mem%evapotrans_lnd%ptr) ) THEN
 
       CALL jsb_add_var( mem, 'fract_snow_soil', mem%fract_snow_soil,            &
@@ -383,7 +383,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
         & prefix, suffix,                                                                                         &
         & lrestart=.FALSE.,                                                                                       &
-        & output_level=BASIC, &
+        & output_level=BASIC,                                                                                     &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL jsb_add_var( mem, 'q_snocpymlt', mem%q_snocpymlt,                     &

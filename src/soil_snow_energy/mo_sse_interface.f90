@@ -157,15 +157,15 @@ CONTAINS
     ! Locally allocated vectors
     !
     REAL(wp), DIMENSION(options%nc) :: &
-      & snow_depth, &
-      & snow_fract, &
-      & t_unfilt_corrected, &
-      & t_soil_top, &
-      & hcap_grnd_snow, &
-      & hcap_grnd_soil, &
-      & grnd_hflx_snow, &
+      & snow_depth,                    &
+      & snow_fract,                    &
+      & t_unfilt_corrected,            &
+      & t_soil_top,                    &
+      & hcap_grnd_snow,                &
+      & hcap_grnd_soil,                &
+      & grnd_hflx_snow,                &
       & grnd_hflx_soil
-    INTEGER, DIMENSION(options%nc) :: &
+    INTEGER, DIMENSION(options%nc) ::  &
       & itop, itop_old
 
     INTEGER :: isnow
@@ -222,14 +222,14 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(SSE_, t_snow_bcoef)    ! inout
     END IF
     IF (.NOT. tile%is_glacier) THEN
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)   ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl) ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, matrix_pot_sl)   ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, bclapp_sl)       ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_sl)       ! inout
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, w_ice_sl)        ! inout
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)    ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl)  ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, matrix_pot_sl)    ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, bclapp_sl)        ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_sl)        ! inout
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, w_ice_sl)         ! inout
       dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_freeze_sl) ! out
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, w_ice_melt_sl)   ! out
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, w_ice_melt_sl)    ! out
     END IF
     dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth)      ! out
 
@@ -253,13 +253,13 @@ CONTAINS
 
     IF (.NOT. dsl4jsb_Config(SSE_)%l_snow) THEN
 
-      CALL calc_soiltemp_old( &
-        & nc, &
-        & nsoil, &
-        & soil_e%dz(:), &
-        & soil_e%levels(:), &
-        & dtime, &
-        & lstart, &
+      CALL calc_soiltemp_old(                          &
+        & nc,                                          &
+        & nsoil,                                       &
+        & soil_e%dz(:),                                &
+        & soil_e%levels(:),                            &
+        & dtime,                                       &
+        & lstart,                                      &
         & t_unfilt_corrected                     (:),  &
         & dsl4jsb_var2D_onChunk(HYDRO_, w_snow_soil),  &
         & dsl4jsb_var2D_onChunk(SSE_,   heat_cond),    &
@@ -494,21 +494,21 @@ CONTAINS
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: &
-      & snow_soil_dens, &
-      & vol_heat_cap, &
-      & heat_cond, &
-      & vol_heat_cap_snow, &
+      & snow_soil_dens,       &
+      & vol_heat_cap,         &
+      & heat_cond,            &
+      & vol_heat_cap_snow,    &
       & heat_cond_snow
     dsl4jsb_Real3D_onChunk :: &
-      & soil_depth_sl, &
-      & fract_org_sl, &
-      & vol_heat_cap_sl, &
+      & soil_depth_sl,        &
+      & fract_org_sl,         &
+      & vol_heat_cap_sl,      &
       & heat_cond_sl
 
     ! Locally allocated vectors
     !
     dsl4jsb_Real3D_onChunk :: &
-      & fract_water,           &
+      & fract_water,          &
       & fract_ice
 
     TYPE(t_jsb_model), POINTER :: model

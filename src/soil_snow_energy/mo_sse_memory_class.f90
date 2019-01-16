@@ -163,98 +163,98 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-    CALL jsb_add_var( mem, 't_soil', mem%t_soil,                                 &
-      & hgrid, soil_e,                                                                     &
-      & t_cf('soil_temperature', 'K', ''),                                                 &
+    CALL jsb_add_var( mem, 't_soil', mem%t_soil,                             &
+      & hgrid, soil_e,                                                       &
+      & t_cf('soil_temperature', 'K', ''),                                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
-      & output_level=BASIC, &
+      & output_level=BASIC,                                                  &
       & initval_r=280.0_wp )
 
-    CALL jsb_add_var( mem, 't_soil_acoef', mem%t_soil_acoef,                     &
-      & hgrid, soil_e,                                                                     &
-      & t_cf('soil_temperature_acoef', '', ''),                                            &
+    CALL jsb_add_var( mem, 't_soil_acoef', mem%t_soil_acoef,                 &
+      & hgrid, soil_e,                                                       &
+      & t_cf('soil_temperature_acoef', '', ''),                              &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 't_soil_bcoef', mem%t_soil_bcoef,                     &
-      & hgrid, soil_e,                                                                     &
-      & t_cf('soil_temperature_bcoef', '', ''),                                            &
+    CALL jsb_add_var( mem, 't_soil_bcoef', mem%t_soil_bcoef,                 &
+      & hgrid, soil_e,                                                       &
+      & t_cf('soil_temperature_bcoef', '', ''),                              &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp )
 
     IF (dsl4jsb_Config(SSE_)%l_snow) THEN
-      CALL jsb_add_var( mem, 'snow_depth_sl', mem%snow_depth_sl,                             &
-        & hgrid, snow_e,                                                                     &
-        & t_cf('snow_depth_sl', 'm', 'Depth of snow layers'),                                &
+      CALL jsb_add_var( mem, 'snow_depth_sl', mem%snow_depth_sl,               &
+        & hgrid, snow_e,                                                       &
+        & t_cf('snow_depth_sl', 'm', 'Depth of snow layers'),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.TRUE.,                                                     &
-        & output_level=MEDIUM, &
+        & output_level=MEDIUM,                                                 &
         & initval_r=0._wp, l_aggregate_all=.TRUE. )
 
-      CALL jsb_add_var( mem, 't_snow', mem%t_snow,                                 &
-        & hgrid, snow_e,                                                                     &
-        & t_cf('snow_temperature', 'K', ''),                                                 &
+      CALL jsb_add_var( mem, 't_snow', mem%t_snow,                             &
+        & hgrid, snow_e,                                                       &
+        & t_cf('snow_temperature', 'K', ''),                                   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
-        & output_level=BASIC, &
+        & output_level=BASIC,                                                  &
         & initval_r=273.15_wp )
 
-      CALL jsb_add_var( mem, 't_snow_acoef', mem%t_snow_acoef,                     &
-        & hgrid, snow_e,                                                                     &
-        & t_cf('snow_temperature_acoef', '', ''),                                            &
+      CALL jsb_add_var( mem, 't_snow_acoef', mem%t_snow_acoef,                 &
+        & hgrid, snow_e,                                                       &
+        & t_cf('snow_temperature_acoef', '', ''),                              &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 't_snow_bcoef', mem%t_snow_bcoef,                     &
-        & hgrid, snow_e,                                                                     &
-        & t_cf('snow_temperature_bcoef', '', ''),                                            &
+      CALL jsb_add_var( mem, 't_snow_bcoef', mem%t_snow_bcoef,                 &
+        & hgrid, snow_e,                                                       &
+        & t_cf('snow_temperature_bcoef', '', ''),                              &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & initval_r=0.0_wp )
     END IF
 
     CALL jsb_add_var( mem, 'hcap_grnd', mem%hcap_grnd,                       &
-      & hgrid, surface,                                                                    &
-      & t_cf('heat_capacity_ground', 'J m-2 K-1', 'Ground heat capacity'),                 &
+      & hgrid, surface,                                                      &
+      & t_cf('heat_capacity_ground', 'J m-2 K-1', 'Ground heat capacity'),   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
-      & output_level=BASIC, &
+      & output_level=BASIC,                                                  &
       & initval_r=1.3e5_wp )
 
-    CALL jsb_add_var( mem, 'hcap_grnd_old', mem%hcap_grnd_old,&
-      & hgrid, surface,                                                                    &
-      & t_cf('heat_capacity_ground_old', 'J m-2 K-1', 'Ground heat capacity (old)'),          &
+    CALL jsb_add_var( mem, 'hcap_grnd_old', mem%hcap_grnd_old,                       &
+      & hgrid, surface,                                                              &
+      & t_cf('heat_capacity_ground_old', 'J m-2 K-1', 'Ground heat capacity (old)'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE.,                                                            &
+      & output_level=BASIC,                                                          &
+      & initval_r=1.3e5_wp )
+
+    CALL jsb_add_var( mem, 'grnd_hflx', mem%grnd_hflx,                       &
+      & hgrid, surface,                                                      &
+      & t_cf('grnd_hflx', '', 'Ground heat flux'),                           &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & output_level=BASIC,                                                  &
+      & initval_r=10.0_wp )
+
+    CALL jsb_add_var( mem, 'grnd_hflx_old', mem%grnd_hflx_old,               &
+      & hgrid, surface,                                                      &
+      & t_cf('grnd_hflx_old', '', 'Ground heat flux (old)'),                 &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
-      & output_level=BASIC, &
-      & initval_r=1.3e5_wp )
-
-    CALL jsb_add_var( mem, 'grnd_hflx', mem%grnd_hflx,                            &
-      & hgrid, surface,                                                                    &
-      & t_cf('grnd_hflx', '', 'Ground heat flux'),                                         &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & output_level=BASIC, &
+      & output_level=BASIC,                                                  &
       & initval_r=10.0_wp )
 
-    CALL jsb_add_var( mem, 'grnd_hflx_old', mem%grnd_hflx_old,                    &
-      & hgrid, surface,                                                                    &
-      & t_cf('grnd_hflx_old', '', 'Ground heat flux (old)'),                               &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & lrestart=.FALSE.,                                                    &
-      & output_level=BASIC, &
-      & initval_r=10.0_wp )
-
-    CALL jsb_add_var( mem, 'thaw_depth', mem%thaw_depth,                            &
-      & hgrid, surface,                                                                    &
-      & t_cf('thaw_depth', 'm', 'Thawing depth'),                                         &
+    CALL jsb_add_var( mem, 'thaw_depth', mem%thaw_depth,                     &
+      & hgrid, surface,                                                      &
+      & t_cf('thaw_depth', 'm', 'Thawing depth'),                            &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &

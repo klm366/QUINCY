@@ -23,16 +23,16 @@ CONTAINS
 
   ! Calculate fuel (JSBACH3 algorithm)
   PURE ELEMENTAL SUBROUTINE calc_fuel_jsbach( &
-    & c_acid_ag1_ta,       & ! in
-    & c_water_ag1_ta,      & ! in
-    & c_ethanol_ag1_ta,    & ! in
-    & c_nonsoluble_ag1_ta, & ! in
-    & c_acid_ag2_ta,       & ! in
-    & c_water_ag2_ta,      & ! in
-    & c_ethanol_ag2_ta,    & ! in
-    & c_nonsoluble_ag2_ta, & ! in
-    & fract_fpc_max,       & ! in
-    & fuel                 & ! out
+    & c_acid_ag1_ta,                          & ! in
+    & c_water_ag1_ta,                         & ! in
+    & c_ethanol_ag1_ta,                       & ! in
+    & c_nonsoluble_ag1_ta,                    & ! in
+    & c_acid_ag2_ta,                          & ! in
+    & c_water_ag2_ta,                         & ! in
+    & c_ethanol_ag2_ta,                       & ! in
+    & c_nonsoluble_ag2_ta,                    & ! in
+    & fract_fpc_max,                          & ! in
+    & fuel                                    & ! out
     & )
 
     ! Input Arguments

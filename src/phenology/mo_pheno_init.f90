@@ -186,7 +186,7 @@ CONTAINS
           dsl4jsb_var2D_onDomain(PHENO_, lai) = &
             & MIN(dsl4jsb_var2D_onDomain(PHENO_, lai), dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom))
         END IF
-        dsl4jsb_var2D_onDomain(PHENO_, fract_fpc) = get_foliage_projected_cover( &
+        dsl4jsb_var2D_onDomain(PHENO_, fract_fpc) = get_foliage_projected_cover(                &
           & dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max), dsl4jsb_var2D_onDomain(PHENO_, lai), &
           & dsl4jsb_Lctlib_param(ClumpinessFactor))
       END IF

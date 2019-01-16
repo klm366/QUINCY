@@ -174,10 +174,10 @@ CONTAINS
 
     ! Declarations
     USE mo_carbon_interface,     ONLY: rescale_carbon_upon_reference_area_change, &
-                                       & calculate_current_c_ta_state_sum, check_carbon_conservation
+      &                                calculate_current_c_ta_state_sum, check_carbon_conservation
     USE mo_pheno_process,        ONLY: calc_previous_day_NPP, calc_summergreen_phenology, calc_evergreen_phenology, &
-                                       calc_crop_phenology, calc_raingreen_phenology, calc_grass_phenology, &
-                                       track_max_green_pool, derive_maxlai_according_to_allometric_relationships
+      &                                calc_crop_phenology, calc_raingreen_phenology, calc_grass_phenology,         &
+      &                                track_max_green_pool, derive_maxlai_according_to_allometric_relationships
     USE mo_jsb_time_iface,       ONLY: get_time_current, get_year_day
     USE mo_jsb_time,             ONLY: is_newyear, is_newday, timeStep_in_days
     USE mo_pheno_constants,      ONLY: PhenoParam
@@ -190,19 +190,20 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Local variables
-    TYPE(t_jsb_model), POINTER             :: model
-    INTEGER                                :: iblk, ics, ice
-    REAL(wp)                               :: dtime
+    TYPE(t_jsb_model), POINTER :: model
+    INTEGER                    :: iblk, ics, ice
+    REAL(wp)                   :: dtime
 
-    INTEGER                                :: day_of_year
+    INTEGER :: day_of_year
 
-    REAL(wp), DIMENSION(options%nc)        :: w_soil_filling,             &
-                                              t_air_in_Celcius,           &
-                                              LaiMax_corrected,           &
-                                              veg_fract_correction_old,   &
-                                              old_c_state_sum, dummy_flux
+    REAL(wp), DIMENSION(options%nc) :: &
+      & w_soil_filling,                &
+      & t_air_in_Celcius,              &
+      & LaiMax_corrected,              &
+      & veg_fract_correction_old,      &
+      & old_c_state_sum, dummy_flux
 
-    TYPE(t_jsb_grid),  POINTER             :: grid
+    TYPE(t_jsb_grid), POINTER :: grid
 
     ! Declare pointers for process configuration and memory
     dsl4jsb_Def_config(PHENO_)
@@ -308,10 +309,10 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(CARBON_,    current_max_green)       ! inout
       dsl4jsb_Get_var2D_onChunk(CARBON_,    veg_carbon_at_max_green) ! inout
 
-      dsl4jsb_Get_var2D_onChunk(PHENO_,    number_of_individuals)      ! inout
+      dsl4jsb_Get_var2D_onChunk(PHENO_,    number_of_individuals)   ! inout
       dsl4jsb_Get_var2D_onChunk(PHENO_,    biomass_per_individual)  ! inout
       dsl4jsb_Get_var2D_onChunk(PHENO_,    maxLAI_allom)            ! inout
-      dsl4jsb_Get_var2D_onChunk(PHENO_,    veg_fract_correction)     ! inout
+      dsl4jsb_Get_var2D_onChunk(PHENO_,    veg_fract_correction)    ! inout
 
       dsl4jsb_Get_var2D_onChunk(PHENO_,    cconservation_allom)     ! inout
 
@@ -398,19 +399,19 @@ CONTAINS
         veg_fract_correction_old(:) = veg_fract_correction(:)
 
         CALL derive_maxLai_according_to_allometric_relationships( &
-          & dsl4jsb_Lctlib_param(alpha_nr_ind),       & ! <- in
-          & dsl4jsb_Lctlib_param(beta_nr_ind),        & ! <- in
-          & dsl4jsb_Lctlib_param(alpha_leaf),         & ! <- in
-          & dsl4jsb_Lctlib_param(beta_leaf),          & ! <- in
-          & dsl4jsb_Lctlib_param(clumpinessFactor),   & ! <- in
-          & dsl4jsb_Lctlib_param(specificLeafArea_C), & ! <- in
-          & c_woods(:),                               & ! <- in
-          & current_max_green(:),                     & ! <- InOut
-          & veg_carbon_at_max_green(:),               & ! <- InOut
-          & number_of_individuals(:),                 & ! <- InOut
-          & biomass_per_individual(:),                & ! <- InOut
-          & veg_fract_correction(:),                  & ! <- InOut
-          & maxLAI_allom(:)                           & ! <- InOut
+          & dsl4jsb_Lctlib_param(alpha_nr_ind),                   & ! in
+          & dsl4jsb_Lctlib_param(beta_nr_ind),                    & ! in
+          & dsl4jsb_Lctlib_param(alpha_leaf),                     & ! in
+          & dsl4jsb_Lctlib_param(beta_leaf),                      & ! in
+          & dsl4jsb_Lctlib_param(clumpinessFactor),               & ! in
+          & dsl4jsb_Lctlib_param(specificLeafArea_C),             & ! in
+          & c_woods(:),                                           & ! in
+          & current_max_green(:),                                 & ! InOut
+          & veg_carbon_at_max_green(:),                           & ! InOut
+          & number_of_individuals(:),                             & ! InOut
+          & biomass_per_individual(:),                            & ! InOut
+          & veg_fract_correction(:),                              & ! InOut
+          & maxLAI_allom(:)                                       & ! InOut
           & )
 
         ! redistribute
@@ -425,12 +426,12 @@ CONTAINS
 
       ! carbon dynamics are only calculated on a day by day basis, thus update only required once a day
       IF(is_newday()) THEN
-        CALL track_max_green_pool(            &
-          & c_green(:),                       & ! <- in
-          & c_reserve(:),                     & ! <- in
-          & c_woods(:),                       & ! <- in
-          & current_max_green(:),             & ! <- InOut
-          & veg_carbon_at_max_green(:)        & ! <- InOut
+        CALL track_max_green_pool(      &
+          & c_green(:),                 & ! in
+          & c_reserve(:),               & ! in
+          & c_woods(:),                 & ! in
+          & current_max_green(:),       & ! InOut
+          & veg_carbon_at_max_green(:)  & ! InOut
           & )
       ENDIF
     ENDIF
@@ -492,18 +493,18 @@ CONTAINS
 
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... summergreen ...')
       CALL calc_summergreen_phenology(    &
-         & day_of_year,                   & ! <- in
-         & l_newday,                      & ! <- in
-         & timestep,                      & ! <- in
-         & lat(:),                        & ! <- in
-         & previous_day_temp_mean(:),     & ! <- in
-         & pseudo_soil_temp(:),           & ! <- in
-         & LaiMax_corrected(:),           & ! <- in
-         & days_since_growth_begin_SG(:), & ! <- inout
-         & chill_days_SG(:),              & ! <- inout
-         & heat_sum_SG(:),                & ! <- inout
-         & growth_phase_SG(:),            & ! <- inout
-         & lai(:)                         & ! <- inout
+         & day_of_year,                   & ! in
+         & l_newday,                      & ! in
+         & timestep,                      & ! in
+         & lat(:),                        & ! in
+         & previous_day_temp_mean(:),     & ! in
+         & pseudo_soil_temp(:),           & ! in
+         & LaiMax_corrected(:),           & ! in
+         & days_since_growth_begin_SG(:), & ! inout
+         & chill_days_SG(:),              & ! inout
+         & heat_sum_SG(:),                & ! inout
+         & growth_phase_SG(:),            & ! inout
+         & lai(:)                         & ! inout
          & )
 
     END IF
@@ -512,17 +513,17 @@ CONTAINS
     IF (dsl4jsb_Lctlib_param(PhenologyType) ==  1) THEN
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... evergreen ...')
        CALL calc_evergreen_phenology(     &
-         & day_of_year,                   & ! <- in
-         & l_newday,                      & ! <- in
-         & timestep,                      & ! <- in
-         & lat(:),                        & ! <- in
-         & pseudo_soil_temp(:),           & ! <- in
-         & LaiMax_corrected(:),           & ! <- in
-         & days_since_growth_begin_EG(:), & ! <- inout
-         & chill_days_EG(:),              & ! <- inout
-         & heat_sum_EG(:),                & ! <- inout
-         & growth_phase_EG(:),            & ! <- inout
-         & lai(:)                         & ! <- inout
+         & day_of_year,                   & ! in
+         & l_newday,                      & ! in
+         & timestep,                      & ! in
+         & lat(:),                        & ! in
+         & pseudo_soil_temp(:),           & ! in
+         & LaiMax_corrected(:),           & ! in
+         & days_since_growth_begin_EG(:), & ! inout
+         & chill_days_EG(:),              & ! inout
+         & heat_sum_EG(:),                & ! inout
+         & growth_phase_EG(:),            & ! inout
+         & lai(:)                         & ! inout
          & )
     END IF
 
@@ -531,22 +532,22 @@ CONTAINS
        ! R: (Abweichungen zu JSBACH3 nur beim LAI und dort erst nach 9. Stelle nach Komma.)
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... crop ...')
       CALL calc_crop_phenology(            &
-        & day_of_year,                     & ! <- in
-        & l_newday,                        & ! <- in
-        & timestep,                        & ! <- in
-        & NPP_pot_rate_ca(:),              & ! <- in
-        & lat(:),                          & ! <- in
-        & pseudo_soil_temp(:),             & ! <- in
-        & LaiMax_corrected(:),             & ! <- in
-        & previous_day_NPP_pot_rate_ca(:), & ! <- in
-        & w_soil_filling(:),               & ! <- in
-        & previous_day_temp_min,           & ! <- in
-        & previous_day_temp_max,           & ! <- in
-        & dsl4jsb_Lctlib_param(specificLeafArea_C), & ! <- in
-        & heat_sum_CRP(:),                 & ! <- inout
-        & heat_sum_winter,                 & ! <- inout
-        & growth_phase_CRP(:),             & ! <- inout
-        & lai(:)                           & ! <- inout
+        & day_of_year,                     & ! in
+        & l_newday,                        & ! in
+        & timestep,                        & ! in
+        & NPP_pot_rate_ca(:),              & ! in
+        & lat(:),                          & ! in
+        & pseudo_soil_temp(:),             & ! in
+        & LaiMax_corrected(:),             & ! in
+        & previous_day_NPP_pot_rate_ca(:), & ! in
+        & w_soil_filling(:),               & ! in
+        & previous_day_temp_min,           & ! in
+        & previous_day_temp_max,           & ! in
+        & dsl4jsb_Lctlib_param(specificLeafArea_C), & ! in
+        & heat_sum_CRP(:),                 & ! inout
+        & heat_sum_winter,                 & ! inout
+        & growth_phase_CRP(:),             & ! inout
+        & lai(:)                           & ! inout
         & )
     END IF
 
@@ -555,11 +556,11 @@ CONTAINS
 
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... raingreen ...')
       CALL calc_raingreen_phenology(        &
-        & timestep,                         & ! <- in
-        & w_soil_filling(:),                & ! <- in
-        & LaiMax_corrected(:),              & ! <- in
-        & previous_day_NPP_pot_rate_ca(:),  & ! <- in
-        & lai(:)                            & ! <- inout
+        & timestep,                         & ! in
+        & w_soil_filling(:),                & ! in
+        & LaiMax_corrected(:),              & ! in
+        & previous_day_NPP_pot_rate_ca(:),  & ! in
+        & lai(:)                            & ! inout
         & )
     END IF
 
@@ -567,12 +568,12 @@ CONTAINS
     IF (dsl4jsb_Lctlib_param(PhenologyType) ==  4) THEN
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... grasses ...')
        CALL calc_grass_phenology(           &
-         & t_air_in_Celcius(:),             & ! <- in
-         & timestep,                        & ! <- in
-         & w_soil_filling(:),               & ! <- in
-         & LaiMax_corrected(:),             & ! <- in
-         & previous_day_NPP_pot_rate_ca(:), & ! <- in
-         & lai(:)                           & ! <- inout
+         & t_air_in_Celcius(:),             & ! in
+         & timestep,                        & ! in
+         & w_soil_filling(:),               & ! in
+         & LaiMax_corrected(:),             & ! in
+         & previous_day_NPP_pot_rate_ca(:), & ! in
+         & lai(:)                           & ! inout
          & )
     END IF
 
@@ -623,7 +624,7 @@ CONTAINS
 
     dsl4jsb_Get_memory(PHENO_)
 
-    dsl4jsb_Get_var2D_onChunk(PHENO_, lai)            ! out
+    dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                              ! out
     lai_mon(1:,0:) => dsl4jsb_memory(PHENO_)%lai_mon (ics:ice, iblk, :) ! in
 
     CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
@@ -724,9 +725,6 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_fpc'
-
-    ! ---------------------------
-    ! Go
 
     iblk = options%iblk
     ics  = options%ics

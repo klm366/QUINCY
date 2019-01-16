@@ -51,39 +51,39 @@ CONTAINS
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: &
-      & t, &
-      & t_unfilt, &
-      & t_lwtr, &
-      & t_lice, &
-      & qsat_lwtr, &
-      & qsat_lice, &
-      & s_wtr, &
-      & s_ice, &
-      & heat_cap, &
-      & press_srf, &
-      & snow, &
-      & latent_hflx_wtr, &
-      & sensible_hflx_wtr, &
-      & latent_hflx_ice, &
-      & sensible_hflx_ice, &
-      & hflx_form_ice, &
-      & hflx_cond_ice, &
-      & hflx_melt_lice, &
-      & hflx_melt_snow, &
-      & fract_lice, &
-      & depth_lice, &
-      & fract_snow_lice, &
-      & w_snow_lice, &
-      & w_snow, &
-      & rad_net_lwtr, &
+      & t,                    &
+      & t_unfilt,             &
+      & t_lwtr,               &
+      & t_lice,               &
+      & qsat_lwtr,            &
+      & qsat_lice,            &
+      & s_wtr,                &
+      & s_ice,                &
+      & heat_cap,             &
+      & press_srf,            &
+      & snow,                 &
+      & latent_hflx_wtr,      &
+      & sensible_hflx_wtr,    &
+      & latent_hflx_ice,      &
+      & sensible_hflx_ice,    &
+      & hflx_form_ice,        &
+      & hflx_cond_ice,        &
+      & hflx_melt_lice,       &
+      & hflx_melt_snow,       &
+      & fract_lice,           &
+      & depth_lice,           &
+      & fract_snow_lice,      &
+      & w_snow_lice,          &
+      & w_snow,               &
+      & rad_net_lwtr,         &
       & rad_net_lice
 
     ! Local variables
-    REAL(wp) :: &
+    REAL(wp) ::             &
       hcap_wtr(options%nc), &
       hcap_ice(options%nc), &
       zero(options%nc)
-    LOGICAL :: &
+    LOGICAL ::                       &
       & l_ice(options%nc),           & ! Indicator for ice cover
       & l_ice_formation(options%nc), &
       & l_ice_melting(options%nc)
@@ -135,21 +135,21 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SEB_, hflx_melt_lice)
     dsl4jsb_Get_var2D_onChunk(SEB_, hflx_melt_snow)
 
-    dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)     ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_, snow)          ! in
-    dsl4jsb_Get_var2D_onChunk(SEB_, latent_hflx_wtr)    ! in
-    dsl4jsb_Get_var2D_onChunk(SEB_, sensible_hflx_wtr)  ! in
-    dsl4jsb_Get_var2D_onChunk(SEB_, latent_hflx_ice)    ! in
-    dsl4jsb_Get_var2D_onChunk(SEB_, sensible_hflx_ice)  ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)         ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, snow)              ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_, latent_hflx_wtr)   ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_, sensible_hflx_wtr) ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_, latent_hflx_ice)   ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_, sensible_hflx_ice) ! in
 
-    dsl4jsb_Get_var2D_onChunk(SEB_, fract_lice) ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB_, depth_lice) ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_lice)    ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow_lice) ! inout
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow)      ! out
+    dsl4jsb_Get_var2D_onChunk(SEB_, fract_lice)        ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB_, depth_lice)        ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_lice) ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow_lice)     ! inout
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow)          ! out
 
-    dsl4jsb_Get_var2D_onChunk(RAD_, rad_net_lwtr)         ! in
-    dsl4jsb_Get_var2D_onChunk(RAD_, rad_net_lice)         ! in
+    dsl4jsb_Get_var2D_onChunk(RAD_, rad_net_lwtr)      ! in
+    dsl4jsb_Get_var2D_onChunk(RAD_, rad_net_lice)      ! in
 
     zero            (:) = 0._wp
     hcap_wtr        (:) = 0._wp
@@ -471,7 +471,7 @@ CONTAINS
 
     ! Locally allocated vectors
     !
-    REAL(wp) :: &
+    REAL(wp) ::                  &
       & s_air      (options%nc), &  !< Dry static energy at lowest atmospheric level
       & heat_tcoef (options%nc)     !< Heat transfer coefficient (rho*C_h*|v|)
 
