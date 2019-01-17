@@ -53,9 +53,9 @@ source_res_dict[5]=T63
 source_res_dict[6]=T127
 source_res_dict[7]=T127
 source_res_dict[8]=T127
-source_res_dict[9]=T255
-source_res_dict[10]=T255
-source_res_dict[11]=T255
+source_res_dict[9]=T127
+source_res_dict[10]=T127
+source_res_dict[11]=T127
 
 extpar_path=${rootdir}/private/mpim/icon_preprocessing/source/extpar.2016
 
