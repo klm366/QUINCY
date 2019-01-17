@@ -44,26 +44,25 @@ ggrids=""                                # disable gaussian grids
 
 
 declare -A source_res_dict
-source_res_dict[0]=05 #vg T31
-source_res_dict[1]=05 #vg T31
-source_res_dict[2]=05 #vg T31
-source_res_dict[3]=05 #vg T63
-source_res_dict[4]=05 #vg T63
-source_res_dict[5]=05 #vg T63
-source_res_dict[6]=05 #vg T127
-source_res_dict[7]=05 #vg T127
-source_res_dict[8]=05 #vg T127
-source_res_dict[9]=05 #vg T255
-source_res_dict[10]=05 #vg T255
-source_res_dict[11]=05 #vg T255
+source_res_dict[0]=T31
+source_res_dict[1]=T31
+source_res_dict[2]=T31
+source_res_dict[3]=T63
+source_res_dict[4]=T63
+source_res_dict[5]=T63
+source_res_dict[6]=T127
+source_res_dict[7]=T127
+source_res_dict[8]=T127
+source_res_dict[9]=T255
+source_res_dict[10]=T255
+source_res_dict[11]=T255
 
 extpar_path=${rootdir}/private/mpim/icon_preprocessing/source/extpar.2016
 
 # Currently, only 0 or 11 possible
 npfts_list="0 11"
 
-# Only 1976 currently.
-year=1976
+year=1992
 
 #input_root=/pool/data/JSBACH/input
 
@@ -107,7 +106,7 @@ case `hostname` in
     module load cdo/1.9.2-magicsxx-intel18
     module load nco/4.6.7-gcc48
     module load netcdf_c/4.3.2-gcc48
-    module load nag/6.0.1064
+    module load nag/6.2
     ;;
    *)
     #module load cdo/1.7.2-gccsys       # cdo 1.8.0 has problems with remapcon
@@ -147,7 +146,7 @@ function generate_gauss_data {
   fi
 
   [[ -d initial_tarfiles ]] && rm -rf initial_tarfiles
-  svn -r 9124 checkout https://svn.mpimet.mpg.de/svn/cosmos/branches/mpiesm-landveg/contrib/initial_tarfiles
+  svn -r 9561 checkout https://svn.mpimet.mpg.de/svn/cosmos/branches/mpiesm-landveg/contrib/initial_tarfiles
   cd initial_tarfiles
   
   export interactive_ctrl=1                    # 1: swich off interactive mode
@@ -159,11 +158,12 @@ function generate_gauss_data {
   export read_pasture=LUH2v2h                  # LUH2v2h / LUH / false
   export pasture_rule=true                     # allocate pastures primarily on grass lands
   export lpasture=true                         # distinguish pastures from grasses
-  export year_ct=1976                          # year the cover_types are derived from (0000 for natural vegetation)
-  export year_cf=1976                          # year cover fractions are derived from (0000 for natural vegetation)
+  export year_ct=${year}                       # year the cover_types are derived from (0000 for natural vegetation)
+  export year_cf=${year}                       # year cover fractions are derived from (0000 for natural vegetation)
   export landcover_series=false                # generate a series of files with cover_types of different years
   export year_cf2=1859                         # only used with landcover_series
   export echam_fractional=${echam_fractional}  # initial file for echam runs with fractional land sea mask
+  export masks_file=default                    # file with land sea mask (default: use echam land sea mask)
   export pool=/pool/data/ECHAM6/input/r0005/${res_atm}     # directories with echam input data
   export pool_land=${pool_prepare}/${res_atm}
   export srcdir=.
@@ -176,7 +176,8 @@ function generate_gauss_data {
       echo "          We use LUH crop and pasture fractions as in CMIP5, here." 
       echo "          Switch to source grid resolution T127, T63 or T31 if you want LUH2v2h data." 
   fi
-  
+#  sed -i '/info=/s/false/true/' ./jsbach_init_file.ksh
+
   rm -f ../jsbach_*.nc
   ./jsbach_init_file.ksh #vg >& /dev/null
   mv jsbach_*.nc ../
@@ -190,6 +191,7 @@ function generate_land_sea_mask {
   echo "Generating land sea mask and lake/glacier fractions ..."
 
   temp=$(mktemp -u --tmpdir=.)
+  temp2=$(mktemp -u --tmpdir=.)
 
   if [[ ${coupled} == "true" ]]
   then
@@ -197,10 +199,13 @@ function generate_land_sea_mask {
   else
     if [[ "${old_r2b4_amip}" != "true" ]]; then
       # Note: blend out some grid boxes which are land in FR_LAND_TOPO
-      # Set all values above 0.85 to 1 because FR_LAND_TOPO contains ocean points around the Caspian Sea
-      #${cdo} setgrid,${icon_grid_file} -setname,notsea -setrtoc,-1,0.2,0 -setrtoc,0.999,1.1,1 -selvar,FR_LAND_TOPO  \
-      ${cdo} setgrid,${icon_grid_file} -setname,notsea -setrtoc,-1,0.2,0 -setrtoc,0.85,1.1,1 -selvar,FR_LAND_TOPO  \
+      ${cdo} setgrid,${icon_grid_file} -setname,notsea -setrtoc,-1,0.2,0 -setrtoc,0.999,1.1,1 -selvar,FR_LAND_TOPO  \
              ${extpar_file} ${grid_name}_notsea.nc
+      # Correct FR_LAND_TOPO for ocean points around the Caspian Sea
+      ${cdo} ifthenc,1 -masklonlatbox,42.5,56.25,44.0,50.5 ${grid_name}_notsea.nc ${temp}
+      ${cdo} ifthenelse -setmisstoc,0 ${temp} ${temp} ${grid_name}_notsea.nc ${temp2}
+      ${cdo} ifthenc,1 -masklonlatbox,43.5,56.25,34.5,44.0 ${temp2} ${temp} 
+      ${cdo} ifthenelse -setmisstoc,0 ${temp} ${temp} ${temp2} ${grid_name}_notsea.nc
     else
       ${cdo} chname,cell_sea_land_mask,notsea -gtc,0 -selvar,cell_sea_land_mask \
              ${icon_grid_file} ${grid_name}_notsea.nc
@@ -222,7 +227,7 @@ function generate_land_sea_mask {
   ${cdo} remapdis,${grid_name}_notsea.nc gauss_${source_res}_lake_ext.nc ${temp}
   ${cdo} setvar,lake -setmissval,-9.e33 -ifthen -gec,0.999 ${grid_name}_notsea.nc ${temp} ${grid_name}_lake_remap.nc
 
-  rm ${temp}
+  rm ${temp} ${temp2}
 
   # Used to mask out ocean with missing values, debug_file needs this
   ${cdo} setctomiss,0 -setmissval,-9e33 ${grid_name}_notsea.nc ${grid_name}_notsea_miss.nc
@@ -543,6 +548,8 @@ function generate_output_files {
   local outfile=""
   local pft_tag=""
 
+  temp=$(mktemp -u --tmpdir=.)
+
   for npfts in $npfts_list
   do
     [[ $npfts -gt 0 ]] && pft_tag="${npfts}pfts_" || pft_tag=""
@@ -577,6 +584,10 @@ function generate_output_files {
           ${grid_name}_glac.nc \
           ${outfile}
     fi
+    cdo showattribute,comment ${input_file} | tail -n +2 > comment.txt
+    cdo setattribute,FILE=comment.txt ${outfile} ${temp} && mv ${temp} ${outfile}
+    rm comment.txt
+
     #ncrename -d cell,ncells ${outfile} >& /dev/null
     copy_uuid ${outfile}
     debug_file ${outfile}
@@ -724,12 +735,6 @@ function debug_file {
 # Main script
 #_____________________________________________________________________________
 #
-if [[ ${year} -ne 1976 ]]
-then
-  echo "Only year 1976 currently supported!."
-  exit
-fi
-
 mkdir -p ${workdir} || true
 cd ${workdir}
 rm -rf *
