@@ -18,7 +18,7 @@ slmModel="land"   # specific SLM model [default: "land"]; possible values: land 
 # flags: T (True) or F (False) [large caps]
 # plant-soil model options
 sb_model_scheme="simple_0d"     # simple_0d simple_1d jsm 
-sb_nloss_scheme="none"       # none fixed dynamic 
+sb_nloss_scheme="dynamic"       # none fixed dynamic 
 flag_sb_prescribe_nh4="F"       # set nh4solute to a constant value
 flag_sb_prescribe_no3="F"       # set no3solute to a constant value
 flag_sb_prescribe_po4="T"       # set po4solute to a constant value
@@ -26,7 +26,7 @@ n_deposition_scheme="none"      # options: none constant dynamic (nhx_srf_down &
 p_deposition_scheme="none"      # options: none constant dynamic (p_srf_down)
 
 # BNF & Mycorrhiza
-bnf_scheme="none"           # none fixed standard optimal resistance unlimited
+bnf_scheme="standard"           # none fixed standard optimal resistance unlimited
 flag_mycorrhiza="F"             # TRUE: the other flag_myco* can be set TRUE | FALSE: the other flag_myco* are set to FALSE by this script
 flag_myco_inorganic="F"         # allows mycorrhiza to access the inorganic N pools
 flag_myco_organic="F"           # allows mycorrhiza to access the organic/residual N pool
@@ -60,11 +60,11 @@ flag_sb_cle_po4="T"             # TRUE: Langmuir equilibrium is constantly maint
 sb_adsorp_scheme="eca_full"     # eca_full; eca_part (only uptake, not for adsorption); eca_none
 
 # simulation length & output
-simulation_length_number=260     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
-output_interval_pool="daily"   # timestep daily weekly monthly yearly
-output_interval_flux="daily"   # timestep daily weekly monthly yearly
-output_start_first_day_year=240   # 1 to ... [lower than or equal with output_end_last_day_year ]
-output_end_last_day_year=260     # equal with or larger than output_start_first_day_year
+simulation_length_number=20     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
+output_interval_pool="weekly"   # timestep daily weekly monthly yearly
+output_interval_flux="weekly"   # timestep daily weekly monthly yearly
+output_start_first_day_year=1   # 1 to ... [lower than or equal with output_end_last_day_year ]
+output_end_last_day_year=20     # equal with or larger than output_start_first_day_year
 
 # PFT 
 setPFTAutomatically="yes"       # yes / no (in case of 'yes', the value of option plant_functional_type_id is ignored)
