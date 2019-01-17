@@ -493,6 +493,9 @@ for (v in 1:nOutVar){
   write.table(pccResDFout, file=paste0("parameter_list/pcc_", outVarName[v], outInfo, ".csv"), append=F, 
             sep = ",", eol="\n", row.names=F, col.names=T)
 }
+# write values of output variables (normalized by the mean)
+write.table(outVarAvgValSet, file=paste0("parameter_list/out_variables_values_normalized_by_mean", outInfo, ".csv"),
+            append=F, sep = ",", eol="\n", row.names=F, col.names=T)
 # write the values of "weighted mean of absolute! parameter pcc estimates (across output variables)" (pccWeightMeanDF)
 write.table(pccWeightMeanDF$pccWeightMean, file=paste0("parameter_list/pcc_weighted_mean_all_parameters", outInfo, ".csv"), 
             append=F, sep = ",", eol="\n",
