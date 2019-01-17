@@ -437,29 +437,28 @@ CONTAINS
       l_pulse_exp_add_15N = .FALSE.
       ! IF(.NOT. model%config%l_transient_spinup) THEN
       !   ! date: 30 Apr 2007, 12PM midday, 120th doy
-      !   IF ((forcing_options%forcing_year - 2007.0_wp) < eps4 .AND. &
-      !       (forcing_options%forcing_doy  - 120.0_wp ) < eps4 .AND. &
-      !       (forcing_options%forcing_hour - 12.0_wp )  < eps4) THEN
+      !   IF (ABS(forcing_options%forcing_year - 2007.0_wp) < eps4 .AND. &
+      !       ABS(forcing_options%forcing_doy  - 120.0_wp ) < eps4 .AND. &
+      !       ABS(forcing_options%forcing_hour - 12.0_wp )  < eps4) THEN
       !     l_pulse_exp_add_15N = .TRUE.
       !   ENDIF
       !   ! date: 31 July 2007, 12PM midday, 212th doy
-      !   IF ((forcing_options%forcing_year - 2007.0_wp) < eps4 .AND. &
-      !       (forcing_options%forcing_doy  - 212.0_wp ) < eps4 .AND. &
-      !       (forcing_options%forcing_hour - 12.0_wp )  < eps4) THEN
+      !   IF (ABS(forcing_options%forcing_year - 2007.0_wp) < eps4 .AND. &
+      !       ABS(forcing_options%forcing_doy  - 212.0_wp ) < eps4 .AND. &
+      !       ABS(forcing_options%forcing_hour - 12.0_wp )  < eps4) THEN
       !     l_pulse_exp_add_15N = .TRUE.
       !   ENDIF
       !   ! date: 30 Oct 2007, 12PM midday, 303th doy
-      !   IF ((forcing_options%forcing_year - 2007.0_wp) < eps4 .AND. &
-      !       (forcing_options%forcing_doy  - 303.0_wp ) < eps4 .AND. &
-      !       (forcing_options%forcing_hour - 12.0_wp )  < eps4) THEN
+      !   IF (ABS(forcing_options%forcing_year - 2007.0_wp) < eps4 .AND. &
+      !       ABS(forcing_options%forcing_doy  - 303.0_wp ) < eps4 .AND. &
+      !       ABS(forcing_options%forcing_hour - 12.0_wp )  < eps4) THEN
       !     l_pulse_exp_add_15N = .TRUE.
       !   ENDIF
       ! ENDIF
-      ! IF (l_pulse_exp_add_15N) THEN
-      !   pulse_exp_add     = 7.0_wp * one_day / dtime                                    ! mg N / m2 / timestep !! from 0.07 kg N / ha in 3 doses
-      !   pulse_exp_isofrac = pulse_exp_add / (pulse_exp_add + noy_deposition_r)
-      !   pulse_exp_delta   = 0._wp * (1 - pulse_exp_isofrac) + pulse_exp_isofrac * 990.0 ! add 99%Natom
-      ! ENDIF
+      ! ! is always calculated (during the experiement) but not always needed/used
+      ! pulse_exp_add     = 7.0_wp * one_day / dtime                                    ! mg N / m2 / timestep !! from 0.07 kg N / ha in 3 doses
+      ! pulse_exp_isofrac = pulse_exp_add / (pulse_exp_add + noy_deposition_r)
+      ! pulse_exp_delta   = 0._wp * (1 - pulse_exp_isofrac) + pulse_exp_isofrac * 990.0 ! add 99%Natom
       !! N deposition
       SELECT CASE (TRIM(forcing_options%n_deposition_scheme))
         CASE ("none")
