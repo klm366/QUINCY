@@ -191,13 +191,13 @@ function generate_land_sea_mask {
   echo "Generating land sea mask and lake/glacier fractions ..."
 
   temp=$(mktemp -u --tmpdir=.)
-  temp2=$(mktemp -u --tmpdir=.)
 
   if [[ ${coupled} == "true" ]]
   then
     ${cdo} chname,lsf,notsea -setgrid,${coupled_grid_file} ${coupled_lsf_file} ${grid_name}_notsea.nc
   else
     if [[ "${old_r2b4_amip}" != "true" ]]; then
+      temp2=$(mktemp -u --tmpdir=.)
       # Note: blend out some grid boxes which are land in FR_LAND_TOPO
       ${cdo} setgrid,${icon_grid_file} -setname,notsea -setrtoc,-1,0.2,0 -setrtoc,0.999,1.1,1 -selvar,FR_LAND_TOPO  \
              ${extpar_file} ${grid_name}_notsea.nc
@@ -206,6 +206,7 @@ function generate_land_sea_mask {
       ${cdo} ifthenelse -setmisstoc,0 ${temp} ${temp} ${grid_name}_notsea.nc ${temp2}
       ${cdo} ifthenc,1 -masklonlatbox,43.5,56.25,34.5,44.0 ${temp2} ${temp} 
       ${cdo} ifthenelse -setmisstoc,0 ${temp} ${temp} ${temp2} ${grid_name}_notsea.nc
+      rm ${temp2}
     else
       ${cdo} chname,cell_sea_land_mask,notsea -gtc,0 -selvar,cell_sea_land_mask \
              ${icon_grid_file} ${grid_name}_notsea.nc
@@ -227,7 +228,7 @@ function generate_land_sea_mask {
   ${cdo} remapdis,${grid_name}_notsea.nc gauss_${source_res}_lake_ext.nc ${temp}
   ${cdo} setvar,lake -setmissval,-9.e33 -ifthen -gec,0.999 ${grid_name}_notsea.nc ${temp} ${grid_name}_lake_remap.nc
 
-  rm ${temp} ${temp2}
+  rm ${temp}
 
   # Used to mask out ocean with missing values, debug_file needs this
   ${cdo} setctomiss,0 -setmissval,-9e33 ${grid_name}_notsea.nc ${grid_name}_notsea_miss.nc
