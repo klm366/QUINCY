@@ -91,6 +91,8 @@ CONTAINS
     ! A2L
     dsl4jsb_Real2D_onChunk :: nhx_deposition
     dsl4jsb_Real2D_onChunk :: noy_deposition
+    dsl4jsb_Real2D_onChunk :: nhx_n15_deposition
+    dsl4jsb_Real2D_onChunk :: noy_n15_deposition
     dsl4jsb_Real2D_onChunk :: p_deposition
     ! VEG_
     dsl4jsb_Real3D_onChunk :: root_fraction_sl
@@ -245,6 +247,8 @@ CONTAINS
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(A2L_,      nhx_deposition)              ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,      noy_deposition)              ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,      nhx_n15_deposition)          ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,      noy_n15_deposition)          ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,      p_deposition)                ! in
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(VEG_,      root_fraction_sl)            ! in
@@ -594,8 +598,8 @@ CONTAINS
     !!
     nh4_solute(:,1)      = nh4_solute(:,1)     + nhx_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
     no3_solute(:,1)      = no3_solute(:,1)     + noy_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
-    nh4_n15_solute(:,1)  = nh4_n15_solute(:,1) + nhx_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
-    no3_n15_solute(:,1)  = no3_n15_solute(:,1) + noy_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
+    nh4_n15_solute(:,1)  = nh4_n15_solute(:,1) + nhx_n15_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
+    no3_n15_solute(:,1)  = no3_n15_solute(:,1) + noy_n15_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
 
     !> 4.3 update of mineral P pools
     !!
