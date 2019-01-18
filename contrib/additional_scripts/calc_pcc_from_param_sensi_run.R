@@ -38,12 +38,13 @@ outVarNameSet  <- c("GPP",                      # 1
                     "Leaf_CN",                  # 2  Leaf_C / Leaf_N
                     "Leaf_NP",                  # 3  Leaf_N / Leaf_P
                     "Total_C",                  # 4
-                    "TotalSoilOrgC",            # 5
-                    "Nfix_asymb",               # 6  asymbiontic N fixation only (SB var: SUM(asymb_n_fixation(ipoi,:)*soil_depth_sl(ipoi,:)))
-                    "NetMinNH4",                # 7
-                    "Net_Mineralisation_PO4",   # 8
-                    "Nlosses",                  # 9   leaching + emmission | Emission_NOY Emission_N2O Emission_N2 LeachingNH4 LeachingNO3 LeachingDOM_N
-                    "Plosses"                   # 10  leaching             | Leaching_PO4 LeachingDOM_P
+                    "EcoC",                     # 5
+                    "TotalSoilOrgC",            # 6
+                    "Nfix_asymb",               # 7  asymbiontic N fixation only (SB var: SUM(asymb_n_fixation(ipoi,:)*soil_depth_sl(ipoi,:)))
+                    "NetMinNH4",                # 8
+                    "Net_Mineralisation_PO4",   # 9
+                    "Nlosses",                  # 10  leaching + emmission | Emission_NOY Emission_N2O Emission_N2 LeachingNH4 LeachingNO3 LeachingDOM_N
+                    "Plosses"                   # 11  leaching             | Leaching_PO4 LeachingDOM_P
 )
 
 outFileSet     <- c("vegfluxC_",                # 1
@@ -51,11 +52,12 @@ outFileSet     <- c("vegfluxC_",                # 1
                     "derivedLeafNP",            # 3  vegpoolN_ & vegpoolP_  these two input files are hardcoded below
                     "vegpoolC_",                # 4
                     "ecopoolCNP_",              # 5
-                    "soilfluxN_",               # 6
+                    "ecopoolCNP_",              # 6
                     "soilfluxN_",               # 7
-                    "soilfluxP_",               # 8
-                    "soilfluxN_",               # 9  
-                    "soilfluxP_"                # 10 
+                    "soilfluxN_",               # 8
+                    "soilfluxP_",               # 9
+                    "soilfluxN_",               # 10  
+                    "soilfluxP_"                # 11 
 )
 
 outVarUnitConvSet <- c(molar_mass_C / 1000 * outInterval,    # 1  mol/m2/week -> kg/m2/yr
@@ -63,11 +65,12 @@ outVarUnitConvSet <- c(molar_mass_C / 1000 * outInterval,    # 1  mol/m2/week ->
                        molar_mass_N / molar_mass_P,          # 3  mol/mol -> g/g
                        molar_mass_C / 1000,                  # 4  mol C -> kg C
                        molar_mass_C / 1000,                  # 5  mol C -> kg C
-                       molar_mass_N * outInterval,           # 6  mol N/m2/week -> g/m2/yr
+                       molar_mass_C / 1000,                  # 6  mol C -> kg C
                        molar_mass_N * outInterval,           # 7  mol N/m2/week -> g/m2/yr
-                       molar_mass_P * outInterval,           # 8  mol P/m2/week -> g/m2/yr
-                       molar_mass_N * outInterval,           # 9  mol N/m2/week -> g/m2/yr
-                       molar_mass_P * outInterval            # 10 mol P/m2/week -> g/m2/yr
+                       molar_mass_N * outInterval,           # 8  mol N/m2/week -> g/m2/yr
+                       molar_mass_P * outInterval,           # 9  mol P/m2/week -> g/m2/yr
+                       molar_mass_N * outInterval,           # 10 mol N/m2/week -> g/m2/yr
+                       molar_mass_P * outInterval            # 11 mol P/m2/week -> g/m2/yr
 )
 
 
@@ -496,6 +499,10 @@ for (v in 1:nOutVar){
 # write values of output variables (normalized by the mean)
 write.table(outVarAvgValSet, file=paste0("parameter_list/out_variables_values_normalized_by_mean", outInfo, ".csv"),
             append=F, sep = ",", eol="\n", row.names=F, col.names=T)
+# write absolute mean values of output variables
+rowNames <- colnames(outVarAvgValSet)
+write.table(meanAbsVal, file=paste0("parameter_list/out_variables_absolute_values_mean", outInfo, ".csv"),
+            append=F, sep = ",", eol="\n", row.names=rowNames, col.names=F)
 # write the values of "weighted mean of absolute! parameter pcc estimates (across output variables)" (pccWeightMeanDF)
 write.table(pccWeightMeanDF$pccWeightMean, file=paste0("parameter_list/pcc_weighted_mean_all_parameters", outInfo, ".csv"), 
             append=F, sep = ",", eol="\n",
