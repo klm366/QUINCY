@@ -4,13 +4,15 @@
 ## 
 
 ###################################################################################################
-# helpers for unit conversion of output variables
+# unit conversion of output variables
 molar_mass_C <- 12.0112
 molar_mass_N <- 14.0072
 molar_mass_P <- 30.997
 weeks        <- 52
 months       <- 12
 outInterval  <- months    # update as needed
+# soil layer depths for 15 soil layers [cm]
+slDepths     <- c(0.065,0.065,0.065,0.069900094,0.09755344,0.136146793,0.190008156,0.265177744,0.370085354,0.516495718,0.720827842, 1.005996292,1.403980925,1.959413224,2.569414418)
 ###################################################################################################
 
 
@@ -38,7 +40,7 @@ outVarNameSet  <- c("GPP",                      # 1
                     "Leaf_CN",                  # 2  Leaf_C / Leaf_N
                     "Leaf_NP",                  # 3  Leaf_N / Leaf_P
                     "Total_C",                  # 4
-                    "EcoC",                     # 5
+                    "EcoC_1m",                  # 5  custom calc from vegPoolC and upper 1 m of soil C
                     "TotalSoilOrgC",            # 6
                     "Nfix_asymb",               # 7  asymbiontic N fixation only (SB var: SUM(asymb_n_fixation(ipoi,:)*soil_depth_sl(ipoi,:)))
                     "NetMinNH4",                # 8
@@ -180,7 +182,7 @@ for (v in 1:nOutVar){
   # read the output-variable data from all simulations into array and calc the avg value of each
   # diff normal & derived variables (case 1 and 2)
   derivedOutVar <- "F"
-  if (outVarName[v] == "Leaf_CN" || outVarName[v] == "Leaf_NP" || outVarName[v] == "Nlosses" || outVarName[v] == "Plosses"){
+  if (outVarName[v] == "Leaf_CN" || outVarName[v] == "Leaf_NP" || outVarName[v] == "EcoC_1m" || outVarName[v] == "Nlosses" || outVarName[v] == "Plosses"){
     derivedOutVar <- "T"
   }
   
@@ -244,6 +246,54 @@ for (v in 1:nOutVar){
         outVarAvgVal[i,1] <- mean(dat1[rowS:rowE,varColNumber1], na.rm=T) / mean(dat2[rowS:rowE,varColNumber2], na.rm=T)  # N/P
       } # end  for()
     } # end Leaf_NP
+    # EcoC_1m
+    if (outVarName[v] == "EcoC_1m"){
+      outFileV      <- "vegpoolC_"
+      outFileS      <- "soilpoolCOrg_lay_"
+      outVarNameV   <- "Total_C"
+      outVarNameSsl <- c("SoluLit_L1", "SoluLit_L2", "SoluLit_L3", "SoluLit_L4", "SoluLit_L5", "SoluLit_L6", "SoluLit_L7", "SoluLit_L8")
+      outVarNameSpl <- c("PolyLit_L1", "PolyLit_L2", "PolyLit_L3", "PolyLit_L4", "PolyLit_L5", "PolyLit_L6", "PolyLit_L7", "PolyLit_L8")
+      outVarNameSwl <- c("WodLit_L1",  "WodLit_L2",  "WodLit_L3",  "WodLit_L4",  "WodLit_L5",  "WodLit_L6",  "WodLit_L7",  "WodLit_L8")
+      outVarNameSmi <- c("Mic_L1",     "Mic_L2",     "Mic_L3",     "Mic_L4",     "Mic_L5",     "Mic_L6",     "Mic_L7",     "Mic_L8")
+      outVarNameSre <- c("Res_L1",     "Res_L2",     "Res_L3",     "Res_L4",     "Res_L5",     "Res_L6",     "Res_L7",     "Res_L8")
+      outVarNameSmy <- c("Myc_L1",     "Myc_L2",     "Myc_L3",     "Myc_L4",     "Myc_L5",     "Myc_L6",     "Myc_L7",     "Myc_L8")
+      soilCOutVarDF <- data.frame("solulit" = outVarNameSsl,
+                                  "polylit" = outVarNameSpl,
+                                  "wodlit"  = outVarNameSwl,
+                                  "mic"     = outVarNameSmi,
+                                  "res"     = outVarNameSre,
+                                  "myc"     = outVarNameSmy,
+                                  stringsAsFactors = F)
+      print(paste0(" reading  ", dirList[1], "/output/", outFileV, tstepPool, outFileExt, " <- ", outVarNameV))
+      print(paste0(" reading  ", dirList[1], "/output/", outFileS, tstepPool, outFileExt, " <- ", "sl1:8 (0.954 m) SoluLit PolyLit WodLit Mic Res Myc"))
+      print(" ...")
+      for (i in 1:nSim){
+        # veg C
+        dat1 <- read.table(paste0(dirList[i], "/output/", outFileV, tstepPool, outFileExt), header=T, sep="")
+        varColNumber1 <- which(colnames(dat1) == outVarNameV)
+        # soil C within upper 1 m (1:8 sl for 15 sl)
+        dat2 <- read.table(paste0(dirList[i], "/output/", outFileS, tstepPool, outFileExt), header=T, sep="")
+        # multiply columns by their depth (slDepths)
+        nColDF        <- ncol(soilCOutVarDF)   # solulit polylit wodlit mic res myc
+        nRowDF        <- nrow(soilCOutVarDF)   # L1 - L8
+        varColNumber2 <- c(rep(0,nColDF*nRowDF))
+        varCount      <- 0
+        for (nc in 1:nColDF){
+          for (nr in 1:nRowDF){
+            varCount                       <- varCount + 1
+            varColNumber2[varCount]        <- which(colnames(dat2) == soilCOutVarDF[nr,nc])#
+            dat2[,varColNumber2[varCount]] <- dat2[,varColNumber2[varCount]] * slDepths[nr]
+          }
+        }
+        rowE <- nrow(dat1)
+        if (rowE > spanRows){ rowS <- rowE - spanRows
+        } else              { rowS <- 1  }
+        outVarAvgVal[i,1] <- mean(dat1[rowS:rowE,varColNumber1], na.rm=T)            # veg C
+        for (m in varColNumber2){
+          outVarAvgVal[i,1] <- outVarAvgVal[i,1] + mean(dat2[rowS:rowE,m], na.rm=T)  # add soil C
+        }
+      } # end  for()
+    } # end EcoC_1m
     # Nlosses
     if (outVarName[v] == "Nlosses"){
       outVarNames  <- c("Emission_NOY", "Emission_N2O", "Emission_N2", "LeachingNH4", "LeachingNO3", "LeachingDOM_N")
