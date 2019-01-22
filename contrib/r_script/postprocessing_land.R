@@ -26,6 +26,7 @@ flist_pool = unique(flist_pool)
 flist_flux = Sys.glob(paste0("vegflux*","_",tstep_flux,"*.txt"))
 flist_flux = c(flist_flux,Sys.glob(paste0("soilflux*","_",tstep_flux,"*.txt")))
 flist_flux = c(flist_flux,Sys.glob(paste0("mycoflux*","_",tstep_flux,"*.txt")))
+flist_flux = c(flist_flux,Sys.glob(paste0("myc_diagnostics*","_",tstep_flux,"*.txt")))
 # get other output files
 flist_other = Sys.glob(paste0("sb_massBalance","_",tstep_flux,"*.txt"))
 flist_other = c(flist_other,Sys.glob(paste0("atm_forcing","_",tstep_flux,"*.txt")))

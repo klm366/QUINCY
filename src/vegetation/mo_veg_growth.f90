@@ -997,7 +997,8 @@ CONTAINS
     USE mo_jsb_math_constants,      ONLY: dtime, one_day, one_year, eps8
     USE mo_veg_constants,           ONLY: vmax_bnf, k_bnf, offset_bnf, eta_nfixation, transform_cost_nh4, transform_cost_no3, &
                                           fresp_growth, cost_n_fixation_max, cost_n_fixation_min, & 
-                                          k1_temp_bnf, k2_temp_bnf,  k3_temp_bnf,  k4_temp_bnf, tau_labile
+                                          k1_temp_bnf, k2_temp_bnf,  k3_temp_bnf,  k4_temp_bnf, tau_labile, &
+                                          f_myc_exudation_max, f_mycorrhization_min, f_mycorrhization_max
     dsl4slm_Use_memory_a_sb
 
     IMPLICIT NONE
@@ -1201,49 +1202,23 @@ CONTAINS
     !> 4.0 Determine C use for Root Exudates
     !! 
     IF(flag_mycorrhiza) THEN
-       f_exudate(:) = 0.5_wp   
-       hlp1(:)      = SUM(sb_mycorrhiza_export%nitrogen(:,:) * soil_depth_sl(:,:), DIM=2) 
-       WHERE(hlp1(:) > eps8) 
-         f_exudate(:) = MIN(f_exudate(:), &
-                            hlp1(:) / (hlp1(:) + (uptake_nh4(:) + uptake_no3(:)) * dtime / 1.e6_wp )) ! Mycofon
-       ENDWHERE 
 
-!! @todo Shorter for trunk!!!
-       ! mol/m3 * m -> mol/m2
-       ! mol/m2 * g/mol -> g/m2
-       ! g/m2 / g/kg -> kg/m2
-       ! kg/m2 / m -> kg/m3
-       ! kg/m3 / kg/m3 -> 1 = kg/kg
-       IF(sb_model_scheme == 'simple_0d')THEN
-         hlp1(:) = (nh4_solute(:,1) + no3_solute(:,1)) * soil_depth_sl(:,1) * & 
-                     molar_mass_N / 1000.0_wp / 1.0_wp / 1695.86_wp
-       ELSE
-         hlp1(:) = SUM((nh4_solute(:,:) + no3_solute(:,:)) * soil_depth_sl(:,:), DIM=2) * & 
-                       molar_mass_N / 1000.0_wp / 1.0_wp / 1695.86_wp
-       ENDIF
-       f_exudate_max(:) = 0.2_wp
-       
-       WHERE (hlp1(:) > 0.01_wp) !Threshold for soil N -> Mycofon   @todo make this threshold a constant ?
-         f_exudate_max(:) = MIN(0.2_wp, &
-                                1.0_wp -(1.0_wp -exp((-50.0_wp * hlp1(:))**3.0_wp)))
-       ENDWHERE
-
-       f_myc_opt(:) = 0.3_wp ! @todo  mycofon; needs to be flexible?!   
+       ! assuming that plants will give max XX% of freshly assimilated carbon to mycorrhiza; scaled with demand
+       f_myc_opt(:) = f_mycorrhization_min + (f_mycorrhization_max - f_mycorrhization_min) * & 
+                                             MAX(demand_uptake_n_tuptake_mavg(:),demand_uptake_p_tuptake_mavg(:)) 
        ! exudation rate (mol / m2 / timestep)
-       exudation_carbon(:) = &
-          MAX(0.0_wp, & 
-              MIN(f_exudate_max(:) * labile_carbon(:) * kstar_labile(:) * dtime / one_day, &
-                  f_exudate(:) * (f_myc_opt(:) * fine_root_carbon(:) - SUM(mycorrhiza_carbon(:,:) * soil_depth_sl(:,:), DIM=2)))) 
-                      
+       exudation_carbon(:) = MIN(f_myc_exudation_max * labile_carbon(:) * kstar_labile(:) * dtime / one_day, &
+                               MAX(f_myc_opt(:) * fine_root_carbon(:) - SUM(mycorrhiza_carbon(:,:) * soil_depth_sl(:,:),DIM=2), &
+                                   0.0_wp))
+
+       ! scale down uptake from mycorrhiza according to demand
        DO isoil = 1,nsoil_sb
-         WHERE(exudation_carbon(:) < eps8)
-           sb_mycorrhiza_export%carbon(:,isoil)     = 0.0_wp
-           sb_mycorrhiza_export%nitrogen(:,isoil)   = 0.0_wp
-           sb_mycorrhiza_export%phosphorus(:,isoil) = 0.0_wp
-           sb_mycorrhiza_export%carbon13(:,isoil)   = 0.0_wp
-           sb_mycorrhiza_export%carbon14(:,isoil)   = 0.0_wp
-           sb_mycorrhiza_export%nitrogen15(:,isoil) = 0.0_wp
-         END WHERE
+          sb_mycorrhiza_export%carbon(:,isoil)     = sb_mycorrhiza_export%carbon(:,isoil)     * demand_uptake_n_tuptake_mavg(:) 
+          sb_mycorrhiza_export%nitrogen(:,isoil)   = sb_mycorrhiza_export%nitrogen(:,isoil)   * demand_uptake_n_tuptake_mavg(:)
+          sb_mycorrhiza_export%phosphorus(:,isoil) = sb_mycorrhiza_export%phosphorus(:,isoil) * demand_uptake_p_tuptake_mavg(:)
+          sb_mycorrhiza_export%carbon13(:,isoil)   = sb_mycorrhiza_export%carbon13(:,isoil)   * demand_uptake_n_tuptake_mavg(:)
+          sb_mycorrhiza_export%carbon14(:,isoil)   = sb_mycorrhiza_export%carbon14(:,isoil)   * demand_uptake_n_tuptake_mavg(:)
+          sb_mycorrhiza_export%nitrogen15(:,isoil) = sb_mycorrhiza_export%nitrogen15(:,isoil) * demand_uptake_n_tuptake_mavg(:)
        END DO
     ENDIF ! flag_mycorrhiza
 

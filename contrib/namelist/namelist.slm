@@ -60,9 +60,8 @@
   flag_sb_prescribe_po4=.FALSE.
   ! mycorrhiza flags
   flag_mycorrhiza=.FALSE.
-  flag_myco_inorganic=.FALSE.
-  flag_myco_organic=.FALSE.
-  flag_myco_priming=.FALSE.
+  flag_mycorrhiza_org=.FALSE.
+  flag_mycorrhiza_prim=.FALSE.
   ! JSM flags
   flag_sb_jsm_transport=.FALSE.
   flag_sb_jsm_litter_input=.FALSE.

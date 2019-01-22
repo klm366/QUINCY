@@ -119,7 +119,17 @@ MODULE mo_sb_constants
       mycorrhiza_cn, &           !< molar ratio of C:N of mycorrhizal fungi
       mycorrhiza_np, &           !< molar ratio of N:P of mycorrhizal fungi
       f_maxresp_myc, &           !< maximum fraction of mycorrhizal carbon used for N transformation [1/day]
-      f_surface_myc2fineroot     !< ratio of surface to mass relationship between mycorrhizal fungi and fine roots
+      f_surface_myc2fineroot, &  !< ratio of surface to mass relationship between mycorrhizal fungi and fine roots
+      myc_root_coverage_max, &       !< maximum of root (tips) that can be covered by mycorrhizae
+      vmax_uptake_norg, &        !< uptake rate of organic nitrogen by mycorrhiza
+      km_up_org, &               !< half-saturation constant for organic uptake [mol N m-3]
+      f_nin2norg, &              !< scaling factor to limit organic uptake according to accessibility to substrate 
+      f_norg_limit, &            !< smoothing factor to limit organic uptake
+      vmax_priming, &            !< turnover time reduction of slow pool by mycorrhizae
+      km_priming, &              !< half-saturation constant for turnover time reduction of slow pool by mycorrhizae [mol C m-3]
+      resp_priming, &            !< respiration associated with priming
+      organic_cn, &              !< molar ratio of C:N of mycorrhizal export to plants (amino acids)
+      f_tau_myc               !< increase of tau_slow in case of saprotrophic/priming macorrhizae to get similar tau_slow
 
    ! nutrient uptake kinetics & ECA approach: simple model
    REAL(wp), SAVE :: & 
@@ -333,8 +343,18 @@ CONTAINS
     mycorrhiza_cue          = 0.7_wp                                  !! ??? SOURCE
     mycorrhiza_cn           = 10.0_wp * molar_mass_N / molar_mass_C   !! 
     mycorrhiza_np           = 14.0_wp * molar_mass_P / molar_mass_N   !! 
-    f_maxresp_myc           = 0.4_wp                                  !! ??? SOURCE
-    f_surface_myc2fineroot  = 10.0_wp                                 !! ??? SOURCE
+    f_maxresp_myc           = 0.5_wp                                  !! ??? SOURCE
+    f_surface_myc2fineroot  = 40.0_wp                                 !! ??? SOURCE
+    myc_root_coverage_max   = 0.3_wp                                  !!
+    vmax_uptake_norg        = 5.0_wp                                  !!  SOURCE ??
+    km_up_org               = 400.0_wp                                !!  SOURCE ??
+    f_nin2norg              = 1.0_wp
+    f_norg_limit            = 0.9_wp
+    vmax_priming            = 2.0_wp                                  !!  SOURCE ??
+    km_priming              = 2.0_wp                                  !!  SOURCE ??
+    resp_priming            = 0.05_wp /one_day                        !!  SOURCE ??
+    organic_cn              = 3.0_wp * molar_mass_N / molar_mass_C
+    f_tau_myc               = 3.0_wp
 
    ! nutrient uptake kinetics & ECA approach: simple model
     km1_up_nh4 = 0.0416_wp                 ! 

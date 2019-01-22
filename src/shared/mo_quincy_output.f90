@@ -1277,7 +1277,11 @@ CONTAINS
     SELECT CASE(TRIM(model%config%slm_model_name))
       CASE('land')  ! for "land & soil" see below
         ! mycofluxCNP
-        fname = 'mycofluxCNP'//'_'//TRIM(spinup_id)//TRIM(spinup_id)//TRIM(output_interval_flux)//'.txt'
+        fname = 'mycofluxCNP'//'_'//TRIM(spinup_id)//TRIM(output_interval_flux)//'.txt'
+        OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+        lun=lun+1
+        ! myc_diagnostics
+        fname = 'myc_diagnostics'//'_'//TRIM(spinup_id)//TRIM(output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
     END SELECT
@@ -1410,6 +1414,9 @@ CONTAINS
         ! mycofluxCNP [mol / m2 / interval]
         WRITE(lun,'(a)') 'Time mycoExportC mycoExportN mycoExportP mycoExportC13 mycoExportC14 mycoExportN15'
         lun=lun+1
+        ! myc_diagnostics
+        WRITE(lun,'(a)') 'Time fCm_resp fCm_SOM'
+        lun=lun+1
     END SELECT
 
 
@@ -1465,9 +1472,10 @@ CONTAINS
                           'Litterfall_DC14 HetResp_DC14 LeachingDOM_DC14'
         lun=lun+1
         ! soilfluxN [mol N /m2 /interval]
-        WRITE(lun,'(3a)') 'Time Litterfall_N ', &
+        WRITE(lun,'(4a)') 'Time Litterfall_N ', &
                           'NDeposition Nfix_asymb NetMinNH4 NetMinNO3 Nitrification Denitrification Emission_NOY ', &
-                          'Emission_N2O Emission_N2 PlantUptakeNH4 PlantUptakeNO3 LeachingNH4 LeachingNO3 LeachingDOM_N' 
+                          'Emission_N2O Emission_N2 PlantUptakeNH4 PlantUptakeNO3 LeachingNH4 LeachingNO3 LeachingDOM_N ', &
+                          'MycUptake_NH4 MycUptake_NO3 MycUptake_NOrg' 
         lun=lun+1
         ! soilfluxP [mol P /m2 /interval]
         WRITE(lun,'(3a)') 'Time Litterfall_P ', &
@@ -1517,6 +1525,7 @@ CONTAINS
             p11str=''
             p12str=''
             p13str=''
+            p14str=''
             DO isoil = 1, nsoil_sb
               IF(isoil<10) THEN 
                 WRITE(layerstr,'(I1)') isoil
@@ -1533,13 +1542,14 @@ CONTAINS
               WRITE(p8str,'(a)') TRIM(p8str)//' NetMineral_no3_L'//TRIM(layerstr)
               WRITE(p9str,'(a)') TRIM(p9str)//' PlantUptake_no3_L'//TRIM(layerstr)
               WRITE(p10str,'(a)') TRIM(p10str)//' MicUptake_no3_L'//TRIM(layerstr)
-              WRITE(p11str,'(a)') TRIM(p11str)//' MycoUptake_no3_L'//TRIM(layerstr)
+              WRITE(p11str,'(a)') TRIM(p11str)//' MycUptake_no3_L'//TRIM(layerstr)
               WRITE(p12str,'(a)') TRIM(p12str)//' Transport_no3_L'//TRIM(layerstr)
               WRITE(p13str,'(a)') TRIM(p13str)//' Transport_DON_L'//TRIM(layerstr)
+              WRITE(p14str,'(a)') TRIM(p14str)//' MycUptake_norg_L'//TRIM(layerstr)
             END DO
-            WRITE(lun,'(14a)') 'Time ', TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str), &
+            WRITE(lun,'(15a)') 'Time ', TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str), &
                                         TRIM(p6str),TRIM(p7str),TRIM(p8str),TRIM(p9str),TRIM(p10str), &
-                                        TRIM(p11str),TRIM(p12str),TRIM(p13str)
+                                        TRIM(p11str),TRIM(p12str),TRIM(p13str),TRIM(p14str)
             lun=lun+1
             ! soilfluxP_lay  [mol P /m3 /interval]
             p1str=''
@@ -1576,7 +1586,7 @@ CONTAINS
               WRITE(p8str,'(a)')  TRIM(p8str)//' Biochem_min_L'//TRIM(layerstr)
               WRITE(p9str,'(a)')  TRIM(p9str)//' Mic_upt_L'//TRIM(layerstr)
               WRITE(p10str,'(a)') TRIM(p10str)//' Plant_upt_L'//TRIM(layerstr)
-              WRITE(p11str,'(a)') TRIM(p11str)//' Myco_upt_L'//TRIM(layerstr)
+              WRITE(p11str,'(a)') TRIM(p11str)//' Myc_upt_L'//TRIM(layerstr)
 
               WRITE(p12str,'(a)') TRIM(p12str)//' Transport_solute_L'//TRIM(layerstr)
               WRITE(p13str,'(a)') TRIM(p13str)//' Transport_assoc_fast_L'//TRIM(layerstr)
@@ -1609,7 +1619,9 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_math_constants,    ONLY: dtime, eps8
+    USE mo_jsb_phys_constants,    ONLY: molar_mass_C, molar_mass_N
     USE mo_rad_constants,         ONLY: rad2ppfd
+    USE mo_sb_constants,          ONLY: organic_cn
     USE mo_isotope_util,          ONLY: calc_delta_C13, calc_delta_C14, calc_delta_N15
     USE mo_sse_config_class,      ONLY: max_soil_layers
     USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
@@ -1757,12 +1769,17 @@ CONTAINS
     REAL(wp), SAVE                        :: sb_total_flux_carbon13_acc    = 0.0_wp
     REAL(wp), SAVE                        :: sb_total_flux_carbon14_acc    = 0.0_wp
     REAL(wp), SAVE                        :: sb_total_flux_nitrogen15_acc  = 0.0_wp
-    REAL(wp), SAVE                        :: myco_export_c_acc             = 0.0_wp
-    REAL(wp), SAVE                        :: myco_export_n_acc             = 0.0_wp
-    REAL(wp), SAVE                        :: myco_export_p_acc             = 0.0_wp
-    REAL(wp), SAVE                        :: myco_export_c13_acc           = 0.0_wp
-    REAL(wp), SAVE                        :: myco_export_c14_acc           = 0.0_wp
-    REAL(wp), SAVE                        :: myco_export_n15_acc           = 0.0_wp
+    REAL(wp), SAVE                        :: myc_export_c_acc              = 0.0_wp
+    REAL(wp), SAVE                        :: myc_export_n_acc              = 0.0_wp
+    REAL(wp), SAVE                        :: myc_export_p_acc              = 0.0_wp
+    REAL(wp), SAVE                        :: myc_export_c13_acc            = 0.0_wp
+    REAL(wp), SAVE                        :: myc_export_c14_acc            = 0.0_wp
+    REAL(wp), SAVE                        :: myc_export_n15_acc            = 0.0_wp
+    REAL(wp), SAVE                        :: myc_uptake_nh4_acc            = 0.0_wp
+    REAL(wp), SAVE                        :: myc_uptake_no3_acc            = 0.0_wp
+    REAL(wp), SAVE                        :: myc_uptake_norg_acc           = 0.0_wp
+    REAL(wp), SAVE                        :: myc_respiration_c_acc         = 0.0_wp
+    REAL(wp), SAVE                        :: f_cm_som_acc                  = 0.0_wp
     ! atmospheric forcing   (note: 'precip_acc' is already calculated for vegfluxH2O output)
     REAL(wp), SAVE                        :: t_air_acc                     = 0.0_wp
     REAL(wp), SAVE                        :: wind_air_acc                  = 0.0_wp
@@ -1785,11 +1802,12 @@ CONTAINS
                                              plant_uptake_nh4_lay_acc = 0.0_wp      , &
                                              microbial_upt_nh4_lay_acc = 0.0_wp     , &
                                              microbial_upt_no3_lay_acc = 0.0_wp     , &
-                                             myco_uptake_nh4_lay_acc = 0.0_wp       , &
+                                             myc_uptake_nh4_lay_acc = 0.0_wp        , &
                                              asymb_n_fixation_lay_acc = 0.0_wp      , &
                                              net_mineral_no3_lay_acc = 0.0_wp       , &
                                              plant_uptake_no3_lay_acc = 0.0_wp      , &
-                                             myco_uptake_no3_lay_acc = 0.0_wp       , &
+                                             myc_uptake_no3_lay_acc = 0.0_wp        , &
+                                             myc_uptake_norg_lay_acc = 0.0_wp       , &
                                              transport_solute_nh4_acc = 0.0_wp      , &
                                              transport_nh4_assoc_acc = 0.0_wp       , &
                                              transport_solute_no3_acc = 0.0_wp      , &
@@ -1805,7 +1823,7 @@ CONTAINS
                                              s_exchange_po4_acc = 0.0_wp        , &
                                              plant_upt_po4_acc = 0.0_wp         , &
                                              microbial_upt_po4_acc = 0.0_wp     , &
-                                             myco_upt_po4_acc = 0.0_wp          , &
+                                             myc_upt_po4_acc = 0.0_wp           , &
                                              transport_solute_po4_acc = 0.0_wp      , &
                                              transport_assoc_fast_po4_acc = 0.0_wp  , &
                                              transport_assoc_slow_po4_acc = 0.0_wp  , &
@@ -1949,6 +1967,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: plant_uptake_po4_sl
     dsl4jsb_Real3D_onChunk      :: mycorrhiza_uptake_nh4_sl
     dsl4jsb_Real3D_onChunk      :: mycorrhiza_uptake_no3_sl
+    dsl4jsb_Real3D_onChunk      :: mycorrhiza_uptake_norg_sl
     dsl4jsb_Real3D_onChunk      :: mycorrhiza_uptake_po4_sl
     dsl4jsb_Real3D_onChunk      :: microbial_uptake_nh4_sl
     dsl4jsb_Real3D_onChunk      :: microbial_uptake_no3_sl
@@ -1958,6 +1977,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: transport_po4_assoc_slow
     dsl4jsb_Real3D_onChunk      :: transport_po4_occluded
     dsl4jsb_Real3D_onChunk      :: transport_po4_primary
+    dsl4jsb_Real3D_onChunk      :: myc_respiration
     ! Get local variables from options argument
     iblk     = options%iblk
     ics      = options%ics
@@ -2100,6 +2120,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,  plant_uptake_po4_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,  mycorrhiza_uptake_nh4_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,  mycorrhiza_uptake_no3_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,  mycorrhiza_uptake_norg_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,  mycorrhiza_uptake_po4_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,  microbial_uptake_nh4_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,  microbial_uptake_no3_sl)
@@ -2109,6 +2130,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,  transport_po4_assoc_slow)
     dsl4jsb_Get_var3D_onChunk(SB_,  transport_po4_occluded)
     dsl4jsb_Get_var3D_onChunk(SB_,  transport_po4_primary)
+    dsl4jsb_Get_var3D_onChunk(SB_,  myc_respiration)
 
     
     ! Get process memory pool structures
@@ -2251,18 +2273,23 @@ CONTAINS
              qg_acc           = qg_acc            - ground_heat_flx(ipoi)            * dtime_one               
              appfd_acc        = appfd_acc         + appfd(ipoi)                      * dtime_one               
              ! Mycorrhiza
-             myco_export_c_acc   = myco_export_c_acc    + SUM(sb_mycorrhiza_export%carbon(ipoi,:) * &
-                                                          soil_depth_sl(ipoi,:)) * dtime_one *1000000._wp/dtime
-             myco_export_n_acc   = myco_export_n_acc    + SUM(sb_mycorrhiza_export%nitrogen(ipoi,:) * &
-                                                          soil_depth_sl(ipoi,:)) * dtime_one *1000000._wp/dtime
-             myco_export_p_acc   = myco_export_p_acc    + SUM(sb_mycorrhiza_export%phosphorus(ipoi,:) * &
-                                                          soil_depth_sl(ipoi,:)) * dtime_one *1000000._wp/dtime
-             myco_export_c13_acc = myco_export_c13_acc  + SUM(sb_mycorrhiza_export%carbon13(ipoi,:) * &
-                                                          soil_depth_sl(ipoi,:)) * dtime_one *1000000._wp/dtime
-             myco_export_c14_acc = myco_export_c14_acc  + SUM(sb_mycorrhiza_export%carbon14(ipoi,:) * &
-                                                          soil_depth_sl(ipoi,:)) * dtime_one *1000000._wp/dtime
-             myco_export_n15_acc = myco_export_n15_acc  + SUM(sb_mycorrhiza_export%nitrogen15(ipoi,:) * &
-                                                          soil_depth_sl(ipoi,:)) * dtime_one *1000000._wp/dtime
+             myc_export_c_acc      = myc_export_c_acc      + SUM(sb_mycorrhiza_export%carbon(ipoi,:) * &
+                                                               soil_depth_sl(ipoi,:)) * dtime_one *1000000._wp/dtime
+             myc_export_n_acc      = myc_export_n_acc      + SUM(sb_mycorrhiza_export%nitrogen(ipoi,:) * &
+                                                               soil_depth_sl(ipoi,:)) * dtime_one *1000000._wp/dtime
+             myc_export_p_acc      = myc_export_p_acc      + SUM(sb_mycorrhiza_export%phosphorus(ipoi,:) * &
+                                                               soil_depth_sl(ipoi,:)) * dtime_one *1000000._wp/dtime
+             myc_export_c13_acc    = myc_export_c13_acc    + SUM(sb_mycorrhiza_export%carbon13(ipoi,:) * &
+                                                               soil_depth_sl(ipoi,:)) * dtime_one *1000000._wp/dtime
+             myc_export_c14_acc    = myc_export_c14_acc    + SUM(sb_mycorrhiza_export%carbon14(ipoi,:) * &
+                                                               soil_depth_sl(ipoi,:)) * dtime_one *1000000._wp/dtime
+             myc_export_n15_acc    = myc_export_n15_acc    + SUM(sb_mycorrhiza_export%nitrogen15(ipoi,:) * &
+                                                               soil_depth_sl(ipoi,:)) * dtime_one *1000000._wp/dtime
+             myc_respiration_c_acc = myc_respiration_c_acc + SUM(myc_respiration(ipoi,:) * soil_depth_sl(ipoi,:)) * &
+                                     molar_mass_C * dtime_one * 1000000._wp / dtime
+             f_cm_som_acc          = f_cm_som_acc + organic_cn * molar_mass_C / molar_mass_N * &
+                                     SUM(mycorrhiza_uptake_norg_sl(ipoi,:) * soil_depth_sl(ipoi,:)) * &
+                                     dtime_one * 1000000._wp / dtime
              ! atmospheric forcing (A2L_)
              t_air_acc                = t_air_acc                + t_air(ipoi)
              wind_air_acc             = wind_air_acc             + wind_air(ipoi)
@@ -2291,8 +2318,11 @@ CONTAINS
                  CASE('land')
                    ! mycofluxCNP
                    write(lun,'(7F24.12)') time_d, & 
-                                          myco_export_c_acc, myco_export_n_acc, myco_export_p_acc, &
-                                          myco_export_c13_acc, myco_export_c14_acc, myco_export_n15_acc
+                                          myc_export_c_acc, myc_export_n_acc, myc_export_p_acc, &
+                                          myc_export_c13_acc, myc_export_c14_acc, myc_export_n15_acc
+                   lun=lun+1
+                   ! myc_diagnostics
+                   write(lun,'(3F24.12)') time_d, myc_respiration_c_acc, f_cm_som_acc
                    lun=lun+1
                END SELECT
 
@@ -2421,12 +2451,14 @@ CONTAINS
                uptake_no3_n15_acc         = 0.0_wp
                uptake_nh4_acc             = 0.0_wp
                uptake_nh4_n15_acc         = 0.0_wp
-               myco_export_c_acc          = 0.0_wp
-               myco_export_n_acc          = 0.0_wp
-               myco_export_p_acc          = 0.0_wp
-               myco_export_c13_acc        = 0.0_wp
-               myco_export_c14_acc        = 0.0_wp
-               myco_export_n15_acc        = 0.0_wp
+               myc_export_c_acc           = 0.0_wp
+               myc_export_n_acc           = 0.0_wp
+               myc_export_p_acc           = 0.0_wp
+               myc_export_c13_acc         = 0.0_wp
+               myc_export_c14_acc         = 0.0_wp
+               myc_export_n15_acc         = 0.0_wp
+               myc_respiration_c_acc      = 0.0_wp
+               f_cm_som_acc               = 0.0_wp
                ! atmospheric forcing (precip_acc is already considered above, see vegfluxH2O)
                t_air_acc                  = 0.0_wp
                wind_air_acc               = 0.0_wp
@@ -2516,6 +2548,9 @@ CONTAINS
         asymb_n_fixation_acc =  asymb_n_fixation_acc + SUM(asymb_n_fixation(ipoi,:)*soil_depth_sl(ipoi,:)) * dtime_one
         asymb_n_fixation_n15_acc =  asymb_n_fixation_n15_acc + SUM(asymb_n_fixation_n15(ipoi,:)*soil_depth_sl(ipoi,:)) * &
                                     dtime_one
+        myc_uptake_nh4_acc  = myc_uptake_nh4_acc  + SUM(mycorrhiza_uptake_nh4_sl(ipoi,:)  * soil_depth_sl(ipoi,:)) * dtime_one
+        myc_uptake_no3_acc  = myc_uptake_no3_acc  + SUM(mycorrhiza_uptake_no3_sl(ipoi,:)  * soil_depth_sl(ipoi,:)) * dtime_one
+        myc_uptake_norg_acc = myc_uptake_norg_acc + SUM(mycorrhiza_uptake_norg_sl(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
         ! Phosphorus
         p_deposition_acc       = p_deposition_acc + p_deposition(ipoi) * dtime_one
         leaching_po4_acc       = leaching_po4_acc + leaching_po4_solute(ipoi) * dtime_one           
@@ -2569,7 +2604,8 @@ CONTAINS
           ! soilfluxN
           write(lun,'(20F20.12)') time_d,litterfallN_acc,n_deposition_acc,asymb_n_fixation_acc,net_min_nh4_acc, net_min_no3_acc, &
                                 nitrification_acc,denitrification_acc,emission_noy_acc,emission_n2o_acc,emission_n2_acc,& 
-                                plant_uptake_nh4_acc,plant_uptake_no3_acc,leaching_nh4_acc,leaching_no3_acc,leachingNorg_acc                    
+                                plant_uptake_nh4_acc,plant_uptake_no3_acc,leaching_nh4_acc,leaching_no3_acc,leachingNorg_acc, &
+                                myc_uptake_nh4_acc, myc_uptake_no3_acc, myc_uptake_norg_acc
           lun=lun+1
           ! soilfluxP
           write(lun,'(20F20.12)') time_d, litterfallP_acc, p_deposition_acc, leaching_po4_acc, leachingPorg_acc, &
@@ -2612,6 +2648,9 @@ CONTAINS
           plant_uptake_nh4_acc           = 0.0_wp
           plant_uptake_no3_acc           = 0.0_wp
           leachingNorg_acc               = 0.0_wp
+          myc_uptake_nh4_acc             = 0.0_wp
+          myc_uptake_no3_acc             = 0.0_wp
+          myc_uptake_norg_acc            = 0.0_wp
           emission_noy_acc               = 0.0_wp
           emission_noy_n15_acc           = 0.0_wp
           emission_n2o_acc               = 0.0_wp
@@ -2674,7 +2713,7 @@ CONTAINS
                                                     microbial_uptake_nh4_sl(ipoi,:) * dtime_one
           microbial_upt_no3_lay_acc(1:nsoil_sb)   = microbial_upt_no3_lay_acc(1:nsoil_sb) + &
                                                     microbial_uptake_no3_sl(ipoi,:) * dtime_one
-          myco_uptake_nh4_lay_acc(1:nsoil_sb)     = myco_uptake_nh4_lay_acc(1:nsoil_sb) + &
+          myc_uptake_nh4_lay_acc(1:nsoil_sb)      = myc_uptake_nh4_lay_acc(1:nsoil_sb) + &
                                                     mycorrhiza_uptake_nh4_sl(ipoi,:) * dtime_one
           transport_solute_nh4_acc(1:nsoil_sb)    = transport_solute_nh4_acc(1:nsoil_sb) + &
                                                     transport_nh4_solute(ipoi,:) * dtime_one
@@ -2686,13 +2725,15 @@ CONTAINS
                                                     net_mineralisation_no3(ipoi,:) * dtime_one
           plant_uptake_no3_lay_acc(1:nsoil_sb)    = plant_uptake_no3_lay_acc(1:nsoil_sb) + &
                                                     plant_uptake_no3_sl(ipoi,:) * dtime_one
-          myco_uptake_no3_lay_acc(1:nsoil_sb)     = myco_uptake_no3_lay_acc(1:nsoil_sb) + &
+          myc_uptake_no3_lay_acc(1:nsoil_sb)      = myc_uptake_no3_lay_acc(1:nsoil_sb) + &
                                                     mycorrhiza_uptake_no3_sl(ipoi,:) * dtime_one
           transport_solute_no3_acc(1:nsoil_sb)    = transport_solute_no3_acc(1:nsoil_sb) + &
                                                     transport_no3_solute(ipoi,:) * dtime_one
           transport_DON_lay_acc(1:nsoil_sb)       = transport_DON_lay_acc(1:nsoil_sb) + &
                                                     sb_transport%dom%nitrogen(ipoi,:) * &
                                                     1000000.0_wp * dtime_one/dtime
+          myc_uptake_norg_lay_acc(1:nsoil_sb)     = myc_uptake_norg_lay_acc(1:nsoil_sb) + &
+                                                    mycorrhiza_uptake_norg_sl(ipoi,:) * dtime_one
           ! P
           f_exchange_po4_acc(1:nsoil_sb)       = f_exchange_po4_acc(1:nsoil_sb) + &
                                                  fast_exchange_po4(ipoi,:) * dtime_one
@@ -2714,7 +2755,7 @@ CONTAINS
                                                  plant_uptake_po4_sl(ipoi,:) * dtime_one
           microbial_upt_po4_acc(1:nsoil_sb)    = microbial_upt_po4_acc(1:nsoil_sb) + &
                                                  microbial_uptake_po4_sl(ipoi,:) * dtime_one
-          myco_upt_po4_acc(1:nsoil_sb)         = myco_upt_po4_acc(1:nsoil_sb) + &
+          myc_upt_po4_acc(1:nsoil_sb)          = myc_upt_po4_acc(1:nsoil_sb) + &
                                                  mycorrhiza_uptake_po4_sl(ipoi,:) * dtime_one
           transport_solute_po4_acc(1:nsoil_sb)     = transport_solute_po4_acc(1:nsoil_sb) + &
                                                      transport_po4_solute(ipoi,:) * dtime_one
@@ -2741,14 +2782,15 @@ CONTAINS
               transport_DOC_lay_acc(1:nsoil_sb)
             lun = lun + 1
             ! soilfluxN_lay
-            write(lun,'(261F20.10)') time_d, &
+            write(lun,'(281F20.10)') time_d, &
               net_mineral_nh4_lay_acc(1:nsoil_sb),   plant_uptake_nh4_lay_acc(1:nsoil_sb), &
-              microbial_upt_nh4_lay_acc(1:nsoil_sb), myco_uptake_nh4_lay_acc(1:nsoil_sb), &
+              microbial_upt_nh4_lay_acc(1:nsoil_sb), myc_uptake_nh4_lay_acc(1:nsoil_sb), &
               transport_solute_nh4_acc(1:nsoil_sb),  transport_nh4_assoc_acc(1:nsoil_sb), &
               asymb_n_fixation_lay_acc(1:nsoil_sb), &
               net_mineral_no3_lay_acc(1:nsoil_sb),   plant_uptake_no3_lay_acc(1:nsoil_sb), &
-              microbial_upt_no3_lay_acc(1:nsoil_sb), myco_uptake_no3_lay_acc(1:nsoil_sb), &
-              transport_solute_no3_acc(1:nsoil_sb),  transport_DON_lay_acc(1:nsoil_sb)
+              microbial_upt_no3_lay_acc(1:nsoil_sb), myc_uptake_no3_lay_acc(1:nsoil_sb), &
+              transport_solute_no3_acc(1:nsoil_sb),  transport_DON_lay_acc(1:nsoil_sb), &
+              myc_uptake_norg_lay_acc(1:nsoil_sb)
             lun = lun + 1
             ! soilfluxP_lay
             write(lun,'(341F20.10)') time_d, &
@@ -2758,7 +2800,7 @@ CONTAINS
 
               net_min_po4_lay_acc(1:nsoil_sb), biochem_min_po4_acc(1:nsoil_sb), &
               microbial_upt_po4_acc(1:nsoil_sb), plant_upt_po4_acc(1:nsoil_sb), &
-              myco_upt_po4_acc(1:nsoil_sb), &
+              myc_upt_po4_acc(1:nsoil_sb), &
 
               transport_solute_po4_acc(1:nsoil_sb), transport_assoc_fast_po4_acc(1:nsoil_sb), &
               transport_assoc_slow_po4_acc(1:nsoil_sb), transport_occluded_po4_acc(1:nsoil_sb), &
@@ -2776,15 +2818,16 @@ CONTAINS
             plant_uptake_nh4_lay_acc(1:nsoil_sb)    = 0.0_wp
             microbial_upt_nh4_lay_acc(1:nsoil_sb)   = 0.0_wp
             microbial_upt_no3_lay_acc(1:nsoil_sb)   = 0.0_wp
-            myco_uptake_nh4_lay_acc(1:nsoil_sb)     = 0.0_wp
+            myc_uptake_nh4_lay_acc(1:nsoil_sb)      = 0.0_wp
             asymb_n_fixation_lay_acc(1:nsoil_sb)    = 0.0_wp
             net_mineral_no3_lay_acc(1:nsoil_sb)     = 0.0_wp
             plant_uptake_no3_lay_acc(1:nsoil_sb)    = 0.0_wp
-            myco_uptake_no3_lay_acc(1:nsoil_sb)     = 0.0_wp
+            myc_uptake_no3_lay_acc(1:nsoil_sb)      = 0.0_wp
             transport_solute_nh4_acc(1:nsoil_sb)    = 0.0_wp
             transport_nh4_assoc_acc(1:nsoil_sb)     = 0.0_wp
             transport_solute_no3_acc(1:nsoil_sb)    = 0.0_wp
             transport_DON_lay_acc(1:nsoil_sb)       = 0.0_wp
+            myc_uptake_norg_lay_acc(1:nsoil_sb)     = 0.0_wp
             ! P
             f_exchange_po4_acc(1:nsoil_sb)            = 0.0_wp
             f_desorp_po4_acc(1:nsoil_sb)              = 0.0_wp
@@ -2796,7 +2839,7 @@ CONTAINS
             biochem_min_po4_acc(1:nsoil_sb)           = 0.0_wp
             microbial_upt_po4_acc(1:nsoil_sb)         = 0.0_wp
             plant_upt_po4_acc(1:nsoil_sb)             = 0.0_wp 
-            myco_upt_po4_acc(1:nsoil_sb)              = 0.0_wp  
+            myc_upt_po4_acc(1:nsoil_sb)               = 0.0_wp  
             transport_solute_po4_acc(1:nsoil_sb)      = 0.0_wp
             transport_assoc_fast_po4_acc(1:nsoil_sb)  = 0.0_wp
             transport_assoc_slow_po4_acc(1:nsoil_sb)  = 0.0_wp

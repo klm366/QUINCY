@@ -209,6 +209,8 @@
   leaf2root_max_ratio=NAN
   delta_n_fraction=NAN
   delta_n_leaf=NAN
+  f_myc_exudation_max=NAN
+  f_mycorrhization_max=NAN
 /
 &SB_CTL
   tau_soluable_litter=NAN
@@ -364,6 +366,13 @@
   km_rootc_weath_po4=NAN
   fc_p_res2dom=NAN
   fc_n_res2dom=NAN
+  f_norg_limit=NAN
+  f_tau_myc=NAN
+  km_priming=NAN
+  km_up_org=NAN
+  myc_root_coverage_max=NAN
+  resp_priming=NAN
+  vmax_uptake_norg=NAN
 /
 &LCTLIB_PFT1_CTL
   sla_p1=NAN

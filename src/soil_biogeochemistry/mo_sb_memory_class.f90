@@ -253,6 +253,9 @@ MODULE mo_sb_memory_class
                                     het_respiration    ,          &  !< heterotrophic respiration  [mol m-3 s-1]
                                     het_respiration_c13,          &  !< c13 heterotrophic respiration   [mol m-3 s-1]
                                     het_respiration_c14,          &  !< c14 heterotrophic respiration   [mol m-3 s-1]
+                                    myc_respiration    ,          &  !< mycorrhizae respiration  [mol m-3 s-1]
+                                    myc_respiration_c13,          &  !< c13 mycorrhizae respiration   [mol m-3 s-1]
+                                    myc_respiration_c14,          &  !< c14 mycorrhizae respiration   [mol m-3 s-1]
                                     net_mineralisation_nh4,       &  !< net mineralisation of N    [mol m-3 s-1]
                                     net_mineralisation_nh4_n15,   &  !< net mineralisation of N15  [mol m-3 s-1] 
                                     net_mineralisation_no3,       &  !< net mineralisation of N    [mol m-3 s-1]
@@ -1798,6 +1801,30 @@ CONTAINS
       CALL jsb_add_var(mem, 'het_respiration_c14', mem%het_respiration_c14, &
             hgrid, vgrid_soil_sb, &
             t_cf('het_respiration_c14', 'mol m-3 s-1', 'c14 heterotrophic respiration'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL jsb_add_var(mem, 'myc_respiration', mem%myc_respiration, &
+            hgrid, vgrid_soil_sb, &
+            t_cf('myc_respiration', 'mol m-3 s-1', 'mycorrhizae respiration'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL jsb_add_var(mem, 'myc_respiration_c13', mem%myc_respiration_c13, &
+            hgrid, vgrid_soil_sb, &
+            t_cf('myc_respiration_c13', 'mol m-3 s-1', 'c13 mycorrhizae respiration'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+  
+      CALL jsb_add_var(mem, 'myc_respiration_c14', mem%myc_respiration_c14, &
+            hgrid, vgrid_soil_sb, &
+            t_cf('myc_respiration_c14', 'mol m-3 s-1', 'c14 mycorrhizae respiration'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &

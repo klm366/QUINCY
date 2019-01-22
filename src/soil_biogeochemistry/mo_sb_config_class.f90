@@ -40,9 +40,8 @@ MODULE mo_sb_config_class
     LOGICAL               :: flag_sb_prescribe_po4
     ! mycorrhiza
     LOGICAL               :: flag_mycorrhiza
-    LOGICAL               :: flag_myco_inorganic
-    LOGICAL               :: flag_myco_organic
-    LOGICAL               :: flag_myco_priming
+    LOGICAL               :: flag_mycorrhiza_org
+    LOGICAL               :: flag_mycorrhiza_prim
     ! JSM
     LOGICAL               :: flag_sb_jsm_transport
     LOGICAL               :: flag_sb_jsm_litter_input
@@ -96,9 +95,8 @@ CONTAINS
     LOGICAL                     :: flag_sb_prescribe_no3
     LOGICAL                     :: flag_sb_prescribe_po4
     LOGICAL                     :: flag_mycorrhiza
-    LOGICAL                     :: flag_myco_inorganic
-    LOGICAL                     :: flag_myco_organic
-    LOGICAL                     :: flag_myco_priming
+    LOGICAL                     :: flag_mycorrhiza_org
+    LOGICAL                     :: flag_mycorrhiza_prim
     LOGICAL                     :: flag_sb_jsm_transport
     LOGICAL                     :: flag_sb_jsm_litter_input
     LOGICAL                     :: flag_sb_jsm_OM_sorption
@@ -127,9 +125,8 @@ CONTAINS
                       flag_sb_prescribe_no3     , &
                       flag_sb_prescribe_po4     , &
                       flag_mycorrhiza           , &
-                      flag_myco_inorganic       , &
-                      flag_myco_organic         , &
-                      flag_myco_priming         , & 
+                      flag_mycorrhiza_org       , &
+                      flag_mycorrhiza_prim      , & 
                       flag_sb_jsm_transport     , &
                       flag_sb_jsm_litter_input  , &
                       flag_sb_jsm_OM_sorption   , &
@@ -165,9 +162,8 @@ CONTAINS
     flag_sb_prescribe_no3       = .FALSE.
     flag_sb_prescribe_po4       = .FALSE.
     flag_mycorrhiza             = .FALSE.
-    flag_myco_inorganic         = .FALSE.
-    flag_myco_organic           = .FALSE.
-    flag_myco_priming           = .FALSE.
+    flag_mycorrhiza_org         = .FALSE.
+    flag_mycorrhiza_prim        = .FALSE.
     flag_sb_jsm_transport       = .FALSE.
     flag_sb_jsm_litter_input    = .FALSE.
     flag_sb_jsm_OM_sorption     = .FALSE.
@@ -206,9 +202,8 @@ CONTAINS
     config%flag_sb_prescribe_no3           = flag_sb_prescribe_no3
     config%flag_sb_prescribe_po4           = flag_sb_prescribe_po4
     config%flag_mycorrhiza                 = flag_mycorrhiza
-    config%flag_myco_inorganic             = flag_myco_inorganic
-    config%flag_myco_organic               = flag_myco_organic
-    config%flag_myco_priming               = flag_myco_priming
+    config%flag_mycorrhiza_org             = flag_mycorrhiza_org
+    config%flag_mycorrhiza_prim            = flag_mycorrhiza_prim
     config%flag_sb_jsm_transport           = flag_sb_jsm_transport
     config%flag_sb_jsm_litter_input        = flag_sb_jsm_litter_input
     config%flag_sb_jsm_OM_sorption         = flag_sb_jsm_OM_sorption

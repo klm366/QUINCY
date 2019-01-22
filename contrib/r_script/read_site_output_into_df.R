@@ -27,7 +27,7 @@ read_site_output_into_df <- function(){
                     'ecopoolCNP_'))
   f_myco <- (c(
                     'mycofluxCNP_',
-                    'myco_diagnostics'))
+                    'myc_diagnostics'))
   f_soil_mass_balance <- (c(   
                     'sb_massBalance_'))
   f_soil_flux <- (c(   

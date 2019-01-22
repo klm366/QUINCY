@@ -89,6 +89,9 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: het_respiration
     dsl4jsb_Real3D_onChunk :: het_respiration_c13
     dsl4jsb_Real3D_onChunk :: het_respiration_c14
+    dsl4jsb_Real3D_onChunk :: myc_respiration
+    dsl4jsb_Real3D_onChunk :: myc_respiration_c13
+    dsl4jsb_Real3D_onChunk :: myc_respiration_c14
     dsl4jsb_Real3D_onChunk :: net_mineralisation_nh4
     dsl4jsb_Real3D_onChunk :: net_mineralisation_nh4_n15
     dsl4jsb_Real3D_onChunk :: net_mineralisation_no3
@@ -193,6 +196,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration)             ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c13)         ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c14)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       myc_respiration)             ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       myc_respiration_c13)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       myc_respiration_c14)         ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_nh4)      ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_no3)      ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_po4)      ! out
@@ -305,6 +311,9 @@ CONTAINS
     het_respiration(:,:)              = zero
     het_respiration_c13(:,:)          = zero
     het_respiration_c14(:,:)          = zero
+    myc_respiration(:,:)              = zero
+    myc_respiration_c13(:,:)          = zero
+    myc_respiration_c14(:,:)          = zero
     net_mineralisation_nh4(:,:)       = zero
     net_mineralisation_nh4_n15(:,:)   = zero
     net_mineralisation_no3(:,:)       = zero

@@ -76,7 +76,7 @@ CONTAINS
     INTEGER                               :: nsoil_sb
     INTEGER                               :: isoil
 !!
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: fine_root_carbon_sl, p_deposition_sl, hlp1
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: fine_root_carbon_sl, p_deposition_sl, hlp1, f_myc_sl
 !!
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_pools'
     ! ---------------------------
@@ -137,6 +137,9 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: het_respiration
     dsl4jsb_Real3D_onChunk :: het_respiration_c13
     dsl4jsb_Real3D_onChunk :: het_respiration_c14
+    dsl4jsb_Real3D_onChunk :: myc_respiration
+    dsl4jsb_Real3D_onChunk :: myc_respiration_c13
+    dsl4jsb_Real3D_onChunk :: myc_respiration_c14
     dsl4jsb_Real3D_onChunk :: net_mineralisation_nh4
     dsl4jsb_Real3D_onChunk :: net_mineralisation_nh4_n15
     dsl4jsb_Real3D_onChunk :: net_mineralisation_no3
@@ -292,6 +295,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration)             ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c13)         ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c14)         ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       myc_respiration)             ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       myc_respiration_c13)         ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       myc_respiration_c14)         ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_nh4)      ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_nh4_n15)  ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_no3)      ! in
@@ -489,45 +495,53 @@ CONTAINS
 
     !> 2.0 update mycorrhiza with flux due to exudation from vegetation and N uptake from soil AND correct flux due to export to plants
     !!
-    sb_formation%mycorrhiza%carbon(:,1)     = sb_formation%mycorrhiza%carbon(:,1) + &
-                                                             veg_exudation%carbon(:) * mycorrhiza_cue / soil_depth_sl(:,1)
-    sb_formation%mycorrhiza%nitrogen(:,1)   = sb_formation%mycorrhiza%nitrogen(:,1) + &
-                                                             veg_exudation%nitrogen(:) / soil_depth_sl(:,1) + &
-                                                             (mycorrhiza_uptake_nh4_sl(:,1) + mycorrhiza_uptake_no3_sl(:,1)) * & !+ mycorrhiza_uptake_norg_sl(:,1)) * &
-                                                             dtime / 1000000._wp
-    sb_formation%mycorrhiza%phosphorus(:,1) = sb_formation%mycorrhiza%phosphorus(:,1) + &
-                                                             veg_exudation%phosphorus(:) / soil_depth_sl(:,1) + &
-                                                             mycorrhiza_uptake_po4_sl(:,1) * dtime / 1000000._wp
-    sb_formation%mycorrhiza%carbon13(:,1)   = sb_formation%mycorrhiza%carbon13(:,1) + &
-                                                             veg_exudation%carbon13(:) * mycorrhiza_cue / soil_depth_sl(:,1)
-    sb_formation%mycorrhiza%carbon14(:,1)   = sb_formation%mycorrhiza%carbon14(:,1) + &
-                                                             veg_exudation%carbon14(:) * mycorrhiza_cue / soil_depth_sl(:,1)
-    sb_formation%mycorrhiza%nitrogen15(:,1) = sb_formation%mycorrhiza%nitrogen15(:,1) + &
-                                                     veg_exudation%nitrogen15(:) / soil_depth_sl(:,1) + &
-                                                     (mycorrhiza_uptake_nh4_n15_sl(:,1) + mycorrhiza_uptake_no3_n15_sl(:,1)) * & !+ mycorrhiza_uptake_norg_n15_sl(:,1)) * &
-                                                     dtime / 1000000._wp
-
-    sb_loss%mycorrhiza%carbon(:,1)     = sb_loss%mycorrhiza%carbon(:,1) + &
-                                                        sb_mycorrhiza_export%carbon(:,1) 
-    sb_loss%mycorrhiza%nitrogen(:,1)   = sb_loss%mycorrhiza%nitrogen(:,1) + &
-                                                        sb_mycorrhiza_export%nitrogen(:,1)
-    sb_loss%mycorrhiza%phosphorus(:,1) = sb_loss%mycorrhiza%phosphorus(:,1) + &
-                                                        sb_mycorrhiza_export%phosphorus(:,1)
-    sb_loss%mycorrhiza%carbon13(:,1)   = sb_loss%mycorrhiza%carbon13(:,1) + &
-                                                        sb_mycorrhiza_export%carbon13(:,1)
-    sb_loss%mycorrhiza%carbon14(:,1)   = sb_loss%mycorrhiza%carbon14(:,1) + &
-                                                        sb_mycorrhiza_export%carbon14(:,1)
-    sb_loss%mycorrhiza%nitrogen15(:,1) = sb_loss%mycorrhiza%nitrogen15(:,1) + &
-                                                        sb_mycorrhiza_export%nitrogen15(:,1)
+    IF(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_0d") THEN
+       f_myc_sl(:,1)          = 1.0_wp
+       f_myc_sl(:,2:nsoil_sb) = 0.0_wp
+    ELSE
+       f_myc_sl(:,:)          = root_fraction_sl(:,:) 
+    ENDIF
 
     DO isoil = 1,nsoil_sb
-      het_respiration(:,isoil)     = het_respiration(:,isoil)     + (1._wp - mycorrhiza_cue) * veg_exudation%carbon(:)   / &
-                                      dtime * 1000000._wp                          
-      het_respiration_c13(:,isoil) = het_respiration_c13(:,isoil) + (1._wp - mycorrhiza_cue) * veg_exudation%carbon13(:) / &
-                                      dtime * 1000000._wp
-      het_respiration_c14(:,isoil) = het_respiration_c14(:,isoil) + (1._wp - mycorrhiza_cue) * veg_exudation%carbon14(:) / &
-                                      dtime * 1000000._wp
+       sb_formation%mycorrhiza%carbon(:,isoil)     = sb_formation%mycorrhiza%carbon(:,isoil) + &
+                                                     f_myc_sl(:,isoil) * mycorrhiza_cue * veg_exudation%carbon(:) / soil_depth_sl(:,isoil)
+       sb_formation%mycorrhiza%nitrogen(:,isoil)   = sb_formation%mycorrhiza%nitrogen(:,isoil) + &
+                                                     f_myc_sl(:,isoil) * veg_exudation%nitrogen(:) / soil_depth_sl(:,isoil) + &
+                                                     (mycorrhiza_uptake_nh4_sl(:,isoil) + mycorrhiza_uptake_no3_sl(:,isoil)) * &
+                                                     dtime / 1000000._wp
+       sb_formation%mycorrhiza%phosphorus(:,isoil) = sb_formation%mycorrhiza%phosphorus(:,isoil) + &
+                                                     f_myc_sl(:,isoil) * veg_exudation%phosphorus(:) / soil_depth_sl(:,isoil) + &
+                                                     mycorrhiza_uptake_po4_sl(:,isoil) * dtime / 1000000._wp
+       sb_formation%mycorrhiza%carbon13(:,isoil)   = sb_formation%mycorrhiza%carbon13(:,isoil) + &
+                                                     f_myc_sl(:,isoil) * mycorrhiza_cue * veg_exudation%carbon13(:) / soil_depth_sl(:,isoil)
+       sb_formation%mycorrhiza%carbon14(:,isoil)   = sb_formation%mycorrhiza%carbon14(:,isoil) + &
+                                                     f_myc_sl(:,isoil) * mycorrhiza_cue * veg_exudation%carbon14(:) / soil_depth_sl(:,isoil)
+       sb_formation%mycorrhiza%nitrogen15(:,isoil) = sb_formation%mycorrhiza%nitrogen15(:,isoil) + &
+                                                     f_myc_sl(:,isoil) * veg_exudation%nitrogen15(:) / soil_depth_sl(:,isoil) + &
+                                                     (mycorrhiza_uptake_nh4_n15_sl(:,isoil) + mycorrhiza_uptake_no3_n15_sl(:,isoil)) * &
+                                                     dtime / 1000000._wp
+
+       het_respiration(:,isoil)     = het_respiration(:,isoil)     + f_myc_sl(:,isoil) * (1._wp - mycorrhiza_cue) * & 
+                                      veg_exudation%carbon(:) / soil_depth_sl(:,isoil) / dtime * 1000000._wp                          
+       myc_respiration(:,isoil)     = myc_respiration(:,isoil)     + f_myc_sl(:,isoil) * (1._wp - mycorrhiza_cue) * &
+                                      veg_exudation%carbon(:) / soil_depth_sl(:,isoil) / dtime * 1000000._wp
+       het_respiration_c13(:,isoil) = het_respiration_c13(:,isoil) + f_myc_sl(:,isoil) * (1._wp - mycorrhiza_cue) * & 
+                                      veg_exudation%carbon13(:) / soil_depth_sl(:,isoil) / dtime * 1000000._wp                          
+       myc_respiration_c13(:,isoil) = myc_respiration_c13(:,isoil) + f_myc_sl(:,isoil) * (1._wp - mycorrhiza_cue) * &
+                                      veg_exudation%carbon13(:) / soil_depth_sl(:,isoil) / dtime * 1000000._wp
+       het_respiration_c14(:,isoil) = het_respiration_c14(:,isoil) + f_myc_sl(:,isoil) * (1._wp - mycorrhiza_cue) * & 
+                                      veg_exudation%carbon14(:) / soil_depth_sl(:,isoil) / dtime * 1000000._wp                          
+       myc_respiration_c14(:,isoil) = myc_respiration_c14(:,isoil) + f_myc_sl(:,isoil) * (1._wp - mycorrhiza_cue) * &
+                                      veg_exudation%carbon14(:) / soil_depth_sl(:,isoil) / dtime * 1000000._wp
     END DO
+
+    sb_loss%mycorrhiza%carbon(:,:)     = sb_loss%mycorrhiza%carbon(:,:)     + sb_mycorrhiza_export%carbon(:,:) 
+    sb_loss%mycorrhiza%nitrogen(:,:)   = sb_loss%mycorrhiza%nitrogen(:,:)   + sb_mycorrhiza_export%nitrogen(:,:)
+    sb_loss%mycorrhiza%phosphorus(:,:) = sb_loss%mycorrhiza%phosphorus(:,:) + sb_mycorrhiza_export%phosphorus(:,:)
+    sb_loss%mycorrhiza%carbon13(:,:)   = sb_loss%mycorrhiza%carbon13(:,:)   + sb_mycorrhiza_export%carbon13(:,:)
+    sb_loss%mycorrhiza%carbon14(:,:)   = sb_loss%mycorrhiza%carbon14(:,:)   + sb_mycorrhiza_export%carbon14(:,:)
+    sb_loss%mycorrhiza%nitrogen15(:,:) = sb_loss%mycorrhiza%nitrogen15(:,:) + sb_mycorrhiza_export%nitrogen15(:,:)
+
 
     !> 3.0 update of organic pools
     !!

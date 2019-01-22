@@ -28,9 +28,8 @@ p_deposition_scheme="none"      # options: none constant dynamic (p_srf_down)
 # BNF & Mycorrhiza
 bnf_scheme="standard"           # none fixed standard optimal resistance unlimited
 flag_mycorrhiza="F"             # TRUE: the other flag_myco* can be set TRUE | FALSE: the other flag_myco* are set to FALSE by this script
-flag_myco_inorganic="F"         # allows mycorrhiza to access the inorganic N pools
-flag_myco_organic="F"           # allows mycorrhiza to access the organic/residual N pool
-flag_myco_priming="F"           # present mycorrhiza enhance decomposition of residual pool (priming)
+flag_mycorrhiza_org="F"         # allows mycorrhiza to access the organic/residual N pool
+flag_mycorrhiza_prim="F"        # present mycorrhiza enhance decomposition of residual pool (priming)
 # canopy model options
 flag_t_resp_acclimation="T"
 flag_t_jmax_acclimation="T"
@@ -304,9 +303,8 @@ validateSb_adsorp_scheme="eca_full eca_part eca_none"
 validateUserConfigValues "$slmModel" "$validateSlmModel" "slmModel"
 validateUserConfigValues "$bnf_scheme" "$validateBNFScheme" "bnf_scheme"
 validateUserConfigValues "$flag_mycorrhiza" "$validateFlags" "flag_mycorrhiza"
-validateUserConfigValues "$flag_myco_inorganic" "$validateFlags" "flag_myco_inorganic"
-validateUserConfigValues "$flag_myco_organic" "$validateFlags" "flag_myco_organic"
-validateUserConfigValues "$flag_myco_priming" "$validateFlags" "flag_myco_priming"
+validateUserConfigValues "$flag_mycorrhiza_org" "$validateFlags" "flag_mycorrhiza_org"
+validateUserConfigValues "$flag_mycorrhiza_prim" "$validateFlags" "flag_mycorrhiza_prim"
 validateUserConfigValues "$n_deposition_scheme" "$validateNDepositionScheme" "n_deposition_scheme"
 validateUserConfigValues "$p_deposition_scheme" "$validatePDepositionScheme" "p_deposition_scheme"
 validateUserConfigValues "$n_deposition_scheme" "$validateNDepositionScheme" "n_deposition_scheme"
@@ -565,9 +563,8 @@ fi
 ## set mycorrhiza flag_myco_* flags to FALSE if mycorrhiza are disabled overall
 if [ $flag_mycorrhiza == "F" ]
  then
-  flag_myco_inorganic="F"
-  flag_myco_organic="F"
-  flag_myco_priming="F"
+  flag_mycorrhiza_org="F"
+  flag_mycorrhiza_prim="F"
 fi
 
 
@@ -626,23 +623,17 @@ if [ $flag_mycorrhiza == T ]
   else
     changeNamelistValue flag_mycorrhiza ".FALSE."
 fi
-if [ $flag_myco_inorganic == T ]
+if [ $flag_mycorrhiza_org == T ]
   then
-    changeNamelistValue flag_myco_inorganic ".TRUE."
+    changeNamelistValue flag_mycorrhiza_org ".TRUE."
   else
-    changeNamelistValue flag_myco_inorganic ".FALSE."
+    changeNamelistValue flag_mycorrhiza_org ".FALSE."
 fi
-if [ $flag_myco_organic == T ]
+if [ $flag_mycorrhiza_prim == T ]
   then
-    changeNamelistValue flag_myco_organic ".TRUE."
+    changeNamelistValue flag_mycorrhiza_prim ".TRUE."
   else
-    changeNamelistValue flag_myco_organic ".FALSE."
-fi
-if [ $flag_myco_priming == T ]
-  then
-    changeNamelistValue flag_myco_priming ".TRUE."
-  else
-    changeNamelistValue flag_myco_priming ".FALSE."
+    changeNamelistValue flag_mycorrhiza_prim ".FALSE."
 fi
 if [ $flag_sb_prescribe_nh4 == T ]
   then

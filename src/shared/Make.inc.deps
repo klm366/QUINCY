@@ -67,6 +67,7 @@ mo_quincy_output.o: \
   mo_jsb_tile_class.o \
   mo_jsb_task_class.o \
   mo_jsb_math_constants.o \
+  mo_jsb_phys_constants.o \
   mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_model_init.o \
@@ -74,6 +75,7 @@ mo_quincy_output.o: \
   mo_jsb4_forcing.o \
   mo_isotope_util.o \
   mo_rad_constants.o \
+  mo_sb_constants.o \
   mo_veg_constants.o \
   mo_assimi_config_class.o \
   mo_sb_config_class.o \

@@ -229,6 +229,8 @@ MODULE mo_quincy_set_parameters
     REAL(wp)           :: leaf2root_max_ratio
     REAL(wp)           :: delta_n_fraction
     REAL(wp)           :: delta_n_leaf
+    REAL(wp)           :: f_myc_exudation_max
+    REAL(wp)           :: f_mycorrhization_max
     ! SB_CTL
     REAL(wp)           :: tau_soluable_litter
     REAL(wp)           :: tau_metabolic_litter
@@ -386,6 +388,13 @@ MODULE mo_quincy_set_parameters
     REAL(wp)           :: biomin_thres_PC
     REAL(wp)           :: fc_p_res2dom
     REAL(wp)           :: fc_n_res2dom
+    REAL(wp)           :: f_norg_limit
+    REAL(wp)           :: f_tau_myc
+    REAL(wp)           :: km_priming
+    REAL(wp)           :: km_up_org
+    REAL(wp)           :: myc_root_coverage_max
+    REAL(wp)           :: resp_priming
+    REAL(wp)           :: vmax_uptake_norg
   CONTAINS
     PROCEDURE :: read_param => read_parameter_slm_list
     PROCEDURE :: set_param  => set_parameter_slm_values_with_list_values
@@ -697,6 +706,8 @@ CONTAINS
     REAL(wp)           :: leaf2root_max_ratio
     REAL(wp)           :: delta_n_fraction
     REAL(wp)           :: delta_n_leaf
+    REAL(wp)           :: f_myc_exudation_max
+    REAL(wp)           :: f_mycorrhization_max
     ! SB_CTL
     REAL(wp)           :: tau_soluable_litter
     REAL(wp)           :: tau_metabolic_litter
@@ -854,6 +865,13 @@ CONTAINS
     REAL(wp)           :: biomin_thres_PC
     REAL(wp)           :: fc_p_res2dom
     REAL(wp)           :: fc_n_res2dom
+    REAL(wp)           :: f_norg_limit
+    REAL(wp)           :: f_tau_myc
+    REAL(wp)           :: km_priming
+    REAL(wp)           :: km_up_org
+    REAL(wp)           :: myc_root_coverage_max
+    REAL(wp)           :: resp_priming
+    REAL(wp)           :: vmax_uptake_norg
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':read_parameter_slm_list'
 
@@ -1066,7 +1084,9 @@ CONTAINS
         leaf2root_min_ratio       , &
         leaf2root_max_ratio       , &
         delta_n_fraction          , &
-        delta_n_leaf              
+        delta_n_leaf              , &
+        f_myc_exudation_max       , &
+        f_mycorrhization_max      
 
     NAMELIST /sb_ctl/             &
         tau_soluable_litter           , &
@@ -1224,7 +1244,14 @@ CONTAINS
         km_rootc_weath_po4            , &
         biomin_thres_PC               , &
         fc_p_res2dom                  , &
-        fc_n_res2dom                  
+        fc_n_res2dom                  , &
+        f_norg_limit                  , &
+        f_tau_myc                     , &
+        km_priming                    , &
+        km_up_org                     , &
+        myc_root_coverage_max         , &
+        resp_priming                  , &
+        vmax_uptake_norg              
 
 
     ! variables for reading model-options from namelist
@@ -1438,6 +1465,8 @@ CONTAINS
     leaf2root_max_ratio         = missval
     delta_n_fraction            = missval
     delta_n_leaf                = missval
+    f_myc_exudation_max         = missval
+    f_mycorrhization_max        = missval
     ! SB_CTL
     tau_soluable_litter           = missval
     tau_metabolic_litter          = missval
@@ -1595,6 +1624,13 @@ CONTAINS
     biomin_thres_PC               = missval
     fc_p_res2dom                  = missval
     fc_n_res2dom                  = missval
+    f_norg_limit                  = missval
+    f_tau_myc                     = missval
+    km_priming                    = missval
+    km_up_org                     = missval
+    myc_root_coverage_max         = missval
+    resp_priming                  = missval
+    vmax_uptake_norg              = missval
 
     ! read the namelist
     ! 
@@ -1839,6 +1875,8 @@ CONTAINS
     this%leaf2root_max_ratio         = leaf2root_max_ratio
     this%delta_n_fraction            = delta_n_fraction
     this%delta_n_leaf                = delta_n_leaf
+    this%f_myc_exudation_max         = f_myc_exudation_max 
+    this%f_mycorrhization_max        = f_mycorrhization_max
     ! SB_CTL
     this%tau_soluable_litter           = tau_soluable_litter
     this%tau_metabolic_litter          = tau_metabolic_litter
@@ -1996,6 +2034,13 @@ CONTAINS
     this%biomin_thres_PC               = biomin_thres_PC
     this%fc_p_res2dom                  = fc_p_res2dom
     this%fc_n_res2dom                  = fc_n_res2dom
+    this%f_norg_limit                  = f_norg_limit
+    this%f_tau_myc                     = f_tau_myc
+    this%km_priming                    = km_priming
+    this%km_up_org                     = km_up_org
+    this%myc_root_coverage_max         = myc_root_coverage_max
+    this%resp_priming                  = resp_priming
+    this%vmax_uptake_norg              = vmax_uptake_norg
 
   END SUBROUTINE read_parameter_slm_list
 
@@ -3098,6 +3143,17 @@ CONTAINS
                                     this%delta_n_leaf, &
                                     "delta_n_leaf", proportional_parameter_changes, dependency_recalculation, &
                                     delta_n_leaf)
+    
+    CALL Set_quincy_parameter_value(this%f_myc_exudation_max, &
+                                    this%f_myc_exudation_max, &
+                                    "f_myc_exudation_max", proportional_parameter_changes, dependency_recalculation, &
+                                    f_myc_exudation_max)
+    
+    CALL Set_quincy_parameter_value(this%f_mycorrhization_max, &
+                                    this%f_mycorrhization_max, &
+                                    "f_mycorrhization_max", proportional_parameter_changes, dependency_recalculation, &
+                                    f_mycorrhization_max)
+    
 
     ! SB_CTL
     CALL Set_quincy_parameter_value(this%tau_soluable_litter * one_day, &
@@ -3880,6 +3936,41 @@ CONTAINS
                                     "fc_n_res2dom", proportional_parameter_changes, dependency_recalculation, &
                                     fc_n_res2dom)
     
+    CALL Set_quincy_parameter_value(this%f_norg_limit, &
+                                    this%f_norg_limit, &
+                                    "f_norg_limit", proportional_parameter_changes, dependency_recalculation, &
+                                    f_norg_limit)
+
+    CALL Set_quincy_parameter_value(this%f_tau_myc, &
+                                    this%f_tau_myc, &
+                                    "f_tau_myc", proportional_parameter_changes, dependency_recalculation, &
+                                    f_tau_myc)
+    
+    CALL Set_quincy_parameter_value(this%km_priming, &
+                                    this%km_priming, &
+                                    "km_priming", proportional_parameter_changes, dependency_recalculation, &
+                                    km_priming)
+
+    CALL Set_quincy_parameter_value(this%km_up_org, &
+                                    this%km_up_org, &
+                                    "km_up_org", proportional_parameter_changes, dependency_recalculation, &
+                                    km_up_org)
+    
+    CALL Set_quincy_parameter_value(this%myc_root_coverage_max, &
+                                    this%myc_root_coverage_max, &
+                                    "myc_root_coverage_max", proportional_parameter_changes, dependency_recalculation, &
+                                    myc_root_coverage_max)
+
+    CALL Set_quincy_parameter_value(this%resp_priming / one_day, &
+                                    this%resp_priming, &
+                                    "resp_priming", proportional_parameter_changes, dependency_recalculation, &
+                                    resp_priming)
+    
+    CALL Set_quincy_parameter_value(this%vmax_uptake_norg, &
+                                    this%vmax_uptake_norg, &
+                                    "vmax_uptake_norg", proportional_parameter_changes, dependency_recalculation, &
+                                    vmax_uptake_norg)
+
   END SUBROUTINE set_parameter_slm_values_with_list_values
 
 
