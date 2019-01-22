@@ -418,6 +418,13 @@ for (v in 1:nOutVar){
 }
 
 
+
+###################
+# save out-variable mean values for later visualization, such as, histogram ....
+outVarAvgValSetDF <- as.data.frame(outVarAvgValSet)
+
+
+
 ###################
 # create and write figures
 print(" create and write figures")
@@ -530,6 +537,23 @@ pdf(paste0("parameter_list/pcc_", outFileID, outInfo, ".pdf"), paper="a4r", heig
        cex=1.0)
     abline(h=c(-1.0,-0.5,0,0.5,1.0), col="sienna",lw=0.6)
   } # end loop over output variables
+
+
+  # loop over output variables to plot histogram of the mean-values from all simulations
+  for (v in 1:nOutVar){
+    minOutVal    <- min(outVarAvgValSetDF[,v], na.rm=T)
+    maxOutVal    <- max(outVarAvgValSetDF[,v], na.rm=T)
+    meanOutVal   <- mean(outVarAvgValSetDF[,v], na.rm=T)
+    medOutVal    <- median(outVarAvgValSetDF[,v], na.rm=T)
+    oVarNameHist <- colnames(outVarAvgValSetDF)[v]
+    hist(outVarAvgValSetDF[,v], 
+         breaks=100,
+         xlim=c(minOutVal,maxOutVal),
+         main=oVarNameHist, xlab="mean of absolute values from individual parameter-set simulations")
+    abline(v=c(minOutVal,maxOutVal,meanOutVal), col="sienna",lw=0.6)
+    abline(v=medOutVal, col="dodgerblue3",lw=1.0)
+    legend("topleft", inset=0.01, c("min, max, mean","median"), lty=c(1,1), col=c("sienna","dodgerblue3"), box.col = "gray84")
+  }
 garbage <- dev.off()
 
 
