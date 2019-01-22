@@ -1276,8 +1276,8 @@ CONTAINS
     !! 
     SELECT CASE(TRIM(model%config%slm_model_name))
       CASE('land')  ! for "land & soil" see below
-        ! mycofluxCNP
-        fname = 'mycofluxCNP'//'_'//TRIM(spinup_id)//TRIM(output_interval_flux)//'.txt'
+        ! mycfluxCNP
+        fname = 'mycfluxCNP'//'_'//TRIM(spinup_id)//TRIM(output_interval_flux)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
         ! myc_diagnostics
@@ -1411,8 +1411,8 @@ CONTAINS
     !! land 
     SELECT CASE(slm_model_name)
       CASE('land')
-        ! mycofluxCNP [mol / m2 / interval]
-        WRITE(lun,'(a)') 'Time mycoExportC mycoExportN mycoExportP mycoExportC13 mycoExportC14 mycoExportN15'
+        ! mycfluxCNP [mol / m2 / interval]
+        WRITE(lun,'(a)') 'Time mycExportC mycExportN mycExportP mycExportC13 mycExportC14 mycExportN15'
         lun=lun+1
         ! myc_diagnostics
         WRITE(lun,'(a)') 'Time fCm_resp fCm_SOM'
@@ -1535,7 +1535,7 @@ CONTAINS
               WRITE(p1str,'(a)') TRIM(p1str)//' NetMineral_nh4_L'//TRIM(layerstr)
               WRITE(p2str,'(a)') TRIM(p2str)//' PlantUptake_nh4_L'//TRIM(layerstr)
               WRITE(p3str,'(a)') TRIM(p3str)//' MicUptake_nh4_L'//TRIM(layerstr)
-              WRITE(p4str,'(a)') TRIM(p4str)//' MycoUptake_nh4_L'//TRIM(layerstr)
+              WRITE(p4str,'(a)') TRIM(p4str)//' MycUptake_nh4_L'//TRIM(layerstr)
               WRITE(p5str,'(a)') TRIM(p5str)//' Transport_nh4_L'//TRIM(layerstr)
               WRITE(p6str,'(a)') TRIM(p6str)//' Transport_assoc_nh4_L'//TRIM(layerstr)
               WRITE(p7str,'(a)') TRIM(p7str)//' AsymbNfixation_L'//TRIM(layerstr)
@@ -2316,7 +2316,7 @@ CONTAINS
                !! 
                SELECT CASE(TRIM(model%config%slm_model_name))  ! cases: land & land/plant & canopy
                  CASE('land')
-                   ! mycofluxCNP
+                   ! mycfluxCNP
                    write(lun,'(7F24.12)') time_d, & 
                                           myc_export_c_acc, myc_export_n_acc, myc_export_p_acc, &
                                           myc_export_c13_acc, myc_export_c14_acc, myc_export_n15_acc

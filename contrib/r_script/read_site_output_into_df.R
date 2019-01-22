@@ -25,8 +25,8 @@ read_site_output_into_df <- function(){
   f_atmforcing_ecopool <- (c(
                     'atm_forcing_',
                     'ecopoolCNP_'))
-  f_myco <- (c(
-                    'mycofluxCNP_',
+  f_myc <- (c(
+                    'mycfluxCNP_',
                     'myc_diagnostics'))
   f_soil_mass_balance <- (c(   
                     'sb_massBalance_'))
@@ -76,7 +76,7 @@ read_site_output_into_df <- function(){
   ## compile the set of files you need in the df         ##
   ## simply comment in/out the ones you do/not need      ##
   files <- c(   f_atmforcing_ecopool,
-                #f_myco,
+                #f_myc,
                 #f_soil_mass_balance,
                 f_soil_flux,
                 f_soil_pool,
