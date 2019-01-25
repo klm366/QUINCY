@@ -48,7 +48,7 @@ CONTAINS
 
     USE mo_jsb_time_iface, ONLY: read_time_namelist, & !, configure_time
                                  configure_time_and_events, &
-                                 get_time_start, get_time_stop
+                                 get_time_start, get_time_stop, get_year_len_from_datetime
 
     CHARACTER(len=*), OPTIONAL, INTENT(IN) :: namelist_filename
     CHARACTER(len=*), OPTIONAL, INTENT(IN) :: model_shortname
@@ -91,10 +91,11 @@ CONTAINS
 
       ! just to avoid compiler warnings about variable set but never referenced
       IF (.FALSE.) THEN
-        PRINT*, start_date%date%year
-        PRINT*, final_date%date%year
-        PRINT*, current_date%date%year
+        PRINT*, get_year_len_from_datetime(start_date)
+        PRINT*, get_year_len_from_datetime(final_date)
+        PRINT*, get_year_len_from_datetime(current_date)
       END IF
+
 
       ! Check if Asselin time filter is used and print message
       eps = get_asselin_coef()

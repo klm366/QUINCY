@@ -23,7 +23,8 @@ MODULE mo_jsb_time_iface
     &                                  getNoOfDaysInMonthDateTime, getNoOfDaysInYearDateTime,        &
     &                                  getTotalMilliSecondsTimeDelta, no_of_sec_in_a_day,            &
     &                                  getNoOfSecondsElapsedInDayDateTime, getTotalSecondsTimeDelta, &
-    &                                  divideDatetimeDifferenceInSeconds !, isCurrentEventActive
+    &                                  divideDatetimeDifferenceInSeconds, & !, isCurrentEventActive
+    &                                  get_year_len_from_datetime => getNoOfDaysInYearDateTime
   USE mo_time_config,            ONLY: time_config !configure_time
   USE mo_time_nml,               ONLY: read_time_namelist
   USE mo_dynamics_config,        ONLY: iequations
@@ -36,7 +37,8 @@ MODULE mo_jsb_time_iface
   USE mo_run_config,             ONLY: l_timer_host => ltimer
 #else
   USE mo_time_conversion, ONLY: t_datetime => time_days, &
-                                get_day_length => day_len
+                                get_day_length => day_len, &
+                                get_year_len_from_datetime => year_len
   USE mo_time_control,    ONLY: get_year_length => get_year_len, get_month_length => get_month_len, get_year_day, &
                                 get_date_components
   USE mo_time_control,    ONLY: start_date, stop_date, current_date, previous_date, next_date, lstart, lresume, l_trigradm1
@@ -59,7 +61,7 @@ MODULE mo_jsb_time_iface
   PRIVATE
 
   PUBLIC :: t_datetime
-  PUBLIC :: get_year_length, get_month_length, get_day_length, get_year_day
+  PUBLIC :: get_year_length, get_month_length, get_day_length, get_year_day, get_year_len_from_datetime
   PUBLIC :: get_time_dt, get_time_nsteps, &
             get_time_start, get_time_stop, &
             get_time_current, get_time_previous, is_time_experiment_start, is_time_restart, &

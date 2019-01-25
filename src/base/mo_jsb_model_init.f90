@@ -45,7 +45,7 @@ CONTAINS
     USE mo_echam_convect_tables, ONLY : init_convect_tables
     USE mo_netCDF,      ONLY: add_dim
     !<<<
-    USE mo_jsb_domain_iface, ONLY: get_lons_and_lats_from_file,
+    USE mo_jsb_domain_iface, ONLY: get_lons_and_lats_from_file
 #endif
     USE mo_jsb_domain_iface, ONLY: get_nlon_nlat_from_file, jsbalone_init_decomp, pe_decomposed
     USE mo_jsb_grid_class,   ONLY: t_jsb_grid, new_grid
