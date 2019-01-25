@@ -40,7 +40,7 @@
 mainTask=3
 
 # Main Task 3 options:
-m3ProbDistr="n"       # [u]niform  [n]ormal distribution of values
+m3ProbDistr="u"       # [u]niform  (normal distribution is not working for now [n]ormal distribution of values, see ticket #516)
 m3NormalSD=0.1        # SD of the normal distribution -> applied to values within range [0,1]
 LHSgenerations=2000   # a higher number improves the distribution in parameter-space: should be between 1000:20000
 
@@ -423,6 +423,12 @@ fi                          #
 ## Main Task 3 ##                                                                                ##
 if [ $mainTask == 3 ]; then                                                                      ##
 ###################################################################################################
+
+## temporary, see ticket #516
+if [ $m3ProbDistr != "u" ]; then
+  m3ProbDistr="u"
+  echo "##> The distribution of values from LHS is set to uniform, normal-distribution does not work for now. <##"
+fi
 
 ## validate basic style of $paramInputFile ##
 for ((i = 0 ; i < $paramNumber ; i++))	
