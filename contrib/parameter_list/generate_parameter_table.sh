@@ -88,7 +88,7 @@ if [ -z "${validate// }" ]  # the search term is available yes / no  [-z test is
 else
  if [ -z $mainTask ]        # test if any value is provided to mainTask
   then
-   echo "EXIT!  The value for parameter mainTask is empty but must contain a valid string, please change and restart generate_parameter_table.sh"
+   echo "EXIT!  The value for parameter mainTask is empty but must contain a valid number, please change and restart generate_parameter_table.sh"
    exit 1
  fi
 fi
@@ -132,7 +132,7 @@ declare -a paramValueNumbersA=($paramNumber)
 for (( a=1; a<=$paramNumber; a++ )) # each line number
   do
     parameterName=$(sed -n "$a"p "$paramInputFile" | awk '{print $1}')  # -n  == quiet/silent
-    if ! cat $paramList | grep $parameterName > /dev/null  # if parameter name not found in file parameter_slm.list
+    if ! cat $paramList | grep -w $parameterName > /dev/null  # if parameter name not found in file parameter_slm.list
       then
         echo "EXIT!  The parameter >""$parameterName""< from your ""$paramInputFile"" does not exist in ""$paramList"" !"
         echo " Please add it to both files: ""$paramList"" and mo_shared_set_parameters.f90."
@@ -181,15 +181,16 @@ paramActive="ACTIVE"
 cp $paramList $paramListRun
 sync
 
-# mark all used parameters with ACTIVE 
+# mark in the parameter_slm_run.list file all used parameters with ACTIVE 
 for ((i = 0 ; i < $paramNumber ; i++))	
 do
   line=$(($i + 1))
   paramName=$(sed -n "$line"p "$paramInputFile" | awk '{print $1}')
-  sed -i /$paramName/s/$valDefault/"$paramActive"/ $paramListRun
+  lineNum=$(grep -wn $paramName "$paramListRun" | cut -d : -f 1)      # get line number of $paramName
+  sed -i "$lineNum"s/$valDefault/"$paramActive"/ $paramListRun
 done
 
-# delete the parameters not used
+# delete from the parameter_slm_run.list file all parameters not used (i.e., not marked with ACTIVE)
 sed -i "/$valDefault/d" "$paramListRun"
 
 return 0 

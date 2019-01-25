@@ -295,8 +295,10 @@ if [ $doParamSensitivitySim == "T" ]; then
 
   # define function that sets the actual values per parameter in ./parameter_slm.list
   function changeParamListValue {
-    sed -i /"$1"/s/ACTIVE/"$2"/ ./"$slmParameterList"   # replace the placeholder "ACTIVE" for parameter $1 with value $2
-  return 0                                            # get return value with: return_value=$?
+    lineNum=$(grep -wn $1 "$slmParameterList" | cut -d : -f 1)  # get line number of $paramName
+    sed -i "$lineNum"s/ACTIVE/"$2"/ ./"$slmParameterList"       # replace the placeholder "ACTIVE" for the parameter in line $lineNum with value $2
+    sleep 0.4
+  return 0                                                      # get return value with: return_value=$?
   }
   # number of parameters
   paraNumber=$(sed -n 1p ../"$simParamSensiFiles""$slmParameterSensiTable" | grep -o " " | wc -l) # count the number of separators between columns
