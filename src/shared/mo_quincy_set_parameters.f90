@@ -10,6 +10,8 @@
 !!
 MODULE mo_quincy_set_parameters
 
+#include "dsl_jsbach.inc"
+
   USE mo_kind,                ONLY: wp
   USE mo_exception,           ONLY: message_text, message, finish
   USE mo_jsb_io,              ONLY: missval  ! = -9.E+15_wp
@@ -482,6 +484,7 @@ MODULE mo_quincy_set_parameters
                                          param_pft7_from_file,  &
                                          param_pft8_from_file
 
+  INTEGER, PARAMETER          :: lun_param_out = 711
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_quincy_set_parameters'
 
@@ -2070,1906 +2073,1887 @@ CONTAINS
     LOGICAL                          , INTENT(in)    :: proportional_parameter_changes
     ! ---------------------------
     ! 0.2 Local
-    LOGICAL                     :: dependency_recalculation   ! set TRUE for parameters that need to be re-calculated because a parameter it depends on got a new value
+    CHARACTER(32)               :: fname                      ! filename
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':set_parameter_slm_values_with_list_values'
+
 
 
     !> 1.0 read parameter values from file
     !! 
     CALL this%read_param
 
-    !> 2.0 replace parameter values from mo_PROC_constants for parameters provided by parameter_slm_run.list
+
+    !> 2.0 open and init output file for parameter values
+    !!     file is closed in section 4.0
+    fname = 'parameter_sensi_param_values.txt'
+    OPEN (UNIT=lun_param_out, FILE=fname, ACTION="write", STATUS="unknown")
+    WRITE(lun_param_out,'(a)') 'parName parVal parValChanged'
+
+
+    !> 3.0 replace parameter values from mo_PROC_constants for parameters provided by parameter_slm_run.list
     !! 
-    !! dependency check: IF ((ABS(this%x    - missval) > eps8) .OR. &
-    !!                       (ABS(this%y    - missval) > eps8)) THEN
-    !!                       dependency_recalculation = .TRUE.
-    !!                   ENDIF
     !! 
-    !! routine:  SUBROUTINE Set_quincy_parameter_value(nml_abs_val, nml_prop_chng, proportional, dependency, def_val)
+    !! routine:  SUBROUTINE Set_quincy_parameter_value(nml_abs_val, nml_prop_chng, proportional, def_val)
     !!    CALL Set_quincy_parameter_value(this%xyz, &         ! or "this%xyz */+- any other parameter"
     !!                                    this%xyz, &         ! just the parameter as defined in the namelist parameter_slm_run.list
-    !!                                    "parameter name", proportional_parameter_changes, dependency_recalculation, &
+    !!                                    "parameter name", proportional_parameter_changes, &
     !!                                    xyz)                ! the original/default parameter variable as declared in mo_PROC_constants
     !! 
     ! CALL Set_quincy_parameter_value(this%xyz, &
     !                                 this%xyz, &
-    !                                 "xyz", proportional_parameter_changes, dependency_recalculation, &
+    !                                 "xyz", proportional_parameter_changes, &
     !                                 xyz)
     ! 
     ! CALL Set_quincy_parameter_value(this%xyz, &
     !                                 this%xyz, &
-    !                                 "xyz", proportional_parameter_changes, dependency_recalculation, &
+    !                                 "xyz", proportional_parameter_changes, &
     !                                 xyz)
     ! 
     ! CALL Set_quincy_parameter_value(this%xyz, &
     !                                 this%xyz, &
-    !                                 "xyz", proportional_parameter_changes, dependency_recalculation, &
+    !                                 "xyz", proportional_parameter_changes, &
     !                                 xyz)
     !! 
     ! ASSIMILATION_CTL
     CALL Set_quincy_parameter_value(this%jmax2n / 4.0_wp, &
                                     this%jmax2n, &
-                                    "jmax2n", proportional_parameter_changes, dependency_recalculation, &
+                                    "jmax2n", proportional_parameter_changes, &
                                     jmax2n)
                                     
     CALL Set_quincy_parameter_value(this%vcmax2n, &
                                     this%vcmax2n, &
-                                    "vcmax2n", proportional_parameter_changes, dependency_recalculation, &
+                                    "vcmax2n", proportional_parameter_changes, &
                                     vcmax2n)
                                     
     CALL Set_quincy_parameter_value(this%pepc2n, &
                                     this%pepc2n, &
-                                    "pepc2n", proportional_parameter_changes, dependency_recalculation, &
+                                    "pepc2n", proportional_parameter_changes, &
                                     pepc2n)
                                     
     CALL Set_quincy_parameter_value(this%chl2n / 39.8_wp, &
                                     this%chl2n, &
-                                    "chl2n", proportional_parameter_changes, dependency_recalculation, &
+                                    "chl2n", proportional_parameter_changes, &
                                     chl2n)
                                     
     CALL Set_quincy_parameter_value(this%k1_fn_struc * molar_mass_N / 1000000._wp, &
                                     this%k1_fn_struc, &
-                                    "k1_fn_struc", proportional_parameter_changes, dependency_recalculation, &
+                                    "k1_fn_struc", proportional_parameter_changes, &
                                     k1_fn_struc)
                                     
     CALL Set_quincy_parameter_value(this%E0kc, &
                                     this%E0kc, &
-                                    "E0kc", proportional_parameter_changes, dependency_recalculation, &
+                                    "E0kc", proportional_parameter_changes, &
                                     E0kc)
                                     
     CALL Set_quincy_parameter_value(this%E1kc, &
                                     this%E1kc, &
-                                    "E1kc", proportional_parameter_changes, dependency_recalculation, &
+                                    "E1kc", proportional_parameter_changes, &
                                     E1kc)
                                     
     CALL Set_quincy_parameter_value(this%E0ko, &
                                     this%E0ko, &
-                                    "E0ko", proportional_parameter_changes, dependency_recalculation, &
+                                    "E0ko", proportional_parameter_changes, &
                                     E0ko)
                                     
     CALL Set_quincy_parameter_value(this%E1ko, &
                                     this%E1ko, &
-                                    "E1ko", proportional_parameter_changes, dependency_recalculation, &
+                                    "E1ko", proportional_parameter_changes, &
                                     E1ko)
                                     
     CALL Set_quincy_parameter_value(this%E0pcp, &
                                     this%E0pcp, &
-                                    "E0pcp", proportional_parameter_changes, dependency_recalculation, &
+                                    "E0pcp", proportional_parameter_changes, &
                                     E0pcp)
                                     
     CALL Set_quincy_parameter_value(this%E1pcp, &
                                     this%E1pcp, &
-                                    "E1pcp", proportional_parameter_changes, dependency_recalculation, &
+                                    "E1pcp", proportional_parameter_changes, &
                                     E1pcp)
                                     
     CALL Set_quincy_parameter_value(this%E0v, &
                                     this%E0v, &
-                                    "E0v", proportional_parameter_changes, dependency_recalculation, &
+                                    "E0v", proportional_parameter_changes, &
                                     E0v)
                                     
     CALL Set_quincy_parameter_value(this%E1v, &
                                     this%E1v, &
-                                    "E1v", proportional_parameter_changes, dependency_recalculation, &
+                                    "E1v", proportional_parameter_changes, &
                                     E1v)
                                     
     CALL Set_quincy_parameter_value(this%t_jmax_offset, &
                                     this%t_jmax_offset, &
-                                    "t_jmax_offset", proportional_parameter_changes, dependency_recalculation, &
+                                    "t_jmax_offset", proportional_parameter_changes, &
                                     t_jmax_offset)
                                     
     CALL Set_quincy_parameter_value(this%t_jmax_slope, &
                                     this%t_jmax_slope, &
-                                    "t_jmax_slope", proportional_parameter_changes, dependency_recalculation, &
+                                    "t_jmax_slope", proportional_parameter_changes, &
                                     t_jmax_slope)
-                                    
-    IF (ABS(this%t_jmax_offset - missval) > eps8) THEN
-        dependency_recalculation = .TRUE.
-        t_jmax_opt_min           = t_jmax_offset   ! copied from mo_assimi_constants
-    ENDIF
-    CALL Set_quincy_parameter_value(t_jmax_offset, &   ! default: t_jmax_opt_min = t_jmax_offset | hence, only proportional changes may have an effect
+    
+    ! is always recalculated in case any of its dependencies has changed
+    t_jmax_opt_min = t_jmax_offset   ! copied from mo_assimi_constants
+    CALL Set_quincy_parameter_value(t_jmax_offset, &   ! default: t_jmax_opt_min = t_jmax_offset | t_jmax_opt_min may be changed only via proportional changes
                                     this%t_jmax_opt_min, &
-                                    "t_jmax_opt_min", proportional_parameter_changes, dependency_recalculation, &
+                                    "t_jmax_opt_min", proportional_parameter_changes, &
                                     t_jmax_opt_min)
                                     
     CALL Set_quincy_parameter_value(this%t_jmax_opt_max, &
                                     this%t_jmax_opt_max, &
-                                    "t_jmax_opt_max", proportional_parameter_changes, dependency_recalculation, &
+                                    "t_jmax_opt_max", proportional_parameter_changes, &
                                     t_jmax_opt_max)
                                     
     CALL Set_quincy_parameter_value(this%Tref_pepc, &
                                     this%Tref_pepc, &
-                                    "Tref_pepc", proportional_parameter_changes, dependency_recalculation, &
+                                    "Tref_pepc", proportional_parameter_changes, &
                                     Tref_pepc)
                                     
     CALL Set_quincy_parameter_value(this%Tbase_pepc, &
                                     this%Tbase_pepc, &
-                                    "Tbase_pepc", proportional_parameter_changes, dependency_recalculation, &
+                                    "Tbase_pepc", proportional_parameter_changes, &
                                     Tbase_pepc)
                                     
     CALL Set_quincy_parameter_value(this%alpha_i, &
                                     this%alpha_i, &
-                                    "alpha_i", proportional_parameter_changes, dependency_recalculation, &
+                                    "alpha_i", proportional_parameter_changes, &
                                     alpha_i)
                                     
     CALL Set_quincy_parameter_value(this%pO2, &
                                     this%pO2, &
-                                    "pO2", proportional_parameter_changes, dependency_recalculation, &
+                                    "pO2", proportional_parameter_changes, &
                                     pO2)
                                     
     CALL Set_quincy_parameter_value(this%CiCa_default_C3, &
                                     this%CiCa_default_C3, &
-                                    "CiCa_default_C3", proportional_parameter_changes, dependency_recalculation, &
+                                    "CiCa_default_C3", proportional_parameter_changes, &
                                     CiCa_default_C3)
                                     
     CALL Set_quincy_parameter_value(this%CiCa_default_C4, &
                                     this%CiCa_default_C4, &
-                                    "CiCa_default_C4", proportional_parameter_changes, dependency_recalculation, &
+                                    "CiCa_default_C4", proportional_parameter_changes, &
                                     CiCa_default_C4)
                                     
     CALL Set_quincy_parameter_value(this%ps_it_max, &
                                     this%ps_it_max, &
-                                    "ps_it_max", proportional_parameter_changes, dependency_recalculation, &
+                                    "ps_it_max", proportional_parameter_changes, &
                                     ps_it_max)
                                     
     CALL Set_quincy_parameter_value(this%ci_max, &
                                     this%ci_max, &
-                                    "ci_max", proportional_parameter_changes, dependency_recalculation, &
+                                    "ci_max", proportional_parameter_changes, &
                                     ci_max)
                                     
-    ! current assumption: parameters from mo_jsb_phys_constants are not modified
-    ! IF ((ABS(this%Dwv  - missval) > eps8) .OR. &
-    !     (ABS(this%Dco2 - missval) > eps8)) THEN
-    !     dependency_recalculation = .TRUE.
-    ! ENDIF
-    CALL Set_quincy_parameter_value(Dwv / Dco2, &                       ! default: Dwv2co2_air = Dwv / Dco2 | hence, only proportional changes may have an effect
+    ! current assumption: parameters from mo_jsb_phys_constants are not modified (this%Dwv & this%Dco2)
+    CALL Set_quincy_parameter_value(Dwv / Dco2, &                       ! default: Dwv2co2_air = Dwv / Dco2 | Dwv2co2_air may be changed only via proportional changes
                                     this%Dwv2co2_air, &
-                                    "Dwv2co2_air", proportional_parameter_changes, dependency_recalculation, &
+                                    "Dwv2co2_air", proportional_parameter_changes, &
                                     Dwv2co2_air)
 
-    ! current assumption: parameters from mo_jsb_phys_constants are not modified
-    ! IF ((ABS(this%Dwv  - missval) > eps8) .OR. &
-    !     (ABS(this%Dco2 - missval) > eps8)) THEN
-    !     dependency_recalculation = .TRUE.
-    ! ENDIF
-    CALL Set_quincy_parameter_value(( Dwv / Dco2  ) ** (2._wp/3._wp), & ! default: Dwv2co2_turb = ( Dwv / Dco2  ) ** (2._wp/3._wp) | hence, only proportional changes may have an effect
+    ! current assumption: parameters from mo_jsb_phys_constants are not modified (this%Dwv & this%Dco2)
+    CALL Set_quincy_parameter_value(( Dwv / Dco2  ) ** (2._wp/3._wp), & ! default: Dwv2co2_turb = ( Dwv / Dco2  ) ** (2._wp/3._wp) | Dwv2co2_turb may be changed only via proportional changes
                                     this%Dwv2co2_turb, &
-                                    "Dwv2co2_turb", proportional_parameter_changes, dependency_recalculation, &
+                                    "Dwv2co2_turb", proportional_parameter_changes, &
                                     Dwv2co2_turb)
                                     
     CALL Set_quincy_parameter_value(this%discr_ps_a_C13, &
                                     this%discr_ps_a_C13, &
-                                    "discr_ps_a_C13", proportional_parameter_changes, dependency_recalculation, &
+                                    "discr_ps_a_C13", proportional_parameter_changes, &
                                     discr_ps_a_C13)
                                     
     CALL Set_quincy_parameter_value(this%discr_ps_b_C13, &
                                     this%discr_ps_b_C13, &
-                                    "discr_ps_b_C13", proportional_parameter_changes, dependency_recalculation, &
+                                    "discr_ps_b_C13", proportional_parameter_changes, &
                                     discr_ps_b_C13)
                                     
     CALL Set_quincy_parameter_value(this%discr_ps_c_C13, &
                                     this%discr_ps_c_C13, &
-                                    "discr_ps_c_C13", proportional_parameter_changes, dependency_recalculation, &
+                                    "discr_ps_c_C13", proportional_parameter_changes, &
                                     discr_ps_c_C13)
-
-    IF (ABS(this%discr_ps_a_C13 - missval) > eps8) THEN
-        dependency_recalculation = .TRUE.
-        discr_ps_a_C14           = 1.97_wp * discr_ps_a_C13   ! copied from mo_assimi_constants
-    ENDIF
+    
+    ! is always recalculated in case any of its dependencies has changed
+    discr_ps_a_C14 = 1.97_wp * discr_ps_a_C13   ! copied from mo_assimi_constants
     CALL Set_quincy_parameter_value(this%discr_ps_a_C14 * discr_ps_a_C13, &
                                     this%discr_ps_a_C14, &
-                                    "discr_ps_a_C14", proportional_parameter_changes, dependency_recalculation, &
+                                    "discr_ps_a_C14", proportional_parameter_changes, &
                                     discr_ps_a_C14)
-
-    IF (ABS(this%discr_ps_b_C13 - missval) > eps8) THEN
-        dependency_recalculation = .TRUE.
-        discr_ps_b_C14           = 1.89_wp * discr_ps_b_C13   ! copied from mo_assimi_constants
-    ENDIF
+    
+    ! is always recalculated in case any of its dependencies has changed
+    discr_ps_b_C14 = 1.89_wp * discr_ps_b_C13   ! copied from mo_assimi_constants
     CALL Set_quincy_parameter_value(this%discr_ps_b_C14 * discr_ps_b_C13, &
                                     this%discr_ps_b_C14, &
-                                    "discr_ps_b_C14", proportional_parameter_changes, dependency_recalculation, &
+                                    "discr_ps_b_C14", proportional_parameter_changes, &
                                     discr_ps_b_C14)
-                                    
-    IF (ABS(this%discr_ps_c_C13 - missval) > eps8) THEN
-        dependency_recalculation = .TRUE.
-        discr_ps_c_C14           = 1.89_wp * discr_ps_c_C13   ! copied from mo_assimi_constants
-    ENDIF
+    
+    ! is always recalculated in case any of its dependencies has changed
+    discr_ps_c_C14 = 1.89_wp * discr_ps_c_C13   ! copied from mo_assimi_constants
     CALL Set_quincy_parameter_value(this%discr_ps_c_C14 * discr_ps_c_C13, &
                                     this%discr_ps_c_C14, &
-                                    "discr_ps_c_C14", proportional_parameter_changes, dependency_recalculation, &
+                                    "discr_ps_c_C14", proportional_parameter_changes, &
                                     discr_ps_c_C14)
                                     
     CALL Set_quincy_parameter_value(this%discr_ps_phi, &
                                     this%discr_ps_phi, &
-                                    "discr_ps_phi", proportional_parameter_changes, dependency_recalculation, &
+                                    "discr_ps_phi", proportional_parameter_changes, &
                                     discr_ps_phi)
                                     
     CALL Set_quincy_parameter_value(this%ka, &
                                     this%ka, &
-                                    "ka", proportional_parameter_changes, dependency_recalculation, &
+                                    "ka", proportional_parameter_changes, &
                                     ka)
                                     
     CALL Set_quincy_parameter_value(this%kn, &
                                     this%kn, &
-                                    "kn", proportional_parameter_changes, dependency_recalculation, &
+                                    "kn", proportional_parameter_changes, &
                                     kn)
                                     
     CALL Set_quincy_parameter_value(this%soa_min_temp, &
                                     this%soa_min_temp, &
-                                    "soa_min_temp", proportional_parameter_changes, dependency_recalculation, &
+                                    "soa_min_temp", proportional_parameter_changes, &
                                     soa_min_temp)
                                     
     CALL Set_quincy_parameter_value(this%soa_max_temp, &
                                     this%soa_max_temp, &
-                                    "soa_max_temp", proportional_parameter_changes, dependency_recalculation, &
+                                    "soa_max_temp", proportional_parameter_changes, &
                                     soa_max_temp)
 
     ! PHENOLOGY_CTL
     CALL Set_quincy_parameter_value(this%gdd_t_air_threshold + Tzero, &
                                     this%gdd_t_air_threshold, &
-                                    "gdd_t_air_threshold", proportional_parameter_changes, dependency_recalculation, &
+                                    "gdd_t_air_threshold", proportional_parameter_changes, &
                                     gdd_t_air_threshold)
 
     ! RADIATION_CTL
     CALL Set_quincy_parameter_value(this%kbl0_vis, &
                                     this%kbl0_vis, &
-                                    "kbl0_vis", proportional_parameter_changes, dependency_recalculation, &
+                                    "kbl0_vis", proportional_parameter_changes, &
                                     kbl0_vis)
     
     CALL Set_quincy_parameter_value(this%kdf0_vis, &
                                     this%kdf0_vis, &
-                                    "kdf0_vis", proportional_parameter_changes, dependency_recalculation, &
+                                    "kdf0_vis", proportional_parameter_changes, &
                                     kdf0_vis)
     
     CALL Set_quincy_parameter_value(this%kbl0_nir, &
                                     this%kbl0_nir, &
-                                    "kbl0_nir", proportional_parameter_changes, dependency_recalculation, &
+                                    "kbl0_nir", proportional_parameter_changes, &
                                     kbl0_nir)
 
     CALL Set_quincy_parameter_value(this%kdf0_nir, &
                                     this%kdf0_nir, &
-                                    "kdf0_nir", proportional_parameter_changes, dependency_recalculation, &
+                                    "kdf0_nir", proportional_parameter_changes, &
                                     kdf0_nir)
     
     CALL Set_quincy_parameter_value(this%rho2sbeta, &
                                     this%rho2sbeta, &
-                                    "rho2sbeta", proportional_parameter_changes, dependency_recalculation, &
+                                    "rho2sbeta", proportional_parameter_changes, &
                                     rho2sbeta)
     
     CALL Set_quincy_parameter_value(this%k_csf, &
                                     this%k_csf, &
-                                    "k_csf", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_csf", proportional_parameter_changes, &
                                     k_csf)
 
     CALL Set_quincy_parameter_value(this%min_cos_zenith_angle_rad, &
                                     this%min_cos_zenith_angle_rad, &
-                                    "min_cos_zenith_angle_rad", proportional_parameter_changes, dependency_recalculation, &
+                                    "min_cos_zenith_angle_rad", proportional_parameter_changes, &
                                     min_cos_zenith_angle_rad)
     
     CALL Set_quincy_parameter_value(this%def_alb_vis_soil, &
                                     this%def_alb_vis_soil, &
-                                    "def_alb_vis_soil", proportional_parameter_changes, dependency_recalculation, &
+                                    "def_alb_vis_soil", proportional_parameter_changes, &
                                     def_alb_vis_soil)
     
     CALL Set_quincy_parameter_value(this%def_alb_nir_soil, &
                                     this%def_alb_nir_soil, &
-                                    "def_alb_nir_soil", proportional_parameter_changes, dependency_recalculation, &
+                                    "def_alb_nir_soil", proportional_parameter_changes, &
                                     def_alb_nir_soil)
     
     CALL Set_quincy_parameter_value(this%rad2ppfd, &
                                     this%rad2ppfd, &
-                                    "rad2ppfd", proportional_parameter_changes, dependency_recalculation, &
+                                    "rad2ppfd", proportional_parameter_changes, &
                                     rad2ppfd)
     
     CALL Set_quincy_parameter_value(this%rfr_ratio_toc, &
                                     this%rfr_ratio_toc, &
-                                    "rfr_ratio_toc", proportional_parameter_changes, dependency_recalculation, &
+                                    "rfr_ratio_toc", proportional_parameter_changes, &
                                     rfr_ratio_toc)
     
     CALL Set_quincy_parameter_value(this%k_r2fr_chl - 0.012_wp, &
                                     this%k_r2fr_chl, &
-                                    "k_r2fr_chl", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_r2fr_chl", proportional_parameter_changes, &
                                     k_r2fr_chl)
     
     ! SHARED_CTL
     CALL Set_quincy_parameter_value(this%mavg_period_weekly, &
                                     this%mavg_period_weekly, &
-                                    "mavg_period_weekly", proportional_parameter_changes, dependency_recalculation, &
+                                    "mavg_period_weekly", proportional_parameter_changes, &
                                     mavg_period_weekly)
     
     CALL Set_quincy_parameter_value(this%mavg_period_monthly, &
                                     this%mavg_period_monthly, &
-                                    "mavg_period_monthly", proportional_parameter_changes, dependency_recalculation, &
+                                    "mavg_period_monthly", proportional_parameter_changes, &
                                     mavg_period_monthly)
     
     CALL Set_quincy_parameter_value(this%mavg_period_yearly, &
                                     this%mavg_period_yearly, &
-                                    "mavg_period_yearly", proportional_parameter_changes, dependency_recalculation, &
+                                    "mavg_period_yearly", proportional_parameter_changes, &
                                     mavg_period_yearly)
 
     CALL Set_quincy_parameter_value(this%mavg_period_tsoa, &
                                     this%mavg_period_tsoa, &
-                                    "mavg_period_tsoa", proportional_parameter_changes, dependency_recalculation, &
+                                    "mavg_period_tsoa", proportional_parameter_changes, &
                                     mavg_period_tsoa)
     
     CALL Set_quincy_parameter_value(this%mavg_period_tuptake, &
                                     this%mavg_period_tuptake, &
-                                    "mavg_period_tuptake", proportional_parameter_changes, dependency_recalculation, &
+                                    "mavg_period_tuptake", proportional_parameter_changes, &
                                     mavg_period_tuptake)
     
     CALL Set_quincy_parameter_value(this%mavg_period_tlabile, &
                                     this%mavg_period_tlabile, &
-                                    "mavg_period_tlabile", proportional_parameter_changes, dependency_recalculation, &
+                                    "mavg_period_tlabile", proportional_parameter_changes, &
                                     mavg_period_tlabile)
 
     CALL Set_quincy_parameter_value(this%mavg_period_tphen, &
                                     this%mavg_period_tphen, &
-                                    "mavg_period_tphen", proportional_parameter_changes, dependency_recalculation, &
+                                    "mavg_period_tphen", proportional_parameter_changes, &
                                     mavg_period_tphen)
 
     CALL Set_quincy_parameter_value(this%mavg_period_tenzyme, &
                                     this%mavg_period_tenzyme, &
-                                    "mavg_period_tenzyme", proportional_parameter_changes, dependency_recalculation, &
+                                    "mavg_period_tenzyme", proportional_parameter_changes, &
                                     mavg_period_tenzyme)
     
     CALL Set_quincy_parameter_value(this%mavg_period_tfrac, &
                                     this%mavg_period_tfrac, &
-                                    "mavg_period_tfrac", proportional_parameter_changes, dependency_recalculation, &
+                                    "mavg_period_tfrac", proportional_parameter_changes, &
                                     mavg_period_tfrac)
     
     CALL Set_quincy_parameter_value(this%mavg_period_tcnl, &
                                     this%mavg_period_tcnl, &
-                                    "mavg_period_tcnl", proportional_parameter_changes, dependency_recalculation, &
+                                    "mavg_period_tcnl", proportional_parameter_changes, &
                                     mavg_period_tcnl)
 
     CALL Set_quincy_parameter_value(this%mavg_period_talloc, &
                                     this%mavg_period_talloc, &
-                                    "mavg_period_talloc", proportional_parameter_changes, dependency_recalculation, &
+                                    "mavg_period_talloc", proportional_parameter_changes, &
                                     mavg_period_talloc)
     
     CALL Set_quincy_parameter_value(this%mavg_period_talloc_dynamic * 365.0_wp, &  ! default value: 30.0_wp * 365.0_wp (i.e., 30 years)
                                     this%mavg_period_talloc_dynamic, &
-                                    "mavg_period_talloc_dynamic", proportional_parameter_changes, dependency_recalculation, &
+                                    "mavg_period_talloc_dynamic", proportional_parameter_changes, &
                                     mavg_period_talloc_dynamic)
     
     CALL Set_quincy_parameter_value(this%mavg_period_tacclim, &
                                     this%mavg_period_tacclim, &
-                                    "mavg_period_tacclim", proportional_parameter_changes, dependency_recalculation, &
+                                    "mavg_period_tacclim", proportional_parameter_changes, &
                                     mavg_period_tacclim)
 
     CALL Set_quincy_parameter_value(this%mavg_period_tmic, &
                                     this%mavg_period_tmic, &
-                                    "mavg_period_tmic", proportional_parameter_changes, dependency_recalculation, &
+                                    "mavg_period_tmic", proportional_parameter_changes, &
                                     mavg_period_tmic)
     
     CALL Set_quincy_parameter_value(this%mavg_period_tgrowth, &
                                     this%mavg_period_tgrowth, &
-                                    "mavg_period_tgrowth", proportional_parameter_changes, dependency_recalculation, &
+                                    "mavg_period_tgrowth", proportional_parameter_changes, &
                                     mavg_period_tgrowth)
     
     CALL Set_quincy_parameter_value(this%mavg_period_tvegdyn, &
                                     this%mavg_period_tvegdyn, &
-                                    "mavg_period_tvegdyn", proportional_parameter_changes, dependency_recalculation, &
+                                    "mavg_period_tvegdyn", proportional_parameter_changes, &
                                     mavg_period_tvegdyn)
 
     ! SSE_CTL
     CALL Set_quincy_parameter_value(this%soil_heat_cap, &
                                     this%soil_heat_cap, &
-                                    "soil_heat_cap", proportional_parameter_changes, dependency_recalculation, &
+                                    "soil_heat_cap", proportional_parameter_changes, &
                                     soil_heat_cap)
 
     CALL Set_quincy_parameter_value(this%soil_therm_cond, &
                                     this%soil_therm_cond, &
-                                    "soil_therm_cond", proportional_parameter_changes, dependency_recalculation, &
+                                    "soil_therm_cond", proportional_parameter_changes, &
                                     soil_therm_cond)
     
     CALL Set_quincy_parameter_value(this%InterceptionEfficiency, &
                                     this%InterceptionEfficiency, &
-                                    "InterceptionEfficiency", proportional_parameter_changes, dependency_recalculation, &
+                                    "InterceptionEfficiency", proportional_parameter_changes, &
                                     InterceptionEfficiency)
     
     CALL Set_quincy_parameter_value(this%w_skin_max, &
                                     this%w_skin_max, &
-                                    "w_skin_max", proportional_parameter_changes, dependency_recalculation, &
+                                    "w_skin_max", proportional_parameter_changes, &
                                     w_skin_max)
 
     CALL Set_quincy_parameter_value(this%drain_frac, &
                                     this%drain_frac, &
-                                    "drain_frac", proportional_parameter_changes, dependency_recalculation, &
+                                    "drain_frac", proportional_parameter_changes, &
                                     drain_frac)
 
     CALL Set_quincy_parameter_value(this%fdrain_runoff, &
                                     this%fdrain_runoff, &
-                                    "fdrain_runoff", proportional_parameter_changes, dependency_recalculation, &
+                                    "fdrain_runoff", proportional_parameter_changes, &
                                     fdrain_runoff)
     
     CALL Set_quincy_parameter_value(this%wpot_pwp, &
                                     this%wpot_pwp, &
-                                    "wpot_pwp", proportional_parameter_changes, dependency_recalculation, &
+                                    "wpot_pwp", proportional_parameter_changes, &
                                     wpot_pwp)
 
     CALL Set_quincy_parameter_value(this%wpot_fc, &
                                     this%wpot_fc, &
-                                    "wpot_fc", proportional_parameter_changes, dependency_recalculation, &
+                                    "wpot_fc", proportional_parameter_changes, &
                                     wpot_fc)
 
     CALL Set_quincy_parameter_value(this%wpot_min, &
                                     this%wpot_min, &
-                                    "wpot_min", proportional_parameter_changes, dependency_recalculation, &
+                                    "wpot_min", proportional_parameter_changes, &
                                     wpot_min)
     
     CALL Set_quincy_parameter_value(this%k_pwp_a, &
                                     this%k_pwp_a, &
-                                    "k_pwp_a", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_pwp_a", proportional_parameter_changes, &
                                     k_pwp_a)
 
     CALL Set_quincy_parameter_value(this%k_pwp_c, &
                                     this%k_pwp_c, &
-                                    "k_pwp_c", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_pwp_c", proportional_parameter_changes, &
                                     k_pwp_c)
 
     CALL Set_quincy_parameter_value(this%k_pwp_s, &
                                     this%k_pwp_s, &
-                                    "k_pwp_s", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_pwp_s", proportional_parameter_changes, &
                                     k_pwp_s)
     
     CALL Set_quincy_parameter_value(this%k_pwp_sc, &
                                     this%k_pwp_sc, &
-                                    "k_pwp_sc", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_pwp_sc", proportional_parameter_changes, &
                                     k_pwp_sc)
 
     CALL Set_quincy_parameter_value(this%k_pwp_at, &
                                     this%k_pwp_at, &
-                                    "k_pwp_at", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_pwp_at", proportional_parameter_changes, &
                                     k_pwp_at)
 
     CALL Set_quincy_parameter_value(this%k_pwp_bt, &
                                     this%k_pwp_bt, &
-                                    "k_pwp_bt", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_pwp_bt", proportional_parameter_changes, &
                                     k_pwp_bt)
     
     CALL Set_quincy_parameter_value(this%k_fc_a, &
                                     this%k_fc_a, &
-                                    "k_fc_a", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_fc_a", proportional_parameter_changes, &
                                     k_fc_a)
 
     CALL Set_quincy_parameter_value(this%k_fc_c, &
                                     this%k_fc_c, &
-                                    "k_fc_c", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_fc_c", proportional_parameter_changes, &
                                     k_fc_c)
 
     CALL Set_quincy_parameter_value(this%k_fc_s, &
                                     this%k_fc_s, &
-                                    "k_fc_s", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_fc_s", proportional_parameter_changes, &
                                     k_fc_s)
     
     CALL Set_quincy_parameter_value(this%k_fc_sc, &
                                     this%k_fc_sc, &
-                                    "k_fc_sc", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_fc_sc", proportional_parameter_changes, &
                                     k_fc_sc)
 
     CALL Set_quincy_parameter_value(this%k_fc_at, &
                                     this%k_fc_at, &
-                                    "k_fc_at", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_fc_at", proportional_parameter_changes, &
                                     k_fc_at)
 
     CALL Set_quincy_parameter_value(this%k_fc_bt, &
                                     this%k_fc_bt, &
-                                    "k_fc_bt", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_fc_bt", proportional_parameter_changes, &
                                     k_fc_bt)
     
     CALL Set_quincy_parameter_value(this%k_fc_ct, &
                                     this%k_fc_ct, &
-                                    "k_fc_ct", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_fc_ct", proportional_parameter_changes, &
                                     k_fc_ct)
 
     CALL Set_quincy_parameter_value(this%k_sat_a, &
                                     this%k_sat_a, &
-                                    "k_sat_a", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_sat_a", proportional_parameter_changes, &
                                     k_sat_a)
 
     CALL Set_quincy_parameter_value(this%k_sat_c, &
                                     this%k_sat_c, &
-                                    "k_sat_c", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_sat_c", proportional_parameter_changes, &
                                     k_sat_c)
     
     CALL Set_quincy_parameter_value(this%k_sat_s, &
                                     this%k_sat_s, &
-                                    "k_sat_s", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_sat_s", proportional_parameter_changes, &
                                     k_sat_s)
 
     CALL Set_quincy_parameter_value(this%k_sat_sc, &
                                     this%k_sat_sc, &
-                                    "k_sat_sc", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_sat_sc", proportional_parameter_changes, &
                                     k_sat_sc)
 
     CALL Set_quincy_parameter_value(this%k_sat_at, &
                                     this%k_sat_at, &
-                                    "k_sat_at", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_sat_at", proportional_parameter_changes, &
                                     k_sat_at)
     
     CALL Set_quincy_parameter_value(this%k_sat_bt, &
                                     this%k_sat_bt, &
-                                    "k_sat_bt", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_sat_bt", proportional_parameter_changes, &
                                     k_sat_bt)
 
     CALL Set_quincy_parameter_value(this%k_sat_ct, &
                                     this%k_sat_ct, &
-                                    "k_sat_ct", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_sat_ct", proportional_parameter_changes, &
                                     k_sat_ct)
 
     CALL Set_quincy_parameter_value(this%k_sat_dt, &
                                     this%k_sat_dt, &
-                                    "k_sat_dt", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_sat_dt", proportional_parameter_changes, &
                                     k_sat_dt)
 
     CALL Set_quincy_parameter_value(this%kdiff_sat_max  / 1000.0_wp / 3600._wp, &
                                     this%kdiff_sat_max, &
-                                    "kdiff_sat_max", proportional_parameter_changes, dependency_recalculation, &
+                                    "kdiff_sat_max", proportional_parameter_changes, &
                                     kdiff_sat_max)
 
     ! VEGETATION_CTL
     CALL Set_quincy_parameter_value(this%fresp_growth, &
                                     this%fresp_growth, &
-                                    "fresp_growth", proportional_parameter_changes, dependency_recalculation, &
+                                    "fresp_growth", proportional_parameter_changes, &
                                     fresp_growth)
     
     CALL Set_quincy_parameter_value(this%fmaint_rate_base, &
                                     this%fmaint_rate_base, &
-                                    "fmaint_rate_base", proportional_parameter_changes, dependency_recalculation, &
+                                    "fmaint_rate_base", proportional_parameter_changes, &
                                     fmaint_rate_base)
     
-    IF (ABS(this%fmaint_rate_base - missval) > eps8) THEN
-        dependency_recalculation = .TRUE.
-        fmaint_rate_wood         = 0.25_wp * fmaint_rate_base   ! copied from mo_veg_constants
-    ENDIF
-    CALL Set_quincy_parameter_value(this%fmaint_rate_wood  * fmaint_rate_base, &
+    ! is always recalculated in case any of its dependencies has changed
+    fmaint_rate_wood = 0.25_wp * fmaint_rate_base   ! copied from mo_veg_constants
+    CALL Set_quincy_parameter_value(this%fmaint_rate_wood * fmaint_rate_base, &
                                     this%fmaint_rate_wood, &
-                                    "fmaint_rate_wood", proportional_parameter_changes, dependency_recalculation, &
+                                    "fmaint_rate_wood", proportional_parameter_changes, &
                                     fmaint_rate_wood)
 
     CALL Set_quincy_parameter_value(this%t_maint_k1, &
                                     this%t_maint_k1, &
-                                    "t_maint_k1", proportional_parameter_changes, dependency_recalculation, &
+                                    "t_maint_k1", proportional_parameter_changes, &
                                     t_maint_k1)
     
     CALL Set_quincy_parameter_value(this%t_maint_k2, &
                                     this%t_maint_k2, &
-                                    "t_maint_k2", proportional_parameter_changes, dependency_recalculation, &
+                                    "t_maint_k2", proportional_parameter_changes, &
                                     t_maint_k2)
     
     CALL Set_quincy_parameter_value(this%t_maint_k3, &
                                     this%t_maint_k3, &
-                                    "t_maint_k3", proportional_parameter_changes, dependency_recalculation, &
+                                    "t_maint_k3", proportional_parameter_changes, &
                                     t_maint_k3)
 
     CALL Set_quincy_parameter_value(this%f_resp_acclim, &
                                     this%f_resp_acclim, &
-                                    "f_resp_acclim", proportional_parameter_changes, dependency_recalculation, &
+                                    "f_resp_acclim", proportional_parameter_changes, &
                                     f_resp_acclim)
     
     CALL Set_quincy_parameter_value(this%t_acclim_zero, &
                                     this%t_acclim_zero, &
-                                    "t_acclim_zero", proportional_parameter_changes, dependency_recalculation, &
+                                    "t_acclim_zero", proportional_parameter_changes, &
                                     t_acclim_zero)
     
     CALL Set_quincy_parameter_value(this%k0_fn_pepc_C3, &
                                     this%k0_fn_pepc_C3, &
-                                    "k0_fn_pepc_C3", proportional_parameter_changes, dependency_recalculation, &
+                                    "k0_fn_pepc_C3", proportional_parameter_changes, &
                                     k0_fn_pepc_C3)
 
     CALL Set_quincy_parameter_value(this%k0_fn_pepc_C4, &
                                     this%k0_fn_pepc_C4, &
-                                    "k0_fn_pepc_C4", proportional_parameter_changes, dependency_recalculation, &
+                                    "k0_fn_pepc_C4", proportional_parameter_changes, &
                                     k0_fn_pepc_C4)
 
-    CALL Set_quincy_parameter_value(this%jmax2vcmax_C3 / 4._wp, &
+    CALL Set_quincy_parameter_value(this%jmax2vcmax_C3 / 4.0_wp, &
                                     this%jmax2vcmax_C3, &
-                                    "jmax2vcmax_C3", proportional_parameter_changes, dependency_recalculation, &
+                                    "jmax2vcmax_C3", proportional_parameter_changes, &
                                     jmax2vcmax_C3)
     
     CALL Set_quincy_parameter_value(this%jmax2vcmax_C4, &
                                     this%jmax2vcmax_C4, &
-                                    "jmax2vcmax_C4", proportional_parameter_changes, dependency_recalculation, &
+                                    "jmax2vcmax_C4", proportional_parameter_changes, &
                                     jmax2vcmax_C4)
     
     CALL Set_quincy_parameter_value(this%tau_labile, &
                                     this%tau_labile, &
-                                    "tau_labile", proportional_parameter_changes, dependency_recalculation, &
+                                    "tau_labile", proportional_parameter_changes, &
                                     tau_labile)
 
     CALL Set_quincy_parameter_value(this%lambda_labile_temp, &
                                     this%lambda_labile_temp, &
-                                    "lambda_labile_temp", proportional_parameter_changes, dependency_recalculation, &
+                                    "lambda_labile_temp", proportional_parameter_changes, &
                                     lambda_labile_temp)
     
     CALL Set_quincy_parameter_value(this%k_labile_temp, &
                                     this%k_labile_temp, &
-                                    "k_labile_temp", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_labile_temp", proportional_parameter_changes, &
                                     k_labile_temp)
     
     CALL Set_quincy_parameter_value(this%lambda_labile_theta, &
                                     this%lambda_labile_theta, &
-                                    "lambda_labile_theta", proportional_parameter_changes, dependency_recalculation, &
+                                    "lambda_labile_theta", proportional_parameter_changes, &
                                     lambda_labile_theta)
 
     CALL Set_quincy_parameter_value(this%k_labile_theta, &
                                     this%k_labile_theta, &
-                                    "k_labile_theta", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_labile_theta", proportional_parameter_changes, &
                                     k_labile_theta)
     
     CALL Set_quincy_parameter_value(this%lambda_phiphen, &
                                     this%lambda_phiphen, &
-                                    "lambda_phiphen", proportional_parameter_changes, dependency_recalculation, &
+                                    "lambda_phiphen", proportional_parameter_changes, &
                                     lambda_phiphen)
     
     CALL Set_quincy_parameter_value(this%k_phiphen, &
                                     this%k_phiphen, &
-                                    "k_phiphen", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_phiphen", proportional_parameter_changes, &
                                     k_phiphen)
 
     CALL Set_quincy_parameter_value(this%lambda_phimaint, &
                                     this%lambda_phimaint, &
-                                    "lambda_phimaint", proportional_parameter_changes, dependency_recalculation, &
+                                    "lambda_phimaint", proportional_parameter_changes, &
                                     lambda_phimaint)
 
     CALL Set_quincy_parameter_value(this%k_phimaint, &
                                     this%k_phimaint, &
-                                    "k_phimaint", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_phimaint", proportional_parameter_changes, &
                                     k_phimaint)
     
     CALL Set_quincy_parameter_value(this%lambda_phimaint_nut, &
                                     this%lambda_phimaint_nut, &
-                                    "lambda_phimaint_nut", proportional_parameter_changes, dependency_recalculation, &
+                                    "lambda_phimaint_nut", proportional_parameter_changes, &
                                     lambda_phimaint_nut)
     
     CALL Set_quincy_parameter_value(this%k_phimaint_nut, &
                                     this%k_phimaint_nut, &
-                                    "k_phimaint_nut", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_phimaint_nut", proportional_parameter_changes, &
                                     k_phimaint_nut)
 
     CALL Set_quincy_parameter_value(this%lambda_phistore, &
                                     this%lambda_phistore, &
-                                    "lambda_phistore", proportional_parameter_changes, dependency_recalculation, &
+                                    "lambda_phistore", proportional_parameter_changes, &
                                     lambda_phistore)
     
     CALL Set_quincy_parameter_value(this%k_phistore, &
                                     this%k_phistore, &
-                                    "k_phistore", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_phistore", proportional_parameter_changes, &
                                     k_phistore)
     
     CALL Set_quincy_parameter_value(this%knut_labile, &
                                     this%knut_labile, &
-                                    "knut_labile", proportional_parameter_changes, dependency_recalculation, &
+                                    "knut_labile", proportional_parameter_changes, &
                                     knut_labile)
 
     CALL Set_quincy_parameter_value(this%lambda_sinklim_ps, &
                                     this%lambda_sinklim_ps, &
-                                    "lambda_sinklim_ps", proportional_parameter_changes, dependency_recalculation, &
+                                    "lambda_sinklim_ps", proportional_parameter_changes, &
                                     lambda_sinklim_ps)
     
     CALL Set_quincy_parameter_value(this%k_sinklim_ps, &
                                     this%k_sinklim_ps, &
-                                    "k_sinklim_ps", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_sinklim_ps", proportional_parameter_changes, &
                                     k_sinklim_ps)
     
     CALL Set_quincy_parameter_value(this%k_cnp_sinklim_ps, &
                                     this%k_cnp_sinklim_ps, &
-                                    "k_cnp_sinklim_ps", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_cnp_sinklim_ps", proportional_parameter_changes, &
                                     k_cnp_sinklim_ps)
 
     CALL Set_quincy_parameter_value(this%beta_sinklim_ps_min, &
                                     this%beta_sinklim_ps_min, &
-                                    "beta_sinklim_ps_min", proportional_parameter_changes, dependency_recalculation, &
+                                    "beta_sinklim_ps_min", proportional_parameter_changes, &
                                     beta_sinklim_ps_min)
 
     CALL Set_quincy_parameter_value(this%fstore_leaf_max, &
                                     this%fstore_leaf_max, &
-                                    "fstore_leaf_max", proportional_parameter_changes, dependency_recalculation, &
+                                    "fstore_leaf_max", proportional_parameter_changes, &
                                     fstore_leaf_max)
     
     CALL Set_quincy_parameter_value(this%fstore_fine_root_max, &
                                     this%fstore_fine_root_max, &
-                                    "fstore_fine_root_max", proportional_parameter_changes, dependency_recalculation, &
+                                    "fstore_fine_root_max", proportional_parameter_changes, &
                                     fstore_fine_root_max)
     
     CALL Set_quincy_parameter_value(this%fstore_sap_wood_max, &
                                     this%fstore_sap_wood_max, &
-                                    "fstore_sap_wood_max", proportional_parameter_changes, dependency_recalculation, &
+                                    "fstore_sap_wood_max", proportional_parameter_changes, &
                                     fstore_sap_wood_max)
 
     CALL Set_quincy_parameter_value(this%k_phi_interact, &
                                     this%k_phi_interact, &
-                                    "k_phi_interact", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_phi_interact", proportional_parameter_changes, &
                                     k_phi_interact)
     
     CALL Set_quincy_parameter_value(this%resorp_fract_leaf, &
                                     this%resorp_fract_leaf, &
-                                    "resorp_fract_leaf", proportional_parameter_changes, dependency_recalculation, &
+                                    "resorp_fract_leaf", proportional_parameter_changes, &
                                     resorp_fract_leaf)
     
     CALL Set_quincy_parameter_value(this%resorp_fract_wood, &
                                     this%resorp_fract_wood, &
-                                    "resorp_fract_wood", proportional_parameter_changes, dependency_recalculation, &
+                                    "resorp_fract_wood", proportional_parameter_changes, &
                                     resorp_fract_wood)
 
     CALL Set_quincy_parameter_value(this%root2leaf_cn, &
                                     this%root2leaf_cn, &
-                                    "root2leaf_cn", proportional_parameter_changes, dependency_recalculation, &
+                                    "root2leaf_cn", proportional_parameter_changes, &
                                     root2leaf_cn)
     
     CALL Set_quincy_parameter_value(this%wood2leaf_cn, &
                                     this%wood2leaf_cn, &
-                                    "wood2leaf_cn", proportional_parameter_changes, dependency_recalculation, &
+                                    "wood2leaf_cn", proportional_parameter_changes, &
                                     wood2leaf_cn)
     
     CALL Set_quincy_parameter_value(this%root2leaf_np, &
                                     this%root2leaf_np, &
-                                    "root2leaf_np", proportional_parameter_changes, dependency_recalculation, &
+                                    "root2leaf_np", proportional_parameter_changes, &
                                     root2leaf_np)
 
     CALL Set_quincy_parameter_value(this%wood2leaf_np, &
                                     this%wood2leaf_np, &
-                                    "wood2leaf_np", proportional_parameter_changes, dependency_recalculation, &
+                                    "wood2leaf_np", proportional_parameter_changes, &
                                     wood2leaf_np)
 
     CALL Set_quincy_parameter_value(this%tau_nutrient_recycling, &
                                     this%tau_nutrient_recycling, &
-                                    "tau_nutrient_recycling", proportional_parameter_changes, dependency_recalculation, &
+                                    "tau_nutrient_recycling", proportional_parameter_changes, &
                                     tau_nutrient_recycling)
     
     CALL Set_quincy_parameter_value(this%kappa_f_demand_nc, &
                                     this%kappa_f_demand_nc, &
-                                    "kappa_f_demand_nc", proportional_parameter_changes, dependency_recalculation, &
+                                    "kappa_f_demand_nc", proportional_parameter_changes, &
                                     kappa_f_demand_nc)
     
     CALL Set_quincy_parameter_value(this%kappa_f_demand_pn, &
                                     this%kappa_f_demand_pn, &
-                                    "kappa_f_demand_pn", proportional_parameter_changes, dependency_recalculation, &
+                                    "kappa_f_demand_pn", proportional_parameter_changes, &
                                     kappa_f_demand_pn)
 
     CALL Set_quincy_parameter_value(this%k_f_demand, &
                                     this%k_f_demand, &
-                                    "k_f_demand", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_f_demand", proportional_parameter_changes, &
                                     k_f_demand)
     
-    CALL Set_quincy_parameter_value(this%cost_n_fixation_max / (molar_mass_C/molar_mass_N), &
+    CALL Set_quincy_parameter_value(this%cost_n_fixation_max / (molar_mass_C / molar_mass_N), &
                                     this%cost_n_fixation_max, &
-                                    "cost_n_fixation_max", proportional_parameter_changes, dependency_recalculation, &
+                                    "cost_n_fixation_max", proportional_parameter_changes, &
                                     cost_n_fixation_max)
     
-    CALL Set_quincy_parameter_value(this%cost_n_fixation_min / (molar_mass_C/molar_mass_N), &
+    CALL Set_quincy_parameter_value(this%cost_n_fixation_min / (molar_mass_C / molar_mass_N), &
                                     this%cost_n_fixation_min, &
-                                    "cost_n_fixation_min", proportional_parameter_changes, dependency_recalculation, &
+                                    "cost_n_fixation_min", proportional_parameter_changes, &
                                     cost_n_fixation_min)
 
     CALL Set_quincy_parameter_value(this%k1_temp_bnf, &
                                     this%k1_temp_bnf, &
-                                    "k1_temp_bnf", proportional_parameter_changes, dependency_recalculation, &
+                                    "k1_temp_bnf", proportional_parameter_changes, &
                                     k1_temp_bnf)
     
     CALL Set_quincy_parameter_value(this%k2_temp_bnf, &
                                     this%k2_temp_bnf, &
-                                    "k2_temp_bnf", proportional_parameter_changes, dependency_recalculation, &
+                                    "k2_temp_bnf", proportional_parameter_changes, &
                                     k2_temp_bnf)
     
     CALL Set_quincy_parameter_value(this%k3_temp_bnf, &
                                     this%k3_temp_bnf, &
-                                    "k3_temp_bnf", proportional_parameter_changes, dependency_recalculation, &
+                                    "k3_temp_bnf", proportional_parameter_changes, &
                                     k3_temp_bnf)
 
     CALL Set_quincy_parameter_value(this%k4_temp_bnf, &
                                     this%k4_temp_bnf, &
-                                    "k4_temp_bnf", proportional_parameter_changes, dependency_recalculation, &
+                                    "k4_temp_bnf", proportional_parameter_changes, &
                                     k4_temp_bnf)
 
-    CALL Set_quincy_parameter_value(this%transform_cost_nh4 / (molar_mass_C/molar_mass_N), &
+    CALL Set_quincy_parameter_value(this%transform_cost_nh4 / (molar_mass_C / molar_mass_N), &
                                     this%transform_cost_nh4, &
-                                    "transform_cost_nh4", proportional_parameter_changes, dependency_recalculation, &
+                                    "transform_cost_nh4", proportional_parameter_changes, &
                                     transform_cost_nh4)
     
-    CALL Set_quincy_parameter_value(this%transform_cost_no3 / (molar_mass_C/molar_mass_N), &
+    CALL Set_quincy_parameter_value(this%transform_cost_no3 / (molar_mass_C / molar_mass_N), &
                                     this%transform_cost_no3, &
-                                    "transform_cost_no3", proportional_parameter_changes, dependency_recalculation, &
+                                    "transform_cost_no3", proportional_parameter_changes, &
                                     transform_cost_no3)
     
-    CALL Set_quincy_parameter_value(this%transform_cost_org / (molar_mass_C/molar_mass_N), &
+    CALL Set_quincy_parameter_value(this%transform_cost_org / (molar_mass_C / molar_mass_N), &
                                     this%transform_cost_org, &
-                                    "transform_cost_org", proportional_parameter_changes, dependency_recalculation, &
+                                    "transform_cost_org", proportional_parameter_changes, &
                                     transform_cost_org)
 
-    IF ((ABS(this%transform_cost_no3 - missval) > eps8) .OR. & 
-        (ABS(this%transform_cost_nh4 - missval) > eps8)) THEN
-        dependency_recalculation = .TRUE.
-        f_nacq_nh4               = transform_cost_no3 / (transform_cost_no3 + transform_cost_nh4)   ! copied from mo_veg_constants
-    ENDIF
+    ! is always recalculated in case any of its dependencies has changed
+    f_nacq_nh4 = transform_cost_no3 / (transform_cost_no3 + transform_cost_nh4)   ! copied from mo_veg_constants
     CALL Set_quincy_parameter_value(transform_cost_no3 / (transform_cost_no3 + transform_cost_nh4), &   ! only proportional changes may have an effect
                                     this%f_nacq_nh4, &
-                                    "f_nacq_nh4", proportional_parameter_changes, dependency_recalculation, &
+                                    "f_nacq_nh4", proportional_parameter_changes, &
                                     f_nacq_nh4)
 
-    IF ((ABS(this%transform_cost_no3 - missval) > eps8) .OR. & 
-        (ABS(this%transform_cost_nh4 - missval) > eps8)) THEN
-        dependency_recalculation = .TRUE.
-        f_nacq_no3               = transform_cost_nh4 / (transform_cost_no3 + transform_cost_nh4)   ! copied from mo_veg_constants
-    ENDIF    
+    ! is always recalculated in case any of its dependencies has changed
+    f_nacq_no3 = transform_cost_nh4 / (transform_cost_no3 + transform_cost_nh4)   ! copied from mo_veg_constants
     CALL Set_quincy_parameter_value(transform_cost_nh4 / (transform_cost_no3 + transform_cost_nh4), &   ! only proportional changes may have an effect
                                     this%f_nacq_no3, &
-                                    "f_nacq_no3", proportional_parameter_changes, dependency_recalculation, &
+                                    "f_nacq_no3", proportional_parameter_changes, &
                                     f_nacq_no3)
     
-    CALL Set_quincy_parameter_value(this%vmax_bnf * 0.0225_wp / (molar_mass_N/molar_mass_C) / (one_day*one_year) * 1.e6_wp, &
+    CALL Set_quincy_parameter_value(this%vmax_bnf * 0.0225_wp / (molar_mass_N / molar_mass_C) / (one_day * one_year) * 1.0e6_wp, &
                                     this%vmax_bnf, &
-                                    "vmax_bnf", proportional_parameter_changes, dependency_recalculation, &
+                                    "vmax_bnf", proportional_parameter_changes, &
                                     vmax_bnf)
 
     CALL Set_quincy_parameter_value(this%k_bnf / (molar_mass_C/molar_Mass_N), &
                                     this%k_bnf, &
-                                    "k_bnf", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_bnf", proportional_parameter_changes, &
                                     k_bnf)
 
-    IF ((ABS(this%transform_cost_no3 - missval) > eps8) .OR. & 
-        (ABS(this%transform_cost_nh4 - missval) > eps8) .OR. & 
-        (ABS(this%f_nacq_no3         - missval) > eps8) .OR. & 
-        (ABS(this%f_nacq_nh4         - missval) > eps8)) THEN
-        dependency_recalculation = .TRUE.
-        offset_bnf               = 6.0_wp * (f_nacq_nh4 * transform_cost_nh4 + f_nacq_no3 * transform_cost_no3)   ! copied from mo_veg_constants
-    ENDIF    
+    ! is always recalculated in case any of its dependencies has changed
+    offset_bnf = 6.0_wp * (f_nacq_nh4 * transform_cost_nh4 + f_nacq_no3 * transform_cost_no3)   ! copied from mo_veg_constants
     CALL Set_quincy_parameter_value(this%offset_bnf * (f_nacq_nh4 * transform_cost_nh4 + f_nacq_no3 * transform_cost_no3), &
                                     this%offset_bnf, &
-                                    "offset_bnf", proportional_parameter_changes, dependency_recalculation, &
+                                    "offset_bnf", proportional_parameter_changes, &
                                     offset_bnf)
     
     CALL Set_quincy_parameter_value(this%eta_nfixation, &
                                     this%eta_nfixation, &
-                                    "eta_nfixation", proportional_parameter_changes, dependency_recalculation, &
+                                    "eta_nfixation", proportional_parameter_changes, &
                                     eta_nfixation)
 
     CALL Set_quincy_parameter_value(this%k0_fn_chl_C3, &
                                     this%k0_fn_chl_C3, &
-                                    "k0_fn_chl_C3", proportional_parameter_changes, dependency_recalculation, &
+                                    "k0_fn_chl_C3", proportional_parameter_changes, &
                                     k0_fn_chl_C3)
 
     CALL Set_quincy_parameter_value(this%k0_fn_chl_C4, &
                                     this%k0_fn_chl_C4, &
-                                    "k0_fn_chl_C4", proportional_parameter_changes, dependency_recalculation, &
+                                    "k0_fn_chl_C4", proportional_parameter_changes, &
                                     k0_fn_chl_C4)
     
     CALL Set_quincy_parameter_value(this%k1_fn_chl_C3, &
                                     this%k1_fn_chl_C3, &
-                                    "k1_fn_chl_C3", proportional_parameter_changes, dependency_recalculation, &
+                                    "k1_fn_chl_C3", proportional_parameter_changes, &
                                     k1_fn_chl_C3)
     
     CALL Set_quincy_parameter_value(this%k1_fn_chl_C4, &
                                     this%k1_fn_chl_C4, &
-                                    "k1_fn_chl_C4", proportional_parameter_changes, dependency_recalculation, &
+                                    "k1_fn_chl_C4", proportional_parameter_changes, &
                                     k1_fn_chl_C4)
 
     CALL Set_quincy_parameter_value(this%kfn_chl, &
                                     this%kfn_chl, &
-                                    "kfn_chl", proportional_parameter_changes, dependency_recalculation, &
+                                    "kfn_chl", proportional_parameter_changes, &
                                     kfn_chl)
     
     CALL Set_quincy_parameter_value(this%min_lai, &
                                     this%min_lai, &
-                                    "min_lai", proportional_parameter_changes, dependency_recalculation, &
+                                    "min_lai", proportional_parameter_changes, &
                                     min_lai)
     
     CALL Set_quincy_parameter_value(this%target_lai_max, &
                                     this%target_lai_max, &
-                                    "target_lai_max", proportional_parameter_changes, dependency_recalculation, &
+                                    "target_lai_max", proportional_parameter_changes, &
                                     target_lai_max)
 
     CALL Set_quincy_parameter_value(this%max_leaf_shedding_rate, &
                                     this%max_leaf_shedding_rate, &
-                                    "max_leaf_shedding_rate", proportional_parameter_changes, dependency_recalculation, &
+                                    "max_leaf_shedding_rate", proportional_parameter_changes, &
                                     max_leaf_shedding_rate)
     
     CALL Set_quincy_parameter_value(this%k_leafon_canopy, &
                                     this%k_leafon_canopy, &
-                                    "k_leafon_canopy", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_leafon_canopy", proportional_parameter_changes, &
                                     k_leafon_canopy)
     
     CALL Set_quincy_parameter_value(this%background_mort_rate_tree, &
                                     this%background_mort_rate_tree, &
-                                    "background_mort_rate_tree", proportional_parameter_changes, dependency_recalculation, &
+                                    "background_mort_rate_tree", proportional_parameter_changes, &
                                     background_mort_rate_tree)
 
     CALL Set_quincy_parameter_value(this%background_mort_rate_grass, &
                                     this%background_mort_rate_grass, &
-                                    "background_mort_rate_grass", proportional_parameter_changes, dependency_recalculation, &
+                                    "background_mort_rate_grass", proportional_parameter_changes, &
                                     background_mort_rate_grass)
 
     CALL Set_quincy_parameter_value(this%lambda_mort_light, &
                                     this%lambda_mort_light, &
-                                    "lambda_mort_light", proportional_parameter_changes, dependency_recalculation, &
+                                    "lambda_mort_light", proportional_parameter_changes, &
                                     lambda_mort_light)
     
     CALL Set_quincy_parameter_value(this%k_mort_light, &
                                     this%k_mort_light, &
-                                    "k_mort_light", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_mort_light", proportional_parameter_changes, &
                                     k_mort_light)
     
     CALL Set_quincy_parameter_value(this%lambda_est_temp, &
                                     this%lambda_est_temp, &
-                                    "lambda_est_temp", proportional_parameter_changes, dependency_recalculation, &
+                                    "lambda_est_temp", proportional_parameter_changes, &
                                     lambda_est_temp)
 
     CALL Set_quincy_parameter_value(this%k_est_temp, &
                                     this%k_est_temp, &
-                                    "k_est_temp", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_est_temp", proportional_parameter_changes, &
                                     k_est_temp)
     
     CALL Set_quincy_parameter_value(this%lambda_est_moist, &
                                     this%lambda_est_moist, &
-                                    "lambda_est_moist", proportional_parameter_changes, dependency_recalculation, &
+                                    "lambda_est_moist", proportional_parameter_changes, &
                                     lambda_est_moist)
     
     CALL Set_quincy_parameter_value(this%k_est_moist, &
                                     this%k_est_moist, &
-                                    "k_est_moist", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_est_moist", proportional_parameter_changes, &
                                     k_est_moist)
 
     CALL Set_quincy_parameter_value(this%wood_extraction_rate, &
                                     this%wood_extraction_rate, &
-                                    "wood_extraction_rate", proportional_parameter_changes, dependency_recalculation, &
+                                    "wood_extraction_rate", proportional_parameter_changes, &
                                     wood_extraction_rate)
     
     CALL Set_quincy_parameter_value(this%k1_mort_greff, &
                                     this%k1_mort_greff, &
-                                    "k1_mort_greff", proportional_parameter_changes, dependency_recalculation, &
+                                    "k1_mort_greff", proportional_parameter_changes, &
                                     k1_mort_greff)
     
     CALL Set_quincy_parameter_value(this%k2_mort_greff, &
                                     this%k2_mort_greff, &
-                                    "k2_mort_greff", proportional_parameter_changes, dependency_recalculation, &
+                                    "k2_mort_greff", proportional_parameter_changes, &
                                     k2_mort_greff)
 
     CALL Set_quincy_parameter_value(this%k3_mort_greff, &
                                     this%k3_mort_greff, &
-                                    "k3_mort_greff", proportional_parameter_changes, dependency_recalculation, &
+                                    "k3_mort_greff", proportional_parameter_changes, &
                                     k3_mort_greff)
 
     CALL Set_quincy_parameter_value(this%min_greff, &
                                     this%min_greff, &
-                                    "min_greff", proportional_parameter_changes, dependency_recalculation, &
+                                    "min_greff", proportional_parameter_changes, &
                                     min_greff)
     
     CALL Set_quincy_parameter_value(this%max_crown_area, &
                                     this%max_crown_area, &
-                                    "max_crown_area", proportional_parameter_changes, dependency_recalculation, &
+                                    "max_crown_area", proportional_parameter_changes, &
                                     max_crown_area)
     
     CALL Set_quincy_parameter_value(this%min_diameter, &
                                     this%min_diameter, &
-                                    "min_diameter", proportional_parameter_changes, dependency_recalculation, &
+                                    "min_diameter", proportional_parameter_changes, &
                                     min_diameter)
 
     CALL Set_quincy_parameter_value(this%k_crown_area, &
                                     this%k_crown_area, &
-                                    "k_crown_area", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_crown_area", proportional_parameter_changes, &
                                     k_crown_area)
     
     CALL Set_quincy_parameter_value(this%k_rp, &
                                     this%k_rp, &
-                                    "k_rp", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_rp", proportional_parameter_changes, &
                                     k_rp)
     
     CALL Set_quincy_parameter_value(this%k_fpc, &
                                     this%k_fpc, &
-                                    "k_fpc", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_fpc", proportional_parameter_changes, &
                                     k_fpc)
 
     CALL Set_quincy_parameter_value(this%fpc_max, &
                                     this%fpc_max, &
-                                    "fpc_max", proportional_parameter_changes, dependency_recalculation, &
+                                    "fpc_max", proportional_parameter_changes, &
                                     fpc_max)
     
     CALL Set_quincy_parameter_value(this%carbon_per_dryweight_leaf, &
                                     this%carbon_per_dryweight_leaf, &
-                                    "carbon_per_dryweight_leaf", proportional_parameter_changes, dependency_recalculation, &
+                                    "carbon_per_dryweight_leaf", proportional_parameter_changes, &
                                     carbon_per_dryweight_leaf)
     
     CALL Set_quincy_parameter_value(this%min_height, &
                                     this%min_height, &
-                                    "min_height", proportional_parameter_changes, dependency_recalculation, &
+                                    "min_height", proportional_parameter_changes, &
                                     min_height)
 
     CALL Set_quincy_parameter_value(this%sm2lm_grass, &
                                     this%sm2lm_grass, &
-                                    "sm2lm_grass", proportional_parameter_changes, dependency_recalculation, &
+                                    "sm2lm_grass", proportional_parameter_changes, &
                                     sm2lm_grass)
 
     CALL Set_quincy_parameter_value(this%lambda_fruit_alloc, &
                                     this%lambda_fruit_alloc, &
-                                    "lambda_fruit_alloc", proportional_parameter_changes, dependency_recalculation, &
+                                    "lambda_fruit_alloc", proportional_parameter_changes, &
                                     lambda_fruit_alloc)
     
     CALL Set_quincy_parameter_value(this%k1_fruit_alloc, &
                                     this%k1_fruit_alloc, &
-                                    "k1_fruit_alloc", proportional_parameter_changes, dependency_recalculation, &
+                                    "k1_fruit_alloc", proportional_parameter_changes, &
                                     k1_fruit_alloc)
     
     CALL Set_quincy_parameter_value(this%k3_fruit_alloc, &
                                     this%k3_fruit_alloc, &
-                                    "k3_fruit_alloc", proportional_parameter_changes, dependency_recalculation, &
+                                    "k3_fruit_alloc", proportional_parameter_changes, &
                                     k3_fruit_alloc)
 
     CALL Set_quincy_parameter_value(this%k4_fruit_alloc, &
                                     this%k4_fruit_alloc, &
-                                    "k4_fruit_alloc", proportional_parameter_changes, dependency_recalculation, &
+                                    "k4_fruit_alloc", proportional_parameter_changes, &
                                     k4_fruit_alloc)
     
     CALL Set_quincy_parameter_value(this%w_root_lim_max, &
                                     this%w_root_lim_max, &
-                                    "w_root_lim_max", proportional_parameter_changes, dependency_recalculation, &
+                                    "w_root_lim_max", proportional_parameter_changes, &
                                     w_root_lim_max)
     
     CALL Set_quincy_parameter_value(this%leaf2root_min_ratio, &
                                     this%leaf2root_min_ratio, &
-                                    "leaf2root_min_ratio", proportional_parameter_changes, dependency_recalculation, &
+                                    "leaf2root_min_ratio", proportional_parameter_changes, &
                                     leaf2root_min_ratio)
 
     CALL Set_quincy_parameter_value(this%leaf2root_max_ratio, &
                                     this%leaf2root_max_ratio, &
-                                    "leaf2root_max_ratio", proportional_parameter_changes, dependency_recalculation, &
+                                    "leaf2root_max_ratio", proportional_parameter_changes, &
                                     leaf2root_max_ratio)
     
     CALL Set_quincy_parameter_value(this%delta_n_fraction, &
                                     this%delta_n_fraction, &
-                                    "delta_n_fraction", proportional_parameter_changes, dependency_recalculation, &
+                                    "delta_n_fraction", proportional_parameter_changes, &
                                     delta_n_fraction)
     
     CALL Set_quincy_parameter_value(this%delta_n_leaf, &
                                     this%delta_n_leaf, &
-                                    "delta_n_leaf", proportional_parameter_changes, dependency_recalculation, &
+                                    "delta_n_leaf", proportional_parameter_changes, &
                                     delta_n_leaf)
     
     CALL Set_quincy_parameter_value(this%f_myc_exudation_max, &
                                     this%f_myc_exudation_max, &
-                                    "f_myc_exudation_max", proportional_parameter_changes, dependency_recalculation, &
+                                    "f_myc_exudation_max", proportional_parameter_changes, &
                                     f_myc_exudation_max)
     
     CALL Set_quincy_parameter_value(this%f_mycorrhization_max, &
                                     this%f_mycorrhization_max, &
-                                    "f_mycorrhization_max", proportional_parameter_changes, dependency_recalculation, &
+                                    "f_mycorrhization_max", proportional_parameter_changes, &
                                     f_mycorrhization_max)
     
 
     ! SB_CTL
     CALL Set_quincy_parameter_value(this%tau_soluable_litter * one_day, &
                                     this%tau_soluable_litter, &
-                                    "tau_soluable_litter", proportional_parameter_changes, dependency_recalculation, &
+                                    "tau_soluable_litter", proportional_parameter_changes, &
                                     tau_soluable_litter)
     
     CALL Set_quincy_parameter_value(this%tau_metabolic_litter * one_year * one_day, &
                                     this%tau_metabolic_litter, &
-                                    "tau_metabolic_litter", proportional_parameter_changes, dependency_recalculation, &
+                                    "tau_metabolic_litter", proportional_parameter_changes, &
                                     tau_metabolic_litter)
     
     CALL Set_quincy_parameter_value(this%tau_structural_litter * one_year * one_day, &
                                     this%tau_structural_litter, &
-                                    "tau_structural_litter", proportional_parameter_changes, dependency_recalculation, &
+                                    "tau_structural_litter", proportional_parameter_changes, &
                                     tau_structural_litter)
 
     CALL Set_quincy_parameter_value(this%tau_woody_litter * one_year * one_day, &
                                     this%tau_woody_litter, &
-                                    "tau_woody_litter", proportional_parameter_changes, dependency_recalculation, &
+                                    "tau_woody_litter", proportional_parameter_changes, &
                                     tau_woody_litter)
     
     CALL Set_quincy_parameter_value(this%tau_fast * one_year * one_day, &
                                     this%tau_fast, &
-                                    "tau_fast", proportional_parameter_changes, dependency_recalculation, &
+                                    "tau_fast", proportional_parameter_changes, &
                                     tau_fast)
     
     CALL Set_quincy_parameter_value(this%tau_slow * one_year * one_day, &
                                     this%tau_slow, &
-                                    "tau_slow", proportional_parameter_changes, dependency_recalculation, &
+                                    "tau_slow", proportional_parameter_changes, &
                                     tau_slow)
 
     CALL Set_quincy_parameter_value(this%tau_biomineralisation * one_year * one_day, &
                                     this%tau_biomineralisation, &
-                                    "tau_biomineralisation", proportional_parameter_changes, dependency_recalculation, &
+                                    "tau_biomineralisation", proportional_parameter_changes, &
                                     tau_biomineralisation)
     
     CALL Set_quincy_parameter_value(this%t_ref_tresponse, &
                                     this%t_ref_tresponse, &
-                                    "t_ref_tresponse", proportional_parameter_changes, dependency_recalculation, &
+                                    "t_ref_tresponse", proportional_parameter_changes, &
                                     t_ref_tresponse)
 
     CALL Set_quincy_parameter_value(this%ea_depolymerisation, &
                                     this%ea_depolymerisation, &
-                                    "ea_depolymerisation", proportional_parameter_changes, dependency_recalculation, &
+                                    "ea_depolymerisation", proportional_parameter_changes, &
                                     ea_depolymerisation)
     
     CALL Set_quincy_parameter_value(this%ea_mic_uptake, &
                                     this%ea_mic_uptake, &
-                                    "ea_mic_uptake", proportional_parameter_changes, dependency_recalculation, &
+                                    "ea_mic_uptake", proportional_parameter_changes, &
                                     ea_mic_uptake)
     
     CALL Set_quincy_parameter_value(this%ea_sorption, &
                                     this%ea_sorption, &
-                                    "ea_sorption", proportional_parameter_changes, dependency_recalculation, &
+                                    "ea_sorption", proportional_parameter_changes, &
                                     ea_sorption)
 
     CALL Set_quincy_parameter_value(this%ea_desorption, &
                                     this%ea_desorption, &
-                                    "ea_desorption", proportional_parameter_changes, dependency_recalculation, &
+                                    "ea_desorption", proportional_parameter_changes, &
                                     ea_desorption)
     
     CALL Set_quincy_parameter_value(this%ea_hsc, &
                                     this%ea_hsc, &
-                                    "ea_hsc", proportional_parameter_changes, dependency_recalculation, &
+                                    "ea_hsc", proportional_parameter_changes, &
                                     ea_hsc)
 
     CALL Set_quincy_parameter_value(this%ea_decomposition, &
                                     this%ea_decomposition, &
-                                    "ea_decomposition", proportional_parameter_changes, dependency_recalculation, &
+                                    "ea_decomposition", proportional_parameter_changes, &
                                     ea_decomposition)
     
     CALL Set_quincy_parameter_value(this%ed_decomposition, &
                                     this%ed_decomposition, &
-                                    "ed_decomposition", proportional_parameter_changes, dependency_recalculation, &
+                                    "ed_decomposition", proportional_parameter_changes, &
                                     ed_decomposition)
     
     CALL Set_quincy_parameter_value(this%t_ref_decomposition, &   ! in function calculated for proportional changes as:
                                     this%t_ref_decomposition, &   ! def_val = 273.15 + (def_val - 273.15) * nml_prop_chng
-                                    "t_ref_decomposition", proportional_parameter_changes, dependency_recalculation, &
+                                    "t_ref_decomposition", proportional_parameter_changes, &
                                     t_ref_decomposition)
 
-    CALL Set_quincy_parameter_value(this%k1_afps / 3._wp, &
+    CALL Set_quincy_parameter_value(this%k1_afps / 3.0_wp, &
                                     this%k1_afps, &
-                                    "k1_afps", proportional_parameter_changes, dependency_recalculation, &
+                                    "k1_afps", proportional_parameter_changes, &
                                     k1_afps)
     
     CALL Set_quincy_parameter_value(this%kmr_depolymerisation, &
                                     this%kmr_depolymerisation, &
-                                    "kmr_depolymerisation", proportional_parameter_changes, dependency_recalculation, &
+                                    "kmr_depolymerisation", proportional_parameter_changes, &
                                     kmr_depolymerisation)
 
     CALL Set_quincy_parameter_value(this%kmr_mic_uptake, &
                                     this%kmr_mic_uptake, &
-                                    "kmr_mic_uptake", proportional_parameter_changes, dependency_recalculation, &
+                                    "kmr_mic_uptake", proportional_parameter_changes, &
                                     kmr_mic_uptake)
     
     CALL Set_quincy_parameter_value(this%kmr_hsc, &
                                     this%kmr_hsc, &
-                                    "kmr_hsc", proportional_parameter_changes, dependency_recalculation, &
+                                    "kmr_hsc", proportional_parameter_changes, &
                                     kmr_hsc)
     
     CALL Set_quincy_parameter_value(this%kmr_sorption, &
                                     this%kmr_sorption, &
-                                    "kmr_sorption", proportional_parameter_changes, dependency_recalculation, &
+                                    "kmr_sorption", proportional_parameter_changes, &
                                     kmr_sorption)
 
     CALL Set_quincy_parameter_value(this%kmr_decomposition, &
                                     this%kmr_decomposition, &
-                                    "kmr_decomposition", proportional_parameter_changes, dependency_recalculation, &
+                                    "kmr_decomposition", proportional_parameter_changes, &
                                     kmr_decomposition)
     
     CALL Set_quincy_parameter_value(this%k_diff_org / one_year / one_day, &
                                     this%k_diff_org, &
-                                    "k_diff_org", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_diff_org", proportional_parameter_changes, &
                                     k_diff_org)
 
     CALL Set_quincy_parameter_value(this%rho_bulk_org, &
                                     this%rho_bulk_org, &
-                                    "rho_bulk_org", proportional_parameter_changes, dependency_recalculation, &
+                                    "rho_bulk_org", proportional_parameter_changes, &
                                     rho_bulk_org)
     
     CALL Set_quincy_parameter_value(this%carbon_per_dryweight_SOM, &
                                     this%carbon_per_dryweight_SOM, &
-                                    "carbon_per_dryweight_SOM", proportional_parameter_changes, dependency_recalculation, &
+                                    "carbon_per_dryweight_SOM", proportional_parameter_changes, &
                                     carbon_per_dryweight_SOM)
     
     CALL Set_quincy_parameter_value(this%qmax_po4_fine_particle / molar_mass_P, &
                                     this%qmax_po4_fine_particle, &
-                                    "qmax_po4_fine_particle", proportional_parameter_changes, dependency_recalculation, &
+                                    "qmax_po4_fine_particle", proportional_parameter_changes, &
                                     qmax_po4_fine_particle)
 
     CALL Set_quincy_parameter_value(this%k_adsorpt_dom / one_year / one_day * molar_mass_C / 1000._wp, &
                                     this%k_adsorpt_dom, &
-                                    "k_adsorpt_dom", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_adsorpt_dom", proportional_parameter_changes, &
                                     k_adsorpt_dom)
     
     CALL Set_quincy_parameter_value(this%k_desorpt_dom / one_year / one_day, &
                                     this%k_desorpt_dom, &
-                                    "k_desorpt_dom", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_desorpt_dom", proportional_parameter_changes, &
                                     k_desorpt_dom)
 
     CALL Set_quincy_parameter_value(this%k_adsorpt_det / one_year / one_day * molar_mass_C / 100000._wp, &
                                     this%k_adsorpt_det, &
-                                    "k_adsorpt_det", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_adsorpt_det", proportional_parameter_changes, &
                                     k_adsorpt_det)
     
     CALL Set_quincy_parameter_value(this%k_desorpt_det / one_year / one_day / 100._wp, &
                                     this%k_desorpt_det, &
-                                    "k_desorpt_det", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_desorpt_det", proportional_parameter_changes, &
                                     k_desorpt_det)
     
     CALL Set_quincy_parameter_value(this%k_adsorpt_nh4, &
                                     this%k_adsorpt_nh4, &
-                                    "k_adsorpt_nh4", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_adsorpt_nh4", proportional_parameter_changes, &
                                     k_adsorpt_nh4)
 
     CALL Set_quincy_parameter_value(this%k_desorpt_nh4, &
                                     this%k_desorpt_nh4, &
-                                    "k_desorpt_nh4", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_desorpt_nh4", proportional_parameter_changes, &
                                     k_desorpt_nh4)
     
-    CALL Set_quincy_parameter_value(this%k_adsorpt_po4 * 8._wp / 9._wp / 30.0_wp / one_day, &
+    CALL Set_quincy_parameter_value(this%k_adsorpt_po4 * 8.0_wp / 9.0_wp / 30.0_wp / one_day, &
                                     this%k_adsorpt_po4, &
-                                    "k_adsorpt_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_adsorpt_po4", proportional_parameter_changes, &
                                     k_adsorpt_po4)
 
     CALL Set_quincy_parameter_value(this%k_desorpt_po4 / 30.0_wp / one_day, &
                                     this%k_desorpt_po4, &
-                                    "k_desorpt_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_desorpt_po4", proportional_parameter_changes, &
                                     k_desorpt_po4)
     
     CALL Set_quincy_parameter_value(this%k_adsorpt_f_po4 / 3600._wp, &
                                     this%k_adsorpt_f_po4, &
-                                    "k_adsorpt_f_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_adsorpt_f_po4", proportional_parameter_changes, &
                                     k_adsorpt_f_po4)
     
     CALL Set_quincy_parameter_value(this%k_desorp_f_po4 / 3600._wp / 10._wp, &
                                     this%k_desorp_f_po4, &
-                                    "k_desorp_f_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_desorp_f_po4", proportional_parameter_changes, &
                                     k_desorp_f_po4)
 
     CALL Set_quincy_parameter_value(this%k_desorp_s_po4, &
                                     this%k_desorp_s_po4, &
-                                    "k_desorp_s_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_desorp_s_po4", proportional_parameter_changes, &
                                     k_desorp_s_po4)
     
     CALL Set_quincy_parameter_value(this%k_adsorpt_s_po4, &
                                     this%k_adsorpt_s_po4, &
-                                    "k_adsorpt_s_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_adsorpt_s_po4", proportional_parameter_changes, &
                                     k_adsorpt_s_po4)
 
     CALL Set_quincy_parameter_value(this%microbial_cn * molar_mass_N / molar_mass_C, &
                                     this%microbial_cn, &
-                                    "microbial_cn", proportional_parameter_changes, dependency_recalculation, &
+                                    "microbial_cn", proportional_parameter_changes, &
                                     microbial_cn)
     
     CALL Set_quincy_parameter_value(this%microbial_np * molar_mass_P / molar_mass_N, &
                                     this%microbial_np, &
-                                    "microbial_np", proportional_parameter_changes, dependency_recalculation, &
+                                    "microbial_np", proportional_parameter_changes, &
                                     microbial_np)
     
     CALL Set_quincy_parameter_value(this%SOM_np * molar_mass_P / molar_mass_N, &
                                     this%SOM_np, &
-                                    "SOM_np", proportional_parameter_changes, dependency_recalculation, &
+                                    "SOM_np", proportional_parameter_changes, &
                                     SOM_np)
     
     CALL Set_quincy_parameter_value(this%SOM_cn * molar_mass_N / molar_mass_C, &
                                     this%SOM_cn, &
-                                    "SOM_cn", proportional_parameter_changes, dependency_recalculation, &
+                                    "SOM_cn", proportional_parameter_changes, &
                                     SOM_cn)
     
     CALL Set_quincy_parameter_value(this%microbial_nue, &
                                     this%microbial_nue, &
-                                    "microbial_nue", proportional_parameter_changes, dependency_recalculation, &
+                                    "microbial_nue", proportional_parameter_changes, &
                                     microbial_nue)
 
     CALL Set_quincy_parameter_value(this%microbial_pue, &
                                     this%microbial_pue, &
-                                    "microbial_pue", proportional_parameter_changes, dependency_recalculation, &
+                                    "microbial_pue", proportional_parameter_changes, &
                                     microbial_pue)
     
     CALL Set_quincy_parameter_value(this%microbial_cue, &
                                     this%microbial_cue, &
-                                    "microbial_cue", proportional_parameter_changes, dependency_recalculation, &
+                                    "microbial_cue", proportional_parameter_changes, &
                                     microbial_cue)
 
     CALL Set_quincy_parameter_value(this%microbial_cue_max, &
                                     this%microbial_cue_max, &
-                                    "microbial_cue_max", proportional_parameter_changes, dependency_recalculation, &
+                                    "microbial_cue_max", proportional_parameter_changes, &
                                     microbial_cue_max)
     
     CALL Set_quincy_parameter_value(this%microbial_cue_min, &
                                     this%microbial_cue_min, &
-                                    "microbial_cue_min", proportional_parameter_changes, dependency_recalculation, &
+                                    "microbial_cue_min", proportional_parameter_changes, &
                                     microbial_cue_min)
     
     CALL Set_quincy_parameter_value(this%microbial_cn_max * molar_mass_N / molar_mass_C, &
                                     this%microbial_cn_max, &
-                                    "microbial_cn_max", proportional_parameter_changes, dependency_recalculation, &
+                                    "microbial_cn_max", proportional_parameter_changes, &
                                     microbial_cn_max)
 
     CALL Set_quincy_parameter_value(this%microbial_cn_min * molar_mass_N / molar_mass_C, &
                                     this%microbial_cn_min, &
-                                    "microbial_cn_min", proportional_parameter_changes, dependency_recalculation, &
+                                    "microbial_cn_min", proportional_parameter_changes, &
                                     microbial_cn_min)
     
     CALL Set_quincy_parameter_value(this%f_mic_cn, &
                                     this%f_mic_cn, &
-                                    "f_mic_cn", proportional_parameter_changes, dependency_recalculation, &
+                                    "f_mic_cn", proportional_parameter_changes, &
                                     f_mic_cn)
 
     CALL Set_quincy_parameter_value(this%frac_woody2dec_litter, &
                                     this%frac_woody2dec_litter, &
-                                    "frac_woody2dec_litter", proportional_parameter_changes, dependency_recalculation, &
+                                    "frac_woody2dec_litter", proportional_parameter_changes, &
                                     frac_woody2dec_litter)
     
     CALL Set_quincy_parameter_value(this%frac_litter2fast_som, &
                                     this%frac_litter2fast_som, &
-                                    "frac_litter2fast_som", proportional_parameter_changes, dependency_recalculation, &
+                                    "frac_litter2fast_som", proportional_parameter_changes, &
                                     frac_litter2fast_som)
     
     CALL Set_quincy_parameter_value(this%frac_fast2slow_som, &
                                     this%frac_fast2slow_som, &
-                                    "frac_fast2slow_som", proportional_parameter_changes, dependency_recalculation, &
+                                    "frac_fast2slow_som", proportional_parameter_changes, &
                                     frac_fast2slow_som)
 
     CALL Set_quincy_parameter_value(this%frac_slow2fast_som, &
                                     this%frac_slow2fast_som, &
-                                    "frac_slow2fast_som", proportional_parameter_changes, dependency_recalculation, &
+                                    "frac_slow2fast_som", proportional_parameter_changes, &
                                     frac_slow2fast_som)
     
     CALL Set_quincy_parameter_value(this%fc_woody2polymeric, &
                                     this%fc_woody2polymeric, &
-                                    "fc_woody2polymeric", proportional_parameter_changes, dependency_recalculation, &
+                                    "fc_woody2polymeric", proportional_parameter_changes, &
                                     fc_woody2polymeric)
 
     CALL Set_quincy_parameter_value(this%fc_soluable2dom, &
                                     this%fc_soluable2dom, &
-                                    "fc_soluable2dom", proportional_parameter_changes, dependency_recalculation, &
+                                    "fc_soluable2dom", proportional_parameter_changes, &
                                     fc_soluable2dom)
     
-    CALL Set_quincy_parameter_value(this%k_mort_microbial * 1.e-8_wp, &
+    CALL Set_quincy_parameter_value(this%k_mort_microbial * 1.0e-8_wp, &
                                     this%k_mort_microbial, &
-                                    "k_mort_microbial", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_mort_microbial", proportional_parameter_changes, &
                                     k_mort_microbial)
     
     CALL Set_quincy_parameter_value(this%min_mic_biomass, &
                                     this%min_mic_biomass, &
-                                    "min_mic_biomass", proportional_parameter_changes, dependency_recalculation, &
+                                    "min_mic_biomass", proportional_parameter_changes, &
                                     min_mic_biomass)
 
-    CALL Set_quincy_parameter_value(this%vmax_mic_uptake / one_year / one_day * 1000000._wp * 10._wp, &
+    CALL Set_quincy_parameter_value(this%vmax_mic_uptake / one_year / one_day * 1000000.0_wp * 10.0_wp, &
                                     this%vmax_mic_uptake, &
-                                    "vmax_mic_uptake", proportional_parameter_changes, dependency_recalculation, &
+                                    "vmax_mic_uptake", proportional_parameter_changes, &
                                     vmax_mic_uptake)
     
-    CALL Set_quincy_parameter_value(this%km_mic_uptake / molar_mass_C * 1000_wp, &
+    CALL Set_quincy_parameter_value(this%km_mic_uptake / molar_mass_C * 1000.0_wp, &
                                     this%km_mic_uptake, &
-                                    "km_mic_uptake", proportional_parameter_changes, dependency_recalculation, &
+                                    "km_mic_uptake", proportional_parameter_changes, &
                                     km_mic_uptake)
 
-    CALL Set_quincy_parameter_value(this%km_depolymerisation / 2._wp / molar_mass_C * 1000_wp, &
+    CALL Set_quincy_parameter_value(this%km_depolymerisation / 2.0_wp / molar_mass_C * 1000.0_wp, &
                                     this%km_depolymerisation, &
-                                    "km_depolymerisation", proportional_parameter_changes, dependency_recalculation, &
+                                    "km_depolymerisation", proportional_parameter_changes, &
                                     km_depolymerisation)
     
     CALL Set_quincy_parameter_value(this%vmax_depolymerisation_residue / one_year / one_day, &
                                     this%vmax_depolymerisation_residue, &
-                                    "vmax_depolymerisation_residue", proportional_parameter_changes, dependency_recalculation, &
+                                    "vmax_depolymerisation_residue", proportional_parameter_changes, &
                                     vmax_depolymerisation_residue)
     
     CALL Set_quincy_parameter_value(this%vmax_depolymerisation_litter / one_year / one_day, &
                                     this%vmax_depolymerisation_litter, &
-                                    "vmax_depolymerisation_litter", proportional_parameter_changes, dependency_recalculation, &
+                                    "vmax_depolymerisation_litter", proportional_parameter_changes, &
                                     vmax_depolymerisation_litter)
 
     CALL Set_quincy_parameter_value(this%f_soluable_residue, &
                                     this%f_soluable_residue, &
-                                    "f_soluable_residue", proportional_parameter_changes, dependency_recalculation, &
+                                    "f_soluable_residue", proportional_parameter_changes, &
                                     f_soluable_residue)
     
     CALL Set_quincy_parameter_value(this%f_soluable_leaf, &
                                     this%f_soluable_leaf, &
-                                    "f_soluable_leaf", proportional_parameter_changes, dependency_recalculation, &
+                                    "f_soluable_leaf", proportional_parameter_changes, &
                                     f_soluable_leaf)
 
     CALL Set_quincy_parameter_value(this%f_soluable_fine_root, &
                                     this%f_soluable_fine_root, &
-                                    "f_soluable_fine_root", proportional_parameter_changes, dependency_recalculation, &
+                                    "f_soluable_fine_root", proportional_parameter_changes, &
                                     f_soluable_fine_root)
     
     CALL Set_quincy_parameter_value(this%f_soluable_fruit, &
                                     this%f_soluable_fruit, &
-                                    "f_soluable_fruit", proportional_parameter_changes, dependency_recalculation, &
+                                    "f_soluable_fruit", proportional_parameter_changes, &
                                     f_soluable_fruit)
     
     CALL Set_quincy_parameter_value(this%f_soluable_seed_bed, &
                                     this%f_soluable_seed_bed, &
-                                    "f_soluable_seed_bed", proportional_parameter_changes, dependency_recalculation, &
+                                    "f_soluable_seed_bed", proportional_parameter_changes, &
                                     f_soluable_seed_bed)
 
     CALL Set_quincy_parameter_value(this%fc_soluable_max, &
                                     this%fc_soluable_max, &
-                                    "fc_soluable_max", proportional_parameter_changes, dependency_recalculation, &
+                                    "fc_soluable_max", proportional_parameter_changes, &
                                     fc_soluable_max)
     
     CALL Set_quincy_parameter_value(this%k_fc_soluable, &
                                     this%k_fc_soluable, &
-                                    "k_fc_soluable", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_fc_soluable", proportional_parameter_changes, &
                                     k_fc_soluable)
 
     CALL Set_quincy_parameter_value(this%k_fn_soluable, &
                                     this%k_fn_soluable, &
-                                    "k_fn_soluable", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_fn_soluable", proportional_parameter_changes, &
                                     k_fn_soluable)
     
     CALL Set_quincy_parameter_value(this%k_fp_soluable, &
                                     this%k_fp_soluable, &
-                                    "k_fp_soluable", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_fp_soluable", proportional_parameter_changes, &
                                     k_fp_soluable)
     
     CALL Set_quincy_parameter_value(this%lc_leaf_max / molar_mass_C * molar_mass_N, &
                                     this%lc_leaf_max, &
-                                    "lc_leaf_max", proportional_parameter_changes, dependency_recalculation, &
+                                    "lc_leaf_max", proportional_parameter_changes, &
                                     lc_leaf_max)
 
     CALL Set_quincy_parameter_value(this%lc_leaf2sla / molar_mass_C * molar_mass_N, &
                                     this%lc_leaf2sla, &
-                                    "lc_leaf2sla", proportional_parameter_changes, dependency_recalculation, &
+                                    "lc_leaf2sla", proportional_parameter_changes, &
                                     lc_leaf2sla)
     
     CALL Set_quincy_parameter_value(this%lc_fine_root / molar_mass_C * molar_mass_N, &
                                     this%lc_fine_root, &
-                                    "lc_fine_root", proportional_parameter_changes, dependency_recalculation, &
+                                    "lc_fine_root", proportional_parameter_changes, &
                                     lc_fine_root)
 
     CALL Set_quincy_parameter_value(this%lc_coarse_root / molar_mass_C * molar_mass_N, &
                                     this%lc_coarse_root, &
-                                    "lc_coarse_root", proportional_parameter_changes, dependency_recalculation, &
+                                    "lc_coarse_root", proportional_parameter_changes, &
                                     lc_coarse_root)
     
     CALL Set_quincy_parameter_value(this%lc_woody_litter / molar_mass_C * molar_mass_N, &
                                     this%lc_woody_litter, &
-                                    "lc_woody_litter", proportional_parameter_changes, dependency_recalculation, &
+                                    "lc_woody_litter", proportional_parameter_changes, &
                                     lc_woody_litter)
     
     CALL Set_quincy_parameter_value(this%lc_fruit / molar_mass_C * molar_mass_N, &
                                     this%lc_fruit, &
-                                    "lc_fruit", proportional_parameter_changes, dependency_recalculation, &
+                                    "lc_fruit", proportional_parameter_changes, &
                                     lc_fruit)
 
     CALL Set_quincy_parameter_value(this%lc_seed_bed / molar_mass_C * molar_mass_N, &
                                     this%lc_seed_bed, &
-                                    "lc_seed_bed", proportional_parameter_changes, dependency_recalculation, &
+                                    "lc_seed_bed", proportional_parameter_changes, &
                                     lc_seed_bed)
     
     CALL Set_quincy_parameter_value(this%mycorrhiza_cue, &
                                     this%mycorrhiza_cue, &
-                                    "mycorrhiza_cue", proportional_parameter_changes, dependency_recalculation, &
+                                    "mycorrhiza_cue", proportional_parameter_changes, &
                                     mycorrhiza_cue)
 
     CALL Set_quincy_parameter_value(this%mycorrhiza_cn * molar_mass_N / molar_mass_C, &
                                     this%mycorrhiza_cn, &
-                                    "mycorrhiza_cn", proportional_parameter_changes, dependency_recalculation, &
+                                    "mycorrhiza_cn", proportional_parameter_changes, &
                                     mycorrhiza_cn)
     
     CALL Set_quincy_parameter_value(this%mycorrhiza_np * molar_mass_P / molar_mass_N, &
                                     this%mycorrhiza_np, &
-                                    "mycorrhiza_np", proportional_parameter_changes, dependency_recalculation, &
+                                    "mycorrhiza_np", proportional_parameter_changes, &
                                     mycorrhiza_np)
     
     CALL Set_quincy_parameter_value(this%f_maxresp_myc, &
                                     this%f_maxresp_myc, &
-                                    "f_maxresp_myc", proportional_parameter_changes, dependency_recalculation, &
+                                    "f_maxresp_myc", proportional_parameter_changes, &
                                     f_maxresp_myc)
 
     CALL Set_quincy_parameter_value(this%f_surface_myc2fineroot, &
                                     this%f_surface_myc2fineroot, &
-                                    "f_surface_myc2fineroot", proportional_parameter_changes, dependency_recalculation, &
+                                    "f_surface_myc2fineroot", proportional_parameter_changes, &
                                     f_surface_myc2fineroot)
     
     CALL Set_quincy_parameter_value(this%km1_up_nh4, &
                                     this%km1_up_nh4, &
-                                    "km1_up_nh4", proportional_parameter_changes, dependency_recalculation, &
+                                    "km1_up_nh4", proportional_parameter_changes, &
                                     km1_up_nh4)
 
     CALL Set_quincy_parameter_value(this%km2_up_nh4, &
                                     this%km2_up_nh4, &
-                                    "km2_up_nh4", proportional_parameter_changes, dependency_recalculation, &
+                                    "km2_up_nh4", proportional_parameter_changes, &
                                     km2_up_nh4)
     
     CALL Set_quincy_parameter_value(this%km1_up_no3, &
                                     this%km1_up_no3, &
-                                    "km1_up_no3", proportional_parameter_changes, dependency_recalculation, &
+                                    "km1_up_no3", proportional_parameter_changes, &
                                     km1_up_no3)
     
     CALL Set_quincy_parameter_value(this%km2_up_no3, &
                                     this%km2_up_no3, &
-                                    "km2_up_no3", proportional_parameter_changes, dependency_recalculation, &
+                                    "km2_up_no3", proportional_parameter_changes, &
                                     km2_up_no3)
 
     CALL Set_quincy_parameter_value(this%km1_up_po4 / 0.0003_wp, &
                                     this%km1_up_po4, &
-                                    "km1_up_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    "km1_up_po4", proportional_parameter_changes, &
                                     km1_up_po4)
     
-    CALL Set_quincy_parameter_value(this%km2_up_po4 / 1000000._wp, &
+    CALL Set_quincy_parameter_value(this%km2_up_po4 / 1000000.0_wp, &
                                     this%km2_up_po4, &
-                                    "km2_up_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    "km2_up_po4", proportional_parameter_changes, &
                                     km2_up_po4)
 
-    CALL Set_quincy_parameter_value(this%vmax_mic_uptake_nh4 / 3600._wp * molar_mass_C, &
+    CALL Set_quincy_parameter_value(this%vmax_mic_uptake_nh4 / 3600.0_wp * molar_mass_C, &
                                     this%vmax_mic_uptake_nh4, &
-                                    "vmax_mic_uptake_nh4", proportional_parameter_changes, dependency_recalculation, &
+                                    "vmax_mic_uptake_nh4", proportional_parameter_changes, &
                                     vmax_mic_uptake_nh4)
     
     CALL Set_quincy_parameter_value(this%km_mic_uptake_nh4 / molar_mass_N, &
                                     this%km_mic_uptake_nh4, &
-                                    "km_mic_uptake_nh4", proportional_parameter_changes, dependency_recalculation, &
+                                    "km_mic_uptake_nh4", proportional_parameter_changes, &
                                     km_mic_uptake_nh4)
     
-    CALL Set_quincy_parameter_value(this%vmax_mic_uptake_no3 / 3600._wp * molar_mass_C, &
+    CALL Set_quincy_parameter_value(this%vmax_mic_uptake_no3 / 3600.0_wp * molar_mass_C, &
                                     this%vmax_mic_uptake_no3, &
-                                    "vmax_mic_uptake_no3", proportional_parameter_changes, dependency_recalculation, &
+                                    "vmax_mic_uptake_no3", proportional_parameter_changes, &
                                     vmax_mic_uptake_no3)
 
     CALL Set_quincy_parameter_value(this%km_mic_uptake_no3 / molar_mass_N, &
                                     this%km_mic_uptake_no3, &
-                                    "km_mic_uptake_no3", proportional_parameter_changes, dependency_recalculation, &
+                                    "km_mic_uptake_no3", proportional_parameter_changes, &
                                     km_mic_uptake_no3)
     
-    CALL Set_quincy_parameter_value(this%f_mic_carrier_n / 1000._wp, &
+    CALL Set_quincy_parameter_value(this%f_mic_carrier_n / 1000.0_wp, &
                                     this%f_mic_carrier_n, &
-                                    "f_mic_carrier_n", proportional_parameter_changes, dependency_recalculation, &
+                                    "f_mic_carrier_n", proportional_parameter_changes, &
                                     f_mic_carrier_n)
 
-    CALL Set_quincy_parameter_value(this%vmax_plant_uptake_nh4 / 3600._wp * molar_mass_C, &
+    CALL Set_quincy_parameter_value(this%vmax_plant_uptake_nh4 / 3600.0_wp * molar_mass_C, &
                                     this%vmax_plant_uptake_nh4, &
-                                    "vmax_plant_uptake_nh4", proportional_parameter_changes, dependency_recalculation, &
+                                    "vmax_plant_uptake_nh4", proportional_parameter_changes, &
                                     vmax_plant_uptake_nh4)
     
     CALL Set_quincy_parameter_value(this%km_plant_uptake_nh4 / molar_mass_N, &
                                     this%km_plant_uptake_nh4, &
-                                    "km_plant_uptake_nh4", proportional_parameter_changes, dependency_recalculation, &
+                                    "km_plant_uptake_nh4", proportional_parameter_changes, &
                                     km_plant_uptake_nh4)
     
-    CALL Set_quincy_parameter_value(this%vmax_plant_uptake_no3 / 3600._wp * molar_mass_C, &
+    CALL Set_quincy_parameter_value(this%vmax_plant_uptake_no3 / 3600.0_wp * molar_mass_C, &
                                     this%vmax_plant_uptake_no3, &
-                                    "vmax_plant_uptake_no3", proportional_parameter_changes, dependency_recalculation, &
+                                    "vmax_plant_uptake_no3", proportional_parameter_changes, &
                                     vmax_plant_uptake_no3)
 
     CALL Set_quincy_parameter_value(this%km_plant_uptake_no3 / molar_mass_N, &
                                     this%km_plant_uptake_no3, &
-                                    "km_plant_uptake_no3", proportional_parameter_changes, dependency_recalculation, &
+                                    "km_plant_uptake_no3", proportional_parameter_changes, &
                                     km_plant_uptake_no3)
     
-    CALL Set_quincy_parameter_value(this%f_plant_carrier_n / 10000._wp, &
+    CALL Set_quincy_parameter_value(this%f_plant_carrier_n / 10000.0_wp, &
                                     this%f_plant_carrier_n, &
-                                    "f_plant_carrier_n", proportional_parameter_changes, dependency_recalculation, &
+                                    "f_plant_carrier_n", proportional_parameter_changes, &
                                     f_plant_carrier_n)
 
-    CALL Set_quincy_parameter_value(this%vmax_mic_uptake_po4 / 3600._wp * molar_mass_C, &
+    CALL Set_quincy_parameter_value(this%vmax_mic_uptake_po4 / 3600.0_wp * molar_mass_C, &
                                     this%vmax_mic_uptake_po4, &
-                                    "vmax_mic_uptake_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    "vmax_mic_uptake_po4", proportional_parameter_changes, &
                                     vmax_mic_uptake_po4)
     
     CALL Set_quincy_parameter_value(this%km_mic_uptake_po4 / molar_mass_P, &
                                     this%km_mic_uptake_po4, &
-                                    "km_mic_uptake_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    "km_mic_uptake_po4", proportional_parameter_changes, &
                                     km_mic_uptake_po4)
     
-    CALL Set_quincy_parameter_value(this%vmax_plant_uptake_po4 / 60._wp * molar_mass_C, &
+    CALL Set_quincy_parameter_value(this%vmax_plant_uptake_po4 / 60.0_wp * molar_mass_C, &
                                     this%vmax_plant_uptake_po4, &
-                                    "vmax_plant_uptake_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    "vmax_plant_uptake_po4", proportional_parameter_changes, &
                                     vmax_plant_uptake_po4)
 
     CALL Set_quincy_parameter_value(this%km_plant_uptake_po4 / molar_mass_P, &
                                     this%km_plant_uptake_po4, &
-                                    "km_plant_uptake_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    "km_plant_uptake_po4", proportional_parameter_changes, &
                                     km_plant_uptake_po4)
     
-    CALL Set_quincy_parameter_value(this%k_mic_uptake_nh4 * 24._wp / one_day, &
+    CALL Set_quincy_parameter_value(this%k_mic_uptake_nh4 * 24.0_wp / one_day, &
                                     this%k_mic_uptake_nh4, &
-                                    "k_mic_uptake_nh4", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_mic_uptake_nh4", proportional_parameter_changes, &
                                     k_mic_uptake_nh4)
 
-    CALL Set_quincy_parameter_value(this%k_plant_uptake_nh4 * 24._wp / one_day, &
+    CALL Set_quincy_parameter_value(this%k_plant_uptake_nh4 * 24.0_wp / one_day, &
                                     this%k_plant_uptake_nh4, &
-                                    "k_plant_uptake_nh4", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_plant_uptake_nh4", proportional_parameter_changes, &
                                     k_plant_uptake_nh4)
     
-    CALL Set_quincy_parameter_value(this%k_mic_uptake_no3 * 24._wp / one_day, &
+    CALL Set_quincy_parameter_value(this%k_mic_uptake_no3 * 24.0_wp / one_day, &
                                     this%k_mic_uptake_no3, &
-                                    "k_mic_uptake_no3", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_mic_uptake_no3", proportional_parameter_changes, &
                                     k_mic_uptake_no3)
     
-    CALL Set_quincy_parameter_value(this%k_plant_uptake_no3 * 24._wp / one_day, &
+    CALL Set_quincy_parameter_value(this%k_plant_uptake_no3 * 24.0_wp / one_day, &
                                     this%k_plant_uptake_no3, &
-                                    "k_plant_uptake_no3", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_plant_uptake_no3", proportional_parameter_changes, &
                                     k_plant_uptake_no3)
 
     CALL Set_quincy_parameter_value(this%k_mic_uptake_po4 / one_day, &
                                     this%k_mic_uptake_po4, &
-                                    "k_mic_uptake_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_mic_uptake_po4", proportional_parameter_changes, &
                                     k_mic_uptake_po4)
     
     CALL Set_quincy_parameter_value(this%k_plant_uptake_po4 / one_day, &
                                     this%k_plant_uptake_po4, &
-                                    "k_plant_uptake_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_plant_uptake_po4", proportional_parameter_changes, &
                                     k_plant_uptake_po4)
 
-    CALL Set_quincy_parameter_value(this%f_mic_carrier_po4 / 1000._wp, &
+    CALL Set_quincy_parameter_value(this%f_mic_carrier_po4 / 1000.0_wp, &
                                     this%f_mic_carrier_po4, &
-                                    "f_mic_carrier_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    "f_mic_carrier_po4", proportional_parameter_changes, &
                                     f_mic_carrier_po4)
     
-    CALL Set_quincy_parameter_value(this%f_plant_carrier_po4 / 10000._wp, &
+    CALL Set_quincy_parameter_value(this%f_plant_carrier_po4 / 10000.0_wp, &
                                     this%f_plant_carrier_po4, &
-                                    "f_plant_carrier_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    "f_plant_carrier_po4", proportional_parameter_changes, &
                                     f_plant_carrier_po4)
     
     CALL Set_quincy_parameter_value(this%qmax_po4_mineral / molar_mass_P, &
                                     this%qmax_po4_mineral, &
-                                    "qmax_po4_mineral", proportional_parameter_changes, dependency_recalculation, &
+                                    "qmax_po4_mineral", proportional_parameter_changes, &
                                     qmax_po4_mineral)
 
     CALL Set_quincy_parameter_value(this%km_adsorpt_mineral_po4 / molar_mass_P, &
                                     this%km_adsorpt_mineral_po4, &
-                                    "km_adsorpt_mineral_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    "km_adsorpt_mineral_po4", proportional_parameter_changes, &
                                     km_adsorpt_mineral_po4)
     
     CALL Set_quincy_parameter_value(this%km_adsorpt_OM_po4 / molar_mass_P, &
                                     this%km_adsorpt_OM_po4, &
-                                    "km_adsorpt_OM_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    "km_adsorpt_OM_po4", proportional_parameter_changes, &
                                     km_adsorpt_OM_po4)
 
     CALL Set_quincy_parameter_value(this%ea_nitrification, &
                                     this%ea_nitrification, &
-                                    "ea_nitrification", proportional_parameter_changes, dependency_recalculation, &
+                                    "ea_nitrification", proportional_parameter_changes, &
                                     ea_nitrification)
     
     CALL Set_quincy_parameter_value(this%ed_nitrification, &
                                     this%ed_nitrification, &
-                                    "ed_nitrification", proportional_parameter_changes, dependency_recalculation, &
+                                    "ed_nitrification", proportional_parameter_changes, &
                                     ed_nitrification)
     
     CALL Set_quincy_parameter_value(this%t_opt_nitrification, &   ! in function calculated for proportional changes as:
                                     this%t_opt_nitrification, &   ! def_val = 273.15 + (def_val - 273.15) * nml_prop_chng
-                                    "t_opt_nitrification", proportional_parameter_changes, dependency_recalculation, &
+                                    "t_opt_nitrification", proportional_parameter_changes, &
                                     t_opt_nitrification)
 
     CALL Set_quincy_parameter_value(this%f_nit_noy, &
                                     this%f_nit_noy, &
-                                    "f_nit_noy", proportional_parameter_changes, dependency_recalculation, &
+                                    "f_nit_noy", proportional_parameter_changes, &
                                     f_nit_noy)
     
     CALL Set_quincy_parameter_value(this%f_nit_n2o, &
                                     this%f_nit_n2o, &
-                                    "f_nit_n2o", proportional_parameter_changes, dependency_recalculation, &
+                                    "f_nit_n2o", proportional_parameter_changes, &
                                     f_nit_n2o)
 
     CALL Set_quincy_parameter_value(this%ea_denitrification, &
                                     this%ea_denitrification, &
-                                    "ea_denitrification", proportional_parameter_changes, dependency_recalculation, &
+                                    "ea_denitrification", proportional_parameter_changes, &
                                     ea_denitrification)
     
-    CALL Set_quincy_parameter_value(this%vmax_nitrification / one_day * 1.e6_wp, &
+    CALL Set_quincy_parameter_value(this%vmax_nitrification / one_day * 1.0e6_wp, &
                                     this%vmax_nitrification, &
-                                    "vmax_nitrification", proportional_parameter_changes, dependency_recalculation, &
+                                    "vmax_nitrification", proportional_parameter_changes, &
                                     vmax_nitrification)
     
-    CALL Set_quincy_parameter_value(this%vmax_denitrification / one_day * 1.e6_wp, &
+    CALL Set_quincy_parameter_value(this%vmax_denitrification / one_day * 1.0e6_wp, &
                                     this%vmax_denitrification, &
-                                    "vmax_denitrification", proportional_parameter_changes, dependency_recalculation, &
+                                    "vmax_denitrification", proportional_parameter_changes, &
                                     vmax_denitrification)
 
     CALL Set_quincy_parameter_value(this%km_denitrification_c, &
                                     this%km_denitrification_c, &
-                                    "km_denitrification_c", proportional_parameter_changes, dependency_recalculation, &
+                                    "km_denitrification_c", proportional_parameter_changes, &
                                     km_denitrification_c)
     
     CALL Set_quincy_parameter_value(this%km_denitrification_no3 * 1000.0_wp / molar_mass_N, &
                                     this%km_denitrification_no3, &
-                                    "km_denitrification_no3", proportional_parameter_changes, dependency_recalculation, &
+                                    "km_denitrification_no3", proportional_parameter_changes, &
                                     km_denitrification_no3)
 
     CALL Set_quincy_parameter_value(this%f_denit_noy, &
                                     this%f_denit_noy, &
-                                    "f_denit_noy", proportional_parameter_changes, dependency_recalculation, &
+                                    "f_denit_noy", proportional_parameter_changes, &
                                     f_denit_noy)
     
     CALL Set_quincy_parameter_value(this%f_denit_n2o, &
                                     this%f_denit_n2o, &
-                                    "f_denit_n2o", proportional_parameter_changes, dependency_recalculation, &
+                                    "f_denit_n2o", proportional_parameter_changes, &
                                     f_denit_n2o)
     
     CALL Set_quincy_parameter_value(this%ea_gasdiffusion, &
                                     this%ea_gasdiffusion, &
-                                    "ea_gasdiffusion", proportional_parameter_changes, dependency_recalculation, &
+                                    "ea_gasdiffusion", proportional_parameter_changes, &
                                     ea_gasdiffusion)
 
     CALL Set_quincy_parameter_value(this%lambda_anvf, &
                                     this%lambda_anvf, &
-                                    "lambda_anvf", proportional_parameter_changes, dependency_recalculation, &
+                                    "lambda_anvf", proportional_parameter_changes, &
                                     lambda_anvf)
     
     CALL Set_quincy_parameter_value(this%k_anvf, &
                                     this%k_anvf, &
-                                    "k_anvf", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_anvf", proportional_parameter_changes, &
                                     k_anvf)
 
     CALL Set_quincy_parameter_value(this%floss_nmin, &
                                     this%floss_nmin, &
-                                    "floss_nmin", proportional_parameter_changes, dependency_recalculation, &
+                                    "floss_nmin", proportional_parameter_changes, &
                                     floss_nmin)
     
     CALL Set_quincy_parameter_value(this%fnit_nmin, &
                                     this%fnit_nmin, &
-                                    "fnit_nmin", proportional_parameter_changes, dependency_recalculation, &
+                                    "fnit_nmin", proportional_parameter_changes, &
                                     fnit_nmin)
     
     CALL Set_quincy_parameter_value(this%fleach_nh4, &
                                     this%fleach_nh4, &
-                                    "fleach_nh4", proportional_parameter_changes, dependency_recalculation, &
+                                    "fleach_nh4", proportional_parameter_changes, &
                                     fleach_nh4)
 
     CALL Set_quincy_parameter_value(this%fleach_po4, &
                                     this%fleach_po4, &
-                                    "fleach_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    "fleach_po4", proportional_parameter_changes, &
                                     fleach_po4)
     
     CALL Set_quincy_parameter_value(this%soil_n_threshold_bnf, &
                                     this%soil_n_threshold_bnf, &
-                                    "soil_n_threshold_bnf", proportional_parameter_changes, dependency_recalculation, &
+                                    "soil_n_threshold_bnf", proportional_parameter_changes, &
                                     soil_n_threshold_bnf)
 
     CALL Set_quincy_parameter_value(this%standard_bnf_max_rate / molar_mass_N / one_year / one_day * 1000000.0_wp, &
                                     this%standard_bnf_max_rate, &
-                                    "standard_bnf_max_rate", proportional_parameter_changes, dependency_recalculation, &
+                                    "standard_bnf_max_rate", proportional_parameter_changes, &
                                     standard_bnf_max_rate)
     
     CALL Set_quincy_parameter_value(this%eta_mic_uptake_nh4, &
                                     this%eta_mic_uptake_nh4, &
-                                    "eta_mic_uptake_nh4", proportional_parameter_changes, dependency_recalculation, &
+                                    "eta_mic_uptake_nh4", proportional_parameter_changes, &
                                     eta_mic_uptake_nh4)
     
     CALL Set_quincy_parameter_value(this%eta_mic_uptake_no3, &
                                     this%eta_mic_uptake_no3, &
-                                    "eta_mic_uptake_no3", proportional_parameter_changes, dependency_recalculation, &
+                                    "eta_mic_uptake_no3", proportional_parameter_changes, &
                                     eta_mic_uptake_no3)
 
     CALL Set_quincy_parameter_value(this%eta_plant_uptake_nh4, &
                                     this%eta_plant_uptake_nh4, &
-                                    "eta_plant_uptake_nh4", proportional_parameter_changes, dependency_recalculation, &
+                                    "eta_plant_uptake_nh4", proportional_parameter_changes, &
                                     eta_plant_uptake_nh4)
     
     CALL Set_quincy_parameter_value(this%eta_plant_uptake_no3, &
                                     this%eta_plant_uptake_no3, &
-                                    "eta_plant_uptake_no3", proportional_parameter_changes, dependency_recalculation, &
+                                    "eta_plant_uptake_no3", proportional_parameter_changes, &
                                     eta_plant_uptake_no3)
 
     CALL Set_quincy_parameter_value(this%eta_nitrification, &
                                     this%eta_nitrification, &
-                                    "eta_nitrification", proportional_parameter_changes, dependency_recalculation, &
+                                    "eta_nitrification", proportional_parameter_changes, &
                                     eta_nitrification)
     
     CALL Set_quincy_parameter_value(this%eta_nitrate_production, &
                                     this%eta_nitrate_production, &
-                                    "eta_nitrate_production", proportional_parameter_changes, dependency_recalculation, &
+                                    "eta_nitrate_production", proportional_parameter_changes, &
                                     eta_nitrate_production)
     
     CALL Set_quincy_parameter_value(this%eta_denitrification, &
                                     this%eta_denitrification, &
-                                    "eta_denitrification", proportional_parameter_changes, dependency_recalculation, &
+                                    "eta_denitrification", proportional_parameter_changes, &
                                     eta_denitrification)
 
     CALL Set_quincy_parameter_value(this%eta_ammonification, &
                                     this%eta_ammonification, &
-                                    "eta_ammonification", proportional_parameter_changes, dependency_recalculation, &
+                                    "eta_ammonification", proportional_parameter_changes, &
                                     eta_ammonification)
     
     CALL Set_quincy_parameter_value(this%eta_volatilisation_nh3, &
                                     this%eta_volatilisation_nh3, &
-                                    "eta_volatilisation_nh3", proportional_parameter_changes, dependency_recalculation, &
+                                    "eta_volatilisation_nh3", proportional_parameter_changes, &
                                     eta_volatilisation_nh3)
 
-    CALL Set_quincy_parameter_value(this%k_weath_mineral / molar_mass_P / 1254._wp / one_year /one_day, &
+    CALL Set_quincy_parameter_value(this%k_weath_mineral / molar_mass_P / 1254.0_wp / one_year / one_day, &
                                     this%k_weath_mineral, &
-                                    "k_weath_mineral", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_weath_mineral", proportional_parameter_changes, &
                                     k_weath_mineral)
     
     CALL Set_quincy_parameter_value(this%eq_sorp_mineral_po4 / molar_mass_P, &
                                     this%eq_sorp_mineral_po4, &
-                                    "eq_sorp_mineral_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    "eq_sorp_mineral_po4", proportional_parameter_changes, &
                                     eq_sorp_mineral_po4)
     
-    CALL Set_quincy_parameter_value(this%k_occlude_po4 / 1000000._wp / 30._wp / one_day, &
+    CALL Set_quincy_parameter_value(this%k_occlude_po4 / 1000000.0_wp / 30.0_wp / one_day, &
                                     this%k_occlude_po4, &
-                                    "k_occlude_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    "k_occlude_po4", proportional_parameter_changes, &
                                     k_occlude_po4)
 
     CALL Set_quincy_parameter_value(this%vmax_biochem_po4 / 40.0_wp / one_day, &
                                     this%vmax_biochem_po4, &
-                                    "vmax_biochem_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    "vmax_biochem_po4", proportional_parameter_changes, &
                                     vmax_biochem_po4)
     
     CALL Set_quincy_parameter_value(this%km_mic_biochem_po4 / molar_mass_C, &
                                     this%km_mic_biochem_po4, &
-                                    "km_mic_biochem_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    "km_mic_biochem_po4", proportional_parameter_changes, &
                                     km_mic_biochem_po4)
 
     CALL Set_quincy_parameter_value(this%km_dip_biochem_po4, &
                                     this%km_dip_biochem_po4, &
-                                    "km_dip_biochem_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    "km_dip_biochem_po4", proportional_parameter_changes, &
                                     km_dip_biochem_po4)
     
     CALL Set_quincy_parameter_value(this%km_rootc_biochem_po4, &
                                     this%km_rootc_biochem_po4, &
-                                    "km_rootc_biochem_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    "km_rootc_biochem_po4", proportional_parameter_changes, &
                                     km_rootc_biochem_po4)
     
     CALL Set_quincy_parameter_value(this%km_rootc_weath_po4, &
                                     this%km_rootc_weath_po4, &
-                                    "km_rootc_weath_po4", proportional_parameter_changes, dependency_recalculation, &
+                                    "km_rootc_weath_po4", proportional_parameter_changes, &
                                     km_rootc_weath_po4)
     
-    CALL Set_quincy_parameter_value(this%biomin_thres_PC / 2400._wp, &
+    CALL Set_quincy_parameter_value(this%biomin_thres_PC / 2400.0_wp, &
                                     this%biomin_thres_PC, &
-                                    "biomin_thres_PC", proportional_parameter_changes, dependency_recalculation, &
+                                    "biomin_thres_PC", proportional_parameter_changes, &
                                     biomin_thres_PC)
     
     CALL Set_quincy_parameter_value(this%fc_p_res2dom, &
                                     this%fc_p_res2dom, &
-                                    "fc_p_res2dom", proportional_parameter_changes, dependency_recalculation, &
+                                    "fc_p_res2dom", proportional_parameter_changes, &
                                     fc_p_res2dom)
     
     CALL Set_quincy_parameter_value(this%fc_n_res2dom, &
                                     this%fc_n_res2dom, &
-                                    "fc_n_res2dom", proportional_parameter_changes, dependency_recalculation, &
+                                    "fc_n_res2dom", proportional_parameter_changes, &
                                     fc_n_res2dom)
     
     CALL Set_quincy_parameter_value(this%f_norg_limit, &
                                     this%f_norg_limit, &
-                                    "f_norg_limit", proportional_parameter_changes, dependency_recalculation, &
+                                    "f_norg_limit", proportional_parameter_changes, &
                                     f_norg_limit)
 
     CALL Set_quincy_parameter_value(this%f_tau_myc, &
                                     this%f_tau_myc, &
-                                    "f_tau_myc", proportional_parameter_changes, dependency_recalculation, &
+                                    "f_tau_myc", proportional_parameter_changes, &
                                     f_tau_myc)
     
     CALL Set_quincy_parameter_value(this%km_priming, &
                                     this%km_priming, &
-                                    "km_priming", proportional_parameter_changes, dependency_recalculation, &
+                                    "km_priming", proportional_parameter_changes, &
                                     km_priming)
 
     CALL Set_quincy_parameter_value(this%km_up_org, &
                                     this%km_up_org, &
-                                    "km_up_org", proportional_parameter_changes, dependency_recalculation, &
+                                    "km_up_org", proportional_parameter_changes, &
                                     km_up_org)
     
     CALL Set_quincy_parameter_value(this%myc_root_coverage_max, &
                                     this%myc_root_coverage_max, &
-                                    "myc_root_coverage_max", proportional_parameter_changes, dependency_recalculation, &
+                                    "myc_root_coverage_max", proportional_parameter_changes, &
                                     myc_root_coverage_max)
 
     CALL Set_quincy_parameter_value(this%resp_priming / one_day, &
                                     this%resp_priming, &
-                                    "resp_priming", proportional_parameter_changes, dependency_recalculation, &
+                                    "resp_priming", proportional_parameter_changes, &
                                     resp_priming)
     
     CALL Set_quincy_parameter_value(this%vmax_uptake_norg, &
                                     this%vmax_uptake_norg, &
-                                    "vmax_uptake_norg", proportional_parameter_changes, dependency_recalculation, &
+                                    "vmax_uptake_norg", proportional_parameter_changes, &
                                     vmax_uptake_norg)
+
+
+    !> 4.0 close output file for parameter values
+    !!     init was done in section 2.0
+    CLOSE(lun_param_out)
 
   END SUBROUTINE set_parameter_slm_values_with_list_values
 
@@ -5800,6 +5784,9 @@ CONTAINS
   SUBROUTINE set_parameter_lctlib_values_with_list_values(model)
 
     USE mo_jsb_model_class,                 ONLY: t_jsb_model
+    USE mo_jsb_process_class,               ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    ! process configurations (t_PROC_config)
+    dsl4jsb_Use_config(VEG_)
 
     IMPLICIT NONE
     ! ---------------------------
@@ -5810,12 +5797,24 @@ CONTAINS
     INTEGER                     :: pft_id 
     LOGICAL                     :: prop_parameter_changes
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':set_parameter_lctlib_values_with_list_values'
-
+    ! ---------------------------
+    ! 0.3 Declare Memory
+    ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_config(VEG_)
+    ! ---------------------------
+    ! 0.4 Process Activity, Debug Option
+    ! 
+    ! ---------------------------
+    ! 0.5 Get Memory
+    ! 
+    ! Get process config
+    dsl4jsb_Get_config(VEG_)
 
 
     !> 0.9 init local variables
     !! 
     prop_parameter_changes = model%config%set_parameter_values_proportional
+    pft_id                 = dsl4jsb_Config(VEG_)%pft_id
 
 
     !> 1.0 read parameter lctlib values from file
@@ -5825,14 +5824,24 @@ CONTAINS
     !> 2.0 replace parameter lctlib values for the particular PFT X that is simulated
     !! 
     !! lctlib(4)%sla is needed for calculation of k_rtos
-    CALL change_lctlib_param_values_pft_x(model%lctlib(1), param_pft1_from_file, model%lctlib(4)%sla, prop_parameter_changes)
-    CALL change_lctlib_param_values_pft_x(model%lctlib(2), param_pft2_from_file, model%lctlib(4)%sla, prop_parameter_changes)
-    CALL change_lctlib_param_values_pft_x(model%lctlib(3), param_pft3_from_file, model%lctlib(4)%sla, prop_parameter_changes)
-    CALL change_lctlib_param_values_pft_x(model%lctlib(4), param_pft4_from_file, model%lctlib(4)%sla, prop_parameter_changes)
-    CALL change_lctlib_param_values_pft_x(model%lctlib(5), param_pft5_from_file, model%lctlib(4)%sla, prop_parameter_changes)
-    CALL change_lctlib_param_values_pft_x(model%lctlib(6), param_pft6_from_file, model%lctlib(4)%sla, prop_parameter_changes)
-    CALL change_lctlib_param_values_pft_x(model%lctlib(7), param_pft7_from_file, model%lctlib(4)%sla, prop_parameter_changes)
-    CALL change_lctlib_param_values_pft_x(model%lctlib(8), param_pft8_from_file, model%lctlib(4)%sla, prop_parameter_changes)
+    SELECT CASE(pft_id)
+      CASE(1)
+        CALL change_lctlib_param_values_pft_x(model%lctlib(1), param_pft1_from_file, model%lctlib(4)%sla, prop_parameter_changes)
+      CASE(2)
+        CALL change_lctlib_param_values_pft_x(model%lctlib(2), param_pft2_from_file, model%lctlib(4)%sla, prop_parameter_changes)
+      CASE(3)
+        CALL change_lctlib_param_values_pft_x(model%lctlib(3), param_pft3_from_file, model%lctlib(4)%sla, prop_parameter_changes)
+      CASE(4)
+        CALL change_lctlib_param_values_pft_x(model%lctlib(4), param_pft4_from_file, model%lctlib(4)%sla, prop_parameter_changes)
+      CASE(5)
+        CALL change_lctlib_param_values_pft_x(model%lctlib(5), param_pft5_from_file, model%lctlib(4)%sla, prop_parameter_changes)
+      CASE(6)
+        CALL change_lctlib_param_values_pft_x(model%lctlib(6), param_pft6_from_file, model%lctlib(4)%sla, prop_parameter_changes)
+      CASE(7)
+        CALL change_lctlib_param_values_pft_x(model%lctlib(7), param_pft7_from_file, model%lctlib(4)%sla, prop_parameter_changes)
+      CASE(8)
+        CALL change_lctlib_param_values_pft_x(model%lctlib(8), param_pft8_from_file, model%lctlib(4)%sla, prop_parameter_changes)
+    END SELECT
 
   END SUBROUTINE set_parameter_lctlib_values_with_list_values
 
@@ -5858,8 +5867,9 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     REAL(wp)                    :: pft4_sla_hlp
-    LOGICAL                     :: dependency_recalculation   ! set TRUE for parameters that need to be re-calculated because a parameter it depends on got a new value
+    CHARACTER(33)               :: fname                      ! filename
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':change_lctlib_param_values_pft_x'
+
 
 
     !> 0.9 set sla_helper to the sla value of pft4 always
@@ -5867,245 +5877,252 @@ CONTAINS
     pft4_sla_hlp = pft4_sla
 
 
-    !> 1.0 replace lctlib parameter-value for the particular PFT if a new value is provided
+    !> 1.0 open and init output file for parameter values
+    !!     file is closed in section 3.0
+    fname = 'parameter_sensi_lctlib_values.txt'
+    OPEN (UNIT=lun_param_out, FILE=fname, ACTION="write", STATUS="unknown")
+    WRITE(lun_param_out,'(a)') 'parName parVal parValChanged'
+
+
+    !> 2.0 replace lctlib parameter-value for the particular PFT if a new value is provided
     !! 
     CALL Set_quincy_parameter_value(1._wp / carbon_per_dryweight_leaf / 1000.0_wp * molar_mass_C * param_pft_from_file%sla, &
                                     param_pft_from_file%sla, &
-                                    "lctlib_sla", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_sla", proportional_parameter_changes, &
                                     lctlib%sla)
     ! if the PFT of this simulation is 4 re-set the sla_helper variable (just in case the lctlib%sla was changed)
     IF (lctlib%lctnumber == 4) pft4_sla_hlp = lctlib%sla
     
     CALL Set_quincy_parameter_value(param_pft_from_file%sigma_vis, &
                                     param_pft_from_file%sigma_vis, &
-                                    "lctlib_sigma_vis", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_sigma_vis", proportional_parameter_changes, &
                                     lctlib%sigma_vis)
     
     CALL Set_quincy_parameter_value(param_pft_from_file%sigma_nir, &
                                     param_pft_from_file%sigma_nir, &
-                                    "lctlib_sigma_nir", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_sigma_nir", proportional_parameter_changes, &
                                     lctlib%sigma_nir)
 
     CALL Set_quincy_parameter_value(param_pft_from_file%omega_clumping, &
                                     param_pft_from_file%omega_clumping, &
-                                    "lctlib_omega_clumping", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_omega_clumping", proportional_parameter_changes, &
                                     lctlib%omega_clumping)
     
     CALL Set_quincy_parameter_value(param_pft_from_file%crown_shape_factor, &
                                     param_pft_from_file%crown_shape_factor, &
-                                    "lctlib_crown_shape_factor", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_crown_shape_factor", proportional_parameter_changes, &
                                     lctlib%crown_shape_factor)
     
     CALL Set_quincy_parameter_value(carbon_per_dryweight_leaf * 1000._wp * molar_mass_N / molar_mass_C / &
-                                      param_pft_from_file%cn_leaf, &
+                                      param_pft_from_file%cn_leaf, &   ! line break - this part belongs to prev. line!
                                     param_pft_from_file%cn_leaf, &
-                                    "lctlib_cn_leaf", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_cn_leaf", proportional_parameter_changes, &
                                     lctlib%cn_leaf)
 
     CALL Set_quincy_parameter_value(carbon_per_dryweight_leaf * 1000._wp * molar_mass_N / molar_mass_C / &
-                                      param_pft_from_file%cn_leaf_min, &
+                                      param_pft_from_file%cn_leaf_min, &   ! line break - this part belongs to prev. line!
                                     param_pft_from_file%cn_leaf_min, &
-                                    "lctlib_cn_leaf_min", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_cn_leaf_min", proportional_parameter_changes, &
                                     lctlib%cn_leaf_min)
     
     CALL Set_quincy_parameter_value(carbon_per_dryweight_leaf * 1000._wp * molar_mass_N / molar_mass_C / &
-                                      param_pft_from_file%cn_leaf_max, &
+                                      param_pft_from_file%cn_leaf_max, &   ! line break - this part belongs to prev. line!
                                     param_pft_from_file%cn_leaf_max, &
-                                    "lctlib_cn_leaf_max", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_cn_leaf_max", proportional_parameter_changes, &
                                     lctlib%cn_leaf_max)
     
     ! not resolving the dependency to cn_leaf (as re-calc is not so easy, in case proportional changes are made, as the original input lctlib parameter is not available here)
     CALL Set_quincy_parameter_value(carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib%cn_leaf / &
-                                      param_pft_from_file%np_leaf, &
+                                      param_pft_from_file%np_leaf, &   ! line break - this part belongs to prev. line!
                                     param_pft_from_file%np_leaf, &
-                                    "lctlib_np_leaf", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_np_leaf", proportional_parameter_changes, &
                                     lctlib%np_leaf)
 
     ! not resolving the dependency to cn_leaf (as re-calc is not so easy, in case proportional changes are made, as the original input lctlib parameter is not available here)
     CALL Set_quincy_parameter_value(carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib%cn_leaf / &
-                                      param_pft_from_file%np_leaf_min, &
+                                      param_pft_from_file%np_leaf_min, &   ! line break - this part belongs to prev. line!
                                     param_pft_from_file%np_leaf_min, &
-                                    "lctlib_np_leaf_min", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_np_leaf_min", proportional_parameter_changes, &
                                     lctlib%np_leaf_min)
 
     ! not resolving the dependency to cn_leaf (as re-calc is not so easy, in case proportional changes are made, as the original input lctlib parameter is not available here)
     CALL Set_quincy_parameter_value(carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib%cn_leaf / &
-                                      param_pft_from_file%np_leaf_max, &
+                                      param_pft_from_file%np_leaf_max, &   ! line break - this part belongs to prev. line!
                                     param_pft_from_file%np_leaf_max, &
-                                    "lctlib_np_leaf_max", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_np_leaf_max", proportional_parameter_changes, &
                                     lctlib%np_leaf_max)
     
     CALL Set_quincy_parameter_value(param_pft_from_file%k0_fn_struc, &
                                     param_pft_from_file%k0_fn_struc, &
-                                    "lctlib_k0_fn_struc", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_k0_fn_struc", proportional_parameter_changes, &
                                     lctlib%k0_fn_struc)
 
-    ! is always recalculated in case any of its dependencies has changed (this generality is fine as fn_oth_min is not varied itself; otherwise dependency_recalculation would need to be set correctly)
+    ! is always recalculated in case any of its dependencies has changed
     lctlib%fn_oth_min = lctlib%k0_fn_struc - 5.0_wp / molar_mass_N * 0.5_wp * 1.e3_wp * 71.4_wp * molar_mass_N / 1.e6_wp
     ! no additional parameter changes to fn_oth_min
     ! CALL Set_quincy_parameter_value(param_pft_from_file%k0_fn_struc - 5.0_wp / molar_mass_N * 0.5_wp * 1.e3_wp * 71.4_wp * &
-    !                                   molar_mass_N / 1.e6_wp, &
+    !                                   molar_mass_N / 1.e6_wp, &   ! line break - this part belongs to prev. line!
     !                                 param_pft_from_file%fn_oth_min, &
-    !                                 "lctlib_fn_oth_min", proportional_parameter_changes, dependency_recalculation, &
+    !                                 "lctlib_fn_oth_min", proportional_parameter_changes, &
     !                                 lctlib%fn_oth_min)
 
     CALL Set_quincy_parameter_value(param_pft_from_file%t_jmax_opt, &
                                     param_pft_from_file%t_jmax_opt, &
-                                    "lctlib_t_jmax_opt", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_t_jmax_opt", proportional_parameter_changes, &
                                     lctlib%t_jmax_opt)
     
     CALL Set_quincy_parameter_value(param_pft_from_file%t_jmax_omega, &
                                     param_pft_from_file%t_jmax_omega, &
-                                    "lctlib_t_jmax_omega", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_t_jmax_omega", proportional_parameter_changes, &
                                     lctlib%t_jmax_omega)
     
     CALL Set_quincy_parameter_value(param_pft_from_file%g0, &
                                     param_pft_from_file%g0, &
-                                    "lctlib_g0", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_g0", proportional_parameter_changes, &
                                     lctlib%g0)
 
     CALL Set_quincy_parameter_value(param_pft_from_file%g1, &
                                     param_pft_from_file%g1, &
-                                    "lctlib_g1", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_g1", proportional_parameter_changes, &
                                     lctlib%g1)
     
     CALL Set_quincy_parameter_value(param_pft_from_file%gmin, &
                                     param_pft_from_file%gmin, &
-                                    "lctlib_gmin", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_gmin", proportional_parameter_changes, &
                                     lctlib%gmin)
     
     CALL Set_quincy_parameter_value(param_pft_from_file%tau_leaf / 12.0_wp, &
                                     param_pft_from_file%tau_leaf, &
-                                    "lctlib_tau_leaf", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_tau_leaf", proportional_parameter_changes, &
                                     lctlib%tau_leaf)
 
     CALL Set_quincy_parameter_value(param_pft_from_file%tau_fine_root, &
                                     param_pft_from_file%tau_fine_root, &
-                                    "lctlib_tau_fine_root", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_tau_fine_root", proportional_parameter_changes, &
                                     lctlib%tau_fine_root)
 
     CALL Set_quincy_parameter_value(param_pft_from_file%tau_coarse_root, &
                                     param_pft_from_file%tau_coarse_root, &
-                                    "lctlib_tau_coarse_root", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_tau_coarse_root", proportional_parameter_changes, &
                                     lctlib%tau_coarse_root)
     
     CALL Set_quincy_parameter_value(param_pft_from_file%tau_branch, &
                                     param_pft_from_file%tau_branch, &
-                                    "lctlib_tau_branch", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_tau_branch", proportional_parameter_changes, &
                                     lctlib%tau_branch)
     
     CALL Set_quincy_parameter_value(param_pft_from_file%tau_sap_wood, &
                                     param_pft_from_file%tau_sap_wood, &
-                                    "lctlib_tau_sap_wood", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_tau_sap_wood", proportional_parameter_changes, &
                                     lctlib%tau_sap_wood)
 
     CALL Set_quincy_parameter_value(param_pft_from_file%tau_fruit, &
                                     param_pft_from_file%tau_fruit, &
-                                    "lctlib_tau_fruit", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_tau_fruit", proportional_parameter_changes, &
                                     lctlib%tau_fruit)
     
     CALL Set_quincy_parameter_value(param_pft_from_file%tau_seed_litter, &
                                     param_pft_from_file%tau_seed_litter, &
-                                    "lctlib_tau_seed_litter", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_tau_seed_litter", proportional_parameter_changes, &
                                     lctlib%tau_seed_litter)
     
     CALL Set_quincy_parameter_value(param_pft_from_file%tau_seed_est, &
                                     param_pft_from_file%tau_seed_est, &
-                                    "lctlib_tau_seed_est", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_tau_seed_est", proportional_parameter_changes, &
                                     lctlib%tau_seed_est)
 
     CALL Set_quincy_parameter_value(param_pft_from_file%tau_mycorrhiza, &
                                     param_pft_from_file%tau_mycorrhiza, &
-                                    "lctlib_tau_mycorrhiza", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_tau_mycorrhiza", proportional_parameter_changes, &
                                     lctlib%tau_mycorrhiza)
     
     CALL Set_quincy_parameter_value(param_pft_from_file%vmax_uptake_n, &
                                     param_pft_from_file%vmax_uptake_n, &
-                                    "lctlib_vmax_uptake_n", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_vmax_uptake_n", proportional_parameter_changes, &
                                     lctlib%vmax_uptake_n)
     
     CALL Set_quincy_parameter_value(param_pft_from_file%vmax_uptake_p, &
                                     param_pft_from_file%vmax_uptake_p, &
-                                    "lctlib_vmax_uptake_p", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_vmax_uptake_p", proportional_parameter_changes, &
                                     lctlib%vmax_uptake_p)
 
     CALL Set_quincy_parameter_value(param_pft_from_file%bnf_base / molar_mass_N / one_day / one_year * 1.e6_wp, &
                                     param_pft_from_file%bnf_base, &
-                                    "lctlib_bnf_base", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_bnf_base", proportional_parameter_changes, &
                                     lctlib%bnf_base)
 
     CALL Set_quincy_parameter_value(param_pft_from_file%lambda_est_light, &
                                     param_pft_from_file%lambda_est_light, &
-                                    "lctlib_lambda_est_light", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_lambda_est_light", proportional_parameter_changes, &
                                     lctlib%lambda_est_light)
     
     CALL Set_quincy_parameter_value(param_pft_from_file%k_est_light, &
                                     param_pft_from_file%k_est_light, &
-                                    "lctlib_k_est_light", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_k_est_light", proportional_parameter_changes, &
                                     lctlib%k_est_light)
     
     CALL Set_quincy_parameter_value(param_pft_from_file%seed_size, &
                                     param_pft_from_file%seed_size, &
-                                    "lctlib_seed_size", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_seed_size", proportional_parameter_changes, &
                                     lctlib%seed_size)
 
     CALL Set_quincy_parameter_value(param_pft_from_file%beta_soil_flush, &
                                     param_pft_from_file%beta_soil_flush, &
-                                    "lctlib_beta_soil_flush", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_beta_soil_flush", proportional_parameter_changes, &
                                     lctlib%beta_soil_flush)
     ! beta_soil_flush may not be > 1
     IF (lctlib%beta_soil_flush > 1.0_wp) lctlib%beta_soil_flush = 1.0_wp
     
     CALL Set_quincy_parameter_value(param_pft_from_file%beta_soil_senescence, &
                                     param_pft_from_file%beta_soil_senescence, &
-                                    "lctlib_beta_soil_senescence", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_beta_soil_senescence", proportional_parameter_changes, &
                                     lctlib%beta_soil_senescence)
     ! beta_soil_senescence may not be > 1
     IF (lctlib%beta_soil_senescence > 1.0_wp) lctlib%beta_soil_senescence = 1.0_wp
     
     CALL Set_quincy_parameter_value(param_pft_from_file%gdd_req_max, &
                                     param_pft_from_file%gdd_req_max, &
-                                    "lctlib_gdd_req_max", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_gdd_req_max", proportional_parameter_changes, &
                                     lctlib%gdd_req_max)
 
     CALL Set_quincy_parameter_value(param_pft_from_file%k_gdd_dormance, &
                                     param_pft_from_file%k_gdd_dormance, &
-                                    "lctlib_k_gdd_dormance", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_k_gdd_dormance", proportional_parameter_changes, &
                                     lctlib%k_gdd_dormance)
     
     CALL Set_quincy_parameter_value(param_pft_from_file%t_air_senescence + Tzero, &
                                     param_pft_from_file%t_air_senescence, &
-                                    "lctlib_t_air_senescence", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_t_air_senescence", proportional_parameter_changes, &
                                     lctlib%t_air_senescence)
     
     CALL Set_quincy_parameter_value(param_pft_from_file%min_leaf_age, &
                                     param_pft_from_file%min_leaf_age, &
-                                    "lctlib_min_leaf_age", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_min_leaf_age", proportional_parameter_changes, &
                                     lctlib%min_leaf_age)
 
     CALL Set_quincy_parameter_value(param_pft_from_file%frac_sapwood_branch, &
                                     param_pft_from_file%frac_sapwood_branch, &
-                                    "lctlib_frac_sapwood_branch", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_frac_sapwood_branch", proportional_parameter_changes, &
                                     lctlib%frac_sapwood_branch)
     ! frac_sapwood_branch may not be > 1
     IF (lctlib%frac_sapwood_branch > 1.0_wp) lctlib%frac_sapwood_branch = 1.0_wp
 
     CALL Set_quincy_parameter_value(param_pft_from_file%wood_density * 1.e6_wp / molar_mass_C, &
                                     param_pft_from_file%wood_density, &
-                                    "lctlib_wood_density", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_wood_density", proportional_parameter_changes, &
                                     lctlib%wood_density)
     
     CALL Set_quincy_parameter_value(param_pft_from_file%k_latosa, &
                                     param_pft_from_file%k_latosa, &
-                                    "lctlib_k_latosa", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_k_latosa", proportional_parameter_changes, &
                                     lctlib%k_latosa)
     
     CALL Set_quincy_parameter_value(param_pft_from_file%k_crtos, &
                                     param_pft_from_file%k_crtos, &
-                                    "lctlib_k_crtos", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_k_crtos", proportional_parameter_changes, &
                                     lctlib%k_crtos)
 
-    ! is always recalculated in case any of its dependencies has changed (this generality is fine as k_rtos is not varied itself; otherwise dependency_recalculation would need to be set correctly)
+    ! is always recalculated in case any of its dependencies has changed
     IF(lctlib%growthform /= igrass) THEN
       lctlib%k_rtos = 1.75_wp * (pft4_sla_hlp * lctlib%wood_density) / lctlib%k_latosa
     ELSE
@@ -6114,40 +6131,40 @@ CONTAINS
     ! no additional parameter changes to k_rtos
     ! CALL Set_quincy_parameter_value(k_rtos_hlp, &
     !                                 param_pft_from_file%k_rtos, &
-    !                                 "lctlib_k_rtos", proportional_parameter_changes, dependency_recalculation, &
+    !                                 "lctlib_k_rtos", proportional_parameter_changes, &
     !                                 lctlib%k_rtos)
     
     CALL Set_quincy_parameter_value(param_pft_from_file%k2_fruit_alloc, &
                                     param_pft_from_file%k2_fruit_alloc, &
-                                    "lctlib_k2_fruit_alloc", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_k2_fruit_alloc", proportional_parameter_changes, &
                                     lctlib%k2_fruit_alloc)
     
     CALL Set_quincy_parameter_value(param_pft_from_file%allom_k1, &
                                     param_pft_from_file%allom_k1, &
-                                    "lctlib_allom_k1", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_allom_k1", proportional_parameter_changes, &
                                     lctlib%allom_k1)
 
     CALL Set_quincy_parameter_value(param_pft_from_file%allom_k2, &
                                     param_pft_from_file%allom_k2, &
-                                    "lctlib_allom_k2", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_allom_k2", proportional_parameter_changes, &
                                     lctlib%allom_k2)
     
     CALL Set_quincy_parameter_value(param_pft_from_file%phi_leaf_min, &
                                     param_pft_from_file%phi_leaf_min, &
-                                    "lctlib_phi_leaf_min", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_phi_leaf_min", proportional_parameter_changes, &
                                     lctlib%phi_leaf_min)
     
-    CALL Set_quincy_parameter_value(param_pft_from_file%k_root * molar_mass_C * 1.e-10_wp, &
+    CALL Set_quincy_parameter_value(param_pft_from_file%k_root * molar_mass_C * 1.0e-10_wp, &
                                     param_pft_from_file%k_root, &
-                                    "lctlib_k_root", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_k_root", proportional_parameter_changes, &
                                     lctlib%k_root)
 
-    CALL Set_quincy_parameter_value(param_pft_from_file%k_sapwood * 1.e-3_wp, &
+    CALL Set_quincy_parameter_value(param_pft_from_file%k_sapwood * 1.0e-3_wp, &
                                     param_pft_from_file%k_sapwood, &
-                                    "lctlib_k_sapwood", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_k_sapwood", proportional_parameter_changes, &
                                     lctlib%k_sapwood)
 
-    ! is always recalculated in case any of its dependencies has changed (this generality is fine as c0_allom is not varied itself; otherwise dependency_recalculation would need to be set correctly)
+    ! is always recalculated in case any of its dependencies has changed
     IF(lctlib%growthform == itree) THEN
       lctlib%c0_allom = SQRT(lctlib%k_root / lctlib%k_sapwood * lctlib%tau_sap_wood / lctlib%tau_fine_root * &
                              lctlib%wood_density) * & 
@@ -6158,18 +6175,24 @@ CONTAINS
     ! no additional parameter changes to c0_allom
     ! CALL Set_quincy_parameter_value(c0_allom_hlp, &
     !                                 param_pft_from_file%c0_allom, &
-    !                                 "lctlib_c0_allom", proportional_parameter_changes, dependency_recalculation, &
+    !                                 "lctlib_c0_allom", proportional_parameter_changes, &
     !                                 lctlib%c0_allom)
     
     CALL Set_quincy_parameter_value(param_pft_from_file%fstore_target, &
                                     param_pft_from_file%fstore_target, &
-                                    "lctlib_fstore_target", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_fstore_target", proportional_parameter_changes, &
                                     lctlib%fstore_target)
     
     CALL Set_quincy_parameter_value(param_pft_from_file%k_root_dist, &
                                     param_pft_from_file%k_root_dist, &
-                                    "lctlib_k_root_dist", proportional_parameter_changes, dependency_recalculation, &
+                                    "lctlib_k_root_dist", proportional_parameter_changes, &
                                     lctlib%k_root_dist)
+
+
+
+    !> 3.0 close output file for parameter values
+    !!     init was done in section 1.0
+    CLOSE(lun_param_out)
 
   END SUBROUTINE change_lctlib_param_values_pft_x
 
@@ -6180,7 +6203,7 @@ CONTAINS
   !!  namelist created from generate_parameter_table.sh: parameter_slm_run.list \n
   !!  i.e., replace hard coded parameter value
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE Set_quincy_parameter_value(nml_abs_val, nml_prop_chng, param_name, proportional, dependency, def_val)
+  SUBROUTINE Set_quincy_parameter_value(nml_abs_val, nml_prop_chng, param_name, proportional, def_val)
 
     USE mo_kind,                ONLY: wp
     USE mo_jsb_math_constants,  ONLY: eps8
@@ -6193,19 +6216,24 @@ CONTAINS
     REAL(wp),         INTENT(in)    :: nml_prop_chng      !< new value from namelist, not changed, used here for proportional change of def_val x from namelist [0 < x < 2]
     CHARACTER(LEN=*), INTENT(in)    :: param_name         !< name of the parameter for writing the new value to file
     LOGICAL,          INTENT(in)    :: proportional       !< logical: calulate new value using proportional change
-    LOGICAL,          INTENT(inout) :: dependency         !< logical: this parameter value may be re-calculated because of a dependency to another param that has been changed 
     REAL(wp),         INTENT(inout) :: def_val            !< default parameter value as hardcoded in the mo_PROC_constants
 
     ! ---------------------------
     ! 0.2 Local
     REAL(wp)             :: param_value_diff    ! for negative def_val the absolute change-value is calculated
+    REAL(wp)             :: def_val_save        ! safe the original value for file output
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Set_quincy_parameter_value'
 
 
-    !> 1.0 re-calc def_val if namelist value differs from missval (i.e., a new namelist value is set) \n 
-    !!      i.e., if a new value was defined in the namelist (parameter_slm_run.list) for this parameter \n
-    !!      need to use the nml_prop_chng variable here, because the nml_abs_val might be changed because it has always "potential other parameters already included"
-    IF ((ABS(nml_prop_chng - missval) > eps8) .OR. dependency) THEN
+    !> 0.9 safe the original value for file output
+    !! 
+    def_val_save = def_val
+
+
+    !> 1.0 re-calc def_val if namelist value differs from missval (i.e., a new namelist value is set or a proportional-change value is set) \n 
+    !!     using the nml_prop_chng variable here, because the nml_abs_val might be changed because it has always "potential other parameters already included"
+    !! 
+    IF (ABS(nml_prop_chng - missval) > eps8) THEN
       ! differ between the two cases: just use the new value / change the (hardcoded) default value by x%
       IF (proportional) THEN
         ! special cases for some parameters, such as, temperatures given in K but modified based on the °C value
@@ -6231,13 +6259,9 @@ CONTAINS
       ENDIF
     ENDIF
     
-    !> 2.0 set parameter dependency back to the default value
+    !> 2.0 write default and new value to file
     !!
-    dependency = .FALSE.
-    
-    !> 3.0 write new value into file
-    !!
-    ! ...
+    WRITE(lun_param_out,'(A,2F24.12)') TRIM(param_name), REAL(def_val_save, wp), REAL(def_val, wp)
     
   END SUBROUTINE Set_quincy_parameter_value
 

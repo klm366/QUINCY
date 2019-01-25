@@ -48,6 +48,7 @@ mo_quincy_set_parameters.o: \
   mo_exception.o \
   mo_jsb_io.o \
   mo_jsb_model_class.o \
+  mo_jsb_process_class.o \
   mo_jsb_lctlib_class.o \
   mo_quincy_update_time_averages.o \
   mo_jsb_math_constants.o \
@@ -57,7 +58,8 @@ mo_quincy_set_parameters.o: \
   mo_jsb_phys_constants.o \
   mo_sse_constants.o \
   mo_sb_constants.o \
-  mo_veg_constants.o
+  mo_veg_constants.o \
+  mo_veg_config_class.o
 
 mo_quincy_output.o: \
   mo_kind.o \
