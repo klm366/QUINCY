@@ -21,7 +21,6 @@ mo_land_model_interface.o: \
   mo_jsb_tile_class.o \
   mo_jsb_task_class.o \
   mo_hsm_class.o \
-  mo_jsb_math_constants.o \
   mo_jsb4_forcing.o \
   mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
