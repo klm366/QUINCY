@@ -94,7 +94,7 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_phys_constants,    ONLY: molar_mass_N, molar_mass_P, grav
-    USE mo_jsb_math_constants,    ONLY: dtime, one_day, eps8, eps4
+    USE mo_jsb_math_constants,    ONLY: one_day, eps8
     USE mo_jsb4_forcing,          ONLY: forcing_options
     USE mo_isotope_util,          ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C, calc_delta_C13, calc_delta_C14, &
                                         calc_mixing_ratio_N15N14
@@ -206,10 +206,6 @@ CONTAINS
                                  doy_new
     INTEGER                   :: nlevel_veg   = -1      ! number of levels at the Z-Axis (canopy layer)
     INTEGER                   :: isoil, ichunk
-    LOGICAL                   :: l_pulse_exp_add_15N    ! 15N pulse experiment
-    REAL(wp)                  :: pulse_exp_add          ! 15N pulse experiment
-    REAL(wp)                  :: pulse_exp_isofrac      ! 15N pulse experiment
-    REAL(wp)                  :: pulse_exp_delta        ! 15N pulse experiment
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_forcing'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -428,37 +424,6 @@ CONTAINS
       END IF
       co2_mixing_ratio_C14(:) = hlp1(:) * co2_mixing_ratio(:) 
 
-      !! N deposition experiment: add 15N pulse (see ticket #511; aimed at running cruncep sites with u85)
-      !!  works only with n_deposition_scheme = dynamic
-      !!  no options or such elsewhere, this code is working but is commented out by default
-      !!   see also the local variable defined above (all named pulse_exp_* or l_pulse_exp_*)
-      !!  no selection of sites just dates, hence, this code runs for all sites, if enabled
-      !! -> to run the pulse experiment uncomment the below lines spanning "IF(.NOT. model%config%l_transient_spinup)" & "IF (l_pulse_exp_add_15N)"
-      l_pulse_exp_add_15N = .FALSE.
-      ! IF(.NOT. model%config%l_transient_spinup) THEN
-      !   ! date: 30 Apr 2007, 12PM midday, 120th doy
-      !   IF (ABS(forcing_options%forcing_year - 2007.0_wp) < eps4 .AND. &
-      !       ABS(forcing_options%forcing_doy  - 120.0_wp ) < eps4 .AND. &
-      !       ABS(forcing_options%forcing_hour - 12.0_wp )  < eps4) THEN
-      !     l_pulse_exp_add_15N = .TRUE.
-      !   ENDIF
-      !   ! date: 31 July 2007, 12PM midday, 212th doy
-      !   IF (ABS(forcing_options%forcing_year - 2007.0_wp) < eps4 .AND. &
-      !       ABS(forcing_options%forcing_doy  - 212.0_wp ) < eps4 .AND. &
-      !       ABS(forcing_options%forcing_hour - 12.0_wp )  < eps4) THEN
-      !     l_pulse_exp_add_15N = .TRUE.
-      !   ENDIF
-      !   ! date: 30 Oct 2007, 12PM midday, 303th doy
-      !   IF (ABS(forcing_options%forcing_year - 2007.0_wp) < eps4 .AND. &
-      !       ABS(forcing_options%forcing_doy  - 303.0_wp ) < eps4 .AND. &
-      !       ABS(forcing_options%forcing_hour - 12.0_wp )  < eps4) THEN
-      !     l_pulse_exp_add_15N = .TRUE.
-      !   ENDIF
-      ! ENDIF
-      ! ! is always calculated (during the experiement) but not always needed/used
-      ! pulse_exp_add     = 7.0_wp * one_day / dtime                                    ! mg N / m2 / timestep !! from 0.07 kg N / ha in 3 doses
-      ! pulse_exp_isofrac = pulse_exp_add / (pulse_exp_add + noy_deposition_r)
-      ! pulse_exp_delta   = 0._wp * (1 - pulse_exp_isofrac) + pulse_exp_isofrac * 990.0 ! add 99%Natom
       !! N deposition
       SELECT CASE (TRIM(forcing_options%n_deposition_scheme))
         CASE ("none")
@@ -470,17 +435,9 @@ CONTAINS
         CASE ("dynamic")
           nhx_deposition(:)   = nhx_deposition_r / molar_mass_N * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
           noy_deposition(:)   = noy_deposition_r / molar_mass_N * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
-          ! 15N pulse experiment (re-calc noy_deposition)
-          IF (l_pulse_exp_add_15N) THEN
-            noy_deposition(:) = (noy_deposition_r + pulse_exp_add) / molar_mass_N * 1000.0_wp / one_day ! mg/m2/day -> mumol/m2/sec
-          ENDIF
       ENDSELECT
       nhx_n15_deposition(:)   = nhx_deposition(:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
       noy_n15_deposition(:)   = noy_deposition(:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
-      ! 15N pulse experiment (re-calc noy_n15_deposition)
-      IF (l_pulse_exp_add_15N) THEN
-        noy_n15_deposition(:) = noy_deposition(:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(pulse_exp_delta))
-      ENDIF
 
       !! P deposition
       SELECT CASE (TRIM(forcing_options%p_deposition_scheme))
