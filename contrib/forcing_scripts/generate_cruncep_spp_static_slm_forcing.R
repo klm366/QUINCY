@@ -52,7 +52,12 @@ co2y<-read.table('/Net/Groups/BGI/model/OCN/input/gridded/CO2/GCP_co2_global.dat
 co2y_dC13<-read.table('/Net/Groups/BGI/work_2/QUINCY/SLM/InputDataSources/Atm/delta13C_in_air_input4MIPs_GM_1850-2015_V1.txt')
 co2y_DC14<-read.table('/Net/Groups/BGI/work_2/QUINCY/SLM/InputDataSources/Atm/Delta14C_in_air_input4MIPs_SHTRNH_1850-2015_V1.txt')
 
-ndep_site<-c(8,13)#kg N/ha
+## N deposition per site [kg N/ha]
+# using this number allows for scaling the N deposition, i.e., consider site history / pre-industrial values
+# these numbers come from literature: ask Lin
+ndep_site<-c(8,13)
+
+## loop over sites
 for (s in 1:length(site_list)) {
 print(paste0("site: ", site_list[s], "  number ", s, " of ", length(site_list)))
   orig_climate_file_name<-paste("/Net/Groups/BGI/model/OCN/input/point/CRUNCEP/",site_list[s],"/climate_1994.nc",sep='')

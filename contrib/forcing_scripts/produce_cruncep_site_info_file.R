@@ -1,5 +1,6 @@
 ##
-## script to generate surface run files for SLM
+## generate site_list.dat files for cruncep site sets for QUINCY: 
+##    all_gfdb  cue_gfdb  spp_gfdb
 ##
 
 ## library
@@ -22,9 +23,14 @@ baseInputPath <- "/Net/Groups/BGI/people/szaehle/Projects/QUINCY/GenerateCRUForc
 
 
 #########################################################################################
-## available met forcing
-metsites     <- read.table(paste0(baseInputPath,'siteinfo_noheader.dat'),stringsAsFactors=F)
-metsite_list <- metsites[,1]
+## basic site lists
+## (orininally from: baseInputPath,'siteinfo_noheader.dat' & 'addsites2019_1.dat', moved into repo for reproducability)
+# all & cue cruncep
+metsites      <- read.table("generate_cruncep_siteinfo_noheader.dat", stringsAsFactors=F)
+metsite_list  <- metsites[,1]
+# spp cruncep
+metsites_spp  <- read.table("generate_cruncep_spp_siteinfo_noheader.dat", stringsAsFactors=F)
+spp_site_list <- metsites_spp[,1]
 
 
 #########################################################################################
@@ -32,7 +38,7 @@ metsite_list <- metsites[,1]
 dat<-read.csv(paste0(baseInputPath,'info_forest.csv'),sep=';',stringsAsFactors=F)
 
 # number of sites in the the info_forest.csv; last site in info_forest.csv is ZAF with some more rows after this site with no information
-forestSiteNum <- which(dat[,1] == "ZAF") # should be 580
+forestSiteNum <- which(dat[,1] == "ZAF") # should be 580 (after which empty data-rows follow in this file)
 
 ## PFT information per site
 # create pft vector from information of pft1 pft2 pft3
@@ -658,30 +664,24 @@ write.table(sitedata,file=paste0("global_forest_database_cue_sites_",Sys.Date(),
 
 #########################################################################################
 ## preparing & creating the output file: spp_gfdb_sites* 1901-2015 and 1984-2013
-##  
-## only two sites are selected here
+## 
 ## 
 ## new data is read from files / generated here
 ##
+##
 
-## define the two sites (no input file needed)
-spp_site_list <- c('BBR','LUE','VES')
-sppSiteNum    <- length(spp_site_list)
+## get number of spp sites (see file input above)
+sppSiteNum <- length(spp_site_list)
 
-## get the lon/lat of these two sites from the metsites object (with list of siteID in metsite_list), file siteinfo_noheader.dat
+## get the lon/lat of all sites (but VES) from the metsites_spp object (with list of siteID in metsites_spp), file siteinfo_noheader.dat
 #  new values for lon_orig & lat_orig  (above they contain lon/lat of all sites in forestsite_list from info_forest.csv)
 lon_orig <- numeric(sppSiteNum)
 lat_orig <- numeric(sppSiteNum)
 i<-1
 for (spp_site in spp_site_list) {
-  if (spp_site == "VES"){
-    lon_orig[i] <- 10.46
-    lat_orig[i] <- 50.36
-  } else {
-    idx         <- spp_site==metsite_list
-    lon_orig[i] <- metsites[idx,2]
-    lat_orig[i] <- metsites[idx,3]
-  }
+    idx         <- spp_site==metsites_spp
+    lon_orig[i] <- metsites_spp[idx,2]
+    lat_orig[i] <- metsites_spp[idx,3]
   i<-i+1
 }
 
@@ -708,7 +708,7 @@ ph           <- numeric(sppSiteNum)
 bulk_density <- numeric(sppSiteNum)
 awc_sl       <- array(NA,c(sppSiteNum,7))
 
-## loop over the two sites and get soil data from above read netcdf files
+## loop over the sites and get soil data from above read netcdf files
 for (s in 1:sppSiteNum) {
   lonidx <- which.min(abs(lon_sg-lon_orig[s]))
   latidx <- which.min(abs(lat_sg-lat_orig[s]))
@@ -724,12 +724,13 @@ for (s in 1:sppSiteNum) {
   #sand[s]         <- weighted.mean(sand_sg[lonidx,latidx,],depth_sl,na.rm=TRUE)/100
   #silt[s]         <- weighted.mean(silt_sg[lonidx,latidx,],depth_sl,na.rm=TRUE)/100
 }
-## set remaining parameter from known data
-sand <- c(22.59, 76.6, 0.47) /100
-silt <- c(51.31, 17.13, 0.43) /100
-clay <- 1 - sand - silt
-ph   <- c(5.2, 4.3, 4.7)
-
+## set remaining parameter from known data, i.e., Lin provided these data (proportions of soil types and ph)
+# BBR LUE VES MTF CON
+sand    <- c(22.59, 76.6,  39.0, 51.0, 41.0) / 100
+silt    <- c(51.31, 17.13, 45.0, 31.0, 42.0) / 100
+clay    <- 1.0 - sand - silt
+ph      <- c(5.2, 4.3, 4.34, 4.46, 4.42)
+pft_spp <- c("TeBS", "TeBS", "TeBS", "TeBS", "TeBS")
 
 ## read lithology map
 #  this is the same input file as above, but repeating it here again for improved modularity
@@ -826,33 +827,33 @@ siteinfo  <- array(NA,c(sppSiteNum,siteParam))
 i <- 1
 for (spp_site in spp_site_list) {
 
-    siteinfo[i,1]<-paste0(spp_site,"_01")
-    siteinfo[i,2]<-lon_orig[i]
-    siteinfo[i,3]<-lat_orig[i]
-    siteinfo[i,4]<-'TeBS'
-    siteinfo[i,5]<-1901
-    siteinfo[i,6]<-2015
-    siteinfo[i,7]<-lon_orig[i]
-    siteinfo[i,8]<-clay[i]
-    siteinfo[i,9]<-silt[i]
-    siteinfo[i,10]<-sand[i]
-    siteinfo[i,11]<-awc[i]
-    siteinfo[i,12]<-bulk_density[i]
-    siteinfo[i,13]<-ph[i]
-    siteinfo[i,14]<-taxousda[i]
-    siteinfo[i,15]<-taxnwrb[i]
-    siteinfo[i,16]<-glim_class_site[i]
-    siteinfo[i,17]<-(-9999) #LAI
-    siteinfo[i,18]<-(-9999) #Nleaf
-    siteinfo[i,19]<-(-9999) #SLA
-    siteinfo[i,20]<-(-9999) #Height
-    siteinfo[i,21]<-1890
-    siteinfo[i,22]<-soilP_depth_site[i]
-    siteinfo[i,23]<-soilP_labile_site[i]
-    siteinfo[i,24]<-soilP_slow_site[i]
-    siteinfo[i,25]<-soilP_occlud_site[i]
-    siteinfo[i,26]<-soilP_primary_site[i]
-    siteinfo[i,27]<-qmaxorg_site[i]
+    siteinfo[i,1]   <-  paste0(spp_site,"_01")
+    siteinfo[i,2]   <-  lon_orig[i]
+    siteinfo[i,3]   <-  lat_orig[i]
+    siteinfo[i,4]   <-  pft_spp[i]
+    siteinfo[i,5]   <-  1901
+    siteinfo[i,6]   <-  2015
+    siteinfo[i,7]   <-  lon_orig[i]
+    siteinfo[i,8]   <-  clay[i]
+    siteinfo[i,9]   <-  silt[i]
+    siteinfo[i,10]  <-  sand[i]
+    siteinfo[i,11]  <-  awc[i]
+    siteinfo[i,12]  <-  bulk_density[i]
+    siteinfo[i,13]  <-  ph[i]
+    siteinfo[i,14]  <-  taxousda[i]
+    siteinfo[i,15]  <-  taxnwrb[i]
+    siteinfo[i,16]  <-  glim_class_site[i]
+    siteinfo[i,17]  <-  (-9999) #LAI
+    siteinfo[i,18]  <-  (-9999) #Nleaf
+    siteinfo[i,19]  <-  (-9999) #SLA
+    siteinfo[i,20]  <-  (-9999) #Height
+    siteinfo[i,21]  <-  1890
+    siteinfo[i,22]  <-  soilP_depth_site[i]
+    siteinfo[i,23]  <-  soilP_labile_site[i]
+    siteinfo[i,24]  <-  soilP_slow_site[i]
+    siteinfo[i,25]  <-  soilP_occlud_site[i]
+    siteinfo[i,26]  <-  soilP_primary_site[i]
+    siteinfo[i,27]  <-  qmaxorg_site[i]
 
   i<-i+1
 }
