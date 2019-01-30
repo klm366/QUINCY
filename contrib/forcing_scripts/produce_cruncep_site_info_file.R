@@ -26,10 +26,10 @@ baseInputPath <- "/Net/Groups/BGI/people/szaehle/Projects/QUINCY/GenerateCRUForc
 ## basic site lists
 ## (orininally from: baseInputPath,'siteinfo_noheader.dat' & 'addsites2019_1.dat', moved into repo for reproducability)
 # all & cue cruncep
-metsites      <- read.table("generate_cruncep_siteinfo_noheader.dat", stringsAsFactors=F)
+metsites      <- read.table("generate_cruncep_siteinfo_noheader.dat", stringsAsFactors=F, header=F)
 metsite_list  <- metsites[,1]
 # spp cruncep
-metsites_spp  <- read.table("generate_cruncep_spp_siteinfo_noheader.dat", stringsAsFactors=F)
+metsites_spp  <- read.table("generate_cruncep_spp_siteinfo_noheader.dat", stringsAsFactors=F, header=F)
 spp_site_list <- metsites_spp[,1]
 
 
