@@ -570,9 +570,12 @@ for (v in 1:nOutVar){
   write.table(pccResDFout, file=paste0("parameter_list/pcc_", outVarName[v], outInfo, ".csv"), append=F, 
             sep = ",", eol="\n", row.names=F, col.names=T)
 }
-# write values of output variables (normalized by the mean)
+# write normalized values of output variables (normalized by the mean)
 write.table(outVarAvgValSet, file=paste0("parameter_list/out_variables_values_normalized_by_mean", outInfo, ".csv"),
             append=F, sep = ",", eol="\n", row.names=F, col.names=T)
+# write absolute values of output variables per simulation (i.e., mean over last x years per output-value from each simulation)
+write.table(outVarAvgValSetDF, file=paste0("parameter_list/out_variables_values_absolute", outInfo, ".csv"),
+            append=F, sep = ",", eol="\n", row.names=F, col.names=T)            
 # write absolute mean values of output variables
 rowNames <- colnames(outVarAvgValSet)
 write.table(meanAbsVal, file=paste0("parameter_list/out_variables_absolute_values_mean", outInfo, ".csv"),
