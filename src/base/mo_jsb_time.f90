@@ -100,11 +100,10 @@ CONTAINS
 
       ! just to avoid compiler warnings about variable set but never referenced
       IF (.FALSE.) THEN
-        PRINT*, get_year_len_from_datetime(start_date)
-        PRINT*, get_year_len_from_datetime(final_date)
-        PRINT*, get_year_len_from_datetime(current_date)
+        PRINT*, get_year_day(start_date)
+        PRINT*, get_year_day(final_date)
+        PRINT*, get_year_day(current_date)
       END IF
-
 
       ! Check if Asselin time filter is used and print message
       eps = get_asselin_coef()
