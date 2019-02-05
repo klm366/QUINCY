@@ -124,7 +124,7 @@ CONTAINS
     ldims(2) = hgrid%nblks
     gdims(1:2) = hgrid%dims_g(1:2)
 
-    this_list => Get_varlist(TRIM(mem%varlist_name), hgrid%patch%id)
+    this_list => Get_varlist(TRIM(mem%varlist_name), hgrid%host_patch_id)
 
     ALLOCATE(var%field(ldims(1),ldims(2),1,1,1))
     var%ptr => var%field(:,:,1,1,1)
@@ -254,7 +254,7 @@ CONTAINS
       gdims(3) = hgrid%dims_g(2)
     END IF
 
-    this_list => Get_varlist(TRIM(mem%varlist_name), hgrid%patch%id)
+    this_list => Get_varlist(TRIM(mem%varlist_name), hgrid%host_patch_id)
 
     ALLOCATE(var%field(ldims(1),ldims(2),ldims(3),1,1))
     var%ptr => var%field(:,:,:,1,1)
@@ -363,7 +363,7 @@ CONTAINS
     ldims(2) = hgrid%nblks
     gdims(1:2) = hgrid%dims_g(1:2)
 
-    this_list => Get_varlist(TRIM(varlist_name), hgrid%patch%id)
+    this_list => Get_varlist(TRIM(varlist_name), hgrid%host_patch_id)
 
     ALLOCATE(groups(3))
     groups(1) = 'ALL'
