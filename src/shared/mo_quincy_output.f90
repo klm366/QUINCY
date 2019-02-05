@@ -56,7 +56,7 @@ CONTAINS
   !! 
   !! lun: start at 100 with a current max of 129 as flux outputs starts with lun 130
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE open_pool_output_files(tile, iblk, ics, ice, nc, nsoil_sb, output_interval_pool, spinup_id)
+  SUBROUTINE open_pool_output_files(tile, iblk, ics, ice, nc, output_interval_pool, spinup_id)
 
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
@@ -64,7 +64,6 @@ CONTAINS
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     
     ! Use of process configurations (t_PROC_config)
-    dsl4jsb_Use_config(ASSIMI_)
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_config(SB_)
 
@@ -75,28 +74,25 @@ CONTAINS
     INTEGER,INTENT(in)                          :: iblk, &        !< iBlock, start point of chunk, end point of chunk, number of points in the chunk
                                                    ics, &
                                                    ice, &
-                                                   nc, &
-                                                   nsoil_sb
+                                                   nc
     CHARACTER(len=*), INTENT(in)                :: output_interval_pool
     CHARACTER(len=*), INTENT(in)                :: spinup_id
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER       :: model
-    INTEGER        :: lun           ! logical unit number
-    INTEGER        :: max_lun_pool  ! currently 129
-    CHARACTER(100) :: fname         ! filename
+    INTEGER                               :: lun                  ! logical unit number
+    INTEGER                               :: max_lun_pool         ! currently 129
+    CHARACTER(100)                        :: fname                ! filename
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':open_pool_output_files'
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(SB_)
     ! ---------------------------
     ! 0.5 Get Memory
     model  => Get_model(tile%owner_model_id)
     ! Get process config
-    dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_config(SB_)
 
@@ -230,7 +226,7 @@ CONTAINS
     !> 3.0 write column headers into output files
     !! 
     !! 
-    CALL init_output_writing_pool(nsoil_sb, dsl4jsb_Config(SB_)%sb_model_scheme, TRIM(model%config%slm_model_name))
+    CALL init_output_writing_pool(dsl4jsb_Config(SB_)%sb_model_scheme, TRIM(model%config%slm_model_name))
 
   END SUBROUTINE open_pool_output_files
 
@@ -240,20 +236,29 @@ CONTAINS
   !! 
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE init_output_writing_pool(nsoil_sb, sb_model_scheme, slm_model_name)
+  SUBROUTINE init_output_writing_pool(sb_model_scheme, slm_model_name)
+
+    USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,              ONLY: Get_vgrid
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    INTEGER           ,INTENT(in) :: nsoil_sb
     CHARACTER(15)     ,INTENT(in) :: sb_model_scheme
     CHARACTER(len=*)  ,INTENT(in) :: slm_model_name
     ! ---------------------------
     ! 0.2 Local
+    TYPE(t_jsb_vgrid),POINTER :: vgrid_soil_sb                ! Vertical grid
+    INTEGER                   :: nsoil_sb                     ! number of soil layers as used/defined by the SB_ process
     INTEGER                   :: lun,isoil
     CHARACTER(2)              :: layerstr
     CHARACTER(450)            :: p1str,p2str,p3str,p4str,p5str,p6str,p7str,p8str,p9str,p10str, &
                                  p11str,p12str,p13str,p14str
+    ! ---------------------------
+    ! 0.5 Get Memory
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+    nsoil_sb      =  vgrid_soil_sb%n_levels
+
 
 
     !> 1.0 write headers
@@ -535,9 +540,10 @@ CONTAINS
     USE mo_jsb_math_constants,    ONLY: eps8
     USE mo_isotope_util,          ONLY: calc_delta_C13,calc_delta_C14,calc_delta_N15
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,              ONLY: Get_vgrid
 
     ! Use of process configurations (t_PROC_config)
-    dsl4jsb_Use_config(ASSIMI_)    
     dsl4jsb_Use_config(SB_)
     ! Use of process memories
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
@@ -560,6 +566,8 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER      :: model
     TYPE(t_lctlib_element), POINTER      :: lctlib                    !< land-cover-type library - parameter across pft's
+    TYPE(t_jsb_vgrid),      POINTER      :: vgrid_canopy              !< Vertical grid
+    INTEGER                              :: ncanopy                   !< number of canopy layers
     LOGICAL                              :: l_land_plant_canopy_out,& !< write land/plant/canopy output T/F
                                             l_soil_output             !< write soil       output T/F
     INTEGER                              :: lun                       ! logical unit number
@@ -578,7 +586,6 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(ASSIMI_)                           ! TYPE(t_assimi_memory),   POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                              ! TYPE(t_veg_memory),      POINTER :: veg__mem
@@ -668,10 +675,11 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
+    model         => Get_model(tile%owner_model_id)
+    lctlib        => model%lctlib(tile%lcts%lib_id)
+    vgrid_canopy  => Get_vgrid('canopy_layer')
+    ncanopy       =  vgrid_canopy%n_levels
     ! Get process config
-    dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_config(SB_)
     ! Get process memories
     dsl4jsb_Get_memory(ASSIMI_)
@@ -1053,7 +1061,7 @@ CONTAINS
         ! output T/F
         IF (l_land_plant_canopy_out) THEN 
           ! veg_canopy 
-          DO icanopy=1, dsl4jsb_Config(ASSIMI_)%ncanopy
+          DO icanopy = 1,ncanopy
             write(lun,'(10F12.6)') time_d, REAL(icanopy), fn_et_cl(ipoi,icanopy), &
                                   fn_rub_cl(ipoi,icanopy), fn_chl_cl(ipoi,icanopy),&
                                   fn_pepc_cl(ipoi,icanopy), fn_oth_cl(ipoi,icanopy),leaf_nitrogen_cl(ipoi,icanopy), &
@@ -1222,7 +1230,7 @@ CONTAINS
   !! 
   !! lun: start at 100 + 30
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE open_flux_output_files(tile, iblk, ics, ice, nc, nsoil_sb, output_interval_flux, spinup_id)
+  SUBROUTINE open_flux_output_files(tile, iblk, ics, ice, nc, output_interval_flux, spinup_id)
 
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
@@ -1230,7 +1238,6 @@ CONTAINS
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     
     ! Use of process configurations (t_PROC_config)
-    dsl4jsb_Use_config(ASSIMI_)
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_config(SB_)
 
@@ -1241,27 +1248,24 @@ CONTAINS
     INTEGER,INTENT(in)                          :: iblk, &        !< iBlock, start point of chunk, end point of chunk, number of points in the chunk
                                                    ics, &
                                                    ice, &
-                                                   nc, &
-                                                   nsoil_sb
+                                                   nc
     CHARACTER(len=*), INTENT(in)                :: output_interval_flux 
     CHARACTER(len=*), INTENT(in)                :: spinup_id
     ! ---------------------------
     ! 0.2 Local
-    TYPE(t_jsb_model),      POINTER       :: model
-    INTEGER        :: lun           ! logical unit number
-    CHARACTER(100) :: fname         ! filename
+    TYPE(t_jsb_model), POINTER       :: model
+    INTEGER                          :: lun           ! logical unit number
+    CHARACTER(100)                   :: fname         ! filename
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':open_flux_output_files'
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(SB_)
     ! ---------------------------
     ! 0.5 Get Memory
     model  => Get_model(tile%owner_model_id)
     ! Get process config
-    dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_config(SB_)
 
@@ -1377,7 +1381,7 @@ CONTAINS
     !> 2.0 write column headers into output files
     !! 
     !! 
-    CALL init_output_writing_flux(nsoil_sb, dsl4jsb_Config(SB_)%sb_model_scheme, TRIM(model%config%slm_model_name))
+    CALL init_output_writing_flux(dsl4jsb_Config(SB_)%sb_model_scheme, TRIM(model%config%slm_model_name))
 
   END SUBROUTINE open_flux_output_files
 
@@ -1387,20 +1391,29 @@ CONTAINS
   !! 
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE init_output_writing_flux(nsoil_sb, sb_model_scheme, slm_model_name)
+  SUBROUTINE init_output_writing_flux(sb_model_scheme, slm_model_name)
+
+    USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,              ONLY: Get_vgrid
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    INTEGER           ,INTENT(in) :: nsoil_sb
     CHARACTER(15)     ,INTENT(in) :: sb_model_scheme
     CHARACTER(len=*)  ,INTENT(in) :: slm_model_name
     ! ---------------------------
     ! 0.2 Local
-    INTEGER         :: lun,isoil
-    CHARACTER(2)    :: layerstr
-    CHARACTER(450)  :: p1str,p2str,p3str,p4str,p5str,p6str,p7str,p8str,p9str,p10str, &
-                       p11str,p12str,p13str,p14str,p15str,p16str,p17str
+    TYPE(t_jsb_vgrid), POINTER :: vgrid_soil_sb                ! Vertical grid
+    INTEGER                    :: nsoil_sb                     ! number of soil layers as used/defined by the SB_ process
+    INTEGER                    :: lun,isoil
+    CHARACTER(2)               :: layerstr
+    CHARACTER(450)             :: p1str,p2str,p3str,p4str,p5str,p6str,p7str,p8str,p9str,p10str, &
+                                 p11str,p12str,p13str,p14str,p15str,p16str,p17str
+    ! ---------------------------
+    ! 0.5 Get Memory
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+    nsoil_sb      =  vgrid_soil_sb%n_levels
+
 
 
     !> 1.0 write headers
@@ -1614,10 +1627,12 @@ CONTAINS
   SUBROUTINE write_output_flux(tile, options, time_d, output_interval_flux, l_flux_output_interval)
 
     USE mo_jsb_class,             ONLY: Get_model
-    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,              ONLY: Get_vgrid
     USE mo_jsb_math_constants,    ONLY: dtime, eps8
     USE mo_jsb_phys_constants,    ONLY: molar_mass_C, molar_mass_N
     USE mo_rad_constants,         ONLY: rad2ppfd
@@ -1654,9 +1669,11 @@ CONTAINS
     LOGICAL,                    INTENT(in)    :: l_flux_output_interval
     ! ---------------------------
     ! 0.2 Local
-    TYPE(t_jsb_model),      POINTER       :: model
-    TYPE(t_lctlib_element), POINTER       :: lctlib             !< land-cover-type library - parameter across pft's
-    LOGICAL :: l_flux_calc_acc_output                           !< this is set to TRUE by default (below) because this routine is called only if it is TRUE
+    TYPE(t_jsb_model),      POINTER       :: model                    !< model
+    TYPE(t_lctlib_element), POINTER       :: lctlib                   !< land-cover-type library - parameter across pft's
+    TYPE(t_jsb_vgrid), POINTER            :: vgrid_soil_sb            !< Vertical grid
+    INTEGER                               :: nsoil_sb                 !< number of soil layers as used/defined by the SB_ process
+    LOGICAL                               :: l_flux_calc_acc_output   !< this is set to TRUE by default (below) because this routine is called only if it is TRUE
     ! local accumulation variables
       ! Note: the *_acc variables are initialized only the first time the subroutine is called. 
       ! On subsequent calls the old value of *_acc is retained.
@@ -1835,7 +1852,7 @@ CONTAINS
     REAL(wp)                              :: dC13gpp, dC13rg, dC13rm, dC13wgr, dC13litterfall, dC13het_resp, dC13leaching
     REAL(wp)                              :: dC13atm
     REAL(wp), SAVE                        :: dtime_one = 1.0_wp         !< just 1.0, but might get modified below
-    INTEGER                               :: iblk, ics, ice, nc, nsoil_sb
+    INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':write_output_flux'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -1983,15 +2000,16 @@ CONTAINS
     ics      = options%ics
     ice      = options%ice
     nc       = options%nc
-    nsoil_sb = options%nsoil_sb
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
 !    IF (.NOT. tile%Is_process_active(xx_)) RETURN   ! ask for all processes considered here ?
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
+    model         => Get_model(tile%owner_model_id)
+    lctlib        => model%lctlib(tile%lcts%lib_id)
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+    nsoil_sb      =  vgrid_soil_sb%n_levels
     ! Get process config
     dsl4jsb_Get_config(SB_)
     ! Get process memories
@@ -2888,7 +2906,7 @@ CONTAINS
   !! 
   !! lun: start at 100 + 60
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE open_output_files_soil_forcing(tile, iblk, ics, ice, nc, nsoil_sb)
+  SUBROUTINE open_output_files_soil_forcing(tile, iblk, ics, ice, nc)
 
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
@@ -2896,18 +2914,18 @@ CONTAINS
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     
     ! Use of process configurations (t_PROC_config)
-    dsl4jsb_Use_config(ASSIMI_)
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_config(SB_)
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
     CLASS(t_jsb_tile_abstract), INTENT(in) :: tile         !< one tile with data structure for one lct
     INTEGER,                    INTENT(in) :: iblk, &      !< iBlock, start point of chunk, end point of chunk, number of points in the chunk
                                               ics, &
                                               ice, &
-                                              nc, &
-                                              nsoil_sb 
+                                              nc
+    ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),POINTER             :: model
     INTEGER        :: lun           ! logical unit number
@@ -2916,19 +2934,22 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(SB_)
+    ! ---------------------------
     ! 0.5 Get Memory
     model  => Get_model(tile%owner_model_id)
     ! Get process config
-    dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_config(SB_)
+
+
+
 
     !! 
     !! output interval will be always timestep !
     !! 
+
 
     !> 1.0 define open() statements for file output
     !! 
@@ -2942,7 +2963,7 @@ CONTAINS
 
     !> 2.0 write column headers into output files
     !! 
-    CALL init_output_files_soil_forcing(nsoil_sb)
+    CALL init_output_files_soil_forcing()
 
   END SUBROUTINE open_output_files_soil_forcing
 
@@ -2953,15 +2974,28 @@ CONTAINS
   !! complete litterfall output (used as input for the stand alone soil model) \n
   !! and some soilphysics variables
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE init_output_files_soil_forcing(nsoil_sb)
+  SUBROUTINE init_output_files_soil_forcing()
+
+    USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,              ONLY: Get_vgrid
 
     IMPLICIT NONE
+    ! ---------------------------
     ! 0.1 InOut
-    INTEGER, INTENT(in)       :: nsoil_sb
+    !..
+    ! ---------------------------
     ! 0.2 Local
-    INTEGER                   :: lun, isoil
-    CHARACTER(2)              :: layerstr
-    CHARACTER(450)            :: p1str,p2str,p3str,p4str,p5str,p6str,p7str,p8str,p9str,p10str
+    TYPE(t_jsb_vgrid), POINTER    :: vgrid_soil_sb                ! Vertical grid
+    INTEGER                       :: nsoil_sb                     ! number of soil layers as used/defined by the SB_ process
+    INTEGER                       :: lun, isoil
+    CHARACTER(2)                  :: layerstr
+    CHARACTER(450)                :: p1str,p2str,p3str,p4str,p5str,p6str,p7str,p8str,p9str,p10str
+    ! ---------------------------
+    ! 0.5 Get Memory
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+    nsoil_sb      =  vgrid_soil_sb%n_levels
+
+
 
     !> 1.0 write headers
     !!
@@ -3045,7 +3079,7 @@ CONTAINS
     REAL(wp)                              :: dN15_leaf,dN15_fine_root,dN15_coarse_root,dN15_sap_wood,dN15_heart_wood,dN15_labile, & 
                                              dN15_reserve,dN15_fruit,dN15_seed_bed
     INTEGER                               :: lun          ! logical unit number
-    INTEGER                               :: iblk, ics, ice, nc, nsoil_sb
+    INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':write_soil_forcing'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -3074,7 +3108,6 @@ CONTAINS
     ics       = options%ics
     ice       = options%ice
     nc        = options%nc
-    nsoil_sb  = options%nsoil_sb
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
 !    IF (.NOT. tile%Is_process_active(xx_)) RETURN

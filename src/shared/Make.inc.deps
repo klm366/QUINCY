@@ -26,6 +26,8 @@ mo_quincy_update_time_averages.o: \
   mo_jsb_class.o \
   mo_jsb_process_class.o \
   mo_jsb_lctlib_class.o \
+  mo_jsb_grid_class.o \
+  mo_jsb_grid.o \
   mo_jsb_phys_constants.o \
   mo_jsb_math_constants.o \
   mo_jsb_impl_constants.o \
@@ -72,6 +74,8 @@ mo_quincy_output.o: \
   mo_jsb_phys_constants.o \
   mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
+  mo_jsb_grid_class.o \
+  mo_jsb_grid.o \
   mo_jsb_model_init.o \
   mo_jsb_process_class.o \
   mo_jsb4_forcing.o \
@@ -79,7 +83,6 @@ mo_quincy_output.o: \
   mo_rad_constants.o \
   mo_sb_constants.o \
   mo_veg_constants.o \
-  mo_assimi_config_class.o \
   mo_sb_config_class.o \
   mo_veg_config_class.o \
   mo_sse_config_class.o \

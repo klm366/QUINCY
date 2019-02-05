@@ -37,7 +37,8 @@ CONTAINS
   !! according to their root profile 
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_litter_partitioning(options, &
+  SUBROUTINE calc_litter_partitioning(nc, &                         ! in
+                                      nsoil_sb, &
                                       lctlib, & 
                                       sb_model_scheme, &
                                       soil_depth_sl, &
@@ -45,7 +46,6 @@ CONTAINS
                                       veg_litterfall, &
                                       sb_formation )
 
-    USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element    
     USE mo_veg_constants,           ONLY: itree, igrass
     USE mo_jsb_math_constants,      ONLY: eps8
@@ -57,20 +57,21 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_jsb_task_options),                         INTENT(in)    :: options                    !< task options
+    INTEGER,                                          INTENT(in)    :: nc, &                      !< dimensions
+                                                                       nsoil_sb
     TYPE(t_lctlib_element),                           INTENT(in)    :: lctlib                     !< land-cover-type library - parameter across pft's
     CHARACTER(len=*),                                 INTENT(in)    :: sb_model_scheme            !< soil model/module name
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: soil_depth_sl, &           !< depth per soil layer
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: soil_depth_sl, &           !< depth per soil layer
                                                                        root_fraction_act_sl       !< root fraction per soil layer
     TYPE(t_veg_pool_a),                               INTENT(in)    :: veg_litterfall             !< vegetation litterfall pool
     TYPE(t_sb_pool_a),                                INTENT(inout) :: sb_formation               !< soil biogeochemistry formation pool
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp), DIMENSION(options%nc) :: fc_soluable_leaf, fc_soluable_fine_root, fc_soluable_coarse_root, fc_soluable_fruit, & 
+    REAL(wp), DIMENSION(nc)         :: fc_soluable_leaf, fc_soluable_fine_root, fc_soluable_coarse_root, fc_soluable_fruit, & 
                                        fc_soluable_seed_bed, fc_soluable_labile, fc_soluable_reserve 
-    REAL(wp), DIMENSION(options%nc) :: fn_soluable_leaf, fn_soluable_fine_root, fn_soluable_coarse_root, fn_soluable_fruit, & 
+    REAL(wp), DIMENSION(nc)         :: fn_soluable_leaf, fn_soluable_fine_root, fn_soluable_coarse_root, fn_soluable_fruit, & 
                                        fn_soluable_seed_bed, fn_soluable_labile, fn_soluable_reserve 
-    REAL(wp), DIMENSION(options%nc) :: fp_soluable_leaf, fp_soluable_fine_root, fp_soluable_coarse_root, fp_soluable_fruit, & 
+    REAL(wp), DIMENSION(nc)         :: fp_soluable_leaf, fp_soluable_fine_root, fp_soluable_coarse_root, fp_soluable_fruit, & 
                                        fp_soluable_seed_bed, fp_soluable_labile, fp_soluable_reserve 
     INTEGER                         :: isoil                      !< loop over soil layers
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_litter_partitioning'
@@ -295,7 +296,7 @@ CONTAINS
 
     !> 4.0 Distribute fine and coarse root litter to soil depth according to the root profile 
     !!
-    DO isoil = 1,options%nsoil_sb
+    DO isoil = 1,nsoil_sb
        sb_formation%soluable_litter%carbon(:,isoil)     = sb_formation%soluable_litter%carbon(:,isoil) + & 
           (fc_soluable_fine_root(:)   * veg_litterfall%fine_root%carbon(:)     + &
            fc_soluable_coarse_root(:) * veg_litterfall%coarse_root%carbon(:) ) * & 

@@ -37,6 +37,8 @@ CONTAINS
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,              ONLY: Get_vgrid
     USE mo_sse_util,              ONLY: soil_depth_to_layers_2d
     USE mo_jsb_math_constants,    ONLY: eps8
     USE mo_sse_constants,         ONLY: soil_heat_cap, soil_therm_cond, kdiff_sat_max, &
@@ -60,12 +62,14 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER                  :: model
-    TYPE(t_lctlib_element), POINTER                  :: lctlib     !< land-cover-type library - parameter across pft's
+    TYPE(t_lctlib_element), POINTER                  :: lctlib        !< land-cover-type library - parameter across pft's
+    TYPE(t_jsb_vgrid),      POINTER                  :: vgrid_soil_sb !< Vertical grid
+    INTEGER                                          :: nsoil_sb      !< number of soil layers as used/defined by the SB_ process
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: hlp1, &
                                                         theta_pwp_sl, theta_fc_sl, theta_sat_sl
     REAL(wp), DIMENSION(options%nc)                  :: soil_awc, &
                                                         hlp2
-    INTEGER                                          :: nsoil_sb, isoil, ichunk
+    INTEGER                                          :: isoil, ichunk
     INTEGER                                          :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':sse_init'
     ! ---------------------------
@@ -108,15 +112,16 @@ CONTAINS
     ics       = options%ics
     ice       = options%ice
     nc        = options%nc
-    nsoil_sb  = options%nsoil_sb
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
     IF (.NOT. tile%Is_process_active(SSE_)) RETURN
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
+    model         => Get_model(tile%owner_model_id)
+    lctlib        => model%lctlib(tile%lcts%lib_id)
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+    nsoil_sb      =  vgrid_soil_sb%n_levels
     ! Get process config
     dsl4jsb_Get_config(SSE_)
     ! Get process memories

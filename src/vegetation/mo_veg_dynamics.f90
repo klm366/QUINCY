@@ -156,7 +156,7 @@ CONTAINS
     !! 
     SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme))
       CASE ("population","cohort")
-        fpc(:) = calc_foliage_projective_cover_tile(options, lctlib, veg_pool%sap_wood%carbon(:), & 
+        fpc(:) = calc_foliage_projective_cover_tile(nc, lctlib, veg_pool%sap_wood%carbon(:), & 
                                                     dens_ind(:), height(:), diameter(:))
     ENDSELECT
 
@@ -195,7 +195,7 @@ CONTAINS
     !! 
     !! retruns constant mortality_rate if veg_dynamics_scheme == none \n
     !! but calcs mortality_rate dynamically if veg_dynamics_scheme == population or cohort
-    CALL calc_veg_mortality(options                                         , & ! in
+    CALL calc_veg_mortality(nc                                              , & ! in
                             lctlib                                          , & 
                             TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme)  , &
                             an_boc_tvegdyn_mavg(:)                          , &
@@ -210,8 +210,8 @@ CONTAINS
     !! 
     !! if either logical is true
     !! @todo update_veg_dynamics() do_cohort_harvest dimension should be used as nc
-    IF (model%config%l_do_stand_replacing_harvest .OR. do_cohort_harvest(options%ics) > test_false_true) THEN
-      CALL calc_veg_harvest(options                                     , & ! in
+    IF (model%config%l_do_stand_replacing_harvest .OR. do_cohort_harvest(ics) > test_false_true) THEN
+      CALL calc_veg_harvest(nc                                          , & ! in
                             veg_pool                                    , &
                             veg_litterfall                              , & ! inout
                             mortality_rate(:)                           )   ! inout
@@ -227,9 +227,8 @@ CONTAINS
         !!  in the routine update_veg_pools section 3.0
       CASE ("population")
         IF(.NOT. model%config%l_do_stand_replacing_harvest) THEN 
-          CALL calc_veg_establishment(options                         , & ! in
+          CALL calc_veg_establishment(nc                              , & ! in
                                       lctlib                          , & 
-                                      dsl4jsb_Config(ASSIMI_)%ncanopy , &
                                       w_soil_root_theta(:)            , &
                                       growing_season(:)               , &
                                       t_air_week_mavg(:)              , &
@@ -247,7 +246,7 @@ CONTAINS
     SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme))
     CASE ("population","cohort")
       !! @todo update_veg_dynamics() do_cohort_harvest dimension should be used as nc
-      IF(.NOT. model%config%l_do_stand_replacing_harvest .AND. do_cohort_harvest(options%ics) < test_false_true) THEN 
+      IF(.NOT. model%config%l_do_stand_replacing_harvest .AND. do_cohort_harvest(ics) < test_false_true) THEN 
         IF(lctlib%growthform == itree) THEN
            delta_dens_ind(:) = calc_delta_dens_ind(lctlib%seed_size           , & 
                                                    dens_ind(:)                , &
@@ -279,14 +278,13 @@ CONTAINS
   !!
   !! Follows Sitch et al. 2003, eq 8)
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION calc_foliage_projective_cover_tile(options                 , &
+  FUNCTION calc_foliage_projective_cover_tile(nc                      , &
                                               lctlib                  , &
                                               veg_pool_sap_wood_carbon, &
                                               dens_ind                , &
                                               height                  , &
                                               diameter) RESULT(fpc) 
 
-    USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_veg_constants,         ONLY: max_crown_area, min_diameter, k_crown_area, k_rp, k_fpc, itree
     USE mo_jsb_math_constants,    ONLY: eps4
@@ -294,20 +292,22 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_jsb_task_options),        INTENT(in) :: options                     !< model options
+    INTEGER,                         INTENT(in) :: nc                          !< dimensions
     TYPE(t_lctlib_element),          INTENT(in) :: lctlib                      !< land-cover-type library - parameter across pft's
-    REAL(wp), DIMENSION(options%nc), INTENT(in) :: veg_pool_sap_wood_carbon, & !< sapwood mass (mol C / m2)
+    REAL(wp), DIMENSION(nc),         INTENT(in) :: veg_pool_sap_wood_carbon, & !< sapwood mass (mol C / m2)
                                                    dens_ind                , & !< tree density (#/m2)
                                                    height                  , & !< tree height (m)
                                                    diameter                    !< tree diameter (m)
-    REAL(wp), DIMENSION(options%nc)             :: fpc                         !< foliage projective cover (fraction)
+    REAL(wp), DIMENSION(nc)                     :: fpc                         !< foliage projective cover (fraction)
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp), DIMENSION(options%nc)             :: crown_area, &
+    REAL(wp), DIMENSION(nc)                     :: crown_area, &
                                                    lai_ind 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_foliage_projective_cover_tile'
 
 
+    !> 1.0
+    !! 
     WHERE(lctlib%growthform == itree .AND. dens_ind(:) .GT. eps4 .AND. height(:) .GT. eps4)
       ! crown area derived from diameter following Sitch et al. 2003; eq 4
       crown_area(:) = MIN(max_crown_area, k_crown_area * MAX(min_diameter,diameter(:)) ** k_rp)
@@ -333,7 +333,7 @@ CONTAINS
   !!
   !! veg\%litterfall
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_veg_mortality(options                   , &
+  SUBROUTINE calc_veg_mortality(nc                        , &
                                 lctlib                    , &
                                 veg_dynamics_scheme       , &
                                 an_boc_tvegdyn_mavg       , &
@@ -345,7 +345,6 @@ CONTAINS
                                 mortality_rate )
 
     USE mo_jsb_math_constants,    ONLY: one_day, one_year, dtime, eps8
-    USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_veg_constants,         ONLY: min_greff, k1_mort_greff, k2_mort_greff, k3_mort_greff, fpc_max, &
                                         itree, igrass, background_mort_rate_tree, background_mort_rate_grass
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
@@ -354,25 +353,31 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_jsb_task_options),        INTENT(in)    :: options                    !< model options
+    INTEGER,                         INTENT(in)    :: nc                         !< dimensions
     TYPE(t_lctlib_element),          INTENT(in)    :: lctlib                     !< land-cover-type library - parameter across pft's
     CHARACTER(len=*),                INTENT(in)    :: veg_dynamics_scheme        !< vegetation dynamics: none population cohort
-    REAL(wp), DIMENSION(options%nc), INTENT(in)    :: an_boc_tvegdyn_mavg    , & !< long-term net C balance at the bottom of the canopy (µmol / m2 / s)
+    REAL(wp), DIMENSION(nc),         INTENT(in)    :: an_boc_tvegdyn_mavg    , & !< long-term net C balance at the bottom of the canopy (µmol / m2 / s)
                                                       net_growth_tvegdyn_mavg, & !< long-term net growth of the plant (µmol / m2 / s) 
                                                       lai_tvegdyn_mavg,        & !< long-term LAI of the plant
                                                       fpc                        !< foliage projective cover
     TYPE(t_veg_pool_a),              INTENT(in)    :: veg_pool                   !< vegetation pool
     TYPE(t_veg_pool_a),              INTENT(inout) :: veg_litterfall             !< vegetation litterfall
-    REAL(wp), DIMENSION(options%nc), INTENT(out)   :: mortality_rate             !< current mortality rate (1/timestep)
+    REAL(wp), DIMENSION(nc),         INTENT(out)   :: mortality_rate             !< current mortality rate (1/timestep)
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp), DIMENSION(options%nc)                :: boc_cbalance               !< C balance at bottom of canopy
-    REAL(wp), DIMENSION(options%nc)                :: greff                      !< long-term growth efficiency
-    REAL(wp), DIMENSION(options%nc)                :: fscal
-    REAL(wp), DIMENSION(options%nc)                :: greff_mortality_rate, &
+    REAL(wp), DIMENSION(nc)                        :: boc_cbalance               !< C balance at bottom of canopy
+    REAL(wp), DIMENSION(nc)                        :: greff                      !< long-term growth efficiency
+    REAL(wp), DIMENSION(nc)                        :: fscal
+    REAL(wp), DIMENSION(nc)                        :: greff_mortality_rate, &
                                                       self_thinning_mortality_rate, &
                                                       bg_mortality_rate 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_veg_mortality'
+
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------    
     
 
     !> differ between veg_dynamics_schemes
@@ -465,27 +470,27 @@ CONTAINS
   !!
   !! veg\%litterfall
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_veg_harvest(options                   , &
+  SUBROUTINE calc_veg_harvest(nc                        , &
                               veg_pool                  , &
                               veg_litterfall            , &
                               mortality_rate)
 
-    USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_veg_constants,         ONLY: wood_extraction_rate
     dsl4slm_Use_memory_a_veg
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_jsb_task_options),         INTENT(in)    :: options                  !< model options
+    INTEGER,                          INTENT(in)    :: nc                       !< dimensions
     TYPE(t_veg_pool_a),               INTENT(in)    :: veg_pool                 !< vegetation pool
     TYPE(t_veg_pool_a),               INTENT(inout) :: veg_litterfall           !< vegetation litterfall
-    REAL(wp), DIMENSION(options%nc),  INTENT(inout) :: mortality_rate           !< background_mort_rate_tree/grass converted to 1/timestep
+    REAL(wp), DIMENSION(nc),          INTENT(inout) :: mortality_rate           !< background_mort_rate_tree/grass converted to 1/timestep
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp), DIMENSION(options%nc)                 :: rest_mortality_rate 
+    REAL(wp), DIMENSION(nc)                         :: rest_mortality_rate 
     REAL(wp)                                        :: export_rate
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_veg_harvest'
+
 
 
     !> 1.0 calculate rest mortality to achieve stand-replacing harvest
@@ -514,9 +519,8 @@ CONTAINS
   !!
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_veg_establishment(options                     , &
+  SUBROUTINE calc_veg_establishment(nc                          , &
                                     lctlib                      , &
-                                    ncanopy                     , &
                                     w_soil_root_theta           , &
                                     growing_season              , &
                                     t_air_week_mavg             , &
@@ -525,7 +529,6 @@ CONTAINS
                                     veg_pool_seed_bed           , &
                                     veg_establishment           )
 
-    USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_jsb_math_constants,    ONLY: dtime, one_day, one_year, eps8
     USE mo_rad_constants,         ONLY: rfr_ratio_toc 
@@ -536,19 +539,18 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_jsb_task_options),         INTENT(in)    :: options                      !< model options
+    INTEGER,                          INTENT(in)    :: nc                           !< dimensions
     TYPE(t_lctlib_element),           INTENT(in)    :: lctlib                       !< land-cover-type library - parameter across pft's
-    INTEGER,                          INTENT(in)    :: ncanopy                      !< number of canopy layer
-    REAL(wp), DIMENSION(options%nc),  INTENT(in)    :: w_soil_root_theta            !< plant available water [fraction of maximum] 
-    REAL(wp), DIMENSION(options%nc),  INTENT(in)    :: growing_season               !< growing season 
-    REAL(wp), DIMENSION(options%nc),  INTENT(in)    :: t_air_week_mavg              !< weekly air temperature [K] 
-    REAL(wp), DIMENSION(options%nc),  INTENT(in)    :: fpc                          !<  ...
-    REAL(wp), DIMENSION(options%nc),  INTENT(in)    :: rfr_ratio_boc_tvegdyn_mavg   !< red-farred ratio at the bottom of the canopy 
+    REAL(wp), DIMENSION(nc),          INTENT(in)    :: w_soil_root_theta            !< plant available water [fraction of maximum] 
+    REAL(wp), DIMENSION(nc),          INTENT(in)    :: growing_season               !< growing season 
+    REAL(wp), DIMENSION(nc),          INTENT(in)    :: t_air_week_mavg              !< weekly air temperature [K] 
+    REAL(wp), DIMENSION(nc),          INTENT(in)    :: fpc                          !<  ...
+    REAL(wp), DIMENSION(nc),          INTENT(in)    :: rfr_ratio_boc_tvegdyn_mavg   !< red-farred ratio at the bottom of the canopy 
     TYPE(t_veg_element_a),            INTENT(in)    :: veg_pool_seed_bed            !< seed_bed in vegetation pool
     TYPE(t_veg_element_a),            INTENT(inout) :: veg_establishment            !< vegetation establishment
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp), DIMENSION(options%nc)                 :: establishment_rate , &
+    REAL(wp), DIMENSION(nc)                         :: establishment_rate , &
                                                        tc                 , &
                                                        rfr_ratio          , &
                                                        flim_light         , &
@@ -557,6 +559,12 @@ CONTAINS
     INTEGER                                         :: icanopy
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_veg_establishment'
 
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+    
 
     !> 1.0 establishment rate
     !!

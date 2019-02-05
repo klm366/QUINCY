@@ -132,9 +132,11 @@ CONTAINS
     USE mo_kind,                    ONLY: wp
     USE mo_jsb_math_constants,      ONLY: eps8
     USE mo_jsb_class,               ONLY: Get_model
+    USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,                ONLY: Get_vgrid
 
     ! Use of process configurations (t_PROC_config)
-    dsl4jsb_Use_config(ASSIMI_)    
+    !..
 
     ! Use of process memories
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
@@ -153,6 +155,8 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER         :: model              !< instance of the model
     TYPE(t_lctlib_element), POINTER         :: lctlib             !< land-cover-type library - parameter across pft's
+    TYPE(t_jsb_vgrid),      POINTER         :: vgrid_canopy       !< Vertical grid
+    INTEGER                                 :: ncanopy            !< number of canopy layers
     INTEGER                                 :: icanopy            !< loop over ncanopy
     INTEGER                                 :: ichunk             !< loop over chunks ics-ice
     INTEGER                                 :: iblk, ics, ice, nc
@@ -160,7 +164,6 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_memory(A2L_)                        !     TYPE(t_a2l_memory),      POINTER :: a2l__mem
     dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
@@ -223,10 +226,12 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
+    model         => Get_model(tile%owner_model_id)
+    lctlib        => model%lctlib(tile%lcts%lib_id)
+    vgrid_canopy  => Get_vgrid('canopy_layer')
+    ncanopy       =  vgrid_canopy%n_levels
     ! Get process config
-    dsl4jsb_Get_config(ASSIMI_)
+    !..
     ! Get process memories
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(ASSIMI_)
@@ -309,7 +314,7 @@ CONTAINS
 
     !> 1.2 2D variables
     !!
-    DO icanopy=1,dsl4jsb_Config(ASSIMI_)%ncanopy
+    DO icanopy=1,ncanopy
       WHERE(swpar_srf_down(:) > eps8)
         ! 1.2.2 add values and count number of values
         ppfd_sunlit_daytime_dacc_cl(:,icanopy)  = ppfd_sunlit_daytime_dacc_cl(:,icanopy)  + ppfd_sunlit_cl(:,icanopy)
@@ -355,7 +360,7 @@ CONTAINS
 
     !> 2.2 2D variables
     !!
-    DO icanopy=1,dsl4jsb_Config(ASSIMI_)%ncanopy
+    DO icanopy=1,ncanopy
       WHERE((cos_zenith_angle(:) - prev_one_cos_zenith_angle(:)) > eps8 .AND. &
             (prev_one_cos_zenith_angle(:) - prev_two_cos_zenith_angle(:)) <= eps8)
         WHERE(daytime_counter(:) > eps8)
@@ -473,6 +478,8 @@ CONTAINS
   SUBROUTINE calc_moving_averages(tile, options)
 
     USE mo_jsb_class,               ONLY: Get_model
+    USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,                ONLY: Get_vgrid
     USE mo_kind,                    ONLY: wp
     USE mo_jsb_impl_constants,      ONLY: test_false_true
     USE mo_jsb_math_constants,      ONLY: eps8
@@ -503,6 +510,8 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER         :: model                !< instance of the model
     TYPE(t_lctlib_element), POINTER         :: lctlib               !< land-cover-type library - parameter across pft's
+    TYPE(t_jsb_vgrid),      POINTER         :: vgrid_canopy         !< Vertical grid
+    INTEGER                                 :: ncanopy              !< number of canopy layers
     REAl(wp),DIMENSION(options%nc)          :: hlp, mavg_period_hlp !< helper
     LOGICAL ,DIMENSION(options%nc)          :: l_growing_season     !< growing_season LOGICAL needed for calc_mavg(), see section 0.9
     INTEGER                                 :: iblk, ics, ice, nc
@@ -678,8 +687,10 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
+    model         => Get_model(tile%owner_model_id)
+    lctlib        => model%lctlib(tile%lcts%lib_id)
+    vgrid_canopy  => Get_vgrid('canopy_layer')
+    ncanopy       =  vgrid_canopy%n_levels
     ! Get process config
     dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_config(VEG_)
@@ -907,13 +918,13 @@ CONTAINS
     !! 
     ppfd_sunlit_tfrac_mavg_cl(:,:)    = calc_mavg(ppfd_sunlit_tfrac_mavg_cl(:,:), ppfd_sunlit_daytime_cl(:,:), &
                                                   mavg_period_tfrac, &
-                                                  do_calc=SPREAD(l_growing_season(:),2,dsl4jsb_Config(ASSIMI_)%ncanopy) )
+                                                  do_calc=SPREAD(l_growing_season(:),2,ncanopy) )
     ppfd_shaded_tfrac_mavg_cl(:,:)    = calc_mavg(ppfd_shaded_tfrac_mavg_cl(:,:), ppfd_shaded_daytime_cl(:,:), &
                                                   mavg_period_tfrac, &
-                                                  do_calc=SPREAD(l_growing_season(:),2,dsl4jsb_Config(ASSIMI_)%ncanopy) )
+                                                  do_calc=SPREAD(l_growing_season(:),2,ncanopy) )
     fleaf_sunlit_tfrac_mavg_cl(:,:)   = calc_mavg(fleaf_sunlit_tfrac_mavg_cl(:,:), fleaf_sunlit_daytime_cl(:,:), &
                                                   mavg_period_tfrac, &
-                                                  do_calc=SPREAD(l_growing_season(:),2,dsl4jsb_Config(ASSIMI_)%ncanopy) )
+                                                  do_calc=SPREAD(l_growing_season(:),2,ncanopy) )
     t_air_tfrac_mavg(:)               = calc_mavg(t_air_tfrac_mavg(:), t_air_daytime(:), &
                                                   mavg_period_tfrac)
     press_srf_tfrac_mavg(:)           = calc_mavg(press_srf_tfrac_mavg(:), press_srf_daytime(:), &
@@ -935,13 +946,13 @@ CONTAINS
     !!
     ppfd_sunlit_tcnl_mavg_cl(:,:)    = calc_mavg(ppfd_sunlit_tcnl_mavg_cl(:,:), ppfd_sunlit_cl(:,:), &
                                                   mavg_period_tcnl, &
-                                                  do_calc=SPREAD(l_growing_season(:),2,dsl4jsb_Config(ASSIMI_)%ncanopy) )
+                                                  do_calc=SPREAD(l_growing_season(:),2,ncanopy) )
     ppfd_shaded_tcnl_mavg_cl(:,:)    = calc_mavg(ppfd_shaded_tcnl_mavg_cl(:,:), ppfd_shaded_cl(:,:), &
                                                   mavg_period_tcnl, &
-                                                  do_calc=SPREAD(l_growing_season(:),2,dsl4jsb_Config(ASSIMI_)%ncanopy) )
+                                                  do_calc=SPREAD(l_growing_season(:),2,ncanopy) )
     fleaf_sunlit_tcnl_mavg_cl(:,:)   = calc_mavg(fleaf_sunlit_tcnl_mavg_cl(:,:), fleaf_sunlit_cl(:,:), &
                                                   mavg_period_tcnl, &
-                                                  do_calc=SPREAD(l_growing_season(:),2,dsl4jsb_Config(ASSIMI_)%ncanopy) )
+                                                  do_calc=SPREAD(l_growing_season(:),2,ncanopy) )
     t_air_tcnl_mavg(:)               = calc_mavg(t_air_tcnl_mavg(:), t_air(:), &
                                                   mavg_period_tcnl, do_calc=l_growing_season(:))
     press_srf_tcnl_mavg(:)           = calc_mavg(press_srf_tcnl_mavg(:), press_srf(:), &

@@ -68,8 +68,8 @@ CONTAINS
                                              csat, cair, z0m, z0h, zchnl, zlev, wind_air
     REAL(wp)                              :: zepz0o, zcons8, zcons9, zcons11, zcons12, zkappa, vtmpc1
     REAL(wp)                              :: HeightWind, HeightHumidity
-    INTEGER                               :: isoil
     INTEGER                               :: iblk, ics, ice, nc
+    REAL(wp)                              :: steplen
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_soil_turbulence'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -106,6 +106,7 @@ CONTAINS
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
+    steplen = options%steplen
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
     IF (.NOT. tile%Is_process_active(SSE_)) RETURN
@@ -186,7 +187,8 @@ CONTAINS
     ! ztvd, ztvs are now virtual potential temperatures, changed by Thomas Raddatz 07.2014
     zril(:)       = zg(:) * ( ztvd(:) - ztvs(:) ) / ( zdu2(:) * (ztvd(:)+ztvs(:))/2._wp )
 
-    CALL calc_drag_coefficient(options, & 
+    CALL calc_drag_coefficient(nc, &
+                               steplen, &
                                t_air(:),q_air(:),wind_air(:),press_srf(:), & 
                                zg(:),zgh(:),z0m(:),z0h(:), &
                                zril(:), &                 ! inout
@@ -210,38 +212,37 @@ CONTAINS
   !!
   !! Calculates time-filtered drag coefficient 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_filtered_drag_coefficient(options, & 
+  SUBROUTINE calc_filtered_drag_coefficient(nc, &
+                                            steplen, &
                                             t_air,q_air,wind_air,press_srf,t_srf,t_srf_new,&                         
                                             height,zril_old,drag_srf,pch,ga)
 
-    USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
     USE mo_jsb_phys_constants,    ONLY: grav, r_gas_vapour, r_gas_dryair, cpd, cpvd1, ckap, cvdifts
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_jsb_task_options),        INTENT(in)    :: options          !< model options
-    REAL(wp), DIMENSION(options%nc), INTENT(in)    :: t_air, &
+    INTEGER,                         INTENT(in)    :: nc                     !< dimensions
+    REAL(wp),                        INTENT(in)    :: steplen                !< step length for this process
+    REAL(wp), DIMENSION(nc),         INTENT(in)    :: t_air, &
                                                       q_air, &
                                                       wind_air, &
                                                       press_srf, &
                                                       t_srf, &
                                                       t_srf_new, &
                                                       height
-    REAL(wp), DIMENSION(options%nc), INTENT(inout) :: zril_old 
-    REAL(wp), DIMENSION(options%nc), INTENT(out)   :: drag_srf, &
+    REAL(wp), DIMENSION(nc),         INTENT(inout) :: zril_old 
+    REAL(wp), DIMENSION(nc),         INTENT(out)   :: drag_srf, &
                                                       pch, &
                                                       ga
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp), DIMENSION(options%nc)       :: ztvd, ztvir, q_sat_surf, ztvs, ztvs_new, zg, zgh, zdu2, zril, & 
+    REAL(wp), DIMENSION(nc)               :: ztvd, ztvir, q_sat_surf, ztvs, ztvs_new, zg, zgh, zdu2, zril, & 
                                              z0m,z0h,csat,cair,zchnl,zlev,zril_initial,zril_update
     REAL(wp)                              :: zepz0o, zcons8, zcons9, zcons11, zcons12, zkappa, vtmpc1
     REAL(wp)                              :: HeightWind, HeightHumidity, &
                                              coef_tm1, coef_t, coef_tp1
-    INTEGER                               :: isoil
-    INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_filtered_drag_coefficient'
 
 
@@ -303,7 +304,8 @@ CONTAINS
 
     zril_old(:) = zril(:)   
 
-    CALL calc_drag_coefficient(options, & 
+    CALL calc_drag_coefficient(nc, &
+                               steplen, &
                                t_air(:),q_air(:),wind_air(:),press_srf(:), & 
                                zg(:),zgh(:),z0m(:),z0h(:),zril(:), & 
                                drag_srf(:),pch(:),ga(:))            
@@ -319,20 +321,21 @@ CONTAINS
   !!
   !! Calculates drag coefficient and aerodynamic conductance 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_drag_coefficient(options, &
+  SUBROUTINE calc_drag_coefficient(nc, &
+                                   steplen, &
                                    t_air,q_air,wind_air,press_srf, & 
                                    zg,zgh,z0m,z0h,zril, & 
                                    drag_srf,pch,ga)            
 
-    USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_phy_schemes,           ONLY: heat_transfer_coef
     USE mo_jsb_phys_constants,    ONLY: grav, r_gas_vapour, r_gas_dryair, ckap, cvdifts
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut 
-    TYPE(t_jsb_task_options),        INTENT(in)    :: options                !< model options
-    REAL(wp), DIMENSION(options%nc), INTENT(in)    :: t_air, &
+    INTEGER,                         INTENT(in)    :: nc                     !< dimensions
+    REAL(wp),                        INTENT(in)    :: steplen                !< step length for this process
+    REAL(wp), DIMENSION(nc),         INTENT(in)    :: t_air, &
                                                       q_air, &
                                                       wind_air, &
                                                       press_srf, &
@@ -341,10 +344,10 @@ CONTAINS
                                                       z0m, &
                                                       z0h, &
                                                       zril
-    REAL(wp), DIMENSION(options%nc), INTENT(out)   :: drag_srf, &
+    REAL(wp), DIMENSION(nc),         INTENT(out)   :: drag_srf, &
                                                       pch, &
                                                       ga
-    REAL(wp), DIMENSION(options%nc)       :: zcdnl, zchln, & 
+    REAL(wp), DIMENSION(nc)               :: zcdnl, zchln, & 
                                              zscfl, zucfl, zucfhl, zcons, zcfncl, zcfnchl, zcfml, zcfhl, &
                                              zchnl,zdu2
     REAL(wp)                              :: zcons8,zcons9,zcons11, zcons12, vtmpc1
@@ -361,7 +364,7 @@ CONTAINS
     zcons8        = 2._wp * 5.0_wp 
     zcons9        = 3._wp * 5.0_wp 
     zcons11       = 3._wp * 5.0_wp * 5.0_wp
-    zcons12       = cvdifts * options%steplen * grav / r_gas_dryair 
+    zcons12       = cvdifts * steplen * grav / r_gas_dryair 
     vtmpc1        = r_gas_vapour / r_gas_dryair - 1.0_wp  
     zdu2(:)       = wind_air(:)**2._wp
 
@@ -393,7 +396,7 @@ CONTAINS
     drag_srf(:) = zcfhl(:)
     pch(:)      = zcfhl(:) / zcfnchl(:) * zchnl(:)
     ! aerodynamic conductance (m/s)
-    ga(:)       = heat_transfer_coef(drag_srf(:), options%steplen) * & 
+    ga(:)       = heat_transfer_coef(drag_srf(:), steplen) * & 
                   wind_air(:)
 
   END SUBROUTINE calc_drag_coefficient

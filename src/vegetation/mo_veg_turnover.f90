@@ -138,7 +138,7 @@ CONTAINS
 
     !> 1.0 Calculate nutrient flux from enzyme, RNA and other turnover in leaves and roots
     !!
-    CALL calc_nutrient_recycling( options                               , & ! in
+    CALL calc_nutrient_recycling( nc                                    , & ! in
                                   lctlib                                , & ! in 
                                   target_cn_fine_root(:)                , &
                                   target_np_fine_root(:)                , &
@@ -155,7 +155,7 @@ CONTAINS
 
     !> 2.0 Calculate recycling and retranslocation
     !!  
-    CALL calc_turnover( options                               , & ! in 
+    CALL calc_turnover( nc                                    , & ! in 
                         lctlib                                , & ! in 
                         growing_season(:)                     , & ! in
                         lai(:)                                , & ! in
@@ -166,10 +166,10 @@ CONTAINS
                         recycling_heart_wood_n(:)             , &
                         recycling_heart_wood_n15(:)           , &
                         recycling_heart_wood_p(:)             , &
-                        veg_pool                              , &
-                        veg_growth                            , &
-                        net_growth                            , &
-                        veg_litterfall                        )   ! inout
+                        veg_pool                              , &  ! in
+                        veg_growth                            , &  ! inout
+                        veg_litterfall                        , &  ! inout
+                        net_growth                             )   ! out
 
 ! Pass back values to process memory
 #define Passback_veg_pool
@@ -194,7 +194,7 @@ CONTAINS
   !! Input: plant status and leaf and root C:N:P target ratios \n
   !! Output: net flux between labile and leaves/roots (+ve: flux to labile, -ve: flux from labile)
   !----------------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_nutrient_recycling( options                           , &
+  SUBROUTINE calc_nutrient_recycling( nc                                , &
                                       lctlib                            , &
                                       target_cn_fine_root               , &
                                       target_np_fine_root               , &
@@ -212,7 +212,6 @@ CONTAINS
     USE mo_kind,                  ONLY: wp
     USE mo_jsb_impl_constants,    ONLY: test_false_true
     USE mo_jsb_math_constants,    ONLY: dtime, one_day, eps8
-    USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_veg_constants,         ONLY: tau_nutrient_recycling, tau_labile
     dsl4slm_Use_memory_a_veg
@@ -220,15 +219,15 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_jsb_task_options),         INTENT(in)    :: options                                !< model options
+    INTEGER,                          INTENT(in)    :: nc                           !< dimensions
     TYPE(t_lctlib_element),           INTENT(in)    :: lctlib                       !< land-cover-type library - parameter across pft's
-    REAL(wp), DIMENSION(options%nc),  INTENT(in)    :: target_cn_fine_root               , &  !< target C:N of fine_roots
+    REAL(wp), DIMENSION(nc),          INTENT(in)    :: target_cn_fine_root               , &  !< target C:N of fine_roots
                                                        target_np_fine_root               , &  !< target N:P of fine_roots 
                                                        target_cn_leaf                    , &  !< ..
                                                        target_np_leaf                         !< ..
-    REAL(wp), DIMENSION(options%nc),  INTENT(in)    :: growing_season                         !< whether the plant is in the growing season
+    REAL(wp), DIMENSION(nc),          INTENT(in)    :: growing_season                         !< whether the plant is in the growing season
     TYPE(t_veg_pool_a),               INTENT(in)    :: veg_pool
-    REAL(wp), DIMENSION(options%nc),  INTENT(inout) :: recycling_leaf_n                  , & 
+    REAL(wp), DIMENSION(nc),          INTENT(inout) :: recycling_leaf_n                  , & 
                                                        recycling_fine_root_n             , & 
                                                        recycling_leaf_p                  , & 
                                                        recycling_fine_root_p             , & 
@@ -236,10 +235,16 @@ CONTAINS
                                                        recycling_fine_root_n15
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp), DIMENSION(options%nc)                 :: hlp1                     ! helper variable
-    REAL(wp), DIMENSION(options%nc)                 :: recycling_leaf, &        ! more helpers1
+    REAL(wp), DIMENSION(nc)                         :: hlp1                     ! helper variable
+    REAL(wp), DIMENSION(nc)                         :: recycling_leaf, &        ! more helpers1
                                                        recycling_fine_root      ! more helpers2
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_nutrient_recycling'
+
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
 
 
     !> 1.0 replace overturning N from leaves and roots by new N from the labile pool using the target C:N
@@ -322,7 +327,7 @@ CONTAINS
   !!
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_turnover( options                   , &
+  SUBROUTINE calc_turnover( nc                        , &
                             lctlib                    , &
                             growing_season            , &
                             lai                       , &
@@ -335,13 +340,12 @@ CONTAINS
                             recycling_heart_wood_p    , &  
                             veg_pool                  , &
                             veg_growth                , &
-                            net_growth                , &
-                            veg_litterfall            )
+                            veg_litterfall            , &
+                            net_growth                )
 
     USE mo_kind,                  ONLY: wp
     USE mo_jsb_impl_constants,    ONLY: test_false_true
     USE mo_jsb_math_constants,    ONLY: dtime, one_day, one_year, eps4
-    USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_veg_constants,         ONLY: max_leaf_shedding_rate, igrass, itree
     USE mo_pheno_constants,       ONLY: ievergreen, iraingreen, isummergreen, iperennial
@@ -350,12 +354,12 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_jsb_task_options),        INTENT(in)    :: options                      !< model options
+    INTEGER,                         INTENT(in)    :: nc                           !< dimensions
     TYPE(t_lctlib_element),          INTENT(in)    :: lctlib                       !< land-cover-type library - parameter across pft's
-    REAL(wp), DIMENSION(options%nc), INTENT(in)    :: growing_season               !< whether the plant is in the growing season
-    REAL(wp), DIMENSION(options%nc), INTENT(in)    :: lai                      , & !< the plant's LAI
+    REAL(wp), DIMENSION(nc),         INTENT(in)    :: growing_season               !< whether the plant is in the growing season
+    REAL(wp), DIMENSION(nc),         INTENT(in)    :: lai                      , & !< the plant's LAI
                                                       target_lai                   !< the plant's annual maximum LAI
-    REAL(wp), DIMENSION(options%nc), INTENT(inout) :: recycling_leaf_n         , & !< foliar N returning to labile pool 
+    REAL(wp), DIMENSION(nc),         INTENT(inout) :: recycling_leaf_n         , & !< foliar N returning to labile pool 
                                                       recycling_leaf_n15       , & !< foliar N15 returning to labile pool 
                                                       recycling_leaf_p         , & !< foliar P returning to labile pool 
                                                       recycling_heart_wood_n   , & !< woody N returning to labile pool 
@@ -363,17 +367,22 @@ CONTAINS
                                                       recycling_heart_wood_p       !< woody P returning to labile pool
     TYPE(t_veg_pool_a),              INTENT(in)    :: veg_pool                     !< current state of vegetation pools 
     TYPE(t_veg_pool_a),              INTENT(inout) :: veg_growth                   !< current growth rate of vegetation pools
-    REAL(wp), DIMENSION(options%nc), INTENT(out)   :: net_growth                   !< current net growth (µmol C / m2 / s) 
     TYPE(t_veg_pool_a),              INTENT(inout) :: veg_litterfall               !< current litter fall from vegetation pools
+    REAL(wp), DIMENSION(nc),         INTENT(out)   :: net_growth                   !< current net growth (µmol C / m2 / s) 
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp), DIMENSION(options%nc)   :: fturn_leaf                   , & !< fraction of leaves turning over 
+    REAL(wp), DIMENSION(nc)           :: fturn_leaf                   , & !< fraction of leaves turning over 
                                          fturn                        , & !< other tissue turnover fraction
                                          retranslocation              , & !< retranslocation before shedding 
                                          nitrogen_recycling_fract     , & !< recycling fraction of N
                                          phosphorus_recycling_fract       !< recycling fraction of P
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_turnover'
 
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
 
 
     !> 1.0 foliage turnover, including recycling of nutrients 

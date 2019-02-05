@@ -45,6 +45,8 @@ CONTAINS
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,              ONLY: Get_vgrid
     USE mo_atmland_constants,     ONLY: min_wind
     USE mo_jsb_phys_constants,    ONLY: r_gas, Tzero
     USE mo_isotope_util,          ONLY: calc_fractionation
@@ -69,9 +71,11 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER       :: model
-    TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
-    INTEGER                               :: icanopy    ! for looping across ncanopy layers
-    REAL(wp),DIMENSION(options%nc)        :: ga,hlp1    ! dummy variable
+    TYPE(t_lctlib_element), POINTER       :: lctlib       !< land-cover-type library - parameter across pft's
+    TYPE(t_jsb_vgrid),      POINTER       :: vgrid_canopy ! Vertical grid
+    INTEGER                               :: ncanopy      ! number of canopy layers
+    INTEGER                               :: icanopy      ! for looping across ncanopy layers
+    REAL(wp),DIMENSION(options%nc)        :: ga,hlp1      ! dummy variable
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_canopy_fluxes'
     ! ---------------------------
@@ -143,8 +147,10 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
+    model         => Get_model(tile%owner_model_id)
+    lctlib        => model%lctlib(tile%lcts%lib_id)
+    vgrid_canopy  => Get_vgrid('canopy_layer')
+    ncanopy       =  vgrid_canopy%n_levels
     ! Get process config
     dsl4jsb_Get_config(ASSIMI_)
     ! Get process memories
@@ -231,7 +237,7 @@ CONTAINS
 
     !> 2.0 calculate photosynthesis per layer
     !!
-    DO icanopy = 1,dsl4jsb_Config(ASSIMI_)%ncanopy
+    DO icanopy = 1,ncanopy
       CALL calc_photosynthesis(  lctlib%gmin                           , & ! lctlib
                                  lctlib%g0                             , &
                                  lctlib%g1                             , &

@@ -38,6 +38,8 @@ CONTAINS
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,              ONLY: Get_vgrid
     USE mo_rad_constants,         ONLY: rad2ppfd
     USE mo_atmland_constants,     ONLY: frac_vis_swtot_srf, frac_par_swvis_srf,eps_vpd, standard_press_srf, def_co2_mixing_ratio
     USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
@@ -69,7 +71,9 @@ CONTAINS
     ! 0.2 Local
     INTEGER, PARAMETER                        :: npft  = 8         !< number of PFTs simulated by the test_canopy model
     TYPE(t_jsb_model),      POINTER           :: model
-    TYPE(t_lctlib_element), POINTER           :: lctlib     !< land-cover-type library - parameter across pft's
+    TYPE(t_lctlib_element), POINTER           :: lctlib            !< land-cover-type library - parameter across pft's
+    TYPE(t_jsb_vgrid),      POINTER           :: vgrid_canopy      ! Vertical grid
+    INTEGER                                   :: ncanopy           ! number of canopy layers
     REAL(wp), DIMENSION(options%nc)           :: &
                   t_air           , &
                   press_srf       , &
@@ -165,7 +169,9 @@ CONTAINS
       ref_pft = 0
       tile%lcts%lib_id = 1
     ENDIF
-    lctlib  => model%lctlib(tile%lcts%lib_id)
+    lctlib        => model%lctlib(tile%lcts%lib_id)
+    vgrid_canopy  => Get_vgrid('canopy_layer')
+    ncanopy       =  vgrid_canopy%n_levels
     ! Get process config
     dsl4jsb_Get_config(ASSIMI_)
     ! Get process memories
@@ -265,10 +271,9 @@ CONTAINS
       veg__mem%pool%leaf%nitrogen%ptr(:,iblk)     = lai(:) / lctlib%sla / lctlib%cn_leaf
       veg__mem%pool%leaf%phosphorus%ptr(:,iblk)   = veg__mem%pool%leaf%nitrogen%ptr(:,iblk) / lctlib%np_leaf
     ENDIF
-    CALL calc_canopy_layers(&
-                            options                                        , & ! in
+    CALL calc_canopy_layers(nc                                             , & ! in
+                            ncanopy                                        , &
                             lctlib                                         , &
-                            dsl4jsb_Config(ASSIMI_)%ncanopy                , &
                             dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
                             dsl4jsb_Config(ASSIMI_)%canopy_layer_depth(:)  , &
                             leaf_nitrogen       = veg__mem%pool%leaf%nitrogen%ptr(:,iblk)      , &
@@ -461,10 +466,9 @@ CONTAINS
 
      lai(:) = lai(:) + 0.5_wp
      veg__mem%pool%leaf%nitrogen%ptr(:,iblk)=ref_nleaf/molar_mass_N*lai(:)
-     CALL calc_canopy_layers(&
-                              options                                        , & ! in
+     CALL calc_canopy_layers( nc                                             , &   ! in
+                              ncanopy                                        , &
                               lctlib                                         , &
-                              dsl4jsb_Config(ASSIMI_)%ncanopy                , &
                               dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
                               dsl4jsb_Config(ASSIMI_)%canopy_layer_depth(:)  , &
                               leaf_nitrogen       = veg__mem%pool%leaf%nitrogen%ptr(:,iblk)      , &
@@ -503,10 +507,9 @@ CONTAINS
   DO i = 1,24
 
      veg__mem%pool%leaf%nitrogen%ptr(:,iblk)=0.125_wp*(i)/molar_mass_N*lai(:)
-     CALL calc_canopy_layers(&
-                              options                                        , & ! in
+     CALL calc_canopy_layers( nc                                             , &   ! in
+                              ncanopy                                        , &
                               lctlib                                         , &
-                              dsl4jsb_Config(ASSIMI_)%ncanopy                , &
                               dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
                               dsl4jsb_Config(ASSIMI_)%canopy_layer_depth(:)  , &
                               leaf_nitrogen       = veg__mem%pool%leaf%nitrogen%ptr(:,iblk)      , &
@@ -549,10 +552,9 @@ CONTAINS
      tile%lcts%lib_id = i
      ! set pointer to the new PFT
      lctlib  => model%lctlib(tile%lcts%lib_id)
-     CALL calc_canopy_layers(&
-                              options                                        , & ! in
+     CALL calc_canopy_layers( nc                                             , &   ! in
+                              ncanopy                                        , &
                               lctlib                                         , &
-                              dsl4jsb_Config(ASSIMI_)%ncanopy                , &
                               dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
                               dsl4jsb_Config(ASSIMI_)%canopy_layer_depth(:)  , &
                               leaf_nitrogen       = veg__mem%pool%leaf%nitrogen%ptr(:,iblk)      , &

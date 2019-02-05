@@ -36,18 +36,21 @@ CONTAINS
   SUBROUTINE update_sb_jsm(tile, options)
 
     USE mo_jsb_class,             ONLY: Get_model
-    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
-    USE mo_jsb_math_constants,    ONLY: dtime, eps8
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,              ONLY: Get_vgrid
+    USE mo_jsb_math_constants,    ONLY: dtime, eps8
     USE mo_isotope_util,          ONLY: calc_fractionation
     USE mo_sb_constants
     USE mo_sb_litter_processes,   ONLY: calc_litter_partitioning
-    USE mo_sb_jsm_processes,      ONLY: calc_inorganic_uptake, calc_sinking_flux_po4, calc_litter_turnover, calc_depolymerisation, &
+    USE mo_sb_jsm_processes,      ONLY: calc_inorganic_uptake, calc_sinking_flux_po4, calc_litter_turnover, &
                                         calc_microbial_growth, calc_sourcing_flux_po4, &
-                                        calc_microbial_turnover, calc_om_sorption,  calc_depolymerisation_SESAM
+                                        calc_microbial_turnover, calc_om_sorption, &
+                                        calc_depolymerisation, calc_depolymerisation_SESAM
     USE mo_sb_jsm_transport,      ONLY: calc_liquid_phase_transport_wrapper, calc_bioturbation_transport_wrapper, &
                                         calc_bioturbation_rate, calc_particle_fluxrate, calc_particle_transport_wrapper
 
@@ -72,16 +75,15 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER       :: model
-    TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
+    TYPE(t_lctlib_element), POINTER       :: lctlib               !< land-cover-type library - parameter across pft's
+    TYPE(t_jsb_vgrid),      POINTER       :: vgrid_soil_sb        !< Vertical grid
+    INTEGER                               :: nsoil_sb             !< number of soil layers as used/defined by the SB_ process
     INTEGER                               :: i, isoil
-    INTEGER                               :: iblk, ics, ice, nc, nsoil_sb
-    LOGICAL, DIMENSION(options%nsoil_sb)  :: tmp1,tmp2,tmp3 
-!!
+    INTEGER                               :: iblk, ics, ice, nc
     REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: fine_root_carbon_sl, p_deposition_sl, & 
                                                         km1_uptake_po4_act, km2_uptake_po4_act, &
                                                         eca_divisor_mic, eca_divisor_plant, &
                                                         arr_hlp1, arr_hlp2, arr_hlp3, arr_hlp4, arr_hlp5
-!!
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_jsm'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -197,15 +199,16 @@ CONTAINS
     ics       = options%ics
     ice       = options%ice
     nc        = options%nc
-    nsoil_sb  = options%nsoil_sb
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
     IF (.NOT. tile%Is_process_active(SB_)) RETURN
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id) 
+    model         => Get_model(tile%owner_model_id)
+    lctlib        => model%lctlib(tile%lcts%lib_id)
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+    nsoil_sb      =  vgrid_soil_sb%n_levels
     ! Get process config
     dsl4jsb_Get_config(SB_)
     ! Get process memories
@@ -332,7 +335,7 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
 
 !BLARPP
-!percolation_sl(:,options%nsoil_sb) = 0.0_wp
+!percolation_sl(:,nsoil_sb) = 0.0_wp
 ! rmm_mic_uptake = 1.0_wp
 ! rmm_depolymerisation = 1.0_wp
 ! rmm_hsc = 1.0_wp
@@ -402,14 +405,14 @@ CONTAINS
     !!
     !> 2.1 decay of soluable litter
     !!
-    CALL calc_litter_turnover(options, tau_soluable_litter, fc_soluable2dom, &
+    CALL calc_litter_turnover(nc, nsoil_sb, tau_soluable_litter, fc_soluable2dom, &
                               rtm_depolymerisation(:,:),rmm_depolymerisation(:,:), &
                               sb_pool%soluable_litter,sb_loss%soluable_litter,sb_formation%dom, &
                               het_respiration(:,:),het_respiration_c13(:,:),het_respiration_c14(:,:))
 
     !> 2.2 decay of woody litter
     !!
-    CALL calc_litter_turnover(options, tau_woody_litter, fc_woody2polymeric, &
+    CALL calc_litter_turnover(nc, nsoil_sb, tau_woody_litter, fc_woody2polymeric, &
                               rtm_depolymerisation(:,:),rmm_depolymerisation(:,:), &
                               sb_pool%woody_litter,sb_loss%woody_litter,sb_formation%polymeric_litter, &
                               het_respiration(:,:),het_respiration_c13(:,:),het_respiration_c14(:,:))
@@ -417,7 +420,7 @@ CONTAINS
     !> 2.4 co-metabolisation of polymeric litter & residues
     !!
 
-    CALL calc_depolymerisation_SESAM(options, rtm_hsc(:,:),rmm_hsc(:,:), &
+    CALL calc_depolymerisation_SESAM(nc, nsoil_sb, rtm_hsc(:,:),rmm_hsc(:,:), &
                                     rtm_depolymerisation(:,:),rmm_depolymerisation(:,:), &
                                     sb_pool%microbial%carbon(:,:), &
                                     enzyme_frac_poly(:,:), enzyme_frac_residue(:,:), &
@@ -428,7 +431,8 @@ CONTAINS
 
     !> 2.5 Update soil litter pools with litter fall
     !!
-    CALL calc_litter_partitioning(options                 , &
+    CALL calc_litter_partitioning(nc                      , &
+                                  nsoil_sb                , &
                                   lctlib                  , &  
                                   TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
                                   soil_depth_sl(:,:)      , &
@@ -440,14 +444,14 @@ CONTAINS
     !!
     !> 3.1 microbial death
     !! determine mortality rate, constrained by to avoiding a complete death of the community
-    CALL calc_microbial_turnover(options,sb_pool%microbial,sb_loss%microbial,& 
+    CALL calc_microbial_turnover(nc, nsoil_sb, sb_pool%microbial,sb_loss%microbial,& 
                                  sb_formation%dom,sb_formation%residue)
 
     !> 4.0 mineral stabilisation
     !!
     !> 4.1 mineral stabilisation of organic matter
     !!
-    CALL calc_om_sorption(options, qmax_org(:,:), rtm_sorption(:,:), rmm_sorption(:,:), rtm_desorption(:,:), &
+    CALL calc_om_sorption(nc, nsoil_sb, qmax_org(:,:), rtm_sorption(:,:), rmm_sorption(:,:), rtm_desorption(:,:), &
                           rmm_desorption(:,:), sb_pool%dom,sb_pool%dom_assoc,sb_pool%residue, & 
                           sb_pool%residue_assoc,sb_formation%dom,sb_formation%dom_assoc,sb_formation%residue, &
                           sb_formation%residue_assoc,sb_loss%dom,sb_loss%dom_assoc,sb_loss%residue,sb_loss%residue_assoc)
@@ -456,7 +460,7 @@ CONTAINS
     !!
     !> 5.1 liquid phase transport
     !!
-    CALL calc_liquid_phase_transport_wrapper(options, & 
+    CALL calc_liquid_phase_transport_wrapper(nc, nsoil_sb, & 
                                    percolation_sl(:,:), soil_depth_sl(:,:), &
                                    sb_pool%dom, nh4_solute(:,:), no3_solute(:,:), po4_solute(:,:), & 
                                    nh4_n15_solute(:,:), no3_n15_solute(:,:), & 
@@ -470,8 +474,8 @@ CONTAINS
 
     !> 5.2 transport due to bioturbation
     !!
-    k_bioturb(:,:) = calc_bioturbation_rate(options, soil_depth_sl(:,:), bulk_dens_corr_sl(:,:), root_fraction_sl(:,:))
-    CALL calc_bioturbation_transport_wrapper(options, k_bioturb(:,:), soil_depth_sl(:,:), &
+    k_bioturb(:,:) = calc_bioturbation_rate(nc, nsoil_sb, soil_depth_sl(:,:), bulk_dens_corr_sl(:,:), root_fraction_sl(:,:))
+    CALL calc_bioturbation_transport_wrapper(nc, nsoil_sb, k_bioturb(:,:), soil_depth_sl(:,:), &
                                     sb_pool%polymeric_litter, sb_pool%dom_assoc, sb_pool%fungi, & 
                                     sb_pool%microbial, sb_pool%residue, sb_pool%residue_assoc, & 
                                     nh4_assoc(:,:), po4_assoc_fast(:,:), po4_assoc_slow(:,:), & 
@@ -484,10 +488,10 @@ CONTAINS
 
     !> 5.3 particle transport
     !!
-    particle_fluxrate(:,:) = calc_particle_fluxrate(options, & 
+    particle_fluxrate(:,:) = calc_particle_fluxrate(nc, nsoil_sb, & 
                                     soil_depth_sl(:,:), bulk_dens_corr_sl(:,:), & 
                                     sb_formation, sb_loss) 
-    CALL calc_particle_transport_wrapper(options, particle_fluxrate(:,:), soil_depth_sl(:,:), &
+    CALL calc_particle_transport_wrapper(nc, nsoil_sb, particle_fluxrate(:,:), soil_depth_sl(:,:), &
                                     sb_pool, nh4_solute(:,:), nh4_assoc(:,:), no3_solute(:,:), po4_solute(:,:), & 
                                     po4_assoc_fast(:,:), po4_assoc_slow(:,:), po4_occluded(:,:), po4_primary(:,:), & 
                                     nh4_n15_solute(:,:), nh4_n15_assoc(:,:), no3_n15_solute(:,:), & 
@@ -510,7 +514,7 @@ CONTAINS
                                 plant_uptake_po4_sl(:,:), fast_desorp_po4(:,:), fast_adsorpt_po4(:,:), arr_hlp1(:,:), &
                                 eca_divisor_adsorp(:,:), eca_divisor_mic, eca_divisor_plant)
 
-    CALL calc_microbial_growth(options,TRIM(dsl4jsb_Config(SB_)%sb_bnf_scheme), &
+    CALL calc_microbial_growth(nc, nsoil_sb, TRIM(dsl4jsb_Config(SB_)%sb_bnf_scheme), &
                                sb_pool%dom,sb_pool%microbial, & 
                                rtm_mic_uptake(:,:),rmm_mic_uptake(:,:),rtm_hsc(:,:),rmm_hsc(:,:),microbial_cue_eff_tmic_mavg(:,:), &
                                microbial_uptake_nh4_sl(:,:),microbial_uptake_nh4_n15_sl(:,:), & 

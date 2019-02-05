@@ -36,6 +36,8 @@ CONTAINS
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,              ONLY: Get_vgrid
     USE mo_atmland_constants,     ONLY: def_co2_mixing_ratio, def_co2_mixing_ratio_C13, def_co2_mixing_ratio_C14, &
                                         def_co2_deltaC13, def_co2_deltaC14
     USE mo_isotope_util,          ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C, calc_mixing_ratio_N15N14, &
@@ -44,9 +46,9 @@ CONTAINS
     USE mo_jsb_math_constants,              ONLY: eps8
     USE mo_assimi_constants,                ONLY: CiCa_default_C3, CiCa_default_C4, ic3phot, ic4phot
     USE mo_assimi_update_canopy_fluxes,     ONLY: discrimination_ps
-    USE mo_sb_jsm_processes
-    USE mo_sse_util,                       ONLY: calc_qmax_texture
-    USE mo_sb_jsm_transport
+    USE mo_sb_jsm_processes                 ! e.g. calc_bulk_soil_carbon()
+    USE mo_sse_util,                        ONLY: calc_qmax_texture
+    USE mo_sb_jsm_transport                 ! e.g. calc_bioturbation_rate()
     USE mo_veg_constants,                   ONLY: itree
     USE mo_sb_constants                     ! e.g.  nh4_solute_prescribe, no3_solute_prescribe, po4_solute_prescribe
 
@@ -71,10 +73,11 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER              :: model
-    TYPE(t_lctlib_element), POINTER              :: lctlib     !< land-cover-type library - parameter across pft's
+    TYPE(t_lctlib_element), POINTER              :: lctlib        !< land-cover-type library - parameter across pft's
+    TYPE(t_jsb_vgrid),      POINTER              :: vgrid_soil_sb !< Vertical grid
+    INTEGER                                      :: nsoil_sb      !< number of soil layers as used/defined by the SB_ process
     INTEGER                                      :: isoil, ichunk
     INTEGER                                      :: iblk, ics, ice, nc
-    INTEGER                                      :: nsoil_sb
     REAL(wp)                                     :: hlp1,hlp2,hlp3,hlp4,hlp5,hlp6,frac_c13,frac_c14
     REAL(wp),DIMENSION(options%nc, options%nsoil_sb) :: fine_root_carbon_sl, labile_p, arr_hlp1, arr_z
     REAL(wp),DIMENSION(options%nsoil_sb)         :: arr_hlp5, arr_hlp6
@@ -131,15 +134,16 @@ CONTAINS
     ics       = options%ics
     ice       = options%ice
     nc        = options%nc
-    nsoil_sb  = options%nsoil_sb
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
     IF (.NOT. tile%Is_process_active(SB_)) RETURN
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
+    model         => Get_model(tile%owner_model_id)
+    lctlib        => model%lctlib(tile%lcts%lib_id)
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+    nsoil_sb      =  vgrid_soil_sb%n_levels
     ! Get process config
     dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_config(SSE_)
@@ -247,7 +251,7 @@ CONTAINS
 
 
              ! inital Qmax based on current soil carbon content
-             bulk_soil_carbon_sl(:,:) = calc_bulk_soil_carbon(options, sb_pool)
+             bulk_soil_carbon_sl(:,:) = calc_bulk_soil_carbon(nc, nsoil_sb, sb_pool)
              bulk_dens_corr_sl(:,:)   = calc_bulk_density_correction(bulk_soil_carbon_sl(:,:), bulk_dens_sl(:,:))
              qmax_po4_min_sl(:,:)     = calc_qmax_texture(qmax_po4_mineral, 0.0_wp, 1._wp)
              qmax_po4_om_sl(:,:)      = qmax_po4_min_sl(:,:)/100._wp
@@ -257,7 +261,8 @@ CONTAINS
              km_adsorpt_po4_sl(:,:) = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:), &
                                       km_adsorpt_OM_po4,km_adsorpt_mineral_po4)
              ! initialise mineral soil P pools
-             CALL init_soil_pi_pools(options, TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &
+             CALL init_soil_pi_pools(nc, nsoil_sb, &
+                                    TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &
                                     soil_depth_sl(:,:), bulk_dens_corr_sl(:,:), &
                                     dsl4jsb_Config(SB_)%soil_p_labile, dsl4jsb_Config(SB_)%soil_p_slow, &
                                     dsl4jsb_Config(SB_)%soil_p_occluded, dsl4jsb_Config(SB_)%soil_p_primary, &
@@ -276,7 +281,7 @@ CONTAINS
                                                                        ( hlp6 + (1.0_wp - hlp6) * root_fraction_sl(:,1)) 
              sb_pool%residue%carbon(:,1)          = hlp5 / molar_mass_C / dsl4jsb_Config(SSE_)%dz_water(1) * & 
                                                                        ( hlp6 + (1.0_wp - hlp6) * root_fraction_sl(:,1)) 
-             DO isoil=2,options%nsoil_sb
+             DO isoil=2,nsoil_sb
                 sb_pool%soluable_litter%carbon(:,isoil)  = hlp1 /  molar_mass_C / dsl4jsb_Config(SSE_)%dz_water(isoil) * &
                                                                           (1.0_wp - hlp6) * root_fraction_sl(:,isoil) 
                 sb_pool%polymeric_litter%carbon(:,isoil) = hlp2 / molar_mass_C / dsl4jsb_Config(SSE_)%dz_water(isoil) * &
@@ -295,7 +300,7 @@ CONTAINS
              no3_solute(:,:) = no3_solute_prescribe / SUM(dsl4jsb_Config(SSE_)%dz_water(:))
 
              ! inital bulk density and qmax_po4 based on current soil carbon content
-             bulk_soil_carbon_sl(:,:) = calc_bulk_soil_carbon(options, sb_pool)
+             bulk_soil_carbon_sl(:,:) = calc_bulk_soil_carbon(nc, nsoil_sb, sb_pool)
              bulk_dens_corr_sl(:,:) = calc_bulk_density_correction(bulk_soil_carbon_sl(:,:), bulk_dens_sl(:,:))            
              qmax_po4_min_sl(:,:) = calc_qmax_texture(qmax_po4_mineral, 0.0_wp, 1._wp)
              qmax_po4_om_sl(:,:) = qmax_po4_min_sl(:,:)/100._wp
@@ -305,7 +310,8 @@ CONTAINS
              km_adsorpt_po4_sl(:,:) = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:), &
                                       km_adsorpt_OM_po4,km_adsorpt_mineral_po4)
              ! initialise mineral soil P pools
-             CALL init_soil_pi_pools(options, TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &
+             CALL init_soil_pi_pools(nc, nsoil_sb, &
+                                  TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &
                                   soil_depth_sl(:,:), bulk_dens_corr_sl(:,:), &
                                   dsl4jsb_Config(SB_)%soil_p_labile, dsl4jsb_Config(SB_)%soil_p_slow, &
                                   dsl4jsb_Config(SB_)%soil_p_occluded, dsl4jsb_Config(SB_)%soil_p_primary, &
@@ -430,7 +436,7 @@ CONTAINS
          no3_n15_solute(:,:) = no3_solute(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
  
          ! inital bulk density, Qmax_org & Qmax_po4 based on current soil carbon content
-         bulk_soil_carbon_sl(:,:) = calc_bulk_soil_carbon(options, sb_pool)
+         bulk_soil_carbon_sl(:,:) = calc_bulk_soil_carbon(nc, nsoil_sb, sb_pool)
          bulk_dens_corr_sl(:,:) = calc_bulk_density_correction(bulk_soil_carbon_sl(:,:), bulk_dens_sl(:,:))
          qmax_org_min_sl(:,:) = calc_qmax_texture(dsl4jsb_Config(SB_)%qmax_org_fine_particle, silt_sl(:,:), clay_sl(:,:))
          qmax_po4_min_sl(:,:) = calc_qmax_texture(qmax_po4_mineral, 0.0_wp, 1._wp)
@@ -459,7 +465,8 @@ CONTAINS
                         km_adsorpt_po4_sl / km_plant_uptake_po4 * f_plant_carrier_po4 * fine_root_carbon_sl + &
                         km_adsorpt_po4_sl / km_mic_uptake_po4 * f_mic_carrier_po4 * sb_pool%microbial%carbon(:,:)
 
-        CALL init_soil_pi_pools(options, TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &
+        CALL init_soil_pi_pools(nc, nsoil_sb, &
+                                TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &
                                 soil_depth_sl(:,:), bulk_dens_corr_sl(:,:), &
                                 dsl4jsb_Config(SB_)%soil_p_labile, dsl4jsb_Config(SB_)%soil_p_slow, &
                                 dsl4jsb_Config(SB_)%soil_p_occluded, dsl4jsb_Config(SB_)%soil_p_primary, &
@@ -469,7 +476,7 @@ CONTAINS
                                 qmax_po4(:,:),km_adsorpt_po4_sl(:,:),arr_hlp1(:,:),eca_divisor_adsorp(:,:))
 
         ! initialise diffusion by bioturbation
-        k_bioturb(:,:) = calc_bioturbation_rate(options,bulk_dens_corr_sl(:,:), root_fraction_sl(:,:), soil_depth_sl(:,:)) 
+        k_bioturb(:,:) = calc_bioturbation_rate(nc, nsoil_sb, bulk_dens_corr_sl(:,:), root_fraction_sl(:,:), soil_depth_sl(:,:)) 
         ! enzyme allocation initialise 
         enzyme_frac_poly(:,:)     = 0.5_wp 
         enzyme_frac_residue(:,:)  = 0.5_wp 
@@ -529,12 +536,11 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
   !! assuming that the soil pi pool sizes are correlated with soil weight
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE init_soil_pi_pools(options, sb_model_scheme, sb_adsorp_scheme, soil_depth_sl, bulk_dens_sl, &
+  SUBROUTINE init_soil_pi_pools(nc, nsoil_sb, sb_model_scheme, sb_adsorp_scheme, soil_depth_sl, bulk_dens_sl, &
                                soil_p_labile, soil_p_slow, soil_p_occluded, soil_p_primary, soil_p_depth, flag_sb_CLE_po4, &
                                po4_solute, po4_assoc_fast, po4_assoc_slow, po4_occluded, po4_primary, &
                                qmax_po4,km, eca_enzyme_hlp, eca_divisor_adsorp)
 
-    USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_phys_constants,    ONLY: molar_mass_P
     USE mo_sb_constants
     USE mo_sb_jsm_processes,      ONLY: calc_fast_po4
@@ -542,11 +548,12 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_jsb_task_options)                        , INTENT(in)     :: options            !< model options
+    INTEGER,                                          INTENT(in)     :: nc                 !< dimensions
+    INTEGER                                         , INTENT(in)     :: nsoil_sb           ! number of soil layers as used/defined by the SB_ process
     CHARACTER(len=*)                                , INTENT(in)     :: sb_model_scheme    !< soil model scheme 
     CHARACTER(len=*)                                , INTENT(in)     :: sb_adsorp_scheme   !< soil model po4 adsorption scheme 
     LOGICAL                                         , INTENT(in)     :: flag_sb_CLE_po4    !< TRUE: equilibrium is affected by plant and microbe;
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)     :: soil_depth_sl, &   !< soil depth per soil layer, [m]
+    REAL(wp), DIMENSION(nc,nsoil_sb)                , INTENT(in)     :: soil_depth_sl, &   !< soil depth per soil layer, [m]
                                                                         bulk_dens_sl, &    !< corrected soil bulk density per soil layer, [kg m-3]
                                                                         qmax_po4, &
                                                                         km
@@ -555,35 +562,41 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                                         soil_p_slow, &     !< total slow P pool (secondary P) of the soil P maps, [g m-2]
                                                                         soil_p_occluded, & !< total occluded P pool of the soil P maps, [g m-2]
                                                                         soil_p_primary     !< total primary P pool of the soil P maps, [g m-2]
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout)  :: po4_solute, &      !< soluble Pi pool per soil layer, [mol m-3]
+    REAL(wp), DIMENSION(nc,nsoil_sb)                , INTENT(inout)  :: po4_solute, &      !< soluble Pi pool per soil layer, [mol m-3]
                                                                         po4_assoc_fast, &  !< fast minerally associated PO4 pool per soil layer, [mol m-3]
                                                                         po4_assoc_slow, &  !< slow minerally associated PO4 pool per soil layer, [mol m-3]
                                                                         po4_occluded, &    !< occluded PO4 pool per soil layer, [mol m-3]
                                                                         po4_primary        !< primary PO4 pool per soil layer, [mol m-3]
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in),  OPTIONAL  :: eca_enzyme_hlp     !< helper item for enzyme abundance in eca approach [mol P / m3]
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(out), OPTIONAL  :: eca_divisor_adsorp !< denominator of ECA item for po4 adsorption [mol P / m3]
+    REAL(wp), DIMENSION(nc,nsoil_sb),         INTENT(in),  OPTIONAL  :: eca_enzyme_hlp     !< helper item for enzyme abundance in eca approach [mol P / m3]
+    REAL(wp), DIMENSION(nc,nsoil_sb),         INTENT(out), OPTIONAL  :: eca_divisor_adsorp !< denominator of ECA item for po4 adsorption [mol P / m3]
     ! ---------------------------
     ! 0.2 Local
-    INTEGER                                          :: i, nsoil_sb
+    INTEGER                                          :: i
     REAL(wp)                                         :: rhlp1, rhlp2
-    LOGICAL,  DIMENSION(options%nc)                  :: aflag
-    REAL(wp), DIMENSION(options%nc)                  :: soil_p_weight, soil_weight_0d, &  !< total soil weight up to the soil_p_depth/soil_depth_0d, [kg]
+    LOGICAL,  DIMENSION(nc)                          :: aflag
+    REAL(wp), DIMENSION(nc)                          :: soil_p_weight, soil_weight_0d, &  !< total soil weight up to the soil_p_depth/soil_depth_0d, [kg]
                                                         soil_p_layer                      !< up to soil_p_layer keep the P init map info
-    REAL(wp), DIMENSION(options%nc)                  :: hlp1, hlp2, hlp3, hlp4, soil_depth_0d
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: soil_weight_sl, &    !< soil weight per soil layer
+    REAL(wp), DIMENSION(nc)                          :: hlp1, hlp2, hlp3, hlp4
+    REAL(wp), DIMENSION(nc)                          :: soil_depth_0d
+    REAL(wp), DIMENSION(nc,nsoil_sb)                 :: soil_weight_sl, &                 !< soil weight per soil layer
                                                         arr_hlp1, arr_hlp2, arr_z
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_soil_pi_pools'
-    ! ---------------------------
-    ! Get local variables from options argument
-    nsoil_sb         = options%nsoil_sb
-    soil_depth_0d(:) = 1._wp !soil depth in simple_0d
 
-    ! initialise output
+
+
+
+    !> 0.9
+    !! init local variables
+    soil_depth_0d(:) = 1._wp ! soil depth in simple_0d
+
+    !> 0.9.1
+    !! initialise output
     po4_solute(:,:)     = 0._wp
     po4_assoc_fast(:,:) = 0._wp
     po4_assoc_slow(:,:) = 0._wp 
     po4_occluded(:,:)   = 0._wp
     po4_primary(:,:)    = 0._wp
+
 
     !> 1.0 calculate the total soil weight up to the soil_p_depth,
     !! and the soil weight per soil layer

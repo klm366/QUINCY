@@ -14,7 +14,6 @@ MODULE mo_sb_update_pools
   USE mo_kind,            ONLY: wp
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_exception,       ONLY: message, message_text, finish
-  USE mo_jsb_task_class,  ONLY: t_jsb_task_options
 
   IMPLICIT NONE
 
@@ -38,12 +37,15 @@ CONTAINS
   SUBROUTINE update_sb_pools(tile, options)
 
     USE mo_jsb_class,             ONLY: Get_model
-    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_math_constants,    ONLY: dtime, eps8
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
+    USE mo_jsb_task_class,        ONLY: t_jsb_task_options
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,              ONLY: Get_vgrid
+    USE mo_jsb_math_constants,    ONLY: dtime, eps8
     USE mo_jsb_phys_constants,    ONLY: lambda_C14
     USE mo_sb_constants
     USE mo_sb_jsm_processes,      ONLY: calc_bulk_soil_carbon, calc_bulk_density_correction, &
@@ -71,13 +73,15 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER       :: model
-    TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
+    TYPE(t_lctlib_element), POINTER       :: lctlib               !< land-cover-type library - parameter across pft's
+    TYPE(t_jsb_vgrid),      POINTER       :: vgrid_soil_sb        !< Vertical grid
+    INTEGER                               :: nsoil_sb             !< number of soil layers as used/defined by the SB_ process
     INTEGER                               :: iblk, ics, ice, nc
-    INTEGER                               :: nsoil_sb
     INTEGER                               :: isoil
-!!
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: fine_root_carbon_sl, p_deposition_sl, hlp1, f_myc_sl
-!!
+    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: fine_root_carbon_sl, &
+                                                        p_deposition_sl, &
+                                                        f_myc_sl, &
+                                                        hlp1
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_pools'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -231,15 +235,16 @@ CONTAINS
     ics       = options%ics
     ice       = options%ice
     nc        = options%nc
-    nsoil_sb  = options%nsoil_sb
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
     IF (.NOT. tile%Is_process_active(SB_)) RETURN
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id) 
+    model         => Get_model(tile%owner_model_id)
+    lctlib        => model%lctlib(tile%lcts%lib_id)
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+    nsoil_sb      =  vgrid_soil_sb%n_levels
     ! Get process config
     dsl4jsb_Get_config(SB_)
     ! Get process memories
@@ -412,7 +417,7 @@ CONTAINS
 
     !> 0.8 correct the plant uptake of nh4, no3 and po4 for soil model 
     IF (TRIM(model%config%slm_model_name)=='soil') THEN
-        DO isoil = 1,options%nsoil_sb
+        DO isoil = 1,nsoil_sb
           plant_uptake_nh4_sl(:,isoil)     = plant_uptake_nh4_sl(:,isoil)     * f_n_demand(:)
           plant_uptake_nh4_n15_sl(:,isoil) = plant_uptake_nh4_n15_sl(:,isoil) * f_n_demand(:)
           plant_uptake_no3_sl(:,isoil)     = plant_uptake_no3_sl(:,isoil)     * f_n_demand(:)
@@ -590,7 +595,7 @@ CONTAINS
 
     !> 4.x update diagnostics and other state variables depending on organic matter content 
     !!
-    bulk_soil_carbon_sl(:,:) = calc_bulk_soil_carbon(options, sb_pool)
+    bulk_soil_carbon_sl(:,:) = calc_bulk_soil_carbon(nc, nsoil_sb, sb_pool)
     bulk_dens_corr_sl(:,:) = calc_bulk_density_correction(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:))
     qmax_org(:,:) = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:),0._wp,qmax_org_min_sl(:,:))
     qmax_po4(:,:) = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:),bulk_dens_sl(:,:),qmax_po4_om_sl(:,:), &
@@ -626,7 +631,7 @@ CONTAINS
                                         veg_pool%fine_root%carbon(:)
          ENDWHERE
       ENDDO
-        CALL calc_pinorg_dynamics( options, &
+        CALL calc_pinorg_dynamics(     nc, nsoil_sb, &
                                        dtime, &
                                        TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
                                        TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &
@@ -859,7 +864,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
   !> Subroutine to calculate fast_exchange_po4 based on Langmuir equilibrium(Yang et al. 2014)
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_pinorg_dynamics(options, &
+  SUBROUTINE calc_pinorg_dynamics(nc, nsoil_sb, &
                                   dtime, &
                                   sb_model_scheme, &
                                   sb_adsorp_scheme, &
@@ -900,14 +905,16 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     USE mo_jsb_math_constants,  ONLY: eps8
 
     IMPLICIT NONE
-    ! 0.1 inout
-    TYPE(t_jsb_task_options),                         INTENT(in)    :: options                       !< dimensions
+    ! ---------------------------
+    ! 0.1 InOut
+    INTEGER,                                          INTENT(in)    :: nc, &                         !< dimensions
+                                                                       nsoil_sb
     REAL(wp),                                         INTENT(in)    :: dtime                         !< length of one time step in seconds
     CHARACTER(len=*),                                 INTENT(in)    :: sb_model_scheme               !< from sb config
     CHARACTER(len=*),                                 INTENT(in)    :: sb_adsorp_scheme              !< eca_full or eca_none
     LOGICAL ,                                         INTENT(in)    :: flag_sb_CLE_po4               !< T: ECA modified Langmuir Equilibrium; F: non-Equilibrium or traditional LE
     LOGICAL ,                                         INTENT(in)    :: flag_sb_eca_upt_po4           !< T: eca applied to plant and microbe; F: eca applied to all
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: po4_assoc_slow, &             !< slow minerally associated PO4 pool [mol/m3]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: po4_assoc_slow, &             !< slow minerally associated PO4 pool [mol/m3]
                                                                        root_fraction_sl, &           !< fraction of root mass in layer
                                                                        bulk_dens_corr_sl, &          !< bulk density of the mineral soil [kg / m3]
                                                                        fine_root_carbon_sl, &        !< fine root carbon of the soil layer [mol C / m3] 
@@ -931,26 +938,29 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                                        net_mineralisation_po4, &     !< net mineralisation of PO4 [mol / m3 / timestep]
                                                                        fast_desorp_po4, &            !< phosphorus fast desorption rate, assoc_fast --> solute [mol P / m3 / timestep]
                                                                        fast_adsorpt_po4              !< phosphorus fast desorption rate, solute --> assoc_fast [mol P / m3 / timestep]
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: po4_solute, &                 !< PO4 in solution [mol / m3]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: po4_solute, &                 !< PO4 in solution [mol / m3]
                                                                        po4_assoc_fast, &             !< fast minerally associated PO4 pool [mol/m3]
                                                                        occlusion_po4, &              !< phosphorus occlusion rate [mol P / m3 / timestep]
                                                                        slow_exchange_po4             !< phosphorus desorption rate, assoc_fast --> assoc_slow [mol P / m3 / timestep]
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(out)   :: fast_exchange_po4             !< phosphorus adsorption rate, solute --> assoc_fast [mol P / m3 / timestep]
-
-
-    ! 0.2 local
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: hlp1, hlp2, hlp3, hlp4, hlp5, hlp6, &
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(out)   :: fast_exchange_po4             !< phosphorus adsorption rate, solute --> assoc_fast [mol P / m3 / timestep]
+    ! ---------------------------
+    ! 0.2 Local
+    REAL(wp), DIMENSION(nc, nsoil_sb)                :: hlp1, hlp2, hlp3, hlp4, hlp5, hlp6, &
                                                         tmp3,tmp4,tmp5,tmp6,tmp7,tmp8 
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: km_adsorpt_po4_act, qmax_po4_mineral_act, & 
+    REAL(wp), DIMENSION(nc, nsoil_sb)                :: km_adsorpt_po4_act, qmax_po4_mineral_act, & 
                                                         k_desorpt_po4_act, k_adsorpt_po4_act, &
                                                         rtm_sorption_act, rmm_sorption_act, &
                                                         rtm_desorption_act, rmm_desorption_act, &
                                                         bulk_dens_corr_sl_act 
-    INTEGER                                          :: isoil                !< loop over options%nsoil_sb     
-    LOGICAL, DIMENSION(options%nsoil_sb)             :: tmp1,tmp2              
+    INTEGER                                          :: isoil                !< loop over nsoil_sb     
+    LOGICAL, DIMENSION(nsoil_sb)                     :: tmp1,tmp2              
     CHARACTER(len=*), PARAMETER                 :: routine = TRIM(modname)//':calc_pinorg_dynamics'
 
-    ! 0.3 rate responsers for 1d and 0d soil model
+
+
+
+    !> 0.9 init local variables
+    !! 
     IF (sb_model_scheme=="simple_0d") THEN
       rtm_sorption_act(:,:) = 0.0_wp 
       rmm_sorption_act(:,:) = 0.0_wp
@@ -961,7 +971,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
       km_adsorpt_po4_act(:,:) = 0.0_wp
       qmax_po4_mineral_act(:,:) = 0.0_wp
       bulk_dens_corr_sl_act(:,:) = 0.0_wp
-      DO isoil = 1,options%nsoil_sb
+      DO isoil = 1,nsoil_sb
          rtm_sorption_act(:,1) = rtm_sorption_act(:,1) + & 
                                          rtm_sorption(:,isoil) * root_fraction_sl(:,isoil) 
          rmm_sorption_act(:,1) = rmm_sorption_act(:,1) + & 
@@ -985,6 +995,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
       km_adsorpt_po4_act(:,:) = km_adsorpt_po4_sl(:,:)
       qmax_po4_mineral_act(:,:) = qmax_po4_corr_sl(:,:)
     ENDIF
+
 
     !> 1.0 limit to possible assoc_slow, 0d model
     !!

@@ -36,7 +36,6 @@ MODULE mo_assimi_config_class
     LOGICAL                 :: flag_optimal_Nfraction     !< optimise leaf internal N allocation
     LOGICAL                 :: flag_t_resp_acclimation    !< whether or not to use the respiration temperature acclimation factor
     LOGICAL                 :: flag_t_jmax_acclimation    !< acclimation of optimum temperature for Jmax 
-    INTEGER                 :: ncanopy                    !< number of canopy layer simulated by the model
     CHARACTER(15)           :: canopy_layer_scheme        !< select scheme to calculate depth of each single canopy layer
                                                           ! "standard|fapar"           
     REAL(wp), ALLOCATABLE   :: canopy_layer_depth(:)      !< depth of each single canopy layer
@@ -127,7 +126,7 @@ CONTAINS
     config%flag_optimal_Nfraction        = flag_optimal_Nfraction
     config%flag_t_resp_acclimation       = flag_t_resp_acclimation
     config%flag_t_jmax_acclimation       = flag_t_jmax_acclimation
-    config%ncanopy                       = ncanopy
+    ! ncanopy is saved in the vgrid_canopy
     config%canopy_layer_scheme           = TRIM(canopy_layer_scheme)
 
 
@@ -154,7 +153,7 @@ CONTAINS
 
     !< Create vertical axis
     !! 
-    vgrid_canopy  => new_vgrid('canopy_layer', ZAXIS_GENERIC, config%ncanopy, &
+    vgrid_canopy  => new_vgrid('canopy_layer', ZAXIS_GENERIC, ncanopy, &
                       longname='Number of canopy layers from ASSIMI_ QUINCY', &
                       ! units='m2 m-2', &
                       ! levels=   , &

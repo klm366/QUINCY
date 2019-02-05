@@ -35,11 +35,13 @@ CONTAINS
   SUBROUTINE update_sse_physics(tile, options)
 
     USE mo_jsb_class,             ONLY: Get_model
-    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,              ONLY: Get_vgrid
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(SSE_)
@@ -60,9 +62,13 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER       :: model
-    TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
+    TYPE(t_lctlib_element), POINTER       :: lctlib         !< land-cover-type library - parameter across pft's
+    TYPE(t_jsb_vgrid),      POINTER       :: vgrid_soil_sb  !< Vertical grid
+    INTEGER                               :: nsoil_sb       !< number of soil layers as used/defined by the SB_ process
     REAL(wp), DIMENSION(options%nc)       :: rel_hum
-    INTEGER                               :: iblk, ics, ice, nc, nsoil_sb, isoil
+    INTEGER                               :: isoil
+    INTEGER                               :: iblk, ics, ice, nc
+    REAL(wp)                              :: steplen
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sse_physics'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -141,19 +147,21 @@ CONTAINS
     ! VEG_ 3D
     dsl4jsb_Real3D_onChunk                :: root_fraction_sl
     ! Get local variables from options argument
-    iblk      = options%iblk
-    ics       = options%ics
-    ice       = options%ice
-    nc        = options%nc
-    nsoil_sb  = options%nsoil_sb
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    steplen = options%steplen
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
     IF (.NOT. tile%Is_process_active(SSE_)) RETURN
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
+    model         => Get_model(tile%owner_model_id)
+    lctlib        => model%lctlib(tile%lcts%lib_id)
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+    nsoil_sb      =  vgrid_soil_sb%n_levels
     ! Get process config
     dsl4jsb_Get_config(SSE_)
     ! Get process memories
@@ -238,7 +246,9 @@ CONTAINS
 
     !> 2.0 Calculate surface energy budget
     !!
-    CALL calc_surface_energy_balance(options, lctlib, &
+    CALL calc_surface_energy_balance(nc, nsoil_sb, &
+                                     steplen, &
+                                     lctlib, &
                                      sw_srf_net(:),lw_srf_down(:), & 
                                      t_air(:),t_acoef(:),t_bcoef(:), & 
                                      q_air(:),q_acoef(:),q_bcoef(:), & 
@@ -253,7 +263,8 @@ CONTAINS
 
     !> 3.0 Calculate soil hydrology processes
     !!
-    CALL calc_soil_hydrology(options, lctlib, &
+    CALL calc_soil_hydrology(nc, nsoil_sb, &
+                             lctlib, &
                              dsl4jsb_Config(SSE_)%soil_depth_water(:), & 
                              rain(:),snow(:),interception(:),evaporation(:),transpiration(:), & 
                              w_soil_root_fc(:),w_soil_root_pwp(:),lai(:),root_depth(:), & 
@@ -266,7 +277,7 @@ CONTAINS
     !> 4.0 diagnose root temperature
     !!
     t_soil_root(:) = 0.0_wp
-    DO isoil = 1,options%nsoil_sb
+    DO isoil = 1,nsoil_sb
        t_soil_root(:) = t_soil_root(:) + root_fraction_sl(:,isoil) * t_soil_sl(:,isoil)
     ENDDO
 
@@ -282,7 +293,9 @@ CONTAINS
   !!
   !! Calculates surface energy fluxes and deep soil temperatures 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_surface_energy_balance(options, lctlib, &
+  SUBROUTINE calc_surface_energy_balance(nc, nsoil_sb, &
+                                         steplen, &
+                                         lctlib, &
                                          sw_srf_net,lw_srf_down, & 
                                          t_air,t_acoef,t_bcoef, & 
                                          q_air,q_acoef,q_bcoef, & 
@@ -294,7 +307,6 @@ CONTAINS
                                          pet,evaporation,interception,transpiration, &                              ! inout
                                          sensible_heat_flx,latent_heat_flx,ground_heat_flx,net_radiation,t_soil_sl) ! inout
 
-    USE mo_jsb_task_class,            ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,          ONLY: t_lctlib_element
     USE mo_jsb_math_constants,        ONLY: dtime, eps8
     USE mo_atmland_constants,         ONLY: min_wind, max_wind 
@@ -308,9 +320,11 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut 
-    TYPE(t_jsb_task_options),                         INTENT(in)    :: options                !< model options
+    INTEGER,                                          INTENT(in)    :: nc, &                  !< dimensions
+                                                                       nsoil_sb
+    REAL(wp),                                         INTENT(in)    :: steplen                !< step length for this process
     TYPE(t_lctlib_element),                           INTENT(in)    :: lctlib                 !< land-cover-type library - parameter across pft's
-    REAL(wp), DIMENSION(options%nc),                  INTENT(in)    :: sw_srf_net, &          !< net shortwave radiation [W/m2] 
+    REAL(wp), DIMENSION(nc),                          INTENT(in)    :: sw_srf_net, &          !< net shortwave radiation [W/m2] 
                                                                        lw_srf_down, &         !< longwave downward radiation [W/m2]
                                                                        t_air, &               !< air temperature [K]
                                                                        t_acoef, &             !< Richtmeyer-Morton Coefficient Ta
@@ -325,11 +339,11 @@ CONTAINS
                                                                        w_skin, &              !< skin water reservoir on leaves [m]
                                                                        canopy_cond, &         !< canopy conductance for water [m/s]
                                                                        rel_hum                !< relative humidity for soil evaporation
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: soil_depth_sl, &       !< soil depth per layer [m]
+    REAL(wp), DIMENSION(nc,nsoil_sb),                 INTENT(in)    :: soil_depth_sl, &       !< soil depth per layer [m]
                                                                        heat_capa_sl, &        !< heat capacity of the soil layer [J/kg]
                                                                        therm_cond_sl, &       !< thermal conductivity of the soil layer []
                                                                        bulk_dens_sl           !< bulk density of the soil layer [kg/m3]
-    REAL(wp), DIMENSION(options%nc),                  INTENT(inout) :: ground_heat_flx_old, & !< ground heat flux from previous time step [W/m2]
+    REAL(wp), DIMENSION(nc),                          INTENT(inout) :: ground_heat_flx_old, & !< ground heat flux from previous time step [W/m2]
                                                                        t_srf_old, &           !< previous timestep's surface temperature 
                                                                        zril_old, &            !< previous timestep's Reynolds number 
                                                                        ga, &                  !< aerodynamic conductance [m/s] 
@@ -343,22 +357,21 @@ CONTAINS
                                                                        latent_heat_flx, &     !< latent heat flux [W/m2]
                                                                        ground_heat_flx, &     !< ground heat flux [W/m2]
                                                                        net_radiation          !< net radiation [W/m2]
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: t_soil_sl              !< soil temperature [K]
+    REAL(wp), DIMENSION(nc,nsoil_sb),                 INTENT(inout) :: t_soil_sl              !< soil temperature [K]
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp), DIMENSION(options%nc)                   :: &                    ! 1D (nc)
-                                                         q_sat        , &
+    REAL(wp), DIMENSION(nc)                       ::     q_sat        , &
                                                          q_sat_srf    , & 
                                                          heat_tcoef   , & 
                                                          wind_air     , & 
                                                          t_srf_new    , & 
                                                          hlp1 
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb)  :: ground_heat_flx_sl              !< soil temperature [K]
-    ! LOGICAL, DIMENSION(options%nc)                    :: info_catch_t_jump    ! for debug/ write out temperature jumps larger 15 K
-    ! INTEGER, SAVE                                     :: timesteps_help = 0   ! for debug/ write out temperature jumps larger 15 K
-    ! REAL(wp), DIMENSION(options%nc)                   :: dQdT,s_old,t2s_conv,heat_tcoef, s_star, q_sat_star
-    ! REAL(wp), DIMENSION(options%nc)                   :: q_air_eff,q_sat_srf_eff,evapotranspiration
-    INTEGER                                           :: isoil, it   ! looping
+    REAL(wp), DIMENSION(nc,nsoil_sb)              :: ground_heat_flx_sl              !< soil temperature [K]
+    ! LOGICAL, DIMENSION(nc)                        :: info_catch_t_jump    ! for debug/ write out temperature jumps larger 15 K
+    ! INTEGER, SAVE                                 :: timesteps_help = 0   ! for debug/ write out temperature jumps larger 15 K
+    ! REAL(wp), DIMENSION(nc)                       :: dQdT,s_old,t2s_conv,heat_tcoef, s_star, q_sat_star
+    ! REAL(wp), DIMENSION(nc)                       :: q_air_eff,q_sat_srf_eff,evapotranspiration
+    INTEGER                                       :: isoil, it   ! looping
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_surface_energy_balance'
 
 
@@ -392,7 +405,7 @@ CONTAINS
 !!    !! working upwards to estimate net transfer implied by previous temperature profile 
 !!    !! (ignores interaction of diffusion with water or ice)
 !!    
-!!    hlp1 = update_surface_temperature(cvdifts*options%steplen,t2s_conv(:),dQdT(:), & 
+!!    hlp1 = update_surface_temperature(cvdifts*steplen,t2s_conv(:),dQdT(:), & 
 !!                                      t_acoef(:),t_bcoef(:), &
 !!                                      q_acoef,q_bcoef(:), & 
 !!                                      s_old(:), &
@@ -422,7 +435,7 @@ CONTAINS
 
       !> 2.1 current heat exchange coefficient (aka drag)
       !! 
-      heat_tcoef(:) = heat_transfer_coef(drag_srf(:), options%steplen)
+      heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen)
   
       !> 2.2 calulate transpiration (kg / m2 / s)
       !! T = rho * (qsat - qair ) * Gtot in mm/s 
@@ -479,7 +492,8 @@ CONTAINS
   
       ! recalculate time-filtered drag 
       IF(it==1) THEN 
-        CALL calc_filtered_drag_coefficient(options, & 
+        CALL calc_filtered_drag_coefficient(nc, &
+                                            steplen, &
                                             t_air(:),q_air(:),wind_air(:),press_srf(:),t_soil_sl(:,1),hlp1(:),&                         
                                             height(:),zril_old(:),drag_srf(:),pch(:),ga(:))
       END IF
@@ -514,7 +528,7 @@ CONTAINS
     !> 3.1 calculate ground heat flux and update deep surface temperatures 
     !!
     ground_heat_flx_sl(:,:) = 0.0_wp 
-    DO isoil = 1,options%nsoil_sb-1
+    DO isoil = 1,nsoil_sb-1
       WHERE(soil_depth_sl(:,isoil) > eps8)
            ground_heat_flx_sl(:,isoil) = therm_cond_sl(:,isoil) * & 
                                          (t_soil_sl(:,isoil+1)-t_soil_sl(:,isoil)) / & 
@@ -524,7 +538,7 @@ CONTAINS
     ground_heat_flx(:)     = ground_heat_flx_sl(:,1) 
     ground_heat_flx_old(:) = ground_heat_flx(:)
 
-    DO isoil = 2,options%nsoil_sb
+    DO isoil = 2,nsoil_sb
       WHERE(soil_depth_sl(:,isoil) > eps8)
          t_soil_sl(:,isoil) = t_soil_sl(:,isoil) + &
                               (ground_heat_flx_sl(:,isoil) - ground_heat_flx_sl(:,isoil-1)) * dtime / & 
@@ -544,7 +558,8 @@ CONTAINS
   !!
   !! Calculates runoff, drainage and an updated state of soil water variables (theta, potential, etc.)
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_soil_hydrology(options, lctlib, &
+  SUBROUTINE calc_soil_hydrology(nc, nsoil_sb, &
+                                 lctlib, &
                                  soil_depth_water, & 
                                  rain,snow,interception,evaporation,transpiration, & 
                                  w_soil_root_fc,w_soil_root_pwp,lai,root_depth, & 
@@ -554,7 +569,6 @@ CONTAINS
                                  runoff,drainage,drainage_fraction, &                     ! inout
                                  w_soil_sl,w_soil_pot_sl,drainage_sl,percolation_sl)      ! inout
 
-    USE mo_jsb_task_class,              ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,            ONLY: t_lctlib_element    
     USE mo_jsb_math_constants,          ONLY: dtime, eps8
     USE mo_jsb_phys_constants,          ONLY: grav
@@ -565,10 +579,11 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut 
-    TYPE(t_jsb_task_options),                         INTENT(in)    :: options                 !< model options
+    INTEGER,                                          INTENT(in)    :: nc, &                  !< dimensions
+                                                                       nsoil_sb
     TYPE(t_lctlib_element),                           INTENT(in)    :: lctlib                  !< land-cover-type library - parameter across pft's
-    REAL(wp), DIMENSION(options%nsoil_sb),            INTENT(in)    :: soil_depth_water        !< depth of a layer
-    REAL(wp), DIMENSION(options%nc),                  INTENT(in)    :: rain, &                 !< rainfall [kg / m2 / s ]
+    REAL(wp), DIMENSION(nsoil_sb),                    INTENT(in)    :: soil_depth_water        !< depth of a layer
+    REAL(wp), DIMENSION(nc),                          INTENT(in)    :: rain, &                 !< rainfall [kg / m2 / s ]
                                                                        snow, &                 !< snowfall [kg / m2 / s ]
                                                                        interception, &         !< interception [kg / m2 / s ]
                                                                        evaporation, &          !< evaporation [kg / m2 / s ]
@@ -577,7 +592,7 @@ CONTAINS
                                                                        w_soil_root_pwp, &      !< root moisture at wilting point [m]
                                                                        lai, &                  !< leaf area index
                                                                        root_depth              !< rooting depth [m]
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(in)    :: soil_depth_sl, &        !< soil depth per layer [m]
+    REAL(wp), DIMENSION(nc,nsoil_sb),                 INTENT(in)    :: soil_depth_sl, &        !< soil depth per layer [m]
                                                                        w_soil_sat_sl, &        !< soil moisture per layer at saturation [m]
                                                                        w_soil_fc_sl, &         !< soil moisture per layer at field capacity [m]
                                                                        w_soil_pwp_sl, &        !< soil moisture per layer at wilting point [m]
@@ -586,26 +601,26 @@ CONTAINS
                                                                        saxtonB, &              !< pedotransfer parameter
                                                                        saxtonC, &              !< pedotransfer parameter
                                                                        root_fraction_sl        !< fraction of root mass per soil layer
-    REAL(wp), DIMENSION(options%nc),                  INTENT(inout) :: w_skin, &               !< water in skin reservoir [m]
+    REAL(wp), DIMENSION(nc),                          INTENT(inout) :: w_skin, &               !< water in skin reservoir [m]
                                                                        w_soil_root, &          !< water in root zone [m]
                                                                        w_soil_root_theta, &    !< fractional water availability in root zone [-]
                                                                        w_soil_root_pot, &      !< soil water potential in root zone [MPa]
                                                                        runoff, &               !< surface runoff [kg / m2 / s]
                                                                        drainage, &             !< deep drainage [kg / m2 / s]
                                                                        drainage_fraction       !< fraction of soil column lost to drainage [1/s]
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb), INTENT(inout) :: w_soil_sl, &            !< soil moisture per layer [m]
+    REAL(wp), DIMENSION(nc,nsoil_sb),                 INTENT(inout) :: w_soil_sl, &            !< soil moisture per layer [m]
                                                                        w_soil_pot_sl, &        !< soil water potential per layer [MPa]
                                                                        drainage_sl, &          !< drainage per layer [kg / m2 / s]
                                                                        percolation_sl          !< fractional water loss [1000/s] 
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp), DIMENSION(options%nc)                 :: &            
+    REAL(wp), DIMENSION(nc)                         :: &            
                                                        infiltration , &
                                                        water_to_skin, &
                                                        water_to_soil, &
                                                        w_soil_root_old, &
                                                        hlp1, hlp2, hlp3
-    REAL(wp),DIMENSION(options%nc,options%nsoil_sb) :: &   
+    REAL(wp),DIMENSION(nc,nsoil_sb)                 :: &   
                                                        ftranspiration , &
                                                        fevaporation   , &
                                                        w_soil_sl_old  , &
@@ -646,13 +661,13 @@ CONTAINS
     !> 2.1 determine fraction of transpiration per layer
     !!
     ftranspiration(:,:) = 0.0_wp
-    DO isoil = 1,options%nsoil_sb
+    DO isoil = 1,nsoil_sb
        WHERE((w_soil_fc_sl(:,isoil) - w_soil_pwp_sl(:,isoil)) > eps8)
           hlp1(:) = calc_soil_moisture_stress(w_soil_pot_sl(:, isoil), lctlib%phi_leaf_min)
           ftranspiration(:,isoil) = root_fraction_sl(:,isoil) * hlp1(:) 
        END WHERE
     ENDDO
-    DO ichunk = 1,options%nc
+    DO ichunk = 1,nc
       ! here SUM covers all soil layers per point of the chunk
       IF( SUM(ftranspiration(ichunk,:)) > eps8 ) THEN 
          ftranspiration(ichunk,:) = ftranspiration(ichunk,:) / SUM(ftranspiration(ichunk,:))
@@ -685,7 +700,7 @@ CONTAINS
 
     !> 2.3 update deeper soil layers given infiltration, transpiration and evaporation
     !!
-    DO isoil = 2,options%nsoil_sb
+    DO isoil = 2,nsoil_sb
 
       ! drainage from this layer due to preferential flow of infiltering water flux
       drainage_sl(:,isoil) = drain_frac / soil_depth_sl(:,isoil) * drainage_sl(:,isoil-1)
@@ -726,7 +741,7 @@ CONTAINS
     ENDWHERE
     w_soil_pot_sl(:,:) = saxtonA(:,:) * (hlp1_2d(:,:) ** saxtonB(:,:))
 
-    DO isoil = 2,options%nsoil_sb
+    DO isoil = 2,nsoil_sb
        ! weighted mean of diffusivity (m/s)
        hlp1(:) = (k_diff(:,isoil-1) * soil_depth_sl(:,isoil-1) + k_diff(:,isoil) * soil_depth_sl(:,isoil)) / &
                  (soil_depth_sl(:,isoil-1) + soil_depth_sl(:,isoil))
@@ -752,7 +767,7 @@ CONTAINS
 
     !> 2.5. diagnose deep drainage
     !!
-    drainage(:) = drainage_sl(:,options%nsoil_sb) 
+    drainage(:) = drainage_sl(:,nsoil_sb) 
     WHERE(w_soil_sl_old(:,:) > eps8)
       percolation_sl(:,:) = MIN( MAX((drainage_sl(:,:)/1000_wp*dtime) / w_soil_sl_old(:,:), -1.0_wp), 1.0_wp) * &
                             1000._wp/dtime
@@ -771,7 +786,7 @@ CONTAINS
     !!       (fc-w) deficit is substracted from the root accessible AWC (fc-pwp)*root_depth
     !!
     w_soil_root(:) = w_soil_sl(:,1) 
-    DO isoil = 2,options%nsoil_sb
+    DO isoil = 2,nsoil_sb
        WHERE(root_depth(:) > soil_depth_water(isoil-1))
           WHERE(root_depth(:) >= soil_depth_water(isoil))
             w_soil_root(:) = w_soil_root(:) + w_soil_sl(:,isoil) 
@@ -868,9 +883,9 @@ CONTAINS
 !!
 !! END FUNCTION calc_surface_temperature
 !!
-!!    !REAL(wp), DIMENSION(options%nc) :: fact_qsat_veg,fact_qsat_soil,fact_qsat_trans,fract_fpc,fract_snow,fract_water
-!!    !REAL(wp), DIMENSION(options%nc) :: fact_qair_veg,fact_qair_soil,fact_qair_trans
-!!    !REAL(wp), DIMENSION(options%nc) :: fact_qsat_srf,fact_q_air,fact_qsat_trans_srf
+!!    !REAL(wp), DIMENSION(nc) :: fact_qsat_veg,fact_qsat_soil,fact_qsat_trans,fract_fpc,fract_snow,fract_water
+!!    !REAL(wp), DIMENSION(nc) :: fact_qair_veg,fact_qair_soil,fact_qair_trans
+!!    !REAL(wp), DIMENSION(nc) :: fact_qsat_srf,fact_q_air,fact_qsat_trans_srf
 !!    !> 2.0 surface fractions for JSBACH energy balance
 !!    !! 
 !!    fract_snow(:) = 0.0_wp

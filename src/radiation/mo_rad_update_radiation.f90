@@ -45,10 +45,12 @@ CONTAINS
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
+    USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,              ONLY: Get_vgrid
     USE mo_rad_constants,         ONLY: rad2ppfd, def_alb_vis_soil, def_alb_nir_soil, rfr_ratio_toc, k_r2fr_chl
 
     ! Use of process configurations (t_PROC_config)
-    dsl4jsb_Use_config(ASSIMI_)    
+    ! ..
     
     ! Use of process memories
     dsl4jsb_Use_memory(A2L_)        !  USE mo_a2l_memory_class, ONLY: t_a2l_memory
@@ -66,13 +68,14 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER        :: model
     TYPE(t_lctlib_element), POINTER        :: lctlib              !< land-cover-type library - parameter across pft's
+    TYPE(t_jsb_vgrid),      POINTER        :: vgrid_canopy        ! Vertical grid
+    INTEGER                                :: ncanopy      ! number of canopy layers
     INTEGER                                :: icanopy             !< loop 1,ncanopy
     INTEGER                                :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_radiation'
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_memory(A2L_)                        !     TYPE(t_a2l_memory), POINTER :: a2l__mem
     dsl4jsb_Def_memory(L2A_)                        !     TYPE(t_l2a_memory), POINTER :: l2a__mem
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory), POINTER :: rad__mem
@@ -130,10 +133,12 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
+    model         => Get_model(tile%owner_model_id)
+    lctlib        => model%lctlib(tile%lcts%lib_id)
+    vgrid_canopy  => Get_vgrid('canopy_layer')
+    ncanopy       =  vgrid_canopy%n_levels
     ! Get process config
-    dsl4jsb_Get_config(ASSIMI_)
+    ! ..
     ! Get process memories
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(L2A_)
@@ -198,8 +203,7 @@ CONTAINS
 
     !> 2.0 calculate VIS radiation budget (absorbed radiation on canopy layers and soil + albedo)
     !! 
-    CALL calc_sw_srf_net(options, lctlib, "vis", &
-                     dsl4jsb_Config(ASSIMI_)%ncanopy, &
+    CALL calc_sw_srf_net(nc, ncanopy, lctlib, "vis", &
                      swvis_srf_down(:), swpar_fdiffuse(:), cos_zenith_angle(:), & 
                      lai(:), lai_cl(:,:), cumm_lai_cl(:,:),& 
                      alb_vis_soil(:), &
@@ -211,8 +215,7 @@ CONTAINS
     !! 
     !! Following Weiss & Norman, Agri. For. Met. 1985, the fraction of VIS and NIR 
     !! diffuse radiation are very similar 
-    CALL calc_sw_srf_net(options, lctlib, "nir", &
-                     dsl4jsb_Config(ASSIMI_)%ncanopy, &
+    CALL calc_sw_srf_net(nc, ncanopy, lctlib, "nir", &
                      swnir_srf_down(:), swpar_fdiffuse(:), cos_zenith_angle(:), & 
                      lai(:), lai_cl(:,:), cumm_lai_cl(:,:), &
                      alb_nir_soil(:), &
@@ -244,7 +247,7 @@ CONTAINS
       appfd(:) = 0.0_wp
     ENDWHERE
    
-    DO icanopy=1,dsl4jsb_Config(ASSIMI_)%ncanopy 
+    DO icanopy=1,ncanopy 
       WHERE(swvis_srf_down(:) > eps8) 
          ppfd_sunlit_cl(:,icanopy) = arad_sunlit_vis_cl(:,icanopy) * swpar_srf_down(:)/swvis_srf_down(:) * rad2ppfd
          ppfd_shaded_cl(:,icanopy) = arad_shaded_vis_cl(:,icanopy) * swpar_srf_down(:)/swvis_srf_down(:) * rad2ppfd
@@ -284,10 +287,10 @@ CONTAINS
   !!  to disable clumping set lctlib(:)%omega_clumping = 1.0_wp
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_sw_srf_net( options             , &   ! in
+  SUBROUTINE calc_sw_srf_net( nc                  , &   ! in
+                              ncanopy             , &   ! in  
                               lctlib              , &   ! in
                               vis_nir_id          , &   ! in
-                              ncanopy             , &   ! in  
                               sw_srf_down         , &   ! in
                               sw_fdiffuse         , &   ! in
                               cos_zenith_angle    , &   ! in 
@@ -304,7 +307,6 @@ CONTAINS
                               alb                 , &   ! out
                               sw_srf_net)               ! out
 
-    USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_rad_constants,           ONLY: min_cos_zenith_angle_rad, kbl0_vis, kdf0_vis, kbl0_nir, kdf0_nir, rho2sbeta, &
                                           k_csf
@@ -312,42 +314,42 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_jsb_task_options)               , INTENT(in)  :: options            !< model options
+    INTEGER                                , INTENT(in)  :: nc                 !< dimensions
+    INTEGER                                , INTENT(in)  :: ncanopy            !< number of canopy layers
     TYPE(t_lctlib_element)                 , INTENT(in)  :: lctlib             !< land-cover-type library - parameter across pft's
     CHARACTER(len=3)                       , INTENT(in)  :: vis_nir_id         !< vis nir identifier for this function only
-    INTEGER                                , INTENT(in)  :: ncanopy            !< number of canopy layers
-    REAL(wp), DIMENSION(options%nc)        , INTENT(in)  :: sw_srf_down        !< shortwave downward radiation flux (W m-2)
-    REAL(wp), DIMENSION(options%nc)        , INTENT(in)  :: sw_fdiffuse        !< fraction of diffuse radiation (--)
-    REAL(wp), DIMENSION(options%nc)        , INTENT(in)  :: cos_zenith_angle   !< solar angle (radians)
-    REAL(wp), DIMENSION(options%nc)        , INTENT(in)  :: lai                !< leaf area index (m-2 m-2)
-    REAL(wp), DIMENSION(options%nc,ncanopy), INTENT(in)  :: lai_cl             !< leaf area index of canopy layer (m-2 m-2) 
-    REAL(wp), DIMENSION(options%nc,ncanopy), INTENT(in)  :: cumm_lai_cl        !< cummulative leaf area index above centre of canopy layer
-    REAL(wp), DIMENSION(options%nc)        , INTENT(in)  :: alb_soil           !< soil albedo 
-    REAL(wp), DIMENSION(options%nc,ncanopy), INTENT(out) :: arad_sunlit_cl     !< absorbed radiation on sunlit leaves (W m-2) 
-    REAL(wp), DIMENSION(options%nc,ncanopy), INTENT(out) :: arad_shaded_cl     !< absorbed radiation of shaded leaves (W m-2) 
-    REAL(wp), DIMENSION(options%nc,ncanopy), INTENT(out) :: fleaf_sunlit_cl    !< fraction of leaves that is sunlit (--)
-    REAL(wp), DIMENSION(options%nc)        , INTENT(out) :: arad_can           !< absorbed radiation by the canopy (W m-2) 
-    REAL(wp), DIMENSION(options%nc)        , INTENT(out) :: arad_soil          !< absorbed radiation by the soil (W m-2)
-    REAL(wp), DIMENSION(options%nc)        , INTENT(out) :: alb_can            !< albedo of the canopy 
-    REAL(wp), DIMENSION(options%nc)        , INTENT(out) :: alb                !< albedo of the tile 
-    REAL(wp), DIMENSION(options%nc)        , INTENT(out) :: sw_srf_net         !< net shortwave radiation of the tile 
+    REAL(wp), DIMENSION(nc)                , INTENT(in)  :: sw_srf_down        !< shortwave downward radiation flux (W m-2)
+    REAL(wp), DIMENSION(nc)                , INTENT(in)  :: sw_fdiffuse        !< fraction of diffuse radiation (--)
+    REAL(wp), DIMENSION(nc)                , INTENT(in)  :: cos_zenith_angle   !< solar angle (radians)
+    REAL(wp), DIMENSION(nc)                , INTENT(in)  :: lai                !< leaf area index (m-2 m-2)
+    REAL(wp), DIMENSION(nc,ncanopy)        , INTENT(in)  :: lai_cl             !< leaf area index of canopy layer (m-2 m-2) 
+    REAL(wp), DIMENSION(nc,ncanopy)        , INTENT(in)  :: cumm_lai_cl        !< cummulative leaf area index above centre of canopy layer
+    REAL(wp), DIMENSION(nc)                , INTENT(in)  :: alb_soil           !< soil albedo 
+    REAL(wp), DIMENSION(nc,ncanopy)        , INTENT(out) :: arad_sunlit_cl     !< absorbed radiation on sunlit leaves (W m-2) 
+    REAL(wp), DIMENSION(nc,ncanopy)        , INTENT(out) :: arad_shaded_cl     !< absorbed radiation of shaded leaves (W m-2) 
+    REAL(wp), DIMENSION(nc,ncanopy)        , INTENT(out) :: fleaf_sunlit_cl    !< fraction of leaves that is sunlit (--)
+    REAL(wp), DIMENSION(nc)                , INTENT(out) :: arad_can           !< absorbed radiation by the canopy (W m-2) 
+    REAL(wp), DIMENSION(nc)                , INTENT(out) :: arad_soil          !< absorbed radiation by the soil (W m-2)
+    REAL(wp), DIMENSION(nc)                , INTENT(out) :: alb_can            !< albedo of the canopy 
+    REAL(wp), DIMENSION(nc)                , INTENT(out) :: alb                !< albedo of the tile 
+    REAL(wp), DIMENSION(nc)                , INTENT(out) :: sw_srf_net         !< net shortwave radiation of the tile 
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp), DIMENSION(options%nc)         :: tmp_cos_zenith_angle            ! local variable of solar angle (radians)
-    REAL(wp), DIMENSION(options%nc)         :: omega                           ! clumping factor 
-    REAL(wp), DIMENSION(options%nc)         :: rho                             ! fraction reflected by green canopy (--)
-    REAL(wp), DIMENSION(options%nc)         :: kdf, kbl                        ! extinction coefficients for radiation over black canopy
-    REAL(wp), DIMENSION(options%nc)         :: irad_dir_down, &                ! downward direct and diffuse radiation 
+    REAL(wp), DIMENSION(nc)                 :: tmp_cos_zenith_angle            ! local variable of solar angle (radians)
+    REAL(wp), DIMENSION(nc)                 :: omega                           ! clumping factor 
+    REAL(wp), DIMENSION(nc)                 :: rho                             ! fraction reflected by green canopy (--)
+    REAL(wp), DIMENSION(nc)                 :: kdf, kbl                        ! extinction coefficients for radiation over black canopy
+    REAL(wp), DIMENSION(nc)                 :: irad_dir_down, &                ! downward direct and diffuse radiation 
                                                irad_dif_down 
-    REAL(wp), DIMENSION(options%nc)         :: irad_dir_down_bc, &             ! light intensity at the bottom of the canopy
+    REAL(wp), DIMENSION(nc)                 :: irad_dir_down_bc, &             ! light intensity at the bottom of the canopy
                                                irad_dif_down_bc 
-    REAL(wp), DIMENSION(options%nc)         :: irad_dif_up                     ! upward diffuse shortwave radiation
-    REAL(wp), DIMENSION(options%nc)         :: idfa                            ! diffuse radiation penetrating foliage at lc 
-    REAL(wp), DIMENSION(options%nc)         :: idra                            ! direct radiation penetrating sunlit foliage at lc 
-    REAL(wp), DIMENSION(options%nc)         :: idrdra                          ! direct radiation remaining direct at lc 
-    REAL(wp), DIMENSION(options%nc)         :: arad_can_up                     ! absorbed radiation from the upward stream
-    REAL(wp), DIMENSION(options%nc,ncanopy) :: arad_shaded_up_cl               ! idem for canopy layers
-    REAL(wp), DIMENSION(options%nc)         :: radf1,radf2,radf3,radf4,radf5   ! dummy variables
+    REAL(wp), DIMENSION(nc)                 :: irad_dif_up                     ! upward diffuse shortwave radiation
+    REAL(wp), DIMENSION(nc)                 :: idfa                            ! diffuse radiation penetrating foliage at lc 
+    REAL(wp), DIMENSION(nc)                 :: idra                            ! direct radiation penetrating sunlit foliage at lc 
+    REAL(wp), DIMENSION(nc)                 :: idrdra                          ! direct radiation remaining direct at lc 
+    REAL(wp), DIMENSION(nc)                 :: arad_can_up                     ! absorbed radiation from the upward stream
+    REAL(wp), DIMENSION(nc,ncanopy)         :: arad_shaded_up_cl               ! idem for canopy layers
+    REAL(wp), DIMENSION(nc)                 :: radf1,radf2,radf3,radf4,radf5   ! dummy variables
     REAL(wp)                                :: temp1,temp2,radf3b              ! dummy variables
     REAL(wp)                                :: lctlib_sigma, &                 ! hlp for local lctlib variable, differentiating vis/nir
                                                kbl0, kdf0                      ! hlp for local rad_constants variables, differentiating vis/nir

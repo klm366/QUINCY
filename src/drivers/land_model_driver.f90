@@ -301,15 +301,15 @@ PROGRAM land_model_driver
     CASE('land','plant','soil','canopy')
       ! open output files for static more or for transient spinup if output may be created (i.e. output interval is not 'none')
       IF (model%config%l_static_forcing_mode) THEN
-        CALL open_pool_output_files(tile, iblk, ics, ice, nc, nsoil_sb, TRIM(model%config%output_interval_pool), '')
-        CALL open_flux_output_files(tile, iblk, ics, ice, nc, nsoil_sb, TRIM(model%config%output_interval_flux), '')
+        CALL open_pool_output_files(tile, iblk, ics, ice, nc, TRIM(model%config%output_interval_pool), '')
+        CALL open_flux_output_files(tile, iblk, ics, ice, nc, TRIM(model%config%output_interval_flux), '')
       ELSEIF (model%config%l_transient_forcing_mode .AND. output_interval_pool_act > 0.0_wp) THEN
-        CALL open_pool_output_files(tile, iblk, ics, ice, nc, nsoil_sb, TRIM(model%config%output_interval_pool_spinup), 'spinup_')
-        CALL open_flux_output_files(tile, iblk, ics, ice, nc, nsoil_sb, TRIM(model%config%output_interval_flux_spinup), 'spinup_')
+        CALL open_pool_output_files(tile, iblk, ics, ice, nc, TRIM(model%config%output_interval_pool_spinup), 'spinup_')
+        CALL open_flux_output_files(tile, iblk, ics, ice, nc, TRIM(model%config%output_interval_flux_spinup), 'spinup_')
       ENDIF
       ! create soil forcing (output is created for a year after spinup; control is in mo_shared:output:write_soil_forcing)
       IF (model%config%flag_generate_soil_forcing) THEN
-        CALL open_output_files_soil_forcing(tile, iblk, ics, ice, nc, nsoil_sb)
+        CALL open_output_files_soil_forcing(tile, iblk, ics, ice, nc)
       ENDIF
     CASE('test_canopy','test_radiation')
       ntimestep = 0     ! simulation starts with zero, and loop asks for 'IF (itimestep .GT. ntimestep) EXIT'
@@ -370,8 +370,8 @@ PROGRAM land_model_driver
           ! change output interval
           output_interval_pool_act                       = output_interval_pool
           ! open new output files
-          CALL open_pool_output_files(tile, iblk, ics, ice, nc, nsoil_sb, TRIM(model%config%output_interval_pool), '')
-          CALL open_flux_output_files(tile, iblk, ics, ice, nc, nsoil_sb, TRIM(model%config%output_interval_flux), '')
+          CALL open_pool_output_files(tile, iblk, ics, ice, nc, TRIM(model%config%output_interval_pool), '')
+          CALL open_flux_output_files(tile, iblk, ics, ice, nc, TRIM(model%config%output_interval_flux), '')
         END IF
       END IF
     END IF
@@ -596,8 +596,8 @@ PROGRAM land_model_driver
           model%config%output_interval_flux   = 'timestep' 
           output_interval_pool                = calc_output_time_interval_pool(model%config%output_interval_pool)
           output_interval_pool_act            = output_interval_pool
-          CALL open_pool_output_files(tile, iblk, ics, ice, nc, nsoil_sb, TRIM(model%config%output_interval_pool), '')
-          CALL open_flux_output_files(tile, iblk, ics, ice, nc, nsoil_sb, TRIM(model%config%output_interval_flux), '')
+          CALL open_pool_output_files(tile, iblk, ics, ice, nc, TRIM(model%config%output_interval_pool), '')
+          CALL open_flux_output_files(tile, iblk, ics, ice, nc, TRIM(model%config%output_interval_flux), '')
 
       ELSE IF (itimestep == fluxnet_output_stop) THEN     ! stop of fluxnet output; NO output after this timestep anyway
           fluxnet_output_status = 3                       ! status update: writing output data finished

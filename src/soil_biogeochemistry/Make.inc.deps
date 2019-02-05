@@ -22,7 +22,6 @@ mo_sb_constants.o: \
 
 mo_sb_litter_processes.o: \
   mo_kind.o \
-  mo_jsb_task_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_math_constants.o \
   mo_sb_constants.o \
@@ -59,6 +58,8 @@ mo_sb_init.o: \
   mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
+  mo_jsb_grid_class.o \
+  mo_jsb_grid.o \
   mo_isotope_util.o \
   mo_jsb_phys_constants.o \
   mo_jsb_math_constants.o \
@@ -81,9 +82,11 @@ mo_sb_jsm_main.o: \
   mo_jsb_process_class.o \
   mo_jsb_tile_class.o \
   mo_jsb_task_class.o \
-  mo_jsb_math_constants.o \
   mo_jsb_model_class.o \
   mo_jsb_lctlib_class.o \
+  mo_jsb_grid_class.o \
+  mo_jsb_grid.o \
+  mo_jsb_math_constants.o \
   mo_isotope_util.o \
   mo_sb_constants.o \
   mo_sb_config_class.o \
@@ -101,10 +104,12 @@ mo_sb_update_pools.o: \
   mo_jsb_tile_class.o \
   mo_jsb_task_class.o \
   mo_jsb_model_class.o \
-  mo_jsb_math_constants.o \
   mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
+  mo_jsb_grid_class.o \
+  mo_jsb_grid.o \
+  mo_jsb_math_constants.o \
   mo_jsb_phys_constants.o \
   mo_isotope_util.o \
   mo_a2l_memory_class.o \
@@ -134,7 +139,6 @@ mo_sb_rate_modifier.o: \
 mo_sb_jsm_processes.o: \
   mo_kind.o \
   mo_exception.o \
-  mo_jsb_task_class.o \
   mo_quincy_update_time_averages.o \
   mo_jsb_math_constants.o \
   mo_jsb_phys_constants.o \
@@ -148,7 +152,6 @@ mo_sb_jsm_processes.o: \
 mo_sb_jsm_transport.o: \
   mo_kind.o \
   mo_exception.o \
-  mo_jsb_task_class.o \
   mo_jsb_math_constants.o \
   mo_jsb_phys_constants.o \
   mo_sb_constants.o \
@@ -162,12 +165,14 @@ mo_sb_simple_model.o: \
   mo_jsb_tile_class.o \
   mo_jsb_task_class.o \
   mo_jsb_model_class.o \
-  mo_jsb_math_constants.o \
   mo_jsb_class.o \
   mo_jsb_model_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
+  mo_jsb_grid_class.o \
+  mo_jsb_grid.o \
   mo_sse_memory_class.o \
+  mo_jsb_math_constants.o \
   mo_jsb_phys_constants.o \
   mo_veg_constants.o \
   mo_veg_memory_class.o \

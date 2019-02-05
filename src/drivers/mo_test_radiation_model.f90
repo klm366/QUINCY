@@ -38,10 +38,10 @@ CONTAINS
     USE mo_jsb_tile_class,                ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,                ONLY: t_jsb_task_options
     USE mo_jsb_model_class,               ONLY: t_jsb_model
-    USE mo_jsb_grid_class,                ONLY: t_jsb_vgrid
-    USE mo_jsb_grid,                      ONLY: Get_vgrid
     USE mo_jsb_lctlib_class,              ONLY: t_lctlib_element
     USE mo_jsb_process_class,             ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_grid_class,                ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,                      ONLY: Get_vgrid
     USE mo_atmland_constants,             ONLY: frac_vis_swtot_srf, frac_par_swvis_srf, eps_vpd, standard_press_srf, def_co2_mixing_ratio
     USE mo_atmland_util,                  ONLY: calc_spec_humidity_sat
     USE mo_jsb_phys_constants,            ONLY: molar_mass_N, Tzero, cvdifts, grav
@@ -69,7 +69,9 @@ CONTAINS
     INTEGER, PARAMETER                        :: npft  = 8        !< number of PFTs simulated by the test_canopy model
     TYPE(t_jsb_model),      POINTER           :: model            !< the model
     TYPE(t_lctlib_element), POINTER           :: lctlib           !< land-cover-type library - parameter across pft's
+    TYPE(t_jsb_vgrid),      POINTER           :: vgrid_canopy     !< Vertical grid
     TYPE(t_jsb_vgrid),      POINTER           :: vgrid_spectral   !< Vertical grid used to display the sprectal bands of light
+    INTEGER                                   :: ncanopy          !< number of canopy layers
     INTEGER                                   :: nspec            !< number of spectral bands
     REAL(wp), DIMENSION(options%nc)           :: &
                   t_air           , &
@@ -153,8 +155,10 @@ CONTAINS
     ! 0.5 Get Memory
     ! Get process variables (Set pointers to variables in memory)
     model           => Get_model(tile%owner_model_id)
+    vgrid_canopy    => Get_vgrid('canopy_layer')
     vgrid_spectral  => Get_vgrid('spectral_bands')
-    nspec           = vgrid_spectral%n_levels
+    ncanopy         =  vgrid_canopy%n_levels
+    nspec           =  vgrid_spectral%n_levels
     ! if pftid is set in the namelist use this pftid
     IF(tile%lcts%lib_id>0)THEN
       ref_pft = tile%lcts%lib_id
@@ -261,10 +265,9 @@ CONTAINS
       veg__mem%pool%leaf%phosphorus%ptr(:,iblk)   = veg__mem%pool%leaf%nitrogen%ptr(:,iblk) / lctlib%np_leaf
     ENDIF
     ! canopy
-    CALL calc_canopy_layers(&
-                            options                                        , & ! in
+    CALL calc_canopy_layers(nc                                             , & ! in
+                            ncanopy                                        , &
                             lctlib                                         , &
-                            dsl4jsb_Config(ASSIMI_)%ncanopy                , &
                             dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
                             dsl4jsb_Config(ASSIMI_)%canopy_layer_depth(:)  , &
                             leaf_nitrogen       = veg__mem%pool%leaf%nitrogen%ptr(:,iblk)      , &
@@ -290,7 +293,7 @@ CONTAINS
   !!
 
   CALL calc_radiative_transfer( options                                         , & ! in
-                                dsl4jsb_Config(ASSIMI_)%ncanopy                 , &
+                                ncanopy                                         , &
                                 nspec                                           , &
                                 t_air(:)                                        , &
                                 canopy_reflectance_sp(:,:)                        ) ! inout

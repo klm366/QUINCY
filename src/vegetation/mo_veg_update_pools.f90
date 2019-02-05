@@ -40,9 +40,11 @@ CONTAINS
     USE mo_jsb_task_class,                  ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element
     USE mo_jsb_model_class,                 ONLY: t_jsb_model
-    USE mo_jsb_math_constants,              ONLY: dtime, one_day, eps4, eps8
     USE mo_jsb_process_class,               ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_grid_class,                  ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,                        ONLY: Get_vgrid
     USE mo_jsb_phys_constants,              ONLY: lambda_C14, rhoh2o, grav
+    USE mo_jsb_math_constants,              ONLY: dtime, one_day, eps4, eps8
     USE mo_isotope_util,                    ONLY: calc_mixing_ratio_N15N14, calc_fractionation, calc_mixing_ratio_C14C
     USE mo_rad_constants,                   ONLY: rfr_ratio_toc 
     USE mo_veg_canopy,                      ONLY: calc_canopy_layers
@@ -55,7 +57,6 @@ CONTAINS
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(ASSIMI_)    
-    dsl4jsb_Use_config(PHENO_)    
     
     ! Use of process memories
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
@@ -80,14 +81,17 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_jsb_model),        POINTER               :: model
     TYPE(t_lctlib_element),   POINTER               :: lctlib           !< land-cover-type library - parameter across pft's
+    TYPE(t_jsb_vgrid),        POINTER               :: vgrid_canopy     !< Vertical grid
+    TYPE(t_jsb_vgrid),        POINTER               :: vgrid_soil_sb    !< Vertical grid
+    INTEGER                                         :: ncanopy          !< number of canopy layers
+    INTEGER                                         :: nsoil_sb         !< number of soil layers as used/defined by the SB_ process
     REAL(wp),                 DIMENSION(options%nc) :: hlp1             !< dummy variable
-    INTEGER                                         :: iblk, ics, ice, nc, nsoil_sb
+    INTEGER                                         :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_pools'
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(ASSIMI_)
-    dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_memory(ASSIMI_)                       ! TYPE(t_assimi_memory),      POINTER :: assimi__mem
     dsl4jsb_Def_memory(PHENO_)                        ! TYPE(t_pheno_memory),       POINTER :: pheno__mem
     dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),         POINTER :: veg__mem
@@ -175,18 +179,20 @@ CONTAINS
     ics       = options%ics
     ice       = options%ice
     nc        = options%nc
-    nsoil_sb  = options%nsoil_sb
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
     IF (.NOT. tile%Is_process_active(VEG_)) RETURN
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
+    model         => Get_model(tile%owner_model_id)
+    lctlib        => model%lctlib(tile%lcts%lib_id)
+    vgrid_canopy  => Get_vgrid('canopy_layer')
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')    
+    ncanopy       =  vgrid_canopy%n_levels
+    nsoil_sb      =  vgrid_soil_sb%n_levels           ! needed for sb_mycorrhiza_export
     ! Get process config
     dsl4jsb_Get_config(ASSIMI_)
-    dsl4jsb_Get_config(PHENO_)
     ! Get process memories
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(PHENO_)
@@ -443,9 +449,9 @@ CONTAINS
     !!
     !! in case of complete harvest, set all pools to zero
     !! (to account for wood extraction, which would otherwise leave some wood, and reset the key plant diagnostics)
-    IF(model%config%l_do_stand_replacing_harvest .OR. do_cohort_harvest(options%ics) > test_false_true) THEN 
+    IF(model%config%l_do_stand_replacing_harvest .OR. do_cohort_harvest(ics) > test_false_true) THEN 
       !! differ between cohort & population scheme
-      IF (do_cohort_harvest(options%ics) > test_false_true) THEN    ! -> cohort scheme
+      IF (do_cohort_harvest(ics) > test_false_true) THEN    ! -> cohort scheme
         dens_ind(:)                    = 1.0_wp
         veg_pool%reserve%carbon(:)     = 1.0_wp
       ELSE ! model%config%l_do_stand_replacing_harvest -> population scheme
@@ -494,9 +500,9 @@ CONTAINS
     !> 4.0 Given current vegetation pools, update canopy layers 
     !!
     !!
-    CALL calc_canopy_layers( options                                        , & ! in
+    CALL calc_canopy_layers( nc                                             , & ! in
+                             ncanopy                                        , &
                              lctlib                                         , &
-                             dsl4jsb_Config(ASSIMI_)%ncanopy                , &
                              dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
                              dsl4jsb_Config(ASSIMI_)%canopy_layer_depth(:)  , &
                              veg_pool%leaf%nitrogen(:)                      , &
