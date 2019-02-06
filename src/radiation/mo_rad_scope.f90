@@ -32,22 +32,20 @@ CONTAINS
   !!  ... describe what this routine does (major in, calc, major out)
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_radiative_transfer( options                   , &   ! in
+  SUBROUTINE calc_radiative_transfer( nc                        , &   ! in
                                       ncanopy                   , &
                                       nspec                     , &
                                       t_air                     , &
                                       canopy_reflectance_sp       )   ! inout
 
-    USE mo_jsb_task_class,            ONLY: t_jsb_task_options
-
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    TYPE(t_jsb_task_options)               , INTENT(in)     :: options                !< model options
-    INTEGER                                , INTENT(in)     :: ncanopy                !< number of canopy layers
-    INTEGER                                , INTENT(in)     :: nspec                  !< number of spectral bands
-    REAL(wp), DIMENSION(options%nc)        , INTENT(in)     :: t_air                  !< air temperature
-    REAL(wp), DIMENSION(options%nc,nspec)  , INTENT(inout)  :: canopy_reflectance_sp  !< top of canopy reflectance factor
+    INTEGER                                , INTENT(in)     :: nc             !< number of points in the chunk
+    INTEGER                                , INTENT(in)     :: ncanopy        !< number of canopy layers
+    INTEGER                                , INTENT(in)     :: nspec          !< number of spectral bands
+    REAL(wp), DIMENSION(nc)        , INTENT(in)     :: t_air                  !< air temperature
+    REAL(wp), DIMENSION(nc,nspec)  , INTENT(inout)  :: canopy_reflectance_sp  !< top of canopy reflectance factor
     ! ---------------------------
     ! 0.2 Local
     ! ...

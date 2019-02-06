@@ -71,5 +71,4 @@ mo_rad_memory_class.o: \
   mo_slm_varlist.o
 
 mo_rad_scope.o: \
-  mo_kind.o \
-  mo_jsb_task_class.o
+  mo_kind.o

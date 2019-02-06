@@ -292,7 +292,7 @@ CONTAINS
   !!
   !!
 
-  CALL calc_radiative_transfer( options                                         , & ! in
+  CALL calc_radiative_transfer( nc                                              , & ! in
                                 ncanopy                                         , &
                                 nspec                                           , &
                                 t_air(:)                                        , &
