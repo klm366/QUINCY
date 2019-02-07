@@ -6,7 +6,7 @@
 !!
 !! @par Revision History
 !! First version by Rainer Schneck (2015-09-29)
-!! Julia Nabel (2018-01-10): l_forestRegrowth flag 
+!! Julia Nabel (2018-01-10): l_forestRegrowth flag
 !!
 
 MODULE mo_pheno_init
@@ -16,7 +16,7 @@ MODULE mo_pheno_init
   USE mo_exception,           ONLY: message
   USE mo_jsb_control,         ONLY: debug_on
 
-  USE mo_jsb_model_class,     ONLY: t_jsb_model  
+  USE mo_jsb_model_class,     ONLY: t_jsb_model
   USE mo_jsb_class,           ONLY: get_model
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
   USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input
@@ -24,10 +24,10 @@ MODULE mo_pheno_init
   dsl4jsb_Use_processes PHENO_
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_memory(PHENO_)
-    
+
   IMPLICIT NONE
   PRIVATE
-  
+
   PUBLIC :: pheno_init
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_pheno_init'
@@ -39,23 +39,7 @@ CONTAINS
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
-    ! Local variables
-    TYPE(t_jsb_model), POINTER  :: model
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init'
-
-    ! Declare pointers for process configuration and memory
-    dsl4jsb_Def_memory(PHENO_)
-    dsl4jsb_Get_memory(PHENO_)
-    !dsl4jsb_Def_config(PHENO_)
-    !dsl4jsb_Get_config(PHENO_)
-
-    ! Declare pointers for variables in memory
-
-    ! ---------------------------
-    ! Go
-
-    model => get_model(tile%owner_model_id)
 
     CALL pheno_init_bc(tile)
     CALL pheno_init_ic(tile)
@@ -131,9 +115,11 @@ CONTAINS
     dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max) = &
       MERGE(dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max), 0._wp, dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max) >= 0._wp)
 
-    NULLIFY(ptr_2D)
-
     CALL input_file%Close()
+
+    ! avoid compiler warnings about pointers not being dereferenced
+    IF (ASSOCIATED(ptr_2D)) CONTINUE
+    NULLIFY(ptr_2D)
 
     IF (tile%lcts(1)%lib_id /= 0)  THEN ! only if the present tile is a pft
       !JN 10.01.18: for now: set the maxLai for non forest types to the one from the Lctlib
@@ -152,7 +138,7 @@ CONTAINS
           & 1.0_wp - exp(-dsl4jsb_Lctlib_param(MaxLAI) / dsl4jsb_Lctlib_param(clumpinessFactor))
       END IF
     END IF
-    
+
   END SUBROUTINE pheno_init_bc
 
   SUBROUTINE pheno_init_ic(tile)
@@ -194,19 +180,19 @@ CONTAINS
         dsl4jsb_var2D_onDomain(PHENO_, fract_fpc) = &
           & wgt1 * dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,nmw1) + wgt2 * dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,nmw2)
       ELSE
-        IF ( .NOT. dsl4jsb_Config(PHENO_)%l_forestRegrowth )  THEN 
+        IF ( .NOT. dsl4jsb_Config(PHENO_)%l_forestRegrowth )  THEN
           dsl4jsb_var2D_onDomain(PHENO_, lai) = MIN(dsl4jsb_var2D_onDomain(PHENO_, lai), dsl4jsb_Lctlib_param(MaxLai))
         ELSE
           dsl4jsb_var2D_onDomain(PHENO_, lai) = &
             & MIN(dsl4jsb_var2D_onDomain(PHENO_, lai), dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom))
         END IF
-        dsl4jsb_var2D_onDomain(PHENO_, fract_fpc) = get_foliage_projected_cover( &
+        dsl4jsb_var2D_onDomain(PHENO_, fract_fpc) = get_foliage_projected_cover(                &
           & dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max), dsl4jsb_var2D_onDomain(PHENO_, lai), &
           & dsl4jsb_Lctlib_param(ClumpinessFactor))
       END IF
     END IF
 
   END SUBROUTINE pheno_init_ic
-  
+
 #endif
 END MODULE mo_pheno_init

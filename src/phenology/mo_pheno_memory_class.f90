@@ -6,7 +6,7 @@
 !!
 !! @par Revision History
 !! First version by Rainer Schneck (2015-09-09)
-!! Julia Nabel (2018-01-09): added memory for optional functionality: forest regrowth 
+!! Julia Nabel (2018-01-09): added memory for optional functionality: forest regrowth
 !!                          (derive maxLAI from biomass via allometric relationships)
 
 MODULE mo_pheno_memory_class
@@ -19,9 +19,9 @@ MODULE mo_pheno_memory_class
   USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_lct_class,          ONLY: VEG_TYPE, LAND_TYPE
-  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
-  USE mo_jsb_varlist,            ONLY: BASIC, MEDIUM, FULL
-  USE mo_jsb_physical_constants, ONLY: tmelt
+  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d
+  USE mo_jsb_varlist,            ONLY: BASIC, FULL !, MEDIUM
+  !USE mo_jsb_physical_constants, ONLY: tmelt
 
   ! Use of processes in this module
   dsl4jsb_Use_processes PHENO_
@@ -66,13 +66,13 @@ MODULE mo_pheno_memory_class
                                           ! at previous day, because not known for current day; updated at ..
                                           ! the beginning of each new day (stream)
 
-                                          !! JN: variables required when l_forestRegrowth = true, i.e. when the 
+                                          !! JN: variables required when l_forestRegrowth = true, i.e. when the
                                           !      maxLAI is derived from biomass via allometric relationships
       & number_of_individuals,          & ! Number of individuals in last calculation [trees ha-1]
       & biomass_per_individual,         & ! Biomass per individual according to allometric relationships [kg/tree]
 
-      & cconservation_allom,            & ! Tester for c conservation upon rescaling due to changed max lai 
-      & maxLAI_allom,                   & ! dynamical maximum LAI [m^2(leaf)/m^2(ground)]: 
+      & cconservation_allom,            & ! Tester for c conservation upon rescaling due to changed max lai
+      & maxLAI_allom,                   & ! dynamical maximum LAI [m^2(leaf)/m^2(ground)]:
                                           ! Current max LAI according to allometric relationships --> only changes ones a year!
 
       ! & laiMax_dyn,                    & ! Dynamical maximum LAI [m^2(leaf)/m^2(ground)]-- not larger than the maximum  lai
@@ -92,9 +92,9 @@ MODULE mo_pheno_memory_class
       & veg_fract_correction              ! Factor representing clumpyness of vegetation (for each tile type).
                                           ! To write it in the output file we define it as 2d even when there is no change
                                           ! between gridcells as it is in fact a 1d constant for each tile.
-                                          !   JN: with l_forestRegrowth = true veg_fract_correction can change over time  
+                                          !   JN: with l_forestRegrowth = true veg_fract_correction can change over time
                                           !       and is spatially variable
-                                          !       if l_forestRegrowth = false there is still no change between gridcells 
+                                          !       if l_forestRegrowth = false there is still no change between gridcells
                                           !       and it is a 1d constant for each tile in this case.
                                           ! Gives the fraction of canopy area from the tile area. Between 0 and 1.
                                           ! canopy area = veg_fract_correction * tile area.
@@ -118,9 +118,8 @@ CONTAINS
   SUBROUTINE Init_pheno_memory(mem, prefix, suffix, lct_ids, model_id)
 
     ! Declarations
-    USE mo_jsb_varlist,       ONLY: t_jsb_varlist, jsb_add_var
-    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
-                                    TSTEP_CONSTANT, tables
+    USE mo_jsb_varlist,       ONLY: jsb_add_var
+    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
 
@@ -136,7 +135,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
-    TYPE(t_jsb_vgrid), POINTER :: surface, canopy_layer        ! Vertical grid
+    TYPE(t_jsb_vgrid), POINTER :: surface !, canopy_layer        ! Vertical grid
     INTEGER :: table
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_pheno_memory'
@@ -151,7 +150,7 @@ CONTAINS
     ! Set pointers to variables in the "grid"
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
-    canopy_layer => Get_vgrid('canopy_layer')
+    !canopy_layer => Get_vgrid('canopy_layer')
 
     dsl4jsb_Get_config(PHENO_)
 
@@ -165,7 +164,7 @@ CONTAINS
         & t_cf('leaf_area_index', '', ''),                                     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
-        & output_level=BASIC, &
+        & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
       ALLOCATE(mem%lai_mon      (hgrid%nproma, hgrid%nblks, 0:13))
@@ -176,7 +175,7 @@ CONTAINS
         & t_cf('foliage_projected_cover', '', ''),                             &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
-        & output_level=BASIC, &
+        & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'fract_fpc_max', mem%fract_fpc_max,               &
@@ -184,7 +183,7 @@ CONTAINS
         & t_cf('maximum_fpc', '', ''),                                         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
-        & output_level=BASIC, &
+        & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'fract_forest', mem%fract_forest,                 &
@@ -192,7 +191,7 @@ CONTAINS
         & t_cf('forest_fraction', '', ''),                                     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
-        & output_level=BASIC, &
+        & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'veg_fract_correction', mem%veg_fract_correction, &
@@ -228,24 +227,24 @@ CONTAINS
           & initval_r=-1.0_wp )
 
         CALL jsb_add_var( mem,'growth_days_eg', mem%days_since_growth_begin_EG, &
-          & hgrid, surface,                                                                 &
-          & t_cf('days_since_growth_begin_EverGreen', '', ''),                              &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),              &
-          & prefix, suffix,                                                                 &
+          & hgrid, surface,                                                     &
+          & t_cf('days_since_growth_begin_EverGreen', '', ''),                  &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+          & prefix, suffix,                                                     &
           & initval_r=0.0_wp )
 
         CALL jsb_add_var( mem,'growth_days_sg', mem%days_since_growth_begin_SG, &
-          & hgrid, surface,                                                                 &
-          & t_cf('days_since_growth_begin_SummerGreen', '', ''),                            &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),              &
-          & prefix, suffix,                                                                 &
+          & hgrid, surface,                                                     &
+          & t_cf('days_since_growth_begin_SummerGreen', '', ''),                &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+          & prefix, suffix,                                                     &
           & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
 
-        CALL jsb_add_var( mem,'yday_npp_pot_rate', mem%previous_day_NPP_pot_rate_ca,     &
-          & hgrid, surface,                                                              &
-          & t_cf('yday_NPP_pot_rate_ca', 'prev day NPP_pot_rate_ca', ''),                &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-          & prefix, suffix,                                                              &
+        CALL jsb_add_var( mem,'yday_npp_pot_rate', mem%previous_day_NPP_pot_rate_ca, &
+          & hgrid, surface,                                                          &
+          & t_cf('yday_NPP_pot_rate_ca', 'prev day NPP_pot_rate_ca', ''),            &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
+          & prefix, suffix,                                                          &
           & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp )
 
         ! CALL jsb_add_var( mem,'laimax_dyn', mem%laiMax_dyn,                    &
@@ -339,7 +338,7 @@ CONTAINS
               & 'Test for c conservation on rescaling of c states for allom.'), &
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
             & prefix, suffix,                                                           &
-            & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) 
+            & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp )
 
         END IF
 

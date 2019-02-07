@@ -13,19 +13,14 @@ MODULE mo_jsb_model_init
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, FUEL_
   dsl4jsb_Use_config(PHENO_)
-  dsl4jsb_Use_config(SSE_)
-  dsl4jsb_Use_config(HYDRO_)
-  dsl4jsb_Use_config(RAD_)
   dsl4jsb_Use_config(CARBON_)
-  dsl4jsb_Use_config(DISTURB_)
-  dsl4jsb_Use_config(FUEL_)
 
   USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_control,      ONLY: get_no_of_models, debug_on
   USE mo_jsb_model_class,  ONLY: t_jsb_model
 
   USE mo_kind,             ONLY: wp
-  USE mo_exception,        ONLY: message, finish
+  USE mo_exception,        ONLY: finish
   USE mo_jsb_parallel,     ONLY: Get_omp_thread, Is_omp_inside_serial
 
   IMPLICIT NONE
@@ -50,12 +45,11 @@ CONTAINS
     USE mo_echam_convect_tables, ONLY : init_convect_tables
     USE mo_netCDF,      ONLY: add_dim
     !<<<
+    USE mo_jsb_domain_iface, ONLY: get_lons_and_lats_from_file,
 #endif
-    USE mo_jsb_domain_iface, ONLY: get_nlon_nlat_from_file, get_lons_and_lats_from_file, jsbalone_init_decomp, pe_decomposed
+    USE mo_jsb_domain_iface, ONLY: get_nlon_nlat_from_file, jsbalone_init_decomp, pe_decomposed
     USE mo_jsb_grid_class,   ONLY: t_jsb_grid, new_grid
     USE mo_jsb_grid,         ONLY: Register_grid
-    USE mo_jsb_model_class,  ONLY: print_model
-
 
     INTEGER,                    INTENT(in) :: model_id, nproca, nprocb, npedim
     CHARACTER(len=*), OPTIONAL, INTENT(in) :: model_name
@@ -163,8 +157,6 @@ CONTAINS
     CALL Register_grid(grid)
     model%grid_id = grid%id
 
-    ! CALL init_model_common(model)
-
     NULLIFY(model)
 
   END SUBROUTINE setup_grid_decomposition
@@ -184,7 +176,7 @@ CONTAINS
     USE mo_pheno_init,          ONLY: pheno_init
     USE mo_carbon_init,         ONLY: carbon_init
     USE mo_fuel_init,           ONLY: fuel_init
-    USE mo_disturb_init,        ONLY: disturb_init
+    !USE mo_disturb_init,        ONLY: disturb_init
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_init,             ONLY: hd_init_ic, hd_init_bc
 #endif
@@ -195,17 +187,11 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER  :: model
     CLASS(t_jsb_tile_abstract), POINTER :: tile, child
-    INTEGER                             :: iproc, ilct, jlct, i, no_children
+    INTEGER                             :: ilct, jlct, i, no_children
     REAL(wp), ALLOCATABLE               :: fract_tmp(:,:)
     INTEGER                             :: no_omp_thread
 
     dsl4jsb_Def_config(PHENO_)
-    dsl4jsb_Def_config(SSE_)
-    dsl4jsb_Def_config(HYDRO_)
-    dsl4jsb_Def_config(RAD_)
-    dsl4jsb_Def_config(CARBON_)
-    dsl4jsb_Def_config(DISTURB_)
-    dsl4jsb_Def_config(FUEL_)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_init'
 
@@ -220,12 +206,6 @@ CONTAINS
     model => Get_model(model_id)
 
     dsl4jsb_Get_config(PHENO_)
-    dsl4jsb_Get_config(SSE_)
-    dsl4jsb_Get_config(HYDRO_)
-    dsl4jsb_Get_config(RAD_)
-    dsl4jsb_Get_config(CARBON_)
-    dsl4jsb_Get_config(FUEL_)
-    dsl4jsb_Get_config(DISTURB_)
 
     !NOTE: JN changed the order of the processes
     !- processes potentially changing the area of a tile are conducted first in the timestep.
@@ -271,7 +251,7 @@ CONTAINS
       ! Normally called before
       ! assimilation -> update_assimilation: -> calc_assimilation_waterlimited
       ! and before
-      ! canopy_cond_unstressed -> update_canopy_conductance_unstressed: 
+      ! canopy_cond_unstressed -> update_canopy_conductance_unstressed:
       !                                    -> calc_assimilation_waterunlimited
       CALL model%Queue_task(ASSIMI_, "assimilation_scaling_factors")
     END IF
@@ -499,16 +479,13 @@ CONTAINS
 
     USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
     USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
-    USE mo_jsb_lct_class,       ONLY: Contains_lct
     USE mo_carbon_init,         ONLY: carbon_read_cpools
     USE mo_util,                ONLY: one_of
 
     INTEGER, INTENT(in) :: model_id
 
     TYPE(t_jsb_model), POINTER  :: model
-    CLASS(t_jsb_tile_abstract), POINTER :: tile, child
-    INTEGER                             :: iproc, ilct, jlct, i, no_children
-    REAL(wp), ALLOCATABLE               :: fract_tmp(:,:)
+    CLASS(t_jsb_tile_abstract), POINTER :: tile
     INTEGER                             :: no_omp_thread
 
     dsl4jsb_Def_config(CARBON_)

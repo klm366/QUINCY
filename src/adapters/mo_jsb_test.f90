@@ -12,6 +12,7 @@
 !!
 MODULE mo_jsb_test
 #ifndef __NO_JSBACH__
+#ifndef __ICON__
 
   USE mo_kind,               ONLY: wp
   USE mo_jsb_time,           ONLY: is_time_experiment_start
@@ -302,7 +303,7 @@ CONTAINS
     REAL(wp), INTENT(out) :: cos_zenith_angle(:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':read_interface_variables'
-    CHARACTER(len=*), PARAMETER :: filename = 'interface_variables.nc' 
+    CHARACTER(len=*), PARAMETER :: filename = 'interface_variables.nc'
 
 #ifndef __ICON__
     INCLUDE 'netcdf.inc'
@@ -311,7 +312,7 @@ CONTAINS
     INTEGER, SAVE :: lon_id, lat_id, time_id      ! dimension IDs
 
     INTEGER  :: fstart(3), fcount(3)
-    INTEGER  :: nlon, nlat, nproma, currentTimestep 
+    INTEGER  :: nlon, nlat, nproma, currentTimestep
     INTEGER  :: year, month, day, hour, minute, second
     REAL(wp) :: date
     REAL(wp), SAVE, ALLOCATABLE :: timevals(:)
@@ -400,11 +401,11 @@ CONTAINS
       currentTimestep = currentTimestep + 1
     END DO
 
-    IF (currentTimestep > time_dim) THEN 
-      WRITE (message_text,*) 'date ', date, ' not available in ', filename 
+    IF (currentTimestep > time_dim) THEN
+      WRITE (message_text,*) 'date ', date, ' not available in ', filename
       CALL finish (TRIM(routine), message_text)
     END IF
- 
+
     fstart(1:3) = (/ ics, iblk, currentTimestep /)
     fcount(1:3) = (/ ice-ics + 1, 1, 1 /)
 
@@ -424,7 +425,7 @@ CONTAINS
     CALL nf_check(nf_get_vara_double(ncid, t_bcoef_id,          fstart, fcount, t_bcoef))
     CALL nf_check(nf_get_vara_double(ncid, q_acoef_id,          fstart, fcount, q_acoef))
     CALL nf_check(nf_get_vara_double(ncid, q_bcoef_id,          fstart, fcount, q_bcoef))
-    CALL nf_check(nf_get_vara_double(ncid, pch_id,              fstart, fcount, pch)) 
+    CALL nf_check(nf_get_vara_double(ncid, pch_id,              fstart, fcount, pch))
     CALL nf_check(nf_get_vara_double(ncid, cos_zenith_angle_id, fstart, fcount, cos_zenith_angle))
 #else
     CALL finish(TRIM(routine), 'Not implemented for use with ICON')
@@ -432,5 +433,6 @@ CONTAINS
 
   END SUBROUTINE read_interface_variables
 
+#endif
 #endif
 END MODULE mo_jsb_test

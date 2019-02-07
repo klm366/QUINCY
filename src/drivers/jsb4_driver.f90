@@ -9,6 +9,7 @@
 !! First version by Julia Nabel (2015-11-02), copied several parts from jsbach3 jsbalone_driver.f90
 !!
 PROGRAM jsb4_driver
+#ifndef __NO_JSBACH__
 #ifndef __ICON__
 
   USE mo_jsb_interface,      ONLY: jsbach_interface
@@ -320,7 +321,7 @@ PROGRAM jsb4_driver
   CALL open_output_streams
 
   ! - Main loop
-  main_loop:DO 
+  main_loop:DO
 
     CALL time_set   !(echam!)
     IF(is_newday()) THEN
@@ -359,7 +360,7 @@ PROGRAM jsb4_driver
 
     DO iblk = 1, nblks
       CALL model%Set_options(iblk=iblk)
- 
+
 ! current assumption for standalone: nlon=nproma=npromz, therefore set (and allocated fields) outside the loop
 !   Else would need large refactoring and:
 !          IF ( iblk == nblks ) THEN
@@ -461,5 +462,6 @@ PROGRAM jsb4_driver
 
   ! Stop MPI
   CALL p_stop
+#endif
 #endif
 END PROGRAM jsb4_driver

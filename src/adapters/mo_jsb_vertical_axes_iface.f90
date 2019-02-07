@@ -10,8 +10,7 @@
 MODULE mo_jsb_vertical_axes_iface
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp, dp
-  USE mo_exception, ONLY: finish, message
+  USE mo_kind, ONLY: wp !, dp
 
 #ifdef __ICON__
   USE mo_name_list_output_zaxes_types, ONLY: t_verticalAxis, t_verticalAxisList
@@ -50,8 +49,6 @@ CONTAINS
     CHARACTER(len=*),         INTENT(in)    :: units
     REAL(wp),                 INTENT(in)    :: levels(:), lbounds(:), ubounds(:)
 
-    TYPE(t_verticalAxis), POINTER :: axis
-
     CALL verticalAxisList%append( &
       & t_verticalAxis(zaxisTypeList%getEntry(zaxis_id), &
       &                length,                           &
@@ -63,7 +60,6 @@ CONTAINS
       &                zaxisLongname = longname          &
       &               ) &
       & )
-    axis => verticalAxisList%getEntry(icon_zaxis_type=zaxis_id)
 
   END SUBROUTINE Setup_jsb_vertical_axis
 

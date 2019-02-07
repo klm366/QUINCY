@@ -34,19 +34,9 @@ MODULE mo_jsb_time
   PUBLIC :: get_asselin_coef
   PUBLIC :: timeStep_in_days, time_steps_per_day
 
-  INTEGER                :: number_timesteps
-  REAL(wp)               :: timestep_length
   TYPE(t_datetime), SAVE :: start_date
   TYPE(t_datetime), SAVE :: current_date
   TYPE(t_datetime), SAVE :: final_date
-
-!!$  !>
-!!$  !! Initialize JSBACH time control
-!!$  !!
-!!$  INTERFACE init_jsb_time
-!!$    MODULE PROCEDURE init_time_standalone
-!!$    MODULE PROCEDURE init_time
-!!$  END INTERFACE init_jsb_time
 
   LOGICAL, SAVE :: time_initialized = .FALSE.
 
@@ -54,15 +44,10 @@ MODULE mo_jsb_time
 
 CONTAINS
 
-  !>
-  !! @brief Initialize time control for JSBACH standalone
-  !!
-!!$  SUBROUTINE init_time_standalone(namelist_filename)
   SUBROUTINE init_time(namelist_filename, model_shortname, restart_jsbach)
 
     USE mo_jsb_time_iface, ONLY: read_time_namelist, & !, configure_time
                                  configure_time_and_events, &
-                                 get_time_nsteps, &
                                  get_time_start, get_time_stop
 
     CHARACTER(len=*), OPTIONAL, INTENT(IN) :: namelist_filename
@@ -85,6 +70,7 @@ CONTAINS
 
       ! TBD: remove #ifdef
 #ifdef __ICON__
+    IF (PRESENT(restart_jsbach)) CONTINUE ! avoid compiler warnings about dummy arguments not being used
     IF (PRESENT(namelist_filename)) THEN
       CALL read_time_namelist(TRIM(namelist_filename))
 #else
@@ -99,12 +85,16 @@ CONTAINS
         CALL configure_time_and_events()
       ENDIF
 
-      number_timesteps  = get_time_nsteps()
-      timestep_length   = get_time_dt()
-      start_date        = get_time_start()
-      final_date        = get_time_stop()
-
+      start_date       = get_time_start()
+      final_date       = get_time_stop()
       current_date     = start_date
+
+      ! just to avoid compiler warnings about variable set but never referenced
+      IF (.FALSE.) THEN
+        PRINT*, start_date%date%year
+        PRINT*, final_date%date%year
+        PRINT*, current_date%date%year
+      END IF
 
       ! Check if Asselin time filter is used and print message
       eps = get_asselin_coef()
@@ -120,28 +110,6 @@ CONTAINS
 
   END SUBROUTINE init_time
 
-!!$  END SUBROUTINE init_time_standalone
-
-!!$  !>
-!!$  !! @brief Initialize JSBACH time control from other model
-!!$  !!
-!!$  SUBROUTINE init_time(nsteps, ini_datetime, end_datetime, dtime)
-!!$
-!!$    INTEGER,          INTENT(in) :: nsteps
-!!$    TYPE(t_datetime), INTENT(in) :: ini_datetime
-!!$    TYPE(t_datetime), INTENT(in) :: end_datetime
-!!$    REAL(wp),         INTENT(in) :: dtime
-!!$
-!!$    CHARACTER(len=*), PARAMETER :: routine = modname//':init_time'
-!!$
-!!$    number_timesteps = nsteps
-!!$    timestep_length  = dtime
-!!$    start_date       = ini_datetime
-!!$    final_date       = end_datetime
-!!$
-!!$    current_date     = start_date
-!!$
-!!$  END SUBROUTINE init_time
 
   SUBROUTINE update_time_at_beginloop(istep, is_standalone)
 
@@ -292,7 +260,7 @@ CONTAINS
 
   END FUNCTION get_year_at_model_start
 
-  
+
   REAL(wp) FUNCTION timeStep_in_days() ! EXPRESS the time step in days (as fraction of day)
     USE mo_jsb_time_iface,   ONLY: get_time_dt
 
@@ -322,6 +290,6 @@ CONTAINS
 
   END FUNCTION time_steps_per_day
 
-   
+
 #endif
 END MODULE mo_jsb_time

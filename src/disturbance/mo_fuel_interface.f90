@@ -18,7 +18,6 @@ MODULE mo_fuel_interface
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, finish
 
-  USE mo_jsb_grid_class,     ONLY: t_jsb_grid
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
@@ -115,7 +114,7 @@ CONTAINS
     ! Local variables
     TYPE(t_jsb_model), POINTER                :: model
 
-    INTEGER :: iblk, ics, ice, nc
+    INTEGER :: iblk, ics, ice
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_fuel'
 
@@ -144,7 +143,6 @@ CONTAINS
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-    nc      = options%nc
 
     ! If process is not active on this tile, do nothing
     IF (.NOT. tile%Is_process_active(FUEL_)) RETURN
@@ -232,21 +230,16 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER          :: weighted_by_fract
 
-    TYPE(t_jsb_model), POINTER                :: model
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_fuel'
 
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice
 
     ! Get local variables from options argument
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_memory(FUEL_)
 

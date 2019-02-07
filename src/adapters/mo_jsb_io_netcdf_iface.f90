@@ -1,5 +1,5 @@
 !>
-!! @brief Contains the interface to io 
+!! @brief Contains the interface to io
 !!
 !! @author
 !!  Reiner Schnur, MPI-M Hamburg
@@ -82,7 +82,9 @@ CONTAINS
 
     CHARACTER(LEN=*),    INTENT(in) :: filename
 
+#ifndef __ICON__
     INTEGER :: file_id, return_status
+#endif
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':netcdf_open_input_generic'
 
@@ -116,7 +118,9 @@ CONTAINS
     TYPE(t_patch),       INTENT(in) :: patch
     TYPE(pe_decomposed), INTENT(in) :: decomp
 
+#ifndef __ICON__
     INTEGER :: file_id, return_status
+#endif
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':netcdf_open_input_patch'
 
@@ -221,7 +225,7 @@ CONTAINS
         CALL nf(nf_inq_vardimid(file_id, varid, dim_id(1:ndims)), TRIM(routine))
         CALL nf(nf_inq_dimlen(file_id, dim_id(1), var_size(1)), TRIM(routine))
       END IF
-      
+
       CALL p_bcast(var_size(1), p_io, mpi_comm)
 
       ALLOCATE(tmp_array(var_size(1)))
@@ -255,10 +259,10 @@ CONTAINS
     CHARACTER(LEN=*),   INTENT(in)    :: variable_name
     REAL(wp), TARGET, OPTIONAL        :: fill_array(:,:)
     REAL(wp), POINTER                 :: netcdf_read_real_2d(:,:)
-
+#ifndef __ICON__
     REAL(wp), POINTER :: tmp_array(:,:)
     INTEGER :: file_id, var_id
-
+#endif
     CHARACTER(len=*), PARAMETER :: routine = modname//':netcdf_read_real_2d'
 
     NULLIFY(netcdf_read_real_2d)
@@ -327,10 +331,13 @@ CONTAINS
     CHARACTER(LEN=*), OPTIONAL, INTENT(in)    :: extdim_name
     REAL(wp), POINTER                         :: netcdf_read_real_2d_extdim(:,:,:)
 
+#ifndef __ICON__
     INTEGER :: i, start_allocated_step, end_allocated_step, steps, start_step, end_step
     REAL(wp), POINTER :: tmp_array(:,:,:), ptr(:,:)
-    INTEGER :: file_id, var_id, var_ndims, var_dim_ids(1:3), var_extdim_size, start_read_index(1:3), count_read_index(1:3)
+    INTEGER :: file_id, var_id
+    INTEGER :: var_ndims, var_dim_ids(1:3), var_extdim_size, start_read_index(1:3), count_read_index(1:3)
     CHARACTER(LEN=NF_MAX_NAME) :: var_extdim_name
+#endif
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':netcdf_read_real_2d_extdim'
 

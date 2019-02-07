@@ -10,8 +10,6 @@
 MODULE mo_phy_schemes_iface
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp
-
 #ifdef __ICON__
 !!$  USE mo_satad, ONLY: specific_humidity => spec_humi, &
 !!$                      sat_pres_water

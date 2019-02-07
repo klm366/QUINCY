@@ -13,16 +13,16 @@ MODULE mo_hd_memory_class
 
   USE mo_kind, ONLY: wp
 
-  USE mo_jsb_model_class,  ONLY: t_jsb_model
-  USE mo_jsb_class,        ONLY: Get_model
+  !USE mo_jsb_model_class,  ONLY: t_jsb_model
+  !USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_memory_class, ONLY: t_jsb_memory
   USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
   ! Use of prcesses in this module
-  dsl4jsb_Use_processes HD_
+  !dsl4jsb_Use_processes HD_
 
   ! Use process configurations
-  dsl4jsb_Use_config(HD_)
+  !dsl4jsb_Use_config(HD_)
 
   IMPLICIT NONE
   PRIVATE
@@ -85,18 +85,18 @@ CONTAINS
     INTEGER,            INTENT(in)    :: lct_ids(:)
     INTEGER,            INTENT(in)    :: model_id
 
-    dsl4jsb_Def_config(HD_)
+    !dsl4jsb_Def_config(HD_)
 
-    TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid                      ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface, hd_o, hd_b, hd_r  ! Vertical grids
     INTEGER :: table
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_hd_memory'
 
-    table = tables(1)
+    IF (lct_ids(1) > 0)  CONTINUE ! avoid compiler warning about dummy argument not being used
+    IF (model_id > 0)    CONTINUE ! avoid compiler warning about dummy argument not being used
 
-    model => Get_model(model_id)
+    table = tables(1)
 
     hgrid   => Get_grid(mem%grid_id)
     surface => get_vgrid('surface')
@@ -106,7 +106,7 @@ CONTAINS
     hd_b => get_vgrid('hd_nres_baseflow')
     hd_r => get_vgrid('hd_nres_riverflow')
 
-    dsl4jsb_Get_config(HD_)
+    !dsl4jsb_Get_config(HD_)
 
     IF (ASSOCIATED(mem%hd_mask%ptr)) RETURN
 

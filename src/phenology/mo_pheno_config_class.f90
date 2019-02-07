@@ -6,15 +6,14 @@
 !!
 !! @par Revision History
 !! First version by Rainer Schneck (2015-09-09)
-!! Julia Nabel (2018-01-10): added l_forestRegrowth flag for optional functionality: forest regrowth 
+!! Julia Nabel (2018-01-10): added l_forestRegrowth flag for optional functionality: forest regrowth
 !!                          (derive maxLAI from biomass via allometric relationships)
 !!
 MODULE mo_pheno_config_class
 #ifndef __NO_JSBACH__
 
-  USE mo_exception,         ONLY: message, finish
+  USE mo_exception,         ONLY: message
   USE mo_io_units,          ONLY: filename_max
-  USE mo_kind,              ONLY: wp
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
   IMPLICIT NONE

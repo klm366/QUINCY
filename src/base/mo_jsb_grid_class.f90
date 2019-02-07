@@ -89,7 +89,7 @@ MODULE mo_jsb_grid_class
   INTERFACE new_grid
     MODULE PROCEDURE new_grid_from_file
     MODULE PROCEDURE new_grid_from_host
-    MODULE PROCEDURE new_grid_from_lonlat
+    ! MODULE PROCEDURE new_grid_from_lonlat ! Not implemented, yet!
   END INTERFACE new_grid
 
   INTEGER, SAVE :: ngrid_count = 0
@@ -200,21 +200,22 @@ CONTAINS
 
   END FUNCTION new_grid_from_file
 
-  FUNCTION new_grid_from_lonlat(lon, lat) RESULT(grid)
+  ! Not implemented, yet!
+  ! FUNCTION new_grid_from_lonlat(lon, lat) RESULT(grid)
 
-    REAL(wp)                        :: lon
-    REAL(wp)                        :: lat
-    TYPE(t_jsb_grid), POINTER       :: grid
+  !   REAL(wp)                        :: lon
+  !   REAL(wp)                        :: lat
+  !   TYPE(t_jsb_grid), POINTER       :: grid
 
-    TYPE(t_jsb_grid), POINTER       :: new
+  !   TYPE(t_jsb_grid), POINTER       :: new
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':new_grid_from_lonlat'
+  !   CHARACTER(len=*), PARAMETER :: routine = modname//':new_grid_from_lonlat'
 
-    ALLOCATE(new)
+  !   ALLOCATE(new)
 
-    grid => new
+  !   grid => new
 
-  END FUNCTION new_grid_from_lonlat
+  ! END FUNCTION new_grid_from_lonlat
 
   SUBROUTINE delete_grid(self)
 
@@ -389,7 +390,7 @@ CONTAINS
 
     TYPE(t_jsb_vgrid), POINTER :: new
 
-    INTEGER :: i, idx
+    INTEGER :: i
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':new_vgrid'
 
@@ -509,8 +510,6 @@ CONTAINS
 #else
     TYPE(t_jsb_vgrid), POINTER :: self
 #endif
-
-    INTEGER :: i, idx
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':delete_vgrid'
 

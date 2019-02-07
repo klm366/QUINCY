@@ -21,10 +21,10 @@ MODULE mo_carbon_constants
 
   REAL(wp), PARAMETER :: FireFracWood2Atmos      =  0.2_wp              !< Fraction of wood carbon emitted to the atm by fire.
                                                                         !< In JS3 called def_fire_fract_wood_2_atmos.
-  REAL(wp), PARAMETER :: fract_wood_aboveGround  = 0.7_wp               !< Fraction of Carbon above ground in wood pool (for separation
-                                                                        !    of woody litter into above and below ground litter pools)
-  REAL(wp), PARAMETER :: fract_green_aboveGround = 0.5_wp               !< Fraction of Carbon above ground in green pool (for separation
-                                                                        !    of green litter into above and below ground litter pools)
+  REAL(wp), PARAMETER :: fract_wood_aboveGround  = 0.7_wp               !< Fraction of C above ground in wood pool (for separation
+                                                                        !  of woody litter into above and below ground litter pools)
+  REAL(wp), PARAMETER :: fract_green_aboveGround = 0.5_wp               !< Fraction of C above ground in green pool (for separation
+                                                                        !  of green litter into above and below ground litter pools)
 
   REAL(wp), PARAMETER :: sec_per_day             = 86400._wp            !< seconds per day
   REAL(wp), PARAMETER :: days_per_year           = 365.25_wp

@@ -10,7 +10,6 @@
 MODULE mo_jsb_vertical_axes
 #ifndef __NO_JSBACH__
 
-  USE mo_exception,               ONLY: message
   USE mo_jsb_vertical_axes_iface, ONLY: t_verticalAxisList, Setup_jsb_vertical_axis, &
     &                                   t_Vgrid, Set_jsb_restart_vgrid
   USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid, t_jsb_vgrid_ptr
@@ -38,7 +37,7 @@ CONTAINS
     CHARACTER(LEN=*), PARAMETER :: routine = modname//"::setup_zaxes_jsbach"
 
     IF (.NOT. ALLOCATED(jsbach_vgrids)) RETURN
- 
+
     DO i=1,SIZE(jsbach_vgrids)
       vgrid => jsbach_vgrids(i)%p
       CALL Setup_jsb_vertical_axis(vertical_axis_list, &
@@ -64,7 +63,7 @@ CONTAINS
     INTEGER :: i
 
     IF (.NOT. ALLOCATED(jsbach_vgrids)) RETURN
- 
+
     DO i=1,SIZE(jsbach_vgrids)
       jsb_vgrid => jsbach_vgrids(i)%p
       CALL Set_jsb_restart_vgrid(vgrid_defs, count,  &

@@ -14,17 +14,16 @@ MODULE mo_jsb_time_iface
 
   USE mo_kind,               ONLY: wp
   USE mo_exception,          ONLY: finish, message, message_text
-  USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel, mpi_comm
 
 #ifdef __ICON__
   USE mtime,                     ONLY: t_datetime => datetime, newDatetime, deallocateDatetime,      &
     &                                  OPERATOR(+), OPERATOR(*), OPERATOR(==),                       &
     &                                  OPERATOR(<=), OPERATOR(>), OPERATOR(-),                       &
-    &                                  divisionquotienttimespan, getDayOfYearFromDateTime,           &   
-    &                                  getNoOfDaysInMonthDateTime, getNoOfDaysInYearDateTime,        & 
+    &                                  divisionquotienttimespan, getDayOfYearFromDateTime,           &
+    &                                  getNoOfDaysInMonthDateTime, getNoOfDaysInYearDateTime,        &
     &                                  getTotalMilliSecondsTimeDelta, no_of_sec_in_a_day,            &
     &                                  getNoOfSecondsElapsedInDayDateTime, getTotalSecondsTimeDelta, &
-    &                                  divideDatetimeDifferenceInSeconds, isCurrentEventActive
+    &                                  divideDatetimeDifferenceInSeconds !, isCurrentEventActive
   USE mo_time_config,            ONLY: time_config !configure_time
   USE mo_time_nml,               ONLY: read_time_namelist
   USE mo_dynamics_config,        ONLY: iequations
@@ -34,7 +33,6 @@ MODULE mo_jsb_time_iface
   USE mo_bcs_time_interpolation, ONLY: t_time_interpolation_weights,              &
     &                                  calculate_time_interpolation_weights
   USE mo_echam_phy_config,       ONLY: echam_phy_tc, dt_zero
-  USE mo_master_config,          ONLY: isRestart
   USE mo_run_config,             ONLY: l_timer_host => ltimer
 #else
   USE mo_time_conversion, ONLY: t_datetime => time_days, &
@@ -47,6 +45,7 @@ MODULE mo_jsb_time_iface
   USE mo_control,         ONLY: l_timer_host => ltimer
 
 #ifdef STANDALONE
+  USE mo_jsb_parallel_iface, ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel, mpi_comm
   USE mo_time_event,      ONLY: io_time_event, TIME_INC_DAYS, TIME_INC_MONTHS, TRIG_FIRST, TRIG_LAST
   USE mo_time_control,    ONLY: lresume, dt_start, dt_resume, dt_stop, delta_time, no_cycles, &
                                 no_days, no_steps, putdata, putrerun, trigfiles, p_bcast_event
@@ -83,6 +82,9 @@ CONTAINS
     CHARACTER(len=*), OPTIONAL, INTENT(IN) :: model_shortname
 
     ! CALL configure_time
+    ! avoid compiler warnings about dummy arguments not being used
+    IF (PRESENT(model_shortname)) CONTINUE
+
     RETURN
 
   END SUBROUTINE configure_time_and_events
@@ -246,7 +248,7 @@ CONTAINS
 
 #ifdef __ICON__
     TYPE(divisionquotienttimespan) :: tq
-    
+
     CALL divideDatetimeDifferenceInSeconds(time_config%tc_stopdate,    &
          &                                 time_config%tc_startdate,   &
          &                                 time_config%tc_dt_model, tq)
@@ -308,9 +310,9 @@ CONTAINS
   !! @brief Get time at previous time step
   !!
   FUNCTION get_time_previous() RESULT(previous)
-    TYPE(t_datetime) :: previous 
+    TYPE(t_datetime) :: previous
 #ifdef __ICON__
-    previous = time_config%tc_current_date + (-1) * time_config%tc_dt_model 
+    previous = time_config%tc_current_date + (-1) * time_config%tc_dt_model
 #else
     previous = previous_date
 #endif
@@ -323,7 +325,7 @@ CONTAINS
   FUNCTION get_time_next() RESULT(next)
     TYPE(t_datetime) :: next
 #ifdef __ICON__
-    next = time_config%tc_current_date + (1) * time_config%tc_dt_model 
+    next = time_config%tc_current_date + (1) * time_config%tc_dt_model
 #else
     next = next_date
 #endif
@@ -420,7 +422,7 @@ CONTAINS
     INTEGER, INTENT(in) :: istep
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':finish_timestep'
-    
+
 #ifdef __ICON__
     WRITE(message_text,'(a,i10)') 'JSBACH: Finish TIME STEP n: ', istep
     CALL message(TRIM(routine),message_text)
@@ -503,7 +505,7 @@ CONTAINS
   !! Get day in year
   !!
   !! Function returns the day of the year for a given date.
-  !! The seconds in the day are given as fraction of the day. 
+  !! The seconds in the day are given as fraction of the day.
   !!
 #ifdef __ICON__
   REAL(wp) FUNCTION get_year_day(date)
@@ -524,7 +526,7 @@ CONTAINS
     INTEGER, INTENT(out)  :: n1, n2
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_time_interpolation_weights'
-    
+
 #ifdef __ICON__
     TYPE(t_time_interpolation_weights) :: current_time_interpolation_weights
 
@@ -592,7 +594,7 @@ CONTAINS
 
     TYPE(FILE_INFO) :: IO_file
     INTEGER :: IO_file_id
-    INTEGER :: forecast_date, verification_date   ! YYYYMMDD 
+    INTEGER :: forecast_date, verification_date   ! YYYYMMDD
     INTEGER :: forecast_time, verification_time   ! HHMMSS
     TYPE(time_native) :: date_nat
 
@@ -617,7 +619,7 @@ CONTAINS
           IO_timestep = delta_time
        ENDIF
     ENDIF
-       
+
     IF (p_parallel) THEN
        CALL p_bcast(istep, p_io, comm=mpi_comm)
        CALL p_bcast(IO_timestep, p_io, comm=mpi_comm)
@@ -628,7 +630,7 @@ CONTAINS
           CALL p_bcast(verification_time, p_io, comm=mpi_comm)
        ENDIF
     ENDIF
-       
+
     IF (lresume) THEN
        CALL inp_convert_date(forecast_date, forecast_time, start_date)
        CALL inp_convert_date(verification_date, verification_time, resume_date)

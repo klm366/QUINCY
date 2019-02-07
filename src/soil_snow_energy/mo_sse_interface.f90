@@ -11,7 +11,7 @@ MODULE mo_sse_interface
 #ifndef __NO_JSBACH__
 
   USE mo_kind,            ONLY: wp
-  USE mo_exception,       ONLY: message, finish
+  USE mo_exception,       ONLY: message
 
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_jsb_time,        ONLY: is_time_experiment_start
@@ -21,15 +21,12 @@ MODULE mo_sse_interface
   USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid
   USE mo_jsb_grid,           ONLY: Get_vgrid
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
-  USE mo_jsb_memory_class,   ONLY: t_jsb_memory, t_jsb_memory_p
-  USE mo_jsb_config_class,   ONLY: t_jsb_config
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
-  dsl4jsb_Use_processes SSE_, SEB_, A2L_, HYDRO_
+  dsl4jsb_Use_processes SSE_, SEB_, HYDRO_ 
   dsl4jsb_Use_config(SSE_)
   dsl4jsb_Use_config(HYDRO_)
-  dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(HYDRO_)
@@ -85,7 +82,7 @@ CONTAINS
     CALL return_ptr%Construct(name='soil_temperature', process_id=SSE_, owner_model_id=model_id)
 
   END FUNCTION Create_task_soil_temperature
-  
+
   ! -------------------------------------------------------------------------------------------------------
   !> Constructor for soil_properties task
   !!
@@ -101,7 +98,7 @@ CONTAINS
     CALL return_ptr%Construct(name='soil_properties', process_id=SSE_, owner_model_id=model_id)
 
   END FUNCTION Create_task_soil_properties
-  
+
   SUBROUTINE Register_sse_tasks(process, model_id)
 
     CLASS(t_jsb_process), INTENT(inout) :: process
@@ -123,11 +120,10 @@ CONTAINS
 
     ! Local variables
     !
+    TYPE(t_jsb_model), POINTER :: model
     dsl4jsb_Def_config(SSE_)
-    dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(SEB_)
-    dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(HYDRO_)
 
     ! Pointers to variables in memory
@@ -161,29 +157,23 @@ CONTAINS
     ! Locally allocated vectors
     !
     REAL(wp), DIMENSION(options%nc) :: &
-      & snow_depth, &
-      & snow_fract, &
-      & t_unfilt_corrected, &
-      & t_soil_top, &
-      & hcap_grnd_snow, &
-      & hcap_grnd_soil, &
-      & grnd_hflx_snow, &
+      & snow_depth,                    &
+      & snow_fract,                    &
+      & t_unfilt_corrected,            &
+      & t_soil_top,                    &
+      & hcap_grnd_snow,                &
+      & hcap_grnd_soil,                &
+      & grnd_hflx_snow,                &
       & grnd_hflx_soil
-    INTEGER, DIMENSION(options%nc) :: &
+    INTEGER, DIMENSION(options%nc) ::  &
       & itop, itop_old
 
-    LOGICAL :: &
-      is_glacier(options%nc)
-
-    INTEGER :: jllog, isnow
+    INTEGER :: isnow
 
     LOGICAL  :: lstart
-    LOGICAL  :: l_tpe_open = .FALSE.
-    LOGICAL  :: l_tpe_closed = .FALSE.
     INTEGER  :: iblk, ics, ice, nc
-    REAL(wp) :: dtime, steplen
+    REAL(wp) :: dtime
 
-    TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_vgrid), POINTER :: soil_e, snow_e
     INTEGER                    :: nsoil, nsnow
 
@@ -194,16 +184,12 @@ CONTAINS
     ice   = options%ice
     nc    = options%nc
     dtime = options%dtime
-    steplen = options%steplen
 
     IF (.NOT. tile%Is_process_active(SSE_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
     model => Get_model(tile%owner_model_id)
-
     dsl4jsb_Get_config(SSE_)
-    dsl4jsb_Get_config(HYDRO_)
 
     soil_e => Get_vgrid('soil_depth_energy')
     nsoil = soil_e%n_levels
@@ -216,7 +202,6 @@ CONTAINS
     !
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(SEB_)
-    dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(HYDRO_)
 
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil)            ! inout
@@ -237,14 +222,14 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(SSE_, t_snow_bcoef)    ! inout
     END IF
     IF (.NOT. tile%is_glacier) THEN
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)   ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl) ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, matrix_pot_sl)   ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, bclapp_sl)       ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_sl)       ! inout
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, w_ice_sl)        ! inout
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)    ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl)  ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, matrix_pot_sl)    ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, bclapp_sl)        ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_sl)        ! inout
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, w_ice_sl)         ! inout
       dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_freeze_sl) ! out
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, w_ice_melt_sl)   ! out
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, w_ice_melt_sl)    ! out
     END IF
     dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth)      ! out
 
@@ -263,18 +248,18 @@ CONTAINS
     IF (lstart) THEN
       t_unfilt_corrected(:) = t_unfilt(:)
     ELSE
-      t_unfilt_corrected(:) = t_unfilt(:) - dsl4jsb_var2D_onChunk(HYDRO_, snowmelt) * dtime * alf / hcap_grnd(:) 
+      t_unfilt_corrected(:) = t_unfilt(:) - dsl4jsb_var2D_onChunk(HYDRO_, snowmelt) * dtime * alf / hcap_grnd(:)
     END IF
 
     IF (.NOT. dsl4jsb_Config(SSE_)%l_snow) THEN
 
-      CALL calc_soiltemp_old( &
-        & nc, &
-        & nsoil, &
-        & soil_e%dz(:), &
-        & soil_e%levels(:), &
-        & dtime, &
-        & lstart, &
+      CALL calc_soiltemp_old(                          &
+        & nc,                                          &
+        & nsoil,                                       &
+        & soil_e%dz(:),                                &
+        & soil_e%levels(:),                            &
+        & dtime,                                       &
+        & lstart,                                      &
         & t_unfilt_corrected                     (:),  &
         & dsl4jsb_var2D_onChunk(HYDRO_, w_snow_soil),  &
         & dsl4jsb_var2D_onChunk(SSE_,   heat_cond),    &
@@ -284,7 +269,7 @@ CONTAINS
         & t_soil                                (:,:), &
         & hcap_grnd                             (:),   &
         & grnd_hflx                             (:),   &
-        & SPREAD(tile%is_glacier, DIM=1, ncopies=nc)   &                
+        & SPREAD(tile%is_glacier, DIM=1, ncopies=nc)   &
         & )
 
       RETURN
@@ -339,7 +324,7 @@ CONTAINS
         & itop_old           (:), &
         & itop               (:), &
         & t_unfilt_corrected (:), &
-        & vol_heat_cap_snow  (:), & 
+        & vol_heat_cap_snow  (:), &
         & heat_cond_snow     (:), &
         & vol_heat_cap_sl  (:,1), &
         & heat_cond_sl     (:,1), &
@@ -370,7 +355,7 @@ CONTAINS
       hcap_grnd_snow(:) = 0._wp
     END IF
 
-    ! @todo: move water/ice calculations to HYDRO_ process 
+    ! @todo: move water/ice calculations to HYDRO_ process
     IF (tile%is_glacier) THEN
       CALL calc_soil_temperature( &
         ! in
@@ -383,7 +368,7 @@ CONTAINS
         & dsl4jsb_Config(SSE_)%l_freeze            , &
         & dsl4jsb_Config(SSE_)%l_supercool         , &
         & t_soil_top                          (:  ), &
-        & vol_heat_cap_sl                     (:,:), & 
+        & vol_heat_cap_sl                     (:,:), &
         & heat_cond_sl                        (:,:), &
         ! inout
         & t_soil                              (:,:), &
@@ -406,7 +391,7 @@ CONTAINS
         & dsl4jsb_Config(SSE_)%l_freeze            , &
         & dsl4jsb_Config(SSE_)%l_supercool         , &
         & t_soil_top                          (:  ), &
-        & vol_heat_cap_sl                     (:,:), & 
+        & vol_heat_cap_sl                     (:,:), &
         & heat_cond_sl                        (:,:), &
         ! inout
         & t_soil                              (:,:), &
@@ -447,22 +432,19 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     TYPE(t_jsb_model), POINTER :: model
-
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(HYDRO_)
-    dsl4jsb_Def_memory(SEB_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_soil_temperature'
 
-    INTEGER :: iblk, ics, ice, nc
+    INTEGER :: iblk, ics, ice
 
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -497,15 +479,14 @@ CONTAINS
 
   SUBROUTINE update_soil_properties(tile, options)
 
-    USE mo_jsb_physical_constants, ONLY: ci, cs, dens_snow_min
-    USE mo_sse_constants,          ONLY: vol_hcap_ice, vol_hcap_snow, vol_hcap_snow_min, hcond_ice, hcond_snow, hcond_snow_min
+    USE mo_jsb_physical_constants, ONLY: ci, dens_snow_min ! , cs
+    USE mo_sse_constants,          ONLY: vol_hcap_ice, vol_hcap_snow, hcond_ice, hcond_snow, hcond_snow_min !, vol_hcap_snow_min
     USE mo_sse_process,            ONLY: calc_vol_heat_capacity, calc_thermal_conductivity
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Local variables
-    !
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_config(HYDRO_)
@@ -513,21 +494,21 @@ CONTAINS
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: &
-      & snow_soil_dens, &
-      & vol_heat_cap, &
-      & heat_cond, &
-      & vol_heat_cap_snow, &
+      & snow_soil_dens,       &
+      & vol_heat_cap,         &
+      & heat_cond,            &
+      & vol_heat_cap_snow,    &
       & heat_cond_snow
     dsl4jsb_Real3D_onChunk :: &
-      & soil_depth_sl, &
-      & fract_org_sl, &
-      & vol_heat_cap_sl, &
+      & soil_depth_sl,        &
+      & fract_org_sl,         &
+      & vol_heat_cap_sl,      &
       & heat_cond_sl
 
     ! Locally allocated vectors
     !
     dsl4jsb_Real3D_onChunk :: &
-      & fract_water,           &
+      & fract_water,          &
       & fract_ice
 
     TYPE(t_jsb_model), POINTER :: model
@@ -641,8 +622,9 @@ CONTAINS
           WHERE (snow_soil_dens(:) > dens_snow_min)          ! "old" or mixture of old and fresh snow
             vol_heat_cap_snow(:) = ci * snow_soil_dens(:)                               ! Use specific heat of ice (Verseghy 1991)
             ! heat_cond_snow   (:) = 2.576e-6_wp * snow_soil_dens(:) ** 2._wp + 0.074_wp                      ! Verseghy (1991)
-            ! heat_cond_snow   (:) = 2.9e-6_wp*snow_soil_dens(:)**2._wp                                         ! Goodrich (1982)
-            heat_cond_snow   (:) = 2.5e-6_wp*snow_soil_dens(:)**2._wp - 0.123e-3_wp*snow_soil_dens(:) + 0.024_wp ! Calonne et al. (2011)
+            ! heat_cond_snow   (:) = 2.9e-6_wp*snow_soil_dens(:)**2._wp                                       ! Goodrich (1982)
+            ! Calonne et al. (2011):
+            heat_cond_snow   (:) = 2.5e-6_wp*snow_soil_dens(:)**2._wp - 0.123e-3_wp*snow_soil_dens(:) + 0.024_wp
           ELSE WHERE                                         ! fresh snow
             ! @todo: these minimum values from mo_sse_constants.f90 don't match with the above equations and minimum snow density
             ! vol_heat_cap_snow(:) = vol_hcap_snow_min
@@ -650,11 +632,11 @@ CONTAINS
             vol_heat_cap_snow(:) = ci * dens_snow_min
           END WHERE
         ELSE
-          vol_heat_cap_snow(:) = vol_hcap_snow                                     ! Use specific heat of snow (cs * dens_snow) 
+          vol_heat_cap_snow(:) = vol_hcap_snow                                     ! Use specific heat of snow (cs * dens_snow)
           heat_cond_snow   (:) = hcond_snow
         END IF
       ELSE
-        vol_heat_cap_snow(:) = vol_hcap_snow                                     ! Use specific heat of snow (cs * dens_snow) 
+        vol_heat_cap_snow(:) = vol_hcap_snow                                     ! Use specific heat of snow (cs * dens_snow)
         heat_cond_snow   (:) = hcond_snow
       END IF
     END IF
@@ -669,13 +651,11 @@ CONTAINS
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
-  !!  
+  !!
   SUBROUTINE aggregate_soil_properties(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
-
-    TYPE(t_jsb_model), POINTER :: model
 
     dsl4jsb_Def_memory(SSE_)
 
@@ -683,16 +663,13 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_soil_properties'
 
-    INTEGER :: iblk, ics, ice, nc
+    INTEGER :: iblk, ics, ice
 
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_memory(SSE_)
 
