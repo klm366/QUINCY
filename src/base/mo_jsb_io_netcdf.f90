@@ -26,7 +26,7 @@ CONTAINS
 
     IF (PRESENT(grid_id)) THEN
       grid => Get_grid(grid_id)
-      jsb_netcdf_open_input = netcdf_open_input(filename, patch=grid%patch, decomp=grid%decomposition)
+      jsb_netcdf_open_input = netcdf_open_input(filename, grid%patch)
     ELSE
       jsb_netcdf_open_input = netcdf_open_input(filename)
     END IF

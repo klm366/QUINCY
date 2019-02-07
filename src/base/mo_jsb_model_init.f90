@@ -31,7 +31,6 @@ MODULE mo_jsb_model_init
   INTERFACE jsbach_setup_grid
     MODULE PROCEDURE setup_grid_standalone
     MODULE PROCEDURE setup_grid_patch
-    MODULE PROCEDURE setup_grid_decomposition
   END INTERFACE jsbach_setup_grid
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_model_init'
@@ -39,29 +38,38 @@ MODULE mo_jsb_model_init
 CONTAINS
 
   SUBROUTINE setup_grid_standalone(nproca, nprocb, npedim, model_id, model_name)
+
 #ifndef __ICON__
     !>>> TODO: echam
     USE mo_gaussgrid,     ONLY : inigau
     USE mo_echam_convect_tables, ONLY : init_convect_tables
     USE mo_netCDF,      ONLY: add_dim
     !<<<
-    USE mo_jsb_domain_iface, ONLY: get_lons_and_lats_from_file,
-#endif
-    USE mo_jsb_domain_iface, ONLY: get_nlon_nlat_from_file, jsbalone_init_decomp, pe_decomposed
+    USE mo_jsb_grid_iface,   ONLY: get_lons_and_lats_from_file, get_nlon_nlat_from_file
+    USE mo_jsb_domain_iface, ONLY: t_patch, jsbalone_init_decomp
     USE mo_jsb_grid_class,   ONLY: t_jsb_grid, new_grid
     USE mo_jsb_grid,         ONLY: Register_grid
+#endif
 
     INTEGER,                    INTENT(in) :: model_id, nproca, nprocb, npedim
     CHARACTER(len=*), OPTIONAL, INTENT(in) :: model_name
 
+#ifndef __ICON__
     TYPE(t_jsb_model),  POINTER  :: model
     TYPE(t_jsb_grid),   POINTER  :: grid
-    TYPE(pe_decomposed) :: decomposition
+    TYPE(t_patch)                :: decomposition
+
+    INTEGER :: nlon, nlat
+#endif
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':setup_grid_standalone'
 
-    INTEGER :: nlon, nlat
+#ifdef __ICON__
+    ! avoid compiler warnings about dummy arguments not being used
+    IF (.FALSE.) WRITE(*,*) nproca, nprocb, npedim, model_id, model_name
 
+    CALL finish(TRIM(routine),'Standalone model currently only works with ECHAM')
+#else
     model => Get_model(model_id)
 
     IF (PRESENT(model_name)) THEN
@@ -72,23 +80,15 @@ CONTAINS
     CALL get_nlon_nlat_from_file(model%config%grid_filename, nlon, nlat)
     CALL jsbalone_init_decomp(nlon, nlat, nproca, nprocb, npedim, decomposition)
 
-#ifndef __ICON__
     CALL inigau               ! beside others required for get_area, i.e. required before new_grid
     CALL init_convect_tables
 
     CALL add_dim("lon", nlon, "longitude", "degrees_east" ) !required to write restart files
     CALL add_dim("lat", nlat, "latitude", "degrees_north")
 
-#endif
-
     !needs to be done after the decomposition is initialised; required for get_lon and get_lat, especially for site-level sims
-#ifndef __ICON__
     CALL get_lons_and_lats_from_file(model%config%grid_filename, decomposition%nproma, decomposition%ngpblks)
-#else
-    CALL finish(TRIM(routine),'Standalone model currently only works with ECHAM')
-#endif
-
-    grid => new_grid(decomp=decomposition)
+    grid => new_grid(decomposition, type='echam')
 
     CALL register_grid(grid)
     model%grid_id = grid%id
@@ -96,32 +96,31 @@ CONTAINS
     ! CALL init_model_common(model)
 
     NULLIFY(model)
+#endif
 
   END SUBROUTINE setup_grid_standalone
 
-  SUBROUTINE setup_grid_patch( model_id, patch)
+  SUBROUTINE setup_grid_patch( model_id, patch, type)
 
     USE mo_jsb_domain_iface, ONLY: t_patch
     USE mo_jsb_grid_class,   ONLY: t_jsb_grid, new_grid
     USE mo_jsb_grid,         ONLY: Register_grid
 
-    INTEGER,                    INTENT(in) :: model_id
-    TYPE(t_patch),              INTENT(in) :: patch
+    INTEGER,               INTENT(in) :: model_id
+    TYPE(t_patch), TARGET, INTENT(in) :: patch
+    CHARACTER(LEN=*),      INTENT(in) :: type
 
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':setup_grid_patch'
 
-    IF (patch%id < 0) &
-      CALL finish(TRIM(routine), 'Improper call with invalid patch')
-
     IF (model_id > get_no_of_models()) &
-      CALL finish(TRIM(routine), 'Host request to more jsbach models than are defined')
+      CALL finish(routine, 'Host request to more jsbach models than are defined')
 
     model => Get_model(model_id)
 
-    grid => new_grid(patch=patch)
+    grid => new_grid(patch, type)
     CALL Register_grid(grid)
     model%grid_id = grid%id
 
@@ -130,36 +129,6 @@ CONTAINS
     NULLIFY(model)
 
   END SUBROUTINE setup_grid_patch
-
-  SUBROUTINE setup_grid_decomposition( model_id, decomposition)
-
-    USE mo_jsb_domain_iface, ONLY: pe_decomposed
-    USE mo_jsb_grid_class,   ONLY: t_jsb_grid, new_grid
-    USE mo_jsb_grid,         ONLY: Register_grid
-
-    INTEGER,               INTENT(in) :: model_id
-    TYPE(pe_decomposed),   INTENT(in) :: decomposition
-
-    TYPE(t_jsb_model), POINTER  :: model
-    TYPE(t_jsb_grid),  POINTER  :: grid
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':setup_grid_decomposition'
-
-    IF (decomposition%nlon < 0) &
-      CALL finish(TRIM(routine), 'Improper call with invalid decomposition')
-
-    IF (model_id > get_no_of_models()) &
-      CALL finish(TRIM(routine), 'Host request to more jsbach models than are defined')
-
-    model => Get_model(model_id)
-
-    grid => new_grid(decomp=decomposition)
-    CALL Register_grid(grid)
-    model%grid_id = grid%id
-
-    NULLIFY(model)
-
-  END SUBROUTINE setup_grid_decomposition
 
   SUBROUTINE jsbach_init(model_id)
 
