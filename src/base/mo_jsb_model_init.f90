@@ -240,8 +240,8 @@ CONTAINS
     END IF
     CALL model%Queue_task(HYDRO_,  "surface_hydrology")
     CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
-    CALL model%Queue_task(SSE_,    "soil_properties")
-    CALL model%Queue_task(SSE_,    "soil_temperature")
+    CALL model%Queue_task(SSE_,    "soil_and_snow_properties")
+    CALL model%Queue_task(SSE_,    "soil_and_snow_temperature")
     CALL model%Queue_task(HYDRO_,  "soil_hydrology")
 #ifndef __NO_JSBACH_HD__
     CALL model%Queue_task(HD_,     "hd_local_outflow")

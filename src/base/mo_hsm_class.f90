@@ -1132,13 +1132,13 @@ CONTAINS
 
     INTEGER :: no_omp_thread
 
-    IF (this%levels_to_lca(no_omp_thread) == -1) RETURN
-
 #ifdef _OPENMP
     no_omp_thread = omp_get_thread_num() + 1
 #else
     no_omp_thread = 1
 #endif
+
+    IF (this%levels_to_lca(no_omp_thread) == -1) RETURN
 
 !!$    CALL message(TRIM(routine), 'Processing exit messages to lca ...'//int2string(this%levels_to_lca))
 
