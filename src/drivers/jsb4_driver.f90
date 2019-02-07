@@ -31,7 +31,7 @@ PROGRAM jsb4_driver
   USE mo_jsb4_forcing,       ONLY: get_interface_variables_from_external_forcing, init_forcing
 
   ! Currently from adapter
-  USE mo_jsb_domain_iface,   ONLY: get_lat, get_lon
+  USE mo_jsb_grid_iface,     ONLY: get_lat, get_lon
   USE mo_jsb_namelist_iface, ONLY: POSITIONED, open_nml, position_nml
   USE mo_jsb_parallel,       ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel, mpi_comm
   USE mo_jsb_test,           ONLY: read_interface_vars, read_interface_variables
@@ -266,8 +266,8 @@ PROGRAM jsb4_driver
 
     !TODO: get from grid? but how to name such a function get_lon_from_grid?
     !      and if, shouldn't then also get_nproma should be called get_nproma_from_grid?
-    lon = get_lon(decomp = local_decomposition)
-    lat = get_lat(decomp = local_decomposition)
+    lon = get_lon(local_decomposition)
+    lat = get_lat(local_decomposition)
 
     ALLOCATE(coslon(nproma,nblks))
     ALLOCATE(coslat(nproma,nblks))

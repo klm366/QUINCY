@@ -13,15 +13,15 @@ MODULE mo_jsb_grid_class
   USE mo_kind,               ONLY: wp
   USE mo_io_units,           ONLY: filename_max
   USE mo_exception,          ONLY: message_text, message, finish
-  USE mo_jsb_domain_iface,   ONLY: t_patch, p_patch, pe_decomposed,               &
+  USE mo_jsb_domain_iface,   ONLY: t_patch, get_host_patch_id,                    &
                                    get_grid_filename_domain => get_grid_filename, &
                                    get_ntotal_domain        => get_ntotal,        &
                                    get_ntotal_g_domain      => get_ntotal_g,      &
                                    get_dims_g_domain        => get_dims_g,        &
                                    get_nlat_g_domain        => get_nlat_g,        &
                                    get_nproma_domain        => get_nproma,        &
-                                   get_nblks_domain         => get_nblks,         &
-                                   get_lon_domain           => get_lon,           &
+                                   get_nblks_domain         => get_nblks
+  USE mo_jsb_grid_iface,     ONLY: get_lon_domain           => get_lon,           &
                                    get_lat_domain           => get_lat,           &
                                    get_area_domain          => get_area
 
@@ -34,27 +34,28 @@ MODULE mo_jsb_grid_class
   PUBLIC :: get_blk_start, get_blk_end, get_col_start, get_col_end
 
   TYPE t_jsb_grid
-    INTEGER                      :: id = 0
-    CHARACTER(LEN=10)            :: name = ''
-    CHARACTER(LEN=filename_max)  :: filename = ''
-    INTEGER                      :: ntotal = 0          !< Number of cells on this PE
-    INTEGER                      :: nland = 0
-    REAL(wp), POINTER            :: lon(:,:) => NULL()
-    REAL(wp), POINTER            :: lat(:,:) => NULL()
-    REAL(wp), POINTER            :: area(:,:) => NULL()
-    LOGICAL,  POINTER            :: lsm(:,:) => NULL()
-    REAL(wp), POINTER            :: lsf(:,:) => NULL()
-    INTEGER                      :: nblks = 1
-    INTEGER                      :: nproma = 0
-    INTEGER                      :: npromz = 0
-    INTEGER                      :: ntotal_g              !< Total number of cells in grid
-    INTEGER                      :: dims_g(2)             !< Dimensions of global grid
-    INTEGER                      :: nlat_g = 0            !< Number of latitudes in global grid (effective for ICON)
-    LOGICAL                      :: configured = .FALSE.
-    TYPE(t_patch), POINTER       :: patch
-    TYPE(pe_decomposed), POINTER :: decomposition
+    INTEGER                       :: id = 0
+    CHARACTER(LEN=10)             :: name = ''
+    CHARACTER(LEN=filename_max)   :: filename = ''
+    INTEGER                       :: ntotal = 0          !< Number of cells on this PE
+    INTEGER                       :: nland = 0
+    REAL(wp), POINTER             :: lon(:,:) => NULL()
+    REAL(wp), POINTER             :: lat(:,:) => NULL()
+    REAL(wp), POINTER             :: area(:,:) => NULL()
+    LOGICAL,  POINTER             :: lsm(:,:) => NULL()
+    REAL(wp), POINTER             :: lsf(:,:) => NULL()
+    INTEGER                       :: nblks = 1
+    INTEGER                       :: nproma = 0
+    INTEGER                       :: npromz = 0
+    INTEGER                       :: ntotal_g              !< Total number of cells in grid
+    INTEGER                       :: dims_g(2)             !< Dimensions of global grid
+    INTEGER                       :: nlat_g = 0            !< Number of latitudes in global grid (effective for ICON)
+    LOGICAL                       :: configured = .FALSE.
+    CHARACTER(LEN=:), ALLOCATABLE :: type
+    TYPE(t_patch), POINTER        :: patch => NULL()
+    INTEGER                       :: host_patch_id
   CONTAINS
-    PROCEDURE :: Print => Print_grid
+    PROCEDURE :: Print             => Print_grid
   END TYPE t_jsb_grid
 
   TYPE t_jsb_grid_ptr
@@ -101,11 +102,11 @@ CONTAINS
   !>
   !! Grid constructor
 
-  FUNCTION new_grid_from_host(patch, decomp) RESULT(grid)
+  FUNCTION new_grid_from_host(patch, type) RESULT(grid)
 
-    TYPE(t_patch),       OPTIONAL, INTENT(in) :: patch          !< used with icon
-    TYPE(pe_decomposed), OPTIONAL, INTENT(in) :: decomp         !< used with echam
-    TYPE(t_jsb_grid), POINTER                 :: grid
+    TYPE(t_patch),    TARGET, INTENT(in) :: patch
+    CHARACTER(LEN=*),         INTENT(in) :: type
+    TYPE(t_jsb_grid),         POINTER    :: grid
 
     TYPE(t_jsb_grid), POINTER       :: new
 
@@ -113,40 +114,33 @@ CONTAINS
 
     ! CALL message(TRIM(routine), 'starting construction of new JSBACH grid instance from host model')
 
-    IF (PRESENT(patch) .AND. PRESENT(decomp)) &
-      CALL finish(TRIM(routine), 'Only one of patch or decomposition can be specified')
-
-    IF (.NOT. PRESENT(patch) .AND. .NOT. PRESENT(decomp)) &
-      CALL finish(TRIM(routine), 'Either patch or decomposition must be specified')
-
     ALLOCATE(new)
 
     ngrid_count = ngrid_count + 1
     new%id = ngrid_count
 !!$    new%name = name
 
-    IF (PRESENT(patch)) THEN
-      new%patch => p_patch(patch%id)
-      ALLOCATE(new%decomposition)
-      new%decomposition%nlon = -1
-    ELSE
-      ALLOCATE(new%decomposition)
-      new%decomposition = decomp
+    SELECT CASE (TRIM(type))
+    CASE ('icon')
+      new%patch => patch
+    CASE ('echam')
       ALLOCATE(new%patch)
-      new%patch%id = -1
-    END IF
+      new%patch = patch
+    END SELECT
+    new%type = TRIM(type)
+    new%host_patch_id = get_host_patch_id(patch)
 
-    new%filename = get_grid_filename_domain(patch, decomp)
-    new%ntotal   = get_ntotal_domain       (patch, decomp)
-    new%ntotal_g = get_ntotal_g_domain     (patch, decomp)
-    new%dims_g(1:2) = get_dims_g_domain    (patch, decomp)
-    new%nlat_g   = get_nlat_g_domain       (patch, decomp)
-    new%nblks    = get_nblks_domain        (patch, decomp)
-    new%nproma   = get_nproma_domain       (patch, decomp)
+    new%filename = get_grid_filename_domain(patch)
+    new%ntotal   = get_ntotal_domain       (patch)
+    new%ntotal_g = get_ntotal_g_domain     (patch)
+    new%dims_g(1:2) = get_dims_g_domain    (patch)
+    new%nlat_g   = get_nlat_g_domain       (patch)
+    new%nblks    = get_nblks_domain        (patch)
+    new%nproma   = get_nproma_domain       (patch)
     new%npromz   = new%ntotal - new%nproma * (new%nblks - 1)
-    new%lon     => get_lon_domain          (patch, decomp)
-    new%lat     => get_lat_domain          (patch, decomp)
-    new%area    => get_area_domain         (patch, decomp)
+    new%lon     => get_lon_domain          (patch)
+    new%lat     => get_lat_domain          (patch)
+    new%area    => get_area_domain         (patch)
     ALLOCATE(new%lsm(new%nproma,new%nblks), new%lsf(new%nproma,new%nblks))
     new%lsm(:,:) = .TRUE.
     new%lsf(:,:) = 1.0_wp
@@ -181,6 +175,7 @@ CONTAINS
     new%id = ngrid_count
     new%name = name
     new%filename = filename
+    new%host_patch_id = 0
 
     ! IF (my_process_is_stdio()) THEN
 
@@ -266,8 +261,8 @@ CONTAINS
       CALL message('  ', message_text)
     END IF
 
-    IF (this%patch%id >= 0) THEN
-      WRITE(message_text,'(A,I2)') 'Patch ID: ', this%patch%id
+    IF (this%host_patch_id > 0) THEN
+      WRITE(message_text,'(A,I2)') 'Patch ID in host model: ', this%host_patch_id
       CALL message('  ', message_text)
     END IF
 
@@ -309,13 +304,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_blk_start'
 
-    IF (grid%patch%id >= 0) THEN
-      get_blk_start = get_blk_start_domain(patch=grid%patch)
-    ELSE IF (grid%decomposition%nlon >= 0) THEN
-      get_blk_start = get_blk_start_domain(decomp=grid%decomposition)
-    ELSE
-      CALL finish(TRIM(routine), 'Something went wrong.')
-    END IF
+    get_blk_start = get_blk_start_domain(grid%patch)
 
   END FUNCTION get_blk_start
 
@@ -327,13 +316,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_blk_end'
 
-    IF (grid%patch%id >= 0) THEN
-      get_blk_end = get_blk_end_domain(patch=grid%patch)
-    ELSE IF (grid%decomposition%nlon >= 0) THEN
-      get_blk_end = get_blk_end_domain(decomp=grid%decomposition)
-    ELSE
-      CALL finish(TRIM(routine), 'Something went wrong.')
-    END IF
+    get_blk_end = get_blk_end_domain(grid%patch)
 
   END FUNCTION get_blk_end
 
@@ -346,13 +329,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_col_start'
 
-    IF (grid%patch%id >= 0) THEN
-      get_col_start = get_col_start_domain(iblk, patch=grid%patch)
-    ELSE IF (grid%decomposition%nlon >= 0) THEN
-      get_col_start = get_col_start_domain(iblk, decomp=grid%decomposition)
-    ELSE
-      CALL finish(TRIM(routine), 'Something went wrong.')
-    END IF
+    get_col_start = get_col_start_domain(iblk, grid%patch)
 
   END FUNCTION get_col_start
 
@@ -365,13 +342,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_col_end'
 
-    IF (grid%patch%id >= 0) THEN
-      get_col_end = get_col_end_domain(iblk, patch=grid%patch)
-    ELSE IF (grid%decomposition%nlon >= 0) THEN
-      get_col_end = get_col_end_domain(iblk, decomp=grid%decomposition)
-    ELSE
-      CALL finish(TRIM(routine), 'Something went wrong.')
-    END IF
+    get_col_end = get_col_end_domain(iblk, grid%patch)
 
   END FUNCTION get_col_end
 
