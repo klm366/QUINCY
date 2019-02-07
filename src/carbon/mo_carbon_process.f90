@@ -6,6 +6,7 @@
 !!
 !! @par Revision History
 !! First version by Rainer Schneck (2015-07-29)
+!! Julia Nabel (2018-01-10): l_forestRegrowth flag -> allow for changing max_LAI
 !!
 MODULE mo_carbon_process
 #ifndef __NO_JSBACH__
@@ -18,7 +19,7 @@ MODULE mo_carbon_process
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: calc_Cpools, relocate_carbon_fire, relocate_carbon_damage, yasso
+  PUBLIC :: calc_Cpools, relocate_carbon_fire, relocate_carbon_damage, yasso, get_per_tile
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_carbon_process'
 
@@ -28,6 +29,7 @@ CONTAINS
   ELEMENTAL SUBROUTINE calc_Cpools( &
     & LAI,                        & ! in
     & LAI_previous,               & ! in
+    & max_LAI,                    & ! in
     & NPP_pot_yDayMean,           & ! in
     & topSoilTemp,                & ! in
     & alpha_yDayMean,             & ! in
@@ -46,7 +48,6 @@ CONTAINS
     & Max_C_content_woods,        & ! in
     & specific_leaf_area_C,       & ! in
     & reserveC2leafC,             & ! in
-    & max_LAI,                    & ! in
     ! & is_vegetation,              & ! in
     & pheno_type,                 & ! in
     & time_steps_per_day,         & ! in
@@ -73,7 +74,7 @@ CONTAINS
     & NPP_act_yDayMean,           & ! out
     !
     ! & fract_litter_wood_new,      & ! inout, optional; R: only for spitfire
-    ! &  Yasso variables
+    ! Yasso variables
     & temp2_30d,                  & ! in, optional, necessary with yasso
     & precip_30d,                 & ! in, optional, necessary with yasso
     !
@@ -116,6 +117,7 @@ CONTAINS
     ! Arguments
     REAL(wp), INTENT(in)    :: LAI                    ! Yesterdays mean LAI
     REAL(wp), INTENT(in)    :: LAI_previous           ! The day before yesterdays mean LAI
+    REAL(wp), INTENT(in)    :: max_LAI                ! Maximum value of LAI
     REAL(wp), INTENT(in)    :: NPP_pot_yDayMean       ! Yesterdays mean NPP rate [mol(C)/m^2 s]
     REAL(wp), INTENT(in)    :: topSoilTemp            ! Yesterdays mean temperature of upper soil layer [degree Kelvin]
     REAL(wp), INTENT(in)    :: alpha_yDayMean         ! Yesterdays mean water stress factor (between 0 and 1)
@@ -134,10 +136,9 @@ CONTAINS
     REAL(wp), INTENT(in)    :: Max_C_content_woods    ! Maximum carbon content of wood pool (from lctLib)
     REAL(wp), INTENT(in)    :: specific_leaf_area_C   ! Specific leaf area (from lctLib) [m^2(leaf)/mol(Carbon)]
     REAL(wp), INTENT(in)    :: reserveC2leafC         ! Ratio of max. carbon in reserve pool to max. carbon of leaves
-    REAL(wp), INTENT(in)    :: max_LAI                ! Maximum value of LAI
     !logical, intent(in)    :: is_vegetation          ! logical vegetation mask
-    INTEGER,  INTENT(in)     :: pheno_type             ! crop =5
-    INTEGER,  INTENT(in)     :: time_steps_per_day
+    INTEGER,  INTENT(in)    :: pheno_type             ! crop =5
+    INTEGER,  INTENT(in)    :: time_steps_per_day
     REAL(wp), INTENT(in)    :: dtime
     !
     REAL(wp), INTENT(inout) :: c_green            ! Green carbon pool: on input last value; updated on output 
@@ -944,10 +945,8 @@ CONTAINS
     & c_green,                        & ! inout, optional
     & c_woods,                        & ! inout, optional
     & c_reserve,                      & ! inout, optional
-    & cflux_dist_greenreserve_2_soil, & ! out, because relocate_carbon_damage is 
-                                        ! called before relocate_carbon_fire!
-    & cflux_dist_woods_2_soil,        & ! out, because relocate_carbon_damage is
-                                        ! called before relocate_carbon_fire!
+    & cflux_dist_greenreserve_2_soil, & ! inout
+    & cflux_dist_woods_2_soil,        & ! inout
     & c_acid_ag1,                     & ! inout
     & c_water_ag1,                    & ! inout
     & c_ethanol_ag1,                  & ! inout
@@ -978,11 +977,11 @@ CONTAINS
     real(wp),intent(inout) :: c_green(:)               ! Value of green carbon pool [mol(C)/m^2(canopy)]
     real(wp),intent(inout) :: c_woods(:)               ! Value of wood carbon pool [mol(C)/m^2(canopy)]
     real(wp),intent(inout) :: c_reserve(:)             ! Value of reserve carbon pool [mol(C)/m^(canopy)2]
-    real(wp),intent(out)   :: cflux_dist_greenreserve_2_soil(:) ! Amount of carbon relocated by wind damage 
-                                                                ! (and later also by fire)
-    real(wp),intent(out)   :: cflux_dist_woods_2_soil(:)  ! Amount of carbon relocated by wind damage 
-                                                                ! (and later also by fire)
-                                                                ! .. to the green litter pools [mol(C)/m^2(canopy)]
+    real(wp),intent(inout)   :: cflux_dist_greenreserve_2_soil(:) ! Amount of carbon relocated by wind damage
+                                                                  ! (and later also by fire)
+    real(wp),intent(inout)   :: cflux_dist_woods_2_soil(:)        ! Amount of carbon relocated by wind damage
+                                                                  ! (and later also by fire)
+                                                                  ! .. to the green litter pools [mol(C)/m^2(canopy)]
 
     !   YASSO
     ! Size class 1: green
@@ -1018,8 +1017,8 @@ CONTAINS
     !! transfer carbon from the wood pool to the wood litter pools nd
     !! transfer carbon from the green and reserve pool to the green litter pool
 
-    cflux_dist_woods_2_soil(:)  = c_woods(:) * damaged_fract(:)
-    cflux_dist_greenreserve_2_soil(:) = (c_green(:) + c_reserve(:)) * damaged_fract(:)
+    cflux_dist_woods_2_soil(:) = cflux_dist_woods_2_soil(:) + c_woods(:) * damaged_fract(:)
+    cflux_dist_greenreserve_2_soil(:) = cflux_dist_greenreserve_2_soil(:) + (c_green(:) + c_reserve(:)) * damaged_fract(:)
 
     ! Add aboveground damaged green and reserve
     factor(:) = (c_green(:) + c_reserve(:)) * fract_green_aboveGround * damaged_fract(:)
@@ -1518,6 +1517,24 @@ CONTAINS
     ENDIF
 
   END SUBROUTINE yasso
+
+  ! --- get_per_tile() ---------------------------------------------------------------------------------------------------
+  !
+  ! calculate per tile density from density per canopy m2 
+  !
+  ELEMENTAL SUBROUTINE get_per_tile(  &
+    & Cpool_per_tile,                 & ! in
+    & Cpool_per_canopy,               & ! in
+    & veg_fract_correction,           & ! in
+    & fract_fpc_max)                    ! in
+
+    REAL(wp), INTENT(IN) ::  fract_fpc_max, veg_fract_correction
+    REAL(wp), INTENT(IN) ::  Cpool_per_canopy
+    REAL(wp), INTENT(OUT)::  Cpool_per_tile
+
+    Cpool_per_tile = Cpool_per_canopy * veg_fract_correction * fract_fpc_max
+
+  END SUBROUTINE get_per_tile
 
 #endif
 END MODULE mo_carbon_process

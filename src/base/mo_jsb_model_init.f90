@@ -227,8 +227,29 @@ CONTAINS
     dsl4jsb_Get_config(FUEL_)
     dsl4jsb_Get_config(DISTURB_)
 
+    !NOTE: JN changed the order of the processes
+    !- processes potentially changing the area of a tile are conducted first in the timestep.
+    !- PHENO processes were moved up: need to happen before C_NPP_pot_allocation for allometric considerations
+
+    !------------------------ tasks that can change area
+    !Disturbances happen on a daily basis and can lead to area changes when running with cohorts
+    IF (model%processes(FUEL_)%p%config%active) THEN
+      CALL model%Queue_task(FUEL_, "fuel")
+    END IF
+    IF (model%processes(DISTURB_)%p%config%active) THEN
+       CALL model%Queue_task(DISTURB_, "natural_disturbances")
+    END IF
+
+    !------------------------ tasks that do not change area
     ! Temporary for testing ... should be in separate subroutine
     CALL model%Queue_task(RAD_,    "surface_radiation")
+    CALL model%Queue_task(PHENO_,  "phenology")           ! JN moved phenology up - for allom it needs to happen
+                                                          ! before C_NPP_pot_allocation
+                                                          ! and with area changes it should happen before assimi
+                      ! --- before it was between humidity_scaling and foliage_projected_cover
+                      ! + prev comment: can be placed between the task "surface_radiation" and "asselin_filter"
+    CALL model%Queue_task(PHENO_,  "foliage_projected_cover")
+
     CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
     CALL model%Queue_task(HYDRO_,  "soil_properties")
     CALL model%Queue_task(SEB_,    "surface_energy")
@@ -269,16 +290,7 @@ CONTAINS
     IF (model%processes(CARBON_)%p%config%active) THEN
        CALL model%Queue_task(CARBON_, "C_NPP_pot_allocation")
     END IF
-    IF (model%processes(FUEL_)%p%config%active) THEN
-      CALL model%Queue_task(FUEL_, "fuel")
-    END IF
-    IF (model%processes(DISTURB_)%p%config%active) THEN
-       CALL model%Queue_task(DISTURB_, "natural_disturbances")
-    END IF
     CALL model%Queue_task(TURB_,   "humidity_scaling")
-    CALL model%Queue_task(PHENO_,  "phenology")           ! can be placed between the task "surface_radiation" and "asselin_filter",
-                                                           ! but in JSBACH3 it was here at the end...
-    CALL model%Queue_task(PHENO_,  "foliage_projected_cover")
     CALL model%Queue_task(TURB_,   "surface_roughness")
     ! Note: albedo is updated at the end of the time step, one time step before the radiation is updated in the atmosphere
     CALL model%Queue_task(RAD_,    "albedo")

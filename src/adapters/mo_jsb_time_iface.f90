@@ -240,7 +240,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_time_nsteps'
 
 #ifndef __ICON__
-    INTEGER :: start_day, start_second, stop_day, stop_second
+    INTEGER :: start_day, start_second, stop_day, stop_second, idt
 #endif
     INTEGER :: isteps
 
@@ -255,13 +255,15 @@ CONTAINS
     CALL TC_get(start_date, start_day, start_second)
     CALL TC_get(stop_date, stop_day, stop_second)
 
+    idt = INT(get_time_dt())
     isteps =                                   &
-      & ( IDAYLEN * (stop_day - start_day - 1) & ! Number of seconds in full days
-      &   + stop_second                        & ! Number of seconds in last day
-      &   + (IDAYLEN - start_second - 1)       & ! Number of seconds in first day
-      & ) / INT(get_time_dt())
+      & (( IDAYLEN/idt * (stop_day - start_day - 1))   & ! Number of seconds in full days
+      &    + (stop_second                              & ! Number of seconds in last day
+      &       + (IDAYLEN - start_second - 1)           & ! Number of seconds in first day
+      &      ) / idt)
 #endif
 
+!@todo: error message is misleading! should be: error in istep calculation or comparable!?
     IF (isteps <= 0) &
       CALL finish(routine, 'number of time steps not configured yet.')
 
