@@ -28,7 +28,10 @@ flist_flux = c(flist_flux,Sys.glob(paste0("soilflux*","_",tstep_flux,"*.txt")))
 flist_other = Sys.glob(paste0("sb_massBalance","_",tstep_flux,"*.txt"))
 
 # create overall file list
-flist=c(flist_pool,flist_flux,flist_other)
+flist  <- c(flist_pool,flist_flux,flist_other)
+# remove output files that contain data from spinup
+spinup <- which(!grepl("spinup",flist))
+flist  <- flist[spinup]
 # number of output files
 nOutFiles=length(flist)
 

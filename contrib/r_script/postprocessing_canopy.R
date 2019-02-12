@@ -16,7 +16,11 @@ flist_flux = Sys.glob(paste0("vegflux*","_",tstep_flux,"*.txt"))
 flist_other = Sys.glob(paste0("atm_forcing","_",tstep_flux,"*.txt"))
 
 #create overall file list
-flist=c(flist_flux,flist_other)
+flist  <- c(flist_flux,flist_other)
+# remove output files that contain data from spinup
+spinup <- which(!grepl("spinup",flist))
+flist  <- flist[spinup]
+# number of output files
 nplot=length(flist)
 
 # plot data
