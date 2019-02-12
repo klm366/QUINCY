@@ -55,7 +55,8 @@ co2y_DC14<-read.table('/Net/Groups/BGI/work_2/QUINCY/SLM/InputDataSources/Atm/De
 ## N deposition per site [kg N/ha]
 # using this number allows for scaling the N deposition, i.e., consider site history / pre-industrial values
 # these numbers come from literature: ask Lin
-ndep_site<-c(8,13)
+# BBR & LUE are about 2014 values and VES is the value from the year 2000
+ndep_site<-c(8, 13, 20.65)
 
 ## loop over sites
 for (s in 1:length(site_list)) {
