@@ -1,4 +1,8 @@
 !>
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
 !! @brief Contains the class and methods for the JSBACH memory structure
 !!
 !! @author
@@ -6,7 +10,7 @@
 !!
 !! @par Revision History
 !! First version by Reiner Schnur (2013-04-04)
-!! Copied to SLM by Jan Engel (20160815) & updated 20170516
+!! Copied to QUINCY by Jan Engel (2016-08-15) & updated 2017-05-16
 !!
 MODULE mo_jsb_memory_class
 #ifndef __NO_JSBACH__

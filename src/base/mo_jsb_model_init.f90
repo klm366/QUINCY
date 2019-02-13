@@ -1,12 +1,16 @@
 !>
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
 !! @brief
-!!  Contains methods for QUINCY initializations.
+!!  Contains methods for model initializations.
 !!
 !! @author
 !!  Reiner Schnur, MPI-Met
 !!
 !! @par Revision History
-!!  tailored the JSBACH4 model-init module to fit QUINCY by Jan Engel MPI-BGC
+!!  the JSBACH4 model-init module was tailored to fit QUINCY by Jan Engel MPI-BGC
 !! 
 !!
 MODULE mo_jsb_model_init

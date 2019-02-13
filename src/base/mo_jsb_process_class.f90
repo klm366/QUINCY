@@ -1,4 +1,8 @@
 !>
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
 !! @brief Contains process class
 !!
 !! @author
@@ -6,7 +10,7 @@
 !!
 !! @par Revision History
 !! First version by Reiner Schnur (2015-09-01)
-!! Copied to SLM by Jan Engel (20160817)
+!! Copied to QUINCY by Jan Engel MPI-BGC (2016-08-17)
 !!
 MODULE mo_jsb_process_class
 #ifndef __NO_JSBACH__

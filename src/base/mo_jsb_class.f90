@@ -1,12 +1,16 @@
 !>
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
 !! @brief basic container (structure) for models
 !!
 !! @author
-!!  Reiner Schnur, MPI-M Hamburg (Jan Engel MPI-BGC thinks Reiner wrote this module)
+!!  Reiner Schnur, MPI-M Hamburg
 !!
 !! @par Revision History
 !!  Reiner Schnur, MPI-M Hamburg
-!!  Jan Engel, MPI-BGC Jena: initial integration into SLM and adaption to SLM (20161025) & update 20170516
+!!  Jan Engel, MPI-BGC Jena: initial integration into QUINCY and adaption to QUINCY (2016-10-25) & update 2017-05-16
 !!
 MODULE mo_jsb_class
 #ifndef __NO_JSBACH__

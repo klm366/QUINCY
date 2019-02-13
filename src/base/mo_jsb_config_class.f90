@@ -1,4 +1,8 @@
 !>
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
 !! @brief Contains structures and methods for JSBACH model config
 !!
 !! @author
@@ -6,7 +10,7 @@
 !!
 !! @par Revision History
 !! First version by Reiner Schnur (2013-04-04)
-!! integration into SLM by Jan Engel, MPI BGC (20160401) & update 20170516
+!! integration into QUINCY by Jan Engel MPI-BGC (2016-04-01) & update 2017-05-16
 !!
 MODULE mo_jsb_config_class
 #ifndef __NO_JSBACH__

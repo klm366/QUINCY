@@ -1,12 +1,14 @@
 !>
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
 !! @brief Contains the definition of variable types used across JSBACH4
 !!
-!! @author
-!!  Jan Engel, MPI-BGC Jena (copied from JSBACH4 git at 20160815)
-!!
 !! @par Revision History
-!! First version by Jan Engel (20160815); no changes compared to JSBACH4 except for not USEing mo_jsb_varlist_iface
-!! 2nd   version by Jan Engel (20170927); remove operator overload functions from variables
+!!  First version by Jan Engel (20160815); no changes compared to JSBACH4 except for not USEing mo_jsb_varlist_iface
+!!  2nd   version by Jan Engel (20170927); remove operator overload functions from variables
+!!  3rd   version by Jan Engel; add t_jsb_struct and t_jsb_n_struct for pool/fluxes infrastructure of QUINCY
 !!
 MODULE mo_jsb_var_class
 #ifndef __NO_JSBACH__

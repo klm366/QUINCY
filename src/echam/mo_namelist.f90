@@ -1,17 +1,12 @@
 !>
 !! @par Copyright
 !! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/model-distribution.html and the
-!! file COPYING in the root of the source tree for this code.
-!! Where software is supplied by third parties, it is indicated in the headers of the routines.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
 !! @brief Tools for namelist reading
 !!
-!! @author who copied the file here
-!!  Jan Engel, MPI-BGC Jena
-!!
 !! @par Revision History
-!! First version by Jan Engel (2016-03-18)
+!!  copied to QUINCY by Jan Engel MPI-BGC (2016-03-18)
 !!
 !! @par ECHAM
 !!  this module originates from ECHAM, file is left untouched

@@ -1,4 +1,8 @@
 !>
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
 !! @brief Contains main JSBACH structure and methods.
 !!
 !! @author
@@ -6,7 +10,7 @@
 !!
 !! @par Revision History
 !!  First version by Reiner Schnur (2013-04-04)
-!!  Modification to fit QUINCY by Jan Engel (2019-01-08)
+!!  Modification to fit QUINCY by Jan Engel MPI-BGC (2019-01-08)
 !!
 MODULE mo_jsb_base
 #ifndef __NO_JSBACH__
