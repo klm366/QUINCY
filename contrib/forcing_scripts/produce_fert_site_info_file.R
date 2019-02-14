@@ -8,7 +8,7 @@ library(ncdf4)
 #########################################################################################
 ## run this script by:
 ## cd contrib/forcing_scripts/
-## Rscript ./produce_fert_site_info_file.R
+## Rscript --vanilla ./produce_fert_site_info_file.R
 
 
 #########################################################################################
@@ -25,6 +25,7 @@ baseInputPath <- "/Net/Groups/BGI/people/szaehle/Projects/QUINCY/GenerateCRUForc
 ## basic site list
 metsites_fert  <- read.table("generate_fert_siteinfo_noheader.dat", stringsAsFactors=F, header=F)
 fert_site_list <- metsites_fert[,1]
+allSiteNameD   <- metsites_fert[,23]    # detailed sites names (last column)
 
 
 #########################################################################################
@@ -130,12 +131,9 @@ fertSiteNum <- length(fert_site_list)
 #  new values for lon_orig & lat_orig  (above they contain lon/lat of all sites in forestsite_list from info_forest.csv)
 lon_orig <- numeric(fertSiteNum)
 lat_orig <- numeric(fertSiteNum)
-i<-1
-for (fert_site in fert_site_list) {
-  idx         <- fert_site==fert_site_list
-  lon_orig[i] <- metsites_fert[idx,2]
-  lat_orig[i] <- metsites_fert[idx,3]
-  i <- i+1
+for (s in 1:length(fert_site_list)) {
+  lon_orig[s] <- metsites_fert[s,2]
+  lat_orig[s] <- metsites_fert[s,3]
 }
 
 
@@ -287,11 +285,13 @@ for (s in 1:fertSiteNum) {
 siteParam <- 27
 siteinfo  <- array(NA,c(fertSiteNum,siteParam))
 
-# loop over gfdb spp selected sites
+# loop over all FERT sites
 i <- 1
 for (fert_site in fert_site_list) {
 
     siteinfo[i,1]   <-  paste0(fert_site,"-CON")
+    # site name special case: COR site manipulated for 15N deposition pulse experiment
+    if (fert_site == "COR" & allSiteNameD[i] == "15N_experiment") siteinfo[i,1] <- "COR-15N"
     siteinfo[i,2]   <-  lon_orig[i]
     siteinfo[i,3]   <-  lat_orig[i]
     siteinfo[i,4]   <-  pft_fert[i]
