@@ -193,7 +193,18 @@ CONTAINS
           & wgt1 * dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,nmw1) + wgt2 * dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,nmw2)
       ELSE
         IF ( .NOT. dsl4jsb_Config(PHENO_)%l_forestRegrowth )  THEN
-          dsl4jsb_var2D_onDomain(PHENO_, lai) = MIN(dsl4jsb_var2D_onDomain(PHENO_, lai), dsl4jsb_Lctlib_param(MaxLai))
+        
+           !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+           ! BCBCBCBCBCBCBCBCBC  in order to set the initial lai to zero
+           !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+           IF(TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'jedi_phenology') THEN
+              dsl4jsb_var2D_onDomain(PHENO_, lai) = 0._wp
+           ELSE
+           !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-    
+              dsl4jsb_var2D_onDomain(PHENO_, lai) = MIN(dsl4jsb_var2D_onDomain(PHENO_, lai), dsl4jsb_Lctlib_param(MaxLai))
+           ENDIF
+        
+        
         ELSE
           dsl4jsb_var2D_onDomain(PHENO_, lai) = &
             & MIN(dsl4jsb_var2D_onDomain(PHENO_, lai), dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom))

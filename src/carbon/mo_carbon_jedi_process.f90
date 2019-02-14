@@ -61,15 +61,9 @@ CONTAINS
 
   ! Calculations to allocate NPP to the plant C pools.
   ELEMENTAL SUBROUTINE calc_Ctradeoff( &
-    & LAI,                        & ! in
-    & LAI_previous,               & ! in
     & GPP_yDayMean    ,           & ! in
-    & NPP_yDayMean    ,           & ! in
-    & topSoilTemp,                & ! in
-    & alpha_yDayMean,             & ! in
     & LAI_shed_constant,          & ! in
     & specific_leaf_area_C,       & ! in
-    & pheno_type,                 & ! in
     ! JeDi plant trait parameters <<<<<<<<<<
     & GrowRspdMoist,              & ! in
     & GrowRspdTemp ,              & ! in
@@ -87,10 +81,10 @@ CONTAINS
     & RelSenesAbgd ,              & ! in
     & NitroStatus  ,              & ! in
     ! JeDi plant trait parameters >>>>>>>>>>
+    & iniyear                    ,&
+    & currentyear                 ,&
     & time_steps_per_day,         & ! in
     & dtime,                      & ! in
-    & t_air,                      & ! in
-  !  
     & c_storage,                  & ! inout
     & c_storage_temp,             & ! out
     & c_leaves,                   & ! inout
@@ -104,12 +98,14 @@ CONTAINS
     & ff_grow_G,                  & ! in
     & ff_npp,                     & ! inout
     & Flg_die,                    & ! inout
+    & Flg_senesc,                 & ! out
     & flx_germ,                   & ! out
     & MaintRes_yDayMean,          & ! in
     & GrowthResp,                 & ! out
     & AutoRes,                    & ! out
     & C_balan,                    & ! out C_balan = GPP - Mainres - Growthres - litter
     & C_delta,                    & ! out C_delta = New total carbon - old total carbon
+    & c_total,                    & !
   !  
     & c_litter_green_ag,          & ! inout
     & c_litter_green_bg,          & ! inout
@@ -162,19 +158,13 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY : tmelt     ! tmelt =273.15_wp
     USE mo_carbon_constants,       ONLY : sec_per_day, days_per_year, sec_per_year
     
-    ! Arguments
-    REAL(wp), INTENT(in)    :: LAI                    ! Yesterdays mean LAI
-    REAL(wp), INTENT(in)    :: LAI_previous           ! The day before yesterdays mean LAI
+    ! Argument
     
     REAL(wp), INTENT(in)    :: GPP_yDayMean           ! Yesterdays mean GPP rate [mol(C)/m^2 s]
-    REAL(wp), INTENT(in)    :: NPP_yDayMean           ! Yesterdays mean GPP rate [mol(C)/m^2 s]CA
-    REAL(wp), INTENT(in)    :: topSoilTemp            ! Yesterdays mean temperature of upper soil layer [degree Kelvin]
-    REAL(wp), INTENT(in)    :: alpha_yDayMean         ! Yesterdays mean water stress factor (between 0 and 1)
-    
+  
     REAL(wp), INTENT(in)    :: LAI_shed_constant      ! Leaf shedding at a constant rate for evergreens etc. [1/day]
     REAL(wp), INTENT(in)    :: specific_leaf_area_C   ! Specific leaf area (from lctLib) [m^2(leaf)/mol(Carbon)]
     !logical, intent(in)    :: is_vegetation           ! logical vegetation mask
-    INTEGER,  INTENT(in)     :: pheno_type             ! crop =5
     REAL(wp), INTENT(in)     :: GrowRspdMoist         ! Jedi parameter -- P01 Growth response time to moisture conditions 
     REAL(wp), INTENT(in)     :: GrowRspdTemp          ! Jedi parameter -- P02 Growth response time to temperature conditions 
     REAL(wp), INTENT(in)     :: CritiGrowTemp         ! Jedi parameter -- P03 Critical temperature for growth                
@@ -190,9 +180,11 @@ CONTAINS
     REAL(wp), INTENT(in)     :: SenesRspdNPP          ! Jedi parameter -- P13 Senescence response time to productivity conditions 
     REAL(wp), INTENT(in)     :: RelSenesAbgd          ! Jedi parameter -- P14 Relative senescence aboveground            
     REAL(wp), INTENT(in)     :: NitroStatus           ! Jedi parameter -- P15 Plant nitrogen status                       
+    INTEGER,  INTENT(in)     :: iniyear      
+    INTEGER,  INTENT(in)     :: currentyear  
     INTEGER,  INTENT(in)     :: time_steps_per_day
     REAL(wp), INTENT(in)     :: dtime
-    REAL(wp), INTENT(in)     :: t_air                  !  Atmosphere temperature (lowest layer) in Kelvin!
+  
     !
     ! JeDi carbon allocation 
     REAL(wp), INTENT(inout) :: c_storage            ! Stored carbon pool: on input last value; updated on output
@@ -215,6 +207,7 @@ CONTAINS
     REAL(wp), INTENT(in) :: ff_grow_W                                             
     REAL(wp), INTENT(inout) :: ff_npp
     REAL(wp), INTENT(out)   :: flx_germ  
+    REAL(wp), INTENT(out)   :: Flg_senesc
     REAL(wp), INTENT(inout) :: Flg_die                                                            
     !                                                     
     REAL(wp), INTENT(inout) :: c_litter_green_ag  ! Above ground green litter C-pool: updated on output [mol(C)/m^2(canopy)]
@@ -232,6 +225,7 @@ CONTAINS
     REAL(wp), INTENT(out)   ::  AutoRes
     REAL(wp), INTENT(out)   ::  C_balan
     REAL(wp), INTENT(out)   ::  C_delta
+    REAL(wp), INTENT(out)   ::  c_total
     !
     ! added for thonicke fire algorithm (spitfire) needed to correctly split the carbon pools into the different fuel classes
     !real(wp),optional,intent(inout) :: fract_litter_wood_new   ! new fraction in above ground wood litter pool
@@ -289,12 +283,12 @@ CONTAINS
 
     
     !real(wp) :: r8_tiny = 0.0123456
-    REAL(wp), PARAMETER  :: PA0_seed = 1.0_wp / 365._wp ! Virtual carbon for seed pool
+    REAL(wp), PARAMETER  :: PA0_seed = 1.0_wp / (365._wp * 12.01_wp) ! Virtual carbon for seed pool
     
     REAL(wp) :: A_seed , A_storage
     REAL(wp) :: AG_struct, AG_growth
     REAL(wp) :: BG_struct, BG_growth
-    REAL(wp) :: Flg_seed, Flg_senesc,Flg_grow
+    REAL(wp) :: Flg_seed,Flg_grow
     REAL(wp) :: Flg_grow_T, Flg_grow_W, Flg_grow_G
     REAL(wp) :: tau_stem, tau_leaves, tau_fnroot, tau_csroot, tau_seed
     REAL(wp) :: ff_germ_Bsoil
@@ -316,7 +310,7 @@ CONTAINS
     REAL(WP) :: fract_green_AG_jedi, fract_wood_AG_jedi ! USED FOR YASSOR 
     REAL(WP) :: zAlloc, zAlloc_leaves, zAlloc_stem, zAlloc_seed, zAlloc_fnroot, zAlloc_csroot
     REAL(WP) :: zLoss_leaves, zLoss_stem, zLoss_seed, zLoss_fnroot, zLoss_csroot
-    REAL(WP) :: C_total
+    REAL(WP) :: c_total_temp
     REAL(wp) :: C_2_litter_woodPool
     !CBAL REAL(wp) :: d_c_slow
     REAL(wp) :: leaf_shedding 
@@ -368,9 +362,6 @@ CONTAINS
     NPP_act_yDayMean         = 0.0_wp
       
     
-    
-    ! modified soil moist. such that heterotrophic respiration is zero below alpha_critical
-    alpha_mod = MAX(alpha_min, (alpha_yDayMean - alpha_critical) / (1._wp - alpha_critical))
 
     ! Initializations
 
@@ -430,7 +421,7 @@ CONTAINS
     AutoRes = MaintRes_yDayMean * sec_per_day
     NPP     = GPP_yDayMean * sec_per_day  - AutoRes
     
-    C_total = c_storage + c_seed + c_leaves + c_stem + c_csroot + c_fnroot 
+    c_total_temp = c_storage + c_seed + c_leaves + c_stem + c_csroot + c_fnroot 
    
     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-! Growing condition !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-!
@@ -578,14 +569,10 @@ CONTAINS
         
         
         
-        c_seed    = c_seed   + zAlloc_seed
-        
-        c_leaves  = c_leaves + zAlloc_leaves - zLoss_leaves
-        
-        c_stem    = c_stem   + zAlloc_stem   - zLoss_stem
-        
-        c_csroot  = c_csroot + zAlloc_csroot - zLoss_csroot
-        
+        c_seed    = c_seed   + zAlloc_seed        
+        c_leaves  = c_leaves + zAlloc_leaves - zLoss_leaves        
+        c_stem    = c_stem   + zAlloc_stem   - zLoss_stem        
+        c_csroot  = c_csroot + zAlloc_csroot - zLoss_csroot       
         c_fnroot  = c_fnroot + zAlloc_fnroot - zLoss_fnroot
         
         
@@ -604,11 +591,13 @@ CONTAINS
         
         
         
-    !      IF ( (curyear .gt. crit_year) .and. (c_storage .le. cTiny) ) THEN
-          IF (  (c_storage .le. cTiny) ) THEN
+    
+       !   IF ( (currentyear .GT. iniyear + 10 ) .AND. (c_storage .le. cTiny) ) THEN
             
+          IF (  (c_storage .le. cTiny) ) THEN
+              
             zLoss_leaves = zLoss_leaves + c_leaves
-            zLoss_stem   = zLoss_stem   + c_stem
+            zLoss_stem   = zLoss_stem   + c_stem    + c_storage ! I dont know where the dead storage carbon shall go so I first put it into stem letter pool
             zLoss_csroot = zLoss_csroot + c_csroot  + c_seed ! I dont know where should dead seed carbon go so i put into coarse root's litter pool first
             zLoss_fnroot = zLoss_fnroot + c_fnroot
             
@@ -620,15 +609,41 @@ CONTAINS
             c_fnroot  = 0._wp
             Flg_die   = 1._wp
             
+          
+          
+        !  ELSE IF ((currentyear .LE. iniyear + 10).AND. (c_storage .le. cTiny)) THEN
+          
+          
+          
+          
+          
+          
           ENDIF
+        
+        
+        
+       
+        
+        
+        
         
         
           leafLitter          =  zLoss_leaves + zLoss_fnroot 
           C_2_litter_woodPool =  zLoss_stem   + zLoss_csroot 
-    
-          fract_green_AG_jedi =  zLoss_leaves  / ( zLoss_leaves + zLoss_fnroot ) 
-          fract_wood_AG_jedi  =  zLoss_stem    / ( zLoss_stem   + zLoss_csroot + zLoss_seed)   !need to think about seed litter carbon
-    
+          
+          
+            IF (zLoss_leaves + zLoss_fnroot == 0._wp ) THEN 
+               fract_green_AG_jedi = 0._wp
+            ELSE
+               fract_green_AG_jedi =  zLoss_leaves  / ( zLoss_leaves + zLoss_fnroot ) 
+            ENDIF
+            
+            IF (  zLoss_stem   + zLoss_csroot + zLoss_seed == 0._wp ) THEN
+               fract_wood_AG_jedi = 0._wp
+            ELSE
+               fract_wood_AG_jedi  =  zLoss_stem    / ( zLoss_stem   + zLoss_csroot + zLoss_seed)   !need to think about seed litter carbon
+            ENDIF
+            
           cflux_c_greenwood_2_litter =  zLoss_leaves + zLoss_fnroot + zLoss_stem + zLoss_csroot + zLoss_seed 
           
         
@@ -655,9 +670,9 @@ CONTAINS
 	   
     ENDIF
 
+   c_total = c_storage + c_seed + c_leaves + c_stem + c_csroot + c_fnroot 
 
-
-   C_delta =  ( c_storage + c_seed + c_leaves + c_stem + c_csroot + c_fnroot ) - C_total  ! this is the difference of assimilated carbon added into c-pools in this timestep
+   C_delta =  ( c_storage + c_seed + c_leaves + c_stem + c_csroot + c_fnroot ) - c_total_temp  ! this is the difference of assimilated carbon added into c-pools in this timestep
    
 
    C_balan = GPP_yDayMean         *  sec_per_day  &
@@ -665,9 +680,7 @@ CONTAINS
            & - GrowthResp         *  sec_per_day  &
            & - ( zLoss_leaves + zLoss_fnroot + zLoss_stem + zLoss_csroot + zLoss_seed ) 
 
-     fract_green_AG_jedi  = 0.5_wp       !  if the fraction is zero, there is nan problem for the litter pool,                                                     
-     fract_wood_AG_jedi   = 0.5_wp       !  it is now temporary set to 0.5                                                               
-
+   
 
     !! ============== COMPUTE SOIL RESPIRATION ===================================================================
     ! with yasso:

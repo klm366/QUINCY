@@ -246,13 +246,29 @@ CONTAINS
 
     INTEGER :: i
 
-    INTEGER, PARAMETER :: npft = 20  ! R: For the implementation of JEDI we use only one PFT/PGS
+    INTEGER, PARAMETER :: npft = 40  ! R: For the implementation of JEDI we use only one PFT/PGS
 
     CHARACTER(len=5), PARAMETER :: pft_shortnames(npft) = [character(len=5) ::  &
-      & 'pft01', 'pft02', 'pft03', 'pft04', 'pft05', 'pft06',                   &
-      & 'pft07', 'pft08', 'pft09', 'pft10', 'pft11',                           &
-      & 'pft12', 'pft13', 'pft14', 'pft15', 'pft16', 'pft17',                   &
-      & 'pft18', 'pft19', 'pft20']                                            
+      &'pft01', 'pft02', 'pft03', 'pft04', 'pft05',&
+      &'pft06', 'pft07', 'pft08', 'pft09', 'pft10',&
+      &'pft11', 'pft12', 'pft13', 'pft14', 'pft15',&
+      &'pft16', 'pft17', 'pft18', 'pft19', 'pft20',&
+      &'pft21', 'pft22', 'pft23', 'pft24', 'pft25',&
+      &'pft26', 'pft27', 'pft28', 'pft29', 'pft30',&
+      &'pft31', 'pft32', 'pft33', 'pft34', 'pft35',&
+      &'pft36', 'pft37', 'pft38', 'pft39', 'pft40']!,&
+      !&'pft41', 'pft42', 'pft43', 'pft44', 'pft45',&
+      !&'pft46', 'pft47', 'pft48', 'pft49', 'pft50',&
+      !&'pft51', 'pft52', 'pft53', 'pft54', 'pft55',&
+      !&'pft56', 'pft57', 'pft58', 'pft59', 'pft60',&
+      !&'pft61', 'pft62', 'pft63', 'pft64', 'pft65',&
+      !&'pft66', 'pft67', 'pft68', 'pft69', 'pft70',&
+      !&'pft71', 'pft72', 'pft73', 'pft74', 'pft75',&
+      !&'pft76', 'pft77', 'pft78', 'pft79', 'pft80',&
+      !&'pft81', 'pft82', 'pft83', 'pft84', 'pft85',&
+      !&'pft86', 'pft87', 'pft88', 'pft89', 'pft90',&
+      !&'pft91', 'pft92', 'pft93', 'pft94', 'pft95',&
+      !&'pft96', 'pft97', 'pft98']!, 'pft99']                                        
       
       
 
@@ -276,14 +292,107 @@ CONTAINS
       & 'Plant Growth Strategy 17',                                             &
       & 'Plant Growth Strategy 18',                                             &
       & 'Plant Growth Strategy 19',                                             &
-      & 'Plant Growth Strategy 20']
+      & 'Plant Growth Strategy 20',&
+      & 'Plant Growth Strategy 21',                                             &
+      & 'Plant Growth Strategy 22',                                             &
+      & 'Plant Growth Strategy 23',                                             &
+      & 'Plant Growth Strategy 24',                                             &
+      & 'Plant Growth Strategy 25',                                             &
+      & 'Plant Growth Strategy 26',                                             &
+      & 'Plant Growth Strategy 27',                                             &
+      & 'Plant Growth Strategy 28',                                             &
+      & 'Plant Growth Strategy 29',                                             &
+      & 'Plant Growth Strategy 30',  &
+      & 'Plant Growth Strategy 31',                                             &
+      & 'Plant Growth Strategy 32',                                             &
+      & 'Plant Growth Strategy 33',                                             &
+      & 'Plant Growth Strategy 34',                                             &
+      & 'Plant Growth Strategy 35',                                             &
+      & 'Plant Growth Strategy 36',                                             &
+      & 'Plant Growth Strategy 37',                                             &
+      & 'Plant Growth Strategy 38',                                             &
+      & 'Plant Growth Strategy 39',                                             &
+      & 'Plant Growth Strategy 40']!,                                             &
+      !& 'Plant Growth Strategy 41',                                             &
+      !& 'Plant Growth Strategy 42',                                             &
+      !& 'Plant Growth Strategy 43',                                             &
+      !& 'Plant Growth Strategy 44',                                             &
+      !& 'Plant Growth Strategy 45',                                             &
+      !& 'Plant Growth Strategy 46',                                             &
+      !& 'Plant Growth Strategy 47',                                             &
+      !& 'Plant Growth Strategy 48',                                             &
+      !& 'Plant Growth Strategy 49',                                             &
+      !& 'Plant Growth Strategy 50',&
+      !& 'Plant Growth Strategy 51',                                             &
+      !& 'Plant Growth Strategy 52',                                             &
+      !& 'Plant Growth Strategy 53',                                             &
+      !& 'Plant Growth Strategy 54',                                             &
+      !& 'Plant Growth Strategy 55',                                             &
+      !& 'Plant Growth Strategy 56',                                             &
+      !& 'Plant Growth Strategy 57',                                             &
+      !& 'Plant Growth Strategy 58',                                             &
+      !& 'Plant Growth Strategy 59',                                             &
+      !& 'Plant Growth Strategy 60',                                             &
+      !& 'Plant Growth Strategy 61',                                             &
+      !& 'Plant Growth Strategy 62',                                             &
+      !& 'Plant Growth Strategy 63',                                             &
+      !& 'Plant Growth Strategy 64',                                             &
+      !& 'Plant Growth Strategy 65',                                             &
+      !& 'Plant Growth Strategy 66',                                             &
+      !& 'Plant Growth Strategy 67',                                             &
+      !& 'Plant Growth Strategy 68',                                             &
+      !& 'Plant Growth Strategy 69',                                             &
+      !& 'Plant Growth Strategy 70',&
+      !& 'Plant Growth Strategy 71',                                             &
+      !& 'Plant Growth Strategy 72',                                             &
+      !& 'Plant Growth Strategy 73',                                             &
+      !& 'Plant Growth Strategy 74',                                             &
+      !& 'Plant Growth Strategy 75',                                             &
+      !& 'Plant Growth Strategy 76',                                             &
+      !& 'Plant Growth Strategy 77',                                             &
+      !& 'Plant Growth Strategy 78',                                             &
+      !& 'Plant Growth Strategy 79',                                             &
+      !& 'Plant Growth Strategy 80',                                             &
+      !& 'Plant Growth Strategy 81',                                             &
+      !& 'Plant Growth Strategy 82',                                             &
+      !& 'Plant Growth Strategy 83',                                             &
+      !& 'Plant Growth Strategy 84',                                             &
+      !& 'Plant Growth Strategy 85',                                             &
+      !& 'Plant Growth Strategy 86',                                             &
+      !& 'Plant Growth Strategy 87',                                             &
+      !& 'Plant Growth Strategy 88',                                             &
+      !& 'Plant Growth Strategy 89',                                             &
+      !& 'Plant Growth Strategy 90',                                             &
+      !& 'Plant Growth Strategy 91',                                             &
+      !& 'Plant Growth Strategy 92',                                             &
+      !& 'Plant Growth Strategy 93',                                             &
+      !& 'Plant Growth Strategy 94',                                             &
+      !& 'Plant Growth Strategy 95',                                             &
+      !& 'Plant Growth Strategy 96',                                             &
+      !& 'Plant Growth Strategy 97',                                             &
+      !& 'Plant Growth Strategy 98']!,                                             &
+!     ! & 'Plant Growth Strategy 99']                                             
+      
+      
+      
+      
       
       
       
 
     ! Index of PFT into lctlib columns
     ! id is one less than in lctlib file because the first column (glacier) has been thrown away
-    INTEGER, PARAMETER :: pft_ids(npft) = (/ 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20/)
+    INTEGER, PARAMETER :: pft_ids(npft) = (/   1,   2,   3,   4,   5,   6,   7,   8,   9,&
+         &10,  11,  12,  13,  14,  15,  16,  17,  18,&
+         &19,  20,  21,  22,  23,  24,  25,  26,  27,&
+         &28,  29,  30,  31,  32,  33,  34,  35,  36,&
+         &37,  38,  39,  40/)!,  41,  42,  43,  44,  45,&
+         !&46,  47,  48,  49,  50,  51,  52,  53,  54,&
+         !&55,  56,  57,  58,  59,  60,  61,  62,  63,&
+         !&64,  65,  66,  67,  68,  69,  70,  71,  72,&
+         !&73,  74,  75,  76,  77,  78,  79,  80,  81,&
+         !&82,  83,  84,  85,  86,  87,  88,  89,  90,&
+         !&91,  92,  93,  94,  95,  96,  97,  98/)!,  99/)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_usecase_pfts'
 

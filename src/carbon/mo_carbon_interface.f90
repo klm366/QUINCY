@@ -231,6 +231,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::   ff_npp
     dsl4jsb_Real2D_onChunk ::   flx_germ
     dsl4jsb_Real2D_onChunk ::   Flg_die
+    dsl4jsb_Real2D_onChunk ::   Flg_senesc
     dsl4jsb_Real2D_onChunk ::   MaintRes
     dsl4jsb_Real2D_onChunk ::   MaintRes_sum
     dsl4jsb_Real2D_onChunk ::   MaintRes_yDayMean
@@ -238,6 +239,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::   AutoRes
     dsl4jsb_Real2D_onChunk ::   C_balan
     dsl4jsb_Real2D_onChunk ::   C_delta
+    dsl4jsb_Real2D_onChunk ::   c_total
     ! Taking relative soil moisture from the HYDRO process
     dsl4jsb_Real2D_onChunk ::   w_soil_rel              
     dsl4jsb_Real2D_onChunk ::   alpha_jedi
@@ -436,6 +438,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_npp            )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   flx_germ          )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   Flg_die           )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   Flg_senesc        )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   alpha_jedi        )
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_rel        ) 
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    max_moist         )
@@ -448,6 +451,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,   AutoRes           )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   C_balan           )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   C_delta           )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   c_total           )
     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
    
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_crop_harvest)         ! inout
@@ -621,7 +625,7 @@ CONTAINS
     inidate = get_time_start()
     iniyear = get_year(inidate)
     lrestart= jsbach_is_restarted()
-  
+    current = get_time_current()
         
     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!     
     
@@ -692,15 +696,9 @@ CONTAINS
       IF (TRIM(model%config%usecase) .eq. 'jsbach_jedi' ) THEN
       
         CALL calc_Ctradeoff( &
-        & LAI_yDayMean,                                & ! in
-        & LAI_yyDayMean,                               & ! in
         & GPP_yDayMean,                                & ! in
-        & NPP_pot_yDayMean,                            & ! in
-        & topSoilTemp_yDayMean,                        & ! in
-        & alpha_yDayMean,                              & ! in
         & dsl4jsb_Lctlib_param(LAI_shed_constant),     & ! in
         & dsl4jsb_Lctlib_param(specificLeafArea_C),    & ! in
-        & dsl4jsb_Lctlib_param(PhenologyType),         & ! in
         ! JeDi plant trait parameter comes in now <<<<<<<<<<<
         & dsl4jsb_Lctlib_param(GrowRspdMoist),         & ! in
         & dsl4jsb_Lctlib_param(GrowRspdTemp ),         & ! in
@@ -718,10 +716,10 @@ CONTAINS
         & dsl4jsb_Lctlib_param(RelSenesAbgd ),         & ! in
         & dsl4jsb_Lctlib_param(NitroStatus  ),         & ! in
         ! JeDi plant trait parameter comes in now >>>>>>>>>>>
+        & iniyear                    ,&
+        & get_year(current)          ,&
         & time_steps_per_day(),                        & ! in
         & dtime,                                       & ! in
-        & t_air,                                       & ! in
-  !  
         & c_storage,                                   & ! inout
         & c_storage_temp,                              & ! out
         & c_leaves,                                    & ! inout
@@ -735,12 +733,14 @@ CONTAINS
         & ff_grow_G,                                   & ! inout
         & ff_npp,                                      & ! inout
         & Flg_die,                                     & ! inout
+        & Flg_senesc,                                  & ! out
         & flx_germ,                                    & ! out
         & MaintRes_yDayMean,                           & ! in
         & GrowthResp,                                  & ! out
         & AutoRes,                                     & ! out
         & C_balan,                                     & ! out
         & C_delta,                                     & ! out
+        & c_total,                                     & !
   !  
         & c_litter_green_ag,                           & ! inout
         & c_litter_green_bg,                           & ! inout
@@ -1018,6 +1018,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, c_storage_ta,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_fnroot_ta,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_csroot_ta,            weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_total_ta,             weighted_by_fract)
     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
     
     ! Variavles for JeDi carbon allocation 
@@ -1122,7 +1123,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  c_fnroot          
     dsl4jsb_Real2D_onChunk ::  c_csroot       
     dsl4jsb_Real2D_onChunk ::  c_seed          
-    dsl4jsb_Real2D_onChunk ::  c_stem        
+    dsl4jsb_Real2D_onChunk ::  c_stem
+    dsl4jsb_Real2D_onChunk ::  c_total
     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
     
     dsl4jsb_Real2D_onChunk ::  c_acid_ag1
@@ -1176,6 +1178,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_fnroot  )             ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_csroot  )             ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_seed    )             ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_total   )             ! inout
      ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
     
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_crop_harvest)         ! inout
@@ -1213,7 +1216,7 @@ CONTAINS
     c_storage         = c_storage         * (oldRefArea / newRefArea)
     c_fnroot          = c_fnroot          * (oldRefArea / newRefArea)
     c_csroot          = c_csroot          * (oldRefArea / newRefArea)
-    
+    c_total           = c_total           * (oldRefArea / newRefArea)
     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
      
     c_crop_harvest    = c_crop_harvest    * (oldRefArea / newRefArea)
@@ -1244,6 +1247,7 @@ CONTAINS
       ! Variavles for JeDi carbon allocation 
       & c_leaves = c_leaves(:) , c_storage = c_storage(:) , c_fnroot = c_fnroot(:) , &
       & c_csroot = c_csroot(:) , c_stem = c_stem(:)       , c_seed = c_seed(:)     , &
+      & c_total = c_total(:), &
       ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
       & c_crop_harvest = c_crop_harvest(:), &
       & c_acid_ag1 = c_acid_ag1(:), c_water_ag1 = c_water_ag1(:), &
@@ -1272,7 +1276,7 @@ CONTAINS
       & c_green , c_woods, c_reserve, c_crop_harvest,             &
       ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
       ! Variavles for JeDi carbon allocation 
-      & c_leaves , c_storage , c_fnroot , c_csroot , c_stem , c_seed , &
+      & c_leaves , c_storage , c_fnroot , c_csroot , c_stem , c_seed , c_total, &
       ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
       & c_acid_ag1, c_water_ag1, c_ethanol_ag1, c_nonsoluble_ag1, &
       & c_acid_bg1, c_water_bg1, c_ethanol_bg1, c_nonsoluble_bg1, &
@@ -1303,7 +1307,7 @@ CONTAINS
     REAL(wp),                   INTENT(in), OPTIONAL  :: c_csroot(:)
     REAL(wp),                   INTENT(in), OPTIONAL  :: c_seed(:)
     REAL(wp),                   INTENT(in), OPTIONAL  :: c_storage(:)
-    
+    REAL(wp),                   INTENT(in), OPTIONAL  :: c_total(:)
 ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
 
     REAL(wp),                   INTENT(in), OPTIONAL  :: c_acid_ag1(:)
@@ -1361,7 +1365,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::     c_leaves_ta
     dsl4jsb_Real2D_onChunk ::     c_fnroot_ta
     dsl4jsb_Real2D_onChunk ::     c_csroot_ta        
-                  
+    dsl4jsb_Real2D_onChunk ::     c_total_ta          
 ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
 
     dsl4jsb_Real2D_onChunk ::  c_acid_ag1_ta
@@ -1422,7 +1426,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_stem_ta    )
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_storage_ta )
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_seed_ta    )
-    
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_total_ta   )
 ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
 
 
@@ -1476,7 +1480,7 @@ CONTAINS
     IF (PRESENT(c_csroot) )  CALL get_per_tile(c_csroot_ta(:) , c_csroot(:) , veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(c_seed)   )  CALL get_per_tile(c_seed_ta(:)   , c_seed(:)   , veg_fract_correction(:), fract_fpc_max(:))   
     IF (PRESENT(c_storage))  CALL get_per_tile(c_storage_ta(:), c_storage(:), veg_fract_correction(:), fract_fpc_max(:))
-    
+    IF (PRESENT(c_total)  )  CALL get_per_tile(c_total_ta(:)  , c_total(:)  , veg_fract_correction(:), fract_fpc_max(:))
 ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
 
 

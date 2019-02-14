@@ -139,14 +139,14 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
         & prefix, suffix,                                                            &
         & output_level=BASIC,loutput=.TRUE.,                                         &
-        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_wp , l_aggregate_all=.TRUE.) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'gross_assimilation', mem%gross_assimilation,                                            &
         & hgrid, surface,                                                                                             &
         & t_cf('gross_assimilation', 'mol(CO2)/m^2 (tile area) s (mean value)', 'Gross photosynthesis on tile area'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                          &
         & prefix, suffix,                                                                                             &
-        & output_level=BASIC,                                                                                         &
+        & output_level=BASIC,                                                       &
         & loutput=.TRUE., lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'dark_respiration_ca', mem%dark_respiration_ca,                                                  &
@@ -154,7 +154,7 @@ CONTAINS
         & t_cf('dark_respiration_ca', 'mol(CO2)/m^2(canopy ground)s (mean value)', 'Dark_respiration on canopy ground area'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                                  &
         & prefix, suffix,                                                                                                     &
-        & output_level=BASIC,                                                                                                 &
+        & output_level=BASIC, loutput=.TRUE.,                                                                                                &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'dark_respiration', mem%dark_respiration,                                              &
@@ -202,7 +202,7 @@ CONTAINS
         & hgrid, canopy_layer,                                                                                             &
         & t_cf('gross_assimilation_cl', 'mol(CO2)/m^2(leaf area)s', 'Gross photosynthesis per canopy layer on leaf area'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                               &
-        & prefix, suffix,                                                                                                  &
+        & prefix, suffix, loutput=.TRUE.,                                                                                &
         & lrestart=.FALSE., initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'dark_respiration_cl', mem%dark_respiration_cl,                                                 &

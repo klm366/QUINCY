@@ -409,7 +409,7 @@ CONTAINS
       CALL calc_assimilation_waterunlimited( &
         & dsl4jsb_Lctlib_param(C4Flag),      &
         & dsl4jsb_Lctlib_param(JeDiCarboxRate),  &
-        & dsl4jsb_Lctlib_param(ETransport),  &
+        & dsl4jsb_Lctlib_param(JeDiCarboxRate)*1.9_wp,  &  ! ECtransport rate = 1.9 Vc,max
         & t_air(:),                          & ! in
         & press_srf(:),                      & ! in
         & par_down_mol(:),                   & ! in
@@ -506,7 +506,7 @@ CONTAINS
   SUBROUTINE update_assimilation(tile, options)
 
     USE mo_assimi_process,      ONLY: calc_assimilation_waterlimited, calc_NPP_pot_rate
-
+    USE mo_jsb_time,          ONLY:time_steps_per_day
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -540,7 +540,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: canopy_cond_over_time ! Canopy conductance integrated over time
 
     dsl4jsb_Real2D_onChunk :: CO2_air_mol           ! CO2 particle mixing ratio [molCO2/molDryAir]
-
+    dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real2D_onChunk :: veg_fract_correction  ! factor to convert from tile to canopy area
     dsl4jsb_Real2D_onChunk :: gross_assimilation_ca
     dsl4jsb_Real2D_onChunk :: gross_assimilation
@@ -598,6 +598,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   canopy_cond)             ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond_limited)     ! in
 
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    lai) !in !-=-=-=-=-=-=-=-=-=-=-=-=-=-=- bcbcbcbcbcbcbcbcbc
     dsl4jsb_Get_var2D_onChunk(PHENO_,    veg_fract_correction)    ! in
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   assimi_scaling_fact_cl)  ! in
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   canopy_cond_cl)          ! inout
@@ -638,12 +639,13 @@ CONTAINS
     !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     
     IF (TRIM(model%config%usecase) .eq. 'jsbach_jedi' ) THEN
-   
-       
+        
+        
+      
       CALL calc_assimilation_waterlimited(    &
         & dsl4jsb_Lctlib_param(C4Flag),       &
         & dsl4jsb_Lctlib_param(JeDiCarboxRate),   &
-        & dsl4jsb_Lctlib_param(ETransport),   &
+        & dsl4jsb_Lctlib_param(JeDiCarboxRate)*1.9_wp,   &
         & t_air(:),                           & ! in
         & press_srf(:),                       & ! in
         & par_down_mol(:),                    & ! in
@@ -709,6 +711,25 @@ CONTAINS
 
     gross_assimilation_ca(:) = SUM(gross_assimilation_cl(:,:) * lai_cl(:,:),DIM=2) ! convert from leaf area of layer to canopy ground area
     gross_assimilation(:) = gross_assimilation_ca(:) * veg_fract_correction(:) ! convert from canopy area to tile box area
+
+
+
+!-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+!        gross_assimilation_ca(:) =  (  2.76 *1.e-06_wp ) *  (   120._wp * (1._wp - exp(-0.5_wp * lai)  ) )         
+!        gross_assimilation_ca(:) = gross_assimilation_ca(:) + ((dsl4jsb_Lctlib_param(NitroStatus)*14._wp/12.01_wp *0.0059)+0.00011)*1._wp
+!        gross_assimilation_ca(:) = gross_assimilation_ca(:) - sqrt(  gross_assimilation_ca(:) **2 - 4._wp * 0.9_wp *  (  (  2.76 *1.e-06_wp ) *   120._wp * (1._wp - exp(-0.5_wp * lai)  ) ) * (((dsl4jsb_Lctlib_param(NitroStatus)*14._wp/12.01_wp *0.0059)+0.00011)*1._wp) )
+!        gross_assimilation_ca(:) = gross_assimilation_ca(:) * (86400._wp * 0.5_wp  / (2._wp*0.9_wp)  )  * 1._wp
+        
+!        gross_assimilation_ca(:) = gross_assimilation_ca(:) /12.01_wp  / 86400._wp
+
+      !  print*,'gross_assimilation=', gross_assimilation(:)
+
+!-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+
+
+
+
 
     ! Same for dark_respiration_ca
     ! R: dies ist eine alternative Schreibweise die verwendet wurde da der PGI Kompiler probleme gemacht hat.

@@ -238,30 +238,32 @@ MODULE mo_carbon_memory_class
        c_storage,                    &
        c_storage_temp,               &
        c_seed,                       &
-       temp_c_seed,                       &
+       temp_c_seed,                  &
        c_stem,                       &
        c_leaves,                     &
        c_fnroot,                     &
-       c_csroot                      
-         
+       c_csroot,                      &
+        c_total                       
    TYPE(t_jsb_var_real2d) ::            &
        c_storage_ta,                    &
        c_seed_ta,                       &
        c_stem_ta,                       &
        c_leaves_ta,                     &
        c_fnroot_ta,                     &
-       c_csroot_ta
+       c_csroot_ta,                    &
+       c_total_ta
        
     TYPE(t_jsb_var_real2d) ::         &
         ff_grow_T,                     &
         ff_grow_G,                     &
-        ff_grow_W,                 &
+        ff_grow_W,                     &
         ff_npp,                        &
         Flg_die,                       &
+        Flg_senesc,                    &
         alpha_jedi,                    &
         MaintRes,                      &
         MaintRes_sum,                  &
-        MaintRes_yDayMean,            &
+        MaintRes_yDayMean,             &
         GrowthResp,                    &
         AutoRes ,                      &
         C_balan,                       &
@@ -508,7 +510,7 @@ CONTAINS
         
       CALL jsb_add_var( mem, 'temp_c_seed', mem%temp_c_seed,                                     &
         & hgrid, surface,                                                                        &
-        & t_cf('temp_c_seed', 'mol(C) m-2(canopy)', 'C-Pool for green parts of vegetation.'),    &
+        & t_cf('temp_c_seed', 'mol(C) m-2(canopy)', 'C-Pool of seed.'),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix,                                                                        &
         & output_level=BASIC,loutput=.TRUE.,                                                      &
@@ -516,7 +518,7 @@ CONTAINS
 
       CALL jsb_add_var( mem, 'c_stem', mem%c_stem,                                     &
         & hgrid, surface,                                                                        &
-        & t_cf('c_stem', 'mol(C) m-2(canopy)', 'C-Pool for green parts of vegetation.'),    &
+        & t_cf('c_stem', 'mol(C) m-2(canopy)', 'C-Pool of stem.'),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix,                                                                        &
         & output_level=BASIC,loutput=.FALSE.,                                                      &
@@ -524,7 +526,7 @@ CONTAINS
 
       CALL jsb_add_var( mem, 'c_csroot', mem%c_csroot,                                     &
         & hgrid, surface,                                                                        &
-        & t_cf('c_csroot', 'mol(C) m-2(canopy)', 'C-Pool for green parts of vegetation.'),    &
+        & t_cf('c_csroot', 'mol(C) m-2(canopy)', 'C-Pool of coarse root.'),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix,                                                                        &
         & output_level=BASIC,loutput=.FALSE.,                                                      &
@@ -532,7 +534,7 @@ CONTAINS
 
       CALL jsb_add_var( mem, 'c_fnroot', mem%c_fnroot,                                     &
         & hgrid, surface,                                                                        &
-        & t_cf('c_fnroot', 'mol(C) m-2(canopy)', 'C-Pool for green parts of vegetation.'),    &
+        & t_cf('c_fnroot', 'mol(C) m-2(canopy)', 'C-Pool of fine root.'),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix,                                                                        &
         & output_level=BASIC,loutput=.FALSE.,                                                      &
@@ -540,15 +542,23 @@ CONTAINS
 
       CALL jsb_add_var( mem, 'c_leaves', mem%c_leaves,                                     &
         & hgrid, surface,                                                                        &
-        & t_cf('c_leaves', 'mol(C) m-2(canopy)', 'C-Pool for green parts of vegetation.'),    &
+        & t_cf('c_leaves', 'mol(C) m-2(canopy)', 'C-Pool of leaves'),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix,                                                                        &
         & output_level=BASIC,loutput=.FALSE.,                                                      &
         & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) 
 
+      CALL jsb_add_var( mem, 'c_total', mem%c_total,                              &
+        & hgrid, surface,                                                                        &
+        & t_cf('c_total','mol(C) m-2(canopy)' ,'Total carbon of six pools'),           &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+        & prefix, suffix,                                                                        &
+        & output_level=BASIC,loutput=.TRUE.,                                                      &
+        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.FALSE. )   
+
       CALL jsb_add_var( mem, 'c_storage_ta', mem%c_storage_ta,                                     &
         & hgrid, surface,                                                                        &
-        & t_cf('c_storage_ta', 'mol(C) m-2(canopy)', 'C-Pool for green parts of vegetation.'),    &
+        & t_cf('c_storage_ta', 'mol(C) m-2', 'C-Pool for green parts of vegetation.'),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix,                                                                        &
         & output_level=BASIC,loutput=.TRUE.,                                                      &
@@ -556,7 +566,7 @@ CONTAINS
         
       CALL jsb_add_var( mem, 'c_seed_ta', mem%c_seed_ta,                                     &
         & hgrid, surface,                                                                        &
-        & t_cf('c_seed_ta', 'mol(C) m-2(canopy)', 'C-Pool for green parts of vegetation.'),    &
+        & t_cf('c_seed_ta', 'mol(C) m-2', 'C-Pool of seed.'),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix,                                                                        &
         & output_level=BASIC,loutput=.TRUE.,                                                      &
@@ -564,7 +574,7 @@ CONTAINS
 
       CALL jsb_add_var( mem, 'c_stem_ta', mem%c_stem_ta,                                     &
         & hgrid, surface,                                                                        &
-        & t_cf('c_stem_ta', 'mol(C) m-2(canopy)', 'C-Pool for green parts of vegetation.'),    &
+        & t_cf('c_stem_ta', 'mol(C) m-2', 'C-Pool of stem.'),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix,                                                                        &
         & output_level=BASIC,loutput=.TRUE.,                                                      &
@@ -572,7 +582,7 @@ CONTAINS
 
       CALL jsb_add_var( mem, 'c_csroot_ta', mem%c_csroot_ta,                                     &
         & hgrid, surface,                                                                        &
-        & t_cf('c_csroot_ta', 'mol(C) m-2(canopy)', 'C-Pool for green parts of vegetation.'),    &
+        & t_cf('c_csroot_ta', 'mol(C) m-2' ,'C-Pool of coarse root.'),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix,                                                                        &
         & output_level=BASIC,loutput=.TRUE.,                                                      &
@@ -580,7 +590,7 @@ CONTAINS
 
       CALL jsb_add_var( mem, 'c_fnroot_ta', mem%c_fnroot_ta,                                     &
         & hgrid, surface,                                                                        &
-        & t_cf('c_fnroot_ta', 'mol(C) m-2(canopy)', 'C-Pool for green parts of vegetation.'),    &
+        & t_cf('c_fnroot_ta','mol(C) m-2', 'C-Pool of fine root.'),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix,                                                                        &
         & output_level=BASIC,loutput=.TRUE.,                                                      &
@@ -588,11 +598,19 @@ CONTAINS
         
       CALL jsb_add_var( mem, 'c_leaves_ta', mem%c_leaves_ta,                                     &
         & hgrid, surface,                                                                        &
-        & t_cf('c_leaves_ta', 'mol(C) m-2(canopy)', 'C-Pool for green parts of vegetation.'),    &
+        & t_cf('c_leaves_ta', 'mol(C) m-2', 'C-Pool od leaves.'),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix,                                                                        &
         & output_level=BASIC,loutput=.TRUE.,                                                      &
         & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) 
+      
+      CALL jsb_add_var( mem, 'c_total_ta', mem%c_total_ta,                              &
+        & hgrid, surface,                                                                        &
+        & t_cf('c_total_ta','mol(C) m-2','Total carbon of six pools'),           &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+        & prefix, suffix,                                                                        &
+        & output_level=BASIC,loutput=.TRUE.,                                                      &
+        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.FALSE. )   
         
       CALL jsb_add_var( mem, 'ff_grow_T', mem%ff_grow_T,                                      &
         & hgrid, surface,                                                                        &
@@ -637,6 +655,14 @@ CONTAINS
       CALL jsb_add_var( mem, 'Flg_die', mem%Flg_die,                                              &
         & hgrid, surface,                                                                        &
         & t_cf('Flg_die', 'Dead'),           &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+        & prefix, suffix,                                                                        &
+        & output_level=BASIC,loutput=.TRUE.,                                                      &
+        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.FALSE. )    
+    
+      CALL jsb_add_var( mem, 'Flg_senesc', mem%Flg_senesc,                                              &
+        & hgrid, surface,                                                                        &
+        & t_cf('Flg_senesc', 'Senescence flag'),           &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix,                                                                        &
         & output_level=BASIC,loutput=.TRUE.,                                                      &
@@ -707,6 +733,8 @@ CONTAINS
         & prefix, suffix,                                                                        &
         & output_level=BASIC,loutput=.TRUE.,                                                      &
         & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.FALSE. )   
+        
+        
       ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
 
       ! Yasso 1
@@ -1161,7 +1189,7 @@ CONTAINS
         & t_cf('c_ethanol_ag1_ta', 'mol(C) m-2', 'C-Pool for ethanol-soluble litter in Yasso (aboveground).'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
         & prefix, suffix,                                                                                           &
-        & output_level=MEDIUM,  loutput=.TRUE.,                                                                 &
+        & output_level=MEDIUM,  loutput=.FALSE.,                                                                 &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'c_nonsoluble_ag1_ta', mem%c_nonsoluble_ag1_ta,                                  &

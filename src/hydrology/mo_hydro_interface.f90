@@ -1272,6 +1272,12 @@ CONTAINS
                                                     q_air(:) >  qsat(t(:),press_srf(:)) & ! in, atmosphere saturated?
                                                     )
 
+    !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    !BCBCBCBCBCBCBCBCBCCBCBCBCBCBCBBCCB
+   ! canopy_cond_limited(:) = canopy_cond(:)
+    !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_canopy_cond_stressed

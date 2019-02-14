@@ -661,13 +661,26 @@ CONTAINS
   SUBROUTINE update_phenology_jedi_phenology(tile,options)
   
      USE mo_pheno_process,        ONLY: calc_jedi_phenology
+   !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+   
+     USE mo_jsb_time,          ONLY: t_datetime,is_newday,is_time_experiment_start,get_time_start,get_year,get_time_current
+  !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+    
     
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_model), POINTER             :: model
     INTEGER                                :: iblk, ics, ice, nc
    ! REAL(wp)                               :: dtime
-  
+  !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+   
+       LOGICAL                      :: lstart
+       TYPE(t_datetime)             :: inidate,current
+       INTEGER                      :: iniyear
+       
+    
+  !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+   
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(CARBON_)
     
@@ -701,10 +714,24 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(PHENO_,    lai)                    ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,   c_leaves)
     
+    
+    inidate = get_time_start()
+    iniyear = get_year(inidate)
+    
+    current = get_time_current()
+    
+  ! IF( get_year(current) .GT. iniyear + 3 ) THEN
+   
     CALL calc_jedi_phenology(  &
                                &  dsl4jsb_Lctlib_param(JeDiSLA),       &  ! in
                                &  c_leaves,                             &  ! in
-                               &  lai                                   )  ! inout
+                               &  lai                  )  ! inout
+  ! ELSE
+   
+  !    lai = 5._wp
+    
+  ! ENDIF 
+ 
    
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
