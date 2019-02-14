@@ -57,12 +57,11 @@ specialFluxnetOutput="F"
 ##(2) cruncep vs gfdb comparison
 # compare simulated model results of CRUNCEP sites with Global Forest Data Base data (/Net/Groups/BGI/data/Model/SLM1/evaluation/point/GFDB/global_forest_database_21092016.csv)
 # T (True) or F (False) [large caps]
-# when set to "T" options are set to: forcingDataSet="cruncep", output_interval_pool/flux="daily", paramSensitivitySim="F", specialFluxnetOutput="F"
-# output is created only from 'output_start_...' to 'output_end_...'
-# default output interval is "daily" (set output_interval_pool="daily" & output_interval_flux="daily")
-# the cleanup_slm_hpc_run.sh starts two R scripts: sim_cruncep_vs_gfdb-process_daily.R & sim_cruncep_vs_gfdb-create_figs.R & sim_cruncep_all_vs_gfdb-create_figs.R
+# when set to "T" options are set to: paramSensitivitySim="F", specialFluxnetOutput="F"
+# output is created from 'output_start_...' to 'output_end_...' (typically 1986 to 2015), but see the output_interval_*_spinup options
+# the output period may be set to output_interval_pool/flux="daily" so that the automatic model-data comparison works
+# the cleanup_slm_hpc_run.sh starts the R scripts: sim_cruncep_vs_gfdb-process_daily.R & sim_cruncep_vs_gfdb-create_figs.R & sim_cruncep_all_vs_gfdb-create_figs.R
 # you can run simulations for the site-sets 'all' and 'cue' CRUNCEPv7, or for only some/one site(s) of it (use customSiteList="F/T"; or singleSiteName="Site-ID")
-# model-data comparison works only if output_interval_pool/flux="daily" (see sim_cruncep_vs_gfdb-process_daily.R)
 compareSimCRUNCEPvsGFDB="F"
 # years of spin-up (static and transient forcing) before output is saved (all output is used for simulation vs GFDB comparision)
 # forcingMode static:    simulation_length_number is increased and 'output_start_...' & 'output_end_...' are shifted by the years defined as spinup
@@ -840,13 +839,29 @@ fi
 ## apply setting for comparison simulated model results of CRUNCEP sites with Global Forest Data Base ##
 # this may overwrite some options specifies above !
 if [ $compareSimCRUNCEPvsGFDB == "T" ]; then
-  gfdbFile="/Net/Groups/BGI/data/Model/SLM1/evaluation/point/GFDB/global_forest_database_cue_sites_01082017.csv"
-  forcingDataSet="cruncep"
-  siteSelection="cue"
+  if [ "$forcingDataSet" != "cruncep" ]; then
+    echo " EXIT!  You want to run a compareSimCRUNCEPvsGFDB simulation with model-data comparison, but the site set is not cruncep."
+    exit 1
+  fi
+  echo " You are running the CRUNCEP vs GFDB simulation for the cruncep > ""$siteSelection"" < site selection."
+  # set path/name for files with field data, for checking their presence below, as long as dailyOutput="T"
+  gfdbFileCUE="/Net/Groups/BGI/data/Model/SLM1/evaluation/point/GFDB/global_forest_database_cue_sites_01082017.csv"
+  gfdbFileALL="/Net/Groups/BGI/data/Model/SLM1/evaluation/point/GFDB/global_forest_database_all_sites_01082017.csv"
+  dailyOutput="T"
+  if [ "$output_interval_pool" != "daily" ]; then 
+    echo " You are running the CRUNCEP vs GFDB simulation with ""$output_interval_pool"" pool output."
+    echo " The sim_cruncep_vs_gfdb-process_daily.R needs daily data - hence, the automatic model-data comparison may not work."
+    dailyOutput="F"
+  fi
+  if [ "$output_interval_flux" != "daily" ]; then 
+    echo " You are running the CRUNCEP vs GFDB simulation with ""$output_interval_flux"" flux output."
+    echo " The sim_cruncep_vs_gfdb-process_daily.R needs daily data - hence, the automatic model-data comparison may not work."
+    dailyOutput="F"
+  fi
+  # disable parameter sensitivity runs
   paramSensitivitySim="F"
+  # disable special fluxnet-output
   specialFluxnetOutput="F"
-  # output_interval_pool="daily"
-  # output_interval_flux="daily"
   if [ $forcingMode == "static" ]
    then
     # output starts right after the spinup has finished (output is used for simulation vs GFDB comparision)
@@ -867,20 +882,20 @@ if [ $compareSimCRUNCEPvsGFDB == "T" ]; then
     # neither do the output_start* & output_end* years change
     # note, in transient simulations the transient_spinup_years are counted within SLM from negative value to zero, which is when the simulation_length_number starts
   fi
-  # checking GFDB file availability
-  if [ ! -e "$gfdbFile" ] # if file not exists
-   then
-    echo "EXIT! The GFDB file does not exist! You set the option compareSimCRUNCEPvsGFDB to T."
-    echo " File location & name should be: ""$gfdbFile"
-    exit 1
-   else
-    echo " "
-    echo " You started simulations to compare CRUNCEP with GFDB data using a spin-up time of ""$spinupLengthGFDB"" years."
-    if [ $forcingMode == "static" ]
-     then
-      echo " The comparison will be based on daily SLM output of "$(($output_end_last_day_year - $output_start_first_day_year + 1))" years after the spin-up (static forcing mode)."
+  # checking GFDB field-data files availability if dailyOutput="T" (if no daily output is produced, the automatic model-data comparison may not work anyway)
+  if [ "$dailyOutput" == "T" ]; then
+    if [ ! -e "$gfdbFileCUE" ] || [ ! -e "$gfdbFileALL" ]; then  # if one of the files does not exists
+      echo "EXIT! The GFDB field-data files are not available! These are needed by the sim_cruncep*_vs_gfdb-create_figs.R scripts."
+      echo " File locations should be: ""$gfdbFileCUE"" and ""$gfdbFileALL"
+      exit 1
+    else
+      echo " "
+      echo " You started simulations to compare CRUNCEP with GFDB data using daily output and a spin-up time of ""$spinupLengthGFDB"" years."
+      if [ $forcingMode == "static" ]; then
+        echo " The comparison will be based on daily SLM output of "$(($output_end_last_day_year - $output_start_first_day_year + 1))" years after the spin-up (static forcing mode)."
+      fi
     fi
-  fi
+  fi # check "$dailyOutput" == "T"
 fi
 
 
