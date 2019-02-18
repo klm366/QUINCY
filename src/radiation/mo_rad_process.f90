@@ -11,7 +11,6 @@ MODULE mo_rad_process
 #ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp
-  USE mo_exception, ONLY: message
 
   IMPLICIT NONE
   PRIVATE
@@ -142,7 +141,7 @@ CONTAINS
 
     ! ---------------------------
     ! Go
-      
+
     ! Expresse radiation in  mol(photons)/(m^2 s)
     par_down_mol = par / Epar
 
@@ -154,7 +153,7 @@ CONTAINS
     ELSE
       ! soil reflectivity is derived from background albedo of the whole solar spectrum (compare eq. (122) in Knorr)
       soil_reflectivity_par = MAX(0.92_wp * alb_vis_soil - 0.015_wp, SoilReflectivityParMin)
-!        soil_reflectivity_par = MAX(0.92_wp * alb_background - 0.015_wp, SoilReflectivityParMin)  ! USE ONLY FOR COMPARISON WITH JSBACH3
+!       soil_reflectivity_par = MAX(0.92_wp * alb_background - 0.015_wp, SoilReflectivityParMin) ! USE ONLY FOR COMPARISON WITH JS3
     END IF
 
     ! Initialize ABSORBED PAR PER LEAF AREA,  IF cos_zenith_angle<1e-3
@@ -447,7 +446,7 @@ CONTAINS
 
     ! ---------------------------
     ! Go
-    
+
     IF (.NOT. l_day) RETURN
 
     ! @todo: use method from mo_surface_ocean:update_albedo_ocean from ECHAM6
@@ -455,7 +454,7 @@ CONTAINS
 
   END SUBROUTINE calc_alb_lwtr
   !
-  !---------------------------------------------------------------------------------------------------------------------------------
+  !--------------------------------------------------------------------------------------------------------------------------------
   !
   PURE ELEMENTAL SUBROUTINE calc_alb_lice( &
     & l_day,       &
@@ -480,10 +479,10 @@ CONTAINS
     ! Local variables
     REAL(wp) :: t_upper_limit    ! Upper temperature limit for cold snow albedo
     REAL(wp) :: alb_min, alb_max ! Minimum and maximum snow albedo
-    
+
     ! ---------------------------
     ! Go
-    
+
     IF (.NOT. l_day) RETURN
 
     t_upper_limit = tmelt - 1._wp
@@ -509,11 +508,11 @@ CONTAINS
 
   END SUBROUTINE calc_alb_lice
   !
-  !---------------------------------------------------------------------------------------------------------------------------------
+  !--------------------------------------------------------------------------------------------------------------------------------
   !
   PURE ELEMENTAL SUBROUTINE calc_glacier_albedo( &
     & l_day,   &
-    & t,       &    
+    & t,       &
     & alb_vis, &
     & alb_nir  &
     & )
@@ -539,7 +538,7 @@ CONTAINS
     ! Go
 
     IF (.NOT. l_day) RETURN
-    
+
     ! calculate new glacier albedo (visible and NIR) only at grid points with solar radiation (i.e. during daytime)
     IF (t >= tmelt) THEN
        alb_vis = AlbedoGlacierVisMin
@@ -558,25 +557,25 @@ CONTAINS
 
   END SUBROUTINE calc_glacier_albedo
   !
-  !---------------------------------------------------------------------------------------------------------------------------------
+  !--------------------------------------------------------------------------------------------------------------------------------
   !
   ! Calculate the albedo of the soil surface
   ! Note, this subroutine should not be called for any soil or vegetation parent tile but only for tiles of the lowest level
 
   ! In JSBACH3 in the subroutine update_soil_albedo calculated the albedo of soils. The scheme accumulates all carbon from
-  ! boxC_litter_green_ag and boxC_slow (canopy) of all tiles and builds a whole grid cell average. (This is done in subroutine update_albedo.
-  ! Note, the glacier tile implementation of the scheme is arbitary as JSBACH3 could never handle a glacier tile.) Then:
-  ! From boxC_slow an albedo reduction may be calculated for the soil (linear or log).
+  ! boxC_litter_green_ag and boxC_slow (canopy) of all tiles and builds a whole grid cell average. (This is done in subroutine
+  ! update_albedo. Note, the glacier tile implementation of the scheme is arbitary as JSBACH3 could never handle a glacier tile.)
+  ! Then: From boxC_slow an albedo reduction may be calculated for the soil (linear or log).
   ! From c_litter_green_ag/c_ag_sum_1 the albedo of litter may be calculted (linear).
   ! Then soil and litter albedos may be summed up according to the litter view fraction.
   ! However, the JSBACH3 scheme is not useable for the new JSBACH4 concept of child tiles. To keep the JSBACH3 concept in JSBACH4
-  ! the albedo calculation could be done only on the highest parent tile (the grid cell). The childs would not have a meaningful albedo.
-  ! Thus in JSBACH4 the albedo calculations are done only on the lowest child tiles and are then accumulated on the parent tiles. This
-  ! represents a "well separated" assumption in contrast of the "well mixed" assumtion in JSBACH3. In the result it does not matter
-  ! for linear relations between carbon (in and on the soil) and soil albedo. (Exception: the litter for any vegetation tile in JSBACH4
-  ! would cover more area than available for this tile and the litter of any other vegetation tile covers less than its area available.)
-  ! Only for the logarithmic case (albedo_options%UseSOC .eq. 'log') the soil albedo result of JSBACH4 differs from JSBACH3.
-  ! In this case this "well separated" result is as reasonable as the "well mixed" result of JSBACH3.
+  ! the albedo calculation could be done only on the highest parent tile (the grid cell). The childs would not have a meaningful
+  ! albedo. Thus in JSBACH4 the albedo calculations are done only on the lowest child tiles and are then accumulated on the parent
+  ! tiles. This represents a "well separated" assumption in contrast of the "well mixed" assumtion in JSBACH3. In the result it
+  ! does not matter for linear relations between carbon (in and on the soil) and soil albedo. (Exception: the litter for any 
+  ! vegetation tile in JSBACH4 would cover more area than available for this tile and the litter of any other vegetation tile
+  ! covers less than its area available.) Only for the logarithmic case (albedo_options%UseSOC .eq. 'log') the soil albedo result
+  ! of JSBACH4 differs from JSBACH3. In this case this "well separated" result is as reasonable as the "well mixed" result of JS3.
 
   ELEMENTAL SUBROUTINE calc_soil_albedo( &
     & l_day,                     &
@@ -595,7 +594,8 @@ CONTAINS
     & )
 
     ! Use declarations
-    USE mo_rad_constants, ONLY: AlbedoSoilConstVis, AlbedoSoilConstNir ! Albedo constant alternatively usable for alb_vis_mineralsoil
+    USE mo_rad_constants, ONLY: AlbedoSoilConstVis, AlbedoSoilConstNir ! Albedo constant alternatively usable for 
+                                                                       ! alb_vis_mineralsoil
 
     ! Arguments
     LOGICAL,          INTENT(in)  :: l_day
@@ -624,7 +624,8 @@ CONTAINS
                            Soil_C_min              = 500.      !
 
     REAL(wp)             ::                         &
-                            alb_vis_soil_nolitter,  & ! Albedo of soil for the vis range (incl. the carbon within soil but without the litter layer above)
+                            alb_vis_soil_nolitter,  & ! Albedo of soil for the vis range (incl. the carbon within soil but
+                                                      ! without the litter layer above)
                             alb_nir_soil_nolitter,  & ! See above, for the nir range
                             litter_area,            &
                             litter_view_fract,      &
@@ -640,21 +641,21 @@ CONTAINS
     IF (use_alb_mineralsoil_const) THEN ! all background soil albedo values are set to the same value
        alb_vis_mineralsoil = AlbedoSoilConstVis
        alb_nir_mineralsoil = AlbedoSoilConstNir
-    ELSE 
-       alb_vis_mineralsoil = alb_background ! R: This is Rainers invention to mitigate the "error" in 
+    ELSE
+       alb_vis_mineralsoil = alb_background ! R: This is Rainers invention to mitigate the "error" in
                                             !    the JSBACH3 version. But still it should not be used.
                                             !    In JSBACH3 it was filled with albedo_soil_vis_base,
                                             !    which included soil and litter carbon. alb_background
                                             !    is the albedo without snow or canopy, BUT it still
        alb_nir_mineralsoil = alb_background !    includes carbon. However, this all is done to
-                                            !    implement the possibility to use mineral soil albedos 
+                                            !    implement the possibility to use mineral soil albedos
                                             !    which would then be consitent with the soil albedo parametrisations!
     END IF
 
     ! albedo of soil with carbon content but without litter
-    ! R: In JSBACH3 albedo_desert_dry_vis is either set to (1) AlbedoSoilConstVis or to albedo_soil_vis_base, which is (dependent on
-    !    the jsbach.nc file) either (2) the mineral soil albedo or (3) the soil albedo with soil C and litter. Thus reading in the "wrong"
-    !    kind of albedo from the jsbach.nc file wasn't so unlikely.
+    ! R: In JSBACH3 albedo_desert_dry_vis is either set to (1) AlbedoSoilConstVis or to albedo_soil_vis_base, which is (dependent
+    !    on the jsbach.nc file) either (2) the mineral soil albedo or (3) the soil albedo with soil C and litter. Thus reading in
+    !    the "wrong" kind of albedo from the jsbach.nc file wasn't so unlikely.
     !    However, the variable was also used inconsistent in the scheme and senseless for glacier.
 
     IF(use_alb_soil_organic_C .eq. 'linear') THEN
@@ -669,7 +670,7 @@ CONTAINS
                                                   !    which could include different kinds of albedos
                                                   !    (see comment above) but in each case not the
                                                   !    correct one.
-                                             
+
       alb_nir_soil_nolitter = alb_nir_mineralsoil
     END IF ! use_alb_soil_organic_C
 
@@ -688,11 +689,12 @@ CONTAINS
       ! calculate the litter_view_fraction, i.e. what fraction of the box is covered by litter
       ! this determines how much soil is seen through litter
       litter_view_fract = 1.0_wp - EXP(-0.5_wp * litter_area) ! R: because this graph is not linear (logarithmical) and in JSBACH4
-                                                              !    the litter_areas are not summed up the result in JSBACH4 will be
-                                                              !    smaller here as it is calculated for each single tile but the sum
-                                                              !    of tiles will give a much higher "litter_view_fract" or - to name it
-                                                              !    better - a higher contribution of the litter part to alb_soil_vis
-                                                              !    However, therefore it meight be necessary to rescale this funktion ...
+                                                              !    the litter_areas are not summed up the result in JS4 will be
+                                                              !    smaller here as it is calcul. for each single tile but the sum
+                                                              !    of tiles will give a much higher "litter_view_fract" or - to
+                                                              !    name it better - a higher contribution of the litter part to
+                                                              !    alb_soil_vis However, therefore it meight be necessary to 
+                                                              !    rescale this funktion ...
 
       alb_vis_soil = (1.0_wp - litter_view_fract) * alb_vis_soil_nolitter + litter_view_fract * alb_vis_litter
       alb_nir_soil = (1.0_wp - litter_view_fract) * alb_nir_soil_nolitter + litter_view_fract * alb_nir_litter
@@ -703,7 +705,7 @@ CONTAINS
 
   END SUBROUTINE calc_soil_albedo
   !
-  !---------------------------------------------------------------------------------------------------------------------------------
+  !--------------------------------------------------------------------------------------------------------------------------------
   !
   ELEMENTAL SUBROUTINE calc_snow_albedo( &
     & l_day,             & ! in
@@ -740,7 +742,8 @@ CONTAINS
                              snow_age,          & ! non-dimensional age of snow
                              cos_zenith_angle,  & ! cosinus of zenith angle of incoming radiation
                              albedo_age_weight, & ! 0 < albedo_age_weight < 1: snow albedo is calcualted by linearly weighting
-                                                  !                            the snow albedo resulting from both age and temperature schemes
+                                                  !                            the snow albedo resulting from both age and
+                                                  !                            temperature schemes
                              t_srf
 
     REAL(wp), INTENT(inout) ::              &
@@ -815,7 +818,7 @@ CONTAINS
 
   END SUBROUTINE calc_snow_albedo
   !
-  !---------------------------------------------------------------------------------------------------------------------------------
+  !--------------------------------------------------------------------------------------------------------------------------------
   !
   ELEMENTAL SUBROUTINE calc_sky_view_fractions( &
     & l_day,              & ! in
@@ -843,9 +846,9 @@ CONTAINS
 
     ! ---------------------------
     ! Go
-    
+
     IF (.NOT. l_day) RETURN
-    
+
     ! Fraction of "visible" bare ground below vegetation regarding only the LAI coverage
     sky_view_fract = 1._wp - fract_fpc_max * (1._wp - EXP(- SkyViewFactor * lai))
 
@@ -857,7 +860,7 @@ CONTAINS
 
   END SUBROUTINE calc_sky_view_fractions
   !
-  !---------------------------------------------------------------------------------------------------------------------------------
+  !--------------------------------------------------------------------------------------------------------------------------------
   !
   PURE ELEMENTAL SUBROUTINE Merge_albedos_of_vegtile( &
     & l_day,               & ! in
@@ -876,11 +879,11 @@ CONTAINS
     & alb_vis,             & ! inout
     & alb_nir              & ! inout
     & )
-    
+
     ! Arguments
     LOGICAL,  INTENT(in) :: l_day ! flag to indicate if it is day or night
     LOGICAL,  INTENT(in) :: l_forest
-        
+
     REAL(wp), INTENT(in) :: &
       sky_view_fract,       &
       sky_view_fract_stem,  &
@@ -961,7 +964,7 @@ CONTAINS
 
   END SUBROUTINE Merge_albedos_of_vegtile
   !
-  !---------------------------------------------------------------------------------------------------------------------------------
+  !--------------------------------------------------------------------------------------------------------------------------------
   !
   ! This is the echam5 scheme
   REAL(wp) PURE ELEMENTAL FUNCTION get_surface_albedo_simple( &
@@ -1037,7 +1040,7 @@ CONTAINS
 
   END FUNCTION get_surface_albedo_simple
   !
-  !---------------------------------------------------------------------------------------------------------------------------------
+  !--------------------------------------------------------------------------------------------------------------------------------
   !
   ELEMENTAL FUNCTION Has_minimal_radiation_2(swvis, swnir) RESULT(l_day)
 

@@ -41,9 +41,15 @@ macros = {
     'def_memory': [re.compile(
         r'dsl4jsb_Def_memory *\((.*)_ *\)', re.IGNORECASE),
         r'TYPE(t_\1_memory), POINTER :: \1__mem'],
+    'def_memory_tile': [re.compile(
+        r'dsl4jsb_Def_memory_tile *\((.*?)_ *, *(.*?) *\)', re.IGNORECASE),
+        r'TYPE(t_\1_memory), POINTER :: \1__mem__\2'],
     'get_memory': [re.compile(
         r'dsl4jsb_Get_memory *\((.*)_ *\)', re.IGNORECASE),
         r'SELECT TYPE (mm => tile%mem(\1_)%p); TYPE IS (t_\1_memory); \1__mem => mm ; END SELECT'],
+    'get_memory_tile': [re.compile(
+        r'dsl4jsb_Get_memory_tile *\((.*?)_ *, *(.*?) *\)', re.IGNORECASE),
+        r'SELECT TYPE (mm => \2%mem(\1_)%p); TYPE IS (t_\1_memory); \1__mem__\2 => mm ; END SELECT'],
     'memory': [re.compile(
         r'dsl4jsb_Memory *\((.*?)_ *\)', re.IGNORECASE),
         r'\1__mem'],
@@ -74,6 +80,12 @@ macros = {
     'get_var2d_onchunk': [re.compile(
         r'dsl4jsb_Get_var2D_onChunk *\((.*?)_ *, *(.*?) *\)', re.IGNORECASE),
         r'\2 => \1__mem%\2%ptr(ics:ice,iblk)'],
+    'get_var2d_onchunk_tile' : [re.compile(
+        r'dsl4jsb_Get_var2D_onChunk_tile *\((.*?)_ *, *(.*?) *, *(.*?) *\)', re.IGNORECASE),
+        r'\2 => \1__mem__\3%\2%ptr(ics:ice,iblk)'],
+    'get_var2d_onchunk_tile_name' : [re.compile(
+        r'dsl4jsb_Get_var2D_onChunk_tile_name *\((.*?)_ *, *(.*?) *, *(.*?) *\)', re.IGNORECASE),
+        r'\2_\3 => \1__mem__\3%\2%ptr(ics:ice,iblk)'],
     'get_var3d_onchunk': [re.compile(
         r'dsl4jsb_Get_var3D_onChunk *\((.*?)_ *, *(.*?) *\)', re.IGNORECASE),
         r'\2 => \1__mem%\2%ptr(ics:ice,:,iblk)'],
@@ -165,7 +177,7 @@ def process_file(inputfile, outputfile, verbose=False, cwd=None):
     with io.open(inputfile, 'r', encoding="utf-8") as infile:
         with (io.open(outputfile, 'w', encoding="utf-8") if outputfile != '' else sys.stdout) as outfile:
             outfile.write(u'!\n! This file was automatically generated from:\n')
-            outfile.write(u'!         ' + os.path.realpath(os.path.abspath(inputfile)) + u'\n')
+            outfile.write(u'!    ' + os.path.realpath(os.path.abspath(inputfile)) + u'\n')
             outfile.write(u'!    with md5 hash: ' + hasher.hexdigest() + u'\n!\n')
             if verbose:
                 if cwd:

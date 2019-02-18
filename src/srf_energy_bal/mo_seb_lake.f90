@@ -16,7 +16,6 @@ MODULE mo_seb_lake
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
-  USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
   USE mo_jsb_control,        ONLY: debug_on
 
@@ -39,8 +38,7 @@ CONTAINS
 
   SUBROUTINE update_surface_energy_lake(tile, options)
 
-    USE mo_phy_schemes,            ONLY: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef
-    USE mo_jsb_physical_constants, ONLY: tmelt
+    USE mo_phy_schemes,            ONLY: qsat, surface_dry_static_energy
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -53,48 +51,46 @@ CONTAINS
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: &
-      & t, &
-      & t_unfilt, &
-      & t_lwtr, &
-      & t_lice, &
-      & qsat_lwtr, &
-      & qsat_lice, &
-      & s_wtr, &
-      & s_ice, &
-      & heat_cap, &
-      & press_srf, &
-      & snow, &
-      & latent_hflx_wtr, &
-      & sensible_hflx_wtr, &
-      & latent_hflx_ice, &
-      & sensible_hflx_ice, &
-      & hflx_form_ice, &
-      & hflx_cond_ice, &
-      & hflx_melt_lice, &
-      & hflx_melt_snow, &
-      & rad_srf_net, &
-      & fract_lice, &
-      & depth_lice, &
-      & fract_snow_lice, &
-      & w_snow_lice, &
-      & w_snow, &
-      & rad_net_lwtr, &
+      & t,                    &
+      & t_unfilt,             &
+      & t_lwtr,               &
+      & t_lice,               &
+      & qsat_lwtr,            &
+      & qsat_lice,            &
+      & s_wtr,                &
+      & s_ice,                &
+      & heat_cap,             &
+      & press_srf,            &
+      & snow,                 &
+      & latent_hflx_wtr,      &
+      & sensible_hflx_wtr,    &
+      & latent_hflx_ice,      &
+      & sensible_hflx_ice,    &
+      & hflx_form_ice,        &
+      & hflx_cond_ice,        &
+      & hflx_melt_lice,       &
+      & hflx_melt_snow,       &
+      & fract_lice,           &
+      & depth_lice,           &
+      & fract_snow_lice,      &
+      & w_snow_lice,          &
+      & w_snow,               &
+      & rad_net_lwtr,         &
       & rad_net_lice
 
     ! Local variables
-    REAL(wp) :: &
+    REAL(wp) ::             &
       hcap_wtr(options%nc), &
       hcap_ice(options%nc), &
-      t_freeze(options%nc), &
       zero(options%nc)
-    LOGICAL :: &
+    LOGICAL ::                       &
       & l_ice(options%nc),           & ! Indicator for ice cover
       & l_ice_formation(options%nc), &
       & l_ice_melting(options%nc)
 
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice
     REAL(wp) :: dtime
-    REAL(wp) :: &
+    REAL(wp) ::   &
       & ml_depth, &      !< Depth of lake mixed layer
       & min_ice_depth    !< Minimum ice thickness to start ice formation
 
@@ -105,7 +101,6 @@ CONTAINS
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
-    nc    = options%nc
     dtime = options%dtime
 
     IF (.NOT. tile%Is_process_active(SEB_) .OR. .NOT. tile%contains_lake) RETURN
@@ -140,21 +135,21 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SEB_, hflx_melt_lice)
     dsl4jsb_Get_var2D_onChunk(SEB_, hflx_melt_snow)
 
-    dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)     ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_, snow)          ! in
-    dsl4jsb_Get_var2D_onChunk(SEB_, latent_hflx_wtr)    ! in
-    dsl4jsb_Get_var2D_onChunk(SEB_, sensible_hflx_wtr)  ! in
-    dsl4jsb_Get_var2D_onChunk(SEB_, latent_hflx_ice)    ! in
-    dsl4jsb_Get_var2D_onChunk(SEB_, sensible_hflx_ice)  ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)         ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, snow)              ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_, latent_hflx_wtr)   ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_, sensible_hflx_wtr) ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_, latent_hflx_ice)   ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_, sensible_hflx_ice) ! in
 
-    dsl4jsb_Get_var2D_onChunk(SEB_, fract_lice) ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB_, depth_lice) ! OUT
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_lice)    ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow_lice) ! inout
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow)      ! out
+    dsl4jsb_Get_var2D_onChunk(SEB_, fract_lice)        ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB_, depth_lice)        ! OUT
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_lice) ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow_lice)     ! inout
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow)          ! out
 
-    dsl4jsb_Get_var2D_onChunk(RAD_, rad_net_lwtr)         ! in
-    dsl4jsb_Get_var2D_onChunk(RAD_, rad_net_lice)         ! in
+    dsl4jsb_Get_var2D_onChunk(RAD_, rad_net_lwtr)      ! in
+    dsl4jsb_Get_var2D_onChunk(RAD_, rad_net_lice)      ! in
 
     zero            (:) = 0._wp
     hcap_wtr        (:) = 0._wp
@@ -308,8 +303,8 @@ CONTAINS
   ELEMENTAL PURE SUBROUTINE calc_lake_ice_temp(t_lice, hcap_ice, hflx_cond_ice, hflx_melt_snow, hflx_melt_lice, &
     &                                          hflx, lhflx, snowfall, hi, hs, fs, hi_min, dtime)
 
-    USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, rhoi, clw, rhoi, rhos, als, alf, ki, ks, ci, cs
-    
+    USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, rhoi, rhoi, rhos, als, alf, ki, ks, ci, cs !, clw
+
     REAL(wp), INTENT(inout) :: t_lice
     REAL(wp), INTENT(out)   :: hcap_ice       !< Heat capacity of thin ice surface layer
     REAL(wp), INTENT(out)   :: hflx_cond_ice
@@ -444,7 +439,7 @@ CONTAINS
 
   SUBROUTINE update_surface_fluxes_lake(tile, options)
 
-    USE mo_phy_schemes,            ONLY: q_effective, surface_dry_static_energy, heat_transfer_coef
+    USE mo_phy_schemes,            ONLY: heat_transfer_coef ! q_effective, surface_dry_static_energy
     USE mo_jsb_physical_constants, ONLY: alv, als
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -476,29 +471,28 @@ CONTAINS
 
     ! Locally allocated vectors
     !
-    REAL(wp) :: &
+    REAL(wp) ::                  &
       & s_air      (options%nc), &  !< Dry static energy at lowest atmospheric level
       & heat_tcoef (options%nc)     !< Heat transfer coefficient (rho*C_h*|v|)
 
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice
     REAL(wp) :: steplen
 
-    TYPE(t_jsb_model), POINTER :: model
+    !TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_fluxes_lake'
 
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-    nc      = options%nc
     steplen = options%steplen
 
     IF (.NOT. tile%Is_process_active(SEB_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    
+
     ! Get model
-    model => Get_model(tile%owner_model_id)
+    !model => Get_model(tile%owner_model_id)
 
     ! Get reference to variables for current block
     !
@@ -524,10 +518,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_wtr)         ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_ice)         ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,   fract_lice)        ! in
-    
+
     ! ---------------------------
     ! Go
-    
+
     ! ================================================================================================================================
     ! Surface fluxes for lake water
 

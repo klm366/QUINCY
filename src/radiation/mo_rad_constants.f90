@@ -18,12 +18,12 @@ MODULE mo_rad_constants
   REAL(wp), PARAMETER ::                   &
    & Epar                   = 2.2E5_wp,    & ! Energy content of PAR [J / mol(photons)]=(4.6 mol/MJ PAR)**-1.  R: for update_par
    & SoilReflectivityParMin = 0.0_wp,      & ! Minimum soil reflectivity in PAR region.  R: for update_par
-   !     LaiMax = 8._wp,                        & ! Maximum LAI (used for nitrogen scaling)
-   & LaiMin = 1.E-9_wp,                    & ! Minimum Lai in PAR computation.R: for calc_fapar_lai_cl
-   & LaiLimit = 3._wp,                     & ! Minimum LAI: used for nitrogen scaling and estimation of fractional cover. R: for calc_fapar_lai_cl
-   & FcMax = 1.0_wp,                       & ! Maximum fractional vegetation cover. R: for calc_fapar_lai_cl
-   & FcMin = 1.E-3_wp,                     & ! Minimum fractional vegetation cover. R: for calc_fapar_lai_cl
-   & ZenithMinPar = 1.E-3_wp,              & ! Minimum cos of zenith angle for which PAR is calculated. R: for calc_fapar_lai_cl
+  !  & LaiMax = 8._wp,                       & ! Maximum LAI (used for nitrogen scaling)
+   & LaiMin = 1.E-9_wp,                    & ! Min Lai in PAR computation for calc_fapar_lai_cl
+   & LaiLimit = 3._wp,                     & ! Min LAI: used for nitro scaling and estimation of fract cover for calc_fapar_lai_cl
+   & FcMax = 1.0_wp,                       & ! Max fractional vegetation cover. R: for calc_fapar_lai_cl
+   & FcMin = 1.E-3_wp,                     & ! Min fractional vegetation cover. R: for calc_fapar_lai_cl
+   & ZenithMinPar = 1.E-3_wp,              & ! Min cos of zenith angle for which PAR is calculated. R: for calc_fapar_lai_cl
    !     ZenithMin = 0.0174524_wp,            & ! Check for solar zenith angle > 89 degrees
    !     SoilReflectivityParMin = 0.0_wp,     & ! Minimum soil reflectivity in PAR region
    !

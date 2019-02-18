@@ -10,12 +10,8 @@
 MODULE mo_jsb_process_factory
 #ifndef __NO_JSBACH__
 
-  USE mo_exception,            ONLY: finish
-
-  !
   USE mo_jsb_process_class,    ONLY: t_jsb_process, Get_process_name
-  USE mo_jsb_memory_class,     ONLY: t_jsb_memory, t_jsb_memory_p
-  USE mo_jsb_config_class,     ONLY: t_jsb_config
+  USE mo_jsb_memory_class,     ONLY: t_jsb_memory
   !
   USE mo_a2l_memory_class,     ONLY: t_a2l_memory
   USE mo_l2a_memory_class,     ONLY: t_l2a_memory
@@ -45,18 +41,18 @@ MODULE mo_jsb_process_factory
   USE mo_assimi_interface,     ONLY: Register_assimi_tasks
   USE mo_assimi_config_class,  ONLY: t_assimi_config
   USE mo_pheno_interface,      ONLY: Register_pheno_tasks
-  USE mo_pheno_config_class,   ONLY: t_pheno_config  
+  USE mo_pheno_config_class,   ONLY: t_pheno_config
 #ifndef __NO_JSBACH_HD__
   USE mo_hd_interface,         ONLY: Register_hd_tasks
   USE mo_hd_config_class,      ONLY: t_hd_config
 #endif
   USE mo_carbon_interface,      ONLY: Register_carbon_tasks
-  USE mo_carbon_config_class,   ONLY: t_carbon_config  
+  USE mo_carbon_config_class,   ONLY: t_carbon_config
   USE mo_disturb_interface,     ONLY: Register_disturb_tasks
-  USE mo_disturb_config_class,  ONLY: t_disturb_config  
+  USE mo_disturb_config_class,  ONLY: t_disturb_config
   USE mo_fuel_interface,        ONLY: Register_fuel_tasks
-  USE mo_fuel_config_class,     ONLY: t_fuel_config  
-  
+  USE mo_fuel_config_class,     ONLY: t_fuel_config
+
   USE mo_jsb_process_class, ONLY: &
     & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_
 

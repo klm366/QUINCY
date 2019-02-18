@@ -16,9 +16,8 @@ MODULE mo_carbon_init
   USE mo_jsb_model_class,   ONLY: t_jsb_model
   USE mo_jsb_class,         ONLY: get_model
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
-  USE mo_jsb_config_class,  ONLY: t_jsb_config_p
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
-  USE mo_jsb_time,          ONLY: get_time_dt, is_time_experiment_start, is_time_restart
+  USE mo_jsb_time,          ONLY: get_time_dt
   USE mo_jsb_control,       ONLY: debug_on
 
   dsl4jsb_Use_processes CARBON_
@@ -40,24 +39,23 @@ CONTAINS
   SUBROUTINE carbon_init(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_model), POINTER                :: model
-    INTEGER                                   :: iblk, ics, ice, nc
+    !TYPE(t_jsb_model), POINTER                :: model
     REAL(wp)                                  :: dtime
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':carbon_init'
 
     dsl4jsb_Def_memory(CARBON_)
-    dsl4jsb_Def_config(CARBON_)
+    !dsl4jsb_Def_config(CARBON_)
 
     dsl4jsb_Real3D_onChunk :: F_pseudo_temp
     dsl4jsb_Real3D_onChunk :: N_pseudo_temp
     dsl4jsb_Real3D_onChunk :: F_pseudo_precip
     dsl4jsb_Real3D_onChunk :: N_pseudo_precip
 
-    model => get_model(tile%owner_model_id)
+    !model => get_model(tile%owner_model_id)
 
     dsl4jsb_Get_memory(CARBON_)
-    dsl4jsb_Get_config(CARBON_)
+    !dsl4jsb_Get_config(CARBON_)
 
     dtime = get_time_dt()
 
@@ -99,18 +97,18 @@ CONTAINS
 
     !-----------------------------------------------------------------------
     !  LOCAL VARIABLES
-    TYPE(t_jsb_model),       POINTER :: model
-    dsl4jsb_Def_memory(CARBON_)
+    !TYPE(t_jsb_model),       POINTER :: model
+    !dsl4jsb_Def_memory(CARBON_)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':carbon_init_bc'
 
     !-----------------------------------------------------------------------
     ! CONTENT
 
-    model => get_model(tile%owner_model_id)
+    !model => get_model(tile%owner_model_id)
 
     ! Get carbon memory of the tile
-    dsl4jsb_Get_memory(CARBON_)
+    !dsl4jsb_Get_memory(CARBON_)
 
     IF (.NOT. tile%Is_process_active(CARBON_)) RETURN
 
@@ -130,9 +128,9 @@ CONTAINS
 
     !-----------------------------------------------------------------------
     !  LOCAL VARIABLES
-    TYPE(t_jsb_model),         POINTER :: model
-    dsl4jsb_Def_config(CARBON_)
-    dsl4jsb_Def_memory(CARBON_)
+    !TYPE(t_jsb_model),         POINTER :: model
+    !dsl4jsb_Def_config(CARBON_)
+    !dsl4jsb_Def_memory(CARBON_)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':carbon_init_ic'
 
@@ -143,10 +141,10 @@ CONTAINS
 
    IF (debug_on()) CALL message(TRIM(routine), 'Initializing carbon memory for tile '//TRIM(tile%name))
 
-   model => Get_model(tile%owner_model_id)
+   !model => Get_model(tile%owner_model_id)
 
    ! Get carbon memory of the tile
-   dsl4jsb_Get_memory(CARBON_)
+   !dsl4jsb_Get_memory(CARBON_)
 
    ! R: nothing to do in the moment ...
 
@@ -185,7 +183,7 @@ CONTAINS
     model => get_model(tile%owner_model_id)
 
     ! Get carbon memory and config  of the tile
-    dsl4jsb_Get_memory(CARBON_)
+    !dsl4jsb_Get_memory(CARBON_)
     dsl4jsb_Get_config(CARBON_)
 
     IF (.NOT. dsl4jsb_Config(CARBON_)%active) RETURN
@@ -200,12 +198,12 @@ CONTAINS
 
     ! TBD: adapt names of variables in input files to names in memory
 
-    ! Note, this is done to avoid 6 Lines of source code for each of the 21 C-pools and 
+    ! Note, this is done to avoid 6 Lines of source code for each of the 21 C-pools and
     !       eventually in addition for each of the existing tile (6x21x14=5166 lines).
 
     ! If we do not want to read carbon pools for each tile we would have to add this
     ! case construct to choose the behaviour for each tile:
-    !SELECT CASE(tile%name) 
+    !SELECT CASE(tile%name)
     !CASE (box)
     !CASE (land)
     !CASE (veg)
@@ -217,7 +215,7 @@ CONTAINS
 
       SELECT CASE(Cpool_name(i))
       CASE ("c_green")
-        memory_pointer => CARBON__mem%c_green%ptr ! CARBON__mem= tile%mem(carbon_)%p 
+        memory_pointer => CARBON__mem%c_green%ptr ! CARBON__mem= tile%mem(carbon_)%p
       CASE ("c_woods")
         memory_pointer => CARBON__mem%c_woods%ptr
       CASE ("c_reserve")
@@ -271,7 +269,11 @@ CONTAINS
 
     CALL input_file%Close()
 
-  END SUBROUTINE carbon_reaD_cpools
+    ! avoid compiler warnings about pointers not being dereferenced
+    IF (ASSOCIATED(return_pointer)) CONTINUE
+    NULLIFY(return_pointer)
+
+  END SUBROUTINE carbon_read_cpools
 
 #endif
 END MODULE mo_carbon_init
