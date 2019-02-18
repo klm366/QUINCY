@@ -2,7 +2,7 @@ MODULE mo_jsb_var_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp, dp
-  USE mo_exception, ONLY: finish, message
+  ! USE mo_exception, ONLY: finish, message
 
   USE mo_jsb_varlist_iface, ONLY: VARNAME_LEN
 
@@ -17,12 +17,13 @@ MODULE mo_jsb_var_class
 
   TYPE, ABSTRACT :: t_jsb_var
     REAL(wp), ALLOCATABLE      :: field(:,:,:,:,:)
-    CHARACTER(len=VARNAME_LEN) :: name            ! Name of variable
-    CHARACTER(len=VARNAME_LEN) :: full_name       ! Full name of variable in varlist, including prefix and suffix
-    INTEGER                    :: type            ! REAL2D / REAL3D
+    CHARACTER(len=VARNAME_LEN) :: name                      ! Name of variable
+    CHARACTER(len=VARNAME_LEN) :: full_name                 ! Full name of variable in varlist, including prefix and suffix
+    INTEGER                    :: type                      ! REAL2D / REAL3D
     INTEGER                    :: owner_proc_id = -1
     INTEGER, ALLOCATABLE       :: owner_tile_path(:)
-    INTEGER, ALLOCATABLE       :: child_idx(:)    ! Position-numbers of same variable for for the child tiles (according to mem%vars(:)).
+    INTEGER, ALLOCATABLE       :: child_idx(:)              ! Position-numbers of same variable for for the child tiles 
+                                                            ! (according to mem%vars(:)).
     REAL(dp)                   :: missval
     LOGICAL                    :: l_aggregate_all = .FALSE. ! When aggregating, consider fractions of all child tiles even
                                                   ! of those where variable doesn't exist
@@ -32,7 +33,11 @@ MODULE mo_jsb_var_class
 !#pragma GCC diagnostic ignored "-Wsurprising"
 
   TYPE, EXTENDS(t_jsb_var) :: t_jsb_var_real2d
-    REAL(wp), POINTER :: ptr(:,:) => NULL()
+    REAL(wp), POINTER &
+#ifdef HAVE_FC_ATTRIBUTE_CONTIGUOUS
+     , CONTIGUOUS &
+#endif
+      :: ptr(:,:) => NULL()
   CONTAINS
     ! PROCEDURE :: Add_real2d                       ! Add two variables of type t_jsb_var_real2d
     ! PROCEDURE :: Add_real2d_and_scalar            ! Add varialbe of type t_jsb_var_real2d with REAL scalar

@@ -22,15 +22,13 @@ MODULE mo_hd_interface
   USE mo_jsb_domain_iface,   ONLY: get_blk_start, get_blk_end, get_col_start, get_col_end
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_control,        ONLY: debug_on
-  USE mo_jsb_config_class,   ONLY: t_jsb_config
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
   USE mo_jsb_time,           ONLY: is_time_experiment_start
 
-  dsl4jsb_Use_processes HD_, SEB_, HYDRO_
+  dsl4jsb_Use_processes HD_, HYDRO_
   dsl4jsb_Use_config(HD_)
   dsl4jsb_Use_memory(HD_)
-  dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(HYDRO_)
 
   USE mo_hd_reservoir_cascade, ONLY: reservoir_cascade
@@ -93,7 +91,6 @@ CONTAINS
 
     dsl4jsb_Def_config(HD_)
     dsl4jsb_Def_memory(HD_)
-    dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(HYDRO_)
 
     ! Pointers to variables in memory
@@ -155,7 +152,7 @@ CONTAINS
     ! Get reference to variables in memory
     !
     dsl4jsb_Get_memory(HD_)
-    dsl4jsb_Get_memory(SEB_)
+    !dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(HYDRO_)
 
     area => grid %area (ics:ice, iblk)
@@ -220,6 +217,9 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    IF (options%nc > 0) CONTINUE ! only to avoid compiler warnings
+    IF (tile%level > 0) CONTINUE ! only to avoid compiler warnings
+
     ! Nothing to do because the HD model only runs on the top tile
 
   END SUBROUTINE aggregate_hd
@@ -239,7 +239,6 @@ CONTAINS
 
     dsl4jsb_Def_config(HD_)
     dsl4jsb_Def_memory(HD_)
-    dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(HYDRO_)
 
     INTEGER                       :: jc, blk, n
@@ -250,7 +249,6 @@ CONTAINS
     CHARACTER(len=*),  PARAMETER  :: routine = modname//':hd_lateral_flow'
 
     ! Pointers to variables in memory
-    REAL(wp), POINTER :: area(:,:)
 
     dsl4jsb_Real2D_onDomain :: &
       & hd_mask,               &
@@ -258,7 +256,7 @@ CONTAINS
       & outflow_runoff,        &
       & outflow_drainage,      &
       & outflow_rivers,        &
-      & outflow_resid,         &
+      !& outflow_resid,         &
       & discharge,             &
       & discharge_ocean,       &
       & internal_drain
@@ -293,6 +291,8 @@ CONTAINS
 
     LOGICAL  :: debug_hd
 
+    IF (options%nc > 0) CONTINUE ! only to avoid compiler warnings
+
     model => Get_model(tile%owner_model_id)
 
     grid => Get_grid(model%grid_id)
@@ -309,10 +309,9 @@ CONTAINS
     ! Get reference to variables for current block
     !
     dsl4jsb_Get_memory(HD_)
-    dsl4jsb_Get_memory(SEB_)
+    !dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(HYDRO_)
 
-    area   => grid%area(:,:)
     nproma =  grid%nproma
     nblks  =  grid%nblks
 
@@ -320,7 +319,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_runoff)   ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_drainage) ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_rivers)   ! IN
-    dsl4jsb_Get_var2D_onDomain(HD_, outflow_resid)    ! OUT
+    !dsl4jsb_Get_var2D_onDomain(HD_, outflow_resid)    ! OUT
     dsl4jsb_Get_var3D_onDomain(HD_, nidx_upstream)    ! IN
     dsl4jsb_Get_var3D_onDomain(HD_, bidx_upstream)    ! IN
 
@@ -494,7 +493,6 @@ CONTAINS
 
     dsl4jsb_Def_config(HD_)
     dsl4jsb_Def_memory(HD_)
-    dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(HYDRO_)
 
     TYPE(t_jsb_model), POINTER :: model
@@ -511,7 +509,7 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: &
       & runoff          , &
       & drainage        , &
-      & outflow_resid   , &
+      !& outflow_resid   , &
       & discharge       , &
       & discharge_ocean , &
       & water_budget    , &
@@ -522,7 +520,7 @@ CONTAINS
     dsl4jsb_Real3D_onDomain :: &
       & overlflow_res ,        &
       & baseflow_res  ,        &
-      & riverflow_res 
+      & riverflow_res
 
     LOGICAL,  POINTER ::    &
       & is_in_domain (:,:)      ! T: cell in domain (not halo)
@@ -556,7 +554,6 @@ CONTAINS
     steplen = options%steplen
 
     dsl4jsb_Get_memory(HD_)
-    dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(HYDRO_)
 
     ! Configuration parameters from the namelist
@@ -581,7 +578,7 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onDomain(HYDRO_, runoff)          ! IN
     dsl4jsb_Get_var2D_onDomain(HYDRO_, drainage)        ! IN
-    dsl4jsb_Get_var2D_onDomain(HD_   , outflow_resid)   ! IN
+    !dsl4jsb_Get_var2D_onDomain(HD_   , outflow_resid)   ! IN
     dsl4jsb_Get_var2D_onDomain(HYDRO_, discharge)       ! IN
     dsl4jsb_Get_var2D_onDomain(HYDRO_, discharge_ocean) ! IN
 

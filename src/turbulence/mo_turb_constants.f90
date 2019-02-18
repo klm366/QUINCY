@@ -15,12 +15,12 @@ MODULE mo_turb_constants
   IMPLICIT NONE
   PUBLIC
 
-  REAL(wp), PARAMETER :: &
+  REAL(wp), PARAMETER ::          &
     !
     ! Parameters for roughness length
-    blending_height = 100._wp,  & !< Blending height [m]
-    roughness_snow  = 0.001_wp, & !< Roughness length of snow-covered surfaces [m]
-    roughness_bare  = 0.005_wp    !< Roughness length of bare land surfaces [m]
+    & blending_height = 100._wp,  & !< Blending height [m]
+    & roughness_snow  = 0.001_wp, & !< Roughness length of snow-covered surfaces [m]
+    & roughness_bare  = 0.005_wp    !< Roughness length of bare land surfaces [m]
 
 #endif
 END MODULE mo_turb_constants

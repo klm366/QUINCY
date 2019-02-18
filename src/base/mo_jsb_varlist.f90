@@ -12,14 +12,12 @@ MODULE mo_jsb_varlist
 
   USE mo_kind,              ONLY: wp, dp
   USE mo_exception,         ONLY: finish
-  USE mo_jsb_class,         ONLY: Get_model
   USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
   USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d, t_jsb_var_real3d, REAL2D, REAL3D
   USE mo_jsb_memory_class,  ONLY: t_jsb_memory
   USE mo_jsb_varlist_iface, ONLY: t_jsb_varlist => t_var_list,      &
                                   jsb_get_var_list => get_var_list, &
                                   jsb_new_var_list => new_var_list, &
-                                  t_var_metadata, t_list_element,   &
                                   add_var_list_element_r2d, add_var_list_element_r3d, &
                                   VARNAME_LEN
   USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2, GRID_UNSTRUCTURED, GRID_UNSTRUCTURED_CELL, GRID_CELL, missval, tables
@@ -69,8 +67,8 @@ CONTAINS
     hgrid, vgrid, cf, grib1, grib2, prefix, suffix,             &
     loutput, lcontainer,                                        &
     lrestart, lrestart_cont, initval_r, isteptype,              &
-    resetval_r, lmiss, missval_r, l_aggregate_all, tlev_source, &
-    info, output_level, verbose, new_element, cdiTimeID         &
+    resetval_r, lmiss, missval_r, l_aggregate_all,              &
+    output_level, verbose                                       &
     )
 
     CLASS(t_jsb_memory),  INTENT(inout)        :: mem                 ! memory structure
@@ -94,14 +92,9 @@ CONTAINS
     LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
     REAL(dp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
     LOGICAL,              INTENT(in), OPTIONAL :: l_aggregate_all     ! aggregate over all child tiles?
-    INTEGER,              INTENT(in), OPTIONAL :: tlev_source         ! actual TL for TL dependent vars
-    TYPE(t_var_metadata), POINTER,    OPTIONAL :: info                ! returns reference to metadata
     INTEGER,              INTENT(in), OPTIONAL :: output_level        ! minimum level of output groups this var belongs to
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
-    TYPE(t_list_element), POINTER, OPTIONAL  :: new_element           ! pointer to new var list element
-    INTEGER,              INTENT(in), OPTIONAL :: cdiTimeID           ! CDI time mode (TIME_VARIABLE/TIME_CONSTANT)
 
-    REAL(wp), POINTER :: p5(:,:,:,:,:)
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
     CHARACTER(len=50) :: name_loc
     TYPE(t_cf_var)    :: cf_loc
@@ -131,11 +124,10 @@ CONTAINS
     ldims(2) = hgrid%nblks
     gdims(1:2) = hgrid%dims_g(1:2)
 
-    this_list => Get_varlist(TRIM(mem%varlist_name), hgrid%patch%id)
+    this_list => Get_varlist(TRIM(mem%varlist_name), hgrid%host_patch_id)
 
     ALLOCATE(var%field(ldims(1),ldims(2),1,1,1))
     var%ptr => var%field(:,:,1,1,1)
-    p5 => var%field
 
     IF (mem%in_var_groups) THEN                                  ! Should this tile memory be part of any var groups?
       ALLOCATE(groups(3+MERGE(2, 0, PRESENT(output_level))))
@@ -161,7 +153,8 @@ CONTAINS
       loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       ! lmiss=lmiss_loc, missval_r=missval_r_loc)
-      lmiss=lmiss_loc, missval_r=missval_r_loc, p5=p5, in_groups=groups)
+      lmiss=lmiss_loc, missval_r=missval_r_loc, p5=var%field, in_groups=groups, &
+      verbose=verbose)
 
     var%name = TRIM(name)
     var%full_name = TRIM(name_loc)
@@ -188,8 +181,8 @@ CONTAINS
     hgrid, vgrid, cf, grib1, grib2, prefix, suffix,              &
     extra_dim_n, loutput, lcontainer,                            &
     lrestart, lrestart_cont, initval_r, isteptype,               &
-    resetval_r, lmiss, missval_r, l_aggregate_all, tlev_source,  &
-    info, output_level, verbose, new_element, cdiTimeID          &
+    resetval_r, lmiss, missval_r, l_aggregate_all,               &
+    output_level, verbose                                        &
     )
 
     CLASS(t_jsb_memory),  INTENT(inout)        :: mem                 ! memory structure
@@ -213,14 +206,9 @@ CONTAINS
     LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
     REAL(dp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
     LOGICAL,              INTENT(in), OPTIONAL :: l_aggregate_all     ! aggregate over all child tiles?
-    INTEGER,              INTENT(in), OPTIONAL :: tlev_source         ! actual TL for TL dependent vars
-    TYPE(t_var_metadata), POINTER,    OPTIONAL :: info                ! returns reference to metadata
     INTEGER,              INTENT(in), OPTIONAL :: output_level        ! minimum level of output groups this var belongs to
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
-    TYPE(t_list_element), POINTER,   OPTIONAL  :: new_element           ! pointer to new var list element
-    INTEGER,              INTENT(in), OPTIONAL :: cdiTimeID           ! CDI time mode (TIME_VARIABLE/TIME_CONSTANT)
 
-    REAL(wp), POINTER :: p5(:,:,:,:,:)
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
     CHARACTER(len=50) :: name_loc
     TYPE(t_cf_var)    :: cf_loc
@@ -266,11 +254,10 @@ CONTAINS
       gdims(3) = hgrid%dims_g(2)
     END IF
 
-    this_list => Get_varlist(TRIM(mem%varlist_name), hgrid%patch%id)
+    this_list => Get_varlist(TRIM(mem%varlist_name), hgrid%host_patch_id)
 
     ALLOCATE(var%field(ldims(1),ldims(2),ldims(3),1,1))
     var%ptr => var%field(:,:,:,1,1)
-    p5 => var%field
 
     IF (mem%in_var_groups) THEN                                  ! Should this tile memory be part of any var groups?
       ALLOCATE(groups(3+MERGE(2, 0, PRESENT(output_level))))
@@ -296,7 +283,7 @@ CONTAINS
       loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       ! lmiss=lmiss_loc, missval_r=missval_r_loc)
-      lmiss=lmiss_loc, missval_r=missval_r_loc, p5=p5, in_groups=groups)
+      lmiss=lmiss_loc, missval_r=missval_r_loc, p5=var%field, in_groups=groups, verbose=verbose)
 
     var%name = TRIM(name)
     var%full_name = TRIM(name_loc)
@@ -323,8 +310,8 @@ CONTAINS
     hgrid, vgrid, cf, grib1, grib2, prefix, suffix,             &
     loutput, lcontainer,                                        &
     lrestart, lrestart_cont, initval_r, isteptype,              &
-    resetval_r, lmiss, missval_r, tlev_source, info,            &
-    verbose, new_element, cdiTimeID                             &
+    resetval_r, lmiss, missval_r,                               &
+    verbose                                                     &
     )
 
     CHARACTER(len=*),     INTENT(in)           :: varlist_name
@@ -346,11 +333,7 @@ CONTAINS
     REAL(wp),             INTENT(in), OPTIONAL :: resetval_r          ! reset value (after accumulation)
     LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
     REAL(dp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
-    INTEGER,              INTENT(in), OPTIONAL :: tlev_source         ! actual TL for TL dependent vars
-    TYPE(t_var_metadata), POINTER,    OPTIONAL :: info                ! returns reference to metadata
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
-    TYPE(t_list_element), POINTER, OPTIONAL  :: new_element           ! pointer to new var list element
-    INTEGER,              INTENT(in), OPTIONAL :: cdiTimeID           ! CDI time mode (TIME_VARIABLE/TIME_CONSTANT)
 
 !!$    REAL(wp), POINTER :: ptr(:,:,:,:,:)
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
@@ -380,7 +363,7 @@ CONTAINS
     ldims(2) = hgrid%nblks
     gdims(1:2) = hgrid%dims_g(1:2)
 
-    this_list => Get_varlist(TRIM(varlist_name), hgrid%patch%id)
+    this_list => Get_varlist(TRIM(varlist_name), hgrid%host_patch_id)
 
     ALLOCATE(groups(3))
     groups(1) = 'ALL'
@@ -393,7 +376,7 @@ CONTAINS
       ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx, &
       loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
-      lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups)
+      lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups, verbose=verbose)
 
   END SUBROUTINE jsb_add_var_list_element_r2d_tile
 

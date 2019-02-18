@@ -12,9 +12,8 @@ MODULE mo_fuel_config_class
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
 
-  USE mo_exception,         ONLY: message_text, message, finish
+  USE mo_exception,         ONLY: message
   USE mo_io_units,          ONLY: filename_max
-  USE mo_kind,              ONLY: wp
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
   ! -------------------------------------------------------------------------------------------------------
@@ -48,12 +47,12 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
 
     INTEGER                     :: fuel_algorithm
- 
+
     NAMELIST /jsb_fuel_nml/     &
-         active,                &
-         ic_filename,           &
-         bc_filename,           &
-         fuel_algorithm
+        & active,               &
+        & ic_filename,          &
+        & bc_filename,          &
+        & fuel_algorithm
 
     INTEGER :: nml_handler, nml_unit, istat
 
