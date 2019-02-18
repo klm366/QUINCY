@@ -1,0 +1,55 @@
+README - 2019-02-15
+
+  +---------------------------------------------------------------------------
+  |
+  ! This software can be used only under the conditions of the 
+  ! fair-use policy for the QUINCY model, available at:
+  ! https://www.bgc-jena.mpg.de/bgi/index.php/Projects/QUINCYModel
+  !
+  ! This software contains and depends on licensed third-party software. 
+  ! Where software is supplied by third parties it is indicated in the 
+  ! headers of the files. In particular, this software can be used only 
+  ! under the conditions of the "MPI-M Software Licence Agreement" v2, see
+  | http://www.mpimet.mpg.de/fileadmin/models/MPIESM/mpi-m_sla_201202.pdf
+  |
+  | The "MPI-M Software Licence Agreement" is available at:
+  | http://www.mpimet.mpg.de/en/science/models
+  |
+  ! Important points
+  !
+  ! 1. Permitted Use
+  !    Use of the software is permitted only for lawful scientific purposes 
+  !    in research and education. It is explicitly prohibited to use this 
+  !    software or parts of it, whether modified or not, 
+  !    for commercial purposes.  
+  !
+  ! 2. Copyright
+  !    Software developed at MPI-BGC is the sole and exclusive property of 
+  !    MPI-BGC. All Rights Reserved.
+  ! 
+  ! 3. Distribution
+  !    It is  not allowed to distribute the software in its original 
+  !    or modified form. Third party users must obtain the software directly 
+  !    from MPI-BGC. 
+  !
+  ! 4. Disclaimer of Warranty
+  !    The use of the software is at your own risk. The software is provided
+  !    "AS IS" and without warranty of any kind.
+  ! 
+  ! 5. Limitation of Liability
+  !    Under no circumstances, including negligence, shall MPI-BGC be liable 
+  !    for any incidental, special, indirect or consequential damages arising 
+  !    out of or relating to this software. 
+  +---------------------------------------------------------------------------
+
+This model version is Tag 1, revision 1772, as described in 
+
+Thum, T., Caldararu, S., Engel. J., Kern, M., Pallandt, M., Schnur, R., 
+     Yu, L., and Zaehle, S. A new terrestrial biosphere model with coupled 
+     carbon, nitrogen, and phosphorus cycles (QUINCY v1.0; revision 1772), in prep. 
+
+ADDITIONAL INFORMATION
+
+Bug reports/info/comments to:
+QUINCY: szaehle@bgc-jena.mpg.de
+------------------------------------------------------------------------------
