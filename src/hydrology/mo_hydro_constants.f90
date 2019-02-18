@@ -26,8 +26,6 @@ MODULE mo_hydro_constants
     & Epar                   = 2.2E5_wp,   & ! Energy content of PAR [J / mol(photons)]=(4.6 mol/MJ PAR)**-1.  R: for update_par
     & SoilReflectivityParMin = 0.0_wp,     & ! Minimum soil reflectivity in PAR region.  R: for update_par
 !    & LaiMax = 8._wp,                      & ! Maximum LAI (used for nitrogen scaling)
-    & LaiMin = 1.E-9_wp,                   & ! Minimum Lai in PAR computation.R: for calc_fapar_lai_cl
-    & LaiLimit = 3._wp,                    & ! Minimum LAI: used for nitrogen scaling and estimation of fractional cover. R: for calc_fapar_lai_cl
     & FcMax = 1.0_wp,                      & ! Maximum fractional vegetation cover. R: for calc_fapar_lai_cl
     & FcMin = 1.E-3_wp,                    & ! Minimum fractional vegetation cover. R: for calc_fapar_lai_cl
     & ZenithMinPar = 1.E-3_wp,             &  ! Minimum cos of zenith angle for which PAR is calculated. R: for calc_fapar_lai_cl
@@ -52,7 +50,8 @@ MODULE mo_hydro_constants
     & vol_p_wilt_org      = 0.255_wp,      & !< volumetricwilting point of organic layer [m/m]
     & hyd_cond_sat_org    = 0.0002_wp,     & !< Saturated hydraulic conductivity of organic part of soil layer [m/s]
     & bclapp_org          = 4._wp,         & !< Exponent b in Clapp and Hornberger of organic part of soil layer  []
-    & matrix_pot_org      = 0.12_wp,       & !< Matrix potential of organic part of soil layer [m] (value for peat from Beringer, 2001)
+    & matrix_pot_org      = 0.12_wp,       & !< Matrix potential of organic part of soil layer [m]
+                                             ! (value for peat from Beringer, 2001)
     & pore_size_index_org = 0.7_wp           !< Pore size distribution index of organic part of soil layer []
 
 #endif

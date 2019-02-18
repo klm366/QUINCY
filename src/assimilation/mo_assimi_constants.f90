@@ -20,9 +20,9 @@ MODULE mo_assimi_constants
          !            A BIOCHEMICAL MODEL OF PHOTOYNTHESIS IN LEAVES OF C3 SPECIES.
          !            PLANTA 149, 78-90.
                          & ALPHA = 0.28_wp,                 & ! EFFICIENCY OF OF PHOTON CAPTURE
-                         & OX    = 0.21_wp,                 & ! OXYGEN CONCENTRATION [MOL(O2) / MOL(AIR)] 
-                         & KC0   = 460.E-6_wp,              & ! MICHAELIS-MENTEN CONSTANT FOR CO2 AT 25C [MOL(CO2) / MOL(AIR)] 
-                         & KO0   = 330.E-3_wp,              & ! MICHAELIS-MENTEN CONSTANT FOR O2 AT 25C [MOL(O2) / MOL(AIR)] 
+                         & OX    = 0.21_wp,                 & ! OXYGEN CONCENTRATION [MOL(O2) / MOL(AIR)]
+                         & KC0   = 460.E-6_wp,              & ! MICHAELIS-MENTEN CONSTANT FOR CO2 AT 25C [MOL(CO2) / MOL(AIR)]
+                         & KO0   = 330.E-3_wp,              & ! MICHAELIS-MENTEN CONSTANT FOR O2 AT 25C [MOL(O2) / MOL(AIR)]
                          & EC    = 59356._wp,               & ! ACTIVATION ENERGY FOR KC [J / MOL]
                          & EO    = 35948._wp,               & ! ACTIVATION ENERGY FOR KO [J / MOL]
                          & EV    = 58520._wp,               & ! ACTIVATION ENERGY FOR VCMAX [J / MOL]
@@ -38,7 +38,7 @@ MODULE mo_assimi_constants
                          & minOfMaxCarboxrate = 1.0e-12_wp, & ! Minimum of maximum carboxylation rate [10^(-6) mol/(m^2 s)].
          ! both
                          & minStomaConductance = 0.0_wp,    & ! Minimum stomatal conductance [mol H2O /(m^2 s) ??]
-         ! Factors that relates leaf internal CO2-concentration to CO2-concentration of ambient air: 
+         ! Factors that relates leaf internal CO2-concentration to CO2-concentration of ambient air:
                          & FCI1C3        = 0.87_wp,         & ! For C3 plants
                          & FCI1C4        = 0.67_wp,         & ! For C4 plants
          ! Factors needed to calculate NPP_pot_rate:

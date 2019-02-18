@@ -149,10 +149,9 @@ CONTAINS
 
   END FUNCTION Get_task
 
-  SUBROUTINE Configure_process(this, namelist_filename)
+  SUBROUTINE Configure_process(this)
 
     CLASS(t_jsb_process), INTENT(inout) :: this
-    CHARACTER(LEN=*),     INTENT(in)    :: namelist_filename
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Configure_process'
 

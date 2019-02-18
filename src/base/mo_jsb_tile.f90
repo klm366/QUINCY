@@ -14,16 +14,14 @@ MODULE mo_jsb_tile
 
   USE mo_kind,                ONLY: wp
   USE mo_exception,           ONLY: message_text, message, finish
-  USE mo_jsb_control,         ONLY: debug_on
+  USE mo_jsb_control,         ONLY: debug_on, get_no_of_models
 
-  USE mo_hsm_class,           ONLY: t_Hsm, t_State, t_Message
+  USE mo_hsm_class,           ONLY: t_State, t_Message
   USE mo_jsb_model_class,     ONLY: t_jsb_model
-  USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract, t_jsb_aggregator_p, t_jsb_aggregator
-  USE mo_jsb_process_class,   ONLY: t_jsb_process_p, &
-    &                               SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_
+  USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
+  USE mo_jsb_process_class,   ONLY: SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_
   USE mo_jsb_process_factory, ONLY: max_no_of_processes
   USE mo_jsb_task_class,      ONLY: t_jsb_process_task !, t_jsb_task_msg
-  USE mo_jsb_config_class,    ONLY: t_jsb_config, t_jsb_config_p
 
   IMPLICIT NONE
   PRIVATE
@@ -59,8 +57,8 @@ CONTAINS
 
     USE mo_jsb_class,           ONLY: Get_model
     USE mo_util,                ONLY: one_of
-    USE mo_jsb_lct_class,       ONLY: t_jsb_lct, LAND_TYPE, LAKE_TYPE, Contains_lct
-    USE mo_jsb_process_class,   ONLY: SEB_, A2L_, L2A_, Get_process_name
+    USE mo_jsb_lct_class,       ONLY: t_jsb_lct, LAND_TYPE, LAKE_TYPE
+    USE mo_jsb_process_class,   ONLY: SEB_, A2L_, L2A_
 
     CHARACTER(len=*),  INTENT(in)           :: name
     CHARACTER(len=*),  INTENT(in)           :: description
@@ -75,10 +73,7 @@ CONTAINS
     CLASS(t_jsb_tile), POINTER              :: return_ptr
 
     TYPE(t_jsb_model),            POINTER :: model
-    TYPE(t_jsb_config_p),         POINTER :: configs(:)
-    CHARACTER(LEN=15)                     :: process_name
     INTEGER                               :: i, j, iproc
-    CLASS(t_jsb_tile_abstract),   POINTER :: tmp_tile
     CLASS(t_State),               POINTER :: parent_tmp
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Construct_tile'
@@ -233,7 +228,7 @@ CONTAINS
     USE mo_jsb_process_class,   ONLY: Get_process_name
     USE mo_jsb_memory_class,    ONLY: t_jsb_memory
     USE mo_jsb_tile_class,      ONLY: t_jsb_aggregator, t_jsb_aggregator_weighted_by_fract
-    USE mo_jsb_varlist,         ONLY: t_jsb_varlist, jsb_add_var, VARNAME_LEN
+    USE mo_jsb_varlist,         ONLY: jsb_add_var
     USE mo_jsb_io,              ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables, TSTEP_INSTANT, TSTEP_CONSTANT
     USE mo_jsb_grid_class,      ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,            ONLY: Get_grid, Get_vgrid
@@ -241,15 +236,14 @@ CONTAINS
 
     CLASS(t_jsb_tile), INTENT(inout) :: this
     CHARACTER(len=*),  INTENT(in)    :: varlist_name
-    CHARACTER(len=*),  INTENT(in)    :: prefix         ! Prefix for variable names
+    CHARACTER(len=*),  INTENT(in)    :: prefix            ! Prefix for variable names
     CHARACTER(len=*),  INTENT(in)    :: suffix
-    LOGICAL,           INTENT(in)    :: l_fixed_fractions  ! Tile fractions can change or not
+    LOGICAL,           INTENT(in)    :: l_fixed_fractions ! Tile fractions can change or not
     LOGICAL,           INTENT(in)    :: in_var_groups
 
     INTEGER                               :: iproc
     CLASS(t_jsb_memory), POINTER          :: tmp_ptr
     CLASS(t_jsb_tile_abstract),   POINTER :: tmp_tile
-    CLASS(t_State), POINTER               :: tmp_child
     CHARACTER(LEN=15)                     :: process_name
 
     TYPE(t_jsb_aggregator_weighted_by_fract), POINTER :: aggregator_weighted_by_fract
@@ -261,9 +255,8 @@ CONTAINS
     TYPE(t_input_file)         :: input_file
     REAL(wp),          POINTER :: return_pointer(:,:), tmp_fract(:,:)
     CHARACTER(len=50)          :: name_loc
-    CHARACTER(len=VARNAME_LEN) :: name
     CHARACTER(len=:), ALLOCATABLE :: varlist_name_loc
-    CHARACTER(len=2)           :: model_id_char
+    CHARACTER(len=3)           :: model_id_suffix                    ! Suffix for domain if more than one model
     INTEGER                    :: ilct, i, no_of_children, child_no
 
     INTEGER :: isteptype
@@ -272,7 +265,7 @@ CONTAINS
 
     IF (debug_on()) CALL message(TRIM(routine), 'Initializing tile '//TRIM(this%name))
 
-    WRITE(model_id_char, '(I2.2)') this%owner_model_id
+    WRITE(model_id_suffix, '(A1,I2.2)') 'D', this%owner_model_id
 
     ! Allocate all memory components for new tile and initialize their data part with NULL()
     ALLOCATE(this%mem(max_no_of_processes))
@@ -290,6 +283,12 @@ CONTAINS
       END IF
 
       process_name = Get_process_name(iproc)
+
+      IF (get_no_of_models() > 1) THEN
+        varlist_name_loc = TRIM(varlist_name)//'_'//TRIM(process_name)//'_'//model_id_suffix
+      ELSE
+        varlist_name_loc = TRIM(varlist_name)//'_'//TRIM(process_name)
+      END IF
 
       IF (this%process_action(iproc) == INHERIT_) THEN
         this%mem(iproc)%p => this%parent_tile%mem(iproc)%p
@@ -309,7 +308,7 @@ CONTAINS
         END IF
         this%mem(iproc)%p => tmp_ptr
         this%mem(iproc)%p%id = iproc
-        this%mem(iproc)%p%varlist_name = TRIM(varlist_name)//'_'//TRIM(process_name)//'_'//model_id_char
+        this%mem(iproc)%p%varlist_name = TRIM(varlist_name_loc)
         this%mem(iproc)%p%grid_id = this%grid_id
         this%mem(iproc)%p%owner_model_id = this%owner_model_id
         this%mem(iproc)%p%owner_proc_id = iproc
@@ -340,7 +339,7 @@ CONTAINS
             tmp_tile%mem(iproc)%p%children(child_no)%p => tmp_ptr
             tmp_ptr => tmp_tile%mem(iproc)%p
             tmp_tile%mem(iproc)%p%id = iproc
-            tmp_tile%mem(iproc)%p%varlist_name =  TRIM(varlist_name)//'_'//TRIM(process_name)//'_'//model_id_char
+            tmp_tile%mem(iproc)%p%varlist_name =  TRIM(varlist_name_loc)
             tmp_tile%mem(iproc)%p%grid_id = this%grid_id
             tmp_tile%mem(iproc)%p%owner_model_id = this%owner_model_id
             ALLOCATE(tmp_tile%mem(iproc)%p%owner_tile_path(SIZE(tmp_tile%path)))
@@ -382,7 +381,11 @@ CONTAINS
     END IF
 
     ! Add fraction(s) of this tile to stream
-    varlist_name_loc =  TRIM(varlist_name)//'_'//model_id_char
+    IF (get_no_of_models() > 1) THEN
+      varlist_name_loc = TRIM(varlist_name)//'_'//model_id_suffix
+    ELSE
+      varlist_name_loc = TRIM(varlist_name)
+    END IF
     CALL jsb_add_var(varlist_name_loc, 'fract', tmp_fract,                                 &
       & hgrid, surface,                                                                                         &
       & t_cf('tile_fraction', '',                                                                          &
@@ -446,6 +449,18 @@ CONTAINS
       END IF
       IF (input_file%Has_var(TRIM(name_loc))) THEN
         return_pointer => input_file%Read_2d(variable_name=TRIM(name_loc))
+        !
+        ! TODO: For security, as a workaround, set lake fractions in coastal points that are 
+        ! partially land and partially ocean to zero, and corresponding land fraction to one.
+        IF (this%name == 'lake') THEN
+          CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
+          return_pointer(:,:) = MERGE(return_pointer(:,:), 0._wp, tmp_fract(:,:) >= 1._wp)
+        END IF
+        IF (this%name == 'land') THEN
+          CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
+          return_pointer(:,:) = MERGE(return_pointer(:,:), 1._wp, tmp_fract(:,:) >= 1._wp)
+        END IF
+        !
         CALL this%Set_fraction(fract=return_pointer(:,:))
       ELSE
         CALL finish(TRIM(routine), 'Fraction '//TRIM(name_loc)//' for tile '//TRIM(this%name)// &
@@ -512,14 +527,12 @@ CONTAINS
   SUBROUTINE Init_vars_on_tile(this)
 
     USE mo_jsb_memory_class,    ONLY: t_jsb_memory
-    USE mo_jsb_process_class,   ONLY: Get_process_name
     USE mo_jsb_varlist,         ONLY: VARNAME_LEN
 
     CLASS(t_jsb_tile), INTENT(inout) :: this
 
     CLASS(t_jsb_memory), POINTER  :: mem
     CHARACTER(len=VARNAME_LEN)    :: name
-    CHARACTER(LEN=15)             :: process_name
     INTEGER                       :: iproc, i, no_of_children, child_no
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_vars_on_tile'
@@ -529,7 +542,6 @@ CONTAINS
     ! Loop over all processes and initialize memory for this tile
     DO iproc=1,max_no_of_processes
 
-      process_name = Get_process_name(iproc)
       ! if the current process is not on leafs of current tile exit DO loop
       SELECT CASE (this%process_action(iproc))
       CASE (SKIP_, ON_TILE_, INHERIT_)
@@ -572,7 +584,6 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     !CLASS(t_jsb_task_msg), POINTER :: msg
     TYPE(t_Message), POINTER :: msg
-    INTEGER :: iproc
     LOGICAL :: l_debug
 
     CLASS(t_jsb_process_task), POINTER :: task

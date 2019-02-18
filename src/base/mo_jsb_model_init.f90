@@ -13,19 +13,14 @@ MODULE mo_jsb_model_init
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, FUEL_
   dsl4jsb_Use_config(PHENO_)
-  dsl4jsb_Use_config(SSE_)
-  dsl4jsb_Use_config(HYDRO_)
-  dsl4jsb_Use_config(RAD_)
   dsl4jsb_Use_config(CARBON_)
-  dsl4jsb_Use_config(DISTURB_)
-  dsl4jsb_Use_config(FUEL_)
 
   USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_control,      ONLY: get_no_of_models, debug_on
   USE mo_jsb_model_class,  ONLY: t_jsb_model
 
   USE mo_kind,             ONLY: wp
-  USE mo_exception,        ONLY: message, finish
+  USE mo_exception,        ONLY: finish
   USE mo_jsb_parallel,     ONLY: Get_omp_thread, Is_omp_inside_serial
 
   IMPLICIT NONE
@@ -36,7 +31,6 @@ MODULE mo_jsb_model_init
   INTERFACE jsbach_setup_grid
     MODULE PROCEDURE setup_grid_standalone
     MODULE PROCEDURE setup_grid_patch
-    MODULE PROCEDURE setup_grid_decomposition
   END INTERFACE jsbach_setup_grid
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_model_init'
@@ -44,30 +38,38 @@ MODULE mo_jsb_model_init
 CONTAINS
 
   SUBROUTINE setup_grid_standalone(nproca, nprocb, npedim, model_id, model_name)
+
 #ifndef __ICON__
     !>>> TODO: echam
     USE mo_gaussgrid,     ONLY : inigau
     USE mo_echam_convect_tables, ONLY : init_convect_tables
     USE mo_netCDF,      ONLY: add_dim
     !<<<
-#endif
-    USE mo_jsb_domain_iface, ONLY: get_nlon_nlat_from_file, get_lons_and_lats_from_file, jsbalone_init_decomp, pe_decomposed
+    USE mo_jsb_grid_iface,   ONLY: get_lons_and_lats_from_file, get_nlon_nlat_from_file
+    USE mo_jsb_domain_iface, ONLY: t_patch, jsbalone_init_decomp
     USE mo_jsb_grid_class,   ONLY: t_jsb_grid, new_grid
     USE mo_jsb_grid,         ONLY: Register_grid
-    USE mo_jsb_model_class,  ONLY: print_model
-
+#endif
 
     INTEGER,                    INTENT(in) :: model_id, nproca, nprocb, npedim
     CHARACTER(len=*), OPTIONAL, INTENT(in) :: model_name
 
+#ifndef __ICON__
     TYPE(t_jsb_model),  POINTER  :: model
     TYPE(t_jsb_grid),   POINTER  :: grid
-    TYPE(pe_decomposed) :: decomposition
+    TYPE(t_patch)                :: decomposition
+
+    INTEGER :: nlon, nlat
+#endif
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':setup_grid_standalone'
 
-    INTEGER :: nlon, nlat
+#ifdef __ICON__
+    ! avoid compiler warnings about dummy arguments not being used
+    IF (.FALSE.) WRITE(*,*) nproca, nprocb, npedim, model_id, model_name
 
+    CALL finish(TRIM(routine),'Standalone model currently only works with ECHAM')
+#else
     model => Get_model(model_id)
 
     IF (PRESENT(model_name)) THEN
@@ -78,23 +80,15 @@ CONTAINS
     CALL get_nlon_nlat_from_file(model%config%grid_filename, nlon, nlat)
     CALL jsbalone_init_decomp(nlon, nlat, nproca, nprocb, npedim, decomposition)
 
-#ifndef __ICON__
     CALL inigau               ! beside others required for get_area, i.e. required before new_grid
     CALL init_convect_tables
 
     CALL add_dim("lon", nlon, "longitude", "degrees_east" ) !required to write restart files
     CALL add_dim("lat", nlat, "latitude", "degrees_north")
 
-#endif
-
     !needs to be done after the decomposition is initialised; required for get_lon and get_lat, especially for site-level sims
-#ifndef __ICON__
     CALL get_lons_and_lats_from_file(model%config%grid_filename, decomposition%nproma, decomposition%ngpblks)
-#else
-    CALL finish(TRIM(routine),'Standalone model currently only works with ECHAM')
-#endif
-
-    grid => new_grid(decomp=decomposition)
+    grid => new_grid(decomposition, type='echam')
 
     CALL register_grid(grid)
     model%grid_id = grid%id
@@ -102,32 +96,31 @@ CONTAINS
     ! CALL init_model_common(model)
 
     NULLIFY(model)
+#endif
 
   END SUBROUTINE setup_grid_standalone
 
-  SUBROUTINE setup_grid_patch( model_id, patch)
+  SUBROUTINE setup_grid_patch( model_id, patch, type)
 
     USE mo_jsb_domain_iface, ONLY: t_patch
     USE mo_jsb_grid_class,   ONLY: t_jsb_grid, new_grid
     USE mo_jsb_grid,         ONLY: Register_grid
 
-    INTEGER,                    INTENT(in) :: model_id
-    TYPE(t_patch),              INTENT(in) :: patch
+    INTEGER,               INTENT(in) :: model_id
+    TYPE(t_patch), TARGET, INTENT(in) :: patch
+    CHARACTER(LEN=*),      INTENT(in) :: type
 
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':setup_grid_patch'
 
-    IF (patch%id < 0) &
-      CALL finish(TRIM(routine), 'Improper call with invalid patch')
-
     IF (model_id > get_no_of_models()) &
-      CALL finish(TRIM(routine), 'Host request to more jsbach models than are defined')
+      CALL finish(routine, 'Host request to more jsbach models than are defined')
 
     model => Get_model(model_id)
 
-    grid => new_grid(patch=patch)
+    grid => new_grid(patch, type)
     CALL Register_grid(grid)
     model%grid_id = grid%id
 
@@ -136,38 +129,6 @@ CONTAINS
     NULLIFY(model)
 
   END SUBROUTINE setup_grid_patch
-
-  SUBROUTINE setup_grid_decomposition( model_id, decomposition)
-
-    USE mo_jsb_domain_iface, ONLY: pe_decomposed
-    USE mo_jsb_grid_class,   ONLY: t_jsb_grid, new_grid
-    USE mo_jsb_grid,         ONLY: Register_grid
-
-    INTEGER,               INTENT(in) :: model_id
-    TYPE(pe_decomposed),   INTENT(in) :: decomposition
-
-    TYPE(t_jsb_model), POINTER  :: model
-    TYPE(t_jsb_grid),  POINTER  :: grid
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':setup_grid_decomposition'
-
-    IF (decomposition%nlon < 0) &
-      CALL finish(TRIM(routine), 'Improper call with invalid decomposition')
-
-    IF (model_id > get_no_of_models()) &
-      CALL finish(TRIM(routine), 'Host request to more jsbach models than are defined')
-
-    model => Get_model(model_id)
-
-    grid => new_grid(decomp=decomposition)
-    CALL Register_grid(grid)
-    model%grid_id = grid%id
-
-    ! CALL init_model_common(model)
-
-    NULLIFY(model)
-
-  END SUBROUTINE setup_grid_decomposition
 
   SUBROUTINE jsbach_init(model_id)
 
@@ -184,7 +145,7 @@ CONTAINS
     USE mo_pheno_init,          ONLY: pheno_init
     USE mo_carbon_init,         ONLY: carbon_init
     USE mo_fuel_init,           ONLY: fuel_init
-    USE mo_disturb_init,        ONLY: disturb_init
+    !USE mo_disturb_init,        ONLY: disturb_init
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_init,             ONLY: hd_init_ic, hd_init_bc
 #endif
@@ -195,17 +156,11 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER  :: model
     CLASS(t_jsb_tile_abstract), POINTER :: tile, child
-    INTEGER                             :: iproc, ilct, jlct, i, no_children
+    INTEGER                             :: ilct, jlct, i, no_children
     REAL(wp), ALLOCATABLE               :: fract_tmp(:,:)
     INTEGER                             :: no_omp_thread
 
     dsl4jsb_Def_config(PHENO_)
-    dsl4jsb_Def_config(SSE_)
-    dsl4jsb_Def_config(HYDRO_)
-    dsl4jsb_Def_config(RAD_)
-    dsl4jsb_Def_config(CARBON_)
-    dsl4jsb_Def_config(DISTURB_)
-    dsl4jsb_Def_config(FUEL_)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_init'
 
@@ -220,15 +175,30 @@ CONTAINS
     model => Get_model(model_id)
 
     dsl4jsb_Get_config(PHENO_)
-    dsl4jsb_Get_config(SSE_)
-    dsl4jsb_Get_config(HYDRO_)
-    dsl4jsb_Get_config(RAD_)
-    dsl4jsb_Get_config(CARBON_)
-    dsl4jsb_Get_config(FUEL_)
-    dsl4jsb_Get_config(DISTURB_)
 
+    !NOTE: JN changed the order of the processes
+    !- processes potentially changing the area of a tile are conducted first in the timestep.
+    !- PHENO processes were moved up: need to happen before C_NPP_pot_allocation for allometric considerations
+
+    !------------------------ tasks that can change area
+    !Disturbances happen on a daily basis and can lead to area changes when running with cohorts
+    IF (model%processes(FUEL_)%p%config%active) THEN
+      CALL model%Queue_task(FUEL_, "fuel")
+    END IF
+    IF (model%processes(DISTURB_)%p%config%active) THEN
+       CALL model%Queue_task(DISTURB_, "natural_disturbances")
+    END IF
+
+    !------------------------ tasks that do not change area
     ! Temporary for testing ... should be in separate subroutine
     CALL model%Queue_task(RAD_,    "surface_radiation")
+    CALL model%Queue_task(PHENO_,  "phenology")           ! JN moved phenology up - for allom it needs to happen
+                                                          ! before C_NPP_pot_allocation
+                                                          ! and with area changes it should happen before assimi
+                      ! --- before it was between humidity_scaling and foliage_projected_cover
+                      ! + prev comment: can be placed between the task "surface_radiation" and "asselin_filter"
+    CALL model%Queue_task(PHENO_,  "foliage_projected_cover")
+
     CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
     CALL model%Queue_task(HYDRO_,  "soil_properties")
     CALL model%Queue_task(SEB_,    "surface_energy")
@@ -239,8 +209,8 @@ CONTAINS
     END IF
     CALL model%Queue_task(HYDRO_,  "surface_hydrology")
     CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
-    CALL model%Queue_task(SSE_,    "soil_properties")
-    CALL model%Queue_task(SSE_,    "soil_temperature")
+    CALL model%Queue_task(SSE_,    "soil_and_snow_properties")
+    CALL model%Queue_task(SSE_,    "soil_and_snow_temperature")
     CALL model%Queue_task(HYDRO_,  "soil_hydrology")
 #ifndef __NO_JSBACH_HD__
     CALL model%Queue_task(HD_,     "hd_local_outflow")
@@ -250,7 +220,7 @@ CONTAINS
       ! Normally called before
       ! assimilation -> update_assimilation: -> calc_assimilation_waterlimited
       ! and before
-      ! canopy_cond_unstressed -> update_canopy_conductance_unstressed: 
+      ! canopy_cond_unstressed -> update_canopy_conductance_unstressed:
       !                                    -> calc_assimilation_waterunlimited
       CALL model%Queue_task(ASSIMI_, "assimilation_scaling_factors")
     END IF
@@ -269,16 +239,7 @@ CONTAINS
     IF (model%processes(CARBON_)%p%config%active) THEN
        CALL model%Queue_task(CARBON_, "C_NPP_pot_allocation")
     END IF
-    IF (model%processes(FUEL_)%p%config%active) THEN
-      CALL model%Queue_task(FUEL_, "fuel")
-    END IF
-    IF (model%processes(DISTURB_)%p%config%active) THEN
-       CALL model%Queue_task(DISTURB_, "natural_disturbances")
-    END IF
     CALL model%Queue_task(TURB_,   "humidity_scaling")
-    CALL model%Queue_task(PHENO_,  "phenology")           ! can be placed between the task "surface_radiation" and "asselin_filter",
-                                                           ! but in JSBACH3 it was here at the end...
-    CALL model%Queue_task(PHENO_,  "foliage_projected_cover")
     CALL model%Queue_task(TURB_,   "surface_roughness")
     ! Note: albedo is updated at the end of the time step, one time step before the radiation is updated in the atmosphere
     CALL model%Queue_task(RAD_,    "albedo")
@@ -487,16 +448,13 @@ CONTAINS
 
     USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
     USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
-    USE mo_jsb_lct_class,       ONLY: Contains_lct
     USE mo_carbon_init,         ONLY: carbon_read_cpools
     USE mo_util,                ONLY: one_of
 
     INTEGER, INTENT(in) :: model_id
 
     TYPE(t_jsb_model), POINTER  :: model
-    CLASS(t_jsb_tile_abstract), POINTER :: tile, child
-    INTEGER                             :: iproc, ilct, jlct, i, no_children
-    REAL(wp), ALLOCATABLE               :: fract_tmp(:,:)
+    CLASS(t_jsb_tile_abstract), POINTER :: tile
     INTEGER                             :: no_omp_thread
 
     dsl4jsb_Def_config(CARBON_)

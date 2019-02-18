@@ -22,9 +22,7 @@ MODULE mo_interface_hd_ocean
   USE mo_yac_finterface,      ONLY: yac_fdef_field, yac_fput, yac_fget_field_id_from_name
 #endif
 
-  USE mo_jsb_config_class,   ONLY: t_jsb_config
-  USE mo_jsb_process_class,  ONLY: t_jsb_process
-  USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
+  USE mo_jsb_task_class,     ONLY: t_jsb_task_options
 
   dsl4jsb_Use_processes HYDRO_
   dsl4jsb_Use_memory(HYDRO_)
@@ -87,8 +85,9 @@ CONTAINS
     REAL(wp), ALLOCATABLE :: buffer(:,:)
     INTEGER               :: collection_size, nbr_pointsets, nbr_subdomains
     INTEGER               :: info, ierror !< return values form cpl_put/get calls
-    INTEGER               :: iblk, n, nn, nlen
+    INTEGER               :: iblk, n, nn !, nlen
 
+    n =options%nc ! only to avoid compiler warnings
 
     IF ( .NOT. is_coupled_run() ) RETURN
 
@@ -113,11 +112,11 @@ CONTAINS
     buffer(:,:) = 0.0_wp
     DO iblk = 1, grid%nblks
       nn = (iblk - 1) * grid%nproma
-      IF (iblk /= grid%nblks) THEN
-        nlen = grid%nproma
-      ELSE
-        nlen = grid%npromz
-      END IF
+      !IF (iblk /= grid%nblks) THEN
+      !  nlen = grid%nproma
+      !ELSE
+      !  nlen = grid%npromz
+      !END IF
       DO n = 1, grid%nproma
         buffer(nn+n,1) = discharge_ocean(n,iblk)
       END DO

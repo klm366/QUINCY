@@ -10,7 +10,7 @@
 MODULE mo_hsm_class
 
   USE mo_exception, ONLY: message, message_text, finish, em_warn
-  USE mo_util,      ONLY: int2string
+  ! USE mo_util,      ONLY: int2string
 #ifdef _OPENMP
   USE omp_lib,      ONLY: omp_get_max_threads, omp_get_thread_num
 #endif
@@ -377,8 +377,6 @@ CONTAINS
     CLASS(t_State), INTENT(inout) :: this
     INTEGER                       :: return_value
 
-    CLASS(t_State), POINTER :: current
-
     IF (this%no_of_children < 0) THEN
       CALL this%Set_no_of_children()
     END IF
@@ -410,7 +408,6 @@ CONTAINS
 
     CLASS(t_State), INTENT(inout) :: this
 
-    CLASS(t_State), POINTER :: current
     INTEGER :: nthreads
 
 #ifdef _OPENMP
@@ -497,21 +494,9 @@ CONTAINS
 
   END FUNCTION Is_not_equal_state
 
-!!$  FUNCTION Process_message_state(this, hsm, msg) RESULT(return_ptr)
-!!$
-!!$    CLASS(t_State),   INTENT(inout) :: this
-!!$    CLASS(t_Hsm),     POINTER       :: hsm
-!!$    CLASS(t_Message), POINTER       :: msg
-!!$    CLASS(t_Message), POINTER       :: return_ptr
-!!$
-!!$    CALL this%Print_state()
-!!$    return_ptr => this%Handler(hsm, msg)
-!!$
-!!$  END FUNCTION Process_message_state
-  FUNCTION Process_message_state(this, hsm, msg) RESULT(return_ptr)
+  FUNCTION Process_message_state(this, msg) RESULT(return_ptr)
 
     CLASS(t_State),   INTENT(inout) :: this
-    CLASS(t_Hsm),     INTENT(inout) :: hsm
     CLASS(t_Message), INTENT(in),   POINTER :: msg
     CLASS(t_Message), POINTER       :: return_ptr
 
@@ -648,7 +633,6 @@ CONTAINS
 
     CLASS(t_hsm), INTENT(inout) :: this
 
-    CLASS(t_State), POINTER :: current
     INTEGER :: nthreads, i
 
 #ifdef _OPENMP
@@ -900,16 +884,16 @@ CONTAINS
 
     this%current(no_omp_thread)%p => this%top
     !this%next    => NULL()
-    tmp_msg => this%current(no_omp_thread)%p%Process_message(this, entry_msg)
+    tmp_msg => this%current(no_omp_thread)%p%Process_message(entry_msg)
     IF(ASSOCIATED(tmp_msg)) DEALLOCATE(tmp_msg)
 
-    tmp_msg => this%current(no_omp_thread)%p%Process_message(this, start_msg)
+    tmp_msg => this%current(no_omp_thread)%p%Process_message(start_msg)
     IF (ASSOCIATED(tmp_msg)) DEALLOCATE(tmp_msg)
     DO WHILE (ASSOCIATED(this%next(no_omp_thread)%p))
       CALL this%Process_entry_to_next()
       this%current(no_omp_thread)%p => this%next(no_omp_thread)%p
       NULLIFY(this%next(no_omp_thread)%p)
-      tmp_msg => this%current(no_omp_thread)%p%Process_message(this, start_msg)
+      tmp_msg => this%current(no_omp_thread)%p%Process_message(start_msg)
       IF (ASSOCIATED(tmp_msg)) DEALLOCATE(tmp_msg)
     END DO
 
@@ -962,7 +946,7 @@ CONTAINS
       DO WHILE (ASSOCIATED(state))
         ! Process message on current state
         IF (l_debug) CALL message(TRIM(routine), 'State is '//TRIM(state%name))
-        tmp_msg => state%Process_message(this, new_msg)
+        tmp_msg => state%Process_message(new_msg)
         IF (ASSOCIATED(new_msg)) THEN
           DEALLOCATE(new_msg)
         END IF
@@ -976,7 +960,7 @@ CONTAINS
         IF (ASSOCIATED(this%next(no_omp_thread)%p)) THEN  ! Take transition to next
           ! CALL this%Process_entry_to_next()
           IF (this%next(no_omp_thread)%p%level == this%current(no_omp_thread)%p%level) THEN
-            ! Goto to a sibling: exit current state   
+            ! Goto to a sibling: exit current state
             this%current(no_omp_thread)%p%visited = .FALSE.   ! Exit current on way up
           END IF
           this%current(no_omp_thread)%p => this%next(no_omp_thread)%p
@@ -1012,7 +996,7 @@ CONTAINS
       DO WHILE (ASSOCIATED(state))
         IF (l_debug) CALL message(TRIM(routine), 'State is '//TRIM(state%name))
         this%source(no_omp_thread)%p => state  ! Set source always to the previous state. This is to find back again later.
-        tmp_msg => state%Process_message(this, new_msg)
+        tmp_msg => state%Process_message(new_msg)
         IF (ASSOCIATED(new_msg)) THEN
         !  IF (ASSOCIATED(new_msg%action)) DEALLOCATE(new_msg%action)
           DEALLOCATE(new_msg)
@@ -1024,7 +1008,7 @@ CONTAINS
           CALL this%Process_entry_to_next()
           this%current(no_omp_thread)%p => this%next(no_omp_thread)%p
           NULLIFY(this%next(no_omp_thread)%p)
-          tmp_msg => this%current(no_omp_thread)%p%Process_message(this, start_msg)
+          tmp_msg => this%current(no_omp_thread)%p%Process_message(start_msg)
           IF (ASSOCIATED(tmp_msg)) THEN
             !IF (ASSOCIATED(tmp_msg%action)) DEALLOCATE(tmp_msg%action)
             DEALLOCATE(tmp_msg)
@@ -1033,7 +1017,7 @@ CONTAINS
             CALL this%Process_entry_to_next()
             this%current(no_omp_thread)%p => this%next(no_omp_thread)%p
             NULLIFY(this%next(no_omp_thread)%p)
-            tmp_msg => this%current(no_omp_thread)%p%Process_message(this, start_msg)
+            tmp_msg => this%current(no_omp_thread)%p%Process_message(start_msg)
             IF (ASSOCIATED(tmp_msg)) THEN
               !IF (ASSOCIATED(tmp_msg%action)) DEALLOCATE(tmp_msg%action)
               DEALLOCATE(tmp_msg)
@@ -1119,7 +1103,7 @@ CONTAINS
 
       DO j=i,1,-1
         state => entrypath(j)%p
-        tmp_msg => state%Process_message(this, entry_msg)
+        tmp_msg => state%Process_message(entry_msg)
         IF (ASSOCIATED(tmp_msg)) DEALLOCATE(tmp_msg)
       END DO
 
@@ -1148,13 +1132,13 @@ CONTAINS
 
     INTEGER :: no_omp_thread
 
-    IF (this%levels_to_lca(no_omp_thread) == -1) RETURN
-
 #ifdef _OPENMP
     no_omp_thread = omp_get_thread_num() + 1
 #else
     no_omp_thread = 1
 #endif
+
+    IF (this%levels_to_lca(no_omp_thread) == -1) RETURN
 
 !!$    CALL message(TRIM(routine), 'Processing exit messages to lca ...'//int2string(this%levels_to_lca))
 
@@ -1165,7 +1149,7 @@ CONTAINS
 
     IF (ASSOCIATED(this%source(no_omp_thread)%p)) THEN
       DO WHILE (state /= this%source(no_omp_thread)%p)
-        tmp_msg => state%Process_message(this, exit_msg)
+        tmp_msg => state%Process_message(exit_msg)
         IF (ASSOCIATED(tmp_msg)) DEALLOCATE(tmp_msg)
         state => state%parent
         IF (.NOT. ASSOCIATED(state)) EXIT
@@ -1175,7 +1159,7 @@ CONTAINS
     state => this%source(no_omp_thread)%p
 !    DO i=this%Get_levels_to_LCA(that),1,-1
     DO i=this%levels_to_lca(no_omp_thread),1,-1
-      tmp_msg => state%Process_message(this, exit_msg)
+      tmp_msg => state%Process_message(exit_msg)
       IF (ASSOCIATED(tmp_msg)) DEALLOCATE(tmp_msg)
       state => state%parent
       IF (.NOT. ASSOCIATED(state)) EXIT

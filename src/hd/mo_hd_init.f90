@@ -16,13 +16,11 @@ MODULE mo_hd_init
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_jsb_model_class,     ONLY: t_jsb_model
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
-  USE mo_jsb_config_class,    ONLY: t_jsb_config_p
   USE mo_jsb_class,           ONLY: get_model
   USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_jsb_grid_class,      ONLY: t_jsb_grid, get_blk_start, get_blk_end, get_col_start, get_col_end
   USE mo_jsb_grid,            ONLY: Get_grid
   USE mo_decomposition_tools, ONLY: get_local_index
-  USE mo_sync,                ONLY: global_max
   USE mo_impl_constants,      ONLY: SEA_BOUNDARY
 
   dsl4jsb_Use_processes HD_
@@ -55,7 +53,7 @@ CONTAINS
 
     TYPE(t_input_file)  :: input_file
 
-    INTEGER :: n, blk, blks, blke, jc, jcs, jce, idx 
+    INTEGER :: n, blk, blks, blke, jc, jcs, jce, idx
     INTEGER :: nblks, nproma
 
     CHARACTER(len=*),  PARAMETER     :: routine = modname//':hd_init_bc'
@@ -184,6 +182,10 @@ CONTAINS
 
     END SELECT
 
+    ! avoid compiler warnings about pointers not being dereferenced
+    IF (ASSOCIATED(return_pointer)) CONTINUE
+    NULLIFY(return_pointer)
+
   END SUBROUTINE hd_init_bc
 
   SUBROUTINE hd_init_ic(tile)
@@ -194,10 +196,10 @@ CONTAINS
     dsl4jsb_Def_memory(HD_)
 
     REAL(wp), POINTER :: &
-      & tile_fract(:,:), &
-      & ptr(:,:)            !< temporary pointer
+      & tile_fract(:,:) !, &
+      !& ptr(:,:)            !< temporary pointer
 
-    TYPE(t_input_file) :: input_file
+    !TYPE(t_input_file) :: input_file
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
@@ -232,14 +234,14 @@ CONTAINS
 !vg       & start_extdim=1,                           &
 !vg       & end_extdim=hd_mem%nres_o_max,             &
 !vg       & fill_array = hd__mem%overlflow_res%ptr)
-!vg 
+!vg
 !vg     ! Baseflow reservoir
 !vg     ptr => input_file%Read_2d_extdim(  &
 !vg       & variable_name='FGMEM',                    &
 !vg       & start_extdim=1,                           &
 !vg       & end_extdim=hd%hd_hd_mem%nres_b_max,        &
 !vg       & fill_array = hd_mem%baseflow_res%ptr)
-!vg 
+!vg
 !vg     ! Riverflow reservoir
 !vg     ptr => input_file%Read_2d_extdim(  &
 !vg       & variable_name='FRFMEM',                   &

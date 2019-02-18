@@ -9,9 +9,10 @@
 !! First version by Julia Nabel (2015-11-02), copied several parts from jsbach3 jsbalone_driver.f90
 !!
 PROGRAM jsb4_driver
+#ifndef __NO_JSBACH__
 #ifndef __ICON__
 
-  USE mo_jsb_interface,      ONLY: jsbach_interface
+  USE mo_jsb_interface,      ONLY: jsbach_interface, jsbach_start_timestep, jsbach_finish_timestep
   USE mo_jsb_base,           ONLY: jsbach_setup_models, jsbach_setup_tiles
   USE mo_jsb_model_init,     ONLY: jsbach_setup_grid, jsbach_init, jsbach_init_after_restart
   USE mo_jsb_model_final,    ONLY: jsbach_finalize
@@ -30,7 +31,7 @@ PROGRAM jsb4_driver
   USE mo_jsb4_forcing,       ONLY: get_interface_variables_from_external_forcing, init_forcing
 
   ! Currently from adapter
-  USE mo_jsb_domain_iface,   ONLY: get_lat, get_lon
+  USE mo_jsb_grid_iface,     ONLY: get_lat, get_lon
   USE mo_jsb_namelist_iface, ONLY: POSITIONED, open_nml, position_nml
   USE mo_jsb_parallel,       ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel, mpi_comm
   USE mo_jsb_test,           ONLY: read_interface_vars, read_interface_variables
@@ -123,8 +124,8 @@ PROGRAM jsb4_driver
   REAL(wp), ALLOCATABLE :: fact_qsat_srf_proc(:,:)
   REAL(wp), ALLOCATABLE :: rough_h_srf_proc(:,:)
   REAL(wp), ALLOCATABLE :: rough_m_srf_proc(:,:)
-  REAL(wp), ALLOCATABLE :: evap_act2pot_proc(:,:)
-!  REAL(wp), ALLOCATABLE :: evap_act_sum_proc(:,:)
+  REAL(wp), ALLOCATABLE :: evapo_act2pot_proc(:,:)
+!  REAL(wp), ALLOCATABLE :: evapo_act_sum_proc(:,:)
 !  REAL(wp), ALLOCATABLE :: evapo_pot_sum_proc(:,:)
 
 
@@ -236,8 +237,8 @@ PROGRAM jsb4_driver
   ALLOCATE(fact_qsat_srf_proc(nproma, nblks))
   ALLOCATE(rough_h_srf_proc(nproma, nblks))
   ALLOCATE(rough_m_srf_proc(nproma, nblks))
-  ALLOCATE(evap_act2pot_proc(nproma, nblks))
-!  ALLOCATE(evap_act_sum_proc(nproma, nblks))
+  ALLOCATE(evapo_act2pot_proc(nproma, nblks))
+!  ALLOCATE(evapo_act_sum_proc(nproma, nblks))
 !  ALLOCATE(evapo_pot_sum_proc(nproma, nblks))
 
   ! output
@@ -265,8 +266,8 @@ PROGRAM jsb4_driver
 
     !TODO: get from grid? but how to name such a function get_lon_from_grid?
     !      and if, shouldn't then also get_nproma should be called get_nproma_from_grid?
-    lon = get_lon(decomp = local_decomposition)
-    lat = get_lat(decomp = local_decomposition)
+    lon = get_lon(local_decomposition)
+    lat = get_lat(local_decomposition)
 
     ALLOCATE(coslon(nproma,nblks))
     ALLOCATE(coslat(nproma,nblks))
@@ -280,32 +281,35 @@ PROGRAM jsb4_driver
     fact_qsat_srf_proc = 0.5_wp
     rough_h_srf_proc = 1._wp
     rough_m_srf_proc = 1._wp
-    evap_act2pot_proc = 1._wp
+    evapo_act2pot_proc = 1._wp
 
-!    evap_act_sum_proc = 0._wp
+!    evapo_act_sum_proc = 0._wp
 !    evapo_pot_sum_proc = 0._wp
   ENDIF
 
-  IF(jsbach_is_restarted()) THEN
+  model => get_model(model_id)
+  tile => model%Get_top_tile()
+  ics = 1
+  ice = nproma
 
-    model => get_model(model_id)
-    tile => model%Get_top_tile()
-    ics = 1
-    ice = nproma
+  IF(jsbach_is_restarted()) THEN
 
     CALL IO_read_streams
 
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(TURB_)
     dsl4jsb_Get_memory(HYDRO_)
+
     DO iblk = 1, nblks
+      CALL model%Set_options(iblk=iblk)
+
       t_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(SEB_, t)
       fact_q_air_proc(:,iblk) = dsl4jsb_var2D_onChunk(TURB_, fact_q_air)
       fact_qsat_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(TURB_, fact_qsat_srf)
       rough_h_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(TURB_, rough_h)
       rough_m_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(TURB_, rough_m)
       ! TODO: if really required calculate daily sums of evapotrans and evapopot in jsbach and get them here (see comment below)
-      evap_act2pot_proc(:,iblk) = MIN(dsl4jsb_var2D_onChunk(HYDRO_, evapotrans),-EPSILON(1._wp)) &
+      evapo_act2pot_proc(:,iblk) = MIN(dsl4jsb_var2D_onChunk(HYDRO_, evapotrans),-EPSILON(1._wp)) &
         & / MIN(dsl4jsb_var2D_onChunk(HYDRO_, evapopot),  -EPSILON(1._wp))
     ENDDO
 
@@ -317,10 +321,14 @@ PROGRAM jsb4_driver
   CALL open_output_streams
 
   ! - Main loop
-  main_loop:DO 
+  main_loop:DO
 
     CALL time_set   !(echam!)
-!    CALL write_date(current_date,'Calculate for: ')
+    IF(is_newday()) THEN
+      CALL write_date(current_date,'Calculate timesteps for day: ')
+    ENDIF
+
+    CALL jsbach_start_timestep(model_id)
 
     IF (l_trigfiles) THEN
       CALL close_output_streams
@@ -345,7 +353,7 @@ PROGRAM jsb4_driver
       CALL solar_parameters(decl_sun, dist_sun, time_of_day, sinlon, sinlat, coslon, coslat, &
         & flx_ratio, cos_zenith_angle, daylght_frc)
 
-      CALL get_interface_variables_from_external_forcing(1, 1, nproma, nblks, sinlat, coslat, lon, evap_act2pot_proc, &
+      CALL get_interface_variables_from_external_forcing(1, 1, nproma, nblks, sinlat, coslat, lon, evapo_act2pot_proc, &
         & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, cos_zenith_angle,      &
         & CO2_concentration, t_air_K, q_air, rain, snow, wind_air, wind_10m,                                          &
         & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, fract_par_diffuse,                              &
@@ -353,6 +361,8 @@ PROGRAM jsb4_driver
     ENDIF
 
     DO iblk = 1, nblks
+      CALL model%Set_options(iblk=iblk)
+
 ! current assumption for standalone: nlon=nproma=npromz, therefore set (and allocated fields) outside the loop
 !   Else would need large refactoring and:
 !          IF ( iblk == nblks ) THEN
@@ -381,19 +391,21 @@ PROGRAM jsb4_driver
 
       IF (.NOT. read_interface_vars) THEN
         ! TODO: if really required (only ERA-interim forcing data):
-        ! To ensure restart identity, the daily evap_act_sum and evapo_pot_sum would need to be calculated in jsbach!
+        ! To ensure restart identity, the daily evapo_act_sum and evapo_pot_sum would need to be calculated in jsbach!
         ! => for now the instantaneous values are used instead of the daily sums, to ensure restart identity
-        evap_act2pot_proc(:,iblk) = MIN(evapotrans(:),-EPSILON(1._wp)) / MIN(evapopot(:),  -EPSILON(1._wp))
-!        evap_act_sum_proc(:,iblk) = evap_act_sum(:,iblk) + MIN(evapotrans(:),-EPSILON(1._wp))
+        evapo_act2pot_proc(:,iblk) = MIN(evapotrans(:),-EPSILON(1._wp)) / MIN(evapopot(:),  -EPSILON(1._wp))
+!        evapo_act_sum_proc(:,iblk) = evapo_act_sum(:,iblk) + MIN(evapotrans(:),-EPSILON(1._wp))
 !        evapo_pot_sum_proc(:,iblk) = evapo_pot_sum(:,iblk) + MIN(evapopot(:),  -EPSILON(1._wp))
       ENDIF
     ENDDO
 
 !    IF ((.NOT. read_interface_vars) .AND. is_newday()) THEN
-!      evap_act2pot_proc = evap_act_sum_proc / evapo_pot_sum_proc
-!      evap_act_sum_proc = 0._wp
+!      evapo_act2pot_proc = evapo_act_sum_proc / evapo_pot_sum_proc
+!      evapo_act_sum_proc = 0._wp
 !      evapo_pot_sum_proc = 0._wp
 !    ENDIF
+
+    CALL jsbach_finish_timestep(model_id, time_step_len)
 
     CALL out_streams
 
@@ -448,11 +460,12 @@ PROGRAM jsb4_driver
 
   IF (.NOT. read_interface_vars) THEN
     DEALLOCATE(lon, lat, coslon, coslat, sinlon, sinlat, daylght_frc)
-    DEALLOCATE(t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, evap_act2pot_proc)
-    !DEALLOCATE(evap_act_sum_proc, evapo_pot_sum_proc)
+    DEALLOCATE(t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, evapo_act2pot_proc)
+    !DEALLOCATE(evapo_act_sum_proc, evapo_pot_sum_proc)
   ENDIF
 
   ! Stop MPI
   CALL p_stop
+#endif
 #endif
 END PROGRAM jsb4_driver
