@@ -14,7 +14,7 @@ MODULE mo_jsb_tile
 
   USE mo_kind,                ONLY: wp
   USE mo_exception,           ONLY: message_text, message, finish
-  USE mo_jsb_control,         ONLY: debug_on
+  USE mo_jsb_control,         ONLY: debug_on, get_no_of_models
 
   USE mo_hsm_class,           ONLY: t_State, t_Message
   USE mo_jsb_model_class,     ONLY: t_jsb_model
@@ -256,7 +256,7 @@ CONTAINS
     REAL(wp),          POINTER :: return_pointer(:,:), tmp_fract(:,:)
     CHARACTER(len=50)          :: name_loc
     CHARACTER(len=:), ALLOCATABLE :: varlist_name_loc
-    CHARACTER(len=2)           :: model_id_char
+    CHARACTER(len=3)           :: model_id_suffix                    ! Suffix for domain if more than one model
     INTEGER                    :: ilct, i, no_of_children, child_no
 
     INTEGER :: isteptype
@@ -265,7 +265,7 @@ CONTAINS
 
     IF (debug_on()) CALL message(TRIM(routine), 'Initializing tile '//TRIM(this%name))
 
-    WRITE(model_id_char, '(I2.2)') this%owner_model_id
+    WRITE(model_id_suffix, '(A1,I2.2)') 'D', this%owner_model_id
 
     ! Allocate all memory components for new tile and initialize their data part with NULL()
     ALLOCATE(this%mem(max_no_of_processes))
@@ -283,6 +283,12 @@ CONTAINS
       END IF
 
       process_name = Get_process_name(iproc)
+
+      IF (get_no_of_models() > 1) THEN
+        varlist_name_loc = TRIM(varlist_name)//'_'//TRIM(process_name)//'_'//model_id_suffix
+      ELSE
+        varlist_name_loc = TRIM(varlist_name)//'_'//TRIM(process_name)
+      END IF
 
       IF (this%process_action(iproc) == INHERIT_) THEN
         this%mem(iproc)%p => this%parent_tile%mem(iproc)%p
@@ -302,7 +308,7 @@ CONTAINS
         END IF
         this%mem(iproc)%p => tmp_ptr
         this%mem(iproc)%p%id = iproc
-        this%mem(iproc)%p%varlist_name = TRIM(varlist_name)//'_'//TRIM(process_name)//'_'//model_id_char
+        this%mem(iproc)%p%varlist_name = TRIM(varlist_name_loc)
         this%mem(iproc)%p%grid_id = this%grid_id
         this%mem(iproc)%p%owner_model_id = this%owner_model_id
         this%mem(iproc)%p%owner_proc_id = iproc
@@ -333,7 +339,7 @@ CONTAINS
             tmp_tile%mem(iproc)%p%children(child_no)%p => tmp_ptr
             tmp_ptr => tmp_tile%mem(iproc)%p
             tmp_tile%mem(iproc)%p%id = iproc
-            tmp_tile%mem(iproc)%p%varlist_name =  TRIM(varlist_name)//'_'//TRIM(process_name)//'_'//model_id_char
+            tmp_tile%mem(iproc)%p%varlist_name =  TRIM(varlist_name_loc)
             tmp_tile%mem(iproc)%p%grid_id = this%grid_id
             tmp_tile%mem(iproc)%p%owner_model_id = this%owner_model_id
             ALLOCATE(tmp_tile%mem(iproc)%p%owner_tile_path(SIZE(tmp_tile%path)))
@@ -375,7 +381,11 @@ CONTAINS
     END IF
 
     ! Add fraction(s) of this tile to stream
-    varlist_name_loc =  TRIM(varlist_name)//'_'//model_id_char
+    IF (get_no_of_models() > 1) THEN
+      varlist_name_loc = TRIM(varlist_name)//'_'//model_id_suffix
+    ELSE
+      varlist_name_loc = TRIM(varlist_name)
+    END IF
     CALL jsb_add_var(varlist_name_loc, 'fract', tmp_fract,                                 &
       & hgrid, surface,                                                                                         &
       & t_cf('tile_fraction', '',                                                                          &

@@ -19,7 +19,7 @@ case `hostname` in
     #basedir=/work/mj0060/m212005/ini_files/jsbach4/icon                                  # for local use
     #
     #output_path=${rootdir}/public/mpim                                                   # eventually it should be this
-    output_path=${rootdir}/private/mpim/icon_preprocessing/source/preliminary_land/r0002  # temporary
+    output_path=${rootdir}/private/mpim/icon_preprocessing/source/preliminary_land/r0003  # temporary
     #output_path=/work/mj0060/m212005/data/icon                                           # for local use
     ;;
   *)
@@ -31,10 +31,7 @@ esac
 workdir=${basedir}/workdir
 
 pool_prepare=/pool/data/JSBACH/prepare/                   # pool directory with data needed for initial file generation
-old_r2b4_amip=false                                       # Temporary: old r2b4_amip grid (true) or new grids (false)
-[[ "${old_r2b4_amip}" != "true" ]] && \
-  grid_path=/pool/data/ICON/grids/private/mpim/icon_preprocessing/source/grids || \
-  grid_path=/pool/data/ICON/grids/private/r2b4_amip
+grid_path=/pool/data/ICON/grids/private/mpim/icon_preprocessing/source/grids
 
 bisections="0 1 2 3 4 5 6 7 8 9 10"
 #bisections="4"                          # for testing
@@ -196,21 +193,16 @@ function generate_land_sea_mask {
   then
     ${cdo} chname,lsf,notsea -setgrid,${coupled_grid_file} ${coupled_lsf_file} ${grid_name}_notsea.nc
   else
-    if [[ "${old_r2b4_amip}" != "true" ]]; then
-      temp2=$(mktemp -u --tmpdir=.)
-      # Note: blend out some grid boxes which are land in FR_LAND_TOPO
-      ${cdo} setgrid,${icon_grid_file} -setname,notsea -setrtoc,-1,0.2,0 -setrtoc,0.999,1.1,1 -selvar,FR_LAND_TOPO  \
-             ${extpar_file} ${grid_name}_notsea.nc
-      # Correct FR_LAND_TOPO for ocean points around the Caspian Sea
-      ${cdo} ifthenc,1 -masklonlatbox,42.5,56.25,44.0,50.5 ${grid_name}_notsea.nc ${temp}
-      ${cdo} ifthenelse -setmisstoc,0 ${temp} ${temp} ${grid_name}_notsea.nc ${temp2}
-      ${cdo} ifthenc,1 -masklonlatbox,43.5,56.25,34.5,44.0 ${temp2} ${temp} 
-      ${cdo} ifthenelse -setmisstoc,0 ${temp} ${temp} ${temp2} ${grid_name}_notsea.nc
-      rm ${temp2}
-    else
-      ${cdo} chname,cell_sea_land_mask,notsea -gtc,0 -selvar,cell_sea_land_mask \
-             ${icon_grid_file} ${grid_name}_notsea.nc
-    fi
+    temp2=$(mktemp -u --tmpdir=.)
+    # Note: blend out some grid boxes which are land in FR_LAND_TOPO
+    ${cdo} setgrid,${icon_grid_file} -setname,notsea -setrtoc,-1,0.2,0 -setrtoc,0.999,1.1,1 -selvar,FR_LAND_TOPO  \
+           ${extpar_file} ${grid_name}_notsea.nc
+    # Correct FR_LAND_TOPO for ocean points around the Caspian Sea
+    ${cdo} ifthenc,1 -masklonlatbox,42.5,56.25,44.0,50.5 ${grid_name}_notsea.nc ${temp}
+    ${cdo} ifthenelse -setmisstoc,0 ${temp} ${temp} ${grid_name}_notsea.nc ${temp2}
+    ${cdo} ifthenc,1 -masklonlatbox,43.5,56.25,34.5,44.0 ${temp2} ${temp} 
+    ${cdo} ifthenelse -setmisstoc,0 ${temp} ${temp} ${temp2} ${grid_name}_notsea.nc
+    rm ${temp2}
     ncatted -a long_name,notsea,m,c,'Fraction of land+lake+glacier' ${grid_name}_notsea.nc
   fi
 
@@ -219,8 +211,11 @@ function generate_land_sea_mask {
   ${cdo} setvar,glac -setmisstoc,0 -setmissval,-9.e33 -ifthen ${grid_name}_notsea.nc -gec,0.9 ${temp} ${grid_name}_glac_remap.nc
 
   # Adjust land sea mask with glacier fraction
-  ${cdo} setvar,notsea -ifthenelse -ltc,0.5 ${grid_name}_glac_remap.nc ${grid_name}_notsea.nc ${grid_name}_glac_remap.nc ${temp}
-  mv ${temp} ${grid_name}_notsea.nc
+  if [[ ${coupled} != "true" ]]
+  then
+    ${cdo} setvar,notsea -ifthenelse -ltc,0.5 ${grid_name}_glac_remap.nc ${grid_name}_notsea.nc ${grid_name}_glac_remap.nc ${temp}
+    mv ${temp} ${grid_name}_notsea.nc
+  fi
 
   # Generate lake fractions, making sure that fractional coastal grid points don't contain any lakes
   # Set small lake fractions below 0.1 to zero
@@ -322,59 +317,17 @@ function remap_var {
       ;;
     elevation )
       echo "Extracting elevation from EXTPAR file ..."
-      if [[ "${old_r2b4_amip}" != "true" ]] 
-      then
-        ${cdo} setvar,elevation \
-              -setgrid,${icon_grid_file} -selvar,topography_c ${extpar_file} \
-              ${grid_name}_${var}_remap.nc
-      else
-        if [[ "${coupled}" != "true" ]]
-        then
-          ${cdo} setvar,elevation \
-                -remapdis,${icon_grid_file} \
-                -setgrid,/pool/data/ICON/grids/private/mpim/icon_preprocessing/source/grids/icon_grid_0005_R02B04_G.nc \
-                -selvar,topography_c ${extpar_file} \
-                ${grid_name}_${var}_remap.nc
-        else
-          temp=$(mktemp -u --tmpdir=.)
-          ${cdo} setvar,elevation \
-                -remapdis,${grid_name}_notsea.nc \
-                -setgrid,/pool/data/ICON/grids/private/mpim/icon_preprocessing/source/grids/icon_grid_0005_R02B04_G.nc \
-                -selvar,topography_c ${extpar_file} \
-                ${temp}
-          ${cdo} setgrid,${grid_name}_notsea.nc ${temp} ${grid_name}_${var}_remap.nc
-          rm ${temp}
-        fi
-      fi
+      ${cdo} setvar,elevation \
+            -setgrid,${icon_grid_file} -selvar,topography_c ${extpar_file} \
+            ${grid_name}_${var}_remap.nc
       ;;
     oro* )
       echo "Extracting $var from EXTPAR file ..."
       # Note: setrtoc in followoing is necessary because SSO variables in extpar file contain missing values
-      if [[ "${old_r2b4_amip}" != "true" ]] 
-      then
-        ${cdo} setvar,${var} \
-              -setgrid,${icon_grid_file} -setrtoc,-9e40,-1000,0 -setrtoc,100000,9e40,0 \
-              -selvar,${sso_dict[${var}]} ${extpar_file} \
-              ${grid_name}_${var}_remap.nc
-      else
-        if [[ "${coupled}" != "true" ]]
-        then
-          ${cdo} setvar,${var} \
-                -remap${remap_scheme},${icon_grid_file} -setrtoc,-9e40,-1000,0 -setrtoc,100000,9e40,0 \
-                -setgrid,/pool/data/ICON/grids/private/mpim/icon_preprocessing/source/grids/icon_grid_0005_R02B04_G.nc \
-                -selvar,${sso_dict[${var}]} ${extpar_file} \
-                ${grid_name}_${var}_remap.nc
-        else
-          temp=$(mktemp -u --tmpdir=.)
-          ${cdo} setvar,${var} -setgrid,${coupled_grid_file} \
-                -remap${remap_scheme},${coupled_grid_file} -setrtoc,-9e40,-1000,0 -setrtoc,100000,9e40,0 \
-                -setgrid,/pool/data/ICON/grids/private/mpim/icon_preprocessing/source/grids/icon_grid_0005_R02B04_G.nc \
-                -selvar,${sso_dict[${var}]} ${extpar_file} \
-                ${temp}
-          ${cdo} setgrid,${grid_name}_notsea.nc ${temp} ${grid_name}_${var}_remap.nc
-          rm ${temp}
-        fi
-      fi
+      ${cdo} setvar,${var} \
+            -setgrid,${icon_grid_file} -setrtoc,-9e40,-1000,0 -setrtoc,100000,9e40,0 \
+            -selvar,${sso_dict[${var}]} ${extpar_file} \
+            ${grid_name}_${var}_remap.nc
       ;;
     cover_fract )
       # npft should be consistent with cover_fract from the JSBACH3 input file
@@ -740,8 +693,6 @@ mkdir -p ${workdir} || true
 cd ${workdir}
 rm -rf *
 
-[[ "${old_r2b4_amip}" == "true" ]] && bisections="4"
-
 for bisection in $bisections $ggrids
 do
   [[ $(echo ${bisection} | cut -c1) == T ]] && jsb4icon=false || jsb4icon=true
@@ -766,14 +717,8 @@ do
       remap_scheme=dis
     fi
 
-    if [[ "${old_r2b4_amip}" != "true" ]]
-    then
-      grid_name=R02B${n0}
-      source_res=${source_res_dict[${bisection}]}
-    else
-      grid_name=r2b4_amip
-      source_res=T63
-    fi
+    grid_name=R02B${n0}
+    source_res=${source_res_dict[${bisection}]}
   else         # jsbach4 on gaussian grid
     grid_name=${bisection}
     remap_scheme=ycon
@@ -786,7 +731,7 @@ do
   echo "=============================================================="
 
   if [[ ${jsb4icon} == true ]]; then
-    [[ "${old_r2b4_amip}" != "true" ]] && icon_grid=icon_grid_00${n1}_R02B${n0}_G.nc || icon_grid=${grid_name}.nc
+    icon_grid=icon_grid_00${n1}_R02B${n0}_G.nc
 
     remap_weights=wgt${remap_scheme}_${source_res}_to_${grid_name}.nc
 
@@ -811,9 +756,7 @@ do
     echo "Generating remap weights: $command"
     time $command
 
-    [[ "${old_r2b4_amip}" != "true" ]] && \
- 	    extpar_file=$(ls ${extpar_path}/icon_extpar_grid_00${n1}_${grid_name}_G_????????.nc) || \
-	    extpar_file=$(ls ${extpar_path}/icon_extpar_grid_0005_R02B04_G_????????.nc)
+    extpar_file=$(ls ${extpar_path}/icon_extpar_grid_00${n1}_${grid_name}_G_????????.nc)
     echo "extpar input file: $extpar_file"
   fi
 
@@ -870,9 +813,7 @@ do
 
   generate_output_files
 
-  [[ "${old_r2b4_amip}" != "true" ]] && \
-    output_dir="${output_path}/${grid_name}/land" || \
-    output_dir="${output_path}/r2b4_amip/lnd"
+  output_dir="${output_path}/${grid_name}/land" || \
   mkdir -p ${output_dir} || true
 
   if [[ ${dryrun} != "true" ]]
