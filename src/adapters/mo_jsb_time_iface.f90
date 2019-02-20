@@ -602,7 +602,7 @@ CONTAINS
          ! copied from jsb3 get_dates:
          ! Get time information from restart file
           IO_file%opened = .FALSE.
-          CALL IO_open('restart_'//TRIM(out_expname)//'_'//TRIM(model_shortname)//'_01.nc', IO_file, IO_READ)
+          CALL IO_open('restart_'//TRIM(out_expname)//'_'//TRIM(model_shortname)//'.nc', IO_file, IO_READ)
 
           IO_file_id = IO_file%file_id
           CALL io_get_att_int(IO_file_id, NF_GLOBAL, 'nstep', istep)

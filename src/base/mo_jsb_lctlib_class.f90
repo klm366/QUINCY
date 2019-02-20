@@ -769,11 +769,11 @@ CONTAINS
              CASE ('relallo2abgrd')
                 READ(line(pos:length),*) lctlib(1:nlct)%RelAllo2Abgrd
                 exists_RelAllo2Abgrd   = .TRUE.
-                WRITE(35,fm) 'RelAllo2Abgrd ',lctlib(1:nlct)%RelAllo2Abgrd
+                WRITE(35,fm) 'RelAllo2AbStru',lctlib(1:nlct)%RelAllo2Abgrd
              CASE ('relallo2blgrd')
                 READ(line(pos:length),*) lctlib(1:nlct)%RelAllo2Blgrd
                 exists_RelAllo2Blgrd   = .TRUE.             
-                WRITE(35,fm) 'RelAllo2Blgrd ',lctlib(1:nlct)%RelAllo2Blgrd
+                WRITE(35,fm) 'RelAllo2BlStru',lctlib(1:nlct)%RelAllo2Blgrd
              CASE ('turnoverstruc')             
                 READ(line(pos:length),*) P11(1:nlct)
                 lctlib(1:nlct)%TurnoverStruc = 365._wp * (79._wp * P11(1:nlct) + 1._wp )
