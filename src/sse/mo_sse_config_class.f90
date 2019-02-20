@@ -75,8 +75,10 @@ CONTAINS
     INTEGER                     :: nsoil_energy    , &
                                    nsoil_water
     REAL(wp)                    :: dz_energy(max_soil_layers), &      ! vector of soil layers 
-                                   dz_water(max_soil_layers),  &
-                                   soil_depth_profile(max_soil_layers)
+                                   dz_water(max_soil_layers)
+    REAL(wp)                    :: soil_depth_profile(max_soil_layers)
+    REAL(wp), ALLOCATABLE       :: lbounds_soil_lay_energy(:), &      ! layer lower bound
+                                   lbounds_soil_lay_water(:)
     REAL(wp)                    :: wsr_capacity    , &
                                    wsn_capacity    , &
                                    soil_depth   
@@ -149,7 +151,9 @@ CONTAINS
 
     CALL close_nml(nml_handler)
 
-    ! allocate vectors
+    ! allocate vectors with dimensions defined in the namelist
+    ALLOCATE(lbounds_soil_lay_energy(nsoil_energy))
+    ALLOCATE(lbounds_soil_lay_water(nsoil_water))
     ALLOCATE(config%soil_depth_energy(nsoil_energy))
     ALLOCATE(config%soil_depth_water (nsoil_water ))
     ALLOCATE(config%dz_energy(nsoil_energy))
@@ -157,11 +161,12 @@ CONTAINS
 
     ! check initialisation of number of soil layers
     IF (nsoil_water .LT. 5 .OR. nsoil_water .GT. 20) & 
-        CALL finish('Init_sse_config','Number of soil layers needs to be a number from the range 5 to 20.')
+        CALL finish(routine,'Number of soil layers needs to be a number from the range 5 to 20.')
     IF (nsoil_water .NE. nsoil_energy) & 
-        CALL finish('Init_sse_config','Initialization with different numbers of soil layers for energy and water not supported.')
+        CALL finish(routine,'Initialization with different numbers of soil layers for energy and water not supported.')
 
     ! If not using 5 layers, estimate depth profile to mimick standard JSB4 profile
+    ! calc thickness of each soil layer, assuming nsoil_water == nsoil_energy, is tested above
     IF(nsoil_water > 5) THEN
        DO isoil=1,nsoil_water
          soil_depth_profile(isoil) = min_layer_depth * & 
@@ -175,6 +180,7 @@ CONTAINS
        dz_water(:) = dz_energy(:)
     ENDIF
 
+    ! run check for soil depth namelist-definition; may not be less/equal zero or larger than covered by soil profile
     IF (soil_depth .LE. 0.0_wp) CALL finish('Init_sse_config','Initialization with non positive soil depth')
     IF (soil_depth .GT. SUM(dz_energy)) CALL finish('Init_sse_config','Initialization of soil depth larger than soil profile not possible')
 
@@ -187,17 +193,21 @@ CONTAINS
     config%soil_awc_prescribe        = soil_awc_prescribe 
     config%soil_theta_prescribe      = soil_theta_prescribe 
 
-    config%soil_depth_energy(1)      = dz_energy(1)
+    ! calc lower bound of soil layers (energy and water) from layer thickness
+    lbounds_soil_lay_energy(1)       = dz_energy(1)
     DO isoil=2,nsoil_energy
-      config%soil_depth_energy(isoil)= config%soil_depth_energy(isoil-1) + dz_energy(isoil)
+      lbounds_soil_lay_energy(isoil) = lbounds_soil_lay_energy(isoil-1) + dz_energy(isoil)
     END DO
-    config%soil_depth_water(1)       = dz_water(1)
+    lbounds_soil_lay_water(1)        = dz_water(1)
     DO isoil=2,nsoil_water
-      config%soil_depth_water(isoil) = config%soil_depth_water(isoil-1) + dz_water(isoil)
+      lbounds_soil_lay_water(isoil)  = lbounds_soil_lay_water(isoil-1) + dz_water(isoil)
     END DO
+    ! add soil layer information also to config% variables; depreciated feature, may be removed soon, see ticket #524
+    config%soil_depth_energy(:)      = lbounds_soil_lay_energy(:)
+    config%soil_depth_water(:)       = lbounds_soil_lay_water(:)
 
-    config%dz_energy(1:nsoil_energy) = dz_energy(1:nsoil_energy)
-    config%dz_water (1:nsoil_water)  = dz_water(1:nsoil_water)
+    config%dz_energy(1:nsoil_energy) = dz_energy(1:nsoil_energy)  ! depreciated feature
+    config%dz_water (1:nsoil_water)  = dz_water(1:nsoil_water)    ! depreciated feature
     config%wsr_capacity              = wsr_capacity
     config%wsn_capacity              = wsn_capacity
     config%soil_depth                = soil_depth 
@@ -207,20 +217,23 @@ CONTAINS
     !config%soil_clay                = not using the input value, as soil_clay must be calculated from soil_sand & soil_silt to guarantee: 1=sand+silt+clay
     config%soil_clay                 = 1.0_wp - soil_sand - soil_silt
     IF(config%soil_clay < eps8) THEN
-       WRITE(message_text,'(2a)') 'invalid proportion of soil_clay (value < eps8)',routine
-       CALL finish("mo_sse_config_class:init_sse_config",message_text)
+       WRITE(message_text,'(a)') 'invalid proportion of soil_clay (value < eps8)'
+       CALL finish(routine, message_text)
     END IF
     config%bulk_density              = bulk_density
 
-    !< Create vertical axis
+
+    !< Create vertical axis (vgrid)
     !! 
-    vgrid_soil_sb => new_vgrid('soil_layer_sb', ZAXIS_GENERIC, config%nsoil_water, &
-                      longname='Number of soil layers from SSE_ QUINCY', &
+    !! these are "infrastructure" values, lbounds and dz may be corrected/limited by site-specific bedrock depth "soil_depth" \n
+    !! site-specific soil-layer thickness values are stored in soil_depth_sl (and calc in sse_init)
+    vgrid_soil_sb => new_vgrid('soil_layer_sb', ZAXIS_GENERIC, nsoil_water, &
+                      longname='Number of soil (water) layers from SSE_ QUINCY', &
                       units='m', &
                       ! levels=   , &
-                      ! lbounds=  , & 
+                      lbounds=lbounds_soil_lay_water(:), & 
                       ! ubounds=  , &
-                      dz=config%dz_water(:))
+                      dz=dz_water(:))
     CALL register_vgrid(vgrid_soil_sb)
 
   END SUBROUTINE Init_sse_config
