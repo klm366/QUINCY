@@ -217,7 +217,7 @@ CONTAINS
     !! site-specific soil-layer thickness values are stored in soil_depth_sl (and calc in sse_init) \n
     !! the function new_vgrid() does: (a) check for "dz(:) <= zero", and (b) calc levels & lbounds from ubounds and dz
     vgrid_soil_sb => new_vgrid('soil_layer_sb', ZAXIS_GENERIC, nsoil_water, &
-                      longname='Number of soil (water) layers from SSE_ QUINCY', &
+                      longname='Soil (water) layers from SSE_ QUINCY', &
                       units='m', &
                       ! levels=  , &      ! is calculated from ubounds and dz
                       ! lbounds=  , &     ! is calculated from ubounds and dz
