@@ -65,7 +65,6 @@ mo_sb_init.o: \
   mo_jsb_math_constants.o \
   mo_assimi_constants.o \
   mo_assimi_update_canopy_fluxes.o \
-  mo_sse_config_class.o \
   mo_sb_constants.o \
   mo_sb_config_class.o \
   mo_sb_jsm_processes.o \

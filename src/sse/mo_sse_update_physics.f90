@@ -44,7 +44,7 @@ CONTAINS
     USE mo_jsb_grid,              ONLY: Get_vgrid
 
     ! Use of process configurations (t_PROC_config)
-    dsl4jsb_Use_config(SSE_)
+    ! ..
 
     ! Use of process memories
     dsl4jsb_Use_memory(A2L_)        !  USE mo_a2l_memory_class,      ONLY: t_a2l_memory
@@ -73,7 +73,6 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_memory(A2L_)                        !     TYPE(t_a2l_memory),      POINTER :: a2l__mem
     dsl4jsb_Def_memory(L2A_)                        !     TYPE(t_l2a_memory),      POINTER :: l2a__mem
     dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
@@ -163,7 +162,7 @@ CONTAINS
     vgrid_soil_sb => Get_vgrid('soil_layer_sb')
     nsoil_sb      =  vgrid_soil_sb%n_levels
     ! Get process config
-    dsl4jsb_Get_config(SSE_)
+    ! ..
     ! Get process memories
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(L2A_)
@@ -265,7 +264,7 @@ CONTAINS
     !!
     CALL calc_soil_hydrology(nc, nsoil_sb, &
                              lctlib, &
-                             dsl4jsb_Config(SSE_)%soil_depth_water(:), & 
+                             vgrid_soil_sb%ubounds(:), &                                              ! (upper bound > lower bound !)
                              rain(:),snow(:),interception(:),evaporation(:),transpiration(:), & 
                              w_soil_root_fc(:),w_soil_root_pwp(:),lai(:),root_depth(:), & 
                              soil_depth_sl(:,:),w_soil_sat_sl(:,:),w_soil_fc_sl(:,:),w_soil_pwp_sl(:,:), & 
@@ -560,7 +559,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_soil_hydrology(nc, nsoil_sb, &
                                  lctlib, &
-                                 soil_depth_water, & 
+                                 soil_layer_w_ubounds, & 
                                  rain,snow,interception,evaporation,transpiration, & 
                                  w_soil_root_fc,w_soil_root_pwp,lai,root_depth, & 
                                  soil_depth_sl,w_soil_sat_sl,w_soil_fc_sl,w_soil_pwp_sl, & 
@@ -582,7 +581,7 @@ CONTAINS
     INTEGER,                                          INTENT(in)    :: nc, &                  !< dimensions
                                                                        nsoil_sb
     TYPE(t_lctlib_element),                           INTENT(in)    :: lctlib                  !< land-cover-type library - parameter across pft's
-    REAL(wp), DIMENSION(nsoil_sb),                    INTENT(in)    :: soil_depth_water        !< depth of a layer
+    REAL(wp), DIMENSION(nsoil_sb),                    INTENT(in)    :: soil_layer_w_ubounds    !< upper bound of soil layers water (upper bound > lower bound !)
     REAL(wp), DIMENSION(nc),                          INTENT(in)    :: rain, &                 !< rainfall [kg / m2 / s ]
                                                                        snow, &                 !< snowfall [kg / m2 / s ]
                                                                        interception, &         !< interception [kg / m2 / s ]
@@ -784,16 +783,18 @@ CONTAINS
     !!       If a soil layer is only partially filled with roots, the plant-accessible 
     !!       water is limited to the AWC of the root zone. All of the layer's water 
     !!       (fc-w) deficit is substracted from the root accessible AWC (fc-pwp)*root_depth
-    !!
+    !! 
+    !! note: upper bound is the larger value compared to lower bound !
+    !! 
     w_soil_root(:) = w_soil_sl(:,1) 
     DO isoil = 2,nsoil_sb
-       WHERE(root_depth(:) > soil_depth_water(isoil-1))
-          WHERE(root_depth(:) >= soil_depth_water(isoil))
+       WHERE(root_depth(:) > soil_layer_w_ubounds(isoil-1))
+          WHERE(root_depth(:) >= soil_layer_w_ubounds(isoil))
             w_soil_root(:) = w_soil_root(:) + w_soil_sl(:,isoil) 
           ELSEWHERE
             ! fraction of the layer that has roots
-            hlp1(:) = (root_depth(:) - soil_depth_water(isoil-1)) / &
-                      (soil_depth_water(isoil) - soil_depth_water(isoil-1))
+            hlp1(:) = (root_depth(:) - soil_layer_w_ubounds(isoil-1)) / &
+                      (soil_layer_w_ubounds(isoil) - soil_layer_w_ubounds(isoil-1))
 
             w_soil_root(:) = w_soil_root(:) + w_soil_fc_sl(:,isoil) * hlp1(:) - &
                              MIN((w_soil_fc_sl(:,isoil) - w_soil_sl(:,isoil)), w_soil_pwp_sl(:,isoil) * hlp1(:))

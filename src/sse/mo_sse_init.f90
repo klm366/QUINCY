@@ -163,27 +163,25 @@ CONTAINS
 
 
     !> 1.0 Total soil depth until bedrock
-    !! 
-!    return_pointer => input_file%Read_2d(         &
-!      & variable_name='soil_depth',               &
-!      & fill_array = dsl4jsb_var2D_ptr(SSE_, soil_depth))
+    !!  code from jsbach4 (hydro init)
     soil_depth(:)                             = dsl4jsb_Config(SSE_)%soil_depth ! SLM code *slmtemp
-    dsl4jsb_var2D_onDomain(SSE_, soil_depth) = &
-      MAX(0.1_wp, MERGE(dsl4jsb_var2D_onDomain(SSE_, soil_depth), 0._wp, dsl4jsb_var2D_onDomain(SSE_, soil_depth) >= 0._wp))
+    dsl4jsb_var2D_onDomain(SSE_, soil_depth)  = MAX(0.1_wp, &
+                                                    MERGE(dsl4jsb_var2D_onDomain(SSE_, soil_depth), 0._wp, &
+                                                          dsl4jsb_var2D_onDomain(SSE_, soil_depth) >= 0._wp))
 
-    !> 2.0 Compute actual soil layer depths based on the fixed layer thicknesses from namelist and
-    !!  the bedrock depth just read in.
+    !> 2.0 Compute actual soil layer depths based on the fixed layer thicknesses from namelist and the bedrock depth
+    !!  note, soil_depth_to_layers_2d() returns an actual 3D variable, which is why we use dsl4jsb_var3D_onDomain() here
     dsl4jsb_var3D_onDomain(SSE_, soil_depth_sl) = soil_depth_to_layers_2d( &
-      & dsl4jsb_var2D_onDomain(SSE_, soil_depth),                         & ! Total soil depth until bedrock (from textures)
-      & dsl4jsb_Config(SSE_)%dz_water(1:nsoil_sb))    ! Soil layer thicknesses from namelist
+                                                    dsl4jsb_var2D_onDomain(SSE_, soil_depth), &   ! Total soil depth until bedrock (from textures), 2D variable
+                                                    vgrid_soil_sb%dz(:))                          ! Soil layer thicknesses from namelist
 
     !> 3.0 check if last soil layer has a thickness larger zero
     !! 
     DO ichunk  = 1,nc
       IF (soil_depth_sl(ichunk,nsoil_sb) < eps8) THEN
         WRITE(message_text,*) 'The last soil layer has a thickness < eps8. Increase soil_depth from ', soil_depth, &
-                              ' to at least ', SUM(dsl4jsb_Config(SSE_)%dz_water(1:nsoil_sb-1)), ' but better ', &
-                              SUM(dsl4jsb_Config(SSE_)%dz_water(1:nsoil_sb)), ' and re-start the simulation.'
+                              ' to at least ', SUM(vgrid_soil_sb%dz(1:nsoil_sb-1)), ' but better ', &
+                              SUM(vgrid_soil_sb%dz(1:nsoil_sb)), ' and re-start the simulation.'
         CALL finish(TRIM(routine), message_text)
       END IF  
     END DO
@@ -246,12 +244,12 @@ CONTAINS
     w_soil_root_fc(:)   = 0._wp
     root_depth(:)       = 0._wp
     DO isoil=1,nsoil_sb
-      hlp1(:,isoil)     = dsl4jsb_Config(SSE_)%dz_water(isoil) * (theta_fc_sl(:,isoil) - theta_pwp_sl(:,isoil))
+      hlp1(:,isoil)     = vgrid_soil_sb%dz(isoil) * (theta_fc_sl(:,isoil) - theta_pwp_sl(:,isoil))
       soil_awc(:)       = soil_awc(:) + hlp1(:,isoil)
       WHERE (soil_awc(:) < (dsl4jsb_Config(SSE_)%soil_awc_prescribe / 1000._wp)) 
-        root_depth(:)       = root_depth(:) + dsl4jsb_Config(SSE_)%dz_water(isoil)
-        w_soil_root_pwp(:)  = w_soil_root_pwp(:) + theta_pwp_sl(:,isoil) * dsl4jsb_Config(SSE_)%dz_water(isoil)
-        w_soil_root_fc(:)   = w_soil_root_fc(:) + theta_fc_sl(:,isoil) * dsl4jsb_Config(SSE_)%dz_water(isoil)
+        root_depth(:)       = root_depth(:) + vgrid_soil_sb%dz(isoil)
+        w_soil_root_pwp(:)  = w_soil_root_pwp(:) + theta_pwp_sl(:,isoil) * vgrid_soil_sb%dz(isoil)
+        w_soil_root_fc(:)   = w_soil_root_fc(:) + theta_fc_sl(:,isoil) * vgrid_soil_sb%dz(isoil)
       ELSEWHERE
         hlp2(:)             = MAX(0._wp, dsl4jsb_Config(SSE_)%soil_awc_prescribe / 1000._wp - soil_awc(:) + hlp1(:,isoil))
         root_depth(:)       = root_depth(:) + hlp2(:) / (theta_fc_sl(:,isoil) - theta_pwp_sl(:,isoil))
@@ -280,18 +278,20 @@ CONTAINS
     !!
     !! root_fraction_sl(:,:) is a variable of veg_mem and depends on the init of root_depth(:), see section 6.0 and ticket #358
     !! 
-    ! layer 1
-    root_fraction_sl(:,1) = (1._wp - exp(-lctlib%k_root_dist * dsl4jsb_Config(SSE_)%soil_depth_water(1))) / &
+    !! note: upper bound is the larger value compared to lower bound !
+    !! 
+    ! layer 1 (vgrid_soil_sb)
+    root_fraction_sl(:,1) = (1._wp - exp(-lctlib%k_root_dist * vgrid_soil_sb%ubounds(1))) / &
                             (1._wp - exp(-lctlib%k_root_dist * root_depth(:)))
-    ! layer 2 -> nsoil_sb
+    ! layer 2 (vgrid_soil_sb)
     DO isoil=2,nsoil_sb
-       WHERE(root_depth(:) > dsl4jsb_Config(SSE_)%soil_depth_water(isoil-1))
-          WHERE(root_depth(:) > dsl4jsb_Config(SSE_)%soil_depth_water(isoil))
-             root_fraction_sl(:,isoil) = (exp(-lctlib%k_root_dist * dsl4jsb_Config(SSE_)%soil_depth_water(isoil-1)) - &
-                                          exp(-lctlib%k_root_dist * dsl4jsb_Config(SSE_)%soil_depth_water(isoil))) / & 
+       WHERE(root_depth(:) > vgrid_soil_sb%ubounds(isoil-1))
+          WHERE(root_depth(:) > vgrid_soil_sb%ubounds(isoil))
+             root_fraction_sl(:,isoil) = (exp(-lctlib%k_root_dist * vgrid_soil_sb%ubounds(isoil-1)) - &
+                                          exp(-lctlib%k_root_dist * vgrid_soil_sb%ubounds(isoil))) / & 
                                          (1._wp - exp(-lctlib%k_root_dist * root_depth(:)))
           ELSEWHERE
-             root_fraction_sl(:,isoil) = (exp(-lctlib%k_root_dist * dsl4jsb_Config(SSE_)%soil_depth_water(isoil-1)) - &
+             root_fraction_sl(:,isoil) = (exp(-lctlib%k_root_dist * vgrid_soil_sb%ubounds(isoil-1)) - &
                                           exp(-lctlib%k_root_dist * root_depth(:))) / & 
                                          (1._wp - exp(-lctlib%k_root_dist * root_depth(:)))
           ENDWHERE
