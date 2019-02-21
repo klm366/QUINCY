@@ -2,11 +2,10 @@
 !! @brief diverse subroutines and functions for tile & forcing variables
 !!
 !! @author
-!!  Jan Engel, MPI-BGC Jena
+!!  Reiner Schnur, MPI-M Hamburg
 !!
 !! @par Revision History
-!! First version by Jan Engel (2016-03-23)
-!! 2nd version by Jan Engel (2016-07-15); all content removed, see SVN r198 & trac ticket #63
+!!   First version, copied from JSBACH4 git repo, by Jan Engel (2016-03-23)
 !!
 MODULE mo_util
 #ifndef __NO_JSBACH__
@@ -16,6 +15,7 @@ MODULE mo_util
   IMPLICIT NONE
   PRIVATE
 
+  PUBLIC :: soil_depth_to_layers_2d
   PUBLIC :: one_of, toupper, int2string, tolower
 
   INTERFACE one_of
@@ -26,6 +26,46 @@ MODULE mo_util
   CHARACTER(len=*), PARAMETER :: modname = 'mo_util'
 
 CONTAINS
+
+
+  !-----------------------------------------------------------------------------------------------------
+  !> FUNCTION return the site-specific soil profile as vector of soil-layer thicknesses
+  !! 
+  !! in: soil_depth (until bedrock) and soil-layer thicknesses
+  !! 
+  !! out: site-specific soil-layer thicknesses, soil_depth_sl as 3D variable "dsl4jsb_var3D_onDomain()"
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION soil_depth_to_layers_2d(depth, dz) RESULT(depth_l)
+  
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut
+    REAL(wp), INTENT(in) :: depth(:,:)
+    REAL(wp), INTENT(in) :: dz(:)
+    REAL(wp)             :: depth_l(SIZE(depth,1), SIZE(dz), SIZE(depth,2))
+    ! ---------------------------
+    ! 0.2 Local
+    REAL(wp) :: bottom, bottom_m1
+    INTEGER  :: nsoil, i
+    CHARACTER(len=*), PARAMETER :: routine = modname//':soil_depth_to_layer_2d'
+  
+    nsoil = SIZE(dz)
+  
+    depth_l(:,:,:) = 0._wp
+    bottom = 0._wp
+    bottom_m1 = 0._wp
+    DO i=1,nsoil
+      bottom = bottom + dz(i)
+      WHERE (depth(:,:) >= bottom)
+        depth_l(:,i,:) = dz(i)
+      ELSEWHERE (depth(:,:) > bottom_m1)
+        depth_l(:,i,:) = depth(:,:) - bottom_m1
+      END WHERE
+      bottom_m1 = bottom_m1 + dz(i)
+    END DO
+  
+  END FUNCTION soil_depth_to_layers_2d
+
 
   !-----------------------------------------------------------------------------------------------------
   !> conversion: uppercase -> lowercase

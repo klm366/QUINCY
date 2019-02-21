@@ -39,7 +39,7 @@ CONTAINS
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
     USE mo_jsb_grid,              ONLY: Get_vgrid
-    USE mo_sse_util,              ONLY: soil_depth_to_layers_2d
+    USE mo_util,                  ONLY: soil_depth_to_layers_2d
     USE mo_jsb_math_constants,    ONLY: eps8
     USE mo_sse_constants,         ONLY: soil_heat_cap, soil_therm_cond, kdiff_sat_max, &
                                         k_pwp_s, k_pwp_c, k_pwp_sc, k_pwp_a, k_pwp_at, k_pwp_bt, &
