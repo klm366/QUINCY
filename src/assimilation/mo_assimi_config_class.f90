@@ -163,12 +163,17 @@ CONTAINS
                       dz=canopy_layer_thickness_profile(:))
     CALL register_vgrid(vgrid_canopy)
 
-    ! temporary fix
-    ! @todo assimi config: lbounds and ubounds are set to zero, because of a bug in the jsbach4 code in new_vgrid() calc wrong values if only dz is provided
-    !  moreover, the jsbach4 code does not yet cover "reversed" layers in a vgrid, i.e., layer 1 is the top canopy layer (vgrid_canopy%level(1) > vgrid_canopy%level(2))
-    vgrid_canopy%lbounds(:) = 0.0_wp
-    vgrid_canopy%ubounds(:) = 0.0_wp
-
+    !< calc vgrid_canopy% lbounds, ubounds, and levels (i.e., center of each the layer)
+    !!  the jsbach4 code does not yet cover "reversed" layers in a vgrid
+    vgrid_canopy%levels(1)  = 0.5_wp * canopy_layer_thickness_profile(1)
+    vgrid_canopy%lbounds(1) = 0.0_wp
+    vgrid_canopy%ubounds(1) = canopy_layer_thickness_profile(1)
+    DO icanopy = 2, ncanopy
+      vgrid_canopy%levels(icanopy)  = SUM(canopy_layer_thickness_profile(1 : icanopy-1)) + &
+                                        0.5_wp * canopy_layer_thickness_profile(icanopy)
+      vgrid_canopy%lbounds(icanopy) = SUM(canopy_layer_thickness_profile(1 : icanopy-1))
+      vgrid_canopy%ubounds(icanopy) = SUM(canopy_layer_thickness_profile(1 : icanopy))
+    END DO
 
   END SUBROUTINE Init_assimi_config
 
