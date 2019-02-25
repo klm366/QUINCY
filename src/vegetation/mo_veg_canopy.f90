@@ -82,7 +82,7 @@ CONTAINS
     INTEGER,                                INTENT(in)              :: ncanopy               !< number of canopy layers
     TYPE(t_lctlib_element),                 INTENT(in)              :: lctlib                !< land-cover-type library
     LOGICAL,                                INTENT(in)              :: flag_optimal_Nfraction!< on/off optimise leaf internal N allocation
-    REAL(wp),DIMENSION(ncanopy),            INTENT(in)              :: canopy_layer_depth    !< depth of each single canopy layer
+    REAL(wp),DIMENSION(ncanopy),            INTENT(in)              :: canopy_layer_depth    !< thickness of each single canopy layer [m2 m-2 LAI]
     REAL(wp),DIMENSION(nc),                 INTENT(in)              :: leaf_nitrogen         !< total canopy N (mol/m2)
     REAL(wp),DIMENSION(nc),                 INTENT(in)              :: lai                   !< total leaf area index
     REAL(wp),DIMENSION(nc),                 INTENT(in),   OPTIONAL  :: t_air                 !< air temperature (avg)
@@ -829,7 +829,7 @@ CONTAINS
     INTEGER,                                INTENT(in) :: ncanopy                       !< number of canopy layers
     TYPE(t_lctlib_element),                 INTENT(in) :: lctlib                        !< land-cover-type library - parameters for one pft
     LOGICAL,                                INTENT(in) :: flag_optimal_Nfraction        !< on/off optimise leaf internal N allocation
-    REAL(wp),DIMENSION(ncanopy),            INTENT(in) :: canopy_layer_depth            !< depth of each single canopy layer
+    REAL(wp),DIMENSION(ncanopy),            INTENT(in) :: canopy_layer_depth            !< thickness of each single canopy layer [m2 m-2 LAI]
     REAL(wp),DIMENSION(nc),                 INTENT(in) :: t_air                   , &   !< air temperature (K)
                                                           press_srf               , &   !< air pressure (Pa)
                                                           q_air                   , &   !< air specific humidity (--)
@@ -1082,7 +1082,7 @@ CONTAINS
     INTEGER,                                INTENT(in)    :: ncanopy                        !< number of canopy layers
     TYPE(t_lctlib_element),                 INTENT(in)    :: lctlib                         !< land-cover-type library - parameters for one pft
     LOGICAL,                                INTENT(in)    :: flag_optimal_Nfraction         !< on/off optimise leaf internal N allocation
-    REAL(wp),DIMENSION(ncanopy),            INTENT(in)    :: canopy_layer_depth             !< depth of each single canopy layer
+    REAL(wp),DIMENSION(ncanopy),            INTENT(in)    :: canopy_layer_depth             !< thickness of each single canopy layer [m2 m-2 LAI]
     REAL(wp),DIMENSION(nc),                 INTENT(in)    :: growing_season                 !< growing season
     REAL(wp),DIMENSION(nc),                 INTENT(in)    :: veg_pool_leaf_carbon       , &
                                                              veg_pool_leaf_nitrogen     , &

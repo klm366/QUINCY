@@ -36,9 +36,7 @@ MODULE mo_assimi_config_class
     LOGICAL                 :: flag_optimal_Nfraction     !< optimise leaf internal N allocation
     LOGICAL                 :: flag_t_resp_acclimation    !< whether or not to use the respiration temperature acclimation factor
     LOGICAL                 :: flag_t_jmax_acclimation    !< acclimation of optimum temperature for Jmax 
-    CHARACTER(15)           :: canopy_layer_scheme        !< select scheme to calculate depth of each single canopy layer
-                                                          ! "standard|fapar"           
-    REAL(wp), ALLOCATABLE   :: canopy_layer_depth(:)      !< depth of each single canopy layer
+    CHARACTER(15)           :: canopy_layer_scheme        !< select scheme to calculate canopy layer thicknesses [standard|fapar]
   CONTAINS
     PROCEDURE :: Init => Init_assimi_config
   END type t_assimi_config
@@ -71,6 +69,7 @@ CONTAINS
     ! variables for reading from namlist, identical to variable-name in namelist
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
+    REAL(wp), ALLOCATABLE       :: canopy_layer_thickness_profile(:)  !<  thickness of each single canopy layer [m2 m-2 LAI]
     LOGICAL                     :: flag_optimal_Nfraction     , &
                                    flag_t_resp_acclimation    , &
                                    flag_t_jmax_acclimation
@@ -119,48 +118,57 @@ CONTAINS
 
     CALL close_nml(nml_handler)
 
-    ! pass values as read from file
+    ! pass values as read from file (ncanopy is saved in the canopy_layer vgrid)
     config%active                        = active
     config%ic_filename                   = ic_filename
     config%bc_filename                   = bc_filename
     config%flag_optimal_Nfraction        = flag_optimal_Nfraction
     config%flag_t_resp_acclimation       = flag_t_resp_acclimation
     config%flag_t_jmax_acclimation       = flag_t_jmax_acclimation
-    ! ncanopy is saved in the vgrid_canopy
     config%canopy_layer_scheme           = TRIM(canopy_layer_scheme)
 
 
     !< canopy layer depth calculation
     !! 
-    ALLOCATE(config%canopy_layer_depth(ncanopy))
-
+    !! dz is not in meter, but describes the layer thickness based on leaf mass \n
+    !! layer 1 is the top canopy layer (reversed order)
+    ALLOCATE(canopy_layer_thickness_profile(ncanopy))
     SELECT CASE(TRIM(config%canopy_layer_scheme))
       CASE ("standard")
-        config%canopy_layer_depth(:) = 0.5_wp
+        canopy_layer_thickness_profile(:) = 0.5_wp
 
       CASE ("fapar")
         ! alternative canopy layer depth calculation, approximately proportional to FAPAR to  
         ! reduce impact of actual canopy layering on PS calculation
         dAPAR = 1._wp/REAL(ncanopy,KIND=wp)
         DO icanopy=1,ncanopy
-          config%canopy_layer_depth(icanopy) = -1.0_wp/k_canopy_layer * LOG(1._wp-(dAPAR*icanopy)+eps4)
+          canopy_layer_thickness_profile(icanopy) = -1.0_wp/k_canopy_layer * LOG(1._wp-(dAPAR*icanopy)+eps4)
         END DO
 
       CASE DEFAULT
         WRITE(message_text,'(2a)') 'invalid canopy_layer_scheme',canopy_layer_scheme
-        CALL finish("mo_assimi_config_class:Init_assimi_config",message_text) 
+        CALL finish(routine, message_text) 
     END SELECT
 
     !< Create vertical axis
     !! 
+    !! these are "infrastructure" values, constant across PFTs and sites, and they do not interfere with tree height \n
+    !! note: the axis of the canopy_layer vgrid is "reversed", i.e., layer 1 is the top canopy layer (vgrid_canopy%level(1) > vgrid_canopy%level(2))
     vgrid_canopy  => new_vgrid('canopy_layer', ZAXIS_GENERIC, ncanopy, &
-                      longname='Number of canopy layers from ASSIMI_ QUINCY', &
-                      ! units='m2 m-2', &
+                      longname='Canopy layers (thickness of leaf mass) from ASSIMI_ QUINCY', &
+                      units='m2 m-2 LAI', &
                       ! levels=   , &
                       ! lbounds=  , & 
                       ! ubounds=  , &
-                      dz=config%canopy_layer_depth)
+                      dz=canopy_layer_thickness_profile(:))
     CALL register_vgrid(vgrid_canopy)
+
+    ! temporary fix
+    ! @todo assimi config: lbounds and ubounds are set to zero, because of a bug in the jsbach4 code in new_vgrid() calc wrong values if only dz is provided
+    !  moreover, the jsbach4 code does not yet cover "reversed" layers in a vgrid, i.e., layer 1 is the top canopy layer (vgrid_canopy%level(1) > vgrid_canopy%level(2))
+    vgrid_canopy%lbounds(:) = 0.0_wp
+    vgrid_canopy%ubounds(:) = 0.0_wp
+
 
   END SUBROUTINE Init_assimi_config
 

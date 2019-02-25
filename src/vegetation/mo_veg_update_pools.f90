@@ -86,6 +86,7 @@ CONTAINS
     INTEGER                                         :: ncanopy          !< number of canopy layers
     INTEGER                                         :: nsoil_sb         !< number of soil layers as used/defined by the SB_ process
     REAL(wp),                 DIMENSION(options%nc) :: hlp1             !< dummy variable
+    REAL(wp), ALLOCATABLE                           :: canopy_layer_depth(:)  !< thickness of each single canopy layer [m2 m-2 LAI]
     INTEGER                                         :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_pools'
     ! ---------------------------
@@ -191,6 +192,8 @@ CONTAINS
     vgrid_soil_sb => Get_vgrid('soil_layer_sb')    
     ncanopy       =  vgrid_canopy%n_levels
     nsoil_sb      =  vgrid_soil_sb%n_levels           ! needed for sb_mycorrhiza_export
+    ALLOCATE(canopy_layer_depth(ncanopy))
+    canopy_layer_depth(:) = vgrid_canopy%dz(:)
     ! Get process config
     dsl4jsb_Get_config(ASSIMI_)
     ! Get process memories
@@ -504,7 +507,7 @@ CONTAINS
                              ncanopy                                        , &
                              lctlib                                         , &
                              dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
-                             dsl4jsb_Config(ASSIMI_)%canopy_layer_depth(:)  , &
+                             canopy_layer_depth(:)                          , &
                              veg_pool%leaf%nitrogen(:)                      , &
                              lai(:)                                         , &
                              ppfd_sunlit_tfrac_mavg_cl(:,:)                 , &

@@ -113,8 +113,9 @@ CONTAINS
     REAL(wp),SAVE :: ref_theta = 1._wp                ! soil water availability in fraction of AWC
     REAL(wp),SAVE :: ref_lai = 3._wp                  ! LAI
     REAL(wp),SAVE :: ref_nleaf = 2.0_wp               ! N leaf per unit leaf area in gN/m2
-    INTEGER       :: ipoi, ichunk                     ! number of the chunk: ipoi 1:nc / ichunk ics:ice
-    INTEGER       :: iblk, ics, ice, nc
+    REAL(wp),ALLOCATABLE    :: canopy_layer_depth(:)  ! thickness of each single canopy layer [m2 m-2 LAI]
+    INTEGER                 :: ipoi, ichunk           ! number of the chunk: ipoi 1:nc / ichunk ics:ice
+    INTEGER                 :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':run_test_radiation_model'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -159,6 +160,8 @@ CONTAINS
     vgrid_spectral  => Get_vgrid('spectral_bands')
     ncanopy         =  vgrid_canopy%n_levels
     nspec           =  vgrid_spectral%n_levels
+    ALLOCATE(canopy_layer_depth(ncanopy))
+    canopy_layer_depth(:) = vgrid_canopy%dz(:)
     ! if pftid is set in the namelist use this pftid
     IF(tile%lcts%lib_id>0)THEN
       ref_pft = tile%lcts%lib_id
@@ -269,7 +272,7 @@ CONTAINS
                             ncanopy                                        , &
                             lctlib                                         , &
                             dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
-                            dsl4jsb_Config(ASSIMI_)%canopy_layer_depth(:)  , &
+                            canopy_layer_depth(:)                          , &
                             leaf_nitrogen       = veg__mem%pool%leaf%nitrogen%ptr(:,iblk)      , &
                             lai                 = lai(:)                          , &
                             ppfd_sunlit_cl      = ppfd_sunlit_tfrac_mavg_cl(:,:)  , &

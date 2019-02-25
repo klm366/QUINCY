@@ -83,6 +83,7 @@ CONTAINS
                                                target_labile_pool_phosphorus, target_reserve_pool_carbon, &
                                                target_reserve_pool_nitrogen, target_reserve_pool_phosphorus
     REAL(wp), DIMENSION(options%nc)         :: hlp1
+    REAL(wp), ALLOCATABLE                   :: canopy_layer_depth(:)  !< thickness of each single canopy layer [m2 m-2 LAI]
     INTEGER                                 :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_growth'
     ! ---------------------------
@@ -261,6 +262,8 @@ CONTAINS
     vgrid_soil_sb => Get_vgrid('soil_layer_sb')    
     ncanopy       =  vgrid_canopy%n_levels
     nsoil_sb      =  vgrid_soil_sb%n_levels           ! also needed for sb_pool & sb_mycorrhiza_export
+    ALLOCATE(canopy_layer_depth(ncanopy))
+    canopy_layer_depth(:) = vgrid_canopy%dz(:)
     ! Get process config
     dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_config(VEG_)
@@ -530,7 +533,7 @@ CONTAINS
                                         ncanopy                                        , &
                                         lctlib                                         , &
                                         dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
-                                        dsl4jsb_Config(ASSIMI_)%canopy_layer_depth(:)  , &
+                                        canopy_layer_depth(:)                          , &
                                         growing_season(:)                              , &
                                         veg_pool%leaf%carbon(:)                        , &  
                                         veg_pool%leaf%nitrogen(:)                      , &
@@ -605,7 +608,7 @@ CONTAINS
                                               ncanopy                                         , &
                                               lctlib                                          , &
                                               dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction  , &
-                                              dsl4jsb_Config(ASSIMI_)%canopy_layer_depth(:)   , &
+                                              canopy_layer_depth(:)                           , &
                                               t_air(:)                                        , &
                                               press_srf(:)                                    , &
                                               q_air(:)                                        , &
