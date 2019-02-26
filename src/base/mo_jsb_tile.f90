@@ -428,7 +428,7 @@ CONTAINS
 
     ! Initialize fraction(s) of this tile from input file
     ALLOCATE(tmp_fract(hgrid%nproma, hgrid%nblks))
-    IF (this%fract_varname == 'equal') THEN
+    IF (TRIM(this%fract_varname) == 'equal') THEN
       IF (ASSOCIATED(this%parent)) THEN
         tmp_fract(:,:) = 1._wp / REAL(this%parent%Get_no_of_children(), wp)
       ELSE
@@ -440,7 +440,7 @@ CONTAINS
     ELSE
       input_file = jsb_netcdf_open_input(TRIM(this%fract_filename), this%owner_model_id)
 
-      IF (this%fract_varname == '') THEN
+      IF (TRIM(this%fract_varname) == '') THEN
         name_loc = 'fract'
         IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
         IF (suffix /= '') name_loc = TRIM(name_loc)//'_'//TRIM(suffix)
@@ -467,7 +467,7 @@ CONTAINS
           &                        ' not found in '//TRIM(this%fract_filename))
       END IF
 
-      IF (this%fract_varname == '') THEN
+      IF (TRIM(this%fract_varname) == '') THEN
         name_loc = 'fract_max'
         IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
         IF (suffix /= '') name_loc = TRIM(name_loc)//'_'//TRIM(suffix)
