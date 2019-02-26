@@ -70,10 +70,10 @@ CONTAINS
     LOGICAL                     :: active
     INTEGER                     :: nsoil_energy    , &
                                    nsoil_water
-    REAL(wp)                    :: dz_energy(max_soil_layers), &      ! vector of soil layer thicknesses 
+    REAL(wp)                    :: dz_energy(max_soil_layers), &                        ! vector of soil layer thicknesses 
                                    dz_water(max_soil_layers)
-    REAL(wp)                    :: soil_layer_thickness_profile(max_soil_layers)
-    REAL(wp), ALLOCATABLE       :: ubounds_soil_lay_energy(:), &      ! layer upper bound (note! upper bound > lower bound)
+    REAL(wp)                    :: soil_layer_profile_ubound_estimate(max_soil_layers)  ! intial estimate of soil profile using the upper bound of each soil layer [m]
+    REAL(wp), ALLOCATABLE       :: ubounds_soil_lay_energy(:), &                        ! layer upper bound (note! upper bound > lower bound)
                                    ubounds_soil_lay_water(:)
     REAL(wp)                    :: wsr_capacity    , &
                                    wsn_capacity    , &
@@ -160,31 +160,35 @@ CONTAINS
     ! If not using 5 layers, estimate soil profile (i.e., dz == layer thicknesses) to mimick standard JSB4 profile
     !  assuming dz_water(:) = dz_energy(:)
     IF(nsoil_water > 5) THEN
-       DO isoil=1,nsoil_water
-         soil_layer_thickness_profile(isoil) = min_layer_depth * & 
-                                                exp(k_soil_profile * isoil * REAL(max_soil_layers)/REAL(nsoil_water)) - & 
-                                                min_layer_depth
-       ENDDO 
-       dz_energy(1) = min_layer_depth
-       DO isoil=2,nsoil_water
-         dz_energy(isoil) = MAX(min_layer_depth,soil_layer_thickness_profile(isoil) - soil_layer_thickness_profile(isoil-1))
-       ENDDO
-       dz_water(:) = dz_energy(:)
+      ! initial calculation of soil profile (for soil moisture calculations) calculating the upper bound of each layer
+      DO isoil=1,nsoil_water
+        soil_layer_profile_ubound_estimate(isoil) = min_layer_depth * & 
+                                                    exp(k_soil_profile * isoil * REAL(max_soil_layers)/REAL(nsoil_water)) - & 
+                                                    min_layer_depth
+      ENDDO 
+      ! final calculation of soil profile, calculating the layer thickness (dz(:)) and correcting for minimum soil-layer thickness
+      dz_water(1) = min_layer_depth
+      DO isoil=2,nsoil_water
+        dz_water(isoil) = MAX(min_layer_depth, &
+                               soil_layer_profile_ubound_estimate(isoil) - soil_layer_profile_ubound_estimate(isoil-1))
+      ENDDO
+      ! apply the same soil profile to soil profile for soil energy calculations
+      dz_energy(:) = dz_water(:)
     ENDIF
 
     ! run check for soil depth namelist-definition; may not be less/equal zero or larger than covered by soil profile
     IF (soil_depth .LE. 0.0_wp) CALL finish('Init_sse_config','Initialization with non positive soil depth')
     IF (soil_depth .GT. SUM(dz_energy)) CALL finish('Init_sse_config','Initialization of soil depth larger than soil profile not possible')
 
-    ! calc upper bound of soil layers (energy and water) from layer thickness
-    ! note: upper bound is the larger value compared to lower bound !
-    ubounds_soil_lay_energy(1)       = dz_energy(1)
-    DO isoil=2,nsoil_energy
-      ubounds_soil_lay_energy(isoil) = ubounds_soil_lay_energy(isoil-1) + dz_energy(isoil)
-    END DO
+    ! calc upper bound of soil layers (water and energy) from layer thickness
+    ! note: upper bound is the larger value compared to lower bound of the same layer!
     ubounds_soil_lay_water(1)        = dz_water(1)
     DO isoil=2,nsoil_water
       ubounds_soil_lay_water(isoil)  = ubounds_soil_lay_water(isoil-1) + dz_water(isoil)
+    END DO
+    ubounds_soil_lay_energy(1)       = dz_energy(1)
+    DO isoil=2,nsoil_energy
+      ubounds_soil_lay_energy(isoil) = ubounds_soil_lay_energy(isoil-1) + dz_energy(isoil)
     END DO
 
     ! pass values as read from file
@@ -215,7 +219,8 @@ CONTAINS
     !! 
     !! these are "infrastructure" values, ubounds and dz may be corrected/limited by site-specific bedrock depth "soil_depth" \n
     !! site-specific soil-layer thickness values are stored in soil_depth_sl (and calc in sse_init) \n
-    !! the function new_vgrid() does: (a) check for "dz(:) <= zero", and (b) calc levels & lbounds from ubounds and dz
+    !! the function new_vgrid() does: (a) check for 'dz(:) <= zero', and (b) calc levels & lbounds from ubounds and dz \n
+    !! levels is defined as the depth at the center of the layer: levels(:) = 0.5_wp * (lbounds(:) + ubounds(:))
     vgrid_soil_sb => new_vgrid('soil_layer_sb', ZAXIS_GENERIC, nsoil_water, &
                       longname='Soil (water) layers from SSE_ QUINCY', &
                       units='m', &

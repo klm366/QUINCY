@@ -69,7 +69,7 @@ CONTAINS
     ! variables for reading from namlist, identical to variable-name in namelist
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
-    REAL(wp), ALLOCATABLE       :: canopy_layer_thickness_profile(:)  !<  thickness of each single canopy layer [m2 m-2 LAI]
+    REAL(wp), ALLOCATABLE       :: canopy_layer_thickness_profile(:)  !< use LAI per layer [m2 m-2], indirectly defining the thickness (i.e., vertical height) of each single canopy layer 
     LOGICAL                     :: flag_optimal_Nfraction     , &
                                    flag_t_resp_acclimation    , &
                                    flag_t_jmax_acclimation
@@ -130,8 +130,13 @@ CONTAINS
 
     !< canopy layer depth calculation
     !! 
-    !! dz is not in meter, but describes the layer thickness based on leaf mass \n
-    !! layer 1 is the top canopy layer (reversed order)
+    !! here the thickness of each canopy layer is calculated (saved in the vgrid as dz(:)) \n
+    !! this thickness is not directly given (by e.g. using the unit meter), but represented by the leaf mass in this layer \n
+    !! this leaf mass is measured as LAI [m2 m-2], that is, the actual thickness (in m) of canopy layer 2 depends on how much 
+    !!   vertical space (hight) needs to be covered to get the LAI specific to canopy layer 2
+    !! 
+    !! layer 1 is the top canopy layer (reversed order of vgrid axis) \n
+    !! and the value of the upper bound of a layer is larger than the value of the lower bound of the same layer
     ALLOCATE(canopy_layer_thickness_profile(ncanopy))
     SELECT CASE(TRIM(config%canopy_layer_scheme))
       CASE ("standard")
@@ -153,9 +158,10 @@ CONTAINS
     !< Create vertical axis
     !! 
     !! these are "infrastructure" values, constant across PFTs and sites, and they do not interfere with tree height \n
-    !! note: the axis of the canopy_layer vgrid is "reversed", i.e., layer 1 is the top canopy layer (vgrid_canopy%level(1) > vgrid_canopy%level(2))
+    !! note: the axis of the canopy_layer vgrid is "reversed", i.e., layer 1 is the top canopy layer \n
+    !! levels is defined as the depth at the center of the layer: levels(:) = 0.5_wp * (lbounds(:) + ubounds(:))
     vgrid_canopy  => new_vgrid('canopy_layer', ZAXIS_GENERIC, ncanopy, &
-                      longname='Canopy layers (thickness of leaf mass) from ASSIMI_ QUINCY', &
+                      longname='Canopy layers (leaf mass per layer as LAI) from ASSIMI_ QUINCY', &
                       units='m2 m-2 LAI', &
                       ! levels=   , &
                       ! lbounds=  , & 
@@ -164,7 +170,7 @@ CONTAINS
     CALL register_vgrid(vgrid_canopy)
 
     !< calc vgrid_canopy% lbounds, ubounds, and levels (i.e., center of each the layer)
-    !!  the jsbach4 code does not yet cover "reversed" layers in a vgrid
+    !!  @todo mo_assimi_config_class:Init_assimi_config  the jsbach4 code currently calc wrong vgrid values (in new_vgrid()) if only dz(:) is given
     vgrid_canopy%levels(1)  = 0.5_wp * canopy_layer_thickness_profile(1)
     vgrid_canopy%lbounds(1) = 0.0_wp
     vgrid_canopy%ubounds(1) = canopy_layer_thickness_profile(1)
