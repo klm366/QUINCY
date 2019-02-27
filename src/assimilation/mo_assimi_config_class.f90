@@ -158,7 +158,9 @@ CONTAINS
     !< Create vertical axis
     !! 
     !! these are "infrastructure" values, constant across PFTs and sites, and they do not interfere with tree height \n
-    !! note: the axis of the canopy_layer vgrid is "reversed", i.e., layer 1 is the top canopy layer \n
+    !! vgrid_canopy% lbounds, ubounds, and levels is calculated by 'new_vgrid()'
+    !! 
+    !! note: the axis of the canopy_layer vgrid is used as "reversed", i.e., layer 1 is the top canopy layer \n
     !! levels is defined as the depth at the center of the layer: levels(:) = 0.5_wp * (lbounds(:) + ubounds(:))
     vgrid_canopy  => new_vgrid('canopy_layer', ZAXIS_GENERIC, ncanopy, &
                       longname='Canopy layers (leaf mass per layer as LAI) from ASSIMI_ QUINCY', &
@@ -168,18 +170,6 @@ CONTAINS
                       ! ubounds=  , &
                       dz=canopy_layer_thickness_profile(:))
     CALL register_vgrid(vgrid_canopy)
-
-    !< calc vgrid_canopy% lbounds, ubounds, and levels (i.e., center of each the layer)
-    !!  @todo mo_assimi_config_class:Init_assimi_config  the jsbach4 code currently calc wrong vgrid values (in new_vgrid()) if only dz(:) is given
-    vgrid_canopy%levels(1)  = 0.5_wp * canopy_layer_thickness_profile(1)
-    vgrid_canopy%lbounds(1) = 0.0_wp
-    vgrid_canopy%ubounds(1) = canopy_layer_thickness_profile(1)
-    DO icanopy = 2, ncanopy
-      vgrid_canopy%levels(icanopy)  = SUM(canopy_layer_thickness_profile(1 : icanopy-1)) + &
-                                        0.5_wp * canopy_layer_thickness_profile(icanopy)
-      vgrid_canopy%lbounds(icanopy) = SUM(canopy_layer_thickness_profile(1 : icanopy-1))
-      vgrid_canopy%ubounds(icanopy) = SUM(canopy_layer_thickness_profile(1 : icanopy))
-    END DO
 
   END SUBROUTINE Init_assimi_config
 

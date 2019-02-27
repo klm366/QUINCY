@@ -407,12 +407,12 @@ CONTAINS
 
     TYPE(t_jsb_vgrid), POINTER :: new
 
-    INTEGER :: i, idx
+    INTEGER :: i
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':new_vgrid'
 
-    IF (TRIM(name) == '') CALL finish(TRIM(routine), 'Must specify axis name')
-    IF (length < 1) CALL finish(TRIM(routine), TRIM(name)//' - length < 1')
+    IF (TRIM(name) == '') CALL finish(routine, 'Must specify axis name')
+    IF (length < 1) CALL finish(routine, TRIM(name)//' - length < 1')
 
     ALLOCATE(new)
 
@@ -441,14 +441,14 @@ CONTAINS
     IF (PRESENT(lbounds)) new%lbounds(:) = lbounds(:)
     IF (PRESENT(ubounds)) new%ubounds(:) = ubounds(:)
     IF (PRESENT(dz)) THEN
-      IF (ANY(dz(:) <= 0._wp)) CALL finish(TRIM(routine), 'Dz must be larger than zero')
+      IF (ANY(dz(:) <= 0._wp)) CALL finish(routine, 'Dz must be larger than zero')
       new%dz     (:) = dz(:)
     END IF
 
     IF (PRESENT(lbounds) .AND. PRESENT(ubounds)) THEN
-      IF (ANY(ubounds(:) < lbounds(:))) CALL finish(TRIM(routine), 'Ubounds must be larger than Lbounds')
+      IF (ANY(ubounds(:) < lbounds(:))) CALL finish(routine, 'Ubounds must be larger than Lbounds')
       IF (PRESENT(dz)) THEN
-        IF (ANY(ABS((ubounds(:)-lbounds(:))-dz(:)) > EPSILON(1._wp))) CALL finish(TRIM(routine), 'Dz != Ubounds-Lbounds')
+        IF (ANY(ABS((ubounds(:)-lbounds(:))-dz(:)) > EPSILON(1._wp))) CALL finish(routine, 'Dz != Ubounds-Lbounds')
       ELSE
         new%dz(:) = ubounds(:) - lbounds(:)
       END IF
@@ -465,7 +465,7 @@ CONTAINS
         new%ubounds(:) = levels(:) + (levels(:) - lbounds(:))
         new%dz(:) = new%ubounds(:) - lbounds(:)
       ELSE
-        CALL finish(TRIM(routine), 'Lbounds present ... specify either Levels or Dz!')
+        CALL finish(routine, 'Lbounds present ... specify either Levels or Dz!')
       END IF
     ELSE IF (PRESENT(ubounds)) THEN
       IF (PRESENT(dz)) THEN
@@ -477,15 +477,18 @@ CONTAINS
         new%lbounds(:) = levels(:) - (ubounds(:) - levels(:))
         new%dz(:) = ubounds(:) - new%lbounds(:)
       ELSE
-        CALL finish(TRIM(routine), 'Ubounds present ... specify either Levels or Dz!')
+        CALL finish(routine, 'Ubounds present ... specify either Levels or Dz!')
       END IF
     ELSE
       IF (PRESENT(levels) .AND. PRESENT(dz)) THEN
-        new%lbounds(:) = levels
+        CALL finish(routine, 'Levels and dz given ... please specify lbounds and/or ubounds')
       ELSE IF (PRESENT(dz)) THEN
         new%lbounds(1) = 0._wp
-        new%lbounds(2:length) = dz(1:length-1)
+        DO i=2,length
+          new%lbounds(i) = new%lbounds(i-1) + dz(i-1)
+        END DO
         new%ubounds(:) = new%lbounds(:) + dz(:)
+        new%levels(:) = 0.5_wp * (new%lbounds(:) + new%ubounds(:))
       ELSE IF (PRESENT(levels)) THEN
         IF (length > 1) THEN ! Multi-level axis
           new%lbounds(1) = 0._wp
