@@ -505,6 +505,9 @@ CONTAINS
     !!
     CALL calc_canopy_layers( nc                                             , & ! in
                              ncanopy                                        , &
+                             vgrid_canopy%dz(:)                             , &
+                             vgrid_canopy%lbounds(:)                        , &
+                             vgrid_canopy%ubounds(:)                        , &
                              lctlib                                         , &
                              dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
                              canopy_layer_depth(:)                          , &

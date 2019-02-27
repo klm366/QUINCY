@@ -38,6 +38,9 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_canopy_layers(nc                    , &
                                 ncanopy               , &
+                                dz                    , &     
+                                lbounds               , &
+                                ubounds               , &
                                 lctlib                , &
                                 flag_optimal_Nfraction, &
                                 canopy_layer_depth, &
@@ -80,6 +83,9 @@ CONTAINS
     ! 0.1 InOut
     INTEGER,                                INTENT(in)              :: nc                    !< dimensions
     INTEGER,                                INTENT(in)              :: ncanopy               !< number of canopy layers
+    REAL(wp),DIMENSION(ncanopy),            INTENT(in)              :: dz, &                 !< canopy layer thickness
+                                                                       lbounds, &            !< lower bound of canopy layer (lbounds < ubounds; lbounds is at top of canopy layer)
+                                                                       ubounds               !< upper bound of canopy layer (lbounds < ubounds; ubounds is at bottom of canopy layer)
     TYPE(t_lctlib_element),                 INTENT(in)              :: lctlib                !< land-cover-type library
     LOGICAL,                                INTENT(in)              :: flag_optimal_Nfraction!< on/off optimise leaf internal N allocation
     REAL(wp),DIMENSION(ncanopy),            INTENT(in)              :: canopy_layer_depth    !< thickness of each single canopy layer [m2 m-2 LAI]
@@ -118,6 +124,7 @@ CONTAINS
     LOGICAL                         :: optimise_n_fractions
     INTEGER                         :: icanopy, ipoint                               ! looping over ncanopy and nc
     REAL(wp),DIMENSION(nc,ncanopy)  :: hlp1,hlp2,hlp3,hlp4
+    !REAL(wp),DIMENSION(nc,ncanopy)  :: mid_point_lai_cl
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_canopy_layers'
     ! ---------------------------
     ! 0.3 Memory allocation
@@ -138,6 +145,7 @@ CONTAINS
     lai_cl(:,:)           = 0._wp
     cumm_lai_cl(:,:)      = 0._wp
     leaf_nitrogen_cl(:,:) = 0._wp
+    !mid_point_lai_cl(:,:) = 0._wp
 
     !> 0.9.1  set pathway specific constants 
     !! 
@@ -176,8 +184,8 @@ CONTAINS
 
     !> 1.0 calculate top of the canopy N
     !!
-    !! canopy_layer_depth(1) == layer depth at canopy top (namelist parameter)
-    WHERE(lai(:) > canopy_layer_depth(1))
+    !! dz(1) == ubounds(1) -> thickness of uppermost canopy layer
+    WHERE(lai(:) > dz(1))
        leaf_nitrogen_tc(:) = leaf_nitrogen(:) * 1000._wp * kn / (1._wp - exp(-kn * lai(:)))
     ELSEWHERE(lai(:) > eps8)  ! if LAI does not fill the first canopy layer, top canopy N = leaf N
        leaf_nitrogen_tc(:) = leaf_nitrogen(:) * 1000._wp /lai(:)
@@ -186,49 +194,73 @@ CONTAINS
 
     !> 2.0 calculate LAI and N content of canopy layers
     !!
-    lc(:) = 0._wp
+    !lc(:) = 0._wp
     DO ipoint  = 1,nc
     DO icanopy = 1,ncanopy
       IF(lai(ipoint) > eps8) THEN ! avoid any calculation if there are no leaves
         
         !> 2.1 LAI of canopy layer
         !!
-        IF(lc(ipoint)+canopy_layer_depth(icanopy) < lai(ipoint)) THEN
+        IF(ubounds(icanopy) < lai(ipoint) .OR. ABS(ubounds(icanopy) - lai(ipoint)) < eps12 ) THEN
+          ! ubounds contains cummulative LAI at the bottom of this layer 
           ! if canopy layer is fully developed
-          lai_cl(ipoint,icanopy) = canopy_layer_depth(icanopy)
-        ELSEIF(lc(ipoint) < lai(ipoint) .AND. lc(ipoint)+canopy_layer_depth(icanopy) >= lai(ipoint)) THEN
+          lai_cl(ipoint,icanopy) = dz(icanopy)
+        ELSEIF(lbounds(icanopy) < lai(ipoint) .AND. ubounds(icanopy) > lai(ipoint)) THEN
           ! if canopy layer is only partially filled assign difference between full LAI and lc to canopy layer
-          lai_cl(ipoint,icanopy) = lai(ipoint) - lc(ipoint)
+          lai_cl(ipoint,icanopy) = lai(ipoint) - lbounds(icanopy)
         END IF
-        lc(ipoint) = lc(ipoint) + lai_cl(ipoint,icanopy)
+        
+        !lc(ipoint) = lc(ipoint) + lai_cl(ipoint,icanopy)
         ! make sure all LAI is represented by letting last layer go to the end of the canopy
-        IF(icanopy==ncanopy .AND. lc(ipoint) < lai(ipoint) ) THEN
-          lai_cl(ipoint,ncanopy) = lai_cl(ipoint,ncanopy) + lai(ipoint) - lc(ipoint)
+        IF(icanopy==ncanopy .AND. ubounds(ncanopy) < lai(ipoint) ) THEN
+          lai_cl(ipoint,ncanopy) = lai(ipoint) ! lai_cl(ipoint,ncanopy) + lai(ipoint) - ubounds(ipoint)
         END IF
 
         !> 2.2 cummulative LAI above mid-point of canopy layer
         !!
+        ! IF (lai_cl(ipoint,icanopy) > 0.0_wp) THEN
+        !   mid_point_lai_cl(ipoint,icanopy) = (SUM(lai_cl(ipoint,1:icanopy)) - lbounds(icanopy))/2.0_wp
+        ! ENDIF
         IF(lai_cl(ipoint,icanopy) > eps8 .AND. icanopy==1) THEN
-          cumm_lai_cl(ipoint,icanopy) = lai_cl(ipoint,icanopy) / 2.0_wp
+         cumm_lai_cl(ipoint,icanopy) = lai_cl(ipoint,icanopy) / 2.0_wp
         END IF
         IF(lai_cl(ipoint,icanopy) > eps8 .AND. icanopy>1) THEN
-          cumm_lai_cl(ipoint,icanopy) = cumm_lai_cl(ipoint,icanopy-1) + lai_cl(ipoint,icanopy-1) / &
-                                        2.0_wp + lai_cl(ipoint,icanopy) / 2.0_wp
+         cumm_lai_cl(ipoint,icanopy) = cumm_lai_cl(ipoint,icanopy-1) + lai_cl(ipoint,icanopy-1) / &
+                                       2.0_wp + lai_cl(ipoint,icanopy) / 2.0_wp
         END IF
         
         !> 2.3 N content of the canopy layer
         !!
         IF(cumm_lai_cl(ipoint,icanopy) > eps12)THEN
-          IF(lai(ipoint) > canopy_layer_depth(1)) THEN
+          IF(lai(ipoint) > ubounds(1)) THEN
             leaf_nitrogen_cl(ipoint,icanopy) = leaf_nitrogen_tc(ipoint) * exp(-kn * cumm_lai_cl(ipoint,icanopy))
           ELSE ! if LAI does not fill the first canopy layer, top canopy N = leaf N
-            leaf_nitrogen_cl(ipoint,icanopy) = leaf_nitrogen_tc(ipoint)
+            leaf_nitrogen_cl(ipoint,1) = leaf_nitrogen_tc(ipoint)
+            leaf_nitrogen_cl(ipoint,2:ncanopy) = 0.0_wp
           END IF
         END IF
       END IF ! lai(ipoint) > eps8
     END DO   ! loop ncanopy
     END DO   ! loop nc
 
+    !! @todo mo_veg_canopy:calc_canopy_layers  transform the Do i,nc loop to WHERE statements, after enabling the calculation of mid_point_lai_cl \n
+    !!     and then cumm_lai_cl(:,1) = mid_point_lai_cl(:,1) outside the above DO loop 
+    ! cumm_lai_cl(:,1) = mid_point_lai_cl(:,1)
+    ! DO icanopy = 2,ncanopy
+    !   cumm_lai_cl(:,icanopy) = cumm_lai_cl(:,icanopy-1) + mid_point_lai_cl(:,icanopy)
+    ! ENDDO 
+
+
+! print*, "!!!!!!!!! ---------"
+! print*,dz
+! print*,lai_cl(1,:)
+! print*,lbounds
+! print*,ubounds
+! print*,cumm_lai_cl(1,:)
+! print*,mid_point_lai_cl(1,:)
+! print*, "---------"
+! print*,lai_cl(1,:)
+! print*,cumm_lai_cl(1,:)
 
     !> 3.0 fractionation of N within canopy laer
     !!
@@ -783,6 +815,9 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_marginal_canopy_flux_increment( nc                      , &
                                                   ncanopy                 , &
+                                                  dz                      , &
+                                                  lbounds                 , &
+                                                  ubounds                 , &
                                                   lctlib                  , &
                                                   flag_optimal_Nfraction  , &
                                                   canopy_layer_depth      , &
@@ -827,6 +862,9 @@ CONTAINS
     ! 0.1 InOut
     INTEGER,                                INTENT(in) :: nc                            !< dimensions
     INTEGER,                                INTENT(in) :: ncanopy                       !< number of canopy layers
+    REAL(wp),DIMENSION(ncanopy),            INTENT(in) :: dz                      , &   !< canopy layer thickness
+                                                          lbounds                 , &   !< lower bound of canopy layer (lbounds < ubounds; lbounds is at top of canopy layer)
+                                                          ubounds                       !< upper bound of canopy layer (lbounds < ubounds; ubounds is at bottom of canopy layer)
     TYPE(t_lctlib_element),                 INTENT(in) :: lctlib                        !< land-cover-type library - parameters for one pft
     LOGICAL,                                INTENT(in) :: flag_optimal_Nfraction        !< on/off optimise leaf internal N allocation
     REAL(wp),DIMENSION(ncanopy),            INTENT(in) :: canopy_layer_depth            !< thickness of each single canopy layer [m2 m-2 LAI]
@@ -930,6 +968,9 @@ CONTAINS
     CALL calc_canopy_layers( &
                             nc                      = nc                          , & ! in
                             ncanopy                 = ncanopy                     , &
+                            dz                      = dz(:)                       , &
+                            lbounds                 = lbounds(:)                  , &
+                            ubounds                 = ubounds(:)                  , &
                             lctlib                  = lctlib                      , &
                             flag_optimal_Nfraction  = flag_optimal_Nfraction      , &
                             canopy_layer_depth      = canopy_layer_depth(:)       , &
@@ -1032,6 +1073,9 @@ CONTAINS
   !----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_dir_optimal_cn_leaf(  nc                            , & ! in
                                         ncanopy                       , &
+                                        dz                            , &
+                                        lbounds                       , &
+                                        ubounds                       , &
                                         lctlib                        , &
                                         flag_optimal_Nfraction        , &
                                         canopy_layer_depth            , &
@@ -1080,6 +1124,9 @@ CONTAINS
     ! 0.1 InOut
     INTEGER,                                INTENT(in)    :: nc                             !< dimensions
     INTEGER,                                INTENT(in)    :: ncanopy                        !< number of canopy layers
+    REAL(wp),DIMENSION(ncanopy),            INTENT(in)    :: dz                         , & !< canopy layer thickness
+                                                             lbounds                    , & !< lower bound of canopy layer (lbounds < ubounds; lbounds is at top of canopy layer)
+                                                             ubounds                        !< upper bound of canopy layer (lbounds < ubounds; ubounds is at bottom of canopy layer)
     TYPE(t_lctlib_element),                 INTENT(in)    :: lctlib                         !< land-cover-type library - parameters for one pft
     LOGICAL,                                INTENT(in)    :: flag_optimal_Nfraction         !< on/off optimise leaf internal N allocation
     REAL(wp),DIMENSION(ncanopy),            INTENT(in)    :: canopy_layer_depth             !< thickness of each single canopy layer [m2 m-2 LAI]
@@ -1185,6 +1232,9 @@ CONTAINS
                 CALL calc_canopy_layers( &
                           nc                      = nc                                      , & ! in
                           ncanopy                 = ncanopy                                 , &
+                          dz                      = dz(:)                                   , &
+                          lbounds                 = lbounds(:)                              , &
+                          ubounds                 = ubounds(:)                              , &
                           lctlib                  = lctlib                                  , &
                           flag_optimal_Nfraction  = flag_optimal_Nfraction                  , &
                           canopy_layer_depth      = canopy_layer_depth(:)                   , &

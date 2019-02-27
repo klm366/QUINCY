@@ -45,7 +45,7 @@ CONTAINS
     USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
     USE mo_veg_util,              ONLY: reset_veg_fluxes
     USE mo_jsb_phys_constants,    ONLY: molar_mass_N, Tzero, cvdifts, grav
-    USE mo_veg_canopy             ! ..
+    USE mo_veg_canopy             ! .. e.g. calc_canopy_layers()
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(ASSIMI_)    
@@ -276,6 +276,9 @@ CONTAINS
     ENDIF
     CALL calc_canopy_layers(nc                                             , & ! in
                             ncanopy                                        , &
+                            vgrid_canopy%dz(:)                             , &
+                            vgrid_canopy%lbounds(:)                        , &
+                            vgrid_canopy%ubounds(:)                        , &
                             lctlib                                         , &
                             dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
                             canopy_layer_depth(:)                          , &
@@ -471,6 +474,9 @@ CONTAINS
      veg__mem%pool%leaf%nitrogen%ptr(:,iblk)=ref_nleaf/molar_mass_N*lai(:)
      CALL calc_canopy_layers( nc                                             , &   ! in
                               ncanopy                                        , &
+                              vgrid_canopy%dz(:)                             , &
+                              vgrid_canopy%lbounds(:)                        , &
+                              vgrid_canopy%ubounds(:)                        , &
                               lctlib                                         , &
                               dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
                               canopy_layer_depth(:)                          , &
@@ -512,6 +518,9 @@ CONTAINS
      veg__mem%pool%leaf%nitrogen%ptr(:,iblk)=0.125_wp*(i)/molar_mass_N*lai(:)
      CALL calc_canopy_layers( nc                                             , &   ! in
                               ncanopy                                        , &
+                              vgrid_canopy%dz(:)                             , &
+                              vgrid_canopy%lbounds(:)                        , &
+                              vgrid_canopy%ubounds(:)                        , &
                               lctlib                                         , &
                               dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
                               canopy_layer_depth(:)                          , &
@@ -557,6 +566,9 @@ CONTAINS
      lctlib  => model%lctlib(tile%lcts%lib_id)
      CALL calc_canopy_layers( nc                                             , &   ! in
                               ncanopy                                        , &
+                              vgrid_canopy%dz(:)                             , &
+                              vgrid_canopy%lbounds(:)                        , &
+                              vgrid_canopy%ubounds(:)                        , &
                               lctlib                                         , &
                               dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
                               canopy_layer_depth(:)                          , &

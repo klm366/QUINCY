@@ -531,6 +531,9 @@ CONTAINS
     IF (TRIM(dsl4jsb_Config(VEG_)%leaf_stoichom_scheme) == "optimal") THEN
       CALL calc_dir_optimal_cn_leaf(    nc                                             , & ! in
                                         ncanopy                                        , &
+                                        vgrid_canopy%dz(:)                             , &
+                                        vgrid_canopy%lbounds(:)                        , &
+                                        vgrid_canopy%ubounds(:)                        , &
                                         lctlib                                         , &
                                         dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
                                         canopy_layer_depth(:)                          , &
@@ -606,6 +609,9 @@ CONTAINS
     !!
     CALL calc_marginal_canopy_flux_increment( nc                                              , & ! in
                                               ncanopy                                         , &
+                                              vgrid_canopy%dz(:)                              , &
+                                              vgrid_canopy%lbounds(:)                         , &
+                                              vgrid_canopy%ubounds(:)                         , &
                                               lctlib                                          , &
                                               dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction  , &
                                               canopy_layer_depth(:)                           , &
