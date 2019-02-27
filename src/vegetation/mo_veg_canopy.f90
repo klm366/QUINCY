@@ -116,7 +116,6 @@ CONTAINS
     LOGICAL,                                INTENT(in),   OPTIONAL  :: inquire_n_fractions   !< whether to return fractions or also run optimisation
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp),DIMENSION(nc)          :: lc                                            ! LAI at top of the canopy layer
     REAL(wp),DIMENSION(nc)          :: leaf_nitrogen_tc                              ! top-of-the-canopy N content
     REAL(wp)                        :: k0_fn_chl, k1_fn_chl                          ! factors in chlorophyll profile calculation
     REAL(wp)                        :: jmax2vcmax                                    ! jmax to vcmax ratio
@@ -194,7 +193,6 @@ CONTAINS
 
     !> 2.0 calculate LAI and N content of canopy layers
     !!
-    !lc(:) = 0._wp
     DO ipoint  = 1,nc
     DO icanopy = 1,ncanopy
       IF(lai(ipoint) > eps8) THEN ! avoid any calculation if there are no leaves
@@ -210,7 +208,6 @@ CONTAINS
           lai_cl(ipoint,icanopy) = lai(ipoint) - lbounds(icanopy)
         END IF
         
-        !lc(ipoint) = lc(ipoint) + lai_cl(ipoint,icanopy)
         ! make sure all LAI is represented by letting last layer go to the end of the canopy
         IF(icanopy==ncanopy .AND. ubounds(ncanopy) < lai(ipoint) ) THEN
           lai_cl(ipoint,ncanopy) = lai(ipoint) ! lai_cl(ipoint,ncanopy) + lai(ipoint) - ubounds(ipoint)
@@ -218,9 +215,10 @@ CONTAINS
 
         !> 2.2 cummulative LAI above mid-point of canopy layer
         !!
-        ! IF (lai_cl(ipoint,icanopy) > 0.0_wp) THEN
-        !   mid_point_lai_cl(ipoint,icanopy) = (SUM(lai_cl(ipoint,1:icanopy)) - lbounds(icanopy))/2.0_wp
-        ! ENDIF
+          ! see comment on calculation of cumm_lai_cl(:,1) below (declaration and init of mid_point_lai_cl is commented out)
+          ! IF (lai_cl(ipoint,icanopy) > 0.0_wp) THEN
+          !   mid_point_lai_cl(ipoint,icanopy) = (SUM(lai_cl(ipoint,1:icanopy)) - lbounds(icanopy))/2.0_wp
+          ! ENDIF
         IF(lai_cl(ipoint,icanopy) > eps8 .AND. icanopy==1) THEN
          cumm_lai_cl(ipoint,icanopy) = lai_cl(ipoint,icanopy) / 2.0_wp
         END IF
@@ -242,7 +240,6 @@ CONTAINS
       END IF ! lai(ipoint) > eps8
     END DO   ! loop ncanopy
     END DO   ! loop nc
-
     !! @todo mo_veg_canopy:calc_canopy_layers  transform the Do i,nc loop to WHERE statements, after enabling the calculation of mid_point_lai_cl \n
     !!     and then cumm_lai_cl(:,1) = mid_point_lai_cl(:,1) outside the above DO loop 
     ! cumm_lai_cl(:,1) = mid_point_lai_cl(:,1)
@@ -250,17 +247,6 @@ CONTAINS
     !   cumm_lai_cl(:,icanopy) = cumm_lai_cl(:,icanopy-1) + mid_point_lai_cl(:,icanopy)
     ! ENDDO 
 
-
-! print*, "!!!!!!!!! ---------"
-! print*,dz
-! print*,lai_cl(1,:)
-! print*,lbounds
-! print*,ubounds
-! print*,cumm_lai_cl(1,:)
-! print*,mid_point_lai_cl(1,:)
-! print*, "---------"
-! print*,lai_cl(1,:)
-! print*,cumm_lai_cl(1,:)
 
     !> 3.0 fractionation of N within canopy laer
     !!
