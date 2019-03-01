@@ -452,11 +452,11 @@ CONTAINS
         !
         ! TODO: For security, as a workaround, set lake fractions in coastal points that are 
         ! partially land and partially ocean to zero, and corresponding land fraction to one.
-        IF (this%name == 'lake') THEN
+        IF (TRIM(this%name) == 'lake') THEN
           CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
           return_pointer(:,:) = MERGE(return_pointer(:,:), 0._wp, tmp_fract(:,:) >= 1._wp)
         END IF
-        IF (this%name == 'land') THEN
+        IF (TRIM(this%name) == 'land') THEN
           CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
           return_pointer(:,:) = MERGE(return_pointer(:,:), 1._wp, tmp_fract(:,:) >= 1._wp)
         END IF
