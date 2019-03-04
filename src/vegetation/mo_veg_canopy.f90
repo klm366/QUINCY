@@ -237,17 +237,21 @@ CONTAINS
     !> 2.3 N content of the canopy layer
     !!
     DO icanopy = 1,ncanopy
-      WHERE(lai(:) > eps8)                    ! avoid any calculation if there are no leaves
-        WHERE(cumm_lai_cl(:,icanopy) > eps12) ! if this layer has some leafs
-          WHERE(lai(:) > ubounds(1))          ! at least the 1st layer is filled
-            leaf_nitrogen_cl(:,icanopy)   = leaf_nitrogen_tc(:) * exp(-kn * cumm_lai_cl(:,icanopy))
-          ELSEWHERE ! if LAI does not fill the first canopy layer, top canopy N = leaf N
-            leaf_nitrogen_cl(:,1)         = leaf_nitrogen_tc(:)
-            !leaf_nitrogen_cl(:,2:ncanopy) = 0.0_wp
+      WHERE(lai(:) > eps8)                        ! avoid any calculation if there are no leaves
+        WHERE(lai(:) > ubounds(1))                ! LAI is present and LAI fills more than first layer 
+          WHERE(cumm_lai_cl(:,icanopy) > eps12)   ! this layer has some leafs
+            leaf_nitrogen_cl(:,icanopy) = leaf_nitrogen_tc(:) * exp(-kn * cumm_lai_cl(:,icanopy))
+          ELSEWHERE
+            leaf_nitrogen_cl(:,icanopy) = 0.0_wp  ! set N to zero if layer has no leafs 
           ENDWHERE
+        ELSEWHERE
+          leaf_nitrogen_cl(:,icanopy)   = 0.0_wp  ! set N to zero if layer has no leafs 
         ENDWHERE
-      ENDWHERE ! lai(:) > eps8
-    ENDDO   ! loop ncanopy
+      ENDWHERE
+    ENDDO
+    WHERE(lai(:) > eps8 .AND..NOT. lai(:) > ubounds(1))   ! LAI is present but 1st layer is not filled
+      leaf_nitrogen_cl(:,1) = leaf_nitrogen_tc(:)         ! set 1st layer N to leaf_nitrogen_tc, but leave all other layers with zero N
+    ENDWHERE
 
 
     !> 3.0 fractionation of N within canopy laer
