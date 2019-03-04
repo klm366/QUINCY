@@ -123,7 +123,7 @@ CONTAINS
     LOGICAL                         :: optimise_n_fractions
     INTEGER                         :: icanopy, ipoint                               ! looping over ncanopy and nc
     REAL(wp),DIMENSION(nc,ncanopy)  :: hlp1,hlp2,hlp3,hlp4
-    !REAL(wp),DIMENSION(nc,ncanopy)  :: mid_point_lai_cl
+    REAL(wp),DIMENSION(nc,ncanopy)  :: mid_point_lai_cl
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_canopy_layers'
     ! ---------------------------
     ! 0.3 Memory allocation
@@ -144,7 +144,7 @@ CONTAINS
     lai_cl(:,:)           = 0._wp
     cumm_lai_cl(:,:)      = 0._wp
     leaf_nitrogen_cl(:,:) = 0._wp
-    !mid_point_lai_cl(:,:) = 0._wp
+    mid_point_lai_cl(:,:) = 0._wp
 
     !> 0.9.1  set pathway specific constants 
     !! 
@@ -213,39 +213,40 @@ CONTAINS
           lai_cl(ipoint,ncanopy) = lai(ipoint) ! lai_cl(ipoint,ncanopy) + lai(ipoint) - ubounds(ipoint)
         END IF
 
-        !> 2.2 cummulative LAI above mid-point of canopy layer
+        !> 2.2.1 mid-point of canopy layer
         !!
-          ! see comment on calculation of cumm_lai_cl(:,1) below (declaration and init of mid_point_lai_cl is commented out)
-          ! IF (lai_cl(ipoint,icanopy) > 0.0_wp) THEN
-          !   mid_point_lai_cl(ipoint,icanopy) = (SUM(lai_cl(ipoint,1:icanopy)) - lbounds(icanopy))/2.0_wp
-          ! ENDIF
-        IF(lai_cl(ipoint,icanopy) > eps8 .AND. icanopy==1) THEN
-         cumm_lai_cl(ipoint,icanopy) = lai_cl(ipoint,icanopy) / 2.0_wp
-        END IF
-        IF(lai_cl(ipoint,icanopy) > eps8 .AND. icanopy>1) THEN
-         cumm_lai_cl(ipoint,icanopy) = cumm_lai_cl(ipoint,icanopy-1) + lai_cl(ipoint,icanopy-1) / &
-                                       2.0_wp + lai_cl(ipoint,icanopy) / 2.0_wp
-        END IF
-        
-        !> 2.3 N content of the canopy layer
-        !!
-        IF(cumm_lai_cl(ipoint,icanopy) > eps12)THEN
-          IF(lai(ipoint) > ubounds(1)) THEN
-            leaf_nitrogen_cl(ipoint,icanopy) = leaf_nitrogen_tc(ipoint) * exp(-kn * cumm_lai_cl(ipoint,icanopy))
-          ELSE ! if LAI does not fill the first canopy layer, top canopy N = leaf N
-            leaf_nitrogen_cl(ipoint,1) = leaf_nitrogen_tc(ipoint)
-            leaf_nitrogen_cl(ipoint,2:ncanopy) = 0.0_wp
-          END IF
-        END IF
+        IF (lai_cl(ipoint,icanopy) > 0.0_wp) THEN
+          mid_point_lai_cl(ipoint,icanopy) = (SUM(lai_cl(ipoint,1:icanopy)) - lbounds(icanopy)) / 2.0_wp
+        ENDIF
+
       END IF ! lai(ipoint) > eps8
     END DO   ! loop ncanopy
     END DO   ! loop nc
-    !! @todo mo_veg_canopy:calc_canopy_layers  transform the Do i,nc loop to WHERE statements, after enabling the calculation of mid_point_lai_cl \n
-    !!     and then cumm_lai_cl(:,1) = mid_point_lai_cl(:,1) outside the above DO loop 
-    ! cumm_lai_cl(:,1) = mid_point_lai_cl(:,1)
-    ! DO icanopy = 2,ncanopy
-    !   cumm_lai_cl(:,icanopy) = cumm_lai_cl(:,icanopy-1) + mid_point_lai_cl(:,icanopy)
-    ! ENDDO 
+    
+    DO ipoint  = 1,nc
+      IF(lai(ipoint) > eps8) THEN ! avoid any calculation if there are no leaves              
+        !> 2.2.2 cummulative LAI above mid-point of canopy layer
+        !!
+        cumm_lai_cl(ipoint,1) = mid_point_lai_cl(ipoint,1)
+        DO icanopy = 2,ncanopy
+          IF(lai_cl(ipoint,icanopy) > eps8) THEN
+            cumm_lai_cl(ipoint,icanopy) = lbounds(icanopy) + mid_point_lai_cl(ipoint,icanopy)
+          ENDIF
+        ENDDO 
+        !> 2.3 N content of the canopy layer
+        !!
+        DO icanopy = 1,ncanopy
+          IF(cumm_lai_cl(ipoint,icanopy) > eps12)THEN
+            IF(lai(ipoint) > ubounds(1)) THEN
+              leaf_nitrogen_cl(ipoint,icanopy) = leaf_nitrogen_tc(ipoint) * exp(-kn * cumm_lai_cl(ipoint,icanopy))
+            ELSE ! if LAI does not fill the first canopy layer, top canopy N = leaf N
+              leaf_nitrogen_cl(ipoint,1) = leaf_nitrogen_tc(ipoint)
+              leaf_nitrogen_cl(ipoint,2:ncanopy) = 0.0_wp
+            END IF
+          END IF
+        END DO
+      END IF ! lai(ipoint) > eps8
+    END DO   ! loop nc
 
 
     !> 3.0 fractionation of N within canopy laer
