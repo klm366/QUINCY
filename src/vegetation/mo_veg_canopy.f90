@@ -193,60 +193,61 @@ CONTAINS
 
     !> 2.0 calculate LAI and N content of canopy layers
     !!
-    DO ipoint  = 1,nc
+    !> 2.1 LAI of canopy layer
+    !!
     DO icanopy = 1,ncanopy
-      IF(lai(ipoint) > eps8) THEN ! avoid any calculation if there are no leaves
-        
-        !> 2.1 LAI of canopy layer
-        !!
-        IF(ubounds(icanopy) < lai(ipoint) .OR. ABS(ubounds(icanopy) - lai(ipoint)) < eps12 ) THEN
+      WHERE(lai(:) > eps8) ! avoid any calculation if there are no leaves
+        ! LAI calculation
+        WHERE(ubounds(icanopy) < lai(:) .OR. ABS(ubounds(icanopy) - lai(:)) < eps12 )
           ! ubounds contains cummulative LAI at the bottom of this layer 
           ! if canopy layer is fully developed
-          lai_cl(ipoint,icanopy) = dz(icanopy)
-        ELSEIF(lbounds(icanopy) < lai(ipoint) .AND. ubounds(icanopy) > lai(ipoint)) THEN
+          lai_cl(:,icanopy) = dz(icanopy)
+        ELSEWHERE(lbounds(icanopy) < lai(:) .AND. ubounds(icanopy) > lai(:))
           ! if canopy layer is only partially filled assign difference between full LAI and lc to canopy layer
-          lai_cl(ipoint,icanopy) = lai(ipoint) - lbounds(icanopy)
-        END IF
+          lai_cl(:,icanopy) = lai(:) - lbounds(icanopy)
+        ENDWHERE
         
         ! make sure all LAI is represented by letting last layer go to the end of the canopy
-        IF(icanopy==ncanopy .AND. ubounds(ncanopy) < lai(ipoint) ) THEN
-          lai_cl(ipoint,ncanopy) = lai(ipoint) ! lai_cl(ipoint,ncanopy) + lai(ipoint) - ubounds(ipoint)
-        END IF
+        WHERE(icanopy==ncanopy .AND. ubounds(ncanopy) < lai(:) )
+          lai_cl(:,ncanopy) = lai(:)
+        ENDWHERE
 
-        !> 2.2.1 mid-point of canopy layer
-        !!
-        IF (lai_cl(ipoint,icanopy) > 0.0_wp) THEN
-          mid_point_lai_cl(ipoint,icanopy) = (SUM(lai_cl(ipoint,1:icanopy)) - lbounds(icanopy)) / 2.0_wp
-        ENDIF
-
-      END IF ! lai(ipoint) > eps8
+        ! LAI mid-point of canopy layer
+        WHERE(lai_cl(:,icanopy) > 0.0_wp)
+          mid_point_lai_cl(:,icanopy) = (SUM(lai_cl(:,1:icanopy)) - lbounds(icanopy)) / 2.0_wp
+        ENDWHERE
+      ENDWHERE ! lai(:) > eps8
     END DO   ! loop ncanopy
-    END DO   ! loop nc
     
-    DO ipoint  = 1,nc
-      IF(lai(ipoint) > eps8) THEN ! avoid any calculation if there are no leaves              
-        !> 2.2.2 cummulative LAI above mid-point of canopy layer
-        !!
-        cumm_lai_cl(ipoint,1) = mid_point_lai_cl(ipoint,1)
-        DO icanopy = 2,ncanopy
-          IF(lai_cl(ipoint,icanopy) > eps8) THEN
-            cumm_lai_cl(ipoint,icanopy) = lbounds(icanopy) + mid_point_lai_cl(ipoint,icanopy)
-          ENDIF
-        ENDDO 
-        !> 2.3 N content of the canopy layer
-        !!
-        DO icanopy = 1,ncanopy
-          IF(cumm_lai_cl(ipoint,icanopy) > eps12)THEN
-            IF(lai(ipoint) > ubounds(1)) THEN
-              leaf_nitrogen_cl(ipoint,icanopy) = leaf_nitrogen_tc(ipoint) * exp(-kn * cumm_lai_cl(ipoint,icanopy))
-            ELSE ! if LAI does not fill the first canopy layer, top canopy N = leaf N
-              leaf_nitrogen_cl(ipoint,1) = leaf_nitrogen_tc(ipoint)
-              leaf_nitrogen_cl(ipoint,2:ncanopy) = 0.0_wp
-            END IF
-          END IF
-        END DO
-      END IF ! lai(ipoint) > eps8
-    END DO   ! loop nc
+    !> 2.2 cummulative LAI above mid-point of canopy layer
+    !!
+    ! 1st layer
+    WHERE(lai(:) > eps8) ! avoid any calculation if there are no leaves    
+      cumm_lai_cl(:,1) = mid_point_lai_cl(:,1)
+    ENDWHERE
+    ! 2-x layers
+    DO icanopy = 2,ncanopy
+      WHERE(lai(:) > eps8) ! avoid any calculation if there are no leaves
+        WHERE(lai_cl(:,icanopy) > eps8)
+          cumm_lai_cl(:,icanopy) = lbounds(icanopy) + mid_point_lai_cl(:,icanopy)
+        ENDWHERE
+      ENDWHERE
+    ENDDO 
+    
+    !> 2.3 N content of the canopy layer
+    !!
+    DO icanopy = 1,ncanopy
+      WHERE(lai(:) > eps8)                    ! avoid any calculation if there are no leaves
+        WHERE(cumm_lai_cl(:,icanopy) > eps12) ! if this layer has some leafs
+          WHERE(lai(:) > ubounds(1))          ! at least the 1st layer is filled
+            leaf_nitrogen_cl(:,icanopy)   = leaf_nitrogen_tc(:) * exp(-kn * cumm_lai_cl(:,icanopy))
+          ELSEWHERE ! if LAI does not fill the first canopy layer, top canopy N = leaf N
+            leaf_nitrogen_cl(:,1)         = leaf_nitrogen_tc(:)
+            !leaf_nitrogen_cl(:,2:ncanopy) = 0.0_wp
+          ENDWHERE
+        ENDWHERE
+      ENDWHERE ! lai(:) > eps8
+    ENDDO   ! loop ncanopy
 
 
     !> 3.0 fractionation of N within canopy laer
