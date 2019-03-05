@@ -112,7 +112,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':new_grid_from_host'
 
-    ! CALL message(TRIM(routine), 'starting construction of new JSBACH grid instance from host model')
+    ! CALL message(routine, 'starting construction of new JSBACH grid instance from host model')
 
     ALLOCATE(new)
 
@@ -149,7 +149,7 @@ CONTAINS
 
     grid => new
 
-    ! CALL message(TRIM(routine), 'construction of JSBACH grid completed.')
+    ! CALL message(routine, 'construction of JSBACH grid completed.')
 
   END FUNCTION new_grid_from_host
 
@@ -166,7 +166,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':new_grid_from_file'
 
-    CALL message(TRIM(routine), 'starting construction of new JSBACH grid instance from file:')
+    CALL message(routine, 'starting construction of new JSBACH grid instance from file:')
     CALL message('     ', TRIM(filename))
 
     ALLOCATE(new)
@@ -191,7 +191,7 @@ CONTAINS
 
     grid => new
 
-    CALL message(TRIM(routine), 'construction of JSBACH grid completed.')
+    CALL message(routine, 'construction of JSBACH grid completed.')
 
   END FUNCTION new_grid_from_file
 
@@ -222,7 +222,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':delete_grid'
 
-    CALL message(TRIM(routine), 'starting destruction of JSBACH grid instance.')
+    CALL message(routine, 'starting destruction of JSBACH grid instance.')
 
     IF (ASSOCIATED(self%lsm)) DEALLOCATE(self%lsm)
     IF (ASSOCIATED(self%lsf)) DEALLOCATE(self%lsf)
@@ -231,7 +231,7 @@ CONTAINS
 
     DEALLOCATE(self)
 
-    CALL message(TRIM(routine), 'destruction of JSBACH grid completed.')
+    CALL message(routine, 'destruction of JSBACH grid completed.')
 
   END SUBROUTINE delete_grid
 
@@ -246,13 +246,13 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Print_grid'
 
-    CALL message(TRIM(routine), 'print JSBACH grid description')
+    CALL message(routine, 'print JSBACH grid description')
 
     WRITE(message_text,'(A,I2,A,A)') 'Grid id: ', this%id, ', grid name: ', TRIM(this%name)
     CALL message('  ', message_text)
 
     IF (.NOT. this%configured) THEN
-      CALL message(TRIM(routine), 'Grid not configured yet!')
+      CALL message(routine, 'Grid not configured yet!')
       RETURN
     END IF
 
@@ -365,8 +365,8 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':new_vgrid'
 
-    IF (TRIM(name) == '') CALL finish(TRIM(routine), 'Must specify axis name')
-    IF (length < 1) CALL finish(TRIM(routine), TRIM(name)//' - length < 1')
+    IF (TRIM(name) == '') CALL finish(routine, 'Must specify axis name')
+    IF (length < 1) CALL finish(routine, TRIM(name)//' - length < 1')
 
     ALLOCATE(new)
 
@@ -395,14 +395,14 @@ CONTAINS
     IF (PRESENT(lbounds)) new%lbounds(:) = lbounds(:)
     IF (PRESENT(ubounds)) new%ubounds(:) = ubounds(:)
     IF (PRESENT(dz)) THEN
-      IF (ANY(dz(:) <= 0._wp)) CALL finish(TRIM(routine), 'Dz must be larger than zero')
+      IF (ANY(dz(:) <= 0._wp)) CALL finish(routine, 'Dz must be larger than zero')
       new%dz     (:) = dz(:)
     END IF
 
     IF (PRESENT(lbounds) .AND. PRESENT(ubounds)) THEN
-      IF (ANY(ubounds(:) < lbounds(:))) CALL finish(TRIM(routine), 'Ubounds must be larger than Lbounds')
+      IF (ANY(ubounds(:) < lbounds(:))) CALL finish(routine, 'Ubounds must be larger than Lbounds')
       IF (PRESENT(dz)) THEN
-        IF (ANY(ABS((ubounds(:)-lbounds(:))-dz(:)) > EPSILON(1._wp))) CALL finish(TRIM(routine), 'Dz != Ubounds-Lbounds')
+        IF (ANY(ABS((ubounds(:)-lbounds(:))-dz(:)) > EPSILON(1._wp))) CALL finish(routine, 'Dz != Ubounds-Lbounds')
       ELSE
         new%dz(:) = ubounds(:) - lbounds(:)
       END IF
@@ -419,7 +419,7 @@ CONTAINS
         new%ubounds(:) = levels(:) + (levels(:) - lbounds(:))
         new%dz(:) = new%ubounds(:) - lbounds(:)
       ELSE
-        CALL finish(TRIM(routine), 'Lbounds present ... specify either Levels or Dz!')
+        CALL finish(routine, 'Lbounds present ... specify either Levels or Dz!')
       END IF
     ELSE IF (PRESENT(ubounds)) THEN
       IF (PRESENT(dz)) THEN
@@ -431,15 +431,18 @@ CONTAINS
         new%lbounds(:) = levels(:) - (ubounds(:) - levels(:))
         new%dz(:) = ubounds(:) - new%lbounds(:)
       ELSE
-        CALL finish(TRIM(routine), 'Ubounds present ... specify either Levels or Dz!')
+        CALL finish(routine, 'Ubounds present ... specify either Levels or Dz!')
       END IF
     ELSE
       IF (PRESENT(levels) .AND. PRESENT(dz)) THEN
-        new%lbounds(:) = levels
+        CALL finish(routine, 'Levels and dz given ... please specify lbounds and/or ubounds')
       ELSE IF (PRESENT(dz)) THEN
         new%lbounds(1) = 0._wp
-        new%lbounds(2:length) = dz(1:length-1)
+        DO i=2,length
+          new%lbounds(i) = new%lbounds(i-1) + dz(i-1)
+        END DO
         new%ubounds(:) = new%lbounds(:) + dz(:)
+        new%levels(:) = 0.5_wp * (new%lbounds(:) + new%ubounds(:))
       ELSE IF (PRESENT(levels)) THEN
         IF (length > 1) THEN ! Multi-level axis
           new%lbounds(1) = 0._wp
@@ -486,7 +489,7 @@ CONTAINS
 
     IF (self%id == 0) RETURN
 
-    CALL message(TRIM(routine), 'starting destruction of JSBACH vgrid instance.')
+    CALL message(routine, 'starting destruction of JSBACH vgrid instance.')
 
     IF (ALLOCATED(self%levels))  DEALLOCATE(self%levels)
     IF (ALLOCATED(self%lbounds)) DEALLOCATE(self%lbounds)
@@ -495,7 +498,7 @@ CONTAINS
 
     DEALLOCATE(self)
 
-    CALL message(TRIM(routine), 'destruction of JSBACH vgrid completed.')
+    CALL message(routine, 'destruction of JSBACH vgrid completed.')
 
   END SUBROUTINE delete_vgrid
 
