@@ -1,6 +1,7 @@
 # Changelog for JSBACH4+
 
 - [Changelog for JSBACH4+](#changelog-for-jsbach4)
+  - [jsbach-4.20p8](#jsbach-420p9)
   - [jsbach-4.20p8](#jsbach-420p8)
   - [jsbach-4.20p7](#jsbach-420p7)
   - [jsbach-4.20p6](#jsbach-420p6)
@@ -10,6 +11,16 @@
   - [jsbach-4.20p2](#jsbach-420p2)
   - [jsbach-4.20p1](#jsbach-420p1)
   - [jsbach-4.20](#jsbach-420)
+
+## jsbach-4.20p9
+
+_Release Date: 5 March 2019_
+
+- Bug fixes in `mo_jsb_tile` (missing TRIM around strings)
+- Changes in `mo_jsb_grid_class`
+  - Bug fix in `new_vgrid` for lbounds in one of the cases
+  - Don't allow the case in `new_vgrid` that levels and dz are given but neither lbounds nor ubounds
+  - Remove unnecessary TRIM's
 
 ## jsbach-4.20p8
 
