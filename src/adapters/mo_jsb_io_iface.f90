@@ -8,6 +8,10 @@
 !! First version                                  by Reiner Schnur (2013-04-04)
 !! IO namelist subroutine for jsb4 standalone     by Julia Nabel (2016-02-20)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!s
 MODULE mo_jsb_io_iface
 #ifndef __NO_JSBACH__
 

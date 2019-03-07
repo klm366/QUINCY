@@ -9,6 +9,10 @@
 !! New subroutines and some adaptations for jsb4 standalone   by Julia Nabel (2016-02-20)
 !! Added ltimer although this doesn't really belong here      by Reiner Schnur (2018-06-04)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
 MODULE mo_jsb_time_iface
 #ifndef __NO_JSBACH__
 

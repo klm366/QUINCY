@@ -8,6 +8,11 @@
 !! First version in mo_srf_interface.f90 by Reiner Schnur (2013-04-04)
 !! Separated out the surface energy balance for LAND part by Reiner Schnur (2016-03-22)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_seb_land
 #ifndef __NO_JSBACH__
 

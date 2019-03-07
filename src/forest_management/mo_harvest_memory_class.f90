@@ -7,6 +7,10 @@
 !! @par Revision History
 !! First version by Julia Nabel (2018-03-19)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
 MODULE mo_harv_memory_class
 #ifndef __NO_JSBACH__
 

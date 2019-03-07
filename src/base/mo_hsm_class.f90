@@ -7,6 +7,11 @@
 !! @par Revision History
 !! First version by Reiner Schnur (2015-06-01)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_hsm_class
 
   USE mo_exception, ONLY: message, message_text, finish, em_warn

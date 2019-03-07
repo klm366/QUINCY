@@ -10,6 +10,10 @@
 !! @par Revision History
 !! Most parts copied from jsbach3 mo_test.f90
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
 MODULE mo_jsb_test
 #ifndef __NO_JSBACH__
 

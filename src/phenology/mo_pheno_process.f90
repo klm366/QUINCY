@@ -9,6 +9,11 @@
 !! Julia Nabel (2018-01-10): added processes to provide optional functionality: forest regrowth (l_forestRegrowth)
 !!                           (derive maxLAI from biomass via allometric relationships)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_pheno_process
 #ifndef __NO_JSBACH__
 

@@ -7,6 +7,10 @@
 !! @par Revision History
 !! First version by Reiner Schnur (2016-03-18)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
 MODULE mo_physical_constants_iface
 #ifndef __NO_JSBACH__
 

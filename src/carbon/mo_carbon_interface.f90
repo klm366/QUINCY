@@ -10,6 +10,11 @@
 !!      ++ subroutines for cpool sums and c conservation test
 !!      ++ task to apply c consequences of area changes among forest age cohorts
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_carbon_interface
 #ifndef __NO_JSBACH__
 
