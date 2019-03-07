@@ -17,6 +17,7 @@
 !! The name of the landcover library file is specified in the JSBACH configuration file (run.def) under the
 !! keyword "LCT_FILE".
 !!
+
 MODULE mo_jsb_lctlib_class
 
   USE mo_jsb_parallel, ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, mpi_comm, p_bcast
