@@ -97,6 +97,8 @@ CONTAINS
     REAL(wp), INTENT(in) :: lwdown   ! downward longwave radiation
     REAL(wp), INTENT(in) :: t_srf    ! surface temperature
 
+    !$claw sca routine
+
     lwnet_from_lwdown = zemiss_def * (lwdown - stbo * t_srf**4)
 
   END FUNCTION lwnet_from_lwdown

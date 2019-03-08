@@ -47,6 +47,7 @@ CONTAINS
 
     USE mo_phy_schemes,   ONLY: lwnet_from_lwdown
 
+    !$claw model-data
     REAL(wp),  INTENT(in) :: &
       & swvis_down,          &
       & swnir_down,          &
@@ -62,8 +63,11 @@ CONTAINS
       & swnir_net,                      & ! net shortwave radiation in near infrared range
       & sw_net,                         &
       & lw_net
+    !$claw end model-data
 
     REAL(wp) :: zswvis_net, zswnir_net, zsw_net, zlw_net
+
+    !$claw sca
 
     ! Compute net SW radiation from downward SW and albedo
     zswvis_net = swvis_down * (1._wp - alb_vis)
