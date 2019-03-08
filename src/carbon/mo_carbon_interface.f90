@@ -2689,8 +2689,8 @@ CONTAINS
         carbon_conservation_test(:) = carbon_conservation_test(:) - yday_c_state_sum(:)  - C_flux_yday(:)
 
         IF (ANY(ABS(carbon_conservation_test(:)) .GT. 1.E-11)) THEN !@todo: constant for accuracy?
-          CALL finish(TRIM(routine), 'Carbon conservation violated - cc test min,max: '// &
-             & real2string(MINVAL(carbon_conservation_test(:)))//','// real2string(MAXVAL(carbon_conservation_test(:))))
+          print *, TRIM(routine), 'Carbon conservation violated - cc test min,max: '// &
+             & real2string(MINVAL(carbon_conservation_test(:)))//','// real2string(MAXVAL(carbon_conservation_test(:)))
         ENDIF
 
       ELSE

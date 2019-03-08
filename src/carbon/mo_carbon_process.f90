@@ -1573,7 +1573,7 @@ CONTAINS
     !TODO-JN: probably needs to be adapted with absolute areas
 
     ! TODO-JN: if smallest possible fraction 1e-10 is re-introduced 
-    !          then the following need to be reworked
+    !          then the following needs to be reworked
 
     IF( prev_fract + delta_fract .GT. 0._wp) THEN
       org_Cpool = ((org_Cpool * prev_fract * veg_fract_correction) + delta_Cpool) &
