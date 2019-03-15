@@ -238,6 +238,8 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(RAD_, albedo_lwtr)  ! in
       dsl4jsb_Get_var2D_onChunk(RAD_, rad_net_lwtr) ! out
 
+      !$claw acc data pcreate(sw_net_lwtr, lw_net_lwtr, sw_net_lice, lw_net_lice)
+
       !$claw sca forward update
       CALL calc_radiation_surface_net( &
         & swvis_srf_down(:),           & ! in
@@ -269,10 +271,13 @@ CONTAINS
         & sw_net=sw_net_lice(:),       & ! out
         & lw_net=lw_net_lice(:)        & ! out
         & )
-
+      
+      !$claw expand parallel
       rad_srf_net(:) = (1._wp - fract_lice(:)) * rad_net_lwtr(:) + fract_lice(:) * rad_net_lice(:)
       sw_srf_net (:) = (1._wp - fract_lice(:)) * sw_net_lwtr(:)  + fract_lice(:) * sw_net_lice(:)
       lw_srf_net (:) = (1._wp - fract_lice(:)) * lw_net_lwtr(:)  + fract_lice(:) * lw_net_lice(:)
+
+      !$claw acc end data
 
     ELSE
 
@@ -740,6 +745,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_soil)  ! in
       dsl4jsb_Get_var2D_onChunk(RAD_,   snow_age)         ! in
 
+      !$claw sca forward update
       CALL calc_snow_albedo(   &
         & l_day(:),            & ! in
         & fract_snow_soil(:),  & ! in
