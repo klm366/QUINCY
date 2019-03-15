@@ -443,11 +443,14 @@ CONTAINS
     USE mo_rad_constants,          ONLY: AlbedoLakeWater
 
     ! Arguments
+    !$claw model-data
     LOGICAL,  INTENT(in)    :: &
       & l_day
     REAL(wp), INTENT(inout) :: &
       & alb_lwtr
+    !$claw end model-data
 
+    !$claw sca
     ! ---------------------------
     ! Go
 
@@ -472,6 +475,7 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: tmelt
 
     ! Arguments
+    !$claw model-data
     LOGICAL,  INTENT(in)    :: &
       & l_day
     REAL(wp), INTENT(in)    :: &
@@ -479,11 +483,13 @@ CONTAINS
       & w_snow_lice
     REAL(wp), INTENT(inout) :: &
       & alb_lice
+    !$claw end model-data
 
     ! Local variables
     REAL(wp) :: t_upper_limit    ! Upper temperature limit for cold snow albedo
     REAL(wp) :: alb_min, alb_max ! Minimum and maximum snow albedo
 
+    !$claw sca
     ! ---------------------------
     ! Go
 
@@ -530,6 +536,7 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: tmelt
 
     ! Arguments
+    !$claw model-data
     LOGICAL,  INTENT(in)    :: &
       & l_day
     REAL(wp), INTENT(in)    :: &
@@ -537,7 +544,9 @@ CONTAINS
     REAL(wp), INTENT(inout) :: &
       & alb_vis,               & ! Albedo of canopy in the VIS range without snow cover.
       & alb_nir                  ! Albedo of canopy in the NIR range without snow cover.
+    !$claw end model-data
 
+    !$claw sca
     ! ---------------------------
     ! Go
 
@@ -584,7 +593,7 @@ CONTAINS
   ELEMENTAL SUBROUTINE calc_soil_albedo( &
     & l_day,                     &
     & use_alb_mineralsoil_const, &
-    & use_alb_soil_organic_C,    &
+    & use_alb_soil_organic_int,  &
     & use_alb_soil_litter,       &
     & c_ag_sum_1,                &
     & c_bg_sum,                  &
@@ -602,15 +611,23 @@ CONTAINS
                                                                        ! alb_vis_mineralsoil
 
     ! Arguments
+    !$claw model-data
     LOGICAL,          INTENT(in)  :: l_day
+    !$claw end model-data
+
     LOGICAL,          INTENT(in)  :: use_alb_mineralsoil_const
-    CHARACTER(LEN=*), INTENT(in)  :: use_alb_soil_organic_C
+    INTEGER,          INTENT(in)  :: use_alb_soil_organic_int
     LOGICAL,          INTENT(in)  :: use_alb_soil_litter
+    !$claw model-data
     REAL(wp),         INTENT(in)  :: &
       & c_ag_sum_1,         &
-      & c_bg_sum,           &
+      & c_bg_sum
+    !$claw end model-data
+    REAL(wp),         INTENT(in)  :: &
       & SpecificLeafArea_C, &
-      & AlbedoLitterVIS,    &
+      & AlbedoLitterVIS
+    !$claw model-data
+    REAL(wp),         INTENT(in)  :: &
       & alb_background
     REAL(wp),         INTENT(inout) :: &
       & alb_vis_mineralsoil,   & ! Albedo of soil without carbon or litter.
@@ -618,7 +635,7 @@ CONTAINS
       & alb_nir_mineralsoil,   & ! Albedo of soil without carbon or litter.
       & alb_vis_soil,          & ! Albedo of soil (may incl. litter layer and/or carbon within soil)
       & alb_nir_soil             ! Albedo of soil (may incl. litter layer and/or carbon within soil)
-
+    !$claw end model-data
 
     ! Local variables
     REAL(wp), PARAMETER ::                                   &
@@ -635,7 +652,6 @@ CONTAINS
                             litter_view_fract,      &
                             alb_vis_litter,         &
                             alb_nir_litter
-
     ! ---------------------------
     ! Go
 
@@ -662,10 +678,10 @@ CONTAINS
     !    the "wrong" kind of albedo from the jsbach.nc file wasn't so unlikely.
     !    However, the variable was also used inconsistent in the scheme and senseless for glacier.
 
-    IF(use_alb_soil_organic_C .eq. 'linear') THEN
+    IF(use_alb_soil_organic_int .eq. 1) THEN ! linear
       alb_vis_soil_nolitter = alb_vis_mineralsoil - Scalfact_SOC_to_alb_vis * MIN(c_bg_sum,Soil_C_min)
       alb_nir_soil_nolitter = alb_nir_mineralsoil - Scalfact_SOC_to_alb_nir * MIN(c_bg_sum,Soil_C_min)
-    ELSE IF(use_alb_soil_organic_C .eq. 'log') THEN
+    ELSE IF(use_alb_soil_organic_int .eq. 2) THEN ! log
       alb_vis_soil_nolitter = MAX(6._wp * alb_vis_mineralsoil / (6._wp + log(1._wp + c_bg_sum)),0.1_wp)
       alb_nir_soil_nolitter = MAX(6._wp * alb_nir_mineralsoil / (6._wp + log(1._wp + c_bg_sum)),0.2_wp)
     ELSE

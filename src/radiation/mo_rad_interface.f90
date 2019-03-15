@@ -616,6 +616,7 @@ CONTAINS
 
     ! Declare configuration variables
     CHARACTER(len=:), ALLOCATABLE :: use_alb_soil_organic_C
+    INTEGER :: use_alb_soil_organic_int
 
     REAL(wp) ::            &
       & albedo_age_weight, &    ! 0 < albedo_age_weight < 1: snow albedo is calcualted by linearly weighting
@@ -699,6 +700,12 @@ CONTAINS
     albedo_age_weight         = dsl4jsb_Config(RAD_) %albedo_age_weight
     AlbedoCanopySnow          = dsl4jsb_Config(RAD_) %AlbedoCanopySnow
 
+    IF(use_alb_soil_organic_C .eq. 'linear') THEN
+       use_alb_soil_organic_int = 1
+    ELSE IF(use_alb_soil_organic_C .eq. 'log') THEN
+       use_alb_soil_organic_int = 2
+    END IF
+
     c_bg_sum => NULL()
     IF (tile%is_bare .OR. tile%is_vegetation) THEN
       IF (TRIM(use_alb_soil_organic_C) /= '' .AND. .NOT. tile%Is_process_active(CARBON_)) THEN
@@ -767,11 +774,13 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(RAD_,   albedo_lwtr)  ! inout
       dsl4jsb_Get_var2D_onChunk(RAD_,   albedo_lice)  ! inout
 
+      !$claw sca forward update
       CALL calc_alb_lwtr( &
         & l_day(:),       & ! in
         & albedo_lwtr(:)  & ! inout
         & )
 
+      !$claw sca forward update
       CALL calc_alb_lice( &
         & l_day(:),       & ! in
         & t_lice(:),      & ! in
@@ -786,6 +795,7 @@ CONTAINS
 
 
     ELSE IF (tile%is_glacier) THEN
+      !$claw sca forward update
       CALL calc_glacier_albedo( &
         & l_day(:),             & ! in
         & t_unfilt(:),          & ! in
@@ -803,11 +813,11 @@ CONTAINS
         IF (tile%lcts(1)%lib_id == 0) CALL finish(TRIM(routine), 'lctlib not available on tile')
 
         dsl4jsb_Get_var2D_onChunk(CARBON_, c_ag_sum_1) ! in
-
+        !$claw sca forward update
         CALL calc_soil_albedo(                        &
           & l_day(:),                                 & ! in
           & use_alb_mineralsoil_const,                & ! in
-          & use_alb_soil_organic_C,                   & ! in
+          & use_alb_soil_organic_int,                 & ! in
           & use_alb_soil_litter,                      & ! in
           & c_ag_sum_1(:),                            & ! in
           !CBAL & c_slow(:),                           & ! in
@@ -831,9 +841,10 @@ CONTAINS
       END IF
 
       ! Merge the albedo of soil with the snow on it for the overall bare soil tile albedo
+      !$claw expand parallel
       alb_vis_lnd(:) = (fract_snow_soil(:) * alb_vis_snow(:)  + (1.0_wp - fract_snow_soil(:)) * alb_vis_soil(:))
       alb_nir_lnd(:) = (fract_snow_soil(:) * alb_nir_snow(:)  + (1.0_wp - fract_snow_soil(:)) * alb_nir_soil(:))
-
+      !$claw end expand
 
     ELSE IF (tile%is_vegetation) THEN
 
@@ -869,10 +880,11 @@ CONTAINS
 
           dsl4jsb_Get_var2D_onChunk(CARBON_, c_ag_sum_1) ! in (Note: c_humus_1 is part of green litter.)
 
+          !$claw sca forward update
           CALL calc_soil_albedo(                        &
             & l_day(:),                                 & ! in
             & use_alb_mineralsoil_const,                & ! in
-            & use_alb_soil_organic_C,                   & ! in
+            & use_alb_soil_organic_int,                 & ! in
             & use_alb_soil_litter,                      & ! in
             & c_ag_sum_1(:),                            & ! in
             !CBAL & c_slow(:),                           & ! in
@@ -933,8 +945,10 @@ CONTAINS
     END IF ! tile%lcts(1)%id == ...
 
     IF (.NOT. tile%is_lake) THEN
+      !$claw expand parallel
       alb_vis(:) = alb_vis_lnd(:)
       alb_nir(:) = alb_nir_lnd(:)
+      !$claw end expand
     END IF
 
     IF (TRIM(use_alb_soil_organic_C) == '') THEN
