@@ -861,16 +861,21 @@ CONTAINS
     USE mo_rad_constants,  ONLY: SkyViewFactor ! Constant in calculating the sky view fractions
 
     ! Arguments
+    !$claw model-data
     LOGICAL,  INTENT(in)  :: l_day
     REAL(wp), INTENT(in)  :: lai,              & ! leaf area index
                              fract_fpc_max,    & ! maximum foliage projected cover
-                             cos_zenith_angle, & ! cosinus of zenith angle of incoming radiation
-                             StemArea
+                             cos_zenith_angle    ! cosinus of zenith angle of incoming radiationa
+    !$claw end model-data
+    REAL(wp), INTENT(in)  :: StemArea
+    !$claw model-data
     REAL(wp), INTENT(inout) :: &
       & sky_view_fract,   & ! Fraction of "visible" bare ground below vegetation without accounting for stems.
                             ! (Falling with rising LAI.)
       & sky_view_fract_stem   ! Fraction of soil below vegetation which is covered by stems but not by LAI.
+    !$claw end model-data
 
+    !$claw sca
     ! ---------------------------
     ! Go
 
@@ -908,13 +913,20 @@ CONTAINS
     & )
 
     ! Arguments
+    !$claw model-data
     LOGICAL,  INTENT(in) :: l_day ! flag to indicate if it is day or night
+    !$claw end model-data
     LOGICAL,  INTENT(in) :: l_forest
-
+    
+    !$claw model-data
     REAL(wp), INTENT(in) :: &
       sky_view_fract,       &
-      sky_view_fract_stem,  &
-      AlbedoCanopySnow,     &
+      sky_view_fract_stem
+    !$claw end model-data
+    REAL(wp), INTENT(in) :: &
+      AlbedoCanopySnow    
+    !$claw model-data
+    REAL(wp), INTENT(in) :: &
       fract_snow_soil,      & ! Snow covered area fraction of soil
       fract_snow_can,       & ! Fraction of snow covered canopy (forest)
       alb_vis_snow,         & ! Note, this snow albedo is used only for snow on soil.
@@ -928,6 +940,7 @@ CONTAINS
     REAL(wp), INTENT(inout) :: &
       & alb_vis, &
       & alb_nir
+    !$claw end model-data
 
     ! Local variables
     REAL(wp) :: &
@@ -935,6 +948,7 @@ CONTAINS
                            ! when it is assumed that no stems (but only the canopy) cover the soil
       & alb_nir_nostems
 
+    !$claw sca
     ! ---------------------------
     ! Go
 
@@ -1073,10 +1087,15 @@ CONTAINS
 
     USE mo_rad_constants, ONLY: MinRadiation ! Minimum amount of radiation for albedo calculations
 
+
+!    !$claw model-data
     REAL(wp), INTENT(in) :: &
       & swvis, &
       & swnir
     LOGICAL :: l_day
+!    !$claw end model-data
+
+!    !$claw sca
 
     l_day = swvis + swnir > MinRadiation
 

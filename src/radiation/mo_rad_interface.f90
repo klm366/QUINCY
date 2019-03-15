@@ -705,6 +705,8 @@ CONTAINS
     ELSE IF(use_alb_soil_organic_C .eq. 'log') THEN
        use_alb_soil_organic_int = 2
     END IF
+  
+    !$claw acc data pcreate(l_day)
 
     c_bg_sum => NULL()
     IF (tile%is_bare .OR. tile%is_vegetation) THEN
@@ -743,7 +745,8 @@ CONTAINS
     ! Go
 
     ! Set day-or-night-switch
-    l_day(:) = Has_minimal_radiation(swvis_srf_down(:), swnir_srf_down(:))
+!    !$claw sca forward update
+    l_day(:) =  Has_minimal_radiation(swvis_srf_down(:), swnir_srf_down(:))
 
     ! Calculate snow albedos. Used later only for bare and vegetation tile types
     ! Note, for vegetation tiles this snow albedos are used only for snow on soil
@@ -913,6 +916,7 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(RAD_, sky_view_fract_stem)  ! inout
 
         IF (tile%lcts(1)%lib_id == 0) CALL finish(TRIM(routine), 'lctlib not available on tile')
+        !$claw sca forward update
         CALL calc_sky_view_fractions(       &
           & l_day(:),                       & ! in
           & lai(:),                         & ! in
@@ -923,6 +927,7 @@ CONTAINS
           & sky_view_fract_stem(:)          & ! inout
           & )
 
+        !$claw sca forward update
         CALL Merge_albedos_of_vegtile(        &
           & l_day(:),                         & ! in
           & dsl4jsb_Lctlib_param(ForestFlag), & ! in  ("true" for forest landcover types)
@@ -954,6 +959,8 @@ CONTAINS
     IF (TRIM(use_alb_soil_organic_C) == '') THEN
       IF (ASSOCIATED(c_bg_sum)) DEALLOCATE(c_bg_sum)
     END IF
+
+    !$claw acc end data
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
