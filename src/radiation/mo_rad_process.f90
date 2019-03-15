@@ -740,19 +740,24 @@ CONTAINS
     USE mo_jsb_physical_constants,  ONLY: tmelt     ! tmelt =273.15_wp
 
     ! Arguments
+    !$claw model-data
     LOGICAL,  INTENT(in)  :: l_day
     REAL(wp), INTENT(in)  ::                    & !
                              fract_snow_soil,   & ! Fraction of snow covered ground
                              snow_age,          & ! non-dimensional age of snow
                              cos_zenith_angle,  & ! cosinus of zenith angle of incoming radiation
-                             albedo_age_weight, & ! 0 < albedo_age_weight < 1: snow albedo is calcualted by linearly weighting
+                             t_srf
+    !$claw end model-data
+
+    REAL(wp), INTENT(in)  ::                    & !
+                             albedo_age_weight    ! 0 < albedo_age_weight < 1: snow albedo is calcualted by linearly weighting
                                                   !                            the snow albedo resulting from both age and
                                                   !                            temperature schemes
-                             t_srf
-
+    !$claw model-data
     REAL(wp), INTENT(inout) ::              &
                              alb_vis_snow,  & ! Albedo of canopy in the VIS range without snow cover.
                              alb_nir_snow     ! Albedo of canopy in the NIR range without snow cover.
+    !$claw end model-data
 
     ! Local variables
     REAL(wp)              ::                    &
@@ -762,6 +767,8 @@ CONTAINS
                              alb_nir_snow_temp, &
                              snow_age_factor,   &
                              snow_albedo_angle_factor
+
+    !$claw sca
 
     ! Initialize local variables
     alb_vis_snow_age  = 0.0_wp
