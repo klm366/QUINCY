@@ -28,7 +28,7 @@ MODULE mo_rad_config_class
   !! currently it does mainly: reading parameters from namelist
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_config) :: t_rad_config
-    INTEGER                 :: nspec                        !< number of spectral bands of the light
+    ! ..
   CONTAINS
     PROCEDURE :: Init => Init_rad_config
   END type t_rad_config
@@ -94,12 +94,11 @@ CONTAINS
     config%active              = active
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
-    config%nspec               = nspec
 
 
     !< Create the 3rd dimension of spectral bands of the light for RAD_ variables using a vertical axis
     !! 
-    vgrid_spectral  => new_vgrid('spectral_bands', ZAXIS_GENERIC, config%nspec, &
+    vgrid_spectral  => new_vgrid('spectral_bands', ZAXIS_GENERIC, nspec, &
                       longname='Number of spectral bands the light is divided into, from RAD_ QUINCY') !, &
                       ! units=''  , &
                       ! levels=   , &
