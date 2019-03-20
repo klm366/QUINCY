@@ -14,6 +14,11 @@
 !! file COPYING in the root of the source tree for this code.
 !! Where software is supplied by third parties, it is indicated in the headers of the routines.
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 #ifdef __xlC__
 @PROCESS STRICT
 #endif
@@ -29,7 +34,7 @@ MODULE mo_jsb_version
 
   PUBLIC :: jsbach_version, jsbach_init_version, jsbach_label_run
 
-  CHARACTER(len=  6), PARAMETER :: jsbach_version = '4.20p7' !< JSBACH version number
+  CHARACTER(len=  6), PARAMETER :: jsbach_version = '4.20p9' !< JSBACH version number
 
   CHARACTER(len=256) :: executable                         !< Name of executable
   CHARACTER(len= 80) :: label(4)                           !< Space for storing model information

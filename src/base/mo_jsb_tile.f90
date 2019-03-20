@@ -9,6 +9,11 @@
 !!
 !! This had to be separated from mo_jsb_tile_class in order to avoid circular dependencies.
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_jsb_tile
 #ifndef __NO_JSBACH__
 
@@ -428,7 +433,7 @@ CONTAINS
 
     ! Initialize fraction(s) of this tile from input file
     ALLOCATE(tmp_fract(hgrid%nproma, hgrid%nblks))
-    IF (this%fract_varname == 'equal') THEN
+    IF (TRIM(this%fract_varname) == 'equal') THEN
       IF (ASSOCIATED(this%parent)) THEN
         tmp_fract(:,:) = 1._wp / REAL(this%parent%Get_no_of_children(), wp)
       ELSE
@@ -440,7 +445,7 @@ CONTAINS
     ELSE
       input_file = jsb_netcdf_open_input(TRIM(this%fract_filename), this%owner_model_id)
 
-      IF (this%fract_varname == '') THEN
+      IF (TRIM(this%fract_varname) == '') THEN
         name_loc = 'fract'
         IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
         IF (suffix /= '') name_loc = TRIM(name_loc)//'_'//TRIM(suffix)
@@ -452,11 +457,11 @@ CONTAINS
         !
         ! TODO: For security, as a workaround, set lake fractions in coastal points that are 
         ! partially land and partially ocean to zero, and corresponding land fraction to one.
-        IF (this%name == 'lake') THEN
+        IF (TRIM(this%name) == 'lake') THEN
           CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
           return_pointer(:,:) = MERGE(return_pointer(:,:), 0._wp, tmp_fract(:,:) >= 1._wp)
         END IF
-        IF (this%name == 'land') THEN
+        IF (TRIM(this%name) == 'land') THEN
           CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
           return_pointer(:,:) = MERGE(return_pointer(:,:), 1._wp, tmp_fract(:,:) >= 1._wp)
         END IF
@@ -467,7 +472,7 @@ CONTAINS
           &                        ' not found in '//TRIM(this%fract_filename))
       END IF
 
-      IF (this%fract_varname == '') THEN
+      IF (TRIM(this%fract_varname) == '') THEN
         name_loc = 'fract_max'
         IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
         IF (suffix /= '') name_loc = TRIM(name_loc)//'_'//TRIM(suffix)

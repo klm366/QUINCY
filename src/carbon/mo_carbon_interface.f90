@@ -9,6 +9,11 @@
 !! Julia Nabel (2018): l_forestRegrowth flag -> allow for changing MaxLai; forest age cohorts
 !!      ++ subroutines for cpool sums and c conservation test
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_carbon_interface
 #ifndef __NO_JSBACH__
 
