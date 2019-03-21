@@ -883,5 +883,3 @@ then
   cd ${workdir}/..
   rm -rf ${workdir}
 fi
-
-
