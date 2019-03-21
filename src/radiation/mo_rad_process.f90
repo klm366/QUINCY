@@ -1023,6 +1023,7 @@ CONTAINS
     USE mo_rad_constants,           ONLY: AlbedoCanopySnow_simple, AlbedoSnowMin_simple, AlbedoSnowMax_simple
 
     ! Arguments
+    !$claw model-data
     REAL(wp), INTENT(in) ::                  &
                             t_srf,           &
                             fract_forest,    &
@@ -1030,6 +1031,7 @@ CONTAINS
                             fract_snow_can,  &
                             lai,             &
                             alb_background
+    !$claw end model-data
 
     ! Local variables
     REAL(wp) ::                                   &
@@ -1040,6 +1042,8 @@ CONTAINS
                             albedo_grnd,          &  ! Albedo on ground
                             albedo_can               ! Albedo on canopy
 
+
+    !$claw sca
     ! ---------------------------
     ! Go
 
@@ -1088,14 +1092,14 @@ CONTAINS
     USE mo_rad_constants, ONLY: MinRadiation ! Minimum amount of radiation for albedo calculations
 
 
-!    !$claw model-data
+    !$claw model-data
     REAL(wp), INTENT(in) :: &
       & swvis, &
       & swnir
     LOGICAL :: l_day
-!    !$claw end model-data
+    !$claw end model-data
 
-!    !$claw sca
+    !$claw sca
 
     l_day = swvis + swnir > MinRadiation
 
