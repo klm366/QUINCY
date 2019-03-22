@@ -88,14 +88,17 @@ CONTAINS
     USE mo_sse_constants,          ONLY: snow_depth_min
 
     LOGICAL,  INTENT(in) :: lstart, l_dynsnow
+    REAL(wp), INTENT(in) :: delta_time
+    !$claw model-data
     REAL(wp), INTENT(in) ::                                                         &
-      & delta_time, t_srf_unfilt, wind_10m, t_air, skinres_canopy_max, skinres_max, &
+      & t_srf_unfilt, wind_10m, t_air, skinres_canopy_max, skinres_max,             &
       & sfract_srf, wfract_srf, hcap_grnd, evapotrans, evapopot, trans, rain, snow
     REAL(wp), INTENT(inout) :: &
       & skinres, snow_soil, canopy_snow, snow_soil_dens
     REAL(wp), INTENT(out)   ::                   &
       & q_snocpymlt, snow_accum, snow_melt_soil, &
       & evapotrans_soil, evapo_skin, evapo_snow, water_to_soil, evapo_deficit
+    !$claw end model-data
     !
     !  local variables
     !
@@ -129,6 +132,8 @@ CONTAINS
     REAL(wp), PARAMETER :: zc1 = tmelt - 3._wp ! [K]
     REAL(wp), PARAMETER :: zc2=1.87E5_wp       ! [Ks]
     REAL(wp), PARAMETER :: zc3=1.56E5_wp       ! [m]
+
+    !$claw sca
 
     snow_accum = 0._wp
     snow_soil_old = snow_soil
@@ -262,8 +267,6 @@ CONTAINS
     evapo_skin = evapo_skin_in_m  * rhoh2o / delta_time
     evapo_snow = sfract_srf * evapopot
 
-    RETURN
-
   END SUBROUTINE calc_surface_hydrology_land
 
   ! ===============================================================================================================================
@@ -302,13 +305,17 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf
 
     LOGICAL,  INTENT(in) :: lstart
+    REAL(wp), INTENT(IN) :: delta_time
+    !$claw model-data
     REAL(wp), INTENT(in) ::       &
-      & delta_time, t_srf_unfilt, &
+      & t_srf_unfilt,             &
       & sfract_srf, hcap_grnd, evapotrans, evapopot, rain, snow
     REAL(wp), INTENT(inout) :: &
       & glacier_depth
     REAL(wp), INTENT(out)   :: &
       & q_snocpymlt, glacier_melt, glacier_runoff, pme_glacier
+    !$claw end model-data
+
     !
     !  local variables
     !
@@ -328,6 +335,8 @@ CONTAINS
     REAL(wp), PARAMETER :: zc1 = tmelt - 3._wp !< [K]
     REAL(wp), PARAMETER :: zc2=1.87E5_wp       !< [Ks]
     REAL(wp), PARAMETER :: zc3=1.56E5_wp       !< [m]
+
+    !$claw sca
 
     !----------------------------------------------------------------------------------------------
 
@@ -366,8 +375,6 @@ CONTAINS
     glacier_melt   = glacier_melt_in_m   * rhoh2o / delta_time
     glacier_runoff = glacier_runoff_in_m * rhoh2o / delta_time
     pme_glacier    = pme_glacier_in_m    * rhoh2o / delta_time
-
-    RETURN
 
   END SUBROUTINE calc_surface_hydrology_glacier
 
@@ -431,6 +438,7 @@ CONTAINS
       & delta_time
     LOGICAL, INTENT(in) :: ltpe_closed
     LOGICAL, INTENT(in) :: ltpe_open
+    !$claw model-data
     REAL(wp), INTENT(in), DIMENSION(nidx, nsoil) :: &
       & soil_depth_l, root_depth_l, fract_org_l,    &
       & hyd_cond_sat_l, matrix_pot_l, bclapp_l, pore_size_index_l, vol_porosity_l, vol_field_cap_l, vol_p_wilt_l
@@ -446,6 +454,7 @@ CONTAINS
       & runoff, drainage
     REAL(wp), INTENT(out), DIMENSION(nidx, nsoil) :: &
       & wsat_l, field_cap_l, p_wilt_l
+    !$claw end model-data
 
     ! Local variables
     REAL(wp) ::                       &
@@ -470,6 +479,8 @@ CONTAINS
 
     INTEGER, PARAMETER :: ilog = 0 ! Switch for debugging output
     INTEGER :: jllog = 0
+
+    !$claw sca
 
     sigma_0   = oro_var_min
     sigma_max = oro_var_max * 64._wp / REAL(nlat, wp) ! @todo: site level
@@ -516,7 +527,7 @@ CONTAINS
     ! sigma_max: resolution dependent maximum
 
     DO jl = 1, nidx
-
+      
       ws_min_drain(jl) = zwdmin * ws_max(jl)            ! minimum amount of soil water for drainage
 
       steepness = MAX(0._wp, oro_stddev(jl)-sigma_0) / (oro_stddev(jl)+sigma_max)
@@ -1274,8 +1285,12 @@ CONTAINS
     & fract_snow_lice                             & ! out
     & )
 
+    !$claw model-data
     REAL(wp),  INTENT(in)    :: w_snow_lice
     REAL(wp),  INTENT(out)   :: fract_snow_lice
+    !$claw end model-data
+
+    !$claw sca
 
     fract_snow_lice = TANH(w_snow_lice * 100._wp)
 
@@ -1301,6 +1316,7 @@ CONTAINS
     USE mo_phy_schemes,            ONLY: heat_transfer_coef, qsat
     USE mo_jsb_physical_constants, ONLY: rhoh2o
 
+    !$claw model-data
     REAL(wp), INTENT(in) :: &
       & dtime,              &
       & steplen,            &
@@ -1318,10 +1334,13 @@ CONTAINS
       & fract_snow_can,      &
       & fract_water    ,     &
       & fract_snow_soil
+    !$claw end model-data
 
     REAL(wp) ::       &
       & qsat_srf_old, &
       & evapo_pot
+
+    !$claw sca
 
     ! Snow fraction on canopy
     ! Wet skin reservoir fraction on soil and canopy (between 0 and 1)
@@ -1377,6 +1396,7 @@ CONTAINS
     USE mo_phy_schemes,            ONLY: heat_transfer_coef, qsat
     USE mo_jsb_physical_constants, ONLY: rhoh2o
 
+    !$claw model-data
     REAL(wp), INTENT(in) :: &
       & dtime,              &
       & steplen,            &
@@ -1392,11 +1412,14 @@ CONTAINS
     REAL(wp), INTENT(out) :: &
       & fract_water,         &
       & fract_snow_soil
+    !$claw end model-data
 
     REAL(wp) ::       &
       & t_srf_old,    &
       & qsat_srf_old, &
       & evapo_pot
+
+    !$claw sca
 
     IF (wsr_max > EPSILON(1._wp)) THEN
       fract_water = MIN(1._wp, w_skin / wsr_max)
@@ -1447,9 +1470,11 @@ CONTAINS
 
     USE mo_hydro_constants, ONLY: k => conductance_k, a => conductance_a, b => conductance_b, c => conductance_c
 
+    !$claw model-data
     REAL(wp), INTENT(in) ::     &
                            lai, &
                            par
+    !$claw end model-data
 
     ! Local variables
     !
@@ -1458,6 +1483,8 @@ CONTAINS
     REAL(wp) :: d, zpar
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_canopy_cond_unstressed_simple'
+
+    !$claw sca
 
 !!$    CALL message(TRIM(routine), 'Computing unstressed canopy conductance')
 
@@ -1511,13 +1538,17 @@ CONTAINS
     ! TODO
     ! TBD: Maybe change later so that it uses geographically dependend critical values (like wilting point)
 
+    !$claw model-data
     REAL(wp), INTENT(in) :: w_soil            !< Soil water content
     REAL(wp), INTENT(in) :: w_soil_max        !< Soil water content at field capacity
+    !$claw end model-data
     REAL(wp), INTENT(in) :: w_soil_crit_fract !< Fraction of max. soil water content at critical point
     REAL(wp), INTENT(in) :: w_soil_wilt_fract !< Fraction of max. soil water content at wilting point
     REAL(wp)             :: water_stress_factor
 
     REAL(wp) :: w_crit, w_wilt                       !< Soil water content at critical/wilting point
+
+    !$claw sca
 
     w_crit = w_soil_max * w_soil_crit_fract
     w_wilt = w_soil_max * w_soil_wilt_fract
