@@ -1379,11 +1379,11 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(HYDRO_,    trans)               ! out
       END IF
 
-      !$claw expand parallel
+!      !$claw expand parallel
       q_air(:) = q_acoef(:) * qsat_star(:) + q_bcoef(:) ! New moisture at lowest atmospheric level by back-substitution
 
       heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen)  ! Transfer coefficient
-
+      
       ! Compute effective air moisture and surface saturation humidity
       q_air_eff(:) = q_effective( SPREAD(0._wp, NCOPIES=nc, DIM=1), q_air(:), &
                               & SPREAD(1._wp, NCOPIES=nc, DIM=1), SPREAD(0._wp, NCOPIES=nc, DIM=1))
@@ -1392,7 +1392,7 @@ CONTAINS
       evapotrans_lnd(:)          = heat_tcoef(:) * (q_air_eff(:) - qsat_srf_eff(:)) ! Evapotranspiration
       evapotrans(:) = evapotrans_lnd(:)
       evapopot(:)           = heat_tcoef(:) * (q_air    (:) - qsat_star   (:)) ! Potential evaporation
-      !$claw end expand
+!      !$claw end expand
       IF (tile%contains_vegetation) THEN
         !$claw expand parallel
         trans(:)              = fact_qsat_trans_srf(:) * evapopot(:)             ! Transpiration
