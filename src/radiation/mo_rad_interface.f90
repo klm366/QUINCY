@@ -276,6 +276,7 @@ CONTAINS
       rad_srf_net(:) = (1._wp - fract_lice(:)) * rad_net_lwtr(:) + fract_lice(:) * rad_net_lice(:)
       sw_srf_net (:) = (1._wp - fract_lice(:)) * sw_net_lwtr(:)  + fract_lice(:) * sw_net_lice(:)
       lw_srf_net (:) = (1._wp - fract_lice(:)) * lw_net_lwtr(:)  + fract_lice(:) * lw_net_lice(:)
+      !$claw end expand
 
       !$claw acc end data
 
