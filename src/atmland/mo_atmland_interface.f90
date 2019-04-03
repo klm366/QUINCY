@@ -19,6 +19,8 @@ MODULE mo_atmland_interface
   USE mo_kind,            ONLY: wp
 
   USE mo_jsb_control,        ONLY: jsbach_runs_standalone
+  USE mo_jsb_model_class,    ONLY: t_jsb_model
+  USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_lct_class,      ONLY: LAKE_TYPE
   !USE mo_jsb_config_class,   ONLY: t_jsb_config
@@ -26,6 +28,7 @@ MODULE mo_atmland_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
 
   dsl4jsb_Use_processes A2L_, SEB_, TURB_, HYDRO_, RAD_, CARBON_
+  dsl4jsb_Use_config(SEB_)
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(TURB_)
@@ -156,7 +159,7 @@ CONTAINS
     & rough_h_srf, rough_m_srf, q_snocpymlt,                                         &
     & alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif,                            &
     & CO2_flux,                                                                      &
-    & t_lwtr, t_lice, qsat_lwtr, qsat_lice,                                          &
+    & t_lwtr, t_lice, qsat_lwtr, qsat_lice, s_lwtr, s_lice,                          &
     & evapo_wtr, latent_hflx_wtr, sensible_hflx_wtr,                                 &
     & evapo_ice, latent_hflx_ice, sensible_hflx_ice,                                 &
     & ice_fract_lake,                                                                &
@@ -170,7 +173,7 @@ CONTAINS
       & fact_q_air(:), fact_qsat_srf(:), evapopot(:),                                &
       & evapotrans(:), latent_hflx(:), sensible_hflx(:), grnd_hflx(:), grnd_hcap(:), &
       & rough_h_srf(:), rough_m_srf(:), q_snocpymlt(:),                              &
-      & t_lwtr(:), t_lice(:), qsat_lwtr(:), qsat_lice(:),                            &
+      & t_lwtr(:), t_lice(:), qsat_lwtr(:), qsat_lice(:), s_lwtr(:), s_lice(:),      &
       & evapo_wtr(:), latent_hflx_wtr(:), sensible_hflx_wtr(:),                      &
       & evapo_ice(:), latent_hflx_ice(:), sensible_hflx_ice(:),                      &
       & ice_fract_lake(:),                                                           &
@@ -179,11 +182,14 @@ CONTAINS
       & alb_vis_dir(:), alb_nir_dir(:), alb_vis_dif(:), alb_nir_dif(:),              &
       & CO2_flux(:)
 
+    dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(TURB_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(CARBON_)
+
+    TYPE(t_jsb_model), POINTER :: model
 
     INTEGER ::  iblk, ics, ice, i
     REAL(wp) :: fact_lake(options%nc), fact_land(options%nc)
@@ -204,6 +210,9 @@ CONTAINS
 
     IF (ice-ics+1 /= SIZE(t_srf,1)) CALL finish(TRIM(routine), 'Wrong dimensions')
 
+    model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(TURB_)
     dsl4jsb_Get_memory(HYDRO_)
@@ -267,18 +276,31 @@ CONTAINS
       END IF
 
       IF (PRESENT(t_lwtr))            t_lwtr(:)            =                dsl4jsb_var2D_onChunk(SEB_,   t_lwtr)
-      IF (PRESENT(t_lice))            t_lice(:)            =                dsl4jsb_var2D_onChunk(SEB_,   t_lice)
       IF (PRESENT(qsat_lwtr))         qsat_lwtr(:)         =                dsl4jsb_var2D_onChunk(SEB_,   qsat_lwtr)
-      IF (PRESENT(qsat_lice))         qsat_lice(:)         =                dsl4jsb_var2D_onChunk(SEB_,   qsat_lice)
+      IF (PRESENT(s_lwtr))            s_lwtr(:)            =                dsl4jsb_var2D_onChunk(SEB_,   s_wtr)
       IF (PRESENT(evapo_wtr))         evapo_wtr(:)         = fact_lake(:) * dsl4jsb_var2D_onChunk(HYDRO_, evapo_wtr)
       IF (PRESENT(latent_hflx_wtr))   latent_hflx_wtr(:)   = fact_lake(:) * dsl4jsb_var2D_onChunk(SEB_,   latent_hflx_wtr)
       IF (PRESENT(sensible_hflx_wtr)) sensible_hflx_wtr(:) = fact_lake(:) * dsl4jsb_var2D_onChunk(SEB_,   sensible_hflx_wtr)
-      IF (PRESENT(evapo_ice))         evapo_ice(:)         = fact_lake(:) * dsl4jsb_var2D_onChunk(HYDRO_, evapo_ice)
-      IF (PRESENT(latent_hflx_ice))   latent_hflx_ice(:)   = fact_lake(:) * dsl4jsb_var2D_onChunk(SEB_,   latent_hflx_ice)
-      IF (PRESENT(sensible_hflx_ice)) sensible_hflx_ice(:) = fact_lake(:) * dsl4jsb_var2D_onChunk(SEB_,   sensible_hflx_ice)
-      IF (PRESENT(ice_fract_lake))    ice_fract_lake(:)    =                dsl4jsb_var2D_onChunk(SEB_,   fract_lice)
       IF (PRESENT(albedo_lwtr))       albedo_lwtr(:)       =                dsl4jsb_var2D_onChunk(RAD_,   albedo_lwtr)
-      IF (PRESENT(albedo_lice))       albedo_lice(:)       =                dsl4jsb_var2D_onChunk(RAD_,   albedo_lice)
+      IF (PRESENT(ice_fract_lake))    ice_fract_lake(:)    =                dsl4jsb_var2D_onChunk(SEB_,   fract_lice)
+
+      IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+        IF (PRESENT(t_lice))            t_lice(:)            =                dsl4jsb_var2D_onChunk(SEB_,   t_lice)
+        IF (PRESENT(qsat_lice))         qsat_lice(:)         =                dsl4jsb_var2D_onChunk(SEB_,   qsat_lice)
+        IF (PRESENT(s_lice))            s_lice(:)            =                dsl4jsb_var2D_onChunk(SEB_,   s_ice)
+        IF (PRESENT(evapo_ice))         evapo_ice(:)         = fact_lake(:) * dsl4jsb_var2D_onChunk(HYDRO_, evapo_ice)
+        IF (PRESENT(latent_hflx_ice))   latent_hflx_ice(:)   = fact_lake(:) * dsl4jsb_var2D_onChunk(SEB_,   latent_hflx_ice)
+        IF (PRESENT(sensible_hflx_ice)) sensible_hflx_ice(:) = fact_lake(:) * dsl4jsb_var2D_onChunk(SEB_,   sensible_hflx_ice)
+        IF (PRESENT(albedo_lice))       albedo_lice(:)       =                dsl4jsb_var2D_onChunk(RAD_,   albedo_lice)
+      ELSE
+        IF (PRESENT(t_lice))            t_lice(:)            =                273.15_wp
+        IF (PRESENT(qsat_lice))         qsat_lice(:)         =                0.0075_wp
+        IF (PRESENT(s_lice))            s_lice(:)            =                2.9E5_wp
+        IF (PRESENT(evapo_ice))         evapo_ice(:)         =                0._wp
+        IF (PRESENT(latent_hflx_ice))   latent_hflx_ice(:)   =                0._wp
+        IF (PRESENT(sensible_hflx_ice)) sensible_hflx_ice(:) =                0._wp
+        IF (PRESENT(albedo_lice))       albedo_lice(:)       =                0._wp
+      END IF
 
     ELSE
 
