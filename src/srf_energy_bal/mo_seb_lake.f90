@@ -144,6 +144,7 @@ CONTAINS
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
+    nc    = options%nc
     dtime = options%dtime
     steplen = options%steplen
 
@@ -722,7 +723,7 @@ CONTAINS
     REAL(wp) :: steplen, alpha
     LOGICAL  :: use_tmx
 
-    !TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_fluxes_lake'
 

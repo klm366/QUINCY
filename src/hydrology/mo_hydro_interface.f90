@@ -41,7 +41,7 @@ MODULE mo_hydro_interface
   dsl4jsb_Use_processes SEB_, SSE_, TURB_, PHENO_, A2L_, HYDRO_
 
   ! Use of process configurations
-  !dsl4jsb_Use_config(SEB_)
+  dsl4jsb_Use_config(SEB_)
   dsl4jsb_Use_config(SSE_)
   dsl4jsb_Use_config(HYDRO_)
 
@@ -1929,7 +1929,7 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc, ic
     REAL(wp) :: steplen, alpha
 
-    !TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_evaporation'
 
@@ -1944,7 +1944,7 @@ CONTAINS
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    !model => Get_model(tile%owner_model_id)
+    model => Get_model(tile%owner_model_id)
 
     ! Get reference to variables for current block
     !

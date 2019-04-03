@@ -34,7 +34,7 @@ MODULE mo_seb_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   dsl4jsb_Use_processes SEB_, HYDRO_, SSE_
-  !dsl4jsb_Use_config(SEB_)
+  dsl4jsb_Use_config(SEB_)
   dsl4jsb_Use_config(SSE_)
 
   dsl4jsb_Use_memory(SEB_)
@@ -561,6 +561,7 @@ CONTAINS
   !! @param[in]     options Additional run-time parameters.
   SUBROUTINE aggregate_surface_fluxes(tile, options)
 
+    TYPE(t_jsb_model), POINTER :: model
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 

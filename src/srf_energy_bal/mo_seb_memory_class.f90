@@ -18,11 +18,16 @@ MODULE mo_seb_memory_class
   USE mo_kind, ONLY: wp
   USE mo_util, ONLY: One_of
 
+  USE mo_jsb_model_class,        ONLY: t_jsb_model
+  USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_lct_class,          ONLY: LAND_TYPE, LAKE_TYPE, GLACIER_TYPE
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real1d, t_jsb_var_real2d
   USE mo_jsb_physical_constants, ONLY: tmelt
   USE mo_jsb_control,            ONLY: jsbach_runs_standalone
+
+  dsl4jsb_Use_processes SEB_
+  dsl4jsb_Use_config(SEB_)
 
   dsl4jsb_Use_processes SEB_
   dsl4jsb_Use_config(SEB_)
