@@ -407,6 +407,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_hydrology'
 
+
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
@@ -450,6 +451,8 @@ CONTAINS
 
       RETURN
     END IF
+
+    !$claw acc data pcreate(w_skin_max, w_skin_canopy_max, trans_tmp)
 
     dsl4jsb_Get_memory(SSE_)
     IF (tile%contains_vegetation) THEN
@@ -608,6 +611,8 @@ CONTAINS
       !$claw expand parallel
       w_snow(:) = w_snow_soil(:) + w_snow_can(:)
     END IF
+
+    !$claw acc end data
 
   END SUBROUTINE update_surface_hydrology
   !
@@ -1574,6 +1579,7 @@ CONTAINS
     ! Set pointers to process configs and memory
     dsl4jsb_Get_config(HYDRO_)
 
+    !$claw acc enter data pcreate(w_skin_max, w_skin_canopy_max)
     w_skin_max = dsl4jsb_Config(HYDRO_)%w_skin_max
 
     dsl4jsb_Get_memory(HYDRO_)
@@ -1682,6 +1688,7 @@ CONTAINS
       fract_snow(:)  = fract_snow_soil(:)
    END IF
 
+   !$claw acc exit data delete(w_skin_canopy_max, w_skin_max)
   END SUBROUTINE update_snow_and_skin_fraction
 
   ! -------------------------------------------------------------------------------------------------------
