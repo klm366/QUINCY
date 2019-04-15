@@ -390,6 +390,7 @@ CONTAINS
     new%lbounds(:) = 0._wp
     new%ubounds(:) = 0._wp
     new%dz     (:) = 0._wp
+    !$acc enter data pcreate(new%levels, new%lbounds, new%ubounds, new%dz)
 
     IF (PRESENT(levels))  new%levels (:) = levels(:)
     IF (PRESENT(lbounds)) new%lbounds(:) = lbounds(:)
@@ -488,6 +489,10 @@ CONTAINS
 
     CALL message(TRIM(routine), 'starting destruction of JSBACH vgrid instance.')
 
+    !$acc exit data delete(self%levels) if(allocated(self%levels))  
+    !$acc exit data delete(self%lbounds) if(allocated(self%lbounds))
+    !$acc exit data delete(self%ubounds) if(allocated(self%ubounds))
+    !$acc exit data delete(self%dz) if(allocated(self%dz))     
     IF (ALLOCATED(self%levels))  DEALLOCATE(self%levels)
     IF (ALLOCATED(self%lbounds)) DEALLOCATE(self%lbounds)
     IF (ALLOCATED(self%ubounds)) DEALLOCATE(self%ubounds)
