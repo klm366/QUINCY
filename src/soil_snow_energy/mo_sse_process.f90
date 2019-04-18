@@ -48,9 +48,13 @@ CONTAINS
     & ) RESULT(vol_heat_cap)
 
     USE mo_sse_constants, ONLY: vol_hcap_water, vol_hcap_ice, vol_hcap_org, vol_hcap_air, vol_hcap_bedrock
-
+    
+    !$claw model-data
     REAL(wp), INTENT(in) :: porosity, vol_heat_cap_soil_dry_mineral, fract_organic, fract_water, fract_ice, layer_depth, dz
     REAL(wp)             :: vol_heat_cap
+    !$claw end model-data
+
+    !$claw sca
 
     IF (layer_depth > 0._wp) THEN  ! above bedrock
       vol_heat_cap = (1._wp - porosity)                                            & ! vol. fraction of solid (mineral + organic)
@@ -95,9 +99,11 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: dens_soil
     USE mo_sse_constants,          ONLY: hcond_org, hcond_dry_org, hcond_water, hcond_ice, hcond_bedrock
     USE mo_hydro_constants,        ONLY: vol_porosity_org
-
+   
+    !$claw model-data
     REAL(wp), INTENT(in) :: heat_cond_soil_mineral, water, ice, porosity, vol_field_cap, fract_organic, layer_depth, dz
     REAL(wp)             :: heat_cond
+    !$claw end model-data
 
     REAL(wp) ::           &
       & dens_bulk,        & !< Bulk density of dry soil (including pores)
@@ -111,6 +117,8 @@ CONTAINS
       & hcond_sat,        & !< Thermal conductivity for saturated soil
       & fract_water,      & !< Effective fractional water volume for saturated soil computation
       & fract_ice           !< Effective fractional ice volume for saturated soil computation
+
+    !$claw sca
 
     IF (layer_depth > 0._wp) THEN  ! above bedrock
       ! Thermal conductivity of dry soil
