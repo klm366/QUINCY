@@ -478,8 +478,13 @@ CONTAINS
     INTEGER, PARAMETER :: ilog = 0 ! Switch for debugging output
     INTEGER :: jllog = 0
 
-    !$claw acc routine seq
-
+    !$acc data &
+    !$acc present(soil_depth_l, root_depth_l, fract_org_l, hyd_cond_sat_l, matrix_pot_l, bclapp_l) & 
+    !$acc present(pore_size_index_l, vol_porosity_l, vol_field_cap_l, vol_p_wilt_l)                &
+    !$acc present(ws_max_mineral, oro_stddev, t_soil, water_to_soil, evapotrans_soil, trans)       &
+    !$acc present(ws, w_soil_overflow, ws_l, soil_ice_l, runoff, drainage,  wsat_l, field_cap_l, p_wilt_l) &
+    ! temporary
+    !$acc pcreate(evapo_soil_in_m, trans_in_m, infilt, ws_max, ws_min_drain, ws_incl_ice, ice_rootzone)
     sigma_0   = oro_var_min
     sigma_max = oro_var_max * 64._wp / REAL(nlat, wp) ! @todo: site level
 
@@ -610,6 +615,7 @@ CONTAINS
       runoff(i)   = runoff  (i) * rhoh2o / delta_time
       drainage(i) = drainage(i) * rhoh2o / delta_time
     END DO
+    !$acc end data
   END SUBROUTINE calc_soil_hydrology
 
   !------------------------------------------------------------------------------------------------
