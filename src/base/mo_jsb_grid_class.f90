@@ -470,7 +470,10 @@ CONTAINS
         END IF
       END IF
     END IF
-
+    !$acc update device(new%levels) if(present(levels))
+    !$acc update device(new%lbounds) if(present(lbounds))
+    !$acc update device(new%ubounds) if(present(ubounds))
+    !$acc update device(new%dz) if(present(dz))
   END FUNCTION new_vgrid
 
   SUBROUTINE delete_vgrid(self)
@@ -489,10 +492,10 @@ CONTAINS
 
     CALL message(TRIM(routine), 'starting destruction of JSBACH vgrid instance.')
 
-    !$acc exit data delete(self%levels) if(allocated(self%levels))  
-    !$acc exit data delete(self%lbounds) if(allocated(self%lbounds))
-    !$acc exit data delete(self%ubounds) if(allocated(self%ubounds))
-    !$acc exit data delete(self%dz) if(allocated(self%dz))     
+    !$acc exit data delete(self%levels) if (allocated(self%levels))
+    !$acc exit data delete(self%lbounds) if (allocated(self%lbounds))
+    !$acc exit data delete(self%ubounds) if (allocated(self%ubounds))
+    !$acc exit data delete(self%dz) if (allocated(self%dz))
     IF (ALLOCATED(self%levels))  DEALLOCATE(self%levels)
     IF (ALLOCATED(self%lbounds)) DEALLOCATE(self%lbounds)
     IF (ALLOCATED(self%ubounds)) DEALLOCATE(self%ubounds)
