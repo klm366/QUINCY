@@ -1401,6 +1401,7 @@ CONTAINS
     END IF
 
     ! Snow fraction on soil
+    !$claw sca forward
     fract_snow_soil = Get_snow_fract_noforest(w_snow_soil, oro_stddev) ! snow on soil below forest
     fract_snow_soil = MERGE(fract_snow_can, fract_snow_soil, &
                                fract_snow_soil < EPSILON(1._wp) .AND. fract_snow_can > EPSILON(1._wp))
@@ -1478,6 +1479,7 @@ CONTAINS
     END IF
 
     ! Snow fraction on soil
+    !$claw sca forward
     fract_snow_soil = Get_snow_fract_noforest(w_snow_soil, oro_stddev) ! snow on soil below forest
 
     ! Potential evaporation using old values of air and surface humidity
@@ -1510,6 +1512,8 @@ CONTAINS
     REAL(wp), INTENT(in) :: &
       & snow,   &
       & orodev
+
+    !$claw sca routine
 
     Get_snow_fract_noforest = wsn2fract_const * TANH(snow * 100._wp) &
                                & * SQRT(snow * 1000._wp / (snow * 1000._wp + wsn2fract_eps + wsn2fract_sigfac * orodev))
