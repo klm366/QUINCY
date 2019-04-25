@@ -240,7 +240,7 @@ CONTAINS
 
 
 
-
+    !$claw expand parallel
     ! Save old surface temperature and saturation spec. humidity
     t_unfilt_old(:) = t_unfilt(:)
     t_old   (:) = t(:)
@@ -254,6 +254,7 @@ CONTAINS
 
     ! The last term of the rhs of the energy balance equation is the conductive heat flux from the ground below
     forc_hflx(:) = grnd_hflx(:)
+    !$claw end expand
 
     IF (is_time_experiment_start()) THEN            ! Start of experiment
       lstart = .TRUE.
@@ -264,6 +265,7 @@ CONTAINS
     ! Update surface temperature
     !
     ! 1. Compute sensitivity of surface saturation specific humidity to temperature
+    !$claw expand parallel
     dQdT(:) = ( qsat(t(:) + 0.001_wp, press_srf(:)) - qsat_srf_old(:) ) * 1000._wp
 
     ! 2. Old dry static energy
@@ -274,9 +276,11 @@ CONTAINS
     t2s_conv(:) = s_old(:) / t_old(:)  !
 
     heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen)
+    !$claw end expand
 
     ! Compute new surface temperature and saturation humidity
     IF (lstart) THEN
+      !$claw expand parallel
       s_star(:) = s_old(:)
     ELSE
       CALL surface_temp_implicit( nc, steplen, &
@@ -542,6 +546,7 @@ CONTAINS
 
     ! Compute new dry static energy at lowest atmospheric level by back-substitution
     !
+    !$claw expand parallel
     s_air(:) = t_acoef(:) * s_star   (:) + t_bcoef(:)
 
     ! Transfer coefficient
@@ -558,6 +563,7 @@ CONTAINS
     ! These two variables are not aggregated together with lake and are the fluxes given back to the atmosphere
     sensible_hflx_lnd(:) = sensible_hflx(:)
     latent_hflx_lnd  (:) = latent_hflx  (:)
+    !$claw end expand
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 

@@ -508,14 +508,14 @@ CONTAINS
 
     ! Maximum capacity of skin reservoir (soil + canopy)
     IF (tile%is_vegetation .OR. tile%is_land) THEN
-      !$claw expand parallel
+!      !$claw expand parallel
       w_skin_canopy_max(:) = dsl4jsb_Config(HYDRO_)%w_skin_max * lai(:) * fract_fpc_max(:)
     ELSE
       !$claw expand parallel
       w_skin_canopy_max(:) = 0._wp
     END IF
     IF (tile%contains_soil) THEN
-      !$claw expand parallel
+ !     !$claw expand parallel
       w_skin_max(:) = dsl4jsb_Config(HYDRO_)%w_skin_max + w_skin_canopy_max(:)
     ELSE
       !$claw expand parallel
@@ -1053,7 +1053,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond)    ! OUT
 
     ! Compute (max) canopy (stomatal) conductance with no water stress
-    !$claw sca forward parallel update
+    !$claw expand parallel
     canopy_cond(:) = get_canopy_conductance( lai(:), swpar_srf_down(:) )
 
   END SUBROUTINE update_canopy_cond_unstressed
@@ -1193,7 +1193,7 @@ CONTAINS
 
     ! Calculate water stress factor
     ! @todo: maybe use the distributed permanent wilting point/field cap from above and change get_water_stress_factor function
-    !$claw sca forward parallel update
+    !$claw expand parallel
     water_stress(:) = &
       & get_water_stress_factor(w_soil_column(:), max_moist(:), &
           &                     dsl4jsb_Config(HYDRO_)%w_soil_crit_fract, dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract)
@@ -1201,6 +1201,7 @@ CONTAINS
     ! Compute (actual) canopy (stomatal) conductance under water stress.
     ! R: diese canopy_cond (stressed) entspricht der canopy_conductance_limited die in JSBACH3 in update_soil gerechnet wurde. Sie
     !    wird auf jeden Fall benötigt unabhängig davon ob der Assimi-Prozess an ist (wird dann als Input benötigt) oder nicht.
+    !$claw expand parallel
     canopy_cond_limited(:) = get_canopy_conductance(canopy_cond(:),            & ! in, unstressed canopy conductance
                                                     water_stress(:),           & ! in, water stress factor
                                                     q_air(:) >  qsat(t(:),press_srf(:)) & ! in, atmosphere saturated?
@@ -1384,7 +1385,7 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(HYDRO_,    trans)               ! out
       END IF
 
-!      !$claw expand parallel
+      !$claw expand parallel
       q_air(:) = q_acoef(:) * qsat_star(:) + q_bcoef(:) ! New moisture at lowest atmospheric level by back-substitution
 
       heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen)  ! Transfer coefficient
@@ -1397,7 +1398,7 @@ CONTAINS
       evapotrans_lnd(:)          = heat_tcoef(:) * (q_air_eff(:) - qsat_srf_eff(:)) ! Evapotranspiration
       evapotrans(:) = evapotrans_lnd(:)
       evapopot(:)           = heat_tcoef(:) * (q_air    (:) - qsat_star   (:)) ! Potential evaporation
-!      !$claw end expand
+      !$claw end expand
       IF (tile%contains_vegetation) THEN
         !$claw expand parallel
         trans(:)              = fact_qsat_trans_srf(:) * evapopot(:)             ! Transpiration

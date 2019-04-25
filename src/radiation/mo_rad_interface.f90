@@ -746,7 +746,7 @@ CONTAINS
     ! Go
 
     ! Set day-or-night-switch
-    !$claw sca forward update parallel
+    !$claw expand parallel
     l_day(:) = Has_minimal_radiation(swvis_srf_down(:), swnir_srf_down(:))
 
     ! Calculate snow albedos. Used later only for bare and vegetation tile types
@@ -865,7 +865,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(RAD_,      alb_nir_soil)          ! inout
 
       IF (use_alb_veg_simple) THEN
-        !$claw sca forward update parallel
+        !$claw expand parallel
         alb_vis_lnd(:) = get_surface_albedo_simple( &
           & t_unfilt(:),                            &
           & fract_forest(:),                        &
@@ -874,8 +874,8 @@ CONTAINS
           & lai(:),                                 &
           & alb_background(:)                       & ! Note, alb_background <-- bc_land_phy.nc
                         )
-        !$claw expand parallel
         alb_nir_lnd(:) = alb_vis_lnd(:)
+        !$claw end expand
       ELSE
 
         ! Get bare soil albedo

@@ -221,7 +221,8 @@ CONTAINS
       & fract_snow_lice,                                &
       & min_ice_depth,                                  &
       & dtime)
-
+    
+    !$claw expand parallel
     qsat_lwtr(:)  = qsat(t_lwtr(:), press_srf(:))
     qsat_lice(:) = qsat(t_lice(:), press_srf(:))
     s_wtr(:)     = surface_dry_static_energy(t_lwtr(:), qsat_lwtr(:))
@@ -231,6 +232,7 @@ CONTAINS
     t_unfilt(:) = t(:)
     heat_cap(:) = (1._wp - fract_lice(:)) * hcap_wtr(:) + fract_lice(:) * hcap_ice(:)
     w_snow(:) = fract_lice(:) * w_snow_lice(:)
+    !$claw end expand
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
@@ -527,6 +529,7 @@ CONTAINS
 
     ! Compute new dry static energy at lowest atmospheric level by back-substitution
     !
+    !$claw expand parallel
     s_air(:) = t_acoef_wtr(:) * s_wtr   (:) + t_bcoef_wtr(:)
 
     ! Transfer coefficient
@@ -563,7 +566,7 @@ CONTAINS
 
     sensible_hflx(:) = (1._wp - fract_lice(:)) * sensible_hflx_wtr(:) + fract_lice(:) * sensible_hflx_ice(:)
     latent_hflx  (:) = (1._wp - fract_lice(:)) * latent_hflx_wtr  (:) + fract_lice(:) * latent_hflx_ice  (:)
-
+    !$claw end expand 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_surface_fluxes_lake

@@ -1524,11 +1524,9 @@ CONTAINS
 
     USE mo_hydro_constants, ONLY: k => conductance_k, a => conductance_a, b => conductance_b, c => conductance_c
 
-    !$claw model-data
     REAL(wp), INTENT(in) ::     &
                            lai, &
                            par
-    !$claw end model-data
 
     ! Local variables
     !
@@ -1538,7 +1536,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_canopy_cond_unstressed_simple'
 
-    !$claw sca
+    !$claw sca routine
 
 !!$    CALL message(TRIM(routine), 'Computing unstressed canopy conductance')
 
@@ -1566,6 +1564,8 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_canopy_cond_stressed_simple'
 
 !!$    CALL message(TRIM(routine), 'Computing unstressed canopy conductance')
+
+    !$claw sca routine
 
     IF (air_is_saturated) THEN
       conductance = EPSILON(1._wp)
@@ -1602,7 +1602,7 @@ CONTAINS
 
     REAL(wp) :: w_crit, w_wilt                       !< Soil water content at critical/wilting point
 
-    !$claw sca
+    !$claw sca routine
 
     w_crit = w_soil_max * w_soil_crit_fract
     w_wilt = w_soil_max * w_soil_wilt_fract
