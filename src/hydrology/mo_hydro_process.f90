@@ -438,20 +438,20 @@ CONTAINS
       & delta_time
     LOGICAL, INTENT(in) :: ltpe_closed
     LOGICAL, INTENT(in) :: ltpe_open
-    REAL(wp), INTENT(in), DIMENSION(nidx, nsoil) :: &
+    REAL(wp), INTENT(in), DIMENSION(:,:) :: &
       & soil_depth_l, root_depth_l, fract_org_l,    &
       & hyd_cond_sat_l, matrix_pot_l, bclapp_l, pore_size_index_l, vol_porosity_l, vol_field_cap_l, vol_p_wilt_l
-    REAL(wp), INTENT(in), DIMENSION(nidx) ::               &
+    REAL(wp), INTENT(in), DIMENSION(:) ::               &
       !& sfract_srf, wfract_srf, 
       & ws_max_mineral, oro_stddev, t_soil, water_to_soil, &
       & evapotrans_soil, trans
-    REAL(wp), INTENT(inout), DIMENSION(nidx) :: &
+    REAL(wp), INTENT(inout), DIMENSION(:) :: &
       & ws, w_soil_overflow
-    REAL(wp), INTENT(inout), DIMENSION(nidx, nsoil) :: &
+    REAL(wp), INTENT(inout), DIMENSION(:,:) :: &
       & ws_l, soil_ice_l
-    REAL(wp), INTENT(out), DIMENSION(nidx) :: &
+    REAL(wp), INTENT(out), DIMENSION(:) :: &
       & runoff, drainage
-    REAL(wp), INTENT(out), DIMENSION(nidx, nsoil) :: &
+    REAL(wp), INTENT(out), DIMENSION(:,:) :: &
       & wsat_l, field_cap_l, p_wilt_l
 
     ! Local variables
