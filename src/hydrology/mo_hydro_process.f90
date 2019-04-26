@@ -488,9 +488,11 @@ CONTAINS
     sigma_0   = oro_var_min
     sigma_max = oro_var_max * 64._wp / REAL(nlat, wp) ! @todo: site level
 
-
+    !$claw acc parallel
+    !$claw acc loop gang 
     DO i = 1, nidx
       trans_in_m(i) = trans(i)  * delta_time / rhoh2o
+      !$claw acc loop vector
       DO jl = 1, nsoil
         wsat_l     (i,jl) = MAX(vol_porosity_l (i,jl) * soil_depth_l(i,jl) - soil_ice_l(i,jl), 0._wp)
         field_cap_l(i,jl) = MAX(vol_field_cap_l(i,jl) * soil_depth_l(i,jl) - soil_ice_l(i,jl), 0._wp)
@@ -501,16 +503,25 @@ CONTAINS
         END IF
       END DO
     END DO
+    !$claw acc end parallel    
+
+    !$claw expand parallel
     ws_max(:) = get_water_in_root_zone(vol_field_cap_l(:,:) * soil_depth_l(:,:), soil_depth_l(:,:), root_depth_l(:,:))
+
+    !$claw acc paralel loop gang vector
     DO i = 1, nidx
       IF (SUM(fract_org_l(i,:)) <= EPSILON(1._wp)) THEN
         ws_max(i) = ws_max_mineral(i)
       END IF
     END DO
 
+    !$claw expand parallel
     ice_rootzone(:) = get_water_in_root_zone(soil_ice_l(:,:), soil_depth_l(:,:), root_depth_l(:,:))
     ws          (:) = get_water_in_root_zone(ws_l      (:,:), soil_depth_l(:,:), root_depth_l(:,:))
+    !$claw end expand
 
+    !$claw acc parallel
+    !$claw acc loop gang
     DO i = 1, nidx
       !--------------------------------------------------------------------------------------------
       !  water budgets
@@ -534,7 +545,7 @@ CONTAINS
       ! sigma_z: standard deviation of topographic height
       ! sigma_0: minimum value (100 m); below b = 0.01
       ! sigma_max: resolution dependent maximum
-  
+      !$claw acc loop vector 
       DO jl = 1, nidx
         
         ws_min_drain(jl) = zwdmin * ws_max(jl)            ! minimum amount of soil water for drainage
@@ -581,6 +592,7 @@ CONTAINS
       ! initilalization of drainage
       drainage(i) = 0._wp
     END DO
+    !$claw acc end parallel
 
     ! Changes by evaporation fluxes
     CALL digest_evapotrans(nidx, nsoil, root_depth_l, soil_depth_l, &
@@ -588,6 +600,7 @@ CONTAINS
 
     ! For numerical reasons, half of the water is infiltrated
     ! before soilhyd and the other half of it afterwards
+    !$claw acc parallel loop gang vector
     DO i = 1, nidx
       infilt(i) = infilt(i) / 2._wp
     END DO
@@ -609,8 +622,10 @@ CONTAINS
 
     ! recalculate soil moisture from the soil moisture of the individual levels
     ! Note: ws only includes the soil moisture within the root zone
+    !$claw expand parallel
     ws(:) = get_water_in_root_zone(ws_l(:,:), soil_depth_l(:,:), root_depth_l(:,:))
-
+     
+    !$claw acc parallel loop gang vector
     DO i = 1, nidx
       runoff(i)   = runoff  (i) * rhoh2o / delta_time
       drainage(i) = drainage(i) * rhoh2o / delta_time
@@ -682,21 +697,29 @@ CONTAINS
     REAL(wp) :: zmvg_l(nidx,nsoil)            ! exponent M in Van Genuchten scheme = pore_size_index / (pore_size_index + 1)
 
 
-    !$claw acc routine seq
+    !$claw acc data & 
+    !$claw acc present(dsoil, wsat_l, field_cap_l, hyd_cond_sat_l, vol_porosity_l, bclapp_l, matrix_pot_l, pore_size_index_l, p_wilt_l, dz, ws_l, drainage, w_soil_overflow, soil_ice) &
+    !$claw acc pcreate(diffus_l, ws_min_drain, ws_rel, ws_crit, drain_crit, ws_tmp, drain_l, soil_above, soil_below, zda, zdb, zdc, ztri, diffusivity, zkredu, zdiflog, remoist, zmvg_l)
+    
 
     ! define reduction factor of hydraulic conductivity with depth (for percolation)
     IF (iredu == 1) THEN
+      !$claw acc parallel
       zkredu(1) = (1._wp + EXP(-credu*dz(1)) )/2._wp
+      !$claw acc loop gang vector
       DO i = 2, nsoil
         zkredu(i) = (EXP(-credu*SUM(dz(1:i-1))) + EXP(-credu*SUM(dz(1:i)))) / 2._wp
       END DO
+      !$claw acc end parallel
     ELSE
+      !$claw acc parallel loop gang vector
       DO i = 1, nsoil
         ! conductivity is constant with depth
         zkredu(i) = 1._wp
       END DO
     END IF
 
+    !$claw acc parallel loop gang vector collapse(2)
     DO j = 1, nidx 
       DO i = 1, nsoil
         zmvg_l(j,i)           = pore_size_index_l(j,i) / (pore_size_index_l(j,i)+1._wp)
@@ -722,8 +745,11 @@ CONTAINS
     !  theta_s: soil moisture at stauration  -> field_cap
     !  theta_r: residual soil moisture       -> p_wilt
 
+    !$claw acc parallel
+    !$claw acc loop gang
     DO j = 1, nidx
       percolation(j,nsoil) = 0._wp
+      !$claw acc loop vector
       DO i = 1, nsoil-1
         IF (field_cap_l(j,i) > zfcmin .AND. field_cap_l(j,i) > p_wilt_l(j,i)) THEN
           ws_rel(j) = MAX(ws_l(j,i) - p_wilt_l(j,i), 0._wp) / (field_cap_l(j,i) - p_wilt_l(j,i))
@@ -738,7 +764,7 @@ CONTAINS
 
 
       ! drainage of the lowest layer above bedrock replaces the percolation calculated above
- 
+      !$claw acc loop vector
       DO i = 1, nsoil
 
         ! is there a layer above or a layer with soil below?
@@ -816,6 +842,7 @@ CONTAINS
       ! numerical recipes/Richtmyer & -Morton diffusion
 
       ! calculating the diffusivity at mid depth of layer i
+      !$claw acc loop vector
       DO i = 1, nsoil
 
         ws_rel(j) = 0._wp
@@ -832,6 +859,7 @@ CONTAINS
       END DO
 
       ! calculating the diffusivity at the bottom of layer i
+      !$claw acc loop vector
       DO i = 1, nsoil-1
         IF (diffus_l(j,i+1) == 0._wp .OR. diffus_l(j,i) == 0._wp) THEN
           diffusivity(j,i) = 0._wp
@@ -852,6 +880,7 @@ CONTAINS
       END IF
 
       ! middle layers
+      !$claw acc loop vector
       DO i = nsoil-1, 2, -1
         IF (dsoil(j,i) > 0._wp) THEN
           IF (dsoil(j,i+1) > 0._wp) THEN
@@ -898,6 +927,7 @@ CONTAINS
       END IF
 
       ! decomposition and forward substitution
+      !$claw acc loop vector
       DO i = 2, nsoil
         IF (dsoil(j,i) > 0._wp) THEN
           ztri(j,i) = -zda(j,i-1) / zdc(j,i-1)
@@ -907,6 +937,7 @@ CONTAINS
       END DO
 
       ! backsubstitution
+      !$claw acc loop vector
       DO i = nsoil-1, 1, -1
         IF (dsoil(j,i+1) > 0._wp) THEN
           ws_l(j,i) = ws_l(j,i) - ztri(j,i+1) * ws_l(j,i+1) * (dsoil(j,i)/dsoil(j,i+1))
@@ -915,6 +946,7 @@ CONTAINS
 
       ! temporary storage for diagnostic printing
       IF (ilog == 1 .OR. ilog == 3) THEN
+        !$claw acc loop vector
         DO i = 1, nsoil
           zdiflog(i) = wslog(i) - ws_l(jllog,i)
         END DO
@@ -924,6 +956,7 @@ CONTAINS
       ! treatment of layer overflow due to diffusion
       IF (.NOT. ltpe_closed) THEN
         ! limit soil moisture to field capacity and add overflow to drainage
+        !$claw acc loop vector
         DO i=1,nsoil
           IF (dsoil(j,i) > 0._wp .AND. ws_l(j,i) > field_cap_l(j,i)) THEN
             drainage(j) = drainage(j) + ws_l(j,i)-field_cap_l(j,i)
@@ -932,6 +965,7 @@ CONTAINS
         END DO
       ELSE
         ! Modification for TPE (closed)
+        !$claw acc loop vector
         DO i=1,nsoil
           IF (dsoil(j,i) > 0._wp) THEN
             IF (ws_l(j,i) > field_cap_l(j,i)) THEN
@@ -950,6 +984,7 @@ CONTAINS
 
       ! Modification for TPE (open)
       IF (ltpe_open) THEN
+        !$claw acc loop vector
         DO i = 1, nsoil
           !IF (i == nsoil - 2 .OR. i == nsoil - 1 .OR. i == nsoil) THEN   ! special adaptation of Shirisha
           IF (i == nsoil-1 .OR. i == nsoil) THEN
@@ -977,6 +1012,7 @@ CONTAINS
       ! ---------------------
 
       ! percolation per time step must be smaller than the usable soil layer water content
+      !$claw acc loop vector
       DO i = 1, nsoil
         ws_min_drain(j) = 0._wp
         IF (dsoil(j,i) > 0._wp .AND. percolation(j,i) > 0._wp) THEN
@@ -996,6 +1032,7 @@ CONTAINS
 
       ! Percolation is added to downward layer or, if lowest layer or bedrock is reached, to
       ! drainage (not TPE closed) resp. overflow pool (TPE closed)
+      !$claw acc loop vector
       DO i = 1, nsoil-1
         IF (dsoil(j,i+1) > 0._wp) THEN
           ws_l(j,i+1) = ws_l(j,i+1) + percolation(j,i)
@@ -1014,6 +1051,7 @@ CONTAINS
 
       ! Percolation overflow is not allowed from layers below the surface layer.
       ! Instead it is assumed that water piles upwards from saturated layers.
+      !$claw acc loop vector
       DO i = nsoil, 2, -1
         IF (dsoil(j,i) > 0._wp .AND. ws_l(j,i) > field_cap_l(j,i)) THEN
           ! soil moisture above field capacity:
@@ -1046,6 +1084,9 @@ CONTAINS
         END IF
       END IF
     END DO
+    !$claw acc end parallel
+    !$claw acc end data
+
 #ifndef _OPENACC
       !----------------------------------------------------------------------------------------------
       ! debugging output for grid cell jllog
@@ -1279,10 +1320,13 @@ CONTAINS
     !  update soil moisture according to infiltration
     !------------------------------------------------------------------------------------------------
 
-    !$claw acc routine seq
-
+    !$claw acc data &
+    !$claw acc present(field_cap_l, infilt, ws_l, drainage, w_soil_overflow)
+    !$claw acc parallel
+    !$claw acc loop gang 
     DO i = 1, nidx
       excess(i) = infilt(i)                   ! amount of water for infiltration at the surface [m]
+      !$claw acc loop vector
       DO  jk = 1, nsoil
         ws_l(i,jk) = ws_l(i,jk) + excess(i)
         IF (.NOT. ltpe_closed) THEN
@@ -1306,6 +1350,8 @@ CONTAINS
         drainage(i) = drainage(i) + excess(i)
       END IF
     END DO
+    !$claw acc end parallel
+    !$claw acc end data
 
     ! make sure there is no negative soil moisture
 !TODO deal with that
