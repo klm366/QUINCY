@@ -65,8 +65,8 @@ MODULE mo_quincy_set_parameters
     REAL(wp)           :: discr_ps_phi
     REAL(wp)           :: ka
     REAL(wp)           :: kn
-    REAL(wp)           :: soa_min_temp
-    REAL(wp)           :: soa_max_temp
+    REAL(wp)           :: soa_b
+    REAL(wp)           :: soa_t_s
     ! PHENOLOGY_CTL
     REAL(wp)           :: gdd_t_air_threshold
     ! RADIATION_CTL
@@ -543,8 +543,8 @@ CONTAINS
     REAL(wp)           :: discr_ps_phi
     REAL(wp)           :: ka
     REAL(wp)           :: kn
-    REAL(wp)           :: soa_min_temp
-    REAL(wp)           :: soa_max_temp
+    REAL(wp)           :: soa_b
+    REAL(wp)           :: soa_t_s
     ! PHENOLOGY_CTL
     REAL(wp)           :: gdd_t_air_threshold
     ! RADIATION_CTL
@@ -917,8 +917,8 @@ CONTAINS
         discr_ps_phi              , &
         ka                        , &
         kn                        , &
-        soa_min_temp              , &
-        soa_max_temp              
+        soa_b                     , &
+        soa_t_s              
 
     NAMELIST /phenology_ctl/      &
         gdd_t_air_threshold
@@ -1302,8 +1302,8 @@ CONTAINS
     discr_ps_phi                = missval
     ka                          = missval
     kn                          = missval
-    soa_min_temp                = missval
-    soa_max_temp                = missval
+    soa_b                       = missval
+    soa_t_s                     = missval
     ! PHENOLOGY_CTL
     gdd_t_air_threshold         = missval
     ! RADIATION_CTL
@@ -1712,8 +1712,8 @@ CONTAINS
     this%discr_ps_phi                = discr_ps_phi    
     this%ka                          = ka              
     this%kn                          = kn              
-    this%soa_min_temp                = soa_min_temp    
-    this%soa_max_temp                = soa_max_temp    
+    this%soa_b                       = soa_b    
+    this%soa_t_s                     = soa_t_s    
     ! PHENOLOGY_CTL
     this%gdd_t_air_threshold         = gdd_t_air_threshold
     ! RADIATION_CTL
@@ -2305,15 +2305,15 @@ CONTAINS
                                     "kn", proportional_parameter_changes, &
                                     kn)
                                     
-    CALL Set_quincy_parameter_value(this%soa_min_temp, &
-                                    this%soa_min_temp, &
-                                    "soa_min_temp", proportional_parameter_changes, &
-                                    soa_min_temp)
+    CALL Set_quincy_parameter_value(this%soa_b, &
+                                    this%soa_b, &
+                                    "soa_b", proportional_parameter_changes, &
+                                    soa_b)
                                     
-    CALL Set_quincy_parameter_value(this%soa_max_temp, &
-                                    this%soa_max_temp, &
-                                    "soa_max_temp", proportional_parameter_changes, &
-                                    soa_max_temp)
+    CALL Set_quincy_parameter_value(this%soa_t_s, &
+                                    this%soa_t_s, &
+                                    "soa_t_s", proportional_parameter_changes, &
+                                    soa_t_s)
 
     ! PHENOLOGY_CTL
     CALL Set_quincy_parameter_value(this%gdd_t_air_threshold + Tzero, &

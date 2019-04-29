@@ -85,9 +85,9 @@ MODULE mo_assimi_constants
       ka             ,   &  !< Extinction coefficient for PAR on chlorophyll
       kn                    !< extinction coefficient to describe decline of N within the canopy
 
-  REAL(wp), SAVE :: &     
-      soa_min_temp  ,   &  !< min Temperature [°C] used to calculate spring recovery period for coniferous forests
-      soa_max_temp         !< max Temperature [°C] used to calculate spring recovery period for coniferous forests
+  REAL(wp), SAVE :: &
+      soa_b         ,   &  !< parameter in state of acclimation calculation used for evergreen forests
+      soa_t_s              !< parameter in state of acclimation calculation used  for evergreen forests
 
   ! some useful numbers for easy identification of photosynthetic pathways and growth forms
   ! need to be parameters (i.e. constant across model runtime)
@@ -159,8 +159,8 @@ CONTAINS
       ka            = 0.005_wp 
       kn            = 0.11_wp
 
-      soa_min_temp  = -3.0_wp
-      soa_max_temp  = 17.0_wp
+      soa_b         = -0.5_wp
+      soa_t_s       = 5.0_wp
 
   END SUBROUTINE init_assimi_constants
 

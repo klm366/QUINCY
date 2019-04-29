@@ -307,13 +307,16 @@ CONTAINS
         !> N specific rate of electron transport rate
         jmax_cl(:,icanopy) = jmax2n * fn_et_cl(:,icanopy) * & 
                              exp(-(((t_air(:) - Tzero - t_jmax_opt_mavg(:))/lctlib%t_jmax_omega)**2)) * &
-                             beta_soil_ps(:) * beta_sinklim_ps(:) * & 
+                             beta_soil_ps(:) * beta_sinklim_ps(:) * beta_soa(:) *& 
                              leaf_nitrogen_cl(:,icanopy)
+
 
         !> N specific rate of Rubisco turnover
         vcmax_cl(:,icanopy) = vcmax2n * fn_rub_cl(:,icanopy) * exp(E0v - E1v/(r_gas * t_air(:))) * &
-                              beta_soil_ps(:) * beta_sinklim_ps(:) * & 
+                              beta_soil_ps(:) * beta_sinklim_ps(:) * beta_soa(:) *& 
                               leaf_nitrogen_cl(:,icanopy) 
+
+
   ENDDO
 
   ! get mean canopy CO2 concentration in the leaf
@@ -352,7 +355,7 @@ CONTAINS
                                             ppfd_shaded_cl      , &
                                             fleaf_sunlit_cl     , &
                                             beta_air            , &
-					                                  beta_soa            , &
+                                            beta_soa            , &
                                             beta_soil_ps        , &
                                             beta_sinklim_ps     , &
                                             beta_soil_gs        , &
@@ -730,7 +733,7 @@ CONTAINS
   PURE ELEMENTAL FUNCTION calc_beta_soa(soa_tsoa_mavg,phenology_type) RESULT(beta_soa)
 
     USE mo_pheno_constants,            ONLY: ievergreen
-    USE mo_assimi_constants,           ONLY: soa_min_temp, soa_max_temp
+    USE mo_assimi_constants,           ONLY: soa_b, soa_t_s
 
     IMPLICIT NONE
     ! ---------------------------
@@ -744,7 +747,7 @@ CONTAINS
 
 
     IF (phenology_type == ievergreen) THEN
-      beta_soa = (soa_tsoa_mavg - soa_min_temp) / (-1.0_wp * soa_min_temp + soa_max_temp)
+      beta_soa = 1.0_wp / (1.0_wp + exp(soa_b * ( soa_tsoa_mavg-soa_t_s ) ))
       beta_soa = MIN ( MAX(beta_soa,0.01_wp), 1.0_wp)
     ELSE
       beta_soa = 1.0_wp
