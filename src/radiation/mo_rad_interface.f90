@@ -166,6 +166,7 @@ CONTAINS
   SUBROUTINE update_surface_radiation(tile, options)
 
     USE mo_rad_process, ONLY: calc_radiation_surface_net
+    !$ser verbatim USE mo_ser_common, ONLY: init
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options), INTENT(in) :: options
@@ -206,6 +207,8 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_radiation'
 
+    !$ser verbatim call init('jsb_ser')
+
     ! Get local variables from options argument
     iblk = options%iblk
     ics  = options%ics
@@ -238,8 +241,15 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(RAD_, albedo_lwtr)  ! in
       dsl4jsb_Get_var2D_onChunk(RAD_, rad_net_lwtr) ! out
 
-      !$claw acc data pcreate(sw_net_lwtr, lw_net_lwtr, sw_net_lice, lw_net_lice)
+      !$ser mode write
+      !$ser savepoint jsb_RAD_update_surface_radiation_1_in
+      !$ser data data swvis_srf_down=swvis_srf_down(:) swnir_srf_down=swnir_srf_down(:)
+      !$ser data albedo_lwtr=albedo_lwtr(:) 
+      !$ser data lw_srf_down=lw_srf_down(:)
+      !$ser data t_lwtr=t_lwtr(:)
 
+      !$claw acc data pcreate(sw_net_lwtr, lw_net_lwtr, sw_net_lice, lw_net_lice)
+      
       !$claw sca forward update
       CALL calc_radiation_surface_net( &
         & swvis_srf_down(:),           & ! in
@@ -252,12 +262,20 @@ CONTAINS
         & sw_net=sw_net_lwtr(:),       & ! out
         & lw_net=lw_net_lwtr(:)        & ! out
         & )
+      
+      !$ser savepoint jsb_RAD_update_surface_radiation_1_out
+      !$ser data rad_net_lwtr=rad_net_lwtr(:) sw_net_lwtr=sw_net_lwtr(:) 
+      !$ser data lw_net_lwtr=lw_net_lwtr(:)
 
       ! Ice on lake
       dsl4jsb_Get_var2D_onChunk(SEB_, t_lice)       ! in
       dsl4jsb_Get_var2D_onChunk(SEB_, fract_lice)   ! in
       dsl4jsb_Get_var2D_onChunk(RAD_, albedo_lice)  ! in
       dsl4jsb_Get_var2D_onChunk(RAD_, rad_net_lice) ! out
+
+      !$ser savepoint jsb_RAD_update_surface_radiation_2_in
+      !$ser data swvis_srf_down=swvis_srf_down(:) swnir_srf_down=swnir_srf_down(:)
+      !$ser data albedo_lice=albedo_lice(:) lw_srf_down=lw_srf_down(:) t_lice=t_lice(:)
 
       !$claw sca forward update
       CALL calc_radiation_surface_net( &
@@ -272,6 +290,10 @@ CONTAINS
         & lw_net=lw_net_lice(:)        & ! out
         & )
       
+      !$ser savepoint jsb_RAD_update_surface_radiation_2_out
+      !$ser data rad_net_lice=rad_net_lice(:) sw_net_lice=sw_net_lice(:) 
+      !$ser data lw_net_lice=lw_net_lice(:)
+
       !$claw expand parallel
       rad_srf_net(:) = (1._wp - fract_lice(:)) * rad_net_lwtr(:) + fract_lice(:) * rad_net_lice(:)
       sw_srf_net (:) = (1._wp - fract_lice(:)) * sw_net_lwtr(:)  + fract_lice(:) * sw_net_lice(:)
