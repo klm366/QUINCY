@@ -166,7 +166,7 @@ CONTAINS
   SUBROUTINE update_surface_radiation(tile, options)
 
     USE mo_rad_process, ONLY: calc_radiation_surface_net
-    !$ser verbatim USE mo_ser_common, ONLY: init
+    !$claw verbatim USE mo_ser_common, ONLY: init
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options), INTENT(in) :: options
@@ -207,7 +207,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_radiation'
 
-    !$ser verbatim call init('jsb_ser')
+    !$claw verbatim call init('jsb_ser')
 
     ! Get local variables from options argument
     iblk = options%iblk
