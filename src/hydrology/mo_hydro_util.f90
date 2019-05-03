@@ -40,7 +40,7 @@ CONTAINS
       & bottom_m1  , &  !< Cumulative depth of soil down to previous layer
       & root_depth      !< Total depth of root_zone
 
-    INTEGER :: n, i, j
+    INTEGER :: n, i
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_water_in_root_zone_d'
 
