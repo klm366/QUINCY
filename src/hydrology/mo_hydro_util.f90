@@ -47,27 +47,26 @@ CONTAINS
     !$claw acc routine seq
 
     n  = SIZE(dz)       ! Number of soil layers
-
     bottom    = SUM(dz (:))
     root_depth = SUM(dz_root(:))
-      IF (root_depth > bottom + EPSILON(1._wp)) THEN
-        !$claw remove
-        CALL finish(TRIM(routine), 'Root zone larger than soil depth.')
-        !$claw end remove
-      ELSE
-        bottom    = 0._wp
-        bottom_m1 = 0._wp
-        ws_root   = 0._wp
-        DO i=1,n
-          bottom    = bottom + dz(i)
-          IF (root_depth >= bottom) THEN                ! Root zone extends to below current layer
-            ws_root = ws_root + ws(i)
-          ELSE IF (root_depth > bottom_m1) THEN         ! Root zone above current layer but below previous layer, i.e.
-            ws_root = ws_root + ws(i) * (root_depth - bottom_m1) / dz(i) ! Root z. partially extends into current layer
-          END IF
-          bottom_m1 = bottom_m1 + dz(i)
-        END DO
-      END IF
+    IF (root_depth > bottom + EPSILON(1._wp)) THEN
+      !$claw remove
+      CALL finish(TRIM(routine), 'Root zone larger than soil depth.')
+      !$claw end remove
+    ELSE
+      bottom    = 0._wp
+      bottom_m1 = 0._wp
+      ws_root   = 0._wp
+      DO i=1,n
+        bottom    = bottom + dz(i)
+        IF (root_depth >= bottom) THEN                ! Root zone extends to below current layer
+          ws_root = ws_root + ws(i)
+        ELSE IF (root_depth > bottom_m1) THEN         ! Root zone above current layer but below previous layer, i.e.
+          ws_root = ws_root + ws(i) * (root_depth - bottom_m1) / dz(i) ! Root z. partially extends into current layer
+        END IF
+        bottom_m1 = bottom_m1 + dz(i)
+      END DO
+    END IF
 
   END FUNCTION get_water_in_root_zone_1d
 
