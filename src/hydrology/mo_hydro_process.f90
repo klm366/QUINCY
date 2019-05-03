@@ -508,7 +508,7 @@ CONTAINS
     !$claw expand parallel
     ws_max(:) = get_water_in_root_zone(vol_field_cap_l(:,:) * soil_depth_l(:,:), soil_depth_l(:,:), root_depth_l(:,:))
 
-    !$claw acc paralel loop gang vector
+    !$claw acc parallel loop gang vector
     DO i = 1, nidx
       IF (SUM(fract_org_l(i,:)) <= EPSILON(1._wp)) THEN
         ws_max(i) = ws_max_mineral(i)
