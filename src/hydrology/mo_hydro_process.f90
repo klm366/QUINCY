@@ -946,7 +946,7 @@ CONTAINS
 
       ! temporary storage for diagnostic printing
       IF (ilog == 1 .OR. ilog == 3) THEN
-        !$claw acc loop vector
+        !TODO CLAW !$claw acc loop vector
         DO i = 1, nsoil
           zdiflog(i) = wslog(i) - ws_l(jllog,i)
         END DO
