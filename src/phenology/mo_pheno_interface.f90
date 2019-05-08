@@ -263,6 +263,7 @@ CONTAINS
     ! Local variables
     LOGICAL :: l_newday
     REAL(wp) :: timestep  ! Timestep in days
+    INTEGER :: i
 
     CHARACTER(len=*), PARAMETER  :: routine = modname//':update_phenology_logrop'
 
@@ -381,6 +382,7 @@ CONTAINS
     !    calc_pseudo_soil_temp habe ich auch dem SEB Prozess zugeordnet.
 
     ! R: wird jedes mal (d.h. für jedes Tile) aufgerufen:
+    !$claw sca forward update savepoint=ser_jsb_PEHNO_calc_previous_day_npp_1 tile_name=tile%name
     CALL calc_previous_day_NPP(          &
       & l_newday,                        & ! Input
       & NPP_pot_rate_ca(:),              & ! Input
@@ -396,8 +398,10 @@ CONTAINS
       ! from the available biomass via allometric relationships
       ! The maxLai gets updated at the beginning of each year with the biomass at the maximum green pool
       IF(is_newyear()) THEN
+        !$claw expand parallel update savepoint=ser_jsb_PEHNO_update_phenology_logrop_expand_1 tile_name=tile%name
         veg_fract_correction_old(:) = veg_fract_correction(:)
 
+        !$claw sca forward update savepoint=ser_jsb_PEHNO_cderive_maxLai_according_to_allometric_relationships_1 tile_name=tile%name
         CALL derive_maxLai_according_to_allometric_relationships( &
           & dsl4jsb_Lctlib_param(alpha_nr_ind),                   & ! in
           & dsl4jsb_Lctlib_param(beta_nr_ind),                    & ! in
@@ -419,13 +423,15 @@ CONTAINS
 
         CALL rescale_carbon_upon_reference_area_change(tile, options, veg_fract_correction_old, veg_fract_correction)
 
-        dummy_flux = 0._wp
+        !$claw expand parallel update
+        dummy_flux(:) = 0._wp
         CALL check_carbon_conservation(tile, options, old_c_state_sum(:), &
           & dummy_flux(:), cconservation_allom(:))
       END IF
 
       ! carbon dynamics are only calculated on a day by day basis, thus update only required once a day
       IF(is_newday()) THEN
+        !$claw sca forward update savepoint=ser_jsb_PHENO_track_max_green_pool_1 tile_name=tile%name
         CALL track_max_green_pool(      &
           & c_green(:),                 & ! in
           & c_reserve(:),               & ! in
@@ -471,19 +477,25 @@ CONTAINS
     ! END IF
 
     IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
+       !$claw expand update savepoint=ser_jsb_PEHNO_update_phenology_logrop_expand_2 tile_name=tile%name
        LaiMax_corrected(:) = dsl4jsb_var2D_onChunk(PHENO_, maxLAI_allom )
     ELSE
      ! R: Rename MaxLAI in lctlib to LAI_max in JS3 comes from theLand%Vegetation%LAI_max,
      ! which is for each vegetated tile taken from MaxLAI in the lct library.
+       !$claw expand update savepoint=ser_jsb_PEHNO_update_phenology_logrop_expand_3 tile_name=tile%name
        LaiMax_corrected(:) = dsl4jsb_Lctlib_param(MaxLAI)
     END IF
 
     ! R: wird jedes mal (d.h. für jedes Tile) aufgerufen, wobei automatisch der Tile spezifische Wert aus dem lctlib genommen wird:
     ! Secure minimum Max-LAI
-    WHERE (LaiMax_corrected(:) < PhenoParam%all%LAI_negligible)
-       LaiMax_corrected(:) = PhenoParam%all%LAI_negligible
-       lai(:) = PhenoParam%all%LAI_negligible - EPSILON(1.0_wp)
-    END WHERE
+
+    !$claw acc parallel loop gang vector
+    DO i = 1, SIZE(LaiMax_corrected)
+      IF (LaiMax_corrected(i) < PhenoParam%all%LAI_negligible) THEN
+        LaiMax_corrected(i) = PhenoParam%all%LAI_negligible
+        lai(i) = PhenoParam%all%LAI_negligible - EPSILON(1.0_wp)
+      END IF
+    END DO
 
     ! R: The following PHENO_ process shall be calculated only on the lowest child tiles (=ON_LEAFS).
     !    This is set within the FUNCTION Construct_tile and makes further statements here unnecessary.
@@ -492,6 +504,7 @@ CONTAINS
     IF (dsl4jsb_Lctlib_param(PhenologyType) ==  2) THEN
 
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... summergreen ...')
+      !$claw sca forward update savepoint=ser_jsb_PHENO_calc_summergreen_phenology_1 tile_name=tile%name
       CALL calc_summergreen_phenology(    &
          & day_of_year,                   & ! in
          & l_newday,                      & ! in
@@ -512,6 +525,7 @@ CONTAINS
     ! none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grasses: 4; crops: 5
     IF (dsl4jsb_Lctlib_param(PhenologyType) ==  1) THEN
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... evergreen ...')
+       !$claw sca forward update savepoint=ser_jsb_PHENO_calc_evergreen_phenology_1 tile_name=tile%name
        CALL calc_evergreen_phenology(     &
          & day_of_year,                   & ! in
          & l_newday,                      & ! in
@@ -531,6 +545,7 @@ CONTAINS
     IF (dsl4jsb_Lctlib_param(PhenologyType) ==  5) THEN
        ! R: (Abweichungen zu JSBACH3 nur beim LAI und dort erst nach 9. Stelle nach Komma.)
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... crop ...')
+      !$claw sca forward update savepoint=ser_jsb_PHENO_calc_crop_phenology_1 tile_name=tile%name
       CALL calc_crop_phenology(            &
         & day_of_year,                     & ! in
         & l_newday,                        & ! in
@@ -541,8 +556,8 @@ CONTAINS
         & LaiMax_corrected(:),             & ! in
         & previous_day_NPP_pot_rate_ca(:), & ! in
         & w_soil_filling(:),               & ! in
-        & previous_day_temp_min,           & ! in
-        & previous_day_temp_max,           & ! in
+        & previous_day_temp_min(:),        & ! in
+        & previous_day_temp_max(:),        & ! in
         & dsl4jsb_Lctlib_param(specificLeafArea_C), & ! in
         & heat_sum_CRP(:),                 & ! inout
         & heat_sum_winter,                 & ! inout
@@ -555,6 +570,7 @@ CONTAINS
     IF (dsl4jsb_Lctlib_param(PhenologyType) ==  3) THEN
 
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... raingreen ...')
+      !$claw sca forward update savepoint=ser_jsb_PHENO_calc_raingreen_phenology_1 tile_name=tile%name
       CALL calc_raingreen_phenology(        &
         & timestep,                         & ! in
         & w_soil_filling(:),                & ! in
@@ -567,6 +583,7 @@ CONTAINS
     ! none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grasses: 4; crops: 5
     IF (dsl4jsb_Lctlib_param(PhenologyType) ==  4) THEN
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... grasses ...')
+       !$claw sca forward update savepoint=ser_jsb_PHENO_calc_grass_phenology_1 tile_name=tile%name
        CALL calc_grass_phenology(           &
          & t_air_in_Celcius(:),             & ! in
          & timestep,                        & ! in
@@ -750,13 +767,16 @@ CONTAINS
     IF (        TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology' &
          & .OR. tile%lcts(1)%lib_id == 0) THEN         ! General vegetation tile, no specific PFT
       IF (model%config%l_compat401) THEN
+        !$claw expand
         fract_fpc(:) = get_foliage_projected_cover(fract_fpc_max(:), lai(:), 1._wp)
       ELSE
         fract_fpc_mon(1:,0:) => dsl4jsb_memory(PHENO_)%fract_fpc_mon (ics:ice, iblk, :) ! in
         CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
         fract_fpc(:) = REAL(wgt1,wp) * fract_fpc_mon(:,nmw1) + REAL(wgt2,wp) * fract_fpc_mon(:,nmw2)
       END IF
-    ELSE                                               ! We have PFTs and %scheme /= climatology
+    ELSE        
+      ! We have PFTs and %scheme /= climatology
+      !$claw expand
       fract_fpc(:) = get_foliage_projected_cover(fract_fpc_max(:), lai(:), dsl4jsb_Lctlib_param(ClumpinessFactor))
     END IF
 

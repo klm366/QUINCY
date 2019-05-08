@@ -182,6 +182,11 @@ MODULE mo_pheno_constants
 
   TYPE(t_PhenologyParameters), SAVE :: PhenoParam
   PUBLIC :: PhenoParam
+  !$acc declare create(PhenoParam%all, PhenoParam%EG_SG, PhenoParam%EG, & 
+  !$acc PhenoParam%SG, PhenoParam%RG, PhenoParam%GRS, PhenoParam%CRP,   & 
+  !$acc PhenoParam%FR, PhenoParam)
+
+  
 
 
 #endif
