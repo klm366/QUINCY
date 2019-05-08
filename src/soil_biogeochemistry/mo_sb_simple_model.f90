@@ -78,8 +78,7 @@ CONTAINS
     TYPE(t_jsb_vgrid),      POINTER       :: vgrid_soil_sb        !< Vertical grid
     INTEGER                               :: nsoil_sb             !< number of soil layers as used/defined by the SB_ process
     INTEGER                               :: isoil                !< loop over nsoil_sb
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) ::      &
-                                             apparent_mic_cn      , &
+    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: apparent_mic_cn      , &
                                              root_fraction_act_sl , &      ! and below needed for switch between 0d and 1d
                                              fine_root_carbon_sl, &
                                              rtm_decomposition_act, &
@@ -107,8 +106,8 @@ CONTAINS
                                              km_dip_biochem_po4_act, &
                                              qmax_po4_mineral_act, &
                                              anaerobic_volume_fraction_act
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: arr_hlp1
-    INTEGER                                          :: iblk, ics, ice, nc
+    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: arr_hlp1
+    INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_simple_model'
     ! ---------------------------
     ! 0.3 Memory allocation
@@ -272,6 +271,36 @@ CONTAINS
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(A2L_)
+    ! Allocate local allocatable variables (deallocate below at the end of this routine)
+    ALLOCATE(apparent_mic_cn(nc, nsoil_sb))
+    ALLOCATE(root_fraction_act_sl(nc, nsoil_sb))
+    ALLOCATE(fine_root_carbon_sl(nc, nsoil_sb))
+    ALLOCATE(rtm_decomposition_act(nc, nsoil_sb))
+    ALLOCATE(rmm_decomposition_act(nc, nsoil_sb))
+    ALLOCATE(rtm_plant_uptake_act(nc, nsoil_sb))
+    ALLOCATE(rmm_plant_uptake_act(nc, nsoil_sb))
+    ALLOCATE(km1_uptake_nh4_act(nc, nsoil_sb))
+    ALLOCATE(km2_uptake_nh4_act(nc, nsoil_sb))
+    ALLOCATE(km1_uptake_no3_act(nc, nsoil_sb))
+    ALLOCATE(km2_uptake_no3_act(nc, nsoil_sb))
+    ALLOCATE(km1_uptake_po4_act(nc, nsoil_sb))
+    ALLOCATE(km2_uptake_po4_act(nc, nsoil_sb))
+    ALLOCATE(km_uptake_org_act(nc, nsoil_sb))
+    ALLOCATE(km_denitrification_c_act(nc, nsoil_sb))
+    ALLOCATE(km_denitrification_no3_act(nc, nsoil_sb))
+    ALLOCATE(rtm_nitrification_act(nc, nsoil_sb))
+    ALLOCATE(rtm_denitrification_act(nc, nsoil_sb))
+    ALLOCATE(rmm_nitrification_act(nc, nsoil_sb))
+    ALLOCATE(rtm_gasdiffusion_act(nc, nsoil_sb))
+    ALLOCATE(rmm_gasdiffusion_act(nc, nsoil_sb))
+    ALLOCATE(p_deposition_act(nc, nsoil_sb))
+    ALLOCATE(vmax_weath_mineral_act_sl(nc, nsoil_sb))
+    ALLOCATE(k_adsorpt_po4_act(nc, nsoil_sb))
+    ALLOCATE(k_desorpt_po4_act(nc, nsoil_sb))
+    ALLOCATE(km_dip_biochem_po4_act(nc, nsoil_sb))
+    ALLOCATE(qmax_po4_mineral_act(nc, nsoil_sb))
+    ALLOCATE(anaerobic_volume_fraction_act(nc, nsoil_sb))
+    ALLOCATE(arr_hlp1(nc, nsoil_sb))
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(A2L_,      p_deposition)                ! in
     ! ---------------------------
@@ -910,6 +939,39 @@ CONTAINS
     occlusion_po4(:,:) = occlusion_po4(:,:) / dtime * 1000000._wp
     slow_exchange_po4(:,:) = slow_exchange_po4(:,:) / dtime * 1000000._wp
     biochem_mineralisation_po4(:,:) = biochem_mineralisation_po4(:,:) / dtime * 1000000._wp
+
+
+
+! Deallocate local allocatable variables
+DEALLOCATE(apparent_mic_cn)
+DEALLOCATE(root_fraction_act_sl)
+DEALLOCATE(fine_root_carbon_sl)
+DEALLOCATE(rtm_decomposition_act)
+DEALLOCATE(rmm_decomposition_act)
+DEALLOCATE(rtm_plant_uptake_act)
+DEALLOCATE(rmm_plant_uptake_act)
+DEALLOCATE(km1_uptake_nh4_act)
+DEALLOCATE(km2_uptake_nh4_act)
+DEALLOCATE(km1_uptake_no3_act)
+DEALLOCATE(km2_uptake_no3_act)
+DEALLOCATE(km1_uptake_po4_act)
+DEALLOCATE(km2_uptake_po4_act)
+DEALLOCATE(km_uptake_org_act)
+DEALLOCATE(km_denitrification_c_act)
+DEALLOCATE(km_denitrification_no3_act)
+DEALLOCATE(rtm_nitrification_act)
+DEALLOCATE(rtm_denitrification_act)
+DEALLOCATE(rmm_nitrification_act)
+DEALLOCATE(rtm_gasdiffusion_act)
+DEALLOCATE(rmm_gasdiffusion_act)
+DEALLOCATE(p_deposition_act)
+DEALLOCATE(vmax_weath_mineral_act_sl)
+DEALLOCATE(k_adsorpt_po4_act)
+DEALLOCATE(k_desorpt_po4_act)
+DEALLOCATE(km_dip_biochem_po4_act)
+DEALLOCATE(qmax_po4_mineral_act)
+DEALLOCATE(anaerobic_volume_fraction_act)
+DEALLOCATE(arr_hlp1)
 
 ! Pass back values to process memory
 dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
