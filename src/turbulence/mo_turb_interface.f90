@@ -286,7 +286,7 @@ CONTAINS
       & fact_qsat_srf,        &
       & fact_qsat_trans_srf,  &
       & qsat_star,            &
-      & canopy_cond,          &
+      & canopy_cond_limited,  &
       & pch,                  &
       & wind_air,             &
       & q_air
@@ -363,9 +363,9 @@ CONTAINS
     IF (tile%contains_vegetation) THEN
       dsl4jsb_Get_var2D_onChunk(PHENO_,    fract_fpc)           ! in
       IF (tile%Is_process_active(ASSIMI_)) THEN
-        dsl4jsb_Get_var2D_onChunk(ASSIMI_,   canopy_cond)         ! in
+        dsl4jsb_Get_var2D_onChunk(ASSIMI_,   canopy_cond_limited)         ! in
       ELSE
-        dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond)         ! in
+        dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond_limited)         ! in
       END IF
 
       IF (model%config%l_compat401) THEN
@@ -376,10 +376,10 @@ CONTAINS
       WHERE (mask(:))
         fact_qsat_veg(:) = fract_snow(:) + (1._wp - fract_snow(:)) *   &
           & (fract_water(:) + ( 1._wp - fract_water(:)) /                &
-          & (1._wp + pch(:) * MAX(1._wp, wind_air(:)) / MAX(1.E-20_wp, canopy_cond(:))))
+          & (1._wp + pch(:) * MAX(1._wp, wind_air(:)) / MAX(1.E-20_wp, canopy_cond_limited(:))))
         fact_qsat_trans(:) = (1._wp - fract_snow(:)) * &
           & (1._wp - fract_water(:)) /                  &
-          & (1._wp + pch(:) * MAX(1._wp, wind_air(:)) / MAX(1.E-20_wp, canopy_cond(:)))
+          & (1._wp + pch(:) * MAX(1._wp, wind_air(:)) / MAX(1.E-20_wp, canopy_cond_limited(:)))
       ELSEWHERE
         fact_qsat_veg(:)   = fract_snow(:) + (1._wp - fract_snow(:)) * fract_water(:)
         fact_qsat_trans(:) = 0._wp

@@ -32,7 +32,7 @@ MODULE mo_assimi_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module (Get_assimi_memory and Get_assimi_config)
-  dsl4jsb_Use_processes ASSIMI_, HYDRO_, PHENO_, RAD_, A2L_
+  dsl4jsb_Use_processes ASSIMI_, HYDRO_, PHENO_, RAD_, A2L_, SEB_
 
   ! Use of process configurations (t_assimi_config)
   dsl4jsb_Use_config(ASSIMI_)
@@ -43,6 +43,7 @@ MODULE mo_assimi_interface
   dsl4jsb_Use_memory(HYDRO_)
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(RAD_)
+  dsl4jsb_Use_memory(SEB_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -65,7 +66,6 @@ MODULE mo_assimi_interface
     PROCEDURE Create_task_assimilation_scaling_factors         !< Constructor function for task
   END INTERFACE   tsk_assimilation_scaling_factors
 
-
   !> Type definition for canopy_cond_unstressed task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_canopy_cond_unstressed
   CONTAINS
@@ -78,11 +78,22 @@ MODULE mo_assimi_interface
     PROCEDURE Create_task_canopy_cond_unstressed     !< Constructor function for task
   END INTERFACE tsk_canopy_cond_unstressed
 
+  !> Type definition for canopy_cond_stressed task
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_canopy_cond_stressed
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_canopy_cond_stressed    !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Aggregate => aggregate_canopy_cond_stressed !< Aggregates computed task variables
+  END TYPE tsk_canopy_cond_stressed
+
+  !> Constructor interface for canopy_cond_stressed task
+  INTERFACE tsk_canopy_cond_stressed
+    PROCEDURE Create_task_canopy_cond_stressed     !< Constructor function for task
+  END INTERFACE tsk_canopy_cond_stressed
+
   !> Type definition for assimilation task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_assimilation
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_assimilation    !< Advances task computation for one timestep
-                                                             ! This is the water limited case!
     PROCEDURE, NOPASS :: Aggregate => aggregate_assimilation !< Aggregates computed task variables
   END TYPE tsk_assimilation
 
@@ -129,6 +140,22 @@ CONTAINS
   END FUNCTION Create_task_canopy_cond_unstressed
 
   ! -------------------------------------------------------------------------------------------------------
+  !> Constructor for canopy_cond_stressed task
+  !!
+  !! @param[in]     model_id     Model id
+  !! @return        return_ptr   Instance of process task "canopy_cond_stressed"
+  !!
+  FUNCTION Create_task_canopy_cond_stressed(model_id) RESULT(return_ptr)
+
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_canopy_cond_stressed::return_ptr)
+    CALL return_ptr%Construct(name='canopy_cond_stressed', process_id=ASSIMI_, owner_model_id=model_id)
+
+  END FUNCTION Create_task_canopy_cond_stressed
+
+  ! -------------------------------------------------------------------------------------------------------
   !> Constructor for assimilation task
   !!
   !! @param[in]     model_id     Model id
@@ -157,6 +184,7 @@ CONTAINS
 
     CALL this%Register_task(tsk_assimilation_scaling_factors(model_id))
     CALL this%Register_task(tsk_canopy_cond_unstressed(model_id))
+    CALL this%Register_task(tsk_canopy_cond_stressed(model_id))
     CALL this%Register_task(tsk_assimilation(model_id))
 
   END SUBROUTINE Register_assimi_tasks
@@ -351,7 +379,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: press_srf             ! Surface pressure
     dsl4jsb_Real2D_onChunk :: par_down_mol          ! Downward PAR flux in mol (photons)/(m^2 s)
     dsl4jsb_Real3D_onChunk :: apar_per_lai_cl       ! Input. Absorbed PAR of canopy layer.
-    dsl4jsb_Real2D_onChunk :: canopy_cond           ! Canopy conductance no limitation
+    dsl4jsb_Real2D_onChunk :: canopy_cond_unlimited ! Canopy conductance no limitation
     !dsl4jsb_Real2D_onChunk :: canopy_cond_limited   ! Canopy conductance water limited
 
     dsl4jsb_Real2D_onChunk :: CO2_air_mol           ! CO2 particle mixing ratio [molCO2/molDryAir]
@@ -391,7 +419,7 @@ CONTAINS
 
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   assimi_scaling_fact_cl)  ! in
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   canopy_cond_cl)          ! out
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_,   canopy_cond)             ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_,   canopy_cond_unlimited)   ! out
 
     ncanopy = dsl4jsb_Config(ASSIMI_)%ncanopy
 
@@ -411,7 +439,7 @@ CONTAINS
     END DO
 
     ! Compute unlimited conductance for the whole canopy (all layers) considering the lai
-    canopy_cond(:) = MAX(1.e-20_wp,SUM(canopy_cond_cl(:,:) * lai_cl(:,:),DIM=2))
+    canopy_cond_unlimited(:) = MAX(1.e-20_wp,SUM(canopy_cond_cl(:,:) * lai_cl(:,:),DIM=2))
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -452,12 +480,135 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, canopy_cond_cl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, canopy_cond,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, canopy_cond_cl,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, canopy_cond_unlimited, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_canopy_cond_unstressed
+
+  ! -------------------------------------------------------------------------------------------------------
+  !>
+  !! @brief Implementation of "update" for task "canopy_cond_stressed"
+  !! Task "update_canopy_cond_stressed" calculates canopy conductance under water stress
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  !!
+  SUBROUTINE update_canopy_cond_stressed(tile, options)
+    ! ---------------------------
+    ! Variables
+
+    ! Used variables
+    USE mo_hydro_process, ONLY: get_canopy_conductance
+    USE mo_phy_schemes,   ONLY: qsat
+
+    ! Arguments
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    TYPE(t_jsb_model), POINTER :: model
+
+    dsl4jsb_Def_config(ASSIMI_)
+
+    dsl4jsb_Def_memory(ASSIMI_)
+    dsl4jsb_Def_memory(SEB_)
+    dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory(HYDRO_)
+
+    dsl4jsb_Real2D_onChunk :: canopy_cond_unlimited
+    dsl4jsb_Real2D_onChunk :: canopy_cond_limited
+    dsl4jsb_Real3D_onChunk :: canopy_cond_cl
+    dsl4jsb_Real2D_onChunk :: water_stress
+    dsl4jsb_Real2D_onChunk :: t
+    dsl4jsb_Real2D_onChunk :: q_air
+    dsl4jsb_Real2D_onChunk :: press_srf
+
+    INTEGER :: iblk, ics, ice
+    INTEGER :: icanopy, ncanopy
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_canopy_cond_stressed'
+
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+
+    IF (.NOT. tile%Is_process_active(ASSIMI_) .OR. .NOT. tile%is_vegetation) RETURN
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_config(ASSIMI_)
+
+    ncanopy = dsl4jsb_Config(ASSIMI_)%ncanopy
+
+    ! Get reference to variables for current block
+    !
+    dsl4jsb_Get_memory(ASSIMI_)
+    dsl4jsb_Get_memory(SEB_)
+    dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_memory(HYDRO_)
+
+    dsl4jsb_Get_var2D_onChunk(A2L_,      q_air)               ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,      press_srf)           ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      t)                   ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_stress)        ! in
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_,   canopy_cond_unlimited) ! in
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_,   canopy_cond_limited) ! out
+    dsl4jsb_Get_var3D_onChunk(ASSIMI_,   canopy_cond_cl)       ! inout
+
+    ! Compute (actual) canopy (stomatal) conductance under water stress.
+    canopy_cond_limited(:) = get_canopy_conductance(canopy_cond_unlimited(:),  & ! in, unstressed canopy conductance
+                                                    water_stress(:),           & ! in, water stress factor
+                                                    q_air(:) >  qsat(t(:),press_srf(:)) & ! in, atmosphere saturated?
+                                                    )
+    ! Scale unlimited conductance per leaf area with the ratio of limited to unlimited conductance for
+    ! whole canopy, ie. compute new limited conductance per leaf area and canopy layer
+    DO icanopy=1,ncanopy
+      canopy_cond_cl(:,icanopy) = canopy_cond_cl(:,icanopy) * canopy_cond_limited(:) / canopy_cond_unlimited(:)
+    END DO
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE update_canopy_cond_stressed
+
+  ! -------------------------------------------------------------------------------------------------------
+  !>
+  !! Implementation of "aggregate" for task "canopy_cond_stressed"
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  !!
+  SUBROUTINE aggregate_canopy_cond_stressed(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    dsl4jsb_Def_memory(ASSIMI_)
+
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_canopy_cond_stressed'
+
+    INTEGER :: iblk, ics, ice
+
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    dsl4jsb_Get_memory(ASSIMI_)
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, canopy_cond_limited, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, canopy_cond_cl,      weighted_by_fract)
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE aggregate_canopy_cond_stressed
 
   ! ================================================================================================================================
   !>
@@ -477,7 +628,6 @@ CONTAINS
 
     ! Local variables
     TYPE(t_jsb_model), POINTER :: model
-    REAL(wp)                   :: dtime
     INTEGER                    :: iblk, ics, ice !, nc
     INTEGER                    :: icanopy
 
@@ -485,7 +635,6 @@ CONTAINS
 
     ! Declare pointers to process configuration and memory
     dsl4jsb_Def_memory(ASSIMI_)
-    dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(PHENO_)
@@ -499,9 +648,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: press_srf             ! Surface pressure
     dsl4jsb_Real2D_onChunk :: par_down_mol          ! Downward PAR flux in mol (photons)/(m^2 s)
     dsl4jsb_Real3D_onChunk :: apar_per_lai_cl       ! Input. Absorbed PAR of canopy layer.
-    dsl4jsb_Real2D_onChunk :: canopy_cond           ! Canopy conductance no limitation
-    dsl4jsb_Real2D_onChunk :: canopy_cond_limited   ! Canopy conductance water limited
-    dsl4jsb_Real2D_onChunk :: canopy_cond_over_time ! Canopy conductance integrated over time
 
     dsl4jsb_Real2D_onChunk :: CO2_air_mol           ! CO2 particle mixing ratio [molCO2/molDryAir]
 
@@ -527,7 +673,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: lai_cl                  ! Leaf area index [-]
 
     ! Set local variables from options argument
-    dtime   = options%dtime
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
@@ -540,13 +685,13 @@ CONTAINS
 
     ! Set process config and memories
     model => Get_model(tile%owner_model_id)
+
     dsl4jsb_Get_config(ASSIMI_)
 
     ncanopy = dsl4jsb_Config(ASSIMI_)%ncanopy
 
     ! Get process memories
     dsl4jsb_Get_memory(ASSIMI_)
-    dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(PHENO_)
@@ -558,14 +703,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(RAD_,      par_down_mol)            ! in
     dsl4jsb_Get_var3D_onChunk(RAD_,      apar_per_lai_cl)         ! in
     dsl4jsb_Get_var3D_onChunk(RAD_,      lai_cl)                  ! in
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_,   canopy_cond)             ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond_limited)     ! in
 
     dsl4jsb_Get_var2D_onChunk(PHENO_,    veg_fract_correction)    ! in
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   assimi_scaling_fact_cl)  ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_,    fract_fpc_max )          ! in
-    dsl4jsb_Get_var3D_onChunk(ASSIMI_,   canopy_cond_cl)          ! inout
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_,   canopy_cond_over_time)   ! inout
+    dsl4jsb_Get_var3D_onChunk(ASSIMI_,   canopy_cond_cl)          ! in
 
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   gross_assimilation_ca)   ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   gross_assimilation)      ! out
@@ -588,13 +730,6 @@ CONTAINS
     ! bethy%CO2_conc_leaf_unlimited_acc(kidx0:kidx1,itile) = bethy%CO2_conc_leaf_unlimited_acc(kidx0:kidx1,itile) + &
     !                                                             CO2_conc_leaf_cl * dtime
 
-
-    ! Scale unlimited conductance per leaf area with the ratio of limited to unlimited conductance for
-    ! whole canopy, ie. compute new limited conductance per leaf area and canopy layer
-    DO icanopy=1,ncanopy
-      canopy_cond_cl(:,icanopy) = canopy_cond_cl(:,icanopy) * canopy_cond_limited(:) / canopy_cond(:)
-    END DO
-
     DO icanopy=1,ncanopy
       CALL calc_assimilation_waterlimited(    &
         & dsl4jsb_Lctlib_param(C4Flag),       &
@@ -616,14 +751,6 @@ CONTAINS
         & e_transport_rate_cl(:,icanopy)      & ! out
         & )
     END DO
-
-
-    ! R: siehe mo_bethy.f90 Zeile 879
-    ! Compute unlimited conductance for the whole canopy (all layers) considering the lai
-    canopy_cond(:) = MAX(1.e-20_wp,SUM(canopy_cond_cl(:,:) * lai_cl(:,:),DIM=2))
-
-    ! Integrate over time
-    canopy_cond_over_time(:) = canopy_cond_over_time(:) + canopy_cond(:) * dtime
 
     ! Same for gross_assimilation_ca
     ! R: dies ist eine alternative Schreibweise die verwendet wurde da der PGI Kompiler probleme gemacht hat.
@@ -689,7 +816,6 @@ CONTAINS
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
     dsl4jsb_Aggregate_onChunk(ASSIMI_, canopy_cond_cl,           weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, canopy_cond_over_time,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation_ca,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, dark_respiration_ca,      weighted_by_fract)
