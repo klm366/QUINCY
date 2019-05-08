@@ -1764,7 +1764,7 @@ CONTAINS
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
   !!
-  SUBROUTINE update_canopy_cond_stressed(tile, options)
+  SUBROUTINE update_water_stress(tile, options)
     ! ---------------------------
     ! Variables
 
@@ -1778,22 +1778,17 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    dsl4jsb_Def_memory(SEB_)
-    dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(HYDRO_)
 
     dsl4jsb_Real2D_onChunk :: canopy_cond_unlimited
     dsl4jsb_Real2D_onChunk :: canopy_cond_limited
     dsl4jsb_Real2D_onChunk :: water_stress
-    dsl4jsb_Real2D_onChunk :: t
-    dsl4jsb_Real2D_onChunk :: q_air
-    dsl4jsb_Real2D_onChunk :: press_srf
 
     INTEGER :: iblk, ics, ice, nc, ic
     LOGICAL :: q_air_gt_qsat_tmp
     LOGICAL :: use_tmx
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':update_canopy_cond_stressed'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_stress'
 
     iblk = options%iblk
     ics  = options%ics
@@ -1808,8 +1803,6 @@ CONTAINS
 
     ! Get reference to variables for current block
     !
-    dsl4jsb_Get_memory(SEB_)
-    dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(HYDRO_)
 
     dsl4jsb_Get_var2D_onChunk(A2L_,      q_air)               ! in
