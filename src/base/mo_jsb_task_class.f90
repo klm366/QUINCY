@@ -34,9 +34,6 @@ MODULE mo_jsb_task_class
     INTEGER  :: ics     = -1      !< first point in the chunk the model currently works on
     INTEGER  :: ice     = -1      !< last  point in the chunk the model currently works on
     INTEGER  :: nc      = -1      !< nc = ice - ics + 1
-    INTEGER  :: nsoil_energy = -1 !< number of soil layers for soil energy calculations
-    INTEGER  :: nsoil_water  = -1 !< number of soil layers for soil moisture calculations
-    INTEGER  :: nsoil_sb     = -1 !< currently this value equals nsoil_water
   END TYPE t_jsb_task_options
 
 !!$  TYPE, EXTENDS(t_Message) :: t_jsb_task_msg

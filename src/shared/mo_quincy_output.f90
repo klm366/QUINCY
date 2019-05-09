@@ -567,7 +567,9 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER      :: model
     TYPE(t_lctlib_element), POINTER      :: lctlib                    !< land-cover-type library - parameter across pft's
     TYPE(t_jsb_vgrid),      POINTER      :: vgrid_canopy              !< Vertical grid
+    TYPE(t_jsb_vgrid),      POINTER      :: vgrid_soil_sb             !< Vertical grid
     INTEGER                              :: ncanopy                   !< number of canopy layers
+    INTEGER                              :: nsoil_sb                  !< number of soil layers as used/defined by the SB_ process
     LOGICAL                              :: l_land_plant_canopy_out,& !< write land/plant/canopy output T/F
                                             l_soil_output             !< write soil       output T/F
     INTEGER                              :: lun                       ! logical unit number
@@ -577,11 +579,10 @@ CONTAINS
     REAL(wp)                             :: dC13leaf,dC13fine_root, & ! 
                                             dC13sap_wood,dC13heart_wood,dC13coarse_root, & ! delta C13 in pools 
                                             dC13fruit,dC13labile,dC13reserve,dC13seed_bed
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) & 
-                                         :: dC13soluable_litter,dC13polymeric_litter,dC13woody_litter, & 
+    REAL(wp),ALLOCATABLE, DIMENSION(:,:) :: dC13soluable_litter,dC13polymeric_litter,dC13woody_litter, & 
                                             dC13dom,dC13dom_assoc,dC13fungi,dC13mycorrhiza,dC13microbial, & 
                                             dC13residue,dC13residue_assoc
-    INTEGER                              :: iblk, ics, ice, nc, nsoil_sb
+    INTEGER                              :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':write_output_pool'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -668,7 +669,6 @@ CONTAINS
     ics       = options%ics
     ice       = options%ice
     nc        = options%nc
-    nsoil_sb  = options%nsoil_sb
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
 !    IF (.NOT. tile%Is_process_active(xx_)) RETURN   ! ask for all processes considered here ?
@@ -679,6 +679,8 @@ CONTAINS
     lctlib        => model%lctlib(tile%lcts%lib_id)
     vgrid_canopy  => Get_vgrid('canopy_layer')
     ncanopy       =  vgrid_canopy%n_levels
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+    nsoil_sb      =  vgrid_soil_sb%n_levels
     ! Get process config
     dsl4jsb_Get_config(SB_)
     ! Get process memories
@@ -687,6 +689,17 @@ CONTAINS
     dsl4jsb_Get_memory(PHENO_)                            ! pheno__mem => pheno_memory
     dsl4jsb_Get_memory(SSE_)                              ! sse__mem => sse_memory
     dsl4jsb_Get_memory(SB_)                               ! sb__mem => sb_memory
+    ! Allocate local allocatable variables (deallocate below at the end of this routine)    
+    ALLOCATE(dC13soluable_litter(nc, nsoil_sb))
+    ALLOCATE(dC13polymeric_litter(nc, nsoil_sb))
+    ALLOCATE(dC13woody_litter(nc, nsoil_sb))
+    ALLOCATE(dC13dom(nc, nsoil_sb))
+    ALLOCATE(dC13dom_assoc(nc, nsoil_sb))
+    ALLOCATE(dC13fungi(nc, nsoil_sb))
+    ALLOCATE(dC13mycorrhiza(nc, nsoil_sb))
+    ALLOCATE(dC13microbial(nc, nsoil_sb))
+    ALLOCATE(dC13residue(nc, nsoil_sb))
+    ALLOCATE(dC13residue_assoc(nc, nsoil_sb))
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)
     ! ---------------------------
@@ -1202,6 +1215,18 @@ CONTAINS
       END IF        ! l_land_plant_canopy_out .OR. l_soil_output
     END SELECT      ! land/soil
 
+
+  ! Deallocate local allocatable variables
+  DEALLOCATE(dC13soluable_litter)
+  DEALLOCATE(dC13polymeric_litter)
+  DEALLOCATE(dC13woody_litter)
+  DEALLOCATE(dC13dom)
+  DEALLOCATE(dC13dom_assoc)
+  DEALLOCATE(dC13fungi)
+  DEALLOCATE(dC13mycorrhiza)
+  DEALLOCATE(dC13microbial)
+  DEALLOCATE(dC13residue)
+  DEALLOCATE(dC13residue_assoc)
 
 ! Pass back values to process memory
 #define Passback_veg_pool

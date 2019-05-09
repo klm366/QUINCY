@@ -102,7 +102,7 @@ CONTAINS
   !! 
   !! and init of: forcing, SB_ & VEG_ pools, tiles, time, fluxnet diagnostics
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE quincy_init(model_id, iblk, nproma, ics, ice, nc, l_forcing, nsoil_sb)
+  SUBROUTINE quincy_init(model_id, iblk, nproma, ics, ice, nc, l_forcing)
 
     ! base
     USE mo_jsb_model_class,       ONLY: t_jsb_model
@@ -136,7 +136,6 @@ CONTAINS
     INTEGER ,INTENT(in)                       :: iblk, nproma         !< block number, number of points per chunk   *slmtmp
     INTEGER ,INTENT(in)                       :: ics, ice, nc         !< first & last & number of points in the chunk the model currently works on  *slmtmp
     LOGICAL ,INTENT(out)                      :: l_forcing            !< IF .TRUE. THEN update_forcing(), update_a2l(), update_l2a()
-    INTEGER ,INTENT(out)                      :: nsoil_sb             !< number of soil layers used in SB_ - needed for open_pool_output_files() & init_output_writing_pool()
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model), POINTER                :: model
@@ -179,15 +178,11 @@ CONTAINS
     model%options%ics          = ics                ! 
     model%options%ice          = ice                ! 
     model%options%nc           = nc                 ! 
-    model%options%nsoil_energy = dsl4jsb_Config(SSE_)%nsoil_energy  ! number of soil layers for soil energy calculations
-    model%options%nsoil_water  = dsl4jsb_Config(SSE_)%nsoil_water   ! number of soil layers for soil moisture calculations
-    model%options%nsoil_sb     = dsl4jsb_Config(SSE_)%nsoil_water   ! number of soil layers used in SB_ - equals nsoil_water
-    nsoil_sb                   = dsl4jsb_Config(SSE_)%nsoil_water   ! SUBROUTINE output for land_model_driver -> open_pool_output_files()
 
 
     !> 3.0 SB_ & VEG_ pools (pool and element structures in veg_ and sb_ memory with ALLOCATABLE variables with operator overload)
     !!
-    CALL Init_sb_pools_elements_a(ics, ice, nc, iblk, nsoil_sb)
+    CALL Init_sb_pools_elements_a(ics, ice, nc, iblk, dsl4jsb_Config(SSE_)%nsoil_water)
     CALL Init_veg_pools_elements_a(ics, ice, nc, iblk)
 
 

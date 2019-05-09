@@ -78,8 +78,8 @@ CONTAINS
     INTEGER                                      :: isoil, ichunk
     INTEGER                                      :: iblk, ics, ice, nc
     REAL(wp)                                     :: hlp1,hlp2,hlp3,hlp4,hlp5,hlp6,frac_c13,frac_c14
-    REAL(wp),DIMENSION(options%nc, options%nsoil_sb) :: fine_root_carbon_sl, labile_p, arr_hlp1, arr_z
-    REAL(wp),DIMENSION(options%nsoil_sb)         :: arr_hlp5, arr_hlp6
+    REAL(wp), ALLOCATABLE, DIMENSION(:,:)        :: fine_root_carbon_sl, labile_p, arr_hlp1, arr_z
+    REAL(wp), ALLOCATABLE, DIMENSION(:)          :: arr_hlp5, arr_hlp6
     REAL(wp),DIMENSION(options%nc)               :: soil_p_layer, arr_hlp4, arr_hlp2, arr_hlp3
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':sb_init'
     ! ---------------------------
@@ -148,6 +148,13 @@ CONTAINS
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(VEG_)
+    ! Allocate local allocatable variables (deallocate below at the end of this routine)    
+    ALLOCATE(fine_root_carbon_sl(nc, nsoil_sb))
+    ALLOCATE(labile_p(nc, nsoil_sb))
+    ALLOCATE(arr_hlp1(nc, nsoil_sb))
+    ALLOCATE(arr_z(nc, nsoil_sb))
+    ALLOCATE(arr_hlp5(nsoil_sb))
+    ALLOCATE(arr_hlp6(nsoil_sb))
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var3D_onChunk(VEG_,      root_fraction_sl)
     ! ---------------------------
@@ -519,6 +526,15 @@ CONTAINS
     !! 
     microbial_cue_eff_tmic_mavg(:,:)  = microbial_cue_max
     vmax_weath_mineral_sl(:,:)        = k_weath_mineral                       ! (parameter from mo_sb_constants)
+
+
+  ! Deallocate local allocatable variables
+  DEALLOCATE(fine_root_carbon_sl)
+  DEALLOCATE(labile_p)
+  DEALLOCATE(arr_hlp1)
+  DEALLOCATE(arr_z)
+  DEALLOCATE(arr_hlp5)
+  DEALLOCATE(arr_hlp6)
 
 ! Pass back values to process memory
 dsl4slm_passback_vegpool_var(pool,fine_root,carbon)

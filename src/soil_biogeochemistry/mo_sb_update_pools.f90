@@ -78,10 +78,10 @@ CONTAINS
     INTEGER                               :: nsoil_sb             !< number of soil layers as used/defined by the SB_ process
     INTEGER                               :: iblk, ics, ice, nc
     INTEGER                               :: isoil
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: fine_root_carbon_sl, &
-                                                        p_deposition_sl, &
-                                                        f_myc_sl, &
-                                                        hlp1
+    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: fine_root_carbon_sl, &
+                                             p_deposition_sl, &
+                                             f_myc_sl, &
+                                             hlp1
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_pools'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -252,6 +252,11 @@ CONTAINS
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(A2L_)
+    ! Allocate local allocatable variables (deallocate below at the end of this routine)    
+    ALLOCATE(fine_root_carbon_sl(nc, nsoil_sb))
+    ALLOCATE(p_deposition_sl(nc, nsoil_sb))
+    ALLOCATE(f_myc_sl(nc, nsoil_sb))
+    ALLOCATE(hlp1(nc, nsoil_sb))
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(A2L_,      nhx_deposition)              ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,      noy_deposition)              ! in
@@ -832,6 +837,12 @@ CONTAINS
        SUM(plant_uptake_nh4_n15_sl(:,:) * soil_depth_sl(:,:), DIM=2)                + &
        SUM(plant_uptake_no3_n15_sl(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime/1.e6_wp  
 
+
+  ! Deallocate local allocatable variables
+  DEALLOCATE(fine_root_carbon_sl)
+  DEALLOCATE(p_deposition_sl)
+  DEALLOCATE(f_myc_sl)
+  DEALLOCATE(hlp1)
 
 ! Pass back values to process memory
 dsl4slm_passback_vegpool_var(pool,fine_root,carbon)

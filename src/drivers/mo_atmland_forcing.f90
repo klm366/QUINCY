@@ -42,7 +42,6 @@ CONTAINS
                               ice                , &  ! in
                               nc                 , &  ! in
                               iblk               , &  ! in
-                              nsoil_sb           , &  ! in
                               timestep           , &  ! in
                               time               , &  ! in
                                   t_air              , &  ! out
@@ -89,8 +88,8 @@ CONTAINS
 
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
-    USE mo_jsb_grid_class,        ONLY: t_jsb_grid
-    USE mo_jsb_grid,              ONLY: Get_Grid
+    USE mo_jsb_grid_class,        ONLY: t_jsb_grid, t_jsb_vgrid
+    USE mo_jsb_grid,              ONLY: Get_Grid, Get_vgrid
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_phys_constants,    ONLY: molar_mass_N, molar_mass_P, grav
@@ -112,7 +111,7 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile                           !< one tile with data structure for one lct
-    INTEGER                   , INTENT(in)    :: ics, ice, nc, iblk, nsoil_sb   !< info on block, chunk and soil layer number
+    INTEGER                   , INTENT(in)    :: ics, ice, nc, iblk             !< info on block, chunk and soil layer number
     INTEGER                   , INTENT(in)    :: timestep                       !< timestep; first timestep of static simulation and simulation after transient spinup is 1
     REAL(wp)                  , INTENT(in)    :: time                           !< current time in days (not timestep !)
     REAL(wp), OPTIONAL        , INTENT(out)   :: &                 !! these are all variables from a2l memory; with assumed shape VAR(1:nc)
@@ -160,6 +159,8 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_jsb_model), POINTER     :: model                  ! the model structure
     TYPE(t_jsb_grid),  POINTER     :: hgrid                  ! horizontal grid
+    TYPE(t_jsb_vgrid), POINTER     :: vgrid_soil_sb          !< Vertical grid
+    INTEGER                        :: nsoil_sb               !< number of soil layers as used/defined by the SB_ process
     ! READ() input variables for: land plant canopy and soil (these variable names can differ from column names in forcing files)
     REAL(wp) ::      swvis_srf_down_r,   lw_srf_down_r, t_air_r,    q_air_r,    &
                      press_srf_r,        rain_r,        snow_r,     wind_air_r, &
@@ -186,13 +187,12 @@ CONTAINS
                      fruit_dC13_r, fruit_DC14_r, fruit_dN15_r , &
                      seed_bed_carbon_r, seed_bed_nitrogen_r, seed_bed_phosphorus_r  , &
                      seed_bed_dC13_r, seed_bed_DC14_r, seed_bed_dN15_r
-    REAL(wp), DIMENSION(nsoil_sb) ::  & 
-                     t_soil_sl_r,     &
-                     w_soil_sl_r,     &
-                     percolation_sl_r
-    REAL(wp), DIMENSION(nsoil_sb) ::  & 
-                     root_fraction_sl_r
     REAL(wp) ::      veg_pool_fine_root_carbon_r
+    REAL(wp), ALLOCATABLE, DIMENSION(:) :: & 
+                     t_soil_sl_r, &
+                     w_soil_sl_r, &
+                     percolation_sl_r, &
+                     root_fraction_sl_r
     ! other local variables
     INTEGER                   :: stat          ! status of I/O (https://software.intel.com/en-us/node/691976)
     INTEGER                   :: lun           ! logical unit number for file input stream, see '2.0 read data'
@@ -228,14 +228,21 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
-    model  => Get_model(tile%owner_model_id)
-!    lctlib => model%lctlib(tile%lcts%lib_id) 
-    hgrid  => Get_grid(model%grid_id)
+    model         => Get_model(tile%owner_model_id)
+!    lctlib        => model%lctlib(tile%lcts%lib_id) 
+    hgrid         => Get_grid(model%grid_id)
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+    nsoil_sb      =  vgrid_soil_sb%n_levels
     ! Get process config
 !    dsl4jsb_Get_config(xx_)
     ! Get process memories
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(VEG_)
+    ! Allocate local allocatable variables (deallocate below at the end of this routine)    
+    ALLOCATE(t_soil_sl_r(nsoil_sb))
+    ALLOCATE(w_soil_sl_r(nsoil_sb))
+    ALLOCATE(percolation_sl_r(nsoil_sb))
+    ALLOCATE(root_fraction_sl_r(nsoil_sb))
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(VEG_,  f_n_demand)
     dsl4jsb_Get_var2D_onChunk(VEG_,  f_p_demand)
@@ -665,6 +672,13 @@ CONTAINS
       f_p_demand(:)         = f_p_demand_r
 
     END SELECT  ! land plant canopy vs soil
+
+
+  ! Deallocate local allocatable variables
+  DEALLOCATE(t_soil_sl_r)
+  DEALLOCATE(w_soil_sl_r)
+  DEALLOCATE(percolation_sl_r)
+  DEALLOCATE(root_fraction_sl_r)
 
 ! Pass back values to process memory
 dsl4slm_passback_vegpool_var(pool,fine_root,carbon)

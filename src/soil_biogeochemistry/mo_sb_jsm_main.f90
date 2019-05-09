@@ -80,10 +80,10 @@ CONTAINS
     INTEGER                               :: nsoil_sb             !< number of soil layers as used/defined by the SB_ process
     INTEGER                               :: i, isoil
     INTEGER                               :: iblk, ics, ice, nc
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: fine_root_carbon_sl, p_deposition_sl, & 
-                                                        km1_uptake_po4_act, km2_uptake_po4_act, &
-                                                        eca_divisor_mic, eca_divisor_plant, &
-                                                        arr_hlp1, arr_hlp2, arr_hlp3, arr_hlp4, arr_hlp5
+    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: fine_root_carbon_sl, p_deposition_sl, & 
+                                             km1_uptake_po4_act, km2_uptake_po4_act, &
+                                             eca_divisor_mic, eca_divisor_plant, &
+                                             arr_hlp1, arr_hlp2, arr_hlp3, arr_hlp4, arr_hlp5
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_jsm'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -216,6 +216,18 @@ CONTAINS
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(A2L_)
+    ! Allocate local allocatable variables (deallocate below at the end of this routine)    
+    ALLOCATE(fine_root_carbon_sl(nc, nsoil_sb))
+    ALLOCATE(p_deposition_sl(nc, nsoil_sb))
+    ALLOCATE(km1_uptake_po4_act(nc, nsoil_sb))
+    ALLOCATE(km2_uptake_po4_act(nc, nsoil_sb))
+    ALLOCATE(eca_divisor_mic(nc, nsoil_sb))
+    ALLOCATE(eca_divisor_plant(nc, nsoil_sb))
+    ALLOCATE(arr_hlp1(nc, nsoil_sb))
+    ALLOCATE(arr_hlp2(nc, nsoil_sb))
+    ALLOCATE(arr_hlp3(nc, nsoil_sb))
+    ALLOCATE(arr_hlp4(nc, nsoil_sb))
+    ALLOCATE(arr_hlp5(nc, nsoil_sb))
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(A2L_,      p_deposition)                ! in
     ! ---------------------------
@@ -540,6 +552,19 @@ CONTAINS
     transport_nh4_n15_assoc(:,:)  = transport_nh4_n15_assoc(:,:) * 1.e6_wp / dtime
     transport_no3_n15_solute(:,:) = transport_no3_n15_solute(:,:)  * 1.e6_wp / dtime
 
+
+  ! Deallocate local allocatable variables
+  DEALLOCATE(fine_root_carbon_sl)
+  DEALLOCATE(p_deposition_sl)
+  DEALLOCATE(km1_uptake_po4_act)
+  DEALLOCATE(km2_uptake_po4_act)
+  DEALLOCATE(eca_divisor_mic)
+  DEALLOCATE(eca_divisor_plant)
+  DEALLOCATE(arr_hlp1)
+  DEALLOCATE(arr_hlp2)
+  DEALLOCATE(arr_hlp3)
+  DEALLOCATE(arr_hlp4)
+  DEALLOCATE(arr_hlp5)
 
 ! Pass back values to process memory
 dsl4slm_passback_vegpool_var(pool,fine_root,carbon)

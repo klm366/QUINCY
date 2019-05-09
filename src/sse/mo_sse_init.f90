@@ -65,7 +65,7 @@ CONTAINS
     TYPE(t_lctlib_element), POINTER                  :: lctlib        !< land-cover-type library - parameter across pft's
     TYPE(t_jsb_vgrid),      POINTER                  :: vgrid_soil_sb !< Vertical grid
     INTEGER                                          :: nsoil_sb      !< number of soil layers as used/defined by the SB_ process
-    REAL(wp), DIMENSION(options%nc,options%nsoil_sb) :: hlp1, &
+    REAL(wp), ALLOCATABLE, DIMENSION(:,:)            :: hlp1, &
                                                         theta_pwp_sl, theta_fc_sl, theta_sat_sl
     REAL(wp), DIMENSION(options%nc)                  :: soil_awc, &
                                                         hlp2
@@ -127,6 +127,11 @@ CONTAINS
     ! Get process memories
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(VEG_)
+    ! Allocate local allocatable variables (deallocate below at the end of this routine)    
+    ALLOCATE(hlp1(nc, nsoil_sb))
+    ALLOCATE(theta_pwp_sl(nc, nsoil_sb))
+    ALLOCATE(theta_fc_sl(nc, nsoil_sb))
+    ALLOCATE(theta_sat_sl(nc, nsoil_sb))
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var3D_onChunk(VEG_,  root_fraction_sl)
     ! ---------------------------
@@ -325,6 +330,13 @@ CONTAINS
     ELSEWHERE
        w_soil_pot_sl(:,:) = 0.0_wp 
     ENDWHERE
+
+
+  ! Deallocate local allocatable variables
+  DEALLOCATE(hlp1)
+  DEALLOCATE(theta_pwp_sl)
+  DEALLOCATE(theta_fc_sl)
+  DEALLOCATE(theta_sat_sl)
 
   END SUBROUTINE sse_init
 

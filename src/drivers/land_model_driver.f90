@@ -49,8 +49,6 @@ PROGRAM land_model_driver
   LOGICAL       :: l_forcing                          ! IF .TRUE. THEN run forcing routines (e.g. update_forcing(), update_a2l(), update_l2a())
   INTEGER       :: transient_spinup_itimestep_period  ! count the number of timesteps covering one repeated spinup period
   INTEGER       :: iblk, nproma, ics, ice, nc         !< *slmtmp may be an input from JSBACH4 later in SLM dev
-  INTEGER       :: nsoil_sb                           !< necessary for open_pool_output_files() & init_output_writing_pool()
-                                                        !!  number of soil layers used in SB_ - equal to nsoil_water
   INTEGER       :: nproca                             ! number of processors for jsbach
   INTEGER       :: nprocb                             ! has to be one
   INTEGER       :: nprocio                            ! number of processors for I/O server
@@ -152,7 +150,6 @@ PROGRAM land_model_driver
   ics      = 1      ! 
   ice      = 1      ! note: ice must be smaller or equal to nproma; this is differently in jsbach4, and only a restriction to SLM !
   nc       = ice - ics + 1                 ! (end-number - start-number + 1)
-  nsoil_sb = -1                            ! namelist parameter
 
   !! 1.2  set up the model with vgrid and process configs (jsbach%models(model_id)%m => model  with 'model' of TYPE(t_jsb_model))
   CALL setup_model_vgrid_procconf("namelist.slm")
@@ -170,7 +167,7 @@ PROGRAM land_model_driver
   !! 1.6 quincy-model init
   !!     and init of: forcing, SB_ & VEG_ pools, tiles, time, fluxnet diagnostics
   CALL quincy_init(model%id, iblk, nproma, ics, ice, nc, &    ! in
-                   l_forcing, nsoil_sb)                       ! out
+                   l_forcing)                                 ! out
   tile => model%Get_top_tile()
 
 
@@ -460,7 +457,6 @@ PROGRAM land_model_driver
                             ice       , &
                             nc        , &
                             iblk      , &
-                            nsoil_sb  , &
                             itimestep , &
                             time_day  , & 
                                   !! forcing (read from file and passed to a2l memory via the land_model_interface)
