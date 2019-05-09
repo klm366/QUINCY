@@ -1519,9 +1519,13 @@ CONTAINS
     & veg_fract_correction,           & ! in
     & fract_fpc_max)                    ! in
 
+    !$claw model-data
     REAL(wp), INTENT(IN) ::  fract_fpc_max, veg_fract_correction
     REAL(wp), INTENT(IN) ::  Cpool_per_canopy
     REAL(wp), INTENT(OUT)::  Cpool_per_tile
+    !$claw end model-data
+
+    !$claw sca
 
     Cpool_per_tile = Cpool_per_canopy * veg_fract_correction * fract_fpc_max
 
