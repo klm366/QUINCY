@@ -30,6 +30,7 @@ MODULE mo_seb_config_class
      CHARACTER(len=10)           :: scheme_albedo !< Scheme to use for computation of albedo (echam5 only for now)
      REAL(wp)                    :: lake_mixed_layer_depth !< Depth of lake mixed layer                             [m]
      REAL(wp)                    :: lake_min_ice_depth     !< Minimum ice thickness to start ice formation on lakes [m]
+     LOGICAL                     :: l_ice_on_lakes         !< Whether to use ice on lakes
    CONTAINS
      PROCEDURE :: Init => Init_seb_config
   END type t_seb_config
@@ -48,13 +49,15 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     CHARACTER(len=10)           :: scheme_albedo
     REAL(wp)                    :: lake_mixed_layer_depth, lake_min_ice_depth
+    LOGICAL                     :: l_ice_on_lakes
 
     NAMELIST /jsb_seb_nml/         &
       active,                      &
       ic_filename, bc_filename,    &
       scheme_albedo,               &
       lake_mixed_layer_depth,      &
-      lake_min_ice_depth
+      lake_min_ice_depth,          &
+      l_ice_on_lakes
 
     INTEGER :: nml_handler, nml_unit, istat
 
@@ -69,6 +72,7 @@ CONTAINS
     scheme_albedo   = 'echam5'
     lake_mixed_layer_depth = 10._wp
     lake_min_ice_depth     = 0.05_wp
+    l_ice_on_lakes  = .TRUE.
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -81,6 +85,7 @@ CONTAINS
     config%scheme_albedo             = scheme_albedo
     config%lake_mixed_layer_depth    = lake_mixed_layer_depth
     config%lake_min_ice_depth        = lake_min_ice_depth
+    config%l_ice_on_lakes            = l_ice_on_lakes
 
     CALL close_nml(nml_handler)
 

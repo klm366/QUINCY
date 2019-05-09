@@ -35,6 +35,7 @@ MODULE mo_turb_interface
   ! Use process configurations
   !dsl4jsb_Use_config(TURB_)
   dsl4jsb_Use_config(HYDRO_)
+  dsl4jsb_Use_config(SEB_)
 
   ! Use process memories
   dsl4jsb_Use_memory(A2L_)
@@ -146,6 +147,8 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    dsl4jsb_Def_config(SEB_)
+
     ! Declare process memories
     dsl4jsb_Def_memory(TURB_)
     dsl4jsb_Def_memory(HYDRO_)
@@ -157,6 +160,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: fract_snow_lice
 
     ! Local variables
+    TYPE(t_jsb_model), POINTER :: model
     INTEGER  :: iblk, ics, ice
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_roughness'
@@ -170,6 +174,10 @@ CONTAINS
     IF (.NOT. tile%Is_process_active(TURB_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_config(SEB_)
 
     ! Get process memories
     dsl4jsb_Get_memory(TURB_)
@@ -185,9 +193,13 @@ CONTAINS
       rough_h(:) =          fract_snow_soil(:)  / (LOG(blending_height /        roughness_snow)  ** 2)  &
         &        + (1._wp - fract_snow_soil(:)) / (LOG(blending_height / MIN(1._wp, rough_m(:))) ** 2)
     ELSE IF (tile%contains_lake) THEN
-      dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_lice) ! IN
-      rough_h(:) =          fract_snow_lice(:)  / (LOG(blending_height /        roughness_snow)  ** 2)  &
-        &        + (1._wp - fract_snow_lice(:)) / (LOG(blending_height / MIN(1._wp, rough_m(:))) ** 2)
+      IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+        dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_lice) ! IN
+        rough_h(:) =          fract_snow_lice(:)  / (LOG(blending_height /        roughness_snow)  ** 2)  &
+          &        + (1._wp - fract_snow_lice(:)) / (LOG(blending_height / MIN(1._wp, rough_m(:))) ** 2)
+      ELSE
+        rough_h(:) = LOG(blending_height / MIN(1._wp, rough_m(:))) ** 2
+      END IF
     ELSE
       CALL finish(TRIM(routine), 'Don"t know what to do.')
     END IF
