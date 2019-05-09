@@ -267,6 +267,10 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER  :: routine = modname//':update_phenology_logrop'
 
+    !$claw acc data pcreate(w_soil_filling, t_air_in_Celcius)  & 
+    !$claw pcreate(LaiMax_corrected, veg_fract_correction_old) &
+    !$claw pcreate(old_c_state_sum, dummy_flux)
+
     ! Set local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -365,9 +369,10 @@ CONTAINS
 
     day_of_year  = INT(get_year_day(get_time_current()))
 
-    w_soil_filling = w_soil_rel  ! Initialization of w_soil_filling for crops and raingreen
-                                 ! R: As in JS3 all soil layers are set to the same relative_moisture(GP,tile) and only the average
-                                 !    over all layers or the uppermost layer is used, we do not need soil layers in the phenology.
+    !$claw expand parallel update
+    w_soil_filling(:) = w_soil_rel(:)  ! Initialization of w_soil_filling for crops and raingreen
+                                       ! R: As in JS3 all soil layers are set to the same relative_moisture(GP,tile) and only the average
+                                       !    over all layers or the uppermost layer is used, we do not need soil layers in the phenology.
 
     ! R: Note, in JSBACH3 the timestep was 1 day. Except of the former update_growth_phase which is now in the calc_XXX_phenology
     !    procedures the phenology including get_letItDie and get_letItGrow can be called several times a day. Within the
@@ -382,7 +387,7 @@ CONTAINS
     !    calc_pseudo_soil_temp habe ich auch dem SEB Prozess zugeordnet.
 
     ! R: wird jedes mal (d.h. für jedes Tile) aufgerufen:
-    !$claw sca forward update savepoint=ser_jsb_PEHNO_calc_previous_day_npp_1 tile_name=tile%name
+    !$claw sca forward update savepoint=ser_jsb_PHENO_calc_previous_day_npp_1 tile_name=tile%name
     CALL calc_previous_day_NPP(          &
       & l_newday,                        & ! Input
       & NPP_pot_rate_ca(:),              & ! Input
@@ -398,10 +403,10 @@ CONTAINS
       ! from the available biomass via allometric relationships
       ! The maxLai gets updated at the beginning of each year with the biomass at the maximum green pool
       IF(is_newyear()) THEN
-        !$claw expand parallel update savepoint=ser_jsb_PEHNO_update_phenology_logrop_expand_1 tile_name=tile%name
+        !$claw expand parallel update savepoint=ser_jsb_PHENO_update_phenology_logrop_expand_1 tile_name=tile%name
         veg_fract_correction_old(:) = veg_fract_correction(:)
 
-        !$claw sca forward update savepoint=ser_jsb_PEHNO_cderive_maxLai_according_to_allometric_relationships_1 tile_name=tile%name
+        !$claw sca forward update savepoint=ser_jsb_PHENO_cderive_maxLai_according_to_allometric_relationships_1 tile_name=tile%name
         CALL derive_maxLai_according_to_allometric_relationships( &
           & dsl4jsb_Lctlib_param(alpha_nr_ind),                   & ! in
           & dsl4jsb_Lctlib_param(beta_nr_ind),                    & ! in
@@ -477,12 +482,12 @@ CONTAINS
     ! END IF
 
     IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
-       !$claw expand update savepoint=ser_jsb_PEHNO_update_phenology_logrop_expand_2 tile_name=tile%name
+       !$claw expand update savepoint=ser_jsb_PHENO_update_phenology_logrop_expand_2 tile_name=tile%name
        LaiMax_corrected(:) = dsl4jsb_var2D_onChunk(PHENO_, maxLAI_allom )
     ELSE
      ! R: Rename MaxLAI in lctlib to LAI_max in JS3 comes from theLand%Vegetation%LAI_max,
      ! which is for each vegetated tile taken from MaxLAI in the lct library.
-       !$claw expand update savepoint=ser_jsb_PEHNO_update_phenology_logrop_expand_3 tile_name=tile%name
+       !$claw expand update savepoint=ser_jsb_PHENO_update_phenology_logrop_expand_3 tile_name=tile%name
        LaiMax_corrected(:) = dsl4jsb_Lctlib_param(MaxLAI)
     END IF
 
@@ -596,7 +601,7 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
-    RETURN
+    !$claw acc end data
 
    END SUBROUTINE update_phenology_logrop
 
