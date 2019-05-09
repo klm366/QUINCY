@@ -203,7 +203,9 @@ CONTAINS
 
     !> 2.0 calculate VIS radiation budget (absorbed radiation on canopy layers and soil + albedo)
     !! 
-    CALL calc_sw_srf_net(nc, ncanopy, lctlib, "vis", &
+    CALL calc_sw_srf_net(nc, ncanopy, &
+                     lctlib%sigma_vis, lctlib%sigma_nir, lctlib%omega_clumping, lctlib%crown_shape_factor, &
+                     "vis", &
                      swvis_srf_down(:), swpar_fdiffuse(:), cos_zenith_angle(:), & 
                      lai(:), lai_cl(:,:), cumm_lai_cl(:,:),& 
                      alb_vis_soil(:), &
@@ -215,7 +217,9 @@ CONTAINS
     !! 
     !! Following Weiss & Norman, Agri. For. Met. 1985, the fraction of VIS and NIR 
     !! diffuse radiation are very similar 
-    CALL calc_sw_srf_net(nc, ncanopy, lctlib, "nir", &
+    CALL calc_sw_srf_net(nc, ncanopy, &
+                     lctlib%sigma_vis, lctlib%sigma_nir, lctlib%omega_clumping, lctlib%crown_shape_factor, &
+                     "nir", &
                      swnir_srf_down(:), swpar_fdiffuse(:), cos_zenith_angle(:), & 
                      lai(:), lai_cl(:,:), cumm_lai_cl(:,:), &
                      alb_nir_soil(:), &
@@ -289,7 +293,10 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_sw_srf_net( nc                  , &   ! in
                               ncanopy             , &   ! in  
-                              lctlib              , &   ! in
+                              lctlib_sigma_vis    , &   ! in
+                              lctlib_sigma_nir    , &   ! in
+                              lctlib_omega_clumping     , &   ! in
+                              lctlib_crown_shape_factor , &   ! in
                               vis_nir_id          , &   ! in
                               sw_srf_down         , &   ! in
                               sw_fdiffuse         , &   ! in
@@ -307,7 +314,6 @@ CONTAINS
                               alb                 , &   ! out
                               sw_srf_net)               ! out
 
-    USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_rad_constants,           ONLY: min_cos_zenith_angle_rad, kbl0_vis, kdf0_vis, kbl0_nir, kdf0_nir, rho2sbeta, &
                                           k_csf
 
@@ -316,7 +322,10 @@ CONTAINS
     ! 0.1 InOut
     INTEGER                                , INTENT(in)  :: nc                 !< dimensions
     INTEGER                                , INTENT(in)  :: ncanopy            !< number of canopy layers
-    TYPE(t_lctlib_element)                 , INTENT(in)  :: lctlib             !< land-cover-type library - parameter across pft's
+    REAL(wp)                               , INTENT(in)  :: lctlib_sigma_vis   !< lctlib parameter
+    REAL(wp)                               , INTENT(in)  :: lctlib_sigma_nir   !< lctlib parameter
+    REAL(wp)                               , INTENT(in)  :: lctlib_omega_clumping     !< lctlib parameter
+    REAL(wp)                               , INTENT(in)  :: lctlib_crown_shape_factor !< lctlib parameter
     CHARACTER(len=3)                       , INTENT(in)  :: vis_nir_id         !< vis nir identifier for this function only
     REAL(wp), DIMENSION(nc)                , INTENT(in)  :: sw_srf_down        !< shortwave downward radiation flux (W m-2)
     REAL(wp), DIMENSION(nc)                , INTENT(in)  :: sw_fdiffuse        !< fraction of diffuse radiation (--)
@@ -366,11 +375,11 @@ CONTAINS
     !! 
     SELECT CASE(vis_nir_id)
       CASE("vis")
-        lctlib_sigma = lctlib%sigma_vis
+        lctlib_sigma = lctlib_sigma_vis
         kbl0         = kbl0_vis                 ! extinction coefficient over black leaves 
         kdf0         = kdf0_vis                 ! extinction coefficient for diffuse radiation 
       CASE("nir")
-        lctlib_sigma = lctlib%sigma_nir
+        lctlib_sigma = lctlib_sigma_nir
         kbl0         = kbl0_nir                 ! extinction coefficient over black leaves 
         kdf0         = kdf0_nir                 ! extinction coefficient for diffuse radiation 
     END SELECT
@@ -413,8 +422,8 @@ CONTAINS
           rho(:) = temp2/(1.0_wp + rho2sbeta * tmp_cos_zenith_angle(:))
   
           !> clumping factor (eq 15.35) Campbell & Norman (1998) as a function of sun-angle
-          omega(:) = lctlib%omega_clumping / (lctlib%omega_clumping + (1.0_wp - lctlib%omega_clumping) * & 
-                  exp(-k_csf * ACOS(tmp_cos_zenith_angle(:))**lctlib%crown_shape_factor)) 
+          omega(:) = lctlib_omega_clumping / (lctlib_omega_clumping + (1.0_wp - lctlib_omega_clumping) * & 
+                  exp(-k_csf * ACOS(tmp_cos_zenith_angle(:))**lctlib_crown_shape_factor)) 
  
           !> Extinction coefficient for radiation over black leaves in canopy
           kdf(:)   = kdf0 * temp1 * omega(:) ! temp1 == SQRT(1.0_wp - lctlib_sigma)

@@ -247,7 +247,6 @@ CONTAINS
     !!
     CALL calc_surface_energy_balance(nc, nsoil_sb, &
                                      steplen, &
-                                     lctlib, &
                                      sw_srf_net(:),lw_srf_down(:), & 
                                      t_air(:),t_acoef(:),t_bcoef(:), & 
                                      q_air(:),q_acoef(:),q_bcoef(:), & 
@@ -263,8 +262,8 @@ CONTAINS
     !> 3.0 Calculate soil hydrology processes
     !!
     CALL calc_soil_hydrology(nc, nsoil_sb, &
-                             lctlib, &
                              vgrid_soil_sb%ubounds(:), &                                              ! (upper bound > lower bound !)
+                             lctlib%phi_leaf_min, &
                              rain(:),snow(:),interception(:),evaporation(:),transpiration(:), & 
                              w_soil_root_fc(:),w_soil_root_pwp(:),lai(:),root_depth(:), & 
                              soil_depth_sl(:,:),w_soil_sat_sl(:,:),w_soil_fc_sl(:,:),w_soil_pwp_sl(:,:), & 
@@ -294,7 +293,6 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_surface_energy_balance(nc, nsoil_sb, &
                                          steplen, &
-                                         lctlib, &
                                          sw_srf_net,lw_srf_down, & 
                                          t_air,t_acoef,t_bcoef, & 
                                          q_air,q_acoef,q_bcoef, & 
@@ -306,7 +304,6 @@ CONTAINS
                                          pet,evaporation,interception,transpiration, &                              ! inout
                                          sensible_heat_flx,latent_heat_flx,ground_heat_flx,net_radiation,t_soil_sl) ! inout
 
-    USE mo_jsb_lctlib_class,          ONLY: t_lctlib_element
     USE mo_jsb_math_constants,        ONLY: dtime, eps8
     USE mo_atmland_constants,         ONLY: min_wind, max_wind 
     USE mo_atmland_util,              ONLY: calc_spec_humidity_sat
@@ -322,7 +319,6 @@ CONTAINS
     INTEGER,                                          INTENT(in)    :: nc, &                  !< dimensions
                                                                        nsoil_sb
     REAL(wp),                                         INTENT(in)    :: steplen                !< step length for this process
-    TYPE(t_lctlib_element),                           INTENT(in)    :: lctlib                 !< land-cover-type library - parameter across pft's
     REAL(wp), DIMENSION(nc),                          INTENT(in)    :: sw_srf_net, &          !< net shortwave radiation [W/m2] 
                                                                        lw_srf_down, &         !< longwave downward radiation [W/m2]
                                                                        t_air, &               !< air temperature [K]
@@ -558,8 +554,8 @@ CONTAINS
   !! Calculates runoff, drainage and an updated state of soil water variables (theta, potential, etc.)
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_soil_hydrology(nc, nsoil_sb, &
-                                 lctlib, &
                                  soil_layer_w_ubounds, & 
+                                 lctlib_phi_leaf_min, &
                                  rain,snow,interception,evaporation,transpiration, & 
                                  w_soil_root_fc,w_soil_root_pwp,lai,root_depth, & 
                                  soil_depth_sl,w_soil_sat_sl,w_soil_fc_sl,w_soil_pwp_sl, & 
@@ -568,7 +564,6 @@ CONTAINS
                                  runoff,drainage,drainage_fraction, &                     ! inout
                                  w_soil_sl,w_soil_pot_sl,drainage_sl,percolation_sl)      ! inout
 
-    USE mo_jsb_lctlib_class,            ONLY: t_lctlib_element    
     USE mo_jsb_math_constants,          ONLY: dtime, eps8
     USE mo_jsb_phys_constants,          ONLY: grav
     USE mo_assimi_update_canopy_fluxes, ONLY: calc_soil_moisture_stress
@@ -578,10 +573,10 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut 
-    INTEGER,                                          INTENT(in)    :: nc, &                  !< dimensions
+    INTEGER,                                          INTENT(in)    :: nc, &                   !< dimensions
                                                                        nsoil_sb
-    TYPE(t_lctlib_element),                           INTENT(in)    :: lctlib                  !< land-cover-type library - parameter across pft's
     REAL(wp), DIMENSION(nsoil_sb),                    INTENT(in)    :: soil_layer_w_ubounds    !< upper bound of soil layers water (upper bound > lower bound !)
+    REAL(wp),                                         INTENT(in)    :: lctlib_phi_leaf_min     !< lctlib paramter
     REAL(wp), DIMENSION(nc),                          INTENT(in)    :: rain, &                 !< rainfall [kg / m2 / s ]
                                                                        snow, &                 !< snowfall [kg / m2 / s ]
                                                                        interception, &         !< interception [kg / m2 / s ]
@@ -662,7 +657,7 @@ CONTAINS
     ftranspiration(:,:) = 0.0_wp
     DO isoil = 1,nsoil_sb
        WHERE((w_soil_fc_sl(:,isoil) - w_soil_pwp_sl(:,isoil)) > eps8)
-          hlp1(:) = calc_soil_moisture_stress(w_soil_pot_sl(:, isoil), lctlib%phi_leaf_min)
+          hlp1(:) = calc_soil_moisture_stress(w_soil_pot_sl(:, isoil), lctlib_phi_leaf_min)
           ftranspiration(:,isoil) = root_fraction_sl(:,isoil) * hlp1(:) 
        END WHERE
     ENDDO
