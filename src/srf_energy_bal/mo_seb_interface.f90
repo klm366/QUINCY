@@ -561,6 +561,7 @@ CONTAINS
   !! @param[in]     options Additional run-time parameters.
   SUBROUTINE aggregate_surface_fluxes(tile, options)
 
+    TYPE(t_jsb_model), POINTER :: model
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 

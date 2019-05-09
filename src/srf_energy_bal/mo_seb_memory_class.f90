@@ -32,6 +32,9 @@ MODULE mo_seb_memory_class
   dsl4jsb_Use_processes SEB_
   dsl4jsb_Use_config(SEB_)
 
+  dsl4jsb_Use_processes SEB_
+  dsl4jsb_Use_config(SEB_)
+
   IMPLICIT NONE
   PRIVATE
 
