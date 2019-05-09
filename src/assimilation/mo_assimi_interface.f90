@@ -1063,4 +1063,3 @@ CONTAINS
 
 #endif
 END MODULE mo_assimi_interface
-
