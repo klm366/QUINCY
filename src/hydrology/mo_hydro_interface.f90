@@ -33,7 +33,7 @@ MODULE mo_hydro_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes SEB_, SSE_, TURB_, PHENO_, A2L_, HYDRO_, ASSIMI_
+  dsl4jsb_Use_processes SEB_, SSE_, TURB_, PHENO_, A2L_, HYDRO_
 
   ! Use of process configurations
   dsl4jsb_Use_config(SEB_)
@@ -47,7 +47,6 @@ MODULE mo_hydro_interface
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(TURB_)
   dsl4jsb_Use_memory(PHENO_)
-  dsl4jsb_Use_memory(ASSIMI_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -117,6 +116,18 @@ MODULE mo_hydro_interface
   INTERFACE tsk_canopy_cond_unstressed
     PROCEDURE Create_task_canopy_cond_unstressed
   END INTERFACE tsk_canopy_cond_unstressed
+
+  !> Type definition for water_stress task
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_water_stress
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_water_stress
+    PROCEDURE, NOPASS :: Aggregate => aggregate_water_stress
+  END TYPE tsk_water_stress
+
+  !> Constructor interface for water_stress task
+  INTERFACE tsk_water_stress
+    PROCEDURE Create_task_water_stress
+  END INTERFACE tsk_water_stress
 
   !> Type definition for canopy_cond_stressed task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_canopy_cond_stressed
@@ -236,6 +247,22 @@ CONTAINS
   END FUNCTION Create_task_canopy_cond_unstressed
 
   ! -------------------------------------------------------------------------------------------------------
+  !> Constructor for water_stress task
+  !!
+  !! @param[in]     model_id     Model id
+  !! @return        return_ptr   Instance of process task "water_stress"
+  !!
+  FUNCTION Create_task_water_stress(model_id) RESULT(return_ptr)
+
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_water_stress::return_ptr)
+    CALL return_ptr%Construct(name='water_stress', process_id=HYDRO_, owner_model_id=model_id)
+
+  END FUNCTION Create_task_water_stress
+
+  ! -------------------------------------------------------------------------------------------------------
   !> Constructor for canopy_cond_stressed task
   !!
   !! @param[in]     model_id     Model id
@@ -329,6 +356,7 @@ CONTAINS
     CALL process%Register_task( tsk_surface_hydrology      (model_id))
     CALL process%Register_task( tsk_soil_properties        (model_id))
     CALL process%Register_task( tsk_soil_hydrology         (model_id))
+    CALL process%Register_task( tsk_water_stress           (model_id))
     CALL process%Register_task( tsk_canopy_cond_unstressed (model_id))
     CALL process%Register_task( tsk_canopy_cond_stressed   (model_id))
     CALL process%Register_task( tsk_evaporation            (model_id))
@@ -1003,7 +1031,7 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real2D_onChunk :: swpar_srf_down
-    dsl4jsb_Real2D_onChunk :: canopy_cond
+    dsl4jsb_Real2D_onChunk :: canopy_cond_unlimited
 
     INTEGER :: iblk, ics, ice
 
@@ -1023,12 +1051,12 @@ CONTAINS
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(A2L_)
 
-    dsl4jsb_Get_var2D_onChunk(A2L_,      swpar_srf_down) ! IN
-    dsl4jsb_Get_var2D_onChunk(PHENO_,    lai)            ! IN
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond)    ! OUT
+    dsl4jsb_Get_var2D_onChunk(A2L_,      swpar_srf_down)        ! IN
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    lai)                   ! IN
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond_unlimited) ! OUT
 
     ! Compute (max) canopy (stomatal) conductance with no water stress
-    canopy_cond(:) = get_canopy_conductance( lai(:), swpar_srf_down(:) )
+    canopy_cond_unlimited(:) = get_canopy_conductance( lai(:), swpar_srf_down(:) )
 
   END SUBROUTINE update_canopy_cond_unstressed
   !
@@ -1062,11 +1090,135 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(HYDRO_,    canopy_cond,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, canopy_cond_unlimited, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_canopy_cond_unstressed
+
+  ! -------------------------------------------------------------------------------------------------------
+  !>
+  !! @brief Implementation of "update" for task "water_stress"
+  !! Task "update_water_stress" calculates water stress
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  !!
+  SUBROUTINE update_water_stress(tile, options)
+    ! ---------------------------
+    ! Variables
+
+    ! Used variables
+    USE mo_hydro_process, ONLY: get_water_stress_factor
+    USE mo_hydro_util,    ONLY: get_water_in_root_zone
+    USE mo_phy_schemes,   ONLY: qsat
+
+    ! Arguments
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    TYPE(t_jsb_model), POINTER :: model
+    dsl4jsb_Def_config(HYDRO_)
+
+    dsl4jsb_Def_memory(HYDRO_)
+
+    dsl4jsb_Real3D_onChunk :: soil_depth_sl
+    dsl4jsb_Real3D_onChunk :: root_depth_sl
+    dsl4jsb_Real2D_onChunk :: w_soil_column       !< Water content in soil column
+    dsl4jsb_Real3D_onChunk :: w_soil_sl           !< Water content in soil layers
+    dsl4jsb_Real3D_onChunk :: w_soil_fc_sl        !< Water content of soil layers at field capacity
+    dsl4jsb_Real3D_onChunk :: w_soil_pwp_sl       !< Water content of soil layers at permanent wilting point
+    dsl4jsb_Real2D_onChunk :: w_soil_root         !< Water content in root zone
+    dsl4jsb_Real2D_onChunk :: w_soil_root_fc      !< Water content in root zone at field capacity
+    dsl4jsb_Real2D_onChunk :: w_soil_root_pwp     !< Water content in root zone at permanent wilting point
+    dsl4jsb_Real2D_onChunk :: max_moist
+    dsl4jsb_Real2D_onChunk :: water_stress
+
+    INTEGER :: iblk, ics, ice
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_stress'
+
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+
+    IF (.NOT. tile%Is_process_active(HYDRO_) .OR. .NOT. tile%is_vegetation) RETURN
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    model => Get_model(tile%owner_model_id)
+    dsl4jsb_Get_config(HYDRO_)
+
+    ! Get reference to variables for current block
+    !
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    soil_depth_sl)       ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_sl)           ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_fc_sl)        ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_pwp_sl)       ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    max_moist)           ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_column)       ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    root_depth_sl)       ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root)         ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root_fc)      ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root_pwp)     ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_stress)        ! out
+
+    ! Get water stress
+
+    ! Calculate water content and field capacity in the root zone
+    ! @todo - do we need these?
+    w_soil_root   (:)  = get_water_in_root_zone(w_soil_sl     (:,:), soil_depth_sl(:,:), root_depth_sl(:,:))
+    w_soil_root_fc(:)  = get_water_in_root_zone(w_soil_fc_sl  (:,:), soil_depth_sl(:,:), root_depth_sl(:,:))
+    w_soil_root_pwp(:) = get_water_in_root_zone(w_soil_pwp_sl (:,:), soil_depth_sl(:,:), root_depth_sl(:,:))
+
+    ! Calculate water stress factor
+    ! @todo: maybe use the distributed permanent wilting point/field cap from above and change get_water_stress_factor function
+    water_stress(:) = &
+      & get_water_stress_factor(w_soil_column(:), max_moist(:), &
+          &                     dsl4jsb_Config(HYDRO_)%w_soil_crit_fract, dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract)
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE update_water_stress
+
+  ! -------------------------------------------------------------------------------------------------------
+  !>
+  !! Implementation of "aggregate" for task "water_stress"
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  !!
+  SUBROUTINE aggregate_water_stress(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    dsl4jsb_Def_memory(HYDRO_)
+
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_water_stress'
+
+    INTEGER :: iblk, ics, ice
+
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    dsl4jsb_Get_memory(HYDRO_)
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_fc,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_pwp,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, water_stress,        weighted_by_fract)
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE aggregate_water_stress
 
   ! -------------------------------------------------------------------------------------------------------
   !>
@@ -1090,25 +1242,13 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     TYPE(t_jsb_model), POINTER :: model
-    dsl4jsb_Def_config(HYDRO_)
 
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(HYDRO_)
-    dsl4jsb_Def_memory(ASSIMI_)
 
-    dsl4jsb_Real2D_onChunk :: canopy_cond
+    dsl4jsb_Real2D_onChunk :: canopy_cond_unlimited
     dsl4jsb_Real2D_onChunk :: canopy_cond_limited
-    dsl4jsb_Real3D_onChunk :: soil_depth_sl
-    dsl4jsb_Real3D_onChunk :: root_depth_sl
-    dsl4jsb_Real2D_onChunk :: w_soil_column       !< Water content in soil column
-    dsl4jsb_Real3D_onChunk :: w_soil_sl           !< Water content in soil layers
-    dsl4jsb_Real3D_onChunk :: w_soil_fc_sl        !< Water content of soil layers at field capacity
-    dsl4jsb_Real3D_onChunk :: w_soil_pwp_sl       !< Water content of soil layers at permanent wilting point
-    dsl4jsb_Real2D_onChunk :: w_soil_root         !< Water content in root zone
-    dsl4jsb_Real2D_onChunk :: w_soil_root_fc      !< Water content in root zone at field capacity
-    dsl4jsb_Real2D_onChunk :: w_soil_root_pwp     !< Water content in root zone at permanent wilting point
-    dsl4jsb_Real2D_onChunk :: max_moist
     dsl4jsb_Real2D_onChunk :: water_stress
     dsl4jsb_Real2D_onChunk :: t
     dsl4jsb_Real2D_onChunk :: q_air
@@ -1125,56 +1265,24 @@ CONTAINS
     IF (.NOT. tile%Is_process_active(HYDRO_) .OR. .NOT. tile%is_vegetation) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
     model => Get_model(tile%owner_model_id)
-    dsl4jsb_Get_config(HYDRO_)
 
     ! Get reference to variables for current block
     !
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(HYDRO_)
-    IF (tile%Is_process_active(ASSIMI_)) THEN
-      dsl4jsb_Get_memory(ASSIMI_)
-    END IF
+
     dsl4jsb_Get_var2D_onChunk(A2L_,      q_air)               ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,      press_srf)           ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,      t)                   ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_,    soil_depth_sl)       ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_sl)           ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_fc_sl)        ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_pwp_sl)       ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    max_moist)           ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_column)       ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_,    root_depth_sl)       ! in
-    IF (tile%Is_process_active(ASSIMI_)) THEN
-      dsl4jsb_Get_var2D_onChunk(ASSIMI_,   canopy_cond)         ! in
-    ELSE
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond)         ! in
-    END IF
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_stress)        ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond_unlimited) ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond_limited) ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root)         ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root_fc)      ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root_pwp)     ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_stress)        ! out
-
-    ! Get water stress
-
-    ! Calculate water content and field capacity in the root zone
-    ! @todo - do we need these?
-    w_soil_root   (:)  = get_water_in_root_zone(w_soil_sl     (:,:), soil_depth_sl(:,:), root_depth_sl(:,:))
-    w_soil_root_fc(:)  = get_water_in_root_zone(w_soil_fc_sl  (:,:), soil_depth_sl(:,:), root_depth_sl(:,:))
-    w_soil_root_pwp(:) = get_water_in_root_zone(w_soil_pwp_sl (:,:), soil_depth_sl(:,:), root_depth_sl(:,:))
-
-    ! Calculate water stress factor
-    ! @todo: maybe use the distributed permanent wilting point/field cap from above and change get_water_stress_factor function
-    water_stress(:) = &
-      & get_water_stress_factor(w_soil_column(:), max_moist(:), &
-          &                     dsl4jsb_Config(HYDRO_)%w_soil_crit_fract, dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract)
 
     ! Compute (actual) canopy (stomatal) conductance under water stress.
-    ! R: diese canopy_cond (stressed) entspricht der canopy_conductance_limited die in JSBACH3 in update_soil gerechnet wurde. Sie
-    !    wird auf jeden Fall benötigt unabhängig davon ob der Assimi-Prozess an ist (wird dann als Input benötigt) oder nicht.
-    canopy_cond_limited(:) = get_canopy_conductance(canopy_cond(:),            & ! in, unstressed canopy conductance
+    canopy_cond_limited(:) = get_canopy_conductance(canopy_cond_unlimited(:),  & ! in, unstressed canopy conductance
                                                     water_stress(:),           & ! in, water stress factor
                                                     q_air(:) >  qsat(t(:),press_srf(:)) & ! in, atmosphere saturated?
                                                     )
@@ -1214,10 +1322,6 @@ CONTAINS
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
     dsl4jsb_Aggregate_onChunk(HYDRO_, canopy_cond_limited, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root,         weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_fc,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_pwp,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, water_stress,        weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
