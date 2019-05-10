@@ -22,7 +22,6 @@ mo_sb_constants.o: \
 
 mo_sb_litter_processes.o: \
   mo_kind.o \
-  mo_jsb_lctlib_class.o \
   mo_jsb_math_constants.o \
   mo_sb_constants.o \
   mo_sb_memory_class.o \
@@ -145,7 +144,6 @@ mo_sb_jsm_processes.o: \
   mo_sb_config_class.o \
   mo_sb_jsm_transport.o \
   mo_sb_memory_class.o \
-  mo_jsb_lctlib_class.o \
   mo_isotope_util.o
 
 mo_sb_jsm_transport.o: \

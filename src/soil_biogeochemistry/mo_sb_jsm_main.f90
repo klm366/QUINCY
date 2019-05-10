@@ -390,7 +390,8 @@ CONTAINS
                             microbial_uptake_nh4_sl(:,:), microbial_uptake_no3_sl(:,:), microbial_uptake_po4_sl(:,:), &
                             fast_desorp_po4(:,:), occlusion_po4(:,:), slow_exchange_po4(:,:))
     !> X.2 NH4
-    CALL calc_inorganic_uptake(TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), lctlib, &
+    CALL calc_inorganic_uptake(lctlib%vmax_uptake_n, &
+                               TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &
                                nh4_solute(:,:), sb_pool%microbial%carbon(:,:), fine_root_carbon_sl(:,:), &
                                rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), & 
                                rtm_plant_uptake(:,:), rmm_plant_uptake(:,:), km1_up_nh4, km2_up_nh4, &
@@ -402,7 +403,8 @@ CONTAINS
                                           calc_fractionation(nh4_solute(:,:) ,nh4_n15_solute(:,:) ,eta_plant_uptake_nh4)
 
     !> X.3 NO3
-    CALL calc_inorganic_uptake(TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), lctlib, &
+    CALL calc_inorganic_uptake(lctlib%vmax_uptake_n, &
+                               TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &
                                no3_solute(:,:), sb_pool%microbial%carbon(:,:), fine_root_carbon_sl(:,:), &
                                rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), & 
                                rtm_plant_uptake(:,:), rmm_plant_uptake(:,:), km1_up_no3, km2_up_no3, &
@@ -445,7 +447,8 @@ CONTAINS
     !!
     CALL calc_litter_partitioning(nc                      , &
                                   nsoil_sb                , &
-                                  lctlib                  , &  
+                                  lctlib%sla              , &
+                                  lctlib%growthform       , &
                                   TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
                                   soil_depth_sl(:,:)      , &
                                   root_fraction_sl(:,:)   , &
@@ -518,7 +521,8 @@ CONTAINS
     arr_hlp1(:,:) = (po4_solute(:,:)+ transport_po4_solute(:,:))/ dtime * 1.e6_wp
     km1_uptake_po4_act(:,:) = km1_up_po4 / (rtm_hsc(:,:) * rmm_hsc(:,:)) / 1000._wp / (w_soil_sl(:,:) / soil_depth_sl(:,:))
     km2_uptake_po4_act(:,:) = km2_up_po4 * rtm_hsc(:,:) * rmm_hsc(:,:) * 1000._wp * (w_soil_sl(:,:) / soil_depth_sl(:,:))
-    CALL calc_sinking_flux_po4(TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), dsl4jsb_Config(SB_)%flag_sb_ECA_upt_po4, lctlib, &
+    CALL calc_sinking_flux_po4(lctlib%vmax_uptake_p, &
+                                TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), dsl4jsb_Config(SB_)%flag_sb_ECA_upt_po4, &
                                 sb_pool%microbial%carbon(:,:), fine_root_carbon_sl(:,:), po4_solute(:,:), &
                                 rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), &
                                 rtm_plant_uptake(:,:), rmm_plant_uptake(:,:), km1_uptake_po4_act(:,:), km2_uptake_po4_act(:,:), &

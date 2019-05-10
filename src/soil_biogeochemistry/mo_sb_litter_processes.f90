@@ -39,14 +39,14 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_litter_partitioning(nc, &                         ! in
                                       nsoil_sb, &
-                                      lctlib, & 
+                                      lctlib_sla, &
+                                      lctlib_growthform, &
                                       sb_model_scheme, &
                                       soil_depth_sl, &
                                       root_fraction_act_sl, &
                                       veg_litterfall, &
-                                      sb_formation )
+                                      sb_formation )                ! inout
 
-    USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element    
     USE mo_veg_constants,           ONLY: itree, igrass
     USE mo_jsb_math_constants,      ONLY: eps8
     USE mo_sb_constants,            ONLY: fc_soluable_max,k_fc_soluable,k_fn_soluable,k_fp_soluable, &
@@ -59,7 +59,8 @@ CONTAINS
     ! 0.1 InOut
     INTEGER,                                          INTENT(in)    :: nc, &                      !< dimensions
                                                                        nsoil_sb
-    TYPE(t_lctlib_element),                           INTENT(in)    :: lctlib                     !< land-cover-type library - parameter across pft's
+    REAL(wp),                                         INTENT(in)    :: lctlib_sla                 !< lctlib parameter
+    INTEGER,                                          INTENT(in)    :: lctlib_growthform          !< lctlib parameter
     CHARACTER(len=*),                                 INTENT(in)    :: sb_model_scheme            !< soil model/module name
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: soil_depth_sl, &           !< depth per soil layer
                                                                        root_fraction_act_sl       !< root fraction per soil layer
@@ -89,7 +90,7 @@ CONTAINS
     fn_soluable_leaf(:) = 0.0_wp
     fp_soluable_leaf(:) = 0.0_wp
     WHERE(veg_litterfall%leaf%nitrogen(:) > eps8)
-       fc_soluable_leaf(:) = MAX(0.0_wp,fc_soluable_max - k_fc_soluable * (lc_leaf_max + lc_leaf2sla * lctlib%sla) * & 
+       fc_soluable_leaf(:) = MAX(0.0_wp,fc_soluable_max - k_fc_soluable * (lc_leaf_max + lc_leaf2sla * lctlib_sla) * & 
                              veg_litterfall%leaf%carbon(:) / veg_litterfall%leaf%nitrogen(:))
        WHERE(fc_soluable_leaf(:) > eps8)
           fn_soluable_leaf(:) = 1._wp / (1._wp + (1._wp - fc_soluable_leaf(:))/(k_fn_soluable*fc_soluable_leaf(:)))
@@ -233,7 +234,7 @@ CONTAINS
     !> 3.0 Add surface litter fall from sapwood and heartwood pools to surface woody litter pool for trees
     !!     for grasses, stems and halms (=sapwood) are not actually wood, and therefore paritioned to 
     !!     metabolic and structural litter as if their were fine roots
-    SELECT CASE(lctlib%growthform)
+    SELECT CASE(lctlib_growthform)
        CASE (itree)
           sb_formation%woody_litter%carbon(:,1) = sb_formation%woody_litter%carbon(:,1) + & 
              (veg_litterfall%sap_wood%carbon(:) + veg_litterfall%heart_wood%carbon(:)) / & 

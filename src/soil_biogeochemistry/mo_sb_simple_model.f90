@@ -450,7 +450,6 @@ CONTAINS
     !!     following routines 
     !! 
     CALL calc_vertical_profile(nc, nsoil_sb, &
-                               lctlib, &
                                TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
                                soil_depth_sl(:,:), &
                                bulk_dens_sl(:,:), &
@@ -508,7 +507,8 @@ CONTAINS
     !> 2.1 Potential plant nutrient uptake rates
     !!
     CALL calc_potential_plant_uptake_rate(nc, nsoil_sb, &
-                                          lctlib, &
+                                          lctlib%vmax_uptake_n, &
+                                          lctlib%vmax_uptake_p, &
                                           dsl4jsb_Config(SB_)%flag_mycorrhiza, &
                                           soil_depth_sl(:,:), &
                                           veg_pool%fine_root%carbon(:), &
@@ -534,7 +534,8 @@ CONTAINS
     !> 2.2 Potential plant nutrient uptake rates
     !!
     CALL calc_potential_mycorrhiza_uptake_rate(nc, nsoil_sb, &
-                                               lctlib, &
+                                               lctlib%vmax_uptake_n, &
+                                               lctlib%vmax_uptake_p, &
                                                dsl4jsb_Config(SB_)%flag_mycorrhiza, &
                                                soil_depth_sl(:,:), &
                                                veg_pool%fine_root%carbon(:), &
@@ -790,7 +791,7 @@ CONTAINS
     !> 4.0 Mycorrhiza dynamics 
     !! 
     CALL calc_mycorrhiza_dynamics(nc, nsoil_sb, &
-                                  lctlib, &
+                                  lctlib%tau_mycorrhiza, &
                                   dsl4jsb_Config(SB_)%flag_mycorrhiza_org, &
                                   soil_depth_sl(:,:), &
                                   veg_pool%fine_root%carbon(:), &
@@ -823,7 +824,8 @@ CONTAINS
     !> 5.0 Update soil litter pools with litter fall
     !!
     CALL calc_litter_partitioning(nc, nsoil_sb, &
-                                  lctlib, &  
+                                  lctlib%sla, &
+                                  lctlib%growthform, &
                                   TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
                                   soil_depth_sl(:,:), &
                                   root_fraction_act_sl(:,:), &
@@ -833,7 +835,7 @@ CONTAINS
     !> 6.0 Add asymbiontic N fixation to NH4 pool 
     !! 
     CALL calc_asymbiontic_n_fixation(nc, nsoil_sb, &
-                                     lctlib, &
+                                     lctlib%bnf_base, &
                                      TRIM(dsl4jsb_Config(SB_)%sb_bnf_scheme), & 
                                      soil_depth_sl(:,:), &
                                      rtm_decomposition_act(:,:), &
@@ -1009,7 +1011,6 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_vertical_profile( nc, &                               ! in 
                                     nsoil_sb, & 
-                                    lctlib, & 
                                     sb_model_scheme, &
                                     soil_depth_sl, &
                                     bulk_dens_sl, &
@@ -1072,7 +1073,6 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     ! 0.1 InOut
     INTEGER,                                     INTENT(in)  :: nc, &                        !< dimensions
                                                                 nsoil_sb
-    TYPE(t_lctlib_element),                      INTENT(in)  :: lctlib                       !< land-cover-type library - parameter across pft's
     CHARACTER(len=*),                            INTENT(in)  :: sb_model_scheme              !< from sb config
     REAL(wp), DIMENSION(nc),                     INTENT(in)  :: p_deposition                 !< p deposition, [µmol m-2 s-1]
     REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)  :: &
@@ -1277,7 +1277,8 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_potential_plant_uptake_rate(nc, &                         ! in
                                               nsoil_sb, &
-                                              lctlib, & 
+                                              lctlib_vmax_uptake_n, & 
+                                              lctlib_vmax_uptake_p, & 
                                               flag_mycorrhiza, &
                                               soil_depth_sl, &
                                               veg_pool_fine_root_carbon, &
@@ -1307,7 +1308,8 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     ! 0.1 InOut
     INTEGER,                                     INTENT(in)  :: nc, &                      !< dimensions
                                                                 nsoil_sb
-    TYPE(t_lctlib_element),                      INTENT(in)  :: lctlib                     !< land-cover-type library - parameter across pft's
+    REAL(wp),                                    INTENT(in)  :: lctlib_vmax_uptake_n       !< lctlib parameter
+    REAL(wp),                                    INTENT(in)  :: lctlib_vmax_uptake_p       !< lctlib parameter
     LOGICAL,                                     INTENT(in)  :: flag_mycorrhiza            !< from sb config
     REAL(wp), DIMENSION(nc),                     INTENT(in)  :: veg_pool_fine_root_carbon  !< fine root carbon [mol / m2]
     REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)  :: &
@@ -1379,11 +1381,11 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
        !!
        !! potential N uptake rate (µmol N / mol C fine-root / s), weighted by root distribution
        hlp1(:,isoil) = root_fraction_act_sl(:,isoil) * rtm_root_uptake_act(:,isoil) * rmm_root_uptake_act(:,isoil) * &
-                       (1.0_wp - myc_root_coverage_act(:)) * lctlib%vmax_uptake_n * f_vmax_uptake_act(:) * &
+                       (1.0_wp - myc_root_coverage_act(:)) * lctlib_vmax_uptake_n * f_vmax_uptake_act(:) * &
                        nh4_solute(:,isoil) * ( km1_uptake_nh4_act(:,isoil) + & 
                        1._wp / ( km2_uptake_nh4_act(:,isoil) + nh4_solute(:,isoil) )) 
        hlp2(:,isoil) = root_fraction_act_sl(:,isoil) * rtm_root_uptake_act(:,isoil) * rmm_root_uptake_act(:,isoil) * &
-                       (1.0_wp - myc_root_coverage_act(:)) * lctlib%vmax_uptake_n * f_vmax_uptake_act(:) * &
+                       (1.0_wp - myc_root_coverage_act(:)) * lctlib_vmax_uptake_n * f_vmax_uptake_act(:) * &
                        no3_solute(:,isoil) * ( km1_uptake_no3_act(:,isoil) + & 
                        1._wp / ( km2_uptake_no3_act(:,isoil) + no3_solute(:,isoil) )) 
        unit_uptake_n_pot(:) = unit_uptake_n_pot(:) + hlp1(:,isoil) + hlp2(:,isoil) 
@@ -1400,7 +1402,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
        !!
        !! potential P uptake rate (µmol P / mol C fine-root / s), weighted by root distribution
        hlp1(:,isoil) = root_fraction_act_sl(:,isoil)  * rtm_root_uptake_act(:,isoil) * rmm_root_uptake_act(:,isoil) * &
-                       (1.0_wp - myc_root_coverage_act(:)) * lctlib%vmax_uptake_p * f_vmax_uptake_act(:) * &
+                       (1.0_wp - myc_root_coverage_act(:)) * lctlib_vmax_uptake_p * f_vmax_uptake_act(:) * &
                         po4_solute(:,isoil) * ( km1_uptake_po4_act(:,isoil) + &
                         1._wp / ( km2_uptake_po4_act(:,isoil) + po4_solute(:,isoil) ))
        unit_uptake_p_pot(:) = unit_uptake_p_pot(:) + hlp1(:,isoil)
@@ -1421,7 +1423,8 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_potential_mycorrhiza_uptake_rate(nc, &                         ! in
                                                    nsoil_sb, &
-                                                   lctlib, & 
+                                                   lctlib_vmax_uptake_n, & 
+                                                   lctlib_vmax_uptake_p, & 
                                                    flag_mycorrhiza, &
                                                    soil_depth_sl, &
                                                    veg_pool_fine_root_carbon, &
@@ -1450,8 +1453,9 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     ! 0.1 InOut
     INTEGER,                                          INTENT(in)  :: nc, &                      !< dimensions
                                                                      nsoil_sb
-    TYPE(t_lctlib_element),                           INTENT(in)  :: lctlib                      !< land-cover-type library - parameter across pft's
-    LOGICAL,                                          INTENT(in)  :: flag_mycorrhiza           !< from sb config
+    REAL(wp),                                         INTENT(in)  :: lctlib_vmax_uptake_n       !< lctlib parameter
+    REAL(wp),                                         INTENT(in)  :: lctlib_vmax_uptake_p       !< lctlib parameter
+    LOGICAL,                                          INTENT(in)  :: flag_mycorrhiza            !< from sb config
     REAL(wp), DIMENSION(nc),                          INTENT(in)  :: veg_pool_fine_root_carbon  !< fine root carbon [mol / m2]
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)  :: soil_depth_sl, &            !< soil depth per layer [m]
                                                                      sb_pool_mycorrhiza_carbon, &!< mycorrhizal biomass [mol C / m3]
@@ -1496,13 +1500,13 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
       DO isoil = 1,nsoil_sb
         mycorrhiza_uptake_nh4_sl(:,isoil) = sb_pool_mycorrhiza_carbon(:,isoil) * &
                                             rtm_mycorrhiza_uptake_act(:,isoil) * rmm_mycorrhiza_uptake_act(:,isoil) * &
-                                            f_surface_myc2fineroot * lctlib%vmax_uptake_n * f_vmax_uptake_act(:) * &
+                                            f_surface_myc2fineroot * lctlib_vmax_uptake_n * f_vmax_uptake_act(:) * &
                                             nh4_solute(:,isoil) * ( km1_uptake_nh4_act(:,isoil) + & 
                                             1._wp / ( km2_uptake_nh4_act(:,isoil) + nh4_solute(:,isoil) )) * & 
                                             dtime / 1.e6_wp
         mycorrhiza_uptake_no3_sl(:,isoil) = sb_pool_mycorrhiza_carbon(:,isoil) * &
                                             rtm_mycorrhiza_uptake_act(:,isoil) * rmm_mycorrhiza_uptake_act(:,isoil) * & 
-                                            f_surface_myc2fineroot * lctlib%vmax_uptake_n * f_vmax_uptake_act(:) * &
+                                            f_surface_myc2fineroot * lctlib_vmax_uptake_n * f_vmax_uptake_act(:) * &
                                             no3_solute(:,isoil) * ( km1_uptake_no3_act(:,isoil) + & 
                                             1._wp / ( km2_uptake_no3_act(:,isoil) + no3_solute(:,isoil) )) * & 
                                             dtime / 1.e6_wp
@@ -1529,7 +1533,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
         !!
         mycorrhiza_uptake_po4_sl(:,isoil) = sb_pool_mycorrhiza_carbon(:,isoil) * &
                                             rtm_mycorrhiza_uptake_act(:,isoil) * rmm_mycorrhiza_uptake_act(:,isoil) *  & 
-                                            f_surface_myc2fineroot * lctlib%vmax_uptake_p * f_vmax_uptake_act(:) * & 
+                                            f_surface_myc2fineroot * lctlib_vmax_uptake_p * f_vmax_uptake_act(:) * & 
                                             po4_solute(:,isoil) * ( km1_uptake_po4_act(:,isoil) + & 
                                             1._wp / ( km2_uptake_po4_act(:,isoil) + po4_solute(:,isoil) )) * & 
                                             dtime / 1.e6_wp
@@ -3014,7 +3018,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_mycorrhiza_dynamics(nc, &                         ! in
                                       nsoil_sb, &
-                                      lctlib, &
+                                      lctlib_tau_mycorrhiza, &
                                       flag_mycorrhiza_org, &
                                       soil_depth_sl, &
                                       veg_pool_fine_root_carbon , &
@@ -3053,7 +3057,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     ! 0.1 InOut
     INTEGER,                                          INTENT(in)    :: nc, &                        !< dimensions
                                                                        nsoil_sb
-    TYPE(t_lctlib_element),                           INTENT(in)    :: lctlib                       !< land-cover-type library - parameter across pft's
+    REAL(wp),                                         INTENT(in)    :: lctlib_tau_mycorrhiza        !< lctlib parameter
     LOGICAL,                                          INTENT(in)    :: flag_mycorrhiza_org          !< from sb config
     REAL(wp), DIMENSION(nc),                          INTENT(in)    :: veg_pool_fine_root_carbon    !< fine root carbon [mol / m2]
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: soil_depth_sl                !< depth per soil layer
@@ -3253,7 +3257,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
 
     !> 1.4 Formation of litter from mycorrhiza turnover (mol / m3 / timestep)
     !!
-    fturn_mycorrhiza(:,:) = 1.0_wp / lctlib%tau_mycorrhiza / one_day / one_year * dtime
+    fturn_mycorrhiza(:,:) = 1.0_wp / lctlib_tau_mycorrhiza / one_day / one_year * dtime
 
     sb_loss%mycorrhiza%carbon(:,:)     = sb_loss%mycorrhiza%carbon(:,:) + &
                                          fturn_mycorrhiza(:,:) * sb_pool%mycorrhiza%carbon(:,:)     
@@ -3293,7 +3297,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_asymbiontic_n_fixation(nc, &                                ! in
                                          nsoil_sb, &
-                                         lctlib, &  
+                                         lctlib_bnf_base, &  
                                          sb_bnf_scheme, &
                                          soil_depth_sl, &
                                          rtm_fixation_act, &
@@ -3314,7 +3318,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     ! 0.1 InOut
     INTEGER,                                          INTENT(in)    :: nc, &                       !< dimensions
                                                                        nsoil_sb
-    TYPE(t_lctlib_element),                           INTENT(in)    :: lctlib                      !< land-cover-type library - parameter across pft's
+    REAL(wp),                                         INTENT(in)    :: lctlib_bnf_base             !< lctlib parameter
     CHARACTER(len=*),                                 INTENT(in)    :: sb_bnf_scheme               !< sb n fixation scheme  
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: soil_depth_sl, &            !< soil depth per layer [m] 
                                                                        rtm_fixation_act, &         !< temperature rate modifier  
@@ -3348,7 +3352,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     !!
     SELECT CASE(TRIM(sb_bnf_scheme))
        CASE("fixed") 
-         hlp2(:) = lctlib%bnf_base / SUM(root_fraction_act_sl(:,:) * soil_depth_sl(:,:),DIM=2)
+         hlp2(:) = lctlib_bnf_base / SUM(root_fraction_act_sl(:,:) * soil_depth_sl(:,:),DIM=2)
          hlp2_2d(:,:) = SPREAD(hlp2,2,nsoil_sb)
        CASE("standard")
          hlp2(:) = standard_bnf_max_rate / SUM(root_fraction_act_sl(:,:) * soil_depth_sl(:,:),DIM=2)

@@ -14,7 +14,6 @@ MODULE mo_sb_jsm_processes
   USE mo_kind,                ONLY: wp
   USE mo_exception,           ONLY: message, finish
   USE mo_jsb_math_constants,  ONLY: dtime, eps8
-  USE mo_jsb_lctlib_class,    ONLY: t_lctlib_element 
 
 
   IMPLICIT NONE
@@ -135,7 +134,9 @@ CONTAINS
   !!
   !! Output: microbial and plant inorganic uptake rates
   !-----------------------------------------------------------------------------------------------------
-  ELEMENTAL SUBROUTINE calc_inorganic_uptake(sb_adsorp_scheme, lctlib, solute, microbial_carbon, fine_root_carbon, &
+  ELEMENTAL SUBROUTINE calc_inorganic_uptake(lctlib_vmax_uptake_n, &
+                                             sb_adsorp_scheme, &
+                                             solute, microbial_carbon, fine_root_carbon, &
                                              rtm_mic_uptake, rmm_mic_uptake, rtm_hsc, rmm_hsc, & 
                                              rtm_plant_uptake, rmm_plant_uptake, km1_upt, km2_upt, &
                                              vmax_mic_uptake, km_mic_uptake, vmax_plant_uptake, km_plant_uptake, & 
@@ -146,8 +147,9 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
+
+    REAL(wp), INTENT(in)            :: lctlib_vmax_uptake_n    !< lctlib paramter
     CHARACTER(len=*), INTENT(in)    :: sb_adsorp_scheme        !< eca_full; 2: eca_none
-    TYPE(t_lctlib_element), INTENT(in)  :: lctlib              !< land-cover-type library - parameter across pft's
     REAL(wp), INTENT(in)            :: solute                  !< concentration of the solvent to be taken up (mol / m3)
     REAL(wp), INTENT(in)            :: microbial_carbon        !< microbial carbon density (mol / m3)
     REAL(wp), INTENT(in)            :: fine_root_carbon        !< fine_root density (mol / m3)
@@ -182,7 +184,7 @@ CONTAINS
       CASE("eca_none")
       hlp1 = km1_upt / (rtm_hsc * rmm_hsc)
       hlp2 = km2_upt * rtm_hsc * rmm_hsc
-      plant_uptake = fine_root_carbon * rtm_plant_uptake * rmm_plant_uptake * lctlib%vmax_uptake_n * & 
+      plant_uptake = fine_root_carbon * rtm_plant_uptake * rmm_plant_uptake * lctlib_vmax_uptake_n * & 
                      solute * ( hlp1 + 1._wp / ( hlp2 + solute )) 
       CASE("eca_part")
         hlp1 = rtm_hsc * rmm_hsc * km_mic_uptake
@@ -368,7 +370,8 @@ CONTAINS
   !!
   !! Output: microbial and plant inorganic uptake rates, fast adsorption and desorption rates
   !-----------------------------------------------------------------------------------------------------
-  ELEMENTAL SUBROUTINE calc_sinking_flux_po4(sb_adsorp_scheme, flag_sb_ECA_upt_po4, lctlib, &
+  ELEMENTAL SUBROUTINE calc_sinking_flux_po4(lctlib_vmax_uptake_p , &
+                                             sb_adsorp_scheme, flag_sb_ECA_upt_po4, &
                                              microbial_carbon, fine_root_carbon, solute, &
                                              rtm_mic_uptake, rmm_mic_uptake, rtm_hsc, rmm_hsc, &
                                              rtm_plant_uptake, rmm_plant_uptake, km1_upt, km2_upt, &
@@ -382,9 +385,9 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
+    REAL(wp)        , INTENT(in)    :: lctlib_vmax_uptake_p      !< lctlib paramter
     CHARACTER(len=*), INTENT(in)    :: sb_adsorp_scheme          !< eca_full; eca_none; eca_part
     LOGICAL,          INTENT(in)    :: flag_sb_ECA_upt_po4       !< T: eca only applies to uptake; F: eca also applies to adsorption
-    TYPE(t_lctlib_element), INTENT(in)  :: lctlib                !< land-cover-type library - parameter across pft's
     REAL(wp)        , INTENT(in)    :: microbial_carbon          !< microbial carbon density (mol / m3)
     REAL(wp)        , INTENT(in)    :: fine_root_carbon          !< fine_root density (mol / m3)
     REAL(wp)        , INTENT(in)    :: rtm_mic_uptake            !< temperature rate modifier for microbial uptake
@@ -463,7 +466,7 @@ CONTAINS
       !> 1.2 non-ECA approach
       !! 
       CASE("eca_none")
-        plant_uptake       = rtm_plant_uptake * rmm_plant_uptake * fine_root_carbon * lctlib%vmax_uptake_p * &
+        plant_uptake       = rtm_plant_uptake * rmm_plant_uptake * fine_root_carbon * lctlib_vmax_uptake_p * &
                              solute * (km1_upt + 1._wp / (km2_upt + solute)) 
         fast_desorp_po4    = 0._wp
         fast_adsorpt_po4   = 0._wp       
