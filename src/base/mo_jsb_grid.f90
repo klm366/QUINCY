@@ -43,6 +43,8 @@ CONTAINS
 
     CALL message(TRIM(routine), 'registered new JSBACH grid instance '//TRIM(grid%name))
 
+    !$acc enter data copyin(grid%lat,grid%lon,grid%area,grid%lsm,grid%lsf,grid)
+
   END SUBROUTINE Register_grid
 
   SUBROUTINE Register_vgrid(vgrid)
@@ -85,6 +87,7 @@ CONTAINS
     WRITE(message_text, '(A,A,2I3)') 'Registered new vgrid: name, ID, length= ',TRIM(vgrid%name), vgrid%ZaxisID, length
     CALL message(TRIM(routine), message_text)
 
+    !$acc enter data create(vgrid%levels,vgrid%lbounds,vgrid%ubounds,vgrid%dz,vgrid)
   END SUBROUTINE Register_vgrid
 
   FUNCTION Get_grid(id) RESULT(grid)
