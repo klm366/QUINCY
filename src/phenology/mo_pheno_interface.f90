@@ -772,16 +772,17 @@ CONTAINS
     IF (        TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology' &
          & .OR. tile%lcts(1)%lib_id == 0) THEN         ! General vegetation tile, no specific PFT
       IF (model%config%l_compat401) THEN
-        !$claw expand parallel update
+        !$claw expand parallel update savepoint=ser_jsb_pheno_update_fpc_expand_1 tile_name=tile%name
         fract_fpc(:) = get_foliage_projected_cover(fract_fpc_max(:), lai(:), 1._wp)
       ELSE
         fract_fpc_mon(1:,0:) => dsl4jsb_memory(PHENO_)%fract_fpc_mon (ics:ice, iblk, :) ! in
         CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
+        !$claw expand parallel update savepoint=ser_jsb_pheno_update_fpc_expand_2 tile_name=tile%name
         fract_fpc(:) = REAL(wgt1,wp) * fract_fpc_mon(:,nmw1) + REAL(wgt2,wp) * fract_fpc_mon(:,nmw2)
       END IF
     ELSE        
       ! We have PFTs and %scheme /= climatology
-      !$claw expand parallel update
+      !$claw expand parallel update savepoint=ser_jsb_pheno_update_fpc_expand_3 tile_name=tile%name
       fract_fpc(:) = get_foliage_projected_cover(fract_fpc_max(:), lai(:), dsl4jsb_Lctlib_param(ClumpinessFactor))
     END IF
 
