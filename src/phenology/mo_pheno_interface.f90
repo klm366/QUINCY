@@ -267,10 +267,6 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER  :: routine = modname//':update_phenology_logrop'
 
-    !$claw acc data pcreate(w_soil_filling, t_air_in_Celcius)  & 
-    !$claw pcreate(LaiMax_corrected, veg_fract_correction_old) &
-    !$claw pcreate(old_c_state_sum, dummy_flux)
-
     ! Set local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -279,6 +275,10 @@ CONTAINS
 
     ! If process is not active on this tile, do nothing
     IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
+
+    !$claw acc data create(w_soil_filling, t_air_in_Celcius)  & 
+    !$claw create(LaiMax_corrected, veg_fract_correction_old) &
+    !$claw create(old_c_state_sum, dummy_flux)
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -772,7 +772,7 @@ CONTAINS
     IF (        TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology' &
          & .OR. tile%lcts(1)%lib_id == 0) THEN         ! General vegetation tile, no specific PFT
       IF (model%config%l_compat401) THEN
-        !$claw expand
+        !$claw expand parallel update
         fract_fpc(:) = get_foliage_projected_cover(fract_fpc_max(:), lai(:), 1._wp)
       ELSE
         fract_fpc_mon(1:,0:) => dsl4jsb_memory(PHENO_)%fract_fpc_mon (ics:ice, iblk, :) ! in
@@ -781,7 +781,7 @@ CONTAINS
       END IF
     ELSE        
       ! We have PFTs and %scheme /= climatology
-      !$claw expand
+      !$claw expand parallel update
       fract_fpc(:) = get_foliage_projected_cover(fract_fpc_max(:), lai(:), dsl4jsb_Lctlib_param(ClumpinessFactor))
     END IF
 
