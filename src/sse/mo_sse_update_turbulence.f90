@@ -43,7 +43,8 @@ CONTAINS
     USE mo_jsb_math_constants,    ONLY: dtime
     USE mo_atmland_constants,     ONLY: min_wind, max_wind 
     USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
-    USE mo_jsb_phys_constants,    ONLY: grav, r_gas_vapour, r_gas_dryair, cpd, cpvd1, ckap, cvdifts
+    USE mo_jsb_phys_constants,    ONLY: grav, r_gas_vapour, r_gas_dryair, cpd, cpvd1, ckap, cvdifts, zkappa, vtmpc1
+    USE mo_sse_constants,         ONLY: height_wind
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(SSE_)
@@ -66,8 +67,7 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc)       :: ztvd, ztvir, q_sat_surf, ztvs, zg, zgh, zdu2, zril, zcdnl, zchln, & 
                                              zscfl, zucfl, zucfhl, zcons, zcfncl, zcfnchl, zcfml, zcfhl, &
                                              csat, cair, z0m, z0h, zchnl, zlev, wind_air
-    REAL(wp)                              :: zepz0o, zcons8, zcons9, zcons11, zcons12, zkappa, vtmpc1
-    REAL(wp)                              :: HeightWind, HeightHumidity
+    REAL(wp)                              :: zcons8, zcons9, zcons11, zcons12
     INTEGER                               :: iblk, ics, ice, nc
     REAL(wp)                              :: steplen
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_soil_turbulence'
@@ -149,26 +149,21 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
-    !-------------------------------------------------------------------------------------------------
-    ! Some constants from echam/mo_surface_land.f90
-    !-------------------------------------------------------------------------------------------------
 
-    zepz0o      = 2._wp
-    zkappa      = r_gas_dryair / cpd
-    vtmpc1      = r_gas_vapour / r_gas_dryair - 1.0_wp  
+    ! 0.9 init local variables and constants
+    ! Some constants from echam/mo_surface_land.f90
     csat(:)     = 0.5_wp
     cair(:)     = 0.5_wp
-
     wind_air(:) = MIN(MAX(wind_10m(:),min_wind),max_wind) 
-    HeightWind  = 10.0_wp
-    zlev(:)     = HeightWind + 3._wp/10._wp * height(:)
+    zlev(:)     = height_wind + 3._wp/10._wp * height(:)
     z0m(:)      = MAX(height(:) / 10.0_wp,0.1_wp)
     z0h(:)      = z0m(:) / 10.0_wp
+
     ! geopotential of the surface layer (see echam's auxhybc.f90 & geopot.f90)
-    ! If HeightWind is set, then the measurement height + an offset from the average vegetation height
+    ! If height_wind is set, then the measurement height + an offset from the average vegetation height
     ! is used. Otherwise, the code defaults to the half-level of ECHAM's lowest atmospheric layer
     zg(:)       = zlev(:) * grav 
-    zgh(:)      = zg(:)                          ! HeightHumidity and HeightTemperature have to be equal
+    zgh(:)      = zg(:)                          ! height_humidity and height_temperature have to be equal
     zdu2(:)     = wind_air(:)**2._wp
 
     ! virtual potential air temperature (see mo_surface_boundary.f90)
@@ -204,7 +199,7 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task to update_soil_turbulence
+  ! Sub Task to mo_sse_update_physics:calc_surface_energy_balance
   !
   !-----------------------------------------------------------------------------------------------------
   !> Routine to provide an new estimate of the drag coefficent, given the old (t-1), current (t) and \n
@@ -218,7 +213,8 @@ CONTAINS
                                             height,zril_old,drag_srf,pch,ga)
 
     USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
-    USE mo_jsb_phys_constants,    ONLY: grav, r_gas_vapour, r_gas_dryair, cpd, cpvd1, ckap, cvdifts
+    USE mo_jsb_phys_constants,    ONLY: grav, r_gas_vapour, r_gas_dryair, cpd, cpvd1, ckap, cvdifts, zkappa, vtmpc1
+    USE mo_sse_constants,         ONLY: height_wind
 
     IMPLICIT NONE
     ! ---------------------------
@@ -240,9 +236,8 @@ CONTAINS
     ! 0.2 Local
     REAL(wp), DIMENSION(nc)               :: ztvd, ztvir, q_sat_surf, ztvs, ztvs_new, zg, zgh, zdu2, zril, & 
                                              z0m,z0h,csat,cair,zchnl,zlev,zril_initial,zril_update
-    REAL(wp)                              :: zepz0o, zcons8, zcons9, zcons11, zcons12, zkappa, vtmpc1
-    REAL(wp)                              :: HeightWind, HeightHumidity, &
-                                             coef_tm1, coef_t, coef_tp1
+    REAL(wp)                              :: zcons8, zcons9, zcons11, zcons12
+    REAL(wp)                              :: coef_tm1, coef_t, coef_tp1
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_filtered_drag_coefficient'
 
 
@@ -250,29 +245,23 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
-    !-------------------------------------------------------------------------------------------------
-    ! Some constants from echam/mo_surface_land.f90
-    !-------------------------------------------------------------------------------------------------
 
-    zkappa      = r_gas_dryair / cpd
-    vtmpc1      = r_gas_vapour / r_gas_dryair - 1.0_wp  
-    csat(:)     = 0.5_wp
-    cair(:)     = 0.5_wp
- 
+    ! 0.9 init local variables and constants
+    ! Some constants from echam/mo_surface_land.f90
     coef_tm1    = 0.5_wp
     coef_t      = 0.25_wp
     coef_tp1    = 0.25_wp
-
-    HeightWind  = 10.0_wp
-    zlev(:)     = HeightWind + 3._wp/10._wp * height(:)
+    csat(:)     = 0.5_wp
+    cair(:)     = 0.5_wp
+    zlev(:)     = height_wind + 3._wp/10._wp * height(:)
     z0m(:)      = MAX(height(:) / 10.0_wp,0.1_wp)
     z0h(:)      = z0m(:) / 10.0_wp
 
     ! geopotential of the surface layer (see echam's auxhybc.f90 & geopot.f90)
-    ! If HeightWind is set, then the measurement height + an offset from the average vegetation height
+    ! If height_wind is set, then the measurement height + an offset from the average vegetation height
     ! is used. Otherwise, the code defaults to the half-level of ECHAM's lowest atmospheric layer
     zg(:)   = zlev(:) * grav 
-    zgh(:)  = zg(:)                          ! HeightHumidity and HeightTemperature have to be equal
+    zgh(:)  = zg(:)                          ! height_humidity and height_temperature have to be equal
     zdu2(:) = wind_air(:)**2._wp
 
     ! virtual potential air temperature (see mo_surface_boundary.f90)
@@ -314,7 +303,7 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task to update_soil_turbulence
+  ! Sub Task to update_soil_turbulence  &  calc_filtered_drag_coefficient
   !
   !-----------------------------------------------------------------------------------------------------
   !> Routine to calculate drag coefficient for a given surface condition and turbulence 
@@ -328,7 +317,7 @@ CONTAINS
                                    drag_srf,pch,ga)            
 
     USE mo_phy_schemes,           ONLY: heat_transfer_coef
-    USE mo_jsb_phys_constants,    ONLY: grav, r_gas_vapour, r_gas_dryair, ckap, cvdifts
+    USE mo_jsb_phys_constants,    ONLY: grav, r_gas_vapour, r_gas_dryair, ckap, cvdifts, vtmpc1
 
     IMPLICIT NONE
     ! ---------------------------
@@ -347,12 +336,12 @@ CONTAINS
     REAL(wp), DIMENSION(nc),         INTENT(out)   :: drag_srf, &
                                                       pch, &
                                                       ga
+    ! ---------------------------
+    ! 0.2 Local                                                      
     REAL(wp), DIMENSION(nc)               :: zcdnl, zchln, & 
                                              zscfl, zucfl, zucfhl, zcons, zcfncl, zcfnchl, zcfml, zcfhl, &
                                              zchnl,zdu2
-    REAL(wp)                              :: zcons8,zcons9,zcons11, zcons12, vtmpc1
-    ! ---------------------------
-    ! 0.2 Local
+    REAL(wp)                              :: zcons8,zcons9,zcons11, zcons12
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_drag_coefficient'
 
 
@@ -360,12 +349,12 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
-   
+
+    ! 0.9 init local variables and constants
     zcons8        = 2._wp * 5.0_wp 
     zcons9        = 3._wp * 5.0_wp 
     zcons11       = 3._wp * 5.0_wp * 5.0_wp
     zcons12       = cvdifts * steplen * grav / r_gas_dryair 
-    vtmpc1        = r_gas_vapour / r_gas_dryair - 1.0_wp  
     zdu2(:)       = wind_air(:)**2._wp
 
     ! Neutral drag coefficient for momentum and heat

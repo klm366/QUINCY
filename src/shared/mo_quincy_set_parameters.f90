@@ -106,6 +106,7 @@ MODULE mo_quincy_set_parameters
     REAL(wp)           :: w_skin_max
     REAL(wp)           :: drain_frac
     REAL(wp)           :: fdrain_runoff
+    REAL(wp)           :: height_wind
     REAL(wp)           :: wpot_pwp
     REAL(wp)           :: wpot_fc
     REAL(wp)           :: wpot_min
@@ -584,6 +585,7 @@ CONTAINS
     REAL(wp)           :: w_skin_max
     REAL(wp)           :: drain_frac
     REAL(wp)           :: fdrain_runoff
+    REAL(wp)           :: height_wind
     REAL(wp)           :: wpot_pwp
     REAL(wp)           :: wpot_fc
     REAL(wp)           :: wpot_min
@@ -962,6 +964,7 @@ CONTAINS
         w_skin_max                , &
         drain_frac                , &
         fdrain_runoff             , &
+        height_wind               , &
         wpot_pwp                  , &
         wpot_fc                   , &
         wpot_min                  , &
@@ -1343,6 +1346,7 @@ CONTAINS
     w_skin_max                  = missval
     drain_frac                  = missval
     fdrain_runoff               = missval
+    height_wind                 = missval
     wpot_pwp                    = missval
     wpot_fc                     = missval
     wpot_min                    = missval
@@ -1753,6 +1757,7 @@ CONTAINS
     this%w_skin_max                  = w_skin_max
     this%drain_frac                  = drain_frac
     this%fdrain_runoff               = fdrain_runoff
+    this%height_wind                 = height_wind
     this%wpot_pwp                    = wpot_pwp
     this%wpot_fc                     = wpot_fc
     this%wpot_min                    = wpot_min
@@ -2493,6 +2498,11 @@ CONTAINS
                                     this%fdrain_runoff, &
                                     "fdrain_runoff", proportional_parameter_changes, &
                                     fdrain_runoff)
+
+    CALL Set_quincy_parameter_value(this%height_wind, &
+                                    this%height_wind, &
+                                    "height_wind", proportional_parameter_changes, &
+                                    height_wind)
     
     CALL Set_quincy_parameter_value(this%wpot_pwp, &
                                     this%wpot_pwp, &

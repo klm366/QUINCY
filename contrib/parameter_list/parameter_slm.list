@@ -83,6 +83,7 @@
   w_skin_max=NAN
   drain_frac=NAN
   fdrain_runoff=NAN
+  height_wind=NAN
   wpot_pwp=NAN
   wpot_fc=NAN
   wpot_min=NAN

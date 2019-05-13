@@ -34,7 +34,9 @@ MODULE mo_jsb_phys_constants
     cvdifts      ,  &           !< ???
     ckap         ,  &           !< von Karmann constant for evaporation
     LatentHeatVaporization, &   !< Latent heat for vapourisation (J/kg) 
-    LatentHeatSublimation       !< Latent heat for sublimation (J/kg) 
+    LatentHeatSublimation, &    !< Latent heat for sublimation (J/kg)
+    zkappa       , &            !< 
+    vtmpc1                      !< 
   ! molar masses
   REAL(wp), SAVE :: &
     molar_mass_C    ,  &        !< g C / mol C
@@ -82,6 +84,7 @@ CONTAINS
     Dwv          = 0.0000242_wp 
     Dco2         = 0.0000151_wp 
     Tzero        = 273.15_wp
+    ! ECHAM
     grav         = 9.81_wp
     rhoh2o       = 1000._wp 
     stbo         = 5.6704E-8_wp
@@ -93,6 +96,8 @@ CONTAINS
     ckap         = 0.41_wp
     LatentHeatVaporization = 2.5008e6_wp
     LatentHeatSublimation  = 2.8345e6_wp
+    zkappa       = r_gas_dryair / cpd
+    vtmpc1       = r_gas_vapour / r_gas_dryair - 1.0_wp  
     ! molar masses
     molar_mass_C   = 12.0112_wp 
     molar_mass_C12 = 12.0_wp    

@@ -26,6 +26,9 @@ MODULE mo_sse_constants
     drain_frac, &               !< preferential flow fraction of infiltrating water per meter soil 
     fdrain_runoff               !< preferential flow fraction of runoff
 
+  REAL(wp), SAVE :: &
+    height_wind                 !< 
+
  ! constants in pedo-transfer functions according to Saxton & Rawls 2006
  REAL(wp) :: & 
     wpot_pwp, &                 !< water potential at permanent wilitng point (Pa)
@@ -82,6 +85,8 @@ CONTAINS
     w_skin_max              = 0.0002_wp     ! JSBACH4 
     drain_frac              = 0.01_wp       ! tuned
     fdrain_runoff           = 0.95_wp       ! set from ORCHIDEE
+
+    height_wind             = 10.0_wp       ! JSBACH ?
 
     ! Saxton & Rawls, 2006, includes conversion from fractional to mass% texture
     wpot_pwp        = 1500._wp
