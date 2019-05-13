@@ -264,6 +264,8 @@ CONTAINS
     LOGICAL :: l_newday
     REAL(wp) :: timestep  ! Timestep in days
     INTEGER :: i
+    REAL(wp) :: MaxLAI
+
 
     CHARACTER(len=*), PARAMETER  :: routine = modname//':update_phenology_logrop'
 
@@ -487,8 +489,9 @@ CONTAINS
     ELSE
      ! R: Rename MaxLAI in lctlib to LAI_max in JS3 comes from theLand%Vegetation%LAI_max,
      ! which is for each vegetated tile taken from MaxLAI in the lct library.
+       MaxLAI = dsl4jsb_Lctlib_param(MaxLAI)
        !$claw expand update savepoint=ser_jsb_PHENO_update_phenology_logrop_expand_3 tile_name=tile%name
-       LaiMax_corrected(:) = dsl4jsb_Lctlib_param(MaxLAI)
+       LaiMax_corrected(:) = MaxLAI
     END IF
 
     ! R: wird jedes mal (d.h. für jedes Tile) aufgerufen, wobei automatisch der Tile spezifische Wert aus dem lctlib genommen wird:
