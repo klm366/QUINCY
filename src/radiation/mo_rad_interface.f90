@@ -600,7 +600,7 @@ CONTAINS
 
     ! Local variables
     TYPE(t_jsb_model), POINTER   :: model
-    INTEGER                      :: iblk, nc , ics, ice
+    INTEGER                      :: iblk, nc , ics, ice, i
 
     LOGICAL                      :: &
                                     & l_day(options%nc)
@@ -794,11 +794,17 @@ CONTAINS
         & albedo_lice(:)  & ! inout
         & )
 
-      WHERE (l_day(:))
-        alb_vis(:) = (1._wp - fract_lice(:)) * albedo_lwtr(:) + fract_lice(:) * albedo_lice(:)
-        alb_nir(:) = alb_vis(:)
-      END WHERE
-
+      !TODO CLAW TEMP
+      !$claw update device(fract_lice, albedo_lwtr, albedo_lice)
+      !$claw acc parallel loop gang vector
+      DO i = 1, size(l_day)
+        IF(l_day(i)) THEN
+          alb_vis(i) = (1._wp - fract_lice(i)) * albedo_lwtr(i) + fract_lice(i) * albedo_lice(i)
+          alb_nir(i) = alb_vis(i)
+        END IF
+      END DO
+      !TODO CLAW TEMP
+      !$claw update host(alb_vis, alb_nir)
 
     ELSE IF (tile%is_glacier) THEN
       !$claw sca forward update savepoint=ser_jsb_RAD_calc_glacier_albedo_1 tile_name=tile%name
