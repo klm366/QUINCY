@@ -741,7 +741,7 @@ CONTAINS
 
 
     INTEGER  :: iblk, ics, ice
-    REAL(wp) :: wgt1, wgt2
+    REAL(wp) :: wgt1, wgt2, ClumpinessFactor
     INTEGER  :: nmw1,nmw2
 
     TYPE(t_jsb_model), POINTER :: model
@@ -782,8 +782,9 @@ CONTAINS
       END IF
     ELSE        
       ! We have PFTs and %scheme /= climatology
+      ClumpinessFactor = dsl4jsb_Lctlib_param(ClumpinessFactor) ! Do a copy to avoid deep copy on accelerator
       !$claw expand parallel update savepoint=ser_jsb_pheno_update_fpc_expand_3 tile_name=tile%name
-      fract_fpc(:) = get_foliage_projected_cover(fract_fpc_max(:), lai(:), dsl4jsb_Lctlib_param(ClumpinessFactor))
+      fract_fpc(:) = get_foliage_projected_cover(fract_fpc_max(:), lai(:), ClumpinessFactor)
     END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
