@@ -795,7 +795,7 @@ CONTAINS
         & )
 
       !TODO CLAW TEMP
-      !$claw update device(fract_lice, albedo_lwtr, albedo_lice)
+      !$claw acc update device(fract_lice, albedo_lwtr, albedo_lice)
       !$claw acc parallel loop gang vector
       DO i = 1, size(l_day)
         IF(l_day(i)) THEN
@@ -804,7 +804,7 @@ CONTAINS
         END IF
       END DO
       !TODO CLAW TEMP
-      !$claw update host(alb_vis, alb_nir)
+      !$claw acc update host(alb_vis, alb_nir)
 
     ELSE IF (tile%is_glacier) THEN
       !$claw sca forward update savepoint=ser_jsb_RAD_calc_glacier_albedo_1 tile_name=tile%name
