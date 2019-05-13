@@ -1535,7 +1535,8 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_snow_and_skin_fraction'
 
     INTEGER  :: iblk, ics, ice
-    REAL(wp) :: dtime, steplen
+    REAL(wp) :: dtime, steplen, config_w_skin_max
+    !$claw verbatim INTEGER, SAVE :: task_counter = 1
 
     ! Declare pointers for process configuration and memory
     dsl4jsb_Def_memory(A2L_)
@@ -1580,8 +1581,12 @@ CONTAINS
     ! Set pointers to process configs and memory
     dsl4jsb_Get_config(HYDRO_)
 
+    ! Use simple scalar for GPU
+    config_w_skin_max = dsl4jsb_Config(HYDRO_)%w_skin_max
+
     !$claw acc enter data pcreate(w_skin_max, w_skin_canopy_max)
-    w_skin_max = dsl4jsb_Config(HYDRO_)%w_skin_max
+    !$claw expand parallel update
+    w_skin_max(:) = config_w_skin_max
 
     dsl4jsb_Get_memory(HYDRO_)
 
@@ -1589,7 +1594,7 @@ CONTAINS
     IF (tile%is_lake) THEN
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_snow_lice)      ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_lice)  ! out
-      !$claw sca forward update
+      !$claw sca forward update savepoint=ser_jsb_hydro_calc_wskin_fractions_lice_1 tile_name=tile%name dtime=dtime steplen=steplen task_counter=task_counter
       CALL calc_wskin_fractions_lice( &
         & w_snow_lice(:),             & ! in
         & fract_snow_lice(:)          & ! out
@@ -1630,24 +1635,30 @@ CONTAINS
 
     ! Maximum capacity of skin reservoir (soil + canopy)
     IF (tile%is_vegetation .OR. tile%is_land) THEN
-      w_skin_canopy_max(:) = dsl4jsb_Config(HYDRO_)%w_skin_max * lai(:) * fract_fpc_max(:)
+      !$claw expand parallel update
+      w_skin_canopy_max(:) = config_w_skin_max * lai(:) * fract_fpc_max(:)
     ELSE
+      !$claw expand parallel update
       w_skin_canopy_max(:) = 0._wp
     END IF
     IF (tile%contains_soil) THEN
-      w_skin_max(:) = dsl4jsb_Config(HYDRO_)%w_skin_max + w_skin_canopy_max(:)
+      !$claw expand parallel update
+      w_skin_max(:) = config_w_skin_max + w_skin_canopy_max(:)
     ELSE
+      !$claw expand parallel update
       w_skin_max(:) = 0._wp
     END IF
 
     IF (tile%is_glacier) THEN
+      !$claw expand parallel update
       fract_snow(:)      = 1._wp
       fract_snow_soil(:) = 1._wp
+      !$claw end expand
     END IF
 
     IF (tile%is_vegetation .OR. tile%is_land) THEN
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_snow_can)       ! in
-      !$claw sca forward update
+      !$claw sca forward update savepoint=ser_jsb_hydro_calc_wskin_fractions_veg_1 tile_name=tile%name dtime=dtime steplen=steplen task_counter=task_counter
       CALL calc_wskin_fractions_veg( &
         & dtime,                     & ! in
         & steplen,                   & ! in
@@ -1664,13 +1675,13 @@ CONTAINS
         & fract_water(:),            & ! out
         & fract_snow_soil(:)         & ! out
         & )
-      !$claw expand parallel
+      !$claw expand parallel update
       fract_snow(:) = fract_snow_soil(:)
    END IF
 
 
     IF (tile%is_bare) THEN
-      !$claw sca forward update
+      !$claw sca forward update savepoint=ser_jsb_hydro_calc_wskin_fractions_bare_1 tile_name=tile%name dtime=dtime steplen=steplen  task_counter=task_counter
       CALL calc_wskin_fractions_bare( &
         & dtime,                      & ! in
         & steplen,                    & ! in
@@ -1685,11 +1696,12 @@ CONTAINS
         & fract_water(:),             & ! out
         & fract_snow_soil(:)          & ! out
         & )
-      !$claw expand parallel
+      !$claw expand parallel update
       fract_snow(:)  = fract_snow_soil(:)
    END IF
 
    !$claw acc exit data delete(w_skin_canopy_max, w_skin_max)
+   !$claw verbatim  task_counter = task_counter + 1
   END SUBROUTINE update_snow_and_skin_fraction
 
   ! -------------------------------------------------------------------------------------------------------
