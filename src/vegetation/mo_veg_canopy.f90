@@ -14,7 +14,6 @@ MODULE mo_veg_canopy
 
   USE mo_kind,                        ONLY: wp
   USE mo_jsb_impl_constants,          ONLY: test_false_true
-  USE mo_jsb_lctlib_class,            ONLY: t_lctlib_element
   USE mo_exception,                   ONLY: message_text, finish
   USE mo_assimi_update_canopy_fluxes, ONLY: calc_photosynthesis
 
@@ -41,7 +40,15 @@ CONTAINS
                                 dz                    , &     
                                 lbounds               , &
                                 ubounds               , &
-                                lctlib                , &
+                                lctlib_ps_pathway     , &
+                                lctlib_k0_fn_struc    , &
+                                lctlib_fn_oth_min     , &
+                                lctlib_sla            , &
+                                lctlib_np_leaf        , &
+                                lctlib_gmin           , &
+                                lctlib_g0             , &
+                                lctlib_g1             , &
+                                lctlib_t_jmax_omega   , &
                                 flag_optimal_Nfraction, &
                                 canopy_layer_depth, &
                                 leaf_nitrogen     , &
@@ -70,7 +77,6 @@ CONTAINS
                                 fn_oth_cl         , &
                                 inquire_n_fractions)
 
-    USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element    
     USE mo_veg_constants,           ONLY: carbon_per_dryweight_leaf, &
                                           jmax2vcmax_C4, k0_fn_chl_C4, k1_fn_chl_C4, k0_fn_pepc_C4, &
                                           jmax2vcmax_C3, k0_fn_chl_C3, k1_fn_chl_C3, k0_fn_pepc_C3, kfn_chl
@@ -86,7 +92,15 @@ CONTAINS
     REAL(wp),DIMENSION(ncanopy),            INTENT(in)              :: dz, &                 !< canopy layer thickness
                                                                        lbounds, &            !< lower bound of canopy layer (lbounds < ubounds; lbounds is at top of canopy layer)
                                                                        ubounds               !< upper bound of canopy layer (lbounds < ubounds; ubounds is at bottom of canopy layer)
-    TYPE(t_lctlib_element),                 INTENT(in)              :: lctlib                !< land-cover-type library
+    INTEGER,                                INTENT(in)              :: lctlib_ps_pathway     !< dimensions
+    REAL(wp),                               INTENT(in)              :: lctlib_k0_fn_struc    !< lctlib parameter
+    REAL(wp),                               INTENT(in)              :: lctlib_fn_oth_min     !< lctlib parameter
+    REAL(wp),                               INTENT(in)              :: lctlib_sla            !< lctlib parameter
+    REAL(wp),                               INTENT(in)              :: lctlib_np_leaf        !< lctlib parameter
+    REAL(wp),                               INTENT(in)              :: lctlib_gmin           !< lctlib parameter
+    REAL(wp),                               INTENT(in)              :: lctlib_g0             !< lctlib parameter
+    REAL(wp),                               INTENT(in)              :: lctlib_g1             !< lctlib parameter
+    REAL(wp),                               INTENT(in)              :: lctlib_t_jmax_omega   !< lctlib parameter  
     LOGICAL,                                INTENT(in)              :: flag_optimal_Nfraction!< on/off optimise leaf internal N allocation
     REAL(wp),DIMENSION(ncanopy),            INTENT(in)              :: canopy_layer_depth    !< thickness of each single canopy layer [m2 m-2 LAI]
     REAL(wp),DIMENSION(nc),                 INTENT(in)              :: leaf_nitrogen         !< total canopy N (mol/m2)
@@ -148,7 +162,7 @@ CONTAINS
 
     !> 0.9.1  set pathway specific constants 
     !! 
-    IF(lctlib%ps_pathway == ic4phot) THEN
+    IF(lctlib_ps_pathway == ic4phot) THEN
         jmax2vcmax = jmax2vcmax_C4
         k0_fn_chl  = k0_fn_chl_C4
         k1_fn_chl  = k1_fn_chl_C4
@@ -259,12 +273,12 @@ CONTAINS
     !> 3.1 fraction not associated with photosynthesis
     !! 
     WHERE(leaf_nitrogen_cl(:,:) > 0.0_wp)
-       fn_oth_cl(:,:) = lctlib%k0_fn_struc - k1_fn_struc * leaf_nitrogen_cl(:,:)
+       fn_oth_cl(:,:) = lctlib_k0_fn_struc - k1_fn_struc * leaf_nitrogen_cl(:,:)
     ELSEWHERE
        fn_oth_cl(:,:) = 1.0_wp
     END WHERE
     ! structural limitation to the indefinite increase in phot. N described by above equation
-    WHERE (fn_oth_cl(:,:) < lctlib%fn_oth_min) fn_oth_cl(:,:) = lctlib%fn_oth_min
+    WHERE (fn_oth_cl(:,:) < lctlib_fn_oth_min) fn_oth_cl(:,:) = lctlib_fn_oth_min
 
 
     !> 3.2 photosynthetic fractions
@@ -284,8 +298,8 @@ CONTAINS
            fn_rub_cl(:,:) = 1._wp - fn_oth_cl(:,:) - fn_chl_cl(:,:) - fn_et_cl(:,:) - fn_pepc_cl(:,:)
 
            ! convert mmol N / m2 to mg N / g DW
-           hlp3(:,:) = leaf_nitrogen_cl(:,:) * molar_mass_N / ((molar_mass_C / lctlib%sla)/carbon_per_dryweight_leaf)
-           hlp4(:,:) = leaf_nitrogen_cl(:,:) / lctlib%np_leaf * molar_mass_P / ((molar_mass_C / lctlib%sla)/carbon_per_dryweight_leaf)
+           hlp3(:,:) = leaf_nitrogen_cl(:,:) * molar_mass_N / ((molar_mass_C / lctlib_sla)/carbon_per_dryweight_leaf)
+           hlp4(:,:) = leaf_nitrogen_cl(:,:) / lctlib_np_leaf * molar_mass_P / ((molar_mass_C / lctlib_sla)/carbon_per_dryweight_leaf)
            !DE stuff Vmax = exp(k1 + k2 * log(P) + k3 * log(N))
            ! implied Vmax and Jmax in nmol / g DW / s
            !hlp1(:,:) = exp(4.44904_wp + 0.3472_wp*log10(hlp4(:,:)) + 0.49078*log10(hlp3(:,:)))
@@ -295,9 +309,9 @@ CONTAINS
            !                      exp(X) = vmax2n * frub * leaf_n
            !                      frub = exp(X) / leaf_n / vmax2n         
            !fn_rub_cl(:,:) = exp(4.44904_wp + 0.3472_wp*log(hlp4(:,:)) + 0.49078*log(hlp3(:,:))) / & 
-           !                 (leaf_nitrogen_cl(:,:) * vcmax2n * 1000._wp / (molar_mass_C / lctlib%sla / 0.48_wp))
+           !                 (leaf_nitrogen_cl(:,:) * vcmax2n * 1000._wp / (molar_mass_C / lctlib_sla / 0.48_wp))
            !fn_et_cl(:,:) = exp(5.49435_wp + 0.37345_wp*log(hlp4(:,:)) + 0.41435_wp*log(hlp3(:,:))) / 4.0_wp / &
-           !                 (leaf_nitrogen_cl(:,:) * jmax2n * 1000._wp / (molar_mass_C / lctlib%sla / 0.48_wp))
+           !                 (leaf_nitrogen_cl(:,:) * jmax2n * 1000._wp / (molar_mass_C / lctlib_sla / 0.48_wp))
            !fn_oth_cl(:,:) = 1.0_wp - fn_chl_cl(:,:) - fn_et_cl(:,:) - fn_pepc_cl(:,:) - fn_rub_cl(:,:)
 
         ELSEWHERE ! canopy layers without leaves
@@ -369,11 +383,11 @@ CONTAINS
 
         IF(optimise_n_fractions) THEN
           DO icanopy = 1,ncanopy
-            CALL optimise_canopy_n_fractions(  lctlib%gmin                , & ! lctlib
-                                               lctlib%g0                  , &
-                                               lctlib%g1                  , &
-                                               lctlib%t_jmax_omega        , &
-                                               lctlib%ps_pathway          , & ! lctlib
+            CALL optimise_canopy_n_fractions(  lctlib_gmin                , & ! lctlib
+                                               lctlib_g0                  , &
+                                               lctlib_g1                  , &
+                                               lctlib_t_jmax_omega        , &
+                                               lctlib_ps_pathway          , & ! lctlib
                                                lai_cl(:,icanopy)          , & ! in
                                                leaf_nitrogen_cl(:,icanopy), &
                                                ppfd_sunlit_cl(:,icanopy)  , &
@@ -810,7 +824,17 @@ CONTAINS
                                                   dz                      , &
                                                   lbounds                 , &
                                                   ubounds                 , &
-                                                  lctlib                  , &
+                                                  lctlib_ps_pathway       , &
+                                                  lctlib_sla              , &
+                                                  lctlib_k0_fn_struc      , &
+                                                  lctlib_fn_oth_min       , &
+                                                  lctlib_np_leaf          , &
+                                                  lctlib_cn_leaf          , &
+                                                  lctlib_gmin             , &
+                                                  lctlib_g0               , &
+                                                  lctlib_g1               , &
+                                                  lctlib_t_jmax_omega     , &
+                                                  lctlib_sigma_vis        , &
                                                   flag_optimal_Nfraction  , &
                                                   canopy_layer_depth      , &
                                                   t_air                   , &
@@ -857,7 +881,17 @@ CONTAINS
     REAL(wp),DIMENSION(ncanopy),            INTENT(in) :: dz                      , &   !< canopy layer thickness
                                                           lbounds                 , &   !< lower bound of canopy layer (lbounds < ubounds; lbounds is at top of canopy layer)
                                                           ubounds                       !< upper bound of canopy layer (lbounds < ubounds; ubounds is at bottom of canopy layer)
-    TYPE(t_lctlib_element),                 INTENT(in) :: lctlib                        !< land-cover-type library - parameters for one pft
+    INTEGER,                                INTENT(in) :: lctlib_ps_pathway             !< lctlib parameter
+    REAL(wp),                               INTENT(in) :: lctlib_sla                    !< lctlib parameter
+    REAL(wp),                               INTENT(in) :: lctlib_k0_fn_struc            !< lctlib parameter
+    REAL(wp),                               INTENT(in) :: lctlib_fn_oth_min             !< lctlib parameter
+    REAL(wp),                               INTENT(in) :: lctlib_np_leaf                !< lctlib parameter
+    REAL(wp),                               INTENT(in) :: lctlib_cn_leaf                !< lctlib parameter
+    REAL(wp),                               INTENT(in) :: lctlib_gmin                   !< lctlib parameter
+    REAL(wp),                               INTENT(in) :: lctlib_g0                     !< lctlib parameter
+    REAL(wp),                               INTENT(in) :: lctlib_g1                     !< lctlib parameter
+    REAL(wp),                               INTENT(in) :: lctlib_t_jmax_omega           !< lctlib parameter
+    REAL(wp),                               INTENT(in) :: lctlib_sigma_vis              !< lctlib parameter
     LOGICAL,                                INTENT(in) :: flag_optimal_Nfraction        !< on/off optimise leaf internal N allocation
     REAL(wp),DIMENSION(ncanopy),            INTENT(in) :: canopy_layer_depth            !< thickness of each single canopy layer [m2 m-2 LAI]
     REAL(wp),DIMENSION(nc),                 INTENT(in) :: t_air                   , &   !< air temperature (K)
@@ -948,12 +982,12 @@ CONTAINS
     !> 2.0 Estimate effect of a small increase in leaf C on LAI and leaf N
     !!
     ! increase LAI by 1 mol of C
-    lai_new(:) = lai(:) + lctlib%sla
+    lai_new(:) = lai(:) + lctlib_sla
     ! equivalent leaf N assuming any new leaf growth will have target CN
     WHERE(veg_pool_leaf_carbon(:) > eps8)
        leaf_nitrogen_new(:) = veg_pool_leaf_nitrogen(:) + veg_pool_leaf_nitrogen(:) / veg_pool_leaf_carbon(:)
     ELSEWHERE
-       leaf_nitrogen_new(:) = 1._wp / lctlib%cn_leaf
+       leaf_nitrogen_new(:) = 1._wp / lctlib_cn_leaf
     END WHERE
 
     ! recompute canopy layer LAI and foliar N with new numbers
@@ -963,7 +997,15 @@ CONTAINS
                             dz                      = dz(:)                       , &
                             lbounds                 = lbounds(:)                  , &
                             ubounds                 = ubounds(:)                  , &
-                            lctlib                  = lctlib                      , &
+                            lctlib_ps_pathway       = lctlib_ps_pathway           , &
+                            lctlib_k0_fn_struc      = lctlib_k0_fn_struc          , &
+                            lctlib_fn_oth_min       = lctlib_fn_oth_min           , &
+                            lctlib_sla              = lctlib_sla                  , &
+                            lctlib_np_leaf          = lctlib_np_leaf              , &
+                            lctlib_gmin             = lctlib_gmin                 , &
+                            lctlib_g0               = lctlib_g0                   , &
+                            lctlib_g1               = lctlib_g1                   , &
+                            lctlib_t_jmax_omega     = lctlib_t_jmax_omega         , &
                             flag_optimal_Nfraction  = flag_optimal_Nfraction      , &
                             canopy_layer_depth      = canopy_layer_depth(:)       , &
                             leaf_nitrogen           = leaf_nitrogen_new(:)        , &
@@ -983,8 +1025,8 @@ CONTAINS
 
     ! In case of no leaves set top layer PAR to SW value
     WHERE (lai(:) < eps8)
-       loc_ppfd_sunlit_cl(:,1)  = (1._wp - lctlib%sigma_vis) * swpar_srf_down(:) * rad2ppfd
-       loc_ppfd_shaded_cl(:,1)  = (1._wp - lctlib%sigma_vis) * swpar_fdiffuse(:) * swpar_srf_down(:) * rad2ppfd
+       loc_ppfd_sunlit_cl(:,1)  = (1._wp - lctlib_sigma_vis) * swpar_srf_down(:) * rad2ppfd
+       loc_ppfd_shaded_cl(:,1)  = (1._wp - lctlib_sigma_vis) * swpar_fdiffuse(:) * swpar_srf_down(:) * rad2ppfd
        loc_fleaf_sunlit_cl(:,1) = exp(-kbl0_vis * cumm_lai_new_cl(:,1))
     END WHERE
 
@@ -992,11 +1034,11 @@ CONTAINS
     net_assimilation_new(:)  = 0.0_wp
     canopy_cond_new(:)       = 0.0_wp
     DO icanopy = 1,ncanopy
-      CALL calc_photosynthesis(     lctlib%gmin                     , & ! lctlib
-                                    lctlib%g0                       , &
-                                    lctlib%g1                       , &
-                                    lctlib%t_jmax_omega             , &
-                                    lctlib%ps_pathway               , &
+      CALL calc_photosynthesis(     lctlib_gmin                     , & ! lctlib
+                                    lctlib_g0                       , &
+                                    lctlib_g1                       , &
+                                    lctlib_t_jmax_omega             , &
+                                    lctlib_ps_pathway               , &
                                     t_air(:)                        , & ! in
                                     press_srf(:)                    , &
                                     co2_mixing_ratio(:)             , &
@@ -1068,7 +1110,15 @@ CONTAINS
                                         dz                            , &
                                         lbounds                       , &
                                         ubounds                       , &
-                                        lctlib                        , &
+                                        lctlib_ps_pathway             , &
+                                        lctlib_k0_fn_struc            , &
+                                        lctlib_fn_oth_min             , &
+                                        lctlib_sla                    , &
+                                        lctlib_np_leaf                , &
+                                        lctlib_gmin                   , &
+                                        lctlib_g0                     , &
+                                        lctlib_g1                     , &
+                                        lctlib_t_jmax_omega           , &
                                         flag_optimal_Nfraction        , &
                                         canopy_layer_depth            , &
                                         growing_season                , &
@@ -1105,7 +1155,6 @@ CONTAINS
                                         labile_nitrogen               , & ! in
                                         leaf_cn_direction             )   ! inout
 
-    USE mo_jsb_lctlib_class,              ONLY: t_lctlib_element    
     USE mo_jsb_math_constants,            ONLY: dtime, one_day, one_year, eps4, eps8
     USE mo_veg_constants,                 ONLY: delta_n_leaf
     USE mo_quincy_update_time_averages,   ONLY: mavg_period_tgrowth
@@ -1119,7 +1168,15 @@ CONTAINS
     REAL(wp),DIMENSION(ncanopy),            INTENT(in)    :: dz                         , & !< canopy layer thickness
                                                              lbounds                    , & !< lower bound of canopy layer (lbounds < ubounds; lbounds is at top of canopy layer)
                                                              ubounds                        !< upper bound of canopy layer (lbounds < ubounds; ubounds is at bottom of canopy layer)
-    TYPE(t_lctlib_element),                 INTENT(in)    :: lctlib                         !< land-cover-type library - parameters for one pft
+    INTEGER,                                INTENT(in)    :: lctlib_ps_pathway              !< lctlib parameter
+    REAL(wp),                               INTENT(in)    :: lctlib_k0_fn_struc             !< lctlib parameter
+    REAL(wp),                               INTENT(in)    :: lctlib_fn_oth_min              !< lctlib parameter
+    REAL(wp),                               INTENT(in)    :: lctlib_sla                     !< lctlib parameter
+    REAL(wp),                               INTENT(in)    :: lctlib_np_leaf                 !< lctlib parameter
+    REAL(wp),                               INTENT(in)    :: lctlib_gmin                    !< lctlib parameter
+    REAL(wp),                               INTENT(in)    :: lctlib_g0                      !< lctlib parameter
+    REAL(wp),                               INTENT(in)    :: lctlib_g1                      !< lctlib parameter
+    REAL(wp),                               INTENT(in)    :: lctlib_t_jmax_omega            !< lctlib parameter
     LOGICAL,                                INTENT(in)    :: flag_optimal_Nfraction         !< on/off optimise leaf internal N allocation
     REAL(wp),DIMENSION(ncanopy),            INTENT(in)    :: canopy_layer_depth             !< thickness of each single canopy layer [m2 m-2 LAI]
     REAL(wp),DIMENSION(nc),                 INTENT(in)    :: growing_season                 !< growing season
@@ -1209,7 +1266,6 @@ CONTAINS
                 leaf_cn_direction(ipoint) = -1._wp
                 
              ELSE
-                
                 !> Check for C optimality i.e. if increasing leaf N increases NPP
                 !!
                 npp_direction(:) = 0.0_wp
@@ -1227,7 +1283,15 @@ CONTAINS
                           dz                      = dz(:)                                   , &
                           lbounds                 = lbounds(:)                              , &
                           ubounds                 = ubounds(:)                              , &
-                          lctlib                  = lctlib                                  , &
+                          lctlib_ps_pathway       = lctlib_ps_pathway                       , &
+                          lctlib_k0_fn_struc      = lctlib_k0_fn_struc                      , &
+                          lctlib_fn_oth_min       = lctlib_fn_oth_min                       , &
+                          lctlib_sla              = lctlib_sla                              , &
+                          lctlib_np_leaf          = lctlib_np_leaf                          , &
+                          lctlib_gmin             = lctlib_gmin                             , &
+                          lctlib_g0               = lctlib_g0                               , &
+                          lctlib_g1               = lctlib_g1                               , &
+                          lctlib_t_jmax_omega     = lctlib_t_jmax_omega                     , &
                           flag_optimal_Nfraction  = flag_optimal_Nfraction                  , &
                           canopy_layer_depth      = canopy_layer_depth(:)                   , &
                           leaf_nitrogen           = leaf_nitrogen_new(ipoint)               , &
@@ -1260,11 +1324,11 @@ CONTAINS
                 ! calculate photosynthesis for each layer
                 DO icanopy =1, ncanopy
                    CALL calc_photosynthesis( &
-                       lctlib%gmin                                   , & ! lctlib
-                       lctlib%g0                                     , &
-                       lctlib%g1                                     , &
-                       lctlib%t_jmax_omega                           , &
-                       lctlib%ps_pathway                             , &
+                       lctlib_gmin                                   , & ! lctlib
+                       lctlib_g0                                     , &
+                       lctlib_g1                                     , &
+                       lctlib_t_jmax_omega                           , &
+                       lctlib_ps_pathway                             , &
                        t_air_tcnl_mavg(ipoint)                       , &  ! in
                        press_srf_tcnl_mavg(ipoint)                   , &
                        co2_mixing_ratio_tcnl_mavg(ipoint)            , &
@@ -1290,23 +1354,23 @@ CONTAINS
                        rl                                            , &
                        hlp1,hlp1,hlp1,hlp1,hlp1                        )
 
-          npp_direction(dd) = npp_direction(dd) + anl * lai_new_cl(ipoint,icanopy)
-       ENDDO
-       ! adjust for change in fine root respiration
-       npp_direction(dd) = npp_direction(dd) - root_nitrogen_new(ipoint) * fmaint_rate(ipoint)
-      ENDDO  ! dd = 1,3
+                npp_direction(dd) = npp_direction(dd) + anl * lai_new_cl(ipoint,icanopy)
+                ENDDO  ! icanopy =1, ncanopy
+                
+                ! adjust for change in fine root respiration
+                npp_direction(dd) = npp_direction(dd) - root_nitrogen_new(ipoint) * fmaint_rate(ipoint)
+                ENDDO  ! dd = 1,3
 
-      ! Direction of change in leaf N. Actual leaf N is modified in interfacte routine
-      !! @todo:veg_canopy:calc_dir_optimal_cn_leaf:potentially dangerous use of MAXLOC - ascertain functioning in 4D
-      leaf_cn_direction(ipoint) = (REAL(MAXLOC(npp_direction, 1),KIND=wp) - 2.0_wp)
-
-      ENDIF
+                ! Direction of change in leaf N. Actual leaf N is modified in interfacte routine
+                !! @todo:veg_canopy:calc_dir_optimal_cn_leaf:potentially dangerous use of MAXLOC - ascertain functioning in 4D
+                leaf_cn_direction(ipoint) = (REAL(MAXLOC(npp_direction, 1),KIND=wp) - 2.0_wp)
+             ENDIF ! IF ((uptake_n(ipoint) *  mavg_period_tgrowth ...
       
-   ELSE    ! IF(veg_pool_leaf_nitrogen(ipoint) > eps4)
-      leaf_cn_direction(ipoint) = 0.0_wp
-   END IF  ! IF(veg_pool_leaf_nitrogen(ipoint) > eps4)
-END IF  ! IF(growing_season(ipoint) > test_false_true)
-END DO  ! ipoint=1,nc
+          ELSE    ! IF(veg_pool_leaf_nitrogen(ipoint) > eps4)
+             leaf_cn_direction(ipoint) = 0.0_wp
+          END IF  ! IF(veg_pool_leaf_nitrogen(ipoint) > eps4)
+       END IF  ! IF(growing_season(ipoint) > test_false_true)
+    END DO  ! ipoint=1,nc
 
   END SUBROUTINE calc_dir_optimal_cn_leaf
   

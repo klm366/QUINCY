@@ -156,7 +156,9 @@ CONTAINS
     !! 
     SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme))
       CASE ("population","cohort")
-        fpc(:) = calc_foliage_projective_cover_tile(nc, lctlib, veg_pool%sap_wood%carbon(:), & 
+        fpc(:) = calc_foliage_projective_cover_tile(nc, &
+                                                    lctlib%growthform, lctlib%wood_density, lctlib%k_latosa, &
+                                                    veg_pool%sap_wood%carbon(:), & 
                                                     dens_ind(:), height(:), diameter(:))
     ENDSELECT
 
@@ -196,7 +198,7 @@ CONTAINS
     !! retruns constant mortality_rate if veg_dynamics_scheme == none \n
     !! but calcs mortality_rate dynamically if veg_dynamics_scheme == population or cohort
     CALL calc_veg_mortality(nc                                              , & ! in
-                            lctlib                                          , & 
+                            lctlib%growthform                               , & 
                             TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme)  , &
                             an_boc_tvegdyn_mavg(:)                          , &
                             net_growth_tvegdyn_mavg(:)                      , &
@@ -228,7 +230,7 @@ CONTAINS
       CASE ("population")
         IF(.NOT. model%config%l_do_stand_replacing_harvest) THEN 
           CALL calc_veg_establishment(nc                              , & ! in
-                                      lctlib                          , & 
+                                      lctlib%tau_seed_est             , & 
                                       w_soil_root_theta(:)            , &
                                       growing_season(:)               , &
                                       t_air_week_mavg(:)              , &
@@ -279,13 +281,14 @@ CONTAINS
   !! Follows Sitch et al. 2003, eq 8)
   !-----------------------------------------------------------------------------------------------------
   FUNCTION calc_foliage_projective_cover_tile(nc                      , &
-                                              lctlib                  , &
+                                              lctlib_growthform       , &
+                                              lctlib_wood_density     , &
+                                              lctlib_k_latosa         , &
                                               veg_pool_sap_wood_carbon, &
                                               dens_ind                , &
                                               height                  , &
                                               diameter) RESULT(fpc) 
 
-    USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_veg_constants,         ONLY: max_crown_area, min_diameter, k_crown_area, k_rp, k_fpc, itree
     USE mo_jsb_math_constants,    ONLY: eps4
 
@@ -293,7 +296,9 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     INTEGER,                         INTENT(in) :: nc                          !< dimensions
-    TYPE(t_lctlib_element),          INTENT(in) :: lctlib                      !< land-cover-type library - parameter across pft's
+    INTEGER,                         INTENT(in) :: lctlib_growthform           !< lctlib paramter
+    REAL(wp),                        INTENT(in) :: lctlib_wood_density         !< lctlib paramter
+    REAL(wp),                        INTENT(in) :: lctlib_k_latosa             !< lctlib paramter
     REAL(wp), DIMENSION(nc),         INTENT(in) :: veg_pool_sap_wood_carbon, & !< sapwood mass (mol C / m2)
                                                    dens_ind                , & !< tree density (#/m2)
                                                    height                  , & !< tree height (m)
@@ -308,12 +313,12 @@ CONTAINS
 
     !> 1.0
     !! 
-    WHERE(lctlib%growthform == itree .AND. dens_ind(:) .GT. eps4 .AND. height(:) .GT. eps4)
+    WHERE(lctlib_growthform == itree .AND. dens_ind(:) .GT. eps4 .AND. height(:) .GT. eps4)
       ! crown area derived from diameter following Sitch et al. 2003; eq 4
       crown_area(:) = MIN(max_crown_area, k_crown_area * MAX(min_diameter,diameter(:)) ** k_rp)
       ! maximum annual, individual LAI, derived from the sapwood area of an individual tree, devided by 
       ! its crown area 
-      lai_ind(:)    = veg_pool_sap_wood_carbon(:) / dens_ind(:) / lctlib%wood_density / height(:) * lctlib%k_latosa / & 
+      lai_ind(:)    = veg_pool_sap_wood_carbon(:) / dens_ind(:) / lctlib_wood_density / height(:) * lctlib_k_latosa / & 
                       crown_area(:)
       ! foliage projective cover is then the product of density and individual crown area
       fpc(:)        = crown_area(:) * dens_ind(:) * (1._wp - exp(-k_fpc * lai_ind(:)))
@@ -334,7 +339,7 @@ CONTAINS
   !! veg\%litterfall
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_veg_mortality(nc                        , &
-                                lctlib                    , &
+                                lctlib_growthform         , &
                                 veg_dynamics_scheme       , &
                                 an_boc_tvegdyn_mavg       , &
                                 net_growth_tvegdyn_mavg   , &
@@ -347,14 +352,13 @@ CONTAINS
     USE mo_jsb_math_constants,    ONLY: one_day, one_year, dtime, eps8
     USE mo_veg_constants,         ONLY: min_greff, k1_mort_greff, k2_mort_greff, k3_mort_greff, fpc_max, &
                                         itree, igrass, background_mort_rate_tree, background_mort_rate_grass
-    USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     dsl4slm_Use_memory_a_veg
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
     INTEGER,                         INTENT(in)    :: nc                         !< dimensions
-    TYPE(t_lctlib_element),          INTENT(in)    :: lctlib                     !< land-cover-type library - parameter across pft's
+    INTEGER,                         INTENT(in)    :: lctlib_growthform          !< lctlib paramter
     CHARACTER(len=*),                INTENT(in)    :: veg_dynamics_scheme        !< vegetation dynamics: none population cohort
     REAL(wp), DIMENSION(nc),         INTENT(in)    :: an_boc_tvegdyn_mavg    , & !< long-term net C balance at the bottom of the canopy (µmol / m2 / s)
                                                       net_growth_tvegdyn_mavg, & !< long-term net growth of the plant (µmol / m2 / s) 
@@ -409,7 +413,7 @@ CONTAINS
 !!       !! in mol / m2 LAI / year \n
 !!       !! transformed to a mortality estimate using a Weibull function
 !!       boc_cbalance(:) = an_boc_tvegdyn_mavg(:) * one_day * one_year / 1.e6_wp &  
-!!                         - ( 1._wp + fresp_growth ) * 1.0_wp/lctlib%tau_leaf/lctlib%sla
+!!                         - ( 1._wp + fresp_growth ) * 1.0_wp/lctlib_tau_leaf/lctlib_sla
 !!       WHERE(boc_cbalance(:) < (-eps4))
 !!          mortality_rate(:) = mortality_rate(:) & 
 !!                              + ( 1._wp - exp ( - ( - lambda_mort_light * boc_cbalance(:) ) ** k_mort_light))
@@ -417,7 +421,7 @@ CONTAINS
 
         !> 1.3 quasi-stochastic background mortality
         !!
-        SELECT CASE (lctlib%growthform)
+        SELECT CASE (lctlib_growthform)
           CASE (itree)
             bg_mortality_rate(:) = background_mort_rate_tree
           CASE (igrass)
@@ -430,7 +434,7 @@ CONTAINS
                            / one_year / one_day * dtime 
 
       CASE ("none")
-        SELECT CASE (lctlib%growthform)
+        SELECT CASE (lctlib_growthform)
           CASE (itree)
             mortality_rate(:) = ((background_mort_rate_tree /  one_year) / one_day) * dtime
           CASE (igrass)
@@ -520,7 +524,7 @@ CONTAINS
   !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_veg_establishment(nc                          , &
-                                    lctlib                      , &
+                                    lctlib_tau_seed_est         , &
                                     w_soil_root_theta           , &
                                     growing_season              , &
                                     t_air_week_mavg             , &
@@ -529,7 +533,6 @@ CONTAINS
                                     veg_pool_seed_bed           , &
                                     veg_establishment           )
 
-    USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_jsb_math_constants,    ONLY: dtime, one_day, one_year, eps8
     USE mo_rad_constants,         ONLY: rfr_ratio_toc 
     USE mo_veg_constants,         ONLY: fpc_max, lambda_est_temp, k_est_temp, lambda_est_moist, k_est_moist
@@ -540,7 +543,7 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     INTEGER,                          INTENT(in)    :: nc                           !< dimensions
-    TYPE(t_lctlib_element),           INTENT(in)    :: lctlib                       !< land-cover-type library - parameter across pft's
+    REAL(wp),                         INTENT(in)    :: lctlib_tau_seed_est          !< lctlib paramter
     REAL(wp), DIMENSION(nc),          INTENT(in)    :: w_soil_root_theta            !< plant available water [fraction of maximum] 
     REAL(wp), DIMENSION(nc),          INTENT(in)    :: growing_season               !< growing season 
     REAL(wp), DIMENSION(nc),          INTENT(in)    :: t_air_week_mavg              !< weekly air temperature [K] 
@@ -574,8 +577,8 @@ CONTAINS
     flim_light(:) = MAX(fpc_max - fpc(:),0.0_wp)
 
 !!    !! depending on the red to far-red ratio of the light at the bottom of the canopy
-!!    flim_light(:) = exp(-(lctlib%lambda_est_light * & 
-!!                          (rfr_ratio_toc-rfr_ratio_boc_tvegdyn_mavg(:)))**lctlib%k_est_light)
+!!    flim_light(:) = exp(-(lctlib_lambda_est_light * & 
+!!                          (rfr_ratio_toc-rfr_ratio_boc_tvegdyn_mavg(:)))**lctlib_k_est_light)
 
     !> 1.2 temperature and soil moisture limitation 
     !! 
@@ -590,7 +593,7 @@ CONTAINS
     !> 1.3 actual establishment rate and associated matter flux from seed bed to reserve pool
     !!
     establishment_rate(:) = flim_light(:) * flim_temp(:) * flim_moist(:) * & 
-                            1.0_wp/lctlib%tau_seed_est/one_day/one_year * dtime
+                            1.0_wp/lctlib_tau_seed_est/one_day/one_year * dtime
     WHERE(establishment_rate(:) < eps8)
        establishment_rate(:) = 0.0_wp
     ENDWHERE
@@ -607,7 +610,7 @@ CONTAINS
   !> calculate change in tree density 
   !!
   !-----------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL FUNCTION calc_delta_dens_ind(seed_size                , & ! lctlib
+  PURE ELEMENTAL FUNCTION calc_delta_dens_ind(lctlib_seed_size         , &
                                               dens_ind                 , &
                                               mortality_rate           , &
                                               veg_establishment_carbon)  &
@@ -616,7 +619,7 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    REAL(wp), INTENT(in) :: seed_size                , & !< seed size to convert C into individuals, lctlib parameter
+    REAL(wp), INTENT(in) :: lctlib_seed_size         , & !< seed size to convert C into individuals, lctlib parameter
                             dens_ind                 , & !< current individuum density (#/m2) 
                             mortality_rate           , & !< mortality per timestep
                             veg_establishment_carbon     !< vegetation establishment measured in C
@@ -626,7 +629,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_delta_density_individuals'
 
 
-    delta_dens_ind = (veg_establishment_carbon / seed_size) - (mortality_rate * dens_ind)
+    delta_dens_ind = (veg_establishment_carbon / lctlib_seed_size) - (mortality_rate * dens_ind)
 
   END FUNCTION calc_delta_dens_ind
 

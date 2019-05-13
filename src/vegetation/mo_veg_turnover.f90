@@ -139,7 +139,6 @@ CONTAINS
     !> 1.0 Calculate nutrient flux from enzyme, RNA and other turnover in leaves and roots
     !!
     CALL calc_nutrient_recycling( nc                                    , & ! in
-                                  lctlib                                , & ! in 
                                   target_cn_fine_root(:)                , &
                                   target_np_fine_root(:)                , &
                                   target_cn_leaf(:)                     , &
@@ -156,7 +155,16 @@ CONTAINS
     !> 2.0 Calculate recycling and retranslocation
     !!  
     CALL calc_turnover( nc                                    , & ! in 
-                        lctlib                                , & ! in 
+                        lctlib%phenology_type                 , &
+                        lctlib%growthform                     , &
+                        lctlib%frac_sapwood_branch            , &
+                        lctlib%tau_leaf                       , &
+                        lctlib%tau_fine_root                  , &
+                        lctlib%tau_coarse_root                , &
+                        lctlib%tau_branch                     , &
+                        lctlib%tau_sap_wood                   , &
+                        lctlib%tau_fruit                      , &
+                        lctlib%tau_seed_litter                , &
                         growing_season(:)                     , & ! in
                         lai(:)                                , & ! in
                         target_lai(:)                         , & ! in
@@ -195,7 +203,6 @@ CONTAINS
   !! Output: net flux between labile and leaves/roots (+ve: flux to labile, -ve: flux from labile)
   !----------------------------------------------------------------------------------------------------------
   SUBROUTINE calc_nutrient_recycling( nc                                , &
-                                      lctlib                            , &
                                       target_cn_fine_root               , &
                                       target_np_fine_root               , &
                                       target_cn_leaf                    , &
@@ -212,7 +219,6 @@ CONTAINS
     USE mo_kind,                  ONLY: wp
     USE mo_jsb_impl_constants,    ONLY: test_false_true
     USE mo_jsb_math_constants,    ONLY: dtime, one_day, eps8
-    USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_veg_constants,         ONLY: tau_nutrient_recycling, tau_labile
     dsl4slm_Use_memory_a_veg
 
@@ -220,7 +226,6 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     INTEGER,                          INTENT(in)    :: nc                           !< dimensions
-    TYPE(t_lctlib_element),           INTENT(in)    :: lctlib                       !< land-cover-type library - parameter across pft's
     REAL(wp), DIMENSION(nc),          INTENT(in)    :: target_cn_fine_root               , &  !< target C:N of fine_roots
                                                        target_np_fine_root               , &  !< target N:P of fine_roots 
                                                        target_cn_leaf                    , &  !< ..
@@ -328,7 +333,16 @@ CONTAINS
   !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_turnover( nc                        , &
-                            lctlib                    , &
+                            lctlib_phenology_type     , &
+                            lctlib_growthform         , &
+                            lctlib_frac_sapwood_branch , &
+                            lctlib_tau_leaf           , &
+                            lctlib_tau_fine_root      , &
+                            lctlib_tau_coarse_root    , &
+                            lctlib_tau_branch         , &
+                            lctlib_tau_sap_wood       , &
+                            lctlib_tau_fruit          , &
+                            lctlib_tau_seed_litter    , &
                             growing_season            , &
                             lai                       , &
                             target_lai                , &
@@ -346,7 +360,6 @@ CONTAINS
     USE mo_kind,                  ONLY: wp
     USE mo_jsb_impl_constants,    ONLY: test_false_true
     USE mo_jsb_math_constants,    ONLY: dtime, one_day, one_year, eps4
-    USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_veg_constants,         ONLY: max_leaf_shedding_rate, igrass, itree
     USE mo_pheno_constants,       ONLY: ievergreen, iraingreen, isummergreen, iperennial
     dsl4slm_Use_memory_a_veg
@@ -355,7 +368,16 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     INTEGER,                         INTENT(in)    :: nc                           !< dimensions
-    TYPE(t_lctlib_element),          INTENT(in)    :: lctlib                       !< land-cover-type library - parameter across pft's
+    INTEGER,                         INTENT(in)    :: lctlib_phenology_type        !< lctlib parameter
+    INTEGER,                         INTENT(in)    :: lctlib_growthform            !< lctlib parameter
+    REAL(wp),                        INTENT(in)    :: lctlib_frac_sapwood_branch   !< lctlib parameter
+    REAL(wp),                        INTENT(in)    :: lctlib_tau_leaf              !< lctlib parameter
+    REAL(wp),                        INTENT(in)    :: lctlib_tau_fine_root         !< lctlib parameter
+    REAL(wp),                        INTENT(in)    :: lctlib_tau_coarse_root       !< lctlib parameter
+    REAL(wp),                        INTENT(in)    :: lctlib_tau_branch            !< lctlib parameter
+    REAL(wp),                        INTENT(in)    :: lctlib_tau_sap_wood          !< lctlib parameter
+    REAL(wp),                        INTENT(in)    :: lctlib_tau_fruit             !< lctlib parameter
+    REAL(wp),                        INTENT(in)    :: lctlib_tau_seed_litter       !< lctlib parameter
     REAL(wp), DIMENSION(nc),         INTENT(in)    :: growing_season               !< whether the plant is in the growing season
     REAL(wp), DIMENSION(nc),         INTENT(in)    :: lai                      , & !< the plant's LAI
                                                       target_lai                   !< the plant's annual maximum LAI
@@ -388,9 +410,9 @@ CONTAINS
     !> 1.0 foliage turnover, including recycling of nutrients 
     !!
     !! flat rate for evergreens, dual rates for deciduous (senescence after the growing season)
-    SELECT CASE (lctlib%phenology_type)
+    SELECT CASE (lctlib_phenology_type)
       CASE (ievergreen)
-         fturn_leaf(:)      = 1.0_wp / lctlib%tau_leaf / one_day / one_year * dtime
+         fturn_leaf(:)      = 1.0_wp / lctlib_tau_leaf / one_day / one_year * dtime
       CASE (iraingreen, isummergreen)
          WHERE(growing_season(:) > test_false_true)
             fturn_leaf(:)   = 0.0_wp              ! herbivory
@@ -403,10 +425,10 @@ CONTAINS
          END WHERE
       CASE (iperennial)
          WHERE(growing_season(:) > test_false_true)
-           fturn_leaf(:)    = 1.0_wp / lctlib%tau_leaf / one_day / one_year * dtime
+           fturn_leaf(:)    = 1.0_wp / lctlib_tau_leaf / one_day / one_year * dtime
          ELSEWHERE
            WHERE(lai(:) > eps4)
-             fturn_leaf(:)  = MAX(1.0_wp / lctlib%tau_leaf / one_day / one_year * dtime, & 
+             fturn_leaf(:)  = MAX(1.0_wp / lctlib_tau_leaf / one_day / one_year * dtime, & 
                                  max_leaf_shedding_rate * dtime / one_day * target_lai(:) / lai(:))
            ELSEWHERE
              fturn_leaf(:)  = 1.0_wp
@@ -436,14 +458,14 @@ CONTAINS
 
     !> 2.0 fine root turnover to litter
     !! 
-    fturn(:)                  = 1.0_wp / lctlib%tau_fine_root / one_day / one_year * dtime
+    fturn(:)                  = 1.0_wp / lctlib_tau_fine_root / one_day / one_year * dtime
     veg_litterfall%fine_root  = veg_litterfall%fine_root + veg_pool%fine_root * fturn(:)
     net_growth(:)             = net_growth(:) - veg_pool%fine_root%carbon(:) * fturn(:)
 
 
     !> 3.0 coarse root turnover to litter 
     !! 
-    fturn(:)                    = 1.0_wp /lctlib%tau_coarse_root /one_day /one_year *dtime
+    fturn(:)                    = 1.0_wp /lctlib_tau_coarse_root /one_day /one_year *dtime
     veg_litterfall%coarse_root  = veg_litterfall%coarse_root + veg_pool%coarse_root * fturn(:)
     net_growth(:)               = net_growth(:) - veg_pool%coarse_root%carbon(:) * fturn(:)
 
@@ -452,19 +474,19 @@ CONTAINS
     !! 
     !> 4.1 litter production from halms (grasses), or branches (trees)
     !! 
-    SELECT CASE (lctlib%growthform)
+    SELECT CASE (lctlib_growthform)
       CASE (itree)
-        fturn(:) = 1.0_wp / lctlib%tau_branch / one_day / one_year * dtime
+        fturn(:) = 1.0_wp / lctlib_tau_branch / one_day / one_year * dtime
       CASE (igrass) ! for grases follows leaf phenology
         fturn(:) = fturn_leaf(:)
     ENDSELECT 
-    veg_litterfall%sap_wood = veg_litterfall%sap_wood + lctlib%frac_sapwood_branch * veg_pool%sap_wood * fturn(:)
-    net_growth(:)           = net_growth(:) - lctlib%frac_sapwood_branch * veg_pool%sap_wood%carbon(:) * fturn(:)
+    veg_litterfall%sap_wood = veg_litterfall%sap_wood + lctlib_frac_sapwood_branch * veg_pool%sap_wood * fturn(:)
+    net_growth(:)           = net_growth(:) - lctlib_frac_sapwood_branch * veg_pool%sap_wood%carbon(:) * fturn(:)
 
     !> 4.2 heart wood formation, including nutrient recycling
     !! 
-    IF(lctlib%growthform == itree)THEN
-        fturn(:)              = (1.0_wp - lctlib%frac_sapwood_branch) / lctlib%tau_sap_wood / one_day / one_year * dtime
+    IF(lctlib_growthform == itree)THEN
+        fturn(:)              = (1.0_wp - lctlib_frac_sapwood_branch) / lctlib_tau_sap_wood / one_day / one_year * dtime
         veg_growth%heart_wood = veg_growth%heart_wood + veg_pool%sap_wood * fturn(:)
         veg_growth%sap_wood   = veg_growth%sap_wood   - veg_pool%sap_wood * fturn(:) 
         ! Nutrient recycling
@@ -481,14 +503,14 @@ CONTAINS
 
     !> 5.0 fruit turnover to seed_bed
     !! 
-    fturn(:)            = 1.0_wp / lctlib%tau_fruit / one_day / one_year * dtime
+    fturn(:)            = 1.0_wp / lctlib_tau_fruit / one_day / one_year * dtime
     veg_growth%seed_bed = veg_growth%seed_bed + veg_pool%fruit * fturn(:)
     veg_growth%fruit    = veg_growth%fruit    - veg_pool%fruit * fturn(:) 
     net_growth(:)       = net_growth(:)       - veg_pool%fruit%carbon(:) * fturn(:)
 
     !> 6.0 seed-bed turnover to litter 
     !! 
-    fturn(:)                = 1.0_wp / lctlib%tau_seed_litter / one_day / one_year * dtime
+    fturn(:)                = 1.0_wp / lctlib_tau_seed_litter / one_day / one_year * dtime
     veg_litterfall%seed_bed = veg_litterfall%seed_bed + veg_pool%seed_bed * fturn(:)
 
   END SUBROUTINE calc_turnover

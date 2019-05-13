@@ -474,7 +474,9 @@ CONTAINS
     !!
     CALL calc_actual_nutrient_uptake_rate(nc, & 
                                           nsoil_sb, &
-                                          lctlib, &
+                                          lctlib%cn_leaf, &
+                                          lctlib%np_leaf, &
+                                          lctlib%tau_fine_root, &
                                           TRIM(model%config%slm_model_name), &
                                           TRIM(dsl4jsb_Config(VEG_)%bnf_scheme), &
                                           TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
@@ -534,7 +536,15 @@ CONTAINS
                                         vgrid_canopy%dz(:)                             , &
                                         vgrid_canopy%lbounds(:)                        , &
                                         vgrid_canopy%ubounds(:)                        , &
-                                        lctlib                                         , &
+                                        lctlib%ps_pathway                              , &
+                                        lctlib%k0_fn_struc                             , &
+                                        lctlib%fn_oth_min                              , &
+                                        lctlib%sla                                     , &
+                                        lctlib%np_leaf                                 , &
+                                        lctlib%gmin                                    , &
+                                        lctlib%g0                                      , &
+                                        lctlib%g1                                      , &
+                                        lctlib%t_jmax_omega                            , &
                                         dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
                                         canopy_layer_depth(:)                          , &
                                         growing_season(:)                              , &
@@ -572,14 +582,14 @@ CONTAINS
                                         leaf_cn_direction(:)                           )   ! inout
     END IF 
 
-    CALL calc_stoichiometry_changes(  lctlib%growthform                            , & ! lctlib
+    CALL calc_stoichiometry_changes(  lctlib%growthform                               , &
                                       lctlib%phenology_type                           , &
-                                      lctlib%cn_leaf                                  , & ! lctlib
+                                      lctlib%cn_leaf                                  , &
                                       lctlib%np_leaf                                  , &
-                                      lctlib%cn_leaf_min                              , & ! lctlib
-                                      lctlib%cn_leaf_max                              , & ! lctlib
-                                      lctlib%np_leaf_min                              , & ! lctlib
-                                      lctlib%np_leaf_max                              , & ! lctlib
+                                      lctlib%cn_leaf_min                              , &
+                                      lctlib%cn_leaf_max                              , &
+                                      lctlib%np_leaf_min                              , &
+                                      lctlib%np_leaf_max                              , &
                                       TRIM(dsl4jsb_Config(VEG_)%leaf_stoichom_scheme) , & ! in
                                       growing_season(:)                               , &
                                       leaf_cn_direction(:)                            , &
@@ -612,7 +622,17 @@ CONTAINS
                                               vgrid_canopy%dz(:)                              , &
                                               vgrid_canopy%lbounds(:)                         , &
                                               vgrid_canopy%ubounds(:)                         , &
-                                              lctlib                                          , &
+                                              lctlib%ps_pathway                               , &
+                                              lctlib%sla                                      , &
+                                              lctlib%k0_fn_struc                              , &
+                                              lctlib%fn_oth_min                               , &
+                                              lctlib%np_leaf                                  , &
+                                              lctlib%cn_leaf                                  , &
+                                              lctlib%gmin                                     , &
+                                              lctlib%g0                                       , &
+                                              lctlib%g1                                       , &
+                                              lctlib%t_jmax_omega                             , &
+                                              lctlib%sigma_vis                                , &
                                               dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction  , &
                                               canopy_layer_depth(:)                           , &
                                               t_air(:)                                        , &
@@ -699,7 +719,11 @@ CONTAINS
                                     height(:), veg_pool%fine_root%carbon(:), veg_pool%sap_wood%carbon(:))
 
     CALL calc_target_labile_reserve_pool_size(nc                               , & ! in
-                                              lctlib                           , &
+                                              lctlib%growthform                , &
+                                              lctlib%fstore_target             , &
+                                              lctlib%sla                       , &
+                                              lctlib%tau_leaf                  , &
+                                              lctlib%tau_fine_root             , &
                                               gpp_tlabile_mavg(:)              , &
                                               maint_respiration_tlabile_mavg(:), & 
                                               growth_req_n_tlabile_mavg(:)     , &
@@ -724,7 +748,6 @@ CONTAINS
     !! 
     !! Info: veg_reserve_use is of TYPE(t_slm_struct_veg_element / t_veg_element_a)
     CALL calc_reserve_useage(nc                               , &   ! in
-                             lctlib                           , &
                              growing_season(:)                , &
                              kstar_labile(:)                  , &
                              target_labile_pool_carbon(:)     , & 
@@ -753,7 +776,9 @@ CONTAINS
     !! 
     !! 
     CALL calc_allocation_fraction(nc                                                , & ! in
-                                  lctlib                                            , & 
+                                  lctlib%growthform                                 , & 
+                                  lctlib%k2_fruit_alloc                             , & 
+                                  lctlib%k_crtos                                    , & 
                                   TRIM(dsl4jsb_Config(VEG_)%biomass_alloc_scheme)   , &
                                   dheight(:)                                        , &
                                   kstar_labile(:)                                   , &
@@ -961,7 +986,9 @@ CONTAINS
   !----------------------------------------------------------------------------------------------------------
   SUBROUTINE calc_actual_nutrient_uptake_rate(nc, & 
                                               nsoil_sb, &
-                                              lctlib, &
+                                              lctlib_cn_leaf, &
+                                              lctlib_np_leaf, &
+                                              lctlib_tau_fine_root, &
                                               slm_model_name, &
                                               bnf_scheme, &
                                               sb_model_scheme, &
@@ -1008,7 +1035,6 @@ CONTAINS
                                               exudation_carbon)
                        
     USE mo_kind,                    ONLY: wp
-    USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element    
     USE mo_jsb_phys_constants,      ONLY: Tzero, molar_mass_C, molar_mass_N
     USE mo_isotope_util,            ONLY: calc_mixing_ratio_N15N14
     USE mo_jsb_math_constants,      ONLY: dtime, one_day, one_year, eps8
@@ -1023,7 +1049,9 @@ CONTAINS
     ! 0.1 InOut
     INTEGER,                              INTENT(in)    :: nc, &                        !< dimensions
                                                            nsoil_sb
-    TYPE(t_lctlib_element),               INTENT(in)    :: lctlib                       !< land-cover-type library - parameter across pft's
+    REAL(wp),                             INTENT(in)    :: lctlib_cn_leaf               !< lctlib parameter
+    REAL(wp),                             INTENT(in)    :: lctlib_np_leaf               !< lctlib parameter
+    REAL(wp),                             INTENT(in)    :: lctlib_tau_fine_root         !< lctlib parameter
     CHARACTER(len=*),                     INTENT(in)    :: slm_model_name               !< model name: land plant soil canopy test_canopy
     CHARACTER(len=*),                     INTENT(in)    :: bnf_scheme                   !< from veg config 
     CHARACTER(len=*),                     INTENT(in)    :: sb_model_scheme              !< from sb config
@@ -1103,9 +1131,9 @@ CONTAINS
     !!
     IF(slm_model_name == 'plant')THEN
        ! in case of the plant-only model, prescribe N and P uptake to match demand
-       plant_uptake_nh4_sl(:,1)     = MAX(labile_carbon(:) / lctlib%cn_leaf - labile_nitrogen(:), &
+       plant_uptake_nh4_sl(:,1)     = MAX(labile_carbon(:) / lctlib_cn_leaf - labile_nitrogen(:), &
                                           0.0_wp) / soil_depth_sl(:,1)
-       plant_uptake_po4_sl(:,1)     = MAX(labile_carbon(:) / lctlib%cn_leaf / lctlib%np_leaf - labile_phosphorus(:), &
+       plant_uptake_po4_sl(:,1)     = MAX(labile_carbon(:) / lctlib_cn_leaf / lctlib_np_leaf - labile_phosphorus(:), &
                                           0.0_wp)  / soil_depth_sl(:,1)
        plant_uptake_nh4_n15_sl(:,1) = plant_uptake_nh4_sl(:,1) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
        plant_uptake_no3_n15_sl(:,1) = plant_uptake_no3_sl(:,1) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
@@ -1148,7 +1176,7 @@ CONTAINS
     ! maintenance respiration cost of a unit fine root carbon over its lifetime (mol C/mol C)
     WHERE(fine_root_carbon(:) > eps8)
       fresp_maint(:) = fmaint_rate_troot_mavg(:) * fine_root_nitrogen(:) / fine_root_carbon(:)  * &
-                       lctlib%tau_fine_root * one_day * one_year / 1.e6_wp
+                       lctlib_tau_fine_root * one_day * one_year / 1.e6_wp
     ELSEWHERE
       fresp_maint(:) = 0.0_wp
     END WHERE
@@ -1198,7 +1226,7 @@ CONTAINS
       CASE ("resistance")
         ! current N deficit of growth assuming default labile turnover rate (µmol N / m2 / s)
 !SZ: @todo mo_veg_growth.f90 why is n-demand defined on a static leaf C:N and not the actual growth requirement for N?
-        n_demand(:)   = demand_uptake_n_tuptake_mavg(:) / lctlib%cn_leaf * &
+        n_demand(:)   = demand_uptake_n_tuptake_mavg(:) / lctlib_cn_leaf * &
                        labile_carbon(:) / tau_labile / one_day * 1.e6_wp
         f_nacq_bnf(:) = MAX((cost_n_uptake_root(:) - offset_bnf) / (cost_n_uptake_root(:) + cost_n_fixation_tuptake_mavg(:)), &
                            0.0_wp)
@@ -1845,7 +1873,11 @@ CONTAINS
   !! Output: target sizes of labile and reserve pools 
   !----------------------------------------------------------------------------------------------------------
   SUBROUTINE calc_target_labile_reserve_pool_size(nc                            , &
-                                                  lctlib                        , &
+                                                  lctlib_growthform             , &
+                                                  lctlib_fstore_target          , &
+                                                  lctlib_sla                    , &
+                                                  lctlib_tau_leaf               , &
+                                                  lctlib_tau_fine_root          , &
                                                   gpp_mavg                      , &
                                                   maint_respiration_mavg        , & 
                                                   growth_req_n_mavg             , &
@@ -1868,7 +1900,6 @@ CONTAINS
 
 
     USE mo_jsb_math_constants,    ONLY: one_day, eps8
-    USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_veg_constants,         ONLY: tau_labile, fresp_growth, resorp_fract_leaf, igrass, &
                                         fstore_leaf_max, fstore_fine_root_max, fstore_sap_wood_max
     dsl4slm_Use_memory_a_veg
@@ -1877,7 +1908,11 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     INTEGER,                         INTENT(in)     :: nc                                !< dimensions
-    TYPE(t_lctlib_element),          INTENT(in)     :: lctlib                            !< land-cover-type library - parameters for one pft
+    INTEGER,                         INTENT(in)     :: lctlib_growthform                 !< lctlib parameter
+    REAL(wp),                        INTENT(in)     :: lctlib_fstore_target              !< lctlib parameter
+    REAL(wp),                        INTENT(in)     :: lctlib_sla                        !< lctlib parameter
+    REAL(wp),                        INTENT(in)     :: lctlib_tau_leaf                   !< lctlib parameter
+    REAL(wp),                        INTENT(in)     :: lctlib_tau_fine_root              !< lctlib parameter
     REAL(wp), DIMENSION(nc),         INTENT(in)     :: gpp_mavg                      , & !< last week's GPP (µmol CO2/m2/s) 
                                                        maint_respiration_mavg        , & !< last week's maintenance respiration (µmol CO2/m2/s)
                                                        growth_req_n_mavg             , & !< last week's requirement for growth (mol N / mol C)
@@ -1916,9 +1951,9 @@ CONTAINS
     !!  scaled to the default turnover time of the labile pool
     !!  for grasses after leaf termination this is reduced to a tenth of respiration to account 
     !!  for reduced fine root respiration in dormant roots
-    !  note, in the below WHERE() the 'lctlib%growthform==igrass' is vectorized automatically, 
+    !  note, in the below WHERE() the 'lctlib_growthform==igrass' is vectorized automatically, 
     !  so for all itree the ELSEWHERE statement is executed, and for igrass the WHERE statement if 'veg_pool_leaf_carbon(:) < eps8'
-    WHERE(lctlib%growthform==igrass .AND. veg_pool_leaf_carbon(:) < eps8)
+    WHERE(lctlib_growthform==igrass .AND. veg_pool_leaf_carbon(:) < eps8)
        target_labile_pool_carbon(:)  = 0.1_wp * maint_respiration_mavg(:) * one_day / 1.e6_wp * tau_labile 
     ELSEWHERE 
        target_labile_pool_carbon(:)  = MAX( gpp_mavg(:) , maint_respiration_mavg(:) ) * one_day / 1.e6_wp * tau_labile
@@ -1934,19 +1969,19 @@ CONTAINS
     !! For the reserve pool, this is the C:N:P needed to regrow one year worth of folige and roots,
     !! accounting for losses to respiration and the nutrients currently required to grow these
     !!
-    target_reserve_pool_carbon(:)     = lctlib%fstore_target * target_lai(:) / lctlib%sla * & 
-                                        ( MIN(1.0_wp,1.0_wp/lctlib%tau_leaf) + &
-                                         1._wp/leaf2root_mass_ratio_mavg(:)/lctlib%tau_fine_root ) * &
+    target_reserve_pool_carbon(:)     = lctlib_fstore_target * target_lai(:) / lctlib_sla * & 
+                                        ( MIN(1.0_wp,1.0_wp/lctlib_tau_leaf) + &
+                                         1._wp/leaf2root_mass_ratio_mavg(:)/lctlib_tau_fine_root ) * &
                                         (1._wp + fresp_growth)
-    target_reserve_pool_nitrogen(:)   = lctlib%fstore_target * target_lai / lctlib%sla * & 
-                                        ( MIN(1.0_wp, 1.0_wp/lctlib%tau_leaf) / &
+    target_reserve_pool_nitrogen(:)   = lctlib_fstore_target * target_lai / lctlib_sla * & 
+                                        ( MIN(1.0_wp, 1.0_wp/lctlib_tau_leaf) / &
                                          target_cn_leaf(:) + 1._wp/leaf2root_mass_ratio_mavg(:) / &
-                                         lctlib%tau_fine_root / target_cn_fine_root(:)) * & 
+                                         lctlib_tau_fine_root / target_cn_fine_root(:)) * & 
                                         (1._wp + fresp_growth)
-    target_reserve_pool_phosphorus(:) = lctlib%fstore_target * target_lai(:) / lctlib%sla * & 
-                                        ( MIN(1.0_wp, 1.0_wp/lctlib%tau_leaf) / &
+    target_reserve_pool_phosphorus(:) = lctlib_fstore_target * target_lai(:) / lctlib_sla * & 
+                                        ( MIN(1.0_wp, 1.0_wp/lctlib_tau_leaf) / &
                                          target_cn_leaf(:) / target_np_leaf(:) + & 
-                                         1._wp / leaf2root_mass_ratio_mavg(:)/ lctlib%tau_fine_root / &
+                                         1._wp / leaf2root_mass_ratio_mavg(:)/ lctlib_tau_fine_root / &
                                          target_cn_fine_root(:) / target_np_fine_root(:)) * & 
                                         (1._wp + fresp_growth)
 
@@ -1978,7 +2013,6 @@ CONTAINS
   !! output: net flux between reserve and labile pools 
   !----------------------------------------------------------------------------------------------------------
   SUBROUTINE calc_reserve_useage( nc                            , &
-                                  lctlib                        , &
                                   growing_season                , &
                                   kstar_labile                  , &
                                   target_labile_pool_carbon     , & 
@@ -1996,7 +2030,6 @@ CONTAINS
     USE mo_kind,                  ONLY: wp
     USE mo_jsb_math_constants,    ONLY: one_day, dtime, eps8
     USE mo_jsb_impl_constants,    ONLY: test_false_true
-    USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_veg_constants,         ONLY: tau_labile, &
                                         lambda_phiphen,  k_phiphen, &
                                         lambda_phimaint, k_phimaint, &
@@ -2010,7 +2043,6 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     INTEGER,                          INTENT(in)    :: nc                                !< dimensions
-    TYPE(t_lctlib_element),           INTENT(in)    :: lctlib                            !< land-cover-type library - parameters for one pft
     REAL(wp), DIMENSION(nc),          INTENT(in)    :: growing_season                    !< does the plant intend to grow?
     REAL(wp), DIMENSION(nc),          INTENT(in)    :: kstar_labile                  , & !< potential labile pool turnover (1/day) 
                                                        target_labile_pool_carbon     , & ! desirable size (mol C/m2) of the labile pool
@@ -2278,7 +2310,9 @@ CONTAINS
   !!        Needs to be adjusted to better match prescriebed allometry and to account for falloc_fruit
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_allocation_fraction(nc                          , &
-                                      lctlib                      , &
+                                      lctlib_growthform           , &
+                                      lctlib_k2_fruit_alloc       , &
+                                      lctlib_k_crtos              , &
                                       biomass_alloc_scheme        , &
                                       dheight                     , &
                                       kstar_labile                , &
@@ -2308,7 +2342,6 @@ CONTAINS
                                       growth_req_p )       
 
     USE mo_jsb_math_constants,      ONLY: dtime, one_day, eps8
-    USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_veg_constants,           ONLY: itree, igrass, &
                                           lambda_fruit_alloc, k1_fruit_alloc, k3_fruit_alloc, k4_fruit_alloc
     dsl4slm_Use_memory_a_veg
@@ -2317,7 +2350,9 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     INTEGER,                          INTENT(in)    :: nc                         !< dimensions
-    TYPE(t_lctlib_element),           INTENT(in)    :: lctlib                     !< land-cover-type library - parameter across pft's
+    INTEGER,                          INTENT(in)    :: lctlib_growthform          !< lctlib parameter
+    REAL(wp),                         INTENT(in)    :: lctlib_k2_fruit_alloc      !< lctlib parameter
+    REAL(wp),                         INTENT(in)    :: lctlib_k_crtos             !< lctlib parameter
     CHARACTER(len=*),                 INTENT(in)    :: biomass_alloc_scheme       !< from veg config
     REAL(wp), DIMENSION(nc),          INTENT(in)    :: dheight                 ,& !< derivative of height per unit sapwood mass change 
                                                        kstar_labile            ,& !< potential labile pool turnover rate (1/day) without stoichiometric limit
@@ -2385,18 +2420,18 @@ CONTAINS
     !!  Fruit allocation depends on whether or not the plant is able to build reserves
     !!  as soon as the carbon balance exceeds a PFT specific offset, the maximal fruit growth rate is achieved
     hlp1(:)                    = MAX(0.0_wp, veg_reserve_use_carbon(:) / dtime * 1000000.0_wp + k3_fruit_alloc)
-    veg_falloc%fruit%carbon(:) = k1_fruit_alloc + ( lctlib%k2_fruit_alloc - k1_fruit_alloc ) * & 
+    veg_falloc%fruit%carbon(:) = k1_fruit_alloc + ( lctlib_k2_fruit_alloc - k1_fruit_alloc ) * & 
                                  exp(-(lambda_fruit_alloc * hlp1(:))**k4_fruit_alloc)
 
     !> 1.2 Calculate allocation fractions to functional organs
     !!
     !! 
-    SELECT CASE(lctlib%growthform)
+    SELECT CASE(lctlib_growthform)
       !> 1.2.1 trees
       !!
       CASE (itree)
         ! carbon increment
-        leaf2wood_mass_ratio(:) = leaf2sapwood_mass_ratio(:) / (1._wp + lctlib%k_crtos)
+        leaf2wood_mass_ratio(:) = leaf2sapwood_mass_ratio(:) / (1._wp + lctlib_k_crtos)
         wood_carbon(:)          = sap_wood_carbon(:) + coarse_root_carbon(:)
 
         !! @todo calc_allocation_fraction() -> 1.2 Calculate allocation fractions -> 
@@ -2424,7 +2459,7 @@ CONTAINS
                                            0.0_wp)        
               WHERE(sap_wood_carbon_inc(:) > 0.0_wp)
                 coarse_root_carbon_inc(:) = MAX((sap_wood_carbon(:) + sap_wood_carbon_inc(:)) * &
-                                                lctlib%k_crtos - coarse_root_carbon(:), 0.0_wp)
+                                                lctlib_k_crtos - coarse_root_carbon(:), 0.0_wp)
                 root_carbon_inc(:)        = MAX(k1_opt(:) + k2_opt(:) * leaf_carbon_inc(:) - root_carbon(:), 0.0_wp)
               ELSEWHERE
                 leaf_carbon_inc(:)        = MAX((b_inc(:) - k1_opt(:) + root_carbon(:)) / (1.0_wp + k2_opt(:)), 0.0_wp)
@@ -2458,7 +2493,7 @@ CONTAINS
                                            0.0_wp)          
               WHERE(sap_wood_carbon_inc(:) > 0.0_wp)
                 coarse_root_carbon_inc(:) = MAX((sap_wood_carbon(:) + sap_wood_carbon_inc(:)) * &
-                                                lctlib%k_crtos - coarse_root_carbon(:), 0.0_wp)
+                                                lctlib_k_crtos - coarse_root_carbon(:), 0.0_wp)
                 root_carbon_inc(:)        = MAX((leaf_carbon(:) + leaf_carbon_inc(:)) / &
                                                 leaf2root_mass_ratio(:) - root_carbon(:), 0.0_wp)
               ELSEWHERE ! special case of no wood growth (phenology etc.): redistribute available carbon 
@@ -2502,7 +2537,7 @@ CONTAINS
       CASE DEFAULT
        !! Write statement
        !! 
-       WRITE(message_text,'(a,i4)') 'invalid growthform type ',lctlib%growthform
+       WRITE(message_text,'(a,i4)') 'invalid growthform type ',lctlib_growthform
        CALL finish("mo_veg_growth",message_text)
     END SELECT
 

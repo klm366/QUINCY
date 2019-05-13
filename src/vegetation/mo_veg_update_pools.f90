@@ -508,7 +508,15 @@ CONTAINS
                              vgrid_canopy%dz(:)                             , &
                              vgrid_canopy%lbounds(:)                        , &
                              vgrid_canopy%ubounds(:)                        , &
-                             lctlib                                         , &
+                             lctlib%ps_pathway                              , &
+                             lctlib%k0_fn_struc                             , &
+                             lctlib%fn_oth_min                              , &
+                             lctlib%sla                                     , &
+                             lctlib%np_leaf                                 , &
+                             lctlib%gmin                                    , &
+                             lctlib%g0                                      , &
+                             lctlib%g1                                      , &
+                             lctlib%t_jmax_omega                            , &
                              dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
                              canopy_layer_depth(:)                          , &
                              veg_pool%leaf%nitrogen(:)                      , &
