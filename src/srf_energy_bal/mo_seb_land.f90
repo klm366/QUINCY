@@ -217,10 +217,17 @@ CONTAINS
       is_glacier(:) = .FALSE.
     END IF
 
+    !$claw acc data create(fract,qsat_srf_old,s_old,dQdT,t2s_conv,heat_tcoef, &
+    !$claw acc t_star,liquid_max,t_air_in_Celcius,is_glacier,has_snow_layer)
+    !$claw acc update device(is_glacier)
+
     ! In the moment the calls of calc_previous_day_variables and calc_pseudo_soil_temp are only
     ! necessary for the phenology process
-    t_air_in_Celcius = t_air - tmelt  ! convert Kelvin in Celcius
+    !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_0
+    t_air_in_Celcius(:) = t_air(:) - tmelt  ! convert Kelvin in Celcius
+    
     ! Sum up of the previous day temperatures
+    !$claw sca forward update savepoint=ser_jsb_seb_land_calc_previous_day_variables_1
     CALL calc_previous_day_variables(is_newday(),               & ! Input
                                      t_air_in_Celcius(:),       & ! Input
                                      !dtime,                     & ! Input
@@ -233,15 +240,14 @@ CONTAINS
                                      day_temp_max(:) )            ! InOut
 
     ! Update of pseudo-soil temperature for each time step
+    !$claw sca forward update savepoint=ser_jsb_seb_land_calc_pseudo_soil_temp_1
     CALL calc_pseudo_soil_temp(t_air_in_Celcius(:)  , & ! Input
                                N_pseudo_soil_temp(:), & ! Input
                                F_pseudo_soil_temp(:), & ! Input
                                pseudo_soil_temp(:)  )   ! InOut (for summer-, evergreen and crop)
 
-
-
-    !$claw expand parallel
     ! Save old surface temperature and saturation spec. humidity
+    !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_1
     t_unfilt_old(:) = t_unfilt(:)
     t_old   (:) = t(:)
     ! Temporary fix for temperatures over ocean getting too warm or too cold, leading to crash in convect_tables
@@ -265,7 +271,7 @@ CONTAINS
     ! Update surface temperature
     !
     ! 1. Compute sensitivity of surface saturation specific humidity to temperature
-    !$claw expand parallel
+    !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_2
     dQdT(:) = ( qsat(t(:) + 0.001_wp, press_srf(:)) - qsat_srf_old(:) ) * 1000._wp
 
     ! 2. Old dry static energy
@@ -280,9 +286,10 @@ CONTAINS
 
     ! Compute new surface temperature and saturation humidity
     IF (lstart) THEN
-      !$claw expand parallel
+      !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_3
       s_star(:) = s_old(:)
     ELSE
+      !$claw sca forward update savepoint=ser_jsb_seb_land_surface_temp_implicit_1
       CALL surface_temp_implicit( nc, steplen, &
         t2s_conv(:), &
         t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), &
@@ -301,16 +308,20 @@ CONTAINS
     END WHERE
 
     ! New unfiltered surface temperature (\tilde(X)^(t+1)) (see below Eq. 3.3.1.5 in ECHAM3 manual, alpha = 1/tpfac2)
+    !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_4
     t_unfilt(:) = ( tpfac2 * s_star(:) + tpfac3 * s_old(:) ) / t2s_conv(:)
 
     ! Correct new dry static energy for melting of snow on the surface and (if l_freeze=.TRUE.) melting/freezing of
     ! ice/water in the top soil layer that will happen during this time step
     ! @todo: shouldn't this also consider wether there is actually enough energy to melt water/ice or freeze water?
     t_star(:) = s_star(:) / t2s_conv(:)
+    !$claw end expand
 
     IF (dsl4jsb_Config(SSE_)%l_snow) THEN
+      !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_5
       has_snow_layer(:) = w_snow(:) * rhoh2o / snow_soil_dens(:) > snow_depth_min
     ELSE
+      !!$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_6
       has_snow_layer(:) = w_snow(:) > dsl4jsb_Config(SSE_)%w_soil_critical
     END IF
 
@@ -340,21 +351,27 @@ CONTAINS
       END WHERE
     END IF
 
+    !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_7
     s_star(:) = t_star(:) * t2s_conv(:)
 
     ! Compute new surface qsat (after correction of dry static energy for snow melt!)
     IF (lstart) THEN
+      !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_8
       qsat_star(:) = qsat_srf_old(:)
     ELSE
+      !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_9
       qsat_star(:) = qsat_srf_old(:) + dQdT(:) * (s_star(:) - s_old(:)) / t2s_conv(:)
     END IF
 
     ! 'Effective temperature' used in radheat of the atmosphere model (see Eq. 6.3 in ECHAM5 manual)
+    !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_10
     t_eff(:) = (t_old(:)**3 * (4._wp * t_star(:) - 3._wp * t_old(:))) ** 0.25_wp
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
-  END SUBROUTINE update_surface_energy_land
+    !$claw acc end data
+
+  END SUBROUTINE update_surface_energy_land 
 
   SUBROUTINE surface_temp_implicit(klon, steplen,             &
     &            pcp,                                         &
@@ -385,12 +402,16 @@ CONTAINS
     !
     REAL(wp) :: zcolin(klon), zcohfl(klon), zcoind(klon), zicp(klon), zca(klon), zcs(klon)
     REAL(wp) :: pdt
+    INTEGER :: i
     !REAL(wp) :: pc16
 
+    !$claw acc data & 
+    !$claw acc create(zcolin,zcohfl,zcoind,zicp,zca,zcs)
     pdt     = cvdifts * steplen
     !pc16    = cpd * cpvd1
 
     !
+    !$claw expand parallel update savepoint=ser_jsb_seb_land_surface_temp_implicit_1
     zicp(:) = 1._wp / pcp(:)
     !
     zca(:)    = als * pfracsu(:) +  alv * (pcair(:) - pfracsu(:))
@@ -407,7 +428,9 @@ CONTAINS
               &      ((zca(:) * peqcoe(:) - zcs(:)) * pqsold(:) + zca(:) * pfqcoe(:)) + pgrdfl(:))
     !
     psnew(:)  = (zcolin(:) * psold(:) + zcoind(:)) / (zcolin(:) + zcohfl(:))
+    !$claw end expand
 
+    !$claw acc end data
   END SUBROUTINE surface_temp_implicit
   !
   ! ================================================================================================================================
@@ -591,11 +614,14 @@ CONTAINS
     !  ARGUMENTS
     LOGICAL,   intent(in)    :: is_newday
 
+    !$claw model-data
     REAL(wp),  intent(in)    :: t_air_in_Celcius!,  & ! air temperature at current time step in lowest atmospheric layer in Celcius
                                 !dtime
+    !$claw end model-data
 
     INTEGER,  intent(in)     :: time_steps_per_day
 
+    !$claw model-data
     REAL(wp),  intent(inout) :: previous_day_temp_mean, & ! "in" because if it is not calculated new, it should remain
                                 previous_day_temp_min,  & ! as before. Without "in" it would be NaN in the output.
                                 previous_day_temp_max
@@ -603,7 +629,7 @@ CONTAINS
     REAL(wp),  intent(inout) :: day_temp_sum,           &
                                 day_temp_min,           &
                                 day_temp_max
-
+    !$claw end model-data
 
     !-----------------------------------------------------------------------
     !  LOCAL VARIABLES
@@ -616,6 +642,8 @@ CONTAINS
 
     ! Note that updating is done globally at the same time step, i.e. for different longitudes the updating happens at different
     ! local times.
+
+    !$claw sca                            
 
     IF(is_newday) THEN  ! day has changed --> recompute mean, min, max day temperature of previous day
                         ! and reinitialize day_temp_sum(), day_temp_min(), day_temp_max()
@@ -665,13 +693,16 @@ CONTAINS
     & pseudo_soil_temp                        & ! InOut
     & )
 
+    !$claw model-data
     REAL(wp), intent(in) :: &
      & t_air_in_Celcius,    &
      & N_pseudo_soil_temp,  &
      & F_pseudo_soil_temp
 
     REAL(wp),  intent(inout) :: pseudo_soil_temp
+    !$claw end model-data
 
+    !$claw sca
 
     pseudo_soil_temp= t_air_in_Celcius / N_pseudo_soil_temp  +  F_pseudo_soil_temp * pseudo_soil_temp
 
