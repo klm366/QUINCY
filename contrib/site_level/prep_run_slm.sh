@@ -23,7 +23,7 @@ slmModel="land"
 ##>> sites <<###########################################################################################
 ## select set of sites: FLUXNET or CRUNCEPv7
 # forcing data and fluxnet/cruncep/face site info *list.dat for the specific set of sites: /Net/Groups/BGI/data/Model/SLM1/input/point/ 
-# options: fluxnet cruncep face manip fert
+# options: fluxnet cruncep face manip fert craine
 forcingDataSet="fluxnet"
 # forcing with or without a transient (like spinup) phase before the actual simulation starts
 # options: static transient
@@ -41,7 +41,9 @@ customSiteListFileName=""
 # this option must be empty (i.e., singleSiteName="" ) to run multiple sites !
 # Site-ID must be consistent with the forcingDataSet option above, i.e., fluxnet, cruncep, face, manip
 # you can get the Site-ID from the 1st column of the particular site-list info file in /Net/Groups/BGI/data/Model/SLM1/input/point/"forcingDataSet"/
-# examples: [FLUX] "DE-Hai" "FI-Hyy" "ZA-Kru"  [CRUN] "BHS_01" "HAI_01" "ILO_05"  [FACE] "DK-AMB" "OR-ELE"  [MANIP] "ES-MaG" "ES-MaT"  [FERT] "HAR-CON_4" "HAR-HIG_4" "HAR-LOW_4" "HAR-CON_5"
+# examples: [FLUX] "DE-Hai" "FI-Hyy" "ZA-Kru"  [CRUN] "BHS_01" "HAI_01" "ILO_05"  
+#           [FACE] "DK-AMB" "OR-ELE"  [MANIP] "ES-MaG" "ES-MaT"  [FERT] "HAR-CON_4" "HAR-HIG_4" "HAR-LOW_4" "HAR-CON_5"
+#           [CRAINE] "CRA_01" "CRA_02" "CRA_18"
 singleSiteName=""
 
 
@@ -73,7 +75,7 @@ spinupLengthGFDB=500
 paramSensitivitySim="F"
 # you can give absolute values ("F") or proportional changes within range [0 < x < 2] ("T")
 paramChangesProportional="F"
-# please provide the Site-ID   (examples:  [FLUX] "DE-Hai" "FI-Hyy" "ZA-Kru"  [CRUN] "BHS_01" "HAI_01" "ILO_05"  [FACE] "DK-AMB" "OR-ELE"  [MANIP] "ES-MaG" "ES-MaT"  [FERT] "HAR-CON_4" "HAR-HIG_4" "HAR-LOW_4" "HAR-CON_5")
+# please provide the Site-ID   (see examples in the three lines above the option "singleSiteName" ~ line 44)
 paramSensitivitySiteName="DE-Hai"
 
 
@@ -203,6 +205,10 @@ while getopts ":e:f:c:m:s:r:y:b:z:n:u:h" opt; do
       echo "   forcingDataSet=fert"
       forcingDataSet="fert"
       ;;
+    "ca")
+      echo "   forcingDataSet=craine"
+      forcingDataSet="craine"
+      ;;
     esac
     ;;
   "c")
@@ -321,6 +327,7 @@ while getopts ":e:f:c:m:s:r:y:b:z:n:u:h" opt; do
     echo "       fa: FACE sites"
     echo "       ma: MANIP tree and grassland sites"
     echo "       fe: FERT sites (fertilization)"
+    echo "       ca: CRAINE sites (selected sites from doi:10.5061/dryad.v2k2607)"
     echo " -c set the customSiteList"
     echo "    Arguments to -c:"
     echo "       T: using the custom site list"
@@ -462,7 +469,7 @@ fi
 return 0
 }
 # lists to validate against
-validateForcingDataSet="fluxnet cruncep face manip fert"
+validateForcingDataSet="fluxnet cruncep face manip fert craine"
 validateForcingMode="static transient"
 validateSiteSelection="all cue spp"
 validateSlmModel="land plant soil canopy"
@@ -651,10 +658,14 @@ case "$forcingDataSet" in
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/FERT/"
   siteDataObsFold="no such evaluation data"  # but this variable must contain something
   ;;
+"craine")
+  siteDataFold="/Net/Groups/BGI/scratch/jengel/quincy_data/point/CRAINE/"
+  siteDataObsFold="no such evaluation data"  # but this variable must contain something
+  ;;
 esac
-# no soil forcing for MANIP
+# no soil forcing for MANIP FERT CRAINE
 if [ "$slmModel" == "soil" ]; then
-  if [ "$forcingDataSet" == "manip" ] || [ "$forcingDataSet" == "fert" ]; then
+  if [ "$forcingDataSet" == "manip" ] || [ "$forcingDataSet" == "fert" ] || [ "$forcingDataSet" == "craine" ]; then
     echo " Sorry, no soil forcing available for ""$forcingDataSet"" sites yet."
     echo " EXIT!"
     exit 1
@@ -825,10 +836,21 @@ else # the default case: $customSiteList == "F"
      then
       siteListFileName="fert_sites_1901-2015_list.dat"
       echo " "
-      echo " Note: you are running a static simulation with a FERT site using forcing 1901-2015 by default."
+      echo " Note: you are running a static simulation with (a) FERT site(s) using (transient) forcing 1901-2015 by default."
       echo " "
     else
       siteListFileName="fert_sites_1901-2015_list.dat"
+    fi
+    ;;
+  "craine")
+    if [ $forcingMode == "static" ]
+     then
+      siteListFileName="craine_sites_1901-2015.dat"
+      echo " "
+      echo " Note: you are running a static simulation with (a) CRAINE site(s) using (transient) forcing 1901-2015 by default."
+      echo " "
+    else
+      siteListFileName="craine_sites_1901-2015.dat"
     fi
     ;;
   esac
@@ -1018,6 +1040,14 @@ case "$forcingDataSet" in
   fi
   ;;
 "fert")
+  if [ $forcingMode == "static" ]
+   then
+    forcingModeFileID="_1901"
+  else
+    forcingModeFileID="_1901"
+  fi
+  ;;
+"craine")
   if [ $forcingMode == "static" ]
    then
     forcingModeFileID="_1901"
