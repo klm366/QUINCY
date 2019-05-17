@@ -177,10 +177,12 @@ CONTAINS
     ! RMS TBD: This has to be revised!
     IF (tile%Is_process_active(SSE_)) THEN
       dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_soil) ! IN
+      !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_0 tile_name=tile%name
       rough_h(:) =          fract_snow_soil(:)  / (LOG(blending_height /        roughness_snow)  ** 2)  &
         &        + (1._wp - fract_snow_soil(:)) / (LOG(blending_height / MIN(1._wp, rough_m(:))) ** 2)
     ELSE IF (tile%contains_lake) THEN
       dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_lice) ! IN
+      !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_1 tile_name=tile%name
       rough_h(:) =          fract_snow_lice(:)  / (LOG(blending_height /        roughness_snow)  ** 2)  &
         &        + (1._wp - fract_snow_lice(:)) / (LOG(blending_height / MIN(1._wp, rough_m(:))) ** 2)
     ELSE
@@ -188,6 +190,7 @@ CONTAINS
     END IF
 
     ! Limit roughness length for heat by 1 m (see below Eq.5.6 in ECHAM5 manual)
+    !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_3 tile_name=tile%name
     rough_h(:) = MIN(1._wp, blending_height * EXP(-1._wp / SQRT(rough_h(:))))
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
