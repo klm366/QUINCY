@@ -897,12 +897,12 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)
     ELSE
       ALLOCATE(fract_org_sl(nc, nsoil))
-      !$claw acc enter data create(fract_org_sl)
-      !$claw expand parallel
+      !!$claw acc enter data create(fract_org_sl)
+      !!$claw expand parallel
       fract_org_sl(:,:) = 0._wp
     END IF
 
-    !$claw sca forward update
+    !!$claw sca forward update
     CALL calc_soil_hydrology( &
       ! in
       & nc, &
@@ -951,7 +951,7 @@ CONTAINS
     END WHERE
 
     IF (.NOT. dsl4jsb_Config(HYDRO_)%l_organic) THEN
-      !$claw acc exit data delete(fract_org_sl)
+      !!$claw acc exit data delete(fract_org_sl)
       DEALLOCATE(fract_org_sl)
     END IF
 
@@ -1187,13 +1187,14 @@ CONTAINS
 
     ! Calculate water content and field capacity in the root zone
     ! @todo - do we need these?
+    !!$claw expand parallel update savepoint=ser_jsb_hxdro_update_canopy_cond_stressed_expand_1
+    !$claw expand
     w_soil_root   (:)  = get_water_in_root_zone(w_soil_sl     (:,:), soil_depth_sl(:,:), root_depth_sl(:,:))
     w_soil_root_fc(:)  = get_water_in_root_zone(w_soil_fc_sl  (:,:), soil_depth_sl(:,:), root_depth_sl(:,:))
     w_soil_root_pwp(:) = get_water_in_root_zone(w_soil_pwp_sl (:,:), soil_depth_sl(:,:), root_depth_sl(:,:))
 
     ! Calculate water stress factor
     ! @todo: maybe use the distributed permanent wilting point/field cap from above and change get_water_stress_factor function
-    !$claw expand parallel
     water_stress(:) = &
       & get_water_stress_factor(w_soil_column(:), max_moist(:), &
           &                     dsl4jsb_Config(HYDRO_)%w_soil_crit_fract, dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract)
@@ -1201,11 +1202,11 @@ CONTAINS
     ! Compute (actual) canopy (stomatal) conductance under water stress.
     ! R: diese canopy_cond (stressed) entspricht der canopy_conductance_limited die in JSBACH3 in update_soil gerechnet wurde. Sie
     !    wird auf jeden Fall benötigt unabhängig davon ob der Assimi-Prozess an ist (wird dann als Input benötigt) oder nicht.
-    !$claw expand parallel
     canopy_cond_limited(:) = get_canopy_conductance(canopy_cond(:),            & ! in, unstressed canopy conductance
                                                     water_stress(:),           & ! in, water stress factor
                                                     q_air(:) >  qsat(t(:),press_srf(:)) & ! in, atmosphere saturated?
                                                     )
+    !$claw end expand                                                    
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1324,6 +1325,8 @@ CONTAINS
 
     !model => Get_model(tile%owner_model_id)
 
+    !$claw acc data create(q_air, q_air_eff, qsat_srf_eff, heat_tcoef)
+
     ! Get reference to variables for current block
     !
     dsl4jsb_Get_memory(A2L_)
@@ -1353,7 +1356,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapopot)           ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapotrans) ! out
 
-      !$claw expand parallel
+      !$claw expand parallel update savepoint=ser_jsb_hydro_update_evaporation_expand_1 tile_name=tile%name
       q_air(:) = q_acoef_wtr(:) * qsat_lwtr(:) + q_bcoef_wtr(:) ! New moisture at lowest atmospheric level by back-substitution
 
       heat_tcoef(:) = heat_transfer_coef(drag_wtr(:), steplen)  ! Transfer coefficient
@@ -1385,7 +1388,7 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(HYDRO_,    trans)               ! out
       END IF
 
-      !$claw expand parallel
+      !$claw expand parallel update savepoint=ser_jsb_hydro_update_evaporation_expand_2 tile_name=tile%name
       q_air(:) = q_acoef(:) * qsat_star(:) + q_bcoef(:) ! New moisture at lowest atmospheric level by back-substitution
 
       heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen)  ! Transfer coefficient
@@ -1400,13 +1403,15 @@ CONTAINS
       evapopot(:)           = heat_tcoef(:) * (q_air    (:) - qsat_star   (:)) ! Potential evaporation
       !$claw end expand
       IF (tile%contains_vegetation) THEN
-        !$claw expand parallel
+        !$claw expand parallel update savepoint=ser_jsb_hydro_update_evaporation_expand_3 tile_name=tile%name
         trans(:)              = fact_qsat_trans_srf(:) * evapopot(:)             ! Transpiration
       END IF
 
     ELSE
       CALL finish(TRIM(routine), 'Called for invalid lct_type')
     END IF
+
+    !$claw acc end data
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
