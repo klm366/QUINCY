@@ -560,7 +560,7 @@ CONTAINS
 
     ! Compute new dry static energy at lowest atmospheric level by back-substitution
     !
-    !$claw expand parallel
+    !$claw expand parallel update savepoint=ser_jsb_seb_lake_update_surface_fluxes_lake_expand_0
     s_air(:) = t_acoef_wtr(:) * s_wtr   (:) + t_bcoef_wtr(:)
 
     ! Transfer coefficient

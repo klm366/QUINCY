@@ -247,7 +247,8 @@ CONTAINS
                                pseudo_soil_temp(:)  )   ! InOut (for summer-, evergreen and crop)
 
     ! Save old surface temperature and saturation spec. humidity
-    !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_1
+    !$claw expand 
+    !parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_1
     t_unfilt_old(:) = t_unfilt(:)
     t_old   (:) = t(:)
     ! Temporary fix for temperatures over ocean getting too warm or too cold, leading to crash in convect_tables
@@ -569,7 +570,7 @@ CONTAINS
 
     ! Compute new dry static energy at lowest atmospheric level by back-substitution
     !
-    !$claw expand parallel
+    !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_fluxes_land_expand_0
     s_air(:) = t_acoef(:) * s_star   (:) + t_bcoef(:)
 
     ! Transfer coefficient
