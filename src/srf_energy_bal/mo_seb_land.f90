@@ -130,7 +130,11 @@ CONTAINS
      & is_glacier,                    &
      & has_snow_layer
 
-    INTEGER :: iblk, ics, ice, nc
+    REAL(wp), DIMENSION(options%nc) ::    & ! Avoid comput in param
+     & soil_depth_sl_vol_porosity_sl_tmp
+    REAL(wp) :: w_soil_critical_tmp
+
+    INTEGER :: iblk, ics, ice, nc, i
     REAL(wp) :: steplen
     INTEGER  :: ilct
 
@@ -218,7 +222,8 @@ CONTAINS
     END IF
 
     !$claw acc data create(fract,qsat_srf_old,s_old,dQdT,t2s_conv,heat_tcoef, &
-    !$claw acc t_star,liquid_max,t_air_in_Celcius,is_glacier,has_snow_layer)
+    !$claw acc t_star,liquid_max,t_air_in_Celcius,is_glacier,has_snow_layer,  & 
+    !$claw acc soil_depth_sl_vol_porosity_sl_tmp)
     !$claw acc update device(is_glacier)
 
     ! In the moment the calls of calc_previous_day_variables and calc_pseudo_soil_temp are only
@@ -303,10 +308,18 @@ CONTAINS
 
     ! @todo - hack for oceans boxes (land tile is direct child of root tile)
     CALL tile%parent_tile%Get_fraction(ics, ice, iblk, fract=fract(:))
-    WHERE (fract(:) < EPSILON(1._wp))
-      ! s_star(:) = s_old(:)
-      s_star(:) = 280._wp * t2s_conv(:)
-    END WHERE
+
+    !$claw acc data present(fract,s_star,t2s_conv)
+    !$claw acc update device(fract,t2s_conv)
+    !$claw acc parallel loop gang vector
+    DO i=1, size(s_star,dim=1)
+      IF (fract(i) < EPSILON(1._wp)) THEN
+        ! s_star(:) = s_old(:)
+        s_star(i) = 280._wp * t2s_conv(i)
+      END IF
+    END DO
+    !$claw acc update host(s_star)
+    !$claw acc end data
 
     ! New unfiltered surface temperature (\tilde(X)^(t+1)) (see below Eq. 3.3.1.5 in ECHAM3 manual, alpha = 1/tpfac2)
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_4
@@ -318,38 +331,58 @@ CONTAINS
     t_star(:) = s_star(:) / t2s_conv(:)
     !$claw end expand
 
+    w_soil_critical_tmp = dsl4jsb_Config(SSE_)%w_soil_critical
     IF (dsl4jsb_Config(SSE_)%l_snow) THEN
       !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_5
       has_snow_layer(:) = w_snow(:) * rhoh2o / snow_soil_dens(:) > snow_depth_min
     ELSE
       !!$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_6
-      has_snow_layer(:) = w_snow(:) > dsl4jsb_Config(SSE_)%w_soil_critical
+      has_snow_layer(:) = w_snow(:) > w_soil_critical_tmp
     END IF
 
     ! Actual snowmelt will be computed later in the hydrology process (update_surface_hydrology)
-    WHERE (has_snow_layer(:) .OR. is_glacier(:))
-      ! Snow melt where glacier or snow layer
-      t_star(:) = MIN(t_star(:), tmelt)
-    END WHERE
+    !$claw acc data present(has_snow_layer,is_glacier,t_star)
+    !$claw acc update device(has_snow_layer,is_glacier,t_star)
+    !$claw acc parallel loop gang vector
+    DO i=1,size(t_star,dim=1)
+      IF (has_snow_layer(i) .OR. is_glacier(i)) THEN
+        ! Snow melt where glacier or snow layer
+        t_star(i) = MIN(t_star(i), tmelt)
+      END IF
+    END DO
+    !$claw acc update host(t_star)
+    !$claw acc end data
 
     IF (dsl4jsb_Config(SSE_)%l_freeze) THEN
+
+      !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_11
+      soil_depth_sl_vol_porosity_sl_tmp(:) = soil_depth_sl  (:,1) * vol_porosity_sl(:,1)
       liquid_max(:) = Get_liquid_max( &
         & dsl4jsb_Config(SSE_)%l_supercool            , &
-        & t_star                                      , &
-        & soil_depth_sl  (:,1) * vol_porosity_sl(:,1) , & ! Maximum water storage
+        & t_star(:)                                   , &
+        & soil_depth_sl_vol_porosity_sl_tmp(:)        , & ! Maximum water storage
         & matrix_pot_sl  (:,1)                        , &
         & bclapp_sl      (:,1)                          &
         & )
-      WHERE (.NOT. has_snow_layer(:) .AND. .NOT. is_glacier(:))
-        WHERE (w_soil_sl(:,1) > MAX(liquid_max(:), dsl4jsb_Config(SSE_)%w_soil_critical))
-          ! Freezing of water in uppermost soil layer where no snow layers above surface and considerable amount of moisture
-          t_star(:) = MAX(t_star(:), tmelt)
-        END WHERE
-        WHERE (w_ice_sl(:,1) > dsl4jsb_Config(SSE_)%w_soil_critical )
-          ! Ice melt in uppermost soil layer where no snow layers above surface and considerable amount of ice
-          t_star(:) = MIN(t_star(:), tmelt)
-        END WHERE
-      END WHERE
+      !$claw end expand
+
+      !$claw acc data present(has_snow_layer,is_glacier,w_soil_sl,liquid_max,t_star,w_ice_sl)
+      !$claw acc update device(has_snow_layer,is_glacier,w_soil_sl,liquid_max,t_star,w_ice_sl)
+      !$claw acc parallel loop gang vector
+      DO i=1,size(t_star, dim=1)  
+        IF (.NOT. has_snow_layer(i) .AND. .NOT. is_glacier(i)) THEN
+          IF (w_soil_sl(i,1) > MAX(liquid_max(i), w_soil_critical_tmp)) THEN
+            ! Freezing of water in uppermost soil layer where no snow layers above surface and considerable amount of moisture
+            t_star(i) = MAX(t_star(i), tmelt)
+          END IF
+          IF (w_ice_sl(i,1) > w_soil_critical_tmp ) THEN
+            ! Ice melt in uppermost soil layer where no snow layers above surface and considerable amount of ice
+            t_star(i) = MIN(t_star(i), tmelt)
+          END IF
+        END IF
+      END DO
+      !$claw acc update host(t_star)
+      !$claw acc end data
     END IF
 
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_7

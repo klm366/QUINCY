@@ -1845,27 +1845,27 @@ CONTAINS
 
     CALL tile%Get_fraction(ics, ice, iblk, fract=tile_fract(:))
 
-    !$claw expand parallel
+    !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_0 tile_name=tile%name
     water_flux(:) = rain(:) + snow(:) + evapotrans(:) - runoff(:) - drainage(:)
     water_flux(:) = water_flux(:) * tile_fract(:) * area(:) / rhoh2o                    ! kg m-2 s-1 -> m3/s
     !$claw end expand
 
     IF (tile%contains_soil .AND. .NOT. tile%is_glacier) THEN
-      !$claw expand parallel
+      !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_1 tile_name=tile%name
       water_content_new(:) = (  w_skin(:) + w_snow(:)                                   &
         &                     + SUM(w_soil_sl(:,:), DIM=2) + SUM(w_ice_sl(:,:), DIM=2)  &
         &                    ) * tile_fract(:) * area(:)  ! m -> m^3
     ELSE
-      !$claw expand parallel
+      !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_2 tile_name=tile%name
       water_content_new(:) = 0._wp
     END IF
 
     IF (.NOT. is_time_experiment_start()) THEN
-      !$claw expand parallel
+      !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_3 tile_name=tile%name
       water_budget(:) = water_content(:) + water_flux(:) * dtime - water_content_new(:)
     END IF
 
-    !$claw expand parallel
+    !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_4 tile_name=tile%name
     water_content(:) = water_content_new(:)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
