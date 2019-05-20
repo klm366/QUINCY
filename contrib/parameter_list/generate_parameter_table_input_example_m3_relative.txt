@@ -1,0 +1,5 @@
+sla_p4 0.9 1.1
+mavg_period_tlabile 0.9 1.1
+tau_fast 0.9 1.1
+vmax_bnf 0.9 1.1
+parameter_sets 80
