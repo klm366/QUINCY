@@ -1645,10 +1645,8 @@ CONTAINS
     ! TODO
     ! TBD: Maybe change later so that it uses geographically dependend critical values (like wilting point)
 
-    !$claw model-data
     REAL(wp), INTENT(in) :: w_soil            !< Soil water content
     REAL(wp), INTENT(in) :: w_soil_max        !< Soil water content at field capacity
-    !$claw end model-data
     REAL(wp), INTENT(in) :: w_soil_crit_fract !< Fraction of max. soil water content at critical point
     REAL(wp), INTENT(in) :: w_soil_wilt_fract !< Fraction of max. soil water content at wilting point
     REAL(wp)             :: water_stress_factor

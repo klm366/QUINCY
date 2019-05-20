@@ -1158,6 +1158,9 @@ CONTAINS
 
     INTEGER :: iblk, ics, ice
 
+    REAL(wp) :: config_w_soil_crit_fract, config_w_soil_wilt_fract
+    LOGICAL, DIMENSION(options%nc) :: q_air_gt_qsat_tmp
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_canopy_cond_stressed'
 
     iblk = options%iblk
@@ -1203,8 +1206,12 @@ CONTAINS
 
     ! Calculate water content and field capacity in the root zone
     ! @todo - do we need these?
-    !!$claw expand parallel update savepoint=ser_jsb_hxdro_update_canopy_cond_stressed_expand_1
-    !$claw expand
+
+    config_w_soil_crit_fract = dsl4jsb_Config(HYDRO_)%w_soil_crit_fract
+    config_w_soil_wilt_fract = dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract
+
+    !$claw acc data create(q_air_gt_qsat_tmp)
+    !$claw expand parallel update savepoint=ser_jsb_hydro_update_canopy_cond_stressed_expand_0 tile_name=tile%name
     w_soil_root   (:)  = get_water_in_root_zone(w_soil_sl     (:,:), soil_depth_sl(:,:), root_depth_sl(:,:))
     w_soil_root_fc(:)  = get_water_in_root_zone(w_soil_fc_sl  (:,:), soil_depth_sl(:,:), root_depth_sl(:,:))
     w_soil_root_pwp(:) = get_water_in_root_zone(w_soil_pwp_sl (:,:), soil_depth_sl(:,:), root_depth_sl(:,:))
@@ -1213,16 +1220,19 @@ CONTAINS
     ! @todo: maybe use the distributed permanent wilting point/field cap from above and change get_water_stress_factor function
     water_stress(:) = &
       & get_water_stress_factor(w_soil_column(:), max_moist(:), &
-          &                     dsl4jsb_Config(HYDRO_)%w_soil_crit_fract, dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract)
+          &                     config_w_soil_crit_fract, config_w_soil_wilt_fract)
 
+
+    q_air_gt_qsat_tmp(:) = q_air(:) > qsat(t(:),press_srf(:))      
     ! Compute (actual) canopy (stomatal) conductance under water stress.
     ! R: diese canopy_cond (stressed) entspricht der canopy_conductance_limited die in JSBACH3 in update_soil gerechnet wurde. Sie
     !    wird auf jeden Fall benötigt unabhängig davon ob der Assimi-Prozess an ist (wird dann als Input benötigt) oder nicht.
     canopy_cond_limited(:) = get_canopy_conductance(canopy_cond(:),            & ! in, unstressed canopy conductance
                                                     water_stress(:),           & ! in, water stress factor
-                                                    q_air(:) >  qsat(t(:),press_srf(:)) & ! in, atmosphere saturated?
+                                                    q_air_gt_qsat_tmp(:)       & ! in, atmosphere saturated?
                                                     )
-    !$claw end expand                                                    
+    !$claw end expand
+    !$claw acc end data
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
