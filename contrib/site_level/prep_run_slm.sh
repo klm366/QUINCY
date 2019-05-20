@@ -659,7 +659,7 @@ case "$forcingDataSet" in
   siteDataObsFold="no such evaluation data"  # but this variable must contain something
   ;;
 "craine")
-  siteDataFold="/Net/Groups/BGI/scratch/jengel/quincy_data/point/CRAINE/"
+  siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/CRAINE/"
   siteDataObsFold="no such evaluation data"  # but this variable must contain something
   ;;
 esac

@@ -371,7 +371,6 @@ case "$forcingDataSet" in
   siteDataSet="FERT/"
   ;;
 "craine")
-  siteDataDirBase="/Net/Groups/BGI/scratch/jengel/quincy_data/point/"
   siteDataSet="CRAINE/"
   ;;
 esac
