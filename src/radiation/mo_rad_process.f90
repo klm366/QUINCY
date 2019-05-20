@@ -121,13 +121,16 @@ CONTAINS
     LOGICAL,  INTENT(in)     :: use_alb_veg_simple
 
     REAL(wp),  INTENT(in)    ::                        &
+                                canopy_bound_lai,      &
+                                canopy_bound_lai_delta
+
+    !$claw model-data
+    REAL(wp),  INTENT(in)    ::                        &
                                 par,                   &
                                 alb_vis_soil,          &
                                 lai,                   &
                                 cos_zenith_angle,      &
-                                fract_par_direct,      &
-                                canopy_bound_lai,      &
-                                canopy_bound_lai_delta
+                                fract_par_direct
 
     REAL(wp),  INTENT(inout) :: B4_layer_above
 
@@ -136,6 +139,7 @@ CONTAINS
                                 faPAR_cl,              &
                                 lai_cl,                &
                                 apar_per_lai_cl
+    !$claw end model-data
 
     REAL(wp) :: ZH, K0, ZP1, Q0, Q1, B0, B1,    & ! These variables vary per grid cell
                 EKL, EHL, B4, FC, FSHD,         & ! These variables vary per grid cell, FC =fractional vegetation cover
@@ -145,6 +149,8 @@ CONTAINS
 
     ! ---------------------------
     ! Go
+
+    !$claw sca
 
     ! Expresse radiation in  mol(photons)/(m^2 s)
     par_down_mol = par / Epar

@@ -469,24 +469,32 @@ CONTAINS
     ! ---------------------------
     ! Go
 
-    ! Initialize local variables
-    par_down_mol           = 0._wp ! for now also in the memory but is only for current time step/"delta_time"
-    soil_reflectivity_par  = 0._wp ! for now also in the memory but is only for current time step/"delta_time"
-    apar_per_lai_cl        = 0._wp
+    !$claw acc data create(B4_layer_above)
 
+    ! Initialize local variables
+
+    !$claw expand parallel update savepoint=ser_jsb_rad_update_radiation_par_expand_0 tile_name=tile%name
+    apar_per_lai_cl(:,:)     = 0._wp
+
+    !$claw expand parallel update savepoint=ser_jsb_rad_update_radiation_par_expand_1 tile_name=tile%name
+    par_down_mol(:)          = 0._wp ! for now also in the memory but is only for current time step/"delta_time"
+    soil_reflectivity_par(:) = 0._wp ! for now also in the memory but is only for current time step/"delta_time"
+    
     par(:) = swpar_srf_down(:)
 
     ! Compute direct fraction of PAR.
     ! R:  fract_par_direct = in ECHAM jsswdifpar, which is zsw_par_fract_diffuse = fract_diffuse_par  =sw_par_fract_direct
-    fract_par_direct = 1._wp - fract_par_diffuse
+    fract_par_direct(:) = 1._wp - fract_par_diffuse(:)
 
     B4_layer_above(:) = 7777777._wp ! Used to transfer variable B4 from one canopy layer to the next. Startvalue only to indicate
                                     ! first layer
+    !$claw end expand
+
     DO icanopy=1,ncanopy
        ! Compute faPAR_cl (absorbed photsynthetic active radiation for each canopy layer) and lai_cl (leaf area index for each
        ! canopy layer)
        canopy_bound_lai_delta = canopy_bound_lai(icanopy) - canopy_bound_lai(icanopy-1)
-
+       !$claw sca forward update savepoint=ser_jsb_rad_calc_par_1 tile_name=tile%name canopy_lvl=icanopy
        CALL calc_par(                 &
          & ncanopy,                   & ! in
          & icanopy,                   & ! in
@@ -512,20 +520,25 @@ CONTAINS
     ! R: Note, the following code is preliminary and should be replaced later by an laccu-procedure.
     !    For the correct integration over time as it is done now, this task must be called only once per timestep.
     ! Accumulate incoming par in mol(photons)/(m^2) over time
+    !$claw expand parallel update savepoint=ser_jsb_rad_update_radiation_par_expand_2 tile_name=tile%name
     par_down_mol_nacc(:) = par_down_mol_nacc(:) + par_down_mol(:) * dtime
 
     ! R: This whole workaround should get abitary soon...
     !acc_counter = acc_counter + 1
     !par_down_mol_tavg = par_down_mol_nacc / dtime / acc_counter
+    !$claw expand parallel update savepoint=ser_jsb_rad_update_radiation_par_expand_3 tile_name=tile%name
     apar_per_lai_cl_nacc(:,:)  = apar_per_lai_cl_nacc(:,:) + apar_per_lai_cl(:,:) * dtime
+
     ! R: This whole workaround (acc_counter) should get abitary soon...
     !apar_per_lai_cl_tavg(:,icanopy)  = apar_per_lai_cl_nacc(:,icanopy) / dtime / acc_counter
     DO icanopy=1,ncanopy
+      !$claw expand parallel update savepoint=ser_jsb_rad_update_radiation_par_expand_4 tile_name=tile%name canopy_lvl=icanopy
       apar_nacc(:) = apar_nacc(:) + par_down_mol(:) * faPAR_cl(:,icanopy) * dtime
     END DO
 
     ! Create faPAR
     DO icanopy=1,ncanopy
+      !$claw expand parallel update savepoint=ser_jsb_rad_update_radiation_par_expand_5 tile_name=tile%name canopy_lvl=icanopy
       faPAR(:) = faPAR(:) + faPAR_cl(:,icanopy) ! faPAR_cl is always the fraction relativ to incoming radiation on the top of the
                                                 ! whole canopy
     END DO
@@ -545,6 +558,8 @@ CONTAINS
 !           !apar_per_lai_cl_tavg(:,icanopy)  = apar_per_lai_cl_nacc(:,icanopy) / dtime / acc_counter
 !           apar_nacc(:)                     = apar_nacc(:) + par_down_mol(:) * faPAR_cl(:,icanopy) * dtime
 !        END IF
+
+    !$claw acc end data
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -794,7 +809,9 @@ CONTAINS
         & albedo_lice(:)  & ! inout
         & )
 
-      !TODO CLAW TEMP
+      
+      !$claw acc data present(alb_vis,alb_nir,fract_lice,albedo_lwtr,albedo_lice)
+      !TODO CLAW TEMP 
       !$claw acc update device(fract_lice, albedo_lwtr, albedo_lice)
       !$claw acc parallel loop gang vector
       DO i = 1, size(l_day)
@@ -805,6 +822,7 @@ CONTAINS
       END DO
       !TODO CLAW TEMP
       !$claw acc update host(alb_vis, alb_nir)
+      !$claw acc end data
 
     ELSE IF (tile%is_glacier) THEN
       !$claw sca forward update savepoint=ser_jsb_RAD_calc_glacier_albedo_1 tile_name=tile%name
