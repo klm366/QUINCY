@@ -290,11 +290,12 @@ CONTAINS
       fact_qair_veg(options%nc),   &
       fact_qair_soil(options%nc),  &
       rel_hum(options%nc),         & ! relative humidity of uppermost soil layer as compared to its field capacity
-      zfract_fpc(options%nc)
+      zfract_fpc(options%nc),      &
+      w_soil_wilt_fract_tmp
     LOGICAL :: &
       mask(options%nc)
 
-    INTEGER :: iblk, ics, ice
+    INTEGER :: iblk, ics, ice, i
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -312,6 +313,9 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_config(HYDRO_)
+
+    !$claw acc data create(fact_qsat_veg,fact_qsat_trans,fact_qsat_soil, & 
+    !$claw acc fact_qair_veg,fact_qair_soil,rel_hum,zfract_fpc,mask)
 
     ! Get pointers to process configs and memory
     dsl4jsb_Get_memory(A2L_)
@@ -355,62 +359,89 @@ CONTAINS
       END IF
 
       IF (model%config%l_compat401) THEN
+        !$claw expand parallel update savepoint=ser_jsb_turb_update_humidity_scaling_expand_0 tile_name=tile%name
         mask(:) = w_soil_sl(:,1) > w_soil_pwp_sl(:,1)
       ELSE
-        mask(:) = w_soil_column(:) > dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract * max_moist(:)
+        w_soil_wilt_fract_tmp = dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract
+        !$claw expand parallel update savepoint=ser_jsb_turb_update_humidity_scaling_expand_1 tile_name=tile%name
+        mask(:) = w_soil_column(:) > w_soil_wilt_fract_tmp * max_moist(:)
       END IF
-      WHERE (mask(:))
-        fact_qsat_veg(:) = fract_snow(:) + (1._wp - fract_snow(:)) *   &
-          & (fract_water(:) + ( 1._wp - fract_water(:)) /                &
-          & (1._wp + pch(:) * MAX(1._wp, wind_air(:)) / MAX(1.E-20_wp, canopy_cond(:))))
-        fact_qsat_trans(:) = (1._wp - fract_snow(:)) * &
-          & (1._wp - fract_water(:)) /                  &
-          & (1._wp + pch(:) * MAX(1._wp, wind_air(:)) / MAX(1.E-20_wp, canopy_cond(:)))
-      ELSEWHERE
-        fact_qsat_veg(:)   = fract_snow(:) + (1._wp - fract_snow(:)) * fract_water(:)
-        fact_qsat_trans(:) = 0._wp
-      END WHERE
+
+      !$claw acc data present(fract_snow,fract_water,pch,wind_air,canopy_cond,fact_qsat_veg,fact_qsat_trans)
+      !$claw acc update device(fract_snow,fract_water,pch,wind_air,canopy_cond)
+      !$claw acc parallel loop gang vector
+      DO i = 1, size(mask, dim=1)
+        IF (mask(i)) THEN
+          fact_qsat_veg(i) = fract_snow(i) + (1._wp - fract_snow(i)) *   &
+            & (fract_water(i) + ( 1._wp - fract_water(i)) /                &
+            & (1._wp + pch(i) * MAX(1._wp, wind_air(i)) / MAX(1.E-20_wp, canopy_cond(i))))
+          fact_qsat_trans(:) = (1._wp - fract_snow(i)) * &
+            & (1._wp - fract_water(i)) /                  &
+            & (1._wp + pch(i) * MAX(1._wp, wind_air(i)) / MAX(1.E-20_wp, canopy_cond(i)))
+        ELSE 
+          fact_qsat_veg(i)   = fract_snow(i) + (1._wp - fract_snow(i)) * fract_water(i)
+          fact_qsat_trans(i) = 0._wp
+        END IF
+      END DO
+      !$claw acc update host(fact_qsat_veg,fact_qsat_trans) ! TODO CLAW TEMP
+      !$claw acc end data
+
+      !$claw expand parallel update savepoint=ser_jsb_turb_update_humidity_scaling_expand_2 tile_name=tile%name
       fact_qair_veg(:) = fact_qsat_veg(:)
       zfract_fpc(:)      = fract_fpc(:)
-
+      !$claw end expand
     ELSE
-
+      !$claw expand parallel update savepoint=ser_jsb_turb_update_humidity_scaling_expand_3 tile_name=tile%name
       fact_qsat_veg(:)   = 0._wp
       fact_qsat_trans(:) = 0._wp
       fact_qair_veg(:)   = 0._wp
       zfract_fpc(:)      = 0._wp
+      !$claw end expand
     END IF
 
     IF (tile%contains_soil) THEN
+      !$claw expand parallel update savepoint=ser_jsb_turb_update_humidity_scaling_expand_4 tile_name=tile%name
       rel_hum(:) = relative_humidity_soil(w_soil_sl(:,1), w_soil_fc_sl(:,1))
 
-      WHERE (qsat_star(:) * rel_hum(:) > q_air(:) .AND. rel_hum(:) > 1.e-10_wp)
-        fact_qsat_soil(:) = fract_snow(:) + (1._wp - fract_snow(:)) * &
-          & (fract_water(:) + (1._wp - fract_water(:)) * rel_hum(:))
-        fact_qair_soil(:) = 1._wp
-      ELSEWHERE
-        fact_qsat_soil(:) = fract_snow(:) + (1._wp - fract_snow(:)) * fract_water(:)
-        fact_qair_soil(:) = fact_qsat_soil(:)
-      END WHERE
-      WHERE (q_air(:) > qsat_star(:))
-        fact_qsat_soil(:) = 1._wp
-        fact_qair_soil(:) = 1._wp
-      END WHERE
+      !$claw acc data present(fact_qsat_soil,fact_qair_soil,qsat_star,rel_hum,q_air,fract_snow,fract_water)
+      !$claw acc update device(qsat_star,rel_hum,q_air,fract_snow,fract_water)
+      !$claw acc parallel loop gang vector
+      DO i = 1, size(qsat_star,dim=1)
+        IF (qsat_star(i) * rel_hum(i) > q_air(i) .AND. rel_hum(i) > 1.e-10_wp) THEN
+          fact_qsat_soil(i) = fract_snow(i) + (1._wp - fract_snow(i)) * &
+            & (fract_water(i) + (1._wp - fract_water(i)) * rel_hum(i))
+          fact_qair_soil(i) = 1._wp
+        ELSE
+          fact_qsat_soil(i) = fract_snow(i) + (1._wp - fract_snow(i)) * fract_water(i)
+          fact_qair_soil(i) = fact_qsat_soil(i)
+        END IF
+        IF (q_air(i) > qsat_star(i)) THEN
+          fact_qsat_soil(i) = 1._wp
+          fact_qair_soil(i) = 1._wp
+        END IF
+      END DO
+      !$claw acc update host(fact_qsat_soil,fact_qair_soil)
+      !$claw acc end data
 
     ELSE IF (tile%contains_glacier) THEN
+      !$claw expand parallel update savepoint=ser_jsb_turb_update_humidity_scaling_expand_5 tile_name=tile%name
       fact_qsat_soil(:) = 1._wp
       fact_qair_soil(:) = 1._wp
-
+      !$claw end expand
     ELSE
-
+      !$claw expand parallel update savepoint=ser_jsb_turb_update_humidity_scaling_expand_6 tile_name=tile%name
       fact_qsat_soil(:) = 0._wp
       fact_qair_soil(:) = 0._wp
-
+      !$claw end expand
     END IF
 
+    !$claw expand parallel update savepoint=ser_jsb_turb_update_humidity_scaling_expand_7 tile_name=tile%name
     fact_qsat_srf(:) = zfract_fpc(:) * fact_qsat_veg(:) + (1._wp - zfract_fpc(:)) * fact_qsat_soil(:)
     fact_q_air(:)    = zfract_fpc(:) * fact_qair_veg(:) + (1._wp - zfract_fpc(:)) * fact_qair_soil(:)
     fact_qsat_trans_srf(:) = zfract_fpc(:) * fact_qsat_trans(:)
+    !$claw end expand
+
+    !$claw acc end data
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
