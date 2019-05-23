@@ -130,13 +130,14 @@ CONTAINS
      & is_glacier,                    &
      & has_snow_layer
 
-    REAL(wp), DIMENSION(options%nc) ::    & ! Avoid comput in param
-     & soil_depth_sl_vol_porosity_sl_tmp
+    REAL(wp) ::    & ! Avoid compute in param
+     & soil_depth_sl_vol_porosity_sl_tmp(size(soil_depth_sl,dim=1))
     REAL(wp) :: w_soil_critical_tmp
 
     INTEGER :: iblk, ics, ice, nc, i
     REAL(wp) :: steplen
     INTEGER  :: ilct
+    LOGICAL :: config_l_supercool ! Temp variable to avoid GPU call problem
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -336,7 +337,7 @@ CONTAINS
       !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_5
       has_snow_layer(:) = w_snow(:) * rhoh2o / snow_soil_dens(:) > snow_depth_min
     ELSE
-      !!$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_6
+      !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_6
       has_snow_layer(:) = w_snow(:) > w_soil_critical_tmp
     END IF
 
@@ -355,10 +356,11 @@ CONTAINS
 
     IF (dsl4jsb_Config(SSE_)%l_freeze) THEN
 
-      !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_11
-      soil_depth_sl_vol_porosity_sl_tmp(:) = soil_depth_sl  (:,1) * vol_porosity_sl(:,1)
+      config_l_supercool = dsl4jsb_Config(SSE_)%l_supercool
+      !$claw expand parallel update
+      soil_depth_sl_vol_porosity_sl_tmp(:) = soil_depth_sl(:,1) * vol_porosity_sl(:,1)
       liquid_max(:) = Get_liquid_max( &
-        & dsl4jsb_Config(SSE_)%l_supercool            , &
+        & config_l_supercool                          , &
         & t_star(:)                                   , &
         & soil_depth_sl_vol_porosity_sl_tmp(:)        , & ! Maximum water storage
         & matrix_pot_sl  (:,1)                        , &
