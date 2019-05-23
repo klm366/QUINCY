@@ -37,17 +37,22 @@ CONTAINS
     ! Arguments
     REAL(wp), INTENT(in) :: &
       & declination,        & ! Solar Declination angle
-      & canopy_bound_lai,   &
+      & canopy_bound_lai
+    !$claw model-data
+    REAL(wp), INTENT(in) :: &
       & lai,                & ! Leaf area index [-]
       & lat
 
     REAL(wp), INTENT(out) :: &
       & assimi_scaling_fact_cl
+    !$claw end model-data  
 
     ! Local variables
     REAL(wp) ::         &
       & k12,            &
       & cos_zenith_noon
+
+    !$claw sca
 
     ! initialize local arguments and variables
     assimi_scaling_fact_cl = 1._wp
@@ -96,7 +101,9 @@ CONTAINS
       & C4Flag
     REAL(wp), INTENT(in) ::   &
       & CarboxRate,           &
-      & ETransport,           &
+      & ETransport
+    !$claw model-data
+    REAL(wp), INTENT(in) ::   &
       & t_air,                &  ! Atmosphere temperature (lowest layer) in Kelvin
       & press_srf,            &  ! Surface pressure
       & par_down_mol,         &  ! Downward PAR flux in mol (photons)/(m^2 s)
@@ -105,6 +112,7 @@ CONTAINS
       & N_scaling_factors        ! Enzymatic scaling with canopy height
     REAL(wp), INTENT(out) ::  &
       & canopy_cond_cl           ! Canopy conductance per canopy layer for water-unlimited case
+    !$claw end model-data
 
     ! Local variables
 
@@ -144,6 +152,8 @@ CONTAINS
 
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':calc_assimilation_waterunlimited'
+
+    !$claw sca
 
     ! Prepare CO2_conc_leaf_cl
     ! R: siehe mo_bethy.f90, Zeile 709
@@ -417,7 +427,10 @@ CONTAINS
       & C4Flag
     REAL(wp), INTENT(in) ::      &
       & CarboxRate,              &
-      & ETransport,              &
+      & ETransport
+
+    !$claw model-data
+    REAL(wp), INTENT(in) ::      &
       & t_air,                   & ! Atmosphere temperature (lowest layer) in Kelvin
       & press_srf,               & ! Surface pressure
       & par_down_mol,            & ! Downward PAR flux in mol (photons)/(m^2 s)
@@ -437,6 +450,7 @@ CONTAINS
       & e_transport_rate_max_cl, & !
       & carbox_rate_cl,          & !
       & e_transport_rate_cl        !
+    !$claw end model-data
 
     !-----------------------------------------------------------------------
     ! Local variables
@@ -488,6 +502,8 @@ CONTAINS
     !-----------------------------------------------------------------------
     ! DOES THIS PROCESS EXIST FOR THE CURRENT TILE?
     ! IF (one_of('calc_assimilation', tile%components) < 1) RETURN
+
+    !$claw sca
 
     !-----------------------------------------------------------------------
     ! CONTENT
@@ -738,6 +754,7 @@ CONTAINS
     USE mo_assimi_constants,    ONLY: f_aut_leaf, cCost
 
     ! Arguments
+    !$claw model-data
     REAL(wp),  INTENT(in) ::   &
       & gross_assimilation_ca, & ! Gross primary product (where photorespiration has already  ..
                                  ! .. been accounted for) [mol(CO2)/(m^2 (canopy ground) s)]
@@ -745,6 +762,7 @@ CONTAINS
 
     REAL(wp),  INTENT(out) :: &
       & NPP_pot_rate_ca            ! Net primary production rate [mol(CO2)/(m^2 (canopy ground) s)]
+    !$claw end model-data  
 
     ! Local variables
     CHARACTER(len=*), PARAMETER :: routine = modname//':calc_NPP_pot_rate'
@@ -752,6 +770,8 @@ CONTAINS
     REAL(wp),PARAMETER   :: hlp =  (cCost -1._wp) / cCost
     REAL(wp)             :: maintenanceRespiration ! R_m
     REAL(wp)             :: growthRespiration      ! R_g
+
+    !$claw sca
 
     !-----------------------------------------------------------------------
     ! DOES THIS PROCESS EXIST FOR THE CURRENT TILE?

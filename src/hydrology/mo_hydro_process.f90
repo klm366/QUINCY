@@ -478,21 +478,23 @@ CONTAINS
     INTEGER, PARAMETER :: ilog = 0 ! Switch for debugging output
     INTEGER :: jllog = 0
 
-    !$acc data &
-    !$acc present(soil_depth_l, root_depth_l, fract_org_l, hyd_cond_sat_l, matrix_pot_l, bclapp_l) & 
-    !$acc present(pore_size_index_l, vol_porosity_l, vol_field_cap_l, vol_p_wilt_l)                &
-    !$acc present(ws_max_mineral, oro_stddev, t_soil, water_to_soil, evapotrans_soil, trans)       &
-    !$acc present(ws, w_soil_overflow, ws_l, soil_ice_l, runoff, drainage,  wsat_l, field_cap_l, p_wilt_l) &
+
+    !$claw acc data pcreate(infilt)
+  !  !$acc data &
+  !  !$acc present(soil_depth_l, root_depth_l, fract_org_l, hyd_cond_sat_l, matrix_pot_l, bclapp_l) & 
+  !  !$acc present(pore_size_index_l, vol_porosity_l, vol_field_cap_l, vol_p_wilt_l)                &
+  !  !$acc present(ws_max_mineral, oro_stddev, t_soil, water_to_soil, evapotrans_soil, trans)       &
+  !  !$acc present(ws, w_soil_overflow, ws_l, soil_ice_l, runoff, drainage,  wsat_l, field_cap_l, p_wilt_l) &
     ! temporary
-    !$acc pcreate(evapo_soil_in_m, trans_in_m, infilt, ws_max, ws_min_drain, ws_incl_ice, ice_rootzone)
+  !  !$acc pcreate(evapo_soil_in_m, trans_in_m, infilt, ws_max, ws_min_drain, ws_incl_ice, ice_rootzone)
     sigma_0   = oro_var_min
     sigma_max = oro_var_max * 64._wp / REAL(nlat, wp) ! @todo: site level
 
-    !$claw acc parallel
-    !$claw acc loop gang 
+   ! !$claw acc parallel
+   ! !$claw acc loop gang 
     DO i = 1, nidx
       trans_in_m(i) = trans(i)  * delta_time / rhoh2o
-      !$claw acc loop vector
+   !   !$claw acc loop vector
       DO jl = 1, nsoil
         wsat_l     (i,jl) = MAX(vol_porosity_l (i,jl) * soil_depth_l(i,jl) - soil_ice_l(i,jl), 0._wp)
         field_cap_l(i,jl) = MAX(vol_field_cap_l(i,jl) * soil_depth_l(i,jl) - soil_ice_l(i,jl), 0._wp)
@@ -503,25 +505,25 @@ CONTAINS
         END IF
       END DO
     END DO
-    !$claw acc end parallel    
+  !  !$claw acc end parallel    
 
-    !$claw expand parallel
+  !  !$claw expand parallel
     ws_max(:) = get_water_in_root_zone(vol_field_cap_l(:,:) * soil_depth_l(:,:), soil_depth_l(:,:), root_depth_l(:,:))
 
-    !$claw acc parallel loop gang vector
+  !  !$claw acc parallel loop gang vector
     DO i = 1, nidx
       IF (SUM(fract_org_l(i,:)) <= EPSILON(1._wp)) THEN
         ws_max(i) = ws_max_mineral(i)
       END IF
     END DO
 
-    !$claw expand parallel
+  !  !$claw expand parallel
     ice_rootzone(:) = get_water_in_root_zone(soil_ice_l(:,:), soil_depth_l(:,:), root_depth_l(:,:))
     ws          (:) = get_water_in_root_zone(ws_l      (:,:), soil_depth_l(:,:), root_depth_l(:,:))
-    !$claw end expand
+ !   !$claw end expand
 
-    !$claw acc parallel
-    !$claw acc loop gang
+  !  !$claw acc parallel
+  !  !$claw acc loop gang
     DO i = 1, nidx
       !--------------------------------------------------------------------------------------------
       !  water budgets
@@ -545,7 +547,7 @@ CONTAINS
       ! sigma_z: standard deviation of topographic height
       ! sigma_0: minimum value (100 m); below b = 0.01
       ! sigma_max: resolution dependent maximum
-      !$claw acc loop vector 
+     ! !$claw acc loop vector 
       DO jl = 1, nidx
         
         ws_min_drain(jl) = zwdmin * ws_max(jl)            ! minimum amount of soil water for drainage
@@ -592,7 +594,7 @@ CONTAINS
       ! initilalization of drainage
       drainage(i) = 0._wp
     END DO
-    !$claw acc end parallel
+  !  !$claw acc end parallel
 
     ! Changes by evaporation fluxes
     CALL digest_evapotrans(nidx, nsoil, root_depth_l, soil_depth_l, &
@@ -600,10 +602,14 @@ CONTAINS
 
     ! For numerical reasons, half of the water is infiltrated
     ! before soilhyd and the other half of it afterwards
+
+    !$claw acc update device(infilt) ! TO BE REMOVED
     !$claw acc parallel loop gang vector
     DO i = 1, nidx
       infilt(i) = infilt(i) / 2._wp
     END DO
+    !$claw acc update host(infilt) ! TO BE REMOVED
+
     ! update soil moisture according to infiltration
     !    - first half of the water
     CALL digest_infilt(nidx, nsoil, ltpe_closed, field_cap_l, infilt, &
@@ -622,15 +628,15 @@ CONTAINS
 
     ! recalculate soil moisture from the soil moisture of the individual levels
     ! Note: ws only includes the soil moisture within the root zone
-    !$claw expand parallel
+  !  !$claw expand parallel
     ws(:) = get_water_in_root_zone(ws_l(:,:), soil_depth_l(:,:), root_depth_l(:,:))
      
-    !$claw acc parallel loop gang vector
+  !  !$claw acc parallel loop gang vector
     DO i = 1, nidx
       runoff(i)   = runoff  (i) * rhoh2o / delta_time
       drainage(i) = drainage(i) * rhoh2o / delta_time
     END DO
-    !$acc end data
+    !$claw acc end data
   END SUBROUTINE calc_soil_hydrology
 
   !------------------------------------------------------------------------------------------------
@@ -946,7 +952,7 @@ CONTAINS
 
       ! temporary storage for diagnostic printing
       IF (ilog == 1 .OR. ilog == 3) THEN
-        !$claw acc loop vector
+        !TODO CLAW !$claw acc loop vector
         DO i = 1, nsoil
           zdiflog(i) = wslog(i) - ws_l(jllog,i)
         END DO
@@ -1321,7 +1327,8 @@ CONTAINS
     !------------------------------------------------------------------------------------------------
 
     !$claw acc data &
-    !$claw acc present(field_cap_l, infilt, ws_l, drainage, w_soil_overflow)
+    !$claw acc present(field_cap_l, infilt, ws_l, drainage, w_soil_overflow) &
+    !$claw acc create(excess)
     !$claw acc parallel
     !$claw acc loop gang 
     DO i = 1, nidx
@@ -1638,10 +1645,8 @@ CONTAINS
     ! TODO
     ! TBD: Maybe change later so that it uses geographically dependend critical values (like wilting point)
 
-    !$claw model-data
     REAL(wp), INTENT(in) :: w_soil            !< Soil water content
     REAL(wp), INTENT(in) :: w_soil_max        !< Soil water content at field capacity
-    !$claw end model-data
     REAL(wp), INTENT(in) :: w_soil_crit_fract !< Fraction of max. soil water content at critical point
     REAL(wp), INTENT(in) :: w_soil_wilt_fract !< Fraction of max. soil water content at wilting point
     REAL(wp)             :: water_stress_factor

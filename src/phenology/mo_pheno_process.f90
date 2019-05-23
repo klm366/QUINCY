@@ -34,14 +34,21 @@ MODULE mo_pheno_process
 
     !-----------------------------------------------------------------------
     !  ARGUMENTS
+    
     LOGICAL,   intent(in)    :: is_newday
-
-    REAL(wp),  intent(in)    :: NPP_pot_rate_ca,          & ! NPP-rate during current time step for each tile (PFT)
-                                dtime
-
+    
+    !$claw model-data
+    REAL(wp),  intent(in)    :: NPP_pot_rate_ca              ! NPP-rate during current time step for each tile (PFT)
+    !$claw end model-data  
+    
+    REAL(wp),  intent(in)    :: dtime
+    
+    !$claw model-data
     REAL(wp),  intent(inout) :: previous_day_NPP_pot_rate_ca ! "in" only to avoid NaN in the output
-
     REAL(wp),  intent(inout) :: day_NPP_sum
+    !$claw end model-data
+
+    !$claw sca 
 
     !-----------------------------------------------------------------------
     ! CONTENT
@@ -140,8 +147,10 @@ MODULE mo_pheno_process
 
      LOGICAL,  intent(in)    :: is_newday
 
+     REAL(wp), intent(in)    :: timeStep_in_days
+
+     !$claw model-data
      REAL(wp), intent(in)    ::                     &
-                                timeStep_in_days,   &
                                 lat,                &
                                 previous_day_temp_mean, &
                                 LaiMax_corrected,   &
@@ -153,6 +162,7 @@ MODULE mo_pheno_process
                                 heat_sum_SG,        &
                                 growth_phase_SG,    &
                                 lai                   ! Total LAI.
+     !$claw end model-data                                
 
 
      !-----------------------------------------------------------------------
@@ -165,7 +175,7 @@ MODULE mo_pheno_process
      ! DOES THIS PROCESS EXIST FOR THE CURRENT TILE?
      ! IF (one_of('calc_phenology', tile%components) < 1) RETURN
 
-
+     !$claw sca
      !-----------------------------------------------------------------------
      ! CONTENT
 
@@ -270,8 +280,6 @@ MODULE mo_pheno_process
         END IF
      END IF
 
-     RETURN
-
    END SUBROUTINE calc_summergreen_phenology
 
 
@@ -296,9 +304,9 @@ MODULE mo_pheno_process
      INTEGER,  intent(in)    :: day_of_year
 
      LOGICAL,  intent(in)    :: is_newday
-
+     REAL(wp), intent(in)    :: timeStep_in_days
+     !$claw model-data
      REAL(wp), intent(in)    ::                     &
-                                timeStep_in_days,   &
                                 lat,                &
                                 LaiMax_corrected,   &
                                 pseudo_soil_temp
@@ -309,7 +317,7 @@ MODULE mo_pheno_process
                                 heat_sum_EG,        &
                                 growth_phase_EG,    &
                                 lai                   ! Total LAI.
-
+     !$claw end model-data
 
      !-----------------------------------------------------------------------
      !  LOCAL VARIABLES
@@ -321,6 +329,7 @@ MODULE mo_pheno_process
      ! DOES THIS PROCESS EXIST FOR THE CURRENT TILE?
      ! IF (one_of('calc_phenology', tile%components) < 1) RETURN
 
+      !$claw sca
 
      !-----------------------------------------------------------------------
      ! CONTENT
@@ -409,8 +418,6 @@ MODULE mo_pheno_process
      END IF
 
 
-     RETURN
-
    END SUBROUTINE calc_evergreen_phenology
 
 
@@ -441,9 +448,12 @@ MODULE mo_pheno_process
      INTEGER,  intent(in)    :: day_of_year
 
      LOGICAL,  intent(in)    :: is_newday
+     REAL(wp), intent(in)    :: timeStep_in_days ! express the time step as a fraction of a day. = dtime / 86400
 
+     REAL(wp), intent(in)    :: lctlib_specificLeafArea_C
+
+     !$claw model-data
      REAL(wp), intent(in)    ::                     &
-                                timeStep_in_days,   & ! express the time step as a fraction of a day. = dtime / 86400
                                 NPP_pot_rate_ca,    &
                                 lat,                &
                                 LaiMax_corrected,   &
@@ -453,15 +463,14 @@ MODULE mo_pheno_process
                                                          ! R: in JSBACH3 wurde für Crops immer der soil layer 1,
                                                          !    d.h. der oberste Layer verwendet!
                                 previous_day_temp_min, &
-                                previous_day_temp_max, &
-                                lctlib_specificLeafArea_C
+                                previous_day_temp_max
 
      REAL(wp), intent(inout) ::                   &
                                 heat_sum_CRP,     &
                                 heat_sum_winter,  &
                                 growth_phase_CRP, &
                                 lai                 ! Total LAI.
-
+     !$claw end model-data
      !-----------------------------------------------------------------------
      !  LOCAL VARIABLES
      REAL(wp)          :: xtmp,         &  ! argument to calls of get_letItDie
@@ -472,6 +481,7 @@ MODULE mo_pheno_process
      LOGICAL           :: NPP_positive     ! flag to indicate the existence of a grass or crop type with a
                                            ! positive NPP
 
+     !$claw sca
 
      !-----------------------------------------------------------------------
      ! CONTENT
@@ -696,8 +706,6 @@ MODULE mo_pheno_process
 
      END IF ! outside the TROPICS
 
-     RETURN
-
    END SUBROUTINE calc_crop_phenology
 
 
@@ -715,14 +723,16 @@ MODULE mo_pheno_process
      !-----------------------------------------------------------------------
      !  ARGUMENTS
 
+     REAL(wp), intent(in)    :: timeStep_in_days
+
+     !$claw model-data
      REAL(wp), intent(in)    ::                   &
-                                timeStep_in_days, &
                                 w_soil_filling,   &
                                 LaiMax_corrected, &
                                 previous_day_NPP_pot_rate_ca
 
      REAL(wp), intent(inout) :: lai  ! Total LAI.
-
+     !$claw end model-data
 
      !-----------------------------------------------------------------------
      !  LOCAL VARIABLES
@@ -735,6 +745,7 @@ MODULE mo_pheno_process
      ! DOES THIS PROCESS EXIST FOR THE CURRENT TILE?
      ! IF (one_of('calc_phenology', tile%components) < 1) RETURN
 
+     !$claw sca
 
      !-----------------------------------------------------------------------
      ! CONTENT
@@ -762,8 +773,6 @@ MODULE mo_pheno_process
         lai = get_letItDie(timeStep_in_days,lai, xtmp)       ! shed leaves as fast as possible.
      END IF
 
-     RETURN
-
    END SUBROUTINE calc_raingreen_phenology
 
 
@@ -781,15 +790,16 @@ MODULE mo_pheno_process
      !-----------------------------------------------------------------------
      !  ARGUMENTS
 
+     REAL(wp), intent(in)    :: timeStep_in_days
+     !$claw model-data
      REAL(wp), intent(in)    ::                   &
                                 t_air_in_Celcius, &
-                                timeStep_in_days, &
                                 w_soil_filling,   &
                                 LaiMax_corrected, &
                                 previous_day_NPP_pot_rate_ca
 
      REAL(wp), intent(inout) :: lai  ! Total LAI.
-
+     !$claw end model-data
      !-----------------------------------------------------------------------
      !  LOCAL VARIABLES
      REAL(wp)          :: xtmp       ! argument to calls of get_letItDie
@@ -799,7 +809,7 @@ MODULE mo_pheno_process
      ! DOES THIS PROCESS EXIST FOR THE CURRENT TILE?
      ! IF (one_of('calc_phenology', tile%components) < 1) RETURN
 
-
+     !$claw sca
      !-----------------------------------------------------------------------
      ! CONTENT
 
@@ -825,8 +835,6 @@ MODULE mo_pheno_process
         xtmp = PhenoParam%GRS%shedRate_drySeason
         lai  = get_letItDie(timeStep_in_days, lai,xtmp)             ! let it die as fast as possible
      END IF
-
-     RETURN
 
    END SUBROUTINE calc_grass_phenology
 
@@ -862,20 +870,26 @@ MODULE mo_pheno_process
                               & lctlib_alpha_leaf,              &
                               & lctlib_beta_leaf,               &
                               & lctlib_clumpinessFactor,        &
-                              & lctlib_specificLeafArea_C,      &
-                              & c_woods
+                              & lctlib_specificLeafArea_C
+
+    !$claw model-data
+    REAL(wp), intent(in)    ::  c_woods
     REAL(wp), intent(inout) ::  current_max_green,              &
                               & veg_carbon_at_max_green,        &
                               & number_of_individuals,          &
                               & biomass_per_individual,         &
                               & veg_fract_correction,           &
                               & maxLAI_allom
+    !$claw end model-data
 
     !-----------------------------------------------------------------------
     !  LOCAL VARIABLES     TODO_JN -> KN select those from above which are only required internally
     REAL(wp) :: kgPerHa, &
           & leafC_per_individual,       & ! Leaf C per individual according to allometric relationships [kg/tree]
           & leafC                         ! Leaf C according to allometric relationships [mol(C) m-2(canopy)]
+
+
+    !$claw sca
 
     !-----------------------------------------------------------------------
     ! CONTENT
@@ -913,8 +927,6 @@ MODULE mo_pheno_process
     veg_carbon_at_max_green = 0.0_wp
     current_max_green = 0.0_wp
 
-    RETURN
-
   END SUBROUTINE derive_maxLai_according_to_allometric_relationships
 
   ! --- track_max_green_pool() ---------------------------------------------------------------------------------------------------
@@ -930,15 +942,17 @@ MODULE mo_pheno_process
 
      !-----------------------------------------------------------------------
      !  ARGUMENTS
+     !$claw model-data
      REAL(wp), intent(in)    :: c_green, c_woods, c_reserve
      REAL(wp), intent(inout) :: current_max_green, veg_carbon_at_max_green
+     !$claw end model-data
+
+     !$claw sca
 
      IF (current_max_green + EPSILON(1.0_wp) .LT. c_green) THEN
        current_max_green = c_green
        veg_carbon_at_max_green = c_green + c_woods + c_reserve
      ENDIF
-
-     RETURN
 
   END SUBROUTINE track_max_green_pool
 
@@ -956,6 +970,7 @@ MODULE mo_pheno_process
                           x,                & ! lai at time t
                           p                   ! leaf shedding rate (units: 1/days)
 
+    !$claw sca routine
     get_letItDie = EXP(-p * timeStep_in_days) * x
 
   END FUNCTION get_letItDie
@@ -987,6 +1002,8 @@ MODULE mo_pheno_process
 
     REAL(wp)            :: hlp1,hlp2,numerator,denominator
 
+    !$claw sca routine
+
     hlp1 = k-p
     hlp2 = k * x / z   ! x/z is the phenoState
     ! Note: make sure that x <= z on input. Call to finish in case of x>z  has been removed from here to allow for inlining.
@@ -1016,6 +1033,8 @@ MODULE mo_pheno_process
 
     REAL(wp)             :: shedRate, slope
 
+    !$claw sca routine
+
     slope           = PhenoParam%RG%growthRate / (PhenoParam%RG%bucketFill_critical - PhenoParam%all%wilt_point)
     shedRate        = PhenoParam%RG%growthRate + PhenoParam%RG%shedRate_aging - slope * (bucket_filling - PhenoParam%all%wilt_point)
     get_shedRate_RG = MIN(MAX(PhenoParam%RG%shedRate_aging,shedRate),PhenoParam%RG%growthRate+PhenoParam%RG%shedRate_aging)
@@ -1028,6 +1047,8 @@ MODULE mo_pheno_process
       & fpc_max,            &
       & lai,                &
       & clumpiness
+
+    !$claw sca routine
 
     get_foliage_projected_cover = fpc_max * (1._wp - EXP(-lai/clumpiness))
 

@@ -286,7 +286,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: w_ice_melt_sl
 
 
-    INTEGER  :: iblk , ics, ice
+    INTEGER  :: iblk , ics, ice, i
     REAL(wp) :: dtime
 
     REAL(wp), DIMENSION(options%nc) :: &
@@ -337,27 +337,47 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_ice_melt_sl)    ! in
 
       IF (.NOT. is_time_experiment_start()) THEN
+        !$claw acc data create(heat_cap)
 
         ! Correction for snowmelt
+        !$claw expand parallel update savepoint=ser_jsb_seb_update_snowmelt_correction_expand_0 tile_name=tile%name
         t_unfilt(:) = t_unfilt(:) - snowmelt(:) * dtime * alf / hcap_grnd_old(:)
 
         IF (dsl4jsb_Config(SSE_)%l_freeze) THEN
+          !$claw expand parallel update savepoint=ser_jsb_seb_update_snowmelt_correction_expand_1 tile_name=tile%name
           heat_cap(:) = vol_heat_cap_sl(:,1) * soil_e%dz(1)
           IF (dsl4jsb_Config(SSE_)%l_snow) THEN
-            WHERE (snow_depth_sl(:,nsnow) < EPSILON(1._wp) .AND. heat_cap(:) > 0._wp)  ! No snow layers present
+            !$claw acc data present(t_unfilt,snow_depth_sl,heat_cap,w_ice_melt_sl,w_soil_freeze_sl)
+            !$claw acc update device(snow_depth_sl,heat_cap,w_ice_melt_sl,w_soil_freeze_sl)
+            !$claw acc parallel loop gang vector
+            DO i = 1,  size(t_unfilt, dim=1)
+              IF (snow_depth_sl(i,nsnow) < EPSILON(1._wp) .AND. heat_cap(i) > 0._wp) THEN  ! No snow layers present
               ! Correction for melting of ice in soil layers
-              t_unfilt(:) = t_unfilt(:) - w_ice_melt_sl   (:,1) * dtime * alf / heat_cap(:)
-              t_unfilt(:) = t_unfilt(:) + w_soil_freeze_sl(:,1) * dtime * alf / heat_cap(:)
-            END WHERE
+                t_unfilt(i) = t_unfilt(i) - w_ice_melt_sl   (i,1) * dtime * alf / heat_cap(i)
+                t_unfilt(i) = t_unfilt(i) + w_soil_freeze_sl(i,1) * dtime * alf / heat_cap(i)
+              END IF
+            END DO
+            !$claw acc update host(t_unfilt)
+            !$claw acc end data
           ELSE   ! No snow layers present
-            WHERE (heat_cap(:) > 0._wp)
-              ! Correction for melting of ice in soil layers
-              t_unfilt(:) = t_unfilt(:) - w_ice_melt_sl   (:,1) * dtime * alf / heat_cap(:)
-              t_unfilt(:) = t_unfilt(:) + w_soil_freeze_sl(:,1) * dtime * alf / heat_cap(:)
-            END WHERE
+            !$claw acc data present(t_unfilt,heat_cap,w_ice_melt_sl,w_soil_freeze_sl)
+            !$claw acc update device(heat_cap,w_ice_melt_sl,w_soil_freeze_sl)
+            !$claw acc parallel loop gang vector
+            DO i = 1, size(t_unfilt,dim=1)
+              IF (heat_cap(i) > 0._wp) THEN
+                ! Correction for melting of ice in soil layers
+                t_unfilt(i) = t_unfilt(i) - w_ice_melt_sl   (i,1) * dtime * alf / heat_cap(i)
+                t_unfilt(i) = t_unfilt(i) + w_soil_freeze_sl(i,1) * dtime * alf / heat_cap(i)
+              END IF
+            END DO
+            !$claw acc update host(t_unfilt)
+            !$claw acc end data
           END IF
         END IF
+        !$claw acc end data
       END IF
+
+      
 
     ELSE
 
