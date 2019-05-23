@@ -128,6 +128,7 @@ CONTAINS
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: t_unfilt
+    dsl4jsb_Real2D_onChunk :: snowmelt
     dsl4jsb_Real3D_onChunk :: t_soil
     dsl4jsb_Real3D_onChunk :: t_soil_acoef
     dsl4jsb_Real3D_onChunk :: t_soil_bcoef
@@ -171,7 +172,7 @@ CONTAINS
     INTEGER :: isnow
 
     LOGICAL  :: lstart
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice, nc, i
     REAL(wp) :: dtime
 
     TYPE(t_jsb_vgrid), POINTER :: soil_e, snow_e
@@ -203,6 +204,9 @@ CONTAINS
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(HYDRO_)
+
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, snowmelt)
+
 
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil)            ! inout
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_acoef)      ! inout
@@ -240,15 +244,21 @@ CONTAINS
     ! Save old ground heat flux and heat capacity before updating
     ! The old flux and capacity (which have been used in the implicit calculation of the new surface temperature) are
     ! given back to the atmosphere so that the surface energy balance can be computed there
+    !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_0 tile_name=tile%name
     grnd_hflx_old(:) = grnd_hflx(:)
     hcap_grnd_old(:) = hcap_grnd(:)
+    !$claw end expand
 
     ! Correction of surface temperature for snow and ice melt
     ! t_unfilt is later corrected in task "snowmelt_correction" of process SEB_, but we need it already here on the sub-tiles
     IF (lstart) THEN
+      !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_1 tile_name=tile%name
       t_unfilt_corrected(:) = t_unfilt(:)
+      !$claw end expand
     ELSE
-      t_unfilt_corrected(:) = t_unfilt(:) - dsl4jsb_var2D_onChunk(HYDRO_, snowmelt) * dtime * alf / hcap_grnd(:)
+      !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_2 tile_name=tile%name
+      t_unfilt_corrected(:) = t_unfilt(:) - snowmelt * dtime * alf / hcap_grnd(:)
+      !$claw end expand
     END IF
 
     IF (.NOT. dsl4jsb_Config(SSE_)%l_snow) THEN
@@ -260,8 +270,8 @@ CONTAINS
         & soil_e%levels(:),                            &
         & dtime,                                       &
         & lstart,                                      &
-        & t_unfilt_corrected                     (:),  &
-        & dsl4jsb_var2D_onChunk(HYDRO_, w_snow_soil),  &
+        & t_unfilt_corrected(:)                     ,  &
+        & w_snow_soil(:)                            ,  &
         & dsl4jsb_var2D_onChunk(SSE_,   heat_cond),    &
         & dsl4jsb_var2D_onChunk(SSE_,   vol_heat_cap), &
         & t_soil_acoef                          (:,:), &
@@ -295,18 +305,22 @@ CONTAINS
 
       snow_fract(:) = dsl4jsb_var2D_onChunk(HYDRO_, fract_snow_soil)
 
-      WHERE (snow_depth(:) > snow_depth_min .AND. snow_fract(:) > EPSILON(1._wp))
-        snow_depth(:) = snow_depth(:) / snow_fract(:)
-      ELSE WHERE
-        snow_depth(:) = 0._wp
-        snow_fract(:) = 0._wp
-      END WHERE
+      DO i = 1, size(snow_depth, dim=1)
+        IF (snow_depth(i) > snow_depth_min .AND. snow_fract(i) > EPSILON(1._wp)) THEN
+          snow_depth(i) = snow_depth(i) / snow_fract(i)
+        ELSE
+          snow_depth(i) = 0._wp
+          snow_fract(i) = 0._wp
+        END IF
+      END DO
 
       DO isnow=nsnow,1,-1
-        WHERE (snow_depth(:) > 0._wp)
-          snow_depth_sl(:,isnow) = MIN(snow_depth(:), snow_e%dz(isnow))
-          snow_depth(:) = snow_depth(:) - snow_depth_sl(:,isnow)
-        END WHERE
+        DO i = 1, size(snow_depth, dim=1)
+          IF (snow_depth(i) > 0._wp) THEN
+            snow_depth_sl(i,isnow) = MIN(snow_depth(i), snow_e%dz(isnow))
+            snow_depth(i) = snow_depth(i) - snow_depth_sl(i,isnow)
+          END IF
+        END DO
       END DO
       snow_depth_sl(:,nsnow) = snow_depth_sl(:,nsnow) + snow_depth(:)
 
@@ -341,11 +355,13 @@ CONTAINS
         & grnd_hflx_snow     (:)  &
         & )
 
-      WHERE (snow_depth_sl(:, nsnow) > 0._wp)   ! At least one snow layer above soil
-        t_soil_top(:) = snow_fract(:) * t_soil_top(:) + (1._wp - snow_fract(:)) * t_unfilt_corrected(:)
-      ELSE WHERE                                ! No snow
-        t_soil_top(:) = t_unfilt_corrected(:)
-      END WHERE
+      DO i = 1, size(snow_depth_sl, dim=1)
+        IF (snow_depth_sl(i, nsnow) > 0._wp) THEN  ! At least one snow layer above soil
+          t_soil_top(i) = snow_fract(:) * t_soil_top(i) + (1._wp - snow_fract(i)) * t_unfilt_corrected(i)
+        ELSE                                ! No snow
+          t_soil_top(i) = t_unfilt_corrected(i)
+        END IF
+      END DO
     ELSE
       snow_depth(:) = dsl4jsb_var2D_onChunk(HYDRO_, w_snow_soil) * rhoh2o / dens_snow
       snow_depth_sl(:,:) = 0._wp
@@ -414,13 +430,15 @@ CONTAINS
         & )
     END IF
 
-    WHERE (snow_depth_sl(:,nsnow) > 0._wp)
-      grnd_hflx(:) = snow_fract(:) * grnd_hflx_snow(:) + (1._wp - snow_fract(:)) * grnd_hflx_soil(:)
-      hcap_grnd(:) = snow_fract(:) * hcap_grnd_snow(:) + (1._wp - snow_fract(:)) * hcap_grnd_soil(:)
-    ELSE WHERE
-      grnd_hflx(:) = grnd_hflx_soil(:)
-      hcap_grnd(:) = hcap_grnd_soil(:)
-    END WHERE
+    DO i = 1, size(snow_depth_sl, dim=1)
+      IF (snow_depth_sl(i,nsnow) > 0._wp) THEN
+        grnd_hflx(i) = snow_fract(i) * grnd_hflx_snow(i) + (1._wp - snow_fract(i)) * grnd_hflx_soil(i)
+        hcap_grnd(i) = snow_fract(i) * hcap_grnd_snow(i) + (1._wp - snow_fract(i)) * hcap_grnd_soil(i)
+      ELSE
+        grnd_hflx(i) = grnd_hflx_soil(i)
+        hcap_grnd(i) = hcap_grnd_soil(i)
+      END IF
+    END DO
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -546,15 +564,23 @@ CONTAINS
     ! On glacier tile, set variables and return
     IF (tile%is_glacier) THEN
       IF (model%config%l_compat401) THEN
+        !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_properties_expand_0 tile_name=tile%name
         vol_heat_cap_sl(:,:) = 2.09e+6_wp
         heat_cond_sl(:,:) = 2.508_wp
+        !$claw end expand
+        !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_properties_expand_1 tile_name=tile%name
         vol_heat_cap_snow(:) = 634500._wp
         heat_cond_snow(:) = 0.31_wp
+        !$claw end expand
       ELSE
+        !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_properties_expand_2 tile_name=tile%name
         vol_heat_cap_sl  (:,:) = vol_hcap_ice
         heat_cond_sl     (:,:) = hcond_ice
+        !$claw end expand
+        !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_properties_expand_3 tile_name=tile%name
         vol_heat_cap_snow(:  ) = vol_hcap_snow
         heat_cond_snow   (:  ) = hcond_snow
+        !$claw end expand
       END IF
       IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
       RETURN
