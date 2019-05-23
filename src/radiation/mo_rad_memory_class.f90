@@ -151,6 +151,11 @@ CONTAINS
 
     IF (.NOT. ASSOCIATED(mem%sw_srf_net%ptr)) THEN
 
+      !$acc enter data pcreate(mem%sw_srf_net,mem%swvis_srf_net,             &
+      !$acc mem%swnir_srf_net,mem%lw_srf_net,mem%rad_srf_net,                &
+      !$acc mem%alb_background, mem%alb_vis,mem%alb_nir,mem%alb_vis_snow,    &
+      !$acc mem%alb_nir_snow)
+
       CALL jsb_add_var( mem, 'sw_srf_net', mem%sw_srf_net,                   &
         & hgrid, surface,                                                    &
         & t_cf('sw_srf_net', '', 'Net surface shortwave radiation'),         &
@@ -246,6 +251,8 @@ CONTAINS
       &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. One_of(GLACIER_TYPE, lct_ids(:)) > 0) &
       & .AND. .NOT. ASSOCIATED(mem%alb_vis_soil%ptr)) THEN
 
+      !$acc enter data pcreate(mem%alb_vis_lnd,mem%alb_nir_lnd)
+
       CALL jsb_add_var( mem, 'alb_vis_lnd', mem%alb_vis_lnd,                        &
         & hgrid, surface,                                                           &
         & t_cf('surface_albvis_lnd', '', ''),                                       &
@@ -270,6 +277,9 @@ CONTAINS
     IF ( (One_of(BARE_TYPE, lct_ids(:)) > 0 .OR. One_of(VEG_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0)                                 &
       & .AND. .NOT. ASSOCIATED(mem%alb_vis_soil%ptr)) THEN
+
+      !$acc enter data pcreate(mem%alb_vis_soil,mem%alb_nir_soil,            &
+      !$acc mem%alb_vis_mineralsoil,mem%alb_nir_mineralsoil)
 
       CALL jsb_add_var( mem, 'alb_vis_soil', mem%alb_vis_soil,               &
         & hgrid, surface,                                                    &
@@ -308,6 +318,13 @@ CONTAINS
     ! Additional variables for vegetation
     IF ( (One_of(VEG_TYPE, lct_ids(:)) > 0 .OR. One_of(LAND_TYPE, lct_ids(:)) > 0) &
       & .AND. .NOT. ASSOCIATED(mem%alb_vis_can%ptr)) THEN
+
+      !$acc enter data pcreate(mem%alb_vis_can,mem%alb_nir_can,mem%snow_age, &
+      !$acc mem%sky_view_fract,mem%sky_view_fract_stem,mem%par, &
+      !$acc mem%par_down_mol,mem%faPAR,mem%par_down_mol_nacc,mem%lai_cl, &
+      !$acc mem%par_down_mol_tavg,mem%soil_reflectivity_par,mem%fract_par_direct, &
+      !$acc mem%faPAR_cl,mem%apar_per_lai_cl,mem%apar_per_lai_cl_nacc, &
+      !$acc mem%apar_per_lai_cl_tavg,mem%apar_nacc)
 
       CALL jsb_add_var( mem, 'alb_vis_can', mem%alb_vis_can,                 &
         & hgrid, surface,                                                    &
@@ -446,6 +463,9 @@ CONTAINS
 
     ! Additional variables for lakes
     IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%rad_net_lwtr%ptr)) THEN
+
+      !$acc enter data pcreate(mem%rad_net_lwtr,mem%rad_net_lice, &
+      !$acc mem%albedo_lwtr,mem%albedo_lice)
 
       CALL jsb_add_var( mem, 'rad_net_lwtr', mem%rad_net_lwtr,                &
         & hgrid, surface,                                                     &

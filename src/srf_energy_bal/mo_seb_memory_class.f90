@@ -134,6 +134,8 @@ CONTAINS
 
     IF (.NOT. ASSOCIATED(mem%t%ptr)) THEN
       ! Common variables
+      !$acc enter data pcreate(mem%t,mem%t_old,mem%t_unfilt,mem%heat_cap,
+      !$acc mem%heat_cap_old,mem%latent_hflx,mem%sensible_hflx,mem%forc_hflx)
       CALL jsb_add_var( mem, 't', mem%t,                                               &
         & hgrid, surface,                                                              &
         & t_cf('sfc_temp', 'K', 'surface temperature'),                                &
@@ -204,6 +206,12 @@ CONTAINS
 
     ! Additional variables for LAND lct
     IF (One_of(LAND_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%s_star%ptr)) THEN
+
+      !$acc enter data pcreate(mem%s_star,mem%qsat_star,mem%t_unfilt_old, &
+      !$acc mem%t_filt,mem%t_eff,mem%latent_hflx_lnd,mem%sensible_hflx_lnd, &
+      !$acc mem%previous_day_temp_mean,mem%previous_day_temp_min, &
+      !$acc mem%previous_day_temp_max,mem%pseudo_soil_temp,mem%day_temp_sum, &
+      !$acc mem%day_temp_min,day_temp_max,N_pseudo_soil_temp,F_pseudo_soil_temp)
 
       CALL jsb_add_var( mem, 's_star', mem%s_star,                                           &
         & hgrid, surface,                                                                    &
@@ -330,6 +338,12 @@ CONTAINS
 
     ! Additional variables for lakes
     IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%t_lwtr%ptr)) THEN
+      
+      !$acc enter data pcreate(mem%t_lwtr,mem%t_lice,mem%s_wtr,mem%qsat_lwtr, & 
+      !$acc mem%s_ice,mem%qsat_lice,mem%latent_hflx_wtr,mem%sensible_hflx_wtr,&
+      !$acc mem%latent_hflx_ice,mem%sensible_hflx_ice,mem%depth_lice,         &
+      !$acc mem%fract_lice,mem%hflx_form_ice,mem%hflx_cond_ice,               &
+      !$acc mem%hflx_melt_lice,mem%hflx_melt_snow)
 
       CALL jsb_add_var( mem, 't_lwtr', mem%t_lwtr,                                     &
         & hgrid, surface,                                                              &
