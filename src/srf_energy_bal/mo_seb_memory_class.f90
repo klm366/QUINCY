@@ -130,6 +130,8 @@ CONTAINS
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
 
+    !$acc enter data pcreate(mem)
+
     IF (.NOT. ASSOCIATED(mem%t%ptr)) THEN
       ! Common variables
       CALL jsb_add_var( mem, 't', mem%t,                                               &

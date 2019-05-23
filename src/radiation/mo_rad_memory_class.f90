@@ -147,6 +147,8 @@ CONTAINS
     surface      => Get_vgrid('surface')
     canopy_layer => Get_vgrid('canopy_layer')
 
+    !$acc enter data pcreate(mem)
+
     IF (.NOT. ASSOCIATED(mem%sw_srf_net%ptr)) THEN
 
       CALL jsb_add_var( mem, 'sw_srf_net', mem%sw_srf_net,                   &

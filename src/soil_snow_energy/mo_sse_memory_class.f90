@@ -105,6 +105,8 @@ CONTAINS
       snow_e  => Get_vgrid('snow_depth_energy')
     END IF
 
+    !$acc enter data pcreate(mem)
+
     IF (ASSOCIATED(mem%vol_heat_cap%ptr)) RETURN
 
     CALL jsb_add_var( mem, 'vol_heat_cap', mem%vol_heat_cap,                 &

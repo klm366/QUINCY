@@ -127,8 +127,9 @@ CONTAINS
     this_list => Get_varlist(TRIM(mem%varlist_name), hgrid%host_patch_id)
 
     ALLOCATE(var%field(ldims(1),ldims(2),1,1,1))
+    !$acc enter data pcreate(var%field)
     var%ptr => var%field(:,:,1,1,1)
-    !$acc enter data create(var%ptr)
+    !$acc enter data pcreate(var%ptr)
 
     IF (mem%in_var_groups) THEN                                  ! Should this tile memory be part of any var groups?
       ALLOCATE(groups(3+MERGE(2, 0, PRESENT(output_level))))
@@ -258,8 +259,9 @@ CONTAINS
     this_list => Get_varlist(TRIM(mem%varlist_name), hgrid%host_patch_id)
 
     ALLOCATE(var%field(ldims(1),ldims(2),ldims(3),1,1))
+    !$acc enter data pcreate(var%field)
     var%ptr => var%field(:,:,:,1,1)
-    !$acc enter data create(var%ptr)
+    !$acc enter data pcreate(var%ptr)
 
     IF (mem%in_var_groups) THEN                                  ! Should this tile memory be part of any var groups?
       ALLOCATE(groups(3+MERGE(2, 0, PRESENT(output_level))))

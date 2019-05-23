@@ -69,6 +69,8 @@ CONTAINS
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
 
+    !$acc enter data pcreate(mem)
+
     IF (ASSOCIATED(mem%rough_m%ptr)) RETURN
 
     CALL jsb_add_var( mem, 'rough_m', mem%rough_m,                                       &
