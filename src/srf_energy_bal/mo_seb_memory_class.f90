@@ -134,7 +134,7 @@ CONTAINS
 
     IF (.NOT. ASSOCIATED(mem%t%ptr)) THEN
       ! Common variables
-      !$acc enter data pcreate(mem%t,mem%t_old,mem%t_unfilt,mem%heat_cap,
+      !$acc enter data pcreate(mem%t,mem%t_old,mem%t_unfilt,mem%heat_cap,     &
       !$acc mem%heat_cap_old,mem%latent_hflx,mem%sensible_hflx,mem%forc_hflx)
       CALL jsb_add_var( mem, 't', mem%t,                                               &
         & hgrid, surface,                                                              &
