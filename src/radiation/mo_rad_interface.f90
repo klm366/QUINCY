@@ -810,9 +810,9 @@ CONTAINS
         & )
 
       
-      !$claw acc data present(alb_vis,alb_nir,fract_lice,albedo_lwtr,albedo_lice)
+      !$claw acc data present(l_day,alb_vis,alb_nir,fract_lice,albedo_lwtr,albedo_lice)
       !TODO CLAW TEMP 
-      !$claw acc update device(fract_lice, albedo_lwtr, albedo_lice)
+      !$claw acc update device(l_day,fract_lice, albedo_lwtr, albedo_lice)
       !$claw acc parallel loop gang vector
       DO i = 1, size(l_day)
         IF(l_day(i)) THEN
