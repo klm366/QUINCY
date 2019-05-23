@@ -211,7 +211,7 @@ CONTAINS
       !$acc mem%t_filt,mem%t_eff,mem%latent_hflx_lnd,mem%sensible_hflx_lnd, &
       !$acc mem%previous_day_temp_mean,mem%previous_day_temp_min, &
       !$acc mem%previous_day_temp_max,mem%pseudo_soil_temp,mem%day_temp_sum, &
-      !$acc mem%day_temp_min,day_temp_max,N_pseudo_soil_temp,F_pseudo_soil_temp)
+      !$acc mem%day_temp_min,mem%day_temp_max,mem%N_pseudo_soil_temp,mem%F_pseudo_soil_temp)
 
       CALL jsb_add_var( mem, 's_star', mem%s_star,                                           &
         & hgrid, surface,                                                                    &
