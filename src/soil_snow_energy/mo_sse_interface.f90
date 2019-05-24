@@ -153,6 +153,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: matrix_pot_sl
     dsl4jsb_Real3D_onChunk :: bclapp_sl
     dsl4jsb_Real2D_onChunk :: thaw_depth
+    dsl4jsb_Real2D_onChunk :: w_snow_soil
 
 
     ! Locally allocated vectors
@@ -206,7 +207,7 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
 
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snowmelt)
-
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow_soil)
 
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil)            ! inout
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_acoef)      ! inout
@@ -238,6 +239,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth)      ! out
 
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)        ! in
+
+    
 
     lstart = is_time_experiment_start()
 
@@ -360,7 +363,7 @@ CONTAINS
 
       DO i = 1, size(snow_depth_sl, dim=1)
         IF (snow_depth_sl(i, nsnow) > 0._wp) THEN  ! At least one snow layer above soil
-          t_soil_top(i) = snow_fract(:) * t_soil_top(i) + (1._wp - snow_fract(i)) * t_unfilt_corrected(i)
+          t_soil_top(i) = snow_fract(i) * t_soil_top(i) + (1._wp - snow_fract(i)) * t_unfilt_corrected(i)
         ELSE                                ! No snow
           t_soil_top(i) = t_unfilt_corrected(i)
         END IF

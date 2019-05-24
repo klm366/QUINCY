@@ -215,7 +215,7 @@ CONTAINS
     !$acc enter data pcreate(mem%fract_snow,mem%w_snow,mem%evapotrans,        &
     !$acc mem%evapopot,mem%evapo_snow,mem%snowmelt,mem%runoff,mem%drainage,   &
     !$acc mem%discharge,mem%discharge_ocean,mem%internal_drain,mem%water_flux,&
-    !$acc mem%water_content,mem%water_budget,mem%elevation,mem%oro_stddev)    &
+    !$acc mem%water_content,mem%water_budget,mem%elevation,mem%oro_stddev)
 
     CALL jsb_add_var( mem, 'fract_snow', mem%fract_snow,                       &
       & hgrid, surface,                                                        &
