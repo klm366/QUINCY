@@ -292,8 +292,10 @@ CONTAINS
 
       ! Calculate snow depth in m (no longer in m water equivalent)
       IF (dsl4jsb_Config(SSE_)%l_dynsnow) THEN
+        !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_3 tile_name=tile%name
         snow_depth(:) = dsl4jsb_var2D_onChunk(HYDRO_, w_snow_soil) * rhoh2o / dsl4jsb_var2D_onChunk(HYDRO_, snow_soil_dens)
       ELSE
+        !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_4 tile_name=tile%name
         snow_depth(:) = dsl4jsb_var2D_onChunk(HYDRO_, w_snow_soil) * rhoh2o / dens_snow
       END IF
 
@@ -301,8 +303,9 @@ CONTAINS
       itop_old(:) = nsnow + 1 - COUNT(snow_depth_sl(:,:) > 0._wp, DIM=2)
 
       ! Calculate depths of snow layers
+      !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_5 tile_name=tile%name
       snow_depth_sl(:,:) = 0._wp
-
+      !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_6 tile_name=tile%name
       snow_fract(:) = dsl4jsb_var2D_onChunk(HYDRO_, fract_snow_soil)
 
       DO i = 1, size(snow_depth, dim=1)
