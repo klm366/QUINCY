@@ -227,7 +227,7 @@ CONTAINS
         & initval_r=0.0_wp )
     END IF
 
-    !$acc enter data prcreate(mem%hcap_grnd,mem%hcap_grnd_old,mem%grnd_hflx, &
+    !$acc enter data pcreate(mem%hcap_grnd,mem%hcap_grnd_old,mem%grnd_hflx, &
     !$acc mem%grnd_hflx_old,mem%thaw_depth)
 
     CALL jsb_add_var( mem, 'hcap_grnd', mem%hcap_grnd,                       &
