@@ -1,6 +1,8 @@
 # Changelog for JSBACH4+
 
 - [Changelog for JSBACH4+](#changelog-for-jsbach4)
+  - [jsbach-4.20p8](#jsbach-420p9)
+  - [jsbach-4.20p8](#jsbach-420p8)
   - [jsbach-4.20p7](#jsbach-420p7)
   - [jsbach-4.20p6](#jsbach-420p6)
   - [jsbach-4.20p5](#jsbach-420p5)
@@ -10,9 +12,79 @@
   - [jsbach-4.20p1](#jsbach-420p1)
   - [jsbach-4.20](#jsbach-420)
 
+## jsbach-4.20p9
+
+_Release Date: 5 March 2019_
+
+- Bug fixes in `mo_jsb_tile` (missing TRIM around strings)
+- Changes in `mo_jsb_grid_class`
+  - Bug fix in `new_vgrid` for lbounds in one of the cases
+  - Don't allow the case in `new_vgrid` that levels and dz are given but neither lbounds nor ubounds
+  - Remove unnecessary TRIM's
+
+## jsbach-4.20p8
+
+_Release Date: 18 February 2019_
+
+- Bug fixes for lakes
+  - `fract_lice` was not propagated from the lake tile to the box tile and therefore returned as zero to the atmosphere
+  - Set lake fractions on fractional land/sea grid boxes (coast) to zero
+
+    Needs a corresponding fix in the atmosphere in `mo_echam_phy_init`
+- Changes for carbon, mostly in preparation for forest management
+  - Added dsl macros in preparation for forest management modules
+  - Task order changes required for forest management (leads to small changes in results)
+  - Removed per-canopy variables from aggregate
+  - Commented variables that are not calculated
+  - Adapted calculation of isteps for ECHAM in mo_jsb_time_iface.f90
+
+    ... to avoid integer overflow for long simulation times, i.e. large difference between start and end date (>70y)
+  - Subroutines for cpool sums and carbon conservation test
+
+    C conservation test for single operations on the tile (still todo: C conservation test on the box for timestep)
+  - Minor corrections in driver and forcing module
+  - Small change of wind damage interface required for cohorts + minor corrections
+  - Set max_C_content_woods as in jsbach3 at svn revision 9089
+
+    (only) changes c wood results when close to previous max
+  - Implemented allometric dependance of MaxLai on biomass
+    Ported from Kim Naudt's work in JSBACH3.
+    - new switch l_forestRegrowth
+    - does not change results when switched off!
+    - if switched on, the MaxLai of pfts with ForestFlag is derived from the available biomass
+  - Bug fix in mo_pheno_init.f90
+- Added daily carbon conservation test on box tile
+  - Carbon conservation test for each new day in `start_timestep`
+  - Added calls to `start_timestep` and `finish_timestep` to driver
+  - Corrected unit of fire atm flux `cflux_fire_all_2_atm`
+- Changes to output behaviour
+  - Append domain (model) ID to stream names only if more than one domain (model)
+  - Default output behaviour for ECHAM is now false and a variable is only written out if `loutput=.TRUE.` is explicitely set for that variable (either in the code or via namelist)
+- Cleanup to get rid of compiler warnings and other formatting changes
+- Various (bug) fixes
+  - Bug fix in `mo_hsm_class.f90`
+  - Correct inconsistent definition of tasks in `mo_sse_interface.f90`
+  - Added `l_aggregate_all=.TRUE.` where necessary to the `jsb_add_var` calls
+  - Corrected box value of gross assimilation (`* fract_fpc_max`) and some minor changes in the ASSIMI_ memory output descriptions
+  - Pre-populate some variables to avoid problem with WHERE statements with Cray compiler
+- Move adapters to ICON/ECHAM
+
+  Needs new adapter file in ICON resp. ECHAM
+  - Remove directory `src/adapters`
+  - Necessary code adaptations
+
+- Various changes in pre-processing script
+  - Make sure that fractional coastal points don't contain lakes
+  - Make sure that glacier fraction is either 0 or 1 and adapt land sea mask to be consistent with that (not for coupled)
+  - Suppress small lake fractions <0.1 from input
+  - Derive vegetation fractions from LUHv2 land cover data
+  - Remove partial ocean points around Caspian Sea in FR_LAND_TOPO from extpar file
+  - Remove option `old_r2b4_amip`
+  - Update output_path
+
 ## jsbach-4.20p7
 
-_Release* Date: 26 June 2018_
+_Release Date: 26 June 2018_
 
 - Re-insert `l_compat401` switch for backward compatibility
 - Use 10m wind from atmosphere in the interface (instead of lowest level wind)
@@ -29,7 +101,7 @@ _Release* Date: 26 June 2018_
 
 ## jsbach-4.20p6
 
-_Release* Date: 20 June 2018_
+_Release Date: 20 June 2018_
 
 - Earlier reading of lctlib so that it can be used in init_usecase to set up tile structure and processes
 - Use correct communicator in `mo_jsb_io_netcdf_iface.f90`
