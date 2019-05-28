@@ -129,7 +129,7 @@ CONTAINS
     ALLOCATE(var%field(ldims(1),ldims(2),1,1,1))
     !$acc enter data pcreate(var%field)
     var%ptr => var%field(:,:,1,1,1)
-    !$acc enter data pcreate(var%ptr)
+    !$acc enter data attach(var%ptr)
 
     IF (mem%in_var_groups) THEN                                  ! Should this tile memory be part of any var groups?
       ALLOCATE(groups(3+MERGE(2, 0, PRESENT(output_level))))
@@ -261,7 +261,7 @@ CONTAINS
     ALLOCATE(var%field(ldims(1),ldims(2),ldims(3),1,1))
     !$acc enter data pcreate(var%field)
     var%ptr => var%field(:,:,:,1,1)
-    !$acc enter data pcreate(var%ptr)
+    !$acc enter data attach(var%ptr)
 
     IF (mem%in_var_groups) THEN                                  ! Should this tile memory be part of any var groups?
       ALLOCATE(groups(3+MERGE(2, 0, PRESENT(output_level))))
