@@ -68,7 +68,7 @@ CONTAINS
 
     IF (PRESENT(namelist_filename)) master_namelist_filename = TRIM(namelist_filename)
 
-    CALL read_jsb_control_namelist(TRIM(master_namelist_filename))
+    CALL read_jsb_control_namelist(TRIM(master_namelist_filename)) ! This sets *no_of_models*
 
     CALL jsbach_init_version(jsbach_runs_standalone())
 
