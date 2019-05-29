@@ -605,6 +605,7 @@ CONTAINS
 
     ! Compute new dry static energy at lowest atmospheric level by back-substitution
     !
+    !$claw acc data create(s_air, heat_tcoef)
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_fluxes_land_expand_0
     s_air(:) = t_acoef(:) * s_star   (:) + t_bcoef(:)
 
@@ -623,6 +624,7 @@ CONTAINS
     sensible_hflx_lnd(:) = sensible_hflx(:)
     latent_hflx_lnd  (:) = latent_hflx  (:)
     !$claw end expand
+    !$claw acc end data
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 

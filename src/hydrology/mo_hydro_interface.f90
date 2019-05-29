@@ -1630,6 +1630,7 @@ CONTAINS
         & w_snow_lice(:),             & ! in
         & fract_snow_lice(:)          & ! out
         & )
+      !$claw acc exit data delete(w_skin_max, w_skin_canopy_max)  
       RETURN
     END IF
 
@@ -1731,7 +1732,7 @@ CONTAINS
       fract_snow(:)  = fract_snow_soil(:)
    END IF
 
-   !$claw acc exit data delete(w_skin_canopy_max, w_skin_max)
+   !$claw acc exit data delete(w_skin_max, w_skin_canopy_max)  
    !$claw verbatim  task_counter = task_counter + 1
   END SUBROUTINE update_snow_and_skin_fraction
 

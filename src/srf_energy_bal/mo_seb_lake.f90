@@ -555,6 +555,9 @@ CONTAINS
     ! ---------------------------
     ! Go
 
+
+    !$claw acc data create(s_air, heat_tcoef)
+
     ! ================================================================================================================================
     ! Surface fluxes for lake water
 
@@ -598,6 +601,9 @@ CONTAINS
     sensible_hflx(:) = (1._wp - fract_lice(:)) * sensible_hflx_wtr(:) + fract_lice(:) * sensible_hflx_ice(:)
     latent_hflx  (:) = (1._wp - fract_lice(:)) * latent_hflx_wtr  (:) + fract_lice(:) * latent_hflx_ice  (:)
     !$claw end expand 
+
+    !$claw acc end data
+
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_surface_fluxes_lake
