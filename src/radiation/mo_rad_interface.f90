@@ -737,6 +737,8 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(CARBON_, c_bg_sum)  ! in
       ELSE
         ALLOCATE(c_bg_sum(nc))
+        !$claw acc enter data create(c_bg_sum)
+        !$claw expand parallel
         c_bg_sum(:) = 0._wp                           ! dummy
       END IF
     END IF
@@ -763,7 +765,7 @@ CONTAINS
     ! Go
 
     ! Set day-or-night-switch
-    !$claw expand parallel update savepoint=ser_jsb_RAD_has_minimal_radiation_1 tile_name=tile%name
+    !$claw expand parallel update savepoint=ser_jsb_rad_has_minimal_radiation_1 tile_name=tile%name
     l_day(:) = Has_minimal_radiation(swvis_srf_down(:), swnir_srf_down(:))
 
     ! Calculate snow albedos. Used later only for bare and vegetation tile types
@@ -773,7 +775,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_soil)  ! in
       dsl4jsb_Get_var2D_onChunk(RAD_,   snow_age)         ! in
 
-      !$claw sca forward update savepoint=ser_jsb_RAD_calc_snow_albedo_1 tile_name=tile%name
+      !$claw sca forward update savepoint=ser_jsb_rad_calc_snow_albedo_1 tile_name=tile%name
       CALL calc_snow_albedo(   &
         & l_day(:),            & ! in
         & fract_snow_soil(:),  & ! in
@@ -795,13 +797,13 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(RAD_,   albedo_lwtr)  ! inout
       dsl4jsb_Get_var2D_onChunk(RAD_,   albedo_lice)  ! inout
 
-      !$claw sca forward update savepoint=ser_jsb_RAD_calc_alb_lwtr_1 tile_name=tile%name
+      !$claw sca forward update savepoint=ser_jsb_rad_calc_alb_lwtr_1 tile_name=tile%name
       CALL calc_alb_lwtr( &
         & l_day(:),       & ! in
         & albedo_lwtr(:)  & ! inout
         & )
 
-      !$claw sca forward update savepoint=ser_jsb_RAD_calc_alb_lice_1 tile_name=tile%name
+      !$claw sca forward update savepoint=ser_jsb_rad_calc_alb_lice_1 tile_name=tile%name
       CALL calc_alb_lice( &
         & l_day(:),       & ! in
         & t_lice(:),      & ! in
@@ -825,7 +827,7 @@ CONTAINS
       !$claw acc end data
 
     ELSE IF (tile%is_glacier) THEN
-      !$claw sca forward update savepoint=ser_jsb_RAD_calc_glacier_albedo_1 tile_name=tile%name
+      !$claw sca forward update savepoint=ser_jsb_rad_calc_glacier_albedo_1 tile_name=tile%name
       CALL calc_glacier_albedo( &
         & l_day(:),             & ! in
         & t_unfilt(:),          & ! in
@@ -843,7 +845,7 @@ CONTAINS
         IF (tile%lcts(1)%lib_id == 0) CALL finish(TRIM(routine), 'lctlib not available on tile')
 
         dsl4jsb_Get_var2D_onChunk(CARBON_, c_ag_sum_1) ! in
-        !$claw sca forward update savepoint=ser_jsb_RAD_calc_soil_albedo_1 tile_name=tile%name
+        !$claw sca forward update savepoint=ser_jsb_rad_calc_soil_albedo_1 tile_name=tile%name
         CALL calc_soil_albedo(                        &
           & l_day(:),                                 & ! in
           & use_alb_mineralsoil_const,                & ! in
@@ -871,7 +873,7 @@ CONTAINS
       END IF
 
       ! Merge the albedo of soil with the snow on it for the overall bare soil tile albedo
-      !$claw expand parallel update savepoint=ser_jsb_RAD_update_albedo_expand_1 tile_name=tile%name
+      !$claw expand parallel update savepoint=ser_jsb_rad_update_albedo_expand_1 tile_name=tile%name
       alb_vis_lnd(:) = (fract_snow_soil(:) * alb_vis_snow(:)  + (1.0_wp - fract_snow_soil(:)) * alb_vis_soil(:))
       alb_nir_lnd(:) = (fract_snow_soil(:) * alb_nir_snow(:)  + (1.0_wp - fract_snow_soil(:)) * alb_nir_soil(:))
       !$claw end expand
@@ -891,7 +893,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(RAD_,      alb_nir_soil)          ! inout
 
       IF (use_alb_veg_simple) THEN
-        !$claw expand parallel savepoint=ser_jsb_RAD_update_albedo_expand_2 tile_name=tile%name
+        !$claw expand parallel savepoint=ser_jsb_rad_update_albedo_expand_2 tile_name=tile%name
         alb_vis_lnd(:) = get_surface_albedo_simple( &
           & t_unfilt(:),                            &
           & fract_forest(:),                        &
@@ -912,7 +914,7 @@ CONTAINS
 
           dsl4jsb_Get_var2D_onChunk(CARBON_, c_ag_sum_1) ! in (Note: c_humus_1 is part of green litter.)
 
-          !$claw sca forward update savepoint=ser_jsb_RAD_calc_soil_albedo_2 tile_name=tile%name
+          !$claw sca forward update savepoint=ser_jsb_rad_calc_soil_albedo_2 tile_name=tile%name
           CALL calc_soil_albedo(                        &
             & l_day(:),                                 & ! in
             & use_alb_mineralsoil_const,                & ! in
@@ -945,7 +947,7 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(RAD_, sky_view_fract_stem)  ! inout
 
         IF (tile%lcts(1)%lib_id == 0) CALL finish(TRIM(routine), 'lctlib not available on tile')
-        !$claw sca forward update savepoint=ser_jsb_RAD_calc_sky_view_fractions_1 tile_name=tile%name
+        !$claw sca forward update savepoint=ser_jsb_rad_calc_sky_view_fractions_1 tile_name=tile%name
         CALL calc_sky_view_fractions(       &
           & l_day(:),                       & ! in
           & lai(:),                         & ! in
@@ -956,7 +958,7 @@ CONTAINS
           & sky_view_fract_stem(:)          & ! inout
           & )
 
-        !$claw sca forward update savepoint=ser_jsb_RAD_merge_albedos_of_vegtile_1 tile_name=tile%name
+        !$claw sca forward update savepoint=ser_jsb_rad_merge_albedos_of_vegtile_1 tile_name=tile%name
         CALL Merge_albedos_of_vegtile(        &
           & l_day(:),                         & ! in
           & dsl4jsb_Lctlib_param(ForestFlag), & ! in  ("true" for forest landcover types)
@@ -979,14 +981,17 @@ CONTAINS
     END IF ! tile%lcts(1)%id == ...
 
     IF (.NOT. tile%is_lake) THEN
-      !$claw expand parallel update savepoint=ser_jsb_RAD_update_albedo_expand_3 tile_name=tile%name
+      !$claw expand parallel update savepoint=ser_jsb_rad_update_albedo_expand_3 tile_name=tile%name
       alb_vis(:) = alb_vis_lnd(:)
       alb_nir(:) = alb_nir_lnd(:)
       !$claw end expand
     END IF
 
     IF (TRIM(use_alb_soil_organic_C) == '') THEN
-      IF (ASSOCIATED(c_bg_sum)) DEALLOCATE(c_bg_sum)
+      IF (ASSOCIATED(c_bg_sum)) THEN
+        !$claw acc exit data delete(c_bg_sum)
+        DEALLOCATE(c_bg_sum)
+      END IF
     END IF
 
     !$claw acc end data
