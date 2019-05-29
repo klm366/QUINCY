@@ -1856,6 +1856,7 @@ CONTAINS
 
     CALL tile%Get_fraction(ics, ice, iblk, fract=tile_fract(:))
 
+    !$claw acc data create(tile_fract, water_content_new)
     !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_0 tile_name=tile%name
     water_flux(:) = rain(:) + snow(:) + evapotrans(:) - runoff(:) - drainage(:)
     water_flux(:) = water_flux(:) * tile_fract(:) * area(:) / rhoh2o                    ! kg m-2 s-1 -> m3/s
@@ -1878,6 +1879,8 @@ CONTAINS
 
     !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_4 tile_name=tile%name
     water_content(:) = water_content_new(:)
+
+    !$claw acc end data
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
