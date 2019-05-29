@@ -1179,7 +1179,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_bg2_ta)        ! in
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg2_ta)     ! in
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2_ta)            ! in
-    !$claw acc data present(current_c_state_sum)
+
     !$claw expand parallel update 
     current_c_state_sum(ics:ice) = c_green_ta(:) + c_woods_ta(:) + c_reserve_ta(:) + c_crop_harvest_ta(:) + &
         & c_acid_ag1_ta(:) + c_water_ag1_ta(:) + c_ethanol_ag1_ta(:) + c_nonsoluble_ag1_ta(:) + &
@@ -1187,7 +1187,6 @@ CONTAINS
         & c_acid_bg1_ta(:) + c_water_bg1_ta(:) + c_ethanol_bg1_ta(:) + c_nonsoluble_bg1_ta(:) + &
         & c_acid_bg2_ta(:) + c_water_bg2_ta(:) + c_ethanol_bg2_ta(:) + c_nonsoluble_bg2_ta(:) + &
         & c_humus_1_ta(:)  + c_humus_2_ta(:)
-    !$claw acc end data
   END SUBROUTINE calculate_current_c_ta_state_sum
 
 
@@ -1300,10 +1299,8 @@ CONTAINS
 
     CALL calculate_current_c_ta_state_sum(tile, options, Cconserve)
     
-    !$claw acc data present(old_c_state_sum, cflux, Cconserve)
     !$claw expand parallel update
     Cconserve(:) = Cconserve(:) - old_c_state_sum(:) - cflux(:)
-    !$claw acc end data
 
   END SUBROUTINE check_carbon_conservation
 
