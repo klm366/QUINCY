@@ -1225,6 +1225,7 @@ CONTAINS
     config_w_soil_crit_fract = dsl4jsb_Config(HYDRO_)%w_soil_crit_fract
     config_w_soil_wilt_fract = dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract
 
+    !TODO CLAW: This part is computed on CPU because temp arrays are issued by compiler. 
     !$claw acc data present(w_soil_root, w_soil_sl, soil_depth_sl, root_depth_sl, &
     !$claw acc w_soil_root_fc, w_soil_fc_sl, w_soil_root_pwp, w_soil_pwp_sl)
     w_soil_root   (:)  = get_water_in_root_zone(w_soil_sl     (:,:), soil_depth_sl(:,:), root_depth_sl(:,:))
