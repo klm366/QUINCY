@@ -859,6 +859,11 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: fract_org_sl
     dsl4jsb_Real3D_onChunk :: t_soil
 
+    dsl4jsb_Real2D_onChunk :: w_soil_rel
+    dsl4jsb_Real2D_onChunk :: w_soil_column
+    dsl4jsb_Real2D_onChunk :: max_moist
+
+
     ! Locally allocated vectors
 
     TYPE(t_jsb_model), POINTER :: model
@@ -873,6 +878,10 @@ CONTAINS
     INTEGER  :: nsoil
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_hydrology'
+
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_rel)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_column)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, max_moist)
 
     iblk  = options%iblk
     ics   = options%ics
@@ -913,12 +922,12 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)
     ELSE
       ALLOCATE(fract_org_sl(nc, nsoil))
-      !!$claw acc enter data create(fract_org_sl)
-      !!$claw expand parallel
+      !$claw acc enter data create(fract_org_sl)
+      !$claw expand parallel update
       fract_org_sl(:,:) = 0._wp
     END IF
 
-    !!$claw sca forward update
+    !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_1 tile_name=tile%name
     CALL calc_soil_hydrology( &
       ! in
       & nc, &
@@ -956,18 +965,24 @@ CONTAINS
       & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ) &
       & )
 
-    WHERE (dsl4jsb_var2D_onChunk(HYDRO_, max_moist) > 0._wp)
-      dsl4jsb_var2D_onChunk(HYDRO_, w_soil_rel) = &
-        & MIN(dsl4jsb_var2D_onChunk(HYDRO_, w_soil_column) / dsl4jsb_var2D_onChunk(HYDRO_, max_moist), 1._wp)
-        ! @todo - in jsbach3, taking the MIN with 1 is not nessecary. Here, w_soil_column can be larger than
-        ! max_moist (in some places) ... this should be investigated, maybe it has to do with the interpolated input fields
-    ELSE WHERE
-      ! max_moist is zero over glaciers
-      dsl4jsb_var2D_onChunk(HYDRO_, w_soil_rel) = 0._wp
-    END WHERE
+    !$claw acc data present(max_moist, w_soil_rel, w_soil_column)
+    !$claw acc update device(w_soil_column, max_moist)
+    !$claw acc parallel loop gang vector
+    DO i = 1, size(max_moist)
+      IF (max_moist(i) > 0._wp) THEN
+        w_soil_rel(i) = MIN(w_soil_column(:) / max_moist(i), 1._wp)
+          ! @todo - in jsbach3, taking the MIN with 1 is not nessecary. Here, w_soil_column can be larger than
+          ! max_moist (in some places) ... this should be investigated, maybe it has to do with the interpolated input fields
+      ELSE
+        ! max_moist is zero over glaciers
+        w_soil_rel(i) = 0._wp
+      END IF
+    END DO
+    !$claw acc update host(w_soil_rel)
+    !$claw acc end data
 
     IF (.NOT. dsl4jsb_Config(HYDRO_)%l_organic) THEN
-      !!$claw acc exit data delete(fract_org_sl)
+      !$claw acc exit data delete(fract_org_sl)
       DEALLOCATE(fract_org_sl)
     END IF
 
@@ -1210,14 +1225,18 @@ CONTAINS
     config_w_soil_crit_fract = dsl4jsb_Config(HYDRO_)%w_soil_crit_fract
     config_w_soil_wilt_fract = dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract
 
-    !$claw acc data create(q_air_gt_qsat_tmp)
-    !$claw expand parallel update savepoint=ser_jsb_hydro_update_canopy_cond_stressed_expand_0 tile_name=tile%name
+    !$claw acc data present(w_soil_root, w_soil_sl, soil_depth_sl, root_depth_sl, &
+    !$claw acc w_soil_root_fc, w_soil_fc_sl, w_soil_root_pwp, w_soil_pwp_sl)
     w_soil_root   (:)  = get_water_in_root_zone(w_soil_sl     (:,:), soil_depth_sl(:,:), root_depth_sl(:,:))
     w_soil_root_fc(:)  = get_water_in_root_zone(w_soil_fc_sl  (:,:), soil_depth_sl(:,:), root_depth_sl(:,:))
     w_soil_root_pwp(:) = get_water_in_root_zone(w_soil_pwp_sl (:,:), soil_depth_sl(:,:), root_depth_sl(:,:))
+    !$claw acc update device(w_soil_root,w_soil_root_fc,w_soil_root_pwp)
+    !$claw acc end data
 
     ! Calculate water stress factor
     ! @todo: maybe use the distributed permanent wilting point/field cap from above and change get_water_stress_factor function
+    !$claw acc data create(q_air_gt_qsat_tmp)
+    !$claw expand parallel update savepoint=ser_jsb_hydro_update_canopy_cond_stressed_expand_0 tile_name=tile%name
     water_stress(:) = &
       & get_water_stress_factor(w_soil_column(:), max_moist(:), &
           &                     config_w_soil_crit_fract, config_w_soil_wilt_fract)
