@@ -854,6 +854,10 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
+    ! Accumulate NPP_pot_rate_ca. day_NPP_sum is divided by the day length and reset to zero in
+    ! update_phenology_logrop at the beginning of each day.
+    day_NPP_sum(:) = day_NPP_sum(:) + NPP_pot_rate_ca(:) * dtime
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_assimilation

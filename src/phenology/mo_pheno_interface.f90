@@ -299,6 +299,10 @@ CONTAINS
       CALL finish(routine, 'The LOGROP phenology model depends on the assimilation process being activated, too')
     ENDIF
 
+    IF ( .NOT. tile%Is_process_active(ASSIMI_)) THEN
+      CALL finish(routine, 'The LOGROP phenology model depends on the assimilation process being activated, too')
+    ENDIF
+
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     !$ACC DATA CREATE(t_air_in_Celcius, LaiMax_corrected) &
