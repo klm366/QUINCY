@@ -80,7 +80,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: day_temp_max
     dsl4jsb_Real2D_onChunk :: day_temp_sum
     dsl4jsb_Real2D_onChunk :: previous_day_temp_mean
-    !dsl4jsb_Real2D_onChunk :: previous_day_NPP_pot_rate_ca
     dsl4jsb_Real2D_onChunk :: previous_day_temp_min
     dsl4jsb_Real2D_onChunk :: previous_day_temp_max
     dsl4jsb_Real2D_onChunk :: F_pseudo_soil_temp
@@ -222,7 +221,7 @@ CONTAINS
       is_glacier(:) = .FALSE.
     END IF
 
-    ! In the moment the calls of calc_previous_day_variables and calc_pseudo_soil_temp are only
+    ! In the moment, the calls of calc_previous_day_variables and calc_pseudo_soil_temp are only
     ! necessary for the phenology process
     t_air_in_Celcius = t_air - tmelt  ! convert Kelvin in Celcius
     ! Sum up of the previous day temperatures
