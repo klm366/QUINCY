@@ -242,7 +242,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(RAD_, rad_net_lwtr) ! out
 
       !$claw acc data pcreate(sw_net_lwtr, lw_net_lwtr, sw_net_lice, lw_net_lice)
-      !$claw sca forward update savepoint=ser_jsb_RAD_calc_radiation_surface_net_1 tile_name=tile%name
+      !$claw sca forward update savepoint=ser_jsb_rad_calc_radiation_surface_net_1 tile_name=tile%name
       CALL calc_radiation_surface_net( &
         & swvis_srf_down(:),           & ! in
         & swnir_srf_down(:),           & ! in
@@ -261,7 +261,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(RAD_, albedo_lice)  ! in
       dsl4jsb_Get_var2D_onChunk(RAD_, rad_net_lice) ! out
 
-      !$claw sca forward update savepoint=ser_jsb_RAD_calc_radiation_surface_net_2 tile_name=tile%name
+      !$claw sca forward update savepoint=ser_jsb_rad_calc_radiation_surface_net_2 tile_name=tile%name
       CALL calc_radiation_surface_net( &
         & swvis_srf_down(:),           & ! in
         & swnir_srf_down(:),           & ! in
@@ -274,7 +274,7 @@ CONTAINS
         & lw_net=lw_net_lice(:)        & ! out
         & )
 
-      !$claw expand parallel update savepoint=ser_jsb_RAD_surface_radiation_expand_1 tile_name=tile%name
+      !$claw expand parallel update savepoint=ser_jsb_rad_surface_radiation_expand_1 tile_name=tile%name
       rad_srf_net(:) = (1._wp - fract_lice(:)) * rad_net_lwtr(:) + fract_lice(:) * rad_net_lice(:)
       sw_srf_net (:) = (1._wp - fract_lice(:)) * sw_net_lwtr(:)  + fract_lice(:) * sw_net_lice(:)
       lw_srf_net (:) = (1._wp - fract_lice(:)) * lw_net_lwtr(:)  + fract_lice(:) * lw_net_lice(:)
@@ -290,7 +290,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(RAD_,      swvis_srf_net)  ! out
       dsl4jsb_Get_var2D_onChunk(RAD_,      swnir_srf_net)  ! out
 
-      !$claw sca forward update savepoint=ser_jsb_RAD_calc_radiation_surface_net_3 tile_name=tile%name
+      !$claw sca forward update savepoint=ser_jsb_rad_calc_radiation_surface_net_3 tile_name=tile%name
       CALL calc_radiation_surface_net( &
         & swvis_srf_down(:),           & ! in
         & swnir_srf_down(:),           & ! in

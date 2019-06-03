@@ -389,7 +389,7 @@ CONTAINS
     !    calc_pseudo_soil_temp habe ich auch dem SEB Prozess zugeordnet.
 
     ! R: wird jedes mal (d.h. für jedes Tile) aufgerufen:
-    !$claw sca forward update savepoint=ser_jsb_PHENO_calc_previous_day_npp_1 tile_name=tile%name
+    !$claw sca forward update savepoint=ser_jsb_pheno_calc_previous_day_npp_1 tile_name=tile%name
     CALL calc_previous_day_NPP(          &
       & l_newday,                        & ! Input
       & NPP_pot_rate_ca(:),              & ! Input
@@ -484,13 +484,13 @@ CONTAINS
     ! END IF
 
     IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
-       !$claw expand update savepoint=ser_jsb_PHENO_update_phenology_logrop_expand_2 tile_name=tile%name
+       !$claw expand update savepoint=ser_jsb_pheno_update_phenology_logrop_expand_2 tile_name=tile%name
        LaiMax_corrected(:) = dsl4jsb_var2D_onChunk(PHENO_, maxLAI_allom )
     ELSE
      ! R: Rename MaxLAI in lctlib to LAI_max in JS3 comes from theLand%Vegetation%LAI_max,
      ! which is for each vegetated tile taken from MaxLAI in the lct library.
        MaxLAI = dsl4jsb_Lctlib_param(MaxLAI)
-       !$claw expand update savepoint=ser_jsb_PHENO_update_phenology_logrop_expand_3 tile_name=tile%name
+       !$claw expand update savepoint=ser_jsb_pheno_update_phenology_logrop_expand_3 tile_name=tile%name
        LaiMax_corrected(:) = MaxLAI
     END IF
 
@@ -512,7 +512,7 @@ CONTAINS
     IF (dsl4jsb_Lctlib_param(PhenologyType) ==  2) THEN
 
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... summergreen ...')
-      !$claw sca forward update savepoint=ser_jsb_PHENO_calc_summergreen_phenology_1 tile_name=tile%name
+      !$claw sca forward update savepoint=ser_jsb_pheno_calc_summergreen_phenology_1 tile_name=tile%name
       CALL calc_summergreen_phenology(    &
          & day_of_year,                   & ! in
          & l_newday,                      & ! in
@@ -533,7 +533,7 @@ CONTAINS
     ! none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grasses: 4; crops: 5
     IF (dsl4jsb_Lctlib_param(PhenologyType) ==  1) THEN
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... evergreen ...')
-       !$claw sca forward update savepoint=ser_jsb_PHENO_calc_evergreen_phenology_1 tile_name=tile%name
+       !$claw sca forward update savepoint=ser_jsb_pheno_calc_evergreen_phenology_1 tile_name=tile%name
        CALL calc_evergreen_phenology(     &
          & day_of_year,                   & ! in
          & l_newday,                      & ! in
@@ -553,7 +553,7 @@ CONTAINS
     IF (dsl4jsb_Lctlib_param(PhenologyType) ==  5) THEN
        ! R: (Abweichungen zu JSBACH3 nur beim LAI und dort erst nach 9. Stelle nach Komma.)
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... crop ...')
-      !$claw sca forward update savepoint=ser_jsb_PHENO_calc_crop_phenology_1 tile_name=tile%name
+      !$claw sca forward update savepoint=ser_jsb_pheno_calc_crop_phenology_1 tile_name=tile%name
       CALL calc_crop_phenology(            &
         & day_of_year,                     & ! in
         & l_newday,                        & ! in
@@ -578,7 +578,7 @@ CONTAINS
     IF (dsl4jsb_Lctlib_param(PhenologyType) ==  3) THEN
 
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... raingreen ...')
-      !$claw sca forward update savepoint=ser_jsb_PHENO_calc_raingreen_phenology_1 tile_name=tile%name
+      !$claw sca forward update savepoint=ser_jsb_pheno_calc_raingreen_phenology_1 tile_name=tile%name
       CALL calc_raingreen_phenology(        &
         & timestep,                         & ! in
         & w_soil_filling(:),                & ! in
@@ -591,7 +591,7 @@ CONTAINS
     ! none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grasses: 4; crops: 5
     IF (dsl4jsb_Lctlib_param(PhenologyType) ==  4) THEN
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... grasses ...')
-       !$claw sca forward update savepoint=ser_jsb_PHENO_calc_grass_phenology_1 tile_name=tile%name
+       !$claw sca forward update savepoint=ser_jsb_pheno_calc_grass_phenology_1 tile_name=tile%name
        CALL calc_grass_phenology(           &
          & t_air_in_Celcius(:),             & ! in
          & timestep,                        & ! in

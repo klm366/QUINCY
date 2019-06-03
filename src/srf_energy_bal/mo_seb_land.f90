@@ -229,11 +229,11 @@ CONTAINS
 
     ! In the moment the calls of calc_previous_day_variables and calc_pseudo_soil_temp are only
     ! necessary for the phenology process
-    !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_0
+    !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_0 tile_name=tile%name
     t_air_in_Celcius(:) = t_air(:) - tmelt  ! convert Kelvin in Celcius
     
     ! Sum up of the previous day temperatures
-    !$claw sca forward update savepoint=ser_jsb_seb_land_calc_previous_day_variables_1
+    !$claw sca forward update savepoint=ser_jsb_seb_land_calc_previous_day_variables_1 tile_name=tile%name
     CALL calc_previous_day_variables(is_newday(),               & ! Input
                                      t_air_in_Celcius(:),       & ! Input
                                      !dtime,                     & ! Input
@@ -246,7 +246,7 @@ CONTAINS
                                      day_temp_max(:) )            ! InOut
 
     ! Update of pseudo-soil temperature for each time step
-    !$claw sca forward update savepoint=ser_jsb_seb_land_calc_pseudo_soil_temp_1
+    !$claw sca forward update savepoint=ser_jsb_seb_land_calc_pseudo_soil_temp_1 tile_name=tile%name
     CALL calc_pseudo_soil_temp(t_air_in_Celcius(:)  , & ! Input
                                N_pseudo_soil_temp(:), & ! Input
                                F_pseudo_soil_temp(:), & ! Input
@@ -254,7 +254,7 @@ CONTAINS
 
     ! Save old surface temperature and saturation spec. humidity
     !$claw expand 
-    !parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_1
+    !parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_1 tile_name=tile%name
     t_unfilt_old(:) = t_unfilt(:)
     t_old   (:) = t(:)
     ! Temporary fix for temperatures over ocean getting too warm or too cold, leading to crash in convect_tables
@@ -278,7 +278,7 @@ CONTAINS
     ! Update surface temperature
     !
     ! 1. Compute sensitivity of surface saturation specific humidity to temperature
-    !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_2
+    !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_2 tile_name=tile%name
     dQdT(:) = ( qsat(t(:) + 0.001_wp, press_srf(:)) - qsat_srf_old(:) ) * 1000._wp
 
     ! 2. Old dry static energy
@@ -293,10 +293,10 @@ CONTAINS
 
     ! Compute new surface temperature and saturation humidity
     IF (lstart) THEN
-      !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_3
+      !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_3 tile_name=tile%name
       s_star(:) = s_old(:)
     ELSE
-      !$claw sca forward update savepoint=ser_jsb_seb_land_surface_temp_implicit_1
+      !$claw sca forward update savepoint=ser_jsb_seb_land_surface_temp_implicit_1 tile_name=tile%name
       CALL surface_temp_implicit( nc, steplen, &
         t2s_conv(:), &
         t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), &
@@ -323,7 +323,7 @@ CONTAINS
     !$claw acc end data
 
     ! New unfiltered surface temperature (\tilde(X)^(t+1)) (see below Eq. 3.3.1.5 in ECHAM3 manual, alpha = 1/tpfac2)
-    !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_4
+    !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_4 tile_name=tile%name
     t_unfilt(:) = ( tpfac2 * s_star(:) + tpfac3 * s_old(:) ) / t2s_conv(:)
 
     ! Correct new dry static energy for melting of snow on the surface and (if l_freeze=.TRUE.) melting/freezing of
@@ -334,10 +334,10 @@ CONTAINS
 
     w_soil_critical_tmp = dsl4jsb_Config(SSE_)%w_soil_critical
     IF (dsl4jsb_Config(SSE_)%l_snow) THEN
-      !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_5
+      !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_5 tile_name=tile%name
       has_snow_layer(:) = w_snow(:) * rhoh2o / snow_soil_dens(:) > snow_depth_min
     ELSE
-      !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_6
+      !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_6 tile_name=tile%name
       has_snow_layer(:) = w_snow(:) > w_soil_critical_tmp
     END IF
 
@@ -387,20 +387,20 @@ CONTAINS
       !$claw acc end data
     END IF
 
-    !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_7
+    !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_7 tile_name=tile%name
     s_star(:) = t_star(:) * t2s_conv(:)
 
     ! Compute new surface qsat (after correction of dry static energy for snow melt!)
     IF (lstart) THEN
-      !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_8
+      !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_8 tile_name=tile%name
       qsat_star(:) = qsat_srf_old(:)
     ELSE
-      !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_9
+      !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_9 tile_name=tile%name
       qsat_star(:) = qsat_srf_old(:) + dQdT(:) * (s_star(:) - s_old(:)) / t2s_conv(:)
     END IF
 
     ! 'Effective temperature' used in radheat of the atmosphere model (see Eq. 6.3 in ECHAM5 manual)
-    !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_10
+    !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_10 tile_name=tile%name
     t_eff(:) = (t_old(:)**3 * (4._wp * t_star(:) - 3._wp * t_old(:))) ** 0.25_wp
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
@@ -522,10 +522,13 @@ CONTAINS
     ! Asselin time filter, if applicable
     eps = get_asselin_coef()
     IF (eps > 0._wp) THEN
+      !$claw expand parallel update savepoint=ser_jsb_seb_land_update_asselin_land_expand_0 tile_name=tile%name
       t_filt(:) = t_unfilt_old(:) + eps * (t_old(:) - 2._wp * t_unfilt_old(:) + t_unfilt(:))
     ELSE
+      !$claw expand parallel update savepoint=ser_jsb_seb_land_update_asselin_land_expand_1 tile_name=tile%name
       t_filt(:) = t_unfilt(:)
     END IF
+    !$claw expand parallel update savepoint=ser_jsb_seb_land_update_asselin_land_expand_2 tile_name=tile%name
     t(:) = t_filt(:)
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
@@ -606,7 +609,7 @@ CONTAINS
     ! Compute new dry static energy at lowest atmospheric level by back-substitution
     !
     !$claw acc data create(s_air, heat_tcoef)
-    !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_fluxes_land_expand_0
+    !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_fluxes_land_expand_0 tile_name=tile%name
     s_air(:) = t_acoef(:) * s_star   (:) + t_bcoef(:)
 
     ! Transfer coefficient
