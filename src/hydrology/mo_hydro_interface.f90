@@ -970,7 +970,7 @@ CONTAINS
     !$claw acc parallel loop gang vector
     DO i = 1, size(max_moist)
       IF (max_moist(i) > 0._wp) THEN
-        w_soil_rel(i) = MIN(w_soil_column(:) / max_moist(i), 1._wp)
+        w_soil_rel(i) = MIN(w_soil_column(i) / max_moist(i), 1._wp)
           ! @todo - in jsbach3, taking the MIN with 1 is not nessecary. Here, w_soil_column can be larger than
           ! max_moist (in some places) ... this should be investigated, maybe it has to do with the interpolated input fields
       ELSE

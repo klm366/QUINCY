@@ -656,7 +656,7 @@ CONTAINS
     dark_respiration(:) =  dark_respiration_ca(:)  * veg_fract_correction(:) * fract_fpc_max(:)
     !$claw end expand 
 
-    !$claw sca forward update savepoint=ser_jsb_assim_calc_NPP_pot_rate_1 tile_name=tile%name
+    !$claw sca forward update savepoint=ser_jsb_assim_calc_npp_pot_rate_1 tile_name=tile%name
     CALL calc_NPP_pot_rate(gross_assimilation_ca(:), dark_respiration_ca(:), NPP_pot_rate_ca(:))
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')

@@ -49,12 +49,10 @@ CONTAINS
 
     USE mo_sse_constants, ONLY: vol_hcap_water, vol_hcap_ice, vol_hcap_org, vol_hcap_air, vol_hcap_bedrock
     
-    !!$claw model-data
     REAL(wp), INTENT(in) :: porosity, vol_heat_cap_soil_dry_mineral, fract_organic, fract_water, fract_ice, layer_depth, dz
     REAL(wp)             :: vol_heat_cap
-   ! !$claw end model-data
 
-   ! !$claw sca
+    !$claw sca routine
 
     IF (layer_depth > 0._wp) THEN  ! above bedrock
       vol_heat_cap = (1._wp - porosity)                                            & ! vol. fraction of solid (mineral + organic)
@@ -100,10 +98,8 @@ CONTAINS
     USE mo_sse_constants,          ONLY: hcond_org, hcond_dry_org, hcond_water, hcond_ice, hcond_bedrock
     USE mo_hydro_constants,        ONLY: vol_porosity_org
    
-    !!$claw model-data
     REAL(wp), INTENT(in) :: heat_cond_soil_mineral, water, ice, porosity, vol_field_cap, fract_organic, layer_depth, dz
     REAL(wp)             :: heat_cond
-   ! !$claw end model-data
 
     REAL(wp) ::           &
       & dens_bulk,        & !< Bulk density of dry soil (including pores)
@@ -118,7 +114,7 @@ CONTAINS
       & fract_water,      & !< Effective fractional water volume for saturated soil computation
       & fract_ice           !< Effective fractional ice volume for saturated soil computation
 
-   ! !$claw sca
+    !$claw sca routine
 
     IF (layer_depth > 0._wp) THEN  ! above bedrock
       ! Thermal conductivity of dry soil
@@ -129,76 +125,76 @@ CONTAINS
 
       IF (water + ice <= EPSILON(1._wp)) THEN
         heat_cond = hcond_dry
-        RETURN
-      END IF
+      ELSE
+        
 
-      ! Thermal conductivity of soil solids
-      hcond_soil = (1._wp - fract_organic) * heat_cond_soil_mineral + fract_organic * hcond_org
+        ! Thermal conductivity of soil solids
+        hcond_soil = (1._wp - fract_organic) * heat_cond_soil_mineral + fract_organic * hcond_org
 
-      ! Thermal conductivity of saturated soil
-      saturation = (water + ice) / layer_depth / porosity  ! fractional volume of water/ice rel. to pore volume
+        ! Thermal conductivity of saturated soil
+        saturation = (water + ice) / layer_depth / porosity  ! fractional volume of water/ice rel. to pore volume
 
-      ! ! --- Alternate formulation ---
-      ! ! @todo: in jsbach3, frozen soil is checked by t_soil <= tmelt, however, the computations in calc_soil_temperature
-      ! ! are such that some ice can remain in a layer even if t_soil > tmelt.
-      ! IF (ice > 0._wp) THEN  ! Frozen case
-      !   kersten = saturation
-      !   fract_water = water / layer_depth
-      !   fract_ice   = porosity - fract_water
-      !   hcond_sat =   hcond_soil      ** (1._wp-porosity) &
-      !     &         * hcond_water     ** fract_water      &
-      !     &         * hcond_ice       ** fract_ice
-      ! ELSE                   ! Unfrozen case
-      !   ! ! This is the case for fine unfrozen soil
-      !   ! IF (saturation > 0.1_wp) THEN
-      !   !   kersten = LOG10(saturation) + 1._wp
-      !   ! ELSE
-      !   !   kersten = 0._wp
-      !   ! END IF
-      !   ! This is the case for coarse unfrozen soil
-      !   IF (saturation > 0.05_wp) THEN
-      !     kersten = 0.7_wp * LOG10(saturation) + 1._wp
-      !   ELSE
-      !     kersten = 0._wp
-      !   END IF
-      !   fract_water = porosity
-      !   hcond_sat =   hcond_soil      ** (1._wp-porosity) &
-      !     &         * hcond_water     ** porosity
-      ! END IF
-
-      ! @todo: in jsbach3, frozen soil is checked by t_soil <= tmelt, however, the computations in calc_soil_temperature
-      ! are such that some ice can remain in a layer even if t_soil > tmelt.
-      IF (ice > 0._wp) THEN  ! Frozen case
-        kersten = saturation
-      ELSE                   ! Unfrozen case
-        ! This is the case for fine unfrozen soil
-        IF (saturation > 0.1_wp) THEN
-          kersten = LOG10(saturation) + 1._wp
-        ELSE
-          kersten = 0._wp
-        END IF
-        ! ! This is the case for coarse unfrozen soil
-        ! IF (saturation > 0.05_wp) THEN
-        !   kersten = 0.7_wp * LOG10(saturation) + 1._wp
-        ! ELSE
-        !   kersten = 0._wp
+        ! ! --- Alternate formulation ---
+        ! ! @todo: in jsbach3, frozen soil is checked by t_soil <= tmelt, however, the computations in calc_soil_temperature
+        ! ! are such that some ice can remain in a layer even if t_soil > tmelt.
+        ! IF (ice > 0._wp) THEN  ! Frozen case
+        !   kersten = saturation
+        !   fract_water = water / layer_depth
+        !   fract_ice   = porosity - fract_water
+        !   hcond_sat =   hcond_soil      ** (1._wp-porosity) &
+        !     &         * hcond_water     ** fract_water      &
+        !     &         * hcond_ice       ** fract_ice
+        ! ELSE                   ! Unfrozen case
+        !   ! ! This is the case for fine unfrozen soil
+        !   ! IF (saturation > 0.1_wp) THEN
+        !   !   kersten = LOG10(saturation) + 1._wp
+        !   ! ELSE
+        !   !   kersten = 0._wp
+        !   ! END IF
+        !   ! This is the case for coarse unfrozen soil
+        !   IF (saturation > 0.05_wp) THEN
+        !     kersten = 0.7_wp * LOG10(saturation) + 1._wp
+        !   ELSE
+        !     kersten = 0._wp
+        !   END IF
+        !   fract_water = porosity
+        !   hcond_sat =   hcond_soil      ** (1._wp-porosity) &
+        !     &         * hcond_water     ** porosity
         ! END IF
+
+        ! @todo: in jsbach3, frozen soil is checked by t_soil <= tmelt, however, the computations in calc_soil_temperature
+        ! are such that some ice can remain in a layer even if t_soil > tmelt.
+        IF (ice > 0._wp) THEN  ! Frozen case
+          kersten = saturation
+        ELSE                   ! Unfrozen case
+          ! This is the case for fine unfrozen soil
+          IF (saturation > 0.1_wp) THEN
+            kersten = LOG10(saturation) + 1._wp
+          ELSE
+            kersten = 0._wp
+          END IF
+          ! ! This is the case for coarse unfrozen soil
+          ! IF (saturation > 0.05_wp) THEN
+          !   kersten = 0.7_wp * LOG10(saturation) + 1._wp
+          ! ELSE
+          !   kersten = 0._wp
+          ! END IF
+        END IF
+        ! @todo: vol_field_cap should probably be replaced by MIN(vol_field_cap, liquid_max/layer_depth) if l_supercool=T
+        vpor_sat = porosity - vol_field_cap  ! Empty pores remaining if soil is saturated
+        fract_water = water / (1._wp - vpor_sat) / layer_depth ! Water fraction rel. to completely saturated soil
+        fract_ice   =   ice / (1._wp - vpor_sat) / layer_depth ! Ice fraction rel. to completely saturated soil
+        hcond_sat =   hcond_soil      ** (1._wp-fract_water-fract_ice) &
+          &         * hcond_water     ** fract_water                   &
+          &         * hcond_ice       ** fract_ice
+
+        heat_cond = (hcond_sat - hcond_dry) * kersten + hcond_dry
+
+        ! Finally, consider soil and bedrock mixture
+        heat_cond = ( heat_cond * layer_depth + hcond_bedrock * (dz - layer_depth) ) / dz
+
+        heat_cond = MAX(heat_cond, hcond_dry)
       END IF
-      ! @todo: vol_field_cap should probably be replaced by MIN(vol_field_cap, liquid_max/layer_depth) if l_supercool=T
-      vpor_sat = porosity - vol_field_cap  ! Empty pores remaining if soil is saturated
-      fract_water = water / (1._wp - vpor_sat) / layer_depth ! Water fraction rel. to completely saturated soil
-      fract_ice   =   ice / (1._wp - vpor_sat) / layer_depth ! Ice fraction rel. to completely saturated soil
-      hcond_sat =   hcond_soil      ** (1._wp-fract_water-fract_ice) &
-        &         * hcond_water     ** fract_water                   &
-        &         * hcond_ice       ** fract_ice
-
-      heat_cond = (hcond_sat - hcond_dry) * kersten + hcond_dry
-
-      ! Finally, consider soil and bedrock mixture
-      heat_cond = ( heat_cond * layer_depth + hcond_bedrock * (dz - layer_depth) ) / dz
-
-      heat_cond = MAX(heat_cond, hcond_dry)
-
     ELSE
       heat_cond = hcond_bedrock
     END IF
