@@ -873,7 +873,7 @@ CONTAINS
     LOGICAL  :: ltpe_open
     LOGICAL  :: ltpe_closed
 
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice, nc, i
     REAL(wp) :: dtime
     INTEGER  :: nsoil
 
