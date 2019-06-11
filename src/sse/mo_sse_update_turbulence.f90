@@ -182,8 +182,7 @@ CONTAINS
     ! ztvd, ztvs are now virtual potential temperatures, changed by Thomas Raddatz 07.2014
     zril(:)       = zg(:) * ( ztvd(:) - ztvs(:) ) / ( zdu2(:) * (ztvd(:)+ztvs(:))/2._wp )
 
-    CALL calc_drag_coefficient(nc, &
-                               steplen, &
+    CALL calc_drag_coefficient(steplen, &
                                t_air(:),q_air(:),wind_air(:),press_srf(:), & 
                                zg(:),zgh(:),z0m(:),z0h(:), &
                                zril(:), &                 ! inout
@@ -207,7 +206,7 @@ CONTAINS
   !!
   !! Calculates time-filtered drag coefficient 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_filtered_drag_coefficient(nc, &
+  ELEMENTAL SUBROUTINE calc_filtered_drag_coefficient( &
                                             steplen, &
                                             t_air,q_air,wind_air,press_srf,t_srf,t_srf_new,&                         
                                             height,zril_old,drag_srf,pch,ga)
@@ -219,23 +218,22 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    INTEGER,                         INTENT(in)    :: nc                     !< dimensions
     REAL(wp),                        INTENT(in)    :: steplen                !< step length for this process
-    REAL(wp), DIMENSION(nc),         INTENT(in)    :: t_air, &
+    REAL(wp),                        INTENT(in)    :: t_air, &
                                                       q_air, &
                                                       wind_air, &
                                                       press_srf, &
                                                       t_srf, &
                                                       t_srf_new, &
                                                       height
-    REAL(wp), DIMENSION(nc),         INTENT(inout) :: zril_old 
-    REAL(wp), DIMENSION(nc),         INTENT(out)   :: drag_srf, &
+    REAL(wp),                        INTENT(inout) :: zril_old 
+    REAL(wp),                        INTENT(out)   :: drag_srf, &
                                                       pch, &
                                                       ga
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp), DIMENSION(nc)               :: ztvd, ztvir, q_sat_surf, ztvs, ztvs_new, zg, zgh, zdu2, zril, & 
-                                             z0m,z0h,csat,cair,zchnl,zlev,zril_initial,zril_update
+    REAL(wp)                              :: ztvd, ztvir, q_sat_surf, ztvs, ztvs_new, zg, zgh, zdu2, zril, &
+                                             z0m, z0h, csat, cair, zchnl, zlev, zril_initial, zril_update
     REAL(wp)                              :: zcons8, zcons9, zcons11, zcons12
     REAL(wp)                              :: coef_tm1, coef_t, coef_tp1
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_filtered_drag_coefficient'
@@ -251,18 +249,18 @@ CONTAINS
     coef_tm1    = 0.5_wp
     coef_t      = 0.25_wp
     coef_tp1    = 0.25_wp
-    csat(:)     = 0.5_wp
-    cair(:)     = 0.5_wp
-    zlev(:)     = height_wind + 3._wp/10._wp * height(:)
-    z0m(:)      = MAX(height(:) / 10.0_wp,0.1_wp)
-    z0h(:)      = z0m(:) / 10.0_wp
+    csat        = 0.5_wp
+    cair        = 0.5_wp
+    zlev        = height_wind + 3._wp/10._wp * height
+    z0m         = MAX(height / 10.0_wp,0.1_wp)
+    z0h         = z0m / 10.0_wp
 
     ! geopotential of the surface layer (see echam's auxhybc.f90 & geopot.f90)
     ! If height_wind is set, then the measurement height + an offset from the average vegetation height
     ! is used. Otherwise, the code defaults to the half-level of ECHAM's lowest atmospheric layer
-    zg(:)   = zlev(:) * grav 
-    zgh(:)  = zg(:)                          ! height_humidity and height_temperature have to be equal
-    zdu2(:) = wind_air(:)**2._wp
+    zg   = zlev * grav 
+    zgh  = zg                          ! height_humidity and height_temperature have to be equal
+    zdu2 = wind_air**2._wp
 
     ! virtual potential air temperature (see mo_surface_boundary.f90)
     ! virtual potential air temperature (see mo_surface_boundary.f90)
@@ -270,34 +268,33 @@ CONTAINS
     ! tv = t * (1 + 0.61 * q * t)    ! virtual temperature
     ! td = t * ( 1000 / p_mb ) ^ R/cdp  ! potential temperature
     ! tvd = tair * (100000/p_pa)^zkappa * 1 + vtmpc1 * q_air) ! virtual potential temperature
-    ztvd(:)       = t_air(:) * ( 100000._wp/press_srf(:))**zkappa * ( 1._wp + vtmpc1 * q_air(:) )
-    ztvir(:)      = t_air(:) * ( 1._wp + vtmpc1 * q_air(:) )
+    ztvd       = t_air * ( 100000._wp/press_srf)**zkappa * ( 1._wp + vtmpc1 * q_air )
+    ztvir      = t_air * ( 1._wp + vtmpc1 * q_air )
     ! virtual potential surface temperature
-    q_sat_surf(:) = calc_spec_humidity_sat(t_srf(:),press_srf(:))
-    ztvs(:)       = t_srf(:) * ( 100000._wp/press_srf(:))**zkappa * &
-                    ( 1._wp + vtmpc1 * ( csat(:) * q_sat_surf(:) + ( 1._wp - cair(:) ) * q_air(:)))
+    q_sat_surf = calc_spec_humidity_sat(t_srf,press_srf)
+    ztvs       = t_srf * ( 100000._wp/press_srf)**zkappa * &
+                 ( 1._wp + vtmpc1 * ( csat * q_sat_surf + ( 1._wp - cair ) * q_air))
     ! virtual potential surface temperature
-    q_sat_surf(:) = calc_spec_humidity_sat(t_srf_new(:),press_srf(:))
-    ztvs_new(:)   = t_srf_new(:) * ( 100000._wp/press_srf(:))**zkappa * &
-                    ( 1._wp + vtmpc1 * ( csat(:) * q_sat_surf(:) + ( 1._wp - cair(:) ) * q_air(:)))
+    q_sat_surf = calc_spec_humidity_sat(t_srf_new,press_srf)
+    ztvs_new   = t_srf_new * ( 100000._wp/press_srf)**zkappa * &
+                 ( 1._wp + vtmpc1 * ( csat * q_sat_surf + ( 1._wp - cair ) * q_air))
 
     ! Richardson number (dry, Brinkop & Roeckner 1995, Tellus)
     ! ztvd, ztvs are now virtual potential temperatures, changed by Thomas Raddatz 07.2014
-    zril_initial(:) = MAX(-5._wp,MIN(5._wp,zg(:) * ( ztvd(:) - ztvs(:) )     / ( zdu2(:) * (ztvd(:)+ztvs(:))/2._wp )))
-    zril_update(:)  = MAX(-5._wp,MIN(5._wp,zg(:) * ( ztvd(:) - ztvs_new(:) ) / ( zdu2(:) * (ztvd(:)+ztvs_new(:))/2._wp )))
+    zril_initial = MAX(-5._wp,MIN(5._wp,zg * ( ztvd - ztvs )     / ( zdu2 * (ztvd+ztvs)/2._wp )))
+    zril_update  = MAX(-5._wp,MIN(5._wp,zg * ( ztvd - ztvs_new ) / ( zdu2 * (ztvd+ztvs_new)/2._wp )))
 
     ! Richrdson number needs to be filtered for offline simulations in order to maintain stability
-    zril(:) = coef_tm1 * zril_old(:)     + &
-              coef_t   * zril_initial(:) + &
-              coef_tp1 * zril_update(:)
+    zril = coef_tm1 * zril_old     + &
+           coef_t   * zril_initial + &
+           coef_tp1 * zril_update
 
-    zril_old(:) = zril(:)   
+    zril_old = zril   
 
-    CALL calc_drag_coefficient(nc, &
-                               steplen, &
-                               t_air(:),q_air(:),wind_air(:),press_srf(:), & 
-                               zg(:),zgh(:),z0m(:),z0h(:),zril(:), & 
-                               drag_srf(:),pch(:),ga(:))            
+    CALL calc_drag_coefficient(steplen, &
+                               t_air,q_air,wind_air,press_srf, & 
+                               zg,zgh,z0m,z0h,zril, & 
+                               drag_srf,pch,ga)            
 
   END SUBROUTINE calc_filtered_drag_coefficient
 
@@ -310,7 +307,7 @@ CONTAINS
   !!
   !! Calculates drag coefficient and aerodynamic conductance 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_drag_coefficient(nc, &
+  ELEMENTAL SUBROUTINE calc_drag_coefficient( &
                                    steplen, &
                                    t_air,q_air,wind_air,press_srf, & 
                                    zg,zgh,z0m,z0h,zril, & 
@@ -322,9 +319,8 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut 
-    INTEGER,                         INTENT(in)    :: nc                     !< dimensions
     REAL(wp),                        INTENT(in)    :: steplen                !< step length for this process
-    REAL(wp), DIMENSION(nc),         INTENT(in)    :: t_air, &
+    REAL(wp),                        INTENT(in)    :: t_air, &
                                                       q_air, &
                                                       wind_air, &
                                                       press_srf, &
@@ -333,12 +329,12 @@ CONTAINS
                                                       z0m, &
                                                       z0h, &
                                                       zril
-    REAL(wp), DIMENSION(nc),         INTENT(out)   :: drag_srf, &
+    REAL(wp),                        INTENT(out)   :: drag_srf, &
                                                       pch, &
                                                       ga
     ! ---------------------------
     ! 0.2 Local                                                      
-    REAL(wp), DIMENSION(nc)               :: zcdnl, zchln, & 
+    REAL(wp)                              :: zcdnl, zchln, & 
                                              zscfl, zucfl, zucfhl, zcons, zcfncl, zcfnchl, zcfml, zcfhl, &
                                              zchnl,zdu2
     REAL(wp)                              :: zcons8,zcons9,zcons11, zcons12
@@ -351,42 +347,42 @@ CONTAINS
 
 
     ! 0.9 init local variables and constants
-    zcons8        = 2._wp * 5.0_wp 
-    zcons9        = 3._wp * 5.0_wp 
-    zcons11       = 3._wp * 5.0_wp * 5.0_wp
-    zcons12       = cvdifts * steplen * grav / r_gas_dryair 
-    zdu2(:)       = wind_air(:)**2._wp
+    zcons8     = 2._wp * 5.0_wp 
+    zcons9     = 3._wp * 5.0_wp 
+    zcons11    = 3._wp * 5.0_wp * 5.0_wp
+    zcons12    = cvdifts * steplen * grav / r_gas_dryair 
+    zdu2       = wind_air**2._wp
 
     ! Neutral drag coefficient for momentum and heat
-    zcdnl(:) = (ckap / LOG(1._wp + zg(:) / (grav *z0m(:) )))**2._wp
-    zchnl(:) = ckap**2._wp / (LOG(1._wp + zg(:) / (grav * z0m(:) )) * &
-                              LOG( ( grav * z0m(:) + zgh(:) ) / (grav * z0h(:) )) )
+    zcdnl = (ckap / LOG(1._wp + zg / (grav *z0m )))**2._wp
+    zchnl = ckap**2._wp / (LOG(1._wp + zg / (grav * z0m )) * &
+                           LOG( ( grav * z0m + zgh ) / (grav * z0h )) )
 
     ! account for stable/unstable case: helper variables
-    zscfl(:)  = SQRT (  1._wp + 5._wp * ABS(zril(:)))
-    zucfl(:)  = 1._wp / (1._wp + zcons11 * zcdnl(:) * SQRT(ABS(zril(:)) * (1._wp  + zg(:) / (grav * z0m(:)))))
-    zucfhl(:) = 1._wp / (1._wp + zcons11 * zchnl(:) * SQRT(ABS(zril(:)) * (1._wp  + zgh(:) / (grav * z0h(:)))))
+    zscfl  = SQRT ( 1._wp + 5._wp * ABS(zril))
+    zucfl  = 1._wp / (1._wp + zcons11 * zcdnl * SQRT(ABS(zril) * (1._wp  + zg / (grav * z0m))))
+    zucfhl = 1._wp / (1._wp + zcons11 * zchnl * SQRT(ABS(zril) * (1._wp  + zgh / (grav * z0h))))
 
     ! ignoring cloud water correction (see mo_surface_land.f90)
-    zcons(:)    = zcons12 * press_srf(:) / ( t_air(:) * (1._wp + vtmpc1 * q_air(:)))
-    zcfncl(:)   = zcons(:) * SQRT(zdu2(:)) * zcdnl(:)
-    zcfnchl(:)  = zcons(:) * SQRT(zdu2(:)) * zchnl(:)
+    zcons    = zcons12 * press_srf / ( t_air * (1._wp + vtmpc1 * q_air))
+    zcfncl   = zcons * SQRT(zdu2) * zcdnl
+    zcfnchl  = zcons * SQRT(zdu2) * zchnl
 
     ! Stable / Unstable case
-    WHERE ( zril(:) > 0._wp )
-       zcfml(:) = zcfncl(:)  / (1._wp + zcons8 * zril(:) / zscfl(:))
-       zcfhl(:) = zcfnchl(:) / (1._wp + zcons9 * zril(:) * zscfl(:))
-    ELSEWHERE
-       zcfml(:) = zcfncl(:)  * (1._wp - zcons8 * zril(:) * zucfl(:))
-       zcfhl(:) = zcfnchl(:) * (1._wp - zcons9 * zril(:) * zucfhl(:))
-    ENDWHERE
+    IF ( zril > 0._wp ) THEN
+       zcfml = zcfncl  / (1._wp + zcons8 * zril / zscfl)
+       zcfhl = zcfnchl / (1._wp + zcons9 * zril * zscfl)
+    ELSE
+       zcfml = zcfncl  * (1._wp - zcons8 * zril * zucfl)
+       zcfhl = zcfnchl * (1._wp - zcons9 * zril * zucfhl)
+    END IF
 
     ! total surface drag (ECHAM)
-    drag_srf(:) = zcfhl(:)
-    pch(:)      = zcfhl(:) / zcfnchl(:) * zchnl(:)
+    drag_srf = zcfhl
+    pch      = zcfhl / zcfnchl * zchnl
     ! aerodynamic conductance (m/s)
-    ga(:)       = heat_transfer_coef(drag_srf(:), steplen) * & 
-                  wind_air(:)
+    ga       = heat_transfer_coef(drag_srf, steplen) * & 
+               wind_air
 
   END SUBROUTINE calc_drag_coefficient
 
