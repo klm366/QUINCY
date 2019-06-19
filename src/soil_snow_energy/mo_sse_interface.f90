@@ -153,7 +153,11 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: matrix_pot_sl
     dsl4jsb_Real3D_onChunk :: bclapp_sl
     dsl4jsb_Real2D_onChunk :: thaw_depth
+    dsl4jsb_Real2D_onChunk :: heat_cond
+    dsl4jsb_Real2D_onChunk :: vol_heat_cap
     dsl4jsb_Real2D_onChunk :: w_snow_soil
+    dsl4jsb_Real2D_onChunk :: snow_soil_dens
+    dsl4jsb_Real2D_onChunk :: fract_snow_soil
 
 
     ! Locally allocated vectors
@@ -167,6 +171,9 @@ CONTAINS
       & hcap_grnd_soil,                &
       & grnd_hflx_snow,                &
       & grnd_hflx_soil
+    LOGICAL, DIMENSION(options%nc)  :: &
+      & ldglac
+
     INTEGER, DIMENSION(options%nc) ::  &
       & itop, itop_old
 
@@ -208,6 +215,8 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snowmelt)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow_soil)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_soil)
 
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil)            ! inout
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_acoef)      ! inout
@@ -238,11 +247,17 @@ CONTAINS
     END IF
     dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth)      ! out
 
+    dsl4jsb_Get_var2D_onChunk(SSE_,   heat_cond)
+    dsl4jsb_Get_var2D_onChunk(SSE_,   vol_heat_cap)
+
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)        ! in
 
     
 
     lstart = is_time_experiment_start()
+
+    !$claw acc enter data create(snow_depth,snow_fract,t_unfilt_corrected,t_soil_top,hcap_grnd_snow,hcap_grnd_soil,grnd_hflx_snow,grnd_hflx_soil,ldglac,itop,itop_old)
+
 
     ! Save old ground heat flux and heat capacity before updating
     ! The old flux and capacity (which have been used in the implicit calculation of the new surface temperature) are
@@ -255,16 +270,16 @@ CONTAINS
     ! Correction of surface temperature for snow and ice melt
     ! t_unfilt is later corrected in task "snowmelt_correction" of process SEB_, but we need it already here on the sub-tiles
     IF (lstart) THEN
-      !!$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_1 tile_name=tile%name
+      !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_1 tile_name=tile%name
       t_unfilt_corrected(:) = t_unfilt(:)
-      !!$claw end expand
     ELSE
-      !!$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_2 tile_name=tile%name
+      !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_2 tile_name=tile%name
       t_unfilt_corrected(:) = t_unfilt(:) - snowmelt(:) * dtime * alf / hcap_grnd(:)
-      !!$claw end expand
     END IF
 
     IF (.NOT. dsl4jsb_Config(SSE_)%l_snow) THEN
+      ldglac(:) = SPREAD(tile%is_glacier, DIM=1, ncopies=nc)
+      !$claw acc update device(ldglac)
 
       CALL calc_soiltemp_old(                          &
         & nc,                                          &
@@ -275,16 +290,19 @@ CONTAINS
         & lstart,                                      &
         & t_unfilt_corrected(:)                     ,  &
         & w_snow_soil(:)                            ,  &
-        & dsl4jsb_var2D_onChunk(SSE_,   heat_cond),    &
-        & dsl4jsb_var2D_onChunk(SSE_,   vol_heat_cap), &
+        & heat_cond(:)                              ,  &
+        & vol_heat_cap(:)                           ,  &
         & t_soil_acoef                          (:,:), &
         & t_soil_bcoef                          (:,:), &
         & t_soil                                (:,:), &
         & hcap_grnd                             (:),   &
         & grnd_hflx                             (:),   &
-        & SPREAD(tile%is_glacier, DIM=1, ncopies=nc)   &
+        & ldglac                                (:)    &
+        !& SPREAD(tile%is_glacier, DIM=1, ncopies=nc)   &
         & )
 
+
+      !$claw acc exit data delete(snow_depth,snow_fract,t_unfilt_corrected,t_soil_top,hcap_grnd_snow,hcap_grnd_soil,grnd_hflx_snow,grnd_hflx_soil,ldglac,itop,itop_old)  
       RETURN
 
     END IF
@@ -295,22 +313,33 @@ CONTAINS
 
       ! Calculate snow depth in m (no longer in m water equivalent)
       IF (dsl4jsb_Config(SSE_)%l_dynsnow) THEN
-        !!$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_3 tile_name=tile%name
-        snow_depth(:) = dsl4jsb_var2D_onChunk(HYDRO_, w_snow_soil) * rhoh2o / dsl4jsb_var2D_onChunk(HYDRO_, snow_soil_dens)
+        !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_3 tile_name=tile%name
+        snow_depth(:) = w_snow_soil(:) * rhoh2o / snow_soil_dens(:)
       ELSE
-        !!$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_4 tile_name=tile%name
-        snow_depth(:) = dsl4jsb_var2D_onChunk(HYDRO_, w_snow_soil) * rhoh2o / dens_snow
+        !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_4 tile_name=tile%name
+        snow_depth(:) = w_snow_soil(:) * rhoh2o / dens_snow
       END IF
 
       ! Calculate top snow layer for previous time step
-      itop_old(:) = nsnow + 1 - COUNT(snow_depth_sl(:,:) > 0._wp, DIM=2)
+      !$claw acc data present(itop,snow_depth_sl)
+      !$claw acc update device(snow_depth_sl)
+      !$claw acc parallel loop gang vector
+      DO i = 1 , nc
+        itop_old(i) = nsnow + 1 - COUNT(snow_depth_sl(i,:) > 0._wp)
+      END DO
+      !$claw acc update host(itop)
+      !$claw acc end data
 
       ! Calculate depths of snow layers
-      !!$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_5 tile_name=tile%name
+      !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_5 tile_name=tile%name
       snow_depth_sl(:,:) = 0._wp
-      !!$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_6 tile_name=tile%name
-      snow_fract(:) = dsl4jsb_var2D_onChunk(HYDRO_, fract_snow_soil)
+      !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_6 tile_name=tile%name
+      snow_fract(:) = fract_snow_soil(:)
 
+
+      !$claw acc data present(snow_depth,snow_fract)
+      !$claw acc update device(snow_depth,snow_fract)
+      !$claw acc parallel loop gang vector
       DO i = 1, size(snow_depth, dim=1)
         IF (snow_depth(i) > snow_depth_min .AND. snow_fract(i) > EPSILON(1._wp)) THEN
           snow_depth(i) = snow_depth(i) / snow_fract(i)
@@ -319,8 +348,15 @@ CONTAINS
           snow_fract(i) = 0._wp
         END IF
       END DO
+      !$claw acc update host(snow_depth,snow_fract)
+      !$claw acc end data
 
+      !$claw acc data present(snow_depth,snow_depth_sl)
+      !$claw acc update device(snow_depth)
+      !$claw acc parallel
+      !$claw acc loop gang
       DO isnow=nsnow,1,-1
+        !$claw acc loop vector
         DO i = 1, size(snow_depth, dim=1)
           IF (snow_depth(i) > 0._wp) THEN
             snow_depth_sl(i,isnow) = MIN(snow_depth(i), snow_e%dz(isnow))
@@ -328,9 +364,15 @@ CONTAINS
           END IF
         END DO
       END DO
+      !$claw acc end parallel
+      !$claw acc update host(snow_depth_sl,snow_depth)
+      !$claw acc end data
+
+      !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_7 tile_name=tile%name
       snow_depth_sl(:,nsnow) = snow_depth_sl(:,nsnow) + snow_depth(:)
 
       ! Calculate top snow layer for current time step
+
       itop(:) = nsnow + 1 - COUNT(snow_depth_sl(:,:) > 0._wp, DIM=2)
 
       CALL calc_snow_temperature( &
@@ -369,12 +411,16 @@ CONTAINS
         END IF
       END DO
     ELSE
-      snow_depth(:) = dsl4jsb_var2D_onChunk(HYDRO_, w_snow_soil) * rhoh2o / dens_snow
+      !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_8 tile_name=tile%name
       snow_depth_sl(:,:) = 0._wp
+
+      !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_9 tile_name=tile%name
+      snow_depth(:) = w_snow_soil(:) * rhoh2o / dens_snow
       snow_fract(:) = 0._wp
       t_soil_top(:) = t_unfilt_corrected(:)
       grnd_hflx_snow(:) = 0._wp
       hcap_grnd_snow(:) = 0._wp
+      !$claw end expand
     END IF
 
     ! @todo: move water/ice calculations to HYDRO_ process
@@ -436,6 +482,9 @@ CONTAINS
         & )
     END IF
 
+    !$claw acc data present(grnd_hflx,hcap_grnd,snow_fract,grnd_hflx_snow,grnd_hflx_soil,hcap_grnd_snow,hcap_grnd_soil)
+    !$claw acc update device(snow_fract,grnd_hflx_snow,grnd_hflx_soil,hcap_grnd_snow,hcap_grnd_soil)
+    !$claw acc parallel loop gang vector
     DO i = 1, size(snow_depth_sl, dim=1)
       IF (snow_depth_sl(i,nsnow) > 0._wp) THEN
         grnd_hflx(i) = snow_fract(i) * grnd_hflx_snow(i) + (1._wp - snow_fract(i)) * grnd_hflx_soil(i)
@@ -445,6 +494,10 @@ CONTAINS
         hcap_grnd(i) = hcap_grnd_soil(i)
       END IF
     END DO
+    !$claw acc update host(grnd_hflx,hcap_grnd)
+    !$claw acc end data
+
+    !$claw acc exit data delete(snow_depth,snow_fract,t_unfilt_corrected,t_soil_top,hcap_grnd_snow,hcap_grnd_soil,grnd_hflx_snow,grnd_hflx_soil,ldglac,itop,itop_old)  
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
