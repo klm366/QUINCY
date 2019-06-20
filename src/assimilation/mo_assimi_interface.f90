@@ -474,7 +474,6 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     REAL(wp)                   :: dtime
     INTEGER                    :: iblk, ics, ice !, nc
-    REAL(wp)                   :: dtime
     INTEGER                    :: icanopy
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_assimilation'
