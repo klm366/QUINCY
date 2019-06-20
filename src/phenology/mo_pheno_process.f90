@@ -12,54 +12,18 @@
 MODULE mo_pheno_process
 #ifndef __NO_JSBACH__
 
-   USE mo_kind,      ONLY: wp
+   USE mo_kind, ONLY: wp
 
    IMPLICIT NONE
    PRIVATE
 
-   PUBLIC :: calc_summergreen_phenology , calc_evergreen_phenology, calc_previous_day_NPP, &
+   PUBLIC :: calc_summergreen_phenology , calc_evergreen_phenology, &
              calc_crop_phenology, calc_raingreen_phenology, calc_grass_phenology, & !, get_letItDie, get_letItGrow, get_shedRate_RG
              get_foliage_projected_cover, derive_maxLai_according_to_allometric_relationships, track_max_green_pool
 
    CHARACTER(len=*), PARAMETER :: modname = 'mo_pheno_process'
 
  CONTAINS
-
-  ELEMENTAL SUBROUTINE calc_previous_day_NPP(is_newday,                    & ! Input
-                                             NPP_pot_rate_ca,              & ! Input
-                                             dtime,                        & ! Input
-                                             previous_day_NPP_pot_rate_ca, & ! Output
-                                             day_NPP_sum                   & ! InOut
-                                             )
-
-    !-----------------------------------------------------------------------
-    !  ARGUMENTS
-    LOGICAL,   intent(in)    :: is_newday
-
-    REAL(wp),  intent(in)    :: NPP_pot_rate_ca,          & ! NPP-rate during current time step for each tile (PFT)
-                                dtime
-
-    REAL(wp),  intent(inout) :: previous_day_NPP_pot_rate_ca ! "in" only to avoid NaN in the output
-
-    REAL(wp),  intent(inout) :: day_NPP_sum
-
-    !-----------------------------------------------------------------------
-    ! CONTENT
-
-    ! --- update mean day values
-
-    ! Note that updating is done globally at the same time step, i.e. for different longitudes the updating happens at different
-    ! local times.
-
-    IF(is_newday) THEN  ! day has changed
-       previous_day_NPP_pot_rate_ca = day_NPP_sum/86400.
-       day_NPP_sum = NPP_pot_rate_ca*dtime
-    ELSE                ! day has not changed
-       day_NPP_sum  = day_NPP_sum   + NPP_pot_rate_ca * dtime
-    END IF
-
-  END SUBROUTINE calc_previous_day_NPP
-
 
   ! --- update_growth_phase() -----------------------------------------------------------------------------------------------------
   !
