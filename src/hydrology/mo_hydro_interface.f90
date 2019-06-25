@@ -879,10 +879,6 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_hydrology'
 
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_rel)
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_column)
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, max_moist)
-
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
@@ -915,6 +911,10 @@ CONTAINS
 
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
+
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_rel)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_column)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, max_moist)
 
     dsl4jsb_Get_var3D_onChunk(SSE_,    t_soil)     ! in
 
@@ -968,7 +968,7 @@ CONTAINS
     !$claw acc data present(max_moist, w_soil_rel, w_soil_column)
     !$claw acc update device(w_soil_column, max_moist)
     !$claw acc parallel loop gang vector
-    DO i = 1, size(max_moist)
+    DO i = ics, ice
       IF (max_moist(i) > 0._wp) THEN
         w_soil_rel(i) = MIN(w_soil_column(i) / max_moist(i), 1._wp)
           ! @todo - in jsbach3, taking the MIN with 1 is not nessecary. Here, w_soil_column can be larger than
