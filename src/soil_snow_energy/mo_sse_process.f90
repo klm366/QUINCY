@@ -514,8 +514,8 @@ CONTAINS
           t_soil(jl,jk+1) = t_soil_acoef(jl,jk) + t_soil_bcoef(jl,jk) * t_soil(jl,jk)
         END DO
       END DO
-      !$claw acc update host(t_soil) ! TODO CLAW to be removed
       !$claw acc end parallel
+      !$claw acc update host(t_soil) ! TODO CLAW to be removed
 
       ! Phase change calculations
       IF (l_freeze .AND. PRESENT(ws)) THEN
@@ -577,8 +577,8 @@ CONTAINS
           END IF
         END DO
       END DO
-      !$claw acc update host(thaw_depth)
       !$claw acc end parallel
+      !$claw acc update host(thaw_depth)
 
     END IF
 
@@ -815,8 +815,9 @@ CONTAINS
       ! END DO
       END DO
     END DO
-    !$claw acc update host(t_snow) ! TODO CLAW to be removed 
     !$claw acc end parallel
+    !$claw acc update host(t_snow) ! TODO CLAW to be removed 
+    !$claw acc end data
     !
     !-----------------------------------------------------------------------------------------------
     !  Computation of new snow temperatures
