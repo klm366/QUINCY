@@ -469,7 +469,7 @@ CONTAINS
     !$claw acc present(dz,mids,t_srf_unfilt,vol_heat_cap,heat_cond,t_soil, &
     !$claw acc t_soil_acoef,t_soil_bcoef,hcap_grnd,grnd_hflx,thaw_depth)
 
-    !$claw acc data update device(mids,dz,vol_heat_cap) ! TODO CLAW to be removed
+    !$claw acc update device(mids,dz,vol_heat_cap) ! TODO CLAW to be removed
 
     !$claw acc parallel loop gang vector
     DO jk = 1,nsoil-1
@@ -482,7 +482,7 @@ CONTAINS
         heat_cap(jl,jk) = dz(jk) * vol_heat_cap(jl,jk)
       END DO
     END DO
-    !$claw acc data update host(zd1,heat_cap) ! TODO CLAW to be removed
+    !$claw acc update host(zd1,heat_cap) ! TODO CLAW to be removed
     
     !-----------------------------------------------------------------------------------------------
     !  Computation of soil temperaturs
@@ -587,7 +587,7 @@ CONTAINS
     !  Computation of the Richtmyer and Morton A and B coefficients for the next time step
     !------------------------------------------------------------------------------------------------
     !$claw acc data present(zdz1,zdz2,heat_cap,heat_cond)
-    !$claw acc data update device(heat_cap,heat_cond,zd1) ! TODO CLAW to be removed
+    !$claw acc update device(heat_cap,heat_cond,zd1) ! TODO CLAW to be removed
     !$claw acc parallel loop gang vector collapse(2)
     DO jl=1,nidx
       DO jk = 1, nsoil
@@ -612,7 +612,7 @@ CONTAINS
 
     ! soil layers above
     !$claw acc data present(z1,zdz1, zdz2,t_soil_acoef,t_soil_bcoef,t_soil)
-    !$claw acc data update device(z1,zdz1, zdz2,t_soil_acoef,t_soil_bcoef,t_soil) ! TODO CLAW to be removed
+    !$claw acc update device(z1,zdz1, zdz2,t_soil_acoef,t_soil_bcoef,t_soil) ! TODO CLAW to be removed
     !$claw acc parallel
     !$claw acc loop gang vector
     DO jl=1,nidx
@@ -624,7 +624,7 @@ CONTAINS
       END DO
     END DO  
     !$claw acc end parallel
-    !$claw acc data update host(z1,t_soil_acoef,t_soil_bcoef)
+    !$claw acc update host(z1,t_soil_acoef,t_soil_bcoef)
     !$claw acc end data
 
     !------------------------------------------------------------------------------------------------
