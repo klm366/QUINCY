@@ -743,6 +743,8 @@ CONTAINS
     REAL(wp) :: zd1(nidx,nsnow+1)
     REAL(wp) :: zdz1(nidx,nsnow+1), zdz2(nidx,nsnow+1)
 
+    !$claw acc data create(zmid,z1,zd1,zdz1,zdz2)
+
 
     !$claw expand parallel update savepoint=ser_jsb_sse_calc_snow_temperature_expand_0 
     grnd_hflx(:) = 0._wp
@@ -951,6 +953,8 @@ CONTAINS
       END DO
     END DO
     !$claw acc update host(grnd_hflx,hcap_grnd)
+    !$claw acc end data
+
     !$claw acc end data
 
   END SUBROUTINE calc_snow_temperature
