@@ -166,7 +166,7 @@ CONTAINS
       CASE ('climatology')
         CALL update_phenology_climatology(tile, options)
    !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-   ! A new phenology scheme is added for JeDi 
+   !PHS: A new phenology scheme is added for JeDi 
    !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       CASE ('jedi_phenology')
         CALL update_phenology_jedi_phenology(tile,options)
@@ -720,17 +720,17 @@ CONTAINS
     
     current = get_time_current()
     
-  ! IF( get_year(current) .GT. iniyear + 3 ) THEN
+   !IF( get_year(current) .GT. iniyear + 10 ) THEN
    
     CALL calc_jedi_phenology(  &
                                &  dsl4jsb_Lctlib_param(JeDiSLA),       &  ! in
                                &  c_leaves,                             &  ! in
                                &  lai                  )  ! inout
-  ! ELSE
+   !ELSE
    
-  !    lai = 5._wp
+      !lai = 2._wp
     
-  ! ENDIF 
+   !ENDIF 
  
    
 

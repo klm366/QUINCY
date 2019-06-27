@@ -147,8 +147,13 @@ CONTAINS
         & 1.0_wp - exp(-dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom) / dsl4jsb_Lctlib_param(clumpinessFactor))
     !@todo: do not rely on the lib_id but use a flag instead?
     ELSE IF (tile%lcts(1)%lib_id /= 0)  THEN ! only if the present tile is a pft
-      dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =   &
-        & 1.0_wp - exp(-dsl4jsb_Lctlib_param(MaxLAI) / dsl4jsb_Lctlib_param(clumpinessFactor))
+   !PHS   dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =   &
+   !PHS     & 1.0_wp - exp(-dsl4jsb_Lctlib_param(MaxLAI) / dsl4jsb_Lctlib_param(clumpinessFactor))
+   !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+   !PHS: JeDi does not need this vegetation correction so I set the correction fraction to one.
+   !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=        
+      dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =  1.0_wp 
+   !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=      
     END IF
 
   END SUBROUTINE pheno_init_bc

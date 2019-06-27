@@ -193,7 +193,7 @@ MODULE mo_pheno_process
        lai = c_leaves * JeDiSLA
        !lai = lai + 1._wp/365._wp
       
-       !lai = 5._wp
+     !  lai = 2._wp
 
 
 

@@ -22,7 +22,8 @@ MODULE mo_jsb_lctlib_class
   USE mo_kind,         ONLY: wp
   USE mo_exception,    ONLY: message_text, finish
   USE mo_util,         ONLY: int2string
-
+  USE mo_jsb_time,        ONLY: timeStep_in_days,get_time_dt
+  
   IMPLICIT NONE
   PRIVATE
 
@@ -155,7 +156,11 @@ MODULE mo_jsb_lctlib_class
     !  JeDi plant trait parameter
     
     REAL(wp) :: GrowRspdMoist
+    REAL(wp) :: jedi_F_pseudo_soilM
+    REAL(wp) :: jedi_N_pseudo_soilM
     REAL(wp) :: GrowRspdTemp 
+    REAL(wp) :: jedi_F_pseudo_T
+    REAL(wp) :: jedi_N_pseudo_T
     REAL(wp) :: CritiGrowTemp
     REAL(wp) :: GermFrac     
     REAL(wp) :: Allo2Reproduc
@@ -167,6 +172,8 @@ MODULE mo_jsb_lctlib_class
     REAL(wp) :: TurnoverStruc
     REAL(wp) :: TurnoverLeaf 
     REAL(wp) :: SenesRspdNPP 
+    REAL(wp) :: jedi_F_pseudo_npp
+    REAL(wp) :: jedi_N_pseudo_npp
     REAL(wp) :: RelSenesAbgd 
     REAL(wp) :: NitroStatus  
     REAL(wp) :: JeDiCarboxRate
@@ -223,7 +230,7 @@ CONTAINS
     TYPE(t_lctlib_element), ALLOCATABLE :: lctlib(:)
 
     INTEGER, PARAMETER            :: lctlib_file_unit = 66
-    INTEGER, PARAMETER            :: length_of_jedi_line = 915
+    INTEGER, PARAMETER            :: length_of_jedi_line = 9100
     CHARACTER(len=30)  :: key
     CHARACTER(len=length_of_jedi_line) :: line
     INTEGER            :: pos_comment, read_status
@@ -334,11 +341,11 @@ CONTAINS
     
     REAL(wp),ALLOCATABLE :: P01(:),P02(:),P03(:),P04(:),P05(:),P06(:),P07(:),P08(:),P09(:),P10(:)
     REAL(wp),ALLOCATABLE :: P11(:),P12(:),P13(:),P14(:),P15(:),Pdenom(:)
-    CHARACTER(len=19)  :: fm 
+    CHARACTER(len=21)  :: fm 
     CHARACTER(len=7)  :: fm_jedi_read_line
         
-        fm_jedi_read_line = '(A300)'
-        write(fm_jedi_read_line(3:5),'(I3)') length_of_jedi_line
+        fm_jedi_read_line = '(A910 )'
+        write(fm_jedi_read_line(3:6),'(I4)') length_of_jedi_line
         
     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!   
                         
@@ -442,8 +449,8 @@ CONTAINS
           READ(line(1:pos-1),'(A)') key
           key = tolower(key)
           
-          fm="(A  ,   (1x,F12.6))"
-          write(fm(7:8),'(I2)') nlct
+          fm="(A  ,     (1x,F12.6))"
+          write(fm(6:9),'(I4)') nlct
           write(*,*) fm,key
           IF(TRIM(key) == "nlct") CYCLE ! nlct already read above
 
@@ -732,17 +739,27 @@ CONTAINS
              
              CASE ('growrspdmoist')
                 READ(line(pos:length),*) P01(1:nlct)                
-                lctlib(1:nlct)%GrowRspdMoist = 10._wp ** ( 4.0_wp * P01(1:nlct)  - 2.0_wp )                
-                exists_GrowRspdMoist   = .TRUE.                
+                lctlib(1:nlct)%GrowRspdMoist = 10._wp ** ( 4.0_wp * P01(1:nlct)  - 2.0_wp )  
+                ! lctlib(1:nlct)%GrowRspdMoist = 100._wp  ** P01(1:nlct)   ! 2019/4/8 PHS chnage the way to sample plant response to temperature, and the memory [days] of plant growth response to temperature
+                exists_GrowRspdMoist   = .TRUE.     
+                  lctlib(1:nlct)%jedi_F_pseudo_soilM = EXP(- get_time_dt() / (lctlib(1:nlct)%GrowRspdMoist  * 86400._wp))
+                  lctlib(1:nlct)%jedi_N_pseudo_soilM = 1._wp / (1._wp - lctlib(1:nlct)%jedi_F_pseudo_soilM )
                 WRITE(35,fm) 'GrowRspdMoist ',lctlib(1:nlct)%GrowRspdMoist
+                WRITE(35,fm) 'jedi_F_pseudo_soilM',lctlib(1:nlct)%jedi_F_pseudo_soilM
+                WRITE(35,fm) ' jedi_N_pseudo_soilM',lctlib(1:nlct)%jedi_N_pseudo_soilM
              CASE ('growrspdtemp')
                 READ(line(pos:length),*) P02(1:nlct)                
                 lctlib(1:nlct)%GrowRspdTemp = 10._wp ** ( 4.0_wp * P02(1:nlct)  - 2.0_wp )
+                !lctlib(1:nlct)%GrowRspdTemp = 100._wp ** P02(1:nlct)  !  2019/4/8 PHS chnage the way to sample plant response to soil moisture, and the memory [days] of plant growth response to soil moisture
                 exists_GrowRspdTemp   = .TRUE.
-                WRITE(35,fm) 'GrowRspdTemp ',lctlib(1:nlct)%GrowRspdTemp                
+                 lctlib(1:nlct)%jedi_F_pseudo_T = EXP(- get_time_dt() / (lctlib(1:nlct)%GrowRspdTemp* 86400._wp ))
+                 lctlib(1:nlct)%jedi_N_pseudo_T = 1._wp / (1._wp - lctlib(1:nlct)%jedi_F_pseudo_T )
+                WRITE(35,fm) 'GrowRspdTemp ',lctlib(1:nlct)%GrowRspdTemp     
+                 WRITE(35,fm) 'jedi_F_pseudo_T ',lctlib(1:nlct)%jedi_F_pseudo_T
+                 WRITE(35,fm) 'jedi_N_pseudo_T',lctlib(1:nlct)%jedi_N_pseudo_T 
              CASE ('critigrowtemp')
                 READ(line(pos:length),*) P03(1:nlct)                
-                lctlib(1:nlct)%CritiGrowTemp = P03(1:nlct)    * ( 10.0_wp - ( -5.0_wp ) )                
+                lctlib(1:nlct)%CritiGrowTemp = -5._wp + P03(1:nlct)    * ( 10.0_wp - ( -5.0_wp ) )      !PHS: 21.06.2019 End of growth season  from -5degC to 0 degC
                 exists_CritiGrowTemp   = .TRUE.
                 WRITE(35,fm) 'CritiGrowTemp ',lctlib(1:nlct)%CritiGrowTemp
              CASE ('germfrac')
@@ -753,26 +770,22 @@ CONTAINS
              CASE ('allo2reproduc')
                 READ(line(pos:length),*) P05(1:nlct)               
                 exists_Allo2Reproduc   = .TRUE.
-                
              CASE ('allo2abground')
                 READ(line(pos:length),*) P06(1:nlct)
                 exists_Allo2Abground   = .TRUE.
-                
              CASE ('allo2blground')
                 READ(line(pos:length),*) P07(1:nlct)
                 exists_Allo2Blground   = .TRUE.
-                
              CASE ('allo2storage')
                 READ(line(pos:length),*) P08(1:nlct)
                 exists_Allo2Storage   = .TRUE.
-                
              CASE ('relallo2abgrd')
                 READ(line(pos:length),*) lctlib(1:nlct)%RelAllo2Abgrd
                 exists_RelAllo2Abgrd   = .TRUE.
                 WRITE(35,fm) 'RelAllo2AbStru',lctlib(1:nlct)%RelAllo2Abgrd
              CASE ('relallo2blgrd')
                 READ(line(pos:length),*) lctlib(1:nlct)%RelAllo2Blgrd
-                exists_RelAllo2Blgrd   = .TRUE.             
+                exists_RelAllo2Blgrd   = .TRUE.
                 WRITE(35,fm) 'RelAllo2BlStru',lctlib(1:nlct)%RelAllo2Blgrd
              CASE ('turnoverstruc')             
                 READ(line(pos:length),*) P11(1:nlct)
@@ -783,23 +796,32 @@ CONTAINS
                 READ(line(pos:length),*) P12(1:nlct)
                 lctlib(1:nlct)%TurnoverLeaf = ( 365._wp / 12._wp ) * ( 10._wp ** (P12(1:nlct) * 2._wp) )
                 exists_TurnoverLeaf   = .TRUE.
-                WRITE(35,fm) 'TurnoverLeaf ',lctlib(1:nlct)%TurnoverLeaf
+                WRITE(35,fm) 'TurnoverLeaf ',lctlib(1:nlct)%TurnoverLeaf  !PHS 9. May. 2019 : we try to sample from sla to turove rate                
+                !lctlib(1:nlct)%JeDiSLA = 50._wp * 12.01_wp * 0.0001_wp + P12(1:nlct) * (  (1000._wp - 50._wp ) * 12.01_wp * 0.0001_wp  )  !PHS 9. May. 2019 : we try to sample from sla to turove rate
+             !   lctlib(1:nlct)%JeDiSLA = 0.104  !superspecies
+              !  WRITE(35,fm) 'JeDiSLA ',   lctlib(1:nlct)%JeDiSLA  !PHS 9. May. 2019 : we try to sample from sla to turove rate                                            
              CASE ('senesrspdnpp')
                 READ(line(pos:length),*) P13(1:nlct)
-                lctlib(1:nlct)%SenesRspdNPP = 10._wp ** ( 4.0_wp * P13(1:nlct) - 1.0_wp )
+                !lctlib(1:nlct)%SenesRspdNPP = 10._wp ** ( 4.0_wp * P13(1:nlct) - 1.0_wp )
+                 lctlib(1:nlct)%SenesRspdNPP = 10._wp ** ( 2.5_wp * P13(1:nlct) - 1.0_wp )  !PHS:18.06.2019 New sample
+                !lctlib(1:nlct)%SenesRspdNPP = 100._wp ** P13(1:nlct)  
                 exists_SenesRspdNPP   = .TRUE.
-                WRITE(35,fm) 'SenesRspdNPP ',lctlib(1:nlct)%SenesRspdNPP
+                 lctlib(1:nlct)%jedi_F_pseudo_npp = EXP(- get_time_dt() / (lctlib(1:nlct)%SenesRspdNPP * 86400._wp))
+                 lctlib(1:nlct)%jedi_N_pseudo_npp = 1._wp / (1._wp - lctlib(1:nlct)%jedi_F_pseudo_npp )
+                WRITE(35,fm) 'SenesRspdNPP ',lctlib(1:nlct)%SenesRspdNPP  !  2019/4/8 PHS chnage the way to sample plant response to bad npp, and the memory [days] of plant senescence response to bad npp
+                WRITE(35,fm) 'jedi_F_pseudo_npp ',lctlib(1:nlct)%jedi_F_pseudo_npp
+                WRITE(35,fm) 'jedi_N_pseudo_npp ',lctlib(1:nlct)%jedi_N_pseudo_npp
              CASE ('relsenesabgd')
                 READ(line(pos:length),*) P14(1:nlct)
-                lctlib(1:nlct)%RelSenesAbgd = 10._wp ** ( 8.0_wp * P14(1:nlct) - 7.0_wp )
+                !lctlib(1:nlct)%RelSenesAbgd = 10._wp ** ( 8.0_wp * P14(1:nlct) - 7.0_wp )
+                lctlib(1:nlct)%RelSenesAbgd =  P14(1:nlct)
                 exists_RelSenesAbgd   = .TRUE.
                 WRITE(35,fm) 'RelSenesAbgd ',lctlib(1:nlct)%RelSenesAbgd
              CASE ('nitrostatus')
                 READ(line(pos:length),*) P15(1:nlct)
                 lctlib(1:nlct)%NitroStatus = (0.9_wp * P15(1:nlct) + 0.1_wp) * 8.578_wp * 0.01_wp  ! [NL] molN / molC canopy nitrogen concentration follows Ollinger (2008) (Pavlick thesis P.89)               
-                exists_NitroStatus   = .TRUE.                                                       
+                exists_NitroStatus   = .TRUE.
                 WRITE(35,fm) 'NitroStatus ',lctlib(1:nlct)%NitroStatus
-                WRITE(*,*)  "nitro"
           !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
         
           CASE default
@@ -819,8 +841,8 @@ CONTAINS
 !            CALL finish('init_lctlib','No data for LctName found in '//TRIM(lctlib_file_name))
             ! Set default
             lctlib%LctName = "undefined"
-!B       IF(.NOT. exist_LandcoverClass) &
-!B            CALL finish('init_lctlib','No data for LandcoverClass found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exist_LandcoverClass) &
+!PHS            CALL finish('init_lctlib','No data for LandcoverClass found in '//TRIM(lctlib_file_name))
        IF(.NOT. exist_AlbedoSnowVisMin) &
             CALL finish('init_lctlib','No data for AlbedoSnowVisMin found in '//TRIM(lctlib_file_name))
        IF(.NOT. exist_AlbedoSnowVisMax) &
@@ -837,129 +859,129 @@ CONTAINS
             CALL finish('init_lctlib','No data for AlbedoCanopyVIS found in '//TRIM(lctlib_file_name))
        IF(.NOT. exist_AlbedoCanopyNIR) &
             CALL finish('init_lctlib','No data for albedoCanopyNIR found in '//TRIM(lctlib_file_name))
-!B       IF(.NOT. exist_AlbedoLitterVis) &
-!B            CALL finish('init_lctlib','No data for AlbedoLitterVis found in '//TRIM(lctlib_file_name))
-!B       IF(.NOT. exist_AlbedoLitterNir) &
-!B            CALL finish('init_lctlib','No data for AlbedoLitterNir found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exist_AlbedoLitterVis) &
+!PHS            CALL finish('init_lctlib','No data for AlbedoLitterVis found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exist_AlbedoLitterNir) &
+!PHS            CALL finish('init_lctlib','No data for AlbedoLitterNir found in '//TRIM(lctlib_file_name))
        IF(.NOT. exist_nitrogenScalingFlag) &
             CALL finish('init_lctLib','No data for NitrogenScalingFlag found in '//TRIM(lctLib_file_name))
        IF(.NOT. exist_C4flag) &
             CALL finish('init_lctLib','No data for C4flag found in '//TRIM(lctLib_file_name))
-!BC       IF(.NOT. exist_CarboxRate) &
-!BC            CALL finish('init_lctLib','No data for CarboxRate found in '//TRIM(lctLib_file_name))
-!BC       IF(.NOT. exist_ETransport) &
-!BC            CALL finish('init_lctLib','No data for ETransport found in '//TRIM(lctLib_file_name))
-!B       IF(.NOT. exist_VegHeight) &
-!B            CALL finish('init_lctLib','No data for VegHeight found in '//TRIM(lctLib_file_name))
+!PHS       IF(.NOT. exist_CarboxRate) &
+!PHS            CALL finish('init_lctLib','No data for CarboxRate found in '//TRIM(lctLib_file_name))
+!PHS       IF(.NOT. exist_ETransport) &
+!PHS            CALL finish('init_lctLib','No data for ETransport found in '//TRIM(lctLib_file_name))
+!PHS       IF(.NOT. exist_VegHeight) &
+!PHS            CALL finish('init_lctLib','No data for VegHeight found in '//TRIM(lctLib_file_name))
        IF(.NOT. exist_VegRoughness) &
             CALL finish('init_lctLib','No data for VegRoughness found in '//TRIM(lctLib_file_name))
        IF(.NOT. exist_MinVegRoughness) &
             CALL finish('init_lctLib','No data for MinVegRoughness found in '//TRIM(lctLib_file_name))
        IF(.NOT. exist_MaxVegRoughness) &
             CALL finish('init_lctLib','No data for MaxVegRoughness found in '//TRIM(lctLib_file_name))
-!B       IF(.NOT. exist_PhenologyType) &
-!B            CALL finish('init_lctlib','No data for PhenologyType found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exist_PhenologyType) &
+!PHS            CALL finish('init_lctlib','No data for PhenologyType found in '//TRIM(lctlib_file_name))
        IF (.NOT. exist_CanopyResistanceMin) &
             lctlib%CanopyResistanceMin = -1.0_wp
        IF(.NOT. exist_MaxLAI) &
             CALL finish('init_lctlib','No data for MaxLAI found in '//TRIM(lctlib_file_name))
        IF(.NOT. exist_StemArea) &
             CALL finish('init_lctlib','No data for StemArea found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT. exist_specificLeafArea_C) &
-!BC            CALL finish('init_lctlib','No data for specificLeafArea_C found in '//TRIM(lctlib_file_name))
-!BC
-!BC       IF(.NOT. exist_alpha_nr_ind) &
-!BC            CALL finish('init_lctlib','No data for alpha_nr_ind found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT. exist_beta_nr_ind) &
-!BC            CALL finish('init_lctlib','No data for beta_nr_ind found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT. exist_alpha_leaf) &
-!BC            CALL finish('init_lctlib','No data for alpha_leaf found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT. exist_beta_leaf) &
-!BC            CALL finish('init_lctlib','No data for beta_leaf found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exist_specificLeafArea_C) &
+!PHS            CALL finish('init_lctlib','No data for specificLeafArea_C found in '//TRIM(lctlib_file_name))
+!PHS
+!PHS       IF(.NOT. exist_alpha_nr_ind) &
+!PHS            CALL finish('init_lctlib','No data for alpha_nr_ind found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exist_beta_nr_ind) &
+!PHS            CALL finish('init_lctlib','No data for beta_nr_ind found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exist_alpha_leaf) &
+!PHS            CALL finish('init_lctlib','No data for alpha_leaf found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exist_beta_leaf) &
+!PHS            CALL finish('init_lctlib','No data for beta_leaf found in '//TRIM(lctlib_file_name))
 
-!BC      IF(.NOT. exist_knorr_tau_w) &
-!BC        CALL finish('init_lctlib','No data for knorr_Tau_w found in '//TRIM(lctlib_file_name))
-!BC      IF(.NOT. exist_knorr_t_phi) &
-!BC        CALL finish('init_lctlib','No data for knorr_T_phi found in '//TRIM(lctlib_file_name))
-!BC      IF(.NOT. exist_knorr_t_r) &
-!BC        CALL finish('init_lctlib','No data for knorr_T_rfound in '//TRIM(lctlib_file_name))
-!BC      IF(.NOT. exist_knorr_day_c) &
-!BC        CALL finish('init_lctlib','No data for knorr_Day_c found in '//TRIM(lctlib_file_name))
-!BC      IF(.NOT. exist_knorr_day_r) &
-!BC        CALL finish('init_lctlib','No data for knorr_Day_r found in '//TRIM(lctlib_file_name))
-!BC      IF(.NOT. exist_knorr_k_l) &
-!BC        CALL finish('init_lctlib','No data for knorr_k_l found in '//TRIM(lctlib_file_name))
-!BC      IF(.NOT. exist_knorr_max_lai) &
-!BC        CALL finish('init_lctlib','No data for knorr_max_lai found in '//TRIM(lctlib_file_name))
-!BC      IF(.NOT. exist_knorr_leaf_growth_rate) &
-!BC        CALL finish('init_lctlib','No data for leaf_growth_rate found in '//TRIM(lctlib_file_name))
+!PHS      IF(.NOT. exist_knorr_tau_w) &
+!PHS        CALL finish('init_lctlib','No data for knorr_Tau_w found in '//TRIM(lctlib_file_name))
+!PHS      IF(.NOT. exist_knorr_t_phi) &
+!PHS        CALL finish('init_lctlib','No data for knorr_T_phi found in '//TRIM(lctlib_file_name))
+!PHS      IF(.NOT. exist_knorr_t_r) &
+!PHS        CALL finish('init_lctlib','No data for knorr_T_rfound in '//TRIM(lctlib_file_name))
+!PHS      IF(.NOT. exist_knorr_day_c) &
+!PHS        CALL finish('init_lctlib','No data for knorr_Day_c found in '//TRIM(lctlib_file_name))
+!PHS      IF(.NOT. exist_knorr_day_r) &
+!PHS        CALL finish('init_lctlib','No data for knorr_Day_r found in '//TRIM(lctlib_file_name))
+!PHS      IF(.NOT. exist_knorr_k_l) &
+!PHS        CALL finish('init_lctlib','No data for knorr_k_l found in '//TRIM(lctlib_file_name))
+!PHS      IF(.NOT. exist_knorr_max_lai) &
+!PHS        CALL finish('init_lctlib','No data for knorr_max_lai found in '//TRIM(lctlib_file_name))
+!PHS      IF(.NOT. exist_knorr_leaf_growth_rate) &
+!PHS        CALL finish('init_lctlib','No data for leaf_growth_rate found in '//TRIM(lctlib_file_name))
 
-!BC       IF(.NOT. exist_reserveC2leafC) &
-!BC            CALL finish('init_lctlib','No data for reserveC2leafC found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT. exist_fract_npp_2_woodPool) &
-!BC            CALL finish('init_lctlib','No data for fract_npp_2_woodPool found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT. exist_fract_npp_2_reservePool) &
-!BC            CALL finish('init_lctlib','No data for fract_npp_2_reservePool found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT. exist_fract_npp_2_exudates) &
-!BC            CALL finish('init_lctlib','No data for fract_npp_2_exudates found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT. exist_fract_green_2_herbivory) &
-!BC            CALL finish('init_lctlib','No data for fract_green_2_herbivory found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT. exist_tau_c_litter_leaf) &
-!BC            CALL finish('init_lctlib','No data for tau_c_litter_leaf found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT. exist_tau_c_litter_wood) &
-!BC            CALL finish('init_lctlib','No data for tau_c_litter_wood found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT. exist_tau_c_woods) &
-!BC            CALL finish('init_lctlib','No data for tau_c_woods found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT. exist_LAI_shed_constant) &
-!BC            CALL finish('init_lctlib','No data for LAI_shed_constant found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT. exist_fract_C_litter_green2atmos) &
-!BC            CALL finish('init_lctlib','No data for fract_C_litter_green2atmos found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT. exist_Max_C_content_woods) &
-!BC            CALL finish('init_lctlib','No data for Max_C_content_woods found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT. exist_ClumpinessFactor) &
-!BC            CALL finish('init_lctlib','No data for ClupinessFactor found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT. exists_dynamic_PFT) &
-!BC            CALL finish('init_lctlib','No data for DYNAMIC_PFT found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT. exists_woody_PFT) &
-!BC            CALL finish('init_lctlib','No data for WOODY_PFT found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT. exists_pasture_PFT) &
-!BC            CALL finish('init_lctlib','No data for PASTURE_PFT found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT. exists_bclimit_min_cold_mmtemp) &
-!BC            CALL finish('init_lctlib','No data for BCLIMIT_MIN_COLD_MMTEMP found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT. exists_bclimit_max_cold_mmtemp) &
-!BC            CALL finish('init_lctlib','No data for BCLIMIT_MAX_COLD_MMTEMP found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT. exists_bclimit_max_warm_mmtemp) &
-!BC            CALL finish('init_lctlib','No data for BCLIMIT_MAX_WARM_MMTEMP found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT. exists_bclimit_min_temprange ) &
-!BC            CALL finish('init_lctlib','No data for BCLIMIT_MIN_TEMPRANGE found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT.exists_bclimit_min_gdd ) &
-!BC            CALL finish('init_lctlib','No data for BCLIMIT_MIN_GDD found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT. exists_gdd_base) &
-!BC            CALL finish('init_lctlib','No data for GDD_BASE found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT. exists_upper_tlim) &
-!BC            CALL finish('init_lctlib','No data for UPPER_TLIM found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT. exists_fract_wood_2_onSite) &
-!BC            CALL finish('init_lctlib','No data for FRACT_WOOD_2_ONSITE found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT. exists_fract_wood_2_paper) &
-!BC            CALL finish('init_lctlib','No data for FRACT_WOOD_2_PAPER found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT. exists_fract_wood_2_construction) &
-!BC            CALL finish('init_lctlib','No data for FRACT_WOOD_2_CONSTRUCTION found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT. exists_moist_extinction) &
-!BC            CALL finish('init_lctlib','No data for moisture of extinction found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT. exists_fuel_dens) &
-!BC            CALL finish('init_lctlib','No data for bulk fuel density found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT. exists_flame_length_f) &
-!BC            CALL finish('init_lctlib','No data for flame length f found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT. exists_crown_length) &
-!BC            CALL finish('init_lctlib','No data for crown length found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT. exists_bark_par1) &
-!BC            CALL finish('init_lctlib','No data for bark_par1 found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT. exists_bark_par2) &
-!BC            CALL finish('init_lctlib','No data for bark_par2 found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT. exists_RCK) &
-!BC            CALL finish('init_lctlib','No data for RCK (resistance to crown damage) found in '//TRIM(lctlib_file_name))
-!BC       IF(.NOT. exists_mort_prob) &
-!BC            CALL finish('init_lctlib','No data for mortality probability found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exist_reserveC2leafC) &
+!PHS            CALL finish('init_lctlib','No data for reserveC2leafC found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exist_fract_npp_2_woodPool) &
+!PHS            CALL finish('init_lctlib','No data for fract_npp_2_woodPool found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exist_fract_npp_2_reservePool) &
+!PHS            CALL finish('init_lctlib','No data for fract_npp_2_reservePool found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exist_fract_npp_2_exudates) &
+!PHS            CALL finish('init_lctlib','No data for fract_npp_2_exudates found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exist_fract_green_2_herbivory) &
+!PHS            CALL finish('init_lctlib','No data for fract_green_2_herbivory found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exist_tau_c_litter_leaf) &
+!PHS            CALL finish('init_lctlib','No data for tau_c_litter_leaf found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exist_tau_c_litter_wood) &
+!PHS            CALL finish('init_lctlib','No data for tau_c_litter_wood found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exist_tau_c_woods) &
+!PHS            CALL finish('init_lctlib','No data for tau_c_woods found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exist_LAI_shed_constant) &
+!PHS            CALL finish('init_lctlib','No data for LAI_shed_constant found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exist_fract_C_litter_green2atmos) &
+!PHS            CALL finish('init_lctlib','No data for fract_C_litter_green2atmos found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exist_Max_C_content_woods) &
+!PHS            CALL finish('init_lctlib','No data for Max_C_content_woods found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exist_ClumpinessFactor) &
+!PHS            CALL finish('init_lctlib','No data for ClupinessFactor found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exists_dynamic_PFT) &
+!PHS            CALL finish('init_lctlib','No data for DYNAMIC_PFT found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exists_woody_PFT) &
+!PHS            CALL finish('init_lctlib','No data for WOODY_PFT found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exists_pasture_PFT) &
+!PHS            CALL finish('init_lctlib','No data for PASTURE_PFT found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exists_bclimit_min_cold_mmtemp) &
+!PHS            CALL finish('init_lctlib','No data for BCLIMIT_MIN_COLD_MMTEMP found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exists_bclimit_max_cold_mmtemp) &
+!PHS            CALL finish('init_lctlib','No data for BCLIMIT_MAX_COLD_MMTEMP found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exists_bclimit_max_warm_mmtemp) &
+!PHS            CALL finish('init_lctlib','No data for BCLIMIT_MAX_WARM_MMTEMP found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exists_bclimit_min_temprange ) &
+!PHS            CALL finish('init_lctlib','No data for BCLIMIT_MIN_TEMPRANGE found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT.exists_bclimit_min_gdd ) &
+!PHS            CALL finish('init_lctlib','No data for BCLIMIT_MIN_GDD found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exists_gdd_base) &
+!PHS            CALL finish('init_lctlib','No data for GDD_BASE found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exists_upper_tlim) &
+!PHS            CALL finish('init_lctlib','No data for UPPER_TLIM found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exists_fract_wood_2_onSite) &
+!PHS            CALL finish('init_lctlib','No data for FRACT_WOOD_2_ONSITE found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exists_fract_wood_2_paper) &
+!PHS            CALL finish('init_lctlib','No data for FRACT_WOOD_2_PAPER found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exists_fract_wood_2_construction) &
+!PHS            CALL finish('init_lctlib','No data for FRACT_WOOD_2_CONSTRUCTION found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exists_moist_extinction) &
+!PHS            CALL finish('init_lctlib','No data for moisture of extinction found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exists_fuel_dens) &
+!PHS            CALL finish('init_lctlib','No data for bulk fuel density found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exists_flame_length_f) &
+!PHS            CALL finish('init_lctlib','No data for flame length f found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exists_crown_length) &
+!PHS            CALL finish('init_lctlib','No data for crown length found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exists_bark_par1) &
+!PHS            CALL finish('init_lctlib','No data for bark_par1 found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exists_bark_par2) &
+!PHS            CALL finish('init_lctlib','No data for bark_par2 found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exists_RCK) &
+!PHS            CALL finish('init_lctlib','No data for RCK (resistance to crown damage) found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exists_mort_prob) &
+!PHS            CALL finish('init_lctlib','No data for mortality probability found in '//TRIM(lctlib_file_name))
        IF(.NOT. exists_woodlittersize_coef) &
             CALL finish('init_lctlib','No data for WOODLITTERSIZE found in '//TRIM(lctlib_file_name))
        IF(.NOT. exists_woodlit_coef) &
@@ -1021,6 +1043,7 @@ CONTAINS
         lctlib(1:nlct)%Allo2Abground = P06(1:nlct) / Pdenom(1:nlct)
         lctlib(1:nlct)%Allo2Blground = P07(1:nlct) / Pdenom(1:nlct)
         lctlib(1:nlct)%Allo2Storage  = P08(1:nlct) / Pdenom(1:nlct)
+        
         WRITE(35,fm) 'Allo2Reproduc ',lctlib(1:nlct)%Allo2Reproduc 
         WRITE(35,fm) 'Allo2Abground ',lctlib(1:nlct)%Allo2Abground 
         WRITE(35,fm) 'Allo2Blground ',lctlib(1:nlct)%Allo2Blground 
@@ -1031,13 +1054,19 @@ CONTAINS
        ENDIF
        
        IF (exists_NitroStatus) THEN
-       lctlib(1:nlct)%JeDiSLA = ( 0.102083_wp * ( ( lctlib(1:nlct)%TurnoverLeaf / 365._wp ) ** ( -0.46_wp ) ) )   !  I add this factor three to have JeDi's sla values'
-       !lctlib(1:nlct)%JeDiSLA = ( 0.03_wp * ( ( lctlib(1:nlct)%TurnoverLeaf / 365._wp ) ** ( -0.46_wp ) ) ) *  12.01_wp                                       
-       
-       lctlib(1:nlct)%JeDiCarboxRate = 12.01_wp * ( 10._wp**0.13_wp ) * ( 10._wp ** -9._wp) * ( lctlib(1:nlct)%NitroStatus * 1000._wp * 14._wp / 12.01_wp)**1.42_wp / lctlib(1:nlct)%JeDiSLA
-       
+       !lctlib(1:nlct)%JeDiSLA = ( 0.102083_wp * ( ( lctlib(1:nlct)%TurnoverLeaf / 365._wp ) ** ( -0.46_wp ) ) ) 
+ 
+       lctlib(1:nlct)%JeDiSLA = ( 0.03_wp * ( ( lctlib(1:nlct)%TurnoverLeaf / 365._wp ) ** ( -0.46_wp ) ) ) *  12.01_wp  
+      
+    
+   !    lctlib(1:nlct)%TurnoverLeaf = exp(  ( - 1._wp /  0.46_wp ) * log(lctlib(1:nlct)%JeDiSLA / (0.102083_wp * 365._wp**0.46_wp)  )  )
+         
+       lctlib(1:nlct)%JeDiCarboxRate = 12.01_wp * ( 10._wp**0.13_wp ) * ( 1.e-09_wp ) * ( lctlib(1:nlct)%NitroStatus * 1000._wp * 14._wp / 12.01_wp)**1.42_wp / lctlib(1:nlct)%JeDiSLA  
+ 
        WRITE(35,fm) 'JeDiCarboxRate ',lctlib(1:nlct)%JeDiCarboxRate * (10._wp**6._wp )  ! This is added for formatted output of the VCmax in the Jedi_parameter       
-       WRITE(35,fm) 'JeDiSLA ',   lctlib(1:nlct)%JeDiSLA
+       WRITE(35,fm) 'JeDiSLA ',   lctlib(1:nlct)%JeDiSLA  !PHS 9. May. 2019 : we try to sample from sla to turove rate       
+    !   WRITE(35,fm) 'TurnoverLeaf ',lctlib(1:nlct)%TurnoverLeaf
+       
        ENDIF
        
        CLOSE(35)
@@ -1049,88 +1078,88 @@ CONTAINS
        ! kalle, 151004
        ! Set carbox rate to  [Mol(CO2)/m^2/s]
        ! SET e-transport rate to [Mol(CO2)/m^2/s]
-!BC       DO i=1,nlct
-!BC         lctLib(i)%ETransport=lctLib(i)%ETransport * 1.e-06_wp
-!BC         lctlib(i)%CarboxRate=lctlib(i)%CarboxRate * 1.e-06_wp
-!BC       END DO
+!PHS       DO i=1,nlct
+!PHS         lctLib(i)%ETransport=lctLib(i)%ETransport * 1.e-06_wp
+!PHS         lctlib(i)%CarboxRate=lctlib(i)%CarboxRate * 1.e-06_wp
+!PHS       END DO
        !------------------------------------------------------------------------------------------
 
        !! --- translate landcover class information into landcover class flags
 
-!B       lctlib(1:nlct)%BareSoilFlag   = .FALSE.
-!B       lctlib(1:nlct)%GlacierFlag    = .FALSE.
-!B       lctlib(1:nlct)%LakeFlag       = .FALSE.
-!B       lctlib(1:nlct)%ForestFlag     = .FALSE.
-!B       lctlib(1:nlct)%GrassFlag      = .FALSE.
-!B       lctlib(1:nlct)%CropFlag       = .FALSE.
-!B       lctlib(1:nlct)%PastureFlag    = .FALSE.
-!B       lctlib(1:nlct)%NaturalVegFlag = .FALSE.
+!PHS       lctlib(1:nlct)%BareSoilFlag   = .FALSE.
+!PHS       lctlib(1:nlct)%GlacierFlag    = .FALSE.
+!PHS       lctlib(1:nlct)%LakeFlag       = .FALSE.
+!PHS       lctlib(1:nlct)%ForestFlag     = .FALSE.
+!PHS       lctlib(1:nlct)%GrassFlag      = .FALSE.
+!PHS       lctlib(1:nlct)%CropFlag       = .FALSE.
+!PHS       lctlib(1:nlct)%PastureFlag    = .FALSE.
+!PHS       lctlib(1:nlct)%NaturalVegFlag = .FALSE.
 
-!B       DO i=1,nlct
-!B          SELECT CASE (lctlib(i)%LandcoverClass)
-!B          CASE (0)
-!B             lctlib(i)%BareSoilFlag = .TRUE.
-!B          CASE (1)
-!B             lctlib(i)%GlacierFlag = .TRUE.
-!B          CASE (2)
-!B             lctlib(i)%LakeFlag = .TRUE.
-!B          CASE (3)
-!B             lctlib(i)%ForestFlag = .TRUE.
-!B             lctlib(i)%NaturalVegFlag = .TRUE.
-!B          CASE (4)
-!B             lctlib(i)%GrassFlag = .TRUE.
-!B             lctlib(i)%NaturalVegFlag = .TRUE.
-!B          CASE (5)
-!B             lctlib(i)%NaturalVegFlag = .TRUE.
-!B          CASE (6)
-!B             lctlib(i)%CropFlag = .TRUE.
-!B          CASE (7)
-!B             lctlib(i)%PastureFlag = .TRUE.
-!B          CASE default
-!B             WRITE(message_text,*) 'LandcoverClass ', lctlib(i)%LandcoverClass,' not allowed in ', TRIM(lctlib_file_name)
-!B             CALL finish('init_lctlib', message_text)
-!B          END SELECT
-!B       END DO
+!PHS       DO i=1,nlct
+!PHS          SELECT CASE (lctlib(i)%LandcoverClass)
+!PHS          CASE (0)
+!PHS             lctlib(i)%BareSoilFlag = .TRUE.
+!PHS          CASE (1)
+!PHS             lctlib(i)%GlacierFlag = .TRUE.
+!PHS          CASE (2)
+!PHS             lctlib(i)%LakeFlag = .TRUE.
+!PHS          CASE (3)
+!PHS             lctlib(i)%ForestFlag = .TRUE.
+!PHS             lctlib(i)%NaturalVegFlag = .TRUE.
+!PHS          CASE (4)
+!PHS             lctlib(i)%GrassFlag = .TRUE.
+!PHS             lctlib(i)%NaturalVegFlag = .TRUE.
+!PHS          CASE (5)
+!PHS             lctlib(i)%NaturalVegFlag = .TRUE.
+!PHS          CASE (6)
+!PHS             lctlib(i)%CropFlag = .TRUE.
+!PHS          CASE (7)
+!PHS             lctlib(i)%PastureFlag = .TRUE.
+!PHS          CASE default
+!PHS             WRITE(message_text,*) 'LandcoverClass ', lctlib(i)%LandcoverClass,' not allowed in ', TRIM(lctlib_file_name)
+!PHS             CALL finish('init_lctlib', message_text)
+!PHS          END SELECT
+!PHS       END DO
 
-!B       npft = 0
+!PHS       npft = 0
         npft = nlct-1
-!B       DO i=1,nlct
-!B          IF(lctlib(i)%naturalVegFlag .OR. lctlib(i)%cropFlag .OR. lctlib(i)%PastureFlag) THEN
-!B
-!B             npft = npft + 1 ! count PFTs
+!PHS       DO i=1,nlct
+!PHS          IF(lctlib(i)%naturalVegFlag .OR. lctlib(i)%cropFlag .OR. lctlib(i)%PastureFlag) THEN
+!PHS
+!PHS             npft = npft + 1 ! count PFTs
 
 
              ! Check consistency with PhenologyTypes
-!B             IF(lctlib(i)%naturalVegFlag .AND. &
-!B                  (lctlib(i)%PhenologyType .LE.0 .OR. lctlib(i)%PhenologyType > 4) ) THEN
-!B                CALL finish('init_lctlib',&
-!B                     'Inconsistent entries for one LandcoverClass and PhenologyType in '//TRIM(lctlib_file_name))
-!B             END IF
-!B             IF(lctlib(i)%CropFlag .AND. .NOT. lctlib(i)%PhenologyType==5 ) THEN
-!B                CALL finish('init_lctlib',&
-!B                     'Inconsistent entries for LandcoverClass "crops" and PhenologyType in '//TRIM(lctlib_file_name))
-!B             END IF
-!B
-!B          END IF
+!PHS             IF(lctlib(i)%naturalVegFlag .AND. &
+!PHS                  (lctlib(i)%PhenologyType .LE.0 .OR. lctlib(i)%PhenologyType > 4) ) THEN
+!PHS                CALL finish('init_lctlib',&
+!PHS                     'Inconsistent entries for one LandcoverClass and PhenologyType in '//TRIM(lctlib_file_name))
+!PHS             END IF
+!PHS             IF(lctlib(i)%CropFlag .AND. .NOT. lctlib(i)%PhenologyType==5 ) THEN
+!PHS                CALL finish('init_lctlib',&
+!PHS                     'Inconsistent entries for LandcoverClass "crops" and PhenologyType in '//TRIM(lctlib_file_name))
+!PHS             END IF
+!PHS
+!PHS          END IF
 
           !! --- check consistency between landcover classes and specifications for the dynamic vegetation
 
- !BC         IF (lctlib(i)%dynamic_pft  .AND. .NOT. lctlib(i)%NaturalVegFlag) THEN
- !BC            CALL finish('init_lctlib',&
- !BC                    'Inconsistent entries: Every DYNAMIC_PFT must belong to LandcoverClass "natural" in '//TRIM(lctlib_file_name))
- !BC         END IF
+ !PHS         IF (lctlib(i)%dynamic_pft  .AND. .NOT. lctlib(i)%NaturalVegFlag) THEN
+ !PHS            CALL finish('init_lctlib',&
+ !PHS                    'Inconsistent entries: Every DYNAMIC_PFT must belong to LandcoverClass "natural" in '//TRIM(lctlib_file_name))
+ !PHS         END IF
 
-!B          IF(lctlib(i)%woody_pft .AND. .NOT. lctlib(i)%NaturalVegFlag) THEN
-!B             CALL finish('init_lctlib',&
-!B                     'Inconsistent entries: Every WOODY_PFT must belong to LandcoverClass "natural" in '//TRIM(lctlib_file_name))
-!B          END IF
+!PHS          IF(lctlib(i)%woody_pft .AND. .NOT. lctlib(i)%NaturalVegFlag) THEN
+!PHS             CALL finish('init_lctlib',&
+!PHS                     'Inconsistent entries: Every WOODY_PFT must belong to LandcoverClass "natural" in '//TRIM(lctlib_file_name))
+!PHS          END IF
 
- !BC         IF( lctlib(i)%GrassFlag .NEQV. (lctlib(i)%dynamic_pft .AND. .NOT. lctlib(i)%woody_PFT )) THEN
- !BC            CALL finish('init_lctlib',&
- !BC                 'Combination of DYNAMIC_PFT and WOODY_PFT is not consistent with LandcoverClass "grasses" in '//&
- !BC                                                                                                    TRIM(lctlib_file_name))
- !BC         END IF
- !B      END DO
+ !PHS         IF( lctlib(i)%GrassFlag .NEQV. (lctlib(i)%dynamic_pft .AND. .NOT. lctlib(i)%woody_PFT )) THEN
+ !PHS            CALL finish('init_lctlib',&
+ !PHS                 'Combination of DYNAMIC_PFT and WOODY_PFT is not consistent with LandcoverClass "grasses" in '//&
+ !PHS                                                                                                    TRIM(lctlib_file_name))
+ !PHS         END IF
+ !PHS      END DO
 
     END IF !p_parallel_io
 
@@ -1141,12 +1170,12 @@ CONTAINS
        DO i=1,nlct
           CALL p_bcast(lctlib(i)%LctName, p_io, mpi_comm)
        ENDDO
-!B       CALL p_bcast(lctlib(:)%LandcoverClass, p_io, mpi_comm)
-!B       CALL p_bcast(lctlib(:)%NaturalVegFlag,p_io, mpi_comm)
-!B       CALL p_bcast(lctlib(:)%ForestFlag,p_io, mpi_comm)
-!B       CALL p_bcast(lctlib(:)%GrassFlag,p_io, mpi_comm)
-!B       CALL p_bcast(lctlib(:)%CropFlag,p_io, mpi_comm)
-!B       CALL p_bcast(lctlib(:)%PastureFlag,p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%LandcoverClass, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%NaturalVegFlag,p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%ForestFlag,p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%GrassFlag,p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%CropFlag,p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%PastureFlag,p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%LakeFlag, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%GlacierFlag, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%BareSoilFlag, p_io, mpi_comm)
@@ -1164,7 +1193,7 @@ CONTAINS
        CALL p_bcast(lctlib(:)%C4flag, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%CarboxRate, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%ETransport, p_io, mpi_comm)
-!B       CALL p_bcast(lctlib(:)%VegHeight, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%VegHeight, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%VegRoughness, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%MinVegRoughness, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%MaxVegRoughness, p_io, mpi_comm)
@@ -1172,52 +1201,52 @@ CONTAINS
        CALL p_bcast(lctlib(:)%CanopyResistanceMin, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%MaxLAI, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%StemArea, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%specificLeafArea_C, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%alpha_nr_ind, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%beta_nr_ind, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%alpha_leaf, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%beta_leaf, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%knorr_Tau_w, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%knorr_T_phi, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%knorr_T_r, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%knorr_Day_c, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%knorr_Day_r, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%knorr_k_l, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%knorr_leaf_growth_rate, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%knorr_max_lai, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%reserveC2leafC, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%fract_npp_2_woodPool, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%fract_npp_2_reservePool, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%fract_npp_2_exudates, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%fract_green_2_herbivory, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%tau_c_litter_leaf, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%tau_c_litter_wood, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%tau_c_woods, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%LAI_shed_constant, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%fract_C_litter_green2atmos, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%Max_C_content_woods, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%specificLeafArea_C, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%alpha_nr_ind, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%beta_nr_ind, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%alpha_leaf, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%beta_leaf, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%knorr_Tau_w, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%knorr_T_phi, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%knorr_T_r, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%knorr_Day_c, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%knorr_Day_r, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%knorr_k_l, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%knorr_leaf_growth_rate, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%knorr_max_lai, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%reserveC2leafC, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%fract_npp_2_woodPool, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%fract_npp_2_reservePool, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%fract_npp_2_exudates, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%fract_green_2_herbivory, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%tau_c_litter_leaf, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%tau_c_litter_wood, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%tau_c_woods, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%LAI_shed_constant, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%fract_C_litter_green2atmos, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%Max_C_content_woods, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%ClumpinessFactor, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%dynamic_pft, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%woody_pft, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%pasture_pft, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%bclimit_min_cold_mmtemp, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%bclimit_max_cold_mmtemp, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%bclimit_max_warm_mmtemp, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%bclimit_min_temprange, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%bclimit_min_gdd, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%gdd_base, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%upper_tlim, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%fract_wood_2_onSite, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%fract_wood_2_paper, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%fract_wood_2_construction, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%moist_extinction, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%fuel_dens, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%flame_length_f, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%crown_length, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%bark_par1, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%bark_par2, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%RCK, p_io, mpi_comm)
-!BC       CALL p_bcast(lctlib(:)%mort_prob, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%dynamic_pft, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%woody_pft, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%pasture_pft, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%bclimit_min_cold_mmtemp, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%bclimit_max_cold_mmtemp, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%bclimit_max_warm_mmtemp, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%bclimit_min_temprange, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%bclimit_min_gdd, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%gdd_base, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%upper_tlim, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%fract_wood_2_onSite, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%fract_wood_2_paper, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%fract_wood_2_construction, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%moist_extinction, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%fuel_dens, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%flame_length_f, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%crown_length, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%bark_par1, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%bark_par2, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%RCK, p_io, mpi_comm)
+!PHS       CALL p_bcast(lctlib(:)%mort_prob, p_io, mpi_comm)
        DO i=1,5
          CALL p_bcast(lctlib(:)%LitVeg_coef(i), p_io, mpi_comm)
          CALL p_bcast(lctlib(:)%LeafLit_coef(i), p_io, mpi_comm)
@@ -1227,8 +1256,12 @@ CONTAINS
        !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
        !   JeDi plant trait parameter 
        CALL p_bcast(lctlib(:)%GrowRspdMoist, p_io, mpi_comm)
+       CALL p_bcast(lctlib(:)%jedi_F_pseudo_soilM, p_io, mpi_comm) 
+       CALL p_bcast(lctlib(:)%jedi_N_pseudo_soilM, p_io, mpi_comm)       
        CALL p_bcast(lctlib(:)%GrowRspdTemp , p_io, mpi_comm) 
-       CALL p_bcast(lctlib(:)%CritiGrowTemp, p_io, mpi_comm)
+       CALL p_bcast(lctlib(:)%jedi_F_pseudo_T  , p_io, mpi_comm)
+       CALL p_bcast(lctlib(:)%jedi_N_pseudo_T , p_io, mpi_comm)
+       CALL p_bcast(lctlib(:)%CritiGrowTemp  , p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%GermFrac     , p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%Allo2Reproduc, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%Allo2Abground, p_io, mpi_comm)
@@ -1239,6 +1272,8 @@ CONTAINS
        CALL p_bcast(lctlib(:)%TurnoverStruc, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%TurnoverLeaf , p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%SenesRspdNPP , p_io, mpi_comm)
+       CALL p_bcast(lctlib(:)%jedi_F_pseudo_npp, p_io, mpi_comm)
+       CALL p_bcast(lctlib(:)%jedi_N_pseudo_npp, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%RelSenesAbgd , p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%NitroStatus  , p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%JeDiCarboxRate, p_io, mpi_comm)

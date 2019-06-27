@@ -129,7 +129,7 @@ CONTAINS
     USE mo_jsb_grid,          ONLY: Get_grid
     
     USE mo_carbon_process,    ONLY: calc_Cpools
-    USE mo_carbon_jedi_process, ONLY: calc_Ctradeoff,jedi_water_stress_factor
+    USE mo_carbon_jedi_process, ONLY: calc_Ctradeoff,jedi_water_stress_factor!,drop_expensive_tissue
     USE mo_jsb_physical_constants, ONLY : tmelt  
     USE mo_jsb_control,        ONLY:  jsbach_is_restarted
     USE mo_jsb_time,          ONLY: t_datetime,is_newday, is_newyear, time_steps_per_day, &
@@ -161,6 +161,7 @@ CONTAINS
     TYPE(t_datetime)             :: inidate,current
     INTEGER                      :: iniyear
     LOGICAL                      :: lrestart
+  
 
     REAL(wp), parameter  :: c_CN_woody       = 0.00303_wp * (12.01_wp / 14.0067_wp)  ! molC/molN Ratio for Woody Tissue
     REAL(wp), parameter  :: c_sapwood        = 0.05_wp
@@ -228,6 +229,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::   ff_grow_W    
     dsl4jsb_Real2D_onChunk ::   ff_grow_T
     dsl4jsb_Real2D_onChunk ::   ff_grow_G
+    dsl4jsb_Real2D_onChunk ::   Flg_grow
+    dsl4jsb_Real2D_onChunk ::   Flg_grow_G
     dsl4jsb_Real2D_onChunk ::   ff_npp
     dsl4jsb_Real2D_onChunk ::   flx_germ
     dsl4jsb_Real2D_onChunk ::   Flg_die
@@ -235,11 +238,17 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::   MaintRes
     dsl4jsb_Real2D_onChunk ::   MaintRes_sum
     dsl4jsb_Real2D_onChunk ::   MaintRes_yDayMean
+    dsl4jsb_Real2D_onChunk ::   temp_sum
+    dsl4jsb_Real2D_onChunk ::   temp_yDayMean
     dsl4jsb_Real2D_onChunk ::   GrowthResp    
     dsl4jsb_Real2D_onChunk ::   AutoRes
+    dsl4jsb_Real2D_onChunk ::  CUE
     dsl4jsb_Real2D_onChunk ::   C_balan
     dsl4jsb_Real2D_onChunk ::   C_delta
     dsl4jsb_Real2D_onChunk ::   c_total
+    dsl4jsb_Real2D_onChunk ::   del_c               !  PHS:24.06.2019  In order to avoid negative c_storage, plant drops fine tissues to reduce large maintenance respiration 
+    dsl4jsb_Real2D_onChunk ::   Leaf_control
+    dsl4jsb_Real2D_onChunk ::   one_counter
     ! Taking relative soil moisture from the HYDRO process
     dsl4jsb_Real2D_onChunk ::   w_soil_rel              
     dsl4jsb_Real2D_onChunk ::   alpha_jedi
@@ -435,6 +444,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_grow_W         )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_grow_T         )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_grow_G         )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   Flg_grow         )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    Flg_grow_G     )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_npp            )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   flx_germ          )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   Flg_die           )
@@ -443,15 +454,20 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_rel        ) 
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    max_moist         )
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_column     )
-    
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  one_counter        )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   MaintRes          )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   MaintRes_sum      )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   MaintRes_yDayMean )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    temp_sum         )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   temp_yDayMean  )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   GrowthResp        )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   AutoRes           )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    CUE              )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   C_balan           )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   C_delta           )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   c_total           )
+     dsl4jsb_Get_var2D_onChunk(CARBON_,  del_c            )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   Leaf_control      )
     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
    
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_crop_harvest)         ! inout
@@ -598,34 +614,30 @@ CONTAINS
     
       
  
-                                                                  
-    ff_grow_T     = ( ( t_air - tmelt ) + dsl4jsb_Lctlib_param(GrowRspdTemp) * ff_grow_T      ) / ( 1._wp + dsl4jsb_Lctlib_param(GrowRspdTemp) )
-    ff_grow_G     = (  alpha_jedi       + dsl4jsb_Lctlib_param(GrowRspdMoist) * ff_grow_G      ) / ( 1._wp + dsl4jsb_Lctlib_param(GrowRspdMoist) )
-    ff_grow_W     = (  alpha_jedi       + dsl4jsb_Lctlib_param(GrowRspdMoist) * ff_grow_W      ) / ( 1._wp + dsl4jsb_Lctlib_param(GrowRspdMoist) )     
-    ff_npp        = ( NPP_act_yDayMean  + dsl4jsb_Lctlib_param(SenesRspdNPP) * ff_npp         ) / ( 1._wp + dsl4jsb_Lctlib_param(SenesRspdNPP) )
+     !  2019/4/8 PHS modified how plant growth and senescence response to temperature, soil moisture, and npp
+                                                      
+    !ff_grow_T     = ( ( t_air - tmelt ) + dsl4jsb_Lctlib_param(GrowRspdTemp) * ff_grow_T      ) / ( 1._wp + dsl4jsb_Lctlib_param(GrowRspdTemp) )
+    !ff_grow_G     = (  alpha_jedi       + dsl4jsb_Lctlib_param(GrowRspdMoist) * ff_grow_G      ) / ( 1._wp + dsl4jsb_Lctlib_param(GrowRspdMoist) )
+    !ff_grow_W     = (  alpha_jedi       + dsl4jsb_Lctlib_param(GrowRspdMoist) * ff_grow_W      ) / ( 1._wp + dsl4jsb_Lctlib_param(GrowRspdMoist) )     
+    !ff_npp        = ( NPP_act_yDayMean  + dsl4jsb_Lctlib_param(SenesRspdNPP) * ff_npp         ) / ( 1._wp + dsl4jsb_Lctlib_param(SenesRspdNPP) )
     
-    MaintRes = 0._wp
-    MaintRes = c_sapwood * c_CN_woody * ( c_stem + c_csroot ) + dsl4jsb_Lctlib_param(NitroStatus) * ( c_leaves + c_fnroot ) 
-    MaintRes = MaintRes  * c_Res_N    * ( 1.4_wp ** ( ( t_air - tmelt - 20._wp ) / 10._wp) ) ! JeDi uses 1.4 for Q10 value
+    ff_grow_T     =  ( t_air - tmelt )         / dsl4jsb_Lctlib_param(jedi_N_pseudo_T)      + ff_grow_T  *     dsl4jsb_Lctlib_param(jedi_F_pseudo_T)
+    ff_grow_G     =  alpha_jedi                / dsl4jsb_Lctlib_param(jedi_N_pseudo_soilM) + ff_grow_G *     dsl4jsb_Lctlib_param(jedi_F_pseudo_soilM)
+    ff_grow_W    =   alpha_jedi                / dsl4jsb_Lctlib_param (jedi_N_pseudo_soilM) + ff_grow_G *     dsl4jsb_Lctlib_param(jedi_F_pseudo_soilM)
+    ff_npp           =   NPP_act_yDayMean / dsl4jsb_Lctlib_param(jedi_N_pseudo_npp)   + ff_npp       *     dsl4jsb_Lctlib_param(jedi_F_pseudo_npp)
     
-    MaintRes = MaintRes / sec_per_day ! The maintanence respiration is computed in a daily manner in JeDi.
-                                      
-!    IF ( lstart ) THEN
-!        IF ( Flg_die .eq. 0._wp  ) THEN         
-!          IF ( c_seed .lt. cTiny ) THEN
-          
-!          c_seed = c_seed +  PA0_seed ! add virtual carbon into seed pool when its empty
-!          temp_c_seed=temp_c_seed + 1  ! This is just to see how many times does this loop is entered. will be remove later
-          
-!          END IF
-!        END IF
-!    ENDIF
+   
 
+     
 
     inidate = get_time_start()
     iniyear = get_year(inidate)
     lrestart= jsbach_is_restarted()
     current = get_time_current()
+    
+    
+    
+    
         
     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!     
     
@@ -641,9 +653,10 @@ CONTAINS
       topSoilTemp_sum  = topSoilTemp_sum  + topSoilTemp ! 2d
       alpha_sum        = alpha_sum        + alpha
       !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!     
-      ! Compute Maintenance respration for JeDi. This is computed outside clac_tradeoff to account for 
+      ! PHS: Compute Maintenance respration for JeDi. This is computed outside clac_tradeoff to account for 
       !   the average of previous-day value.
-      MaintRes_sum     = MaintRes_sum + MaintRes
+      !   MaintRes_sum     = MaintRes_sum + MaintRes
+      temp_sum           = temp_sum + t_air
       !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!     
       
  
@@ -668,9 +681,44 @@ CONTAINS
       !NPP_pot_rate_ca_acc        = NPP_pot_rate_ca/time_steps_per_day() ! s.o.
 
       !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!     
-      ! Compute Maintenance respration for JeDi. 
-      MaintRes_yDayMean   = MaintRes_sum / time_steps_per_day() 
-      MaintRes_sum        = MaintRes  ! This reset the value of MainRes_sum for the next day
+      ! PHS: Compute Maintenance respration for JeDi. 
+      ! PHS try to compute maintenance respiration only once per day 
+       temp_yDayMean  = temp_sum / time_steps_per_day()
+       
+       MaintRes = 0._wp
+       MaintRes = c_sapwood * c_CN_woody * ( c_stem + c_csroot ) + dsl4jsb_Lctlib_param(NitroStatus) * ( c_leaves + c_fnroot ) 
+       MaintRes = MaintRes  * c_Res_N    * ( 1.4_wp ** ( ( temp_yDayMean - tmelt - 20._wp ) / 10._wp) ) ! JeDi uses 1.4 for Q10 value
+    
+       MaintRes = MaintRes / sec_per_day ! The maintanence respiration is computed in a daily manner in JeDi.
+       MaintRes_yDayMean   = MaintRes
+       
+       temp_sum = t_air
+       
+   !    if ( get_year(current) .le. iniyear + 2._wp )  print*,"fine tissues = ",  c_leaves + c_fnroot, 'Coarse tissues = ', c_stem + c_csroot
+       !  PHS:24.06.2019  In order to avoid negative c_storage, plant drops fine tissues to reduce large maintenance respiration 
+       !                             If c_storage + GPP - MainRes <0, then this plant invest too much into expensive tissues 
+       !                             so this plant will drop the exact amount of fine tissues corresponding to the difference
+!      CALL drop_expensive_tissue(&
+!                                                                      &  Flg_die,                                                     &
+!                                                                      &  GPP_yDayMean,                                         &
+!                                                                      &  del_c,                                                          & 
+!                                                                      &  dsl4jsb_Lctlib_param(NitroStatus),                &
+!                                                                      &  temp_yDayMean,                                         &
+!                                                                      &  c_storage,                                                    &                                                                      
+!                                                                      &  c_leaves,                                                      &
+!                                                                      &  c_fnroot,                                                      &
+!                                                                      &  c_csroot,                                                      &
+!                                                                      &  c_stem,                                                       &
+!                                                                      &  c_Res_N,                                                      &
+!                                                                      &  c_CN_woody,               &
+!                                                                      &  c_sapwood,                   &
+!                                                                      &  MaintRes,                                                      &
+!                                                                      &  MaintRes_yDayMean  )
+       
+       
+     
+      !Leaf_control        = 1._wp - exp(-0.5_wp * LAI )
+      
       !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!     
       
 
@@ -697,8 +745,6 @@ CONTAINS
       
         CALL calc_Ctradeoff( &
         & GPP_yDayMean,                                & ! in
-        & dsl4jsb_Lctlib_param(LAI_shed_constant),     & ! in
-        & dsl4jsb_Lctlib_param(specificLeafArea_C),    & ! in
         ! JeDi plant trait parameter comes in now <<<<<<<<<<<
         & dsl4jsb_Lctlib_param(GrowRspdMoist),         & ! in
         & dsl4jsb_Lctlib_param(GrowRspdTemp ),         & ! in
@@ -716,10 +762,12 @@ CONTAINS
         & dsl4jsb_Lctlib_param(RelSenesAbgd ),         & ! in
         & dsl4jsb_Lctlib_param(NitroStatus  ),         & ! in
         ! JeDi plant trait parameter comes in now >>>>>>>>>>>
-        & iniyear                    ,&
-        & get_year(current)          ,&
+        & iniyear,                                              & !in
+        & get_year(current),                            & !in
         & time_steps_per_day(),                        & ! in
         & dtime,                                       & ! in
+        & one_counter,                               & ! inout
+        !& Leaf_control,                                & ! in
         & c_storage,                                   & ! inout
         & c_storage_temp,                              & ! out
         & c_leaves,                                    & ! inout
@@ -731,16 +779,24 @@ CONTAINS
         & ff_grow_W,                               & ! inout
         & ff_grow_T,                                   & ! inout
         & ff_grow_G,                                   & ! inout
+        & Flg_grow,                    & ! out
+        & Flg_grow_G ,              & ! out
         & ff_npp,                                      & ! inout
         & Flg_die,                                     & ! inout
         & Flg_senesc,                                  & ! out
         & flx_germ,                                    & ! out
-        & MaintRes_yDayMean,                           & ! in
+        & MaintRes_yDayMean,                           & ! inout
         & GrowthResp,                                  & ! out
         & AutoRes,                                     & ! out
+         & CUE,                          & !out carbon use efficiency
         & C_balan,                                     & ! out
         & C_delta,                                     & ! out
         & c_total,                                     & !
+        &  c_Res_N,                    & !
+        &  c_CN_woody,               & !
+        &  c_sapwood,                   & ! 
+         &  temp_yDayMean,        & ! in
+        & del_c,                                       & !out
   !  
         & c_litter_green_ag,                           & ! inout
         & c_litter_green_bg,                           & ! inout
@@ -907,6 +963,7 @@ CONTAINS
         ! Variavles for JeDi carbon allocation 
         & c_leaves = c_leaves(:) , c_storage = c_storage(:) , c_fnroot = c_fnroot(:) , &
         & c_csroot = c_csroot(:) , c_stem = c_stem(:)       , c_seed = c_seed(:)     , &
+        &  & c_total = c_total(:),         &
         ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
         & c_crop_harvest = c_crop_harvest(:),                                       &
         & c_acid_ag1 = c_acid_ag1(:), c_water_ag1 = c_water_ag1(:),                 &
@@ -956,6 +1013,20 @@ CONTAINS
 
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+
+    IF (get_year(current) .EQ. iniyear ) THEN
+        ff_npp = 0._wp
+        Flg_senesc = 0._wp
+        Flg_die = 0._wp
+        c_storage = 0._wp
+        c_stem    = 0._wp
+        c_leaves  = 0._wp 
+        c_fnroot  = 0._wp     
+        c_csroot  = 0._wp
+        c_seed  = 0._wp
+        one_counter = 0._wp
+    END IF
 
 
   END SUBROUTINE update_C_NPP_pot_allocation

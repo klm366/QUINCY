@@ -181,7 +181,7 @@ CONTAINS
         & prefix, suffix,                                                        &
         & lrestart=.FALSE., initval_r=0.0_wp )
 
-      ! REAL(wp), POINTER, DIMENSION(:,:,:) ::
+     
       CALL jsb_add_var( mem, 'scaling_fact_cl', mem%assimi_scaling_fact_cl,  &
         & hgrid, canopy_layer,                                               &
         & t_cf('assimi_scaling_fact_cl', '-',                                &
@@ -196,13 +196,15 @@ CONTAINS
         'Canopy cond. per canopy layer and per leaf area'),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
+        & output_level=BASIC, loutput=.TRUE.,                               &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'gross_assimilation_cl', mem%gross_assimilation_cl,                                           &
         & hgrid, canopy_layer,                                                                                             &
         & t_cf('gross_assimilation_cl', 'mol(CO2)/m^2(leaf area)s', 'Gross photosynthesis per canopy layer on leaf area'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                               &
-        & prefix, suffix, loutput=.TRUE.,                                                                                &
+        & prefix, suffix,                                                                                                    &
+        & output_level=BASIC, loutput=.TRUE.,                                                                                &
         & lrestart=.FALSE., initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'dark_respiration_cl', mem%dark_respiration_cl,                                                 &
@@ -253,6 +255,7 @@ CONTAINS
         & t_cf('canopy_conductance', '', ''),                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
+        & output_level=BASIC,loutput=.TRUE.,                                         &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'cover_fract_pot', mem%cover_fract_pot,         &

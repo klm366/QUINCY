@@ -309,7 +309,9 @@ CONTAINS
         END IF
         this%mem(iproc)%p => tmp_ptr
         this%mem(iproc)%p%id = iproc
-        this%mem(iproc)%p%varlist_name = TRIM(varlist_name)//'_'//TRIM(process_name)!//'_'//model_id_char  !-=-=-=-=-=-=-=-=-=-=-=-=-=-= PHS "problem with restart file"
+        this%mem(iproc)%p%varlist_name = TRIM(varlist_name)//'_'//TRIM(this%name) !-=-=-=-=-=-=-=-=-=-=-=-=-=-=PHS "now each pft has an output file but all processes are in one file"
+        !this%mem(iproc)%p%varlist_name = TRIM(varlist_name)//'_'//TRIM(process_name)//'_'//TRIM(this%name) !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= PHS "now each pft has one output file"       
+        !this%mem(iproc)%p%varlist_name = TRIM(varlist_name)//'_'//TRIM(process_name)//'_'//model_id_char  !-=-=-=-=-=-=-=-=-=-=-=-=-=-= PHS "problem with restart file"
         this%mem(iproc)%p%grid_id = this%grid_id
         this%mem(iproc)%p%owner_model_id = this%owner_model_id
         this%mem(iproc)%p%owner_proc_id = iproc
@@ -340,7 +342,9 @@ CONTAINS
             tmp_tile%mem(iproc)%p%children(child_no)%p => tmp_ptr
             tmp_ptr => tmp_tile%mem(iproc)%p
             tmp_tile%mem(iproc)%p%id = iproc
-            tmp_tile%mem(iproc)%p%varlist_name =  TRIM(varlist_name)//'_'//TRIM(process_name)!//'_'//model_id_char !-=-=-=-=-=-=-=-=-=-=-=-=-=-= PHS "problem with restart file"
+            tmp_tile%mem(iproc)%p%varlist_name =  TRIM(varlist_name)//'_'//TRIM(this%name) !-=-=-=-=-=-=-=-=-=-=-=-=-=-=PHS "now each pft has an output file but all processes are in one file"
+            !tmp_tile%mem(iproc)%p%varlist_name =  TRIM(varlist_name)//'_'//TRIM(process_name)//'_'//TRIM(this%name)!-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= PHS "now each pft has one output file"
+            !tmp_tile%mem(iproc)%p%varlist_name =  TRIM(varlist_name)//'_'//TRIM(process_name)//'_'//model_id_char !-=-=-=-=-=-=-=-=-=-=-=-=-=-= PHS "problem with restart file"
             tmp_tile%mem(iproc)%p%grid_id = this%grid_id
             tmp_tile%mem(iproc)%p%owner_model_id = this%owner_model_id
             ALLOCATE(tmp_tile%mem(iproc)%p%owner_tile_path(SIZE(tmp_tile%path)))
@@ -382,7 +386,7 @@ CONTAINS
     END IF
 
     ! Add fraction(s) of this tile to stream
-    varlist_name_loc =  TRIM(varlist_name)!//'_'//model_id_char   !-=-=-=-=-=-=-=-=-=-=-=-=-=-= PHS "problem with restart file"
+    varlist_name_loc =  TRIM(varlist_name)  !//'_'//model_id_char   !-=-=-=-=-=-=-=-=-=-=-=-=-=-= PHS "problem with restart file"
     CALL jsb_add_var(varlist_name_loc, 'fract', tmp_fract,                                 &
       & hgrid, surface,                                                                                         &
       & t_cf('tile_fraction', '',                                                                          &
@@ -425,7 +429,7 @@ CONTAINS
 
     ! Initialize fraction(s) of this tile from input file
     ALLOCATE(tmp_fract(hgrid%nproma, hgrid%nblks))
-    IF (this%fract_varname == 'equal') THEN
+    IF (TRIM(this%fract_varname) == 'equal') THEN
       IF (ASSOCIATED(this%parent)) THEN
         tmp_fract(:,:) = 1._wp / REAL(this%parent%Get_no_of_children(), wp)
       ELSE

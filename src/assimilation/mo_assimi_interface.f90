@@ -422,18 +422,20 @@ CONTAINS
     
     
     ELSE  ! Oringinal call for assimilation under water unlimited case in JB4
-      CALL calc_assimilation_waterunlimited( &
-        & dsl4jsb_Lctlib_param(C4Flag),      &
-        & dsl4jsb_Lctlib_param(CarboxRate),  &
-        & dsl4jsb_Lctlib_param(ETransport),  &
-        & t_air(:),                          & ! in
-        & press_srf(:),                      & ! in
-        & par_down_mol(:),                   & ! in
-        & apar_per_lai_cl(:,icanopy),        & ! in
-        & CO2_air_mol(:),                    & ! in
-        & assimi_scaling_fact_cl(:,icanopy), & ! in
-        & canopy_cond_cl(:,icanopy)          & ! out
-        & )
+    
+    write(*,*) "you are in a wrong routine for jedi assimilation computation!!!!!!!!"
+!      CALL calc_assimilation_waterunlimited( &
+!        & dsl4jsb_Lctlib_param(C4Flag),      &
+!        & dsl4jsb_Lctlib_param(CarboxRate),  &
+!        & dsl4jsb_Lctlib_param(ETransport),  &
+!        & t_air(:),                          & ! in
+!        & press_srf(:),                      & ! in
+!        & par_down_mol(:),                   & ! in
+!        & apar_per_lai_cl(:,icanopy),        & ! in
+!        & CO2_air_mol(:),                    & ! in
+!        & assimi_scaling_fact_cl(:,icanopy), & ! in
+!        & canopy_cond_cl(:,icanopy)          & ! out
+!        & )
         
     ENDIF
     
@@ -640,8 +642,7 @@ CONTAINS
     
     IF (TRIM(model%config%usecase) .eq. 'jsbach_jedi' ) THEN
         
-        
-      
+    
       CALL calc_assimilation_waterlimited(    &
         & dsl4jsb_Lctlib_param(C4Flag),       &
         & dsl4jsb_Lctlib_param(JeDiCarboxRate),   &
@@ -663,26 +664,26 @@ CONTAINS
         & )
    
     ELSE
-    
-      CALL calc_assimilation_waterlimited(    &
-        & dsl4jsb_Lctlib_param(C4Flag),       &
-        & dsl4jsb_Lctlib_param(CarboxRate),   &
-        & dsl4jsb_Lctlib_param(ETransport),   &
-        & t_air(:),                           & ! in
-        & press_srf(:),                       & ! in
-        & par_down_mol(:),                    & ! in
-        & apar_per_lai_cl(:,icanopy),         & ! in
-        & CO2_air_mol(:),                     & ! in
-        & assimi_scaling_fact_cl(:,icanopy),  & ! in
-        & CO2_conc_leaf_cl(:,icanopy),        & ! out only for the water limited case here
-        & canopy_cond_cl(:,icanopy),          & ! in  only for the water limited case here
-        & gross_assimilation_cl(:,icanopy),   & ! out
-        & dark_respiration_cl(:,icanopy),     & ! out
-        & carbox_rate_max_cl(:,icanopy),      & ! out
-        & e_transport_rate_max_cl(:,icanopy), & ! out
-        & carbox_rate_cl(:,icanopy),          & ! out
-        & e_transport_rate_cl(:,icanopy)      & ! out
-        & )
+    write(*,*) "you are in a wrong routine for jedi assimilation computation!!!!!!!!"
+!      CALL calc_assimilation_waterlimited(    &
+!        & dsl4jsb_Lctlib_param(C4Flag),       &
+!        & dsl4jsb_Lctlib_param(CarboxRate),   &
+!        & dsl4jsb_Lctlib_param(ETransport),   &
+!        & t_air(:),                           & ! in
+!        & press_srf(:),                       & ! in
+!        & par_down_mol(:),                    & ! in
+!        & apar_per_lai_cl(:,icanopy),         & ! in
+!        & CO2_air_mol(:),                     & ! in
+!        & assimi_scaling_fact_cl(:,icanopy),  & ! in
+!        & CO2_conc_leaf_cl(:,icanopy),        & ! out only for the water limited case here
+!        & canopy_cond_cl(:,icanopy),          & ! in  only for the water limited case here
+!        & gross_assimilation_cl(:,icanopy),   & ! out
+!        & dark_respiration_cl(:,icanopy),     & ! out
+!        & carbox_rate_max_cl(:,icanopy),      & ! out
+!        & e_transport_rate_max_cl(:,icanopy), & ! out
+!        & carbox_rate_cl(:,icanopy),          & ! out
+!        & e_transport_rate_cl(:,icanopy)      & ! out
+!        & )
         
         
     ENDIF
@@ -697,11 +698,25 @@ CONTAINS
 
     ! R: siehe mo_bethy.f90 Zeile 879
     ! Compute unlimited conductance for the whole canopy (all layers) considering the lai
-    canopy_cond(:) = MAX(1.e-20_wp,SUM(canopy_cond_cl(:,:) * lai_cl(:,:),DIM=2))
-
+    
+    !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    ! March 22, 2019 
+    !PHS: THE CANOPY CONDUCTANCE (canopy_cond) should only be the water-unlimited case. So we removed the following line. 
+    !PHS canopy_cond(:) = MAX(1.e-20_wp,SUM(canopy_cond_cl(:,:) * lai_cl(:,:),DIM=2))
+    !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    
+    
     ! Integrate over time
-    canopy_cond_over_time(:) = canopy_cond_over_time(:) + canopy_cond(:) * dtime
-
+    !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    ! March 22, 2019 
+    !PHS   canopy_cond_over_time(:) = canopy_cond_over_time(:) + canopy_cond(:) * dtime
+    canopy_cond_over_time(:) = canopy_cond_over_time(:) + MAX(1.e-20_wp,SUM(canopy_cond_cl(:,:) * lai_cl(:,:),DIM=2)) * dtime
+    !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    
+    
+    
+    
+    
     ! Same for gross_assimilation_ca
     ! R: dies ist eine alternative Schreibweise die verwendet wurde da der PGI Kompiler probleme gemacht hat.
     !gross_assimilation(:) = 0._wp
@@ -711,20 +726,7 @@ CONTAINS
 
     gross_assimilation_ca(:) = SUM(gross_assimilation_cl(:,:) * lai_cl(:,:),DIM=2) ! convert from leaf area of layer to canopy ground area
     gross_assimilation(:) = gross_assimilation_ca(:) * veg_fract_correction(:) ! convert from canopy area to tile box area
-
-
-
-!-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-!        gross_assimilation_ca(:) =  (  2.76 *1.e-06_wp ) *  (   120._wp * (1._wp - exp(-0.5_wp * lai)  ) )         
-!        gross_assimilation_ca(:) = gross_assimilation_ca(:) + ((dsl4jsb_Lctlib_param(NitroStatus)*14._wp/12.01_wp *0.0059)+0.00011)*1._wp
-!        gross_assimilation_ca(:) = gross_assimilation_ca(:) - sqrt(  gross_assimilation_ca(:) **2 - 4._wp * 0.9_wp *  (  (  2.76 *1.e-06_wp ) *   120._wp * (1._wp - exp(-0.5_wp * lai)  ) ) * (((dsl4jsb_Lctlib_param(NitroStatus)*14._wp/12.01_wp *0.0059)+0.00011)*1._wp) )
-!        gross_assimilation_ca(:) = gross_assimilation_ca(:) * (86400._wp * 0.5_wp  / (2._wp*0.9_wp)  )  * 1._wp
-        
-!        gross_assimilation_ca(:) = gross_assimilation_ca(:) /12.01_wp  / 86400._wp
-
-      !  print*,'gross_assimilation=', gross_assimilation(:)
-
-!-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    
 
 
 

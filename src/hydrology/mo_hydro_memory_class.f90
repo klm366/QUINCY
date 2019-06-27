@@ -134,8 +134,16 @@ MODULE mo_hydro_memory_class
       & water_stress,     & !< Water stress factor of canopy                        (1: no water stress, 0: infinite stress)
       & canopy_cond,         & ! Canopy conductance without water limit  [m/s] (mean value)
       & canopy_cond_limited, & ! Canopy conductance water limit [m/s] (mean value)
-      & trans               !< Transpiration
-
+      & trans !< Transpiration
+  
+  
+      !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
+      ! PHS to see if air is saturated
+      TYPE(t_jsb_var_real2d) :: &
+      & jedi_air_sat !PHS
+      !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
+  
+  
     ! Additional variables for GLACIER lct_type
     TYPE(t_jsb_var_real2d) :: &
       & fract_snow_glac,  & !< Snow fraction on glacier                                                 []
@@ -728,7 +736,7 @@ CONTAINS
         & hgrid, surface,                                                            &
         & t_cf('Water content in root zone of the soil', 'm water equivalent', ''),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
-        & prefix, suffix,                                                            &
+        & prefix, suffix,    output_level=BASIC,                             &
         & lrestart=.FALSE., loutput=.TRUE.  ,                                     &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
@@ -736,7 +744,7 @@ CONTAINS
         & hgrid, surface,                                                                             &
         & t_cf('Water content at field capacity in root zone of the soil', 'm water equivalent', ''), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                          &
-        & prefix, suffix,                                                                             &
+        & prefix, suffix, output_level=BASIC,                                                   &
         & lrestart=.FALSE.,   loutput=.TRUE.,                                                      &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
@@ -744,15 +752,17 @@ CONTAINS
         & hgrid, surface,                                                                                      &
         & t_cf('Water content at permanent wilting point in root zone of the soil', 'm water equivalent', ''), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                   &
-        & prefix, suffix,                                                                                      &
-        & lrestart=.FALSE., loutput=.TRUE.,                                                                  &
+        & prefix, suffix,     &
+        & output_level=BASIC,loutput=.TRUE.,                                  &                                                                                 
+        & lrestart=.FALSE.,                                         &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL jsb_add_var( mem, 'water_stress', mem%water_stress,                &
         & hgrid, surface,                                                     &
         & t_cf('Water stress factor of canopy', '-', ''),                     &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
-        & prefix, suffix,                                                     &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &        
+        & prefix, suffix,                                                      &
+        & output_level=BASIC,loutput=.TRUE.,                                  &
         & lrestart=.FALSE., initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'canopy_cond', mem%canopy_cond,                 &
@@ -760,6 +770,7 @@ CONTAINS
         & t_cf('canopy_conductance', '', ''),                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
+        & output_level=BASIC,loutput=.TRUE.,                                 &        
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'canopy_cond_limited', mem%canopy_cond_limited, &
@@ -767,8 +778,19 @@ CONTAINS
         & t_cf('canopy_conductance_limited', '', ''),                        &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
+        & output_level=BASIC,loutput=.TRUE.,                                 &
         & initval_r=0.0_wp )
-
+       !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
+       ! PHS to see if air is saturated  
+      CALL jsb_add_var( mem, 'jedi_air_sat', mem%jedi_air_sat, &
+        & hgrid, surface,                                                    &
+        & t_cf('jedi if air is saturated ', '', ''),                        &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & output_level=BASIC,loutput=.TRUE.,                                 &
+        & initval_r=0.0_wp )  
+!        !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
+    
       CALL jsb_add_var( mem, 'trans', mem%trans,                                     &
         & hgrid, surface,                                                            &
         & t_cf('surface_transpiration', 'kg m-2 s-1', 'Transpiration from surface'), &
