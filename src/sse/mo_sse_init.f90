@@ -175,7 +175,7 @@ CONTAINS
                                                           dsl4jsb_var2D_onDomain(SSE_, soil_depth) >= 0._wp))
 
     !> 2.0 Compute actual soil layer depths based on the fixed layer thicknesses from namelist and the bedrock depth
-    !!  note, soil_depth_to_layers_2d() returns an actual 3D variable, which is why we use dsl4jsb_var3D_onDomain() here
+    !!  note, soil_depth_to_layers_2d() returns an actual 3D variable
     dsl4jsb_var3D_onDomain(SSE_, soil_depth_sl) = soil_depth_to_layers_2d( &
                                                     dsl4jsb_var2D_onDomain(SSE_, soil_depth), &   ! Total soil depth until bedrock (from textures), 2D variable
                                                     vgrid_soil_sb%dz(:))                          ! Soil layer thicknesses from namelist
