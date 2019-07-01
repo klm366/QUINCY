@@ -63,8 +63,8 @@ CONTAINS
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_memory(PHENO_)                          !   TYPE(t_pheno_memory), POINTER      :: pheno__mem
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk    :: growing_season
-    dsl4jsb_Real2D_onChunk    :: lai_max
+    dsl4jsb_Real2D_onDomain    :: growing_season
+    dsl4jsb_Real2D_onDomain    :: lai_max
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -83,8 +83,8 @@ CONTAINS
     ! Get process memories
     dsl4jsb_Get_memory(PHENO_)
     ! Get process variables (Set pointers to variables in memory)
-    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)
-    dsl4jsb_Get_var2D_onChunk(PHENO_, lai_max)
+    dsl4jsb_Get_var2D_onDomain(PHENO_, growing_season)
+    dsl4jsb_Get_var2D_onDomain(PHENO_, lai_max)
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -93,16 +93,16 @@ CONTAINS
 
     ! set growing season flag depending on whether this is a evergreen plant (TRUE) or not (FALSE)
     IF(lctlib%phenology_type == ievergreen) THEN
-      growing_season(:) = true
+      growing_season(:,:) = true
     ELSE
-      growing_season(:) = false
+      growing_season(:,:) = false
     ENDIF
 
     ! set lai_max from the site specific LAI from all_site_list.dat (saved in pheno_config:lai_max) and check for sensible values
     IF (dsl4jsb_Config(PHENO_)%lai_max > 0.5_wp .AND. dsl4jsb_Config(PHENO_)%lai_max < 8.0_wp) THEN
-      lai_max(:) = dsl4jsb_Config(PHENO_)%lai_max
+      lai_max(:,:) = dsl4jsb_Config(PHENO_)%lai_max
     ELSE
-      lai_max(:) = 6.0_wp
+      lai_max(:,:) = 6.0_wp
     END IF
 
   END SUBROUTINE pheno_init
