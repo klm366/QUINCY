@@ -14,6 +14,11 @@
 !! file COPYING in the root of the source tree for this code.
 !! Where software is supplied by third parties, it is indicated in the headers of the routines.
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 #ifdef __xlC__
 @PROCESS STRICT
 #endif
@@ -29,7 +34,7 @@ MODULE mo_jsb_version
 
   PUBLIC :: jsbach_version, jsbach_init_version, jsbach_label_run
 
-  CHARACTER(len=  6), PARAMETER :: jsbach_version = '4.20p7' !< JSBACH version number
+  CHARACTER(len=  6), PARAMETER :: jsbach_version = '4.20p9' !< JSBACH version number
 
   CHARACTER(len=256) :: executable                         !< Name of executable
   CHARACTER(len= 80) :: label(4)                           !< Space for storing model information
@@ -53,14 +58,14 @@ CONTAINS
 
     LOGICAL, INTENT(in), OPTIONAL :: standalone !< true: offline JSBACH, false: ECHAM/JSBACH
 
-    LOGICAL             :: l_standalone !< true: offline JSBACH, false: ECHAM/JSBACH
-    CHARACTER (len=  8) :: ydate        !< Date of simulation
-    CHARACTER (len= 10) :: ytime        !< Time of simulation
-    CHARACTER (len=256) :: os_name      !< Name of OS for simulation
-    CHARACTER (len=256) :: user_name    !< User that runs simulation
-    CHARACTER (len=256) :: host_name    !< Host name for simulation
+    !LOGICAL             :: l_standalone !< true: offline JSBACH, false: ECHAM/JSBACH
+    !CHARACTER (len=  8) :: ydate        !< Date of simulation
+    !CHARACTER (len= 10) :: ytime        !< Time of simulation
+    !CHARACTER (len=256) :: os_name      !< Name of OS for simulation
+    !CHARACTER (len=256) :: user_name    !< User that runs simulation
+    !CHARACTER (len=256) :: host_name    !< Host name for simulation
 
-    INTEGER :: i_lena, i_lenb, i_lenc
+    !INTEGER :: i_lena, i_lenb, i_lenc
     INTEGER :: i
 
     !  External subroutines
@@ -68,8 +73,9 @@ CONTAINS
 
     !  Executable statements
 
-    l_standalone = .FALSE.
-    IF (PRESENT(standalone)) l_standalone = standalone
+    !l_standalone = .FALSE.
+    !IF (PRESENT(standalone)) l_standalone = standalone
+    IF (PRESENT(standalone)) CONTINUE ! to avoid compiler warnings about dummy arguments not being used
 
     ! Get model name from environment
     IF (my_process_is_stdio()) THEN

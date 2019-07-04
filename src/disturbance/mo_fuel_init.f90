@@ -7,22 +7,24 @@
 !! @par Revision History
 !! First version by Rainer Schneck (2017-06-20)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_fuel_init
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: message
 
   USE mo_jsb_model_class,   ONLY: t_jsb_model
   USE mo_jsb_class,         ONLY: Get_model
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
-  USE mo_jsb_config_class,  ONLY: t_jsb_config_p
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
-  USE mo_jsb_time_iface,    ONLY: is_time_experiment_start, is_time_restart
 
   dsl4jsb_Use_processes FUEL_
   dsl4jsb_Use_config(FUEL_)
-  dsl4jsb_Use_memory(FUEL_)
+  !dsl4jsb_Use_memory(FUEL_)
 
   IMPLICIT NONE
   PRIVATE
@@ -42,8 +44,8 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':fuel_init'
 
-    dsl4jsb_Def_memory(FUEL_)
-    dsl4jsb_Get_memory(FUEL_)
+    !dsl4jsb_Def_memory(FUEL_)
+    !dsl4jsb_Get_memory(FUEL_)
 
     ! No initialization needed at this time
     RETURN
@@ -63,18 +65,18 @@ CONTAINS
 
     !-----------------------------------------------------------------------
     !  LOCAL VARIABLES
-    TYPE(t_jsb_model),       POINTER :: model
-    dsl4jsb_Def_memory(FUEL_)
+    !TYPE(t_jsb_model),       POINTER :: model
+    !dsl4jsb_Def_memory(FUEL_)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':fuel_init_bc'
 
     !-----------------------------------------------------------------------
     ! CONTENT
 
-    model => get_model(tile%owner_model_id)
+    !model => get_model(tile%owner_model_id)
 
     ! Get fuel memory of the tile
-    dsl4jsb_Get_memory(FUEL_)
+    !dsl4jsb_Get_memory(FUEL_)
 
     IF (.NOT. tile%Is_process_active(FUEL_)) RETURN
 
@@ -91,11 +93,11 @@ CONTAINS
     TYPE(t_jsb_model),         POINTER :: model
 
     dsl4jsb_Def_config(FUEL_)
-    dsl4jsb_Def_memory(FUEL_)
+    !dsl4jsb_Def_memory(FUEL_)
 
-    REAL(wp), POINTER :: &
-      & return_pointer  (:,  :) !, & !< temporary pointer
-      ! & return_pointer3d(:,:,:)
+    !REAL(wp), POINTER :: &
+    !  & return_pointer  (:,  :) !, & !< temporary pointer
+    !  & return_pointer3d(:,:,:)
 
     TYPE(t_input_file) :: input_file
 
@@ -104,7 +106,7 @@ CONTAINS
     model => get_model(tile%owner_model_id)
 
     ! Get fuel memory and config  of the tile
-    dsl4jsb_Get_memory(FUEL_)
+    !dsl4jsb_Get_memory(FUEL_)
     dsl4jsb_Get_config(FUEL_)
 
     IF (.NOT. tile%Is_process_active(FUEL_)) RETURN

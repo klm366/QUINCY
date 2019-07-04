@@ -7,6 +7,10 @@
 !! @par Revision History
 !! First version by Rainer Schneck (2015-05-04)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
 
 MODULE mo_rad_memory_class
 #ifndef __NO_JSBACH__
@@ -21,7 +25,8 @@ MODULE mo_rad_memory_class
   USE mo_jsb_lct_class,    ONLY: BARE_TYPE, VEG_TYPE, LAND_TYPE, GLACIER_TYPE, LAKE_TYPE
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes RAD_
+  dsl4jsb_Use_processes SEB_
+  dsl4jsb_Use_config(SEB_)
 
   IMPLICIT NONE
   PRIVATE
@@ -124,7 +129,7 @@ CONTAINS
 
   SUBROUTINE Init_rad_memory(mem, prefix, suffix, lct_ids, model_id)
 
-    USE mo_jsb_varlist,       ONLY: jsb_add_var, BASIC, MEDIUM, FULL
+    USE mo_jsb_varlist,       ONLY: jsb_add_var, BASIC, MEDIUM !, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
                                     TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
@@ -138,12 +143,15 @@ CONTAINS
     INTEGER,             INTENT(in)    :: lct_ids(:)
     INTEGER,             INTENT(in)    :: model_id
 
+    dsl4jsb_Def_config(SEB_)
+
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface, canopy_layer        ! Vertical grid
     INTEGER :: table
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_rad_memory'
+    IF (model_id > 0) CONTINUE ! avoid compiler warning about dummy argument not being used
 
     model => Get_model(model_id)
 
@@ -152,6 +160,8 @@ CONTAINS
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
     canopy_layer => Get_vgrid('canopy_layer')
+
+    dsl4jsb_Get_config(SEB_)
 
     IF (.NOT. ASSOCIATED(mem%sw_srf_net%ptr)) THEN
 
@@ -461,15 +471,6 @@ CONTAINS
         & output_level=MEDIUM,                                                &
         & initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 'rad_net_lice', mem%rad_net_lice,                &
-        & hgrid, surface,                                                     &
-        & t_cf('rad_net_lice', '', 'Net surface radiation over lake ice'),    &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
-        & prefix, suffix,                                                     &
-        & lrestart=.FALSE.,                                                   &
-        & output_level=MEDIUM,                                                &
-        & initval_r=0.0_wp )
-
       CALL jsb_add_var( mem, 'albedo_lwtr', mem%albedo_lwtr,                  &
         & hgrid, surface,                                                     &
         & t_cf('albedo_lwtr', '', 'Albedo of open water on lakes'),           &
@@ -478,13 +479,24 @@ CONTAINS
         & output_level=MEDIUM,                                                &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=AlbedoLakeWater )
 
-      CALL jsb_add_var( mem, 'albedo_lice', mem%albedo_lice,                  &
-        & hgrid, surface,                                                     &
-        & t_cf('albedo_lice', '', 'Albedo of ice on lake water'),             &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
-        & prefix, suffix,                                                     &
-        & output_level=MEDIUM,                                                &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=AlbedoLakeIceMin )
+      IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+        CALL jsb_add_var( mem, 'rad_net_lice', mem%rad_net_lice,                &
+          & hgrid, surface,                                                     &
+          & t_cf('rad_net_lice', '', 'Net surface radiation over lake ice'),    &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+          & prefix, suffix,                                                     &
+          & lrestart=.FALSE.,                                                   &
+          & output_level=MEDIUM,                                                &
+          & initval_r=0.0_wp )
+
+        CALL jsb_add_var( mem, 'albedo_lice', mem%albedo_lice,                  &
+          & hgrid, surface,                                                     &
+          & t_cf('albedo_lice', '', 'Albedo of ice on lake water'),             &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+          & prefix, suffix,                                                     &
+          & output_level=MEDIUM,                                                &
+          & loutput=.TRUE., lrestart=.TRUE., initval_r=AlbedoLakeIceMin )
+      END IF
 
     END IF
 

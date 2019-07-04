@@ -7,20 +7,22 @@
 !! @par Revision History
 !! First version by Reiner Schnur (2013-04-04)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_jsb_model_usecases
 #ifndef __NO_JSBACH__
 
   USE mo_exception,           ONLY: message, finish
-  USE mo_kind,                ONLY: wp
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model
   USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, FUEL_
-  USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
-  USE mo_jsb_grid_class,      ONLY: t_jsb_grid !, get_nblks, get_nproma
-  USE mo_jsb_grid,            ONLY: Get_Grid
+  USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, AGGREGATE_ !, ON_SUBTREE_
   USE mo_jsb_tile,            ONLY: t_jsb_tile
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
-    &                               LAND_TYPE, BARE_TYPE, VEG_TYPE, GLACIER_TYPE, LAKE_TYPE
+    &                               LAND_TYPE, VEG_TYPE, GLACIER_TYPE, LAKE_TYPE !, BARE_TYPE
 
   IMPLICIT NONE
   PRIVATE
@@ -109,7 +111,12 @@ CONTAINS
             & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
             & fract_varname='fract_veg')
 
-    NULLIFY(box_tile)
+    ! Next 3 lines only to avoid compiler warnings about pointers not being dereferenced
+    IF (ASSOCIATED(glacier_tile)) CONTINUE
+    IF (ASSOCIATED(lake_tile)) CONTINUE
+    IF (ASSOCIATED(veg_Tile)) CONTINUE
+
+    NULLIFY(box_tile, lake_tile, glacier_tile, land_tile, veg_tile)
 
   END SUBROUTINE init_usecase_lite
 
@@ -229,12 +236,14 @@ CONTAINS
                & lct=t_jsb_lct(VEG_TYPE, lib_id=pft_ids(i)), parent=veg_tile)
             END DO
 
-    NULLIFY(box_tile)
-    NULLIFY(lake_tile)
-    NULLIFY(land_tile)
-    NULLIFY(glacier_tile)
-    NULLIFY(veg_tile)
-    NULLIFY(pft_tile)
+    ! ! Next 3 lines only to avoid compiler warnings about pointers not being dereferenced
+    ! IF (ASSOCIATED(glacier_tile)) CONTINUE
+    ! IF (ASSOCIATED(lake_tile)) CONTINUE
+    ! IF (ASSOCIATED(pft_tile)) CONTINUE
+        
+    NULLIFY(box_tile, land_tile, veg_tile, pft_tile)
+    IF (model%config%use_glacier) NULLIFY(glacier_tile)
+    IF (model%config%use_lakes) NULLIFY(lake_tile)
 
   END SUBROUTINE init_usecase_pfts
 

@@ -9,21 +9,24 @@
 !!
 !! This had to be separated from mo_jsb_tile_class in order to avoid circular dependencies.
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_jsb_tile
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
   USE mo_exception,           ONLY: message_text, message, finish
-  USE mo_jsb_control,         ONLY: debug_on
+  USE mo_jsb_control,         ONLY: debug_on, get_no_of_models
 
-  USE mo_hsm_class,           ONLY: t_Hsm, t_State, t_Message
+  USE mo_hsm_class,           ONLY: t_State, t_Message
   USE mo_jsb_model_class,     ONLY: t_jsb_model
-  USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract, t_jsb_aggregator_p, t_jsb_aggregator
-  USE mo_jsb_process_class,   ONLY: t_jsb_process_p, &
-    &                               SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_
+  USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
+  USE mo_jsb_process_class,   ONLY: SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_
   USE mo_jsb_process_factory, ONLY: max_no_of_processes
   USE mo_jsb_task_class,      ONLY: t_jsb_process_task !, t_jsb_task_msg
-  USE mo_jsb_config_class,    ONLY: t_jsb_config, t_jsb_config_p
 
   IMPLICIT NONE
   PRIVATE
@@ -59,8 +62,8 @@ CONTAINS
 
     USE mo_jsb_class,           ONLY: Get_model
     USE mo_util,                ONLY: one_of
-    USE mo_jsb_lct_class,       ONLY: t_jsb_lct, LAND_TYPE, LAKE_TYPE, Contains_lct
-    USE mo_jsb_process_class,   ONLY: SEB_, A2L_, L2A_, Get_process_name
+    USE mo_jsb_lct_class,       ONLY: t_jsb_lct, LAND_TYPE, LAKE_TYPE
+    USE mo_jsb_process_class,   ONLY: SEB_, A2L_, L2A_
 
     CHARACTER(len=*),  INTENT(in)           :: name
     CHARACTER(len=*),  INTENT(in)           :: description
@@ -75,10 +78,7 @@ CONTAINS
     CLASS(t_jsb_tile), POINTER              :: return_ptr
 
     TYPE(t_jsb_model),            POINTER :: model
-    TYPE(t_jsb_config_p),         POINTER :: configs(:)
-    CHARACTER(LEN=15)                     :: process_name
     INTEGER                               :: i, j, iproc
-    CLASS(t_jsb_tile_abstract),   POINTER :: tmp_tile
     CLASS(t_State),               POINTER :: parent_tmp
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Construct_tile'
@@ -227,13 +227,13 @@ CONTAINS
   ! Note: It is important that Init_tile is only called for the tiles after the hierarchical tile tree has
   !       been completely constructed. Therefore, Init_tile is called from init_model_common.
   !
-  SUBROUTINE Init_tile(this, varlist_name, prefix, suffix, l_fixed_fractions, in_var_groups)
+  SUBROUTINE Init_tile(this, varlist_name, prefix, suffix, l_fixed_fractions, l_rel_fractions, in_var_groups)
 
     USE mo_jsb_process_factory, ONLY: Create_process_memory
     USE mo_jsb_process_class,   ONLY: Get_process_name
     USE mo_jsb_memory_class,    ONLY: t_jsb_memory
     USE mo_jsb_tile_class,      ONLY: t_jsb_aggregator, t_jsb_aggregator_weighted_by_fract
-    USE mo_jsb_varlist,         ONLY: t_jsb_varlist, jsb_add_var, VARNAME_LEN
+    USE mo_jsb_varlist,         ONLY: jsb_add_var
     USE mo_jsb_io,              ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables, TSTEP_INSTANT, TSTEP_CONSTANT
     USE mo_jsb_grid_class,      ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,            ONLY: Get_grid, Get_vgrid
@@ -241,15 +241,15 @@ CONTAINS
 
     CLASS(t_jsb_tile), INTENT(inout) :: this
     CHARACTER(len=*),  INTENT(in)    :: varlist_name
-    CHARACTER(len=*),  INTENT(in)    :: prefix         ! Prefix for variable names
+    CHARACTER(len=*),  INTENT(in)    :: prefix            ! Prefix for variable names
     CHARACTER(len=*),  INTENT(in)    :: suffix
     LOGICAL,           INTENT(in)    :: l_fixed_fractions  ! Tile fractions can change or not
+    LOGICAL,           INTENT(in)    :: l_rel_fractions    ! Tile fractions in input file are relative wrt parent
     LOGICAL,           INTENT(in)    :: in_var_groups
 
     INTEGER                               :: iproc
     CLASS(t_jsb_memory), POINTER          :: tmp_ptr
     CLASS(t_jsb_tile_abstract),   POINTER :: tmp_tile
-    CLASS(t_State), POINTER               :: tmp_child
     CHARACTER(LEN=15)                     :: process_name
 
     TYPE(t_jsb_aggregator_weighted_by_fract), POINTER :: aggregator_weighted_by_fract
@@ -261,9 +261,8 @@ CONTAINS
     TYPE(t_input_file)         :: input_file
     REAL(wp),          POINTER :: return_pointer(:,:), tmp_fract(:,:)
     CHARACTER(len=50)          :: name_loc
-    CHARACTER(len=VARNAME_LEN) :: name
     CHARACTER(len=:), ALLOCATABLE :: varlist_name_loc
-    CHARACTER(len=2)           :: model_id_char
+    CHARACTER(len=3)           :: model_id_suffix                    ! Suffix for domain if more than one model
     INTEGER                    :: ilct, i, no_of_children, child_no
 
     INTEGER :: isteptype
@@ -272,7 +271,7 @@ CONTAINS
 
     IF (debug_on()) CALL message(TRIM(routine), 'Initializing tile '//TRIM(this%name))
 
-    WRITE(model_id_char, '(I2.2)') this%owner_model_id
+    WRITE(model_id_suffix, '(A1,I2.2)') 'D', this%owner_model_id
 
     ! Allocate all memory components for new tile and initialize their data part with NULL()
     ALLOCATE(this%mem(max_no_of_processes))
@@ -290,6 +289,12 @@ CONTAINS
       END IF
 
       process_name = Get_process_name(iproc)
+
+      IF (get_no_of_models() > 1) THEN
+        varlist_name_loc = TRIM(varlist_name)//'_'//TRIM(process_name)//'_'//model_id_suffix
+      ELSE
+        varlist_name_loc = TRIM(varlist_name)//'_'//TRIM(process_name)
+      END IF
 
       IF (this%process_action(iproc) == INHERIT_) THEN
         this%mem(iproc)%p => this%parent_tile%mem(iproc)%p
@@ -309,9 +314,9 @@ CONTAINS
         END IF
         this%mem(iproc)%p => tmp_ptr
         this%mem(iproc)%p%id = iproc
-        this%mem(iproc)%p%varlist_name = TRIM(varlist_name)//'_'//TRIM(this%name) !-=-=-=-=-=-=-=-=-=-=-=-=-=-=PHS "now each pft has an output file but all processes are in one file"
-        !this%mem(iproc)%p%varlist_name = TRIM(varlist_name)//'_'//TRIM(process_name)//'_'//TRIM(this%name) !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= PHS "now each pft has one output file"       
-        !this%mem(iproc)%p%varlist_name = TRIM(varlist_name)//'_'//TRIM(process_name)//'_'//model_id_char  !-=-=-=-=-=-=-=-=-=-=-=-=-=-= PHS "problem with restart file"
+        this%mem(iproc)%p%varlist_name = TRIM(varlist_name_loc)//'_'//TRIM(this%name) !-=-=-=-=-=-=-=-=-=-=-=-=-=-=PHS "now each pft has an output file but all processes are in one file"
+        !this%mem(iproc)%p%varlist_name = TRIM(varlist_name_loc)//'_'//TRIM(process_name)//'_'//TRIM(this%name) !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= PHS "now each pft has one output file"       
+        !this%mem(iproc)%p%varlist_name = TRIM(varlist_name_loc)//'_'//TRIM(process_name)//'_'//model_id_char  !-=-=-=-=-=-=-=-=-=-=-=-=-=-= PHS "problem with restart file"
         this%mem(iproc)%p%grid_id = this%grid_id
         this%mem(iproc)%p%owner_model_id = this%owner_model_id
         this%mem(iproc)%p%owner_proc_id = iproc
@@ -342,9 +347,9 @@ CONTAINS
             tmp_tile%mem(iproc)%p%children(child_no)%p => tmp_ptr
             tmp_ptr => tmp_tile%mem(iproc)%p
             tmp_tile%mem(iproc)%p%id = iproc
-            tmp_tile%mem(iproc)%p%varlist_name =  TRIM(varlist_name)//'_'//TRIM(this%name) !-=-=-=-=-=-=-=-=-=-=-=-=-=-=PHS "now each pft has an output file but all processes are in one file"
-            !tmp_tile%mem(iproc)%p%varlist_name =  TRIM(varlist_name)//'_'//TRIM(process_name)//'_'//TRIM(this%name)!-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= PHS "now each pft has one output file"
-            !tmp_tile%mem(iproc)%p%varlist_name =  TRIM(varlist_name)//'_'//TRIM(process_name)//'_'//model_id_char !-=-=-=-=-=-=-=-=-=-=-=-=-=-= PHS "problem with restart file"
+            tmp_tile%mem(iproc)%p%varlist_name =  TRIM(varlist_name_loc)//'_'//TRIM(this%name) !-=-=-=-=-=-=-=-=-=-=-=-=-=-=PHS "now each pft has an output file but all processes are in one file"
+            !tmp_tile%mem(iproc)%p%varlist_name =  TRIM(varlist_name_loc)//'_'//TRIM(process_name)//'_'//TRIM(this%name)!-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= PHS "now each pft has one output file"
+            !tmp_tile%mem(iproc)%p%varlist_name =  TRIM(varlist_name)_loc//'_'//TRIM(process_name)//'_'//model_id_char !-=-=-=-=-=-=-=-=-=-=-=-=-=-= PHS "problem with restart file"
             tmp_tile%mem(iproc)%p%grid_id = this%grid_id
             tmp_tile%mem(iproc)%p%owner_model_id = this%owner_model_id
             ALLOCATE(tmp_tile%mem(iproc)%p%owner_tile_path(SIZE(tmp_tile%path)))
@@ -386,11 +391,15 @@ CONTAINS
     END IF
 
     ! Add fraction(s) of this tile to stream
-    varlist_name_loc =  TRIM(varlist_name)  !//'_'//model_id_char   !-=-=-=-=-=-=-=-=-=-=-=-=-=-= PHS "problem with restart file"
+    IF (get_no_of_models() > 1) THEN
+      varlist_name_loc = TRIM(varlist_name)//'_'//model_id_suffix
+    ELSE
+      varlist_name_loc = TRIM(varlist_name)
+    END IF
     CALL jsb_add_var(varlist_name_loc, 'fract', tmp_fract,                                 &
       & hgrid, surface,                                                                                         &
       & t_cf('tile_fraction', '',                                                                          &
-      &      'fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
+      &      'fraction of grid box covered by tile '//TRIM(this%name)),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       & prefix, suffix,loutput=.TRUE., lrestart=.NOT. l_fixed_fractions,                                                     &
       & initval_r=0.0_wp, isteptype=isteptype)
@@ -399,7 +408,7 @@ CONTAINS
     CALL jsb_add_var(varlist_name_loc, 'fract_max', tmp_fract,                         &
       & hgrid, surface,                                                                                         &
       & t_cf('tile_fraction_max', '',                                                                          &
-      &      'max fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
+      &      'max fraction of grid box covered by tile '//TRIM(this%name)),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                      &
       & initval_r=0.0_wp, isteptype=isteptype)
@@ -408,7 +417,7 @@ CONTAINS
     CALL jsb_add_var(varlist_name_loc, 'fract_old', tmp_fract,                                 &
       & hgrid, surface,                                                                                         &
       & t_cf('tile_fraction_old', '',                                                                          &
-      &      'old fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
+      &      'old fraction of grid box covered by tile '//TRIM(this%name)),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                      &
       & initval_r=0.0_wp, isteptype=isteptype)
@@ -417,7 +426,7 @@ CONTAINS
     CALL jsb_add_var(varlist_name_loc, 'fract_max_old', tmp_fract,                         &
       & hgrid, surface,                                                                                         &
       & t_cf('tile_fraction_max_old', '',                                                                          &
-      &      'old max fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
+      &      'old max fraction of grid box covered by tile '//TRIM(this%name)),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                      &
       & initval_r=0.0_wp, isteptype=isteptype)
@@ -430,8 +439,9 @@ CONTAINS
     ! Initialize fraction(s) of this tile from input file
     ALLOCATE(tmp_fract(hgrid%nproma, hgrid%nblks))
     IF (TRIM(this%fract_varname) == 'equal') THEN
-      IF (ASSOCIATED(this%parent)) THEN
-        tmp_fract(:,:) = 1._wp / REAL(this%parent%Get_no_of_children(), wp)
+      IF (ASSOCIATED(this%parent_tile)) THEN
+        CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
+        tmp_fract(:,:) = tmp_fract(:,:) / REAL(this%parent_tile%Get_no_of_children(), wp)
       ELSE
         tmp_fract(:,:) = 1._wp
       END IF
@@ -441,7 +451,7 @@ CONTAINS
     ELSE
       input_file = jsb_netcdf_open_input(TRIM(this%fract_filename), this%owner_model_id)
 
-      IF (this%fract_varname == '') THEN
+      IF (TRIM(this%fract_varname) == '') THEN
         name_loc = 'fract'
         IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
         IF (suffix /= '') name_loc = TRIM(name_loc)//'_'//TRIM(suffix)
@@ -450,13 +460,37 @@ CONTAINS
       END IF
       IF (input_file%Has_var(TRIM(name_loc))) THEN
         return_pointer => input_file%Read_2d(variable_name=TRIM(name_loc))
+        !
+        ! TODO: For security set all values of the box fractions to 1 that are close to 1 
+        ! (similar to mo_echam_phy_init) in order to account for precision errors
+        IF (TRIM(this%name) == 'box') THEN
+          return_pointer(:,:) = MERGE(1._wp, return_pointer(:,:), return_pointer(:,:) > 1._wp - 10._wp*EPSILON(1._wp))
+        END IF
+        !
+        ! TODO: For security, as a workaround, set lake fractions in coastal points that are 
+        ! partially land and partially ocean to zero, and corresponding land fraction to one.
+        IF (TRIM(this%name) == 'lake') THEN
+          CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
+          return_pointer(:,:) = MERGE(return_pointer(:,:), 0._wp, tmp_fract(:,:) >= 1._wp)
+        END IF
+        IF (TRIM(this%name) == 'land') THEN
+          CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
+          return_pointer(:,:) = MERGE(return_pointer(:,:), 1._wp, tmp_fract(:,:) >= 1._wp)
+        END IF
+        !
         CALL this%Set_fraction(fract=return_pointer(:,:))
       ELSE
         CALL finish(TRIM(routine), 'Fraction '//TRIM(name_loc)//' for tile '//TRIM(this%name)// &
           &                        ' not found in '//TRIM(this%fract_filename))
       END IF
+      IF (ASSOCIATED(this%parent_tile) .AND. l_rel_fractions) THEN
+        CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
+        CALL this%Set_fraction(fract=MAX(0._wp, return_pointer(:,:)*tmp_fract(:,:)))
+      ELSE
+        CALL this%Set_fraction(fract=return_pointer(:,:))
+      END IF
 
-      IF (this%fract_varname == '') THEN
+      IF (TRIM(this%fract_varname) == '') THEN
         name_loc = 'fract_max'
         IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
         IF (suffix /= '') name_loc = TRIM(name_loc)//'_'//TRIM(suffix)
@@ -465,9 +499,22 @@ CONTAINS
       END IF
       IF (input_file%Has_var(TRIM(name_loc))) THEN
         return_pointer => input_file%Read_2d(variable_name=TRIM(name_loc))
-        CALL this%Set_fraction(fract_max=return_pointer(:,:))
+        IF (l_rel_fractions) THEN
+          IF (ASSOCIATED(this%parent_tile)) THEN
+            CALL this%parent_tile%Get_fraction(fract_max=tmp_fract(:,:))
+            CALL this%Set_fraction(fract_max=MAX(0._wp, return_pointer(:,:)*tmp_fract(:,:)))
+          ELSE
+            CALL this%Set_fraction(fract_max=return_pointer(:,:))
+          END IF
+        ELSE
+          CALL this%Set_fraction(fract_max=return_pointer(:,:))
+        END IF
       ELSE
-        tmp_fract(:,:) = 1._wp
+        IF (ASSOCIATED(this%parent_tile)) THEN
+          CALL this%parent_tile%Get_fraction(fract_max=tmp_fract(:,:))
+        ELSE
+          tmp_fract(:,:) = 1._wp
+        END IF
         CALL this%Set_fraction(fract_max=tmp_fract(:,:))
       END IF
 
@@ -516,14 +563,12 @@ CONTAINS
   SUBROUTINE Init_vars_on_tile(this)
 
     USE mo_jsb_memory_class,    ONLY: t_jsb_memory
-    USE mo_jsb_process_class,   ONLY: Get_process_name
     USE mo_jsb_varlist,         ONLY: VARNAME_LEN
 
     CLASS(t_jsb_tile), INTENT(inout) :: this
 
     CLASS(t_jsb_memory), POINTER  :: mem
     CHARACTER(len=VARNAME_LEN)    :: name
-    CHARACTER(LEN=15)             :: process_name
     INTEGER                       :: iproc, i, no_of_children, child_no
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_vars_on_tile'
@@ -533,7 +578,6 @@ CONTAINS
     ! Loop over all processes and initialize memory for this tile
     DO iproc=1,max_no_of_processes
 
-      process_name = Get_process_name(iproc)
       ! if the current process is not on leafs of current tile exit DO loop
       SELECT CASE (this%process_action(iproc))
       CASE (SKIP_, ON_TILE_, INHERIT_)
@@ -576,7 +620,6 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     !CLASS(t_jsb_task_msg), POINTER :: msg
     TYPE(t_Message), POINTER :: msg
-    INTEGER :: iproc
     LOGICAL :: l_debug
 
     CLASS(t_jsb_process_task), POINTER :: task

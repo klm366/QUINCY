@@ -7,12 +7,17 @@
 ! @par Revision History
 ! First version by Rainer Schneck (2015-04-27)
 !
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_rad_config_class
 #ifndef __NO_JSBACH__
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
 
-  USE mo_exception,         ONLY: message_text, message, finish
+  USE mo_exception,         ONLY: message
   USE mo_io_units,          ONLY: filename_max
   USE mo_kind,              ONLY: wp
   USE mo_jsb_control,       ONLY: debug_on
@@ -26,9 +31,9 @@ MODULE mo_rad_config_class
   PUBLIC :: t_rad_config !, Get_rad_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_rad_config
-    LOGICAL :: &
-      & use_alb_veg_simple, &         !< Use the simplified albedo calculations for vegetation tiles
-      & use_alb_soil_scheme, &        !< For vegetation and bare soil tiles:
+    LOGICAL ::                     &
+      & use_alb_veg_simple,        &  !< Use the simplified albedo calculations for vegetation tiles
+      & use_alb_soil_scheme,       &  !< For vegetation and bare soil tiles:
                                       !   Use the complex calculations of the soil albedo from carbon in and
                                       !   on the soil (accounts for the soil under vegetation and for bare soil)
                                       !   if vegetation tile: only used if use_alb_veg_simple=.FALSE.
@@ -36,7 +41,7 @@ MODULE mo_rad_config_class
                                       !   if TRUE constant parameter values are used for albedo of the mineral soil
                                       !   if FALSE values for albedo of the mineral soil are taken from
                                       !   bc_land_phys.nc file.
-      & use_alb_soil_litter, &        !< For vegetation and bare soil tiles:
+      & use_alb_soil_litter,       &  !< For vegetation and bare soil tiles:
                                       !   TRUE: soil albedo includes the albedo of the litter cover above it
                                       !   FALSE soil albedo ignores the albedo of the litter cover above it
 
@@ -89,7 +94,7 @@ CONTAINS
     LOGICAL                     :: use_alb_canopy
     REAL(wp)                    :: albedo_age_weight
 
-    NAMELIST /jsb_rad_nml/      &
+    NAMELIST /jsb_rad_nml/            &
          active,                      &
          ic_filename,                 &
          bc_filename,                 &
@@ -108,9 +113,9 @@ CONTAINS
     IF (debug_on()) CALL message(TRIM(routine), 'Starting radiation configuration')
 
     ! Set defaults
-    active              = .TRUE.
-    bc_filename         = 'bc_land_rad.nc'  !R: gibts im Moment noch nicht
-    ic_filename         = 'ic_land_rad.nc'  !R: gibts im Moment noch nicht
+    active                    = .TRUE.
+    bc_filename               = 'bc_land_rad.nc'  !R: gibts im Moment noch nicht
+    ic_filename               = 'ic_land_rad.nc'  !R: gibts im Moment noch nicht
     use_alb_veg_simple        = .FALSE.
     use_alb_mineralsoil_const = .FALSE.
     use_alb_soil_organic_C    = ''
@@ -128,9 +133,9 @@ CONTAINS
     CALL close_nml(nml_handler)
 
     ! Write resulting values in config memory
-    config%active              = active
-    config%ic_filename         = ic_filename
-    config%bc_filename         = bc_filename
+    config%active                    = active
+    config%ic_filename               = ic_filename
+    config%bc_filename               = bc_filename
     config%use_alb_veg_simple        = use_alb_veg_simple
     config%use_alb_mineralsoil_const = use_alb_mineralsoil_const
     config%use_alb_soil_organic_C    = use_alb_soil_organic_C

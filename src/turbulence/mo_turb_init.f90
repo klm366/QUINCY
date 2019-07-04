@@ -7,6 +7,11 @@
 !! @par Revision History
 !! First version by Reiner Schnur (2013-04-04)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_turb_init
 #ifndef __NO_JSBACH__
 
@@ -49,11 +54,12 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
-    TYPE(t_jsb_model),       POINTER :: model
+    !TYPE(t_jsb_model),       POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':turb_init_bc'
 
-    model => get_model(tile%owner_model_id)
+    IF (tile%level > 0) CONTINUE ! only to avoid compiler warnings
+    !model => get_model(tile%owner_model_id)
 
   END SUBROUTINE turb_init_bc
 
@@ -97,6 +103,10 @@ CONTAINS
       MERGE(dsl4jsb_var2D_onDomain(TURB_,rough_m), 1._wp, dsl4jsb_var2D_onDomain(TURB_,rough_m) > 0._wp)
 
     CALL input_file%Close()
+
+    ! avoid compiler warnings about pointers not being dereferenced
+    IF (ASSOCIATED(ptr_2D)) CONTINUE
+    NULLIFY(ptr_2D)
 
   END SUBROUTINE turb_init_ic
 

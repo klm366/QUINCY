@@ -1,23 +1,22 @@
 !>
+!! This module provides the data from the landcover library file, which contains additional information on the
+!! landcover data used in a particular run of JSBACH.
+!! The name of the landcover library file is specified in the JSBACH configuration file (run.def) under the
+!! keyword "LCT_FILE".
+!!
+!! Authors: Reiner Schnur, 7/2003
+!!          Christian H. Reick, 8/2003
+!!
+!! @par Revision History
+!! Julia Nabel (2018-01-10): added params for optional functionality in PHENO_: forest regrowth (l_forestRegrowth)
+!!                           (derive maxLAI from biomass via allometric relationships)
 !! @par Copyright
 !! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/model-distribution.html and the
-!! file COPYING in the root of the source tree for this code.
-!! Where software is supplied by third parties, it is indicated in the headers of the routines.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
+
 MODULE mo_jsb_lctlib_class
-  !
-  ! This module provides the data from the landcover library file, which contains additional information on the
-  ! landcover data used in a particular run of JSBACH.
-  ! The name of the landcover library file is specified in the JSBACH configuration file (run.def) under the
-  ! keyword "LCT_FILE".
-  !
-  ! Authors: Reiner Schnur, 7/2003
-  !          Christian H. Reick, 8/2003
-  !
-  !! @par Revision History
-  !! Julia Nabel (2018-01-10): added params for optional functionality in PHENO_: forest regrowth (l_forestRegrowth)
-  !!                           (derive maxLAI from biomass via allometric relationships)
+
   USE mo_jsb_parallel, ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, mpi_comm, p_bcast
   USE mo_kind,         ONLY: wp
   USE mo_exception,    ONLY: message_text, finish

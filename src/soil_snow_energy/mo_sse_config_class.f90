@@ -7,6 +7,11 @@
 !! @par Revision History
 !! First version by Reiner Schnur (2013-04-04)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_sse_config_class
 #ifndef __NO_JSBACH__
 
@@ -62,7 +67,7 @@ CONTAINS
     REAL(wp) :: w_soil_critical
     INTEGER  :: nsnow
     REAL(wp) :: dz_snow(max_snow_layers)
-    CHARACTER(len=filename_max) :: ic_filename, bc_filename, bc_sso_filename
+    CHARACTER(len=filename_max) :: ic_filename, bc_filename
 
     NAMELIST /jsb_sse_nml/                      &
       & active,                                 &
@@ -170,9 +175,9 @@ CONTAINS
     CALL input_file%Close()
 
     soil_vgrid  => new_vgrid('soil_depth_energy', ZAXIS_DEPTH_BELOW_LAND, nsoil, &
-      & levels  = mids                 (1:nsoil  ),                         &
-      & lbounds = depths               (1:nsoil  ),                         &
-      & ubounds = depths               (2:nsoil+1),                         &
+      & levels  = mids                 (1:nsoil  ),                              &
+      & lbounds = depths               (1:nsoil  ),                              &
+      & ubounds = depths               (2:nsoil+1),                              &
       & units='m')
     CALL register_vgrid(soil_vgrid)
     WRITE(message_text, *) 'Soil levels in soil energy (upper) [m]: ', soil_vgrid%lbounds
@@ -186,8 +191,8 @@ CONTAINS
     DEALLOCATE(depths, mids)
 
     IF (l_snow) THEN
-      IF (dz_snow(1) < snow_depth_min) &
-        & CALL finish(TRIM(routine), 'Depth of first snow layer should be larger than snow_depth_min='&
+      IF (dz_snow(1) < snow_depth_min)                                                                 &
+        & CALL finish(TRIM(routine), 'Depth of first snow layer should be larger than snow_depth_min=' &
         &                            //real2string(snow_depth_min))
       ALLOCATE(depths(nsnow+1))
       ALLOCATE(mids(nsnow))

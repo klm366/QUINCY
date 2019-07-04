@@ -7,6 +7,10 @@
 !! @par Revision History
 !! First version by Rainer Schneck (2015-10-29)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
 
 MODULE mo_hydro_interface
 #ifndef __NO_JSBACH__
@@ -18,26 +22,22 @@ MODULE mo_hydro_interface
   USE mo_jsb_control,        ONLY: debug_on
   USE mo_jsb_time,           ONLY: is_time_experiment_start
   USE mo_kind,               ONLY: wp
-  USE mo_exception,          ONLY: message, finish, message_text, em_warn
-  USE mo_util,               ONLY: real2string
+  USE mo_exception,          ONLY: message, finish
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
   USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
-  USE mo_jsb_config_class,   ONLY: t_jsb_config
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
-!  USE mo_util,               ONLY: one_of, int2string
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes SEB_, SSE_, TURB_, PHENO_, A2L_, RAD_, HYDRO_, ASSIMI_
+  dsl4jsb_Use_processes SEB_, SSE_, TURB_, PHENO_, A2L_, HYDRO_
 
   ! Use of process configurations
   dsl4jsb_Use_config(SEB_)
   dsl4jsb_Use_config(SSE_)
-  dsl4jsb_Use_config(RAD_)
   dsl4jsb_Use_config(HYDRO_)
 
   ! Use of process memories
@@ -47,8 +47,6 @@ MODULE mo_hydro_interface
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(TURB_)
   dsl4jsb_Use_memory(PHENO_)
-  dsl4jsb_Use_memory(RAD_)
-  dsl4jsb_Use_memory(ASSIMI_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -118,6 +116,18 @@ MODULE mo_hydro_interface
   INTERFACE tsk_canopy_cond_unstressed
     PROCEDURE Create_task_canopy_cond_unstressed
   END INTERFACE tsk_canopy_cond_unstressed
+
+  !> Type definition for water_stress task
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_water_stress
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_water_stress
+    PROCEDURE, NOPASS :: Aggregate => aggregate_water_stress
+  END TYPE tsk_water_stress
+
+  !> Constructor interface for water_stress task
+  INTERFACE tsk_water_stress
+    PROCEDURE Create_task_water_stress
+  END INTERFACE tsk_water_stress
 
   !> Type definition for canopy_cond_stressed task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_canopy_cond_stressed
@@ -237,6 +247,22 @@ CONTAINS
   END FUNCTION Create_task_canopy_cond_unstressed
 
   ! -------------------------------------------------------------------------------------------------------
+  !> Constructor for water_stress task
+  !!
+  !! @param[in]     model_id     Model id
+  !! @return        return_ptr   Instance of process task "water_stress"
+  !!
+  FUNCTION Create_task_water_stress(model_id) RESULT(return_ptr)
+
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_water_stress::return_ptr)
+    CALL return_ptr%Construct(name='water_stress', process_id=HYDRO_, owner_model_id=model_id)
+
+  END FUNCTION Create_task_water_stress
+
+  ! -------------------------------------------------------------------------------------------------------
   !> Constructor for canopy_cond_stressed task
   !!
   !! @param[in]     model_id     Model id
@@ -330,6 +356,7 @@ CONTAINS
     CALL process%Register_task( tsk_surface_hydrology      (model_id))
     CALL process%Register_task( tsk_soil_properties        (model_id))
     CALL process%Register_task( tsk_soil_hydrology         (model_id))
+    CALL process%Register_task( tsk_water_stress           (model_id))
     CALL process%Register_task( tsk_canopy_cond_unstressed (model_id))
     CALL process%Register_task( tsk_canopy_cond_stressed   (model_id))
     CALL process%Register_task( tsk_evaporation            (model_id))
@@ -349,7 +376,7 @@ CONTAINS
   SUBROUTINE update_surface_hydrology(tile, options)
 
     USE mo_hydro_process,          ONLY: calc_surface_hydrology_land, calc_surface_hydrology_glacier
-    USE mo_jsb_physical_constants, ONLY: alf, dens_snow
+    USE mo_jsb_physical_constants, ONLY: dens_snow
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -374,7 +401,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: w_skin
     dsl4jsb_Real2D_onChunk :: fract_water
     dsl4jsb_Real2D_onChunk :: w_snow_soil
-    ! dsl4jsb_Real2D_onChunk :: w_snow_soil_old
     dsl4jsb_Real2D_onChunk :: snow_soil_dens
     dsl4jsb_Real2D_onChunk :: w_snow
     dsl4jsb_Real2D_onChunk :: snow_accum
@@ -386,26 +412,15 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real2D_onChunk :: fract_fpc_max
     dsl4jsb_Real2D_onChunk :: hcap_grnd
-    dsl4jsb_Real2D_onChunk :: hcap_grnd_old
     dsl4jsb_Real2D_onChunk :: evapotrans
     dsl4jsb_Real2D_onChunk :: trans
     dsl4jsb_Real2D_onChunk :: evapopot
     dsl4jsb_Real2D_onChunk :: evapo_snow
-    dsl4jsb_Real2D_onChunk :: oro_stddev
     dsl4jsb_Real2D_onChunk :: snowmelt
     dsl4jsb_Real2D_onChunk :: runoff
     dsl4jsb_Real2D_onChunk :: drainage
     dsl4jsb_Real2D_onChunk :: runoff_glac
-    dsl4jsb_Real2D_onChunk :: w_soil_column
     dsl4jsb_Real2D_onChunk :: water_excess
-    dsl4jsb_Real3D_onChunk :: w_soil_sl
-    dsl4jsb_Real3D_onChunk :: w_soil_fc_sl
-    dsl4jsb_Real3D_onChunk :: w_soil_pwp_sl
-    dsl4jsb_Real2D_onChunk :: w_soil_rel
-    dsl4jsb_Real2D_onChunk :: w_soil_root
-    dsl4jsb_Real2D_onChunk :: w_soil_root_fc
-    dsl4jsb_Real2D_onChunk :: root_depth
-    dsl4jsb_Real2D_onChunk :: w_soil_overflow
     dsl4jsb_Real2D_onChunk :: w_glac
 
 
@@ -416,16 +431,9 @@ CONTAINS
       & w_skin_canopy_max, &
       & trans_tmp
 
-    LOGICAL :: &
-      is_glacier(options%nc)
-
-    INTEGER :: jllog
-
     LOGICAL  :: lstart
-    LOGICAL  :: l_tpe_open = .FALSE.
-    LOGICAL  :: l_tpe_closed = .FALSE.
-    INTEGER  :: iblk, ics, ice, nc
-    REAL(wp) :: dtime, steplen
+    INTEGER  :: iblk, ics, ice
+    REAL(wp) :: dtime
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -434,9 +442,7 @@ CONTAINS
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
-    nc    = options%nc
     dtime = options%dtime
-    steplen = options%steplen
 
     IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
 
@@ -486,11 +492,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,   snow)           ! in
 
     dsl4jsb_Get_var2D_onChunk(SSE_,   hcap_grnd)      ! out
-    dsl4jsb_Get_var2D_onChunk(SSE_,   hcap_grnd_old)  ! out
 
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow)         ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow_soil)    ! out
-    ! dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow_soil_old)! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens) ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow)     ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, evapotrans)     ! in
@@ -502,16 +506,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)       ! out
 
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)       ! inout
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, oro_stddev)     ! in
 
     IF (tile%is_glacier) THEN
-      is_glacier(:) = .TRUE.
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_glac)        ! inout
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    runoff_glac)   ! inout
     ELSE
-      is_glacier(:) = .FALSE.
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_column)   ! out
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_rel)      ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_excess)    ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_water)     ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_skin)          ! inout
@@ -519,13 +518,11 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans_soil) ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_skin)      ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_deficit)   ! out
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_overflow) ! inout
       IF (tile%is_vegetation .OR. tile%is_land) THEN
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   w_snow_can)    ! inout
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   trans)         ! in
         dsl4jsb_Get_var2D_onChunk(PHENO_,   lai)           ! in
         dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max) ! in
-        dsl4jsb_Get_var2D_onChunk(HYDRO_,   root_depth)    ! in
       END IF
     END IF
 
@@ -640,28 +637,21 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    TYPE(t_jsb_model), POINTER :: model
 
-    dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(HYDRO_)
-    dsl4jsb_Def_memory(SEB_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_surface_hydrology'
 
-    INTEGER :: iblk, ics, ice, nc
+    INTEGER :: iblk, ics, ice
 
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    model => Get_model(tile%owner_model_id)
-
-    dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(HYDRO_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
@@ -673,15 +663,13 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, snowmelt,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, q_snocpymlt,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_glac,          weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, w_snow_soil,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, w_snow_can,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, snow_accum,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, snow_soil_dens,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapotrans_soil, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_skin,       weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_snow,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_skin,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_snow,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, water_excess,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_deficit,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_deficit,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,        weighted_by_fract)
 
@@ -731,10 +719,9 @@ CONTAINS
     ! Locally allocated vectors
     !
     TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_jsb_grid),  POINTER :: grid
     TYPE(t_jsb_vgrid), POINTER :: soil_w
 
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice
     INTEGER  :: nsoil
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_properties'
@@ -742,7 +729,6 @@ CONTAINS
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
-    nc    = options%nc
 
     IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
 
@@ -751,8 +737,6 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
-
-    grid => Get_grid(model%grid_id)
 
     soil_w => Get_vgrid('soil_depth_water')
     nsoil = soil_w%n_levels
@@ -812,24 +796,19 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    TYPE(t_jsb_model), POINTER :: model
-
     dsl4jsb_Def_memory(HYDRO_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_soil_properties'
 
-    INTEGER :: iblk, ics, ice, nc
+    INTEGER :: iblk, ics, ice
 
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_memory(HYDRO_)
 
@@ -857,7 +836,6 @@ CONTAINS
   SUBROUTINE update_soil_hydrology(tile, options)
 
     USE mo_hydro_process,          ONLY: calc_soil_hydrology
-    USE mo_jsb_physical_constants, ONLY: alf
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -866,22 +844,13 @@ CONTAINS
     !
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_memory(SSE_)
-    dsl4jsb_Def_memory(SEB_)
-    dsl4jsb_Def_memory(PHENO_)
-    dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(HYDRO_)
 
     ! Pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: t_unfilt
-    dsl4jsb_Real2D_onChunk :: max_moist
-    dsl4jsb_Real2D_onChunk :: lai
-    dsl4jsb_Real2D_onChunk :: fract_fpc_max
     dsl4jsb_Real3D_onChunk :: fract_org_sl
     dsl4jsb_Real3D_onChunk :: t_soil
 
     ! Locally allocated vectors
-
-    ! REAL(wp), DIMENSION(options%nc) :: &
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
@@ -891,7 +860,7 @@ CONTAINS
     LOGICAL  :: ltpe_closed
 
     INTEGER  :: iblk, ics, ice, nc
-    REAL(wp) :: dtime, steplen
+    REAL(wp) :: dtime
     INTEGER  :: nsoil
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_hydrology'
@@ -901,7 +870,6 @@ CONTAINS
     ice   = options%ice
     nc    = options%nc
     dtime = options%dtime
-    steplen = options%steplen
 
     IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
 
@@ -926,9 +894,6 @@ CONTAINS
     ltpe_closed = .FALSE.
     IF (model%config%tpe_scheme == 'open')   ltpe_open = .TRUE.
     IF (model%config%tpe_scheme == 'closed') ltpe_closed = .TRUE.
-
-!!$    IF (model%config%usecase == 'jsbach_lite_tpe_open')   l_tpe_open = .TRUE.
-!!$    IF (model%config%usecase == 'jsbach_lite_tpe_closed') l_tpe_closed = .TRUE.
 
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
@@ -960,8 +925,6 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_porosity_sl   ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_field_cap_sl  ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_p_wilt_sl     ), &
-      & dsl4jsb_var2D_onChunk (HYDRO_, fract_snow        ), &
-      & dsl4jsb_var2D_onChunk (HYDRO_, fract_water       ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, max_moist         ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, oro_stddev        ), &
       &                                t_soil        (:,1), &
@@ -1011,28 +974,20 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    TYPE(t_jsb_model), POINTER :: model
-
-    dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(HYDRO_)
-    dsl4jsb_Def_memory(SEB_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_soil_hydrology'
 
-    INTEGER :: iblk, ics, ice, nc
+    INTEGER :: iblk, ics, ice
 
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    model => Get_model(tile%owner_model_id)
-
-    dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(HYDRO_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
@@ -1076,24 +1031,19 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real2D_onChunk :: swpar_srf_down
-    dsl4jsb_Real2D_onChunk :: canopy_cond
+    dsl4jsb_Real2D_onChunk :: canopy_cond_unlimited
 
-    INTEGER :: iblk, ics, ice, nc
-
-    TYPE(t_jsb_model), POINTER :: model
+    INTEGER :: iblk, ics, ice
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_canopy_cond_unstressed'
 
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (.NOT. tile%Is_process_active(HYDRO_) .OR. .NOT. tile%is_vegetation) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    model => Get_model(tile%owner_model_id)
 
     ! Get reference to variables for current block
     !
@@ -1101,12 +1051,12 @@ CONTAINS
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(A2L_)
 
-    dsl4jsb_Get_var2D_onChunk(A2L_,      swpar_srf_down) ! IN
-    dsl4jsb_Get_var2D_onChunk(PHENO_,    lai)            ! IN
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond)    ! OUT
+    dsl4jsb_Get_var2D_onChunk(A2L_,      swpar_srf_down)        ! IN
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    lai)                   ! IN
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond_unlimited) ! OUT
 
     ! Compute (max) canopy (stomatal) conductance with no water stress
-    canopy_cond(:) = get_canopy_conductance( lai(:), swpar_srf_down(:) )
+    canopy_cond_unlimited(:) = get_canopy_conductance( lai(:), swpar_srf_down(:) )
 
   END SUBROUTINE update_canopy_cond_unstressed
   !
@@ -1126,26 +1076,21 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    TYPE(t_jsb_model), POINTER :: model
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_canopy_cond_unstressed'
 
-    INTEGER :: iblk, ics, ice, nc
+    INTEGER :: iblk, ics, ice
 
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_memory(HYDRO_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(HYDRO_,    canopy_cond,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, canopy_cond_unlimited, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1153,18 +1098,18 @@ CONTAINS
 
   ! -------------------------------------------------------------------------------------------------------
   !>
-  !! @brief Implementation of "update" for task "canopy_cond_stressed"
-  !! Task "update_canopy_cond_stressed" calculates canopy conductance under water stress
+  !! @brief Implementation of "update" for task "water_stress"
+  !! Task "update_water_stress" calculates water stress
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
   !!
-  SUBROUTINE update_canopy_cond_stressed(tile, options)
+  SUBROUTINE update_water_stress(tile, options)
     ! ---------------------------
     ! Variables
 
     ! Used variables
-    USE mo_hydro_process, ONLY: get_canopy_conductance, get_water_stress_factor
+    USE mo_hydro_process, ONLY: get_water_stress_factor
     USE mo_hydro_util,    ONLY: get_water_in_root_zone
     USE mo_phy_schemes,   ONLY: qsat
 
@@ -1172,29 +1117,21 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    TYPE(t_jsb_model), POINTER :: model
     dsl4jsb_Def_config(HYDRO_)
 
-    dsl4jsb_Def_memory(SEB_)
-    dsl4jsb_Def_memory(PHENO_)
-    dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(HYDRO_)
-    dsl4jsb_Def_memory(ASSIMI_)
 
-    dsl4jsb_Real2D_onChunk :: lai
-    dsl4jsb_Real2D_onChunk :: swpar_srf_down
-    dsl4jsb_Real2D_onChunk :: canopy_cond
-    dsl4jsb_Real2D_onChunk :: canopy_cond_limited
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: root_depth_sl
-    !dsl4jsb_Real2D_onChunk :: w_soil_column   !< Water content in soil column
-    dsl4jsb_Real3D_onChunk :: w_soil_sl            !< Water content in soil layers
-    dsl4jsb_Real3D_onChunk :: w_soil_fc_sl         !< Water content of soil layers at field capacity
-    dsl4jsb_Real3D_onChunk :: w_soil_pwp_sl        !< Water content of soil layers at permanent wilting point
+    dsl4jsb_Real2D_onChunk :: w_soil_column       !< Water content in soil column
+    dsl4jsb_Real3D_onChunk :: w_soil_sl           !< Water content in soil layers
+    dsl4jsb_Real3D_onChunk :: w_soil_fc_sl        !< Water content of soil layers at field capacity
+    dsl4jsb_Real3D_onChunk :: w_soil_pwp_sl       !< Water content of soil layers at permanent wilting point
     dsl4jsb_Real2D_onChunk :: w_soil_root         !< Water content in root zone
     dsl4jsb_Real2D_onChunk :: w_soil_root_fc      !< Water content in root zone at field capacity
     dsl4jsb_Real2D_onChunk :: w_soil_root_pwp     !< Water content in root zone at permanent wilting point
     dsl4jsb_Real2D_onChunk :: max_moist
-    dsl4jsb_Real2D_onChunk :: w_soil_column
     dsl4jsb_Real2D_onChunk :: water_stress
     dsl4jsb_Real2D_onChunk :: t
     dsl4jsb_Real2D_onChunk :: q_air
@@ -1206,47 +1143,28 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':update_canopy_cond_stressed'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_stress'
 
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (.NOT. tile%Is_process_active(HYDRO_) .OR. .NOT. tile%is_vegetation) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
     model => Get_model(tile%owner_model_id)
-
     dsl4jsb_Get_config(HYDRO_)
 
     ! Get reference to variables for current block
     !
-    dsl4jsb_Get_memory(PHENO_)
-    dsl4jsb_Get_memory(SEB_)
-    dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(HYDRO_)
-    IF (tile%Is_process_active(ASSIMI_)) THEN
-      dsl4jsb_Get_memory(ASSIMI_)
-    END IF
-    dsl4jsb_Get_var2D_onChunk(A2L_,      q_air)               ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_,      press_srf)           ! in
-    dsl4jsb_Get_var2D_onChunk(SEB_,      t)                   ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_,    soil_depth_sl)        ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    soil_depth_sl)       ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_sl)           ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_fc_sl)        ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_pwp_sl)       ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    max_moist)           ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_column)       ! in
-    dsl4jsb_Get_var2D_onChunk(PHENO_,    lai)                 ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_,    root_depth_sl)        ! in
-    IF (tile%Is_process_active(ASSIMI_)) THEN
-      dsl4jsb_Get_var2D_onChunk(ASSIMI_,   canopy_cond)         ! in
-    ELSE
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond)         ! in
-    END IF
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond_limited) ! out
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    root_depth_sl)       ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root)         ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root_fc)      ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root_pwp)     ! out
@@ -1269,10 +1187,112 @@ CONTAINS
       & get_water_stress_factor(w_soil_column(:), max_moist(:), &
           &                     dsl4jsb_Config(HYDRO_)%w_soil_crit_fract, dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract)
 
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE update_water_stress
+
+  ! -------------------------------------------------------------------------------------------------------
+  !>
+  !! Implementation of "aggregate" for task "water_stress"
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  !!
+  SUBROUTINE aggregate_water_stress(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    dsl4jsb_Def_memory(HYDRO_)
+
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_water_stress'
+
+    INTEGER :: iblk, ics, ice
+
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    dsl4jsb_Get_memory(HYDRO_)
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_fc,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_pwp,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, water_stress,        weighted_by_fract)
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE aggregate_water_stress
+
+  ! -------------------------------------------------------------------------------------------------------
+  !>
+  !! @brief Implementation of "update" for task "canopy_cond_stressed"
+  !! Task "update_canopy_cond_stressed" calculates canopy conductance under water stress
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  !!
+  SUBROUTINE update_canopy_cond_stressed(tile, options)
+    ! ---------------------------
+    ! Variables
+
+    ! Used variables
+    USE mo_hydro_process, ONLY: get_canopy_conductance, get_water_stress_factor
+    USE mo_hydro_util,    ONLY: get_water_in_root_zone
+    USE mo_phy_schemes,   ONLY: qsat
+
+    ! Arguments
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    TYPE(t_jsb_model), POINTER :: model
+
+    dsl4jsb_Def_memory(SEB_)
+    dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory(HYDRO_)
+
+    dsl4jsb_Real2D_onChunk :: canopy_cond_unlimited
+    dsl4jsb_Real2D_onChunk :: canopy_cond_limited
+    dsl4jsb_Real2D_onChunk :: water_stress
+    dsl4jsb_Real2D_onChunk :: t
+    dsl4jsb_Real2D_onChunk :: q_air
+    dsl4jsb_Real2D_onChunk :: press_srf
+
+    INTEGER :: iblk, ics, ice
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_canopy_cond_stressed'
+
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+
+    IF (.NOT. tile%Is_process_active(HYDRO_) .OR. .NOT. tile%is_vegetation) RETURN
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
+
+    ! Get reference to variables for current block
+    !
+    dsl4jsb_Get_memory(SEB_)
+    dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_memory(HYDRO_)
+
+    dsl4jsb_Get_var2D_onChunk(A2L_,      q_air)               ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,      press_srf)           ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,      t)                   ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_stress)        ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond_unlimited) ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond_limited) ! out
+
     ! Compute (actual) canopy (stomatal) conductance under water stress.
-    ! R: diese canopy_cond (stressed) entspricht der canopy_conductance_limited die in JSBACH3 in update_soil gerechnet wurde.
-    !    Sie wird auf jeden Fall benötigt unabhängig davon ob der Assimilations-Prozess an ist (wird dann als Input benötigt) oder nicht.
-    canopy_cond_limited(:) = get_canopy_conductance(canopy_cond(:),            & ! in, unstressed canopy conductance
+    canopy_cond_limited(:) = get_canopy_conductance(canopy_cond_unlimited(:),  & ! in, unstressed canopy conductance
                                                     water_stress(:),           & ! in, water stress factor
                                                     q_air(:) >  qsat(t(:),press_srf(:)) & ! in, atmosphere saturated?
                                                     )
@@ -1301,30 +1321,21 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    TYPE(t_jsb_model), POINTER :: model
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_canopy_cond_stressed'
 
-    INTEGER :: iblk, ics, ice, nc
+    INTEGER :: iblk, ics, ice
 
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_memory(HYDRO_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
     dsl4jsb_Aggregate_onChunk(HYDRO_, canopy_cond_limited, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root,         weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_fc,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_pwp,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, water_stress,        weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1346,6 +1357,7 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Local variables
+    dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(SEB_)
@@ -1405,6 +1417,7 @@ CONTAINS
 
     ! Get reference to variables for current block
     !
+    dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SEB_)
@@ -1418,17 +1431,12 @@ CONTAINS
 
       dsl4jsb_Get_var2D_onChunk(A2L_, q_acoef_wtr)       ! in
       dsl4jsb_Get_var2D_onChunk(A2L_, q_bcoef_wtr)       ! in
-      dsl4jsb_Get_var2D_onChunk(A2L_, q_acoef_ice)       ! in
-      dsl4jsb_Get_var2D_onChunk(A2L_, q_bcoef_ice)       ! in
       dsl4jsb_Get_var2D_onChunk(A2L_, drag_wtr)          ! in
       dsl4jsb_Get_var2D_onChunk(A2L_, drag_ice)          ! in
       dsl4jsb_Get_var2D_onChunk(SEB_, qsat_lwtr)         ! in
-      dsl4jsb_Get_var2D_onChunk(SEB_, qsat_lice)         ! in
-      dsl4jsb_Get_var2D_onChunk(SEB_, fract_lice)        ! in
 
 
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapo_wtr)          ! out
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapo_ice)          ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapopot)           ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapotrans) ! out
 
@@ -1438,13 +1446,22 @@ CONTAINS
 
       evapo_wtr (:) = heat_tcoef(:) * (q_air(:) - qsat_lwtr(:)) ! Potential evaporation
 
-      q_air(:) = q_acoef_ice(:) * qsat_lice(:) + q_bcoef_ice(:) ! New moisture at lowest atmospheric level by back-substitution
+      IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+        dsl4jsb_Get_var2D_onChunk(A2L_,   q_acoef_ice)       ! in
+        dsl4jsb_Get_var2D_onChunk(A2L_,   q_bcoef_ice)       ! in
+        dsl4jsb_Get_var2D_onChunk(SEB_,   qsat_lice)         ! in
+        dsl4jsb_Get_var2D_onChunk(SEB_,   fract_lice)        ! in
+        dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_ice)         ! out
 
-      heat_tcoef(:) = heat_transfer_coef(drag_ice(:), steplen)  ! Transfer coefficient
+        q_air(:) = q_acoef_ice(:) * qsat_lice(:) + q_bcoef_ice(:) ! New moisture at lowest atmospheric level by back-substitution
 
-      evapo_ice (:) = heat_tcoef(:) * (q_air(:) - qsat_lice(:)) ! Potential evaporation
+        heat_tcoef(:) = heat_transfer_coef(drag_ice(:), steplen)  ! Transfer coefficient
 
-      evapopot          (:) = (1._wp - fract_lice(:)) * evapo_wtr   (:) + fract_lice(:) * evapo_ice   (:)
+        evapo_ice (:) = heat_tcoef(:) * (q_air(:) - qsat_lice(:)) ! Potential evaporation
+        evapopot          (:) = (1._wp - fract_lice(:)) * evapo_wtr   (:) + fract_lice(:) * evapo_ice   (:)
+      ELSE
+        evapopot  (:) = evapo_wtr(:)
+      END IF
       evapotrans(:) = evapopot(:)
 
     ELSE IF (tile%contains_soil .OR. tile%contains_glacier) THEN
@@ -1495,29 +1512,29 @@ CONTAINS
   !!
   SUBROUTINE aggregate_evaporation(tile, options)
 
+    TYPE(t_jsb_model), POINTER :: model
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Local variables
+    dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(HYDRO_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    TYPE(t_jsb_model), POINTER :: model
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_evaporation'
 
-    INTEGER :: iblk, ics, ice, nc
+    INTEGER :: iblk, ics, ice
 
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
 
+    dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_memory(HYDRO_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
@@ -1527,7 +1544,9 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, trans,              weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapotrans_lnd,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_wtr,          weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_ice,          weighted_by_fract)
+    IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+      dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_ice,          weighted_by_fract)
+    END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1545,13 +1564,11 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    TYPE(t_jsb_model), POINTER :: model
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_snow_and_ice_hydrology'
 
-    IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
+    IF (options%nc > 0) CONTINUE ! avoid compiler warnings about dummy arguments not being used
 
-    model => Get_model(tile%owner_model_id)
+    IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
 
     IF (tile%contains_lake) THEN
       !! Currently done in SEB process
@@ -1575,20 +1592,16 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    TYPE(t_jsb_model), POINTER :: model
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_snow_and_ice_hydrology'
 
-    INTEGER :: iblk, ics, ice, nc
+    INTEGER :: iblk !, ics, ice
 
     iblk = options%iblk
-    ics  = options%ics
-    ice  = options%ice
-    nc   = options%nc
+    !ics  = options%ics
+    !ice  = options%ice
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    model => Get_model(tile%owner_model_id)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1605,8 +1618,6 @@ CONTAINS
   SUBROUTINE update_snow_and_skin_fraction( tile, options)
 
     ! Use declarations
-    USE mo_phy_schemes,            ONLY: heat_transfer_coef, qsat
-    USE mo_jsb_physical_constants, ONLY: rhoh2o
     USE mo_hydro_process,          ONLY: calc_wskin_fractions_lice, calc_wskin_fractions_veg, calc_wskin_fractions_bare
     ! sollte jetzt in dieses File hier kommen: USE mo_hydro_process,  ONLY: calc_hydro_snow_and_skin_fraction
 
@@ -1616,16 +1627,16 @@ CONTAINS
 
     !----------------------------
     ! Local variables
-    REAL(wp), DIMENSION(options%nc) :: w_skin_canopy_max, w_skin_max
-
     TYPE(t_jsb_model), POINTER :: model
+    REAL(wp), DIMENSION(options%nc) :: w_skin_canopy_max, w_skin_max
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_snow_and_skin_fraction'
 
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice
     REAL(wp) :: dtime, steplen
 
     ! Declare pointers for process configuration and memory
+    dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_memory(SEB_)
@@ -1633,13 +1644,11 @@ CONTAINS
     dsl4jsb_Def_memory(PHENO_)
 
     ! Declare pointers for variables in memory
-    !dsl4jsb_Real2D_onChunk :: glacier
     dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real2D_onChunk :: fract_snow
     dsl4jsb_Real2D_onChunk :: fract_water
     dsl4jsb_Real2D_onChunk :: fract_fpc_max
     dsl4jsb_Real2D_onChunk :: fract_snow_can
-    dsl4jsb_Real2D_onChunk :: fract_snow_veg
     dsl4jsb_Real2D_onChunk :: fract_snow_soil
     dsl4jsb_Real2D_onChunk :: fract_snow_lice
     dsl4jsb_Real2D_onChunk :: w_snow_can
@@ -1658,7 +1667,6 @@ CONTAINS
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-    nc      = options%nc
     dtime   = options%dtime
     steplen = options%steplen
 
@@ -1669,6 +1677,7 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     ! Set pointers to process configs and memory
+    dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_config(HYDRO_)
 
     w_skin_max = dsl4jsb_Config(HYDRO_)%w_skin_max
@@ -1677,12 +1686,14 @@ CONTAINS
 
     ! First handle LAKE_TYPE lct
     IF (tile%is_lake) THEN
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_snow_lice)      ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_lice)  ! out
-      CALL calc_wskin_fractions_lice( &
-        & w_snow_lice(:),             & ! in
-        & fract_snow_lice(:)          & ! out
-        & )
+      IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+        dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow_lice)      ! in
+        dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_lice)  ! out
+        CALL calc_wskin_fractions_lice( &
+          & w_snow_lice(:),             & ! in
+          & fract_snow_lice(:)          & ! out
+          & )
+      END IF
       RETURN
     END IF
 
@@ -1785,18 +1796,18 @@ CONTAINS
   !!
   SUBROUTINE aggregate_snow_and_skin_fraction(tile, options)
 
+    TYPE(t_jsb_model), POINTER :: model
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(HYDRO_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    TYPE(t_jsb_model), POINTER :: model
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_snow_and_skin_fraction'
 
-    INTEGER  :: iblk, ics, ice
+    INTEGER  :: iblk , ics, ice
 
     iblk = options%iblk
     ics  = options%ics
@@ -1806,6 +1817,7 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
+    dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_memory(HYDRO_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
@@ -1814,7 +1826,9 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, fract_snow,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, fract_snow_soil,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, fract_snow_can,   weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, fract_snow_lice,  weighted_by_fract)
+    IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+      dsl4jsb_Aggregate_onChunk(HYDRO_, fract_snow_lice,  weighted_by_fract)
+    END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1860,7 +1874,7 @@ CONTAINS
       & tile_fract (options%nc), &
       & water_content_new(options%nc)
 
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice
     REAL(wp) :: dtime
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_balance'
@@ -1868,7 +1882,6 @@ CONTAINS
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
-    nc    = options%nc
     dtime = options%dtime
 
     ! IF (tile%lcts() RETURN   ! Check water balance only on root tile
@@ -1926,26 +1939,21 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    TYPE(t_jsb_model), POINTER :: model
+    !dsl4jsb_Def_memory(HYDRO_)
 
-    dsl4jsb_Def_memory(HYDRO_)
-
-    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+    !CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_water_balance'
 
-    INTEGER :: iblk, ics, ice, nc
+    INTEGER :: iblk !, ics, ice
 
     iblk = options%iblk
-    ics  = options%ics
-    ice  = options%ice
-    nc   = options%nc
+    !ics  = options%ics
+    !ice  = options%ice
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    model => Get_model(tile%owner_model_id)
-
-    dsl4jsb_Get_memory(HYDRO_)
+    !dsl4jsb_Get_memory(HYDRO_)
 
     ! weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 

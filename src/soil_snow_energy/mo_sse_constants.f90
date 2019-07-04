@@ -7,6 +7,11 @@
 !! @par Revision History
 !! First version by Reiner Schnur (2013-04-04)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_sse_constants
 #ifndef __NO_JSBACH__
 
@@ -16,7 +21,7 @@ MODULE mo_sse_constants
   IMPLICIT NONE
   PUBLIC
 
-  REAL(wp), PARAMETER :: &
+  REAL(wp), PARAMETER ::                    &
     ! Parameters for solid soil particulate
     & hcond_dry_soil     = 0.05_wp,         & !< Dry soil heat conductivity (O'Donnel et al 2009)             [W/m/K]
     ! Parameters for liquid water

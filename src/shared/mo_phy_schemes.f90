@@ -7,6 +7,11 @@
 !! @par Revision History
 !! First version by Reiner Schnur (2013-04-04)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_phy_schemes
 #ifndef __NO_JSBACH__
 
@@ -30,7 +35,7 @@ CONTAINS
   REAL(wp) ELEMENTAL FUNCTION qsat(temperature, pressure)
 
     USE mo_echam_convect_tables, ONLY: tlucua, &                       ! Table for water vapor pressure e_s multiplied by R_d/R_v
-                                 jptlucu1, jptlucu2, lookuperror
+                                 jptlucu1, jptlucu2
     USE mo_jsb_physical_constants, ONLY: rvd1                    ! = R_v/R_d - 1
 
     REAL(wp), INTENT(in) :: temperature      ! Air temperature [K]

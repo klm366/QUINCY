@@ -8,13 +8,15 @@
 !! First version by Rainer Schneck (2015-07-29)
 !! Julia Nabel (2018-01-10): l_forestRegrowth flag -> allow for changing max_LAI
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_carbon_process
 #ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp
-  USE mo_exception, ONLY: message
-
-  USE mo_jsb_lctlib_class, ONLY: t_lctlib_element
 
   IMPLICIT NONE
   PRIVATE
@@ -48,10 +50,7 @@ CONTAINS
     & Max_C_content_woods,        & ! in
     & specific_leaf_area_C,       & ! in
     & reserveC2leafC,             & ! in
-    ! & is_vegetation,              & ! in
     & pheno_type,                 & ! in
-    & time_steps_per_day,         & ! in
-    & dtime,                      & ! in
     !
     & c_green,                    & ! inout
     & c_woods,                    & ! inout
@@ -112,7 +111,7 @@ CONTAINS
 
     USE mo_carbon_constants,       ONLY : fract_green_aboveGround, fract_wood_aboveGround
     USE mo_jsb_physical_constants, ONLY : tmelt     ! tmelt =273.15_wp
-    USE mo_carbon_constants,       ONLY : sec_per_day, days_per_year, sec_per_year
+    USE mo_carbon_constants,       ONLY : sec_per_day
 
     ! Arguments
     REAL(wp), INTENT(in)    :: LAI                    ! Yesterdays mean LAI
@@ -136,10 +135,7 @@ CONTAINS
     REAL(wp), INTENT(in)    :: Max_C_content_woods    ! Maximum carbon content of wood pool (from lctLib)
     REAL(wp), INTENT(in)    :: specific_leaf_area_C   ! Specific leaf area (from lctLib) [m^2(leaf)/mol(Carbon)]
     REAL(wp), INTENT(in)    :: reserveC2leafC         ! Ratio of max. carbon in reserve pool to max. carbon of leaves
-    !logical, intent(in)    :: is_vegetation          ! logical vegetation mask
     INTEGER,  INTENT(in)    :: pheno_type             ! crop =5
-    INTEGER,  INTENT(in)    :: time_steps_per_day
-    REAL(wp), INTENT(in)    :: dtime
     !
     REAL(wp), INTENT(inout) :: c_green            ! Green carbon pool: on input last value; updated on output
                                                      !    [mol(C)/m^2(canopy)]
@@ -970,10 +966,10 @@ CONTAINS
     USE mo_carbon_constants,  ONLY : fract_green_aboveGround, fract_wood_aboveGround
 
     ! Arguments
-    real(wp),intent(in)    :: damaged_fract(:)              ! Fraction of the vegetated area of each tile damaged till the last
-                                                                ! call of this routine
-    real(wp),intent(in)    :: LeafLit_coef(:)         ! Factor to spread non woody litter into yasso pools [ ]
-    real(wp),intent(in)    :: WoodLit_coef(:)         ! Factor to spread woody litterfall into yasso pools [ ]
+    real(wp),intent(in)    :: damaged_fract(:)         ! Fraction of the vegetated area of each tile damaged till the last
+                                                       ! call of this routine
+    real(wp),intent(in)    :: LeafLit_coef(:)          ! Factor to spread non woody litter into yasso pools [ ]
+    real(wp),intent(in)    :: WoodLit_coef(:)          ! Factor to spread woody litterfall into yasso pools [ ]
     real(wp),intent(inout) :: c_green(:)               ! Value of green carbon pool [mol(C)/m^2(canopy)]
     real(wp),intent(inout) :: c_woods(:)               ! Value of wood carbon pool [mol(C)/m^2(canopy)]
     real(wp),intent(inout) :: c_reserve(:)             ! Value of reserve carbon pool [mol(C)/m^(canopy)2]
@@ -1098,18 +1094,18 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: tmelt
     IMPLICIT NONE
 
-    REAL(wp), DIMENSION(9),  INTENT(IN)  :: Yasso_io_pools     ! Yasso pools IN                                        [mol(c)/m2]
+    REAL(wp), DIMENSION(9),  INTENT(IN)  :: Yasso_io_pools     ! Yasso pools IN [mol(c)/m2]
     REAL(wp),                INTENT(IN)  :: WoodLitterSize     ! Size of woody litter;
-                                                               !     is zero when the subroutine is called for non-woody litter
+                                                               !   is zero when the subroutine is called for non-woody litter
     REAL(wp), DIMENSION(2),  INTENT(IN)  :: Weather            ! climatic drivers: air temperature and precipitation, 15-d means
                                                                ! Weather(1) in [K] ; Weather(2) in [mm/s]
-    REAL(wp),                INTENT(IN)  :: litter             ! fresh litter inputs  (above and belowground)         [mol(C)/m2/day]
+    REAL(wp),                INTENT(IN)  :: litter             ! fresh litter inputs  (above and belowground) [mol(C)/m2/day]
     REAL(wp), DIMENSION(5),  INTENT(IN)  :: Lit_coefV          ! fractions to seperate incoming litter to the yasso pool    [ ]
-    REAL(wp),                INTENT(IN)  :: fract_aboveground   ! parameter to seperate litter influx into above- and belowground
+    REAL(wp),                INTENT(IN)  :: fract_aboveground  ! parameter to seperate litter influx into above- and belowground
                                                                !     part                                                   [ ]
-    REAL(wp),                INTENT(IN)  :: NPP_2_rootExudates ! root exudates [daily]                                [mol(C)/m2/day]
+    REAL(wp),                INTENT(IN)  :: NPP_2_rootExudates ! root exudates [daily]  [mol(C)/m2/day]
 
-    REAL(wp), DIMENSION(16), INTENT(OUT) :: Yasso_out          ! updated Yasso pools(1:9) [mol(c)/m2] & respiration(10) [mol(c)/m2/d]
+    REAL(wp), DIMENSION(16), INTENT(OUT) :: Yasso_out          ! updated Y pools(1:9) [mol(c)/m2] & respiration(10) [mol(c)/m2/d]
                                                                ! & Cflx_2_humus (11) [mol(c)/m2/d] ... see update_Cpools for more
                                                                ! information
 
@@ -1523,7 +1519,7 @@ CONTAINS
   ! calculate per tile density from density per canopy m2
   !
   ELEMENTAL SUBROUTINE get_per_tile(  &
-    & Cpool_per_tile,                 & ! in
+    & Cpool_per_tile,                 & ! out
     & Cpool_per_canopy,               & ! in
     & veg_fract_correction,           & ! in
     & fract_fpc_max)                    ! in

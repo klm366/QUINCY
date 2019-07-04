@@ -7,16 +7,18 @@
 !! @par Revision History
 !! First version by Veronika Gayler (2013-04-20)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_hd_reservoir_cascade
 !#ifndef __NO_JSBACH__
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
   USE mo_kind,                   ONLY: wp
-  USE mo_exception,              ONLY: finish, message, message_text
 
-  USE mo_jsb_control,            ONLY: debug_on
   USE mo_time_base,              ONLY: rdaylen
-  USE mo_jsb_physical_constants, ONLY: rhoh2o
 
   IMPLICIT NONE
   PRIVATE

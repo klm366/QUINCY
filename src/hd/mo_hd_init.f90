@@ -7,6 +7,11 @@
 !! @par Revision History
 !! First version by Veronika Gayler (2013-04-20)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_hd_init
 !#ifndef __NO_JSBACH__
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
@@ -16,13 +21,11 @@ MODULE mo_hd_init
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_jsb_model_class,     ONLY: t_jsb_model
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
-  USE mo_jsb_config_class,    ONLY: t_jsb_config_p
   USE mo_jsb_class,           ONLY: get_model
   USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_jsb_grid_class,      ONLY: t_jsb_grid, get_blk_start, get_blk_end, get_col_start, get_col_end
   USE mo_jsb_grid,            ONLY: Get_grid
   USE mo_decomposition_tools, ONLY: get_local_index
-  USE mo_sync,                ONLY: global_max
   USE mo_impl_constants,      ONLY: SEA_BOUNDARY
 
   dsl4jsb_Use_processes HD_
@@ -48,8 +51,9 @@ CONTAINS
     dsl4jsb_Def_config(HD_)
     dsl4jsb_Def_memory(HD_)
 
+    INTEGER, POINTER ::         &
+      & cell_sea_land_mask(:,:)
     REAL(wp), POINTER ::         &
-      & cell_sea_land_mask(:,:), &
       & return_pointer   (:,:),  &   !< temporary pointer
       & return_pointer3d (:,:,:)     !< temporary pointer
 
@@ -172,7 +176,7 @@ CONTAINS
       input_file = jsb_netcdf_open_input(TRIM(grid%filename), model%id)
 
       ! coastal ocean cells
-      cell_sea_land_mask => input_file%Read_2d( &
+      cell_sea_land_mask => input_file%Read_2d_int( &
         & variable_name='cell_sea_land_mask')
       dsl4jsb_var2D_onDomain(HD_, coast_ocean) = &
         & MERGE(1._wp, 0._wp, cell_sea_land_mask(:,:) == SEA_BOUNDARY)
@@ -184,6 +188,10 @@ CONTAINS
 
     END SELECT
 
+    ! avoid compiler warnings about pointers not being dereferenced
+    IF (ASSOCIATED(return_pointer)) CONTINUE
+    NULLIFY(return_pointer)
+
   END SUBROUTINE hd_init_bc
 
   SUBROUTINE hd_init_ic(tile)
@@ -194,10 +202,10 @@ CONTAINS
     dsl4jsb_Def_memory(HD_)
 
     REAL(wp), POINTER :: &
-      & tile_fract(:,:), &
-      & ptr(:,:)            !< temporary pointer
+      & tile_fract(:,:) !, &
+      !& ptr(:,:)            !< temporary pointer
 
-    TYPE(t_input_file) :: input_file
+    !TYPE(t_input_file) :: input_file
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid

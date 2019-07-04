@@ -7,17 +7,20 @@
 !! @par Revision History
 !! First version by Reiner Schnur (2013-04-04)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_turb_memory_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind, ONLY: wp
   USE mo_util, ONLY: One_of
 
-  USE mo_jsb_model_class,  ONLY: t_jsb_model
-  USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_memory_class, ONLY: t_jsb_memory
-  USE mo_jsb_lct_class,    ONLY: LAND_TYPE, BARE_TYPE, VEG_TYPE, GLACIER_TYPE, LAKE_TYPE
-  USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_jsb_lct_class,    ONLY: LAND_TYPE, BARE_TYPE, VEG_TYPE, GLACIER_TYPE !, LAKE_TYPE
+  USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d
 
   IMPLICIT NONE
   PRIVATE
@@ -49,9 +52,8 @@ CONTAINS
 
   SUBROUTINE Init_turb_memory(mem, prefix, suffix, lct_ids, model_id)
 
-    USE mo_jsb_varlist,       ONLY: jsb_add_var, BASIC, MEDIUM, FULL
-    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
-                                    TSTEP_CONSTANT, tables
+    USE mo_jsb_varlist,       ONLY: jsb_add_var, BASIC !, MEDIUM, FULL
+    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
 
@@ -59,17 +61,14 @@ CONTAINS
     CHARACTER(len=*),     INTENT(in)    :: prefix
     CHARACTER(len=*),     INTENT(in)    :: suffix
     INTEGER,              INTENT(in)    :: lct_ids(:)
-    INTEGER,                   INTENT(in)    :: model_id
+    INTEGER,              INTENT(in)    :: model_id
 
-    TYPE(t_jsb_model),       POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
     INTEGER :: table
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_turb_memory'
-
-    model => Get_model(model_id)
-
+    IF (model_id > 0) CONTINUE ! avoid compiler warning about dummy argument not being used
     table = tables(1)
 
     hgrid   => Get_grid(mem%grid_id)
@@ -77,22 +76,22 @@ CONTAINS
 
     IF (ASSOCIATED(mem%rough_m%ptr)) RETURN
 
-    CALL jsb_add_var( mem, 'rough_m', mem%rough_m,                       &
-      & hgrid, surface,                                                           &
-      & t_cf('roughness_length_momentum', 'm', 'surface roughness length for momentum'),         &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
-      & prefix, suffix,                                                      &
-      & lrestart=.TRUE.,                                                     &
-      & output_level=BASIC, &
+    CALL jsb_add_var( mem, 'rough_m', mem%rough_m,                                       &
+      & hgrid, surface,                                                                  &
+      & t_cf('roughness_length_momentum', 'm', 'surface roughness length for momentum'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
+      & prefix, suffix,                                                                  &
+      & lrestart=.TRUE.,                                                                 &
+      & output_level=BASIC,                                                              &
       & initval_r=1.0_wp )
 
-    CALL jsb_add_var( mem, 'rough_h', mem%rough_h,                       &
-      & hgrid, surface,                                                           &
-      & t_cf('roughness_length_heat', 'm', 'surface roughness length for heat'),                 &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
-      & prefix, suffix,                                                      &
-      & lrestart=.TRUE.,                                                     &
-      & output_level=BASIC, &
+    CALL jsb_add_var( mem, 'rough_h', mem%rough_h,                               &
+      & hgrid, surface,                                                          &
+      & t_cf('roughness_length_heat', 'm', 'surface roughness length for heat'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
+      & prefix, suffix,                                                          &
+      & lrestart=.TRUE.,                                                         &
+      & output_level=BASIC,                                                      &
       & initval_r=1.0_wp )
 
     ! Additional variables for all lcts except lakes
@@ -100,31 +99,31 @@ CONTAINS
       &   .OR. One_of(BARE_TYPE,    lct_ids(:)) > 0 &
       &   .OR. One_of(LAND_TYPE,    lct_ids(:)) > 0 &
       &   .OR. One_of(GLACIER_TYPE, lct_ids(:)) > 0 &
-      &  )                                       &
+      &  )                                          &
       & .AND. .NOT. ASSOCIATED(mem%fact_q_air%ptr)) THEN
 
-      CALL jsb_add_var( mem, 'fact_q_air', mem%fact_q_air,                                   &
-        & hgrid, surface,                                                                    &
-        & t_cf('fact_q_air', '', ''),                                                        &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
-        & prefix, suffix,                                                                    &
-        & output_level=BASIC, &
+      CALL jsb_add_var( mem, 'fact_q_air', mem%fact_q_air,                   &
+        & hgrid, surface,                                                    &
+        & t_cf('fact_q_air', '', ''),                                        &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & output_level=BASIC,                                                &
         & initval_r=0.5_wp )
 
-      CALL jsb_add_var( mem, 'fact_qsat_srf', mem%fact_qsat_srf,                             &
-        & hgrid, surface,                                                                    &
-        & t_cf('fact_qsat_srf', '', ''),                                                     &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
-        & prefix, suffix,                                                                    &
-        & output_level=BASIC, &
+      CALL jsb_add_var( mem, 'fact_qsat_srf', mem%fact_qsat_srf,             &
+        & hgrid, surface,                                                    &
+        & t_cf('fact_qsat_srf', '', ''),                                     &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & output_level=BASIC,                                                &
         & initval_r=0.5_wp )
 
-      CALL jsb_add_var( mem, 'fact_qsat_trans_srf', mem%fact_qsat_trans_srf,                 &
-        & hgrid, surface,                                                                    &
-        & t_cf('fact_qsat_trans_srf', '', ''),                                               &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
-        & prefix, suffix,                                                                    &
-        & output_level=BASIC, &
+      CALL jsb_add_var( mem, 'fact_qsat_trans_srf', mem%fact_qsat_trans_srf, &
+        & hgrid, surface,                                                    &
+        & t_cf('fact_qsat_trans_srf', '', ''),                               &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & output_level=BASIC,                                                &
         & initval_r=0.5_wp )
 
     END IF

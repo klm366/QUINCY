@@ -7,14 +7,17 @@
 !! @par Revision History
 !! First version by Reiner Schnur (2013-04-04)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_jsb_base
 #ifndef __NO_JSBACH__
 
-!!$  USE mo_jsb_model_class, ONLY: t_jsb_model_m
-!!$  USE mo_jsb_class, ONLY: t_jsb, jsbach
   USE mo_jsb_class,   ONLY: jsbach
   USE mo_jsb_control, ONLY: debug_on
-  USE mo_exception,   ONLY: message_text, message, finish
+  USE mo_exception,   ONLY: message
   USE mo_util,        ONLY: int2string
 
   IMPLICIT NONE
@@ -29,7 +32,7 @@ CONTAINS
 
     USE mo_jsb_control,         ONLY: jsb_models_nml, get_no_of_models, init_jsb_master_control, &
       &                               jsbach_runs_standalone, jsbach_is_restarted
-    USE mo_jsb_parallel,        ONLY: init_parallel_iface, init_mpi_communicators
+    USE mo_jsb_parallel,        ONLY: init_parallel_iface
     USE mo_jsb_model_class,     ONLY: t_jsb_model, new_model
     USE mo_jsb_config_class,    ONLY: new_model_config
     USE mo_jsb_process_factory, ONLY: max_no_of_processes, Create_process
@@ -37,11 +40,8 @@ CONTAINS
     USE mo_jsb_grid_class,      ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,            ONLY: Register_vgrid
     USE mo_jsb_io,              ONLY: ZAXIS_SURFACE
-    USE mo_jsb_model_usecases,  ONLY: init_usecase
-    !USE mo_jsb_domain,         ONLY: init_domains
 
-    dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, FUEL_
-    dsl4jsb_Use_config(PHENO_)
+    dsl4jsb_Use_processes SSE_, HYDRO_, RAD_, CARBON_, DISTURB_, FUEL_
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
     dsl4jsb_Use_config(RAD_)
@@ -51,7 +51,6 @@ CONTAINS
 
     CHARACTER(len=*), INTENT(in) :: master_namelist_filename
 
-    dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_config(RAD_)
@@ -120,7 +119,6 @@ CONTAINS
 
       CALL model%Configure_processes()
 
-      dsl4jsb_Get_config(PHENO_)
       dsl4jsb_Get_config(SSE_)
       dsl4jsb_Get_config(HYDRO_)
       dsl4jsb_Get_config(RAD_)
@@ -181,8 +179,6 @@ CONTAINS
       END IF
 
     END DO
-
-    !IF (jsbach_runs_standalone) CALL init_domains(jsbach%models(:)%grid%filename) !TODO-check-with-RMS: delete!?
 
     IF (debug_on()) CALL message(TRIM(routine), 'done basic setup')
 

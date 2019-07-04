@@ -7,6 +7,11 @@
 !! @par Revision History
 !! First version by Reiner Schnur (2013-04-04)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_seb_init
 #ifndef __NO_JSBACH__
 
@@ -14,10 +19,10 @@ MODULE mo_seb_init
   USE mo_exception,         ONLY: message
   USE mo_jsb_control,       ONLY: debug_on
 
-  USE mo_jsb_model_class,   ONLY: t_jsb_model
+  !USE mo_jsb_model_class,   ONLY: t_jsb_model
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
-  USE mo_jsb_class,         ONLY: get_model
-  USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
+  !USE mo_jsb_class,         ONLY: get_model
+  !USE mo_jsb_io_netcdf,     ONLY: t_input_file !, jsb_netcdf_open_input
 
   dsl4jsb_Use_processes SEB_
   dsl4jsb_Use_config(SEB_)
@@ -39,7 +44,6 @@ CONTAINS
     USE mo_jsb_time,        ONLY: timeStep_in_days
     USE mo_pheno_constants, ONLY: PhenoParam
 
-    TYPE(t_jsb_model), POINTER                :: model
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':seb_init'
@@ -56,7 +60,6 @@ CONTAINS
     ! Initial values for the calculation of pseudo_soil_temp in SUBROUTINE calc_pseudo_soil_temp
     dsl4jsb_Get_memory(SEB_)
 
-    model => get_model(tile%owner_model_id)
 
     IF (tile%contains_land) THEN
       dsl4jsb_Get_var2D_onDomain(SEB_, N_pseudo_soil_temp) ! OUT
@@ -72,43 +75,40 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
-    TYPE(t_jsb_model),       POINTER :: model
+    !TYPE(t_jsb_model),       POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':seb_init_bc'
 
-    model => get_model(tile%owner_model_id)
+    IF (tile%level > 0) CONTINUE ! only to avoid compiler warnings
+    !model => get_model(tile%owner_model_id)
 
   END SUBROUTINE seb_init_bc
 
   RECURSIVE SUBROUTINE seb_init_ic(tile)
 
-    USE mo_jsb_time, ONLY: get_time_interpolation_weights
+    !USE mo_jsb_time, ONLY: get_time_interpolation_weights
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
     dsl4jsb_Def_config(SEB_)
-    dsl4jsb_Def_memory(SEB_)
+    !dsl4jsb_Def_memory(SEB_)
 
-    REAL(wp), POINTER :: &
-      & ptr_2D(:,  :)       !< temporary pointer
+    !REAL(wp), POINTER :: &
+    !  & ptr_2D(:,  :)       !< temporary pointer
 
-    TYPE(t_input_file) :: input_file
+    !TYPE(t_input_file) :: input_file
 
-    INTEGER  :: i
-
-    TYPE(t_jsb_model), POINTER :: model
+    !INTEGER  :: i
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':seb_init_ic'
 
-    model => get_model(tile%owner_model_id)
-
     ! Get seb config
-    dsl4jsb_Get_config(SEB_)
+    !dsl4jsb_Get_config(SEB_)
 
     IF (.NOT. dsl4jsb_Config(SEB_)%active) RETURN
 
     ! Get seb memory of the tile
-    dsl4jsb_Get_memory(SEB_)
+    !dsl4jsb_Get_memory(SEB_)
 
     ! Initialize parameters
     !

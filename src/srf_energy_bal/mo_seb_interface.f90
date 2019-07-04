@@ -1,13 +1,18 @@
-  !>
-  !! @brief Contains the interfaces for the surface energy balance process.
-  !!
-  !! @author
-  !!  Reiner Schnur, MPI-M Hamburg
-  !!
-  !! @par Revision History
-  !! First version in mo_srf_interface.f90 by Reiner Schnur (2013-04-04)
-  !! Separated out the surface energy balance part by Reiner Schnur (2016-03-22)
-  !!
+!>
+!! @brief Contains the interfaces for the surface energy balance process.
+!!
+!! @author
+!!  Reiner Schnur, MPI-M Hamburg
+!!
+!! @par Revision History
+!! First version in mo_srf_interface.f90 by Reiner Schnur (2013-04-04)
+!! Separated out the surface energy balance part by Reiner Schnur (2016-03-22)
+!!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_seb_interface
 #ifndef __NO_JSBACH__
 
@@ -24,7 +29,6 @@ MODULE mo_seb_interface
   USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid
   USE mo_jsb_grid,           ONLY: Get_vgrid
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
-  USE mo_jsb_config_class,   ONLY: t_jsb_config
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
@@ -190,15 +194,9 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    INTEGER :: iblk, ics, ice
-
-    TYPE(t_jsb_model), POINTER :: model
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_energy'
 
     IF (.NOT. tile%Is_process_active(SEB_)) RETURN
-
-    model => Get_model(tile%owner_model_id)
 
     IF (tile%is_lake) THEN
       CALL update_surface_energy_lake(tile, options)
@@ -222,10 +220,10 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     dsl4jsb_Def_memory(SEB_)
-
-    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+    dsl4jsb_Def_config(SEB_)
 
     TYPE(t_jsb_model), POINTER :: model
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_surface_energy'
 
@@ -239,6 +237,7 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
+    dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_memory(SEB_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
@@ -251,12 +250,15 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SEB_, heat_cap,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, heat_cap_old,  weighted_by_fract)
 
-    dsl4jsb_Aggregate_onChunk(SEB_, t_lwtr,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, t_lice,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, s_wtr,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, s_ice,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, qsat_lwtr, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, qsat_lice, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, t_lwtr,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, s_wtr,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, qsat_lwtr,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, fract_lice, weighted_by_fract)
+    IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+      dsl4jsb_Aggregate_onChunk(SEB_, t_lice,     weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(SEB_, s_ice,      weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(SEB_, qsat_lice,  weighted_by_fract)
+    END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -278,6 +280,9 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    ! Local variables
+    !
+    TYPE(t_jsb_model), POINTER :: model
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(SSE_)
@@ -292,15 +297,15 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: w_soil_freeze_sl
     dsl4jsb_Real3D_onChunk :: w_ice_melt_sl
 
-    INTEGER  :: iblk, ics, ice
+
+    INTEGER  :: iblk , ics, ice
     REAL(wp) :: dtime
 
     REAL(wp), DIMENSION(options%nc) :: &
       & heat_cap
 
-    TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_vgrid), POINTER :: soil_e, snow_e
-    INTEGER                    :: nsoil, nsnow
+    INTEGER                    :: nsnow !,  nsoil
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_snowmelt_correction'
 
@@ -314,9 +319,7 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
-
     dsl4jsb_Get_config(SSE_)
-
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(HYDRO_)
     IF (tile%contains_land) THEN
@@ -324,7 +327,7 @@ CONTAINS
     END IF
 
     soil_e => Get_vgrid('soil_depth_energy')
-    nsoil = soil_e%n_levels
+    !nsoil = soil_e%n_levels
     IF (dsl4jsb_Config(SSE_)%l_snow) THEN
       snow_e => Get_vgrid('snow_depth_energy')
       nsnow = snow_e%n_levels
@@ -393,19 +396,15 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    TYPE(t_jsb_model), POINTER :: model
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_snowmelt_correction'
 
-    INTEGER :: iblk, ics, ice
+    INTEGER :: iblk , ics, ice
 
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_memory(SEB_)
 
@@ -433,19 +432,9 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    INTEGER :: iblk, ics, ice
-
-    TYPE(t_jsb_model), POINTER :: model
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_asselin'
 
     IF (.NOT. tile%Is_process_active(SEB_)) RETURN
-
-    iblk = options%iblk
-    ics  = options%ics
-    ice  = options%ice
-
-    model => Get_model(tile%owner_model_id)
 
     IF (tile%contains_lake) THEN
       ! No Asselin filter for lake tile
@@ -472,19 +461,15 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    TYPE(t_jsb_model), POINTER :: model
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_asselin'
 
-    INTEGER :: iblk, ics, ice
+    INTEGER :: iblk , ics, ice
 
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_memory(SEB_)
 
@@ -512,13 +497,9 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    TYPE(t_jsb_model), POINTER :: model
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_fluxes'
 
     IF (.NOT. tile%Is_process_active(SEB_)) RETURN
-
-    model => Get_model(tile%owner_model_id)
 
     IF (tile%contains_lake) THEN
       CALL update_surface_fluxes_lake(tile, options)
@@ -541,15 +522,15 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(SEB_)
 
+    TYPE(t_jsb_model),       POINTER :: model
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
-
-    TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_surface_fluxes'
 
-    INTEGER :: iblk, ics, ice
+    INTEGER :: iblk , ics, ice
 
     iblk = options%iblk
     ics  = options%ics
@@ -559,6 +540,7 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
+    dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_memory(SEB_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
@@ -570,8 +552,10 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SEB_,   sensible_hflx_lnd,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_,   latent_hflx_wtr,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_,   sensible_hflx_wtr,  weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_,   latent_hflx_ice,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_,   sensible_hflx_ice,  weighted_by_fract)
+    IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+      dsl4jsb_Aggregate_onChunk(SEB_,   latent_hflx_ice,    weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(SEB_,   sensible_hflx_ice,  weighted_by_fract)
+    END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

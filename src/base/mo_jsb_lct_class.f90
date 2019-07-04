@@ -7,11 +7,15 @@
 !! @par Revision History
 !! First version by Reiner Schnur (2016-02-01)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_jsb_lct_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp
-  USE mo_exception, ONLY: message_text, message, finish
 
   IMPLICIT NONE
   PRIVATE

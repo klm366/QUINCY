@@ -7,6 +7,11 @@
 !! @par Revision History
 !! First version by Reiner Schnur (2013-04-04)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_sse_init
 #ifndef __NO_JSBACH__
 
@@ -23,7 +28,6 @@ MODULE mo_sse_init
 
   dsl4jsb_Use_processes SSE_, SEB_, HYDRO_
   dsl4jsb_Use_config(SSE_)
-  dsl4jsb_Use_config(SEB_)
   dsl4jsb_Use_config(HYDRO_)
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(SEB_)
@@ -138,9 +142,9 @@ CONTAINS
     dsl4jsb_Def_memory(SEB_)
 
     REAL(wp), POINTER :: &
-      & t_srf_mon (:,:,:),    & !< Climatological monthly values of surface temperature
-      & ptr_2D    (:,  :),    & !< temporary pointer
-      & ptr_3D    (:,:,:)
+      & t_srf_mon (:,:,:) !,    & !< Climatological monthly values of surface temperature
+      !& ptr_2D    (:,  :),    & !< temporary pointer
+      !& ptr_3D    (:,:,:)
 
     TYPE(t_input_file) :: input_file
     TYPE(t_jsb_vgrid), POINTER :: soil_e
@@ -190,8 +194,8 @@ CONTAINS
   SUBROUTINE init_soil_properties(tile)
 
     USE mo_jsb_physical_constants, ONLY: ci, dens_snow_min
-    USE mo_sse_constants,          ONLY: vol_hcap_ice, vol_hcap_snow, vol_hcap_snow_min, &
-      &                                  hcond_ice, hcond_org, hcond_snow, hcond_snow_min
+    USE mo_sse_constants,          ONLY: vol_hcap_ice, vol_hcap_snow, & ! vol_hcap_snow_min,
+      &                                  hcond_ice, hcond_snow !, hcond_snow_min, hcond_org
     USE mo_sse_process,            ONLY: calc_vol_heat_capacity, calc_thermal_conductivity
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -224,14 +228,11 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_vgrid), POINTER :: soil_e
 
-    LOGICAL  :: l_compat401
     INTEGER  :: nsoil, nproma, nblks
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_soil_properties'
 
     model => Get_model(tile%owner_model_id)
-
-    l_compat401 = model%config%l_compat401
 
     soil_e => Get_vgrid('soil_depth_energy')
     nsoil = soil_e%n_levels

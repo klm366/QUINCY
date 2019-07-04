@@ -7,11 +7,16 @@
 !! @par Revision History
 !! First version by Reiner Schnur (2013-04-04)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_l2a_memory_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind,              ONLY: wp
-  USE mo_exception,         ONLY: message
+  !USE mo_exception,         ONLY: message
   USE mo_util,              ONLY: One_of
 
   USE mo_jsb_model_class,   ONLY: t_jsb_model
@@ -19,6 +24,8 @@ MODULE mo_l2a_memory_class
   USE mo_jsb_memory_class,  ONLY: t_jsb_memory
   USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d
   USE mo_jsb_lct_class,     ONLY: LAKE_TYPE
+
+  dsl4jsb_Use_processes CARBON_
 
   IMPLICIT NONE
   PRIVATE
@@ -43,7 +50,9 @@ MODULE mo_l2a_memory_class
       latent_hflx_wtr    , &
       sensible_hflx_wtr  , &
       latent_hflx_ice    , &
-      sensible_hflx_ice
+      sensible_hflx_ice  , &
+      carbon_conservation_test, &
+      yday_c_state_sum
   CONTAINS
     PROCEDURE :: Init => Init_l2a_memory
   END TYPE t_l2a_memory
@@ -63,7 +72,7 @@ CONTAINS
     CHARACTER(len=*),         INTENT(in)    :: prefix
     CHARACTER(len=*),         INTENT(in)    :: suffix
     INTEGER,                  INTENT(in)    :: lct_ids(:)
-    INTEGER,                  INTENT(in)    :: model_id
+    INTEGER,                  INTENT(in)    :: model_id ! necessary to get modelconfig
 
     TYPE(t_jsb_model),       POINTER :: model
     TYPE(t_jsb_grid),        POINTER :: hgrid
@@ -202,6 +211,24 @@ CONTAINS
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp )
 
+    END IF
+
+    IF (model%processes(CARBON_)%p%config%active) THEN
+      CALL jsb_add_var( mem, 'carbon_conservation_test', mem%carbon_conservation_test, &
+        & hgrid, surface,                                                              &
+        & t_cf('carbon_conservation_test', '', 'Carbon conservation test'),            &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & loutput = .TRUE., lrestart=.TRUE.,                                           &
+        & initval_r=-999.0_wp )
+
+      CALL jsb_add_var( mem, 'yday_c_state_sum', mem%yday_c_state_sum,                             &
+        & hgrid, surface,                                                                          &
+        & t_cf('yday_c_state_sum', '', 'yday c state sum required for carbon conservation test'),  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
+        & prefix, suffix,                                                                          &
+        & loutput = .TRUE., lrestart=.TRUE.,                                                       &
+        & initval_r=0.0_wp )
     END IF
 
   END SUBROUTINE Init_l2a_memory

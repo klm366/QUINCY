@@ -8,6 +8,11 @@
 !! First version in mo_srf_interface.f90 by Reiner Schnur (2013-04-04)
 !! Separated out the surface energy balance for LAND part by Reiner Schnur (2016-03-22)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_seb_land
 #ifndef __NO_JSBACH__
 
@@ -17,15 +22,13 @@ MODULE mo_seb_land
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
-  USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
   USE mo_jsb_lct_class,      ONLY: GLACIER_TYPE, Contains_lct
   USE mo_jsb_control,        ONLY: debug_on
   USE mo_jsb_time,           ONLY: is_time_experiment_start
 
   dsl4jsb_Use_processes SEB_, RAD_, TURB_, A2L_, SSE_, HYDRO_
-  dsl4jsb_Use_config(SEB_)
-  dsl4jsb_Use_config(HYDRO_)
+  !dsl4jsb_Use_config(SEB_)
   dsl4jsb_Use_config(SSE_)
 
   dsl4jsb_Use_memory(A2L_)
@@ -53,15 +56,14 @@ CONTAINS
     USE mo_phy_schemes,            ONLY: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, tpfac2, tpfac3
     USE mo_sse_constants,          ONLY: snow_depth_min
-    USE mo_jsb_time,               ONLY: get_asselin_coef, is_newday, timeStep_in_days, time_steps_per_day
+    USE mo_jsb_time,               ONLY: is_newday, time_steps_per_day ! get_asselin_coef, timeStep_in_days
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Local variables
     !
-    dsl4jsb_Def_config(SEB_)
-    dsl4jsb_Def_config(HYDRO_)
+    !dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(RAD_)
@@ -78,7 +80,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: day_temp_max
     dsl4jsb_Real2D_onChunk :: day_temp_sum
     dsl4jsb_Real2D_onChunk :: previous_day_temp_mean
-    dsl4jsb_Real2D_onChunk :: previous_day_NPP_pot_rate_ca
     dsl4jsb_Real2D_onChunk :: previous_day_temp_min
     dsl4jsb_Real2D_onChunk :: previous_day_temp_max
     dsl4jsb_Real2D_onChunk :: F_pseudo_soil_temp
@@ -119,23 +120,22 @@ CONTAINS
     ! Locally allocated vectors
     !
     REAL(wp), DIMENSION(options%nc)  :: &
-      fract,            &
-      qsat_srf_old,     &
-      s_old,            &
-      dQdT,             & !< Sensitivity of saturated surface specific humidity to temperature
-      t2s_conv,         & !< Conversion factor from temperature to dry static energy (C_pd * (1+(delta-1)*q_v))
-      heat_tcoef,       & !< Heat transfer coefficient (rho*C_h*|v|)
-      t_star,           &
-      liquid_max,       &
-      t_air_in_Celcius
+     & fract,                           &
+     & qsat_srf_old,                    &
+     & s_old,                           &
+     & dQdT,                            & !< Sensitivity of saturated surface specific humidity to temperature
+     & t2s_conv,                        & !< Conversion factor from temperature to dry static energy (C_pd * (1+(delta-1)*q_v))
+     & heat_tcoef,                      & !< Heat transfer coefficient (rho*C_h*|v|)
+     & t_star,                          &
+     & liquid_max,                      &
+     & t_air_in_Celcius
 
     LOGICAL, DIMENSION(options%nc) :: &
-      is_glacier, &
-      has_snow_layer
+     & is_glacier,                    &
+     & has_snow_layer
 
     INTEGER :: iblk, ics, ice, nc
-    REAL(wp) :: steplen !, dtime
-    REAL(wp) :: eps
+    REAL(wp) :: steplen
     INTEGER  :: ilct
 
     TYPE(t_jsb_model), POINTER :: model
@@ -147,13 +147,12 @@ CONTAINS
     ice  = options%ice
     nc   = options%nc
     steplen = options%steplen
-    !dtime   = options%dtime
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
 
-    dsl4jsb_Get_config(SEB_)
+    !dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_config(SSE_)
 
     ! Get reference to variables for current block
@@ -222,7 +221,7 @@ CONTAINS
       is_glacier(:) = .FALSE.
     END IF
 
-    ! In the moment the calls of calc_previous_day_variables and calc_pseudo_soil_temp are only
+    ! In the moment, the calls of calc_previous_day_variables and calc_pseudo_soil_temp are only
     ! necessary for the phenology process
     t_air_in_Celcius = t_air - tmelt  ! convert Kelvin in Celcius
     ! Sum up of the previous day temperatures
@@ -366,8 +365,8 @@ CONTAINS
     &            psnew)
 
     USE mo_jsb_physical_constants, ONLY: &
-      & cpd, &
-      & cpvd1, &
+      !& cpd, &
+      !& cpvd1, &
       & zemiss_def, &
       & stbo, &
       & alv,  &
@@ -386,10 +385,10 @@ CONTAINS
     !
     REAL(wp) :: zcolin(klon), zcohfl(klon), zcoind(klon), zicp(klon), zca(klon), zcs(klon)
     REAL(wp) :: pdt
-    REAL(wp) :: pc16
+    !REAL(wp) :: pc16
 
     pdt     = cvdifts * steplen
-    pc16    = cpd * cpvd1
+    !pc16    = cpd * cpvd1
 
     !
     zicp(:) = 1._wp / pcp(:)
@@ -422,7 +421,7 @@ CONTAINS
 
     ! Local variables
     !
-    dsl4jsb_Def_config(SEB_)
+    !dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(SEB_)
 
     ! Pointers to variables in memory
@@ -435,26 +434,24 @@ CONTAINS
 
     ! Locally allocated variables
     !
-    INTEGER :: iblk, ics, ice, nc
+    INTEGER :: iblk, ics, ice
     REAL(wp) :: eps
 
-    TYPE(t_jsb_model), POINTER :: model
+    !TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_asselin_land'
 
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    model => Get_model(tile%owner_model_id)
-
-    dsl4jsb_Get_config(SEB_)
+    !model => Get_model(tile%owner_model_id)
 
     ! Get reference to variables for current block
     !
+    !dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_memory(SEB_)
 
     dsl4jsb_Get_var2D_onChunk(SEB_,      t)              ! out
@@ -478,7 +475,7 @@ CONTAINS
 
   SUBROUTINE update_surface_fluxes_land(tile, options)
 
-    USE mo_phy_schemes,            ONLY: q_effective, surface_dry_static_energy, heat_transfer_coef
+    USE mo_phy_schemes,            ONLY: heat_transfer_coef
     USE mo_jsb_physical_constants, ONLY: alv, als
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -505,28 +502,27 @@ CONTAINS
 
     ! Locally allocated vectors
     !
-    REAL(wp) ::                &
-      & s_air          (options%nc),   &  !< Dry static energy at lowest atmospheric level
-      & heat_tcoef     (options%nc)       !< Heat transfer coefficient (rho*C_h*|v|)
+    REAL(wp) ::                      &
+      & s_air          (options%nc), &  !< Dry static energy at lowest atmospheric level
+      & heat_tcoef     (options%nc)     !< Heat transfer coefficient (rho*C_h*|v|)
 
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice
     REAL(wp) :: steplen
 
-    TYPE(t_jsb_model), POINTER :: model
+    !TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_fluxes_land'
 
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-    nc      = options%nc
     steplen = options%steplen
 
     IF (.NOT. tile%Is_process_active(SEB_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    model => Get_model(tile%owner_model_id)
+    !model => Get_model(tile%owner_model_id)
 
     ! Get reference to variables for current block
     !
@@ -574,16 +570,17 @@ CONTAINS
 
     ! Updates the mean day temperature ("previous_day_temp_mean(:)") from air temperature and the mean day NPP-rate
   ! (field previous_day_NPP(:,:)
-  ELEMENTAL SUBROUTINE calc_previous_day_variables(is_newday,              & ! Input
-                                                   t_air_in_Celcius,       & ! Input
-                                                   !dtime,                  & ! Input
-                                                   time_steps_per_day,     & ! Input
-                                                   previous_day_temp_mean, & ! InOut
-                                                   day_temp_sum,           & ! InOut
-                                                   previous_day_temp_min,  & ! InOut
-                                                   day_temp_min,           & ! InOut
-                                                   previous_day_temp_max,  & ! InOut
-                                                   day_temp_max )            ! InOut
+  ELEMENTAL SUBROUTINE calc_previous_day_variables( &
+    & is_newday,                                    & ! Input
+    & t_air_in_Celcius,                             & ! Input
+    ! & dtime,                                        & ! Input
+    & time_steps_per_day,                           & ! Input
+    & previous_day_temp_mean,                       & ! InOut
+    & day_temp_sum,                                 & ! InOut
+    & previous_day_temp_min,                        & ! InOut
+    & day_temp_min,                                 & ! InOut
+    & previous_day_temp_max,                        & ! InOut
+    &  day_temp_max )                                 ! InOut
 
     !-----------------------------------------------------------------------
     !  DECLARATIONS
@@ -659,16 +656,17 @@ CONTAINS
   !
   ! Remark: Instead of air-temperature one could try to use the bottom temperature to compute the pseudo_soil_temp.
   !
-  ELEMENTAL SUBROUTINE calc_pseudo_soil_temp(t_air_in_Celcius,   & ! Input
-                                             N_pseudo_soil_temp, & ! Input
-                                             F_pseudo_soil_temp, & ! Input
-                                             pseudo_soil_temp    & ! InOut
-                                             )
+  ELEMENTAL SUBROUTINE calc_pseudo_soil_temp( &
+    & t_air_in_Celcius,                       & ! Input
+    & N_pseudo_soil_temp,                     & ! Input
+    & F_pseudo_soil_temp,                     & ! Input
+    & pseudo_soil_temp                        & ! InOut
+    & )
 
-    REAL(wp),  intent(in)    ::                     &
-                                t_air_in_Celcius,   &
-                                N_pseudo_soil_temp, &
-                                F_pseudo_soil_temp
+    REAL(wp), intent(in) :: &
+     & t_air_in_Celcius,    &
+     & N_pseudo_soil_temp,  &
+     & F_pseudo_soil_temp
 
     REAL(wp),  intent(inout) :: pseudo_soil_temp
 

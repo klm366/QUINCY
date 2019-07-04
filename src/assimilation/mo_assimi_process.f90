@@ -7,11 +7,15 @@
 !! @par Revision History
 !! First version by Rainer Schneck (2015-07-29)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_assimi_process
 #ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp
-  USE mo_exception, ONLY: message
 
   IMPLICIT NONE
   PRIVATE
@@ -32,7 +36,7 @@ CONTAINS
     & )
 
     ! Declarations
-    USE mo_hydro_constants,   ONLY: LaiLimit
+    USE mo_rad_constants,     ONLY: LaiLimit
     USE mo_math_constants,    ONLY: pi
 
     ! Arguments
@@ -67,7 +71,8 @@ CONTAINS
 
     ! Condition: LAI>LaiLimit
     IF (lai >= LaiLimit) THEN
-      ! R: Note this could be packed into an ELEMENTAL procedure, but I think it would make things only complicated without improving security
+      ! R: Note this could be packed into an ELEMENTAL procedure, but I think it would make things only complicated without
+      ! improving security
       assimi_scaling_fact_cl = MAX(1.e-10_wp,EXP( -k12 * canopy_bound_lai * lai)) !! see Eqs. (107), (108) in Knorr
     END IF
 
@@ -121,7 +126,7 @@ CONTAINS
                             ! of stomatal conductance, photosynthesis and transpiration: a model that
                             ! includes a laminar boundary layer,
                             ! Agricultural and Forest Meteorology, 54, pp. 107-136, 1991
-      & DARKINHIB,        & ! Dark inhibition
+      & DARKINHIB           ! Dark inhibition
                             ! Value to inhibit Dark-Respiration in light
                             ! after Brooks and Farquhar, Effect of temperature on the CO2/O2 specifity on RBisCO
                             ! and the rate of respiration in the light, Planta 165, 397-406, 1985
@@ -129,26 +134,19 @@ CONTAINS
                             ! up from 50 umol/m^2s total solar downward radiation, i.e. 25 umol/m^2s downward PAR
                             ! (idea for improvement: darkinhib should be closer to 1 at very high latitudes)
                             ! The FUNCTION is an own creation.
-      & K1,               & ! helper
-      & K2                  ! helper
 
     REAL(wp) ::           & ! variables with canopy layer
       & VCMAX,            & ! MAXIMUM CARBOXYLATION RATE [MOL(CO2)/M^2 S]
       & JMAX,             & ! MAXIMUM RATE OF ELECTRON TRANSPORT [MOL(CO2)/M^2 S]
       & K,                & ! CO2 SPECIFICITY OF PECASE
-      & T,                & ! Canopy Temperature in Kelvin
       & TC,               & ! Canopy Temperature (leaf) in Celsius.
       & GASS,             & ! gross assimilation (formerly called A)
       & DARK_RESP,        & ! dark respiration (formerly called RD).
       & JE,               & ! Electron transport rate (Knorr, Eq. 102c)
       & JC,               & ! Carboxylation rate (Knorr, Eq. 102b)
       & J0,               &
-      & J1,               &
-      & G0,               &
-      & W1,               & ! helper
-      & W2,               & ! helper
-      & B,                & ! helper
-      & C            ! helper
+      & J1
+
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':calc_assimilation_waterunlimited'
 
@@ -190,12 +188,13 @@ CONTAINS
       !    RD-Dark respiration, K-PEPcase CO2 specivity
       !    Knorr (106)
       !---------------------------------------------------------------------------------
-      KC = KC0 * EXP(EC / R_gas * T0 * T1**(-1) * t_air**(-1))  ! Division "/T1 /t_air" are expressed strange here (and in the following)
-                                                                ! because if this subroutine is not used as elemental (e.g. for tests)
-                                                                ! it makes accuracy of calculation much better!
-                                                                ! R: Abweichungen des Ergebnisses im Vergl. zu JSBACH3 ab 14. Stelle nach
-                                                                !    Komma, obwohl Inputs (R_gas, T0, T1, t_air) genau gleich. Ursache:
-                                                                !    epsilon ist 2.22E-16 (JSBACH3 und JSBACH4) und EXP verstärkt Fehler.
+      KC = KC0 * EXP(EC / R_gas * T0 * T1**(-1) * t_air**(-1))  ! Division "/T1 /t_air" are expressed strange here (and in the
+                                                                ! following) because if this subroutine is not used as elemental
+                                                                ! (e.g. for tests) it makes accuracy of calculation much better!
+                                                                ! R: Abweichungen des Ergebnisses im Vergl. zu JSBACH3 ab 14. 
+                                                                !    Stelle nach dem Komma, obwohl Inputs (R_gas, T0, T1, t_air)
+                                                                !    genau gleich. Ursache: epsilon ist 2.22E-16 (JSBACH3
+                                                                !    und JSBACH4) und EXP verstärkt Fehler.
       KO = KO0 * EXP(EO / R_gas * T0 * T1**(-1)  * t_air**(-1)) ! see above
 
       !---------------------------------------------------------------------------------!
@@ -243,8 +242,8 @@ CONTAINS
       !---------------------------------------------------------------------------------
       IF (JMAX .GT. minOfMaxCarboxrate) THEN
         J1 =   ALPHA * apar_per_lai_cl * JMAX &
-           & / SQRT(JMAX**2 + (ALPHA * apar_per_lai_cl)**2) ! R: Abweichungen des Ergebnisses im Vergl. zu JSBACH3 ab 15./16. Stelle nach
-      ELSE                                                  !    Komma obwohl ALPHA, apar_per_lai_cl, JMAX genau gleich.
+           & / SQRT(JMAX**2 + (ALPHA * apar_per_lai_cl)**2) ! R: Abweichungen des Ergebnisses im Verg. zu JSBACH3 ab 15./16. Stelle
+      ELSE                                                  !    nach Komma obwohl ALPHA, apar_per_lai_cl, JMAX genau gleich.
         J1 = 0._wp
       END IF
 
@@ -258,8 +257,8 @@ CONTAINS
                                                                  !    auch wenn dasselbe OX verwendet wird. Wahrscheinlich nimmt
                                                                  !    Kompiler einen Kopiervorgang vor.
 
-      HITINHIB = 1._wp / ( 1._wp + EXP( 1.3_wp * ( TC - 55._wp ) ) ) ! R: bei gleichem Input keine Abweichung (22 Stellen nach Komma)
-      GASS = MIN (JE, JC) * HITINHIB                                 ! R: Bei gleichem Input keine Abweichung (22 Stellen nach Komma)
+      HITINHIB = 1._wp / ( 1._wp + EXP( 1.3_wp * ( TC - 55._wp ) ) ) ! R: bei gleichem Input keine Abweichung (22 Stell nach Komma)
+      GASS = MIN (JE, JC) * HITINHIB                                 ! R: Bei gleichem Input keine Abweichung (22 Stell nach Komma)
 
       !---------------------------------------------------------------------------------
       !
@@ -271,13 +270,14 @@ CONTAINS
       ! PVM at 25C, therefore RD = const * PVM, but the temperature dependance goes with
       ! ER (for respiration) and not with EV (for PVM)
       !---------------------------------------------------------------------------------
-      DARKINHIB = 0.5_wp + 0.5_wp * EXP(-2.e5_wp * MAX(par_down_mol,0.0_wp)) ! R: bei gleichem Input keine Abweichung (22 Stellen nach Komma)
+      DARKINHIB = 0.5_wp + 0.5_wp * EXP(-2.e5_wp * MAX(par_down_mol,0.0_wp)) ! R: bei gleichem Input keine Abweichung (22 Stellen
+                                                                             !    nach Komma)
 
       DARK_RESP =   FRDC3 * CarboxRate * N_scaling_factors         &
                 & * EXP(ER * T0 / R_gas  * T1**(-1) * t_air**(-1)) &
-                & * HITINHIB * DARKINHIB                             ! R: auch wenn FRDC3, CarboxRate, N_scaling_factors, ER, T0,
-                                                                     !    T1, R_gas, t_air, HITINHIB, DARKINHIB gleich sind entstehen ab der
-                                                                     !    16. Stelle nach Komma Abweichungen wg. EXP.
+                & * HITINHIB * DARKINHIB                          ! R: auch wenn FRDC3, CarboxRate, N_scaling_factors, ER, T0,
+                                                                  !    T1, R_gas, t_air, HITINHIB, DARKINHIB gleich sind
+                                                                  !    entstehen ab der 16. Stelle nach Komma Abweichungen wg. EXP.
 
       !---------------------------------------------------------------------------------
       ! Diffusion equation Flux = (CA - CI) / resistence, rs
@@ -332,13 +332,13 @@ CONTAINS
       ! K scales of course with EK
       !---------------------------------------------------------------------------------
       K =   ETransport * 1.E3_wp * N_scaling_factors &
-        & * EXP(EK * T0 / R_gas * T1**(-1) * t_air**(-1))  ! R: Abweichung ab der 16. Stelle nach dem Komma also im Bereich EPSILON
+        & * EXP(EK * T0 / R_gas * T1**(-1) * t_air**(-1)) ! R: Abweichung ab der 16. Stelle nach dem Komma also im Bereich EPSILON
 
       !---------------------------------------------------------------------------------
       ! same as C3
       !---------------------------------------------------------------------------------
       VCMAX =   CarboxRate * N_scaling_factors &
-            & * EXP(EV / R_gas * T0 * T1**(-1) * t_air**(-1))  ! R: Abweichung ab der 19. Stelle nach dem Komma also im Bereich EPSILON
+            & * EXP(EV / R_gas * T0 * T1**(-1) * t_air**(-1))  ! R: Abw. ab der 19. Stelle nach dem Komma also im Bereich EPSILON
 
       !---------------------------------------------------------------------------------
       !  same as C3, just the 25 degree Celsius proportional factor is different
@@ -347,7 +347,8 @@ CONTAINS
       DARKINHIB = 0.5_wp + 0.5_wp * EXP(-2.e5_wp * MAX(par_down_mol,0.0_wp)) ! R: keine Abweichung
       HITINHIB  = 1._wp / ( 1._wp + EXP( 1.3_wp * ( TC - 55._wp ) ) )        ! R: keine Abweichung
       DARK_RESP =    FRDC4 * CarboxRate * N_scaling_factors &
-                & *  EXP(ER * T0 / R_gas * T1**(-1) * t_air**(-1)) * HITINHIB * DARKINHIB ! R: Abweichung ab der 15. Stelle nach dem Komma also im Bereich EPSILON
+                & *  EXP(ER * T0 / R_gas * T1**(-1) * t_air**(-1)) * HITINHIB * DARKINHIB ! R: Abweichung ab der 15. Stelle nach
+                                                                                          ! dem Komma also im Bereich EPSILON
 
       !---------------------------------------------------------------------------------
       !
@@ -474,7 +475,6 @@ CONTAINS
       & VCMAX,     & ! MAXIMUM CARBOXYLATION RATE [MOL(CO2)/M^2 S]
       & JMAX,      & ! MAXIMUM RATE OF ELECTRON TRANSPORT [MOL(CO2)/M^2 S]
       & K,         & ! CO2 SPECIFICITY OF PECASE
-      & T,         & ! Canopy Temperature in Kelvin
       & TC,        & ! Canopy Temperature (leaf) in Celsius.
       & GASS,      & ! gross assimilation (formerly called A)
       & DARK_RESP, & ! dark respiration (formerly called RD).
@@ -522,10 +522,11 @@ CONTAINS
       !---------------------------------------------------------------------------------
       KC = KC0 * EXP(EC / R_gas * T0 * T1**(-1) * t_air**(-1) )  ! R: Abweichung ab der 13. Stelle nach dem Komma,
                                                                  !    obwohl T0 und T1 und t_air genau gleich. Ursache:
-                                                                 !    epsilon ist 2.22E-16 (JSBACH3 und JSBACH4) und EXP verstärkt Fehler.
-      KO = KO0 * EXP(EO / R_gas * T0 * T1**(-1) * t_air**(-1) )  ! R: Abweichung ab der 9. Stelle nach dem Komma, obwohl T0 und T1 und
-                                                                 !    t_air genau gleich. (Grund warum hier Abweichung größer als oben:
-                                                                 !    KO0 ist um Faktor 3 größer als KC0.)
+                                                                 !    epsilon ist 2.22E-16 (JSBACH3 und JSBACH4) und EXP verstärkt
+                                                                 !    Fehler.
+      KO = KO0 * EXP(EO / R_gas * T0 * T1**(-1) * t_air**(-1) )  ! R: Abweichung ab der 9. Stelle nach dem Komma, obwohl T0 und T1
+                                                                 !    und t_air genau gleich. (Grund warum hier Abweichung größer
+                                                                 !    als oben: KO0 ist um Faktor 3 größer als KC0.)
       GAM = MAX (1.7E-6_wp * TC, 0._wp)                          ! R: Keine Abweichungen
       VCMAX = CarboxRate * N_scaling_factors &
                 * EXP(EV * T0 / R_gas * T1**(-1) * t_air**(-1) ) ! PVM=PVM0*N_scaling_factors*EXP(Energy scaled relative 25C)
@@ -537,9 +538,10 @@ CONTAINS
                 * EXP(ER * T0  / R_gas * T1**(-1) * t_air**(-1) ) &            ! with RD0 proportional PVM0 at 25C
                 * HITINHIB * DARKINHIB                                         ! R: Abweichung ab der 15. Stelle nach dem Komma
       JMAX = ETransport * N_scaling_factors       &  ! PJM=PJM0*N_scaling_factors*EXP(Energy scaled relative 25C)
-                * TC / 25._wp                        ! R: bis hierher keinerlei Abweichung. N_scaling_factors und ETransport genau gleich.!
-      JMAX = MAX(JMAX, minOfMaxCarboxrate) ! R: Abweichung nur für Fall minOfmaxCarboxrate und dann ab der 13. Stelle nach dem Komma
-                                           !    weil minOfMaxCarboxrate = 1.0e-12 ist
+                * TC / 25._wp                        ! R: bis hierher keinerlei Abweichung. N_scaling_factors und ETransport genau
+                                                     !    gleich.
+      JMAX = MAX(JMAX, minOfMaxCarboxrate) ! R: Abweichung nur für Fall minOfmaxCarboxrate und dann ab der 13. Stelle nach dem
+                                           !    Komma weil minOfMaxCarboxrate = 1.0e-12 ist
 
       !---------------------------------------------------------------------------------
       !
@@ -573,9 +575,9 @@ CONTAINS
       !---------------------------------------------------------------------------------
       !if (R_gas < 0.1 .OR. t_air < 0.1 .OR. press_srf < 0.1) &
       !print*,iGP,R_gas,t_air,press_srf
-      G0 = canopy_cond_cl / 1.6_wp / R_gas * t_air**(-1) * press_srf ! R: Die folgenden Berechnungen führen zu keinen Abweichungen im
-                                                                     !    Ergebnis CO2_conc_leaf_cl und bei GASS zu einer Abweichung ab der
-                                                                     !    16. Stelle nach Komma
+      G0 = canopy_cond_cl / 1.6_wp / R_gas * t_air**(-1) * press_srf ! R: Die folgenden Berechnungen führen zu keinen Abweichungen
+                                                                     !    im Ergebnis CO2_conc_leaf_cl und bei GASS zu einer
+                                                                     !    Abweichung ab der 16. Stelle nach Komma
       !---------------------------------------------------------------------------------
       ! A = min{JC, JE} - RD
       ! => A = JC - RD ^ A = JE - RD
@@ -627,7 +629,7 @@ CONTAINS
       !   result for the actual canopy layer goes back to update_bethy as bethy%CO2_conc_leaf has no canopy layers.
       !   Therefore bethy%CO2_conc_leaf_acc is calculated inside the canopy loop!
       CO2_conc_leaf_cl = CO2_mol_mixing_ratio - &
-        & MAX((GASS - DARK_RESP) / MAX(G0, 1.E-6_wp), 0._wp) ! R: keine Abweichung auch nicht aus der Summe aus den Abweichungen oben
+        & MAX((GASS - DARK_RESP) / MAX(G0, 1.E-6_wp), 0._wp) ! R: keine Abweichung auch nicht aus der Summe aus Abweichungen oben
       !---------------------------------------------------------------------------------
       ! Photorespiration
       ! Carboxylilation controlled assimilation:
@@ -673,8 +675,8 @@ CONTAINS
 
       DARKINHIB = 0.5_wp + 0.5_wp * EXP(-2.e5_wp * MAX(par_down_mol,0.0_wp)) ! R: keine Abweichungen
       HITINHIB  = 1._wp / ( 1._wp + EXP( 1.3_wp * ( TC - 55._wp ) ) )        ! R: keine Abweichungen
-      DARK_RESP = FRDC4 * CarboxRate * N_scaling_factors  &           ! DARK_RESP=RD0*N_scaling_factors*EXP(Energie scaled relative 25C)
-                 * EXP(ER * T0 / R_gas * T1**(-1) * t_air**(-1) )   & ! with RD0 proportional PVM0 at 25C
+      DARK_RESP = FRDC4 * CarboxRate * N_scaling_factors  &           ! DARK_RESP=RD0*N_scaling_factors*EXP(Energie scaled relative
+                 * EXP(ER * T0 / R_gas * T1**(-1) * t_air**(-1) )   & !  25C) with RD0 proportional PVM0 at 25C
                  * HITINHIB * DARKINHIB                               ! Abweichung ab der 16. Stelle nach dem Komma
       !---------------------------------------------------------------------------------
       !

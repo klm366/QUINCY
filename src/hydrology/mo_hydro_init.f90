@@ -7,6 +7,11 @@
 !! @par Revision History
 !! First version by Rainer Schneck (2015-10-09)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_hydro_init
 #ifndef __NO_JSBACH__
 
@@ -59,12 +64,12 @@ CONTAINS
     dsl4jsb_Def_memory(HYDRO_)
 
     REAL(wp), POINTER :: &
-      & ptr_2D(:,  :),   &
-      & ptr_3D(:,:,:)
+      & ptr_2D(:,  :) !,   &
+      !& ptr_3D(:,:,:)
 
     TYPE(t_input_file) :: input_file
     TYPE(t_jsb_vgrid), POINTER :: soil_w
-    INTEGER :: i, isoil, nsoil
+    INTEGER :: i, nsoil
 
     TYPE(t_jsb_model),       POINTER :: model
 
@@ -312,6 +317,10 @@ CONTAINS
       END DO
 
       CALL input_file%Close()
+
+    ! avoid compiler warnings about pointers not being dereferenced
+    IF (ASSOCIATED(ptr_2D)) CONTINUE
+    NULLIFY(ptr_2D)
 
     END IF
 

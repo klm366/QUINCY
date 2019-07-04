@@ -8,10 +8,16 @@
 !! @par Revision History
 !! First version by Julia Nabel (2015-11-02), copied several parts from jsbach3 jsbalone_driver.f90
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 PROGRAM jsb4_driver
+#ifndef __NO_JSBACH__
 #ifndef __ICON__
 
-  USE mo_jsb_interface,      ONLY: jsbach_interface
+  USE mo_jsb_interface,      ONLY: jsbach_interface, jsbach_start_timestep, jsbach_finish_timestep
   USE mo_jsb_base,           ONLY: jsbach_setup_models, jsbach_setup_tiles
   USE mo_jsb_model_init,     ONLY: jsbach_setup_grid, jsbach_init, jsbach_init_after_restart
   USE mo_jsb_model_final,    ONLY: jsbach_finalize
@@ -30,7 +36,7 @@ PROGRAM jsb4_driver
   USE mo_jsb4_forcing,       ONLY: get_interface_variables_from_external_forcing, init_forcing
 
   ! Currently from adapter
-  USE mo_jsb_domain_iface,   ONLY: get_lat, get_lon
+  USE mo_jsb_grid_iface,     ONLY: get_lat, get_lon
   USE mo_jsb_namelist_iface, ONLY: POSITIONED, open_nml, position_nml
   USE mo_jsb_parallel,       ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel, mpi_comm
   USE mo_jsb_test,           ONLY: read_interface_vars, read_interface_variables
@@ -265,8 +271,8 @@ PROGRAM jsb4_driver
 
     !TODO: get from grid? but how to name such a function get_lon_from_grid?
     !      and if, shouldn't then also get_nproma should be called get_nproma_from_grid?
-    lon = get_lon(decomp = local_decomposition)
-    lat = get_lat(decomp = local_decomposition)
+    lon = get_lon(local_decomposition)
+    lat = get_lat(local_decomposition)
 
     ALLOCATE(coslon(nproma,nblks))
     ALLOCATE(coslat(nproma,nblks))
@@ -326,6 +332,8 @@ PROGRAM jsb4_driver
     IF(is_newday()) THEN
       CALL write_date(current_date,'Calculate timesteps for day: ')
     ENDIF
+
+    CALL jsbach_start_timestep(model_id)
 
     IF (l_trigfiles) THEN
       CALL close_output_streams
@@ -402,6 +410,8 @@ PROGRAM jsb4_driver
 !      evapo_pot_sum_proc = 0._wp
 !    ENDIF
 
+    CALL jsbach_finish_timestep(model_id, time_step_len)
+
     CALL out_streams
 
     IF (l_putrerun) CALL write_streams
@@ -461,5 +471,6 @@ PROGRAM jsb4_driver
 
   ! Stop MPI
   CALL p_stop
+#endif
 #endif
 END PROGRAM jsb4_driver

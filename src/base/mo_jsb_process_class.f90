@@ -7,6 +7,11 @@
 !! @par Revision History
 !! First version by Reiner Schnur (2015-09-01)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_jsb_process_class
 #ifndef __NO_JSBACH__
 
@@ -149,10 +154,9 @@ CONTAINS
 
   END FUNCTION Get_task
 
-  SUBROUTINE Configure_process(this, namelist_filename)
+  SUBROUTINE Configure_process(this)
 
     CLASS(t_jsb_process), INTENT(inout) :: this
-    CHARACTER(LEN=*),     INTENT(in)    :: namelist_filename
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Configure_process'
 

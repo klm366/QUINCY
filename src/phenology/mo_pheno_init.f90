@@ -8,6 +8,10 @@
 !! First version by Rainer Schneck (2015-09-29)
 !! Julia Nabel (2018-01-10): l_forestRegrowth flag
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
 
 MODULE mo_pheno_init
 #ifndef __NO_JSBACH__
@@ -39,23 +43,7 @@ CONTAINS
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
-    ! Local variables
-    TYPE(t_jsb_model), POINTER  :: model
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init'
-
-    ! Declare pointers for process configuration and memory
-    dsl4jsb_Def_memory(PHENO_)
-    dsl4jsb_Get_memory(PHENO_)
-    !dsl4jsb_Def_config(PHENO_)
-    !dsl4jsb_Get_config(PHENO_)
-
-    ! Declare pointers for variables in memory
-
-    ! ---------------------------
-    ! Go
-
-    model => get_model(tile%owner_model_id)
 
     CALL pheno_init_bc(tile)
     CALL pheno_init_ic(tile)
@@ -131,29 +119,37 @@ CONTAINS
     dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max) = &
       MERGE(dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max), 0._wp, dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max) >= 0._wp)
 
-    NULLIFY(ptr_2D)
-
     CALL input_file%Close()
 
-    !JN 10.01.18: for now: set the maxLai for non forest types to the one from the Lctlib
-    !             later one might think about allometric relation ships in other multi annual plants, too?
-    IF ( (dsl4jsb_Config(PHENO_)%l_forestRegrowth) .AND. (.NOT. dsl4jsb_Lctlib_param(ForestFlag)) ) THEN
-      dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom) = dsl4jsb_Lctlib_param(MaxLAI)
-    END IF
+    ! avoid compiler warnings about pointers not being dereferenced
+    IF (ASSOCIATED(ptr_2D)) CONTINUE
+    NULLIFY(ptr_2D)
 
-    !JN 10.01.18: with l_forestRegrowth the maxLAI can change over time for forest pfts
-    IF ( (dsl4jsb_Config(PHENO_)%l_forestRegrowth) .AND. (dsl4jsb_Lctlib_param(ForestFlag)) ) THEN
-      dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =   &
-        & 1.0_wp - exp(-dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom) / dsl4jsb_Lctlib_param(clumpinessFactor))
-    !@todo: do not rely on the lib_id but use a flag instead?
-    ELSE IF (tile%lcts(1)%lib_id /= 0)  THEN ! only if the present tile is a pft
-   !PHS   dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =   &
-   !PHS     & 1.0_wp - exp(-dsl4jsb_Lctlib_param(MaxLAI) / dsl4jsb_Lctlib_param(clumpinessFactor))
-   !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-   !PHS: JeDi does not need this vegetation correction so I set the correction fraction to one.
-   !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=        
+    IF (tile%lcts(1)%lib_id /= 0)  THEN ! only if the present tile is a pft
+      !JN 10.01.18: for now: set the maxLai for non forest types to the one from the Lctlib
+      !             later one might think about allometric relation ships in other multi annual plants, too?
+      IF ( (dsl4jsb_Config(PHENO_)%l_forestRegrowth) .AND. (.NOT. dsl4jsb_Lctlib_param(ForestFlag)) ) THEN
+        dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom) = dsl4jsb_Lctlib_param(MaxLAI)
+      END IF
+
+      !JN 10.01.18: with l_forestRegrowth the maxLAI can change over time for forest pfts
+      IF ( (dsl4jsb_Config(PHENO_)%l_forestRegrowth) .AND. (dsl4jsb_Lctlib_param(ForestFlag)) ) THEN
+        dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =   &
+          & 1.0_wp - exp(-dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom) / dsl4jsb_Lctlib_param(clumpinessFactor))
+      !@todo: do not rely on the lib_id but use a flag instead?
+      ELSE
+        dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =   &
+          & 1.0_wp - exp(-dsl4jsb_Lctlib_param(MaxLAI) / dsl4jsb_Lctlib_param(clumpinessFactor))
+      END IF
+
+      !PHS   dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =   &
+      !PHS     & 1.0_wp - exp(-dsl4jsb_Lctlib_param(MaxLAI) / dsl4jsb_Lctlib_param(clumpinessFactor))
+     !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+      !PHS: JeDi does not need this vegetation correction so I set the correction fraction to one.
+      !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=        
       dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =  1.0_wp 
-   !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=      
+      !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=      
+
     END IF
 
   END SUBROUTINE pheno_init_bc
@@ -214,7 +210,7 @@ CONTAINS
           dsl4jsb_var2D_onDomain(PHENO_, lai) = &
             & MIN(dsl4jsb_var2D_onDomain(PHENO_, lai), dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom))
         END IF
-        dsl4jsb_var2D_onDomain(PHENO_, fract_fpc) = get_foliage_projected_cover( &
+        dsl4jsb_var2D_onDomain(PHENO_, fract_fpc) = get_foliage_projected_cover(                &
           & dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max), dsl4jsb_var2D_onDomain(PHENO_, lai), &
           & dsl4jsb_Lctlib_param(ClumpinessFactor))
       END IF

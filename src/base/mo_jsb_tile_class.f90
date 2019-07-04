@@ -7,20 +7,24 @@
 !! @par Revision History
 !! First version by Reiner Schnur (2013-04-04)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_jsb_tile_class
 #ifndef __NO_JSBACH__
 
   USE mo_jsb_control,         ONLY: debug_on
-  USE mo_kind,                ONLY: wp, dp
-  USE mo_util,                ONLY: real2string
-  USE mo_exception,           ONLY: message_text, message, finish
+  USE mo_kind,                ONLY: wp !, dp
+  USE mo_exception,           ONLY: message, finish
   USE mo_io_units,            ONLY: filename_max
 
   USE mo_hsm_class,           ONLY: t_Hsm, t_State, t_Message
   USE mo_jsb_memory_class,    ONLY: t_jsb_memory_p, t_jsb_memory
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
     &                               LAND_TYPE, VEG_TYPE, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE
-  USE mo_jsb_var_class,       ONLY: t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_jsb_var_class,       ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
   IMPLICIT NONE
   PRIVATE
@@ -37,8 +41,8 @@ MODULE mo_jsb_tile_class
     PROCEDURE(aggregate_interface_2d), DEFERRED             :: Aggregate_2d
     PROCEDURE(aggregate_interface_3d), DEFERRED             :: Aggregate_3d
     GENERIC                                                 :: Aggregate => Aggregate_2d, Aggregate_3d
-    PROCEDURE(aggregate_interface_setopt_logical), DEFERRED :: Set_aggregator_option_logical
-    GENERIC                                                 :: Set_option => Set_aggregator_option_logical
+    ! PROCEDURE(aggregate_interface_setopt_logical), DEFERRED :: Set_aggregator_option_logical
+    ! GENERIC                                                 :: Set_option => Set_aggregator_option_logical
   END TYPE t_jsb_aggregator
 
   TYPE t_jsb_aggregator_p
@@ -62,8 +66,8 @@ MODULE mo_jsb_tile_class
     LOGICAL                                :: contains_lake = .FALSE.
     LOGICAL                                :: contains_soil = .FALSE.
     INTEGER,                ALLOCATABLE    :: process_action(:)
-    REAL(wp), PRIVATE,          POINTER    :: fract     (:,:)      !< Fraction of this tile (relative to parent tile)
-    REAL(wp),                   POINTER    :: fract_max (:,:)      !< Maximum potential fraction for this tile (rel. to parent)
+    REAL(wp), PRIVATE,          POINTER    :: fract     (:,:)      !< Fraction of this tile (relative to grid box)
+    REAL(wp),                   POINTER    :: fract_max (:,:)      !< Maximum potential fraction for this tile (rel. to grid box)
     REAL(wp), PRIVATE,          POINTER    :: fract_old     (:,:)  !< Old fract
     REAL(wp),                   POINTER    :: fract_max_old (:,:)  !< Old fract_max
     CHARACTER(LEN=filename_max)            :: fract_filename       !< Name of file to read tile fractions from. The variable names
@@ -111,13 +115,14 @@ MODULE mo_jsb_tile_class
   END type t_jsb_tile_abstract
 
   ABSTRACT INTERFACE
-    SUBROUTINE Init_interface(this, varlist_name, prefix, suffix, l_fixed_fractions, in_var_groups)
+    SUBROUTINE Init_interface(this, varlist_name, prefix, suffix, l_fixed_fractions, l_rel_fractions, in_var_groups)
       IMPORT :: t_jsb_tile_abstract
       CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
       CHARACTER(len=*),           INTENT(in)    :: varlist_name
       CHARACTER(len=*),           INTENT(in)    :: prefix
       CHARACTER(len=*),           INTENT(in)    :: suffix
       LOGICAL,                    INTENT(in)    :: l_fixed_fractions
+      LOGICAL,                    INTENT(in)    :: l_rel_fractions
       LOGICAL,                    INTENT(in)    :: in_var_groups
     END SUBROUTINE Init_interface
   END INTERFACE
@@ -130,11 +135,9 @@ MODULE mo_jsb_tile_class
   END INTERFACE
 
   ABSTRACT INTERFACE
-    ! FUNCTION Handler_interface(this, hsm, msg_in) RESULT(return_ptr)
     FUNCTION Handler_interface(this, msg_in) RESULT(return_ptr)
       IMPORT :: t_jsb_tile_abstract, t_Hsm, t_Message
       CLASS(t_jsb_tile_abstract),  INTENT(inout) :: this
-      ! CLASS(t_Hsm),                INTENT(inout) :: hsm
       CLASS(t_Message),            INTENT(in)    :: msg_in
       CLASS(t_Message),            POINTER       :: return_ptr
     END FUNCTION Handler_interface
@@ -182,7 +185,7 @@ MODULE mo_jsb_tile_class
 !    PROCEDURE :: Aggregate => Aggregate_weighted_by_fract_3d
     PROCEDURE :: Aggregate_2d                  => Aggregate_weighted_by_fract_2d
     PROCEDURE :: Aggregate_3d                  => Aggregate_weighted_by_fract_3d
-    PROCEDURE :: Set_aggregator_option_logical => Aggregate_weighted_by_fract_set_option_logical
+    ! PROCEDURE :: Set_aggregator_option_logical => Aggregate_weighted_by_fract_set_option_logical
     FINAL     :: Finalize_aggregator_weighted_by_fract
   END TYPE t_jsb_aggregator_weighted_by_fract
 
@@ -414,7 +417,7 @@ CONTAINS
       & fract_old(:,:),    &
       & fract_max_old(:,:)
 
-    INTEGER :: ilct
+    ! INTEGER :: ilct
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Set_fraction_2d'
 
@@ -688,7 +691,6 @@ CONTAINS
 
     INTEGER :: no_children, i
     CLASS(t_State), POINTER :: current
-    REAL(wp), ALLOCATABLE :: fract(:), fract_sum(:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Set_fractions_aggregator'
 
@@ -705,18 +707,6 @@ CONTAINS
         current => current%next_sibling
       END DO
 
-      ALLOCATE(fract(ice-ics+1))
-      ALLOCATE(fract_sum(ice-ics+1))
-      fract(:) = tile%fract(ics:ice,iblk)
-      fract_sum(:) = SUM(this%fractions(ics:ice,iblk,:), DIM=2)
-      ! IF (ASSOCIATED(tile%parent) .AND. ANY( fract_sum(:) < 1._wp - EPSILON(1._wp) .AND. fract(:) > 0._wp)) THEN
-      !   CALL message(TRIM(routine), 'Sum of child tile fractions on tile '//TRIM(tile%name)//': '//&
-      !     &                         real2string(MINVAL(fract_sum(:)))//' - '//real2string(MAXVAL(fract_sum(:))), &
-      !     &          all_print=.TRUE.)
-      !   CALL finish(TRIM(routine), 'Sum of tile fractions is not 1 on tile')
-      ! END IF
-      DEALLOCATE(fract, fract_sum)
-
       tile%l_fract_children_changed(ics:ice,iblk) = .FALSE.
     END IF
 
@@ -724,16 +714,14 @@ CONTAINS
 
   SUBROUTINE Aggregate_weighted_by_fract_2d(this, tile, var, ics, ice, iblk, caller)
 
-    USE mo_hsm_class,      ONLY: t_State
-
     CLASS(t_jsb_aggregator_weighted_by_fract), INTENT(inout) :: this
     CLASS(t_jsb_tile_abstract),                INTENT(inout) :: tile
     TYPE(t_jsb_var_real2d),                    INTENT(inout) :: var
     INTEGER,                                   INTENT(in)    :: ics, ice, iblk
     CHARACTER(len=*),                          INTENT(in)    :: caller
 
-    INTEGER :: no_children, i, iproc, nc
-    REAL(dp) :: missval
+    INTEGER :: no_children, i, iproc
+    ! REAL(dp) :: missval
 
     CHARACTER(len=256) :: routine
 
@@ -747,9 +735,7 @@ CONTAINS
 
     CALL this%Set_fractions(tile, ics, ice, iblk)
 
-    nc = ice - ics + 1
-
-    missval = var%missval
+    ! missval = var%missval
 
     iproc = var%owner_proc_id
     IF (iproc < 0) CALL finish(TRIM(routine), 'Unknown process for variable '//TRIM(var%name)//' on tile '//TRIM(tile%name))
@@ -764,41 +750,41 @@ CONTAINS
       CALL finish(TRIM(routine), 'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' has wrong size')
     END IF
 
-    this%data_sum (:,iblk) = 0._wp
-    this%fract_sum(:,iblk) = 0._wp
-
-    DO i=1,no_children
-      IF (var%child_idx(i) > 0) THEN
-        ASSOCIATE (data_child => tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p%field(ics:ice,iblk,1,1,1), &
-          &        fractions  => this%fractions(ics:ice,iblk,i))
-          this%data_sum(ics:ice,iblk) = this%data_sum(ics:ice,iblk) + fractions * data_child
-          this%fract_sum(ics:ice,iblk) = this%fract_sum(ics:ice,iblk) + fractions
-        END ASSOCIATE
-      END IF
-    END DO
-    ! print*,'AAA ',ics,ice,MINVAL(this%data_sum(ics:ice)), MAXVAL(this%data_sum(ics:ice)),&
-      ! & MINVAL(this%fract_sum(ics:ice)), MAXVAL(this%fract_sum(ics:ice))
-
-    ! IF (ANY(fract_sum(:) > 1._wp + EPSILON(1._wp))) THEN
-    !   ! print*, fract_sum
-    !   CALL message(TRIM(routine), 'On tile '//TRIM(tile%name)//': fract_sum > 1 - '// &
-    !     &                         real2string(MINVAL(fract_sum(:)))//' - '//real2string(MAXVAL(fract_sum(:))), &
-    !     &          all_print=.TRUE.)
-    !   CALL finish(TRIM(routine),  '    ... this should not happen')
-    ! END IF
-
-    IF (no_children == 1 .AND. .NOT. var%l_aggregate_all) THEN
-      ! Only one tile to aggregate, avoid multiplying and dividing by a potentially small fraction
-      var%ptr(ics:ice,iblk) = this%data_sum(ics:ice,iblk)
-    ELSE IF (var%l_aggregate_all) THEN              ! Sum of fractions is 1
-      ! For tiles where variable is not defined data(:,tile) is 0
-      var%ptr(ics:ice,iblk) = this%data_sum(ics:ice,iblk)
+    IF (no_children == 1) THEN
+      var%ptr(ics:ice,iblk) = tile%mem(iproc)%p%children(1)%p%vars(var%child_idx(1))%p%field(ics:ice,iblk,1,1,1)
     ELSE
+      this%data_sum (:,iblk) = 0._wp
+      this%fract_sum(:,iblk) = 0._wp
+
+      DO i=1,no_children
+        ASSOCIATE (fractions  => this%fractions(ics:ice,iblk,i))
+          IF (var%child_idx(i) > 0) THEN
+            ASSOCIATE (data_child => tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p%field(ics:ice,iblk,1,1,1) )
+              this%data_sum(ics:ice,iblk) = this%data_sum(ics:ice,iblk) + fractions * data_child
+            END ASSOCIATE
+            this%fract_sum(ics:ice,iblk) = this%fract_sum(ics:ice,iblk) + fractions
+          ELSE IF (var%l_aggregate_all) THEN
+            this%fract_sum(ics:ice,iblk) = this%fract_sum(ics:ice,iblk) + fractions
+          END IF
+        END ASSOCIATE
+      END DO
+      ! print*,'AAA ',ics,ice,MINVAL(this%data_sum(ics:ice)), MAXVAL(this%data_sum(ics:ice)),&
+        ! & MINVAL(this%fract_sum(ics:ice)), MAXVAL(this%fract_sum(ics:ice))
+
+      ! IF (ANY(fract_sum(:) > 1._wp + EPSILON(1._wp))) THEN
+      !   ! print*, fract_sum
+      !   CALL message(TRIM(routine), 'On tile '//TRIM(tile%name)//': fract_sum > 1 - '// &
+      !     &                         real2string(MINVAL(fract_sum(:)))//' - '//real2string(MAXVAL(fract_sum(:))), &
+      !     &          all_print=.TRUE.)
+      !   CALL finish(TRIM(routine),  '    ... this should not happen')
+      ! END IF
+
       WHERE (this%fract_sum(ics:ice,iblk) > 0._wp)
         var%ptr(ics:ice,iblk) = this%data_sum(ics:ice,iblk) / this%fract_sum(ics:ice,iblk)
       !ELSE WHERE
       !  var%ptr(ics:ice,iblk) = missval
       END WHERE
+
     END IF
 
     IF (var%l_aggregate_all) THEN
@@ -811,16 +797,14 @@ CONTAINS
 
   SUBROUTINE Aggregate_weighted_by_fract_3d(this, tile, var, ics, ice, iblk, caller)
 
-    USE mo_hsm_class,      ONLY: t_State
-
     CLASS(t_jsb_aggregator_weighted_by_fract), INTENT(inout) :: this
     CLASS(t_jsb_tile_abstract),                INTENT(inout) :: tile
     TYPE(t_jsb_var_real3d),                    INTENT(inout) :: var
     INTEGER,                                   INTENT(in)    :: ics, ice, iblk
     CHARACTER(len=*),                          INTENT(in)    :: caller
 
-    INTEGER :: no_children, i, iproc, nc, ilev
-    REAL(dp) :: missval
+    INTEGER :: no_children, i, iproc, ilev
+    ! REAL(dp) :: missval
 
     CHARACTER(len=256) :: routine
 
@@ -834,9 +818,7 @@ CONTAINS
 
     CALL this%Set_fractions(tile, ics, ice, iblk)
 
-    nc = ice - ics + 1
-
-    missval = var%missval
+    ! missval = var%missval
 
     iproc = var%owner_proc_id
     IF (iproc < 0) CALL finish(TRIM(routine), 'Unknown process for variable '//TRIM(var%name)//' on tile '//TRIM(tile%name))
@@ -851,32 +833,35 @@ CONTAINS
       CALL finish(TRIM(routine), 'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' has wrong size')
     END IF
 
-    DO ilev=1,SIZE(var%ptr,2)
-      this%fract_sum(:,iblk) = 0._wp
-      this%data_sum (:,iblk) = 0._wp
-      DO i=1,no_children
-        IF (var%child_idx(i) > 0) THEN
-          ASSOCIATE (data_child => tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p%field(ics:ice,ilev,iblk,1,1), &
-            &        fractions  => this%fractions(ics:ice,iblk,i))
-            this%data_sum(ics:ice,iblk) = this%data_sum(ics:ice,iblk) + fractions * data_child
-            this%fract_sum(ics:ice,iblk) = this%fract_sum(ics:ice,iblk) + fractions
-          END ASSOCIATE
-        END IF
+    IF (no_children == 1) THEN
+      DO ilev=1,SIZE(var%ptr,2)
+        var%ptr(ics:ice,ilev,iblk) = tile%mem(iproc)%p%children(1)%p%vars(var%child_idx(1))%p%field(ics:ice,ilev,iblk,1,1)
       END DO
-      IF (no_children == 1 .AND. .NOT. var%l_aggregate_all) THEN
-        ! Only one tile to aggregate, avoid multiplying and dividing by a potentially small fraction
-        var%ptr(ics:ice,ilev,iblk) = this%data_sum(ics:ice,iblk)
-      ELSE IF (var%l_aggregate_all) THEN              ! Sum of fractions is 1
-        ! For tiles where variable is not defined data(:,ilev,tile) is 0
-        var%ptr(ics:ice,ilev,iblk) = this%data_sum(ics:ice,iblk)
-      ELSE
+    ELSE
+
+      DO ilev=1,SIZE(var%ptr,2)
+        this%fract_sum(:,iblk) = 0._wp
+        this%data_sum (:,iblk) = 0._wp
+        DO i=1,no_children
+          ASSOCIATE (fractions  => this%fractions(ics:ice,iblk,i))
+            IF (var%child_idx(i) > 0) THEN
+              ASSOCIATE (data_child => tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p%field(ics:ice,ilev,iblk,1,1) )
+                this%data_sum(ics:ice,iblk) = this%data_sum(ics:ice,iblk) + fractions * data_child
+              END ASSOCIATE
+              this%fract_sum(ics:ice,iblk) = this%fract_sum(ics:ice,iblk) + fractions
+            ELSE IF (var%l_aggregate_all) THEN
+              this%fract_sum(ics:ice,iblk) = this%fract_sum(ics:ice,iblk) + fractions
+            END IF
+          END ASSOCIATE
+        END DO
         WHERE (this%fract_sum(ics:ice,iblk) > 0._wp)
           var%ptr(ics:ice,ilev,iblk) = this%data_sum(ics:ice,iblk) / this%fract_sum(ics:ice,iblk)
         ! ELSE WHERE
           ! var%ptr(ics:ice,ilev,iblk) = missval
         END WHERE
-      END IF
-    END DO
+      END DO
+
+    END IF
 
     ! IF (ANY(fract_sum(:) > 1._wp + EPSILON(1._wp))) THEN
     !   CALL message(TRIM(routine), 'On tile '//TRIM(tile%name)//': fract_sum > 1 - '// &
@@ -893,18 +878,18 @@ CONTAINS
 
   END SUBROUTINE Aggregate_weighted_by_fract_3d
 
-  SUBROUTINE Aggregate_weighted_by_fract_set_option_logical(this, name, value)
+  ! SUBROUTINE Aggregate_weighted_by_fract_set_option_logical(this, name, value)
 
-    CLASS(t_jsb_aggregator_weighted_by_fract), INTENT(inout) :: this
-    CHARACTER(len=*),                          INTENT(in)    :: name
-    LOGICAL,                                   INTENT(in)    :: value
+  !   CLASS(t_jsb_aggregator_weighted_by_fract), INTENT(inout) :: this
+  !   CHARACTER(len=*),                          INTENT(in)    :: name
+  !   LOGICAL,                                   INTENT(in)    :: value
 
-    ! SELECT CASE (TRIM(name))
-    ! CASE ('option')
-    !   this%option = value
-    ! END SELECT
+  !   SELECT CASE (TRIM(name))
+  !   CASE ('option')
+  !     this%option = value
+  !   END SELECT
 
-  END SUBROUTINE Aggregate_weighted_by_fract_set_option_logical
+  ! END SUBROUTINE Aggregate_weighted_by_fract_set_option_logical
 
   FUNCTION Get_first_child_tile(this) RESULT(return_ptr)
 

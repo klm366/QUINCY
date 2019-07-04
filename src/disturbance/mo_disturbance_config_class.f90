@@ -7,12 +7,17 @@
 !! @par Revision History
 !! First version by Rainer Schneck (06.04.2017)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_disturb_config_class
 #ifndef __NO_JSBACH__
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
 
-  USE mo_exception,         ONLY: message_text, message, finish
+  USE mo_exception,         ONLY: message
   USE mo_io_units,          ONLY: filename_max
   USE mo_kind,              ONLY: wp
   USE mo_jsb_config_class,  ONLY: t_jsb_config

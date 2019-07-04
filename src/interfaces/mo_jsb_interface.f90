@@ -7,23 +7,28 @@
 !! @par Revision History
 !! First version by Reiner Schnur (2013-04-04)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_jsb_interface
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
-  USE mo_exception,           ONLY: message_text, message, finish
-  USE mo_util_string,         ONLY: int2string
+  USE mo_exception,           ONLY: message, finish !,message_text
+  ! USE mo_util_string,         ONLY: int2string
 
-  USE mo_jsb_control,         ONLY: debug_on, timer_on, l_timer_host, jsbach_runs_standalone, timer_jsbach
+  USE mo_jsb_control,         ONLY: debug_on, timer_on, l_timer_host, timer_jsbach
   USE mo_timer,               ONLY: timer_start, timer_stop
   USE mo_jsb_class,           ONLY: Get_model
   USE mo_jsb_model_class,     ONLY: t_jsb_model
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
-  USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_Task_queue
-  USE mo_hsm_class,           ONLY: t_Hsm, t_Message, t_State
 !  USE mo_jsb_controller,      ONLY: Run_process_task
   USE mo_atmland_interface,   ONLY: update_atm2land, update_land2atm
-  USE mo_jsb_parallel,        ONLY: get_my_global_mpi_id, Get_omp_thread, Is_omp_inside_serial
+  USE mo_jsb_parallel,        ONLY: Get_omp_thread, Is_omp_inside_serial !, get_my_global_mpi_id
+
+  dsl4jsb_Use_processes CARBON_
 
   IMPLICIT NONE
   PRIVATE
@@ -32,7 +37,7 @@ MODULE mo_jsb_interface
 
   INTERFACE jsbach_interface
     MODULE PROCEDURE interface_full
-    MODULE PROCEDURE interface_inquire
+    ! MODULE PROCEDURE interface_inquire
   END INTERFACE jsbach_interface
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_interface'
@@ -85,18 +90,22 @@ CONTAINS
     & drag_wtr, drag_ice,                                               & !< in
     & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,               & !< in
     & t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice,               & !< in
-    & t_lwtr, qsat_lwtr, evapo_wtr, latent_hflx_wtr, sensible_hflx_wtr, & !< out
+    & t_lwtr, qsat_lwtr, s_lwtr,                                        &
+    & evapo_wtr, latent_hflx_wtr, sensible_hflx_wtr, & !< out
     & albedo_lwtr,                                                      & !< out
-    & t_lice, qsat_lice, evapo_ice, latent_hflx_ice, sensible_hflx_ice, & !< out
+    & t_lice, qsat_lice, s_lice,                                        &
+    & evapo_ice, latent_hflx_ice, sensible_hflx_ice, & !< out
     & albedo_lice,                                                      & !< out
     & ice_fract_lake,                                                   & !< out
     ! For standalone jsbach
     & evapopot                                                          & !< out; optional
     & )
 
+#ifndef __ICON__
     USE mo_jsb_test,          ONLY: write_interface_vars, write_interface_variables
+#endif
 
-    INTEGER :: p_pe
+    ! INTEGER :: p_pe
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':interface_full'
 
@@ -165,12 +174,14 @@ CONTAINS
     REAL(wp), INTENT(out), OPTIONAL ::   &
       & t_lwtr            (:), &
       & qsat_lwtr         (:), &
+      & s_lwtr            (:), &
       & evapo_wtr         (:), &
       & latent_hflx_wtr   (:), &
       & sensible_hflx_wtr (:), &
       & albedo_lwtr       (:), &
       & t_lice            (:), &
       & qsat_lice         (:), &
+      & s_lice            (:), &
       & evapo_ice         (:), &
       & latent_hflx_ice   (:), &
       & sensible_hflx_ice (:), &
@@ -193,11 +204,16 @@ CONTAINS
 
     no_omp_thread = Get_omp_thread()
 
+    ! Note: Since write_interface_variables is not yet implemented for ICON, the call to it is suppressed here for ICON.
+    !       This is an exception since we don't want to use conditional compiling, but otherwise there are lots
+    !       of compiler warnings about unused dummy arguments.
+#ifndef __ICON__
     IF (write_interface_vars) THEN
       CALL write_interface_variables(ics, ice, iblk, t_air, q_air, rain, snow, wind_air, wind_10m, &
         & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, press_srf, drag_srf,    &
         & t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle)
     END IF
+#endif
 
     nc = ice - ics + 1
 
@@ -284,11 +300,13 @@ CONTAINS
       & CO2_flux           = CO2_flux(:),        &
       & t_lwtr             = t_lwtr,             &
       & qsat_lwtr          = qsat_lwtr,          &
+      & s_lwtr             = s_lwtr,             &
       & evapo_wtr          = evapo_wtr,          &
       & latent_hflx_wtr    = latent_hflx_wtr,    &
       & sensible_hflx_wtr  = sensible_hflx_wtr,  &
       & t_lice             = t_lice,             &
       & qsat_lice          = qsat_lice,          &
+      & s_lice             = s_lice,             &
       & evapo_ice          = evapo_ice,          &
       & latent_hflx_ice    = latent_hflx_ice,    &
       & sensible_hflx_ice  = sensible_hflx_ice,  &
@@ -311,45 +329,39 @@ CONTAINS
 
   !
   ! Not used currently
-  SUBROUTINE interface_inquire( model_id, iblk, ics, ice,         &
-    & t_srf, t_eff_srf, qsat_srf, zh_srf, zm_srf, alb_vis, alb_nir)
+  ! SUBROUTINE interface_inquire( model_id, iblk, ics, ice,         &
+  !   & t_srf, t_eff_srf, qsat_srf, zh_srf, zm_srf, alb_vis, alb_nir)
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':interface_inquire'
+  !   CHARACTER(len=*), PARAMETER :: routine = modname//':interface_inquire'
 
-    INTEGER, INTENT(in) :: &
-      & model_id,          &
-      & iblk,              &
-      & ics,               &
-      & ice
+  !   INTEGER, INTENT(in) :: &
+  !     & model_id,          &
+  !     & iblk,              &
+  !     & ics,               &
+  !     & ice
 
-    REAL(wp), INTENT(inout) :: &
-      & t_srf    (:), &
-      & t_eff_srf(:), &
-      & qsat_srf (:), &
-      & zh_srf   (:), &
-      & zm_srf   (:), &
-      & alb_vis  (:), &
-      & alb_nir  (:)
+  !   REAL(wp), INTENT(inout) :: &
+  !     & t_srf    (:), &
+  !     & t_eff_srf(:), &
+  !     & qsat_srf (:), &
+  !     & zh_srf   (:), &
+  !     & zm_srf   (:), &
+  !     & alb_vis  (:), &
+  !     & alb_nir  (:)
 
-  END SUBROUTINE interface_inquire
+  ! END SUBROUTINE interface_inquire
 
   SUBROUTINE jsbach_start_timestep(model_id)
 
-    USE mo_jsb_time,          ONLY: is_time_experiment_start
-    USE mo_jsb_time_iface,    ONLY: is_time_restart
-    USE mo_util,              ONLY: one_of
-    USE mo_jsb_process_class, ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
-
-    dsl4jsb_Use_processes CARBON_
-    dsl4jsb_Use_config(CARBON_)
-
-    dsl4jsb_Def_config(CARBON_)
+    USE mo_jsb_time,          ONLY: is_newday
+    USE mo_carbon_interface,  ONLY: yday_carbon_conservation_test
 
     INTEGER,  INTENT(in) :: model_id
 
-    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_model),           POINTER :: model
     CLASS(t_jsb_tile_abstract),  POINTER :: tile
-    INTEGER :: p_pe, no_omp_thread
+
+    INTEGER :: no_omp_thread
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_start_timestep'
 
@@ -360,14 +372,21 @@ CONTAINS
     END IF
 
     no_omp_thread = Get_omp_thread()   ! Should always be 1
+    IF (no_omp_thread /= 1) CALL finish(routine, 'should not be called inside OMP parallel region!')
 
     model => Get_model(model_id)
-
-    dsl4jsb_Get_config(CARBON_)
 
     ! Reset all tiles at the beginning of the timestep
     CALL model%Reset_tiles()
 
+    ! Carbon conservation test    
+    tile => model%Get_top_tile()
+    IF (model%processes(CARBON_)%p%config%active) THEN
+      IF(is_newday()) THEN
+        CALL yday_carbon_conservation_test(tile, model%options(no_omp_thread))
+      END IF
+    END IF
+    
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
 
   END SUBROUTINE jsbach_start_timestep
@@ -382,7 +401,6 @@ CONTAINS
     INTEGER, INTENT(in)  :: model_id
     REAL(wp), INTENT(in) :: steplen
 
-    INTEGER :: p_pe
     TYPE(t_jsb_model),          POINTER :: model
     CLASS(t_jsb_tile_abstract),  POINTER :: tile
 

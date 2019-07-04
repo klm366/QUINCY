@@ -7,17 +7,18 @@
 !! @par Revision History
 !! First version by Rainer Schneck (2017-04-6)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_fuel_memory_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind, ONLY: wp
-  USE mo_util, ONLY: One_of
 
-  USE mo_jsb_model_class,        ONLY: t_jsb_model
-  USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
-  USE mo_jsb_lct_class,          ONLY: VEG_TYPE
-  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d
 
   IMPLICIT NONE
   PRIVATE
@@ -44,8 +45,8 @@ CONTAINS
 
   SUBROUTINE Init_fuel_memory(mem, prefix, suffix, lct_ids, model_id)
 
-    USE mo_jsb_varlist,       ONLY: jsb_add_var, BASIC, MEDIUM, FULL
-    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, TSTEP_CONSTANT, tables
+    USE mo_jsb_varlist,       ONLY: jsb_add_var, BASIC !, MEDIUM, FULL
+    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
 
@@ -55,14 +56,14 @@ CONTAINS
     INTEGER,              INTENT(in)    :: lct_ids(:)
     INTEGER,              INTENT(in)    :: model_id
 
-    TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid          ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface        ! Vertical grid
     INTEGER :: table
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_fuel_memory'
 
-    model => Get_model(model_id)
+    IF (lct_ids(1) > 0)  CONTINUE ! avoid compiler warning about dummy argument not being used
+    IF (model_id > 0)    CONTINUE ! avoid compiler warning about dummy argument not being used
 
     table = tables(1)
 

@@ -7,6 +7,11 @@
 !! @par Revision History
 !! First version by Rainer Schneck (2015-07-29)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_fuel_process
 #ifndef __NO_JSBACH__
 
@@ -23,16 +28,16 @@ CONTAINS
 
   ! Calculate fuel (JSBACH3 algorithm)
   PURE ELEMENTAL SUBROUTINE calc_fuel_jsbach( &
-    & c_acid_ag1_ta,       & ! in
-    & c_water_ag1_ta,      & ! in
-    & c_ethanol_ag1_ta,    & ! in
-    & c_nonsoluble_ag1_ta, & ! in
-    & c_acid_ag2_ta,       & ! in
-    & c_water_ag2_ta,      & ! in
-    & c_ethanol_ag2_ta,    & ! in
-    & c_nonsoluble_ag2_ta, & ! in
-    & fract_fpc_max,       & ! in
-    & fuel                 & ! out
+    & c_acid_ag1_ta,                          & ! in
+    & c_water_ag1_ta,                         & ! in
+    & c_ethanol_ag1_ta,                       & ! in
+    & c_nonsoluble_ag1_ta,                    & ! in
+    & c_acid_ag2_ta,                          & ! in
+    & c_water_ag2_ta,                         & ! in
+    & c_ethanol_ag2_ta,                       & ! in
+    & c_nonsoluble_ag2_ta,                    & ! in
+    & fract_fpc_max,                          & ! in
+    & fuel                                    & ! out
     & )
 
     ! Input Arguments

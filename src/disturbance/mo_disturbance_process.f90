@@ -7,13 +7,16 @@
 !! @par Revision History
 !! First version by Rainer Schneck (2015-07-29)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_disturb_process
 #ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp
-  USE mo_exception, ONLY: message
-
-  USE mo_exception,        ONLY: message, finish
+  USE mo_exception, ONLY: finish
 
   IMPLICIT NONE
   PRIVATE
@@ -25,13 +28,13 @@ MODULE mo_disturb_process
 CONTAINS
 
   PURE ELEMENTAL SUBROUTINE burned_fract_jsbach( &
-    & fire_rel_hum_threshold,   & ! in
-    & fire_litter_threshold,    & ! in
-    & fire_minimum,             & ! in
-    & fire_tau,                 & ! in
-    & q_rel_air_climbuf,        & ! in
-    & fuel,                     & ! in
-    & burned_fract              & ! out
+    & fire_rel_hum_threshold,                    & ! in
+    & fire_litter_threshold,                     & ! in
+    & fire_minimum,                              & ! in
+    & fire_tau,                                  & ! in
+    & q_rel_air_climbuf,                         & ! in
+    & fuel,                                      & ! in
+    & burned_fract                               & ! out
     & )
 
     ! Input Arguments
@@ -122,11 +125,12 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_relative_humidity_air'
 
-    CALL sat_specific_humidity(nc,               & ! in
-                               air_temperature,  & ! in
-                               air_press,        & ! in
-                               air_qsat          & ! out
-                              )
+    CALL sat_specific_humidity( &
+      & nc,                     & ! in
+      & air_temperature,        & ! in
+      & air_press,              & ! in
+      & air_qsat                & ! out
+      & )
 
         IF (ANY( air_qsat(:) > 0.99_wp*HUGE(1._wp) )) THEN
            CALL finish(TRIM(routine), 'lookup table overflow.')
@@ -165,7 +169,7 @@ CONTAINS
     !Assertion: the expected temperature range is indirectly defined by the tlucua bounds -> consistency check
     DO i = 1,nc
       IF ((temp(i) .LT. REAL(LBOUND(tlucua,dim=1)/1000._wp)) .OR. (temp(i) .GT. REAL(UBOUND(tlucua,dim=1)/1000._wp))) THEN
-        WRITE (message_text,*) &
+        WRITE (message_text,*)                                                                                      &
           & 'Inconsistency with tlucua bounds (would give a seg. fault or a floating invalid operation exception)', &
           & '- temperature was: ', temp(i), 'K. One thing to check: consistency of land-sea mask and forcing.'
         CALL finish(TRIM(routine), TRIM(message_text))

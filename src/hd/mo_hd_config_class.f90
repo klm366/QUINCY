@@ -7,11 +7,16 @@
 !! @par Revision History
 !! First version by Veroniks Gayler (2013-04-20)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_hd_config_class
 !#ifndef __NO_JSBACH__
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
-  USE mo_exception,         ONLY: message_text, message, finish
+  USE mo_exception,         ONLY: message
   USE mo_io_units,          ONLY: filename_max
   USE mo_kind,              ONLY: wp
   USE mo_jsb_control,       ONLY: debug_on

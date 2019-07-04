@@ -7,12 +7,16 @@
 !! @par Revision History
 !! First version by Reiner Schnur (2013-04-04)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_sse_process
 #ifndef __NO_JSBACH__
 
   USE mo_jsb_physical_constants, ONLY: rhoh2o
   USE mo_kind,      ONLY: wp
-  USE mo_exception, ONLY: message
 
   IMPLICIT NONE
   PRIVATE
@@ -39,13 +43,13 @@ CONTAINS
   ! @return     The volumetric heat capacity of soil.
   !!
   ELEMENTAL PURE FUNCTION calc_vol_heat_capacity( &
-    & vol_heat_cap_soil_dry_mineral, &
-    & porosity,              &
-    & fract_organic,         &
-    & fract_water,           &
-    & fract_ice,             &
-    & layer_depth,           &
-    & dz                     &
+    & vol_heat_cap_soil_dry_mineral,              &
+    & porosity,                                   &
+    & fract_organic,                              &
+    & fract_water,                                &
+    & fract_ice,                                  &
+    & layer_depth,                                &
+    & dz                                          &
     & ) RESULT(vol_heat_cap)
 
     USE mo_sse_constants, ONLY: vol_hcap_water, vol_hcap_ice, vol_hcap_org, vol_hcap_air, vol_hcap_bedrock
@@ -57,7 +61,7 @@ CONTAINS
       vol_heat_cap = (1._wp - porosity)                                            & ! vol. fraction of solid (mineral + organic)
         &              * ( (1._wp - fract_organic) * vol_heat_cap_soil_dry_mineral & ! heat cap of mineral soil
         &                  +        fract_organic  * vol_hcap_org                  & ! heat cap of organic soil
-        &                ) &
+        &                )                                                         &
         &            + fract_water * vol_hcap_water                                & ! heat cap of liquid water
         &            + fract_ice   * vol_hcap_ice                                  & ! heat cap of frozen water
         ! @todo : porosity - fract_water - fract_ice should not become lower than zero.
@@ -85,12 +89,12 @@ CONTAINS
   ! @return     The thermal conductivity.
   !!
   ELEMENTAL PURE FUNCTION calc_thermal_conductivity( &
-    & heat_cond_soil_mineral,   &
-    & water, ice,               &
-    & porosity, vol_field_cap,  &
-    & fract_organic,            &
-    & layer_depth,              &
-    & dz                        &
+    & heat_cond_soil_mineral,                        &
+    & water, ice,                                    &
+    & porosity, vol_field_cap,                       &
+    & fract_organic,                                 &
+    & layer_depth,                                   &
+    & dz                                             &
     & ) RESULT(heat_cond)
 
     USE mo_jsb_physical_constants, ONLY: dens_soil
@@ -100,18 +104,18 @@ CONTAINS
     REAL(wp), INTENT(in) :: heat_cond_soil_mineral, water, ice, porosity, vol_field_cap, fract_organic, layer_depth, dz
     REAL(wp)             :: heat_cond
 
-    REAL(wp) :: &
-      & dens_bulk,      & !< Bulk density of dry soil (including pores)
+    REAL(wp) ::           &
+      & dens_bulk,        & !< Bulk density of dry soil (including pores)
       & porosity_mineral, & !< Volumentric porosity of mineral soil part
-      & hcond_dry_min,  & !< Dry thermal conductivity soil (including mineral soil and pores)
-      & hcond_dry,      & !< Dry thermal conductivity of soil (including mineral and organic soil and pores)
-      & vpor_sat,       & !< Effective porosity for saturated soil computation (pores remaining if soil is saturated)
-      & saturation,     & !< Degree of saturation
-      & kersten,        & !< Kersten number
-      & hcond_soil,     & !< Thermal conductivity of soil solids (mineral and organic)
-      & hcond_sat,      & !< Thermal conductivity for saturated soil
-      & fract_water,    & !< Effective fractional water volume for saturated soil computation
-      & fract_ice         !< Effective fractional ice volume for saturated soil computation
+      & hcond_dry_min,    & !< Dry thermal conductivity soil (including mineral soil and pores)
+      & hcond_dry,        & !< Dry thermal conductivity of soil (including mineral and organic soil and pores)
+      & vpor_sat,         & !< Effective porosity for saturated soil computation (pores remaining if soil is saturated)
+      & saturation,       & !< Degree of saturation
+      & kersten,          & !< Kersten number
+      & hcond_soil,       & !< Thermal conductivity of soil solids (mineral and organic)
+      & hcond_sat,        & !< Thermal conductivity for saturated soil
+      & fract_water,      & !< Effective fractional water volume for saturated soil computation
+      & fract_ice           !< Effective fractional ice volume for saturated soil computation
 
     IF (layer_depth > 0._wp) THEN  ! above bedrock
       ! Thermal conductivity of dry soil
@@ -203,15 +207,15 @@ CONTAINS
     USE mo_math_constants, ONLY: pi
 
     REAL(wp), INTENT(in) :: &
-      ws, & !< moisture content [m], e.g. of uppermost soil layer
-      fc    !< field capacity (maximum moisture content) [m], e.g. of uppermost soil layer
+      & ws,                 & !< moisture content [m], e.g. of uppermost soil layer
+      fc                      !< field capacity (maximum moisture content) [m], e.g. of uppermost soil layer
 
     REAL(wp) :: moisture
 
     moisture = MIN(ws, fc)
     IF (moisture > 0._wp) THEN
-      relative_humidity_soil = 0.5_wp * (1._wp - COS(moisture * pi / fc)) ! relative_humidity increases with higher moisture and lower fc
-                                                                     ! Note, fc has to be  >= than moisture!
+      relative_humidity_soil = 0.5_wp * (1._wp - COS(moisture * pi / fc)) ! relative_humidity increases with higher moisture and
+                                                                          !  lower fc. Note, fc has to be  >= than moisture!
     ELSE
       relative_humidity_soil = 0._wp
     END IF
@@ -244,9 +248,8 @@ CONTAINS
   SUBROUTINE init_soil_temperature(cmid, tclim, tsoil, tsurf)
 
     USE mo_jsb_time,       ONLY: t_datetime, get_time_start, get_year, &
-                                 get_year_length, get_month_length, get_day_length, get_year_day
+                                 & get_year_length, get_month_length, get_day_length, get_year_day
     USE mo_math_constants, ONLY: pi
-    USE mo_exception,      ONLY: finish
 
     REAL(wp), INTENT(in)  :: cmid(:)     !< Depths of soil layer mid points
     REAL(wp), INTENT(in)  :: tclim(:,:)  !< Climatological monthly surface temperature
@@ -304,7 +307,7 @@ CONTAINS
 
     ! Initialize soil temperatures
     DO i=1,nsoil
-      tsoil(:,i) = SUM(tclim(:,:), DIM=2) / 12._wp &
+      tsoil(:,i) = SUM(tclim(:,:), DIM=2) / 12._wp                            &
                  & + 0.5_wp * zrange(:) * EXP(-(cmid(i)-cmid_offset) / zsqrt) &
                  &   * COS(2._wp * pi * (day_in_year - zdmax(:)) / year_len - (cmid(i)-cmid_offset) / zsqrt)
     END DO
@@ -348,14 +351,14 @@ CONTAINS
   ! @return     { description_of_the_return_value } !
   !
   SUBROUTINE calc_soil_temperature(       &
-    & nidx, nsoil, dz, mids,                         &
-    & delta_time, lstart, &
-    & l_freeze, l_supercool, &
-    & t_srf_unfilt,              &
-    & vol_heat_cap, heat_cond,          &
-    & t_soil, t_soil_acoef, t_soil_bcoef,   &
-    & hcap_grnd, grnd_hflx, &
-    & thaw_depth, &
+    & nidx, nsoil, dz, mids,              &
+    & delta_time, lstart,                 &
+    & l_freeze, l_supercool,              &
+    & t_srf_unfilt,                       &
+    & vol_heat_cap, heat_cond,            &
+    & t_soil, t_soil_acoef, t_soil_bcoef, &
+    & hcap_grnd, grnd_hflx,               &
+    & thaw_depth,                         &
     ! optional
     & ws_max, matrix_pot, bclapp, ws, ice, frozen, melt &
     & )
@@ -445,7 +448,7 @@ CONTAINS
     REAL(wp), INTENT(inout), OPTIONAL ::  ws(nidx,nsoil)           !! Water storage [m]
     REAL(wp), INTENT(inout), OPTIONAL ::  ice(nidx,nsoil)          !! Ice storage [m]
     REAL(wp), INTENT(out), OPTIONAL   ::  frozen(nidx,nsoil)       !! Water flux from freezing soil water [kg m-2 s-1]
-    REAL(wp), INTENT(out), OPTIONAL  ::  melt(nidx,nsoil)         !! Water flux from melting soil ice    [kg m-2 s-1]
+    REAL(wp), INTENT(out), OPTIONAL   ::  melt(nidx,nsoil)         !! Water flux from melting soil ice    [kg m-2 s-1]
 
     !------------------------------------------------------------------
     !  local Variables
@@ -454,7 +457,7 @@ CONTAINS
     REAL(wp) :: z1(nidx)
     REAL(wp) :: zd1(nsoil)
     REAL(wp) :: zdz1(nidx,nsoil), zdz2(nidx,nsoil)
-    REAL(wp) :: heat_cap(nidx,nsoil), liquid_max(nidx,nsoil), freezemelt(nidx,nsoil)
+    REAL(wp) :: heat_cap(nidx,nsoil), liquid_max(nidx,nsoil) !, freezemelt(nidx,nsoil)
 
     !-----------------------------------------------------------------------------------------------
     !  Computation of useful constants
@@ -568,15 +571,15 @@ CONTAINS
   END SUBROUTINE calc_soil_temperature
 
   SUBROUTINE calc_snow_temperature(       &
-    & nidx, nsnow,                          &
-    & dz_soil, &
-    & delta_time, lstart,                   &
-    & dz, itop_old, itop, &
-    & t_srf_unfilt,              &
-    & vol_heat_cap, heat_cond,          &
-    & vol_heat_cap_soil, heat_cond_soil, &
+    & nidx, nsnow,                        &
+    & dz_soil,                            &
+    & delta_time, lstart,                 &
+    & dz, itop_old, itop,                 &
+    & t_srf_unfilt,                       &
+    & vol_heat_cap, heat_cond,            &
+    & vol_heat_cap_soil, heat_cond_soil,  &
     & t_soil, t_soil_acoef, t_soil_bcoef, &
-    & t_snow, t_snow_acoef, t_snow_bcoef,   &
+    & t_snow, t_snow_acoef, t_snow_bcoef, &
     & t_soil_top, hcap_grnd, grnd_hflx)
     !
     !
@@ -727,9 +730,9 @@ CONTAINS
     IF (.NOT. lstart) THEN
       t_snow(:,:) = 0._wp
       DO jk=1,nsnow
-        WHERE (itop(:) <= jk .AND. jk <= itop_old(:))           ! zero+ new snow layers: layers from new top layer to top prev layer
+        WHERE (itop(:) <= jk .AND. jk <= itop_old(:))          ! zero+ new snow layers: layers from new top layer to top prev layer
           t_snow(:,jk) = t_srf_unfilt(:)
-        ELSE WHERE (itop(:) > itop_old(:) .AND. jk == itop(:))  ! snow present but fewer snow layers : new top layer
+        ELSE WHERE (itop(:) > itop_old(:) .AND. jk == itop(:)) ! snow present but fewer snow layers : new top layer
           t_snow(:,jk) = t_srf_unfilt(:)
         END WHERE
       END DO
@@ -800,17 +803,18 @@ CONTAINS
 
   END SUBROUTINE calc_snow_temperature
 
-  SUBROUTINE calc_soiltemp_old(nidx,nsoil,cdel,cmid            &
-                           , delta_time                        &
-                           , lstart                            &
-                           , pts                               &
-                           , psn                               &
-                           , psocond, prgcgn                   &
-                           , pgrndc, pgrndd                    &
-                           , ptsoil                            &
-                           , pgrndcapc, pgrndhflx              &
-                           , ldglac                            &
-                           )
+  SUBROUTINE calc_soiltemp_old( &
+    & nidx,nsoil,cdel,cmid,     &
+    & delta_time,               &
+    & lstart,                   &
+    & pts,                      &
+    & psn,                      &
+    & psocond, prgcgn,          &
+    & pgrndc, pgrndd,           &
+    & ptsoil,                   &
+    & pgrndcapc, pgrndhflx,     &
+    & ldglac                    &
+    & )
   !
   !   AUTHOR:  FREDERIC HOURDIN     30/01/92
   !
@@ -864,7 +868,7 @@ CONTAINS
     INTEGER, Intent(in)  ::  nsoil                !! number of soil layers (fixed to 5)
     REAL(wp), Intent(in) ::  cdel(nsoil)
     REAL(wp), Intent(in) ::  cmid(nsoil)
-    REAL(wp), Intent(in)     ::  delta_time       !! time step
+    REAL(wp), Intent(in) ::  delta_time           !! time step
     LOGICAL, INTENT(in)  :: lstart
     REAL(wp), Intent(in)     ::  pts(nidx)            !! surface temperature at top of soil [K]
     REAL(wp), Intent(in)     ::  psn(nidx)            !! equivalent snow depth [m water]
@@ -1011,8 +1015,8 @@ CONTAINS
   END SUBROUTINE calc_soiltemp_old
 
   PURE ELEMENTAL FUNCTION Get_liquid_max( &
-    & l_supercool, &
-    & temp, w_max, matrix_pot, bclapp &
+    & l_supercool,                        &
+    & temp, w_max, matrix_pot, bclapp     &
     & ) RESULT(liquid_max)
 
     USE mo_jsb_physical_constants, ONLY: tmelt, alf, grav
@@ -1028,7 +1032,7 @@ CONTAINS
       IF (temp < tmelt) THEN
         ! supercooled water equation (Niu&Yang,2006)
         liquid_max =                                                              &
-          & w_max                                                     & ! Maximum water storage
+          & w_max                                                                 & ! Maximum water storage
           & * ( alf * (tmelt - temp) / MAX(1.e-10_wp, grav * temp * matrix_pot) ) &
           &   ** ( -1._wp / MAX(1._wp, bclapp))
       END IF

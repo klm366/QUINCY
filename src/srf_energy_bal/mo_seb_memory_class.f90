@@ -8,6 +8,11 @@
 !! First version in mo_srf_memory_class.f90 by Reiner Schnur (2013-04-04)
 !! Separated out the surface energy balance part by Reiner Schnur (2016-03-21)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_seb_memory_class
 #ifndef __NO_JSBACH__
 
@@ -18,8 +23,11 @@ MODULE mo_seb_memory_class
   USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_lct_class,          ONLY: LAND_TYPE, LAKE_TYPE
-  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d
   USE mo_jsb_physical_constants, ONLY: tmelt
+
+  dsl4jsb_Use_processes SEB_
+  dsl4jsb_Use_config(SEB_)
 
   IMPLICIT NONE
   PRIVATE
@@ -97,7 +105,7 @@ MODULE mo_seb_memory_class
       & fract_lice,           & !< Fraction of lake ice                                            []
       & hflx_form_ice,        & !< Heat flux for ice formation                                     [W m-2]
       & hflx_cond_ice,        & !< Conductive heat flux for ice on lakes
-      & hflx_melt_lice,        & !< Heat flux from melting ice on lakes
+      & hflx_melt_lice,       & !< Heat flux from melting ice on lakes
       & hflx_melt_snow          !< Heat flux from melting snow on lake ice
 
   CONTAINS
@@ -110,8 +118,8 @@ CONTAINS
 
   SUBROUTINE Init_seb_memory(mem, prefix, suffix, lct_ids, model_id)
 
-    USE mo_jsb_varlist,       ONLY: jsb_add_var, BASIC, MEDIUM, FULL
-    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, TSTEP_CONSTANT, tables
+    USE mo_jsb_varlist,       ONLY: jsb_add_var, BASIC !, MEDIUM, FULL
+    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables !, TSTEP_CONSTANT
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
 
@@ -121,12 +129,15 @@ CONTAINS
     INTEGER,             INTENT(in)    :: lct_ids(:)
     INTEGER,             INTENT(in)    :: model_id
 
+    dsl4jsb_Def_config(SEB_)
+
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
     INTEGER :: table
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_seb_memory'
+    IF (model_id > 0) CONTINUE ! avoid compiler warning about dummy argument not being used
 
     model => Get_model(model_id)
 
@@ -134,6 +145,8 @@ CONTAINS
 
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
+
+    dsl4jsb_Get_config(SEB_)
 
     IF (.NOT. ASSOCIATED(mem%t%ptr)) THEN
       ! Common variables
@@ -341,46 +354,23 @@ CONTAINS
         & prefix, suffix,                                                              &
         & initval_r=280.0_wp )
 
-      CALL jsb_add_var( mem, 't_lice', mem%t_lice,                                     &
-        & hgrid, surface,                                                              &
-        & t_cf('sfc_temp_ice', 'K', 'lake surface temperature ice '),                  &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & initval_r=tmelt )
-
-      CALL jsb_add_var( mem, 's_wtr', mem%s_wtr,                                             &
-        & hgrid, surface,                                                                    &
+        CALL jsb_add_var( mem, 's_wtr', mem%s_wtr,                                               &
+        & hgrid, surface,                                                                      &
         & t_cf('sfc_dry_static_energy_wtr', 'm2 s-2', 'surface dry static energy (lake wtr)'), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
-        & prefix, suffix,                                                                    &
-        & lrestart=.FALSE.,                                                                  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &
+        & prefix, suffix,                                                                      &
+        & lrestart=.FALSE.,                                                                    &
         & initval_r=2.9E5_wp )
 
-      CALL jsb_add_var( mem, 'qsat_lwtr', mem%qsat_lwtr,                                       &
-        & hgrid, surface,                                                                    &
+      CALL jsb_add_var( mem, 'qsat_lwtr', mem%qsat_lwtr,                                         &
+        & hgrid, surface,                                                                        &
         & t_cf('sfc_qsat_lwtr', 'm2 s-2', 'surface specific humidity at saturation (lake wtr)'), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
-        & prefix, suffix,                                                                    &
-        & lrestart=.FALSE.,                                                                  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+        & prefix, suffix,                                                                        &
+        & lrestart=.FALSE.,                                                                      &
         & initval_r=0.0075_wp )
 
-      CALL jsb_add_var( mem, 's_ice', mem%s_ice,                                             &
-        & hgrid, surface,                                                                    &
-        & t_cf('sfc_dry_static_energy_ice', 'm2 s-2', 'surface dry static energy (lake ice)'), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
-        & prefix, suffix,                                                                    &
-        & lrestart=.FALSE.,                                                                  &
-        & initval_r=2.9E5_wp )
-
-      CALL jsb_add_var( mem, 'qsat_lice', mem%qsat_lice,                                       &
-        & hgrid, surface,                                                                    &
-        & t_cf('sfc_qsat_lice', 'm2 s-2', 'surface specific humidity at saturation (lake ice)'), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
-        & prefix, suffix,                                                                    &
-        & lrestart=.FALSE.,                                                                  &
-        & initval_r=0.0075_wp )
-
-      CALL jsb_add_var( mem, 'latent_hflx_wtr', mem%latent_hflx_wtr,                   &
+        CALL jsb_add_var( mem, 'latent_hflx_wtr', mem%latent_hflx_wtr,                   &
         & hgrid, surface,                                                              &
         & t_cf('latent_hflx_wtr', 'W m-2', 'latent heat flux over lake water'),        &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
@@ -396,64 +386,91 @@ CONTAINS
         & lrestart=.TRUE.,                                                             &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      CALL jsb_add_var( mem, 'latent_hflx_ice', mem%latent_hflx_ice,                   &
-        & hgrid, surface,                                                              &
-        & t_cf('latent_hflx_ice', 'W m-2', 'latent heat flux over lake ice'),          &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & lrestart=.TRUE.,                                                             &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-      CALL jsb_add_var( mem, 'sensible_hflx_ice', mem%sensible_hflx_ice,               &
-        & hgrid, surface,                                                              &
-        & t_cf('sensible_hflx_ice', 'W m-2', 'sensible heat flux over lake ice'),      &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & lrestart=.TRUE.,                                                             &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-      CALL jsb_add_var( mem, 'depth_lice', mem%depth_lice,                             &
-        & hgrid, surface,                                                              &
-        & t_cf('ice_thickness', 'm', 'thickness of ice on lake'),                      &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & initval_r=0.0_wp )
-
       ! Fraction of ice on lake
       CALL jsb_add_var( mem, 'fract_lice', mem%fract_lice,                             &
         & hgrid, surface,                                                              &
         & t_cf('fract_lice', '', 'fraction of ice on lake'),                           &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & initval_r=0.0_wp )
+    
+      IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
 
-      CALL jsb_add_var( mem, 'hflx_form_ice', mem%hflx_form_ice,                       &
-        & hgrid, surface,                                                              &
-        & t_cf('hflx_form_ice', 'W m-2)', 'heat flux for ice formation on lake ice'),  &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        CALL jsb_add_var( mem, 't_lice', mem%t_lice,                                     &
+          & hgrid, surface,                                                              &
+          & t_cf('sfc_temp_ice', 'K', 'lake surface temperature ice '),                  &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+          & prefix, suffix,                                                              &
+          & initval_r=tmelt )
+    
+        CALL jsb_add_var( mem, 's_ice', mem%s_ice,                                               &
+          & hgrid, surface,                                                                      &
+          & t_cf('sfc_dry_static_energy_ice', 'm2 s-2', 'surface dry static energy (lake ice)'), &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &
+          & prefix, suffix,                                                                      &
+          & lrestart=.FALSE.,                                                                    &
+          & initval_r=2.9E5_wp )
+    
+        CALL jsb_add_var( mem, 'qsat_lice', mem%qsat_lice,                                         &
+          & hgrid, surface,                                                                        &
+          & t_cf('sfc_qsat_lice', 'm2 s-2', 'surface specific humidity at saturation (lake ice)'), &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+          & prefix, suffix,                                                                        &
+          & lrestart=.FALSE.,                                                                      &
+          & initval_r=0.0075_wp )
+    
+        CALL jsb_add_var( mem, 'latent_hflx_ice', mem%latent_hflx_ice,                   &
+          & hgrid, surface,                                                              &
+          & t_cf('latent_hflx_ice', 'W m-2', 'latent heat flux over lake ice'),          &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+          & prefix, suffix,                                                              &
+          & lrestart=.TRUE.,                                                             &
+          & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+    
+        CALL jsb_add_var( mem, 'sensible_hflx_ice', mem%sensible_hflx_ice,               &
+          & hgrid, surface,                                                              &
+          & t_cf('sensible_hflx_ice', 'W m-2', 'sensible heat flux over lake ice'),      &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+          & prefix, suffix,                                                              &
+          & lrestart=.TRUE.,                                                             &
+          & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+    
+        CALL jsb_add_var( mem, 'depth_lice', mem%depth_lice,                             &
+          & hgrid, surface,                                                              &
+          & t_cf('ice_thickness', 'm', 'thickness of ice on lake'),                      &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+          & prefix, suffix,                                                              &
+          & initval_r=0.0_wp )
+    
+        CALL jsb_add_var( mem, 'hflx_form_ice', mem%hflx_form_ice,                       &
+          & hgrid, surface,                                                              &
+          & t_cf('hflx_form_ice', 'W m-2)', 'heat flux for ice formation on lake ice'),  &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+          & prefix, suffix,                                                              &
+          & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+    
+        CALL jsb_add_var( mem, 'hflx_cond_ice', mem%hflx_cond_ice,                       &
+          & hgrid, surface,                                                              &
+          & t_cf('hflx_cond_ice', 'W m-2)', 'conductive heat flux on lake ice'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+          & prefix, suffix,                                                              &
+          & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+    
+        CALL jsb_add_var( mem, 'hflx_melt_lice', mem%hflx_melt_lice,                     &
+          & hgrid, surface,                                                              &
+          & t_cf('hflx_melt_lice', 'W m-2)', 'heat flux from ice melt on lakes'),        &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+          & prefix, suffix,                                                              &
+          & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+    
+        CALL jsb_add_var( mem, 'hflx_melt_snow', mem%hflx_melt_snow,                     &
+          & hgrid, surface,                                                              &
+          & t_cf('hflx_melt_snow', 'W m-2)', 'heat_flux from snow melt on lakes'),       &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+          & prefix, suffix,                                                              &
+          & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      CALL jsb_add_var( mem, 'hflx_cond_ice', mem%hflx_cond_ice,                       &
-        & hgrid, surface,                                                              &
-        & t_cf('hflx_cond_ice', 'W m-2)', 'conductive heat flux on lake ice'),         &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-      CALL jsb_add_var( mem, 'hflx_melt_lice', mem%hflx_melt_lice,                       &
-        & hgrid, surface,                                                              &
-        & t_cf('hflx_melt_lice', 'W m-2)', 'heat flux from ice melt on lakes'),         &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-      CALL jsb_add_var( mem, 'hflx_melt_snow', mem%hflx_melt_snow,                     &
-        & hgrid, surface,                                                              &
-        & t_cf('hflx_melt_snow', 'W m-2)', 'heat_flux from snow melt on lakes'),       &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        END IF
 
     END IF
 

@@ -7,6 +7,11 @@
 !! @par Revision History
 !! First version by Reiner Schnur (2016-04-01)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_turb_interface
 #ifndef __NO_JSBACH__
 
@@ -21,7 +26,6 @@ MODULE mo_turb_interface
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
-  USE mo_jsb_config_class,   ONLY: t_jsb_config
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
@@ -29,8 +33,9 @@ MODULE mo_turb_interface
   dsl4jsb_Use_processes TURB_, SEB_, HYDRO_, PHENO_, ASSIMI_, SSE_, A2L_
 
   ! Use process configurations
-  dsl4jsb_Use_config(TURB_)
+  !dsl4jsb_Use_config(TURB_)
   dsl4jsb_Use_config(HYDRO_)
+  dsl4jsb_Use_config(SEB_)
 
   ! Use process memories
   dsl4jsb_Use_memory(A2L_)
@@ -142,6 +147,8 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    dsl4jsb_Def_config(SEB_)
+
     ! Declare process memories
     dsl4jsb_Def_memory(TURB_)
     dsl4jsb_Def_memory(HYDRO_)
@@ -153,9 +160,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: fract_snow_lice
 
     ! Local variables
-    INTEGER  :: iblk, ics, ice, nc
-
     TYPE(t_jsb_model), POINTER :: model
+    INTEGER  :: iblk, ics, ice
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_roughness'
 
@@ -163,7 +169,6 @@ CONTAINS
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-    nc      = options%nc
 
     ! If process is not active on this tile, do nothing
     IF (.NOT. tile%Is_process_active(TURB_)) RETURN
@@ -171,6 +176,8 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_config(SEB_)
 
     ! Get process memories
     dsl4jsb_Get_memory(TURB_)
@@ -186,9 +193,13 @@ CONTAINS
       rough_h(:) =          fract_snow_soil(:)  / (LOG(blending_height /        roughness_snow)  ** 2)  &
         &        + (1._wp - fract_snow_soil(:)) / (LOG(blending_height / MIN(1._wp, rough_m(:))) ** 2)
     ELSE IF (tile%contains_lake) THEN
-      dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_lice) ! IN
-      rough_h(:) =          fract_snow_lice(:)  / (LOG(blending_height /        roughness_snow)  ** 2)  &
-        &        + (1._wp - fract_snow_lice(:)) / (LOG(blending_height / MIN(1._wp, rough_m(:))) ** 2)
+      IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+        dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_lice) ! IN
+        rough_h(:) =          fract_snow_lice(:)  / (LOG(blending_height /        roughness_snow)  ** 2)  &
+          &        + (1._wp - fract_snow_lice(:)) / (LOG(blending_height / MIN(1._wp, rough_m(:))) ** 2)
+      ELSE
+        rough_h(:) = LOG(blending_height / MIN(1._wp, rough_m(:))) ** 2
+      END IF
     ELSE
       CALL finish(TRIM(routine), 'Don"t know what to do.')
     END IF
@@ -216,22 +227,17 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    TYPE(t_jsb_model), POINTER :: model
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_roughness'
 
     ! Local variables
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice
 
     ! Get local variables from options argument
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_memory(TURB_)
 
@@ -253,7 +259,7 @@ CONTAINS
   !!
   SUBROUTINE update_humidity_scaling(tile, options)
 
-    USE mo_jsb_physical_constants, ONLY: rhoh2o
+    !USE mo_jsb_physical_constants, ONLY: rhoh2o
     USE mo_sse_process,            ONLY: relative_humidity_soil
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -280,7 +286,7 @@ CONTAINS
       & fact_qsat_srf,        &
       & fact_qsat_trans_srf,  &
       & qsat_star,            &
-      & canopy_cond,          &
+      & canopy_cond_limited,  &
       & pch,                  &
       & wind_air,             &
       & q_air
@@ -302,7 +308,7 @@ CONTAINS
     LOGICAL :: &
       mask(options%nc)
 
-    INTEGER :: iblk, ics, ice, nc
+    INTEGER :: iblk, ics, ice
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -312,7 +318,6 @@ CONTAINS
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (.NOT. tile%Is_process_active(TURB_) .OR. tile%contains_lake) RETURN
 
@@ -358,9 +363,9 @@ CONTAINS
     IF (tile%contains_vegetation) THEN
       dsl4jsb_Get_var2D_onChunk(PHENO_,    fract_fpc)           ! in
       IF (tile%Is_process_active(ASSIMI_)) THEN
-        dsl4jsb_Get_var2D_onChunk(ASSIMI_,   canopy_cond)         ! in
+        dsl4jsb_Get_var2D_onChunk(ASSIMI_,   canopy_cond_limited)         ! in
       ELSE
-        dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond)         ! in
+        dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond_limited)         ! in
       END IF
 
       IF (model%config%l_compat401) THEN
@@ -371,10 +376,10 @@ CONTAINS
       WHERE (mask(:))
         fact_qsat_veg(:) = fract_snow(:) + (1._wp - fract_snow(:)) *   &
           & (fract_water(:) + ( 1._wp - fract_water(:)) /                &
-          & (1._wp + pch(:) * MAX(1._wp, wind_air(:)) / MAX(1.E-20_wp, canopy_cond(:))))
+          & (1._wp + pch(:) * MAX(1._wp, wind_air(:)) / MAX(1.E-20_wp, canopy_cond_limited(:))))
         fact_qsat_trans(:) = (1._wp - fract_snow(:)) * &
           & (1._wp - fract_water(:)) /                  &
-          & (1._wp + pch(:) * MAX(1._wp, wind_air(:)) / MAX(1.E-20_wp, canopy_cond(:)))
+          & (1._wp + pch(:) * MAX(1._wp, wind_air(:)) / MAX(1.E-20_wp, canopy_cond_limited(:)))
       ELSEWHERE
         fact_qsat_veg(:)   = fract_snow(:) + (1._wp - fract_snow(:)) * fract_water(:)
         fact_qsat_trans(:) = 0._wp
@@ -441,22 +446,17 @@ CONTAINS
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-    TYPE(t_jsb_model), POINTER :: model
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_humidity_scaling'
 
     ! Local variables
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice
 
     ! Get local variables from options argument
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    nc   = options%nc
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_memory(TURB_)
 

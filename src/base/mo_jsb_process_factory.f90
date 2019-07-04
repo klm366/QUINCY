@@ -7,15 +7,16 @@
 !! @par Revision History
 !! First version by Reiner Schnur (2015-06-29)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_jsb_process_factory
 #ifndef __NO_JSBACH__
 
-  USE mo_exception,            ONLY: finish
-
-  !
   USE mo_jsb_process_class,    ONLY: t_jsb_process, Get_process_name
-  USE mo_jsb_memory_class,     ONLY: t_jsb_memory, t_jsb_memory_p
-  USE mo_jsb_config_class,     ONLY: t_jsb_config
+  USE mo_jsb_memory_class,     ONLY: t_jsb_memory
   !
   USE mo_a2l_memory_class,     ONLY: t_a2l_memory
   USE mo_l2a_memory_class,     ONLY: t_l2a_memory
