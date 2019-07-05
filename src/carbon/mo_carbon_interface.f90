@@ -31,14 +31,13 @@ MODULE mo_carbon_interface
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
-  
+
   ! Use of processes in this module (Get_carbon_memory and Get_carbon_config)
-  dsl4jsb_Use_processes CARBON_, ASSIMI_, PHENO_, DISTURB_, A2L_, L2A_
+  dsl4jsb_Use_processes CARBON_, ASSIMI_, PHENO_, DISTURB_, A2L_, L2A_,HYDRO_
 
   ! Use of process configurations
   dsl4jsb_Use_config(PHENO_)
-  
-  
+
   ! Use of process memories (t_carbon_memory)
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(ASSIMI_)
@@ -135,9 +134,7 @@ CONTAINS
     USE mo_jsb_time,          ONLY: t_datetime,is_newday, is_newyear, time_steps_per_day, &
                                  &  is_time_experiment_start, get_year_at_model_start,     &
                                  &  get_time_start, get_year,get_time_current
-    USE mo_carbon_constants,  ONLY: molarMassCO2_kg, sec_per_day, days_per_year
-    
-
+    USE mo_carbon_constants,  ONLY: molarMassCO2_kg, sec_per_day
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -240,7 +237,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::   C_balan
     dsl4jsb_Real2D_onChunk ::   C_delta
     dsl4jsb_Real2D_onChunk ::   c_total
-    dsl4jsb_Real2D_onChunk ::   del_c               !  PHS:24.06.2019  In order to avoid negative c_storage, plant drops fine tissues to reduce large maintenance respiration 
+    dsl4jsb_Real2D_onChunk ::   del_c         
     dsl4jsb_Real2D_onChunk ::   Leaf_control
     dsl4jsb_Real2D_onChunk ::   one_counter
     ! Taking relative soil moisture from the HYDRO process
@@ -506,8 +503,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,     t_air)                      ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,     rain)                       ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,     snow)                       ! in
-    
-    
+
     ! ---------------------------
     ! Go
 
@@ -730,7 +726,6 @@ CONTAINS
         & iniyear,                                              & !in
         & get_year(current),                            & !in
         & time_steps_per_day(),                        & ! in
-        & dtime,                                       & ! in
         & one_counter,                               & ! inout
         !& Leaf_control,                                & ! in
         & c_storage,                                   & ! inout
@@ -926,7 +921,7 @@ CONTAINS
         ! Variavles for JeDi carbon allocation 
         & c_leaves = c_leaves(:) , c_storage = c_storage(:) , c_fnroot = c_fnroot(:) , &
         & c_csroot = c_csroot(:) , c_stem = c_stem(:)       , c_seed = c_seed(:)     , &
-        &  & c_total = c_total(:),         &
+        &  c_total = c_total(:),         &
         ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
         & c_crop_harvest = c_crop_harvest(:),                                       &
         & c_acid_ag1 = c_acid_ag1(:), c_water_ag1 = c_water_ag1(:),                 &

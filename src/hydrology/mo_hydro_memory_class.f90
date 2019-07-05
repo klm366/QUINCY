@@ -141,12 +141,6 @@ MODULE mo_hydro_memory_class
       & canopy_cond_limited,  & !< Canopy conductance with water limit [m/s] (mean value)
       & trans                   !< Transpiration
 
-      !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
-      ! PHS to see if air is saturated
-      TYPE(t_jsb_var_real2d) :: &
-      & jedi_air_sat !PHS
-      !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
-
     ! Additional variables for GLACIER lct_type
     TYPE(t_jsb_var_real2d) :: &
       & fract_snow_glac,      & !< Snow fraction on glacier                                                 []
@@ -787,17 +781,6 @@ CONTAINS
           & prefix, suffix,                                                    &
           & initval_r=0.0_wp )
       END IF
-
-       !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
-       ! PHS to see if air is saturated  
-      CALL jsb_add_var( mem, 'jedi_air_sat', mem%jedi_air_sat, &
-        & hgrid, surface,                                                    &
-        & t_cf('jedi if air is saturated ', '', ''),                        &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & output_level=BASIC,loutput=.TRUE.,                                 &
-        & initval_r=0.0_wp )  
-!        !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
 
       CALL jsb_add_var( mem, 'trans', mem%trans,                                     &
         & hgrid, surface,                                                            &

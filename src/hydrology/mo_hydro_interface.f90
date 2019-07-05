@@ -1133,15 +1133,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: w_soil_root_pwp     !< Water content in root zone at permanent wilting point
     dsl4jsb_Real2D_onChunk :: max_moist
     dsl4jsb_Real2D_onChunk :: water_stress
-    dsl4jsb_Real2D_onChunk :: t
-    dsl4jsb_Real2D_onChunk :: q_air
-    dsl4jsb_Real2D_onChunk :: press_srf
-    !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
-    dsl4jsb_Real2D_onChunk :: jedi_air_sat !PHS: to see if air is saturated
-    !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
-    INTEGER :: iblk, ics, ice, nc
 
-    TYPE(t_jsb_model), POINTER :: model
+    INTEGER :: iblk, ics, ice
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_stress'
 
@@ -1169,9 +1162,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root_fc)      ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root_pwp)     ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_stress)        ! out
-    !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    jedi_air_sat) !out
-    !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
 
     ! Get water stress
 
@@ -1296,10 +1286,6 @@ CONTAINS
                                                     water_stress(:),           & ! in, water stress factor
                                                     q_air(:) >  qsat(t(:),press_srf(:)) & ! in, atmosphere saturated?
                                                     )
-    
-       jedi_air_sat(:) =   q_air(:)  -  qsat(t(:),press_srf(:))  !19.04.12 PHS: to see if air is saturated. 
-    
-
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

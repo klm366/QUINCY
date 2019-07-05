@@ -141,13 +141,16 @@ CONTAINS
         dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =   &
           & 1.0_wp - exp(-dsl4jsb_Lctlib_param(MaxLAI) / dsl4jsb_Lctlib_param(clumpinessFactor))
       END IF
-
-      !PHS   dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =   &
-      !PHS     & 1.0_wp - exp(-dsl4jsb_Lctlib_param(MaxLAI) / dsl4jsb_Lctlib_param(clumpinessFactor))
+  
      !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       !PHS: JeDi does not need this vegetation correction so I set the correction fraction to one.
       !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=        
-      dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =  1.0_wp 
+      IF(TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'jedi_phenology') THEN
+          dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =  1.0_wp 
+      ELSE
+          dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =   &
+           & 1.0_wp - exp(-dsl4jsb_Lctlib_param(MaxLAI) / dsl4jsb_Lctlib_param(clumpinessFactor))
+      END IF
       !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=      
 
     END IF

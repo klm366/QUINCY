@@ -148,7 +148,6 @@ CONTAINS
     & iniyear,                    &     ! in
     & currentyear,                & !in
     & time_steps_per_day,         & ! in
-    & dtime,                      & ! in
     & one_counter,                      & !inout
    ! & Leaf_control,               & ! in
     & c_storage,                  & ! inout
@@ -252,7 +251,6 @@ CONTAINS
     INTEGER,  INTENT(in)     :: iniyear      
     INTEGER,  INTENT(in)     :: currentyear  
     INTEGER,  INTENT(in)     :: time_steps_per_day
-    REAL(wp), INTENT(in)     :: dtime
     REAL(wp), INTENT(inout) :: one_counter
     REAL(wp), INTENT(out)     :: del_c
  !   REAL(wp), INTENT(in)     :: Leaf_control 
@@ -772,7 +770,7 @@ CONTAINS
         
        
         
-        
+         IF (  Flg_grow  .LT.  1._WP) CUE = 0._wp
         
         
         

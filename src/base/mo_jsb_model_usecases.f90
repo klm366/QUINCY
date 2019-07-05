@@ -128,28 +128,28 @@ CONTAINS
 
     INTEGER :: i
 
-    INTEGER, PARAMETER :: npft = 4
+    INTEGER, PARAMETER :: npft = 11
 
     CHARACTER(len=5), PARAMETER :: pft_shortnames(npft) = [character(len=5) ::  &
-      & 'pft01', 'pft02', 'pft03', 'pft04']!, 'pft05', 'pft06', &
-      !& 'pft07', 'pft08', 'pft09', 'pft10', 'pft11' ]
+      & 'pft01', 'pft02', 'pft03', 'pft04', 'pft05', 'pft06', &
+      & 'pft07', 'pft08', 'pft09', 'pft10', 'pft11' ]
 
     CHARACTER(len=30), PARAMETER :: pft_longnames(npft) = [character(len=30) :: &
       & 'Tropical broadleaf evergreen', &
       & 'Tropical broadleaf deciduous', &
       & 'Extra-tropical evergreen',     &
-      & 'Extra-tropical deciduous'     ]!&
-!      & 'Raingreen shrubs',             &
- !     & 'Deciduous shrubs',             &
- !     & 'C3 grass',                     &
- !     & 'C4 grass',                     &
- !     & 'C3 pasture',                   &
- !     & 'C4 pasture',                   &
- !     & 'C3 crops'                    ]
+      & 'Extra-tropical deciduous',     &
+      & 'Raingreen shrubs',             &
+      & 'Deciduous shrubs',             &
+      & 'C3 grass',                     &
+      & 'C4 grass',                     &
+      & 'C3 pasture',                   &
+      & 'C4 pasture',                   &
+      & 'C3 crops'                    ]
 
     ! Index of PFT into lctlib columns
     ! id is one less than in lctlib file because the first column (glacier) has been thrown away
-    INTEGER, PARAMETER :: pft_ids(npft) = (/ 1,2,3,4/) !,9,10,11,12,14,15,19 /)
+    INTEGER, PARAMETER :: pft_ids(npft) = (/ 1,2,3,4,9,10,11,12,14,15,19 /)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_usecase_pfts'
 

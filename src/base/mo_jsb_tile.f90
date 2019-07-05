@@ -315,8 +315,6 @@ CONTAINS
         this%mem(iproc)%p => tmp_ptr
         this%mem(iproc)%p%id = iproc
         this%mem(iproc)%p%varlist_name = TRIM(varlist_name_loc)//'_'//TRIM(this%name) !-=-=-=-=-=-=-=-=-=-=-=-=-=-=PHS "now each pft has an output file but all processes are in one file"
-        !this%mem(iproc)%p%varlist_name = TRIM(varlist_name_loc)//'_'//TRIM(process_name)//'_'//TRIM(this%name) !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= PHS "now each pft has one output file"       
-        !this%mem(iproc)%p%varlist_name = TRIM(varlist_name_loc)//'_'//TRIM(process_name)//'_'//model_id_char  !-=-=-=-=-=-=-=-=-=-=-=-=-=-= PHS "problem with restart file"
         this%mem(iproc)%p%grid_id = this%grid_id
         this%mem(iproc)%p%owner_model_id = this%owner_model_id
         this%mem(iproc)%p%owner_proc_id = iproc
@@ -348,8 +346,6 @@ CONTAINS
             tmp_ptr => tmp_tile%mem(iproc)%p
             tmp_tile%mem(iproc)%p%id = iproc
             tmp_tile%mem(iproc)%p%varlist_name =  TRIM(varlist_name_loc)//'_'//TRIM(this%name) !-=-=-=-=-=-=-=-=-=-=-=-=-=-=PHS "now each pft has an output file but all processes are in one file"
-            !tmp_tile%mem(iproc)%p%varlist_name =  TRIM(varlist_name_loc)//'_'//TRIM(process_name)//'_'//TRIM(this%name)!-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= PHS "now each pft has one output file"
-            !tmp_tile%mem(iproc)%p%varlist_name =  TRIM(varlist_name)_loc//'_'//TRIM(process_name)//'_'//model_id_char !-=-=-=-=-=-=-=-=-=-=-=-=-=-= PHS "problem with restart file"
             tmp_tile%mem(iproc)%p%grid_id = this%grid_id
             tmp_tile%mem(iproc)%p%owner_model_id = this%owner_model_id
             ALLOCATE(tmp_tile%mem(iproc)%p%owner_tile_path(SIZE(tmp_tile%path)))

@@ -732,8 +732,8 @@ CONTAINS
         & t_cf('temp_sum', 'Used to accumulate temperature over a day. '),           &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix,                                                                        &
-        & output_level=BASIC,loutput=.TRUE.,                                                      &
-        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.FALSE. )    
+        & output_level=BASIC,loutput=.FALSE.,                                                      &
+        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.FALSE. )    
         
       CALL jsb_add_var( mem, 'temp_yDayMean', mem%temp_yDayMean,                              &
         & hgrid, surface,                                                                        &

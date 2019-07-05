@@ -653,7 +653,7 @@ CONTAINS
   SUBROUTINE update_assimilation(tile, options)
 
     USE mo_assimi_process,      ONLY: calc_assimilation_waterlimited, calc_NPP_pot_rate
-    USE mo_jsb_time,          ONLY:time_steps_per_day
+
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -739,7 +739,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(RAD_,      apar_per_lai_cl)         ! in
     dsl4jsb_Get_var3D_onChunk(RAD_,      lai_cl)                  ! in
 
-    dsl4jsb_Get_var2D_onChunk(PHENO_,    lai) !in !-=-=-=-=-=-=-=-=-=-=-=-=-=-=- bcbcbcbcbcbcbcbcbc
     dsl4jsb_Get_var2D_onChunk(PHENO_,    veg_fract_correction)    ! in
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   assimi_scaling_fact_cl)  ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_,    fract_fpc_max )          ! in
