@@ -291,9 +291,11 @@ CONTAINS
       process_name = Get_process_name(iproc)
 
       IF (get_no_of_models() > 1) THEN
-        varlist_name_loc = TRIM(varlist_name)//'_'//TRIM(process_name)//'_'//model_id_suffix
+        ! varlist_name_loc = TRIM(varlist_name)//'_'//TRIM(process_name)//'_'//model_id_suffix
+        varlist_name_loc = TRIM(varlist_name)//'_'//model_id_suffix ! PHS
       ELSE
-        varlist_name_loc = TRIM(varlist_name)//'_'//TRIM(process_name)
+        ! varlist_name_loc = TRIM(varlist_name)//'_'//TRIM(process_name)
+        varlist_name_loc = TRIM(varlist_name) ! PHS
       END IF
 
       IF (this%process_action(iproc) == INHERIT_) THEN
