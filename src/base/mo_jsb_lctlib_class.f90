@@ -758,7 +758,7 @@ CONTAINS
                  WRITE(35,fm) 'jedi_N_pseudo_T',lctlib(1:nlct)%jedi_N_pseudo_T 
              CASE ('critigrowtemp')
                 READ(line(pos:length),*) P03(1:nlct)                
-                lctlib(1:nlct)%CritiGrowTemp = -5._wp + P03(1:nlct)    * ( 10.0_wp - ( -5.0_wp ) )      !PHS: 21.06.2019 End of growth season  from -5degC to 0 degC
+                lctlib(1:nlct)%CritiGrowTemp = -0._wp + P03(1:nlct)    * ( 15.0_wp - ( -0.0_wp ) )      !PHS: 21.06.2019 End of growth season  from -5degC to 0 degC
                 exists_CritiGrowTemp   = .TRUE.
                 WRITE(35,fm) 'CritiGrowTemp ',lctlib(1:nlct)%CritiGrowTemp
              CASE ('germfrac')
@@ -793,7 +793,7 @@ CONTAINS
                 WRITE(35,fm) 'TurnoverStruc ',lctlib(1:nlct)%TurnoverStruc
              CASE ('turnoverleaf')
                 READ(line(pos:length),*) P12(1:nlct)
-                lctlib(1:nlct)%TurnoverLeaf = ( 365._wp / 12._wp ) * ( 10._wp ** (P12(1:nlct) * 2._wp) )
+                lctlib(1:nlct)%TurnoverLeaf = ( 365._wp / 12._wp ) * ( 10._wp ** (1.48_wp * P12(1:nlct) * 2._wp) )
                 exists_TurnoverLeaf   = .TRUE.
                 WRITE(35,fm) 'TurnoverLeaf ',lctlib(1:nlct)%TurnoverLeaf  !PHS 9. May. 2019 : we try to sample from sla to turove rate                
                 !lctlib(1:nlct)%JeDiSLA = 50._wp * 12.01_wp * 0.0001_wp + P12(1:nlct) * (  (1000._wp - 50._wp ) * 12.01_wp * 0.0001_wp  )  !PHS 9. May. 2019 : we try to sample from sla to turove rate
