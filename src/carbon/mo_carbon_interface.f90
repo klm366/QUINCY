@@ -33,7 +33,7 @@ MODULE mo_carbon_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
   
   ! Use of processes in this module (Get_carbon_memory and Get_carbon_config)
-  dsl4jsb_Use_processes CARBON_, ASSIMI_, PHENO_, DISTURB_, A2L_, L2A_
+  dsl4jsb_Use_processes CARBON_, ASSIMI_, PHENO_, DISTURB_, A2L_, L2A_, HYDRO_
 
   ! Use of process configurations
   dsl4jsb_Use_config(PHENO_)
@@ -730,7 +730,6 @@ CONTAINS
         & iniyear,                                              & !in
         & get_year(current),                            & !in
         & time_steps_per_day(),                        & ! in
-        & dtime,                                       & ! in
         & one_counter,                               & ! inout
         !& Leaf_control,                                & ! in
         & c_storage,                                   & ! inout
@@ -926,7 +925,7 @@ CONTAINS
         ! Variavles for JeDi carbon allocation 
         & c_leaves = c_leaves(:) , c_storage = c_storage(:) , c_fnroot = c_fnroot(:) , &
         & c_csroot = c_csroot(:) , c_stem = c_stem(:)       , c_seed = c_seed(:)     , &
-        &  & c_total = c_total(:),         &
+        & c_total = c_total(:),         &
         ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
         & c_crop_harvest = c_crop_harvest(:),                                       &
         & c_acid_ag1 = c_acid_ag1(:), c_water_ag1 = c_water_ag1(:),                 &
@@ -1819,14 +1818,13 @@ CONTAINS
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
   !
-  SUBROUTINE yday_carbon_conservation_test(tile, options)
+  SUBROUTINE yday_carbon_conservation_test(tile)
 
     USE mo_carbon_constants,   ONLY: molarMassCO2_kg, sec_per_day
     USE mo_jsb_grid,           ONLY: Get_grid
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(in), TARGET :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)         :: options
 
     dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_memory(L2A_)
@@ -1834,9 +1832,10 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER      :: model
     TYPE(t_jsb_grid),  POINTER      :: grid
+    TYPE(t_jsb_task_options)        :: options
 
-    REAL(wp), DIMENSION(options%nc) :: C_flux_yday
-    INTEGER                :: ics, ice, iblk
+    REAL(wp), ALLOCATABLE :: C_flux_yday(:)
+    INTEGER               :: ics, ice, iblk, nc
 
     dsl4jsb_Get_memory(L2A_)
     dsl4jsb_Get_memory(CARBON_)
@@ -1845,13 +1844,24 @@ CONTAINS
     grid => Get_grid(model%grid_id)
 
 !    iblk  = options%iblk
-    ics   = options%ics
-    ice   = options%ice
+    options%ics = 1
+    options%ice = grid%nproma
+
+    ics = options%ics
+    ice = options%ice
+    nc = ice - ics + 1
+
+    ALLOCATE(C_flux_yday(nc))
 
     DO iblk = 1, grid%nblks
 
       CALL model%Set_options(iblk=iblk)
-      ! TODO: ics and ice should be retrieved for each iblk (are not necessarily constant for each block in ICON)
+      options%iblk = iblk
+      IF (iblk == grid%nblks) THEN
+        options%ice = grid%npromz
+        ice = grid%npromz
+        ! TODO: ics and ice should be retrieved for each iblk (are not necessarily constant for each block in ICON)
+      END IF
 
       dsl4jsb_Get_var2D_onChunk(L2A_,  carbon_conservation_test )     ! inout
       dsl4jsb_Get_var2D_onChunk(L2A_,  yday_c_state_sum )             ! inout
@@ -1879,6 +1889,8 @@ CONTAINS
       CALL calculate_current_c_ta_state_sum(tile, options, yday_c_state_sum)
 
     END DO
+
+    DEALLOCATE(C_flux_yday)
 
   END SUBROUTINE yday_carbon_conservation_test
 

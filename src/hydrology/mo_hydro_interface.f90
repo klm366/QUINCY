@@ -1117,7 +1117,6 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    TYPE(t_jsb_model), POINTER :: model
     dsl4jsb_Def_config(HYDRO_)
 
     dsl4jsb_Def_memory(HYDRO_)
@@ -1136,9 +1135,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: t
     dsl4jsb_Real2D_onChunk :: q_air
     dsl4jsb_Real2D_onChunk :: press_srf
-    !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
-    dsl4jsb_Real2D_onChunk :: jedi_air_sat !PHS: to see if air is saturated
-    !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
+
     INTEGER :: iblk, ics, ice, nc
 
     TYPE(t_jsb_model), POINTER :: model
@@ -1169,9 +1166,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root_fc)      ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root_pwp)     ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_stress)        ! out
-    !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    jedi_air_sat) !out
-    !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
 
     ! Get water stress
 
@@ -1263,6 +1257,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: t
     dsl4jsb_Real2D_onChunk :: q_air
     dsl4jsb_Real2D_onChunk :: press_srf
+    !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
+    dsl4jsb_Real2D_onChunk :: jedi_air_sat !PHS: to see if air is saturated
+    !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
 
     INTEGER :: iblk, ics, ice
 
@@ -1290,6 +1287,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_stress)        ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond_unlimited) ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond_limited) ! out
+    !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    jedi_air_sat) !out
+    !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
 
     ! Compute (actual) canopy (stomatal) conductance under water stress.
     canopy_cond_limited(:) = get_canopy_conductance(canopy_cond_unlimited(:),  & ! in, unstressed canopy conductance
@@ -1297,7 +1297,7 @@ CONTAINS
                                                     q_air(:) >  qsat(t(:),press_srf(:)) & ! in, atmosphere saturated?
                                                     )
     
-       jedi_air_sat(:) =   q_air(:)  -  qsat(t(:),press_srf(:))  !19.04.12 PHS: to see if air is saturated. 
+    jedi_air_sat(:) =   q_air(:)  -  qsat(t(:),press_srf(:))  !19.04.12 PHS: to see if air is saturated. 
     
 
 
