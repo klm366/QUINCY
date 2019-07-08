@@ -769,63 +769,58 @@ CONTAINS
 
     DO icanopy=1,ncanopy
     
-    !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    ! Using jedi's Vc,max value to compute photosynthesis
-    !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+      IF (TRIM(model%config%usecase) .eq. 'jsbach_jedi' ) THEN        
     
-    IF (TRIM(model%config%usecase) .eq. 'jsbach_jedi' ) THEN
-        
+        !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+        ! Using jedi's Vc,max value to compute photosynthesis
+        !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     
-      CALL calc_assimilation_waterlimited(    &
-        & dsl4jsb_Lctlib_param(C4Flag),       &
-        & dsl4jsb_Lctlib_param(JeDiCarboxRate),   &
-        & dsl4jsb_Lctlib_param(JeDiCarboxRate)*1.9_wp,   &
-        & t_air(:),                           & ! in
-        & press_srf(:),                       & ! in
-        & par_down_mol(:),                    & ! in
-        & apar_per_lai_cl(:,icanopy),         & ! in
-        & CO2_air_mol(:),                     & ! in
-        & assimi_scaling_fact_cl(:,icanopy),  & ! in
-        & CO2_conc_leaf_cl(:,icanopy),        & ! out only for the water limited case here
-        & canopy_cond_cl(:,icanopy),          & ! in  only for the water limited case here
-        & gross_assimilation_cl(:,icanopy),   & ! out
-        & dark_respiration_cl(:,icanopy),     & ! out
-        & carbox_rate_max_cl(:,icanopy),      & ! out
-        & e_transport_rate_max_cl(:,icanopy), & ! out
-        & carbox_rate_cl(:,icanopy),          & ! out
-        & e_transport_rate_cl(:,icanopy)      & ! out
-        & )
-   
-    ELSE
-    write(*,*) "you are in a wrong routine for jedi assimilation computation!!!!!!!!"
-!      CALL calc_assimilation_waterlimited(    &
-!        & dsl4jsb_Lctlib_param(C4Flag),       &
-!        & dsl4jsb_Lctlib_param(CarboxRate),   &
-!        & dsl4jsb_Lctlib_param(ETransport),   &
-!        & t_air(:),                           & ! in
-!        & press_srf(:),                       & ! in
-!        & par_down_mol(:),                    & ! in
-!        & apar_per_lai_cl(:,icanopy),         & ! in
-!        & CO2_air_mol(:),                     & ! in
-!        & assimi_scaling_fact_cl(:,icanopy),  & ! in
-!        & CO2_conc_leaf_cl(:,icanopy),        & ! out only for the water limited case here
-!        & canopy_cond_cl(:,icanopy),          & ! in  only for the water limited case here
-!        & gross_assimilation_cl(:,icanopy),   & ! out
-!        & dark_respiration_cl(:,icanopy),     & ! out
-!        & carbox_rate_max_cl(:,icanopy),      & ! out
-!        & e_transport_rate_max_cl(:,icanopy), & ! out
-!        & carbox_rate_cl(:,icanopy),          & ! out
-!        & e_transport_rate_cl(:,icanopy)      & ! out
-!        & )
-        
-        
-    ENDIF
+        CALL calc_assimilation_waterlimited(    &
+          & dsl4jsb_Lctlib_param(C4Flag),       &
+          & dsl4jsb_Lctlib_param(JeDiCarboxRate),   &
+          & dsl4jsb_Lctlib_param(JeDiCarboxRate)*1.9_wp,   &
+          & t_air(:),                           & ! in
+          & press_srf(:),                       & ! in
+          & par_down_mol(:),                    & ! in
+          & apar_per_lai_cl(:,icanopy),         & ! in
+          & CO2_air_mol(:),                     & ! in
+          & assimi_scaling_fact_cl(:,icanopy),  & ! in
+          & CO2_conc_leaf_cl(:,icanopy),        & ! out only for the water limited case here
+          & canopy_cond_cl(:,icanopy),          & ! in  only for the water limited case here
+          & gross_assimilation_cl(:,icanopy),   & ! out
+          & dark_respiration_cl(:,icanopy),     & ! out
+          & carbox_rate_max_cl(:,icanopy),      & ! out
+          & e_transport_rate_max_cl(:,icanopy), & ! out
+          & carbox_rate_cl(:,icanopy),          & ! out
+          & e_transport_rate_cl(:,icanopy)      & ! out
+          & )
     
-    !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    
- 
-        
-        
+      ELSE
+
+        dsl4jsb_Get_var2D_onChunk(PHENO_,    day_NPP_sum)             ! inout
+
+        CALL calc_assimilation_waterlimited(    &
+          & dsl4jsb_Lctlib_param(C4Flag),       &
+          & dsl4jsb_Lctlib_param(CarboxRate),   &
+          & dsl4jsb_Lctlib_param(ETransport),   &
+          & t_air(:),                           & ! in
+          & press_srf(:),                       & ! in
+          & par_down_mol(:),                    & ! in
+          & apar_per_lai_cl(:,icanopy),         & ! in
+          & CO2_air_mol(:),                     & ! in
+          & assimi_scaling_fact_cl(:,icanopy),  & ! in
+          & CO2_conc_leaf_cl(:,icanopy),        & ! out only for the water limited case here
+          & canopy_cond_cl(:,icanopy),          & ! in  only for the water limited case here
+          & gross_assimilation_cl(:,icanopy),   & ! out
+          & dark_respiration_cl(:,icanopy),     & ! out
+          & carbox_rate_max_cl(:,icanopy),      & ! out
+          & e_transport_rate_max_cl(:,icanopy), & ! out
+          & carbox_rate_cl(:,icanopy),          & ! out
+          & e_transport_rate_cl(:,icanopy)      & ! out
+          & )
+          
+      ENDIF
+      
     END DO
 
     ! Same for gross_assimilation_ca
@@ -853,9 +848,11 @@ CONTAINS
 
     CALL calc_NPP_pot_rate(gross_assimilation_ca, dark_respiration_ca, NPP_pot_rate_ca)
 
-    ! Accumulate NPP_pot_rate_ca. day_NPP_sum is divided by the day length and reset to zero in
-    ! update_phenology_logrop at the beginning of each day.
-    day_NPP_sum(:) = day_NPP_sum(:) + NPP_pot_rate_ca(:) * dtime
+    IF (TRIM(model%config%usecase) /= 'jsbach_jedi' ) THEN        
+      ! Accumulate NPP_pot_rate_ca. day_NPP_sum is divided by the day length and reset to zero in
+      ! update_phenology_logrop at the beginning of each day.
+      day_NPP_sum(:) = day_NPP_sum(:) + NPP_pot_rate_ca(:) * dtime
+    END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

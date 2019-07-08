@@ -736,13 +736,13 @@ CONTAINS
           AutoRes    = AutoRes    /  sec_per_day 
           
     
-          IF (  GPP_yDayMean .LT. 1.E-12 ) THEN
+          IF (  GPP_yDayMean .LT. 1.E-12_wp ) THEN
           
               CUE = 0._wp
               
           ELSE
         
-           CUE =NPP_act_yDayMean /SIGN(MAX(ABS(GPP_yDayMean), 1.E-12), GPP_yDayMean)
+           CUE =NPP_act_yDayMean /SIGN(MAX(ABS(GPP_yDayMean), 1.E-12_wp), GPP_yDayMean)
            CUE = MAX ( 0._wp, CUE )
            
           END IF
@@ -767,10 +767,9 @@ CONTAINS
           ENDIF
         
         
-        
-       
-        
+ 
          IF (  Flg_grow  .LT.  1._WP) CUE = 0._wp
+
         
         
         
