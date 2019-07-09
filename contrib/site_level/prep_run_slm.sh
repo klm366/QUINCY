@@ -23,7 +23,7 @@ slmModel="land"
 ##>> sites <<###########################################################################################
 ## select set of sites: FLUXNET or CRUNCEPv7
 # forcing data and fluxnet/cruncep/face site info *list.dat for the specific set of sites: /Net/Groups/BGI/data/Model/SLM1/input/point/ 
-# options: fluxnet cruncep face manip fert craine
+# options: fluxnet cruncep face manip fert craine photacc
 forcingDataSet="fluxnet"
 # forcing with or without a transient (like spinup) phase before the actual simulation starts
 # options: static transient
@@ -43,7 +43,7 @@ customSiteListFileName=""
 # you can get the Site-ID from the 1st column of the particular site-list info file in /Net/Groups/BGI/data/Model/SLM1/input/point/"forcingDataSet"/
 # examples: [FLUX] "DE-Hai" "FI-Hyy" "ZA-Kru"  [CRUN] "BHS_01" "HAI_01" "ILO_05"  
 #           [FACE] "DK-AMB" "OR-ELE"  [MANIP] "ES-MaG" "ES-MaT"  [FERT] "HAR-CON_4" "HAR-HIG_4" "HAR-LOW_4" "HAR-CON_5"
-#           [CRAINE] "CRA_01" "CRA_02" "CRA_18"
+#           [CRAINE] "CRA_01" "CRA_02" "CRA_18"  [PHOTACC] "ARC_01" "MON_02" "STR_01"
 singleSiteName=""
 
 
@@ -209,6 +209,10 @@ while getopts ":e:f:c:m:s:r:y:b:z:n:u:h" opt; do
       echo "   forcingDataSet=craine"
       forcingDataSet="craine"
       ;;
+    "ph")
+      echo "   forcingDataSet=photacc"
+      forcingDataSet="photacc"
+      ;;
     esac
     ;;
   "c")
@@ -328,6 +332,7 @@ while getopts ":e:f:c:m:s:r:y:b:z:n:u:h" opt; do
     echo "       ma: MANIP tree and grassland sites"
     echo "       fe: FERT sites (fertilization)"
     echo "       ca: CRAINE sites (selected sites from doi:10.5061/dryad.v2k2607)"
+    echo "       ph: PHOTACC sites (phot acclimation)"
     echo " -c set the customSiteList"
     echo "    Arguments to -c:"
     echo "       T: using the custom site list"
@@ -469,7 +474,7 @@ fi
 return 0
 }
 # lists to validate against
-validateForcingDataSet="fluxnet cruncep face manip fert craine"
+validateForcingDataSet="fluxnet cruncep face manip fert craine photacc"
 validateForcingMode="static transient"
 validateSiteSelection="all cue spp"
 validateSlmModel="land plant soil canopy"
@@ -635,7 +640,7 @@ if [ $paramSensitivitySim == "T" ]; then
 fi
 
 
-## site data-set: FLUXNET / CRUNCEPv7 / FACE / MANIP ##
+## site data-set: FLUXNET / CRUNCEPv7 / FACE / MANIP / ... ##
 case "$forcingDataSet" in
 "fluxnet")
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET2/"
@@ -662,10 +667,16 @@ case "$forcingDataSet" in
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/CRAINE/"
   siteDataObsFold="no such evaluation data"  # but this variable must contain something
   ;;
+"photacc")
+    #! temporary fix for PHOTACC !#
+    siteDataFold="/Net/Groups/BGI/scratch/jengel/quincy_data/point/PHOTACC/"
+  #siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/PHOTACC/"
+  siteDataObsFold="no such evaluation data"  # but this variable must contain something
+  ;;
 esac
-# no soil forcing for MANIP FERT CRAINE
+# no soil forcing for MANIP FERT CRAINE PHOTACC
 if [ "$slmModel" == "soil" ]; then
-  if [ "$forcingDataSet" == "manip" ] || [ "$forcingDataSet" == "fert" ] || [ "$forcingDataSet" == "craine" ]; then
+  if [ "$forcingDataSet" == "manip" ] || [ "$forcingDataSet" == "fert" ] || [ "$forcingDataSet" == "craine" ] || [ "$forcingDataSet" == "photacc" ]; then
     echo " Sorry, no soil forcing available for ""$forcingDataSet"" sites yet."
     echo " EXIT!"
     exit 1
@@ -851,6 +862,17 @@ else # the default case: $customSiteList == "F"
       echo " "
     else
       siteListFileName="craine_sites_1901-2015.dat"
+    fi
+    ;;
+  "photacc")
+    if [ $forcingMode == "static" ]
+     then
+      siteListFileName="photacc_sites_1901-2015.dat"
+      echo " "
+      echo " Note: you are running a static simulation with (a) PHOTACC site(s) using (transient) forcing 1901-2015 by default."
+      echo " "
+    else
+      siteListFileName="photacc_sites_1901-2015.dat"
     fi
     ;;
   esac
@@ -1048,6 +1070,14 @@ case "$forcingDataSet" in
   fi
   ;;
 "craine")
+  if [ $forcingMode == "static" ]
+   then
+    forcingModeFileID="_1901"
+  else
+    forcingModeFileID="_1901"
+  fi
+  ;;
+"photacc")
   if [ $forcingMode == "static" ]
    then
     forcingModeFileID="_1901"
