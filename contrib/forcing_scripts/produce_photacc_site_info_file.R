@@ -17,11 +17,6 @@ library(ncdf4)
 
 
 #########################################################################################
-## basic input path
-baseInputPath <- "/Net/Groups/BGI/scratch/jengel/quincy_data/ocn_weather_output/photacc_site_set/"
-
-
-#########################################################################################
 ## basic site lists
 metsites      <- read.table("generate_photacc_siteinfo_noheader.dat", stringsAsFactors=F, header=F)
 metsite_list  <- metsites[,1]

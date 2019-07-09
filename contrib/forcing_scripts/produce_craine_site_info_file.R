@@ -17,11 +17,6 @@ library(ncdf4)
 
 
 #########################################################################################
-## basic input path
-baseInputPath <- "/Net/Groups/BGI/scratch/jengel/quincy_data/ocn_weather_output/craine_site_set/"
-
-
-#########################################################################################
 ## basic site lists
 metsites      <- read.table("generate_craine_siteinfo_noheader.dat", stringsAsFactors=F, header=F)
 metsite_list  <- metsites[,1]
@@ -29,22 +24,20 @@ metsite_list  <- metsites[,1]
 
 #########################################################################################
 ## available site characteristics
-dat <- read.csv(paste0(baseInputPath,'craine_sites_1901-2015_list.dat'), sep="", header=T, stringsAsFactors=F)
+dat           <- metsites
+colnames(dat) <- c("Site-ID", "lon", "lat", "PFT")
 
 # number of sites
-siteNum <- nrow(dat)
+siteNum <- nrow(metsites)
 
 ## PFT information per site
 pft <- dat$PFT
 
 ## more site characteristics
-siteID_list     <- dat$SiteID
+siteID_list     <- dat$'Site-ID'
 lon_orig        <- dat$lon
 lat_orig        <- dat$lat
-sand            <- dat$sand
-silt            <- dat$silt
-awc             <- dat$awc
-plantyear       <- dat$PlantYear
+plantyear       <- c(rep(-9999,siteNum))
 
 ## feedback
 print(paste0(" Start creating the site_list info file for ",siteNum," sites of the CRAINE siteset."))
@@ -102,7 +95,10 @@ taxousda     <- numeric(siteNum)
 depth        <- numeric(siteNum)
 ph           <- numeric(siteNum)
 bulk_density <- numeric(siteNum)
+sand         <- numeric(siteNum)
+silt         <- numeric(siteNum)
 awc_sl       <- array(NA,c(siteNum,7))
+awc          <- numeric(siteNum)
 
 for (s in 1:siteNum) {
   lonidx          <- which.min(abs(lon_sg-lon_orig[s]))
@@ -113,10 +109,10 @@ for (s in 1:siteNum) {
   taxousda[s]     <- taxousda_sg[lonidx,latidx]
   taxnwrb[s]      <- taxnwrb_sg[lonidx,latidx]
 
-  if(is.na(sand[s])) sand[s] <- weighted.mean(sand_sg[lonidx,latidx,],depth_sl,na.rm=TRUE)/100
-  if(is.na(silt[s])) silt[s] <- weighted.mean(silt_sg[lonidx,latidx,],depth_sl,na.rm=TRUE)/100
-  awc_sl[s,]                 <-(fc_vol_sg[lonidx,latidx,]-pwp_vol_sg[lonidx,latidx,])/100
-  if(is.na(awc[s]))  awc[s]  <- weighted.mean(awc_sl[s,],depth_sl,na.rm=TRUE)*depth[s]*1000
+  sand[s]     <- weighted.mean(sand_sg[lonidx,latidx,],depth_sl,na.rm=TRUE)/100
+  silt[s]     <- weighted.mean(silt_sg[lonidx,latidx,],depth_sl,na.rm=TRUE)/100
+  awc_sl[s,]  <- (fc_vol_sg[lonidx,latidx,]-pwp_vol_sg[lonidx,latidx,])/100
+  awc[s]      <- weighted.mean(awc_sl[s,],depth_sl,na.rm=TRUE)*depth[s]*1000
 }
 
 
