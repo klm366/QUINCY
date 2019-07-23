@@ -242,17 +242,17 @@ CONTAINS
       ! pheno_init
       IF (one_of(model%config%slm_model_name, [character(len=20) :: &
           'land','plant','canopy' ]) > 0) THEN
-        CALL pheno_init(tile, model%options)
+        CALL pheno_init(tile)
       END IF
       ! assimi_init
       IF (one_of(model%config%slm_model_name, [character(len=20) :: &
           'land','plant','canopy','test_canopy','test_radiation' ]) > 0) THEN
-        CALL assimi_init(tile, model%options)
+        CALL assimi_init(tile)
       END IF
       ! rad_init
       IF (one_of(model%config%slm_model_name, [character(len=20) :: &
           'land','plant','canopy','test_canopy','test_radiation' ]) > 0) THEN
-        CALL rad_init(tile, model%options)
+        CALL rad_init(tile)
       END IF
       ! veg_init
       IF (one_of(model%config%slm_model_name, [character(len=20) :: &
