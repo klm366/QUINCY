@@ -48,7 +48,7 @@ CONTAINS
     USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
 
     ! Use of process configurations (t_PROC_config)
-    dsl4jsb_Use_config(PHENO_)    
+    !
 
     ! Use of process memories
     dsl4jsb_Use_memory(A2L_)        !  USE mo_a2l_memory_class, ONLY: t_a2l_memory
@@ -70,7 +70,6 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_memory(A2L_)                        !     TYPE(t_a2l_memory),      POINTER :: a2l__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(PHENO_)                      !     TYPE(t_pheno_memory),    POINTER :: pheno__mem
@@ -108,7 +107,7 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id) 
     ! Get process config
-    dsl4jsb_Get_config(PHENO_)          ! PHENO_conf => model%processes(PROC)%p%config | use: dsl4jsb_Config(PHENO_)%var or PHENO__conf%var
+    !
     ! Get process memories
     dsl4jsb_Get_memory(A2L_)            ! a2l__mem => a2l_memory
     dsl4jsb_Get_memory(VEG_)            ! veg__mem => veg_memory
