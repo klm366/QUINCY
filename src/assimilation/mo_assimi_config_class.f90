@@ -118,7 +118,7 @@ CONTAINS
 
     CALL close_nml(nml_handler)
 
-    ! pass values as read from file (ncanopy is saved in the canopy_layer vgrid)
+    ! pass values as read from file (ncanopy is read from namelist and saved in the canopy_layer vgrid)
     config%active                        = active
     config%ic_filename                   = ic_filename
     config%bc_filename                   = bc_filename
