@@ -585,14 +585,14 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     ! ---------------------------
     ! 0.2 Local
     INTEGER                                          :: i
-    REAL(wp)                                         :: rhlp1
+    REAL(wp)                                         :: rhlp1, rhlp2
     LOGICAL,  DIMENSION(nc)                          :: aflag
     REAL(wp), DIMENSION(nc)                          :: soil_p_weight, soil_weight_0d, &  !< total soil weight up to the soil_p_depth/soil_depth_0d, [kg]
                                                         soil_p_layer                      !< up to soil_p_layer keep the P init map info
     REAL(wp), DIMENSION(nc)                          :: hlp1, hlp2, hlp3, hlp4
     REAL(wp), DIMENSION(nc)                          :: soil_depth_0d
     REAL(wp), DIMENSION(nc,nsoil_sb)                 :: soil_weight_sl, &                 !< soil weight per soil layer
-                                                        arr_hlp1, arr_z
+                                                        arr_hlp1, arr_hlp2, arr_z
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_soil_pi_pools'
 
 
@@ -629,101 +629,83 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     END DO
     hlp4(:) = rhlp1 / soil_p_weight(:) ! the Pi density from init map, [g P / kg soil]
     
-    !> 2.0 calculate the initial slow P, occluded P, primary P pool, and labile_P
-    !! based on the assumption that soil P pool are linearly corrected with soil weight
-    DO i=1,nsoil_sb
-      IF (i==1) THEN
-        arr_z(:,i)        = soil_depth_sl(:,i) / 2._wp
-      ELSE
-        arr_z(:,i)          = arr_z(:,i-1) + (soil_depth_sl(:,i) + soil_depth_sl(:,i-1)) / 2._wp  
-      ENDIF   
-    ENDDO
-
-    DO i=1,nsoil_sb
-      hlp1(:)             = MIN(2._wp * arr_z(:,i) ** 0.5_wp, 3.4_wp) / 3.5_wp ! primary corrected for depth, [g P] 
-      ! hlp2(:)             = MIN(3._wp, arr_z(:,i) ** (-0.75_wp)) / 3.5_wp ! labile + slow
-      hlp2(:)             = 0.8_wp ** (2._wp * arr_z(:,i)) / 3.5_wp
-      hlp3(:)             = MAX((1 - hlp1(:) - hlp2(:)), 0.2_wp / 3.5_wp) ! occluded corrected for depth
-
-      WHERE ((hlp1(:) + hlp2(:) + hlp3(:)) > 1._wp)
-        hlp1(:) = hlp1(:) / (hlp1(:) + hlp2(:) + hlp3(:))
-        hlp2(:) = hlp2(:) / (hlp1(:) + hlp2(:) + hlp3(:))
-        hlp3(:) = hlp3(:) / (hlp1(:) + hlp2(:) + hlp3(:))
-      ENDWHERE
-      WHERE (soil_p_layer(:) > i) 
-        po4_assoc_slow(:,i) = bulk_dens_sl(:,i) * hlp4(:) * (soil_p_slow + soil_p_labile) / rhlp1 / molar_mass_P * 8._wp / 17._wp
-        po4_occluded(:,i)   = bulk_dens_sl(:,i) * hlp4(:) * soil_p_occluded               / rhlp1 / molar_mass_P
-        po4_primary(:,i)    = bulk_dens_sl(:,i) * hlp4(:) * soil_p_primary                / rhlp1 / molar_mass_P
-        arr_hlp1(:,i)       = bulk_dens_sl(:,i) * hlp4(:) * (soil_p_slow + soil_p_labile) / rhlp1 / molar_mass_P * 9._wp / 17._wp !p_labile_sl in the follwing Eqn, [mol / m3]
-      ELSEWHERE
-        po4_assoc_slow(:,i) = bulk_dens_sl(:,i) * hlp4(:) * hlp2(:) / molar_mass_P * 8._wp / 17._wp
-        po4_occluded(:,i)   = bulk_dens_sl(:,i) * hlp4(:) * hlp3(:) / molar_mass_P
-        po4_primary(:,i)    = bulk_dens_sl(:,i) * hlp4(:) * hlp1(:) / molar_mass_P
-        arr_hlp1(:,i)       = bulk_dens_sl(:,i) * hlp4(:) * hlp2(:) / molar_mass_P * 9._wp / 17._wp !p_labile_sl in the follwing Eqn, [mol / m3]
-      ENDWHERE
-    END DO
-
-    !> 2.1 calculate the initial solute P and fast P,
-    !! based on the assumption that labile P is the sum of both,
-    !! and they follow the Langmuir equilibrium
-    !! po4_assoc_fast = (p_labile_sl + Smax + K - sqrt((p_labile_sl + Smax + K)**2 - 4*p_labile_sl*Smax)) / 2
-    
-    DO i=1,nsoil_sb
-      IF (sb_model_scheme == 'jsm' .AND. sb_adsorp_scheme /= 'eca_none' ) THEN
-          po4_assoc_fast(:,i)        = calc_fast_po4(arr_hlp1(:,i),qmax_po4(:,i),km(:,i), eca_enzyme_hlp(:,i))
-          po4_solute(:,i)            = arr_hlp1(:,i) - po4_assoc_fast(:,i)
-          eca_divisor_adsorp(:,i)    = arr_hlp1(:,i) - po4_assoc_fast(:,i) + eca_enzyme_hlp(:,i)
-      ELSE
-        po4_assoc_fast(:,i) = calc_fast_po4(arr_hlp1(:,i),qmax_po4(:,i),km(:,i))
-        po4_solute(:,i)     = arr_hlp1(:,i) - po4_assoc_fast(:,i)
-      ENDIF
-
-    END DO
-
-    !> 3.0 simple_0d should represent the first meter from the simple_1d
-
+    !> 2.0 simple_0d should represent the first meter, 
+    !! simple_1d and jsm use the soil profile depth
     IF (sb_model_scheme=='simple_0d') THEN
-
+      rhlp1 = 9._wp / 17._wp * (soil_p_slow + soil_p_labile)  ! temp correction for global average
+      rhlp2 = 8._wp / 17._wp * (soil_p_slow + soil_p_labile)  ! to get equilibrium in fast and slow pool
       hlp1(:) = 0._wp; hlp2(:) = 0._wp; aflag(:) = .TRUE.
-      po4_assoc_slow(:,1) = po4_assoc_slow(:,1) * soil_depth_sl(:,1)
-      po4_occluded(:,1)   = po4_occluded(:,1)   * soil_depth_sl(:,1)
-      po4_primary(:,1)    = po4_primary(:,1)    * soil_depth_sl(:,1)  
-      arr_hlp1(:,1)       = arr_hlp1(:,1)       * soil_depth_sl(:,1)  
-      DO i=2,nsoil_sb
+      DO i=1,nsoil_sb
         WHERE (aflag) 
-          hlp1(:)             = hlp1(:)             + soil_depth_sl(:,i)
-          hlp2(:)             = hlp2(:)             + soil_weight_sl(:,i)
-          po4_assoc_slow(:,1) = po4_assoc_slow(:,1) + po4_assoc_slow(:,i) * soil_depth_sl(:,i) 
-          po4_occluded(:,1)   = po4_occluded(:,1)   + po4_occluded(:,i)   * soil_depth_sl(:,i)
-          po4_primary(:,1)    = po4_primary(:,1)    + po4_primary(:,i)    * soil_depth_sl(:,i)
-          arr_hlp1(:,1)       = arr_hlp1(:,1)       + arr_hlp1(:,i)       * soil_depth_sl(:,i)
+          hlp1(:) = hlp1(:) + soil_depth_sl(:,i)
+          hlp2(:) = hlp2(:) + soil_weight_sl(:,i)
           WHERE (hlp1(:) > soil_depth_0d(:))
-            po4_assoc_slow(:,1) = po4_assoc_slow(:,1) - po4_assoc_slow(:,i) * (hlp1(:) - soil_depth_0d(:)) / soil_depth_sl(:,i) * soil_depth_sl(:,i)
-            po4_occluded(:,1)   = po4_occluded(:,1)   - po4_occluded(:,i)   * (hlp1(:) - soil_depth_0d(:)) / soil_depth_sl(:,i) * soil_depth_sl(:,i)
-            po4_primary(:,1)    = po4_primary(:,1)    - po4_primary(:,i)    * (hlp1(:) - soil_depth_0d(:)) / soil_depth_sl(:,i) * soil_depth_sl(:,i)
-            arr_hlp1(:,1)       = arr_hlp1(:,1)       - arr_hlp1(:,i)       * (hlp1(:) - soil_depth_0d(:)) / soil_depth_sl(:,i) * soil_depth_sl(:,i)
-            soil_weight_0d(:)   = hlp2(:)             - soil_weight_sl(:,i) * (hlp1(:) - soil_depth_0d(:)) / soil_depth_sl(:,i)
+            soil_weight_0d(:) = hlp2(:) - soil_weight_sl(:,i) * (hlp1(:) - soil_depth_0d(:)) / soil_depth_sl(:,i)
             aflag(:) = .FALSE.
           ENDWHERE
         ENDWHERE
-        po4_assoc_slow(:,i) = 0._wp
-        po4_occluded(:,i)   = 0._wp
-        po4_primary(:,i)    = 0._wp
-        po4_assoc_fast(:,i) = 0._wp
-        po4_solute(:,i)     = 0._wp
       END DO
-      hlp1(:)             = soil_weight_0d(:)   * qmax_po4_mineral !Smax in Eqn, [mol / m3]
-      hlp2(:)             = soil_weight_0d(:)   * km_adsorpt_mineral_po4 !K in Eqn, [mol / m3]
+      po4_assoc_slow(:,1) = rhlp2 * soil_p_weight(:) / soil_weight_0d(:) / molar_mass_P
+      po4_occluded(:,1)   = soil_p_occluded * soil_p_weight(:) / soil_weight_0d(:) / molar_mass_P
+      po4_primary(:,1)    = soil_p_primary * soil_p_weight(:) / soil_weight_0d(:) / molar_mass_P
+      arr_hlp1(:,1)       = rhlp1 * soil_p_weight(:) / soil_weight_0d(:) / molar_mass_P
+      hlp1(:)             = soil_weight_0d(:) * qmax_po4_mineral !Smax in Eqn, [mol / m3]
+      hlp2(:)             = soil_weight_0d(:) * km_adsorpt_mineral_po4 !K in Eqn, [mol / m3]
       po4_assoc_fast(:,1) = calc_fast_po4(arr_hlp1(:,1),hlp1(:),hlp2(:))
       po4_solute(:,1)     = arr_hlp1(:,1) - po4_assoc_fast(:,1)
+    ELSE
+      !> 2.1 calculate the initial slow P, occluded P, primary P pool, and labile_P
+      !! based on the assumption that soil P pool are linearly corrected with soil weight
+      DO i=1,nsoil_sb
+        IF (i==1) THEN
+          arr_z(:,i)        = soil_depth_sl(:,i) / 2._wp
+        ELSE
+          arr_z(:,i)          = arr_z(:,i-1) + (soil_depth_sl(:,i) + soil_depth_sl(:,i-1)) / 2._wp  
+        ENDIF   
+      ENDDO
 
-      po4_assoc_slow(:,1) = po4_assoc_slow(:,1) / soil_depth_sl(:,1)
-      po4_occluded(:,1)   = po4_occluded(:,1)   / soil_depth_sl(:,1)
-      po4_primary(:,1)    = po4_primary(:,1)    / soil_depth_sl(:,1)
-      po4_assoc_fast(:,1) = po4_assoc_fast(:,1) / soil_depth_sl(:,1)
-      po4_solute(:,1)     = po4_solute(:,1)     / soil_depth_sl(:,1)
-      
+      DO i=1,nsoil_sb
+        hlp1(:)             = MIN(2._wp * arr_z(:,i) ** 0.5_wp, 3.4_wp) / 3.5_wp ! primary corrected for depth, [g P] 
+        ! hlp2(:)             = MIN(3._wp, arr_z(:,i) ** (-0.75_wp)) / 3.5_wp ! labile + slow
+        hlp2(:)             = 0.8_wp ** (2._wp * arr_z(:,i)) / 3.5_wp
+        hlp3(:)             = MAX((1 - hlp1(:) - hlp2(:)), 0.2_wp / 3.5_wp) ! occluded corrected for depth
+
+        WHERE ((hlp1(:) + hlp2(:) + hlp3(:)) > 1._wp)
+          hlp1(:) = hlp1(:) / (hlp1(:) + hlp2(:) + hlp3(:))
+          hlp2(:) = hlp2(:) / (hlp1(:) + hlp2(:) + hlp3(:))
+          hlp3(:) = hlp3(:) / (hlp1(:) + hlp2(:) + hlp3(:))
+        ENDWHERE
+        WHERE (soil_p_layer(:) > i) 
+          po4_assoc_slow(:,i) = bulk_dens_sl(:,i) * hlp4(:) * (soil_p_slow + soil_p_labile) / rhlp1 / molar_mass_P * 8._wp / 17._wp
+          po4_occluded(:,i)   = bulk_dens_sl(:,i) * hlp4(:) * soil_p_occluded               / rhlp1 / molar_mass_P
+          po4_primary(:,i)    = bulk_dens_sl(:,i) * hlp4(:) * soil_p_primary                / rhlp1 / molar_mass_P
+          arr_hlp1(:,i)       = bulk_dens_sl(:,i) * hlp4(:) * (soil_p_slow + soil_p_labile) / rhlp1 / molar_mass_P * 9._wp / 17._wp !p_labile_sl in the follwing Eqn, [mol / m3]
+        ELSEWHERE
+          po4_assoc_slow(:,i) = bulk_dens_sl(:,i) * hlp4(:) * hlp2(:) / molar_mass_P * 8._wp / 17._wp
+          po4_occluded(:,i)   = bulk_dens_sl(:,i) * hlp4(:) * hlp3(:) / molar_mass_P
+          po4_primary(:,i)    = bulk_dens_sl(:,i) * hlp4(:) * hlp1(:) / molar_mass_P
+          arr_hlp1(:,i)       = bulk_dens_sl(:,i) * hlp4(:) * hlp2(:) / molar_mass_P * 9._wp / 17._wp !p_labile_sl in the follwing Eqn, [mol / m3]
+        ENDWHERE
+      END DO
+
+      !> 2.2 calculate the initial solute P and fast P,
+      !! based on the assumption that labile P is the sum of both,
+      !! and they follow the Langmuir equilibrium
+      !! po4_assoc_fast = (p_labile_sl + Smax + K - sqrt((p_labile_sl + Smax + K)**2 - 4*p_labile_sl*Smax)) / 2
+    
+      DO i=1,nsoil_sb
+        IF (sb_model_scheme == 'jsm' .AND. sb_adsorp_scheme /= 'eca_none' ) THEN
+            po4_assoc_fast(:,i)        = calc_fast_po4(arr_hlp1(:,i),qmax_po4(:,i),km(:,i), eca_enzyme_hlp(:,i))
+            po4_solute(:,i)            = arr_hlp1(:,i) - po4_assoc_fast(:,i)
+            eca_divisor_adsorp(:,i)    = arr_hlp1(:,i) - po4_assoc_fast(:,i) + eca_enzyme_hlp(:,i)
+        ELSE
+          po4_assoc_fast(:,i) = calc_fast_po4(arr_hlp1(:,i),qmax_po4(:,i),km(:,i))
+          po4_solute(:,i)     = arr_hlp1(:,i) - po4_assoc_fast(:,i)
+        ENDIF
+
+      END DO
     END IF
+
   END SUBROUTINE init_soil_pi_pools
 
   !-----------------------------------------------------------------------------------------------------

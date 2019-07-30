@@ -277,8 +277,8 @@ CONTAINS
     carbon_per_dryweight_SOM  = 0.4271_wp                                                   !! COMISSION for Hainich
     qmax_po4_fine_particle    = 0.5_wp / molar_mass_P                                       ! [mol P kg-1 soil], 
     k_adsorpt_dom             = 59.9610_wp / one_year / one_day * molar_mass_C  / 1000._wp  ! conversion to m3 / mol C / s, Bernhard 20180913
-    k_desorpt_dom             = 0.5082_wp / one_year / one_day                            ! Bernhard 20180913
-    k_adsorpt_det             = 31.012_wp / one_year / one_day * molar_mass_C / 100000._wp  ! conversion to m3 / mol C / s, Bernhard 20180913
+    k_desorpt_dom             = 508.2151_wp / one_year / one_day                            ! Bernhard 20180913
+    k_adsorpt_det             = 300.1012_wp / one_year / one_day * molar_mass_C / 100000._wp  ! conversion to m3 / mol C / s, Bernhard 20180913
     k_desorpt_det             = 15.3957_wp / one_year / one_day / 100._wp                     ! Bernhard 20180913
     k_adsorpt_nh4             = 0.0_wp                                                      !  
     k_desorpt_nh4             = 0.0_wp                                                      !  
@@ -293,8 +293,8 @@ CONTAINS
     ! microbial parameters
     microbial_cn            = 13._wp * molar_mass_N / molar_mass_C   ! textbook knowledge
     microbial_np            = 0.8_wp * molar_mass_P / molar_mass_N   ! textbook knowledge
-    SOM_cn                  = 15.3_wp  !* molar_mass_N / molar_mass_C   ! textbook knowledge
-    SOM_np                  = 6._wp !* molar_mass_P / molar_mass_N   ! textbook knowledge
+    SOM_cn                  = 9._wp  * molar_mass_N / molar_mass_C   ! textbook knowledge
+    SOM_np                  = 14._wp * molar_mass_P / molar_mass_N   ! textbook knowledge
     microbial_nue           = 0.8_wp                                 ! Manzoni et al. 2008
     microbial_pue           = 0.8_wp                                 ! Manzoni et al. 2008
     microbial_cue           = 0.392_wp                               ! COMISSION paper
@@ -310,16 +310,16 @@ CONTAINS
    
     ! additional microbial parameters for JSM implementation
     fc_woody2polymeric            = 0.3_wp                                 !  
-    fc_soluable2dom               = 0.7_wp                                 !
+    fc_soluable2dom               = 0.9_wp                                 !
     k_mort_microbial              = 7.48_wp * 1.e-8_wp                                ! 
     min_mic_biomass               = 0.01_wp                                           ! 
     vmax_mic_uptake               = 3495.18053_wp / one_year / one_day * 1000000._wp * 10._wp ! 
     km_mic_uptake                 = 1.02404788_wp / molar_mass_C * 1000_wp            ! conversion to mol C m-3
-    vmax_depolymerisation_residue = 0.2316605_wp / one_year / one_day                      ! 0.2316605_wp 
-    vmax_depolymerisation_litter  = 0.3698_wp / one_year / one_day                       ! 
+    vmax_depolymerisation_residue = 1.21_wp / one_year / one_day                      ! 0.2316605_wp 
+    vmax_depolymerisation_litter  = 1.5_wp / one_year / one_day                       ! 
     km_depolymerisation           = 0.08876_wp / 2._wp / molar_mass_C * 1000_wp       ! conversion to mol C m-3   estimated
-    fc_p_res2dom                  = 0.8_wp
-    fc_n_res2dom                  = 0.4_wp
+    fc_p_res2dom                  = 0._wp
+    fc_n_res2dom                  = 0.1_wp
 
     ! parameters controlling litter partitioning
     f_soluable_residue   = 0.172_wp                                   ! 
@@ -386,7 +386,7 @@ CONTAINS
     k_plant_uptake_no3      = 8.9_wp * 24._wp / one_day                   ! [s-1], Zhu et al. 2016; 8.9 h-1, Zhu et al. 2017
     k_mic_uptake_po4        = 400._wp / one_day                           ! [s-1], Zhu et al. 2016, and references therein  
     k_plant_uptake_po4      = 12._wp / one_day                            ! [s-1], Zhu et al. 2016, and references therein
-    f_mic_carrier_po4       = 0.05_wp / 100._wp                          ! assuming 30% of the microbial enzymes are P transporter, based on Zhu et al. 2016
+    f_mic_carrier_po4       = 0.05_wp / 1000._wp                          ! assuming 30% of the microbial enzymes are P transporter, based on Zhu et al. 2016
     f_plant_carrier_po4     = 1.25_wp / 10000._wp                         ! assuming 10% of the plant enzymes are P transporter, based on Zhu et al. 2016
     qmax_po4_mineral        = 1.2_wp / molar_mass_P                       ! [mol P kg-1 soil], Olander and Vitousek 2005
     km_adsorpt_mineral_po4  = 0.070_wp / 1000._wp / molar_mass_P          ! [mol P kg-1 fine mineral soil], based on 0.332 [mol P L-1 soil solution]  
@@ -434,12 +434,12 @@ CONTAINS
     k_weath_mineral       = 0.1_wp / molar_mass_P / 1254._wp / one_year /one_day  ! [mol P kg-1 s-1], Wang et al. 2010 combining with BBR soil weight of 1m
     eq_sorp_mineral_po4   = 80._wp / molar_mass_P                                 ! [mol P m-3] ! random guess based on init value of assoc_slow
     k_occlude_po4         = 1.0_wp / 1000000._wp / 30._wp / one_day               ! [s-1], Yang et al. 2014
-    vmax_biochem_po4      = 0.25_wp / one_day / 50._wp                            ! [mol-1 C s-1], estimated from Bunemann et al. 2016, LUS site, based on 50 mol/m3 mic 
-    km_mic_biochem_po4    = 5._wp / molar_mass_C                                  ! [mol C m-3] ! random number, equals to the usual microbe biomass (0.1 g C m-3)
+    vmax_biochem_po4      = 1.0_wp / 40.0_wp / one_day                            ! [mol P s-1], estimated from Bunemann et al. 2016, LUS site
+    km_mic_biochem_po4    = 0.01_wp / molar_mass_C                                ! [mol C m-3] ! random number, equals to the usual microbe biomass (0.1 g C m-3)
     km_dip_biochem_po4    = 0.001_wp                                              ! estimated
     km_rootc_biochem_po4  = 20._wp                                                ! 
     km_rootc_weath_po4    = 10._wp                                                !
-    biomin_thres_PC       = 1._wp / 5000._wp
+    biomin_thres_PC       = 1._wp / 2400._wp
     !! BLARPP only temporarily, mol / m2 !!
     nh4_solute_prescribe = 0.1_wp
     no3_solute_prescribe = 0.1_wp

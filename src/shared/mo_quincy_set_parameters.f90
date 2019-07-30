@@ -3695,7 +3695,7 @@ CONTAINS
                                     "k_plant_uptake_po4", proportional_parameter_changes, &
                                     k_plant_uptake_po4)
 
-    CALL Set_quincy_parameter_value(this%f_mic_carrier_po4 / 100.0_wp, &
+    CALL Set_quincy_parameter_value(this%f_mic_carrier_po4 / 1000.0_wp, &
                                     this%f_mic_carrier_po4, &
                                     "f_mic_carrier_po4", proportional_parameter_changes, &
                                     f_mic_carrier_po4)
@@ -3885,7 +3885,7 @@ CONTAINS
                                     "k_occlude_po4", proportional_parameter_changes, &
                                     k_occlude_po4)
 
-    CALL Set_quincy_parameter_value(this%vmax_biochem_po4 / 50.0_wp / one_day, &
+    CALL Set_quincy_parameter_value(this%vmax_biochem_po4 / 40.0_wp / one_day, &
                                     this%vmax_biochem_po4, &
                                     "vmax_biochem_po4", proportional_parameter_changes, &
                                     vmax_biochem_po4)
@@ -3910,7 +3910,7 @@ CONTAINS
                                     "km_rootc_weath_po4", proportional_parameter_changes, &
                                     km_rootc_weath_po4)
     
-    CALL Set_quincy_parameter_value(this%biomin_thres_PC / 5000.0_wp, &
+    CALL Set_quincy_parameter_value(this%biomin_thres_PC / 2400.0_wp, &
                                     this%biomin_thres_PC, &
                                     "biomin_thres_PC", proportional_parameter_changes, &
                                     biomin_thres_PC)
