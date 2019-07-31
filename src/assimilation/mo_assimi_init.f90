@@ -35,11 +35,10 @@ CONTAINS
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
-    USE mo_assimi_constants
+    USE mo_assimi_constants,      ONLY: t_jmax_opt_min
 
     ! Use of process configurations (t_PROC_config)
-    dsl4jsb_Use_config(ASSIMI_)    
-    
+    !
     ! USE PROC_memory
     dsl4jsb_Use_memory(ASSIMI_)
 
@@ -56,7 +55,6 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_memory(ASSIMI_)
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onDomain      :: beta_air
@@ -88,7 +86,7 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts%lib_id)
     ! Get process config
-    dsl4jsb_Get_config(ASSIMI_)
+    !
     ! Get process memories
     dsl4jsb_Get_memory(ASSIMI_)
     ! Get process variables (Set pointers to variables in memory)

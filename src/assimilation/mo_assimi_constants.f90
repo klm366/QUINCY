@@ -107,8 +107,7 @@ CONTAINS
 
     USE mo_jsb_phys_constants,  ONLY: molar_mass_N, &   !< parameter from mo_jsb_phys_constants
                                       Dwv, &            !< parameter from mo_jsb_phys_constants - diffusion coefficient for water vapour in air
-                                      Dco2, &           !< parameter from mo_jsb_phys_constants - diffusion coefficient for CO2 in air
-                                      Tzero             !< melting point in K
+                                      Dco2              !< parameter from mo_jsb_phys_constants - diffusion coefficient for CO2 in air
 
     IMPLICIT NONE
     ! ---------------------------
