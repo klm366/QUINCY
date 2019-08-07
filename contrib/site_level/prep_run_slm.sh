@@ -724,7 +724,7 @@ if [ $paramSensitivitySim == "T" ]; then
   echo " You aim at parameter sensitivity simulations for the site: ""$paramSensitivitySiteName"
   echo " Simulations will be done for each of the parameter combination you specified in contrib/parameter_list/parameter_table.txt"
   if [ $paramChangesProportional == "T" ]; then
-    echo " Parameter values will be changed by a certain proportion [0<x<2] (i.e. you set paramChangesProportional=T)"
+    echo " Parameter values will be changed by a certain proportion [0<x<y], where y is not limited (i.e. you set paramChangesProportional=T)"
   else
     echo " Parameter values will be changed using absolute values as defined in parameter_table.txt (i.e. you set paramChangesProportional=F)"
   fi
