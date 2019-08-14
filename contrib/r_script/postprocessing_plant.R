@@ -1,5 +1,22 @@
 #!/usr/bin/env Rscript
 
+##    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
+##    Copyright (C) 2019 Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., and Zaehle S.
+##
+##    This file is part of the QUINCY model.
+##    The QUINCY model is free software: you can redistribute it and/or modify
+##    it under the terms of the GNU General Public License as published by
+##    the Free Software Foundation, either version 3 of the License, or
+##    (at your option) any later version.
+##
+##    The QUINCY model is distributed in the hope that it will be useful,
+##    but WITHOUT ANY WARRANTY; without even the implied warranty of
+##    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+##    GNU General Public License for more details.
+##
+##    You should have received a copy of the GNU General Public License
+##    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
+
 # postprocessing of output data from QUINCY plant model
 # it is called either by contrib/site_level/run_slm.sh (HPC simulations) or contrib/test_bed/run-slm_test-bed.sh
 
@@ -7,7 +24,7 @@
 trim <- function (x) gsub("^\\s+|\\s+$", "", x)
 
 #read timestep of output file from namelist for pool & flux
-namelist=read.delim('namelist.slm',header=F,sep="=",stringsAsFactors=F)
+namelist=read.delim('namelist.slm',header=F,sep="=",stringsAsFactors=F,skip=17)
 tstep_pool=trim(namelist[trim(namelist[,1])=="output_interval_pool",2])
 tstep_flux=trim(namelist[trim(namelist[,1])=="output_interval_flux",2])
 

@@ -1,5 +1,22 @@
 #!/bin/bash
 
+##    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
+##    Copyright (C) 2019 Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., and Zaehle S.
+##
+##    This file is part of the QUINCY model.
+##    The QUINCY model is free software: you can redistribute it and/or modify
+##    it under the terms of the GNU General Public License as published by
+##    the Free Software Foundation, either version 3 of the License, or
+##    (at your option) any later version.
+##
+##    The QUINCY model is distributed in the hope that it will be useful,
+##    but WITHOUT ANY WARRANTY; without even the implied warranty of
+##    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+##    GNU General Public License for more details.
+##
+##    You should have received a copy of the GNU General Public License
+##    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
+
 #########
 ## Where: you can start this script from anywhere (no need to cd into a specific directory), when logged into a cluster node such as pc028
 ## What:  this script starts the SLM binary land.x , the specific model may be specified via the "slmModel" option
@@ -819,14 +836,15 @@ fi
 echo " Nice idea !" 
 if [ "$forcingDataSet" == "none" ]; then
   # siteName variable not valid, so give different feedback compared to using a forcing data set
-  echo " Let's go with SLM ""$slmModel"" for an unknown site, using the local forcing file." 
+  echo " Let's go with QUINCY ""$slmModel"" for an unknown site, using the local forcing file." 
 else
-  echo " Let's go with SLM ""$slmModel"" for the site: ""$siteName" 
+  echo " Let's go with QUINCY ""$slmModel"" for the site: ""$siteName" 
 fi
 echo -n "  ...  "
 
 ## run the SLM binary (always compiled as land.x) ##
-compiler=$(sed -n 2p ./../../../build/Make.inc.local | awk '{print $3}')
+lineCompInfo=$(grep -n "COMP\ \=" ./../../../build/Make.inc.local | awk 'BEGIN { FS = ":" } ; {print $1}')
+compiler=$(sed -n "$lineCompInfo"p ./../../../build/Make.inc.local | awk '{print $3}')
 ./../../../"$compiler"/bin/land.x 
 echo "Simulation finished"
 echo " "

@@ -1,4 +1,8 @@
 !>
+!! @par Copyright
+!!  This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!!  Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
 !! @brief Contains some functions for physcial schemes
 !!
 !! @author
@@ -6,7 +10,7 @@
 !!
 !! @par Revision History
 !! First version by Reiner Schnur (2013-04-04)
-!! Adapted for SLM purposes (by Sönke Zaehle (2016-12-22)
+!! Adapted for QUINCY purposes (by Sönke Zaehle (2016-12-22)
 !!
 MODULE mo_phy_schemes
 #ifndef __NO_JSBACH__
