@@ -40,7 +40,7 @@ setwd(workDir)
 trim <- function (x) gsub("^\\s+|\\s+$", "", x)
 
 # read timestep ans oil layer information of output file from namelist for pool & flux
-namelist=read.delim('namelist.slm',header=F,sep="=",stringsAsFactors=F)
+namelist=read.delim('namelist.slm',header=F,sep="=",stringsAsFactors=F,skip=17)
 tstep_pool=trim(namelist[trim(namelist[,1])=="output_interval_pool",2])
 tstep_flux=trim(namelist[trim(namelist[,1])=="output_interval_flux",2])
 soilLayer <- trim(namelist[trim(namelist[,1])=="nsoil_energy",2])

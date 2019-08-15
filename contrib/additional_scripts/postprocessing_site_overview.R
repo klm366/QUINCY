@@ -55,7 +55,7 @@ namelistPath <- paste0(dirnames[1], "input/namelist.slm")
 trim <- function (x) gsub("^\\s+|\\s+$", "", x)
 
 # read timestep of output file from namelist for pool & flux
-namelist   <- read.delim(namelistPath, header=F, sep="=", stringsAsFactors=F)
+namelist   <- read.delim(namelistPath, header=F, sep="=", stringsAsFactors=F, skip=17)
 tstep_pool <- trim(namelist[trim(namelist[,1])=="output_interval_pool",2])
 tstep_flux <- trim(namelist[trim(namelist[,1])=="output_interval_flux",2])
 

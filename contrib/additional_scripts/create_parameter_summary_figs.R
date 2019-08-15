@@ -70,7 +70,7 @@ trim <- function (x) gsub("^\\s+|\\s+$", "", x)
 
 ## read namelist to get output interval
 namelistPath <- Sys.glob(paste0("../1001_*/input/namelist.slm"))
-namelist     <- read.delim(namelistPath, header=F, sep="=", stringsAsFactors=F)
+namelist     <- read.delim(namelistPath, header=F, sep="=", stringsAsFactors=F, skip=17)
 tStepPool    <- trim(namelist[trim(namelist[,1])=="output_interval_pool",2])
 
 ## compile full output-file name

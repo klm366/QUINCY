@@ -133,7 +133,7 @@ paramList   <- colnames(paramTab)
 
 ###################
 # get output interval from namelist  (timestep daily weekly monthly yearly)
-namelist  <- read.delim(paste0(dirList[1],"/input/namelist.slm"), header=F, sep="=", stringsAsFactors=F)
+namelist  <- read.delim(paste0(dirList[1],"/input/namelist.slm"), header=F, sep="=", stringsAsFactors=F, skip=17)
 tstepPool <- trim(namelist[trim(namelist[,1])=="output_interval_pool",2])
 # not differentiating pool vs flux tstep_* !
 
