@@ -19,7 +19,7 @@
 
 #########
 ## Where: you can start this script from anywhere (no need to cd into a specific directory), when logged into a cluster node such as pc028
-## What:  this script starts the SLM binary land.x , the specific model may be specified via the "slmModel" option
+## What:  this script starts the QUINCY binary land.x , the specific model may be specified via the "slmModel" option
 ## HowTo: specify the below simulation options as suitable for you
 ## Tip:   some of the below simulation options can be provided as argument to this script, for more information type: ./run-slm_test-bed.sh -h 
 ## 
@@ -30,7 +30,7 @@
 ########################################################################################################
 
 # model
-slmModel="land"   # specific SLM model [default: "land"]; possible values: land plant soil canopy test_canopy test_radiation
+slmModel="land"   # specific QUINCY model [default: "land"]; possible values: land plant soil canopy test_canopy test_radiation
 
 # flags: T (True) or F (False) [large caps]
 # plant-soil model options
@@ -44,7 +44,7 @@ p_deposition_scheme="none"      # options: none constant dynamic (p_srf_down)
 
 # BNF & Mycorrhiza
 bnf_scheme="standard"           # none fixed standard optimal resistance unlimited
-flag_mycorrhiza="F"             # TRUE: the other flag_myco* can be set TRUE | FALSE: the other flag_myco* are set to FALSE by this script
+flag_mycorrhiza="F"             # TRUE: the other flag_myco* can be set TRUE | FALSE: the other flag_myco* are set to FALSE by this script in line 622 "if [ $flag_mycorrhiza == "F" ]"
 flag_mycorrhiza_org="F"         # allows mycorrhiza to access the organic/residual N pool
 flag_mycorrhiza_prim="F"        # present mycorrhiza enhance decomposition of residual pool (priming)
 # canopy model options
@@ -63,7 +63,7 @@ cohort_harvest_interval=80        # number of years after which the cohort is ha
 
 # soil model options
 soil_depth=5.7                  # meter (5.7 to 9.5)
-nsoil_layer=5                   # number of soil layers (default for SLM land: 5 | for SLM soil only available forcing: 15 | generally: min 5 & max 20)
+nsoil_layer=5                   # number of soil layers (default for QUINCY land: 5 | for QUINCY soil only available forcing: 15 | generally: min 5 & max 20)
 
 # JSM
 flag_sb_jsm_transport="F"       # ..
@@ -554,15 +554,20 @@ else
 fi
 
 
-## create folder, and copy some files there ##
+## create folder, and copy all files needed for simulation ##
 # postprocessing R scripts
 # namelist
 # lctlib_slm_nlct8.def
+# binary
 mkdir -p ./"$slmModel"
 rm -rf   ./"$slmModel"/*  # delete all in this folder if the folder existed before
-cp ../r_script/postprocessing_"$slmModel".R   ./"$slmModel"
-cp ../namelist/namelist.slm                   ./"$slmModel"
-cp ../../data/lctlib_slm_nlct8.def            ./"$slmModel"
+makeInfoFile="./../../build/Make.inc.local"
+lineCompInfo=$(grep -n "COMP\ \=" "$makeInfoFile" | awk 'BEGIN { FS = ":" } ; {print $1}')
+compiler=$(sed -n "$lineCompInfo"p "$makeInfoFile" | awk '{print $3}')
+rsync -a ../r_script/postprocessing_"$slmModel".R   ./"$slmModel"/
+rsync -a ../namelist/namelist.slm                   ./"$slmModel"/
+rsync -a ../../data/lctlib_slm_nlct8.def            ./"$slmModel"/
+rsync -a ./../../"$compiler"/bin/land.x             ./"$slmModel"/
 
 
 ## copy forcing file(s)
@@ -842,10 +847,8 @@ else
 fi
 echo -n "  ...  "
 
-## run the SLM binary (always compiled as land.x) ##
-lineCompInfo=$(grep -n "COMP\ \=" ./../../../build/Make.inc.local | awk 'BEGIN { FS = ":" } ; {print $1}')
-compiler=$(sed -n "$lineCompInfo"p ./../../../build/Make.inc.local | awk '{print $3}')
-./../../../"$compiler"/bin/land.x 
+## run the QUINCY binary (always compiled as land.x) ##
+./land.x 
 echo "Simulation finished"
 echo " "
 echo "Running postprocessing ... "
