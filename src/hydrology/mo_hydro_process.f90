@@ -782,7 +782,7 @@ CONTAINS
     !$claw acc loop gang
     DO j = 1, nidx
       percolation(j,nsoil) = 0._wp
-      !$claw acc loop vector
+      !$claw acc loop seq
       DO i = 1, nsoil-1
         IF (field_cap_l(j,i) > zfcmin .AND. field_cap_l(j,i) > p_wilt_l(j,i)) THEN
           ws_rel(j) = MAX(ws_l(j,i) - p_wilt_l(j,i), 0._wp) / (field_cap_l(j,i) - p_wilt_l(j,i))
@@ -797,7 +797,7 @@ CONTAINS
 
 
       ! drainage of the lowest layer above bedrock replaces the percolation calculated above
-      !$claw acc loop vector
+      !$claw acc loop seq
       DO i = 1, nsoil
 
         ! is there a layer above or a layer with soil below?
@@ -875,7 +875,7 @@ CONTAINS
       ! numerical recipes/Richtmyer & -Morton diffusion
 
       ! calculating the diffusivity at mid depth of layer i
-      !$claw acc loop vector
+      !$claw acc loop seq
       DO i = 1, nsoil
 
         ws_rel(j) = 0._wp
@@ -892,7 +892,7 @@ CONTAINS
       END DO
 
       ! calculating the diffusivity at the bottom of layer i
-      !$claw acc loop vector
+      !$claw acc loop seq
       DO i = 1, nsoil-1
         IF (diffus_l(j,i+1) == 0._wp .OR. diffus_l(j,i) == 0._wp) THEN
           diffusivity(j,i) = 0._wp
@@ -913,7 +913,7 @@ CONTAINS
       END IF
 
       ! middle layers
-      !$claw acc loop vector
+      !$claw acc loop seq
       DO i = nsoil-1, 2, -1
         IF (dsoil(j,i) > 0._wp) THEN
           IF (dsoil(j,i+1) > 0._wp) THEN
@@ -960,7 +960,7 @@ CONTAINS
       END IF
 
       ! decomposition and forward substitution
-      !$claw acc loop vector
+      !$claw acc loop seq
       DO i = 2, nsoil
         IF (dsoil(j,i) > 0._wp) THEN
           ztri(j,i) = -zda(j,i-1) / zdc(j,i-1)
@@ -970,7 +970,7 @@ CONTAINS
       END DO
 
       ! backsubstitution
-      !$claw acc loop vector
+      !$claw acc loop seq
       DO i = nsoil-1, 1, -1
         IF (dsoil(j,i+1) > 0._wp) THEN
           ws_l(j,i) = ws_l(j,i) - ztri(j,i+1) * ws_l(j,i+1) * (dsoil(j,i)/dsoil(j,i+1))
@@ -979,7 +979,7 @@ CONTAINS
 
       ! temporary storage for diagnostic printing
       IF (ilog == 1 .OR. ilog == 3) THEN
-        !TODO CLAW !$claw acc loop vector
+        !$claw acc loop seq
         DO i = 1, nsoil
           zdiflog(i) = wslog(i) - ws_l(jllog,i)
         END DO
@@ -989,7 +989,7 @@ CONTAINS
       ! treatment of layer overflow due to diffusion
       IF (.NOT. ltpe_closed) THEN
         ! limit soil moisture to field capacity and add overflow to drainage
-        !$claw acc loop vector
+        !$claw acc loop seq
         DO i=1,nsoil
           IF (dsoil(j,i) > 0._wp .AND. ws_l(j,i) > field_cap_l(j,i)) THEN
             drainage(j) = drainage(j) + ws_l(j,i)-field_cap_l(j,i)
@@ -998,7 +998,7 @@ CONTAINS
         END DO
       ELSE
         ! Modification for TPE (closed)
-        !$claw acc loop vector
+        !$claw acc loop seq
         DO i=1,nsoil
           IF (dsoil(j,i) > 0._wp) THEN
             IF (ws_l(j,i) > field_cap_l(j,i)) THEN
@@ -1017,7 +1017,7 @@ CONTAINS
 
       ! Modification for TPE (open)
       IF (ltpe_open) THEN
-        !$claw acc loop vector
+        !$claw acc loop seq
         DO i = 1, nsoil
           !IF (i == nsoil - 2 .OR. i == nsoil - 1 .OR. i == nsoil) THEN   ! special adaptation of Shirisha
           IF (i == nsoil-1 .OR. i == nsoil) THEN
@@ -1045,7 +1045,7 @@ CONTAINS
       ! ---------------------
 
       ! percolation per time step must be smaller than the usable soil layer water content
-      !$claw acc loop vector
+      !$claw acc loop seq
       DO i = 1, nsoil
         ws_min_drain(j) = 0._wp
         IF (dsoil(j,i) > 0._wp .AND. percolation(j,i) > 0._wp) THEN
@@ -1065,7 +1065,7 @@ CONTAINS
 
       ! Percolation is added to downward layer or, if lowest layer or bedrock is reached, to
       ! drainage (not TPE closed) resp. overflow pool (TPE closed)
-      !$claw acc loop vector
+      !$claw acc loop seq
       DO i = 1, nsoil-1
         IF (dsoil(j,i+1) > 0._wp) THEN
           ws_l(j,i+1) = ws_l(j,i+1) + percolation(j,i)
@@ -1084,7 +1084,7 @@ CONTAINS
 
       ! Percolation overflow is not allowed from layers below the surface layer.
       ! Instead it is assumed that water piles upwards from saturated layers.
-      !$claw acc loop vector
+      !$claw acc loop seq
       DO i = nsoil, 2, -1
         IF (dsoil(j,i) > 0._wp .AND. ws_l(j,i) > field_cap_l(j,i)) THEN
           ! soil moisture above field capacity:
