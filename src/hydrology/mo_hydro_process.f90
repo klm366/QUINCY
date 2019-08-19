@@ -1358,9 +1358,10 @@ CONTAINS
     !$claw acc create(excess)
     !$claw acc update device(field_cap_l, infilt, ws_l, drainage, w_soil_overflow)
     !$claw acc parallel
+    !$claw acc loop gang vector
     DO i = 1, nidx
       excess(i) = infilt(i)                   ! amount of water for infiltration at the surface [m]
-      !$claw acc loop gang vector
+      !$claw acc loop seq
       DO  jk = 1, nsoil
         ws_l(i,jk) = ws_l(i,jk) + excess(i)
         IF (.NOT. ltpe_closed) THEN
