@@ -479,7 +479,7 @@ CONTAINS
     INTEGER :: jllog = 0
 
 
-    !$claw acc data pcreate(evapo_soil_in_m,trans_in_m,ws_rel,infilt,ws_max, ws_min_drain, ws_incl_ice, ice_rootzone)
+    !$claw acc data pcreate(evapo_soil_in_m,trans_in_m,infilt,ws_max,ws_min_drain,ws_incl_ice,ice_rootzone)
   !  !$acc data &
   !  !$acc present(soil_depth_l, root_depth_l, fract_org_l, hyd_cond_sat_l, matrix_pot_l, bclapp_l) & 
   !  !$acc present(pore_size_index_l, vol_porosity_l, vol_field_cap_l, vol_p_wilt_l)                &
@@ -489,11 +489,13 @@ CONTAINS
     sigma_0   = oro_var_min
     sigma_max = oro_var_max * 64._wp / REAL(nlat, wp) ! @todo: site level
 
-   ! !$claw acc parallel
-   ! !$claw acc loop gang 
+    !$claw acc data present(trans_in_m,trans,wsat_l,vol_porosity_l,soil_depth_l,soil_ice_l,field_cap_l,vol_field_cap_l,p_wilt_l,vol_p_wilt_l)
+    !$claw acc update device(trans,vol_porosity_l,soil_depth_l,soil_ice_l,vol_field_cap_l,wsat_l,vol_p_wilt_l)
+    !$claw acc parallel
+    !$claw acc loop gang
     DO i = 1, nidx
       trans_in_m(i) = trans(i)  * delta_time / rhoh2o
-   !   !$claw acc loop vector
+      !$claw acc loop vector
       DO jl = 1, nsoil
         wsat_l     (i,jl) = MAX(vol_porosity_l (i,jl) * soil_depth_l(i,jl) - soil_ice_l(i,jl), 0._wp)
         field_cap_l(i,jl) = MAX(vol_field_cap_l(i,jl) * soil_depth_l(i,jl) - soil_ice_l(i,jl), 0._wp)
@@ -504,25 +506,40 @@ CONTAINS
         END IF
       END DO
     END DO
-  !  !$claw acc end parallel    
+    !$claw acc end parallel
+    !$claw acc update host(trans_in_m,wsat_l,field_cap_l,p_wilt_l)
+    !$claw acc end data
 
-  !  !$claw expand parallel update
+
+    !$claw acc data present(ws_max, vol_field_cap_l, soil_depth_l,root_depth_l)
     ws_max(:) = get_water_in_root_zone(vol_field_cap_l(:,:) * soil_depth_l(:,:), soil_depth_l(:,:), root_depth_l(:,:))
+    !$claw acc update device(ws_max)
+    !$claw acc end data
 
-  !  !$claw acc parallel loop gang vector
+    !$claw acc data present(fract_org_l,ws_max,ws_max_mineral)
+    !$claw acc update device(ws_max,fract_org_l,ws_max_mineral)
+    !$claw acc parallel loop gang vector
     DO i = 1, nidx
       IF (SUM(fract_org_l(i,:)) <= EPSILON(1._wp)) THEN
         ws_max(i) = ws_max_mineral(i)
       END IF
     END DO
+    !$claw acc update host(ws_max)
+    !$claw acc end data
 
-  !  !$claw expand parallel update
+    !$claw expand parallel update savepoint=ser_jsb_hydro_calc_soil_hydrology_expand_0
     ice_rootzone(:) = get_water_in_root_zone(soil_ice_l(:,:), soil_depth_l(:,:), root_depth_l(:,:))
     ws          (:) = get_water_in_root_zone(ws_l      (:,:), soil_depth_l(:,:), root_depth_l(:,:))
- !   !$claw end expand
+    !$claw end expand
 
-  !  !$claw acc parallel
-  !  !$claw acc loop gang
+    !$claw acc data present(evapo_soil_in_m,evapotrans_soil,trans_in_m) &
+    !$claw acc present(ws_min_drain,ws_max,oro_stddev,runoff,infilt)    &
+    !$claw acc present(water_to_soil,ws_incl_ice,ice_rootzone,drainage)
+    !$claw acc update device(evapo_soil_in_m,evapotrans_soil,trans_in_m)
+    !$claw acc update device(ws_min_drain,ws_max,oro_stddev,runoff,infilt)
+    !$claw acc update device(water_to_soil,ws_incl_ice,ice_rootzone,drainage)
+    !$claw acc parallel
+    !$claw acc loop gang
     DO i = 1, nidx
       !--------------------------------------------------------------------------------------------
       !  water budgets
@@ -546,7 +563,7 @@ CONTAINS
       ! sigma_z: standard deviation of topographic height
       ! sigma_0: minimum value (100 m); below b = 0.01
       ! sigma_max: resolution dependent maximum
-     ! !$claw acc loop vector 
+      !$claw acc loop vector
       DO jl = 1, nidx
         
         ws_min_drain(jl) = zwdmin * ws_max(jl)            ! minimum amount of soil water for drainage
@@ -593,7 +610,9 @@ CONTAINS
       ! initilalization of drainage
       drainage(i) = 0._wp
     END DO
-  !  !$claw acc end parallel
+    !$claw acc end parallel
+    !$claw acc update host(runoff,infilt,drainage,ws_incl_ice,ws_min_drain,evapo_soil_in_m)
+    !$claw acc end data
 
     ! Changes by evaporation fluxes
     CALL digest_evapotrans(nidx, nsoil, root_depth_l, soil_depth_l, &
@@ -602,20 +621,23 @@ CONTAINS
     ! For numerical reasons, half of the water is infiltrated
     ! before soilhyd and the other half of it afterwards
 
-    
-    !$claw acc update device(infilt) ! TO BE REMOVED
+    !$claw acc data present(infilt)
+    !$claw acc update device(infilt)
     !$claw acc parallel loop gang vector present(infilt)
     DO i = 1, nidx
       infilt(i) = infilt(i) / 2._wp
     END DO
-    !$claw acc update host(infilt) ! TO BE REMOVED
+    !$claw acc update host(infilt)
+    !$claw acc end data
 
     ! update soil moisture according to infiltration
     !    - first half of the water
+    !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_digest_infilt_0
     CALL digest_infilt(nidx, nsoil, ltpe_closed, field_cap_l, infilt, &
          ws_l, drainage, w_soil_overflow)
 
     ! Drainage calculation with multi-layer soil scheme
+    !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_soilhyd_0
     CALL soilhyd(nidx, nsoil, delta_time, ilog, jllog, ws_l, soil_depth_l, &
          wsat_l, field_cap_l, hyd_cond_sat_l, vol_porosity_l, bclapp_l,   &
          matrix_pot_l, drainage, pore_size_index_l, p_wilt_l, dz,       &
@@ -623,19 +645,24 @@ CONTAINS
 
     ! update soil moisture according to infiltration
     !    - second half of the water
+    !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_digest_infilt_1
     CALL digest_infilt(nidx, nsoil, ltpe_closed, field_cap_l, infilt, &
          ws_l, drainage, w_soil_overflow)
 
     ! recalculate soil moisture from the soil moisture of the individual levels
     ! Note: ws only includes the soil moisture within the root zone
-  !  !$claw expand parallel update savepoint=ser_jsb_hydro_calc_soil_hydrology_expand_ 
     ws(:) = get_water_in_root_zone(ws_l(:,:), soil_depth_l(:,:), root_depth_l(:,:))
-     
-  !  !$claw acc parallel loop gang vector
+    !$claw acc update device(ws)
+
+    !$claw acc data present(runoff,drainage)
+    !$claw acc update device(runoff,drainage)
+    !$claw acc parallel loop gang vector
     DO i = 1, nidx
       runoff(i)   = runoff  (i) * rhoh2o / delta_time
       drainage(i) = drainage(i) * rhoh2o / delta_time
     END DO
+    !$claw acc end data
+    !$claw acc update host(runoff,drainage) ! TO BE REMOVED
     !$claw acc end data
   END SUBROUTINE calc_soil_hydrology
 
@@ -703,10 +730,10 @@ CONTAINS
     REAL(wp) :: zmvg_l(nidx,nsoil)            ! exponent M in Van Genuchten scheme = pore_size_index / (pore_size_index + 1)
 
 
-    !$claw acc data & 
+    !$claw acc data &
     !$claw acc present(dsoil, wsat_l, field_cap_l, hyd_cond_sat_l, vol_porosity_l, bclapp_l, matrix_pot_l, pore_size_index_l, p_wilt_l, dz, ws_l, drainage, w_soil_overflow, soil_ice) &
     !$claw acc pcreate(diffus_l, ws_min_drain, ws_rel, ws_crit, drain_crit, ws_tmp, drain_l, soil_above, soil_below, zda, zdb, zdc, ztri, diffusivity, zkredu, zdiflog, remoist, zmvg_l)
-    
+
 
     ! define reduction factor of hydraulic conductivity with depth (for percolation)
     IF (iredu == 1) THEN
@@ -1329,11 +1356,11 @@ CONTAINS
     !$claw acc data &
     !$claw acc present(field_cap_l, infilt, ws_l, drainage, w_soil_overflow) &
     !$claw acc create(excess)
+    !$claw acc update device(field_cap_l, infilt, ws_l, drainage, w_soil_overflow)
     !$claw acc parallel
-    !$claw acc loop gang 
     DO i = 1, nidx
       excess(i) = infilt(i)                   ! amount of water for infiltration at the surface [m]
-      !$claw acc loop vector
+      !$claw acc loop gang vector
       DO  jk = 1, nsoil
         ws_l(i,jk) = ws_l(i,jk) + excess(i)
         IF (.NOT. ltpe_closed) THEN
@@ -1358,6 +1385,7 @@ CONTAINS
       END IF
     END DO
     !$claw acc end parallel
+    !$claw acc update host(drainage)
     !$claw acc end data
 
     ! make sure there is no negative soil moisture
