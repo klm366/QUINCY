@@ -819,7 +819,7 @@ CONTAINS
     INTEGER,                                   INTENT(in)    :: ics, ice, iblk
     CHARACTER(len=*),                          INTENT(in)    :: caller
 
-    INTEGER :: no_children, i, iproc, ilev
+    INTEGER :: no_children, i, iproc, ilev, j
     ! REAL(dp) :: missval
 
     CHARACTER(len=256) :: routine
@@ -850,29 +850,37 @@ CONTAINS
     END IF
 
     DO ilev=1,SIZE(var%ptr,2)
-      this%fract_sum(:,iblk) = 0._wp
-      this%data_sum (:,iblk) = 0._wp
+      DO j = ics, ice
+        this%fract_sum(j,iblk) = 0._wp
+        this%data_sum (j,iblk) = 0._wp
+      END DO
       DO i=1,no_children
         IF (var%child_idx(i) > 0) THEN
           ASSOCIATE (data_child => tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p%field(ics:ice,ilev,iblk,1,1), &
             &        fractions  => this%fractions(ics:ice,iblk,i))
-            this%data_sum(ics:ice,iblk) = this%data_sum(ics:ice,iblk) + fractions * data_child
-            this%fract_sum(ics:ice,iblk) = this%fract_sum(ics:ice,iblk) + fractions
+            DO j = ics, ice
+              this%data_sum(j,iblk) = this%data_sum(j,iblk) + fractions(j) * data_child(j)
+              this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + fractions(j)
+            END DO
           END ASSOCIATE
         END IF
       END DO
       IF (no_children == 1 .AND. .NOT. var%l_aggregate_all) THEN
         ! Only one tile to aggregate, avoid multiplying and dividing by a potentially small fraction
-        var%ptr(ics:ice,ilev,iblk) = this%data_sum(ics:ice,iblk)
+        DO j = ics, ice
+          var%ptr(j,ilev,iblk) = this%data_sum(j,iblk)
+        END DO
       ELSE IF (var%l_aggregate_all) THEN              ! Sum of fractions is 1
         ! For tiles where variable is not defined data(:,ilev,tile) is 0
-        var%ptr(ics:ice,ilev,iblk) = this%data_sum(ics:ice,iblk)
+        DO j = ics, ice
+          var%ptr(j,ilev,iblk) = this%data_sum(j,iblk)
+        END DO
       ELSE
-        WHERE (this%fract_sum(ics:ice,iblk) > 0._wp)
-          var%ptr(ics:ice,ilev,iblk) = this%data_sum(ics:ice,iblk) / this%fract_sum(ics:ice,iblk)
-        ! ELSE WHERE
-          ! var%ptr(ics:ice,ilev,iblk) = missval
-        END WHERE
+        DO j = ics, ice
+          IF (this%fract_sum(j,iblk) > 0._wp) THEN
+            var%ptr(j,ilev,iblk) = this%data_sum(j,iblk) / this%fract_sum(j,iblk)
+          END IF
+        END DO
       END IF
     END DO
 
