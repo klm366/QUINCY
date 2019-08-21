@@ -660,7 +660,7 @@ CONTAINS
     ALLOCATE(aggregator%fractions(grid%nproma, grid%nblks, no_of_children))
     ALLOCATE(aggregator%data_sum (grid%nproma, grid%nblks))
     ALLOCATE(aggregator%fract_sum(grid%nproma, grid%nblks))
-
+    !$acc enter data create(aggregator%fractions, aggregator%data_sum, aggregator%fract_sum, aggregator)
   END FUNCTION Create_aggregator_weighted_by_fract
 
   SUBROUTINE Finalize_aggregator_weighted_by_fract(aggregator)
@@ -671,9 +671,18 @@ CONTAINS
 
     !CALL message(TRIM(routine), 'Finalizing aggregator '//TRIM(aggregator%name))
 
-    IF (ALLOCATED(aggregator%fractions)) DEALLOCATE(aggregator%fractions)
-    IF (ALLOCATED(aggregator%data_sum))  DEALLOCATE(aggregator%data_sum)
-    IF (ALLOCATED(aggregator%fract_sum)) DEALLOCATE(aggregator%fract_sum)
+    IF (ALLOCATED(aggregator%fractions)) THEN
+      !$acc exit data delete(aggregator%fractions)
+      DEALLOCATE(aggregator%fractions)
+    END IF
+    IF (ALLOCATED(aggregator%data_sum)) THEN
+      !$acc exit data delete(aggregator%data_sum)
+      DEALLOCATE(aggregator%data_sum)
+    END IF
+    IF (ALLOCATED(aggregator%fract_sum)) THEN
+      !$acc exit data delete(aggregator%fract_sum)
+      DEALLOCATE(aggregator%fract_sum)
+    END IF
 
   END SUBROUTINE Finalize_aggregator_weighted_by_fract
 
@@ -757,11 +766,13 @@ CONTAINS
       CALL finish(TRIM(routine), 'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' has wrong size')
     END IF
 
-
+    !$acc data present(this%data_sum, this%fract_sum, var%ptr)
+    !$acc parallel loop gang vector
     DO j = ics, ice
       this%data_sum (j,iblk) = 0._wp
       this%fract_sum(j,iblk) = 0._wp
     END DO
+    !$acc update host(this%data_sum, this%fract_sum)
 
     DO i=1,no_children
       IF (var%child_idx(i) > 0) THEN
@@ -784,7 +795,6 @@ CONTAINS
     !     &          all_print=.TRUE.)
     !   CALL finish(TRIM(routine),  '    ... this should not happen')
     ! END IF
-
     IF (no_children == 1 .AND. .NOT. var%l_aggregate_all) THEN
       ! Only one tile to aggregate, avoid multiplying and dividing by a potentially small fraction
       DO j = ics, ice
@@ -802,6 +812,8 @@ CONTAINS
         END IF
       END DO
     END IF
+
+    !$acc end data
 
     IF (var%l_aggregate_all) THEN
       IF (debug_on() .AND. iblk==1) CALL message('     ... ', TRIM(var%name)//' ('//TRIM(this%name)//'; all_tiles)')
@@ -848,8 +860,11 @@ CONTAINS
     ELSE IF (SIZE(var%child_idx) /= no_children) THEN
       CALL finish(TRIM(routine), 'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' has wrong size')
     END IF
-
+   ! !$acc data present(this%fract_sum, this%data_sum, var%ptr, this%fractions)
+   ! !$acc update device(this%fract_sum, this%data_sum)
+   ! !$acc parallel
     DO ilev=1,SIZE(var%ptr,2)
+    !  !$acc loop gang vector
       DO j = ics, ice
         this%fract_sum(j,iblk) = 0._wp
         this%data_sum (j,iblk) = 0._wp
@@ -858,6 +873,7 @@ CONTAINS
         IF (var%child_idx(i) > 0) THEN
           ASSOCIATE (data_child => tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p%field(ics:ice,ilev,iblk,1,1), &
             &        fractions  => this%fractions(ics:ice,iblk,i))
+   !         !$acc loop gang vector
             DO j = ics, ice
               this%data_sum(j,iblk) = this%data_sum(j,iblk) + fractions(j) * data_child(j)
               this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + fractions(j)
@@ -867,15 +883,18 @@ CONTAINS
       END DO
       IF (no_children == 1 .AND. .NOT. var%l_aggregate_all) THEN
         ! Only one tile to aggregate, avoid multiplying and dividing by a potentially small fraction
+  !      !$acc loop gang vector
         DO j = ics, ice
           var%ptr(j,ilev,iblk) = this%data_sum(j,iblk)
         END DO
       ELSE IF (var%l_aggregate_all) THEN              ! Sum of fractions is 1
         ! For tiles where variable is not defined data(:,ilev,tile) is 0
+ !       !$acc loop gang vector
         DO j = ics, ice
           var%ptr(j,ilev,iblk) = this%data_sum(j,iblk)
         END DO
       ELSE
+!        !$acc loop gang vector
         DO j = ics, ice
           IF (this%fract_sum(j,iblk) > 0._wp) THEN
             var%ptr(j,ilev,iblk) = this%data_sum(j,iblk) / this%fract_sum(j,iblk)
@@ -883,6 +902,9 @@ CONTAINS
         END DO
       END IF
     END DO
+!    !$acc end parallel
+!    !$acc update host(this%data_sum,this%fract_sum,var%ptr)
+!    !$acc end data
 
     ! IF (ANY(fract_sum(:) > 1._wp + EPSILON(1._wp))) THEN
     !   CALL message(TRIM(routine), 'On tile '//TRIM(tile%name)//': fract_sum > 1 - '// &
