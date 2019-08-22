@@ -772,22 +772,21 @@ CONTAINS
       this%data_sum (j,iblk) = 0._wp
       this%fract_sum(j,iblk) = 0._wp
     END DO
-    !$acc update host(this%data_sum, this%fract_sum)
 
-!    !$acc parallel default(present)
     DO i=1,no_children
       IF (var%child_idx(i) > 0) THEN
         ASSOCIATE (data_child => tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p%field(ics:ice,iblk,1,1,1), &
           &        fractions  => this%fractions(ics:ice,iblk,i))
-!         !$acc loop gang vector
+          !$acc data copyin(data_child)
+          !$acc parallel loop gang vector
           DO j = ics, ice
             this%data_sum(j,iblk) = this%data_sum(j,iblk) + fractions(j) * data_child(j)
             this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + fractions(j)
           END DO
+          !$acc end data
         END ASSOCIATE
       END IF
     END DO
-!    !$acc end parallel
     ! print*,'AAA ',ics,ice,MINVAL(this%data_sum(ics:ice)), MAXVAL(this%data_sum(ics:ice)),&
       ! & MINVAL(this%fract_sum(ics:ice)), MAXVAL(this%fract_sum(ics:ice))
 
@@ -799,7 +798,6 @@ CONTAINS
     !   CALL finish(TRIM(routine),  '    ... this should not happen')
     ! END IF
 
-    !$acc update device(this%data_sum, this%fract_sum)
     IF (no_children == 1 .AND. .NOT. var%l_aggregate_all) THEN
       ! Only one tile to aggregate, avoid multiplying and dividing by a potentially small fraction
       !$acc parallel loop gang vector
@@ -876,20 +874,22 @@ CONTAINS
         this%fract_sum(j,iblk) = 0._wp
         this%data_sum (j,iblk) = 0._wp
       END DO
-      !$acc update host(this%fract_sum, this%data_sum)
+
       DO i=1,no_children
         IF (var%child_idx(i) > 0) THEN
           ASSOCIATE (data_child => tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p%field(ics:ice,ilev,iblk,1,1), &
             &        fractions  => this%fractions(ics:ice,iblk,i))
-   !         !$acc loop gang vector
+            !$acc data copyin(data_child)
+            !$acc parallel loop gang vector
             DO j = ics, ice
               this%data_sum(j,iblk) = this%data_sum(j,iblk) + fractions(j) * data_child(j)
               this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + fractions(j)
             END DO
+            !$acc end data
           END ASSOCIATE
         END IF
       END DO
-      !$acc update device(this%fract_sum, this%data_sum)
+
       IF (no_children == 1 .AND. .NOT. var%l_aggregate_all) THEN
         ! Only one tile to aggregate, avoid multiplying and dividing by a potentially small fraction
         !$acc parallel loop gang vector
