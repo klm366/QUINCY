@@ -632,12 +632,10 @@ CONTAINS
 
     ! update soil moisture according to infiltration
     !    - first half of the water
-    !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_digest_infilt_0
     CALL digest_infilt(nidx, nsoil, ltpe_closed, field_cap_l, infilt, &
          ws_l, drainage, w_soil_overflow)
 
     ! Drainage calculation with multi-layer soil scheme
-    !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_soilhyd_0
     CALL soilhyd(nidx, nsoil, delta_time, ilog, jllog, ws_l, soil_depth_l, &
          wsat_l, field_cap_l, hyd_cond_sat_l, vol_porosity_l, bclapp_l,   &
          matrix_pot_l, drainage, pore_size_index_l, p_wilt_l, dz,       &
@@ -645,7 +643,6 @@ CONTAINS
 
     ! update soil moisture according to infiltration
     !    - second half of the water
-    !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_digest_infilt_1
     CALL digest_infilt(nidx, nsoil, ltpe_closed, field_cap_l, infilt, &
          ws_l, drainage, w_soil_overflow)
 
@@ -979,7 +976,7 @@ CONTAINS
 
       ! temporary storage for diagnostic printing
       IF (ilog == 1 .OR. ilog == 3) THEN
-        !$claw acc loop seq
+        !!$claw acc loop seq ! This raises an error by the compiler
         DO i = 1, nsoil
           zdiflog(i) = wslog(i) - ws_l(jllog,i)
         END DO
