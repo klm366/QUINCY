@@ -632,6 +632,7 @@ CONTAINS
 
     ! update soil moisture according to infiltration
     !    - first half of the water
+    !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_digest_infilt_0
     CALL digest_infilt(nidx, nsoil, ltpe_closed, field_cap_l, infilt, &
          ws_l, drainage, w_soil_overflow)
 
@@ -643,6 +644,7 @@ CONTAINS
 
     ! update soil moisture according to infiltration
     !    - second half of the water
+    !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_digest_infilt_1
     CALL digest_infilt(nidx, nsoil, ltpe_closed, field_cap_l, infilt, &
          ws_l, drainage, w_soil_overflow)
 
@@ -1383,7 +1385,7 @@ CONTAINS
       END IF
     END DO
     !$claw acc end parallel
-    !$claw acc update host(drainage)
+    !$claw acc update host(drainage,ws_l,w_soil_overflow)
     !$claw acc end data
 
     ! make sure there is no negative soil moisture
