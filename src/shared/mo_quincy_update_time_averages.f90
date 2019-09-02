@@ -730,7 +730,6 @@ CONTAINS
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, net_assimilation_boc)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_daytime)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_daytime)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_daytime)
@@ -914,8 +913,11 @@ CONTAINS
     !! 
     t_air_tphen_mavg(:)           = calc_mavg(t_air_tphen_mavg(:), t_air(:), mavg_period_tphen)
     beta_soil_gs_tphen_mavg(:)    = calc_mavg(beta_soil_gs_tphen_mavg(:), beta_soil_gs(:), mavg_period_tphen)
-    soa_tsoa_mavg(:)              = calc_mavg(soa_tsoa_mavg(:), t_air(:)-Tzero, mavg_period_tsoa)
     beta_soa_tphen_mavg(:)        = calc_mavg(beta_soa_tphen_mavg(:), beta_soa(:), mavg_period_tphen)
+
+    !> 1.2 soa time-scale
+    !! 
+    soa_tsoa_mavg(:)              = calc_mavg(soa_tsoa_mavg(:), t_air(:)-Tzero, mavg_period_tsoa)
 
     !> 1.3 averages at the nutrient-uptake demand time-scale
     !! 
