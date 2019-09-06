@@ -88,11 +88,11 @@ plant_functional_type_id=5      # 1 - 8
 
 # forcing input
 flag_oneYearForcing="F"         # T (True) or F (False): whether to use (repeatedly) only the 1st year of the climate forcing input file
-forcingDataSet="fluxnet"        # options: fluxnet cruncep face manip fert craine photacc none (for 'none' provide: test_bed/climate.dat [land plant canopy] or soil_forcing_litterfall.dat & soil_forcing_soilphysics.dat [soil])
+forcingDataSet="fluxnet"        # options: fluxnet cruncep face manip fert craine photacc spp1685 none (for 'none' provide: test_bed/climate.dat [land plant canopy] or soil_forcing_litterfall.dat & soil_forcing_soilphysics.dat [soil])
 siteName="DE-Hai"               # get the Site-ID from the 1st column of the particular "site list .dat"
                                 # examples: [FLUX] "DE-Hai" "FI-Hyy" "ZA-Kru"  [CRUN] "BHS_01" "HAI_01" "ILO_05"  
                                 #           [FACE] "DK-AMB" "OR-ELE"  [MANIP] "ES-MaG" "ES-MaT"  [FERT] "HAR-CON_4" "HAR-HIG_4" "HAR-LOW_4" "HAR-CON_5"
-                                #           [CRAINE] "CRA_01" "CRA_02" "CRA_18"  [PHOTACC] "ARC_01" "MON_02" "STR_01"
+                                #           [CRAINE] "CRA_01" "CRA_02" "CRA_18"  [PHOTACC] "ARC_01" "MON_02" "STR_01"  [SPP_1685] "BBR" "LUE" "VES"
 soil_awc_prescribe=300.0        # float !
 soil_theta_prescribe=1.0        # float !
 longitude=0.0                   # float !
@@ -156,6 +156,10 @@ while getopts ":p:m:i:f:s:y:b:z:h" opt; do
     "ph")
       echo "   forcingDataSet=photacc"
       forcingDataSet="photacc"
+      ;;
+    "sp")
+      echo "   forcingDataSet=spp1685"
+      forcingDataSet="spp1685"
       ;;
     "no")
       echo "   forcingDataSet=none"
@@ -248,7 +252,7 @@ while getopts ":p:m:i:f:s:y:b:z:h" opt; do
     echo "       land plant soil canopy test_canopy test_radiation"
     echo " -i set siteName, i.e., siteID"
     echo "    Arguments to -i:"
-    echo "       a valid siteName, e.g., [FLUX] DE-Hai  [CRUN] BHS_01  [FACE] DK-AMB  [MANIP] ES-MaG  [FERT] HAR-CON_4  [CRAINE] CRA_01  [PHOTACC] MON_02"
+    echo "       a valid siteName, e.g., [FLUX] DE-Hai  [CRUN] BHS_01  [FACE] DK-AMB  [MANIP] ES-MaG  [FERT] HAR-CON_4  [CRAINE] CRA_01  [PHOTACC] MON_02  [SPP_1685] BBR" 
     echo " -f set the forcingDataSet"
     echo "    Arguments to -f:"
     echo "       fl: FLUXNET"
@@ -258,6 +262,7 @@ while getopts ":p:m:i:f:s:y:b:z:h" opt; do
     echo "       fe: FERT sites (fertilization)"
     echo "       ca: CRAINE sites (selected sites from doi:10.5061/dryad.v2k2607)"
     echo "       ph: PHOTACC sites (phot acclimation)"
+    echo "       sp: SPP_1685 sites (for jsm simulations)"
     echo "       no: none; using climate.dat file in test_bed folder"
     echo " -s set the soil model"
     echo "    Arguments to -s:"
@@ -325,7 +330,7 @@ validateOutputInterval="timestep daily weekly monthly yearly"
 validatePlantFunctionalTypeID="1 2 3 4 5 6 7 8"
 validateOptionForcing="constant generate readfile"
 validateSetPFTAutomatically="yes no"
-validateForcingDataSet="fluxnet cruncep face manip fert craine photacc none"
+validateForcingDataSet="fluxnet cruncep face manip fert craine photacc spp1685 none"
 validateSb_adsorp_scheme="eca_full eca_part eca_none"
 
 ## validate user-defined model-options ##
@@ -398,6 +403,9 @@ case "$forcingDataSet" in
 "photacc")
   siteDataSet="PHOTACC/"
   ;;
+"spp1685")
+  siteDataSet="SPP_1685/"
+  ;;
 esac
 # no soil forcing for MANIP FERT CRAINE PHOTACC
 if [ "$slmModel" == "soil" ]; then
@@ -466,6 +474,9 @@ case "$forcingDataSet" in
   echo " "
   echo " Note: you are running (a) PHOTACC site(s) using forcing 1901-2015 by default."
   ;;
+"spp1685")
+  allSiteInfoFile="$siteDataDirBase""$siteDataSet"spp_1685_sites_1984-2013_list.dat
+  ;;
 esac
 
 
@@ -512,6 +523,9 @@ case "$forcingDataSet" in
   ;;
 "photacc")
   siteNameStatMetForc="$siteName""_1901"              # DRE_01_1901-2015.dat (only transient forcing files)
+  ;;
+"spp1685")
+  siteNameStatMetForc="$siteName""_1984"              # BBR_1984-2013.dat (use the static forcing for test_bed)
   ;;
 esac
 
@@ -582,7 +596,7 @@ if [ $slmModel != "test_canopy" ] && [ $slmModel != "test_radiation" ]; then    
           else # land plant canopy
             cp ./"$forceLandMetFile"    ./"$slmModel"/"$forceLandMetFile"
         fi 
-      # forcingDataSet == fluxnet / cruncep / face / manip / fert / craine / photacc
+      # forcingDataSet == fluxnet / cruncep / face / manip / fert / craine / photacc / spp1685
       else 
         if [ $slmModel == "soil" ]
           then
