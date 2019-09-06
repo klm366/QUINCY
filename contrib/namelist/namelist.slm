@@ -58,7 +58,7 @@
   soil_depth=5.7
   soil_awc_prescribe=300.0
   soil_theta_prescribe=1.0
-  // soil properties (sand & silt is read from forcing, clay is calculated)
+  ! soil properties (sand & silt is read from forcing, clay is calculated)
   soil_sand=0.4
   soil_silt=0.3
   soil_clay=0.3
