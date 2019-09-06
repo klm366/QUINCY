@@ -1477,6 +1477,12 @@ changeNamelistValue biomass_alloc_scheme "$biomass_alloc_scheme"
 changeNamelistValue leaf_stoichom_scheme "$leaf_stoichom_scheme"
 changeNamelistValue cohort_harvest_interval "$cohort_harvest_interval"
 changeNamelistValue sb_adsorp_scheme "$sb_adsorp_scheme"
+if [ "$forcingDataSet" == "spp1685" ]
+  then
+    changeNamelistValue flag_spp1685 ".TRUE."
+  else
+    changeNamelistValue flag_spp1685 ".FALSE."
+fi
 if [ $flag_sb_eca_upt_po4 == T ]
   then
     changeNamelistValue flag_sb_ECA_upt_po4 ".TRUE."

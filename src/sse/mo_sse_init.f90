@@ -211,6 +211,9 @@ CONTAINS
     
     !> 4.0 init soil-property variables
     !! 
+    
+    !> 4.1 init with one site-specific value for all soil layers
+    !! 
     bulk_dens_sl(:,:)   = dsl4jsb_Config(SSE_)%bulk_density 
     heat_capa_sl(:,:)   = soil_heat_cap
     therm_cond_sl(:,:)  = soil_therm_cond
@@ -218,6 +221,19 @@ CONTAINS
     silt_sl(:,:)        = dsl4jsb_Config(SSE_)%soil_silt
     clay_sl(:,:)        = dsl4jsb_Config(SSE_)%soil_clay
     t_srf_old(:)        = 273.15_wp
+
+    !> 4.2 init with site-specific and soil-layer specific texture (sand silt clay) information
+    !! 
+    !! works only with the SPP_1685 site-set (namelist flag flag_spp1685 is set depending on the site-set); 
+    !! met-forcing was created with the usual scripts; 
+    !! soil forcing for JSM was created using QUINCY land (current trunk) with simple_1d and this texture information; 
+    !! hence, JSM can run simulations for the SPP_1685 sites must use the below soil-layer specific texture init
+    IF (dsl4jsb_Config(SSE_)%flag_spp1685) THEN
+      print*," << sse init spp 1685"
+
+
+    ENDIF
+
 
     !> 5.0 soil hydraulic properties, based on Saxton and Rawls 2006, SSSA
     !! 

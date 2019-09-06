@@ -63,6 +63,8 @@
   soil_silt=0.3
   soil_clay=0.3
   bulk_density=1500.0
+  ! flag for site-set SPP_1685, providing (using in simply_1d and jsm) soil layer specific texture information in sse_init
+  flag_spp1685=.FALSE.
 /
 &SOIL_BIOGEOCHEMISTRY_CTL
   ! the soil biogeochemistry process

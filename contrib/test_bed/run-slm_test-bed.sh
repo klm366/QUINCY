@@ -677,6 +677,12 @@ changeNamelistValue sb_model_scheme "$sb_model_scheme"
 changeNamelistValue sb_nloss_scheme "$sb_nloss_scheme"
 changeNamelistValue sb_bnf_scheme "$bnf_scheme" 
 changeNamelistValue sb_adsorp_scheme "$sb_adsorp_scheme"
+if [ "$forcingDataSet" == "spp1685" ]
+  then
+    changeNamelistValue flag_spp1685 ".TRUE."
+  else
+    changeNamelistValue flag_spp1685 ".FALSE."
+fi
 if [ $flag_sb_eca_upt_po4 == T ]
   then
     changeNamelistValue flag_sb_ECA_upt_po4 ".TRUE."

@@ -55,6 +55,7 @@ MODULE mo_sse_config_class
     REAL(wp)              :: soil_silt            !< soil silt proportion - site specific from forcing info file
     REAL(wp)              :: soil_clay            !< soil clay proportion - recalculated from: clay = 1.0 -sand -silt
     REAL(wp)              :: bulk_density    
+    LOGICAL               :: flag_spp1685
   CONTAINS
     PROCEDURE :: Init => Init_sse_config
   END TYPE t_sse_config
@@ -102,6 +103,7 @@ CONTAINS
                                    soil_silt       , &
                                    soil_clay
     REAL(wp)                    :: bulk_density
+    LOGICAL                     :: flag_spp1685
     INTEGER                     :: isoil   ! looping
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     REAL(wp)                    :: k_soil_profile       ! for soil layer calculations
@@ -125,7 +127,8 @@ CONTAINS
                           soil_sand               , &
                           soil_silt               , &
                           soil_clay               , &
-                          bulk_density            
+                          bulk_density            , &
+                          flag_spp1685            
 
     ! variables for reading model-options from namelist
     INTEGER :: nml_handler, nml_unit, istat
@@ -155,6 +158,7 @@ CONTAINS
     soil_silt                     = 0.4_wp
     soil_clay                     = 0.3_wp
     bulk_density                  = 1500.0_wp
+    flag_spp1685                  = .FALSE.       ! if TRUE: use soil layer specific texture information for SPP_1685 sites
 
     ! read the namelist
     ! &SSE_CTL
@@ -225,6 +229,7 @@ CONTAINS
     !config%soil_clay                = not using the input value, as soil_clay must be calculated from soil_sand & soil_silt to guarantee: 1=sand+silt+clay
     config%soil_clay                 = 1.0_wp - soil_sand - soil_silt
     config%bulk_density              = bulk_density
+    config%flag_spp1685              = flag_spp1685
 
     ! check for an error in clay content of soil
     IF(config%soil_clay < eps8) THEN
