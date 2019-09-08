@@ -171,7 +171,7 @@ CONTAINS
     def_co2_deltaC14          = -14.9_wp
     def_co2_mixing_ratio_C14  = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14) * def_co2_mixing_ratio 
     def_wind                  = 1.0_wp         
-    def_p_deposition          = 0.8_wp
+    def_n_deposition          = 0.8_wp
     def_p_deposition          = 0.015_wp
 
   END SUBROUTINE init_atmland_constants
