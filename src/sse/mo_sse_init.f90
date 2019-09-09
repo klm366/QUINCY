@@ -234,6 +234,14 @@ CONTAINS
     !! met-forcing was created with the usual scripts; 
     !! soil forcing for JSM was created using QUINCY land (current trunk) with simple_1d and this texture information; 
     !! hence, JSM can run simulations for the SPP_1685 sites must use the below soil-layer specific texture init
+    !! 
+    !! the below texture data is based on: Lang, F. et al. (2017 ) "Soil phosphorus supply controls P nutrition strategies 
+    !!   of beech forest ecosystems in Central Europe". Biogeochemistry, doi:10.1007/s10533-017-0375-0. Table S2 in the
+    !!   Supplementary material 2.
+    !!   These texture data were extrapolated: We use the measured soil texture of the topmost 1m soil for all the five sites 
+    !!   (presented in this table S2). We extrapolated them to the whole soil depth (9.5m) following the pattern of 
+    !!   texture change against depth increase observed in the topmost 1m soil.
+    !! 
     IF (dsl4jsb_Config(SSE_)%flag_spp1685) THEN
       IF (dsl4jsb_Config(SB_)%sb_model_scheme == "simple_1d" .OR. dsl4jsb_Config(SB_)%sb_model_scheme == "jsm") THEN
         ! check if nsoil_sb == 15
