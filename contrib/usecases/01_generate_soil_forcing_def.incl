@@ -15,27 +15,28 @@
 ##    You should have received a copy of the GNU General Public License
 ##    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
 
-# default SLM usecase: 01_generate_soil_forcing_def
+# default QUINCY usecase: 01_generate_soil_forcing_def
 # 
-# generate soil_forcing for stand alone SLM soil model:
+# generate soil_forcing for the stand alone QUINCY soil model:
 #  creating: veg litterfall + some soilphysics output used as input by the (standalone) soil model
-#  options apply specifically to the generation of soil forcing using the SLM land model
+#  options apply specifically to the generation of soil forcing using the QUINCY land model
 #
 # prep_run_slm.sh necessary settings:
-#  forcingDataSet fluxnet/cruncep/face
+#  forcingDataSet fluxnet/cruncep/face/spp_1685
 #  siteSelection  cue/spp (for cruncep)
 #
 
 echo " Simulation runs for soil_forcing creation:"
 echo "  usecase='01_generate_soil_forcing_def' applying special settings to some options"
 echo "  please run the simulations (prep_run_slm.sh -u 01) for: "
-echo "    FLUXNET (all sites)"
+echo "    FLUXNET"
 echo "    CRUNCEP with siteSelection cue & spp"
-echo "    FACE (all four sites)"
+echo "    FACE"
+echo "    SPP_1685"
 echo "  no need to change any else, the namelist-parameter flag_generate_soil_forcing is set to TRUE for u01 automatically"
 echo " "
 echo " after all jobs have finished, please run additional_scripts/copy_soil_forcing.sh"
-echo "   (this script updates the soil forcing for the site sets, "
+echo "   (this script updates the soil forcing for the site sets new soil forcing was created, "
 echo "    and renames the experimentalID of soil_forcing simulations leaving the renamed folders in your scratch)"
 echo " "
 
