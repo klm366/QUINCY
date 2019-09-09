@@ -35,7 +35,9 @@ MODULE mo_hd_init
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: hd_init_ic, hd_init_bc    ! initialization of initial and boundary conditions
+  PUBLIC :: hd_init_ic, hd_init_bc      ! initialization of initial and boundary conditions
+
+  INTEGER, PARAMETER :: nneigh_max = 12 ! Maximum number of inflow neighbor cells
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_hd_init'
 
@@ -59,6 +61,7 @@ CONTAINS
 
     TYPE(t_input_file)  :: input_file
 
+    INTEGER, ALLOCATABLE :: cells_up(:,:,:)
     INTEGER :: n, blk, blks, blke, jc, jcs, jce, idx
     INTEGER :: nblks, nproma
 
@@ -90,9 +93,6 @@ CONTAINS
       hd__mem%nres_o_max = 1
       hd__mem%nres_b_max = 1
       hd__mem%nres_r_max = 5
-
-      ! Maximum number of inflow neighbor cells
-      hd__mem%nneigh = 6
 
       !CALL message(TRIM(routine), 'Initializing HD fractions for tile '//TRIM(tile%name)//&
       !  &                         ' from '//TRIM(dsl4jsb_Config(HD_)%fract_filneame))
@@ -134,16 +134,26 @@ CONTAINS
       ! Global index neighbouring grid cells upstream
       return_pointer3d => input_file%Read_2d_extdim(  &
         & variable_name='CELLS_UP',                   &
-        & start_extdim=1, end_extdim=hd__mem%nneigh,    &
+        & start_extdim=1, end_extdim=nneigh_max,    &
         & extdim_name='nneigh')
 
-        ! find local idices of grid cells upstream
-        nproma = grid%nproma
-        nblks  = grid%nblks
-        ALLOCATE(dsl4jsb_var_ptr(HD_,nidx_upstream) (nproma, hd__mem%nneigh, nblks))
-        ALLOCATE(dsl4jsb_var_ptr(HD_,bidx_upstream) (nproma, hd__mem%nneigh, nblks))
-        dsl4jsb_var_ptr(HD_,nidx_upstream) = -1
-        dsl4jsb_var_ptr(HD_,bidx_upstream)  = -1
+      nproma = grid%nproma
+      nblks  = grid%nblks
+
+      ALLOCATE(cells_up(nproma, nblks, nneigh_max))
+      cells_up(:,:,:) = NINT(return_pointer3d(:,:,:))
+      hd__mem%nneigh = 0
+      DO n=1, nneigh_max
+        IF (ANY(cells_up(:,:,n) > 0)) THEN
+          hd__mem%nneigh = n
+        END IF
+      END DO
+
+      ! find local idices of grid cells upstream
+      ALLOCATE(dsl4jsb_var_ptr(HD_,nidx_upstream) (nproma, hd__mem%nneigh, nblks))
+      ALLOCATE(dsl4jsb_var_ptr(HD_,bidx_upstream) (nproma, hd__mem%nneigh, nblks))
+      dsl4jsb_var_ptr(HD_,nidx_upstream) = -1
+      dsl4jsb_var_ptr(HD_,bidx_upstream) = -1
 
       blks = get_blk_start(grid)
       blke = get_blk_end(grid)
@@ -152,14 +162,14 @@ CONTAINS
         jce = get_col_end  (blk, grid)
         DO n = 1, hd__mem%nneigh
           DO jc = jcs, jce
-            IF (NINT(return_pointer3d(jc,blk,n)) > 0) THEN
+            IF (cells_up(jc,blk,n) > 0) THEN
               idx = get_local_index(grid%patch%cells%decomp_info%glb2loc_index, NINT(return_pointer3d(jc,blk,n)))
               !print*, 'vg: p_pe: ', p_pe, ' n: ', n, ' blk: ', blk, ' FDIR: ', NINT(return_pointer(n,blk)), 'idx: ',idx
               IF (idx ==  0) THEN
-                WRITE (message_text,*) "index of grid cell upstream (", NINT(return_pointer3d(jc,blk,n)), ") not in global domain"
+                WRITE (message_text,*) "index of grid cell upstream (", cells_up(jc,blk,n), ") not in global domain"
                 CALL finish(routine, message_text)
               ELSE IF (idx == -1) THEN
-                WRITE (message_text,*) "index of grid cell upstream (", NINT(return_pointer3d(jc,blk,n)), ") not in local domain"
+                WRITE (message_text,*) "index of grid cell upstream (", cells_up(jc,blk,n), ") not in local domain"
                 CALL finish(routine, message_text)
               END IF
               hd__mem%bidx_upstream%ptr(jc,n,blk) = (idx-1)/nproma + 1
@@ -168,6 +178,8 @@ CONTAINS
           END DO
         END DO
       END DO
+
+      DEALLOCATE(cells_up)
 
       CALL input_file%Close()
 
