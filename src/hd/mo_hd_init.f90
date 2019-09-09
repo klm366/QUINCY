@@ -61,6 +61,7 @@ CONTAINS
 
     TYPE(t_input_file)  :: input_file
 
+    INTEGER, ALLOCATABLE :: cells_up(:,:,:)
     INTEGER :: n, blk, blks, blke, jc, jcs, jce, idx
     INTEGER :: nblks, nproma, nneigh
 
