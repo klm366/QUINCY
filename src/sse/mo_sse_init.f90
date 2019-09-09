@@ -67,6 +67,7 @@ CONTAINS
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(SSE_)
+    dsl4jsb_Use_config(SB_)
 
     ! USE PROC_memory
     dsl4jsb_Use_memory(SSE_)
@@ -87,6 +88,8 @@ CONTAINS
                                                         theta_pwp_sl, theta_fc_sl, theta_sat_sl
     REAL(wp), DIMENSION(options%nc)                  :: soil_awc, &
                                                         hlp2
+    REAL(wp)                                         :: site_longitude
+    CHARACTER(len=3)                                 :: site_ID_spp1685
     INTEGER                                          :: isoil, ichunk
     INTEGER                                          :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':sse_init'
@@ -94,6 +97,7 @@ CONTAINS
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(SSE_)
+    dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(VEG_)
     ! Declare pointers to variables in memory
@@ -136,12 +140,14 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
-    model         => Get_model(tile%owner_model_id)
-    lctlib        => model%lctlib(tile%lcts%lib_id)
-    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
-    nsoil_sb      =  vgrid_soil_sb%n_levels
+    model          => Get_model(tile%owner_model_id)
+    lctlib         => model%lctlib(tile%lcts%lib_id)
+    vgrid_soil_sb  => Get_vgrid('soil_layer_sb')
+    nsoil_sb       =  vgrid_soil_sb%n_levels
+    site_longitude = model%config%lon
     ! Get process config
     dsl4jsb_Get_config(SSE_)
+    dsl4jsb_Get_config(SB_)
     ! Get process memories
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(VEG_)
@@ -229,10 +235,85 @@ CONTAINS
     !! soil forcing for JSM was created using QUINCY land (current trunk) with simple_1d and this texture information; 
     !! hence, JSM can run simulations for the SPP_1685 sites must use the below soil-layer specific texture init
     IF (dsl4jsb_Config(SSE_)%flag_spp1685) THEN
-      print*," << sse init spp 1685"
+      IF (dsl4jsb_Config(SB_)%sb_model_scheme == "simple_1d" .OR. dsl4jsb_Config(SB_)%sb_model_scheme == "jsm") THEN
+        ! check if nsoil_sb == 15
+        IF (nsoil_sb /= 15) THEN
+          CALL finish(TRIM(routine),'nsoil_sb is not 15 | Simulations with the SPP_1685 site-set work only with 15 soil layers.')
+        ENDIF
+        
+        ! get site ID from longitude
+        IF (ABS(site_longitude - 9.75_wp) < eps8) THEN
+          site_ID_spp1685 = "BBR"
+        ELSEIF (ABS(site_longitude - 10.25_wp) < eps8) THEN
+          site_ID_spp1685 = "LUE"
+        ELSEIF (ABS(site_longitude - 10.75_wp) < eps8) THEN
+          site_ID_spp1685 = "VES"
+        !ELSEIF () THEN
+        !ELSEIF () THEN
+        ELSE
+          site_ID_spp1685 = "ERR"
+        ENDIF
 
-
-    ENDIF
+        ! set site specific soil texture values per soil layer
+        SELECT CASE(site_ID_spp1685)
+        CASE ("BBR")
+          DO ichunk=1,nc
+            sand_sl(ichunk,1:nsoil_sb)   = (/0.07_wp,0.09_wp,0.1_wp,0.1228_wp,0.1785_wp, &
+                                            0.24_wp,0.2726_wp,0.3519_wp,0.4_wp,0.45_wp, &
+                                            0.5_wp,0.6_wp,0.7_wp,0.8_wp,0.8_wp/)
+            silt_sl(ichunk,1:nsoil_sb)   = (/0.56_wp,0.54_wp,0.55_wp,0.5386_wp,0.5184_wp, &
+                                            0.5_wp,0.5042_wp,0.4868_wp,0.4_wp,0.37_wp, &
+                                            0.35_wp,0.3_wp,0.22_wp,0.15_wp,0.15_wp/)
+          ENDDO
+        CASE ("LUE")
+          DO ichunk=1,nc
+            sand_sl(ichunk,1:nsoil_sb)   = (/0.75_wp,0.76_wp,0.81_wp,0.7543_wp,0.7448_wp, &
+                                             0.713_wp,0.7626_wp,0.8185_wp,0.84_wp,0.85_wp, &
+                                             0.85_wp,0.88_wp,0.88_wp,0.9_wp,0.92_wp/)
+            silt_sl(ichunk,1:nsoil_sb)   = (/0.19_wp,0.19_wp,0.14_wp,0.1864_wp,0.1926_wp, &
+                                             0.2085_wp,0.1753_wp,0.1177_wp,0.1_wp,0.1_wp, &
+                                             0.1_wp,0.08_wp,0.08_wp,0.06_wp,0.05_wp/)
+          ENDDO    
+        CASE ("VES")
+          DO ichunk=1,nc
+            sand_sl(ichunk,1:nsoil_sb)   = (/0.30_wp,0.3245_wp,0.3746_wp,0.4057_wp,0.4494_wp, &
+                                             0.4923_wp,0.5627_wp,0.6669_wp,0.71_wp,0.75_wp, &
+                                             0.77_wp,0.79_wp,0.83_wp,0.86_wp,0.88_wp/)
+            silt_sl(ichunk,1:nsoil_sb)   = (/0.4638_wp,0.47_wp,0.4562_wp,0.4579_wp,0.4386_wp, &
+                                             0.4012_wp,0.3578_wp,0.2864_wp,0.25_wp,0.22_wp, &
+                                             0.2_wp,0.18_wp,0.15_wp,0.12_wp,0.1_wp/)
+          ENDDO
+      ! ELSEIF () THEN
+      ! ! site MIT
+      !   DO ichunk=1,nc
+      !     sand_sl(ichunk,1:nsoil_sb)   = (/0.447_wp,0.5115_wp,0.5102_wp,0.52_wp,0.5642_wp, &
+      !                                      0.57_wp,0.56_wp,0.5681_wp,0.60_wp,0.62_wp, &
+      !                                      0.64_wp,0.65_wp,0.70_wp,0.70_wp,0.70_wp/)
+      !     silt_sl(ichunk,1:nsoil_sb)   = (/0.3223_wp,0.3115_wp,0.3148_wp,0.32_wp,0.3195_wp, &
+      !                                      0.34_wp,0.3526_wp,0.3601_wp,0.33_wp,0.32_wp, &
+      !                                      0.31_wp,0.30_wp,0.26_wp,0.26_wp,0.27_wp/)
+      !   ENDDO
+      ! ELSEIF () THEN
+      ! ! site CON
+      !   DO ichunk=1,nc
+      !     sand_sl(ichunk,1:nsoil_sb)   = (/0.40_wp,0.3969_wp,0.39_wp,0.40_wp,0.41_wp, &
+      !                                      0.4447_wp,0.4872_wp,0.5159_wp,0.55_wp,0.58_wp, &
+      !                                      0.60_wp,0.62_wp,0.65_wp,0.70_wp,0.70_wp/)
+      !     silt_sl(ichunk,1:nsoil_sb)   = (/0.33_wp,0.3454_wp,0.38_wp,0.40_wp,0.42_wp, &
+      !                                      0.40_wp,0.3992_wp,0.3961_wp,0.37_wp,0.35_wp, &
+      !                                      0.33_wp,0.31_wp,0.29_wp,0.25_wp,0.25_wp/)
+      ! 
+      ! 
+      !   ENDDO
+        CASE DEFAULT
+          CALL finish(TRIM(routine),'This site seems to be not a part of the SPP_1685 site-set although flag_spp1685 is set T.')
+        END SELECT
+        
+        ! calculate clay content from sand and silt
+        clay_sl(:,:) = 1.0_wp
+        clay_sl(:,:) = clay_sl(:,:) - (sand_sl(:,:) + silt_sl(:,:))
+      ENDIF  ! simple_1d / jsm
+    ENDIF   ! flag_spp1685
 
 
     !> 5.0 soil hydraulic properties, based on Saxton and Rawls 2006, SSSA

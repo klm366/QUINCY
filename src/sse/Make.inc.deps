@@ -72,6 +72,7 @@ mo_sse_init.o: \
   mo_sse_constants.o \
   mo_sse_config_class.o \
   mo_sse_memory_class.o \
+  mo_sb_config_class.o \
   mo_veg_memory_class.o
 
 mo_sse_util.o: \
