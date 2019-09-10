@@ -256,8 +256,10 @@ CONTAINS
           site_ID_spp1685 = "LUE"
         ELSEIF (ABS(site_longitude - 10.75_wp) < eps8) THEN
           site_ID_spp1685 = "VES"
-        !ELSEIF () THEN
-        !ELSEIF () THEN
+        ELSEIF (ABS(site_longitude - 12.75_wp) < eps8) THEN
+          site_ID_spp1685 = "MIT"
+        ELSEIF (ABS(site_longitude - 7.75_wp) < eps8) THEN
+          site_ID_spp1685 = "CON"
         ELSE
           site_ID_spp1685 = "ERR"
         ENDIF
@@ -291,28 +293,24 @@ CONTAINS
                                              0.4012_wp,0.3578_wp,0.2864_wp,0.25_wp,0.22_wp, &
                                              0.2_wp,0.18_wp,0.15_wp,0.12_wp,0.1_wp/)
           ENDDO
-      ! ELSEIF () THEN
-      ! ! site MIT
-      !   DO ichunk=1,nc
-      !     sand_sl(ichunk,1:nsoil_sb)   = (/0.447_wp,0.5115_wp,0.5102_wp,0.52_wp,0.5642_wp, &
-      !                                      0.57_wp,0.56_wp,0.5681_wp,0.60_wp,0.62_wp, &
-      !                                      0.64_wp,0.65_wp,0.70_wp,0.70_wp,0.70_wp/)
-      !     silt_sl(ichunk,1:nsoil_sb)   = (/0.3223_wp,0.3115_wp,0.3148_wp,0.32_wp,0.3195_wp, &
-      !                                      0.34_wp,0.3526_wp,0.3601_wp,0.33_wp,0.32_wp, &
-      !                                      0.31_wp,0.30_wp,0.26_wp,0.26_wp,0.27_wp/)
-      !   ENDDO
-      ! ELSEIF () THEN
-      ! ! site CON
-      !   DO ichunk=1,nc
-      !     sand_sl(ichunk,1:nsoil_sb)   = (/0.40_wp,0.3969_wp,0.39_wp,0.40_wp,0.41_wp, &
-      !                                      0.4447_wp,0.4872_wp,0.5159_wp,0.55_wp,0.58_wp, &
-      !                                      0.60_wp,0.62_wp,0.65_wp,0.70_wp,0.70_wp/)
-      !     silt_sl(ichunk,1:nsoil_sb)   = (/0.33_wp,0.3454_wp,0.38_wp,0.40_wp,0.42_wp, &
-      !                                      0.40_wp,0.3992_wp,0.3961_wp,0.37_wp,0.35_wp, &
-      !                                      0.33_wp,0.31_wp,0.29_wp,0.25_wp,0.25_wp/)
-      ! 
-      ! 
-      !   ENDDO
+        CASE ("MIT")
+          DO ichunk=1,nc
+            sand_sl(ichunk,1:nsoil_sb)   = (/0.447_wp,0.5115_wp,0.5102_wp,0.52_wp,0.5642_wp, &
+                                             0.57_wp,0.56_wp,0.5681_wp,0.60_wp,0.62_wp, &
+                                             0.64_wp,0.65_wp,0.70_wp,0.70_wp,0.70_wp/)
+            silt_sl(ichunk,1:nsoil_sb)   = (/0.3223_wp,0.3115_wp,0.3148_wp,0.32_wp,0.3195_wp, &
+                                             0.34_wp,0.3526_wp,0.3601_wp,0.33_wp,0.32_wp, &
+                                             0.31_wp,0.30_wp,0.26_wp,0.26_wp,0.27_wp/)
+          ENDDO
+        CASE ("CON")
+          DO ichunk=1,nc
+            sand_sl(ichunk,1:nsoil_sb)   = (/0.40_wp,0.3969_wp,0.39_wp,0.40_wp,0.41_wp, &
+                                             0.4447_wp,0.4872_wp,0.5159_wp,0.55_wp,0.58_wp, &
+                                             0.60_wp,0.62_wp,0.65_wp,0.70_wp,0.70_wp/)
+            silt_sl(ichunk,1:nsoil_sb)   = (/0.33_wp,0.3454_wp,0.38_wp,0.40_wp,0.42_wp, &
+                                             0.40_wp,0.3992_wp,0.3961_wp,0.37_wp,0.35_wp, &
+                                             0.33_wp,0.31_wp,0.29_wp,0.25_wp,0.25_wp/)
+          ENDDO
         CASE DEFAULT
           CALL finish(TRIM(routine),'This site seems to be not a part of the SPP_1685 site-set although flag_spp1685 is set T.')
         END SELECT
