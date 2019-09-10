@@ -19,7 +19,7 @@
 
 #########################################################################################
 ##
-## generate > transient < met forcing for Cruncep v7 SPP sites using weatherdump v2
+## generate > transient < met forcing for Cruncep v7 SPP (& SPP_1685) sites using weatherdump v2
 ##
 ## run this script by:
 ##  cd contrib/forcing_scripts/
@@ -71,9 +71,15 @@ co2y_DC14<-read.table('/Net/Groups/BGI/work_2/QUINCY/SLM/InputDataSources/Atm/De
 
 ## N deposition per site [kg N/ha]
 # using this number allows for scaling the N deposition, i.e., consider site history / pre-industrial values
-# these numbers come from literature: ask Lin
-# BBR & LUE are about 2014 values and VES is the value from the year 2000
-ndep_site<-c(8, 13, 20.65)
+# these numbers come from literature:
+#  BBR and LUE: Bünemann, E. K., Augstburger, S. & Frossard, E. (2016) Dominance of either physicochemical or biological phosphorus cycling processes 
+#               in temperate forest soils of contrasting phosphate availability. Soil Biology and Biochemistry 101, 85-95, doi:10.1016/j.soilbio.2016.07.005
+#  VES: Forstliches Umweltmonitoring in Thüringen (Gotha, 2001)
+#  CON: calculated from raw data; data source: Jaane Krüger, personal communication with Lin Yu
+#  MIT: no literature value available; calculated as the mean value of CON, BBR and LUE
+# BBR & LUE & CON are about 2014 values and VES is the value from the year 2000
+# BBR LUE VES MIT CON
+ndep_site<-c(8, 13, 20.65, 9.7, 8.19)
 
 for (s in 1:length(site_list)) {
 print(paste0("site: ", site_list[s], "  number ", s, " of ", length(site_list)))

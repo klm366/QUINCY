@@ -16,7 +16,7 @@
 ##    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
 
 ##
-## generate site_list.dat files for cruncep site sets for QUINCY: 
+## generate site_list.dat files for cruncep site sets for QUINCY (the spp_gfdb may be used for SPP_1685 site-set too): 
 ##    all_gfdb  cue_gfdb  spp_gfdb
 ##
 
@@ -26,7 +26,7 @@ library(ncdf4)
 #########################################################################################
 ## run this script by:
 ## cd contrib/forcing_scripts/
-## Rscript ./produce_cruncep_site_info_file.R
+## Rscript --vanilla ./produce_cruncep_site_info_file.R
 
 
 #########################################################################################
@@ -690,7 +690,7 @@ write.table(sitedata,file=paste0("global_forest_database_cue_sites_",Sys.Date(),
 ## get number of spp sites (see file input above)
 sppSiteNum <- length(spp_site_list)
 
-## get the lon/lat of all sites (but VES) from the metsites_spp object (with list of siteID in metsites_spp), file siteinfo_noheader.dat
+## get the lon/lat of all sites from the metsites_spp object (with list of siteID in metsites_spp), file siteinfo_noheader.dat
 #  new values for lon_orig & lat_orig  (above they contain lon/lat of all sites in forestsite_list from info_forest.csv)
 lon_orig <- numeric(sppSiteNum)
 lat_orig <- numeric(sppSiteNum)
@@ -741,8 +741,8 @@ for (s in 1:sppSiteNum) {
   #sand[s]         <- weighted.mean(sand_sg[lonidx,latidx,],depth_sl,na.rm=TRUE)/100
   #silt[s]         <- weighted.mean(silt_sg[lonidx,latidx,],depth_sl,na.rm=TRUE)/100
 }
-## set remaining parameter from known data, i.e., Lin provided these data (proportions of soil types and ph)
-# BBR LUE VES MTF CON
+## set remaining parameter from known data, i.e., Lin Yu provided these data (proportions of soil types and ph)
+# site order: BBR LUE VES MIT CON
 sand    <- c(22.59, 76.6,  39.0, 51.0, 41.0) / 100
 silt    <- c(51.31, 17.13, 45.0, 31.0, 42.0) / 100
 clay    <- 1.0 - sand - silt
