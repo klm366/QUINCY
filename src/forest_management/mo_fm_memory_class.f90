@@ -82,7 +82,7 @@ CONTAINS
         & t_cf('to_harvest', '', 'Whatever to Harvest.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
-        & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp ) 
+        & loutput = .FALSE.,lrestart=.FALSE., initval_r=0.0_wp ) 
 
     END IF
 
