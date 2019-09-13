@@ -27,7 +27,7 @@ MODULE mo_hydro_memory_class
   USE mo_jsb_varlist,      ONLY: BASIC, MEDIUM, FULL
 
   ! Use of prcesses in this module
-  dsl4jsb_Use_processes HYDRO_, SSE_
+  dsl4jsb_Use_processes HYDRO_, SSE_, SEB_, ASSIMI_
 
   ! Use process configurations
   dsl4jsb_Use_config(HYDRO_)
@@ -129,16 +129,16 @@ MODULE mo_hydro_memory_class
     TYPE(t_jsb_var_real3d) :: &
       & root_depth_sl          !< Rooted depth per soil layer (until rooting depth) [m]
     TYPE(t_jsb_var_real2d) :: &
-      & root_depth,          &  !< Rooting depth [m]
-      & fract_snow_can,   & !< Snow fraction on canopy                                                  []
-      & w_snow_can,       & !< Water content of snow reservoir on canopy                                [m water equivalent]
-      & w_soil_root,      & !< Water content in root zone of the soil                                   [m]
-      & w_soil_root_fc,   & !< Water content at field capacity in root zone of the soil                 [m]
-      & w_soil_root_pwp,  & !< Water content at permanent wilting point in root zone of the soil        [m]
-      & water_stress,     & !< Water stress factor of canopy                        (1: no water stress, 0: infinite stress)
-      & canopy_cond,         & ! Canopy conductance without water limit  [m/s] (mean value)
-      & canopy_cond_limited, & ! Canopy conductance water limit [m/s] (mean value)
-      & trans               !< Transpiration
+      & root_depth,           & !< Rooting depth [m]
+      & fract_snow_can,       & !< Snow fraction on canopy                                                  []
+      & w_snow_can,           & !< Water content of snow reservoir on canopy                                [m water equivalent]
+      & w_soil_root,          & !< Water content in root zone of the soil                                   [m]
+      & w_soil_root_fc,       & !< Water content at field capacity in root zone of the soil                 [m]
+      & w_soil_root_pwp,      & !< Water content at permanent wilting point in root zone of the soil        [m]
+      & water_stress,         & !< Water stress factor of canopy                        (1: no water stress, 0: infinite stress)
+      & canopy_cond_unlimited,& !< Canopy conductance without water limit  [m/s] (mean value)
+      & canopy_cond_limited,  & !< Canopy conductance with water limit [m/s] (mean value)
+      & trans                   !< Transpiration
 
     ! Additional variables for GLACIER lct_type
     TYPE(t_jsb_var_real2d) :: &
@@ -759,19 +759,21 @@ CONTAINS
         & prefix, suffix,                                                     &
         & lrestart=.FALSE., initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 'canopy_cond', mem%canopy_cond,                 &
-        & hgrid, surface,                                                    &
-        & t_cf('canopy_conductance', '', ''),                                &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & initval_r=0.0_wp )
+      IF (.NOT. dsl4jsb_Config(ASSIMI_)%active) THEN
+        CALL jsb_add_var( mem, 'canopy_cond_unlimited', mem%canopy_cond_unlimited, &
+          & hgrid, surface,                                                    &
+          & t_cf('canopy_conductance_unlimited', '', ''),                      &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix,                                                    &
+          & initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 'canopy_cond_limited', mem%canopy_cond_limited, &
-        & hgrid, surface,                                                    &
-        & t_cf('canopy_conductance_limited', '', ''),                        &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & initval_r=0.0_wp )
+        CALL jsb_add_var( mem, 'canopy_cond_limited', mem%canopy_cond_limited, &
+          & hgrid, surface,                                                    &
+          & t_cf('canopy_conductance_limited', '', ''),                        &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix,                                                    &
+          & initval_r=0.0_wp )
+      END IF
 
       CALL jsb_add_var( mem, 'trans', mem%trans,                                     &
         & hgrid, surface,                                                            &

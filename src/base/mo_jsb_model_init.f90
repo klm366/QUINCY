@@ -315,26 +315,21 @@ CONTAINS
 #endif
     CALL model%Queue_task(SEB_,    "snowmelt_correction")
     IF (model%processes(ASSIMI_)%p%config%active) THEN
-      ! Normally called before
-      ! assimilation -> update_assimilation: -> calc_assimilation_waterlimited
-      ! and before
-      ! canopy_cond_unstressed -> update_canopy_conductance_unstressed:
-      !                                    -> calc_assimilation_waterunlimited
+      ! Normally called before update_canopy_cond_unstressed and update_assimilation
       CALL model%Queue_task(ASSIMI_, "assimilation_scaling_factors")
     END IF
     IF (model%processes(ASSIMI_)%p%config%active) THEN
-      CALL model%Queue_task(ASSIMI_, "canopy_cond_unstressed") ! -> calc_assimilation_waterunlimited
+      CALL model%Queue_task(ASSIMI_, "canopy_cond_unstressed")
     ELSE
       CALL model%Queue_task(HYDRO_,  "canopy_cond_unstressed")
     END IF
-    CALL model%Queue_task(HYDRO_,  "canopy_cond_stressed") ! Should be called with and without the ASSIMI process,
-                                                           ! and before assimilation
-    ! CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
+    CALL model%Queue_task(HYDRO_, "water_stress")
     IF (model%processes(ASSIMI_)%p%config%active) THEN
-      CALL model%Queue_task(ASSIMI_, "assimilation") ! -> calc_assimilation_waterlimited
-                                                     ! should be called after the soil hydrology is calculated
+      CALL model%Queue_task(ASSIMI_, "canopy_cond_stressed")
+      CALL model%Queue_task(ASSIMI_, "assimilation")
+    ELSE
+      CALL model%Queue_task(HYDRO_,  "canopy_cond_stressed")
     END IF
-
     IF (model%processes(CARBON_)%p%config%active) THEN
       CALL model%Queue_task(CARBON_, "C_NPP_pot_allocation")
     END IF
