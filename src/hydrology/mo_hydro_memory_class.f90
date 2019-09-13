@@ -759,7 +759,8 @@ CONTAINS
         & prefix, suffix,                                                     &
         & lrestart=.FALSE., initval_r=0.0_wp )
 
-      IF (.NOT. dsl4jsb_Config(ASSIMI_)%active) THEN
+!TODO merge dsl4jsb_Config changes
+!      IF (.NOT. dsl4jsb_Config(ASSIMI_)%active) THEN
         CALL jsb_add_var( mem, 'canopy_cond_unlimited', mem%canopy_cond_unlimited, &
           & hgrid, surface,                                                    &
           & t_cf('canopy_conductance_unlimited', '', ''),                      &
@@ -773,7 +774,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
           & initval_r=0.0_wp )
-      END IF
+!      END IF
 
       CALL jsb_add_var( mem, 'trans', mem%trans,                                     &
         & hgrid, surface,                                                            &
