@@ -491,7 +491,8 @@ CONTAINS
       & latent_hflx_ice_ptr, &
       & fract_lice_ptr, &
       & albedo_lwtr_ptr, &
-      & albedo_lice_ptr
+      & albedo_lice_ptr, &
+      & sensible_hflx_ice_ptr
 
     ! avoid compiler warnings about dummy arguments not being used
     IF (PRESENT(alb_nir_dif_wtr)) CONTINUE
@@ -594,7 +595,7 @@ CONTAINS
         !$acc data present(fact_qsat_srf, fact_qsat_srf_ptr)
         !$acc parallel loop
         DO i = ics, ice
-          fact_qsat_srf(i) = act_qsat_srf_ptr(i)
+          fact_qsat_srf(i) = fact_qsat_srf_ptr(i)
         END DO
         !$acc end data
       END IF
@@ -674,10 +675,10 @@ CONTAINS
       END IF
       IF (PRESENT(q_snocpymlt)) THEN
         q_snocpymlt_ptr => dsl4jsb_var2D_onChunk(HYDRO_, q_snocpymlt)
-        !$acc data present(q_snocpymlt, q_snocpymlt_ptr, fract_land)
+        !$acc data present(q_snocpymlt, q_snocpymlt_ptr, fact_land)
         !$acc parallel loop
         DO i = ics, ice
-          q_snocpymlt(i) = fact_land(:) * q_snocpymlt_ptr(i)
+          q_snocpymlt(i) = fact_land(i) * q_snocpymlt_ptr(i)
         END DO
         !$acc end data
       END IF
@@ -700,7 +701,7 @@ CONTAINS
         !$acc end data
       END IF
       IF (PRESENT(alb_nir_dir)) THEN
-        alb_nir_lnd => dsl4jsb_var2D_onChunk(RAD_,   alb_nir_lnd)  ! TODO
+        alb_nir_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_,   alb_nir_lnd)  ! TODO
         !$acc data present(alb_nir_dir, alb_nir_lnd_ptr)
         !$acc parallel loop
         DO i = ics, ice
@@ -724,7 +725,7 @@ CONTAINS
           cflux_npp_2_atm_ta_ptr => dsl4jsb_var2D_onChunk(CARBON_,cflux_npp_2_atm_ta)
           cflux_soilresp_2_atm_ta_ptr => dsl4jsb_var2D_onChunk(CARBON_,cflux_soilresp_2_atm_ta)
           cflux_herb_2_atm_ta_ptr => dsl4jsb_var2D_onChunk(CARBON_,cflux_herb_2_atm_ta)
-          !$acc data present(CO2_flux, fract_land, cflux_npp_2_atm_ta_ptr, cflux_soilresp_2_atm_ta_ptr, cflux_herb_2_atm_ta_ptr)
+          !$acc data present(CO2_flux, fact_land, cflux_npp_2_atm_ta_ptr, cflux_soilresp_2_atm_ta_ptr, cflux_herb_2_atm_ta_ptr)
           !$acc parallel loop
           DO i = ics, ice
                                   CO2_flux(i)         = fact_land(i) *                              &
@@ -760,7 +761,7 @@ CONTAINS
         !$acc end data
       END IF
       IF (PRESENT(qsat_lwtr)) THEN
-        qsat_lwtr_ptr => dsl4jsb_var2D_onChunk(SEB_,   qsat_lwtr_ptr)
+        qsat_lwtr_ptr => dsl4jsb_var2D_onChunk(SEB_,   qsat_lwtr)
         !$acc data present(qsat_lwtr, qsat_lwtr_ptr)
         !$acc parallel loop
         DO i = ics, ice
@@ -788,7 +789,7 @@ CONTAINS
       END IF
       IF (PRESENT(latent_hflx_wtr)) THEN
         latent_hflx_wtr_ptr => dsl4jsb_var2D_onChunk(SEB_,   latent_hflx_wtr)
-        !$acc data present(latent_hflx_wtr, latent_hflx_wtr_ptr, fract_lake)
+        !$acc data present(latent_hflx_wtr, latent_hflx_wtr_ptr, fact_lake)
         !$acc parallel loop
         DO i = ics, ice
           latent_hflx_wtr(i)   = fact_lake(i) * latent_hflx_wtr_ptr(i)
@@ -797,7 +798,7 @@ CONTAINS
       END IF
       IF (PRESENT(sensible_hflx_wtr)) THEN
         sensible_hflx_wtr_ptr => dsl4jsb_var2D_onChunk(SEB_,   sensible_hflx_wtr)
-        !$acc data present(sensible_hflx_wtr, sensible_hflx_wtr_ptr, fract_lake)
+        !$acc data present(sensible_hflx_wtr, sensible_hflx_wtr_ptr, fact_lake)
         !$acc parallel loop
         DO i = ics, ice
           sensible_hflx_wtr(i) = fact_lake(i) * sensible_hflx_wtr_ptr(i)
@@ -806,7 +807,7 @@ CONTAINS
       END IF
       IF (PRESENT(evapo_ice)) THEN
         evapo_ice_ptr => dsl4jsb_var2D_onChunk(HYDRO_, evapo_ice)
-        !$acc data present(evapo_ice_ptr, evapo_ice, fract_lake)
+        !$acc data present(evapo_ice_ptr, evapo_ice, fact_lake)
         !$acc parallel loop
         DO i = ics, ice
           evapo_ice(i) = fact_lake(i) * evapo_ice_ptr(i)
@@ -815,7 +816,7 @@ CONTAINS
       END IF
       IF (PRESENT(latent_hflx_ice)) THEN
         latent_hflx_ice_ptr => dsl4jsb_var2D_onChunk(SEB_,   latent_hflx_ice)
-        !$acc data present(latent_hflx_ice, latent_hflx_ice_ptr, fract_lake)
+        !$acc data present(latent_hflx_ice, latent_hflx_ice_ptr, fact_lake)
         !$acc parallel loop
         DO i = ics, ice
           latent_hflx_ice(i) = fact_lake(i) * latent_hflx_ice_ptr(i)
@@ -824,7 +825,7 @@ CONTAINS
       END IF
       IF (PRESENT(sensible_hflx_ice)) THEN
         sensible_hflx_ice_ptr  => dsl4jsb_var2D_onChunk(SEB_,   sensible_hflx_ice)
-        !$acc data present(sensible_hflx_ice_ptr, sensible_hflx_ice, fract_lake)
+        !$acc data present(sensible_hflx_ice_ptr, sensible_hflx_ice, fact_lake)
         !$acc parallel loop
         DO i = ics, ice
           sensible_hflx_ice(i) = fact_lake(i) * sensible_hflx_ice_ptr(i)
@@ -926,7 +927,7 @@ CONTAINS
       END IF
       IF (PRESENT(evapotrans)) THEN
         evapotrans_lnd_ptr => dsl4jsb_var2D_onChunk(HYDRO_, evapotrans_lnd)
-        !$acc data present(evapotrans, evapotrans_lnd_ptr_ptr)
+        !$acc data present(evapotrans, evapotrans_lnd_ptr)
         !$acc parallel loop
         DO i = ics, ice
           evapotrans(i)= evapotrans_lnd_ptr(i)
@@ -971,7 +972,7 @@ CONTAINS
       END IF
       IF (PRESENT(rough_h_srf)) THEN
         rough_h_ptr => dsl4jsb_var2D_onChunk(TURB_,  rough_h)
-        !$acc data present(rough_h_srf, rough_h)
+        !$acc data present(rough_h_srf, rough_h_ptr)
         !$acc parallel loop
         DO i = ics, ice
           rough_h_srf(i) = rough_h_ptr(i)
@@ -1043,7 +1044,7 @@ CONTAINS
                                   CO2_flux(i)           =                                             &
           &                               (   cflux_npp_2_atm_ta_ptr(i)      &
           &                                 + cflux_soilresp_2_atm_ta_ptr(i) &
-          &                                 + cflux_herb_2_atm_ta(i) &
+          &                                 + cflux_herb_2_atm_ta_ptr(i) &
           &                               )
           END DO
           !$acc end data
