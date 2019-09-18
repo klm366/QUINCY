@@ -244,6 +244,11 @@ CONTAINS
         & output_level=MEDIUM,                                               &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
+      !$acc update device(mem%sw_srf_net,mem%swvis_srf_net,                  &
+      !$acc mem%swnir_srf_net,mem%lw_srf_net,mem%rad_srf_net,                &
+      !$acc mem%alb_background, mem%alb_vis,mem%alb_nir,mem%alb_vis_snow,    &
+      !$acc mem%alb_nir_snow)
+
     END IF
 
     ! Additional variables for land tiles
@@ -271,6 +276,7 @@ CONTAINS
         & output_level=MEDIUM, &
         & initval_r=0.0_wp )
 
+      !$acc update device(mem%alb_vis_lnd,mem%alb_nir_lnd)
     END IF
 
     ! Additional variables for soil
@@ -313,6 +319,8 @@ CONTAINS
         & output_level=MEDIUM,                                               &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
+      !$acc update device(mem%alb_vis_soil,mem%alb_nir_soil,            &
+      !$acc mem%alb_vis_mineralsoil,mem%alb_nir_mineralsoil)
     END IF
 
     ! Additional variables for vegetation
@@ -459,6 +467,12 @@ CONTAINS
          & prefix, suffix,                                                                &
          & lrestart=.FALSE., initval_r=0.0_wp )
 
+      !$acc update device(mem%alb_vis_can,mem%alb_nir_can,mem%snow_age, &
+      !$acc mem%sky_view_fract,mem%sky_view_fract_stem,mem%par, &
+      !$acc mem%par_down_mol,mem%faPAR,mem%par_down_mol_nacc,mem%lai_cl, &
+      !$acc mem%par_down_mol_tavg,mem%soil_reflectivity_par,mem%fract_par_direct, &
+      !$acc mem%faPAR_cl,mem%apar_per_lai_cl,mem%apar_per_lai_cl_nacc, &
+      !$acc mem%apar_per_lai_cl_tavg,mem%apar_nacc)
     END IF
 
     ! Additional variables for lakes
@@ -501,6 +515,8 @@ CONTAINS
         & output_level=MEDIUM,                                                &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=AlbedoLakeIceMin )
 
+      !$acc update device(mem%rad_net_lwtr,mem%rad_net_lice, &
+      !$acc mem%albedo_lwtr,mem%albedo_lice)
     END IF
 
   END SUBROUTINE Init_rad_memory
