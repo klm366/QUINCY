@@ -529,7 +529,7 @@ CONTAINS
         !$acc data present(t_srf, t_filt_ptr)
         !$acc parallel loop
         DO i = ics, ice
-          t_srf(i) = t_filt_ptr
+          t_srf(i) = t_filt_ptr(i)
         END DO
         !$acc end data
       END IF
@@ -870,7 +870,7 @@ CONTAINS
       END IF
       IF (PRESENT(s_srf)) THEN
         s_star_ptr => dsl4jsb_var2D_onChunk(SEB_,   s_star)
-        !$acc data present(,s_star)
+        !$acc data present(s_star_ptr,s_srf)
         !$acc parallel loop
         DO i = ics, ice
           s_srf(i)            = s_star_ptr(i)
@@ -1026,7 +1026,7 @@ CONTAINS
           &                                 + cflux_herb_2_atm_ta(i) &
           &                               )
           END DO
-          !$acc end dats
+          !$acc end data
         ELSE
           !$acc kernels default(present)
                                     CO2_flux(:)         = 0._wp
