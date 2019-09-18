@@ -582,19 +582,71 @@ CONTAINS
         END IF
       END IF
 
-      IF (PRESENT(t_lwtr))            t_lwtr(:)            = 0._wp                                   ! Temporary
-      IF (PRESENT(t_lice))            t_lice(:)            = 0._wp                                   ! Temporary
-      IF (PRESENT(qsat_lwtr))         qsat_lwtr(:)         = 0._wp
-      IF (PRESENT(qsat_lice))         qsat_lice(:)         = 0._wp
-      IF (PRESENT(evapo_wtr))         evapo_wtr(:)         = 0._wp
-      IF (PRESENT(latent_hflx_wtr))   latent_hflx_wtr(:)   = 0._wp
-      IF (PRESENT(sensible_hflx_wtr)) sensible_hflx_wtr(:) = 0._wp
-      IF (PRESENT(evapo_ice))         evapo_ice(:)         = 0._wp
-      IF (PRESENT(latent_hflx_ice))   latent_hflx_ice(:)   = 0._wp
-      IF (PRESENT(sensible_hflx_ice)) sensible_hflx_ice(:) = 0._wp
-      IF (PRESENT(ice_fract_lake))    ice_fract_lake(:)    = 0._wp                                   ! Temporary
-      IF (PRESENT(albedo_lwtr))       albedo_lwtr(:)       = 0.07_wp
-      IF (PRESENT(albedo_lice))       albedo_lice(:)       = 0.55_wp
+      IF (PRESENT(t_lwtr)) THEN 
+        !$acc kernels default(present)
+        t_lwtr(:)            = 0._wp                                   ! Temporary
+        !$acc end kernels
+      END IF
+      IF (PRESENT(t_lice)) THEN 
+        !$acc kernels default(present)
+        t_lice(:)            = 0._wp                                   ! Temporary
+        !$acc end kernels
+      END IF
+      IF (PRESENT(qsat_lwtr)) THEN 
+        !$acc kernels default(present)
+        qsat_lwtr(:)         = 0._wp
+        !$acc end kernels
+      END IF
+      IF (PRESENT(qsat_lice)) THEN 
+        !$acc kernels default(present)
+        qsat_lice(:)         = 0._wp
+        !$acc end kernels
+      END IF
+      IF (PRESENT(evapo_wtr)) THEN 
+        !$acc kernels default(present)
+        evapo_wtr(:)         = 0._wp
+        !$acc end kernels
+      END IF
+      IF (PRESENT(latent_hflx_wtr)) THEN
+        !$acc kernels default(present) 
+        latent_hflx_wtr(:)   = 0._wp
+        !$acc end kernels
+      END IF
+      IF (PRESENT(sensible_hflx_wtr)) THEN
+        !$acc kernels default(present)
+        sensible_hflx_wtr(:) = 0._wp
+        !$acc end kernels
+      END IF
+      IF (PRESENT(evapo_ice)) THEN 
+        !$acc kernels default(present)
+        evapo_ice(:)         = 0._wp
+        !$acc end kernels
+      END IF
+      IF (PRESENT(latent_hflx_ice)) THEN
+        !$acc kernels default(present)
+        latent_hflx_ice(:)   = 0._wp
+        !$acc end kernels
+      END IF
+      IF (PRESENT(sensible_hflx_ice)) THEN
+        !$acc kernels default(present)
+        sensible_hflx_ice(:) = 0._wp
+        !$acc end kernels
+      END IF
+      IF (PRESENT(ice_fract_lake)) THEN 
+        !$acc kernels default(present)
+        ice_fract_lake(:)    = 0._wp                                   ! Temporary
+        !$acc end kernels
+      END IF
+      IF (PRESENT(albedo_lwtr)) THEN
+        !$acc kernels default(present)
+        albedo_lwtr(:)       = 0.07_wp
+        !$acc end kernels
+      END IF
+      IF (PRESENT(albedo_lice)) THEN 
+        !$acc kernels default(present)
+        albedo_lice(:)       = 0.55_wp
+        !$acc end kernels
+      END IF
     END IF
 
   END SUBROUTINE update_land2atm
