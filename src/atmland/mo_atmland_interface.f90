@@ -528,20 +528,18 @@ CONTAINS
 
       !$acc data pcreate(fact_lake, fact_land, fract_ptr)
       
-      DO i = ics, ice
-        fact_lake(i) = tile%lcts(i)%fract(i,iblk)
-        fact_land(i) = 1._wp - fact_lake(i)
-        IF (fact_lake(i) > 0._wp) THEN
-          fact_lake(i) = 1._wp / fact_lake(i)
-        ELSE
-          fact_lake(i) = 1._wp
-        END IF
-        IF (fact_land(i) > 0._wp) THEN
-          fact_land(i) = 1._wp / fact_land(i)
-        ELSE
-          fact_land(i) = 1._wp
-        END IF
-      END DO
+      fact_lake(:) = tile%lcts(i)%fract(ics:ice,iblk)
+      fact_land(:) = 1._wp - fact_lake(:)
+      WHERE (fact_lake(:) > 0._wp)
+        fact_lake(:) = 1._wp / fact_lake(:)
+      ELSE WHERE
+        fact_lake(:) = 1._wp
+      END WHERE
+      WHERE (fact_land(:) > 0._wp)
+        fact_land(:) = 1._wp / fact_land(:)
+      ELSE WHERE
+        fact_land(:) = 1._wp
+      END WHERE
       !$acc update device(fact_land, fact_lake)
      
 
