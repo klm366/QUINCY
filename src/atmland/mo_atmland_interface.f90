@@ -528,8 +528,6 @@ CONTAINS
 
       !$acc data pcreate(fact_lake, fact_land, fract_ptr)
       
-      !$acc parallel default(present)
-      !$acc loop
       DO i = ics, ice
         fact_lake(i) = tile%lcts(i)%fract(i,iblk)
         fact_land(i) = 1._wp - fact_lake(i)
@@ -544,7 +542,7 @@ CONTAINS
           fact_land(i) = 1._wp
         END IF
       END DO
-      !$acc end parallel
+      !$acc update device(fact_land, fact_lake)
      
 
       IF (PRESENT(t_srf)) THEN
