@@ -531,7 +531,7 @@ CONTAINS
       !$acc parallel default(present)
       !$acc loop
       DO i = ics, ice
-        fact_lake(i) = tile%lcts(i)%fract(:,iblk)
+        fact_lake(i) = tile%lcts(i)%fract(i,iblk)
         fact_land(i) = 1._wp - fact_lake(i)
         IF (fact_lake(i) > 0._wp) THEN
           fact_lake(i) = 1._wp / fact_lake(i)
