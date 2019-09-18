@@ -373,7 +373,7 @@ CONTAINS
         !$acc data present(q_bcoef_wtr_ptr, q_bcoef_wtr)
         !$acc parallel loop
         DO i = ics, ice
-          dq_bcoef_wtr_ptr(i) = q_bcoef_wtr(i)
+          q_bcoef_wtr_ptr(i) = q_bcoef_wtr(i)
         END DO
         !$acc end data
       END IF
