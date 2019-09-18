@@ -103,100 +103,102 @@ CONTAINS
     dsl4jsb_Get_memory(A2L_)
 
     IF (PRESENT(t_air)) THEN
-      !$acc kernels default(present)
+      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,t_air), t_air)
       dsl4jsb_var2D_onChunk(A2L_,t_air)             = t_air             (:)
       !$acc end kernels
     END IF
     IF (PRESENT(q_air)) THEN
-      !$acc kernels default(present)
+      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,q_air), q_air)
       dsl4jsb_var2D_onChunk(A2L_,q_air)             = q_air             (:)
       !$acc end kernels
     END IF
     IF (PRESENT(rain)) THEN
-      !$acc kernels default(present)
+      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,rain), rain)
       dsl4jsb_var2D_onChunk(A2L_,rain)              = rain              (:)
       !$acc end kernels
     END IF
     IF (PRESENT(snow)) THEN
-      !$acc kernels default(present)
+      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,snow), snow)
       dsl4jsb_var2D_onChunk(A2L_,snow)              = snow              (:)
       !$acc end kernels
     END IF
     IF (PRESENT(wind_air)) THEN
-      !$acc kernels default(present)
+      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,wind_air), wind_air)
       dsl4jsb_var2D_onChunk(A2L_,wind_air)          = wind_air          (:)
       !$acc end kernels
     END IF
     IF (PRESENT(wind_10m)) THEN
-      !$acc kernels default(present)
+      !$acc kernels present(sl4jsb_var2D_onChunk(A2L_,wind_10m), wind_10m)
       dsl4jsb_var2D_onChunk(A2L_,wind_10m)          = wind_10m          (:)
       !$acc end kernels
     END IF
     IF (PRESENT(lw_srf_down)) THEN
-      !$acc kernels default(present)
+      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,lw_srf_down), lw_srf_down)
       dsl4jsb_var2D_onChunk(A2L_,lw_srf_down)       = lw_srf_down       (:)
       !$acc end kernels
     END IF
     IF (PRESENT(swvis_srf_down)) THEN
-      !$acc kernels default(present)
+      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,swvis_srf_down), swvis_srf_down)
       dsl4jsb_var2D_onChunk(A2L_,swvis_srf_down)    = swvis_srf_down    (:)
       !$acc end kernels
     END IF
     IF (PRESENT(swnir_srf_down)) THEN
-      !$acc kernels default(present)
+      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,swnir_srf_down), swnir_srf_down)
       dsl4jsb_var2D_onChunk(A2L_,swnir_srf_down)    = swnir_srf_down    (:)
       !$acc end kernels
     END IF
     IF (PRESENT(swpar_srf_down)) THEN
-      !$acc kernels default(present)
+      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,swpar_srf_down), swpar_srf_down)
       dsl4jsb_var2D_onChunk(A2L_,swpar_srf_down)    = swpar_srf_down    (:)
       !$acc end kernels
     END IF
     IF (PRESENT(fract_par_diffuse)) THEN
-      !$acc kernels default(present)
+      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,fract_par_diffuse), fract_par_diffuse)
       dsl4jsb_var2D_onChunk(A2L_,fract_par_diffuse)  = fract_par_diffuse  (:)
       !$acc end kernels
     END IF
     IF (PRESENT(press_srf)) THEN
-      !$acc kernels default(present)
+      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,press_srf), press_srf)
       dsl4jsb_var2D_onChunk(A2L_,press_srf)         = press_srf         (:)
       !$acc end kernels
     END IF
     IF (PRESENT(drag_srf)) THEN
-      !$acc kernels default(present)
+      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,drag_srf), drag_srf)
       dsl4jsb_var2D_onChunk(A2L_,drag_srf)          = drag_srf          (:)
       !$acc end kernels
     END IF
     IF (PRESENT(t_acoef)) THEN
-      !$acc kernels default(present)
+      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,t_acoef), t_acoef)
       dsl4jsb_var2D_onChunk(A2L_,t_acoef)           = t_acoef           (:)
       !$acc end kernels
     END IF
     IF (PRESENT(t_bcoef)) THEN
+      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,t_bcoef), t_bcoef)
       dsl4jsb_var2D_onChunk(A2L_,t_bcoef)           = t_bcoef           (:)
       !$acc end kernels
     END IF
     IF (PRESENT(q_acoef)) THEN
-      !$acc kernels default(present)
+      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,q_acoef), q_acoef)
       dsl4jsb_var2D_onChunk(A2L_,q_acoef)           = q_acoef           (:)
       !$acc end kernels
     END IF
     IF (PRESENT(q_bcoef)) THEN
-      !$acc kernels default(present)
+      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,q_bcoef), q_bcoef)
       dsl4jsb_var2D_onChunk(A2L_,q_bcoef)           = q_bcoef           (:)
       !$acc end kernels
     END IF
     IF (PRESENT(pch)) THEN
-      !$acc kernels default(present)
+      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,pch), pch)
       dsl4jsb_var2D_onChunk(A2L_,pch)               = pch               (:)
       !$acc end kernels
     END IF
     IF (PRESENT(cos_zenith_angle)) THEN
-      !$acc kernels default(present)
+      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,cos_zenith_angle), cos_zenith_angle)
       dsl4jsb_var2D_onChunk(A2L_,cos_zenith_angle)  = cos_zenith_angle  (:)
       !$acc end kernels
     END IF
     IF (PRESENT(CO2_air)) THEN
+      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_, CO2_air), CO2_air, dsl4jsb_var2D_onChunk(A2L_, CO2_air_mol))
       dsl4jsb_var2D_onChunk(A2L_, CO2_air) = CO2_air(:)
       ! Convert CO2 mass mixing ratio [kg/kg] to particle mixing ratio [mol/mol]
       dsl4jsb_var2D_onChunk(A2L_, CO2_air_mol) = CO2_air(:) * molarMassDryAir / molarMassCO2
@@ -206,52 +208,52 @@ CONTAINS
     IF (tile%contains_lake) THEN
 
       IF (PRESENT(drag_wtr)) THEN
-        !$acc kernels default(present)
+        !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,drag_wtr), drag_wtr)
         dsl4jsb_var2D_onChunk(A2L_,drag_wtr)          = drag_wtr          (:)
         !$acc end kernels
       END IF
       IF (PRESENT(drag_ice)) THEN
-        !$acc kernels default(present)
+        !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,drag_ice), drag_ice)
         dsl4jsb_var2D_onChunk(A2L_,drag_ice)          = drag_ice          (:)
         !$acc end kernels
       END IF
       IF (PRESENT(t_acoef_wtr)) THEN
-        !$acc kernels default(present)
+        !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,t_acoef_wtr), t_acoef_wtr)
         dsl4jsb_var2D_onChunk(A2L_,t_acoef_wtr)       = t_acoef_wtr       (:)
         !$acc end kernels
       END IF
       IF (PRESENT(t_bcoef_wtr)) THEN
-        !$acc kernels default(present)
+        !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,t_bcoef_wtr), t_bcoef_wtr)
         dsl4jsb_var2D_onChunk(A2L_,t_bcoef_wtr)       = t_bcoef_wtr       (:)
         !$acc end kernels
       END IF
       IF (PRESENT(q_acoef_wtr)) THEN
-        !$acc kernels default(present)
+        !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,q_acoef_wtr), q_acoef_wtr)
         dsl4jsb_var2D_onChunk(A2L_,q_acoef_wtr)       = q_acoef_wtr       (:)
         !$acc end kernels
       END IF
       IF (PRESENT(q_bcoef_wtr)) THEN
-        !$acc kernels default(present)
+        !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,q_bcoef_wtr), q_bcoef_wtr)
         dsl4jsb_var2D_onChunk(A2L_,q_bcoef_wtr)       = q_bcoef_wtr       (:)
         !$acc end kernels
       END IF
       IF (PRESENT(t_acoef_ice)) THEN
-        !$acc kernels default(present)
+        !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,t_acoef_ice), t_acoef_ice)
         dsl4jsb_var2D_onChunk(A2L_,t_acoef_ice)       = t_acoef_ice       (:)
         !$acc end kernels
       END IF
       IF (PRESENT(t_bcoef_ice)) THEN
-        !$acc kernels default(present)
+        !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,t_bcoef_ice), t_bcoef_ice)
         dsl4jsb_var2D_onChunk(A2L_,t_bcoef_ice)       = t_bcoef_ice       (:)
         !$acc end kernels
       END IF
       IF (PRESENT(q_acoef_ice)) THEN
-        !$acc kernels default(present)
+        !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,q_acoef_ice), q_acoef_ice)
         dsl4jsb_var2D_onChunk(A2L_,q_acoef_ice)       = q_acoef_ice       (:)
         !$acc end kernels
       END IF
       IF (PRESENT(q_bcoef_ice)) THEN
-        !$acc kernels default(present)
+        !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,q_bcoef_ice), q_bcoef_ice)
         dsl4jsb_var2D_onChunk(A2L_,q_bcoef_ice)       = q_bcoef_ice       (:)
         !$acc end kernels
       END IF
