@@ -177,6 +177,8 @@ CONTAINS
       mem%no_of_vars = pos_of_var
     END IF
 
+    !$acc update device(var%ptr)
+
   END SUBROUTINE jsb_add_var_list_element_r2d
 
   SUBROUTINE jsb_add_var_list_element_r3d(mem, name, var,        &
@@ -307,6 +309,8 @@ CONTAINS
       mem%vars(pos_of_var)%p => var
       mem%no_of_vars = pos_of_var
     END IF
+
+    !$acc update device(var%ptr)
 
   END SUBROUTINE jsb_add_var_list_element_r3d
 
