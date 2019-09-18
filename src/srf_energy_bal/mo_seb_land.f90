@@ -253,8 +253,7 @@ CONTAINS
                                pseudo_soil_temp(:)  )   ! InOut (for summer-, evergreen and crop)
 
     ! Save old surface temperature and saturation spec. humidity
-    !$claw expand 
-    !parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_1 tile_name=tile%name
+    !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_1 tile_name=tile%name
     t_unfilt_old(:) = t_unfilt(:)
     t_old   (:) = t(:)
     ! Temporary fix for temperatures over ocean getting too warm or too cold, leading to crash in convect_tables

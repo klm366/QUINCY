@@ -245,7 +245,7 @@ CONTAINS
     ! Go
 
     !$claw acc data create(lat, canopy_bound_lai)
-    !$claw acc update device(lat, canopy_bound_lai)
+    !$claw acc update device(lat, canopy_bound_lai) ! LOCAL VARIABLE
 
     CALL inquire_declination(declination) ! R: do not put this in elemental procedure as it would not be pure...
                                           ! e.g. declination = 0.006918_wp
