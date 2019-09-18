@@ -86,8 +86,12 @@ CONTAINS
     INTEGER                                          :: nsoil_sb      !< number of soil layers as used/defined by the SB_ process
     REAL(wp), ALLOCATABLE, DIMENSION(:,:)            :: hlp1, &
                                                         theta_pwp_sl, theta_fc_sl, theta_sat_sl
+    REAL(wp), ALLOCATABLE, DIMENSION(:,:)            :: hlp_sand_sl, hlp_clay_sl, hlp_silt_sl
+    REAL(wp), ALLOCATABLE, DIMENSION(:,:)            :: sand_original_sl, clay_original_sl, silt_original_sl
     REAL(wp), DIMENSION(options%nc)                  :: soil_awc, &
                                                         hlp2
+    REAL(wp)                                         :: min_prop_soil_texture, &
+                                                        max_prop_soil_texture
     REAL(wp)                                         :: site_longitude
     CHARACTER(len=3)                                 :: site_ID_spp1685
     INTEGER                                          :: isoil, ichunk
@@ -156,6 +160,12 @@ CONTAINS
     ALLOCATE(theta_pwp_sl(nc, nsoil_sb))
     ALLOCATE(theta_fc_sl(nc, nsoil_sb))
     ALLOCATE(theta_sat_sl(nc, nsoil_sb))
+    ALLOCATE(hlp_sand_sl(nc, nsoil_sb))
+    ALLOCATE(hlp_clay_sl(nc, nsoil_sb))
+    ALLOCATE(hlp_silt_sl(nc, nsoil_sb))
+    ALLOCATE(sand_original_sl(nc, nsoil_sb))
+    ALLOCATE(clay_original_sl(nc, nsoil_sb))
+    ALLOCATE(silt_original_sl(nc, nsoil_sb))
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var3D_onChunk(VEG_,  root_fraction_sl)
     ! ---------------------------
@@ -186,10 +196,22 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SSE_, clay_sl)
 
 
+
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
+
+    !> 0.9 init local variables
+    !!  
+    min_prop_soil_texture = 0.05_wp
+    max_prop_soil_texture = 1.0_wp - (2.0_wp * min_prop_soil_texture)
+    hlp_sand_sl(:,:) = 0.0_wp
+    hlp_clay_sl(:,:) = 0.0_wp
+    hlp_silt_sl(:,:) = 0.0_wp
+    sand_original_sl(:,:) = 0.0_wp
+    clay_original_sl(:,:) = 0.0_wp
+    silt_original_sl(:,:) = 0.0_wp
 
     !> 1.0 Total soil depth until bedrock
     !!  code from jsbach4 (hydro init)
@@ -322,6 +344,97 @@ CONTAINS
     ENDIF   ! flag_spp1685
 
 
+    !> 4.3 ensure a minimum proportion of 5 % for sand, clay and silt
+    !! this is to ensure applying the empirical functions by Saxton within the range of the texture they were designed for \n
+    !!   for details see ticket #560
+    !! 
+    !! brief explanation: for low proportions of clay (< 1.8 %) and large proportions of sand (> 60 %) 
+    !!   theta_pwp_sl(:,:) is likely to become negative; see section 5.1 "fractional water holding capacity at permanent wilting point"
+    sand_original_sl(:,:) = sand_sl(:,:)
+    clay_original_sl(:,:) = clay_sl(:,:)
+    silt_original_sl(:,:) = silt_sl(:,:)
+    WHERE (sand_sl(:,:) < min_prop_soil_texture .AND. clay_sl(:,:) < min_prop_soil_texture) 
+      sand_sl(:,:)     = min_prop_soil_texture
+      clay_sl(:,:)     = min_prop_soil_texture
+      silt_sl(:,:)     = max_prop_soil_texture
+    ELSEWHERE (sand_sl(:,:) < min_prop_soil_texture .AND. silt_sl(:,:) < min_prop_soil_texture)
+      sand_sl(:,:)     = min_prop_soil_texture
+      silt_sl(:,:)     = min_prop_soil_texture
+      clay_sl(:,:)     = max_prop_soil_texture
+    ELSEWHERE (clay_sl(:,:) < min_prop_soil_texture .AND. silt_sl(:,:) < min_prop_soil_texture)
+      clay_sl(:,:)     = min_prop_soil_texture
+      silt_sl(:,:)     = min_prop_soil_texture
+      sand_sl(:,:)     = max_prop_soil_texture
+    ELSEWHERE (sand_sl(:,:) < min_prop_soil_texture)
+      hlp_sand_sl(:,:) = min_prop_soil_texture - sand_sl(:,:)
+      ! proportion of hlp_sand_sl(:,:) to be drawn from clay and silt
+      hlp_clay_sl(:,:) = clay_sl(:,:) + (1.0_wp - (clay_sl(:,:) + silt_sl(:,:))) / 2.0_wp
+      hlp_silt_sl(:,:) = silt_sl(:,:) + (1.0_wp - (clay_sl(:,:) + silt_sl(:,:))) / 2.0_wp
+      ! where new clay proportion in soil would be less than "min_prop_soil_texture + 0.01" use only from silt
+      WHERE     ( (clay_sl(:,:) - hlp_sand_sl(:,:) * hlp_clay_sl(:,:)) < (min_prop_soil_texture + 0.01) )
+        silt_sl(:,:) = silt_sl(:,:) - hlp_sand_sl(:,:)
+      ! where new silt proportion in soil would be less than "min_prop_soil_texture + 0.01" use only from clay
+      ELSEWHERE ( (silt_sl(:,:) - hlp_sand_sl(:,:) * hlp_silt_sl(:,:)) < (min_prop_soil_texture + 0.01) )
+        clay_sl(:,:) = clay_sl(:,:) - hlp_sand_sl(:,:)
+      ELSEWHERE
+        clay_sl(:,:) = clay_sl(:,:) - hlp_sand_sl(:,:) * hlp_clay_sl(:,:)
+        silt_sl(:,:) = silt_sl(:,:) - hlp_sand_sl(:,:) * hlp_silt_sl(:,:)
+      ENDWHERE
+      sand_sl(:,:) = min_prop_soil_texture
+    ELSEWHERE (clay_sl(:,:) < min_prop_soil_texture)
+      hlp_clay_sl(:,:) = min_prop_soil_texture - clay_sl(:,:)
+      ! proportion of hlp_clay_sl(:,:) to be drawn from sand and silt
+      hlp_sand_sl(:,:) = sand_sl(:,:) + (1.0_wp - (sand_sl(:,:) + silt_sl(:,:))) / 2.0_wp
+      hlp_silt_sl(:,:) = silt_sl(:,:) + (1.0_wp - (sand_sl(:,:) + silt_sl(:,:))) / 2.0_wp
+      ! where new sand proportion in soil would be less than "min_prop_soil_texture + 0.01" use only from silt
+      WHERE     ( (sand_sl(:,:) - hlp_clay_sl(:,:) * hlp_sand_sl(:,:)) < (min_prop_soil_texture + 0.01) )
+        silt_sl(:,:) = silt_sl(:,:) - hlp_clay_sl(:,:)
+      ! where new silt proportion in soil would be less than "min_prop_soil_texture + 0.01" use only from sand
+      ELSEWHERE ( (silt_sl(:,:) - hlp_clay_sl(:,:) * hlp_silt_sl(:,:)) < (min_prop_soil_texture + 0.01) )
+        sand_sl(:,:) = sand_sl(:,:) - hlp_clay_sl(:,:)
+      ELSEWHERE
+        sand_sl(:,:) = sand_sl(:,:) - hlp_clay_sl(:,:) * hlp_sand_sl(:,:)
+        silt_sl(:,:) = silt_sl(:,:) - hlp_clay_sl(:,:) * hlp_silt_sl(:,:)
+      ENDWHERE
+      clay_sl(:,:) = min_prop_soil_texture      
+    ELSEWHERE (silt_sl(:,:) < min_prop_soil_texture)
+      hlp_silt_sl(:,:) = min_prop_soil_texture - silt_sl(:,:)
+      ! proportion of hlp_silt_sl(:,:) to be drawn from sand and silt
+      hlp_sand_sl(:,:) = sand_sl(:,:) + (1.0_wp - (sand_sl(:,:) + clay_sl(:,:))) / 2.0_wp
+      hlp_clay_sl(:,:) = clay_sl(:,:) + (1.0_wp - (sand_sl(:,:) + clay_sl(:,:))) / 2.0_wp
+      ! where new sand proportion in soil would be less than "min_prop_soil_texture + 0.01" use only from clay
+      WHERE     ( (sand_sl(:,:) - hlp_silt_sl(:,:) * hlp_sand_sl(:,:)) < (min_prop_soil_texture + 0.01) )
+        clay_sl(:,:) = clay_sl(:,:) - hlp_silt_sl(:,:)
+      ! where new clay proportion in soil would be less than "min_prop_soil_texture + 0.01" use only from sand
+      ELSEWHERE ( (clay_sl(:,:) - hlp_silt_sl(:,:) * hlp_clay_sl(:,:)) < (min_prop_soil_texture + 0.01) )
+        sand_sl(:,:) = sand_sl(:,:) - hlp_silt_sl(:,:)
+      ELSEWHERE
+        sand_sl(:,:) = sand_sl(:,:) - hlp_silt_sl(:,:) * hlp_sand_sl(:,:)
+        clay_sl(:,:) = clay_sl(:,:) - hlp_silt_sl(:,:) * hlp_clay_sl(:,:)
+      ENDWHERE
+      silt_sl(:,:) = min_prop_soil_texture     
+    ENDWHERE
+
+    !> 4.3.1 ensure all adds up to exactly 1.0_wp
+    !! 
+    silt_sl(:,:) = 1.0_wp - (sand_sl(:,:) + clay_sl(:,:))
+
+    !> 4.3.2 output changes in soil texture
+    !! 
+    IF (SUM(sand_sl(:,:) - sand_original_sl(:,:)) > eps8) THEN
+      CALL message(TRIM(routine), ' section 4.3.  Modified the soil texture sand input.')
+      print*,TRIM(routine), " section 4.3.  Modified the soil texture sand input: ", sand_sl(:,:) - sand_original_sl(:,:)
+    ENDIF
+    IF (SUM(clay_sl(:,:) - clay_original_sl(:,:)) > eps8) THEN
+      CALL message(TRIM(routine), ' section 4.3.  Modified the soil texture clay input.')
+      print*,TRIM(routine), " section 4.3.  Modified the soil texture clay input: ", clay_sl(:,:) - clay_original_sl(:,:)
+    ENDIF
+    IF (SUM(silt_sl(:,:) - silt_original_sl(:,:)) > eps8) THEN
+      CALL message(TRIM(routine), ' section 4.3.  Modified the soil texture silt input.')
+      print*,TRIM(routine), " section 4.3.  Modified the soil texture silt input: ", silt_sl(:,:) - silt_original_sl(:,:)
+    ENDIF
+    
+    
     !> 5.0 soil hydraulic properties, based on Saxton and Rawls 2006, SSSA
     !! 
 
