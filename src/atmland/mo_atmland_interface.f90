@@ -459,19 +459,39 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_land2atm'
 
-    dsl4jsb_Real2D_onChunk ::  &
-      & t_srf_ptr, t_eff_srf_ptr, qsat_srf_ptr, s_srf_ptr,                               &
-      & fact_q_air_ptr, fact_qsat_srf_ptr, evapopot_ptr,                                &
-      & evapotrans_ptr, latent_hflx_ptr, sensible_hflx_ptr, grnd_hflx_ptr, grnd_hcap_ptr, &
-      & rough_h_srf_ptr, rough_m_srf_ptr, q_snocpymlt_ptr,                              &
-      & t_lwtr_ptr, t_lice_ptr, qsat_lwtr_ptr, qsat_lice_ptr,                            &
-      & evapo_wtr_ptr, latent_hflx_wtr_ptr, sensible_hflx_wtr_ptr,                      &
-      & evapo_ice_ptr, latent_hflx_ice_ptr, sensible_hflx_ice_ptr,                      &
-      & ice_fract_lake_ptr,                                                           &
-      & alb_vis_dir_wtr_ptr, alb_vis_dif_wtr_ptr, alb_nir_dir_wtr_ptr,                  &
-      & alb_nir_dif_wtr_ptr, albedo_lwtr_ptr, albedo_lice_ptr,                          &
-      & alb_vis_dir_ptr, alb_nir_dir_ptr, alb_vis_dif_ptr, alb_nir_dif_ptr,              &
-      & CO2_flux_ptr
+    dsl4jsb_Real2D_onChunk :: &
+      & t_filt_ptr, &
+      & t_eff_ptr, &
+      & qsat_star_ptr, &
+      & s_star_ptr, &
+      & fact_q_air_ptr, &
+      & fact_qsat_srf_ptr, &
+      & evapopot_ptr, &
+      & evapotrans_lnd_ptr, &
+      & latent_hflx_lnd_ptr, &
+      & sensible_hflx_lnd_ptr, &
+      & forc_hflx_ptr, &
+      & heat_cap_old_ptr, &
+      & rough_h_ptr, &
+      & rough_m_ptr, &
+      & q_snocpymlt_ptr, &
+      & alb_vis_lnd_ptr, &
+      & alb_nir_lnd_ptr, &
+      & cflux_npp_2_atm_ta_ptr, &
+      & cflux_soilresp_2_atm_ta_ptr, &
+      & cflux_herb_2_atm_ta_ptr, &
+      & t_lwtr_ptr, &
+      & t_lice_ptr, &
+      & qsat_lwtr_ptr, &
+      & qsat_lice_ptr, &
+      & evapo_wtr_ptr, &
+      & latent_hflx_wtr_ptr, &
+      & sensible_hflx_wtr_ptr, &
+      & evapo_ice_ptr, &
+      & latent_hflx_ice_ptr, &
+      & fract_lice_ptr, &
+      & albedo_lwtr_ptr, &
+      & albedo_lice_ptr
 
     ! avoid compiler warnings about dummy arguments not being used
     IF (PRESENT(alb_nir_dif_wtr)) CONTINUE
