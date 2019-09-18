@@ -492,7 +492,8 @@ CONTAINS
       & fract_lice_ptr, &
       & albedo_lwtr_ptr, &
       & albedo_lice_ptr, &
-      & sensible_hflx_ice_ptr
+      & sensible_hflx_ice_ptr, &
+      & fract_ptr
 
     ! avoid compiler warnings about dummy arguments not being used
     IF (PRESENT(alb_nir_dif_wtr)) CONTINUE
@@ -525,11 +526,12 @@ CONTAINS
         IF (tile%lcts(i)%id == LAKE_TYPE) EXIT
       END DO
 
+      !$acc data pcreate(fact_lake, fact_land, fract_ptr)
       
       !$acc parallel default(present)
       !$acc loop
       DO i = ics, ice
-        fact_lake(i) = tile%lcts(i)%fract(i,iblk)
+        fact_lake(i) = tile%lcts(i)%fract(:,iblk)
         fact_land(i) = 1._wp - fact_lake(i)
         IF (fact_lake(i) > 0._wp) THEN
           fact_lake(i) = 1._wp / fact_lake(i)
@@ -859,7 +861,7 @@ CONTAINS
         END DO
         !$acc end data
       END IF
-
+      !$acc end data
     ELSE
 
       IF (PRESENT(t_srf)) THEN
