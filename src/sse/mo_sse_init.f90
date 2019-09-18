@@ -421,19 +421,19 @@ CONTAINS
 
     !> 4.3.2 output changes in soil texture
     !! 
-    IF (SUM(sand_sl(:,:) - sand_original_sl(:,:)) > eps8) THEN
+    IF (ABS(SUM(sand_sl(:,:) - sand_original_sl(:,:))) > eps8) THEN
       CALL message(TRIM(routine), ' section 4.3.  Modified the soil texture sand input.')
       print*,TRIM(routine), " section 4.3.  Modified the soil texture sand input: ", sand_sl(:,:) - sand_original_sl(:,:)
     ENDIF
-    IF (SUM(clay_sl(:,:) - clay_original_sl(:,:)) > eps8) THEN
+    IF (ABS(SUM(clay_sl(:,:) - clay_original_sl(:,:))) > eps8) THEN
       CALL message(TRIM(routine), ' section 4.3.  Modified the soil texture clay input.')
       print*,TRIM(routine), " section 4.3.  Modified the soil texture clay input: ", clay_sl(:,:) - clay_original_sl(:,:)
     ENDIF
-    IF (SUM(silt_sl(:,:) - silt_original_sl(:,:)) > eps8) THEN
+    IF (ABS(SUM(silt_sl(:,:) - silt_original_sl(:,:))) > eps8) THEN
       CALL message(TRIM(routine), ' section 4.3.  Modified the soil texture silt input.')
       print*,TRIM(routine), " section 4.3.  Modified the soil texture silt input: ", silt_sl(:,:) - silt_original_sl(:,:)
     ENDIF
-    
+
     
     !> 5.0 soil hydraulic properties, based on Saxton and Rawls 2006, SSSA
     !! 
