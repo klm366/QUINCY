@@ -88,9 +88,44 @@ CONTAINS
 
     dsl4jsb_Def_memory(A2L_)
 
-    INTEGER ::  iblk, ics, ice
+    INTEGER ::  iblk, ics, ice, i
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_atm2land'
+
+    dsl4jsb_Real2D_onChunk ::  &
+      & t_air_ptr, &
+      & q_air_ptr, & 
+      & rain_ptr, &
+      & snow_ptr, &
+      & wind_air_ptr, &
+      & wind_10m_ptr, &
+      & lw_srf_down_ptr, &
+      & swvis_srf_down_ptr, &
+      & swnir_srf_down_ptr, &
+      & swpar_srf_down_ptr, &
+      & fract_par_diffuse_ptr, &
+      & press_srf_ptr, &
+      & drag_srf_ptr, &
+      & t_acoef_ptr, &
+      & t_bcoef_ptr, &
+      & q_acoef_ptr, &
+      & q_bcoef_ptr, &
+      & pch_ptr, &
+      & cos_zenith_angle_ptr, &
+      & CO2_air_ptr, &
+      & CO2_air_mol_ptr, &
+      & drag_wtr_ptr, &
+      & drag_ice_ptr, &
+      & t_acoef_wtr_ptr, &
+      & t_bcoef_wtr_ptr, &
+      & q_acoef_wtr_ptr, &
+      & q_bcoef_wtr_ptr, &
+      & t_acoef_ice_ptr, &
+      & t_bcoef_ice_ptr, &
+      & q_acoef_ice_ptr, &
+      & q_bcoef_ice_ptr
+
+
 
     IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
 
@@ -103,159 +138,280 @@ CONTAINS
     dsl4jsb_Get_memory(A2L_)
 
     IF (PRESENT(t_air)) THEN
-      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,t_air), t_air)
-      dsl4jsb_var2D_onChunk(A2L_,t_air)             = t_air             (:)
-      !$acc end kernels
+      t_air_ptr => dsl4jsb_var2D_onChunk(A2L_,t_air)
+      !$acc data present(t_air_ptr, t_air)
+      !$acc parallel loop
+      DO i = ics, ice
+        t_air_ptr(i) = t_air(i)
+      END DO
+      !$acc end data
     END IF
     IF (PRESENT(q_air)) THEN
-      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,q_air), q_air)
-      dsl4jsb_var2D_onChunk(A2L_,q_air)             = q_air             (:)
-      !$acc end kernels
+      q_air_ptr => dsl4jsb_var2D_onChunk(A2L_,q_air)
+      !$acc data present(q_air_ptr, q_air)
+      !$acc parallel loop
+      DO i = ics, ice
+        q_air_ptr(i) = q_air(i)
+      END DO
+      !$acc end data
     END IF
     IF (PRESENT(rain)) THEN
-      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,rain), rain)
-      dsl4jsb_var2D_onChunk(A2L_,rain)              = rain              (:)
-      !$acc end kernels
+      rain_ptr => dsl4jsb_var2D_onChunk(A2L_,rain)
+      !$acc data present(rain_ptr, rain)
+      !$acc parallel loop
+      DO i = ics, ice
+        rain_ptr(i)= rain(i)
+      END DO
+      !$acc end data
     END IF
     IF (PRESENT(snow)) THEN
-      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,snow), snow)
-      dsl4jsb_var2D_onChunk(A2L_,snow)              = snow              (:)
-      !$acc end kernels
+      snow_ptr => dsl4jsb_var2D_onChunk(A2L_,snow)
+      !$acc data present(snow_ptr, snow)
+      !$acc parallel loop
+      DO i = ics, ice
+        snow_ptr(i) = snow(i)
+      END DO
+      !$acc end data
     END IF
     IF (PRESENT(wind_air)) THEN
-      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,wind_air), wind_air)
-      dsl4jsb_var2D_onChunk(A2L_,wind_air)          = wind_air          (:)
-      !$acc end kernels
+      wind_air_ptr => dsl4jsb_var2D_onChunk(A2L_,wind_air)
+      !$acc data present(wind_air_ptr, wind_air)
+      !$acc parallel loop
+      DO i = ics, ice
+        wind_air_ptr(i) = wind_air(i)
+      END DO
+      !$acc end data
     END IF
     IF (PRESENT(wind_10m)) THEN
-      !$acc kernels present(sl4jsb_var2D_onChunk(A2L_,wind_10m), wind_10m)
-      dsl4jsb_var2D_onChunk(A2L_,wind_10m)          = wind_10m          (:)
-      !$acc end kernels
+      wind_10m_ptr => dsl4jsb_var2D_onChunk(A2L_,wind_10m)
+      !$acc data present(wind_10m_ptr, wind_10m)
+      !$acc parallel loop
+      DO i = ics, ice
+        wind_10m_ptr(i) = wind_10m(i)
+      END DO
+      !$acc end data
     END IF
     IF (PRESENT(lw_srf_down)) THEN
-      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,lw_srf_down), lw_srf_down)
-      dsl4jsb_var2D_onChunk(A2L_,lw_srf_down)       = lw_srf_down       (:)
-      !$acc end kernels
+      lw_srf_down_ptr => dsl4jsb_var2D_onChunk(A2L_,lw_srf_down)
+      !$acc data present(lw_srf_down_ptr, lw_srf_down)
+      !$acc parallel loop
+      DO i = ics, ice
+        lw_srf_down_ptr(i) = lw_srf_down(i)
+      END DO
+      !$acc end data
     END IF
     IF (PRESENT(swvis_srf_down)) THEN
-      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,swvis_srf_down), swvis_srf_down)
-      dsl4jsb_var2D_onChunk(A2L_,swvis_srf_down)    = swvis_srf_down    (:)
-      !$acc end kernels
+      swvis_srf_down_ptr => dsl4jsb_var2D_onChunk(A2L_,swvis_srf_down)
+      !$acc data present(swvis_srf_down_ptr, swvis_srf_down)
+      !$acc parallel loop
+      DO i = ics, ice
+        swvis_srf_down_ptr(i) = swvis_srf_down(i)
+      END DO
+      !$acc end data
     END IF
     IF (PRESENT(swnir_srf_down)) THEN
-      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,swnir_srf_down), swnir_srf_down)
-      dsl4jsb_var2D_onChunk(A2L_,swnir_srf_down)    = swnir_srf_down    (:)
-      !$acc end kernels
+      swnir_srf_down_ptr => dsl4jsb_var2D_onChunk(A2L_,swnir_srf_down)
+      !$acc data present(swnir_srf_down_ptr, swnir_srf_down)
+      !$acc parallel loop
+      DO i = ics, ice
+        swnir_srf_down_ptr(i) = swnir_srf_down(i)
+      END DO
+      !$acc end data
     END IF
     IF (PRESENT(swpar_srf_down)) THEN
-      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,swpar_srf_down), swpar_srf_down)
-      dsl4jsb_var2D_onChunk(A2L_,swpar_srf_down)    = swpar_srf_down    (:)
-      !$acc end kernels
+      swpar_srf_down_ptr => dsl4jsb_var2D_onChunk(A2L_,swpar_srf_down)
+      !$acc data present(swpar_srf_down_ptr, swpar_srf_down)
+      !$acc parallel loop
+      DO i = ics, ice
+        swpar_srf_down_ptr(i) = swpar_srf_down(i)
+      END DO
+      !$acc end data
     END IF
     IF (PRESENT(fract_par_diffuse)) THEN
-      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,fract_par_diffuse), fract_par_diffuse)
-      dsl4jsb_var2D_onChunk(A2L_,fract_par_diffuse)  = fract_par_diffuse  (:)
-      !$acc end kernels
+      fract_par_diffuse_ptr => dsl4jsb_var2D_onChunk(A2L_,fract_par_diffuse)
+      !$acc data present(fract_par_diffuse_ptr, fract_par_diffuse)
+      !$acc parallel loop
+      DO i = ics, ice
+        fract_par_diffuse_ptr(i)  = fract_par_diffuse(i)
+      END DO
+      !$acc end data
     END IF
     IF (PRESENT(press_srf)) THEN
-      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,press_srf), press_srf)
-      dsl4jsb_var2D_onChunk(A2L_,press_srf)         = press_srf         (:)
-      !$acc end kernels
+      press_srf_ptr => dsl4jsb_var2D_onChunk(A2L_,press_srf)
+      !$acc data present(press_srf_ptr, press_srf)
+      !$acc parallel loop
+      DO i = ics, ice
+        press_srf_ptr(i) = press_srf(i)
+      END DO
+      !$acc end data
     END IF
     IF (PRESENT(drag_srf)) THEN
-      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,drag_srf), drag_srf)
-      dsl4jsb_var2D_onChunk(A2L_,drag_srf)          = drag_srf          (:)
-      !$acc end kernels
+      drag_srf_ptr => dsl4jsb_var2D_onChunk(A2L_,drag_srf)
+      !$acc data present(drag_srf_ptr, drag_srf)
+      !$acc parallel loop
+      DO i = ics, ice
+        drag_srf_ptr(i) = drag_srf(i)
+      END DO
+      !$acc end data
     END IF
     IF (PRESENT(t_acoef)) THEN
-      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,t_acoef), t_acoef)
-      dsl4jsb_var2D_onChunk(A2L_,t_acoef)           = t_acoef           (:)
-      !$acc end kernels
+      t_acoef_ptr => dsl4jsb_var2D_onChunk(A2L_,t_acoef)
+      !$acc data present(t_acoef_ptr, t_acoef)
+      !$acc parallel loop
+      DO i = ics, ice
+        t_acoef_ptr(i) = t_acoef(i)
+      END DO
+      !$acc end data
     END IF
     IF (PRESENT(t_bcoef)) THEN
-      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,t_bcoef), t_bcoef)
-      dsl4jsb_var2D_onChunk(A2L_,t_bcoef)           = t_bcoef           (:)
-      !$acc end kernels
+      t_bcoef_ptr => dsl4jsb_var2D_onChunk(A2L_,t_bcoef)
+      !$acc data present(t_bcoef_ptr, t_bcoef)
+      !$acc parallel loop
+      DO i = ics, ice
+        t_bcoef_ptr(i) = t_bcoef(i)
+      END DO
+      !$acc end data
     END IF
     IF (PRESENT(q_acoef)) THEN
-      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,q_acoef), q_acoef)
-      dsl4jsb_var2D_onChunk(A2L_,q_acoef)           = q_acoef           (:)
-      !$acc end kernels
+      q_acoef_ptr => dsl4jsb_var2D_onChunk(A2L_,q_acoef)
+      !$acc data present(q_acoef_ptr, q_acoef)
+      !$acc parallel loop
+      DO i = ics, ice
+        q_acoef_ptr(i) = q_acoef(i)
+      END DO
+      !$acc end data
     END IF
     IF (PRESENT(q_bcoef)) THEN
-      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,q_bcoef), q_bcoef)
-      dsl4jsb_var2D_onChunk(A2L_,q_bcoef)           = q_bcoef           (:)
-      !$acc end kernels
+      q_bcoef_ptr => dsl4jsb_var2D_onChunk(A2L_,q_bcoef)
+      !$acc data present(q_bcoef_ptr, q_bcoef)
+      !$acc parallel loop
+      DO i = ics, ice
+        q_bcoef_ptr(i) = q_bcoef(i)
+      END DO
+      !$acc end data
     END IF
     IF (PRESENT(pch)) THEN
-      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,pch), pch)
-      dsl4jsb_var2D_onChunk(A2L_,pch)               = pch               (:)
-      !$acc end kernels
+      pch_ptr => dsl4jsb_var2D_onChunk(A2L_,pch)
+      !$acc data present(pch_ptr, pch)
+      !$acc parallel loop
+      DO i = ics, ice
+        pch_ptr(i) = pch(i)
+      END DO
+      !$acc end data
     END IF
     IF (PRESENT(cos_zenith_angle)) THEN
-      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,cos_zenith_angle), cos_zenith_angle)
-      dsl4jsb_var2D_onChunk(A2L_,cos_zenith_angle)  = cos_zenith_angle  (:)
-      !$acc end kernels
+      cos_zenith_angle_ptr => dsl4jsb_var2D_onChunk(A2L_,cos_zenith_angle)
+      !$acc data present(cos_zenith_angle_ptr, cos_zenith_angle)
+      !$acc parallel loop
+      DO i = ics, ice
+        cos_zenith_angle_ptr(i) = cos_zenith_angle(i)
+      END DO
+      !$acc end data
     END IF
     IF (PRESENT(CO2_air)) THEN
-      !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_, CO2_air), CO2_air, dsl4jsb_var2D_onChunk(A2L_, CO2_air_mol))
-      dsl4jsb_var2D_onChunk(A2L_, CO2_air) = CO2_air(:)
-      ! Convert CO2 mass mixing ratio [kg/kg] to particle mixing ratio [mol/mol]
-      dsl4jsb_var2D_onChunk(A2L_, CO2_air_mol) = CO2_air(:) * molarMassDryAir / molarMassCO2
-      !$acc end kernels
+      CO2_air_ptr => dsl4jsb_var2D_onChunk(A2L_, CO2_air)
+      CO2_air_mol_ptr => dsl4jsb_var2D_onChunk(A2L_, CO2_air_mol)
+      !$acc data present(CO2_air_ptr, CO2_air_mol_ptr, CO2_air)
+      !$acc parallel loop
+      DO i = ics, ice
+        CO2_air_ptr(i) = CO2_air(i)
+        ! Convert CO2 mass mixing ratio [kg/kg] to particle mixing ratio [mol/mol]
+        CO2_air_mol_ptr(i) = CO2_air(i) * molarMassDryAir / molarMassCO2
+      END DO
+      !$acc end data
     END IF
 
     IF (tile%contains_lake) THEN
 
       IF (PRESENT(drag_wtr)) THEN
-        !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,drag_wtr), drag_wtr)
-        dsl4jsb_var2D_onChunk(A2L_,drag_wtr)          = drag_wtr          (:)
-        !$acc end kernels
+        drag_wtr_ptr => dsl4jsb_var2D_onChunk(A2L_,drag_wtr)
+        !$acc data present(drag_wtr_ptr, drag_wtr)
+        !$acc parallel loop
+        DO i = ics, ice
+          drag_wtr_ptr(i) = drag_wtr(i)
+        END DO
+        !$acc end data
       END IF
       IF (PRESENT(drag_ice)) THEN
-        !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,drag_ice), drag_ice)
-        dsl4jsb_var2D_onChunk(A2L_,drag_ice)          = drag_ice          (:)
-        !$acc end kernels
+        drag_ice_ptr => dsl4jsb_var2D_onChunk(A2L_,drag_ice)
+        !$acc data present(drag_ice_ptr, drag_ice)
+        !$acc parallel loop
+        DO i = ics, ice
+          drag_ice_ptr(i) = drag_ice(i)
+        END DO
+        !$acc end data
       END IF
       IF (PRESENT(t_acoef_wtr)) THEN
-        !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,t_acoef_wtr), t_acoef_wtr)
-        dsl4jsb_var2D_onChunk(A2L_,t_acoef_wtr)       = t_acoef_wtr       (:)
-        !$acc end kernels
-      END IF
+        t_acoef_wtr_ptr => dsl4jsb_var2D_onChunk(A2L_,t_acoef_wtr)
+        !$acc data present(t_acoef_wtr_ptr, t_acoef_wtr)
+        !$acc parallel loop
+        DO i = ics, ice
+          t_acoef_wtr_ptr(i) = t_acoef_wtr(i)
+        END DO
+        !$acc end data
+        END IF
       IF (PRESENT(t_bcoef_wtr)) THEN
-        !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,t_bcoef_wtr), t_bcoef_wtr)
-        dsl4jsb_var2D_onChunk(A2L_,t_bcoef_wtr)       = t_bcoef_wtr       (:)
-        !$acc end kernels
+        t_bcoef_wtr_ptr => dsl4jsb_var2D_onChunk(A2L_,t_bcoef_wtr)
+        !$acc data present(t_bcoef_wtr_ptr, t_bcoef_wtr)
+        !$acc parallel loop
+        DO i = ics, ice
+          t_bcoef_wtr_ptr(i) = t_bcoef_wtr(i)
+        END DO
+        !$acc end data
       END IF
       IF (PRESENT(q_acoef_wtr)) THEN
-        !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,q_acoef_wtr), q_acoef_wtr)
-        dsl4jsb_var2D_onChunk(A2L_,q_acoef_wtr)       = q_acoef_wtr       (:)
-        !$acc end kernels
+        q_acoef_wtr_ptr => dsl4jsb_var2D_onChunk(A2L_,q_acoef_wtr)
+        !$acc data present(q_acoef_wtr_ptr, q_acoef_wtr)
+        !$acc parallel loop
+        DO i = ics, ice
+          q_acoef_wtr_ptr(i) = q_acoef_wtr(i)
+        END DO
+        !$acc end data
       END IF
       IF (PRESENT(q_bcoef_wtr)) THEN
-        !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,q_bcoef_wtr), q_bcoef_wtr)
-        dsl4jsb_var2D_onChunk(A2L_,q_bcoef_wtr)       = q_bcoef_wtr       (:)
-        !$acc end kernels
+        q_bcoef_wtr_ptr => dsl4jsb_var2D_onChunk(A2L_,q_bcoef_wtr)
+        !$acc data present(q_bcoef_wtr_ptr, q_bcoef_wtr)
+        !$acc parallel loop
+        DO i = ics, ice
+          dq_bcoef_wtr_ptr(i) = q_bcoef_wtr(i)
+        END DO
+        !$acc end data
       END IF
       IF (PRESENT(t_acoef_ice)) THEN
-        !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,t_acoef_ice), t_acoef_ice)
-        dsl4jsb_var2D_onChunk(A2L_,t_acoef_ice)       = t_acoef_ice       (:)
-        !$acc end kernels
+        t_acoef_ice_ptr => dsl4jsb_var2D_onChunk(A2L_,t_acoef_ice)
+        !$acc data present(t_acoef_ice_ptr, t_acoef_ice)
+        !$acc parallel loop
+        DO i = ics, ice
+          t_acoef_ice_ptr(i) = t_acoef_ice(i)
+        END DO
+        !$acc end data
       END IF
       IF (PRESENT(t_bcoef_ice)) THEN
-        !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,t_bcoef_ice), t_bcoef_ice)
-        dsl4jsb_var2D_onChunk(A2L_,t_bcoef_ice)       = t_bcoef_ice       (:)
-        !$acc end kernels
+        t_bcoef_ice_ptr => dsl4jsb_var2D_onChunk(A2L_,t_bcoef_ice)
+        !$acc data present(t_bcoef_ice_ptr, t_bcoef_ice)
+        !$acc parallel loop
+        DO i = ics, ice
+          t_bcoef_ice_ptr(i) = t_bcoef_ice(i)
+        END DO
+        !$acc end data
       END IF
       IF (PRESENT(q_acoef_ice)) THEN
-        !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,q_acoef_ice), q_acoef_ice)
-        dsl4jsb_var2D_onChunk(A2L_,q_acoef_ice)       = q_acoef_ice       (:)
-        !$acc end kernels
+        q_acoef_ice_ptr => dsl4jsb_var2D_onChunk(A2L_,q_acoef_ice)
+        !$acc data present(q_acoef_ice_ptr, q_acoef_ice)
+        !$acc parallel loop
+        DO i = ics, ice
+          q_acoef_ice_ptr(i) = q_acoef_ice(i)
+        END DO
+        !$acc end data
       END IF
       IF (PRESENT(q_bcoef_ice)) THEN
-        !$acc kernels present(dsl4jsb_var2D_onChunk(A2L_,q_bcoef_ice), q_bcoef_ice)
-        dsl4jsb_var2D_onChunk(A2L_,q_bcoef_ice)       = q_bcoef_ice       (:)
-        !$acc end kernels
+        q_bcoef_ice_ptr => dsl4jsb_var2D_onChunk(A2L_,q_bcoef_ice)
+        !$acc data present(q_bcoef_ice_ptr, q_bcoef_ice)
+        !$acc parallel loop
+        DO i = ics, ice
+          q_bcoef_ice_ptr(i) = q_bcoef_ice(i)
+        END DO
+        !$acc end data
       END IF
 
     END IF
