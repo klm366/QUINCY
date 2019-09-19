@@ -355,7 +355,7 @@ CONTAINS
     IF (dsl4jsb_Config(SSE_)%l_freeze) THEN
 
       config_l_supercool = dsl4jsb_Config(SSE_)%l_supercool
-      !$claw expand parallel update
+      !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_6_1 tile_name=tile%name
       soil_depth_sl_vol_porosity_sl_tmp(:) = soil_depth_sl(:,1) * vol_porosity_sl(:,1)
       liquid_max(:) = Get_liquid_max( &
         & config_l_supercool                          , &
