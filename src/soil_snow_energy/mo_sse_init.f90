@@ -180,6 +180,9 @@ CONTAINS
     END DO
     dsl4jsb_var2D_onDomain(SEB_,t_unfilt) = dsl4jsb_var2D_onDomain(SEB_,t)
 
+    !$acc update device(dsl4jsb_var2D_onDomain(SEB_,t_unfilt), & 
+    !$acc dsl4jsb_var2D_onDomain(SEB_,t))
+
     CALL input_file%Close()
 
     CALL init_soil_properties(tile)

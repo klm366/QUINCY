@@ -135,6 +135,12 @@ CONTAINS
       dsl4jsb_var2D_onDomain(RAD_,alb_nir_lnd) = AlbedoNirInitial
     END IF
 
+    !$acc update device(dsl4jsb_var2D_onDomain(RAD_,alb_vis), &
+    !$acc dsl4jsb_var2D_onDomain(RAD_,alb_nir), &
+    !$acc dsl4jsb_var2D_onDomain(RAD_,alb_vis_lnd), &
+    !$acc dsl4jsb_var2D_onDomain(RAD_,alb_nir_lnd), &
+    !$acc dsl4jsb_var2D_onDomain(RAD_,alb_background))
+
     ! soil albedo
     IF (tile%contains_soil) THEN
       return_pointer => input_file%Read_2d( &
@@ -148,6 +154,7 @@ CONTAINS
         & fill_array = dsl4jsb_var_ptr(RAD_, alb_nir_soil))
       dsl4jsb_var2D_onDomain(RAD_,alb_nir_soil) = &
         MERGE(dsl4jsb_var2D_onDomain(RAD_,alb_nir_soil), 0._wp, dsl4jsb_var2D_onDomain(RAD_,alb_nir_soil) >= 0._wp)
+      !$acc update device(dsl4jsb_var2D_onDomain(RAD_,alb_nir_soil), dsl4jsb_var2D_onDomain(RAD_, alb_vis_soil))
     END IF
 
     IF (tile%contains_vegetation) THEN
@@ -186,6 +193,7 @@ CONTAINS
       dsl4jsb_Config(RAD_)%AlbedoCanopySnow = &
         & albedo_age_weight * AlbedoCanopySnow_age + (1._wp - albedo_age_weight) * AlbedoCanopySnow_temp
 
+      !$acc update device(dsl4jsb_var2D_onDomain(RAD_, alb_nir_can))
     END IF
 
     CALL input_file%Close()
