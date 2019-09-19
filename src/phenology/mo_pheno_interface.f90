@@ -265,6 +265,7 @@ CONTAINS
     REAL(wp) :: timestep  ! Timestep in days
     INTEGER :: i
     REAL(wp) :: MaxLAI
+    REAL(wp) :: LAI_negligible_tmp
 
 
     CHARACTER(len=*), PARAMETER  :: routine = modname//':update_phenology_logrop'
@@ -497,12 +498,13 @@ CONTAINS
     ! R: wird jedes mal (d.h. für jedes Tile) aufgerufen, wobei automatisch der Tile spezifische Wert aus dem lctlib genommen wird:
     ! Secure minimum Max-LAI
 
+    LAI_negligible_tmp = PhenoParam%all%LAI_negligible
     !$claw acc data present(LaiMax_corrected, lai)
     !$claw acc parallel loop gang vector
     DO i = 1, SIZE(LaiMax_corrected)
-      IF (LaiMax_corrected(i) < PhenoParam%all%LAI_negligible) THEN
-        LaiMax_corrected(i) = PhenoParam%all%LAI_negligible
-        lai(i) = PhenoParam%all%LAI_negligible - EPSILON(1.0_wp)
+      IF (LaiMax_corrected(i) < LAI_negligible_tmp) THEN
+        LaiMax_corrected(i) = LAI_negligible_tmp
+        lai(i) = LAI_negligible_tmp - EPSILON(1.0_wp)
       END IF
     END DO
     !$claw acc end data
