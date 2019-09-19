@@ -1346,7 +1346,6 @@ CONTAINS
     !$claw acc data &
     !$claw acc present(field_cap_l, infilt, ws_l, drainage, w_soil_overflow) &
     !$claw acc create(excess)
-    !$claw acc update device(field_cap_l, infilt, ws_l, drainage, w_soil_overflow)
     !$claw acc parallel
     !$claw acc loop gang vector
     DO i = 1, nidx
