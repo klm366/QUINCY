@@ -75,7 +75,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: day_temp_max
     dsl4jsb_Real2D_onChunk :: day_temp_sum
     dsl4jsb_Real2D_onChunk :: previous_day_temp_mean
-    !dsl4jsb_Real2D_onChunk :: previous_day_NPP_pot_rate_ca
     dsl4jsb_Real2D_onChunk :: previous_day_temp_min
     dsl4jsb_Real2D_onChunk :: previous_day_temp_max
     dsl4jsb_Real2D_onChunk :: F_pseudo_soil_temp
@@ -230,7 +229,7 @@ CONTAINS
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_0_0 tile_name=tile%name
     soil_depth_sl_vol_porosity_sl_tmp(:) = soil_depth_sl(:,1) * vol_porosity_sl(:,1)
 
-    ! In the moment the calls of calc_previous_day_variables and calc_pseudo_soil_temp are only
+    ! In the moment, the calls of calc_previous_day_variables and calc_pseudo_soil_temp are only
     ! necessary for the phenology process
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_0 tile_name=tile%name
     t_air_in_Celcius(:) = t_air(:) - tmelt  ! convert Kelvin in Celcius

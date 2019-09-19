@@ -175,7 +175,7 @@ CONTAINS
     ! Declarations
     USE mo_carbon_interface,     ONLY: rescale_carbon_upon_reference_area_change, &
       &                                calculate_current_c_ta_state_sum, check_carbon_conservation
-    USE mo_pheno_process,        ONLY: calc_previous_day_NPP, calc_summergreen_phenology, calc_evergreen_phenology, &
+    USE mo_pheno_process,        ONLY: calc_summergreen_phenology, calc_evergreen_phenology, &
       &                                calc_crop_phenology, calc_raingreen_phenology, calc_grass_phenology,         &
       &                                track_max_green_pool, derive_maxlai_according_to_allometric_relationships
     USE mo_jsb_time_iface,       ONLY: get_time_current, get_year_day
@@ -192,7 +192,6 @@ CONTAINS
     ! Local variables
     TYPE(t_jsb_model), POINTER :: model
     INTEGER                    :: iblk, ics, ice
-    REAL(wp)                   :: dtime
 
     INTEGER :: day_of_year
 
@@ -240,7 +239,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: chill_days_EG
     dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real2D_onChunk :: day_NPP_sum
-    !dsl4jsb_Real2D_onChunk :: previous_day_NPP_rate
     dsl4jsb_Real2D_onChunk :: previous_day_temp_min
     dsl4jsb_Real2D_onChunk :: previous_day_temp_max
     dsl4jsb_Real2D_onChunk :: previous_day_NPP_pot_rate_ca
@@ -274,7 +272,6 @@ CONTAINS
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-    dtime   = options%dtime
 
     ! If process is not active on this tile, do nothing
     IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
@@ -282,6 +279,9 @@ CONTAINS
     !$claw acc data create(w_soil_filling, t_air_in_Celcius)  & 
     !$claw create(LaiMax_corrected, veg_fract_correction_old) &
     !$claw create(old_c_state_sum, dummy_flux)
+    IF ( .NOT. tile%Is_process_active(ASSIMI_)) THEN
+      CALL finish(routine, 'The LOGROP phenology model depends on the assimilation process being activated, too')
+    ENDIF
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -387,18 +387,18 @@ CONTAINS
     ! R: Die Berechnungen von update_previous_day_variables in JSBACH3 muß man bis auf NPP nicht für jedes Tile machen. Daher
     !    habe ich die Berechnungen von NPP von den anderen Berechnungen in update_previous_day_variables für JSBACH4 getrennt.
     !    Die Berechnungen die nicht für jedes Tile gemacht werden müssen sind in calc_previous_day_variables und die NPP-
-    !    Berechnungen sind in calc_previous_day_NPP. Außerdem ist calc_previous_day_variables nun dem SEB Prozess zugeordnet.
+    !    Berechnungen werden im Folgenden vorgenommen. Außerdem ist calc_previous_day_variables nun dem SEB Prozess zugeordnet.
     !    calc_pseudo_soil_temp habe ich auch dem SEB Prozess zugeordnet.
 
-    ! R: wird jedes mal (d.h. für jedes Tile) aufgerufen:
-    !$claw sca forward update savepoint=ser_jsb_pheno_calc_previous_day_npp_1 tile_name=tile%name
-    CALL calc_previous_day_NPP(          &
-      & l_newday,                        & ! Input
-      & NPP_pot_rate_ca(:),              & ! Input
-      & dtime,                           & ! Input
-      & previous_day_NPP_pot_rate_ca(:), & ! Output (for crop and raingreen)
-      & day_NPP_sum(:)                   & ! InOut
-      & )
+    ! day_NPP_sum contains the accumulated sum of NPP_pot_rate_ca and is computed in update_assimilation each time step
+    ! after this routine. At the start of a new day, we here divide the sum by the day length to get
+    ! previous_day_NPP_pot_rate_ca (needed in this subroutine) and reset it to zero.
+    IF (l_newday) THEN
+      !$claw expand parallel update savepoint=ser_jsb_pheno_day_npp_sum_expand_0 tile_name=tile%name
+      previous_day_NPP_pot_rate_ca(:) = day_NPP_sum(:)/86400._wp
+      day_NPP_sum(:) = 0._wp
+      !$claw end expand
+    END IF
 
     ! JN 10.01.18
     IF ((dsl4jsb_Config(PHENO_)%l_forestRegrowth) .AND. (dsl4jsb_Lctlib_param(ForestFlag))) THEN
