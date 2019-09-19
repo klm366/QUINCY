@@ -81,6 +81,7 @@ CONTAINS
     dsl4jsb_memory(PHENO_)%lai_mon(:,:,1:12) = ptr_mon(:,:,1:12)
     dsl4jsb_memory(PHENO_)%lai_mon(:,:,0   ) = ptr_mon(:,:,12  )
     dsl4jsb_memory(PHENO_)%lai_mon(:,:,13  ) = ptr_mon(:,:,1   )
+    !$acc update device(dsl4jsb_memory(PHENO_)%lai_mon)
     DEALLOCATE(ptr_mon)
 
     ! Foliage projected cover climatology
@@ -91,6 +92,7 @@ CONTAINS
     dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,1:12) = ptr_mon(:,:,1:12)
     dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,0   ) = ptr_mon(:,:,12  )
     dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,13  ) = ptr_mon(:,:,1   )
+    !$acc update device(dsl4jsb_memory(PHENO_)%fract_fpc_mon)
     DEALLOCATE(ptr_mon)
 
     ! Forest fraction
@@ -101,6 +103,7 @@ CONTAINS
       & fill_array = dsl4jsb_var_ptr(PHENO_, fract_forest))
     dsl4jsb_var2D_onDomain(PHENO_, fract_forest) = &
       MERGE(dsl4jsb_var2D_onDomain(PHENO_, fract_forest), 0._wp, dsl4jsb_var2D_onDomain(PHENO_, fract_forest) >= 0._wp)
+    !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, fract_forest))
 
     CALL input_file%Close()
 
@@ -114,6 +117,7 @@ CONTAINS
 
     dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max) = &
       MERGE(dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max), 0._wp, dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max) >= 0._wp)
+    !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max))
 
     CALL input_file%Close()
 
@@ -126,6 +130,7 @@ CONTAINS
       !             later one might think about allometric relation ships in other multi annual plants, too?
       IF ( (dsl4jsb_Config(PHENO_)%l_forestRegrowth) .AND. (.NOT. dsl4jsb_Lctlib_param(ForestFlag)) ) THEN
         dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom) = dsl4jsb_Lctlib_param(MaxLAI)
+        !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom))
       END IF
 
       !JN 10.01.18: with l_forestRegrowth the maxLAI can change over time for forest pfts
@@ -137,6 +142,7 @@ CONTAINS
         dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =   &
           & 1.0_wp - exp(-dsl4jsb_Lctlib_param(MaxLAI) / dsl4jsb_Lctlib_param(clumpinessFactor))
       END IF
+      !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction))
     END IF
 
   END SUBROUTINE pheno_init_bc
