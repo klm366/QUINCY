@@ -131,7 +131,7 @@ CONTAINS
      & has_snow_layer
 
     REAL(wp) ::    & ! Avoid compute in param
-     & soil_depth_sl_vol_porosity_sl_tmp(size(soil_depth_sl,dim=1))
+     & soil_depth_sl_vol_porosity_sl_tmp(size(liquid_max,dim=1))
     REAL(wp) :: w_soil_critical_tmp
 
     INTEGER :: iblk, ics, ice, nc, i
@@ -226,6 +226,9 @@ CONTAINS
     !$claw acc t_star,liquid_max,t_air_in_Celcius,is_glacier,has_snow_layer,  & 
     !$claw acc soil_depth_sl_vol_porosity_sl_tmp)
     !$claw acc update device(is_glacier) ! 
+
+    !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_0_0 tile_name=tile%name
+    soil_depth_sl_vol_porosity_sl_tmp(:) = soil_depth_sl(:,1) * vol_porosity_sl(:,1)
 
     ! In the moment the calls of calc_previous_day_variables and calc_pseudo_soil_temp are only
     ! necessary for the phenology process
@@ -356,7 +359,6 @@ CONTAINS
 
       config_l_supercool = dsl4jsb_Config(SSE_)%l_supercool
       !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_6_1 tile_name=tile%name
-      soil_depth_sl_vol_porosity_sl_tmp(:) = soil_depth_sl(:,1) * vol_porosity_sl(:,1)
       liquid_max(:) = Get_liquid_max( &
         & config_l_supercool                          , &
         & t_star(:)                                   , &
