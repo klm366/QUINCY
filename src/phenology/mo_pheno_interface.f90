@@ -485,13 +485,13 @@ CONTAINS
     ! END IF
 
     IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
-       !$claw expand update savepoint=ser_jsb_pheno_update_phenology_logrop_expand_2 tile_name=tile%name
+       !$claw expand parallel update savepoint=ser_jsb_pheno_update_phenology_logrop_expand_2 tile_name=tile%name
        LaiMax_corrected(:) = dsl4jsb_var2D_onChunk(PHENO_, maxLAI_allom )
     ELSE
      ! R: Rename MaxLAI in lctlib to LAI_max in JS3 comes from theLand%Vegetation%LAI_max,
      ! which is for each vegetated tile taken from MaxLAI in the lct library.
        MaxLAI = dsl4jsb_Lctlib_param(MaxLAI)
-       !$claw expand update savepoint=ser_jsb_pheno_update_phenology_logrop_expand_3 tile_name=tile%name
+       !$claw expand parallel update savepoint=ser_jsb_pheno_update_phenology_logrop_expand_3 tile_name=tile%name
        LaiMax_corrected(:) = MaxLAI
     END IF
 
