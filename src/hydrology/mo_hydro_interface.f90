@@ -966,7 +966,6 @@ CONTAINS
       & )
 
     !$claw acc data present(max_moist, w_soil_rel, w_soil_column)
-    !$claw acc update device(w_soil_column, max_moist)
     !$claw acc parallel loop gang vector
     DO i = ics, ice
       IF (max_moist(i) > 0._wp) THEN
