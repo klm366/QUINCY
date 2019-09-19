@@ -368,7 +368,8 @@ CONTAINS
     l_newday = is_newday()
     timestep = timeStep_in_days()
 
-    t_air_in_Celcius = t_air - tmelt  ! convert Kelvin in Celcius
+    !$claw expand parallel update
+    t_air_in_Celcius(:) = t_air(:) - tmelt(:)  ! convert Kelvin in Celcius
 
     day_of_year  = INT(get_year_day(get_time_current()))
 
