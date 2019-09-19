@@ -322,12 +322,10 @@ CONTAINS
 
       ! Calculate top snow layer for previous time step
       !$claw acc data present(itop,snow_depth_sl)
-      !$claw acc update device(snow_depth_sl)
       !$claw acc parallel loop gang vector
       DO i = 1 , nc
         itop_old(i) = nsnow + 1 - COUNT(snow_depth_sl(i,:) > 0._wp)
       END DO
-      !$claw acc update host(itop)
       !$claw acc end data
 
       ! Calculate depths of snow layers
@@ -338,7 +336,6 @@ CONTAINS
 
 
       !$claw acc data present(snow_depth,snow_fract)
-      !$claw acc update device(snow_depth,snow_fract)
       !$claw acc parallel loop gang vector
       DO i = 1, size(snow_depth, dim=1)
         IF (snow_depth(i) > snow_depth_min .AND. snow_fract(i) > EPSILON(1._wp)) THEN
@@ -348,11 +345,9 @@ CONTAINS
           snow_fract(i) = 0._wp
         END IF
       END DO
-      !$claw acc update host(snow_depth,snow_fract)
       !$claw acc end data
 
       !$claw acc data present(snow_depth,snow_depth_sl)
-      !$claw acc update device(snow_depth)
       !$claw acc parallel
       !$claw acc loop gang
       DO isnow=nsnow,1,-1
@@ -365,7 +360,6 @@ CONTAINS
         END DO
       END DO
       !$claw acc end parallel
-      !$claw acc update host(snow_depth_sl,snow_depth)
       !$claw acc end data
 
       !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_7 tile_name=tile%name
@@ -483,7 +477,6 @@ CONTAINS
     END IF
 
     !$claw acc data present(grnd_hflx,hcap_grnd,snow_fract,grnd_hflx_snow,grnd_hflx_soil,hcap_grnd_snow,hcap_grnd_soil)
-    !$claw acc update device(snow_fract,grnd_hflx_snow,grnd_hflx_soil,hcap_grnd_snow,hcap_grnd_soil)
     !$claw acc parallel loop gang vector
     DO i = 1, size(snow_depth_sl, dim=1)
       IF (snow_depth_sl(i,nsnow) > 0._wp) THEN

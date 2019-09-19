@@ -310,7 +310,6 @@ CONTAINS
     CALL tile%parent_tile%Get_fraction(ics, ice, iblk, fract=fract(:))
 
     !$claw acc data present(fract,s_star,t2s_conv)
-    !$claw acc update device(fract,t2s_conv)
     !$claw acc parallel loop gang vector
     DO i=1, size(s_star,dim=1)
       IF (fract(i) < EPSILON(1._wp)) THEN
