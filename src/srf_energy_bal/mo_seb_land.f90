@@ -308,6 +308,7 @@ CONTAINS
 
     ! @todo - hack for oceans boxes (land tile is direct child of root tile)
     CALL tile%parent_tile%Get_fraction(ics, ice, iblk, fract=fract(:))
+    !$acc update device(fract)
 
     !$claw acc data present(fract,s_star,t2s_conv)
     !$claw acc parallel loop gang vector
