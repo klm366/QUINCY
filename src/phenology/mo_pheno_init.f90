@@ -81,7 +81,6 @@ CONTAINS
     dsl4jsb_memory(PHENO_)%lai_mon(:,:,1:12) = ptr_mon(:,:,1:12)
     dsl4jsb_memory(PHENO_)%lai_mon(:,:,0   ) = ptr_mon(:,:,12  )
     dsl4jsb_memory(PHENO_)%lai_mon(:,:,13  ) = ptr_mon(:,:,1   )
-    !$acc update device(dsl4jsb_memory(PHENO_)%lai_mon)
     DEALLOCATE(ptr_mon)
 
     ! Foliage projected cover climatology
@@ -92,7 +91,6 @@ CONTAINS
     dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,1:12) = ptr_mon(:,:,1:12)
     dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,0   ) = ptr_mon(:,:,12  )
     dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,13  ) = ptr_mon(:,:,1   )
-    !$acc update device(dsl4jsb_memory(PHENO_)%fract_fpc_mon)
     DEALLOCATE(ptr_mon)
 
     ! Forest fraction
