@@ -927,6 +927,7 @@ CONTAINS
       fract_org_sl(:,:) = 0._wp
     END IF
 
+    !$claw acc update device(soil_w%dz) ! TODO move if possible
     !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_1 tile_name=tile%name
     CALL calc_soil_hydrology( &
       ! in
