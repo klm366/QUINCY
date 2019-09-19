@@ -203,6 +203,7 @@ CONTAINS
       !$acc dsl4jsb_var_ptr(HYDRO_,w_soil_pwp_sl), &
       !$acc dsl4jsb_var_ptr(HYDRO_,w_soil_fc_sl), &
       !$acc dsl4jsb_var_ptr(HYDRO_, vol_field_cap), &
+      !$acc dsl4jsb_var_ptr(HYDRO_, vol_p_wilt), &
       !$acc dsl4jsb_var_ptr(HYDRO_, pore_size_index), &
       !$acc dsl4jsb_var_ptr(HYDRO_, bclapp), &
       !$acc dsl4jsb_var_ptr(HYDRO_, matrix_pot), &
