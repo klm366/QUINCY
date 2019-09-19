@@ -817,8 +817,6 @@ CONTAINS
 
       
       !$claw acc data present(l_day,alb_vis,alb_nir,fract_lice,albedo_lwtr,albedo_lice)
-      !TODO CLAW TEMP 
-      !$claw acc update device(l_day,fract_lice, albedo_lwtr, albedo_lice)
       !$claw acc parallel loop gang vector
       DO i = 1, size(l_day)
         IF(l_day(i)) THEN
@@ -826,8 +824,6 @@ CONTAINS
           alb_nir(i) = alb_vis(i)
         END IF
       END DO
-      !TODO CLAW TEMP
-      !$claw acc update host(alb_vis, alb_nir)
       !$claw acc end data
 
     ELSE IF (tile%is_glacier) THEN
