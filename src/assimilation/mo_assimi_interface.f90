@@ -665,6 +665,7 @@ CONTAINS
 
     ! Accumulate NPP_pot_rate_ca. day_NPP_sum is divided by the day length and reset to zero in
     ! update_phenology_logrop at the beginning of each day.
+    !$claw expand parallel update savepoint=ser_jsb_assim_day_npp_sum_expand_0 tile_name=tile%name
     day_NPP_sum(:) = day_NPP_sum(:) + NPP_pot_rate_ca(:) * dtime
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
