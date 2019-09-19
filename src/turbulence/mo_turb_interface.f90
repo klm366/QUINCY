@@ -368,7 +368,6 @@ CONTAINS
       END IF
 
       !$claw acc data present(fract_snow,fract_water,pch,wind_air,canopy_cond,fact_qsat_veg,fact_qsat_trans)
-      !$claw acc update device(fract_snow,fract_water,pch,wind_air,canopy_cond)
       !$claw acc parallel loop gang vector
       DO i = 1, size(mask, dim=1)
         IF (mask(i)) THEN
@@ -404,7 +403,6 @@ CONTAINS
       rel_hum(:) = relative_humidity_soil(w_soil_sl(:,1), w_soil_fc_sl(:,1))
 
       !$claw acc data present(fact_qsat_soil,fact_qair_soil,qsat_star,rel_hum,q_air,fract_snow,fract_water)
-      !$claw acc update device(qsat_star,rel_hum,q_air,fract_snow,fract_water)
       !$claw acc parallel loop gang vector
       DO i = 1, size(qsat_star,dim=1)
         IF (qsat_star(i) * rel_hum(i) > q_air(i) .AND. rel_hum(i) > 1.e-10_wp) THEN
