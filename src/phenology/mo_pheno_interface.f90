@@ -497,6 +497,7 @@ CONTAINS
     ! R: wird jedes mal (d.h. für jedes Tile) aufgerufen, wobei automatisch der Tile spezifische Wert aus dem lctlib genommen wird:
     ! Secure minimum Max-LAI
 
+    !$claw acc data present(LaiMax_corrected, lai)
     !$claw acc parallel loop gang vector
     DO i = 1, SIZE(LaiMax_corrected)
       IF (LaiMax_corrected(i) < PhenoParam%all%LAI_negligible) THEN
@@ -504,6 +505,7 @@ CONTAINS
         lai(i) = PhenoParam%all%LAI_negligible - EPSILON(1.0_wp)
       END IF
     END DO
+    !$claw acc end data
 
     ! R: The following PHENO_ process shall be calculated only on the lowest child tiles (=ON_LEAFS).
     !    This is set within the FUNCTION Construct_tile and makes further statements here unnecessary.
