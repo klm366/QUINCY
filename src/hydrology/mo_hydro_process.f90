@@ -602,6 +602,7 @@ CONTAINS
     !$claw acc end data
 
     ! Changes by evaporation fluxes
+    !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_digest_evapotrans_0 ! Only for savepoint not really SCA
     CALL digest_evapotrans(nidx, nsoil, root_depth_l, soil_depth_l, &
          field_cap_l, trans_in_m, evapo_soil_in_m, ws_l, soil_ice_l)
 
@@ -622,6 +623,7 @@ CONTAINS
          ws_l, drainage, w_soil_overflow)
 
     ! Drainage calculation with multi-layer soil scheme
+    !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_soilhyd_0 ! Only for savepoint not really SCA
     CALL soilhyd(nidx, nsoil, delta_time, ilog, jllog, ws_l, soil_depth_l, &
          wsat_l, field_cap_l, hyd_cond_sat_l, vol_porosity_l, bclapp_l,   &
          matrix_pot_l, drainage, pore_size_index_l, p_wilt_l, dz,       &
