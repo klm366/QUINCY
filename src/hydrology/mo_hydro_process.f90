@@ -1177,11 +1177,14 @@ CONTAINS
     !  update soil moisture due to evaporation and transpiration fluxes
     !----------------------------------------------------------------------------------------------
 
-    !$claw acc routine seq
+    !$claw acc data present(droot, dsoil, field_cap_l, trans_in_m, evapo_soil, &
+    !$claw acc ws_l, soil_ice) pcreate(deficit_evapo, deficit_trans, deficit_l, &
+    !$claw acc remaining, rootfract, fixed, trans_layer, ws, root_depth, reduce_evapo)
 
     !  bare soil evaporation
     ! -----------------------
-
+    !$claw acc parallel
+    !$claw acc loop
     DO i = 1, nidx
       deficit_evapo(i) = 0._wp   ! water missing for evaporation due to limited soil water
       IF (evapo_soil(i) < 0._wp) THEN          ! pos. evaporation flux (not dew)
@@ -1206,6 +1209,7 @@ CONTAINS
         deficit_trans(i) = 0._wp
       END IF
 
+      !$claw acc loop seq
       DO jk =1, nsoil
 
         deficit_l(i)   = 0._wp
@@ -1259,6 +1263,7 @@ CONTAINS
 
       ws(i) = SUM(ws_l(i,:)) + SUM(soil_ice(i,:))  ! water and ice  within the column
 
+      !$claw acc loop seq
       DO jk=1, nsoil
         IF (reduce_evapo(i) < 0._wp .AND. ws(i) > 0._wp) THEN
           ! reduce soil moisture and ice relative to the water content of each layer
@@ -1268,7 +1273,9 @@ CONTAINS
       END DO
     END DO ! i DO statement
 
-!TODO deal with this
+    !$claw acc end parallel
+    !$claw acc end data
+
 #ifndef _OPENACC
     ! make sure there is no negative soil ice
     IF (ANY(soil_ice(:,:) < 0._wp)) THEN
