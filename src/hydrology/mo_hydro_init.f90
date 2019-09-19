@@ -509,13 +509,9 @@ CONTAINS
       vol_p_wilt_sl     (:,:,:) = (1 - fract_org_sl(:,:,:)) * vol_p_wilt_sl     (:,:,:) + fract_org_sl(:,:,:) * vol_p_wilt_org
     END IF
 
-    !$acc update device(dsl4jsb_Get_var3D_onDomain(HYDRO_, hyd_cond_sat_sl), &
-    !$acc dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_porosity_sl), &
-    !$acc dsl4jsb_Get_var3D_onDomain(HYDRO_, bclapp_sl), &
-    !$acc dsl4jsb_Get_var3D_onDomain(HYDRO_, matrix_pot_sl), &
-    !$acc dsl4jsb_Get_var3D_onDomain(HYDRO_, pore_size_index_sl), &
-    !$acc dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_field_cap_sl), &
-    !$acc dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_p_wilt_sl))
+    !$acc update device(hyd_cond_sat_sl, vol_porosity_sl, bclapp_sl, &
+    !$acc matrix_pot_sl, pore_size_index_sl, vol_field_cap_sl, &
+    !$acc vol_p_wilt_sl)
 
   END SUBROUTINE init_soil_properties
 
