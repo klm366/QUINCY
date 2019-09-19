@@ -369,7 +369,7 @@ CONTAINS
     timestep = timeStep_in_days()
 
     !$claw expand parallel update
-    t_air_in_Celcius(:) = t_air(:) - tmelt(:)  ! convert Kelvin in Celcius
+    t_air_in_Celcius(:) = t_air(:) - tmelt  ! convert Kelvin in Celcius
 
     day_of_year  = INT(get_year_day(get_time_current()))
 
