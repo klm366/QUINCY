@@ -367,14 +367,14 @@ CONTAINS
         mask(:) = w_soil_column(:) > w_soil_wilt_fract_tmp * max_moist(:)
       END IF
 
-      !$claw acc data present(fract_snow,fract_water,pch,wind_air,canopy_cond,fact_qsat_veg,fact_qsat_trans)
+      !$claw acc data present(fract_snow,fract_water,pch,wind_air,canopy_cond,fact_qsat_veg,fact_qsat_trans,mask)
       !$claw acc parallel loop gang vector
       DO i = 1, size(mask, dim=1)
         IF (mask(i)) THEN
           fact_qsat_veg(i) = fract_snow(i) + (1._wp - fract_snow(i)) *   &
             & (fract_water(i) + ( 1._wp - fract_water(i)) /                &
             & (1._wp + pch(i) * MAX(1._wp, wind_air(i)) / MAX(1.E-20_wp, canopy_cond(i))))
-          fact_qsat_trans(:) = (1._wp - fract_snow(i)) * &
+          fact_qsat_trans(i) = (1._wp - fract_snow(i)) * &
             & (1._wp - fract_water(i)) /                  &
             & (1._wp + pch(i) * MAX(1._wp, wind_air(i)) / MAX(1.E-20_wp, canopy_cond(i)))
         ELSE 
