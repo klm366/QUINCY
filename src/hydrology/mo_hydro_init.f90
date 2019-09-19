@@ -312,7 +312,9 @@ CONTAINS
       END DO
 
       CALL input_file%Close()
-
+      !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_, w_snow), &
+      !$acc dsl4jsb_var2D_onDomain(HYDRO_, w_snow_soil), &
+      !$acc dsl4jsb_var2D_onDomain(HYDRO_,w_soil_overflow))
     ! avoid compiler warnings about pointers not being dereferenced
     IF (ASSOCIATED(ptr_2D)) CONTINUE
     NULLIFY(ptr_2D)
@@ -340,6 +342,11 @@ CONTAINS
       dsl4jsb_var3D_onDomain(HYDRO_, w_soil_pwp_sl) =                                                        &
         & (1 - dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)) * dsl4jsb_var3D_onDomain(HYDRO_, w_soil_pwp_sl) &
         & +    dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)  * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl) * vol_p_wilt_org
+      
+      !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl), &
+      !$acc dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sat_sl), &
+      !$acc dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl), &
+      !$acc dsl4jsb_var3D_onDomain(HYDRO_, w_soil_pwp_sl))
     END IF
 
     IF (tile%contains_soil) THEN
@@ -366,10 +373,15 @@ CONTAINS
         dsl4jsb_var2D_onDomain(HYDRO_, w_soil_rel) = 0._wp
       END WHERE
 
+      
+      !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_, w_soil_rel), &
+      !$acc dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column), &
+      !$acc dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl))
+
       CALL init_soil_properties(tile)
     END IF
 
-      IF (tile%contains_vegetation) THEN
+    IF (tile%contains_vegetation) THEN
       ! Calculate water content and field capacity in the root zone
       DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, w_soil_root), 2)
         dsl4jsb_var_ptr(HYDRO_, w_soil_root)       (:,  i)    = get_water_in_root_zone( &
@@ -385,6 +397,9 @@ CONTAINS
           & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)   (:,:,i),                           &
           & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)    (:,:,i))
       END DO
+      !$acc update device(dsl4jsb_var_ptr(HYDRO_, w_soil_root), &
+      !$acc dsl4jsb_var_ptr(HYDRO_, w_soil_root_fc), &
+      !$acc dsl4jsb_var_ptr(HYDRO_, w_soil_root_pwp))
     END IF
 
   END SUBROUTINE hydro_init_ic
