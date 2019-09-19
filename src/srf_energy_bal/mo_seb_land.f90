@@ -225,7 +225,7 @@ CONTAINS
     !$claw acc data create(fract,qsat_srf_old,s_old,dQdT,t2s_conv,heat_tcoef, &
     !$claw acc t_star,liquid_max,t_air_in_Celcius,is_glacier,has_snow_layer,  & 
     !$claw acc soil_depth_sl_vol_porosity_sl_tmp)
-    !$claw acc update device(is_glacier)
+    !$claw acc update device(is_glacier) ! 
 
     ! In the moment the calls of calc_previous_day_variables and calc_pseudo_soil_temp are only
     ! necessary for the phenology process
@@ -342,7 +342,6 @@ CONTAINS
 
     ! Actual snowmelt will be computed later in the hydrology process (update_surface_hydrology)
     !$claw acc data present(has_snow_layer,is_glacier,t_star)
-    !$claw acc update device(has_snow_layer,is_glacier,t_star)
     !$claw acc parallel loop gang vector
     DO i=1,size(t_star,dim=1)
       IF (has_snow_layer(i) .OR. is_glacier(i)) THEN
@@ -368,7 +367,6 @@ CONTAINS
       !$claw end expand
 
       !$claw acc data present(has_snow_layer,is_glacier,w_soil_sl,liquid_max,t_star,w_ice_sl)
-      !$claw acc update device(has_snow_layer,is_glacier,w_soil_sl,liquid_max,t_star,w_ice_sl)
       !$claw acc parallel loop gang vector
       DO i=1,size(t_star, dim=1)  
         IF (.NOT. has_snow_layer(i) .AND. .NOT. is_glacier(i)) THEN
