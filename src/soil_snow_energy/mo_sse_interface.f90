@@ -349,7 +349,7 @@ CONTAINS
 
       !$claw acc data present(snow_depth,snow_depth_sl)
       !$claw acc parallel
-      !$claw acc loop gang
+      !$claw acc loop seq
       DO isnow=nsnow,1,-1
         !$claw acc loop vector
         DO i = 1, size(snow_depth, dim=1)
