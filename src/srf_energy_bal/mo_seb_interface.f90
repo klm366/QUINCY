@@ -348,7 +348,6 @@ CONTAINS
           heat_cap(:) = vol_heat_cap_sl(:,1) * soil_e%dz(1)
           IF (dsl4jsb_Config(SSE_)%l_snow) THEN
             !$claw acc data present(t_unfilt,snow_depth_sl,heat_cap,w_ice_melt_sl,w_soil_freeze_sl)
-            !$claw acc update device(snow_depth_sl,heat_cap,w_ice_melt_sl,w_soil_freeze_sl)
             !$claw acc parallel loop gang vector
             DO i = 1,  size(t_unfilt, dim=1)
               IF (snow_depth_sl(i,nsnow) < EPSILON(1._wp) .AND. heat_cap(i) > 0._wp) THEN  ! No snow layers present
@@ -357,11 +356,9 @@ CONTAINS
                 t_unfilt(i) = t_unfilt(i) + w_soil_freeze_sl(i,1) * dtime * alf / heat_cap(i)
               END IF
             END DO
-            !$claw acc update host(t_unfilt)
             !$claw acc end data
           ELSE   ! No snow layers present
             !$claw acc data present(t_unfilt,heat_cap,w_ice_melt_sl,w_soil_freeze_sl)
-            !$claw acc update device(heat_cap,w_ice_melt_sl,w_soil_freeze_sl)
             !$claw acc parallel loop gang vector
             DO i = 1, size(t_unfilt,dim=1)
               IF (heat_cap(i) > 0._wp) THEN
@@ -370,7 +367,6 @@ CONTAINS
                 t_unfilt(i) = t_unfilt(i) + w_soil_freeze_sl(i,1) * dtime * alf / heat_cap(i)
               END IF
             END DO
-            !$claw acc update host(t_unfilt)
             !$claw acc end data
           END IF
         END IF

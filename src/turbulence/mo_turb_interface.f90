@@ -382,7 +382,6 @@ CONTAINS
           fact_qsat_trans(i) = 0._wp
         END IF
       END DO
-      !$claw acc update host(fact_qsat_veg,fact_qsat_trans) ! TODO CLAW TEMP
       !$claw acc end data
 
       !$claw expand parallel update savepoint=ser_jsb_turb_update_humidity_scaling_expand_2 tile_name=tile%name
@@ -418,7 +417,6 @@ CONTAINS
           fact_qair_soil(i) = 1._wp
         END IF
       END DO
-      !$claw acc update host(fact_qsat_soil,fact_qair_soil)
       !$claw acc end data
 
     ELSE IF (tile%contains_glacier) THEN

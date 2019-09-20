@@ -1375,7 +1375,6 @@ CONTAINS
       END IF
     END DO
     !$claw acc end parallel
-    !$claw acc update host(drainage,ws_l,w_soil_overflow)
     !$claw acc end data
 
     ! make sure there is no negative soil moisture

@@ -316,7 +316,6 @@ CONTAINS
           END DO
         END DO
       END DO
-      !$claw acc update host(fract_water,fract_ice)
       !$claw acc end data
       
       !$claw expand parallel update savepoint=ser_jsb_sse_init_calc_vol_heat_capacity_1 tile_name=tile%name
