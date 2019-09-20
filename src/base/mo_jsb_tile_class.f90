@@ -787,6 +787,9 @@ CONTAINS
         END ASSOCIATE
       END IF
     END DO
+
+    !$acc update host(this%fract_sum, this%data_sum)
+
     ! print*,'AAA ',ics,ice,MINVAL(this%data_sum(ics:ice)), MAXVAL(this%data_sum(ics:ice)),&
       ! & MINVAL(this%fract_sum(ics:ice)), MAXVAL(this%fract_sum(ics:ice))
 
@@ -887,6 +890,8 @@ CONTAINS
           END ASSOCIATE
         END IF
       END DO
+
+      !$acc update host(this%fract_sum, this%data_sum)
 
       IF (no_children == 1 .AND. .NOT. var%l_aggregate_all) THEN
         ! Only one tile to aggregate, avoid multiplying and dividing by a potentially small fraction
