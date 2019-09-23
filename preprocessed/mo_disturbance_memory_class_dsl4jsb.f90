@@ -1,0 +1,157 @@
+!
+! This file was automatically generated from:
+!    /scratch/snx3000/clementv/icon_eniac_gpu_build/externals/jsbach/src/disturbance/mo_disturbance_memory_class.f90
+!    with md5 hash: 640a3d8d768262ef64a3b84c826e7703
+!
+!>
+!! @brief Contains the memory class for the disturb process.
+!!
+!! @author
+!!  Rainer Schneck, MPI-M Hamburg
+!!
+!! @par Revision History
+!! First version by Rainer Schneck (2017-04-6)
+!!
+MODULE mo_disturb_memory_class
+#ifndef __NO_JSBACH__
+
+  USE mo_kind, ONLY: wp
+
+  USE mo_jsb_memory_class,       ONLY: t_jsb_memory
+  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d
+
+  IMPLICIT NONE
+  PRIVATE
+
+  PUBLIC :: t_disturb_memory, max_no_of_vars
+
+  INTEGER, PARAMETER :: max_no_of_vars = 40
+
+  !> Type definition for memory
+  TYPE, EXTENDS(t_jsb_memory) :: t_disturb_memory
+
+  TYPE(t_jsb_var_real2d) ::   &
+    cconservation_fire,       &
+    cconservation_wind,       &
+    burned_fract,             & ! burned fraction of tile
+    damaged_fract,            & ! windbreak fraction of tile
+    q_rel_air_climbuf,        & ! Relative humiditiy of lowest air layer smoothed in time.
+    q_rel_air_climbuf_yday,   & ! Relative humiditiy of lowest air layer smoothed in time at the end of the last day.
+                                ! This is only needed for cbalone forcing!
+    prev_day_max_wind_10m,    & ! for windbreak
+    max_wind_10m,             & ! for windbreak
+    max_wind_10m_act            ! for windbreak
+
+  CONTAINS
+    PROCEDURE :: Init => Init_disturb_memory
+  END TYPE t_disturb_memory
+
+
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_disturb_memory_class'
+
+CONTAINS
+
+  SUBROUTINE Init_disturb_memory(mem, prefix, suffix, lct_ids, model_id)
+
+    USE mo_jsb_varlist,       ONLY: jsb_add_var, BASIC !, MEDIUM, FULL
+    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
+    USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
+    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
+
+    CLASS(t_disturb_memory), INTENT(inout), TARGET :: mem
+    CHARACTER(len=*),    INTENT(in)    :: prefix
+    CHARACTER(len=*),    INTENT(in)    :: suffix
+    INTEGER,             INTENT(in)    :: lct_ids(:)
+    INTEGER,             INTENT(in)    :: model_id
+
+    TYPE(t_jsb_grid),  POINTER :: hgrid           ! Horizontal grid
+    TYPE(t_jsb_vgrid), POINTER :: surface         ! Vertical grids
+    INTEGER :: table
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_disturb_memory'
+
+    IF (lct_ids(1) > 0)  CONTINUE ! avoid compiler warning about dummy argument not being used
+    IF (model_id > 0)    CONTINUE ! avoid compiler warning about dummy argument not being used
+
+    table = tables(1)
+
+    hgrid   => Get_grid(mem%grid_id)
+    surface => Get_vgrid('surface')
+
+    IF (.NOT. ASSOCIATED(mem%burned_fract%ptr)) THEN
+
+      CALL jsb_add_var( mem, 'burned_fract', mem%burned_fract,                            &
+        & hgrid, surface,                                                                 &
+        & t_cf('burned_fract', 'frac', 'Fraction of tile that is burned.'),               &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),              &
+        & prefix, suffix,                                                                 &
+        & output_level=BASIC,                                                             &
+        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+
+      CALL jsb_add_var( mem, 'damaged_fract', mem%damaged_fract,                           &
+        & hgrid, surface,                                                                  &
+        & t_cf('damaged_fract', 'frac', 'Fraction of tile that is damaged by windbreak.'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
+        & prefix, suffix,                                                                  &
+        & output_level=BASIC,                                                              &
+        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+
+      CALL jsb_add_var( mem, 'q_air_clim', mem%q_rel_air_climbuf,                                       &
+        & hgrid, surface,                                                                               &
+        & t_cf('q_rel_air_climbuf', '-', 'Relative humiditiy of lowest air layer smoothed in time.'),   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                            &
+        & prefix, suffix,                                                                               &
+        & lrestart=.TRUE., initval_r=50.0_wp ) ! initval taken from JS3; lrestart=true only necessary if we restart within a day
+
+      CALL jsb_add_var( mem, 'q_air_clim_yday', mem%q_rel_air_climbuf_yday,                               &
+        & hgrid, surface,                                                                                 &
+        & t_cf('q_rel_air_climbuf_yday', '-', 'Relative humiditiy of lowest air layer smoothed in time    &
+                                                 & at the end of the last day.'),                         &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
+        & prefix, suffix,                                                                                 &
+        & output_level=BASIC,                                                                             &
+        & lrestart=.FALSE., initval_r=50.0_wp ) ! initval taken from JSBACH3
+
+      CALL jsb_add_var( mem, 'prev_day_max_wind_10m', mem%prev_day_max_wind_10m,    &
+        & hgrid, surface,                                                           &
+        & t_cf('prev_day_max_wind_10m', '-', 'Previous day maximum wind speed.'),   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+        & prefix, suffix,                                                           &
+        & lrestart=.FALSE., initval_r=0.0_wp )
+
+      CALL jsb_add_var( mem, 'max_wind_10m', mem%max_wind_10m,                                           &
+        & hgrid, surface,                                                                                &
+        & t_cf('max_wind_10m', '-', 'Maximum wind speed smoothed in time at the end of the last day..'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
+        & prefix, suffix,                                                                                &
+        & lrestart=.TRUE., initval_r=0.0_wp )
+
+      CALL jsb_add_var( mem, 'max_wind_10m_act', mem%max_wind_10m_act,        &
+        & hgrid, surface,                                                     &
+        & t_cf('max_wind_10m_act', '-', 'This days maximum wind speed.'),     &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+        & prefix, suffix,                                                     &
+        & lrestart=.FALSE., initval_r=0.0_wp )
+
+      CALL jsb_add_var( mem, 'cconservation_wind', mem%cconservation_wind,    &
+        & hgrid, surface,                                                     &
+        & t_cf('cconservation_wind', 'mol(C) m-2(canopy)',                    &
+        &   'Test for c conservation on relocation for wind damaged area.'),  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+        & prefix, suffix,                                                     &
+        & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp )
+
+      CALL jsb_add_var( mem, 'cconservation_fire', mem%cconservation_fire,    &
+        & hgrid, surface,                                                     &
+        & t_cf('cconservation_fire', 'mol(C) m-2(canopy)',                    &
+        &  'Test for c conservation on relocation for burned area.'),         &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+        & prefix, suffix,                                                     &
+        & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp )
+
+    END IF
+
+  END SUBROUTINE Init_disturb_memory
+
+#endif
+END MODULE mo_disturb_memory_class
