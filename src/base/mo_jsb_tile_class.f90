@@ -766,8 +766,9 @@ CONTAINS
       CALL finish(TRIM(routine), 'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' has wrong size')
     END IF
 
-    !$acc data present(this%data_sum, this%fract_sum, this%fractions, var%ptr)
+    !$acc data present(this%data_sum, this%fract_sum, var%ptr)
     !$acc update host(var%ptr)
+    !!$acc parallel loop gang vector
     DO j = ics, ice
       this%data_sum (j,iblk) = 0._wp
       this%fract_sum(j,iblk) = 0._wp
@@ -777,16 +778,16 @@ CONTAINS
       IF (var%child_idx(i) > 0) THEN
         ASSOCIATE (data_child => tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p%field(ics:ice,iblk,1,1,1), &
           &        fractions  => this%fractions(ics:ice,iblk,i))
+          !!$acc data copyin(data_child)
+          !!$acc parallel loop gang vector
           DO j = ics, ice
             this%data_sum(j,iblk) = this%data_sum(j,iblk) + fractions(j) * data_child(j)
             this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + fractions(j)
           END DO
+          !!$acc end data
         END ASSOCIATE
       END IF
     END DO
-
-    !$acc update host(this%fract_sum, this%data_sum)
-
     ! print*,'AAA ',ics,ice,MINVAL(this%data_sum(ics:ice)), MAXVAL(this%data_sum(ics:ice)),&
       ! & MINVAL(this%fract_sum(ics:ice)), MAXVAL(this%fract_sum(ics:ice))
 
@@ -800,21 +801,26 @@ CONTAINS
 
     IF (no_children == 1 .AND. .NOT. var%l_aggregate_all) THEN
       ! Only one tile to aggregate, avoid multiplying and dividing by a potentially small fraction
+      !!$acc parallel loop gang vector
       DO j = ics, ice
         var%ptr(j,iblk) = this%data_sum(j,iblk)
       END DO
     ELSE IF (var%l_aggregate_all) THEN              ! Sum of fractions is 1
       ! For tiles where variable is not defined data(:,tile) is 0
+      !!$acc parallel loop gang vector
       DO j = ics, ice
         var%ptr(j,iblk) = this%data_sum(j,iblk)
       END DO
     ELSE
+      !!$acc parallel loop gang vector
       DO j = ics, ice
         IF (this%fract_sum(j,iblk) > 0._wp) THEN
         var%ptr(j,iblk) = this%data_sum(j,iblk) / this%fract_sum(j,iblk)
         END IF
       END DO
     END IF
+
+    !!$acc update host(var%ptr)
     !$acc update device(var%ptr)
     !$acc end data
 
@@ -863,9 +869,10 @@ CONTAINS
     ELSE IF (SIZE(var%child_idx) /= no_children) THEN
       CALL finish(TRIM(routine), 'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' has wrong size')
     END IF
-    !$acc data present(this%fract_sum, this%data_sum, var%ptr)
+    !$acc data present(this%fract_sum, this%data_sum, var%ptr, this%fractions)
     !$acc update host(var%ptr)
     DO ilev=1,SIZE(var%ptr,2)
+      !!$acc parallel loop gang vector
       DO j = ics, ice
         this%fract_sum(j,iblk) = 0._wp
         this%data_sum (j,iblk) = 0._wp
@@ -875,26 +882,31 @@ CONTAINS
         IF (var%child_idx(i) > 0) THEN
           ASSOCIATE (data_child => tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p%field(ics:ice,ilev,iblk,1,1), &
             &        fractions  => this%fractions(ics:ice,iblk,i))
+            !!$acc data copyin(data_child)
+            !!$acc parallel loop gang vector
             DO j = ics, ice
               this%data_sum(j,iblk) = this%data_sum(j,iblk) + fractions(j) * data_child(j)
               this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + fractions(j)
             END DO
+            !!$acc end data
           END ASSOCIATE
         END IF
       END DO
 
-
       IF (no_children == 1 .AND. .NOT. var%l_aggregate_all) THEN
         ! Only one tile to aggregate, avoid multiplying and dividing by a potentially small fraction
+        !!$acc parallel loop gang vector
         DO j = ics, ice
           var%ptr(j,ilev,iblk) = this%data_sum(j,iblk)
         END DO
       ELSE IF (var%l_aggregate_all) THEN              ! Sum of fractions is 1
         ! For tiles where variable is not defined data(:,ilev,tile) is 0
+        !!$acc parallel loop gang vector
         DO j = ics, ice
           var%ptr(j,ilev,iblk) = this%data_sum(j,iblk)
         END DO
       ELSE
+        !!$acc parallel loop gang vector
         DO j = ics, ice
           IF (this%fract_sum(j,iblk) > 0._wp) THEN
             var%ptr(j,ilev,iblk) = this%data_sum(j,iblk) / this%fract_sum(j,iblk)
@@ -902,6 +914,7 @@ CONTAINS
         END DO
       END IF
     END DO
+    !!$acc update host(var%ptr)
     !$acc update device(var%ptr)
     !$acc end data
 
