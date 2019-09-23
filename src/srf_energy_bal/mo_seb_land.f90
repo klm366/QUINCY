@@ -320,7 +320,6 @@ CONTAINS
         s_star(i) = 280._wp * t2s_conv(i)
       END IF
     END DO
-    !$claw acc update host(s_star)
     !$claw acc end data
 
     ! New unfiltered surface temperature (\tilde(X)^(t+1)) (see below Eq. 3.3.1.5 in ECHAM3 manual, alpha = 1/tpfac2)
@@ -351,7 +350,6 @@ CONTAINS
         t_star(i) = MIN(t_star(i), tmelt)
       END IF
     END DO
-    !$claw acc update host(t_star)
     !$claw acc end data
 
     IF (dsl4jsb_Config(SSE_)%l_freeze) THEN
@@ -381,7 +379,6 @@ CONTAINS
           END IF
         END IF
       END DO
-      !$claw acc update host(t_star)
       !$claw acc end data
     END IF
 

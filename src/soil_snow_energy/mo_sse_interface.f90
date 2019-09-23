@@ -487,7 +487,6 @@ CONTAINS
         hcap_grnd(i) = hcap_grnd_soil(i)
       END IF
     END DO
-    !$claw acc update host(grnd_hflx,hcap_grnd)
     !$claw acc end data
 
     !$claw acc exit data delete(snow_depth,snow_fract,t_unfilt_corrected,t_soil_top,hcap_grnd_snow,hcap_grnd_soil,grnd_hflx_snow,grnd_hflx_soil,ldglac,itop,itop_old)  
@@ -684,11 +683,11 @@ CONTAINS
           END IF
         END DO
       END DO
-      !$claw acc update host(fract_water,fract_ice)
       !$claw acc end data
 
       ALLOCATE(vol_heat_cap_tmp(nc,nsoil), soil_e_dz_tmp(nc,nsoil))
       !$claw acc enter data pcreate(vol_heat_cap_tmp,soil_e_dz_tmp)
+      !$claw acc update host(vol_heat_cap(:))
       vol_heat_cap_tmp(:,:) = SPREAD( vol_heat_cap(:), DIM=2, ncopies=nsoil)
       soil_e_dz_tmp(:,:) = SPREAD( soil_e%dz(:), DIM=1, ncopies=nc)
       !$claw acc update device(vol_heat_cap_tmp,soil_e_dz_tmp)
@@ -710,14 +709,12 @@ CONTAINS
       DEALLOCATE(fract_water, fract_ice, vol_heat_cap_tmp, soil_e_dz_tmp)
     ELSE
       !$claw acc data present(vol_heat_cap_sl,vol_heat_cap)
-      !$claw acc update device(vol_heat_cap)
       !$claw acc parallel loop gang vector collapse(2)
       DO i = 1, nc
         DO j = 1, nsoil
           vol_heat_cap_sl(i,j) = vol_heat_cap(i)
         END DO
       END DO
-      !$claw acc update host(vol_heat_cap)
       !$claw acc end data
     ENDIF
 
@@ -747,14 +744,12 @@ CONTAINS
       DEALLOCATE(heat_cond_tmp, soil_e_dz_tmp)
     ELSE
       !$claw acc data present(heat_cond_sl,heat_cond)
-      !$claw acc update device(heat_cond)
       !$claw acc parallel loop gang vector collapse(2)
       DO i = 1, nc
         DO j = 1, nsoil
           heat_cond_sl(i,j) = heat_cond(i)
         END DO
       END DO
-      !$claw acc update host(heat_cond_sl)
       !$claw acc end data
     END IF
 
@@ -773,7 +768,6 @@ CONTAINS
         IF (dsl4jsb_Config(SSE_)%l_dynsnow) THEN
           dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens)
           !$claw acc data present(snow_soil_dens,vol_heat_cap_snow,heat_cond_snow)
-          !$claw acc update device(snow_soil_dens)
           !$claw acc parallel loop gang vector
           DO i = 1, size(snow_soil_dens)
             IF (snow_soil_dens(i) > dens_snow_min) THEN     ! "old" or mixture of old and fresh snow
@@ -789,7 +783,6 @@ CONTAINS
               vol_heat_cap_snow(i) = ci * dens_snow_min
             END IF
           END DO
-          !$claw acc update host(heat_cond_snow,vol_heat_cap_snow)
           !$claw acc end data
         ELSE
           !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_properties_expand_5  tile_name=tile%name

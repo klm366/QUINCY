@@ -469,7 +469,6 @@ CONTAINS
     !$claw acc present(dz,mids,t_srf_unfilt,vol_heat_cap,heat_cond,t_soil, &
     !$claw acc t_soil_acoef,t_soil_bcoef,hcap_grnd,grnd_hflx,thaw_depth)
 
-    !$claw acc update device(mids,dz,vol_heat_cap) ! TODO CLAW to be removed
 
     !$claw acc parallel loop gang vector
     DO jk = 1,nsoil-1
@@ -482,7 +481,6 @@ CONTAINS
         heat_cap(jl,jk) = dz(jk) * vol_heat_cap(jl,jk)
       END DO
     END DO
-    !$claw acc update host(zd1,heat_cap) ! TODO CLAW to be removed
     
     !-----------------------------------------------------------------------------------------------
     !  Computation of soil temperaturs
@@ -505,7 +503,6 @@ CONTAINS
       t_soil(:,1) = t_srf_unfilt(:)
       ! deeper layers
 
-      !$claw acc update device(t_soil_acoef,t_soil_bcoef,t_soil) ! TODO CLAW to be removed
       !$claw acc parallel
       !$claw acc loop gang vector
       DO jl=1,nidx
@@ -515,7 +512,6 @@ CONTAINS
         END DO
       END DO
       !$claw acc end parallel
-      !$claw acc update host(t_soil) ! TODO CLAW to be removed
 
       ! Phase change calculations
       IF (l_freeze .AND. PRESENT(ws)) THEN
@@ -530,7 +526,6 @@ CONTAINS
           & )
 
         !$claw acc data present(frozen,ice,melt)
-        !$claw acc update device(t_soil,ws,liquid_max,frozen,heat_cap,ice,melt) ! TODO CLAW to be removed
         !$claw acc parallel loop gang vector collapse(2)
         DO jl=1,nidx
           DO jk=1,nsoil
@@ -549,7 +544,6 @@ CONTAINS
             END IF
           END DO 
         END DO
-        !$claw acc update host(t_soil,ws,frozen,ice,melt) ! TODO CLAW to be removed
         !$claw acc end data
 
         !$claw expand parallel update savepoint=ser_jsb_sse_calc_soil_temperature_expand_1 counter=ser_counter
@@ -559,7 +553,6 @@ CONTAINS
       END IF
 
       ! Thawing depth
-      !$claw acc update device(thaw_depth,mids,t_soil)
       !$claw acc parallel
       !$claw acc loop gang vector
       DO jl=1,nidx
@@ -578,7 +571,6 @@ CONTAINS
         END DO
       END DO
       !$claw acc end parallel
-      !$claw acc update host(thaw_depth)
 
     END IF
 
@@ -587,7 +579,6 @@ CONTAINS
     !  Computation of the Richtmyer and Morton A and B coefficients for the next time step
     !------------------------------------------------------------------------------------------------
     !$claw acc data present(zdz1,zdz2,heat_cap,heat_cond)
-    !$claw acc update device(heat_cap,heat_cond,zd1) ! TODO CLAW to be removed
     !$claw acc parallel loop gang vector collapse(2)
     DO jl=1,nidx
       DO jk = 1, nsoil
@@ -600,7 +591,6 @@ CONTAINS
         zdz1(jl,jk) = zd1(jk) * heat_cond(jl,jk)
       END DO
     END DO
-    !$claw acc update host(zdz1,zdz2) ! TODO CLAW to be removed
     !$claw acc end data
 
     ! lowest soil layer
@@ -612,7 +602,6 @@ CONTAINS
 
     ! soil layers above
     !$claw acc data present(z1,zdz1, zdz2,t_soil_acoef,t_soil_bcoef,t_soil)
-    !$claw acc update device(z1,zdz1, zdz2,t_soil_acoef,t_soil_bcoef,t_soil) ! TODO CLAW to be removed
     !$claw acc parallel
     !$claw acc loop gang vector
     DO jl=1,nidx
@@ -624,7 +613,6 @@ CONTAINS
       END DO
     END DO  
     !$claw acc end parallel
-    !$claw acc update host(z1,t_soil_acoef,t_soil_bcoef)
     !$claw acc end data
 
     !------------------------------------------------------------------------------------------------
@@ -762,7 +750,6 @@ CONTAINS
     !$claw end expand
 
     !$claw acc data present(zmid,dz,zd1)
-    !$claw acc update device(zmid,dz,zd1) ! TODO CLAW to be removed 
     !$claw acc parallel
     !$claw acc loop gang vector
     DO jl = 1, nidx
@@ -775,9 +762,7 @@ CONTAINS
       END DO
     END DO
     !$claw acc end parallel
-    !$claw acc update host(zmid,zd1) ! TODO CLAW to be removed 
     !$claw acc end data
-
     ! mid of two uppermost soil layers
     !$claw expand parallel update savepoint=ser_jsb_sse_calc_snow_temperature_expand_1
     zmid(:,nsnow+1) = zmid(:,nsnow) + 0.5_wp * (dz(:,nsnow) + dz_soil(1))
@@ -789,7 +774,6 @@ CONTAINS
     ! Reset old values accounting for changes in number of snow layers
     !
     !$claw acc data present(itop,t_snow)
-    !$claw acc update device(itop) ! TODO CLAW to be removed 
     !$claw acc parallel 
     !$claw acc loop gang vector private(itop_new)
     DO jl=1,nidx
@@ -818,7 +802,6 @@ CONTAINS
       END DO
     END DO
     !$claw acc end parallel
-    !$claw acc update host(t_snow) ! TODO CLAW to be removed 
     !$claw acc end data
     !
     !-----------------------------------------------------------------------------------------------
@@ -830,7 +813,6 @@ CONTAINS
       t_snow(:,:) = 0._wp
 
       !$claw acc data present(t_snow,itop,itop_old,t_srf_unfilt,t_snow_acoef,t_snow_bcoef,t_soil_top)
-      !$claw acc update device(t_snow,itop,itop_old,t_srf_unfilt,t_snow_acoef,t_snow_bcoef) ! TODO CLAW to be removed
       !$claw acc parallel loop gang vector collapse(2)
       DO jl=1,nidx
         DO jk=1,nsnow
@@ -861,7 +843,6 @@ CONTAINS
         END IF
       END DO
       !$claw acc end parallel
-      !$claw acc update host(t_snow,t_soil_top)! TODO CLAW to be removed 
       !$claw acc end data
     END IF
 
@@ -884,7 +865,6 @@ CONTAINS
       END DO
     END DO
     !$claw acc end parallel
-    !$claw acc update host(t_snow_acoef,t_snow_bcoef) ! TODO CLAW to be removed
     !$claw acc end data
 
     !$claw acc parallel loop gang vector collapse(2)
@@ -914,13 +894,11 @@ CONTAINS
         t_snow_bcoef(jl,nsnow) = 0._wp
       END IF
     END DO
-    !$claw acc update host(t_snow_acoef,t_snow_bcoef) ! TODO CLAW o be removed
     !$claw acc end data
 
 
     ! snow layers above up to top snow layer
     !$claw acc data present(itop,z1,zdz1,zdz2,t_snow_acoef,t_snow_bcoef,t_snow)
-    !$claw acc update device(itop,z1,zdz1,zdz2,t_snow_acoef,t_snow_bcoef,t_snow) ! TODO CLAW to be removed
     !$claw acc parallel loop gang vector
     DO jl=1,nidx
       DO jk = nsnow, 2, -1
@@ -934,7 +912,6 @@ CONTAINS
         END IF
       END DO
     END DO
-    !$claw acc update host(t_snow_acoef,t_snow_bcoef) ! TODO CLAW to be removed
     !$claw acc end data
 
     !------------------------------------------------------------------------------------------------
@@ -942,7 +919,6 @@ CONTAINS
     !------------------------------------------------------------------------------------------------
     !
     !$claw acc data present(itop,grnd_hflx,hcap_grnd,zdz1,zdz2,t_snow_acoef,t_snow_bcoef,t_snow)
-    !$claw acc update device(itop,grnd_hflx,hcap_grnd,zdz1,zdz2,t_snow_acoef,t_snow_bcoef,t_snow)
     !$claw acc parallel loop gang vector collapse(2)
     DO jl=1,nidx
       DO jk=1,nsnow
@@ -952,7 +928,6 @@ CONTAINS
         END IF
       END DO
     END DO
-    !$claw acc update host(grnd_hflx,hcap_grnd)
     !$claw acc end data
 
     !$claw acc end data
@@ -1066,7 +1041,6 @@ CONTAINS
   !
     !$claw acc data present(cdel,cmid,pts,psn,psocond,prgcgn,pgrndc,pgrndd,ptsoil,pgrndcapc,pgrndhflx,ldglac) &
     !$claw acc create(zso_cond,zso_capa,z1,zd1,zdz1,zdz2,zkappa,zcapa,zsnow_h,zx1,zx2)
-    !$claw acc update device(cdel,cmid,pts,psn,psocond,prgcgn,pgrndc,pgrndd,ptsoil,ldglac)
 
     !$claw acc parallel loop gang vector
     DO jk = 1,nsoil-1
@@ -1208,13 +1182,12 @@ CONTAINS
   !   CALORIFIC CAPACITY OF THE GROUND:
   !   ---------------------------------------------------------
   !
-     !$claw acc parallel loop gang vector
+    !$claw acc parallel loop gang vector
     DO i = 1, nidx
       pgrndhflx(i) = zdz1(i,1) * (pgrndc(i,1) + (pgrndd(i,1) - 1._wp) * ptsoil(i,1))
       pgrndcapc(i) = (zdz2(i,1) * delta_time + delta_time * (1._wp - pgrndd(i,1)) * zdz1(i,1))
     END DO
 
-    !$claw acc update host(pgrndc,pgrndd,ptsoil,pgrndcapc,pgrndhflx)
     !$claw acc end data
 
   END SUBROUTINE calc_soiltemp_old

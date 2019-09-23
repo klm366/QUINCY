@@ -978,7 +978,6 @@ CONTAINS
         w_soil_rel(i) = 0._wp
       END IF
     END DO
-    !$claw acc update host(w_soil_rel)
     !$claw acc end data
 
     IF (.NOT. dsl4jsb_Config(HYDRO_)%l_organic) THEN
