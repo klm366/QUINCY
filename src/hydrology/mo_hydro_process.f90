@@ -525,7 +525,7 @@ CONTAINS
 
     !$claw acc data present(evapo_soil_in_m,evapotrans_soil,trans_in_m) &
     !$claw acc present(ws_min_drain,ws_max,oro_stddev,runoff,infilt)    &
-    !$claw acc present(water_to_soil,ws_incl_ice,ice_rootzone,drainage)
+    !$claw acc present(water_to_soil,ws_incl_ice,ice_rootzone,drainage,t_soil)
     !$claw acc parallel
     !$claw acc loop gang
     DO i = 1, nidx
@@ -609,7 +609,7 @@ CONTAINS
     ! before soilhyd and the other half of it afterwards
 
     !$claw acc data present(infilt)
-    !$claw acc parallel loop gang vector present(infilt)
+    !$claw acc parallel loop gang vector
     DO i = 1, nidx
       infilt(i) = infilt(i) / 2._wp
     END DO

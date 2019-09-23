@@ -193,7 +193,8 @@ CONTAINS
       dsl4jsb_Config(RAD_)%AlbedoCanopySnow = &
         & albedo_age_weight * AlbedoCanopySnow_age + (1._wp - albedo_age_weight) * AlbedoCanopySnow_temp
 
-      !$acc update device(dsl4jsb_var2D_onDomain(RAD_, alb_nir_can))
+      !$acc update device(dsl4jsb_var2D_onDomain(RAD_, alb_nir_can), &
+      !$acc dsl4jsb_var2D_onDomain(RAD_, alb_vis_can))
     END IF
 
     CALL input_file%Close()

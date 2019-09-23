@@ -1227,7 +1227,8 @@ CONTAINS
 
     !TODO CLAW: This part is computed on CPU because temp arrays are issued by compiler. 
     !$claw acc data present(w_soil_root, w_soil_sl, soil_depth_sl, root_depth_sl, &
-    !$claw acc w_soil_root_fc, w_soil_fc_sl, w_soil_root_pwp, w_soil_pwp_sl)
+    !$claw acc w_soil_root_fc, w_soil_fc_sl, w_soil_root_pwp, w_soil_pwp_sl, w_soil_pwp_sl)
+    !$claw acc update host(w_soil_sl, soil_depth_sl, root_depth_sl, w_soil_fc_sl)
     w_soil_root   (:)  = get_water_in_root_zone(w_soil_sl     (:,:), soil_depth_sl(:,:), root_depth_sl(:,:))
     w_soil_root_fc(:)  = get_water_in_root_zone(w_soil_fc_sl  (:,:), soil_depth_sl(:,:), root_depth_sl(:,:))
     w_soil_root_pwp(:) = get_water_in_root_zone(w_soil_pwp_sl (:,:), soil_depth_sl(:,:), root_depth_sl(:,:))
@@ -1875,8 +1876,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_budget)        ! out
 
     CALL tile%Get_fraction(ics, ice, iblk, fract=tile_fract(:))
-
     !$claw acc data create(tile_fract, water_content_new)
+    !$claw acc update device(tile_fract)
     !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_0 tile_name=tile%name
     water_flux(:) = rain(:) + snow(:) + evapotrans(:) - runoff(:) - drainage(:)
     water_flux(:) = water_flux(:) * tile_fract(:) * area(:) / rhoh2o                    ! kg m-2 s-1 -> m3/s
