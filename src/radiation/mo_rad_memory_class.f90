@@ -243,7 +243,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & output_level=MEDIUM,                                               &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+        & loutput=.FALSE., lrestart=.TRUE., initval_r=0.0_wp)
 
       CALL jsb_add_var( mem, 'alb_nir_snow', mem%alb_nir_snow,               &
         & hgrid, surface,                                                    &
@@ -251,7 +251,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & output_level=MEDIUM,                                               &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+        & loutput=.FALSE., lrestart=.TRUE., initval_r=0.0_wp)
 
     END IF
 
@@ -291,7 +291,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & output_level=MEDIUM,                                               &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
+        & loutput=.FALSE., lrestart=.TRUE., initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'alb_nir_soil', mem%alb_nir_soil,               &
         & hgrid, surface,                                                    &
@@ -299,7 +299,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & output_level=MEDIUM,                                               &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
+        & loutput=.FALSE., lrestart=.TRUE., initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'alb_vis_mineralsoil', mem%alb_vis_mineralsoil, &
         & hgrid, surface,                                                    &
@@ -307,7 +307,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & output_level=MEDIUM,                                               &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+        & loutput=.FALSE., lrestart=.TRUE., initval_r=0.0_wp)
 
       CALL jsb_add_var( mem, 'alb_nir_mineralsoil', mem%alb_nir_mineralsoil, &
         & hgrid, surface,                                                    &
@@ -315,7 +315,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & output_level=MEDIUM,                                               &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+        & loutput=.FALSE., lrestart=.TRUE., initval_r=0.0_wp)
 
     END IF
 
@@ -346,21 +346,21 @@ CONTAINS
         & t_cf('snow_age', '', ''),                                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
+        & loutput=.FALSE., lrestart=.TRUE., initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'sky_view_fract', mem%sky_view_fract,           &
         & hgrid, surface,                                                    &
         & t_cf('sky_view_fract', '', ''),                                    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+        & loutput=.FALSE., lrestart=.TRUE., initval_r=0.0_wp)
 
       CALL jsb_add_var( mem, 'sky_view_fract_stem', mem%sky_view_fract_stem, &
         & hgrid, surface,                                                    &
         & t_cf('sky_view_fract_stem', '', ''),                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+        & loutput=.FALSE., lrestart=.TRUE., initval_r=0.0_wp)
 
       CALL jsb_add_var( mem, 'par', mem%par,                                 &
         & hgrid, surface,                                                    &
@@ -412,14 +412,14 @@ CONTAINS
         & t_cf('Fraction of direct PAR', '', ''),                            &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
-        & loutput=.TRUE., lrestart=.FALSE., initval_r=0.5_wp )
+        & loutput=.FALSE., lrestart=.FALSE., initval_r=0.5_wp )
 
        CALL jsb_add_var( mem, 'lai_cl', mem%lai_cl,                           &
          & hgrid, canopy_layer,                                               &
          & t_cf('LAI for each canopy layer', '', ''),                         &
          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
          & prefix, suffix,                                                    &
-         & output_level=BASIC, loutput=.TRUE.,                               &
+         & output_level=BASIC, loutput=.FALSE.,                               &
          & lrestart=.FALSE., initval_r=0.0_wp )
 
        CALL jsb_add_var( mem, 'fapar_cl', mem%faPAR_cl,                            &
@@ -477,7 +477,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
         & prefix, suffix,                                                     &
         & output_level=MEDIUM,                                                &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=AlbedoLakeWater )
+        & loutput=.FALSE., lrestart=.TRUE., initval_r=AlbedoLakeWater )
 
       IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
         CALL jsb_add_var( mem, 'rad_net_lice', mem%rad_net_lice,                &
@@ -495,7 +495,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
           & prefix, suffix,                                                     &
           & output_level=MEDIUM,                                                &
-          & loutput=.TRUE., lrestart=.TRUE., initval_r=AlbedoLakeIceMin )
+          & loutput=.FALSE., lrestart=.TRUE., initval_r=AlbedoLakeIceMin )
       END IF
 
     END IF

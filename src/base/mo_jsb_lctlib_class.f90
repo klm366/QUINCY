@@ -161,6 +161,7 @@ MODULE mo_jsb_lctlib_class
     REAL(wp) :: jedi_F_pseudo_T
     REAL(wp) :: jedi_N_pseudo_T
     REAL(wp) :: CritiGrowTemp
+    REAL(wp) :: EndGrowTemp
     REAL(wp) :: GermFrac     
     REAL(wp) :: Allo2Reproduc
     REAL(wp) :: Allo2Abground
@@ -738,29 +739,36 @@ CONTAINS
              
              CASE ('growrspdmoist')
                 READ(line(pos:length),*) P01(1:nlct)                
-                lctlib(1:nlct)%GrowRspdMoist = 10._wp ** ( 4.0_wp * P01(1:nlct)  - 2.0_wp )  
+                !lctlib(1:nlct)%GrowRspdMoist = 10._wp ** ( 4.0_wp * P01(1:nlct)  + 2.0_wp )  
+                lctlib(1:nlct)%GrowRspdMoist = 10._wp ** ( 1.5_wp * P01(1:nlct)  + 0.5_wp )  
                 ! lctlib(1:nlct)%GrowRspdMoist = 100._wp  ** P01(1:nlct)   ! 2019/4/8 PHS chnage the way to sample plant response to temperature, and the memory [days] of plant growth response to temperature
                 exists_GrowRspdMoist   = .TRUE.     
                   lctlib(1:nlct)%jedi_F_pseudo_soilM = EXP(- get_time_dt() / (lctlib(1:nlct)%GrowRspdMoist  * 86400._wp))
                   lctlib(1:nlct)%jedi_N_pseudo_soilM = 1._wp / (1._wp - lctlib(1:nlct)%jedi_F_pseudo_soilM )
                 WRITE(35,fm) 'GrowRspdMoist ',lctlib(1:nlct)%GrowRspdMoist
-                WRITE(35,fm) 'jedi_F_pseudo_soilM',lctlib(1:nlct)%jedi_F_pseudo_soilM
-                WRITE(35,fm) ' jedi_N_pseudo_soilM',lctlib(1:nlct)%jedi_N_pseudo_soilM
              CASE ('growrspdtemp')
                 READ(line(pos:length),*) P02(1:nlct)                
-                lctlib(1:nlct)%GrowRspdTemp = 10._wp ** ( 4.0_wp * P02(1:nlct)  - 2.0_wp )
+                !lctlib(1:nlct)%GrowRspdTemp = 10._wp ** ( 4.0_wp * P02(1:nlct)  - 2.0_wp )
+                lctlib(1:nlct)%GrowRspdTemp = 10._wp ** ( 1.1_wp * P02(1:nlct)  + 0.9_wp )
                 !lctlib(1:nlct)%GrowRspdTemp = 100._wp ** P02(1:nlct)  !  2019/4/8 PHS chnage the way to sample plant response to soil moisture, and the memory [days] of plant growth response to soil moisture
                 exists_GrowRspdTemp   = .TRUE.
                  lctlib(1:nlct)%jedi_F_pseudo_T = EXP(- get_time_dt() / (lctlib(1:nlct)%GrowRspdTemp* 86400._wp ))
                  lctlib(1:nlct)%jedi_N_pseudo_T = 1._wp / (1._wp - lctlib(1:nlct)%jedi_F_pseudo_T )
                 WRITE(35,fm) 'GrowRspdTemp ',lctlib(1:nlct)%GrowRspdTemp     
-                 WRITE(35,fm) 'jedi_F_pseudo_T ',lctlib(1:nlct)%jedi_F_pseudo_T
-                 WRITE(35,fm) 'jedi_N_pseudo_T',lctlib(1:nlct)%jedi_N_pseudo_T 
              CASE ('critigrowtemp')
                 READ(line(pos:length),*) P03(1:nlct)                
-                lctlib(1:nlct)%CritiGrowTemp = 0._wp + P03(1:nlct)    * ( 15.0_wp - ( 0.0_wp ) )      !PHS: 21.06.2019 End of growth season  from -5degC to 0 degC
+                lctlib(1:nlct)%CritiGrowTemp = -5._wp + P03(1:nlct)    * ( 15.0_wp - ( -5.0_wp ) )      !PHS: 21.06.2019 End of growth season  from -5degC to 0 degC
                 exists_CritiGrowTemp   = .TRUE.
-                WRITE(35,fm) 'CritiGrowTemp ',lctlib(1:nlct)%CritiGrowTemp
+                WRITE(35,fm) 'CritiGrowTemp ',lctlib(1:nlct)%CritiGrowTemp   
+                do i = 1,nlct         
+                     IF ( lctlib(i)%CritiGrowTemp   .LT. 10._wp )    THEN
+                            lctlib(i)%EndGrowTemp = 10._wp + P03(i)    * ( 15._wp - 10._wp )
+                     ELSE
+                            lctlib(i)%EndGrowTemp =  lctlib(i)%CritiGrowTemp + P03(i)    * ( 15._wp -  lctlib(i)%CritiGrowTemp )
+                     END IF
+                end do
+               ! lctlib(i)%EndGrowTemp =  lctlib(i)%CritiGrowTemp + (1._wp + P03(i) )   * ( 5._wp )
+                WRITE(35,fm) 'EndGrowTemp ',lctlib(1:nlct)%EndGrowTemp
              CASE ('germfrac')
                 READ(line(pos:length),*) P04(1:nlct)               
                 lctlib(1:nlct)%GermFrac = 10._wp ** ( 3.0_wp * P04(1:nlct)  - 3.0_wp)                
@@ -793,24 +801,17 @@ CONTAINS
                 WRITE(35,fm) 'TurnoverStruc ',lctlib(1:nlct)%TurnoverStruc
              CASE ('turnoverleaf')
                 READ(line(pos:length),*) P12(1:nlct)
-                !lctlib(1:nlct)%TurnoverLeaf = ( 365._wp / 12._wp ) * ( 10._wp ** (P12(1:nlct) * 2._wp) )
-                lctlib(1:nlct)%TurnoverLeaf = ( 365._wp / 12._wp ) * ( 10._wp ** (  (1.48_wp * P12(1:nlct) + 0.3_wp )* 2._wp) ) 
+                lctlib(1:nlct)%TurnoverLeaf = ( 365._wp / 12._wp ) * ( 10._wp ** (  (1.48_wp * P12(1:nlct) + 0.3_wp )) ) 
                 exists_TurnoverLeaf   = .TRUE.
-                WRITE(35,fm) 'TurnoverLeaf ',lctlib(1:nlct)%TurnoverLeaf  !PHS 9. May. 2019 : we try to sample from sla to turove rate                
-                !lctlib(1:nlct)%JeDiSLA = 50._wp * 12.01_wp * 0.0001_wp + P12(1:nlct) * (  (1000._wp - 50._wp ) * 12.01_wp * 0.0001_wp  )  !PHS 9. May. 2019 : we try to sample from sla to turove rate
-             !   lctlib(1:nlct)%JeDiSLA = 0.104  !superspecies
-              !  WRITE(35,fm) 'JeDiSLA ',   lctlib(1:nlct)%JeDiSLA  !PHS 9. May. 2019 : we try to sample from sla to turove rate                                            
+                WRITE(35,fm) 'TurnoverLeaf ',lctlib(1:nlct)%TurnoverLeaf  
              CASE ('senesrspdnpp')
                 READ(line(pos:length),*) P13(1:nlct)
                 !lctlib(1:nlct)%SenesRspdNPP = 10._wp ** ( 4.0_wp * P13(1:nlct) - 1.0_wp )
-                 lctlib(1:nlct)%SenesRspdNPP = 10._wp ** ( 2.5_wp * P13(1:nlct) - 1.0_wp )  !PHS:18.06.2019 New sample
-                !lctlib(1:nlct)%SenesRspdNPP = 100._wp ** P13(1:nlct)  
+                 lctlib(1:nlct)%SenesRspdNPP =10._wp ** ( 1.5_wp * P01(1:nlct)  + 0.5_wp )   !PHS:18.06.2019 New sample
                 exists_SenesRspdNPP   = .TRUE.
                  lctlib(1:nlct)%jedi_F_pseudo_npp = EXP(- get_time_dt() / (lctlib(1:nlct)%SenesRspdNPP * 86400._wp))
                  lctlib(1:nlct)%jedi_N_pseudo_npp = 1._wp / (1._wp - lctlib(1:nlct)%jedi_F_pseudo_npp )
-                WRITE(35,fm) 'SenesRspdNPP ',lctlib(1:nlct)%SenesRspdNPP  !  2019/4/8 PHS chnage the way to sample plant response to bad npp, and the memory [days] of plant senescence response to bad npp
-                WRITE(35,fm) 'jedi_F_pseudo_npp ',lctlib(1:nlct)%jedi_F_pseudo_npp
-                WRITE(35,fm) 'jedi_N_pseudo_npp ',lctlib(1:nlct)%jedi_N_pseudo_npp
+                WRITE(35,fm) 'SenesRspdNPP ',lctlib(1:nlct)%SenesRspdNPP  
              CASE ('relsenesabgd')
                 READ(line(pos:length),*) P14(1:nlct)
                 !lctlib(1:nlct)%RelSenesAbgd = 10._wp ** ( 8.0_wp * P14(1:nlct) - 7.0_wp )
@@ -1049,18 +1050,15 @@ CONTAINS
        ENDIF
        
        IF (exists_NitroStatus) THEN
-       !lctlib(1:nlct)%JeDiSLA = ( 0.102083_wp * ( ( lctlib(1:nlct)%TurnoverLeaf / 365._wp ) ** ( -0.46_wp ) ) ) 
  
-       lctlib(1:nlct)%JeDiSLA = ( 0.03_wp * ( ( lctlib(1:nlct)%TurnoverLeaf / 365._wp ) ** ( -0.46_wp ) ) ) *  12.01_wp  
-      
-    
-   !    lctlib(1:nlct)%TurnoverLeaf = exp(  ( - 1._wp /  0.46_wp ) * log(lctlib(1:nlct)%JeDiSLA / (0.102083_wp * 365._wp**0.46_wp)  )  )
-         
-       lctlib(1:nlct)%JeDiCarboxRate = 12.01_wp * ( 10._wp**0.13_wp ) * ( 1.e-09_wp ) * ( lctlib(1:nlct)%NitroStatus * 1000._wp * 14._wp / 12.01_wp)**1.42_wp / lctlib(1:nlct)%JeDiSLA  
- 
-       WRITE(35,fm) 'JeDiCarboxRate ',lctlib(1:nlct)%JeDiCarboxRate * (10._wp**6._wp )  ! This is added for formatted output of the VCmax in the Jedi_parameter       
-       WRITE(35,fm) 'JeDiSLA ',   lctlib(1:nlct)%JeDiSLA  !PHS 9. May. 2019 : we try to sample from sla to turove rate       
-    !   WRITE(35,fm) 'TurnoverLeaf ',lctlib(1:nlct)%TurnoverLeaf
+       !lctlib(1:nlct)%JeDiSLA = ( 0.03_wp * ( ( lctlib(1:nlct)%TurnoverLeaf / 365._wp ) ** ( -0.46_wp ) ) ) *  12.01_wp           
+       lctlib(1:nlct)%JeDiSLA = ( ( 0.0001*10.**2.43  ) * ( ( lctlib(1:nlct)%TurnoverLeaf / 365._wp ) ** ( -0.46_wp ) ) ) *  12.01_wp           
+       !28.8. 2019PHS: original jedi --lctlib(1:nlct)%JeDiCarboxRate = 12.01_wp * ( 10._wp**0.13_wp ) * ( 1.e-09_wp ) * ( lctlib(1:nlct)%NitroStatus * 1000._wp * 14._wp / 12.01_wp)**1.42_wp / lctlib(1:nlct)%JeDiSLA  
+        lctlib(1:nlct)%JeDiCarboxRate = (   5._wp +  14._wp * lctlib(1:nlct)%NitroStatus / lctlib(1:nlct)%JeDiSLA  * (9.3_wp + 20._wp * P08(1:nlct) )   ) * (10._wp**-6._wp )
+       WRITE(35,fm) 'JeDiCarboxRate ',lctlib(1:nlct)%JeDiCarboxRate * (10._wp**6._wp )
+       !WRITE(35,fm) 'JeDiCarboxRate ',lctlib(1:nlct)%JeDiCarboxRate * (10._wp**6._wp ) *5._wp ! test 5* Vcmax! This is added for formatted output of the VCmax in the Jedi_parameter       
+       !!28.8. 2019PHS: original jedi  -- WRITE(35,fm) 'JeDiCarboxRate ',lctlib(1:nlct)%JeDiCarboxRate * (10._wp**6._wp )  ! This is added for formatted output of the VCmax in the Jedi_parameter       
+       WRITE(35,fm) 'JeDiSLA ',   lctlib(1:nlct)%JeDiSLA  
        
        ENDIF
        
@@ -1257,6 +1255,7 @@ CONTAINS
        CALL p_bcast(lctlib(:)%jedi_F_pseudo_T  , p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%jedi_N_pseudo_T , p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%CritiGrowTemp  , p_io, mpi_comm)
+       CALL p_bcast(lctlib(:)%EndGrowTemp , p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%GermFrac     , p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%Allo2Reproduc, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%Allo2Abground, p_io, mpi_comm)

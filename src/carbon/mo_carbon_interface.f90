@@ -31,7 +31,7 @@ MODULE mo_carbon_interface
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
-
+  USE mo_jsb_time,          ONLY: get_time_dt
   ! Use of processes in this module (Get_carbon_memory and Get_carbon_config)
   dsl4jsb_Use_processes CARBON_, ASSIMI_, PHENO_, DISTURB_, A2L_, L2A_,HYDRO_
 
@@ -125,23 +125,25 @@ CONTAINS
   SUBROUTINE update_C_NPP_pot_allocation(tile, options)
 
     ! Use declarations
-    USE mo_jsb_grid,          ONLY: Get_grid
-    
+    USE mo_jsb_grid,          ONLY: Get_grid,Get_vgrid
+    USE mo_util,    ONLY: soil_depth_to_layers_2d
     USE mo_carbon_process,    ONLY: calc_Cpools
-    USE mo_carbon_jedi_process, ONLY: calc_Ctradeoff,jedi_water_stress_factor!,drop_expensive_tissue
+    USE mo_carbon_jedi_process, ONLY: calc_Ctradeoff,jedi_water_stress_factor,jedi_soil_depth_to_layers_1d!,drop_expensive_tissue
     USE mo_jsb_physical_constants, ONLY : tmelt  
     USE mo_jsb_control,        ONLY:  jsbach_is_restarted
     USE mo_jsb_time,          ONLY: t_datetime,is_newday, is_newyear, time_steps_per_day, &
                                  &  is_time_experiment_start, get_year_at_model_start,     &
                                  &  get_time_start, get_year,get_time_current
     USE mo_carbon_constants,  ONLY: molarMassCO2_kg, sec_per_day
-
+    USE mo_jsb_grid_class,     ONLY:  t_jsb_vgrid !PHS: root_depth
+    USE mo_hydro_util,             ONLY: get_water_in_root_zone !PHS: root_depth
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Declare local variables
     TYPE(t_jsb_model), POINTER   :: model
+    TYPE(t_jsb_vgrid), POINTER :: soil_w   !PHS: soil depth
     LOGICAL                      :: lstart
     INTEGER                      :: iblk, ics, ice
     REAL(wp), allocatable        :: precip_total(:)
@@ -155,7 +157,7 @@ CONTAINS
     INTEGER                      :: iniyear
     LOGICAL                      :: lrestart
   
-
+    
     REAL(wp), parameter  :: c_CN_woody       = 0.00303_wp * (12.01_wp / 14.0067_wp)  ! molC/molN Ratio for Woody Tissue
     REAL(wp), parameter  :: c_sapwood        = 0.05_wp
     REAL(wp), parameter  :: c_Res_N          = 0.218_wp * ( 14.0067_wp / 12.01_wp )  !! specific respiration in molC/molN/d
@@ -163,7 +165,10 @@ CONTAINS
                                                                 !   heterotrophic respiration rate. This value is 
                                                                 !   taken from JB4.
     REAL(wp), parameter  :: cTiny            = 1.E-8_wp
-   
+     REAL(wp)                   ::  dTdt
+
+  
+
     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
     
 
@@ -210,12 +215,10 @@ CONTAINS
     ! Variavles for JeDi carbon allocation 
     !
     dsl4jsb_Real2D_onChunk ::   c_storage               !     Storage carbon pool 
-    dsl4jsb_Real2D_onChunk ::   c_storage_temp
     dsl4jsb_Real2D_onChunk ::   c_leaves                !      Leaves carbon pool             
     dsl4jsb_Real2D_onChunk ::   c_fnroot                !   Fine root carbon pool
     dsl4jsb_Real2D_onChunk ::   c_csroot                ! Coarse root carbon pool
     dsl4jsb_Real2D_onChunk ::   c_seed                  !        Seed carbon pool
-    dsl4jsb_Real2D_onChunk ::   temp_c_seed                  !        Seed carbon pool
     dsl4jsb_Real2D_onChunk ::   c_stem                  !        Stem carbon pool
     dsl4jsb_Real2D_onChunk ::   ff_grow_W    
     dsl4jsb_Real2D_onChunk ::   ff_grow_T
@@ -234,18 +237,26 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::   GrowthResp    
     dsl4jsb_Real2D_onChunk ::   AutoRes
     dsl4jsb_Real2D_onChunk ::  CUE
+    dsl4jsb_Real2D_onChunk ::  root_maxmoist
+    dsl4jsb_Real2D_onChunk ::  jedi_pot_supply_transp
+    dsl4jsb_Real2D_onChunk ::  root_depth
+    dsl4jsb_Real2D_onChunk ::  soil_depth
+    dsl4jsb_Real3D_onChunk ::  root_depth_sl
+    dsl4jsb_Real3D_onChunk ::  vol_field_cap_sl
+    dsl4jsb_Real3D_onChunk ::  soil_depth_sl
     dsl4jsb_Real2D_onChunk ::   C_balan
     dsl4jsb_Real2D_onChunk ::   C_delta
     dsl4jsb_Real2D_onChunk ::   c_total
     dsl4jsb_Real2D_onChunk ::   del_c         
-    dsl4jsb_Real2D_onChunk ::   Leaf_control
     dsl4jsb_Real2D_onChunk ::   one_counter
     ! Taking relative soil moisture from the HYDRO process
     dsl4jsb_Real2D_onChunk ::   w_soil_rel              
     dsl4jsb_Real2D_onChunk ::   alpha_jedi
     dsl4jsb_Real2D_onChunk ::   max_moist
     dsl4jsb_Real2D_onChunk ::   w_soil_column
-    
+    dsl4jsb_Real2D_onChunk ::   ff_T_30d
+    dsl4jsb_Real2D_onChunk ::   ff_dTdt                      
+    dsl4jsb_Real2D_onChunk ::   ff_grow_T_yDayMean
     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
     
                                                         
@@ -353,6 +364,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: rain
     dsl4jsb_Real2D_onChunk :: snow
 
+
+    !PHS: root depth
+    soil_w => Get_vgrid('soil_depth_water')
+    
+    
     ! If process is not active on this tile, do nothing
     IF (.NOT. tile%Is_process_active(CARBON_)) RETURN
 
@@ -400,12 +416,10 @@ CONTAINS
     ! Variavles for JeDi carbon allocation 
     !
     dsl4jsb_Get_var2D_onChunk(CARBON_,   c_storage         )     !     Storage carbon pool 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   c_storage_temp    )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   c_leaves          )     !      Leaves carbon pool             
     dsl4jsb_Get_var2D_onChunk(CARBON_,   c_fnroot          )     !   Fine root carbon pool
     dsl4jsb_Get_var2D_onChunk(CARBON_,   c_csroot          )     ! Coarse root carbon pool
     dsl4jsb_Get_var2D_onChunk(CARBON_,   c_seed            )     !        Seed carbon pool
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   temp_c_seed       )     !        Seed carbon pool
     dsl4jsb_Get_var2D_onChunk(CARBON_,   c_stem            )     !        Stem carbon pool
     dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_grow_W         )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_grow_T         )
@@ -417,9 +431,16 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,   Flg_die           )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   Flg_senesc        )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   alpha_jedi        )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  root_maxmoist )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  jedi_pot_supply_transp )
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_rel        ) 
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    max_moist         )
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_column     )
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,   root_depth          )
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,   soil_depth     )
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,   root_depth_sl          )  ! 3 Dimensional
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,   vol_field_cap_sl       ) 
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,  soil_depth_sl            )
     dsl4jsb_Get_var2D_onChunk(CARBON_,  one_counter        )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   MaintRes          )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   MaintRes_sum      )
@@ -432,8 +453,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,   C_balan           )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   C_delta           )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   c_total           )
-     dsl4jsb_Get_var2D_onChunk(CARBON_,  del_c            )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   Leaf_control      )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  del_c            )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  ff_dTdt                      )
+    dsl4jsb_Get_var2D_onChunk(CARBON_, ff_T_30d                    )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_grow_T_yDayMean) 
     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
    
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_crop_harvest)         ! inout
@@ -567,34 +590,36 @@ CONTAINS
     !   we can use the one implimented in JB4, such as pseudo temperature.
     !   Therefore, it needs revision.   
     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!     
-    
-    
-    alpha_jedi(:) = jedi_water_stress_factor( w_soil_column(:), &
-                 &                                 max_moist(:), &             
-                 &       dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract)
-    
+      inidate = get_time_start()
+      iniyear = get_year(inidate)
+      lrestart= jsbach_is_restarted()
+      current = get_time_current()
+   
       
- 
-     !  2019/4/8 PHS modified how plant growth and senescence response to temperature, soil moisture, and npp
-                                                      
-    !ff_grow_T     = ( ( t_air - tmelt ) + dsl4jsb_Lctlib_param(GrowRspdTemp) * ff_grow_T      ) / ( 1._wp + dsl4jsb_Lctlib_param(GrowRspdTemp) )
-    !ff_grow_G     = (  alpha_jedi       + dsl4jsb_Lctlib_param(GrowRspdMoist) * ff_grow_G      ) / ( 1._wp + dsl4jsb_Lctlib_param(GrowRspdMoist) )
-    !ff_grow_W     = (  alpha_jedi       + dsl4jsb_Lctlib_param(GrowRspdMoist) * ff_grow_W      ) / ( 1._wp + dsl4jsb_Lctlib_param(GrowRspdMoist) )     
-    !ff_npp        = ( NPP_act_yDayMean  + dsl4jsb_Lctlib_param(SenesRspdNPP) * ff_npp         ) / ( 1._wp + dsl4jsb_Lctlib_param(SenesRspdNPP) )
+       root_maxmoist(:)= get_water_in_root_zone(vol_field_cap_sl(:,:) * soil_depth_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:))          
+      
+      
+      alpha_jedi(:) = jedi_water_stress_factor( w_soil_column(:), &
+                 &                              root_maxmoist(:), &             
+                 &       dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract)            
+                 
+      jedi_pot_supply_transp      =   c_fnroot * (  1000._wp *  0.5_wp *  12.01_wp  *  0.001_wp  / 86400._wp  )  *  alpha_jedi 
+    
+      IF (get_year(current) .LE. iniyear + 8 ) THEN
+               jedi_pot_supply_transp = MAX( jedi_pot_supply_transp , 0.00007 )
+      END IF
+    
     
     ff_grow_T     =  ( t_air - tmelt )         / dsl4jsb_Lctlib_param(jedi_N_pseudo_T)      + ff_grow_T  *     dsl4jsb_Lctlib_param(jedi_F_pseudo_T)
     ff_grow_G     =  alpha_jedi                / dsl4jsb_Lctlib_param(jedi_N_pseudo_soilM) + ff_grow_G *     dsl4jsb_Lctlib_param(jedi_F_pseudo_soilM)
     ff_grow_W    =   alpha_jedi                / dsl4jsb_Lctlib_param (jedi_N_pseudo_soilM) + ff_grow_G *     dsl4jsb_Lctlib_param(jedi_F_pseudo_soilM)
     ff_npp           =   NPP_act_yDayMean / dsl4jsb_Lctlib_param(jedi_N_pseudo_npp)   + ff_npp       *     dsl4jsb_Lctlib_param(jedi_F_pseudo_npp)
     
-   
+     ff_T_30d     =  ( t_air - tmelt )         / ( 1._wp / (1._wp-EXP(- get_time_dt() / (30._wp* 86400._wp ))))      + ff_T_30d  *     EXP(- get_time_dt() / (30._wp* 86400._wp ))
 
      
 
-    inidate = get_time_start()
-    iniyear = get_year(inidate)
-    lrestart= jsbach_is_restarted()
-    current = get_time_current()
+  
     
     
     
@@ -655,32 +680,10 @@ CONTAINS
        
        temp_sum = t_air
        
-   !    if ( get_year(current) .le. iniyear + 2._wp )  print*,"fine tissues = ",  c_leaves + c_fnroot, 'Coarse tissues = ', c_stem + c_csroot
-       !  PHS:24.06.2019  In order to avoid negative c_storage, plant drops fine tissues to reduce large maintenance respiration 
-       !                             If c_storage + GPP - MainRes <0, then this plant invest too much into expensive tissues 
-       !                             so this plant will drop the exact amount of fine tissues corresponding to the difference
-!      CALL drop_expensive_tissue(&
-!                                                                      &  Flg_die,                                                     &
-!                                                                      &  GPP_yDayMean,                                         &
-!                                                                      &  del_c,                                                          & 
-!                                                                      &  dsl4jsb_Lctlib_param(NitroStatus),                &
-!                                                                      &  temp_yDayMean,                                         &
-!                                                                      &  c_storage,                                                    &                                                                      
-!                                                                      &  c_leaves,                                                      &
-!                                                                      &  c_fnroot,                                                      &
-!                                                                      &  c_csroot,                                                      &
-!                                                                      &  c_stem,                                                       &
-!                                                                      &  c_Res_N,                                                      &
-!                                                                      &  c_CN_woody,               &
-!                                                                      &  c_sapwood,                   &
-!                                                                      &  MaintRes,                                                      &
-!                                                                      &  MaintRes_yDayMean  )
+       !PHS 05.08.2019 Tend
+       ff_dTdt                      = ( ff_T_30d - ff_grow_T_yDayMean ) / ( 1._wp /  ( 1._wp - EXP(-1._wp / (15._wp ))     ))  +  EXP(-1._wp / (15._wp ))    * ff_dTdt    
+       ff_grow_T_yDayMean = ff_T_30d
        
-       
-     
-      !Leaf_control        = 1._wp - exp(-0.5_wp * LAI )
-      
-      !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!     
       
 
 
@@ -710,6 +713,7 @@ CONTAINS
         & dsl4jsb_Lctlib_param(GrowRspdMoist),         & ! in
         & dsl4jsb_Lctlib_param(GrowRspdTemp ),         & ! in
         & dsl4jsb_Lctlib_param(CritiGrowTemp),         & ! in
+        & dsl4jsb_Lctlib_param(EndGrowTemp),           & ! in
         & dsl4jsb_Lctlib_param(GermFrac     ),         & ! in
         & dsl4jsb_Lctlib_param(Allo2Reproduc),         & ! in
         & dsl4jsb_Lctlib_param(Allo2Abground),         & ! in
@@ -727,18 +731,16 @@ CONTAINS
         & get_year(current),                            & !in
         & time_steps_per_day(),                        & ! in
         & one_counter,                               & ! inout
-        !& Leaf_control,                                & ! in
         & c_storage,                                   & ! inout
-        & c_storage_temp,                              & ! out
         & c_leaves,                                    & ! inout
         & c_fnroot,                                    & ! inout
         & c_csroot,                                    & ! inout
         & c_seed,                                      & ! inout
-        & temp_c_seed,                                 & ! inout
         & c_stem,                                      & ! inout
-        & ff_grow_W,                               & ! inout
-        & ff_grow_T,                                   & ! inout
-        & ff_grow_G,                                   & ! inout
+        & ff_grow_W,                               & ! in
+        & ff_grow_T,                                   & ! in
+        & ff_grow_G,                                   & ! in
+        & ff_dTdt,                                       & !in
         & Flg_grow,                    & ! out
         & Flg_grow_G ,              & ! out
         & ff_npp,                                      & ! inout
@@ -749,6 +751,7 @@ CONTAINS
         & GrowthResp,                                  & ! out
         & AutoRes,                                     & ! out
          & CUE,                          & !out carbon use efficiency
+         & root_depth,                 &  ! out 
         & C_balan,                                     & ! out
         & C_delta,                                     & ! out
         & c_total,                                     & !
@@ -756,7 +759,7 @@ CONTAINS
         &  c_CN_woody,               & !
         &  c_sapwood,                   & ! 
          &  temp_yDayMean,        & ! in
-        & del_c,                                       & !out
+  !      & del_c,                                       & !out
   !  
         & c_litter_green_ag,                           & ! inout
         & c_litter_green_bg,                           & ! inout
@@ -805,8 +808,9 @@ CONTAINS
         &  WoodLitterSize   =  dsl4jsb_Lctlib_param(WoodLitterSize)   & ! in, optional, necessary with yasso
         & )
       
-    !    print*, "c_acid_ag1= ",c_acid_ag1,"c_acid_bg1",c_acid_bg1,"c_acid_ag2",c_acid_ag2,"c_acid_bg2",c_acid_bg2
+      root_depth = MIN(root_depth,soil_depth)
       
+      root_depth_sl = jedi_soil_depth_to_layers_1d(  root_depth, soil_w%dz(:))   
       
       ELSE
       

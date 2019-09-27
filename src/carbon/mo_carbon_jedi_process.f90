@@ -19,11 +19,41 @@ MODULE mo_carbon_jedi_process
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: calc_Ctradeoff, yasso, get_per_tile,jedi_water_stress_factor!,drop_expensive_tissue
+  PUBLIC :: calc_Ctradeoff, yasso, get_per_tile,jedi_water_stress_factor,jedi_soil_depth_to_layers_1d!,drop_expensive_tissue
   !PUBLIC :: , relocate_carbon_fire, relocate_carbon_damage
   CHARACTER(len=*), PARAMETER :: modname = 'mo_carbon_jedi_process'
 
 CONTAINS
+
+  FUNCTION jedi_soil_depth_to_layers_1d(depth, dz) RESULT(depth_l)
+
+    REAL(wp), INTENT(in) :: depth(:)
+    REAL(wp), INTENT(in) :: dz(:)
+    REAL(wp)             :: depth_l(SIZE(depth,1), SIZE(dz))
+
+    REAL(wp) :: bottom, bottom_m1
+    INTEGER  :: nsoil, i
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':jedi_soil_depth_to_layer_1d'
+
+    nsoil = SIZE(dz)
+
+    depth_l(:,:) = 0._wp
+    bottom = 0._wp
+    bottom_m1 = 0._wp
+    DO i=1,nsoil
+      bottom = bottom + dz(i)
+      WHERE (depth(:) >= bottom)
+        depth_l(:,i) = dz(i)
+      ELSEWHERE (depth(:) > bottom_m1)
+        depth_l(:,i) = depth(:) - bottom_m1
+      END WHERE
+      bottom_m1 = bottom_m1 + dz(i)
+    END DO
+
+  END FUNCTION jedi_soil_depth_to_layers_1d
+
+
 
  ELEMENTAL FUNCTION jedi_water_stress_factor ( &
     & w_soil, w_soil_max, w_soil_wilt_fract) RESULT(water_stress_factor)
@@ -52,78 +82,6 @@ CONTAINS
  END FUNCTION jedi_water_stress_factor
 
 
-!ELEMENTAL SUBROUTINE drop_expensive_tissue ( &
-!                                                                      &  Flg_die,                    &
-!                                                                      &  GPP_yDayMean, &
-!                                                                      &  del_c,                         & 
-!                                                                      &  NitroStatus,                &
-!                                                                      &  temp_yDayMean,        &
-!                                                                      &  c_storage,                  &                                                                      
-!                                                                      &  c_leaves,                    &
-!                                                                      &  c_fnroot,                    &
-!                                                                      &  c_csroot,                    &
-!                                                                      &  c_stem,                      &
-!                                                                      &  c_Res_N,                    &
-!                                                                      &  c_CN_woody,               &
-!                                                                      &  c_sapwood,                   &
-!                                                                      &  MaintRes,                    &
-!                                                                      &  MaintRes_yDayMean )
-!             USE mo_carbon_constants,  ONLY:  sec_per_day 
-!             USE mo_jsb_physical_constants, ONLY : tmelt  
-            
-!            REAL(wp),INTENT(IN)         ::    Flg_die
-!            REAL(wp),INTENT(IN)         ::   GPP_yDayMean
-!            REAL(wp),INTENT(INOUT)   ::   del_c                     
-!            REAL(wp),INTENT(IN)         ::   NitroStatus           
-!            REAL(wp),INTENT(IN)          ::   temp_yDayMean     
-!            REAL(wp),INTENT(IN)         ::   c_storage               
-!            REAL(wp),INTENT(INOUT)   ::   c_leaves                
-!            REAL(wp),INTENT(INOUT)   ::   c_fnroot                
-!            REAL(wp),INTENT(INOUT)   ::   c_csroot                
-!            REAL(wp),INTENT(INOUT)   ::   c_stem               
-!            REAL(wp),INTENT(IN)         ::   c_Res_N     
-!            REAL(wp),INTENT(IN)         ::  c_CN_woody
-!            REAL(wp),INTENT(IN)         ::  c_sapwood        
-!            REAL(wp),INTENT(INOUT)   ::   MaintReS               
-!            REAL(wp),INTENT(INOUT)   ::   MaintRes_yDayMean                                                           
-!            REAL(WP) :: f_leafroot,f_finetissues,f_stemcsroot                                                         
-                                                                      
-
-!   if ( Flg_die .eq. 0._wp .and. (c_storage + GPP_yDayMean * sec_per_day - MaintRes_yDayMean * sec_per_day  )  .LT.   0._wp   ) then
-
-!          if (  (  c_leaves + c_fnroot + c_stem + c_csroot ) .gt. 0._wp  ) then 
-          
-!                           del_c = abs(c_storage + GPP_yDayMean * sec_per_day - MaintRes_yDayMean * sec_per_day  )  /   &
-!                             (   c_Res_N    * ( 1.4_wp ** ( ( temp_yDayMean - tmelt - 20._wp ) / 10._wp) )   )
-                           
-!                            f_finetissues = NitroStatus * ( c_leaves + c_fnroot )  / (  NitroStatus * ( c_leaves + c_fnroot ) +   c_sapwood * c_CN_woody * ( c_stem + c_csroot )        )
-                           
-!                           f_leafroot       = c_leaves / (  c_leaves + c_fnroot  )
-!                           f_stemcsroot =   c_stem  / ( c_stem + c_csroot ) 
-!                           c_leaves = c_leaves -  del_c * f_finetissues * f_leafroot 
-!                           c_fnroot = c_fnroot -   del_c * f_finetissues * ( 1._wp  -  f_leafroot  )
-!                           c_stem = c_stem -  del_c * ( 1._wp - f_finetissues ) * f_stemcsroot
-!                           c_csroot = c_csroot  -  del_c * ( 1._wp - f_finetissues ) * ( 1._wp - f_stemcsroot  )
-                           
-!                           MaintRes = 0._wp
-!                           MaintRes = c_sapwood * c_CN_woody * ( c_stem + c_csroot ) + NitroStatus * ( c_leaves + c_fnroot ) 
-!                           MaintRes = MaintRes  * c_Res_N    * ( 1.4_wp ** ( ( temp_yDayMean - tmelt - 20._wp ) / 10._wp) ) ! JeDi uses 1.4 for Q10 value
-!                           MaintRes = MaintRes / sec_per_day ! The maintanence respiration is computed daily in JeDi.
-!                           MaintRes_yDayMean   = MaintRes
-       
-      
-!          endif 
-       
-!       else
-          
-!          del_c = 0._wp
-       
-!       end if
-
-
-
-!END SUBROUTINE drop_expensive_tissue
-
 
   ! Calculations to allocate NPP to the plant C pools.
   ELEMENTAL SUBROUTINE calc_Ctradeoff( &
@@ -132,6 +90,7 @@ CONTAINS
     & GrowRspdMoist,              & ! in
     & GrowRspdTemp ,              & ! in
     & CritiGrowTemp,              & ! in
+    & EndGrowTemp,              & !in
     & GermFrac     ,              & ! in
     & Allo2Reproduc,              & ! in
     & Allo2Abground,              & ! in
@@ -149,18 +108,16 @@ CONTAINS
     & currentyear,                & !in
     & time_steps_per_day,         & ! in
     & one_counter,                      & !inout
-   ! & Leaf_control,               & ! in
     & c_storage,                  & ! inout
-    & c_storage_temp,             & ! out
     & c_leaves,                   & ! inout
     & c_fnroot,                   & ! inout
     & c_csroot,                   & ! inout
     & c_seed,                     & ! inout
-    & temp_c_seed,                & ! inout
     & c_stem,                     & ! inout
     & ff_grow_W,                  & ! in
     & ff_grow_T,                  & ! in
     & ff_grow_G,                  & ! in
+    & ff_dTdt,                       & !in
     & Flg_grow,                    & ! out
     & Flg_grow_G ,              & ! out
     & ff_npp,                     & ! inout
@@ -171,6 +128,7 @@ CONTAINS
     & GrowthResp,                 & ! out
     & AutoRes,                    & ! out
     & CUE,                          & !out carbon use efficiency
+    & root_depth,                 & ! out root_depth computed from coarse root carbon
     & C_balan,                    & ! out C_balan = GPP - Mainres - Growthres - litter
     & C_delta,                    & ! out C_delta = New total carbon - old total carbon
     & c_total,                    & ! out
@@ -178,7 +136,7 @@ CONTAINS
     &  c_CN_woody,               & ! in
     &  c_sapwood,                   & ! in
     &  temp_yDayMean,        & ! in
-    &  del_c,                          & !out
+  !  &  del_c,                          & !out
     & c_litter_green_ag,          & ! inout
     & c_litter_green_bg,          & ! inout
     & c_litter_wood_ag,           & ! inout
@@ -235,7 +193,8 @@ CONTAINS
     REAL(wp), INTENT(in)    :: GPP_yDayMean           ! Yesterdays mean GPP rate [mol(C)/m^2 s]
     REAL(wp), INTENT(in)     :: GrowRspdMoist         ! Jedi parameter -- P01 Growth response time to moisture conditions 
     REAL(wp), INTENT(in)     :: GrowRspdTemp          ! Jedi parameter -- P02 Growth response time to temperature conditions 
-    REAL(wp), INTENT(in)     :: CritiGrowTemp         ! Jedi parameter -- P03 Critical temperature for growth                
+    REAL(wp), INTENT(in)     :: CritiGrowTemp         ! Jedi parameter -- P03 Critical temperature for growth        
+    REAL(wp), INTENT(in)     :: EndGrowTemp        
     REAL(wp), INTENT(in)     :: GermFrac              ! Jedi parameter -- P04 Germination fraction                      
     REAL(wp), INTENT(in)     :: Allo2Reproduc         ! Jedi parameter -- P05 Allocation to reproduction                
     REAL(wp), INTENT(in)     :: Allo2Abground         ! Jedi parameter -- P06 Allocation to above ground growth           
@@ -252,26 +211,22 @@ CONTAINS
     INTEGER,  INTENT(in)     :: currentyear  
     INTEGER,  INTENT(in)     :: time_steps_per_day
     REAL(wp), INTENT(inout) :: one_counter
-    REAL(wp), INTENT(out)     :: del_c
- !   REAL(wp), INTENT(in)     :: Leaf_control 
+   ! REAL(wp), INTENT(out)     :: del_c
     !
     ! JeDi carbon allocation 
     REAL(wp), INTENT(inout) :: c_storage            ! Stored carbon pool: on input last value; updated on output
-                                                     !    [mol(C)/m^2(canopy)]   
-    REAL(wp), INTENT(out) ::  c_storage_temp                                                                      
+                                                     !    [mol(C)/m^2(canopy)]                     
     REAL(wp), INTENT(inout) :: c_leaves           ! Leaves carbon pool: on input last value; updated on output
                                                      !    [mol(C)/m^2(canopy)]
     REAL(wp), INTENT(inout) :: c_seed             ! Seed carbon pool: on input last value; updated on output
-                                                     !    [mol(C)/m^2(canopy)]             
-    REAL(wp), INTENT(inout) :: temp_c_seed             ! Seed carbon pool: on input last value; updated on output
-                                                     !    [mol(C)/m^2(canopy)]                                                                                                                                        
+                                                     !    [mol(C)/m^2(canopy)]                                                                                                                                                   
     REAL(wp), INTENT(inout) :: c_fnroot           ! Fine root carbon pool: on input last value; updated on output
                                                      !    [mol(C)/m^2(canopy)]
     REAL(wp), INTENT(inout) :: c_csroot           ! Coarse root carbon pool: on input last value; updated on output
                                                      !    [mol(C)/m^2(canopy)]                                                     
     REAL(wp), INTENT(inout) :: c_stem             ! Stem carbon pool: on input last value; updated on output
                                                      !    [mol(C)/m^2(canopy)]        
-    REAL(wp), INTENT(in) :: ff_grow_T
+    REAL(wp), INTENT(in) :: ff_grow_T,ff_dTdt
     REAL(wp), INTENT(in) :: ff_grow_G
     REAL(wp), INTENT(in) :: ff_grow_W 
     REAL(wp), INTENT(out)   ::  Flg_grow
@@ -302,6 +257,7 @@ CONTAINS
     REAL(wp), INTENT(out)   ::  C_delta
     REAL(wp), INTENT(out)   ::  c_total
     REAL(wp), INTENT(out)   ::  CUE
+    REAL(wp), INTENT(out)   ::  root_depth
     !
     ! added for thonicke fire algorithm (spitfire) needed to correctly split the carbon pools into the different fuel classes
     !real(wp),optional,intent(inout) :: fract_litter_wood_new   ! new fraction in above ground wood litter pool
@@ -500,53 +456,6 @@ CONTAINS
     c_total_temp = c_storage + c_seed + c_leaves + c_stem + c_csroot + c_fnroot 
     
    
-     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
-!      if ( Flg_die .lt. 1._wp .and. (c_storage + NPP  )  .LT.   0._wp   ) then   !PHS drop tissues
-
-!          if (  (  c_leaves + c_fnroot + c_stem + c_csroot ) .gt. 0._wp  ) then 
-          
-!                           del_c = abs(c_storage + NPP  )  /   &
-!                             (   c_Res_N    * ( 1.4_wp ** ( ( temp_yDayMean - tmelt - 20._wp ) / 10._wp) )   )
-                           
-!                            f_finetissues = NitroStatus * ( c_leaves + c_fnroot )  / (  NitroStatus * ( c_leaves + c_fnroot ) +   c_sapwood * c_CN_woody * ( c_stem + c_csroot )        )
-                           
-!                           f_leafroot       = c_leaves / (  c_leaves + c_fnroot  )
-!                           f_stemcsroot =   c_stem  / ( c_stem + c_csroot ) 
-!                           c_leaves = c_leaves -  del_c * f_finetissues * f_leafroot 
-!                           c_fnroot = c_fnroot -   del_c * f_finetissues * ( 1._wp  -  f_leafroot  )
-!                           c_stem = c_stem -  del_c * ( 1._wp - f_finetissues ) * f_stemcsroot
-!                           c_csroot = c_csroot  -  del_c * ( 1._wp - f_finetissues ) * ( 1._wp - f_stemcsroot  )
-                           
-!                          ! compute new maintenance respiration again 
-!                           MaintRes = 0._wp
-!                           MaintRes = c_sapwood * c_CN_woody * ( c_stem + c_csroot ) + NitroStatus * ( c_leaves + c_fnroot ) 
-!                           MaintRes = MaintRes  * c_Res_N    * ( 1.4_wp ** ( ( temp_yDayMean - tmelt - 20._wp ) / 10._wp) ) ! JeDi uses 1.4 for Q10 value
-!                           MaintRes = MaintRes / sec_per_day ! The maintanence respiration is computed daily in JeDi.
-!                           MaintRes_yDayMean   = MaintRes
-                           
-!                           AutoRes = MaintRes_yDayMean * sec_per_day
-!                           NPP     = GPP_yDayMean * sec_per_day  - AutoRes
-       
-      
-!          endif 
-       
-!       else
-          
-!          del_c = 0._wp
-       
-!       end if
-   
-!     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
    
     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-! Growing condition !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-!
@@ -558,7 +467,20 @@ CONTAINS
     Flg_grow_W = 0._wp
     Flg_grow_G = 0._wp
     
-    IF ( ff_grow_T     .ge.  CritiGrowTemp   ) Flg_grow_T = 1.0_wp
+    !IF ( ff_grow_T     .ge.  CritiGrowTemp   ) Flg_grow_T = 1.0_wp
+    
+    IF ( ff_grow_T     .ge.  EndGrowTemp   ) THEN
+            Flg_grow_T = 1.0_wp
+    ELSE IF ( ff_grow_T     .gt.  EndGrowTemp  .and.  ff_grow_T     .le.  EndGrowTemp  ) THEN
+        IF ( ff_dTdt .gt. 0._wp  ) THEN
+            Flg_grow_T = 1.0_wp
+        ELSE
+            Flg_grow_T = 0.0_wp
+        END IF
+    ELSE 
+            Flg_grow_T = 0.0_wp
+    END IF
+    
     IF ( ff_grow_W     .ge. 0.5_wp           ) Flg_grow_W = 1.0_wp
     IF ( ff_grow_G     .ge. 0.5_wp           ) Flg_grow_G = 1.0_wp  ! This needs to be modified 
     
@@ -600,14 +522,7 @@ CONTAINS
     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=! 
     
     fract_veg = 1.0_wp  ! Dont know what this control, need to check later  ????????
-    
-  
-!    AG_growth  = Flg_grow * Allo2Abground
-!    BG_growth  = Flg_grow * Allo2Blground
-! 
-!    AG_struct  = Flg_grow * RelAllo2Abgrd * Leaf_control
-!    BG_struct  = Flg_grow * RelAllo2Blgrd 
- 
+     
   
     
     AG_growth  = Flg_grow * Allo2Abground
@@ -628,8 +543,7 @@ CONTAINS
     
     
     
-      IF (   ( c_storage .gt. 0._wp )  .or. ( c_storage .lt. cTiny  .and. c_total_temp .gt.  1._wp     )  ) THEN  ! PHS:24.06.2019  In order to avoid negative c_storage, plant drops fine tissues to reduce large maintenance respiration   from gt -> ge
-    
+      IF (    c_storage .gt. 0._wp  ) THEN  
 	    Flg_seed = 0._wp
         IF ( NPP  .gt. 0._wp  ) Flg_seed = 1.0_wp ! OR NPP_yDayMean ???
         
@@ -696,9 +610,7 @@ CONTAINS
         zLoss_csroot =  c_csroot  / tau_csroot
         zLoss_fnroot =  c_fnroot   / tau_fnroot
         
-        
-        c_storage_temp = zAlloc_leaves - zLoss_leaves
-       
+               
         
         
         !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
@@ -730,8 +642,8 @@ CONTAINS
         END IF
         
          
-          
-     
+          root_depth = MAX( 0.2, sqrt( c_csroot * 2250.*12.01 ) * 0.001 )   !PHS: adding root depth
+      
           GrowthResp = GrowthResp /  sec_per_day 
           AutoRes    = AutoRes    /  sec_per_day 
           
@@ -803,16 +715,17 @@ CONTAINS
     
 
     ELSE 
-       CUE                             = 0._wp
-      GrowthResp                  = 0._wp
-      AutoRes                     = 0._wp
-      NPP_act_yDayMean            = 0._wp
-      leafLitter                  = 0._wp
-      C_2_litter_woodPool         = 0._wp
-      fract_green_AG_jedi         = 0._wp
-      fract_wood_AG_jedi          = 0._wp
-      cflux_c_greenwood_2_litter  = 0._wp
-	   
+      CUE                          = 0._wp
+      GrowthResp                   = 0._wp
+      AutoRes                      = 0._wp
+      NPP_act_yDayMean             = 0._wp
+      leafLitter                   = 0._wp
+      C_2_litter_woodPool          = 0._wp
+      fract_green_AG_jedi          = 0._wp
+      fract_wood_AG_jedi           = 0._wp
+      cflux_c_greenwood_2_litter   = 0._wp
+      root_depth                   = 0._wp   
+
     ENDIF
 
      IF ( ( currentyear .EQ. iniyear+1 )  .AND. (  one_counter .LT. 11._wp ) .AND.  (  Flg_grow .GT. 0._wp  ) ) THEN
@@ -823,7 +736,7 @@ CONTAINS
       END IF
 
 
-   c_total = c_storage + c_seed + c_leaves + c_stem + c_csroot + c_fnroot 
+   c_total = c_storage + c_leaves + c_stem + c_csroot + c_fnroot 
 
    C_delta =  ( c_storage + c_seed + c_leaves + c_stem + c_csroot + c_fnroot ) - c_total_temp  ! this is the difference of assimilated carbon added into c-pools in this timestep
    

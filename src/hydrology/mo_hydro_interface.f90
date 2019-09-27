@@ -33,7 +33,7 @@ MODULE mo_hydro_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes SEB_, SSE_, TURB_, PHENO_, A2L_, HYDRO_
+  dsl4jsb_Use_processes SEB_, SSE_, TURB_, PHENO_, A2L_, HYDRO_,CARBON_
 
   ! Use of process configurations
   dsl4jsb_Use_config(SEB_)
@@ -47,6 +47,7 @@ MODULE mo_hydro_interface
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(TURB_)
   dsl4jsb_Use_memory(PHENO_)
+  dsl4jsb_Use_memory(CARBON_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -1121,7 +1122,8 @@ CONTAINS
     dsl4jsb_Def_config(HYDRO_)
 
     dsl4jsb_Def_memory(HYDRO_)
-
+    dsl4jsb_Def_memory(CARBON_)   !PHS
+    
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: root_depth_sl
     dsl4jsb_Real2D_onChunk :: w_soil_column       !< Water content in soil column
@@ -1133,6 +1135,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: w_soil_root_pwp     !< Water content in root zone at permanent wilting point
     dsl4jsb_Real2D_onChunk :: max_moist
     dsl4jsb_Real2D_onChunk :: water_stress
+    dsl4jsb_Real2D_onChunk :: evapopot
+    dsl4jsb_Real2D_onChunk :: jedi_pot_supply_transp  !PHS
 
     INTEGER :: iblk, ics, ice
 
@@ -1151,6 +1155,7 @@ CONTAINS
     ! Get reference to variables for current block
     !
     dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(CARBON_)
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    soil_depth_sl)       ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_sl)           ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_fc_sl)        ! in
@@ -1162,9 +1167,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root_fc)      ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root_pwp)     ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_stress)        ! out
-
+    
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapopot) !PHS
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   jedi_pot_supply_transp) !PHS	
     ! Get water stress
-
+     
+     
     ! Calculate water content and field capacity in the root zone
     ! @todo - do we need these?
     w_soil_root   (:)  = get_water_in_root_zone(w_soil_sl     (:,:), soil_depth_sl(:,:), root_depth_sl(:,:))
@@ -1173,9 +1181,22 @@ CONTAINS
 
     ! Calculate water stress factor
     ! @todo: maybe use the distributed permanent wilting point/field cap from above and change get_water_stress_factor function
-    water_stress(:) = &
-      & get_water_stress_factor(w_soil_column(:), max_moist(:), &
-          &                     dsl4jsb_Config(HYDRO_)%w_soil_crit_fract, dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract)
+
+   IF (TRIM(model%config%usecase) .eq. 'jsbach_jedi' ) THEN
+      
+      WHERE (evapopot(:) .GE. 0._wp)  
+         water_stress(:) = 1._wp
+      ELSEWHERE ( evapopot(:) .LT. 0._wp )   
+          water_stress(:) = 1._wp - exp(  -  jedi_pot_supply_transp(:)  /  ABS(evapopot(:))  )
+      END WHERE
+      
+   ELSE
+      
+       water_stress(:) = &
+         & get_water_stress_factor(w_soil_column(:), max_moist(:), &
+             &                     dsl4jsb_Config(HYDRO_)%w_soil_crit_fract, dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract) 
+             
+    END IF 
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

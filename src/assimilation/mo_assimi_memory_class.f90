@@ -200,7 +200,7 @@ CONTAINS
         & t_cf('gross_assimilation_cl', 'mol(CO2)/m^2(leaf area) / s', 'Gross photosynthesis per canopy layer on leaf area'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                                  &
         & prefix, suffix,                                                                                                     &
-        & output_level=BASIC, loutput=.TRUE.,                                                                                &
+        & output_level=BASIC, loutput=.FALSE.,                                                                                &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE.  )
 
       CALL jsb_add_var( mem, 'dark_respiration_cl', mem%dark_respiration_cl,                                                    &
@@ -258,7 +258,7 @@ CONTAINS
         & t_cf('canopy_conductance_limited', '', ''),                            &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
-        & output_level=BASIC, loutput=.TRUE.,                                                                                &
+        & output_level=BASIC, loutput=.FALSE.,                                                                                &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'cover_fract_pot', mem%cover_fract_pot,         &
