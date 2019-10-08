@@ -768,6 +768,9 @@ CONTAINS
        hlp2(:) = (w_soil_sl(:,isoil-1) - w_soil_sl(:,isoil) * hlp3(:)) / (1._wp + hlp3(:))
        WHERE(hlp1(:) < 0.0_wp  .AND. hlp1(:) < hlp2(:)) hlp1(:) = hlp2(:)
        WHERE(hlp1(:) >= 0.0_wp .AND. hlp1(:) > hlp2(:)) hlp1(:) = hlp2(:)
+       ! avoid soil water content exceeding soil water capacity
+       hlp1(:) = MIN(MAX(hlp1(:), w_soil_sl(:,isoil-1) - w_soil_fc_sl(:,isoil-1)), &
+                     w_soil_fc_sl(:,isoil)-w_soil_sl(:,isoil))
 
        ! update soil layers with diffusion
        w_soil_sl(:,isoil-1)   = w_soil_sl(:,isoil-1) - hlp1(:)
