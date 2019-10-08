@@ -520,6 +520,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: CO2_conc_leaf_cl        ! CO2 concentration inside leaf  [mol(CO2)/mol(Air)]:
                                                       ! Output only for the water limited case here
     dsl4jsb_Real3D_onChunk :: lai_cl                  ! Leaf area index [-]
+    dsl4jsb_Real2D_onChunk :: day_NPP_sum
 
     ! Set local variables from options argument
     dtime   = options%dtime
@@ -527,6 +528,7 @@ CONTAINS
     ics     = options%ics
     ice     = options%ice
     !nc      = options%nc
+    dtime   = options%dtime
 
     ! If process is not active on this tile, do nothing
     IF (.NOT. tile%Is_process_active(ASSIMI_)) RETURN
@@ -574,6 +576,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   e_transport_rate_cl)     ! out
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   carbox_rate_cl)          ! out
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   CO2_conc_leaf_cl)        ! out
+
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    day_NPP_sum)             ! inout
 
     ! ---------------------------
     ! Go
@@ -644,6 +648,10 @@ CONTAINS
     dark_respiration(:) =  dark_respiration_ca(:)  * veg_fract_correction(:) * fract_fpc_max(:)
 
     CALL calc_NPP_pot_rate(gross_assimilation_ca, dark_respiration_ca, NPP_pot_rate_ca)
+
+    ! Accumulate NPP_pot_rate_ca. day_NPP_sum is divided by the day length and reset to zero in
+    ! update_phenology_logrop at the beginning of each day.
+    day_NPP_sum(:) = day_NPP_sum(:) + NPP_pot_rate_ca(:) * dtime
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
