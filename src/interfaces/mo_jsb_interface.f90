@@ -372,7 +372,7 @@ CONTAINS
     tile => model%Get_top_tile()
     IF (model%processes(CARBON_)%p%config%active) THEN
       IF(is_newday()) THEN
-        CALL yday_carbon_conservation_test(tile, model%options(no_omp_thread))
+        CALL yday_carbon_conservation_test(tile)
       END IF
     END IF
     
