@@ -271,7 +271,8 @@ CONTAINS
 
       ! Initialize tile memory and read tile fractions
       ! @todo: once we have land use change or dynveg, l_fixed_fractions needs to be adapted
-      CALL tile%Init(TRIM(model%shortname), '', TRIM(tile%name), l_fixed_fractions=.TRUE., &
+      CALL tile%Init(TRIM(model%shortname), '', TRIM(tile%name),                             &
+        & l_fixed_fractions=.TRUE., l_rel_fractions=model%config%relative_fractions_in_file, &
         & in_var_groups=one_of(TRIM(tile%name), model%config%output_tiles) > 0)
 
       ! TBD: Loop over processes instead of explicit
@@ -363,6 +364,8 @@ CONTAINS
                   EXIT
                 END IF
               END DO
+              CALL tile%Get_fraction(fract=fract_tmp(:,:))
+              tile%lcts(ilct)%fract(:,:) = MERGE(tile%lcts(ilct)%fract(:,:) / fract_tmp(:,:), 0._wp, fract_tmp(:,:) > 0._wp)
             END IF
             child => child%Get_next_sibling_tile()
           END DO
