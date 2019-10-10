@@ -9,6 +9,11 @@
 !! Julia Nabel (2018-01-10): added l_forestRegrowth flag for optional functionality: forest regrowth
 !!                          (derive maxLAI from biomass via allometric relationships)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_pheno_config_class
 #ifndef __NO_JSBACH__
 

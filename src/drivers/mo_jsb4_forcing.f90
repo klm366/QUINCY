@@ -20,10 +20,9 @@
 !!
 !! @par Copyright
 !! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/model-distribution.html and the
-!! file COPYING in the root of the source tree for this code.
-!! Where software is supplied by third parties, it is indicated in the headers of the routines.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
+
 MODULE mo_jsb4_forcing
 #ifndef __NO_JSBACH__
 
