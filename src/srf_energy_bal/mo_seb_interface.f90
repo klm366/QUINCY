@@ -28,7 +28,7 @@ MODULE mo_seb_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   dsl4jsb_Use_processes SEB_, HYDRO_, SSE_
-  !dsl4jsb_Use_config(SEB_)
+  dsl4jsb_Use_config(SEB_)
   dsl4jsb_Use_config(SSE_)
 
   dsl4jsb_Use_memory(SEB_)
@@ -215,7 +215,9 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     dsl4jsb_Def_memory(SEB_)
+    dsl4jsb_Def_config(SEB_)
 
+    TYPE(t_jsb_model), POINTER :: model
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_surface_energy'
@@ -228,6 +230,9 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
+    model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_memory(SEB_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
@@ -241,12 +246,14 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SEB_, heat_cap_old,  weighted_by_fract)
 
     dsl4jsb_Aggregate_onChunk(SEB_, t_lwtr,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, t_lice,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, s_wtr,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, s_ice,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, qsat_lwtr,  weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, qsat_lice,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, fract_lice, weighted_by_fract)
+    IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+      dsl4jsb_Aggregate_onChunk(SEB_, t_lice,     weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(SEB_, s_ice,      weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(SEB_, qsat_lice,  weighted_by_fract)
+    END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -510,6 +517,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(SEB_)
 
     TYPE(t_jsb_model),       POINTER :: model
@@ -525,6 +533,9 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
+    model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_memory(SEB_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
@@ -536,8 +547,10 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SEB_,   sensible_hflx_lnd,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_,   latent_hflx_wtr,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_,   sensible_hflx_wtr,  weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_,   latent_hflx_ice,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_,   sensible_hflx_ice,  weighted_by_fract)
+    IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+      dsl4jsb_Aggregate_onChunk(SEB_,   latent_hflx_ice,    weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(SEB_,   sensible_hflx_ice,  weighted_by_fract)
+    END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
