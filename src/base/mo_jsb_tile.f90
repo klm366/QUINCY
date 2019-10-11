@@ -227,7 +227,7 @@ CONTAINS
   ! Note: It is important that Init_tile is only called for the tiles after the hierarchical tile tree has
   !       been completely constructed. Therefore, Init_tile is called from init_model_common.
   !
-  SUBROUTINE Init_tile(this, varlist_name, prefix, suffix, l_fixed_fractions, l_rel_fractions, in_var_groups)
+  SUBROUTINE Init_tile(this, varlist_name, prefix, suffix, l_fixed_fractions, in_var_groups)
 
     USE mo_jsb_process_factory, ONLY: Create_process_memory
     USE mo_jsb_process_class,   ONLY: Get_process_name
@@ -243,8 +243,7 @@ CONTAINS
     CHARACTER(len=*),  INTENT(in)    :: varlist_name
     CHARACTER(len=*),  INTENT(in)    :: prefix            ! Prefix for variable names
     CHARACTER(len=*),  INTENT(in)    :: suffix
-    LOGICAL,           INTENT(in)    :: l_fixed_fractions  ! Tile fractions can change or not
-    LOGICAL,           INTENT(in)    :: l_rel_fractions    ! Tile fractions in input file are relative wrt parent
+    LOGICAL,           INTENT(in)    :: l_fixed_fractions ! Tile fractions can change or not
     LOGICAL,           INTENT(in)    :: in_var_groups
 
     INTEGER                               :: iproc
@@ -395,7 +394,7 @@ CONTAINS
     CALL jsb_add_var(varlist_name_loc, 'fract', tmp_fract,                                 &
       & hgrid, surface,                                                                                         &
       & t_cf('tile_fraction', '',                                                                          &
-      &      'fraction of grid box covered by tile '//TRIM(this%name)),                      &
+      &      'fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                     &
       & initval_r=0.0_wp, isteptype=isteptype)
@@ -404,7 +403,7 @@ CONTAINS
     CALL jsb_add_var(varlist_name_loc, 'fract_max', tmp_fract,                         &
       & hgrid, surface,                                                                                         &
       & t_cf('tile_fraction_max', '',                                                                          &
-      &      'max fraction of grid box covered by tile '//TRIM(this%name)),                      &
+      &      'max fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                      &
       & initval_r=0.0_wp, isteptype=isteptype)
@@ -413,7 +412,7 @@ CONTAINS
     CALL jsb_add_var(varlist_name_loc, 'fract_old', tmp_fract,                                 &
       & hgrid, surface,                                                                                         &
       & t_cf('tile_fraction_old', '',                                                                          &
-      &      'old fraction of grid box covered by tile '//TRIM(this%name)),                      &
+      &      'old fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                      &
       & initval_r=0.0_wp, isteptype=isteptype)
@@ -422,7 +421,7 @@ CONTAINS
     CALL jsb_add_var(varlist_name_loc, 'fract_max_old', tmp_fract,                         &
       & hgrid, surface,                                                                                         &
       & t_cf('tile_fraction_max_old', '',                                                                          &
-      &      'old max fraction of grid box covered by tile '//TRIM(this%name)),                      &
+      &      'old max fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                      &
       & initval_r=0.0_wp, isteptype=isteptype)
@@ -435,9 +434,8 @@ CONTAINS
     ! Initialize fraction(s) of this tile from input file
     ALLOCATE(tmp_fract(hgrid%nproma, hgrid%nblks))
     IF (TRIM(this%fract_varname) == 'equal') THEN
-      IF (ASSOCIATED(this%parent_tile)) THEN
-        CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
-        tmp_fract(:,:) = tmp_fract(:,:) / REAL(this%parent_tile%Get_no_of_children(), wp)
+      IF (ASSOCIATED(this%parent)) THEN
+        tmp_fract(:,:) = 1._wp / REAL(this%parent%Get_no_of_children(), wp)
       ELSE
         tmp_fract(:,:) = 1._wp
       END IF
@@ -479,12 +477,6 @@ CONTAINS
         CALL finish(TRIM(routine), 'Fraction '//TRIM(name_loc)//' for tile '//TRIM(this%name)// &
           &                        ' not found in '//TRIM(this%fract_filename))
       END IF
-      IF (ASSOCIATED(this%parent_tile) .AND. l_rel_fractions) THEN
-        CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
-        CALL this%Set_fraction(fract=MAX(0._wp, return_pointer(:,:)*tmp_fract(:,:)))
-      ELSE
-        CALL this%Set_fraction(fract=return_pointer(:,:))
-      END IF
 
       IF (TRIM(this%fract_varname) == '') THEN
         name_loc = 'fract_max'
@@ -495,22 +487,9 @@ CONTAINS
       END IF
       IF (input_file%Has_var(TRIM(name_loc))) THEN
         return_pointer => input_file%Read_2d(variable_name=TRIM(name_loc))
-        IF (l_rel_fractions) THEN
-          IF (ASSOCIATED(this%parent_tile)) THEN
-            CALL this%parent_tile%Get_fraction(fract_max=tmp_fract(:,:))
-            CALL this%Set_fraction(fract_max=MAX(0._wp, return_pointer(:,:)*tmp_fract(:,:)))
-          ELSE
-            CALL this%Set_fraction(fract_max=return_pointer(:,:))
-          END IF
-        ELSE
-          CALL this%Set_fraction(fract_max=return_pointer(:,:))
-        END IF
+        CALL this%Set_fraction(fract_max=return_pointer(:,:))
       ELSE
-        IF (ASSOCIATED(this%parent_tile)) THEN
-          CALL this%parent_tile%Get_fraction(fract_max=tmp_fract(:,:))
-        ELSE
-          tmp_fract(:,:) = 1._wp
-        END IF
+        tmp_fract(:,:) = 1._wp
         CALL this%Set_fraction(fract_max=tmp_fract(:,:))
       END IF
 
