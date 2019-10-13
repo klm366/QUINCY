@@ -1,7 +1,7 @@
 # Changelog for JSBACH4+
 
 - [Changelog for JSBACH4+](#changelog-for-jsbach4)
-  - [jsbach-4.20p8](#jsbach-420p9)
+  - [jsbach-4.20p9](#jsbach-420p9)
   - [jsbach-4.20p8](#jsbach-420p8)
   - [jsbach-4.20p7](#jsbach-420p7)
   - [jsbach-4.20p6](#jsbach-420p6)
