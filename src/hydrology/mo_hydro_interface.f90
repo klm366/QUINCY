@@ -631,8 +631,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, snowmelt,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, q_snocpymlt,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_glac,          weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, w_snow_soil,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, w_snow_can,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, snow_accum,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, snow_soil_dens,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapotrans_soil, weighted_by_fract)

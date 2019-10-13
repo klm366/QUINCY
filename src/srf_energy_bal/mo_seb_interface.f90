@@ -512,6 +512,7 @@ CONTAINS
 
     dsl4jsb_Def_memory(SEB_)
 
+    TYPE(t_jsb_model),       POINTER :: model
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_surface_fluxes'
