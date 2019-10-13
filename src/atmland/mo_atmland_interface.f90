@@ -295,6 +295,7 @@ CONTAINS
       ELSE
         IF (PRESENT(t_lice))            t_lice(:)            =                273.15_wp
         IF (PRESENT(qsat_lice))         qsat_lice(:)         =                0.0075_wp
+        IF (PRESENT(s_lice))            s_lice(:)            =                2.9E5_wp
         IF (PRESENT(evapo_ice))         evapo_ice(:)         =                0._wp
         IF (PRESENT(latent_hflx_ice))   latent_hflx_ice(:)   =                0._wp
         IF (PRESENT(sensible_hflx_ice)) sensible_hflx_ice(:) =                0._wp
