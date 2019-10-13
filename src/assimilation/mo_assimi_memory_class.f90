@@ -39,8 +39,7 @@ MODULE mo_assimi_memory_class
       dark_respiration_ca,        & ! Dark respiration of leaf at each time step
                                     ! [mol(co2) / (m^2(canopy ground) * s) ]  (mean value)
       dark_respiration,           & ! see above but here on tile area
-      NPP_pot_rate_ca,            & ! Net primary production rate [mol(CO2)/(m^2 (canopy ground) * s)]
-      canopy_cond_over_time
+      NPP_pot_rate_ca               ! Net primary production rate [mol(CO2)/(m^2 (canopy ground) * s)]
 
 !                                         CO2_conc_leaf,                  & ! CO2 concentration inside leaf [MOL(CO2)/MOL(AIR)]
 !                                         CO2_conc_leaf_acc,              & ! CO2 concentration inside leaf [MOL(CO2)/MOL(AIR)]
@@ -85,8 +84,9 @@ MODULE mo_assimi_memory_class
       & e_transport_rate_cl,      &
       & CO2_conc_leaf_cl            ! CO2 concentration inside leaf [ mol(CO2)/ mol(AIR) ]
 
-    TYPE(t_jsb_var_real2d) :: &
-      & canopy_cond                 ! Canopy conductance without water limit  [m/s] (mean value)
+    TYPE(t_jsb_var_real2d) ::     &
+      & canopy_cond_unlimited,    & ! Canopy conductance without water limit  [m/s] (mean value)
+      & canopy_cond_limited         ! Canopy conductance with water limit  [m/s] (mean value)
 
     ! R: This variable is needed for process DISTURB and should be later in the process vegdyn
     !    However it has to exist on each pft, therefore I put it to this process for now!
@@ -173,15 +173,6 @@ CONTAINS
         & output_level=BASIC,                                                               &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      CALL jsb_add_var( mem, 'canopy_cond_over_time', mem%canopy_cond_over_time, &
-        & hgrid, surface,                                                        &
-        & t_cf('canopy_cond_over_time', '-',                                     &
-        'Canopy cond. integrated over time'),                                    &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
-        & prefix, suffix,                                                        &
-        & lrestart=.FALSE., initval_r=0.0_wp )
-
-      ! REAL(wp), POINTER, DIMENSION(:,:,:) ::
       CALL jsb_add_var( mem, 'scaling_fact_cl', mem%assimi_scaling_fact_cl,  &
         & hgrid, canopy_layer,                                               &
         & t_cf('assimi_scaling_fact_cl', '-',                                &
@@ -248,11 +239,18 @@ CONTAINS
         & prefix, suffix,                                                                            &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3 CO2_conc_leaf_acc
 
-      CALL jsb_add_var( mem, 'canopy_cond', mem%canopy_cond,                 &
-        & hgrid, surface,                                                    &
-        & t_cf('canopy_conductance', '', ''),                                &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
+      CALL jsb_add_var( mem, 'canopy_cond_unlimited', mem%canopy_cond_unlimited, &
+        & hgrid, surface,                                                        &
+        & t_cf('canopy_conductance_unlimited', '', ''),                          &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+        & prefix, suffix,                                                        &
+        & initval_r=0.0_wp )
+
+        CALL jsb_add_var( mem, 'canopy_cond_limited', mem%canopy_cond_limited,   &
+        & hgrid, surface,                                                        &
+        & t_cf('canopy_conductance_limited', '', ''),                            &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+        & prefix, suffix,                                                        &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'cover_fract_pot', mem%cover_fract_pot,         &
