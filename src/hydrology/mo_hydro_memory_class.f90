@@ -22,11 +22,12 @@ MODULE mo_hydro_memory_class
   USE mo_jsb_varlist,      ONLY: BASIC !, MEDIUM, FULL
 
   ! Use of prcesses in this module
-  dsl4jsb_Use_processes HYDRO_, SSE_
+  dsl4jsb_Use_processes HYDRO_, SSE_, SEB_
 
   ! Use process configurations
   dsl4jsb_Use_config(HYDRO_)
   dsl4jsb_Use_config(SSE_)
+  dsl4jsb_Use_config(SEB_)
 
   IMPLICIT NONE
   PRIVATE
@@ -180,6 +181,7 @@ CONTAINS
 
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_config(SSE_)
+    dsl4jsb_Def_config(SEB_)
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid            ! Horizontal grid
@@ -200,6 +202,7 @@ CONTAINS
 
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_config(SSE_)
+    dsl4jsb_Get_config(SEB_)
 
     IF (dsl4jsb_Config(SSE_)%l_dynsnow) THEN
       ini_snow_dens = dens_snow_min
@@ -821,30 +824,32 @@ CONTAINS
         & lrestart=.FALSE.,                                                                           &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      CALL jsb_add_var( mem, 'evapo_ice', mem%evapo_ice,                                            &
-        & hgrid, surface,                                                                           &
-        & t_cf('surface_evapotranspiration_ice', 'kg m-2 s-1', 'Evapotranspiration from lake ice'), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                        &
-        & prefix, suffix,                                                                           &
-        & lrestart=.FALSE.,                                                                         &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+        CALL jsb_add_var( mem, 'evapo_ice', mem%evapo_ice,                                            &
+          & hgrid, surface,                                                                           &
+          & t_cf('surface_evapotranspiration_ice', 'kg m-2 s-1', 'Evapotranspiration from lake ice'), &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                        &
+          & prefix, suffix,                                                                           &
+          & lrestart=.FALSE.,                                                                         &
+          & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      !Fraction of snow on lake ice, rel. to ice fraction
-      CALL jsb_add_var( mem, 'fract_snow_lice', mem%fract_snow_lice,                           &
-        & hgrid, surface,                                                                      &
-        & t_cf('fract_snow_lice', '-', 'fraction of snow on lake ice (rel. to ice fraction)'), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &
-        & prefix, suffix,                                                                      &
-        & output_level=BASIC,                                                                  &
-        & initval_r=0.0_wp )
+        !Fraction of snow on lake ice, rel. to ice fraction
+        CALL jsb_add_var( mem, 'fract_snow_lice', mem%fract_snow_lice,                                &
+          & hgrid, surface,                                                                           &
+          & t_cf('fract_snow_lice', '-', 'fraction of snow on lake ice (rel. to ice fraction)'),      &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                        &
+          & prefix, suffix,                                                                           &
+          & output_level=BASIC,                                                                       &
+          & initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 'w_snow_lice', mem%w_snow_lice,                                        &
-        & hgrid, surface,                                                                           &
-        & t_cf('w_snow_lice', 'm water equivalent', 'Water content of snow reservoir on lake ice'), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                        &
-        & prefix, suffix,                                                                           &
-        & output_level=BASIC,                                                                       &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        CALL jsb_add_var( mem, 'w_snow_lice', mem%w_snow_lice,                                        &
+          & hgrid, surface,                                                                           &
+          & t_cf('w_snow_lice', 'm water equivalent', 'Water content of snow reservoir on lake ice'), &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                        &
+          & prefix, suffix,                                                                           &
+          & output_level=BASIC,                                                                       &
+          & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      END IF
 
     END IF
 

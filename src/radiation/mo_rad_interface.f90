@@ -31,6 +31,7 @@ MODULE mo_rad_interface
   ! Use process configurations
   dsl4jsb_Use_config(RAD_)
   dsl4jsb_Use_config(ASSIMI_)
+  dsl4jsb_Use_config(SEB_)
 
   ! Use of process memories
   dsl4jsb_Use_memory(A2L_)
@@ -171,6 +172,7 @@ CONTAINS
     TYPE(t_jsb_task_options), INTENT(in) :: options
 
     ! Declare pointers to process configs and memory
+    dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(RAD_)
@@ -202,6 +204,8 @@ CONTAINS
       & sw_net_lwtr(options%nc), &
       & sw_net_lice(options%nc)
 
+    TYPE(t_jsb_model), POINTER :: model
+
     INTEGER :: iblk , ics, ice
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_radiation'
@@ -216,6 +220,9 @@ CONTAINS
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
+    model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SEB_)
@@ -251,26 +258,32 @@ CONTAINS
         & )
 
       ! Ice on lake
-      dsl4jsb_Get_var2D_onChunk(SEB_, t_lice)       ! in
-      dsl4jsb_Get_var2D_onChunk(SEB_, fract_lice)   ! in
-      dsl4jsb_Get_var2D_onChunk(RAD_, albedo_lice)  ! in
-      dsl4jsb_Get_var2D_onChunk(RAD_, rad_net_lice) ! out
+      IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+        dsl4jsb_Get_var2D_onChunk(SEB_, fract_lice)   ! in
+        dsl4jsb_Get_var2D_onChunk(SEB_, t_lice)       ! in
+        dsl4jsb_Get_var2D_onChunk(RAD_, albedo_lice)  ! in
+        dsl4jsb_Get_var2D_onChunk(RAD_, rad_net_lice) ! out
 
-      CALL calc_radiation_surface_net( &
-        & swvis_srf_down(:),           & ! in
-        & swnir_srf_down(:),           & ! in
-        & albedo_lice(:),              & ! in
-        & albedo_lice(:),              & ! in
-        & lw_srf_down(:),              & ! in
-        & t_lice(:),                   & ! in
-        & rad_net_lice(:),             & ! out
-        & sw_net=sw_net_lice(:),       & ! out
-        & lw_net=lw_net_lice(:)        & ! out
-        & )
-
-      rad_srf_net(:) = (1._wp - fract_lice(:)) * rad_net_lwtr(:) + fract_lice(:) * rad_net_lice(:)
-      sw_srf_net (:) = (1._wp - fract_lice(:)) * sw_net_lwtr(:)  + fract_lice(:) * sw_net_lice(:)
-      lw_srf_net (:) = (1._wp - fract_lice(:)) * lw_net_lwtr(:)  + fract_lice(:) * lw_net_lice(:)
+        CALL calc_radiation_surface_net( &
+          & swvis_srf_down(:),           & ! in
+          & swnir_srf_down(:),           & ! in
+          & albedo_lice(:),              & ! in
+          & albedo_lice(:),              & ! in
+          & lw_srf_down(:),              & ! in
+          & t_lice(:),                   & ! in
+          & rad_net_lice(:),             & ! out
+          & sw_net=sw_net_lice(:),       & ! out
+          & lw_net=lw_net_lice(:)        & ! out
+          & )
+        
+        rad_srf_net(:) = (1._wp - fract_lice(:)) * rad_net_lwtr(:) + fract_lice(:) * rad_net_lice(:)
+        sw_srf_net (:) = (1._wp - fract_lice(:)) * sw_net_lwtr(:)  + fract_lice(:) * sw_net_lice(:)
+        lw_srf_net (:) = (1._wp - fract_lice(:)) * lw_net_lwtr(:)  + fract_lice(:) * lw_net_lice(:)
+      ELSE
+        rad_srf_net(:) = rad_net_lwtr(:)
+        sw_srf_net (:) = sw_net_lwtr (:)
+        lw_srf_net (:) = lw_net_lwtr (:)
+      END IF
 
     ELSE
 
@@ -308,9 +321,11 @@ CONTAINS
   !!
   SUBROUTINE aggregate_surface_radiation(tile, options)
 
+    TYPE(t_jsb_model), POINTER :: model
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(RAD_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
@@ -325,6 +340,9 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
+    model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_memory(RAD_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
@@ -336,7 +354,9 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(RAD_, swnir_srf_net,  weighted_by_fract)
 
     dsl4jsb_Aggregate_onChunk(RAD_, rad_net_lwtr,   weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(RAD_, rad_net_lice,   weighted_by_fract)
+    IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+      dsl4jsb_Aggregate_onChunk(RAD_, rad_net_lice,   weighted_by_fract)
+    END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -597,6 +617,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER  :: routine = modname//':update_albedo'
 
     ! Declare pointers to process configuration and memory
+    dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_config(RAD_)
 
     dsl4jsb_Def_memory(RAD_)
@@ -673,6 +694,7 @@ CONTAINS
     IF (.NOT. is_time_experiment_start() .AND. .NOT. is_time_ltrig_rad_m1(model%id) .AND. .NOT. jsbach_runs_standalone()) RETURN
 
     ! Set pointers to process configs and memory
+    dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_config(RAD_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(A2L_)
@@ -753,27 +775,34 @@ CONTAINS
 
     IF (tile%is_lake) THEN
       dsl4jsb_Get_var2D_onChunk(SEB_,   t_lice)       ! in
-      dsl4jsb_Get_var2D_onChunk(SEB_,   fract_lice)   ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow_lice)  ! in
       dsl4jsb_Get_var2D_onChunk(RAD_,   albedo_lwtr)  ! inout
-      dsl4jsb_Get_var2D_onChunk(RAD_,   albedo_lice)  ! inout
 
       CALL calc_alb_lwtr( &
         & l_day(:),       & ! in
         & albedo_lwtr(:)  & ! inout
         & )
 
-      CALL calc_alb_lice( &
+      IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+        dsl4jsb_Get_var2D_onChunk(SEB_,   fract_lice)   ! in
+        dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow_lice)  ! in
+        dsl4jsb_Get_var2D_onChunk(RAD_,   albedo_lice)  ! inout
+
+        CALL calc_alb_lice( &
         & l_day(:),       & ! in
         & t_lice(:),      & ! in
         & w_snow_lice(:), & ! in
         & albedo_lice(:)  & ! inout
         & )
 
-      WHERE (l_day(:))
-        alb_vis(:) = (1._wp - fract_lice(:)) * albedo_lwtr(:) + fract_lice(:) * albedo_lice(:)
-        alb_nir(:) = alb_vis(:)
-      END WHERE
+        WHERE (l_day(:))
+          alb_vis(:) = (1._wp - fract_lice(:)) * albedo_lwtr(:) + fract_lice(:) * albedo_lice(:)
+        END WHERE
+      ELSE
+        WHERE (l_day(:))
+          alb_vis(:) = albedo_lwtr(:)
+        END WHERE
+      END IF
+      alb_nir(:) = alb_vis(:)  ! TODO
 
 
     ELSE IF (tile%is_glacier) THEN
