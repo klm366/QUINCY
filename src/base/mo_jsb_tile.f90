@@ -450,6 +450,12 @@ CONTAINS
       IF (input_file%Has_var(TRIM(name_loc))) THEN
         return_pointer => input_file%Read_2d(variable_name=TRIM(name_loc))
         !
+        ! TODO: For security set all values of the box fractions to 1 that are close to 1 
+        ! (similar to mo_echam_phy_init) in order to account for precision errors
+        IF (TRIM(this%name) == 'box') THEN
+          return_pointer(:,:) = MERGE(1._wp, return_pointer(:,:), return_pointer(:,:) > 1._wp - 10._wp*EPSILON(1._wp))
+        END IF
+        !
         ! TODO: For security, as a workaround, set lake fractions in coastal points that are 
         ! partially land and partially ocean to zero, and corresponding land fraction to one.
         IF (TRIM(this%name) == 'lake') THEN
