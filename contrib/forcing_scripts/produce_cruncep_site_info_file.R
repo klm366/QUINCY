@@ -483,6 +483,9 @@ for (gfdb_site in gfdb_all_selected_sitelist) {
 }
 
 ## output
+# time stamp
+date <- Sys.Date()
+# header
 colnames(siteinfo)<-c('Site-ID','lon','lat','PFT','start','end',
                       'lon_gmt','clay','silt','sand','awc','bd','ph',
                       'taxusda','taxnwrb','lith_glim',
@@ -490,15 +493,15 @@ colnames(siteinfo)<-c('Site-ID','lon','lat','PFT','start','end',
                       'soilP_depth','soilP_labile','soilP_slow','soilP_occluded','soilP_primary',
                       'Qmax_org_fp')
 # 1901-2015
-write.table(siteinfo,file=paste0("crun_all_gfdb_sites_1901-2015_list",Sys.Date(),".dat"),quote=F,row.names=F,col.names=T)
+write.table(siteinfo,file=paste0("crun_all_gfdb_sites_1901-2015_list",date,".dat"),quote=F,row.names=F,col.names=T)
 siteinfo[,5]<-1984
 siteinfo[,6]<-2013
 # 1984-2013
-write.table(siteinfo,file=paste0("crun_all_gfdb_sites_1984-2013_list",Sys.Date(),".dat"),quote=F,row.names=F,col.names=T)
+write.table(siteinfo,file=paste0("crun_all_gfdb_sites_1984-2013_list",date,".dat"),quote=F,row.names=F,col.names=T)
 
 ## extra output with specific date
 colnames(sitedata)<-c(colnames(gfdb_all_selected),'Original.Site.Code')
-write.table(sitedata,file=paste0("global_forest_database_all_sites_",Sys.Date(),".csv"),quote=F,row.names=F,col.names=T,sep=",")
+write.table(sitedata,file=paste0("global_forest_database_all_sites_",date,".csv"),quote=F,row.names=F,col.names=T,sep=",")
 
 
 
@@ -659,6 +662,9 @@ for (gfdb_site in gfdb_cue_sitelist) {
 
 
 ## output
+# time stamp
+date <- Sys.Date()
+# header
 colnames(siteinfo)<-c('Site-ID','lon','lat','PFT','start','end',
                       'lon_gmt','clay','silt','sand','awc','bd','ph',
                       'taxusda','taxnwrb','lith_glim',
@@ -666,15 +672,15 @@ colnames(siteinfo)<-c('Site-ID','lon','lat','PFT','start','end',
                       'soilP_depth','soilP_labile','soilP_slow','soilP_occluded','soilP_primary',
                       'Qmax_org_fp')
 # 1901-2015
-write.table(siteinfo,file=paste0("crun_cue_gfdb_sites_1901-2015_list",Sys.Date(),".dat"),quote=F,row.names=F,col.names=T)
+write.table(siteinfo,file=paste0("crun_cue_gfdb_sites_1901-2015_list",date,".dat"),quote=F,row.names=F,col.names=T)
 siteinfo[,5]<-1984
 siteinfo[,6]<-2013
 # 1984-2013
-write.table(siteinfo,file=paste0("crun_cue_gfdb_sites_1984-2013_list",Sys.Date(),".dat"),quote=F,row.names=F,col.names=T)
+write.table(siteinfo,file=paste0("crun_cue_gfdb_sites_1984-2013_list",date,".dat"),quote=F,row.names=F,col.names=T)
 
 ## extra output with specific date
 colnames(sitedata)<-c(colnames(gfdb_cue),'Original.Site.Code')
-write.table(sitedata,file=paste0("global_forest_database_cue_sites_",Sys.Date(),".csv"),quote=F,row.names=F,col.names=T,sep=",")
+write.table(sitedata,file=paste0("global_forest_database_cue_sites_",date,".csv"),quote=F,row.names=F,col.names=T,sep=",")
 
 
 
@@ -742,9 +748,9 @@ for (s in 1:sppSiteNum) {
   #silt[s]         <- weighted.mean(silt_sg[lonidx,latidx,],depth_sl,na.rm=TRUE)/100
 }
 ## set remaining parameter from known data, i.e., Lin Yu provided these data (proportions of soil types and ph)
-# site order: BBR LUE VES MIT CON
-sand    <- c(22.59, 76.6,  39.0, 51.0, 41.0) / 100
-silt    <- c(51.31, 17.13, 45.0, 31.0, 42.0) / 100
+# site order: BBR LUE VES MTF CON
+sand    <- c(22.59, 76.6,  39.0, 51.0, 41.0) / 100.0
+silt    <- c(51.31, 17.13, 45.0, 31.0, 42.0) / 100.0
 clay    <- 1.0 - sand - silt
 ph      <- c(5.2, 4.3, 4.34, 4.46, 4.42)
 pft_spp <- c("TeBS", "TeBS", "TeBS", "TeBS", "TeBS")
@@ -877,22 +883,42 @@ for (spp_site in spp_site_list) {
 
 
 ## output
+# time stamp
+date <- Sys.Date()
+# header
 colnames(siteinfo)<-c('Site-ID','lon','lat','PFT','start','end',
                       'lon_gmt','clay','silt','sand','awc','bd','ph',
                       'taxusda','taxnwrb','lith_glim',
                       'LAI','Nleaf','SLA','Height','PlantYear',
                       'soilP_depth','soilP_labile','soilP_slow','soilP_occluded','soilP_primary',
                       'Qmax_org_fp')
+
+## CRUNCEP SPP
 # 1901-2015
-write.table(siteinfo,file=paste0("crun_spp_sites_1901-2015_list",Sys.Date(),".dat"),quote=F,row.names=F,col.names=T)
+write.table(siteinfo,file=paste0("crun_spp_sites_1901-2015_list",date,".dat"),quote=F,row.names=F,col.names=T)
 siteinfo[,5]<-1984
 siteinfo[,6]<-2013
 # 1984-2013
-write.table(siteinfo,file=paste0("crun_spp_sites_1984-2013_list",Sys.Date(),".dat"),quote=F,row.names=F,col.names=T)
+write.table(siteinfo,file=paste0("crun_spp_sites_1984-2013_list",date,".dat"),quote=F,row.names=F,col.names=T)
+
+## SPP_1685
+i <- 1
+for (spp_site in spp_site_list) {
+  siteinfo[i,1]   <-  spp_site  # site_ID without an appended "_01"
+  i<-i+1
+}
+# 1984-2013
+write.table(siteinfo,file=paste0("spp_1685_sites_1984-2013_list",date,".dat"),quote=F,row.names=F,col.names=T)
+siteinfo[,5]<-1901
+siteinfo[,6]<-2015
+# 1901-2015
+write.table(siteinfo,file=paste0("spp_1685_sites_1901-2015_list",date,".dat"),quote=F,row.names=F,col.names=T)
+
 
 
 print(" ")
-print(paste0("Script has finished. The new all/cue/spp_sites_list.dat files with ",siteParam," Parameters have been created."))
+print("Script has finished.")
+print(paste0("The new crun_all/cue/spp_*",date,".dat & spp_1685_sites_*",date,".dat files with ",siteParam," Parameters have been created."))
 
 
 ## end ##

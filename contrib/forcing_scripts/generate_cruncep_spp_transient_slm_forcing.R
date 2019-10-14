@@ -76,9 +76,9 @@ co2y_DC14<-read.table('/Net/Groups/BGI/work_2/QUINCY/SLM/InputDataSources/Atm/De
 #               in temperate forest soils of contrasting phosphate availability. Soil Biology and Biochemistry 101, 85-95, doi:10.1016/j.soilbio.2016.07.005
 #  VES: Forstliches Umweltmonitoring in Thüringen (Gotha, 2001)
 #  CON: calculated from raw data; data source: Jaane Krüger, personal communication with Lin Yu
-#  MIT: no literature value available; calculated as the mean value of CON, BBR and LUE
+#  MTF: no literature value available; calculated as the mean value of CON, BBR and LUE
 # BBR & LUE & CON are about 2014 values and VES is the value from the year 2000
-# BBR LUE VES MIT CON
+# BBR LUE VES MTF CON
 ndep_site<-c(8, 13, 20.65, 9.7, 8.19)
 
 for (s in 1:length(site_list)) {

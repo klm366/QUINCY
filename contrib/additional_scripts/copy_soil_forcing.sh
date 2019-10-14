@@ -180,11 +180,11 @@ if [ -d "$pathSourceBase""$expNameCS" ] # if folder is present, i.e., new soil_f
   for site in $(ls -d "$pathSourceBase""$expNameCS"/*/)
    do
 
-    siteBase=$(basename $site)  # just: BBR_01 & LUE_01 & VES_01
+    siteBase=$(basename $site)  # just: BBR_01 & LUE_01 & VES_01 & CON_01 & MTF_01
 
     if [ $siteBase != "x_binary" ]
     then
-        # the two SPP sites have a *_01 name, so do not need to sort out the *_01 folder as needed for CUE
+        # the five SPP sites have a *_01 name, so do not need to sort out the *_01 folder as needed for CUE
         # get a short version of siteBase BBR_01 -> BBR (which is the name of the forcing file)
         siteBaseShort=$(echo $siteBase | cut -c1-3)
         echo  "  site: ""$siteBaseShort""_01"
@@ -262,7 +262,7 @@ if [ -d "$pathSourceBase""$expNameS" ] # if folder is present, i.e., new soil_fo
   for site in $(ls -d "$pathSourceBase""$expNameS"/*/)
    do
 
-    siteBase=$(basename $site)  # just: VES, LUE, BBR, ... 
+    siteBase=$(basename $site)  # just: VES, LUE, BBR, CON, MTF
 
     if [ $siteBase != "x_binary" ]
     then

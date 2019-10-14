@@ -446,7 +446,7 @@ case "$forcingDataSet" in
 "cruncep")
   allSiteInfoFile="$siteDataDirBase""$siteDataSet"crun_cue_gfdb_sites_1984-2013_list.dat
   # the two cruncep spp sites are not listed in the all_gfdb_sites_*_list.dat but only in the spp_sites_*_list.dat
-  if [ "$siteName" == "BBR_01" ] || [ "$siteName" == "LUE_01" ] || [ "$siteName" == "VES_01" ]
+  if [ "$siteName" == "BBR_01" ] || [ "$siteName" == "LUE_01" ] || [ "$siteName" == "VES_01" ] || [ "$siteName" == "MTF_01" ] || [ "$siteName" == "CON_01" ]
    then
     allSiteInfoFile="$siteDataDirBase""$siteDataSet"crun_spp_sites_1984-2013_list.dat
   fi
