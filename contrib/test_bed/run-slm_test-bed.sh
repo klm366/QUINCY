@@ -455,7 +455,7 @@ case "$forcingDataSet" in
   allSiteInfoFile="$siteDataDirBase""$siteDataSet"face_sites_1996-2008_list.dat
   ;;
 "manip")
-  allSiteInfoFile="$siteDataDirBase""$siteDataSet"manip_sites_2009-2017_list.dat
+  allSiteInfoFile="$siteDataDirBase""$siteDataSet"manip_sites_2009-2019_list.dat
   ;;
 "fert")
   allSiteInfoFile="$siteDataDirBase""$siteDataSet"fert_sites_1901-2015_list.dat

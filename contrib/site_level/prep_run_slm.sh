@@ -860,7 +860,7 @@ else # the default case: $customSiteList == "F"
   "manip")
     if [ $forcingMode == "static" ]
      then
-      siteListFileName="manip_sites_2009-2017_list.dat"
+      siteListFileName="manip_sites_2009-2019_list.dat"
     else
       echo " Sorry. Transient forcing for MANIP sites not yet available."
       echo " EXIT!"
