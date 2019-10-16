@@ -466,7 +466,8 @@ CONTAINS
     !> conversion of ppm to Pa
     ppm2Pa = press_srf * 1.e-06_wp
     !>  Net canopy layer respiration (umol[CO2]/m2/s)
-    maint_resp_cl = fmaint_rate_base/1000._wp * beta_soil_ps * temperature_response_respiration(temp, temp_acclim) * leaf_nitrogen_cl
+    maint_resp_cl = fmaint_rate_base / 1000._wp * beta_soil_ps * temperature_response_respiration(temp, temp_acclim) * &
+                      leaf_nitrogen_cl
 
 
     !> @par IF: initialise output for no-light condition
@@ -490,7 +491,8 @@ CONTAINS
       pcp = exp(E0pcp - E1pcp/rtck) * ppm2Pa
 
       !> N specific rate of electron transport rate
-      n1  = jmax2n * fn_et_cl * exp(-(((temp - Tzero - t_jmax_opt)/t_jmax_omega)**2.0_wp)) * beta_soil_ps * beta_sinklim_ps * beta_soa
+      n1  = jmax2n * fn_et_cl * exp(-(((temp - Tzero - t_jmax_opt) / t_jmax_omega) ** 2.0_wp)) * &
+              beta_soil_ps * beta_sinklim_ps * beta_soa
 
       !> N specific rate of Rubisco turnover
       n2  = vcmax2n * fn_rub_cl * exp(E0v - E1v/rtck) * beta_soil_ps * beta_sinklim_ps * beta_soa

@@ -316,8 +316,10 @@ CONTAINS
            fn_rub_cl(:,:) = 1._wp - fn_oth_cl(:,:) - fn_chl_cl(:,:) - fn_et_cl(:,:) - fn_pepc_cl(:,:)
 
            ! convert mmol N / m2 to mg N / g DW
-           hlp3(:,:) = leaf_nitrogen_cl(:,:) * molar_mass_N / ((molar_mass_C / lctlib_sla)/carbon_per_dryweight_leaf)
-           hlp4(:,:) = leaf_nitrogen_cl(:,:) / lctlib_np_leaf * molar_mass_P / ((molar_mass_C / lctlib_sla)/carbon_per_dryweight_leaf)
+           hlp3(:,:) = leaf_nitrogen_cl(:,:) * molar_mass_N / &
+                         ((molar_mass_C / lctlib_sla)/carbon_per_dryweight_leaf)
+           hlp4(:,:) = leaf_nitrogen_cl(:,:) / lctlib_np_leaf * molar_mass_P / &
+                         ((molar_mass_C / lctlib_sla)/carbon_per_dryweight_leaf)
            !DE stuff Vmax = exp(k1 + k2 * log(P) + k3 * log(N))
            ! implied Vmax and Jmax in nmol / g DW / s
            !hlp1(:,:) = exp(4.44904_wp + 0.3472_wp*log10(hlp4(:,:)) + 0.49078*log10(hlp3(:,:)))
@@ -366,7 +368,8 @@ CONTAINS
             fn_et_cl(:,icanopy)   = (1._wp - (fn_oth_cl(:,icanopy) + fn_chl_cl(:,icanopy) + fn_pepc_cl(:,icanopy) )) / &
                                     (1._wp + jmax2n/(jmax2vcmax * vcmax2n))
             ! fraction of Rubisco is determined as the remainder
-            fn_rub_cl(:,icanopy)  = 1._wp - fn_oth_cl(:,icanopy) - fn_chl_cl(:,icanopy) - fn_et_cl(:,icanopy) - fn_pepc_cl(:,icanopy)
+            fn_rub_cl(:,icanopy)  = 1._wp - fn_oth_cl(:,icanopy) - fn_chl_cl(:,icanopy) - fn_et_cl(:,icanopy) - &
+                                      fn_pepc_cl(:,icanopy)
           ENDWHERE
         ELSEWHERE
               leaf_nitrogen_cl(:,icanopy) = 0.0_wp
@@ -1279,8 +1282,9 @@ CONTAINS
           ! Only change leaf N if leaves present
           IF(veg_pool_leaf_nitrogen(ipoint) > eps4)THEN
              !> Check the N status of the plant. If there is not enough N for growth, decrease leaf N
-             IF ((uptake_n(ipoint) *  mavg_period_tgrowth * one_year*one_day*1e-6_wp + labile_nitrogen(ipoint)) * growth_cn(ipoint) < &
-                  (npp(ipoint)*  mavg_period_tgrowth * 1e-6_wp * one_year*one_day + labile_carbon(ipoint))) THEN
+             IF ((uptake_n(ipoint) *  mavg_period_tgrowth * one_year * one_day * 1e-6_wp + labile_nitrogen(ipoint)) * &
+                  growth_cn(ipoint) < &
+                 (npp(ipoint)*  mavg_period_tgrowth * 1e-6_wp * one_year * one_day + labile_carbon(ipoint))) THEN
                 leaf_cn_direction(ipoint) = -1._wp
                 
              ELSE
@@ -1332,10 +1336,14 @@ CONTAINS
                 IF (lai(ipoint) > eps8) THEN
                    ! avoid division by zero for plants that have no leaf nitrogen
                    WHERE (leaf_nitrogen_new_cl(ipoint,:) > eps8 .AND. fn_oth_cl(ipoint,:) < 1._wp)
-                      fn_rub_new_cl(ipoint,:)  = fn_rub_cl(ipoint,:)  * (1._wp - fn_oth_new_cl(ipoint,:)) / (1._wp - fn_oth_cl(ipoint,:))
-                      fn_et_new_cl(ipoint,:)   = fn_et_cl(ipoint,:)   * (1._wp - fn_oth_new_cl(ipoint,:)) / (1._wp - fn_oth_cl(ipoint,:))
-                      fn_pepc_new_cl(ipoint,:) = fn_pepc_cl(ipoint,:) * (1._wp - fn_oth_new_cl(ipoint,:)) / (1._wp - fn_oth_cl(ipoint,:))
-                      fn_chl_new_cl(ipoint,:)  = fn_chl_cl(ipoint,:)  * (1._wp - fn_oth_new_cl(ipoint,:)) / (1._wp - fn_oth_cl(ipoint,:))
+                      fn_rub_new_cl(ipoint,:)  = fn_rub_cl(ipoint,:)  * &
+                                                   (1._wp - fn_oth_new_cl(ipoint,:)) / (1._wp - fn_oth_cl(ipoint,:))
+                      fn_et_new_cl(ipoint,:)   = fn_et_cl(ipoint,:)   * &
+                                                   (1._wp - fn_oth_new_cl(ipoint,:)) / (1._wp - fn_oth_cl(ipoint,:))
+                      fn_pepc_new_cl(ipoint,:) = fn_pepc_cl(ipoint,:) * &
+                                                   (1._wp - fn_oth_new_cl(ipoint,:)) / (1._wp - fn_oth_cl(ipoint,:))
+                      fn_chl_new_cl(ipoint,:)  = fn_chl_cl(ipoint,:)  * &
+                                                   (1._wp - fn_oth_new_cl(ipoint,:)) / (1._wp - fn_oth_cl(ipoint,:))
                    END WHERE
                 END IF
 
