@@ -83,34 +83,43 @@ colnames(dfnew3)<-colnames(dfnew2)
 dfnew3[1:length(dfnew2[,1]),]<-dfnew2
 # calc the number of timesteps (1/2 h) missing
 nmiss<-nrow(dfnew3) - nrow(dfnew2)
-# get the sequence of days of the year that are missing
-doy_miss<-seq(365-nmiss/48+1,365,1)
 
-## add "days" and "hours" information for the missing data
-d<-1
-h<-0.0
-for (i in 1:nmiss) {
-   dfnew3[nrow(dfnew2) +i, 2] <- doy_miss[d]
-   dfnew3[nrow(dfnew2) +i, 3] <- h
-   h<-h+0.5
-   if(h==24) {
-     d<-d+1
-     h<-0
-   }
-}
-
-## add missing data for the last year
-for (v in 4:nvar) {
-for (i in 1:nmiss) {
-    dfnew3[length(dfnew2[,1])+i,v]<-mean(dfnew3[dfnew3$doy==dfnew3$doy[length(dfnew2[,1])+i]&dfnew3$hour==dfnew3$hour[length(dfnew2[,1])+i],v],na.rm=T)
+## if nmiss > 0
+if (nmiss > 0){
+  # get the sequence of days of the year that are missing
+  doy_miss<-seq(365-nmiss/48+1,365,1)
+  
+  ## add "days" and "hours" information for the missing data
+  d<-1
+  h<-0.0
+  for (i in 1:nmiss) {
+     dfnew3[nrow(dfnew2) +i, 2] <- doy_miss[d]
+     dfnew3[nrow(dfnew2) +i, 3] <- h
+     h<-h+0.5
+     if(h==24) {
+       d<-d+1
+       h<-0
+     }
   }
+  
+  ## add missing data for the last year
+  for (v in 4:nvar) {
+  for (i in 1:nmiss) {
+      dfnew3[length(dfnew2[,1])+i,v]<-mean(dfnew3[dfnew3$doy==dfnew3$doy[length(dfnew2[,1])+i]&dfnew3$hour==dfnew3$hour[length(dfnew2[,1])+i],v],na.rm=T)
+    }
+  }
+  lastYear <- df[nrow(df),1]
+  dfnew3[(length(dfnew2[,1])+1):length(dfnew3[,1]),1] <- lastYear
+  
+
+  # move the gapfilled data to 'df' object, as the load() in generate_manip_static_slm_forcing.R expects this object name
+  df <- dfnew3
+} else {  # if nmiss == 0
+  # move the gapfilled data to 'df' object, as the load() in generate_manip_static_slm_forcing.R expects this object name
+  df <- dfnew2
 }
-lastYear <- df[nrow(df),1]
-dfnew3[(length(dfnew2[,1])+1):length(dfnew3[,1]),1] <- lastYear
 
 ## write output
-# move the gapfilled data to 'df' object, as the load() in generate_manip_static_slm_forcing.R expects this object name
-df <- dfnew3
 # this output file is used by the generate_manip_static_slm_forcing.R script to create actual QUINCY met-forcing
 save(df, file=paste0(workDir,outGapFilledData))
 
