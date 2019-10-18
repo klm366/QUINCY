@@ -177,7 +177,7 @@ p_deposition_scheme="none"      # options: none constant dynamic (p_srf_down)
 ##>> details about the HPC, if unsure stick with the defaults <<################################
 queue="all"                  # available queues: all BTM io mpi_large io_perform (for information on the queues run at pc026/27/28: bqueues -l; io_perform selects only the new INTEL3 nodes: lshosts)
 emailNotification="no"       # set either to yes or no (small caps)
-memory=1000                  # memory per job you may need [mega byte]; here provided in MB (default: 1000) but recalculated to KB which is what OpenLava needs
+memory=5000                  # memory per job you may need [mega byte]; here provided in MB (default: 1000) but recalculated to KB which is what OpenLava needs
 numberCpuMax=160             # maximum number of simulations started in parallel (default is 160)
 
 
