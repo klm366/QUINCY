@@ -101,7 +101,7 @@ print(site_list[s])
        swdown<-df[,4]
        lwdown<-df[,5]
        tair<-df[,6]
-       rain<-df[,9]*48*48
+       rain<-df[,9]
        snow<-df[,10]
        qair<-df[,7]
        press<-df[,8]
@@ -117,15 +117,14 @@ print(site_list[s])
        pdep<-numeric(length(swdown))
        pdep[]<-p_dummy
       nc_close(fid)
-      # N deposition data
+
+    ## add data looping over the years
     year_out=co2=co2_dC13=co2_DC14=noy=nhx<-numeric(length(swdown))
     for (year in c(startyear:endyear)) {
       print(c(site_list[s],year))
-      if(year<2017) {
-         fid<-nc_open(paste0("/Net/Groups/BGI/model/OCN/input/gridded/NDEP/CESM-CAM/ndep_",year,".nc"))
-      } else {
-         fid<-nc_open("/Net/Groups/BGI/model/OCN/input/gridded/NDEP/CESM-CAM/ndep_2016.nc")
-      }
+      ## N deposition
+      #  using RCP 8.5 data throughout
+       fid<-nc_open(paste0("/Net/Groups/BGI/model/OCN/input/gridded/NDEP/CESM-CAM/ndep_RCP8.5_",year,".nc"))
        lonndep<-ncvar_get(fid,'lon')
        latndep<-ncvar_get(fid,'lat')
        latx<-which.min(abs(latndep-as.numeric(latsite)))
@@ -139,13 +138,15 @@ print(site_list[s])
          noy[(1:(dpm[m]*48))+sum(dpm[1:(m-1)])*48+365*48*(year-startyear)]<-rep(noy_dummy[m],dpm[m]*48)
        }
       nc_close(fid)
-      # CO2
-      if(year<2017) {
+      ## CO2 
+      #  use global mean values from GCP_co2_global.dat for all values before 2014,
+      #  because the Majadas field sensor was not well calibrated before 2014 and, hence, does not give reasonable values
+      if(year<2014) {
         co2[1:17520+365*48*(year-startyear)]<-rep(co2y[co2y[,1]==year,2],17520)
       } else {
         co2[1:17520+365*48*(year-startyear)]<-rep(co2y[co2y[,1]==2016,2],17520)+2*(year-2016)
       }
-      if(year<2016) {
+      if(year<2014) {
         co2_dC13[1:17520+365*48*(year-startyear)]<-rep(co2y_dC13[(co2y_dC13[,1]-0.5)==year,2],17520)
       } else {
         co2_dC13[1:17520+365*48*(year-startyear)]<-rep(co2y_dC13[(co2y_dC13[,1]-0.5)==2015,2],17520)-0.02*(year-2015)
@@ -153,7 +154,7 @@ print(site_list[s])
       if(latsite>30) C14lat=2
       if(latsite>-30&latsite<=30) C14lat=3
       if(latsite<=-30) C14lat=4
-      if(year<2016) {
+      if(year<2014) {
         co2_DC14[1:17520+365*48*(year-startyear)]<-rep(co2y_DC14[(co2y_DC14[,1]-0.5)==year,C14lat],17520)
       } else {
         co2_DC14[1:17520+365*48*(year-startyear)]<-rep(co2y_DC14[(co2y_DC14[,1]-0.5)==2015,C14lat],17520)-5*(year-2015)
@@ -169,7 +170,7 @@ print(site_list[s])
                      press[1:nstep],rain[1:nstep],snow[1:nstep],wind[1:nstep],co2[1:nstep],co2_dC13[1:nstep],co2_DC14[1:nstep],
                      nhx[1:nstep],noy[1:nstep],pdep[1:nstep])
                      
-      # write output
+      # write output append yearly data (header created above)
       write.table(format(round(forcing,digits=4),nsmall=1), file=outname, append=TRUE, quote=FALSE,
                   col.names=FALSE, row.names=FALSE, sep=" ")
 
