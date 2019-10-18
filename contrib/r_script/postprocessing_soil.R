@@ -64,23 +64,31 @@ for (i in 1:nOutFiles) {
   # only output files that do not contain layer information
   if(!grepl("_lay",flist[i])) {
     print(paste('   reading',flist[i]))
-    dat=read.table(flist[i],header=T,sep="")
-    nvar=dim(dat)[2]
-    # number of columns with variables, excluding the 1st row "Time"
-    effColNum <- ncol(dat) -1 
-    mat=matrix(seq(1,2*round(effColNum/2)+2,1),nrow=round(effColNum/2)+1,ncol=2,byrow=T) 
-    layout(mat)
-    par(mai=c(0.4,0.5,0.14,0),oma=c(0.1,0.1,0.1,0.1)) # oma = outer margins
-    xAxis <- tstep_pool
-    if(grepl("flux",flist[i])) {
-      xAxis <- tstep_flux
-    }
-    for (v in 2:nvar) {
-      if(!all(is.na(dat[,v]))){
-        plot(dat[,v],ylab=colnames(dat)[v],type='l',xlab=xAxis, tck=0.03, mgp=c(1.5, 0.2, 0))
-        # plot a brown horizontal line at 0 for sb_massBalance only
-        if(grepl("sb_massBalance",flist[i])) abline(h=0,col="sienna",lty=1,lwd=0.4)
+    # get size of the file and run 'plot()' only for files < 3 GB
+    fsize <- file.info(flist[i])[1,1]  # in Byte
+    fsize <- fsize / 1000 / 1000       # in MB
+    if (fsize < 3000.0){
+      dat=read.table(flist[i],header=T,sep="")
+      nvar=dim(dat)[2]
+      # number of columns with variables, excluding the 1st row "Time"
+      effColNum <- ncol(dat) -1 
+      mat=matrix(seq(1,2*round(effColNum/2)+2,1),nrow=round(effColNum/2)+1,ncol=2,byrow=T) 
+      layout(mat)
+      par(mai=c(0.4,0.5,0.14,0),oma=c(0.1,0.1,0.1,0.1)) # oma = outer margins
+      xAxis <- tstep_pool
+      if(grepl("flux",flist[i])) {
+        xAxis <- tstep_flux
       }
+      for (v in 2:nvar) {
+        if(!all(is.na(dat[,v]))){
+          plot(dat[,v],ylab=colnames(dat)[v],type='l',xlab=xAxis, tck=0.03, mgp=c(1.5, 0.2, 0))
+          # plot a brown horizontal line at 0 for sb_massBalance only
+          if(grepl("sb_massBalance",flist[i])) abline(h=0,col="sienna",lty=1,lwd=0.4)
+        }
+      }
+    # if file is > 2 GB
+    } else{
+      print(paste0("  Skipping ", flist[i], " because it is larger than 2 GB (", fsize," MB)."))
     }
   }
 }
@@ -104,45 +112,53 @@ if (any(flistLayFiles)){
     # only output files that contain layer information
     if(grepl("_lay",flist[i])) {
       print(paste('   reading',flist[i]))
-      dat=read.table(flist[i],header=T,sep="")
-      nvar=dim(dat)[2]
-      # number of rows with data
-      rowNum <- nrow(dat)
-      # number of columns with variables, excluding the 1st row "Time"
-      varCol <- ncol(dat) -1 
-      # number of variables
-      varNum <- varCol/ soilLayer
-      mat=matrix(seq(1,2*round(soilLayer/2)+2,1),nrow=round(soilLayer/2)+1,ncol=2,byrow=T) 
-      bottomMargin <- 18
-      if (soilLayer > 8) bottomMargin <- 8     # reduce bottom margin to leave enough space for plots if soil layer numers is large
-      if (soilLayer > 14) bottomMargin <- 0.1  # reduce bottom margin to leave enough space for plots if soil layer numers is very large
-      
-      xAxis <- tstep_pool
-      if(grepl("flux",flist[i])) {
-        xAxis <- tstep_flux
-      }
-    
-      countVar <- 0
-      for (v in 1:varNum) {
-        layout(mat)
-        par(mai=c(0.3,0.4,0,0),oma=c(bottomMargin,0.2,1.2,0.2)) # oma = outer margins
-        a <- soilLayer *countVar +2
-        b <- a + soilLayer -1
-        dat2 <- dat[,a:b]
-        # variable name
-        vName<-colnames(dat2[1])
-        vName<-substr(vName, 1, nchar(vName)-3)
-        for (j in soilLSeq) {
-          if (j < 10){ yAxisLabel<-substr(colnames(dat2)[j], nchar(colnames(dat2)[j])-1, nchar(colnames(dat2)[j]))
-          } else       yAxisLabel<-substr(colnames(dat2)[j], nchar(colnames(dat2)[j])-2, nchar(colnames(dat2)[j]))
-          plot(1:rowNum, dat2[,j], 
-            ylab=yAxisLabel, xlab=xAxis, 
-            type='l',
-            tck=0.02, mgp=c(1.2, 0.14, 0))
-          if (j == 1) mtext(vName, cex=0.9, side=3, line=0.04, adj=0,col="red3")
-          if (j == 2) mtext(flist[i], cex=0.8, side=3, line=0.04, adj=0)
+      # get size of the file and run 'plot()' only for files < 3 GB
+      fsize <- file.info(flist[i])[1,1]  # in Byte
+      fsize <- fsize / 1000 / 1000       # in MB
+      if (fsize < 3000.0){
+        dat=read.table(flist[i],header=T,sep="")
+        nvar=dim(dat)[2]
+        # number of rows with data
+        rowNum <- nrow(dat)
+        # number of columns with variables, excluding the 1st row "Time"
+        varCol <- ncol(dat) -1 
+        # number of variables
+        varNum <- varCol/ soilLayer
+        mat=matrix(seq(1,2*round(soilLayer/2)+2,1),nrow=round(soilLayer/2)+1,ncol=2,byrow=T) 
+        bottomMargin <- 18
+        if (soilLayer > 8) bottomMargin <- 8     # reduce bottom margin to leave enough space for plots if soil layer numers is large
+        if (soilLayer > 14) bottomMargin <- 0.1  # reduce bottom margin to leave enough space for plots if soil layer numers is very large
+        
+        xAxis <- tstep_pool
+        if(grepl("flux",flist[i])) {
+          xAxis <- tstep_flux
         }
-        countVar <- countVar +1
+        
+        countVar <- 0
+        for (v in 1:varNum) {
+          layout(mat)
+          par(mai=c(0.3,0.4,0,0),oma=c(bottomMargin,0.2,1.2,0.2)) # oma = outer margins
+          a <- soilLayer *countVar +2
+          b <- a + soilLayer -1
+          dat2 <- dat[,a:b]
+          # variable name
+          vName<-colnames(dat2[1])
+          vName<-substr(vName, 1, nchar(vName)-3)
+          for (j in soilLSeq) {
+            if (j < 10){ yAxisLabel<-substr(colnames(dat2)[j], nchar(colnames(dat2)[j])-1, nchar(colnames(dat2)[j]))
+            } else       yAxisLabel<-substr(colnames(dat2)[j], nchar(colnames(dat2)[j])-2, nchar(colnames(dat2)[j]))
+            plot(1:rowNum, dat2[,j], 
+              ylab=yAxisLabel, xlab=xAxis, 
+              type='l',
+              tck=0.02, mgp=c(1.2, 0.14, 0))
+            if (j == 1) mtext(vName, cex=0.9, side=3, line=0.04, adj=0,col="red3")
+            if (j == 2) mtext(flist[i], cex=0.8, side=3, line=0.04, adj=0)
+          }
+          countVar <- countVar +1
+        }
+      # if file is > 2 GB
+      } else{
+        print(paste0("  Skipping ", flist[i], " because it is larger than 2 GB (", fsize," MB)."))
       }
     }
   }
@@ -176,50 +192,58 @@ if (any(flistLayFiles)){
     # only output files that contain layer information
     if(grepl("_lay",flist[i])) {
       print(paste('   reading',flist[i]))
-      dat=read.table(flist[i],header=T,sep="")
-      nvar=dim(dat)[2]
-      # number of rows with data
-      rowNum <- nrow(dat)
-      # number of columns with variables, excluding the 1st row "Time"
-      varCol <- ncol(dat) -1 
-      # number of variables
-      varNum <- varCol/ soilLayer
-      # create one soil profile figure for each variable
-      countVar <- 0
-      for (v in 1:varNum) {
-        a <- soilLayer *countVar +2
-        b <- a + soilLayer -1
-        vDat <- dat[,a:b]
-        # calc start and end row to consider
-        rowE <- nrow(vDat)
-        if (rowE > spanRows){ rowS <- rowE - spanRows
-        } else              { rowS <- 1  }
-        # calc mean and SD per row for the last 10 years of simulated data, or all data im simulation time is < 10 yr
-        vMean<-apply(vDat[rowS:rowE,], 2, mean)
-        vSD  <-apply(vDat[rowS:rowE,], 2, sd)
-        # prepare visualization of SD
-        vSDup<-vMean+vSD
-        vSDdn<-vMean-vSD
-        # variable name
-        vName<-colnames(vDat[1])
-        vName<-substr(vName, 1, nchar(vName)-3)
-        # set margins
-        par(oma=c(0.2,0.2,0.2,0.2),mar=c(7.2,2.4,1.2,0.4),xpd=FALSE)
-        # plot as line and points
-        plot(vMean,soilLSeq,
-             type="l",
-             ylab="soil layers",xlab=vName,
-             ylim=rev(range(soilLSeq)),
-             xlim=c(min(vSDdn),max(vSDup)),
-             main=paste0(vName,"    from ",flist[i]),
-             tck=0.01, mgp=c(1.2, 0.14, 0))
-        arrows(vSDup, soilLSeq, vSDdn, soilLSeq, code=3, length=0.0, angle=90, col="orange3")
-        points(vMean,soilLSeq, pch=21)
-        par(xpd=NA)
-        legend(min(vSDdn), max(soilLSeq)+0.12*max(soilLSeq), 
-                c(paste0("Mean over last ",spanTime," years."),"SD of mean",paste0("The mean was calculated from ",tstep_pool," model output.")), 
-                cex=0.8, col=c("black","orange3",NA), pch=c(21,NA,NA), lty=c(NA,1,NA), box.col = "gray80")
-        countVar <- countVar +1
+      # get size of the file and run 'plot()' only for files < 3 GB
+      fsize <- file.info(flist[i])[1,1]  # in Byte
+      fsize <- fsize / 1000 / 1000       # in MB
+      if (fsize < 3000.0){
+        dat=read.table(flist[i],header=T,sep="")
+        nvar=dim(dat)[2]
+        # number of rows with data
+        rowNum <- nrow(dat)
+        # number of columns with variables, excluding the 1st row "Time"
+        varCol <- ncol(dat) -1 
+        # number of variables
+        varNum <- varCol/ soilLayer
+        # create one soil profile figure for each variable
+        countVar <- 0
+        for (v in 1:varNum) {
+          a <- soilLayer *countVar +2
+          b <- a + soilLayer -1
+          vDat <- dat[,a:b]
+          # calc start and end row to consider
+          rowE <- nrow(vDat)
+          if (rowE > spanRows){ rowS <- rowE - spanRows
+          } else              { rowS <- 1  }
+          # calc mean and SD per row for the last 10 years of simulated data, or all data im simulation time is < 10 yr
+          vMean<-apply(vDat[rowS:rowE,], 2, mean)
+          vSD  <-apply(vDat[rowS:rowE,], 2, sd)
+          # prepare visualization of SD
+          vSDup<-vMean+vSD
+          vSDdn<-vMean-vSD
+          # variable name
+          vName<-colnames(vDat[1])
+          vName<-substr(vName, 1, nchar(vName)-3)
+          # set margins
+          par(oma=c(0.2,0.2,0.2,0.2),mar=c(7.2,2.4,1.2,0.4),xpd=FALSE)
+          # plot as line and points
+          plot(vMean,soilLSeq,
+               type="l",
+               ylab="soil layers",xlab=vName,
+               ylim=rev(range(soilLSeq)),
+               xlim=c(min(vSDdn),max(vSDup)),
+               main=paste0(vName,"    from ",flist[i]),
+               tck=0.01, mgp=c(1.2, 0.14, 0))
+          arrows(vSDup, soilLSeq, vSDdn, soilLSeq, code=3, length=0.0, angle=90, col="orange3")
+          points(vMean,soilLSeq, pch=21)
+          par(xpd=NA)
+          legend(min(vSDdn), max(soilLSeq)+0.12*max(soilLSeq), 
+                  c(paste0("Mean over last ",spanTime," years."),"SD of mean",paste0("The mean was calculated from ",tstep_pool," model output.")), 
+                  cex=0.8, col=c("black","orange3",NA), pch=c(21,NA,NA), lty=c(NA,1,NA), box.col = "gray80")
+          countVar <- countVar +1
+        }
+      # if file is > 2 GB
+      } else{
+        print(paste0("  Skipping ", flist[i], " because it is larger than 2 GB (", fsize," MB)."))
       }
     }
   }
