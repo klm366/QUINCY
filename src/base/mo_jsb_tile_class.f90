@@ -751,7 +751,7 @@ CONTAINS
     END IF
 
     IF (no_children == 1) THEN
-      var%ptr(ics:ice,iblk) = tile%mem(iproc)%p%children(1)%p%vars(var%child_idx(1))%p%field(ics:ice,iblk,1,1,1)
+      var%ptr(ics:ice,iblk) = tile%mem(iproc)%p%children(1)%p%vars(var%child_idx(1))%p%ptr2d(ics:ice,iblk)
     ELSE
       this%data_sum (:,iblk) = 0._wp
       this%fract_sum(:,iblk) = 0._wp
@@ -759,7 +759,7 @@ CONTAINS
       DO i=1,no_children
         ASSOCIATE (fractions  => this%fractions(ics:ice,iblk,i))
           IF (var%child_idx(i) > 0) THEN
-            ASSOCIATE (data_child => tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p%field(ics:ice,iblk,1,1,1) )
+            ASSOCIATE (data_child => tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p%ptr2d(ics:ice,iblk) )
               this%data_sum(ics:ice,iblk) = this%data_sum(ics:ice,iblk) + fractions * data_child
             END ASSOCIATE
             this%fract_sum(ics:ice,iblk) = this%fract_sum(ics:ice,iblk) + fractions
@@ -835,7 +835,7 @@ CONTAINS
 
     IF (no_children == 1) THEN
       DO ilev=1,SIZE(var%ptr,2)
-        var%ptr(ics:ice,ilev,iblk) = tile%mem(iproc)%p%children(1)%p%vars(var%child_idx(1))%p%field(ics:ice,ilev,iblk,1,1)
+        var%ptr(ics:ice,ilev,iblk) = tile%mem(iproc)%p%children(1)%p%vars(var%child_idx(1))%p%ptr3d(ics:ice,ilev,iblk)
       END DO
     ELSE
 
@@ -845,7 +845,7 @@ CONTAINS
         DO i=1,no_children
           ASSOCIATE (fractions  => this%fractions(ics:ice,iblk,i))
             IF (var%child_idx(i) > 0) THEN
-              ASSOCIATE (data_child => tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p%field(ics:ice,ilev,iblk,1,1) )
+              ASSOCIATE (data_child => tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p%ptr3d(ics:ice,ilev,iblk) )
                 this%data_sum(ics:ice,iblk) = this%data_sum(ics:ice,iblk) + fractions * data_child
               END ASSOCIATE
               this%fract_sum(ics:ice,iblk) = this%fract_sum(ics:ice,iblk) + fractions
