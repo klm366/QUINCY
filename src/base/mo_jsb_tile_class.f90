@@ -767,7 +767,7 @@ CONTAINS
 
     DO i=1,no_children
       IF (var%child_idx(i) > 0) THEN
-        ASSOCIATE (data_child => tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p%field(ics:ice,iblk,1,1,1), &
+        ASSOCIATE (data_child => tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p%ptr2d(ics:ice,iblk), &
           &        fractions  => this%fractions(ics:ice,iblk,i))
           this%data_sum(ics:ice,iblk) = this%data_sum(ics:ice,iblk) + fractions * data_child
           this%fract_sum(ics:ice,iblk) = this%fract_sum(ics:ice,iblk) + fractions
@@ -850,7 +850,7 @@ CONTAINS
       this%data_sum (:,iblk) = 0._wp
       DO i=1,no_children
         IF (var%child_idx(i) > 0) THEN
-          ASSOCIATE (data_child => tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p%field(ics:ice,ilev,iblk,1,1), &
+          ASSOCIATE (data_child => tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p%ptr3d(ics:ice,ilev,iblk), &
             &        fractions  => this%fractions(ics:ice,iblk,i))
             this%data_sum(ics:ice,iblk) = this%data_sum(ics:ice,iblk) + fractions * data_child
             this%fract_sum(ics:ice,iblk) = this%fract_sum(ics:ice,iblk) + fractions
