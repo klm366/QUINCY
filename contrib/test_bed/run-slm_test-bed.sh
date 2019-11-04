@@ -77,8 +77,8 @@ sb_adsorp_scheme="eca_full"     # eca_full; eca_part (only uptake, not for adsor
 
 # simulation length & output
 simulation_length_number=20     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
-output_interval_pool="weekly"   # timestep daily weekly monthly yearly
-output_interval_flux="weekly"   # timestep daily weekly monthly yearly
+output_interval_pool="daily"   # timestep daily weekly monthly yearly
+output_interval_flux="daily"   # timestep daily weekly monthly yearly
 output_start_first_day_year=1   # 1 to ... [lower than or equal with output_end_last_day_year ]
 output_end_last_day_year=20     # equal with or larger than output_start_first_day_year
 

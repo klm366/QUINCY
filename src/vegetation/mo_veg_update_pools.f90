@@ -428,7 +428,7 @@ CONTAINS
                                        (lai_max(:) - lai(:)) / lai_max(:))) * &
                                       dtime / one_day 
        ELSEWHERE
-          veg_litterfall%leaf%carbon(:) = MAX(veg_pool%leaf%carbon(:), & 
+          veg_litterfall%leaf%carbon(:) = MIN(veg_pool%leaf%carbon(:), & 
                                               lai(:)/lctlib%sla * max_leaf_shedding_rate * dtime / one_day * & 
                                               lai_max(:) / &
                                               MAX(eps4, lai(:)))
