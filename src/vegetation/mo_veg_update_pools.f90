@@ -62,7 +62,7 @@ CONTAINS
     USE mo_jsb_grid_class,                  ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                        ONLY: Get_vgrid
     USE mo_jsb_phys_constants,              ONLY: lambda_C14, rhoh2o, grav
-    USE mo_jsb_math_constants,              ONLY: dtime, one_day, eps4, eps8
+    USE mo_jsb_math_constants,              ONLY: dtime, one_day, one_year, eps4, eps8
     USE mo_isotope_util,                    ONLY: calc_mixing_ratio_N15N14, calc_fractionation, calc_mixing_ratio_C14C
     USE mo_rad_constants,                   ONLY: rfr_ratio_toc 
     USE mo_veg_canopy,                      ONLY: calc_canopy_layers
@@ -72,6 +72,7 @@ CONTAINS
     USE mo_atmland_constants,               ONLY: def_co2_mixing_ratio, def_co2_mixing_ratio_C13, def_co2_mixing_ratio_C14, &
                                                   def_co2_deltaC13, def_co2_deltaC14
     USE mo_assimi_update_canopy_fluxes,     ONLY: discrimination_ps
+    USE mo_pheno_constants,                 ONLY: ievergreen
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(ASSIMI_)    
@@ -433,6 +434,11 @@ CONTAINS
                                               lai_max(:) / &
                                               MAX(eps4, lai(:)))
        ENDWHERE
+       
+       ! calc leaf turnover for evergreen trees (needed, for e.g. mean_leaf_age, as evergreens are always within growing_season)
+       IF(lctlib%phenology_type == ievergreen) THEN
+         veg_litterfall%leaf%carbon(:) = veg_pool%leaf%carbon(:) / lctlib%tau_leaf / one_day / one_year * dtime
+       ENDIF
  
        ! update leaf C:N:P pools 
        veg_pool%leaf%carbon(:)     = veg_pool%leaf%carbon(:)   + veg_growth%leaf%carbon(:) - veg_litterfall%leaf%carbon(:) 
@@ -458,7 +464,8 @@ CONTAINS
     END WHERE
 
     WHERE(veg_pool%leaf%carbon(:) > eps8)
-        mean_leaf_age(:) = (mean_leaf_age(:) + dtime / one_day) * (1._wp - veg_growth%leaf%carbon(:) / veg_pool%leaf%carbon(:))
+        mean_leaf_age(:) = (mean_leaf_age(:) + dtime / one_day) * (1._wp - veg_growth%leaf%carbon(:) / veg_pool%leaf%carbon(:)) &
+                           - mean_leaf_age(:) * veg_litterfall%leaf%carbon(:) / veg_pool%leaf%carbon(:)
       ELSEWHERE
         mean_leaf_age(:) = 0.0_wp
     END WHERE
