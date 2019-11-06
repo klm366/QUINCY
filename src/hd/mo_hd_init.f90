@@ -270,7 +270,7 @@ CONTAINS
       & tile_fract(:,:), &
       & ptr(:,:,:)            !< temporary pointer
 
-    !TYPE(t_input_file) :: input_file
+    TYPE(t_input_file) :: input_file
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
