@@ -563,6 +563,7 @@ CONTAINS
                                         lctlib%g0                                      , &
                                         lctlib%g1                                      , &
                                         lctlib%t_jmax_omega                            , &
+                                        lctlib%tau_leaf                                , &
                                         dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
                                         canopy_layer_depth(:)                          , &
                                         growing_season(:)                              , &

@@ -1140,6 +1140,7 @@ CONTAINS
                                         lctlib_g0                     , &
                                         lctlib_g1                     , &
                                         lctlib_t_jmax_omega           , &
+                                        lctlib_tau_leaf               , &
                                         flag_optimal_Nfraction        , &
                                         canopy_layer_depth            , &
                                         growing_season                , &
@@ -1177,7 +1178,7 @@ CONTAINS
                                         leaf_cn_direction             )   ! inout
 
     USE mo_jsb_math_constants,            ONLY: dtime, one_day, one_year, eps4, eps8
-    USE mo_veg_constants,                 ONLY: delta_n_leaf
+    USE mo_veg_constants,                 ONLY: delta_n_leaf, resorp_fract_leaf
     USE mo_quincy_update_time_averages,   ONLY: mavg_period_tgrowth
     USE mo_pheno_constants,               ONLY: ievergreen, iraingreen, isummergreen, iperennial
 
@@ -1198,6 +1199,7 @@ CONTAINS
     REAL(wp),                               INTENT(in)    :: lctlib_g0                      !< lctlib parameter
     REAL(wp),                               INTENT(in)    :: lctlib_g1                      !< lctlib parameter
     REAL(wp),                               INTENT(in)    :: lctlib_t_jmax_omega            !< lctlib parameter
+    REAL(wp),                               INTENT(in)    :: lctlib_tau_leaf                !< lctlib parameter
     LOGICAL,                                INTENT(in)    :: flag_optimal_Nfraction         !< on/off optimise leaf internal N allocation
     REAL(wp),DIMENSION(ncanopy),            INTENT(in)    :: canopy_layer_depth             !< thickness of each single canopy layer [m2 m-2 LAI]
     REAL(wp),DIMENSION(nc),                 INTENT(in)    :: growing_season                 !< growing season
@@ -1282,9 +1284,10 @@ CONTAINS
           ! Only change leaf N if leaves present
           IF(veg_pool_leaf_nitrogen(ipoint) > eps4)THEN
              !> Check the N status of the plant. If there is not enough N for growth, decrease leaf N
-             IF ((uptake_n(ipoint) *  mavg_period_tgrowth * one_year * one_day * 1e-6_wp + labile_nitrogen(ipoint)) * &
-                  growth_cn(ipoint) < &
-                 (npp(ipoint)*  mavg_period_tgrowth * 1e-6_wp * one_year * one_day + labile_carbon(ipoint))) THEN
+             IF ((uptake_n(ipoint) *  mavg_period_tgrowth * one_day * 1e-6_wp + &
+                   resorp_fract_leaf * veg_pool_leaf_nitrogen(ipoint) * 1._wp / (lctlib_tau_leaf * one_year * one_day) * &
+                   mavg_period_tgrowth * one_day * 1e-6_wp + labile_nitrogen(ipoint)) * growth_cn(ipoint) < &
+                 (npp(ipoint)*  mavg_period_tgrowth * 1e-6_wp * one_day + labile_carbon(ipoint))) THEN
                 leaf_cn_direction(ipoint) = -1._wp
                 
              ELSE
@@ -1390,7 +1393,7 @@ CONTAINS
                 ! Direction of change in leaf N. Actual leaf N is modified in interfacte routine
                 !! @todo:veg_canopy:calc_dir_optimal_cn_leaf:potentially dangerous use of MAXLOC - ascertain functioning in 4D
                 leaf_cn_direction(ipoint) = (REAL(MAXLOC(npp_direction, 1),KIND=wp) - 2.0_wp)
-             ENDIF ! IF ((uptake_n(ipoint) *  mavg_period_tgrowth ...
+             ENDIF  ! if enough N available
       
           ELSE    ! IF(veg_pool_leaf_nitrogen(ipoint) > eps4)
              leaf_cn_direction(ipoint) = 0.0_wp
