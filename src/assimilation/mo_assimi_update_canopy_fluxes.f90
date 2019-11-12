@@ -324,7 +324,7 @@ CONTAINS
         ! diagnose jmax and vcmax
         !> N specific rate of electron transport rate
         jmax_cl(:,icanopy) = jmax2n * fn_et_cl(:,icanopy) * & 
-                             exp(-(((t_air(:) - Tzero - t_jmax_opt_mavg(:))/lctlib%t_jmax_omega)**2)) * &
+                             exp(-(((t_air(:) - Tzero - t_jmax_opt_mavg(:))/lctlib%t_jmax_omega)**2.0_wp)) * &
                              beta_soil_ps(:) * beta_sinklim_ps(:) * beta_soa(:) *& 
                              leaf_nitrogen_cl(:,icanopy)
 
@@ -342,7 +342,7 @@ CONTAINS
 
   ! uptake optimum temperature for electron transport
   IF(dsl4jsb_Config(ASSIMI_)%flag_t_jmax_acclimation) THEN
-    t_jmax_opt(:) = t_jmax_offset + t_jmax_slope * ( t_air(:) - TZero )
+    t_jmax_opt(:) = t_jmax_offset + t_jmax_slope * ( t_air(:) - Tzero )
     t_jmax_opt(:) = MIN(MAX(t_jmax_opt(:),t_jmax_opt_min),t_jmax_opt_max)   ! tested with gfortran, MIN() & MAX() are vectorized correctly
   ELSE                                                                      ! currently t_jmax_opt_min is init with t_jmax_offset
     t_jmax_opt(:) = lctlib%t_jmax_opt
@@ -464,7 +464,7 @@ CONTAINS
     !> static energy (R_gas: J mol-1 K-1 -> rtck: J mol-1)
     rtck = r_gas * temp
     !> conversion of ppm to Pa
-    ppm2Pa = press_srf * 1.e-06_wp
+    ppm2Pa = press_srf * 1.e-6_wp
     !>  Net canopy layer respiration (umol[CO2]/m2/s)
     maint_resp_cl = fmaint_rate_base / 1000._wp * beta_soil_ps * temperature_response_respiration(temp, temp_acclim) * &
                       leaf_nitrogen_cl
@@ -535,7 +535,7 @@ CONTAINS
 
         CASE (ic4phot)
           !> N specific rate of PePc limited photosynthessis
-          n3 = pepc2n * fn_pepc_cl * 2**((temp - TZero - Tref_pepc )/ Tbase_pepc)
+          n3 = pepc2n * fn_pepc_cl * 2.0_wp**((temp - Tzero - Tref_pepc )/ Tbase_pepc)
 
           !> ci sensitivity of Electron-transport limited photosynthesis
           m1 = ci_max/(ci_max + 2.0_wp * pcp)
@@ -630,7 +630,7 @@ CONTAINS
         !! Friend 2005 eq. 8: r_tot = ( Dh2oco2_air / gs_cl + Dh2oco2_turb / (speed * q_cdrag))
         !! Corrected to Bonan et al. 2008, Ecol. Clim: accounting for the molecular diffusion differences
         !! at the stomatal interface (1.6) and in the boundary layer, where turbulence plays a role (1.37)
-        ci_cl = co2_mixing_ratio * ppm2Pa - an_cl * rtck * 1e-06_wp * (Dwv2co2_air/gs_cl + Dwv2co2_turb/ga)
+        ci_cl = co2_mixing_ratio * ppm2Pa - an_cl * rtck * 1e-6_wp * (Dwv2co2_air/gs_cl + Dwv2co2_turb/ga)
         ci_cl = MAX (ci_cl, pcp)
 
         !> change in An since last iteration and save new an_cl
