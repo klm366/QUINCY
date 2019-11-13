@@ -71,8 +71,7 @@ MODULE mo_l2a_memory_class
                               sensible_heat_flx     , &  !> sensible heat flux [W m-2]
                               latent_heat_flx       , &  !> latent heat flux [W m-2]
                               ground_heat_flx       , &  !> ground heat flux [W m-2]
-                              ground_heat_flx_old   , &  !> ground heat flux of previous timestep [W m-2]
-                              vpd                        !> 2m air vapour pressure deficit [Pa]
+                              ground_heat_flx_old        !> ground heat flux of previous timestep [W m-2]
 
     ! For lakes
     TYPE(t_jsb_var_real2d) :: &                              
@@ -243,14 +242,6 @@ CONTAINS
     CALL jsb_add_var( mem, 'ground_heat_flx_old', mem%ground_heat_flx_old, &
             hgrid, vgrid_surface, &
             t_cf('ground_heat_flx_old', 'W m-2', 'ground heat flux of previous timestep'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp )
-
-    CALL jsb_add_var( mem, 'vpd', mem%vpd, &
-            hgrid, vgrid_surface, &
-            t_cf('vpd', 'Pa', '2m air vapour pressure deficit'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &

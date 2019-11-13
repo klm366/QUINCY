@@ -112,10 +112,10 @@ CONTAINS
                   q_bcoef        , &
                   pch            , &
                   cos_zenith_angle, &
-                  ga             , &
+                  ga             !, &
                   !latitude      , &
                   !longitude     , &
-                  vpd
+                  !vpd
     REAL(wp),DIMENSION(options%nc)      :: hlp1
     INTEGER       :: i,lun
     INTEGER       :: ref_pft                          ! PFT identifier

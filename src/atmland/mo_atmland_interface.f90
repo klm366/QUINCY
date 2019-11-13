@@ -292,6 +292,7 @@ CONTAINS
 
       dsl4jsb_Use_memory(L2A_)
       dsl4jsb_Use_memory(RAD_)
+      dsl4jsb_Use_memory(ASSIMI_)
 
     IMPLICIT NONE
     ! ---------------------------
@@ -329,6 +330,7 @@ CONTAINS
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(L2A_)
     dsl4jsb_Def_memory(RAD_)
+    dsl4jsb_Def_memory(ASSIMI_)
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -345,6 +347,7 @@ CONTAINS
     ! Get process memories
     dsl4jsb_Get_memory(L2A_)
     dsl4jsb_Get_memory(RAD_)
+    dsl4jsb_Get_memory(ASSIMI_)
 
 
 
@@ -374,7 +377,7 @@ CONTAINS
     IF (PRESENT(sensible_heat_flx))     sensible_heat_flx(:) = dsl4jsb_var2D_onChunk(L2A_,   sensible_heat_flx)
     IF (PRESENT(latent_heat_flx))       latent_heat_flx(:)   = dsl4jsb_var2D_onChunk(L2A_,   latent_heat_flx)
     ! ASSIMI
-    IF (PRESENT(vpd))                   vpd(:)               = dsl4jsb_var2D_onChunk(L2A_,   vpd)
+    IF (PRESENT(vpd))                   vpd(:)               = dsl4jsb_var2D_onChunk(ASSIMI_,   vpd)
     ! For lakes:
 !    IF (Contains_lct(tile%lcts, LAKE_TYPE)) THEN
       IF (PRESENT(latent_hflx_wtr))       latent_hflx_wtr(:)   = dsl4jsb_var2D_onChunk(L2A_,   latent_hflx_wtr)

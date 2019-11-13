@@ -69,7 +69,8 @@ MODULE mo_assimi_memory_class
                               beta_soil_gs              , &  !< scaling factor to account for soil moisture constraints on conductance [unitless]
                               canopy_cond               , &  !< canopy-integrated conductance for water [m s-1]
                               co2_conc_leaf             , &  !< canopy-integrated internal leaf CO2 concentration [ppm]
-                              t_jmax_opt                     !< optimal temperature for electron transport of photosynthesis [°C]
+                              t_jmax_opt                , &  !< optimal temperature for electron transport of photosynthesis [°C]
+                              vpd                            !> 2m air vapour pressure deficit [Pa]
 
     TYPE(t_jsb_var_real3d)    :: &
                               canopy_cond_cl            , &  !< conductance for water per canopy layer [m s-1]
@@ -290,7 +291,15 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
- 
+
+      CALL jsb_add_var( mem, 'vpd', mem%vpd, &
+            hgrid, vgrid_surface, &
+            t_cf('vpd', 'Pa', '2m air vapour pressure deficit'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp )
+
       CALL jsb_add_var(mem, 'canopy_cond_cl', mem%canopy_cond_cl, &
             hgrid, vgrid_canopy, &
             t_cf('canopy_cond_cl', 'm s-1', 'conductance for water per canopy layer'), &
