@@ -8,7 +8,7 @@
 !! First version by Rainer Schneck (2015-10-29)
 !!
 !! @par Copyright
-ass.f90! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
 
