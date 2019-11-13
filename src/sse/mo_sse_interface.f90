@@ -50,7 +50,6 @@ MODULE mo_sse_interface
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(A2L_)
-  dsl4jsb_Use_memory(L2A_)
   
 
   IMPLICIT NONE
@@ -276,7 +275,6 @@ CONTAINS
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(A2L_)
-    dsl4jsb_Def_memory(L2A_)
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -296,7 +294,6 @@ CONTAINS
     ! Get process memories
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(A2L_)
-    dsl4jsb_Get_memory(L2A_)
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -314,9 +311,6 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(A2L_, t_bcoef              , weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(A2L_, q_acoef              , weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(A2L_, q_bcoef              , weighted_by_fract)
-      ! ---------------------------
-      dsl4jsb_Aggregate_onChunk(L2A_, ground_heat_flx      , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(L2A_, sensible_heat_flx    , weighted_by_fract)
     END IF
 
     !X Implementation: Start your process scheme here...
@@ -351,7 +345,6 @@ CONTAINS
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(A2L_)
-    dsl4jsb_Def_memory(L2A_)
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -372,7 +365,6 @@ CONTAINS
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(A2L_)
-    dsl4jsb_Get_memory(L2A_)
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -389,11 +381,10 @@ CONTAINS
       ! ---------------------------
       dsl4jsb_Aggregate_onChunk(RAD_, net_radiation         , weighted_by_fract)
       ! ---------------------------
-      dsl4jsb_Aggregate_onChunk(L2A_, ground_heat_flx       , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(L2A_, ground_heat_flx_old   , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(L2A_, latent_heat_flx       , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(L2A_, sensible_heat_flx     , weighted_by_fract)
-      ! ---------------------------
+      dsl4jsb_Aggregate_onChunk(SSE_, ground_heat_flx       , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(SSE_, ground_heat_flx_old   , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(SSE_, latent_heat_flx       , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(SSE_, sensible_heat_flx     , weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(SSE_, t_srf_old             , weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(SSE_, zril_old              , weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(SSE_, transpiration         , weighted_by_fract)

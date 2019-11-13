@@ -37,6 +37,7 @@ mo_atmland_interface.o: \
   mo_l2a_memory_class.o \
   mo_rad_memory_class.o \
   mo_assimi_memory_class.o \
+  mo_sse_memory_class.o \
   mo_jsb_control.o
 
 mo_l2a_memory_class.o: \

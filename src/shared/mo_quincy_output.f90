@@ -1690,7 +1690,6 @@ CONTAINS
 
     ! Use of process memories
     dsl4jsb_Use_memory(A2L_)        !  USE mo_a2l_memory_class, ONLY: t_a2l_memory
-    dsl4jsb_Use_memory(L2A_)        !  USE mo_l2a_memory_class, ONLY: t_l2a_memory
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4slm_Use_memory_a_veg
@@ -1902,7 +1901,6 @@ CONTAINS
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(A2L_)                   !     TYPE(t_a2l_memory),    POINTER :: a2l__mem
-    dsl4jsb_Def_memory(L2A_)                   !     TYPE(t_l2a_memory),    POINTER :: l2a__mem
     dsl4jsb_Def_memory(ASSIMI_)                !     TYPE(t_assimi_memory), POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                   !     TYPE(t_veg_memory),    POINTER :: veg__mem
     dsl4jsb_Def_memory(RAD_)                   !     TYPE(t_rad_memory),    POINTER :: rad__mem
@@ -1928,10 +1926,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_C14
     dsl4jsb_Real2D_onChunk      :: press_srf
     dsl4jsb_Real2D_onChunk      :: q_air
-    ! L2A_
-    dsl4jsb_Real2D_onChunk      :: sensible_heat_flx
-    dsl4jsb_Real2D_onChunk      :: latent_heat_flx
-    dsl4jsb_Real2D_onChunk      :: ground_heat_flx
     ! ASSIMI_
     dsl4jsb_Real2D_onChunk      :: gross_assimilation
     dsl4jsb_Real2D_onChunk      :: gross_assimilation_C13
@@ -1942,6 +1936,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: runoff 
     dsl4jsb_Real2D_onChunk      :: evaporation 
     dsl4jsb_Real2D_onChunk      :: transpiration
+    dsl4jsb_Real2D_onChunk      :: sensible_heat_flx
+    dsl4jsb_Real2D_onChunk      :: latent_heat_flx
+    dsl4jsb_Real2D_onChunk      :: ground_heat_flx
     ! SSE_ 3D
     dsl4jsb_Real3D_onChunk      :: soil_depth_sl
     ! RAD_
@@ -2057,7 +2054,6 @@ CONTAINS
     dsl4jsb_Get_config(SB_)
     ! Get process memories
     dsl4jsb_Get_memory(A2L_)
-    dsl4jsb_Get_memory(L2A_)
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(RAD_)
@@ -2083,22 +2079,23 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)
     dsl4jsb_Get_var2D_onChunk(A2L_, q_air)
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(L2A_, sensible_heat_flx)
-    dsl4jsb_Get_var2D_onChunk(L2A_, latent_heat_flx)
-    dsl4jsb_Get_var2D_onChunk(L2A_, ground_heat_flx)
-    ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation_C13)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation_C14)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, canopy_cond)
     ! ---------------------------
+    ! SSE_ 2D
     dsl4jsb_Get_var2D_onChunk(SSE_, evaporation)
     dsl4jsb_Get_var2D_onChunk(SSE_, interception)
     dsl4jsb_Get_var2D_onChunk(SSE_, pet)
     dsl4jsb_Get_var2D_onChunk(SSE_, runoff)
     dsl4jsb_Get_var2D_onChunk(SSE_, drainage)
-    dsl4jsb_Get_var3D_onChunk(SSE_, soil_depth_sl)
     dsl4jsb_Get_var2D_onChunk(SSE_, transpiration)
+    dsl4jsb_Get_var2D_onChunk(SSE_, sensible_heat_flx)
+    dsl4jsb_Get_var2D_onChunk(SSE_, latent_heat_flx)
+    dsl4jsb_Get_var2D_onChunk(SSE_, ground_heat_flx)
+    ! SSE_ 3D
+    dsl4jsb_Get_var3D_onChunk(SSE_, soil_depth_sl)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(RAD_, albedo)
     dsl4jsb_Get_var2D_onChunk(RAD_, net_radiation)

@@ -66,13 +66,6 @@ MODULE mo_l2a_memory_class
                               alb_vis_dir           , &  !> surface albedo for direct radiation in the visible band [unitless]
                               alb_nir_dir                !> surface albedo for direct radiation in the near infrared band [unitless]
 
-    ! added from SLM, not existent in jsbach4 20160823
-    TYPE(t_jsb_var_real2d) :: &                              
-                              sensible_heat_flx     , &  !> sensible heat flux [W m-2]
-                              latent_heat_flx       , &  !> latent heat flux [W m-2]
-                              ground_heat_flx       , &  !> ground heat flux [W m-2]
-                              ground_heat_flx_old        !> ground heat flux of previous timestep [W m-2]
-
     ! For lakes
     TYPE(t_jsb_var_real2d) :: &                              
                               latent_hflx_wtr       , &  !> latent heat flux over water [W m-2]
@@ -210,38 +203,6 @@ CONTAINS
     CALL jsb_add_var( mem, 'alb_nir_dir', mem%alb_nir_dir, &
             hgrid, vgrid_surface, &
             t_cf('alb_nir_dir', 'unitless', 'surface albedo for direct radiation in the near infrared band'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp )
-
-    CALL jsb_add_var( mem, 'sensible_heat_flx', mem%sensible_heat_flx, &
-            hgrid, vgrid_surface, &
-            t_cf('sensible_heat_flx', 'W m-2', 'sensible heat flux'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp )
-
-    CALL jsb_add_var( mem, 'latent_heat_flx', mem%latent_heat_flx, &
-            hgrid, vgrid_surface, &
-            t_cf('latent_heat_flx', 'W m-2', 'latent heat flux'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp )
-
-    CALL jsb_add_var( mem, 'ground_heat_flx', mem%ground_heat_flx, &
-            hgrid, vgrid_surface, &
-            t_cf('ground_heat_flx', 'W m-2', 'ground heat flux'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp )
-
-    CALL jsb_add_var( mem, 'ground_heat_flx_old', mem%ground_heat_flx_old, &
-            hgrid, vgrid_surface, &
-            t_cf('ground_heat_flx_old', 'W m-2', 'ground heat flux of previous timestep'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &

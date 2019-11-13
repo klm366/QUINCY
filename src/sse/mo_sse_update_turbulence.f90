@@ -69,7 +69,6 @@ CONTAINS
 
     ! Use of process memories
     dsl4jsb_Use_memory(A2L_)        !  USE mo_a2l_memory_class, ONLY: t_a2l_memory
-    dsl4jsb_Use_memory(L2A_)        !  USE mo_l2a_memory_class, ONLY: t_l2a_memory
     dsl4jsb_Use_memory(SSE_)        !  USE mo_sse_memory_class,     ONLY: t_sse_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
 
@@ -94,7 +93,6 @@ CONTAINS
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_memory(A2L_)                        !     TYPE(t_a2l_memory), POINTER :: a2l__mem
-    dsl4jsb_Def_memory(L2A_)                        !     TYPE(t_l2a_memory), POINTER :: l2a__mem
     dsl4jsb_Def_memory(SSE_)                        !     TYPE(t_sse_memory),     POINTER :: sse__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
     ! Declare pointers to variables in memory
@@ -110,9 +108,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: t_bcoef
     dsl4jsb_Real2D_onChunk                :: q_acoef
     dsl4jsb_Real2D_onChunk                :: q_bcoef
-    ! L2A_
-    dsl4jsb_Real2D_onChunk                :: ground_heat_flx
-    dsl4jsb_Real2D_onChunk                :: sensible_heat_flx
     ! SSE_
     dsl4jsb_Real3D_onChunk                :: t_soil_sl
     ! VEG_
@@ -136,7 +131,6 @@ CONTAINS
     dsl4jsb_Get_config(SSE_)
     ! Get process memories
     dsl4jsb_Get_memory(A2L_)
-    dsl4jsb_Get_memory(L2A_)
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(VEG_)
     ! Get process variables (Set pointers to variables in memory)
@@ -151,9 +145,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, t_bcoef)              ! out
     dsl4jsb_Get_var2D_onChunk(A2L_, q_acoef)              ! out
     dsl4jsb_Get_var2D_onChunk(A2L_, q_bcoef)              ! out
-    ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(L2A_, ground_heat_flx)      ! out
-    dsl4jsb_Get_var2D_onChunk(L2A_, sensible_heat_flx)    ! out
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)            ! in
     ! ---------------------------
