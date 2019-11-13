@@ -8,7 +8,7 @@
 !! First version by Rainer Schneck (2015-10-29)
 !!
 !! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+ass.f90! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
 
@@ -253,6 +253,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                         &
       & prefix, suffix,                                                                            &
       & lrestart=.TRUE.,                                                                           &
+      & output_level=BASIC,                                                                        &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL jsb_add_var( mem, 'evapo_snow', mem%evapo_snow,                       &
