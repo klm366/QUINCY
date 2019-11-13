@@ -98,8 +98,9 @@ CONTAINS
                                   t_bcoef_ice        , &
                                   q_acoef_ice        , &
                                   q_bcoef_ice        , &
-                                 !! a2l memory - end
-                                 !! l2a memory - INTENT(out) - start
+                                  !! a2l memory - end
+                                  !! start - variables for passing values from land to atmosphere
+                                  !! INTENT(out)
                                   t_srf             ,   &
                                   t_eff_srf         ,   &
                                   qsat_srf          ,   &
@@ -121,7 +122,7 @@ CONTAINS
                                   sensible_hflx_wtr ,   &
                                   latent_hflx_ice   ,   &
                                   sensible_hflx_ice     &
-                                  !! l2a memory - end
+                                  !! end - variables for passing values from land to atmosphere
                                   )
 
 
@@ -203,7 +204,7 @@ CONTAINS
                                   q_acoef_ice(:)        , &
                                   q_bcoef_ice(:)
                                                      !! a2l memory - end
-    REAL(wp),INTENT(out)          :: &              !! l2a memory - INTENT(out) - start
+    REAL(wp),INTENT(out)          :: &                      !! start - variables for passing values from land to atmosphere
                                   t_srf(:)             ,   &
                                   t_eff_srf(:)         ,   &
                                   qsat_srf(:)          ,   &
@@ -224,7 +225,7 @@ CONTAINS
                                   latent_hflx_wtr(:)   ,   &
                                   sensible_hflx_wtr(:) ,   &
                                   latent_hflx_ice(:)   ,   &
-                                  sensible_hflx_ice(:) !! l2a memory - end
+                                  sensible_hflx_ice(:)      !! end - variables for passing values from land to atmosphere
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),          POINTER   :: model
@@ -457,12 +458,11 @@ CONTAINS
       END SELECT  ! select SLM model !
     ENDIF                            
 
-    !> 3.0 pass atmland variables from l2a memory back to the driver
+    !> 3.0 variables for passing values from land to atmosphere (via the driver)
     !! 
     !! 
     IF (l_forcing) THEN       ! l_forcing is true if update_a2l() is called (depends on the SLM model selected)
       CALL update_l2a( &
-      ! the sequence of input variables is consistent with the sequence of var in t_l2a_memory !
       tile                                              ,   &
       model%options                                     ,   &
       t_srf                   = t_srf(:)             ,   &

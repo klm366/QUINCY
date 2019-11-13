@@ -116,7 +116,6 @@ CONTAINS
     ! L2A_
     dsl4jsb_Real2D_onChunk                :: ground_heat_flx_old
     dsl4jsb_Real2D_onChunk                :: ground_heat_flx
-    dsl4jsb_Real2D_onChunk                :: net_radiation
     dsl4jsb_Real2D_onChunk                :: latent_heat_flx
     dsl4jsb_Real2D_onChunk                :: sensible_heat_flx
     ! SSE_ 2D
@@ -158,6 +157,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: canopy_cond
     ! RAD_
     dsl4jsb_Real2D_onChunk                :: sw_srf_net
+    dsl4jsb_Real2D_onChunk                :: net_radiation
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk                :: lai 
     dsl4jsb_Real2D_onChunk                :: height
@@ -205,7 +205,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, drag_srf)             ! inout
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(L2A_, ground_heat_flx_old)  ! inout
-    dsl4jsb_Get_var2D_onChunk(L2A_, net_radiation)        ! inout
     dsl4jsb_Get_var2D_onChunk(L2A_, ground_heat_flx)      ! inout
     dsl4jsb_Get_var2D_onChunk(L2A_, latent_heat_flx)      ! inout
     dsl4jsb_Get_var2D_onChunk(L2A_, sensible_heat_flx)    ! inout
@@ -247,6 +246,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, canopy_cond)       ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(RAD_, sw_srf_net)           ! in
+    dsl4jsb_Get_var2D_onChunk(RAD_, net_radiation)        ! inout
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(VEG_, lai)                  ! in 
     dsl4jsb_Get_var2D_onChunk(VEG_, height)               ! in 

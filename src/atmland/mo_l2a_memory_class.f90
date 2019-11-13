@@ -68,12 +68,10 @@ MODULE mo_l2a_memory_class
 
     ! added from SLM, not existent in jsbach4 20160823
     TYPE(t_jsb_var_real2d) :: &                              
-                              albedo                , &  !> total surface albedo [unitless]
                               sensible_heat_flx     , &  !> sensible heat flux [W m-2]
                               latent_heat_flx       , &  !> latent heat flux [W m-2]
                               ground_heat_flx       , &  !> ground heat flux [W m-2]
                               ground_heat_flx_old   , &  !> ground heat flux of previous timestep [W m-2]
-                              net_radiation         , &  !> surface net radiation [W m-2]
                               vpd                        !> 2m air vapour pressure deficit [Pa]
 
     ! For lakes
@@ -218,14 +216,6 @@ CONTAINS
             prefix, suffix, &
             initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'albedo', mem%albedo, &
-            hgrid, vgrid_surface, &
-            t_cf('albedo', 'unitless', 'total surface albedo'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp )
-
     CALL jsb_add_var( mem, 'sensible_heat_flx', mem%sensible_heat_flx, &
             hgrid, vgrid_surface, &
             t_cf('sensible_heat_flx', 'W m-2', 'sensible heat flux'), &
@@ -253,14 +243,6 @@ CONTAINS
     CALL jsb_add_var( mem, 'ground_heat_flx_old', mem%ground_heat_flx_old, &
             hgrid, vgrid_surface, &
             t_cf('ground_heat_flx_old', 'W m-2', 'ground heat flux of previous timestep'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp )
-
-    CALL jsb_add_var( mem, 'net_radiation', mem%net_radiation, &
-            hgrid, vgrid_surface, &
-            t_cf('net_radiation', 'W m-2', 'surface net radiation'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &

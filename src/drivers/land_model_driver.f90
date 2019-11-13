@@ -123,7 +123,8 @@ PROGRAM land_model_driver
                                   q_acoef_ice        , &
                                   q_bcoef_ice
                                          !! a2l memory - end
-  REAL(wp), ALLOCATABLE, DIMENSION(:)  :: &   !! l2a memory - start
+  !! start - variables for passing values from land to atmosphere
+  REAL(wp), ALLOCATABLE, DIMENSION(:)  :: & 
                                   t_srf             ,   &
                                   t_eff_srf         ,   &
                                   qsat_srf          ,   &
@@ -135,17 +136,17 @@ PROGRAM land_model_driver
                                   alb_nir_dif       ,   &
                                   alb_vis_dir       ,   &
                                   alb_nir_dir       ,   &
-                                  albedo            ,   &
-                                  sensible_heat_flx ,   &
-                                  latent_heat_flx   ,   &
-                                  net_radiation     ,   &
-                                  vpd               ,   &
+                                  albedo            ,   &   ! not present in jsb4 | RAD_
+                                  sensible_heat_flx ,   &   ! not present in jsb4 | 
+                                  latent_heat_flx   ,   &   ! not present in jsb4 | 
+                                  net_radiation     ,   &   ! not present in jsb4 | RAD_
+                                  vpd               ,   &   ! not present in jsb4 | 
                                   ! For lakes:
                                   latent_hflx_wtr   ,   &
                                   sensible_hflx_wtr ,   &
                                   latent_hflx_ice   ,   &
                                   sensible_hflx_ice
-                                         !! l2a memory - end
+  !! end - variables for passing values from land to atmosphere
   CHARACTER(len=*), PARAMETER :: modname = 'land_model_driver'
 
 
@@ -574,8 +575,9 @@ PROGRAM land_model_driver
                                   t_bcoef_ice(:)        , &
                                   q_acoef_ice(:)        , &
                                   q_bcoef_ice(:)        , &
-                                 !! a2l memory - end
-                                 !! l2a memory - INTENT(out) - start
+                                  !! a2l memory - end
+                                  !! start - variables for passing values from land to atmosphere
+                                  !! INTENT(out)
                                   t_srf(:)             ,   &
                                   t_eff_srf(:)         ,   &
                                   qsat_srf(:)          ,   &
@@ -597,7 +599,7 @@ PROGRAM land_model_driver
                                   sensible_hflx_wtr(:) ,   &
                                   latent_hflx_ice(:)   ,   &
                                   sensible_hflx_ice(:)     &
-                                  !! l2a memory - end
+                                  !! end - variables for passing values from land to atmosphere
                                 &  ) ! land_model_interface()
 
     !! 5.7 special case: fluxnet output

@@ -260,14 +260,11 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  !> pass atmland variables from l2a memory back into the driver, per timestep
+  !> pass land variables from various process memories back into the driver (to atmosphere), each timestep
   !!
   !! 
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_l2a( &
-    ! the sequence of input variables is consistent with the sequence of var in t_l2a_memory !
-    ! some variables differ compared to the JSBACH4 routine, see comments 
-    ! all variables are defined as: real(wp), optional, intent(out)
       tile              ,   &
       options           ,   &
       t_srf             ,   &
@@ -281,17 +278,20 @@ CONTAINS
       alb_nir_dif       ,   &
       alb_vis_dir       ,   &
       alb_nir_dir       ,   &
-      albedo            ,   &   ! added from SLM, not existent in jsbach4 20160823
-      sensible_heat_flx ,   &   ! added from SLM, not existent in jsbach4 20160823
-      latent_heat_flx   ,   &   ! added from SLM, not existent in jsbach4 20160823
-      net_radiation     ,   &   ! added from SLM, not existent in jsbach4 20160823
-      vpd               ,   &   ! added from SLM, not existent in jsbach4 20160823
+      albedo            ,   &   ! added from QUINCY, not existent in jsbach4 20160823
+      sensible_heat_flx ,   &   ! added from QUINCY, not existent in jsbach4 20160823
+      latent_heat_flx   ,   &   ! added from QUINCY, not existent in jsbach4 20160823
+      net_radiation     ,   &   ! added from QUINCY, not existent in jsbach4 20160823
+      vpd               ,   &   ! added from QUINCY, not existent in jsbach4 20160823
       ! For lakes:
       latent_hflx_wtr   ,   &
       sensible_hflx_wtr ,   &
       latent_hflx_ice   ,   &
       sensible_hflx_ice     &
       & )
+
+      dsl4jsb_Use_memory(L2A_)
+      dsl4jsb_Use_memory(RAD_)
 
     IMPLICIT NONE
     ! ---------------------------
@@ -327,7 +327,8 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_memory(L2A_)   !     TYPE(t_l2a_memory), POINTER :: l2a__mem
+    dsl4jsb_Def_memory(L2A_)
+    dsl4jsb_Def_memory(RAD_)
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -343,6 +344,7 @@ CONTAINS
 !    dsl4jsb_Get_config(PHENO_)
     ! Get process memories
     dsl4jsb_Get_memory(L2A_)
+    dsl4jsb_Get_memory(RAD_)
 
 
 
@@ -352,6 +354,8 @@ CONTAINS
 
 
     ! 1.0 pass variables values from memory to output variables
+    ! L2A (this feature is depreciated in jsb4)
+    !     (currently all land -> atmosphere variables may be in the memory of the processes where they are calculated)
     IF (PRESENT(t_srf))                 t_srf(:)             = dsl4jsb_var2D_onChunk(L2A_,   t_srf)
     IF (PRESENT(t_eff_srf))             t_eff_srf(:)         = dsl4jsb_var2D_onChunk(L2A_,   t_eff_srf)
     IF (PRESENT(qsat_srf))              qsat_srf(:)          = dsl4jsb_var2D_onChunk(L2A_,   qsat_srf)
@@ -363,10 +367,13 @@ CONTAINS
     IF (PRESENT(alb_nir_dif))           alb_nir_dif(:)       = dsl4jsb_var2D_onChunk(L2A_,   alb_nir_dif)
     IF (PRESENT(alb_vis_dir))           alb_vis_dir(:)       = dsl4jsb_var2D_onChunk(L2A_,   alb_vis_dir)
     IF (PRESENT(alb_nir_dir))           alb_nir_dir(:)       = dsl4jsb_var2D_onChunk(L2A_,   alb_nir_dir)
-    IF (PRESENT(albedo))                albedo(:)            = dsl4jsb_var2D_onChunk(L2A_,   albedo)
+    ! RAD
+    IF (PRESENT(albedo))                albedo(:)            = dsl4jsb_var2D_onChunk(RAD_,   albedo)
+    IF (PRESENT(net_radiation))         net_radiation(:)     = dsl4jsb_var2D_onChunk(RAD_,   net_radiation)
+    ! SSE
     IF (PRESENT(sensible_heat_flx))     sensible_heat_flx(:) = dsl4jsb_var2D_onChunk(L2A_,   sensible_heat_flx)
     IF (PRESENT(latent_heat_flx))       latent_heat_flx(:)   = dsl4jsb_var2D_onChunk(L2A_,   latent_heat_flx)
-    IF (PRESENT(net_radiation))         net_radiation(:)     = dsl4jsb_var2D_onChunk(L2A_,   net_radiation)
+    ! ASSIMI
     IF (PRESENT(vpd))                   vpd(:)               = dsl4jsb_var2D_onChunk(L2A_,   vpd)
     ! For lakes:
 !    IF (Contains_lct(tile%lcts, LAKE_TYPE)) THEN

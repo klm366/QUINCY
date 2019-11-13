@@ -46,7 +46,6 @@ MODULE mo_rad_interface
 
   ! Use of process memories (t_PROC_memory)
   dsl4jsb_Use_memory(RAD_)
-  dsl4jsb_Use_memory(L2A_)
   dsl4jsb_Use_memory(VEG_)
 
 
@@ -137,7 +136,6 @@ CONTAINS
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(RAD_)
     dsl4jsb_Def_memory(RAD_)
-    dsl4jsb_Def_memory(L2A_)
     dsl4jsb_Def_memory(VEG_)
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -157,7 +155,6 @@ CONTAINS
     dsl4jsb_Get_config(RAD_)
     ! Get process memories
     dsl4jsb_Get_memory(RAD_)
-    dsl4jsb_Get_memory(L2A_)
     dsl4jsb_Get_memory(VEG_)
 
 
@@ -193,9 +190,8 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(RAD_, arad_sunlit_nir_cl      , weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, arad_shaded_nir_cl      , weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, fleaf_sunlit_nir_cl     , weighted_by_fract)
-      ! ---------------------------
-      dsl4jsb_Aggregate_onChunk(L2A_, albedo                  , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(L2A_, net_radiation           , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, albedo                  , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, net_radiation           , weighted_by_fract)
       ! ---------------------------
       dsl4jsb_Aggregate_onChunk(VEG_, fleaf_sunlit_cl         , weighted_by_fract)
     END IF

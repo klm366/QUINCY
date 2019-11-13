@@ -29,6 +29,7 @@ mo_sse_interface.o: \
   mo_sse_update_physics.o \
   mo_sse_config_class.o \
   mo_sse_memory_class.o \
+  mo_rad_memory_class.o \
   mo_a2l_memory_class.o \
   mo_l2a_memory_class.o
 

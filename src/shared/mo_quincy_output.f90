@@ -1929,8 +1929,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: press_srf
     dsl4jsb_Real2D_onChunk      :: q_air
     ! L2A_
-    dsl4jsb_Real2D_onChunk      :: albedo
-    dsl4jsb_Real2D_onChunk      :: net_radiation
     dsl4jsb_Real2D_onChunk      :: sensible_heat_flx
     dsl4jsb_Real2D_onChunk      :: latent_heat_flx
     dsl4jsb_Real2D_onChunk      :: ground_heat_flx
@@ -1947,6 +1945,8 @@ CONTAINS
     ! SSE_ 3D
     dsl4jsb_Real3D_onChunk      :: soil_depth_sl
     ! RAD_
+    dsl4jsb_Real2D_onChunk      :: albedo
+    dsl4jsb_Real2D_onChunk      :: net_radiation
     dsl4jsb_Real2D_onChunk      :: appfd
     ! VEG_
     dsl4jsb_Real2D_onChunk      :: growth_respiration
@@ -2083,8 +2083,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)
     dsl4jsb_Get_var2D_onChunk(A2L_, q_air)
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(L2A_, albedo)
-    dsl4jsb_Get_var2D_onChunk(L2A_, net_radiation)
     dsl4jsb_Get_var2D_onChunk(L2A_, sensible_heat_flx)
     dsl4jsb_Get_var2D_onChunk(L2A_, latent_heat_flx)
     dsl4jsb_Get_var2D_onChunk(L2A_, ground_heat_flx)
@@ -2102,6 +2100,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SSE_, soil_depth_sl)
     dsl4jsb_Get_var2D_onChunk(SSE_, transpiration)
     ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(RAD_, albedo)
+    dsl4jsb_Get_var2D_onChunk(RAD_, net_radiation)
     dsl4jsb_Get_var2D_onChunk(RAD_, appfd)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration)

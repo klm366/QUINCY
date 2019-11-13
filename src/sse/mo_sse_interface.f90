@@ -48,6 +48,7 @@ MODULE mo_sse_interface
 
   ! Use of process memories (t_PROC_memory)
   dsl4jsb_Use_memory(SSE_)
+  dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(L2A_)
   
@@ -314,7 +315,6 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(A2L_, q_acoef              , weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(A2L_, q_bcoef              , weighted_by_fract)
       ! ---------------------------
-      dsl4jsb_Aggregate_onChunk(L2A_, net_radiation        , weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(L2A_, ground_heat_flx      , weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(L2A_, sensible_heat_flx    , weighted_by_fract)
     END IF
@@ -349,6 +349,7 @@ CONTAINS
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_memory(SSE_)
+    dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(L2A_)
     ! Get local variables from options argument
@@ -369,6 +370,7 @@ CONTAINS
     dsl4jsb_Get_config(SSE_)
     ! Get process memories
     dsl4jsb_Get_memory(SSE_)
+    dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(L2A_)
 
@@ -385,9 +387,10 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(A2L_, pch                   , weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(A2L_, drag_srf              , weighted_by_fract)
       ! ---------------------------
-      dsl4jsb_Aggregate_onChunk(L2A_, ground_heat_flx_old   , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(L2A_, net_radiation         , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, net_radiation         , weighted_by_fract)
+      ! ---------------------------
       dsl4jsb_Aggregate_onChunk(L2A_, ground_heat_flx       , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(L2A_, ground_heat_flx_old   , weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(L2A_, latent_heat_flx       , weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(L2A_, sensible_heat_flx     , weighted_by_fract)
       ! ---------------------------

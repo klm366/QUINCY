@@ -52,13 +52,15 @@ MODULE mo_rad_memory_class
       & swvis_srf_net,         & !< net shortwave radiation at surface in visible range [W m-2]
       & swnir_srf_net,         & !< net shortwave radiation at surface in NIR range [W m-2]
       & lw_srf_net,            & !< net longwave radiation at surface [W m-2]
-      & rad_srf_net              !< net radiation at surface [W m-2]
+      & rad_srf_net,           & !< net radiation at surface [W m-2]
+      & net_radiation            !> surface net radiation [W m-2]
 
     TYPE(t_jsb_var_real2d)  :: & 
       & alb_vis,               & !< Albedo of the whole tile in the VIS (visible) range [unitless]
       & alb_nir,               & !< Albedo of the whole tile in the NIR (near-infrared) range [unitless]
       & alb_vis_snow,          & !< Albedo of snow in the VIS range [unitless]
-      & alb_nir_snow             !< Albedo of snow in the NIR range [unitless]
+      & alb_nir_snow,          & !< Albedo of snow in the NIR range [unitless]
+      & albedo                   !> total surface albedo [unitless]
 
     ! Additional variables for soil
     TYPE(t_jsb_var_real2d)  :: &
@@ -197,6 +199,14 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var( mem, 'net_radiation', mem%net_radiation, &
+            hgrid, vgrid_surface, &
+            t_cf('net_radiation', 'W m-2', 'surface net radiation'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp )
   
       CALL jsb_add_var(mem, 'alb_vis', mem%alb_vis, &
             hgrid, vgrid_surface, &
@@ -229,6 +239,14 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var( mem, 'albedo', mem%albedo, &
+            hgrid, vgrid_surface, &
+            t_cf('albedo', 'unitless', 'total surface albedo'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp )
   
       CALL jsb_add_var(mem, 'alb_vis_soil', mem%alb_vis_soil, &
             hgrid, vgrid_surface, &

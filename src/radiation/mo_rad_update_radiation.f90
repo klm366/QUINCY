@@ -72,7 +72,6 @@ CONTAINS
     
     ! Use of process memories
     dsl4jsb_Use_memory(A2L_)        !  USE mo_a2l_memory_class, ONLY: t_a2l_memory
-    dsl4jsb_Use_memory(L2A_)        !  USE mo_l2a_memory_class, ONLY: t_l2a_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class, ONLY: t_rad_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class, ONLY: t_veg_memory
     
@@ -95,11 +94,10 @@ CONTAINS
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(A2L_)                        !     TYPE(t_a2l_memory), POINTER :: a2l__mem
-    dsl4jsb_Def_memory(L2A_)                        !     TYPE(t_l2a_memory), POINTER :: l2a__mem
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory), POINTER :: rad__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory), POINTER :: veg__mem
     ! Declare pointers to variables in memory
-    ! RAD_
+    ! RAD_ 2D
     dsl4jsb_Real2D_onChunk :: sw_srf_net
     dsl4jsb_Real2D_onChunk :: swvis_srf_net
     dsl4jsb_Real2D_onChunk :: swnir_srf_net
@@ -116,6 +114,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: arad_nir_can
     dsl4jsb_Real2D_onChunk :: appfd
     dsl4jsb_Real2D_onChunk :: rfr_ratio_boc 
+    dsl4jsb_Real2D_onChunk :: albedo
+    dsl4jsb_Real2D_onChunk :: net_radiation
+    ! RAD_ 3D
     dsl4jsb_Real3D_onChunk :: ppfd_sunlit_cl
     dsl4jsb_Real3D_onChunk :: ppfd_shaded_cl
     dsl4jsb_Real3D_onChunk :: arad_sunlit_vis_cl
@@ -130,9 +131,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: cos_zenith_angle
     dsl4jsb_Real2D_onChunk :: swnir_srf_down
     dsl4jsb_Real2D_onChunk :: swvis_srf_down
-    ! L2A_
-    dsl4jsb_Real2D_onChunk :: albedo
-    dsl4jsb_Real2D_onChunk :: net_radiation
     ! VEG_
     dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real3D_onChunk :: leaf_nitrogen_cl 
@@ -159,7 +157,6 @@ CONTAINS
     ! ..
     ! Get process memories
     dsl4jsb_Get_memory(A2L_)
-    dsl4jsb_Get_memory(L2A_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(VEG_)
     ! Get process variables (Set pointers to variables in memory)
@@ -169,9 +166,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, swnir_srf_down)           ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swvis_srf_down)           ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(L2A_, albedo)                   ! out
-    dsl4jsb_Get_var2D_onChunk(L2A_, net_radiation)            ! out
-    ! ---------------------------
+    ! RAD_ 2D
     dsl4jsb_Get_var2D_onChunk(RAD_, sw_srf_net)               ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, swvis_srf_net)            ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, swnir_srf_net)            ! out
@@ -188,6 +183,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(RAD_, arad_nir_can)             ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, appfd)                    ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc)            ! out
+    dsl4jsb_Get_var2D_onChunk(RAD_, albedo)                   ! out
+    dsl4jsb_Get_var2D_onChunk(RAD_, net_radiation)            ! out
+    ! RAD_ 3D
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)           ! out
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)           ! out
     dsl4jsb_Get_var3D_onChunk(RAD_, arad_sunlit_vis_cl)       ! out
@@ -197,7 +195,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(RAD_, arad_shaded_nir_cl)       ! out
     dsl4jsb_Get_var3D_onChunk(RAD_, fleaf_sunlit_nir_cl)      ! out
     ! ---------------------------
+    ! VEG_ 2D
     dsl4jsb_Get_var2D_onChunk(VEG_, lai)                      ! in
+    ! VEG_ 3D
     dsl4jsb_Get_var3D_onChunk(VEG_, lai_cl)                   ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)         ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)                ! in
