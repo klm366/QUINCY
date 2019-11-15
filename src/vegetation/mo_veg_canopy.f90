@@ -246,7 +246,7 @@ CONTAINS
 
         ! LAI mid-point of canopy layer
         WHERE(lai_cl(:,icanopy) > 0.0_wp)
-          mid_point_lai_cl(:,icanopy) = (SUM(lai_cl(:,1:icanopy)) - lbounds(icanopy)) / 2.0_wp
+          mid_point_lai_cl(:,icanopy) = (SUM(lai_cl(:,1:icanopy), DIM=2) - lbounds(icanopy)) / 2.0_wp
         ENDWHERE
       ENDWHERE ! lai(:) > eps8
     END DO   ! loop ncanopy
