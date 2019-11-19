@@ -29,6 +29,13 @@ MODULE mo_jsb_varlist
   USE mo_jsb_io_iface,      ONLY: t_cf_var, t_grib2_var, grib2_var
   USE mo_jsb_process_class, ONLY: Get_process_name
 
+#ifdef _OPENACC
+  use openacc
+#define __acc_attach(ptr) CALL acc_attach(ptr)
+#else
+#define __acc_attach(ptr)
+#endif
+
   IMPLICIT NONE
   PRIVATE
 
@@ -132,7 +139,9 @@ CONTAINS
     this_list => Get_varlist(TRIM(mem%varlist_name), hgrid%host_patch_id)
 
     ALLOCATE(var%field(ldims(1),ldims(2),1,1,1))
+    !$acc enter data create(var%field)
     var%ptr => var%field(:,:,1,1,1)
+    __acc_attach(var%ptr)
 
     IF (mem%in_var_groups) THEN                                  ! Should this tile memory be part of any var groups?
       ALLOCATE(groups(3+MERGE(2, 0, PRESENT(output_level))))
@@ -166,6 +175,8 @@ CONTAINS
     var%type = REAL2D
     var%missval = missval_r_loc
     IF (PRESENT(l_aggregate_all)) var%l_aggregate_all = l_aggregate_all
+    IF (PRESENT(lrestart)) var%is_in_restart = lrestart
+    var%is_in_restart = var%is_in_restart .OR. .TRUE.  ! TODO
 
     var%owner_proc_id = mem%owner_proc_id
 
@@ -262,7 +273,9 @@ CONTAINS
     this_list => Get_varlist(TRIM(mem%varlist_name), hgrid%host_patch_id)
 
     ALLOCATE(var%field(ldims(1),ldims(2),ldims(3),1,1))
+    !$acc enter data create(var%field)
     var%ptr => var%field(:,:,:,1,1)
+    __acc_attach(var%ptr)
 
     IF (mem%in_var_groups) THEN                                  ! Should this tile memory be part of any var groups?
       ALLOCATE(groups(3+MERGE(2, 0, PRESENT(output_level))))
@@ -295,6 +308,8 @@ CONTAINS
     var%type = REAL3D
     var%missval = missval_r_loc
     IF (PRESENT(l_aggregate_all)) var%l_aggregate_all = l_aggregate_all
+    IF (PRESENT(lrestart)) var%is_in_restart = lrestart
+    var%is_in_restart = var%is_in_restart .OR. .TRUE.  ! TODO
 
     var%owner_proc_id = mem%owner_proc_id
 
