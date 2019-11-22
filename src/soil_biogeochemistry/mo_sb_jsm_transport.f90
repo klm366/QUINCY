@@ -361,7 +361,7 @@ CONTAINS
     !! note the omission of woody litter in the first layer, which is assumed not to be part of the profile
     !!
     particle_fluxrate(:,1) = soil_depth_sl(:,1) * &
-           (sb_formation%soluable_litter%carbon(:,1)  - sb_loss%soluable_litter%carbon(:,1) + &
+           (sb_formation%soluable_litter%carbon(:,1) - sb_loss%soluable_litter%carbon(:,1) + &
            sb_formation%polymeric_litter%carbon(:,1) - sb_loss%polymeric_litter%carbon(:,1) + &
            sb_formation%dom%carbon(:,1)              - sb_loss%dom%carbon(:,1) + &
            sb_formation%dom_assoc%carbon(:,1)        - sb_loss%dom_assoc%carbon(:,1) + &
@@ -373,7 +373,7 @@ CONTAINS
            (carbon_per_dryweight_SOM / molar_mass_C * 1000._wp)
 
     DO isoil = 2,nsoil_sb
-       particle_fluxrate(:,isoil) = soil_depth_sl(:,isoil) * &
+       particle_fluxrate(:,isoil) = particle_fluxrate(:,isoil-1) + soil_depth_sl(:,isoil) * &
           (sb_formation%soluable_litter%carbon(:,isoil)  - sb_loss%soluable_litter%carbon(:,isoil) + &
            sb_formation%polymeric_litter%carbon(:,isoil) - sb_loss%polymeric_litter%carbon(:,isoil) + &
            sb_formation%woody_litter%carbon(:,isoil)     - sb_loss%woody_litter%carbon(:,isoil) + &
