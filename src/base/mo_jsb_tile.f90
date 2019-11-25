@@ -28,6 +28,13 @@ MODULE mo_jsb_tile
   USE mo_jsb_process_factory, ONLY: max_no_of_processes
   USE mo_jsb_task_class,      ONLY: t_jsb_process_task !, t_jsb_task_msg
 
+#ifdef _OPENACC
+  use openacc
+#define __acc_attach(ptr) CALL acc_attach(ptr)
+#else
+#define __acc_attach(ptr)
+#endif
+
   IMPLICIT NONE
   PRIVATE
 
@@ -399,6 +406,7 @@ CONTAINS
       & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                     &
       & initval_r=0.0_wp, isteptype=isteptype)
     CALL this%Set_fract_ptr(tmp_fract)
+    __acc_attach(this%fract)
 
     CALL jsb_add_var(varlist_name_loc, 'fract_max', tmp_fract,                         &
       & hgrid, surface,                                                                                         &
@@ -408,6 +416,7 @@ CONTAINS
       & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                      &
       & initval_r=0.0_wp, isteptype=isteptype)
     CALL this%Set_fract_max_ptr(tmp_fract)
+    __acc_attach(this%fract_max)
 
     CALL jsb_add_var(varlist_name_loc, 'fract_old', tmp_fract,                                 &
       & hgrid, surface,                                                                                         &
@@ -417,6 +426,7 @@ CONTAINS
       & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                      &
       & initval_r=0.0_wp, isteptype=isteptype)
     CALL this%Set_fract_old_ptr(tmp_fract)
+    __acc_attach(this%fract_old)
 
     CALL jsb_add_var(varlist_name_loc, 'fract_max_old', tmp_fract,                         &
       & hgrid, surface,                                                                                         &
@@ -426,6 +436,7 @@ CONTAINS
       & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                      &
       & initval_r=0.0_wp, isteptype=isteptype)
     CALL this%Set_fract_max_old_ptr(tmp_fract)
+    __acc_attach(this%fract_max_old)
     NULLIFY(tmp_fract)
 
     ALLOCATE(this%l_fract_children_changed(hgrid%nproma, hgrid%nblks))

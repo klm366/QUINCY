@@ -164,6 +164,8 @@ CONTAINS
     var%type = REAL2D
     var%missval = missval_r_loc
     IF (PRESENT(l_aggregate_all)) var%l_aggregate_all = l_aggregate_all
+    IF (PRESENT(lrestart)) var%is_in_restart = lrestart
+    var%is_in_restart = var%is_in_restart .OR. .TRUE.  ! TODO
 
     var%owner_proc_id = mem%owner_proc_id
 
@@ -291,6 +293,8 @@ CONTAINS
     var%type = REAL3D
     var%missval = missval_r_loc
     IF (PRESENT(l_aggregate_all)) var%l_aggregate_all = l_aggregate_all
+    IF (PRESENT(lrestart)) var%is_in_restart = lrestart
+    var%is_in_restart = var%is_in_restart .OR. .TRUE.  ! TODO
 
     var%owner_proc_id = mem%owner_proc_id
 

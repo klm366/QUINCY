@@ -27,6 +27,7 @@ MODULE mo_jsb_model_init
   USE mo_kind,             ONLY: wp
   USE mo_exception,        ONLY: finish
   USE mo_jsb_parallel,     ONLY: Get_omp_thread, Is_omp_inside_serial
+  USE mo_jsb_time,         ONLY: is_time_restart
 
   IMPLICIT NONE
   PRIVATE
@@ -444,6 +445,10 @@ CONTAINS
       END DO
     END IF
 
+#ifdef _OPENACC
+    IF (.NOT. is_time_restart()) CALL model%cpu_to_gpu()
+#endif
+
   END SUBROUTINE jsbach_init
 
   SUBROUTINE jsbach_init_after_restart(model_id)
@@ -494,6 +499,10 @@ CONTAINS
       tile => model%Goto_next_tile()
 
     END DO
+
+#ifdef _OPENACC
+    CALL model%cpu_to_gpu()
+#endif
 
   END SUBROUTINE jsbach_init_after_restart
 

@@ -41,7 +41,8 @@ MODULE mo_jsb_var_class
                                                             ! (according to mem%vars(:)).
     REAL(dp)                   :: missval
     LOGICAL                    :: l_aggregate_all = .FALSE. ! When aggregating, consider fractions of all child tiles even
-                                                  ! of those where variable doesn't exist
+                                                            ! of those where variable doesn't exist
+    LOGICAL                    :: is_in_restart = .FALSE.   ! Whether variable is requested to be written to restart file
   END TYPE t_jsb_var
 
 !#pragma GCC diagnostic push
