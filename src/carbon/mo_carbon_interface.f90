@@ -145,7 +145,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER   :: model
     TYPE(t_jsb_vgrid), POINTER :: soil_w   !PHS: soil depth
     LOGICAL                      :: lstart
-    INTEGER                      :: iblk, ics, ice
+    INTEGER                      :: iblk, ics, ice, nc, i
     REAL(wp), allocatable        :: precip_total(:)
     REAL(wp), DIMENSION(options%nc) :: MaxLai
     REAL(wp), DIMENSION(options%nc) :: old_c_state_sum, current_fluxes
@@ -227,6 +227,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::   Flg_grow_G
     dsl4jsb_Real2D_onChunk ::   ff_npp
     dsl4jsb_Real2D_onChunk ::   flx_germ
+    dsl4jsb_Real2D_onChunk ::   adj_fraction
     dsl4jsb_Real2D_onChunk ::   Flg_die
     dsl4jsb_Real2D_onChunk ::   Flg_senesc
     dsl4jsb_Real2D_onChunk ::   MaintRes
@@ -238,12 +239,15 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::   AutoRes
     dsl4jsb_Real2D_onChunk ::  CUE
     dsl4jsb_Real2D_onChunk ::  root_maxmoist
+    dsl4jsb_Real2D_onChunk ::  seed_maxmoist
     dsl4jsb_Real2D_onChunk ::  jedi_pot_supply_transp
     dsl4jsb_Real2D_onChunk ::  root_depth
     dsl4jsb_Real2D_onChunk ::  soil_depth
     dsl4jsb_Real3D_onChunk ::  root_depth_sl
     dsl4jsb_Real3D_onChunk ::  vol_field_cap_sl
     dsl4jsb_Real3D_onChunk ::  soil_depth_sl
+    dsl4jsb_Real3D_onChunk ::  w_soil_sl
+    dsl4jsb_Real3D_onChunk ::  seed_depth_sl
     dsl4jsb_Real2D_onChunk ::   C_balan
     dsl4jsb_Real2D_onChunk ::   C_delta
     dsl4jsb_Real2D_onChunk ::   c_total
@@ -252,8 +256,10 @@ CONTAINS
     ! Taking relative soil moisture from the HYDRO process
     dsl4jsb_Real2D_onChunk ::   w_soil_rel              
     dsl4jsb_Real2D_onChunk ::   alpha_jedi
+    dsl4jsb_Real2D_onChunk ::   alpha_jedi_seed
     dsl4jsb_Real2D_onChunk ::   max_moist
     dsl4jsb_Real2D_onChunk ::   w_soil_column
+    dsl4jsb_Real2D_onChunk ::   w_soil_column_seed
     dsl4jsb_Real2D_onChunk ::   ff_T_30d
     dsl4jsb_Real2D_onChunk ::   ff_dTdt                      
     dsl4jsb_Real2D_onChunk ::   ff_grow_T_yDayMean
@@ -375,7 +381,7 @@ CONTAINS
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
-
+    nc   = options%nc
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_memory(ASSIMI_)
@@ -428,19 +434,29 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,    Flg_grow_G     )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_npp            )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   flx_germ          )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   adj_fraction      )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   Flg_die           )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   Flg_senesc        )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   alpha_jedi        )
+    
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   alpha_jedi_seed)
+    dsl4jsb_Get_var3D_onChunk(CARBON_,   seed_depth_sl)
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   seed_maxmoist)
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   w_soil_column_seed)
     dsl4jsb_Get_var2D_onChunk(CARBON_,  root_maxmoist )
     dsl4jsb_Get_var2D_onChunk(CARBON_,  jedi_pot_supply_transp )
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_rel        ) 
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    max_moist         )
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_column     )
+
     dsl4jsb_Get_var2D_onChunk(HYDRO_,   root_depth          )
     dsl4jsb_Get_var2D_onChunk(HYDRO_,   soil_depth     )
-    dsl4jsb_Get_var3D_onChunk(HYDRO_,   root_depth_sl          )  ! 3 Dimensional
+    ! 3 Dimensional--------------------------------------------------------------------------
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,   w_soil_sl                )
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,   root_depth_sl          ) 
     dsl4jsb_Get_var3D_onChunk(HYDRO_,   vol_field_cap_sl       ) 
     dsl4jsb_Get_var3D_onChunk(HYDRO_,  soil_depth_sl            )
+    ! 3 Dimensional--------------------------------------------------------------------------
     dsl4jsb_Get_var2D_onChunk(CARBON_,  one_counter        )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   MaintRes          )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   MaintRes_sum      )
@@ -594,26 +610,55 @@ CONTAINS
       iniyear = get_year(inidate)
       lrestart= jsbach_is_restarted()
       current = get_time_current()
-   
-      
-       root_maxmoist(:)= get_water_in_root_zone(vol_field_cap_sl(:,:) * soil_depth_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:))          
       
       
-      alpha_jedi(:) = jedi_water_stress_factor( w_soil_column(:), &
-                 &                              root_maxmoist(:), &             
-                 &       dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract)            
-                 
-      jedi_pot_supply_transp      =   c_fnroot * (  1000._wp *  0.5_wp *  12.01_wp  *  0.001_wp  / 86400._wp  )  *  alpha_jedi 
-    
-      IF (get_year(current) .LE. iniyear + 8 ) THEN
-               jedi_pot_supply_transp = MAX( jedi_pot_supply_transp , 0.00007 )
+       IF (get_year(current) .LE. iniyear + 2 ) THEN    !  PHS: initial carbon
+      
+          ! c_storage = 0.01_wp 
+          ! c_leaves   = c_storage * dsl4jsb_Lctlib_param(Allo2Abground) *  ( 1._wp -  dsl4jsb_Lctlib_param(RelAllo2Abgrd) ) * 1.0_wp / (1.0_wp + 0.33_wp)  *   dsl4jsb_Lctlib_param(TurnoverLeaf ) 
+          ! c_stem     = c_storage * dsl4jsb_Lctlib_param(Allo2Abground) *                  dsl4jsb_Lctlib_param(RelAllo2Abgrd)  * 1.0_wp / (1.0_wp + 0.25_wp)   *  dsl4jsb_Lctlib_param(TurnoverStruc)
+          ! c_fnroot    = c_storage * dsl4jsb_Lctlib_param(Allo2Blground) *  ( 1._wp -   dsl4jsb_Lctlib_param(RelAllo2Blgrd) ) * 1.0_wp / (1.0_wp + 0.33_wp)   *   dsl4jsb_Lctlib_param(TurnoverLeaf )
+          ! c_csroot   =  c_storage * dsl4jsb_Lctlib_param(Allo2Blground) *                   dsl4jsb_Lctlib_param(RelAllo2Blgrd)  * 1.0_wp / (1.0_wp + 0.49_wp)   *   dsl4jsb_Lctlib_param(TurnoverStruc)
+          ! c_seed     =   c_storage * dsl4jsb_Lctlib_param(Allo2Reproduc) *  (1.0_wp / (1.0_wp + 0.66_wp)  )  /   (dsl4jsb_Lctlib_param(GermFrac )  +  1./(10.*365.)    )
+
+           ff_npp = 0._wp
+           Flg_senesc = 0._wp
+           Flg_die = 0._wp
+           one_counter = 0._wp           
+
+
+      END IF     !  PHS: initial carbon
+      
+       IF (  is_time_experiment_start()  )  THEN
+      seed_depth_sl       = jedi_soil_depth_to_layers_1d(  SPREAD(0.05_wp, NCOPIES=nc, DIM=1)  , soil_w%dz(:))         ! Jedi assumes germination of seed depends on the first 0.5 m of soil wetness
+      seed_maxmoist(:)= get_water_in_root_zone(vol_field_cap_sl(:,:) * soil_depth_sl(:,:), soil_depth_sl(:,:), seed_depth_sl(:,:))      
       END IF
+      
+       root_maxmoist(:)= get_water_in_root_zone(vol_field_cap_sl(:,:) * soil_depth_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:))  
+       
+   
+       
+       w_soil_column_seed(:) = get_water_in_root_zone( w_soil_sl(:,:), soil_depth_sl(:,:), seed_depth_sl(:,:))      
+       
+       
+      alpha_jedi(:)          = jedi_water_stress_factor( w_soil_column(:),  root_maxmoist(:),  dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract)                    
+      alpha_jedi_seed(:) = jedi_water_stress_factor( w_soil_column_seed(:),  seed_maxmoist(:),  dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract)            
+      
+      ! 2019.11.27 PHS: still at the stage of testing "water stress" 
+      WHERE (c_fnroot .gt. 0._wp) 
+           jedi_pot_supply_transp      =  MAX(0._wp,  c_leaves / c_fnroot * (  1._wp / 86400._wp  )  *  alpha_jedi     )            
+      ELSEWHERE 
+           jedi_pot_supply_transp      =  0._wp
+      END WHERE
+      !jedi_pot_supply_transp      =  MAX(0._wp,  c_fnroot * (  1000._wp *  0.5_wp *  12.01_wp  *  0.001_wp  / 86400._wp  )    ) 
+      !jedi_pot_supply_transp      =  MAX(0._wp,  c_fnroot * (  1000._wp *  0.5_wp *  12.01_wp  *  0.001_wp  / 86400._wp  )  *  alpha_jedi   ) 
     
     
-    ff_grow_T     =  ( t_air - tmelt )         / dsl4jsb_Lctlib_param(jedi_N_pseudo_T)      + ff_grow_T  *     dsl4jsb_Lctlib_param(jedi_F_pseudo_T)
-    ff_grow_G     =  alpha_jedi                / dsl4jsb_Lctlib_param(jedi_N_pseudo_soilM) + ff_grow_G *     dsl4jsb_Lctlib_param(jedi_F_pseudo_soilM)
-    ff_grow_W    =   alpha_jedi                / dsl4jsb_Lctlib_param (jedi_N_pseudo_soilM) + ff_grow_G *     dsl4jsb_Lctlib_param(jedi_F_pseudo_soilM)
-    ff_npp           =   NPP_act_yDayMean / dsl4jsb_Lctlib_param(jedi_N_pseudo_npp)   + ff_npp       *     dsl4jsb_Lctlib_param(jedi_F_pseudo_npp)
+    
+    ff_grow_T     =  ( t_air - tmelt )         / dsl4jsb_Lctlib_param(jedi_N_pseudo_T)      + ff_grow_T   *     dsl4jsb_Lctlib_param(jedi_F_pseudo_T)
+    ff_grow_G     =  alpha_jedi_seed        / dsl4jsb_Lctlib_param(jedi_N_pseudo_soilM) + ff_grow_G  *     dsl4jsb_Lctlib_param(jedi_F_pseudo_soilM)
+    ff_grow_W    =   alpha_jedi                / dsl4jsb_Lctlib_param (jedi_N_pseudo_soilM) + ff_grow_W *     dsl4jsb_Lctlib_param(jedi_F_pseudo_soilM)
+    ff_npp           =   NPP_act_yDayMean / dsl4jsb_Lctlib_param(jedi_N_pseudo_npp)   + ff_npp         *     dsl4jsb_Lctlib_param(jedi_F_pseudo_npp)
     
      ff_T_30d     =  ( t_air - tmelt )         / ( 1._wp / (1._wp-EXP(- get_time_dt() / (30._wp* 86400._wp ))))      + ff_T_30d  *     EXP(- get_time_dt() / (30._wp* 86400._wp ))
 
@@ -681,7 +726,7 @@ CONTAINS
        temp_sum = t_air
        
        !PHS 05.08.2019 Tend
-       ff_dTdt                      = ( ff_T_30d - ff_grow_T_yDayMean ) / ( 1._wp /  ( 1._wp - EXP(-1._wp / (15._wp ))     ))  +  EXP(-1._wp / (15._wp ))    * ff_dTdt    
+       ff_dTdt                      = ( ff_T_30d - ff_grow_T_yDayMean ) / ( 1._wp /  ( 1._wp - EXP(- get_time_dt() / (30._wp* 86400._wp ))    ))  +  EXP(- get_time_dt() / (30._wp* 86400._wp ))  * ff_dTdt    
        ff_grow_T_yDayMean = ff_T_30d
        
       
@@ -706,7 +751,10 @@ CONTAINS
 
       ! Now update the C pools
       IF (TRIM(model%config%usecase) .eq. 'jsbach_jedi' ) THEN
-      
+       
+       
+       IF (get_year(current) .GT. iniyear + 2 ) THEN     !  PHS: initial carbon
+       
         CALL calc_Ctradeoff( &
         & GPP_yDayMean,                                & ! in
         ! JeDi plant trait parameter comes in now <<<<<<<<<<<
@@ -726,6 +774,7 @@ CONTAINS
         & dsl4jsb_Lctlib_param(SenesRspdNPP ),         & ! in
         & dsl4jsb_Lctlib_param(RelSenesAbgd ),         & ! in
         & dsl4jsb_Lctlib_param(NitroStatus  ),         & ! in
+        & dsl4jsb_Lctlib_param(JeDiSLA),                    &  ! in
         ! JeDi plant trait parameter comes in now >>>>>>>>>>>
         & iniyear,                                              & !in
         & get_year(current),                            & !in
@@ -747,6 +796,7 @@ CONTAINS
         & Flg_die,                                     & ! inout
         & Flg_senesc,                                  & ! out
         & flx_germ,                                    & ! out
+        &  adj_fraction,                                  &  !out
         & MaintRes_yDayMean,                           & ! inout
         & GrowthResp,                                  & ! out
         & AutoRes,                                     & ! out
@@ -807,6 +857,8 @@ CONTAINS
         &  WoodLit_coef5    =  dsl4jsb_Lctlib_param(WoodLit_coef(5)), & ! in, optional, necessary with yasso
         &  WoodLitterSize   =  dsl4jsb_Lctlib_param(WoodLitterSize)   & ! in, optional, necessary with yasso
         & )
+      END IF  !  PHS: initial carbon
+      root_depth = MAX( root_depth, 0.05_wp)
       
       root_depth = MIN(root_depth,soil_depth)
       
@@ -977,19 +1029,11 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
 
-    IF (get_year(current) .EQ. iniyear ) THEN
-        ff_npp = 0._wp
-        Flg_senesc = 0._wp
-        Flg_die = 0._wp
-        c_storage = 0._wp
-        c_stem    = 0._wp
-        c_leaves  = 0._wp 
-        c_fnroot  = 0._wp     
-        c_csroot  = 0._wp
-        c_seed  = 0._wp
-        one_counter = 0._wp
-    END IF
+     
 
+
+
+    
 
   END SUBROUTINE update_C_NPP_pot_allocation
 

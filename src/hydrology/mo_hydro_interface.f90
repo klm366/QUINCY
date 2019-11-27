@@ -1137,6 +1137,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: water_stress
     dsl4jsb_Real2D_onChunk :: evapopot
     dsl4jsb_Real2D_onChunk :: jedi_pot_supply_transp  !PHS
+    dsl4jsb_Real2D_onChunk :: alpha_jedi   !PHS	
 
     INTEGER :: iblk, ics, ice
 
@@ -1170,6 +1171,7 @@ CONTAINS
     
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapopot) !PHS
     dsl4jsb_Get_var2D_onChunk(CARBON_,   jedi_pot_supply_transp) !PHS	
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  alpha_jedi)!PHS	
     ! Get water stress
      
      
@@ -1185,9 +1187,11 @@ CONTAINS
    IF (TRIM(model%config%usecase) .eq. 'jsbach_jedi' ) THEN
       
       WHERE (evapopot(:) .GE. 0._wp)  
-         water_stress(:) = 1._wp
+         water_stress(:) = 0._wp
       ELSEWHERE ( evapopot(:) .LT. 0._wp )   
-          water_stress(:) = 1._wp - exp(  -  jedi_pot_supply_transp(:)  /  ABS(evapopot(:))  )
+          !water_stress(:) = 1._wp - exp(  -  jedi_pot_supply_transp(:)  /  ABS(evapopot(:))  )
+           water_stress(:) = alpha_jedi(:) * (1._wp - exp(  - 4.6_wp * 0.03_wp * ABS(evapopot(:)) / jedi_pot_supply_transp(:)   ) )
+          !water_stress(:) =  alpha_jedi(:)  
       END WHERE
       
    ELSE

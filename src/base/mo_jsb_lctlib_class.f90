@@ -482,12 +482,13 @@ CONTAINS
           CASE ('albedosnowmax')
             READ(line(pos:length),*) lctlib(1:nlct)%AlbedoSnowMax
             exist_AlbedoSnowMax = .TRUE.
-          CASE ('albedocanopyvis')
-            READ(line(pos:length),*) lctlib(1:nlct)%AlbedoCanopyVIS
-            exist_AlbedoCanopyVIS = .TRUE.
-          CASE ('albedocanopynir')
-            READ(line(pos:length),*) lctlib(1:nlct)%AlbedoCanopyNIR
-            exist_AlbedoCanopyNIR = .TRUE.
+  !PHS: The albedos of canopy are computed by canopy nitrogen content
+  !PHS:        CASE ('albedocanopyvis')
+  !PHS:          READ(line(pos:length),*) lctlib(1:nlct)%AlbedoCanopyVIS
+  !PHS:          exist_AlbedoCanopyVIS = .TRUE.
+  !PHS:        CASE ('albedocanopynir')
+  !PHS:          READ(line(pos:length),*) lctlib(1:nlct)%AlbedoCanopyNIR
+  !PHS:          exist_AlbedoCanopyNIR = .TRUE.
           CASE ('albedolittervis')
             READ(line(pos:length),*) lctlib(1:nlct)%AlbedoLitterVis
             exist_AlbedoLitterVis = .TRUE.
@@ -738,19 +739,15 @@ CONTAINS
              
              
              CASE ('growrspdmoist')
-                READ(line(pos:length),*) P01(1:nlct)                
-                !lctlib(1:nlct)%GrowRspdMoist = 10._wp ** ( 4.0_wp * P01(1:nlct)  + 2.0_wp )  
-                lctlib(1:nlct)%GrowRspdMoist = 10._wp ** ( 1.5_wp * P01(1:nlct)  + 0.5_wp )  
-                ! lctlib(1:nlct)%GrowRspdMoist = 100._wp  ** P01(1:nlct)   ! 2019/4/8 PHS chnage the way to sample plant response to temperature, and the memory [days] of plant growth response to temperature
+                READ(line(pos:length),*) P01(1:nlct)         
+                lctlib(1:nlct)%GrowRspdMoist = 10._wp ** ( 1.1_wp * P01(1:nlct)  + 0.9_wp )  
                 exists_GrowRspdMoist   = .TRUE.     
                   lctlib(1:nlct)%jedi_F_pseudo_soilM = EXP(- get_time_dt() / (lctlib(1:nlct)%GrowRspdMoist  * 86400._wp))
                   lctlib(1:nlct)%jedi_N_pseudo_soilM = 1._wp / (1._wp - lctlib(1:nlct)%jedi_F_pseudo_soilM )
                 WRITE(35,fm) 'GrowRspdMoist ',lctlib(1:nlct)%GrowRspdMoist
              CASE ('growrspdtemp')
                 READ(line(pos:length),*) P02(1:nlct)                
-                !lctlib(1:nlct)%GrowRspdTemp = 10._wp ** ( 4.0_wp * P02(1:nlct)  - 2.0_wp )
                 lctlib(1:nlct)%GrowRspdTemp = 10._wp ** ( 1.1_wp * P02(1:nlct)  + 0.9_wp )
-                !lctlib(1:nlct)%GrowRspdTemp = 100._wp ** P02(1:nlct)  !  2019/4/8 PHS chnage the way to sample plant response to soil moisture, and the memory [days] of plant growth response to soil moisture
                 exists_GrowRspdTemp   = .TRUE.
                  lctlib(1:nlct)%jedi_F_pseudo_T = EXP(- get_time_dt() / (lctlib(1:nlct)%GrowRspdTemp* 86400._wp ))
                  lctlib(1:nlct)%jedi_N_pseudo_T = 1._wp / (1._wp - lctlib(1:nlct)%jedi_F_pseudo_T )
@@ -767,7 +764,6 @@ CONTAINS
                             lctlib(i)%EndGrowTemp =  lctlib(i)%CritiGrowTemp + P03(i)    * ( 15._wp -  lctlib(i)%CritiGrowTemp )
                      END IF
                 end do
-               ! lctlib(i)%EndGrowTemp =  lctlib(i)%CritiGrowTemp + (1._wp + P03(i) )   * ( 5._wp )
                 WRITE(35,fm) 'EndGrowTemp ',lctlib(1:nlct)%EndGrowTemp
              CASE ('germfrac')
                 READ(line(pos:length),*) P04(1:nlct)               
@@ -807,7 +803,7 @@ CONTAINS
              CASE ('senesrspdnpp')
                 READ(line(pos:length),*) P13(1:nlct)
                 !lctlib(1:nlct)%SenesRspdNPP = 10._wp ** ( 4.0_wp * P13(1:nlct) - 1.0_wp )
-                 lctlib(1:nlct)%SenesRspdNPP =10._wp ** ( 1.5_wp * P01(1:nlct)  + 0.5_wp )   !PHS:18.06.2019 New sample
+                 lctlib(1:nlct)%SenesRspdNPP =10._wp ** ( 1.855_wp * P01(1:nlct)  + 1.145_wp )   !PHS:18.06.2019 New sample
                 exists_SenesRspdNPP   = .TRUE.
                  lctlib(1:nlct)%jedi_F_pseudo_npp = EXP(- get_time_dt() / (lctlib(1:nlct)%SenesRspdNPP * 86400._wp))
                  lctlib(1:nlct)%jedi_N_pseudo_npp = 1._wp / (1._wp - lctlib(1:nlct)%jedi_F_pseudo_npp )
@@ -823,6 +819,27 @@ CONTAINS
                 lctlib(1:nlct)%NitroStatus = (0.9_wp * P15(1:nlct) + 0.1_wp) * 8.578_wp * 0.01_wp  ! [NL] molN / molC canopy nitrogen concentration follows Ollinger (2008) (Pavlick thesis P.89)               
                 exists_NitroStatus   = .TRUE.
                 WRITE(35,fm) 'NitroStatus ',lctlib(1:nlct)%NitroStatus
+                
+                !PHS: JeDi-BACH uses canopy nitrogen content to scale albedo.  The linear relationship is taken from Hollinger et al. 2010. ( albedo = 0.067 [%N]* 0.48 [gc/DM]* 100 Nitro [gc/gN] +0.02 )
+                !PHS: To adapt this relationship into JeDi-BACH, we simply take the value of albedo + (-) 0.05 for NIR (visible). (a tip from Thomas)
+                !PHS: There is a saturation value for Nitorgen content higher than 3 %N [gN/100g DM] ( 3 / 100 * 12.01 /14.0067 /0.48 ~= 0.05359 mol N/ molc)
+                !PHS: I set a minimum value of albedo to 0.03 (0.22) for visible (NIR). These values are taken from the tropical evergreen in the original lctlib.def. 
+                !PHS: Thereby I obtain the minimum value for nitrogen content ( 0.015997 molN / molc) ~= 0.89 % )
+                  
+                WHERE (lctlib(1:nlct)%NitroStatus .GE. 0.015997_wp .and. lctlib(1:nlct)%NitroStatus .LE. 0.05359_wp ) 
+                    lctlib(1:nlct)%AlbedoCanopyVIS =  3.216_wp * 14.0067_wp / 12.01_wp * lctlib(1:nlct)%NitroStatus +0.02_wp - 0.05_wp 
+                    lctlib(1:nlct)%AlbedoCanopyNIR =  3.216_wp * 14.0067_wp / 12.01_wp * lctlib(1:nlct)%NitroStatus +0.02_wp + 0.05_wp
+                 ELSEWHERE(lctlib(1:nlct)%NitroStatus .GT. 0.05359_wp)
+                     lctlib(1:nlct)%AlbedoCanopyVIS = 0.221_wp - 0.05_wp
+                     lctlib(1:nlct)%AlbedoCanopyNIR = 0.221_wp +0.05_wp
+                 ELSEWHERE(lctlib(1:nlct)%NitroStatus .LT. 0.015997_wp)
+                     lctlib(1:nlct)%AlbedoCanopyVIS = 0.03_wp
+                     lctlib(1:nlct)%AlbedoCanopyNIR = 0.13_wp
+                 END WHERE   
+                    exist_AlbedoCanopyVIS = .TRUE.  
+                    exist_AlbedoCanopyNIR = .TRUE.
+                    WRITE(35,fm) 'AlbCanopyVIS', lctlib(1:nlct)%AlbedoCanopyVIS
+                    WRITE(35,fm) 'AlbCanopyNIR', lctlib(1:nlct)%AlbedoCanopyNIR
           !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
         
           CASE default
@@ -1054,10 +1071,8 @@ CONTAINS
        !lctlib(1:nlct)%JeDiSLA = ( 0.03_wp * ( ( lctlib(1:nlct)%TurnoverLeaf / 365._wp ) ** ( -0.46_wp ) ) ) *  12.01_wp           
        lctlib(1:nlct)%JeDiSLA = ( ( 0.0001*10.**2.43  ) * ( ( lctlib(1:nlct)%TurnoverLeaf / 365._wp ) ** ( -0.46_wp ) ) ) *  12.01_wp           
        !28.8. 2019PHS: original jedi --lctlib(1:nlct)%JeDiCarboxRate = 12.01_wp * ( 10._wp**0.13_wp ) * ( 1.e-09_wp ) * ( lctlib(1:nlct)%NitroStatus * 1000._wp * 14._wp / 12.01_wp)**1.42_wp / lctlib(1:nlct)%JeDiSLA  
-        lctlib(1:nlct)%JeDiCarboxRate = (   5._wp +  14._wp * lctlib(1:nlct)%NitroStatus / lctlib(1:nlct)%JeDiSLA  * (9.3_wp + 20._wp * P08(1:nlct) )   ) * (10._wp**-6._wp )
+        lctlib(1:nlct)%JeDiCarboxRate = (   4.19_wp +  14._wp * lctlib(1:nlct)%NitroStatus / lctlib(1:nlct)%JeDiSLA  * (9.3_wp + 20._wp * P08(1:nlct) )   ) * (10._wp**-6._wp )
        WRITE(35,fm) 'JeDiCarboxRate ',lctlib(1:nlct)%JeDiCarboxRate * (10._wp**6._wp )
-       !WRITE(35,fm) 'JeDiCarboxRate ',lctlib(1:nlct)%JeDiCarboxRate * (10._wp**6._wp ) *5._wp ! test 5* Vcmax! This is added for formatted output of the VCmax in the Jedi_parameter       
-       !!28.8. 2019PHS: original jedi  -- WRITE(35,fm) 'JeDiCarboxRate ',lctlib(1:nlct)%JeDiCarboxRate * (10._wp**6._wp )  ! This is added for formatted output of the VCmax in the Jedi_parameter       
        WRITE(35,fm) 'JeDiSLA ',   lctlib(1:nlct)%JeDiSLA  
        
        ENDIF
@@ -1079,40 +1094,40 @@ CONTAINS
 
        !! --- translate landcover class information into landcover class flags
 
-!PHS       lctlib(1:nlct)%BareSoilFlag   = .FALSE.
-!PHS       lctlib(1:nlct)%GlacierFlag    = .FALSE.
-!PHS       lctlib(1:nlct)%LakeFlag       = .FALSE.
-!PHS       lctlib(1:nlct)%ForestFlag     = .FALSE.
-!PHS       lctlib(1:nlct)%GrassFlag      = .FALSE.
-!PHS       lctlib(1:nlct)%CropFlag       = .FALSE.
-!PHS       lctlib(1:nlct)%PastureFlag    = .FALSE.
-!PHS       lctlib(1:nlct)%NaturalVegFlag = .FALSE.
+              lctlib(1:nlct)%BareSoilFlag   = .FALSE.
+              lctlib(1:nlct)%GlacierFlag    = .FALSE.
+              lctlib(1:nlct)%LakeFlag       = .FALSE.
+              lctlib(1:nlct)%ForestFlag     = .FALSE.
+              lctlib(1:nlct)%GrassFlag      = .FALSE.
+              lctlib(1:nlct)%CropFlag       = .FALSE.
+              lctlib(1:nlct)%PastureFlag    = .FALSE.
+              lctlib(1:nlct)%NaturalVegFlag = .FALSE.
 
-!PHS       DO i=1,nlct
-!PHS          SELECT CASE (lctlib(i)%LandcoverClass)
-!PHS          CASE (0)
-!PHS             lctlib(i)%BareSoilFlag = .TRUE.
-!PHS          CASE (1)
-!PHS             lctlib(i)%GlacierFlag = .TRUE.
-!PHS          CASE (2)
-!PHS             lctlib(i)%LakeFlag = .TRUE.
-!PHS          CASE (3)
-!PHS             lctlib(i)%ForestFlag = .TRUE.
-!PHS             lctlib(i)%NaturalVegFlag = .TRUE.
-!PHS          CASE (4)
-!PHS             lctlib(i)%GrassFlag = .TRUE.
-!PHS             lctlib(i)%NaturalVegFlag = .TRUE.
-!PHS          CASE (5)
-!PHS             lctlib(i)%NaturalVegFlag = .TRUE.
-!PHS          CASE (6)
-!PHS             lctlib(i)%CropFlag = .TRUE.
-!PHS          CASE (7)
-!PHS             lctlib(i)%PastureFlag = .TRUE.
-!PHS          CASE default
-!PHS             WRITE(message_text,*) 'LandcoverClass ', lctlib(i)%LandcoverClass,' not allowed in ', TRIM(lctlib_file_name)
-!PHS             CALL finish('init_lctlib', message_text)
-!PHS          END SELECT
-!PHS       END DO
+            DO i=1,nlct
+                SELECT CASE (lctlib(i)%LandcoverClass)
+                 CASE (0)
+                    lctlib(i)%BareSoilFlag = .TRUE.
+                 CASE (1)
+                    lctlib(i)%GlacierFlag = .TRUE.
+                 CASE (2)
+                    lctlib(i)%LakeFlag = .TRUE.
+                 CASE (3)
+                    lctlib(i)%ForestFlag = .TRUE.
+                    lctlib(i)%NaturalVegFlag = .TRUE.
+                 CASE (4)
+                    lctlib(i)%GrassFlag = .TRUE.
+                    lctlib(i)%NaturalVegFlag = .TRUE.
+                 CASE (5)
+                    lctlib(i)%NaturalVegFlag = .TRUE.
+                 CASE (6)
+                    lctlib(i)%CropFlag = .TRUE.
+                 CASE (7)
+                    lctlib(i)%PastureFlag = .TRUE.
+                 CASE default
+                    WRITE(message_text,*) 'LandcoverClass ', lctlib(i)%LandcoverClass,' not allowed in ', TRIM(lctlib_file_name)
+                    CALL finish('init_lctlib', message_text)
+              END SELECT
+           END DO
 
 !PHS       npft = 0
         npft = nlct-1
@@ -1163,12 +1178,12 @@ CONTAINS
        DO i=1,nlct
           CALL p_bcast(lctlib(i)%LctName, p_io, mpi_comm)
        ENDDO
-!PHS       CALL p_bcast(lctlib(:)%LandcoverClass, p_io, mpi_comm)
-!PHS       CALL p_bcast(lctlib(:)%NaturalVegFlag,p_io, mpi_comm)
-!PHS       CALL p_bcast(lctlib(:)%ForestFlag,p_io, mpi_comm)
-!PHS       CALL p_bcast(lctlib(:)%GrassFlag,p_io, mpi_comm)
-!PHS       CALL p_bcast(lctlib(:)%CropFlag,p_io, mpi_comm)
-!PHS       CALL p_bcast(lctlib(:)%PastureFlag,p_io, mpi_comm)
+       CALL p_bcast(lctlib(:)%LandcoverClass, p_io, mpi_comm)
+       CALL p_bcast(lctlib(:)%NaturalVegFlag,p_io, mpi_comm)
+       CALL p_bcast(lctlib(:)%ForestFlag,p_io, mpi_comm)
+       CALL p_bcast(lctlib(:)%GrassFlag,p_io, mpi_comm)
+       CALL p_bcast(lctlib(:)%CropFlag,p_io, mpi_comm)
+       CALL p_bcast(lctlib(:)%PastureFlag,p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%LakeFlag, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%GlacierFlag, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%BareSoilFlag, p_io, mpi_comm)

@@ -20,8 +20,8 @@ MODULE mo_carbon_memory_class
   USE mo_jsb_model_class,        ONLY: t_jsb_model
   USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
-  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d !, t_jsb_var_real3d
-
+  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d , t_jsb_var_real3d 
+  USE mo_jsb_io,            ONLY:  TSTEP_CONSTANT
   ! Use of prcesses in this module
   dsl4jsb_Use_processes PHENO_
 
@@ -33,7 +33,7 @@ MODULE mo_carbon_memory_class
 
   PUBLIC :: t_carbon_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 150    !PHS changed from 110 to 120
+  INTEGER, PARAMETER :: max_no_of_vars = 180    !PHS changed from 110 to 120
 
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_carbon_memory
@@ -281,8 +281,15 @@ MODULE mo_carbon_memory_class
          ff_dTdt,                            &                     
          ff_grow_T_yDayMean,       &
          ff_T_30d,                          &
-         root_maxmoist,&
-         jedi_pot_supply_transp
+         root_maxmoist,                &
+         jedi_pot_supply_transp,     &
+         adj_fraction,                      &
+         seed_maxmoist,               &
+         alpha_jedi_seed,                &
+         w_soil_column_seed
+         
+       TYPE(t_jsb_var_real3d) :: &
+      & seed_depth_sl           
    ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
 
 
@@ -312,7 +319,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid     ! Horizontal grid
-    TYPE(t_jsb_vgrid), POINTER :: surface   ! Vertical grids
+    TYPE(t_jsb_vgrid), POINTER :: surface,soil_w   ! Vertical grids
     INTEGER :: table
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_carbon_memory'
@@ -324,7 +331,7 @@ CONTAINS
 
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
-
+    soil_w => Get_vgrid('soil_depth_water')
     dsl4jsb_Get_config(PHENO_)
 
     IF (.NOT. ASSOCIATED(mem%pseudo_temp%ptr)) THEN
@@ -648,6 +655,14 @@ CONTAINS
         & output_level=BASIC,loutput=.TRUE.,                                                      &
         & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.FALSE. )   
      
+     CALL jsb_add_var( mem, 'adj_fraction', mem%adj_fraction,                              &
+        & hgrid, surface,                                                                        &
+        & t_cf('adj_fraction', 'Constraint factor for leaf growth '),           &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+        & prefix, suffix,                                                                        &
+        & output_level=BASIC,loutput=.TRUE.,                                                      &
+        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.FALSE. )   
+     
       CALL jsb_add_var( mem, 'Flg_grow', mem%Flg_grow,                                              &
         & hgrid, surface,                                                                        &
         & t_cf('Flg_grow', 'Flag of growth'),           &
@@ -686,9 +701,40 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix,                                                                        &
         & output_level=BASIC,loutput=.TRUE.,                                                      &
-        & lrestart=.TRUE., initval_r=1.0_wp, l_aggregate_all=.FALSE. )  
-          
+        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.FALSE. )   
+        
+       CALL jsb_add_var( mem, 'alpha_jedi_seed', mem%alpha_jedi_seed,                              &
+        & hgrid, surface,                                                                        &
+        & t_cf('alpha_jedi_seed', 'relalive soil wetness for seed (upper 50mm of the soil)'),           &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+        & prefix, suffix,                                                                        &
+        & output_level=BASIC,loutput=.TRUE.,                                                      &
+        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.FALSE. )   
+        
+       CALL jsb_add_var( mem, 'seed_maxmoist', mem%seed_maxmoist,                              &
+        & hgrid, surface,                                                                        &
+        & t_cf('seed_maxmoist','m' ,'Maximum moisture of the top 50 mm soil (used for seed germination)'),           &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+        & prefix, suffix,                                                                        &
+        & output_level=BASIC,loutput=.TRUE.,                                                      &
+        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.FALSE.)!, isteptype=TSTEP_CONSTANT )
+        
+        CALL jsb_add_var( mem, 'w_soil_column_seed', mem%w_soil_column_seed,                              &
+        & hgrid, surface,                                                                        &
+        & t_cf('w_soil_column_seed', 'm water equivalent' ,'cumulated soil water in the top 50mm'),           &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+        & prefix, suffix,                                                                        &
+        & output_level=BASIC,loutput=.TRUE.,                                                      &
+        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.FALSE.)!, isteptype=TSTEP_CONSTANT ) 
       
+       CALL jsb_add_var( mem, 'seed_depth_sl', mem%seed_depth_sl,                              &
+        & hgrid, soil_w,                                                                        &
+        & t_cf('seed_depth_sl','m', 'depth of the soil layer for the top 50 mm soil '),           &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+        & prefix, suffix,                                                                        &
+        & output_level=BASIC,loutput=.FALSE.,                                                      &
+        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.FALSE.)!, isteptype=TSTEP_CONSTANT )
+
       CALL jsb_add_var( mem, 'MaintRes', mem%MaintRes,                              &
         & hgrid, surface,                                                                        &
         & t_cf('MaintRes', 'Maintenance Respiration'),           &

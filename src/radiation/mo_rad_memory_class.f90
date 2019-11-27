@@ -329,8 +329,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & lrestart=.FALSE.,                                                  &
-        & output_level=MEDIUM,                                               &
-        & initval_r=0.0_wp )
+        & output_level=BASIC,                                               &
+        & loutput=.TRUE.,  initval_r=0.0_wp)
 
       CALL jsb_add_var( mem, 'alb_nir_can', mem%alb_nir_can,                 &
         & hgrid, surface,                                                    &
@@ -338,8 +338,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & lrestart=.FALSE.,                                                  &
-        & output_level=MEDIUM,                                               &
-        & initval_r=0.0_wp )
+        & output_level=BASIC,                                               &
+        & loutput=.TRUE.,  initval_r=0.0_wp)
 
       CALL jsb_add_var( mem, 'snow_age', mem%snow_age,                       &
         & hgrid, surface,                                                    &

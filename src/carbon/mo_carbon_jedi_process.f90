@@ -103,6 +103,7 @@ CONTAINS
     & SenesRspdNPP ,              & ! in
     & RelSenesAbgd ,              & ! in
     & NitroStatus  ,              & ! in
+    & JeDiSLA,                     &  ! in
     ! JeDi plant trait parameters >>>>>>>>>>
     & iniyear,                    &     ! in
     & currentyear,                & !in
@@ -124,6 +125,7 @@ CONTAINS
     & Flg_die,                    & ! inout
     & Flg_senesc,                 & ! out
     & flx_germ,                   & ! out
+    & adj_fraction,                &  !out
     & MaintRes_yDayMean,          & ! inout
     & GrowthResp,                 & ! out
     & AutoRes,                    & ! out
@@ -206,7 +208,8 @@ CONTAINS
     REAL(wp), INTENT(in)     :: TurnoverLeaf          ! Jedi parameter -- P12 Turnover time of leaf and fine root pools   
     REAL(wp), INTENT(in)     :: SenesRspdNPP          ! Jedi parameter -- P13 Senescence response time to productivity conditions 
     REAL(wp), INTENT(in)     :: RelSenesAbgd          ! Jedi parameter -- P14 Relative senescence aboveground            
-    REAL(wp), INTENT(in)     :: NitroStatus           ! Jedi parameter -- P15 Plant nitrogen status                       
+    REAL(wp), INTENT(in)     :: NitroStatus           ! Jedi parameter -- P15 Plant nitrogen status    
+    REAL(wp), INTENT(in)     :: JeDiSLA                   
     INTEGER,  INTENT(in)     :: iniyear      
     INTEGER,  INTENT(in)     :: currentyear  
     INTEGER,  INTENT(in)     :: time_steps_per_day
@@ -234,7 +237,8 @@ CONTAINS
     REAL(wp), INTENT(inout) :: ff_npp
     REAL(wp), INTENT(out)   :: flx_germ  
     REAL(wp), INTENT(out)   :: Flg_senesc
-    REAL(wp), INTENT(inout) :: Flg_die                                                            
+    REAL(wp), INTENT(inout) :: Flg_die    
+    REAL(wp), INTENT(out)   :: adj_fraction                                                        
     !                                                     
     REAL(wp), INTENT(inout) :: c_litter_green_ag  ! Above ground green litter C-pool: updated on output [mol(C)/m^2(canopy)]
     REAL(wp), INTENT(inout) :: c_litter_green_bg  ! Below ground green litter C-pool: updated on output [mol(C)/m^2(canopy)]
@@ -331,17 +335,20 @@ CONTAINS
     REAL(wp), PARAMETER  :: c_GRes_wood      = 1.0_wp / (1.0_wp + 0.25_wp)
     REAL(wp), PARAMETER  :: c_GRes_csroot    = 1.0_wp / (1.0_wp + 0.49_wp)
     REAL(wp), PARAMETER  :: c_GRes_seed      = 1.0_wp / (1.0_wp + 0.66_wp)    
-    REAL(wp), PARAMETER  :: c_tau_seed       = 10._wp * 365._wp !  seed decomposition time scale (years), value is taken from JeDi 
+    REAL(wp), PARAMETER  :: c_tau_seed       = 3._wp * 365._wp !  seed decomposition time scale (years), value is taken from JeDi 
     REAL(wp), PARAMETER  :: c_tau_sen        = 10._wp 
-    REAL(wp), parameter  :: cTiny            = 1.E-8_wp        
+    REAL(wp), PARAMETER  :: c_tau_storage     = 3._wp * 365._wp ! decay of the storage pool (3-year), PHS decided arbitrarily
+    REAL(wp), parameter  :: cTiny            = 1.E-8_wp     
     
+    REAL(wp), PARAMETER  :: leaf_growth_fract = 0.03_wp   
+    REAL(wp) :: allo_max_leaves,zAlloc_leaves_tmp
     
     REAL(wp) :: MaintRes
     REAL(wp) :: NPP
     REAL(WP) :: f_leafroot,f_finetissues,f_stemcsroot                              
     REAL(WP) :: fract_green_AG_jedi, fract_wood_AG_jedi ! USED FOR YASSOR 
     REAL(WP) :: zAlloc, zAlloc_leaves, zAlloc_stem, zAlloc_seed, zAlloc_fnroot, zAlloc_csroot
-    REAL(WP) :: zLoss_leaves, zLoss_stem, zLoss_seed, zLoss_fnroot, zLoss_csroot
+    REAL(WP) :: zLoss_leaves, zLoss_stem, zLoss_seed, zLoss_fnroot, zLoss_csroot, zLoss_storage 
     REAL(WP) :: c_total_temp
     REAL(wp) :: C_2_litter_woodPool
     !CBAL REAL(wp) :: d_c_slow
@@ -467,11 +474,11 @@ CONTAINS
     Flg_grow_W = 0._wp
     Flg_grow_G = 0._wp
     
-    !IF ( ff_grow_T     .ge.  CritiGrowTemp   ) Flg_grow_T = 1.0_wp
+  !  IF ( ff_grow_T     .ge.  CritiGrowTemp   ) Flg_grow_T = 1.0_wp
     
     IF ( ff_grow_T     .ge.  EndGrowTemp   ) THEN
             Flg_grow_T = 1.0_wp
-    ELSE IF ( ff_grow_T     .gt.  EndGrowTemp  .and.  ff_grow_T     .le.  EndGrowTemp  ) THEN
+    ELSE IF ( ff_grow_T     .gt.  CritiGrowTemp  .and.  ff_grow_T     .le.  EndGrowTemp  ) THEN
         IF ( ff_dTdt .gt. 0._wp  ) THEN
             Flg_grow_T = 1.0_wp
         ELSE
@@ -488,8 +495,18 @@ CONTAINS
     Flg_grow   = Flg_grow_T * Flg_grow_W
     Flg_grow_G = Flg_grow_T * Flg_grow_G
     
-   ! IF ( del_c .GT. 0._wp ) Flg_grow = 0._wp  ! !PHS drop tissues
-
+    IF( Flg_grow_G .GT. 0._wp .AND.  one_counter .lt. 1._wp  )  THEN
+           
+           c_storage = 0.01_wp 
+           c_leaves   = c_storage * Allo2Abground  *  ( 1._wp -  RelAllo2Abgrd ) * 1.0_wp / (1.0_wp + 0.33_wp)  *   TurnoverLeaf  
+           c_stem     = c_storage * Allo2Abground  *                  RelAllo2Abgrd  * 1.0_wp / (1.0_wp + 0.25_wp)   *  TurnoverStruc
+           c_fnroot    = c_storage * Allo2Blground  *  ( 1._wp -   RelAllo2Blgrd ) * 1.0_wp / (1.0_wp + 0.33_wp)   *   TurnoverLeaf 
+           c_csroot   =  c_storage * Allo2Blground  *                   RelAllo2Blgrd  * 1.0_wp / (1.0_wp + 0.49_wp)   *   TurnoverStruc
+           c_seed     =   c_storage * Allo2Reproduc *  (1.0_wp / (1.0_wp + 0.66_wp)  )  /   (GermFrac   +  1./(c_tau_seed)    )
+           one_counter =one_counter +1
+    
+    ENDIF
+   
     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-! Germination condition !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-!
     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=! 
@@ -499,16 +516,6 @@ CONTAINS
     IF ( Flg_die .lt. 1._wp )  THEN  ! If the species is alive
     
   
-      IF ( ( currentyear .EQ. iniyear+1 )  .AND. (  one_counter .LT. 1._wp ) .AND.  (  Flg_grow_G .GT. 0._WP  ) ) THEN
-            
-            one_counter = one_counter + 1._wp
-            c_seed = c_seed + 1._wp
-      
-      END IF
-  
-      
-  
-    
     flx_germ   = Flg_grow_G * GermFrac * c_seed ! if germination is favorable then carbon flows from seed to storage pool 
     c_storage  = c_storage + flx_germ
     c_seed     = c_seed    - flx_germ  
@@ -541,15 +548,19 @@ CONTAINS
     ! Compute JeDi carbon allocation of different C(tissue) pools
     
     
-    
-    
-      IF (    c_storage .gt. 0._wp  ) THEN  
+      IF ( (   c_storage .gt. 0._wp .and.   currentyear .GE. iniyear+20 )  .or.     (   currentyear .LT. iniyear+20 )    ) THEN  
 	    Flg_seed = 0._wp
+	    
+	    
+	
+	    
         IF ( NPP  .gt. 0._wp  ) Flg_seed = 1.0_wp ! OR NPP_yDayMean ???
         
         A_seed    = Flg_grow * Flg_seed * Allo2Reproduc
-        
-        c_storage = c_storage + NPP
+    
+        IF( c_storage .gt. 0._wp )  zLoss_storage = c_storage / c_tau_storage
+      
+        c_storage = c_storage + NPP - zLoss_storage
         
      
         
@@ -557,13 +568,36 @@ CONTAINS
         
         zAlloc        = MAX(0._wp,c_storage)  !  To make sure that no negative c_storage distributed to the pools
         
-        zAlloc_seed   = zAlloc * A_seed                                          * c_GRes_seed 
-        zAlloc_leaves = zAlloc * AG_growth * ( 1._wp - AG_struct ) * c_GRes_leaves
-        zAlloc_stem   = zAlloc * AG_growth * AG_struct                  * c_GRes_wood
-        zAlloc_csroot = zAlloc * BG_growth * BG_struct                  * c_GRes_csroot
-        zAlloc_fnroot = zAlloc * BG_growth * ( 1._wp - BG_struct ) * c_GRes_fnroot  
+        !PHS: 10.10.2019  I introduce a break to stop rapid growth of leaf
+        ! I first define the first amount of leaf that can be added to the leaf pool.  
+        ! I assume the first amount of leaf growth is 1 % of c_leaves assigning that lai = 3.  ( when c_leaves=0)
+        ! Otherwise the allocation to c_leaves can only be maximum values of 5% of the previous day. (leaf_growth_fract=0.05)
+        ! then the allocation to the other tissues pools shall be constrained by the proportional of the c_leaves allocation.  (adj_fraction)
+        IF ( c_leaves .EQ. 0._wp )  THEN
+           allo_max_leaves = 4._wp / 12.01_wp
+        ELSE
+           allo_max_leaves = c_leaves * leaf_growth_fract
+        END IF
         
-        c_storage = c_storage - ( A_seed + AG_growth + BG_growth ) * zAlloc
+        zAlloc_leaves_tmp = zAlloc * AG_growth * ( 1._wp - AG_struct ) * c_GRes_leaves
+        zAlloc_leaves = MIN( zAlloc_leaves_tmp, allo_max_leaves )
+        
+        IF (zAlloc_leaves .NE. 0._wp  ) THEN
+            adj_fraction  =  zAlloc_leaves / zAlloc_leaves_tmp
+        ELSE
+            adj_fraction  = 1._wp
+        END IF
+        
+        
+        
+        
+        zAlloc_seed   = zAlloc * A_seed                                          * c_GRes_seed     *   adj_fraction
+        !zAlloc_leaves = zAlloc * AG_growth * ( 1._wp - AG_struct ) * c_GRes_leaves
+        zAlloc_stem   = zAlloc * AG_growth * AG_struct                  * c_GRes_wood     *   adj_fraction
+        zAlloc_csroot = zAlloc * BG_growth * BG_struct                  * c_GRes_csroot    *   adj_fraction
+        zAlloc_fnroot = zAlloc * BG_growth * ( 1._wp - BG_struct ) * c_GRes_fnroot     *   adj_fraction
+        
+        c_storage = c_storage - ( A_seed + AG_growth + BG_growth ) * zAlloc   *   adj_fraction
         
         !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
         !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-! Growth respiration !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-!
@@ -585,11 +619,12 @@ CONTAINS
         
         
         Flg_senesc = 0._wp
-        IF ( ff_npp .lt. 0._wp .and. NPP .lt. 0._wp) Flg_senesc  = 1.0_wp - Flg_grow   ! See remarks below.
+       ! IF ( (    currentyear .GE. 1995   ) .and. ff_npp .lt. 0._wp .and. NPP .lt. 0._wp) Flg_senesc  = 1.0_wp - Flg_grow   ! See remarks below.
         ! No idea why the flag for senescence is using:  1 - flag_grow  
         ! I took the calculation from JeDi.
         ! I guess senescence happens, when: (1) Non-growing condition (2) NPP<0, which may suggest that plants spend many energy respiring
         !                                   (3) C_storage>0           (4) ff_npp<0 
+        
         
         
         tau_stem   = TurnoverStruc
@@ -631,18 +666,13 @@ CONTAINS
         !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-! Death of plants     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-!
         !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=! 
         
-        IF ( ( currentyear .EQ. iniyear+1 )  .AND. (  one_counter .LT. 2._wp ) .AND.  (  Flg_grow_G .GT. 0._WP  ) ) THEN
-            
-            NPP_act_yDayMean = 0._wp
-           
-         ELSE
+       
          
             NPP_act_yDayMean = ( GPP_yDayMean * sec_per_day  - AutoRes ) / (  sec_per_day )
-                 
-        END IF
-        
-         
-          root_depth = MAX( 0.2, sqrt( c_csroot * 2250.*12.01 ) * 0.001 )   !PHS: adding root depth
+                          
+            root_depth = sqrt( c_csroot * 2250.*12.01 ) * 0.001 
+
+      
       
           GrowthResp = GrowthResp /  sec_per_day 
           AutoRes    = AutoRes    /  sec_per_day 
@@ -658,9 +688,9 @@ CONTAINS
            CUE = MAX ( 0._wp, CUE )
            
           END IF
+        IF   (    currentyear .GE. 1995    ) THEN
         
-        
-          IF (  ((c_storage  ) .le. cTiny ) ) then !.or. ( c_storage .lt. 0._wp )) THEN  ! PHS: 24.06.2019 PHS modified from cTiny to zero 
+          IF (  c_storage   .le. cTiny )  then 
               
             zLoss_leaves = zLoss_leaves + c_leaves
             zLoss_stem   = zLoss_stem   + c_stem    + c_storage ! I dont know where the dead storage carbon shall go so I first put it into stem letter pool
@@ -678,14 +708,14 @@ CONTAINS
             
           ENDIF
         
-        
+        END IF
  
          IF (  Flg_grow  .LT.  1._WP) CUE = 0._wp
 
         
         
         
-          leafLitter          =  zLoss_leaves + zLoss_fnroot !+ del_c  !PHS drop tissues
+          leafLitter          =  zLoss_leaves + zLoss_fnroot + zLoss_storage!+ del_c  !PHS drop tissues
           C_2_litter_woodPool =  zLoss_stem   + zLoss_csroot 
           
           
@@ -728,12 +758,7 @@ CONTAINS
 
     ENDIF
 
-     IF ( ( currentyear .EQ. iniyear+1 )  .AND. (  one_counter .LT. 11._wp ) .AND.  (  Flg_grow .GT. 0._wp  ) ) THEN
-            
-            one_counter = one_counter + 1._wp
-            NPP_act_yDayMean = 0._wp
-      
-      END IF
+    
 
 
    c_total = c_storage + c_leaves + c_stem + c_csroot + c_fnroot 

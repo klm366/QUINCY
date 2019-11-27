@@ -244,7 +244,7 @@ CONTAINS
       & prefix, suffix,                                                                      &
       & lrestart=.TRUE.,                                                                     &
       & output_level=BASIC,                                                                  &
-      & loutput=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      & loutput=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       ! Potential evapotranspiration/sublimation
     CALL jsb_add_var( mem, 'evapopot', mem%evapopot,                                               &
@@ -611,7 +611,7 @@ CONTAINS
         & t_cf('evaporation_deficit', 'm water equivalent', ''),               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
-        & lrestart=.FALSE.,                                                    &
+        & lrestart=.FALSE.,     loutput=.TRUE.,                       &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL jsb_add_var( mem, 'water_excess', mem%water_excess,                   &
@@ -780,7 +780,7 @@ CONTAINS
           & hgrid, surface,                                                    &
           & t_cf('canopy_conductance_limited', '', ''),                        &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix,                                                    &
+          & prefix, suffix,    loutput=.TRUE.,                        &
           & initval_r=0.0_wp )
       END IF
 
@@ -789,7 +789,7 @@ CONTAINS
         & t_cf('surface_transpiration', 'kg m-2 s-1', 'Transpiration from surface'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
         & prefix, suffix,                                                            &
-        & lrestart=.FALSE.,                                                          &
+        & lrestart=.FALSE.,  loutput=.TRUE.,                                  &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     END IF

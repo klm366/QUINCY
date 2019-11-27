@@ -748,6 +748,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER             :: model
     dsl4jsb_Def_config(PHENO_)
+    dsl4jsb_Def_memory(CARBON_)  
     dsl4jsb_Def_memory(PHENO_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
