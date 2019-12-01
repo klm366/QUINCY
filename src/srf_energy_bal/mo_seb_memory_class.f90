@@ -93,9 +93,9 @@ MODULE mo_seb_memory_class
       & t_lice,               & !< Lake surface temperature (ice)                                  [K]
 !!$      & t_lwtr_old,            & !< Lake surface temperature (water) at previous timestep           [K]
 !!$      & t_lice_old,            & !< Lake surface temperature (ice) at previous timestep             [K]
-      & s_wtr,                & !< Surface dry static energy over lake water                       [m2 s-2]
+      & s_lwtr,               & !< Surface dry static energy over lake water                       [m2 s-2]
       & qsat_lwtr,            & !< Saturation specific humidity at surface over lake water        [kg kg-1]
-      & s_ice,                & !< Surface dry static energy over lake ice                         [m2 s-2]
+      & s_lice,               & !< Surface dry static energy over lake ice                         [m2 s-2]
       & qsat_lice,            & !< Saturation specific humidity at surface over lake ice           [kg kg-1]
       & latent_hflx_wtr,      &
       & sensible_hflx_wtr,    &
@@ -357,7 +357,7 @@ CONTAINS
     ! Additional variables for lakes
     IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%t_lwtr%ptr)) THEN
 
-      !$acc enter data pcreate(mem%t_lwtr,mem%s_wtr,mem%qsat_lwtr, &
+      !$acc enter data pcreate(mem%t_lwtr,mem%s_lwtr,mem%qsat_lwtr, &
       !$acc mem%latent_hflx_wtr,mem%sensible_hflx_wtr,mem%fract_lice)
 
       CALL jsb_add_var( mem, 't_lwtr', mem%t_lwtr,                                     &
@@ -367,7 +367,7 @@ CONTAINS
         & prefix, suffix,                                                              &
         & initval_r=280.0_wp )
 
-      CALL jsb_add_var( mem, 's_lwtr', mem%s_wtr,                                              &
+      CALL jsb_add_var( mem, 's_lwtr', mem%s_lwtr,                                             &
         & hgrid, surface,                                                                      &
         & t_cf('sfc_dry_static_energy_wtr', 'm2 s-2', 'surface dry static energy (lake wtr)'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &
@@ -410,7 +410,7 @@ CONTAINS
       IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
 
         !$acc enter data pcreate(mem%t_lice, & 
-        !$acc mem%s_ice,mem%qsat_lice,                                  &
+        !$acc mem%s_lice,mem%qsat_lice,                                 &
         !$acc mem%latent_hflx_ice,mem%sensible_hflx_ice,mem%depth_lice, &
         !$acc mem%hflx_form_ice,mem%hflx_cond_ice,                      &
         !$acc mem%hflx_melt_lice,mem%hflx_melt_snow)
@@ -422,7 +422,7 @@ CONTAINS
           & prefix, suffix,                                                              &
           & initval_r=tmelt )
     
-        CALL jsb_add_var( mem, 's_lice', mem%s_ice,                                              &
+        CALL jsb_add_var( mem, 's_lice', mem%s_lice,                                             &
           & hgrid, surface,                                                                      &
           & t_cf('sfc_dry_static_energy_ice', 'm2 s-2', 'surface dry static energy (lake ice)'), &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &

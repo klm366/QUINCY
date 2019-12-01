@@ -30,7 +30,7 @@ MODULE mo_jsb_tile
 
 #ifdef _OPENACC
   use openacc
-#define __acc_attach(ptr) CALL acc_attach(ptr)
+#define __acc_attach(ptr) CALL acc_attach(ptr)  
 #else
 #define __acc_attach(ptr)
 #endif
@@ -398,6 +398,9 @@ CONTAINS
     ELSE
       varlist_name_loc = TRIM(varlist_name)
     END IF
+
+    !$acc enter data create(this%fract,this%fract_max,this%fract_old,this%fract_max_old)
+
     CALL jsb_add_var(varlist_name_loc, 'fract', tmp_fract,                                 &
       & hgrid, surface,                                                                                         &
       & t_cf('tile_fraction', '',                                                                          &
@@ -405,8 +408,10 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                     &
       & initval_r=0.0_wp, isteptype=isteptype)
+
     CALL this%Set_fract_ptr(tmp_fract)
     __acc_attach(this%fract)
+    NULLIFY(tmp_fract)
 
     CALL jsb_add_var(varlist_name_loc, 'fract_max', tmp_fract,                         &
       & hgrid, surface,                                                                                         &
@@ -417,6 +422,7 @@ CONTAINS
       & initval_r=0.0_wp, isteptype=isteptype)
     CALL this%Set_fract_max_ptr(tmp_fract)
     __acc_attach(this%fract_max)
+    NULLIFY(tmp_fract)
 
     CALL jsb_add_var(varlist_name_loc, 'fract_old', tmp_fract,                                 &
       & hgrid, surface,                                                                                         &
@@ -427,6 +433,7 @@ CONTAINS
       & initval_r=0.0_wp, isteptype=isteptype)
     CALL this%Set_fract_old_ptr(tmp_fract)
     __acc_attach(this%fract_old)
+    NULLIFY(tmp_fract)
 
     CALL jsb_add_var(varlist_name_loc, 'fract_max_old', tmp_fract,                         &
       & hgrid, surface,                                                                                         &

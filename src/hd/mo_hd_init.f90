@@ -90,6 +90,7 @@ CONTAINS
       dsl4jsb_var2D_onDomain(HD_, nres_baseflow) = 1._wp
 
       ! Maximum number of reservoirs
+      ! If this is changed one has to change the definition of the three grids in mo_hd_config_class!!!
       hd__mem%nres_o_max = 1
       hd__mem%nres_b_max = 1
       hd__mem%nres_r_max = 5
@@ -214,13 +215,17 @@ CONTAINS
     dsl4jsb_Def_memory(HD_)
 
     REAL(wp), POINTER :: &
-      & tile_fract(:,:) !, &
-      !& ptr(:,:)            !< temporary pointer
+      & tile_fract(:,:), &
+      & ptr(:,:,:)            !< temporary pointer
 
-    !TYPE(t_input_file) :: input_file
+    TYPE(t_input_file) :: input_file
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
+
+    INTEGER :: n, blk, blks, blke, jc, jcs, jce
+    INTEGER :: nblks, nproma
+    INTEGER :: idx
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':hd_init_ic'
 
@@ -241,37 +246,80 @@ CONTAINS
 
     IF (debug_on()) CALL message(TRIM(routine), 'Initializing hd memory from '//TRIM(dsl4jsb_Config(HD_)%ic_filename))
 
-!vg     input_file = jsb_netcdf_open_input(TRIM(model%config%hd%ic_filename), model%grid_id)
-
     ! Initialize boundary conditions
     !
+    IF (dsl4jsb_config(HD_)%read_initial_reservoirs) THEN
 
-!vg     ! Overlandflow reservoir
-!vg     ptr => input_file%Read_2d_extdim(  &
-!vg       & variable_name='FLFMEM',                   &
-!vg       & start_extdim=1,                           &
-!vg       & end_extdim=hd_mem%nres_o_max,             &
-!vg       & fill_array = hd__mem%overlflow_res%ptr)
-!vg
-!vg     ! Baseflow reservoir
-!vg     ptr => input_file%Read_2d_extdim(  &
-!vg       & variable_name='FGMEM',                    &
-!vg       & start_extdim=1,                           &
-!vg       & end_extdim=hd%hd_hd_mem%nres_b_max,        &
-!vg       & fill_array = hd_mem%baseflow_res%ptr)
-!vg
-!vg     ! Riverflow reservoir
-!vg     ptr => input_file%Read_2d_extdim(  &
-!vg       & variable_name='FRFMEM',                   &
-!vg       & start_extdim=1,                           &
-!vg       & end_extdim=hd%hd_hd_mem%nres_r_max,        &
-!vg       & fill_array = hd_mem%riverflow_res%ptr)
+      input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HD_)%ic_filename), model%grid_id)
 
-    ALLOCATE(tile_fract(grid%nproma, grid%nblks))
-    CALL tile%Get_fraction(fract=tile_fract(:,:))
-    dsl4jsb_var3D_onDomain(HD_,overlflow_res) = 1000._wp * SPREAD(tile_fract(:,:), DIM=2, NCOPIES=hd__mem%nres_o_max)
-    dsl4jsb_var3D_onDomain(HD_,baseflow_res)  = 5000._wp * SPREAD(tile_fract(:,:), DIM=2, NCOPIES=hd__mem%nres_b_max)
-    dsl4jsb_var3D_onDomain(HD_,riverflow_res) = 1000._wp * SPREAD(tile_fract(:,:), DIM=2, NCOPIES=hd__mem%nres_r_max)
+      nproma = grid%nproma
+      nblks  = grid%nblks
+      blks = get_blk_start(grid)
+      blke = get_blk_end(grid)
+      
+      ! Overlandflow reservoir
+      ptr => input_file%Read_2d_extdim(  &
+        & variable_name='FLFMEM',                   &
+        & start_extdim=1,                           &
+        & end_extdim= hd__mem%nres_o_max,           &
+        & extdim_name='oresnum')
+      
+      
+      DO blk = blks, blke
+         jcs = get_col_start(blk, grid)
+         jce = get_col_end  (blk, grid)
+         DO n = 1, hd__mem%nres_o_max
+           DO jc = jcs, jce
+             dsl4jsb_var_ptr(HD_,overlflow_res)(jc,n,blk) = ptr(jc,blk,n)
+           END DO
+         END DO
+      END DO
+      
+      ! Baseflow reservoir
+      ptr => input_file%Read_2d_extdim(  &
+        & variable_name='FGMEM',                    &
+        & start_extdim=1,                           &
+        & end_extdim= hd__mem%nres_b_max,           &
+        & extdim_name='bresnum')
+      
+      DO blk = blks, blke
+         jcs = get_col_start(blk, grid)
+         jce = get_col_end  (blk, grid)
+         DO n = 1, hd__mem%nres_b_max
+           DO jc = jcs, jce
+              dsl4jsb_var_ptr(HD_,baseflow_res)(jc,n,blk) = ptr(jc,blk,n)
+            END DO
+          END DO
+      END DO
+      
+      ! Riverflow reservoir
+      ptr => input_file%Read_2d_extdim(  &
+        & variable_name='FRFMEM',                   &
+        & start_extdim=1,                           &
+        & end_extdim= hd__mem%nres_r_max,           &
+        & extdim_name='rresnum')
+      
+      DO blk = blks, blke
+         jcs = get_col_start(blk, grid)
+         jce = get_col_end  (blk, grid)
+         DO n = 1, hd__mem%nres_r_max
+           DO jc = jcs, jce
+             dsl4jsb_var_ptr(HD_,riverflow_res)(jc,n,blk) = ptr(jc,blk,n)
+           END DO
+         END DO
+      END DO
+
+      CALL input_file%Close()
+
+    ELSE
+
+      ALLOCATE(tile_fract(grid%nproma, grid%nblks))
+      CALL tile%Get_fraction(fract=tile_fract(:,:))
+        dsl4jsb_var3D_onDomain(HD_,overlflow_res) = 1000._wp * SPREAD(tile_fract(:,:), DIM=2, NCOPIES=hd__mem%nres_o_max)
+        dsl4jsb_var3D_onDomain(HD_,baseflow_res)  = 5000._wp * SPREAD(tile_fract(:,:), DIM=2, NCOPIES=hd__mem%nres_b_max)
+        dsl4jsb_var3D_onDomain(HD_,riverflow_res) = 1000._wp * SPREAD(tile_fract(:,:), DIM=2, NCOPIES=hd__mem%nres_r_max)
+
+      END IF
 
   END SUBROUTINE hd_init_ic
 
