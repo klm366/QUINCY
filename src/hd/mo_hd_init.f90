@@ -246,11 +246,12 @@ CONTAINS
 
     IF (debug_on()) CALL message(TRIM(routine), 'Initializing hd memory from '//TRIM(dsl4jsb_Config(HD_)%ic_filename))
 
-      input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HD_)%ic_filename), model%grid_id)
-
     ! Initialize boundary conditions
     !
     IF (dsl4jsb_config(HD_)%read_initial_reservoirs) THEN
+
+      input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HD_)%ic_filename), model%grid_id)
+
       nproma = grid%nproma
       nblks  = grid%nblks
       blks = get_blk_start(grid)
