@@ -937,13 +937,13 @@ CONTAINS
       ! print*,'AAA ',ics,ice,MINVAL(this%data_sum(ics:ice)), MAXVAL(this%data_sum(ics:ice)),&
         ! & MINVAL(this%fract_sum(ics:ice)), MAXVAL(this%fract_sum(ics:ice))
 
-      ! IF (ANY(fract_sum(:) > 1._wp + EPSILON(1._wp))) THEN
-      !   ! print*, fract_sum
-      !   CALL message(TRIM(routine), 'On tile '//TRIM(tile%name)//': fract_sum > 1 - '// &
-      !     &                         real2string(MINVAL(fract_sum(:)))//' - '//real2string(MAXVAL(fract_sum(:))), &
-      !     &          all_print=.TRUE.)
-      !   CALL finish(TRIM(routine),  '    ... this should not happen')
-      ! END IF
+    ! IF (ANY(fract_sum(:) > 1._wp + EPSILON(1._wp))) THEN
+    !   ! print*, fract_sum
+    !   CALL message(TRIM(routine), 'On tile '//TRIM(tile%name)//': fract_sum > 1 - '// &
+    !     &                         real2string(MINVAL(fract_sum(:)))//' - '//real2string(MAXVAL(fract_sum(:))), &
+    !     &          all_print=.TRUE.)
+    !   CALL finish(TRIM(routine),  '    ... this should not happen')
+    ! END IF
 
       ! Calculate the weighted average
       !

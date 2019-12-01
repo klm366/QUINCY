@@ -377,4 +377,3 @@ CONTAINS
 #endif
 
 #endif
-END MODULE mo_jsb_config_class
