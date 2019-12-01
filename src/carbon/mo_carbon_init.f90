@@ -186,7 +186,7 @@ CONTAINS
     model => get_model(tile%owner_model_id)
 
     ! Get carbon memory and config  of the tile
-    !dsl4jsb_Get_memory(CARBON_)
+    dsl4jsb_Get_memory(CARBON_)
     dsl4jsb_Get_config(CARBON_)
 
     IF (.NOT. model%Is_process_enabled(CARBON_)) RETURN

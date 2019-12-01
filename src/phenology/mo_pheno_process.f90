@@ -405,6 +405,9 @@ MODULE mo_pheno_process
 
      REAL(wp), intent(in)    :: lctlib_specificLeafArea_C
 
+     REAL(wp), intent(in)    :: lctlib_specificLeafArea_C
+
+     !$claw model-data
      REAL(wp), intent(in)    ::                     &
                                 NPP_pot_rate_ca,    &
                                 lat,                &
@@ -822,6 +825,7 @@ MODULE mo_pheno_process
                               & biomass_per_individual,         &
                               & veg_fract_correction,           &
                               & maxLAI_allom
+    !$claw end model-data
 
     !-----------------------------------------------------------------------
     !  LOCAL VARIABLES     TODO_JN -> KN select those from above which are only required internally
@@ -883,8 +887,12 @@ MODULE mo_pheno_process
 
      !-----------------------------------------------------------------------
      !  ARGUMENTS
+     !$claw model-data
      REAL(wp), intent(in)    :: c_green, c_woods, c_reserve
      REAL(wp), intent(inout) :: current_max_green, veg_carbon_at_max_green
+     !$claw end model-data
+
+     !$claw sca
 
      IF (current_max_green + EPSILON(1.0_wp) .LT. c_green) THEN
        current_max_green = c_green

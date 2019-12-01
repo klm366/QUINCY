@@ -1010,6 +1010,8 @@ CONTAINS
 
       !$ACC END PARALLEL
 
+      !$acc end data
+
     ELSE
 
       !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)

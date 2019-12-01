@@ -559,6 +559,8 @@ CONTAINS
       RETURN
     END IF
 
+    !$claw acc data pcreate(w_skin_max, w_skin_canopy_max, trans_tmp)
+
     dsl4jsb_Get_memory(SSE_)
     IF (tile%contains_vegetation) THEN
       dsl4jsb_Get_memory(PHENO_)
@@ -849,6 +851,8 @@ CONTAINS
     !$ACC END PARALLEL
 
     !$ACC WAIT(1)
+
+    !$claw acc end data
 
   END SUBROUTINE update_surface_hydrology
   !
@@ -1222,6 +1226,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: ice_pond
     dsl4jsb_Real2D_onChunk :: weq_pond
 
+    dsl4jsb_Real2D_onChunk :: w_soil_rel
+    dsl4jsb_Real2D_onChunk :: w_soil_column
+    dsl4jsb_Real2D_onChunk :: max_moist
+
+
     ! Locally allocated vectors
 
     TYPE(t_jsb_model), POINTER :: model
@@ -1285,6 +1294,8 @@ CONTAINS
     !$ACC UPDATE DEVICE(l_fract, tile_fract) ASYNC(1)
     !$ACC WAIT(1)
 
+    !$claw acc update device(soil_w%dz) ! TODO move if possible
+    !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_1 tile_name=tile%name
     CALL calc_soil_hydrology( &
       ! in
       & nc, &
@@ -1793,6 +1804,7 @@ CONTAINS
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
+    nc   = options%nc
 
     IF (.NOT. tile%Is_process_calculated(HYDRO_) .OR. .NOT. tile%is_vegetation) RETURN
 
@@ -1876,6 +1888,7 @@ CONTAINS
   SUBROUTINE update_evaporation(tile, options)
 
     USE mo_phy_schemes,            ONLY: q_effective, heat_transfer_coef
+    USE mo_jsb_physical_constants, ONLY: grav, cvdifts
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -1938,6 +1951,10 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
+
+    !$cla$w acc data create(q_air, q_air_eff, qsat_srf_eff, heat_tcoef)
+    ALLOCATE(q_air(nc),q_air_eff(nc),qsat_srf_eff(nc),heat_tcoef(nc))
+    !$claw acc enter data create(q_air, q_air_eff, qsat_srf_eff, heat_tcoef)
 
     ! Get reference to variables for current block
     !
@@ -2307,6 +2324,7 @@ CONTAINS
         !$ACC END PARALLEL LOOP
         !$ACC WAIT(1)
       END IF
+      !$claw acc exit data delete(w_skin_max, w_skin_canopy_max)  
       RETURN
     END IF
 
@@ -2664,6 +2682,8 @@ CONTAINS
 #endif
     END DO
     !$ACC END PARALLEL LOOP
+
+    !$claw acc end data
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

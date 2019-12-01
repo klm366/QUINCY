@@ -296,6 +296,11 @@ CONTAINS
         !$ACC END PARALLEL LOOP
       END IF
     END IF
+    !$claw acc update device(is_glacier) ! 
+    !$claw acc end data
+
+    !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_0_0 tile_name=tile%name
+    soil_depth_sl_vol_porosity_sl_tmp(:) = soil_depth_sl(:,1) * vol_porosity_sl(:,1)
 
     ! Grid cells without a real land fraction lead to numerical problems. As the land tile is
     ! calculated globally, this occurs e.g. on complete ocean or complete lake grid cells.
@@ -650,7 +655,9 @@ CONTAINS
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
-  END SUBROUTINE update_surface_energy_land
+    !$claw acc end data
+
+  END SUBROUTINE update_surface_energy_land 
 
   SUBROUTINE surface_temp_implicit(alpha, steplen,     &
     &            pcp,                                  &
@@ -730,6 +737,7 @@ CONTAINS
       psnew  = (zcolin * psold + zcoind) / (zcolin + zcohfl)
     ! END DO
 
+    !$claw acc end data
   END SUBROUTINE surface_temp_implicit
   !
   ! ================================================================================================================================
@@ -858,6 +866,7 @@ CONTAINS
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
+    nc      = options%nc
     steplen = options%steplen
     alpha   = options%alpha
 
@@ -1046,6 +1055,7 @@ CONTAINS
      & F_pseudo_soil_temp
 
     REAL(wp),  intent(inout) :: pseudo_soil_temp
+    !$claw end model-data
 
     pseudo_soil_temp= t_air_in_Celcius / N_pseudo_soil_temp  +  F_pseudo_soil_temp * pseudo_soil_temp
 

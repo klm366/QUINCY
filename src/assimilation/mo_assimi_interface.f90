@@ -308,6 +308,7 @@ CONTAINS
 
     IF (dsl4jsb_Lctlib_param(NitrogenScalingFlag)) THEN
       DO i=1,ncanopy
+        !$claw sca forward update savepoint=ser_jsb_assim_calc_assimilation_scaling_factors_1 tile_name=tile%name canopy_lvl=i
         CALL calc_assimilation_scaling_factors( &
           & declination,                        & ! input
           & canopy_bound_lai(i-1),              & ! input
@@ -327,6 +328,8 @@ CONTAINS
       END DO
       !$ACC END PARALLEL
     END IF
+
+    !$claw acc end data
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -810,6 +813,7 @@ CONTAINS
     ! Go
 
     DO icanopy=1,ncanopy
+      !$claw sca forward update savepoint=ser_jsb_assim_calc_assimilation_waterlimited_1 tile_name=tile%name canopy_lvl=icanopy
       CALL calc_assimilation_waterlimited(    &
         & dsl4jsb_Lctlib_param(C4Flag),       &
         & dsl4jsb_Lctlib_param(CarboxRate),   &
@@ -856,6 +860,7 @@ CONTAINS
 
     ! Accumulate NPP_pot_rate_ca. day_NPP_sum is divided by the day length and reset to zero in
     ! update_phenology_logrop at the beginning of each day.
+    !$claw expand parallel update savepoint=ser_jsb_assim_day_npp_sum_expand_0 tile_name=tile%name
     day_NPP_sum(:) = day_NPP_sum(:) + NPP_pot_rate_ca(:) * dtime
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')

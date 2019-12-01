@@ -471,6 +471,8 @@ CONTAINS
       !$ACC UPDATE DEVICE(this%fract_old(ics:ice,iblk)) ASYNC(1)
     END IF
 
+    !$acc update device(this%fract,this%fract_max,this%fract_old,this%fract_max_old)
+
   END SUBROUTINE Set_fraction_1d
 
   SUBROUTINE Set_fraction_2d(this, fract, fract_old)

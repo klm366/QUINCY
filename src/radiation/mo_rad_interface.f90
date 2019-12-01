@@ -173,6 +173,9 @@ CONTAINS
   SUBROUTINE update_surface_radiation(tile, options)
 
     USE mo_rad_process, ONLY: calc_radiation_surface_net
+#ifdef SERIALIZE
+    !$claw verbatim USE mo_ser_common, ONLY: init
+#endif
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options), INTENT(in) :: options
@@ -215,6 +218,10 @@ CONTAINS
     INTEGER :: iblk , ics, ice, nc, ic
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_radiation'
+
+#ifdef SERIALIZE
+    !$claw verbatim call init('jsb_ser')
+#endif
 
     ! Get local variables from options argument
     iblk = options%iblk
@@ -274,6 +281,7 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(RAD_, albedo_lice)  ! in
         dsl4jsb_Get_var2D_onChunk(RAD_, rad_net_lice) ! out
 
+        !$claw sca forward update savepoint=ser_jsb_rad_calc_radiation_surface_net_2 tile_name=tile%name
         CALL calc_radiation_surface_net( &
           & swvis_srf_down(:),           & ! in
           & swnir_srf_down(:),           & ! in
@@ -1193,6 +1201,9 @@ CONTAINS
       END IF
     END IF
     !$ACC EXIT DATA DELETE(l_day)
+    DEALLOCATE(l_day)
+
+    !$claw acc exit data delete(l_day)
     DEALLOCATE(l_day)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')

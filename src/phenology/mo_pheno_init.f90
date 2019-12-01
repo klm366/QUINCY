@@ -132,6 +132,8 @@ CONTAINS
     pheno_init_vars%lai_mon(:,:,0   ) = ptr_mon(:,:,12  )
     pheno_init_vars%lai_mon(:,:,13  ) = ptr_mon(:,:,1   )
     DEALLOCATE(ptr_mon)
+    !$acc enter data attach(dsl4jsb_memory(PHENO_)%lai_mon)
+    !$acc update device(dsl4jsb_memory(PHENO_)%lai_mon)
 
     ! Foliage projected cover climatology
     IF (debug_on()) CALL message(TRIM(routine), 'reading veg_fract ...')
@@ -142,6 +144,7 @@ CONTAINS
     pheno_init_vars%fract_fpc_mon(:,:,0   ) = ptr_mon(:,:,12  )
     pheno_init_vars%fract_fpc_mon(:,:,13  ) = ptr_mon(:,:,1   )
     DEALLOCATE(ptr_mon)
+    !$acc update device(dsl4jsb_memory(PHENO_)%fract_fpc_mon)
 
     ! Forest fraction
     ! @todo: only used for use_alb_veg_simple=.TRUE. and HYDRO_ init if l_organic=.TRUE.
@@ -344,7 +347,10 @@ CONTAINS
         END DO
         !$ACC END PARALLEL LOOP
       END IF
+      !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, fract_fpc))
     END IF
+
+    !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, lai))
 
   END SUBROUTINE pheno_init_ic
 

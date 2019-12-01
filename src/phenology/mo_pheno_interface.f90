@@ -299,6 +299,9 @@ CONTAINS
       CALL finish(routine, 'The LOGROP phenology model depends on the assimilation process being activated, too')
     ENDIF
 
+    !$claw acc data create(w_soil_filling, t_air_in_Celcius)  & 
+    !$claw create(LaiMax_corrected, veg_fract_correction_old) &
+    !$claw create(old_c_state_sum, dummy_flux)
     IF ( .NOT. tile%Is_process_active(ASSIMI_)) THEN
       CALL finish(routine, 'The LOGROP phenology model depends on the assimilation process being activated, too')
     ENDIF
@@ -812,7 +815,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real2D_onChunk :: fract_fpc
     dsl4jsb_Real2D_onChunk :: fract_fpc_max
-    REAL(wp), POINTER      :: fract_fpc_mon(:,:)
+    ! REAL(wp), POINTER      :: fract_fpc_mon(:,:)
 
 
     INTEGER  :: iblk, ics, ice, nc, ic
@@ -853,7 +856,7 @@ CONTAINS
         END DO
         !$ACC END PARALLEL LOOP
       ELSE
-        fract_fpc_mon(1:,0:) => dsl4jsb_memory(PHENO_)%fract_fpc_mon (ics:ice, iblk, :) ! in
+        ! fract_fpc_mon(1:,0:) => dsl4jsb_memory(PHENO_)%fract_fpc_mon (ics:ice, iblk, :) ! in
         CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO ic = 1, nc

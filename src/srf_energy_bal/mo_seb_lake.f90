@@ -471,6 +471,7 @@ CONTAINS
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, clw, rhoi, alf
 
+    !$claw model-data
     REAL(wp), INTENT(inout) :: t_lwtr            !< Surface temperature over open water
     REAL(wp), INTENT(in)    :: hflx             !< Sum of all radiative and turbulent surface heat fluxes
     REAL(wp), INTENT(inout) :: hflx_resid       !< Heat flux for ice formation or melting
@@ -492,6 +493,8 @@ CONTAINS
     REAL(wp) :: &
       & t_star, &
       & t_freeze
+
+    !$claw sca
 
     ! Lake tile is either not covered by ice or completely covered.
     IF (l_ice) RETURN
@@ -540,6 +543,7 @@ CONTAINS
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, rhoi, rhoi, rhos, als, alf, ki, ks, ci, cs !, clw
 
+    !$claw model-data
     REAL(wp), INTENT(inout) :: t_lice
     REAL(wp), INTENT(out)   :: hcap_ice       !< Heat capacity of thin ice surface layer
     REAL(wp), INTENT(out)   :: hflx_cond_ice
@@ -552,6 +556,7 @@ CONTAINS
     REAL(wp), INTENT(in)    :: hi             !< Ice thickness [m]
     REAL(wp), INTENT(inout) :: hs             !< Snow depth [m water equivalent]
     REAL(wp), INTENT(in)    :: fs             !< Fraction of snow on ice
+    !$claw end model-data
     REAL(wp), INTENT(in)    :: hi_min
     REAL(wp), INTENT(in)    :: dtime
 
@@ -559,6 +564,8 @@ CONTAINS
     REAL(wp) :: hflx_melt  !< Excess heat available for melting snow and ice
     REAL(wp) :: delta_hs
     REAL(wp) :: delta_t_lice
+
+    !$claw sca 
 
     hcap_ice = rhoi * ci * hi_min + rhoh2o * cs * hs
 
@@ -631,6 +638,7 @@ CONTAINS
 
     USE mo_jsb_physical_constants, ONLY: rhoi, alf, als
 
+    !$claw model-data
     REAL(wp), INTENT(inout) :: hi              !< Ice thickness [m]
     REAL(wp), INTENT(inout) :: fi              !< Ice fraction  []
     REAL(wp), INTENT(inout) :: hflx_form_ice   !< Residual heat flux from ice formation (complete or unrealized) [W m-2 = J m-2 s-1]
@@ -645,6 +653,8 @@ CONTAINS
 
     REAL(wp), INTENT(in)    :: hi_min          !< Minimum ice thickness [m]
     REAL(wp), INTENT(in)    :: dtime
+
+    !$claw sca
 
     IF (l_ice_formation) THEN                              ! Formation of a new slab of ice
 
@@ -730,6 +740,7 @@ CONTAINS
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
+    nc      = options%nc
     steplen = options%steplen
     alpha   = options%alpha
 
@@ -778,6 +789,11 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_ice)         ! in
       dsl4jsb_Get_var2D_onChunk(SEB_,   fract_lice)        ! in
     END IF
+
+    ! TODO which one to use? The first one gave an error
+    !$cla$w acc data create(s_air, heat_tcoef)
+    ALLOCATE(s_air(nc), heat_tcoef(nc))
+    !$claw acc enter data create(s_air,heat_tcoef)
 
     ! ================================================================================================================================
     ! Surface fluxes for lake water
@@ -833,6 +849,10 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
     END IF
+
+    !$cla$w acc end data
+    !$claw acc exit data delete(s_air,heat_tcoef)
+    DEALLOCATE(s_air, heat_tcoef)
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 

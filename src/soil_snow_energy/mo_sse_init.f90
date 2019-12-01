@@ -450,7 +450,7 @@ CONTAINS
       & vol_porosity_sl
 
     ! Locally allocated vectors
-    !
+    ! 
     dsl4jsb_Real3D_onDomain :: &
       & liquid_max,            &
       & fract_water,           &

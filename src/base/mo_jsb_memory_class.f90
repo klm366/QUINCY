@@ -967,4 +967,3 @@ CONTAINS
   END FUNCTION Average_over_children_real2d
 
 #endif
-END MODULE mo_jsb_memory_class

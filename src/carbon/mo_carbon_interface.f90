@@ -1432,6 +1432,8 @@ END SUBROUTINE recalc_carbon_per_tile_vars
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':calculate_current_c_ta_state_sum'
 
+   
+
     dsl4jsb_Real2D_onChunk ::  c_green_ta
     dsl4jsb_Real2D_onChunk ::  c_reserve_ta
     dsl4jsb_Real2D_onChunk ::  c_woods_ta
@@ -1619,6 +1621,8 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     END DO
     !$ACC END PARALLEL LOOP
 
+    c_ag_sum_1(ics:ice) =  c_acid_ag1(:) + c_water_ag1(:) + c_ethanol_ag1(:) + c_nonsoluble_ag1(:) + c_humus_1(:)
+    !$claw end expand
   END SUBROUTINE calculate_current_c_ag_1_and_bg_sums
 
 
@@ -2126,4 +2130,3 @@ END SUBROUTINE recalc_carbon_per_tile_vars
   END SUBROUTINE global_carbon_diagnostics
 
 #endif
-END MODULE mo_carbon_interface

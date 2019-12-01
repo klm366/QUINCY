@@ -401,6 +401,8 @@ CONTAINS
         !$ACC END DATA
       END IF
 
+      
+
     ELSE
 
       CALL finish(TRIM(routine), 'Called for invalid lct_type')

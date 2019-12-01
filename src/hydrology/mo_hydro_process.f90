@@ -519,6 +519,8 @@ CONTAINS
       & runoff_glac_in_m,    & !< Runoff in m
       & snowmelt_in_m          !< Snow/ice melt in m
 
+    !$claw sca
+
     !----------------------------------------------------------------------------------------------
 
     ! Convert water fluxes to m water equivalent within the time step
@@ -1730,6 +1732,9 @@ CONTAINS
 
     REAL(wp),  INTENT(in)    :: weq_snow_lice
     REAL(wp),  INTENT(out)   :: fract_snow_lice
+    !$claw end model-data
+
+    !$claw sca
 
     fract_snow_lice = TANH(weq_snow_lice * 100._wp)
 
@@ -1790,6 +1795,7 @@ CONTAINS
       & fract_pond,          &
       & fract_wet,           &
       & fract_snow_soil
+    !$claw end model-data
 
     REAL(wp) ::       &
       & qsat_srf_old, &
@@ -1912,6 +1918,7 @@ CONTAINS
       & fract_pond,          &
       & fract_wet,           &
       & fract_snow_soil
+    !$claw end model-data
 
     REAL(wp) ::       &
       & qsat_srf_old, &
@@ -1992,6 +1999,8 @@ CONTAINS
     REAL(wp), INTENT(in) :: &
       & snow,   &
       & orodev
+
+    !$claw sca routine
 
     Get_snow_fract_noforest = wsn2fract_const * TANH(snow * 100._wp) &
                                & * SQRT(snow * 1000._wp / (snow * 1000._wp + wsn2fract_eps + wsn2fract_sigfac * orodev))
@@ -2088,6 +2097,8 @@ CONTAINS
     REAL(wp)             :: water_stress_factor
 
     REAL(wp) :: w_crit, w_wilt                       !< Soil water content at critical/wilting point
+
+    !$claw sca routine
 
     w_crit = w_soil_max * w_soil_crit_fract
     w_wilt = w_soil_max * w_soil_wilt_fract

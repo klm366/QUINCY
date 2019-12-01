@@ -63,6 +63,8 @@ CONTAINS
                          &  fract_water, fract_ice, layer_depth, dz
     REAL(wp)             :: vol_heat_cap
 
+    !$claw sca routine
+
     IF (layer_depth > 0._wp) THEN  ! above bedrock
       vol_heat_cap = (1._wp - porosity)                                            & ! vol. fraction of solid (mineral + organic)
         &              * ( (1._wp - fract_organic) * vol_heat_cap_soil_dry_mineral & ! heat cap of mineral soil
@@ -227,6 +229,8 @@ CONTAINS
       fc                      !< field capacity (maximum moisture content) [m], e.g. of uppermost soil layer
 
     REAL(wp) :: moisture
+
+    !$claw sca routine
 
     moisture = MIN(ws, fc)
     IF (moisture > 0._wp) THEN
@@ -687,6 +691,8 @@ CONTAINS
     !$ACC WAIT(1)
     !$ACC END DATA
 
+    !$claw acc end data
+    !$claw verbatim ser_counter = ser_counter + 1
   END SUBROUTINE calc_soil_temperature
 
   SUBROUTINE calc_snow_temperature(       &
@@ -905,6 +911,7 @@ CONTAINS
       !$ACC END PARALLEL LOOP
 
     END IF
+
 
     !
     !------------------------------------------------------------------------------------------------

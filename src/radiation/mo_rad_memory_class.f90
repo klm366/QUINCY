@@ -493,6 +493,8 @@ CONTAINS
         & output_level=MEDIUM,                                                &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=AlbedoLakeWater )
 
+      !$acc update device(mem%rad_net_lwtr,mem%albedo_lwtr)
+      
       IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
 
         CALL mem%Add_var( 'rad_net_lice', mem%rad_net_lice,                     &

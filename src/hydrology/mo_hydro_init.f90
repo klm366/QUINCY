@@ -328,6 +328,9 @@ CONTAINS
       END IF
     END IF
 
+
+    !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_,elevation), &
+    !$acc dsl4jsb_var2D_onDomain(HYDRO_,oro_stddev))
     CALL input_file%Close()
 
     IF (tile%contains_soil) THEN
