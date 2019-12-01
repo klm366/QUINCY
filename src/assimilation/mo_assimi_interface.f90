@@ -277,11 +277,15 @@ CONTAINS
     ! ---------------------------
     ! Go
 
+    !$claw acc data create(lat, canopy_bound_lai)
+    !$claw acc update device(lat, canopy_bound_lai) ! LOCAL VARIABLE
+
     CALL inquire_declination(declination) ! R: do not put this in elemental procedure as it would not be pure...
                                           ! e.g. declination = 0.006918_wp
 
     IF (dsl4jsb_Lctlib_param(NitrogenScalingFlag)) THEN
       DO i=1,ncanopy
+        !$claw sca forward update savepoint=ser_jsb_assim_calc_assimilation_scaling_factors_1 tile_name=tile%name canopy_lvl=i
         CALL calc_assimilation_scaling_factors( &
           & declination,                        & ! input
           & canopy_bound_lai(i-1),              & ! input
@@ -291,8 +295,11 @@ CONTAINS
           & )
       END DO
     ELSE                                           ! to some vegetation classes nitrogen scaling is not applied
+      !$claw expand parallel update savepoint=ser_jsb_assim_update_assimilation_scaling_factors_expand_0 tile_name=tile%name 
       assimi_scaling_fact_cl(:,:) = 1._wp
     END IF
+
+    !$claw acc end data
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -424,6 +431,7 @@ CONTAINS
     ncanopy = dsl4jsb_Config(ASSIMI_)%ncanopy
 
     DO icanopy=1,ncanopy
+      !$claw sca forward update savepoint=ser_jsb_assim_calc_assimilation_waterunlimited_1 tile_name=tile%name canopy_lvl=icanopy
       CALL calc_assimilation_waterunlimited( &
         & dsl4jsb_Lctlib_param(C4Flag),      &
         & dsl4jsb_Lctlib_param(CarboxRate),  &
@@ -439,6 +447,7 @@ CONTAINS
     END DO
 
     ! Compute unlimited conductance for the whole canopy (all layers) considering the lai
+    !$claw expand parallel update savepoint=ser_jsb_assim_update_canopy_cond_unstressed_expand_0 tile_name=tile%name
     canopy_cond_unlimited(:) = MAX(1.e-20_wp,SUM(canopy_cond_cl(:,:) * lai_cl(:,:),DIM=2))
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -524,14 +533,17 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: q_air
     dsl4jsb_Real2D_onChunk :: press_srf
 
-    INTEGER :: iblk, ics, ice
+    INTEGER :: iblk, ics, ice, nc
     INTEGER :: icanopy, ncanopy
+    ! LOGICAL, DIMENSION(options%nc) :: q_air_gt_qsat_tmp
+    LOGICAL, ALLOCATABLE :: q_air_gt_qsat_tmp(:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_canopy_cond_stressed'
 
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
+    nc   = options%nc
 
     IF (.NOT. tile%Is_process_active(ASSIMI_) .OR. .NOT. tile%is_vegetation) RETURN
 
@@ -559,15 +571,27 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   canopy_cond_cl)       ! inout
 
     ! Compute (actual) canopy (stomatal) conductance under water stress.
+    !$cla$w acc data create(q_air_gt_qsat_tmp)
+    ALLOCATE(q_air_gt_qsat_tmp(nc))
+    !$claw acc enter data create(q_air_gt_qsat_tmp)
+    !$claw expand parallel update savepoint=ser_jsb_assimi_update_canopy_cond_stressed_expand_0 tile_name=tile%name
+    q_air_gt_qsat_tmp(:) = q_air(:) > qsat(t(:),press_srf(:))      
     canopy_cond_limited(:) = get_canopy_conductance(canopy_cond_unlimited(:),  & ! in, unstressed canopy conductance
                                                     water_stress(:),           & ! in, water stress factor
-                                                    q_air(:) >  qsat(t(:),press_srf(:)) & ! in, atmosphere saturated?
+                                                    q_air_gt_qsat_tmp(:)       & ! in, atmosphere saturated?
                                                     )
+    !$claw end expand
+    !$cla$w acc end data
+    !$claw acc exit data delete(q_air_gt_qsat_tmp)
+    DEALLOCATE(q_air_gt_qsat_tmp)
+
     ! Scale unlimited conductance per leaf area with the ratio of limited to unlimited conductance for
     ! whole canopy, ie. compute new limited conductance per leaf area and canopy layer
     DO icanopy=1,ncanopy
+      !$claw expand parallel update savepoint=ser_jsb_assim_update_canopy_cond_stressed_expand_1 tile_name=tile%name canopy_lvl=icanopy
       canopy_cond_cl(:,icanopy) = canopy_cond_cl(:,icanopy) * canopy_cond_limited(:) / canopy_cond_unlimited(:)
     END DO
+    !$claw end expand
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -736,6 +760,7 @@ CONTAINS
     !                                                             CO2_conc_leaf_cl * dtime
 
     DO icanopy=1,ncanopy
+      !$claw sca forward update savepoint=ser_jsb_assim_calc_assimilation_waterlimited_1 tile_name=tile%name canopy_lvl=icanopy
       CALL calc_assimilation_waterlimited(    &
         & dsl4jsb_Lctlib_param(C4Flag),       &
         & dsl4jsb_Lctlib_param(CarboxRate),   &
@@ -756,6 +781,8 @@ CONTAINS
         & e_transport_rate_cl(:,icanopy)      & ! out
         & )
     END DO
+
+    !$claw expand parallel update savepoint=ser_jsb_assim_update_assimilation_expand_0 tile_name=tile%name
 
     ! Same for gross_assimilation_ca
     ! R: dies ist eine alternative Schreibweise die verwendet wurde da der PGI Kompiler probleme gemacht hat.
@@ -779,11 +806,14 @@ CONTAINS
     dark_respiration_ca(:) = SUM(dark_respiration_cl(:,:) * lai_cl(:,:),DIM=2)
     ! convert from canopy area to tile box area
     dark_respiration(:) =  dark_respiration_ca(:)  * veg_fract_correction(:) * fract_fpc_max(:)
+    !$claw end expand 
 
-    CALL calc_NPP_pot_rate(gross_assimilation_ca, dark_respiration_ca, NPP_pot_rate_ca)
+    !$claw sca forward update savepoint=ser_jsb_assim_calc_npp_pot_rate_1 tile_name=tile%name
+    CALL calc_NPP_pot_rate(gross_assimilation_ca(:), dark_respiration_ca(:), NPP_pot_rate_ca(:))
 
     ! Accumulate NPP_pot_rate_ca. day_NPP_sum is divided by the day length and reset to zero in
     ! update_phenology_logrop at the beginning of each day.
+    !$claw expand parallel update savepoint=ser_jsb_assim_day_npp_sum_expand_0 tile_name=tile%name
     day_NPP_sum(:) = day_NPP_sum(:) + NPP_pot_rate_ca(:) * dtime
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')

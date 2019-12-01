@@ -1,0 +1,590 @@
+!
+! This file was automatically generated from:
+!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/srf_energy_bal/mo_seb_interface.f90
+!    with md5 hash: 43be6a269ab095190638e8989fd53357
+!
+!>
+!! @brief Contains the interfaces for the surface energy balance process.
+!!
+!! @author
+!!  Reiner Schnur, MPI-M Hamburg
+!!
+!! @par Revision History
+!! First version in mo_srf_interface.f90 by Reiner Schnur (2013-04-04)
+!! Separated out the surface energy balance part by Reiner Schnur (2016-03-22)
+!!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
+MODULE mo_seb_interface
+#ifndef __NO_JSBACH__
+
+  ! -------------------------------------------------------------------------------------------------------
+  ! Used variables of module
+
+  USE mo_jsb_control,     ONLY: debug_on
+  USE mo_jsb_time,        ONLY: is_time_experiment_start
+  USE mo_kind,            ONLY: wp
+  USE mo_exception,       ONLY: message, finish
+
+  USE mo_jsb_model_class,    ONLY: t_jsb_model
+  USE mo_jsb_class,          ONLY: Get_model
+  USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid
+  USE mo_jsb_grid,           ONLY: Get_vgrid
+  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
+  USE mo_jsb_process_class,  ONLY: t_jsb_process
+  USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
+
+  USE mo_jsb_process_class, ONLY: seb_, hydro_, sse_
+  USE mo_seb_config_class, ONLY: t_seb_config
+  USE mo_sse_config_class, ONLY: t_sse_config
+
+  USE mo_seb_memory_class, ONLY: t_seb_memory
+  USE mo_hydro_memory_class, ONLY: t_hydro_memory
+  USE mo_sse_memory_class, ONLY: t_sse_memory
+
+  ! -------------------------------------------------------------------------------------------------------
+  ! Module variables
+
+  IMPLICIT NONE
+  PRIVATE
+
+  PUBLIC :: Register_seb_tasks !,t_seb_process
+
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_surface_energy
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_surface_energy
+    PROCEDURE, NOPASS :: Aggregate => aggregate_surface_energy
+  END TYPE tsk_surface_energy
+
+  INTERFACE tsk_surface_energy
+    PROCEDURE Create_task_surface_energy
+  END INTERFACE tsk_surface_energy
+
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_snowmelt_correction
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_snowmelt_correction
+    PROCEDURE, NOPASS :: Aggregate => aggregate_snowmelt_correction
+  END TYPE tsk_snowmelt_correction
+
+  INTERFACE tsk_snowmelt_correction
+    PROCEDURE Create_task_snowmelt_correction
+  END INTERFACE tsk_snowmelt_correction
+
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_asselin_filter
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_asselin
+    PROCEDURE, NOPASS :: Aggregate => aggregate_asselin
+  END TYPE tsk_asselin_filter
+
+  INTERFACE tsk_asselin_filter
+    PROCEDURE Create_task_asselin_filter
+  END INTERFACE tsk_asselin_filter
+
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_surface_fluxes
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_surface_fluxes
+    PROCEDURE, NOPASS :: Aggregate => aggregate_surface_fluxes
+  END TYPE tsk_surface_fluxes
+
+  INTERFACE tsk_surface_fluxes
+    PROCEDURE Create_task_surface_fluxes
+  END INTERFACE tsk_surface_fluxes
+
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_seb_interface'
+
+CONTAINS
+
+  ! ================================================================================================================================
+  !! Constructors for tasks
+
+  ! -------------------------------------------------------------------------------------------------------
+  !> Constructor for surface_energy task
+  !!
+  !! @param[in]     model_id     Model id
+  !! @return        return_ptr   Instance of process task "surface_energy"
+  !!
+  FUNCTION Create_task_surface_energy(model_id) RESULT(return_ptr)
+
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_surface_energy::return_ptr)
+    CALL return_ptr%Construct(name='surface_energy', process_id=SEB_, owner_model_id=model_id)
+
+  END FUNCTION Create_task_surface_energy
+
+  ! -------------------------------------------------------------------------------------------------------
+  !> Constructor for snowmelt_correction task
+  !!
+  !! @param[in]     model_id     Model id
+  !! @return        return_ptr   Instance of process task "snowmelt_correction"
+  !!
+  FUNCTION Create_task_snowmelt_correction(model_id) RESULT(return_ptr)
+
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_snowmelt_correction::return_ptr)
+    CALL return_ptr%Construct(name='snowmelt_correction', process_id=SEB_, owner_model_id=model_id)
+
+  END FUNCTION Create_task_snowmelt_correction
+
+  ! -------------------------------------------------------------------------------------------------------
+  !> Constructor for asselin_filter task
+  !!
+  !! @param[in]     model_id     Model id
+  !! @return        return_ptr   Instance of process task "asselin_filter"
+  !!
+  FUNCTION Create_task_asselin_filter(model_id) RESULT(return_ptr)
+
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_asselin_filter::return_ptr)
+    CALL return_ptr%Construct(name='asselin_filter', process_id=SEB_, owner_model_id=model_id)
+
+  END FUNCTION Create_task_asselin_filter
+
+  ! -------------------------------------------------------------------------------------------------------
+  !> Constructor for surface_energy fluxes
+  !!
+  !! @param[in]     model_id     Model id
+  !! @return        return_ptr   Instance of process task "surface_fluxes"
+  !!
+  FUNCTION Create_task_surface_fluxes(model_id) RESULT(return_ptr)
+
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_surface_fluxes::return_ptr)
+    CALL return_ptr%Construct(name='surface_fluxes', process_id=SEB_, owner_model_id=model_id)
+
+  END FUNCTION Create_task_surface_fluxes
+
+  ! =======================================================================================================
+  !> Register tasks for surface energy process
+  !!
+  !! @param[in,out] this      Instance of surface energy process class
+  !! @param[in]     model_id  Model id
+  !!
+  SUBROUTINE Register_seb_tasks(this, model_id)
+
+    CLASS(t_jsb_process), INTENT(inout) :: this
+    INTEGER,              INTENT(in)    :: model_id
+
+    CALL this%Register_task(tsk_surface_energy(model_id))
+    CALL this%Register_task(tsk_snowmelt_correction(model_id))
+    CALL this%Register_task(tsk_asselin_filter(model_id))
+    CALL this%Register_task(tsk_surface_fluxes(model_id))
+
+  END SUBROUTINE Register_seb_tasks
+
+  ! ================================================================================================================================
+  !>
+  !! @brief Implementation of "update" for task "surface energy"
+  !! Task "update_surface_energy" calculates the new surface temperature from the surface energy balance (sensible and latent heat,
+  !! net radiation, ground heat).
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  !!
+  SUBROUTINE update_surface_energy(tile, options)
+
+    USE mo_seb_land, ONLY: update_surface_energy_land
+    USE mo_seb_lake, ONLY: update_surface_energy_lake
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_energy'
+
+    IF (.NOT. tile%Is_process_active(SEB_)) RETURN
+
+    IF (tile%is_lake) THEN
+      CALL update_surface_energy_lake(tile, options)
+    ELSE IF (tile%is_land) THEN
+      CALL update_surface_energy_land(tile, options)
+    ELSE
+      CALL finish(TRIM(routine), 'Called for invalid lct_type '//TRIM(tile%lcts(1)%name)//' on tile '//TRIM(tile%name))
+    END IF
+
+  END SUBROUTINE update_surface_energy
+
+  ! -------------------------------------------------------------------------------------------------------
+  !>
+  !! Implementation of "aggregate" for task "surface_energy"
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  SUBROUTINE aggregate_surface_energy(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    TYPE(t_seb_memory), POINTER :: seb__mem
+    TYPE(t_seb_config), POINTER :: seb__conf
+
+    TYPE(t_jsb_model), POINTER :: model
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_surface_energy'
+
+    INTEGER :: iblk, ics, ice
+
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
+
+    SELECT TYPE (cc => model%processes(seb_)%p%config); TYPE IS (t_seb_config) ; seb__conf => cc ; END SELECT
+    SELECT TYPE (mm => tile%mem(seb_)%p); TYPE IS (t_seb_memory); seb__mem => mm ; END SELECT
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    CALL weighted_by_fract%Aggregate(tile, seb__mem%t_unfilt,ics,ice,iblk,routine)
+    CALL weighted_by_fract%Aggregate(tile, seb__mem%t_eff,ics,ice,iblk,routine)
+    CALL weighted_by_fract%Aggregate(tile, seb__mem%qsat_star,ics,ice,iblk,routine)
+    CALL weighted_by_fract%Aggregate(tile, seb__mem%s_star,ics,ice,iblk,routine)
+    CALL weighted_by_fract%Aggregate(tile, seb__mem%forc_hflx,ics,ice,iblk,routine)
+    CALL weighted_by_fract%Aggregate(tile, seb__mem%heat_cap,ics,ice,iblk,routine)
+    CALL weighted_by_fract%Aggregate(tile, seb__mem%heat_cap_old,ics,ice,iblk,routine)
+
+    IF (model%config%use_lakes) THEN
+      CALL weighted_by_fract%Aggregate(tile, seb__mem%t_lwtr,ics,ice,iblk,routine)
+      CALL weighted_by_fract%Aggregate(tile, seb__mem%s_lwtr,ics,ice,iblk,routine)
+      CALL weighted_by_fract%Aggregate(tile, seb__mem%qsat_lwtr,ics,ice,iblk,routine)
+      CALL weighted_by_fract%Aggregate(tile, seb__mem%fract_lice,ics,ice,iblk,routine)
+      IF (seb__conf%l_ice_on_lakes) THEN
+        CALL weighted_by_fract%Aggregate(tile, seb__mem%t_lice,ics,ice,iblk,routine)
+        CALL weighted_by_fract%Aggregate(tile, seb__mem%s_lice,ics,ice,iblk,routine)
+        CALL weighted_by_fract%Aggregate(tile, seb__mem%qsat_lice,ics,ice,iblk,routine)
+      END IF
+    END IF
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE aggregate_surface_energy
+
+  ! ================================================================================================================================
+  !>
+  !! @brief Implementation of "update" for task "snowmelt_correction"
+  !! Task "snowmelt_correction" applies a correction for t_unfilt due to snow and ice melting
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     config  Vector of process configurations.
+  !! @param[in]     options Additional run-time parameters.
+  !!
+  SUBROUTINE update_snowmelt_correction(tile, options)
+
+    USE mo_jsb_physical_constants, ONLY: alf
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    ! Local variables
+    !
+    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_sse_config), POINTER :: sse__conf
+    TYPE(t_seb_memory), POINTER :: seb__mem
+    TYPE(t_sse_memory), POINTER :: sse__mem
+    TYPE(t_hydro_memory), POINTER :: hydro__mem
+
+    ! Pointers to variables in memory
+    REAL(wp), POINTER, DIMENSION(:) :: t_unfilt
+    REAL(wp), POINTER, DIMENSION(:) :: snowmelt
+    REAL(wp), POINTER, DIMENSION(:) :: hcap_grnd_old
+    REAL(wp), POINTER, DIMENSION(:,:) :: snow_depth_sl
+    REAL(wp), POINTER, DIMENSION(:,:) :: vol_heat_cap_sl
+    REAL(wp), POINTER, DIMENSION(:,:) :: w_soil_freeze_sl
+    REAL(wp), POINTER, DIMENSION(:,:) :: w_ice_melt_sl
+
+
+    INTEGER  :: iblk , ics, ice, i
+    REAL(wp) :: dtime
+
+    REAL(wp), DIMENSION(options%nc) :: &
+      & heat_cap
+
+    TYPE(t_jsb_vgrid), POINTER :: soil_e, snow_e
+    INTEGER                    :: nsnow !,  nsoil
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_snowmelt_correction'
+
+    IF (.NOT. tile%Is_process_active(SEB_) .OR. .NOT. tile%is_land) RETURN
+
+    iblk  = options%iblk
+    ics   = options%ics
+    ice   = options%ice
+    dtime = options%dtime
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
+    SELECT TYPE (cc => model%processes(sse_)%p%config); TYPE IS (t_sse_config) ; sse__conf => cc ; END SELECT
+    SELECT TYPE (mm => tile%mem(seb_)%p); TYPE IS (t_seb_memory); seb__mem => mm ; END SELECT
+    SELECT TYPE (mm => tile%mem(hydro_)%p); TYPE IS (t_hydro_memory); hydro__mem => mm ; END SELECT
+    IF (tile%contains_land) THEN
+      SELECT TYPE (mm => tile%mem(sse_)%p); TYPE IS (t_sse_memory); sse__mem => mm ; END SELECT
+    END IF
+
+    soil_e => Get_vgrid('soil_depth_energy')
+    !nsoil = soil_e%n_levels
+    IF (sse__conf%l_snow) THEN
+      snow_e => Get_vgrid('snow_depth_energy')
+      nsnow = snow_e%n_levels
+    END IF
+
+    IF (tile%contains_lake) THEN
+      ! No correction for lake tile
+
+    ELSE IF (tile%contains_land) THEN
+
+      t_unfilt => seb__mem%t_unfilt%ptr(ics:ice,iblk)         ! inout
+      snowmelt => hydro__mem%snowmelt%ptr(ics:ice,iblk)         ! in
+      hcap_grnd_old => sse__mem%hcap_grnd_old%ptr(ics:ice,iblk)    ! in
+      IF (sse__conf%l_snow) THEN
+        snow_depth_sl => sse__mem%snow_depth_sl%ptr(ics:ice,:,iblk)    ! in
+      END IF
+      vol_heat_cap_sl => sse__mem%vol_heat_cap_sl%ptr(ics:ice,:,iblk)  ! in
+      w_soil_freeze_sl => hydro__mem%w_soil_freeze_sl%ptr(ics:ice,:,iblk) ! in
+      w_ice_melt_sl => hydro__mem%w_ice_melt_sl%ptr(ics:ice,:,iblk)    ! in
+
+      IF (.NOT. is_time_experiment_start()) THEN
+        !$claw acc data create(heat_cap)
+
+        ! Correction for snowmelt
+        !$claw expand parallel update savepoint=ser_jsb_seb_update_snowmelt_correction_expand_0 tile_name=tile%name
+        t_unfilt(:) = t_unfilt(:) - snowmelt(:) * dtime * alf / hcap_grnd_old(:)
+
+        IF (sse__conf%l_freeze) THEN
+          !$claw expand parallel update savepoint=ser_jsb_seb_update_snowmelt_correction_expand_1 tile_name=tile%name
+          heat_cap(:) = vol_heat_cap_sl(:,1) * soil_e%dz(1)
+          IF (sse__conf%l_snow) THEN
+            !$claw acc data present(t_unfilt,snow_depth_sl,heat_cap,w_ice_melt_sl,w_soil_freeze_sl)
+            !$claw acc parallel loop gang vector
+            DO i = 1,  size(t_unfilt, dim=1)
+              IF (snow_depth_sl(i,nsnow) < EPSILON(1._wp) .AND. heat_cap(i) > 0._wp) THEN  ! No snow layers present
+              ! Correction for melting of ice in soil layers
+                t_unfilt(i) = t_unfilt(i) - w_ice_melt_sl   (i,1) * dtime * alf / heat_cap(i)
+                t_unfilt(i) = t_unfilt(i) + w_soil_freeze_sl(i,1) * dtime * alf / heat_cap(i)
+              END IF
+            END DO
+            !$claw acc end data
+          ELSE   ! No snow layers present
+            !$claw acc data present(t_unfilt,heat_cap,w_ice_melt_sl,w_soil_freeze_sl)
+            !$claw acc parallel loop gang vector
+            DO i = 1, size(t_unfilt,dim=1)
+              IF (heat_cap(i) > 0._wp) THEN
+                ! Correction for melting of ice in soil layers
+                t_unfilt(i) = t_unfilt(i) - w_ice_melt_sl   (i,1) * dtime * alf / heat_cap(i)
+                t_unfilt(i) = t_unfilt(i) + w_soil_freeze_sl(i,1) * dtime * alf / heat_cap(i)
+              END IF
+            END DO
+            !$claw acc end data
+          END IF
+        END IF
+        !$claw acc end data
+      END IF
+
+      
+
+    ELSE
+
+      CALL finish(TRIM(routine), 'Called for invalid lct_type')
+
+    END IF
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE update_snowmelt_correction
+
+  ! -------------------------------------------------------------------------------------------------------
+  !>
+  !! Implementation of "aggregate" for task "snowmelt_correction"
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  SUBROUTINE aggregate_snowmelt_correction(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    TYPE(t_seb_memory), POINTER :: seb__mem
+
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_snowmelt_correction'
+
+    INTEGER :: iblk , ics, ice
+
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    SELECT TYPE (mm => tile%mem(seb_)%p); TYPE IS (t_seb_memory); seb__mem => mm ; END SELECT
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    CALL weighted_by_fract%Aggregate(tile, seb__mem%t_unfilt,ics,ice,iblk,routine)
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE aggregate_snowmelt_correction
+
+  ! ================================================================================================================================
+  !>
+  !! @brief Implementation of "update" for task "asselin_filter"
+  !! Task "asselin_filter" calculates applies the Asselin time filter to the new surface temperature, if applicable
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     config  Vector of process configurations.
+  !! @param[in]     options Additional run-time parameters.
+  !!
+  SUBROUTINE update_asselin(tile, options)
+
+    USE mo_seb_land, ONLY: update_asselin_land
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_asselin'
+
+    IF (.NOT. tile%Is_process_active(SEB_)) RETURN
+
+    IF (tile%contains_lake) THEN
+      ! No Asselin filter for lake tile
+    ELSE IF (tile%contains_land) THEN
+      CALL update_asselin_land(tile, options)
+    ELSE
+      CALL finish(TRIM(routine), 'Called for invalid lct_type')
+    END IF
+
+  END SUBROUTINE update_asselin
+
+  ! -------------------------------------------------------------------------------------------------------
+  !>
+  !! Implementation of "aggregate" for task "asselin_filter"
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  SUBROUTINE aggregate_asselin(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    TYPE(t_seb_memory), POINTER :: seb__mem
+
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_asselin'
+
+    INTEGER :: iblk , ics, ice
+
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    SELECT TYPE (mm => tile%mem(seb_)%p); TYPE IS (t_seb_memory); seb__mem => mm ; END SELECT
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    CALL weighted_by_fract%Aggregate(tile, seb__mem%t,ics,ice,iblk,routine)
+    CALL weighted_by_fract%Aggregate(tile, seb__mem%t_filt,ics,ice,iblk,routine)
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE aggregate_asselin
+
+  ! ================================================================================================================================
+  !>
+  !! @brief Implementation of "update" for task "surface fluxes"
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  !!
+  SUBROUTINE update_surface_fluxes(tile, options)
+
+    USE mo_seb_land, ONLY: update_surface_fluxes_land
+    USE mo_seb_lake, ONLY: update_surface_fluxes_lake
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_fluxes'
+
+    IF (.NOT. tile%Is_process_active(SEB_)) RETURN
+
+    IF (tile%contains_lake) THEN
+      CALL update_surface_fluxes_lake(tile, options)
+    ELSE IF (tile%contains_land) THEN
+      CALL update_surface_fluxes_land(tile, options)
+    ELSE
+      CALL finish(TRIM(routine), 'Called for invalid lct_type')
+    END IF
+
+  END SUBROUTINE update_surface_fluxes
+
+  ! -------------------------------------------------------------------------------------------------------
+  !>
+  !! Implementation of "aggregate" for task "surface_fluxes"
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  SUBROUTINE aggregate_surface_fluxes(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    TYPE(t_seb_config), POINTER :: seb__conf
+    TYPE(t_seb_memory), POINTER :: seb__mem
+
+    TYPE(t_jsb_model),       POINTER :: model
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_surface_fluxes'
+
+    INTEGER :: iblk , ics, ice
+
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
+
+    SELECT TYPE (cc => model%processes(seb_)%p%config); TYPE IS (t_seb_config) ; seb__conf => cc ; END SELECT
+    SELECT TYPE (mm => tile%mem(seb_)%p); TYPE IS (t_seb_memory); seb__mem => mm ; END SELECT
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    CALL weighted_by_fract%Aggregate(tile, seb__mem%latent_hflx,ics,ice,iblk,routine)
+    CALL weighted_by_fract%Aggregate(tile, seb__mem%sensible_hflx,ics,ice,iblk,routine)
+
+    CALL weighted_by_fract%Aggregate(tile, seb__mem%latent_hflx_lnd,ics,ice,iblk,routine)
+    CALL weighted_by_fract%Aggregate(tile, seb__mem%sensible_hflx_lnd,ics,ice,iblk,routine)
+    CALL weighted_by_fract%Aggregate(tile, seb__mem%latent_hflx_wtr,ics,ice,iblk,routine)
+    CALL weighted_by_fract%Aggregate(tile, seb__mem%sensible_hflx_wtr,ics,ice,iblk,routine)
+    IF (seb__conf%l_ice_on_lakes) THEN
+      CALL weighted_by_fract%Aggregate(tile, seb__mem%latent_hflx_ice,ics,ice,iblk,routine)
+      CALL weighted_by_fract%Aggregate(tile, seb__mem%sensible_hflx_ice,ics,ice,iblk,routine)
+    END IF
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE aggregate_surface_fluxes
+  !
+  ! ================================================================================================================================
+  !
+#endif
+END MODULE mo_seb_interface

@@ -24,10 +24,18 @@ MODULE mo_jsb_varlist
                                   jsb_get_var_list => get_var_list, &
                                   jsb_new_var_list => new_var_list, &
                                   add_var_list_element_r2d, add_var_list_element_r3d, &
+                                  is_variable_in_output, &
                                   VARNAME_LEN
   USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2, GRID_UNSTRUCTURED, GRID_UNSTRUCTURED_CELL, GRID_CELL, missval, tables
   USE mo_jsb_io_iface,      ONLY: t_cf_var, t_grib2_var, grib2_var
   USE mo_jsb_process_class, ONLY: Get_process_name
+
+#ifdef _OPENACC
+  use openacc
+#define __acc_attach(ptr) CALL acc_attach(ptr)  
+#else
+#define __acc_attach(ptr)
+#endif
 
   IMPLICIT NONE
   PRIVATE
@@ -157,13 +165,20 @@ CONTAINS
       ! lmiss=lmiss_loc, missval_r=missval_r_loc)
       lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups, &
       verbose=verbose)
+    __acc_attach(var%ptr2d)
 
+    !$acc update device(var%ptr2d)
     var%ptr => var%ptr2d
+    __acc_attach(var%ptr)
     var%name = TRIM(name)
     var%full_name = TRIM(name_loc)
     var%type = REAL2D
     var%missval = missval_r_loc
     IF (PRESENT(l_aggregate_all)) var%l_aggregate_all = l_aggregate_all
+    IF (PRESENT(loutput)) var%is_in_output = loutput
+    var%is_in_output = var%is_in_output .OR. is_variable_in_output(var%full_name)
+    IF (PRESENT(lrestart)) var%is_in_restart = lrestart
+    var%is_in_restart = var%is_in_restart .OR. .TRUE.  ! TODO
 
     var%owner_proc_id = mem%owner_proc_id
 
@@ -284,13 +299,20 @@ CONTAINS
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       ! lmiss=lmiss_loc, missval_r=missval_r_loc)
       lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups, verbose=verbose)
+      __acc_attach(var%ptr3d)
 
+    !$acc update device(var%ptr3d)
     var%ptr => var%ptr3d
+    __acc_attach(var%ptr)
     var%name = TRIM(name)
     var%full_name = TRIM(name_loc)
     var%type = REAL3D
     var%missval = missval_r_loc
     IF (PRESENT(l_aggregate_all)) var%l_aggregate_all = l_aggregate_all
+    IF (PRESENT(loutput)) var%is_in_output = loutput
+    var%is_in_output = var%is_in_output .OR. is_variable_in_output(var%full_name)
+    IF (PRESENT(lrestart)) var%is_in_restart = lrestart
+    var%is_in_restart = var%is_in_restart .OR. .TRUE.  ! TODO
 
     var%owner_proc_id = mem%owner_proc_id
 

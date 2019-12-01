@@ -163,7 +163,14 @@ CONTAINS
 
     dsl4jsb_Get_config(SEB_)
 
+    !$acc enter data pcreate(mem)
+
     IF (.NOT. ASSOCIATED(mem%sw_srf_net%ptr)) THEN
+
+      !$acc enter data pcreate(mem%sw_srf_net,mem%swvis_srf_net,             &
+      !$acc mem%swnir_srf_net,mem%lw_srf_net,mem%rad_srf_net,                &
+      !$acc mem%alb_background, mem%alb_vis,mem%alb_nir,mem%alb_vis_snow,    &
+      !$acc mem%alb_nir_snow)
 
       CALL jsb_add_var( mem, 'sw_srf_net', mem%sw_srf_net,                   &
         & hgrid, surface,                                                    &
@@ -253,12 +260,19 @@ CONTAINS
         & output_level=MEDIUM,                                               &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
+      !$acc update device(mem%sw_srf_net,mem%swvis_srf_net,                  &
+      !$acc mem%swnir_srf_net,mem%lw_srf_net,mem%rad_srf_net,                &
+      !$acc mem%alb_background, mem%alb_vis,mem%alb_nir,mem%alb_vis_snow,    &
+      !$acc mem%alb_nir_snow)
+
     END IF
 
     ! Additional variables for land tiles
     IF ( (One_of(BARE_TYPE, lct_ids(:)) > 0 .OR. One_of(VEG_TYPE, lct_ids(:)) > 0           &
       &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. One_of(GLACIER_TYPE, lct_ids(:)) > 0) &
       & .AND. .NOT. ASSOCIATED(mem%alb_vis_soil%ptr)) THEN
+
+      !$acc enter data pcreate(mem%alb_vis_lnd,mem%alb_nir_lnd)
 
       CALL jsb_add_var( mem, 'alb_vis_lnd', mem%alb_vis_lnd,                        &
         & hgrid, surface,                                                           &
@@ -278,12 +292,16 @@ CONTAINS
         & output_level=MEDIUM, &
         & initval_r=0.0_wp )
 
+      !$acc update device(mem%alb_vis_lnd,mem%alb_nir_lnd)
     END IF
 
     ! Additional variables for soil
     IF ( (One_of(BARE_TYPE, lct_ids(:)) > 0 .OR. One_of(VEG_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0)                                 &
       & .AND. .NOT. ASSOCIATED(mem%alb_vis_soil%ptr)) THEN
+
+      !$acc enter data pcreate(mem%alb_vis_soil,mem%alb_nir_soil,            &
+      !$acc mem%alb_vis_mineralsoil,mem%alb_nir_mineralsoil)
 
       CALL jsb_add_var( mem, 'alb_vis_soil', mem%alb_vis_soil,               &
         & hgrid, surface,                                                    &
@@ -317,11 +335,20 @@ CONTAINS
         & output_level=MEDIUM,                                               &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
+      !$acc update device(mem%alb_vis_soil,mem%alb_nir_soil,            &
+      !$acc mem%alb_vis_mineralsoil,mem%alb_nir_mineralsoil)
     END IF
 
     ! Additional variables for vegetation
     IF ( (One_of(VEG_TYPE, lct_ids(:)) > 0 .OR. One_of(LAND_TYPE, lct_ids(:)) > 0) &
       & .AND. .NOT. ASSOCIATED(mem%alb_vis_can%ptr)) THEN
+
+      !$acc enter data pcreate(mem%alb_vis_can,mem%alb_nir_can,mem%snow_age, &
+      !$acc mem%sky_view_fract,mem%sky_view_fract_stem,mem%par, &
+      !$acc mem%par_down_mol,mem%faPAR,mem%par_down_mol_nacc,mem%lai_cl, &
+      !$acc mem%par_down_mol_tavg,mem%soil_reflectivity_par,mem%fract_par_direct, &
+      !$acc mem%faPAR_cl,mem%apar_per_lai_cl,mem%apar_per_lai_cl_nacc, &
+      !$acc mem%apar_per_lai_cl_tavg,mem%apar_nacc)
 
       CALL jsb_add_var( mem, 'alb_vis_can', mem%alb_vis_can,                 &
         & hgrid, surface,                                                    &
@@ -456,10 +483,18 @@ CONTAINS
          & prefix, suffix,                                                                &
          & lrestart=.FALSE., initval_r=0.0_wp )
 
+      !$acc update device(mem%alb_vis_can,mem%alb_nir_can,mem%snow_age, &
+      !$acc mem%sky_view_fract,mem%sky_view_fract_stem,mem%par, &
+      !$acc mem%par_down_mol,mem%faPAR,mem%par_down_mol_nacc,mem%lai_cl, &
+      !$acc mem%par_down_mol_tavg,mem%soil_reflectivity_par,mem%fract_par_direct, &
+      !$acc mem%faPAR_cl,mem%apar_per_lai_cl,mem%apar_per_lai_cl_nacc, &
+      !$acc mem%apar_per_lai_cl_tavg,mem%apar_nacc)
     END IF
 
     ! Additional variables for lakes
     IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%rad_net_lwtr%ptr)) THEN
+
+      !$acc enter data pcreate(mem%rad_net_lwtr, mem%albedo_lwtr)
 
       CALL jsb_add_var( mem, 'rad_net_lwtr', mem%rad_net_lwtr,                &
         & hgrid, surface,                                                     &
@@ -478,7 +513,12 @@ CONTAINS
         & output_level=MEDIUM,                                                &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=AlbedoLakeWater )
 
+      !$acc update device(mem%rad_net_lwtr,mem%albedo_lwtr)
+      
       IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+
+        !$acc enter data pcreate(mem%rad_net_lice, mem%albedo_lice)
+
         CALL jsb_add_var( mem, 'rad_net_lice', mem%rad_net_lice,                &
           & hgrid, surface,                                                     &
           & t_cf('rad_net_lice', '', 'Net surface radiation over lake ice'),    &
@@ -495,6 +535,9 @@ CONTAINS
           & prefix, suffix,                                                     &
           & output_level=MEDIUM,                                                &
           & loutput=.TRUE., lrestart=.TRUE., initval_r=AlbedoLakeIceMin )
+
+        !$acc update device(mem%rad_net_lice,mem%albedo_lice)
+
       END IF
 
     END IF

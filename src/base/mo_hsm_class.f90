@@ -110,15 +110,15 @@ MODULE mo_hsm_class
   !! This derived type defines the structure of a basic Hierarchical State Machine
   !!
   TYPE, ABSTRACT :: t_Hsm
-    CHARACTER(len=30)           :: name
-    CLASS(t_State), POINTER     :: top     => NULL()    !< Topmost state
+    CHARACTER(len=30)            :: name
+    CLASS(t_State), POINTER      :: top     => NULL()    !< Topmost state
     !
-    CLASS(t_State_p), ALLOCATABLE :: current(:)     !< Current state
-    CLASS(t_State_p), ALLOCATABLE :: next(:)        !< Next state (non_null if transition taken)
-    CLASS(t_State_p), ALLOCATABLE :: source(:)      !< Source state during last transition
-    TYPE(t_Action),   ALLOCATABLE :: actions(:)         !< List of possible actions (events)
-    INTEGER,          ALLOCATABLE :: levels_to_lca(:)   !< Temporary storage
-    INTEGER                       :: mode               !< HSM_full or HSM_simple
+    TYPE(t_State_p), ALLOCATABLE :: current(:)     !< Current state
+    TYPE(t_State_p), ALLOCATABLE :: next(:)        !< Next state (non_null if transition taken)
+    TYPE(t_State_p), ALLOCATABLE :: source(:)      !< Source state during last transition
+    TYPE(t_Action),  ALLOCATABLE :: actions(:)         !< List of possible actions (events)
+    INTEGER,         ALLOCATABLE :: levels_to_lca(:)   !< Temporary storage
+    INTEGER                      :: mode               !< HSM_full or HSM_simple
   CONTAINS
     PROCEDURE :: Init_hsm
     PROCEDURE :: Set_mode          => Set_mode_hsm
