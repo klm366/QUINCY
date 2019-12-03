@@ -1,32 +1,58 @@
+#!/usr/bin/env Rscript
+
+##    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
+##    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+##    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
+##
+##    This file is part of the QUINCY model.
+##    The QUINCY model is free software: you can redistribute it and/or modify
+##    it under the terms of the GNU General Public License version 3,
+##    as published by the Free Software Foundation.
+##
+##    The QUINCY model is distributed in the hope that it will be useful,
+##    but WITHOUT ANY WARRANTY; without even the implied warranty of
+##    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+##    GNU General Public License for more details.
+##
+##    You should have received a copy of the GNU General Public License
+##    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
+
 ##
 ## creates forcing (and surface [ic/bc] + evaluation) files for FLUXNET site-level runs with JSBACH
 ##
 ## original script by Juergen Knauer creating files for JSBACH3: paste0(workDirMain, "data_by_jknauer/create_surface_forcing_files_fluxnet.r")
 ## 
-## this version is tailored for producing QUINCY input files (see e.g. cover_type definition)
+## this version is tailored for producing JSBACH met-forcing files that can be used for creating QUINCY met-forcing files
+## the creation of surface and evaluation files is not tested and maybe needs some work, see e.g. cover_type definition
+##
 ## notes:
-##   - the surface fiel creation work for the three sites set as default, but values for e.g. soil depth I do not have for other sites
+##   - the surface file creation works for the three sites set as default, but values for e.g. soil depth I do not have for other sites
 ##   - hence, skipping the surface (ic/bc) file creation, as these files are not needed for QUINCY anyway
 ##
-
+## run this script by:
+##  cd contrib/forcing_scripts/
+##  Rscript --vanilla ./generate_fluxnet2015_icbc_surface_forcing_eval_files_jsbach.R
+##
+## met-forcing is created for all sites listed in ./generate_fluxnet2015_site_list.dat by default (see siteListFile)
+##
 
 ############################## info from Juergens Script docu:
-
 ##### Open questions:
 ## is max_moist calculation correct?
-## why do calculated values agree so badly with the values in the Email from S?nke?
-
+## why do calculated values agree so badly with the values in the Email from Sönke?
 ##### TODO
 ## enable case of 2 or more tiles
-
 ###################################################################################################
+
+## get the dir this script is located
+args      <- commandArgs(trailingOnly = F)  
+scriptDir <- paste0(normalizePath(dirname(sub("^--file=", "", args[grep("^--file=", args)]))), "/") 
+print(paste0("This script is located in: ", scriptDir))
 
 ## libraries
 library(ncdf4)
-    # I do not know yet, why/whether the following libraries are needed  
-    #library(bigleaf)
-    #library(devtools)
-    #install_bitbucket("juergenknauer/bigleaf")  # to be replaced with 
+library(bigleaf)   # functions: aerodynamic.conductance() & surface.conductance() & VPD.to.q() & VPD.to.rH()
+
 
 ###################################################################################################
 
@@ -114,6 +140,25 @@ SolarElevationAngle <- function(doy, hour, lat, lon, useSolartime=FALSE){
   return(data.frame("SolElev_rad"=SolElev_rad,"SolElev_deg"=SolElev_deg))
 }
 
+## get extraterrestrial solar radiation
+ExtRadiation <- function(Doy){    
+  # Calculate extraterrestrial solar radiation after Lanini, 2010 (Master thesis, Bern University)
+  # Fractional year in radians
+  FracYear_rad.V.n <- 2*pi*(Doy-1) /365.24
+  
+  # Total solar irradiance
+  SolarIrr_Wm2.c <- 1366.1 #W/m-2
+  
+  #Eccentricity correction
+  ExtRadiation.V.n <- SolarIrr_Wm2.c * (1.00011 + 0.034221*cos(FracYear_rad.V.n) + 0.00128*sin(FracYear_rad.V.n)
+                                        + 0.000719*cos(2*FracYear_rad.V.n) + 0.000077*sin(2*FracYear_rad.V.n))
+  attr(ExtRadiation.V.n, 'varnames') <- 'ExtRad'
+  attr(ExtRadiation.V.n, 'units') <- 'W_m-2'
+  
+  return(ExtRadiation.V.n)
+  
+}
+
 ##  get potential radiation
 PotRadiation <- function(Doy,Hour,Lat,Long,SolElev_deg){
   ##use Solartime (where noon is exactly at 12:00). Set this to FALSE to directly use local winter time
@@ -131,7 +176,7 @@ PotRadiation <- function(Doy,Hour,Lat,Long,SolElev_deg){
 funct_soilParamFromTexture <- function(clay_fraction, sand_fraction, silt_fraction, rootdepth){
   
   if(sum(clay_fraction,sand_fraction,silt_fraction) != 1){
-    stop("grain size distribution has to sum up to 1.0!")
+    stop("function funct_soilParamFromTexture(): grain size distribution has to sum up to 1.0!")
   }
   
   clay <- clay_fraction * 100
@@ -271,8 +316,8 @@ funct_soilParamFromTexture <- function(clay_fraction, sand_fraction, silt_fracti
 ###################################################################################################
 
 ## define main dirs
-baseDir     <- "/home/jengel/remote/rt-bgi/"
-#baseDir     <- "/Net/Groups/BGI/"
+#debug baseDir     <- "/home/jengel/remote/rt-bgi/"
+baseDir     <- "/Net/Groups/BGI/"
 workDirMain <- paste0(baseDir,"work_2/QUINCY/SLM/Data/fluxnet2015_jsbach_input/")
 
 
@@ -305,24 +350,16 @@ CO2_data              <- read.table(paste0(workDirMain, "data_by_jknauer/GCP_co2
                           # original file from (2019-11-20): people/jknauer/mesophyll_conductance/JSBACH/new_sites_setup/GCP_co2_global.dat
 
 ## site list file with surface properties
-siteinfo              <- read.table(paste0(workDirMain, "data_by_jknauer/new_fluxnet_sites_surface_properties.txt"), header=T, sep="\t")
+#used for ic/bc surface file creation: siteinfo              <- read.table(paste0(workDirMain, "data_by_jknauer/new_fluxnet_sites_surface_properties.txt"), header=T, sep="\t")
+
 
 ## soil layers: valid for all sites
 levels     <- c(0.065,0.25,0.91,2.91,5.7)        # soil layer boundaries
 depths     <- (c(levels,0) - c(0,levels))[1:5]   # depths of soil layers
 
-## define sites
-#sites <- c("BE-Lon","DE-Geb","GF-Guy")
-#sites <- "US-Ne1"
-#sites <- c("AT-Neu","AU-Tum","BE-Lon","DE-Geb","DK-Sor","FI-Hyy","FR-LBr",
-#                   "FR-Pue","GF-Guy","US-Ha1","US-Ne1")
-#sites <- c("AU-Tum","BE-Lon","DE-Geb","DK-Sor","FI-Hyy","FR-LBr",
-#                   "FR-Pue","GF-Guy","US-Ha1","US-Ne1")
-#sites <- c("AT-Neu","DE-Geb","FR-Pue","GF-Guy")
-#sites <- c("BE-Lon","DE-Geb","DK-Sor","FI-Hyy","FR-LBr","FR-Pue","GF-Guy","US-Ha1","US-Ne1")
-#sites <- c("AU-Tum","US-Ha1","US-Ne1")
-#sites <- as.character(siteinfo[,1])[-c(4,15)]
-sites <- c("US-Ha1","US-Ne1")
+## define sites for which forcing should be created
+siteListFile <- read.table(paste0(scriptDir, "generate_fluxnet2015_site_list.dat"), header=T, sep="", stringsAsFactors=F)
+sites        <- siteListFile$site_id
 
 
 
@@ -421,29 +458,6 @@ for (s in 1:length(sites)){
 ## II) Forcing files  (plus eval files, if "create_eval_files == T") 
 #################################################################################################
 
-## present dir is "$workDirMain"fluxnet/
-
-# copying the original files is not necessary nor is it advised to do so; just leave this code for reference
-# ## copy the original 1/2 hour Fluxnet2015 Berkely data files
-# for (s in 1:length(sites)){
-#   
-#   print(paste0("copy forcing files - starting site: ",sites[s]))
-#   
-#   # check if file available
-#   forcing_file <- list.files(fluxnetForcingHHDir, pattern=sites[s])
-#   if (length(forcing_file) < 1){
-#     stop("forcing file for site",sites[s],"couldn't be found! Check again!")
-#   }
-#   else{
-#     # copy file
-#     file.copy(from=paste0(fluxnetForcingHHDir,forcing_file), to="./forcing_input/", overwrite=FALSE)
-#   }
-# }
-# 
-# input_files_forcing  <- unname(sapply(sites,function(x) list.files("./forcing_input",pattern=x)))
-
-
-
 ## Settings for forcing (and evaluation) files creation
 interpolate          <- T  # if hourly resolution, perform linear interpolation?
 create_forcing_files <- T  # create forcing files?
@@ -461,14 +475,16 @@ calc_Gs_Ga           <- T  # this is used only if create_eval_files = TRUE: calc
 ## loop over sites and create forcing files (and eval files)
 for (s in 1:length(sites)){
 
-  print(paste0("creating forcing files - starting site: ",sites[s]))
+  print(" ")
+  print("-------------------------")
+  print(paste0("creating forcing files - starting site: ", sites[s], " (", s, " of ", length(sites), " sites)"))
   
   ## get info about whether the data is l_HH T/F
   # logical 1/2 data per default == T
   l_HH             <- T
   secondspertstep  <- 3600 / 2
   forcingFileHR    <- list.files(fluxForcHRListDir, pattern=sites[s])
-  if (length(forcingFileHR) < 1){
+  if (length(forcingFileHR) > 0){
     l_HH <- F
     secondspertstep  <- 3600
     print(" Only hourly data is available for this site")
@@ -487,16 +503,18 @@ for (s in 1:length(sites)){
   cat("startyear: ",startyear, fill=TRUE)
   cat("endyear: ",endyear, fill=TRUE)
 
+  print(paste0("Opening the original Fluxnet file: ", fluxnetForcingHHDir, sites[s], ".HH.", startyear, ".", endyear, ".nc"))
   fluxForcFile <- nc_open(paste0(fluxnetForcingHHDir, sites[s], ".HH.", startyear, ".", endyear, ".nc"))
   
   ## start forcing file creation
   if (create_forcing_files){
     
     ## lon and lat
-    latitude  <- siteinfo[siteinfo[,"site"] == sites[s],"lat"]
-    longitude <- siteinfo[siteinfo[,"site"] == sites[s],"lon"]
+    latitude  <- ncvar_get(fluxForcFile, "latitude")
+    longitude <- ncvar_get(fluxForcFile, "longitude")
     if (longitude < 0){   # convert lon to degrees east!
       longitude <- 360 + longitude 
+      print(paste0("convert lon to degrees east | longitude is now: ", longitude))
     }
     
     ## load additional time information
@@ -560,13 +578,15 @@ for (s in 1:length(sites)){
     ## if interpolate == T and no 1/2 hourly data
     pr_c <- which(colnames(forcing_vals) == "PR")
     if (interpolate & !l_HH){
-      cat("data are at hourly resolution and linearly interpolating to half hours!",fill=TRUE)
-      missing <- seq(1,nrow(forcing_vals),2)  # assuming that every second value is missing, and the first one is missing
+      cat("data are at hourly resolution -> linearly interpolating to half hours!",fill=TRUE)
+      missing <- seq(1,nrow(forcing_vals),2)  # assuming that every second HH value is missing, and the first HH one is missing
       
+      ## go over all columns (variables) except PR (with column number pr_c)
       for (c in c(2:ncol(forcing_vals))[-(pr_c-1)]){  # assuming that first column is "gregtime"
         forcing_vals[missing,c] <- sapply(missing, function(x) mean(c(forcing_vals[x+1,c],forcing_vals[x-1,c]),na.rm=T))
       } 
-      ### special treatment for precip
+      ## special treatment for precipitation (PR)
+      # get the HR timesteps 
       precip_events <- which(forcing_vals[,pr_c] > 0)
       forcing_vals[precip_events-1,pr_c] <- forcing_vals[precip_events,pr_c]
       #forcing_vals[precip_events,pr_c]   <- 0.5 * forcing_vals[precip_events,pr_c]
@@ -597,13 +617,15 @@ for (s in 1:length(sites)){
     
     
     ## fill variables if only a few entries are missing (that is required to make sure JSBACH is correctly working)
+    # not the precipitation (PR) column
     interpolate_columns <- c(2:ncol(forcing_vals))[-which(c(2:ncol(forcing_vals)) == pr_c)]
-        
+
+    print("fill variables if only a few entries are missing (excluding PR)")
     cat("in total",nrow(forcing_vals),"observations",fill=T)    
     for (c in interpolate_columns){ 
       missing <- which(is.na(forcing_vals[,c]))
       if (length(missing) > 0){
-        cat("filled",length(missing),"values in variable",colnames(forcing_vals)[4],fill=TRUE)
+        cat("filling",length(missing),"values in variable",colnames(forcing_vals)[c],fill=TRUE)
         w <- 2
         still_missing <- TRUE
         while (still_missing){
@@ -651,8 +673,10 @@ for (s in 1:length(sites)){
   
   
     ### create nc file on disk
-    filename_forcing <- paste0(sites[s],".", startyear,"-", endyear,".forcing.halfhourly.nc")
-    forcing <- nc_create(filename=filename_forcing,
+    filenameForcing     <- paste0(sites[s],".", startyear,"-", endyear,".forcing.halfhourly.nc")
+    filenameForcingWork <- paste0(sites[s],".", startyear,"-", endyear,".forcing.halfhourly",Sys.Date(),".nc")
+    print(paste0("Creating new forcing file in work dir: ", filenameForcingWork))
+    forcing <- nc_create(filename=filenameForcingWork,
                          vars=list(air_pressure,air_pressure_flag,air_temp,air_temp_flag,longwave,longwave_flag,shortwave,
                                    shortwave_flag,mpot,mpot_flag,wspeed,wspeed_flag,rel_humidity,rel_humidity_flag,
                                    qair,qair_flag,precip,precip_flag,d13C,CO2))
@@ -684,7 +708,9 @@ for (s in 1:length(sites)){
     nc_close(forcing)
   
     ## copy result file to the right folder
-    file.copy(from=filename_forcing, to=paste0(modelForcingOutDir, filename_forcing), overwrite=TRUE)
+    print("Copying the newly created forcing file into the met_forcing dir overwriting any previous version & keeping the version in the work dir for manual deletion")
+    print(paste0(filenameForcingWork, " -> ", modelForcingOutDir, filenameForcing))
+    file.copy(from=filenameForcingWork, to=paste0(modelForcingOutDir, filenameForcing), overwrite=TRUE)
   
   }  # end: if (create_forcing_files)
   
@@ -715,8 +741,8 @@ for (s in 1:length(sites)){
 
     if (!create_forcing_files){
       ## lon and lat
-      latitude  <- siteinfo[siteinfo[,"site"] == sites[s],"lat"]
-      longitude <- siteinfo[siteinfo[,"site"] == sites[s],"lon"]
+      latitude  <- ncvar_get(fluxForcFile, "latitude")
+      longitude <- ncvar_get(fluxForcFile, "longitude")
       if (longitude < 0){   # convert lon to degrees east!
         longitude <- 360 + longitude 
       }
@@ -756,7 +782,7 @@ for (s in 1:length(sites)){
         
     ### interpolate, if necessary
     if (interpolate & !l_HH){
-      cat("data are at hourly resolution and linearly interpolated to half hours!",fill=TRUE)
+      cat("data are at hourly resolution -> linearly interpolating to half hours!",fill=TRUE)
       missing <- seq(1,nrow(obs_vals),2)  # assuming that every second value is missing, and the first one is missing
       
       for (c in c(2:ncol(obs_vals))){  # assuming that first column is "year"
