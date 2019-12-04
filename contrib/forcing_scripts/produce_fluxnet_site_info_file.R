@@ -16,7 +16,7 @@
 ##    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
 
 ##
-## script to generate surface run files for SLM
+## script to generate site-info (a.k.a. surface or ic/bc) files for QUINCY - FLUXNET2 site-set
 ##
 
 ## library
@@ -24,8 +24,8 @@ library(ncdf4)
 
 #########################################################################################
 ## run this script by:
-## cd contrib/forcing_scripts/
-## Rscript ./produce_fluxnet_site_info_file.R
+##      cd contrib/forcing_scripts/
+##      Rscript --vanilla ./produce_fluxnet_site_info_file.R
 
 
 #########################################################################################
@@ -37,7 +37,7 @@ library(ncdf4)
 ## site_list.dat containing basic site-level data
 ## input path
 ipath            <- "/Net/Groups/BGI/model/OCN/input/point/FLUXNET/v2/"
-allsiteinfo      <- read.table(paste0(ipath,"site_list.dat"),stringsAsFactor=F,header=T)
+allsiteinfo      <- read.table("generate_fluxnet_site_list.dat", header=T, sep="", stringsAsFactor=F)
 
 ## get site names and start/end years of data
 allsitestartyear <- allsiteinfo$start
@@ -369,7 +369,7 @@ write.table(siteinfo,file=paste0("flux_all_sites_1901-2006_list",Sys.Date(),".da
 
 
 
-print(paste0("Script has finished. The new flux_all_sites_list.dat with ",siteParam," Parameters were created."))
+print(paste0("Script has finished. The two new flux_all_sites_list.dat files with ",siteParam," parameters were created."))
 
 
 ## end ##
