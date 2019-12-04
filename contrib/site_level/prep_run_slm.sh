@@ -38,9 +38,9 @@ slmModel="land"
 
 
 ##>> sites <<###########################################################################################
-## select set of sites: FLUXNET or CRUNCEPv7
-# forcing data and fluxnet/cruncep/face site info *list.dat for the specific set of sites: /Net/Groups/BGI/data/Model/SLM1/input/point/ 
-# options: fluxnet cruncep face manip fert craine photacc spp1685
+## select the site-set:
+# forcing data and site info *list.dat for all site-sets: /Net/Groups/BGI/data/Model/SLM1/input/point/ 
+# options: fluxnet fluxnet3 cruncep face manip fert craine photacc spp1685
 forcingDataSet="fluxnet"
 # forcing with or without a transient (like spinup) phase before the actual simulation starts
 # options: static transient
@@ -56,20 +56,20 @@ customSiteList="F"
 customSiteListFileName=""
 ## run a single site: provide the Site-ID 
 # this option must be empty (i.e., singleSiteName="" ) to run multiple sites !
-# Site-ID must be consistent with the forcingDataSet option above, i.e., fluxnet, cruncep, face, manip
+# Site-ID must be consistent with the forcingDataSet option above, i.e., fluxnet, fluxnet3, cruncep, face, manip, ...
 # you can get the Site-ID from the 1st column of the particular site-list info file in /Net/Groups/BGI/data/Model/SLM1/input/point/"forcingDataSet"/
-# examples: [FLUX] "DE-Hai" "FI-Hyy" "ZA-Kru"  [CRUN] "BHS_01" "HAI_01" "ILO_05"  
+# examples: [FLUX/3] "DE-Hai" "FI-Hyy" "ZA-Kru"  [CRUN] "BHS_01" "HAI_01" "ILO_05"  
 #           [FACE] "DK-AMB" "OR-ELE"  [MANIP] "ES-MaG" "ES-MaT"  [FERT] "HAR-CON_4" "HAR-HIG_4" "HAR-LOW_4" "HAR-CON_5"
 #           [CRAINE] "CRA_01" "CRA_02" "CRA_18"  [PHOTACC] "ARC_01" "MON_02" "STR_01"  [SPP_1685] "BBR" "LUE" "VES"
 singleSiteName=""
 
 
 ##>> special runs <<####################################################################################
-##(1) fluxnet diagnostics output 
-# run Fluxnet simulations creating timestep output for the last full forcing period within the simulation runtime 'simulation_length_number'
+##(1) fluxnet/3 diagnostics output 
+# run Fluxnet/3 simulations creating timestep output for the last full forcing period within the simulation runtime 'simulation_length_number'
 # in addition output is created at the interval 'output_interval_pool' (must not be "timestep") from 'output_start_...' to 'output_end_...'
 # T (True) or F (False) [large caps]
-# when set to "T" simulations and extra scripts will be run by the run.slm.sh for each of the fluxnet sites you specify above (i.e., all sites, customSiteList, one site: singleSiteName)
+# when set to "T" simulations and extra scripts will be run by the run.slm.sh for each of the fluxnet/3 sites you specify above (i.e., all sites, customSiteList, one site: singleSiteName)
 # scripts are: convert_slm2FLUXNET.R & generate_FLUXNET_diagnostics.R
 specialFluxnetOutput="F"
 
@@ -92,7 +92,7 @@ spinupLengthGFDB=500
 paramSensitivitySim="F"
 # you can give absolute values ("F") or proportional changes within range [0 < x < 2] ("T")
 paramChangesProportional="F"
-# please provide the Site-ID   (see examples in the three lines above the option "singleSiteName" ~ line 44)
+# please provide the Site-ID   (see examples in the three lines above the option "singleSiteName" ~ line 61)
 paramSensitivitySiteName="DE-Hai"
 
 
@@ -205,6 +205,10 @@ while getopts ":e:f:c:m:s:r:y:b:z:n:u:h" opt; do
     "fl")
       echo "   forcingDataSet=fluxnet"
       forcingDataSet="fluxnet"
+      ;;
+    "f3")
+      echo "   forcingDataSet=fluxnet3 (Berkley 2015)"
+      forcingDataSet="fluxnet3"
       ;;
     "cr")
       echo "   forcingDataSet=cruncep"
@@ -348,6 +352,7 @@ while getopts ":e:f:c:m:s:r:y:b:z:n:u:h" opt; do
     echo " -f set the forcingDataSet"
     echo "    Arguments to -f:"
     echo "       fl: FLUXNET"
+    echo "       f3: FLUXNET3 (Berkley 2015)"
     echo "       cr: CRUNCEPv7"
     echo "       fa: FACE sites"
     echo "       ma: MANIP tree and grassland sites"
@@ -496,7 +501,7 @@ fi
 return 0
 }
 # lists to validate against
-validateForcingDataSet="fluxnet cruncep face manip fert craine photacc spp1685"
+validateForcingDataSet="fluxnet fluxnet3 cruncep face manip fert craine photacc spp1685"
 validateForcingMode="static transient"
 validateSiteSelection="all cue spp"
 validateSlmModel="land plant soil canopy"
@@ -669,6 +674,10 @@ case "$forcingDataSet" in
   #siteDataObsFold="/Net/Groups/BGI/data/Model/SLM1/evaluation/point/FLUXNET2/"
   siteDataObsFold="/Net/Groups/BGI/data/Model/SLM1/evaluation/point/FLUXNET/"   # evaluation data; 'FLUXNET' is a symlink
   ;;
+"fluxnet3")
+  siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET3/"
+  siteDataObsFold="/Net/Groups/BGI/data/Model/SLM1/evaluation/point/FLUXNET/"   # evaluation data; 'FLUXNET' is a symlink
+  ;;
 "cruncep")
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/CRUNCEPv7/"
   siteDataObsFold="no such evaluation data"  # but this variable must contain something
@@ -819,6 +828,13 @@ else # the default case: $customSiteList == "F"
           siteListFileName="flux_baseline_sites_1901-2006_list.dat"
           echo " You use u80/81/82. Setting site list file to flux_baseline_sites_1901-2006_list.dat."
        fi
+    fi
+    ;;
+  "fluxnet3")
+    if [ $forcingMode == "static" ]; then
+      siteListFileName="flux3_all_sites_1991-2014_list.dat"
+    else 
+      siteListFileName="flux3_all_sites_1901-2014_list.dat"
     fi
     ;;
   "cruncep")
@@ -1041,10 +1057,10 @@ fi
   
 
 ## transient forcing and fluxnet simulation
-# note: actual simulation length 1901 to x varies with the site, because teh available site data does start at diff years and has different lengths
+# note: actual simulation length 1901 to x varies with the site, because the available site data does start at diff years and has different lengths
 # this is dealt with in run_slm.sh
-if [ $forcingDataSet == "fluxnet" ] &&  [ $forcingMode == "transient" ]; then
-  echo " You started a transient simulation with fluxnet data."
+if [ $forcingDataSet == "fluxnet" ] || [ $forcingDataSet == "fluxnet3" ] && [ $forcingMode == "transient" ]; then
+  echo " You started a transient simulation with fluxnet forcing: ""$forcingDataSet"
   echo " Note: the simulation (starting in 1901 after the spinup) ends with the last year of data available for the particular site."
   echo " Hence, the actual simulation length may vary with the fluxnet sites."
   echo " You set the simulation length to: ""$simulation_length_number"" starting in 1901. This may change for most sites."
@@ -1057,6 +1073,18 @@ fi
 ## an identifier (additional to siteName) for static and transient forcing files -> passed to run_slm.sh (via config file) ##
 case "$forcingDataSet" in
 "fluxnet")
+  if [ $forcingMode == "static" ]
+   then
+    forcingModeFileID="_s_"
+    # for the soil model the forcing file indentifier is different, as here only static (1 yr) forcing is available
+    if [ "$slmModel" == "soil" ]; then
+     forcingModeFileID="_"
+    fi
+  else
+    forcingModeFileID="_t_"
+  fi
+  ;;
+"fluxnet3")
   if [ $forcingMode == "static" ]
    then
     forcingModeFileID="_s_"
@@ -1188,11 +1216,15 @@ fi
 if [ $specialFluxnetOutput == "T" ]
  then
     # check site data set
-    if [ $forcingDataSet != "fluxnet" ]; then
-      echo "EXIT! You might want to use FLUXNET sites when enabling special FLUXNET-Simulation output :) ."
+    if [ $forcingDataSet == "fluxnet" ]; then
+      echo " Running specal Fluxnet Simulation with site-set: FLUXNET2"
+    elif [ $forcingDataSet == "fluxnet3" ]; then
+      echo " Running specal Fluxnet Simulation with site-set: FLUXNET3"
+    else
+      echo "EXIT! You might want to use FLUXNET/3 sites when enabling special FLUXNET-Simulation output :) ."
       exit 1
     fi
-    # check SLM model
+    # check SLM model    
     if [ $slmModel == "soil" ]; then
       echo "EXIT! specialFluxnetOutput currently not working with SLM ""$slmModel"" model."
       rm -r "$simFold"  # deleting the already created simulation folder
@@ -1200,7 +1232,7 @@ if [ $specialFluxnetOutput == "T" ]
     fi
     # give info on screen
     echo " "
-    echo " You just started simulations to generate FLUXNET diagnostics from the last complete forcing period before the end of the ""$simulation_length_number"" years."
+    echo " You just started simulations to generate FLUXNET/3 diagnostics from the last complete forcing period before the end of the ""$simulation_length_number"" years."
     # docu: if e.g. the simulation length is 80 years, the last full forcing period, considering 3 years of data, could be from year 76 to 78
     # if $singleSiteName is not empty
     if [ ! -z "$singleSiteName" ]; then

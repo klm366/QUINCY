@@ -288,15 +288,23 @@ if [ $useSiteSpecificAWC == "T" ]; then
    changeNamelistValue soil_awc_prescribe "$(awk '{print $11}' <<< "$siteData")" 
 fi
 # special fluxnet output #
+# calc forcing period length for namelist
 if [ $specialFluxnetOutput == "T" ]; then
-    year1=$(awk '{print $5}' <<< "$siteData")
-    # quickfix ! 
-    if [ $fluxnetTransientSim == "T" ]; then
+  # startyear
+  year1=$(awk '{print $5}' <<< "$siteData")
+  # in case of transient simulations: get startyear from "site-info file for static simulations"
+  if [ $fluxnetTransientSim == "T" ]; then
+    if [ $forcingDataSet == "fluxnet" ]; then
       year1=$(grep "$forcingSiteFileID" "/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET2/flux_all_sites_1995-2006_list.dat" | awk '{print $5}')
+    elif [ $forcingDataSet == "fluxnet3" ]; then
+      year1=$(grep "$forcingSiteFileID" "/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET3/flux3_all_sites_1991-2014_list.dat" | awk '{print $5}')
     fi
-    year2=$(awk '{print $6}' <<< "$siteData")
-    forcingPeriodLength=$(($year2-$year1+1))
-    changeNamelistValue fluxnet_output_length "$forcingPeriodLength"
+  fi
+  # lastyear
+  year2=$(awk '{print $6}' <<< "$siteData")
+  # period
+  forcingPeriodLength=$(($year2-$year1+1))
+  changeNamelistValue fluxnet_output_length "$forcingPeriodLength"
 fi
 # transient simulations with fluxnet sites #
 if [ $fluxnetTransientSim == "T" ]; then

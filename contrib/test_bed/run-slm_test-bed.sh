@@ -88,9 +88,9 @@ plant_functional_type_id=5      # 1 - 8
 
 # forcing input
 flag_oneYearForcing="F"         # T (True) or F (False): whether to use (repeatedly) only the 1st year of the climate forcing input file
-forcingDataSet="fluxnet"        # options: fluxnet cruncep face manip fert craine photacc spp1685 none (for 'none' provide: test_bed/climate.dat [land plant canopy] or soil_forcing_litterfall.dat & soil_forcing_soilphysics.dat [soil])
+forcingDataSet="fluxnet"        # options: fluxnet fluxnet3 cruncep face manip fert craine photacc spp1685 none (for 'none' provide: test_bed/climate.dat [land plant canopy] or soil_forcing_litterfall.dat & soil_forcing_soilphysics.dat [soil])
 siteName="DE-Hai"               # get the Site-ID from the 1st column of the particular "site list .dat"
-                                # examples: [FLUX] "DE-Hai" "FI-Hyy" "ZA-Kru"  [CRUN] "BHS_01" "HAI_01" "ILO_05"  
+                                # examples: [FLUX/3] "DE-Hai" "FI-Hyy" "ZA-Kru"  [CRUN] "BHS_01" "HAI_01" "ILO_05"  
                                 #           [FACE] "DK-AMB" "OR-ELE"  [MANIP] "ES-MaG" "ES-MaT"  [FERT] "HAR-CON_4" "HAR-HIG_4" "HAR-LOW_4" "HAR-CON_5"
                                 #           [CRAINE] "CRA_01" "CRA_02" "CRA_18"  [PHOTACC] "ARC_01" "MON_02" "STR_01"  [SPP_1685] "BBR" "LUE" "VES"
 soil_awc_prescribe=300.0        # float !
@@ -132,6 +132,10 @@ while getopts ":p:m:i:f:s:y:b:z:h" opt; do
     "fl")
       echo "   forcingDataSet=fluxnet"
       forcingDataSet="fluxnet"
+      ;;
+    "f3")
+      echo "   forcingDataSet=fluxnet3 (Berkley 2015)"
+      forcingDataSet="fluxnet3"
       ;;
     "cr")
       echo "   forcingDataSet=cruncep"
@@ -256,6 +260,7 @@ while getopts ":p:m:i:f:s:y:b:z:h" opt; do
     echo " -f set the forcingDataSet"
     echo "    Arguments to -f:"
     echo "       fl: FLUXNET"
+    echo "       f3: FLUXNET3 (Berkley 2015)"
     echo "       cr: CRUNCEPv7"
     echo "       fa: FACE sites"
     echo "       ma: MANIP tree and grassland sites"
@@ -330,7 +335,7 @@ validateOutputInterval="timestep daily weekly monthly yearly"
 validatePlantFunctionalTypeID="1 2 3 4 5 6 7 8"
 validateOptionForcing="constant generate readfile"
 validateSetPFTAutomatically="yes no"
-validateForcingDataSet="fluxnet cruncep face manip fert craine photacc spp1685 none"
+validateForcingDataSet="fluxnet fluxnet3 cruncep face manip fert craine photacc spp1685 none"
 validateSb_adsorp_scheme="eca_full eca_part eca_none"
 
 ## validate user-defined model-options ##
@@ -384,6 +389,9 @@ forceLandMetFile="climate.dat"
 case "$forcingDataSet" in
 "fluxnet")
   siteDataSet="FLUXNET2/"
+  ;;
+"fluxnet3")
+  siteDataSet="FLUXNET3/"
   ;;
 "cruncep")
   siteDataSet="CRUNCEPv7/"
@@ -442,6 +450,9 @@ fi
 case "$forcingDataSet" in
 "fluxnet")
   allSiteInfoFile="$siteDataDirBase""$siteDataSet"flux_all_sites_1995-2006_list.dat
+  ;;
+"fluxnet3")
+  allSiteInfoFile="$siteDataDirBase""$siteDataSet"flux3_all_sites_1991-2014_list.dat
   ;;
 "cruncep")
   allSiteInfoFile="$siteDataDirBase""$siteDataSet"crun_cue_gfdb_sites_1984-2013_list.dat
@@ -503,6 +514,9 @@ fi
 #  i.e. the met_forcing file for the specific site (not the full file name but an string long enough to identify the file correctly)
 case "$forcingDataSet" in
 "fluxnet")
+  siteNameStatMetForc="$siteName""_s_"                # e.g.: DE-Hai  ->  DE-Hai_s_*.dat  ->  DE-Hai_s_2000-2006.dat  -> climate.dat
+  ;;
+"fluxnet3")
   siteNameStatMetForc="$siteName""_s_"                # e.g.: DE-Hai  ->  DE-Hai_s_*.dat  ->  DE-Hai_s_2000-2006.dat  -> climate.dat
   ;;
 "cruncep")
@@ -596,7 +610,7 @@ if [ $slmModel != "test_canopy" ] && [ $slmModel != "test_radiation" ]; then    
           else # land plant canopy
             cp ./"$forceLandMetFile"    ./"$slmModel"/"$forceLandMetFile"
         fi 
-      # forcingDataSet == fluxnet / cruncep / face / manip / fert / craine / photacc / spp1685
+      # forcingDataSet == fluxnet / fluxnet3 / cruncep / face / manip / fert / craine / photacc / spp1685
       else 
         if [ $slmModel == "soil" ]
           then
