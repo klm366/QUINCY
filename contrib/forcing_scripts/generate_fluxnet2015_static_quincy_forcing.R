@@ -54,9 +54,9 @@ infile_ext='.forcing.halfhourly.nc'
 
 ## read site info file (produced using OCN ?)
 allsiteinfo       <- read.table("generate_fluxnet2015_site_list.dat", sep="", header=T, stringsAsFactor=F)  # created manually using generate_fluxnet_site_list.dat
+allsitename       <- allsiteinfo[,1]
 allsitestartyear  <- allsiteinfo[,2]
 allsiteendyear    <- allsiteinfo[,3]
-allsitename       <- allsiteinfo[,1]
 site_list         <- allsitename
 
 doy <- ceiling(seq(1/48,365,1/48))
@@ -105,6 +105,7 @@ for (s in 1:length(site_list)) {
       qair    <- ncvar_get(fid,"qair")[1,] *1000
       press   <- ncvar_get(fid,"air_pressure")[1,] /100
       wind    <- ncvar_get(fid,"wspeed")[1,]
+      wind[wind < 0.1] <- 0.1    # may not be smaller 0.1 for model stability
       ## forcing input files do not contain snowfall information; QUINCY reads the snow, but does not use it; so, simply set all to zero
       snow    <- rain * 0.0 
       ## correct some swdown values in IL-Yat
@@ -128,6 +129,13 @@ for (s in 1:length(site_list)) {
       snow    <- snow[- leapPositions]
       # remove date vector; not needed hereafter
       remove(dateInt)
+    }
+
+    # lon (from the jsbach metforcing files) needs to be converted back to the range [-180,180]
+    # it was converted to degrees east in the generate_fluxnet2015_icbc_surface_forcing_eval_files_jsbach.R
+    if (lonsite > 180){ 
+      lonsite <- lonsite - 360
+      #print(paste0(site_list[s], " convert lon from degrees east to range [-180,180] | longitude is now: ", lonsite))
     }
 
     # P deposition data
