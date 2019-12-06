@@ -102,6 +102,8 @@ CONTAINS
     dsl4jsb_var2D_onDomain(TURB_,rough_m) = &
       MERGE(dsl4jsb_var2D_onDomain(TURB_,rough_m), 1._wp, dsl4jsb_var2D_onDomain(TURB_,rough_m) > 0._wp)
 
+    !$acc update device(dsl4jsb_var2D_onDomain(TURB_,rough_m))
+
     CALL input_file%Close()
 
     ! avoid compiler warnings about pointers not being dereferenced

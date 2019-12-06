@@ -1127,6 +1127,8 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':calculate_current_c_ta_state_sum'
     INTEGER                     :: ics, ice, iblk
 
+   
+
     dsl4jsb_Real2D_onChunk ::  c_green_ta
     dsl4jsb_Real2D_onChunk ::  c_reserve_ta
     dsl4jsb_Real2D_onChunk ::  c_woods_ta
@@ -1183,13 +1185,13 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg2_ta)     ! in
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2_ta)            ! in
 
-    current_c_state_sum = c_green_ta + c_woods_ta + c_reserve_ta + c_crop_harvest_ta + &
-        & c_acid_ag1_ta + c_water_ag1_ta + c_ethanol_ag1_ta + c_nonsoluble_ag1_ta + &
-        & c_acid_ag2_ta + c_water_ag2_ta + c_ethanol_ag2_ta + c_nonsoluble_ag2_ta + &
-        & c_acid_bg1_ta + c_water_bg1_ta + c_ethanol_bg1_ta + c_nonsoluble_bg1_ta + &
-        & c_acid_bg2_ta + c_water_bg2_ta + c_ethanol_bg2_ta + c_nonsoluble_bg2_ta + &
-        & c_humus_1_ta  + c_humus_2_ta
-
+    !$claw expand parallel update 
+    current_c_state_sum(ics:ice) = c_green_ta(:) + c_woods_ta(:) + c_reserve_ta(:) + c_crop_harvest_ta(:) + &
+        & c_acid_ag1_ta(:) + c_water_ag1_ta(:) + c_ethanol_ag1_ta(:) + c_nonsoluble_ag1_ta(:) + &
+        & c_acid_ag2_ta(:) + c_water_ag2_ta(:) + c_ethanol_ag2_ta(:) + c_nonsoluble_ag2_ta(:) + &
+        & c_acid_bg1_ta(:) + c_water_bg1_ta(:) + c_ethanol_bg1_ta(:) + c_nonsoluble_bg1_ta(:) + &
+        & c_acid_bg2_ta(:) + c_water_bg2_ta(:) + c_ethanol_bg2_ta(:) + c_nonsoluble_bg2_ta(:) + &
+        & c_humus_1_ta(:)  + c_humus_2_ta(:)
   END SUBROUTINE calculate_current_c_ta_state_sum
 
 
@@ -1263,12 +1265,13 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2)             ! in
 
     !TODO-JN-COHORTS: could be done in mo_carbon_process
-    c_bg_sum = c_acid_bg1 + c_water_bg1 + c_ethanol_bg1 + c_nonsoluble_bg1 + &
-             & c_acid_bg2 + c_water_bg2 + c_ethanol_bg2 + c_nonsoluble_bg2 + &
-             & c_humus_1  + c_humus_2
+    !$claw expand parallel update
+    c_bg_sum(ics:ice) = c_acid_bg1(:) + c_water_bg1(:) + c_ethanol_bg1(:) + c_nonsoluble_bg1(:) + &
+             & c_acid_bg2(:) + c_water_bg2(:) + c_ethanol_bg2(:) + c_nonsoluble_bg2(:) + &
+             & c_humus_1(:)  + c_humus_2(:)
 
-    c_ag_sum_1 =  c_acid_ag1 + c_water_ag1 + c_ethanol_ag1 + c_nonsoluble_ag1 + c_humus_1
-
+    c_ag_sum_1(ics:ice) =  c_acid_ag1(:) + c_water_ag1(:) + c_ethanol_ag1(:) + c_nonsoluble_ag1(:) + c_humus_1(:)
+    !$claw end expand
   END SUBROUTINE calculate_current_c_ag_1_and_bg_sums
 
 
@@ -1300,8 +1303,9 @@ CONTAINS
     !INTEGER                     :: ics, ice, iblk
 
     CALL calculate_current_c_ta_state_sum(tile, options, Cconserve)
-
-    Cconserve = Cconserve - old_c_state_sum - cflux
+    
+    !$claw expand parallel update
+    Cconserve(:) = Cconserve(:) - old_c_state_sum(:) - cflux(:)
 
   END SUBROUTINE check_carbon_conservation
 
@@ -1312,14 +1316,13 @@ CONTAINS
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
   !
-  SUBROUTINE yday_carbon_conservation_test(tile, options)
+  SUBROUTINE yday_carbon_conservation_test(tile)
 
     USE mo_carbon_constants,   ONLY: molarMassCO2_kg, sec_per_day
     USE mo_jsb_grid,           ONLY: Get_grid
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(in), TARGET :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)         :: options
 
     dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_memory(L2A_)
@@ -1327,9 +1330,10 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER      :: model
     TYPE(t_jsb_grid),  POINTER      :: grid
+    TYPE(t_jsb_task_options)        :: options
 
-    REAL(wp), DIMENSION(options%nc) :: C_flux_yday
-    INTEGER                :: ics, ice, iblk
+    REAL(wp), ALLOCATABLE :: C_flux_yday(:)
+    INTEGER               :: ics, ice, iblk, nc
 
     dsl4jsb_Get_memory(L2A_)
     dsl4jsb_Get_memory(CARBON_)
@@ -1338,13 +1342,24 @@ CONTAINS
     grid => Get_grid(model%grid_id)
 
 !    iblk  = options%iblk
-    ics   = options%ics
-    ice   = options%ice
+    options%ics = 1
+    options%ice = grid%nproma
+
+    ics = options%ics
+    ice = options%ice
+    nc = ice - ics + 1
+
+    ALLOCATE(C_flux_yday(nc))
 
     DO iblk = 1, grid%nblks
 
       CALL model%Set_options(iblk=iblk)
-      ! TODO: ics and ice should be retrieved for each iblk (are not necessarily constant for each block in ICON)
+      options%iblk = iblk
+      IF (iblk == grid%nblks) THEN
+        options%ice = grid%npromz
+        ice = grid%npromz
+        ! TODO: ics and ice should be retrieved for each iblk (are not necessarily constant for each block in ICON)
+      END IF
 
       dsl4jsb_Get_var2D_onChunk(L2A_,  carbon_conservation_test )     ! inout
       dsl4jsb_Get_var2D_onChunk(L2A_,  yday_c_state_sum )             ! inout
@@ -1353,17 +1368,17 @@ CONTAINS
       IF (.NOT. ALL(carbon_conservation_test .EQ. -999.0_wp)) THEN
       
         !CO2 flux due to npp and respiration
-        C_flux_yday(:) = - ((dsl4jsb_var2D_onChunk(CARBON_, cflux_npp_2_atm_yday_ta)     &
+        C_flux_yday(ics:ice) = - ((dsl4jsb_var2D_onChunk(CARBON_, cflux_npp_2_atm_yday_ta)     &
           & + dsl4jsb_var2D_onChunk(CARBON_, cflux_soilresp_2_atm_ta)                   &
           & + dsl4jsb_var2D_onChunk(CARBON_, cflux_herb_2_atm_ta)) / molarMassCO2_kg) * sec_per_day
 
         IF (model%processes(DISTURB_)%p%config%active) THEN
-          C_flux_yday(:) =  C_flux_yday(:) &
+          C_flux_yday(ics:ice) =  C_flux_yday(ics:ice) &
             & - (dsl4jsb_var2D_onChunk(CARBON_, cflux_fire_all_2_atm_ta))
         ENDIF
 
         CALL calculate_current_c_ta_state_sum(tile, options, carbon_conservation_test)
-        carbon_conservation_test = carbon_conservation_test - yday_c_state_sum  - C_flux_yday(:)
+        carbon_conservation_test = carbon_conservation_test - yday_c_state_sum  - C_flux_yday(ics:ice)
 
       ELSE
         carbon_conservation_test = 0._wp
@@ -1372,6 +1387,8 @@ CONTAINS
       CALL calculate_current_c_ta_state_sum(tile, options, yday_c_state_sum)
 
     END DO
+
+    DEALLOCATE(C_flux_yday)
 
   END SUBROUTINE yday_carbon_conservation_test
 

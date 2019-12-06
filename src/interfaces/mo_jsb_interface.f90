@@ -231,7 +231,9 @@ CONTAINS
     CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, dtime=dtime, steplen=steplen)
 
     ! Put atmospheric forcing into the a2l memory.
-    tile => model%Get_top_tile()
+
+    CALL model%Get_top_tile(tile)
+
     CALL update_atm2land(                           &
       & tile,                                       &
       & model%options(no_omp_thread),               &
@@ -274,7 +276,9 @@ CONTAINS
 
     ! Finally, give the required variables back to the atmosphere
     ! Note: evapopot is an optional parameter, so it has to be passed without the colon!
-    tile => model%Get_top_tile()
+
+    CALL model%Get_top_tile(tile)
+
     CALL update_land2atm(                        &
       & tile,                                    &
       & model%options(no_omp_thread),            &
@@ -379,11 +383,13 @@ CONTAINS
     ! Reset all tiles at the beginning of the timestep
     CALL model%Reset_tiles()
 
-    ! Carbon conservation test    
-    tile => model%Get_top_tile()
+    ! Carbon conservation test
+
+    CALL model%Get_top_tile(tile)
+
     IF (model%processes(CARBON_)%p%config%active) THEN
       IF(is_newday()) THEN
-        CALL yday_carbon_conservation_test(tile, model%options(no_omp_thread))
+        CALL yday_carbon_conservation_test(tile)
       END IF
     END IF
     
@@ -417,7 +423,8 @@ CONTAINS
     END IF
 
     model => Get_model(model_id)
-    tile => model%Get_top_tile()
+
+    CALL model%Get_top_tile(tile)
 
     ! Update options
     CALL model%Set_options(steplen=steplen)
@@ -427,6 +434,10 @@ CONTAINS
       CALL hd_check_water_budget(tile, model%options(no_omp_thread))
 
       CALL interface_hd_ocean(tile, model%options(no_omp_thread))
+#endif
+
+#ifdef _OPENACC
+    CALL model%gpu_to_cpu()
 #endif
 
   END SUBROUTINE jsbach_finish_timestep
