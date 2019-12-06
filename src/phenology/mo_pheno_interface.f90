@@ -815,7 +815,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real2D_onChunk :: fract_fpc
     dsl4jsb_Real2D_onChunk :: fract_fpc_max
-    ! REAL(wp), POINTER      :: fract_fpc_mon(:,:)
+    REAL(wp), POINTER      :: fract_fpc_mon(:,:)
 
 
     INTEGER  :: iblk, ics, ice, nc, ic
@@ -856,7 +856,7 @@ CONTAINS
         END DO
         !$ACC END PARALLEL LOOP
       ELSE
-        ! fract_fpc_mon(1:,0:) => dsl4jsb_memory(PHENO_)%fract_fpc_mon (ics:ice, iblk, :) ! in
+        fract_fpc_mon(1:,0:) => dsl4jsb_memory(PHENO_)%fract_fpc_mon (ics:ice, iblk, :) ! in
         CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO ic = 1, nc
