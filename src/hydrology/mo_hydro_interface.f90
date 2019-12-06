@@ -1787,7 +1787,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    TYPE(t_jsb_model), POINTER :: model
+    ! TYPE(t_jsb_model), POINTER :: model
 
     dsl4jsb_Def_memory(HYDRO_)
 
@@ -1888,7 +1888,6 @@ CONTAINS
   SUBROUTINE update_evaporation(tile, options)
 
     USE mo_phy_schemes,            ONLY: q_effective, heat_transfer_coef
-    USE mo_jsb_physical_constants, ONLY: grav, cvdifts
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
