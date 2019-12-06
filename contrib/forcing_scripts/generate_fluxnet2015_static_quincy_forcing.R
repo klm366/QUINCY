@@ -149,12 +149,22 @@ for (s in 1:length(site_list)) {
       pdep[]  <- p_dummy
     nc_close(fid)
     
-    # N deposition data
     # create empty vectors based on the length of the 'swdown' meteo vector
     co2=co2_dC13=co2_DC14=noy=nhx <- numeric(length(swdown))
+    # loop over forcing years
     for (year in c(startyear:endyear)) {
       print(c(site_list[s],year))
-      fid<-nc_open(paste0("/Net/Groups/BGI/model/OCN/input/gridded/NDEP/CESM-CAM/ndep_",year,".nc"))
+
+      ## N deposition
+      #  this data covers the period 1850 to 2100
+      if (year < 1996){
+        # use Ndep data created by Sönke
+        fid<-nc_open(paste0("/Net/Groups/BGI/model/OCN/input/gridded/NDEP/CESM-CAM/ndep_",year,".nc"))
+      }
+      else {
+        #  using RCP 8.5 data for all years after 1995
+        fid<-nc_open(paste0("/Net/Groups/BGI/model/OCN/input/gridded/NDEP/CESM-CAM/ndep_RCP8.5_",year,".nc"))
+      }
         lonndep   <- ncvar_get(fid,'lon')
         latndep   <- ncvar_get(fid,'lat')
         latx      <- which.min(abs(latndep-as.numeric(latsite)))
@@ -190,7 +200,7 @@ for (s in 1:length(site_list)) {
                    press[1:nstep],rain[1:nstep],snow[1:nstep],wind[1:nstep],co2[1:nstep],co2_dC13[1:nstep],co2_DC14[1:nstep],
                    nhx[1:nstep],noy[1:nstep],pdep[1:nstep])
 
-    # write output
+    # write output append yearly data (header created above)
     write.table(format(round(forcing,digits=4),nsmall=1), file=outSiteFile, append=TRUE, quote=FALSE,
                 col.names=FALSE, row.names=FALSE, sep=" ")
 

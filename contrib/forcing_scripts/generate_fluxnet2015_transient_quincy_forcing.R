@@ -46,7 +46,7 @@ set.seed(123)
 
 ## create out folder & set in/out path
 ipath1 <- "/Net/Groups/BGI/work_2/QUINCY/SLM/Data/fluxnet2015_jsbach_input/met_forcing/"
-opath  <- "./new_fluxnet2015_static_met_forcing/"
+opath  <- "./new_fluxnet2015_transient_met_forcing/"
 dir.create(opath, showWarnings=T, recursive=T)
 
 ## input file pattern definitions
@@ -193,8 +193,16 @@ for (s in 1:length(site_list)) {
     # loop over the years from default start of forcing (1901) to the site-specific last years (overall max should be 2014)
     for (year in forcing_startyear:endyear){
 
-      # N deposition data
-      fid <- nc_open(paste0("/Net/Groups/BGI/model/OCN/input/gridded/NDEP/CESM-CAM/ndep_", year, ".nc"))
+      ## N deposition
+      #  this data covers the period 1850 to 2100
+      if (year < 1996){
+        # use Ndep data created by Sönke
+        fid<-nc_open(paste0("/Net/Groups/BGI/model/OCN/input/gridded/NDEP/CESM-CAM/ndep_",year,".nc"))
+      }
+      else {
+        #  using RCP 8.5 data for all years after 1995
+        fid<-nc_open(paste0("/Net/Groups/BGI/model/OCN/input/gridded/NDEP/CESM-CAM/ndep_RCP8.5_",year,".nc"))
+      }
         lonndep   <- ncvar_get(fid,'lon')
         latndep   <- ncvar_get(fid,'lat')
         latx      <- which.min(abs(latndep-as.numeric(latsite)))
