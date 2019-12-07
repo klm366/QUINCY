@@ -310,7 +310,6 @@ CONTAINS
   REAL ( KIND= wp ) , POINTER :: swpar_srf_down ( : )
   REAL ( KIND= wp ) , POINTER :: par ( : )
   REAL ( KIND= wp ) , POINTER :: par_down_mol ( : )
-  REAL ( KIND= wp ) , POINTER :: par_down_mol_nacc ( : )
   REAL ( KIND= wp ) , POINTER :: soil_reflectivity_par ( : )
   REAL ( KIND= wp ) , POINTER :: alb_vis_soil ( : )
   REAL ( KIND= wp ) , POINTER :: lai ( : )
@@ -318,22 +317,17 @@ CONTAINS
   REAL ( KIND= wp ) , POINTER :: fract_par_direct ( : )
   REAL ( KIND= wp ) , POINTER :: fract_par_diffuse ( : )
   REAL ( KIND= wp ) , POINTER :: canopy_bound_lai ( : )
-  REAL ( KIND= wp ) , POINTER :: apar_nacc ( : )
   REAL ( KIND= wp ) , POINTER :: fapar ( : )
   REAL ( KIND= wp ) , POINTER :: fapar_cl ( : , : )
   REAL ( KIND= wp ) , POINTER :: apar_per_lai_cl ( : , : )
   REAL ( KIND= wp ) , POINTER :: lai_cl ( : , : )
-  REAL ( KIND= wp ) , POINTER :: apar_per_lai_cl_nacc ( : , : )
   CHARACTER ( LEN= * ) , PARAMETER :: routine ="mo_rad_interface" //&
   ":update_radiation_par"
   INTEGER :: claw_induction_2
   INTEGER :: claw_induction_7
-  INTEGER :: claw_induction_8
+  INTEGER :: claw_induction_9
   INTEGER :: claw_induction_10
   INTEGER :: claw_induction_11
-  INTEGER :: claw_induction_12
-  INTEGER :: claw_induction_13
-  INTEGER :: claw_induction_14
 
   iblk = options % iblk
   ics = options % ics
@@ -382,23 +376,19 @@ CONTAINS
   alb_vis_soil => rad__mem % alb_vis_soil % ptr ( ics : ice , iblk )
   par => rad__mem % par % ptr ( ics : ice , iblk )
   par_down_mol => rad__mem % par_down_mol % ptr ( ics : ice , iblk )
-  par_down_mol_nacc => rad__mem % par_down_mol_nacc % ptr ( ics : ice , iblk )
   soil_reflectivity_par => rad__mem % soil_reflectivity_par % ptr ( ics : ice&
    , iblk )
   lai_cl => rad__mem % lai_cl % ptr ( ics : ice , : , iblk )
   fapar_cl => rad__mem % fapar_cl % ptr ( ics : ice , : , iblk )
   apar_per_lai_cl => rad__mem % apar_per_lai_cl % ptr ( ics : ice , : , iblk )
-  apar_per_lai_cl_nacc => rad__mem % apar_per_lai_cl_nacc % ptr ( ics : ice ,&
-   : , iblk )
-  apar_nacc => rad__mem % apar_nacc % ptr ( ics : ice , iblk )
   fapar => rad__mem % fapar % ptr ( ics : ice , iblk )
 !$acc data create(b4_layer_above)
 !$acc data present(apar_per_lai_cl(:,:))
 !$acc parallel
 !$acc loop gang vector
-  DO claw_induction_13 = 1 , size ( apar_per_lai_cl , 1 )
-   DO claw_induction_14 = 1 , size ( apar_per_lai_cl , 2 )
-    apar_per_lai_cl ( claw_induction_13 , claw_induction_14 ) = 0._wp
+  DO claw_induction_10 = 1 , size ( apar_per_lai_cl , 1 )
+   DO claw_induction_11 = 1 , size ( apar_per_lai_cl , 2 )
+    apar_per_lai_cl ( claw_induction_10 , claw_induction_11 ) = 0._wp
    END DO
   END DO
 !$acc end parallel
@@ -429,39 +419,14 @@ CONTAINS
     fapar_cl ( : , icanopy ) , lai_cl ( : , icanopy ) , apar_per_lai_cl ( : ,&
     icanopy ) )
   END DO
-!$acc data present(par_down_mol(:),par_down_mol_nacc(:))
+!$acc data present(fapar(:))
 !$acc parallel
 !$acc loop gang vector
-  DO claw_induction_12 = 1 , size ( par_down_mol_nacc , 1 )
-   par_down_mol_nacc ( claw_induction_12 ) = par_down_mol_nacc (&
-    claw_induction_12 ) + par_down_mol ( claw_induction_12 ) * dtime
+  DO claw_induction_9 = 1 , size ( fapar , 1 )
+   fapar ( claw_induction_9 ) = 0._wp
   END DO
 !$acc end parallel
 !$acc end data
-!$acc data present(apar_per_lai_cl(:,:),apar_per_lai_cl_nacc(:,:))
-!$acc parallel
-!$acc loop gang vector
-  DO claw_induction_10 = 1 , size ( apar_per_lai_cl_nacc , 1 )
-   DO claw_induction_11 = 1 , size ( apar_per_lai_cl_nacc , 2 )
-    apar_per_lai_cl_nacc ( claw_induction_10 , claw_induction_11 ) =&
-     apar_per_lai_cl_nacc ( claw_induction_10 , claw_induction_11 ) +&
-     apar_per_lai_cl ( claw_induction_10 , claw_induction_11 ) * dtime
-   END DO
-  END DO
-!$acc end parallel
-!$acc end data
-  DO icanopy = 1 , ncanopy , 1
-!$acc data present(par_down_mol(:),apar_nacc(:),fapar_cl(:,icanopy))
-!$acc parallel
-!$acc loop gang vector
-   DO claw_induction_8 = 1 , size ( apar_nacc , 1 )
-    apar_nacc ( claw_induction_8 ) = apar_nacc ( claw_induction_8 ) +&
-     par_down_mol ( claw_induction_8 ) * fapar_cl ( claw_induction_8 , icanopy&
-     ) * dtime
-   END DO
-!$acc end parallel
-!$acc end data
-  END DO
   DO icanopy = 1 , ncanopy , 1
 !$acc data present(fapar(:),fapar_cl(:,icanopy))
 !$acc parallel
@@ -570,7 +535,7 @@ CONTAINS
   INTEGER :: claw_induction_4
   INTEGER :: claw_induction_5
   INTEGER :: claw_induction_6
-  INTEGER :: claw_induction_9
+  INTEGER :: claw_induction_8
 
   iblk = options % iblk
   ics = options % ics
@@ -674,9 +639,9 @@ CONTAINS
 !$acc data present(swvis_srf_down(:),l_day(:),swnir_srf_down(:))
 !$acc parallel
 !$acc loop gang vector
-  DO claw_induction_9 = 1 , size ( l_day , 1 )
-   l_day ( claw_induction_9 ) = has_minimal_radiation ( swvis_srf_down (&
-    claw_induction_9 ) , swnir_srf_down ( claw_induction_9 ) )
+  DO claw_induction_8 = 1 , size ( l_day , 1 )
+   l_day ( claw_induction_8 ) = has_minimal_radiation ( swvis_srf_down (&
+    claw_induction_8 ) , swnir_srf_down ( claw_induction_8 ) )
   END DO
 !$acc end parallel
 !$acc end data

@@ -556,6 +556,7 @@ CONTAINS
   REAL ( KIND= wp ) , POINTER :: lai ( : )
   REAL ( KIND= wp ) , POINTER :: fract_fpc ( : )
   REAL ( KIND= wp ) , POINTER :: fract_fpc_max ( : )
+  REAL ( KIND= wp ) , POINTER :: fract_fpc_mon ( : , : )
   INTEGER :: iblk
   INTEGER :: ics
   INTEGER :: ice
@@ -606,16 +607,16 @@ CONTAINS
 !$acc end parallel
 !$acc end data
    ELSE
+    fract_fpc_mon ( 1 : , 0 : ) => pheno__mem % fract_fpc_mon ( ics : ice ,&
+     iblk , : )
     CALL get_time_interpolation_weights ( wgt1 , wgt2 , nmw1 , nmw2 )
-!$acc data &
-!$acc present(pheno__mem%fract_fpc_mon(:,iblk,nmw2) &
-!$acc ,pheno__mem%fract_fpc_mon(:,iblk,nmw1),fract_fpc(:))
+!$acc data present(fract_fpc_mon(:,nmw2),fract_fpc_mon(:,nmw1),fract_fpc(:))
 !$acc parallel
 !$acc loop gang vector
     DO claw_induction_6 = 1 , size ( fract_fpc , 1 )
-     fract_fpc ( claw_induction_6 ) = real ( wgt1 , wp ) * pheno__mem %&
-      fract_fpc_mon ( claw_induction_6 , iblk , nmw1 ) + real ( wgt2 , wp ) *&
-      pheno__mem % fract_fpc_mon ( claw_induction_6 , iblk , nmw2 )
+     fract_fpc ( claw_induction_6 ) = real ( wgt1 , wp ) * fract_fpc_mon (&
+      claw_induction_6 , nmw1 ) + real ( wgt2 , wp ) * fract_fpc_mon (&
+      claw_induction_6 , nmw2 )
     END DO
 !$acc end parallel
 !$acc end data
