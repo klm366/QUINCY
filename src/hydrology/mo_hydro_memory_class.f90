@@ -24,6 +24,7 @@ MODULE mo_hydro_memory_class
   USE mo_jsb_var_class,    ONLY: t_jsb_var_real1d, t_jsb_var_real2d, t_jsb_var_real3d
   USE mo_jsb_lct_class,    ONLY: LAND_TYPE, BARE_TYPE, VEG_TYPE, LAKE_TYPE, GLACIER_TYPE
   USE mo_jsb_varlist,      ONLY: BASIC !, MEDIUM, FULL
+  USE mo_jsb_process_class, ONLY: ON_TILE_, AGGREGATE_
 
   ! Use of prcesses in this module
   dsl4jsb_Use_processes HYDRO_, SSE_, SEB_, ASSIMI_
