@@ -1107,7 +1107,6 @@ CONTAINS
  SUBROUTINE update_water_stress ( tile , options )
   USE mo_hydro_process , ONLY: get_water_stress_factor
   USE mo_hydro_util , ONLY: get_water_in_root_zone
-  USE mo_phy_schemes , ONLY: qsat
 
   CLASS ( t_jsb_tile_abstract ) , INTENT(INOUT) :: tile
   TYPE ( t_jsb_task_options ) , INTENT(IN) :: options
@@ -1234,13 +1233,11 @@ CONTAINS
  END SUBROUTINE aggregate_water_stress
 
  SUBROUTINE update_canopy_cond_stressed ( tile , options )
-  USE mo_hydro_process , ONLY: get_canopy_conductance ,&
-   get_water_stress_factor
+  USE mo_hydro_process , ONLY: get_canopy_conductance
   USE mo_phy_schemes , ONLY: qsat
 
   CLASS ( t_jsb_tile_abstract ) , INTENT(INOUT) :: tile
   TYPE ( t_jsb_task_options ) , INTENT(IN) :: options
-  TYPE ( t_jsb_model ) , POINTER :: model
   TYPE ( t_seb_memory ) , POINTER :: seb__mem
   TYPE ( t_a2l_memory ) , POINTER :: a2l__mem
   TYPE ( t_hydro_memory ) , POINTER :: hydro__mem
@@ -1271,7 +1268,6 @@ CONTAINS
    CALL message ( trim ("mo_hydro_interface" //":update_canopy_cond_stressed"&
     ) ,"Starting on tile " // trim ( tile % name ) //" ..." )
   END IF
-  model => get_model ( tile % owner_model_id )
   SELECT TYPE ( mm => tile % mem ( seb_ ) % p )
   TYPE IS ( t_seb_memory )
    seb__mem => mm
@@ -1354,7 +1350,6 @@ CONTAINS
 
  SUBROUTINE update_evaporation ( tile , options )
   USE mo_phy_schemes , ONLY: q_effective , heat_transfer_coef
-  USE mo_jsb_physical_constants , ONLY: grav , cvdifts
 
   CLASS ( t_jsb_tile_abstract ) , INTENT(INOUT) :: tile
   TYPE ( t_jsb_task_options ) , INTENT(IN) :: options

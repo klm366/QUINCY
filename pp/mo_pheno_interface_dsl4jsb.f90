@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/phenology/mo_pheno_interface.f90
-!    with md5 hash: 58f18826a2b08c4b4b16f7cc9f0bd520
+!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/phenology/mo_pheno_interface.f90
+!    with md5 hash: 0d27a91419579efc431c19d304b099b3
 !
 !>
 !! @brief Contains the interfaces to the phenlogy processes
@@ -755,7 +755,7 @@ CONTAINS
     REAL(wp), POINTER, DIMENSION(:) :: lai
     REAL(wp), POINTER, DIMENSION(:) :: fract_fpc
     REAL(wp), POINTER, DIMENSION(:) :: fract_fpc_max
-    ! REAL(wp), POINTER      :: fract_fpc_mon(:,:)
+    REAL(wp), POINTER      :: fract_fpc_mon(:,:)
 
 
     INTEGER  :: iblk, ics, ice
@@ -793,12 +793,10 @@ CONTAINS
         !$claw expand parallel update savepoint=ser_jsb_pheno_update_fpc_expand_1 tile_name=tile%name
         fract_fpc(:) = get_foliage_projected_cover(fract_fpc_max(:), lai(:), 1._wp)
       ELSE
-        ! fract_fpc_mon(1:,0:) => pheno__mem%fract_fpc_mon (ics:ice, iblk, :) ! in
+        fract_fpc_mon(1:,0:) => pheno__mem%fract_fpc_mon (ics:ice, iblk, :) ! in
         CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
-        ! fract_fpc(:) = REAL(wgt1,wp) * fract_fpc_mon(:,nmw1) + REAL(wgt2,wp) * fract_fpc_mon(:,nmw2)
         !$claw expand parallel update savepoint=ser_jsb_pheno_update_fpc_expand_2 tile_name=tile%name
-        fract_fpc(:) = REAL(wgt1,wp) * pheno__mem%fract_fpc_mon(:,iblk,nmw1) + &
-          &            REAL(wgt2,wp) * pheno__mem%fract_fpc_mon(:,iblk,nmw2)
+        fract_fpc(:) = REAL(wgt1,wp) * fract_fpc_mon(:,nmw1) + REAL(wgt2,wp) * fract_fpc_mon(:,nmw2)
       END IF
     ELSE        
       ! We have PFTs and %scheme /= climatology

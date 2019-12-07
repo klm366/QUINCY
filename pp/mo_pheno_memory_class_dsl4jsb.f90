@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/phenology/mo_pheno_memory_class.f90
-!    with md5 hash: 11cec7933bbf448e736f89924b858ff2
+!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/phenology/mo_pheno_memory_class.f90
+!    with md5 hash: 4880c93387b87b20efc57680d38fc5ef
 !
 !>
 !! @brief Contains the memory class for phenology.
@@ -171,10 +171,12 @@ CONTAINS
       &  )                                       &
       & .AND. .NOT. ASSOCIATED(mem%lai%ptr)) THEN
 
-      ALLOCATE(mem%lai_mon      (hgrid%nproma, hgrid%nblks, 0:13))
-      ALLOCATE(mem%fract_fpc_mon(hgrid%nproma, hgrid%nblks, 0:13))
-      !$acc enter data pcreate(mem%lai_mon,mem%fract_fpc_mon)
-      !$acc enter data attach(mem%lai_mon,mem%fract_fpc_mon)
+      ! IF (TRIM(pheno__conf%scheme) == 'climatology') THEN   ! TODO
+        ALLOCATE(mem%lai_mon      (hgrid%nproma, hgrid%nblks, 0:13))
+        ALLOCATE(mem%fract_fpc_mon(hgrid%nproma, hgrid%nblks, 0:13))
+        !$acc enter data pcreate(mem%lai_mon,mem%fract_fpc_mon)
+        !$acc enter data attach(mem%lai_mon,mem%fract_fpc_mon)
+      ! END IF
   
       !$acc enter data pcreate(mem%lai,mem%fract_fpc,mem%fract_fpc_max,      &
       !$acc mem%fract_forest,mem%veg_fract_correction)

@@ -1,6 +1,6 @@
 !
 ! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/radiation/mo_rad_constants.f90
+!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/radiation/mo_rad_constants.f90
 !    with md5 hash: a8ddf4a936fc6ea2945dd37bea42ed56
 !
 !>

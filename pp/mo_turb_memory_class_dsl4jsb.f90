@@ -1,6 +1,6 @@
 !
 ! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/turbulence/mo_turb_memory_class.f90
+!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/turbulence/mo_turb_memory_class.f90
 !    with md5 hash: edb4fcc75639258d6158ff3f540b28b5
 !
 !>
