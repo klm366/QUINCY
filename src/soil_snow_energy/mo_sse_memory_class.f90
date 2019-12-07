@@ -112,8 +112,6 @@ CONTAINS
 
     !$acc enter data pcreate(mem)
 
-    IF (ASSOCIATED(mem%vol_heat_cap%ptr)) RETURN
-
     !$acc enter data pcreate(mem%vol_heat_cap,mem%vol_heat_cap_sl, &
     !$acc mem%vol_heat_cap_snow,mem%heat_cond,mem%heat_cond_sl,    &
     !$acc mem%heat_cond_snow,mem%thermal_diffusivity,mem%t_soil,   &
