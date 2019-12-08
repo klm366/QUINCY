@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from:
 !    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/phenology/mo_pheno_memory_class.f90
-!    with md5 hash: 4880c93387b87b20efc57680d38fc5ef
+!    with md5 hash: add7f114d31c563b1a055346db2a42c6
 !
 !>
 !! @brief Contains the memory class for phenology.
@@ -168,8 +168,7 @@ CONTAINS
 
     IF ( (     One_of(LAND_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(VEG_TYPE,  lct_ids(:)) > 0 &
-      &  )                                       &
-      & .AND. .NOT. ASSOCIATED(mem%lai%ptr)) THEN
+      &  ) ) THEN
 
       ! IF (TRIM(pheno__conf%scheme) == 'climatology') THEN   ! TODO
         ALLOCATE(mem%lai_mon      (hgrid%nproma, hgrid%nblks, 0:13))

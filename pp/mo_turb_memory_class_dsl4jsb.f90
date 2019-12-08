@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from:
 !    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/turbulence/mo_turb_memory_class.f90
-!    with md5 hash: edb4fcc75639258d6158ff3f540b28b5
+!    with md5 hash: 79046d4d72bb1e571694b0c84b0132a4
 !
 !>
 !! @brief Contains the memory class for the surface turbulence process.
@@ -81,8 +81,6 @@ CONTAINS
 
     !$acc enter data pcreate(mem)
 
-    IF (ASSOCIATED(mem%rough_m%ptr)) RETURN
-
     !$acc enter data pcreate(mem%rough_m,mem%rough_h)
 
     CALL jsb_add_var( mem, 'rough_m', mem%rough_m,                                       &
@@ -108,8 +106,7 @@ CONTAINS
       &   .OR. One_of(BARE_TYPE,    lct_ids(:)) > 0 &
       &   .OR. One_of(LAND_TYPE,    lct_ids(:)) > 0 &
       &   .OR. One_of(GLACIER_TYPE, lct_ids(:)) > 0 &
-      &  )                                          &
-      & .AND. .NOT. ASSOCIATED(mem%fact_q_air%ptr)) THEN
+      &  ) ) THEN
 
       !$acc enter data pcreate(mem%fact_q_air,mem%fact_qsat_srf, &
       !$acc mem%fact_qsat_trans_srf)
