@@ -363,4 +363,3 @@ CONTAINS
   END SUBROUTINE Init_assimi_memory
 
 #endif
-END MODULE mo_assimi_memory_class
