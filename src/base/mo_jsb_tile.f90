@@ -279,6 +279,7 @@ CONTAINS
 
     ! Allocate all memory components for new tile and initialize their data part with NULL()
     ALLOCATE(this%mem(max_no_of_processes))
+    !$acc enter data create(this%mem)
 
     ! Loop over all processes and initialize memory for this tile
     DO iproc=1,max_no_of_processes
@@ -311,12 +312,19 @@ CONTAINS
         child_no = this%path(this%level)
         ! this%param(iproc)%p => t_jsb_param(iproc)
         tmp_ptr => Create_process_memory(iproc)
+        __acc_attach(tmp_ptr)
+        !$acc enter data create(tmp_ptr%vars)
+        !$acc update device(tmp_ptr%vars)
         IF (ASSOCIATED(this%parent_tile)) THEN
-          IF (.NOT. ASSOCIATED(this%parent_tile%mem(iproc)%p%children) .AND. this%parent_tile%Get_no_of_children() > 0) &
-            & ALLOCATE(this%parent_tile%mem(iproc)%p%children(this%parent_tile%Get_no_of_children()))
+          IF (.NOT. ASSOCIATED(this%parent_tile%mem(iproc)%p%children) .AND. this%parent_tile%Get_no_of_children() > 0) THEN
+            ALLOCATE(this%parent_tile%mem(iproc)%p%children(this%parent_tile%Get_no_of_children()))
+            !$acc enter data create(this%parent_tile%mem(iproc)%p%children)
+          END IF
           this%parent_tile%mem(iproc)%p%children(child_no)%p => tmp_ptr
+          __acc_attach(this%parent_tile%mem(iproc)%p%children(child_no)%p)
         END IF
         this%mem(iproc)%p => tmp_ptr
+        __acc_attach(this%mem(iproc)%p)
         this%mem(iproc)%p%id = iproc
         this%mem(iproc)%p%varlist_name = TRIM(varlist_name_loc)
         this%mem(iproc)%p%grid_id = this%grid_id
@@ -338,6 +346,7 @@ CONTAINS
       END IF
 
     END DO
+    !$acc update device(this%mem)
 
     hgrid   => Get_grid(this%grid_id)
     surface => Get_vgrid('surface')
@@ -543,8 +552,10 @@ CONTAINS
       DO i=1,mem%no_of_vars
         name = mem%vars(i)%p%name
         IF (no_of_children > 0) THEN
-          IF (.NOT. ALLOCATED(mem%vars(i)%p%child_idx)) &
-            & ALLOCATE(mem%vars(i)%p%child_idx(no_of_children))
+          IF (.NOT. ALLOCATED(mem%vars(i)%p%child_idx)) THEN
+            ALLOCATE(mem%vars(i)%p%child_idx(no_of_children))
+            !$acc enter data create(mem%vars(i)%p%child_idx)
+          END IF
           DO child_no=1,no_of_children
             IF (ASSOCIATED(mem%children(child_no)%p)) THEN
               mem%vars(i)%p%child_idx(child_no) = mem%children(child_no)%p%Get_var_position(TRIM(name))
@@ -552,6 +563,7 @@ CONTAINS
               mem%vars(i)%p%child_idx(child_no) = 0
             END IF
           END DO
+          !$acc update device(mem%vars(i)%p%child_idx)
         END IF
       END DO
 

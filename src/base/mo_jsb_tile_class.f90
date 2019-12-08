@@ -152,18 +152,18 @@ MODULE mo_jsb_tile_class
   END INTERFACE
 
   ABSTRACT INTERFACE
-    SUBROUTINE aggregate_interface_2d(this, tile, var, ics, ice, iblk, caller)
-      IMPORT :: t_jsb_aggregator, t_jsb_tile_abstract, t_jsb_var_real2d
+    SUBROUTINE aggregate_interface_2d(this, mem, var, ics, ice, iblk, caller)
+      IMPORT :: t_jsb_aggregator, t_jsb_memory, t_jsb_var_real2d
       CLASS(t_jsb_aggregator),    INTENT(inout) :: this
-      CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+      CLASS(t_jsb_memory),        INTENT(inout) :: mem
       TYPE(t_jsb_var_real2d),     INTENT(inout) :: var
       INTEGER,                    INTENT(in)    :: ics, ice, iblk
       CHARACTER(len=*),           INTENT(in)    :: caller
     END SUBROUTINE aggregate_interface_2d
-    SUBROUTINE aggregate_interface_3d(this, tile, var, ics, ice, iblk,caller)
-      IMPORT :: t_jsb_aggregator, t_jsb_tile_abstract, t_jsb_var_real3d
+    SUBROUTINE aggregate_interface_3d(this, mem, var, ics, ice, iblk,caller)
+      IMPORT :: t_jsb_aggregator, t_jsb_memory, t_jsb_var_real3d
       CLASS(t_jsb_aggregator),    INTENT(inout) :: this
-      CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+      CLASS(t_jsb_memory),        INTENT(inout) :: mem
       TYPE(t_jsb_var_real3d),     INTENT(inout) :: var
       INTEGER,                    INTENT(in)    :: ics, ice, iblk
       CHARACTER(len=*),           INTENT(in)    :: caller
@@ -663,6 +663,7 @@ CONTAINS
     IF (no_of_children < 1) CALL finish(TRIM(routine), 'This should not happen!')
 
     ALLOCATE(aggregator)
+    !$acc enter data create(aggregator)
     aggregator%name = 'weighted_by_fract'
 
     grid => Get_grid(grid_id)
@@ -722,14 +723,18 @@ CONTAINS
 
       ALLOCATE(fract(ice-ics+1))
       ALLOCATE(fract_sum(ice-ics+1))
+      !$acc enter data create(fract, fract_sum)
+      !$acc data present(tile%fract, this%fractions)
       fract(:) = tile%fract(ics:ice,iblk)
       fract_sum(:) = SUM(this%fractions(ics:ice,iblk,:), DIM=2)
+      !$acc end data
       ! IF (ASSOCIATED(tile%parent) .AND. ANY( fract_sum(:) < 1._wp - EPSILON(1._wp) .AND. fract(:) > 0._wp)) THEN
       !   CALL message(TRIM(routine), 'Sum of child tile fractions on tile '//TRIM(tile%name)//': '//&
       !     &                         real2string(MINVAL(fract_sum(:)))//' - '//real2string(MAXVAL(fract_sum(:))), &
       !     &          all_print=.TRUE.)
       !   CALL finish(TRIM(routine), 'Sum of tile fractions is not 1 on tile')
       ! END IF
+      !$acc exit data delete(fract, fract_sum)
       DEALLOCATE(fract, fract_sum)
 
       tile%l_fract_children_changed(ics:ice,iblk) = .FALSE.
@@ -737,16 +742,16 @@ CONTAINS
 
   END SUBROUTINE Set_fractions_aggregator
 
-  SUBROUTINE Aggregate_weighted_by_fract_2d(this, tile, var, ics, ice, iblk, caller)
+  SUBROUTINE Aggregate_weighted_by_fract_2d(this, mem, var, ics, ice, iblk, caller)
 
     CLASS(t_jsb_aggregator_weighted_by_fract), INTENT(inout) :: this
-    CLASS(t_jsb_tile_abstract),                INTENT(inout) :: tile
+    CLASS(t_jsb_memory),                       INTENT(inout) :: mem
     TYPE(t_jsb_var_real2d),                    INTENT(inout) :: var
     INTEGER,                                   INTENT(in)    :: ics, ice, iblk
     CHARACTER(len=*),                          INTENT(in)    :: caller
 
     CLASS(t_jsb_var), POINTER :: ptr
-    INTEGER :: no_children, i, iproc, j
+    INTEGER :: no_children, i, iproc, j, ichild
     ! REAL(dp) :: missval
 
     CHARACTER(len=256) :: routine
@@ -759,26 +764,28 @@ CONTAINS
 
     IF (.NOT. ASSOCIATED(var%ptr)) RETURN
 
-    CALL this%Set_fractions(tile, ics, ice, iblk)
+    ! CALL this%Set_fractions(tile, ics, ice, iblk)
 
     ! missval = var%missval
 
     iproc = var%owner_proc_id
-    IF (iproc < 0) CALL finish(TRIM(routine), 'Unknown process for variable '//TRIM(var%name)//' on tile '//TRIM(tile%name))
+    ! IF (iproc < 0) CALL finish(TRIM(routine), 'Unknown process for variable '//TRIM(var%name)//' on tile '//TRIM(tile%name))
 
-    IF (.NOT. ASSOCIATED(tile%mem(iproc)%p)) RETURN
+    ! IF (.NOT. ASSOCIATED(tile%mem(iproc)%p)) RETURN
 
-    no_children = tile%Get_no_of_children()
+    ! no_children = tile%Get_no_of_children()
+    no_children = SIZE(mem%children)
 
-    IF (.NOT. ALLOCATED(var%child_idx)) THEN
-      CALL finish(TRIM(routine), 'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' not allocated')
-    ELSE IF (SIZE(var%child_idx) /= no_children) THEN
-      CALL finish(TRIM(routine), 'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' has wrong size')
-    END IF
+    ! IF (.NOT. ALLOCATED(var%child_idx)) THEN
+    !   CALL finish(TRIM(routine), 'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' not allocated')
+    ! ELSE IF (SIZE(var%child_idx) /= no_children) THEN
+    !   CALL finish(TRIM(routine), 'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' has wrong size')
+    ! END IF
 
-    !$acc data present(this%data_sum, this%fract_sum, var%ptr)
-    !$acc update host(var%ptr)
-    !!$acc parallel loop gang vector
+    !$acc update device(this%fractions)
+    !$acc data present(mem, mem%children, this%data_sum, this%fract_sum, var%ptr, var%child_idx, this%fractions)
+    !! !$acc update host(var%ptr)
+    !$acc parallel loop gang vector
     DO j = ics, ice
       this%data_sum (j,iblk) = 0._wp
       this%fract_sum(j,iblk) = 0._wp
@@ -786,17 +793,26 @@ CONTAINS
 
     DO i=1,no_children
       IF (var%child_idx(i) > 0) THEN
-        ptr => tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p
-        !$acc update host(ptr%ptr2d)
-        !!$acc parallel loop gang vector
+        ichild = var%child_idx(i)
+        ! ptr => tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p
+        !! !$acc update host(ptr%ptr2d)
+        !! !$acc update device(ptr%ptr2d)
+        !! !$acc data present(ptr%ptr2d)
+        !$acc data present(mem%children(i)%p%vars) copyin(mem%children(i)%p%vars(ichild))
+        !$acc parallel default(present)
+        !$acc loop gang vector
         DO j = ics, ice
           this%data_sum(j,iblk) = this%data_sum(j,iblk) &
-            & + this%fractions(j,iblk,i) * ptr%ptr2d(j,iblk)
+          ! & + this%fractions(j,iblk,i) * ptr%ptr2d(j,iblk)
+          ! & + this%fractions(j,iblk,i) * tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p%ptr2d(j,iblk)
+          & + this%fractions(j,iblk,i) * mem%children(i)%p%vars(ichild)%p%ptr2d(j,iblk)
           this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
         END DO
-        !!$acc end data
+        !$acc end parallel
+        !$acc end data
       END IF
     END DO
+
     ! print*,'AAA ',ics,ice,MINVAL(this%data_sum(ics:ice)), MAXVAL(this%data_sum(ics:ice)),&
       ! & MINVAL(this%fract_sum(ics:ice)), MAXVAL(this%fract_sum(ics:ice))
 
@@ -824,13 +840,13 @@ CONTAINS
       !!$acc parallel loop gang vector
       DO j = ics, ice
         IF (this%fract_sum(j,iblk) > 0._wp) THEN
-        var%ptr(j,iblk) = this%data_sum(j,iblk) / this%fract_sum(j,iblk)
+          var%ptr(j,iblk) = this%data_sum(j,iblk) / this%fract_sum(j,iblk)
         END IF
       END DO
     END IF
 
-    !!$acc update host(var%ptr)
-    !$acc update device(var%ptr)
+    !$acc update host(var%ptr)
+    !! !$acc update device(var%ptr)
     !$acc end data
 
     IF (var%l_aggregate_all) THEN
@@ -841,10 +857,10 @@ CONTAINS
 
   END SUBROUTINE Aggregate_weighted_by_fract_2d
 
-  SUBROUTINE Aggregate_weighted_by_fract_3d(this, tile, var, ics, ice, iblk, caller)
+  SUBROUTINE Aggregate_weighted_by_fract_3d(this, mem, var, ics, ice, iblk, caller)
 
     CLASS(t_jsb_aggregator_weighted_by_fract), INTENT(inout) :: this
-    CLASS(t_jsb_tile_abstract),                INTENT(inout) :: tile
+    CLASS(t_jsb_memory),                       INTENT(inout) :: mem
     TYPE(t_jsb_var_real3d),                    INTENT(inout) :: var
     INTEGER,                                   INTENT(in)    :: ics, ice, iblk
     CHARACTER(len=*),                          INTENT(in)    :: caller
@@ -863,22 +879,24 @@ CONTAINS
 
     IF (.NOT. ASSOCIATED(var%ptr)) RETURN
 
-    CALL this%Set_fractions(tile, ics, ice, iblk)
+    ! CALL this%Set_fractions(tile, ics, ice, iblk)
 
     ! missval = var%missval
 
-    iproc = var%owner_proc_id
-    IF (iproc < 0) CALL finish(TRIM(routine), 'Unknown process for variable '//TRIM(var%name)//' on tile '//TRIM(tile%name))
+    ! iproc = var%owner_proc_id
+    ! IF (iproc < 0) CALL finish(TRIM(routine), 'Unknown process for variable '//TRIM(var%name)//' on tile '//TRIM(tile%name))
 
-    IF (.NOT. ASSOCIATED(tile%mem(iproc)%p)) RETURN
+    ! IF (.NOT. ASSOCIATED(tile%mem(iproc)%p)) RETURN
 
-    no_children = tile%Get_no_of_children()
+    ! no_children = tile%Get_no_of_children()
+    no_children = SIZE(mem%children)
 
-    IF (.NOT. ALLOCATED(var%child_idx)) THEN
-      CALL finish(TRIM(routine), 'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' not allocated')
-    ELSE IF (SIZE(var%child_idx) /= no_children) THEN
-      CALL finish(TRIM(routine), 'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' has wrong size')
-    END IF
+    ! IF (.NOT. ALLOCATED(var%child_idx)) THEN
+    !   CALL finish(TRIM(routine), 'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' not allocated')
+    ! ELSE IF (SIZE(var%child_idx) /= no_children) THEN
+    !   CALL finish(TRIM(routine), 'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' has wrong size')
+    ! END IF
+
     !$acc data present(this%fract_sum, this%data_sum, var%ptr, this%fractions)
     !$acc update host(var%ptr)
     DO ilev=1,SIZE(var%ptr,2)
@@ -890,7 +908,8 @@ CONTAINS
 
       DO i=1,no_children
         IF (var%child_idx(i) > 0) THEN
-          ptr => tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p
+          ! ptr => tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p
+          ptr => mem%children(i)%p%vars(var%child_idx(i))%p
           !$acc update host(ptr%ptr3d)
           !!$acc parallel loop gang vector
           DO j = ics, ice

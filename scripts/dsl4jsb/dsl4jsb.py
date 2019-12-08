@@ -116,9 +116,12 @@ macros = {
     'var_ptr': [re.compile(
         r'dsl4jsb_var_ptr *\((.*?)_ *, *(.*?) *\)', re.IGNORECASE),
         r'\1__mem%\2%ptr'],
+    # 'aggregate_onchunk': [re.compile(
+    #     r'dsl4jsb_Aggregate_onChunk *\((.*?)_ *, *(.*?) *, *(.*?)\)', re.IGNORECASE),
+    #     r'CALL \3%Aggregate(tile, \1__mem%\2,ics,ice,iblk,routine)']
     'aggregate_onchunk': [re.compile(
         r'dsl4jsb_Aggregate_onChunk *\((.*?)_ *, *(.*?) *, *(.*?)\)', re.IGNORECASE),
-        r'CALL \3%Aggregate(tile, \1__mem%\2,ics,ice,iblk,routine)']
+        r'CALL \3%Aggregate(\1__mem, \1__mem%\2,ics,ice,iblk,routine)']
     }
 
 help_text = """
