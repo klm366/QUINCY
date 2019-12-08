@@ -120,18 +120,20 @@ MODULE mo_pheno_memory_class
 CONTAINS
 
 
-  SUBROUTINE Init_pheno_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_pheno_memory(mem, prefix, suffix, process_action, lct_ids, model_id)
 
     ! Declarations
     USE mo_jsb_varlist,       ONLY: jsb_add_var
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
+    USE mo_jsb_process_class, ONLY: ON_TILE_, AGGREGATE_
 
     ! Arguments
     CLASS(t_pheno_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),      INTENT(in)            :: prefix
     CHARACTER(len=*),      INTENT(in)            :: suffix
+    INTEGER,               INTENT(in)            :: process_action
     INTEGER,               INTENT(in)            :: lct_ids(:)
     INTEGER,               INTENT(in)            :: model_id
 
@@ -142,6 +144,7 @@ CONTAINS
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface !, canopy_layer        ! Vertical grid
     INTEGER :: table
+    LOGICAL :: l_required
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_pheno_memory'
 
@@ -160,6 +163,8 @@ CONTAINS
     dsl4jsb_Get_config(PHENO_)
     
     !$acc enter data pcreate(mem)
+
+    l_required = process_action == ON_TILE_
 
     IF ( (     One_of(LAND_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(VEG_TYPE,  lct_ids(:)) > 0 &
@@ -180,6 +185,7 @@ CONTAINS
         & t_cf('leaf_area_index', '', ''),                                     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
+        & l_required=.TRUE.,                                                   &
         & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
@@ -188,6 +194,7 @@ CONTAINS
         & t_cf('foliage_projected_cover', '', ''),                             &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
+        & l_required=.TRUE.,                                                   & ! Only because of output in experiment scripts
         & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
@@ -196,6 +203,7 @@ CONTAINS
         & t_cf('maximum_fpc', '', ''),                                         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
+        & l_required=.TRUE.,                                                   &
         & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
@@ -204,6 +212,7 @@ CONTAINS
         & t_cf('forest_fraction', '', ''),                                     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
+        & l_required=l_required,                                                     &
         & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
@@ -212,6 +221,7 @@ CONTAINS
         & t_cf('Correction factor to convert tile to canopy area', '', '') ,   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
+        & l_required=l_required,                                                     &
         & output_level=FULL,                                                   &
         & lrestart=.TRUE.,                                                     &
         & initval_r=0.0_wp )
@@ -231,6 +241,7 @@ CONTAINS
           & t_cf('growth_phase_SummerGreen', '', ''),                          &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
+          & l_required=l_required,                                                     &
           & initval_r=-1.0_wp) ! Start in rest phase for summergreens
 
         CALL jsb_add_var( mem,'growth_phase_eg', mem%growth_phase_EG,          &
@@ -238,6 +249,7 @@ CONTAINS
           & t_cf('growth_phase_EverGreen', '', ''),                            &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
+          & l_required=l_required,                                                     &
           & initval_r=1.0_wp ) ! Start in vegetative phase for evergreens
 
         CALL jsb_add_var( mem,'growth_phase_crp', mem%growth_phase_CRP,        &
@@ -245,6 +257,7 @@ CONTAINS
           & t_cf('growth_phase_Crop', '', ''),                                 &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
+          & l_required=l_required,                                                     &
           & initval_r=-1.0_wp )
 
         CALL jsb_add_var( mem,'growth_days_eg', mem%days_since_growth_begin_EG, &
@@ -252,6 +265,7 @@ CONTAINS
           & t_cf('days_since_growth_begin_EverGreen', '', ''),                  &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
           & prefix, suffix,                                                     &
+          & l_required=l_required,                                                     &
           & initval_r=0.0_wp )
 
         CALL jsb_add_var( mem,'growth_days_sg', mem%days_since_growth_begin_SG, &
@@ -259,6 +273,7 @@ CONTAINS
           & t_cf('days_since_growth_begin_SummerGreen', '', ''),                &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
           & prefix, suffix,                                                     &
+          & l_required=l_required,                                                     &
           & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
 
         CALL jsb_add_var( mem,'yday_npp_pot_rate', mem%previous_day_NPP_pot_rate_ca, &
@@ -266,6 +281,7 @@ CONTAINS
           & t_cf('yday_NPP_pot_rate_ca', 'prev day NPP_pot_rate_ca', ''),            &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
           & prefix, suffix,                                                          &
+          & l_required=l_required,                                                     &
           & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp )
 
         ! CALL jsb_add_var( mem,'laimax_dyn', mem%laiMax_dyn,                    &
@@ -287,6 +303,7 @@ CONTAINS
           & t_cf('day_NPP_sum', '', ''),                                       &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
+          & l_required=l_required,                                                     &
           & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp)
 
         CALL jsb_add_var( mem,'heat_sum_eg', mem%heat_sum_EG,                  &
@@ -294,6 +311,7 @@ CONTAINS
           & t_cf('heat_sum_EG', '', ''),                                       &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
+          & l_required=l_required,                                                     &
           & loutput=.TRUE., lrestart=.TRUE., initval_r=-99.0_wp)
 
         CALL jsb_add_var( mem,'heat_sum_sg', mem%heat_sum_SG,                  &
@@ -301,6 +319,7 @@ CONTAINS
           & t_cf('heat_sum_SG', '', ''),                                       &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
+          & l_required=l_required,                                                     &
           & loutput=.TRUE., lrestart=.TRUE., initval_r=-99.0_wp) ! has to be lower than -1
 
         CALL jsb_add_var( mem,'heat_sum_crp', mem%heat_sum_CRP,                &
@@ -308,6 +327,7 @@ CONTAINS
           & t_cf('heat_sum_CRP', '', ''),                                      &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
+          & l_required=l_required,                                                     &
           & loutput=.TRUE., lrestart=.TRUE., initval_r=9999.0_wp)
 
         CALL jsb_add_var( mem,'heat_sum_winter', mem%heat_sum_winter,          &
@@ -315,6 +335,7 @@ CONTAINS
           & t_cf('heat_sum_winter', '', ''),                                   &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
+          & l_required=l_required,                                                     &
           & loutput=.TRUE., lrestart=.TRUE., initval_r=-EPSILON(1._wp))
 
         CALL jsb_add_var( mem,'chill_days_eg', mem%chill_days_EG,              &
@@ -322,6 +343,7 @@ CONTAINS
           & t_cf('chill_days_EG', '', ''),                                     &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
+          & l_required=l_required,                                                     &
           & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp)
 
         CALL jsb_add_var( mem,'chill_days_sg', mem%chill_days_SG,              &
@@ -329,6 +351,7 @@ CONTAINS
           & t_cf('chill_days_SG', '', ''),                                     &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
+          & l_required=l_required,                                                     &
           & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp)
 
         IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
@@ -337,6 +360,7 @@ CONTAINS
             & t_cf('maxLAI_allom', 'm^2(leaf)/m^2(ground)', 'maximum LAI according to allometric relationships'),  &
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
             & prefix, suffix,                                                    &
+            & l_required=l_required,                                                     &
             & loutput=.TRUE., lrestart=.TRUE., initval_r=0.4_wp)
 
 !@todo: variables are only relevant for forest pfts - how to constrain memory allocation to forest pfts?
@@ -345,12 +369,15 @@ CONTAINS
             & t_cf('number_of_individuals', 'trees ha-1', 'Number of individuals in last calculation'), &
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
             & prefix, suffix,                                                    &
+            & l_required=l_required,                                                     &
             & loutput=.TRUE., lrestart=.TRUE., initval_r=15000.0_wp)
+
           CALL jsb_add_var( mem,'biomass_per_ind', mem%biomass_per_individual, &
             & hgrid, surface,                                                    &
             & t_cf('biomass_per_individual', 'kg/tree', 'Biomass per individual according to allometric relationships'), &
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
             & prefix, suffix,                                                    &
+            & l_required=l_required,                                                     &
             & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
           CALL jsb_add_var( mem, 'cconservation_allom', mem%cconservation_allom,              &
@@ -359,6 +386,7 @@ CONTAINS
               & 'Test for c conservation on rescaling of c states for allom.'), &
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
             & prefix, suffix,                                                           &
+            & l_required=l_required,                                                     &
             & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
         END IF

@@ -21,6 +21,7 @@ MODULE mo_fuel_init
   USE mo_jsb_class,         ONLY: Get_model
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
+  USE mo_jsb_process_class, ONLY: ON_TILE_
 
   dsl4jsb_Use_processes FUEL_
   dsl4jsb_Use_config(FUEL_)
@@ -54,8 +55,6 @@ CONTAINS
 
     CALL fuel_init_bc(tile)
 
-
-
   END SUBROUTINE fuel_init
 
   SUBROUTINE fuel_init_bc(tile)
@@ -78,7 +77,7 @@ CONTAINS
     ! Get fuel memory of the tile
     !dsl4jsb_Get_memory(FUEL_)
 
-    IF (.NOT. tile%Is_process_active(FUEL_)) RETURN
+    IF (.NOT. tile%process_action(FUEL_) == ON_TILE_) RETURN
 
     CALL message(TRIM(routine), 'Setting fuel boundary conditions for tile '//TRIM(tile%name))
 
@@ -103,13 +102,13 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':fuel_init_ic'
 
+    IF (.NOT. tile%process_action(FUEL_) == ON_TILE_) RETURN
+
     model => get_model(tile%owner_model_id)
 
     ! Get fuel memory and config  of the tile
     !dsl4jsb_Get_memory(FUEL_)
     dsl4jsb_Get_config(FUEL_)
-
-    IF (.NOT. tile%Is_process_active(FUEL_)) RETURN
 
     CALL message(TRIM(routine), 'Setting fuel initial conditions for tile '//TRIM(tile%name))
 

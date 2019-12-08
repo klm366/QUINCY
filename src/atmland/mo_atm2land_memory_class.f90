@@ -74,7 +74,7 @@ MODULE mo_a2l_memory_class
 
 CONTAINS
 
-  SUBROUTINE Init_a2l_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_a2l_memory(mem, prefix, suffix, process_action, lct_ids, model_id)
 
     USE mo_jsb_varlist,       ONLY: jsb_add_var
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
@@ -85,6 +85,7 @@ CONTAINS
     CLASS(t_a2l_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),    INTENT(in)    :: prefix
     CHARACTER(len=*),    INTENT(in)    :: suffix
+    INTEGER,             INTENT(in)    :: process_action
     INTEGER,             INTENT(in)    :: lct_ids(:)
     INTEGER,             INTENT(in)    :: model_id
 
@@ -94,7 +95,10 @@ CONTAINS
     INTEGER :: table
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':new_a2l_memory'
-    IF (model_id > 0) CONTINUE ! avoid compiler warning about dummy argument not being used
+
+    IF (model_id > 0)       CONTINUE ! avoid compiler warning about dummy argument not being used
+    IF (process_action > 0) CONTINUE ! avoid compiler warning about dummy argument not being used
+
     table = tables(1)
 
     hgrid => Get_grid(mem%grid_id)

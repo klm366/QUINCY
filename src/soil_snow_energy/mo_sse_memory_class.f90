@@ -18,10 +18,11 @@ MODULE mo_sse_memory_class
   USE mo_kind,      ONLY: wp
   USE mo_exception, ONLY: finish
 
-  USE mo_jsb_model_class,  ONLY: t_jsb_model
-  USE mo_jsb_class,        ONLY: Get_model
-  USE mo_jsb_memory_class, ONLY: t_jsb_memory
-  USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_jsb_model_class,   ONLY: t_jsb_model
+  USE mo_jsb_class,         ONLY: Get_model
+  USE mo_jsb_memory_class,  ONLY: t_jsb_memory
+  USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_jsb_process_class, ONLY: ON_TILE_, AGGREGATE_
 
   ! Use of prcesses in this module
   dsl4jsb_Use_processes SSE_
@@ -71,7 +72,7 @@ MODULE mo_sse_memory_class
 
 CONTAINS
 
-  SUBROUTINE Init_sse_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_sse_memory(mem, prefix, suffix, process_action, lct_ids, model_id)
 
     USE mo_jsb_varlist,       ONLY: jsb_add_var, BASIC, MEDIUM !, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
@@ -82,6 +83,7 @@ CONTAINS
     CLASS(t_sse_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),     INTENT(in)    :: prefix
     CHARACTER(len=*),     INTENT(in)    :: suffix
+    INTEGER,              INTENT(in)    :: process_action
     INTEGER,              INTENT(in)    :: lct_ids(:)
     INTEGER,              INTENT(in)    :: model_id
 
@@ -91,6 +93,7 @@ CONTAINS
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface, soil_e, snow_e      ! Vertical grids
     INTEGER :: table
+    LOGICAL :: l_required
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_sse_memory'
 
@@ -112,6 +115,8 @@ CONTAINS
 
     !$acc enter data pcreate(mem)
 
+    l_required = process_action == ON_TILE_
+
     !$acc enter data pcreate(mem%vol_heat_cap,mem%vol_heat_cap_sl, &
     !$acc mem%vol_heat_cap_snow,mem%heat_cond,mem%heat_cond_sl,    &
     !$acc mem%heat_cond_snow,mem%thermal_diffusivity,mem%t_soil,   &
@@ -122,6 +127,7 @@ CONTAINS
       & t_cf('vol_heat_capacity_soil', 'J m-3 K-1', ''),                     &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
+      & l_required=l_required,                                                     &
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
@@ -130,6 +136,7 @@ CONTAINS
       & t_cf('vol_heat_capacity_soil', 'J m-3 K-1', ''),                     &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
+      & l_required=.TRUE.,                                                   &
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
@@ -138,6 +145,7 @@ CONTAINS
       & t_cf('vol_heat_capacity_snow', 'J m-3 K-1', ''),                     &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
+      & l_required=l_required,                                                     &
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
@@ -146,6 +154,7 @@ CONTAINS
       & t_cf('heat_cond_soil', 'J m-1 s-1 K-1', ''),                         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
+      & l_required=l_required,                                                     &
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
@@ -154,6 +163,7 @@ CONTAINS
       & t_cf('heat_cond_soil', 'J m-1 s-1 K-1', ''),                         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
+      & l_required=l_required,                                                     &
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
@@ -162,6 +172,7 @@ CONTAINS
       & t_cf('heat_cond_snow', 'J m-1 s-1 K-1', ''),                         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
+      & l_required=l_required,                                                     &
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
@@ -170,6 +181,7 @@ CONTAINS
       & t_cf('thermal_diffusivity_soil', 'm2 s-1', ''),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
+      & l_required=l_required,                                                     &
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
@@ -178,6 +190,7 @@ CONTAINS
       & t_cf('soil_temperature', 'K', ''),                                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
+      & l_required=l_required,                                                     &
       & output_level=BASIC,                                                  &
       & initval_r=280.0_wp )
 
@@ -186,6 +199,7 @@ CONTAINS
       & t_cf('soil_temperature_acoef', '', ''),                              &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
+      & l_required=l_required,                                                     &
       & initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 't_soil_bcoef', mem%t_soil_bcoef,                 &
@@ -193,6 +207,7 @@ CONTAINS
       & t_cf('soil_temperature_bcoef', '', ''),                              &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
+      & l_required=l_required,                                                     &
       & initval_r=0.0_wp )
 
     IF (dsl4jsb_Config(SSE_)%l_snow) THEN
@@ -203,6 +218,7 @@ CONTAINS
         & t_cf('snow_depth_sl', 'm', 'Depth of snow layers'),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
+        & l_required=.TRUE.,                                                   &
         & lrestart=.TRUE.,                                                     &
         & output_level=MEDIUM,                                                 &
         & initval_r=0._wp, l_aggregate_all=.TRUE. )
@@ -212,6 +228,7 @@ CONTAINS
         & t_cf('snow_temperature', 'K', ''),                                   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
+        & l_required=l_required,                                                     &
         & output_level=BASIC,                                                  &
         & initval_r=273.15_wp )
 
@@ -220,6 +237,7 @@ CONTAINS
         & t_cf('snow_temperature_acoef', '', ''),                              &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
+        & l_required=l_required,                                                     &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 't_snow_bcoef', mem%t_snow_bcoef,                 &
@@ -227,6 +245,7 @@ CONTAINS
         & t_cf('snow_temperature_bcoef', '', ''),                              &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
+        & l_required=l_required,                                                     &
         & initval_r=0.0_wp )
     END IF
 
@@ -238,6 +257,7 @@ CONTAINS
       & t_cf('heat_capacity_ground', 'J m-2 K-1', 'Ground heat capacity'),   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
+      & l_required=.TRUE.,                                                   &
       & output_level=BASIC,                                                  &
       & initval_r=1.3e5_wp )
 
@@ -246,6 +266,7 @@ CONTAINS
       & t_cf('heat_capacity_ground_old', 'J m-2 K-1', 'Ground heat capacity (old)'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
+      & l_required=.TRUE.,                                                           &
       & lrestart=.FALSE.,                                                            &
       & output_level=BASIC,                                                          &
       & initval_r=1.3e5_wp )
@@ -255,6 +276,7 @@ CONTAINS
       & t_cf('grnd_hflx', '', 'Ground heat flux'),                           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
+      & l_required=.TRUE.,                                                   &
       & output_level=BASIC,                                                  &
       & initval_r=10.0_wp )
 
@@ -263,6 +285,7 @@ CONTAINS
       & t_cf('grnd_hflx_old', '', 'Ground heat flux (old)'),                 &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
+      & l_required=l_required,                                                     &
       & lrestart=.FALSE.,                                                    &
       & output_level=BASIC,                                                  &
       & initval_r=10.0_wp )
@@ -272,6 +295,7 @@ CONTAINS
       & t_cf('thaw_depth', 'm', 'Thawing depth'),                            &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
+      & l_required=l_required,                                                     &
       & lrestart=.FALSE.,                                                    &
       & output_level=MEDIUM, &
       & initval_r=10.0_wp, l_aggregate_all=.TRUE. )

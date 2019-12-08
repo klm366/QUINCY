@@ -61,7 +61,7 @@ MODULE mo_l2a_memory_class
 
 CONTAINS
 
-  SUBROUTINE Init_l2a_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_l2a_memory(mem, prefix, suffix, process_action, lct_ids, model_id)
 
     USE mo_jsb_varlist,       ONLY: jsb_add_var
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
@@ -71,6 +71,7 @@ CONTAINS
     CLASS(t_l2a_memory),      INTENT(inout), TARGET :: mem
     CHARACTER(len=*),         INTENT(in)    :: prefix
     CHARACTER(len=*),         INTENT(in)    :: suffix
+    INTEGER,                  INTENT(in)    :: process_action
     INTEGER,                  INTENT(in)    :: lct_ids(:)
     INTEGER,                  INTENT(in)    :: model_id ! necessary to get modelconfig
 
@@ -81,6 +82,8 @@ CONTAINS
     INTEGER :: table
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':new_l2a_memory'
+
+    IF (process_action > 0) CONTINUE ! avoid compiler warning about dummy argument not being used
 
     model => Get_model(model_id)
 

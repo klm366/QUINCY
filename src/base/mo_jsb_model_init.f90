@@ -276,7 +276,92 @@ CONTAINS
       CALL tile%Init(TRIM(model%shortname), '', TRIM(tile%name), l_fixed_fractions=.TRUE., &
         & in_var_groups=one_of(TRIM(tile%name), model%config%output_tiles) > 0)
 
-      ! TBD: Loop over processes instead of explicit
+      CALL model%Goto_next_tile(tile)
+    END DO
+
+    ! Iterate over tiles again and initialize hierarchical structure for memories and variables
+    CALL model%Reset_tiles()
+    CALL model%Get_top_tile(tile)
+    IF (.NOT. ASSOCIATED(tile)) &
+      & CALL finish(TRIM(routine), 'Top tile not set')
+
+    DO WHILE (ASSOCIATED(tile))
+
+      IF (.NOT. tile%visited(no_omp_thread) .AND. tile%Has_children()) THEN
+        CALL model%Goto_next_tile(tile)
+        CYCLE
+      END IF
+
+      CALL tile%Init_vars()
+
+      CALL model%Goto_next_tile(tile)
+
+    END DO
+
+    ! Iterate over tiles again and set lct fractions (after ALL tile fractions have been set above)
+    CALL model%Reset_tiles()
+    CALL model%Get_top_tile(tile)
+
+    IF (.NOT. ASSOCIATED(tile)) &
+      & CALL finish(TRIM(routine), 'Top tile not set')
+
+    ALLOCATE(fract_tmp(SIZE(tile%lcts(1)%fract,1), SIZE(tile%lcts(1)%fract,2)))
+
+    DO WHILE (ASSOCIATED(tile))
+
+      IF (.NOT. tile%visited(no_omp_thread) .AND. tile%Has_children()) THEN
+        CALL model%Goto_next_tile(tile)
+        CYCLE
+      END IF
+
+      ! tile is a leaf or it has children and we're on the way up
+      DO ilct=1,SIZE(tile%lcts)
+        IF (tile%Has_children()) THEN
+          tile%lcts(ilct)%fract(:,:) = 0._wp
+          no_children = tile%Get_no_of_children()
+          child => tile%Get_first_child_tile()
+          DO i=1,no_children
+            IF (Contains_lct(child%lcts, tile%lcts(ilct)%id)) THEN
+              DO jlct=1,SIZE(child%lcts)
+                IF (child%lcts(jlct)%id == tile%lcts(ilct)%id) THEN
+                  CALL child%Get_fraction(fract=fract_tmp(:,:))
+                  IF (jlct > 1) THEN
+                    fract_tmp(:,:) = fract_tmp(:,:) * child%lcts(jlct)%fract(:,:)
+                  END IF
+                  tile%lcts(ilct)%fract(:,:) = tile%lcts(ilct)%fract(:,:) + fract_tmp(:,:)
+                  EXIT
+                END IF
+              END DO
+            END IF
+            child => child%Get_next_sibling_tile()
+          END DO
+        ELSE
+          IF (ilct > 1) CALL finish(TRIM(routine), 'Leave tiles should only have one LCT')
+          tile%lcts(1)%fract(:,:) = 1._wp        ! Leaves have only one LCT
+        END IF
+      END DO
+
+      CALL model%Goto_next_tile(tile)
+
+    END DO
+
+    DEALLOCATE(fract_tmp)
+
+    ! CALL init routines
+    CALL model%Reset_tiles()
+    CALL model%Get_top_tile(tile)
+
+    IF (.NOT. ASSOCIATED(tile)) &
+      & CALL finish(TRIM(routine), 'Top tile not set')
+
+    DO WHILE (ASSOCIATED(tile))
+
+      IF (.NOT. tile%visited(no_omp_thread) .AND. tile%Has_children()) THEN
+        CALL model%Goto_next_tile(tile)
+        CYCLE
+      END IF
+
+        ! TBD: Loop over processes instead of explicit
       IF (one_of(tile%process_action(RAD_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
         CALL rad_init(tile)
       END IF
@@ -329,74 +414,6 @@ CONTAINS
 #endif
 
       CALL model%Goto_next_tile(tile)
-    END DO
-
-    ! Iterate over tiles again and set lct fractions (after ALL tile fractions have been set above)
-    CALL model%Reset_tiles()
-    CALL model%Get_top_tile(tile)
-
-    IF (.NOT. ASSOCIATED(tile)) &
-      & CALL finish(TRIM(routine), 'Top tile not set')
-
-    ALLOCATE(fract_tmp(SIZE(tile%lcts(1)%fract,1), SIZE(tile%lcts(1)%fract,2)))
-
-    DO WHILE (ASSOCIATED(tile))
-
-      IF (.NOT. tile%visited(no_omp_thread) .AND. tile%Has_children()) THEN
-        CALL model%Goto_next_tile(tile)
-        CYCLE
-      END IF
-
-      ! tile is a leaf or it has children and we're on the way up
-      DO ilct=1,SIZE(tile%lcts)
-        IF (tile%Has_children()) THEN
-          tile%lcts(ilct)%fract(:,:) = 0._wp
-          no_children = tile%Get_no_of_children()
-          child => tile%Get_first_child_tile()
-          DO i=1,no_children
-            IF (Contains_lct(child%lcts, tile%lcts(ilct)%id)) THEN
-              DO jlct=1,SIZE(child%lcts)
-                IF (child%lcts(jlct)%id == tile%lcts(ilct)%id) THEN
-                  CALL child%Get_fraction(fract=fract_tmp(:,:))
-                  IF (jlct > 1) THEN
-                    fract_tmp(:,:) = fract_tmp(:,:) * child%lcts(jlct)%fract(:,:)
-                  END IF
-                  tile%lcts(ilct)%fract(:,:) = tile%lcts(ilct)%fract(:,:) + fract_tmp(:,:)
-                  EXIT
-                END IF
-              END DO
-            END IF
-            child => child%Get_next_sibling_tile()
-          END DO
-        ELSE
-          IF (ilct > 1) CALL finish(TRIM(routine), 'Leave tiles should only have one LCT')
-          tile%lcts(1)%fract(:,:) = 1._wp        ! Leaves have only one LCT
-        END IF
-      END DO
-
-      CALL model%Goto_next_tile(tile)
-
-    END DO
-
-    DEALLOCATE(fract_tmp)
-
-    ! Iterate over tiles again and initialize hierarchical structure for memories and variables
-    CALL model%Reset_tiles()
-    CALL model%Get_top_tile(tile)
-    IF (.NOT. ASSOCIATED(tile)) &
-      & CALL finish(TRIM(routine), 'Top tile not set')
-
-    DO WHILE (ASSOCIATED(tile))
-
-      IF (.NOT. tile%visited(no_omp_thread) .AND. tile%Has_children()) THEN
-        CALL model%Goto_next_tile(tile)
-        CYCLE
-      END IF
-
-      CALL tile%Init_vars()
-
-      CALL model%Goto_next_tile(tile)
-
     END DO
 
     ! Iterate over tiles and crossckeck tile structure

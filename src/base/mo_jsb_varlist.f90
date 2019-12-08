@@ -81,7 +81,7 @@ CONTAINS
     loutput, lcontainer,                                        &
     lrestart, lrestart_cont, initval_r, isteptype,              &
     resetval_r, lmiss, missval_r, l_aggregate_all,              &
-    output_level, verbose                                       &
+    output_level, verbose, l_required                           &
     )
 
     CLASS(t_jsb_memory),  INTENT(inout)        :: mem                 ! memory structure
@@ -95,6 +95,7 @@ CONTAINS
     TYPE(t_grib2),        INTENT(in)           :: grib2               ! GRIB2 related metadata
     CHARACTER(len=*),     INTENT(in)           :: prefix              ! Prefix for variable name
     CHARACTER(len=*),     INTENT(in)           :: suffix              ! Suffix for variable name
+    LOGICAL,              INTENT(in), OPTIONAL :: l_required
     LOGICAL,              INTENT(in), OPTIONAL :: loutput             ! output flag
     LOGICAL,              INTENT(in), OPTIONAL :: lcontainer          ! container flag
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart            ! restart flag
@@ -112,6 +113,7 @@ CONTAINS
     CHARACTER(len=50) :: name_loc
     TYPE(t_cf_var)    :: cf_loc
     TYPE(t_grib2_var) :: grib2_loc
+    LOGICAL           :: l_required_loc
     LOGICAL           :: lmiss_loc
     REAL(dp)          :: missval_r_loc
     INTEGER           :: ldims(2), gdims(2)
@@ -120,6 +122,17 @@ CONTAINS
     CHARACTER(len=:), ALLOCATABLE :: output_level_name
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsb_add_var_list_element_r2d'
+
+    l_required_loc = .TRUE.
+    IF (PRESENT(l_required)) l_required_loc = l_required
+
+    IF (.NOT. l_required_loc) RETURN
+
+    ! IF (PRESENT(loutput)) var%is_in_output = loutput
+    ! var%is_in_output = var%is_in_output .OR. is_variable_in_output(var%full_name)
+    var%is_in_output = is_variable_in_output(var%full_name)
+    IF (PRESENT(lrestart)) var%is_in_restart = lrestart
+    var%is_in_restart = var%is_in_restart .OR. .TRUE.  ! TODO
 
     name_loc = TRIM(name)
     IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
@@ -175,10 +188,6 @@ CONTAINS
     var%type = REAL2D
     var%missval = missval_r_loc
     IF (PRESENT(l_aggregate_all)) var%l_aggregate_all = l_aggregate_all
-    IF (PRESENT(loutput)) var%is_in_output = loutput
-    var%is_in_output = var%is_in_output .OR. is_variable_in_output(var%full_name)
-    IF (PRESENT(lrestart)) var%is_in_restart = lrestart
-    var%is_in_restart = var%is_in_restart .OR. .TRUE.  ! TODO
 
     var%owner_proc_id = mem%owner_proc_id
 
@@ -200,7 +209,7 @@ CONTAINS
     extra_dim_n, loutput, lcontainer,                            &
     lrestart, lrestart_cont, initval_r, isteptype,               &
     resetval_r, lmiss, missval_r, l_aggregate_all,               &
-    output_level, verbose                                        &
+    output_level, verbose, l_required                            &
     )
 
     CLASS(t_jsb_memory),  INTENT(inout)        :: mem                 ! memory structure
@@ -214,6 +223,7 @@ CONTAINS
     CHARACTER(len=*),     INTENT(in)           :: prefix              ! Prefix for variable name
     CHARACTER(len=*),     INTENT(in)           :: suffix              ! Suffix for variable name
     INTEGER,              INTENT(in), OPTIONAL :: extra_dim_n         ! Extra (third) dimension (not levels)
+    LOGICAL,              INTENT(in), OPTIONAL :: l_required
     LOGICAL,              INTENT(in), OPTIONAL :: loutput             ! output flag
     LOGICAL,              INTENT(in), OPTIONAL :: lcontainer          ! container flag
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart            ! restart flag
@@ -231,6 +241,7 @@ CONTAINS
     CHARACTER(len=50) :: name_loc
     TYPE(t_cf_var)    :: cf_loc
     TYPE(t_grib2_var) :: grib2_loc
+    LOGICAL           :: l_required_loc
     LOGICAL           :: lmiss_loc
     REAL(dp)          :: missval_r_loc
     INTEGER           :: ldims(3), gdims(3)
@@ -239,6 +250,17 @@ CONTAINS
     CHARACTER(len=:), ALLOCATABLE :: output_level_name
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsb_add_var_list_element_r3d'
+
+    l_required_loc = .TRUE.
+    IF (PRESENT(l_required)) l_required_loc = l_required
+
+    IF (.NOT. l_required_loc) RETURN
+
+    ! IF (PRESENT(loutput)) var%is_in_output = loutput
+    ! var%is_in_output = var%is_in_output .OR. is_variable_in_output(var%full_name)
+    var%is_in_output = is_variable_in_output(var%full_name)
+    IF (PRESENT(lrestart)) var%is_in_restart = lrestart
+    var%is_in_restart = var%is_in_restart .OR. .TRUE.  ! TODO
 
     name_loc = TRIM(name)
     IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)

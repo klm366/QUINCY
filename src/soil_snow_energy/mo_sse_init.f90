@@ -20,11 +20,13 @@ MODULE mo_sse_init
   USE mo_jsb_control,       ONLY: debug_on
 
   USE mo_jsb_model_class,   ONLY: t_jsb_model
-  USE mo_jsb_grid_class,    ONLY: t_jsb_vgrid
-  USE mo_jsb_grid,          ONLY: Get_vgrid
-  USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
+  USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
+  USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
+  USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_class,         ONLY: get_model
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
+  USE mo_jsb_process_class, ONLY: ON_TILE_, AGGREGATE_
+  USE mo_jsb_task_class,    ONLY: t_jsb_task_options
 
   dsl4jsb_Use_processes SSE_, SEB_, HYDRO_
   dsl4jsb_Use_config(SSE_)
@@ -55,8 +57,13 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':sse_init'
 
-    CALL sse_init_bc(tile)
-    CALL sse_init_ic(tile)
+    IF (tile%process_action(SSE_) == ON_TILE_) THEN
+      CALL sse_init_bc(tile)
+      CALL sse_init_ic(tile)
+    ELSE IF (tile%process_action(SSE_) == AGGREGATE_) THEN
+      ! CALL sse_aggregate_bc(tile)
+      CALL sse_aggregate_ic(tile)
+    END IF
 
   END SUBROUTINE sse_init
 
@@ -83,8 +90,6 @@ CONTAINS
 
     ! Get soil config
     dsl4jsb_Get_config(SSE_)
-
-    IF (.NOT. tile%Is_process_active(SSE_)) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Setting  soil energy boundary conditions for tile '//TRIM(tile%name))
 
@@ -138,6 +143,55 @@ CONTAINS
 
   END SUBROUTINE sse_init_bc
 
+  SUBROUTINE sse_aggregate_bc(tile)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+
+    dsl4jsb_Def_memory(SSE_)
+
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+    TYPE(t_jsb_model),       POINTER :: model
+    TYPE(t_jsb_grid),        POINTER :: grid
+    TYPE(t_jsb_task_options)         :: options
+
+    INTEGER :: iblk, ics, ice, nc
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':sse_aggregate_bc'
+
+    model => Get_model(tile%owner_model_id)
+    grid => Get_grid(model%grid_id)
+
+    options%ics = 1
+    options%ice = grid%nproma
+
+    ics = options%ics
+    ice = options%ice
+    nc = ice - ics + 1
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    dsl4jsb_Get_memory(SSE_)
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    DO iblk = 1, grid%nblks
+
+      CALL model%Set_options(iblk=iblk)
+      options%iblk = iblk
+      IF (iblk == grid%nblks) THEN
+        options%ice = grid%npromz
+        ice = grid%npromz
+        ! TODO: ics and ice should be retrieved for each iblk (are not necessarily constant for each block in ICON)
+      END IF
+
+      ! dsl4jsb_Aggregate_onChunk(SSE_, ...,      weighted_by_fract)
+
+    END DO
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE sse_aggregate_bc
+
   SUBROUTINE sse_init_ic(tile)
 
     USE mo_sse_process, ONLY: init_soil_temperature
@@ -170,8 +224,6 @@ CONTAINS
 
     ! Get soil config
     dsl4jsb_Get_config(SSE_)
-
-    IF (.NOT. tile%Is_process_active(SSE_)) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Initializing soil energy memory for tile '//TRIM(tile%name))
 
@@ -206,6 +258,55 @@ CONTAINS
     CALL init_soil_properties(tile)
 
   END SUBROUTINE sse_init_ic
+
+  SUBROUTINE sse_aggregate_ic(tile)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+
+    dsl4jsb_Def_memory(SSE_)
+
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+    TYPE(t_jsb_model),       POINTER :: model
+    TYPE(t_jsb_grid),        POINTER :: grid
+    TYPE(t_jsb_task_options)         :: options
+
+    INTEGER :: iblk, ics, ice, nc
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':sse_aggregate_ic'
+
+    model => Get_model(tile%owner_model_id)
+    grid => Get_grid(model%grid_id)
+
+    options%ics = 1
+    options%ice = grid%nproma
+
+    ics = options%ics
+    ice = options%ice
+    nc = ice - ics + 1
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    dsl4jsb_Get_memory(SSE_)
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    DO iblk = 1, grid%nblks
+
+      CALL model%Set_options(iblk=iblk)
+      options%iblk = iblk
+      IF (iblk == grid%nblks) THEN
+        options%ice = grid%npromz
+        ice = grid%npromz
+        ! TODO: ics and ice should be retrieved for each iblk (are not necessarily constant for each block in ICON)
+      END IF
+
+      dsl4jsb_Aggregate_onChunk(SSE_, vol_heat_cap_sl,    weighted_by_fract)
+
+    END DO
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE sse_aggregate_ic
 
   SUBROUTINE init_soil_properties(tile)
 

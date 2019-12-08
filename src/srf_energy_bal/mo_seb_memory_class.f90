@@ -24,6 +24,7 @@ MODULE mo_seb_memory_class
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_lct_class,          ONLY: LAND_TYPE, LAKE_TYPE
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d
+  USE mo_jsb_process_class,      ONLY: ON_TILE_, AGGREGATE_
   USE mo_jsb_physical_constants, ONLY: tmelt
 
   dsl4jsb_Use_processes SEB_
@@ -116,7 +117,7 @@ MODULE mo_seb_memory_class
 
 CONTAINS
 
-  SUBROUTINE Init_seb_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_seb_memory(mem, prefix, suffix, process_action, lct_ids, model_id)
 
     USE mo_jsb_varlist,       ONLY: jsb_add_var, BASIC !, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables !, TSTEP_CONSTANT
@@ -126,6 +127,7 @@ CONTAINS
     CLASS(t_seb_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),    INTENT(in)    :: prefix
     CHARACTER(len=*),    INTENT(in)    :: suffix
+    INTEGER,             INTENT(in)    :: process_action
     INTEGER,             INTENT(in)    :: lct_ids(:)
     INTEGER,             INTENT(in)    :: model_id
 
@@ -135,6 +137,7 @@ CONTAINS
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
     INTEGER :: table
+    LOGICAL :: l_required
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_seb_memory'
     IF (model_id > 0) CONTINUE ! avoid compiler warning about dummy argument not being used
@@ -150,6 +153,8 @@ CONTAINS
     dsl4jsb_Get_config(SEB_)
 
 
+    l_required = process_action == ON_TILE_
+
     !$acc enter data pcreate(mem%t,mem%t_old,mem%t_unfilt,mem%heat_cap,     &
     !$acc mem%heat_cap_old,mem%latent_hflx,mem%sensible_hflx,mem%forc_hflx)
     CALL jsb_add_var( mem, 't', mem%t,                                               &
@@ -157,6 +162,7 @@ CONTAINS
       & t_cf('sfc_temp', 'K', 'surface temperature'),                                &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
+      & l_required=l_required,                                                     &
       & output_level=BASIC, &
       & initval_r=280.0_wp )
 
@@ -165,6 +171,7 @@ CONTAINS
       & t_cf('sfc_temp_old', 'K', 'surface temperature at previous timestep'),       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
+      & l_required=l_required,                                                     &
       & lrestart=.FALSE.,                                                            &
       & initval_r=280.0_wp )
 
@@ -173,6 +180,7 @@ CONTAINS
       & t_cf('sfc_temp_unfilt', 'K', 'unfiltered surface temperature'),              &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
+      & l_required=l_required,                                                     &
       & initval_r=280.0_wp )
 
     CALL jsb_add_var( mem, 'heat_cap', mem%heat_cap,                                 &
@@ -180,6 +188,7 @@ CONTAINS
       & t_cf('sfc_heat_cap', 'J m-2 K-1)', 'surface layer heat capacity'),           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
+      & l_required=l_required,                                                     &
       & output_level=BASIC, &
       & initval_r=0.0_wp )
 
@@ -188,6 +197,7 @@ CONTAINS
       & t_cf('sfc_heat_cap_old', 'J m-2 K-1)', 'srf layer heat cap. prev timestep'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
+      & l_required=.TRUE.,                                                           &
       & lrestart=.FALSE.,                                                            &
       & output_level=BASIC, &
       & initval_r=0.0_wp )
@@ -197,6 +207,7 @@ CONTAINS
       & t_cf('latent_hflx', 'W m-2', 'latent heat flux density at surface'),         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
+      & l_required=l_required,                                                     &
       & lrestart=.FALSE.,                                                            &
       & output_level=BASIC, &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
@@ -206,6 +217,7 @@ CONTAINS
       & t_cf('sensible_hflx', 'W m-2', 'sensible heat flux at surface'),             &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
+      & l_required=l_required,                                                     &
       & lrestart=.FALSE.,                                                            &
       & output_level=BASIC, &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
@@ -215,6 +227,7 @@ CONTAINS
       & t_cf('forc_hflx', 'W m-2)', 'additional heat flux at surface'),              &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
+      & l_required=.TRUE.,                                                           &
       & lrestart=.FALSE.,                                                            &
       & output_level=BASIC, &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
@@ -233,6 +246,7 @@ CONTAINS
         & t_cf('sfc_dry_static_energy', 'm2 s-2', 'surface dry static energy'),              &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
+        & l_required=.TRUE.,                                                                 &
         & lrestart=.FALSE.,                                                                  &
         & output_level=BASIC, &
         & initval_r=2.9E5_wp )
@@ -242,6 +256,7 @@ CONTAINS
         & t_cf('sfc_qsat', 'm2 s-2', 'surface specific humidity at saturation'),             &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
+        & l_required=.TRUE.,                                                                 &
         & lrestart=.FALSE.,                                                                  &
         & output_level=BASIC, &
         & initval_r=0.0075_wp )
@@ -251,6 +266,7 @@ CONTAINS
         & t_cf('sfc_temp_unfilt_old', 'K', 'unf. surface temperature at previous timestep'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
+        & l_required=l_required,                                                     &
         & lrestart=.FALSE.,                                                                  &
         & initval_r=280.0_wp )
 
@@ -259,6 +275,7 @@ CONTAINS
         & t_cf('sfc_temp_filt', 'K', 'filtered surface temperature'),                        &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
+        & l_required=.TRUE.,                                                                 &
         & lrestart=.FALSE.,                                                                  &
         & initval_r=280.0_wp )
 
@@ -267,6 +284,7 @@ CONTAINS
         & t_cf('surface_temperature_eff', 'K', 'effective surface temperature'),             &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
+        & l_required=.TRUE.,                                                                 &
         & lrestart=.FALSE.,                                                                  &
         & initval_r=280.0_wp )
 
@@ -275,6 +293,7 @@ CONTAINS
         & t_cf('latent_hflx_lnd', 'W m-2', 'latent heat flux density at surface (lnd)'),     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
+        & l_required=.TRUE.,                                                                 &
         & lrestart=.FALSE.,                                                                  &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
@@ -283,6 +302,7 @@ CONTAINS
         & t_cf('sensible_hflx_lnd', 'W m-2', 'sensible heat flux at surface (lnd)'),         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
+        & l_required=.TRUE.,                                                                 &
         & lrestart=.FALSE.,                                                                  &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
@@ -291,6 +311,7 @@ CONTAINS
         & t_cf('previous_day_temp_mean', '', ''),                                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
         & prefix, suffix,                                                          &
+        & l_required=l_required,                                                     &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=10.0_wp )
 
       CALL jsb_add_var( mem, 'previous_day_temp_min', mem%previous_day_temp_min, &
@@ -298,6 +319,7 @@ CONTAINS
         & t_cf('previous_day_temp_min', '', ''),                                 &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
+        & l_required=l_required,                                                     &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=5.0_wp )
 
       CALL jsb_add_var( mem, 'previous_day_temp_max', mem%previous_day_temp_max, &
@@ -305,6 +327,7 @@ CONTAINS
         & t_cf('albedo_nir_previous_day_temp_maxsnow', '', ''),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
+        & l_required=l_required,                                                     &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=15.0_wp )
 
       CALL jsb_add_var( mem, 'pseudo_soil_temp', mem%pseudo_soil_temp,           &
@@ -312,6 +335,7 @@ CONTAINS
         & t_cf('pseudo_soil_temp', '', ''),                                      &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
+        & l_required=l_required,                                                     &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=10.0_wp )
 
       CALL jsb_add_var( mem,'day_temp_sum', mem%day_temp_sum,                    &
@@ -319,6 +343,7 @@ CONTAINS
         & t_cf('day_temp_sum', '', ''),                                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
+        & l_required=l_required,                                                     &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp )
 
       CALL jsb_add_var( mem,'day_temp_min', mem%day_temp_min,                    &
@@ -326,6 +351,7 @@ CONTAINS
         & t_cf('day_temp_min', '', ''),                                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
+        & l_required=l_required,                                                     &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp )
 
       CALL jsb_add_var( mem,'day_temp_max', mem%day_temp_max,                    &
@@ -333,6 +359,7 @@ CONTAINS
         & t_cf('day_temp_max', '', ''),                                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
+        & l_required=l_required,                                                     &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp)
 
       CALL jsb_add_var( mem,'N_pseudo_soil_temp', mem%N_pseudo_soil_temp,        &
@@ -340,6 +367,7 @@ CONTAINS
         & t_cf('N_pseudo_soil_temp', '', ''),                                    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
+        & l_required=l_required,                                                     &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=10._wp )
 
       CALL jsb_add_var( mem,'F_pseudo_soil_temp', mem%F_pseudo_soil_temp,        &
@@ -347,6 +375,7 @@ CONTAINS
         & t_cf('F_pseudo_soil_temp', '', ''),                                    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
+        & l_required=l_required,                                                     &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=10._wp )
 
     END IF
@@ -362,6 +391,7 @@ CONTAINS
         & t_cf('sfc_temp_wtr', 'K', 'lake surface temperature wtr '),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
+        & l_required=.TRUE.,                                                           &
         & initval_r=280.0_wp )
 
       CALL jsb_add_var( mem, 's_lwtr', mem%s_lwtr,                                             &
@@ -369,6 +399,7 @@ CONTAINS
         & t_cf('sfc_dry_static_energy_wtr', 'm2 s-2', 'surface dry static energy (lake wtr)'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &
         & prefix, suffix,                                                                      &
+        & l_required=.TRUE.,                                                                   &
         & lrestart=.FALSE.,                                                                    &
         & initval_r=2.9E5_wp )
 
@@ -377,6 +408,7 @@ CONTAINS
         & t_cf('sfc_qsat_lwtr', 'm2 s-2', 'surface specific humidity at saturation (lake wtr)'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix,                                                                        &
+        & l_required=.TRUE.,                                                                     &
         & lrestart=.FALSE.,                                                                      &
         & initval_r=0.0075_wp )
 
@@ -385,6 +417,7 @@ CONTAINS
         & t_cf('latent_hflx_wtr', 'W m-2', 'latent heat flux over lake water'),        &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
+        & l_required=.TRUE.,                                                           &
         & lrestart=.TRUE.,                                                             &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
@@ -393,6 +426,7 @@ CONTAINS
         & t_cf('sensible_hflx_wtr', 'W m-2', 'sensible heat flux over lake water'),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
+        & l_required=.TRUE.,                                                           &
         & lrestart=.TRUE.,                                                             &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
@@ -402,6 +436,7 @@ CONTAINS
         & t_cf('fract_lice', '', 'fraction of ice on lake'),                           &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
+        & l_required=.TRUE.,                                                           &
         & initval_r=0.0_wp )
     
       IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
@@ -417,6 +452,7 @@ CONTAINS
           & t_cf('sfc_temp_ice', 'K', 'lake surface temperature ice '),                  &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
           & prefix, suffix,                                                              &
+          & l_required=.TRUE.,                                                           &
           & initval_r=tmelt )
     
         CALL jsb_add_var( mem, 's_lice', mem%s_lice,                                             &
@@ -424,6 +460,7 @@ CONTAINS
           & t_cf('sfc_dry_static_energy_ice', 'm2 s-2', 'surface dry static energy (lake ice)'), &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &
           & prefix, suffix,                                                                      &
+          & l_required=.TRUE.,                                                                   &
           & lrestart=.FALSE.,                                                                    &
           & initval_r=2.9E5_wp )
     
@@ -432,6 +469,7 @@ CONTAINS
           & t_cf('sfc_qsat_lice', 'm2 s-2', 'surface specific humidity at saturation (lake ice)'), &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
           & prefix, suffix,                                                                        &
+          & l_required=.TRUE.,                                                                     &
           & lrestart=.FALSE.,                                                                      &
           & initval_r=0.0075_wp )
     
@@ -440,6 +478,7 @@ CONTAINS
           & t_cf('latent_hflx_ice', 'W m-2', 'latent heat flux over lake ice'),          &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
           & prefix, suffix,                                                              &
+          & l_required=.TRUE.,                                                           &
           & lrestart=.TRUE.,                                                             &
           & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
     
@@ -448,6 +487,7 @@ CONTAINS
           & t_cf('sensible_hflx_ice', 'W m-2', 'sensible heat flux over lake ice'),      &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
           & prefix, suffix,                                                              &
+          & l_required=.TRUE.,                                                           &
           & lrestart=.TRUE.,                                                             &
           & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
     
@@ -456,6 +496,7 @@ CONTAINS
           & t_cf('ice_thickness', 'm', 'thickness of ice on lake'),                      &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
           & prefix, suffix,                                                              &
+          & l_required=l_required,                                                     &
           & initval_r=0.0_wp )
     
         CALL jsb_add_var( mem, 'hflx_form_ice', mem%hflx_form_ice,                       &
@@ -463,6 +504,7 @@ CONTAINS
           & t_cf('hflx_form_ice', 'W m-2)', 'heat flux for ice formation on lake ice'),  &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
           & prefix, suffix,                                                              &
+          & l_required=l_required,                                                     &
           & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
     
         CALL jsb_add_var( mem, 'hflx_cond_ice', mem%hflx_cond_ice,                       &
@@ -470,6 +512,7 @@ CONTAINS
           & t_cf('hflx_cond_ice', 'W m-2)', 'conductive heat flux on lake ice'),         &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
           & prefix, suffix,                                                              &
+          & l_required=l_required,                                                     &
           & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
     
         CALL jsb_add_var( mem, 'hflx_melt_lice', mem%hflx_melt_lice,                     &
@@ -477,6 +520,7 @@ CONTAINS
           & t_cf('hflx_melt_lice', 'W m-2)', 'heat flux from ice melt on lakes'),        &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
           & prefix, suffix,                                                              &
+          & l_required=l_required,                                                     &
           & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
     
         CALL jsb_add_var( mem, 'hflx_melt_snow', mem%hflx_melt_snow,                     &
@@ -484,6 +528,7 @@ CONTAINS
           & t_cf('hflx_melt_snow', 'W m-2)', 'heat_flux from snow melt on lakes'),       &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
           & prefix, suffix,                                                              &
+          & l_required=l_required,                                                     &
           & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
         END IF

@@ -23,6 +23,7 @@ MODULE mo_seb_init
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
   !USE mo_jsb_class,         ONLY: get_model
   !USE mo_jsb_io_netcdf,     ONLY: t_input_file !, jsb_netcdf_open_input
+  USE mo_jsb_process_class, ONLY: ON_TILE_
 
   dsl4jsb_Use_processes SEB_
   dsl4jsb_Use_config(SEB_)
@@ -53,6 +54,8 @@ CONTAINS
       & N_pseudo_soil_temp
 
     dsl4jsb_Def_memory(SEB_)
+
+    IF (.NOT. tile%process_action(SEB_) == ON_TILE_) RETURN
 
     CALL seb_init_bc(tile)
     !CALL seb_init_ic(tile)

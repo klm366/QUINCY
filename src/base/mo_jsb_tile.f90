@@ -328,9 +328,9 @@ CONTAINS
         this%mem(iproc)%p%no_of_children = no_of_children
         this%mem(iproc)%p%in_var_groups = in_var_groups    ! Must be before CALL to %Init !
         IF (prefix /= '') THEN
-          CALL this%mem(iproc)%p%Init(TRIM(process_name)//'_'//TRIM(prefix), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
+          CALL this%mem(iproc)%p%Init(TRIM(process_name)//'_'//TRIM(prefix), TRIM(suffix), this%process_action(iproc), this%lcts(:)%id, this%owner_model_id)
         ELSE
-          CALL this%mem(iproc)%p%Init(TRIM(process_name), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
+          CALL this%mem(iproc)%p%Init(TRIM(process_name), TRIM(suffix), this%process_action(iproc), this%lcts(:)%id, this%owner_model_id)
         END IF
         IF (debug_on()) &
           & CALL message(TRIM(routine), 'Created memory for process '//TRIM(process_name)//' on tile '//TRIM(this%name))

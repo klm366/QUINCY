@@ -18,9 +18,10 @@ MODULE mo_turb_memory_class
   USE mo_kind, ONLY: wp
   USE mo_util, ONLY: One_of
 
-  USE mo_jsb_memory_class, ONLY: t_jsb_memory
-  USE mo_jsb_lct_class,    ONLY: LAND_TYPE, BARE_TYPE, VEG_TYPE, GLACIER_TYPE !, LAKE_TYPE
-  USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d
+  USE mo_jsb_memory_class,  ONLY: t_jsb_memory
+  USE mo_jsb_lct_class,     ONLY: LAND_TYPE, BARE_TYPE, VEG_TYPE, GLACIER_TYPE !, LAKE_TYPE
+  USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d
+  USE mo_jsb_process_class, ONLY: ON_TILE_, AGGREGATE_
 
   IMPLICIT NONE
   PRIVATE
@@ -50,7 +51,7 @@ CONTAINS
 
 CONTAINS
 
-  SUBROUTINE Init_turb_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_turb_memory(mem, prefix, suffix, process_action, lct_ids, model_id)
 
     USE mo_jsb_varlist,       ONLY: jsb_add_var, BASIC !, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
@@ -60,12 +61,14 @@ CONTAINS
     CLASS(t_turb_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),     INTENT(in)    :: prefix
     CHARACTER(len=*),     INTENT(in)    :: suffix
+    INTEGER,              INTENT(in)    :: process_action
     INTEGER,              INTENT(in)    :: lct_ids(:)
     INTEGER,              INTENT(in)    :: model_id
 
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
     INTEGER :: table
+    LOGICAL :: l_required
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_turb_memory'
     IF (model_id > 0) CONTINUE ! avoid compiler warning about dummy argument not being used
@@ -76,6 +79,8 @@ CONTAINS
 
     !$acc enter data pcreate(mem)
 
+    l_required = process_action == ON_TILE_
+
     !$acc enter data pcreate(mem%rough_m,mem%rough_h)
 
     CALL jsb_add_var( mem, 'rough_m', mem%rough_m,                                       &
@@ -83,6 +88,7 @@ CONTAINS
       & t_cf('roughness_length_momentum', 'm', 'surface roughness length for momentum'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
       & prefix, suffix,                                                                  &
+      & l_required=.TRUE.,                                                               &
       & lrestart=.TRUE.,                                                                 &
       & output_level=BASIC,                                                              &
       & initval_r=1.0_wp )
@@ -92,6 +98,7 @@ CONTAINS
       & t_cf('roughness_length_heat', 'm', 'surface roughness length for heat'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
       & prefix, suffix,                                                          &
+      & l_required=.TRUE.,                                                       &
       & lrestart=.TRUE.,                                                         &
       & output_level=BASIC,                                                      &
       & initval_r=1.0_wp )
@@ -111,6 +118,7 @@ CONTAINS
         & t_cf('fact_q_air', '', ''),                                        &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
+        & l_required=.TRUE.,                                                 &
         & output_level=BASIC,                                                &
         & initval_r=0.5_wp )
 
@@ -119,6 +127,7 @@ CONTAINS
         & t_cf('fact_qsat_srf', '', ''),                                     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
+        & l_required=.TRUE.,                                                 &
         & output_level=BASIC,                                                &
         & initval_r=0.5_wp )
 
@@ -127,6 +136,7 @@ CONTAINS
         & t_cf('fact_qsat_trans_srf', '', ''),                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
+        & l_required=.TRUE.,                                                 &
         & output_level=BASIC,                                                &
         & initval_r=0.5_wp )
 

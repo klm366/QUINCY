@@ -21,9 +21,13 @@ MODULE mo_pheno_init
   USE mo_jsb_control,         ONLY: debug_on
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model
+  USE mo_jsb_grid_class,      ONLY: t_jsb_grid, t_jsb_vgrid
+  USE mo_jsb_grid,            ONLY: Get_grid, Get_vgrid
+  USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_class,           ONLY: get_model
-  USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
   USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input
+  USE mo_jsb_process_class,   ONLY: ON_TILE_, AGGREGATE_
+  USE mo_jsb_task_class,      ONLY: t_jsb_task_options
 
   dsl4jsb_Use_processes PHENO_
   dsl4jsb_Use_config(PHENO_)
@@ -45,8 +49,13 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init'
 
-    CALL pheno_init_bc(tile)
-    CALL pheno_init_ic(tile)
+    IF (tile%process_action(PHENO_) == ON_TILE_) THEN
+      CALL pheno_init_bc(tile)
+      CALL pheno_init_ic(tile)
+    ELSE IF (tile%process_action(PHENO_) == AGGREGATE_) THEN
+      CALL pheno_aggregate_bc(tile)
+      CALL pheno_aggregate_ic(tile)
+    END IF
 
   END SUBROUTINE pheno_init
 
@@ -152,6 +161,55 @@ CONTAINS
 
   END SUBROUTINE pheno_init_bc
 
+  SUBROUTINE pheno_aggregate_bc(tile)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+
+    dsl4jsb_Def_memory(PHENO_)
+
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+    TYPE(t_jsb_model),       POINTER :: model
+    TYPE(t_jsb_grid),        POINTER :: grid
+    TYPE(t_jsb_task_options)         :: options
+
+    INTEGER :: iblk, ics, ice, nc
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_aggregate_bc'
+
+    model => Get_model(tile%owner_model_id)
+    grid => Get_grid(model%grid_id)
+
+    options%ics = 1
+    options%ice = grid%nproma
+
+    ics = options%ics
+    ice = options%ice
+    nc = ice - ics + 1
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    dsl4jsb_Get_memory(PHENO_)
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    DO iblk = 1, grid%nblks
+
+      CALL model%Set_options(iblk=iblk)
+      options%iblk = iblk
+      IF (iblk == grid%nblks) THEN
+        options%ice = grid%npromz
+        ice = grid%npromz
+        ! TODO: ics and ice should be retrieved for each iblk (are not necessarily constant for each block in ICON)
+      END IF
+
+      dsl4jsb_Aggregate_onChunk(PHENO_, fract_fpc_max,      weighted_by_fract)
+
+    END DO
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE pheno_aggregate_bc
+
   SUBROUTINE pheno_init_ic(tile)
 
     USE mo_pheno_process, ONLY: get_foliage_projected_cover
@@ -210,6 +268,56 @@ CONTAINS
     !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, lai))
 
   END SUBROUTINE pheno_init_ic
+
+  SUBROUTINE pheno_aggregate_ic(tile)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+
+    dsl4jsb_Def_memory(PHENO_)
+
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+    TYPE(t_jsb_model),       POINTER :: model
+    TYPE(t_jsb_grid),        POINTER :: grid
+    TYPE(t_jsb_task_options)         :: options
+
+    INTEGER :: iblk, ics, ice, nc
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_aggregate_ic'
+
+    model => Get_model(tile%owner_model_id)
+    grid => Get_grid(model%grid_id)
+
+    options%ics = 1
+    options%ice = grid%nproma
+
+    ics = options%ics
+    ice = options%ice
+    nc = ice - ics + 1
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    dsl4jsb_Get_memory(PHENO_)
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    DO iblk = 1, grid%nblks
+
+      CALL model%Set_options(iblk=iblk)
+      options%iblk = iblk
+      IF (iblk == grid%nblks) THEN
+        options%ice = grid%npromz
+        ice = grid%npromz
+        ! TODO: ics and ice should be retrieved for each iblk (are not necessarily constant for each block in ICON)
+      END IF
+
+      dsl4jsb_Aggregate_onChunk(PHENO_, lai,          weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(PHENO_, fract_fpc,    weighted_by_fract)
+
+    END DO
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE pheno_aggregate_ic
 
 #endif
 END MODULE mo_pheno_init

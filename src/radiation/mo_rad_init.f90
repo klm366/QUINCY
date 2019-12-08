@@ -23,6 +23,7 @@ MODULE mo_rad_init
   USE mo_jsb_class,         ONLY: Get_model
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
+  USE mo_jsb_process_class, ONLY: ON_TILE_
 
   dsl4jsb_Use_processes RAD_
   dsl4jsb_Use_config(RAD_)
@@ -63,6 +64,8 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':rad_init_bc'
 
+    IF (.NOT. tile%process_action(RAD_) == ON_TILE_) RETURN
+
     !model => get_model(tile%owner_model_id)
 
     !-----------------------------------------------------------------------
@@ -70,8 +73,6 @@ CONTAINS
 
     ! Get radiation memory of the tile
     dsl4jsb_Get_memory(RAD_)
-
-    IF (.NOT. ASSOCIATED(rad__mem)) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Setting  radiation boundary conditions for tile '//TRIM(tile%name))
 
@@ -100,6 +101,8 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':rad_init_ic'
 
+    IF (.NOT. tile%process_action(RAD_) == ON_TILE_) RETURN
+
     model => get_model(tile%owner_model_id)
 
     ! Get radiation memory of the tile
@@ -107,8 +110,6 @@ CONTAINS
 
     ! Get radiation config
     dsl4jsb_Get_config(RAD_)
-
-    IF (.NOT. dsl4jsb_Config(RAD_)%active) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Initializing radiation memory for tile '//TRIM(tile%name))
 

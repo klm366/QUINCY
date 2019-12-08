@@ -66,10 +66,11 @@ MODULE mo_jsb_memory_class
   ! Note: argument "mem" needs to have the TARGET attribute so that we can point to individual variables
   !       (of class t_jsb_var) contained in the memory structure.
   ABSTRACT INTERFACE
-    SUBROUTINE Init_memory(mem, prefix, suffix, lct_ids, model_id)
+    SUBROUTINE Init_memory(mem, prefix, suffix, process_action, lct_ids, model_id)
       IMPORT :: t_jsb_memory, t_jsb_config
       CLASS(t_jsb_memory), INTENT(inout), TARGET :: mem
       CHARACTER(LEN=*),    INTENT(in)    :: prefix, suffix
+      INTEGER,             INTENT(in)    :: process_action
       INTEGER,             INTENT(in)    :: lct_ids(:)
       INTEGER,             INTENT(in)    :: model_id
     END SUBROUTINE Init_memory

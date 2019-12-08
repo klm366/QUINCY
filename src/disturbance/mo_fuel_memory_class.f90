@@ -19,6 +19,7 @@ MODULE mo_fuel_memory_class
 
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d
+  USE mo_jsb_process_class,      ONLY: ON_TILE_, AGGREGATE_
 
   IMPLICIT NONE
   PRIVATE
@@ -43,7 +44,7 @@ MODULE mo_fuel_memory_class
 
 CONTAINS
 
-  SUBROUTINE Init_fuel_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_fuel_memory(mem, prefix, suffix, process_action, lct_ids, model_id)
 
     USE mo_jsb_varlist,       ONLY: jsb_add_var, BASIC !, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
@@ -53,12 +54,14 @@ CONTAINS
     CLASS(t_fuel_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),     INTENT(in)    :: prefix
     CHARACTER(len=*),     INTENT(in)    :: suffix
+    INTEGER,              INTENT(in)    :: process_action
     INTEGER,              INTENT(in)    :: lct_ids(:)
     INTEGER,              INTENT(in)    :: model_id
 
     TYPE(t_jsb_grid),  POINTER :: hgrid          ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface        ! Vertical grid
     INTEGER :: table
+    LOGICAL :: l_required
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_fuel_memory'
 
@@ -70,13 +73,16 @@ CONTAINS
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
 
-      CALL jsb_add_var( mem, 'fuel', mem%fuel,                                                                      &
-        & hgrid, surface,                                                                                           &
-        & t_cf('fuel', 'mol(C)/m^2 (potential vegetation)', 'Amount of carbon fuel for burned area calculations.'), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
-        & prefix, suffix,                                                                                           &
-        & output_level=BASIC,                                                                                       &
-        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+    l_required = process_action == ON_TILE_
+
+    CALL jsb_add_var( mem, 'fuel', mem%fuel,                                                                      &
+      & hgrid, surface,                                                                                           &
+      & t_cf('fuel', 'mol(C)/m^2 (potential vegetation)', 'Amount of carbon fuel for burned area calculations.'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
+      & prefix, suffix,                                                                                           &
+      & l_required=l_required,                                                     &
+      & output_level=BASIC,                                                                                       &
+      & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
   END SUBROUTINE Init_fuel_memory
 

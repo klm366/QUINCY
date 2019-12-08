@@ -24,6 +24,7 @@ MODULE mo_carbon_init
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_jsb_time,          ONLY: get_time_dt
   USE mo_jsb_control,       ONLY: debug_on
+  USE mo_jsb_process_class, ONLY: ON_TILE_
 
   dsl4jsb_Use_processes CARBON_
   dsl4jsb_Use_config(CARBON_)
@@ -56,6 +57,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: N_pseudo_temp
     dsl4jsb_Real3D_onChunk :: F_pseudo_precip
     dsl4jsb_Real3D_onChunk :: N_pseudo_precip
+
+    IF (.NOT. tile%process_action(CARBON_) == ON_TILE_) RETURN
 
     !model => get_model(tile%owner_model_id)
 
@@ -110,12 +113,12 @@ CONTAINS
     !-----------------------------------------------------------------------
     ! CONTENT
 
+    IF (.NOT. tile%process_action(CARBON_) == ON_TILE_) RETURN
+
     !model => get_model(tile%owner_model_id)
 
     ! Get carbon memory of the tile
     !dsl4jsb_Get_memory(CARBON_)
-
-    IF (.NOT. tile%Is_process_active(CARBON_)) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Setting  carbon boundary conditions for tile '//TRIM(tile%name))
 
@@ -142,7 +145,7 @@ CONTAINS
    !-----------------------------------------------------------------------
    ! CONTENT
 
-   IF (.NOT. tile%Is_process_active(CARBON_)) RETURN
+   IF (.NOT. tile%process_action(CARBON_) == ON_TILE_) RETURN
 
    IF (debug_on()) CALL message(TRIM(routine), 'Initializing carbon memory for tile '//TRIM(tile%name))
 
@@ -184,6 +187,8 @@ CONTAINS
       & 'c_acid_bg2',  'c_water_bg2', 'c_ethanol_bg2', 'c_nonsoluble_bg2', 'c_humus_2' ]
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':carbon_read_cpools'
+
+    IF (.NOT. tile%process_action(CARBON_) == ON_TILE_) RETURN
 
     model => get_model(tile%owner_model_id)
 

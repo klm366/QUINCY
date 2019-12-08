@@ -22,6 +22,7 @@ MODULE mo_hd_memory_class
   !USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_memory_class, ONLY: t_jsb_memory
   USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_jsb_process_class,      ONLY: ON_TILE_, AGGREGATE_
 
   ! Use of prcesses in this module
   !dsl4jsb_Use_processes HD_
@@ -76,7 +77,7 @@ MODULE mo_hd_memory_class
 
 CONTAINS
 
-  SUBROUTINE Init_hd_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_hd_memory(mem, prefix, suffix, process_action, lct_ids, model_id)
 
     USE mo_jsb_varlist,       ONLY: jsb_add_var
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
@@ -87,6 +88,7 @@ CONTAINS
     CLASS(t_hd_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),   INTENT(in)    :: prefix
     CHARACTER(len=*),   INTENT(in)    :: suffix
+    INTEGER,            INTENT(in)    :: process_action
     INTEGER,            INTENT(in)    :: lct_ids(:)
     INTEGER,            INTENT(in)    :: model_id
 

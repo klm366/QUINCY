@@ -556,7 +556,7 @@ CONTAINS
     l_debug = .FALSE.
     IF (PRESENT(debug)) l_debug = debug
 
-    CALL self%Set_mode('full')
+    CALL self%Set_mode('simple')
 
     ALLOCATE(self%current(nthreads))
     ALLOCATE(self%next   (nthreads))

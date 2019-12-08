@@ -19,6 +19,7 @@ MODULE mo_disturb_memory_class
 
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d
+  USE mo_jsb_process_class,      ONLY: ON_TILE_, AGGREGATE_
 
   IMPLICIT NONE
   PRIVATE
@@ -51,7 +52,7 @@ MODULE mo_disturb_memory_class
 
 CONTAINS
 
-  SUBROUTINE Init_disturb_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_disturb_memory(mem, prefix, suffix, process_action, lct_ids, model_id)
 
     USE mo_jsb_varlist,       ONLY: jsb_add_var, BASIC !, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
@@ -61,12 +62,14 @@ CONTAINS
     CLASS(t_disturb_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),    INTENT(in)    :: prefix
     CHARACTER(len=*),    INTENT(in)    :: suffix
+    INTEGER,             INTENT(in)    :: process_action
     INTEGER,             INTENT(in)    :: lct_ids(:)
     INTEGER,             INTENT(in)    :: model_id
 
     TYPE(t_jsb_grid),  POINTER :: hgrid           ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface         ! Vertical grids
     INTEGER :: table
+    LOGICAL :: l_required
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_disturb_memory'
 
@@ -78,11 +81,14 @@ CONTAINS
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
 
+    l_required = process_action == ON_TILE_
+
     CALL jsb_add_var( mem, 'burned_fract', mem%burned_fract,                            &
       & hgrid, surface,                                                                 &
       & t_cf('burned_fract', 'frac', 'Fraction of tile that is burned.'),               &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),              &
       & prefix, suffix,                                                                 &
+      & l_required=l_required,                                                     &
       & output_level=BASIC,                                                             &
       & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
@@ -91,6 +97,7 @@ CONTAINS
       & t_cf('damaged_fract', 'frac', 'Fraction of tile that is damaged by windbreak.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
       & prefix, suffix,                                                                  &
+      & l_required=l_required,                                                     &
       & output_level=BASIC,                                                              &
       & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
@@ -99,6 +106,7 @@ CONTAINS
       & t_cf('q_rel_air_climbuf', '-', 'Relative humiditiy of lowest air layer smoothed in time.'),   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                            &
       & prefix, suffix,                                                                               &
+      & l_required=l_required,                                                     &
       & lrestart=.TRUE., initval_r=50.0_wp ) ! initval taken from JS3; lrestart=true only necessary if we restart within a day
 
     CALL jsb_add_var( mem, 'q_air_clim_yday', mem%q_rel_air_climbuf_yday,                               &
@@ -107,6 +115,7 @@ CONTAINS
                                                & at the end of the last day.'),                         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
       & prefix, suffix,                                                                                 &
+      & l_required=l_required,                                                     &
       & output_level=BASIC,                                                                             &
       & lrestart=.FALSE., initval_r=50.0_wp ) ! initval taken from JSBACH3
 
@@ -115,6 +124,7 @@ CONTAINS
       & t_cf('prev_day_max_wind_10m', '-', 'Previous day maximum wind speed.'),   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
       & prefix, suffix,                                                           &
+      & l_required=l_required,                                                     &
       & lrestart=.FALSE., initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'max_wind_10m', mem%max_wind_10m,                                           &
@@ -122,6 +132,7 @@ CONTAINS
       & t_cf('max_wind_10m', '-', 'Maximum wind speed smoothed in time at the end of the last day..'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
       & prefix, suffix,                                                                                &
+      & l_required=l_required,                                                     &
       & lrestart=.TRUE., initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'max_wind_10m_act', mem%max_wind_10m_act,        &
@@ -129,6 +140,7 @@ CONTAINS
       & t_cf('max_wind_10m_act', '-', 'This days maximum wind speed.'),     &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
       & prefix, suffix,                                                     &
+      & l_required=l_required,                                                     &
       & lrestart=.FALSE., initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'cconservation_wind', mem%cconservation_wind,    &
@@ -137,6 +149,7 @@ CONTAINS
       &   'Test for c conservation on relocation for wind damaged area.'),  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
       & prefix, suffix,                                                     &
+      & l_required=l_required,                                                     &
       & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'cconservation_fire', mem%cconservation_fire,    &
@@ -145,6 +158,7 @@ CONTAINS
       &  'Test for c conservation on relocation for burned area.'),         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
       & prefix, suffix,                                                     &
+      & l_required=l_required,                                                     &
       & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp )
 
   END SUBROUTINE Init_disturb_memory

@@ -18,11 +18,12 @@ MODULE mo_rad_memory_class
   USE mo_kind, ONLY: wp
   USE mo_util, ONLY: One_of
 
-  USE mo_jsb_model_class,  ONLY: t_jsb_model
-  USE mo_jsb_class,        ONLY: Get_model
-  USE mo_jsb_memory_class, ONLY: t_jsb_memory
-  USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
-  USE mo_jsb_lct_class,    ONLY: BARE_TYPE, VEG_TYPE, LAND_TYPE, GLACIER_TYPE, LAKE_TYPE
+  USE mo_jsb_model_class,   ONLY: t_jsb_model
+  USE mo_jsb_class,         ONLY: Get_model
+  USE mo_jsb_memory_class,  ONLY: t_jsb_memory
+  USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_jsb_lct_class,     ONLY: BARE_TYPE, VEG_TYPE, LAND_TYPE, GLACIER_TYPE, LAKE_TYPE
+  USE mo_jsb_process_class, ONLY: ON_TILE_, AGGREGATE_
 
   ! Use of processes in this module
   dsl4jsb_Use_processes SEB_
@@ -127,7 +128,7 @@ MODULE mo_rad_memory_class
 
 CONTAINS
 
-  SUBROUTINE Init_rad_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_rad_memory(mem, prefix, suffix, process_action, lct_ids, model_id)
 
     USE mo_jsb_varlist,       ONLY: jsb_add_var, BASIC, MEDIUM !, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
@@ -140,6 +141,7 @@ CONTAINS
     CLASS(t_rad_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),    INTENT(in)    :: prefix
     CHARACTER(len=*),    INTENT(in)    :: suffix
+    INTEGER,             INTENT(in)    :: process_action
     INTEGER,             INTENT(in)    :: lct_ids(:)
     INTEGER,             INTENT(in)    :: model_id
 
@@ -149,6 +151,7 @@ CONTAINS
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface, canopy_layer        ! Vertical grid
     INTEGER :: table
+    LOGICAL :: l_required
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_rad_memory'
     IF (model_id > 0) CONTINUE ! avoid compiler warning about dummy argument not being used
@@ -165,6 +168,8 @@ CONTAINS
 
     !$acc enter data pcreate(mem)
 
+    l_required = process_action == ON_TILE_
+
     !$acc enter data pcreate(mem%sw_srf_net,mem%swvis_srf_net,             &
     !$acc mem%swnir_srf_net,mem%lw_srf_net,mem%rad_srf_net,                &
     !$acc mem%alb_background, mem%alb_vis,mem%alb_nir,mem%alb_vis_snow,    &
@@ -175,6 +180,7 @@ CONTAINS
       & t_cf('sw_srf_net', '', 'Net surface shortwave radiation'),         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
       & prefix, suffix,                                                    &
+      & l_required=l_required,                                                     &
       & lrestart=.FALSE.,                                                  &
       & output_level=BASIC,                                                &
       & initval_r=0.0_wp )
@@ -184,6 +190,7 @@ CONTAINS
       & t_cf('swvis_srf_net', '', 'Net surface shortwave radiation in VIS'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
+      & l_required=l_required,                                                     &
       & lrestart=.FALSE.,                                                    &
       & output_level=MEDIUM,                                                 &
       & initval_r=0.0_wp )
@@ -193,6 +200,7 @@ CONTAINS
       & t_cf('swnir_srf_net', '', 'Net surface shortwave radiation in NIR'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
+      & l_required=l_required,                                                     &
       & lrestart=.FALSE.,                                                    &
       & output_level=MEDIUM,                                                 &
       & initval_r=0.0_wp )
@@ -202,6 +210,7 @@ CONTAINS
       & t_cf('lw_srf_net', '', 'Net surface longwave radiation'),          &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
       & prefix, suffix,                                                    &
+      & l_required=l_required,                                                     &
       & lrestart=.FALSE.,                                                  &
       & output_level=BASIC,                                                &
       & initval_r=0.0_wp )
@@ -211,6 +220,7 @@ CONTAINS
       & t_cf('rad_srf_net', '', 'Net surface radiation'),                  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
       & prefix, suffix,                                                    &
+      & l_required=.TRUE.,                                                 &
       & lrestart=.FALSE.,                                                  &
       & output_level=BASIC,                                                &
       & initval_r=0.0_wp )
@@ -220,6 +230,7 @@ CONTAINS
       & t_cf('surface_albedo_background', '', ''),                         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
       & prefix, suffix,                                                    &
+      & l_required=l_required,                                                     &
       & lrestart=.FALSE.,                                                  &
       & output_level=MEDIUM,                                               &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
@@ -229,6 +240,7 @@ CONTAINS
       & t_cf('gridcell_surface_albedo_visible', '', ''),                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
       & prefix, suffix,                                                    &
+      & l_required=l_required,                                                     &
       & lrestart=.TRUE.,                                                   &
       & output_level=BASIC,                                                &
       & initval_r=0.0_wp )
@@ -238,6 +250,7 @@ CONTAINS
       & t_cf('gridcell_surface_albedo_nir', '', ''),                       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
       & prefix, suffix,                                                    &
+      & l_required=l_required,                                                     &
       & lrestart=.TRUE.,                                                   &
       & output_level=BASIC,                                                &
       & initval_r=0.0_wp )
@@ -247,6 +260,7 @@ CONTAINS
       & t_cf('albedo_vis_snow', '', ''),                                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
       & prefix, suffix,                                                    &
+      & l_required=l_required,                                                     &
       & output_level=MEDIUM,                                               &
       & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
@@ -255,6 +269,7 @@ CONTAINS
       & t_cf('albedo_nir_snow', '', ''),                                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
       & prefix, suffix,                                                    &
+      & l_required=l_required,                                                     &
       & output_level=MEDIUM,                                               &
       & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
@@ -275,6 +290,7 @@ CONTAINS
         & t_cf('surface_albvis_lnd', '', ''),                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
+        & l_required=.TRUE.,                                                        &
         & lrestart=.TRUE.,                                                          &
         & output_level=MEDIUM, &
         & initval_r=0.0_wp )
@@ -284,6 +300,7 @@ CONTAINS
         & t_cf('surface_albnir_lnd', '', ''),                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
+        & l_required=.TRUE.,                                                        &
         & lrestart=.TRUE.,                                                          &
         & output_level=MEDIUM, &
         & initval_r=0.0_wp )
@@ -304,6 +321,7 @@ CONTAINS
         & t_cf('soil_albedo_with_carbon_and_litter', '', ''),                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
+        & l_required=l_required,                                                     &
         & output_level=MEDIUM,                                               &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
 
@@ -312,6 +330,7 @@ CONTAINS
         & t_cf('soil_albedo_with_carbon_and_litter', '', ''),                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
+        & l_required=l_required,                                                     &
         & output_level=MEDIUM,                                               &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
 
@@ -320,6 +339,7 @@ CONTAINS
         & t_cf('alb_vis_mineralsoil', '', ''),                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
+        & l_required=l_required,                                                     &
         & output_level=MEDIUM,                                               &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
@@ -328,6 +348,7 @@ CONTAINS
         & t_cf('alb_nir_mineralsoil', '', ''),                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
+        & l_required=l_required,                                                     &
         & output_level=MEDIUM,                                               &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
@@ -352,6 +373,7 @@ CONTAINS
         & t_cf('albedo_vis_canopy', '', ''),                                 &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
+        & l_required=l_required,                                                     &
         & lrestart=.FALSE.,                                                  &
         & output_level=MEDIUM,                                               &
         & initval_r=0.0_wp )
@@ -361,6 +383,7 @@ CONTAINS
         & t_cf('albedo_nir_canpy', '', ''),                                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
+        & l_required=l_required,                                                     &
         & lrestart=.FALSE.,                                                  &
         & output_level=MEDIUM,                                               &
         & initval_r=0.0_wp )
@@ -370,6 +393,7 @@ CONTAINS
         & t_cf('snow_age', '', ''),                                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
+        & l_required=l_required,                                                     &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'sky_view_fract', mem%sky_view_fract,           &
@@ -377,6 +401,7 @@ CONTAINS
         & t_cf('sky_view_fract', '', ''),                                    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
+        & l_required=l_required,                                                     &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
       CALL jsb_add_var( mem, 'sky_view_fract_stem', mem%sky_view_fract_stem, &
@@ -384,6 +409,7 @@ CONTAINS
         & t_cf('sky_view_fract_stem', '', ''),                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
+        & l_required=l_required,                                                     &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
       CALL jsb_add_var( mem, 'par', mem%par,                                 &
@@ -391,6 +417,7 @@ CONTAINS
         & t_cf('Downward PAR flux in [W/m^2]', '', ''),                      &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
+        & l_required=l_required,                                                     &
         & output_level=MEDIUM,                                               &
         & lrestart=.FALSE., initval_r=0.0_wp )
 
@@ -399,6 +426,7 @@ CONTAINS
         & t_cf('Downward PAR flux in mol (photons)', '', ''),                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
+        & l_required=l_required,                                                     &
         & output_level=MEDIUM,                                               &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! R: initval =0
 
@@ -407,6 +435,7 @@ CONTAINS
         & t_cf('Fraction of PAR absorbed by the canopy', '', ''),            &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
+        & l_required=l_required,                                                     &
         & output_level=BASIC,                                                &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
@@ -429,6 +458,7 @@ CONTAINS
         & t_cf('Soil reflectivity in the PAR region', '', ''),                   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
+        & l_required=l_required,                                                     &
         & loutput=.FALSE., lrestart=.FALSE., initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'fract_par_direct', mem%fract_par_direct,       &
@@ -436,6 +466,7 @@ CONTAINS
         & t_cf('Fraction of direct PAR', '', ''),                            &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
+        & l_required=l_required,                                                     &
         & loutput=.TRUE., lrestart=.FALSE., initval_r=0.5_wp )
 
       CALL jsb_add_var( mem, 'lai_cl', mem%lai_cl,                           &
@@ -443,6 +474,7 @@ CONTAINS
         & t_cf('LAI for each canopy layer', '', ''),                         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
+        & l_required=l_required,                                                     &
         & lrestart=.FALSE., initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'fapar_cl', mem%faPAR_cl,                            &
@@ -450,6 +482,7 @@ CONTAINS
         & t_cf('Absorbed PAR per canopy layer [fraction of irradiance]', '', ''), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
         & prefix, suffix,                                                         &
+        & l_required=l_required,                                                     &
         & lrestart=.FALSE., initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'apar_per_lai_cl', mem%apar_per_lai_cl,         &
@@ -457,6 +490,7 @@ CONTAINS
         & t_cf('Absorbed PAR per canopy layer (LAI area).', '', ''),         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
+        & l_required=l_required,                                                     &
         & loutput=.FALSE., lrestart=.FALSE., initval_r=0.0_wp )
 
       !  CALL jsb_add_var( mem, 'apar_per_lai_cl_nacc', mem%apar_per_lai_cl_nacc,           &
@@ -499,6 +533,7 @@ CONTAINS
         & t_cf('rad_net_lwtr', '', 'Net surface radiation over lake water'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
         & prefix, suffix,                                                     &
+        & l_required=l_required,                                                     &
         & lrestart=.FALSE.,                                                   &
         & output_level=MEDIUM,                                                &
         & initval_r=0.0_wp )
@@ -508,6 +543,7 @@ CONTAINS
         & t_cf('albedo_lwtr', '', 'Albedo of open water on lakes'),           &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
         & prefix, suffix,                                                     &
+        & l_required=.TRUE.,                                                  &
         & output_level=MEDIUM,                                                &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=AlbedoLakeWater )
 
@@ -522,6 +558,7 @@ CONTAINS
           & t_cf('rad_net_lice', '', 'Net surface radiation over lake ice'),    &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
           & prefix, suffix,                                                     &
+          & l_required=l_required,                                                     &
           & lrestart=.FALSE.,                                                   &
           & output_level=MEDIUM,                                                &
           & initval_r=0.0_wp )
@@ -531,6 +568,7 @@ CONTAINS
           & t_cf('albedo_lice', '', 'Albedo of ice on lake water'),             &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
           & prefix, suffix,                                                     &
+          & l_required=.TRUE.,                                                  &
           & output_level=MEDIUM,                                                &
           & loutput=.TRUE., lrestart=.TRUE., initval_r=AlbedoLakeIceMin )
 
