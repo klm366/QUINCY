@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from:
 !    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/soil_snow_energy/mo_sse_process.f90
-!    with md5 hash: 43ace6176c136a6f0f832282db5b823e
+!    with md5 hash: f3d741ebb433dffce8fa7a38c1744b36
 !
 !>
 !! @brief Contains the routines for the soil and snow energy processes
@@ -516,17 +516,15 @@ CONTAINS
       ! deeper layers
 
       !$claw acc data present(t_soil,t_soil_acoef,t_soil_bcoef)
-      ! !$claw acc parallel
-      ! !$claw acc loop gang vector
-      !$claw acc update host(t_soil,t_soil_acoef,t_soil_bcoef)
+      !$claw acc parallel
+      !$claw acc loop gang vector
       DO jl=1,nidx
         ! !$claw acc loop seq
         DO jk = 1, nsoil-1
           t_soil(jl,jk+1) = t_soil_acoef(jl,jk) + t_soil_bcoef(jl,jk) * t_soil(jl,jk)
         END DO
       END DO
-      !$claw acc update device(t_soil)
-      ! !$claw acc end parallel
+      !$claw acc end parallel
       !$claw acc end data
 
       ! Phase change calculations
@@ -568,13 +566,11 @@ CONTAINS
         !$claw acc end data
 
         ! Note: only either frozen or melt is non-zero at any given point
-        !$cla$w expand parallel update savepoint=ser_jsb_sse_calc_soil_temperature_expand_1 counter=ser_counter
-        !$claw acc update host(ws,ice,t_soil,frozen,melt,heat_cap)
+        !$claw expand parallel update savepoint=ser_jsb_sse_calc_soil_temperature_expand_1 counter=ser_counter
         ws(:,:) = ws(:,:) - frozen(:,:) + melt(:,:)
         ice(:,:) = ice(:,:) + frozen(:,:) - melt(:,:)
         t_soil(:,:) = t_soil(:,:) + frozen(:,:) * alf * rhoh2o / heat_cap(:,:) - melt(:,:) * alf * rhoi / heat_cap(:,:)
-        !$claw acc update device(ws,ice,t_soil)
-        !$cla$w end expand
+        !$claw end expand
 
         !$claw expand parallel update savepoint=ser_jsb_sse_calc_soil_temperature_expand_2 counter=ser_counter
         frozen(:,:) = frozen(:,:) * rhoh2o / delta_time
@@ -636,40 +632,25 @@ CONTAINS
     z1(:,:) = 0._wp
 
     ! lowest soil layer
-    ! !$claw expand parallel update savepoint=ser_jsb_sse_calc_soil_temperature_expand_4 counter=ser_counter
-    ! z1(:,nsoil-1) = zdz2(:,nsoil) + zdz1(:,nsoil-1)
-    ! t_soil_acoef(:,nsoil-1) = zdz2(:,nsoil) * t_soil(:,nsoil) / z1(:,nsoil-1)
-    ! t_soil_bcoef(:,nsoil-1) = zdz1(:,nsoil-1) / z1(:,nsoil-1)
-
-    !$claw acc data present(z1,zdz2,zdz1,z1,t_soil,t_soil_acoef,t_soil_bcoef)
-    ! !$claw acc parallel
-    ! !$claw acc loop seq
-    !$claw acc update host(zdz2,zdz1,t_soil)
-    DO jl=1,nidx
-      z1(jl,nsoil-1) = zdz2(jl,nsoil) + zdz1(jl,nsoil-1)
-      t_soil_acoef(jl,nsoil-1) = zdz2(jl,nsoil) * t_soil(jl,nsoil) / z1(jl,nsoil-1)
-      t_soil_bcoef(jl,nsoil-1) = zdz1(jl,nsoil-1) / z1(jl,nsoil-1)
-    END DO
-    !$claw acc update device(t_soil_acoef,t_soil_bcoef)
-    ! !$claw acc end parallel
-    !$claw acc end data
-    ! !$claw end expand
+    !$claw expand parallel update savepoint=ser_jsb_sse_calc_soil_temperature_expand_4 counter=ser_counter
+    z1(:,nsoil-1) = zdz2(:,nsoil) + zdz1(:,nsoil-1)
+    t_soil_acoef(:,nsoil-1) = zdz2(:,nsoil) * t_soil(:,nsoil) / z1(:,nsoil-1)
+    t_soil_bcoef(:,nsoil-1) = zdz1(:,nsoil-1) / z1(:,nsoil-1)
+    !$claw end expand
 
     ! soil layers above
     !$claw acc data present(z1,zdz1, zdz2,t_soil_acoef,t_soil_bcoef,t_soil)
-    ! !$claw acc parallel
-    ! !$claw acc loop gang vector
-    !$claw acc update host(zdz2,zdz1,t_soil_acoef,t_soil_bcoef)
+    !$claw acc parallel
+    !$claw acc loop gang vector
     DO jl=1,nidx
-      ! !$claw acc loop seq
+      !$claw acc loop seq
       DO jk = nsoil-1, 2, -1
         z1(:,jk-1) = 1._wp / (zdz2(:,jk) + zdz1(:,jk-1) + zdz1(:,jk) * (1._wp - t_soil_bcoef(:,jk)))
         t_soil_acoef(:,jk-1) = (t_soil(:,jk) * zdz2(:,jk) + zdz1(:,jk) * t_soil_acoef(:,jk)) * z1(:,jk-1)
         t_soil_bcoef(:,jk-1) = zdz1(:,jk-1) * z1(:,jk-1)
       END DO
     END DO  
-    !$claw acc update device(t_soil_acoef,t_soil_bcoef)
-    ! !$claw acc end parallel
+    !$claw acc end parallel
     !$claw acc end data
 
 #if defined(_CLAW) && defined(SERIALIZE)
