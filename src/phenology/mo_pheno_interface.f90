@@ -750,7 +750,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real2D_onChunk :: fract_fpc
     dsl4jsb_Real2D_onChunk :: fract_fpc_max
-    ! REAL(wp), POINTER      :: fract_fpc_mon(:,:)
+    REAL(wp), POINTER      :: fract_fpc_mon(:,:)
 
 
     INTEGER  :: iblk, ics, ice
@@ -788,12 +788,10 @@ CONTAINS
         !$claw expand parallel update savepoint=ser_jsb_pheno_update_fpc_expand_1 tile_name=tile%name
         fract_fpc(:) = get_foliage_projected_cover(fract_fpc_max(:), lai(:), 1._wp)
       ELSE
-        ! fract_fpc_mon(1:,0:) => dsl4jsb_memory(PHENO_)%fract_fpc_mon (ics:ice, iblk, :) ! in
+        fract_fpc_mon(1:,0:) => dsl4jsb_memory(PHENO_)%fract_fpc_mon (ics:ice, iblk, :) ! in
         CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
-        ! fract_fpc(:) = REAL(wgt1,wp) * fract_fpc_mon(:,nmw1) + REAL(wgt2,wp) * fract_fpc_mon(:,nmw2)
         !$claw expand parallel update savepoint=ser_jsb_pheno_update_fpc_expand_2 tile_name=tile%name
-        fract_fpc(:) = REAL(wgt1,wp) * dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,iblk,nmw1) + &
-          &            REAL(wgt2,wp) * dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,iblk,nmw2)
+        fract_fpc(:) = REAL(wgt1,wp) * fract_fpc_mon(:,nmw1) + REAL(wgt2,wp) * fract_fpc_mon(:,nmw2)
       END IF
     ELSE        
       ! We have PFTs and %scheme /= climatology
