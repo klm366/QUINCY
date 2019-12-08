@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/hydrology/mo_hydro_interface.f90
-!    with md5 hash: 45fbf71b603dec6a6c8295c0354b0f32
+!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/hydrology/mo_hydro_interface.f90
+!    with md5 hash: 23fceb08b0389ac1bf1b05d1da968cf9
 !
 !>
 !! @brief Contains the interfaces to the hydro processes
@@ -1173,7 +1173,6 @@ CONTAINS
     ! Used variables
     USE mo_hydro_process, ONLY: get_water_stress_factor
     USE mo_hydro_util,    ONLY: get_water_in_root_zone
-    USE mo_phy_schemes,   ONLY: qsat
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -1308,14 +1307,14 @@ CONTAINS
     ! Variables
 
     ! Used variables
-    USE mo_hydro_process, ONLY: get_canopy_conductance, get_water_stress_factor
+    USE mo_hydro_process, ONLY: get_canopy_conductance
     USE mo_phy_schemes,   ONLY: qsat
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    TYPE(t_jsb_model), POINTER :: model
+    ! TYPE(t_jsb_model), POINTER :: model
 
     TYPE(t_seb_memory), POINTER :: seb__mem
     TYPE(t_a2l_memory), POINTER :: a2l__mem
@@ -1344,7 +1343,7 @@ CONTAINS
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    model => Get_model(tile%owner_model_id)
+    ! model => Get_model(tile%owner_model_id)
 
     ! Get reference to variables for current block
     !
@@ -1425,7 +1424,6 @@ CONTAINS
   SUBROUTINE update_evaporation(tile, options)
 
     USE mo_phy_schemes,            ONLY: q_effective, heat_transfer_coef
-    USE mo_jsb_physical_constants, ONLY: grav, cvdifts
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options

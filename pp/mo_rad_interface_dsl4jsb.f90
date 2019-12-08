@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/radiation/mo_rad_interface.f90
-!    with md5 hash: 128dcc8650fc8a3b00f4be37990e85f2
+!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/radiation/mo_rad_interface.f90
+!    with md5 hash: 46c5ff3d78079a2358475f3aa9fedd78
 !
 !>
 !! @brief Contains the interfaces to the radiation processes
@@ -431,8 +431,8 @@ CONTAINS
     REAL(wp), POINTER, DIMENSION(:) :: swpar_srf_down
     REAL(wp), POINTER, DIMENSION(:) :: par                   ! Downward PAR flux in [W/m^2], Photosynth. Active Radiation (400-700nm)
     REAL(wp), POINTER, DIMENSION(:) :: par_down_mol          ! Downward PAR flux in mol (photons)/(m^2 s)
-    REAL(wp), POINTER, DIMENSION(:) :: par_down_mol_nacc     ! PAR accumulated [MOL PHOTONS/M^2 ]
-    !REAL(wp), POINTER, DIMENSION(:) :: par_down_mol_tavg     ! PAR [MOL PHOTONS/M^2 S] (time mean value)
+    ! REAL(wp), POINTER, DIMENSION(:) :: par_down_mol_nacc     ! PAR accumulated [MOL PHOTONS/M^2 ]
+    ! REAL(wp), POINTER, DIMENSION(:) :: par_down_mol_tavg     ! PAR [MOL PHOTONS/M^2 S] (time mean value)
     REAL(wp), POINTER, DIMENSION(:) :: soil_reflectivity_par ! Soil reflectivity within the PAR spectrum [-]
     REAL(wp), POINTER, DIMENSION(:) :: alb_vis_soil          ! Soil albedo in the visible range
     REAL(wp), POINTER, DIMENSION(:) :: lai                   ! Leaf area index [-]
@@ -440,14 +440,14 @@ CONTAINS
     REAL(wp), POINTER, DIMENSION(:) :: fract_par_direct      ! Fraction of direct (in contrast to diffuse) PAR [-]
     REAL(wp), POINTER, DIMENSION(:) :: fract_par_diffuse     ! Fraction of diffuse (in contrast to direct) PAR [-]
     REAL(wp), POINTER, DIMENSION(:) :: canopy_bound_lai
-    REAL(wp), POINTER, DIMENSION(:) :: apar_nacc
+    ! REAL(wp), POINTER, DIMENSION(:) :: apar_nacc
     REAL(wp), POINTER, DIMENSION(:) :: faPAR
 
     REAL(wp), POINTER, DIMENSION(:,:) :: fapar_cl              ! Fraction of absorbed PAR per leaf area for each canopy layer
     REAL(wp), POINTER, DIMENSION(:,:) :: apar_per_lai_cl       ! Absorbed PAR of canopy layer
     REAL(wp), POINTER, DIMENSION(:,:) :: lai_cl                ! Leaf area index of canopy layer
-    REAL(wp), POINTER, DIMENSION(:,:) :: apar_per_lai_cl_nacc  ! Absorbed PAR accumulated [MOL PHOTONS/M^2 ]
-    !REAL(wp), POINTER, DIMENSION(:,:) :: apar_per_lai_cl_tavg  ! Absorbed PAR [MOL PHOTONS/M^2 S] (time mean value)
+    ! REAL(wp), POINTER, DIMENSION(:,:) :: apar_per_lai_cl_nacc  ! Absorbed PAR accumulated [MOL PHOTONS/M^2 ]
+    ! REAL(wp), POINTER, DIMENSION(:,:) :: apar_per_lai_cl_tavg  ! Absorbed PAR [MOL PHOTONS/M^2 S] (time mean value)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_radiation_par'
 
@@ -488,16 +488,16 @@ CONTAINS
 
     ! R: These variables could also be local as they are not used outside this procedure in the moment.
     !    However I want it in the std model output and thus it has to be in the memory
-    par_down_mol_nacc => rad__mem%par_down_mol_nacc%ptr(ics:ice,iblk)     ! inout
-    !par_down_mol_tavg => rad__mem%par_down_mol_tavg%ptr(ics:ice,iblk)     ! inout
+    ! par_down_mol_nacc => rad__mem%par_down_mol_nacc%ptr(ics:ice,iblk)     ! inout
+    ! par_down_mol_tavg => rad__mem%par_down_mol_tavg%ptr(ics:ice,iblk)     ! inout
     soil_reflectivity_par => rad__mem%soil_reflectivity_par%ptr(ics:ice,iblk) ! inout
     lai_cl => rad__mem%lai_cl%ptr(ics:ice,:,iblk)                ! inout
     fapar_cl => rad__mem%fapar_cl%ptr(ics:ice,:,iblk)              ! inout
     ! used outside for assimilation:
     apar_per_lai_cl => rad__mem%apar_per_lai_cl%ptr(ics:ice,:,iblk)       ! inout
-    apar_per_lai_cl_nacc => rad__mem%apar_per_lai_cl_nacc%ptr(ics:ice,:,iblk)  ! inout
-    !apar_per_lai_cl_tavg => rad__mem%apar_per_lai_cl_tavg%ptr(ics:ice,:,iblk)  ! inout
-    apar_nacc => rad__mem%apar_nacc%ptr(ics:ice,iblk)             ! inout
+    ! apar_per_lai_cl_nacc => rad__mem%apar_per_lai_cl_nacc%ptr(ics:ice,:,iblk)  ! inout
+    ! apar_per_lai_cl_tavg => rad__mem%apar_per_lai_cl_tavg%ptr(ics:ice,:,iblk)  ! inout
+    ! apar_nacc => rad__mem%apar_nacc%ptr(ics:ice,iblk)             ! inout
 
     faPAR => rad__mem%faPAR%ptr(ics:ice,iblk)                 ! out
 
@@ -555,25 +555,27 @@ CONTAINS
     ! R: Note, the following code is preliminary and should be replaced later by an laccu-procedure.
     !    For the correct integration over time as it is done now, this task must be called only once per timestep.
     ! Accumulate incoming par in mol(photons)/(m^2) over time
-    !$claw expand parallel update savepoint=ser_jsb_rad_update_radiation_par_expand_2 tile_name=tile%name
-    par_down_mol_nacc(:) = par_down_mol_nacc(:) + par_down_mol(:) * dtime
+    !! !$claw expand parallel update savepoint=ser_jsb_rad_update_radiation_par_expand_2 tile_name=tile%name
+    ! par_down_mol_nacc(:) = par_down_mol_nacc(:) + par_down_mol(:) * dtime
 
     ! R: This whole workaround should get abitary soon...
     !acc_counter = acc_counter + 1
     !par_down_mol_tavg = par_down_mol_nacc / dtime / acc_counter
-    !$claw expand parallel update savepoint=ser_jsb_rad_update_radiation_par_expand_3 tile_name=tile%name
-    apar_per_lai_cl_nacc(:,:)  = apar_per_lai_cl_nacc(:,:) + apar_per_lai_cl(:,:) * dtime
+    !! !$claw expand parallel update savepoint=ser_jsb_rad_update_radiation_par_expand_3 tile_name=tile%name
+    ! apar_per_lai_cl_nacc(:,:)  = apar_per_lai_cl_nacc(:,:) + apar_per_lai_cl(:,:) * dtime
 
     ! R: This whole workaround (acc_counter) should get abitary soon...
     !apar_per_lai_cl_tavg(:,icanopy)  = apar_per_lai_cl_nacc(:,icanopy) / dtime / acc_counter
-    DO icanopy=1,ncanopy
-      !$claw expand parallel update savepoint=ser_jsb_rad_update_radiation_par_expand_4 tile_name=tile%name canopy_lvl=icanopy
-      apar_nacc(:) = apar_nacc(:) + par_down_mol(:) * faPAR_cl(:,icanopy) * dtime
-    END DO
+    ! DO icanopy=1,ncanopy
+      !! !$claw expand parallel update savepoint=ser_jsb_rad_update_radiation_par_expand_4 tile_name=tile%name canopy_lvl=icanopy
+      ! apar_nacc(:) = apar_nacc(:) + par_down_mol(:) * faPAR_cl(:,icanopy) * dtime
+    ! END DO
 
     ! Create faPAR
+    !$claw expand parallel update savepoint=ser_jsb_rad_update_radiation_par_expand_2 tile_name=tile%name
+    faPAR(:) = 0._wp
     DO icanopy=1,ncanopy
-      !$claw expand parallel update savepoint=ser_jsb_rad_update_radiation_par_expand_5 tile_name=tile%name canopy_lvl=icanopy
+      !$claw expand parallel update savepoint=ser_jsb_rad_update_radiation_par_expand_3 tile_name=tile%name canopy_lvl=icanopy
       faPAR(:) = faPAR(:) + faPAR_cl(:,icanopy) ! faPAR_cl is always the fraction relativ to incoming radiation on the top of the
                                                 ! whole canopy
     END DO

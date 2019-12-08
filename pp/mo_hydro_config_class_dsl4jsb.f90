@@ -1,6 +1,6 @@
 !
 ! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/hydrology/mo_hydro_config_class.f90
+!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/hydrology/mo_hydro_config_class.f90
 !    with md5 hash: 65752f7c2fb4e1eedfc4741f926bc981
 !
 !>

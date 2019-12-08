@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/assimilation/mo_assimi_memory_class.f90
-!    with md5 hash: 53e5952f671f600e9f2a0d2795649e51
+!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/assimilation/mo_assimi_memory_class.f90
+!    with md5 hash: e6df0fdefe1fa4d626cb9245eb4ddb58
 !
 !>
 !! @brief Contains the memory class for the assimilation process.
@@ -183,7 +183,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
         & prefix, suffix,                                                                   &
         & output_level=BASIC,                                                               &
-        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL jsb_add_var( mem, 'scaling_fact_cl', mem%assimi_scaling_fact_cl,  &
         & hgrid, canopy_layer,                                               &
