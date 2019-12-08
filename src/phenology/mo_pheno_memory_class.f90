@@ -163,8 +163,7 @@ CONTAINS
 
     IF ( (     One_of(LAND_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(VEG_TYPE,  lct_ids(:)) > 0 &
-      &  )                                       &
-      & .AND. .NOT. ASSOCIATED(mem%lai%ptr)) THEN
+      &  ) ) THEN
 
       ! IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology') THEN   ! TODO
         ALLOCATE(mem%lai_mon      (hgrid%nproma, hgrid%nblks, 0:13))
