@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from:
 !    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/base/mo_jsb_tile.f90
-!    with md5 hash: e71bc071218c3966db5db589e03ba9f5
+!    with md5 hash: 8bc7db53172c43b20fdccda58ed092ea
 !
 !>
 !! @brief Contains concrete tile class that contains the surface structure and memory state.
@@ -46,7 +46,6 @@ MODULE mo_jsb_tile
   PUBLIC :: t_jsb_tile, t_jsb_tile_p
 
   TYPE, EXTENDS(t_jsb_tile_abstract) :: t_jsb_tile
-    LOGICAL :: must_create_memory_parents(max_no_of_processes)    !< helper variable
     TYPE(t_jsb_model),         POINTER :: model => NULL()
     LOGICAL :: in_var_groups
   CONTAINS
@@ -176,7 +175,6 @@ CONTAINS
     END IF
 
     ! Loop over all processes and set actions for this tile
-    return_ptr%must_create_memory_parents(:) = .FALSE.
     DO i=1,max_no_of_processes
       return_ptr%process_action(i) = SKIP_
       iproc = -1
@@ -342,43 +340,6 @@ CONTAINS
         IF (debug_on()) &
           & CALL message(TRIM(routine), 'Created memory for process '//TRIM(process_name)//' on tile '//TRIM(this%name))
 
-      END IF
-
-      IF (this%must_create_memory_parents(iproc)) THEN
-        child_no = this%path(this%level)
-        tmp_tile => this%parent_tile
-        DO WHILE (ASSOCIATED(tmp_tile))
-          no_of_children = tmp_tile%Get_no_of_children()
-          IF (.NOT. ASSOCIATED(tmp_tile%mem(iproc)%p)) THEN
-            tmp_tile%mem(iproc)%p => Create_process_memory(iproc)
-            IF (.NOT. ASSOCIATED(tmp_tile%mem(iproc)%p%children) .AND. no_of_children > 0) &
-              & ALLOCATE(tmp_tile%mem(iproc)%p%children(no_of_children))
-            tmp_tile%mem(iproc)%p%children(child_no)%p => tmp_ptr
-            tmp_ptr => tmp_tile%mem(iproc)%p
-            tmp_tile%mem(iproc)%p%id = iproc
-            tmp_tile%mem(iproc)%p%varlist_name =  TRIM(varlist_name_loc)
-            tmp_tile%mem(iproc)%p%grid_id = this%grid_id
-            tmp_tile%mem(iproc)%p%owner_model_id = this%owner_model_id
-            ALLOCATE(tmp_tile%mem(iproc)%p%owner_tile_path(SIZE(tmp_tile%path)))
-            tmp_tile%mem(iproc)%p%owner_tile_path(:) = tmp_tile%path(:)
-            tmp_tile%mem(iproc)%p%owner_tile_name = TRIM(tmp_tile%name)
-            tmp_tile%mem(iproc)%p%no_of_children = no_of_children
-            IF (debug_on()) &
-              & CALL message(TRIM(routine), 'Created memory for process '//TRIM(process_name)//' on tile '//TRIM(tmp_tile%name))
-          END IF
-          ! Note: Init for mem(iproc) might be called several times for the same tile and must make sure that only
-          ! those parts of the memory (for certain lct%id) are created that haven't been initialized before.
-          IF (prefix /= '') THEN
-            CALL tmp_tile%mem(iproc)%p%Init(TRIM(process_name)//'_'//TRIM(prefix), TRIM(tmp_tile%name), &
-              &                             tmp_tile%lcts(:)%id, this%owner_model_id)
-          ELSE
-            CALL tmp_tile%mem(iproc)%p%Init(TRIM(process_name), '', tmp_tile%lcts(:)%id, this%owner_model_id)
-          END IF
-
-          child_no = tmp_tile%path(tmp_tile%level)
-          tmp_tile => tmp_tile%parent_tile
-        END DO
-        NULLIFY(tmp_tile)
       END IF
 
     END DO
