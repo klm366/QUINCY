@@ -1168,7 +1168,6 @@ CONTAINS
     ! Used variables
     USE mo_hydro_process, ONLY: get_water_stress_factor
     USE mo_hydro_util,    ONLY: get_water_in_root_zone
-    USE mo_phy_schemes,   ONLY: qsat
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -1303,14 +1302,14 @@ CONTAINS
     ! Variables
 
     ! Used variables
-    USE mo_hydro_process, ONLY: get_canopy_conductance, get_water_stress_factor
+    USE mo_hydro_process, ONLY: get_canopy_conductance
     USE mo_phy_schemes,   ONLY: qsat
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    TYPE(t_jsb_model), POINTER :: model
+    ! TYPE(t_jsb_model), POINTER :: model
 
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(A2L_)
@@ -1339,7 +1338,7 @@ CONTAINS
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    model => Get_model(tile%owner_model_id)
+    ! model => Get_model(tile%owner_model_id)
 
     ! Get reference to variables for current block
     !
@@ -1420,7 +1419,6 @@ CONTAINS
   SUBROUTINE update_evaporation(tile, options)
 
     USE mo_phy_schemes,            ONLY: q_effective, heat_transfer_coef
-    USE mo_jsb_physical_constants, ONLY: grav, cvdifts
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
