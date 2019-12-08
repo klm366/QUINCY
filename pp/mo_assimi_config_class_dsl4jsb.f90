@@ -1,6 +1,6 @@
 !
 ! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/assimilation/mo_assimi_config_class.f90
+!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/assimilation/mo_assimi_config_class.f90
 !    with md5 hash: c237bfc9cbdaa9147a82782d0f39aa87
 !
 !>

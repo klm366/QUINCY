@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/hd/mo_hd_memory_class.f90
-!    with md5 hash: 8f98927479a700d48e9d799746ee4e16
+!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/hd/mo_hd_memory_class.f90
+!    with md5 hash: d2b6cedd7d55fd7da5864a65da5f5994
 !
 !>
 !! @brief Contains the memory class for the surface.
@@ -117,8 +117,6 @@ CONTAINS
     hd_r => get_vgrid('hd_nres_riverflow')
 
     !SELECT TYPE (cc => model%processes(hd_)%p%config); TYPE IS (t_hd_config) ; hd__conf => cc ; END SELECT
-
-    IF (ASSOCIATED(mem%hd_mask%ptr)) RETURN
 
     CALL jsb_add_var( mem, 'hd_mask', mem%hd_mask,     &
       & hgrid, surface,                                                                    &

@@ -163,13 +163,14 @@ CONTAINS
 
     IF ( (     One_of(LAND_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(VEG_TYPE,  lct_ids(:)) > 0 &
-      &  )                                       &
-      & .AND. .NOT. ASSOCIATED(mem%lai%ptr)) THEN
+      &  ) ) THEN
 
-      ALLOCATE(mem%lai_mon      (hgrid%nproma, hgrid%nblks, 0:13))
-      ALLOCATE(mem%fract_fpc_mon(hgrid%nproma, hgrid%nblks, 0:13))
-      !$acc enter data pcreate(mem%lai_mon,mem%fract_fpc_mon)
-      !$acc enter data attach(mem%lai_mon,mem%fract_fpc_mon)
+      ! IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology') THEN   ! TODO
+        ALLOCATE(mem%lai_mon      (hgrid%nproma, hgrid%nblks, 0:13))
+        ALLOCATE(mem%fract_fpc_mon(hgrid%nproma, hgrid%nblks, 0:13))
+        !$acc enter data pcreate(mem%lai_mon,mem%fract_fpc_mon)
+        !$acc enter data attach(mem%lai_mon,mem%fract_fpc_mon)
+      ! END IF
   
       !$acc enter data pcreate(mem%lai,mem%fract_fpc,mem%fract_fpc_max,      &
       !$acc mem%fract_forest,mem%veg_fract_correction)

@@ -227,14 +227,17 @@ CONTAINS
   INTEGER :: claw_induction_2
   INTEGER :: claw_induction_3
   INTEGER :: claw_induction_4
+  INTEGER :: claw_induction_5
+  INTEGER :: claw_induction_6
   INTEGER :: claw_induction_7
-  INTEGER :: claw_induction_8
-  INTEGER :: claw_induction_9
   INTEGER :: claw_induction_10
+  INTEGER :: claw_induction_11
+  INTEGER :: claw_induction_12
   INTEGER :: claw_induction_13
-  INTEGER :: claw_induction_14
-  INTEGER :: claw_induction_15
   INTEGER :: claw_induction_16
+  INTEGER :: claw_induction_17
+  INTEGER :: claw_induction_18
+  INTEGER :: claw_induction_19
 
 INTEGER, SAVE :: ser_counter = 1
 !$acc data create(z1,zd1,zdz1,zdz2,heat_cap,liquid_max) &
@@ -266,8 +269,8 @@ INTEGER, SAVE :: ser_counter = 1
 !$acc data present(thaw_depth(:))
 !$acc parallel
 !$acc loop gang vector
-  DO claw_induction_16 = 1 , size ( thaw_depth , 1 )
-   thaw_depth ( claw_induction_16 ) = 0._wp
+  DO claw_induction_19 = 1 , size ( thaw_depth , 1 )
+   thaw_depth ( claw_induction_19 ) = 0._wp
   END DO
 !$acc end parallel
 !$acc end data
@@ -275,20 +278,21 @@ INTEGER, SAVE :: ser_counter = 1
 !$acc data present(t_soil(:,1),t_srf_unfilt(:))
 !$acc parallel
 !$acc loop gang vector
-   DO claw_induction_13 = 1 , size ( t_soil , 1 )
-    t_soil ( claw_induction_13 , 1 ) = t_srf_unfilt ( claw_induction_13 )
+   DO claw_induction_16 = 1 , size ( t_soil , 1 )
+    t_soil ( claw_induction_16 , 1 ) = t_srf_unfilt ( claw_induction_16 )
    END DO
 !$acc end parallel
 !$acc end data
 !$acc data present(t_soil,t_soil_acoef,t_soil_bcoef)
-!$acc update host(t_soil,t_soil_acoef,t_soil_bcoef)
+!$acc parallel
+!$acc loop gang vector
    DO jl = 1 , nidx , 1
     DO jk = 1 , nsoil - 1 , 1
      t_soil ( jl , jk + 1 ) = t_soil_acoef ( jl , jk ) + t_soil_bcoef ( jl ,&
       jk ) * t_soil ( jl , jk )
     END DO
    END DO
-!$acc update device(t_soil)
+!$acc end parallel
 !$acc end data
    IF ( l_freeze .AND. present ( ws ) ) THEN
     IF ( l_supercool ) THEN
@@ -297,13 +301,13 @@ INTEGER, SAVE :: ser_counter = 1
 !$acc ,liquid_max(:,:))
 !$acc parallel
 !$acc loop gang vector
-     DO claw_induction_9 = 1 , size ( liquid_max , 1 )
-      DO claw_induction_10 = 1 , size ( liquid_max , 2 )
-       liquid_max ( claw_induction_9 , claw_induction_10 ) = get_liquid_max (&
-        t_soil ( claw_induction_9 , claw_induction_10 ) , ws_max (&
-        claw_induction_9 , claw_induction_10 ) , matrix_pot ( claw_induction_9&
-        , claw_induction_10 ) , bclapp ( claw_induction_9 , claw_induction_10&
-        ) )
+     DO claw_induction_12 = 1 , size ( liquid_max , 1 )
+      DO claw_induction_13 = 1 , size ( liquid_max , 2 )
+       liquid_max ( claw_induction_12 , claw_induction_13 ) = get_liquid_max (&
+        t_soil ( claw_induction_12 , claw_induction_13 ) , ws_max (&
+        claw_induction_12 , claw_induction_13 ) , matrix_pot (&
+        claw_induction_12 , claw_induction_13 ) , bclapp ( claw_induction_12 ,&
+        claw_induction_13 ) )
       END DO
      END DO
 !$acc end parallel
@@ -312,9 +316,9 @@ INTEGER, SAVE :: ser_counter = 1
 !$acc data present(liquid_max(:,:))
 !$acc parallel
 !$acc loop gang vector
-     DO claw_induction_7 = 1 , size ( liquid_max , 1 )
-      DO claw_induction_8 = 1 , size ( liquid_max , 2 )
-       liquid_max ( claw_induction_7 , claw_induction_8 ) = 0._wp
+     DO claw_induction_10 = 1 , size ( liquid_max , 1 )
+      DO claw_induction_11 = 1 , size ( liquid_max , 2 )
+       liquid_max ( claw_induction_10 , claw_induction_11 ) = 0._wp
       END DO
      END DO
 !$acc end parallel
@@ -339,23 +343,37 @@ INTEGER, SAVE :: ser_counter = 1
     END DO
 !$acc end parallel
 !$acc end data
-!$cla$w expand parallel update savepoint=ser_jsb_sse_calc_soil_temperature_expand_1 counter=ser_counter
-!$acc update host(ws,ice,t_soil,frozen,melt,heat_cap)
-    ws ( : , : ) = ws ( : , : ) - frozen ( : , : ) + melt ( : , : )
-    ice ( : , : ) = ice ( : , : ) + frozen ( : , : ) - melt ( : , : )
-    t_soil ( : , : ) = t_soil ( : , : ) + frozen ( : , : ) * alf * rhoh2o /&
-     heat_cap ( : , : ) - melt ( : , : ) * alf * rhoi / heat_cap ( : , : )
-!$acc update device(ws,ice,t_soil)
-!$cla$w end expand
+!$acc data &
+!$acc present(frozen(:,:),melt(:,:),ice(:,:),t_soil(:,:),heat_cap(:,:),ws(: &
+!$acc ,:))
+!$acc parallel
+!$acc loop gang vector
+    DO claw_induction_2 = 1 , size ( ws , 1 )
+     DO claw_induction_3 = 1 , size ( ws , 2 )
+      ws ( claw_induction_2 , claw_induction_3 ) = ws ( claw_induction_2 ,&
+       claw_induction_3 ) - frozen ( claw_induction_2 , claw_induction_3 ) +&
+       melt ( claw_induction_2 , claw_induction_3 )
+      ice ( claw_induction_2 , claw_induction_3 ) = ice ( claw_induction_2 ,&
+       claw_induction_3 ) + frozen ( claw_induction_2 , claw_induction_3 ) -&
+       melt ( claw_induction_2 , claw_induction_3 )
+      t_soil ( claw_induction_2 , claw_induction_3 ) = t_soil (&
+       claw_induction_2 , claw_induction_3 ) + frozen ( claw_induction_2 ,&
+       claw_induction_3 ) * alf * rhoh2o / heat_cap ( claw_induction_2 ,&
+       claw_induction_3 ) - melt ( claw_induction_2 , claw_induction_3 ) * alf&
+       * rhoi / heat_cap ( claw_induction_2 , claw_induction_3 )
+     END DO
+    END DO
+!$acc end parallel
+!$acc end data
 !$acc data present(frozen(:,:),melt(:,:))
 !$acc parallel
 !$acc loop gang vector
-    DO claw_induction_2 = 1 , size ( frozen , 1 )
-     DO claw_induction_3 = 1 , size ( frozen , 2 )
-      frozen ( claw_induction_2 , claw_induction_3 ) = frozen (&
-       claw_induction_2 , claw_induction_3 ) * rhoh2o / delta_time
-      melt ( claw_induction_2 , claw_induction_3 ) = melt ( claw_induction_2 ,&
-       claw_induction_3 ) * rhoi / delta_time
+    DO claw_induction_4 = 1 , size ( frozen , 1 )
+     DO claw_induction_5 = 1 , size ( frozen , 2 )
+      frozen ( claw_induction_4 , claw_induction_5 ) = frozen (&
+       claw_induction_4 , claw_induction_5 ) * rhoh2o / delta_time
+      melt ( claw_induction_4 , claw_induction_5 ) = melt ( claw_induction_4 ,&
+       claw_induction_5 ) * rhoi / delta_time
      END DO
     END DO
 !$acc end parallel
@@ -397,27 +415,34 @@ INTEGER, SAVE :: ser_counter = 1
 !$acc data present(z1(:,:))
 !$acc parallel
 !$acc loop gang vector
-  DO claw_induction_14 = 1 , size ( z1 , 1 )
-   DO claw_induction_15 = 1 , size ( z1 , 2 )
-    z1 ( claw_induction_14 , claw_induction_15 ) = 0._wp
+  DO claw_induction_17 = 1 , size ( z1 , 1 )
+   DO claw_induction_18 = 1 , size ( z1 , 2 )
+    z1 ( claw_induction_17 , claw_induction_18 ) = 0._wp
    END DO
   END DO
 !$acc end parallel
 !$acc end data
-!$acc data present(z1,zdz2,zdz1,z1,t_soil,t_soil_acoef,t_soil_bcoef)
-!$acc update host(zdz2,zdz1,t_soil)
-  DO jl = 1 , nidx , 1
-   z1 ( jl , nsoil - 1 ) = zdz2 ( jl , nsoil ) + zdz1 ( jl , nsoil - 1 )
-   t_soil_acoef ( jl , nsoil - 1 ) = zdz2 ( jl , nsoil ) * t_soil ( jl , nsoil&
-    ) / z1 ( jl , nsoil - 1 )
-   t_soil_bcoef ( jl , nsoil - 1 ) = zdz1 ( jl , nsoil - 1 ) / z1 ( jl , nsoil&
-    - 1 )
+!$acc data &
+!$acc present(t_soil_acoef(:,nsoil-1),t_soil_bcoef(:,nsoil-1),zdz2(:,nsoil) &
+!$acc ,t_soil(:,nsoil),zdz1(:,nsoil-1),z1(:,nsoil-1))
+!$acc parallel
+!$acc loop gang vector
+  DO claw_induction_6 = 1 , size ( z1 , 1 )
+   z1 ( claw_induction_6 , nsoil - 1 ) = zdz2 ( claw_induction_6 , nsoil ) +&
+    zdz1 ( claw_induction_6 , nsoil - 1 )
+   t_soil_acoef ( claw_induction_6 , nsoil - 1 ) = zdz2 ( claw_induction_6 ,&
+    nsoil ) * t_soil ( claw_induction_6 , nsoil ) / z1 ( claw_induction_6 ,&
+    nsoil - 1 )
+   t_soil_bcoef ( claw_induction_6 , nsoil - 1 ) = zdz1 ( claw_induction_6 ,&
+    nsoil - 1 ) / z1 ( claw_induction_6 , nsoil - 1 )
   END DO
-!$acc update device(t_soil_acoef,t_soil_bcoef)
+!$acc end parallel
 !$acc end data
 !$acc data present(z1,zdz1, zdz2,t_soil_acoef,t_soil_bcoef,t_soil)
-!$acc update host(zdz2,zdz1,t_soil_acoef,t_soil_bcoef)
+!$acc parallel
+!$acc loop gang vector
   DO jl = 1 , nidx , 1
+!$acc loop seq
    DO jk = nsoil - 1 , 2 , (-1)
     z1 ( : , jk - 1 ) = 1._wp / ( zdz2 ( : , jk ) + zdz1 ( : , jk - 1 ) + zdz1&
      ( : , jk ) * ( 1._wp - t_soil_bcoef ( : , jk ) ) )
@@ -426,20 +451,20 @@ INTEGER, SAVE :: ser_counter = 1
     t_soil_bcoef ( : , jk - 1 ) = zdz1 ( : , jk - 1 ) * z1 ( : , jk - 1 )
    END DO
   END DO
-!$acc update device(t_soil_acoef,t_soil_bcoef)
+!$acc end parallel
 !$acc end data
 !$acc data &
 !$acc present(t_soil(:,1),t_soil_bcoef(:,1),grnd_hflx(:),zdz1(:,1) &
 !$acc ,hcap_grnd(:),t_soil_acoef(:,1),zdz2(:,1))
 !$acc parallel
 !$acc loop gang vector
-  DO claw_induction_4 = 1 , size ( grnd_hflx , 1 )
-   grnd_hflx ( claw_induction_4 ) = zdz1 ( claw_induction_4 , 1 ) * (&
-    t_soil_acoef ( claw_induction_4 , 1 ) + ( t_soil_bcoef ( claw_induction_4&
-    , 1 ) - 1._wp ) * t_soil ( claw_induction_4 , 1 ) )
-   hcap_grnd ( claw_induction_4 ) = zdz2 ( claw_induction_4 , 1 ) * delta_time&
-    + delta_time * ( 1._wp - t_soil_bcoef ( claw_induction_4 , 1 ) ) * zdz1 (&
-    claw_induction_4 , 1 )
+  DO claw_induction_7 = 1 , size ( grnd_hflx , 1 )
+   grnd_hflx ( claw_induction_7 ) = zdz1 ( claw_induction_7 , 1 ) * (&
+    t_soil_acoef ( claw_induction_7 , 1 ) + ( t_soil_bcoef ( claw_induction_7&
+    , 1 ) - 1._wp ) * t_soil ( claw_induction_7 , 1 ) )
+   hcap_grnd ( claw_induction_7 ) = zdz2 ( claw_induction_7 , 1 ) * delta_time&
+    + delta_time * ( 1._wp - t_soil_bcoef ( claw_induction_7 , 1 ) ) * zdz1 (&
+    claw_induction_7 , 1 )
   END DO
 !$acc end parallel
 !$acc end data
@@ -482,10 +507,10 @@ ser_counter = ser_counter + 1
   REAL ( KIND= wp ) :: zd1 ( 1 : nidx , 1 : nsnow + 1 )
   REAL ( KIND= wp ) :: zdz1 ( 1 : nidx , 1 : nsnow + 1 )
   REAL ( KIND= wp ) :: zdz2 ( 1 : nidx , 1 : nsnow + 1 )
-  INTEGER :: claw_induction_5
-  INTEGER :: claw_induction_6
-  INTEGER :: claw_induction_11
-  INTEGER :: claw_induction_12
+  INTEGER :: claw_induction_8
+  INTEGER :: claw_induction_9
+  INTEGER :: claw_induction_14
+  INTEGER :: claw_induction_15
 
 !$acc data create(zmid,z1,zd1,zdz1,zdz2)
 !$acc data &
@@ -493,11 +518,11 @@ ser_counter = ser_counter + 1
 !$acc ,zmid(:,1))
 !$acc parallel
 !$acc loop gang vector
-  DO claw_induction_5 = 1 , size ( grnd_hflx , 1 )
-   grnd_hflx ( claw_induction_5 ) = 0._wp
-   hcap_grnd ( claw_induction_5 ) = 0._wp
-   t_soil_top ( claw_induction_5 ) = t_srf_unfilt ( claw_induction_5 )
-   zmid ( claw_induction_5 , 1 ) = dz ( claw_induction_5 , 1 ) / 2._wp
+  DO claw_induction_8 = 1 , size ( grnd_hflx , 1 )
+   grnd_hflx ( claw_induction_8 ) = 0._wp
+   hcap_grnd ( claw_induction_8 ) = 0._wp
+   t_soil_top ( claw_induction_8 ) = t_srf_unfilt ( claw_induction_8 )
+   zmid ( claw_induction_8 , 1 ) = dz ( claw_induction_8 , 1 ) / 2._wp
   END DO
 !$acc end parallel
 !$acc end data
@@ -521,15 +546,15 @@ ser_counter = ser_counter + 1
 !$acc ,nsnow+2),zd1(:,nsnow),dz_soil(2),zd1(:,nsnow+1))
 !$acc parallel
 !$acc loop gang vector
-  DO claw_induction_6 = 1 , size ( zmid , 1 )
-   zmid ( claw_induction_6 , nsnow + 1 ) = zmid ( claw_induction_6 , nsnow ) +&
-    0.5_wp * ( dz ( claw_induction_6 , nsnow ) + dz_soil ( 1 ) )
-   zmid ( claw_induction_6 , nsnow + 2 ) = zmid ( claw_induction_6 , nsnow + 1&
+  DO claw_induction_9 = 1 , size ( zmid , 1 )
+   zmid ( claw_induction_9 , nsnow + 1 ) = zmid ( claw_induction_9 , nsnow ) +&
+    0.5_wp * ( dz ( claw_induction_9 , nsnow ) + dz_soil ( 1 ) )
+   zmid ( claw_induction_9 , nsnow + 2 ) = zmid ( claw_induction_9 , nsnow + 1&
     ) + 0.5_wp * ( dz_soil ( 1 ) + dz_soil ( 2 ) )
-   zd1 ( claw_induction_6 , nsnow ) = 1._wp / ( zmid ( claw_induction_6 ,&
-    nsnow + 1 ) - zmid ( claw_induction_6 , nsnow ) )
-   zd1 ( claw_induction_6 , nsnow + 1 ) = 1._wp / ( zmid ( claw_induction_6 ,&
-    nsnow + 2 ) - zmid ( claw_induction_6 , nsnow + 1 ) )
+   zd1 ( claw_induction_9 , nsnow ) = 1._wp / ( zmid ( claw_induction_9 ,&
+    nsnow + 1 ) - zmid ( claw_induction_9 , nsnow ) )
+   zd1 ( claw_induction_9 , nsnow + 1 ) = 1._wp / ( zmid ( claw_induction_9 ,&
+    nsnow + 2 ) - zmid ( claw_induction_9 , nsnow + 1 ) )
   END DO
 !$acc end parallel
 !$acc end data
@@ -549,9 +574,9 @@ ser_counter = ser_counter + 1
 !$acc data present(t_snow(:,:))
 !$acc parallel
 !$acc loop gang vector
-   DO claw_induction_11 = 1 , size ( t_snow , 1 )
-    DO claw_induction_12 = 1 , size ( t_snow , 2 )
-     t_snow ( claw_induction_11 , claw_induction_12 ) = 0._wp
+   DO claw_induction_14 = 1 , size ( t_snow , 1 )
+    DO claw_induction_15 = 1 , size ( t_snow , 2 )
+     t_snow ( claw_induction_14 , claw_induction_15 ) = 0._wp
     END DO
    END DO
 !$acc end parallel

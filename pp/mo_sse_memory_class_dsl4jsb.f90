@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/soil_snow_energy/mo_sse_memory_class.f90
-!    with md5 hash: a9bfcd382dbcb157d3b82c2e046aecd9
+!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/soil_snow_energy/mo_sse_memory_class.f90
+!    with md5 hash: b8858c2106e1b3d07e150dad6e9a187d
 !
 !>
 !! @brief Contains the memory class for the soil and snow energy process.
@@ -116,8 +116,6 @@ CONTAINS
     END IF
 
     !$acc enter data pcreate(mem)
-
-    IF (ASSOCIATED(mem%vol_heat_cap%ptr)) RETURN
 
     !$acc enter data pcreate(mem%vol_heat_cap,mem%vol_heat_cap_sl, &
     !$acc mem%vol_heat_cap_snow,mem%heat_cond,mem%heat_cond_sl,    &

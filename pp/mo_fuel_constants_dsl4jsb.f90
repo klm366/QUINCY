@@ -1,6 +1,6 @@
 !
 ! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/disturbance/mo_fuel_constants.f90
+!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/disturbance/mo_fuel_constants.f90
 !    with md5 hash: 3cfc8074a60fbe374e517a23eece7cd7
 !
 !>
