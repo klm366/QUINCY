@@ -568,7 +568,7 @@ CONTAINS
     ! sigma_max: resolution dependent maximum
 
     !$claw acc parallel
-    !$claw acc loop seq
+    !$claw acc loop gang vector
     DO i=1,nidx
       ws_min_drain(i) = zwdmin * ws_max(i)            ! minimum amount of soil water for drainage
 
