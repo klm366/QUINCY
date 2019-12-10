@@ -298,7 +298,7 @@ PROGRAM jsb4_driver
   ENDIF
 
   model => get_model(model_id)
-  tile => model%Get_top_tile()
+  CALL model%Get_top_tile(tile)
   ics = 1
   ice = nproma
 
