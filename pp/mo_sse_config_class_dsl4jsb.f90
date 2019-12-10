@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/soil_snow_energy/mo_sse_config_class.f90
-!    with md5 hash: b5afa8e3e59db33b6fa8262f2568ec83
+! This file was automatically generated from JSBACH source file:
+!    src/soil_snow_energy/mo_sse_config_class.f90
+! with md5 hash: b5afa8e3e59db33b6fa8262f2568ec83
 !
 !>
 !! @brief Contains structures and methods for soil and snow energy config

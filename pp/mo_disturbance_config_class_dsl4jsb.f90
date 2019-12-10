@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/disturbance/mo_disturbance_config_class.f90
-!    with md5 hash: c9d2b5b29b31f4d214b151ba7fbfec06
+! This file was automatically generated from JSBACH source file:
+!    src/disturbance/mo_disturbance_config_class.f90
+! with md5 hash: c9d2b5b29b31f4d214b151ba7fbfec06
 !
 !>
 !! @brief Contains structures and methods for disturbance config

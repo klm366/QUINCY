@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/base/mo_jsb_model_init.f90
-!    with md5 hash: 9d42f1532059b5e593072edef15346c4
+! This file was automatically generated from JSBACH source file:
+!    src/base/mo_jsb_model_init.f90
+! with md5 hash: 9d42f1532059b5e593072edef15346c4
 !
 !>
 !! @brief Contains methods for JSBACH initializations.

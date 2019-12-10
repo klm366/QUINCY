@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/turbulence/mo_turb_config_class.f90
-!    with md5 hash: 17ec8eb76df3dcbc9096e9447e4b59c4
+! This file was automatically generated from JSBACH source file:
+!    src/turbulence/mo_turb_config_class.f90
+! with md5 hash: 17ec8eb76df3dcbc9096e9447e4b59c4
 !
 !>
 !! @brief Contains structures and methods for turbulence config

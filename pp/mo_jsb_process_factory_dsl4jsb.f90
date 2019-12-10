@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/base/mo_jsb_process_factory.f90
-!    with md5 hash: 04c8ca945764cf6da9e9248aacd7c421
+! This file was automatically generated from JSBACH source file:
+!    src/base/mo_jsb_process_factory.f90
+! with md5 hash: 04c8ca945764cf6da9e9248aacd7c421
 !
 !>
 !! @brief Contains process factory.

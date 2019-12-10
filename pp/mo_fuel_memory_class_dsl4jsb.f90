@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/disturbance/mo_fuel_memory_class.f90
-!    with md5 hash: 8314ae08cc926630e9091c885c9092af
+! This file was automatically generated from JSBACH source file:
+!    src/disturbance/mo_fuel_memory_class.f90
+! with md5 hash: 8314ae08cc926630e9091c885c9092af
 !
 !>
 !! @brief Contains the memory class for the fuel process.

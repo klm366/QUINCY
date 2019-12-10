@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/base/mo_jsb_lctlib_class.f90
-!    with md5 hash: 62249c2a12772850d6ab8effac847a53
+! This file was automatically generated from JSBACH source file:
+!    src/base/mo_jsb_lctlib_class.f90
+! with md5 hash: 62249c2a12772850d6ab8effac847a53
 !
 !>
 !! This module provides the data from the landcover library file, which contains additional information on the

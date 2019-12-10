@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/hydrology/mo_hydro_process.f90
-!    with md5 hash: befdfb98f490cfe43567f46cffe9f0c1
+! This file was automatically generated from JSBACH source file:
+!    src/hydrology/mo_hydro_process.f90
+! with md5 hash: befdfb98f490cfe43567f46cffe9f0c1
 !
 !>
 !! @brief Contains the routines for the hydro processes

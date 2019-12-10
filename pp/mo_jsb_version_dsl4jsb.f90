@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/base/mo_jsb_version.f90
-!    with md5 hash: fc9247f3a37c1d47f066a30507cace36
+! This file was automatically generated from JSBACH source file:
+!    src/base/mo_jsb_version.f90
+! with md5 hash: fc9247f3a37c1d47f066a30507cace36
 !
 !>
 !! @brief Contains methods to define and print JSBACH version number and label a simulation.

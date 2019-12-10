@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/base/mo_jsb_lct_class.f90
-!    with md5 hash: 395d7576c8fde0813a32cacc0e96d9ab
+! This file was automatically generated from JSBACH source file:
+!    src/base/mo_jsb_lct_class.f90
+! with md5 hash: 395d7576c8fde0813a32cacc0e96d9ab
 !
 !>
 !! @brief Contains definitions and methods for landcover types.

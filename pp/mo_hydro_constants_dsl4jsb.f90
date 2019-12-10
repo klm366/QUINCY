@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/hydrology/mo_hydro_constants.f90
-!    with md5 hash: 9edfb75b8b9e0300abf7aba79dbb664d
+! This file was automatically generated from JSBACH source file:
+!    src/hydrology/mo_hydro_constants.f90
+! with md5 hash: 9edfb75b8b9e0300abf7aba79dbb664d
 !
 !>
 !! @brief Contains constants for the radiation processes

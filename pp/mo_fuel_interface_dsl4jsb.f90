@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/disturbance/mo_fuel_interface.f90
-!    with md5 hash: 55081393d9b6066317c00a7056ca165e
+! This file was automatically generated from JSBACH source file:
+!    src/disturbance/mo_fuel_interface.f90
+! with md5 hash: 55081393d9b6066317c00a7056ca165e
 !
 !>
 !! @brief Contains the interfaces to the fuel process

@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/assimilation/mo_assimi_process.f90
-!    with md5 hash: 83b5545a3917fa26902962c47cd07f69
+! This file was automatically generated from JSBACH source file:
+!    src/assimilation/mo_assimi_process.f90
+! with md5 hash: 83b5545a3917fa26902962c47cd07f69
 !
 !>
 !! @brief Contains the routines for the assimilation processes

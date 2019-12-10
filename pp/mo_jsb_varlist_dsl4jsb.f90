@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/base/mo_jsb_varlist.f90
-!    with md5 hash: 6fc2ab0f4ce6e26a5b630836671bf682
+! This file was automatically generated from JSBACH source file:
+!    src/base/mo_jsb_varlist.f90
+! with md5 hash: 6fc2ab0f4ce6e26a5b630836671bf682
 !
 !>
 !! @brief Contains routines for var_lists/streams

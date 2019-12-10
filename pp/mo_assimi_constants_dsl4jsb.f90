@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/assimilation/mo_assimi_constants.f90
-!    with md5 hash: 70be844766af4493b65dc542b4eccad9
+! This file was automatically generated from JSBACH source file:
+!    src/assimilation/mo_assimi_constants.f90
+! with md5 hash: 70be844766af4493b65dc542b4eccad9
 !
 !>
 !! @brief Contains constants for the assimilation processes

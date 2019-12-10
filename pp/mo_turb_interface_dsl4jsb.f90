@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/turbulence/mo_turb_interface.f90
-!    with md5 hash: d4ff71ba345892354090c04e0b711ea3
+! This file was automatically generated from JSBACH source file:
+!    src/turbulence/mo_turb_interface.f90
+! with md5 hash: d4ff71ba345892354090c04e0b711ea3
 !
 !>
 !! @brief Contains the interfaces to the turbulence process
