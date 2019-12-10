@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/disturbance/mo_fuel_config_class.f90
-!    with md5 hash: d4af778d2240de9a4f93a7698c65b116
+! This file was automatically generated from JSBACH source file:
+!    src/disturbance/mo_fuel_config_class.f90
+! with md5 hash: d4af778d2240de9a4f93a7698c65b116
 !
 !>
 !! @brief Contains structures and methods for fuel config

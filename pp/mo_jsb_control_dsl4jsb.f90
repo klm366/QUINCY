@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/base/mo_jsb_control.f90
-!    with md5 hash: 2159b6e2029ba5fa34206067759f3d62
+! This file was automatically generated from JSBACH source file:
+!    src/base/mo_jsb_control.f90
+! with md5 hash: 2159b6e2029ba5fa34206067759f3d62
 !
 !>
 !! @brief Contains methods for JSBACH master control.

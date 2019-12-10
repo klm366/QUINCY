@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/disturbance/mo_disturbance_interface.f90
-!    with md5 hash: 2286f6a698c1651075cb94325b712d0e
+! This file was automatically generated from JSBACH source file:
+!    src/disturbance/mo_disturbance_interface.f90
+! with md5 hash: 2286f6a698c1651075cb94325b712d0e
 !
 !>
 !! @brief Contains the interfaces to the disturb process

@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/hydrology/mo_hydro_init.f90
-!    with md5 hash: 82bc38ae6a3746eaebd077d53b618812
+! This file was automatically generated from JSBACH source file:
+!    src/hydrology/mo_hydro_init.f90
+! with md5 hash: 82bc38ae6a3746eaebd077d53b618812
 !
 !>
 !! @brief Initialization of the the hydrology memory.

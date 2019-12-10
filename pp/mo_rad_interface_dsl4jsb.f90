@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/radiation/mo_rad_interface.f90
-!    with md5 hash: 46c5ff3d78079a2358475f3aa9fedd78
+! This file was automatically generated from JSBACH source file:
+!    src/radiation/mo_rad_interface.f90
+! with md5 hash: 46c5ff3d78079a2358475f3aa9fedd78
 !
 !>
 !! @brief Contains the interfaces to the radiation processes

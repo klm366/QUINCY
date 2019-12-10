@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/soil_snow_energy/mo_sse_interface.f90
-!    with md5 hash: 511c25ee6d452ce35969545512e3fdd8
+! This file was automatically generated from JSBACH source file:
+!    src/soil_snow_energy/mo_sse_interface.f90
+! with md5 hash: 511c25ee6d452ce35969545512e3fdd8
 !
 !>
 !! @brief Contains the interfaces to the soil and snow energy processes

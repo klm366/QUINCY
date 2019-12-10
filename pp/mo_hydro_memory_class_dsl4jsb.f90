@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/hydrology/mo_hydro_memory_class.f90
-!    with md5 hash: 978cfc50fd9d5b6e2ad4714f0f8ac503
+! This file was automatically generated from JSBACH source file:
+!    src/hydrology/mo_hydro_memory_class.f90
+! with md5 hash: 978cfc50fd9d5b6e2ad4714f0f8ac503
 !
 !>
 !! @brief Contains the memory class for the hydrology process.

@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/srf_energy_bal/mo_seb_config_class.f90
-!    with md5 hash: cd424a7162257b080d5dcadb0603e3af
+! This file was automatically generated from JSBACH source file:
+!    src/srf_energy_bal/mo_seb_config_class.f90
+! with md5 hash: cd424a7162257b080d5dcadb0603e3af
 !
 !>
 !! @brief Contains structures and methods for seb config

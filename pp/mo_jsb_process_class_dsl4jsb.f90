@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/base/mo_jsb_process_class.f90
-!    with md5 hash: 58979e8993897089257a65fc215d4f0f
+! This file was automatically generated from JSBACH source file:
+!    src/base/mo_jsb_process_class.f90
+! with md5 hash: 58979e8993897089257a65fc215d4f0f
 !
 !>
 !! @brief Contains process class
