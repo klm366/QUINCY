@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from JSBACH source file:
 !    src/drivers/jsb4_driver.f90
-! with md5 hash: 3cebb29bc7249277034fe85a5c4a02ed
+! with md5 hash: 7aa9de39b807b80fe31d27d253374949
 !
 !>
 !! @brief Contains the driver for jsbach standalone -> currently only and explicitly for use with Echam
@@ -298,7 +298,7 @@ PROGRAM jsb4_driver
   ENDIF
 
   model => get_model(model_id)
-  tile => model%Get_top_tile()
+  CALL model%Get_top_tile(tile)
   ics = 1
   ice = nproma
 
