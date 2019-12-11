@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/base/mo_jsb_grid_class.f90
-!    with md5 hash: cd16cdc2f82ef2ab2adaeac720dadd4c
+! This file was automatically generated from JSBACH source file:
+!    src/base/mo_jsb_grid_class.f90
+! with md5 hash: cd16cdc2f82ef2ab2adaeac720dadd4c
 !
 !>
 !! @brief Contains JSBACH grid structure and methods

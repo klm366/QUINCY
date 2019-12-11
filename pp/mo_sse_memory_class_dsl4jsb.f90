@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/soil_snow_energy/mo_sse_memory_class.f90
-!    with md5 hash: b8858c2106e1b3d07e150dad6e9a187d
+! This file was automatically generated from JSBACH source file:
+!    src/soil_snow_energy/mo_sse_memory_class.f90
+! with md5 hash: b8858c2106e1b3d07e150dad6e9a187d
 !
 !>
 !! @brief Contains the memory class for the soil and snow energy process.

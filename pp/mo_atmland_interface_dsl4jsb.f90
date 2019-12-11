@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/atmland/mo_atmland_interface.f90
-!    with md5 hash: d3d484fe428afb3226d3d02f64593982
+! This file was automatically generated from JSBACH source file:
+!    src/atmland/mo_atmland_interface.f90
+! with md5 hash: d3d484fe428afb3226d3d02f64593982
 !
 !>
 !! @brief Interface to run JSBACH for one time step

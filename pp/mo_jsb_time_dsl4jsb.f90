@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/base/mo_jsb_time.f90
-!    with md5 hash: 17a281b1b36db3aadb4e3dd5ddd84121
+! This file was automatically generated from JSBACH source file:
+!    src/base/mo_jsb_time.f90
+! with md5 hash: 17a281b1b36db3aadb4e3dd5ddd84121
 !
 !>
 !! @brief Contains time control for JSBACH

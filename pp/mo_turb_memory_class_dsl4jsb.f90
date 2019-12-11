@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/turbulence/mo_turb_memory_class.f90
-!    with md5 hash: 79046d4d72bb1e571694b0c84b0132a4
+! This file was automatically generated from JSBACH source file:
+!    src/turbulence/mo_turb_memory_class.f90
+! with md5 hash: 79046d4d72bb1e571694b0c84b0132a4
 !
 !>
 !! @brief Contains the memory class for the surface turbulence process.

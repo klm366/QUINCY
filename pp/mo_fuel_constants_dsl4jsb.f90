@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/disturbance/mo_fuel_constants.f90
-!    with md5 hash: 3cfc8074a60fbe374e517a23eece7cd7
+! This file was automatically generated from JSBACH source file:
+!    src/disturbance/mo_fuel_constants.f90
+! with md5 hash: 3cfc8074a60fbe374e517a23eece7cd7
 !
 !>
 !! @brief Contains constants for the fuel process

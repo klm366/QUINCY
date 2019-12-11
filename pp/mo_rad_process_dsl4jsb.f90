@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/radiation/mo_rad_process.f90
-!    with md5 hash: dd9646c8dae373edb8389219ebc1d454
+! This file was automatically generated from JSBACH source file:
+!    src/radiation/mo_rad_process.f90
+! with md5 hash: dd9646c8dae373edb8389219ebc1d454
 !
 !>
 !! @brief Contains the routines for the radiation processes

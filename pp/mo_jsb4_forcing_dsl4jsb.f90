@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/drivers/mo_jsb4_forcing.f90
-!    with md5 hash: c525d036e69ebde584fb2945099f8dcd
+! This file was automatically generated from JSBACH source file:
+!    src/drivers/mo_jsb4_forcing.f90
+! with md5 hash: c525d036e69ebde584fb2945099f8dcd
 !
 !>
 !! @brief Module to read and convert external forcing data (expects annual files with year in filename)

@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/phenology/mo_pheno_memory_class.f90
-!    with md5 hash: add7f114d31c563b1a055346db2a42c6
+! This file was automatically generated from JSBACH source file:
+!    src/phenology/mo_pheno_memory_class.f90
+! with md5 hash: add7f114d31c563b1a055346db2a42c6
 !
 !>
 !! @brief Contains the memory class for phenology.

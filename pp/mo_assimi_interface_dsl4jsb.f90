@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/assimilation/mo_assimi_interface.f90
-!    with md5 hash: 21d1829089bd4a78675ed9c6ac4f6010
+! This file was automatically generated from JSBACH source file:
+!    src/assimilation/mo_assimi_interface.f90
+! with md5 hash: 21d1829089bd4a78675ed9c6ac4f6010
 !
 !>
 !! @brief Contains the interfaces to the assimi process

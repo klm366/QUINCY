@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/radiation/mo_rad_init.f90
-!    with md5 hash: 5ea8ba3d0ee35fd23497c3079db1f471
+! This file was automatically generated from JSBACH source file:
+!    src/radiation/mo_rad_init.f90
+! with md5 hash: 5ea8ba3d0ee35fd23497c3079db1f471
 !
 !>
 !! @brief Initialization of the the radiation memory.

@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/disturbance/mo_disturbance_process.f90
-!    with md5 hash: 29471a16f7d4cdfd41e36028b179507f
+! This file was automatically generated from JSBACH source file:
+!    src/disturbance/mo_disturbance_process.f90
+! with md5 hash: 29471a16f7d4cdfd41e36028b179507f
 !
 !>
 !! @brief Contains the routines for the disturb processes

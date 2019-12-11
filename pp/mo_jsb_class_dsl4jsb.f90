@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/base/mo_jsb_class.f90
-!    with md5 hash: 8f3a43b6e7ea6cca4db80a6195477c91
+! This file was automatically generated from JSBACH source file:
+!    src/base/mo_jsb_class.f90
+! with md5 hash: 8f3a43b6e7ea6cca4db80a6195477c91
 !
 !>
 !! @par Copyright

@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/hd/mo_hd_memory_class.f90
-!    with md5 hash: d2b6cedd7d55fd7da5864a65da5f5994
+! This file was automatically generated from JSBACH source file:
+!    src/hd/mo_hd_memory_class.f90
+! with md5 hash: d2b6cedd7d55fd7da5864a65da5f5994
 !
 !>
 !! @brief Contains the memory class for the surface.

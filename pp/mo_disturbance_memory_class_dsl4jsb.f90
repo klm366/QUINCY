@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/disturbance/mo_disturbance_memory_class.f90
-!    with md5 hash: 42ce0ed4fa59bae8f6b3b31338e64bda
+! This file was automatically generated from JSBACH source file:
+!    src/disturbance/mo_disturbance_memory_class.f90
+! with md5 hash: 42ce0ed4fa59bae8f6b3b31338e64bda
 !
 !>
 !! @brief Contains the memory class for the disturb process.

@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/phenology/mo_pheno_interface.f90
-!    with md5 hash: 0d27a91419579efc431c19d304b099b3
+! This file was automatically generated from JSBACH source file:
+!    src/phenology/mo_pheno_interface.f90
+! with md5 hash: 0d27a91419579efc431c19d304b099b3
 !
 !>
 !! @brief Contains the interfaces to the phenlogy processes

@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/hydrology/mo_hydro_interface.f90
-!    with md5 hash: 23fceb08b0389ac1bf1b05d1da968cf9
+! This file was automatically generated from JSBACH source file:
+!    src/hydrology/mo_hydro_interface.f90
+! with md5 hash: 23fceb08b0389ac1bf1b05d1da968cf9
 !
 !>
 !! @brief Contains the interfaces to the hydro processes

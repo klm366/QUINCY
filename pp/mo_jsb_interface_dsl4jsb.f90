@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/interfaces/mo_jsb_interface.f90
-!    with md5 hash: d9ca4acf940a5cf226cf938d00fe0833
+! This file was automatically generated from JSBACH source file:
+!    src/interfaces/mo_jsb_interface.f90
+! with md5 hash: d9ca4acf940a5cf226cf938d00fe0833
 !
 !>
 !! @brief Interface to run JSBACH for one time step
