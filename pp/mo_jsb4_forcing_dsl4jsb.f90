@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from JSBACH source file:
 !    src/drivers/mo_jsb4_forcing.f90
-! with md5 hash: c525d036e69ebde584fb2945099f8dcd
+! with md5 hash: a6652fa1ca1b3ef0fc20387834b63234
 !
 !>
 !! @brief Module to read and convert external forcing data (expects annual files with year in filename)
@@ -334,7 +334,7 @@ CONTAINS
 
     ! --- compute bottom pressure
     model => get_model(model_id)
-    tile => model%Get_top_tile()
+    CALL model%Get_top_tile(tile)
     SELECT TYPE (mm => tile%mem(hydro_)%p); TYPE IS (t_hydro_memory); hydro__mem => mm ; END SELECT
     DO iblk = 1, nblks
       ! get elevation
@@ -1530,7 +1530,7 @@ CONTAINS
     IF (.NOT. forcing_options%forcing_set_ocean_to_constants) RETURN
 
     model => Get_model(model_id)
-    tile => model%Get_top_tile()
+    CALL model%Get_top_tile(tile)
 
     DO iblk = 1, nblks
       CALL tile%Get_fraction(ics, ice, iblk, fract=fract(:))
