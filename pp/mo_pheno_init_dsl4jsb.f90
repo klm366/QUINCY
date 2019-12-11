@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/phenology/mo_pheno_init.f90
-!    with md5 hash: e74cb3756f078fc832e0353dff5b0244
+! This file was automatically generated from JSBACH source file:
+!    src/phenology/mo_pheno_init.f90
+! with md5 hash: e74cb3756f078fc832e0353dff5b0244
 !
 !>
 !! @brief Initialization of the the phenology memory.

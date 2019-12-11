@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/soil_snow_energy/mo_sse_process.f90
-!    with md5 hash: f3d741ebb433dffce8fa7a38c1744b36
+! This file was automatically generated from JSBACH source file:
+!    src/soil_snow_energy/mo_sse_process.f90
+! with md5 hash: f3d741ebb433dffce8fa7a38c1744b36
 !
 !>
 !! @brief Contains the routines for the soil and snow energy processes

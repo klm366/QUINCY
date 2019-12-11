@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/radiation/mo_rad_config_class.f90
-!    with md5 hash: bdfdfe800adb1f13698183993e115ade
+! This file was automatically generated from JSBACH source file:
+!    src/radiation/mo_rad_config_class.f90
+! with md5 hash: bdfdfe800adb1f13698183993e115ade
 !
 !>
 ! @brief Contains structures and methods for radiation config

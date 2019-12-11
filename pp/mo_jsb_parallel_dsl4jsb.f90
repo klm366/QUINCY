@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/base/mo_jsb_parallel.f90
-!    with md5 hash: 92f44de11df6c33529c93190c0371b31
+! This file was automatically generated from JSBACH source file:
+!    src/base/mo_jsb_parallel.f90
+! with md5 hash: 92f44de11df6c33529c93190c0371b31
 !
 !>
 !! @brief Contains some functions to interface with the parallel infrastructure

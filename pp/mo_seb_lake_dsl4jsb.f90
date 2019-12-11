@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/srf_energy_bal/mo_seb_lake.f90
-!    with md5 hash: 9f138d4dcf8dd4cb0b15b39fa5419855
+! This file was automatically generated from JSBACH source file:
+!    src/srf_energy_bal/mo_seb_lake.f90
+! with md5 hash: 9f138d4dcf8dd4cb0b15b39fa5419855
 !
 !>
 !! @brief Contains the routines for the surface energy balance on LAKE lct_type.

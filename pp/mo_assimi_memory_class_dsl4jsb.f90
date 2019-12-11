@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/assimilation/mo_assimi_memory_class.f90
-!    with md5 hash: 3a1652ee9e5f02424a87d37f4a4b8691
+! This file was automatically generated from JSBACH source file:
+!    src/assimilation/mo_assimi_memory_class.f90
+! with md5 hash: 3a1652ee9e5f02424a87d37f4a4b8691
 !
 !>
 !! @brief Contains the memory class for the assimilation process.

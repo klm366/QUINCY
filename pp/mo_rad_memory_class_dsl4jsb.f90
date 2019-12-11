@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/radiation/mo_rad_memory_class.f90
-!    with md5 hash: 760957e259c4698e2ae6a5ea9ebdcb2f
+! This file was automatically generated from JSBACH source file:
+!    src/radiation/mo_rad_memory_class.f90
+! with md5 hash: 760957e259c4698e2ae6a5ea9ebdcb2f
 !
 !>
 !! @brief Contains the memory class for radiation.

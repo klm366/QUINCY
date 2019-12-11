@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/srf_energy_bal/mo_seb_memory_class.f90
-!    with md5 hash: bcbb8844b85059d5b1f66f04287ed248
+! This file was automatically generated from JSBACH source file:
+!    src/srf_energy_bal/mo_seb_memory_class.f90
+! with md5 hash: bcbb8844b85059d5b1f66f04287ed248
 !
 !>
 !! @brief Contains the memory class for the surface energy balance process.

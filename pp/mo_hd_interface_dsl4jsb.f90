@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/hd/mo_hd_interface.f90
-!    with md5 hash: 894fa34772d810b07e7f8fc6a846f639
+! This file was automatically generated from JSBACH source file:
+!    src/hd/mo_hd_interface.f90
+! with md5 hash: 894fa34772d810b07e7f8fc6a846f639
 !
 !>
 !! @brief Contains the interfaces to the HD model

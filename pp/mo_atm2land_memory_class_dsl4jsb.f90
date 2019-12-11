@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/atmland/mo_atm2land_memory_class.f90
-!    with md5 hash: 756cd68e0992cc26db2d47eea3560593
+! This file was automatically generated from JSBACH source file:
+!    src/atmland/mo_atm2land_memory_class.f90
+! with md5 hash: 756cd68e0992cc26db2d47eea3560593
 !
 !>
 !! @brief Contains types for the atmosphere-land interface memory.

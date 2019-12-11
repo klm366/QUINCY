@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/carbon/mo_carbon_memory_class.f90
-!    with md5 hash: 1e599a154f75f63590d29b5b0b85284c
+! This file was automatically generated from JSBACH source file:
+!    src/carbon/mo_carbon_memory_class.f90
+! with md5 hash: 1e599a154f75f63590d29b5b0b85284c
 !
 !>
 !! @brief Contains the memory class for the carbon process.

@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/phenology/mo_pheno_constants.f90
-!    with md5 hash: c73962ba34fad3697485a9ca1104af27
+! This file was automatically generated from JSBACH source file:
+!    src/phenology/mo_pheno_constants.f90
+! with md5 hash: c73962ba34fad3697485a9ca1104af27
 !
 !>
 !! @brief Contains constants for the phenology processes

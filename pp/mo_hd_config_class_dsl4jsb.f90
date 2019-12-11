@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/hd/mo_hd_config_class.f90
-!    with md5 hash: b544e8872306489dd2df7b660fea8ec8
+! This file was automatically generated from JSBACH source file:
+!    src/hd/mo_hd_config_class.f90
+! with md5 hash: b544e8872306489dd2df7b660fea8ec8
 !
 !>
 !! @brief Contains structures and methods for hd config

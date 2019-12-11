@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/carbon/mo_carbon_constants.f90
-!    with md5 hash: 66b82dcbc74fd17c3c67d2b1e8a3f709
+! This file was automatically generated from JSBACH source file:
+!    src/carbon/mo_carbon_constants.f90
+! with md5 hash: 66b82dcbc74fd17c3c67d2b1e8a3f709
 !
 !>
 !! @brief Contains constants for the carbon processes

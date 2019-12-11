@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/soil_snow_energy/mo_sse_init.f90
-!    with md5 hash: b4009f8ada900180c4688731b922c2ea
+! This file was automatically generated from JSBACH source file:
+!    src/soil_snow_energy/mo_sse_init.f90
+! with md5 hash: b4009f8ada900180c4688731b922c2ea
 !
 !>
 !! @brief Initialization of the the soil and snow memory.

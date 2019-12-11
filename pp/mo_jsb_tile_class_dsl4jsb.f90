@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/base/mo_jsb_tile_class.f90
-!    with md5 hash: f5bb7a1a957de5c65e59bba1645b7d3f
+! This file was automatically generated from JSBACH source file:
+!    src/base/mo_jsb_tile_class.f90
+! with md5 hash: f5bb7a1a957de5c65e59bba1645b7d3f
 !
 !>
 !! @brief Contains abstract tile class that contains the surface structure and memory state

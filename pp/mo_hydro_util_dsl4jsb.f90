@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/hydrology/mo_hydro_util.f90
-!    with md5 hash: 2a132d684093f66ad21a15aba0816060
+! This file was automatically generated from JSBACH source file:
+!    src/hydrology/mo_hydro_util.f90
+! with md5 hash: 2a132d684093f66ad21a15aba0816060
 !
 !>
 !! @brief Contains utilities for the hydrology process

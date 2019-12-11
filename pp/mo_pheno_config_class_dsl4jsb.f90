@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /users/rschnur/icon-les-dev-staging.pgi_gpu/externals/jsbach/src/phenology/mo_pheno_config_class.f90
-!    with md5 hash: 572a6ce7a57327aa29e932b175e7ce1d
+! This file was automatically generated from JSBACH source file:
+!    src/phenology/mo_pheno_config_class.f90
+! with md5 hash: 572a6ce7a57327aa29e932b175e7ce1d
 !
 !>
 !! @brief Contains structures and methods for phenology config
