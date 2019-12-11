@@ -41,6 +41,20 @@ PROGRAM example
   dsl4jsb_var3D_onDomain(SOIL_,ws_l)
   dsl4jsb_Aggregate_onChunk(SOIL_,ws, aggregator)
 
+  dsl4jsb_Use_pools(CARBON_) t_basic_pool, t_awenh_pool
+  dsl4jsb_Def_pool(t_basic_pool) :: green
+  dsl4jsb_Get_pool(CARBON_, pools%plant%green, green)
+  dsl4jsb_pool(CARBON_, pools%plant%green)%carbon
+  dsl4jsb_Get_pool_var2d_onChunk(CARBON_, pools%soil, soil_respiration)
+  dsl4jsb_Use_elements(CARBON_) CARBON
+
+  CALL sub($CARBON@sub:soil_respiration$) ! comment
+  CALL sub($carbon@dom:soil_respiration$) ! comment
+  CALL sub($CARBON:soil_respiration$, $carbon@dom:soil_respiration$)
+  CALL sub($carbon:pools%plant%green%carbon$)
+  CALL sub($soil_respiration$)
+  CALL sub($soil_respiration(ic,:,iblk)$)
+
   ! Test abort on error
   dsl4jsb_Def_menory(SOIL_)
 

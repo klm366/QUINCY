@@ -107,7 +107,7 @@ CONTAINS
     !X    & prefix, suffix,                                                              &
     !X    & initval_r=280.0_wp )
 
-    !X  CALL jsb_add_var( mem, 't_old', mem%t_old,                                       &
+    !X  CALL mem%Add_var( 't_old', mem%t_old,                                       &
     !X    & hgrid, surface,                                                              &
     !X    & t_cf('sfc_temp_old', 'K', 'surface temperature at previous timestep'),       &
     !X    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
@@ -120,14 +120,14 @@ CONTAINS
     !X add your LAND-lct variables here e.g:
     !X IF (One_of(LAND_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%s_star%ptr)) THEN
 
-    !X  CALL jsb_add_var( mem, 's_sfc', mem%s_star,                                            &
+    !X  CALL mem%Add_var( 's_sfc', mem%s_star,                                            &
     !X    & hgrid, surface,                                                                    &
     !X    & t_cf('sfc_dry_static_energy', 'm2 s-2', 'surface dry static energy'),              &
     !X    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
     !X    & prefix, suffix,                                                                    &
     !X    & initval_r=2.9E5_wp )
 
-    !X  CALL jsb_add_var( mem, 'qsat_sfc', mem%qsat_star,                                      &
+    !X  CALL mem%Add_var( 'qsat_sfc', mem%qsat_star,                                      &
     !X    & hgrid, surface,                                                                    &
     !X    & t_cf('sfc_qsat', 'm2 s-2', 'surface specific humidity at saturation'),             &
     !X    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
@@ -140,14 +140,14 @@ CONTAINS
     !X add your LAKE-lct variables here e.g:
     !XIF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%t_wtr%ptr)) THEN
 
-    !X  CALL jsb_add_var( mem, 't_wtr', mem%t_wtr,                                       &
+    !X  CALL mem%Add_var( 't_wtr', mem%t_wtr,                                       &
     !X    & hgrid, surface,                                                              &
     !X    & t_cf('sfc_temp_wtr', 'K', 'lake surface temperature wtr '),                  &
     !X    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
     !X    & prefix, suffix,                                                              &
     !X    & initval_r=280.0_wp )
 
-    !X  CALL jsb_add_var( mem, 't_ice', mem%t_ice,                                       &
+    !X  CALL mem%Add_var( 't_ice', mem%t_ice,                                       &
     !X    & hgrid, surface,                                                              &
     !X    & t_cf('sfc_temp_ice', 'K', 'lake surface temperature ice '),                  &
     !X    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &

@@ -23,6 +23,7 @@ MODULE mo_jsb_model_usecases
   USE mo_jsb_tile,            ONLY: t_jsb_tile
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
     &                               LAND_TYPE, VEG_TYPE, GLACIER_TYPE, LAKE_TYPE !, BARE_TYPE
+  USE mo_test_pools,          ONLY: test_pools
 
   IMPLICIT NONE
   PRIVATE
@@ -239,6 +240,8 @@ CONTAINS
     IF (ASSOCIATED(pft_tile)) CONTINUE
         
     NULLIFY(box_tile, lake_tile, land_tile, glacier_tile, veg_tile, pft_tile)
+
+    CALL test_pools()
 
   END SUBROUTINE init_usecase_pfts
 

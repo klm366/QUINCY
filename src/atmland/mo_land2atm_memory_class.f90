@@ -89,7 +89,7 @@ CONTAINS
     hgrid => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
 
-    CALL jsb_add_var( mem, 't_srf', mem%t_srf,                      &
+    CALL mem%Add_var( 't_srf', mem%t_srf,                      &
       & hgrid, surface,                                                      &
       & t_cf('surface_temperature', 'K', ''),                                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -97,7 +97,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 't_eff_srf', mem%t_eff_srf,              &
+    CALL mem%Add_var( 't_eff_srf', mem%t_eff_srf,              &
       & hgrid, surface,                                                      &
       & t_cf('effective_surface_temperature', 'K', ''),                         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -105,7 +105,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'qsat_srf', mem%qsat_srf,                &
+    CALL mem%Add_var( 'qsat_srf', mem%qsat_srf,                &
       & hgrid, surface,                                                      &
       & t_cf('saturated_surface_specific_humidity', '', ''),                    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -113,7 +113,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'fact_q_air', mem%fact_q_air,            &
+    CALL mem%Add_var( 'fact_q_air', mem%fact_q_air,            &
       & hgrid, surface,                                                      &
       & t_cf('factor_air_moisture', '', ''),                                    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -121,7 +121,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'fact_qsat_srf', mem%fact_qsat_srf,      &
+    CALL mem%Add_var( 'fact_qsat_srf', mem%fact_qsat_srf,      &
       & hgrid, surface,                                                      &
       & t_cf('factor_qsat_srf', '', ''),                                        &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -129,7 +129,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'zh_srf', mem%zh_srf,                    &
+    CALL mem%Add_var( 'zh_srf', mem%zh_srf,                    &
       & hgrid, surface,                                                      &
       & t_cf('surface_roughness_humidity', '', ''),                             &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -137,7 +137,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'zm_srf', mem%zm_srf,                    &
+    CALL mem%Add_var( 'zm_srf', mem%zm_srf,                    &
       & hgrid, surface,                                                      &
       & t_cf('surface_roughness_momentum', '', ''),                             &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -145,7 +145,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'alb_vis_dif', mem%alb_vis_dif,          &
+    CALL mem%Add_var( 'alb_vis_dif', mem%alb_vis_dif,          &
       & hgrid, surface,                                                      &
       & t_cf('albedo_visible_diffuse', '', ''),                                 &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -153,7 +153,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'alb_nir_dif', mem%alb_nir_dif,          &
+    CALL mem%Add_var( 'alb_nir_dif', mem%alb_nir_dif,          &
       & hgrid, surface,                                                      &
       & t_cf('albedo_near_infrared_diffuse', '', ''),                           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -161,7 +161,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'alb_vis_dir', mem%alb_vis_dir,          &
+    CALL mem%Add_var( 'alb_vis_dir', mem%alb_vis_dir,          &
       & hgrid, surface,                                                      &
       & t_cf('albedo_visible_direct', '', ''),                                  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -169,7 +169,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'alb_nir_dir', mem%alb_nir_dir,          &
+    CALL mem%Add_var( 'alb_nir_dir', mem%alb_nir_dir,          &
       & hgrid, surface,                                                      &
       & t_cf('albedo_near_infrared_dir', '', ''),                               &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -179,7 +179,7 @@ CONTAINS
 
     IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%latent_hflx_wtr%ptr)) THEN
 
-      CALL jsb_add_var( mem, 'latent_hflx_wtr', mem%latent_hflx_wtr,           &
+      CALL mem%Add_var( 'latent_hflx_wtr', mem%latent_hflx_wtr,           &
         & hgrid, surface,                                                      &
         & t_cf('latent_hflx_wtr', '', 'Latent heat flux over lake water'),     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -187,7 +187,7 @@ CONTAINS
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 'sensible_hflx_wtr', mem%sensible_hflx_wtr,       &
+      CALL mem%Add_var( 'sensible_hflx_wtr', mem%sensible_hflx_wtr,       &
         & hgrid, surface,                                                      &
         & t_cf('sensible_hflx_wtr', '', 'Sensible heat flux over lake water'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -195,7 +195,7 @@ CONTAINS
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 'latent_hflx_ice', mem%latent_hflx_ice,           &
+      CALL mem%Add_var( 'latent_hflx_ice', mem%latent_hflx_ice,           &
         & hgrid, surface,                                                      &
         & t_cf('latent_hflx_ice', '', 'Latent heat flux over lake ice'),       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -203,7 +203,7 @@ CONTAINS
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 'sensible_hflx_ice', mem%sensible_hflx_ice,       &
+      CALL mem%Add_var( 'sensible_hflx_ice', mem%sensible_hflx_ice,       &
         & hgrid, surface,                                                      &
         & t_cf('sensible_hflx_ice', '', 'Sensible heat flux over lake ice'),   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -214,7 +214,7 @@ CONTAINS
     END IF
 
     IF (model%processes(CARBON_)%p%config%active) THEN
-      CALL jsb_add_var( mem, 'carbon_conservation_test', mem%carbon_conservation_test, &
+      CALL mem%Add_var( 'carbon_conservation_test', mem%carbon_conservation_test, &
         & hgrid, surface,                                                              &
         & t_cf('carbon_conservation_test', '', 'Carbon conservation test'),            &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
@@ -222,7 +222,7 @@ CONTAINS
         & loutput = .TRUE., lrestart=.TRUE.,                                           &
         & initval_r=-999.0_wp )
 
-      CALL jsb_add_var( mem, 'yday_c_state_sum', mem%yday_c_state_sum,                             &
+      CALL mem%Add_var( 'yday_c_state_sum', mem%yday_c_state_sum,                             &
         & hgrid, surface,                                                                          &
         & t_cf('yday_c_state_sum', '', 'yday c state sum required for carbon conservation test'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &

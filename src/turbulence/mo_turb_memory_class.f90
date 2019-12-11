@@ -76,7 +76,7 @@ CONTAINS
 
     IF (ASSOCIATED(mem%rough_m%ptr)) RETURN
 
-    CALL jsb_add_var( mem, 'rough_m', mem%rough_m,                                       &
+    CALL mem%Add_var( 'rough_m', mem%rough_m,                                       &
       & hgrid, surface,                                                                  &
       & t_cf('roughness_length_momentum', 'm', 'surface roughness length for momentum'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
@@ -85,7 +85,7 @@ CONTAINS
       & output_level=BASIC,                                                              &
       & initval_r=1.0_wp )
 
-    CALL jsb_add_var( mem, 'rough_h', mem%rough_h,                               &
+    CALL mem%Add_var( 'rough_h', mem%rough_h,                               &
       & hgrid, surface,                                                          &
       & t_cf('roughness_length_heat', 'm', 'surface roughness length for heat'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
@@ -102,7 +102,7 @@ CONTAINS
       &  )                                          &
       & .AND. .NOT. ASSOCIATED(mem%fact_q_air%ptr)) THEN
 
-      CALL jsb_add_var( mem, 'fact_q_air', mem%fact_q_air,                   &
+      CALL mem%Add_var( 'fact_q_air', mem%fact_q_air,                   &
         & hgrid, surface,                                                    &
         & t_cf('fact_q_air', '', ''),                                        &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
@@ -110,7 +110,7 @@ CONTAINS
         & output_level=BASIC,                                                &
         & initval_r=0.5_wp )
 
-      CALL jsb_add_var( mem, 'fact_qsat_srf', mem%fact_qsat_srf,             &
+      CALL mem%Add_var( 'fact_qsat_srf', mem%fact_qsat_srf,             &
         & hgrid, surface,                                                    &
         & t_cf('fact_qsat_srf', '', ''),                                     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
@@ -118,7 +118,7 @@ CONTAINS
         & output_level=BASIC,                                                &
         & initval_r=0.5_wp )
 
-      CALL jsb_add_var( mem, 'fact_qsat_trans_srf', mem%fact_qsat_trans_srf, &
+      CALL mem%Add_var( 'fact_qsat_trans_srf', mem%fact_qsat_trans_srf, &
         & hgrid, surface,                                                    &
         & t_cf('fact_qsat_trans_srf', '', ''),                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &

@@ -239,7 +239,8 @@ CONTAINS
     END IF
     ! CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
     IF (model%processes(CARBON_)%p%config%active) THEN
-       CALL model%Queue_task(CARBON_, "C_NPP_pot_allocation")
+      CALL model%Queue_task(CARBON_, "C_NPP_pot_allocation")
+      CALL model%Queue_task(CARBON_, "allocation")
     END IF
     CALL model%Queue_task(TURB_,   "humidity_scaling")
     CALL model%Queue_task(TURB_,   "surface_roughness")

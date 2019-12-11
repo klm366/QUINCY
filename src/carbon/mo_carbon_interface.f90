@@ -22,6 +22,7 @@ MODULE mo_carbon_interface
 
   ! Use of basic structures
   USE mo_jsb_control,     ONLY: debug_on
+  USE mo_jsb_time,        ONLY: get_day_length
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, finish
 
@@ -34,8 +35,11 @@ MODULE mo_carbon_interface
 
   ! Use of processes in this module (Get_carbon_memory and Get_carbon_config)
   dsl4jsb_Use_processes CARBON_, ASSIMI_, PHENO_, DISTURB_, A2L_, L2A_
+  dsl4jsb_Use_pools(CARBON_) t_jsb_pool, t_basic_pool, t_my_pools, t_plant_pool, t_soil_pool !t_awenh_pool
+  dsl4jsb_Use_elements(CARBON_) CARBON
 
   ! Use of process configurations
+  dsl4jsb_Use_config(CARBON_)
   dsl4jsb_Use_config(PHENO_)
 
   ! Use of process memories (t_carbon_memory)
@@ -68,6 +72,18 @@ MODULE mo_carbon_interface
     PROCEDURE Create_task_C_NPP_pot_allocation        !< Constructor function for task
   END INTERFACE tsk_C_NPP_pot_allocation
 
+  !> Type definition for allocation task
+  TYPE, EXTENDS(t_jsb_process_task) ::   tsk_allocation
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_allocation    !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Aggregate => aggregate_allocation !< Aggregates computed task variables
+  END TYPE   tsk_allocation
+
+  !> Constructor interface for allocation task
+  INTERFACE tsk_allocation
+    PROCEDURE Create_task_allocation        !< Constructor function for task
+  END INTERFACE tsk_allocation
+
 
 CONTAINS
 
@@ -90,6 +106,21 @@ CONTAINS
 
   END FUNCTION Create_task_C_NPP_pot_allocation
 
+  ! -------------------------------------------------------------------------------------------------------
+  !> Constructor for allocation task
+  !!
+  !! @param[in]     model_id     Model id
+  !! @return        return_ptr   Instance of process task "allocation"
+  !!
+  FUNCTION Create_task_allocation(model_id) RESULT(return_ptr)
+
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_allocation::return_ptr)
+    CALL return_ptr%Construct(name='allocation', process_id=CARBON_, owner_model_id=model_id)
+
+  END FUNCTION Create_task_allocation
 
   ! -------------------------------------------------------------------------------------------------------
   !> Register tasks for carbon process
@@ -103,8 +134,128 @@ CONTAINS
     INTEGER,                 INTENT(in) :: model_id
 
     CALL this%Register_task(tsk_C_NPP_pot_allocation(model_id))
+    CALL this%Register_task(tsk_allocation(model_id))
 
   END SUBROUTINE Register_carbon_tasks
+
+  ! ================================================================================================================================
+  !>
+  !! @brief Implementation to calculate the allocation of NPP carbon to the plant pools
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  !!
+  SUBROUTINE update_allocation(tile, options)
+
+    ! Use declarations
+    USE mo_carbon_veg,        ONLY: calc_allocation
+    USE mo_carbon_constants,  ONLY: molarMassCO2_kg, sec_per_day
+    USE mo_jsb_subset,        ONLY: t_subset
+
+    ! Arguments
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    ! Declare local variables
+    TYPE(t_jsb_model), POINTER   :: model
+    LOGICAL                      :: lstart
+    INTEGER                      :: iblk, ics, ice
+    TYPE(t_subset)               :: subset
+    REAL(wp), DIMENSION(options%nc) :: MaxLai
+
+    CHARACTER(len=*), PARAMETER  :: routine = modname//':update_allocation'
+
+    ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_config(PHENO_)
+    dsl4jsb_Def_config(CARBON_)
+    dsl4jsb_Def_memory(CARBON_)
+    dsl4jsb_Def_memory(PHENO_)
+    ! dsl4jsb_Def_memory(ASSIMI_)
+    ! dsl4jsb_Def_memory(A2L_)
+
+    dsl4jsb_Def_pool(t_plant_pool) :: plant
+    dsl4jsb_Def_pool(t_plant_pool) :: falloc
+
+    ! If process is not active on this tile, do nothing
+    IF (.NOT. tile%Is_process_active(CARBON_)) RETURN
+
+    ! iblk  = options%iblk
+    ! ics   = options%ics
+    ! ice   = options%ice
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_config(CARBON_)
+    dsl4jsb_Get_config(PHENO_)
+
+    dsl4jsb_Get_memory(CARBON_)
+    dsl4jsb_Get_memory(PHENO_)
+    ! dsl4jsb_Get_memory(ASSIMI_)
+    ! dsl4jsb_Get_memory(A2L_)
+
+    ! In case of l_forestRegrowth = true the maximum LAI can change over time
+    IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
+      MaxLai(:) = dsl4jsb_var2D_onChunk(PHENO_, maxLAI_allom )
+    ELSE
+      ! R: Rename MaxLAI in lctlib to LAI_max in JS3 comes from theLand%Vegetation%LAI_max,
+      ! which is for each vegetated tile taken from MaxLAI in the lct library.
+      MaxLai(:) = dsl4jsb_Lctlib_param(MaxLAI)
+    END IF
+
+    dsl4jsb_Get_pool(CARBON_, my_pools%state%plant, plant)
+    dsl4jsb_Get_pool(CARBON_, my_pools%falloc,      falloc)
+
+    CALL calc_allocation(                      &
+      & Get_day_length(),                      &  ! in
+      & dsl4jsb_Config(CARBON_)%with_nitrogen, &  ! in
+      & dsl4jsb_Lctlib,                        &  ! in
+      & plant,                                 &  ! in
+      & $LAI_yDayMean$,                        &  ! in
+      & MaxLai(:),                             &  ! in
+      & $NPP_pot_yDayMean$,                    &  ! in
+      & falloc,                                &  ! inout
+      & $root_exudates$,                       &  ! out
+      & $NPP_act_yDayMean$,                    &  ! out
+      & $NPP_flux_correction$                  &  ! out 
+      & )
+
+  END SUBROUTINE update_allocation
+  ! -------------------------------------------------------------------------------------------------------
+  !>
+  !! Implementation of "aggregate" for task "allocation"
+  !!
+  !! @param[in,out] tile    Tile for which aggregation of child tiles is executed.
+  !! @param[in]     config  Vector of process configurations.
+  !! @param[in]     options Additional run-time parameters.
+  !!
+  SUBROUTINE aggregate_allocation(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    dsl4jsb_Def_memory(CARBON_)
+
+    CLASS(t_jsb_aggregator), POINTER          :: weighted_by_fract
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_allocation'
+
+    INTEGER  :: iblk , ics, ice
+
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    dsl4jsb_Get_memory(CARBON_)
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE aggregate_allocation
 
   ! ================================================================================================================================
   !>
@@ -120,6 +271,7 @@ CONTAINS
     USE mo_carbon_process,    ONLY: calc_Cpools
     USE mo_jsb_time,          ONLY: is_newday, is_newyear, time_steps_per_day, is_time_experiment_start
     USE mo_carbon_constants,  ONLY: molarMassCO2_kg, sec_per_day
+    USE mo_jsb_subset,        ONLY: t_subset
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -129,9 +281,12 @@ CONTAINS
     TYPE(t_jsb_model), POINTER   :: model
     LOGICAL                      :: lstart
     INTEGER                      :: iblk, ics, ice
+    TYPE(t_subset)               :: subset
     REAL(wp), allocatable        :: precip_total(:)
     REAL(wp), DIMENSION(options%nc) :: MaxLai
     REAL(wp), DIMENSION(options%nc) :: old_c_state_sum, current_fluxes
+    REAL(wp), DIMENSION(options%nc,1) :: temp
+
     CHARACTER(len=*), PARAMETER  :: routine = modname//':update_C_NPP_pot_allocation'
 
     ! Declare process configuration and memory Pointers
@@ -140,6 +295,12 @@ CONTAINS
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_memory(A2L_)
+
+    dsl4jsb_Def_pool(t_my_pools)      :: my_pools
+    dsl4jsb_Def_pool(t_plant_pool) :: plant_pool
+    dsl4jsb_Def_pool(t_soil_pool) :: soil_pool
+    ! dsl4jsb_Def_pool(t_awenh_pool) :: woody
+    ! CLASS(t_pool), POINTER         :: pool_ptr
 
     ! Declare pointers to variables in memory
     ! R: former cbalance_type variables
@@ -166,16 +327,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  c_woods           ! C-pool for stems, thick roots and other (dead) structural
                                                      !  material of living plants [mol(C)/m^2(canopy)]
     dsl4jsb_Real2D_onChunk ::  c_crop_harvest    ! C-pool for biomass harvested from crops [mol(C)/m^2(grid box)]
-    dsl4jsb_Real2D_onChunk ::  c_litter_green_ag ! C-pool for above ground non-woody litter especially from leaves
-                                                     !     [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_litter_green_bg ! C-pool for below ground non-woody litter especially from
-                                                     !     fine roots [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_litter_wood_ag  ! C-pool for litter originating from above ground woody parts of the
-                                                     !    plants [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_litter_wood_bg  ! C-pool for litter originating from below ground woody parts of the
-                                                     !    plants [mol(C)/m^2(canopy)]
-    !CBAL dsl4jsb_Real2D_onChunk ::  c_slow            ! C-pool for below ground organic material (coming from the litter
-                                                     !     pools) [mol(C)/m^2(canopy)]
+
     !SIZE CLASS 1
     dsl4jsb_Real2D_onChunk ::  c_acid_ag1        ! Yasso above ground litter-pool for acid soluble litter
                                                       !  [mol(C)/m^2(canopy)]
@@ -305,11 +457,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_reserve )             ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_woods )               ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_crop_harvest)         ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_litter_green_ag )     ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_litter_green_bg )     ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_litter_wood_ag  )     ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_litter_wood_bg  )     ! inout
-    !CBAL dsl4jsb_Get_var2D_onChunk(CARBON_,  c_slow            )     ! inout
     !SIZE CLASS 1
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_ag1)            ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag1)           ! inout
@@ -372,6 +519,22 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,     rain)                       ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,     snow)                       ! in
 
+    ! subset = pheno__mem%LAI%Get_subset()
+    ! print*,'AAA ', subset%ics, subset%ice, subset%iblk
+    ! dsl4jsb_Get_pool(CARBON_, plant%living%green, green)
+    ! print*, 'AAA ',green%shortname, ' ', green%name, ' ', green%carbon%element_name
+    dsl4jsb_Get_pool(CARBON_, my_pools%state%plant, plant_pool)
+    ! pool_ptr => carbon__mem%pools%Find_pool('soil:woody')
+    ! print*,'CCC ',pool_ptr%path
+    ! SELECT TYPE (p => pool_ptr)
+    ! TYPE IS (t_awenh_pool)
+      ! woody => p
+    ! END SELECT
+    ! print*, 'BBB ',woody%bg%acid%shortname, ', ', dsl4jsb_pool(CARBON_, soil%woody%bg%acid)%name
+    dsl4jsb_Get_pool(CARBON_, my_pools%state%soil, soil_pool)
+    ! print*,'EEE ', soil_pool%var_list(1)%p%name
+    ! temp(:,:) = carbon__mem%root_exudates + carbon__mem%excess_NPP
+    ! carbon__mem%soil_respiration = carbon__mem%root_exudates + carbon__mem%excess_NPP
     ! ---------------------------
     ! Go
 
@@ -386,8 +549,6 @@ CONTAINS
     cflux_npp_2_atm_ta       = 0._wp
     cflux_soilresp_2_atm_ta  = 0._wp
     cflux_herb_2_atm_ta = 0._wp
-
-    ! R: "IF (read_cpools .AND. (lstart .OR. lresume)) THEN ..." of JS3 is in JS4 now in SUBROUTINE carbon_init_ic(tile)!
 
     ! R: To keep in mind: In JS3: NPP_pot_Rate is calculated from function NPP_pot_rate_bethy. This function gets
     !    grossAssimilation from theLand%Bethy%gross_assimilation,
@@ -469,7 +630,9 @@ CONTAINS
         MaxLai(:) = dsl4jsb_Lctlib_param(MaxLAI)
       END IF
 
+
       !Calculate current sum before operation for c conservation test
+      CALL my_pools%state_ta%Sum_leaves([CARBON])
       CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum(:))
 
       ! Now update the C pools
@@ -486,8 +649,6 @@ CONTAINS
         &  dsl4jsb_Lctlib_param(fract_NPP_2_exudates),        & ! in
         !
         &  dsl4jsb_Lctlib_param(fract_green_2_herbivory),     & ! in
-        &  dsl4jsb_Lctlib_param(tau_c_litter_leaf),           & ! in
-        &  dsl4jsb_Lctlib_param(tau_c_litter_wood),           & ! in
         &  dsl4jsb_Lctlib_param(tau_c_woods),                 & ! in
         &  dsl4jsb_Lctlib_param(LAI_shed_constant),           & ! in
         &  dsl4jsb_Lctlib_param(fract_C_litter_green2atmos),  & ! in
@@ -500,11 +661,6 @@ CONTAINS
         &  c_woods,                                           & ! inout
         &  c_reserve,                                         & ! inout
         &  c_crop_harvest,                                    & ! inout
-        &  c_litter_green_ag,                                 & ! inout
-        &  c_litter_green_bg,                                 & ! inout
-        &  c_litter_wood_ag,                                  & ! inout
-        &  c_litter_wood_bg,                                  & ! inout
-        ! &  CBAL c_slow,                                       & ! inout
         !
         &  soil_respiration,                                  & ! out
         &  NPP_flux_correction,                               & ! out
@@ -672,11 +828,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, c_woods_ta,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_reserve_ta,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_crop_harvest_ta,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_green_ag_ta,  weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_green_bg_ta,  weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_wood_ag_ta,   weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_wood_bg_ta,   weighted_by_fract)
-    !CBAL dsl4jsb_Aggregate_onChunk(CARBON_, c_slow_ta,        weighted_by_fract)
     ! ag1 and bg1
     dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_ag1_ta,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_water_ag1_ta,        weighted_by_fract)
