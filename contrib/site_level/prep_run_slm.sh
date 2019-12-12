@@ -40,7 +40,7 @@ slmModel="land"
 ##>> sites <<###########################################################################################
 ## select the site-set:
 # forcing data and site info *list.dat for all site-sets: /Net/Groups/BGI/data/Model/SLM1/input/point/ 
-# options: fluxnet fluxnet3 cruncep face manip fert craine photacc spp1685
+# options: fluxnet fluxnet3 cruncep face manip fert craine photacc spp1685 confin
 forcingDataSet="fluxnet"
 # forcing with or without a transient (like spinup) phase before the actual simulation starts
 # options: static transient
@@ -61,6 +61,7 @@ customSiteListFileName=""
 # examples: [FLUX/3] "DE-Hai" "FI-Hyy" "ZA-Kru"  [CRUN] "BHS_01" "HAI_01" "ILO_05"  
 #           [FACE] "DK-AMB" "OR-ELE"  [MANIP] "ES-MaG" "ES-MaT"  [FERT] "HAR-CON_4" "HAR-HIG_4" "HAR-LOW_4" "HAR-CON_5"
 #           [CRAINE] "CRA_01" "CRA_02" "CRA_18"  [PHOTACC] "ARC_01" "MON_02" "STR_01"  [SPP_1685] "BBR" "LUE" "VES"
+#           [CONFIN] "FI-Hyy" "FI-Ken"
 singleSiteName=""
 
 
@@ -238,6 +239,10 @@ while getopts ":e:f:c:m:s:r:y:b:z:n:u:h" opt; do
       echo "   forcingDataSet=spp1685"
       forcingDataSet="spp1685"
       ;;
+    "co")
+      echo "   forcingDataSet=confin"
+      forcingDataSet="confin"
+      ;;
     esac
     ;;
   "c")
@@ -360,6 +365,7 @@ while getopts ":e:f:c:m:s:r:y:b:z:n:u:h" opt; do
     echo "       ca: CRAINE sites (selected sites from doi:10.5061/dryad.v2k2607)"
     echo "       ph: PHOTACC sites (phot acclimation)"
     echo "       sp: SPP_1685 sites (for jsm simulations)"
+    echo "       co: CONFIN (four finnish sites with conifers)"
     echo " -c set the customSiteList"
     echo "    Arguments to -c:"
     echo "       T: using the custom site list"
@@ -501,7 +507,7 @@ fi
 return 0
 }
 # lists to validate against
-validateForcingDataSet="fluxnet fluxnet3 cruncep face manip fert craine photacc spp1685"
+validateForcingDataSet="fluxnet fluxnet3 cruncep face manip fert craine photacc spp1685 confin"
 validateForcingMode="static transient"
 validateSiteSelection="all cue spp"
 validateSlmModel="land plant soil canopy"
@@ -708,10 +714,19 @@ case "$forcingDataSet" in
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/SPP_1685/"
   siteDataObsFold="no such evaluation data"  # but this variable must contain something
   ;;
+"confin")
+    #! temporary fix for CONFIN !#
+    siteDataFold="/Net/Groups/BGI/scratch/jengel/quincy_data/point/CONFIN/"
+  #siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/CONFIN/"
+  siteDataObsFold="no such evaluation data"  # but this variable must contain something
+  ;;
 esac
-# no soil forcing for MANIP FERT CRAINE PHOTACC
+# soil forcing available only for some site-sets
 if [ "$slmModel" == "soil" ]; then
-  if [ "$forcingDataSet" == "manip" ] || [ "$forcingDataSet" == "fert" ] || [ "$forcingDataSet" == "craine" ] || [ "$forcingDataSet" == "photacc" ]; then
+  if [ "$forcingDataSet" == "fluxnet" ] || [ "$forcingDataSet" == "cruncep" ] || [ "$forcingDataSet" == "face" ] || [ "$forcingDataSet" == "spp1685" ]; then
+    # soil forcing available
+    echo "Running the QUINCY soil model"
+  else
     echo " Sorry, no soil forcing available for ""$forcingDataSet"" sites yet."
     echo " EXIT!"
     exit 1
@@ -923,6 +938,14 @@ else # the default case: $customSiteList == "F"
       siteListFileName="spp_1685_sites_1984-2013_list.dat"
     else 
       siteListFileName="spp_1685_sites_1901-2015_list.dat"
+    fi
+    ;;
+  "confin")
+    if [ $forcingMode == "static" ]
+     then
+      siteListFileName="confin_sites_1997-2014_list.dat"
+    else 
+      siteListFileName="confin_sites_1901-2014_list.dat"
     fi
     ;;
   esac
@@ -1153,6 +1176,18 @@ case "$forcingDataSet" in
     forcingModeFileID="_1984"
   else
     forcingModeFileID="_1901"
+  fi
+  ;;
+"confin")
+  if [ $forcingMode == "static" ]
+   then
+    forcingModeFileID="_s_"
+    # for the soil model the forcing file indentifier is different, as here only static (1 yr) forcing is available
+    if [ "$slmModel" == "soil" ]; then
+     forcingModeFileID="_"
+    fi
+  else
+    forcingModeFileID="_t_"
   fi
   ;;
 esac
