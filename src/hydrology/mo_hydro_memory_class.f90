@@ -218,7 +218,7 @@ CONTAINS
       ini_snow_dens = dens_snow
     END IF
 
-    !$acc enter data pcreate(mem)
+    !! !$acc enter data pcreate(mem)
 
     ! Common variables
 

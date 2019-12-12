@@ -189,6 +189,7 @@ CONTAINS
     IF (pos_of_var > mem%max_no_of_vars) THEN
       CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(mem%varlist_name)//', '//TRIM(name))
     ELSE
+      !$acc enter data create(mem%vars(pos_of_var)%p)
       mem%vars(pos_of_var)%p => var
       __acc_attach(mem%vars(pos_of_var)%p)
       mem%no_of_vars = pos_of_var
@@ -324,7 +325,9 @@ CONTAINS
     IF (pos_of_var > mem%max_no_of_vars) THEN
       CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(mem%varlist_name)//', '//TRIM(name))
     ELSE
+      !$acc enter data create(mem%vars(pos_of_var)%p)
       mem%vars(pos_of_var)%p => var
+      __acc_attach(mem%vars(pos_of_var)%p)
       mem%no_of_vars = pos_of_var
     END IF
 

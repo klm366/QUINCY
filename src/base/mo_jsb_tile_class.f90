@@ -783,7 +783,8 @@ CONTAINS
     ! END IF
 
     !$acc update device(this%fractions)
-    !$acc data present(mem, mem%children, this%data_sum, this%fract_sum, var%ptr, var%child_idx, this%fractions)
+    !$acc data create(mem, mem%children) copyin(mem,mem%children, var,var%child_idx) &
+    !$acc      present(this%data_sum, this%fract_sum, var%ptr, var%child_idx, this%fractions)
     !! !$acc update host(var%ptr)
     !$acc parallel loop gang vector
     DO j = ics, ice
@@ -791,27 +792,34 @@ CONTAINS
       this%fract_sum(j,iblk) = 0._wp
     END DO
 
+    !$acc parallel default(present)
+    !$acc loop gang
     DO i=1,no_children
       IF (var%child_idx(i) > 0) THEN
         ichild = var%child_idx(i)
-        ! ptr => tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p
+        print*,'AAA ',i,iblk, ichild
+        print*,'CCC ', mem%children(i)%p%id
+        print*,'DDD ', mem%children(i)%p%vars(ichild)%p%name
+      ! ptr => tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p
         !! !$acc update host(ptr%ptr2d)
         !! !$acc update device(ptr%ptr2d)
         !! !$acc data present(ptr%ptr2d)
-        !$acc data present(mem%children(i)%p%vars) copyin(mem%children(i)%p%vars(ichild))
-        !$acc parallel default(present)
-        !$acc loop gang vector
+        !! !$acc data present(mem%children(i)%p%vars) copyin(mem%children(i)%p%vars(ichild))
+        !! !$acc parallel default(present)
+        !! !$acc loop gang vector
         DO j = ics, ice
+          print*,'BBB ', j, this%fractions(j,iblk,i), this%data_sum(j,iblk)
           this%data_sum(j,iblk) = this%data_sum(j,iblk) &
           ! & + this%fractions(j,iblk,i) * ptr%ptr2d(j,iblk)
           ! & + this%fractions(j,iblk,i) * tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p%ptr2d(j,iblk)
           & + this%fractions(j,iblk,i) * mem%children(i)%p%vars(ichild)%p%ptr2d(j,iblk)
           this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
         END DO
-        !$acc end parallel
-        !$acc end data
+        !! !$acc end parallel
+        !! !$acc end data
       END IF
     END DO
+    !$acc end parallel
 
     ! print*,'AAA ',ics,ice,MINVAL(this%data_sum(ics:ice)), MAXVAL(this%data_sum(ics:ice)),&
       ! & MINVAL(this%fract_sum(ics:ice)), MAXVAL(this%fract_sum(ics:ice))
@@ -897,8 +905,8 @@ CONTAINS
     !   CALL finish(TRIM(routine), 'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' has wrong size')
     ! END IF
 
-    !$acc data present(this%fract_sum, this%data_sum, var%ptr, this%fractions)
-    !$acc update host(var%ptr)
+    !$acc update device(this%fractions)
+    !$acc data create(mem, mem%children) present(this%data_sum, this%fract_sum, var%ptr, var%child_idx, this%fractions)
     DO ilev=1,SIZE(var%ptr,2)
       !!$acc parallel loop gang vector
       DO j = ics, ice

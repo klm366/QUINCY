@@ -163,7 +163,7 @@ CONTAINS
 
     dsl4jsb_Get_config(SEB_)
 
-    !$acc enter data pcreate(mem)
+    !! !$acc enter data pcreate(mem)
 
     !$acc enter data pcreate(mem%sw_srf_net,mem%swvis_srf_net,             &
     !$acc mem%swnir_srf_net,mem%lw_srf_net,mem%rad_srf_net,                &

@@ -303,6 +303,7 @@ CONTAINS
 
       IF (this%process_action(iproc) == INHERIT_) THEN
         this%mem(iproc)%p => this%parent_tile%mem(iproc)%p
+        __acc_attach(this%mem(iproc)%p)
         this%mem(iproc)%p%in_var_groups = in_var_groups
         IF (debug_on()) &
           & CALL message(TRIM(routine), 'Linked memory for process '//TRIM(process_name)//&
@@ -312,17 +313,10 @@ CONTAINS
         child_no = this%path(this%level)
         ! this%param(iproc)%p => t_jsb_param(iproc)
         tmp_ptr => Create_process_memory(iproc)
+        !$acc update device(tmp_ptr)
         __acc_attach(tmp_ptr)
         !$acc enter data create(tmp_ptr%vars)
         !$acc update device(tmp_ptr%vars)
-        IF (ASSOCIATED(this%parent_tile)) THEN
-          IF (.NOT. ASSOCIATED(this%parent_tile%mem(iproc)%p%children) .AND. this%parent_tile%Get_no_of_children() > 0) THEN
-            ALLOCATE(this%parent_tile%mem(iproc)%p%children(this%parent_tile%Get_no_of_children()))
-            !$acc enter data create(this%parent_tile%mem(iproc)%p%children)
-          END IF
-          this%parent_tile%mem(iproc)%p%children(child_no)%p => tmp_ptr
-          __acc_attach(this%parent_tile%mem(iproc)%p%children(child_no)%p)
-        END IF
         this%mem(iproc)%p => tmp_ptr
         __acc_attach(this%mem(iproc)%p)
         this%mem(iproc)%p%id = iproc
@@ -335,14 +329,27 @@ CONTAINS
         this%mem(iproc)%p%owner_tile_name = TRIM(this%name)
         this%mem(iproc)%p%no_of_children = no_of_children
         this%mem(iproc)%p%in_var_groups = in_var_groups    ! Must be before CALL to %Init !
+        !$acc update device(this%mem(iproc)%p)
+        !$acc enter data create(this%mem(iproc)%p%vars)
         IF (prefix /= '') THEN
           CALL this%mem(iproc)%p%Init(TRIM(process_name)//'_'//TRIM(prefix), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
         ELSE
           CALL this%mem(iproc)%p%Init(TRIM(process_name), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
         END IF
+        !$acc update device(this%mem(iproc)%p%vars)
+        !$acc update device(this%mem)
         IF (debug_on()) &
           & CALL message(TRIM(routine), 'Created memory for process '//TRIM(process_name)//' on tile '//TRIM(this%name))
-
+        IF (ASSOCIATED(this%parent_tile)) THEN
+          IF (.NOT. ASSOCIATED(this%parent_tile%mem(iproc)%p%children) .AND. this%parent_tile%Get_no_of_children() > 0) THEN
+            ALLOCATE(this%parent_tile%mem(iproc)%p%children(this%parent_tile%Get_no_of_children()))
+            !$acc enter data create(this%parent_tile%mem(iproc)%p%children)
+          END IF
+          this%parent_tile%mem(iproc)%p%children(child_no)%p => this%mem(iproc)%p
+          !$acc update device(this%parent_tile%mem(iproc)%p%children(child_no)%p)
+          __acc_attach(this%parent_tile%mem(iproc)%p%children(child_no)%p)
+        END IF
+  
       END IF
 
     END DO

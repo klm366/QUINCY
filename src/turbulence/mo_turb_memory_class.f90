@@ -74,7 +74,7 @@ CONTAINS
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
 
-    !$acc enter data pcreate(mem)
+    !! !$acc enter data pcreate(mem)
 
     !$acc enter data pcreate(mem%rough_m,mem%rough_h)
 

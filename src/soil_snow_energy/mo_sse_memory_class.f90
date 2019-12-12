@@ -110,7 +110,7 @@ CONTAINS
       snow_e  => Get_vgrid('snow_depth_energy')
     END IF
 
-    !$acc enter data pcreate(mem)
+    !! !$acc enter data pcreate(mem)
 
     !$acc enter data pcreate(mem%vol_heat_cap,mem%vol_heat_cap_sl, &
     !$acc mem%vol_heat_cap_snow,mem%heat_cond,mem%heat_cond_sl,    &

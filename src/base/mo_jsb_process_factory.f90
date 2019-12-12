@@ -196,8 +196,10 @@ CONTAINS
       ALLOCATE(t_fuel_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_fuel_vars
     END SELECT
+    !$acc enter data create(return_ptr)
 
     ALLOCATE(return_ptr%vars(return_ptr%max_no_of_vars))
+    !$acc enter data create(return_ptr%vars)
 
   END FUNCTION Create_process_memory
 
