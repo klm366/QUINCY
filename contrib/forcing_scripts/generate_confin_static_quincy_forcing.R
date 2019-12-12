@@ -19,10 +19,14 @@
 
 #########################################################################################
 ##
-## generate > static < met forcing for four finish sites
+## generate > static < met forcing for four finish sites - site-set CONFIN
 ##
-## the original forcing input does contain 5 leap years (1996 2000 2004 2008 2012)
+## the original forcing input does contain leap years (1996 2000 2004 2008 2012)
 ##  in the below script all dates "February 29th" are neglected, i.e., if time = YYYY0229.x
+##
+## note! data availability differs across sites
+##       see object 'siteDataPeriods' for the dates
+##       I got these data periods by checking over which periods the variable 'shortwave' is available (i.e., < 5000)
 ## 
 ## run this script by:
 ##  cd contrib/forcing_scripts/
@@ -30,12 +34,8 @@
 ## 
 ## note: * allsiteinfo is ./generate_confin_site_list.dat  
 ##         (manually created from BGI/work_2/QUINCY/SLM/Data/CONFIN_4_finish_sites/site_descriptions.txt)
-
-# 2do !! <<<<<<<<<<<<<<<<<<<<< check & do the site info file creation        <<<<<<<<<<<<<  !!!!
-
-##       * also the actual site info file (confin_sites_1996-2014_list.dat) was created manually
-##         (from files: jsbach_def_4sites.nc ? and site_descriptions.txt in BGI/work_2/QUINCY/SLM/Data/CONFIN_4_finish_sites/)
-##         using the fluxnet FI-Hyy (from FLUXNET2 site-set) as basis that is modified
+##       * also the actual site info file (confin_sites_1991-2014_list.dat) was created manually using the FI-HYY data from FLUXNET3 site info file
+##         (lon/lat from /Net/Groups/BGI/work_2/QUINCY/SLM/Data/CONFIN_4_finish_sites/site_descriptions.txt)
 ##       * this site info file needs (manual) modification when a new dataset with more recent data is processed
 ## 
 ## output may be generated per default in:
@@ -49,136 +49,179 @@ library(ncdf4)
 
 
 ## create out folder & set in/out path
-dir.create("./new_confin_static_met_forcing", showWarnings=T, recursive=T)
 ipath1 <- "/Net/Groups/BGI/work_2/QUINCY/SLM/Data/CONFIN_4_finish_sites/"
 opath  <- "./new_confin_static_met_forcing/"
+dir.create("./new_confin_static_met_forcing", showWarnings=T, recursive=T)
 
 ## define & load climate-forcing input file
-#  contains the data for all four sites
-infile <- "climate_4sites_1996-2014_with_leap_years.nc"
-load(paste0(ipath1, infile))
-
-## define first and last year of dataset
-firstYear <- 1996
-lastYear  <- 2014
-leapYears <- c(1996, 2000, 2004, 2008, 2012)
+#  contains the data for all four sites (ut limited to 2003-2013 for swdown & lwdown)
+inForcFile <- "climate_4sites_1996-2014_with_leap_years.nc"
 
 ## message
-print(paste0("Generating met forcing for four finish conifers sites (CONFIN) for : ", firstYear, "to ",lastYear))
+print("Generating met forcing for four finish conifers sites (CONFIN)")
 
 ## read site info file (manually created from BGI/people/szaehle/Projects/QUINCY/GenerateMANP_Forcing_2018/site_info.dat)
 allsiteinfo       <- read.table("generate_confin_site_list.dat", stringsAsFactor=F, header=T)
+allsitename       <- allsiteinfo[,1]
 allsitestartyear  <- allsiteinfo[,5]
 allsiteendyear    <- allsiteinfo[,6]
-allsitename       <- allsiteinfo[,1]
 site_list         <- allsitename
 
+## site index in the met-forcing input file, according to the lon/lat
+# lon  23.9597, 24.2430, 24.2948, 26.6378
+# lat  60.6418, 67.9872, 61.8474, 67.3619
+# site FI-Let,  FI-Ken,  FI-Hyy,  FI-Sod
+# site sequence in 'site_list' (i.e., in generate_confin_site_list.dat): "FI-Hyy", "FI-Ken", "FI-Let", "FI-Sod")
+siteIndexForcing <- data.frame("FI-Hyy"=3, 
+                               "FI-Ken"=2, 
+                               "FI-Let"=1, 
+                               "FI-Sod"=4)
+
+## meteo data: site specific definition of the period (start:last) where meteo data is available (site sequence identical to 'site_list')
+siteDataPeriods <- data.frame("FI-Hyy"=as.numeric(c(17569,  333120)),   # 1997 - 2014
+                              "FI-Ken"=as.numeric(c(122737, 315600)),   # 2003 - 2013
+                              "FI-Let"=as.numeric(c(227953, 298080)),   # 2009 - 2012 | note, many data points were gap-filled
+                              "FI-Sod"=as.numeric(c(87697,  333120)))   # 2001 - 2014
+
+## define time variables
 doy=ceiling(seq(1/48,365,1/48))
 hod=rep(seq(0,23.5,0.5),365)
 dpm <- c(31,28,31,30,31,30,31,31,30,31,30,31)  # days per month
 
+## number of forcing variables and header names in output file
 forcVar <- 17  # number of forcing variables including time (see header1 & 2)
 header1 <- c('year','doy','hour','swvis_srf_down','lw_srf_down','t_air','q_air','press_srf',
            'rain','snow','wind_air','co2_mixing_ratio','co2_dC13','co2DC14','nhx_srf_down','noy_srf_down','p_srf_down')
 header2 <- c('-','-','-','Wm-2','Wm-2','K','g/kg','hPa','mm/day','mm/day','m/s','ppm','per-mill','per-mill','mg/m2/day','mg/m2/day','mg/m2/day')
 
+## CO2 input data
 co2y      <- read.table('/Net/Groups/BGI/model/OCN/input/gridded/CO2/GCP_co2_global.dat')
 co2y_dC13 <- read.table('/Net/Groups/BGI/work_2/QUINCY/SLM/InputDataSources/Atm/delta13C_in_air_input4MIPs_GM_1850-2015_V1.txt')
 co2y_DC14 <- read.table('/Net/Groups/BGI/work_2/QUINCY/SLM/InputDataSources/Atm/Delta14C_in_air_input4MIPs_SHTRNH_1850-2015_V1.txt')
 
-slm_site_list <- array(0, c(length(site_list), forcVar))
 
+## loop over sites (FI-Hyy, FI-Ken, FI-Let, FI-Sod)
 for (s in 1:length(site_list)) {
 #for (s in 1:1) {
-print(site_list[s])
-  startyear<-allsitestartyear[allsitename==site_list[s]]
-  endyear<-allsiteendyear[allsitename==site_list[s]]
-  nyear<-endyear-startyear+1
-  outname=paste(opath,site_list[s],"_",startyear,"-",endyear,'.dat',sep='')
-  #if(stat3) {
-    if (file.exists(outname)) file.remove(outname) 
-    # write header
-    write.table(t(cbind(header1,header2)),file=outname,append=TRUE,
-                quote=FALSE,col.names=FALSE,row.names=FALSE,sep=' ') 
-      # meteo data
-       lonsite<-allsiteinfo[allsitename==site_list[s],2]
-       latsite<-allsiteinfo[allsitename==site_list[s],3]
-       swdown<-df[,4]
-       lwdown<-df[,5]
-       tair<-df[,6]
-       rain<-df[,9]
-       snow<-df[,10]
-       qair<-df[,7]
-       press<-df[,8]
-       wind<-df[,11]
-       wind[wind<0.1]<-0.1
-      # P deposition data
-      fid<-nc_open("/Net/Groups/BGI/work_2/QUINCY/SLM/InputDataSources/P-DEP/nitrogenandphosphorus2x2annualdep.nc")
-       lonpdep<-as.numeric(ncvar_get(fid,'lon'))
-       latpdep<-as.numeric(ncvar_get(fid,'lat'))
-       latx<-which.min(abs(latpdep-latsite))
-       lonx<-which.min(abs(lonpdep-lonsite))
-       p_dummy<-ncvar_get(fid,'pdep')[lonx,latx]/365
-       pdep<-numeric(length(swdown))
-       pdep[]<-p_dummy
-      nc_close(fid)
+  
+  # message
+  print(paste0("start creating met-forcing for site: ", site_list[s]))
 
-    ## add data looping over the years
-    year_out=co2=co2_dC13=co2_DC14=noy=nhx<-numeric(length(swdown))
-    for (year in c(startyear:endyear)) {
-      print(c(site_list[s],year))
-      ## N deposition
-      #  using RCP 8.5 data throughout
-       fid<-nc_open(paste0("/Net/Groups/BGI/model/OCN/input/gridded/NDEP/CESM-CAM/ndep_RCP8.5_",year,".nc"))
-       lonndep<-ncvar_get(fid,'lon')
-       latndep<-ncvar_get(fid,'lat')
-       latx<-which.min(abs(latndep-as.numeric(latsite)))
-       lonx<-which.min(abs(lonndep-as.numeric(lonsite)))
-       nhx_dummy<-ncvar_get(fid,'NHx_deposition')[lonx,latx,]*86400*1000*1000
-       noy_dummy<-ncvar_get(fid,'NOy_deposition')[lonx,latx,]*86400*1000*1000
-       nhx[1:(dpm[1]*48)+365*48*(year-startyear)]<-rep(nhx_dummy[1],dpm[1]*48)
-       noy[1:(dpm[1]*48)+365*48*(year-startyear)]<-rep(noy_dummy[1],dpm[1]*48)
-       for (m in 2:12) {
-         nhx[(1:(dpm[m]*48))+sum(dpm[1:(m-1)])*48+365*48*(year-startyear)]<-rep(nhx_dummy[m],dpm[m]*48)
-         noy[(1:(dpm[m]*48))+sum(dpm[1:(m-1)])*48+365*48*(year-startyear)]<-rep(noy_dummy[m],dpm[m]*48)
-       }
-      nc_close(fid)
-      ## CO2 
-      #  use global mean values from GCP_co2_global.dat for all values before 2014,
-      #  because the Majadas field sensor was not well calibrated before 2014 and, hence, does not give reasonable values
-      if(year<2014) {
-        co2[1:17520+365*48*(year-startyear)]<-rep(co2y[co2y[,1]==year,2],17520)
-      } else {
-        co2[1:17520+365*48*(year-startyear)]<-rep(co2y[co2y[,1]==2016,2],17520)+2*(year-2016)
-      }
-      if(year<2014) {
-        co2_dC13[1:17520+365*48*(year-startyear)]<-rep(co2y_dC13[(co2y_dC13[,1]-0.5)==year,2],17520)
-      } else {
-        co2_dC13[1:17520+365*48*(year-startyear)]<-rep(co2y_dC13[(co2y_dC13[,1]-0.5)==2015,2],17520)-0.02*(year-2015)
-      }
-      if(latsite>30) C14lat=2
-      if(latsite>-30&latsite<=30) C14lat=3
-      if(latsite<=-30) C14lat=4
-      if(year<2014) {
-        co2_DC14[1:17520+365*48*(year-startyear)]<-rep(co2y_DC14[(co2y_DC14[,1]-0.5)==year,C14lat],17520)
-      } else {
-        co2_DC14[1:17520+365*48*(year-startyear)]<-rep(co2y_DC14[(co2y_DC14[,1]-0.5)==2015,C14lat],17520)-5*(year-2015)
-      }
-      year_out[1:17520+365*48*(year-startyear)]<-rep(year,17520)
-      }
-      doy_out<-(rep(doy,nyear))
-      hod_out<-(rep(hod,nyear))
-      nstep<-length(doy_out)
-      
-      # combine individual variables into one array for output
-      forcing<-cbind(year_out[1:nstep],doy_out,hod_out,swdown[1:nstep],lwdown[1:nstep],tair[1:nstep],qair[1:nstep],
-                     press[1:nstep],rain[1:nstep],snow[1:nstep],wind[1:nstep],co2[1:nstep],co2_dC13[1:nstep],co2_DC14[1:nstep],
-                     nhx[1:nstep],noy[1:nstep],pdep[1:nstep])
-                     
-      # write output append yearly data (header created above)
-      write.table(format(round(forcing,digits=4),nsmall=1), file=outname, append=TRUE, quote=FALSE,
-                  col.names=FALSE, row.names=FALSE, sep=" ")
+  # data availability period is identical for all four sites
+  startyear <- allsitestartyear[s]
+  endyear   <- allsiteendyear[s]
+  nyear     <- endyear-startyear+1
+  
+  # generated output file
+  outSiteFile <- paste0(opath, site_list[s],"_s_",startyear,"-",endyear,'.dat')  # the "_s_" denotes static met-forcing (compared to transient)
+  # remove old output file
+  if (file.exists(outSiteFile)) file.remove(outSiteFile) 
+  
+  # write header
+  write.table(t(cbind(header1,header2)), file=outSiteFile, append=TRUE, quote=FALSE, col.names=FALSE, row.names=FALSE, sep=' ') 
 
+  # define met-forcing input file
+  inSiteFile <- paste0(ipath1, inForcFile)
+
+  # get lon/lat from site info file
+  lonsite <- allsiteinfo[s,2]
+  latsite <- allsiteinfo[s,3]
+  
+  # get index of this site in the met-forcing file
+  sIDForc    <- as.integer(siteIndexForcing[s])
+
+  # get meteo data (data are available for different periods across the four sites)
+  dataPeriod <- c(siteDataPeriods[1,s], siteDataPeriods[2,s])  # element range in data vector denoting first and last data point of this period
+
+  fid <- nc_open(inSiteFile)
+    dateInt <- as.integer(ncvar_get(fid,"time"))[dataPeriod[1]:dataPeriod[2]]  # get the dates as integer for removing leap days
+    
+    swdown  <- ncvar_get(fid,"shortwave")[sIDForc, sIDForc, dataPeriod[1]:dataPeriod[2]]
+    lwdown  <- ncvar_get(fid,"longwave")[sIDForc, sIDForc, dataPeriod[1]:dataPeriod[2]]
+    tair    <- ncvar_get(fid,"air_temp")[sIDForc, sIDForc, dataPeriod[1]:dataPeriod[2]] +273.15   # K = degC + 273.15
+    rain    <- ncvar_get(fid,"precip")[sIDForc, sIDForc, dataPeriod[1]:dataPeriod[2]] *86400      # precip = rain (snow not included)
+    qair    <- ncvar_get(fid,"qair")[sIDForc, sIDForc, dataPeriod[1]:dataPeriod[2]] *1000
+    press   <- ncvar_get(fid,"air_pressure")[sIDForc, sIDForc, dataPeriod[1]:dataPeriod[2]] /100
+    wind    <- ncvar_get(fid,"wspeed")[sIDForc, sIDForc, dataPeriod[1]:dataPeriod[2]]
+    # some corrections and error catching
+    wind[wind < 0.1] <- 0.1   # may not be smaller 0.1 for model stability
+    snow    <- rain * 0.0     # forcing input files do not contain snowfall information; QUINCY reads the snow, but does not use it; so, simply set all to zero
+  nc_close(fid)
+
+  # remove leap days from meteo data (all Febr 29th)
+  leapPositions <- grep("0229", dateInt)
+  if(length(leapPositions) > 0){
+    print("removing leap days from meteo data")
+    swdown  <- swdown[- leapPositions]
+    lwdown  <- lwdown[- leapPositions]
+    tair    <- tair[- leapPositions]
+    rain    <- rain[- leapPositions]
+    qair    <- qair[- leapPositions]
+    press   <- press[- leapPositions]
+    wind    <- wind[- leapPositions]
+    snow    <- snow[- leapPositions]
+    # remove date vector; not needed hereafter
+    remove(dateInt)
+  }
+
+  # P deposition data  
+  fid <- nc_open("/Net/Groups/BGI/work_2/QUINCY/SLM/InputDataSources/P-DEP/nitrogenandphosphorus2x2annualdep.nc")
+    lonpdep <- as.numeric(ncvar_get(fid,'lon'))
+    latpdep <- as.numeric(ncvar_get(fid,'lat'))
+    latx    <- which.min(abs(latpdep-latsite))
+    lonx    <- which.min(abs(lonpdep-lonsite))
+    p_dummy <- ncvar_get(fid,'pdep')[lonx,latx]/365
+    pdep    <- numeric(length(swdown))
+    pdep[]  <- p_dummy
+  nc_close(fid)
+
+  # create empty vectors based on the length of the 'swdown' meteo vector
+  co2=co2_dC13=co2_DC14=noy=nhx <- numeric(length(swdown))
+  # loop over forcing years
+  for (year in c(startyear:endyear)) {
+    print(c(site_list[s],year))
+
+    ## N deposition
+    #  using RCP 8.5 data throughout
+    fid<-nc_open(paste0("/Net/Groups/BGI/model/OCN/input/gridded/NDEP/CESM-CAM/ndep_RCP8.5_",year,".nc"))
+      lonndep   <- ncvar_get(fid,'lon')
+      latndep   <- ncvar_get(fid,'lat')
+      latx      <- which.min(abs(latndep-as.numeric(latsite)))
+      lonx      <- which.min(abs(lonndep-as.numeric(lonsite)))
+      nhx_dummy <- ncvar_get(fid,'NHx_deposition')[lonx,latx,]*86400*1000*1000
+      noy_dummy <- ncvar_get(fid,'NOy_deposition')[lonx,latx,]*86400*1000*1000
+      nhx[1:(dpm[1]*48)+365*48*(year-startyear)] <- rep(nhx_dummy[1],dpm[1]*48)
+      noy[1:(dpm[1]*48)+365*48*(year-startyear)] <- rep(noy_dummy[1],dpm[1]*48)
+      for (m in 2:12) {
+        nhx[(1:(dpm[m]*48))+sum(dpm[1:(m-1)])*48+365*48*(year-startyear)]<-rep(nhx_dummy[m],dpm[m]*48)
+        noy[(1:(dpm[m]*48))+sum(dpm[1:(m-1)])*48+365*48*(year-startyear)]<-rep(noy_dummy[m],dpm[m]*48)
+      }
+    nc_close(fid)
+    
+    #CO2
+    co2[1:17520+365*48*(year-startyear)]      <- rep(co2y[co2y[,1]==year,2],17520)
+    co2_dC13[1:17520+365*48*(year-startyear)] <- rep(co2y_dC13[(co2y_dC13[,1]-0.5)==year,2],17520)
+    if(latsite>30) C14lat=2
+    if(latsite>-30&latsite<=30) C14lat=3
+    if(latsite<=-30) C14lat=4
+    co2_DC14[1:17520+365*48*(year-startyear)] <- rep(co2y_DC14[(co2y_DC14[,1]-0.5)==year,C14lat],17520)
+  }
+    
+  # create time information for output file
+  year_out <- numeric(length(swdown))
+  for (year in c(startyear:endyear)) year_out[1:17520+365*48*(year-startyear)] <- rep(year,17520)
+  doy_out  <- (rep(doy,nyear))
+  hod_out  <- (rep(hod,nyear))
+  nstep    <- length(doy_out)
+
+  # combine individual variables into one array for output
+  forcing<-cbind(year_out[1:nstep],doy_out,hod_out,swdown[1:nstep],lwdown[1:nstep],tair[1:nstep],qair[1:nstep],
+                 press[1:nstep],rain[1:nstep],snow[1:nstep],wind[1:nstep],co2[1:nstep],co2_dC13[1:nstep],co2_DC14[1:nstep],
+                 nhx[1:nstep],noy[1:nstep],pdep[1:nstep])
+                 
+  # write output append yearly data (header created above)
+  write.table(format(round(forcing,digits=4),nsmall=1), file=outSiteFile, append=TRUE, quote=FALSE,
+              col.names=FALSE, row.names=FALSE, sep=" ")
 }
 
 
