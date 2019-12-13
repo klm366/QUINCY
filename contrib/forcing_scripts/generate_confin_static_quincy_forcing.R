@@ -51,14 +51,14 @@ library(ncdf4)
 ## create out folder & set in/out path
 ipath1 <- "/Net/Groups/BGI/work_2/QUINCY/SLM/Data/CONFIN_4_finish_sites/"
 opath  <- "./new_confin_static_met_forcing/"
-dir.create("./new_confin_static_met_forcing", showWarnings=T, recursive=T)
+dir.create(opath , showWarnings=T, recursive=T)
 
 ## define & load climate-forcing input file
 #  contains the data for all four sites (ut limited to 2003-2013 for swdown & lwdown)
 inForcFile <- "climate_4sites_1996-2014_with_leap_years.nc"
 
 ## message
-print("Generating met forcing for four finish conifers sites (CONFIN)")
+print("Generating statci met-forcing for four finish conifers sites (CONFIN)")
 
 ## read site info file (manually created from BGI/people/szaehle/Projects/QUINCY/GenerateMANP_Forcing_2018/site_info.dat)
 allsiteinfo       <- read.table("generate_confin_site_list.dat", stringsAsFactor=F, header=T)
