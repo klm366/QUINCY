@@ -185,7 +185,7 @@ CONTAINS
     ! ---------------------------
     ! Go
 
-    IF (is_newday()) THEN ! only once per day
+    IF (is_newday(options%datetime, options%dtime)) THEN ! only once per day
 
       SELECT CASE (dsl4jsb_Config(FUEL_)%fuel_algorithm)
         CASE (1) !! jsbach algorithm
