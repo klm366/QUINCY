@@ -530,7 +530,7 @@ CONTAINS
       END IF
     END IF
 
-    IF (is_time_experiment_start()) THEN          ! Start of experiment
+    IF (is_time_experiment_start(options%datetime)) THEN          ! Start of experiment
       lstart = .TRUE.
       w_snow(:) = 0._wp
     ELSE
@@ -2030,7 +2030,7 @@ CONTAINS
       water_content_new(:) = 0._wp
     END IF
 
-    IF (.NOT. is_time_experiment_start()) THEN
+    IF (.NOT. is_time_experiment_start(options%datetime)) THEN
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_3 tile_name=tile%name
       water_budget(:) = water_content(:) + water_flux(:) * dtime - water_content_new(:)
     END IF
