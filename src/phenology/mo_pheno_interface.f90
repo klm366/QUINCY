@@ -1082,4 +1082,3 @@ CONTAINS
   END SUBROUTINE global_phenology_diagnostics
 
 #endif
-END MODULE mo_pheno_interface

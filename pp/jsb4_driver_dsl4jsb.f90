@@ -83,6 +83,7 @@ PROGRAM jsb4_driver
   REAL(wp):: zwtime, zutime, zstime, zrtime
 
   INTEGER:: nml_handler, read_status, f_unit, status, iblk, nproma, nblks, ncid, model_id, ice, ics
+  TYPE(t_datetime) :: current_datetime
 
   !! Variables of namelist jsb_parallel_nml
   INTEGER:: nproca  ! number of processors for jsbach
@@ -337,6 +338,7 @@ PROGRAM jsb4_driver
     IF(is_newday()) THEN
       CALL write_date(current_date,'Calculate timesteps for day: ')
     ENDIF
+    CALL manager_state(current_datetime)
 
     CALL jsbach_start_timestep(model_id)
 
@@ -388,7 +390,7 @@ PROGRAM jsb4_driver
           & t_acoef(:,iblk), t_bcoef(:,iblk), q_acoef(:,iblk), q_bcoef(:,iblk), pch(:,iblk), cos_zenith_angle(:,iblk))
       ENDIF
 
-      CALL jsbach_interface ( 1, iblk, 1, nproma, delta_time, time_step_len, t_air_K(:,iblk), &
+      CALL jsbach_interface ( 1, iblk, 1, nproma, current_datetime, delta_time, time_step_len, t_air_K(:,iblk), &
         & q_air(:,iblk), rain(:,iblk), snow(:,iblk), wind_air(:,iblk), wind_10m(:,iblk), lw_srf_down(:,iblk), &
         & swvis_srf_down(:,iblk), swnir_srf_down(:,iblk), swpar_srf_down(:,iblk), fract_par_diffuse(:,iblk), &
         & press_srf(:,iblk), drag_srf(:,iblk), &

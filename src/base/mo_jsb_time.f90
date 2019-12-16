@@ -102,7 +102,6 @@ CONTAINS
       IF (.FALSE.) THEN
         PRINT*, get_year_day(start_date)
         PRINT*, get_year_day(final_date)
-        PRINT*, get_year_day(current_date)
       END IF
 
       ! Check if Asselin time filter is used and print message
