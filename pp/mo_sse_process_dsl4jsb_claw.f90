@@ -138,7 +138,7 @@ CONTAINS
   REAL ( KIND= wp ) , ALLOCATABLE :: zrange ( : )
   REAL ( KIND= wp ) , ALLOCATABLE :: zdmax ( : )
   INTEGER , ALLOCATABLE :: jmax ( : )
-  TYPE ( t_datetime ) :: inidate
+  TYPE ( t_datetime ) , POINTER :: inidate
   INTEGER :: iniyear
   INTEGER :: im
   INTEGER :: i
@@ -155,7 +155,7 @@ CONTAINS
   nsoil = size ( tsoil , 2 )
   ALLOCATE ( zrange ( ndim ) , jmax ( ndim ) , zdmax ( ndim ) )
   zkap = 7.5e-7_wp
-  inidate = get_time_start ( )
+  inidate => get_time_start ( )
   iniyear = get_year ( inidate )
   year_len = real ( get_year_length ( iniyear ) , wp )
   day_in_year = int ( get_year_day ( inidate ) )

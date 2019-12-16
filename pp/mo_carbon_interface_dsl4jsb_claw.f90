@@ -56,7 +56,7 @@ CONTAINS
 
  SUBROUTINE update_c_npp_pot_allocation ( tile , options )
   USE mo_carbon_process , ONLY: calc_cpools
-  USE mo_jsb_time , ONLY: is_newday , is_newyear , time_steps_per_day ,&
+  USE mo_jsb_time , ONLY: is_newday , is_newyear , timesteps_per_day ,&
    is_time_experiment_start
   USE mo_carbon_constants , ONLY: molarmassco2_kg , sec_per_day
 
@@ -67,6 +67,7 @@ CONTAINS
   INTEGER :: iblk
   INTEGER :: ics
   INTEGER :: ice
+  REAL ( KIND= wp ) :: dtime
   REAL ( KIND= wp ) , ALLOCATABLE :: precip_total ( : )
   REAL ( KIND= wp ) :: maxlai ( 1 : options % nc )
   REAL ( KIND= wp ) :: old_c_state_sum ( 1 : options % nc )
@@ -154,6 +155,7 @@ CONTAINS
   iblk = options % iblk
   ics = options % ics
   ice = options % ice
+  dtime = options % dtime
   IF ( debug_on ( ) .AND. iblk == 1 ) THEN
    CALL message ( trim ("mo_carbon_interface" //":update_C_NPP_pot_allocation"&
     ) ,"Starting on tile " // trim ( tile % name ) //" ..." )
@@ -274,11 +276,13 @@ CONTAINS
   t_air => a2l__mem % t_air % ptr ( ics : ice , iblk )
   rain => a2l__mem % rain % ptr ( ics : ice , iblk )
   snow => a2l__mem % snow % ptr ( ics : ice , iblk )
-  IF ( debug_on ( ) .AND. iblk == 1 .AND. is_newday ( ) ) THEN
+  IF ( debug_on ( ) .AND. iblk == 1 .AND. is_newday ( options % datetime ,&
+   dtime ) ) THEN
    CALL message ( trim ("mo_carbon_interface" //":update_C_NPP_pot_allocation"&
     ) ,"update_C_NPP_pot_allocation: First time step of new day" )
   END IF
-  IF ( debug_on ( ) .AND. iblk == 1 .AND. is_newyear ( ) ) THEN
+  IF ( debug_on ( ) .AND. iblk == 1 .AND. is_newyear ( options % datetime ,&
+   dtime ) ) THEN
    CALL message ( trim ("mo_carbon_interface" //":update_C_NPP_pot_allocation"&
     ) ,"update_C_NPP_pot_allocation: First time step of new year" )
   END IF
@@ -290,8 +294,8 @@ CONTAINS
   precip_total = rain + snow
   pseudo_precip = precip_total * n_pseudo_precip + f_pseudo_precip *&
    pseudo_precip
-  lstart = is_time_experiment_start ( )
-  IF ( ( .NOT. is_newday ( ) ) .OR. lstart ) THEN
+  lstart = is_time_experiment_start ( options % datetime )
+  IF ( ( .NOT. is_newday ( options % datetime , dtime ) ) .OR. lstart ) THEN
    lai_sum = lai_sum + lai
    npp_pot_sum = npp_pot_sum + npp_pot_rate_ca
    gpp_sum = gpp_sum + gross_assimilation_ca
@@ -299,11 +303,11 @@ CONTAINS
    alpha_sum = alpha_sum + alpha
   ELSE
    lai_yydaymean = lai_ydaymean
-   lai_ydaymean = lai_sum / time_steps_per_day ( )
-   npp_pot_ydaymean = npp_pot_sum / time_steps_per_day ( )
-   gpp_ydaymean = gpp_sum / time_steps_per_day ( )
-   topsoiltemp_ydaymean = topsoiltemp_sum / time_steps_per_day ( )
-   alpha_ydaymean = alpha_sum / time_steps_per_day ( )
+   lai_ydaymean = lai_sum / timesteps_per_day ( dtime )
+   npp_pot_ydaymean = npp_pot_sum / timesteps_per_day ( dtime )
+   gpp_ydaymean = gpp_sum / timesteps_per_day ( dtime )
+   topsoiltemp_ydaymean = topsoiltemp_sum / timesteps_per_day ( dtime )
+   alpha_ydaymean = alpha_sum / timesteps_per_day ( dtime )
    lai_sum = lai
    npp_pot_sum = npp_pot_rate_ca
    gpp_sum = gross_assimilation_ca

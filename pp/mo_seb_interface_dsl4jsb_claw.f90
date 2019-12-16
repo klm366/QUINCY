@@ -286,7 +286,7 @@ CONTAINS
     w_soil_freeze_sl => hydro__mem % w_soil_freeze_sl % ptr ( ics : ice , : ,&
      iblk )
     w_ice_melt_sl => hydro__mem % w_ice_melt_sl % ptr ( ics : ice , : , iblk )
-    IF ( ( .NOT. is_time_experiment_start ( ) ) ) THEN
+    IF ( ( .NOT. is_time_experiment_start ( options % datetime ) ) ) THEN
 !$acc data create(heat_cap)
 !$acc data present(t_unfilt(:),hcap_grnd_old(:),snowmelt(:))
 !$acc parallel

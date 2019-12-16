@@ -546,9 +546,9 @@ CONTAINS
    "Starting on tile " // trim ( tile % name ) //" ..." )
   END IF
   model => get_model ( tile % owner_model_id )
-  IF ( ( .NOT. is_time_experiment_start ( ) ) .AND. ( .NOT.&
-   is_time_ltrig_rad_m1 ( model % id ) ) .AND. ( .NOT. jsbach_runs_standalone&
-   ( ) ) ) THEN
+  IF ( ( .NOT. is_time_experiment_start ( options % datetime ) ) .AND. ( .NOT.&
+   is_time_ltrig_rad_m1 ( options % datetime , options % dtime , model % id )&
+   ) .AND. ( .NOT. jsbach_runs_standalone ( ) ) ) THEN
    RETURN
   END IF
   SELECT TYPE ( cc => model % processes ( seb_ ) % p % config )
@@ -850,9 +850,9 @@ CONTAINS
    "Starting on tile " // trim ( tile % name ) //" ..." )
   END IF
   model => get_model ( tile % owner_model_id )
-  IF ( ( .NOT. is_time_experiment_start ( ) ) .AND. ( .NOT.&
-   is_time_ltrig_rad_m1 ( model % id ) ) .AND. ( .NOT. jsbach_runs_standalone&
-   ( ) ) ) THEN
+  IF ( ( .NOT. is_time_experiment_start ( options % datetime ) ) .AND. ( .NOT.&
+   is_time_ltrig_rad_m1 ( options % datetime , options % dtime , model % id )&
+   ) .AND. ( .NOT. jsbach_runs_standalone ( ) ) ) THEN
    RETURN
   END IF
   SELECT TYPE ( mm => tile % mem ( rad_ ) % p )

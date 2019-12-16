@@ -155,7 +155,7 @@ CONTAINS
    calc_evergreen_phenology , calc_crop_phenology , calc_raingreen_phenology ,&
    calc_grass_phenology , track_max_green_pool ,&
    derive_maxlai_according_to_allometric_relationships
-  USE mo_jsb_time_iface , ONLY: get_time_current , get_year_day
+  USE mo_jsb_time_iface , ONLY: get_year_day
   USE mo_jsb_time , ONLY: is_newyear , is_newday , timestep_in_days
   USE mo_pheno_constants , ONLY: phenoparam
   USE mo_jsb_grid_class , ONLY: t_jsb_grid
@@ -333,8 +333,8 @@ CONTAINS
    CALL finish ( trim ("mo_pheno_interface" //":update_phenology_logrop" ) ,&
    "The programm tries to calculate phenology on a non vegetated tile..." )
   END IF
-  l_newday = is_newday ( )
-  timestep = timestep_in_days ( )
+  l_newday = is_newday ( options % datetime , options % dtime )
+  timestep = timestep_in_days ( options % dtime )
 !$acc data present(t_air(:),t_air_in_celcius(:))
 !$acc parallel
 !$acc loop gang vector
@@ -343,7 +343,7 @@ CONTAINS
   END DO
 !$acc end parallel
 !$acc end data
-  day_of_year = int ( get_year_day ( get_time_current ( ) ) )
+  day_of_year = int ( get_year_day ( options % datetime ) )
 !$acc data present(w_soil_rel(:),w_soil_filling(:))
 !$acc parallel
 !$acc loop gang vector
@@ -366,7 +366,7 @@ CONTAINS
   END IF
   IF ( pheno__conf % l_forestregrowth .AND. model % lctlib ( tile % lcts ( 1 )&
    % lib_id ) % forestflag ) THEN
-   IF ( is_newyear ( ) ) THEN
+   IF ( is_newyear ( options % datetime , options % dtime ) ) THEN
 !$acc data present(veg_fract_correction_old(:),veg_fract_correction(:))
 !$acc parallel
 !$acc loop gang vector
@@ -401,7 +401,7 @@ CONTAINS
     CALL check_carbon_conservation ( tile , options , old_c_state_sum ( : ) ,&
      dummy_flux ( : ) , cconservation_allom ( : ) )
    END IF
-   IF ( is_newday ( ) ) THEN
+   IF ( is_newday ( options % datetime , options % dtime ) ) THEN
     CALL track_max_green_pool ( c_green ( : ) , c_reserve ( : ) , c_woods ( :&
      ) , current_max_green ( : ) , veg_carbon_at_max_green ( : ) )
    END IF
@@ -529,7 +529,7 @@ CONTAINS
   CALL weighted_by_fract % aggregate ( tile , pheno__mem % lai , ics , ice ,&
    iblk ,"mo_pheno_interface" //":aggregate_phenology" )
   IF ( pheno__conf % l_forestregrowth ) THEN
-   IF ( is_newyear ( ) ) THEN
+   IF ( is_newyear ( options % datetime , options % dtime ) ) THEN
     CALL weighted_by_fract % aggregate ( tile , pheno__mem % maxlai_allom ,&
      ics , ice , iblk ,"mo_pheno_interface" //":aggregate_phenology" )
     CALL weighted_by_fract % aggregate ( tile , pheno__mem %&

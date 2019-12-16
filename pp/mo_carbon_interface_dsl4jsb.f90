@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from JSBACH source file:
 !    src/carbon/mo_carbon_interface.f90
-! with md5 hash: bc9974fe32f3a4c05a211911dbdf469b
+! with md5 hash: 3ccabbec5737246243750c64851112ed
 !
 !>
 !! @brief Contains the interfaces to the carbon process
@@ -123,7 +123,7 @@ CONTAINS
 
     ! Use declarations
     USE mo_carbon_process,    ONLY: calc_Cpools
-    USE mo_jsb_time,          ONLY: is_newday, is_newyear, time_steps_per_day, is_time_experiment_start
+    USE mo_jsb_time,          ONLY: is_newday, is_newyear, timesteps_per_day, is_time_experiment_start
     USE mo_carbon_constants,  ONLY: molarMassCO2_kg, sec_per_day
 
     ! Arguments
@@ -134,6 +134,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER   :: model
     LOGICAL                      :: lstart
     INTEGER                      :: iblk, ics, ice
+    REAL(wp)                     :: dtime
     REAL(wp), allocatable        :: precip_total(:)
     REAL(wp), DIMENSION(options%nc) :: MaxLai
     REAL(wp), DIMENSION(options%nc) :: old_c_state_sum, current_fluxes
@@ -280,6 +281,7 @@ CONTAINS
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
+    dtime = options%dtime
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     model => Get_model(tile%owner_model_id)
@@ -381,9 +383,9 @@ CONTAINS
     ! Go
 
     ! Put a comment on the screen...
-    IF (debug_on() .AND. iblk==1 .AND. is_newday()  ) CALL message(TRIM(routine), &
+    IF (debug_on() .AND. iblk==1 .AND. is_newday(options%datetime, dtime)  ) CALL message(TRIM(routine), &
                                                            'update_C_NPP_pot_allocation: First time step of new day')
-    IF (debug_on() .AND. iblk==1 .AND. is_newyear() ) CALL message(TRIM(routine), &
+    IF (debug_on() .AND. iblk==1 .AND. is_newyear(options%datetime, dtime) ) CALL message(TRIM(routine), &
                                                            'update_C_NPP_pot_allocation: First time step of new year')
 
     ! Initializations
@@ -430,9 +432,9 @@ CONTAINS
     precip_total  = rain + snow  ! Precipitation rate [kg/(m^2 s)]
     pseudo_precip = precip_total * N_pseudo_precip  +  F_pseudo_precip * pseudo_precip
 
-    lstart = is_time_experiment_start()
+    lstart = is_time_experiment_start(options%datetime)
 
-    IF( .NOT. is_newday() .OR. lstart) THEN ! perform daily sums if WE ARE NOT STARTING A NEW DAY
+    IF( .NOT. is_newday(options%datetime,dtime) .OR. lstart) THEN ! perform daily sums if WE ARE NOT STARTING A NEW DAY
                                             ! or if we JUST STARTED AN TOTALLY NEW EXPERIMENT
 
       LAI_sum          = LAI_sum          + LAI
@@ -446,12 +448,12 @@ CONTAINS
 
       ! First save as "previous previous days" and "previous days" means
       LAI_yyDayMean  = LAI_yDayMean
-      LAI_yDayMean   = LAI_sum/time_steps_per_day()
+      LAI_yDayMean   = LAI_sum/timesteps_per_day(dtime)
 
-      NPP_pot_yDayMean     = NPP_pot_sum/time_steps_per_day()
-      GPP_yDayMean         = GPP_sum/time_steps_per_day()
-      topSoilTemp_yDayMean = topSoilTemp_sum/time_steps_per_day() ! 2d
-      alpha_yDayMean       = alpha_sum/time_steps_per_day()
+      NPP_pot_yDayMean     = NPP_pot_sum/timesteps_per_day(dtime)
+      GPP_yDayMean         = GPP_sum/timesteps_per_day(dtime)
+      topSoilTemp_yDayMean = topSoilTemp_sum/timesteps_per_day(dtime) ! 2d
+      alpha_yDayMean       = alpha_sum/timesteps_per_day(dtime)
 
       ! Then restart summing of this days values
       LAI_sum             = LAI
@@ -459,7 +461,7 @@ CONTAINS
       GPP_sum             = gross_assimilation_ca
       topSoilTemp_sum     = topSoilTemp ! 2d
       alpha_sum           = alpha
-      !NPP_pot_rate_ca_acc        = NPP_pot_rate_ca/time_steps_per_day() ! s.o.
+      !NPP_pot_rate_ca_acc        = NPP_pot_rate_ca/timesteps_per_day(dtime) ! s.o.
 
       ! Save other variables (for yasso) as "previous days"
       pseudo_temp_yDay   = pseudo_temp

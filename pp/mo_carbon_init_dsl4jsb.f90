@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from JSBACH source file:
 !    src/carbon/mo_carbon_init.f90
-! with md5 hash: 59a7fc85cb0a09da42206666e3ccd422
+! with md5 hash: 94c725d8c3011e4ee2b229416c7482c0
 !
 !>
 !! @brief Initialization of the the carbon memory.
@@ -67,7 +67,7 @@ CONTAINS
     SELECT TYPE (mm => tile%mem(carbon_)%p); TYPE IS (t_carbon_memory); carbon__mem => mm ; END SELECT
     !SELECT TYPE (cc => model%processes(carbon_)%p%config); TYPE IS (t_carbon_config) ; carbon__conf => cc ; END SELECT
 
-    dtime = get_time_dt()
+    dtime = get_time_dt(tile%owner_model_id)
 
     !CALL carbon_init_ic(tile)
     !CALL carbon_init_bc(tile)

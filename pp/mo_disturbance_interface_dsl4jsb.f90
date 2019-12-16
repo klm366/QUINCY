@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from JSBACH source file:
 !    src/disturbance/mo_disturbance_interface.f90
-! with md5 hash: 2286f6a698c1651075cb94325b712d0e
+! with md5 hash: 8b15bd12e750c80c49bab44f18c70572
 !
 !>
 !! @brief Contains the interfaces to the disturb process
@@ -129,7 +129,7 @@ CONTAINS
     USE mo_carbon_interface,      ONLY: recalc_per_tile_vars, calculate_current_c_ag_1_and_bg_sums, &
                                       & calculate_current_c_ta_state_sum, check_carbon_conservation
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
-    USE mo_jsb_time,              ONLY: is_time_experiment_start, time_steps_per_day, is_newday
+    USE mo_jsb_time,              ONLY: is_time_experiment_start, timesteps_per_day, is_newday
     USE mo_disturbance_constants, ONLY: persist_rel_hum, persist_wind_10m
 
     ! Arguments
@@ -307,10 +307,10 @@ CONTAINS
 
     ! R: This may be later in a climbuf process for dynveg and disturbance.
     ! Maximum daily wind speed and relative air humidity smoothed in time
-    persist = persist_rel_hum ** (1._wp/REAL(time_steps_per_day(),wp))
+    persist = persist_rel_hum ** (1._wp/REAL(timesteps_per_day(options%dtime),wp))
     q_rel_air_climbuf(:) = q_rel_air_climbuf(:) * persist  +  MIN(q_rel_air(:),100._wp) * (1._wp - persist)
 
-    IF (.NOT. is_newday() .OR. is_time_experiment_start()) THEN
+    IF (.NOT. is_newday(options%datetime, options%dtime) .OR. is_time_experiment_start(options%datetime)) THEN
       WHERE (wind_10m(:) > max_wind_10m_act(:))
          max_wind_10m_act(:) = wind_10m(:)
       END WHERE
@@ -321,7 +321,7 @@ CONTAINS
       q_rel_air_climbuf_yDay(:) = q_rel_air_climbuf(:)
     END IF
 
-    IF (is_newday()) THEN ! only once per day
+    IF (is_newday(options%datetime, options%dtime)) THEN ! only once per day
       cflux_dist_greenreserve_2_soil(:) = 0._wp
       cflux_dist_woods_2_soil(:) = 0._wp
 
