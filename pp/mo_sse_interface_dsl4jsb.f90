@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from JSBACH source file:
 !    src/soil_snow_energy/mo_sse_interface.f90
-! with md5 hash: 511c25ee6d452ce35969545512e3fdd8
+! with md5 hash: 27b0ec86dacdd20fd674fce7b7385fc9
 !
 !>
 !! @brief Contains the interfaces to the soil and snow energy processes
@@ -263,7 +263,7 @@ CONTAINS
 
     t_unfilt => seb__mem%t_unfilt%ptr(ics:ice,iblk)        ! in
 
-    lstart = is_time_experiment_start()
+    lstart = is_time_experiment_start(options%datetime)
 
     !$claw acc enter data create(snow_depth,snow_fract,t_unfilt_corrected,t_soil_top,hcap_grnd_snow,hcap_grnd_soil,grnd_hflx_snow,grnd_hflx_soil,ldglac,itop,itop_old)
 

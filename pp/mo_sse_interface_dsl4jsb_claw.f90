@@ -228,7 +228,7 @@ CONTAINS
   heat_cond => sse__mem % heat_cond % ptr ( ics : ice , iblk )
   vol_heat_cap => sse__mem % vol_heat_cap % ptr ( ics : ice , iblk )
   t_unfilt => seb__mem % t_unfilt % ptr ( ics : ice , iblk )
-  lstart = is_time_experiment_start ( )
+  lstart = is_time_experiment_start ( options % datetime )
 !$acc enter data &
 !$acc create(snow_depth,snow_fract,t_unfilt_corrected,t_soil_top &
 !$acc ,hcap_grnd_snow,hcap_grnd_soil,grnd_hflx_snow,grnd_hflx_soil,ldglac &

@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from JSBACH source file:
 !    src/srf_energy_bal/mo_seb_init.f90
-! with md5 hash: 4e55a0fbf37ae06cabd1cd25f6f24c64
+! with md5 hash: 7e908b814b9ae89fd517ae0ada773528
 !
 !>
 !! @brief Initialization of the the seb memory.
@@ -46,7 +46,7 @@ CONTAINS
   !> Intialize soil process (after memory has been set up)
   !
   SUBROUTINE seb_init(tile)
-    USE mo_jsb_time,        ONLY: timeStep_in_days
+    USE mo_jsb_time,        ONLY: timestep_in_days
     USE mo_pheno_constants, ONLY: PhenoParam
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -70,7 +70,7 @@ CONTAINS
       n_pseudo_soil_temp => seb__mem%n_pseudo_soil_temp%ptr(:,:) ! OUT
       f_pseudo_soil_temp => seb__mem%f_pseudo_soil_temp%ptr(:,:) ! OUT
 
-      F_pseudo_soil_temp = EXP(-timeStep_in_days()/PhenoParam%EG_SG%tau_pseudo_soil)
+      F_pseudo_soil_temp = EXP(- timestep_in_days(model_id=tile%owner_model_id)/PhenoParam%EG_SG%tau_pseudo_soil)
       N_pseudo_soil_temp = 1._wp / (1._wp - F_pseudo_soil_temp)
 
       !$acc update device(F_pseudo_soil_temp, N_pseudo_soil_temp)

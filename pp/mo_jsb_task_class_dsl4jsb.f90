@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from JSBACH source file:
 !    src/base/mo_jsb_task_class.f90
-! with md5 hash: 9a431dc77de71eba92e124ac292ac3d3
+! with md5 hash: 34e75288640825162b7003b3e4217b51
 !
 !>
 !! @brief Contains process task class
@@ -29,6 +29,7 @@ MODULE mo_jsb_task_class
   ! USE mo_hsm_class,       ONLY: t_jsb_task_msg => t_Message
   USE mo_hsm_class,       ONLY: t_Message
   USE mo_jsb_tile_class,  ONLY: t_jsb_tile_abstract
+  USE mo_jsb_time,        ONLY: t_datetime
 
   IMPLICIT NONE
   PRIVATE
@@ -37,12 +38,13 @@ MODULE mo_jsb_task_class
   PUBLIC :: t_jsb_process_task, t_jsb_process_task_p, t_Task_queue, t_jsb_task_options
 
   TYPE t_jsb_task_options
-    REAL(wp) :: dtime   = -1._wp
-    REAL(wp) :: steplen = -1._wp
-    INTEGER  :: iblk    = -1  ! Number of current block (chunk)
-    INTEGER  :: ics     = -1  ! Index of chunk start
-    INTEGER  :: ice     = -1  ! Index of chunk end
-    INTEGER  :: nc      = -1  ! Length of chunk
+    REAL(wp)                  :: dtime   = -1._wp
+    REAL(wp)                  :: steplen = -1._wp
+    TYPE(t_datetime), POINTER :: datetime
+    INTEGER                   :: iblk    = -1  ! Number of current block (chunk)
+    INTEGER                   :: ics     = -1  ! Index of chunk start
+    INTEGER                   :: ice     = -1  ! Index of chunk end
+    INTEGER                   :: nc      = -1  ! Length of chunk
   END TYPE t_jsb_task_options
 
 !!$  TYPE, EXTENDS(t_Message) :: t_jsb_task_msg

@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from JSBACH source file:
 !    src/base/mo_jsb_model_class.f90
-! with md5 hash: 4784dc72ff8f5fe23fa06853d314337a
+! with md5 hash: d1911b43e093e16deeffd88f5907dc46
 !
 !>
 !! @brief Contains main JSBACH model class.
@@ -410,17 +410,19 @@ CONTAINS
 
   END FUNCTION Get_tile
 
-  SUBROUTINE Set_options(this, dtime, steplen, iblk, ics, ice, nc)
+  SUBROUTINE Set_options(this, datetime, dtime, steplen, iblk, ics, ice, nc)
 
     USE mo_jsb_utils_iface, ONLY: assign_if_present
+    USE mo_jsb_time,        ONLY: t_datetime
 
-    CLASS(t_jsb_model), INTENT(inout) :: this
-    REAL(wp), OPTIONAL, INTENT(in)    :: dtime
-    REAL(wp), OPTIONAL, INTENT(in)    :: steplen
-    INTEGER,  OPTIONAL, INTENT(in)    :: iblk
-    INTEGER,  OPTIONAL, INTENT(in)    :: ics
-    INTEGER,  OPTIONAL, INTENT(in)    :: ice
-    INTEGER,  OPTIONAL, INTENT(in)    :: nc
+    CLASS(t_jsb_model),                  INTENT(inout) :: this
+    TYPE(t_datetime), OPTIONAL, POINTER, INTENT(in)    :: datetime
+    REAL(wp),         OPTIONAL,          INTENT(in)    :: dtime
+    REAL(wp),         OPTIONAL,          INTENT(in)    :: steplen
+    INTEGER,          OPTIONAL,          INTENT(in)    :: iblk
+    INTEGER,          OPTIONAL,          INTENT(in)    :: ics
+    INTEGER,          OPTIONAL,          INTENT(in)    :: ice
+    INTEGER,          OPTIONAL,          INTENT(in)    :: nc
 
     INTEGER :: no_omp_thread
 
@@ -432,6 +434,7 @@ CONTAINS
     CALL assign_if_present(this%options(no_omp_thread)%ics,     ics)
     CALL assign_if_present(this%options(no_omp_thread)%ice,     ice)
     CALL assign_if_present(this%options(no_omp_thread)%nc,      nc)
+    IF (PRESENT(datetime)) this%options(no_omp_thread)%datetime => datetime
 
   END SUBROUTINE Set_options
 

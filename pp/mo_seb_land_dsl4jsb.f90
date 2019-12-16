@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from JSBACH source file:
 !    src/srf_energy_bal/mo_seb_land.f90
-! with md5 hash: 27dba4c2180bcae046e27dbe5002be8f
+! with md5 hash: a50f9875afb8b5a0aee2e2aa6dfb2e08
 !
 !>
 !! @brief Contains the routines for the surface energy balance on LAND lct_type.
@@ -61,7 +61,7 @@ CONTAINS
     USE mo_phy_schemes,            ONLY: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, tpfac2, tpfac3
     USE mo_sse_constants,          ONLY: snow_depth_min
-    USE mo_jsb_time,               ONLY: is_newday, time_steps_per_day ! get_asselin_coef, timeStep_in_days
+    USE mo_jsb_time,               ONLY: is_newday, timesteps_per_day ! get_asselin_coef, timeStep_in_days
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -247,10 +247,10 @@ CONTAINS
     
     ! Sum up of the previous day temperatures
     !$claw sca forward update savepoint=ser_jsb_seb_land_calc_previous_day_variables_1 tile_name=tile%name
-    CALL calc_previous_day_variables(is_newday(),               & ! Input
+    CALL calc_previous_day_variables(is_newday(options%datetime, options%dtime),               & ! Input
                                      t_air_in_Celcius(:),       & ! Input
                                      !dtime,                     & ! Input
-                                     time_steps_per_day(),      & ! Input
+                                     timesteps_per_day(options%dtime), & ! Input
                                      previous_day_temp_mean(:), & ! InOut (for summer- and evergreen)
                                      day_temp_sum(:),           & ! InOut
                                      previous_day_temp_min(:),  & ! InOut (for crop)
@@ -284,7 +284,7 @@ CONTAINS
     forc_hflx(:) = grnd_hflx(:)
     !$claw end expand
 
-    IF (is_time_experiment_start()) THEN            ! Start of experiment
+    IF (is_time_experiment_start(options%datetime)) THEN            ! Start of experiment
       lstart = .TRUE.
     ELSE
       lstart = .FALSE.

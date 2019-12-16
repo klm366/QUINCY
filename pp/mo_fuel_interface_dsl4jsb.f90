@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from JSBACH source file:
 !    src/disturbance/mo_fuel_interface.f90
-! with md5 hash: 55081393d9b6066317c00a7056ca165e
+! with md5 hash: 30ac68bfec1f65d66c3483c8bf7bec30
 !
 !>
 !! @brief Contains the interfaces to the fuel process
@@ -190,7 +190,7 @@ CONTAINS
     ! ---------------------------
     ! Go
 
-    IF (is_newday()) THEN ! only once per day
+    IF (is_newday(options%datetime, options%dtime)) THEN ! only once per day
 
       SELECT CASE (fuel__conf%fuel_algorithm)
         CASE (1) !! jsbach algorithm

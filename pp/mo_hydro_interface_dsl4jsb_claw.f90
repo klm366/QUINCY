@@ -414,7 +414,7 @@ CONTAINS
     fract_fpc_max => pheno__mem % fract_fpc_max % ptr ( ics : ice , iblk )
    END IF
   END IF
-  IF ( is_time_experiment_start ( ) ) THEN
+  IF ( is_time_experiment_start ( options % datetime ) ) THEN
    lstart = .TRUE.
    w_snow ( : ) = 0._wp
   ELSE
@@ -2033,7 +2033,7 @@ INTEGER, SAVE :: task_counter = 1
 !$acc end parallel
 !$acc end data
   END IF
-  IF ( ( .NOT. is_time_experiment_start ( ) ) ) THEN
+  IF ( ( .NOT. is_time_experiment_start ( options % datetime ) ) ) THEN
 !$acc data &
 !$acc present(water_budget(:),water_content(:),water_flux(:) &
 !$acc ,water_content_new(:))

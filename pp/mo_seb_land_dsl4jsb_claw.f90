@@ -31,7 +31,7 @@ CONTAINS
    heat_transfer_coef
   USE mo_jsb_physical_constants , ONLY: tmelt , rhoh2o , tpfac2 , tpfac3
   USE mo_sse_constants , ONLY: snow_depth_min
-  USE mo_jsb_time , ONLY: is_newday , time_steps_per_day
+  USE mo_jsb_time , ONLY: is_newday , timesteps_per_day
 
   CLASS ( t_jsb_tile_abstract ) , INTENT(INOUT) :: tile
   TYPE ( t_jsb_task_options ) , INTENT(IN) :: options
@@ -244,10 +244,11 @@ CONTAINS
   END DO
 !$acc end parallel
 !$acc end data
-  CALL calc_previous_day_variables ( is_newday ( ) , t_air_in_celcius ( : ) ,&
-   time_steps_per_day ( ) , previous_day_temp_mean ( : ) , day_temp_sum ( : )&
-   , previous_day_temp_min ( : ) , day_temp_min ( : ) , previous_day_temp_max&
-   ( : ) , day_temp_max ( : ) )
+  CALL calc_previous_day_variables ( is_newday ( options % datetime , options&
+   % dtime ) , t_air_in_celcius ( : ) , timesteps_per_day ( options % dtime )&
+   , previous_day_temp_mean ( : ) , day_temp_sum ( : ) , previous_day_temp_min&
+   ( : ) , day_temp_min ( : ) , previous_day_temp_max ( : ) , day_temp_max ( :&
+   ) )
   CALL calc_pseudo_soil_temp ( t_air_in_celcius ( : ) , n_pseudo_soil_temp ( :&
    ) , f_pseudo_soil_temp ( : ) , pseudo_soil_temp ( : ) )
 !$acc data present(t_unfilt_old(:),t_unfilt(:),t(:),t_old(:))
@@ -272,7 +273,7 @@ CONTAINS
   END DO
 !$acc end parallel
 !$acc end data
-  IF ( is_time_experiment_start ( ) ) THEN
+  IF ( is_time_experiment_start ( options % datetime ) ) THEN
    lstart = .TRUE.
   ELSE
    lstart = .FALSE.

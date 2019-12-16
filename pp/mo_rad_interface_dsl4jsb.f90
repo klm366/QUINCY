@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from JSBACH source file:
 !    src/radiation/mo_rad_interface.f90
-! with md5 hash: 46c5ff3d78079a2358475f3aa9fedd78
+! with md5 hash: 0bd2c9f2d57ba7098bb3aee1d21a49e7
 !
 !>
 !! @brief Contains the interfaces to the radiation processes
@@ -736,7 +736,17 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     ! Update albedo only at experiment start, if model runs standalone or one time step before the radiation time step
-    IF (.NOT. is_time_experiment_start() .AND. .NOT. is_time_ltrig_rad_m1(model%id) .AND. .NOT. jsbach_runs_standalone()) RETURN
+    IF (.NOT. is_time_experiment_start(options%datetime) .AND. &
+      & .NOT. is_time_ltrig_rad_m1(options%datetime, options%dtime, model%id) .AND. &
+      & .NOT. jsbach_runs_standalone()) RETURN
+
+    ! Enable for debugging:
+    ! IF (iblk == 1 .AND. .NOT. ASSOCIATED(tile%next_sibling_tile)) THEN
+    !   IF (is_time_ltrig_rad_m1(options%datetime, options%dtime, model%id) .OR. &
+    !     & is_time_experiment_start(options%datetime)) THEN
+    !     CALL message('update_albedo ', 'compute surface albedo')
+    !   END IF
+    ! END IF
 
     ! Set pointers to process configs and memory
     SELECT TYPE (cc => model%processes(seb_)%p%config); TYPE IS (t_seb_config) ; seb__conf => cc ; END SELECT
@@ -1084,7 +1094,9 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     ! Update albedo only at experiment start, if model runs standalone or one time step before the radiation time step
-    IF (.NOT. is_time_experiment_start() .AND. .NOT. is_time_ltrig_rad_m1(model%id) .AND. .NOT. jsbach_runs_standalone()) RETURN
+    IF (.NOT. is_time_experiment_start(options%datetime) .AND. &
+      & .NOT. is_time_ltrig_rad_m1(options%datetime, options%dtime, model%id) .AND. &
+      & .NOT. jsbach_runs_standalone()) RETURN
 
     SELECT TYPE (mm => tile%mem(rad_)%p); TYPE IS (t_rad_memory); rad__mem => mm ; END SELECT
 

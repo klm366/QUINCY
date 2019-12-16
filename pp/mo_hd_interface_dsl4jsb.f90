@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from JSBACH source file:
 !    src/hd/mo_hd_interface.f90
-! with md5 hash: 894fa34772d810b07e7f8fc6a846f639
+! with md5 hash: cfdf499963a5b86798b52d487b1b4693
 !
 !>
 !! @brief Contains the interfaces to the HD model
@@ -671,7 +671,7 @@ CONTAINS
       CALL message (TRIM(routine),message_text)
     END IF
 
-    IF (is_time_experiment_start()) RETURN
+    IF (is_time_experiment_start(options%datetime)) RETURN
 
     ! water conservation test
     !
