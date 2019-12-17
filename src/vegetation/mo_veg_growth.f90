@@ -830,7 +830,6 @@ CONTAINS
     !! 
     !! 
     CALL calc_partitioning(nc                                     , & ! in
-                           TRIM(dsl4jsb_Config(VEG_)%bnf_scheme)  , &
                            kstar_labile(:)                        , &
                            maint_respiration_pot(:)               , &
                            maint_respiration_leaf(:)              , &
@@ -2663,7 +2662,6 @@ CONTAINS
   !! output: growth of tissue types, maintenance, growth and N processing respiration, exudation 
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_partitioning( nc                            , &
-                                veg_bnf_scheme                , &
                                 kstar_labile                  , &
                                 maint_respiration_pot         , &
                                 maint_respiration_leaf        , &
@@ -2692,7 +2690,6 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     INTEGER,                          INTENT(in)    :: nc                               !< dimensions
-    CHARACTER(len=*),                 INTENT(in)    :: veg_bnf_scheme                   !< from veg config 
     REAL(wp), DIMENSION(nc),          INTENT(in)    :: kstar_labile                 , & !< potential labile pool turnover (1/day) 
                                                        maint_respiration_pot        , & !< potential (demand-based) plant maintenance respiration
                                                        maint_respiration_leaf       , & !< foliar maintenance respiration
