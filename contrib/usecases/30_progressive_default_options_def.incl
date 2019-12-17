@@ -32,8 +32,8 @@ bnf_scheme="optimal"           # none fixed standard optimal resistance unlimite
 
 flag_optimal_Nfraction="T"      # optimal N fraction
 
-biomass_alloc_scheme="optimal"    # fixed dynamic optimal
-leaf_stoichom_scheme="optimal"    # fixed dynamic optimal
+biomass_alloc_scheme="dynamic"    # fixed dynamic optimal
+leaf_stoichom_scheme="dynamic"    # fixed dynamic optimal
 
 soil_depth=9.5                  # meter (5.7 to 9.5)
 nsoil_layer=15                   # number of soil layers (default for SLM land: 5 | for SLM soil only available forcing: 15 | generally: min 5 & max 20)
