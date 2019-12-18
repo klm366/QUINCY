@@ -514,7 +514,7 @@ CONTAINS
       !$claw acc parallel
       !$claw acc loop gang vector
       DO jl=1,nidx
-        ! !$claw acc loop seq
+        !$claw acc loop seq
         DO jk = 1, nsoil-1
           t_soil(jl,jk+1) = t_soil_acoef(jl,jk) + t_soil_bcoef(jl,jk) * t_soil(jl,jk)
         END DO
