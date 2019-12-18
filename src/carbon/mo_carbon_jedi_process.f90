@@ -138,7 +138,6 @@ CONTAINS
     &  c_CN_woody,               & ! in
     &  c_sapwood,                   & ! in
     &  temp_yDayMean,        & ! in
-  !  &  del_c,                          & !out
     & c_litter_green_ag,          & ! inout
     & c_litter_green_bg,          & ! inout
     & c_litter_wood_ag,           & ! inout
@@ -214,7 +213,6 @@ CONTAINS
     INTEGER,  INTENT(in)     :: currentyear  
     INTEGER,  INTENT(in)     :: time_steps_per_day
     REAL(wp), INTENT(inout) :: one_counter
-   ! REAL(wp), INTENT(out)     :: del_c
     !
     ! JeDi carbon allocation 
     REAL(wp), INTENT(inout) :: c_storage            ! Stored carbon pool: on input last value; updated on output
@@ -619,7 +617,7 @@ CONTAINS
         
         
         Flg_senesc = 0._wp
-       ! IF ( (    currentyear .GE. 1995   ) .and. ff_npp .lt. 0._wp .and. NPP .lt. 0._wp) Flg_senesc  = 1.0_wp - Flg_grow   ! See remarks below.
+        IF ( (    currentyear .GE. 1995   ) .and. ff_npp .lt. 0._wp .and. NPP .lt. 0._wp) Flg_senesc  = 1.0_wp - Flg_grow   ! See remarks below.
         ! No idea why the flag for senescence is using:  1 - flag_grow  
         ! I took the calculation from JeDi.
         ! I guess senescence happens, when: (1) Non-growing condition (2) NPP<0, which may suggest that plants spend many energy respiring
@@ -629,8 +627,8 @@ CONTAINS
         
         tau_stem   = TurnoverStruc
         tau_csroot = TurnoverStruc
-        tau_leaves = 1._wp / ( (1._wp / TurnoverLeaf ) + ( 1._wp / c_tau_sen ) * Flg_senesc *             RelSenesAbgd )
-        tau_fnroot = 1._wp / ( (1._wp / TurnoverLeaf ) + ( 1._wp / c_tau_sen ) * Flg_senesc * ( 1._wp -   RelSenesAbgd) )
+        tau_leaves = 1._wp / ( (1._wp / TurnoverLeaf ) + ( 1._wp / TurnoverLeaf ) * Flg_senesc *             RelSenesAbgd )      !PHS 11.12.2019 play around with the senescence process
+        tau_fnroot = 1._wp / ( (1._wp / TurnoverLeaf ) + ( 1._wp / TurnoverLeaf ) * Flg_senesc * ( 1._wp -   RelSenesAbgd) )!PHS 11.12.2019 play around with the senescence process
         
         
         
@@ -715,7 +713,7 @@ CONTAINS
         
         
         
-          leafLitter          =  zLoss_leaves + zLoss_fnroot + zLoss_storage!+ del_c  !PHS drop tissues
+          leafLitter          =  zLoss_leaves + zLoss_fnroot + zLoss_storage
           C_2_litter_woodPool =  zLoss_stem   + zLoss_csroot 
           
           
@@ -769,7 +767,7 @@ CONTAINS
    C_balan = GPP_yDayMean         *  sec_per_day  &
            & - MaintRes_yDayMean  *  sec_per_day  &
            & - GrowthResp         *  sec_per_day  &
-           & - ( zLoss_leaves + zLoss_fnroot + zLoss_stem + zLoss_csroot + zLoss_seed ) 
+           & - ( zLoss_leaves + zLoss_fnroot + zLoss_stem + zLoss_csroot + zLoss_seed + zLoss_storage) 
 
    
 

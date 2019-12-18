@@ -277,7 +277,6 @@ MODULE mo_carbon_memory_class
         C_delta,                       &
         flx_germ,                      &
         one_counter,               &
-        del_c,                            &
          ff_dTdt,                            &                     
          ff_grow_T_yDayMean,       &
          ff_T_30d,                          &
@@ -516,7 +515,7 @@ CONTAINS
         & t_cf('c_seed', 'mol(C) m-2(canopy)', 'C-Pool for green parts of vegetation.'),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix,                                                                        &
-        & output_level=BASIC,loutput=.TRUE.,                                                      &
+        & output_level=BASIC,loutput=.FALSE.,                                                      &
         & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
         
       CALL jsb_add_var( mem, 'c_stem', mem%c_stem,                                     &
@@ -556,8 +555,8 @@ CONTAINS
         & t_cf('c_total','mol(C) m-2(canopy)' ,'Total carbon of six pools'),           &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix,                                                                        &
-        & output_level=BASIC,loutput=.TRUE.,                                                      &
-        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.FALSE. )   
+        & output_level=BASIC,loutput=.FALSE.,                                                      &
+        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )   
 
       CALL jsb_add_var( mem, 'c_storage_ta', mem%c_storage_ta,                                     &
         & hgrid, surface,                                                                        &
@@ -613,7 +612,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix,                                                                        &
         & output_level=BASIC,loutput=.TRUE.,                                                      &
-        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.FALSE. )   
+        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )   
         
       CALL jsb_add_var( mem, 'ff_grow_T', mem%ff_grow_T,                                      &
         & hgrid, surface,                                                                        &
@@ -652,7 +651,7 @@ CONTAINS
         & t_cf('flx_germ', 'carbon flux from germination '),           &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix,                                                                        &
-        & output_level=BASIC,loutput=.TRUE.,                                                      &
+        & output_level=BASIC,loutput=.FALSE.,                                                      &
         & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.FALSE. )   
      
      CALL jsb_add_var( mem, 'adj_fraction', mem%adj_fraction,                              &
@@ -716,15 +715,15 @@ CONTAINS
         & t_cf('seed_maxmoist','m' ,'Maximum moisture of the top 50 mm soil (used for seed germination)'),           &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix,                                                                        &
-        & output_level=BASIC,loutput=.TRUE.,                                                      &
-        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.FALSE.)!, isteptype=TSTEP_CONSTANT )
+        & output_level=BASIC,loutput=.FALSE.,                                                      &
+        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.FALSE.)!, isteptype=TSTEP_CONSTANT )
         
         CALL jsb_add_var( mem, 'w_soil_column_seed', mem%w_soil_column_seed,                              &
         & hgrid, surface,                                                                        &
         & t_cf('w_soil_column_seed', 'm water equivalent' ,'cumulated soil water in the top 50mm'),           &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix,                                                                        &
-        & output_level=BASIC,loutput=.TRUE.,                                                      &
+        & output_level=BASIC,loutput=.FALSE.,                                                      &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.FALSE.)!, isteptype=TSTEP_CONSTANT ) 
       
        CALL jsb_add_var( mem, 'seed_depth_sl', mem%seed_depth_sl,                              &
@@ -772,7 +771,7 @@ CONTAINS
         & t_cf('temp_yDayMean', 'Mean temperature of previous day'),           &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix,                                                                        &
-        & output_level=BASIC,loutput=.TRUE.,                                                      &
+        & output_level=BASIC,loutput=.FALSE.,                                                      &
         & lrestart=.FALSE., initval_r=15.0_wp, l_aggregate_all=.FALSE. )    
             
       CALL jsb_add_var( mem, 'GrowthResp', mem%GrowthResp,                              &
@@ -826,14 +825,6 @@ CONTAINS
         & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.FALSE. )   
         
         
-         CALL jsb_add_var( mem, 'del_c', mem%del_c,                              &
-        & hgrid, surface,                                                                        &
-        & t_cf('del_c', 'Dropped extra carbon'),           &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
-        & prefix, suffix,                                                                        &
-        & output_level=BASIC,loutput=.TRUE.,                                                      &
-        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.FALSE. )   
-        
         CALL jsb_add_var( mem, 'ff_dTdt', mem%ff_dTdt,                              &
         & hgrid, surface,                                                                        &
         & t_cf('ff_dTdt', 'trend of the temperature change'),           &
@@ -855,7 +846,7 @@ CONTAINS
         & t_cf('ff_T_30d', '30 days running mean of jedi pseudo temperature'),           &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix,                                                                        &
-        & output_level=BASIC,loutput=.TRUE.,                                                      &
+        & output_level=BASIC,loutput=.FALSE.,                                                      &
         & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.FALSE. )             
         
        CALL jsb_add_var( mem, 'root_maxmoist', mem%root_maxmoist,                              &
@@ -872,7 +863,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix,                                                                        &
         & output_level=BASIC,loutput=.TRUE.,                                                      &
-        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.FALSE. )     
+        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.FALSE. )     
                 
         
       ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
@@ -1155,7 +1146,7 @@ CONTAINS
         & hgrid, surface,                                                                      &
         & t_cf('alpha_yDayMean', '-', 'Previous day mean value of Water Stress Coefficient.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &
-        & prefix, suffix, loutput=.TRUE.,                                                                     &
+        & prefix, suffix, loutput=.FALSE.,                                                                     &
         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3.
 
       CALL jsb_add_var( mem, 'root_exudates', mem%root_exudates,             &
@@ -1528,7 +1519,7 @@ CONTAINS
         & t_cf('NPP_pot_yDayMean_ta', 'mol(C) m-2 s-1', 'Mean NPP Rate of the previous day.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                        &
         & prefix, suffix,                                                                           &
-        & output_level=BASIC, loutput = .TRUE.,                                                     &
+        & output_level=BASIC, loutput = .FALSE.,                                                     &
         & lrestart=.FALSE., initval_r=1.0E-13_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3. Initializing to zero would result
                                                    ! in a zero divide in the first time step of an initialized run.
 
@@ -1656,7 +1647,7 @@ CONTAINS
           & 'Test for c conservation on allocation and respiration.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
-        & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & loutput = .FALSE.,lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
           CALL jsb_add_var( mem,'max_green', mem%current_max_green,      &

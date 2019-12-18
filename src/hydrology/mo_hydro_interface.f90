@@ -1113,7 +1113,7 @@ CONTAINS
     USE mo_hydro_process, ONLY: get_water_stress_factor
     USE mo_hydro_util,    ONLY: get_water_in_root_zone
     USE mo_phy_schemes,   ONLY: qsat
-
+    USE mo_carbon_constants,  ONLY: max_pipe_transpir
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -1190,7 +1190,7 @@ CONTAINS
          water_stress(:) = 0._wp
       ELSEWHERE ( evapopot(:) .LT. 0._wp )   
           !water_stress(:) = 1._wp - exp(  -  jedi_pot_supply_transp(:)  /  ABS(evapopot(:))  )
-           water_stress(:) = alpha_jedi(:) * (1._wp - exp(  - 4.6_wp * 0.03_wp * ABS(evapopot(:)) / jedi_pot_supply_transp(:)   ) )
+           water_stress(:) = MIN(1._wp , ABS(evapopot(:)) / max_pipe_transpir  * (1._wp - exp(  -   jedi_pot_supply_transp(:) / ABS(evapopot(:))   ) ))
           !water_stress(:) =  alpha_jedi(:)  
       END WHERE
       
@@ -1240,6 +1240,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_fc,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_pwp,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, water_stress,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, root_depth,        weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

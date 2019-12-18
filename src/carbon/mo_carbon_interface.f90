@@ -61,6 +61,7 @@ MODULE mo_carbon_interface
   PUBLIC ::  Register_carbon_tasks
   PUBLIC ::  recalc_per_tile_vars, calculate_current_c_ag_1_and_bg_sums, rescale_carbon_upon_reference_area_change, &
     &        calculate_current_c_ta_state_sum, check_carbon_conservation, yday_carbon_conservation_test
+  PUBLIC ::  jedi_biomass_to_fract
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_carbon_interface'
 
@@ -134,7 +135,7 @@ CONTAINS
     USE mo_jsb_time,          ONLY: t_datetime,is_newday, is_newyear, time_steps_per_day, &
                                  &  is_time_experiment_start, get_year_at_model_start,     &
                                  &  get_time_start, get_year,get_time_current
-    USE mo_carbon_constants,  ONLY: molarMassCO2_kg, sec_per_day
+    USE mo_carbon_constants,  ONLY: molarMassCO2_kg, sec_per_day,max_pipe_transpir
     USE mo_jsb_grid_class,     ONLY:  t_jsb_vgrid !PHS: root_depth
     USE mo_hydro_util,             ONLY: get_water_in_root_zone !PHS: root_depth
     ! Arguments
@@ -157,7 +158,8 @@ CONTAINS
     INTEGER                      :: iniyear
     LOGICAL                      :: lrestart
   
-    
+    !REAL(wp), parameter  :: rootshoot_opt     = 3.58462104_wp ! median value of root-shoot ratio 50th percentile
+    REAL(wp), parameter  :: rootshoot_opt     = 8.473583644190947_wp ! median value of root-shoot ratio 75th percentile
     REAL(wp), parameter  :: c_CN_woody       = 0.00303_wp * (12.01_wp / 14.0067_wp)  ! molC/molN Ratio for Woody Tissue
     REAL(wp), parameter  :: c_sapwood        = 0.05_wp
     REAL(wp), parameter  :: c_Res_N          = 0.218_wp * ( 14.0067_wp / 12.01_wp )  !! specific respiration in molC/molN/d
@@ -251,7 +253,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::   C_balan
     dsl4jsb_Real2D_onChunk ::   C_delta
     dsl4jsb_Real2D_onChunk ::   c_total
-    dsl4jsb_Real2D_onChunk ::   del_c         
     dsl4jsb_Real2D_onChunk ::   one_counter
     ! Taking relative soil moisture from the HYDRO process
     dsl4jsb_Real2D_onChunk ::   w_soil_rel              
@@ -469,7 +470,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,   C_balan           )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   C_delta           )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   c_total           )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  del_c            )
     dsl4jsb_Get_var2D_onChunk(CARBON_,  ff_dTdt                      )
     dsl4jsb_Get_var2D_onChunk(CARBON_, ff_T_30d                    )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_grow_T_yDayMean) 
@@ -645,12 +645,17 @@ CONTAINS
       alpha_jedi_seed(:) = jedi_water_stress_factor( w_soil_column_seed(:),  seed_maxmoist(:),  dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract)            
       
       ! 2019.11.27 PHS: still at the stage of testing "water stress" 
-      WHERE (c_fnroot .gt. 0._wp) 
-           jedi_pot_supply_transp      =  MAX(0._wp,  c_leaves / c_fnroot * (  1._wp / 86400._wp  )  *  alpha_jedi     )            
+      WHERE (c_leaves .gt. 0._wp) 
+          ! 2019.12.4  
+          ! The potential supply rate from soil depends on the root-shoot-ratio. The root-shoot-ratio is function of fine-root-carbon and Leaf-area-index.
+          !                                                                                                     a(r)=1-exp(- (-log(0.01))/r_optimal   * r  )     a : is a function of root-shoot-ratio  [0...1]
+          !                                                                                                                                                                        r : root-shoot-ratio [10^-3  ~  10^3]
+          !                                                                                                                                                                        r_optimal: the median value of the root-shoot-ratio among all PGS
+           jedi_pot_supply_transp      = (1._wp - exp( -(- log(0.01))/rootshoot_opt * (c_fnroot / (c_leaves*dsl4jsb_Lctlib_param(JeDiSLA)) )  )) * max_pipe_transpir  *  alpha_jedi     
       ELSEWHERE 
            jedi_pot_supply_transp      =  0._wp
       END WHERE
-      !jedi_pot_supply_transp      =  MAX(0._wp,  c_fnroot * (  1000._wp *  0.5_wp *  12.01_wp  *  0.001_wp  / 86400._wp  )    ) 
+      
       !jedi_pot_supply_transp      =  MAX(0._wp,  c_fnroot * (  1000._wp *  0.5_wp *  12.01_wp  *  0.001_wp  / 86400._wp  )  *  alpha_jedi   ) 
     
     
@@ -717,7 +722,7 @@ CONTAINS
        temp_yDayMean  = temp_sum / time_steps_per_day()
        
        MaintRes = 0._wp
-       MaintRes = c_sapwood * c_CN_woody * ( c_stem + c_csroot ) + dsl4jsb_Lctlib_param(NitroStatus) * ( c_leaves + c_fnroot ) 
+       MaintRes = c_sapwood * c_CN_woody * ( c_stem + c_csroot ) + dsl4jsb_Lctlib_param(NitroStatus)*dsl4jsb_Lctlib_param(JeDiSLA) * ( c_leaves + c_fnroot )  !NNN
        MaintRes = MaintRes  * c_Res_N    * ( 1.4_wp ** ( ( temp_yDayMean - tmelt - 20._wp ) / 10._wp) ) ! JeDi uses 1.4 for Q10 value
     
        MaintRes = MaintRes / sec_per_day ! The maintanence respiration is computed in a daily manner in JeDi.
@@ -809,7 +814,6 @@ CONTAINS
         &  c_CN_woody,               & !
         &  c_sapwood,                   & ! 
          &  temp_yDayMean,        & ! in
-  !      & del_c,                                       & !out
   !  
         & c_litter_green_ag,                           & ! inout
         & c_litter_green_bg,                           & ! inout
@@ -1086,11 +1090,15 @@ CONTAINS
     ! Variavles for JeDi carbon allocation 
     dsl4jsb_Aggregate_onChunk(CARBON_, c_leaves_ta,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_stem_ta,              weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_seed_ta,              weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_seed_ta,               weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_storage_ta,           weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_fnroot_ta,            weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_csroot_ta,            weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_total_ta,             weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_fnroot_ta,             weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_csroot_ta,             weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_total_ta,                weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, MaintRes_yDayMean, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  GrowthResp,            weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  AutoRes,                  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  root_maxmoist,        weighted_by_fract)
     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
     
     ! Variavles for JeDi carbon allocation 
@@ -1937,6 +1945,67 @@ CONTAINS
     DEALLOCATE(C_flux_yday)
 
   END SUBROUTINE yday_carbon_conservation_test
+
+  SUBROUTINE jedi_biomass_to_fract(tile, options)
+
+    USE mo_jsb_var_class,   ONLY:t_jsb_var_real2d
+    USE mo_jsb_grid,           ONLY: Get_grid
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout)         :: tile
+    TYPE(t_jsb_task_options)  , INTENT(in)         :: options
+    
+    TYPE(t_jsb_var_real2d), POINTER :: var
+    CLASS(t_jsb_tile_abstract), POINTER :: child
+
+    dsl4jsb_Real2D_onDomain :: c_total
+
+    dsl4jsb_Def_memory(CARBON_)
+
+    TYPE(t_jsb_model), POINTER      :: model
+    TYPE(t_jsb_grid),  POINTER      :: grid
+
+    REAL(wp), ALLOCATABLE :: c_total_sum(:,:)
+    INTEGER               :: nblks, nproma
+    INTEGER               :: i, no_children
+
+    dsl4jsb_Get_memory(CARBON_)
+
+    model => Get_model(tile%owner_model_id)
+    grid => Get_grid(model%grid_id)
+
+    nblks = grid%nblks
+    nproma = grid%nproma
+
+    var => dsl4jsb_memory(CARBON_)%c_total
+
+    ALLOCATE(c_total_sum(nproma,nblks))
+    c_total_sum(:,:) = 0._wp
+
+    no_children = tile%Get_no_of_children()
+
+    DO i=1,no_children
+      IF (var%child_idx(i) > 0) THEN
+        ASSOCIATE (data_child => dsl4jsb_memory(CARBON_)%children(i)%p%vars(var%child_idx(i))%p%field(:,:,1,1,1) )
+          c_total_sum(:,:) = c_total_sum(:,:) + data_child(:,:)
+        END ASSOCIATE
+      END IF
+    END DO
+
+    child => tile%Get_first_child_tile()
+    DO i=1,no_children
+      ASSOCIATE (data_child => dsl4jsb_memory(CARBON_)%children(i)%p%vars(var%child_idx(i))%p%field(:,:,1,1,1) )
+        WHERE (c_total_sum(:,:) > 0._wp)
+          child%fract(:,:) = data_child(:,:) / c_total_sum(:,:)
+        END WHERE
+      END ASSOCIATE
+      child => child%Get_next_sibling_tile()
+    END DO
+    
+    tile%l_fract_children_changed(:,:) = .TRUE.
+
+    DEALLOCATE(c_total_sum)
+
+  END SUBROUTINE jedi_biomass_to_fract
 
 #endif
 END MODULE mo_carbon_interface

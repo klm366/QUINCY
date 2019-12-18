@@ -393,6 +393,8 @@ CONTAINS
 
   SUBROUTINE jsbach_finish_timestep(model_id, steplen)
 
+    USE mo_carbon_interface, ONLY: jedi_biomass_to_fract
+
 #ifndef __NO_JSBACH_HD__
     USE mo_interface_hd_ocean, ONLY: interface_hd_ocean
     USE mo_hd_interface,       ONLY: hd_check_water_budget, hd_lateral_flow
@@ -421,6 +423,19 @@ CONTAINS
 
     ! Update options
     CALL model%Set_options(steplen=steplen)
+
+    IF (TRIM(model%config%usecase) == 'jsbach_jedi') THEN
+      CALL model%Reset_tiles()
+      tile => model%Get_top_tile()
+      IF (.NOT. ASSOCIATED(tile)) &
+        & CALL finish(TRIM(routine), 'Top tile not set')
+
+      DO WHILE (ASSOCIATED(tile))
+        IF (TRIM(tile%name) == 'veg') EXIT
+        tile => model%Goto_next_tile()
+      END DO
+      CALL jedi_biomass_to_fract(tile, model%options(no_omp_thread))
+    END IF
 
 #ifndef __NO_JSBACH_HD__
       CALL hd_lateral_flow(tile, model%options(no_omp_thread))

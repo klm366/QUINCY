@@ -803,7 +803,8 @@ CONTAINS
              CASE ('senesrspdnpp')
                 READ(line(pos:length),*) P13(1:nlct)
                 !lctlib(1:nlct)%SenesRspdNPP = 10._wp ** ( 4.0_wp * P13(1:nlct) - 1.0_wp )
-                 lctlib(1:nlct)%SenesRspdNPP =10._wp ** ( 1.855_wp * P01(1:nlct)  + 1.145_wp )   !PHS:18.06.2019 New sample
+                 !lctlib(1:nlct)%SenesRspdNPP =10._wp ** ( 1.855_wp * P01(1:nlct)  + 1.145_wp )   !PHS:18.06.2019 New sample
+                 lctlib(1:nlct)%SenesRspdNPP =10._wp **1.145_wp + 300._wp * P01(1:nlct)    !PHS:09.12.2019 New sample
                 exists_SenesRspdNPP   = .TRUE.
                  lctlib(1:nlct)%jedi_F_pseudo_npp = EXP(- get_time_dt() / (lctlib(1:nlct)%SenesRspdNPP * 86400._wp))
                  lctlib(1:nlct)%jedi_N_pseudo_npp = 1._wp / (1._wp - lctlib(1:nlct)%jedi_F_pseudo_npp )
@@ -811,12 +812,14 @@ CONTAINS
              CASE ('relsenesabgd')
                 READ(line(pos:length),*) P14(1:nlct)
                 !lctlib(1:nlct)%RelSenesAbgd = 10._wp ** ( 8.0_wp * P14(1:nlct) - 7.0_wp )
-                lctlib(1:nlct)%RelSenesAbgd =  P14(1:nlct)
+                !lctlib(1:nlct)%RelSenesAbgd =  P14(1:nlct)
+                lctlib(1:nlct)%RelSenesAbgd =  0.5_wp
                 exists_RelSenesAbgd   = .TRUE.
                 WRITE(35,fm) 'RelSenesAbgd ',lctlib(1:nlct)%RelSenesAbgd
              CASE ('nitrostatus')
                 READ(line(pos:length),*) P15(1:nlct)
-                lctlib(1:nlct)%NitroStatus = (0.9_wp * P15(1:nlct) + 0.1_wp) * 8.578_wp * 0.01_wp  ! [NL] molN / molC canopy nitrogen concentration follows Ollinger (2008) (Pavlick thesis P.89)               
+                !lctlib(1:nlct)%NitroStatus = (0.9_wp * P15(1:nlct) + 0.1_wp) * 8.578_wp * 0.01_wp  ! [NL] molN / molC canopy nitrogen concentration follows Ollinger (2008) (Pavlick thesis P.89)               
+                lctlib(1:nlct)%NitroStatus = (0.64_wp+2.96*P15(1:nlct))/14.0067_wp! 10.12.2019 new sample of leaf nitrogen on area-based!!!!!!  NNN TRY database
                 exists_NitroStatus   = .TRUE.
                 WRITE(35,fm) 'NitroStatus ',lctlib(1:nlct)%NitroStatus
                 
@@ -824,22 +827,25 @@ CONTAINS
                 !PHS: To adapt this relationship into JeDi-BACH, we simply take the value of albedo + (-) 0.05 for NIR (visible). (a tip from Thomas)
                 !PHS: There is a saturation value for Nitorgen content higher than 3 %N [gN/100g DM] ( 3 / 100 * 12.01 /14.0067 /0.48 ~= 0.05359 mol N/ molc)
                 !PHS: I set a minimum value of albedo to 0.03 (0.22) for visible (NIR). These values are taken from the tropical evergreen in the original lctlib.def. 
-                !PHS: Thereby I obtain the minimum value for nitrogen content ( 0.015997 molN / molc) ~= 0.89 % )
-                  
-                WHERE (lctlib(1:nlct)%NitroStatus .GE. 0.015997_wp .and. lctlib(1:nlct)%NitroStatus .LE. 0.05359_wp ) 
-                    lctlib(1:nlct)%AlbedoCanopyVIS =  3.216_wp * 14.0067_wp / 12.01_wp * lctlib(1:nlct)%NitroStatus +0.02_wp - 0.05_wp 
-                    lctlib(1:nlct)%AlbedoCanopyNIR =  3.216_wp * 14.0067_wp / 12.01_wp * lctlib(1:nlct)%NitroStatus +0.02_wp + 0.05_wp
-                 ELSEWHERE(lctlib(1:nlct)%NitroStatus .GT. 0.05359_wp)
-                     lctlib(1:nlct)%AlbedoCanopyVIS = 0.221_wp - 0.05_wp
-                     lctlib(1:nlct)%AlbedoCanopyNIR = 0.221_wp +0.05_wp
-                 ELSEWHERE(lctlib(1:nlct)%NitroStatus .LT. 0.015997_wp)
-                     lctlib(1:nlct)%AlbedoCanopyVIS = 0.03_wp
-                     lctlib(1:nlct)%AlbedoCanopyNIR = 0.13_wp
-                 END WHERE   
-                    exist_AlbedoCanopyVIS = .TRUE.  
-                    exist_AlbedoCanopyNIR = .TRUE.
-                    WRITE(35,fm) 'AlbCanopyVIS', lctlib(1:nlct)%AlbedoCanopyVIS
-                    WRITE(35,fm) 'AlbCanopyNIR', lctlib(1:nlct)%AlbedoCanopyNIR
+                !PHS: Thereby I obtain the minimum value for nitrogen content ( 0.015997 molN / molc) ~= 0.89 %N )
+                
+              
+              
+              
+                !WHERE (lctlib(1:nlct)%NitroStatus .GE. 0.015997_wp .and. lctlib(1:nlct)%NitroStatus .LE. 0.05359_wp ) 
+                !    lctlib(1:nlct)%AlbedoCanopyVIS =  3.216_wp * 14.0067_wp / 12.01_wp * lctlib(1:nlct)%NitroStatus+0.02_wp - 0.05_wp 
+                !    lctlib(1:nlct)%AlbedoCanopyNIR =  3.216_wp * 14.0067_wp / 12.01_wp * lctlib(1:nlct)%NitroStatus+0.02_wp + 0.05_wp
+                ! ELSEWHERE(lctlib(1:nlct)%NitroStatus .GT. 0.05359_wp)
+                !     lctlib(1:nlct)%AlbedoCanopyVIS = 0.221_wp - 0.05_wp
+                !     lctlib(1:nlct)%AlbedoCanopyNIR = 0.221_wp +0.05_wp
+                ! ELSEWHERE(lctlib(1:nlct)%NitroStatus .LT. 0.015997_wp)
+                !     lctlib(1:nlct)%AlbedoCanopyVIS = 0.03_wp
+                !     lctlib(1:nlct)%AlbedoCanopyNIR = 0.13_wp
+                ! END WHERE   
+                  !  exist_AlbedoCanopyVIS = .TRUE.  
+                  !  exist_AlbedoCanopyNIR = .TRUE.
+                  !  WRITE(35,fm) 'AlbCanopyVIS', lctlib(1:nlct)%AlbedoCanopyVIS
+                  !  WRITE(35,fm) 'AlbCanopyNIR', lctlib(1:nlct)%AlbedoCanopyNIR
           !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
         
           CASE default
@@ -868,10 +874,10 @@ CONTAINS
             CALL finish('init_lctlib','No data for AlbedoSnowMin found in '//TRIM(lctlib_file_name))
        IF(.NOT. exist_AlbedoSnowMax) &
             CALL finish('init_lctlib','No data for AlbedoSnowMax found in '//TRIM(lctlib_file_name))
-       IF(.NOT. exist_AlbedoCanopyVIS) &
-            CALL finish('init_lctlib','No data for AlbedoCanopyVIS found in '//TRIM(lctlib_file_name))
-       IF(.NOT. exist_AlbedoCanopyNIR) &
-            CALL finish('init_lctlib','No data for albedoCanopyNIR found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exist_AlbedoCanopyVIS) &
+!PHS            CALL finish('init_lctlib','No data for AlbedoCanopyVIS found in '//TRIM(lctlib_file_name))
+!PHS       IF(.NOT. exist_AlbedoCanopyNIR) &
+!PHS            CALL finish('init_lctlib','No data for albedoCanopyNIR found in '//TRIM(lctlib_file_name))
 !PHS       IF(.NOT. exist_AlbedoLitterVis) &
 !PHS            CALL finish('init_lctlib','No data for AlbedoLitterVis found in '//TRIM(lctlib_file_name))
 !PHS       IF(.NOT. exist_AlbedoLitterNir) &
@@ -1071,9 +1077,31 @@ CONTAINS
        !lctlib(1:nlct)%JeDiSLA = ( 0.03_wp * ( ( lctlib(1:nlct)%TurnoverLeaf / 365._wp ) ** ( -0.46_wp ) ) ) *  12.01_wp           
        lctlib(1:nlct)%JeDiSLA = ( ( 0.0001*10.**2.43  ) * ( ( lctlib(1:nlct)%TurnoverLeaf / 365._wp ) ** ( -0.46_wp ) ) ) *  12.01_wp           
        !28.8. 2019PHS: original jedi --lctlib(1:nlct)%JeDiCarboxRate = 12.01_wp * ( 10._wp**0.13_wp ) * ( 1.e-09_wp ) * ( lctlib(1:nlct)%NitroStatus * 1000._wp * 14._wp / 12.01_wp)**1.42_wp / lctlib(1:nlct)%JeDiSLA  
-        lctlib(1:nlct)%JeDiCarboxRate = (   4.19_wp +  14._wp * lctlib(1:nlct)%NitroStatus / lctlib(1:nlct)%JeDiSLA  * (9.3_wp + 20._wp * P08(1:nlct) )   ) * (10._wp**-6._wp )
+       ! lctlib(1:nlct)%JeDiCarboxRate = (   4.19_wp +  14._wp * lctlib(1:nlct)%NitroStatus / lctlib(1:nlct)%JeDiSLA  * (9.3_wp + 20._wp * P08(1:nlct) )   ) * (10._wp**-6._wp )
+        lctlib(1:nlct)%JeDiCarboxRate = (   4.19_wp +  14._wp * lctlib(1:nlct)%NitroStatus  * (9.3_wp + 20._wp * P08(1:nlct) )   ) * (10._wp**-6._wp )  !NNN
        WRITE(35,fm) 'JeDiCarboxRate ',lctlib(1:nlct)%JeDiCarboxRate * (10._wp**6._wp )
        WRITE(35,fm) 'JeDiSLA ',   lctlib(1:nlct)%JeDiSLA  
+       
+       
+                      WHERE (lctlib(1:nlct)%NitroStatus*lctlib(1:nlct)%JeDiSLA  .GE. 0.015997_wp .and. lctlib(1:nlct)%NitroStatus*lctlib(1:nlct)%JeDiSLA  .LE. 0.05359_wp ) 
+                          lctlib(1:nlct)%AlbedoCanopyVIS =  3.216_wp * 14.0067_wp / 12.01_wp * lctlib(1:nlct)%NitroStatus*lctlib(1:nlct)%JeDiSLA +0.02_wp - 0.05_wp 
+                          lctlib(1:nlct)%AlbedoCanopyNIR =  3.216_wp * 14.0067_wp / 12.01_wp * lctlib(1:nlct)%NitroStatus*lctlib(1:nlct)%JeDiSLA +0.02_wp + 0.05_wp
+                       ELSEWHERE(lctlib(1:nlct)%NitroStatus*lctlib(1:nlct)%JeDiSLA  .GT. 0.05359_wp)
+                           lctlib(1:nlct)%AlbedoCanopyVIS = 0.221_wp - 0.05_wp
+                           lctlib(1:nlct)%AlbedoCanopyNIR = 0.221_wp +0.05_wp
+                       ELSEWHERE(lctlib(1:nlct)%NitroStatus*lctlib(1:nlct)%JeDiSLA  .LT. 0.015997_wp)
+                           lctlib(1:nlct)%AlbedoCanopyVIS = 0.03_wp
+                           lctlib(1:nlct)%AlbedoCanopyNIR = 0.13_wp  
+                       END WHERE       
+               
+                    exist_AlbedoCanopyVIS = .TRUE.  
+                    exist_AlbedoCanopyNIR = .TRUE.
+                    WRITE(35,fm) 'AlbCanopyVIS', lctlib(1:nlct)%AlbedoCanopyVIS
+                    WRITE(35,fm) 'AlbCanopyNIR', lctlib(1:nlct)%AlbedoCanopyNIR
+       IF(.NOT. exist_AlbedoCanopyVIS) &
+            CALL finish('init_lctlib','No data for AlbedoCanopyVIS found in '//TRIM(lctlib_file_name))
+       IF(.NOT. exist_AlbedoCanopyNIR) &
+            CALL finish('init_lctlib','No data for albedoCanopyNIR found in '//TRIM(lctlib_file_name))
        
        ENDIF
        

@@ -34,6 +34,7 @@ MODULE mo_carbon_constants
   REAL(wp), PARAMETER :: sec_per_day             = 86400._wp            !< seconds per day
   REAL(wp), PARAMETER :: days_per_year           = 365.25_wp
   REAL(wp), PARAMETER :: sec_per_year            = days_per_year * sec_per_day
-
+  
+  REAL(wp), PARAMETER :: max_pipe_transpir = 2.33_wp / 86400._wp
 #endif
 END MODULE mo_carbon_constants

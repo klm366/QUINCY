@@ -152,7 +152,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
         & prefix, suffix,                                                                                           &
         & output_level=BASIC,                                                                                       &
-        & loutput=.TRUE.,lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+        & loutput=.FALSE.,lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
       CALL jsb_add_var( mem, 'dark_respiration_ca', mem%dark_respiration_ca,                                        &
         & hgrid, surface,                                                                                           &

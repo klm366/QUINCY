@@ -66,9 +66,9 @@ MODULE mo_jsb_tile_class
     LOGICAL                                :: contains_lake = .FALSE.
     LOGICAL                                :: contains_soil = .FALSE.
     INTEGER,                ALLOCATABLE    :: process_action(:)
-    REAL(wp), PRIVATE,          POINTER    :: fract     (:,:)      !< Fraction of this tile (relative to grid box)
+    REAL(wp),                   POINTER    :: fract     (:,:)      !< Fraction of this tile (relative to grid box)
     REAL(wp),                   POINTER    :: fract_max (:,:)      !< Maximum potential fraction for this tile (rel. to grid box)
-    REAL(wp), PRIVATE,          POINTER    :: fract_old     (:,:)  !< Old fract
+    REAL(wp),                   POINTER    :: fract_old     (:,:)  !< Old fract
     REAL(wp),                   POINTER    :: fract_max_old (:,:)  !< Old fract_max
     CHARACTER(LEN=filename_max)            :: fract_filename       !< Name of file to read tile fractions from. The variable names
                                                                    !! must be either "fract[_max]_"//tile%name, or specified by
