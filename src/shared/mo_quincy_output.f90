@@ -1506,8 +1506,8 @@ CONTAINS
         ! vegfluxH2O [kg/m2/interval, ... , m/interval, m/interval ]
         WRITE(lun,'(a)') 'Time Precip PET Evaporation Interception Transpiration Runoff Drainage GC GA'
         lun=lun+1
-        ! vegfluxEnergy [MJ/m2/interval, ???]
-        WRITE(lun,'(a)') 'Time Rnet Qh Qle Qg Albedo PPFD aPPFD fAPPFD' 
+        ! vegfluxEnergy [Wm-2] [Wm-2] [Wm-2] [Wm-2] [--] [µmol m-2 s-1] [µmol m-2 s-1] [--] [--] [--]
+        WRITE(lun,'(a)') 'Time Rnet Qh Qle Qg Albedo PPFD aPPFD fAPPFD albedo_vis albedo_nir'
         lun=lun+1        
         ! atm_forcing [???]
         WRITE(lun,'(2a)') 'Time sum_Precip mean_AirTemperature mean_Wind mean_SWdown mean_LWdown mean_VPD', &
@@ -1945,6 +1945,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: albedo
     dsl4jsb_Real2D_onChunk      :: net_radiation
     dsl4jsb_Real2D_onChunk      :: appfd
+    dsl4jsb_Real2D_onChunk      :: alb_vis
+    dsl4jsb_Real2D_onChunk      :: alb_nir
     ! VEG_
     dsl4jsb_Real2D_onChunk      :: growth_respiration
     dsl4jsb_Real2D_onChunk      :: maint_respiration
@@ -2100,6 +2102,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(RAD_, albedo)
     dsl4jsb_Get_var2D_onChunk(RAD_, net_radiation)
     dsl4jsb_Get_var2D_onChunk(RAD_, appfd)
+    dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis)
+    dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration)
     dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration)
@@ -2434,8 +2438,8 @@ CONTAINS
                       hlp1=0.0_wp
                    ENDIF
                    ! vegfluxEnergy
-                   write(lun,'(12F18.8)') time_d, rnet_acc, qh_acc, qle_acc, -qg_acc, & 
-                                          albedo_acc, ppfd_acc, appfd_acc, hlp1
+                   write(lun,'(11F18.8)') time_d, rnet_acc, qh_acc, qle_acc, -qg_acc, & 
+                                          albedo_acc, ppfd_acc, appfd_acc, hlp1, alb_vis, alb_nir
                    lun=lun+1
                    ! atm_forcing
                    IF(ndat_acc > 1.0_wp) THEN
