@@ -701,6 +701,7 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
     END IF
+    !$claw acc update host(vol_heat_cap_sl)
 
     IF (dsl4jsb_Config(SSE_)%l_heat_cond_dyn) THEN
       ALLOCATE( &
