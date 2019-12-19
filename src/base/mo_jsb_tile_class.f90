@@ -26,6 +26,13 @@ MODULE mo_jsb_tile_class
     &                               LAND_TYPE, VEG_TYPE, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE
   USE mo_jsb_var_class,       ONLY: t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d
 
+#ifdef _OPENACC
+  USE openacc
+#define __acc_attach(ptr) CALL acc_attach(ptr)  
+#else
+#define __acc_attach(ptr)
+#endif
+
   IMPLICIT NONE
   PRIVATE
 
@@ -374,6 +381,7 @@ CONTAINS
 
       this%fract_old(ics:ice, iblk) = this%fract(ics:ice, iblk)
       this%fract    (ics:ice, iblk) = fract(:)
+      !$acc update device(this%fract(ics:ice,iblk), this%fract_old(ics:ice,iblk))
 
       IF (ASSOCIATED(this%parent)) THEN
         SELECT TYPE (parent=>this%parent)
@@ -391,6 +399,7 @@ CONTAINS
 
       this%fract_max_old(ics:ice, iblk) = this%fract_max(ics:ice, iblk)
       this%fract_max    (ics:ice, iblk) = fract_max(:)
+      !$acc update device(this%fract_max(ics:ice,iblk), this%fract_max_old(ics:ice,iblk))
     END IF
 
     IF (PRESENT(fract_old)) THEN
@@ -398,6 +407,7 @@ CONTAINS
        & CALL finish(TRIM(routine), 'Dimension mismatch')
 
       this%fract_old(ics:ice, iblk) = fract_old(:)
+      !$acc update device(this%fract_old(ics:ice,iblk))
     END IF
 
     IF (PRESENT(fract_max_old)) THEN
@@ -405,9 +415,8 @@ CONTAINS
        & CALL finish(TRIM(routine), 'Dimension mismatch')
 
       this%fract_max_old(ics:ice, iblk) = fract_max_old(:)
+      !$acc update device(this%fract_max_old(ics:ice,iblk))
     END IF
-
-    !$acc update device(this%fract,this%fract_max,this%fract_old,this%fract_max_old)
 
   END SUBROUTINE Set_fraction_1d
 
@@ -432,6 +441,7 @@ CONTAINS
 
         this%fract_old(:,:) = this%fract(:,:)
         this%fract    (:,:) = fract(:,:)
+        !$acc update device(this%fract, this%fract_old)
 
         ! IF (ASSOCIATED(this%parent)) THEN
         !   SELECT TYPE (parent=>this%parent)
@@ -459,6 +469,7 @@ CONTAINS
       IF (ANY(fract_max(:,:) /= this%fract_max(:,:))) THEN
         this%fract_max_old(:,:) = this%fract_max(:,:)
         this%fract_max    (:,:) = fract_max(:,:)
+        !$acc update device(this%fract_max, this%fract_max_old)
       END IF
 
     END IF
@@ -469,6 +480,7 @@ CONTAINS
 
       IF (ANY(fract_old(:,:) /= this%fract_old(:,:))) THEN
         this%fract_old(:,:) = fract_old(:,:)
+        !$acc update device(this%fract_old)
       END IF
 
     END IF
@@ -479,6 +491,7 @@ CONTAINS
 
       IF (ANY(fract_max_old(:,:) /= this%fract_max_old(:,:))) THEN
         this%fract_max_old(:,:) = fract_max_old(:,:)
+        !$acc update device(this%fract_max_old)
       END IF
 
     END IF
@@ -562,6 +575,7 @@ CONTAINS
     REAL(wp), POINTER                         :: ptr(:,:)
 
     this%fract => ptr
+    __acc_attach(this%fract)
 
   END SUBROUTINE Set_fract_ptr
 
@@ -571,6 +585,7 @@ CONTAINS
     REAL(wp), POINTER                         :: ptr(:,:)
 
     this%fract_old => ptr
+    __acc_attach(this%fract_old)
 
   END SUBROUTINE Set_fract_old_ptr
 
@@ -580,6 +595,7 @@ CONTAINS
     REAL(wp), POINTER                         :: ptr(:,:)
 
     this%fract_max => ptr
+    __acc_attach(this%fract_max)
 
   END SUBROUTINE Set_fract_max_ptr
 
@@ -589,6 +605,7 @@ CONTAINS
     REAL(wp), POINTER                         :: ptr(:,:)
 
     this%fract_max_old => ptr
+    __acc_attach(this%fract_max_old)
 
   END SUBROUTINE Set_fract_max_old_ptr
 
