@@ -350,7 +350,7 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_freeze_sl) ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_ice_melt_sl)    ! in
 
-      IF (.NOT. is_time_experiment_start(options%datetime)) THEN
+      IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
         !$claw acc data create(heat_cap)
 
         ! Correction for snowmelt

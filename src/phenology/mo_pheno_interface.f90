@@ -370,13 +370,13 @@ CONTAINS
     END IF
 
     ! Initialization of local variables
-    l_newday = is_newday(options%datetime, options%dtime)
+    l_newday = is_newday(options%current_datetime, options%dtime)
     timestep = timestep_in_days(options%dtime)
 
     !$claw expand parallel update
     t_air_in_Celcius(:) = t_air(:) - tmelt  ! convert Kelvin in Celcius
 
-    day_of_year  = INT(get_year_day(options%datetime))
+    day_of_year  = INT(get_year_day(options%current_datetime))
 
     !$claw expand parallel update
     w_soil_filling(:) = w_soil_rel(:)  ! Initialization of w_soil_filling for crops and raingreen
@@ -411,7 +411,7 @@ CONTAINS
       ! to keep the overall structure of pheno we mimic this dependency by deriving the maxLAI
       ! from the available biomass via allometric relationships
       ! The maxLai gets updated at the beginning of each year with the biomass at the maximum green pool
-      IF(is_newyear(options%datetime, options%dtime)) THEN
+      IF(is_newyear(options%current_datetime, options%dtime)) THEN
         !$claw expand parallel update savepoint=ser_jsb_PHENO_update_phenology_logrop_expand_1 tile_name=tile%name
         veg_fract_correction_old(:) = veg_fract_correction(:)
 
@@ -444,7 +444,7 @@ CONTAINS
       END IF
 
       ! carbon dynamics are only calculated on a day by day basis, thus update only required once a day
-      IF(is_newday(options%datetime, options%dtime)) THEN
+      IF(is_newday(options%current_datetime, options%dtime)) THEN
         !$claw sca forward update savepoint=ser_jsb_PHENO_track_max_green_pool_1 tile_name=tile%name
         CALL track_max_green_pool(      &
           & c_green(:),                 & ! in
@@ -710,7 +710,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(PHENO_, lai,    weighted_by_fract)
 
     IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
-      IF (is_newyear(options%datetime, options%dtime)) THEN
+      IF (is_newyear(options%current_datetime, options%dtime)) THEN
         dsl4jsb_Aggregate_onChunk(PHENO_, maxLAI_allom,    weighted_by_fract)
         dsl4jsb_Aggregate_onChunk(PHENO_, cconservation_allom,    weighted_by_fract)
 

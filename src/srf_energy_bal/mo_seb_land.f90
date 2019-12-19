@@ -242,7 +242,7 @@ CONTAINS
     
     ! Sum up of the previous day temperatures
     !$claw sca forward update savepoint=ser_jsb_seb_land_calc_previous_day_variables_1 tile_name=tile%name
-    CALL calc_previous_day_variables(is_newday(options%datetime, options%dtime),               & ! Input
+    CALL calc_previous_day_variables(is_newday(options%current_datetime, options%dtime),    & ! Input
                                      t_air_in_Celcius(:),       & ! Input
                                      !dtime,                     & ! Input
                                      timesteps_per_day(options%dtime), & ! Input
@@ -279,7 +279,7 @@ CONTAINS
     forc_hflx(:) = grnd_hflx(:)
     !$claw end expand
 
-    IF (is_time_experiment_start(options%datetime)) THEN            ! Start of experiment
+    IF (is_time_experiment_start(options%current_datetime)) THEN            ! Start of experiment
       lstart = .TRUE.
     ELSE
       lstart = .FALSE.

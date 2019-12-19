@@ -48,7 +48,7 @@ CONTAINS
   SUBROUTINE interface_full( &
     & model_id,         &
     & iblk, ics, ice,   &
-    & datetime,         &
+    & current_datetime, &
     & dtime, steplen,   &
     & t_air,            &
     & q_air,            &
@@ -119,7 +119,7 @@ CONTAINS
       & ics,               &
       & ice
     TYPE(t_datetime), POINTER, INTENT(in) :: &
-      & datetime
+      & current_datetime
     REAL(wp), INTENT(in) :: &
       & dtime,              &
       & steplen
@@ -234,7 +234,7 @@ CONTAINS
     IF (debug_on('basic') .AND. iblk == 1) CALL message( TRIM(routine), 'Updating '//TRIM(model%name))
 
     ! Update options
-    CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, datetime=datetime, dtime=dtime, steplen=steplen)
+    CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=current_datetime, dtime=dtime, steplen=steplen)
 
     ! Put atmospheric forcing into the a2l memory.
 
@@ -361,13 +361,13 @@ CONTAINS
 
   ! END SUBROUTINE interface_inquire
 
-  SUBROUTINE jsbach_start_timestep(model_id, datetime, dtime)
+  SUBROUTINE jsbach_start_timestep(model_id, current_datetime, dtime)
 
     USE mo_jsb_time,          ONLY: is_newday
     USE mo_carbon_interface,  ONLY: yday_carbon_conservation_test
 
     INTEGER,                   INTENT(in) :: model_id
-    TYPE(t_datetime), POINTER, INTENT(in) :: datetime
+    TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
     REAL(wp),                  INTENT(in) :: dtime
 
     TYPE(t_jsb_model),           POINTER :: model
@@ -388,7 +388,7 @@ CONTAINS
 
     model => Get_model(model_id)
 
-    CALL model%Set_options(datetime=datetime, dtime=dtime)
+    CALL model%Set_options(current_datetime=current_datetime, dtime=dtime)
 
     ! Reset all tiles at the beginning of the timestep
     CALL model%Reset_tiles()
@@ -398,7 +398,7 @@ CONTAINS
     CALL model%Get_top_tile(tile)
 
     IF (model%processes(CARBON_)%p%config%active) THEN
-      IF(is_newday(datetime, dtime)) THEN
+      IF(is_newday(current_datetime, dtime)) THEN
         CALL yday_carbon_conservation_test(tile)
       END IF
     END IF
@@ -407,7 +407,7 @@ CONTAINS
 
   END SUBROUTINE jsbach_start_timestep
 
-  SUBROUTINE jsbach_finish_timestep(model_id, datetime, steplen)
+  SUBROUTINE jsbach_finish_timestep(model_id, current_datetime, steplen)
 
 #ifndef __NO_JSBACH_HD__
     USE mo_interface_hd_ocean, ONLY: interface_hd_ocean
@@ -415,7 +415,7 @@ CONTAINS
 #endif
 
     INTEGER,                   INTENT(in) :: model_id
-    TYPE(t_datetime), POINTER, INTENT(in) :: datetime
+    TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
     REAL(wp),                  INTENT(in) :: steplen
 
     TYPE(t_jsb_model),          POINTER :: model
@@ -438,7 +438,7 @@ CONTAINS
     CALL model%Get_top_tile(tile)
 
     ! Update options
-    CALL model%Set_options(datetime=datetime, steplen=steplen)
+    CALL model%Set_options(current_datetime=current_datetime, steplen=steplen)
 
 #ifndef __NO_JSBACH_HD__
       CALL hd_lateral_flow(tile, model%options(no_omp_thread))

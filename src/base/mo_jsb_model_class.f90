@@ -405,13 +405,13 @@ CONTAINS
 
   END FUNCTION Get_tile
 
-  SUBROUTINE Set_options(this, datetime, dtime, steplen, iblk, ics, ice, nc)
+  SUBROUTINE Set_options(this, current_datetime, dtime, steplen, iblk, ics, ice, nc)
 
     USE mo_jsb_utils_iface, ONLY: assign_if_present
     USE mo_jsb_time,        ONLY: t_datetime
 
     CLASS(t_jsb_model),                  INTENT(inout) :: this
-    TYPE(t_datetime), OPTIONAL, POINTER, INTENT(in)    :: datetime
+    TYPE(t_datetime), OPTIONAL, POINTER, INTENT(in)    :: current_datetime
     REAL(wp),         OPTIONAL,          INTENT(in)    :: dtime
     REAL(wp),         OPTIONAL,          INTENT(in)    :: steplen
     INTEGER,          OPTIONAL,          INTENT(in)    :: iblk
@@ -429,7 +429,7 @@ CONTAINS
     CALL assign_if_present(this%options(no_omp_thread)%ics,     ics)
     CALL assign_if_present(this%options(no_omp_thread)%ice,     ice)
     CALL assign_if_present(this%options(no_omp_thread)%nc,      nc)
-    IF (PRESENT(datetime)) this%options(no_omp_thread)%datetime => datetime
+    IF (PRESENT(current_datetime)) this%options(no_omp_thread)%current_datetime => current_datetime
 
   END SUBROUTINE Set_options
 
