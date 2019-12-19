@@ -50,6 +50,13 @@ MODULE mo_jsb_tile_class
 #define __acc_attach(ptr)
 #endif
 
+#ifdef _OPENACC
+  USE openacc
+#define __acc_attach(ptr) CALL acc_attach(ptr)  
+#else
+#define __acc_attach(ptr)
+#endif
+
   IMPLICIT NONE
   PRIVATE
 
@@ -470,8 +477,6 @@ CONTAINS
       this%fract_old(ics:ice, iblk) = fract_old(:)
       !$ACC UPDATE DEVICE(this%fract_old(ics:ice,iblk)) ASYNC(1)
     END IF
-
-    !$acc update device(this%fract,this%fract_max,this%fract_old,this%fract_max_old)
 
   END SUBROUTINE Set_fraction_1d
 

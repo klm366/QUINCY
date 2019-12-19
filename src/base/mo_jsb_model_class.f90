@@ -818,4 +818,3 @@ CONTAINS
 #endif
 
 #endif
-END MODULE mo_jsb_model_class
