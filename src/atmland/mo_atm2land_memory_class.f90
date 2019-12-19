@@ -100,6 +100,13 @@ CONTAINS
     hgrid => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
 
+    !$acc enter data create(mem)
+
+    !$acc enter data create(mem%t_air,mem%q_air,mem%rain,mem%snow,mem%wind_air,mem%wind_10m, &
+    !$acc mem%lw_srf_down,mem%swvis_srf_down,mem%swpar_srf_down,mem%fract_par_diffuse,       &
+    !$acc mem%press_srf,mem%drag_srf,mem%t_acoef,mem%t_bcoef,mem%q_acoef,mem%q_bcoef,        &
+    !$acc mem%pch,mem%cos_zenith_angle,mem%CO2_air,mem%CO2_air_mol)
+
     CALL jsb_add_var( mem, 't_air', mem%t_air,       &
       & hgrid, surface,                                                      &
       & t_cf('air_temperature', 'K', ''),                                    &
@@ -279,6 +286,9 @@ CONTAINS
       & lrestart=.FALSE., initval_r=4.0E-4_wp ) ! R: I just choosed this value for 400 ppm
 
     IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%t_acoef_wtr%ptr)) THEN
+
+      !$acc enter data create(mem%drag_wtr,mem%t_acoef_wtr,mem%t_bcoef_wtr,mem%q_acoef_wtr,mem%q_bcoef_wtr, &
+      !$acc                   mem%drag_ice,mem%t_acoef_ice,mem%t_bcoef_ice,mem%q_acoef_ice,mem%q_bcoef_ice)
 
       CALL jsb_add_var( mem, 'drag_wtr', mem%drag_wtr,                &
         & hgrid, surface,                                                      &

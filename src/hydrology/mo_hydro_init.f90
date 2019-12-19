@@ -335,12 +335,14 @@ CONTAINS
       END DO
 
       CALL input_file%Close()
-      !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_, w_snow), &
-      !$acc dsl4jsb_var2D_onDomain(HYDRO_, w_snow_soil), &
-      !$acc dsl4jsb_var2D_onDomain(HYDRO_,w_soil_overflow))
-    ! avoid compiler warnings about pointers not being dereferenced
-    IF (ASSOCIATED(ptr_2D)) CONTINUE
-    NULLIFY(ptr_2D)
+
+      !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_, w_snow),       &
+      !$acc               dsl4jsb_var2D_onDomain(HYDRO_, w_snow_soil),  &
+      !$acc               dsl4jsb_var2D_onDomain(HYDRO_, w_soil_overflow))
+      ! avoid compiler warnings about pointers not being dereferenced
+
+      IF (ASSOCIATED(ptr_2D)) CONTINUE
+      NULLIFY(ptr_2D)
 
     END IF
 
@@ -397,9 +399,9 @@ CONTAINS
       END WHERE
 
       
-      !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_, w_soil_rel), &
-      !$acc dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column), &
-      !$acc dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl))
+      !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_, w_soil_rel),    &
+      !$acc               dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column), &
+      !$acc               dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl))
 
       CALL init_soil_properties(tile)
     END IF
