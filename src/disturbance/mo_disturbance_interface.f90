@@ -305,7 +305,7 @@ CONTAINS
     persist = persist_rel_hum ** (1._wp/REAL(timesteps_per_day(options%dtime),wp))
     q_rel_air_climbuf(:) = q_rel_air_climbuf(:) * persist  +  MIN(q_rel_air(:),100._wp) * (1._wp - persist)
 
-    IF (.NOT. is_newday(options%datetime, options%dtime) .OR. is_time_experiment_start(options%datetime)) THEN
+    IF (.NOT. is_newday(options%current_datetime, options%dtime) .OR. is_time_experiment_start(options%current_datetime)) THEN
       WHERE (wind_10m(:) > max_wind_10m_act(:))
          max_wind_10m_act(:) = wind_10m(:)
       END WHERE
@@ -316,7 +316,7 @@ CONTAINS
       q_rel_air_climbuf_yDay(:) = q_rel_air_climbuf(:)
     END IF
 
-    IF (is_newday(options%datetime, options%dtime)) THEN ! only once per day
+    IF (is_newday(options%current_datetime, options%dtime)) THEN ! only once per day
       cflux_dist_greenreserve_2_soil(:) = 0._wp
       cflux_dist_woods_2_soil(:) = 0._wp
 
