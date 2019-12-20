@@ -59,7 +59,7 @@ nSoilLay  <- (length(colnames(sPoolCOrg)) -1) / 10  # time + 10 variables: SoluL
 print(paste0("number of soil layers is: ", nSoilLay))
 
 # number of columns of the output array (3D variables store the layer-data in multiple columns)
-nOutCol  <- 200   # this includes overprovisioning, columns without data will be removed before write the output file (see line ~370)
+nOutCol  <- 250   # this includes overprovisioning, columns without data will be removed before write the output file (see line ~370)
 print(paste0("using ", nOutCol, " columns for the output array, including overprovisioning"))
 # number of rows of the output array (i.e., number of timesteps from output data)
 nOutRow  <- nrow(sPoolCOrg)
