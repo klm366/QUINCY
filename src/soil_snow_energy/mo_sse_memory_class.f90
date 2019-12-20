@@ -112,11 +112,6 @@ CONTAINS
 
     !$acc enter data pcreate(mem)
 
-    !$acc enter data pcreate(mem%vol_heat_cap,mem%vol_heat_cap_sl, &
-    !$acc mem%vol_heat_cap_snow,mem%heat_cond,mem%heat_cond_sl,    &
-    !$acc mem%heat_cond_snow,mem%thermal_diffusivity,mem%t_soil,   &
-    !$acc mem%t_soil_acoef,mem%t_soil_bcoef)
-
     CALL jsb_add_var( mem, 'vol_heat_cap', mem%vol_heat_cap,                 &
       & hgrid, surface,                                                      &
       & t_cf('vol_heat_capacity_soil', 'J m-3 K-1', ''),                     &
@@ -229,9 +224,6 @@ CONTAINS
         & prefix, suffix,                                                      &
         & initval_r=0.0_wp )
     END IF
-
-    !$acc enter data pcreate(mem%hcap_grnd,mem%hcap_grnd_old,mem%grnd_hflx, &
-    !$acc mem%grnd_hflx_old,mem%thaw_depth)
 
     CALL jsb_add_var( mem, 'hcap_grnd', mem%hcap_grnd,                       &
       & hgrid, surface,                                                      &

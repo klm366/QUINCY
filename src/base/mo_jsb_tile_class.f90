@@ -27,7 +27,7 @@ MODULE mo_jsb_tile_class
   USE mo_jsb_var_class,       ONLY: t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d
 
 #ifdef _OPENACC
-  USE openacc
+  use openacc
 #define __acc_attach(ptr) CALL acc_attach(ptr)  
 #else
 #define __acc_attach(ptr)
@@ -57,6 +57,15 @@ MODULE mo_jsb_tile_class
   END TYPE t_jsb_aggregator_p
 
   ! Declarations for tile
+  !
+  ! Used to cache some pointers on the GPU
+  TYPE :: real_2d_p
+    REAL(wp), POINTER :: p(:,:)
+  END TYPE
+  TYPE :: real_3d_p
+    REAL(wp), POINTER :: p(:,:,:)
+  END TYPE
+  !
   TYPE, ABSTRACT, EXTENDS(t_State) :: t_jsb_tile_abstract
     TYPE(t_jsb_lct),        ALLOCATABLE    :: lcts(:)              !< List of land cover types for tile
                                                                    !! The first entry is always the primary LCT for this tile;
@@ -92,6 +101,9 @@ MODULE mo_jsb_tile_class
     CLASS(t_jsb_tile_abstract), POINTER    :: first_child_tile => NULL()
     CLASS(t_jsb_tile_abstract), POINTER    :: next_sibling_tile => NULL()
     !
+    TYPE(real_2d_p), POINTER :: ptrs2d_cache(:,:,:)
+    TYPE(real_3d_p), POINTER :: ptrs3d_cache(:,:,:)
+    !
     INTEGER                                :: grid_id = -1
     INTEGER                                :: owner_model_id = 0
   CONTAINS
@@ -117,6 +129,9 @@ MODULE mo_jsb_tile_class
     !PROCEDURE                              :: Get_fractions_max
     PROCEDURE                              :: Get_first_child_tile
     PROCEDURE                              :: Get_next_sibling_tile
+    !
+    PROCEDURE                              :: Cache_GPU_pointers
+    !
     PROCEDURE(Init_interface),      DEFERRED :: Init
     PROCEDURE(Init_vars_interface), DEFERRED :: Init_vars
     PROCEDURE(Print_interface),     DEFERRED :: Print
@@ -686,7 +701,7 @@ CONTAINS
     ALLOCATE(aggregator%fractions(grid%nproma, grid%nblks, no_of_children))
     ALLOCATE(aggregator%data_sum (grid%nproma, grid%nblks))
     ALLOCATE(aggregator%fract_sum(grid%nproma, grid%nblks))
-    !$acc enter data create(aggregator%fractions, aggregator%data_sum, aggregator%fract_sum, aggregator)
+    !$acc enter data create(aggregator, aggregator%fractions, aggregator%data_sum, aggregator%fract_sum)
   END FUNCTION Create_aggregator_weighted_by_fract
 
   SUBROUTINE Finalize_aggregator_weighted_by_fract(aggregator)
@@ -737,17 +752,19 @@ CONTAINS
         current => current%next_sibling
       END DO
 
-      ALLOCATE(fract(ice-ics+1))
-      ALLOCATE(fract_sum(ice-ics+1))
-      fract(:) = tile%fract(ics:ice,iblk)
-      fract_sum(:) = SUM(this%fractions(ics:ice,iblk,:), DIM=2)
-      ! IF (ASSOCIATED(tile%parent) .AND. ANY( fract_sum(:) < 1._wp - EPSILON(1._wp) .AND. fract(:) > 0._wp)) THEN
-      !   CALL message(TRIM(routine), 'Sum of child tile fractions on tile '//TRIM(tile%name)//': '//&
-      !     &                         real2string(MINVAL(fract_sum(:)))//' - '//real2string(MAXVAL(fract_sum(:))), &
-      !     &          all_print=.TRUE.)
-      !   CALL finish(TRIM(routine), 'Sum of tile fractions is not 1 on tile')
-      ! END IF
-      DEALLOCATE(fract, fract_sum)
+      !$acc update device( this%fractions(ics:ice,iblk,:) )
+
+      ! ALLOCATE(fract(ice-ics+1))
+      ! ALLOCATE(fract_sum(ice-ics+1))
+      ! fract(:) = tile%fract(ics:ice,iblk)
+      ! fract_sum(:) = SUM(this%fractions(ics:ice,iblk,:), DIM=2)
+      ! ! IF (ASSOCIATED(tile%parent) .AND. ANY( fract_sum(:) < 1._wp - EPSILON(1._wp) .AND. fract(:) > 0._wp)) THEN
+      ! !   CALL message(TRIM(routine), 'Sum of child tile fractions on tile '//TRIM(tile%name)//': '//&
+      ! !     &                         real2string(MINVAL(fract_sum(:)))//' - '//real2string(MAXVAL(fract_sum(:))), &
+      ! !     &          all_print=.TRUE.)
+      ! !   CALL finish(TRIM(routine), 'Sum of tile fractions is not 1 on tile')
+      ! ! END IF
+      ! DEALLOCATE(fract, fract_sum)
 
       tile%l_fract_children_changed(ics:ice,iblk) = .FALSE.
     END IF
@@ -762,7 +779,9 @@ CONTAINS
     INTEGER,                                   INTENT(in)    :: ics, ice, iblk
     CHARACTER(len=*),                          INTENT(in)    :: caller
 
-    CLASS(t_jsb_var), POINTER :: ptr
+    REAL(wp), POINTER :: ptr(:,:)
+    TYPE(real_2d_p), POINTER :: tile_ptrs2d_cache(:,:,:)
+
     INTEGER :: no_children, i, iproc, j
     ! REAL(dp) :: missval
 
@@ -777,6 +796,7 @@ CONTAINS
     IF (.NOT. ASSOCIATED(var%ptr)) RETURN
 
     CALL this%Set_fractions(tile, ics, ice, iblk)
+    CALL tile%Cache_GPU_pointers()
 
     ! missval = var%missval
 
@@ -793,27 +813,29 @@ CONTAINS
       CALL finish(TRIM(routine), 'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' has wrong size')
     END IF
 
-    !$acc data present(this%data_sum, this%fract_sum, var%ptr)
-    !$acc update host(var%ptr)
-    !!$acc parallel loop gang vector
+    tile_ptrs2d_cache => tile%ptrs2d_cache
+
+    ! print*, routine//": working on var ", var%full_name
+
+    !$acc parallel default(none) present(this, tile_ptrs2d_cache, var)
+    !$acc loop gang vector
     DO j = ics, ice
       this%data_sum (j,iblk) = 0._wp
       this%fract_sum(j,iblk) = 0._wp
     END DO
 
+    !$acc loop seq
     DO i=1,no_children
-      IF (var%child_idx(i) > 0) THEN
-        ptr => tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p
-        !$acc update host(ptr%ptr2d)
-        !!$acc parallel loop gang vector
+      IF ( var%child_idx(i) > 0 ) THEN
+        !$acc loop gang vector
         DO j = ics, ice
           this%data_sum(j,iblk) = this%data_sum(j,iblk) &
-            & + this%fractions(j,iblk,i) * ptr%ptr2d(j,iblk)
+            & + this%fractions(j,iblk,i) * tile_ptrs2d_cache(i,var%child_idx(i),iproc)%p(j,iblk) 
           this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
         END DO
-        !!$acc end data
       END IF
     END DO
+    
     ! print*,'AAA ',ics,ice,MINVAL(this%data_sum(ics:ice)), MAXVAL(this%data_sum(ics:ice)),&
       ! & MINVAL(this%fract_sum(ics:ice)), MAXVAL(this%fract_sum(ics:ice))
 
@@ -827,28 +849,25 @@ CONTAINS
 
     IF (no_children == 1 .AND. .NOT. var%l_aggregate_all) THEN
       ! Only one tile to aggregate, avoid multiplying and dividing by a potentially small fraction
-      !!$acc parallel loop gang vector
+      !$acc loop gang vector
       DO j = ics, ice
         var%ptr(j,iblk) = this%data_sum(j,iblk)
       END DO
     ELSE IF (var%l_aggregate_all) THEN              ! Sum of fractions is 1
       ! For tiles where variable is not defined data(:,tile) is 0
-      !!$acc parallel loop gang vector
+      !$acc loop gang vector
       DO j = ics, ice
         var%ptr(j,iblk) = this%data_sum(j,iblk)
       END DO
     ELSE
-      !!$acc parallel loop gang vector
+      !$acc loop gang vector
       DO j = ics, ice
         IF (this%fract_sum(j,iblk) > 0._wp) THEN
         var%ptr(j,iblk) = this%data_sum(j,iblk) / this%fract_sum(j,iblk)
         END IF
       END DO
     END IF
-
-    !!$acc update host(var%ptr)
-    !$acc update device(var%ptr)
-    !$acc end data
+    !$acc end parallel
 
     IF (var%l_aggregate_all) THEN
       IF (debug_on() .AND. iblk==1) CALL message('     ... ', TRIM(var%name)//' ('//TRIM(this%name)//'; all_tiles)')
@@ -867,6 +886,8 @@ CONTAINS
     CHARACTER(len=*),                          INTENT(in)    :: caller
 
     CLASS(t_jsb_var), POINTER :: ptr
+    TYPE(real_3d_p), POINTER :: tile_ptrs3d_cache(:,:,:)
+
     INTEGER :: no_children, i, iproc, ilev, j
     ! REAL(dp) :: missval
 
@@ -881,6 +902,7 @@ CONTAINS
     IF (.NOT. ASSOCIATED(var%ptr)) RETURN
 
     CALL this%Set_fractions(tile, ics, ice, iblk)
+    CALL tile%Cache_GPU_pointers()
 
     ! missval = var%missval
 
@@ -896,23 +918,27 @@ CONTAINS
     ELSE IF (SIZE(var%child_idx) /= no_children) THEN
       CALL finish(TRIM(routine), 'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' has wrong size')
     END IF
-    !$acc data present(this%fract_sum, this%data_sum, var%ptr, this%fractions)
-    !$acc update host(var%ptr)
+
+    tile_ptrs3d_cache => tile%ptrs3d_cache
+
+    ! print*, routine//": working on var ", var%full_name
+
+    !$acc parallel default(none) present(this, tile_ptrs3d_cache, var)
+    !$acc loop seq
     DO ilev=1,SIZE(var%ptr,2)
-      !!$acc parallel loop gang vector
+      !$acc loop gang vector
       DO j = ics, ice
         this%fract_sum(j,iblk) = 0._wp
         this%data_sum (j,iblk) = 0._wp
       END DO
 
+      !$acc loop seq
       DO i=1,no_children
         IF (var%child_idx(i) > 0) THEN
-          ptr => tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p
-          !$acc update host(ptr%ptr3d)
-          !!$acc parallel loop gang vector
+          !$acc loop gang vector
           DO j = ics, ice
             this%data_sum(j,iblk) = this%data_sum(j,iblk) &
-              & + this%fractions(j,iblk,i) * ptr%ptr3d(j,ilev,iblk)
+              & + this%fractions(j,iblk,i) * tile_ptrs3d_cache(i,var%child_idx(i),iproc)%p(j,ilev,iblk) 
             this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
           END DO
         END IF
@@ -920,18 +946,18 @@ CONTAINS
 
       IF (no_children == 1 .AND. .NOT. var%l_aggregate_all) THEN
         ! Only one tile to aggregate, avoid multiplying and dividing by a potentially small fraction
-        !!$acc parallel loop gang vector
+        !$acc loop gang vector
         DO j = ics, ice
           var%ptr(j,ilev,iblk) = this%data_sum(j,iblk)
         END DO
       ELSE IF (var%l_aggregate_all) THEN              ! Sum of fractions is 1
         ! For tiles where variable is not defined data(:,ilev,tile) is 0
-        !!$acc parallel loop gang vector
+        !$acc loop gang vector
         DO j = ics, ice
           var%ptr(j,ilev,iblk) = this%data_sum(j,iblk)
         END DO
       ELSE
-        !!$acc parallel loop gang vector
+        !$acc loop gang vector
         DO j = ics, ice
           IF (this%fract_sum(j,iblk) > 0._wp) THEN
             var%ptr(j,ilev,iblk) = this%data_sum(j,iblk) / this%fract_sum(j,iblk)
@@ -939,9 +965,7 @@ CONTAINS
         END DO
       END IF
     END DO
-    !!$acc update host(var%ptr)
-    !$acc update device(var%ptr)
-    !$acc end data
+    !$acc end parallel
 
     ! IF (ANY(fract_sum(:) > 1._wp + EPSILON(1._wp))) THEN
     !   CALL message(TRIM(routine), 'On tile '//TRIM(tile%name)//': fract_sum > 1 - '// &
@@ -1032,6 +1056,74 @@ CONTAINS
       & CALL finish(TRIM(routine), 'Could not find next sibling tile')
 
   END FUNCTION Get_next_sibling_tile
+
+  SUBROUTINE Cache_GPU_pointers(this)
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
+
+    INTEGER :: no_children, nproc, i,j,iproc, maxsize
+    INTEGER, ALLOCATABLE :: sizes(:,:)
+
+    no_children = this%Get_no_of_children()
+    nproc = SIZE( this%mem )
+
+    IF ( .NOT. ASSOCIATED(this%ptrs2d_cache) ) THEN
+
+      ALLOCATE(sizes(no_children,nproc))
+      sizes(:,:) = 0
+
+      DO iproc=1,nproc
+        IF ( ASSOCIATED(this%mem(iproc)%p) ) THEN
+          DO i=1,size(this%mem(iproc)%p%children)
+            IF ( ASSOCIATED(this%mem(iproc)%p%children(i)%p) ) &
+              & sizes(i,iproc) = SIZE( this%mem(iproc)%p%children(i)%p%vars )
+          END DO
+        END IF
+      END DO
+      maxsize = MAXVAL( sizes )
+
+      ALLOCATE( this%ptrs2d_cache(no_children,maxsize,nproc), &
+                this%ptrs3d_cache(no_children,maxsize,nproc)  )
+      !$acc enter data create(this%ptrs2d_cache, this%ptrs3d_cache)
+
+    !END IF
+    ! DA: This MAY be POTENTIALLY unsafe, if the var pointers get reallocated
+    !  from time to time. If that is indeed the case, uncomment END IF and remove
+    !  a matching END IF from the block below
+              
+      DO iproc=1,nproc
+        IF ( ASSOCIATED(this%mem(iproc)%p) ) THEN
+
+          DO i=1,size(this%mem(iproc)%p%children)
+            IF ( ASSOCIATED(this%mem(iproc)%p%children(i)%p) ) THEN
+
+              DO j=1,SIZE( this%mem(iproc)%p%children(i)%p%vars )
+                IF ( ASSOCIATED(this%mem(iproc)%p%children(i)%p%vars(j)%p) ) THEN
+                  IF ( .NOT. ASSOCIATED(this%ptrs2d_cache(i,j,iproc)%p, &
+                                        this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr2d) ) THEN
+
+                    this%ptrs2d_cache(i,j,iproc)%p => this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr2d
+                    __acc_attach(this%ptrs2d_cache(i,j,iproc)%p)
+                  END IF
+
+                  IF ( .NOT. ASSOCIATED(this%ptrs3d_cache(i,j,iproc)%p, &
+                                        this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr3d) ) THEN
+
+                    this%ptrs3d_cache(i,j,iproc)%p => this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr3d
+                    __acc_attach(this%ptrs3d_cache(i,j,iproc)%p)
+                  END IF
+                END IF
+              END DO
+
+            END IF
+          END DO
+        END IF
+      END DO
+
+    ! DA: this is the IF to remove, see above
+    END IF
+
+  END SUBROUTINE Cache_GPU_pointers
+    
 
 #endif
 END MODULE mo_jsb_tile_class

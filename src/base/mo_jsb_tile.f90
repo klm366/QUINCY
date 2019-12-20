@@ -360,7 +360,7 @@ CONTAINS
       varlist_name_loc = TRIM(varlist_name)
     END IF
 
-    !$acc enter data create(this%fract,this%fract_max,this%fract_old,this%fract_max_old)
+    !$acc enter data copyin(this)
 
     CALL jsb_add_var(varlist_name_loc, 'fract', tmp_fract,                                 &
       & hgrid, surface,                                                                                         &
@@ -551,6 +551,8 @@ CONTAINS
               mem%vars(i)%p%child_idx(child_no) = 0
             END IF
           END DO
+          !$acc enter data copyin(mem%vars(i)%p%child_idx)
+          __acc_attach(mem%vars(i)%p%child_idx)
         END IF
       END DO
 

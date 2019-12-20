@@ -76,8 +76,6 @@ CONTAINS
 
     !$acc enter data pcreate(mem)
 
-    !$acc enter data pcreate(mem%rough_m,mem%rough_h)
-
     CALL jsb_add_var( mem, 'rough_m', mem%rough_m,                                       &
       & hgrid, surface,                                                                  &
       & t_cf('roughness_length_momentum', 'm', 'surface roughness length for momentum'), &
@@ -102,9 +100,6 @@ CONTAINS
       &   .OR. One_of(LAND_TYPE,    lct_ids(:)) > 0 &
       &   .OR. One_of(GLACIER_TYPE, lct_ids(:)) > 0 &
       &  ) ) THEN
-
-      !$acc enter data pcreate(mem%fact_q_air,mem%fact_qsat_srf, &
-      !$acc mem%fact_qsat_trans_srf)
 
       CALL jsb_add_var( mem, 'fact_q_air', mem%fact_q_air,                   &
         & hgrid, surface,                                                    &
