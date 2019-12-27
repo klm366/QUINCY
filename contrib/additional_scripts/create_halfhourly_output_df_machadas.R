@@ -43,6 +43,8 @@ inFileExt <- "_timestep.txt"
 date <- Sys.Date()
 # output file
 outFile <- paste0("./quincy_hh_timestep_land_output_", date, "_for_machadas.csv")
+# list with units of all output variables (is created below)
+unitList <- "empty"
 
 
 ## constants for unit conversion
@@ -102,6 +104,7 @@ inFile  <- paste0("soilfluxCdC13DC14", inFileExt)
 var1    <- getVarData(inFile, "HetResp")
 outArr[,countCol]           <- var1
 colnames(outArr)[countCol]  <- "Rh"               # µmol m-2 s-1
+unitList                    <- "µmol m-2 s-1"     # initial entry of unitList object
 countCol                    <- countCol + 1
 
 ##
@@ -114,6 +117,7 @@ for (l in 1:nSoilLay){
   outArr[,countCol]           <- var1 + var2 + var3
   outArr[,countCol]           <- outArr[,countCol] * molar_mass_C / 1000   # mol C m-3 -> kg C m-3
   colnames(outArr)[countCol]  <- paste0("Litter_C_lay", l)
+  unitList                    <- c(unitList, "kg C m-3")
   countCol                    <- countCol + 1
 }
 for (l in 1:nSoilLay){
@@ -123,6 +127,7 @@ for (l in 1:nSoilLay){
   outArr[,countCol]           <- var1 + var2
   outArr[,countCol]           <- outArr[,countCol] * molar_mass_C / 1000   # mol C m-3 -> kg C m-3
   colnames(outArr)[countCol]  <- paste0("SOM_C_lay", l)
+  unitList                    <- c(unitList, "kg C m-3")
   countCol                    <- countCol + 1
 }
 
@@ -136,6 +141,7 @@ for (l in 1:nSoilLay){
   outArr[,countCol]           <- var1 + var2 + var3
   outArr[,countCol]           <- outArr[,countCol] * molar_mass_N / 1000   # mol N m-3 -> kg N m-3
   colnames(outArr)[countCol]  <- paste0("Litter_N_lay", l)
+  unitList                    <- c(unitList, "kg N m-3")
   countCol                    <- countCol + 1
 }
 for (l in 1:nSoilLay){
@@ -145,6 +151,7 @@ for (l in 1:nSoilLay){
   outArr[,countCol]           <- var1 + var2
   outArr[,countCol]           <- outArr[,countCol] * molar_mass_N / 1000   # mol N m-3 -> kg N m-3
   colnames(outArr)[countCol]  <- paste0("SOM_N_lay", l)
+  unitList                    <- c(unitList, "kg N m-3")
   countCol                    <- countCol + 1
 }
 
@@ -158,6 +165,7 @@ for (l in 1:nSoilLay){
   outArr[,countCol]           <- var1 + var2 + var3
   outArr[,countCol]           <- outArr[,countCol] * molar_mass_P / 1000   # mol P m-3 -> kg P m-3
   colnames(outArr)[countCol]  <- paste0("Litter_P_lay", l)
+  unitList                    <- c(unitList, "kg P m-3")
   countCol                    <- countCol + 1
 }
 for (l in 1:nSoilLay){
@@ -167,6 +175,7 @@ for (l in 1:nSoilLay){
   outArr[,countCol]           <- var1 + var2
   outArr[,countCol]           <- outArr[,countCol] * molar_mass_P / 1000   # mol P m-3 -> kg P m-3
   colnames(outArr)[countCol]  <- paste0("SOM_P_lay", l)
+  unitList                    <- c(unitList, "kg P m-3")
   countCol                    <- countCol + 1
 }
 
@@ -179,6 +188,7 @@ for (l in 1:nSoilLay){
   outArr[,countCol]           <- var1 + var2
   outArr[,countCol]           <- outArr[,countCol] * molar_mass_N / 1000   # mol N m-3 -> kg N m-3
   colnames(outArr)[countCol]  <- paste0("Nmineral_lay", l)
+  unitList                    <- c(unitList, "kg N m-3")
   countCol                    <- countCol + 1
 }
 
@@ -192,6 +202,7 @@ for (l in 1:nSoilLay){
   outArr[,countCol]           <- var1 + var2 + var3
   outArr[,countCol]           <- outArr[,countCol] * molar_mass_P / 1000   # mol P m-3 -> kg P m-3
   colnames(outArr)[countCol]  <- paste0("OlsonP_lay", l)
+  unitList                    <- c(unitList, "kg P m-3")
   countCol                    <- countCol + 1
 }
 
@@ -201,12 +212,14 @@ for (l in 1:nSoilLay){
   var1    <- getVarData(inFile, paste0("WaterContentSoil_L", l))
   outArr[,countCol]           <- var1
   colnames(outArr)[countCol]  <- paste0("Theta_lay", l)       # m
+  unitList                    <- c(unitList, "m")
   countCol                    <- countCol + 1
 }
 for (l in 1:nSoilLay){
   var1    <- getVarData(inFile, paste0("TemperatureSoil_L", l))
   outArr[,countCol]           <- var1
   colnames(outArr)[countCol]  <- paste0("SoilT_lay", l)       # K
+  unitList                    <- c(unitList, "K")
   countCol                    <- countCol + 1
 }
 
@@ -215,16 +228,19 @@ inFile  <- paste0("veg_diagnostics", inFileExt)
 var1    <- getVarData(inFile, "Height")
 outArr[,countCol]           <- var1
 colnames(outArr)[countCol]  <- "Height"           # m
+unitList                    <- c(unitList, "m")
 countCol                    <- countCol + 1
 
 var1    <- getVarData(inFile, "Diameter")
 outArr[,countCol]           <- var1
 colnames(outArr)[countCol]  <- "Diameter"         # m
+unitList                    <- c(unitList, "m")
 countCol                    <- countCol + 1
 
 var1    <- getVarData(inFile, "LAI")
 outArr[,countCol]           <- var1
 colnames(outArr)[countCol]  <- "LAI"              # m2 m-2
+unitList                    <- c(unitList, "m2 m-2")
 countCol                    <- countCol + 1
 
 ##
@@ -232,6 +248,7 @@ inFile  <- paste0("vegfluxC", inFileExt)
 var1    <- getVarData(inFile, "GPP")
 outArr[,countCol]           <- var1
 colnames(outArr)[countCol]  <- "GPP"              # µmol m-2 s-1
+unitList                    <- c(unitList, "µmol m-2 s-1")
 countCol                    <- countCol + 1
 
 var1    <- getVarData(inFile, "MaintResp")
@@ -239,42 +256,47 @@ var2    <- getVarData(inFile, "NTransformResp")
 var3    <- getVarData(inFile, "GrowthResp")
 outArr[,countCol]           <- var1 + var2 + var3
 colnames(outArr)[countCol]  <- "Ra"               # µmol m-2 s-1
+unitList                    <- c(unitList, "µmol m-2 s-1")
 countCol                    <- countCol + 1
 
 var1    <- getVarData(inFile, "Growth_sapwood_C")
 outArr[,countCol]           <- var1
 colnames(outArr)[countCol]  <- "NPP_sapwood"      # µmol m-2 s-1
+unitList                    <- c(unitList, "µmol m-2 s-1")
 countCol                    <- countCol + 1
 
 ##
 inFile  <- paste0("vegfluxEnergy", inFileExt)
 varList     <- c("Rnet", "Qh", "Qle", "Qg", "Albedo", "PPFD", "aPPFD", "fAPPFD", "albedo_vis", "albedo_nir")
 varOutList  <- c("Rnet", "Qh", "Qle", "Qg", "Albedo", "downward_PPFD", "absorbed_PPFD", "fPAR", "albedo_vis", "albedo_nir")
-# units: Wm-2 Wm-2 Wm-2 Wm-2 [--] [µmol m-2 s-1] [µmol m-2 s-1] [--] [--] [--]
+unitVegFlux <- c("Wm-2", "Wm-2", "Wm-2", "Wm-2", "--", "µmol m-2 s-1", "µmol m-2 s-1", "--", "--", "--")
 for (v in 1:length(varList)){
   var1    <- getVarData(inFile, varList[v])
   outArr[,countCol]           <- var1
   colnames(outArr)[countCol]  <- varOutList[v]
+  unitList                    <- c(unitList, unitVegFlux[v])
   countCol                    <- countCol + 1
 }
-remove(varList, varOutList)
+remove(varList, varOutList, unitVegFlux)
 
 ##
-inFile  <- paste0("vegfluxH2O", inFileExt)
-varList <- c("Evaporation", "Interception", "Transpiration", "GC", "GA")
-# units: [kg m-2 s-1] [kg m-2 s-1] [kg m-2 s-1] [m s-1] [m s-1]
+inFile      <- paste0("vegfluxH2O", inFileExt)
+varList     <- c("Evaporation", "Interception", "Transpiration", "GC", "GA")
+unitVegFlux <- c("kg m-2 s-1", "kg m-2 s-1", "kg m-2 s-1", "m s-1", "m s-1")
 for (v in 1:length(varList)){
   var1    <- getVarData(inFile, varList[v])
   outArr[,countCol]           <- var1
   colnames(outArr)[countCol]  <- varList[v]
+  unitList                    <- c(unitList, unitVegFlux[v])
   countCol                    <- countCol + 1
 }
-remove(varList)
+remove(varList, unitVegFlux)
 
 var1    <- getVarData(inFile, "Runoff")
 var2    <- getVarData(inFile, "Drainage")
 outArr[,countCol]           <- var1 + var2
 colnames(outArr)[countCol]  <- "Leaching_and_Runoff"      # kg m-2 s-1
+unitList                    <- c(unitList, "kg m-2 s-1")
 countCol                    <- countCol + 1
 
 ##
@@ -283,6 +305,7 @@ var1    <- getVarData(inFile, "Leaf_C")
 outArr[,countCol]           <- var1
 outArr[,countCol]           <- outArr[,countCol] * molar_mass_C / 1000   # mol C m-2 -> kg C m-2
 colnames(outArr)[countCol]  <- "Leaf_C"
+unitList                    <- c(unitList, "kg C m-2")
 countCol                    <- countCol + 1
 leafCMol                    <- var1         # needed for calculation of foliar_N and foliar_P
 
@@ -290,12 +313,14 @@ var1    <- getVarData(inFile, "FineRoot_C")
 outArr[,countCol]           <- var1
 outArr[,countCol]           <- outArr[,countCol] * molar_mass_C / 1000   # mol C m-2 -> kg C m-2
 colnames(outArr)[countCol]  <- "FineRoot_C"
+unitList                    <- c(unitList, "kg C m-2")
 countCol                    <- countCol + 1
 
 var1    <- getVarData(inFile, "Total_C")
 outArr[,countCol]           <- var1
 outArr[,countCol]           <- outArr[,countCol] * molar_mass_C / 1000   # mol C m-2 -> kg C m-2
 colnames(outArr)[countCol]  <- "Total_C"
+unitList                    <- c(unitList, "kg C m-2")
 countCol                    <- countCol + 1
 
 ##
@@ -304,6 +329,7 @@ var1    <- getVarData(inFile, "Leaf_dC13")
 outArr[,countCol]           <- var1
 outArr[,countCol]           <- outArr[,countCol] * molar_mass_C / 1000   # mol C m-2 -> kg C m-2
 colnames(outArr)[countCol]  <- "Leaf_dC13"
+unitList                    <- c(unitList, "kg C m-2")
 countCol                    <- countCol + 1
 
 ##
@@ -311,6 +337,7 @@ inFile  <- paste0("vegpoolN", inFileExt)
 var1    <- getVarData(inFile, "Leaf_N")
 outArr[,countCol]           <- (var1 * molar_mass_N) / (leafCMol * molar_mass_C) * 48
 colnames(outArr)[countCol]  <- "foliar_N"         # [%]
+unitList                    <- c(unitList, "%")
 countCol                    <- countCol + 1
 leafNMol                    <- var1         # needed for calculation of foliar_NP and chlorophyll
 
@@ -319,6 +346,7 @@ inFile  <- paste0("vegpoolP", inFileExt)
 var1    <- getVarData(inFile, "Leaf_P")
 outArr[,countCol]           <- (var1 * molar_mass_P) / (leafCMol * molar_mass_C) * 48
 colnames(outArr)[countCol]  <- "foliar_P"         # [%]
+unitList                    <- c(unitList, "%")
 countCol                    <- countCol + 1
 leafPMol                    <- var1         # needed for calculation of foliar_NP
 remove(leafCMol)
@@ -327,6 +355,7 @@ remove(leafCMol)
 var1    <- (leafNMol * molar_mass_N) / (leafPMol * molar_mass_P)
 outArr[,countCol]           <- var1
 colnames(outArr)[countCol]  <- "foliar_N/P"       # [-]
+unitList                    <- c(unitList, "--")
 countCol                    <- countCol + 1
 remove(leafPMol)
 
@@ -343,6 +372,7 @@ for (l in 1:nCanopyLay){
   var1                        <- var0[rowsLayer]
   outArr[,countCol]           <- var1
   colnames(outArr)[countCol]  <- paste0("chlorophyll_lay", l)     # [µmol Chloroplast per m-2 leaf]
+  unitList                    <- c(unitList, "µmol Chloroplast per m-2 leaf")
   countCol                    <- countCol + 1
 }
 
@@ -353,6 +383,7 @@ for (l in 1:nCanopyLay){
   var1                        <- var0[rowsLayer]
   outArr[,countCol]           <- var1
   colnames(outArr)[countCol]  <- paste0("jmax_lay", l)     # [µmol m-2 (leaf) s-1]
+  unitList                    <- c(unitList, "µmol m-2 (leaf) s-1")
   countCol                    <- countCol + 1
 }
 
@@ -363,6 +394,7 @@ for (l in 1:nCanopyLay){
   var1                        <- var0[rowsLayer]
   outArr[,countCol]           <- var1
   colnames(outArr)[countCol]  <- paste0("vcmax_lay", l)     # [µmol m-2 (leaf) s-1]
+  unitList                    <- c(unitList, "µmol m-2 (leaf) s-1")
   countCol                    <- countCol + 1
 }
 
@@ -391,7 +423,9 @@ print(paste0("creating figures across output variables, saved as: ", outFile, ".
 pdf(file=paste0(outFile, ".pdf"), paper="a4", height=8, width=8, pointsize=10, bg="white", family="Helvetica", version="1.6")
   for (c in 1:ncol(outArr)){
     plot(1:nOutRow, outArr[,c], type="p", pch=16, cex=0.6, 
-         xlab="Time [30 min timesteps]", ylab=colnames(outArr)[c], main=colnames(outArr)[c])
+         xlab="11 Years, 2009 - 2019, 365 days per year [30 min timesteps]", 
+         ylab=colnames(outArr)[c], 
+         main=paste0(colnames(outArr)[c], " [", unitList[c], "]"))
   }
 dev.off()
 
