@@ -36,8 +36,8 @@ MODULE mo_jsb_memory_class
     INTEGER :: owner_model_id = 0
     INTEGER :: owner_proc_id = 0
     INTEGER :: no_of_children = 0
-    CLASS(t_jsb_memory_p), POINTER :: children(:) => NULL()
-    CLASS(t_jsb_memory)  , POINTER :: parent => NULL()
+    TYPE(t_jsb_memory_p), POINTER :: children(:) => NULL()
+    CLASS(t_jsb_memory) , POINTER :: parent => NULL()
     INTEGER, ALLOCATABLE :: owner_tile_path(:)
     CHARACTER(len=10)    :: owner_tile_name
     INTEGER :: max_no_of_vars = 0
@@ -247,6 +247,7 @@ CONTAINS
     REAL(wp), allocatable               :: var_collected(:,:)
     CHARACTER(len=*), PARAMETER :: routine = modname//':Average_over_children'
 
+    ALLOCATE(var_collected(ice-ics+1,no_children))
     ! Collect corresponding vars of subtiles
     DO i=1,no_children
       IF ( .NOT. ASSOCIATED(this%children(i)%p%vars(var%child_idx(i))%p) ) THEN
@@ -256,6 +257,7 @@ CONTAINS
     END DO
     ! Note, this works because the fract_st sum over DIM=2 is always = 1 !
     var_averaged(:) = SUM( var_collected(:,:) * fract_st(:,:) , DIM=2)
+    DEALLOCATE(var_collected)
 
   END FUNCTION Average_over_children_real2d
 

@@ -70,8 +70,6 @@ CONTAINS
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
 
-    IF (.NOT. ASSOCIATED(mem%fuel%ptr)) THEN
-
       CALL jsb_add_var( mem, 'fuel', mem%fuel,                                                                      &
         & hgrid, surface,                                                                                           &
         & t_cf('fuel', 'mol(C)/m^2 (potential vegetation)', 'Amount of carbon fuel for burned area calculations.'), &
@@ -79,9 +77,6 @@ CONTAINS
         & prefix, suffix,                                                                                           &
         & output_level=BASIC,                                                                                       &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
-
-    END IF
-
 
   END SUBROUTINE Init_fuel_memory
 
