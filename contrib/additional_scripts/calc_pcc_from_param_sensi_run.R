@@ -28,7 +28,7 @@ molar_mass_P <- 30.997
 weeks        <- 52
 months       <- 12
 outInterval  <- months    # update as needed
-# soil layer depths for 15 soil layers [cm]
+# soil layer depths (i.e. layer thickness) for 15 soil layers [m]
 slDepths     <- c(0.065,0.065,0.065,0.069900094,0.09755344,0.136146793,0.190008156,0.265177744,0.370085354,0.516495718,0.720827842, 1.005996292,1.403980925,1.959413224,2.569414418)
 ###################################################################################################
 
