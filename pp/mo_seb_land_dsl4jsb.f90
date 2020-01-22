@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from JSBACH source file:
 !    src/srf_energy_bal/mo_seb_land.f90
-! with md5 hash: a50f9875afb8b5a0aee2e2aa6dfb2e08
+! with md5 hash: 2d24fc9629c8d81d9113a061a9b25fee
 !
 !>
 !! @brief Contains the routines for the surface energy balance on LAND lct_type.
@@ -247,7 +247,7 @@ CONTAINS
     
     ! Sum up of the previous day temperatures
     !$claw sca forward update savepoint=ser_jsb_seb_land_calc_previous_day_variables_1 tile_name=tile%name
-    CALL calc_previous_day_variables(is_newday(options%datetime, options%dtime),               & ! Input
+    CALL calc_previous_day_variables(is_newday(options%current_datetime, options%dtime),    & ! Input
                                      t_air_in_Celcius(:),       & ! Input
                                      !dtime,                     & ! Input
                                      timesteps_per_day(options%dtime), & ! Input
@@ -284,7 +284,7 @@ CONTAINS
     forc_hflx(:) = grnd_hflx(:)
     !$claw end expand
 
-    IF (is_time_experiment_start(options%datetime)) THEN            ! Start of experiment
+    IF (is_time_experiment_start(options%current_datetime)) THEN            ! Start of experiment
       lstart = .TRUE.
     ELSE
       lstart = .FALSE.

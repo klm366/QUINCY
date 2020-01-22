@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from JSBACH source file:
 !    src/carbon/mo_carbon_interface.f90
-! with md5 hash: 3ccabbec5737246243750c64851112ed
+! with md5 hash: 2f7b3054149f60a3c1f105713209389d
 !
 !>
 !! @brief Contains the interfaces to the carbon process
@@ -383,9 +383,9 @@ CONTAINS
     ! Go
 
     ! Put a comment on the screen...
-    IF (debug_on() .AND. iblk==1 .AND. is_newday(options%datetime, dtime)  ) CALL message(TRIM(routine), &
+    IF (debug_on() .AND. iblk==1 .AND. is_newday(options%current_datetime, dtime)  ) CALL message(TRIM(routine), &
                                                            'update_C_NPP_pot_allocation: First time step of new day')
-    IF (debug_on() .AND. iblk==1 .AND. is_newyear(options%datetime, dtime) ) CALL message(TRIM(routine), &
+    IF (debug_on() .AND. iblk==1 .AND. is_newyear(options%current_datetime, dtime) ) CALL message(TRIM(routine), &
                                                            'update_C_NPP_pot_allocation: First time step of new year')
 
     ! Initializations
@@ -432,9 +432,9 @@ CONTAINS
     precip_total  = rain + snow  ! Precipitation rate [kg/(m^2 s)]
     pseudo_precip = precip_total * N_pseudo_precip  +  F_pseudo_precip * pseudo_precip
 
-    lstart = is_time_experiment_start(options%datetime)
+    lstart = is_time_experiment_start(options%current_datetime)
 
-    IF( .NOT. is_newday(options%datetime,dtime) .OR. lstart) THEN ! perform daily sums if WE ARE NOT STARTING A NEW DAY
+    IF( .NOT. is_newday(options%current_datetime,dtime) .OR. lstart) THEN ! perform daily sums if WE ARE NOT STARTING A NEW DAY
                                             ! or if we JUST STARTED AN TOTALLY NEW EXPERIMENT
 
       LAI_sum          = LAI_sum          + LAI

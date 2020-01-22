@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from JSBACH source file:
 !    src/radiation/mo_rad_interface.f90
-! with md5 hash: 0bd2c9f2d57ba7098bb3aee1d21a49e7
+! with md5 hash: afe6431939ad42c8f9e65a86f9d63f12
 !
 !>
 !! @brief Contains the interfaces to the radiation processes
@@ -736,14 +736,14 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     ! Update albedo only at experiment start, if model runs standalone or one time step before the radiation time step
-    IF (.NOT. is_time_experiment_start(options%datetime) .AND. &
-      & .NOT. is_time_ltrig_rad_m1(options%datetime, options%dtime, model%id) .AND. &
+    IF (.NOT. is_time_experiment_start(options%current_datetime) .AND. &
+      & .NOT. is_time_ltrig_rad_m1(options%current_datetime, options%dtime, model%id) .AND. &
       & .NOT. jsbach_runs_standalone()) RETURN
 
     ! Enable for debugging:
     ! IF (iblk == 1 .AND. .NOT. ASSOCIATED(tile%next_sibling_tile)) THEN
-    !   IF (is_time_ltrig_rad_m1(options%datetime, options%dtime, model%id) .OR. &
-    !     & is_time_experiment_start(options%datetime)) THEN
+    !   IF (is_time_ltrig_rad_m1(options%current_datetime, options%dtime, model%id) .OR. &
+    !     & is_time_experiment_start(options%current_datetime)) THEN
     !     CALL message('update_albedo ', 'compute surface albedo')
     !   END IF
     ! END IF
@@ -952,7 +952,7 @@ CONTAINS
       alb_nir_soil => rad__mem%alb_nir_soil%ptr(ics:ice,iblk)          ! inout
 
       IF (use_alb_veg_simple) THEN
-        !$claw expand parallel savepoint=ser_jsb_rad_update_albedo_expand_2 tile_name=tile%name
+        !$claw expand parallel update savepoint=ser_jsb_rad_update_albedo_expand_2 tile_name=tile%name
         alb_vis_lnd(:) = get_surface_albedo_simple( &
           & t_unfilt(:),                            &
           & fract_forest(:),                        &
@@ -1094,8 +1094,8 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     ! Update albedo only at experiment start, if model runs standalone or one time step before the radiation time step
-    IF (.NOT. is_time_experiment_start(options%datetime) .AND. &
-      & .NOT. is_time_ltrig_rad_m1(options%datetime, options%dtime, model%id) .AND. &
+    IF (.NOT. is_time_experiment_start(options%current_datetime) .AND. &
+      & .NOT. is_time_ltrig_rad_m1(options%current_datetime, options%dtime, model%id) .AND. &
       & .NOT. jsbach_runs_standalone()) RETURN
 
     SELECT TYPE (mm => tile%mem(rad_)%p); TYPE IS (t_rad_memory); rad__mem => mm ; END SELECT

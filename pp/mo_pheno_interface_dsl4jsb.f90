@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from JSBACH source file:
 !    src/phenology/mo_pheno_interface.f90
-! with md5 hash: 2c8deabfb365ee96b3b9dcf5340a8671
+! with md5 hash: df947f7cbff275dedf30229ecd90c535
 !
 !>
 !! @brief Contains the interfaces to the phenlogy processes
@@ -375,13 +375,13 @@ CONTAINS
     END IF
 
     ! Initialization of local variables
-    l_newday = is_newday(options%datetime, options%dtime)
+    l_newday = is_newday(options%current_datetime, options%dtime)
     timestep = timestep_in_days(options%dtime)
 
     !$claw expand parallel update
     t_air_in_Celcius(:) = t_air(:) - tmelt  ! convert Kelvin in Celcius
 
-    day_of_year  = INT(get_year_day(options%datetime))
+    day_of_year  = INT(get_year_day(options%current_datetime))
 
     !$claw expand parallel update
     w_soil_filling(:) = w_soil_rel(:)  ! Initialization of w_soil_filling for crops and raingreen
@@ -406,8 +406,8 @@ CONTAINS
     IF (l_newday) THEN
       !$claw expand parallel update savepoint=ser_jsb_pheno_day_npp_sum_expand_0 tile_name=tile%name
       previous_day_NPP_pot_rate_ca(:) = day_NPP_sum(:)/86400._wp
+      !$claw expand parallel update savepoint=ser_jsb_pheno_day_npp_sum_expand_1 tile_name=tile%name
       day_NPP_sum(:) = 0._wp
-      !$claw end expand
     END IF
 
     ! JN 10.01.18
@@ -416,7 +416,7 @@ CONTAINS
       ! to keep the overall structure of pheno we mimic this dependency by deriving the maxLAI
       ! from the available biomass via allometric relationships
       ! The maxLai gets updated at the beginning of each year with the biomass at the maximum green pool
-      IF(is_newyear(options%datetime, options%dtime)) THEN
+      IF(is_newyear(options%current_datetime, options%dtime)) THEN
         !$claw expand parallel update savepoint=ser_jsb_PHENO_update_phenology_logrop_expand_1 tile_name=tile%name
         veg_fract_correction_old(:) = veg_fract_correction(:)
 
@@ -449,7 +449,7 @@ CONTAINS
       END IF
 
       ! carbon dynamics are only calculated on a day by day basis, thus update only required once a day
-      IF(is_newday(options%datetime, options%dtime)) THEN
+      IF(is_newday(options%current_datetime, options%dtime)) THEN
         !$claw sca forward update savepoint=ser_jsb_PHENO_track_max_green_pool_1 tile_name=tile%name
         CALL track_max_green_pool(      &
           & c_green(:),                 & ! in
@@ -668,6 +668,7 @@ CONTAINS
     lai_mon(1:,0:) => pheno__mem%lai_mon (ics:ice, iblk, :) ! in
 
     CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
+    !$claw expand parallel update savepoint=ser_jsb_pheno_update_phenology_climatology_expand_1 tile_name=tile%name
     lai(:) = REAL(wgt1,wp) * lai_mon(:,nmw1) + REAL(wgt2,wp) * lai_mon(:,nmw2)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -715,7 +716,7 @@ CONTAINS
     CALL weighted_by_fract%Aggregate(tile, pheno__mem%lai,ics,ice,iblk,routine)
 
     IF (pheno__conf%l_forestRegrowth) THEN
-      IF (is_newyear(options%datetime, options%dtime)) THEN
+      IF (is_newyear(options%current_datetime, options%dtime)) THEN
         CALL weighted_by_fract%Aggregate(tile, pheno__mem%maxlai_allom,ics,ice,iblk,routine)
         CALL weighted_by_fract%Aggregate(tile, pheno__mem%cconservation_allom,ics,ice,iblk,routine)
 
