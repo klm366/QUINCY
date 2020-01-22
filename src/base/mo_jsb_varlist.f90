@@ -188,7 +188,6 @@ CONTAINS
     END IF
     var%is_in_restart = .TRUE.  ! All jsbach var_lists have lrestart=.TRUE. by default
     IF (PRESENT(lrestart)) var%is_in_restart = lrestart
-    print*,'AAA ',TRIM(var%full_name), var%is_in_restart
     ! var%is_in_restart = var%is_in_restart .OR. .TRUE.  ! TODO
 
     var%owner_proc_id = mem%owner_proc_id
@@ -333,7 +332,6 @@ CONTAINS
     END IF
     var%is_in_restart = .TRUE.  ! All jsbach var_lists have lrestart=.TRUE. by default
     IF (PRESENT(lrestart)) var%is_in_restart = lrestart
-    print*,'AAA ',TRIM(var%full_name), var%is_in_restart
     ! var%is_in_restart = var%is_in_restart .OR. .TRUE.  ! TODO
 
     var%owner_proc_id = mem%owner_proc_id
