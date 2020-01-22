@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from JSBACH source file:
 !    src/shared/mo_phy_schemes.f90
-! with md5 hash: ab6e4dd63ad71b1823d437783532d99f
+! with md5 hash: e62c139654399c79f14a669cfe9d27f2
 !
 !>
 !! @brief Contains some functions for physcial schemes
@@ -100,7 +100,7 @@ CONTAINS
 
     REAL(wp), INTENT(in) :: t_srf
 
-    thermal_radiation = stbo * zemiss_def * t_srf**4
+    thermal_radiation = stbo * zemiss_def * t_srf**4._wp
 
   END FUNCTION thermal_radiation
 
@@ -115,7 +115,7 @@ CONTAINS
 
     !$claw sca routine
 
-    lwnet_from_lwdown = zemiss_def * (lwdown - stbo * t_srf**4)
+    lwnet_from_lwdown = zemiss_def * (lwdown - stbo * t_srf**4._wp)
 
   END FUNCTION lwnet_from_lwdown
 

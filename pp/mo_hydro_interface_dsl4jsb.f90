@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from JSBACH source file:
 !    src/hydrology/mo_hydro_interface.f90
-! with md5 hash: a3d2d8d9673e642f9236dc6683bdc648
+! with md5 hash: 7fc607b51639aebda3a2e0a82a6b6211
 !
 !>
 !! @brief Contains the interfaces to the hydro processes
@@ -535,7 +535,7 @@ CONTAINS
       END IF
     END IF
 
-    IF (is_time_experiment_start(options%datetime)) THEN          ! Start of experiment
+    IF (is_time_experiment_start(options%current_datetime)) THEN          ! Start of experiment
       lstart = .TRUE.
       w_snow(:) = 0._wp
     ELSE
@@ -2035,7 +2035,7 @@ CONTAINS
       water_content_new(:) = 0._wp
     END IF
 
-    IF (.NOT. is_time_experiment_start(options%datetime)) THEN
+    IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_3 tile_name=tile%name
       water_budget(:) = water_content(:) + water_flux(:) * dtime - water_content_new(:)
     END IF

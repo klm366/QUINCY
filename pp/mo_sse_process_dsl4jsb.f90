@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from JSBACH source file:
 !    src/soil_snow_energy/mo_sse_process.f90
-! with md5 hash: 5b8a27deda8bf1cc2216f7a9bbbc8441
+! with md5 hash: 42fc9a68df66b41395628e8bcd956c41
 !
 !>
 !! @brief Contains the routines for the soil and snow energy processes
@@ -519,7 +519,7 @@ CONTAINS
       !$claw acc parallel
       !$claw acc loop gang vector
       DO jl=1,nidx
-        ! !$claw acc loop seq
+        !$claw acc loop seq
         DO jk = 1, nsoil-1
           t_soil(jl,jk+1) = t_soil_acoef(jl,jk) + t_soil_bcoef(jl,jk) * t_soil(jl,jk)
         END DO
