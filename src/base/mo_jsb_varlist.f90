@@ -186,4 +186,3 @@ CONTAINS
   END FUNCTION
 
 #endif
-END MODULE mo_jsb_varlist
