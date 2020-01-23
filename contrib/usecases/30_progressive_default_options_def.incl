@@ -18,8 +18,8 @@
 # default QUINCY usecase: 30_progressive_default_options_def.incl
 # 
 # enable all modern features of QUINCY which 
-#  are tested and stable 
-#  considered improvements of the default model
+#  are tested and stable
+#  and are considered improvements of the default model, i.e., the default settings for the options in the prep_run_slm.sh
 # 
 # the options included here are only the ones that are modified compared to the current default prep_run_slm.sh 
 # 
@@ -27,10 +27,6 @@
 
 sb_model_scheme="simple_1d"     # simple_0d simple_1d jsm 
 flag_sb_prescribe_po4="F"       # set po4solute to a constant value
-
-bnf_scheme="optimal"           # none fixed standard optimal resistance unlimited
-
-flag_optimal_Nfraction="T"      # optimal N fraction
 
 biomass_alloc_scheme="dynamic"    # fixed dynamic optimal
 leaf_stoichom_scheme="dynamic"    # fixed dynamic optimal
