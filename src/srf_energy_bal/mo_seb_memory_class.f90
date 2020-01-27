@@ -151,72 +151,72 @@ CONTAINS
 
     !$acc enter data pcreate(mem%t,mem%t_old,mem%t_unfilt,mem%heat_cap,     &
     !$acc mem%heat_cap_old,mem%latent_hflx,mem%sensible_hflx,mem%forc_hflx)
-      CALL mem%Add_var( 't', mem%t,                                               &
-        & hgrid, surface,                                                              &
-        & t_cf('sfc_temp', 'K', 'surface temperature'),                                &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & output_level=BASIC, &
-        & initval_r=280.0_wp )
+    CALL mem%Add_var( 't', mem%t,                                               &
+      & hgrid, surface,                                                              &
+      & t_cf('sfc_temp', 'K', 'surface temperature'),                                &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & output_level=BASIC, &
+      & initval_r=280.0_wp )
 
-      CALL mem%Add_var( 't_old', mem%t_old,                                       &
-        & hgrid, surface,                                                              &
-        & t_cf('sfc_temp_old', 'K', 'surface temperature at previous timestep'),       &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & lrestart=.FALSE.,                                                            &
-        & initval_r=280.0_wp )
+    CALL mem%Add_var( 't_old', mem%t_old,                                       &
+      & hgrid, surface,                                                              &
+      & t_cf('sfc_temp_old', 'K', 'surface temperature at previous timestep'),       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE.,                                                            &
+      & initval_r=280.0_wp )
 
-      CALL mem%Add_var( 't_unfilt', mem%t_unfilt,                                 &
-        & hgrid, surface,                                                              &
-        & t_cf('sfc_temp_unfilt', 'K', 'unfiltered surface temperature'),              &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & initval_r=280.0_wp )
+    CALL mem%Add_var( 't_unfilt', mem%t_unfilt,                                 &
+      & hgrid, surface,                                                              &
+      & t_cf('sfc_temp_unfilt', 'K', 'unfiltered surface temperature'),              &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & initval_r=280.0_wp )
 
-      CALL mem%Add_var( 'heat_cap', mem%heat_cap,                                 &
-        & hgrid, surface,                                                              &
-        & t_cf('sfc_heat_cap', 'J m-2 K-1)', 'surface layer heat capacity'),           &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & output_level=BASIC, &
-        & initval_r=0.0_wp )
+    CALL mem%Add_var( 'heat_cap', mem%heat_cap,                                 &
+      & hgrid, surface,                                                              &
+      & t_cf('sfc_heat_cap', 'J m-2 K-1)', 'surface layer heat capacity'),           &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & output_level=BASIC, &
+      & initval_r=0.0_wp )
 
-      CALL mem%Add_var( 'heat_cap_old', mem%heat_cap_old,                         &
-        & hgrid, surface,                                                              &
-        & t_cf('sfc_heat_cap_old', 'J m-2 K-1)', 'srf layer heat cap. prev timestep'), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & lrestart=.FALSE.,                                                            &
-        & output_level=BASIC, &
-        & initval_r=0.0_wp )
+    CALL mem%Add_var( 'heat_cap_old', mem%heat_cap_old,                         &
+      & hgrid, surface,                                                              &
+      & t_cf('sfc_heat_cap_old', 'J m-2 K-1)', 'srf layer heat cap. prev timestep'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE.,                                                            &
+      & output_level=BASIC, &
+      & initval_r=0.0_wp )
 
-      CALL mem%Add_var( 'latent_hflx', mem%latent_hflx,                           &
-        & hgrid, surface,                                                              &
-        & t_cf('latent_hflx', 'W m-2', 'latent heat flux density at surface'),         &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & lrestart=.FALSE.,                                                            &
-        & output_level=BASIC, &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+    CALL mem%Add_var( 'latent_hflx', mem%latent_hflx,                           &
+      & hgrid, surface,                                                              &
+      & t_cf('latent_hflx', 'W m-2', 'latent heat flux density at surface'),         &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE.,                                                            &
+      & output_level=BASIC, &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      CALL mem%Add_var( 'sensible_hflx', mem%sensible_hflx,                       &
-        & hgrid, surface,                                                              &
-        & t_cf('sensible_hflx', 'W m-2', 'sensible heat flux at surface'),             &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & lrestart=.FALSE.,                                                            &
-        & output_level=BASIC, &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+    CALL mem%Add_var( 'sensible_hflx', mem%sensible_hflx,                       &
+      & hgrid, surface,                                                              &
+      & t_cf('sensible_hflx', 'W m-2', 'sensible heat flux at surface'),             &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE.,                                                            &
+      & output_level=BASIC, &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      CALL mem%Add_var( 'forc_hflx', mem%forc_hflx,                               &
-        & hgrid, surface,                                                              &
-        & t_cf('forc_hflx', 'W m-2)', 'additional heat flux at surface'),              &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & lrestart=.FALSE.,                                                            &
-        & output_level=BASIC, &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+    CALL mem%Add_var( 'forc_hflx', mem%forc_hflx,                               &
+      & hgrid, surface,                                                              &
+      & t_cf('forc_hflx', 'W m-2)', 'additional heat flux at surface'),              &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE.,                                                            &
+      & output_level=BASIC, &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     ! Additional variables for LAND lct
     IF (One_of(LAND_TYPE, lct_ids(:)) > 0 ) THEN

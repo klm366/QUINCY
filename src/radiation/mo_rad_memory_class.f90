@@ -170,93 +170,93 @@ CONTAINS
     !$acc mem%alb_background, mem%alb_vis,mem%alb_nir,mem%alb_vis_snow,    &
     !$acc mem%alb_nir_snow)
 
-      CALL mem%Add_var( 'sw_srf_net', mem%sw_srf_net,                   &
-        & hgrid, surface,                                                    &
-        & t_cf('sw_srf_net', '', 'Net surface shortwave radiation'),         &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & lrestart=.FALSE.,                                                  &
-        & output_level=BASIC,                                                &
-        & initval_r=0.0_wp )
+    CALL mem%Add_var( 'sw_srf_net', mem%sw_srf_net,                   &
+      & hgrid, surface,                                                    &
+      & t_cf('sw_srf_net', '', 'Net surface shortwave radiation'),         &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix,                                                    &
+      & lrestart=.FALSE.,                                                  &
+      & output_level=BASIC,                                                &
+      & initval_r=0.0_wp )
 
-      CALL mem%Add_var( 'swvis_srf_net', mem%swvis_srf_net,               &
-        & hgrid, surface,                                                      &
-        & t_cf('swvis_srf_net', '', 'Net surface shortwave radiation in VIS'), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
-        & lrestart=.FALSE.,                                                    &
-        & output_level=MEDIUM,                                                 &
-        & initval_r=0.0_wp )
+    CALL mem%Add_var( 'swvis_srf_net', mem%swvis_srf_net,               &
+      & hgrid, surface,                                                      &
+      & t_cf('swvis_srf_net', '', 'Net surface shortwave radiation in VIS'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
+      & output_level=MEDIUM,                                                 &
+      & initval_r=0.0_wp )
 
-      CALL mem%Add_var( 'swnir_srf_net', mem%swnir_srf_net,               &
-        & hgrid, surface,                                                      &
-        & t_cf('swnir_srf_net', '', 'Net surface shortwave radiation in NIR'), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
-        & lrestart=.FALSE.,                                                    &
-        & output_level=MEDIUM,                                                 &
-        & initval_r=0.0_wp )
+    CALL mem%Add_var( 'swnir_srf_net', mem%swnir_srf_net,               &
+      & hgrid, surface,                                                      &
+      & t_cf('swnir_srf_net', '', 'Net surface shortwave radiation in NIR'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
+      & output_level=MEDIUM,                                                 &
+      & initval_r=0.0_wp )
 
-      CALL mem%Add_var( 'lw_srf_net', mem%lw_srf_net,                   &
-        & hgrid, surface,                                                    &
-        & t_cf('lw_srf_net', '', 'Net surface longwave radiation'),          &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & lrestart=.FALSE.,                                                  &
-        & output_level=BASIC,                                                &
-        & initval_r=0.0_wp )
+    CALL mem%Add_var( 'lw_srf_net', mem%lw_srf_net,                   &
+      & hgrid, surface,                                                    &
+      & t_cf('lw_srf_net', '', 'Net surface longwave radiation'),          &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix,                                                    &
+      & lrestart=.FALSE.,                                                  &
+      & output_level=BASIC,                                                &
+      & initval_r=0.0_wp )
 
-      CALL mem%Add_var( 'rad_srf_net', mem%rad_srf_net,                 &
-        & hgrid, surface,                                                    &
-        & t_cf('rad_srf_net', '', 'Net surface radiation'),                  &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & lrestart=.FALSE.,                                                  &
-        & output_level=BASIC,                                                &
-        & initval_r=0.0_wp )
+    CALL mem%Add_var( 'rad_srf_net', mem%rad_srf_net,                 &
+      & hgrid, surface,                                                    &
+      & t_cf('rad_srf_net', '', 'Net surface radiation'),                  &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix,                                                    &
+      & lrestart=.FALSE.,                                                  &
+      & output_level=BASIC,                                                &
+      & initval_r=0.0_wp )
 
-      CALL mem%Add_var( 'alb_background', mem%alb_background,           &
-        & hgrid, surface,                                                    &
-        & t_cf('surface_albedo_background', '', ''),                         &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & lrestart=.FALSE.,                                                  &
-        & output_level=MEDIUM,                                               &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+    CALL mem%Add_var( 'alb_background', mem%alb_background,           &
+      & hgrid, surface,                                                    &
+      & t_cf('surface_albedo_background', '', ''),                         &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix,                                                    &
+      & lrestart=.FALSE.,                                                  &
+      & output_level=MEDIUM,                                               &
+      & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-      CALL mem%Add_var( 'alb_vis', mem%alb_vis,                         &
-        & hgrid, surface,                                                    &
-        & t_cf('gridcell_surface_albedo_visible', '', ''),                   &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & lrestart=.TRUE.,                                                   &
-        & output_level=BASIC,                                                &
-        & initval_r=0.0_wp )
+    CALL mem%Add_var( 'alb_vis', mem%alb_vis,                         &
+      & hgrid, surface,                                                    &
+      & t_cf('gridcell_surface_albedo_visible', '', ''),                   &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix,                                                    &
+      & lrestart=.TRUE.,                                                   &
+      & output_level=BASIC,                                                &
+      & initval_r=0.0_wp )
 
-      CALL mem%Add_var( 'alb_nir', mem%alb_nir,                         &
-        & hgrid, surface,                                                    &
-        & t_cf('gridcell_surface_albedo_nir', '', ''),                       &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & lrestart=.TRUE.,                                                   &
-        & output_level=BASIC,                                                &
-        & initval_r=0.0_wp )
+    CALL mem%Add_var( 'alb_nir', mem%alb_nir,                         &
+      & hgrid, surface,                                                    &
+      & t_cf('gridcell_surface_albedo_nir', '', ''),                       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix,                                                    &
+      & lrestart=.TRUE.,                                                   &
+      & output_level=BASIC,                                                &
+      & initval_r=0.0_wp )
 
-      CALL mem%Add_var( 'alb_vis_snow', mem%alb_vis_snow,               &
-        & hgrid, surface,                                                    &
-        & t_cf('albedo_vis_snow', '', ''),                                   &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & output_level=MEDIUM,                                               &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+    CALL mem%Add_var( 'alb_vis_snow', mem%alb_vis_snow,               &
+      & hgrid, surface,                                                    &
+      & t_cf('albedo_vis_snow', '', ''),                                   &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix,                                                    &
+      & output_level=MEDIUM,                                               &
+      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
-      CALL mem%Add_var( 'alb_nir_snow', mem%alb_nir_snow,               &
-        & hgrid, surface,                                                    &
-        & t_cf('albedo_nir_snow', '', ''),                                   &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & output_level=MEDIUM,                                               &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+    CALL mem%Add_var( 'alb_nir_snow', mem%alb_nir_snow,               &
+      & hgrid, surface,                                                    &
+      & t_cf('albedo_nir_snow', '', ''),                                   &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix,                                                    &
+      & output_level=MEDIUM,                                               &
+      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
     !$acc update device(mem%sw_srf_net,mem%swvis_srf_net,                  &
     !$acc mem%swnir_srf_net,mem%lw_srf_net,mem%rad_srf_net,                &
