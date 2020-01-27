@@ -100,9 +100,11 @@ CONTAINS
 
     INTEGER  :: iblk, ics, ice, nc
     REAL(wp) :: dtime
-    REAL(wp) ::   &
-      & ml_depth, &      !< Depth of lake mixed layer
-      & min_ice_depth    !< Minimum ice thickness to start ice formation
+    REAL(wp) ::         &
+      & ml_depth,       & !< Depth of lake mixed layer
+      & min_ice_depth,  & !< Minimum ice thickness to start ice formation
+      & min_fract_lice, &
+      & min_hcap_wtr
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -210,8 +212,15 @@ CONTAINS
       & ml_depth,                                       & !< in;    Mixed-layer depth
       & min_ice_depth)                                    !< in;    Minimum ice thickness
 
-    !$claw acc update host(fract_lice(:),hcap_wtr(:))
-    IF (ANY(fract_lice(:) <= 0.5_wp .AND. hcap_wtr(:) < EPSILON(1._wp))) THEN
+    !$claw acc kernels
+    min_fract_lice = MINVAL(fract_lice)
+    !$claw acc end kernels
+
+    !$claw acc kernels
+    min_hcap_wtr   = MINVAL(hcap_wtr)
+    !$claw acc end kernels
+
+    IF (min_fract_lice <= 0.5_wp .AND. min_hcap_wtr < EPSILON(1._wp)) THEN
       CALL finish(TRIM(routine),'hcap_wtr can"t be zero')
     END IF
 
