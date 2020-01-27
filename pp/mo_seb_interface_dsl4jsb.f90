@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from JSBACH source file:
 !    src/srf_energy_bal/mo_seb_interface.f90
-! with md5 hash: 7ce309b739b9e62ae16ac44e8b64746b
+! with md5 hash: 66b99daaac76c18890c8fd56dabb2df1
 !
 !>
 !! @brief Contains the interfaces for the surface energy balance process.
@@ -355,7 +355,7 @@ CONTAINS
       w_soil_freeze_sl => hydro__mem%w_soil_freeze_sl%ptr(ics:ice,:,iblk) ! in
       w_ice_melt_sl => hydro__mem%w_ice_melt_sl%ptr(ics:ice,:,iblk)    ! in
 
-      IF (.NOT. is_time_experiment_start(options%datetime)) THEN
+      IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
         !$claw acc data create(heat_cap)
 
         ! Correction for snowmelt

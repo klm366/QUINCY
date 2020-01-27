@@ -88,10 +88,10 @@ CONTAINS
   INTEGER :: ice
   CHARACTER ( LEN= * ) , PARAMETER :: routine ="mo_turb_interface" //&
   ":update_roughness"
+  INTEGER :: claw_induction_5
   INTEGER :: claw_induction_6
-  INTEGER :: claw_induction_7
-  INTEGER :: claw_induction_8
-  INTEGER :: claw_induction_9
+  INTEGER :: claw_induction_10
+  INTEGER :: claw_induction_11
 
   iblk = options % iblk
   ics = options % ics
@@ -123,11 +123,11 @@ CONTAINS
 !$acc data present(rough_m(:),fract_snow_soil(:),rough_h(:))
 !$acc parallel
 !$acc loop gang vector
-   DO claw_induction_6 = 1 , size ( rough_h , 1 )
-    rough_h ( claw_induction_6 ) = fract_snow_soil ( claw_induction_6 ) / log&
-     ( blending_height / roughness_snow ) ** ( 2 ) + ( 1._wp - fract_snow_soil&
-     ( claw_induction_6 ) ) / log ( blending_height / min ( 1._wp , rough_m (&
-     claw_induction_6 ) ) ) ** ( 2 )
+   DO claw_induction_10 = 1 , size ( rough_h , 1 )
+    rough_h ( claw_induction_10 ) = fract_snow_soil ( claw_induction_10 ) /&
+     log ( blending_height / roughness_snow ) ** ( 2 ) + ( 1._wp -&
+     fract_snow_soil ( claw_induction_10 ) ) / log ( blending_height / min (&
+     1._wp , rough_m ( claw_induction_10 ) ) ) ** ( 2 )
    END DO
 !$acc end parallel
 !$acc end data
@@ -139,11 +139,11 @@ CONTAINS
 !$acc data present(rough_m(:),rough_h(:),fract_snow_lice(:))
 !$acc parallel
 !$acc loop gang vector
-     DO claw_induction_9 = 1 , size ( rough_h , 1 )
-      rough_h ( claw_induction_9 ) = fract_snow_lice ( claw_induction_9 ) /&
+     DO claw_induction_6 = 1 , size ( rough_h , 1 )
+      rough_h ( claw_induction_6 ) = fract_snow_lice ( claw_induction_6 ) /&
        log ( blending_height / roughness_snow ) ** ( 2 ) + ( 1._wp -&
-       fract_snow_lice ( claw_induction_9 ) ) / log ( blending_height / min (&
-       1._wp , rough_m ( claw_induction_9 ) ) ) ** ( 2 )
+       fract_snow_lice ( claw_induction_6 ) ) / log ( blending_height / min (&
+       1._wp , rough_m ( claw_induction_6 ) ) ) ** ( 2 )
      END DO
 !$acc end parallel
 !$acc end data
@@ -151,9 +151,9 @@ CONTAINS
 !$acc data present(rough_m(:),rough_h(:))
 !$acc parallel
 !$acc loop gang vector
-     DO claw_induction_8 = 1 , size ( rough_h , 1 )
-      rough_h ( claw_induction_8 ) = log ( blending_height / min ( 1._wp ,&
-       rough_m ( claw_induction_8 ) ) ) ** ( 2 )
+     DO claw_induction_5 = 1 , size ( rough_h , 1 )
+      rough_h ( claw_induction_5 ) = log ( blending_height / min ( 1._wp ,&
+       rough_m ( claw_induction_5 ) ) ) ** ( 2 )
      END DO
 !$acc end parallel
 !$acc end data
@@ -166,9 +166,9 @@ CONTAINS
 !$acc data present(rough_h(:))
 !$acc parallel
 !$acc loop gang vector
-  DO claw_induction_7 = 1 , size ( rough_h , 1 )
-   rough_h ( claw_induction_7 ) = min ( 1._wp , blending_height * exp ( ( -&
-    1._wp / sqrt ( rough_h ( claw_induction_7 ) ) ) ) )
+  DO claw_induction_11 = 1 , size ( rough_h , 1 )
+   rough_h ( claw_induction_11 ) = min ( 1._wp , blending_height * exp ( ( -&
+    1._wp / sqrt ( rough_h ( claw_induction_11 ) ) ) ) )
   END DO
 !$acc end parallel
 !$acc end data
@@ -259,9 +259,9 @@ CONTAINS
   INTEGER :: claw_induction_2
   INTEGER :: claw_induction_3
   INTEGER :: claw_induction_4
-  INTEGER :: claw_induction_5
-  INTEGER :: claw_induction_10
-  INTEGER :: claw_induction_11
+  INTEGER :: claw_induction_7
+  INTEGER :: claw_induction_8
+  INTEGER :: claw_induction_9
 
   iblk = options % iblk
   ics = options % ics
@@ -339,9 +339,9 @@ CONTAINS
 !$acc data present(w_soil_sl(:,1),mask(:),w_soil_pwp_sl(:,1))
 !$acc parallel
 !$acc loop gang vector
-    DO claw_induction_11 = 1 , size ( mask , 1 )
-     mask ( claw_induction_11 ) = w_soil_sl ( claw_induction_11 , 1 ) >&
-      w_soil_pwp_sl ( claw_induction_11 , 1 )
+    DO claw_induction_8 = 1 , size ( mask , 1 )
+     mask ( claw_induction_8 ) = w_soil_sl ( claw_induction_8 , 1 ) >&
+      w_soil_pwp_sl ( claw_induction_8 , 1 )
     END DO
 !$acc end parallel
 !$acc end data
@@ -350,9 +350,9 @@ CONTAINS
 !$acc data present(w_soil_column(:),mask(:),max_moist(:))
 !$acc parallel
 !$acc loop gang vector
-    DO claw_induction_10 = 1 , size ( mask , 1 )
-     mask ( claw_induction_10 ) = w_soil_column ( claw_induction_10 ) >&
-      w_soil_wilt_fract_tmp * max_moist ( claw_induction_10 )
+    DO claw_induction_7 = 1 , size ( mask , 1 )
+     mask ( claw_induction_7 ) = w_soil_column ( claw_induction_7 ) >&
+      w_soil_wilt_fract_tmp * max_moist ( claw_induction_7 )
     END DO
 !$acc end parallel
 !$acc end data
@@ -405,9 +405,9 @@ CONTAINS
 !$acc data present(rel_hum(:),w_soil_sl(:,1),w_soil_fc_sl(:,1))
 !$acc parallel
 !$acc loop gang vector
-   DO claw_induction_5 = 1 , size ( rel_hum , 1 )
-    rel_hum ( claw_induction_5 ) = relative_humidity_soil ( w_soil_sl (&
-     claw_induction_5 , 1 ) , w_soil_fc_sl ( claw_induction_5 , 1 ) )
+   DO claw_induction_9 = 1 , size ( rel_hum , 1 )
+    rel_hum ( claw_induction_9 ) = relative_humidity_soil ( w_soil_sl (&
+     claw_induction_9 , 1 ) , w_soil_fc_sl ( claw_induction_9 , 1 ) )
    END DO
 !$acc end parallel
 !$acc end data

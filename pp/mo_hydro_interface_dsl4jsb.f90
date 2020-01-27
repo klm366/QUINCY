@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from JSBACH source file:
 !    src/hydrology/mo_hydro_interface.f90
-! with md5 hash: a3d2d8d9673e642f9236dc6683bdc648
+! with md5 hash: d2e3881936f9ace7fabe428acb770c75
 !
 !>
 !! @brief Contains the interfaces to the hydro processes
@@ -535,7 +535,7 @@ CONTAINS
       END IF
     END IF
 
-    IF (is_time_experiment_start(options%datetime)) THEN          ! Start of experiment
+    IF (is_time_experiment_start(options%current_datetime)) THEN          ! Start of experiment
       lstart = .TRUE.
       w_snow(:) = 0._wp
     ELSE
@@ -1233,15 +1233,9 @@ CONTAINS
     config_w_soil_crit_fract = hydro__conf%w_soil_crit_fract
     config_w_soil_wilt_fract = hydro__conf%w_soil_wilt_fract
 
-    !TODO CLAW: This part is computed on CPU because temp arrays are issued by compiler. 
-    !$claw acc data present(w_soil_root, w_soil_sl, soil_depth_sl, root_depth_sl, &
-    !$claw acc w_soil_root_fc, w_soil_fc_sl, w_soil_root_pwp, w_soil_pwp_sl, w_soil_pwp_sl)
-    !$claw acc update host(w_soil_sl, soil_depth_sl, root_depth_sl, w_soil_fc_sl, w_soil_pwp_sl)
-    w_soil_root   (:)  = get_water_in_root_zone(w_soil_sl     (:,:), soil_depth_sl(:,:), root_depth_sl(:,:))
-    w_soil_root_fc(:)  = get_water_in_root_zone(w_soil_fc_sl  (:,:), soil_depth_sl(:,:), root_depth_sl(:,:))
-    w_soil_root_pwp(:) = get_water_in_root_zone(w_soil_pwp_sl (:,:), soil_depth_sl(:,:), root_depth_sl(:,:))
-    !$claw acc update device(w_soil_root,w_soil_root_fc,w_soil_root_pwp) ! COMPUTED ON CPU
-    !$claw acc end data
+    CALL get_water_in_root_zone(w_soil_sl     (:,:), soil_depth_sl(:,:), root_depth_sl(:,:), w_soil_root   (:) )
+    CALL get_water_in_root_zone(w_soil_fc_sl  (:,:), soil_depth_sl(:,:), root_depth_sl(:,:), w_soil_root_fc(:) )
+    CALL get_water_in_root_zone(w_soil_pwp_sl (:,:), soil_depth_sl(:,:), root_depth_sl(:,:), w_soil_root_pwp(:))
 
     ! Calculate water stress factor
     ! @todo: maybe use the distributed permanent wilting point/field cap from above and change get_water_stress_factor function
@@ -2035,7 +2029,7 @@ CONTAINS
       water_content_new(:) = 0._wp
     END IF
 
-    IF (.NOT. is_time_experiment_start(options%datetime)) THEN
+    IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_3 tile_name=tile%name
       water_budget(:) = water_content(:) + water_flux(:) * dtime - water_content_new(:)
     END IF

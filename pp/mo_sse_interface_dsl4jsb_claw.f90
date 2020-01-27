@@ -228,7 +228,7 @@ CONTAINS
   heat_cond => sse__mem % heat_cond % ptr ( ics : ice , iblk )
   vol_heat_cap => sse__mem % vol_heat_cap % ptr ( ics : ice , iblk )
   t_unfilt => seb__mem % t_unfilt % ptr ( ics : ice , iblk )
-  lstart = is_time_experiment_start ( options % datetime )
+  lstart = is_time_experiment_start ( options % current_datetime )
 !$acc enter data &
 !$acc create(snow_depth,snow_fract,t_unfilt_corrected,t_soil_top &
 !$acc ,hcap_grnd_snow,hcap_grnd_soil,grnd_hflx_snow,grnd_hflx_soil,ldglac &
@@ -339,7 +339,7 @@ CONTAINS
 !$acc parallel
 !$acc loop seq
    DO isnow = nsnow , 1 , (-1)
-!$acc loop vector
+!$acc loop gang vector
     DO i = 1 , size ( snow_depth , dim = 1 ) , 1
      IF ( snow_depth ( i ) > 0._wp ) THEN
       snow_depth_sl ( i , isnow ) = min ( snow_depth ( i ) , snow_e % dz (&
