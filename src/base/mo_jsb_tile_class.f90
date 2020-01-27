@@ -27,7 +27,7 @@ MODULE mo_jsb_tile_class
   USE mo_jsb_var_class,       ONLY: t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d
 
 #ifdef _OPENACC
-  use openacc
+  USE openacc
 #define __acc_attach(ptr) CALL acc_attach(ptr)  
 #else
 #define __acc_attach(ptr)
