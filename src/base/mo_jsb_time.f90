@@ -17,7 +17,8 @@ MODULE mo_jsb_time
 
   USE mo_kind,           ONLY: wp
   USE mo_exception,      ONLY: message, message_text, finish
-  USE mo_jsb_time_iface, ONLY: t_datetime, get_date_components, get_time_start, &
+  USE mo_jsb_time_iface, ONLY: t_datetime, deallocateDatetime, &
+                               get_date_components, get_time_start, &
                                get_time_dt, is_time_experiment_start, is_time_restart, &
                                get_year_length, get_month_length, get_day_length, get_year_day,   &
                                is_time_ltrig_rad_m1, get_time_interpolation_weights, get_asselin_coef
@@ -155,6 +156,8 @@ CONTAINS
 
     is_newday = current_day /= previous_day
 
+    CALL deallocateDatetime(previous)
+
   END FUNCTION is_newday
 
   LOGICAL FUNCTION is_newyear(current, dt)
@@ -176,6 +179,8 @@ CONTAINS
     previous_year = get_year(previous)
 
     is_newyear = current_year /= previous_year
+
+    CALL deallocateDatetime(previous)
 
   END FUNCTION is_newyear
 
