@@ -28,13 +28,19 @@ MODULE mo_jsb_tile
   USE mo_jsb_process_factory, ONLY: max_no_of_processes
   USE mo_jsb_task_class,      ONLY: t_jsb_process_task !, t_jsb_task_msg
 
+#ifdef _OPENACC
+  use openacc
+#define __acc_attach(ptr) CALL acc_attach(ptr)  
+#else
+#define __acc_attach(ptr)
+#endif
+
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: t_jsb_tile, t_jsb_tile_p
 
   TYPE, EXTENDS(t_jsb_tile_abstract) :: t_jsb_tile
-    ! LOGICAL :: must_create_memory_parents(max_no_of_processes)    !< helper variable
     TYPE(t_jsb_model),         POINTER :: model => NULL()
     LOGICAL :: in_var_groups
   CONTAINS
@@ -164,7 +170,6 @@ CONTAINS
     END IF
 
     ! Loop over all processes and set actions for this tile
-    ! return_ptr%must_create_memory_parents(:) = .FALSE.
     DO i=1,max_no_of_processes
       return_ptr%process_action(i) = SKIP_
       iproc = -1
@@ -227,13 +232,13 @@ CONTAINS
   ! Note: It is important that Init_tile is only called for the tiles after the hierarchical tile tree has
   !       been completely constructed. Therefore, Init_tile is called from init_model_common.
   !
-  SUBROUTINE Init_tile(this, varlist_name, prefix, suffix, l_fixed_fractions, l_rel_fractions, in_var_groups)
+  SUBROUTINE Init_tile(this, varlist_name, prefix, suffix, l_fixed_fractions, in_var_groups)
 
     USE mo_jsb_process_factory, ONLY: Create_process_memory
     USE mo_jsb_process_class,   ONLY: Get_process_name
     USE mo_jsb_memory_class,    ONLY: t_jsb_memory
     USE mo_jsb_tile_class,      ONLY: t_jsb_aggregator, t_jsb_aggregator_weighted_by_fract
-    USE mo_jsb_varlist,         ONLY: jsb_add_var, VARNAME_LEN
+    USE mo_jsb_varlist,         ONLY: jsb_add_var
     USE mo_jsb_io,              ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables, TSTEP_INSTANT, TSTEP_CONSTANT
     USE mo_jsb_grid_class,      ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,            ONLY: Get_grid, Get_vgrid
@@ -243,8 +248,7 @@ CONTAINS
     CHARACTER(len=*),  INTENT(in)    :: varlist_name
     CHARACTER(len=*),  INTENT(in)    :: prefix            ! Prefix for variable names
     CHARACTER(len=*),  INTENT(in)    :: suffix
-    LOGICAL,           INTENT(in)    :: l_fixed_fractions  ! Tile fractions can change or not
-    LOGICAL,           INTENT(in)    :: l_rel_fractions    ! Tile fractions in input file are relative wrt parent
+    LOGICAL,           INTENT(in)    :: l_fixed_fractions ! Tile fractions can change or not
     LOGICAL,           INTENT(in)    :: in_var_groups
 
     INTEGER                               :: iproc
@@ -335,43 +339,6 @@ CONTAINS
 
       END IF
 
-      ! IF (this%must_create_memory_parents(iproc)) THEN
-      !   child_no = this%path(this%level)
-      !   tmp_tile => this%parent_tile
-      !   DO WHILE (ASSOCIATED(tmp_tile))
-      !     no_of_children = tmp_tile%Get_no_of_children()
-      !     IF (.NOT. ASSOCIATED(tmp_tile%mem(iproc)%p)) THEN
-      !       tmp_tile%mem(iproc)%p => Create_process_memory(iproc)
-      !       IF (.NOT. ASSOCIATED(tmp_tile%mem(iproc)%p%children) .AND. no_of_children > 0) &
-      !         & ALLOCATE(tmp_tile%mem(iproc)%p%children(no_of_children))
-      !       tmp_tile%mem(iproc)%p%children(child_no)%p => tmp_ptr
-      !       tmp_ptr => tmp_tile%mem(iproc)%p
-      !       tmp_tile%mem(iproc)%p%id = iproc
-      !       tmp_tile%mem(iproc)%p%varlist_name =  TRIM(varlist_name_loc)
-      !       tmp_tile%mem(iproc)%p%grid_id = this%grid_id
-      !       tmp_tile%mem(iproc)%p%owner_model_id = this%owner_model_id
-      !       ALLOCATE(tmp_tile%mem(iproc)%p%owner_tile_path(SIZE(tmp_tile%path)))
-      !       tmp_tile%mem(iproc)%p%owner_tile_path(:) = tmp_tile%path(:)
-      !       tmp_tile%mem(iproc)%p%owner_tile_name = TRIM(tmp_tile%name)
-      !       tmp_tile%mem(iproc)%p%no_of_children = no_of_children
-      !       IF (debug_on()) &
-      !         & CALL message(TRIM(routine), 'Created memory for process '//TRIM(process_name)//' on tile '//TRIM(tmp_tile%name))
-      !     END IF
-      !     ! Note: Init for mem(iproc) might be called several times for the same tile and must make sure that only
-      !     ! those parts of the memory (for certain lct%id) are created that haven't been initialized before.
-      !     IF (prefix /= '') THEN
-      !       CALL tmp_tile%mem(iproc)%p%Init(TRIM(process_name)//'_'//TRIM(prefix), TRIM(tmp_tile%name), &
-      !         &                             tmp_tile%lcts(:)%id, this%owner_model_id)
-      !     ELSE
-      !       CALL tmp_tile%mem(iproc)%p%Init(TRIM(process_name), '', tmp_tile%lcts(:)%id, this%owner_model_id)
-      !     END IF
-
-      !     child_no = tmp_tile%path(tmp_tile%level)
-      !     tmp_tile => tmp_tile%parent_tile
-      !   END DO
-      !   NULLIFY(tmp_tile)
-      ! END IF
-
     END DO
 
     hgrid   => Get_grid(this%grid_id)
@@ -394,40 +361,47 @@ CONTAINS
     ELSE
       varlist_name_loc = TRIM(varlist_name)
     END IF
+
+    !$acc enter data create(this%fract,this%fract_max,this%fract_old,this%fract_max_old)
+
     CALL jsb_add_var(varlist_name_loc, 'fract', tmp_fract,                                 &
       & hgrid, surface,                                                                                         &
       & t_cf('tile_fraction', '',                                                                          &
-      &      'fraction of grid box covered by tile '//TRIM(this%name)),                      &
+      &      'fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                     &
-      & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
+      & initval_r=0.0_wp, isteptype=isteptype)
+
     CALL this%Set_fract_ptr(tmp_fract)
+    NULLIFY(tmp_fract)
 
     CALL jsb_add_var(varlist_name_loc, 'fract_max', tmp_fract,                         &
       & hgrid, surface,                                                                                         &
       & t_cf('tile_fraction_max', '',                                                                          &
-      &      'max fraction of grid box covered by tile '//TRIM(this%name)),                      &
+      &      'max fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                      &
-      & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
+      & initval_r=0.0_wp, isteptype=isteptype)
     CALL this%Set_fract_max_ptr(tmp_fract)
+    NULLIFY(tmp_fract)
 
     CALL jsb_add_var(varlist_name_loc, 'fract_old', tmp_fract,                                 &
       & hgrid, surface,                                                                                         &
       & t_cf('tile_fraction_old', '',                                                                          &
-      &      'old fraction of grid box covered by tile '//TRIM(this%name)),                      &
+      &      'old fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                      &
-      & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
+      & initval_r=0.0_wp, isteptype=isteptype)
     CALL this%Set_fract_old_ptr(tmp_fract)
+    NULLIFY(tmp_fract)
 
     CALL jsb_add_var(varlist_name_loc, 'fract_max_old', tmp_fract,                         &
       & hgrid, surface,                                                                                         &
       & t_cf('tile_fraction_max_old', '',                                                                          &
-      &      'old max fraction of grid box covered by tile '//TRIM(this%name)),                      &
+      &      'old max fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                      &
-      & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
+      & initval_r=0.0_wp, isteptype=isteptype)
     CALL this%Set_fract_max_old_ptr(tmp_fract)
     NULLIFY(tmp_fract)
 
@@ -437,9 +411,8 @@ CONTAINS
     ! Initialize fraction(s) of this tile from input file
     ALLOCATE(tmp_fract(hgrid%nproma, hgrid%nblks))
     IF (TRIM(this%fract_varname) == 'equal') THEN
-      IF (ASSOCIATED(this%parent_tile)) THEN
-        CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
-        tmp_fract(:,:) = tmp_fract(:,:) / REAL(this%parent_tile%Get_no_of_children(), wp)
+      IF (ASSOCIATED(this%parent)) THEN
+        tmp_fract(:,:) = 1._wp / REAL(this%parent%Get_no_of_children(), wp)
       ELSE
         tmp_fract(:,:) = 1._wp
       END IF
@@ -481,12 +454,6 @@ CONTAINS
         CALL finish(TRIM(routine), 'Fraction '//TRIM(name_loc)//' for tile '//TRIM(this%name)// &
           &                        ' not found in '//TRIM(this%fract_filename))
       END IF
-      IF (ASSOCIATED(this%parent_tile) .AND. l_rel_fractions) THEN
-        CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
-        CALL this%Set_fraction(fract=MAX(0._wp, return_pointer(:,:)*tmp_fract(:,:)))
-      ELSE
-        CALL this%Set_fraction(fract=return_pointer(:,:))
-      END IF
 
       IF (TRIM(this%fract_varname) == '') THEN
         name_loc = 'fract_max'
@@ -497,22 +464,9 @@ CONTAINS
       END IF
       IF (input_file%Has_var(TRIM(name_loc))) THEN
         return_pointer => input_file%Read_2d(variable_name=TRIM(name_loc))
-        IF (l_rel_fractions) THEN
-          IF (ASSOCIATED(this%parent_tile)) THEN
-            CALL this%parent_tile%Get_fraction(fract_max=tmp_fract(:,:))
-            CALL this%Set_fraction(fract_max=MAX(0._wp, return_pointer(:,:)*tmp_fract(:,:)))
-          ELSE
-            CALL this%Set_fraction(fract_max=return_pointer(:,:))
-          END IF
-        ELSE
-          CALL this%Set_fraction(fract_max=return_pointer(:,:))
-        END IF
+        CALL this%Set_fraction(fract_max=return_pointer(:,:))
       ELSE
-        IF (ASSOCIATED(this%parent_tile)) THEN
-          CALL this%parent_tile%Get_fraction(fract_max=tmp_fract(:,:))
-        ELSE
-          tmp_fract(:,:) = 1._wp
-        END IF
+        tmp_fract(:,:) = 1._wp
         CALL this%Set_fraction(fract_max=tmp_fract(:,:))
       END IF
 
@@ -542,15 +496,18 @@ CONTAINS
     END IF
 
     ! Loop over lcts of this tile and add variables for fractions for each lct
+    !$acc enter data create(this%lcts)
     DO ilct=1,SIZE(this%lcts)
 
+      !! !$acc enter data create(this%lcts(ilct)%fract)
       CALL jsb_add_var(varlist_name_loc, 'fract_'//TRIM(this%lcts(ilct)%name), this%lcts(ilct)%fract,             &
         & hgrid, surface,                                                                                         &
         & t_cf('lct_fraction', '',                                                                                &
         &      'fraction of '//TRIM(this%name)//' covered by LCT '//TRIM(this%lcts(ilct)%name)),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
         & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                       &
-        & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
+        & initval_r=0.0_wp, isteptype=isteptype)
+      __acc_attach(this%lcts(ilct)%fract)
 
     END DO
 

@@ -269,7 +269,7 @@ CONTAINS
 
     ! Use declarations
     USE mo_carbon_process,    ONLY: calc_Cpools
-    USE mo_jsb_time,          ONLY: is_newday, is_newyear, time_steps_per_day, is_time_experiment_start
+    USE mo_jsb_time,          ONLY: is_newday, is_newyear, timesteps_per_day, is_time_experiment_start
     USE mo_carbon_constants,  ONLY: molarMassCO2_kg, sec_per_day
     USE mo_jsb_subset,        ONLY: t_subset
 
@@ -281,6 +281,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER   :: model
     LOGICAL                      :: lstart
     INTEGER                      :: iblk, ics, ice
+    REAL(wp)                     :: dtime
     TYPE(t_subset)               :: subset
     REAL(wp), allocatable        :: precip_total(:)
     REAL(wp), DIMENSION(options%nc) :: MaxLai
@@ -427,6 +428,7 @@ CONTAINS
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
+    dtime = options%dtime
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     model => Get_model(tile%owner_model_id)
@@ -539,9 +541,9 @@ CONTAINS
     ! Go
 
     ! Put a comment on the screen...
-    IF (debug_on() .AND. iblk==1 .AND. is_newday()  ) CALL message(TRIM(routine), &
+    IF (debug_on() .AND. iblk==1 .AND. is_newday(options%current_datetime, dtime)  ) CALL message(TRIM(routine), &
                                                            'update_C_NPP_pot_allocation: First time step of new day')
-    IF (debug_on() .AND. iblk==1 .AND. is_newyear() ) CALL message(TRIM(routine), &
+    IF (debug_on() .AND. iblk==1 .AND. is_newyear(options%current_datetime, dtime) ) CALL message(TRIM(routine), &
                                                            'update_C_NPP_pot_allocation: First time step of new year')
 
     ! Initializations
@@ -586,9 +588,9 @@ CONTAINS
     precip_total  = rain + snow  ! Precipitation rate [kg/(m^2 s)]
     pseudo_precip = precip_total * N_pseudo_precip  +  F_pseudo_precip * pseudo_precip
 
-    lstart = is_time_experiment_start()
+    lstart = is_time_experiment_start(options%current_datetime)
 
-    IF( .NOT. is_newday() .OR. lstart) THEN ! perform daily sums if WE ARE NOT STARTING A NEW DAY
+    IF( .NOT. is_newday(options%current_datetime,dtime) .OR. lstart) THEN ! perform daily sums if WE ARE NOT STARTING A NEW DAY
                                             ! or if we JUST STARTED AN TOTALLY NEW EXPERIMENT
 
       LAI_sum          = LAI_sum          + LAI
@@ -602,12 +604,12 @@ CONTAINS
 
       ! First save as "previous previous days" and "previous days" means
       LAI_yyDayMean  = LAI_yDayMean
-      LAI_yDayMean   = LAI_sum/time_steps_per_day()
+      LAI_yDayMean   = LAI_sum/timesteps_per_day(dtime)
 
-      NPP_pot_yDayMean     = NPP_pot_sum/time_steps_per_day()
-      GPP_yDayMean         = GPP_sum/time_steps_per_day()
-      topSoilTemp_yDayMean = topSoilTemp_sum/time_steps_per_day() ! 2d
-      alpha_yDayMean       = alpha_sum/time_steps_per_day()
+      NPP_pot_yDayMean     = NPP_pot_sum/timesteps_per_day(dtime)
+      GPP_yDayMean         = GPP_sum/timesteps_per_day(dtime)
+      topSoilTemp_yDayMean = topSoilTemp_sum/timesteps_per_day(dtime) ! 2d
+      alpha_yDayMean       = alpha_sum/timesteps_per_day(dtime)
 
       ! Then restart summing of this days values
       LAI_sum             = LAI
@@ -615,7 +617,7 @@ CONTAINS
       GPP_sum             = gross_assimilation_ca
       topSoilTemp_sum     = topSoilTemp ! 2d
       alpha_sum           = alpha
-      !NPP_pot_rate_ca_acc        = NPP_pot_rate_ca/time_steps_per_day() ! s.o.
+      !NPP_pot_rate_ca_acc        = NPP_pot_rate_ca/timesteps_per_day(dtime) ! s.o.
 
       ! Save other variables (for yasso) as "previous days"
       pseudo_temp_yDay   = pseudo_temp
@@ -1334,13 +1336,13 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg2_ta)     ! in
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2_ta)            ! in
 
-    current_c_state_sum = c_green_ta + c_woods_ta + c_reserve_ta + c_crop_harvest_ta + &
-        & c_acid_ag1_ta + c_water_ag1_ta + c_ethanol_ag1_ta + c_nonsoluble_ag1_ta + &
-        & c_acid_ag2_ta + c_water_ag2_ta + c_ethanol_ag2_ta + c_nonsoluble_ag2_ta + &
-        & c_acid_bg1_ta + c_water_bg1_ta + c_ethanol_bg1_ta + c_nonsoluble_bg1_ta + &
-        & c_acid_bg2_ta + c_water_bg2_ta + c_ethanol_bg2_ta + c_nonsoluble_bg2_ta + &
-        & c_humus_1_ta  + c_humus_2_ta
-
+    !$claw expand parallel update 
+    current_c_state_sum(ics:ice) = c_green_ta(:) + c_woods_ta(:) + c_reserve_ta(:) + c_crop_harvest_ta(:) + &
+        & c_acid_ag1_ta(:) + c_water_ag1_ta(:) + c_ethanol_ag1_ta(:) + c_nonsoluble_ag1_ta(:) + &
+        & c_acid_ag2_ta(:) + c_water_ag2_ta(:) + c_ethanol_ag2_ta(:) + c_nonsoluble_ag2_ta(:) + &
+        & c_acid_bg1_ta(:) + c_water_bg1_ta(:) + c_ethanol_bg1_ta(:) + c_nonsoluble_bg1_ta(:) + &
+        & c_acid_bg2_ta(:) + c_water_bg2_ta(:) + c_ethanol_bg2_ta(:) + c_nonsoluble_bg2_ta(:) + &
+        & c_humus_1_ta(:)  + c_humus_2_ta(:)
   END SUBROUTINE calculate_current_c_ta_state_sum
 
 
@@ -1414,12 +1416,13 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2)             ! in
 
     !TODO-JN-COHORTS: could be done in mo_carbon_process
-    c_bg_sum = c_acid_bg1 + c_water_bg1 + c_ethanol_bg1 + c_nonsoluble_bg1 + &
-             & c_acid_bg2 + c_water_bg2 + c_ethanol_bg2 + c_nonsoluble_bg2 + &
-             & c_humus_1  + c_humus_2
+    !$claw expand parallel update
+    c_bg_sum(ics:ice) = c_acid_bg1(:) + c_water_bg1(:) + c_ethanol_bg1(:) + c_nonsoluble_bg1(:) + &
+             & c_acid_bg2(:) + c_water_bg2(:) + c_ethanol_bg2(:) + c_nonsoluble_bg2(:) + &
+             & c_humus_1(:)  + c_humus_2(:)
 
-    c_ag_sum_1 =  c_acid_ag1 + c_water_ag1 + c_ethanol_ag1 + c_nonsoluble_ag1 + c_humus_1
-
+    c_ag_sum_1(ics:ice) =  c_acid_ag1(:) + c_water_ag1(:) + c_ethanol_ag1(:) + c_nonsoluble_ag1(:) + c_humus_1(:)
+    !$claw end expand
   END SUBROUTINE calculate_current_c_ag_1_and_bg_sums
 
 
@@ -1451,8 +1454,9 @@ CONTAINS
     !INTEGER                     :: ics, ice, iblk
 
     CALL calculate_current_c_ta_state_sum(tile, options, Cconserve)
-
-    Cconserve = Cconserve - old_c_state_sum - cflux
+    
+    !$claw expand parallel update
+    Cconserve(:) = Cconserve(:) - old_c_state_sum(:) - cflux(:)
 
   END SUBROUTINE check_carbon_conservation
 
@@ -1463,14 +1467,13 @@ CONTAINS
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
   !
-  SUBROUTINE yday_carbon_conservation_test(tile, options)
+  SUBROUTINE yday_carbon_conservation_test(tile)
 
     USE mo_carbon_constants,   ONLY: molarMassCO2_kg, sec_per_day
     USE mo_jsb_grid,           ONLY: Get_grid
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(in), TARGET :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)         :: options
 
     dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_memory(L2A_)
@@ -1478,9 +1481,10 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER      :: model
     TYPE(t_jsb_grid),  POINTER      :: grid
+    TYPE(t_jsb_task_options)        :: options
 
-    REAL(wp), DIMENSION(options%nc) :: C_flux_yday
-    INTEGER                :: ics, ice, iblk
+    REAL(wp), ALLOCATABLE :: C_flux_yday(:)
+    INTEGER               :: ics, ice, iblk, nc
 
     dsl4jsb_Get_memory(L2A_)
     dsl4jsb_Get_memory(CARBON_)
@@ -1489,13 +1493,24 @@ CONTAINS
     grid => Get_grid(model%grid_id)
 
 !    iblk  = options%iblk
-    ics   = options%ics
-    ice   = options%ice
+    options%ics = 1
+    options%ice = grid%nproma
+
+    ics = options%ics
+    ice = options%ice
+    nc = ice - ics + 1
+
+    ALLOCATE(C_flux_yday(nc))
 
     DO iblk = 1, grid%nblks
 
       CALL model%Set_options(iblk=iblk)
-      ! TODO: ics and ice should be retrieved for each iblk (are not necessarily constant for each block in ICON)
+      options%iblk = iblk
+      IF (iblk == grid%nblks) THEN
+        options%ice = grid%npromz
+        ice = grid%npromz
+        ! TODO: ics and ice should be retrieved for each iblk (are not necessarily constant for each block in ICON)
+      END IF
 
       dsl4jsb_Get_var2D_onChunk(L2A_,  carbon_conservation_test )     ! inout
       dsl4jsb_Get_var2D_onChunk(L2A_,  yday_c_state_sum )             ! inout
@@ -1504,17 +1519,17 @@ CONTAINS
       IF (.NOT. ALL(carbon_conservation_test .EQ. -999.0_wp)) THEN
       
         !CO2 flux due to npp and respiration
-        C_flux_yday(:) = - ((dsl4jsb_var2D_onChunk(CARBON_, cflux_npp_2_atm_yday_ta)     &
+        C_flux_yday(ics:ice) = - ((dsl4jsb_var2D_onChunk(CARBON_, cflux_npp_2_atm_yday_ta)     &
           & + dsl4jsb_var2D_onChunk(CARBON_, cflux_soilresp_2_atm_ta)                   &
           & + dsl4jsb_var2D_onChunk(CARBON_, cflux_herb_2_atm_ta)) / molarMassCO2_kg) * sec_per_day
 
         IF (model%processes(DISTURB_)%p%config%active) THEN
-          C_flux_yday(:) =  C_flux_yday(:) &
+          C_flux_yday(ics:ice) =  C_flux_yday(ics:ice) &
             & - (dsl4jsb_var2D_onChunk(CARBON_, cflux_fire_all_2_atm_ta))
         ENDIF
 
         CALL calculate_current_c_ta_state_sum(tile, options, carbon_conservation_test)
-        carbon_conservation_test = carbon_conservation_test - yday_c_state_sum  - C_flux_yday(:)
+        carbon_conservation_test = carbon_conservation_test - yday_c_state_sum  - C_flux_yday(ics:ice)
 
       ELSE
         carbon_conservation_test = 0._wp
@@ -1523,6 +1538,8 @@ CONTAINS
       CALL calculate_current_c_ta_state_sum(tile, options, yday_c_state_sum)
 
     END DO
+
+    DEALLOCATE(C_flux_yday)
 
   END SUBROUTINE yday_carbon_conservation_test
 

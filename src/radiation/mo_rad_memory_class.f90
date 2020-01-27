@@ -96,20 +96,20 @@ MODULE mo_rad_memory_class
       & par,                  & ! sw_par_down from atmosphere in [W/m^2]
       & par_down_mol,         & ! Downward PAR flux in mol(photons)/(m^2 s) but only for current time step/"delta_time"
       & faPAR,                & ! fraction of PAR absorbed by the canopy and per leaf area
-      & par_down_mol_nacc,    & ! incoming PAR accumulated (over output timestep) in mol(photons)/(m^2)
-      & par_down_mol_tavg,    & ! incoming PAR (mean value over output timestep) [MOL PHOTONS/M^2 S]
+      ! & par_down_mol_nacc,    & ! incoming PAR accumulated (over output timestep) in mol(photons)/(m^2)
+      ! & par_down_mol_tavg,    & ! incoming PAR (mean value over output timestep) [MOL PHOTONS/M^2 S]
       & soil_reflectivity_par,& ! Soil reflectivity in the PAR region but only for current time step/"delta_time"
-      & fract_par_direct,     & ! Fraction of direct PAR
-      & apar_nacc
+      & fract_par_direct        ! Fraction of direct PAR
+      ! & apar_nacc
 
     TYPE(t_jsb_var_real3d) :: & ! alt: (nland, ncanopy, ntiles)
       & lai_cl,               & ! LAI per canopy layer; preliminarily, should later be put to another process...
       & faPAR_cl,             & ! Absorbed PAR per canopy layer and per leaf area [fraction of irradiance]
                                 ! As fraction of incoming radiation at the top of the canopy layers (=1).
-      & apar_per_lai_cl,      & ! Absorbed PAR per canopy layer LAI (lai_cl). Only for current time step/dtime.
+      & apar_per_lai_cl         ! Absorbed PAR per canopy layer LAI (lai_cl). Only for current time step/dtime.
                                 ! [(absorbed photons) / (m^2(leaf area) * s)]
-      & apar_per_lai_cl_nacc, & ! PAR absorbed by the canopy accumulated (over output timestep) in mol(photons)/m^2
-      & apar_per_lai_cl_tavg    ! PAR absorbed by the canopy (mean value over output timestep)  in mol(photons)/(m^2 * s)
+      ! & apar_per_lai_cl_nacc, & ! PAR absorbed by the canopy accumulated (over output timestep) in mol(photons)/m^2
+      ! & apar_per_lai_cl_tavg    ! PAR absorbed by the canopy (mean value over output timestep)  in mol(photons)/(m^2 * s)
 
     !
     ! Additional variables for LAKE lct_type
@@ -163,7 +163,12 @@ CONTAINS
 
     dsl4jsb_Get_config(SEB_)
 
-    IF (.NOT. ASSOCIATED(mem%sw_srf_net%ptr)) THEN
+    !$acc enter data pcreate(mem)
+
+    !$acc enter data pcreate(mem%sw_srf_net,mem%swvis_srf_net,             &
+    !$acc mem%swnir_srf_net,mem%lw_srf_net,mem%rad_srf_net,                &
+    !$acc mem%alb_background, mem%alb_vis,mem%alb_nir,mem%alb_vis_snow,    &
+    !$acc mem%alb_nir_snow)
 
       CALL mem%Add_var( 'sw_srf_net', mem%sw_srf_net,                   &
         & hgrid, surface,                                                    &
@@ -253,12 +258,17 @@ CONTAINS
         & output_level=MEDIUM,                                               &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
-    END IF
+    !$acc update device(mem%sw_srf_net,mem%swvis_srf_net,                  &
+    !$acc mem%swnir_srf_net,mem%lw_srf_net,mem%rad_srf_net,                &
+    !$acc mem%alb_background, mem%alb_vis,mem%alb_nir,mem%alb_vis_snow,    &
+    !$acc mem%alb_nir_snow)
 
     ! Additional variables for land tiles
     IF ( (One_of(BARE_TYPE, lct_ids(:)) > 0 .OR. One_of(VEG_TYPE, lct_ids(:)) > 0           &
       &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. One_of(GLACIER_TYPE, lct_ids(:)) > 0) &
-      & .AND. .NOT. ASSOCIATED(mem%alb_vis_soil%ptr)) THEN
+      & ) THEN
+
+      !$acc enter data pcreate(mem%alb_vis_lnd,mem%alb_nir_lnd)
 
       CALL mem%Add_var( 'alb_vis_lnd', mem%alb_vis_lnd,                        &
         & hgrid, surface,                                                           &
@@ -278,12 +288,16 @@ CONTAINS
         & output_level=MEDIUM, &
         & initval_r=0.0_wp )
 
+      !$acc update device(mem%alb_vis_lnd,mem%alb_nir_lnd)
     END IF
 
     ! Additional variables for soil
     IF ( (One_of(BARE_TYPE, lct_ids(:)) > 0 .OR. One_of(VEG_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0)                                 &
-      & .AND. .NOT. ASSOCIATED(mem%alb_vis_soil%ptr)) THEN
+      & ) THEN
+
+      !$acc enter data pcreate(mem%alb_vis_soil,mem%alb_nir_soil,            &
+      !$acc mem%alb_vis_mineralsoil,mem%alb_nir_mineralsoil)
 
       CALL mem%Add_var( 'alb_vis_soil', mem%alb_vis_soil,               &
         & hgrid, surface,                                                    &
@@ -317,11 +331,21 @@ CONTAINS
         & output_level=MEDIUM,                                               &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
+      !$acc update device(mem%alb_vis_soil,mem%alb_nir_soil,            &
+      !$acc mem%alb_vis_mineralsoil,mem%alb_nir_mineralsoil)
     END IF
 
     ! Additional variables for vegetation
     IF ( (One_of(VEG_TYPE, lct_ids(:)) > 0 .OR. One_of(LAND_TYPE, lct_ids(:)) > 0) &
-      & .AND. .NOT. ASSOCIATED(mem%alb_vis_can%ptr)) THEN
+      & ) THEN
+
+      !$acc enter data pcreate(mem%alb_vis_can,mem%alb_nir_can,mem%snow_age, &
+      !$acc mem%sky_view_fract,mem%sky_view_fract_stem,mem%par, &
+      !$acc mem%par_down_mol,mem%faPAR,mem%lai_cl, &
+      !$acc mem%soil_reflectivity_par,mem%fract_par_direct, &
+      !$acc mem%faPAR_cl,mem%apar_per_lai_cl)
+      !! !$acc mem%par_down_mol_tavg,mem%apar_per_lai_cl_tavg, &
+      !! !$acc mem%par_down_mol_nacc,mem%apar_nacc,mem%apar_per_lai_cl_nacc)
 
       CALL mem%Add_var( 'alb_vis_can', mem%alb_vis_can,                 &
         & hgrid, surface,                                                    &
@@ -386,19 +410,19 @@ CONTAINS
         & output_level=BASIC,                                                &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL mem%Add_var( 'par_down_mol_nacc', mem%par_down_mol_nacc,     &
-        & hgrid, surface,                                                    &
-        & t_cf('Incoming PAR accumulated (over output timestep)', '', ''),   &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & lrestart=.FALSE., initval_r=0.0_wp )
+      ! CALL mem%Add_var( 'par_down_mol_nacc', mem%par_down_mol_nacc,     &
+      !   & hgrid, surface,                                                    &
+      !   & t_cf('Incoming PAR accumulated (over output timestep)', '', ''),   &
+      !   & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+      !   & prefix, suffix,                                                    &
+      !   & lrestart=.FALSE., initval_r=0.0_wp )
 
-      CALL mem%Add_var( 'par_down_mol_tavg', mem%par_down_mol_tavg,     &
-        & hgrid, surface,                                                    &
-        & t_cf('Incoming PAR (mean value over output timestep)', '', ''),    &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & lrestart=.FALSE., initval_r=0.0_wp ) ! R: initval =0
+      ! CALL mem%Add_var( 'par_down_mol_tavg', mem%par_down_mol_tavg,     &
+      !   & hgrid, surface,                                                    &
+      !   & t_cf('Incoming PAR (mean value over output timestep)', '', ''),    &
+      !   & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+      !   & prefix, suffix,                                                    &
+      !   & lrestart=.FALSE., initval_r=0.0_wp ) ! R: initval =0
 
       CALL mem%Add_var( 'soil_reflectivity_par', mem%soil_reflectivity_par, &
         & hgrid, surface,                                                        &
@@ -435,31 +459,40 @@ CONTAINS
          & prefix, suffix,                                                    &
          & loutput=.FALSE., lrestart=.FALSE., initval_r=0.0_wp )
 
-       CALL mem%Add_var( 'apar_per_lai_cl_nacc', mem%apar_per_lai_cl_nacc,           &
-         & hgrid, canopy_layer,                                                           &
-         & t_cf('PAR absorbed by the canopy (accumulated over output timestep)', '', ''), &
-         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
-         & prefix, suffix,                                                                &
-         & lrestart=.FALSE., initval_r=0.0_wp )
+       ! CALL mem%Add_var( 'apar_per_lai_cl_nacc', mem%apar_per_lai_cl_nacc,           &
+       !   & hgrid, canopy_layer,                                                           &
+       !   & t_cf('PAR absorbed by the canopy (accumulated over output timestep)', '', ''), &
+       !   & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+       !   & prefix, suffix,                                                                &
+       !   & lrestart=.FALSE., initval_r=0.0_wp )
 
-       CALL mem%Add_var( 'apar_per_lai_cl_tavg', mem%apar_per_lai_cl_tavg,          &
-         & hgrid, canopy_layer,                                                          &
-         & t_cf('PAR absorbed by the canopy (mean value over output timestep)', '', ''), &
-         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
-         & prefix, suffix,                                                               &
-         & lrestart=.FALSE., initval_r=0.0_wp )
+       ! CALL mem%Add_var( 'apar_per_lai_cl_tavg', mem%apar_per_lai_cl_tavg,          &
+       !   & hgrid, canopy_layer,                                                          &
+       !   & t_cf('PAR absorbed by the canopy (mean value over output timestep)', '', ''), &
+       !   & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
+       !   & prefix, suffix,                                                               &
+       !   & lrestart=.FALSE., initval_r=0.0_wp )
 
-       CALL mem%Add_var( 'apar_nacc', mem%apar_nacc,                                 &
-         & hgrid, surface,                                                                &
-         & t_cf('PAR absorbed by the canopy (accumulated over output timestep)', '', ''), &
-         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
-         & prefix, suffix,                                                                &
-         & lrestart=.FALSE., initval_r=0.0_wp )
+       ! CALL mem%Add_var( 'apar_nacc', mem%apar_nacc,                                 &
+       !   & hgrid, surface,                                                                &
+       !   & t_cf('PAR absorbed by the canopy (accumulated over output timestep)', '', ''), &
+       !   & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+       !   & prefix, suffix,                                                                &
+       !   & lrestart=.FALSE., initval_r=0.0_wp )
 
+      !$acc update device(mem%alb_vis_can,mem%alb_nir_can,mem%snow_age, &
+      !$acc mem%sky_view_fract,mem%sky_view_fract_stem,mem%par, &
+      !$acc mem%par_down_mol,mem%faPAR,mem%lai_cl, &
+      !$acc mem%soil_reflectivity_par,mem%fract_par_direct, &
+      !$acc mem%faPAR_cl,mem%apar_per_lai_cl)
+      !! !$acc mem%par_down_mol_tavg,mem%apar_per_lai_cl_tavg, &
+      !! !$acc mem%par_down_mol_nacc,mem%apar_per_lai_cl_nacc,mem%apar_nacc)
     END IF
 
     ! Additional variables for lakes
-    IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%rad_net_lwtr%ptr)) THEN
+    IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 ) THEN
+
+      !$acc enter data pcreate(mem%rad_net_lwtr, mem%albedo_lwtr)
 
       CALL mem%Add_var( 'rad_net_lwtr', mem%rad_net_lwtr,                &
         & hgrid, surface,                                                     &
@@ -478,7 +511,12 @@ CONTAINS
         & output_level=MEDIUM,                                                &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=AlbedoLakeWater )
 
+      !$acc update device(mem%rad_net_lwtr,mem%albedo_lwtr)
+      
       IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+
+        !$acc enter data pcreate(mem%rad_net_lice, mem%albedo_lice)
+
         CALL mem%Add_var( 'rad_net_lice', mem%rad_net_lice,                &
           & hgrid, surface,                                                     &
           & t_cf('rad_net_lice', '', 'Net surface radiation over lake ice'),    &
@@ -495,6 +533,9 @@ CONTAINS
           & prefix, suffix,                                                     &
           & output_level=MEDIUM,                                                &
           & loutput=.TRUE., lrestart=.TRUE., initval_r=AlbedoLakeIceMin )
+
+        !$acc update device(mem%rad_net_lice,mem%albedo_lice)
+
       END IF
 
     END IF

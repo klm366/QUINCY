@@ -27,6 +27,7 @@ MODULE mo_jsb_model_init
   USE mo_kind,             ONLY: wp
   USE mo_exception,        ONLY: finish
   USE mo_jsb_parallel,     ONLY: Get_omp_thread, Is_omp_inside_serial
+  USE mo_jsb_time,         ONLY: is_time_restart, get_time_start
 
   IMPLICIT NONE
   PRIVATE
@@ -259,21 +260,21 @@ CONTAINS
 
     ! Iterate over tiles and call initialization if necessary
     CALL model%Reset_tiles()
-    tile => model%Get_top_tile()
+    CALL model%Get_top_tile(tile)
+
     IF (.NOT. ASSOCIATED(tile)) &
       & CALL finish(TRIM(routine), 'Top tile not set')
 
     DO WHILE (ASSOCIATED(tile))
 
       IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
-        tile => model%Goto_next_tile()
+        CALL model%Goto_next_tile(tile)
         CYCLE
       END IF
 
       ! Initialize tile memory and read tile fractions
       ! @todo: once we have land use change or dynveg, l_fixed_fractions needs to be adapted
-      CALL tile%Init(TRIM(model%shortname), '', TRIM(tile%name),                             &
-        & l_fixed_fractions=.TRUE., l_rel_fractions=model%config%relative_fractions_in_file, &
+      CALL tile%Init(TRIM(model%shortname), '', TRIM(tile%name), l_fixed_fractions=.TRUE., &
         & in_var_groups=one_of(TRIM(tile%name), model%config%output_tiles) > 0)
 
       ! TBD: Loop over processes instead of explicit
@@ -328,13 +329,13 @@ CONTAINS
       END IF
 #endif
 
-      tile => model%Goto_next_tile()
-
+      CALL model%Goto_next_tile(tile)
     END DO
 
     ! Iterate over tiles again and set lct fractions (after ALL tile fractions have been set above)
     CALL model%Reset_tiles()
-    tile => model%Get_top_tile()
+    CALL model%Get_top_tile(tile)
+
     IF (.NOT. ASSOCIATED(tile)) &
       & CALL finish(TRIM(routine), 'Top tile not set')
 
@@ -343,7 +344,7 @@ CONTAINS
     DO WHILE (ASSOCIATED(tile))
 
       IF (.NOT. tile%visited(no_omp_thread) .AND. tile%Has_children()) THEN
-        tile => model%Goto_next_tile()
+        CALL model%Goto_next_tile(tile)
         CYCLE
       END IF
 
@@ -365,8 +366,6 @@ CONTAINS
                   EXIT
                 END IF
               END DO
-              CALL tile%Get_fraction(fract=fract_tmp(:,:))
-              tile%lcts(ilct)%fract(:,:) = MERGE(tile%lcts(ilct)%fract(:,:) / fract_tmp(:,:), 0._wp, fract_tmp(:,:) > 0._wp)
             END IF
             child => child%Get_next_sibling_tile()
           END DO
@@ -374,9 +373,10 @@ CONTAINS
           IF (ilct > 1) CALL finish(TRIM(routine), 'Leave tiles should only have one LCT')
           tile%lcts(1)%fract(:,:) = 1._wp        ! Leaves have only one LCT
         END IF
+        !$acc update device(tile%lcts(ilct)%fract)
       END DO
 
-      tile => model%Goto_next_tile()
+      CALL model%Goto_next_tile(tile)
 
     END DO
 
@@ -384,33 +384,33 @@ CONTAINS
 
     ! Iterate over tiles again and initialize hierarchical structure for memories and variables
     CALL model%Reset_tiles()
-    tile => model%Get_top_tile()
+    CALL model%Get_top_tile(tile)
     IF (.NOT. ASSOCIATED(tile)) &
       & CALL finish(TRIM(routine), 'Top tile not set')
 
     DO WHILE (ASSOCIATED(tile))
 
       IF (.NOT. tile%visited(no_omp_thread) .AND. tile%Has_children()) THEN
-        tile => model%Goto_next_tile()
+        CALL model%Goto_next_tile(tile)
         CYCLE
       END IF
 
       CALL tile%Init_vars()
 
-      tile => model%Goto_next_tile()
+      CALL model%Goto_next_tile(tile)
 
     END DO
 
     ! Iterate over tiles and crossckeck tile structure
     CALL model%Reset_tiles()
-    tile => model%Get_top_tile()
+    CALL model%Get_top_tile(tile)
     IF (.NOT. ASSOCIATED(tile)) &
       & CALL finish(TRIM(routine), 'Top tile not set')
 
     DO WHILE (ASSOCIATED(tile))
 
       IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
-        tile => model%Goto_next_tile()
+        CALL model%Goto_next_tile(tile)
         CYCLE
       END IF
 
@@ -422,31 +422,38 @@ CONTAINS
             & CALL finish(TRIM(routine), 'Must use phenology climatology on general, non-PFT VEG tile '//TRIM(tile%name))
       END IF
 
-      tile => model%Goto_next_tile()
+      CALL model%Goto_next_tile(tile)
 
     END DO
     !
     !
     IF (debug_on()) THEN
+
       ! Iterate over tiles again and print tile information (after ALL tiles have been initialized above)
       CALL model%Reset_tiles()
-      tile => model%Get_top_tile()
+
+      CALL model%Get_top_tile(tile)
+
       IF (.NOT. ASSOCIATED(tile)) &
         & CALL finish(TRIM(routine), 'Top tile not set')
 
       DO WHILE (ASSOCIATED(tile))
 
         IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
-          tile => model%Goto_next_tile()
+          CALL model%Goto_next_tile(tile)
           CYCLE
         END IF
 
         CALL tile%Print()
 
-        tile => model%Goto_next_tile()
+        CALL model%Goto_next_tile(tile)
 
       END DO
     END IF
+
+!#ifdef _OPENACC
+!    IF (.NOT. is_time_restart(get_time_start())) CALL model%cpu_to_gpu()
+!#endif
 
   END SUBROUTINE jsbach_init
 
@@ -479,14 +486,14 @@ CONTAINS
 
     ! Iterate over tiles and call initialization if necessary
     CALL model%Reset_tiles()
-    tile => model%Get_top_tile()
+    CALL model%Get_top_tile(tile)
     IF (.NOT. ASSOCIATED(tile)) &
       & CALL finish(TRIM(routine), 'Top tile not set')
 
     DO WHILE (ASSOCIATED(tile))
 
       IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
-        tile => model%Goto_next_tile()
+        call model%Goto_next_tile(tile)
         CYCLE
       END IF
 
@@ -495,9 +502,13 @@ CONTAINS
         IF (dsl4jsb_Config(CARBON_)%read_cpools) CALL carbon_read_cpools(tile)
       END IF
 
-      tile => model%Goto_next_tile()
+      CALL model%Goto_next_tile(tile)
 
     END DO
+
+#ifdef _OPENACC
+    CALL model%cpu_to_gpu()
+#endif
 
   END SUBROUTINE jsbach_init_after_restart
 

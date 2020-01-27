@@ -146,7 +146,7 @@ help_text = """
     dsl4jsb.py [-h] [OPTION...]
 
         -h                usage
-        -v, --verbose     print list of conversions
+        -v, --verbose     print list of conversions (use twice for message for files not processed)
         -i, --ifile=FILE  input file (test.f90 if missing and input directory (-d) not given)
         -o, --ofile=FILE  output file (stdout if missing)
         -d, --idir=DIR    directory with source files
@@ -229,7 +229,7 @@ def replace_dollar_function(match):
         result = result + index
     return result
 
-def process_file(inputfile, outputfile, verbose=False, cwd=None):
+def process_file(inputfile, outputfile, verbose=False, verbose_more=False, cwd=None):
     # Compute hash value of input file
     hasher = hashlib.md5()
     with io.open(inputfile, 'rb') as infile:
@@ -251,23 +251,26 @@ def process_file(inputfile, outputfile, verbose=False, cwd=None):
         # Since input file hasn't changed, reset its modification time to the one
         # of the output file, so that make doesn't think the input file is newer
         os.utime(inputfile, (os.path.getatime(inputfile), os.path.getmtime(outputfile)))
-        if verbose:
+        if verbose_more:
             print('File hasn"t changed: ' + os.path.realpath(os.path.abspath(inputfile)))
         return
 
     with io.open(inputfile, 'r', encoding="utf-8") as infile:
         with (io.open(outputfile, 'w', encoding="utf-8") if outputfile != '' else sys.stdout) as outfile:
-            outfile.write(u'!\n! This file was automatically generated from:\n')
-            outfile.write(u'!    ' + os.path.realpath(os.path.abspath(inputfile)) + u'\n')
-            outfile.write(u'!    with md5 hash: ' + hasher.hexdigest() + u'\n!\n')
+            outfile.write(u'!\n! This file was automatically generated from JSBACH source file:\n')
+            outfile.write(u'!    ' + re.sub(r'.*/src', 'src', os.path.realpath(os.path.abspath(inputfile))) + u'\n')
+            outfile.write(u'! with md5 hash: ' + hasher.hexdigest() + u'\n!\n')
             if verbose:
                 if cwd:
                     print('   Pre-processing: ' + os.path.relpath(os.path.realpath(os.path.abspath(inputfile)), cwd) + ' => ' + os.path.relpath(outputfile, cwd))
                 else:
                     print('   Pre-processing: ' + os.path.realpath(inputfile) + ' => ' + outputfile)
             for line in infile:
-                if outputfile == '':
-                    outfile.write(u'! ' + line)
+                if outputfile == '' and inputfile == 'test.f90':
+                    if (sys.version_info > (3, 0)):
+                        outfile.write(u'! ' + line)
+                    else:
+                        outfile.write(u'! ' + line.encode('utf-8'))
                 matches = re.finditer(re_function, line)
                 if matches:
                     for match in matches:         # match.groupt(1) contains the macro name without "dsl4jsb_"
@@ -298,8 +301,15 @@ def process_file(inputfile, outputfile, verbose=False, cwd=None):
                     print(re.sub(r"!.*$",'',line))
                     print('Line too long after replacing macro')
                     sys.exit()
-                outfile.write(line)
-
+                if outputfile == '':
+                    if (sys.version_info > (3, 0)):
+                        outfile.write(line)
+                    else:
+                        outfile.write(line.encode('utf-8'))
+                else:
+                    outfile.write(line)
+    if outputfile != '':
+        os.utime(outputfile, (os.path.getatime(outputfile), os.path.getmtime(inputfile)))
 
 def main(argv):
 
@@ -310,6 +320,7 @@ def main(argv):
     inputdir = ''
     outputdir = ''
     verbose = False
+    verbose_more = False
     keep = False
     pp_add = None
     try:
@@ -322,7 +333,10 @@ def main(argv):
             print(help_text)
             sys.exit()
         elif opt in ("-v", "--verbose"):
-            verbose = True
+            if not verbose:
+                verbose = True
+            else:
+                verbose_more = True
         elif opt in ("-k", "--keep-dirs"):
             keep = True
         elif opt in ("-p", "--pp-add"):
@@ -376,11 +390,11 @@ def main(argv):
                 else:
                     ofile = os.path.join(outputdir, os.path.basename(ifile))
             __current_file = os.path.basename(ifile)
-            process_file(os.path.join(inputdir, ifile), ofile, verbose, cwd)
+            process_file(os.path.join(inputdir, ifile), ofile, verbose, verbose_more, cwd)
         os.chdir(cwd)
     else:
         __current_file = os.path.basename(inputfile)
-        process_file(inputfile, outputfile, verbose, cwd)
+        process_file(inputfile, outputfile, verbose, verbose_more, cwd)
 
     return 0
 

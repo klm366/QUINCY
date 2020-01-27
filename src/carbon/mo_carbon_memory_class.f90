@@ -771,7 +771,6 @@ CONTAINS
     ! Add other variables to the memory
     !==============================================================================================================================
     !
-    IF (.NOT. ASSOCIATED(mem%pseudo_temp%ptr)) THEN
 
 ! R: only if we would want to have these variables in 2d (see mo_carbon_init.f90 for their initialization):
       CALL mem%Add_var( 'n_pseudo_temp', mem%N_pseudo_temp, &
@@ -1648,8 +1647,6 @@ CONTAINS
             & prefix, suffix,                                                    &
             & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE.)
       ENDIF
-
-    END IF
 
   ! CONTAINS
 

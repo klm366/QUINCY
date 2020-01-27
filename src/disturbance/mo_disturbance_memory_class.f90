@@ -78,7 +78,6 @@ CONTAINS
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
 
-    IF (.NOT. ASSOCIATED(mem%burned_fract%ptr)) THEN
 
       CALL mem%Add_var( 'burned_fract', mem%burned_fract,                            &
         & hgrid, surface,                                                                 &
@@ -148,8 +147,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
         & prefix, suffix,                                                     &
         & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp )
-
-    END IF
 
   END SUBROUTINE Init_disturb_memory
 

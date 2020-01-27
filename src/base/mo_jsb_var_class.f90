@@ -22,9 +22,17 @@ MODULE mo_jsb_var_class
     ENUMERATOR :: REAL2D=1, REAL3D
   END ENUM
 
-  ! TYPE, EXTENDS(t_hermetic), ABSTRACT :: t_jsb_var(type)
-  TYPE, EXTENDS(t_hermetic) :: t_jsb_var
-    REAL(wp), ALLOCATABLE         :: field(:,:,:,:,:)
+  TYPE, ABSTRACT :: t_jsb_var
+    REAL(wp), POINTER &
+#ifdef HAVE_FC_ATTRIBUTE_CONTIGUOUS
+      , CONTIGUOUS &
+#endif
+      :: ptr2d(:,:) => NULL()
+    REAL(wp), POINTER &
+#ifdef HAVE_FC_ATTRIBUTE_CONTIGUOUS
+      , CONTIGUOUS &
+#endif
+      :: ptr3d(:,:,:) => NULL()
     CHARACTER(len=VARNAME_LEN)    :: name                      ! Name of variable
     CHARACTER(len=VARNAME_LEN)    :: full_name                 ! Full name of variable in varlist, including prefix and suffix
     INTEGER                       :: type                      ! REAL2D / REAL3D
@@ -37,10 +45,12 @@ MODULE mo_jsb_var_class
     INTEGER, ALLOCATABLE          :: owner_tile_path(:)
     INTEGER, ALLOCATABLE          :: child_idx(:)              ! Position-numbers of same variable for for the child tiles 
                                                                ! (according to mem%vars(:)).
-    ! TYPE(t_subset), POINTER       :: sub
+    ! TYPE(t_subset), POINTER     :: sub
     REAL(dp)                      :: missval
     LOGICAL                       :: l_aggregate_all = .FALSE. ! When aggregating, consider fractions of all child tiles even
-                                                  ! of those where variable doesn't exist
+                                                               ! of those where variable doesn't exist
+    LOGICAL                       :: is_in_output  = .FALSE.   ! Whether variable is requested to be written to output
+    LOGICAL                       :: is_in_restart = .FALSE.   ! Whether variable is requested to be written to restart file
   CONTAINS
     PROCEDURE :: Get_subset         => t_jsb_var_get_subset
     PROCEDURE :: force_finalization => t_jsb_var_force_finalization
@@ -127,12 +137,9 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':t_jsb_var_real2d_associate_pointers'
 
-    ! IF (ASSOCIATED(this%ptr)) NULLIFY(this%ptr)
-    ! this%ptr => this%field(ic_start:ic_end, iblk_start:iblk_end, 1, 1, 1)
-
     IF (ASSOCIATED(this%ptrm1)) NULLIFY(this%ptrm1)
     IF (iblk_start == iblk_end) THEN
-      this%ptrm1 => this%field(ic_start:ic_end, iblk_start, 1, 1, 1)
+      this%ptrm1 => this%ptr2d(ic_start:ic_end, iblk_start)
     END IF
 
   END SUBROUTINE t_jsb_var_real2d_associate_pointers
@@ -147,12 +154,9 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':t_jsb_var_real3d_associate_pointers'
 
-    ! IF (ASSOCIATED(this%ptr)) NULLIFY(this%ptr)
-    ! this%ptr => this%field(ic_start:ic_end, :, iblk_start:iblk_end, 1, 1)
-
     IF (ASSOCIATED(this%ptrm1)) NULLIFY(this%ptrm1)
     IF (iblk_start == iblk_end) THEN
-      this%ptrm1 => this%field(ic_start:ic_end, :, iblk_start, 1, 1)
+      this%ptrm1 => this%ptr3d(ic_start:ic_end, :, iblk_start)
     END IF
 
   END SUBROUTINE t_jsb_var_real3d_associate_pointers
@@ -176,8 +180,7 @@ CONTAINS
     IF (ALLOCATED(this%owner_tile_path)) DEALLOCATE(this%owner_tile_path)
     IF (ALLOCATED(this%child_idx)) DEALLOCATE(this%child_idx)
 
-    IF (ASSOCIATED(this%ptr)) NULLIFY(this%ptr)
-    IF (ALLOCATED(this%field)) DEALLOCATE(this%field)
+    IF (ASSOCIATED(this%ptr)) DEALLOCATE(this%ptr)
 
   END SUBROUTINE finalize_jsb_var_real2d
 
@@ -192,8 +195,7 @@ CONTAINS
     IF (ALLOCATED(this%owner_tile_path)) DEALLOCATE(this%owner_tile_path)
     IF (ALLOCATED(this%child_idx)) DEALLOCATE(this%child_idx)
 
-    IF (ASSOCIATED(this%ptr)) NULLIFY(this%ptr)
-    IF (ALLOCATED(this%field)) DEALLOCATE(this%field)
+    IF (ASSOCIATED(this%ptr)) DEALLOCATE(this%ptr)
 
   END SUBROUTINE finalize_jsb_var_real3d
 

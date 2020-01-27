@@ -44,8 +44,8 @@ MODULE mo_jsb_memory_class
     INTEGER :: owner_proc_id = 0
     CHARACTER(LEN=:), ALLOCATABLE :: owner_proc_name
     INTEGER :: no_of_children = 0
-    CLASS(t_jsb_memory_p), POINTER :: children(:) => NULL()
-    CLASS(t_jsb_memory)  , POINTER :: parent => NULL()
+    TYPE(t_jsb_memory_p), POINTER :: children(:) => NULL()
+    CLASS(t_jsb_memory) , POINTER :: parent => NULL()
     INTEGER, ALLOCATABLE :: owner_tile_path(:)
     CHARACTER(len=10)    :: owner_tile_name
     INTEGER :: max_no_of_vars = 0
@@ -70,7 +70,7 @@ MODULE mo_jsb_memory_class
                                                                         ! R: Note, we do not want to keep a "var collection" in the memory
                                                                         !    because we already have all child values in the memory.
     PROCEDURE                                    :: Collect_var_real3d  ! Collect var from its child tiles
-    PROCEDURE                                    :: HandDown_var_real3d ! Hand back var to child tiles
+    PROCEDURE                                    :: HandDown_var_real2d ! Hand back var to child tiles
     PROCEDURE                                    :: Average_over_children_real2d ! Average var over the child tiles
   END TYPE t_jsb_memory
 
@@ -648,7 +648,7 @@ CONTAINS
     ALLOCATE(var_collected(ice-ics+1,no_children))
 
     DO i=1,no_children
-       var_collected(:,i) = this%children(i)%p%vars(var%child_idx(i))%p%field(ics:ice,iblk, 1, 1, 1)
+       var_collected(:,i) = this%children(i)%p%vars(var%child_idx(i))%p%ptr2d(ics:ice,iblk)
     END DO
 
   END FUNCTION Collect_var_real2d
@@ -667,18 +667,18 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Collect_var_real3d'
 
     ALLOCATE(var_collected(ice - ics + 1, &
-      &                    SIZE(this%children(1)%p%vars(var%child_idx(1))%p%field, DIM=2), &
+      &                    SIZE(this%children(1)%p%vars(var%child_idx(1))%p%ptr3d, DIM=2), &
       &                    no_children))
 
     DO i=1,no_children
        ! R: Unterschied zu %ptr(ics:ice,iblk) ???
-       var_collected(:,:,i) = this%children(i)%p%vars(var%child_idx(i))%p%field(ics:ice,:, iblk, 1, 1)
+       var_collected(:,:,i) = this%children(i)%p%vars(var%child_idx(i))%p%ptr3d(ics:ice,:, iblk)
     END DO
 
   END FUNCTION Collect_var_real3d
 
 
-  SUBROUTINE HandDown_var_real3d(this, ics, ice, iblk, no_children,  var, var_handdown)
+  SUBROUTINE HandDown_var_real2d(this, ics, ice, iblk, no_children,  var, var_handdown)
 
     CLASS(t_jsb_memory), INTENT(inout)  :: this        ! mem_process of the parent tile: tile%mem(iproc)%p
     INTEGER,             INTENT(in)     :: ics, ice, iblk
@@ -688,13 +688,13 @@ CONTAINS
 
     INTEGER :: i !, iproc
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':HandDown_var_real3d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':HandDown_var_real2d'
 
     DO i=1,no_children
-      this%children(i)%p%vars(var%child_idx(i))%p%field(ics:ice, iblk, 1, 1, 1) = var_handdown(:,i)
+      this%children(i)%p%vars(var%child_idx(i))%p%ptr2d(ics:ice, iblk) = var_handdown(:,i)
     END DO
 
-  END SUBROUTINE HandDown_var_real3d
+  END SUBROUTINE HandDown_var_real2d
 
 
   FUNCTION Average_over_children_real2d(this, ics, ice, iblk, no_children,  var, fract_st) RESULT(var_averaged)
@@ -712,15 +712,17 @@ CONTAINS
     REAL(wp), allocatable               :: var_collected(:,:)
     CHARACTER(len=*), PARAMETER :: routine = modname//':Average_over_children'
 
+    ALLOCATE(var_collected(ice-ics+1,no_children))
     ! Collect corresponding vars of subtiles
     DO i=1,no_children
       IF ( .NOT. ASSOCIATED(this%children(i)%p%vars(var%child_idx(i))%p) ) THEN
         CALL finish(TRIM(routine), 'This var does not exist on the child tile '//TRIM(int2string(i))//' .')
       END IF
-      var_collected(:,i) = this%children(i)%p%vars(var%child_idx(i))%p%field(ics:ice, iblk, 1, 1, 1)
+      var_collected(:,i) = this%children(i)%p%vars(var%child_idx(i))%p%ptr2d(ics:ice, iblk)
     END DO
     ! Note, this works because the fract_st sum over DIM=2 is always = 1 !
     var_averaged(:) = SUM( var_collected(:,:) * fract_st(:,:) , DIM=2)
+    DEALLOCATE(var_collected)
 
   END FUNCTION Average_over_children_real2d
 

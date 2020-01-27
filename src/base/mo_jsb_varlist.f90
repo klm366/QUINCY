@@ -23,9 +23,17 @@ MODULE mo_jsb_varlist
                                   jsb_get_var_list => get_var_list, &
                                   jsb_new_var_list => new_var_list, &
                                   add_var_list_element_r2d, add_var_list_element_r3d, &
+                                  is_variable_in_output, &
                                   VARNAME_LEN
   USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2, GRID_UNSTRUCTURED, GRID_UNSTRUCTURED_CELL, GRID_CELL, missval, tables
   USE mo_jsb_io_iface,      ONLY: t_cf_var, t_grib2_var, grib2_var
+
+#ifdef _OPENACC
+  use openacc
+#define __acc_attach(ptr) CALL acc_attach(ptr)  
+#else
+#define __acc_attach(ptr)
+#endif
 
   IMPLICIT NONE
   PRIVATE

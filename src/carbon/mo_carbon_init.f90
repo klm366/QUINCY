@@ -62,7 +62,7 @@ CONTAINS
     dsl4jsb_Get_memory(CARBON_)
     !dsl4jsb_Get_config(CARBON_)
 
-    dtime = get_time_dt()
+    dtime = get_time_dt(tile%owner_model_id)
 
     !CALL carbon_init_ic(tile)
     !CALL carbon_init_bc(tile)
@@ -188,7 +188,7 @@ CONTAINS
     model => get_model(tile%owner_model_id)
 
     ! Get carbon memory and config  of the tile
-    !dsl4jsb_Get_memory(CARBON_)
+    dsl4jsb_Get_memory(CARBON_)
     dsl4jsb_Get_config(CARBON_)
 
     IF (.NOT. dsl4jsb_Config(CARBON_)%active) RETURN

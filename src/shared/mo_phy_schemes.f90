@@ -44,6 +44,8 @@ CONTAINS
     INTEGER :: it
     REAL(wp) :: tluc
 
+    !$claw sca routine
+
     it = NINT(temperature*1000._wp)
 !!$    it = MIN(MAX(NINT(temperature*1000._wp), 50000),400000)    ! Temporary fix
     tluc = tlucua(it) !<- TODO catch seg fault for unplausible temperatures? (e.g. see mo_jsb4_forcing)
@@ -63,6 +65,8 @@ CONTAINS
       & qair,               & !< Air specific humidity
       & fsat, fair            !< Weighing factors for qsat and qair accounting for only partially wet surface.
 
+    !$claw sca routine
+
     q_effective = fsat * qsat + (1._wp -fair) * qair
 
   END FUNCTION q_effective
@@ -77,6 +81,8 @@ CONTAINS
       & t_srf,                      & !< Surface temperature
       & qsat_srf                      !< Surface saturation specific humidity
 
+      !$claw sca routine
+
       surface_dry_static_energy = t_srf * cpd * ( 1._wp + cpvd1 * qsat_srf)
 
   END FUNCTION surface_dry_static_energy
@@ -89,7 +95,7 @@ CONTAINS
 
     REAL(wp), INTENT(in) :: t_srf
 
-    thermal_radiation = stbo * zemiss_def * t_srf**4
+    thermal_radiation = stbo * zemiss_def * t_srf**4._wp
 
   END FUNCTION thermal_radiation
 
@@ -102,7 +108,9 @@ CONTAINS
     REAL(wp), INTENT(in) :: lwdown   ! downward longwave radiation
     REAL(wp), INTENT(in) :: t_srf    ! surface temperature
 
-    lwnet_from_lwdown = zemiss_def * (lwdown - stbo * t_srf**4)
+    !$claw sca routine
+
+    lwnet_from_lwdown = zemiss_def * (lwdown - stbo * t_srf**4._wp)
 
   END FUNCTION lwnet_from_lwdown
 
@@ -113,6 +121,8 @@ CONTAINS
     REAL(wp), INTENT(in) :: &
       & drag,      &
       & steplen
+
+    !$claw sca routine
 
     heat_transfer_coef = drag / (cvdifts * grav * steplen)
 

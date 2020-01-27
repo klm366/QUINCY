@@ -329,7 +329,7 @@ CONTAINS
 
     ! --- compute bottom pressure
     model => get_model(model_id)
-    tile => model%Get_top_tile()
+    CALL model%Get_top_tile(tile)
     dsl4jsb_Get_memory(HYDRO_)
     DO iblk = 1, nblks
       ! get elevation
@@ -1525,7 +1525,7 @@ CONTAINS
     IF (.NOT. forcing_options%forcing_set_ocean_to_constants) RETURN
 
     model => Get_model(model_id)
-    tile => model%Get_top_tile()
+    CALL model%Get_top_tile(tile)
 
     DO iblk = 1, nblks
       CALL tile%Get_fraction(ics, ice, iblk, fract=fract(:))

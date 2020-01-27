@@ -135,7 +135,7 @@ CONTAINS
     surface => Get_vgrid('surface')
     canopy_layer => Get_vgrid('canopy_layer')
 
-    IF (.NOT. ASSOCIATED(mem%gross_assimilation_ca%ptr)) THEN
+    !$acc enter data pcreate(mem)
 
       CALL mem%Add_var( 'gross_assimilation_ca', mem%gross_assimilation_ca,     &
         & hgrid, surface,                                                            &

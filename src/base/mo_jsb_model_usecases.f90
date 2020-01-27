@@ -234,12 +234,14 @@ CONTAINS
                & lct=t_jsb_lct(VEG_TYPE, lib_id=pft_ids(i)), parent=veg_tile)
             END DO
 
-    ! Next 3 lines only to avoid compiler warnings about pointers not being dereferenced
-    IF (ASSOCIATED(glacier_tile)) CONTINUE
-    IF (ASSOCIATED(lake_tile)) CONTINUE
-    IF (ASSOCIATED(pft_tile)) CONTINUE
+    ! ! Next 3 lines only to avoid compiler warnings about pointers not being dereferenced
+    ! IF (ASSOCIATED(glacier_tile)) CONTINUE
+    ! IF (ASSOCIATED(lake_tile)) CONTINUE
+    ! IF (ASSOCIATED(pft_tile)) CONTINUE
         
-    NULLIFY(box_tile, lake_tile, land_tile, glacier_tile, veg_tile, pft_tile)
+    NULLIFY(box_tile, land_tile, veg_tile, pft_tile)
+    IF (model%config%use_glacier) NULLIFY(glacier_tile)
+    IF (model%config%use_lakes) NULLIFY(lake_tile)
 
     CALL test_pools()
 

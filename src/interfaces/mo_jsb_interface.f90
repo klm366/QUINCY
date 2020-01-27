@@ -28,6 +28,7 @@ MODULE mo_jsb_interface
   USE mo_atmland_interface,   ONLY: update_atm2land, update_land2atm
   USE mo_jsb_subset,          ONLY: ON_CHUNK
   USE mo_jsb_parallel,        ONLY: Get_omp_thread, Is_omp_inside_serial !, get_my_global_mpi_id
+  USE mo_jsb_time,            ONLY: t_datetime
 
   dsl4jsb_Use_processes CARBON_
 
@@ -47,7 +48,9 @@ CONTAINS
 
   SUBROUTINE interface_full( &
     & model_id,         &
-    & iblk, ics, ice, dtime, steplen, &
+    & iblk, ics, ice,   &
+    & current_datetime, &
+    & dtime, steplen,   &
     & t_air,            &
     & q_air,            &
     & rain,             &
@@ -116,8 +119,11 @@ CONTAINS
       & iblk,              &
       & ics,               &
       & ice
-
-    REAL(wp), INTENT(in) :: dtime, steplen
+    TYPE(t_datetime), POINTER, INTENT(in) :: &
+      & current_datetime
+    REAL(wp), INTENT(in) :: &
+      & dtime,              &
+      & steplen
     REAL(wp), INTENT(in) ::    &
       & t_air             (:), &
       & q_air             (:), &
@@ -229,13 +235,15 @@ CONTAINS
     IF (debug_on('basic') .AND. iblk == 1) CALL message( TRIM(routine), 'Updating '//TRIM(model%name))
 
     ! Update options
-    CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, dtime=dtime, steplen=steplen)
+    CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=current_datetime, dtime=dtime, steplen=steplen)
     CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
 
     CALL model%Associate_var_pointers(ics, ice, iblk, iblk)
 
     ! Put atmospheric forcing into the a2l memory.
-    tile => model%Get_top_tile()
+
+    CALL model%Get_top_tile(tile)
+
     CALL update_atm2land(                           &
       & tile,                                       &
       & model%options(no_omp_thread),               &
@@ -278,7 +286,9 @@ CONTAINS
 
     ! Finally, give the required variables back to the atmosphere
     ! Note: evapopot is an optional parameter, so it has to be passed without the colon!
-    tile => model%Get_top_tile()
+
+    CALL model%Get_top_tile(tile)
+
     CALL update_land2atm(                        &
       & tile,                                    &
       & model%options(no_omp_thread),            &
@@ -355,12 +365,14 @@ CONTAINS
 
   ! END SUBROUTINE interface_inquire
 
-  SUBROUTINE jsbach_start_timestep(model_id)
+  SUBROUTINE jsbach_start_timestep(model_id, current_datetime, dtime)
 
     USE mo_jsb_time,          ONLY: is_newday
     USE mo_carbon_interface,  ONLY: yday_carbon_conservation_test
 
-    INTEGER,  INTENT(in) :: model_id
+    INTEGER,                   INTENT(in) :: model_id
+    TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
+    REAL(wp),                  INTENT(in) :: dtime
 
     TYPE(t_jsb_model),           POINTER :: model
     CLASS(t_jsb_tile_abstract),  POINTER :: tile
@@ -380,14 +392,18 @@ CONTAINS
 
     model => Get_model(model_id)
 
+    CALL model%Set_options(current_datetime=current_datetime, dtime=dtime)
+
     ! Reset all tiles at the beginning of the timestep
     CALL model%Reset_tiles()
 
-    ! Carbon conservation test    
-    tile => model%Get_top_tile()
+    ! Carbon conservation test
+
+    CALL model%Get_top_tile(tile)
+
     IF (model%processes(CARBON_)%p%config%active) THEN
-      IF(is_newday()) THEN
-        CALL yday_carbon_conservation_test(tile, model%options(no_omp_thread))
+      IF(is_newday(current_datetime, dtime)) THEN
+        CALL yday_carbon_conservation_test(tile)
       END IF
     END IF
     
@@ -395,15 +411,16 @@ CONTAINS
 
   END SUBROUTINE jsbach_start_timestep
 
-  SUBROUTINE jsbach_finish_timestep(model_id, steplen)
+  SUBROUTINE jsbach_finish_timestep(model_id, current_datetime, steplen)
 
 #ifndef __NO_JSBACH_HD__
     USE mo_interface_hd_ocean, ONLY: interface_hd_ocean
     USE mo_hd_interface,       ONLY: hd_check_water_budget, hd_lateral_flow
 #endif
 
-    INTEGER, INTENT(in)  :: model_id
-    REAL(wp), INTENT(in) :: steplen
+    INTEGER,                   INTENT(in) :: model_id
+    TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
+    REAL(wp),                  INTENT(in) :: steplen
 
     TYPE(t_jsb_model),          POINTER :: model
     CLASS(t_jsb_tile_abstract),  POINTER :: tile
@@ -421,17 +438,22 @@ CONTAINS
     END IF
 
     model => Get_model(model_id)
-    tile => model%Get_top_tile()
+
+    CALL model%Get_top_tile(tile)
 
     ! Update options
-    CALL model%Set_options(steplen=steplen)
+    CALL model%Set_options(current_datetime=current_datetime, steplen=steplen)
 
 #ifndef __NO_JSBACH_HD__
-      CALL hd_lateral_flow(tile, model%options(no_omp_thread))
-      CALL hd_check_water_budget(tile, model%options(no_omp_thread))
+    CALL hd_lateral_flow(tile, model%options(no_omp_thread))
+    CALL hd_check_water_budget(tile, model%options(no_omp_thread))
 
-      CALL interface_hd_ocean(tile, model%options(no_omp_thread))
+    CALL interface_hd_ocean(tile, model%options(no_omp_thread))
 #endif
+
+!#ifdef _OPENACC
+!    CALL model%gpu_to_cpu()
+!#endif
 
   END SUBROUTINE jsbach_finish_timestep
 
