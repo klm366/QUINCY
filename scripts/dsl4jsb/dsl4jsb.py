@@ -89,6 +89,9 @@ macros = {
     'get_var3d_onchunk': [re.compile(
         r'dsl4jsb_Get_var3D_onChunk *\((.*?)_ *, *(.*?) *\)', re.IGNORECASE),
         r'\2 => \1__mem%\2%ptr(ics:ice,:,iblk)'],
+    'var2d_indexed': [re.compile(
+        r'dsl4jsb_var2D_indexed *\((.*?)_ *, *(.*?) *, *(.*?) *\)', re.IGNORECASE),
+        r'\1__mem%\2%ptr(\3,iblk)'],
     'var2d_onchunk': [re.compile(
         r'dsl4jsb_var2D_onChunk *\((.*?)_ *, *(.*?) *\)', re.IGNORECASE),
         r'\1__mem%\2%ptr(ics:ice,iblk)'],

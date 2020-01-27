@@ -25,6 +25,13 @@ MODULE mo_a2l_memory_class
   USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d
   USE mo_jsb_lct_class,     ONLY: LAKE_TYPE
 
+#ifdef _OPENACC
+  USE openacc
+#define __acc_attach(ptr) CALL acc_attach(ptr)  
+#else
+#define __acc_attach(ptr)
+#endif
+
   IMPLICIT NONE
   PRIVATE
 
@@ -102,11 +109,6 @@ CONTAINS
 
     !$acc enter data create(mem)
 
-    !$acc enter data create(mem%t_air,mem%q_air,mem%rain,mem%snow,mem%wind_air,mem%wind_10m, &
-    !$acc mem%lw_srf_down,mem%swvis_srf_down,mem%swpar_srf_down,mem%fract_par_diffuse,       &
-    !$acc mem%press_srf,mem%drag_srf,mem%t_acoef,mem%t_bcoef,mem%q_acoef,mem%q_bcoef,        &
-    !$acc mem%pch,mem%cos_zenith_angle,mem%CO2_air,mem%CO2_air_mol)
-
     CALL jsb_add_var( mem, 't_air', mem%t_air,       &
       & hgrid, surface,                                                      &
       & t_cf('air_temperature', 'K', ''),                                    &
@@ -115,6 +117,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & output_level=BASIC, &
       & initval_r=283.15_wp )  ! R: I just invented a value to start with...
+      __acc_attach(mem%t_air)
 
     CALL jsb_add_var( mem, 'q_air', mem%q_air,                                            &
       & hgrid, surface,                                                                   &
@@ -124,6 +127,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                                 &
       & output_level=BASIC, &
       & initval_r=0.0_wp )
+      __acc_attach(mem%q_air)
 
     CALL jsb_add_var( mem, 'rain', mem%rain,                        &
       & hgrid, surface,                                                      &
@@ -133,6 +137,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & output_level=BASIC, &
       & initval_r=0.0_wp )
+      __acc_attach(mem%rain)
 
     CALL jsb_add_var( mem, 'snow', mem%snow,                        &
       & hgrid, surface,                                                      &
@@ -142,6 +147,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & output_level=BASIC, &
       & initval_r=0.0_wp )
+      __acc_attach(mem%snow)
 
     CALL jsb_add_var( mem, 'wind_air', mem%wind_air,                &
       & hgrid, surface,                                                      &
@@ -150,6 +156,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
+      __acc_attach(mem%wind_air)
 
     CALL jsb_add_var( mem, 'wind_10m', mem%wind_10m,                &
       & hgrid, surface,                                                      &
@@ -158,6 +165,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
+      __acc_attach(mem%wind_10m)
 
     CALL jsb_add_var( mem, 'lw_srf_down', mem%lw_srf_down,          &
       & hgrid, surface,                                                      &
@@ -167,6 +175,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & output_level=BASIC, &
       & initval_r=0.0_wp )
+      __acc_attach(mem%lw_srf_down)
 
     CALL jsb_add_var( mem, 'swvis_srf_down', mem%swvis_srf_down,             &
       & hgrid, surface,                                                      &
@@ -176,6 +185,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & output_level=BASIC, &
       & initval_r=0.0_wp )
+      __acc_attach(mem%swvis_srf_down)
 
     CALL jsb_add_var( mem, 'swnir_srf_down', mem%swnir_srf_down,             &
       & hgrid, surface,                                                      &
@@ -185,6 +195,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & output_level=BASIC, &
       & initval_r=0.0_wp )
+      __acc_attach(mem%swnir_srf_down)
 
     CALL jsb_add_var( mem, 'swpar_srf_down', mem%swpar_srf_down,    &
       & hgrid, surface,                                                      &
@@ -193,6 +204,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
+      __acc_attach(mem%swpar_srf_down)
 
     CALL jsb_add_var( mem, 'fract_par_diffuse', mem%fract_par_diffuse,&
       & hgrid, surface,                                                      &
@@ -201,6 +213,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
+      __acc_attach(mem%fract_par_diffuse)
 
     CALL jsb_add_var( mem, 'press_srf', mem%press_srf,                       &
       & hgrid, surface,                                                      &
@@ -209,7 +222,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & initval_r=101325.0_wp )  ! R: I just took average atmospheric pressure
-                                 !    at sea level as value to start with...
+      __acc_attach(mem%press_srf)      !    at sea level as value to start with...
 
     CALL jsb_add_var( mem, 'drag_srf', mem%drag_srf,                         &
       & hgrid, surface,                                                      &
@@ -218,6 +231,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
+      __acc_attach(mem%drag_srf)
 
     CALL jsb_add_var( mem, 't_acoef', mem%t_acoef,                           &
       & hgrid, surface,                                                      &
@@ -226,6 +240,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
+      __acc_attach(mem%t_acoef)
 
     CALL jsb_add_var( mem, 't_bcoef', mem%t_bcoef,                           &
       & hgrid, surface,                                                      &
@@ -234,6 +249,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
+      __acc_attach(mem%t_bcoef)
 
     CALL jsb_add_var( mem, 'q_acoef', mem%q_acoef,                           &
       & hgrid, surface,                                                      &
@@ -242,6 +258,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
+      __acc_attach(mem%q_acoef)
 
     CALL jsb_add_var( mem, 'q_bcoef', mem%q_bcoef,                           &
       & hgrid, surface,                                                      &
@@ -250,6 +267,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
+      __acc_attach(mem%q_bcoef)
 
     CALL jsb_add_var( mem, 'pch', mem%pch,                                   &
       & hgrid, surface,                                                      &
@@ -258,6 +276,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
+      __acc_attach(mem%pch)
 
     CALL jsb_add_var( mem, 'cos_zenith_angle', mem%cos_zenith_angle,         &
       & hgrid, surface,                                                      &
@@ -266,6 +285,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
+      __acc_attach(mem%cos_zenith_angle)
 
     CALL jsb_add_var( mem, 'co2_air', mem%CO2_air, &
       & hgrid, surface,                                                                            &
@@ -274,7 +294,7 @@ CONTAINS
       & prefix, suffix,                                                                            &
       & output_level=BASIC, &
       & lrestart=.FALSE., initval_r=6.077E-4_wp ) ! R: I just freely choosed this value. Corresponds to 400 ppm:
-                                                  !    CO2:44.011 g/mol; dry air: 28,97 g/mol
+      __acc_attach(mem%CO2_air)                       !    CO2:44.011 g/mol; dry air: 28,97 g/mol
                                                   !    400 ppm => 6.077*10^-4
 
     CALL jsb_add_var( mem, 'co2_air_mol', mem%CO2_air_mol, &
@@ -284,11 +304,9 @@ CONTAINS
       & prefix, suffix,                                                                                &
       & output_level=BASIC, &
       & lrestart=.FALSE., initval_r=4.0E-4_wp ) ! R: I just choosed this value for 400 ppm
+      __acc_attach(mem%CO2_air_mol)
 
     IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%t_acoef_wtr%ptr)) THEN
-
-      !$acc enter data create(mem%drag_wtr,mem%t_acoef_wtr,mem%t_bcoef_wtr,mem%q_acoef_wtr,mem%q_bcoef_wtr, &
-      !$acc                   mem%drag_ice,mem%t_acoef_ice,mem%t_bcoef_ice,mem%q_acoef_ice,mem%q_bcoef_ice)
 
       CALL jsb_add_var( mem, 'drag_wtr', mem%drag_wtr,                &
         & hgrid, surface,                                                      &
@@ -297,6 +315,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp )
+        __acc_attach(mem%drag_wtr)
 
       CALL  jsb_add_var( mem, 'drag_ice', mem%drag_ice,                &
         & hgrid, surface,                                                      &
@@ -305,6 +324,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp )
+        __acc_attach(mem%drag_ice)
 
       CALL jsb_add_var( mem, 't_acoef_wtr', mem%t_acoef_wtr,                   &
         & hgrid, surface,                                                      &
@@ -313,6 +333,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp )
+        __acc_attach(mem%t_acoef_wtr)
 
       CALL jsb_add_var( mem, 't_bcoef_wtr', mem%t_bcoef_wtr,                   &
         & hgrid, surface,                                                      &
@@ -321,6 +342,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp )
+        __acc_attach(mem%t_bcoef_wtr)
 
       CALL jsb_add_var( mem, 'q_acoef_wtr', mem%q_acoef_wtr,                   &
         & hgrid, surface,                                                      &
@@ -329,6 +351,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp )
+        __acc_attach(mem%q_acoef_wtr)
 
       CALL jsb_add_var( mem, 'q_bcoef_wtr', mem%q_bcoef_wtr,                   &
         & hgrid, surface,                                                      &
@@ -337,6 +360,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp )
+        __acc_attach(mem%q_bcoef_wtr)
 
       CALL jsb_add_var( mem, 't_acoef_ice', mem%t_acoef_ice,                   &
         & hgrid, surface,                                                      &
@@ -345,6 +369,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp )
+        __acc_attach(mem%t_acoef_ice)
 
       CALL jsb_add_var( mem, 't_bcoef_ice', mem%t_bcoef_ice,                   &
         & hgrid, surface,                                                      &
@@ -353,6 +378,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp )
+        __acc_attach(mem%t_bcoef_ice)
 
       CALL jsb_add_var( mem, 'q_acoef_ice', mem%q_acoef_ice,                   &
         & hgrid, surface,                                                      &
@@ -361,6 +387,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp )
+        __acc_attach(mem%q_acoef_ice)
 
       CALL jsb_add_var( mem, 'q_bcoef_ice', mem%q_bcoef_ice,                   &
         & hgrid, surface,                                                      &
@@ -369,6 +396,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp )
+        __acc_attach(mem%q_bcoef_ice)
 
     END IF
 
