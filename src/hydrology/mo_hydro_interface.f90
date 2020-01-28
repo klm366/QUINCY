@@ -1974,7 +1974,7 @@ CONTAINS
       & tile_fract (options%nc), &
       & water_content_new(options%nc)
 
-    INTEGER  :: iblk, ics, ice
+    INTEGER  :: iblk, ics, ice, nc, i
     REAL(wp) :: dtime
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_balance'
@@ -1982,6 +1982,7 @@ CONTAINS
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
+    nc    = options%nc
     dtime = options%dtime
 
     ! IF (tile%lcts() RETURN   ! Check water balance only on root tile
@@ -2012,9 +2013,13 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_content)       ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_budget)        ! out
 
-    !$claw acc data create(tile_fract, water_content_new)
-    CALL tile%Get_fraction(ics, ice, iblk, fract=tile_fract(:))
-    !$claw acc update device(tile_fract)
+    !$claw acc data create(tile, tile%fract, tile_fract, water_content_new)
+
+    !$claw acc parallel loop gang vector
+    DO i=1,nc
+      tile_fract(i) = tile%fract(ics-1+i,iblk)
+    END DO
+
     !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_0 tile_name=tile%name
     water_flux(:) = rain(:) + snow(:) + evapotrans(:) - runoff(:) - drainage(:)
     water_flux(:) = water_flux(:) * tile_fract(:) * area(:) / rhoh2o                    ! kg m-2 s-1 -> m3/s

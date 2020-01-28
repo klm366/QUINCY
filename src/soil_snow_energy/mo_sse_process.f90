@@ -640,9 +640,9 @@ CONTAINS
     DO jl=1,nidx
       !$claw acc loop seq
       DO jk = nsoil-1, 2, -1
-        z1(:,jk-1) = 1._wp / (zdz2(:,jk) + zdz1(:,jk-1) + zdz1(:,jk) * (1._wp - t_soil_bcoef(:,jk)))
-        t_soil_acoef(:,jk-1) = (t_soil(:,jk) * zdz2(:,jk) + zdz1(:,jk) * t_soil_acoef(:,jk)) * z1(:,jk-1)
-        t_soil_bcoef(:,jk-1) = zdz1(:,jk-1) * z1(:,jk-1)
+        z1(jl,jk-1) = 1._wp / (zdz2(jl,jk) + zdz1(jl,jk-1) + zdz1(jl,jk) * (1._wp - t_soil_bcoef(jl,jk)))
+        t_soil_acoef(jl,jk-1) = (t_soil(jl,jk) * zdz2(jl,jk) + zdz1(jl,jk) * t_soil_acoef(jl,jk)) * z1(jl,jk-1)
+        t_soil_bcoef(jl,jk-1) = zdz1(jl,jk-1) * z1(jl,jk-1)
       END DO
     END DO  
     !$claw acc end parallel
@@ -943,6 +943,7 @@ CONTAINS
     !$claw acc data present(itop,z1,zdz1,zdz2,t_snow_acoef,t_snow_bcoef,t_snow)
     !$claw acc parallel loop gang vector
     DO jl=1,nidx
+      !$claw acc loop seq
       DO jk = nsnow, 2, -1
         IF (jk > itop(jl)) THEN
           z1(jl) = 1._wp / (zdz2(jl,jk) + zdz1(jl,jk-1) + zdz1(jl,jk) * (1._wp - t_snow_bcoef(jl,jk)))
