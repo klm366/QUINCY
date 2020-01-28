@@ -36,6 +36,13 @@ MODULE mo_atmland_interface
   dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(CARBON_)
 
+#ifdef _OPENACC
+  use openacc
+#define __acc_attach(ptr) CALL acc_attach(ptr)  
+#else
+#define __acc_attach(ptr)
+#endif
+
   IMPLICIT NONE
   PRIVATE
 
@@ -465,7 +472,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    INTEGER ::  iblk, ics, ice, i
+    INTEGER ::  iblk, ics, ice, i, j
     REAL(wp) :: fact_lake(options%nc), fact_land(options%nc)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_land2atm'
@@ -538,25 +545,31 @@ CONTAINS
       ! box. This is necessary because, in the atmosphere, they are weighted with the fractions of lake/nolake in the whole
       ! grid box, while on the root tile of JSBACH they are relative to the land fraction of the grid box including lakes.
       ! Note that, if lakes are considered, the lake tile must be a direct child of the root tile.
-      DO i=1,SIZE(tile%lcts)
-        IF (tile%lcts(i)%id == LAKE_TYPE) EXIT
+      DO j=1,SIZE(tile%lcts)
+        IF (tile%lcts(j)%id == LAKE_TYPE) EXIT
       END DO
 
-      !$acc data pcreate(fact_lake, fact_land, fract_ptr)
+      !$acc data pcreate(fact_lake, fact_land, fract_ptr) present(tile%lcts)
+      fract_ptr => tile%lcts(j)%fract(ics:ice,iblk)
+      __acc_attach(fract_ptr)
       
-      fact_lake(:) = tile%lcts(i)%fract(ics:ice,iblk)
-      fact_land(:) = 1._wp - fact_lake(:)
-      WHERE (fact_lake(:) > 0._wp)
-        fact_lake(:) = 1._wp / fact_lake(:)
-      ELSE WHERE
-        fact_lake(:) = 1._wp
-      END WHERE
-      WHERE (fact_land(:) > 0._wp)
-        fact_land(:) = 1._wp / fact_land(:)
-      ELSE WHERE
-        fact_land(:) = 1._wp
-      END WHERE
-      !$acc update device(fact_land, fact_lake)
+      !$acc data present(fract_ptr)
+      !$acc parallel loop
+      DO i=ics, ice
+        fact_lake(i) = fract_ptr(i)
+        fact_land(i) = 1._wp - fact_lake(i)
+        IF (fact_lake(i) > 0._wp) THEN
+          fact_lake(i) = 1._wp / fact_lake(i)
+        ELSE
+          fact_lake(i) = 1._wp
+        END IF
+        IF (fact_land(i) > 0._wp) THEN
+          fact_land(i) = 1._wp / fact_land(i)
+        ELSE
+          fact_land(i) = 1._wp
+        END IF
+      END DO
+      !$acc end data
      
 
       IF (PRESENT(t_srf)) THEN

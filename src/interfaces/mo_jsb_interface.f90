@@ -430,15 +430,15 @@ CONTAINS
     CALL model%Set_options(steplen=steplen)
 
 #ifndef __NO_JSBACH_HD__
-      CALL hd_lateral_flow(tile, model%options(no_omp_thread))
-      CALL hd_check_water_budget(tile, model%options(no_omp_thread))
+    CALL hd_lateral_flow(tile, model%options(no_omp_thread))
+    CALL hd_check_water_budget(tile, model%options(no_omp_thread))
 
-      CALL interface_hd_ocean(tile, model%options(no_omp_thread))
+    CALL interface_hd_ocean(tile, model%options(no_omp_thread))
 #endif
 
-#ifdef _OPENACC
-    CALL model%gpu_to_cpu()
-#endif
+!#ifdef _OPENACC
+!    CALL model%gpu_to_cpu()
+!#endif
 
   END SUBROUTINE jsbach_finish_timestep
 
