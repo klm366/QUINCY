@@ -401,8 +401,8 @@ CONTAINS
     IF (l_newday) THEN
       !$claw expand parallel update savepoint=ser_jsb_pheno_day_npp_sum_expand_0 tile_name=tile%name
       previous_day_NPP_pot_rate_ca(:) = day_NPP_sum(:)/86400._wp
+      !$claw expand parallel update savepoint=ser_jsb_pheno_day_npp_sum_expand_1 tile_name=tile%name
       day_NPP_sum(:) = 0._wp
-      !$claw end expand
     END IF
 
     ! JN 10.01.18
@@ -663,6 +663,7 @@ CONTAINS
     lai_mon(1:,0:) => dsl4jsb_memory(PHENO_)%lai_mon (ics:ice, iblk, :) ! in
 
     CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
+    !$claw expand parallel update savepoint=ser_jsb_pheno_update_phenology_climatology_expand_1 tile_name=tile%name
     lai(:) = REAL(wgt1,wp) * lai_mon(:,nmw1) + REAL(wgt2,wp) * lai_mon(:,nmw2)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
