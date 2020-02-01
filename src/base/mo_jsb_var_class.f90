@@ -237,9 +237,9 @@ CONTAINS
     ics = sub%ics ; ice = sub%ice ; iblk = sub%iblk ; nb = sub%nb ; nc = sub%nc
 
     IF (sub%type == ON_CHUNK) THEN
-      lhs%field(ics:ice,iblk,1,1,1) = rhs%field(ics:ice,iblk,1,1,1)
+      lhs%ptr2d(ics:ice,iblk) = rhs%ptr2d(ics:ice,iblk)
     ELSE
-      lhs%field(:,:,1,1,1) = rhs%field(:,:,1,1,1)
+      lhs%ptr2d(:,:) = rhs%ptr2d(:,:)
     END IF
 
   END SUBROUTINE Assign_var_to_var_real2d
@@ -258,9 +258,9 @@ CONTAINS
     ics = sub%ics ; ice = sub%ice ; iblk = sub%iblk ; nb = sub%nb ; nc = sub%nc
 
     IF (sub%type == ON_CHUNK) THEN
-      lhs%field(ics:ice,:,iblk,1,1) = rhs%field(ics:ice,:,iblk,1,1)
+      lhs%ptr3d(ics:ice,:,iblk) = rhs%ptr3d(ics:ice,:,iblk)
     ELSE
-      lhs%field(:,:,:,1,1) = rhs%field(:,:,:,1,1)
+      lhs%ptr3d(:,:,:) = rhs%ptr3d(:,:,:)
     END IF
 
   END SUBROUTINE Assign_var_to_var_real3d
@@ -279,7 +279,7 @@ CONTAINS
 
     IF (sub%type == ON_CHUNK) THEN
       ics = sub%ics ; ice = sub%ice ; iblk = sub%iblk ; nb = sub%nb ; nc = sub%nc
-      lhs%field(ics:ice,iblk,1,1,1) = rhs(:)
+      lhs%ptr2d(ics:ice,iblk) = rhs(:)
     ELSE
       CALL finish(routine, 'Cannot assign 1d-field to jsb_var on domain')
     END IF
@@ -301,9 +301,9 @@ CONTAINS
     IF (sub%type == ON_CHUNK) THEN
       IF (SIZE(rhs,2) > 1) CALL finish(routine, 'Dimension mismatch for assignment to jsb_var on chunk')
       ics = sub%ics ; ice = sub%ice ; iblk = sub%iblk ; nb = sub%nb ; nc = sub%nc
-      lhs%field(ics:ice,iblk,1,1,1) = rhs(:,1)
+      lhs%ptr2d(ics:ice,iblk) = rhs(:,1)
     ELSE
-      lhs%field(:,:,1,1,1) = rhs(:,:)
+      lhs%ptr2d(:,:) = rhs(:,:)
     END IF
 
   END SUBROUTINE Assign_field2d_to_var_real2d
@@ -322,9 +322,9 @@ CONTAINS
 
     IF (sub%type == ON_CHUNK) THEN
       ics = sub%ics ; ice = sub%ice ; iblk = sub%iblk ; nb = sub%nb ; nc = sub%nc
-      lhs%field(ics:ice,iblk,1,1,1) = rhs
+      lhs%ptr2d(ics:ice,iblk) = rhs
     ELSE
-      lhs%field(:,:,1,1,1) = rhs
+      lhs%ptr2d(:,:) = rhs
     END IF
 
   END SUBROUTINE Assign_scalar_to_var_real2d
@@ -344,9 +344,9 @@ CONTAINS
     IF (sub%type == ON_CHUNK) THEN
       IF (SIZE(rhs,3) > 1) CALL finish(routine, 'Dimension mismatch for assignment to jsb_var on chunk')
       ics = sub%ics ; ice = sub%ice ; iblk = sub%iblk ; nb = sub%nb ; nc = sub%nc
-      lhs%field(ics:ice,:,iblk,1,1) = rhs(:,:,1)
+      lhs%ptr3d(ics:ice,:,iblk) = rhs(:,:,1)
     ELSE
-      lhs%field(:,:,:,1,1) = rhs(:,:,:)
+      lhs%ptr3d(:,:,:) = rhs(:,:,:)
     END IF
 
   END SUBROUTINE Assign_field3d_to_var_real3d
@@ -365,9 +365,9 @@ CONTAINS
 
     IF (sub%type == ON_CHUNK) THEN
       ics = sub%ics ; ice = sub%ice ; iblk = sub%iblk ; nb = sub%nb ; nc = sub%nc
-      lhs%field(ics:ice,:,iblk,1,1) = rhs
+      lhs%ptr3d(ics:ice,:,iblk) = rhs
     ELSE
-      lhs%field(:,:,:,1,1) = rhs
+      lhs%ptr3d(:,:,:) = rhs
     END IF
 
   END SUBROUTINE Assign_scalar_to_var_real3d
@@ -422,8 +422,8 @@ CONTAINS
     var3%owner_proc_id = var1%owner_proc_id
     var3%owner_tile_path = var1%owner_tile_path
     var3%missval = var1%missval
-    var3%field = var1%field + scalar
-    var3%ptr => var3%field(:,:,1,1,1)
+    var3%ptr2d = var1%ptr2d + scalar
+    var3%ptr => var3%ptr2d(:,:)
 
   END FUNCTION Add_real2d_and_scalar
 
@@ -443,8 +443,8 @@ CONTAINS
     var3%owner_proc_id = var1%owner_proc_id
     var3%owner_tile_path = var1%owner_tile_path
     var3%missval = var1%missval
-    var3%field = var1%field + RESHAPE(field, (/SIZE(var1%ptr,1),SIZE(var1%ptr,2),1,1,1/))
-    var3%ptr => var3%field(:,:,1,1,1)
+    var3%ptr2d = var1%ptr2d + field
+    var3%ptr => var3%ptr2d(:,:)
 
   END FUNCTION Add_real2d_and_field
 
@@ -459,8 +459,8 @@ CONTAINS
     var3%owner_proc_id = var1%owner_proc_id
     var3%owner_tile_path = var1%owner_tile_path
     var3%missval = var1%missval
-    var3%field = var1%field + scalar
-    var3%ptr => var3%field(:,:,:,1,1)
+    var3%ptr3d = var1%ptr3d + scalar
+    var3%ptr => var3%ptr3d(:,:,:)
 
   END FUNCTION Add_real3d_and_scalar
 
@@ -480,8 +480,8 @@ CONTAINS
     var3%owner_proc_id = var1%owner_proc_id
     var3%owner_tile_path = var1%owner_tile_path
     var3%missval = var1%missval
-    var3%field = var1%field + RESHAPE(field, (/SIZE(var1%ptr,1),SIZE(var1%ptr,2),SIZE(var1%ptr,3),1,1/))
-    var3%ptr => var3%field(:,:,:,1,1)
+    var3%ptr3d = var1%ptr3d + field
+    var3%ptr => var3%ptr3d(:,:,:)
 
   END FUNCTION Add_real3d_and_field
 
@@ -501,8 +501,8 @@ CONTAINS
     var3%owner_proc_id = var1%owner_proc_id
     var3%owner_tile_path = var1%owner_tile_path
     var3%missval = var1%missval
-    var3%field = var1%field * RESHAPE(field, (/SIZE(var1%ptr,1),SIZE(var1%ptr,2),1,1,1/))
-    var3%ptr => var3%field(:,:,1,1,1)
+    var3%ptr2d = var1%ptr2d * field
+    var3%ptr => var3%ptr2d(:,:)
 
   END FUNCTION Multiply_real2d_with_field
 
@@ -522,8 +522,8 @@ CONTAINS
     var3%owner_proc_id = var1%owner_proc_id
     var3%owner_tile_path = var1%owner_tile_path
     var3%missval = var1%missval
-    var3%field = var1%field + RESHAPE(field, (/SIZE(var1%ptr,1),SIZE(var1%ptr,2),SIZE(var1%ptr,3),1,1/))
-    var3%ptr => var3%field(:,:,:,1,1)
+    var3%ptr3d = var1%ptr3d + field
+    var3%ptr => var3%ptr3d(:,:,:)
 
   END FUNCTION Multiply_real3d_with_field
 

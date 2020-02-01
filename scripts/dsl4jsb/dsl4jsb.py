@@ -177,7 +177,8 @@ def replace_dollar_function(match):
             match1 = match1[:-1]
     else:
         if (__current_file.find('_interface.f90') > 0 or __current_file.find('_init.f90') > 0
-            or __current_file.find('_veg.f90') > 0):
+            or __current_file.find('_veg.f90') > 0
+            or __current_file.find('_land.f90') or __current_file.find('_lake.f90')):
             match1 = __current_file.split('_')[1] # Get the process name after mo_
         elif __current_file == 'test.f90':
             match1 = 'carbon@sub'
@@ -190,7 +191,8 @@ def replace_dollar_function(match):
     #     subset = 'loop'
     else:
         process = match1
-        if re.search('_interface(_.*)*\.f90', __current_file):
+        if re.search('_interface(_.*)*\.f90', __current_file) \
+            or __current_file.find('_land.f90') > 0 or __current_file.find('_lake.f90') > 0:
             subset = 'sub'
         elif re.search('_init(_.*)*\.f90', __current_file):
             subset = 'dom'
@@ -295,7 +297,7 @@ def process_file(inputfile, outputfile, verbose=False, verbose_more=False, cwd=N
                 # pat = re.compile(r'\$(.*?:)? *(.*?) *\$', re.IGNORECASE)
                 pat = re.compile(r'\$([^(]*?:)? *(.*?) *\$', re.IGNORECASE)
                 line = pat.sub(replace_dollar_function, line)
-                line = re.sub(r'([A-Z]*?)_', tolower, line)
+                #line = re.sub(r'([A-Z]*?)_', tolower, line)
                 if len(re.sub(r"!.*$",'',line)) > 132:
                     print(line)
                     print(re.sub(r"!.*$",'',line))

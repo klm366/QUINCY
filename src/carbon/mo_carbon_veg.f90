@@ -57,7 +57,7 @@ CONTAINS
     REAL(wp),               INTENT(in)    :: NPP_pot(:)       !< Potential NPP rate (from assimilation) [mol(C)/m^2/s]
     TYPE(t_plant_pool),     INTENT(inout) :: alloc            !< Flux pool for allocation [mol/m^2/s]
     REAL(wp),               INTENT(out)   :: &
-      & root_exudates, &                                      !< Part of NPP_pot that goes into root exudates [mol(C)/m^2/s]
+      & root_exudates(:), &                                   !< Part of NPP_pot that goes into root exudates [mol(C)/m^2/s]
       & NPP_act(:), &                                         !< Actual NPP rate [mol(C)/m^2/s] after N-limitation
                                                               !  and excess carbon drop
       & NPP_flux_correction(:)                                !< NPP flux correction [mol(C)/m^2/s]

@@ -503,14 +503,14 @@ CONTAINS
     END IF
 
     CALL this%Reset_tiles()
-    tile => this%Get_top_tile()
+    CALL this%Get_top_tile(tile)
     IF (.NOT. ASSOCIATED(tile)) &
       & CALL finish(TRIM(routine), 'Top tile not set')
 
     DO WHILE (ASSOCIATED(tile))
 
       IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
-        tile => this%Goto_next_tile()
+        CALL this%Goto_next_tile(tile)
         CYCLE
       END IF
 
@@ -533,7 +533,7 @@ CONTAINS
 
       END DO
 
-      tile => this%Goto_next_tile()
+      CALL this%Goto_next_tile(tile)
 
     END DO
 
