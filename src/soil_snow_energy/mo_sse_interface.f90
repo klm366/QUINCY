@@ -405,7 +405,8 @@ CONTAINS
         & grnd_hflx_snow     (:)  &
         & )
 
-      DO i = 1, size(snow_depth_sl, dim=1)
+      !$claw acc parallel loop default(none) present(snow_depth_sl,snow_fract,t_unfilt_corrected,t_soil_top)
+      DO i = 1, nc
         IF (snow_depth_sl(i, nsnow) > 0._wp) THEN  ! At least one snow layer above soil
           t_soil_top(i) = snow_fract(i) * t_soil_top(i) + (1._wp - snow_fract(i)) * t_unfilt_corrected(i)
         ELSE                                ! No snow
@@ -784,7 +785,7 @@ CONTAINS
           dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens)
           !$claw acc data present(snow_soil_dens,vol_heat_cap_snow,heat_cond_snow)
           !$claw acc parallel loop gang vector
-          DO i = 1, size(snow_soil_dens)
+          DO i = 1, nc
             IF (snow_soil_dens(i) > dens_snow_min) THEN     ! "old" or mixture of old and fresh snow
               vol_heat_cap_snow(i) = ci * snow_soil_dens(i)                               ! Use specific heat of ice (Verseghy 1991)
               ! heat_cond_snow   (:) = 2.576e-6_wp * snow_soil_dens(:) ** 2._wp + 0.074_wp                      ! Verseghy (1991)

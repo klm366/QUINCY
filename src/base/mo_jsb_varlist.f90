@@ -110,6 +110,7 @@ CONTAINS
 
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
     CHARACTER(len=50) :: name_loc
+    LOGICAL           :: loutput_loc
     TYPE(t_cf_var)    :: cf_loc
     TYPE(t_grib2_var) :: grib2_loc
     LOGICAL           :: lmiss_loc
@@ -124,6 +125,9 @@ CONTAINS
     name_loc = TRIM(name)
     IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
     IF (suffix /= '') name_loc = TRIM(name_loc)//'_'//TRIM(suffix)
+
+    loutput_loc = .TRUE.
+    IF (PRESENT(loutput)) loutput_loc = loutput
 
     lmiss_loc = .TRUE.
     IF (PRESENT(lmiss)) lmiss_loc = lmiss
@@ -175,10 +179,16 @@ CONTAINS
     var%type = REAL2D
     var%missval = missval_r_loc
     IF (PRESENT(l_aggregate_all)) var%l_aggregate_all = l_aggregate_all
-    IF (PRESENT(loutput)) var%is_in_output = loutput
-    var%is_in_output = var%is_in_output .OR. is_variable_in_output(var%full_name)
+    IF (loutput_loc) THEN
+      IF (mem%in_var_groups) THEN
+        var%is_in_output = is_variable_in_output(var%full_name, groups(:))
+      ELSE
+        var%is_in_output = is_variable_in_output(var%full_name)
+      END IF
+    END IF
+    var%is_in_restart = .TRUE.  ! All jsbach var_lists have lrestart=.TRUE. by default
     IF (PRESENT(lrestart)) var%is_in_restart = lrestart
-    var%is_in_restart = var%is_in_restart .OR. .TRUE.  ! TODO
+    ! var%is_in_restart = var%is_in_restart .OR. .TRUE.  ! TODO
 
     var%owner_proc_id = mem%owner_proc_id
 
@@ -229,6 +239,7 @@ CONTAINS
 
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
     CHARACTER(len=50) :: name_loc
+    LOGICAL           :: loutput_loc
     TYPE(t_cf_var)    :: cf_loc
     TYPE(t_grib2_var) :: grib2_loc
     LOGICAL           :: lmiss_loc
@@ -243,6 +254,9 @@ CONTAINS
     name_loc = TRIM(name)
     IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
     IF (suffix /= '') name_loc = TRIM(name_loc)//'_'//TRIM(suffix)
+
+    loutput_loc = .TRUE.
+    IF (PRESENT(loutput)) loutput_loc = loutput
 
     lmiss_loc = .TRUE.
     IF (PRESENT(lmiss)) lmiss_loc = lmiss
@@ -309,10 +323,16 @@ CONTAINS
     var%type = REAL3D
     var%missval = missval_r_loc
     IF (PRESENT(l_aggregate_all)) var%l_aggregate_all = l_aggregate_all
-    IF (PRESENT(loutput)) var%is_in_output = loutput
-    var%is_in_output = var%is_in_output .OR. is_variable_in_output(var%full_name)
+    IF (loutput_loc) THEN
+      IF (mem%in_var_groups) THEN
+        var%is_in_output = is_variable_in_output(var%full_name, groups(:))
+      ELSE
+        var%is_in_output = is_variable_in_output(var%full_name)
+      END IF
+    END IF
+    var%is_in_restart = .TRUE.  ! All jsbach var_lists have lrestart=.TRUE. by default
     IF (PRESENT(lrestart)) var%is_in_restart = lrestart
-    var%is_in_restart = var%is_in_restart .OR. .TRUE.  ! TODO
+    ! var%is_in_restart = var%is_in_restart .OR. .TRUE.  ! TODO
 
     var%owner_proc_id = mem%owner_proc_id
 

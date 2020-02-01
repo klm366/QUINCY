@@ -738,7 +738,7 @@ CONTAINS
 
     !$claw acc data &
     !$claw acc present(dsoil, wsat_l, field_cap_l, hyd_cond_sat_l, vol_porosity_l, bclapp_l, matrix_pot_l, pore_size_index_l, p_wilt_l, dz, ws_l, drainage, w_soil_overflow, soil_ice) &
-    !$claw acc pcreate(diffus_l, ws_min_drain, ws_rel, ws_crit, drain_crit, ws_tmp, drain_l, soil_above, soil_below, zda, zdb, zdc, ztri, diffusivity, zkredu, zdiflog, remoist, zmvg_l)
+    !$claw acc pcreate(percolation, diffus_l, ws_min_drain, ws_rel, ws_crit, drain_crit, ws_tmp, drain_l, soil_above, soil_below, zda, zdb, zdc, ztri, diffusivity, zkredu, zdiflog, remoist, zmvg_l)
 
     !$claw acc parallel loop gang vector collapse(2)
     DO j=1,nidx
