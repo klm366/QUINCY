@@ -409,6 +409,10 @@ CONTAINS
 
   SUBROUTINE jsbach_finish_timestep(model_id, current_datetime, steplen)
 
+    USE mo_util,        ONLY: report_memory_usage
+    USE mo_jsb_control, ONLY: get_debug_memory_level
+    USE mo_jsb_time,    ONLY: is_newday, is_newmonth
+
 #ifndef __NO_JSBACH_HD__
     USE mo_interface_hd_ocean, ONLY: interface_hd_ocean
     USE mo_hd_interface,       ONLY: hd_check_water_budget, hd_lateral_flow
@@ -423,6 +427,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_finish_timestep'
 
+    LOGICAL :: l_trace_memory
     INTEGER :: no_omp_thread
 
     no_omp_thread = Get_omp_thread()
@@ -450,6 +455,18 @@ CONTAINS
 !#ifdef _OPENACC
 !    CALL model%gpu_to_cpu()
 !#endif
+
+    l_trace_memory = .FALSE.
+    SELECT CASE (get_debug_memory_level())
+    CASE (1)
+      l_trace_memory = is_newmonth(current_datetime, steplen)
+    CASE (2)
+      l_trace_memory = is_newday(current_datetime, steplen)
+    CASE (3)
+      l_trace_memory = .TRUE.
+    END SELECT
+
+    IF (l_trace_memory) CALL report_memory_usage()
 
   END SUBROUTINE jsbach_finish_timestep
 
