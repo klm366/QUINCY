@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from JSBACH source file:
 !    src/hydrology/mo_hydro_init.f90
-! with md5 hash: 82bc38ae6a3746eaebd077d53b618812
+! with md5 hash: 9530d6098d1ff909054c12d00771e1ca
 !
 !>
 !! @brief Initialization of the the hydrology memory.
@@ -340,12 +340,14 @@ CONTAINS
       END DO
 
       CALL input_file%Close()
-      !$acc update device(hydro__mem%w_snow%ptr(:,:), &
-      !$acc hydro__mem%w_snow_soil%ptr(:,:), &
-      !$acc hydro__mem%w_soil_overflow%ptr(:,:))
-    ! avoid compiler warnings about pointers not being dereferenced
-    IF (ASSOCIATED(ptr_2D)) CONTINUE
-    NULLIFY(ptr_2D)
+
+      !$acc update device(hydro__mem%w_snow%ptr(:,:),       &
+      !$acc               hydro__mem%w_snow_soil%ptr(:,:),  &
+      !$acc               hydro__mem%w_soil_overflow%ptr(:,:))
+      ! avoid compiler warnings about pointers not being dereferenced
+
+      IF (ASSOCIATED(ptr_2D)) CONTINUE
+      NULLIFY(ptr_2D)
 
     END IF
 
@@ -402,9 +404,9 @@ CONTAINS
       END WHERE
 
       
-      !$acc update device(hydro__mem%w_soil_rel%ptr(:,:), &
-      !$acc hydro__mem%w_soil_column%ptr(:,:), &
-      !$acc hydro__mem%w_soil_sl%ptr(:,:,:))
+      !$acc update device(hydro__mem%w_soil_rel%ptr(:,:),    &
+      !$acc               hydro__mem%w_soil_column%ptr(:,:), &
+      !$acc               hydro__mem%w_soil_sl%ptr(:,:,:))
 
       CALL init_soil_properties(tile)
     END IF

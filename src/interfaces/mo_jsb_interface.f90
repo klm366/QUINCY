@@ -436,9 +436,9 @@ CONTAINS
     CALL interface_hd_ocean(tile, model%options(no_omp_thread))
 #endif
 
-#ifdef _OPENACC
-   CALL model%gpu_to_cpu()
-#endif
+! #ifdef _OPENACC
+!    CALL model%gpu_to_cpu()
+! #endif
 
   END SUBROUTINE jsbach_finish_timestep
 

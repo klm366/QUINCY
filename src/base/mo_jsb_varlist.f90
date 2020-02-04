@@ -169,11 +169,8 @@ CONTAINS
       ! lmiss=lmiss_loc, missval_r=missval_r_loc)
       lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups, &
       verbose=verbose)
-    __acc_attach(var%ptr2d)
 
-    !$acc update device(var%ptr2d)
     var%ptr => var%ptr2d
-    __acc_attach(var%ptr)
     var%name = TRIM(name)
     var%full_name = TRIM(name_loc)
     var%type = REAL2D
@@ -202,6 +199,11 @@ CONTAINS
       mem%vars(pos_of_var)%p => var
       mem%no_of_vars = pos_of_var
     END IF
+
+    !$acc enter data copyin(var)
+    !$acc update device(var%ptr2d)
+    __acc_attach(var%ptr2d)
+    __acc_attach(var%ptr)
 
   END SUBROUTINE jsb_add_var_list_element_r2d
 
@@ -313,11 +315,8 @@ CONTAINS
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       ! lmiss=lmiss_loc, missval_r=missval_r_loc)
       lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups, verbose=verbose)
-      __acc_attach(var%ptr3d)
 
-    !$acc update device(var%ptr3d)
     var%ptr => var%ptr3d
-    __acc_attach(var%ptr)
     var%name = TRIM(name)
     var%full_name = TRIM(name_loc)
     var%type = REAL3D
@@ -346,6 +345,11 @@ CONTAINS
       mem%vars(pos_of_var)%p => var
       mem%no_of_vars = pos_of_var
     END IF
+
+    !$acc enter data copyin(var)
+    !$acc update device(var%ptr3d)
+    __acc_attach(var%ptr3d)
+    __acc_attach(var%ptr)
 
   END SUBROUTINE jsb_add_var_list_element_r3d
 

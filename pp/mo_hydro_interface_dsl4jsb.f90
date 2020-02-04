@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from JSBACH source file:
 !    src/hydrology/mo_hydro_interface.f90
-! with md5 hash: 23fceb08b0389ac1bf1b05d1da968cf9
+! with md5 hash: 9f1974c7e954e2d16a3741529abd5976
 !
 !>
 !! @brief Contains the interfaces to the hydro processes
@@ -1979,7 +1979,7 @@ CONTAINS
       & tile_fract (options%nc), &
       & water_content_new(options%nc)
 
-    INTEGER  :: iblk, ics, ice
+    INTEGER  :: iblk, ics, ice, nc, i
     REAL(wp) :: dtime
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_balance'
@@ -1987,6 +1987,7 @@ CONTAINS
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
+    nc    = options%nc
     dtime = options%dtime
 
     ! IF (tile%lcts() RETURN   ! Check water balance only on root tile
@@ -2017,9 +2018,13 @@ CONTAINS
     water_content => hydro__mem%water_content%ptr(ics:ice,iblk)       ! out
     water_budget => hydro__mem%water_budget%ptr(ics:ice,iblk)        ! out
 
-    !$claw acc data create(tile_fract, water_content_new)
-    CALL tile%Get_fraction(ics, ice, iblk, fract=tile_fract(:))
-    !$claw acc update device(tile_fract)
+    !$claw acc data create(tile, tile%fract, tile_fract, water_content_new)
+
+    !$claw acc parallel loop gang vector
+    DO i=1,nc
+      tile_fract(i) = tile%fract(ics-1+i,iblk)
+    END DO
+
     !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_0 tile_name=tile%name
     water_flux(:) = rain(:) + snow(:) + evapotrans(:) - runoff(:) - drainage(:)
     water_flux(:) = water_flux(:) * tile_fract(:) * area(:) / rhoh2o                    ! kg m-2 s-1 -> m3/s

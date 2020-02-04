@@ -1950,6 +1950,8 @@ INTEGER, SAVE :: task_counter = 1
   INTEGER :: iblk
   INTEGER :: ics
   INTEGER :: ice
+  INTEGER :: nc
+  INTEGER :: i
   REAL ( KIND= wp ) :: dtime
   CHARACTER ( LEN= * ) , PARAMETER :: routine ="mo_hydro_interface" //&
   ":update_water_balance"
@@ -1962,6 +1964,7 @@ INTEGER, SAVE :: task_counter = 1
   iblk = options % iblk
   ics = options % ics
   ice = options % ice
+  nc = options % nc
   dtime = options % dtime
   IF ( debug_on ( ) .AND. iblk == 1 ) THEN
    CALL message ( trim ("mo_hydro_interface" //":update_water_balance" ) ,&
@@ -1992,9 +1995,11 @@ INTEGER, SAVE :: task_counter = 1
   water_flux => hydro__mem % water_flux % ptr ( ics : ice , iblk )
   water_content => hydro__mem % water_content % ptr ( ics : ice , iblk )
   water_budget => hydro__mem % water_budget % ptr ( ics : ice , iblk )
-!$acc data create(tile_fract, water_content_new)
-  CALL tile % get_fraction ( ics , ice , iblk , fract = tile_fract ( : ) )
-!$acc update device(tile_fract)
+!$acc data create(tile, tile%fract, tile_fract, water_content_new)
+!$acc parallel loop gang vector
+  DO i = 1 , nc , 1
+   tile_fract ( i ) = tile % fract ( ics - 1 + i , iblk )
+  END DO
 !$acc data &
 !$acc present(snow(:),tile_fract(:),drainage(:),rain(:),runoff(:),area(:) &
 !$acc ,water_flux(:),evapotrans(:))

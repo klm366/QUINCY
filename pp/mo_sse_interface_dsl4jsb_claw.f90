@@ -372,7 +372,9 @@ CONTAINS
     t_soil_acoef ( : , 1 ) , t_soil_bcoef ( : , 1 ) , t_snow ( : , : ) ,&
     t_snow_acoef ( : , : ) , t_snow_bcoef ( : , : ) , t_soil_top ( : ) ,&
     hcap_grnd_snow ( : ) , grnd_hflx_snow ( : ) )
-   DO i = 1 , size ( snow_depth_sl , dim = 1 ) , 1
+!$acc parallel loop default(none) &
+!$acc present(snow_depth_sl,snow_fract,t_unfilt_corrected,t_soil_top)
+   DO i = 1 , nc , 1
     IF ( snow_depth_sl ( i , nsnow ) > 0._wp ) THEN
      t_soil_top ( i ) = snow_fract ( i ) * t_soil_top ( i ) + ( 1._wp -&
       snow_fract ( i ) ) * t_unfilt_corrected ( i )
@@ -824,7 +826,7 @@ CONTAINS
      snow_soil_dens => hydro__mem % snow_soil_dens % ptr ( ics : ice , iblk )
 !$acc data present(snow_soil_dens,vol_heat_cap_snow,heat_cond_snow)
 !$acc parallel loop gang vector
-     DO i = 1 , size ( snow_soil_dens ) , 1
+     DO i = 1 , nc , 1
       IF ( snow_soil_dens ( i ) > dens_snow_min ) THEN
        vol_heat_cap_snow ( i ) = ci * snow_soil_dens ( i )
        heat_cond_snow ( i ) = 2.5e-6_wp * snow_soil_dens ( i ) ** ( 2._wp ) -&
