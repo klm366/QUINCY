@@ -354,7 +354,7 @@ CONTAINS
       !$claw acc parallel
       !$claw acc loop seq
       DO isnow=nsnow,1,-1
-        !$claw acc loop vector
+        !$claw acc loop gang vector
         DO i = 1, size(snow_depth, dim=1)
           IF (snow_depth(i) > 0._wp) THEN
             snow_depth_sl(i,isnow) = MIN(snow_depth(i), snow_e%dz(isnow))
