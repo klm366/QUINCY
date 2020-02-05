@@ -122,6 +122,7 @@ CONTAINS
   REAL ( KIND= wp ) , POINTER :: lai_mon ( : , : )
   CHARACTER ( LEN= * ) , PARAMETER :: routine ="mo_pheno_interface" //&
   ":update_phenology_climatology"
+  INTEGER :: claw_induction_7
 
   iblk = options % iblk
   ics = options % ics
@@ -140,8 +141,15 @@ CONTAINS
   lai => pheno__mem % lai % ptr ( ics : ice , iblk )
   lai_mon ( 1 : , 0 : ) => pheno__mem % lai_mon ( ics : ice , iblk , : )
   CALL get_time_interpolation_weights ( wgt1 , wgt2 , nmw1 , nmw2 )
-  lai ( : ) = real ( wgt1 , wp ) * lai_mon ( : , nmw1 ) + real ( wgt2 , wp ) *&
-   lai_mon ( : , nmw2 )
+!$acc data present(lai(:),lai_mon(:,nmw1),lai_mon(:,nmw2))
+!$acc parallel
+!$acc loop gang vector
+  DO claw_induction_7 = 1 , size ( lai , 1 )
+   lai ( claw_induction_7 ) = real ( wgt1 , wp ) * lai_mon ( claw_induction_7&
+    , nmw1 ) + real ( wgt2 , wp ) * lai_mon ( claw_induction_7 , nmw2 )
+  END DO
+!$acc end parallel
+!$acc end data
   IF ( debug_on ( ) .AND. iblk == 1 ) THEN
    CALL message ( trim ("mo_pheno_interface" //":update_phenology_climatology"&
     ) ,"Finished." )
@@ -222,13 +230,14 @@ CONTAINS
   REAL ( KIND= wp ) :: lai_negligible_tmp
   CHARACTER ( LEN= * ) , PARAMETER :: routine ="mo_pheno_interface" //&
   ":update_phenology_logrop"
-  INTEGER :: claw_induction_0
+  INTEGER :: claw_induction_1
   INTEGER :: claw_induction_2
   INTEGER :: claw_induction_3
   INTEGER :: claw_induction_4
   INTEGER :: claw_induction_5
-  INTEGER :: claw_induction_8
-  INTEGER :: claw_induction_9
+  INTEGER :: claw_induction_6
+  INTEGER :: claw_induction_10
+  INTEGER :: claw_induction_11
 
   iblk = options % iblk
   ics = options % ics
@@ -338,8 +347,8 @@ CONTAINS
 !$acc data present(t_air(:),t_air_in_celcius(:))
 !$acc parallel
 !$acc loop gang vector
-  DO claw_induction_5 = 1 , size ( t_air_in_celcius , 1 )
-   t_air_in_celcius ( claw_induction_5 ) = t_air ( claw_induction_5 ) - tmelt
+  DO claw_induction_6 = 1 , size ( t_air_in_celcius , 1 )
+   t_air_in_celcius ( claw_induction_6 ) = t_air ( claw_induction_6 ) - tmelt
   END DO
 !$acc end parallel
 !$acc end data
@@ -347,8 +356,8 @@ CONTAINS
 !$acc data present(w_soil_rel(:),w_soil_filling(:))
 !$acc parallel
 !$acc loop gang vector
-  DO claw_induction_4 = 1 , size ( w_soil_filling , 1 )
-   w_soil_filling ( claw_induction_4 ) = w_soil_rel ( claw_induction_4 )
+  DO claw_induction_5 = 1 , size ( w_soil_filling , 1 )
+   w_soil_filling ( claw_induction_5 ) = w_soil_rel ( claw_induction_5 )
   END DO
 !$acc end parallel
 !$acc end data
@@ -356,10 +365,17 @@ CONTAINS
 !$acc data present(day_npp_sum(:),previous_day_npp_pot_rate_ca(:))
 !$acc parallel
 !$acc loop gang vector
-   DO claw_induction_0 = 1 , size ( previous_day_npp_pot_rate_ca , 1 )
-    previous_day_npp_pot_rate_ca ( claw_induction_0 ) = day_npp_sum (&
-     claw_induction_0 ) / 86400._wp
-    day_npp_sum ( claw_induction_0 ) = 0._wp
+   DO claw_induction_4 = 1 , size ( previous_day_npp_pot_rate_ca , 1 )
+    previous_day_npp_pot_rate_ca ( claw_induction_4 ) = day_npp_sum (&
+     claw_induction_4 ) / 86400._wp
+   END DO
+!$acc end parallel
+!$acc end data
+!$acc data present(day_npp_sum(:))
+!$acc parallel
+!$acc loop gang vector
+   DO claw_induction_3 = 1 , size ( day_npp_sum , 1 )
+    day_npp_sum ( claw_induction_3 ) = 0._wp
    END DO
 !$acc end parallel
 !$acc end data
@@ -370,9 +386,9 @@ CONTAINS
 !$acc data present(veg_fract_correction_old(:),veg_fract_correction(:))
 !$acc parallel
 !$acc loop gang vector
-    DO claw_induction_9 = 1 , size ( veg_fract_correction_old , 1 )
-     veg_fract_correction_old ( claw_induction_9 ) = veg_fract_correction (&
-      claw_induction_9 )
+    DO claw_induction_11 = 1 , size ( veg_fract_correction_old , 1 )
+     veg_fract_correction_old ( claw_induction_11 ) = veg_fract_correction (&
+      claw_induction_11 )
     END DO
 !$acc end parallel
 !$acc end data
@@ -393,8 +409,8 @@ CONTAINS
 !$acc data present(dummy_flux(:))
 !$acc parallel
 !$acc loop gang vector
-    DO claw_induction_8 = 1 , size ( dummy_flux , 1 )
-     dummy_flux ( claw_induction_8 ) = 0._wp
+    DO claw_induction_10 = 1 , size ( dummy_flux , 1 )
+     dummy_flux ( claw_induction_10 ) = 0._wp
     END DO
 !$acc end parallel
 !$acc end data
@@ -410,9 +426,9 @@ CONTAINS
 !$acc data present(pheno__mem%maxlai_allom%ptr(ics:ice,iblk),laimax_corrected(:))
 !$acc parallel
 !$acc loop gang vector
-   DO claw_induction_3 = 1 , size ( laimax_corrected , 1 )
-    laimax_corrected ( claw_induction_3 ) = pheno__mem % maxlai_allom % ptr (&
-     claw_induction_3 , iblk )
+   DO claw_induction_2 = 1 , size ( laimax_corrected , 1 )
+    laimax_corrected ( claw_induction_2 ) = pheno__mem % maxlai_allom % ptr (&
+     claw_induction_2 , iblk )
    END DO
 !$acc end parallel
 !$acc end data
@@ -421,8 +437,8 @@ CONTAINS
 !$acc data present(laimax_corrected(:))
 !$acc parallel
 !$acc loop gang vector
-   DO claw_induction_2 = 1 , size ( laimax_corrected , 1 )
-    laimax_corrected ( claw_induction_2 ) = maxlai
+   DO claw_induction_1 = 1 , size ( laimax_corrected , 1 )
+    laimax_corrected ( claw_induction_1 ) = maxlai
    END DO
 !$acc end parallel
 !$acc end data
@@ -568,9 +584,9 @@ CONTAINS
   TYPE ( t_jsb_model ) , POINTER :: model
   CHARACTER ( LEN= * ) , PARAMETER :: routine ="mo_pheno_interface" //&
   ":update_fpc"
-  INTEGER :: claw_induction_1
-  INTEGER :: claw_induction_6
-  INTEGER :: claw_induction_7
+  INTEGER :: claw_induction_0
+  INTEGER :: claw_induction_8
+  INTEGER :: claw_induction_9
 
   iblk = options % iblk
   ics = options % ics
@@ -600,9 +616,9 @@ CONTAINS
 !$acc data present(lai(:),fract_fpc_max(:),fract_fpc(:))
 !$acc parallel
 !$acc loop gang vector
-    DO claw_induction_7 = 1 , size ( fract_fpc , 1 )
-     fract_fpc ( claw_induction_7 ) = get_foliage_projected_cover (&
-      fract_fpc_max ( claw_induction_7 ) , lai ( claw_induction_7 ) , 1._wp )
+    DO claw_induction_9 = 1 , size ( fract_fpc , 1 )
+     fract_fpc ( claw_induction_9 ) = get_foliage_projected_cover (&
+      fract_fpc_max ( claw_induction_9 ) , lai ( claw_induction_9 ) , 1._wp )
     END DO
 !$acc end parallel
 !$acc end data
@@ -613,10 +629,10 @@ CONTAINS
 !$acc data present(fract_fpc_mon(:,nmw2),fract_fpc_mon(:,nmw1),fract_fpc(:))
 !$acc parallel
 !$acc loop gang vector
-    DO claw_induction_6 = 1 , size ( fract_fpc , 1 )
-     fract_fpc ( claw_induction_6 ) = real ( wgt1 , wp ) * fract_fpc_mon (&
-      claw_induction_6 , nmw1 ) + real ( wgt2 , wp ) * fract_fpc_mon (&
-      claw_induction_6 , nmw2 )
+    DO claw_induction_8 = 1 , size ( fract_fpc , 1 )
+     fract_fpc ( claw_induction_8 ) = real ( wgt1 , wp ) * fract_fpc_mon (&
+      claw_induction_8 , nmw1 ) + real ( wgt2 , wp ) * fract_fpc_mon (&
+      claw_induction_8 , nmw2 )
     END DO
 !$acc end parallel
 !$acc end data
@@ -627,9 +643,9 @@ CONTAINS
 !$acc data present(lai(:),fract_fpc_max(:),fract_fpc(:))
 !$acc parallel
 !$acc loop gang vector
-   DO claw_induction_1 = 1 , size ( fract_fpc , 1 )
-    fract_fpc ( claw_induction_1 ) = get_foliage_projected_cover (&
-     fract_fpc_max ( claw_induction_1 ) , lai ( claw_induction_1 ) ,&
+   DO claw_induction_0 = 1 , size ( fract_fpc , 1 )
+    fract_fpc ( claw_induction_0 ) = get_foliage_projected_cover (&
+     fract_fpc_max ( claw_induction_0 ) , lai ( claw_induction_0 ) ,&
      clumpinessfactor )
    END DO
 !$acc end parallel

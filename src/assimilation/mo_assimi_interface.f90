@@ -329,8 +329,6 @@ CONTAINS
       !$ACC END PARALLEL
     END IF
 
-    !$claw acc end data
-
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_assimilation_scaling_factors

@@ -342,14 +342,17 @@ CONTAINS
   REAL ( KIND= wp ) :: ws_min_drain ( 1 : nidx )
   REAL ( KIND= wp ) :: ws_incl_ice ( 1 : nidx )
   REAL ( KIND= wp ) :: ice_rootzone ( 1 : nidx )
+  REAL ( KIND= wp ) :: vfc_times_sd_l ( 1 : nidx , 1 : nsoil )
   INTEGER :: jl
   INTEGER :: i
   INTEGER , PARAMETER :: ilog = 0
   INTEGER :: jllog = 0
+  INTEGER :: claw_induction_0
+  INTEGER :: claw_induction_1
 
 !$acc data &
 !$acc pcreate(evapo_soil_in_m,trans_in_m,infilt,ws_max,ws_min_drain &
-!$acc ,ws_incl_ice,ice_rootzone)
+!$acc ,ws_incl_ice,ice_rootzone,vfc_times_sd_l)
   sigma_0 = oro_var_min
   sigma_max = oro_var_max * 64._wp / real ( nlat , wp )
 !$acc data &
@@ -375,12 +378,20 @@ CONTAINS
   END DO
 !$acc end parallel
 !$acc end data
-!$acc data present(ws_max, vol_field_cap_l, soil_depth_l,root_depth_l)
-!$acc update host(vol_field_cap_l,soil_depth_l,root_depth_l)
-  ws_max ( : ) = get_water_in_root_zone ( vol_field_cap_l ( : , : ) *&
-   soil_depth_l ( : , : ) , soil_depth_l ( : , : ) , root_depth_l ( : , : ) )
-!$acc update device(ws_max)
+!$acc data present(vol_field_cap_l(:,:),soil_depth_l(:,:),vfc_times_sd_l(:,:))
+!$acc parallel
+!$acc loop gang vector
+  DO claw_induction_0 = 1 , size ( vfc_times_sd_l , 1 )
+   DO claw_induction_1 = 1 , size ( vfc_times_sd_l , 2 )
+    vfc_times_sd_l ( claw_induction_0 , claw_induction_1 ) = vol_field_cap_l (&
+     claw_induction_0 , claw_induction_1 ) * soil_depth_l ( claw_induction_0 ,&
+     claw_induction_1 )
+   END DO
+  END DO
+!$acc end parallel
 !$acc end data
+  CALL get_water_in_root_zone ( vfc_times_sd_l ( : , : ) , soil_depth_l ( : ,&
+   : ) , root_depth_l ( : , : ) , ws_max ( : ) )
 !$acc data present(fract_org_l,ws_max,ws_max_mineral)
 !$acc parallel loop gang vector
   DO i = 1 , nidx , 1
@@ -390,16 +401,10 @@ CONTAINS
   END DO
 !$acc end parallel
 !$acc end data
-!$cla$w expand parallel update savepoint=ser_jsb_hydro_calc_soil_hydrology_expand_0
-!$acc data present(ice_rootzone,ws, soil_ice_l, ws_l, soil_depth_l,root_depth_l)
-!$acc update host(soil_ice_l,ws_l,soil_depth_l,root_depth_l)
-  ice_rootzone ( : ) = get_water_in_root_zone ( soil_ice_l ( : , : ) ,&
-   soil_depth_l ( : , : ) , root_depth_l ( : , : ) )
-  ws ( : ) = get_water_in_root_zone ( ws_l ( : , : ) , soil_depth_l ( : , : )&
-   , root_depth_l ( : , : ) )
-!$acc update device(ice_rootzone,ws)
-!$acc end data
-!$cla$w end expand
+  CALL get_water_in_root_zone ( soil_ice_l ( : , : ) , soil_depth_l ( : , : )&
+   , root_depth_l ( : , : ) , ice_rootzone ( : ) )
+  CALL get_water_in_root_zone ( ws_l ( : , : ) , soil_depth_l ( : , : ) ,&
+   root_depth_l ( : , : ) , ws ( : ) )
 !$acc data present(evapo_soil_in_m,evapotrans_soil,trans_in_m) &
 !$acc present(ws_min_drain,ws_max,oro_stddev,runoff,infilt) &
 !$acc present(water_to_soil,ws_incl_ice,ice_rootzone,drainage,t_soil)
@@ -411,7 +416,7 @@ CONTAINS
   END DO
 !$acc end parallel
 !$acc parallel
-!$acc loop seq
+!$acc loop gang vector
   DO i = 1 , nidx , 1
    ws_min_drain ( i ) = zwdmin * ws_max ( i )
    steepness = max ( 0._wp , oro_stddev ( i ) - sigma_0 ) / ( oro_stddev ( i )&
@@ -473,12 +478,8 @@ CONTAINS
    w_soil_overflow , ltpe_closed , ltpe_open )
   CALL digest_infilt ( nidx , nsoil , ltpe_closed , field_cap_l , infilt ,&
    ws_l , drainage , w_soil_overflow )
-!$acc data present(ws, ws_l, soil_depth_l,root_depth_l)
-!$acc update host(ws_l, soil_depth_l, root_depth_l)
-  ws ( : ) = get_water_in_root_zone ( ws_l ( : , : ) , soil_depth_l ( : , : )&
-   , root_depth_l ( : , : ) )
-!$acc update device(ws)
-!$acc end data
+  CALL get_water_in_root_zone ( ws_l ( : , : ) , soil_depth_l ( : , : ) ,&
+   root_depth_l ( : , : ) , ws ( : ) )
 !$acc data present(runoff,drainage)
 !$acc parallel loop gang vector
   DO i = 1 , nidx , 1
@@ -520,7 +521,7 @@ CONTAINS
 !$acc ws_l, soil_ice) pcreate(deficit_evapo, deficit_trans, deficit_l, &
 !$acc remaining, rootfract, fixed, trans_layer, ws, root_depth, reduce_evapo)
 !$acc parallel
-!$acc loop
+!$acc loop gang vector
   DO i = 1 , nidx , 1
    deficit_evapo ( i ) = 0._wp
    IF ( evapo_soil ( i ) < 0._wp ) THEN
@@ -684,8 +685,11 @@ CONTAINS
   REAL ( KIND= wp ) :: zmvg_l ( 1 : nidx , 1 : nsoil )
 
 !$acc data &
-!$acc present(dsoil, wsat_l, field_cap_l, hyd_cond_sat_l, vol_porosity_l, bclapp_l, matrix_pot_l, pore_size_index_l, p_wilt_l, dz, ws_l, drainage, w_soil_overflow, soil_ice) &
-!$acc pcreate(diffus_l, ws_min_drain, ws_rel, ws_crit, drain_crit, ws_tmp, drain_l, soil_above, soil_below, zda, zdb, zdc, ztri, diffusivity, zkredu, zdiflog, remoist, zmvg_l)
+!$acc present(dsoil, wsat_l, field_cap_l, hyd_cond_sat_l, vol_porosity_l, bclapp_l, matrix_pot_l, &
+!$acc pore_size_index_l, p_wilt_l, dz, ws_l, drainage, w_soil_overflow, soil_ice) &
+!$acc pcreate(diffus_l, ws_min_drain, ws_rel, ws_crit, drain_crit, ws_tmp, drain_l, soil_above, &
+!$acc soil_below, zda, zdb, zdc, ztri, diffusivity, zkredu, zdiflog, remoist, zmvg_l, &
+!$acc percolation, wslog)
 !$acc parallel loop gang vector collapse(2)
   DO j = 1 , nidx , 1
    DO i = 1 , nsoil , 1
@@ -714,8 +718,8 @@ CONTAINS
      i ) + 1._wp )
    END DO
   END DO
-!$acc parallel
-!$acc loop gang
+!$acc parallel default(none)
+!$acc loop gang vector
   DO j = 1 , nidx , 1
    percolation ( j , nsoil ) = 0._wp
 !$acc loop seq

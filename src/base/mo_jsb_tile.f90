@@ -46,7 +46,7 @@ MODULE mo_jsb_tile
 #endif
 
 #ifdef _OPENACC
-  use openacc
+  USE openacc
 #define __acc_attach(ptr) CALL acc_attach(ptr)  
 #else
 #define __acc_attach(ptr)

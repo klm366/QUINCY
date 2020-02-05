@@ -1295,4 +1295,3 @@ CONTAINS
   END FUNCTION Get_liquid_max
 
 #endif
-END MODULE mo_sse_process

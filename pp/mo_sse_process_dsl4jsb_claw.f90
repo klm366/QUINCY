@@ -237,7 +237,6 @@ CONTAINS
   INTEGER :: claw_induction_16
   INTEGER :: claw_induction_17
   INTEGER :: claw_induction_18
-  INTEGER :: claw_induction_19
 
 INTEGER, SAVE :: ser_counter = 1
 !$acc data create(z1,zd1,zdz1,zdz2,heat_cap,liquid_max) &
@@ -269,31 +268,27 @@ INTEGER, SAVE :: ser_counter = 1
 !$acc data present(thaw_depth(:))
 !$acc parallel
 !$acc loop gang vector
-  DO claw_induction_19 = 1 , size ( thaw_depth , 1 )
-   thaw_depth ( claw_induction_19 ) = 0._wp
+  DO claw_induction_18 = 1 , size ( thaw_depth , 1 )
+   thaw_depth ( claw_induction_18 ) = 0._wp
   END DO
 !$acc end parallel
 !$acc end data
   IF ( ( .NOT. lstart ) ) THEN
-!$acc data present(t_soil(:,1),t_srf_unfilt(:))
-!$acc parallel
-!$acc loop gang vector
-   DO claw_induction_16 = 1 , size ( t_soil , 1 )
-    t_soil ( claw_induction_16 , 1 ) = t_srf_unfilt ( claw_induction_16 )
-   END DO
-!$acc end parallel
-!$acc end data
-!$acc data present(t_soil,t_soil_acoef,t_soil_bcoef)
-!$acc parallel
+!$acc parallel default(none) &
+!$acc present(t_srf_unfilt,t_soil,t_soil_acoef,t_soil_bcoef)
 !$acc loop gang vector
    DO jl = 1 , nidx , 1
-    DO jk = 1 , nsoil - 1 , 1
+    t_soil ( jl , 1 ) = t_srf_unfilt ( jl )
+   END DO
+!$acc loop seq
+   DO jk = 1 , nsoil - 1 , 1
+!$acc loop gang vector
+    DO jl = 1 , nidx , 1
      t_soil ( jl , jk + 1 ) = t_soil_acoef ( jl , jk ) + t_soil_bcoef ( jl ,&
       jk ) * t_soil ( jl , jk )
     END DO
    END DO
 !$acc end parallel
-!$acc end data
    IF ( l_freeze .AND. present ( ws ) ) THEN
     IF ( l_supercool ) THEN
 !$acc data &
@@ -398,38 +393,40 @@ INTEGER, SAVE :: ser_counter = 1
    END DO
 !$acc end parallel
   END IF
-!$acc data present(zdz1,zdz2,heat_cap,heat_cond)
-!$acc parallel loop gang vector collapse(2)
-  DO jl = 1 , nidx , 1
-   DO jk = 1 , nsoil , 1
+!$acc parallel default(none) present(zdz1,zdz2,zd1,heat_cap,heat_cond)
+!$acc loop gang vector collapse(2)
+  DO jk = 1 , nsoil , 1
+   DO jl = 1 , nidx , 1
     zdz2 ( jl , jk ) = heat_cap ( jl , jk ) / delta_time
    END DO
   END DO
-!$acc parallel loop gang vector collapse(2)
-  DO jl = 1 , nidx , 1
-   DO jk = 1 , nsoil - 1 , 1
+!$acc loop gang vector collapse(2)
+  DO jk = 1 , nsoil - 1 , 1
+   DO jl = 1 , nidx , 1
     zdz1 ( jl , jk ) = zd1 ( jk ) * heat_cond ( jl , jk )
    END DO
   END DO
-!$acc end data
+!$acc end parallel
 !$acc data present(z1(:,:))
 !$acc parallel
 !$acc loop gang vector
-  DO claw_induction_17 = 1 , size ( z1 , 1 )
-   DO claw_induction_18 = 1 , size ( z1 , 2 )
-    z1 ( claw_induction_17 , claw_induction_18 ) = 0._wp
+  DO claw_induction_16 = 1 , size ( z1 , 1 )
+   DO claw_induction_17 = 1 , size ( z1 , 2 )
+    z1 ( claw_induction_16 , claw_induction_17 ) = 0._wp
    END DO
   END DO
 !$acc end parallel
 !$acc end data
+!$acc parallel loop default(none) present(zdz1,zdz2,z1) gang vector
+  DO jl = 1 , nidx , 1
+   z1 ( jl , nsoil - 1 ) = zdz2 ( jl , nsoil ) + zdz1 ( jl , nsoil - 1 )
+  END DO
 !$acc data &
 !$acc present(t_soil_acoef(:,nsoil-1),t_soil_bcoef(:,nsoil-1),zdz2(:,nsoil) &
 !$acc ,t_soil(:,nsoil),zdz1(:,nsoil-1),z1(:,nsoil-1))
 !$acc parallel
 !$acc loop gang vector
-  DO claw_induction_6 = 1 , size ( z1 , 1 )
-   z1 ( claw_induction_6 , nsoil - 1 ) = zdz2 ( claw_induction_6 , nsoil ) +&
-    zdz1 ( claw_induction_6 , nsoil - 1 )
+  DO claw_induction_6 = 1 , size ( t_soil_acoef , 1 )
    t_soil_acoef ( claw_induction_6 , nsoil - 1 ) = zdz2 ( claw_induction_6 ,&
     nsoil ) * t_soil ( claw_induction_6 , nsoil ) / z1 ( claw_induction_6 ,&
     nsoil - 1 )
@@ -444,11 +441,11 @@ INTEGER, SAVE :: ser_counter = 1
   DO jl = 1 , nidx , 1
 !$acc loop seq
    DO jk = nsoil - 1 , 2 , (-1)
-    z1 ( : , jk - 1 ) = 1._wp / ( zdz2 ( : , jk ) + zdz1 ( : , jk - 1 ) + zdz1&
-     ( : , jk ) * ( 1._wp - t_soil_bcoef ( : , jk ) ) )
-    t_soil_acoef ( : , jk - 1 ) = ( t_soil ( : , jk ) * zdz2 ( : , jk ) + zdz1&
-     ( : , jk ) * t_soil_acoef ( : , jk ) ) * z1 ( : , jk - 1 )
-    t_soil_bcoef ( : , jk - 1 ) = zdz1 ( : , jk - 1 ) * z1 ( : , jk - 1 )
+    z1 ( jl , jk - 1 ) = 1._wp / ( zdz2 ( jl , jk ) + zdz1 ( jl , jk - 1 ) +&
+     zdz1 ( jl , jk ) * ( 1._wp - t_soil_bcoef ( jl , jk ) ) )
+    t_soil_acoef ( jl , jk - 1 ) = ( t_soil ( jl , jk ) * zdz2 ( jl , jk ) +&
+     zdz1 ( jl , jk ) * t_soil_acoef ( jl , jk ) ) * z1 ( jl , jk - 1 )
+    t_soil_bcoef ( jl , jk - 1 ) = zdz1 ( jl , jk - 1 ) * z1 ( jl , jk - 1 )
    END DO
   END DO
 !$acc end parallel
@@ -596,8 +593,9 @@ ser_counter = ser_counter + 1
      END IF
     END DO
    END DO
-!$acc parallel loop gang vector collapse(2)
+!$acc parallel loop gang vector
    DO jl = 1 , nidx , 1
+!$acc loop seq
     DO jk = 2 , nsnow , 1
      IF ( jk > max ( itop ( jl ) , itop_old ( jl ) ) ) THEN
       t_snow ( jl , jk ) = t_snow_acoef ( jl , jk - 1 ) + t_snow_bcoef ( jl ,&
@@ -614,7 +612,6 @@ ser_counter = ser_counter + 1
      t_soil_top ( jl ) = t_srf_unfilt ( jl )
     END IF
    END DO
-!$acc end parallel
 !$acc end data
   END IF
 !$acc data present(itop,t_snow_acoef,t_snow_bcoef)
@@ -662,6 +659,7 @@ ser_counter = ser_counter + 1
 !$acc data present(itop,z1,zdz1,zdz2,t_snow_acoef,t_snow_bcoef,t_snow)
 !$acc parallel loop gang vector
   DO jl = 1 , nidx , 1
+!$acc loop seq
    DO jk = nsnow , 2 , (-1)
     IF ( jk > itop ( jl ) ) THEN
      z1 ( jl ) = 1._wp / ( zdz2 ( jl , jk ) + zdz1 ( jl , jk - 1 ) + zdz1 ( jl&

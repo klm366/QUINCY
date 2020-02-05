@@ -2584,6 +2584,7 @@ CONTAINS
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
+    nc    = options%nc
     dtime = options%dtime
     is_experiment_start = is_time_experiment_start(options%current_datetime)
 

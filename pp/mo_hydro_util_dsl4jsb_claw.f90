@@ -6,12 +6,12 @@ MODULE mo_hydro_util
  PUBLIC :: get_water_in_root_zone
  CHARACTER ( LEN= * ) , PRIVATE , PARAMETER :: modname ="mo_hydro_util"
  INTERFACE get_water_in_root_zone
-  MODULE PROCEDURE get_water_in_root_zone_1d
   MODULE PROCEDURE get_water_in_root_zone_2d
  END INTERFACE
 
 CONTAINS
- FUNCTION get_water_in_root_zone_1d ( ws , dz , dz_root ) RESULT(ws_root)
+ SUBROUTINE get_water_in_root_zone_1d ( ws , dz , dz_root , ws_root )
+
   REAL ( KIND= wp ) , INTENT(IN) :: ws ( : )
   REAL ( KIND= wp ) , INTENT(IN) :: dz ( : )
   REAL ( KIND= wp ) , INTENT(IN) :: dz_root ( : )
@@ -45,13 +45,14 @@ CONTAINS
     bottom_m1 = bottom_m1 + dz ( i )
    END DO
   END IF
- END FUNCTION get_water_in_root_zone_1d
+ END SUBROUTINE get_water_in_root_zone_1d
 
- FUNCTION get_water_in_root_zone_2d ( ws , dz , dz_root ) RESULT(ws_root)
+ SUBROUTINE get_water_in_root_zone_2d ( ws , dz , dz_root , ws_root )
+
   REAL ( KIND= wp ) , INTENT(IN) :: ws ( : , : )
   REAL ( KIND= wp ) , INTENT(IN) :: dz ( : , : )
   REAL ( KIND= wp ) , INTENT(IN) :: dz_root ( : , : )
-  REAL ( KIND= wp ) :: ws_root ( 1 : size ( ws , 1 ) )
+  REAL ( KIND= wp ) , INTENT(INOUT) :: ws_root ( 1 : size ( ws , 1 ) )
   REAL ( KIND= wp ) :: bottom ( 1 : size ( ws , 1 ) )
   REAL ( KIND= wp ) :: bottom_m1 ( 1 : size ( ws_root , 1 ) )
   REAL ( KIND= wp ) :: root_depth ( 1 : size ( ws , 1 ) )
@@ -61,8 +62,10 @@ CONTAINS
   CHARACTER ( LEN= * ) , PARAMETER :: routine ="mo_hydro_util" //&
   ":get_water_in_root_zone_2d"
 
-!$acc routine seq
   n = size ( dz , 2 )
+!$acc data present(ws, dz, dz_root, ws_root) create(bottom, bottom_m1, root_depth)
+!$acc parallel default(none)
+!$acc loop gang vector
   DO j = 1 , size ( ws , 1 ) , 1
    bottom ( j ) = sum ( dz ( j , : ) )
    root_depth ( j ) = sum ( dz_root ( j , : ) )
@@ -71,6 +74,7 @@ CONTAINS
     bottom ( j ) = 0._wp
     bottom_m1 ( j ) = 0._wp
     ws_root ( j ) = 0._wp
+!$acc loop seq
     DO i = 1 , n , 1
      bottom ( j ) = bottom ( j ) + dz ( j , i )
      IF ( root_depth ( j ) >= bottom ( j ) ) THEN
@@ -85,7 +89,9 @@ CONTAINS
     END DO
    END IF
   END DO
- END FUNCTION get_water_in_root_zone_2d
+!$acc end parallel
+!$acc end data
+ END SUBROUTINE get_water_in_root_zone_2d
 
 END MODULE mo_hydro_util
 

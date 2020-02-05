@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from JSBACH source file:
 !    src/turbulence/mo_turb_memory_class.f90
-! with md5 hash: 79046d4d72bb1e571694b0c84b0132a4
+! with md5 hash: 64bdac517124662c39240b76df652506
 !
 !>
 !! @brief Contains the memory class for the surface turbulence process.
@@ -79,9 +79,7 @@ CONTAINS
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
 
-    !$acc enter data pcreate(mem)
-
-    !$acc enter data pcreate(mem%rough_m,mem%rough_h)
+    !! !$acc enter data pcreate(mem)
 
     CALL jsb_add_var( mem, 'rough_m', mem%rough_m,                                       &
       & hgrid, surface,                                                                  &
@@ -107,9 +105,6 @@ CONTAINS
       &   .OR. One_of(LAND_TYPE,    lct_ids(:)) > 0 &
       &   .OR. One_of(GLACIER_TYPE, lct_ids(:)) > 0 &
       &  ) ) THEN
-
-      !$acc enter data pcreate(mem%fact_q_air,mem%fact_qsat_srf, &
-      !$acc mem%fact_qsat_trans_srf)
 
       CALL jsb_add_var( mem, 'fact_q_air', mem%fact_q_air,                   &
         & hgrid, surface,                                                    &

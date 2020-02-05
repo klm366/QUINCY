@@ -290,6 +290,40 @@ CONTAINS
       END DO
     END IF
 
+    t_air_ptr             => dsl4jsb_var2D_onChunk(A2L_, t_air)
+    q_air_ptr             => dsl4jsb_var2D_onChunk(A2L_, q_air)
+    rain_ptr              => dsl4jsb_var2D_onChunk(A2L_, rain)
+    snow_ptr              => dsl4jsb_var2D_onChunk(A2L_, snow)
+    wind_air_ptr          => dsl4jsb_var2D_onChunk(A2L_, wind_air)
+    wind_10m_ptr          => dsl4jsb_var2D_onChunk(A2L_, wind_10m)
+    lw_srf_down_ptr       => dsl4jsb_var2D_onChunk(A2L_, lw_srf_down)
+    swvis_srf_down_ptr    => dsl4jsb_var2D_onChunk(A2L_, swvis_srf_down)
+    swnir_srf_down_ptr    => dsl4jsb_var2D_onChunk(A2L_, swnir_srf_down)
+    swpar_srf_down_ptr    => dsl4jsb_var2D_onChunk(A2L_, swpar_srf_down)
+    fract_par_diffuse_ptr => dsl4jsb_var2D_onChunk(A2L_, fract_par_diffuse)
+    press_srf_ptr         => dsl4jsb_var2D_onChunk(A2L_, press_srf)
+    drag_srf_ptr          => dsl4jsb_var2D_onChunk(A2L_, drag_srf)
+    t_acoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, t_acoef)
+    t_bcoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, t_bcoef)
+    q_acoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, q_acoef)
+    q_bcoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, q_bcoef)
+    pch_ptr               => dsl4jsb_var2D_onChunk(A2L_, pch)
+    cos_zenith_angle_ptr  => dsl4jsb_var2D_onChunk(A2L_, cos_zenith_angle)
+    CO2_air_ptr           => dsl4jsb_var2D_onChunk(A2L_, CO2_air)
+    CO2_air_mol_ptr       => dsl4jsb_var2D_onChunk(A2L_, CO2_air_mol)
+    drag_wtr_ptr          => dsl4jsb_var2D_onChunk(A2L_, drag_wtr)
+    drag_ice_ptr          => dsl4jsb_var2D_onChunk(A2L_, drag_ice)
+    t_acoef_wtr_ptr       => dsl4jsb_var2D_onChunk(A2L_, t_acoef_wtr)
+    t_bcoef_wtr_ptr       => dsl4jsb_var2D_onChunk(A2L_, t_bcoef_wtr)
+    q_acoef_wtr_ptr       => dsl4jsb_var2D_onChunk(A2L_, q_acoef_wtr)
+    q_bcoef_wtr_ptr       => dsl4jsb_var2D_onChunk(A2L_, q_bcoef_wtr)
+    t_acoef_ice_ptr       => dsl4jsb_var2D_onChunk(A2L_, t_acoef_ice)
+    t_bcoef_ice_ptr       => dsl4jsb_var2D_onChunk(A2L_, t_bcoef_ice)
+    q_acoef_ice_ptr       => dsl4jsb_var2D_onChunk(A2L_, q_acoef_ice)
+    q_bcoef_ice_ptr       => dsl4jsb_var2D_onChunk(A2L_, q_bcoef_ice)
+
+    !$acc parallel default(present)
+
     IF (PRESENT(t_air)) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO i=1,nc
@@ -497,6 +531,7 @@ CONTAINS
       END IF
 
     END IF
+    !$acc end parallel
 
     !$ACC END PARALLEL
 

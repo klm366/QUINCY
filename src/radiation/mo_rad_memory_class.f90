@@ -492,8 +492,6 @@ CONTAINS
         & prefix, suffix,                                                     &
         & output_level=MEDIUM,                                                &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=AlbedoLakeWater )
-
-      !$acc update device(mem%rad_net_lwtr,mem%albedo_lwtr)
       
       IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
 

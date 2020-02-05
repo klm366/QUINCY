@@ -160,7 +160,7 @@ CONTAINS
 
     dsl4jsb_Get_config(PHENO_)
     
-    !$acc enter data pcreate(mem)
+    !! !$acc enter data pcreate(mem)
 
     IF ( (     One_of(LAND_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(VEG_TYPE,  lct_ids(:)) > 0 &

@@ -41,6 +41,7 @@ MODULE mo_atmland_interface
   USE mo_rad_memory_class, ONLY: t_rad_memory
   USE mo_carbon_memory_class, ONLY: t_carbon_memory
 
+
   IMPLICIT NONE
   PRIVATE
 
@@ -86,18 +87,14 @@ CONTAINS
 
     USE mo_jsb_physical_constants, ONLY: molarMassDryAir, molarMassCO2
 
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-    REAL(wp), OPTIONAL, INTENT(in) ::                                            &
-      & t_air(:), q_air(:), rain(:), snow(:), wind_air(:), wind_10m(:),          &
-      & lw_srf_down(:), swvis_srf_down(:), swnir_srf_down(:), swpar_srf_down(:), &
-      & fract_par_diffuse(:), press_srf(:), drag_srf(:),                          &
-      & t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:),                          &
-      & pch(:), cos_zenith_angle(:),                                             &
-      & CO2_air(:),                                                              &
-      & drag_wtr(:), drag_ice(:),                                                &
-      & t_acoef_wtr(:), t_bcoef_wtr(:), q_acoef_wtr(:), q_bcoef_wtr(:),          &
-      & t_acoef_ice(:), t_bcoef_ice(:), q_acoef_ice(:), q_bcoef_ice(:)
+    CLASS(t_jsb_tile_abstract), INTENT(inout)             :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)                :: options
+    REAL(wp), OPTIONAL, DIMENSION(options%nc), INTENT(in) ::                                                       &
+      & t_air, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, &
+      & fract_par_diffuse, press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle,         &
+      & CO2_air, drag_wtr, drag_ice,                                                                               &
+      & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,                                                        &
+      & t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice
 
     TYPE(t_a2l_memory), POINTER :: a2l__mem
 
@@ -106,39 +103,37 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_atm2land'
 
     REAL(wp), POINTER, DIMENSION(:) ::  &
-      & t_air_ptr, &
-      & q_air_ptr, & 
-      & rain_ptr, &
-      & snow_ptr, &
-      & wind_air_ptr, &
-      & wind_10m_ptr, &
-      & lw_srf_down_ptr, &
-      & swvis_srf_down_ptr, &
-      & swnir_srf_down_ptr, &
-      & swpar_srf_down_ptr, &
+      & t_air_ptr,             &
+      & q_air_ptr,             &
+      & rain_ptr,              &
+      & snow_ptr,              &
+      & wind_air_ptr,          &
+      & wind_10m_ptr,          &
+      & lw_srf_down_ptr,       &
+      & swvis_srf_down_ptr,    &
+      & swnir_srf_down_ptr,    &
+      & swpar_srf_down_ptr,    &
       & fract_par_diffuse_ptr, &
-      & press_srf_ptr, &
-      & drag_srf_ptr, &
-      & t_acoef_ptr, &
-      & t_bcoef_ptr, &
-      & q_acoef_ptr, &
-      & q_bcoef_ptr, &
-      & pch_ptr, &
-      & cos_zenith_angle_ptr, &
-      & CO2_air_ptr, &
-      & CO2_air_mol_ptr, &
-      & drag_wtr_ptr, &
-      & drag_ice_ptr, &
-      & t_acoef_wtr_ptr, &
-      & t_bcoef_wtr_ptr, &
-      & q_acoef_wtr_ptr, &
-      & q_bcoef_wtr_ptr, &
-      & t_acoef_ice_ptr, &
-      & t_bcoef_ice_ptr, &
-      & q_acoef_ice_ptr, &
+      & press_srf_ptr,         &
+      & drag_srf_ptr,          &
+      & t_acoef_ptr,           &
+      & t_bcoef_ptr,           &
+      & q_acoef_ptr,           &
+      & q_bcoef_ptr,           &
+      & pch_ptr,               &
+      & cos_zenith_angle_ptr,  &
+      & CO2_air_ptr,           &
+      & CO2_air_mol_ptr,       &
+      & drag_wtr_ptr,          &
+      & drag_ice_ptr,          &
+      & t_acoef_wtr_ptr,       &
+      & t_bcoef_wtr_ptr,       &
+      & q_acoef_wtr_ptr,       &
+      & q_bcoef_wtr_ptr,       &
+      & t_acoef_ice_ptr,       &
+      & t_bcoef_ice_ptr,       &
+      & q_acoef_ice_ptr,       &
       & q_bcoef_ice_ptr
-
-
 
     IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
 
@@ -151,6 +146,40 @@ CONTAINS
 
     SELECT TYPE (mm => tile%mem(a2l_)%p); TYPE IS (t_a2l_memory); a2l__mem => mm ; END SELECT
 
+    t_air_ptr             => a2l__mem%t_air%ptr(ics:ice,iblk)
+    q_air_ptr             => a2l__mem%q_air%ptr(ics:ice,iblk)
+    rain_ptr              => a2l__mem%rain%ptr(ics:ice,iblk)
+    snow_ptr              => a2l__mem%snow%ptr(ics:ice,iblk)
+    wind_air_ptr          => a2l__mem%wind_air%ptr(ics:ice,iblk)
+    wind_10m_ptr          => a2l__mem%wind_10m%ptr(ics:ice,iblk)
+    lw_srf_down_ptr       => a2l__mem%lw_srf_down%ptr(ics:ice,iblk)
+    swvis_srf_down_ptr    => a2l__mem%swvis_srf_down%ptr(ics:ice,iblk)
+    swnir_srf_down_ptr    => a2l__mem%swnir_srf_down%ptr(ics:ice,iblk)
+    swpar_srf_down_ptr    => a2l__mem%swpar_srf_down%ptr(ics:ice,iblk)
+    fract_par_diffuse_ptr => a2l__mem%fract_par_diffuse%ptr(ics:ice,iblk)
+    press_srf_ptr         => a2l__mem%press_srf%ptr(ics:ice,iblk)
+    drag_srf_ptr          => a2l__mem%drag_srf%ptr(ics:ice,iblk)
+    t_acoef_ptr           => a2l__mem%t_acoef%ptr(ics:ice,iblk)
+    t_bcoef_ptr           => a2l__mem%t_bcoef%ptr(ics:ice,iblk)
+    q_acoef_ptr           => a2l__mem%q_acoef%ptr(ics:ice,iblk)
+    q_bcoef_ptr           => a2l__mem%q_bcoef%ptr(ics:ice,iblk)
+    pch_ptr               => a2l__mem%pch%ptr(ics:ice,iblk)
+    cos_zenith_angle_ptr  => a2l__mem%cos_zenith_angle%ptr(ics:ice,iblk)
+    co2_air_ptr           => a2l__mem%co2_air%ptr(ics:ice,iblk)
+    co2_air_mol_ptr       => a2l__mem%co2_air_mol%ptr(ics:ice,iblk)
+    drag_wtr_ptr          => a2l__mem%drag_wtr%ptr(ics:ice,iblk)
+    drag_ice_ptr          => a2l__mem%drag_ice%ptr(ics:ice,iblk)
+    t_acoef_wtr_ptr       => a2l__mem%t_acoef_wtr%ptr(ics:ice,iblk)
+    t_bcoef_wtr_ptr       => a2l__mem%t_bcoef_wtr%ptr(ics:ice,iblk)
+    q_acoef_wtr_ptr       => a2l__mem%q_acoef_wtr%ptr(ics:ice,iblk)
+    q_bcoef_wtr_ptr       => a2l__mem%q_bcoef_wtr%ptr(ics:ice,iblk)
+    t_acoef_ice_ptr       => a2l__mem%t_acoef_ice%ptr(ics:ice,iblk)
+    t_bcoef_ice_ptr       => a2l__mem%t_bcoef_ice%ptr(ics:ice,iblk)
+    q_acoef_ice_ptr       => a2l__mem%q_acoef_ice%ptr(ics:ice,iblk)
+    q_bcoef_ice_ptr       => a2l__mem%q_bcoef_ice%ptr(ics:ice,iblk)
+
+    !$acc parallel default(present)
+
     IF (PRESENT(t_air)) THEN
       t_air_ptr => a2l__mem%t_air%ptr(ics:ice,iblk)
       !$acc data present(t_air_ptr, t_air)
@@ -158,7 +187,6 @@ CONTAINS
       DO i=1,nc
         t_air_ptr(i) = t_air(i)
       END DO
-      !$acc end data
     END IF
     IF (PRESENT(q_air)) THEN
       q_air_ptr => a2l__mem%q_air%ptr(ics:ice,iblk)
@@ -167,7 +195,6 @@ CONTAINS
       DO i=1,nc
         q_air_ptr(i) = q_air(i)
       END DO
-      !$acc end data
     END IF
     IF (PRESENT(rain)) THEN
       rain_ptr => a2l__mem%rain%ptr(ics:ice,iblk)
@@ -176,7 +203,6 @@ CONTAINS
       DO i=1,nc
         rain_ptr(i)= rain(i)
       END DO
-      !$acc end data
     END IF
     IF (PRESENT(snow)) THEN
       snow_ptr => a2l__mem%snow%ptr(ics:ice,iblk)
@@ -185,7 +211,6 @@ CONTAINS
       DO i=1,nc
         snow_ptr(i) = snow(i)
       END DO
-      !$acc end data
     END IF
     IF (PRESENT(wind_air)) THEN
       wind_air_ptr => a2l__mem%wind_air%ptr(ics:ice,iblk)
@@ -194,7 +219,6 @@ CONTAINS
       DO i=1,nc
         wind_air_ptr(i) = wind_air(i)
       END DO
-      !$acc end data
     END IF
     IF (PRESENT(wind_10m)) THEN
       wind_10m_ptr => a2l__mem%wind_10m%ptr(ics:ice,iblk)
@@ -203,7 +227,6 @@ CONTAINS
       DO i=1,nc
         wind_10m_ptr(i) = wind_10m(i)
       END DO
-      !$acc end data
     END IF
     IF (PRESENT(lw_srf_down)) THEN
       lw_srf_down_ptr => a2l__mem%lw_srf_down%ptr(ics:ice,iblk)
@@ -212,7 +235,6 @@ CONTAINS
       DO i=1,nc
         lw_srf_down_ptr(i) = lw_srf_down(i)
       END DO
-      !$acc end data
     END IF
     IF (PRESENT(swvis_srf_down)) THEN
       swvis_srf_down_ptr => a2l__mem%swvis_srf_down%ptr(ics:ice,iblk)
@@ -221,7 +243,6 @@ CONTAINS
       DO i=1,nc
         swvis_srf_down_ptr(i) = swvis_srf_down(i)
       END DO
-      !$acc end data
     END IF
     IF (PRESENT(swnir_srf_down)) THEN
       swnir_srf_down_ptr => a2l__mem%swnir_srf_down%ptr(ics:ice,iblk)
@@ -230,7 +251,6 @@ CONTAINS
       DO i=1,nc
         swnir_srf_down_ptr(i) = swnir_srf_down(i)
       END DO
-      !$acc end data
     END IF
     IF (PRESENT(swpar_srf_down)) THEN
       swpar_srf_down_ptr => a2l__mem%swpar_srf_down%ptr(ics:ice,iblk)
@@ -239,7 +259,6 @@ CONTAINS
       DO i=1,nc
         swpar_srf_down_ptr(i) = swpar_srf_down(i)
       END DO
-      !$acc end data
     END IF
     IF (PRESENT(fract_par_diffuse)) THEN
       fract_par_diffuse_ptr => a2l__mem%fract_par_diffuse%ptr(ics:ice,iblk)
@@ -248,7 +267,6 @@ CONTAINS
       DO i=1,nc
         fract_par_diffuse_ptr(i)  = fract_par_diffuse(i)
       END DO
-      !$acc end data
     END IF
     IF (PRESENT(press_srf)) THEN
       press_srf_ptr => a2l__mem%press_srf%ptr(ics:ice,iblk)
@@ -257,7 +275,6 @@ CONTAINS
       DO i=1,nc
         press_srf_ptr(i) = press_srf(i)
       END DO
-      !$acc end data
     END IF
     IF (PRESENT(drag_srf)) THEN
       drag_srf_ptr => a2l__mem%drag_srf%ptr(ics:ice,iblk)
@@ -266,7 +283,6 @@ CONTAINS
       DO i=1,nc
         drag_srf_ptr(i) = drag_srf(i)
       END DO
-      !$acc end data
     END IF
     IF (PRESENT(t_acoef)) THEN
       t_acoef_ptr => a2l__mem%t_acoef%ptr(ics:ice,iblk)
@@ -275,7 +291,6 @@ CONTAINS
       DO i=1,nc
         t_acoef_ptr(i) = t_acoef(i)
       END DO
-      !$acc end data
     END IF
     IF (PRESENT(t_bcoef)) THEN
       t_bcoef_ptr => a2l__mem%t_bcoef%ptr(ics:ice,iblk)
@@ -284,7 +299,6 @@ CONTAINS
       DO i=1,nc
         t_bcoef_ptr(i) = t_bcoef(i)
       END DO
-      !$acc end data
     END IF
     IF (PRESENT(q_acoef)) THEN
       q_acoef_ptr => a2l__mem%q_acoef%ptr(ics:ice,iblk)
@@ -293,7 +307,6 @@ CONTAINS
       DO i=1,nc
         q_acoef_ptr(i) = q_acoef(i)
       END DO
-      !$acc end data
     END IF
     IF (PRESENT(q_bcoef)) THEN
       q_bcoef_ptr => a2l__mem%q_bcoef%ptr(ics:ice,iblk)
@@ -302,7 +315,6 @@ CONTAINS
       DO i=1,nc
         q_bcoef_ptr(i) = q_bcoef(i)
       END DO
-      !$acc end data
     END IF
     IF (PRESENT(pch)) THEN
       pch_ptr => a2l__mem%pch%ptr(ics:ice,iblk)
@@ -311,7 +323,6 @@ CONTAINS
       DO i=1,nc
         pch_ptr(i) = pch(i)
       END DO
-      !$acc end data
     END IF
     IF (PRESENT(cos_zenith_angle)) THEN
       cos_zenith_angle_ptr => a2l__mem%cos_zenith_angle%ptr(ics:ice,iblk)
@@ -320,7 +331,6 @@ CONTAINS
       DO i=1,nc
         cos_zenith_angle_ptr(i) = cos_zenith_angle(i)
       END DO
-      !$acc end data
     END IF
     IF (PRESENT(CO2_air)) THEN
       co2_air_ptr => a2l__mem%co2_air%ptr(ics:ice,iblk)
@@ -332,10 +342,9 @@ CONTAINS
         ! Convert CO2 mass mixing ratio [kg/kg] to particle mixing ratio [mol/mol]
         CO2_air_mol_ptr(i) = CO2_air(i) * molarMassDryAir / molarMassCO2
       END DO
-      !$acc end data
     END IF
 
-    IF (tile%contains_lake) THEN
+    IF (tile_contains_lake) THEN
 
       IF (PRESENT(drag_wtr)) THEN
         drag_wtr_ptr => a2l__mem%drag_wtr%ptr(ics:ice,iblk)
@@ -344,7 +353,6 @@ CONTAINS
         DO i=1,nc
           drag_wtr_ptr(i) = drag_wtr(i)
         END DO
-        !$acc end data
       END IF
       IF (PRESENT(drag_ice)) THEN
         drag_ice_ptr => a2l__mem%drag_ice%ptr(ics:ice,iblk)
@@ -353,7 +361,6 @@ CONTAINS
         DO i=1,nc
           drag_ice_ptr(i) = drag_ice(i)
         END DO
-        !$acc end data
       END IF
       IF (PRESENT(t_acoef_wtr)) THEN
         t_acoef_wtr_ptr => a2l__mem%t_acoef_wtr%ptr(ics:ice,iblk)
@@ -362,8 +369,7 @@ CONTAINS
         DO i=1,nc
           t_acoef_wtr_ptr(i) = t_acoef_wtr(i)
         END DO
-        !$acc end data
-        END IF
+      END IF
       IF (PRESENT(t_bcoef_wtr)) THEN
         t_bcoef_wtr_ptr => a2l__mem%t_bcoef_wtr%ptr(ics:ice,iblk)
         !$acc data present(t_bcoef_wtr_ptr, t_bcoef_wtr)
@@ -371,7 +377,6 @@ CONTAINS
         DO i=1,nc
           t_bcoef_wtr_ptr(i) = t_bcoef_wtr(i)
         END DO
-        !$acc end data
       END IF
       IF (PRESENT(q_acoef_wtr)) THEN
         q_acoef_wtr_ptr => a2l__mem%q_acoef_wtr%ptr(ics:ice,iblk)
@@ -380,7 +385,6 @@ CONTAINS
         DO i=1,nc
           q_acoef_wtr_ptr(i) = q_acoef_wtr(i)
         END DO
-        !$acc end data
       END IF
       IF (PRESENT(q_bcoef_wtr)) THEN
         q_bcoef_wtr_ptr => a2l__mem%q_bcoef_wtr%ptr(ics:ice,iblk)
@@ -389,7 +393,6 @@ CONTAINS
         DO i=1,nc
           q_bcoef_wtr_ptr(i) = q_bcoef_wtr(i)
         END DO
-        !$acc end data
       END IF
       IF (PRESENT(t_acoef_ice)) THEN
         t_acoef_ice_ptr => a2l__mem%t_acoef_ice%ptr(ics:ice,iblk)
@@ -398,7 +401,6 @@ CONTAINS
         DO i=1,nc
           t_acoef_ice_ptr(i) = t_acoef_ice(i)
         END DO
-        !$acc end data
       END IF
       IF (PRESENT(t_bcoef_ice)) THEN
         t_bcoef_ice_ptr => a2l__mem%t_bcoef_ice%ptr(ics:ice,iblk)
@@ -407,7 +409,6 @@ CONTAINS
         DO i=1,nc
           t_bcoef_ice_ptr(i) = t_bcoef_ice(i)
         END DO
-        !$acc end data
       END IF
       IF (PRESENT(q_acoef_ice)) THEN
         q_acoef_ice_ptr => a2l__mem%q_acoef_ice%ptr(ics:ice,iblk)
@@ -416,7 +417,6 @@ CONTAINS
         DO i=1,nc
           q_acoef_ice_ptr(i) = q_acoef_ice(i)
         END DO
-        !$acc end data
       END IF
       IF (PRESENT(q_bcoef_ice)) THEN
         q_bcoef_ice_ptr => a2l__mem%q_bcoef_ice%ptr(ics:ice,iblk)
@@ -425,10 +425,10 @@ CONTAINS
         DO i=1,nc
           q_bcoef_ice_ptr(i) = q_bcoef_ice(i)
         END DO
-        !$acc end data
       END IF
 
     END IF
+    !$acc end parallel
 
   END SUBROUTINE update_atm2land
 
@@ -545,25 +545,30 @@ CONTAINS
       ! box. This is necessary because, in the atmosphere, they are weighted with the fractions of lake/nolake in the whole
       ! grid box, while on the root tile of JSBACH they are relative to the land fraction of the grid box including lakes.
       ! Note that, if lakes are considered, the lake tile must be a direct child of the root tile.
-      DO i=1,SIZE(tile%lcts)
-        IF (tile%lcts(i)%id == LAKE_TYPE) EXIT
+      DO j=1,SIZE(tile%lcts)
+        IF (tile%lcts(j)%id == LAKE_TYPE) EXIT
       END DO
 
-      !$acc data pcreate(fact_lake, fact_land, fract_ptr)
+      !$acc data pcreate(fact_lake, fact_land, fract_ptr) present(tile%lcts)
+      fract_ptr => tile%lcts(j)%fract(ics:ice,iblk)
       
-      fact_lake(:) = tile%lcts(i)%fract(ics:ice,iblk)
-      fact_land(:) = 1._wp - fact_lake(:)
-      WHERE (fact_lake(:) > 0._wp)
-        fact_lake(:) = 1._wp / fact_lake(:)
-      ELSE WHERE
-        fact_lake(:) = 1._wp
-      END WHERE
-      WHERE (fact_land(:) > 0._wp)
-        fact_land(:) = 1._wp / fact_land(:)
-      ELSE WHERE
-        fact_land(:) = 1._wp
-      END WHERE
-      !$acc update device(fact_land, fact_lake)
+      !$acc data present(fract_ptr)
+      !$acc parallel loop
+      DO i=1,nc
+        fact_lake(i) = fract_ptr(i)
+        fact_land(i) = 1._wp - fact_lake(i)
+        IF (fact_lake(i) > 0._wp) THEN
+          fact_lake(i) = 1._wp / fact_lake(i)
+        ELSE
+          fact_lake(i) = 1._wp
+        END IF
+        IF (fact_land(i) > 0._wp) THEN
+          fact_land(i) = 1._wp / fact_land(i)
+        ELSE
+          fact_land(i) = 1._wp
+        END IF
+      END DO
+      !$acc end data
      
 
       IF (PRESENT(t_srf)) THEN

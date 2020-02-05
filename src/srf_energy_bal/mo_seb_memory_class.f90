@@ -158,7 +158,7 @@ CONTAINS
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
 
-    !$acc enter data pcreate(mem)
+    !! !$acc enter data pcreate(mem)
     dsl4jsb_Get_config(SEB_)
 
     CALL mem%Add_var( 't', mem%t,                                                    &
