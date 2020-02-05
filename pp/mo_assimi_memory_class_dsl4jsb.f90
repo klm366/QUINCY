@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from JSBACH source file:
 !    src/assimilation/mo_assimi_memory_class.f90
-! with md5 hash: 3a1652ee9e5f02424a87d37f4a4b8691
+! with md5 hash: e74def90edc961a494948dce3a7b30a7
 !
 !>
 !! @brief Contains the memory class for the assimilation process.
@@ -140,7 +140,7 @@ CONTAINS
     surface => Get_vgrid('surface')
     canopy_layer => Get_vgrid('canopy_layer')
 
-    !$acc enter data pcreate(mem)
+    !! !$acc enter data pcreate(mem)
 
     CALL jsb_add_var( mem, 'gross_assimilation_ca', mem%gross_assimilation_ca,     &
       & hgrid, surface,                                                            &

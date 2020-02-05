@@ -937,7 +937,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(RAD_,      alb_nir_soil)          ! inout
 
       IF (use_alb_veg_simple) THEN
-        !$claw expand parallel savepoint=ser_jsb_rad_update_albedo_expand_2 tile_name=tile%name
+        !$claw expand parallel update savepoint=ser_jsb_rad_update_albedo_expand_2 tile_name=tile%name
         alb_vis_lnd(:) = get_surface_albedo_simple( &
           & t_unfilt(:),                            &
           & fract_forest(:),                        &

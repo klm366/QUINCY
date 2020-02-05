@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from JSBACH source file:
 !    src/hydrology/mo_hydro_memory_class.f90
-! with md5 hash: 978cfc50fd9d5b6e2ad4714f0f8ac503
+! with md5 hash: 897f54ee1b391a51b96a172b04bedb09
 !
 !>
 !! @brief Contains the memory class for the hydrology process.
@@ -223,14 +223,9 @@ CONTAINS
       ini_snow_dens = dens_snow
     END IF
 
-    !$acc enter data pcreate(mem)
+    !! !$acc enter data pcreate(mem)
 
     ! Common variables
-
-    !$acc enter data pcreate(mem%fract_snow,mem%w_snow,mem%evapotrans,        &
-    !$acc mem%evapopot,mem%evapo_snow,mem%snowmelt,mem%runoff,mem%drainage,   &
-    !$acc mem%discharge,mem%discharge_ocean,mem%internal_drain,mem%water_flux,&
-    !$acc mem%water_content,mem%water_budget,mem%elevation,mem%oro_stddev)
 
     CALL jsb_add_var( mem, 'fract_snow', mem%fract_snow,                       &
       & hgrid, surface,                                                        &
@@ -369,10 +364,6 @@ CONTAINS
       &   .OR. One_of(LAND_TYPE,    lct_ids(:)) > 0 &
       &  ) ) THEN
 
-      !$acc enter data pcreate(mem%fract_snow_soil,mem%w_snow_soil, &
-      !$acc mem%snow_soil_dens,mem%evapotrans_lnd,mem%q_snocpymlt,  &
-      !$acc mem%fract_water)  
-
       CALL jsb_add_var( mem, 'fract_snow_soil', mem%fract_snow_soil,            &
         & hgrid, surface,                                                       &
         & t_cf('fraction of snow on soil', '-', ''),                            &
@@ -435,17 +426,6 @@ CONTAINS
       &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 &
       &  ) ) THEN
 
-      !$acc enter data pcreate(mem%soil_depth,mem%soil_depth_sl,mem%max_moist, &
-      !$acc mem%vol_field_cap,mem%vol_field_cap_sl,mem%vol_p_wilt,             &
-      !$acc mem%vol_p_wilt_sl,mem%vol_porosity,mem%vol_porosity_sl,            &
-      !$acc mem%pore_size_index,mem%pore_size_index_sl,mem%bclapp,             &
-      !$acc mem%bclapp_sl,mem%matrix_pot,mem%matrix_pot_sl,mem%hyd_cond_sat,   &
-      !$acc mem%hyd_cond_sat_sl,mem%w_skin,mem%snow_accum,mem%evapotrans_soil, &
-      !$acc mem%evapo_skin,mem%evapo_deficit,mem%water_excess,                 &
-      !$acc mem%w_soil_overflow,mem%w_soil_column,mem%w_soil_sl,mem%w_ice_sl,  &
-      !$acc mem%w_soil_freeze_sl,mem%w_ice_melt_sl,mem%w_soil_sat_sl,          &
-      !$acc mem%w_soil_fc_sl,mem%w_soil_pwp_sl,mem%w_soil_rel)
-
       CALL jsb_add_var( mem, 'soil_depth', mem%soil_depth,                     &
         & hgrid, surface,                                                      &
         & t_cf('soil_depth', 'm', 'Depth of soil until bedrock'),              &
@@ -463,7 +443,6 @@ CONTAINS
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
       IF (hydro__conf%l_organic) THEN
-        !$acc enter data pcreate(mem%fract_org_sl)
         CALL jsb_add_var( mem, 'fract_org_sl', mem%fract_org_sl,                    &
           & hgrid, soil_w,                                                          &
           & t_cf('fract_org_sl', '', 'Fraction of organic material in soil layer'), &
@@ -728,10 +707,6 @@ CONTAINS
       &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 &
       &  ) ) THEN
 
-      !$acc enter data pcreate(mem%root_depth,mem%root_depth_sl,               &
-      !$acc mem%fract_snow_can,mem%w_snow_can,mem%w_soil_root,                 &
-      !$acc mem%w_soil_root_fc,mem%w_soil_root_pwp,mem%water_stress,mem%trans)
-
       CALL jsb_add_var( mem, 'root_depth', mem%root_depth,                   &
         & hgrid, surface,                                                    &
         & t_cf('rooting_depth', '', ''),                                     &
@@ -794,7 +769,6 @@ CONTAINS
         & lrestart=.FALSE., initval_r=0.0_wp )
 
       IF (.NOT. assimi__conf%active) THEN
-       !$acc enter data pcreate(mem%canopy_cond_unlimited,mem%canopy_cond_limited)
         CALL jsb_add_var( mem, 'canopy_cond_unlimited', mem%canopy_cond_unlimited, &
           & hgrid, surface,                                                    &
           & t_cf('canopy_conductance_unlimited', '', ''),                      &
@@ -825,8 +799,6 @@ CONTAINS
       &   .OR. One_of(LAND_TYPE,    lct_ids(:)) > 0 &
       &  ) ) THEN
 
-      !$acc enter data pcreate(mem%fract_snow_glac,mem%w_glac,mem%runoff_glac)  
-
       CALL jsb_add_var( mem, 'fract_snow_glac', mem%fract_snow_glac,         &
         & hgrid, surface,                                                    &
         & t_cf('fraction of snow on glacier', '-', ''),                      &
@@ -855,8 +827,6 @@ CONTAINS
     ! Additional variables for LAKE lct
     IF (      One_of(LAKE_TYPE, lct_ids(:)) > 0 ) THEN
 
-      !$acc enter data pcreate(mem%evapo_wtr) 
-
       CALL jsb_add_var( mem, 'evapo_wtr', mem%evapo_wtr,                                              &
         & hgrid, surface,                                                                             &
         & t_cf('surface_evapotranspiration_wtr', 'kg m-2 s-1', 'Evapotranspiration from lake water'), &
@@ -866,7 +836,6 @@ CONTAINS
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       IF (seb__conf%l_ice_on_lakes) THEN
-        !$acc enter data pcreate(mem%evapo_ice,mem%fract_snow_lice,mem%w_snow_lice)
         CALL jsb_add_var( mem, 'evapo_ice', mem%evapo_ice,                                            &
           & hgrid, surface,                                                                           &
           & t_cf('surface_evapotranspiration_ice', 'kg m-2 s-1', 'Evapotranspiration from lake ice'), &

@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from JSBACH source file:
 !    src/base/mo_jsb_model_init.f90
-! with md5 hash: 9d42f1532059b5e593072edef15346c4
+! with md5 hash: 4dee0cdceb8374c705da9e9718dd0bf0
 !
 !>
 !! @brief Contains methods for JSBACH initializations.
@@ -377,6 +377,7 @@ CONTAINS
           IF (ilct > 1) CALL finish(TRIM(routine), 'Leave tiles should only have one LCT')
           tile%lcts(1)%fract(:,:) = 1._wp        ! Leaves have only one LCT
         END IF
+        !$acc update device(tile%lcts(ilct)%fract)
       END DO
 
       CALL model%Goto_next_tile(tile)
@@ -454,9 +455,9 @@ CONTAINS
       END DO
     END IF
 
-#ifdef _OPENACC
-    IF (.NOT. is_time_restart()) CALL model%cpu_to_gpu()
-#endif
+!#ifdef _OPENACC
+!    IF (.NOT. is_time_restart()) CALL model%cpu_to_gpu()
+!#endif
 
   END SUBROUTINE jsbach_init
 

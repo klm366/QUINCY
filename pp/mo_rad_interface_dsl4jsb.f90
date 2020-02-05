@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from JSBACH source file:
 !    src/radiation/mo_rad_interface.f90
-! with md5 hash: 46c5ff3d78079a2358475f3aa9fedd78
+! with md5 hash: 8387b974db9ebbaec5cbcc8b9950c172
 !
 !>
 !! @brief Contains the interfaces to the radiation processes
@@ -942,7 +942,7 @@ CONTAINS
       alb_nir_soil => rad__mem%alb_nir_soil%ptr(ics:ice,iblk)          ! inout
 
       IF (use_alb_veg_simple) THEN
-        !$claw expand parallel savepoint=ser_jsb_rad_update_albedo_expand_2 tile_name=tile%name
+        !$claw expand parallel update savepoint=ser_jsb_rad_update_albedo_expand_2 tile_name=tile%name
         alb_vis_lnd(:) = get_surface_albedo_simple( &
           & t_unfilt(:),                            &
           & fract_forest(:),                        &
