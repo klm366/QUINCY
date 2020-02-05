@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from JSBACH source file:
 !    src/assimilation/mo_assimi_interface.f90
-! with md5 hash: 21d1829089bd4a78675ed9c6ac4f6010
+! with md5 hash: 0ea4d232b7cd8b8528001ffa1305ce70
 !
 !>
 !! @brief Contains the interfaces to the assimi process
@@ -232,7 +232,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER   :: model
     TYPE(t_jsb_grid),  POINTER   :: grid
     INTEGER                      :: iblk, ics, ice !, nc
-    REAL(wp)                     :: lat(options%nc)
+    REAL(wp),          POINTER   :: lat(:)
     REAL(wp)                     :: declination ! Solar Declination angle
     INTEGER                      :: i
     INTEGER                      :: ncanopy          ! number of canopy layers
@@ -274,17 +274,13 @@ CONTAINS
     canopy_bound_lai(0:ncanopy) => assimi__conf%canopy_bound_lai(0:ncanopy)
 
     grid => Get_grid(model%grid_id)
-    lat(:)  = grid%lat(ics:ice, iblk)
+    lat  => grid%lat(ics:ice, iblk)
 
     lai => pheno__mem%lai%ptr(ics:ice,iblk)                     ! in
     assimi_scaling_fact_cl => assimi__mem%assimi_scaling_fact_cl%ptr(ics:ice,:,iblk) ! out
 
     ! ---------------------------
     ! Go
-
-    !$claw acc data create(lat, canopy_bound_lai)
-    !$claw acc update device(lat, canopy_bound_lai) ! LOCAL VARIABLE
-
     CALL inquire_declination(declination) ! R: do not put this in elemental procedure as it would not be pure...
                                           ! e.g. declination = 0.006918_wp
 
@@ -303,8 +299,6 @@ CONTAINS
       !$claw expand parallel update savepoint=ser_jsb_assim_update_assimilation_scaling_factors_expand_0 tile_name=tile%name 
       assimi_scaling_fact_cl(:,:) = 1._wp
     END IF
-
-    !$claw acc end data
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

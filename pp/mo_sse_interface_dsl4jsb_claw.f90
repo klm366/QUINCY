@@ -339,7 +339,7 @@ CONTAINS
 !$acc parallel
 !$acc loop seq
    DO isnow = nsnow , 1 , (-1)
-!$acc loop vector
+!$acc loop gang vector
     DO i = 1 , size ( snow_depth , dim = 1 ) , 1
      IF ( snow_depth ( i ) > 0._wp ) THEN
       snow_depth_sl ( i , isnow ) = min ( snow_depth ( i ) , snow_e % dz (&

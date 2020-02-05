@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from JSBACH source file:
 !    src/hydrology/mo_hydro_init.f90
-! with md5 hash: 9530d6098d1ff909054c12d00771e1ca
+! with md5 hash: 72e10c0d48ee564b66837147a18bd362
 !
 !>
 !! @brief Initialization of the the hydrology memory.
@@ -384,14 +384,16 @@ CONTAINS
       ! water content should actually be zero. Therefore, make sure that water content is not larger than field capacity.
       hydro__mem%w_soil_sl%ptr(:,:,:) = &
         & MIN(hydro__mem%w_soil_sl%ptr(:,:,:), hydro__mem%w_soil_fc_sl%ptr(:,:,:))
+      !$acc update device(hydro__mem%w_soil_sl%ptr(:,:,:))
 
       DO i=1,SIZE(hydro__mem%w_soil_root%ptr, 2)
-        hydro__mem%w_soil_column%ptr     (:,  i)    = get_water_in_root_zone( &
-          & hydro__mem%w_soil_sl%ptr     (:,:,i),                             &
-          & hydro__mem%soil_depth_sl%ptr (:,:,i),                             &
-          & hydro__mem%root_depth_sl%ptr (:,:,i))
+          CALL get_water_in_root_zone(                       &
+          & hydro__mem%w_soil_sl%ptr     (:,:,i),  &
+          & hydro__mem%soil_depth_sl%ptr (:,:,i),  &
+          & hydro__mem%root_depth_sl%ptr (:,:,i),  &
+          & hydro__mem%w_soil_column%ptr (:,  i)   )
       END DO
-
+      !$acc update host(hydro__mem%w_soil_column%ptr)
       WHERE (hydro__mem%w_soil_column%ptr(:,:) > hydro__mem%max_moist%ptr(:,:))
         hydro__mem%w_soil_column%ptr(:,:) = hydro__mem%max_moist%ptr(:,:)
       END WHERE
@@ -414,22 +416,27 @@ CONTAINS
     IF (tile%contains_vegetation) THEN
       ! Calculate water content and field capacity in the root zone
       DO i=1,SIZE(hydro__mem%w_soil_root%ptr, 2)
-        hydro__mem%w_soil_root%ptr       (:,  i)    = get_water_in_root_zone( &
-          & hydro__mem%w_soil_sl%ptr     (:,:,i),                             &
-          & hydro__mem%soil_depth_sl%ptr   (:,:,i),                           &
-          & hydro__mem%root_depth_sl%ptr    (:,:,i))
-        hydro__mem%w_soil_root_fc%ptr    (:,  i)    = get_water_in_root_zone( &
-          & hydro__mem%w_soil_fc_sl%ptr  (:,:,i),                             &
-          & hydro__mem%soil_depth_sl%ptr   (:,:,i),                           &
-          & hydro__mem%root_depth_sl%ptr    (:,:,i))
-        hydro__mem%w_soil_root_pwp%ptr   (:,  i)    = get_water_in_root_zone( &
-          & hydro__mem%w_soil_pwp_sl%ptr (:,:,i),                             &
-          & hydro__mem%soil_depth_sl%ptr   (:,:,i),                           &
-          & hydro__mem%root_depth_sl%ptr    (:,:,i))
+          CALL get_water_in_root_zone( &
+          & hydro__mem%w_soil_sl%ptr      (:,:,i), & 
+          & hydro__mem%soil_depth_sl%ptr  (:,:,i), &
+          & hydro__mem%root_depth_sl%ptr  (:,:,i), &
+          & hydro__mem%w_soil_root%ptr    (:,  i)  )
+ 
+          CALL get_water_in_root_zone( & 
+          & hydro__mem%w_soil_fc_sl%ptr   (:,:,i), & 
+          & hydro__mem%soil_depth_sl%ptr  (:,:,i), &
+          & hydro__mem%root_depth_sl%ptr  (:,:,i), &
+          & hydro__mem%w_soil_root_fc%ptr (:,  i)  )
+          
+          CALL get_water_in_root_zone( & 
+          & hydro__mem%w_soil_pwp_sl%ptr  (:,:,i), & 
+          & hydro__mem%soil_depth_sl%ptr  (:,:,i), &
+          & hydro__mem%root_depth_sl%ptr  (:,:,i), &
+          & hydro__mem%w_soil_root_pwp%ptr(:,  i)  )
       END DO
-      !$acc update device(hydro__mem%w_soil_root%ptr, &
-      !$acc hydro__mem%w_soil_root_fc%ptr, &
-      !$acc hydro__mem%w_soil_root_pwp%ptr)
+      !$acc update host(hydro__mem%w_soil_root%ptr,     &
+      !$acc             hydro__mem%w_soil_root_fc%ptr,  &
+      !$acc             hydro__mem%w_soil_root_pwp%ptr)
     END IF
 
   END SUBROUTINE hydro_init_ic

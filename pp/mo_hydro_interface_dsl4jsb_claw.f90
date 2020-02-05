@@ -1166,18 +1166,12 @@ CONTAINS
   water_stress => hydro__mem % water_stress % ptr ( ics : ice , iblk )
   config_w_soil_crit_fract = hydro__conf % w_soil_crit_fract
   config_w_soil_wilt_fract = hydro__conf % w_soil_wilt_fract
-!$acc data present(w_soil_root, w_soil_sl, soil_depth_sl, root_depth_sl, &
-!$acc w_soil_root_fc, w_soil_fc_sl, w_soil_root_pwp, w_soil_pwp_sl, w_soil_pwp_sl)
-!$acc update host(w_soil_sl, soil_depth_sl, root_depth_sl, w_soil_fc_sl, &
-!$acc w_soil_pwp_sl)
-  w_soil_root ( : ) = get_water_in_root_zone ( w_soil_sl ( : , : ) ,&
-   soil_depth_sl ( : , : ) , root_depth_sl ( : , : ) )
-  w_soil_root_fc ( : ) = get_water_in_root_zone ( w_soil_fc_sl ( : , : ) ,&
-   soil_depth_sl ( : , : ) , root_depth_sl ( : , : ) )
-  w_soil_root_pwp ( : ) = get_water_in_root_zone ( w_soil_pwp_sl ( : , : ) ,&
-   soil_depth_sl ( : , : ) , root_depth_sl ( : , : ) )
-!$acc update device(w_soil_root,w_soil_root_fc,w_soil_root_pwp) ! computed on cpu
-!$acc end data
+  CALL get_water_in_root_zone ( w_soil_sl ( : , : ) , soil_depth_sl ( : , : )&
+   , root_depth_sl ( : , : ) , w_soil_root ( : ) )
+  CALL get_water_in_root_zone ( w_soil_fc_sl ( : , : ) , soil_depth_sl ( : , :&
+   ) , root_depth_sl ( : , : ) , w_soil_root_fc ( : ) )
+  CALL get_water_in_root_zone ( w_soil_pwp_sl ( : , : ) , soil_depth_sl ( : ,&
+   : ) , root_depth_sl ( : , : ) , w_soil_root_pwp ( : ) )
 !$acc data present(w_soil_column(:),max_moist(:),water_stress(:))
 !$acc parallel
 !$acc loop gang vector

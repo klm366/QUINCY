@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from JSBACH source file:
 !    src/base/mo_jsb_tile.f90
-! with md5 hash: a18085449f3e44bea30fc0cde6d0cf23
+! with md5 hash: 1e3e2fcd8a0adb4c6a5890760cfc1134
 !
 !>
 !! @brief Contains concrete tile class that contains the surface structure and memory state.
@@ -319,8 +319,6 @@ CONTAINS
         ! this%param(iproc)%p => t_jsb_param(iproc)
         tmp_ptr => Create_process_memory(iproc)
         __acc_attach(tmp_ptr)
-        !! !$acc enter data create(tmp_ptr%vars)
-        !! !$acc update device(tmp_ptr%vars)
         this%mem(iproc)%p => tmp_ptr
         __acc_attach(this%mem(iproc)%p)
         this%mem(iproc)%p%id = iproc
@@ -341,7 +339,6 @@ CONTAINS
           CALL this%mem(iproc)%p%Init(TRIM(process_name), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
         END IF
         !$acc update device(this%mem(iproc)%p%vars)
-        !$acc update device(this%mem)
         IF (debug_on()) &
           & CALL message(TRIM(routine), 'Created memory for process '//TRIM(process_name)//' on tile '//TRIM(this%name))
 
@@ -358,6 +355,7 @@ CONTAINS
       END IF
 
     END DO
+    !$acc update device(this%mem)
 
     hgrid   => Get_grid(this%grid_id)
     surface => Get_vgrid('surface')

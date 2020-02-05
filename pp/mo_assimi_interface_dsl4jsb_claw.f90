@@ -125,7 +125,7 @@ CONTAINS
   INTEGER :: iblk
   INTEGER :: ics
   INTEGER :: ice
-  REAL ( KIND= wp ) :: lat ( 1 : options % nc )
+  REAL ( KIND= wp ) , POINTER :: lat ( : )
   REAL ( KIND= wp ) :: declination
   INTEGER :: i
   INTEGER :: ncanopy
@@ -168,12 +168,10 @@ CONTAINS
   canopy_bound_lai ( 0 : ncanopy ) => assimi__conf % canopy_bound_lai ( 0 :&
    ncanopy )
   grid => get_grid ( model % grid_id )
-  lat ( : ) = grid % lat ( ics : ice , iblk )
+  lat => grid % lat ( ics : ice , iblk )
   lai => pheno__mem % lai % ptr ( ics : ice , iblk )
   assimi_scaling_fact_cl => assimi__mem % assimi_scaling_fact_cl % ptr ( ics :&
    ice , : , iblk )
-!$acc data create(lat, canopy_bound_lai)
-!$acc update device(lat, canopy_bound_lai) ! local variable
   CALL inquire_declination ( declination )
   IF ( model % lctlib ( tile % lcts ( 1 ) % lib_id ) % nitrogenscalingflag )&
    THEN
@@ -193,7 +191,6 @@ CONTAINS
 !$acc end parallel
 !$acc end data
   END IF
-!$acc end data
   IF ( debug_on ( ) .AND. iblk == 1 ) THEN
    CALL message ( trim ("mo_assimi_interface" //&
    ":assimilation_scaling_factors" ) ,"Finished." )

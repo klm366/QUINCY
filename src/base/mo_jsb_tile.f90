@@ -314,8 +314,6 @@ CONTAINS
         ! this%param(iproc)%p => t_jsb_param(iproc)
         tmp_ptr => Create_process_memory(iproc)
         __acc_attach(tmp_ptr)
-        !! !$acc enter data create(tmp_ptr%vars)
-        !! !$acc update device(tmp_ptr%vars)
         this%mem(iproc)%p => tmp_ptr
         __acc_attach(this%mem(iproc)%p)
         this%mem(iproc)%p%id = iproc
@@ -336,7 +334,6 @@ CONTAINS
           CALL this%mem(iproc)%p%Init(TRIM(process_name), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
         END IF
         !$acc update device(this%mem(iproc)%p%vars)
-        !$acc update device(this%mem)
         IF (debug_on()) &
           & CALL message(TRIM(routine), 'Created memory for process '//TRIM(process_name)//' on tile '//TRIM(this%name))
 
@@ -353,6 +350,7 @@ CONTAINS
       END IF
 
     END DO
+    !$acc update device(this%mem)
 
     hgrid   => Get_grid(this%grid_id)
     surface => Get_vgrid('surface')

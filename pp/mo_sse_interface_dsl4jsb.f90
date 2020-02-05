@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from JSBACH source file:
 !    src/soil_snow_energy/mo_sse_interface.f90
-! with md5 hash: 7452a943ae3cae6f60feb7ab02c1cfb1
+! with md5 hash: fe52f0fab31a97222f4769539df971de
 !
 !>
 !! @brief Contains the interfaces to the soil and snow energy processes
@@ -359,7 +359,7 @@ CONTAINS
       !$claw acc parallel
       !$claw acc loop seq
       DO isnow=nsnow,1,-1
-        !$claw acc loop vector
+        !$claw acc loop gang vector
         DO i = 1, size(snow_depth, dim=1)
           IF (snow_depth(i) > 0._wp) THEN
             snow_depth_sl(i,isnow) = MIN(snow_depth(i), snow_e%dz(isnow))
