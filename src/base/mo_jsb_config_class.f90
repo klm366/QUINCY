@@ -31,6 +31,7 @@ MODULE mo_jsb_config_class
     CHARACTER(len=40)              :: usecase
     LOGICAL                        :: use_lakes
     LOGICAL                        :: use_glacier
+    LOGICAL                        :: use_quincy
     CHARACTER(len=10)              :: tpe_scheme       ! For terraplanet setup: open/closed
     CHARACTER(len=10)              :: hsm_mode
     LOGICAL                        :: l_compat401      ! Use configuration compatible with jsbach 4.01
@@ -79,6 +80,7 @@ CONTAINS
 
     LOGICAL                     :: use_lakes
     LOGICAL                     :: use_glacier
+    LOGICAL                     :: use_quincy
     LOGICAL                     :: l_compat401
     CHARACTER(len=filename_max) :: fract_filename
     CHARACTER(len=40)           :: usecase
@@ -89,6 +91,7 @@ CONTAINS
     NAMELIST /jsb_model_nml/  &
       use_lakes, &
       use_glacier, &
+      use_quincy, &
       l_compat401, &
       usecase, &
       tpe_scheme, &
@@ -107,6 +110,7 @@ CONTAINS
     ! Set defaults
     use_lakes       = .TRUE.
     use_glacier     = .TRUE.
+    use_quincy      = .FALSE.
     l_compat401     = .FALSE.
     grid_filename   = ''
     grid_name       = ''
@@ -132,6 +136,7 @@ CONTAINS
 
     model_config%use_lakes      = use_lakes
     model_config%use_glacier    = use_glacier
+    model_config%use_quincy     = use_quincy
     model_config%l_compat401    = l_compat401
     model_config%usecase        = usecase
     model_config%tpe_scheme     = tpe_scheme
