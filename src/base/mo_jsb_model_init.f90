@@ -395,6 +395,7 @@ CONTAINS
       END IF
 
       CALL tile%Init_vars()
+      CALL tile%Cache_GPU_pointers()
 
       CALL model%Goto_next_tile(tile)
 
