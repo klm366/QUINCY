@@ -101,8 +101,8 @@ MODULE mo_jsb_tile_class
     CLASS(t_jsb_tile_abstract), POINTER    :: first_child_tile => NULL()
     CLASS(t_jsb_tile_abstract), POINTER    :: next_sibling_tile => NULL()
     !
-    TYPE(real_2d_p), POINTER :: ptrs2d_cache(:,:,:)
-    TYPE(real_3d_p), POINTER :: ptrs3d_cache(:,:,:)
+    TYPE(real_2d_p), POINTER :: ptrs2d_cache(:,:,:) => NULL()
+    TYPE(real_3d_p), POINTER :: ptrs3d_cache(:,:,:) => NULL()
     !
     INTEGER                                :: grid_id = -1
     INTEGER                                :: owner_model_id = 0
@@ -1073,12 +1073,17 @@ CONTAINS
       ALLOCATE(sizes(no_children,nproc))
       sizes(:,:) = 0
 
+      !Note: process_action(iproc) = 2 means = AGGREGATE_ , but this can't be USEd
+      !      from mo_jsb_process_class because of circular dependencies
+
       DO iproc=1,nproc
-        IF ( ASSOCIATED(this%mem(iproc)%p) ) THEN
-          DO i=1,size(this%mem(iproc)%p%children)
-            IF ( ASSOCIATED(this%mem(iproc)%p%children(i)%p) ) &
-              & sizes(i,iproc) = SIZE( this%mem(iproc)%p%children(i)%p%vars )
-          END DO
+        IF (this%process_action(iproc) == 2) THEN
+          IF ( ASSOCIATED(this%mem(iproc)%p) ) THEN
+            DO i=1,size(this%mem(iproc)%p%children)
+              IF ( ASSOCIATED(this%mem(iproc)%p%children(i)%p) ) &
+                & sizes(i,iproc) = SIZE( this%mem(iproc)%p%children(i)%p%vars )
+            END DO
+          END IF
         END IF
       END DO
       maxsize = MAXVAL( sizes )
@@ -1093,31 +1098,33 @@ CONTAINS
     !  a matching END IF from the block below
               
       DO iproc=1,nproc
-        IF ( ASSOCIATED(this%mem(iproc)%p) ) THEN
+        IF (this%process_action(iproc) == 2) THEN
+          IF ( ASSOCIATED(this%mem(iproc)%p) ) THEN
 
-          DO i=1,size(this%mem(iproc)%p%children)
-            IF ( ASSOCIATED(this%mem(iproc)%p%children(i)%p) ) THEN
+            DO i=1,size(this%mem(iproc)%p%children)
+              IF ( ASSOCIATED(this%mem(iproc)%p%children(i)%p) ) THEN
 
-              DO j=1,SIZE( this%mem(iproc)%p%children(i)%p%vars )
-                IF ( ASSOCIATED(this%mem(iproc)%p%children(i)%p%vars(j)%p) ) THEN
-                  IF ( .NOT. ASSOCIATED(this%ptrs2d_cache(i,j,iproc)%p, &
-                                        this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr2d) ) THEN
+                DO j=1,SIZE( this%mem(iproc)%p%children(i)%p%vars )
+                  IF ( ASSOCIATED(this%mem(iproc)%p%children(i)%p%vars(j)%p) ) THEN
+                    IF ( .NOT. ASSOCIATED(this%ptrs2d_cache(i,j,iproc)%p, &
+                                          this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr2d) ) THEN
 
-                    this%ptrs2d_cache(i,j,iproc)%p => this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr2d
-                    __acc_attach(this%ptrs2d_cache(i,j,iproc)%p)
+                      this%ptrs2d_cache(i,j,iproc)%p => this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr2d
+                      __acc_attach(this%ptrs2d_cache(i,j,iproc)%p)
+                    END IF
+
+                    IF ( .NOT. ASSOCIATED(this%ptrs3d_cache(i,j,iproc)%p, &
+                                          this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr3d) ) THEN
+
+                      this%ptrs3d_cache(i,j,iproc)%p => this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr3d
+                      __acc_attach(this%ptrs3d_cache(i,j,iproc)%p)
+                    END IF
                   END IF
+                END DO
 
-                  IF ( .NOT. ASSOCIATED(this%ptrs3d_cache(i,j,iproc)%p, &
-                                        this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr3d) ) THEN
-
-                    this%ptrs3d_cache(i,j,iproc)%p => this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr3d
-                    __acc_attach(this%ptrs3d_cache(i,j,iproc)%p)
-                  END IF
-                END IF
-              END DO
-
-            END IF
-          END DO
+              END IF
+            END DO
+          END IF
         END IF
       END DO
 
