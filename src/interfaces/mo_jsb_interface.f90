@@ -215,7 +215,7 @@ CONTAINS
     !       of compiler warnings about unused dummy arguments.
 #ifndef __ICON__
     IF (write_interface_vars) THEN
-      CALL write_interface_variables(ics, ice, iblk, t_air, q_air, rain, snow, wind_air, wind_10m, &
+      CALL write_interface_variables(ics, ice, iblk, current_datetime, t_air, q_air, rain, snow, wind_air, wind_10m, &
         & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, press_srf, drag_srf,    &
         & t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle)
     END IF

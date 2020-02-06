@@ -29,7 +29,7 @@ MODULE mo_jsb_time
 !!$  PUBLIC :: init_jsb_time
   PUBLIC :: init_time
   PUBLIC :: update_time_at_beginloop, update_time_at_endloop
-  PUBLIC :: t_datetime
+  PUBLIC :: t_datetime, deallocateDatetime
   PUBLIC :: get_date_components, get_time_start, get_time_dt, &
             is_time_experiment_start, is_time_restart, &
             get_year_length, get_month_length, get_day_length, get_year_day
