@@ -101,8 +101,8 @@ MODULE mo_jsb_tile_class
     CLASS(t_jsb_tile_abstract), POINTER    :: first_child_tile => NULL()
     CLASS(t_jsb_tile_abstract), POINTER    :: next_sibling_tile => NULL()
     !
-    TYPE(real_2d_p), POINTER :: ptrs2d_cache(:,:,:)
-    TYPE(real_3d_p), POINTER :: ptrs3d_cache(:,:,:)
+    TYPE(real_2d_p), POINTER :: ptrs2d_cache(:,:,:) => NULL()
+    TYPE(real_3d_p), POINTER :: ptrs3d_cache(:,:,:) => NULL()
     !
     INTEGER                                :: grid_id = -1
     INTEGER                                :: owner_model_id = 0
@@ -796,7 +796,6 @@ CONTAINS
     IF (.NOT. ASSOCIATED(var%ptr)) RETURN
 
     CALL this%Set_fractions(tile, ics, ice, iblk)
-    CALL tile%Cache_GPU_pointers()
 
     ! missval = var%missval
 
@@ -903,7 +902,6 @@ CONTAINS
     IF (.NOT. ASSOCIATED(var%ptr)) RETURN
 
     CALL this%Set_fractions(tile, ics, ice, iblk)
-    CALL tile%Cache_GPU_pointers()
 
     ! missval = var%missval
 
@@ -1059,7 +1057,13 @@ CONTAINS
 
   END FUNCTION Get_next_sibling_tile
 
+  ! Cache pointers to variables for aggregation (in order to get it to work on GPUs).
+  ! Note: This is called during initialization from model_init for each tile. If var pointers get
+  !       reallocated from time to time, the second part of this routine must be called from 
+  !       within the time loop. But be mindful of OpenMP threads ... do this only once on each processor!
+  !
   SUBROUTINE Cache_GPU_pointers(this)
+
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
 
     INTEGER :: no_children, nproc, i,j,iproc, maxsize
@@ -1068,61 +1072,60 @@ CONTAINS
     no_children = this%Get_no_of_children()
     nproc = SIZE( this%mem )
 
-    IF ( .NOT. ASSOCIATED(this%ptrs2d_cache) ) THEN
+    ALLOCATE(sizes(no_children,nproc))
+    sizes(:,:) = 0
 
-      ALLOCATE(sizes(no_children,nproc))
-      sizes(:,:) = 0
+    !Note: process_action(iproc) = 2 means = AGGREGATE_ , but this can't be USEd
+    !      from mo_jsb_process_class because of circular dependencies
 
-      DO iproc=1,nproc
+    DO iproc=1,nproc
+      IF (this%process_action(iproc) == 2) THEN
         IF ( ASSOCIATED(this%mem(iproc)%p) ) THEN
-          DO i=1,size(this%mem(iproc)%p%children)
+          DO i=1,no_children
             IF ( ASSOCIATED(this%mem(iproc)%p%children(i)%p) ) &
-              & sizes(i,iproc) = SIZE( this%mem(iproc)%p%children(i)%p%vars )
+              & sizes(i,iproc) = this%mem(iproc)%p%children(i)%p%no_of_vars
           END DO
         END IF
-      END DO
-      maxsize = MAXVAL( sizes )
+      END IF
+    END DO
+    maxsize = MAXVAL( sizes )
 
-      ALLOCATE( this%ptrs2d_cache(no_children,maxsize,nproc), &
-                this%ptrs3d_cache(no_children,maxsize,nproc)  )
-      !$acc enter data create(this%ptrs2d_cache, this%ptrs3d_cache)
+    ALLOCATE( this%ptrs2d_cache(no_children,maxsize,nproc), &
+              this%ptrs3d_cache(no_children,maxsize,nproc)  )
+    !$acc enter data create(this%ptrs2d_cache, this%ptrs3d_cache)
 
-    !END IF
-    ! DA: This MAY be POTENTIALLY unsafe, if the var pointers get reallocated
-    !  from time to time. If that is indeed the case, uncomment END IF and remove
-    !  a matching END IF from the block below
-              
-      DO iproc=1,nproc
+    DO iproc=1,nproc
+      IF (this%process_action(iproc) == 2) THEN
         IF ( ASSOCIATED(this%mem(iproc)%p) ) THEN
 
-          DO i=1,size(this%mem(iproc)%p%children)
+          DO i=1,no_children
             IF ( ASSOCIATED(this%mem(iproc)%p%children(i)%p) ) THEN
-
-              DO j=1,SIZE( this%mem(iproc)%p%children(i)%p%vars )
+              DO j=1,this%mem(iproc)%p%children(i)%p%no_of_vars
                 IF ( ASSOCIATED(this%mem(iproc)%p%children(i)%p%vars(j)%p) ) THEN
-                  IF ( .NOT. ASSOCIATED(this%ptrs2d_cache(i,j,iproc)%p, &
-                                        this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr2d) ) THEN
 
-                    this%ptrs2d_cache(i,j,iproc)%p => this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr2d
-                    __acc_attach(this%ptrs2d_cache(i,j,iproc)%p)
+                  IF (ASSOCIATED(this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr2d)) THEN
+                    IF ( .NOT. ASSOCIATED(this%ptrs2d_cache(i,j,iproc)%p, &
+                                          this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr2d) ) THEN
+                      this%ptrs2d_cache(i,j,iproc)%p => this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr2d
+                      __acc_attach(this%ptrs2d_cache(i,j,iproc)%p)
+                    END IF
                   END IF
 
-                  IF ( .NOT. ASSOCIATED(this%ptrs3d_cache(i,j,iproc)%p, &
-                                        this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr3d) ) THEN
-
-                    this%ptrs3d_cache(i,j,iproc)%p => this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr3d
-                    __acc_attach(this%ptrs3d_cache(i,j,iproc)%p)
+                  IF (ASSOCIATED(this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr3d)) THEN
+                    IF ( .NOT. ASSOCIATED(this%ptrs3d_cache(i,j,iproc)%p, &
+                                          this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr3d) ) THEN
+                      this%ptrs3d_cache(i,j,iproc)%p => this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr3d
+                      __acc_attach(this%ptrs3d_cache(i,j,iproc)%p)
+                    END IF
                   END IF
+
                 END IF
               END DO
-
             END IF
           END DO
         END IF
-      END DO
-
-    ! DA: this is the IF to remove, see above
-    END IF
+      END IF
+    END DO
 
   END SUBROUTINE Cache_GPU_pointers
     

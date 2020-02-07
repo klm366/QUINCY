@@ -212,15 +212,22 @@ CONTAINS
       & ml_depth,                                       & !< in;    Mixed-layer depth
       & min_ice_depth)                                    !< in;    Minimum ice thickness
 
-    !$claw acc kernels
-    min_fract_lice = MINVAL(fract_lice)
-    !$claw acc end kernels
+    ! TODO How to put this on GPU? The following block is wrong!
 
-    !$claw acc kernels
-    min_hcap_wtr   = MINVAL(hcap_wtr)
-    !$claw acc end kernels
+      ! !$claw acc kernels
+    ! min_fract_lice = MINVAL(fract_lice)
+    ! !$claw acc end kernels
 
-    IF (min_fract_lice <= 0.5_wp .AND. min_hcap_wtr < EPSILON(1._wp)) THEN
+    ! !$claw acc kernels
+    ! min_hcap_wtr   = MINVAL(hcap_wtr)
+    ! !$claw acc end kernels
+
+    ! IF (min_fract_lice <= 0.5_wp .AND. min_hcap_wtr < EPSILON(1._wp)) THEN
+    !   CALL finish(TRIM(routine),'hcap_wtr can"t be zero')
+    ! END IF
+
+    !$claw acc update host(fract_lice(:),hcap_wtr(:))
+    IF (ANY(fract_lice(:) <= 0.5_wp .AND. hcap_wtr(:) < EPSILON(1._wp))) THEN
       CALL finish(TRIM(routine),'hcap_wtr can"t be zero')
     END IF
 
