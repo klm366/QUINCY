@@ -866,7 +866,6 @@ CONTAINS
 
     ! Set the fractions of the child tiles (on the current chunk)
     CALL this%Set_fractions(tile, ics, ice, iblk)
-    CALL tile%Cache_GPU_pointers()
 
     ! Assure the current variable belongs to a process
     iproc = var%owner_proc_id
@@ -1030,7 +1029,6 @@ CONTAINS
 
     ! Set the fractions of the child tiles (on the current chunk)
     CALL this%Set_fractions(tile, ics, ice, iblk)
-    CALL tile%Cache_GPU_pointers()
 
     ! Assure the current variable belongs to a process
     iproc = var%owner_proc_id
