@@ -48,17 +48,26 @@ ipath1 <- "/Net/Groups/BGI/work_2/QUINCY/SLM/Data/manip_majadas/raw_and_gapfille
 opath  <- "./new_manip_static_met_forcing/"
 
 ## define & load input file (gapfilled data provided by Tarek telmad@bgc-jena.mpg.de)
-## input file is a data.frame stored as 'df' when loaded, as this was the output object name in the generate_manip_forcing_gapfill_rawdata.R
-#infile <- "ES_LMa_2009-2017_gapfilled.Rdata"
+## input file is a data.frame stored as object 'df' when loaded (this was the output object name in generate_manip_forcing_gapfill_rawdata.R)
 infile <- "ES_LMa_2009_2019_gapfilled.Rdata"
-load(paste0(ipath1, infile))
+load(paste0(ipath1, infile))    # object name is 'df' as saved in 'generate_manip_forcing_gapfill_rawdata.R'
 
 ## get first and last year of dataset
 firstYear <- df[1,1]
 lastYear  <- df[nrow(df),1]
 
+## check length of input file created by Tarek
+#  (Tarek modified the Majadas measured data to fit the QUINCY "365 days * 48 timesteps" year length, so there should be no problems)
+dataRangeYr <- lastYear - firstYear + 1
+dataRangeTs <- dataRangeYr * 365 * 48
+if (nrow(df) != dataRangeTs){
+  print(paste0(" The number of timesteps in the Majadas dataset does not match years*365*48. Stopping this script."))
+  stop()
+}
+remove(dataRangeYr, dataRangeTs)
+
 ## message
-print(paste0("Generating met forcing for the Manip/Majadas tree and grassland sites for : ", firstYear, "to ",lastYear))
+print(paste0("Generating met forcing for the Manip/Majadas tree and grassland sites for : ", firstYear, " to ",lastYear))
 
 ## read site info file (manually created from BGI/people/szaehle/Projects/QUINCY/GenerateMANP_Forcing_2018/site_info.dat)
 allsiteinfo       <- read.table("generate_manip_site_list.dat", stringsAsFactor=F, header=T)
@@ -77,7 +86,8 @@ header2<-c('-','-','-','Wm-2','Wm-2','K','g/kg','hPa','mm/day','mm/day','m/s','p
 
 header_site_list<-c('Site-ID','lon','lat','PFT','start','end','lon_gmt','clay','silt','sand','awc','pH','LAI','Nleaf','SLA','Height','PlantYear')
 
-co2y<-read.table('/Net/Groups/BGI/model/OCN/input/gridded/CO2/GCP_co2_global.dat')
+#co2y<-read.table('/Net/Groups/BGI/model/OCN/input/gridded/CO2/GCP_co2_global.dat')
+# df$co2_mixing_ratio [ppm] from Majadas is used instead of the global (yearly) values
 co2y_dC13<-read.table('/Net/Groups/BGI/work_2/QUINCY/SLM/InputDataSources/Atm/delta13C_in_air_input4MIPs_GM_1850-2015_V1.txt')
 co2y_DC14<-read.table('/Net/Groups/BGI/work_2/QUINCY/SLM/InputDataSources/Atm/Delta14C_in_air_input4MIPs_SHTRNH_1850-2015_V1.txt')
 
@@ -124,7 +134,7 @@ print(site_list[s])
       print(c(site_list[s],year))
       ## N deposition
       #  using RCP 8.5 data throughout
-       fid<-nc_open(paste0("/Net/Groups/BGI/model/OCN/input/gridded/NDEP/CESM-CAM/ndep_RCP8.5_",year,".nc"))
+      fid<-nc_open(paste0("/Net/Groups/BGI/model/OCN/input/gridded/NDEP/CESM-CAM/ndep_RCP8.5_",year,".nc"))
        lonndep<-ncvar_get(fid,'lon')
        latndep<-ncvar_get(fid,'lat')
        latx<-which.min(abs(latndep-as.numeric(latsite)))
@@ -138,14 +148,8 @@ print(site_list[s])
          noy[(1:(dpm[m]*48))+sum(dpm[1:(m-1)])*48+365*48*(year-startyear)]<-rep(noy_dummy[m],dpm[m]*48)
        }
       nc_close(fid)
-      ## CO2 
-      #  use global mean values from GCP_co2_global.dat for all values before 2014,
-      #  because the Majadas field sensor was not well calibrated before 2014 and, hence, does not give reasonable values
-      if(year<2014) {
-        co2[1:17520+365*48*(year-startyear)]<-rep(co2y[co2y[,1]==year,2],17520)
-      } else {
-        co2[1:17520+365*48*(year-startyear)]<-rep(co2y[co2y[,1]==2016,2],17520)+2*(year-2016)
-      }
+
+      ## global data for CO2 dC13 and DC14
       if(year<2014) {
         co2_dC13[1:17520+365*48*(year-startyear)]<-rep(co2y_dC13[(co2y_dC13[,1]-0.5)==year,2],17520)
       } else {
@@ -160,19 +164,23 @@ print(site_list[s])
         co2_DC14[1:17520+365*48*(year-startyear)]<-rep(co2y_DC14[(co2y_DC14[,1]-0.5)==2015,C14lat],17520)-5*(year-2015)
       }
       year_out[1:17520+365*48*(year-startyear)]<-rep(year,17520)
-      }
-      doy_out<-(rep(doy,nyear))
-      hod_out<-(rep(hod,nyear))
-      nstep<-length(doy_out)
-      
-      # combine individual variables into one array for output
-      forcing<-cbind(year_out[1:nstep],doy_out,hod_out,swdown[1:nstep],lwdown[1:nstep],tair[1:nstep],qair[1:nstep],
-                     press[1:nstep],rain[1:nstep],snow[1:nstep],wind[1:nstep],co2[1:nstep],co2_dC13[1:nstep],co2_DC14[1:nstep],
-                     nhx[1:nstep],noy[1:nstep],pdep[1:nstep])
-                     
-      # write output append yearly data (header created above)
-      write.table(format(round(forcing,digits=4),nsmall=1), file=outname, append=TRUE, quote=FALSE,
-                  col.names=FALSE, row.names=FALSE, sep=" ")
+    }
+    ## CO2 measured at Majadas
+    co2 <- df$co2_mixing_ratio
+    
+    ## time information for output file
+    doy_out<-(rep(doy,nyear))
+    hod_out<-(rep(hod,nyear))
+    nstep<-length(doy_out)
+    
+    ## combine individual variables into one array for output
+    forcing<-cbind(year_out[1:nstep],doy_out,hod_out,swdown[1:nstep],lwdown[1:nstep],tair[1:nstep],qair[1:nstep],
+                   press[1:nstep],rain[1:nstep],snow[1:nstep],wind[1:nstep],co2[1:nstep],co2_dC13[1:nstep],co2_DC14[1:nstep],
+                   nhx[1:nstep],noy[1:nstep],pdep[1:nstep])
+                   
+    ## write output append yearly data (header created above)
+    write.table(format(round(forcing,digits=4),nsmall=1), file=outname, append=TRUE, quote=FALSE,
+                col.names=FALSE, row.names=FALSE, sep=" ")
 
 }
 
