@@ -47,6 +47,10 @@ outFile <- paste0("./quincy_hh_timestep_land_output_", date, "_for_machadas.csv"
 unitList <- "empty"
 
 
+## soil layer width [m] (15 sl, 9.5 m depth)
+soilLayWidth <- c(0.065, 0.065, 0.065, 0.069900094, 0.09755344, 0.136146793, 0.190008156, 0.265177744, 0.370085354, 0.516495718, 
+                  0.720827842, 1.005996292, 1.403980925, 1.959413224, 2.569414418) 
+
 ## constants for unit conversion
 molar_mass_C <- 12.0112
 molar_mass_N <- 14.0072
@@ -210,9 +214,9 @@ for (l in 1:nSoilLay){
 inFile  <- paste0("soilpoolPhysics_lay", inFileExt)
 for (l in 1:nSoilLay){
   var1    <- getVarData(inFile, paste0("WaterContentSoil_L", l))
-  outArr[,countCol]           <- var1
-  colnames(outArr)[countCol]  <- paste0("Theta_lay", l)       # m
-  unitList                    <- c(unitList, "m")
+  outArr[,countCol]           <- var1 / soilLayWidth[l]       # convert from meter to volumetric fraction
+  colnames(outArr)[countCol]  <- paste0("Theta_lay", l)       # volumetric fraction
+  unitList                    <- c(unitList, "vol. fraction")
   countCol                    <- countCol + 1
 }
 for (l in 1:nSoilLay){
@@ -220,6 +224,24 @@ for (l in 1:nSoilLay){
   outArr[,countCol]           <- var1
   colnames(outArr)[countCol]  <- paste0("SoilT_lay", l)       # K
   unitList                    <- c(unitList, "K")
+  countCol                    <- countCol + 1
+}
+
+##
+inFile  <- paste0("soilpoolPhysics", inFileExt)
+var1    <- getVarData(inFile, "RootZoneSoilWaterPotential")
+outArr[,countCol]           <- var1
+colnames(outArr)[countCol]  <- "RootZone_SoilWater_Potential" # MPa
+unitList                    <- c(unitList, "MPa")
+countCol                    <- countCol + 1
+
+##
+inFile  <- paste0("soil_diagnostics_lay", inFileExt)
+for (l in 1:nSoilLay){
+  var1    <- getVarData(inFile, paste0("RootC_L", l))         # quincy output: veg_pool%fine_root%carbon(ipoi) * root_fraction_sl(ipoi,:) / soil_depth_sl(ipoi,:)
+  outArr[,countCol]           <- var1 * molar_mass_C / 1000   # mol C m-3 -> kg C m-3
+  colnames(outArr)[countCol]  <- paste0("RootDensity_lay", l)
+  unitList                    <- c(unitList, "kg C m-3")
   countCol                    <- countCol + 1
 }
 
