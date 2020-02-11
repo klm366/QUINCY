@@ -119,6 +119,31 @@ if (nmiss > 0){
   df <- dfnew2
 }
 
+## correct the offset in the Majadas measures CO2 data in the initial about 2.5 years
+# offset co2 is present from 1:42200 in Majadas data
+print("CO2 offset correction for the initial ~ 2.5 years of measured data.")
+aMean <- mean(df$co2_mixing_ratio[1:42200], na.rm = T)     # mean of the init ~ 2.5 years
+bMean <- mean(df$co2_mixing_ratio[42201:59720], na.rm = T) # mean of the year after that
+abOffset <- aMean - bMean  # it is a positive offset
+
+## mean of global co2 for the years 2009-2012 from /Net/Groups/BGI/model/OCN/input/gridded/CO2/GCP_co2_global.dat
+# 2009  385.80
+# 2010  387.98
+# 2011  389.79
+# 2012  391.88
+co2Global <- c(385.80, 387.98, 389.79, 391.88)
+# global mean for the Majadas period [42201:59720] is assumed to be the mean of 2011/2012 global
+globBMean <- mean (co2Global[3:4])
+# correct the 2009-2011 (2011 only until 42200) and add the trend between the years to globBMean
+rowSel <- which(df$year == 2009)
+df$co2_mixing_ratio[rowSel] <- df$co2_mixing_ratio[rowSel] - abOffset - (globBMean - co2Global[1])
+rowSel <- which(df$year == 2010)
+df$co2_mixing_ratio[rowSel] <- df$co2_mixing_ratio[rowSel] - abOffset - (globBMean - co2Global[2])
+rowSel <- which(df$year == 2011 )
+rowSel <- rowSel[1:(42200-17520-17520)]
+df$co2_mixing_ratio[rowSel] <- df$co2_mixing_ratio[rowSel] - abOffset - (globBMean - co2Global[3])
+
+
 ## write output
 # this output file is used by the generate_manip_static_slm_forcing.R script to create actual QUINCY met-forcing
 save(df, file=paste0(workDir,outGapFilledData))
