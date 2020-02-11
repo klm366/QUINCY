@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from JSBACH source file:
 !    src/soil_snow_energy/mo_sse_interface.f90
-! with md5 hash: 511c25ee6d452ce35969545512e3fdd8
+! with md5 hash: fe52f0fab31a97222f4769539df971de
 !
 !>
 !! @brief Contains the interfaces to the soil and snow energy processes
@@ -359,7 +359,7 @@ CONTAINS
       !$claw acc parallel
       !$claw acc loop seq
       DO isnow=nsnow,1,-1
-        !$claw acc loop vector
+        !$claw acc loop gang vector
         DO i = 1, size(snow_depth, dim=1)
           IF (snow_depth(i) > 0._wp) THEN
             snow_depth_sl(i,isnow) = MIN(snow_depth(i), snow_e%dz(isnow))
@@ -410,7 +410,8 @@ CONTAINS
         & grnd_hflx_snow     (:)  &
         & )
 
-      DO i = 1, size(snow_depth_sl, dim=1)
+      !$claw acc parallel loop default(none) present(snow_depth_sl,snow_fract,t_unfilt_corrected,t_soil_top)
+      DO i = 1, nc
         IF (snow_depth_sl(i, nsnow) > 0._wp) THEN  ! At least one snow layer above soil
           t_soil_top(i) = snow_fract(i) * t_soil_top(i) + (1._wp - snow_fract(i)) * t_unfilt_corrected(i)
         ELSE                                ! No snow
@@ -789,7 +790,7 @@ CONTAINS
           snow_soil_dens => hydro__mem%snow_soil_dens%ptr(ics:ice,iblk)
           !$claw acc data present(snow_soil_dens,vol_heat_cap_snow,heat_cond_snow)
           !$claw acc parallel loop gang vector
-          DO i = 1, size(snow_soil_dens)
+          DO i = 1, nc
             IF (snow_soil_dens(i) > dens_snow_min) THEN     ! "old" or mixture of old and fresh snow
               vol_heat_cap_snow(i) = ci * snow_soil_dens(i)                               ! Use specific heat of ice (Verseghy 1991)
               ! heat_cond_snow   (:) = 2.576e-6_wp * snow_soil_dens(:) ** 2._wp + 0.074_wp                      ! Verseghy (1991)

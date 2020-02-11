@@ -1,7 +1,7 @@
 !
 ! This file was automatically generated from JSBACH source file:
 !    src/base/mo_jsb_model_class.f90
-! with md5 hash: 4784dc72ff8f5fe23fa06853d314337a
+! with md5 hash: 7f77c821acabd4a08a1de3553b9515a4
 !
 !>
 !! @brief Contains main JSBACH model class.
@@ -527,12 +527,13 @@ CONTAINS
 
         mem => tile%mem(iproc)%p
         DO i=1,mem%no_of_vars
-          ! IF (mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart) CALL message(routine//': gpu2cpu', TRIM(mem%vars(i)%p%full_name))
           IF (ASSOCIATED(mem%vars(i)%p%ptr2d)) THEN
             !$acc update host(mem%vars(i)%p%ptr2d) if(mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart)
+            ! IF (mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart) CALL message(routine//': gpu2cpu', TRIM(mem%vars(i)%p%full_name))
             CONTINUE
           ELSE IF (ASSOCIATED(mem%vars(i)%p%ptr3d)) THEN
             !$acc update host(mem%vars(i)%p%ptr3d) if(mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart)
+            ! IF (mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart) CALL message(routine//': gpu2cpu', TRIM(mem%vars(i)%p%full_name))
             CONTINUE
           END IF
         END DO

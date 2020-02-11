@@ -135,7 +135,7 @@ CONTAINS
     surface => Get_vgrid('surface')
     canopy_layer => Get_vgrid('canopy_layer')
 
-    !$acc enter data pcreate(mem)
+    !! !$acc enter data pcreate(mem)
 
     CALL jsb_add_var( mem, 'gross_assimilation_ca', mem%gross_assimilation_ca,     &
       & hgrid, surface,                                                            &

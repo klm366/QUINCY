@@ -110,12 +110,7 @@ CONTAINS
       snow_e  => Get_vgrid('snow_depth_energy')
     END IF
 
-    !$acc enter data pcreate(mem)
-
-    !$acc enter data pcreate(mem%vol_heat_cap,mem%vol_heat_cap_sl, &
-    !$acc mem%vol_heat_cap_snow,mem%heat_cond,mem%heat_cond_sl,    &
-    !$acc mem%heat_cond_snow,mem%thermal_diffusivity,mem%t_soil,   &
-    !$acc mem%t_soil_acoef,mem%t_soil_bcoef)
+    !! !$acc enter data pcreate(mem)
 
     CALL jsb_add_var( mem, 'vol_heat_cap', mem%vol_heat_cap,                 &
       & hgrid, surface,                                                      &
@@ -196,8 +191,6 @@ CONTAINS
       & initval_r=0.0_wp )
 
     IF (dsl4jsb_Config(SSE_)%l_snow) THEN
-      !$acc enter data pcreate(mem%snow_depth_sl,mem%t_snow,mem%t_snow_acoef, & 
-      !$acc mem%t_snow_bcoef)
       CALL jsb_add_var( mem, 'snow_depth_sl', mem%snow_depth_sl,               &
         & hgrid, snow_e,                                                       &
         & t_cf('snow_depth_sl', 'm', 'Depth of snow layers'),                  &
@@ -229,9 +222,6 @@ CONTAINS
         & prefix, suffix,                                                      &
         & initval_r=0.0_wp )
     END IF
-
-    !$acc enter data pcreate(mem%hcap_grnd,mem%hcap_grnd_old,mem%grnd_hflx, &
-    !$acc mem%grnd_hflx_old,mem%thaw_depth)
 
     CALL jsb_add_var( mem, 'hcap_grnd', mem%hcap_grnd,                       &
       & hgrid, surface,                                                      &

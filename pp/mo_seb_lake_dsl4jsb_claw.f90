@@ -72,6 +72,8 @@ CONTAINS
   REAL ( KIND= wp ) :: dtime
   REAL ( KIND= wp ) :: ml_depth
   REAL ( KIND= wp ) :: min_ice_depth
+  REAL ( KIND= wp ) :: min_fract_lice
+  REAL ( KIND= wp ) :: min_hcap_wtr
   TYPE ( t_jsb_model ) , POINTER :: model
   CHARACTER ( LEN= * ) , PARAMETER :: routine ="mo_seb_lake" //&
   ":update_surface_energy_lake"
@@ -197,9 +199,13 @@ CONTAINS
   CALL calc_lake_wtr_temp ( t_lwtr ( : ) , hflx_tmp ( : ) , hflx_form_ice ( :&
    ) , hcap_wtr ( : ) , l_ice_formation ( : ) , l_ice_melting ( : ) , l_ice (&
    : ) , dtime , ml_depth , min_ice_depth )
-!$acc update host(fract_lice(:),hcap_wtr(:))
-  IF ( any ( fract_lice ( : ) <= 0.5_wp .AND. hcap_wtr ( : ) < epsilon ( 1._wp&
-   ) ) ) THEN
+!$acc kernels
+  min_fract_lice = minval ( fract_lice )
+!$acc end kernels
+!$acc kernels
+  min_hcap_wtr = minval ( hcap_wtr )
+!$acc end kernels
+  IF ( min_fract_lice <= 0.5_wp .AND. min_hcap_wtr < epsilon ( 1._wp ) ) THEN
    CALL finish ( trim ("mo_seb_lake" //":update_surface_energy_lake" ) ,&
    "hcap_wtr can""t be zero" )
   END IF
