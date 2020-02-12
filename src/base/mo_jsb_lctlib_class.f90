@@ -804,7 +804,7 @@ CONTAINS
                 READ(line(pos:length),*) P13(1:nlct)
                 !lctlib(1:nlct)%SenesRspdNPP = 10._wp ** ( 4.0_wp * P13(1:nlct) - 1.0_wp )
                  !lctlib(1:nlct)%SenesRspdNPP =10._wp ** ( 1.855_wp * P01(1:nlct)  + 1.145_wp )   !PHS:18.06.2019 New sample
-                 lctlib(1:nlct)%SenesRspdNPP =10._wp **1.145_wp + 300._wp * P01(1:nlct)    !PHS:09.12.2019 New sample
+                 lctlib(1:nlct)%SenesRspdNPP =10._wp ** ( 1.1_wp * P13(1:nlct)  + 0.9_wp )    !PHS:09.12.2019 New sample
                 exists_SenesRspdNPP   = .TRUE.
                  lctlib(1:nlct)%jedi_F_pseudo_npp = EXP(- get_time_dt() / (lctlib(1:nlct)%SenesRspdNPP * 86400._wp))
                  lctlib(1:nlct)%jedi_N_pseudo_npp = 1._wp / (1._wp - lctlib(1:nlct)%jedi_F_pseudo_npp )

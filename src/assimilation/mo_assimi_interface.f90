@@ -435,7 +435,8 @@ CONTAINS
       CALL calc_assimilation_waterunlimited( &
         & dsl4jsb_Lctlib_param(C4Flag),      &
         & dsl4jsb_Lctlib_param(JeDiCarboxRate),  &
-        & dsl4jsb_Lctlib_param(JeDiCarboxRate)*1.9_wp,  &  ! ECtransport rate = 1.9 Vc,max
+      ! & dsl4jsb_Lctlib_param(JeDiCarboxRate)*1.9_wp,   &
+        & 2.718_wp*dsl4jsb_Lctlib_param(JeDiCarboxRate)**0.89_wp,   &    ! PHS 18.12.2019 try to scale Jmax from Vcmax with different relationship
         & t_air(:),                          & ! in
         & press_srf(:),                      & ! in
         & par_down_mol(:),                   & ! in
@@ -778,7 +779,8 @@ CONTAINS
         CALL calc_assimilation_waterlimited(    &
           & dsl4jsb_Lctlib_param(C4Flag),       &
           & dsl4jsb_Lctlib_param(JeDiCarboxRate),   &
-          & dsl4jsb_Lctlib_param(JeDiCarboxRate)*1.9_wp,   &
+        ! & dsl4jsb_Lctlib_param(JeDiCarboxRate)*1.9_wp,   &
+          & 2.718_wp*dsl4jsb_Lctlib_param(JeDiCarboxRate)**0.89_wp,   &    ! PHS 18.12.2019 try to scale Jmax from Vcmax with different relationship
           & t_air(:),                           & ! in
           & press_srf(:),                       & ! in
           & par_down_mol(:),                    & ! in

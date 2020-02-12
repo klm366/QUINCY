@@ -335,8 +335,8 @@ CONTAINS
     REAL(wp), PARAMETER  :: c_GRes_seed      = 1.0_wp / (1.0_wp + 0.66_wp)    
     REAL(wp), PARAMETER  :: c_tau_seed       = 3._wp * 365._wp !  seed decomposition time scale (years), value is taken from JeDi 
     REAL(wp), PARAMETER  :: c_tau_sen        = 10._wp 
-    REAL(wp), PARAMETER  :: c_tau_storage     = 3._wp * 365._wp ! decay of the storage pool (3-year), PHS decided arbitrarily
-    REAL(wp), parameter  :: cTiny            = 1.E-8_wp     
+    REAL(wp), PARAMETER  :: c_tau_storage     = 1._wp * 365._wp ! decay of the storage pool (1-year), PHS decided arbitrarily
+    REAL(wp), parameter  :: cTiny            = 1.E-8_wp        
     
     REAL(wp), PARAMETER  :: leaf_growth_fract = 0.03_wp   
     REAL(wp) :: allo_max_leaves,zAlloc_leaves_tmp
@@ -487,15 +487,15 @@ CONTAINS
     END IF
     
     IF ( ff_grow_W     .ge. 0.5_wp           ) Flg_grow_W = 1.0_wp
-    IF ( ff_grow_G     .ge. 0.5_wp           ) Flg_grow_G = 1.0_wp  ! This needs to be modified 
+    IF ( ff_grow_G     .ge. 0.5_wp           ) Flg_grow_G = 1.0_wp  
     
     
-    Flg_grow   = Flg_grow_T * Flg_grow_W
+    Flg_grow   = Flg_grow_T * Flg_grow_W 
     Flg_grow_G = Flg_grow_T * Flg_grow_G
     
     IF( Flg_grow_G .GT. 0._wp .AND.  one_counter .lt. 1._wp  )  THEN
            
-           c_storage = 0.01_wp 
+           c_storage =  1._wp! 0.01_wp 
            c_leaves   = c_storage * Allo2Abground  *  ( 1._wp -  RelAllo2Abgrd ) * 1.0_wp / (1.0_wp + 0.33_wp)  *   TurnoverLeaf  
            c_stem     = c_storage * Allo2Abground  *                  RelAllo2Abgrd  * 1.0_wp / (1.0_wp + 0.25_wp)   *  TurnoverStruc
            c_fnroot    = c_storage * Allo2Blground  *  ( 1._wp -   RelAllo2Blgrd ) * 1.0_wp / (1.0_wp + 0.33_wp)   *   TurnoverLeaf 
@@ -567,10 +567,9 @@ CONTAINS
         zAlloc        = MAX(0._wp,c_storage)  !  To make sure that no negative c_storage distributed to the pools
         
         !PHS: 10.10.2019  I introduce a break to stop rapid growth of leaf
-        ! I first define the first amount of leaf that can be added to the leaf pool.  
-        ! I assume the first amount of leaf growth is 1 % of c_leaves assigning that lai = 3.  ( when c_leaves=0)
-        ! Otherwise the allocation to c_leaves can only be maximum values of 5% of the previous day. (leaf_growth_fract=0.05)
-        ! then the allocation to the other tissues pools shall be constrained by the proportional of the c_leaves allocation.  (adj_fraction)
+        ! I define the initial amount of carbon that is added to the leaf pool to be 4g C.
+        ! Afterwards, the maximal allocation to c_leaves can only be 3% c_leaves of the previous day. (leaf_growth_fract)
+        ! Likewise, the other tissues' allocation are constrained by the proportional of the c_leaves allocation.  (adj_fraction)
         IF ( c_leaves .EQ. 0._wp )  THEN
            allo_max_leaves = 4._wp / 12.01_wp
         ELSE
@@ -617,7 +616,7 @@ CONTAINS
         
         
         Flg_senesc = 0._wp
-        IF ( (    currentyear .GE. 1995   ) .and. ff_npp .lt. 0._wp .and. NPP .lt. 0._wp) Flg_senesc  = 1.0_wp - Flg_grow   ! See remarks below.
+        IF ( (    currentyear .GE. iniyear+20   ) .and. ff_npp .lt. 0._wp .and. NPP .lt. 0._wp) Flg_senesc  = 1.0_wp - Flg_grow   ! See remarks below.
         ! No idea why the flag for senescence is using:  1 - flag_grow  
         ! I took the calculation from JeDi.
         ! I guess senescence happens, when: (1) Non-growing condition (2) NPP<0, which may suggest that plants spend many energy respiring
@@ -686,7 +685,7 @@ CONTAINS
            CUE = MAX ( 0._wp, CUE )
            
           END IF
-        IF   (    currentyear .GE. 1995    ) THEN
+        IF   (    currentyear .GE. iniyear+19    ) THEN
         
           IF (  c_storage   .le. cTiny )  then 
               

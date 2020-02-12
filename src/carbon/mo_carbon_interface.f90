@@ -599,13 +599,6 @@ CONTAINS
     lstart = is_time_experiment_start()
     
     
-    !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
-    ! TODO:  Growing condition for JeDi is computed here:
-    !   The growing condition flags are computed here because JeDi needs the memory from the previous 
-    !    time steps. Christian suggests that instead of using the Euler method implementing in JeDi,
-    !   we can use the one implimented in JB4, such as pseudo temperature.
-    !   Therefore, it needs revision.   
-    !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!     
       inidate = get_time_start()
       iniyear = get_year(inidate)
       lrestart= jsbach_is_restarted()
@@ -614,12 +607,6 @@ CONTAINS
       
        IF (get_year(current) .LE. iniyear + 2 ) THEN    !  PHS: initial carbon
       
-          ! c_storage = 0.01_wp 
-          ! c_leaves   = c_storage * dsl4jsb_Lctlib_param(Allo2Abground) *  ( 1._wp -  dsl4jsb_Lctlib_param(RelAllo2Abgrd) ) * 1.0_wp / (1.0_wp + 0.33_wp)  *   dsl4jsb_Lctlib_param(TurnoverLeaf ) 
-          ! c_stem     = c_storage * dsl4jsb_Lctlib_param(Allo2Abground) *                  dsl4jsb_Lctlib_param(RelAllo2Abgrd)  * 1.0_wp / (1.0_wp + 0.25_wp)   *  dsl4jsb_Lctlib_param(TurnoverStruc)
-          ! c_fnroot    = c_storage * dsl4jsb_Lctlib_param(Allo2Blground) *  ( 1._wp -   dsl4jsb_Lctlib_param(RelAllo2Blgrd) ) * 1.0_wp / (1.0_wp + 0.33_wp)   *   dsl4jsb_Lctlib_param(TurnoverLeaf )
-          ! c_csroot   =  c_storage * dsl4jsb_Lctlib_param(Allo2Blground) *                   dsl4jsb_Lctlib_param(RelAllo2Blgrd)  * 1.0_wp / (1.0_wp + 0.49_wp)   *   dsl4jsb_Lctlib_param(TurnoverStruc)
-          ! c_seed     =   c_storage * dsl4jsb_Lctlib_param(Allo2Reproduc) *  (1.0_wp / (1.0_wp + 0.66_wp)  )  /   (dsl4jsb_Lctlib_param(GermFrac )  +  1./(10.*365.)    )
 
            ff_npp = 0._wp
            Flg_senesc = 0._wp
@@ -647,7 +634,7 @@ CONTAINS
       ! 2019.11.27 PHS: still at the stage of testing "water stress" 
       WHERE (c_leaves .gt. 0._wp) 
           ! 2019.12.4  
-          ! The potential supply rate from soil depends on the root-shoot-ratio. The root-shoot-ratio is function of fine-root-carbon and Leaf-area-index.
+          ! The potential supply rate from soil depends on the root-shoot-ratio. The root-shoot-ratio is the ratio betweem fine-root-carbon and Leaf-area-index.
           !                                                                                                     a(r)=1-exp(- (-log(0.01))/r_optimal   * r  )     a : is a function of root-shoot-ratio  [0...1]
           !                                                                                                                                                                        r : root-shoot-ratio [10^-3  ~  10^3]
           !                                                                                                                                                                        r_optimal: the median value of the root-shoot-ratio among all PGS
@@ -725,7 +712,7 @@ CONTAINS
        MaintRes = c_sapwood * c_CN_woody * ( c_stem + c_csroot ) + dsl4jsb_Lctlib_param(NitroStatus)*dsl4jsb_Lctlib_param(JeDiSLA) * ( c_leaves + c_fnroot )  !NNN
        MaintRes = MaintRes  * c_Res_N    * ( 1.4_wp ** ( ( temp_yDayMean - tmelt - 20._wp ) / 10._wp) ) ! JeDi uses 1.4 for Q10 value
     
-       MaintRes = MaintRes / sec_per_day ! The maintanence respiration is computed in a daily manner in JeDi.
+       MaintRes = MaintRes / sec_per_day ! The maintanence respiration is daily computed in JeDi.
        MaintRes_yDayMean   = MaintRes
        
        temp_sum = t_air
