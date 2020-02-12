@@ -682,7 +682,7 @@ case "$forcingDataSet" in
   ;;
 "fluxnet3")
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET3/"
-  siteDataObsFold="/Net/Groups/BGI/data/Model/SLM1/evaluation/point/FLUXNET/"   # evaluation data; 'FLUXNET' is a symlink
+  siteDataObsFold="no such evaluation data"  # but this variable must contain something
   ;;
 "cruncep")
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/CRUNCEPv7/"
@@ -721,20 +721,9 @@ case "$forcingDataSet" in
   siteDataObsFold="no such evaluation data"  # but this variable must contain something
   ;;
 esac
-# soil forcing available only for some site-sets
-if [ "$slmModel" == "soil" ]; then
-  if [ "$forcingDataSet" == "fluxnet" ] || [ "$forcingDataSet" == "cruncep" ] || [ "$forcingDataSet" == "face" ] || [ "$forcingDataSet" == "spp1685" ]; then
-    # soil forcing available
-    echo "Running the QUINCY soil model"
-  else
-    echo " Sorry, no soil forcing available for ""$forcingDataSet"" sites yet."
-    echo " EXIT!"
-    exit 1
-  fi
-fi
 
 
-## SLM model forcing: land/plant/canopy/soil (only 15 soil layer forcing for SLM soil )
+## QUINCY model forcing: land/plant/canopy/soil (only 15 soil layer forcing for the soil model)
 metForcingDir="met_forcing/"
 soilForcingDirBase="soil_forcing_sl"
 case "$slmModel" in
@@ -752,17 +741,36 @@ case "$slmModel" in
   if [ "$nsoil_layer" != 15 ]; then
     echo " "
     echo " You aim at using ""$nsoil_layer"" soil layers, where soil forcing is available for 15 sl only."
-    echo " nsoil_layer is now set to 15."
+    echo " nsoil_layer is now changed to 15."
     nsoil_layer=15
   fi
   # test soil depth against the value necessary to run 15 sl, i.e., 9.5 meters
   if [ "$soil_depth" != 9.5 ]; then
     echo " You aim at using 15 soil layers, which needs a soil depth of 9.5 meters. But your soil depth is set to ""$soil_depth""."
-    echo " soil_depth is now set to 9.5 meters."
+    echo " soil_depth is now changed to 9.5 meters."
     soil_depth=9.5
   fi
-  # soil forcing directory
+  # set soil forcing directory
   siteDataFoldForcing="$siteDataFold""$soilForcingDirBase""15/"
+  # test if soil forcing is available for this site set
+  soilForcingAvailable="T"
+  if [ ! -d "$siteDataFoldForcing" ]; then
+    soilForcingAvailable="F"    # directory not present
+  else
+    if [ -z "$(ls -A $siteDataFoldForcing)" ]; then
+      soilForcingAvailable="F"  # directory empty
+    fi
+  fi
+  # soil forcing availability feedback/action
+  if [ "$soilForcingAvailable" == "T" ]; then
+    # soil forcing available
+    echo "Running the QUINCY soil model"
+  else
+    echo " Sorry, no soil forcing available for ""$forcingDataSet"" sites yet."
+    echo " Please ask Jan or Sönke if you need it."
+    echo " EXIT!"
+    exit 1
+  fi
   ;;
 esac
 

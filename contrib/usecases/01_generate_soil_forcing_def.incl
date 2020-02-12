@@ -17,19 +17,21 @@
 
 # default QUINCY usecase: 01_generate_soil_forcing_def
 # 
-# generate soil_forcing for the stand alone QUINCY soil model:
+# generate soil_forcing for the stand alone JSM-QUINCY soil model:
 #  creating: veg litterfall + some soilphysics output used as input by the (standalone) soil model
 #  options apply specifically to the generation of soil forcing using the QUINCY land model
 #
 # prep_run_slm.sh necessary settings:
-#  forcingDataSet fluxnet/cruncep/face/spp_1685
+#  forcingDataSet fluxnet/fluxnet3/cruncep/face/spp_1685
 #  siteSelection  cue/spp (for cruncep)
 #
 
 echo " Simulation runs for soil_forcing creation:"
 echo "  usecase='01_generate_soil_forcing_def' applying special settings to some options"
+echo "  the experimentalID will be created automatically hery by this usecase"
 echo "  please run the simulations (prep_run_slm.sh -u 01) for: "
-echo "    FLUXNET"
+echo "    FLUXNET2"  # site-set "fluxnet"
+echo "    FLUXNET3"  # site-set "fluxnet3"
 echo "    CRUNCEP with siteSelection cue & spp"
 echo "    FACE"
 echo "    SPP_1685"

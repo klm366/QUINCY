@@ -424,17 +424,6 @@ case "$forcingDataSet" in
   siteDataSet="CONFIN/"
   ;;
 esac
-# soil forcing available only for some site-sets
-if [ "$slmModel" == "soil" ]; then
-  if [ "$forcingDataSet" == "fluxnet" ] || [ "$forcingDataSet" == "cruncep" ] || [ "$forcingDataSet" == "face" ] || [ "$forcingDataSet" == "spp1685" ]; then
-    # soil forcing available
-    echo "Running the QUINCY soil model"
-  else
-    echo " Sorry, no soil forcing available for ""$forcingDataSet"" sites yet."
-    echo " EXIT!"
-    exit 1
-  fi
-fi
 
 
 ## test number of soil levels and set dirname for soil_forcing files
@@ -444,17 +433,36 @@ if [ $slmModel == "soil" ]
   if [ "$nsoil_layer" != 15 ]; then
     echo " "
     echo " You aim at using ""$nsoil_layer"" soil layers, where soil forcing is available for 15 sl only."
-    echo " nsoil_layer is now set to 15."
+    echo " nsoil_layer is now changed to 15."
     nsoil_layer=15
   fi
   # test soil depth against the value necessary to run 15 sl, i.e., 9.5 meters
   if [ "$soil_depth" != 9.5 ]; then
     echo " You aim at using 15 soil layers, which needs a soil depth of 9.5 meters. But your soil depth is set to ""$soil_depth""."
-    echo " soil_depth is now set to 9.5 meters."
+    echo " soil_depth is now changed to 9.5 meters."
     soil_depth=9.5
   fi
-    # soil forcing directory
-    soilForcingDir="$soilForcingDirBase""15/"
+  # set soil forcing directory
+  soilForcingDir="$soilForcingDirBase""15/"
+  # test if soil forcing is available for this site set
+  soilForcingAvailable="T"
+  if [ ! -d "$siteDataDirBase""$siteDataSet""$soilForcingDir" ]; then
+    soilForcingAvailable="F"    # directory not present
+  else
+    if [ -z '$(ls -A "$siteDataDirBase""$siteDataSet""$soilForcingDir")' ]; then
+      soilForcingAvailable="F"  # directory empty
+    fi
+  fi
+  # soil forcing availability feedback/action
+  if [ "$soilForcingAvailable" == "T" ]; then
+    # soil forcing available
+    echo "Running the QUINCY soil model"
+  else
+    echo " Sorry, no soil forcing available for ""$forcingDataSet"" sites yet."
+    echo " Please ask Jan or Sönke if you need it."
+    echo " EXIT!"
+    exit 1
+  fi
 fi 
 
 

@@ -18,10 +18,11 @@
 ##    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
 
 ## copy the just-created soil_forcing (usecase 01) to the particular folders in the sites sets (BGI/data/Model/SLM1/input/point/)
+##  some more detailed docu is presented in the usecase 01 file 01_generate_soil_forcing_def.incl
 ##  considering soil forcing for 15 soil layers only
 ##
-## the soil forcing mey be created for FLUXNET and CRUNCEP cue & spp and FACE and SPP_1685:
-##  using the prep_run_slm.sh with the usecase 01, which sets default values and the option flag_generate_soil_forcing == T
+## the soil forcing may be created for FLUXNET2/3 and CRUNCEP cue & spp and FACE and SPP_1685:
+##  using the prep_run_slm.sh with the usecase 01, which set default values and the option flag_generate_soil_forcing == T
 ## 
 
 
@@ -44,6 +45,7 @@ userName="$USER"
 ## paths to the folders at the server
 mainPathServer="/Net/Groups/BGI/data/Model/SLM1/input/point/"
 pathServerF="$mainPathServer""FLUXNET2/"
+pathServerF3="$mainPathServer""FLUXNET3/"
 pathServerC="$mainPathServer""CRUNCEPv7/"
 pathServerA="$mainPathServer""FACE/"
 pathServerS="$mainPathServer""SPP_1685/"
@@ -72,12 +74,14 @@ echo " "
 #  create this folder in case it is not present, does preserve folders and symlinks to folders present
 soilForce="soil_forcing_sl""$sl""/"
 mkdir -p "$pathServerF""$soilForce"
+mkdir -p "$pathServerF3""$soilForce"
 mkdir -p "$pathServerC""$soilForce"
 mkdir -p "$pathServerA""$soilForce"
 mkdir -p "$pathServerS""$soilForce"
 
 ## set the experimentalID folder names in the user scratch/slm/ folder containing the simulation results
 expNameF="exp_create_soil_forc_fluxnet_sl""$sl"
+expNameF3="exp_create_soil_forc_fluxnet3_sl""$sl"
 expNameCC="exp_create_soil_forc_cruncep_cue_sl""$sl"
 expNameCS="exp_create_soil_forc_cruncep_spp_sl""$sl"
 expNameA="exp_create_soil_forc_face_sl""$sl"
@@ -89,7 +93,7 @@ expNameS="exp_create_soil_forc_spp1685_sl""$sl"
 ########################################################################################
 
 #############################
-## Fluxnet                 ##
+## Fluxnet 2               ##
 #############################
 if [ -d "$pathSourceBase""$expNameF" ] # if folder is present, i.e., new soil_forcing files were created
  then
@@ -121,6 +125,42 @@ if [ -d "$pathSourceBase""$expNameF" ] # if folder is present, i.e., new soil_fo
   
   ## appending current date to simulation results folders at your scratch
   mv "$pathSourceBase""$expNameF"  "$pathSourceBase""$expNameF"_"$currDate"
+fi     # if new soil_forcing was created
+
+
+#############################
+## Fluxnet 3               ##
+#############################
+if [ -d "$pathSourceBase""$expNameF3" ] # if folder is present, i.e., new soil_forcing files were created
+ then
+
+  echo " Removing old Fluxnet3 soil_forcing from: ""$pathServerF3""$soilForce"
+  rm -f "$pathServerF3""$soilForce"*lit.dat
+  rm -f "$pathServerF3""$soilForce"*sph.dat
+  sync && sleep 0.5
+
+  echo " Copying Fluxnet3 soil_forcing from :""$pathSourceBase""$expNameF3"
+  for site in $(ls -d "$pathSourceBase""$expNameF3"/*/)
+   do
+
+    siteBase=$(basename $site)  # just: DE-Hai, IT-Cpz, US-Syv, ...
+
+    if [ $siteBase != "x_binary" ]
+    then
+
+      # grep the met_forcing filename with e.g. DE-Hai, select only the first line (static forcing, DE-Hai_s_2000-2012) and remove "_s"
+      filenameBase=$(ls -la "$pathServerF3""met_forcing/" | grep "$siteBase" | head -n1 | awk '{print $9}' | rev | cut -c5- | rev | sed "s/_s//")
+      echo "  site: "$filenameBase
+
+      # copy new soil_forcing files
+      cp "$pathSourceBase""$expNameF3""/""$siteBase"/output/veglitterfall_timestep.txt "$pathServerF3""$soilForce""$filenameBase""_lit.dat"
+      cp "$pathSourceBase""$expNameF3""/""$siteBase"/output/soilphysics_timestep.txt   "$pathServerF3""$soilForce""$filenameBase""_sph.dat"
+    fi
+    sync
+  done # loop over all sites for which soil_forcing was created
+  
+  ## appending current date to simulation results folders at your scratch
+  mv "$pathSourceBase""$expNameF3"  "$pathSourceBase""$expNameF3"_"$currDate"
 fi     # if new soil_forcing was created
 
 
