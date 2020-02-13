@@ -18,8 +18,9 @@ MODULE mo_jsb_model_class
   USE mo_exception,         ONLY: message_text, message, finish
   USE mo_kind,              ONLY: wp
   USE mo_io_units,          ONLY: filename_max
-  USE mo_jsb_parallel,      ONLY: Get_omp_no_of_threads, Get_omp_thread
+  USE mo_jsb_parallel,      ONLY: Get_omp_no_of_threads, Get_omp_thread, Is_omp_inside_serial
 
+  USE mo_jsb_control,       ONLY: debug_on
   USE mo_hsm_class,         ONLY: t_Hsm, t_State, t_Message, t_Action
   USE mo_jsb_config_class,  ONLY: t_jsb_model_config
   USE mo_jsb_process_class, ONLY: t_jsb_process, t_jsb_process_p, Get_process_name
@@ -56,7 +57,7 @@ MODULE mo_jsb_model_class
     INTEGER                            :: grid_id
     TYPE(t_jsb_process_p),     POINTER :: processes(:)
     TYPE(t_Task_queue),        POINTER :: queue        => NULL()
-    CLASS(t_jsb_process_task_p), ALLOCATABLE :: current_task(:)
+    TYPE(t_jsb_process_task_p), ALLOCATABLE :: current_task(:)
     TYPE(t_lctlib_element),    POINTER :: lctlib(:)
   CONTAINS
     ! From base type:
@@ -83,6 +84,10 @@ MODULE mo_jsb_model_class
 !!$    PROCEDURE :: Process_task
     PROCEDURE :: Run_tasks
     PROCEDURE :: Set_options
+#ifdef _OPENACC
+    PROCEDURE :: gpu_to_cpu => Sync_vars_from_gpu_to_cpu
+    PROCEDURE :: cpu_to_gpu => Sync_vars_from_cpu_to_gpu
+#endif
   END TYPE t_jsb_model
 
   !>
@@ -278,10 +283,10 @@ CONTAINS
 
   END FUNCTION Get_model_shortname
 
-  FUNCTION Get_top_tile(this) RESULT(return_ptr)
+  SUBROUTINE Get_top_tile(this, return_ptr)
 
     CLASS(t_jsb_model), INTENT(in) :: this
-    CLASS(t_jsb_tile_abstract), POINTER :: return_ptr
+    CLASS(t_jsb_tile_abstract), POINTER, INTENT(inout) :: return_ptr
 
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_model_class:Get_model_top_tile'
 
@@ -296,7 +301,7 @@ CONTAINS
       CALL finish(TRIM(routine), 'Unkown type for tile')
     END SELECT
 
-  END FUNCTION Get_top_tile
+  END SUBROUTINE Get_top_tile
 
   ! Set current tile to top on current OMP thread and set %visited to .FALSE.
   SUBROUTINE Reset(this)
@@ -322,10 +327,10 @@ CONTAINS
 
   END SUBROUTINE Reset_tiles
 
-  FUNCTION Goto_next_tile(this) RESULT(return_ptr)
+  SUBROUTINE Goto_next_tile(this, return_ptr)
 
     CLASS(t_jsb_model), INTENT(inout)  :: this
-    CLASS(t_jsb_tile_abstract), POINTER :: return_ptr
+    CLASS(t_jsb_tile_abstract), POINTER, INTENT(inout) :: return_ptr
 
     CLASS(t_State), POINTER :: next
 
@@ -348,7 +353,7 @@ CONTAINS
 
     NULLIFY(next)
 
-  END FUNCTION Goto_next_tile
+  END SUBROUTINE Goto_next_tile
 
   FUNCTION Get_next_tile(this) RESULT(return_ptr)
 
@@ -473,6 +478,129 @@ CONTAINS
     IF (ASSOCIATED(grid)) CALL grid%Print
 
   END SUBROUTINE print_model
+
+#ifdef _OPENACC
+  SUBROUTINE Sync_vars_from_gpu_to_cpu(this)
+
+    USE mo_jsb_memory_class,    ONLY: t_jsb_memory
+    USE mo_jsb_process_class,   ONLY: SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_
+
+    CLASS(t_jsb_model), INTENT(inout) :: this
+
+    CLASS(t_jsb_memory), POINTER  :: mem
+    CLASS(t_jsb_tile_abstract), POINTER :: tile
+    INTEGER                       :: iproc, i, no_omp_thread
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Sync_vars_from_gpu_to_cpu'
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Syncing variables from GPU to CPU '//TRIM(this%name))
+
+    no_omp_thread = Get_omp_thread()
+    IF (.NOT. Is_omp_inside_serial()) THEN
+      CALL finish(TRIM(routine), 'Should not be called within parallel OMP region')
+    END IF
+
+    CALL this%Reset_tiles()
+    CALL this%Get_top_tile(tile)
+    IF (.NOT. ASSOCIATED(tile)) CALL finish(TRIM(routine), 'Top tile not set')
+
+    DO WHILE (ASSOCIATED(tile))
+
+      IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
+        CALL this%Goto_next_tile(tile)
+        CYCLE
+      END IF
+
+      ! Loop over all processes and initialize memory for this tile
+      DO iproc=1,SIZE(tile%mem)
+
+        ! if the current process is not on leafs of current tile exit DO loop
+        SELECT CASE (tile%process_action(iproc))
+        CASE (SKIP_, INHERIT_)
+          CYCLE
+        END SELECT
+
+        mem => tile%mem(iproc)%p
+        DO i=1,mem%no_of_vars
+          IF (ASSOCIATED(mem%vars(i)%p%ptr2d)) THEN
+            !$acc update host(mem%vars(i)%p%ptr2d) if(mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart)
+            ! IF (mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart) CALL message(routine//': gpu2cpu', TRIM(mem%vars(i)%p%full_name))
+            CONTINUE
+          ELSE IF (ASSOCIATED(mem%vars(i)%p%ptr3d)) THEN
+            !$acc update host(mem%vars(i)%p%ptr3d) if(mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart)
+            ! IF (mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart) CALL message(routine//': gpu2cpu', TRIM(mem%vars(i)%p%full_name))
+            CONTINUE
+          END IF
+        END DO
+
+      END DO
+
+      CALL this%Goto_next_tile(tile)
+
+    END DO
+
+  END SUBROUTINE Sync_vars_from_gpu_to_cpu
+
+  SUBROUTINE Sync_vars_from_cpu_to_gpu(this)
+
+    USE mo_jsb_memory_class,    ONLY: t_jsb_memory
+    USE mo_jsb_process_class,   ONLY: SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_
+
+    CLASS(t_jsb_model), INTENT(inout) :: this
+
+    CLASS(t_jsb_memory), POINTER  :: mem
+    CLASS(t_jsb_tile_abstract), POINTER :: tile
+    INTEGER                       :: iproc, i, no_omp_thread
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Sync_vars_from_cpu_to_gpu'
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Syncing variables from CPU to GPU '//TRIM(this%name))
+
+    no_omp_thread = Get_omp_thread()
+    IF (.NOT. Is_omp_inside_serial()) THEN
+      CALL finish(TRIM(routine), 'Should not be called within parallel OMP region')
+    END IF
+
+    CALL this%Reset_tiles()
+    CALL this%Get_top_tile(tile)
+    IF (.NOT. ASSOCIATED(tile)) CALL finish(TRIM(routine), 'Top tile not set')
+
+    DO WHILE (ASSOCIATED(tile))
+
+      IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
+        CALL this%Goto_next_tile(tile)
+        CYCLE
+      END IF
+
+      ! Loop over all processes and initialize memory for this tile
+      DO iproc=1,SIZE(tile%mem)
+
+        ! if the current process is not on leafs of current tile exit DO loop
+        SELECT CASE (tile%process_action(iproc))
+        CASE (SKIP_, INHERIT_)
+          CYCLE
+        END SELECT
+
+        mem => tile%mem(iproc)%p
+        DO i=1,mem%no_of_vars
+          ! IF (mem%vars(i)%p%is_in_restart) CALL message(routine//': cpu2gpu', TRIM(mem%vars(i)%p%full_name))
+          IF (ASSOCIATED(mem%vars(i)%p%ptr2d)) THEN
+            !$acc update device(mem%vars(i)%p%ptr2d) if(mem%vars(i)%p%is_in_restart)
+            CONTINUE
+          ELSE IF (ASSOCIATED(mem%vars(i)%p%ptr3d)) THEN
+            !$acc update device(mem%vars(i)%p%ptr3d) if(mem%vars(i)%p%is_in_restart)
+            CONTINUE
+          END IF
+        END DO
+
+      END DO
+
+      CALL this%Goto_next_tile(tile)
+
+    END DO
+
+  END SUBROUTINE Sync_vars_from_cpu_to_gpu
+#endif
 
 #endif
 END MODULE mo_jsb_model_class

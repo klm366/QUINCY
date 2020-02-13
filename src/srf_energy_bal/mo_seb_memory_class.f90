@@ -93,9 +93,9 @@ MODULE mo_seb_memory_class
       & t_lice,               & !< Lake surface temperature (ice)                                  [K]
 !!$      & t_lwtr_old,            & !< Lake surface temperature (water) at previous timestep           [K]
 !!$      & t_lice_old,            & !< Lake surface temperature (ice) at previous timestep             [K]
-      & s_wtr,                & !< Surface dry static energy over lake water                       [m2 s-2]
+      & s_lwtr,               & !< Surface dry static energy over lake water                       [m2 s-2]
       & qsat_lwtr,            & !< Saturation specific humidity at surface over lake water        [kg kg-1]
-      & s_ice,                & !< Surface dry static energy over lake ice                         [m2 s-2]
+      & s_lice,               & !< Surface dry static energy over lake ice                         [m2 s-2]
       & qsat_lice,            & !< Saturation specific humidity at surface over lake ice           [kg kg-1]
       & latent_hflx_wtr,      &
       & sensible_hflx_wtr,    &
@@ -146,80 +146,78 @@ CONTAINS
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
 
+    !! !$acc enter data pcreate(mem)
     dsl4jsb_Get_config(SEB_)
 
-    IF (.NOT. ASSOCIATED(mem%t%ptr)) THEN
-      ! Common variables
-      CALL jsb_add_var( mem, 't', mem%t,                                               &
-        & hgrid, surface,                                                              &
-        & t_cf('sfc_temp', 'K', 'surface temperature'),                                &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & output_level=BASIC, &
-        & loutput=.TRUE.,initval_r=280.0_wp )
+    CALL jsb_add_var( mem, 't', mem%t,                                               &
+      & hgrid, surface,                                                              &
+      & t_cf('sfc_temp', 'K', 'surface temperature'),                                &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & output_level=BASIC, &
+      & loutput=.TRUE., initval_r=280.0_wp )
 
-      CALL jsb_add_var( mem, 't_old', mem%t_old,                                       &
-        & hgrid, surface,                                                              &
-        & t_cf('sfc_temp_old', 'K', 'surface temperature at previous timestep'),       &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & lrestart=.FALSE.,                                                            &
-        & initval_r=280.0_wp )
+    CALL jsb_add_var( mem, 't_old', mem%t_old,                                       &
+      & hgrid, surface,                                                              &
+      & t_cf('sfc_temp_old', 'K', 'surface temperature at previous timestep'),       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE.,                                                            &
+      & initval_r=280.0_wp )
 
-      CALL jsb_add_var( mem, 't_unfilt', mem%t_unfilt,                                 &
-        & hgrid, surface,                                                              &
-        & t_cf('sfc_temp_unfilt', 'K', 'unfiltered surface temperature'),              &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & initval_r=280.0_wp )
+    CALL jsb_add_var( mem, 't_unfilt', mem%t_unfilt,                                 &
+      & hgrid, surface,                                                              &
+      & t_cf('sfc_temp_unfilt', 'K', 'unfiltered surface temperature'),              &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & initval_r=280.0_wp )
 
-      CALL jsb_add_var( mem, 'heat_cap', mem%heat_cap,                                 &
-        & hgrid, surface,                                                              &
-        & t_cf('sfc_heat_cap', 'J m-2 K-1)', 'surface layer heat capacity'),           &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & output_level=BASIC, &
-        & initval_r=0.0_wp )
+    CALL jsb_add_var( mem, 'heat_cap', mem%heat_cap,                                 &
+      & hgrid, surface,                                                              &
+      & t_cf('sfc_heat_cap', 'J m-2 K-1)', 'surface layer heat capacity'),           &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & output_level=BASIC, &
+      & initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 'heat_cap_old', mem%heat_cap_old,                         &
-        & hgrid, surface,                                                              &
-        & t_cf('sfc_heat_cap_old', 'J m-2 K-1)', 'srf layer heat cap. prev timestep'), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & lrestart=.FALSE.,                                                            &
-        & output_level=BASIC, &
-        & initval_r=0.0_wp )
+    CALL jsb_add_var( mem, 'heat_cap_old', mem%heat_cap_old,                         &
+      & hgrid, surface,                                                              &
+      & t_cf('sfc_heat_cap_old', 'J m-2 K-1)', 'srf layer heat cap. prev timestep'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE.,                                                            &
+      & output_level=BASIC, &
+      & initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 'latent_hflx', mem%latent_hflx,                           &
-        & hgrid, surface,                                                              &
-        & t_cf('latent_hflx', 'W m-2', 'latent heat flux density at surface'),         &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & lrestart=.FALSE.,                                                            &
-        & output_level=BASIC, &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+    CALL jsb_add_var( mem, 'latent_hflx', mem%latent_hflx,                           &
+      & hgrid, surface,                                                              &
+      & t_cf('latent_hflx', 'W m-2', 'latent heat flux density at surface'),         &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE.,                                                            &
+      & output_level=BASIC, &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      CALL jsb_add_var( mem, 'sensible_hflx', mem%sensible_hflx,                       &
-        & hgrid, surface,                                                              &
-        & t_cf('sensible_hflx', 'W m-2', 'sensible heat flux at surface'),             &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & lrestart=.FALSE.,                                                            &
-        & output_level=BASIC, &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+    CALL jsb_add_var( mem, 'sensible_hflx', mem%sensible_hflx,                       &
+      & hgrid, surface,                                                              &
+      & t_cf('sensible_hflx', 'W m-2', 'sensible heat flux at surface'),             &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE.,                                                            &
+      & output_level=BASIC, &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      CALL jsb_add_var( mem, 'forc_hflx', mem%forc_hflx,                               &
-        & hgrid, surface,                                                              &
-        & t_cf('forc_hflx', 'W m-2)', 'additional heat flux at surface'),              &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & lrestart=.FALSE.,                                                            &
-        & output_level=BASIC, &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-    END IF
+    CALL jsb_add_var( mem, 'forc_hflx', mem%forc_hflx,                               &
+      & hgrid, surface,                                                              &
+      & t_cf('forc_hflx', 'W m-2)', 'additional heat flux at surface'),              &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE.,                                                            &
+      & output_level=BASIC, &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     ! Additional variables for LAND lct
-    IF (One_of(LAND_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%s_star%ptr)) THEN
+    IF (One_of(LAND_TYPE, lct_ids(:)) > 0 ) THEN
 
       CALL jsb_add_var( mem, 's_star', mem%s_star,                                           &
         & hgrid, surface,                                                                    &
@@ -345,7 +343,7 @@ CONTAINS
     END IF
 
     ! Additional variables for lakes
-    IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%t_lwtr%ptr)) THEN
+    IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 ) THEN
 
       CALL jsb_add_var( mem, 't_lwtr', mem%t_lwtr,                                     &
         & hgrid, surface,                                                              &
@@ -354,7 +352,7 @@ CONTAINS
         & prefix, suffix,                                                              &
         & initval_r=280.0_wp )
 
-        CALL jsb_add_var( mem, 's_wtr', mem%s_wtr,                                               &
+      CALL jsb_add_var( mem, 's_lwtr', mem%s_lwtr,                                             &
         & hgrid, surface,                                                                      &
         & t_cf('sfc_dry_static_energy_wtr', 'm2 s-2', 'surface dry static energy (lake wtr)'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &
@@ -370,7 +368,7 @@ CONTAINS
         & lrestart=.FALSE.,                                                                      &
         & initval_r=0.0075_wp )
 
-        CALL jsb_add_var( mem, 'latent_hflx_wtr', mem%latent_hflx_wtr,                   &
+      CALL jsb_add_var( mem, 'latent_hflx_wtr', mem%latent_hflx_wtr,                   &
         & hgrid, surface,                                                              &
         & t_cf('latent_hflx_wtr', 'W m-2', 'latent heat flux over lake water'),        &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
@@ -395,7 +393,7 @@ CONTAINS
         & initval_r=0.0_wp )
     
       IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
-
+      
         CALL jsb_add_var( mem, 't_lice', mem%t_lice,                                     &
           & hgrid, surface,                                                              &
           & t_cf('sfc_temp_ice', 'K', 'lake surface temperature ice '),                  &
@@ -403,7 +401,7 @@ CONTAINS
           & prefix, suffix,                                                              &
           & initval_r=tmelt )
     
-        CALL jsb_add_var( mem, 's_ice', mem%s_ice,                                               &
+        CALL jsb_add_var( mem, 's_lice', mem%s_lice,                                             &
           & hgrid, surface,                                                                      &
           & t_cf('sfc_dry_static_energy_ice', 'm2 s-2', 'surface dry static energy (lake ice)'), &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &

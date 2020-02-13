@@ -100,6 +100,8 @@ CONTAINS
     hgrid => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
 
+    !! !$acc enter data create(mem)
+
     CALL jsb_add_var( mem, 't_air', mem%t_air,       &
       & hgrid, surface,                                                      &
       & t_cf('air_temperature', 'K', ''),                                    &

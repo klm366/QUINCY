@@ -21,7 +21,7 @@ MODULE mo_carbon_memory_class
   USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d , t_jsb_var_real3d 
-  USE mo_jsb_io,            ONLY:  TSTEP_CONSTANT
+  USE mo_jsb_io,                 ONLY:  TSTEP_CONSTANT
   ! Use of prcesses in this module
   dsl4jsb_Use_processes PHENO_
 
@@ -332,8 +332,6 @@ CONTAINS
     surface => Get_vgrid('surface')
     soil_w => Get_vgrid('soil_depth_water')
     dsl4jsb_Get_config(PHENO_)
-
-    IF (.NOT. ASSOCIATED(mem%pseudo_temp%ptr)) THEN
 
 ! R: only if we would want to have these variables in 2d (see mo_carbon_init.f90 for their initialization):
       CALL jsb_add_var( mem, 'n_pseudo_temp', mem%N_pseudo_temp, &
@@ -1663,9 +1661,6 @@ CONTAINS
             & prefix, suffix,                                                    &
             & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE.)
       ENDIF
-
-    END IF
-
 
   END SUBROUTINE Init_carbon_memory
 

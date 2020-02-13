@@ -24,10 +24,18 @@ MODULE mo_jsb_varlist
                                   jsb_get_var_list => get_var_list, &
                                   jsb_new_var_list => new_var_list, &
                                   add_var_list_element_r2d, add_var_list_element_r3d, &
+                                  is_variable_in_output, &
                                   VARNAME_LEN
   USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2, GRID_UNSTRUCTURED, GRID_UNSTRUCTURED_CELL, GRID_CELL, missval, tables
   USE mo_jsb_io_iface,      ONLY: t_cf_var, t_grib2_var, grib2_var
   USE mo_jsb_process_class, ONLY: Get_process_name
+
+#ifdef _OPENACC
+  use openacc
+#define __acc_attach(ptr) CALL acc_attach(ptr)  
+#else
+#define __acc_attach(ptr)
+#endif
 
   IMPLICIT NONE
   PRIVATE
@@ -102,6 +110,7 @@ CONTAINS
 
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
     CHARACTER(len=50) :: name_loc
+    LOGICAL           :: loutput_loc
     TYPE(t_cf_var)    :: cf_loc
     TYPE(t_grib2_var) :: grib2_loc
     LOGICAL           :: lmiss_loc
@@ -117,6 +126,9 @@ CONTAINS
     IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
     IF (suffix /= '') name_loc = TRIM(name_loc)//'_'//TRIM(suffix)
 
+    loutput_loc = .TRUE.
+    IF (PRESENT(loutput)) loutput_loc = loutput
+
     lmiss_loc = .TRUE.
     IF (PRESENT(lmiss)) lmiss_loc = lmiss
     missval_r_loc = missval
@@ -130,9 +142,6 @@ CONTAINS
     gdims(1:2) = hgrid%dims_g(1:2)
 
     this_list => Get_varlist(TRIM(mem%varlist_name), hgrid%host_patch_id)
-
-    ALLOCATE(var%field(ldims(1),ldims(2),1,1,1))
-    var%ptr => var%field(:,:,1,1,1)
 
     IF (mem%in_var_groups) THEN                                  ! Should this tile memory be part of any var groups?
       ALLOCATE(groups(3+MERGE(2, 0, PRESENT(output_level))))
@@ -152,20 +161,31 @@ CONTAINS
     END IF
 
     CALL add_var_list_element_r2d( &
-      this_list, TRIM(name_loc), var%ptr, GRID_UNSTRUCTURED_CELL, vgrid%ZaxisID, &
+      this_list, TRIM(name_loc), var%ptr2d, GRID_UNSTRUCTURED_CELL, vgrid%ZaxisID, &
       cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table, &
       ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx, &
       loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       ! lmiss=lmiss_loc, missval_r=missval_r_loc)
-      lmiss=lmiss_loc, missval_r=missval_r_loc, p5=var%field, in_groups=groups, &
+      lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups, &
       verbose=verbose)
 
+    var%ptr => var%ptr2d
     var%name = TRIM(name)
     var%full_name = TRIM(name_loc)
     var%type = REAL2D
     var%missval = missval_r_loc
     IF (PRESENT(l_aggregate_all)) var%l_aggregate_all = l_aggregate_all
+    IF (loutput_loc) THEN
+      IF (mem%in_var_groups) THEN
+        var%is_in_output = is_variable_in_output(var%full_name, groups(:))
+      ELSE
+        var%is_in_output = is_variable_in_output(var%full_name)
+      END IF
+    END IF
+    var%is_in_restart = .TRUE.  ! All jsbach var_lists have lrestart=.TRUE. by default
+    IF (PRESENT(lrestart)) var%is_in_restart = lrestart
+    ! var%is_in_restart = var%is_in_restart .OR. .TRUE.  ! TODO
 
     var%owner_proc_id = mem%owner_proc_id
 
@@ -179,6 +199,11 @@ CONTAINS
       mem%vars(pos_of_var)%p => var
       mem%no_of_vars = pos_of_var
     END IF
+
+    !$acc enter data copyin(var)
+    !$acc update device(var%ptr2d)
+    __acc_attach(var%ptr2d)
+    __acc_attach(var%ptr)
 
   END SUBROUTINE jsb_add_var_list_element_r2d
 
@@ -216,6 +241,7 @@ CONTAINS
 
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
     CHARACTER(len=50) :: name_loc
+    LOGICAL           :: loutput_loc
     TYPE(t_cf_var)    :: cf_loc
     TYPE(t_grib2_var) :: grib2_loc
     LOGICAL           :: lmiss_loc
@@ -230,6 +256,9 @@ CONTAINS
     name_loc = TRIM(name)
     IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
     IF (suffix /= '') name_loc = TRIM(name_loc)//'_'//TRIM(suffix)
+
+    loutput_loc = .TRUE.
+    IF (PRESENT(loutput)) loutput_loc = loutput
 
     lmiss_loc = .TRUE.
     IF (PRESENT(lmiss)) lmiss_loc = lmiss
@@ -261,9 +290,6 @@ CONTAINS
 
     this_list => Get_varlist(TRIM(mem%varlist_name), hgrid%host_patch_id)
 
-    ALLOCATE(var%field(ldims(1),ldims(2),ldims(3),1,1))
-    var%ptr => var%field(:,:,:,1,1)
-
     IF (mem%in_var_groups) THEN                                  ! Should this tile memory be part of any var groups?
       ALLOCATE(groups(3+MERGE(2, 0, PRESENT(output_level))))
       ! All variables are put into these three catch-all groups
@@ -282,19 +308,30 @@ CONTAINS
     END IF
 
     CALL add_var_list_element_r3d( &
-      this_list, TRIM(name_loc), var%ptr, GRID_UNSTRUCTURED_CELL, vgrid%ZaxisID, &
+      this_list, TRIM(name_loc), var%ptr3d, GRID_UNSTRUCTURED_CELL, vgrid%ZaxisID, &
       cf_loc, grib2_loc, code=grib1%PARAMETER, table=grib1%table, &
       ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx, &
       loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       ! lmiss=lmiss_loc, missval_r=missval_r_loc)
-      lmiss=lmiss_loc, missval_r=missval_r_loc, p5=var%field, in_groups=groups, verbose=verbose)
+      lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups, verbose=verbose)
 
+    var%ptr => var%ptr3d
     var%name = TRIM(name)
     var%full_name = TRIM(name_loc)
     var%type = REAL3D
     var%missval = missval_r_loc
     IF (PRESENT(l_aggregate_all)) var%l_aggregate_all = l_aggregate_all
+    IF (loutput_loc) THEN
+      IF (mem%in_var_groups) THEN
+        var%is_in_output = is_variable_in_output(var%full_name, groups(:))
+      ELSE
+        var%is_in_output = is_variable_in_output(var%full_name)
+      END IF
+    END IF
+    var%is_in_restart = .TRUE.  ! All jsbach var_lists have lrestart=.TRUE. by default
+    IF (PRESENT(lrestart)) var%is_in_restart = lrestart
+    ! var%is_in_restart = var%is_in_restart .OR. .TRUE.  ! TODO
 
     var%owner_proc_id = mem%owner_proc_id
 
@@ -308,6 +345,11 @@ CONTAINS
       mem%vars(pos_of_var)%p => var
       mem%no_of_vars = pos_of_var
     END IF
+
+    !$acc enter data copyin(var)
+    !$acc update device(var%ptr3d)
+    __acc_attach(var%ptr3d)
+    __acc_attach(var%ptr)
 
   END SUBROUTINE jsb_add_var_list_element_r3d
 

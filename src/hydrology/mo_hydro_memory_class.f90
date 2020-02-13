@@ -24,6 +24,7 @@ MODULE mo_hydro_memory_class
   USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
   USE mo_jsb_lct_class,    ONLY: LAND_TYPE, BARE_TYPE, VEG_TYPE, LAKE_TYPE, GLACIER_TYPE
   USE mo_jsb_varlist,      ONLY: BASIC !, MEDIUM, FULL
+  USE mo_jsb_process_class, ONLY: ON_TILE_, AGGREGATE_
 
   ! Use of prcesses in this module
   dsl4jsb_Use_processes HYDRO_, SSE_, SEB_, ASSIMI_
@@ -217,8 +218,9 @@ CONTAINS
       ini_snow_dens = dens_snow
     END IF
 
+    !! !$acc enter data pcreate(mem)
+
     ! Common variables
-    IF (ASSOCIATED(mem%fract_snow%ptr)) RETURN
 
     CALL jsb_add_var( mem, 'fract_snow', mem%fract_snow,                       &
       & hgrid, surface,                                                        &
@@ -355,8 +357,7 @@ CONTAINS
       &   .OR. One_of(BARE_TYPE,    lct_ids(:)) > 0 &
       &   .OR. One_of(GLACIER_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(LAND_TYPE,    lct_ids(:)) > 0 &
-      &  )                                          &
-      &  .AND. .NOT. ASSOCIATED(mem%evapotrans_lnd%ptr) ) THEN
+      &  ) ) THEN
 
       CALL jsb_add_var( mem, 'fract_snow_soil', mem%fract_snow_soil,            &
         & hgrid, surface,                                                       &
@@ -418,8 +419,7 @@ CONTAINS
     IF ( (     One_of(VEG_TYPE,  lct_ids(:)) > 0 &
       &   .OR. One_of(BARE_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 &
-      &  )                                       &
-      &  .AND. .NOT. ASSOCIATED(mem%soil_depth%ptr) ) THEN
+      &  ) ) THEN
 
       CALL jsb_add_var( mem, 'soil_depth', mem%soil_depth,                     &
         & hgrid, surface,                                                      &
@@ -700,8 +700,7 @@ CONTAINS
     ! Additional variables for vegetation
     IF ( (     One_of(VEG_TYPE,  lct_ids(:)) > 0 &
       &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 &
-      &  )                                       &
-      &  .AND. .NOT. ASSOCIATED(mem%root_depth%ptr)) THEN
+      &  ) ) THEN
 
       CALL jsb_add_var( mem, 'root_depth', mem%root_depth,                   &
         & hgrid, surface,                                                    &
@@ -797,8 +796,7 @@ CONTAINS
     ! Additional variables for GLACIER lct
     IF ( (     One_of(GLACIER_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(LAND_TYPE,    lct_ids(:)) > 0 &
-      &  )                                          &
-      &  .AND. .NOT. ASSOCIATED(mem%fract_snow_glac%ptr)) THEN
+      &  ) ) THEN
 
       CALL jsb_add_var( mem, 'fract_snow_glac', mem%fract_snow_glac,         &
         & hgrid, surface,                                                    &
@@ -826,8 +824,7 @@ CONTAINS
     END IF
 
     ! Additional variables for LAKE lct
-    IF (      One_of(LAKE_TYPE, lct_ids(:)) > 0 &
-      & .AND. .NOT. ASSOCIATED(mem%evapo_wtr%ptr)) THEN
+    IF (      One_of(LAKE_TYPE, lct_ids(:)) > 0 ) THEN
 
       CALL jsb_add_var( mem, 'evapo_wtr', mem%evapo_wtr,                                              &
         & hgrid, surface,                                                                             &

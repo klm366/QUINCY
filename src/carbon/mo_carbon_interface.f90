@@ -1645,6 +1645,8 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':calculate_current_c_ta_state_sum'
     INTEGER                     :: ics, ice, iblk
 
+   
+
     dsl4jsb_Real2D_onChunk ::  c_green_ta
     dsl4jsb_Real2D_onChunk ::  c_reserve_ta
     dsl4jsb_Real2D_onChunk ::  c_woods_ta
@@ -1721,21 +1723,13 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg2_ta)     ! in
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2_ta)            ! in
 
-    current_c_state_sum = c_green_ta + c_woods_ta + c_reserve_ta + c_crop_harvest_ta + &
-        & c_acid_ag1_ta + c_water_ag1_ta + c_ethanol_ag1_ta + c_nonsoluble_ag1_ta + &
-        & c_acid_ag2_ta + c_water_ag2_ta + c_ethanol_ag2_ta + c_nonsoluble_ag2_ta + &
-        & c_acid_bg1_ta + c_water_bg1_ta + c_ethanol_bg1_ta + c_nonsoluble_bg1_ta + &
-        & c_acid_bg2_ta + c_water_bg2_ta + c_ethanol_bg2_ta + c_nonsoluble_bg2_ta + &
-        & c_humus_1_ta  + c_humus_2_ta
-        
-   ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
-    ! PHS: need to have carbon check for Jedi!
-    
-   ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
-   
-     
-        
-
+    !$claw expand parallel update 
+    current_c_state_sum(ics:ice) = c_green_ta(:) + c_woods_ta(:) + c_reserve_ta(:) + c_crop_harvest_ta(:) + &
+        & c_acid_ag1_ta(:) + c_water_ag1_ta(:) + c_ethanol_ag1_ta(:) + c_nonsoluble_ag1_ta(:) + &
+        & c_acid_ag2_ta(:) + c_water_ag2_ta(:) + c_ethanol_ag2_ta(:) + c_nonsoluble_ag2_ta(:) + &
+        & c_acid_bg1_ta(:) + c_water_bg1_ta(:) + c_ethanol_bg1_ta(:) + c_nonsoluble_bg1_ta(:) + &
+        & c_acid_bg2_ta(:) + c_water_bg2_ta(:) + c_ethanol_bg2_ta(:) + c_nonsoluble_bg2_ta(:) + &
+        & c_humus_1_ta(:)  + c_humus_2_ta(:)
   END SUBROUTINE calculate_current_c_ta_state_sum
 
 
@@ -1809,12 +1803,14 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2)             ! in
 
     !TODO-JN-COHORTS: could be done in mo_carbon_process
-    c_bg_sum = c_acid_bg1 + c_water_bg1 + c_ethanol_bg1 + c_nonsoluble_bg1 + &
-             & c_acid_bg2 + c_water_bg2 + c_ethanol_bg2 + c_nonsoluble_bg2 + &
-             & c_humus_1  + c_humus_2
-    c_ag_sum_1 =  c_acid_ag1 + c_water_ag1 + c_ethanol_ag1 + c_nonsoluble_ag1 + c_humus_1
-    
-   END SUBROUTINE calculate_current_c_ag_1_and_bg_sums
+    !$claw expand parallel update
+    c_bg_sum(:) = c_acid_bg1(:) + c_water_bg1(:) + c_ethanol_bg1(:) + c_nonsoluble_bg1(:) + &
+             & c_acid_bg2(:) + c_water_bg2(:) + c_ethanol_bg2(:) + c_nonsoluble_bg2(:) + &
+             & c_humus_1(:)  + c_humus_2(:)
+
+    c_ag_sum_1(:) =  c_acid_ag1(:) + c_water_ag1(:) + c_ethanol_ag1(:) + c_nonsoluble_ag1(:) + c_humus_1(:)
+    !$claw end expand
+  END SUBROUTINE calculate_current_c_ag_1_and_bg_sums
 
 
   ! ================================================================================================================================
@@ -1845,8 +1841,9 @@ CONTAINS
     !INTEGER                     :: ics, ice, iblk
 
     CALL calculate_current_c_ta_state_sum(tile, options, Cconserve)
-
-    Cconserve = Cconserve - old_c_state_sum - cflux
+    
+    !$claw expand parallel update
+    Cconserve(:) = Cconserve(:) - old_c_state_sum(:) - cflux(:)
 
   END SUBROUTINE check_carbon_conservation
 
@@ -1909,17 +1906,17 @@ CONTAINS
       IF (.NOT. ALL(carbon_conservation_test .EQ. -999.0_wp)) THEN
       
         !CO2 flux due to npp and respiration
-        C_flux_yday(:) = - ((dsl4jsb_var2D_onChunk(CARBON_, cflux_npp_2_atm_yday_ta)     &
+        C_flux_yday(ics:ice) = - ((dsl4jsb_var2D_onChunk(CARBON_, cflux_npp_2_atm_yday_ta)     &
           & + dsl4jsb_var2D_onChunk(CARBON_, cflux_soilresp_2_atm_ta)                   &
           & + dsl4jsb_var2D_onChunk(CARBON_, cflux_herb_2_atm_ta)) / molarMassCO2_kg) * sec_per_day
 
         IF (model%processes(DISTURB_)%p%config%active) THEN
-          C_flux_yday(:) =  C_flux_yday(:) &
+          C_flux_yday(ics:ice) =  C_flux_yday(ics:ice) &
             & - (dsl4jsb_var2D_onChunk(CARBON_, cflux_fire_all_2_atm_ta))
         ENDIF
 
         CALL calculate_current_c_ta_state_sum(tile, options, carbon_conservation_test)
-        carbon_conservation_test = carbon_conservation_test - yday_c_state_sum  - C_flux_yday(:)
+        carbon_conservation_test = carbon_conservation_test - yday_c_state_sum  - C_flux_yday(ics:ice)
 
       ELSE
         carbon_conservation_test = 0._wp

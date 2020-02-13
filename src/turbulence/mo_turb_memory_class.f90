@@ -74,7 +74,7 @@ CONTAINS
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
 
-    IF (ASSOCIATED(mem%rough_m%ptr)) RETURN
+    !! !$acc enter data pcreate(mem)
 
     CALL jsb_add_var( mem, 'rough_m', mem%rough_m,                                       &
       & hgrid, surface,                                                                  &
@@ -99,8 +99,7 @@ CONTAINS
       &   .OR. One_of(BARE_TYPE,    lct_ids(:)) > 0 &
       &   .OR. One_of(LAND_TYPE,    lct_ids(:)) > 0 &
       &   .OR. One_of(GLACIER_TYPE, lct_ids(:)) > 0 &
-      &  )                                          &
-      & .AND. .NOT. ASSOCIATED(mem%fact_q_air%ptr)) THEN
+      &  ) ) THEN
 
       CALL jsb_add_var( mem, 'fact_q_air', mem%fact_q_air,                   &
         & hgrid, surface,                                                    &

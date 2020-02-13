@@ -86,6 +86,8 @@ CONTAINS
     dsl4jsb_memory(PHENO_)%lai_mon(:,:,0   ) = ptr_mon(:,:,12  )
     dsl4jsb_memory(PHENO_)%lai_mon(:,:,13  ) = ptr_mon(:,:,1   )
     DEALLOCATE(ptr_mon)
+    !$acc enter data attach(dsl4jsb_memory(PHENO_)%lai_mon)
+    !$acc update device(dsl4jsb_memory(PHENO_)%lai_mon)
 
     ! Foliage projected cover climatology
     IF (debug_on()) CALL message(TRIM(routine), 'reading veg_fract ...')
@@ -96,6 +98,7 @@ CONTAINS
     dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,0   ) = ptr_mon(:,:,12  )
     dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,13  ) = ptr_mon(:,:,1   )
     DEALLOCATE(ptr_mon)
+    !$acc update device(dsl4jsb_memory(PHENO_)%fract_fpc_mon)
 
     ! Forest fraction
     ! @todo: only used for use_alb_veg_simple=.TRUE.
@@ -105,6 +108,7 @@ CONTAINS
       & fill_array = dsl4jsb_var_ptr(PHENO_, fract_forest))
     dsl4jsb_var2D_onDomain(PHENO_, fract_forest) = &
       MERGE(dsl4jsb_var2D_onDomain(PHENO_, fract_forest), 0._wp, dsl4jsb_var2D_onDomain(PHENO_, fract_forest) >= 0._wp)
+    !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, fract_forest))
 
     CALL input_file%Close()
 
@@ -118,6 +122,7 @@ CONTAINS
 
     dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max) = &
       MERGE(dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max), 0._wp, dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max) >= 0._wp)
+    !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max))
 
     CALL input_file%Close()
 
@@ -130,6 +135,7 @@ CONTAINS
       !             later one might think about allometric relation ships in other multi annual plants, too?
       IF ( (dsl4jsb_Config(PHENO_)%l_forestRegrowth) .AND. (.NOT. dsl4jsb_Lctlib_param(ForestFlag)) ) THEN
         dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom) = dsl4jsb_Lctlib_param(MaxLAI)
+        !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom))
       END IF
 
       !JN 10.01.18: with l_forestRegrowth the maxLAI can change over time for forest pfts
@@ -152,6 +158,8 @@ CONTAINS
            & 1.0_wp - exp(-dsl4jsb_Lctlib_param(MaxLAI) / dsl4jsb_Lctlib_param(clumpinessFactor))
       END IF
       !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=      
+
+      !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction))
 
     END IF
 
@@ -188,8 +196,10 @@ CONTAINS
       & wgt1 * dsl4jsb_memory(PHENO_)%lai_mon(:,:,nmw1) + wgt2 * dsl4jsb_memory(PHENO_)%lai_mon(:,:,nmw2)
 
     IF (model%config%l_compat401) THEN
+      !$claw expand
       dsl4jsb_var2D_onDomain(PHENO_, fract_fpc) = get_foliage_projected_cover( &
         & dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max), dsl4jsb_var2D_onDomain(PHENO_, lai), 2._wp)
+      !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, fract_fpc))
     ELSE
       IF (       TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology' &
           & .OR. tile%lcts(1)%lib_id == 0) THEN         ! lib_id=0: eneral vegetation tile, no specific PFT
@@ -213,11 +223,15 @@ CONTAINS
           dsl4jsb_var2D_onDomain(PHENO_, lai) = &
             & MIN(dsl4jsb_var2D_onDomain(PHENO_, lai), dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom))
         END IF
+        !$claw expand
         dsl4jsb_var2D_onDomain(PHENO_, fract_fpc) = get_foliage_projected_cover(                &
           & dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max), dsl4jsb_var2D_onDomain(PHENO_, lai), &
           & dsl4jsb_Lctlib_param(ClumpinessFactor))
       END IF
+      !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, fract_fpc))
     END IF
+
+    !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, lai))
 
   END SUBROUTINE pheno_init_ic
 
