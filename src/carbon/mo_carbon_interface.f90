@@ -616,31 +616,33 @@ CONTAINS
 
       END IF     !  PHS: initial carbon
       
-       IF (  is_time_experiment_start()  )  THEN
-      seed_depth_sl       = jedi_soil_depth_to_layers_1d(  SPREAD(0.05_wp, NCOPIES=nc, DIM=1)  , soil_w%dz(:))         ! Jedi assumes germination of seed depends on the first 0.5 m of soil wetness
-      seed_maxmoist(:)= get_water_in_root_zone(vol_field_cap_sl(:,:) * soil_depth_sl(:,:), soil_depth_sl(:,:), seed_depth_sl(:,:))      
+      IF (  is_time_experiment_start()  )  THEN
+        seed_depth_sl = jedi_soil_depth_to_layers_1d(  SPREAD(0.05_wp, NCOPIES=nc, DIM=1)  , soil_w%dz(:))         ! Jedi assumes germination of seed depends on the first 0.5 m of soil wetness
+        CALL get_water_in_root_zone(vol_field_cap_sl(:,:) * soil_depth_sl(:,:), soil_depth_sl(:,:), seed_depth_sl(:,:), seed_maxmoist(:))
       END IF
       
-       root_maxmoist(:)= get_water_in_root_zone(vol_field_cap_sl(:,:) * soil_depth_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:))  
+      CALL get_water_in_root_zone(vol_field_cap_sl(:,:) * soil_depth_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:), root_maxmoist(:))
+               
+      CALL get_water_in_root_zone( w_soil_sl(:,:), soil_depth_sl(:,:), seed_depth_sl(:,:), w_soil_column_seed(:))
        
-   
-       
-       w_soil_column_seed(:) = get_water_in_root_zone( w_soil_sl(:,:), soil_depth_sl(:,:), seed_depth_sl(:,:))      
-       
-       
-      alpha_jedi(:)          = jedi_water_stress_factor( w_soil_column(:),  root_maxmoist(:),  dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract)                    
+      alpha_jedi(:)      = jedi_water_stress_factor( w_soil_column(:),       root_maxmoist(:),  dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract)                    
       alpha_jedi_seed(:) = jedi_water_stress_factor( w_soil_column_seed(:),  seed_maxmoist(:),  dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract)            
       
       ! 2019.11.27 PHS: still at the stage of testing "water stress" 
       WHERE (c_leaves .gt. 0._wp) 
+        ! 2019.12.4  
           ! 2019.12.4  
-          ! The potential supply rate from soil depends on the root-shoot-ratio. The root-shoot-ratio is the ratio betweem fine-root-carbon and Leaf-area-index.
-          !                                                                                                     a(r)=1-exp(- (-log(0.01))/r_optimal   * r  )     a : is a function of root-shoot-ratio  [0...1]
-          !                                                                                                                                                                        r : root-shoot-ratio [10^-3  ~  10^3]
-          !                                                                                                                                                                        r_optimal: the median value of the root-shoot-ratio among all PGS
-           jedi_pot_supply_transp      = (1._wp - exp( -(- log(0.01))/rootshoot_opt * (c_fnroot / (c_leaves*dsl4jsb_Lctlib_param(JeDiSLA)) )  )) * max_pipe_transpir  *  alpha_jedi     
+        ! 2019.12.4  
+          ! 2019.12.4  
+        ! 2019.12.4  
+        ! The potential supply rate from soil depends on the root-shoot-ratio. The root-shoot-ratio is the ratio betweem fine-root-carbon and Leaf-area-index.
+        !                                                                                                     a(r)=1-exp(- (-log(0.01))/r_optimal   * r  )     a : is a function of root-shoot-ratio  [0...1]
+        !                                                                                                                                                                        r : root-shoot-ratio [10^-3  ~  10^3]
+        !                                                                                                                                                                        r_optimal: the median value of the root-shoot-ratio among all PGS
+        jedi_pot_supply_transp = (1._wp - exp( -(- log(0.01))/rootshoot_opt * &
+          &                         (c_fnroot / (c_leaves*dsl4jsb_Lctlib_param(JeDiSLA)) ) )) * max_pipe_transpir * alpha_jedi
       ELSEWHERE 
-           jedi_pot_supply_transp      =  0._wp
+        jedi_pot_supply_transp =  0._wp
       END WHERE
       
       !jedi_pot_supply_transp      =  MAX(0._wp,  c_fnroot * (  1000._wp *  0.5_wp *  12.01_wp  *  0.001_wp  / 86400._wp  )  *  alpha_jedi   ) 
@@ -1969,7 +1971,7 @@ CONTAINS
 
     DO i=1,no_children
       IF (var%child_idx(i) > 0) THEN
-        ASSOCIATE (data_child => dsl4jsb_memory(CARBON_)%children(i)%p%vars(var%child_idx(i))%p%field(:,:,1,1,1) )
+        ASSOCIATE (data_child => dsl4jsb_memory(CARBON_)%children(i)%p%vars(var%child_idx(i))%p%ptr2d(:,:) )
           c_total_sum(:,:) = c_total_sum(:,:) + data_child(:,:)
         END ASSOCIATE
       END IF
@@ -1977,7 +1979,7 @@ CONTAINS
 
     child => tile%Get_first_child_tile()
     DO i=1,no_children
-      ASSOCIATE (data_child => dsl4jsb_memory(CARBON_)%children(i)%p%vars(var%child_idx(i))%p%field(:,:,1,1,1) )
+      ASSOCIATE (data_child => dsl4jsb_memory(CARBON_)%children(i)%p%vars(var%child_idx(i))%p%ptr2d(:,:) )
         WHERE (c_total_sum(:,:) > 0._wp)
           child%fract(:,:) = data_child(:,:) / c_total_sum(:,:)
         END WHERE

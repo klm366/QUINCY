@@ -1078,9 +1078,10 @@ CONTAINS
        lctlib(1:nlct)%JeDiSLA = ( ( 0.0001*10.**2.43  ) * ( ( lctlib(1:nlct)%TurnoverLeaf / 365._wp ) ** ( -0.46_wp ) ) ) *  12.01_wp           
        !28.8. 2019PHS: original jedi --lctlib(1:nlct)%JeDiCarboxRate = 12.01_wp * ( 10._wp**0.13_wp ) * ( 1.e-09_wp ) * ( lctlib(1:nlct)%NitroStatus * 1000._wp * 14._wp / 12.01_wp)**1.42_wp / lctlib(1:nlct)%JeDiSLA  
        ! lctlib(1:nlct)%JeDiCarboxRate = (   4.19_wp +  14._wp * lctlib(1:nlct)%NitroStatus / lctlib(1:nlct)%JeDiSLA  * (9.3_wp + 20._wp * P08(1:nlct) )   ) * (10._wp**-6._wp )
-        lctlib(1:nlct)%JeDiCarboxRate = (   4.19_wp +  14._wp * lctlib(1:nlct)%NitroStatus  * (9.3_wp + 20._wp * P08(1:nlct) )   ) * (10._wp**-6._wp )  !NNN
-       WRITE(35,fm) 'JeDiCarboxRate ',lctlib(1:nlct)%JeDiCarboxRate * (10._wp**6._wp )
-       WRITE(35,fm) 'JeDiSLA ',   lctlib(1:nlct)%JeDiSLA  
+       lctlib(1:nlct)%JeDiCarboxRate = (   4.19_wp +  14._wp * lctlib(1:nlct)%NitroStatus  * &
+         &                                            (9.3_wp + 20._wp * P08(1:nlct) )   ) * 1.e-6_wp  !NNN
+       WRITE(35,fm) 'JeDiCarboxRate ', lctlib(1:nlct)%JeDiCarboxRate * 10.e6_wp
+       WRITE(35,fm) 'JeDiSLA ', lctlib(1:nlct)%JeDiSLA  
        
        
                       WHERE (lctlib(1:nlct)%NitroStatus*lctlib(1:nlct)%JeDiSLA  .GE. 0.015997_wp .and. lctlib(1:nlct)%NitroStatus*lctlib(1:nlct)%JeDiSLA  .LE. 0.05359_wp ) 

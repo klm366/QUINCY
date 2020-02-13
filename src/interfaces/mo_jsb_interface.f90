@@ -433,13 +433,13 @@ CONTAINS
 
     IF (TRIM(model%config%usecase) == 'jsbach_jedi') THEN
       CALL model%Reset_tiles()
-      tile => model%Get_top_tile()
+      CALL model%Get_top_tile(tile)
       IF (.NOT. ASSOCIATED(tile)) &
         & CALL finish(TRIM(routine), 'Top tile not set')
 
       DO WHILE (ASSOCIATED(tile))
         IF (TRIM(tile%name) == 'veg') EXIT
-        tile => model%Goto_next_tile()
+        CALL model%Goto_next_tile(tile)
       END DO
       CALL jedi_biomass_to_fract(tile, model%options(no_omp_thread))
     END IF
