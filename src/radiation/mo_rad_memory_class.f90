@@ -412,8 +412,6 @@ CONTAINS
         & prefix, suffix,                                                    &
         & loutput=.FALSE., lrestart=.FALSE., initval_r=0.5_wp )
 
-        & loutput=.TRUE., lrestart=.FALSE., initval_r=0.5_wp )
-
       CALL jsb_add_var( mem, 'lai_cl', mem%lai_cl,                           &
         & hgrid, canopy_layer,                                               &
         & t_cf('LAI for each canopy layer', '', ''),                         &
