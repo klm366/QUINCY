@@ -433,7 +433,7 @@ CONTAINS
       tmp_fract(:,:) = 1._wp
       CALL this%Set_fraction(fract_max=tmp_fract(:,:))
     ELSE
-      input_file = jsb_netcdf_open_input(TRIM(this%fract_filename), this%owner_model_id)
+      input_file = jsb_netcdf_open_input(TRIM(this%fract_filename), this%grid_id)
 
       IF (TRIM(this%fract_varname) == '') THEN
         name_loc = 'fract'
