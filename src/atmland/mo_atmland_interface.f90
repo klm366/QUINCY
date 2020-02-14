@@ -129,6 +129,7 @@ CONTAINS
       & cos_zenith_angle_ptr, &
       & CO2_air_ptr, &
       & CO2_air_mol_ptr, &
+      & co2_mixing_ratio_ptr, &
       & drag_wtr_ptr, &
       & drag_ice_ptr, &
       & t_acoef_wtr_ptr, &
@@ -327,12 +328,15 @@ CONTAINS
     IF (PRESENT(CO2_air)) THEN
       CO2_air_ptr => dsl4jsb_var2D_onChunk(A2L_, CO2_air)
       CO2_air_mol_ptr => dsl4jsb_var2D_onChunk(A2L_, CO2_air_mol)
+      co2_mixing_ratio_ptr => dsl4jsb_var2D_onChunk(A2L_, co2_mixing_ratio)
       !$acc data present(CO2_air_ptr, CO2_air_mol_ptr, CO2_air)
       !$acc parallel loop
       DO i=1,nc
         CO2_air_ptr(i) = CO2_air(i)
         ! Convert CO2 mass mixing ratio [kg/kg] to particle mixing ratio [mol/mol]
         CO2_air_mol_ptr(i) = CO2_air(i) * molarMassDryAir / molarMassCO2
+        ! convert CO2 from "molar ratio (volume)" to "co2 mixing ratio ppmv" (quincy | used in e.g. update_canopy_fluxes)
+        co2_mixing_ratio_ptr(i) = CO2_air_mol_ptr(i) * 1000000._wp
       END DO
       !$acc end data
     END IF

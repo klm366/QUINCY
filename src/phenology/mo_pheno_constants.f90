@@ -192,5 +192,45 @@ MODULE mo_pheno_constants
   !$acc PhenoParam%SG, PhenoParam%RG, PhenoParam%GRS, PhenoParam%CRP,   & 
   !$acc PhenoParam%FR, PhenoParam)
 
+  !! quincy
+  REAL(wp), SAVE ::   & 
+      gdd_t_air_threshold             !< temperature threshold for the accumulation of growing degree days [deg K]
+
+  !< some useful numbers for easy identification of photosynthetic pathways and growth forms
+  !! 
+  INTEGER, PARAMETER ::                     &
+      ievergreen              = 1         , &
+      isummergreen            = 2         , &
+      iraingreen              = 3         , &
+      iperennial              = 4
+
+  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_pheno_constants'
+
+CONTAINS
+
+  !-----------------------------------------------------------------------------------------------------
+  !> initialize constants used in the phenology process
+  !! called by jsbach_setup_models()
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE init_pheno_constants
+
+    USE mo_jsb_physical_constants,      ONLY: tmelt  
+
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut
+    ! 
+    ! ---------------------------
+    ! 0.2 Local
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_pheno_constants'
+
+    
+
+
+    gdd_t_air_threshold       = 5.0_wp + tmelt            !< ... citation
+
+
+  END SUBROUTINE init_pheno_constants
+
 #endif
 END MODULE mo_pheno_constants
