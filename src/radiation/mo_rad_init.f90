@@ -69,6 +69,10 @@ CONTAINS
 
     CALL rad_init_bc(tile)
     CALL rad_init_ic(tile)
+    !! quincy
+    IF (tile%contains_vegetation) THEN
+      CALL rad_init_q_ic(tile)
+    ENDIF
 
     IF (tile%Is_last_process_tile(RAD_)) THEN
       CALL rad_finalize_init_vars()
@@ -300,6 +304,81 @@ CONTAINS
     END IF
 
   END SUBROUTINE rad_init_ic
+
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Intialize radiation process (after memory has been set up)
+  !! 
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE rad_init_q_ic(tile)
+
+    USE mo_jsb_class,             ONLY: Get_model
+    USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
+    !USE mo_jsb_model_class,       ONLY: t_jsb_model
+    USE mo_jsb_process_class,     ONLY: RAD_
+    USE mo_rad_constants,         ONLY: rfr_ratio_toc
+
+    ! USE PROC_memory
+    dsl4jsb_Use_memory(RAD_)
+
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut
+    CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
+    ! ---------------------------
+    ! 0.2 Local
+    !TYPE(t_jsb_model),      POINTER              :: model
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':rad_init_q_ic'
+    ! ---------------------------
+    ! 0.3 Declare Memory
+    ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_memory(RAD_)
+    ! Declare pointers to variables in memory
+    dsl4jsb_Real2D_onDomain      :: rfr_ratio_boc
+    dsl4jsb_Real2D_onDomain      :: rfr_ratio_boc_tvegdyn_mavg
+    dsl4jsb_Real3D_onDomain      :: ppfd_sunlit_tfrac_mavg_cl
+    dsl4jsb_Real3D_onDomain      :: ppfd_sunlit_tcnl_mavg_cl
+    dsl4jsb_Real3D_onDomain      :: ppfd_shaded_tfrac_mavg_cl
+    dsl4jsb_Real3D_onDomain      :: ppfd_shaded_tcnl_mavg_cl
+    ! ---------------------------
+    ! 0.4 Process Activity, Debug Option
+    IF (.NOT. tile%Is_process_active(RAD_)) RETURN
+    IF (debug_on()) CALL message(TRIM(routine), 'Setting initial conditions of radiation memory (quincy) for tile '// &
+      &                          TRIM(tile%name))
+    ! ---------------------------
+    ! 0.5 Get Memory
+    !model  => Get_model(tile%owner_model_id)
+    ! Get process config
+    !dsl4jsb_Get_config(RAD_)
+    ! Get process memories
+    dsl4jsb_Get_memory(RAD_)
+    ! Get process variables (Set pointers to variables in memory)
+    dsl4jsb_Get_var2D_onDomain(RAD_, rfr_ratio_boc)
+    dsl4jsb_Get_var2D_onDomain(RAD_, rfr_ratio_boc_tvegdyn_mavg)
+    dsl4jsb_Get_var3D_onDomain(RAD_, ppfd_sunlit_tfrac_mavg_cl)
+    dsl4jsb_Get_var3D_onDomain(RAD_, ppfd_sunlit_tcnl_mavg_cl)
+    dsl4jsb_Get_var3D_onDomain(RAD_, ppfd_shaded_tfrac_mavg_cl)
+    dsl4jsb_Get_var3D_onDomain(RAD_, ppfd_shaded_tcnl_mavg_cl)
+    
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
+
+    rfr_ratio_boc(:,:)                  = rfr_ratio_toc
+    rfr_ratio_boc_tvegdyn_mavg(:,:)     = rfr_ratio_boc(:,:) 
+
+    ppfd_sunlit_tfrac_mavg_cl(:,:,:)    = 150.0_wp
+    ppfd_sunlit_tcnl_mavg_cl(:,:,:)     = 150.0_wp
+    
+    ppfd_shaded_tfrac_mavg_cl(:,:,:)    = 10.0_wp
+    ppfd_shaded_tcnl_mavg_cl(:,:,:)     = 10.0_wp
+
+
+  END SUBROUTINE rad_init_q_ic
+
 
 #endif
 END MODULE mo_rad_init

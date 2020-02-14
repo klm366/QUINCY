@@ -159,6 +159,10 @@ CONTAINS
     surface      => Get_vgrid('surface')
 
     dsl4jsb_Get_config(PHENO_)
+
+    !! do not add these variables if use_quincy=.TRUE.
+    !! some of these var are added to memory anyway, as they are needed also for quincy, see below
+    IF (.NOT. model%config%use_quincy) THEN
     
     !! !$acc enter data pcreate(mem)
 

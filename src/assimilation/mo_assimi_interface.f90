@@ -38,6 +38,9 @@ MODULE mo_assimi_interface
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
+  USE mo_assimi_update_canopy_fluxes,   ONLY: update_canopy_fluxes
+  USE mo_assimi_util,                   ONLY: reset_assimi_fluxes  
+
   ! Use of processes in this module (Get_assimi_memory and Get_assimi_config)
   dsl4jsb_Use_processes ASSIMI_, HYDRO_, PHENO_, RAD_, A2L_, SEB_
 
@@ -189,6 +192,43 @@ CONTAINS
     CALL return_ptr%Construct(name='assimilation', process_id=ASSIMI_, owner_model_id=model_id)
 
   END FUNCTION Create_task_assimilation
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Constructor: reset_assimi_fluxes task
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Create_task_reset_assimi_fluxes(model_id) RESULT(return_ptr)
+
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+
+    ALLOCATE(tsk_reset_assimi_fluxes::return_ptr)
+    CALL return_ptr%Construct(name='reset_assimi_fluxes', process_id=ASSIMI_, owner_model_id=model_id)
+
+  END FUNCTION Create_task_reset_assimi_fluxes
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Constructor: update_canopy_fluxes task
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Create_task_update_canopy_fluxes(model_id) RESULT(return_ptr)
+
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+
+    ALLOCATE(tsk_update_canopy_fluxes::return_ptr)
+    CALL return_ptr%Construct(name='update_canopy_fluxes', process_id=ASSIMI_, owner_model_id=model_id)
+    
+  END FUNCTION Create_task_update_canopy_fluxes
+
 
   ! -------------------------------------------------------------------------------------------------------
   !> Constructor for npp_buffer task
@@ -1067,6 +1107,141 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_npp_buffer
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Implementation of "aggregate": reset_assimi_fluxes task
+  !!  actually NOT using this routine, i.e., no var is aggregated here
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE aggr_reset_assimi_fluxes(tile, options)
+
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    ! ---------------------------
+    ! 0.2 Local
+    TYPE(t_jsb_model),        POINTER         :: model
+    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
+    INTEGER                                   :: iblk, ics, ice, nc
+    !X if necessary: REAL(wp) :: dtime, steplen
+    CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggr_reset_assimi_fluxes'
+    ! ---------------------------
+    ! 0.3 Declare Memory
+    ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_memory(ASSIMI_)
+    ! Get local variables from options argument
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    !X if necessary: dtime   = options%dtime
+    !X if necessary: steplen = options%steplen
+    ! ---------------------------
+    ! 0.4 Process Activity, Debug Option
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ---------------------------
+    ! 0.5 Get Memory
+    ! Get process variables (Set pointers to variables in memory)
+    model => Get_model(tile%owner_model_id)
+    ! Get process config
+    ! Get process memories
+    dsl4jsb_Get_memory(ASSIMI_)
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go aggregate
+    ! ------------------------------------------------------------------------------------------------------------
+    
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+    ! do not aggregate after this routine
+      
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE aggr_reset_assimi_fluxes
+  
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Implementation of "aggregate": update_canopy_fluxes task
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE aggr_update_canopy_fluxes(tile, options)
+
+    dsl4jsb_Use_processes ASSIMI_
+    
+    dsl4jsb_Use_memory(ASSIMI_)
+
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    ! ---------------------------
+    ! 0.2 Local
+    TYPE(t_jsb_model),        POINTER         :: model
+    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
+    INTEGER                                   :: iblk, ics, ice, nc
+    !X if necessary: REAL(wp) :: dtime, steplen
+    CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggr_update_canopy_fluxes'
+    ! ---------------------------
+    ! 0.3 Declare Memory
+    ! Declare process configuration and memory Pointers
+    !dsl4jsb_Def_config(ASSIMI_)
+    dsl4jsb_Def_memory(ASSIMI_)
+    ! Get local variables from options argument
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    !X if necessary: dtime   = options%dtime
+    !X if necessary: steplen = options%steplen
+    ! ---------------------------
+    ! 0.4 Process Activity, Debug Option
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ---------------------------
+    ! 0.5 Get Memory
+    ! Get process variables (Set pointers to variables in memory)
+    model => Get_model(tile%owner_model_id)
+    ! Get process config
+    !dsl4jsb_Get_config(ASSIMI_)
+    ! Get process memories
+    dsl4jsb_Get_memory(ASSIMI_)
+
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go aggregate
+    ! ------------------------------------------------------------------------------------------------------------
+    
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    ! ASSIMI_
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation_C13      , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation_C14      , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, net_assimilation            , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, net_assimilation_boc        , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, maint_respiration_leaf      , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, canopy_cond                 , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, co2_conc_leaf               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_air                    , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soa                    , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, soa_tsoa_mavg               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, t_jmax_opt                  , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, net_assimilation_cl         , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation_cl       , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, maint_respiration_leaf_cl   , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, canopy_cond_cl              , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, co2_conc_leaf_cl            , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, jmax_cl                     , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, vcmax_cl                    , weighted_by_fract)
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE aggr_update_canopy_fluxes
+
+
 
 #endif
 END MODULE mo_assimi_interface

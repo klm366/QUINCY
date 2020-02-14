@@ -282,6 +282,11 @@ CONTAINS
     USE mo_util_string, ONLY: tolower
 #endif
 
+    ! USE statements necessary for modifying QUINCY model input values of lctlib parameters
+    USE mo_jsb_math_constants,      ONLY: one_day, one_year
+    USE mo_jsb_physical_constants,  ONLY: molar_mass_C, molar_mass_N, molar_mass_P, Dwv, Dco2, tmelt 
+    USE mo_veg_constants,           ONLY: carbon_per_dryweight_leaf, sm2lm_grass, igrass, itree
+
     CHARACTER(len=*), INTENT(in) :: lctlib_file_name
     CHARACTER(len=*), INTENT(in) :: model_scheme_char
     CHARACTER(len=*), INTENT(in) :: usecase

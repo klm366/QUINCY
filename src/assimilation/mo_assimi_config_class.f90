@@ -32,6 +32,11 @@ MODULE mo_assimi_config_class
      INTEGER               :: ncanopy          ! number of canopy layers for the assimi process
                                                ! R: could be different for other processes e.g. for radiation
      REAL(wp), ALLOCATABLE :: canopy_bound_lai(:)
+    !! quincy
+    LOGICAL                 :: flag_optimal_Nfraction     !< optimise leaf internal N allocation
+    LOGICAL                 :: flag_t_resp_acclimation    !< whether or not to use the respiration temperature acclimation factor
+    LOGICAL                 :: flag_t_jmax_acclimation    !< acclimation of optimum temperature for Jmax 
+    CHARACTER(15)           :: canopy_layer_scheme        !< select scheme to calculate canopy layer thicknesses [standard|fapar]
    CONTAINS
      PROCEDURE :: Init => Init_assimi_config
   END type t_assimi_config
@@ -108,6 +113,50 @@ CONTAINS
     DO icanopy = 0,config%ncanopy
       config%canopy_bound_lai(icanopy) = REAL(icanopy, wp) / REAL(config%ncanopy, wp)
     END DO
+
+    !! quincy
+    !< canopy layer depth calculation
+    !! 
+    !! here the thickness of each canopy layer is calculated (saved in the vgrid as dz(:)) \n
+    !! this thickness is not directly given (by e.g. using the unit meter), but represented by the leaf mass in this layer \n
+    !! this leaf mass is measured as LAI [m2 m-2], that is, the actual thickness (in m) of canopy layer 2 depends on how much 
+    !!   vertical space (hight) needs to be covered to get the LAI specific to canopy layer 2
+    !! 
+    !! layer 1 is the top canopy layer (reversed order of vgrid axis) \n
+    !! and the value of the upper bound of a layer is larger than the value of the lower bound of the same layer
+    ALLOCATE(canopy_layer_thickness_profile(ncanopy_q_))
+    SELECT CASE(TRIM(config%canopy_layer_scheme))
+      CASE ("standard")
+        canopy_layer_thickness_profile(:) = 0.5_wp
+
+      CASE ("fapar")
+        ! alternative canopy layer depth calculation, approximately proportional to FAPAR to  
+        ! reduce impact of actual canopy layering on PS calculation
+        dAPAR = 1._wp/REAL(ncanopy_q_,KIND=wp)
+        DO icanopy=1,ncanopy_q_
+          canopy_layer_thickness_profile(icanopy) = -1.0_wp/k_canopy_layer * LOG(1._wp-(dAPAR*icanopy)+eps4)
+        END DO
+
+      CASE DEFAULT
+        WRITE(message_text,'(2a)') 'invalid canopy_layer_scheme',canopy_layer_scheme
+        CALL finish(routine, message_text) 
+    END SELECT
+
+    !< Create vertical axis
+    !! 
+    !! these are "infrastructure" values, constant across PFTs and sites, and they do not interfere with tree height \n
+    !! vgrid_canopy% lbounds, ubounds, and levels is calculated by 'new_vgrid()'
+    !! 
+    !! note: the axis of the canopy_layer vgrid is used as "reversed", i.e., layer 1 is the top canopy layer \n
+    !! levels is defined as the depth at the center of the layer: levels(:) = 0.5_wp * (lbounds(:) + ubounds(:))
+    vgrid_canopy  => new_vgrid('canopy_layer_q_', ZAXIS_GENERIC, ncanopy_q_, &
+                      longname='Canopy layers (leaf mass per layer as LAI) from ASSIMI_ QUINCY', &
+                      units='m2 m-2 LAI', &
+                      ! levels=   , &
+                      ! lbounds=  , & 
+                      ! ubounds=  , &
+                      dz=canopy_layer_thickness_profile(:))
+    CALL register_vgrid(vgrid_canopy)
 
   END SUBROUTINE Init_assimi_config
 

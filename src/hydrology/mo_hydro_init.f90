@@ -146,6 +146,8 @@ CONTAINS
 
     CALL hydro_init_bc(tile)
     CALL hydro_init_ic(tile)
+    !! quincy
+    CALL hydro_init_q_ic(tile)
 
     IF (tile%Is_last_process_tile(HYDRO_)) THEN
       CALL hydro_finalize_init_vars()

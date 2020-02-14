@@ -191,6 +191,13 @@ MODULE mo_hydro_memory_class
       weq_snow_gsum,          & !< Global snow amount on non-glacier land   [Gt]
       weq_balance_err_gsum      !< Global water balance error sum           [m3/timestep]
 
+
+  !! quincy
+  !Soil Water addons for QUINCY in HYDRO
+  TYPE(t_jsb_var_real2d)          :: &
+                                  w_soil_root_theta, & !< root zone integrated plant available water, fraction of maximum 
+                                  w_soil_root_pot      !< soil water potential [MPa]
+
   CONTAINS
     PROCEDURE :: Init => Init_hydro_memory
   END TYPE t_hydro_memory

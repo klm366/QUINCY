@@ -83,4 +83,3 @@ MODULE mo_rad_constants
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_rad_constants'
 
 #endif
-END MODULE mo_rad_constants

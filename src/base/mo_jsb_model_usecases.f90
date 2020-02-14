@@ -675,4 +675,3 @@ CONTAINS
   END SUBROUTINE init_usecase_quincy_11_pfts
 
 #endif
-END MODULE mo_jsb_model_usecases
