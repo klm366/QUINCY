@@ -776,7 +776,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   carbox_rate_cl)          ! out
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   CO2_conc_leaf_cl)        ! out
 
-    dsl4jsb_Get_var2D_onChunk(PHENO_,    day_NPP_sum)             ! inout
+    IF (TRIM(model%config%usecase) /= 'jsbach_jedi' ) THEN        
+      dsl4jsb_Get_var2D_onChunk(PHENO_,  day_NPP_sum)             ! inout
+    END IF
 
     ! ---------------------------
     ! Go
