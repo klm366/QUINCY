@@ -27,7 +27,7 @@ MODULE mo_jsb_model_init
   USE mo_kind,             ONLY: wp
   USE mo_exception,        ONLY: finish
   USE mo_jsb_parallel,     ONLY: Get_omp_thread, Is_omp_inside_serial
-  USE mo_jsb_time,         ONLY: is_time_restart
+  USE mo_jsb_time,         ONLY: is_time_restart, get_time_start
 
   IMPLICIT NONE
   PRIVATE
@@ -452,7 +452,7 @@ CONTAINS
     END IF
 
 !#ifdef _OPENACC
-!    IF (.NOT. is_time_restart()) CALL model%cpu_to_gpu()
+!    IF (.NOT. is_time_restart(get_time_start())) CALL model%cpu_to_gpu()
 !#endif
 
   END SUBROUTINE jsbach_init

@@ -41,7 +41,7 @@ CONTAINS
   !> Intialize soil process (after memory has been set up)
   !
   SUBROUTINE seb_init(tile)
-    USE mo_jsb_time,        ONLY: timeStep_in_days
+    USE mo_jsb_time,        ONLY: timestep_in_days
     USE mo_pheno_constants, ONLY: PhenoParam
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -65,7 +65,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onDomain(SEB_, N_pseudo_soil_temp) ! OUT
       dsl4jsb_Get_var2D_onDomain(SEB_, F_pseudo_soil_temp) ! OUT
 
-      F_pseudo_soil_temp = EXP(-timeStep_in_days()/PhenoParam%EG_SG%tau_pseudo_soil)
+      F_pseudo_soil_temp = EXP(- timestep_in_days(model_id=tile%owner_model_id)/PhenoParam%EG_SG%tau_pseudo_soil)
       N_pseudo_soil_temp = 1._wp / (1._wp - F_pseudo_soil_temp)
 
       !$acc update device(F_pseudo_soil_temp, N_pseudo_soil_temp)
