@@ -192,6 +192,9 @@ CONTAINS
       cpd_or_cvd = cpd
     END IF
 
+    l_is_newday = is_newday(options%current_datetime, options%dtime)
+    tmp_timesteps_per_day = timesteps_per_day(options%dtime)
+
     !dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_config(SSE_)
 
@@ -298,6 +301,12 @@ CONTAINS
     END IF
     !$claw acc update device(is_glacier) ! 
     !$claw acc end data
+
+    IF (is_time_experiment_start(options%current_datetime)) THEN            ! Start of experiment
+      lstart = .TRUE.
+    ELSE
+      lstart = .FALSE.
+    END IF
 
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_0_0 tile_name=tile%name
     soil_depth_sl_vol_porosity_sl_tmp(:) = soil_depth_sl(:,1) * vol_porosity_sl(:,1)
