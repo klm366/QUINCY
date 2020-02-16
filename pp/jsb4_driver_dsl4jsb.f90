@@ -494,4 +494,3 @@ PROGRAM jsb4_driver
   CALL p_stop
 #endif
 #endif
-END PROGRAM jsb4_driver

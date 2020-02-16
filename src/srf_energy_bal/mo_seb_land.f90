@@ -195,6 +195,9 @@ CONTAINS
     l_is_newday = is_newday(options%current_datetime, options%dtime)
     tmp_timesteps_per_day = timesteps_per_day(options%dtime)
 
+    l_is_newday = is_newday(options%current_datetime, options%dtime)
+    tmp_timesteps_per_day = timesteps_per_day(options%dtime)
+
     !dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_config(SSE_)
 
