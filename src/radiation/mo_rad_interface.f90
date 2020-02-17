@@ -347,6 +347,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(SEB_, t)              ! in
 
       ! quincy calculates all (albedo & short wave) but long wave radiation
+      !$claw expand
       lw_srf_net(:) = lwnet_from_lwdown(lw_srf_down(:), t(:))
     
     
@@ -700,11 +701,12 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Local variables
-    TYPE(t_jsb_model), POINTER            :: model
-    TYPE(t_lctlib_element), POINTER       :: lctlib       !< land-cover-type library - parameter across pft's
-    INTEGER                               :: iblk, nc , ics, ice, i
-    LOGICAL, ALLOCATABLE                  :: l_day(:)
-    CHARACTER(len=*), PARAMETER           :: routine = modname//':update_albedo'
+    TYPE(t_jsb_model), POINTER      :: model
+    TYPE(t_lctlib_element), POINTER :: lctlib       !< land-cover-type library - parameter across pft's
+    INTEGER                         :: iblk, nc , ics, ice, i
+    LOGICAL, ALLOCATABLE            :: l_day(:)
+
+    CHARACTER(len=*), PARAMETER     :: routine = modname//':update_albedo'
 
     ! Declare pointers to process configuration and memory
     dsl4jsb_Def_config(SEB_)
@@ -804,6 +806,7 @@ CONTAINS
     IF (tile%contains_vegetation) THEN
       dsl4jsb_Get_memory(PHENO_)
     END IF
+
     ! Set pointers to variables in config
     use_alb_veg_simple        = dsl4jsb_Config(RAD_) %use_alb_veg_simple
     use_alb_soil_scheme       = dsl4jsb_Config(RAD_) %use_alb_soil_scheme
@@ -826,7 +829,7 @@ CONTAINS
       END IF
 
       IF (TRIM(use_alb_soil_organic_C) /= '') THEN
-        !dsl4jsb_Get_memory(CARBON_)
+        dsl4jsb_Get_memory(CARBON_)
         dsl4jsb_Get_var2D_onChunk(CARBON_, c_bg_sum)  ! in
       ELSE
         ALLOCATE(c_bg_sum(nc))
@@ -835,6 +838,7 @@ CONTAINS
         c_bg_sum(:) = 0._wp                           ! dummy
       END IF
     END IF
+
     ! Set pointers to variables in memory
     dsl4jsb_Get_var2D_onChunk(A2L_,   cos_zenith_angle)      ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,   swvis_srf_down)        ! in
@@ -842,6 +846,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)              ! in
 
     !RMS dsl4jsb_Get_var2D_onChunk(CARBON_,   c_slow)            ! in
+
     dsl4jsb_Get_var2D_onChunk(RAD_,   alb_background)        ! in
     dsl4jsb_Get_var2D_onChunk(RAD_,   alb_vis)               ! inout
     dsl4jsb_Get_var2D_onChunk(RAD_,   alb_nir)               ! inout
@@ -852,10 +857,8 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_lnd)           ! inout
     END IF
 
-
     ! ---------------------------
     ! Go
-
 
     ALLOCATE(l_day(nc))
     !$claw acc enter data create(l_day)
@@ -864,7 +867,6 @@ CONTAINS
     !! 
     !$claw expand parallel update savepoint=ser_jsb_rad_has_minimal_radiation_1 tile_name=tile%name
     l_day(:) = Has_minimal_radiation(swvis_srf_down(:), swnir_srf_down(:))
-
 
     !> 1.0 snow
     !!
@@ -890,7 +892,6 @@ CONTAINS
 
     ! TODO Compute alb_vis and alb_nir separately!
     ! NOTE This is done by the QUINCY routine calc_sw_srf_net() when use_quincy = .TRUE. (in another Task)
-
 
     !> 2.0 lakes & lakes with ice
     !!
@@ -939,9 +940,7 @@ CONTAINS
         !$claw acc end data
       END IF
 
-
     !> 3.0 glacier
-    !!
     !!
     ELSE IF (tile%is_glacier) THEN
       !$claw sca forward update savepoint=ser_jsb_rad_calc_glacier_albedo_1 tile_name=tile%name
@@ -952,7 +951,6 @@ CONTAINS
         & alb_nir_lnd(:)        & ! inout
         & )
 
-
     !> 4.0 soil
     !! currently jsbach4 does not consider "bare tiles"
     !!
@@ -962,8 +960,8 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_soil)          ! inout
       dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_soil)          ! inout
 
-      !!       needs the active CARBON_ process           \n
-      !!       by default: use_alb_soil_scheme = .FALSE.  \n
+      !!       needs the active CARBON_ process
+      !!       by default: use_alb_soil_scheme = .FALSE.
       !!       also the soil albedo is calc below for vegetation tiles
       IF (use_alb_soil_scheme) THEN
         IF (tile%lcts(1)%lib_id == 0) CALL finish(TRIM(routine), 'lctlib not available on tile')
@@ -1025,7 +1023,7 @@ CONTAINS
 
       !> 5.1  simple calculation of alb_vis_lnd / alb_nir_lnd
       !!
-      !! TRUE for jsbach_lite, FALSE for jsbach_pfts  \n
+      !! TRUE for jsbach_lite, FALSE for jsbach_pfts
       IF (use_alb_veg_simple) THEN
         !$claw expand parallel update savepoint=ser_jsb_rad_update_albedo_expand_2 tile_name=tile%name
         alb_vis_lnd(:) = get_surface_albedo_simple( &
@@ -1046,8 +1044,8 @@ CONTAINS
       ELSE
 
         !> 5.2.1 Get bare soil albedo for vegetation tiles
-        !!       needs the active CARBON_ process           \n
-        !!       by default: use_alb_soil_scheme = .FALSE.  \n
+        !!       needs the active CARBON_ process
+        !!       by default: use_alb_soil_scheme = .FALSE.
         !!       also the soil albedo is calc above with the same routine in case "IF (tile%is_bare)"
         IF (use_alb_soil_scheme) THEN
           ! The albedo for bare soil under the canopy of a vegetation tile is the same as for the bare soil tile:
@@ -1073,7 +1071,6 @@ CONTAINS
             & alb_vis_soil(:),                          & ! inout
             & alb_nir_soil(:)                           & ! inout
             & )
-
         ELSE
           ! Do nothing: alb_vis_soil and alb_nir_soil are already in memory initialited from the bc_land_phy.nc file
           ! and represent the soil albedo including carbon in the soil as well as litter on the soil, but without
@@ -1141,8 +1138,7 @@ CONTAINS
       !$claw end expand
     END IF
 
-
-    !> 7.0 deallocate a pointers
+    !> 7.0 deallocate a pointer
     !! 
     IF (TRIM(use_alb_soil_organic_C) == '') THEN
       IF (ASSOCIATED(c_bg_sum)) THEN
@@ -1152,7 +1148,6 @@ CONTAINS
     END IF
     !$claw acc exit data delete(l_day)
     DEALLOCATE(l_day)
-
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1441,6 +1436,7 @@ CONTAINS
 
     !> 0.9  Set day-or-night-switch
     !! 
+    !$claw expand
     l_day(:) = Has_minimal_radiation(swvis_srf_down(:), swnir_srf_down(:))
 
 

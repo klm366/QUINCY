@@ -262,7 +262,7 @@ CONTAINS
     !!  usecase must be set to: "jsbach_pfts" (which assumes ASSIMI_ to be active)      (this is not tested)
     !!  CARBON_ may be active                                                           (this is not tested)
     !!  l_forestRegrowth is assumed to be .FALSE.                                       (this is not tested)
-    ELSEIF (model%config%use_quincy) THEN
+    ELSE IF (model%config%use_quincy) THEN
       !!------------------------ tasks that simply set fluxes back to zero at the beginning of each timestep
       !!
       CALL model%Queue_task(ASSIMI_, "reset_assimi_fluxes")         !! quincy
@@ -468,6 +468,7 @@ CONTAINS
       END IF
 
       CALL tile%Init_vars()
+      CALL tile%Cache_GPU_pointers()
 
       CALL model%Goto_next_tile(tile)
 

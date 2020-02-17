@@ -112,14 +112,14 @@ MODULE mo_rad_constants
 CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
-  !> initialize constants used in the radiation process
-  !! called by jsbach_setup_models()
+  !> Initialize constants used in the radiation process
+  !! Called by jsbach_setup_models()
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE init_rad_constants
 
     IMPLICIT NONE
     ! ---------------------------
-    ! 0.2 Local
+    ! Locals
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_rad_constants'
 
     kbl0_vis                  = 0.5_wp        !< Spitters 1986 
@@ -140,7 +140,6 @@ CONTAINS
     k_r2fr_chl                = 0.0012_wp - 0.012_wp !<  Kull & Kruijt 1998
 
   END SUBROUTINE init_rad_constants
-
 
 #endif
 END MODULE mo_rad_constants

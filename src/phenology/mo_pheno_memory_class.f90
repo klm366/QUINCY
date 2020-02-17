@@ -174,7 +174,7 @@ CONTAINS
     !! some of these var are added to memory anyway, as they are needed also for quincy, see below
     IF (.NOT. model%config%use_quincy) THEN
     
-    !$acc enter data pcreate(mem)
+    !! !$acc enter data pcreate(mem)
 
     IF ( (     One_of(LAND_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(VEG_TYPE,  lct_ids(:)) > 0 &
@@ -186,9 +186,6 @@ CONTAINS
         !$acc enter data pcreate(mem%lai_mon,mem%fract_fpc_mon)
         !$acc enter data attach(mem%lai_mon,mem%fract_fpc_mon)
       ! END IF
-  
-      !$acc enter data pcreate(mem%lai,mem%fract_fpc,mem%fract_fpc_max,      &
-      !$acc mem%fract_forest,mem%veg_fract_correction)
 
       CALL jsb_add_var( mem, 'lai', mem%lai,                                   &
         & hgrid, surface,                                                      &
@@ -232,14 +229,6 @@ CONTAINS
         & initval_r=0.0_wp )
 
       IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'logrop') THEN
-
-        !$acc enter data pcreate(mem%growth_phase_SG,mem%growth_phase_EG,      &
-        !$acc mem%growth_phase_CRP,mem%days_since_growth_begin_EG,             &
-        !$acc mem%days_since_growth_begin_SG,mem%previous_day_NPP_pot_rate_ca, &
-        !$acc mem%number_of_individuals,mem%biomass_per_individual,            &
-        !$acc mem%cconservation_allom,mem%maxLAI_allom,mem%day_NPP_sum,        &
-        !$acc mem%heat_sum_EG,mem%heat_sum_SG,mem%heat_sum_CRP,                &
-        !$acc mem%heat_sum_winter,mem%chill_days_SG,mem%chill_days_EG)
 
         CALL jsb_add_var( mem,'growth_phase_sg', mem%growth_phase_SG,          &
           & hgrid, surface,                                                    &
@@ -354,7 +343,7 @@ CONTAINS
             & prefix, suffix,                                                    &
             & loutput=.TRUE., lrestart=.TRUE., initval_r=0.4_wp)
 
-!@todo: variables are only relevant for forest pfts - how to constrain memory allocation to forest pfts?
+          !@todo: variables are only relevant for forest pfts - how to constrain memory allocation to forest pfts?
           CALL jsb_add_var( mem,'individuals', mem%number_of_individuals, &
             & hgrid, surface,                                                    &
             & t_cf('number_of_individuals', 'trees ha-1', 'Number of individuals in last calculation'), &
@@ -426,41 +415,41 @@ CONTAINS
 
         !! original quincy variables
         !!
-        CALL jsb_add_var(mem, 'growing_season', mem%growing_season, &
-              hgrid, surface, &
-              t_cf('growing_season', 'logical', 'logical to identify whether the plant is in the growing season'), &
-              t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
-              prefix, suffix, &
-              loutput=.TRUE., lrestart=.TRUE., &
-              initval_r=0.0_wp) !false) ! initvalue
+        CALL jsb_add_var(mem, 'growing_season', mem%growing_season,                                              &
+          & hgrid, surface,                                                                                      &
+          & t_cf('growing_season', 'logical', 'logical to identify whether the plant is in the growing season'), &
+          & t_grib1(table, 255, grib_bits),                                                                      &
+          & t_grib2(255, 255, 255, grib_bits),                                                                   &
+          & prefix, suffix,                                                                                      &
+          & loutput=.TRUE., lrestart=.TRUE.,                                                                     &
+          & initval_r=0.0_wp) !false) ! initvalue
   
-        CALL jsb_add_var(mem, 'gdd', mem%gdd, &
-              hgrid, surface, &
-              t_cf('gdd', 'K days', 'growing degree days above 5 degC'), &
-              t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
-              prefix, suffix, &
-              loutput=.TRUE., lrestart=.TRUE., &
-              initval_r=0.0_wp) ! initvalue
+        CALL jsb_add_var(mem, 'gdd', mem%gdd,                                                                    &
+          & hgrid, surface,                                                                                      &
+          & t_cf('gdd', 'K days', 'growing degree days above 5 degC'),                                           &
+          & t_grib1(table, 255, grib_bits),                                                                      &
+          & t_grib2(255, 255, 255, grib_bits),                                                                   &
+          & prefix, suffix,                                                                                      &
+          & loutput=.TRUE., lrestart=.TRUE.,                                                                     &
+          & initval_r=0.0_wp) ! initvalue
     
-        CALL jsb_add_var(mem, 'nd_dormance', mem%nd_dormance, &
-              hgrid, surface, &
-              t_cf('nd_dormance', '# days', 'number of days since last growing season'), &
-              t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
-              prefix, suffix, &
-              loutput=.TRUE., lrestart=.TRUE., &
-              initval_r=0.0_wp) ! initvalue
+        CALL jsb_add_var(mem, 'nd_dormance', mem%nd_dormance,                                                    &
+          & hgrid, surface,                                                                                      &
+          & t_cf('nd_dormance', '# days', 'number of days since last growing season'),                           &
+          & t_grib1(table, 255, grib_bits),                                                                      &
+          & t_grib2(255, 255, 255, grib_bits),                                                                   &
+          & prefix, suffix,                                                                                      &
+          & loutput=.TRUE., lrestart=.TRUE.,                                                                     &
+          & initval_r=0.0_wp) ! initvalue
   
-        CALL jsb_add_var(mem, 'lai_max', mem%lai_max, &
-              hgrid, surface, &
-              t_cf('lai_max', 'm2 m-2', 'maximum lai (site specific)'), &
-              t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
-              prefix, suffix, &
-              loutput=.TRUE., lrestart=.TRUE., &
-              initval_r=0.0_wp) ! initvalue
+        CALL jsb_add_var(mem, 'lai_max', mem%lai_max,                                                            &
+          & hgrid, surface,                                                                                      &
+          & t_cf('lai_max', 'm2 m-2', 'maximum lai (site specific)'),                                            &
+          & t_grib1(table, 255, grib_bits),                                                                      &
+          & t_grib2(255, 255, 255, grib_bits),                                                                   &
+          & prefix, suffix,                                                                                      &
+          & loutput=.TRUE., lrestart=.TRUE.,                                                                     &
+          & initval_r=0.0_wp) ! initvalue
   
       END IF
     END IF

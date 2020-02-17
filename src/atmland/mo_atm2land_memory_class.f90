@@ -19,8 +19,8 @@ MODULE mo_a2l_memory_class
   !USE mo_exception,         ONLY: message
   USE mo_util,              ONLY: One_of
 
-  !USE mo_jsb_model_class,   ONLY: t_jsb_model
-  !USE mo_jsb_class,         ONLY: Get_model
+  USE mo_jsb_model_class,   ONLY: t_jsb_model
+  USE mo_jsb_class,         ONLY: Get_model
   USE mo_jsb_memory_class,  ONLY: t_jsb_memory
   USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d
   USE mo_jsb_lct_class,     ONLY: LAKE_TYPE
@@ -69,33 +69,34 @@ MODULE mo_a2l_memory_class
     
     !! quincy
     !TYPE(t_jsb_var_real2d) :: &
-                              ! t_air                 , &  !> 2m air temperature [K] 
-                              ! q_air                 , &  !> 2m air specific humidity [g g-1] 
-                              ! rain                  , &  !> liquid water precipitation [kg m-2 s-1]
-                              ! snow                  , &  !> solid water precipitation [kg m-2 s-1]
-                              ! wind_air              , &  !> 2m air wind speed [m s-1] 
-                              ! wind_10m              , &  !> 10m air wind speed [m s-1] 
-                              ! lw_srf_down           , &  !> longwave surface downward flux [W m-2] 
-                              ! swvis_srf_down        , &  !> shortwave surface downward flux in the visible band [W m-2]
-                              ! swnir_srf_down        , &  !> shortwave surface downward flux in the near infrared band [W m-2] 
-                              ! swpar_srf_down        , &  !> shortwave surface downward flux in the PAR band [W m-2] 
-                              ! swpar_fdiffuse        , &  !> fraction of shortwave surface downward flux that is diffuse [fraction]
-                              ! press_srf             , &  !> surface air pressure [Pa]
-                              ! drag_srf              , &  !> total surface drag [unitless] 
-                              ! t_acoef               , &  !> Richtmeyer-Morten coefficient A for temperature [unitless] 
-                              ! t_bcoef               , &  !> Richtmeyer-Morten coefficient B for temperature [unitless]
-                              ! q_acoef               , &  !> Richtmeyer-Morten coefficient A for specific humidity [unitless] 
-                              ! q_bcoef               , &  !> Richtmeyer-Morten coefficient B for specific humidity [unitless]
-                              ! pch                   , &  !> total surface drag [unitless] 
-                              ! cos_zenith_angle           !> Cosine of solar zenith angle [unitless]
+      ! & t_air                 , &  !> 2m air temperature [K] 
+      ! & q_air                 , &  !> 2m air specific humidity [g g-1] 
+      ! & rain                  , &  !> liquid water precipitation [kg m-2 s-1]
+      ! & snow                  , &  !> solid water precipitation [kg m-2 s-1]
+      ! & wind_air              , &  !> 2m air wind speed [m s-1] 
+      ! & wind_10m              , &  !> 10m air wind speed [m s-1] 
+      ! & lw_srf_down           , &  !> longwave surface downward flux [W m-2] 
+      ! & swvis_srf_down        , &  !> shortwave surface downward flux in the visible band [W m-2]
+      ! & swnir_srf_down        , &  !> shortwave surface downward flux in the near infrared band [W m-2] 
+      ! & swpar_srf_down        , &  !> shortwave surface downward flux in the PAR band [W m-2] 
+      ! & swpar_fdiffuse        , &  !> fraction of shortwave surface downward flux that is diffuse [fraction]
+      ! & press_srf             , &  !> surface air pressure [Pa]
+      ! & drag_srf              , &  !> total surface drag [unitless] 
+      ! & t_acoef               , &  !> Richtmeyer-Morten coefficient A for temperature [unitless] 
+      ! & t_bcoef               , &  !> Richtmeyer-Morten coefficient B for temperature [unitless]
+      ! & q_acoef               , &  !> Richtmeyer-Morten coefficient A for specific humidity [unitless] 
+      ! & q_bcoef               , &  !> Richtmeyer-Morten coefficient B for specific humidity [unitless]
+      ! & pch                   , &  !> total surface drag [unitless] 
+      ! & cos_zenith_angle           !> Cosine of solar zenith angle [unitless]
+
     ! CO2
     TYPE(t_jsb_var_real2d) :: &
       ! jsbach4 variables, in quincy routines replaced by co2_mixing_ratio  _c13  _c14
-      ! CO2_air               , &  !> molar ratio (mass)
-      ! CO2_air_mol           , &  !> molar ratio (volume)
-      co2_mixing_ratio      , &  !> surface air co2 mixing ratio [ppmv]   >> mo_atmland_interface: co2_mixing_ratio = co2_air_mol * 1000000._wp
-      co2_mixing_ratio_C13  , &  !> surface air 13co2 mixing ratio [ppmv]
-      co2_mixing_ratio_C14       !> surface air 14co2 mixing ratio [scaled]
+      ! & CO2_air               , &  !> molar ratio (mass)
+      ! & CO2_air_mol           , &  !> molar ratio (volume)
+      & CO2_mixing_ratio      , &  !> surface air CO2 mixing ratio [ppmv]   >> mo_atmland_interface: CO2_mixing_ratio = CO2_air_mol * 1000000._wp
+      & CO2_mixing_ratio_C13  , &  !> surface air 13CO2 mixing ratio [ppmv]
+      & CO2_mixing_ratio_C14       !> surface air 14CO2 mixing ratio [scaled]
     
     
   CONTAINS
@@ -122,22 +123,19 @@ CONTAINS
 
     TYPE(t_jsb_grid),    POINTER :: hgrid
     TYPE(t_jsb_vgrid),   POINTER :: surface
-
+    TYPE(t_jsb_model),   POINTER :: model
     INTEGER :: table
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':new_a2l_memory'
     IF (model_id > 0) CONTINUE ! avoid compiler warning about dummy argument not being used
     table = tables(1)
 
+    model   => Get_model(model_id)
+
     hgrid => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
 
-    !$acc enter data create(mem)
-
-    !$acc enter data create(mem%t_air,mem%q_air,mem%rain,mem%snow,mem%wind_air,mem%wind_10m, &
-    !$acc mem%lw_srf_down,mem%swvis_srf_down,mem%swpar_srf_down,mem%fract_par_diffuse,       &
-    !$acc mem%press_srf,mem%drag_srf,mem%t_acoef,mem%t_bcoef,mem%q_acoef,mem%q_bcoef,        &
-    !$acc mem%pch,mem%cos_zenith_angle,mem%CO2_air,mem%CO2_air_mol)
+    !! !$acc enter data create(mem)
 
     CALL jsb_add_var( mem, 't_air', mem%t_air,       &
       & hgrid, surface,                                                      &
@@ -319,9 +317,6 @@ CONTAINS
 
     IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%t_acoef_wtr%ptr)) THEN
 
-      !$acc enter data create(mem%drag_wtr,mem%t_acoef_wtr,mem%t_bcoef_wtr,mem%q_acoef_wtr,mem%q_bcoef_wtr, &
-      !$acc                   mem%drag_ice,mem%t_acoef_ice,mem%t_bcoef_ice,mem%q_acoef_ice,mem%q_bcoef_ice)
-
       CALL jsb_add_var( mem, 'drag_wtr', mem%drag_wtr,                &
         & hgrid, surface,                                                      &
         & t_cf('surface_drag_wtr', '', ''),                                    &
@@ -404,42 +399,44 @@ CONTAINS
 
     END IF
 
+    IF (.NOT. model%config%use_quincy) RETURN
+
     !! quincy
     ! CALL jsb_add_var( mem, 'swpar_fdiffuse', mem%swpar_fdiffuse, &
-    !         hgrid, surface, &
-    !         t_cf('swpar_fdiffuse', 'fraction', 'fraction of shortwave surface downward flux that is diffuse'), &
-    !         t_grib1(table, 255, grib_bits), &
-    !         t_grib2(255, 255, 255, grib_bits), &
-    !         prefix, suffix, &
-    !         loutput=.TRUE., lrestart=.TRUE., &
-    !         initval_r=0.0_wp)
+    !  & hgrid, surface, &
+    !  & t_cf('swpar_fdiffuse', 'fraction', 'fraction of shortwave surface downward flux that is diffuse'), &
+    !  & t_grib1(table, 255, grib_bits), &
+    !  & t_grib2(255, 255, 255, grib_bits), &
+    !  & prefix, suffix, &
+    !  & loutput=.TRUE., lrestart=.TRUE., &
+    !  & initval_r=0.0_wp)
     
-    CALL jsb_add_var( mem, 'co2_mixing_ratio', mem%co2_mixing_ratio, &
-            hgrid, surface, &
-            t_cf('co2_mixing_ratio', 'ppm', 'surface air co2 mixing ratio'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            loutput=.TRUE., lrestart=.TRUE., &
-            initval_r=0.0_wp)
+    CALL jsb_add_var( mem, 'CO2_mixing_ratio', mem%co2_mixing_ratio,              &
+      & hgrid, surface,                                                           &
+      & t_cf('CO2_mixing_ratio', 'ppm', 'surface air CO2 mixing ratio'),          &
+      & t_grib1(table, 255, grib_bits),                                           &
+      & t_grib2(255, 255, 255, grib_bits),                                        &
+      & prefix, suffix,                                                           &
+      & loutput=.TRUE., lrestart=.TRUE.,                                          &
+      & initval_r=0.0_wp)
 
-    CALL jsb_add_var( mem, 'co2_mixing_ratio_c13', mem%co2_mixing_ratio_c13, &
-            hgrid, surface, &
-            t_cf('co2_mixing_ratio_C13', 'ppm', 'surface air 13co2 mixing ratio'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            loutput=.TRUE., lrestart=.TRUE., &
-            initval_r=0.0_wp)
+    CALL jsb_add_var( mem, 'CO2_mixing_ratio_C13', mem%CO2_mixing_ratio_C13,      &
+      & hgrid, surface,                                                           &
+      & t_cf('CO2_mixing_ratio_C13', 'ppm', 'surface air 13CO2 mixing ratio'),    &
+      & t_grib1(table, 255, grib_bits),                                           &
+      & t_grib2(255, 255, 255, grib_bits),                                        &
+      & prefix, suffix,                                                           &
+      & loutput=.TRUE., lrestart=.TRUE.,                                          &
+      & initval_r=0.0_wp)
 
-    CALL jsb_add_var( mem, 'co2_mixing_ratio_C14', mem%co2_mixing_ratio_c14, &
-            hgrid, surface, &
-            t_cf('co2_mixing_ratio_c14', 'scaled', 'surface air 14co2 mixing ratio'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            loutput=.TRUE., lrestart=.TRUE., &
-            initval_r=0.0_wp)
+    CALL jsb_add_var( mem, 'CO2_mixing_ratio_C14', mem%CO2_mixing_ratio_C14,      &
+      & hgrid, surface,                                                           &
+      & t_cf('CO2_mixing_ratio_C14', 'scaled', 'surface air 14CO2 mixing ratio'), &
+      & t_grib1(table, 255, grib_bits),                                           &
+      & t_grib2(255, 255, 255, grib_bits),                                        &
+      & prefix, suffix,                                                           &
+      & loutput=.TRUE., lrestart=.TRUE.,                                          &
+      & initval_r=0.0_wp)
 
   END SUBROUTINE Init_a2l_memory
 

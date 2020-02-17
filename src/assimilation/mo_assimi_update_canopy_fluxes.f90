@@ -74,14 +74,15 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER       :: model
-    TYPE(t_lctlib_element), POINTER       :: lctlib       !< land-cover-type library - parameter across pft's
-    TYPE(t_jsb_vgrid),      POINTER       :: vgrid_canopy ! Vertical grid
-    INTEGER                               :: ncanopy      ! number of canopy layers
-    INTEGER                               :: icanopy      ! for looping across ncanopy layers
-    INTEGER                               :: no_omp_thread ! number of open mp thread (for task options)
-    LOGICAL, DIMENSION(options%nc)        :: l_day        ! day/night
-    REAL(wp),DIMENSION(options%nc)        :: ga, hlp1     ! dummy variable
+    TYPE(t_lctlib_element), POINTER       :: lctlib                           !< land-cover-type library - parameter across pft's
+    TYPE(t_jsb_vgrid),      POINTER       :: vgrid_canopy                     !  Vertical grid
+    INTEGER                               :: ncanopy                          !  number of canopy layers
+    INTEGER                               :: icanopy                          !  for looping across ncanopy layers
+    INTEGER                               :: no_omp_thread                    !  number of open mp thread (for task options)
+    LOGICAL, DIMENSION(options%nc)        :: l_day                            !  day/night
+    REAL(wp),DIMENSION(options%nc)        :: ga, hlp1, tmp_steplen_times_wind !  dummy variable
     INTEGER                               :: iblk, ics, ice, nc
+    REAL(wp)                              :: steplen
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_canopy_fluxes'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -142,11 +143,14 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: fn_rub_cl
     dsl4jsb_Real3D_onChunk      :: fn_pepc_cl
     dsl4jsb_Real3D_onChunk      :: leaf_nitrogen_cl
+
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
+    steplen = options%steplen
+
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
     IF (.NOT. tile%Is_process_active(ASSIMI_)) RETURN
@@ -241,7 +245,9 @@ CONTAINS
     !!
     beta_air(:)     = calc_atm_moisture_stress(t_air(:), q_air(:), press_srf(:))
 
-    ga(:) = heat_transfer_coef(drag_srf(:),model%options(no_omp_thread)%steplen) * MAX(wind_10m, min_wind) 
+    tmp_steplen_times_wind(:) = steplen * MAX(wind_10m(:), min_wind)
+    !$claw expand
+    ga(:) = heat_transfer_coef(drag_srf(:), tmp_steplen_times_wind(:)) 
 
     ! Calculate the state of acclimation, slowing photosynthesis in evergreen conifers in spring
     ! temporary set to 1.0 !
@@ -250,6 +256,7 @@ CONTAINS
     !> 2.0 calculate photosynthesis per layer
     !!
     ! get information about day/nigth (same way as in RAD_)
+    !$claw expand
     l_day(:) = Has_minimal_radiation(swvis_srf_down(:), swnir_srf_down(:))
     ! calc PS
     DO icanopy = 1,ncanopy

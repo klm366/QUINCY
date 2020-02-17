@@ -44,6 +44,7 @@ MODULE mo_pheno_interface
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(ASSIMI_)
   dsl4jsb_Use_memory(CARBON_)
+  dsl4jsb_Use_memory(VEG_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -158,9 +159,6 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   FUNCTION Create_task_time_average_phenology(model_id) RESULT(return_ptr)
 
-    IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
@@ -182,9 +180,8 @@ CONTAINS
     USE mo_jsb_model_class,   ONLY: t_jsb_model
     USE mo_jsb_class,         ONLY: Get_model
 
-    ! in/out
     CLASS(t_jsb_process), INTENT(inout) :: this
-    INTEGER,                 INTENT(in) :: model_id
+    INTEGER,              INTENT(in) :: model_id
 
     ! local
     TYPE(t_jsb_model), POINTER :: model
@@ -839,22 +836,16 @@ CONTAINS
 
   END SUBROUTINE aggregate_phenology
 
-
   !-----------------------------------------------------------------------------------------------------
   !> Implementation of "aggregate": phenology_q_ task
-  !! 
   !! 
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE aggregate_phenology_q_(tile, options)
 
-    dsl4jsb_Use_memory(VEG_)
-
-    ! ---------------------------
-    ! 0.1 InOut
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
-    ! ---------------------------
-    ! 0.2 Local
+
+    ! Locals
     TYPE(t_jsb_model), POINTER                :: model
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(VEG_)
@@ -1007,7 +998,6 @@ CONTAINS
 
   END SUBROUTINE aggregate_fpc
 
-
   !-----------------------------------------------------------------------------------------------------
   !> calculate time moving averages for PHENO_
   !!
@@ -1015,7 +1005,6 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_time_average_phenology(tile, options)
 
-    USE mo_jsb_process_class,       ONLY: A2L_, ASSIMI_, VEG_, PHENO_
     USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     !USE mo_jsb_model_class,         ONLY: t_jsb_model
@@ -1028,28 +1017,19 @@ CONTAINS
     USE mo_time_averages,           ONLY: calc_time_mavg, mavg_period_tphen, mavg_period_weekly, mavg_period_monthly, &
                                           mavg_period_tlabile, mavg_period_tsoa
 
-    ! Use of process configurations (t_PROC_config)
-    ! Use of process memories
-    dsl4jsb_Use_memory(A2L_)        
-    dsl4jsb_Use_memory(ASSIMI_)     
-    dsl4jsb_Use_memory(VEG_)     
-
-    IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile               !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)    :: options            !< model options
-    ! ---------------------------
-    ! 0.2 Local
-    !TYPE(t_jsb_model),      POINTER         :: model                !< instance of the model
-    INTEGER                                 :: iblk, ics, ice, nc
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_time_average_phenology'
-    ! ---------------------------
-    ! 0.3 Declare Memory
-    ! Declare process configuration and memory Pointers
+
+    ! Locals
+    !TYPE(t_jsb_model), POINTER :: model                !< instance of the model
+    INTEGER                     :: iblk, ics, ice, nc
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_time_average_phenology'
+
     dsl4jsb_Def_memory(A2L_)                        
     dsl4jsb_Def_memory(ASSIMI_)                     
-    dsl4jsb_Def_memory(VEG_)                      
+    dsl4jsb_Def_memory(VEG_)         
+             
     ! Declare pointers to variables in memory
     ! A2L_
     dsl4jsb_Real2D_onChunk      :: t_air
@@ -1071,26 +1051,24 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: maint_respiration_pot
     dsl4jsb_Real2D_onChunk      :: growth_req_n
     dsl4jsb_Real2D_onChunk      :: growth_req_p
+
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
-    ! ---------------------------
-    ! 0.4 Process Activity, Debug Option
+
     IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
+
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    ! ---------------------------
-    ! 0.5 Get Memory
+
     !model         => Get_model(tile%owner_model_id)
     !lctlib        => model%lctlib(tile%lcts%lib_id)
-    ! Get process config
     !
-    ! Get process memories
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
-    ! Get process variables (Set pointers to variables in memory)
+
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation)
@@ -1169,13 +1147,6 @@ CONTAINS
     USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
     USE mo_jsb_task_class,     ONLY: t_jsb_task_options
 
-    ! Use of processes in this module
-    dsl4jsb_Use_processes ASSIMI_, VEG_
-
-    dsl4jsb_Use_memory(ASSIMI_)
-    dsl4jsb_Use_memory(VEG_)
-
-    IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile

@@ -53,7 +53,6 @@ MODULE mo_l2a_memory_class
       sensible_hflx_ice  , &
       carbon_conservation_test, &
       yday_c_state_sum
-
   CONTAINS
     PROCEDURE :: Init => Init_l2a_memory
   END TYPE t_l2a_memory

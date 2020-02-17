@@ -204,9 +204,9 @@ CONTAINS
     vgrid_canopy => Get_vgrid('canopy_layer_q_')  !! quincy
     model   => Get_model(model_id)
 
-    IF (.NOT. model%config%use_quincy) THEN
+    ! !$acc enter data pcreate(mem)
 
-    !$acc enter data pcreate(mem)
+    IF (.NOT. model%config%use_quincy) THEN
 
       CALL jsb_add_var( mem, 'gross_assimilation_ca', mem%gross_assimilation_ca,     &
         & hgrid, surface,                                                            &

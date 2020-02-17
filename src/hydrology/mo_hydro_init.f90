@@ -47,12 +47,16 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
+    TYPE(t_jsb_model), POINTER :: model
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init'
+
+    model => Get_model(tile%owner_model_id)
 
     CALL hydro_init_bc(tile)
     CALL hydro_init_ic(tile)
     !! quincy
-    CALL hydro_init_q_ic(tile)
+    IF (model%config%use_quincy) CALL hydro_init_q_ic(tile)
 
   END SUBROUTINE hydro_init
 
@@ -79,7 +83,7 @@ CONTAINS
 
     IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
 
-    IF (debug_on()) CALL message(TRIM(routine), 'Setting  hydrology boundary conditions for tile '//TRIM(tile%name))
+    IF (debug_on()) CALL message(routine, 'Setting  hydrology boundary conditions for tile '//TRIM(tile%name))
 
     model => Get_model(tile%owner_model_id)
 
@@ -381,14 +385,16 @@ CONTAINS
       ! water content should actually be zero. Therefore, make sure that water content is not larger than field capacity.
       dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl) = &
         & MIN(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl), dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl))
+      !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl))
 
       DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, w_soil_root), 2)
-        dsl4jsb_var_ptr(HYDRO_, w_soil_column)     (:,  i)    = get_water_in_root_zone( &
-          & dsl4jsb_var_ptr(HYDRO_, w_soil_sl)     (:,:,i),                             &
-          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl) (:,:,i),                             &
-          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl) (:,:,i))
+          CALL get_water_in_root_zone(                       &
+          & dsl4jsb_var_ptr(HYDRO_, w_soil_sl)     (:,:,i),  &
+          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl) (:,:,i),  &
+          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl) (:,:,i),  &
+          & dsl4jsb_var_ptr(HYDRO_, w_soil_column) (:,  i)   )
       END DO
-
+      !$acc update host(dsl4jsb_var_ptr(HYDRO_, w_soil_column))
       WHERE (dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column) > dsl4jsb_var2D_onDomain(HYDRO_, max_moist))
         dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column) = dsl4jsb_var2D_onDomain(HYDRO_, max_moist)
       END WHERE
@@ -411,22 +417,27 @@ CONTAINS
     IF (tile%contains_vegetation) THEN
       ! Calculate water content and field capacity in the root zone
       DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, w_soil_root), 2)
-        dsl4jsb_var_ptr(HYDRO_, w_soil_root)       (:,  i)    = get_water_in_root_zone( &
-          & dsl4jsb_var_ptr(HYDRO_, w_soil_sl)     (:,:,i),                             &
-          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)   (:,:,i),                           &
-          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)    (:,:,i))
-        dsl4jsb_var_ptr(HYDRO_, w_soil_root_fc)    (:,  i)    = get_water_in_root_zone( &
-          & dsl4jsb_var_ptr(HYDRO_, w_soil_fc_sl)  (:,:,i),                             &
-          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)   (:,:,i),                           &
-          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)    (:,:,i))
-        dsl4jsb_var_ptr(HYDRO_, w_soil_root_pwp)   (:,  i)    = get_water_in_root_zone( &
-          & dsl4jsb_var_ptr(HYDRO_, w_soil_pwp_sl) (:,:,i),                             &
-          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)   (:,:,i),                           &
-          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)    (:,:,i))
+          CALL get_water_in_root_zone( &
+          & dsl4jsb_var_ptr(HYDRO_, w_soil_sl)      (:,:,i), & 
+          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)  (:,:,i), &
+          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)  (:,:,i), &
+          & dsl4jsb_var_ptr(HYDRO_, w_soil_root)    (:,  i)  )
+ 
+          CALL get_water_in_root_zone( & 
+          & dsl4jsb_var_ptr(HYDRO_, w_soil_fc_sl)   (:,:,i), & 
+          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)  (:,:,i), &
+          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)  (:,:,i), &
+          & dsl4jsb_var_ptr(HYDRO_, w_soil_root_fc) (:,  i)  )
+          
+          CALL get_water_in_root_zone( & 
+          & dsl4jsb_var_ptr(HYDRO_, w_soil_pwp_sl)  (:,:,i), & 
+          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)  (:,:,i), &
+          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)  (:,:,i), &
+          & dsl4jsb_var_ptr(HYDRO_, w_soil_root_pwp)(:,  i)  )
       END DO
-      !$acc update device(dsl4jsb_var_ptr(HYDRO_, w_soil_root), &
-      !$acc dsl4jsb_var_ptr(HYDRO_, w_soil_root_fc), &
-      !$acc dsl4jsb_var_ptr(HYDRO_, w_soil_root_pwp))
+      !$acc update host(dsl4jsb_var_ptr(HYDRO_, w_soil_root),     &
+      !$acc             dsl4jsb_var_ptr(HYDRO_, w_soil_root_fc),  &
+      !$acc             dsl4jsb_var_ptr(HYDRO_, w_soil_root_pwp))
     END IF
 
   END SUBROUTINE hydro_init_ic

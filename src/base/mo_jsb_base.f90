@@ -198,9 +198,10 @@ CONTAINS
       ! CALL init_sse_constants
       ! CALL init_sb_constants
       CALL init_pheno_constants    
+      IF (debug_on()) CALL message(TRIM(routine), 'initialized quincy constants)')
     ENDIF
 
-    IF (debug_on()) CALL message(TRIM(routine), 'done basic setup (models, process configs, quincy constants init)')
+    IF (debug_on()) CALL message(TRIM(routine), 'done basic setup (models, process configs)')
 
   END SUBROUTINE jsbach_setup_models
 

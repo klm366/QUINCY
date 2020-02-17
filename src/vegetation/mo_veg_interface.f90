@@ -38,7 +38,6 @@ MODULE mo_veg_interface
   USE mo_jsb_tile_class,              ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_task_class,              ONLY: t_jsb_process_task, t_jsb_task_options
   USE mo_jsb_process_class,           ONLY: t_jsb_process
-  USE mo_veg_util,                    ONLY: reset_veg_fluxes
   ! USE mo_veg_turnover,                ONLY: update_veg_turnover
   ! USE mo_veg_dynamics,                ONLY: update_veg_dynamics
   ! USE mo_veg_growth,                  ONLY: update_veg_growth
@@ -68,8 +67,8 @@ MODULE mo_veg_interface
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_reset_veg_fluxes
   CONTAINS
-    PROCEDURE, NOPASS :: Integrate => reset_veg_fluxes      !< Advances task computation for one timestep
-    PROCEDURE, NOPASS :: Aggregate => aggr_reset_veg_fluxes !< Aggregates computed task variables
+    PROCEDURE, NOPASS :: Integrate => update_reset_veg_fluxes    !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Aggregate => aggregate_reset_veg_fluxes !< Aggregates computed task variables
   END TYPE tsk_reset_veg_fluxes
 
   ! !-----------------------------------------------------------------------------------------------------
@@ -270,65 +269,72 @@ CONTAINS
   ! 
   ! END FUNCTION Create_task_update_veg_pools
 
+  !-----------------------------------------------------------------------------------------------------
+  !> Implementation of "update": reset_veg_fluxes task
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE update_reset_veg_fluxes(tile, options)
+
+    USE mo_veg_util, ONLY: reset_veg_fluxes
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    INTEGER :: iblk
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_reset_veg_fluxes'
+
+    iblk    = options%iblk
+
+    IF (debug_on() .AND. iblk==1) CALL message(routine, 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    CALL reset_veg_fluxes(tile, options)
+
+    IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
+
+  END SUBROUTINE update_reset_veg_fluxes
 
   !-----------------------------------------------------------------------------------------------------
   !> Implementation of "aggregate": reset_veg_fluxes task
-  !!  actually NOT using this routine, i.e., no var is aggregated here
+  !! Actually NOT using this routine, i.e., no var is aggregated here
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE aggr_reset_veg_fluxes(tile, options)
+  SUBROUTINE aggregate_reset_veg_fluxes(tile, options)
 
-    ! Use of process memories (t_PROC_memory)
-    dsl4jsb_Use_memory(VEG_)
-
-    IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
-    ! ---------------------------
-    ! 0.2 Local
-    TYPE(t_jsb_model),        POINTER         :: model
-    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
-    INTEGER                                   :: iblk, ics, ice, nc
-    !X if necessary: REAL(wp) :: dtime, steplen
-    CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggr_reset_veg_fluxes'
-    ! ---------------------------
-    ! 0.3 Declare Memory
+
+    ! Local
+    TYPE(t_jsb_model),        POINTER :: model
+    CLASS(t_jsb_aggregator),  POINTER :: weighted_by_fract
+    INTEGER                           :: iblk, ics, ice, nc
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_reset_veg_fluxes'
+
     ! Declare process configuration and memory Pointers
     !dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_memory(VEG_)
+
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
-    !X if necessary: dtime   = options%dtime
-    !X if necessary: steplen = options%steplen
-    ! ---------------------------
-    ! 0.4 Process Activity, Debug Option
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    ! ---------------------------
-    ! 0.5 Get Memory
-    ! Get process variables (Set pointers to variables in memory)
+
+    IF (debug_on() .AND. iblk==1) CALL message(routine, 'Starting on tile '//TRIM(tile%name)//' ...')
+
     model => Get_model(tile%owner_model_id)
+
     ! Get process config
     !dsl4jsb_Get_config(VEG_)
     ! Get process memories
     dsl4jsb_Get_memory(VEG_)
 
-
-    ! ------------------------------------------------------------------------------------------------------------
-    ! Go aggregate
-    ! ------------------------------------------------------------------------------------------------------------
-    
-
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
     ! nothing to aggregate, yet
 
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+    IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
 
-  END SUBROUTINE aggr_reset_veg_fluxes
+  END SUBROUTINE aggregate_reset_veg_fluxes
 
   ! !-----------------------------------------------------------------------------------------------------
   ! !> Implementation of "aggregate": update_veg_turnover task
