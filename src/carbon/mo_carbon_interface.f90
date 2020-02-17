@@ -99,10 +99,23 @@ CONTAINS
   !!
   SUBROUTINE Register_carbon_tasks(this, model_id)
 
+    USE mo_jsb_model_class,   ONLY: t_jsb_model
+    USE mo_jsb_class,         ONLY: Get_model
+
+    ! in/out
     CLASS(t_jsb_process), INTENT(inout) :: this
     INTEGER,                 INTENT(in) :: model_id
 
-    CALL this%Register_task(tsk_C_NPP_pot_allocation(model_id))
+    ! local
+    TYPE(t_jsb_model), POINTER :: model
+
+    ! get var / objects 
+    model   => Get_model(model_id)
+
+
+    IF (.NOT. model%config%use_quincy) THEN
+      CALL this%Register_task(tsk_C_NPP_pot_allocation(model_id))
+    ENDIF
 
   END SUBROUTINE Register_carbon_tasks
 
