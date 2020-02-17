@@ -106,7 +106,7 @@ MODULE mo_jsb_var_class
 !#pragma GCC diagnostic pop
 
   TYPE t_jsb_var_p
-    CLASS(t_jsb_var), POINTER :: p
+    CLASS(t_jsb_var), POINTER :: p => NULL()
   END TYPE t_jsb_var_p
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_var_class'

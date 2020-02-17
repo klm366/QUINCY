@@ -47,10 +47,16 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
+    TYPE(t_jsb_model), POINTER :: model
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init'
+
+    model => Get_model(tile%owner_model_id)
 
     CALL hydro_init_bc(tile)
     CALL hydro_init_ic(tile)
+    !! quincy
+    IF (model%config%use_quincy) CALL hydro_init_q_ic(tile)
 
   END SUBROUTINE hydro_init
 
@@ -77,7 +83,7 @@ CONTAINS
 
     IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
 
-    IF (debug_on()) CALL message(TRIM(routine), 'Setting  hydrology boundary conditions for tile '//TRIM(tile%name))
+    IF (debug_on()) CALL message(routine, 'Setting  hydrology boundary conditions for tile '//TRIM(tile%name))
 
     model => Get_model(tile%owner_model_id)
 
@@ -379,14 +385,16 @@ CONTAINS
       ! water content should actually be zero. Therefore, make sure that water content is not larger than field capacity.
       dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl) = &
         & MIN(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl), dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl))
+      !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl))
 
       DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, w_soil_root), 2)
-        dsl4jsb_var_ptr(HYDRO_, w_soil_column)     (:,  i)    = get_water_in_root_zone( &
-          & dsl4jsb_var_ptr(HYDRO_, w_soil_sl)     (:,:,i),                             &
-          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl) (:,:,i),                             &
-          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl) (:,:,i))
+          CALL get_water_in_root_zone(                       &
+          & dsl4jsb_var_ptr(HYDRO_, w_soil_sl)     (:,:,i),  &
+          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl) (:,:,i),  &
+          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl) (:,:,i),  &
+          & dsl4jsb_var_ptr(HYDRO_, w_soil_column) (:,  i)   )
       END DO
-
+      !$acc update host(dsl4jsb_var_ptr(HYDRO_, w_soil_column))
       WHERE (dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column) > dsl4jsb_var2D_onDomain(HYDRO_, max_moist))
         dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column) = dsl4jsb_var2D_onDomain(HYDRO_, max_moist)
       END WHERE
@@ -409,25 +417,95 @@ CONTAINS
     IF (tile%contains_vegetation) THEN
       ! Calculate water content and field capacity in the root zone
       DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, w_soil_root), 2)
-        dsl4jsb_var_ptr(HYDRO_, w_soil_root)       (:,  i)    = get_water_in_root_zone( &
-          & dsl4jsb_var_ptr(HYDRO_, w_soil_sl)     (:,:,i),                             &
-          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)   (:,:,i),                           &
-          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)    (:,:,i))
-        dsl4jsb_var_ptr(HYDRO_, w_soil_root_fc)    (:,  i)    = get_water_in_root_zone( &
-          & dsl4jsb_var_ptr(HYDRO_, w_soil_fc_sl)  (:,:,i),                             &
-          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)   (:,:,i),                           &
-          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)    (:,:,i))
-        dsl4jsb_var_ptr(HYDRO_, w_soil_root_pwp)   (:,  i)    = get_water_in_root_zone( &
-          & dsl4jsb_var_ptr(HYDRO_, w_soil_pwp_sl) (:,:,i),                             &
-          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)   (:,:,i),                           &
-          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)    (:,:,i))
+          CALL get_water_in_root_zone( &
+          & dsl4jsb_var_ptr(HYDRO_, w_soil_sl)      (:,:,i), & 
+          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)  (:,:,i), &
+          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)  (:,:,i), &
+          & dsl4jsb_var_ptr(HYDRO_, w_soil_root)    (:,  i)  )
+ 
+          CALL get_water_in_root_zone( & 
+          & dsl4jsb_var_ptr(HYDRO_, w_soil_fc_sl)   (:,:,i), & 
+          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)  (:,:,i), &
+          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)  (:,:,i), &
+          & dsl4jsb_var_ptr(HYDRO_, w_soil_root_fc) (:,  i)  )
+          
+          CALL get_water_in_root_zone( & 
+          & dsl4jsb_var_ptr(HYDRO_, w_soil_pwp_sl)  (:,:,i), & 
+          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)  (:,:,i), &
+          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)  (:,:,i), &
+          & dsl4jsb_var_ptr(HYDRO_, w_soil_root_pwp)(:,  i)  )
       END DO
-      !$acc update device(dsl4jsb_var_ptr(HYDRO_, w_soil_root), &
-      !$acc dsl4jsb_var_ptr(HYDRO_, w_soil_root_fc), &
-      !$acc dsl4jsb_var_ptr(HYDRO_, w_soil_root_pwp))
+      !$acc update host(dsl4jsb_var_ptr(HYDRO_, w_soil_root),     &
+      !$acc             dsl4jsb_var_ptr(HYDRO_, w_soil_root_fc),  &
+      !$acc             dsl4jsb_var_ptr(HYDRO_, w_soil_root_pwp))
     END IF
 
   END SUBROUTINE hydro_init_ic
+
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Intialize hydro variables initial conditions (ic)
+  !! 
+  !! quincy
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE hydro_init_q_ic(tile)
+
+    dsl4jsb_Use_memory(HYDRO_)
+
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut
+    CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
+    ! ---------------------------
+    ! 0.2 Local
+    TYPE(t_jsb_model),       POINTER  :: model
+    !TYPE(t_input_file)                :: input_file
+    CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init_q_ic'
+    ! ---------------------------
+    ! 0.3 Declare Memory
+    ! Declare process configuration and memory Pointers
+    !dsl4jsb_Def_config(HYDRO_)
+    dsl4jsb_Def_memory(HYDRO_)
+    ! Declare pointers to variables in memory
+    dsl4jsb_Real2D_onDomain    :: w_soil_root_theta
+    dsl4jsb_Real2D_onDomain    :: w_soil_root_pot
+    ! ---------------------------
+    ! 0.4 Debug Option
+    IF (debug_on()) CALL message(TRIM(routine), 'Setting initial conditions of hydro memory (quincy) for tile '// &
+      &                          TRIM(tile%name))
+    ! ---------------------------
+    ! 0.5 Get Memory
+    model => get_model(tile%owner_model_id)
+    ! Get process config
+    !dsl4jsb_Get_config(HYDRO_)
+    ! Get process memories
+    dsl4jsb_Get_memory(HYDRO_)
+    ! Get process variables (Set pointers to variables in memory)
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, w_soil_root_theta)
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, w_soil_root_pot)
+    
+    
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
+    !> 1.0 init constants
+    !! 
+    !
+
+
+    !> 2.0 init variables
+    !!    
+    ! get input file
+    !input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HYDRO_)%ic_filename), model%grid_id)
+
+    w_soil_root_theta(:,:) = 1.0_wp   ! this is the default value, maybe better use site-specific value
+    w_soil_root_pot(:,:)   = -0.032999999999_wp ! quincy: saxtonA(:,1) * (MIN(w_soil_root_fc,w_soil_root(:)) / root_depth(:)) ** saxtonB(:,1) 
+
+
+  END SUBROUTINE hydro_init_q_ic
+
 
   SUBROUTINE init_soil_properties(tile)
 

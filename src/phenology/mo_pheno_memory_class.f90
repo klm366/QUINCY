@@ -111,6 +111,17 @@ MODULE mo_pheno_memory_class
     REAL(wp), POINTER :: lai_mon(:,:,:)       !< Monthly leaf area index (per year or climatology) <nproma x nblks x 14>    !
     REAL(wp), POINTER :: fract_fpc_mon(:,:,:) !< Monthly fpc (per year or climatology) <nproma x nblks x 14>    !
 
+    !! quincy
+    ! used as logical: 0 = FALSE / 1 = TRUE
+    TYPE(t_jsb_var_real2d)          :: &
+                                    growing_season          !< logical to identify whether the plant is in the growing season or not
+
+
+    TYPE(t_jsb_var_real2d)          :: &
+                                    gdd                 , & !< growing degree days above 5°C [K day]
+                                    nd_dormance         , & !< number of days since last growing season [# days]
+                                    lai_max                 !< maximum lai - from site specific lai data [m2 m-2]
+
   CONTAINS
     PROCEDURE :: Init => Init_pheno_memory
   END TYPE t_pheno_memory
@@ -123,7 +134,6 @@ CONTAINS
   SUBROUTINE Init_pheno_memory(mem, prefix, suffix, lct_ids, model_id)
 
     ! Declarations
-    USE mo_jsb_varlist,       ONLY: jsb_add_var
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
@@ -158,8 +168,12 @@ CONTAINS
     !canopy_layer => Get_vgrid('canopy_layer')
 
     dsl4jsb_Get_config(PHENO_)
+
+    !! do not add these variables if use_quincy=.TRUE.
+    !! some of these var are added to memory anyway, as they are needed also for quincy, see below
+    IF (.NOT. model%config%use_quincy) THEN
     
-    !$acc enter data pcreate(mem)
+    !! !$acc enter data pcreate(mem)
 
     IF ( (     One_of(LAND_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(VEG_TYPE,  lct_ids(:)) > 0 &
@@ -171,9 +185,6 @@ CONTAINS
         !$acc enter data pcreate(mem%lai_mon,mem%fract_fpc_mon)
         !$acc enter data attach(mem%lai_mon,mem%fract_fpc_mon)
       ! END IF
-  
-      !$acc enter data pcreate(mem%lai,mem%fract_fpc,mem%fract_fpc_max,      &
-      !$acc mem%fract_forest,mem%veg_fract_correction)
 
       CALL mem%Add_var( 'lai', mem%lai,                                   &
         & hgrid, surface,                                                      &
@@ -217,14 +228,6 @@ CONTAINS
         & initval_r=0.0_wp )
 
       IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'logrop') THEN
-
-        !$acc enter data pcreate(mem%growth_phase_SG,mem%growth_phase_EG,      &
-        !$acc mem%growth_phase_CRP,mem%days_since_growth_begin_EG,             &
-        !$acc mem%days_since_growth_begin_SG,mem%previous_day_NPP_pot_rate_ca, &
-        !$acc mem%number_of_individuals,mem%biomass_per_individual,            &
-        !$acc mem%cconservation_allom,mem%maxLAI_allom,mem%day_NPP_sum,        &
-        !$acc mem%heat_sum_EG,mem%heat_sum_SG,mem%heat_sum_CRP,                &
-        !$acc mem%heat_sum_winter,mem%chill_days_SG,mem%chill_days_EG)
 
         CALL mem%Add_var('growth_phase_sg', mem%growth_phase_SG,          &
           & hgrid, surface,                                                    &
@@ -365,6 +368,89 @@ CONTAINS
 
       END IF
 
+    END IF  !  VEG / LAND
+    END IF  !  IF(.NOT. use_quincy)
+    
+    !! quincy
+    IF (model%config%use_quincy) THEN
+      IF ( One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. &
+         & One_of(VEG_TYPE,  lct_ids(:)) > 0) THEN
+
+        !! jsbach4 variables, copied from above (with some minor modification for output/restart)
+        !!
+        CALL mem%Add_var('lai', mem%lai,                                         &
+          & hgrid, surface,                                                      &
+          & t_cf('leaf_area_index', '', ''),                                     &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+          & prefix, suffix,                                                      &
+          & loutput=.TRUE.,                                                      &
+          & lrestart=.TRUE.,                                                     &
+          & initval_r=0.0_wp )
+  
+        CALL mem%Add_var('fract_fpc', mem%fract_fpc,                             &
+          & hgrid, surface,                                                      &
+          & t_cf('foliage_projected_cover', '', ''),                             &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+          & prefix, suffix,                                                      &
+          & loutput=.TRUE.,                                                      &
+          & initval_r=0.0_wp )
+  
+        CALL mem%Add_var('fract_fpc_max', mem%fract_fpc_max,                     &
+          & hgrid, surface,                                                      &
+          & t_cf('maximum_fpc', '', ''),                                         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+          & prefix, suffix,                                                      &
+          & loutput=.TRUE.,                                                      &
+          & initval_r=0.0_wp )
+  
+        CALL mem%Add_var('veg_fract_correction', mem%veg_fract_correction,       &
+          & hgrid, surface,                                                      &
+          & t_cf('Correction factor to convert tile to canopy area', '', '') ,   &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+          & prefix, suffix,                                                      &
+          & loutput=.TRUE.,                                                      &
+          & lrestart=.TRUE.,                                                     &
+          & initval_r=0.0_wp )
+
+        !! original quincy variables
+        !!
+        CALL mem%Add_var('growing_season', mem%growing_season,                                                   &
+          & hgrid, surface,                                                                                      &
+          & t_cf('growing_season', 'logical', 'logical to identify whether the plant is in the growing season'), &
+          & t_grib1(table, 255, grib_bits),                                                                      &
+          & t_grib2(255, 255, 255, grib_bits),                                                                   &
+          & prefix, suffix,                                                                                      &
+          & loutput=.TRUE., lrestart=.TRUE.,                                                                     &
+          & initval_r=0.0_wp) !false) ! initvalue
+  
+        CALL mem%Add_var('gdd', mem%gdd,                                                                         &
+          & hgrid, surface,                                                                                      &
+          & t_cf('gdd', 'K days', 'growing degree days above 5 degC'),                                           &
+          & t_grib1(table, 255, grib_bits),                                                                      &
+          & t_grib2(255, 255, 255, grib_bits),                                                                   &
+          & prefix, suffix,                                                                                      &
+          & loutput=.TRUE., lrestart=.TRUE.,                                                                     &
+          & initval_r=0.0_wp) ! initvalue
+    
+        CALL mem%Add_var('nd_dormance', mem%nd_dormance,                                                         &
+          & hgrid, surface,                                                                                      &
+          & t_cf('nd_dormance', '# days', 'number of days since last growing season'),                           &
+          & t_grib1(table, 255, grib_bits),                                                                      &
+          & t_grib2(255, 255, 255, grib_bits),                                                                   &
+          & prefix, suffix,                                                                                      &
+          & loutput=.TRUE., lrestart=.TRUE.,                                                                     &
+          & initval_r=0.0_wp) ! initvalue
+  
+        CALL mem%Add_var('lai_max', mem%lai_max,                                                                 &
+          & hgrid, surface,                                                                                      &
+          & t_cf('lai_max', 'm2 m-2', 'maximum lai (site specific)'),                                            &
+          & t_grib1(table, 255, grib_bits),                                                                      &
+          & t_grib2(255, 255, 255, grib_bits),                                                                   &
+          & prefix, suffix,                                                                                      &
+          & loutput=.TRUE., lrestart=.TRUE.,                                                                     &
+          & initval_r=0.0_wp) ! initvalue
+  
+      END IF
     END IF
 
   END SUBROUTINE Init_pheno_memory

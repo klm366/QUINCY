@@ -367,7 +367,7 @@ CONTAINS
 
   SUBROUTINE jsbach_start_timestep(model_id, current_datetime, dtime)
 
-    USE mo_jsb_time,          ONLY: is_newday
+    USE mo_jsb_time,          ONLY: is_newday, is_time_experiment_start
     USE mo_carbon_interface,  ONLY: yday_carbon_conservation_test
 
     INTEGER,                   INTENT(in) :: model_id
@@ -402,7 +402,7 @@ CONTAINS
     CALL model%Get_top_tile(tile)
 
     IF (model%processes(CARBON_)%p%config%active) THEN
-      IF(is_newday(current_datetime, dtime)) THEN
+      IF (is_newday(current_datetime, dtime) .AND. .NOT. is_time_experiment_start(current_datetime)) THEN
         CALL yday_carbon_conservation_test(tile)
       END IF
     END IF
@@ -456,9 +456,9 @@ CONTAINS
     CALL interface_hd_ocean(tile, model%options(no_omp_thread))
 #endif
 
-!#ifdef _OPENACC
+! #ifdef _OPENACC
 !    CALL model%gpu_to_cpu()
-!#endif
+! #endif
 
     l_trace_memory = .FALSE.
     SELECT CASE (get_debug_memory_level())

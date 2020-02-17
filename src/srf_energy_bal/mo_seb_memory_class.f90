@@ -118,7 +118,7 @@ CONTAINS
 
   SUBROUTINE Init_seb_memory(mem, prefix, suffix, lct_ids, model_id)
 
-    USE mo_jsb_varlist,       ONLY: jsb_add_var, BASIC !, MEDIUM, FULL
+    USE mo_jsb_varlist,       ONLY: BASIC !, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables !, TSTEP_CONSTANT
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
@@ -146,11 +146,9 @@ CONTAINS
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
 
-    !$acc enter data pcreate(mem)
+    !! !$acc enter data pcreate(mem)
     dsl4jsb_Get_config(SEB_)
 
-    !$acc enter data pcreate(mem%t,mem%t_old,mem%t_unfilt,mem%heat_cap,     &
-    !$acc mem%heat_cap_old,mem%latent_hflx,mem%sensible_hflx,mem%forc_hflx)
     CALL mem%Add_var( 't', mem%t,                                               &
       & hgrid, surface,                                                              &
       & t_cf('sfc_temp', 'K', 'surface temperature'),                                &
@@ -220,12 +218,6 @@ CONTAINS
 
     ! Additional variables for LAND lct
     IF (One_of(LAND_TYPE, lct_ids(:)) > 0 ) THEN
-
-      !$acc enter data pcreate(mem%s_star,mem%qsat_star,mem%t_unfilt_old, &
-      !$acc mem%t_filt,mem%t_eff,mem%latent_hflx_lnd,mem%sensible_hflx_lnd, &
-      !$acc mem%previous_day_temp_mean,mem%previous_day_temp_min, &
-      !$acc mem%previous_day_temp_max,mem%pseudo_soil_temp,mem%day_temp_sum, &
-      !$acc mem%day_temp_min,mem%day_temp_max,mem%N_pseudo_soil_temp,mem%F_pseudo_soil_temp)
 
       CALL mem%Add_var( 's_star', mem%s_star,                                           &
         & hgrid, surface,                                                                    &
@@ -353,9 +345,6 @@ CONTAINS
     ! Additional variables for lakes
     IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 ) THEN
 
-      !$acc enter data pcreate(mem%t_lwtr,mem%s_lwtr,mem%qsat_lwtr, &
-      !$acc mem%latent_hflx_wtr,mem%sensible_hflx_wtr,mem%fract_lice)
-
       CALL mem%Add_var( 't_lwtr', mem%t_lwtr,                                     &
         & hgrid, surface,                                                              &
         & t_cf('sfc_temp_wtr', 'K', 'lake surface temperature wtr '),                  &
@@ -404,12 +393,6 @@ CONTAINS
         & initval_r=0.0_wp )
     
       IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
-
-        !$acc enter data pcreate(mem%t_lice, & 
-        !$acc mem%s_lice,mem%qsat_lice,                                 &
-        !$acc mem%latent_hflx_ice,mem%sensible_hflx_ice,mem%depth_lice, &
-        !$acc mem%hflx_form_ice,mem%hflx_cond_ice,                      &
-        !$acc mem%hflx_melt_lice,mem%hflx_melt_snow)
       
         CALL mem%Add_var( 't_lice', mem%t_lice,                                     &
           & hgrid, surface,                                                              &
