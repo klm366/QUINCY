@@ -27,7 +27,7 @@ MODULE mo_jsb_control
 
   PUBLIC :: init_jsb_master_control
   PUBLIC :: jsbach_runs_standalone, jsbach_is_restarted
-  PUBLIC :: debug_on, timer_on, l_timer_host
+  PUBLIC :: debug_on, timer_on, l_timer_host, get_debug_memory_level
   PUBLIC :: model_base_dir
   ! t_jsb_model_nml needs to be public for the NEC compiler
   PUBLIC :: t_jsb_model_nml, jsb_models_nml, get_no_of_models
@@ -38,6 +38,7 @@ MODULE mo_jsb_control
   LOGICAL :: restart_jsbach
   CHARACTER(len=99) :: model_base_dir
   INTEGER :: debug_level
+  INTEGER :: debug_memory_level
   INTEGER :: timer_level
 
   TYPE t_jsb_model_nml
@@ -137,7 +138,8 @@ CONTAINS
       restart_jsbach,          &
       model_base_dir,          &
       timer_level,             &
-      debug_level
+      debug_level,             &
+      debug_memory_level
 
     NAMELIST /jsb_model_nml/   &
       model_id,                &
@@ -147,11 +149,12 @@ CONTAINS
       model_namelist_filename
 
     ! Namelist defaults
-    is_standalone  = .TRUE.
-    restart_jsbach = .FALSE.
-    model_base_dir = '.'
-    timer_level    = 0
-    debug_level    = 0
+    is_standalone      = .TRUE.
+    restart_jsbach     = .FALSE.
+    model_base_dir     = '.'
+    timer_level        = 0
+    debug_level        = 0
+    debug_memory_level = 0
 
     nml_handler = open_nml(TRIM(namelist_filename))
 
@@ -251,6 +254,12 @@ CONTAINS
     END IF
 
   END FUNCTION debug_on
+
+  INTEGER FUNCTION get_debug_memory_level()
+
+    get_debug_memory_level = debug_memory_level
+
+  END FUNCTION get_debug_memory_level
 
   LOGICAL FUNCTION timer_on(level)
 
