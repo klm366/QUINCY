@@ -31,7 +31,7 @@ MODULE mo_carbon_interface
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
-  USE mo_jsb_time,          ONLY: get_time_dt
+
   ! Use of processes in this module (Get_carbon_memory and Get_carbon_config)
   dsl4jsb_Use_processes CARBON_, ASSIMI_, PHENO_, DISTURB_, A2L_, L2A_,HYDRO_
 
@@ -147,6 +147,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: soil_w   !PHS: soil depth
     LOGICAL                      :: lstart
     INTEGER                      :: iblk, ics, ice, nc, i
+    REAL(wp)                     :: dtime
     REAL(wp), allocatable        :: precip_total(:)
     REAL(wp), DIMENSION(options%nc) :: MaxLai
     REAL(wp), DIMENSION(options%nc) :: old_c_state_sum, current_fluxes
@@ -383,6 +384,8 @@ CONTAINS
     ics   = options%ics
     ice   = options%ice
     nc   = options%nc
+    dtime = options%dtime
+
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_memory(ASSIMI_)
@@ -654,7 +657,7 @@ CONTAINS
     ff_grow_W    =   alpha_jedi                / dsl4jsb_Lctlib_param (jedi_N_pseudo_soilM) + ff_grow_W *     dsl4jsb_Lctlib_param(jedi_F_pseudo_soilM)
     ff_npp           =   NPP_act_yDayMean / dsl4jsb_Lctlib_param(jedi_N_pseudo_npp)   + ff_npp         *     dsl4jsb_Lctlib_param(jedi_F_pseudo_npp)
     
-     ff_T_30d     =  ( t_air - tmelt )         / ( 1._wp / (1._wp-EXP(- get_time_dt() / (30._wp* 86400._wp ))))      + ff_T_30d  *     EXP(- get_time_dt() / (30._wp* 86400._wp ))
+     ff_T_30d     =  ( t_air - tmelt )         / ( 1._wp / (1._wp-EXP(- dtime / (30._wp* 86400._wp ))))      + ff_T_30d  *     EXP(- dtime / (30._wp* 86400._wp ))
 
      
 
@@ -720,7 +723,7 @@ CONTAINS
        temp_sum = t_air
        
        !PHS 05.08.2019 Tend
-       ff_dTdt                      = ( ff_T_30d - ff_grow_T_yDayMean ) / ( 1._wp /  ( 1._wp - EXP(- get_time_dt() / (30._wp* 86400._wp ))    ))  +  EXP(- get_time_dt() / (30._wp* 86400._wp ))  * ff_dTdt    
+       ff_dTdt                      = ( ff_T_30d - ff_grow_T_yDayMean ) / ( 1._wp /  ( 1._wp - EXP(- dtime / (30._wp* 86400._wp ))    ))  +  EXP(- dtime / (30._wp* 86400._wp ))  * ff_dTdt    
        ff_grow_T_yDayMean = ff_T_30d
        
       

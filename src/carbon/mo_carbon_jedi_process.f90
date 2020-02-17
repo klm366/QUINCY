@@ -667,7 +667,7 @@ CONTAINS
          
             NPP_act_yDayMean = ( GPP_yDayMean * sec_per_day  - AutoRes ) / (  sec_per_day )
                           
-            root_depth = sqrt( c_csroot * 2250.*12.01 ) * 0.001 
+            root_depth = sqrt( c_csroot * 2250._wp*12.01_wp ) * 0.001_wp
 
       
       
