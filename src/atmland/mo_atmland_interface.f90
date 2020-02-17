@@ -170,6 +170,9 @@ CONTAINS
 
     model_scheme = model%config%model_scheme
 
+    model => Get_model(tile%owner_model_id)
+    use_quincy = model%config%use_quincy
+
     ! make this logical accessible in the OpenACC code directly
     tile_contains_lake = tile%contains_lake
 
@@ -350,6 +353,7 @@ CONTAINS
     IF (PRESENT(CO2_air)) THEN
       CO2_air_ptr           => dsl4jsb_var2D_onChunk(A2L_, CO2_air)
       CO2_air_mol_ptr       => dsl4jsb_var2D_onChunk(A2L_, CO2_air_mol)
+      IF (use_quincy) CO2_mixing_ratio_ptr  => dsl4jsb_var2D_onChunk(A2L_, CO2_mixing_ratio)
     END IF
     IF (PRESENT(drag_wtr)) THEN
       drag_wtr_ptr          => dsl4jsb_var2D_onChunk(A2L_, drag_wtr)

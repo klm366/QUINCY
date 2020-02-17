@@ -38,7 +38,7 @@ MODULE mo_hydro_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes SEB_, SSE_, TURB_, PHENO_, A2L_, HYDRO_
+  dsl4jsb_Use_processes SEB_, SSE_, TURB_, PHENO_, A2L_, HYDRO_, ASSIMI_
 
   ! Use of process configurations
   dsl4jsb_Use_config(SEB_)
@@ -52,6 +52,7 @@ MODULE mo_hydro_interface
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(TURB_)
   dsl4jsb_Use_memory(PHENO_)
+  dsl4jsb_Use_memory(ASSIMI_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -1719,6 +1720,27 @@ CONTAINS
 
     !$ACC WAIT(1)
     !$ACC END DATA
+
+
+    !! quincy calculation of beta_soil_*  (soil moisture constraints scaling factor)
+    !!
+    !! the below calc are somewhat preliminary, the original quincy code is kept below, but outcommented
+    IF (model%config%use_quincy) THEN
+      WHERE ((w_soil_root(:) - w_soil_root_pwp(:)) > eps8)
+        beta_soil_gs(:) = MIN( MAX( 0.0_wp, 2.0_wp * (w_soil_root(:) - w_soil_root_pwp(:)) / &
+                                            (w_soil_root_fc(:) - w_soil_root_pwp(:))), 1.0_wp) 
+      ELSEWHERE
+        beta_soil_gs(:) = 0.0_wp
+      END WHERE
+      beta_soil_ps(:) = beta_soil_gs(:)
+          !! original way of calc beta_soil_* in quincy
+          !beta_soil_gs(:) = calc_soil_moisture_stress(w_soil_root_pot(:), lctlib%phi_leaf_min)
+          !beta_soil_ps(:) = calc_soil_moisture_stress(w_soil_root_pot(:), lctlib%phi_leaf_min)
+      ! catch beta_soil_ps getting zero
+      ! this is very neccessary, because with "beta_soil_ps=0" calc_photosynthesis() does get a runtime error, because n1 & n2 
+      !   become zero, and then msat & nco become zero, resulting in an error with the log() operation "nlim = -log(nco/..."
+      WHERE(beta_soil_ps(:) < eps8) beta_soil_ps(:) = eps8
+    END IF
 
 
     !! quincy calculation of beta_soil_*  (soil moisture constraints scaling factor)
