@@ -1622,7 +1622,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     END DO
     !$ACC END PARALLEL LOOP
 
-    c_ag_sum_1(ics:ice) =  c_acid_ag1(:) + c_water_ag1(:) + c_ethanol_ag1(:) + c_nonsoluble_ag1(:) + c_humus_1(:)
+    c_ag_sum_1(:) =  c_acid_ag1(:) + c_water_ag1(:) + c_ethanol_ag1(:) + c_nonsoluble_ag1(:) + c_humus_1(:)
     !$claw end expand
   END SUBROUTINE calculate_current_c_ag_1_and_bg_sums
 
