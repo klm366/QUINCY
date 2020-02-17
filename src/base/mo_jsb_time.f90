@@ -186,6 +186,28 @@ CONTAINS
 
   END FUNCTION is_newmonth
 
+  LOGICAL FUNCTION is_newmonth(current, dt)
+
+    USE mo_jsb_time_iface, ONLY: get_time_previous
+
+    TYPE(t_datetime), POINTER, INTENT(in) :: current
+    REAL(wp),                  INTENT(in) :: dt
+
+    TYPE(t_datetime), POINTER :: previous
+
+    INTEGER :: current_month, previous_month
+
+    previous => get_time_previous(current, dt)
+
+    current_month  = INT(get_month(current))
+    previous_month = INT(get_month(previous))
+
+    is_newmonth = current_month /= previous_month
+
+    CALL deallocateDatetime(previous)
+
+  END FUNCTION is_newmonth
+
   LOGICAL FUNCTION is_newyear(current, dt)
 
     USE mo_jsb_time_iface, ONLY: get_time_previous
