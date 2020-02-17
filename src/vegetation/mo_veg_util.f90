@@ -14,14 +14,20 @@ MODULE mo_veg_util
   USE mo_jsb_control, ONLY: debug_on
   USE mo_exception,   ONLY: message
 
+  ! Use of processes in this module
+  dsl4jsb_Use_processes VEG_
+
+  ! Use of process memories
+  dsl4jsb_Use_memory(VEG_)
+
   IMPLICIT NONE
   PRIVATE
+
   PUBLIC :: reset_veg_fluxes
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_util'
 
 CONTAINS
-
 
   !-----------------------------------------------------------------------------------------------------
   !> init/reset vegetation fluxes (with/to zero)
@@ -34,53 +40,37 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: VEG_
     USE mo_jsb_math_constants,    ONLY: zero
     
-    ! Use of process memories
-    dsl4jsb_Use_memory(VEG_)
-
-    IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
-    ! ---------------------------
-    ! 0.2 Local 
+
+    ! Locals
     TYPE(t_jsb_model),      POINTER       :: model
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':reset_veg_fluxes'
-    ! ---------------------------
-    ! 0.3 Declare Memory
-    ! Declare process configuration and memory Pointers
+
     dsl4jsb_Def_memory(VEG_) 
-    ! Declare pointers to variables in memory
-    ! VEG_ 2D
+
     dsl4jsb_Real2D_onChunk      :: veg_growth_leaf_carbon
     dsl4jsb_Real2D_onChunk      :: veg_litterfall_leaf_carbon
     dsl4jsb_Real2D_onChunk      :: maint_respiration_pot
+
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
-    ! ---------------------------
-    ! 0.4 Process Activity, Debug Option
-    IF (debug_on()) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    ! ---------------------------
-    ! 0.5 Get Memory
-    ! Get process config
-    !
-    ! Get process memories
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
     dsl4jsb_Get_memory(VEG_) 
-    ! Get process variables (Set pointers to variables in memory)
+
     model  => Get_model(tile%owner_model_id)
-    ! ---------------------------
+
     dsl4jsb_Get_var2D_onChunk(VEG_, veg_growth_leaf_carbon)           ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, veg_litterfall_leaf_carbon)       ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_pot)            ! out
-
-
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
@@ -93,6 +83,7 @@ CONTAINS
     
     maint_respiration_pot(:)        = zero
 
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE reset_veg_fluxes
 

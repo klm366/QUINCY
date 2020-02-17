@@ -176,6 +176,12 @@ CONTAINS
     ! make this logical accessible in the OpenACC code directly
     tile_contains_lake = tile%contains_lake
 
+    model => Get_model(tile%owner_model_id)
+    use_quincy = model%config%use_quincy
+
+    ! make this logical accessible in the OpenACC code directly
+    tile_contains_lake = tile%contains_lake
+
     IF (nc /= SIZE(t_air,1)) CALL finish(TRIM(routine), 'Wrong dimensions')
 
     dsl4jsb_Get_memory(A2L_)

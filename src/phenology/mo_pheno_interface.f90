@@ -40,6 +40,7 @@ MODULE mo_pheno_interface
   dsl4jsb_Use_memory(HYDRO_)
   dsl4jsb_Use_memory(ASSIMI_)
   dsl4jsb_Use_memory(CARBON_)
+  dsl4jsb_Use_memory(VEG_)
 
   IMPLICIT NONE
   PRIVATE

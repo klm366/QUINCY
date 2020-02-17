@@ -219,21 +219,11 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE init_pheno_constants
 
-    USE mo_jsb_physical_constants,      ONLY: tmelt  
+    USE mo_jsb_physical_constants, ONLY: tmelt  
 
-    IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
-    ! 
-    ! ---------------------------
-    ! 0.2 Local
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_pheno_constants'
-
-    
-
+    CHARACTER(len=*), PARAMETER :: routine = modname//':init_pheno_constants'
 
     gdd_t_air_threshold       = 5.0_wp + tmelt            !< ... citation
-
 
   END SUBROUTINE init_pheno_constants
 

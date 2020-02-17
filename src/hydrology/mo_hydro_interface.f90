@@ -1776,11 +1776,6 @@ CONTAINS
   !!
   SUBROUTINE aggregate_water_stress(tile, options)
 
-    USE mo_jsb_process_class,     ONLY: HYDRO_, ASSIMI_
-
-    dsl4jsb_Use_memory(HYDRO_)
-    dsl4jsb_Use_memory(ASSIMI_)
-
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 

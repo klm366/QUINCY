@@ -805,6 +805,7 @@ CONTAINS
     IF (tile%contains_vegetation) THEN
       dsl4jsb_Get_memory(PHENO_)
     END IF
+
     ! Set pointers to variables in config
     use_alb_veg_simple        = dsl4jsb_Config(RAD_) %use_alb_veg_simple
     use_alb_soil_scheme       = dsl4jsb_Config(RAD_) %use_alb_soil_scheme
@@ -829,7 +830,7 @@ CONTAINS
       END IF
 
       IF (TRIM(use_alb_soil_organic_C) /= '') THEN
-        !dsl4jsb_Get_memory(CARBON_)
+        dsl4jsb_Get_memory(CARBON_)
         dsl4jsb_Get_var2D_onChunk(CARBON_, c_bg_sum)  ! in
       ELSE
         ALLOCATE(c_bg_sum(nc))
@@ -841,6 +842,7 @@ CONTAINS
         !$ACC END PARALLEL LOOP
       END IF
     END IF
+
     ! Set pointers to variables in memory
     dsl4jsb_Get_var2D_onChunk(A2L_,   cos_zenith_angle)      ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,   swvis_srf_down)        ! in
@@ -848,6 +850,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)              ! in
 
     !RMS dsl4jsb_Get_var2D_onChunk(CARBON_,   c_slow)            ! in
+
     dsl4jsb_Get_var2D_onChunk(RAD_,   alb_background)        ! in
     dsl4jsb_Get_var2D_onChunk(RAD_,   alb_vis)               ! inout
     dsl4jsb_Get_var2D_onChunk(RAD_,   alb_nir)               ! inout
@@ -862,10 +865,8 @@ CONTAINS
       END IF
     END IF
 
-
     ! ---------------------------
     ! Go
-
 
     ALLOCATE(l_day(nc))
     !$ACC ENTER DATA CREATE(l_day)
@@ -1220,7 +1221,6 @@ CONTAINS
     !$claw acc exit data delete(l_day)
     DEALLOCATE(l_day)
 
-
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_albedo
@@ -1497,6 +1497,7 @@ CONTAINS
 
     !> 0.9  Set day-or-night-switch
     !! 
+    !$claw expand
     l_day(:) = Has_minimal_radiation(swvis_srf_down(:), swnir_srf_down(:))
 
 
