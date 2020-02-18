@@ -33,7 +33,7 @@ MODULE mo_hydro_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes SEB_, SSE_, TURB_, PHENO_, A2L_, HYDRO_,CARBON_
+  dsl4jsb_Use_processes SEB_, SSE_, TURB_, PHENO_, A2L_, HYDRO_, CARBON_, ASSIMI_
 
   ! Use of process configurations
   dsl4jsb_Use_config(SEB_)
@@ -48,6 +48,7 @@ MODULE mo_hydro_interface
   dsl4jsb_Use_memory(TURB_)
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(CARBON_)
+  dsl4jsb_Use_memory(ASSIMI_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -531,7 +532,7 @@ CONTAINS
       END IF
     END IF
 
-    IF (is_time_experiment_start()) THEN          ! Start of experiment
+    IF (is_time_experiment_start(options%current_datetime)) THEN          ! Start of experiment
       lstart = .TRUE.
       w_snow(:) = 0._wp
     ELSE
@@ -1167,9 +1168,11 @@ CONTAINS
     ! Variables
 
     ! Used variables
-    USE mo_hydro_process, ONLY: get_water_stress_factor
-    USE mo_hydro_util,    ONLY: get_water_in_root_zone
+    USE mo_jsb_math_constants, ONLY: eps8
+    USE mo_hydro_process,      ONLY: get_water_stress_factor
+    USE mo_hydro_util,         ONLY: get_water_in_root_zone
     USE mo_carbon_constants,  ONLY: max_pipe_transpir
+
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -1179,7 +1182,8 @@ CONTAINS
 
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(CARBON_)   !PHS
-    
+    dsl4jsb_Def_memory(ASSIMI_)
+
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: root_depth_sl
     dsl4jsb_Real2D_onChunk :: w_soil_column       !< Water content in soil column
@@ -1194,7 +1198,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: evapopot
     dsl4jsb_Real2D_onChunk :: jedi_pot_supply_transp  !PHS
     dsl4jsb_Real2D_onChunk :: alpha_jedi   !PHS	
-
+    ! ASSIMI_
+    dsl4jsb_Real2D_onChunk :: beta_soil_gs
+    dsl4jsb_Real2D_onChunk :: beta_soil_ps
     INTEGER :: iblk, ics, ice
     REAL(wp) :: config_w_soil_crit_fract, config_w_soil_wilt_fract
 
@@ -1207,13 +1213,20 @@ CONTAINS
     IF (.NOT. tile%Is_process_active(HYDRO_) .OR. .NOT. tile%is_vegetation) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
     model => Get_model(tile%owner_model_id)
+
     dsl4jsb_Get_config(HYDRO_)
 
     ! Get reference to variables for current block
     !
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(CARBON_)
+
+    IF (model%config%use_quincy) THEN
+      dsl4jsb_Get_memory(ASSIMI_)
+    END IF
+    !
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    soil_depth_sl)       ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_sl)           ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_fc_sl)        ! in
@@ -1228,7 +1241,12 @@ CONTAINS
     
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapopot) !PHS
     dsl4jsb_Get_var2D_onChunk(CARBON_,   jedi_pot_supply_transp) !PHS	
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  alpha_jedi)!PHS	
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  alpha_jedi)!PHS
+    !
+    IF (model%config%use_quincy) THEN
+      dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs)        ! out   ! quincy
+      dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps)        ! out   ! quincy
+    END IF
     ! Get water stress
      
      
@@ -1264,6 +1282,27 @@ CONTAINS
       !$claw end expand
     END IF 
 
+
+    !! quincy calculation of beta_soil_*  (soil moisture constraints scaling factor)
+    !!
+    !! the below calc are somewhat preliminary, the original quincy code is kept below, but outcommented
+    IF (model%config%use_quincy) THEN
+      WHERE ((w_soil_root(:) - w_soil_root_pwp(:)) > eps8)
+        beta_soil_gs(:) = MIN( MAX( 0.0_wp, 2.0_wp * (w_soil_root(:) - w_soil_root_pwp(:)) / &
+                                            (w_soil_root_fc(:) - w_soil_root_pwp(:))), 1.0_wp) 
+      ELSEWHERE
+        beta_soil_gs(:) = 0.0_wp
+      END WHERE
+      beta_soil_ps(:) = beta_soil_gs(:)
+          !! original way of calc beta_soil_* in quincy
+          !beta_soil_gs(:) = calc_soil_moisture_stress(w_soil_root_pot(:), lctlib%phi_leaf_min)
+          !beta_soil_ps(:) = calc_soil_moisture_stress(w_soil_root_pot(:), lctlib%phi_leaf_min)
+      ! catch beta_soil_ps getting zero
+      ! this is very neccessary, because with "beta_soil_ps=0" calc_photosynthesis() does get a runtime error, because n1 & n2 
+      !   become zero, and then msat & nco become zero, resulting in an error with the log() operation "nlim = -log(nco/..."
+      WHERE(beta_soil_ps(:) < eps8) beta_soil_ps(:) = eps8
+    END IF
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_water_stress
@@ -1281,7 +1320,9 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(ASSIMI_)
 
+    TYPE(t_jsb_model),       POINTER :: model
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_water_stress'
@@ -1294,15 +1335,27 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
+    model => Get_model(tile%owner_model_id)
+
     dsl4jsb_Get_memory(HYDRO_)
+    IF (model%config%use_quincy) THEN
+      dsl4jsb_Get_memory(ASSIMI_)
+    END IF
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    ! HYDRO_
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_fc,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_pwp,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, water_stress,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, root_depth,          weighted_by_fract)
+
+    ! ASSIMI_
+    IF (model%config%use_quincy) THEN
+      dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_gs      , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_ps      , weighted_by_fract)
+    END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -2054,7 +2107,7 @@ CONTAINS
       water_content_new(:) = 0._wp
     END IF
 
-    IF (.NOT. is_time_experiment_start()) THEN
+    IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_3 tile_name=tile%name
       water_budget(:) = water_content(:) + water_flux(:) * dtime - water_content_new(:)
     END IF

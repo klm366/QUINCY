@@ -40,7 +40,7 @@ MODULE mo_hydro_memory_class
 
   PUBLIC :: t_hydro_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 80
+  INTEGER, PARAMETER :: max_no_of_vars = 90
 
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_hydro_memory
@@ -158,6 +158,12 @@ MODULE mo_hydro_memory_class
       & evapo_ice,            & !< Evaporation over lake ice
       & fract_snow_lice,      & !< Fraction of swow on lake ice                                             []
       & w_snow_lice             !< Water content of snow on lake ice                                        [m water equivalent]
+
+    !! quincy
+    !Soil Water addons for QUINCY in HYDRO
+    TYPE(t_jsb_var_real2d) :: &
+      & w_soil_root_theta,    & !< root zone integrated plant available water, fraction of maximum 
+      & w_soil_root_pot         !< soil water potential [MPa]
 
   CONTAINS
     PROCEDURE :: Init => Init_hydro_memory
@@ -394,8 +400,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
         & prefix, suffix,                                                                                         &
         & lrestart=.FALSE.,                                                                                       &
-        & output_level=BASIC, &
-        & loutput=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & loutput=.TRUE., output_level=BASIC,                                                                     &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL jsb_add_var( mem, 'q_snocpymlt', mem%q_snocpymlt,                     &
         & hgrid, surface,                                                        &
@@ -862,6 +868,28 @@ CONTAINS
       END IF
 
     END IF
+
+    !! quincy
+    IF (model%config%use_quincy) THEN
+      CALL jsb_add_var(mem, 'w_soil_root_theta', mem%w_soil_root_theta,                                      &
+        & hgrid, surface,                                                                                    &
+        & t_cf('w_soil_root_theta', '', 'root zone integrated plant available water, fraction of maximum '), &
+        & t_grib1(table, 255, grib_bits),                                                                    &
+        & t_grib2(255, 255, 255, grib_bits),                                                                 &
+        & prefix, suffix,                                                                                    &
+        & loutput=.TRUE., lrestart=.TRUE.,                                                                   &
+        & initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'w_soil_root_pot', mem%w_soil_root_pot,                                          &
+        & hgrid, surface,                                                                                    &
+        & t_cf('w_soil_root_pot', 'MPa', 'soil water potential'),                                            &
+        & t_grib1(table, 255, grib_bits),                                                                    &
+        & t_grib2(255, 255, 255, grib_bits),                                                                 &
+        & prefix, suffix,                                                                                    &
+        & loutput=.TRUE., lrestart=.TRUE.,                                                                   &
+        & initval_r=0.0_wp) ! initvalue
+    ENDIF
+
 
     END SUBROUTINE Init_hydro_memory
 #endif

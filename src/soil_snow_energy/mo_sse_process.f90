@@ -262,15 +262,15 @@ CONTAINS
     REAL(wp), INTENT(out) :: tsoil(:,:)  !< Soil temperatures
     REAL(wp), INTENT(out) :: tsurf(:)    !< Surface temperature
 
-    INTEGER               :: nsoil, ndim
-    REAL(wp)              :: zkap, zsqrt
-    REAL(wp), ALLOCATABLE :: zrange(:), zdmax(:)
-    INTEGER,  ALLOCATABLE :: jmax(:)
-    TYPE(t_datetime)      :: inidate
-    INTEGER               :: iniyear
-    INTEGER               :: im, i, jl
-    REAL(wp)              :: year_len, day_in_year
-    REAL(wp)              :: month_len(12), month_mid(12)
+    INTEGER                   :: nsoil, ndim
+    REAL(wp)                  :: zkap, zsqrt
+    REAL(wp), ALLOCATABLE     :: zrange(:), zdmax(:)
+    INTEGER,  ALLOCATABLE     :: jmax(:)
+    TYPE(t_datetime), POINTER :: inidate
+    INTEGER                   :: iniyear
+    INTEGER                   :: im, i, jl
+    REAL(wp)                  :: year_len, day_in_year
+    REAL(wp)                  :: month_len(12), month_mid(12)
 
     REAL(wp), PARAMETER :: cmid_offset = 0.07_wp
 
@@ -283,7 +283,7 @@ CONTAINS
 
     zkap = 7.5e-7_wp
 
-    inidate = get_time_start()
+    inidate => get_time_start()
     iniyear = get_year(inidate)
 
     year_len    = REAL(get_year_length(iniyear), wp)

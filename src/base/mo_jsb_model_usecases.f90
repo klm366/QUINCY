@@ -18,7 +18,8 @@ MODULE mo_jsb_model_usecases
   USE mo_exception,           ONLY: message, finish
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model
-  USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, FUEL_
+  USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
+                                    FUEL_, VEG_
   USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, AGGREGATE_ !, ON_SUBTREE_
   USE mo_jsb_tile,            ONLY: t_jsb_tile
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
@@ -189,11 +190,24 @@ CONTAINS
             ! & lct=t_jsb_lct(GLACIER_TYPE, lib_id=1), parent=land_tile)
         END IF
 
+        ! default jsb4: HYDRO_ is active at veg tile only to save runtime
+        IF (.NOT. model%config%use_quincy) THEN
           veg_tile => t_jsb_tile('veg', 'Veg tile', &
             & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_   /), &
             & process_actions = (/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
             & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
             & fract_varname='fract_veg')
+        ! use_quincy: 
+        !  HYDRO_ is active at PFT tiles to make all the HYDRO_ variables available to the PFT tiles
+        !    note: HYDRO_ results differ only marginally between ON_TILE_ & ON_LEAFS_ (tested by Reiner)
+        !  VEG_ is active
+        ELSE
+          veg_tile => t_jsb_tile('veg', 'Veg tile', &
+            & processes       = (/HYDRO_,    SSE_,     ASSIMI_,   PHENO_,    VEG_   /), &
+            & process_actions = (/ON_LEAFS_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
+            & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
+            & fract_varname='fract_veg')
+        ENDIF
 
           ! R: TBD: DISTURB_ ist kein Task von CARBON_,
           !         da es die cover fractions der pfts verändert und nur als Nebeneffekt auch die C-Pools

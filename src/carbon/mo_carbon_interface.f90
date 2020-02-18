@@ -108,10 +108,23 @@ CONTAINS
   !!
   SUBROUTINE Register_carbon_tasks(this, model_id)
 
+    USE mo_jsb_model_class,   ONLY: t_jsb_model
+    USE mo_jsb_class,         ONLY: Get_model
+
+    ! in/out
     CLASS(t_jsb_process), INTENT(inout) :: this
     INTEGER,                 INTENT(in) :: model_id
 
-    CALL this%Register_task(tsk_C_NPP_pot_allocation(model_id))
+    ! local
+    TYPE(t_jsb_model), POINTER :: model
+
+    ! get var / objects 
+    model   => Get_model(model_id)
+
+
+    IF (.NOT. model%config%use_quincy) THEN
+      CALL this%Register_task(tsk_C_NPP_pot_allocation(model_id))
+    ENDIF
 
   END SUBROUTINE Register_carbon_tasks
 
@@ -132,9 +145,9 @@ CONTAINS
     USE mo_carbon_jedi_process, ONLY: calc_Ctradeoff,jedi_water_stress_factor,jedi_soil_depth_to_layers_1d!,drop_expensive_tissue
     USE mo_jsb_physical_constants, ONLY : tmelt  
     USE mo_jsb_control,        ONLY:  jsbach_is_restarted
-    USE mo_jsb_time,          ONLY: t_datetime,is_newday, is_newyear, time_steps_per_day, &
+    USE mo_jsb_time,          ONLY: t_datetime,is_newday, is_newyear, timesteps_per_day, &
                                  &  is_time_experiment_start, get_year_at_model_start,     &
-                                 &  get_time_start, get_year,get_time_current
+                                 &  get_time_start, get_year
     USE mo_carbon_constants,  ONLY: molarMassCO2_kg, sec_per_day,max_pipe_transpir
     USE mo_jsb_grid_class,     ONLY:  t_jsb_vgrid !PHS: root_depth
     USE mo_hydro_util,             ONLY: get_water_in_root_zone !PHS: root_depth
@@ -155,7 +168,7 @@ CONTAINS
     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
     ! Declare variavles for JeDi carbon allocation 
     ! 
-    TYPE(t_datetime)             :: inidate,current
+    TYPE(t_datetime), POINTER    :: inidate
     INTEGER                      :: iniyear
     LOGICAL                      :: lrestart
   
@@ -550,9 +563,9 @@ CONTAINS
     ! Go
 
     ! Put a comment on the screen...
-    IF (debug_on() .AND. iblk==1 .AND. is_newday()  ) CALL message(TRIM(routine), &
+    IF (debug_on() .AND. iblk==1 .AND. is_newday(options%current_datetime, dtime)  ) CALL message(TRIM(routine), &
                                                            'update_C_NPP_pot_allocation: First time step of new day')
-    IF (debug_on() .AND. iblk==1 .AND. is_newyear() ) CALL message(TRIM(routine), &
+    IF (debug_on() .AND. iblk==1 .AND. is_newyear(options%current_datetime, dtime) ) CALL message(TRIM(routine), &
                                                            'update_C_NPP_pot_allocation: First time step of new year')
 
     ! Initializations
@@ -599,16 +612,14 @@ CONTAINS
     precip_total  = rain + snow  ! Precipitation rate [kg/(m^2 s)]
     pseudo_precip = precip_total * N_pseudo_precip  +  F_pseudo_precip * pseudo_precip
 
-    lstart = is_time_experiment_start()
+    lstart = is_time_experiment_start(options%current_datetime)
     
     
-      inidate = get_time_start()
+      inidate => get_time_start()
       iniyear = get_year(inidate)
-      lrestart= jsbach_is_restarted()
-      current = get_time_current()
+      lrestart= jsbach_is_restarted()      
       
-      
-       IF (get_year(current) .LE. iniyear + 2 ) THEN    !  PHS: initial carbon
+       IF (get_year(options%current_datetime) .LE. iniyear + 2 ) THEN    !  PHS: initial carbon
       
 
            ff_npp = 0._wp
@@ -619,7 +630,7 @@ CONTAINS
 
       END IF     !  PHS: initial carbon
       
-      IF (  is_time_experiment_start()  )  THEN
+      IF (  is_time_experiment_start(options%current_datetime)  )  THEN
         seed_depth_sl = jedi_soil_depth_to_layers_1d(  SPREAD(0.05_wp, NCOPIES=nc, DIM=1)  , soil_w%dz(:))         ! Jedi assumes germination of seed depends on the first 0.5 m of soil wetness
         CALL get_water_in_root_zone(vol_field_cap_sl(:,:) * soil_depth_sl(:,:), soil_depth_sl(:,:), seed_depth_sl(:,:), seed_maxmoist(:))
       END IF
@@ -672,7 +683,7 @@ CONTAINS
     
     
     
-    IF( .NOT. is_newday() .OR. lstart) THEN ! perform daily sums if WE ARE NOT STARTING A NEW DAY
+    IF( .NOT. is_newday(options%current_datetime,dtime) .OR. lstart) THEN ! perform daily sums if WE ARE NOT STARTING A NEW DAY
                                             ! or if we JUST STARTED AN TOTALLY NEW EXPERIMENT
 
       LAI_sum          = LAI_sum          + LAI
@@ -693,12 +704,12 @@ CONTAINS
 
       ! First save as "previous previous days" and "previous days" means
       LAI_yyDayMean  = LAI_yDayMean
-      LAI_yDayMean   = LAI_sum/time_steps_per_day()
+      LAI_yDayMean   = LAI_sum/timesteps_per_day(dtime)
 
-      NPP_pot_yDayMean     = NPP_pot_sum/time_steps_per_day()
-      GPP_yDayMean         = GPP_sum/time_steps_per_day()
-      topSoilTemp_yDayMean = topSoilTemp_sum/time_steps_per_day() ! 2d
-      alpha_yDayMean       = alpha_sum/time_steps_per_day()
+      NPP_pot_yDayMean     = NPP_pot_sum/timesteps_per_day(dtime)
+      GPP_yDayMean         = GPP_sum/timesteps_per_day(dtime)
+      topSoilTemp_yDayMean = topSoilTemp_sum/timesteps_per_day(dtime) ! 2d
+      alpha_yDayMean       = alpha_sum/timesteps_per_day(dtime)
 
       ! Then restart summing of this days values
       LAI_sum             = LAI
@@ -706,12 +717,12 @@ CONTAINS
       GPP_sum             = gross_assimilation_ca
       topSoilTemp_sum     = topSoilTemp ! 2d
       alpha_sum           = alpha
-      !NPP_pot_rate_ca_acc        = NPP_pot_rate_ca/time_steps_per_day() ! s.o.
+      !NPP_pot_rate_ca_acc        = NPP_pot_rate_ca/timesteps_per_day(dtime) ! s.o.
 
       !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!     
       ! PHS: Compute Maintenance respration for JeDi. 
       ! PHS try to compute maintenance respiration only once per day 
-       temp_yDayMean  = temp_sum / time_steps_per_day()
+       temp_yDayMean  = temp_sum / timesteps_per_day(dtime)
        
        MaintRes = 0._wp
        MaintRes = c_sapwood * c_CN_woody * ( c_stem + c_csroot ) + dsl4jsb_Lctlib_param(NitroStatus)*dsl4jsb_Lctlib_param(JeDiSLA) * ( c_leaves + c_fnroot )  !NNN
@@ -750,7 +761,7 @@ CONTAINS
       IF (TRIM(model%config%usecase) .eq. 'jsbach_jedi' ) THEN
        
        
-       IF (get_year(current) .GT. iniyear + 2 ) THEN     !  PHS: initial carbon
+       IF (get_year(options%current_datetime) .GT. iniyear + 2 ) THEN     !  PHS: initial carbon
        
         CALL calc_Ctradeoff( &
         & GPP_yDayMean,                                & ! in
@@ -771,12 +782,12 @@ CONTAINS
         & dsl4jsb_Lctlib_param(SenesRspdNPP ),         & ! in
         & dsl4jsb_Lctlib_param(RelSenesAbgd ),         & ! in
         & dsl4jsb_Lctlib_param(NitroStatus  ),         & ! in
-        & dsl4jsb_Lctlib_param(JeDiSLA),                    &  ! in
+        & dsl4jsb_Lctlib_param(JeDiSLA),               &  ! in
         ! JeDi plant trait parameter comes in now >>>>>>>>>>>
-        & iniyear,                                              & !in
-        & get_year(current),                            & !in
-        & time_steps_per_day(),                        & ! in
-        & one_counter,                               & ! inout
+        & iniyear,                                     & !in
+        & get_year(options%current_datetime),          & !in
+        & timesteps_per_day(dtime),                    & ! in
+        & one_counter,                                 & ! inout
         & c_storage,                                   & ! inout
         & c_leaves,                                    & ! inout
         & c_fnroot,                                    & ! inout

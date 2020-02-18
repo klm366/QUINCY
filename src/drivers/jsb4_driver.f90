@@ -27,6 +27,8 @@ PROGRAM jsb4_driver
   USE mo_jsb_class,          ONLY: get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_model_class,    ONLY: t_jsb_model
+  USE mo_mvstream,           ONLY: init_mvstream, mvstream_update_cache, mvstream_accumulate
+  USE mo_jsb_time,           ONLY: t_datetime, deallocateDatetime
 
   dsl4jsb_Use_processes SEB_, TURB_, HYDRO_
   dsl4jsb_Use_memory(SEB_)
@@ -55,14 +57,15 @@ PROGRAM jsb4_driver
   ! io
   USE mo_io,               ONLY: write_streams, IO_read_streams
   USE mo_filename,         ONLY: out_filetype
-  USE mo_netcdf,           ONLY: nf_check, nf_close
+  USE mo_netcdf,           ONLY: nf_check, nf_close, add_dim, SURFACE
   USE mo_memory_base,      ONLY: default_output, NETCDF
   USE mo_output,           ONLY: open_output_streams, close_output_streams, out_streams, init_output
   USE mo_decomposition,    ONLY: local_decomposition
 
   ! time control and orbit calc
   USE mo_time_control,     ONLY: time_set, time_reset, lstop, l_trigfiles, l_putrerun, delta_time, &
-    &                            time_step_len, get_orbit_times, l_orbvsop87, current_date, write_date
+    &                            time_step_len, get_orbit_times, l_orbvsop87, current_date, write_date, &
+    &                            echam_time, manager_state
 
   USE mo_radiation_parameters, ONLY: lyr_perp, nmonth, yr_perp, solar_parameters
   ! ICON would be:
@@ -78,6 +81,8 @@ PROGRAM jsb4_driver
   REAL(wp):: zwtime, zutime, zstime, zrtime
 
   INTEGER:: nml_handler, read_status, f_unit, status, iblk, nproma, nblks, ncid, model_id, ice, ics
+  TYPE(t_datetime)          :: current_datetime
+  TYPE(t_datetime), POINTER :: current_datetime_ptr => NULL()
 
   !! Variables of namelist jsb_parallel_nml
   INTEGER:: nproca  ! number of processors for jsbach
@@ -197,6 +202,10 @@ PROGRAM jsb4_driver
   CALL p_init_communicators(nproca, nprocb, nprocio)
   CALL machine_setup
 
+  CALL add_dim ("surface",1,                      levtyp =    1,     &
+                                                  single = .TRUE.,   &
+                                                  indx   = SURFACE)
+
   ! - jsbach_init
   CALL jsbach_setup_models('namelist.jsbach')
   CALL jsbach_setup_grid(nproca, nprocb, npedim, model_id) ! Only one model implemented for now
@@ -297,6 +306,8 @@ PROGRAM jsb4_driver
   ics = 1
   ice = nproma
 
+  CALL init_mvstream('namelist.jsbach')
+
   IF(jsbach_is_restarted()) THEN
 
     CALL IO_read_streams
@@ -324,16 +335,19 @@ PROGRAM jsb4_driver
 
   CALL init_output
   CALL open_output_streams
+  CALL mvstream_update_cache
 
   ! - Main loop
   main_loop:DO
 
     CALL time_set   !(echam!)
-    IF(is_newday()) THEN
+    CALL manager_state(echam_time, current_datetime)
+    ALLOCATE(current_datetime_ptr, source=current_datetime)
+    IF(is_newday(current_datetime_ptr, delta_time)) THEN
       CALL write_date(current_date,'Calculate timesteps for day: ')
     ENDIF
 
-    CALL jsbach_start_timestep(model_id)
+    CALL jsbach_start_timestep(model_id, current_datetime_ptr, delta_time)
 
     IF (l_trigfiles) THEN
       CALL close_output_streams
@@ -358,7 +372,8 @@ PROGRAM jsb4_driver
       CALL solar_parameters(decl_sun, dist_sun, time_of_day, sinlon, sinlat, coslon, coslat, &
         & flx_ratio, cos_zenith_angle, daylght_frc)
 
-      CALL get_interface_variables_from_external_forcing(1, 1, nproma, nblks, sinlat, coslat, lon, evapo_act2pot_proc, &
+      CALL get_interface_variables_from_external_forcing(1, 1, nproma, nblks, current_datetime_ptr, &
+        & sinlat, coslat, lon, evapo_act2pot_proc, &
         & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, cos_zenith_angle,      &
         & CO2_concentration, t_air_K, q_air, rain, snow, wind_air, wind_10m,                                          &
         & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, fract_par_diffuse,                              &
@@ -377,13 +392,13 @@ PROGRAM jsb4_driver
 !          END IF
 
       IF (read_interface_vars) THEN
-        CALL read_interface_variables( 1, nproma, iblk, ncid, t_air_K(:,iblk), q_air(:,iblk), rain(:,iblk), &
+        CALL read_interface_variables( 1, nproma, iblk, ncid, current_datetime_ptr, t_air_K(:,iblk), q_air(:,iblk), rain(:,iblk), &
           & snow(:,iblk), wind_air(:,iblk), wind_10m(:,iblk), lw_srf_down(:,iblk), swvis_srf_down(:,iblk), &
           & swnir_srf_down(:,iblk), swpar_srf_down(:,iblk), press_srf(:,iblk), drag_srf(:,iblk), &
           & t_acoef(:,iblk), t_bcoef(:,iblk), q_acoef(:,iblk), q_bcoef(:,iblk), pch(:,iblk), cos_zenith_angle(:,iblk))
       ENDIF
 
-      CALL jsbach_interface ( 1, iblk, 1, nproma, delta_time, time_step_len, t_air_K(:,iblk), &
+      CALL jsbach_interface ( 1, iblk, 1, nproma, current_datetime_ptr, delta_time, time_step_len, t_air_K(:,iblk), &
         & q_air(:,iblk), rain(:,iblk), snow(:,iblk), wind_air(:,iblk), wind_10m(:,iblk), lw_srf_down(:,iblk), &
         & swvis_srf_down(:,iblk), swnir_srf_down(:,iblk), swpar_srf_down(:,iblk), fract_par_diffuse(:,iblk), &
         & press_srf(:,iblk), drag_srf(:,iblk), &
@@ -404,14 +419,15 @@ PROGRAM jsb4_driver
       ENDIF
     ENDDO
 
-!    IF ((.NOT. read_interface_vars) .AND. is_newday()) THEN
+!    IF ((.NOT. read_interface_vars) .AND. is_newday(current_datetime_ptr, delta_time)) THEN
 !      evapo_act2pot_proc = evapo_act_sum_proc / evapo_pot_sum_proc
 !      evapo_act_sum_proc = 0._wp
 !      evapo_pot_sum_proc = 0._wp
 !    ENDIF
 
-    CALL jsbach_finish_timestep(model_id, time_step_len)
-
+    CALL jsbach_finish_timestep(model_id, current_datetime_ptr, time_step_len)
+    CALL deallocateDatetime(current_datetime_ptr)
+    CALL mvstream_accumulate
     CALL out_streams
 
     IF (l_putrerun) CALL write_streams
