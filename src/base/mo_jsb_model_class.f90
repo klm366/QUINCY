@@ -405,17 +405,19 @@ CONTAINS
 
   END FUNCTION Get_tile
 
-  SUBROUTINE Set_options(this, dtime, steplen, iblk, ics, ice, nc)
+  SUBROUTINE Set_options(this, current_datetime, dtime, steplen, iblk, ics, ice, nc)
 
     USE mo_jsb_utils_iface, ONLY: assign_if_present
+    USE mo_jsb_time,        ONLY: t_datetime
 
-    CLASS(t_jsb_model), INTENT(inout) :: this
-    REAL(wp), OPTIONAL, INTENT(in)    :: dtime
-    REAL(wp), OPTIONAL, INTENT(in)    :: steplen
-    INTEGER,  OPTIONAL, INTENT(in)    :: iblk
-    INTEGER,  OPTIONAL, INTENT(in)    :: ics
-    INTEGER,  OPTIONAL, INTENT(in)    :: ice
-    INTEGER,  OPTIONAL, INTENT(in)    :: nc
+    CLASS(t_jsb_model),                  INTENT(inout) :: this
+    TYPE(t_datetime), OPTIONAL, POINTER, INTENT(in)    :: current_datetime
+    REAL(wp),         OPTIONAL,          INTENT(in)    :: dtime
+    REAL(wp),         OPTIONAL,          INTENT(in)    :: steplen
+    INTEGER,          OPTIONAL,          INTENT(in)    :: iblk
+    INTEGER,          OPTIONAL,          INTENT(in)    :: ics
+    INTEGER,          OPTIONAL,          INTENT(in)    :: ice
+    INTEGER,          OPTIONAL,          INTENT(in)    :: nc
 
     INTEGER :: no_omp_thread
 
@@ -427,6 +429,7 @@ CONTAINS
     CALL assign_if_present(this%options(no_omp_thread)%ics,     ics)
     CALL assign_if_present(this%options(no_omp_thread)%ice,     ice)
     CALL assign_if_present(this%options(no_omp_thread)%nc,      nc)
+    IF (PRESENT(current_datetime)) this%options(no_omp_thread)%current_datetime => current_datetime
 
   END SUBROUTINE Set_options
 
@@ -522,12 +525,13 @@ CONTAINS
 
         mem => tile%mem(iproc)%p
         DO i=1,mem%no_of_vars
-          ! IF (mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart) CALL message(routine//': gpu2cpu', TRIM(mem%vars(i)%p%full_name))
           IF (ASSOCIATED(mem%vars(i)%p%ptr2d)) THEN
             !$acc update host(mem%vars(i)%p%ptr2d) if(mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart)
+            ! IF (mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart) CALL message(routine//': gpu2cpu', TRIM(mem%vars(i)%p%full_name))
             CONTINUE
           ELSE IF (ASSOCIATED(mem%vars(i)%p%ptr3d)) THEN
             !$acc update host(mem%vars(i)%p%ptr3d) if(mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart)
+            ! IF (mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart) CALL message(routine//': gpu2cpu', TRIM(mem%vars(i)%p%full_name))
             CONTINUE
           END IF
         END DO

@@ -40,7 +40,7 @@ MODULE mo_hydro_memory_class
 
   PUBLIC :: t_hydro_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 80
+  INTEGER, PARAMETER :: max_no_of_vars = 90
 
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_hydro_memory
@@ -159,6 +159,12 @@ MODULE mo_hydro_memory_class
       & fract_snow_lice,      & !< Fraction of swow on lake ice                                             []
       & w_snow_lice             !< Water content of snow on lake ice                                        [m water equivalent]
 
+    !! quincy
+    !Soil Water addons for QUINCY in HYDRO
+    TYPE(t_jsb_var_real2d) :: &
+      & w_soil_root_theta,    & !< root zone integrated plant available water, fraction of maximum 
+      & w_soil_root_pot         !< soil water potential [MPa]
+
   CONTAINS
     PROCEDURE :: Init => Init_hydro_memory
   END TYPE t_hydro_memory
@@ -218,14 +224,9 @@ CONTAINS
       ini_snow_dens = dens_snow
     END IF
 
-    !$acc enter data pcreate(mem)
+    !! !$acc enter data pcreate(mem)
 
     ! Common variables
-
-    !$acc enter data pcreate(mem%fract_snow,mem%w_snow,mem%evapotrans,        &
-    !$acc mem%evapopot,mem%evapo_snow,mem%snowmelt,mem%runoff,mem%drainage,   &
-    !$acc mem%discharge,mem%discharge_ocean,mem%internal_drain,mem%water_flux,&
-    !$acc mem%water_content,mem%water_budget,mem%elevation,mem%oro_stddev)
 
     CALL jsb_add_var( mem, 'fract_snow', mem%fract_snow,                       &
       & hgrid, surface,                                                        &
@@ -285,7 +286,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & lrestart=.FALSE.,                                                     &
-      & output_level=BASIC,                                                   &
+      & loutput=.TRUE., output_level=BASIC,                                   &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL jsb_add_var( mem, 'drainage', mem%drainage,                         &
@@ -294,7 +295,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
-      & output_level=BASIC,                                                  &
+      & loutput=.TRUE., output_level=BASIC,                                  &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL jsb_add_var( mem, 'discharge', mem%discharge,                       &
@@ -365,10 +366,6 @@ CONTAINS
       &   .OR. One_of(LAND_TYPE,    lct_ids(:)) > 0 &
       &  ) ) THEN
 
-      !$acc enter data pcreate(mem%fract_snow_soil,mem%w_snow_soil, &
-      !$acc mem%snow_soil_dens,mem%evapotrans_lnd,mem%q_snocpymlt,  &
-      !$acc mem%fract_water)  
-
       CALL jsb_add_var( mem, 'fract_snow_soil', mem%fract_snow_soil,            &
         & hgrid, surface,                                                       &
         & t_cf('fraction of snow on soil', '-', ''),                            &
@@ -404,7 +401,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
         & prefix, suffix,                                                                                         &
         & lrestart=.FALSE.,                                                                                       &
-        & output_level=BASIC,                                                                                     &
+        & loutput=.TRUE., output_level=BASIC,                                                                     &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL jsb_add_var( mem, 'q_snocpymlt', mem%q_snocpymlt,                     &
@@ -431,22 +428,12 @@ CONTAINS
       &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 &
       &  ) ) THEN
 
-      !$acc enter data pcreate(mem%soil_depth,mem%soil_depth_sl,mem%max_moist, &
-      !$acc mem%vol_field_cap,mem%vol_field_cap_sl,mem%vol_p_wilt,             &
-      !$acc mem%vol_p_wilt_sl,mem%vol_porosity,mem%vol_porosity_sl,            &
-      !$acc mem%pore_size_index,mem%pore_size_index_sl,mem%bclapp,             &
-      !$acc mem%bclapp_sl,mem%matrix_pot,mem%matrix_pot_sl,mem%hyd_cond_sat,   &
-      !$acc mem%hyd_cond_sat_sl,mem%w_skin,mem%snow_accum,mem%evapotrans_soil, &
-      !$acc mem%evapo_skin,mem%evapo_deficit,mem%water_excess,                 &
-      !$acc mem%w_soil_overflow,mem%w_soil_column,mem%w_soil_sl,mem%w_ice_sl,  &
-      !$acc mem%w_soil_freeze_sl,mem%w_ice_melt_sl,mem%w_soil_sat_sl,          &
-      !$acc mem%w_soil_fc_sl,mem%w_soil_pwp_sl,mem%w_soil_rel)
-
       CALL jsb_add_var( mem, 'soil_depth', mem%soil_depth,                     &
         & hgrid, surface,                                                      &
         & t_cf('soil_depth', 'm', 'Depth of soil until bedrock'),              &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
+        & loutput=.TRUE., &
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
@@ -455,11 +442,11 @@ CONTAINS
         & t_cf('soil_depth_layer', 'm', ''),                                   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
+        & loutput=.TRUE., &
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
       IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
-        !$acc enter data pcreate(mem%fract_org_sl)
         CALL jsb_add_var( mem, 'fract_org_sl', mem%fract_org_sl,                    &
           & hgrid, soil_w,                                                          &
           & t_cf('fract_org_sl', '', 'Fraction of organic material in soil layer'), &
@@ -617,6 +604,7 @@ CONTAINS
         & t_cf('evapotrans_soil', 'kg m-2 s-1', 'Evapotranspiration from soil (w/o snow and skin res.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
         & prefix, suffix,                                                                                &
+        & loutput=.TRUE., &
         & lrestart=.FALSE.,                                                                              &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
@@ -656,7 +644,7 @@ CONTAINS
         & t_cf('Water content in the whole soil column', 'm water equivalent', ''),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
         & prefix, suffix,                                                            &
-        & output_level=BASIC,                                                        &
+        & loutput=.TRUE., output_level=BASIC,                                        &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL jsb_add_var( mem, 'w_soil_sl', mem%w_soil_sl,                     &
@@ -664,6 +652,7 @@ CONTAINS
         & t_cf('Water content in soil layers', 'm water equivalent', ''),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
+        & loutput=.TRUE., &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL jsb_add_var( mem, 'w_ice_sl', mem%w_ice_sl,                       &
@@ -694,6 +683,7 @@ CONTAINS
         & t_cf('Water content in soil layers at saturation', 'm water equivalent', ''), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
         & prefix, suffix,                                                               &
+        & loutput=.TRUE., &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL jsb_add_var( mem, 'w_soil_fc_sl', mem%w_soil_fc_sl,                              &
@@ -701,6 +691,7 @@ CONTAINS
         & t_cf('Water content in soil layers at field capacity', 'm water equivalent', ''), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
         & prefix, suffix,                                                                   &
+        & loutput=.TRUE., &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL jsb_add_var( mem, 'w_soil_pwp_sl', mem%w_soil_pwp_sl,                                     &
@@ -708,6 +699,7 @@ CONTAINS
         & t_cf('Water content in soil layers at permanent wilting point', 'm water equivalent', ''), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                         &
         & prefix, suffix,                                                                            &
+        & loutput=.TRUE., &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL jsb_add_var( mem,'w_soil_rel', mem%w_soil_rel,                           &
@@ -724,15 +716,12 @@ CONTAINS
       &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 &
       &  ) ) THEN
 
-      !$acc enter data pcreate(mem%root_depth,mem%root_depth_sl,               &
-      !$acc mem%fract_snow_can,mem%w_snow_can,mem%w_soil_root,                 &
-      !$acc mem%w_soil_root_fc,mem%w_soil_root_pwp,mem%water_stress,mem%trans)
-
       CALL jsb_add_var( mem, 'root_depth', mem%root_depth,                   &
         & hgrid, surface,                                                    &
         & t_cf('rooting_depth', '', ''),                                     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
+        & loutput=.TRUE., &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
       CALL jsb_add_var( mem, 'root_depth_sl', mem%root_depth_sl,             &
@@ -740,6 +729,7 @@ CONTAINS
         & t_cf('root_depth_layer', 'm', ''),                                 &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
+        & loutput=.TRUE., &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
       CALL jsb_add_var( mem, 'fract_snow_can', mem%fract_snow_can,           &
@@ -764,6 +754,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
         & prefix, suffix,                                                            &
         & lrestart=.FALSE.,                                                          &
+        & loutput=.TRUE., &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL jsb_add_var( mem, 'w_soil_root_fc', mem%w_soil_root_fc,                                    &
@@ -772,6 +763,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                          &
         & prefix, suffix,                                                                             &
         & lrestart=.FALSE.,                                                                           &
+        & loutput=.TRUE., &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL jsb_add_var( mem, 'w_soil_root_pwp', mem%w_soil_root_pwp,                                           &
@@ -780,6 +772,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                   &
         & prefix, suffix,                                                                                      &
         & lrestart=.FALSE.,                                                                                    &
+        & loutput=.TRUE., &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL jsb_add_var( mem, 'water_stress', mem%water_stress,                &
@@ -787,15 +780,16 @@ CONTAINS
         & t_cf('Water stress factor of canopy', '-', ''),                     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
         & prefix, suffix,                                                     &
+        & loutput=.TRUE., &
         & lrestart=.FALSE., initval_r=0.0_wp )
 
       IF (.NOT. dsl4jsb_Config(ASSIMI_)%active) THEN
-       !$acc enter data pcreate(mem%canopy_cond_unlimited,mem%canopy_cond_limited)
         CALL jsb_add_var( mem, 'canopy_cond_unlimited', mem%canopy_cond_unlimited, &
           & hgrid, surface,                                                    &
           & t_cf('canopy_conductance_unlimited', '', ''),                      &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
+          & loutput=.TRUE., &
           & initval_r=0.0_wp )
 
         CALL jsb_add_var( mem, 'canopy_cond_limited', mem%canopy_cond_limited, &
@@ -803,6 +797,7 @@ CONTAINS
           & t_cf('canopy_conductance_limited', '', ''),                        &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
+          & loutput=.TRUE., &
           & initval_r=0.0_wp )
       END IF
 
@@ -812,6 +807,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
         & prefix, suffix,                                                            &
         & lrestart=.FALSE.,                                                          &
+        & loutput=.TRUE., &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     END IF
@@ -820,8 +816,6 @@ CONTAINS
     IF ( (     One_of(GLACIER_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(LAND_TYPE,    lct_ids(:)) > 0 &
       &  ) ) THEN
-
-      !$acc enter data pcreate(mem%fract_snow_glac,mem%w_glac,mem%runoff_glac)  
 
       CALL jsb_add_var( mem, 'fract_snow_glac', mem%fract_snow_glac,         &
         & hgrid, surface,                                                    &
@@ -851,8 +845,6 @@ CONTAINS
     ! Additional variables for LAKE lct
     IF (      One_of(LAKE_TYPE, lct_ids(:)) > 0 ) THEN
 
-      !$acc enter data pcreate(mem%evapo_wtr) 
-
       CALL jsb_add_var( mem, 'evapo_wtr', mem%evapo_wtr,                                              &
         & hgrid, surface,                                                                             &
         & t_cf('surface_evapotranspiration_wtr', 'kg m-2 s-1', 'Evapotranspiration from lake water'), &
@@ -862,7 +854,6 @@ CONTAINS
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
-        !$acc enter data pcreate(mem%evapo_ice,mem%fract_snow_lice,mem%w_snow_lice)
         CALL jsb_add_var( mem, 'evapo_ice', mem%evapo_ice,                                            &
           & hgrid, surface,                                                                           &
           & t_cf('surface_evapotranspiration_ice', 'kg m-2 s-1', 'Evapotranspiration from lake ice'), &
@@ -890,6 +881,28 @@ CONTAINS
       END IF
 
     END IF
+
+    !! quincy
+    IF (model%config%use_quincy) THEN
+      CALL jsb_add_var(mem, 'w_soil_root_theta', mem%w_soil_root_theta,                                      &
+        & hgrid, surface,                                                                                    &
+        & t_cf('w_soil_root_theta', '', 'root zone integrated plant available water, fraction of maximum '), &
+        & t_grib1(table, 255, grib_bits),                                                                    &
+        & t_grib2(255, 255, 255, grib_bits),                                                                 &
+        & prefix, suffix,                                                                                    &
+        & loutput=.TRUE., lrestart=.TRUE.,                                                                   &
+        & initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'w_soil_root_pot', mem%w_soil_root_pot,                                          &
+        & hgrid, surface,                                                                                    &
+        & t_cf('w_soil_root_pot', 'MPa', 'soil water potential'),                                            &
+        & t_grib1(table, 255, grib_bits),                                                                    &
+        & t_grib2(255, 255, 255, grib_bits),                                                                 &
+        & prefix, suffix,                                                                                    &
+        & loutput=.TRUE., lrestart=.TRUE.,                                                                   &
+        & initval_r=0.0_wp) ! initvalue
+    ENDIF
+
 
     END SUBROUTINE Init_hydro_memory
 #endif

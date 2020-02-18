@@ -277,14 +277,13 @@ CONTAINS
     IF (tile%is_glacier) THEN
       !$claw expand parallel update
       vol_heat_cap_sl  (:,:,:) = vol_hcap_ice
-      !$claw expand parallel update
       heat_cond_sl     (:,:,:) = hcond_ice
-      !$cla$w end expand
+      !$claw end expand
       !$claw expand parallel update
       vol_heat_cap_snow(:  ,:) = vol_hcap_snow
-      !$claw expand parallel update
       heat_cond_snow   (:  ,:) = hcond_snow
-      !$cla$w end expand
+      !$claw end expand
+      !$claw acc update host(vol_heat_cap_sl, heat_cond_sl, vol_heat_cap_snow, heat_cond_snow)
       RETURN
     END IF
 
@@ -363,10 +362,9 @@ CONTAINS
           END DO
         END DO
       END DO
-      !$claw acc update host(vol_heat_cap_sl)
       !$claw acc end data
-
     END IF
+    !$claw acc update host(vol_heat_cap_sl)
 
     IF (dsl4jsb_Config(SSE_)%l_heat_cond_dyn) THEN
       !$claw expand parallel update savepoint=ser_jsb_sse_init_calc_thermal_conductivity_1 tile_name=tile%name
@@ -382,6 +380,7 @@ CONTAINS
         &                                      soil_e_dz_tmp(:,:,:)                                                     &
         !&                   SPREAD(SPREAD(soil_e%dz        (:),     DIM=1, ncopies=nproma), DIM=3, ncopies=nblks)  &
         & )
+      !$claw acc update host(heat_cond_sl)
     ELSE
       !$claw acc data present(heat_cond_sl,heat_cond)
       !$claw acc update device(heat_cond)
@@ -427,6 +426,7 @@ CONTAINS
           !$cla$w end expand
         END IF
       END IF
+      !$claw acc update host(vol_heat_cap_snow, heat_cond_snow)
     ! ELSE
     !   vol_heat_cap_snow and heat_cond_snow are fixed in calc_soiltemp_old
     END IF
