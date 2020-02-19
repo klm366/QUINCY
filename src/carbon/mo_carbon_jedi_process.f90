@@ -72,7 +72,7 @@ CONTAINS
     
     w_wilt = w_soil_max * w_soil_wilt_fract
 
-    IF (w_soil - w_wilt > 0._wp) THEN
+    IF (w_soil_max - w_wilt > 0._wp) THEN
       water_stress_factor = MAX (0._wp, &
         &                        MIN (1._wp, (w_soil - w_wilt) / (w_soil_max - w_wilt) ))
     ELSE
