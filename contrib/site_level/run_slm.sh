@@ -347,14 +347,39 @@ sleep 5s && sync
 
 
 #############################################################################################
-## move the job folder to the local scratch/ at the HPC node and work from there           ##
+## move the job dir to the local /scratch at the HPC node and work from there              ##
 #############################################################################################
-## if more than 14GB space is available at this local scratch
+## test how much space is left on the local /scratch of the node
 scratchSpace=$(df /scratch/ | grep "scratch" | awk '{print $4}')
+# get the name of the node
+nodeName=$(uname -n)
+echo "simulation runs at node: ""$nodeName"
+# assume a QUINCY job might take max 4 GB space (for an u82 job 3 GB are used), calc the overall min space needed
+# default is 32 GB (8 jobs at all queue nodes) [1 GB = 1 B * 1028 * 1028]
+minSpace="34000000"
+# 512 GB at access io1 io2 io3 where 128 jobs can run
+if [ "$nodeName" == "access" ] || [ "$nodeName" == "io1" ] || [ "$nodeName" == "io2" ] || [ "$nodeName" == "io3" ]; then
+  minSpace="544000000"
+# 192 GB at io4-6 where 48 jobs can run
+elif [ "$nodeName" == "io4" ] || [ "$nodeName" == "io5" ] || [ "$nodeName" == "io6" ]; then
+  minSpace="204000000"
+# 128 GB at master where 32 jobs can run
+elif [ "$nodeName" == "master" ]; then
+  minSpace="136000000"
+# 80 GB at iof-ioj where 20 jobs can run
+elif [ "$nodeName" == "iof" ] || [ "$nodeName" == "iog" ] || [ "$nodeName" == "ioh" ] || [ "$nodeName" == "ioi" ] || [ "$nodeName" == "ioj" ]; then
+  minSpace="85000000"
+# 64 GB at io7-ioe where 16 jobs can run
+elif [ "$nodeName" == "io7" ] || [ "$nodeName" == "io8" ] || [ "$nodeName" == "io9" ] || [ "$nodeName" == "ioa" ] || [ "$nodeName" == "iob" ] || [ "$nodeName" == "ioc" ] || [ "$nodeName" == "iod" ] || [ "$nodeName" == "ioe" ]; then
+  minSpace="68000000"
+fi
+
 localScratch="FALSE"
-if [ "$scratchSpace" -gt "15000000" ]
+if [ "$scratchSpace" -gt "$minSpace" ]
  then
   localScratch="TRUE"
+  echo "running the simulation at the local /scratch of the node"
+  echo " "
 
   ## working in the scratch folder at the node
   mkdir -p /scratch/"$username"
@@ -440,7 +465,7 @@ if [ "$localScratch" == "TRUE" ]
   # remove job-folder from local scratch
   rm -rf  /scratch/"$username"/"$jobName""$jobIndex""$siteName"
  else
-  echo " Did not use the local scratch/ of the node because it was not enough space available!"
+  echo " Did not run the simulation at the local /scratch of the node because there was not enough space available!"
   echo " "
 fi
 
