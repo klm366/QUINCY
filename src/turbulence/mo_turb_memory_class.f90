@@ -19,7 +19,7 @@ MODULE mo_turb_memory_class
   USE mo_util, ONLY: One_of
 
   USE mo_jsb_memory_class, ONLY: t_jsb_memory
-  USE mo_jsb_lct_class,    ONLY: LAND_TYPE, BARE_TYPE, VEG_TYPE, GLACIER_TYPE !, LAKE_TYPE
+  USE mo_jsb_lct_class,    ONLY: LAND_TYPE, BARE_TYPE, VEG_TYPE, GLACIER_TYPE, WET_TYPE !, LAKE_TYPE
   USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d
 
   IMPLICIT NONE
@@ -99,6 +99,7 @@ CONTAINS
       &   .OR. One_of(BARE_TYPE,    lct_ids(:)) > 0 &
       &   .OR. One_of(LAND_TYPE,    lct_ids(:)) > 0 &
       &   .OR. One_of(GLACIER_TYPE, lct_ids(:)) > 0 &
+      &   .OR. One_of(WET_TYPE, lct_ids(:)) > 0 &
       &  ) ) THEN
 
       CALL jsb_add_var( mem, 'fact_q_air', mem%fact_q_air,                   &

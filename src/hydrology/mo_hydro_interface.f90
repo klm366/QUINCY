@@ -376,7 +376,7 @@ CONTAINS
   !!
   SUBROUTINE update_surface_hydrology(tile, options)
 
-    USE mo_hydro_process,          ONLY: calc_surface_hydrology_land, calc_surface_hydrology_glacier
+    USE mo_hydro_process,          ONLY: calc_surface_hydrology_land, calc_surface_hydrology_glacier, calc_surface_hydrology_wet
     USE mo_jsb_physical_constants, ONLY: dens_snow
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -587,6 +587,48 @@ CONTAINS
         !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_7 tile_name=tile%name
         snow_soil_dens(:) = dens_snow
       END IF
+    ELSE IF (tile%is_wet) THEN
+      IF (tile%is_vegetation) THEN
+        !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_8 tile_name=tile%name
+        trans_tmp(:) = trans(:)
+      ELSE
+        !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_9 tile_name=tile%name
+        trans_tmp(:) = 0._wp
+      END IF
+      !$claw sca forward update savepoint=ser_jsb_hydro_calc_surface_hydrology_land_1 tile_name=tile%name
+      CALL calc_surface_hydrology_wet(   &
+        & lstart,                         & !< in
+        & dtime,                          & !< in
+        & dsl4jsb_Config(SSE_)%l_dynsnow, & !< in
+        & t_unfilt(:),                    & !< in
+        & wind_10m(:),                    & !< in
+        & t_air(:),                       & !< in
+        & w_skin_max(:),                  & !< in
+        & fract_snow(:),                  & !< in
+        & fract_water(:),                 & !< in
+        & hcap_grnd(:),                   & !< in
+        & evapotrans(:),                  & !< in
+        & evapopot(:),                    & !< in
+        & trans_tmp(:),                   & !< in
+        & rain(:),                        & !< in
+        & snow(:),                        & !< in
+        & w_skin(:),                      & !< inout
+        & w_snow_soil(:),                 & !< inout
+        & snow_soil_dens(:),              & !< inout
+        & q_snocpymlt(:),                 & !< out
+        & snow_accum(:),                  & !< out
+        & snowmelt(:),                    & !< out
+        & evapotrans_soil(:),             & !< out
+        & evapo_skin(:),                  & !< out
+        & evapo_snow(:),                  & !< out
+        & water_excess(:),                & !< out
+        & evapo_deficit(:)                & !< out
+        & )
+
+      IF (model%config%l_compat401) THEN
+        !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_10 tile_name=tile%name
+        snow_soil_dens(:) = 330._wp
+      END IF
     ELSE
       IF (tile%is_vegetation) THEN
         !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_8 tile_name=tile%name
@@ -638,6 +680,9 @@ CONTAINS
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_11 tile_name=tile%name
       w_snow(:) = 0._wp
     ELSE IF (tile%is_bare) THEN
+      !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_12 tile_name=tile%name
+      w_snow(:) = w_snow_soil(:)
+    ELSE IF (tile%is_wet) THEN
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_12 tile_name=tile%name
       w_snow(:) = w_snow_soil(:)
     ELSE IF (tile%is_vegetation .OR. tile%is_land) THEN
@@ -922,6 +967,8 @@ CONTAINS
     ! Runoff and drainage for glaciers already computed in update_surface_hydrology
     ! Glaciers have no water in soil
     IF (tile%is_glacier) RETURN
+
+    IF (tile%is_wet) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -1845,7 +1892,7 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(SEB_,      t)                ! in
 
-    IF (tile%is_bare .OR. tile%is_vegetation .OR. tile%is_land) THEN
+    IF (tile%is_bare .OR. tile%is_wet .OR. tile%is_vegetation .OR. tile%is_land) THEN
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    oro_stddev)       ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_water)  ! out
     END IF
@@ -1855,7 +1902,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_can)   ! out
     END IF
 
-    IF (tile%is_vegetation .OR. tile%is_land .OR. tile%is_bare) THEN
+    IF (tile%is_vegetation .OR. tile%is_land .OR. tile%is_bare .OR. tile%is_wet) THEN
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_skin)           ! in
     END IF
 
@@ -1929,6 +1976,27 @@ CONTAINS
       !$claw expand parallel update
       fract_snow(:)  = fract_snow_soil(:)
    END IF
+
+    IF (tile%is_wet) THEN
+      !$claw sca forward update savepoint=ser_jsb_hydro_calc_wskin_fractions_bare_1 tile_name=tile%name dtime=dtime steplen=steplen  task_counter=task_counter
+      CALL calc_wskin_fractions_bare( &
+        & dtime,                      & ! in
+        & steplen,                    & ! in
+        & w_skin_max,                 & ! in
+        & oro_stddev(:),              & ! in
+        & t(:),                       & ! in
+        & press_srf(:),               & ! in
+        & drag_srf(:),                & ! in
+        & q_air(:),                   & ! in
+        & w_skin(:),                  & ! in
+        & w_snow_soil(:),             & ! in
+        & fract_water(:),             & ! out
+        & fract_snow_soil(:)          & ! out
+        & )
+      !$claw expand parallel update
+      fract_snow(:)  = fract_snow_soil(:)
+   END IF
+
 
    !$claw acc exit data delete(w_skin_max, w_skin_canopy_max)  
    !$claw verbatim  task_counter = task_counter + 1

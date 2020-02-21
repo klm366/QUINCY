@@ -20,7 +20,7 @@ MODULE mo_jsb_lct_class
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: LAND_TYPE, VEG_TYPE, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE
+  PUBLIC :: LAND_TYPE, VEG_TYPE, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE, WET_TYPE
   PUBLIC :: max_no_of_lct, t_jsb_lct, Contains_lct
 
   INTEGER, PARAMETER :: max_no_of_lct = 10
@@ -31,12 +31,14 @@ MODULE mo_jsb_lct_class
       & VEG_TYPE,      & !< Vegetated
       & BARE_TYPE,     & !< Bare soil
       & GLACIER_TYPE,  & !< Glacier
-      & LAKE_TYPE        !< Lake
+      & LAKE_TYPE,      & !< Lake
+      & WET_TYPE         !< Wetland
   END ENUM
 
   TYPE t_jsb_lct
     INTEGER           :: id = 0               !< Id for lct, one of enumeration above
-    CHARACTER(LEN=5)  :: name = ""            !< Short name for lct
+!    CHARACTER(LEN=5)  :: name = ""            !< Short name for lct
+    CHARACTER(LEN=6)  :: name = ""            !< Short name for lct
     CHARACTER(LEN=30) :: long_name = ""       !< Long name for lct
     REAL(wp), POINTER :: fract(:,:) => NULL() !< Cover fraction of this lct (relative to tile that owns this lct)
     INTEGER           :: lib_id               !< Id of lct in lctlib
@@ -138,6 +140,8 @@ CONTAINS
         return_value = 'glac'
       CASE (LAKE_TYPE)
         return_value = 'lake'
+      CASE (WET_TYPE)
+        return_value = 'wet'
       END SELECT
     END IF
 
@@ -164,6 +168,8 @@ CONTAINS
         return_value = 'Glacier'
       CASE (LAKE_TYPE)
         return_value = 'Lake'
+      CASE (WET_TYPE)
+        return_value = 'Wet'      
       END SELECT
     END IF
 

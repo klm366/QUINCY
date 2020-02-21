@@ -23,7 +23,7 @@ MODULE mo_jsb_model_usecases
   USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, AGGREGATE_ !, ON_SUBTREE_
   USE mo_jsb_tile,            ONLY: t_jsb_tile
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
-    &                               LAND_TYPE, VEG_TYPE, GLACIER_TYPE, LAKE_TYPE !, BARE_TYPE
+    &                               LAND_TYPE, VEG_TYPE, GLACIER_TYPE, LAKE_TYPE, WET_TYPE !, BARE_TYPE
 
   IMPLICIT NONE
   PRIVATE
@@ -122,7 +122,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
-    CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, veg_tile, pft_tile
+    CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, veg_tile, pft_tile, wet_tile
 
     INTEGER :: i
 
@@ -186,6 +186,11 @@ CONTAINS
             & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile)
             ! & lct=t_jsb_lct(GLACIER_TYPE, lib_id=1), parent=land_tile)
         END IF
+
+          wet_tile => t_jsb_tile('wet', 'Wet tile', &
+            & processes = (/HYDRO_, SSE_/), &
+            & process_actions = (/ON_TILE_, ON_TILE_/), &
+            & lct=t_jsb_lct(WET_TYPE), parent=land_tile)
 
         ! default jsb4: HYDRO_ is active at veg tile only to save runtime
         IF (.NOT. model%config%use_quincy) THEN
@@ -252,7 +257,7 @@ CONTAINS
     ! IF (ASSOCIATED(lake_tile)) CONTINUE
     ! IF (ASSOCIATED(pft_tile)) CONTINUE
         
-    NULLIFY(box_tile, land_tile, veg_tile, pft_tile)
+    NULLIFY(box_tile, land_tile, veg_tile, pft_tile, wet_tile)
     IF (model%config%use_glacier) NULLIFY(glacier_tile)
     IF (model%config%use_lakes) NULLIFY(lake_tile)
 

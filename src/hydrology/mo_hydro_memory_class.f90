@@ -22,7 +22,7 @@ MODULE mo_hydro_memory_class
   USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_memory_class, ONLY: t_jsb_memory
   USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
-  USE mo_jsb_lct_class,    ONLY: LAND_TYPE, BARE_TYPE, VEG_TYPE, LAKE_TYPE, GLACIER_TYPE
+  USE mo_jsb_lct_class,    ONLY: LAND_TYPE, BARE_TYPE, VEG_TYPE, LAKE_TYPE, GLACIER_TYPE, WET_TYPE
   USE mo_jsb_varlist,      ONLY: BASIC !, MEDIUM, FULL
   USE mo_jsb_process_class, ONLY: ON_TILE_, AGGREGATE_
 
@@ -364,6 +364,7 @@ CONTAINS
       &   .OR. One_of(BARE_TYPE,    lct_ids(:)) > 0 &
       &   .OR. One_of(GLACIER_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(LAND_TYPE,    lct_ids(:)) > 0 &
+      &   .OR. One_of(WET_TYPE,    lct_ids(:)) > 0 &
       &  ) ) THEN
 
       CALL jsb_add_var( mem, 'fract_snow_soil', mem%fract_snow_soil,            &
@@ -426,6 +427,7 @@ CONTAINS
     IF ( (     One_of(VEG_TYPE,  lct_ids(:)) > 0 &
       &   .OR. One_of(BARE_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 &
+      &   .OR. One_of(WET_TYPE, lct_ids(:)) > 0 &
       &  ) ) THEN
 
       CALL jsb_add_var( mem, 'soil_depth', mem%soil_depth,                     &
@@ -596,6 +598,7 @@ CONTAINS
     ! IF ( (     One_of(VEG_TYPE,  lct_ids(:)) > 0 &
     !   &   .OR. One_of(BARE_TYPE, lct_ids(:)) > 0 &
     !   &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 &
+    !   &   .OR. One_of(WET_TYPE, lct_ids(:)) > 0 &
     !   &  )                                       &
     !   &  .AND. .NOT. ASSOCIATED(mem%fract_water%ptr) ) THEN
 

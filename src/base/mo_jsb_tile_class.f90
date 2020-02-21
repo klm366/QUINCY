@@ -23,7 +23,7 @@ MODULE mo_jsb_tile_class
   USE mo_hsm_class,           ONLY: t_Hsm, t_State, t_Message
   USE mo_jsb_memory_class,    ONLY: t_jsb_memory_p, t_jsb_memory
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
-    &                               LAND_TYPE, VEG_TYPE, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE
+    &                               LAND_TYPE, VEG_TYPE, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE, WET_TYPE
   USE mo_jsb_var_class,       ONLY: t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d
 
 #ifdef _OPENACC
@@ -75,11 +75,13 @@ MODULE mo_jsb_tile_class
     LOGICAL                                :: is_land = .FALSE.
     LOGICAL                                :: is_glacier = .FALSE.
     LOGICAL                                :: is_lake = .FALSE.
+    LOGICAL                                :: is_wet = .FALSE.
     LOGICAL                                :: contains_vegetation = .FALSE.
     LOGICAL                                :: contains_bare = .FALSE.
     LOGICAL                                :: contains_land = .FALSE.
     LOGICAL                                :: contains_glacier = .FALSE.
     LOGICAL                                :: contains_lake = .FALSE.
+    LOGICAL                                :: contains_wet = .FALSE.
     LOGICAL                                :: contains_soil = .FALSE.
     INTEGER,                ALLOCATABLE    :: process_action(:)
     ! REAL(wp), PRIVATE,          POINTER    :: fract     (:,:)      !< Fraction of this tile (relative to parent tile)
@@ -323,6 +325,8 @@ CONTAINS
           this%is_glacier = .TRUE.
         CASE (LAKE_TYPE)
           this%is_lake = .TRUE.
+        CASE (WET_TYPE)
+          this%is_wet = .TRUE.
         END SELECT
       END IF
 
@@ -351,9 +355,11 @@ CONTAINS
       this%contains_glacier = .TRUE.
     CASE (LAKE_TYPE)
       this%contains_lake = .TRUE.
+    CASE (WET_TYPE)
+      this%contains_wet = .TRUE.
     END SELECT
 
-    this%contains_soil       = this%contains_vegetation .OR. this%contains_bare .OR. this%contains_land
+    this%contains_soil       = this%contains_vegetation .OR. this%contains_bare .OR. this%contains_wet .OR. this%contains_land
 
   END SUBROUTINE Add_lct
 
