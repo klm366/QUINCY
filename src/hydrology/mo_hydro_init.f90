@@ -387,13 +387,24 @@ CONTAINS
         & MIN(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl), dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl))
       !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl))
 
-      DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, w_soil_root), 2)
+      IF (.NOT. tile%contains_vegetation) THEN
+        ! TODO Just sum w_soil_sl over layers?
+        DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, w_soil_sl), 2)
+            CALL get_water_in_root_zone(                       &
+            & dsl4jsb_var_ptr(HYDRO_, w_soil_sl)     (:,:,i),  &
+            & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl) (:,:,i),  &
+            & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl) (:,:,i),  &
+            & dsl4jsb_var_ptr(HYDRO_, w_soil_column) (:,  i)   )
+        END DO
+      ELSE
+        DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, w_soil_sl), 2)
           CALL get_water_in_root_zone(                       &
           & dsl4jsb_var_ptr(HYDRO_, w_soil_sl)     (:,:,i),  &
           & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl) (:,:,i),  &
           & dsl4jsb_var_ptr(HYDRO_, root_depth_sl) (:,:,i),  &
           & dsl4jsb_var_ptr(HYDRO_, w_soil_column) (:,  i)   )
-      END DO
+        END DO
+      END IF
       !$acc update host(dsl4jsb_var_ptr(HYDRO_, w_soil_column))
       WHERE (dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column) > dsl4jsb_var2D_onDomain(HYDRO_, max_moist))
         dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column) = dsl4jsb_var2D_onDomain(HYDRO_, max_moist)
