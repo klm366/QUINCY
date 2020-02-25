@@ -48,8 +48,8 @@ MODULE mo_jsb_pool_class
     CHARACTER(LEN=:),  ALLOCATABLE :: name               ! No spaces!
     CHARACTER(LEN=:),  ALLOCATABLE :: path
     CHARACTER(LEN=:),  ALLOCATABLE :: element_unit
-    CLASS(t_jsb_pool_p),   POINTER     :: pool_list(:)
-    CLASS(t_jsb_pool_p),   POINTER     :: leaf_list(:)
+    CLASS(t_jsb_pool_p),   POINTER     :: pool_list(:) => NULL()
+    CLASS(t_jsb_pool_p),   POINTER     :: leaf_list(:) => NULL()
     ! TYPE(t_element_p), ALLOCATABLE :: element_list(:)
     TYPE(t_jsb_var_p), ALLOCATABLE :: element_list(:)
     TYPE(t_jsb_var_p), ALLOCATABLE :: var_list(:)
