@@ -28,19 +28,54 @@
 MODULE mo_veg_memory_class
 
   USE mo_kind,                   ONLY: wp
+  USE mo_exception,              ONLY: finish
   USE mo_util,                   ONLY: One_of
+  USE mo_jsb_utils_iface,        ONLY: assign_if_present_allocatable
   USE mo_jsb_impl_constants,     ONLY: false
-  USE mo_exception,              ONLY: message
+  
+  USE mo_jsb_model_class,        ONLY: t_jsb_model
+  USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
-  USE mo_jsb_lct_class,          ONLY: VEG_TYPE, LAND_TYPE
-  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_jsb_var_class,          ONLY: t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_jsb_pool_class,         ONLY: t_jsb_pool
+  USE mo_jsb_lct_class,          ONLY: LAND_TYPE, VEG_TYPE
 
 
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: t_veg_memory, max_no_of_vars
+  PUBLIC :: t_veg_element_pool
+  PUBLIC :: t_jsb_pool
+  PUBLIC :: carbon, nitrogen, phosphorus, carbon13, carbon14, nitrogen15
  
   INTEGER, PARAMETER :: max_no_of_vars      = 250  !> TYPE t_jsb_var
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Type definition for veg pools
+  !!
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  TYPE, EXTENDS(t_jsb_pool) :: t_veg_element_pool
+    TYPE(t_jsb_var_real2d), POINTER :: carbon
+    TYPE(t_jsb_var_real2d), POINTER :: nitrogen
+    TYPE(t_jsb_var_real2d), POINTER :: phosphorus
+    TYPE(t_jsb_var_real2d), POINTER :: carbon13
+    TYPE(t_jsb_var_real2d), POINTER :: carbon14
+    TYPE(t_jsb_var_real2d), POINTER :: nitrogen15
+  CONTAINS
+    PROCEDURE :: Init => t_veg_element_pool_init
+  END TYPE t_veg_element_pool
+
+
+
+
+
+
+
+
+
+
+
 
 
   !-----------------------------------------------------------------------------------------------------
