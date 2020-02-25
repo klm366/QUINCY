@@ -321,6 +321,7 @@ CONTAINS
         this%mem(iproc)%p%grid_id = this%grid_id
         this%mem(iproc)%p%owner_model_id = this%owner_model_id
         this%mem(iproc)%p%owner_proc_id = iproc
+        this%mem(iproc)%p%owner_proc_name = Get_process_name(iproc)
         ALLOCATE(this%mem(iproc)%p%owner_tile_path(SIZE(this%path)))
         this%mem(iproc)%p%owner_tile_path(:) = this%path(:)
         this%mem(iproc)%p%owner_tile_name = TRIM(this%name)
