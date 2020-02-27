@@ -1268,4 +1268,3 @@ CONTAINS
   END SUBROUTINE hydro_sanitize_state
 
 #endif
-END MODULE mo_hydro_init
