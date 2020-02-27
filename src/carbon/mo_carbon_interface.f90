@@ -531,6 +531,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,     rain)                       ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,     snow)                       ! in
 
+    dsl4jsb_Get_pool(CARBON_, my_pools, my_pools)
     ! subset = pheno__mem%LAI%Get_subset()
     ! print*,'AAA ', subset%ics, subset%ice, subset%iblk
     ! dsl4jsb_Get_pool(CARBON_, plant%living%green, green)
@@ -644,7 +645,7 @@ CONTAINS
 
 
       !Calculate current sum before operation for c conservation test
-      CALL my_pools%state_ta%Sum_leaves([CARBON])
+      ! CALL my_pools%state_ta%Sum_leaves([CARBON])
       CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum(:))
 
       ! Now update the C pools

@@ -400,7 +400,7 @@ CONTAINS
     IF (suffix_loc /= '') suffix_loc = '_' // suffix_loc
 
     ALLOCATE(pools)
-    CALL pools%Init(name, shortname, l_elements=.FALSE.)
+    CALL pools%Init(name, shortname, l_elements=.TRUE., element_unit=unit)
 
     IF ( (     One_of(VEG_TYPE,  lct_ids(:)) > 0 &
       &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 &
