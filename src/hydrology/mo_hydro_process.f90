@@ -21,8 +21,8 @@ MODULE mo_hydro_process
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: calc_surface_hydrology_land, calc_surface_hydrology_glacier, calc_surface_hydrology_wet,      &
-    & calc_soil_hydrology, calc_wskin_fractions_lice, calc_wskin_fractions_veg, calc_wskin_fractions_bare, &
+  PUBLIC :: calc_surface_hydrology_land, calc_surface_hydrology_glacier, calc_surface_hydrology_wet, calc_soil_hydrology, &
+    & calc_wskin_fractions_lice, calc_wskin_fractions_veg, calc_wskin_fractions_bare, calc_wskin_fractions_wet,           &
     & get_canopy_conductance, get_water_stress_factor
 
   INTERFACE get_canopy_conductance
@@ -535,7 +535,7 @@ CONTAINS
 
     !  Snow budget and meltwater
     !-----------------------------------------------------
-    skinres = skinres                                     ! Add melt water from canopy to skin reservoir
+    skinres = skinres_max                                                ! Add melt water from canopy to skin reservoir
     water_to_soil = snow_melt_soil + MAX(0._wp, skinres-skinres_max)     ! Excess water enters the soil, and
     skinres = MIN(skinres_max, skinres)                                  ! skin reservoir is limited to the maximum
     snow_accum = new_snow + evapo_snow_pot_in_m - snow_melt_soil 
@@ -597,6 +597,8 @@ CONTAINS
   ! @param [in]      dz                 (Fixed) Thicknesses of soil layers [m]
   ! @param [in]      nlat               (Effective) number of latitudes
   ! @param [in]      delta_time         Time step [s]
+  ! @param [in]      
+  ! @param [in]      
   ! @param [in]      soil_depth_l       Thicknesses of soil layers until bedrocj [m]
   ! @param [in]      root_depth_l       Thicknesses of soil layers until rooting depth [m]
   ! @param [in]      fract_org_l        Fractions per soil layer of organic comonent []
@@ -607,17 +609,16 @@ CONTAINS
   ! @param [in]      vol_porosity_l     Soil porosity [m/m]
   ! @param [in]      vol_field_cap_l    Volumetric field capacity [m/m]
   ! @param [in]      vol_p_wilt_l       Volumetric permanent wilting point [m/m]
-  ! @param [in]      sfract_srf         Snow cover fraction []
-  ! @param [in]      wfract_srf         Wet surface fraction (skin reservoir) []
   ! @param [in]      ws_max_mineral     Maximum water holding capacity of non-organic soil [m]
   ! @param [in]      oro_stddev         Sub-grid standard deviation of orography [m]
   ! @param [in]      t_soil             Temperature of the upper soil layer [K]
-  ! @param [in]      water_to_soil      Amount of water going into the soil [m]
+  ! @param [in]      water_to_soil      Water available for infiltration into the soil [m water equivalent]
   ! @param [in]      evapotrans_soil    Evapotranspiration from the soil (w/o snow or canopy) [kg m-2 s-1]
   ! @param [in]      trans              Evapotranspiration [kg m-2 s-1]
   ! @param [in,out]  ws                 Total water content of soil column in rooting zone [m]
   ! @param [in,out]  ws_l               Content un-frozen water of soil layers in rooting zone [m]
   ! @param [in,out]  soil_ice_l         Content of frozen water os soil layers in rooting zone [m]
+  ! @param [in,out]  w_soil_overflow    Water content of reservoir  [m] 
   ! @param [out]     wsat_l             Maximum water storage in each soil layers [m]
   ! @param [out]     field_cap_l        Water content at field capacity in soil layers [m]
   ! @param [out]     p_wilt_l           Water content at permanent wilting point in soil layers [m]
@@ -1524,7 +1525,8 @@ CONTAINS
       max2d(:) = MAXLOC(ws_l(:,:) - field_cap_l(:,:))
       WRITE (message_text,*) 'liquid water content above field capacity: at ',max2d(:) ,': ws_l: ', ws_l(max2d(1),max2d(2)), &
          ' field_cap_l: ', field_cap_l(max2d(1),max2d(2))
-      CALL finish ('digest_evapotrans', message_text)
+      ! Changed temporaly by Nora Specht to simulate moisture saturated soil
+      !CALL finish ('digest_evapotrans', message_text)
       ! CALL message ('digest_evapotrans', message_text, all_print=.TRUE., level=em_warn)
       ! ws_l(:,:) = MIN(ws_l(:,:), field_cap_l(:,:))
     END IF
@@ -1800,6 +1802,63 @@ CONTAINS
     END IF
 
   END SUBROUTINE calc_wskin_fractions_bare
+
+  ELEMENTAL SUBROUTINE calc_wskin_fractions_wet( &
+    & dtime,                                      & ! in
+    & steplen,                                    & ! in
+    & t_srf,                                      & ! in
+    & press_srf,                                  & ! in
+    & drag_srf,                                   & ! in
+    & q_air,                                      & ! in
+    & w_skin,                                     & ! in
+    & fract_water,                                & ! out
+    & fract_snow_soil                             & ! out
+    & )
+
+    USE mo_phy_schemes,            ONLY: heat_transfer_coef, qsat
+    USE mo_jsb_physical_constants, ONLY: rhoh2o
+
+    REAL(wp), INTENT(in) :: &
+      & dtime,              &
+      & steplen
+
+    !$claw model-data
+    REAL(wp), INTENT(in) :: &
+      & t_srf,              &
+      & press_srf,          &
+      & drag_srf,           &
+      & q_air,              &
+      & w_skin
+
+    REAL(wp), INTENT(out) :: &
+      & fract_water,         &
+      & fract_snow_soil
+
+    REAL(wp) ::       &
+      & t_srf_old,    &
+      & qsat_srf_old, &
+      & evapo_pot
+
+    fract_water = 1._wp
+    fract_snow_soil =  0._wp
+
+    ! Potential evaporation using old values of air and surface humidity
+    t_srf_old = t_srf
+    qsat_srf_old = qsat(t_srf_old, press_srf)
+    evapo_pot =  heat_transfer_coef(drag_srf, steplen) * (qsat_srf_old - q_air) ! Positive upwards
+
+    ! Reduce snow cover on soil if snow loss during the time step due to potential evaporation is larger than
+    ! snow water content from soil and canopy together
+    ! R: In the following lines I just kicked out the contribution of w_skin_can as compared to JSBACH3. For the intension of
+    !    the parametrization this can be done so easily for the bare type and it is consistent with JSBACH3.
+    ! Same for water cover on soil
+    IF (fract_water > 0._wp .AND. w_skin > EPSILON(1._wp)) THEN
+      fract_water = fract_water &
+        & / MAX(1._wp, (1._wp - fract_snow_soil) * evapo_pot * dtime / (rhoh2o * MAX(EPSILON(1._wp), w_skin)))
+    END IF
+
+  END SUBROUTINE calc_wskin_fractions_wet
+
 
   !< Roesch et al. 2002, Climate Dynamics
   !

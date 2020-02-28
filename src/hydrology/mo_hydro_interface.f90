@@ -933,6 +933,9 @@ CONTAINS
     ! Pointers to variables in memory
     dsl4jsb_Real3D_onChunk :: fract_org_sl
     dsl4jsb_Real3D_onChunk :: t_soil
+    dsl4jsb_Real3D_onChunk :: w_soil_sl           !< Water content in soil layers [m]
+    dsl4jsb_Real3D_onChunk :: soil_depth_sl       !< Thicknesses of soil layers until bedrock [m]
+    dsl4jsb_Real3D_onChunk :: vol_field_cap_sl    !< Volumetric field capacity [m/m]
 
     dsl4jsb_Real2D_onChunk :: w_soil_rel
     dsl4jsb_Real2D_onChunk :: w_soil_column
@@ -968,8 +971,6 @@ CONTAINS
     ! Glaciers have no water in soil
     IF (tile%is_glacier) RETURN
 
-    IF (tile%is_wet) RETURN
-
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
@@ -994,6 +995,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, max_moist)
 
     dsl4jsb_Get_var3D_onChunk(SSE_,    t_soil)     ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_sl)
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_field_cap_sl)
 
     IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
       dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)
@@ -1003,6 +1007,8 @@ CONTAINS
       !$claw expand parallel update
       fract_org_sl(:,:) = 0._wp
     END IF
+
+    IF (tile%contains_wet) w_soil_sl = vol_field_cap_sl * soil_depth_sl  ! Water content in soil layers at field capacity
 
     !$claw acc update device(soil_w%dz) ! TODO move if possible
     !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_1 tile_name=tile%name
@@ -1042,6 +1048,7 @@ CONTAINS
       & dsl4jsb_var2D_onChunk (HYDRO_, runoff            ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ) &
       & )
+
 
     !$claw acc data present(max_moist, w_soil_rel, w_soil_column)
     !$claw acc parallel loop gang vector
@@ -1792,7 +1799,7 @@ CONTAINS
   SUBROUTINE update_snow_and_skin_fraction( tile, options)
 
     ! Use declarations
-    USE mo_hydro_process,          ONLY: calc_wskin_fractions_lice, calc_wskin_fractions_veg, calc_wskin_fractions_bare
+    USE mo_hydro_process,          ONLY: calc_wskin_fractions_lice, calc_wskin_fractions_veg, calc_wskin_fractions_bare, calc_wskin_fractions_wet
     ! sollte jetzt in dieses File hier kommen: USE mo_hydro_process,  ONLY: calc_hydro_snow_and_skin_fraction
 
     ! Arguments
@@ -1979,17 +1986,14 @@ CONTAINS
 
     IF (tile%is_wet) THEN
       !$claw sca forward update savepoint=ser_jsb_hydro_calc_wskin_fractions_bare_1 tile_name=tile%name dtime=dtime steplen=steplen  task_counter=task_counter
-      CALL calc_wskin_fractions_bare( &
+      CALL calc_wskin_fractions_wet( &
         & dtime,                      & ! in
         & steplen,                    & ! in
-        & w_skin_max,                 & ! in
-        & oro_stddev(:),              & ! in
         & t(:),                       & ! in
         & press_srf(:),               & ! in
         & drag_srf(:),                & ! in
         & q_air(:),                   & ! in
         & w_skin(:),                  & ! in
-        & w_snow_soil(:),             & ! in
         & fract_water(:),             & ! out
         & fract_snow_soil(:)          & ! out
         & )

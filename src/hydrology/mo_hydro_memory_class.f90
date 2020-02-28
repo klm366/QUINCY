@@ -717,6 +717,7 @@ CONTAINS
     ! Additional variables for vegetation
     IF ( (     One_of(VEG_TYPE,  lct_ids(:)) > 0 &
       &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 &
+      &   .OR. One_of(WET_TYPE, lct_ids(:)) > 0 &
       &  ) ) THEN
 
       CALL jsb_add_var( mem, 'root_depth', mem%root_depth,                   &

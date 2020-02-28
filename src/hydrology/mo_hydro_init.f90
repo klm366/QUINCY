@@ -227,7 +227,7 @@ CONTAINS
 
     END IF
 
-    IF (tile%contains_vegetation) THEN
+    IF (tile%contains_vegetation .OR. tile%contains_wet) THEN
 
       input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HYDRO_)%bc_filename), model%grid_id)
 
@@ -389,7 +389,7 @@ CONTAINS
 
       IF (.NOT. tile%contains_vegetation) THEN
       ! TODO Just sum w_soil_sl over layers?
-        DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, w_soil_sl), 2)
+        DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, w_soil_sl), 3)
             CALL get_water_in_root_zone(                       &
             & dsl4jsb_var_ptr(HYDRO_, w_soil_sl)     (:,:,i),  &
             & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl) (:,:,i),  &
@@ -397,7 +397,7 @@ CONTAINS
             & dsl4jsb_var_ptr(HYDRO_, w_soil_column) (:,  i)   )
         END DO
       ELSE
-        DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, w_soil_sl), 2)
+        DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, w_soil_sl), 3)
             CALL get_water_in_root_zone(                       & 
             & dsl4jsb_var_ptr(HYDRO_, w_soil_sl)     (:,:,i),  & 
             & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl) (:,:,i),  & 
