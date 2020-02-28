@@ -44,9 +44,9 @@ MODULE mo_veg_memory_class
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: t_veg_memory, max_no_of_vars
-  PUBLIC :: t_veg_element_pool
+  PUBLIC :: t_veg_elements_pool
   PUBLIC :: t_jsb_pool
-  PUBLIC :: carbon, nitrogen, phosphorus, carbon13, carbon14, nitrogen15
+  PUBLIC :: carbon_, nitrogen_, phosphorus_, carbon13_, carbon14_, nitrogen15_
  
   INTEGER, PARAMETER :: max_no_of_vars      = 250  !> TYPE t_jsb_var
 
@@ -55,7 +55,7 @@ MODULE mo_veg_memory_class
   !!
   !! 
   !-----------------------------------------------------------------------------------------------------
-  TYPE, EXTENDS(t_jsb_pool) :: t_veg_element_pool
+  TYPE, EXTENDS(t_jsb_pool) :: t_veg_elements_pool
     TYPE(t_jsb_var_real2d), POINTER :: carbon
     TYPE(t_jsb_var_real2d), POINTER :: nitrogen
     TYPE(t_jsb_var_real2d), POINTER :: phosphorus
@@ -63,8 +63,8 @@ MODULE mo_veg_memory_class
     TYPE(t_jsb_var_real2d), POINTER :: carbon14
     TYPE(t_jsb_var_real2d), POINTER :: nitrogen15
   CONTAINS
-    PROCEDURE :: Init => t_veg_element_pool_init
-  END TYPE t_veg_element_pool
+    PROCEDURE :: Init => t_veg_elements_pool_init
+  END TYPE t_veg_elements_pool
 
 
 
@@ -75,8 +75,15 @@ MODULE mo_veg_memory_class
 
 
 
+  !> element_id 
+  !! 
+  ENUM, BIND(C)
+    ENUMERATOR :: carbon_=1, nitrogen_, phosphorus_, carbon13_, carbon14_, nitrogen15_
+  END ENUM
 
-
+  !> list with the element_id of all elements as defined above
+  !! is allocated in Init_PROC_memory
+  INTEGER, ALLOCATABLE, SAVE :: all_elements(:)
 
   !-----------------------------------------------------------------------------------------------------
   !> Type definition for veg memory
@@ -185,6 +192,116 @@ MODULE mo_veg_memory_class
 
 CONTAINS
 
+  !-----------------------------------------------------------------------------------------------------
+  !> routines for initializing the VEG_ pools
+  !!
+  !!  
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE t_veg_elements_pool_init(this, name, shortname, l_elements, element_list, element_unit)
+
+    CLASS(t_veg_elements_pool), INTENT(inout) :: this               ! object of TYPE t_veg_elements_pool
+    CHARACTER(LEN=*),           INTENT(in)    :: name               ! pool name       (No spaces !)
+    CHARACTER(LEN=*),           INTENT(in)    :: shortname          ! pool short name (No spaces !)
+    LOGICAL,          OPTIONAL, INTENT(in)    :: l_elements         ! IF pool has elements 
+    INTEGER,          OPTIONAL, INTENT(in)    :: element_list(:)    ! list of elements, if only selected elements may be added
+    CHARACTER(LEN=*), OPTIONAL, INTENT(in)    :: element_unit       ! unit of elements
+
+    LOGICAL :: l_add_elements
+    INTEGER, ALLOCATABLE :: element_list_loc(:)
+    INTEGER :: i
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':t_veg_elements_pool_init'
+
+    !--------------------------------------------
+    this%name = name
+    this%shortname = shortname
+
+    l_add_elements = .TRUE.
+    IF (PRESENT(l_elements)) l_add_elements = l_elements
+
+    IF (.NOT. l_add_elements) RETURN
+
+    IF (.NOT. PRESENT(element_unit)) CALL finish(routine, 'Missing unit for elements')
+
+    ALLOCATE(element_list_loc(SIZE(all_elements)))
+    element_list_loc(:) = all_elements(:)
+    CALL assign_if_present_allocatable(element_list_loc, element_list)  ! selects element_list if available
+  
+    this%element_unit = element_unit
+  
+    !> carbon
+    IF (One_of(carbon_, element_list_loc) > 0) THEN
+      CALL this%Add_element('carbon', 'C', carbon_, dim=2)
+      i = this%Find_element_position(carbon_)
+      IF (i > 0) THEN
+        SELECT TYPE (selector => this%element_list(i)%p)
+        CLASS IS (t_jsb_var_real2d)
+          this%carbon => selector
+        END SELECT
+      END IF
+    END IF
+    !> nitrogen
+    IF (One_of(nitrogen_, element_list_loc) > 0) THEN
+      CALL this%Add_element('nitrogen', 'N', nitrogen_, dim=2)
+      i = this%Find_element_position(nitrogen_)
+      IF (i > 0) THEN
+        SELECT TYPE (selector => this%element_list(i)%p)
+        CLASS IS (t_jsb_var_real2d)
+          this%nitrogen => selector
+        END SELECT
+      END IF
+    END IF
+    !> phosphorus
+    IF (One_of(phosphorus_, element_list_loc) > 0) THEN
+      CALL this%Add_element('phosphorus', 'P', phosphorus_, dim=2)
+      i = this%Find_element_position(phosphorus_)
+      IF (i > 0) THEN
+        SELECT TYPE (selector => this%element_list(i)%p)
+        CLASS IS (t_jsb_var_real2d)
+          this%phosphorus => selector
+        END SELECT
+      END IF
+    END IF
+    !> carbon13
+    IF (One_of(carbon13_, element_list_loc) > 0) THEN
+      CALL this%Add_element('carbon13', 'C13', carbon13_, dim=2)
+      i = this%Find_element_position(carbon13_)
+      IF (i > 0) THEN
+        SELECT TYPE (selector => this%element_list(i)%p)
+        CLASS IS (t_jsb_var_real2d)
+          this%carbon13 => selector
+        END SELECT
+      END IF
+    END IF
+    !> carbon14
+    IF (One_of(carbon14_, element_list_loc) > 0) THEN
+      CALL this%Add_element('carbon14', 'C14', carbon14_, dim=2)
+      i = this%Find_element_position(carbon14_)
+      IF (i > 0) THEN
+        SELECT TYPE (selector => this%element_list(i)%p)
+        CLASS IS (t_jsb_var_real2d)
+          this%carbon14 => selector
+        END SELECT
+      END IF
+    END IF
+    !> nitrogen15
+    IF (One_of(nitrogen15_, element_list_loc) > 0) THEN
+      CALL this%Add_element('nitrogen15', 'N15', nitrogen15_, dim=2)
+      i = this%Find_element_position(nitrogen15_)
+      IF (i > 0) THEN
+        SELECT TYPE (selector => this%element_list(i)%p)
+        CLASS IS (t_jsb_var_real2d)
+          this%nitrogen15 => selector
+        END SELECT
+      END IF
+    END IF
+
+  END SUBROUTINE t_veg_elements_pool_init
+
+
+
+
+
 
   !-----------------------------------------------------------------------------------------------------
   !> initialize memory for the VEG_ process
@@ -200,16 +317,12 @@ CONTAINS
     USE mo_jsb_model_class,   ONLY: t_jsb_model
     USE mo_jsb_class,         ONLY: Get_model
 
-    IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1.InOut
     CLASS(t_veg_memory),  INTENT(inout), TARGET  :: mem             !> veg memory
     CHARACTER(len=*),     INTENT(in)             :: prefix          !> process name
     CHARACTER(len=*),     INTENT(in)             :: suffix          !> tile name
     INTEGER,              INTENT(in)             :: lct_ids(:)      !> vector of land cover type IDs
     INTEGER,              INTENT(in)             :: model_id        !> model ID model\%id
     ! ---------------------------
-    ! 0.2 Local
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: vgrid_surface                ! Vertical grid
@@ -217,14 +330,18 @@ CONTAINS
     INTEGER                    :: table
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_veg_memory'
     ! ---------------------------
-    ! 0.5 Get Memory
     model         => Get_model(model_id)
     table         =  tables(1)
     hgrid         => Get_grid(model%grid_id)
     vgrid_surface => Get_vgrid('surface')
     vgrid_canopy  => Get_vgrid('canopy_layer_q_')
 
-
+    !> populate all_elements(:) with the element_id of all elements
+    !! QUINCY is using always all elements
+    IF (.NOT. ALLOCATED(all_elements)) THEN
+      ALLOCATE(all_elements(6))
+      all_elements(:) = [carbon_, nitrogen_, phosphorus_, carbon13_, carbon14_, nitrogen15_]
+    END IF
 
     !> add 2D & 3D variables
     !!
