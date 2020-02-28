@@ -64,6 +64,7 @@ MODULE mo_veg_memory_class
     TYPE(t_jsb_var_real2d), POINTER :: nitrogen15
   CONTAINS
     PROCEDURE :: Init => t_veg_elements_pool_init
+    PROCEDURE :: Get_element_name_by_id => t_veg_elements_pool_get_element_name_by_id
   END TYPE t_veg_elements_pool
 
 
@@ -192,10 +193,39 @@ MODULE mo_veg_memory_class
 
 CONTAINS
 
+
   !-----------------------------------------------------------------------------------------------------
-  !> routines for initializing the VEG_ pools
+  !> helper function for t_veg_elements_pool
+  !! PROCEDURE :: Get_element_name_by_id => t_veg_elements_pool_get_element_name_by_id
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION t_veg_elements_pool_get_element_name_by_id(this, id) RESULT(name)
+
+    CLASS(t_veg_elements_pool), INTENT(in)  :: this
+    INTEGER,                    INTENT(in)  :: id
+    CHARACTER(LEN=:),           ALLOCATABLE :: name
+
+    ! name may be consistent with the "name" provided to "CALL this%Add_element()"
+    SELECT CASE (id)
+    CASE (carbon_)
+      name='carbon'
+    CASE (nitrogen_)
+      name='nitrogen'
+    CASE (phosphorus_)
+      name='phosphorus'
+    CASE (carbon13_)
+      name='carbon13'
+    CASE (carbon14_)
+      name='carbon14'
+    CASE (nitrogen15_)
+      name='nitrogen15'
+    END SELECT
+
+  END FUNCTION t_veg_elements_pool_get_element_name_by_id
+
+
+  !-----------------------------------------------------------------------------------------------------
+  !> routine for initializing the VEG_ elements pool
   !!
-  !!  
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE t_veg_elements_pool_init(this, name, shortname, l_elements, element_list, element_unit)
 
