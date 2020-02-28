@@ -55,6 +55,8 @@ MODULE mo_jsb_pool_class
     TYPE(t_jsb_var_p), ALLOCATABLE :: var_list(:)
   CONTAINS
     PROCEDURE(init_iface), DEFERRED :: Init
+    PROCEDURE(get_el_name_iface_id), DEFERRED :: Get_element_name_by_id
+    GENERIC                         :: Get_element_name => Get_element_name_by_id
     PROCEDURE                       :: Add_element           => t_jsb_pool_add_element
     PROCEDURE                       :: Add_var               => t_jsb_pool_add_var
     PROCEDURE                       :: Has_elements          => t_jsb_pool_has_elements
@@ -90,6 +92,12 @@ MODULE mo_jsb_pool_class
       INTEGER,          OPTIONAL, INTENT(in)    :: element_list(:) ! Select elements to add
       CHARACTER(LEN=*), OPTIONAL, INTENT(in)    :: element_unit
     END SUBROUTINE init_iface
+    FUNCTION get_el_name_iface_id(this, id) RESULT(name)
+      IMPORT t_jsb_pool
+      CLASS(t_jsb_pool),          INTENT(in) :: this
+      INTEGER,           INTENT(in) :: id
+      CHARACTER(LEN=:), ALLOCATABLE :: name
+    END FUNCTION get_el_name_iface_id
   END INTERFACE
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_pool_class'
@@ -497,7 +505,7 @@ CONTAINS
 
     DO i=1,SIZE(element_list)
       i_element = this%Find_element_position(element_list(i))
-      IF (i_element < 1) CALL finish(routine, 'Element not found')
+      IF (i_element < 1) CALL finish(routine, 'Element '//this%Get_element_name(element_list(i))//' not found')
 
       SELECT TYPE (element1 => this%element_list(i_element)%p)
       CLASS IS (t_jsb_var_real2d)
@@ -537,10 +545,11 @@ MODULE mo_test_pools
   PUBLIC :: test_pools
 
   TYPE, EXTENDS(t_jsb_pool) :: t_basic_pool
-  TYPE(t_jsb_var_real2d), POINTER :: carbon
-  TYPE(t_jsb_var_real2d), POINTER :: nitrogen
-CONTAINS
+    TYPE(t_jsb_var_real2d), POINTER :: carbon
+    TYPE(t_jsb_var_real2d), POINTER :: nitrogen
+  CONTAINS
     PROCEDURE :: Init => t_basic_pool_init
+    PROCEDURE :: Get_element_name_by_id => t_basic_pool_get_element_name_by_id
   END TYPE t_basic_pool
 
   TYPE, EXTENDS(t_basic_pool) :: t_plant
@@ -557,7 +566,22 @@ CONTAINS
 
 CONTAINS
 
-  SUBROUTINE t_basic_pool_init(this, name, shortname, l_elements, element_list, element_unit)
+FUNCTION t_basic_pool_get_element_name_by_id(this, id) RESULT(name)
+
+  CLASS(t_basic_pool), INTENT(in) :: this
+  INTEGER,             INTENT(in) :: id
+  CHARACTER(LEN=:), ALLOCATABLE   :: name
+
+  SELECT CASE (id)
+  CASE (CARBON)
+    name='carbon'
+  CASE (NITROGEN)
+    name='nitrogen'
+  END SELECT
+
+END FUNCTION t_basic_pool_get_element_name_by_id
+
+SUBROUTINE t_basic_pool_init(this, name, shortname, l_elements, element_list, element_unit)
 
     CLASS(t_basic_pool),        INTENT(inout) :: this
     CHARACTER(LEN=*),           INTENT(in)    :: name

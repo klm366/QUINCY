@@ -49,6 +49,7 @@ MODULE mo_carbon_memory_class
     TYPE(t_jsb_var_real2d), POINTER :: nitrogen
   CONTAINS
     PROCEDURE :: Init => t_basic_pool_init
+    PROCEDURE :: Get_element_name_by_id => t_basic_pool_get_element_name_by_id
   END TYPE t_basic_pool
 
   ! TYPE, EXTENDS(t_basic_pool) :: t_litter_abg_pool
@@ -317,6 +318,21 @@ MODULE mo_carbon_memory_class
 
 CONTAINS
 
+  FUNCTION t_basic_pool_get_element_name_by_id(this, id) RESULT(name)
+
+    CLASS(t_basic_pool), INTENT(in) :: this
+    INTEGER,             INTENT(in) :: id
+    CHARACTER(LEN=:), ALLOCATABLE   :: name
+
+    SELECT CASE (id)
+    CASE (CARBON)
+      name='carbon'
+    CASE (NITROGEN)
+      name='nitrogen'
+    END SELECT
+
+  END FUNCTION t_basic_pool_get_element_name_by_id
+
   SUBROUTINE t_basic_pool_init(this, name, shortname, l_elements, element_list, element_unit)
 
     CLASS(t_basic_pool),        INTENT(inout) :: this
@@ -400,7 +416,7 @@ CONTAINS
     IF (suffix_loc /= '') suffix_loc = '_' // suffix_loc
 
     ALLOCATE(pools)
-    CALL pools%Init(name, shortname, l_elements=.FALSE.)
+    CALL pools%Init(name, shortname, l_elements=.TRUE., element_unit=unit)
 
     IF ( (     One_of(VEG_TYPE,  lct_ids(:)) > 0 &
       &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 &

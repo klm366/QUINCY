@@ -531,6 +531,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,     rain)                       ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,     snow)                       ! in
 
+    dsl4jsb_Get_pool(CARBON_, my_pools, my_pools)
     ! subset = pheno__mem%LAI%Get_subset()
     ! print*,'AAA ', subset%ics, subset%ice, subset%iblk
     ! dsl4jsb_Get_pool(CARBON_, plant%living%green, green)
@@ -644,7 +645,7 @@ CONTAINS
 
 
       !Calculate current sum before operation for c conservation test
-      CALL my_pools%state_ta%Sum_leaves([CARBON])
+      ! CALL my_pools%state_ta%Sum_leaves([CARBON])
       CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum(:))
 
       ! Now update the C pools
@@ -1427,11 +1428,11 @@ CONTAINS
 
     !TODO-JN-COHORTS: could be done in mo_carbon_process
     !$claw expand parallel update
-    c_bg_sum(ics:ice) = c_acid_bg1(:) + c_water_bg1(:) + c_ethanol_bg1(:) + c_nonsoluble_bg1(:) + &
+    c_bg_sum(:) = c_acid_bg1(:) + c_water_bg1(:) + c_ethanol_bg1(:) + c_nonsoluble_bg1(:) + &
              & c_acid_bg2(:) + c_water_bg2(:) + c_ethanol_bg2(:) + c_nonsoluble_bg2(:) + &
              & c_humus_1(:)  + c_humus_2(:)
 
-    c_ag_sum_1(ics:ice) =  c_acid_ag1(:) + c_water_ag1(:) + c_ethanol_ag1(:) + c_nonsoluble_ag1(:) + c_humus_1(:)
+    c_ag_sum_1(:) =  c_acid_ag1(:) + c_water_ag1(:) + c_ethanol_ag1(:) + c_nonsoluble_ag1(:) + c_humus_1(:)
     !$claw end expand
   END SUBROUTINE calculate_current_c_ag_1_and_bg_sums
 
