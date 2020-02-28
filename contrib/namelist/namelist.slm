@@ -63,8 +63,6 @@
   soil_silt=0.3
   soil_clay=0.3
   bulk_density=1500.0
-  ! flag for site-set SPP_1685, providing (using in simply_1d and jsm) soil layer specific texture information in sse_init
-  flag_spp1685=.FALSE.
 /
 &SOIL_BIOGEOCHEMISTRY_CTL
   ! the soil biogeochemistry process
@@ -85,9 +83,6 @@
   flag_sb_jsm_transport=.FALSE.
   flag_sb_jsm_litter_input=.FALSE.
   flag_sb_jsm_OM_sorption=.FALSE.
-  ! ECA flags
-  flag_sb_ECA_upt_po4=.TRUE.
-  flag_sb_CLE_po4=.TRUE.
   ! parameter values
   usda_taxonomy_class=1
   nwrb_taxonomy_class=1
@@ -128,6 +123,8 @@
   ! site specific stand harvest
   flag_stand_harvest=.FALSE.
   stand_replacing_year=1500
+  ! flag for site-set SPP_1685; soil layer specific texture information for simple_1d and jsm
+  flag_spp1685=.FALSE.
 /
 &JSB_FORCING_CTL
   ! mo_jsb4_forcing

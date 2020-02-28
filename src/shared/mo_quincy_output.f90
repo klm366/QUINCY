@@ -225,8 +225,12 @@ CONTAINS
             fname = 'soilpooldN15org_lay'//'_'//TRIM(spinup_id)//TRIM(output_interval_pool)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
-            ! soil_diagnostics_lay
-            fname = 'soil_diagnostics_lay'//'_'//TRIM(spinup_id)//TRIM(output_interval_pool)//'.txt'
+            ! soil_diagnostics_microbial_lay
+            fname = 'soil_diagnostics_microbial_lay'//'_'//TRIM(spinup_id)//TRIM(output_interval_pool)//'.txt'
+            OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+            lun=lun+1
+            ! soil_diagnostics_sorption_lay
+            fname = 'soil_diagnostics_sorption_lay'//'_'//TRIM(spinup_id)//TRIM(output_interval_pool)//'.txt'
             OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
             lun=lun+1
         END SELECT
@@ -497,7 +501,7 @@ CONTAINS
               TRIM(p8str),TRIM(p9str),TRIM(p10str)
             lun=lun+1 
             
-            ! soil_diagnostics_lay [mol C / m3, kg/m3, na, mol P / m3, mol P / m3, mol C / m3]
+            ! soil_diagnostics_microbial_lay [mol C / m3, kg/m3, na, mol P / m3, mol P / m3, mol C / m3]
             p1str=''
             p2str=''
             p3str=''
@@ -518,25 +522,52 @@ CONTAINS
               ELSE
                 WRITE(layerstr,'(I2)') isoil
               ENDIF
+              WRITE(p1str,'(a)') TRIM(p1str)//' CUEmic_L'//TRIM(layerstr)
+              WRITE(p2str,'(a)') TRIM(p2str)//' NUEmic_L'//TRIM(layerstr)
+              WRITE(p3str,'(a)') TRIM(p3str)//' PUEmic_L'//TRIM(layerstr)
+              WRITE(p4str,'(a)') TRIM(p4str)//' RootC_L'//TRIM(layerstr)
+              WRITE(p5str,'(a)') TRIM(p5str)//' EnzPoly_L'//TRIM(layerstr) 
+              WRITE(p6str,'(a)') TRIM(p6str)//' EnzRes_L'//TRIM(layerstr) 
+              WRITE(p7str,'(a)') TRIM(p7str)//' EnzPolyC_L'//TRIM(layerstr) 
+              WRITE(p8str,'(a)') TRIM(p8str)//' EnzPolyN_L'//TRIM(layerstr) 
+              WRITE(p9str,'(a)') TRIM(p9str)//' EnzPolyP_L'//TRIM(layerstr) 
+              WRITE(p10str,'(a)') TRIM(p10str)//' EnzPolyC_mavg_L'//TRIM(layerstr) 
+              WRITE(p11str,'(a)') TRIM(p11str)//' EnzPolyN_mavg_L'//TRIM(layerstr) 
+              WRITE(p12str,'(a)') TRIM(p12str)//' EnzPolyP_mavg_L'//TRIM(layerstr)
+              WRITE(p13str,'(a)') TRIM(p13str)//' DOM_CN_mavg_L'//TRIM(layerstr)
+              WRITE(p14str,'(a)') TRIM(p14str)//' DOM_CP_mavg_L'//TRIM(layerstr)
+            ENDDO
+            WRITE(lun,'(15a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),&
+              TRIM(p8str),TRIM(p9str),TRIM(p10str),TRIM(p11str),TRIM(p12str),TRIM(p13str),TRIM(p14str)
+            lun=lun+1    
+
+            ! soil_diagnostics_sorption_lay
+            p1str=''
+            p2str=''
+            p3str=''
+            p4str=''
+            p5str=''
+            p6str=''
+            p7str=''
+            p8str=''
+            p9str=''
+            DO isoil = 1,nsoil_sb
+              IF(isoil<10) THEN 
+                WRITE(layerstr,'(I1)') isoil
+              ELSE
+                WRITE(layerstr,'(I2)') isoil
+              ENDIF
               WRITE(p1str,'(a)') TRIM(p1str)//' QmaxOrg_L'//TRIM(layerstr)
               WRITE(p2str,'(a)') TRIM(p2str)//' Rho_L'//TRIM(layerstr)
-              WRITE(p3str,'(a)') TRIM(p3str)//' CUEmic_L'//TRIM(layerstr)
+              WRITE(p3str,'(a)') TRIM(p3str)//' RhoCor_L'//TRIM(layerstr)
               WRITE(p4str,'(a)') TRIM(p4str)//' QmaxPo4_L'//TRIM(layerstr)
               WRITE(p5str,'(a)') TRIM(p5str)//' KmPo4_L'//TRIM(layerstr)
-              WRITE(p6str,'(a)') TRIM(p6str)//' RootC_L'//TRIM(layerstr)
-              WRITE(p7str,'(a)') TRIM(p7str)//' EnzPoly_L'//TRIM(layerstr) 
-              WRITE(p8str,'(a)') TRIM(p8str)//' EnzRes_L'//TRIM(layerstr) 
-              WRITE(p9str,'(a)') TRIM(p9str)//' EnzPolyC_L'//TRIM(layerstr) 
-              WRITE(p10str,'(a)') TRIM(p10str)//' EnzPolyN_L'//TRIM(layerstr) 
-              WRITE(p11str,'(a)') TRIM(p11str)//' EnzPolyP_L'//TRIM(layerstr) 
-              WRITE(p12str,'(a)') TRIM(p12str)//' EnzPolyC_mavg_L'//TRIM(layerstr) 
-              WRITE(p13str,'(a)') TRIM(p13str)//' EnzPolyN_mavg_L'//TRIM(layerstr) 
-              WRITE(p14str,'(a)') TRIM(p14str)//' EnzPolyP_mavg_L'//TRIM(layerstr)
+              WRITE(p9str,'(a)') TRIM(p9str)//' MinVol_L'//TRIM(layerstr)
             ENDDO
-            WRITE(lun,'(15a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str), &
-                                       TRIM(p6str),TRIM(p7str),TRIM(p8str),TRIM(p9str),TRIM(p10str), &
-                                       TRIM(p11str),TRIM(p12str),TRIM(p13str),TRIM(p14str)
-            lun=lun+1                 
+            WRITE(lun,'(10a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str),TRIM(p6str),TRIM(p7str),&
+              TRIM(p8str),TRIM(p9str)
+            lun=lun+1    
+             
         END SELECT
     END SELECT
 
@@ -624,6 +655,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: soil_depth_sl
     dsl4jsb_Real3D_onChunk      :: t_soil_sl
     dsl4jsb_Real3D_onChunk      :: w_soil_sl
+    dsl4jsb_Real3D_onChunk      :: bulk_dens_sl
+    dsl4jsb_Real3D_onChunk      :: volume_min_sl
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk      :: lai 
     dsl4jsb_Real2D_onChunk      :: height
@@ -674,6 +707,10 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: km_adsorpt_po4_sl
     dsl4jsb_Real3D_onChunk      :: bulk_dens_corr_sl
     dsl4jsb_Real3D_onChunk      :: microbial_cue_eff_tmic_mavg 
+    dsl4jsb_Real3D_onChunk      :: microbial_nue_eff_tmic_mavg
+    dsl4jsb_Real3D_onChunk      :: microbial_pue_eff_tmic_mavg
+    dsl4jsb_Real3D_onChunk      :: dom_cn_mavg 
+    dsl4jsb_Real3D_onChunk      :: dom_cp_mavg 
     dsl4jsb_Real3D_onChunk      :: enzyme_frac_poly
     dsl4jsb_Real3D_onChunk      :: enzyme_frac_residue
     dsl4jsb_Real3D_onChunk      :: enzyme_frac_poly_c
@@ -731,6 +768,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SSE_, soil_depth_sl)
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)
     dsl4jsb_Get_var3D_onChunk(SSE_, w_soil_sl)
+    dsl4jsb_Get_var3D_onChunk(SSE_, bulk_dens_sl)
+    dsl4jsb_Get_var3D_onChunk(SSE_, volume_min_sl)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(VEG_, lai)
     dsl4jsb_Get_var2D_onChunk(VEG_, height)
@@ -778,6 +817,10 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,  km_adsorpt_po4_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,  bulk_dens_corr_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,  microbial_cue_eff_tmic_mavg)
+    dsl4jsb_Get_var3D_onChunk(SB_,  microbial_nue_eff_tmic_mavg)
+    dsl4jsb_Get_var3D_onChunk(SB_,  microbial_pue_eff_tmic_mavg)
+    dsl4jsb_Get_var3D_onChunk(SB_,  dom_cn_mavg)
+    dsl4jsb_Get_var3D_onChunk(SB_,  dom_cp_mavg)
     dsl4jsb_Get_var3D_onChunk(SB_,  enzyme_frac_poly)
     dsl4jsb_Get_var3D_onChunk(SB_,  enzyme_frac_residue)
     dsl4jsb_Get_var3D_onChunk(SB_,  enzyme_frac_poly_c)
@@ -1221,13 +1264,18 @@ CONTAINS
             calc_delta_N15(sb_pool%residue_assoc%nitrogen(ipoi,:), &
                             sb_pool%residue_assoc%nitrogen15(ipoi,:))
           lun=lun+1
-          ! soil_diagnostics_lay
-          write(lun,'(281F16.6)') time_d, qmax_org(ipoi,:), bulk_dens_corr_sl(ipoi,:), microbial_cue_eff_tmic_mavg(ipoi,:), &
-                                 qmax_po4(ipoi,:), km_adsorpt_po4_sl(ipoi,:), &
+          ! soil_diagnostics_microbial_lay
+          write(lun,'(281F16.6)') time_d, microbial_cue_eff_tmic_mavg(ipoi,:), microbial_nue_eff_tmic_mavg(ipoi,:), &
+                                 microbial_pue_eff_tmic_mavg(ipoi,:), &
                                  veg_pool%fine_root%carbon(ipoi) * root_fraction_sl(ipoi,:) / soil_depth_sl(ipoi,:), &
-                                 enzyme_frac_poly(ipoi,:), enzyme_frac_residue(ipoi,:), enzyme_frac_poly_c(ipoi,:), & 
+                                 enzyme_frac_poly(ipoi,:), enzyme_frac_residue(ipoi,:), enzyme_frac_poly_c(ipoi,:), &
                                  enzyme_frac_poly_n(ipoi,:), enzyme_frac_poly_p(ipoi,:), enzyme_frac_poly_c_mavg(ipoi,:), &
-                                 enzyme_frac_poly_n_mavg(ipoi,:), enzyme_frac_poly_p_mavg(ipoi,:)
+                                 enzyme_frac_poly_n_mavg(ipoi,:), enzyme_frac_poly_p_mavg(ipoi,:), &
+                                 dom_cn_mavg(ipoi,:), dom_cp_mavg(ipoi,:)
+          lun=lun+1
+          ! soil_diagnostics_sorption_lay
+          write(lun,'(281F16.6)') time_d, qmax_org(ipoi,:), bulk_dens_sl(ipoi,:), bulk_dens_corr_sl(ipoi,:), qmax_po4(ipoi,:), &
+                                 km_adsorpt_po4_sl(ipoi,:), volume_min_sl(ipoi,:)
           lun=lun+1
         END SELECT  ! simple_1d/jsm
       END IF        ! l_land_plant_canopy_out .OR. l_soil_output

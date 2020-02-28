@@ -64,9 +64,6 @@ MODULE mo_sb_config_class
     LOGICAL               :: flag_sb_jsm_transport
     LOGICAL               :: flag_sb_jsm_litter_input
     LOGICAL               :: flag_sb_jsm_OM_sorption
-    ! ECA
-    LOGICAL               :: flag_sb_ECA_upt_po4
-    LOGICAL               :: flag_sb_CLE_po4
     !> parameter
     !! 
     INTEGER               :: usda_taxonomy_class
@@ -118,8 +115,6 @@ CONTAINS
     LOGICAL                     :: flag_sb_jsm_transport
     LOGICAL                     :: flag_sb_jsm_litter_input
     LOGICAL                     :: flag_sb_jsm_OM_sorption
-    LOGICAL                     :: flag_sb_ECA_upt_po4
-    LOGICAL                     :: flag_sb_CLE_po4
     INTEGER                     :: usda_taxonomy_class
     INTEGER                     :: nwrb_taxonomy_class
     INTEGER                     :: lithology_class
@@ -148,8 +143,6 @@ CONTAINS
                       flag_sb_jsm_transport     , &
                       flag_sb_jsm_litter_input  , &
                       flag_sb_jsm_OM_sorption   , &
-                      flag_sb_ECA_upt_po4       , &
-                      flag_sb_CLE_po4           , &
                       usda_taxonomy_class       , &
                       nwrb_taxonomy_class       , &
                       lithology_class           , &
@@ -185,8 +178,6 @@ CONTAINS
     flag_sb_jsm_transport       = .FALSE.
     flag_sb_jsm_litter_input    = .FALSE.
     flag_sb_jsm_OM_sorption     = .FALSE.
-    flag_sb_ECA_upt_po4         = .TRUE.
-    flag_sb_CLE_po4             = .TRUE.
     usda_taxonomy_class         = 1
     nwrb_taxonomy_class         = 1
     lithology_class             = 1
@@ -225,8 +216,6 @@ CONTAINS
     config%flag_sb_jsm_transport           = flag_sb_jsm_transport
     config%flag_sb_jsm_litter_input        = flag_sb_jsm_litter_input
     config%flag_sb_jsm_OM_sorption         = flag_sb_jsm_OM_sorption
-    config%flag_sb_ECA_upt_po4             = flag_sb_ECA_upt_po4
-    config%flag_sb_CLE_po4                 = flag_sb_CLE_po4
     config%usda_taxonomy_class             = usda_taxonomy_class
     config%nwrb_taxonomy_class             = nwrb_taxonomy_class
     config%lithology_class                 = lithology_class

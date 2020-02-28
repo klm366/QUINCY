@@ -61,6 +61,7 @@ MODULE mo_jsb_config_class
     LOGICAL           :: flag_climate_forcing_one_year
     LOGICAL           :: flag_stand_harvest
     INTEGER           :: stand_replacing_year
+    LOGICAL           :: flag_spp1685
     ! GRID_CTL
     REAL(wp)          :: lat
     REAL(wp)          :: lon
@@ -151,6 +152,8 @@ CONTAINS
     LOGICAL                     :: flag_climate_forcing_one_year
     LOGICAL                     :: flag_stand_harvest
     INTEGER                     :: stand_replacing_year
+    LOGICAL                     :: flag_spp1685
+
     LOGICAL                     :: use_lakes
     LOGICAL                     :: use_glacier
     LOGICAL                     :: l_compat401
@@ -176,7 +179,9 @@ CONTAINS
         set_parameter_values_proportional     , &
         flag_climate_forcing_one_year         , &
         flag_stand_harvest                    , &
-        stand_replacing_year
+        stand_replacing_year                  , &
+        flag_spp1685                          
+                          
     ! NAMELIST /jsb_model_nml/  &
     !   use_lakes, &
     !   use_glacier, &
@@ -227,6 +232,7 @@ CONTAINS
     hsm_mode                                = 'simple'
     fract_filename                          = 'bc_land_frac.nc'
     output_tiles(:)                         = ''
+    flag_spp1685                            = .FALSE.       ! if TRUE: soil layer specific texture information for SPP_1685 sites: simple_1d and jsm
 
     ! Read namelist
     nml_handler = open_nml(TRIM(namelist_filename))
@@ -260,6 +266,7 @@ CONTAINS
     model_config%flag_climate_forcing_one_year          = flag_climate_forcing_one_year
     model_config%flag_stand_harvest                     = flag_stand_harvest              ! might be modified below IF (config%stand_replacing_year .LT. 1901)
     model_config%stand_replacing_year                   = stand_replacing_year
+    model_config%flag_spp1685                           = flag_spp1685
     ! model_config%use_lakes      = use_lakes
     ! model_config%use_glacier    = use_glacier
     ! model_config%l_compat401    = l_compat401

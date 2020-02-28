@@ -144,8 +144,6 @@ flag_sb_jsm_litter_input="F"      # ..
 flag_sb_jsm_OM_sorption="F"       # ..
 
 # ECA and P cycle
-flag_sb_eca_upt_po4="T"           # TRUE: use the ECA approach for plant and microbe P uptake | FALSE: use non-ECA approach for plant and microbe P uptake
-flag_sb_cle_po4="T"               # TRUE: Langmuir equilibrium is constantly maintained between solute P and labile P | FALSE: Langmuir equilibrium is not maintained
 sb_adsorp_scheme="eca_full"       # eca_full; eca_part (only uptake, not for adsorption); eca_none
 
 # simulation length & output
@@ -642,8 +640,6 @@ validateUserConfigValues "$flag_t_jmax_acclimation" "$validateFlags" "flag_t_jma
 validateUserConfigValues "$flag_sb_jsm_transport" "$validateFlags" "flag_sb_jsm_transport"
 validateUserConfigValues "$flag_sb_jsm_litter_input" "$validateFlags" "flag_sb_jsm_litter_input"
 validateUserConfigValues "$flag_sb_jsm_OM_sorption" "$validateFlags" "flag_sb_jsm_OM_sorption"
-validateUserConfigValues "$flag_sb_eca_upt_po4" "$validateFlags" "flag_sb_eca_upt_po4"
-validateUserConfigValues "$flag_sb_cle_po4" "$validateFlags" "flag_sb_cle_po4"
 validateUserConfigValues "$sb_adsorp_scheme" "$validateSBAdsorpScheme" "sb_adsorp_scheme"
 validateUserConfigValues "$biomass_alloc_scheme" "$validateBiomassAllocScheme" "biomass_alloc_scheme"
 validateUserConfigValues "$leaf_stoichom_scheme" "$validateLeafStoichomScheme" "leaf_stoichom_scheme"
@@ -1557,18 +1553,6 @@ if [ "$forcingDataSet" == "spp1685" ]
     changeNamelistValue flag_spp1685 ".TRUE."
   else
     changeNamelistValue flag_spp1685 ".FALSE."
-fi
-if [ $flag_sb_eca_upt_po4 == T ]
-  then
-    changeNamelistValue flag_sb_ECA_upt_po4 ".TRUE."
-  else
-    changeNamelistValue flag_sb_ECA_upt_po4 ".FALSE."
-fi
-if [ $flag_sb_cle_po4 == T ]
-  then
-    changeNamelistValue flag_sb_CLE_po4 ".TRUE."
-  else
-    changeNamelistValue flag_sb_CLE_po4 ".FALSE."
 fi
 if [ $flag_mycorrhiza == T ]
   then

@@ -342,7 +342,7 @@ CONTAINS
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in) :: bulk_dens_corr_sl      !< bulk density of mineral+organic soil [kg/m3]
     TYPE(t_sb_pool_a),                                INTENT(in) :: sb_formation           !< formation of pools [mol/m3/timestep]
     TYPE(t_sb_pool_a),                                INTENT(in) :: sb_loss                !< loss from pools [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_sb)                            :: particle_fluxrate 
+    REAL(wp), DIMENSION(nc, nsoil_sb)                            :: particle_fluxrate      !< m/timestep
     ! ---------------------------
     ! 0.2 Local
     INTEGER                     :: isoil
@@ -422,7 +422,7 @@ CONTAINS
     ! 0.1 InOut
     INTEGER,                                          INTENT(in)    :: nc, &                      !< dimensions
                                                                        nsoil_sb
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: particle_fluxrate          !< particle fluxrate (1/timestep) 
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: particle_fluxrate          !< particle fluxrate (m/timestep) 
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: soil_depth_sl              !< depth of each soil layer [m] 
     TYPE(t_sb_pool_a),                                INTENT(in)    :: sb_pool                    !< organic pools [mol/m3]
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: nh4_solute                 !< NH4 pool in soil solution [mol/m3]
@@ -436,7 +436,7 @@ CONTAINS
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: nh4_n15_solute             !< N15H4 pool in soil solution [mol/m3]
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: nh4_n15_assoc              !< minerally associated N15H4 pool [mol/m3]
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: no3_n15_solute             !< N15O3 pool in soil solution [mol/m3]
-    TYPE(t_sb_pool_a),                                INTENT(inout) :: sb_transport               !< xminerally associated DOM pool [mol/m3]
+    TYPE(t_sb_pool_a),                                INTENT(inout) :: sb_transport               !< rate of sb pool transport [mol/m3/timestep]
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: transport_nh4_solute       !< rate of solute NH4 transport [mol/m3/timestep]
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: transport_nh4_assoc        !< rate of associated NH4 transport [mol/m3/timestep]
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: transport_no3_solute       !< rate of solute NO3 transport [mol/m3/timestep]
@@ -649,6 +649,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_particle_transport(nc, nsoil_sb, particle_fluxrate,soil_depth_sl,pool,transport)
 
+    USE mo_jsb_math_constants,  ONLY: eps4
+
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
@@ -660,8 +662,8 @@ CONTAINS
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: transport              !< transport between layers per timestep 
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp), DIMENSION(nc)         :: hlp1 
-    INTEGER                         :: isoil
+    REAL(wp), DIMENSION(nc) :: hlp1, hlp2 
+    INTEGER                 :: isoil, isoil_hlp, ichunk
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_particle_transport'
 
 
@@ -672,26 +674,41 @@ CONTAINS
 
     !> 1.0 advective transport in the vertical axis of the soil (i.e. down)
     !! I can do 1,n-1 here, because by definition, there cannot be any upward transport from the uppermost layer
+    !!
+    ! loop over: soil layers & points in chunk & soil layers limited by the 1st soil layer loop
     DO isoil = 1,nsoil_sb-1
-       WHERE(particle_fluxrate(:,isoil) > 0.0_wp)
-          hlp1(:) = particle_fluxrate(:,isoil) * pool(:,isoil)
-       ELSEWHERE
-          hlp1(:) = particle_fluxrate(:,isoil) * pool(:,isoil+1)
-       ENDWHERE
-       transport(:,isoil)   = transport(:,isoil)   - hlp1(:) / soil_depth_sl(:,isoil)
-       transport(:,isoil+1) = transport(:,isoil+1) + hlp1(:) / soil_depth_sl(:,isoil+1)
-       
-   ENDDO
+       DO ichunk = 1,nc 
+         IF (particle_fluxrate(ichunk,isoil) < 0.0_wp) THEN
+           hlp1(ichunk) = particle_fluxrate(ichunk,isoil) * pool(ichunk,isoil+1) 
+         ELSE
+           ! when particle transport pushes down material, check if the fluxrate exceeds the soil layer depth
+           isoil_hlp    = isoil
+           hlp1(ichunk) = 0._wp
+           hlp2(ichunk) = particle_fluxrate(ichunk,isoil)
+           ! DO loop: only when fluxrate is more than the soil layer depth, 
+           !          push the whole layer downwards and store the rest in hlp2
+           DO WHILE (hlp2(ichunk) > soil_depth_sl(ichunk,isoil_hlp) .AND. isoil_hlp > 0)
+             hlp1(ichunk) = hlp1(ichunk) + soil_depth_sl(ichunk,isoil_hlp) * pool(ichunk,isoil_hlp)
+             hlp2(ichunk) = hlp2(ichunk) - soil_depth_sl(ichunk,isoil_hlp)
+             isoil_hlp    = isoil_hlp - 1
+           ENDDO
+           ! IF 1. fluxrate does not exceeds depth of layer isoil, material are transported from the layer isoil
+           !    2. not all isoil layers are pushed down, extra material are transported from layer i
+           ! ELSE (i<eps4) all isoil layers are pushed down (fluxrate is more than the total depth of isoil layers)
+           IF (isoil_hlp > 0) THEN
+             hlp1(ichunk) = hlp1(ichunk) + hlp2(ichunk) * pool(ichunk,isoil_hlp)
+           ENDIF
+         ENDIF
+         transport(ichunk,isoil)   = transport(ichunk,isoil)   - hlp1(ichunk) / soil_depth_sl(ichunk,isoil)
+         transport(ichunk,isoil+1) = transport(ichunk,isoil+1) + hlp1(ichunk) / soil_depth_sl(ichunk,isoil+1)
+       ENDDO
+    ENDDO
 
-   !> 2.0 lower boundary condition,??
-   !!  based on the assumption that there is no upward flux, and that all other 
-   !!  material is lost
-!   WHERE(particle_fluxrate(:,nsoil_sb) > 0.0_wp)
-!      hlp1(:) = particle_fluxrate(:,nsoil_sb) * pool(:,nsoil_sb) * soil_depth_sl(:,nsoil_sb)
-!   ELSEWHERE
-      hlp1(:) = 0.0_wp 
-!   ENDWHERE
-   transport(:,nsoil_sb) = transport(:,nsoil_sb) - hlp1(:) / soil_depth_sl(:,nsoil_sb)
+    !> 2.0 lower boundary condition,??
+    !!  based on the assumption that there is no upward flux, and that all other 
+    !!  material is lost
+    hlp1(:)               = 0.0_wp 
+    transport(:,nsoil_sb) = transport(:,nsoil_sb) - hlp1(:) / soil_depth_sl(:,nsoil_sb)
 
   END SUBROUTINE calc_particle_transport
 

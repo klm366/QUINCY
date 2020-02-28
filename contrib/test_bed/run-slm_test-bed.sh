@@ -71,8 +71,6 @@ flag_sb_jsm_litter_input="F"    # ..
 flag_sb_jsm_OM_sorption="F"     # ..
 
 # ECA and P cycle  (currently not available in the prep_run_slm.sh; defaults are: T/T/eca_full)
-flag_sb_eca_upt_po4="T"         # TRUE: use the ECA approach for plant and microbe P uptake | FALSE: use non-ECA approach for plant and microbe P uptake
-flag_sb_cle_po4="T"             # TRUE: Langmuir equilibrium is constantly maintained between solute P and labile P | FALSE: Langmuir equilibrium is not maintained
 sb_adsorp_scheme="eca_full"     # eca_full; eca_part (only uptake, not for adsorption); eca_none
 
 # simulation length & output
@@ -375,8 +373,6 @@ validateUserConfigValues "$setPFTAutomatically" "$validateSetPFTAutomatically" "
 validateUserConfigValues "$plant_functional_type_id" "$validatePlantFunctionalTypeID" "plant_functional_type_id"
 validateUserConfigValues "$flag_oneYearForcing" "$validateFlags" "flag_oneYearForcing"
 validateUserConfigValues "$forcingDataSet" "$validateForcingDataSet" "forcingDataSet"
-validateUserConfigValues "$flag_sb_eca_upt_po4" "$validateFlags" "flag_sb_eca_upt_po4"
-validateUserConfigValues "$flag_sb_cle_po4" "$validateFlags" "flag_sb_cle_po4"
 validateUserConfigValues "$sb_adsorp_scheme" "$validateSb_adsorp_scheme" "sb_adsorp_scheme"
 
 # not validated: simulation_length_number, output_start_first_day_year, output_end_last_day_year, soil_awc_prescribe, soil_theta_prescribe, latitude, longitude 
@@ -724,18 +720,6 @@ if [ "$forcingDataSet" == "spp1685" ]
     changeNamelistValue flag_spp1685 ".TRUE."
   else
     changeNamelistValue flag_spp1685 ".FALSE."
-fi
-if [ $flag_sb_eca_upt_po4 == T ]
-  then
-    changeNamelistValue flag_sb_ECA_upt_po4 ".TRUE."
-  else
-    changeNamelistValue flag_sb_ECA_upt_po4 ".FALSE."
-fi
-if [ $flag_sb_cle_po4 == T ]
-  then
-    changeNamelistValue flag_sb_CLE_po4 ".TRUE."
-  else
-    changeNamelistValue flag_sb_CLE_po4 ".FALSE."
 fi
 if [ $flag_mycorrhiza == T ]
   then

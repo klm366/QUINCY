@@ -256,7 +256,6 @@
   k_diff_org=NAN
   rho_bulk_org=NAN
   carbon_per_dryweight_SOM=NAN
-  qmax_po4_fine_particle=NAN
   k_adsorpt_dom=NAN
   k_desorpt_dom=NAN
   k_adsorpt_det=NAN
@@ -273,12 +272,11 @@
   microbial_np=NAN
   microbial_nue=NAN
   microbial_pue=NAN
+  fc_woody2polymeric=NAN
+  fc_soluable2dom=NAN
   microbial_cue=NAN
   microbial_cue_max=NAN
   microbial_cue_min=NAN
-  microbial_cn_max=NAN
-  microbial_cn_min=NAN
-  f_mic_cn=NAN
   frac_woody2dec_litter=NAN
   frac_litter2fast_som=NAN
   frac_fast2slow_som=NAN
@@ -308,6 +306,8 @@
   lc_woody_litter=NAN
   lc_fruit=NAN
   lc_seed_bed=NAN
+  microbial_nue=NAN
+  microbial_pue=NAN
   mycorrhiza_cue=NAN
   mycorrhiza_cn=NAN
   mycorrhiza_np=NAN
@@ -382,6 +382,10 @@
   km_dip_biochem_po4=NAN
   km_rootc_biochem_po4=NAN
   km_rootc_weath_po4=NAN
+  km_root_enzyme_weath_po4=NAN
+  biomin_thres_pc=NAN
+  vmax_depolymerisation_residue=NAN
+  vmax_depolymerisation_litter=NAN
   fc_p_res2dom=NAN
   fc_n_res2dom=NAN
   f_norg_limit=NAN
@@ -391,6 +395,12 @@
   myc_root_coverage_max=NAN
   resp_priming=NAN
   vmax_uptake_norg=NAN
+  k_fast_som_cn_max=NAN
+  k_fast_som_cn_min=NAN
+  f_fast_som_cn=NAN
+  k_slow_som_cn=NAN
+  k_fast_som_np=NAN
+  k_slow_som_np=NAN
 /
 &LCTLIB_PFT1_CTL
   sla_p1=NAN

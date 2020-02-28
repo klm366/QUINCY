@@ -49,7 +49,7 @@ MODULE mo_sb_memory_class
   PUBLIC :: sb_pool, sb_formation, sb_loss, sb_transport    ! *slmtemp
   PUBLIC :: sb_delta_pools, sb_mycorrhiza_export            ! *slmtemp
 
-  INTEGER, PARAMETER :: max_no_of_vars      = 180  !> TYPE t_jsb_var        currently 149 variables (r1676 January 2019)
+  INTEGER, PARAMETER :: max_no_of_vars      = 200  !> TYPE t_jsb_var        currently 187 variables + 2 element & 4 pool structs (r2063 Dec 2019)
   INTEGER, PARAMETER :: max_no_of_structs   = 20   !> TYPE t_jsb_struct     *slmjsb4
   INTEGER, PARAMETER :: max_no_of_n_structs = 20   !> TYPE t_jsb_n_struct   *slmjsb4
 
@@ -220,7 +220,8 @@ MODULE mo_sb_memory_class
                                     po4_assoc_slow     , &  !< slow minerally associated phosphate  [mol m-3] 
                                     po4_occluded       , &  !< occluded phosphate [mol m-3] 
                                     po4_primary        , &  !< primary phosphate mineral [mol m-3] 
-                                    po4_solute              !< phophate in soil solution [mol m-3] 
+                                    po4_solute         , &  !< phophate in soil solution [mol m-3] 
+                                    soil_litter_carbon_sl   !< (bulk) soil density of litter carbon [mol C m-3 soil]
 
     ! transport fluxes 
     TYPE(t_jsb_var_real3d)          :: &
@@ -268,34 +269,34 @@ MODULE mo_sb_memory_class
                                     rmm_gasdiffusion        !< rate modifier for gasdiffusion [--] 
 
     TYPE(t_jsb_var_real3d)          :: &
-                                    het_respiration    ,          &  !< heterotrophic respiration  [mol m-3 s-1]
-                                    het_respiration_c13,          &  !< c13 heterotrophic respiration   [mol m-3 s-1]
-                                    het_respiration_c14,          &  !< c14 heterotrophic respiration   [mol m-3 s-1]
-                                    myc_respiration    ,          &  !< mycorrhizae respiration  [mol m-3 s-1]
-                                    myc_respiration_c13,          &  !< c13 mycorrhizae respiration   [mol m-3 s-1]
-                                    myc_respiration_c14,          &  !< c14 mycorrhizae respiration   [mol m-3 s-1]
-                                    net_mineralisation_nh4,       &  !< net mineralisation of N    [mol m-3 s-1]
-                                    net_mineralisation_nh4_n15,   &  !< net mineralisation of N15  [mol m-3 s-1] 
-                                    net_mineralisation_no3,       &  !< net mineralisation of N    [mol m-3 s-1]
-                                    net_mineralisation_no3_n15,   &  !< net mineralisation of N15  [mol m-3 s-1] 
-                                    net_mineralisation_po4,       &  !< net mineralisation of P  [mol m-3 s-1]
-                                    plant_uptake_nh4_sl,          &  !< plant uptake of N    [mol m-3 s-1]
-                                    plant_uptake_nh4_n15_sl,      &  !< plant uptake of N15  [mol m-3 s-1] 
-                                    plant_uptake_no3_sl,          &  !< plant uptake of N    [mol m-3 s-1]
-                                    plant_uptake_no3_n15_sl,      &  !< plant uptake of N15  [mol m-3 s-1] 
-                                    plant_uptake_po4_sl,          &  !< plant uptake of P  [mol m-3 s-1]
-                                    microbial_uptake_nh4_sl,      &  !< microbial uptake of N    [mol m-3 s-1]
-                                    microbial_uptake_nh4_n15_sl,  &  !< microbial uptake of N15  [mol m-3 s-1] 
-                                    microbial_uptake_no3_sl,      &  !< microbial uptake of N    [mol m-3 s-1]
-                                    microbial_uptake_no3_n15_sl,  &  !< microbial uptake of N15  [mol m-3 s-1] 
-                                    microbial_uptake_po4_sl,      &  !< microbial uptake of P  [mol m-3 s-1]
-                                    mycorrhiza_uptake_nh4_sl,     &  !< mycorrhiza uptake of N    [mol m-3 s-1]
-                                    mycorrhiza_uptake_nh4_n15_sl, &  !< mycorrhiza uptake of N15  [mol m-3 s-1] 
-                                    mycorrhiza_uptake_no3_sl,     &  !< mycorrhiza uptake of N    [mol m-3 s-1]
-                                    mycorrhiza_uptake_no3_n15_sl, &  !< mycorrhiza uptake of N15  [mol m-3 s-1] 
-                                    mycorrhiza_uptake_norg_sl,    &  !< mycorrhiza uptake of N    [mol m-3 s-1]
-                                    mycorrhiza_uptake_norg_n15_sl,&  !< mycorrhiza uptake of N15  [mol m-3 s-1] 
-                                    mycorrhiza_uptake_po4_sl,   &    !< mycorrhiza uptake of P  [mol m-3 s-1] 
+                                    het_respiration    ,          &  !< heterotrophic respiration  [µmol m-3 s-1]
+                                    het_respiration_c13,          &  !< c13 heterotrophic respiration   [µmol m-3 s-1]
+                                    het_respiration_c14,          &  !< c14 heterotrophic respiration   [µmol m-3 s-1]
+                                    myc_respiration    ,          &  !< mycorrhizae respiration  [µmol m-3 s-1]
+                                    myc_respiration_c13,          &  !< c13 mycorrhizae respiration   [µmol m-3 s-1]
+                                    myc_respiration_c14,          &  !< c14 mycorrhizae respiration   [µmol m-3 s-1]
+                                    net_mineralisation_nh4,       &  !< net mineralisation of N    [µmol m-3 s-1]
+                                    net_mineralisation_nh4_n15,   &  !< net mineralisation of N15  [µmol m-3 s-1] 
+                                    net_mineralisation_no3,       &  !< net mineralisation of N    [µmol m-3 s-1]
+                                    net_mineralisation_no3_n15,   &  !< net mineralisation of N15  [µmol m-3 s-1] 
+                                    net_mineralisation_po4,       &  !< net mineralisation of P  [µmol m-3 s-1]
+                                    plant_uptake_nh4_sl,          &  !< plant uptake of N    [µmol m-3 s-1]
+                                    plant_uptake_nh4_n15_sl,      &  !< plant uptake of N15  [µmol m-3 s-1] 
+                                    plant_uptake_no3_sl,          &  !< plant uptake of N    [µmol m-3 s-1]
+                                    plant_uptake_no3_n15_sl,      &  !< plant uptake of N15  [µmol m-3 s-1] 
+                                    plant_uptake_po4_sl,          &  !< plant uptake of P  [µmol m-3 s-1]
+                                    microbial_uptake_nh4_sl,      &  !< microbial uptake of N    [µmol m-3 s-1]
+                                    microbial_uptake_nh4_n15_sl,  &  !< microbial uptake of N15  [µmol m-3 s-1] 
+                                    microbial_uptake_no3_sl,      &  !< microbial uptake of N    [µmol m-3 s-1]
+                                    microbial_uptake_no3_n15_sl,  &  !< microbial uptake of N15  [µmol m-3 s-1] 
+                                    microbial_uptake_po4_sl,      &  !< microbial uptake of P  [µmol m-3 s-1]
+                                    mycorrhiza_uptake_nh4_sl,     &  !< mycorrhiza uptake of N    [µmol m-3 s-1]
+                                    mycorrhiza_uptake_nh4_n15_sl, &  !< mycorrhiza uptake of N15  [µmol m-3 s-1] 
+                                    mycorrhiza_uptake_no3_sl,     &  !< mycorrhiza uptake of N    [µmol m-3 s-1]
+                                    mycorrhiza_uptake_no3_n15_sl, &  !< mycorrhiza uptake of N15  [µmol m-3 s-1] 
+                                    mycorrhiza_uptake_norg_sl,    &  !< mycorrhiza uptake of N    [µmol m-3 s-1]
+                                    mycorrhiza_uptake_norg_n15_sl,&  !< mycorrhiza uptake of N15  [µmol m-3 s-1] 
+                                    mycorrhiza_uptake_po4_sl,   &    !< mycorrhiza uptake of P  [µmol m-3 s-1] 
                                     volatilisation_nh4,       &      !< volatilisation of NH4  [µmol m-3 s-1]
                                     volatilisation_nh4_n15, &        !< volatilisation of 15NH4  [µmol m-3 s-1]
                                     nitrification_no3, &             !< nitrification NO3 [µmol m-3 s-1]
@@ -348,14 +349,21 @@ MODULE mo_sb_memory_class
                                     qmax_org, &                       !< sorption capacity of dom of mineral soil [kg C kg-1 mineral soil]
                                     qmax_po4, &                       !< sorption capacity of po4 of mineral soil [mol P m-3 soil]
                                     km_adsorpt_po4_sl, &              !< half saturation of po4 sorption isotherm [mol P m-3 soil]
-                                    eca_divisor_adsorp, &             !< denominator of ECA item for po4 adsorption [mol P m-3 soil]
                                     k_bioturb, &                      !< diffusion rate resulting from bioturbation
                                     bulk_dens_corr_sl, &              !< organic fraction corrected bulk-density of the soil [kg m-3]
                                     bulk_soil_carbon_sl, &            !< bulk soil density of carbon [kg m-3] 
-                                    particle_fluxrate, &              !< burial rate due to organic matter fall and decay [s-1?] 
+                                    particle_fluxrate, &              !< burial rate due to organic matter fall and decay [m s-1] 
                                     anaerobic_volume_fraction_sl, &   !< anaerobic volume fraction [unitless]
-                                    microbial_cue_eff, &              !< instantaneous microbial CUE given NP constraints
-                                    microbial_cue_eff_tmic_mavg       !< time-averaged microbial CUE given NP constraints 
+                                    microbial_cue_eff, &              !< instantaneous microbial CUE given NP constraints [unitless]
+                                    microbial_cue_eff_tmic_mavg, &    !< time-averaged microbial CUE given NP constraints [unitless]
+                                    microbial_nue_eff, &              !< instantaneous microbial NUE given NP constraints [unitless]
+                                    microbial_nue_eff_tmic_mavg, &    !< time-averaged microbial NUE given NP constraints [unitless]
+                                    microbial_pue_eff, &              !< instantaneous microbial PUE given NP constraints [unitless]
+                                    microbial_pue_eff_tmic_mavg, &    !< time-averaged microbial PUE given NP constraints [unitless]
+                                    dom_cn, &                         !< dom CN ratio
+                                    dom_cp, &                         !< dom CP ratio
+                                    dom_cn_mavg, &                    !< time-averaged dom CN ratio
+                                    dom_cp_mavg                       !< time-averaged dom CP ratio
  
 
     ! 3D soil properties
@@ -1802,7 +1810,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'het_respiration', mem%het_respiration, &
             hgrid, vgrid_soil_sb, &
-            t_cf('het_respiration', 'mol m-3 s-1', 'heterotrophic respiration'), &
+            t_cf('het_respiration', 'µmol m-3 s-1', 'heterotrophic respiration'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1810,7 +1818,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'het_respiration_c13', mem%het_respiration_c13, &
             hgrid, vgrid_soil_sb, &
-            t_cf('het_respiration_c13', 'mol m-3 s-1', 'c13 heterotrophic respiration'), &
+            t_cf('het_respiration_c13', 'µmol m-3 s-1', 'c13 heterotrophic respiration'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1818,7 +1826,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'het_respiration_c14', mem%het_respiration_c14, &
             hgrid, vgrid_soil_sb, &
-            t_cf('het_respiration_c14', 'mol m-3 s-1', 'c14 heterotrophic respiration'), &
+            t_cf('het_respiration_c14', 'µmol m-3 s-1', 'c14 heterotrophic respiration'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1826,7 +1834,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'myc_respiration', mem%myc_respiration, &
             hgrid, vgrid_soil_sb, &
-            t_cf('myc_respiration', 'mol m-3 s-1', 'mycorrhizae respiration'), &
+            t_cf('myc_respiration', 'µmol m-3 s-1', 'mycorrhizae respiration'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1834,7 +1842,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'myc_respiration_c13', mem%myc_respiration_c13, &
             hgrid, vgrid_soil_sb, &
-            t_cf('myc_respiration_c13', 'mol m-3 s-1', 'c13 mycorrhizae respiration'), &
+            t_cf('myc_respiration_c13', 'µmol m-3 s-1', 'c13 mycorrhizae respiration'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1842,7 +1850,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'myc_respiration_c14', mem%myc_respiration_c14, &
             hgrid, vgrid_soil_sb, &
-            t_cf('myc_respiration_c14', 'mol m-3 s-1', 'c14 mycorrhizae respiration'), &
+            t_cf('myc_respiration_c14', 'µmol m-3 s-1', 'c14 mycorrhizae respiration'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1850,7 +1858,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'net_mineralisation_nh4', mem%net_mineralisation_nh4, &
             hgrid, vgrid_soil_sb, &
-            t_cf('net_mineralisation_nh4', 'mol m-3 s-1', 'net mineralisation of N'), &
+            t_cf('net_mineralisation_nh4', 'µmol m-3 s-1', 'net mineralisation of N'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1858,7 +1866,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'net_mineralisation_nh4_n15', mem%net_mineralisation_nh4_n15, &
             hgrid, vgrid_soil_sb, &
-            t_cf('net_mineralisation_nh4_n15', 'mol m-3 s-1', 'net mineralisation of N15'), &
+            t_cf('net_mineralisation_nh4_n15', 'µmol m-3 s-1', 'net mineralisation of N15'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1866,7 +1874,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'net_mineralisation_no3', mem%net_mineralisation_no3, &
             hgrid, vgrid_soil_sb, &
-            t_cf('net_mineralisation_no3', 'mol m-3 s-1', 'net mineralisation of N'), &
+            t_cf('net_mineralisation_no3', 'µmol m-3 s-1', 'net mineralisation of N'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1874,7 +1882,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'net_mineralisation_no3_n15', mem%net_mineralisation_no3_n15, &
             hgrid, vgrid_soil_sb, &
-            t_cf('net_mineralisation_no3_n15', 'mol m-3 s-1', 'net mineralisation of N15'), &
+            t_cf('net_mineralisation_no3_n15', 'µmol m-3 s-1', 'net mineralisation of N15'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1882,7 +1890,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'net_mineralisation_po4', mem%net_mineralisation_po4, &
             hgrid, vgrid_soil_sb, &
-            t_cf('net_mineralisation_po4', 'mol m-3 s-1', 'net mineralisation of P'), &
+            t_cf('net_mineralisation_po4', 'µmol m-3 s-1', 'net mineralisation of P'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1890,7 +1898,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'plant_uptake_nh4_sl', mem%plant_uptake_nh4_sl, &
             hgrid, vgrid_soil_sb, &
-            t_cf('plant_uptake_nh4_sl', 'mol m-3 s-1', 'plant uptake of N'), &
+            t_cf('plant_uptake_nh4_sl', 'µmol m-3 s-1', 'plant uptake of N'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1898,7 +1906,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'plant_uptake_nh4_n15_sl', mem%plant_uptake_nh4_n15_sl, &
             hgrid, vgrid_soil_sb, &
-            t_cf('plant_uptake_nh4_n15_sl', 'mol m-3 s-1', 'plant uptake of N15'), &
+            t_cf('plant_uptake_nh4_n15_sl', 'µmol m-3 s-1', 'plant uptake of N15'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1906,7 +1914,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'plant_uptake_no3_sl', mem%plant_uptake_no3_sl, &
             hgrid, vgrid_soil_sb, &
-            t_cf('plant_uptake_no3_sl', 'mol m-3 s-1', 'plant uptake of N'), &
+            t_cf('plant_uptake_no3_sl', 'µmol m-3 s-1', 'plant uptake of N'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1914,7 +1922,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'plant_uptake_no3_n15_sl', mem%plant_uptake_no3_n15_sl, &
             hgrid, vgrid_soil_sb, &
-            t_cf('plant_uptake_no3_n15_sl', 'mol m-3 s-1', 'plant uptake of N15'), &
+            t_cf('plant_uptake_no3_n15_sl', 'µmol m-3 s-1', 'plant uptake of N15'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1922,7 +1930,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'plant_uptake_po4_sl', mem%plant_uptake_po4_sl, &
             hgrid, vgrid_soil_sb, &
-            t_cf('plant_uptake_po4_sl', 'mol m-3 s-1', 'plant uptake of P'), &
+            t_cf('plant_uptake_po4_sl', 'µmol m-3 s-1', 'plant uptake of P'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1930,7 +1938,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'microbial_uptake_nh4_sl', mem%microbial_uptake_nh4_sl, &
             hgrid, vgrid_soil_sb, &
-            t_cf('microbial_uptake_nh4_sl', 'mol m-3 s-1', 'microbial uptake of N'), &
+            t_cf('microbial_uptake_nh4_sl', 'µmol m-3 s-1', 'microbial uptake of N'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1938,7 +1946,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'microbial_uptake_nh4_n15_sl', mem%microbial_uptake_nh4_n15_sl, &
             hgrid, vgrid_soil_sb, &
-            t_cf('microbial_uptake_nh4_n15_sl', 'mol m-3 s-1', 'microbial uptake of N15'), &
+            t_cf('microbial_uptake_nh4_n15_sl', 'µmol m-3 s-1', 'microbial uptake of N15'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1946,7 +1954,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'microbial_uptake_no3_sl', mem%microbial_uptake_no3_sl, &
             hgrid, vgrid_soil_sb, &
-            t_cf('microbial_uptake_no3_sl', 'mol m-3 s-1', 'microbial uptake of N'), &
+            t_cf('microbial_uptake_no3_sl', 'µmol m-3 s-1', 'microbial uptake of N'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1954,7 +1962,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'microbial_uptake_no3_n15_sl', mem%microbial_uptake_no3_n15_sl, &
             hgrid, vgrid_soil_sb, &
-            t_cf('microbial_uptake_no3_n15_sl', 'mol m-3 s-1', 'microbial uptake of N15'), &
+            t_cf('microbial_uptake_no3_n15_sl', 'µmol m-3 s-1', 'microbial uptake of N15'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1962,7 +1970,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'microbial_uptake_po4_sl', mem%microbial_uptake_po4_sl, &
             hgrid, vgrid_soil_sb, &
-            t_cf('microbial_uptake_po4_sl', 'mol m-3 s-1', 'microbial uptake of P'), &
+            t_cf('microbial_uptake_po4_sl', 'µmol m-3 s-1', 'microbial uptake of P'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1970,7 +1978,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'mycorrhiza_uptake_nh4_sl', mem%mycorrhiza_uptake_nh4_sl, &
             hgrid, vgrid_soil_sb, &
-            t_cf('mycorrhiza_uptake_nh4_sl', 'mol m-3 s-1', 'mycorrhiza uptake of N'), &
+            t_cf('mycorrhiza_uptake_nh4_sl', 'µmol m-3 s-1', 'mycorrhiza uptake of N'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1978,7 +1986,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'mycorrhiza_uptake_nh4_n15_sl', mem%mycorrhiza_uptake_nh4_n15_sl, &
             hgrid, vgrid_soil_sb, &
-            t_cf('mycorrhiza_uptake_nh4_n15_sl', 'mol m-3 s-1', 'mycorrhiza uptake of N15'), &
+            t_cf('mycorrhiza_uptake_nh4_n15_sl', 'µmol m-3 s-1', 'mycorrhiza uptake of N15'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1986,7 +1994,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'mycorrhiza_uptake_no3_sl', mem%mycorrhiza_uptake_no3_sl, &
             hgrid, vgrid_soil_sb, &
-            t_cf('mycorrhiza_uptake_no3_sl', 'mol m-3 s-1', 'mycorrhiza uptake of N'), &
+            t_cf('mycorrhiza_uptake_no3_sl', 'µmol m-3 s-1', 'mycorrhiza uptake of N'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -1994,7 +2002,7 @@ CONTAINS
   
       CALL jsb_add_var(mem, 'mycorrhiza_uptake_no3_n15_sl', mem%mycorrhiza_uptake_no3_n15_sl, &
             hgrid, vgrid_soil_sb, &
-            t_cf('mycorrhiza_uptake_no3_n15_sl', 'mol m-3 s-1', 'mycorrhiza uptake of N15'), &
+            t_cf('mycorrhiza_uptake_no3_n15_sl', 'µmol m-3 s-1', 'mycorrhiza uptake of N15'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2002,7 +2010,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'mycorrhiza_uptake_norg_sl', mem%mycorrhiza_uptake_norg_sl, &
             hgrid, vgrid_soil_sb, &
-            t_cf('mycorrhiza_uptake_norg_sl', 'mol m-3 s-1', 'mycorrhiza uptake of N'), &
+            t_cf('mycorrhiza_uptake_norg_sl', 'µmol m-3 s-1', 'mycorrhiza uptake of N'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2010,7 +2018,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'mycorrhiza_uptake_norg_n15_sl', mem%mycorrhiza_uptake_norg_n15_sl, &
             hgrid, vgrid_soil_sb, &
-            t_cf('mycorrhiza_uptake_norg_n15_sl', 'mol m-3 s-1', 'mycorrhiza uptake of N15'), &
+            t_cf('mycorrhiza_uptake_norg_n15_sl', 'µmol m-3 s-1', 'mycorrhiza uptake of N15'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2018,7 +2026,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'mycorrhiza_uptake_po4_sl', mem%mycorrhiza_uptake_po4_sl, &
             hgrid, vgrid_soil_sb, &
-            t_cf('mycorrhiza_uptake_po4_sl', 'mol m-3 s-1', 'mycorrhiza uptake of P'), &
+            t_cf('mycorrhiza_uptake_po4_sl', 'µmol m-3 s-1', 'mycorrhiza uptake of P'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2393,9 +2401,9 @@ CONTAINS
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL jsb_add_var(mem, 'eca_divisor_adsorp', mem%eca_divisor_adsorp, &
+      CALL jsb_add_var(mem, 'vmax_weath_mineral_sl', mem%vmax_weath_mineral_sl, &
             hgrid, vgrid_soil_sb, &
-            t_cf('eca_divisor_adsorp', 'mol P m-3 soil', 'denominator of the ECA item for adsorption'), &
+            t_cf('vmax_weath_mineral_sl', 'mol P m-3 s-1', 'weathering coefficient of mineral soil'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2419,7 +2427,15 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'bulk_soil_carbon_sl', mem%bulk_soil_carbon_sl, &
             hgrid, vgrid_soil_sb, &
-            t_cf('bulk_soil_carbon_sl', 'kg m-3', 'bulk soil density of carbon'), &
+            t_cf('bulk_soil_carbon_sl', 'mol m-3', 'bulk soil density of non-litter carbon'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'soil_litter_carbon_sl', mem%soil_litter_carbon_sl, &
+            hgrid, vgrid_soil_sb, &
+            t_cf('soil_litter_carbon_sl', 'mol m-3', 'soil density of litter carbon'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2427,7 +2443,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'particle_fluxrate', mem%particle_fluxrate, &
             hgrid, vgrid_soil_sb, &
-            t_cf('particle_fluxrate', '', 'burial rate due to organic matter fall and decay'), &
+            t_cf('particle_fluxrate', 'm s-1', 'burial rate due to organic matter fall and decay'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2443,7 +2459,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'microbial_cue_eff', mem%microbial_cue_eff, &
             hgrid, vgrid_soil_sb, &
-            t_cf('microbial_cue_eff', '', 'instantaneous microbial CUE given NP constraints'), &
+            t_cf('microbial_cue_eff', 'unitless', 'instantaneous microbial CUE given NP constraints'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2451,7 +2467,71 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'microbial_cue_eff_tmic_mavg', mem%microbial_cue_eff_tmic_mavg, &
             hgrid, vgrid_soil_sb, &
-            t_cf('microbial_cue_eff_tmic_mavg', '', 'time-averaged microbial CUE given NP constraints'), &
+            t_cf('microbial_cue_eff_tmic_mavg', 'unitless', 'time-averaged microbial CUE given NP constraints'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'microbial_nue_eff', mem%microbial_nue_eff, &
+            hgrid, vgrid_soil_sb, &
+            t_cf('microbial_nue_eff', 'unitless', 'instantaneous microbial NUE given NP constraints'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'microbial_nue_eff_tmic_mavg', mem%microbial_nue_eff_tmic_mavg, &
+            hgrid, vgrid_soil_sb, &
+            t_cf('microbial_nue_eff_tmic_mavg', 'unitless', 'time-averaged microbial NUE given NP constraints'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'microbial_pue_eff', mem%microbial_pue_eff, &
+            hgrid, vgrid_soil_sb, &
+            t_cf('microbial_pue_eff', 'unitless', 'instantaneous microbial PUE given NP constraints'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'microbial_pue_eff_tmic_mavg', mem%microbial_pue_eff_tmic_mavg, &
+            hgrid, vgrid_soil_sb, &
+            t_cf('microbial_pue_eff_tmic_mavg', 'unitless', 'time-averaged microbial CUE given NP constraints'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'dom_cn', mem%dom_cn, &
+            hgrid, vgrid_soil_sb, &
+            t_cf('dom_cn', '', 'dom CN ratio'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'dom_cp', mem%dom_cp, &
+            hgrid, vgrid_soil_sb, &
+            t_cf('dom_cp', '', 'dom CP ratio'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'dom_cn_mavg', mem%dom_cn_mavg, &
+            hgrid, vgrid_soil_sb, &
+            t_cf('dom_cn_mavg', '', 'time-averaged dom CN ratio'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'dom_cp_mavg', mem%dom_cp_mavg, &
+            hgrid, vgrid_soil_sb, &
+            t_cf('dom_cp_mavg', '', 'time-averaged dom CP ratio'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2467,15 +2547,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'lithology_class_sl', mem%lithology_class_sl, &
             hgrid, vgrid_soil_sb, &
-            t_cf('lithology_class_sl', 'unitless', ''), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'vmax_weath_mineral_sl', mem%vmax_weath_mineral_sl, &
-            hgrid, vgrid_soil_sb, &
-            t_cf('vmax_weath_mineral_sl', 'mol P m-3 s-1', 'weathering coefficient of mineral soil'), &
+            t_cf('lithology_class_sl', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2483,7 +2555,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'enzyme_frac_poly', mem%enzyme_frac_poly, &
             hgrid, vgrid_soil_sb, &
-            t_cf('enzyme_frac_poly', 'unitless', 'fraction of depolymerisation enzyme which depolymerises poly litter'), &
+            t_cf('enzyme_frac_poly', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2491,7 +2563,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'enzyme_frac_residue', mem%enzyme_frac_residue, &
             hgrid, vgrid_soil_sb, &
-            t_cf('enzyme_frac_residue', 'unitless', 'fraction of depolymerisation enzyme which depolymerises microbial residue'), &
+            t_cf('enzyme_frac_residue', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2499,7 +2571,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'enzyme_frac_poly_c', mem%enzyme_frac_poly_c, &
             hgrid, vgrid_soil_sb, &
-            t_cf('enzyme_frac_poly_c', 'unitless', 'fraction of depolymerisation enzyme which depolymerises poly litter, determined by C'), &
+            t_cf('enzyme_frac_poly_c', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2507,7 +2579,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'enzyme_frac_poly_n', mem%enzyme_frac_poly_n, &
             hgrid, vgrid_soil_sb, &
-            t_cf('enzyme_frac_poly_n', 'unitless', 'fraction of depolymerisation enzyme which depolymerises poly litter, determined by N'), &
+            t_cf('enzyme_frac_poly_n', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2515,7 +2587,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'enzyme_frac_poly_p', mem%enzyme_frac_poly_p, &
             hgrid, vgrid_soil_sb, &
-            t_cf('enzyme_frac_poly_p', 'unitless', 'fraction of depolymerisation enzyme which depolymerises poly litter, determined by P'), &
+            t_cf('enzyme_frac_poly_p', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2523,7 +2595,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'enzyme_frac_poly_c_mavg', mem%enzyme_frac_poly_c_mavg, &
             hgrid, vgrid_soil_sb, &
-            t_cf('enzyme_frac_poly_c_mavg', 'unitless', 'moving average of enzyme_frac_poly_c'), &
+            t_cf('enzyme_frac_poly_c_mavg', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2531,7 +2603,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'enzyme_frac_poly_n_mavg', mem%enzyme_frac_poly_n_mavg, &
             hgrid, vgrid_soil_sb, &
-            t_cf('enzyme_frac_poly_n_mavg', 'unitless', 'moving average of enzyme_frac_poly_n'), &
+            t_cf('enzyme_frac_poly_n_mavg', '', ''), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &

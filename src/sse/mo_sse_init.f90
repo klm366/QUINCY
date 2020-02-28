@@ -90,6 +90,7 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc)                  :: soil_awc, &
                                                         hlp2
     REAL(wp)                                         :: site_longitude
+    LOGICAL                                          :: flag_spp1685
     CHARACTER(len=3)                                 :: site_ID_spp1685
     INTEGER                                          :: isoil, ichunk
     INTEGER                                          :: iblk, ics, ice, nc
@@ -130,6 +131,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk    :: sand_sl
     dsl4jsb_Real3D_onChunk    :: silt_sl
     dsl4jsb_Real3D_onChunk    :: clay_sl
+    dsl4jsb_Real3D_onChunk    :: volume_min_sl
     ! Get local variables from options argument
     iblk      = options%iblk
     ics       = options%ics
@@ -146,6 +148,7 @@ CONTAINS
     vgrid_soil_sb  => Get_vgrid('soil_layer_sb')
     nsoil_sb       =  vgrid_soil_sb%n_levels
     site_longitude = model%config%lon
+    flag_spp1685   = model%config%flag_spp1685
     ! Get process config
     dsl4jsb_Get_config(SSE_)
     dsl4jsb_Get_config(SB_)
@@ -188,7 +191,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SSE_, sand_sl)
     dsl4jsb_Get_var3D_onChunk(SSE_, silt_sl)
     dsl4jsb_Get_var3D_onChunk(SSE_, clay_sl)
-
+    dsl4jsb_Get_var3D_onChunk(SSE_, volume_min_sl)
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -232,6 +235,7 @@ CONTAINS
     silt_sl(:,:)        = dsl4jsb_Config(SSE_)%soil_silt
     clay_sl(:,:)        = dsl4jsb_Config(SSE_)%soil_clay
     t_srf_old(:)        = 273.15_wp
+    volume_min_sl(:,:)  = 1._wp
 
     !> 4.2 init with site-specific and soil-layer specific texture (sand silt clay) information
     !! 
@@ -247,7 +251,7 @@ CONTAINS
     !!   (presented in this table S2). We extrapolated them to the whole soil depth (9.5m) following the pattern of 
     !!   texture change against depth increase observed in the topmost 1m soil.
     !! 
-    IF (dsl4jsb_Config(SSE_)%flag_spp1685) THEN
+    IF (flag_spp1685) THEN
       IF (dsl4jsb_Config(SB_)%sb_model_scheme == "simple_1d" .OR. dsl4jsb_Config(SB_)%sb_model_scheme == "jsm") THEN
         ! check if nsoil_sb == 15
         IF (nsoil_sb /= 15) THEN
@@ -273,6 +277,9 @@ CONTAINS
         SELECT CASE(site_ID_spp1685)
         CASE ("BBR")
           DO ichunk=1,nc
+            bulk_dens_sl(ichunk,1:nsoil_sb)   = (/1000._wp,1080._wp,1200._wp,1320._wp,1450._wp, &
+                                                 1520._wp,1600._wp,1650._wp,1700._wp,1750._wp, &
+                                                 1800._wp, 1850._wp, 1900._wp, 1950._wp, 2000._wp/)
             sand_sl(ichunk,1:nsoil_sb)   = (/0.07_wp,0.09_wp,0.1_wp,0.1228_wp,0.1785_wp, &
                                             0.24_wp,0.2726_wp,0.3519_wp,0.4_wp,0.45_wp, &
                                             0.5_wp,0.6_wp,0.7_wp,0.8_wp,0.8_wp/)
@@ -282,6 +289,9 @@ CONTAINS
           ENDDO
         CASE ("LUE")
           DO ichunk=1,nc
+            bulk_dens_sl(ichunk,1:nsoil_sb)   = (/1570._wp,1600._wp,1610._wp,1630._wp,1660._wp, &
+                                                 1800._wp,2000._wp,2000._wp,2200._wp,2200._wp, &
+                                                 2200._wp, 2200._wp, 2200._wp, 2200._wp, 2200._wp/)
             sand_sl(ichunk,1:nsoil_sb)   = (/0.75_wp,0.76_wp,0.81_wp,0.7543_wp,0.7448_wp, &
                                              0.713_wp,0.7626_wp,0.8185_wp,0.84_wp,0.85_wp, &
                                              0.85_wp,0.88_wp,0.88_wp,0.9_wp,0.92_wp/)
@@ -291,6 +301,9 @@ CONTAINS
           ENDDO    
         CASE ("VES")
           DO ichunk=1,nc
+            bulk_dens_sl(ichunk,1:nsoil_sb)   = (/1000._wp,1000._wp,1000._wp,1000._wp,1050._wp, &
+                                                 1050._wp,1050._wp,1200._wp,1250._wp,1300._wp, &
+                                                 1350._wp, 1400._wp, 1450._wp, 1500._wp, 1600._wp/)
             sand_sl(ichunk,1:nsoil_sb)   = (/0.30_wp,0.3245_wp,0.3746_wp,0.4057_wp,0.4494_wp, &
                                              0.4923_wp,0.5627_wp,0.6669_wp,0.71_wp,0.75_wp, &
                                              0.77_wp,0.79_wp,0.83_wp,0.86_wp,0.88_wp/)

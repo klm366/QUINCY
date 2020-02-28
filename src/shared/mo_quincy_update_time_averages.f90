@@ -683,6 +683,14 @@ CONTAINS
     ! SB_
     dsl4jsb_Real3D_onChunk      :: microbial_cue_eff_tmic_mavg
     dsl4jsb_Real3D_onChunk      :: microbial_cue_eff
+    dsl4jsb_Real3D_onChunk      :: microbial_nue_eff_tmic_mavg
+    dsl4jsb_Real3D_onChunk      :: microbial_nue_eff
+    dsl4jsb_Real3D_onChunk      :: microbial_pue_eff_tmic_mavg
+    dsl4jsb_Real3D_onChunk      :: microbial_pue_eff
+    dsl4jsb_Real3D_onChunk      :: dom_cn_mavg
+    dsl4jsb_Real3D_onChunk      :: dom_cp_mavg
+    dsl4jsb_Real3D_onChunk      :: dom_cn
+    dsl4jsb_Real3D_onChunk      :: dom_cp
     dsl4jsb_Real3D_onChunk      :: enzyme_frac_poly_c
     dsl4jsb_Real3D_onChunk      :: enzyme_frac_poly_n
     dsl4jsb_Real3D_onChunk      :: enzyme_frac_poly_p
@@ -855,8 +863,16 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_daytime_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)
     ! ---------------------------
-    dsl4jsb_Get_var3D_onChunk(SB_, microbial_cue_eff_tmic_mavg)
-    dsl4jsb_Get_var3D_onChunk(SB_, microbial_cue_eff)
+    dsl4jsb_Get_var3D_onChunk(SB_,  microbial_cue_eff_tmic_mavg)
+    dsl4jsb_Get_var3D_onChunk(SB_,  microbial_cue_eff)
+    dsl4jsb_Get_var3D_onChunk(SB_,  microbial_nue_eff_tmic_mavg)
+    dsl4jsb_Get_var3D_onChunk(SB_,  microbial_nue_eff)
+    dsl4jsb_Get_var3D_onChunk(SB_,  microbial_pue_eff_tmic_mavg)
+    dsl4jsb_Get_var3D_onChunk(SB_,  microbial_pue_eff)
+    dsl4jsb_Get_var3D_onChunk(SB_,  dom_cn_mavg)
+    dsl4jsb_Get_var3D_onChunk(SB_,  dom_cp_mavg)
+    dsl4jsb_Get_var3D_onChunk(SB_,  dom_cn)
+    dsl4jsb_Get_var3D_onChunk(SB_,  dom_cp)
     dsl4jsb_Get_var3D_onChunk(SB_,  enzyme_frac_poly_c)
     dsl4jsb_Get_var3D_onChunk(SB_,  enzyme_frac_poly_n)
     dsl4jsb_Get_var3D_onChunk(SB_,  enzyme_frac_poly_p)
@@ -1148,7 +1164,11 @@ CONTAINS
 
     !> 1.11
     !!
-    microbial_cue_eff_tmic_mavg(:,:) = calc_mavg(microbial_cue_eff_tmic_mavg(:,:), microbial_cue_eff(:,:), mavg_period_tmic)
+    microbial_cue_eff_tmic_mavg(:,:) = calc_mavg(microbial_cue_eff_tmic_mavg(:,:),microbial_cue_eff(:,:), mavg_period_tmic)
+    microbial_nue_eff_tmic_mavg(:,:) = calc_mavg(microbial_nue_eff_tmic_mavg(:,:),microbial_nue_eff(:,:), mavg_period_tmic)
+    microbial_pue_eff_tmic_mavg(:,:) = calc_mavg(microbial_pue_eff_tmic_mavg(:,:),microbial_pue_eff(:,:), mavg_period_tmic)
+    dom_cn_mavg(:,:)                 = calc_mavg(dom_cn_mavg(:,:),dom_cn(:,:), mavg_period_tenzyme)
+    dom_cp_mavg(:,:)                 = calc_mavg(dom_cp_mavg(:,:),dom_cp(:,:), mavg_period_tenzyme)
     enzyme_frac_poly_c_mavg(:,:)        = calc_mavg(enzyme_frac_poly_c_mavg(:,:), enzyme_frac_poly_c(:,:), mavg_period_tenzyme)
     enzyme_frac_poly_n_mavg(:,:)        = calc_mavg(enzyme_frac_poly_n_mavg(:,:), enzyme_frac_poly_n(:,:), mavg_period_tenzyme)
     enzyme_frac_poly_p_mavg(:,:)        = calc_mavg(enzyme_frac_poly_p_mavg(:,:), enzyme_frac_poly_p(:,:), mavg_period_tenzyme)

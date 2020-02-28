@@ -278,7 +278,6 @@ MODULE mo_quincy_set_parameters
     REAL(wp)           :: k_diff_org
     REAL(wp)           :: rho_bulk_org
     REAL(wp)           :: carbon_per_dryweight_SOM
-    REAL(wp)           :: qmax_po4_fine_particle
     REAL(wp)           :: k_adsorpt_dom
     REAL(wp)           :: k_desorpt_dom
     REAL(wp)           :: k_adsorpt_det
@@ -293,16 +292,11 @@ MODULE mo_quincy_set_parameters
     REAL(wp)           :: k_adsorpt_s_po4
     REAL(wp)           :: microbial_cn
     REAL(wp)           :: microbial_np
-    REAL(wp)           :: SOM_np
-    REAL(wp)           :: SOM_cn
     REAL(wp)           :: microbial_nue
     REAL(wp)           :: microbial_pue
     REAL(wp)           :: microbial_cue
     REAL(wp)           :: microbial_cue_max
     REAL(wp)           :: microbial_cue_min
-    REAL(wp)           :: microbial_cn_max
-    REAL(wp)           :: microbial_cn_min
-    REAL(wp)           :: f_mic_cn
     REAL(wp)           :: frac_woody2dec_litter
     REAL(wp)           :: frac_litter2fast_som
     REAL(wp)           :: frac_fast2slow_som
@@ -406,7 +400,8 @@ MODULE mo_quincy_set_parameters
     REAL(wp)           :: km_dip_biochem_po4
     REAL(wp)           :: km_rootc_biochem_po4
     REAL(wp)           :: km_rootc_weath_po4
-    REAL(wp)           :: biomin_thres_PC
+    REAL(wp)           :: km_root_enzyme_weath_po4
+    REAL(wp)           :: biomin_thres_pc
     REAL(wp)           :: fc_p_res2dom
     REAL(wp)           :: fc_n_res2dom
     REAL(wp)           :: f_norg_limit
@@ -416,6 +411,12 @@ MODULE mo_quincy_set_parameters
     REAL(wp)           :: myc_root_coverage_max
     REAL(wp)           :: resp_priming
     REAL(wp)           :: vmax_uptake_norg
+    REAL(wp)           :: k_fast_som_cn_max
+    REAL(wp)           :: k_fast_som_cn_min
+    REAL(wp)           :: f_fast_som_cn
+    REAL(wp)           :: k_slow_som_cn
+    REAL(wp)           :: k_fast_som_np 
+    REAL(wp)           :: k_slow_som_np 
   CONTAINS
     PROCEDURE :: read_param => read_parameter_slm_list
     PROCEDURE :: set_param  => set_parameter_slm_values_with_list_values
@@ -757,7 +758,6 @@ CONTAINS
     REAL(wp)           :: k_diff_org
     REAL(wp)           :: rho_bulk_org
     REAL(wp)           :: carbon_per_dryweight_SOM
-    REAL(wp)           :: qmax_po4_fine_particle
     REAL(wp)           :: k_adsorpt_dom
     REAL(wp)           :: k_desorpt_dom
     REAL(wp)           :: k_adsorpt_det
@@ -772,16 +772,11 @@ CONTAINS
     REAL(wp)           :: k_adsorpt_s_po4
     REAL(wp)           :: microbial_cn
     REAL(wp)           :: microbial_np
-    REAL(wp)           :: SOM_np
-    REAL(wp)           :: SOM_cn
     REAL(wp)           :: microbial_nue
     REAL(wp)           :: microbial_pue
     REAL(wp)           :: microbial_cue
     REAL(wp)           :: microbial_cue_max
     REAL(wp)           :: microbial_cue_min
-    REAL(wp)           :: microbial_cn_max
-    REAL(wp)           :: microbial_cn_min
-    REAL(wp)           :: f_mic_cn
     REAL(wp)           :: frac_woody2dec_litter
     REAL(wp)           :: frac_litter2fast_som
     REAL(wp)           :: frac_fast2slow_som
@@ -885,7 +880,8 @@ CONTAINS
     REAL(wp)           :: km_dip_biochem_po4
     REAL(wp)           :: km_rootc_biochem_po4
     REAL(wp)           :: km_rootc_weath_po4
-    REAL(wp)           :: biomin_thres_PC
+    REAL(wp)           :: km_root_enzyme_weath_po4
+    REAL(wp)           :: biomin_thres_pc
     REAL(wp)           :: fc_p_res2dom
     REAL(wp)           :: fc_n_res2dom
     REAL(wp)           :: f_norg_limit
@@ -895,6 +891,12 @@ CONTAINS
     REAL(wp)           :: myc_root_coverage_max
     REAL(wp)           :: resp_priming
     REAL(wp)           :: vmax_uptake_norg
+    REAL(wp)           :: k_fast_som_cn_max
+    REAL(wp)           :: k_fast_som_cn_min
+    REAL(wp)           :: f_fast_som_cn
+    REAL(wp)           :: k_slow_som_cn
+    REAL(wp)           :: k_fast_som_np
+    REAL(wp)           :: k_slow_som_np
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':read_parameter_slm_list'
 
@@ -1138,7 +1140,6 @@ CONTAINS
         k_diff_org                    , &
         rho_bulk_org                  , &
         carbon_per_dryweight_SOM      , &
-        qmax_po4_fine_particle        , &
         k_adsorpt_dom                 , &
         k_desorpt_dom                 , &
         k_adsorpt_det                 , &
@@ -1153,16 +1154,11 @@ CONTAINS
         k_adsorpt_s_po4               , &
         microbial_cn                  , &
         microbial_np                  , &
-        SOM_np                        , &
-        SOM_cn                        , &
         microbial_nue                 , &
         microbial_pue                 , &
         microbial_cue                 , &
         microbial_cue_max             , &
         microbial_cue_min             , &
-        microbial_cn_max              , &
-        microbial_cn_min              , &
-        f_mic_cn                      , &
         frac_woody2dec_litter         , &
         frac_litter2fast_som          , &
         frac_fast2slow_som            , &
@@ -1266,7 +1262,8 @@ CONTAINS
         km_dip_biochem_po4            , &
         km_rootc_biochem_po4          , &
         km_rootc_weath_po4            , &
-        biomin_thres_PC               , &
+        km_root_enzyme_weath_po4      , &
+        biomin_thres_pc               , &
         fc_p_res2dom                  , &
         fc_n_res2dom                  , &
         f_norg_limit                  , &
@@ -1275,8 +1272,14 @@ CONTAINS
         km_up_org                     , &
         myc_root_coverage_max         , &
         resp_priming                  , &
-        vmax_uptake_norg              
-
+        vmax_uptake_norg              , &
+        k_fast_som_cn_max             , &
+        k_fast_som_cn_min             , &
+        f_fast_som_cn                 , &
+        k_slow_som_cn                 , &
+        k_fast_som_np                 , &
+        k_slow_som_np                  
+        
 
     ! variables for reading model-options from namelist
     ! 
@@ -1518,7 +1521,6 @@ CONTAINS
     k_diff_org                    = missval
     rho_bulk_org                  = missval
     carbon_per_dryweight_SOM      = missval
-    qmax_po4_fine_particle        = missval
     k_adsorpt_dom                 = missval
     k_desorpt_dom                 = missval
     k_adsorpt_det                 = missval
@@ -1533,16 +1535,11 @@ CONTAINS
     k_adsorpt_s_po4               = missval
     microbial_cn                  = missval
     microbial_np                  = missval
-    SOM_np                        = missval
-    SOM_cn                        = missval
     microbial_nue                 = missval
     microbial_pue                 = missval
     microbial_cue                 = missval
     microbial_cue_max             = missval
     microbial_cue_min             = missval
-    microbial_cn_max              = missval
-    microbial_cn_min              = missval
-    f_mic_cn                      = missval
     frac_woody2dec_litter         = missval
     frac_litter2fast_som          = missval
     frac_fast2slow_som            = missval
@@ -1646,7 +1643,8 @@ CONTAINS
     km_dip_biochem_po4            = missval
     km_rootc_biochem_po4          = missval
     km_rootc_weath_po4            = missval
-    biomin_thres_PC               = missval
+    km_root_enzyme_weath_po4      = missval
+    biomin_thres_pc               = missval
     fc_p_res2dom                  = missval
     fc_n_res2dom                  = missval
     f_norg_limit                  = missval
@@ -1656,6 +1654,12 @@ CONTAINS
     myc_root_coverage_max         = missval
     resp_priming                  = missval
     vmax_uptake_norg              = missval
+    k_fast_som_cn_max             = missval
+    k_fast_som_cn_min             = missval
+    f_fast_som_cn                 = missval
+    k_slow_som_cn                 = missval
+    k_fast_som_np                 = missval
+    k_slow_som_np                 = missval
 
     ! read the namelist
     ! 
@@ -1929,7 +1933,6 @@ CONTAINS
     this%k_diff_org                    = k_diff_org
     this%rho_bulk_org                  = rho_bulk_org
     this%carbon_per_dryweight_SOM      = carbon_per_dryweight_SOM
-    this%qmax_po4_fine_particle        = qmax_po4_fine_particle
     this%k_adsorpt_dom                 = k_adsorpt_dom
     this%k_desorpt_dom                 = k_desorpt_dom
     this%k_adsorpt_det                 = k_adsorpt_det
@@ -1944,16 +1947,11 @@ CONTAINS
     this%k_adsorpt_s_po4               = k_adsorpt_s_po4
     this%microbial_cn                  = microbial_cn
     this%microbial_np                  = microbial_np
-    this%SOM_np                        = SOM_np
-    this%SOM_cn                        = SOM_cn
     this%microbial_nue                 = microbial_nue
     this%microbial_pue                 = microbial_pue
     this%microbial_cue                 = microbial_cue
     this%microbial_cue_max             = microbial_cue_max
     this%microbial_cue_min             = microbial_cue_min
-    this%microbial_cn_max              = microbial_cn_max
-    this%microbial_cn_min              = microbial_cn_min
-    this%f_mic_cn                      = f_mic_cn
     this%frac_woody2dec_litter         = frac_woody2dec_litter
     this%frac_litter2fast_som          = frac_litter2fast_som
     this%frac_fast2slow_som            = frac_fast2slow_som
@@ -2057,7 +2055,8 @@ CONTAINS
     this%km_dip_biochem_po4            = km_dip_biochem_po4
     this%km_rootc_biochem_po4          = km_rootc_biochem_po4
     this%km_rootc_weath_po4            = km_rootc_weath_po4
-    this%biomin_thres_PC               = biomin_thres_PC
+    this%km_root_enzyme_weath_po4      = km_root_enzyme_weath_po4
+    this%biomin_thres_pc               = biomin_thres_pc
     this%fc_p_res2dom                  = fc_p_res2dom
     this%fc_n_res2dom                  = fc_n_res2dom
     this%f_norg_limit                  = f_norg_limit
@@ -2067,6 +2066,12 @@ CONTAINS
     this%myc_root_coverage_max         = myc_root_coverage_max
     this%resp_priming                  = resp_priming
     this%vmax_uptake_norg              = vmax_uptake_norg
+    this%k_fast_som_cn_max             = k_fast_som_cn_max
+    this%k_fast_som_cn_min             = k_fast_som_cn_min
+    this%f_fast_som_cn                 = f_fast_som_cn 
+    this%k_slow_som_cn                 = k_slow_som_cn
+    this%k_fast_som_np                 = k_fast_som_np
+    this%k_slow_som_np                 = k_slow_som_np
 
   END SUBROUTINE read_parameter_slm_list
 
@@ -3287,28 +3292,23 @@ CONTAINS
                                     this%carbon_per_dryweight_SOM, &
                                     "carbon_per_dryweight_SOM", proportional_parameter_changes, &
                                     carbon_per_dryweight_SOM)
-    
-    CALL Set_quincy_parameter_value(this%qmax_po4_fine_particle / molar_mass_P, &
-                                    this%qmax_po4_fine_particle, &
-                                    "qmax_po4_fine_particle", proportional_parameter_changes, &
-                                    qmax_po4_fine_particle)
 
     CALL Set_quincy_parameter_value(this%k_adsorpt_dom / one_year / one_day * molar_mass_C / 1000._wp, &
                                     this%k_adsorpt_dom, &
                                     "k_adsorpt_dom", proportional_parameter_changes, &
                                     k_adsorpt_dom)
     
-    CALL Set_quincy_parameter_value(this%k_desorpt_dom / one_year / one_day, &
+    CALL Set_quincy_parameter_value(this%k_desorpt_dom / one_year / one_day / 1000._wp, &
                                     this%k_desorpt_dom, &
                                     "k_desorpt_dom", proportional_parameter_changes, &
                                     k_desorpt_dom)
 
-    CALL Set_quincy_parameter_value(this%k_adsorpt_det / one_year / one_day * molar_mass_C / 100000._wp, &
+    CALL Set_quincy_parameter_value(this%k_adsorpt_det / one_year / one_day * molar_mass_C / 1000._wp, &
                                     this%k_adsorpt_det, &
                                     "k_adsorpt_det", proportional_parameter_changes, &
                                     k_adsorpt_det)
     
-    CALL Set_quincy_parameter_value(this%k_desorpt_det / one_year / one_day / 100._wp, &
+    CALL Set_quincy_parameter_value(this%k_desorpt_det / one_year / one_day / 1000._wp, &
                                     this%k_desorpt_det, &
                                     "k_desorpt_det", proportional_parameter_changes, &
                                     k_desorpt_det)
@@ -3363,16 +3363,6 @@ CONTAINS
                                     "microbial_np", proportional_parameter_changes, &
                                     microbial_np)
     
-    CALL Set_quincy_parameter_value(this%SOM_np * molar_mass_P / molar_mass_N, &
-                                    this%SOM_np, &
-                                    "SOM_np", proportional_parameter_changes, &
-                                    SOM_np)
-    
-    CALL Set_quincy_parameter_value(this%SOM_cn * molar_mass_N / molar_mass_C, &
-                                    this%SOM_cn, &
-                                    "SOM_cn", proportional_parameter_changes, &
-                                    SOM_cn)
-    
     CALL Set_quincy_parameter_value(this%microbial_nue, &
                                     this%microbial_nue, &
                                     "microbial_nue", proportional_parameter_changes, &
@@ -3398,21 +3388,6 @@ CONTAINS
                                     "microbial_cue_min", proportional_parameter_changes, &
                                     microbial_cue_min)
     
-    CALL Set_quincy_parameter_value(this%microbial_cn_max * molar_mass_N / molar_mass_C, &
-                                    this%microbial_cn_max, &
-                                    "microbial_cn_max", proportional_parameter_changes, &
-                                    microbial_cn_max)
-
-    CALL Set_quincy_parameter_value(this%microbial_cn_min * molar_mass_N / molar_mass_C, &
-                                    this%microbial_cn_min, &
-                                    "microbial_cn_min", proportional_parameter_changes, &
-                                    microbial_cn_min)
-    
-    CALL Set_quincy_parameter_value(this%f_mic_cn, &
-                                    this%f_mic_cn, &
-                                    "f_mic_cn", proportional_parameter_changes, &
-                                    f_mic_cn)
-
     CALL Set_quincy_parameter_value(this%frac_woody2dec_litter, &
                                     this%frac_woody2dec_litter, &
                                     "frac_woody2dec_litter", proportional_parameter_changes, &
@@ -3453,7 +3428,7 @@ CONTAINS
                                     "min_mic_biomass", proportional_parameter_changes, &
                                     min_mic_biomass)
 
-    CALL Set_quincy_parameter_value(this%vmax_mic_uptake / one_year / one_day * 1000000.0_wp * 10.0_wp, &
+    CALL Set_quincy_parameter_value(this%vmax_mic_uptake / one_year / one_day * 1000000.0_wp * 10._wp, &
                                     this%vmax_mic_uptake, &
                                     "vmax_mic_uptake", proportional_parameter_changes, &
                                     vmax_mic_uptake)
@@ -3683,22 +3658,22 @@ CONTAINS
                                     "km_plant_uptake_po4", proportional_parameter_changes, &
                                     km_plant_uptake_po4)
     
-    CALL Set_quincy_parameter_value(this%k_mic_uptake_nh4 * 24.0_wp / one_day, &
+    CALL Set_quincy_parameter_value(this%k_mic_uptake_nh4 * 24._wp / one_day, &
                                     this%k_mic_uptake_nh4, &
                                     "k_mic_uptake_nh4", proportional_parameter_changes, &
                                     k_mic_uptake_nh4)
 
-    CALL Set_quincy_parameter_value(this%k_plant_uptake_nh4 * 24.0_wp / one_day, &
+    CALL Set_quincy_parameter_value(this%k_plant_uptake_nh4 * 24._wp / one_day, &
                                     this%k_plant_uptake_nh4, &
                                     "k_plant_uptake_nh4", proportional_parameter_changes, &
                                     k_plant_uptake_nh4)
     
-    CALL Set_quincy_parameter_value(this%k_mic_uptake_no3 * 24.0_wp / one_day, &
+    CALL Set_quincy_parameter_value(this%k_mic_uptake_no3 * 24._wp / one_day, &
                                     this%k_mic_uptake_no3, &
                                     "k_mic_uptake_no3", proportional_parameter_changes, &
                                     k_mic_uptake_no3)
     
-    CALL Set_quincy_parameter_value(this%k_plant_uptake_no3 * 24.0_wp / one_day, &
+    CALL Set_quincy_parameter_value(this%k_plant_uptake_no3 * 24._wp / one_day, &
                                     this%k_plant_uptake_no3, &
                                     "k_plant_uptake_no3", proportional_parameter_changes, &
                                     k_plant_uptake_no3)
@@ -3713,7 +3688,7 @@ CONTAINS
                                     "k_plant_uptake_po4", proportional_parameter_changes, &
                                     k_plant_uptake_po4)
 
-    CALL Set_quincy_parameter_value(this%f_mic_carrier_po4 / 1000.0_wp, &
+    CALL Set_quincy_parameter_value(this%f_mic_carrier_po4 / 100.0_wp, &
                                     this%f_mic_carrier_po4, &
                                     "f_mic_carrier_po4", proportional_parameter_changes, &
                                     f_mic_carrier_po4)
@@ -3728,12 +3703,12 @@ CONTAINS
                                     "qmax_po4_mineral", proportional_parameter_changes, &
                                     qmax_po4_mineral)
 
-    CALL Set_quincy_parameter_value(this%km_adsorpt_mineral_po4 / molar_mass_P, &
+    CALL Set_quincy_parameter_value(this%km_adsorpt_mineral_po4 / 1000._wp / molar_mass_P, &
                                     this%km_adsorpt_mineral_po4, &
                                     "km_adsorpt_mineral_po4", proportional_parameter_changes, &
                                     km_adsorpt_mineral_po4)
     
-    CALL Set_quincy_parameter_value(this%km_adsorpt_OM_po4 / molar_mass_P, &
+    CALL Set_quincy_parameter_value(this%km_adsorpt_OM_po4 / 1000._wp / molar_mass_P, &
                                     this%km_adsorpt_OM_po4, &
                                     "km_adsorpt_OM_po4", proportional_parameter_changes, &
                                     km_adsorpt_OM_po4)
@@ -3898,12 +3873,12 @@ CONTAINS
                                     "eq_sorp_mineral_po4", proportional_parameter_changes, &
                                     eq_sorp_mineral_po4)
     
-    CALL Set_quincy_parameter_value(this%k_occlude_po4 / 1000000.0_wp / 30.0_wp / one_day, &
+    CALL Set_quincy_parameter_value(this%k_occlude_po4 / 1000000._wp / 30._wp / one_day, &
                                     this%k_occlude_po4, &
                                     "k_occlude_po4", proportional_parameter_changes, &
                                     k_occlude_po4)
 
-    CALL Set_quincy_parameter_value(this%vmax_biochem_po4 / 40.0_wp / one_day, &
+    CALL Set_quincy_parameter_value(this%vmax_biochem_po4 / 50.0_wp / one_day, &
                                     this%vmax_biochem_po4, &
                                     "vmax_biochem_po4", proportional_parameter_changes, &
                                     vmax_biochem_po4)
@@ -3928,10 +3903,15 @@ CONTAINS
                                     "km_rootc_weath_po4", proportional_parameter_changes, &
                                     km_rootc_weath_po4)
     
-    CALL Set_quincy_parameter_value(this%biomin_thres_PC / 2400.0_wp, &
-                                    this%biomin_thres_PC, &
-                                    "biomin_thres_PC", proportional_parameter_changes, &
-                                    biomin_thres_PC)
+    CALL Set_quincy_parameter_value(this%km_root_enzyme_weath_po4 / molar_mass_C, &
+                                    this%km_root_enzyme_weath_po4, &
+                                    "km_root_enzyme_weath_po4", proportional_parameter_changes, &
+                                    km_root_enzyme_weath_po4)
+
+    CALL Set_quincy_parameter_value(this%biomin_thres_pc / 5000.0_wp, &
+                                    this%biomin_thres_pc, &
+                                    "biomin_thres_pc", proportional_parameter_changes, &
+                                    biomin_thres_pc)
     
     CALL Set_quincy_parameter_value(this%fc_p_res2dom, &
                                     this%fc_p_res2dom, &
@@ -3977,6 +3957,36 @@ CONTAINS
                                     this%vmax_uptake_norg, &
                                     "vmax_uptake_norg", proportional_parameter_changes, &
                                     vmax_uptake_norg)
+
+    CALL Set_quincy_parameter_value(this%k_fast_som_cn_max * molar_mass_N / molar_mass_C, &
+                                    this%k_fast_som_cn_max, &
+                                    "k_fast_som_cn_max", proportional_parameter_changes, &
+                                    k_fast_som_cn_max)
+
+    CALL Set_quincy_parameter_value(this%k_fast_som_cn_min * molar_mass_N / molar_mass_C, &
+                                    this%k_fast_som_cn_min, &
+                                    "k_fast_som_cn_min", proportional_parameter_changes, &
+                                    k_fast_som_cn_min)
+    
+    CALL Set_quincy_parameter_value(this%f_fast_som_cn, &
+                                    this%f_fast_som_cn, &
+                                    "f_fast_som_cn", proportional_parameter_changes, &
+                                    f_fast_som_cn)
+
+    CALL Set_quincy_parameter_value(this%k_slow_som_cn * molar_mass_N / molar_mass_C, &
+                                    this%k_slow_som_cn, &
+                                    "k_slow_som_cn", proportional_parameter_changes, &
+                                    k_slow_som_cn)
+
+    CALL Set_quincy_parameter_value(this%k_fast_som_np * molar_mass_P / molar_mass_N, &
+                                    this%k_fast_som_np, &
+                                    "k_fast_som_np", proportional_parameter_changes, &
+                                    k_fast_som_np)
+    
+    CALL Set_quincy_parameter_value(this%k_slow_som_np * molar_mass_P / molar_mass_N, &
+                                    this%k_slow_som_np, &
+                                    "k_slow_som_np", proportional_parameter_changes, &
+                                    k_slow_som_np)
 
 
     !> 4.0 close output file for parameter values

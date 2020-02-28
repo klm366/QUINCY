@@ -123,9 +123,10 @@ MODULE mo_sse_memory_class
                                     bulk_dens_sl,         &  !< soil bulk density [kg m-3]
                                     therm_cond_sl            !< soil thermal conductivity [W m-2 K-1]
     TYPE(t_jsb_var_real3d)          :: & 
-                                    sand_sl             , &  !< soil sand proportion
-                                    silt_sl             , &  !< soil silt proportion
-                                    clay_sl             , &  !< soil clay proportion (re-calculated as: clay = 1.0 -sand -silt)
+                                    sand_sl             , &  !< soil sand proportion of mineral soil
+                                    silt_sl             , &  !< soil silt proportion of mineral soil
+                                    clay_sl             , &  !< soil clay proportion of mineral soil(re-calculated as: clay = 1.0 -sand -silt)
+                                    volume_min_sl       , &  !< soil mineral volumetric fraction
                                     qmax_org_min_sl     , &  !< maximum OM sorption capacity of mineral soil, [mol C kg-1 mineral soil]
                                     qmax_po4_min_sl     , &  !< maximum po4 sorption capacity of SOM, [mol P kg-1 SOM]
                                     qmax_po4_om_sl           !< maximum po4 sorption capacity of mineral soil, [mol P kg-1 mineral soil]
@@ -514,6 +515,14 @@ CONTAINS
       CALL jsb_add_var(mem, 'clay_sl', mem%clay_sl, &
             hgrid, vgrid_soil_sb, &
             t_cf('clay_sl', '', 'soil clay proportion'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'volume_min_sl', mem%volume_min_sl, &
+            hgrid, vgrid_soil_sb, &
+            t_cf('volume_min_sl', '', 'soil mineral volumetric proportion'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
