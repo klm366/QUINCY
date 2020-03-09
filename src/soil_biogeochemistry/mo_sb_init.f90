@@ -790,7 +790,9 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
         soil_depth_acc_sl(:,i)          = soil_depth_acc_sl(:,i-1) + (soil_depth_sl(:,i) + soil_depth_sl(:,i-1)) / 2._wp  
       ENDIF   
     ENDDO
-    ! numerical coefficient2 for depth-dependent distrubution equation
+    !> the depth correction of initial Pi pool distributions are fitted against the observed pattern of a young cambisol soil 
+    !! with basalt as parent material (BBR, Lang et al. 2017) that, 
+    !! the proportion of: labile+sorbed P decreases with increasing depth, and primary P increases with increasing depth (Yu et al., 2020)
     rhlp2 = 3.5_wp            ! denominator coefficient for P pool depth correction
     rhlp3 = 2._wp             ! numerical coefficient for P pool depth correction
     rhlp4 = 0.1_wp            ! numerical coefficient of minimum occluded P for P pool depth correction
