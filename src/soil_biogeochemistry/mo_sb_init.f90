@@ -791,15 +791,15 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
       ENDIF   
     ENDDO
     ! numerical coefficient2 for depth-dependent distrubution equation
-    rhlp2 = 3.5_wp
-    rhlp3 = 2._wp
-    rhlp4 = 0.1_wp
-    rhlp5 = 0.8_wp
-    rhlp6 = 9._wp / 17._wp  ! global average value of labile_P/(labile_P + slow_P)
+    rhlp2 = 3.5_wp            ! denominator coefficient for P pool depth correction
+    rhlp3 = 2._wp             ! numerical coefficient for P pool depth correction
+    rhlp4 = 0.1_wp            ! numerical coefficient of minimum occluded P for P pool depth correction
+    rhlp5 = 0.8_wp            ! numerical coefficient for P pool depth correction
+    rhlp6 = 9._wp / 17._wp   ! global average value of labile_P/(labile_P + slow_P)
     DO i=1,nsoil_sb
-      hlp1(:)             = MIN(rhlp3 * soil_depth_acc_sl(:,i) ** 0.5_wp, (rhlp2 - rhlp4)) / rhlp2 ! primary corrected for depth, [g P] 
+      hlp1(:)             = MIN(rhlp3 * soil_depth_acc_sl(:,i) ** 0.5_wp, (rhlp2 - rhlp4)) / rhlp2 ! primary P, corrected with depth, [g P] 
       hlp2(:)             = rhlp5 ** (rhlp3 * soil_depth_acc_sl(:,i)) / rhlp2
-      hlp3(:)             = MAX((1.0_wp - hlp1(:) - hlp2(:)), rhlp4 / rhlp2) ! occluded corrected for depth
+      hlp3(:)             = MAX((1.0_wp - hlp1(:) - hlp2(:)), rhlp4 / rhlp2) ! occluded P, corrected with depth
 
       WHERE ((hlp1(:) + hlp2(:) + hlp3(:)) > 1._wp)
         hlp1(:) = hlp1(:) / (hlp1(:) + hlp2(:) + hlp3(:))
