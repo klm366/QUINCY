@@ -236,7 +236,7 @@ unitList                    <- c(unitList, "MPa")
 countCol                    <- countCol + 1
 
 ##
-inFile  <- paste0("soil_diagnostics_lay", inFileExt)
+inFile  <- paste0("soil_diagnostics_microbial_lay", inFileExt)
 for (l in 1:nSoilLay){
   var1    <- getVarData(inFile, paste0("RootC_L", l))         # quincy output: veg_pool%fine_root%carbon(ipoi) * root_fraction_sl(ipoi,:) / soil_depth_sl(ipoi,:)
   outArr[,countCol]           <- var1 * molar_mass_C / 1000   # mol C m-3 -> kg C m-3
