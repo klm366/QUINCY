@@ -313,4 +313,3 @@ CONTAINS
   END FUNCTION timer_on
 
 #endif
-END MODULE mo_jsb_control
