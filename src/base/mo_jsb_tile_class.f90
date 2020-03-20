@@ -327,6 +327,7 @@ CONTAINS
           this%is_lake = .TRUE.
         CASE (WET_TYPE)
           this%is_wet = .TRUE.
+          this%is_vegetation = .TRUE.
         END SELECT
       END IF
 
@@ -357,6 +358,7 @@ CONTAINS
       this%contains_lake = .TRUE.
     CASE (WET_TYPE)
       this%contains_wet = .TRUE.
+      this%contains_vegetation = .TRUE.
     END SELECT
 
     this%contains_soil       = this%contains_vegetation .OR. this%contains_bare .OR. this%contains_wet .OR. this%contains_land

@@ -122,15 +122,20 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
-    CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, veg_tile, pft_tile, wet_tile
+    CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, veg_tile, pft_tile, wet_tile, wft_tile
 
     INTEGER :: i
 
     INTEGER, PARAMETER :: npft = 11
+    INTEGER, PARAMETER :: nwft = 2
+
 
     CHARACTER(len=5), PARAMETER :: pft_shortnames(npft) = [character(len=5) ::  &
       & 'pft01', 'pft02', 'pft03', 'pft04', 'pft05', 'pft06', &
       & 'pft07', 'pft08', 'pft09', 'pft10', 'pft11' ]
+
+    CHARACTER(len=5), PARAMETER :: wft_shortnames(nwft) = [character(len=5) ::  &
+      & 'wft01', 'wft02' ]
 
     CHARACTER(len=30), PARAMETER :: pft_longnames(npft) = [character(len=30) :: &
       & 'Tropical broadleaf evergreen', &
@@ -145,9 +150,15 @@ CONTAINS
       & 'C4 pasture',                   &
       & 'C3 crops'                    ]
 
+    CHARACTER(len=30), PARAMETER :: wft_longnames(nwft) = [character(len=30) :: &
+      & 'Raingreen shrubs',             &
+      & 'C4 grass'                    ]
+
+
     ! Index of PFT into lctlib columns
     ! id is one less than in lctlib file because the first column (glacier) has been thrown away
     INTEGER, PARAMETER :: pft_ids(npft) = (/ 1,2,3,4,9,10,11,12,14,15,19 /)
+    INTEGER, PARAMETER :: wft_ids(nwft) = (/ 9,12 /) !(/ 9,12 /)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_usecase_pfts'
 
@@ -188,8 +199,8 @@ CONTAINS
         END IF
 
           wet_tile => t_jsb_tile('wet', 'Wet tile', &
-            & processes = (/HYDRO_, SSE_/), &
-            & process_actions = (/ON_TILE_, ON_TILE_/), &
+            & processes = (/HYDRO_, SSE_, ASSIMI_, PHENO_/), &
+            & process_actions = (/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
             & lct=t_jsb_lct(WET_TYPE), parent=land_tile)
 
         ! default jsb4: HYDRO_ is active at veg tile only to save runtime
@@ -239,12 +250,15 @@ CONTAINS
           !
           IF (model%processes(CARBON_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(CARBON_, ON_LEAFS_, AGGREGATE_)
+            CALL wet_tile%Set_process_action(CARBON_, ON_LEAFS_, AGGREGATE_)
           END IF
           IF (model%processes(FUEL_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(FUEL_, ON_TILE_, AGGREGATE_)
+            CALL wet_tile%Set_process_action(FUEL_, ON_TILE_, AGGREGATE_)
           END IF
           IF (model%processes(DISTURB_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(DISTURB_, ON_LEAFS_, AGGREGATE_)
+            CALL wet_tile%Set_process_action(DISTURB_, ON_LEAFS_, AGGREGATE_)
           END IF
 
             DO i=1,npft
@@ -252,12 +266,18 @@ CONTAINS
                & lct=t_jsb_lct(VEG_TYPE, lib_id=pft_ids(i)), parent=veg_tile)
             END DO
 
+            DO i=1,nwft
+              wft_tile => t_jsb_tile(wft_shortnames(i), TRIM(wft_longnames(i)), &
+               & lct=t_jsb_lct(WET_TYPE, lib_id=wft_ids(i)), parent=wet_tile)
+            END DO
+
+
     ! ! Next 3 lines only to avoid compiler warnings about pointers not being dereferenced
     ! IF (ASSOCIATED(glacier_tile)) CONTINUE
     ! IF (ASSOCIATED(lake_tile)) CONTINUE
     ! IF (ASSOCIATED(pft_tile)) CONTINUE
         
-    NULLIFY(box_tile, land_tile, veg_tile, pft_tile, wet_tile)
+    NULLIFY(box_tile, land_tile, veg_tile, pft_tile, wet_tile, wft_tile)
     IF (model%config%use_glacier) NULLIFY(glacier_tile)
     IF (model%config%use_lakes) NULLIFY(lake_tile)
 

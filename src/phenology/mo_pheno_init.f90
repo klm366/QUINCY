@@ -129,10 +129,17 @@ CONTAINS
     input_file = jsb_netcdf_open_input(TRIM(model%config%fract_filename), model%grid_id)     ! Temporary
 
     ! Maximum foliage projected cover
-    IF (debug_on()) CALL message(TRIM(routine), 'reading veg_ratio_max ...')
-    ptr_2D => input_file%Read_2d(      &
-      & variable_name='veg_ratio_max', &
-      & fill_array = dsl4jsb_var_ptr(PHENO_, fract_fpc_max))
+    IF (tile%is_wet) THEN
+      IF (debug_on()) CALL message(TRIM(routine), 'reading wet_ratio_max ...')
+      ptr_2D => input_file%Read_2d(      &
+        & variable_name='wet_ratio_max', &
+        & fill_array = dsl4jsb_var_ptr(PHENO_, fract_fpc_max))
+    ELSE IF (.NOT. tile%is_wet .AND. tile%is_vegetation) THEN
+      IF (debug_on()) CALL message(TRIM(routine), 'reading veg_ratio_max ...')
+      ptr_2D => input_file%Read_2d(      &
+        & variable_name='veg_ratio_max', &
+        & fill_array = dsl4jsb_var_ptr(PHENO_, fract_fpc_max))
+    END IF
 
     dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max) = &
       MERGE(dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max), 0._wp, dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max) >= 0._wp)
@@ -305,10 +312,17 @@ CONTAINS
     !> 2.1 get fract_fpc_max from bc file
     input_file = jsb_netcdf_open_input(TRIM(model%config%fract_filename), model%grid_id)     ! Temporary
     ! Maximum foliage projected cover
-    IF (debug_on()) CALL message(TRIM(routine), 'reading veg_ratio_max ...')
-    ptr_2D => input_file%Read_2d(      &
-      & variable_name='veg_ratio_max', &
-      & fill_array = dsl4jsb_var_ptr(PHENO_, fract_fpc_max))
+    IF (tile%is_wet) THEN
+      IF (debug_on()) CALL message(TRIM(routine), 'reading wet_ratio_max ...')
+      ptr_2D => input_file%Read_2d(      &
+        & variable_name='wet_ratio_max', &
+        & fill_array = dsl4jsb_var_ptr(PHENO_, fract_fpc_max))
+    ELSE IF (.NOT. tile%is_wet .AND. tile%is_vegetation) THEN
+      IF (debug_on()) CALL message(TRIM(routine), 'reading veg_ratio_max ...')
+      ptr_2D => input_file%Read_2d(      &
+        & variable_name='veg_ratio_max', &
+        & fill_array = dsl4jsb_var_ptr(PHENO_, fract_fpc_max))
+    END IF
     dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max) = &
       MERGE(dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max), 0._wp, dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max) >= 0._wp)
     !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max))

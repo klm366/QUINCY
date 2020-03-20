@@ -227,7 +227,7 @@ CONTAINS
 
     END IF
 
-    IF (tile%contains_vegetation .OR. tile%contains_wet) THEN
+    IF (tile%contains_vegetation) THEN
 
       input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HYDRO_)%bc_filename), model%grid_id)
 

@@ -19,7 +19,7 @@ MODULE mo_assimi_memory_class
   USE mo_util, ONLY: One_of
 
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
-  USE mo_jsb_lct_class,          ONLY: VEG_TYPE, LAND_TYPE
+  USE mo_jsb_lct_class,          ONLY: VEG_TYPE, LAND_TYPE, WET_TYPE
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
   IMPLICIT NONE
@@ -341,7 +341,8 @@ CONTAINS
     !! quincy
     IF (model%config%use_quincy) THEN
       IF ( (     One_of(LAND_TYPE, lct_ids(:)) > 0 &
-        &   .OR. One_of(VEG_TYPE,  lct_ids(:)) > 0)) THEN
+        &   .OR. One_of(VEG_TYPE,  lct_ids(:)) > 0 &
+        &   .OR. One_of(WET_TYPE,  lct_ids(:)) > 0)) THEN
         
 !!! temporary fix until the PHENO & other processes are using only the quincy tasks with use_quincy == TRUE
 !!!  few jsb4 variables are needed by carbon_interface:update_C_NPP_pot_allocation

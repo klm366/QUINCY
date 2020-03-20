@@ -823,7 +823,7 @@ CONTAINS
     END IF
   
     c_bg_sum => NULL()
-    IF (tile%is_bare .OR. tile%is_vegetation .OR. tile%is_wet) THEN
+    IF (tile%is_bare .OR. tile%is_vegetation) THEN
       IF (TRIM(use_alb_soil_organic_C) /= '' .AND. .NOT. tile%Is_process_active(CARBON_)) THEN
         CALL finish(TRIM(routine), 'Carbon process must be active for use_alb_soil_organic_C')
       END IF
@@ -872,7 +872,7 @@ CONTAINS
     !!
     !! Calculate snow albedos. Used later only for bare and vegetation tile types
     !! Note, for vegetation tiles this snow albedos are used only for snow on soil
-    IF (tile%is_bare .OR. tile%is_vegetation .OR. tile%is_wet) THEN
+    IF (tile%is_bare .OR. tile%is_vegetation) THEN
 
       dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_soil)  ! in
       dsl4jsb_Get_var2D_onChunk(RAD_,   snow_age)         ! in
@@ -999,57 +999,6 @@ CONTAINS
       alb_vis_lnd(:) = (fract_snow_soil(:) * alb_vis_snow(:)  + (1.0_wp - fract_snow_soil(:)) * alb_vis_soil(:))
       alb_nir_lnd(:) = (fract_snow_soil(:) * alb_nir_snow(:)  + (1.0_wp - fract_snow_soil(:)) * alb_nir_soil(:))
       !$claw end expand
-
-
-    !> 5.0 vegetation / canopy
-    !!  jsbach4 routines
-    !!
-    ELSE IF (tile%is_wet) THEN
-      dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_mineralsoil)   ! inout
-      dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_mineralsoil)   ! inout
-      dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_soil)          ! inout
-      dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_soil)          ! inout
-
-      !!       needs the active CARBON_ process
-      !!       by default: use_alb_soil_scheme = .FALSE.
-      !!       also the soil albedo is calc below for vegetation tiles
-      IF (use_alb_soil_scheme) THEN
-        IF (tile%lcts(1)%lib_id == 0) CALL finish(TRIM(routine), 'lctlib not available on tile')
-
-        dsl4jsb_Get_var2D_onChunk(CARBON_, c_ag_sum_1) ! in
-        !$claw sca forward update savepoint=ser_jsb_rad_calc_soil_albedo_1 tile_name=tile%name
-        CALL calc_soil_albedo(                        &
-          & l_day(:),                                 & ! in
-          & use_alb_mineralsoil_const,                & ! in
-          & use_alb_soil_organic_int,                 & ! in
-          & use_alb_soil_litter,                      & ! in
-          & c_ag_sum_1(:),                            & ! in
-          !CBAL & c_slow(:),                           & ! in
-          & c_bg_sum(:),                              & ! in
-          ! @todo: on a bare soil tile, there is no vegetation and therefore also no lctlib entry!?
-          & dsl4jsb_Lctlib_param(specificLeafArea_C), & ! in
-          & dsl4jsb_Lctlib_param(AlbedoLitterVIS),    & ! in
-          & alb_background(:),                        & ! in
-          & alb_vis_mineralsoil(:),                   & ! inout
-          & alb_nir_mineralsoil(:),                   & ! inout
-          & alb_vis_soil(:),                          & ! inout
-          & alb_nir_soil(:)                           & ! inout
-          & )
-      ELSE
-        ! Do nothing: alb_vis_soil and alb_nir_soil are already in memory initialited from bc_land_phy.nc file
-        ! and represent the soil albedo including carbon in the soil as well as litter on the soil, but without
-        ! the canopy above.
-        IF (debug_on() .AND. iblk == 1) THEN
-          CALL message(TRIM(routine), 'Soil albedo scheme not used for bare soil tiles but taken from bc_land_phy.nc file')
-        END IF
-      END IF
-
-      ! Merge the albedo of soil with the snow on it for the overall bare soil tile albedo
-      !$claw expand parallel update savepoint=ser_jsb_rad_update_albedo_expand_1 tile_name=tile%name
-      alb_vis_lnd(:) = (fract_snow_soil(:) * alb_vis_snow(:)  + (1.0_wp - fract_snow_soil(:)) * alb_vis_soil(:))
-      alb_nir_lnd(:) = (fract_snow_soil(:) * alb_nir_snow(:)  + (1.0_wp - fract_snow_soil(:)) * alb_nir_soil(:))
-      !$claw end expand
-
 
     !> 5.0 vegetation / canopy
     !!  jsbach4 routines
@@ -1181,7 +1130,7 @@ CONTAINS
     !! this is needed because for lake tiles, the "tile albedo" is calculated directly, \n
     !! but for vegetation, bare and glacier, the "land albedo" is calculated \n
     !! with "use_quincy = T", for vegetation tiles the "tile albedo" (alb_vis & alb_nir) is calculated directly
-    IF (tile%is_bare .OR. tile%is_glacier .OR. tile%is_wet .OR. (tile%is_vegetation .AND. .NOT. model%config%use_quincy)) THEN
+    IF (tile%is_bare .OR. tile%is_glacier .OR. (tile%is_vegetation .AND. .NOT. model%config%use_quincy)) THEN
       !$claw expand parallel update savepoint=ser_jsb_rad_update_albedo_expand_3 tile_name=tile%name
       alb_vis(:) = alb_vis_lnd(:)
       alb_nir(:) = alb_nir_lnd(:)
