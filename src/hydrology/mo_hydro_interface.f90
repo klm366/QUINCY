@@ -1266,11 +1266,12 @@ CONTAINS
     IF (TRIM(model%config%usecase) .eq. 'jsbach_jedi' ) THEN
       
       WHERE (evapopot(:) .GE. 0._wp)  
-         water_stress(:) = 0._wp
+        water_stress(:) = 0._wp
       ELSEWHERE ( evapopot(:) .LT. 0._wp )   
-          !water_stress(:) = 1._wp - exp(  -  jedi_pot_supply_transp(:)  /  ABS(evapopot(:))  )
-           water_stress(:) = MIN(1._wp , ABS(evapopot(:)) / max_pipe_transpir  * (1._wp - exp(  -   jedi_pot_supply_transp(:) / ABS(evapopot(:))   ) ))
-          !water_stress(:) =  alpha_jedi(:)  
+        !water_stress(:) = 1._wp - exp(  -  jedi_pot_supply_transp(:)  /  ABS(evapopot(:))  )
+        water_stress(:) = MIN(1._wp , ABS(evapopot(:)) / max_pipe_transpir  * &
+        &                (1._wp - exp( - jedi_pot_supply_transp(:) / ABS(evapopot(:)) ) ))
+       !water_stress(:) =  alpha_jedi(:)  
       END WHERE
       
     ELSE

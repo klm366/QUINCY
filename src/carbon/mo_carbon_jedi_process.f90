@@ -495,13 +495,13 @@ CONTAINS
     
     IF( Flg_grow_G .GT. 0._wp .AND.  one_counter .lt. 1._wp  )  THEN
            
-           c_storage =  1._wp! 0.01_wp 
-           c_leaves   = c_storage * Allo2Abground  *  ( 1._wp -  RelAllo2Abgrd ) * 1.0_wp / (1.0_wp + 0.33_wp)  *   TurnoverLeaf  
-           c_stem     = c_storage * Allo2Abground  *                  RelAllo2Abgrd  * 1.0_wp / (1.0_wp + 0.25_wp)   *  TurnoverStruc
-           c_fnroot    = c_storage * Allo2Blground  *  ( 1._wp -   RelAllo2Blgrd ) * 1.0_wp / (1.0_wp + 0.33_wp)   *   TurnoverLeaf 
-           c_csroot   =  c_storage * Allo2Blground  *                   RelAllo2Blgrd  * 1.0_wp / (1.0_wp + 0.49_wp)   *   TurnoverStruc
-           c_seed     =   c_storage * Allo2Reproduc *  (1.0_wp / (1.0_wp + 0.66_wp)  )  /   (GermFrac   +  1./(c_tau_seed)    )
-           one_counter =one_counter +1
+      c_storage = 1._wp! 0.01_wp 
+      c_leaves  = c_storage * Allo2Abground *  ( 1._wp -  RelAllo2Abgrd ) * 1.0_wp / (1.0_wp + 0.33_wp)  * TurnoverLeaf  
+      c_stem    = c_storage * Allo2Abground *                  RelAllo2Abgrd  * 1.0_wp / (1.0_wp + 0.25_wp) * TurnoverStruc
+      c_fnroot  = c_storage * Allo2Blground *  ( 1._wp -   RelAllo2Blgrd ) * 1.0_wp / (1.0_wp + 0.33_wp) * TurnoverLeaf 
+      c_csroot  = c_storage * Allo2Blground *                   RelAllo2Blgrd  * 1.0_wp / (1.0_wp + 0.49_wp) * TurnoverStruc
+      c_seed    = c_storage * Allo2Reproduc *  (1.0_wp / (1.0_wp + 0.66_wp)  )  /   (GermFrac   +  1./(c_tau_seed)    )
+      one_counter =one_counter +1
     
     ENDIF
    

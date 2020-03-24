@@ -118,7 +118,8 @@ CONTAINS
       & iblk,              &
       & ics,               &
       & ice
-    TYPE(t_datetime), POINTER, INTENT(in) :: &
+    ! TYPE(t_datetime), POINTER, INTENT(in) :: &
+    TYPE(t_datetime), POINTER :: &
       & current_datetime
     REAL(wp), INTENT(in) :: &
       & dtime,              &

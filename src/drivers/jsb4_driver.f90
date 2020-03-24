@@ -23,12 +23,11 @@ PROGRAM jsb4_driver
   USE mo_jsb_model_final,    ONLY: jsbach_finalize
   USE mo_jsb_version,        ONLY: jsbach_init_version, jsbach_label_run
   USE mo_jsb_control,        ONLY: jsbach_runs_standalone, jsbach_is_restarted
-  USE mo_jsb_time,           ONLY: is_newday
+  USE mo_jsb_time,           ONLY: t_datetime, deallocateDatetime, is_newday, is_time_experiment_start
   USE mo_jsb_class,          ONLY: get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_mvstream,           ONLY: init_mvstream, mvstream_update_cache, mvstream_accumulate
-  USE mo_jsb_time,           ONLY: t_datetime, deallocateDatetime
 
   dsl4jsb_Use_processes SEB_, TURB_, HYDRO_
   dsl4jsb_Use_memory(SEB_)
@@ -40,27 +39,34 @@ PROGRAM jsb4_driver
   ! Currently from adapter
   USE mo_jsb_grid_iface,     ONLY: get_lat, get_lon
   USE mo_jsb_namelist_iface, ONLY: POSITIONED, open_nml, position_nml
-  USE mo_jsb_parallel,       ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel, mpi_comm
+  USE mo_jsb_parallel,       ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel, &
+    &                              init_mpi_communicators, init_parallel_iface, mpi_comm, p_pe
   USE mo_jsb_test,           ONLY: read_interface_vars, read_interface_variables
 
   ! Seems to be available in both ICON and ECHAM
   USE mo_exception,        ONLY: message, message_text
-  USE mo_kind,             ONLY: wp
+  USE mo_kind,             ONLY: wp, sp
   USE mo_math_constants,   ONLY: pi
   USE mo_orbit,            ONLY: orbit_kepler, orbit_vsop87
 
 !>>> TODO? echam:
   ! parallelisation
-  USE mo_mpi,              ONLY: p_start, p_stop, p_init_communicators
+  USE mo_control,          ONLY: nproca, nprocb, nprocio, lyaxt_transposition
+  USE mo_mpi,              ONLY: p_start, p_stop, p_init_communicators, p_init_model_communicator, &
+    &                            p_init_model_communicator, p_global_comm, p_all_comm, p_comm_null
   USE mo_machine,          ONLY: machine_setup
 
   ! io
   USE mo_io,               ONLY: write_streams, IO_read_streams
   USE mo_filename,         ONLY: out_filetype
   USE mo_netcdf,           ONLY: nf_check, nf_close, add_dim, SURFACE
-  USE mo_memory_base,      ONLY: default_output, NETCDF
+  USE mo_memory_base,      ONLY: default_output, NETCDF, NETCDF2,  NETCDF4
   USE mo_output,           ONLY: open_output_streams, close_output_streams, out_streams, init_output
   USE mo_decomposition,    ONLY: local_decomposition
+
+  ! parallel io
+  USE mo_echam_yaxt,       ONLY: yaxt_initialize, yaxt_finalize, &
+    &                            add_yaxt_gp_nlevs, setup_yaxt_decomposition
 
   ! time control and orbit calc
   USE mo_time_control,     ONLY: time_set, time_reset, lstop, l_trigfiles, l_putrerun, delta_time, &
@@ -74,6 +80,10 @@ PROGRAM jsb4_driver
 
   IMPLICIT NONE
 
+#ifdef HAVE_CDIPIO
+  INCLUDE 'cdipio.inc'
+#endif
+
   CHARACTER(len=*), PARAMETER :: progname = 'jsb4_driver'
 
   INTEGER,  EXTERNAL:: util_cputime
@@ -85,12 +95,14 @@ PROGRAM jsb4_driver
   TYPE(t_datetime), POINTER :: current_datetime_ptr => NULL()
 
   !! Variables of namelist jsb_parallel_nml
-  INTEGER:: nproca  ! number of processors for jsbach
-  INTEGER:: nprocb  ! has to be one
-  INTEGER:: nprocio ! number of processors for I/O server
-  INTEGER:: npedim  ! Working dimension for blocks in each domain.
+  ! INTEGER :: nproca  ! number of processors for jsbach
+  ! INTEGER :: nprocb  ! has to be one
+  ! INTEGER :: nprocio ! number of processors for I/O server
+  INTEGER :: iomode
+  INTEGER :: npedim  ! Working dimension for blocks in each domain.
                      ! Default (-1): each domain is processed in one call
-  INTEGER:: buffer(4) ! buffer to broadcast the 4 above variables
+  INTEGER :: buffer(5) ! buffer to broadcast the 4 above variables
+  REAL(sp) :: PartInFlate
 
   LOGICAL :: l_rad_call = .FALSE.  ! TODO? echam -- orbit calculation
   REAL(wp) :: time_of_day, orbit_date, rasc_sun, decl_sun, dist_sun, flx_ratio
@@ -158,16 +170,18 @@ PROGRAM jsb4_driver
 
     NAMELIST /jsb_parallel_nml/     &
       nproca, npedim,             &
-      nprocb, nprocio
+      nprocb, nprocio, iomode
 
   !-------------------------------------------------------------------------------------------------
 
   model_id = 1
   default_output = .TRUE.
-  out_filetype = NETCDF
+  out_filetype = NETCDF4
+  lyaxt_transposition = .FALSE.
 
   ! Start MPI
   CALL p_start
+  CALL init_parallel_iface
 
   ! Initialize wallclock timer
 !$OMP PARALLEL
@@ -176,30 +190,50 @@ PROGRAM jsb4_driver
 !$OMP END MASTER
 !$OMP END PARALLEL
 
+  ! define default values
+  nproca = 1
+  nprocb = 1
+  nprocio = 0
+  iomode = 0
+  npedim = -1
+
   ! read processor decomposition
   IF (my_process_is_stdio()) THEN
-    ! define default values
-    nproca = 1
-    nprocb = 1
-    nprocio = 0
-    npedim = -1
-
     ! read the namelist
     nml_handler = open_nml ('namelist.jsbach')
     f_unit = position_nml ('jsb_parallel_nml', nml_handler, status=read_status)
     IF (read_status == POSITIONED) READ(f_unit, jsb_parallel_nml)
   ENDIF
 
+  IF (my_process_is_stdio()) THEN
+    buffer(:) = (/ nproca, nprocb, nprocio, iomode, npedim /)
+  END IF
   IF (my_process_is_mpi_parallel()) THEN
-    buffer(:) = (/ nproca, nprocb, nprocio, npedim /)
-    CALL p_bcast (buffer, p_io, comm=mpi_comm)
+    CALL p_bcast (buffer, p_io, comm=p_global_comm)
     nproca  = buffer(1)
     nprocb  = buffer(2)
     nprocio = buffer(3)
-    npedim  = buffer(4)
+    iomode  = buffer(4)
+    npedim  = buffer(5)
   END IF
 
-  CALL p_init_communicators(nproca, nprocb, nprocio)
+  IF (nprocio > 0 .OR. lyaxt_transposition) THEN
+    CALL yaxt_initialize(p_global_comm)
+  ENDIF
+
+  PartInFlate = 1.1_sp
+  CALL p_init_model_communicator(p_global_comm, nproca, nprocb, nprocio, iomode, PartInFlate)
+  ! CALL init_mpi_communicators()
+  ! CALL p_init_communicators(nproca, nprocb, nprocio)
+#ifdef HAVE_CDIPIO
+  ! finish OASIS, YAXT and MPI on IO-servers
+  IF (p_all_comm == p_comm_null) THEN
+    CALL yaxt_finalize()
+    CALL p_stop
+    STOP
+  ENDIF
+#endif  /* HAVE_CDIPIO */
+
   CALL machine_setup
 
   CALL add_dim ("surface",1,                      levtyp =    1,     &
@@ -208,7 +242,14 @@ PROGRAM jsb4_driver
 
   ! - jsbach_init
   CALL jsbach_setup_models('namelist.jsbach')
+  ! Setup grid and decomposition
   CALL jsbach_setup_grid(nproca, nprocb, npedim, model_id) ! Only one model implemented for now
+
+  IF (nprocio > 0 .OR. lyaxt_transposition) THEN
+    CALL add_yaxt_gp_nlevs((/1, 5/))
+    CALL setup_yaxt_decomposition
+  ENDIF
+
   CALL jsbach_setup_tiles(model_id)
   CALL jsbach_init(model_id)
 
@@ -307,6 +348,7 @@ PROGRAM jsb4_driver
   ice = nproma
 
   CALL init_mvstream('namelist.jsbach')
+  CALL mvstream_update_cache
 
   IF(jsbach_is_restarted()) THEN
 
@@ -334,8 +376,15 @@ PROGRAM jsb4_driver
   CALL jsbach_init_after_restart(model_id)
 
   CALL init_output
-  CALL open_output_streams
-  CALL mvstream_update_cache
+  ! CALL open_output_streams
+  ! CALL mvstream_update_cache
+
+#ifdef HAVE_CDIPIO
+  ! change from I/O STAGE_DEFINITION to STAGE_TIMELOOP
+  IF (nprocio > 0 ) THEN
+    CALL pioEndDef
+  ENDIF
+#endif
 
   ! - Main loop
   main_loop:DO
@@ -349,8 +398,10 @@ PROGRAM jsb4_driver
 
     CALL jsbach_start_timestep(model_id, current_datetime_ptr, delta_time)
 
+    !IF (l_trigfiles .AND. .NOT. is_time_experiment_start(current_datetime_ptr)) THEN
     IF (l_trigfiles) THEN
-      CALL close_output_streams
+      CALL message('INFO','Closing and re-opening output streams')
+      IF (.NOT. is_time_experiment_start(current_datetime_ptr)) CALL close_output_streams
       CALL open_output_streams
     ENDIF
 
@@ -441,7 +492,23 @@ PROGRAM jsb4_driver
     CALL nf_check(nf_close(ncid))
   ENDIF
 
+#ifdef HAVE_CDIPIO
+  ! changes from I/O STAGE_DEFINITION to STAGE_CLEANUP
+  IF (nprocio > 0 ) THEN
+    CALL pioEndTimestepping
+  ENDIF
+#endif
+  CALL close_output_streams
+  CALL message('INFO','Closed output streams')
+
   CALL jsbach_finalize()
+
+#ifdef HAVE_CDIPIO
+  IF (nprocio > 0 ) THEN
+    ! Finalize parallel I/O with CDI
+    CALL pioFinalize()
+  ENDIF
+#endif
 
 !$OMP PARALLEL
 !$OMP MASTER
@@ -485,6 +552,7 @@ PROGRAM jsb4_driver
     !DEALLOCATE(evapo_act_sum_proc, evapo_pot_sum_proc)
   ENDIF
 
+  IF (nprocio > 0 .OR. lyaxt_transposition)CALL yaxt_finalize()
   ! Stop MPI
   CALL p_stop
 #endif

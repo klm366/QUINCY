@@ -35,7 +35,7 @@ MODULE mo_carbon_memory_class
 
   PUBLIC :: t_carbon_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 210   !PHS changed from 110 to 120
+  INTEGER, PARAMETER :: max_no_of_vars = 170   !PHS changed from 110 to 120
 
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_carbon_memory
