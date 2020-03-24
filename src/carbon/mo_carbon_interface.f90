@@ -615,75 +615,68 @@ CONTAINS
     lstart = is_time_experiment_start(options%current_datetime)
     
     
-      inidate => get_time_start()
-      iniyear = get_year(inidate)
-      lrestart= jsbach_is_restarted()      
-      
-       IF (get_year(options%current_datetime) .LE. iniyear + 2 ) THEN    !  PHS: initial carbon
-      
+    inidate => get_time_start()
+    iniyear = get_year(inidate)
+    lrestart= jsbach_is_restarted()      
+    
+    IF (get_year(options%current_datetime) .LE. iniyear + 2 ) THEN    !  PHS: initial carbon
+      ff_npp = 0._wp
+      Flg_senesc = 0._wp
+      Flg_die = 0._wp
+      one_counter = 0._wp           
+    END IF     !  PHS: initial carbon
+    
+    IF (  is_time_experiment_start(options%current_datetime)  )  THEN
+      seed_depth_sl = jedi_soil_depth_to_layers_1d(  SPREAD(0.05_wp, NCOPIES=nc, DIM=1)  , soil_w%dz(:))         ! Jedi assumes germination of seed depends on the first 0.5 m of soil wetness
+      CALL get_water_in_root_zone(vol_field_cap_sl(:,:) * soil_depth_sl(:,:), &
+        &                         soil_depth_sl(:,:), seed_depth_sl(:,:),     &
+        &                         seed_maxmoist(:))
+    END IF
+    
+    CALL get_water_in_root_zone(vol_field_cap_sl(:,:) * soil_depth_sl(:,:), &
+      &                         soil_depth_sl(:,:), root_depth_sl(:,:), root_maxmoist(:))
 
-           ff_npp = 0._wp
-           Flg_senesc = 0._wp
-           Flg_die = 0._wp
-           one_counter = 0._wp           
-
-
-      END IF     !  PHS: initial carbon
+    CALL get_water_in_root_zone(w_soil_sl(:,:), soil_depth_sl(:,:), seed_depth_sl(:,:), w_soil_column_seed(:))
       
-      IF (  is_time_experiment_start(options%current_datetime)  )  THEN
-        seed_depth_sl = jedi_soil_depth_to_layers_1d(  SPREAD(0.05_wp, NCOPIES=nc, DIM=1)  , soil_w%dz(:))         ! Jedi assumes germination of seed depends on the first 0.5 m of soil wetness
-        CALL get_water_in_root_zone(vol_field_cap_sl(:,:) * soil_depth_sl(:,:), soil_depth_sl(:,:), seed_depth_sl(:,:), seed_maxmoist(:))
-      END IF
-      
-      CALL get_water_in_root_zone(vol_field_cap_sl(:,:) * soil_depth_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:), root_maxmoist(:))
-               
-      CALL get_water_in_root_zone( w_soil_sl(:,:), soil_depth_sl(:,:), seed_depth_sl(:,:), w_soil_column_seed(:))
-       
-      alpha_jedi(:)      = jedi_water_stress_factor( w_soil_column(:),       root_maxmoist(:),  dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract)                    
-      alpha_jedi_seed(:) = jedi_water_stress_factor( w_soil_column_seed(:),  seed_maxmoist(:),  dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract)            
-      
-      ! 2019.11.27 PHS: still at the stage of testing "water stress" 
-      WHERE (c_leaves .gt. 0._wp) 
+    alpha_jedi(:)      = jedi_water_stress_factor( w_soil_column(:),      root_maxmoist(:),  &
+      &                                             dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract)
+    alpha_jedi_seed(:) = jedi_water_stress_factor( w_soil_column_seed(:), seed_maxmoist(:),  &
+      &                                            dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract)            
+    
+    ! 2019.11.27 PHS: still at the stage of testing "water stress" 
+    WHERE (c_leaves .gt. 0._wp) 
+      ! 2019.12.4  
         ! 2019.12.4  
-          ! 2019.12.4  
+      ! 2019.12.4  
         ! 2019.12.4  
-          ! 2019.12.4  
-        ! 2019.12.4  
-        ! The potential supply rate from soil depends on the root-shoot-ratio. The root-shoot-ratio is the ratio betweem fine-root-carbon and Leaf-area-index.
-        !                                                                                                     a(r)=1-exp(- (-log(0.01))/r_optimal   * r  )     a : is a function of root-shoot-ratio  [0...1]
-        !                                                                                                                                                                        r : root-shoot-ratio [10^-3  ~  10^3]
-        !                                                                                                                                                                        r_optimal: the median value of the root-shoot-ratio among all PGS
-        jedi_pot_supply_transp = (1._wp - exp( -(- log(0.01))/rootshoot_opt * &
-          &                         (c_fnroot / (c_leaves*dsl4jsb_Lctlib_param(JeDiSLA)) ) )) * max_pipe_transpir * alpha_jedi
-      ELSEWHERE 
-        jedi_pot_supply_transp =  0._wp
-      END WHERE
-      
-      !jedi_pot_supply_transp      =  MAX(0._wp,  c_fnroot * (  1000._wp *  0.5_wp *  12.01_wp  *  0.001_wp  / 86400._wp  )  *  alpha_jedi   ) 
+      ! 2019.12.4  
+      ! The potential supply rate from soil depends on the root-shoot-ratio. The root-shoot-ratio is the ratio betweem fine-root-carbon and Leaf-area-index.
+      !                                                                                                     a(r)=1-exp(- (-log(0.01))/r_optimal   * r  )     a : is a function of root-shoot-ratio  [0...1]
+      !                                                                                                                                                                        r : root-shoot-ratio [10^-3  ~  10^3]
+      !                                                                                                                                                                        r_optimal: the median value of the root-shoot-ratio among all PGS
+      jedi_pot_supply_transp = (1._wp - exp( -(- log(0.01))/rootshoot_opt * &
+        &                         (c_fnroot / (c_leaves*dsl4jsb_Lctlib_param(JeDiSLA)) ) )) * max_pipe_transpir * alpha_jedi
+    ELSEWHERE 
+      jedi_pot_supply_transp =  0._wp
+    END WHERE
     
-    
-    
-    ff_grow_T     =  ( t_air - tmelt )         / dsl4jsb_Lctlib_param(jedi_N_pseudo_T)      + ff_grow_T   *     dsl4jsb_Lctlib_param(jedi_F_pseudo_T)
-    ff_grow_G     =  alpha_jedi_seed        / dsl4jsb_Lctlib_param(jedi_N_pseudo_soilM) + ff_grow_G  *     dsl4jsb_Lctlib_param(jedi_F_pseudo_soilM)
-    ff_grow_W    =   alpha_jedi                / dsl4jsb_Lctlib_param (jedi_N_pseudo_soilM) + ff_grow_W *     dsl4jsb_Lctlib_param(jedi_F_pseudo_soilM)
-    ff_npp           =   NPP_act_yDayMean / dsl4jsb_Lctlib_param(jedi_N_pseudo_npp)   + ff_npp         *     dsl4jsb_Lctlib_param(jedi_F_pseudo_npp)
-    
-     ff_T_30d     =  ( t_air - tmelt )         / ( 1._wp / (1._wp-EXP(- dtime / (30._wp* 86400._wp ))))      + ff_T_30d  *     EXP(- dtime / (30._wp* 86400._wp ))
-
-     
-
+    !jedi_pot_supply_transp      =  MAX(0._wp,  c_fnroot * (  1000._wp *  0.5_wp *  12.01_wp  *  0.001_wp  / 86400._wp  )  *  alpha_jedi   ) 
   
+    ff_grow_T =  ( t_air - tmelt ) / dsl4jsb_Lctlib_param(jedi_N_pseudo_T)      + &
+      &          ff_grow_T * dsl4jsb_Lctlib_param(jedi_F_pseudo_T)
+    ff_grow_G =  alpha_jedi_seed   / dsl4jsb_Lctlib_param(jedi_N_pseudo_soilM)  + &
+      &          ff_grow_G * dsl4jsb_Lctlib_param(jedi_F_pseudo_soilM)
+    ff_grow_W =  alpha_jedi        / dsl4jsb_Lctlib_param (jedi_N_pseudo_soilM) + &
+      &          ff_grow_W * dsl4jsb_Lctlib_param(jedi_F_pseudo_soilM)
+    ff_npp    =  NPP_act_yDayMean  / dsl4jsb_Lctlib_param(jedi_N_pseudo_npp)    + &
+      &          ff_npp    * dsl4jsb_Lctlib_param(jedi_F_pseudo_npp)
     
-    
-    
-    
-        
+    ff_T_30d  =  ( t_air - tmelt ) / ( 1._wp / (1._wp-EXP(- dtime / (30._wp* 86400._wp )))) + &
+      &          ff_T_30d * EXP(- dtime / (30._wp* 86400._wp ))
+
     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!     
-    
-    
-    
-    
-    IF( .NOT. is_newday(options%current_datetime,dtime) .OR. lstart) THEN ! perform daily sums if WE ARE NOT STARTING A NEW DAY
+
+      IF( .NOT. is_newday(options%current_datetime,dtime) .OR. lstart) THEN ! perform daily sums if WE ARE NOT STARTING A NEW DAY
                                             ! or if we JUST STARTED AN TOTALLY NEW EXPERIMENT
 
       LAI_sum          = LAI_sum          + LAI
@@ -725,7 +718,9 @@ CONTAINS
        temp_yDayMean  = temp_sum / timesteps_per_day(dtime)
        
        MaintRes = 0._wp
-       MaintRes = c_sapwood * c_CN_woody * ( c_stem + c_csroot ) + dsl4jsb_Lctlib_param(NitroStatus)*dsl4jsb_Lctlib_param(JeDiSLA) * ( c_leaves + c_fnroot )  !NNN
+       MaintRes = c_sapwood * c_CN_woody * ( c_stem + c_csroot ) + &
+         &        dsl4jsb_Lctlib_param(NitroStatus) * dsl4jsb_Lctlib_param(JeDiSLA) * &
+         &             ( c_leaves + c_fnroot )  !NNN
        MaintRes = MaintRes  * c_Res_N    * ( 1.4_wp ** ( ( temp_yDayMean - tmelt - 20._wp ) / 10._wp) ) ! JeDi uses 1.4 for Q10 value
     
        MaintRes = MaintRes / sec_per_day ! The maintanence respiration is daily computed in JeDi.
@@ -734,13 +729,10 @@ CONTAINS
        temp_sum = t_air
        
        !PHS 05.08.2019 Tend
-       ff_dTdt                      = ( ff_T_30d - ff_grow_T_yDayMean ) / ( 1._wp /  ( 1._wp - EXP(- dtime / (30._wp* 86400._wp ))    ))  +  EXP(- dtime / (30._wp* 86400._wp ))  * ff_dTdt    
+       ff_dTdt            = ( ff_T_30d - ff_grow_T_yDayMean ) / ( 1._wp /  ( 1._wp - EXP(- dtime / (30._wp* 86400._wp ))  )) + &
+         &                  EXP(- dtime / (30._wp* 86400._wp ))  * ff_dTdt    
        ff_grow_T_yDayMean = ff_T_30d
        
-      
-
-
-
       ! Save other variables (for yasso) as "previous days"
       pseudo_temp_yDay   = pseudo_temp
       pseudo_precip_yDay = pseudo_precip

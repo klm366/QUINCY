@@ -22,9 +22,10 @@ MODULE mo_pheno_process
    IMPLICIT NONE
    PRIVATE
 
-   PUBLIC :: calc_summergreen_phenology , calc_evergreen_phenology, &
-             calc_crop_phenology, calc_raingreen_phenology, calc_grass_phenology, & !, get_letItDie, get_letItGrow, get_shedRate_RG
-             get_foliage_projected_cover, derive_maxLai_according_to_allometric_relationships, track_max_green_pool, calc_jedi_phenology
+  PUBLIC :: calc_summergreen_phenology , calc_evergreen_phenology, &
+    & calc_crop_phenology, calc_raingreen_phenology, calc_grass_phenology, & !, get_letItDie, get_letItGrow, get_shedRate_RG
+    & get_foliage_projected_cover, derive_maxLai_according_to_allometric_relationships, &
+    & track_max_green_pool, calc_jedi_phenology
 
    CHARACTER(len=*), PARAMETER :: modname = 'mo_pheno_process'
 

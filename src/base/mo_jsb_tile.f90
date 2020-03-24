@@ -270,6 +270,8 @@ CONTAINS
     INTEGER                    :: ilct, i, no_of_children, child_no
 
     INTEGER :: isteptype
+    ! CHARACTER(LEN=6) :: part_suffix
+    ! INTEGER :: pft_number
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_tile'
 
@@ -295,14 +297,6 @@ CONTAINS
 
       process_name = Get_process_name(iproc)
 
-      IF (get_no_of_models() > 1) THEN
-        ! varlist_name_loc = TRIM(varlist_name)//'_'//TRIM(process_name)//'_'//model_id_suffix
-        varlist_name_loc = TRIM(varlist_name)//'_'//model_id_suffix ! PHS
-      ELSE
-        ! varlist_name_loc = TRIM(varlist_name)//'_'//TRIM(process_name)
-        varlist_name_loc = TRIM(varlist_name) ! PHS
-      END IF
-
       IF (this%process_action(iproc) == INHERIT_) THEN
         this%mem(iproc)%p => this%parent_tile%mem(iproc)%p
         this%mem(iproc)%p%in_var_groups = in_var_groups
@@ -319,7 +313,33 @@ CONTAINS
         this%mem(iproc)%p => tmp_ptr
         __acc_attach(this%mem(iproc)%p)
         this%mem(iproc)%p%id = iproc
-        this%mem(iproc)%p%varlist_name = TRIM(varlist_name_loc)//'_'//TRIM(this%name) !-=-=-=-=-=-=-=-=-=-=-=-=-=-=PHS "now each pft has an output file but all processes are in one file"
+
+        IF (get_no_of_models() > 1) THEN
+          varlist_name_loc = TRIM(varlist_name)//'_'//TRIM(process_name)//'_'//model_id_suffix
+          ! varlist_name_loc = TRIM(varlist_name)//'_'//model_id_suffix ! PHS
+        ELSE
+          varlist_name_loc = TRIM(varlist_name)//'_'//TRIM(process_name)
+          ! varlist_name_loc = TRIM(varlist_name) ! PHS
+        END IF
+        ! IF (process_name == 'carbon' .AND. TRIM(this%model%config%usecase) == 'jsbach_jedi') THEN
+        !   part_suffix = ''
+        !   IF (this%name(1:3) == 'pft') THEN
+        !     READ(this%name(4:LEN(this%name)), '(I3)') pft_number
+        !     IF (pft_number < 70) THEN
+        !       part_suffix = '_part1'
+        !     ELSE IF (pft_number < 140) THEN
+        !       part_suffix = '_part2'
+        !     ELSE IF (pft_number < 210) THEN
+        !       part_suffix = '_part3'
+        !     ELSE
+        !       part_suffix = '_part4'
+        !     END IF
+        !   END IF
+        !   varlist_name_loc = TRIM(varlist_name_loc)//TRIM(part_suffix)
+        ! END IF
+        this%mem(iproc)%p%varlist_name = TRIM(varlist_name_loc)
+
+        ! this%mem(iproc)%p%varlist_name = TRIM(varlist_name_loc)//'_'//TRIM(this%name) !-=-=-=-=-=-=-=-=-=-=-=-=-=-=PHS "now each pft has an output file but all processes are in one file"
         this%mem(iproc)%p%grid_id = this%grid_id
         this%mem(iproc)%p%owner_model_id = this%owner_model_id
         this%mem(iproc)%p%owner_proc_id = iproc

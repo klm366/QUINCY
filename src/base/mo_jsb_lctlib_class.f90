@@ -534,30 +534,29 @@ CONTAINS
 
     ALLOCATE(lctlib(nlct))
     
-     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
-     !   JeDi plant trait parameter 
-    OPEN(35,file='Jedi_parameter.txt')
-    ALLOCATE(P01(nlct))
-    ALLOCATE(P02(nlct))
-    ALLOCATE(P03(nlct))
-    ALLOCATE(P04(nlct))
-    ALLOCATE(P05(nlct))
-    ALLOCATE(P06(nlct))
-    ALLOCATE(P07(nlct))
-    ALLOCATE(P08(nlct))
-    ALLOCATE(P09(nlct))
-    ALLOCATE(P10(nlct))
-    ALLOCATE(P11(nlct))
-    ALLOCATE(P12(nlct))
-    ALLOCATE(P13(nlct))
-    ALLOCATE(P14(nlct))
-    ALLOCATE(P15(nlct))
-    ALLOCATE(Pdenom(nlct))
-     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
-          
-
     IF (my_process_is_stdio()) THEN
 
+      !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
+      !   JeDi plant trait parameter 
+      OPEN(35,file='Jedi_parameter.txt')
+      ALLOCATE(P01(nlct))
+      ALLOCATE(P02(nlct))
+      ALLOCATE(P03(nlct))
+      ALLOCATE(P04(nlct))
+      ALLOCATE(P05(nlct))
+      ALLOCATE(P06(nlct))
+      ALLOCATE(P07(nlct))
+      ALLOCATE(P08(nlct))
+      ALLOCATE(P09(nlct))
+      ALLOCATE(P10(nlct))
+      ALLOCATE(P11(nlct))
+      ALLOCATE(P12(nlct))
+      ALLOCATE(P13(nlct))
+      ALLOCATE(P14(nlct))
+      ALLOCATE(P15(nlct))
+      ALLOCATE(Pdenom(nlct))
+       !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
+            
        REWIND(unit=lctlib_file_unit) ! Go back to beginning of landcover library file
 
        ALLOCATE(itmp(nlct))
@@ -1510,7 +1509,8 @@ CONTAINS
        IF (exists_NitroStatus) THEN
  
        !lctlib(1:nlct)%JeDiSLA = ( 0.03_wp * ( ( lctlib(1:nlct)%TurnoverLeaf / 365._wp ) ** ( -0.46_wp ) ) ) *  12.01_wp           
-       lctlib(1:nlct)%JeDiSLA = ( ( 0.0001*10.**2.43  ) * ( ( lctlib(1:nlct)%TurnoverLeaf / 365._wp ) ** ( -0.46_wp ) ) ) *  12.01_wp           
+       lctlib(1:nlct)%JeDiSLA = ( ( 0.0001_wp * 10._wp**2.43_wp  ) * &
+         &                      ( ( lctlib(1:nlct)%TurnoverLeaf / 365._wp ) ** ( -0.46_wp ) ) ) *  12.01_wp           
        !28.8. 2019PHS: original jedi --lctlib(1:nlct)%JeDiCarboxRate = 12.01_wp * ( 10._wp**0.13_wp ) * ( 1.e-09_wp ) * ( lctlib(1:nlct)%NitroStatus * 1000._wp * 14._wp / 12.01_wp)**1.42_wp / lctlib(1:nlct)%JeDiSLA  
        ! lctlib(1:nlct)%JeDiCarboxRate = (   4.19_wp +  14._wp * lctlib(1:nlct)%NitroStatus / lctlib(1:nlct)%JeDiSLA  * (9.3_wp + 20._wp * P08(1:nlct) )   ) * (10._wp**-6._wp )
        lctlib(1:nlct)%JeDiCarboxRate = (   4.19_wp +  14._wp * lctlib(1:nlct)%NitroStatus  * &
@@ -1519,29 +1519,32 @@ CONTAINS
        WRITE(35,fm) 'JeDiSLA ', lctlib(1:nlct)%JeDiSLA  
        
        
-                      WHERE (lctlib(1:nlct)%NitroStatus*lctlib(1:nlct)%JeDiSLA  .GE. 0.015997_wp .and. lctlib(1:nlct)%NitroStatus*lctlib(1:nlct)%JeDiSLA  .LE. 0.05359_wp ) 
-                          lctlib(1:nlct)%AlbedoCanopyVIS =  3.216_wp * 14.0067_wp / 12.01_wp * lctlib(1:nlct)%NitroStatus*lctlib(1:nlct)%JeDiSLA +0.02_wp - 0.05_wp 
-                          lctlib(1:nlct)%AlbedoCanopyNIR =  3.216_wp * 14.0067_wp / 12.01_wp * lctlib(1:nlct)%NitroStatus*lctlib(1:nlct)%JeDiSLA +0.02_wp + 0.05_wp
-                       ELSEWHERE(lctlib(1:nlct)%NitroStatus*lctlib(1:nlct)%JeDiSLA  .GT. 0.05359_wp)
-                           lctlib(1:nlct)%AlbedoCanopyVIS = 0.221_wp - 0.05_wp
-                           lctlib(1:nlct)%AlbedoCanopyNIR = 0.221_wp +0.05_wp
-                       ELSEWHERE(lctlib(1:nlct)%NitroStatus*lctlib(1:nlct)%JeDiSLA  .LT. 0.015997_wp)
-                           lctlib(1:nlct)%AlbedoCanopyVIS = 0.03_wp
-                           lctlib(1:nlct)%AlbedoCanopyNIR = 0.13_wp  
-                       END WHERE       
+      WHERE (lctlib(1:nlct)%NitroStatus*lctlib(1:nlct)%JeDiSLA  >= 0.015997_wp .AND. &
+        &    lctlib(1:nlct)%NitroStatus*lctlib(1:nlct)%JeDiSLA  <= 0.05359_wp ) 
+        lctlib(1:nlct)%AlbedoCanopyVIS = 3.216_wp * 14.0067_wp / 12.01_wp * &
+          &                              lctlib(1:nlct)%NitroStatus*lctlib(1:nlct)%JeDiSLA +0.02_wp - 0.05_wp 
+        lctlib(1:nlct)%AlbedoCanopyNIR = 3.216_wp * 14.0067_wp / 12.01_wp * &
+          &                              lctlib(1:nlct)%NitroStatus*lctlib(1:nlct)%JeDiSLA +0.02_wp + 0.05_wp
+      ELSEWHERE(lctlib(1:nlct)%NitroStatus*lctlib(1:nlct)%JeDiSLA  .GT. 0.05359_wp)
+        lctlib(1:nlct)%AlbedoCanopyVIS = 0.221_wp - 0.05_wp
+        lctlib(1:nlct)%AlbedoCanopyNIR = 0.221_wp +0.05_wp
+      ELSEWHERE(lctlib(1:nlct)%NitroStatus*lctlib(1:nlct)%JeDiSLA  .LT. 0.015997_wp)
+        lctlib(1:nlct)%AlbedoCanopyVIS = 0.03_wp
+        lctlib(1:nlct)%AlbedoCanopyNIR = 0.13_wp  
+      END WHERE       
                
-                    exist_AlbedoCanopyVIS = .TRUE.  
-                    exist_AlbedoCanopyNIR = .TRUE.
-                    WRITE(35,fm) 'AlbCanopyVIS', lctlib(1:nlct)%AlbedoCanopyVIS
-                    WRITE(35,fm) 'AlbCanopyNIR', lctlib(1:nlct)%AlbedoCanopyNIR
-       IF(.NOT. exist_AlbedoCanopyVIS) &
-            CALL finish('init_lctlib','No data for AlbedoCanopyVIS found in '//TRIM(lctlib_file_name))
-       IF(.NOT. exist_AlbedoCanopyNIR) &
-            CALL finish('init_lctlib','No data for albedoCanopyNIR found in '//TRIM(lctlib_file_name))
+      exist_AlbedoCanopyVIS = .TRUE.  
+      exist_AlbedoCanopyNIR = .TRUE.
+      WRITE(35,fm) 'AlbCanopyVIS', lctlib(1:nlct)%AlbedoCanopyVIS
+      WRITE(35,fm) 'AlbCanopyNIR', lctlib(1:nlct)%AlbedoCanopyNIR
+
+      IF(.NOT. exist_AlbedoCanopyVIS) &
+        CALL finish('init_lctlib','No data for AlbedoCanopyVIS found in '//TRIM(lctlib_file_name))
+      IF(.NOT. exist_AlbedoCanopyNIR) &
+        CALL finish('init_lctlib','No data for albedoCanopyNIR found in '//TRIM(lctlib_file_name))       
+      ENDIF
        
-       ENDIF
-       
-       CLOSE(35)
+      CLOSE(35)
        !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
        
 
