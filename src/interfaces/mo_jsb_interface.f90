@@ -94,10 +94,10 @@ CONTAINS
     & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,               & !< in
     & t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice,               & !< in
     & t_lwtr, qsat_lwtr, s_lwtr,                                        &
-    & evapo_wtr, latent_hflx_wtr, sensible_hflx_wtr, & !< out
+    & evapo_wtr, latent_hflx_wtr, sensible_hflx_wtr,                    & !< out
     & albedo_lwtr,                                                      & !< out
     & t_lice, qsat_lice, s_lice,                                        &
-    & evapo_ice, latent_hflx_ice, sensible_hflx_ice, & !< out
+    & evapo_ice, latent_hflx_ice, sensible_hflx_ice,                    & !< out
     & albedo_lice,                                                      & !< out
     & ice_fract_lake,                                                   & !< out
     ! For standalone jsbach
