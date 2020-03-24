@@ -34,7 +34,7 @@ CONTAINS
     & fire_tau,                                  & ! in
     & q_rel_air_climbuf,                         & ! in
     & fuel,                                      & ! in
-    & burned_fract                               & ! out
+    & burned_fract                               & ! inout
     & )
 
     ! Input Arguments
@@ -47,7 +47,7 @@ CONTAINS
       & fuel
 
     ! Output Arguments
-    REAL(wp), INTENT(out) :: burned_fract
+    REAL(wp), INTENT(inout) :: burned_fract
 
     ! Locals
     REAL(wp) :: delta_time_yr
@@ -79,7 +79,7 @@ CONTAINS
     & cover_fract_pot,                                 & ! in
     & prev_day_max_wind_10m,                           & ! in
     & max_wind_10m,                                    & ! in
-    & damaged_fract                                    & ! out
+    & damaged_fract                                    & ! inout
     & )
 
     ! Arguments
@@ -90,7 +90,7 @@ CONTAINS
       & prev_day_max_wind_10m, &
       & max_wind_10m
 
-    REAL(wp), INTENT(out) ::   &
+    REAL(wp), INTENT(inout) :: &
       & damaged_fract
 
     ! Locals
