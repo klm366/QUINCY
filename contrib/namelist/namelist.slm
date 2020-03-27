@@ -114,7 +114,8 @@
   fluxnet_output_length=2
   ! flags
   ! generate forcing file for the standalone soil model (veg%litterfall pool plus rate modifiers) per timestep [FALSE TRUE]
-  flag_generate_soil_forcing=.FALSE.
+  flag_generate_soil_forcing_stat=.FALSE.
+  flag_generate_soil_forcing_trans=.FALSE.
   ! set parameter values from file [FALSE TRUE] and use absolute (new) values or make proportional changes
   set_parameter_values_from_file=.FALSE.
   set_parameter_values_proportional=.FALSE.

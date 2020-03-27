@@ -323,8 +323,10 @@ PROGRAM land_model_driver
         CALL open_pool_output_files(tile, iblk, ics, ice, nc, TRIM(model%config%output_interval_pool_spinup), 'spinup_')
         CALL open_flux_output_files(tile, iblk, ics, ice, nc, TRIM(model%config%output_interval_flux_spinup), 'spinup_')
       ENDIF
-      ! create soil forcing (output is created for a year after spinup; control is in mo_shared:output:write_soil_forcing)
-      IF (model%config%flag_generate_soil_forcing) THEN
+      ! create soil forcing (for quincy-jsm standalone): output-control is in mo_shared:output:write_soil_forcing
+      !  static:    output is created from a static simulation, for one year after static-spinup
+      !  transient: output is created from a transient simulation with fluxnet/3 sites, for the last full forcing-period at the end of transient simulation
+      IF (model%config%flag_generate_soil_forcing_stat .OR. model%config%flag_generate_soil_forcing_trans) THEN
         CALL open_output_files_soil_forcing(tile, iblk, ics, ice, nc)
       ENDIF
     CASE('test_canopy','test_radiation')
@@ -530,6 +532,7 @@ PROGRAM land_model_driver
                               l_forcing, &
                               l_output, &
                               l_output_interval_match, &
+                              fluxnet_output_status, &
                               output_interval_pool_act, &  ! used for flux output: output_interval_flux
                               time_day, &
                               time_year, &
@@ -631,7 +634,7 @@ PROGRAM land_model_driver
   !! 
   IF (fluxnet_output_status == 0) CALL close_output_files
   IF (l_forcing) CALL close_forcing_input_file(TRIM(model%config%slm_model_name)) ! only if forcing is enabled at all (land plant canopy soil)
-  IF (model%config%flag_generate_soil_forcing) THEN
+  IF (model%config%flag_generate_soil_forcing_stat .OR. model%config%flag_generate_soil_forcing_trans) THEN
     CALL close_output_files_soil_forcing
   END IF
 

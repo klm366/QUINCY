@@ -66,7 +66,7 @@ doParamSensitivitySim=$(sed -n 9p "$simFoldDefaultFiles""config.txt" | awk '{pri
 # info: $compareSimCRUNCEPvsGFDB T/F is saved at line 10 but not needed here; only for the cleanup_slm_hpc_run.sh
 fluxnetTransientSim=$(sed -n 11p "$simFoldDefaultFiles""config.txt" | awk '{print $1}')               # T/F
 transient_simulation_start_year=$(sed -n 11p "$simFoldDefaultFiles""config.txt" | awk '{print $2}')   # year at which transient simulation starts (default 1901)
-
+createSoilForcFlag=$(sed -n 12p "$simFoldDefaultFiles""config.txt")                                   # T/F
 
 ## model forcing - define input file-names as expected by the model (see mo_atmland_forcing.f90)
 forceSoilLitterFile="soil_forcing_litterfall.dat"
@@ -166,8 +166,8 @@ cp "$simFoldDefaultFiles""$slmNamelist" ./
 cp "$simFoldDefaultFiles""$slmLctlib"   ./
 cp "$simFoldDefaultFiles""$slmBinary"   ./
 cp "$simFoldDefaultFiles""$slmRscript"  ./
-# special fluxnet-output files
-if [ $specialFluxnetOutput == "T" ];then
+# special fluxnet-output files (only if not used for soil forcing creation)
+if [ $specialFluxnetOutput == "T" ] && [ "$createSoilForcFlag" == "F" ]; then
    cp "$simFoldDefaultFiles""$slmRscript4fluxfile"  ./
    cp "$simFoldDefaultFiles""$slmRscript4fluxdiag"  ./
    cp "$siteDataObsFold""$(awk '{print $1}' <<< "$siteData")"*.nc ./obs.nc
@@ -288,7 +288,7 @@ if [ $useSiteSpecificAWC == "T" ]; then
    changeNamelistValue soil_awc_prescribe "$(awk '{print $11}' <<< "$siteData")" 
 fi
 # special fluxnet output #
-# calc forcing period length for namelist
+# calc forcing period length for namelist - needed also for soil forcing creation
 if [ $specialFluxnetOutput == "T" ]; then
   # startyear
   year1=$(awk '{print $5}' <<< "$siteData")
@@ -410,7 +410,7 @@ sleep 2
 Rscript ./"$slmRscript"
 sync
 
-if [ $specialFluxnetOutput == "T" ]; then 
+if [ $specialFluxnetOutput == "T" ] && [ "$createSoilForcFlag" == "F" ]; then 
    Rscript ./"$slmRscript4fluxfile" $(awk '{print $2}' <<< "$siteData") $(awk '{print $3}' <<< "$siteData") $(awk '{print $5}' <<< "$siteData")
    Rscript ./"$slmRscript4fluxdiag" $(awk '{print $5}' <<< "$siteData") $(awk '{print $6}' <<< "$siteData")
 fi
@@ -419,7 +419,10 @@ fi
 rm ./*.dat                  #  forcing file(s) (climate.dat for SLM land)
 rm ./"$slmRscript"          #  R script for postprocessing
 rm ./"$slmBinary"           #  the binary
-[ $specialFluxnetOutput == "T" ] && rm ./"$slmRscript4fluxfile" ./"$slmRscript4fluxdiag"  # equal to: if [ ... ]; then ...; fi
+if [ $specialFluxnetOutput == "T" ] && [ "$createSoilForcFlag" == "F" ]; then 
+  rm ./"$slmRscript4fluxfile"
+  rm ./"$slmRscript4fluxdiag"
+fi
 sleep 2
 
 ## sort job specific files ##
@@ -437,7 +440,7 @@ mv ./*.pdf                  ./postprocessing      #  for all SLM models postproc
 if [ $doParamSensitivitySim == "T" ]; then
   mv ./"$slmParameterList"  ./input
 fi
-if [ $specialFluxnetOutput == "T" ]; then 
+if [ $specialFluxnetOutput == "T" ] && [ "$createSoilForcFlag" == "F" ]; then 
   mv ./output/summary*      ./postprocessing
   mv ./output/statistics*   ./postprocessing
   mv ./*.nc                 ./output 

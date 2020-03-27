@@ -54,8 +54,9 @@ MODULE mo_jsb_config_class
                          output_end_last_day_year           !< output stop  at the last day of this year
     LOGICAL           :: fluxnet_output                     !< 
     INTEGER           :: fluxnet_output_length              !< 
-    LOGICAL           :: flag_generate_soil_forcing         !< all litterfall pools + some soilphysics 
+    LOGICAL           :: flag_generate_soil_forcing_stat    !< usecase 01: all litterfall pools + some soilphysics | static simulation
                                                             !! at period: model%config%output_start_first_day_year .. output_end_last_day_year
+    LOGICAL           :: flag_generate_soil_forcing_trans   !< usecase 08: all litterfall pools + some soilphysics | transient simaulation
     LOGICAL           :: set_parameter_values_from_file     !< set values of (some) parameters to values given by namelist (parameter_slm_run.list)
     LOGICAL           :: set_parameter_values_proportional  !< if TRUE: change the default (hardcoded) parameter values by proportion as defined in namelist
     LOGICAL           :: flag_climate_forcing_one_year
@@ -146,7 +147,8 @@ CONTAINS
                                    output_end_last_day_year
     LOGICAL                     :: fluxnet_output
     INTEGER                     :: fluxnet_output_length
-    LOGICAL                     :: flag_generate_soil_forcing                 !< all litterfall pools + some soilphysics
+    LOGICAL                     :: flag_generate_soil_forcing_stat
+    LOGICAL                     :: flag_generate_soil_forcing_trans
     LOGICAL                     :: set_parameter_values_from_file
     LOGICAL                     :: set_parameter_values_proportional
     LOGICAL                     :: flag_climate_forcing_one_year
@@ -174,7 +176,8 @@ CONTAINS
         output_end_last_day_year              , &
         fluxnet_output                        , &
         fluxnet_output_length                 , &
-        flag_generate_soil_forcing            , &
+        flag_generate_soil_forcing_stat       , &
+        flag_generate_soil_forcing_trans      , &
         set_parameter_values_from_file        , &
         set_parameter_values_proportional     , &
         flag_climate_forcing_one_year         , &
@@ -212,7 +215,8 @@ CONTAINS
     output_end_last_day_year                = 10
     fluxnet_output                          = .FALSE.     ! .TRUE. .FALSE.
     fluxnet_output_length                   = 2
-    flag_generate_soil_forcing              = .FALSE.     ! .TRUE. .FALSE.
+    flag_generate_soil_forcing_stat         = .FALSE.     ! .TRUE. .FALSE.  << is set to T for usecase 01 only
+    flag_generate_soil_forcing_trans        = .FALSE.     ! .TRUE. .FALSE.  << is set to T for usecase 08 only
     set_parameter_values_from_file          = .FALSE.     ! .TRUE. .FALSE.
     set_parameter_values_proportional       = .FALSE.     ! .TRUE. .FALSE.
     flag_climate_forcing_one_year           = .FALSE.     ! .TRUE. .FALSE.
@@ -260,7 +264,8 @@ CONTAINS
     model_config%output_end_last_day_year               = output_end_last_day_year
     model_config%fluxnet_output                         = fluxnet_output
     model_config%fluxnet_output_length                  = fluxnet_output_length
-    model_config%flag_generate_soil_forcing             = flag_generate_soil_forcing
+    model_config%flag_generate_soil_forcing_stat        = flag_generate_soil_forcing_stat
+    model_config%flag_generate_soil_forcing_trans       = flag_generate_soil_forcing_trans
     model_config%set_parameter_values_from_file         = set_parameter_values_from_file
     model_config%set_parameter_values_proportional      = set_parameter_values_proportional
     model_config%flag_climate_forcing_one_year          = flag_climate_forcing_one_year

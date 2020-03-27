@@ -1,0 +1,113 @@
+##    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
+##    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+##    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
+##
+##    This file is part of the QUINCY model.
+##    The QUINCY model is free software: you can redistribute it and/or modify
+##    it under the terms of the GNU General Public License version 3,
+##    as published by the Free Software Foundation.
+##
+##    The QUINCY model is distributed in the hope that it will be useful,
+##    but WITHOUT ANY WARRANTY; without even the implied warranty of
+##    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+##    GNU General Public License for more details.
+##
+##    You should have received a copy of the GNU General Public License
+##    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
+
+# default QUINCY usecase: 08_generate_flux_trans_soil_forcing_def
+# 
+# generate soil_forcing over from a transient simulation run with fluxnet/3 sites for the stand-alone JSM-QUINCY soil model:
+#  soil-forcing output for the last full forcing period of the transient 115 years (1901-2015)
+#  creating: veg litterfall + some soilphysics output used as input by the standalone JSM-QUINCY soil model
+#  options apply specifically to the generation of soil forcing using the QUINCY land model
+#
+# prep_run_slm.sh necessary settings:
+#  forcingDataSet fluxnet/fluxnet3
+#
+
+echo " "
+echo " quincy model run to create soil_forcing creation from a transient simulation with fluxnet/3 sites:"
+echo "  usecase='08_generate_flux_trans_soil_forcing_def' using almost identical options as u82"
+echo "  the experimentalID will be created automatically by this usecase"
+echo "  please run the simulations (prep_run_slm.sh -u 08) for: "
+echo "    FLUXNET2"  # site-set "fluxnet"
+echo "    FLUXNET3"  # site-set "fluxnet3"
+echo "  no need to change any else, the namelist-parameter flag_generate_soil_forcing_trans is set to TRUE for u08 automatically"
+echo "    meaning, when usecase number 08 is selected, flag_generate_soil_forcing_trans is set to T"
+echo " "
+echo " after all jobs have finished, please run: additional_scripts/copy_soil_forcing_trans.sh"
+echo "   (this script updates the transient soil forcing for all site-sets new transient soil-forcing was created, "
+echo "    and renames the experimentalID of soil_forcing simulations leaving the renamed folders in your scratch)"
+echo " "
+
+# works only with fluxnet/3 site-set
+echo " works only with fluxnet/3 site-set"
+echo "$forcingDataSet" | grep "fluxnet" >> /dev/null || exit 1
+
+# set experimentalID according to site-set
+# add number of soil layers to experimentalID, only 15 sl since ticket #407
+experimentalID="create_soil_forc_""$forcingDataSet"  # the copy_soil_forcing_trans.sh refers to this specific experimentalID
+experimentalID="$experimentalID"_sl15
+
+slmModel="land"
+forcingMode="transient"
+
+customSiteList="F"
+customSiteListFileName=""
+singleSiteName=""
+paramSensitivitySim="F"
+
+specialFluxnetOutput="T"
+compareSimCRUNCEPvsGFDB="F"
+
+##>> namelist options - almost identical with u82 <<###############################################
+sb_model_scheme="simple_1d"     # simple_0d simple_1d jsm 
+sb_nloss_scheme="dynamic"       # none fixed dynamic
+flag_sb_prescribe_nh4="F"       # set nh4solute to a constant value
+flag_sb_prescribe_no3="F"       # set no3solute to a constant value
+flag_sb_prescribe_po4="F"       # set po4solute to a constant value
+
+bnf_scheme="standard"           # none fixed standard optimal resistance unlimited
+flag_mycorrhiza="F"             # TRUE: the other flag_myco* can be used with TRUE | FALSE: the other flag_myco* are set to FALSE by this script
+
+flag_t_resp_acclimation="T"     # use the respiration temperature acclimation factor
+flag_t_jmax_acclimation="T"     # acclimation of optimum temperature for Jmax
+flag_optimal_Nfraction="F"      # optimal N fraction
+ncanopy=10                      # number of canopy layers
+canopy_layer_scheme="fapar"     # canopy layer depth calculation options: standard fapar
+
+biomass_alloc_scheme="dynamic"    # fixed dynamic optimal
+leaf_stoichom_scheme="dynamic"    # fixed dynamic optimal
+veg_dynamics_scheme="population"  # none population cohort
+cohort_harvest_interval=80        # number of years after which the cohort is harvested and re-planted, is used with veg_dynamics_scheme="cohort"
+flag_stand_harvest="F"            # if TRUE: l_do_stand_replacing_harvest is set to TRUE in SLM on the 1st timestep of the 1st day of the year "PlantYear" in the site_list file (or never, if that was before 1901)
+
+soil_depth=9.5                    # meters
+nsoil_layer=15                    # number of soil layers (default: 5 | min: 5 | max: 20)
+
+simulation_length_number=115     # default years for forcingMode: static = 30 | transient = 115 [transient: 01.01.1901 -> 31.12.2015 without spinup!]
+# info: the output interval is used for output after spinup until the last full forcing period is reached, then, timestep output is created
+output_interval_pool="monthly"   # timestep daily weekly monthly yearly
+output_interval_flux="monthly"   # timestep daily weekly monthly yearly
+output_start_first_day_year=1    # 1 to ... [must be lower than or equal with option: output_end_last_day_year]
+output_end_last_day_year=115     # equal with or larger than option: output_start_first_day_year
+
+# options for the forcingMode transient (only evaluated if forcingMode == transient)
+transient_spinup_start_year=1901      # default 1901; start year of spinup period
+transient_spinup_end_year=1930        # default 1930; last  year of spinup period
+transient_spinup_years=500            # default 500; overall years of spinup repeating "spinup period" multiple times
+transient_simulation_start_year=1901  # default 1901; simulation start with forcing at this year and ends after simulation_length_number
+output_interval_pool_spinup="none"    # none weekly monthly yearly (only for transient forcingMode; if you'd need timestep or daily please talk to Jan or Sönke)
+output_interval_flux_spinup="none"    # none weekly monthly yearly (only for transient forcingMode; if you'd need timestep or daily please talk to Jan or Sönke)
+
+# forcing input
+flag_oneYearForcing="F"         # T (True) or F (False): whether to use (repeatedly) only the 1st year of the climate forcing input file
+useSiteSpecificAWC="T"          # T (True) or F (False) [large caps] -> set "T" to use AWC as in site-list file (soil_awc_prescribe is used otherwise)
+soil_theta_prescribe=1.0        # float !
+flag_read_dC13="T"              # either use forcing dC13 or the prescribed default value
+flag_read_DC14="T"              # either use forcing DC14 or the prescribed default value
+n_deposition_scheme="dynamic"   # options: none constant dynamic (nhx_srf_down & noy_srf_down)
+p_deposition_scheme="dynamic"   # options: none constant dynamic (p_srf_down)
+
+queue="io_perform"              # io_perform selects only the new INTEL3 nodes: lshosts

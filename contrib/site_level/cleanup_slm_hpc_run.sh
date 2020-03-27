@@ -43,7 +43,7 @@ slmModel=$(sed -n 3p "$simFold""default_files/config.txt")                      
 specialFluxnetOutput=$(sed -n 6p "$simFold""default_files/config.txt")                          # T/F  -> fluxnet diagnostics from timestep output
 paramSensitivitySim=$(sed -n 9p "$simFold""default_files/config.txt" | awk '{print $1}')        # T/F  -> parameter sensitivity
 compareSimCRUNCEPvsGFDB=$(sed -n 10p "$simFold""default_files/config.txt" | awk '{print $1}')   # T/F  -> compare with global forest data base
-
+createSoilForcFlag=$(sed -n 12p "$simFold""default_files/config.txt")                           # T/F
 
 ## move job specific error & out files into the particular job folder ##
 if [ "$array" == "T" ]
@@ -113,7 +113,7 @@ if [ $compareSimCRUNCEPvsGFDB == T ]; then
 fi
 
 ## run one R Script for postprocessing the fluxnet diagnostics with barplots
-if [ "$specialFluxnetOutput" == T ]; then
+if [ "$specialFluxnetOutput" == T ] && [ "$createSoilForcFlag" == "F" ]; then
   echo " sim_fluxnet_diagnostics-process_timestep.R"
   Rscript --vanilla "$simFold"default_files/sim_fluxnet_diagnostics-process_timestep.R $simFold  # creates two .csv files
   sleep 2

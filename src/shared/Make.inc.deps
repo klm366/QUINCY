@@ -93,7 +93,6 @@ mo_quincy_output.o: \
   mo_jsb_lctlib_class.o \
   mo_jsb_grid_class.o \
   mo_jsb_grid.o \
-  mo_jsb_model_init.o \
   mo_jsb_process_class.o \
   mo_jsb4_forcing.o \
   mo_isotope_util.o \

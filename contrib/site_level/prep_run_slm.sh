@@ -418,9 +418,9 @@ if [ ! -z "$usecase" ]            # if $usecase is not empty
       echo " Applying settings for usecase: ""$usecase""  (usecase file: ""$usecaseFileIncl"")"
       echo " "
       # test whether the experimentalID is defined in the usecase file, if so append the revision number of the local working copy
-      #  anyway, do not apply this for the usecase 01, i.e., generate soil forcing
+      #  anyway, do not apply this for the usecase 01 & 08, i.e., generate soil forcing
       validateExpIDPresent="$(grep -w "experimentalID" "$usecaseFileIncl")"
-      if [ ! -z "${validateExpIDPresent// }" ] && [ "$usecase" != "01" ]  # -z test is explicitly for: the length of string is zero, here not zero
+      if [ ! -z "${validateExpIDPresent// }" ] && [ "$usecase" != "01" ] && [ "$usecase" != "08" ]  # -z test is explicitly for: the length of string is zero, here not zero
        then 
         # check if SVN information is available (exit status == 0), if so add the current revision number to the experimentalID
         svn info ./ >/dev/null 2>&1
@@ -1256,11 +1256,11 @@ if [ $specialFluxnetOutput == "T" ]
  then
     # check site data set
     if [ $forcingDataSet == "fluxnet" ]; then
-      echo " Running specal Fluxnet Simulation with site-set: FLUXNET2"
+      echo " Running fluxnet diagnostics simulation with site-set: FLUXNET2"
     elif [ $forcingDataSet == "fluxnet3" ]; then
-      echo " Running specal Fluxnet Simulation with site-set: FLUXNET3"
+      echo " Running fluxnet diagnostics simulation with site-set: FLUXNET3"
     else
-      echo "EXIT! You might want to use FLUXNET/3 sites when enabling special FLUXNET-Simulation output :) ."
+      echo "EXIT! You might want to use FLUXNET/3 sites when running fluxnet diagnostics simulation :) ."
       exit 1
     fi
     # check SLM model    
@@ -1445,32 +1445,9 @@ if [ $paramSensitivitySim == "T" ]; then
   fi
 fi
 
-## pass info about files to run_slm.sh via an extra file ("$simFoldDefaultFiles""config.txt") ##
-# /Net/Groups/BGI/scratch/""$username""/slm/$jobName/default_files/config.txt
-echo "$siteList"                                                  >  "$simFoldDefaultFiles""config.txt"   # 1
-echo "$siteDataFoldForcing"                                       >> "$simFoldDefaultFiles""config.txt"
-echo "$slmModel"                                                  >> "$simFoldDefaultFiles""config.txt"
-echo "$forcingDataSet"                                            >> "$simFoldDefaultFiles""config.txt"
-echo "$forcingModeFileID"                                         >> "$simFoldDefaultFiles""config.txt"   # 5
-echo "$specialFluxnetOutput"                                      >> "$simFoldDefaultFiles""config.txt"
-echo "$siteDataObsFold"                                           >> "$simFoldDefaultFiles""config.txt"
-echo "$useSiteSpecificAWC"                                        >> "$simFoldDefaultFiles""config.txt"
-echo "$paramSensitivitySim"" ""$simParamSensiFiles"               >> "$simFoldDefaultFiles""config.txt"
-echo "$compareSimCRUNCEPvsGFDB"                                   >> "$simFoldDefaultFiles""config.txt"   # 10
-echo "$fluxnetTransientSim"" ""$transient_simulation_start_year"  >> "$simFoldDefaultFiles""config.txt"
-#echo "$"                                                         >> "$simFoldDefaultFiles""config.txt"
-#echo "$"                                                         >> "$simFoldDefaultFiles""config.txt"
-
-# pass extra info about parameter sensitivity simulations to folder
-if [ $paramSensitivitySim == "T" ]; then
-  echo "$paramSensitivitySiteLineNumber"         >  "$simFoldParamSensiFiles""param_config.txt"
-  echo "$slmParamListRunFilename"               >>  "$simFoldParamSensiFiles""param_config.txt"
-  echo "$slmParamTableFilename"                 >>  "$simFoldParamSensiFiles""param_config.txt"
-  #echo "$"                                     >>  "$simFoldParamSensiFiles""param_config.txt"
-  #echo "$"                                     >>  "$simFoldParamSensiFiles""param_config.txt"
-fi
-
+############################################################################################################################
 ## copy namelist binary R-Scripts to simulation folder: /Net/Groups/BGI/scratch/""$username""/slm/$jobName/default_files/ ##
+############################################################################################################################
 cp "$slmRunScriptJob"           "$simFoldDefaultFiles"
 cp "$slmCleanupScript"          "$simFoldDefaultFiles"
 cp "$slmBinary"                 "$simFoldDefaultFiles"
@@ -1497,8 +1474,9 @@ fi
 ## syncronize all data with the file system ##
 sleep 1 && sync
 
-
+#############################################################################################
 ## define a function that manipulates the namelist && change namelist according to options ##
+#############################################################################################
 # model: slm_model_name = land plant soil canopy
 # 2 do: add other options like optimization
 
@@ -1674,12 +1652,6 @@ if [ $flag_oneYearForcing == T ]
   else
     changeNamelistValue flag_climate_forcing_one_year ".FALSE."
 fi
-if [ $usecase == "01" ]  # usecase file: 01_generate_soil_forcing_def
-  then
-    changeNamelistValue flag_generate_soil_forcing ".TRUE."
-  else
-    changeNamelistValue flag_generate_soil_forcing ".FALSE."
-fi
 changeNamelistValue simulation_length_number "$simulation_length_number"
 changeNamelistValue output_interval_pool "$output_interval_pool"
 changeNamelistValue output_interval_flux "$output_interval_flux"
@@ -1696,7 +1668,46 @@ changeNamelistValue transient_spinup_start_year "$transient_spinup_start_year"
 changeNamelistValue transient_spinup_end_year "$transient_spinup_end_year"
 changeNamelistValue transient_spinup_years "$transient_spinup_years"
 changeNamelistValue transient_simulation_start_year "$transient_simulation_start_year"
-  
+## namelist options for soil forcing creation (BASE_CTL):
+## u01: static, one year, all site-sets | u08: transient, fluxnet-forcing years, fluxnet/3 sites
+createSoilForcFlag="F"    # default: F | needed for u08 in run_slm.sh
+if [ $usecase == "01" ]; then                                     # usecase file: 01_generate_soil_forcing_def
+  changeNamelistValue flag_generate_soil_forcing_stat ".TRUE."    # default is .FALSE.
+  createSoilForcFlag="T"                                          # needed only for u08, but set T here anyway
+fi
+if [ $usecase == "08" ]; then                                     # usecase file: 08_generate_flux_trans_soil_forcing_def
+  changeNamelistValue flag_generate_soil_forcing_trans ".TRUE."   # default is .FALSE.
+  createSoilForcFlag="T"                                          # disable all "fluxnet diagnostics" scripts & stuff in run_slm.sh
+fi  
+
+#########################################################################################################
+## pass config info and filenames to run_slm.sh via an extra file ("$simFoldDefaultFiles""config.txt") ##
+#########################################################################################################
+# /Net/Groups/BGI/scratch/""$username""/slm/$jobName/default_files/config.txt
+echo "$siteList"                                                  >  "$simFoldDefaultFiles""config.txt"   # 1
+echo "$siteDataFoldForcing"                                       >> "$simFoldDefaultFiles""config.txt"
+echo "$slmModel"                                                  >> "$simFoldDefaultFiles""config.txt"
+echo "$forcingDataSet"                                            >> "$simFoldDefaultFiles""config.txt"
+echo "$forcingModeFileID"                                         >> "$simFoldDefaultFiles""config.txt"   # 5
+echo "$specialFluxnetOutput"                                      >> "$simFoldDefaultFiles""config.txt"
+echo "$siteDataObsFold"                                           >> "$simFoldDefaultFiles""config.txt"
+echo "$useSiteSpecificAWC"                                        >> "$simFoldDefaultFiles""config.txt"
+echo "$paramSensitivitySim"" ""$simParamSensiFiles"               >> "$simFoldDefaultFiles""config.txt"
+echo "$compareSimCRUNCEPvsGFDB"                                   >> "$simFoldDefaultFiles""config.txt"   # 10
+echo "$fluxnetTransientSim"" ""$transient_simulation_start_year"  >> "$simFoldDefaultFiles""config.txt"
+echo "$createSoilForcFlag"                                        >> "$simFoldDefaultFiles""config.txt"
+#echo "$"                                                         >> "$simFoldDefaultFiles""config.txt"
+# pass extra info about parameter sensitivity simulations to folder
+if [ $paramSensitivitySim == "T" ]; then
+  echo "$paramSensitivitySiteLineNumber"         >  "$simFoldParamSensiFiles""param_config.txt"
+  echo "$slmParamListRunFilename"               >>  "$simFoldParamSensiFiles""param_config.txt"
+  echo "$slmParamTableFilename"                 >>  "$simFoldParamSensiFiles""param_config.txt"
+  #echo "$"                                     >>  "$simFoldParamSensiFiles""param_config.txt"
+  #echo "$"                                     >>  "$simFoldParamSensiFiles""param_config.txt"
+fi
+
+## syncronize all data with the file system ##
+sleep 1 && sync
 
 ##################################################################################
 ## start job with simulations by starting the job(array) -> run_slm.sh          ##
