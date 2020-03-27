@@ -167,7 +167,7 @@ cp "$simFoldDefaultFiles""$slmLctlib"   ./
 cp "$simFoldDefaultFiles""$slmBinary"   ./
 cp "$simFoldDefaultFiles""$slmRscript"  ./
 # special fluxnet-output files (only if not used for soil forcing creation)
-if [ $specialFluxnetOutput == "T" ] && [ "$createSoilForcFlag" == "F" ]; then
+if [ $specialFluxnetOutput == "T" ] && [ "$createSoilForcFlag" == "F" ] && [ "$slmModel" == "land" ]; then
    cp "$simFoldDefaultFiles""$slmRscript4fluxfile"  ./
    cp "$simFoldDefaultFiles""$slmRscript4fluxdiag"  ./
    cp "$siteDataObsFold""$(awk '{print $1}' <<< "$siteData")"*.nc ./obs.nc
@@ -410,7 +410,7 @@ sleep 2
 Rscript ./"$slmRscript"
 sync
 
-if [ $specialFluxnetOutput == "T" ] && [ "$createSoilForcFlag" == "F" ]; then 
+if [ $specialFluxnetOutput == "T" ] && [ "$createSoilForcFlag" == "F" ] && [ "$slmModel" == "land" ]; then 
    Rscript ./"$slmRscript4fluxfile" $(awk '{print $2}' <<< "$siteData") $(awk '{print $3}' <<< "$siteData") $(awk '{print $5}' <<< "$siteData")
    Rscript ./"$slmRscript4fluxdiag" $(awk '{print $5}' <<< "$siteData") $(awk '{print $6}' <<< "$siteData")
 fi
@@ -419,7 +419,7 @@ fi
 rm ./*.dat                  #  forcing file(s) (climate.dat for SLM land)
 rm ./"$slmRscript"          #  R script for postprocessing
 rm ./"$slmBinary"           #  the binary
-if [ $specialFluxnetOutput == "T" ] && [ "$createSoilForcFlag" == "F" ]; then 
+if [ $specialFluxnetOutput == "T" ] && [ "$createSoilForcFlag" == "F" ] && [ "$slmModel" == "land" ]; then 
   rm ./"$slmRscript4fluxfile"
   rm ./"$slmRscript4fluxdiag"
 fi
@@ -440,7 +440,7 @@ mv ./*.pdf                  ./postprocessing      #  for all SLM models postproc
 if [ $doParamSensitivitySim == "T" ]; then
   mv ./"$slmParameterList"  ./input
 fi
-if [ $specialFluxnetOutput == "T" ] && [ "$createSoilForcFlag" == "F" ]; then 
+if [ $specialFluxnetOutput == "T" ] && [ "$createSoilForcFlag" == "F" ] && [ "$slmModel" == "land" ]; then 
   mv ./output/summary*      ./postprocessing
   mv ./output/statistics*   ./postprocessing
   mv ./*.nc                 ./output 

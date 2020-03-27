@@ -33,7 +33,7 @@
 # set something useful for you (allowed only: alphanumeric _ -); if empty ( experimentalID="" ) current date is used
 experimentalID=""
 ## specify SLM model -> the parameter 'slm_model_name' in the namelist.slm is changed accordingly (so, no need to manually change it in the namelist)
-# land (plant+soil), plant (necessary soil parts prescribed), soil (uses soil-forcing generated from plant), canopy
+# land (plant+soil), plant (necessary soil parts prescribed), soil (uses soil-forcing generated from land), canopy
 slmModel="land"
 
 
@@ -746,7 +746,7 @@ case "$slmModel" in
     echo " soil_depth is now changed to 9.5 meters."
     soil_depth=9.5
   fi
-  # set soil forcing directory
+  # set soil-forcing directory
   siteDataFoldForcing="$siteDataFold""$soilForcingDirBase""15/"
   # test if soil forcing is available for this site set
   soilForcingAvailable="T"
@@ -757,10 +757,20 @@ case "$slmModel" in
       soilForcingAvailable="F"  # directory empty
     fi
   fi
+  # test for transient soil-forcing - currently available only for fluxnet/3
+  if [ "$forcingMode" == "transient" ]; then
+    if [ "$forcingDataSet" == "fluxnet" ] || [ "$forcingDataSet" == "fluxnet3" ]; then
+      echo " Using transient soil-forcing"
+    else
+      echo " No transient soil-forcing available for ""$forcingDataSet"" - only for fluxnet/3"
+      echo " EXIT!"
+      exit 1
+    fi
+  fi
   # soil forcing availability feedback/action
   if [ "$soilForcingAvailable" == "T" ]; then
     # soil forcing available
-    echo "Running the QUINCY soil model"
+    echo " Running the QUINCY soil model"
   else
     echo " Sorry, no soil forcing available for ""$forcingDataSet"" sites yet."
     echo " Please ask Jan or Sönke if you need it."
@@ -817,7 +827,8 @@ if [ $customSiteList == "T" ]
        then
         siteName=$(cut -c1-3  <<< "$siteName")
       fi
-      # test if a forcing file for this site is available
+      # test if a forcing file for this site is available in the met_forcing / soil_forcing_sl15 directory
+      # currently static & transient forcing is not tested individually  TODO
       if ! ls -la $siteDataFoldForcing | grep $siteName > /dev/null  # if forcing file not found
         then
           echo "EXIT! The site ""$siteName"" from your custom site_list.dat does not exist in the forcingDataSet folder of: ""$forcingDataSet"" !"
@@ -842,7 +853,7 @@ else # the default case: $customSiteList == "F"
     ## SLM baseline paper 2018 using a specific set of fluxnet sites per default for usecases 80 81 82
     if [ "$usecase" != "none" ] # if a $usecase is defined
      then
-       if [ "$usecase" -gt 79 ] &&  [ "$usecase" -lt 83 ]  # if usecase 80 or 81 or 82
+       if [ "$usecase" -gt 79 ] && [ "$usecase" -lt 83 ]  # if usecase 80 or 81 or 82
         then
           siteListFileName="flux_baseline_sites_1901-2006_list.dat"
           echo " You use u80/81/82. Setting site list file to flux_baseline_sites_1901-2006_list.dat."
@@ -957,7 +968,7 @@ else # the default case: $customSiteList == "F"
 fi
 
 
-## apply setting for comparison simulated model results of CRUNCEP sites with Global Forest Data Base ##
+## apply setting for comparing simulated model results of CRUNCEP sites with Global Forest Data Base ##
 # this may overwrite some options specifies above !
 if [ $compareSimCRUNCEPvsGFDB == "T" ]; then
   if [ "$forcingDataSet" != "cruncep" ]; then
@@ -1030,9 +1041,13 @@ if [ $forcingMode == "transient" ]
 
    # soil model
    if [ "$slmModel" == "soil" ]; then
-    echo " There is no transient mode for the soil model, please select the static forcing mode."
-    echo " EXIT!"
-    exit 1
+     if [ "$forcingDataSet" == "fluxnet" ] || [ "$forcingDataSet" == "fluxnet3" ]; then
+       echo " Transient simulation with ""$forcingDataSet"" sites."
+     else
+       echo " There is no transient soil-forcing for this site-set, please select the static forcing mode to run the standalone soil-model."
+       echo " EXIT!"
+       exit 1
+     fi
    fi
    # spinup length
    if [ $transient_spinup_years -lt 1 ]
@@ -1107,7 +1122,7 @@ case "$forcingDataSet" in
     if [ "$slmModel" == "soil" ]; then
      forcingModeFileID="_"
     fi
-  else
+  else  # valid for land & soil
     forcingModeFileID="_t_"
   fi
   ;;
@@ -1119,7 +1134,7 @@ case "$forcingDataSet" in
     if [ "$slmModel" == "soil" ]; then
      forcingModeFileID="_"
     fi
-  else
+  else  # valid for land & soil
     forcingModeFileID="_t_"
   fi
   ;;
@@ -1263,13 +1278,17 @@ if [ $specialFluxnetOutput == "T" ]
       echo "EXIT! You might want to use FLUXNET/3 sites when running fluxnet diagnostics simulation :) ."
       exit 1
     fi
-    # check SLM model    
+    # check QUINCY model    
     if [ $slmModel == "soil" ]; then
-      echo "EXIT! specialFluxnetOutput currently not working with SLM ""$slmModel"" model."
-      rm -r "$simFold"  # deleting the already created simulation folder
-      exit 1
+      if [ "$forcingDataSet" == "fluxnet" ] || [ "$forcingDataSet" == "fluxnet3" ]; then
+        echo " Running QUINCY soil model and creating fluxnet diagnostics output."
+      else
+        echo "EXIT! Fluxnet diagnostics output currently not working with QUINCY ""$slmModel"" model and the ""$forcingDataSet"" site-set."
+        rm -r "$simFold"  # deleting the already created simulation folder
+        exit 1
+      fi
     fi
-    # give info on screen
+    # message to screen
     echo " "
     echo " You just started simulations to generate FLUXNET/3 diagnostics from the last complete forcing period before the end of the ""$simulation_length_number"" years."
     # docu: if e.g. the simulation length is 80 years, the last full forcing period, considering 3 years of data, could be from year 76 to 78

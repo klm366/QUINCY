@@ -113,7 +113,7 @@ if [ $compareSimCRUNCEPvsGFDB == T ]; then
 fi
 
 ## run one R Script for postprocessing the fluxnet diagnostics with barplots
-if [ "$specialFluxnetOutput" == T ] && [ "$createSoilForcFlag" == "F" ]; then
+if [ "$specialFluxnetOutput" == T ] && [ "$createSoilForcFlag" == "F" ] && [ "$slmModel" == "land" ]; then
   echo " sim_fluxnet_diagnostics-process_timestep.R"
   Rscript --vanilla "$simFold"default_files/sim_fluxnet_diagnostics-process_timestep.R $simFold  # creates two .csv files
   sleep 2
