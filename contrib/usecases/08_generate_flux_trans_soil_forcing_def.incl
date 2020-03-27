@@ -47,7 +47,7 @@ echo "$forcingDataSet" | grep "fluxnet" >> /dev/null || exit 1
 
 # set experimentalID according to site-set
 # add number of soil layers to experimentalID, only 15 sl since ticket #407
-experimentalID="create_soil_forc_""$forcingDataSet"  # the copy_soil_forcing_trans.sh refers to this specific experimentalID
+experimentalID="create_soil_forc_trans_""$forcingDataSet"  # the copy_soil_forcing_trans.sh refers to this specific experimentalID
 experimentalID="$experimentalID"_sl15
 
 slmModel="land"
