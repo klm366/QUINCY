@@ -15,7 +15,7 @@
 ##    You should have received a copy of the GNU General Public License
 ##    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
 
-# default QUINCY usecase: 01_generate_soil_forcing_def
+# default QUINCY usecase: 01_generate_stat_soil_forcing_def
 # 
 # generate soil_forcing for the stand alone JSM-QUINCY soil model:
 #  creating: veg litterfall + some soilphysics output used as input by the (standalone) soil model
@@ -26,9 +26,9 @@
 #  siteSelection  cue/spp (for cruncep)
 #
 
-echo " Simulation runs for soil_forcing creation:"
-echo "  usecase='01_generate_soil_forcing_def' applying special settings to some options"
-echo "  the experimentalID will be created automatically hery by this usecase"
+echo " Simulation runs for static soil_forcing creation:"
+echo "  usecase='01_generate_stat_soil_forcing_def' applying special settings to some options"
+echo "  the experimentalID will be created automatically here by this usecase"
 echo "  please run the simulations (prep_run_slm.sh -u 01) for: "
 echo "    FLUXNET2"  # site-set "fluxnet"
 echo "    FLUXNET3"  # site-set "fluxnet3"
@@ -38,17 +38,17 @@ echo "    SPP_1685"
 echo "  no need to change any else, the namelist-parameter flag_generate_soil_forcing_stat is set to TRUE for u01 automatically" 
 echo "    meaning, when usecase number 01 is selected, flag_generate_soil_forcing_stat is set to T"
 echo " "
-echo " after all jobs have finished, please run additional_scripts/copy_soil_forcing.sh"
-echo "   (this script updates the soil forcing for the site sets new soil forcing was created, "
-echo "    and renames the experimentalID of soil_forcing simulations leaving the renamed folders in your scratch)"
+echo " after all jobs have finished, please run additional_scripts/copy_soil_forcing_stat.sh"
+echo "   (this script updates the soil forcing for the site-sets new static soil forcing was created, "
+echo "    and renames the experimentalID of static soil_forcing-creation simulations leaving the renamed folders in your scratch)"
 echo " "
 
 # set experimentalID according to site dataset
 # add cue/spp in case of a cruncep simulation
-experimentalID="create_soil_forc_""$forcingDataSet"  # the copy_soil_forcing.sh refers to this specific experimentalID
+experimentalID="create_soil_forc_stat_""$forcingDataSet"  # the copy_soil_forcing.sh refers to this specific experimentalID
 if [ $forcingDataSet == "cruncep" ]
  then
-  experimentalID="create_soil_forc_""$forcingDataSet""_""$siteSelection"
+  experimentalID="create_soil_forc_stat_""$forcingDataSet""_""$siteSelection"
 fi
 
 # add number of soil layers to experimentalID, only 15 sl since ticket #407
@@ -57,7 +57,7 @@ experimentalID="$experimentalID"_sl15
 forcingMode="static"          # ! if changed to "transient" adaptions to the copy_soil_forcing.sh are needed
 slmModel="land"
 
-spinupLengthSoilForcing=200   # years of spin-up before output is generated and saved
+spinupLengthSoilForcing=300   # years of spin-up before output is generated and saved
 yearsSoilForcing=1            # number of years of forcing to be generated and saved after spin-up
 
 customSiteList="F"
@@ -71,7 +71,7 @@ sb_model_scheme="simple_1d"     # simple_0d simple_1d jsm
 sb_nloss_scheme="dynamic"       # none fixed dynamic
 flag_sb_prescribe_nh4="F"       # set nh4solute to a constant value
 flag_sb_prescribe_no3="F"       # set no3solute to a constant value
-flag_sb_prescribe_po4="T"       # set po4solute to a constant value
+flag_sb_prescribe_po4="F"       # set po4solute to a constant value
 
 bnf_scheme="standard"           # none fixed standard optimal resistance unlimited
 flag_mycorrhiza="F"             # TRUE: the other flag_myco* can be used with TRUE | FALSE: the other flag_myco* are set to FALSE by this script
@@ -82,8 +82,8 @@ flag_optimal_Nfraction="F"      # optimal N fraction
 ncanopy=10                      # number of canopy layers
 canopy_layer_scheme="fapar"     # canopy layer depth calculation options: standard fapar
 
-biomass_alloc_scheme="fixed"    # fixed dynamic optimal
-leaf_stoichom_scheme="fixed"    # fixed dynamic optimal
+biomass_alloc_scheme="dynamic"    # fixed dynamic optimal
+leaf_stoichom_scheme="dynamic"    # fixed dynamic optimal
 veg_dynamics_scheme="population"  # none population cohort
 flag_stand_harvest="F"            # if TRUE: l_do_stand_replacing_harvest is set to TRUE in SLM on the 1st timestep of the 1st day of the year "PlantYear" in the site_list file (or never, if that was before 1901)
 

@@ -417,21 +417,22 @@ if [ ! -z "$usecase" ]            # if $usecase is not empty
       echo " "
       echo " Applying settings for usecase: ""$usecase""  (usecase file: ""$usecaseFileIncl"")"
       echo " "
-      # test whether the experimentalID is defined in the usecase file, if so append the revision number of the local working copy
-      #  anyway, do not apply this for the usecase 01 & 08, i.e., generate soil forcing
+      # test whether the experimentalID is defined in the usecase file, 
+      # if so:  append the revision number of the local working copy
+      #         also used for soil-forcing creation (usecases 01 & 08)
       validateExpIDPresent="$(grep -w "experimentalID" "$usecaseFileIncl")"
-      if [ ! -z "${validateExpIDPresent// }" ] && [ "$usecase" != "01" ] && [ "$usecase" != "08" ]  # -z test is explicitly for: the length of string is zero, here not zero
-       then 
+      if [ ! -z "${validateExpIDPresent// }" ]; then  # -z test is explicitly for: the length of string is zero, here not zero
         # check if SVN information is available (exit status == 0), if so add the current revision number to the experimentalID
         svn info ./ >/dev/null 2>&1
         exitSVN=$?
-        if [ "$exitSVN" == 0 ] # if exit status of svn info is zero, i.e., all good
-         then
+        if [ "$exitSVN" == 0 ]; then # if exit status of svn info is zero, i.e., all good
           workingCopyRev=$(svn info ../../ | grep "Rev:" | awk '{print $4}')
           experimentalID="$experimentalID""_r""$workingCopyRev"
           echo " The script could retrieve the revision number of your local working copy."
           echo " The experimentalID is set to: ""$experimentalID"
           echo " "
+        else  # if rev number could not be retrieved, append "0000"
+          experimentalID="$experimentalID""_r0000"
         fi
       fi
    else 
