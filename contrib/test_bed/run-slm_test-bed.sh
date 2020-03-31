@@ -64,6 +64,7 @@ cohort_harvest_interval=80        # number of years after which the cohort is ha
 # soil model options
 soil_depth=5.7                  # meter (5.7 to 9.5)
 nsoil_layer=5                   # number of soil layers (default for QUINCY land: 5 | for QUINCY soil only available forcing: 15 | generally: min 5 & max 20)
+soilForcStatRevNum=""           # only numbers - revision number (e.g., 2174) of the code (svn repo trunk) the soil forcing was created with - see site-set dir
 
 # JSM
 flag_sb_jsm_transport="F"       # ..
@@ -86,9 +87,10 @@ plant_functional_type_id=5      # 1 - 8
 
 # forcing input
 flag_oneYearForcing="F"         # T (True) or F (False): whether to use (repeatedly) only the 1st year of the climate forcing input file
-forcingDataSet="fluxnet"        # options: fluxnet fluxnet3 cruncep face manip fert craine photacc spp1685 confin none (for 'none' provide: test_bed/climate.dat [land plant canopy] or soil_forcing_litterfall.dat & soil_forcing_soilphysics.dat [soil])
+forcingDataSet="fluxnet3"       # options: fluxnet fluxnet3 cruncep face manip fert craine photacc spp1685 confin none (for 'none' provide: test_bed/climate.dat [land plant canopy] or soil_forcing_litterfall.dat & soil_forcing_soilphysics.dat [soil])
+crunSites="cue"                 # cue or spp  [spp: BBR_01 | LUE_01 | VES_01 | MTF_01 | CON_01]
 siteName="DE-Hai"               # get the Site-ID from the 1st column of the particular "site list .dat"
-                                # examples: [FLUX/3] "DE-Hai" "FI-Hyy" "ZA-Kru"  [CRUN] "BHS_01" "HAI_01" "ILO_05"  
+                                # examples: [FLUX/3] "DE-Hai" "FI-Hyy" "ZA-Kru"  [CRUN] "BHS_01" "HAI_01" "ILO_05" "BBR_01" 
                                 #           [FACE] "DK-AMB" "OR-ELE"  [MANIP] "ES-MaG" "ES-MaT"  [FERT] "HAR-CON_4" "HAR-HIG_4" "HAR-LOW_4" "HAR-CON_5"
                                 #           [CRAINE] "CRA_01" "CRA_02" "CRA_18"  [PHOTACC] "ARC_01" "MON_02" "STR_01"  [SPP_1685] "BBR" "LUE" "VES"
                                 #           [CONFIN] "FI-Hyy" "FI-Ken"
@@ -340,6 +342,7 @@ validatePlantFunctionalTypeID="1 2 3 4 5 6 7 8"
 validateOptionForcing="constant generate readfile"
 validateSetPFTAutomatically="yes no"
 validateForcingDataSet="fluxnet fluxnet3 cruncep face manip fert craine photacc spp1685 confin none"
+validateCrunSites="cue spp"
 validateSb_adsorp_scheme="eca_full eca_part eca_none"
 
 ## validate user-defined model-options ##
@@ -373,19 +376,26 @@ validateUserConfigValues "$setPFTAutomatically" "$validateSetPFTAutomatically" "
 validateUserConfigValues "$plant_functional_type_id" "$validatePlantFunctionalTypeID" "plant_functional_type_id"
 validateUserConfigValues "$flag_oneYearForcing" "$validateFlags" "flag_oneYearForcing"
 validateUserConfigValues "$forcingDataSet" "$validateForcingDataSet" "forcingDataSet"
+validateUserConfigValues "$crunSites" "$validateCrunSites" "crunSites"
 validateUserConfigValues "$sb_adsorp_scheme" "$validateSb_adsorp_scheme" "sb_adsorp_scheme"
 
 # not validated: simulation_length_number, output_start_first_day_year, output_end_last_day_year, soil_awc_prescribe, soil_theta_prescribe, latitude, longitude 
 
-
 ## definition of some basic variables
 siteDataDirBase="/Net/Groups/BGI/data/Model/SLM1/input/point/"
 metForcingDir="met_forcing/"
-soilForcingDirBase="soil_forcing_sl"
+soilForcStatDirBase="soil_forcing_stat_sl15"
 forceSoilLitterFile="soil_forcing_litterfall.dat"
 forceSoilPhysicFile="soil_forcing_soilphysics.dat"
 forceLandMetFile="climate.dat"
-
+# CRUNCEPv7 soil forcing is stored in an extra dir per CUE & SPP sites
+if [ "$forcingDataSet" == "cruncep" ]; then
+  if [ "$crunSites" == "cue" ]; then
+    soilForcStatDirBase="soil_forcing_stat_cue_sl15"
+  elif [ "$crunSites" == "spp" ]; then
+    soilForcStatDirBase="soil_forcing_stat_spp_sl15"
+  fi
+fi
 
 ## set folder for the site data-set
 case "$forcingDataSet" in
@@ -438,8 +448,14 @@ if [ $slmModel == "soil" ]
     echo " soil_depth is now changed to 9.5 meters."
     soil_depth=9.5
   fi
-  # set soil forcing directory
-  soilForcingDir="$soilForcingDirBase""15/"
+  # set soil forcing directory by adding the revision number
+  #   current fallback: if no revision number is provided, a symlink points to the default soil-forcing
+  if [ -z "$soilForcStatRevNum" ]; then   # if "$soilForcStatRevNum" == ""  (empty)
+    echo " The current default soil forcing is used. See symlink: BGI/data/Model/SLM1/input/point/[site-set]/""$soilForcStatDirBase"
+    soilForcingDir="$soilForcStatDirBase""/"
+  else
+    soilForcingDir="$soilForcStatDirBase""_r""$soilForcStatRevNum""/"
+  fi
   # test if soil forcing is available for this site set
   soilForcingAvailable="T"
   if [ ! -d "$siteDataDirBase""$siteDataSet""$soilForcingDir" ]; then
@@ -452,10 +468,10 @@ if [ $slmModel == "soil" ]
   # soil forcing availability feedback/action
   if [ "$soilForcingAvailable" == "T" ]; then
     # soil forcing available
-    echo "Running the QUINCY soil model"
+    echo " Running the QUINCY soil model"
   else
-    echo " Sorry, no soil forcing available for ""$forcingDataSet"" sites yet."
-    echo " Please ask Jan or Sönke if you need it."
+    echo " Sorry, no static soil-forcing available in the directory you provided:"
+    echo " ""$siteDataDirBase""$siteDataSet""$soilForcingDir"
     echo " EXIT!"
     exit 1
   fi
@@ -471,10 +487,10 @@ case "$forcingDataSet" in
   allSiteInfoFile="$siteDataDirBase""$siteDataSet"flux3_all_sites_1991-2014_list.dat
   ;;
 "cruncep")
+  # cruncep cue (crun_cue_gfdb_sites_*_list.dat)
   allSiteInfoFile="$siteDataDirBase""$siteDataSet"crun_cue_gfdb_sites_1984-2013_list.dat
-  # the two cruncep spp sites are not listed in the all_gfdb_sites_*_list.dat but only in the spp_sites_*_list.dat
-  if [ "$siteName" == "BBR_01" ] || [ "$siteName" == "LUE_01" ] || [ "$siteName" == "VES_01" ] || [ "$siteName" == "MTF_01" ] || [ "$siteName" == "CON_01" ]
-   then
+  # cruncep spp (crun_spp_sites_*_list.dat)
+  if [ "$crunSites" == "spp" ]; then
     allSiteInfoFile="$siteDataDirBase""$siteDataSet"crun_spp_sites_1984-2013_list.dat
   fi
   ;;
@@ -624,33 +640,32 @@ rsync -a ./../../"$compiler"/bin/land.x             ./"$slmModel"/
 
 ## copy forcing file(s)
 if [ $slmModel != "test_canopy" ] && [ $slmModel != "test_radiation" ]; then      # copy a climate.dat file for all models but test_canopy & test_radiation
-    # forcingDataSet == none (local forcing file needed)
-    if [ "$forcingDataSet" == "none" ]
-      then
-        if [ $slmModel == "soil" ]
-          then
-            cp ./"$forceSoilLitterFile" ./"$slmModel"/"$forceSoilLitterFile"
-            cp ./"$forceSoilPhysicFile" ./"$slmModel"/"$forceSoilPhysicFile"
-          else # land plant canopy
-            cp ./"$forceLandMetFile"    ./"$slmModel"/"$forceLandMetFile"
-        fi 
-      # forcingDataSet == fluxnet / fluxnet3 / cruncep / face / manip / fert / craine / photacc / spp1685 / confin
-      else 
-        if [ $slmModel == "soil" ]
-          then
-            # use a shorter site name for cruncep forcing 
-            if [ "$forcingDataSet" == "cruncep" ]; then
-              siteNameSoilForceID=$(echo "$siteName" | cut -c1-3)   # e.g. ILO_05 -> ILO
-            else # fluxnet / face / manip / fert / craine / photacc
-              siteNameSoilForceID="$siteName"
-            fi
-            # copy files
-            cp "$siteDataDirBase""$siteDataSet""$soilForcingDir""$siteNameSoilForceID"*_lit.dat  ./"$slmModel"/"$forceSoilLitterFile"
-            cp "$siteDataDirBase""$siteDataSet""$soilForcingDir""$siteNameSoilForceID"*_sph.dat  ./"$slmModel"/"$forceSoilPhysicFile"
-          else # land plant canopy
-            cp "$siteDataDirBase""$siteDataSet""$metForcingDir""$siteNameStatMetForc"*.dat  ./"$slmModel"/"$forceLandMetFile"
-        fi 
-    fi
+    ## local forcing file  (forcingDataSet == none)
+    if [ "$forcingDataSet" == "none" ]; then
+      if [ $slmModel == "soil" ]; then
+        cp ./"$forceSoilLitterFile" ./"$slmModel"/"$forceSoilLitterFile"
+        cp ./"$forceSoilPhysicFile" ./"$slmModel"/"$forceSoilPhysicFile"
+      else # land plant canopy
+        cp ./"$forceLandMetFile"    ./"$slmModel"/"$forceLandMetFile"
+      fi 
+      ## forcingDataSet  (fluxnet / fluxnet3 / cruncep / face / manip / fert / craine / photacc / spp1685 / confin)
+    else 
+      # soil
+      if [ $slmModel == "soil" ]; then
+        # no identifier needed, just the sitename (stat & trans soil-forcing are stored in diff dirs)
+        if [ "$forcingDataSet" == "cruncep" ]; then
+          siteNameSoilForceID=$(echo "$siteName" | cut -c1-3)   # e.g. ILO_05 -> ILO
+        else # fluxnet / face / manip / fert / craine / photacc
+          siteNameSoilForceID="$siteName"
+        fi
+        # copy files
+        cp "$siteDataDirBase""$siteDataSet""$soilForcingDir""$siteNameSoilForceID"*_lit.dat  ./"$slmModel"/"$forceSoilLitterFile"
+        cp "$siteDataDirBase""$siteDataSet""$soilForcingDir""$siteNameSoilForceID"*_sph.dat  ./"$slmModel"/"$forceSoilPhysicFile"
+      # land plant canopy
+      else
+        cp "$siteDataDirBase""$siteDataSet""$metForcingDir""$siteNameStatMetForc"*.dat  ./"$slmModel"/"$forceLandMetFile"
+      fi 
+    fi  # "$forcingDataSet" == "none"
 fi
 
 
