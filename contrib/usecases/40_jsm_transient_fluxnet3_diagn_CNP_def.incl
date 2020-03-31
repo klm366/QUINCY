@@ -30,6 +30,7 @@ slmModel="soil"
 
 forcingDataSet="fluxnet3"
 forcingMode="transient"
+soilForcTransRevNum="2174"
 customSiteList="F"
 customSiteListFileName=""
 singleSiteName=""
