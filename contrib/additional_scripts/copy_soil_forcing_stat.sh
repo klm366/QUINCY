@@ -75,7 +75,7 @@ soilForceCruncepCueDirBase="soil_forcing_stat_cue_sl15_r"
 soilForceCruncepSppDirBase="soil_forcing_stat_spp_sl15_r"
 
 # met-forcing years included into the soil-forcing file names for CRUNCEP cue/spp
-sfCruncepYears="_1984-2013"
+sfCruncepYears="1984-2013"
 
 ########################################################################################
 ## delete old and copy new soil_forcing files, only if new soil forcing was created   ##
