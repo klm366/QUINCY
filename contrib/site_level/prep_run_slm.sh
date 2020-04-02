@@ -708,9 +708,7 @@ case "$forcingDataSet" in
   siteDataObsFold="no such evaluation data"  # but this variable must contain something
   ;;
 "photacc")
-    #! temporary fix for PHOTACC !#
-    siteDataFold="/Net/Groups/BGI/scratch/jengel/quincy_data/point/PHOTACC/"
-  #siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/PHOTACC/"
+  siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/PHOTACC/"
   siteDataObsFold="no such evaluation data"  # but this variable must contain something
   ;;
 "spp1685")
@@ -718,9 +716,7 @@ case "$forcingDataSet" in
   siteDataObsFold="no such evaluation data"  # but this variable must contain something
   ;;
 "confin")
-    #! temporary fix for CONFIN !#
-    siteDataFold="/Net/Groups/BGI/scratch/jengel/quincy_data/point/CONFIN/"
-  #siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/CONFIN/"
+  siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/CONFIN/"
   siteDataObsFold="no such evaluation data"  # but this variable must contain something
   ;;
 esac

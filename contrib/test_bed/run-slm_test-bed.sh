@@ -511,8 +511,6 @@ case "$forcingDataSet" in
   echo " Note: you are running (a) CRAINE site(s) using forcing 1901-2015 by default."
   ;;
 "photacc")
-    #! temporary fix for PHOTACC !#
-    siteDataDirBase="/Net/Groups/BGI/scratch/jengel/quincy_data/point/"
   allSiteInfoFile="$siteDataDirBase""$siteDataSet"photacc_sites_1901-2015.dat
   echo " "
   echo " Note: you are running (a) PHOTACC site(s) using forcing 1901-2015 by default."
@@ -521,8 +519,6 @@ case "$forcingDataSet" in
   allSiteInfoFile="$siteDataDirBase""$siteDataSet"spp_1685_sites_1984-2013_list.dat
   ;;
 "confin")
-    #! temporary fix for CONFIN !#
-    siteDataDirBase="/Net/Groups/BGI/scratch/jengel/quincy_data/point/"
   allSiteInfoFile="$siteDataDirBase""$siteDataSet"confin_sites_1997-2014_list.dat
   ;;
 esac
