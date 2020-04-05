@@ -753,9 +753,9 @@ case "$slmModel" in
   #
   # set soil-forcing directory
   #
-  # static/transient
+  # static/transient + revNumber
   soilForcStatDirBase="soil_forcing_stat_sl15"
-  soilForcTransDirBase="soil_forcing_trans_sl15"
+  soilForcTransDirBase="soil_forcing_trans_sl15"   # available only for a limited number of site-sets
   # cue/spp static forcing for CRUNCEPv7
   if [ "$forcingDataSet" == "cruncep" ]; then
     if [ "$crunSites" == "cue" ]; then
@@ -764,6 +764,7 @@ case "$slmModel" in
       soilForcStatDirBase="soil_forcing_stat_spp_sl15"
     fi
   fi
+  # give static/transient value to a unified variable
   if [ "$forcingMode" == "static" ]; then
     soilForcDirBase="$soilForcStatDirBase"
     soilForcRevNum="$soilForcStatRevNum"
@@ -1055,47 +1056,48 @@ if [ $compareSimCRUNCEPvsGFDB == "T" ]; then
 fi
 
 
-## evaluate options for the forcingMode == transient ##
+## evaluate options: forcingMode == transient ##
 #  some settings of the transient simulations are affected by the compareSimCRUNCEPvsGFDB simulation settings if compareSimCRUNCEPvsGFDB == "T"
-#  QUINCY soil model: availability of soil forcing is already tested above
-if [ $forcingMode == "transient" ]
- then
-   echo " "
-   echo " You set the forcingMode to transient, with a spinup time of ""$transient_spinup_years"" years that uses forcing input from year ""$transient_spinup_start_year"" to ""$transient_spinup_end_year""."
-   echo " The subsequent simulation may cover ""$simulation_length_number"" years, starting with forcing data from year ""$transient_simulation_start_year""."
+if [ $forcingMode == "transient" ] && [ "$slmModel" != "soil" ]; then
+  echo " "
+  echo " You use QUINCY ""$slmModel"" and set the forcingMode to transient, with a spinup time of ""$transient_spinup_years"" years that uses forcing input from year ""$transient_spinup_start_year"" to ""$transient_spinup_end_year""."
+  echo " The subsequent simulation may cover ""$simulation_length_number"" years, starting with forcing data from year ""$transient_simulation_start_year""."
 
-   # spinup length
-   if [ $transient_spinup_years -lt 1 ]
-    then
-     echo " Ohh, you set the spinup time to a value less than 1 year, which is not recommended. Re-setting it to 1 now."
-     transient_spinup_years=1
-   fi
-   if [ $transient_spinup_years -lt 50 ]
-    then
-     echo " Warning: You set the spinup length to ""$transient_spinup_years"" years, which might be to low for sufficient results (default would be 500 years)."
-   fi
-   # starting year 
-   if [ $transient_spinup_start_year != "1901" ]
-    then
-     echo " You set the transient_spinup_start_year to ""$transient_spinup_start_year"", which is currently not supported. Sorry."
-     echo " Setting transient_spinup_start_year=1901."
-     transient_spinup_start_year=1901
-   fi
-   if [ $transient_simulation_start_year != "1901" ]
-    then
-     echo " You set the transient_simulation_start_year to ""$transient_simulation_start_year"", which is currently not supported. Sorry."
-     echo " Setting transient_simulation_start_year=1901."
-     transient_simulation_start_year=1901
-   fi
-   # length of forcing period repeatedly used for spinup
-   transient_test_spinup_forcing_period=$((transient_spinup_end_year - transient_spinup_start_year + 1))
-   if [ $transient_test_spinup_forcing_period -lt 6 ] || [ $transient_test_spinup_forcing_period -gt 49 ]
-    then
-     echo " You set the length of forcing period repeatedly used for spinup to ""$transient_test_spinup_forcing_period""."
-     echo " This is not recommended. Please use a period length (transient_spinup_end_year - transient_spinup_start_year) between 5 and 50 years."
-     transient_spinup_end_year=$((transient_spinup_start_year + 29))
-     echo " The new (automagically corrected) value of transient_spinup_end_year is ""$transient_spinup_end_year"" setting the period length to the default of 30 years."
-   fi
+  # spinup length
+  if [ $transient_spinup_years -lt 1 ]; then
+    echo " Ohh, you set the spinup time to a value less than 1 year, which is not recommended. Re-setting it to 1 now."
+    transient_spinup_years=1
+  fi
+  if [ $transient_spinup_years -lt 50 ]; then
+    echo " Warning: You set the spinup length to ""$transient_spinup_years"" years, which might be to low for sufficient results (default would be 500 years)."
+  fi
+  # starting year 
+  if [ $transient_spinup_start_year != "1901" ]; then
+    echo " You set the transient_spinup_start_year to ""$transient_spinup_start_year"", which is currently not supported. Sorry."
+    echo " Setting transient_spinup_start_year=1901."
+    transient_spinup_start_year=1901
+  fi
+  if [ $transient_simulation_start_year != "1901" ]; then
+    echo " You set the transient_simulation_start_year to ""$transient_simulation_start_year"", which is currently not supported. Sorry."
+    echo " Setting transient_simulation_start_year=1901."
+    transient_simulation_start_year=1901
+  fi
+  # length of forcing period repeatedly used for spinup
+  transient_test_spinup_forcing_period=$((transient_spinup_end_year - transient_spinup_start_year + 1))
+  if [ $transient_test_spinup_forcing_period -lt 2 ] || [ $transient_test_spinup_forcing_period -gt 49 ]; then
+    echo " You set the length of forcing period repeatedly used for spinup to ""$transient_test_spinup_forcing_period""."
+    echo " It is recommended to use a period length (transient_spinup_end_year - transient_spinup_start_year) between 2 and 50 years."
+    transient_spinup_end_year=$((transient_spinup_start_year + 29))
+    echo " The new (corrected) value of transient_spinup_end_year is ""$transient_spinup_end_year"" setting the period length to the default of 30 years."
+  fi
+# transient & QUINCY soil model
+elif [ $forcingMode == "transient" ] && [ "$slmModel" == "soil" ]; then
+  echo " "
+  echo " You use QUINCY ""$slmModel"" and set the forcingMode to transient, with a spinup time of ""$transient_spinup_years"" years."
+  echo " The transient simulation (after) spinup) may cover one full forcing period, which is a site-specific parameter (fluxnet/3 site-sets )."  
+  echo " EXIT! not yet implemented"
+  exit 1
+# TODO  add code for soil transient simulations here, and to the run_slm.sh !
 # forcingMode == "static"
 else  
   # set transient* parameters to default values, to avoid potentially quirky values here, but do not want do do checking either
@@ -1113,17 +1115,17 @@ if [ $compareSimCRUNCEPvsGFDB == "T" ] &&  [ $forcingMode == "transient" ]; then
 fi  
   
 
-## transient forcing and fluxnet simulation
+## transient forcing and fluxnet simulation with 
 # note: actual simulation length 1901 to x varies with the site, because the available site data does start at diff years and has different lengths
 #       this is dealt with in run_slm.sh
-fluxnetTransientSim="F"
-if [ $forcingMode == "transient" ]; then
+fluxnetTransQLand="F"
+if [ $forcingMode == "transient" ] && [ "$slmModel" != "soil" ]; then
   if [ $forcingDataSet == "fluxnet" ] || [ $forcingDataSet == "fluxnet3" ]; then
-    echo " You started a transient simulation with fluxnet forcing: ""$forcingDataSet"
+    echo " You started a transient simulation with QUINCY ""$slmModel"" and fluxnet forcing: ""$forcingDataSet"
     echo " Note: the simulation (starting in 1901 after the spinup) ends with the last year of data available for the particular site."
     echo " Hence, the actual simulation length may vary with the fluxnet sites."
     echo " You set the simulation length to: ""$simulation_length_number"" starting in 1901. This may change for most sites."
-    fluxnetTransientSim="T"
+    fluxnetTransQLand="T"
   fi
 fi
 
@@ -1272,41 +1274,52 @@ if [ $flag_mycorrhiza == "F" ]
 fi
 
 
-## validate options linked with specialFluxnetOutput ##
-if [ $specialFluxnetOutput == "T" ]
- then
-    # check site data set
-    if [ $forcingDataSet == "fluxnet" ]; then
-      echo " Running fluxnet diagnostics simulation with site-set: FLUXNET2"
-    elif [ $forcingDataSet == "fluxnet3" ]; then
-      echo " Running fluxnet diagnostics simulation with site-set: FLUXNET3"
-    else
-      echo "EXIT! You might want to use FLUXNET/3 sites when running fluxnet diagnostics simulation :) ."
-      exit 1
-    fi
-    # check QUINCY model (fluxnet/3 site-set already tested above)    
-    if [ $slmModel == "soil" ]; then
-      echo " Running QUINCY soil model and creating fluxnet diagnostics output."
-    fi
-    # message to screen
+## validate options linked with specialFluxnetOutput a.k.a. fluxnet diagnostics simulations ##
+#  requires transient forcing from 1901 to ~2015 !
+#  in addition to the normal transient simulation:
+#    the last full forcing period is written out at timestep 
+#    extra R scripts are started per site after the simulation comparing simulation results with empirical data
+if [ $specialFluxnetOutput == "T" ]; then
+  # check site data set
+  if [ $forcingDataSet == "fluxnet" ]; then
+    echo " Running fluxnet diagnostics simulation with site-set: FLUXNET2"
+  elif [ $forcingDataSet == "fluxnet3" ]; then
+    echo " Running fluxnet diagnostics simulation with site-set: FLUXNET3"
+  else
+    echo "EXIT! You might want to use FLUXNET/3 sites when running fluxnet diagnostics simulation :) ."
+    exit 1
+  fi
+  # check QUINCY model (fluxnet/3 site-set already tested above)
+  if [ "$slmModel" == "soil" ]; then
+    echo " You are trying to run the QUINCY soil model with a fluxnet diagnostics simulation setup (uses transient forcing)."
+    echo "EXIT! fluxnet diagnostics simulationa require transient forcing from 1901 to ~2015. Such soil_forcing is not available for now."
+    rm -r "$simFold"  # deleting the already created simulation folder
+    exit 1
+  fi
+  if [ "$slmModel" != "land" ]; then
+    echo "EXIT! The fluxnet diagnostics simulations should only run with the QUINCY land model, not the ""$slmModel"" model."
+    rm -r "$simFold"  # deleting the already created simulation folder
+    exit 1
+  fi
+  # message to screen
+  echo " "
+  echo " You just started simulations to generate FLUXNET/3 diagnostics from the last complete forcing period before the end of the ""$simulation_length_number"" years."
+  # docu: if e.g. the simulation length is 80 years, the last full forcing period, considering 3 years of data, could be from year 76 to 78
+  # if $singleSiteName is not empty
+  if [ ! -z "$singleSiteName" ]; then
+    echo " Simulation is done for one site: ""$singleSiteName"
     echo " "
-    echo " You just started simulations to generate FLUXNET/3 diagnostics from the last complete forcing period before the end of the ""$simulation_length_number"" years."
-    # docu: if e.g. the simulation length is 80 years, the last full forcing period, considering 3 years of data, could be from year 76 to 78
-    # if $singleSiteName is not empty
-    if [ ! -z "$singleSiteName" ]; then
-      echo " Simulation is done for one site: ""$singleSiteName"
-      echo " "
-    fi
-    # parameter sensitivity simulations
-    if [ $paramSensitivitySim == "T" ]; then
-      echo " Multiple parameter sensitivity simulations are done for the site: ""$paramSensitivitySiteName"
-      echo " "
-    fi
-    # $singleSiteName is empty and no parameter sensitivity simulations
-    if [ -z "$singleSiteName" ] && [ $paramSensitivitySim == "F" ]; then
-       echo " Simulations are done for all sites listed in: ""$siteListFileName"
-       echo " "
-    fi
+  fi
+  # parameter sensitivity simulations
+  if [ $paramSensitivitySim == "T" ]; then
+    echo " Multiple parameter sensitivity simulations are done for the site: ""$paramSensitivitySiteName"
+    echo " "
+  fi
+  # $singleSiteName is empty and no parameter sensitivity simulations
+  if [ -z "$singleSiteName" ] && [ $paramSensitivitySim == "F" ]; then
+     echo " Simulations are done for all sites listed in: ""$siteListFileName"
+     echo " "
+  fi
 fi
 
 
@@ -1713,7 +1726,7 @@ echo "$siteDataObsFold"                                           >> "$simFoldDe
 echo "$useSiteSpecificAWC"                                        >> "$simFoldDefaultFiles""config.txt"
 echo "$paramSensitivitySim"" ""$simParamSensiFiles"               >> "$simFoldDefaultFiles""config.txt"
 echo "$compareSimCRUNCEPvsGFDB"                                   >> "$simFoldDefaultFiles""config.txt"   # 10
-echo "$fluxnetTransientSim"" ""$transient_simulation_start_year"  >> "$simFoldDefaultFiles""config.txt"
+echo "$fluxnetTransQLand"" ""$transient_simulation_start_year"    >> "$simFoldDefaultFiles""config.txt"
 echo "$createSoilForcFlag"                                        >> "$simFoldDefaultFiles""config.txt"
 #echo "$"                                                         >> "$simFoldDefaultFiles""config.txt"
 # pass extra info about parameter sensitivity simulations to folder

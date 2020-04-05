@@ -156,6 +156,7 @@ if [ $nSimDir -lt 105 ]; then
       ps2pdf ./pdftmp/"$count"a.ps ./pdftmp/"$count"a.pdf
     fi
   done
+  # TODO replace pdftk by qpdf
   pdftk ./pdftmp/*.pdf output ./postprocessing_all_sites.pdf
   rm -r ./pdftmp
 fi
