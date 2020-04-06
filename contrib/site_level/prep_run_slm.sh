@@ -40,7 +40,7 @@ slmModel="land"
 ##>> sites <<###########################################################################################
 ## select the site-set:
 # forcing data and site info *list.dat for all site-sets: /Net/Groups/BGI/data/Model/SLM1/input/point/ 
-# options: fluxnet fluxnet3 cruncep face manip fert craine photacc spp1685 confin
+# options: fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin
 forcingDataSet="fluxnet"
 # forcing with or without a transient (like spinup) phase before the actual simulation starts
 # options: static transient
@@ -48,6 +48,8 @@ forcingMode="static"
 # set the specific set of sites of the forcingDataSet you want to use
 #  cruncep: all cue spp
 crunSites="cue"
+#  global: all sub (all: 394 | sub: 101 sites)
+globSites="sub"
 # soil-forcing revision number
 # revision of the trunk the soil-forcing was created with (to see whats avilable, check /Net/Groups/BGI/data/Model/SLM1/input/point/"forcingDataSet"/ )
 # for static and transient soil-forcing (transient only for: fluxnet/3)
@@ -65,6 +67,7 @@ customSiteListFileName=""
 # Site-ID must be consistent with the forcingDataSet option above, i.e., fluxnet, fluxnet3, cruncep, face, manip, ...
 # you can get the Site-ID from the 1st column of the particular site-list info file in /Net/Groups/BGI/data/Model/SLM1/input/point/"forcingDataSet"/
 # examples: [FLUX/3] "DE-Hai" "FI-Hyy" "ZA-Kru"  [CRUN] "BHS_01" "HAI_01" "ILO_05"  
+#           [GLOBAL all/sub] "GLB_007" "GLB_058" "GLB_394"
 #           [FACE] "DK-AMB" "OR-ELE"  [MANIP] "ES-MaG" "ES-MaT"  [FERT] "HAR-CON_4" "HAR-HIG_4" "HAR-LOW_4" "HAR-CON_5"
 #           [CRAINE] "CRA_01" "CRA_02" "CRA_18"  [PHOTACC] "ARC_01" "MON_02" "STR_01"  [SPP_1685] "BBR" "LUE" "VES"
 #           [CONFIN] "FI-Hyy" "FI-Ken"
@@ -153,7 +156,7 @@ flag_sb_jsm_OM_sorption="F"       # ..
 sb_adsorp_scheme="eca_full"       # eca_full; eca_part (only uptake, not for adsorption); eca_none
 
 # simulation length & output
-simulation_length_number=30       # default years for forcingMode: static = 30 | transient = 115 [transient: 01.01.1901 -> 31.12.2015 without spinup!]
+simulation_length_number=30       # default years for forcingMode: static = 30 | transient = 115/118 [transient: 01.01.1901 -> 31.12.2015/18 without spinup!]
 output_interval_pool="weekly"     # timestep daily weekly monthly yearly
 output_interval_flux="weekly"     # timestep daily weekly monthly yearly
 output_start_first_day_year=1     # 1 to ... [must be lower than or equal with option: output_end_last_day_year]
@@ -214,6 +217,10 @@ while getopts ":e:f:c:m:s:r:y:b:z:n:u:h" opt; do
     "f3")
       echo "   forcingDataSet=fluxnet3 (Berkley 2015)"
       forcingDataSet="fluxnet3"
+      ;;
+    "gl")
+      echo "   forcingDataSet=global"
+      forcingDataSet="global"
       ;;
     "cr")
       echo "   forcingDataSet=cruncep"
@@ -362,6 +369,7 @@ while getopts ":e:f:c:m:s:r:y:b:z:n:u:h" opt; do
     echo "    Arguments to -f:"
     echo "       fl: FLUXNET"
     echo "       f3: FLUXNET3 (Berkley 2015)"
+    echo "       gl: GLOBAL"
     echo "       cr: CRUNCEPv7"
     echo "       fa: FACE sites"
     echo "       ma: MANIP tree and grassland sites"
@@ -512,9 +520,10 @@ fi
 return 0
 }
 # lists to validate against
-validateForcingDataSet="fluxnet fluxnet3 cruncep face manip fert craine photacc spp1685 confin"
+validateForcingDataSet="fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin"
 validateForcingMode="static transient"
 validateCrunSites="all cue spp"
+validateGlobSites="all sub"
 validateSlmModel="land plant soil canopy"
 validateBNFScheme="none fixed standard optimal resistance unlimited"
 validateMycScheme="no am ecm"
@@ -623,6 +632,7 @@ fi
 validateUserConfigValues "$forcingDataSet" "$validateForcingDataSet" "forcingDataSet"
 validateUserConfigValues "$forcingMode" "$validateForcingMode" "forcingMode"
 validateUserConfigValues "$crunSites" "$validateCrunSites" "crunSites"
+validateUserConfigValues "$globSites" "$validateGlobSites" "globSites"
 validateUserConfigValues "$customSiteList" "$validateFlags" "customSiteList"
 validateUserConfigValues "$slmModel" "$validateSlmModel" "slmModel"
 validateUserConfigValues "$queue" "$validateQueue" "queue"
@@ -676,7 +686,7 @@ if [ $paramSensitivitySim == "T" ]; then
 fi
 
 
-## site data-set: FLUXNET / CRUNCEPv7 / FACE / MANIP / ... ##
+## site data-set: FLUXNET / GLOBAL / CRUNCEPv7 / FACE / MANIP / ... ##
 case "$forcingDataSet" in
 "fluxnet")
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET2/"
@@ -685,6 +695,10 @@ case "$forcingDataSet" in
   ;;
 "fluxnet3")
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET3/"
+  siteDataObsFold="no such evaluation data"  # but this variable must contain something
+  ;;
+"global")
+  siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/GLOBAL/"
   siteDataObsFold="no such evaluation data"  # but this variable must contain something
   ;;
 "cruncep")
@@ -796,6 +810,7 @@ case "$slmModel" in
     fi
   fi
   # soil forcing availability feedback/action
+  # this also catches if there is no soil-forcing for a site-set at all
   if [ "$soilForcingAvailable" == "T" ]; then
     # soil forcing available
     echo " Running the QUINCY soil model with forcing from:"
@@ -892,6 +907,26 @@ else
     else 
       siteListFileName="flux3_all_sites_1901-2014_list.dat"
     fi
+    ;;
+  "global")
+    case "$globSites" in
+    "all")
+      if [ $forcingMode == "static" ]; then
+        siteListFileName="global_all_sites_1989-2018_list.dat"
+      else
+        siteListFileName="global_all_sites_1901-2018_list.dat"
+      fi
+      # no soil forcing for "global all" yet
+      ;;
+    "sub")
+      if [ $forcingMode == "static" ]; then
+        siteListFileName="global_sub_sites_1989-2018_list.dat"
+      else
+        siteListFileName="global_sub_sites_1901-2018_list.dat"
+      fi
+      # no soil forcing for "global sub" yet
+      ;;
+    esac
     ;;
   "cruncep")
     case "$crunSites" in
@@ -1149,6 +1184,13 @@ case "$forcingDataSet" in
   fi
   # QUINCY soil model: no specific forcing-file indentifier needed; static & transient soil-forcing are stored in individual dirs
   if [ "$slmModel" == "soil" ]; then forcingModeFileID="_"; fi
+  ;;
+"global")
+  if [ $forcingMode == "static" ]; then
+    forcingModeFileID="_s_"
+  else
+    forcingModeFileID="_t_"
+  fi
   ;;
 "cruncep")
   if [ $forcingMode == "static" ]
