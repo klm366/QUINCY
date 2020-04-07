@@ -92,7 +92,7 @@ crunSites="cue"                 # cue or spp  [spp: BBR_01 | LUE_01 | VES_01 | M
 siteName="DE-Hai"               # get the Site-ID from the 1st column of the particular "site list .dat"
                                 # examples: [FLUX/3] "DE-Hai" "FI-Hyy" "ZA-Kru"  [CRUN] "BHS_01" "HAI_01" "ILO_05" "BBR_01" 
                                 #           [GLOBAL all] "GLB_007" "GLB_058" "GLB_394"
-                                #           [FACE] "DK-AMB" "OR-ELE"  [MANIP] "ES-MaG" "ES-MaT"  [FERT] "HAR-CON_4" "HAR-HIG_4" "HAR-LOW_4" "HAR-CON_5"
+                                #           [FACE] "DK-AMB" "OR-ELE"  [MANIP] "ES-MaG" "ES-MaT"  [FERT] "HAR-CON_4" "HAR-HIG_4" "HAR-LOW_4" "HAR-CON_5" "SDA-CON" "SDA-ADD"
                                 #           [CRAINE] "CRA_01" "CRA_02" "CRA_18"  [PHOTACC] "ARC_01" "MON_02" "STR_01"  [SPP_1685] "BBR" "LUE" "VES"
                                 #           [CONFIN] "FI-Hyy" "FI-Ken"
 soil_awc_prescribe=300.0        # float !
@@ -514,7 +514,7 @@ case "$forcingDataSet" in
   allSiteInfoFile="$siteDataDirBase""$siteDataSet"manip_sites_2009-2019_list.dat
   ;;
 "fert")
-  allSiteInfoFile="$siteDataDirBase""$siteDataSet"fert_sites_1901-2015_list.dat
+  allSiteInfoFile="$siteDataDirBase""$siteDataSet"fert_sites_1901-2018_list.dat
   echo " "
   echo " Note: you are running (a) FERT site(s) using forcing 1901-2015 by default."
   ;;

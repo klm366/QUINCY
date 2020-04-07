@@ -33,31 +33,49 @@
 ## 
 #########################################################################################
 
+## info:
+##  * the FERT site set is used for two different experiments: a) N fertilization, and b) 15N pulses (site COR or CR2)
+##  * a) the site info file is created for "Site-ID"-CON sites, with the "CON" tag for control
+##    * these sites are the "base set" of sites 
+##    * manually added are/will be (by Silvia) copies of each of these sites, with tags like "-HIG" "-LOW" "-ADD" etc.
+##    * again, this script does only screate a site info file with ""-CON" basic sites
+##  * b) the COR (Cornell Uni) is used for the experiment
+##    * the 15N pulses are not added here (nor are they added with the produce_fert_site_info_file.R)
+##    * the idea is to add it at runtime in the QUINCY model, probably hardcoded specific to a site
+##    * hence the same COR site is present in this site-set two times with a different name each ("-CON" & "-15N" tags)
+##    * in addition, new forcing data for the COR site was available with April 2020, hence, 
+##      another two COR sites were added to this site set named CR2 for "COR version 2", with forcing to yr 2018
+##    * for the CR2 site two versions are created, same as for COR ("-CON" & "-15N" tags)
 
 ## library
 library(ncdf4)
 
 ## create out folder & set in/out path
-dir.create("./new_fert_transient_met_forcing", showWarnings=T, recursive=T)
-ipath1="/Net/Groups/BGI/people/szaehle/Projects/QUINCY/GenerateCRUForcing_2017/Results/"
-ipath2="/Weather/"              # relative path within each site folder
-infile_prefix='weather_dump_'
-infile_ext='.nc'
-opath="./new_fert_transient_met_forcing/"
-
-## forcing period
-startyear <- 1901
-endyear   <- 2015
+localOutDir <- "./new_fert_transient_met_forcing"
+dir.create(localOutDir, showWarnings=T, recursive=T)
+# input for all but CR2 site
+ipath1  <- "/Net/Groups/BGI/work_2/QUINCY/SLM/Data/CRUNCEP_2017_siteset_data/Results/" # copied 2020-04-07 from /Net/Groups/BGI/people/szaehle/Projects/QUINCY/GenerateCRUForcing_2017
+# input for the CR2 site
+ipath1a <- "/Net/Groups/BGI/work_2/QUINCY/SLM/Data/COR_sitedata_CR2_FERT_siteset_new_20200401"
+ipath2  <- "/Weather/"              # relative path within each site folder
+infile_prefix <- 'weather_dump_'
+infile_ext    <- '.nc'
+opath   <- paste0(localOutDir, "/")
 
 ## site info
-allSiteInfo   <- read.table("generate_fert_siteinfo_noheader.dat", stringsAsFactor=F)
+allSiteInfo   <- read.table("generate_fert_siteinfo_noheader.dat", stringsAsFactor=F, header=F, sep="")
+allsitename   <- allSiteInfo[,1]
 allsitelon    <- allSiteInfo[,2]
 allsitelat    <- allSiteInfo[,3]
-allsitename   <- allSiteInfo[,1]
 allSiteNameD  <- allSiteInfo[,23]  # detailed sites names (last column)
 allSiteInfoLN <- 0                 # row number of allSiteInfo of the current site in the below loop over all sites in the allSiteInfo
 site_list     <- allsitename
 
+## forcing period
+#  last year is 2015 by default, but 2018 for the CR2 site(s)
+startYear <- rep(1901, length(allsitename))
+lastYear  <- rep(2015, length(allsitename))
+lastYear[which(allsitename == "CR2")] <- 2018
 
 doy=ceiling(seq(1/48,365,1/48))
 hod=rep(seq(0,23.5,0.5),365)
@@ -73,24 +91,33 @@ co2y_DC14<-read.table('/Net/Groups/BGI/work_2/QUINCY/SLM/InputDataSources/Atm/De
 
 
 ## loop over all FERT sites and create forcing files
-# create variable that is TRUE only for the COR site with manipulation of 15N deposition
+#  the two COR sites use identical forcing, but one gets the name tag "-15N_" instead of "-CON_"
+#  the two CR2 sites use identical forcing, but one gets the name tag "-15N_" instead of "-CON_"
+#  to manage this, the cor15n switch is used
 cor15n <- "F"
 for (s in 1:length(site_list)) {
+
   # check for COR-15N site
-  if (site_list[s] == "COR" & allSiteNameD[s] == "15N_experiment") cor15n <- "T"
+  cor15n <- "F"
+  if (site_list[s] == "COR" & allSiteNameD[s] == "15N_experiment")      cor15n <- "T"
+  if (site_list[s] == "CR2" & allSiteNameD[s] == "15N_experiment_2018") cor15n <- "T"
   # print site name
   print(paste0("site: ", site_list[s], "  number ", s, " of ", length(site_list)))
-  # additional info for COR-15N
-  if (cor15n == "T") print("  creating the COR-15N forcing: using COR forcing data and manipulate with 15N deposition pulses")
-  # check if forcing data are available for this site
-  stat3   <- file.exists(paste0(ipath1,site_list[s],ipath2,infile_prefix,1994,infile_ext))
-  # create name of output file => adding "-CON" to site name for "control"
-  outname <- paste0(opath,site_list[s],"-CON_",startyear,"-",endyear,'.dat')
-  # output name special case COR-15N: COR site with manipulation of 15N deposition
-  if (cor15n == "T") outname <- paste0(opath,site_list[s],"-15N_",startyear,"-",endyear,'.dat')
-  # get row number of this site in allSiteInfo
-  allSiteInfoLN <- s
+  # # additional info for COR-15N
+  # if (cor15n == "T") print("  creating the COR-15N forcing: using COR forcing data and manipulate with 15N deposition pulses")
+
+  # define general inPath variable (different input path for CR2 site)
+  inPath <- paste0(ipath1, site_list[s], ipath2)
+  if (site_list[s] == "CR2") inPath <- paste0(ipath1a, ipath2)
   
+  # check if forcing data are available for this site (different path for CR2)
+  stat3   <- file.exists(paste0(inPath, infile_prefix, 1994, infile_ext))
+  # create name of output file => adding "-CON" to site name for "control"
+  outname <- paste0(opath, site_list[s], "-CON_", startYear[s], "-", lastYear[s], ".dat")
+  # output name special case COR/CR2-15N
+  if (cor15n == "T") outname <- paste0(opath, site_list[s], "-15N_", startYear[s], "-", lastYear[s], ".dat")
+  # get line number (LN) of this site in allSiteInfo
+  allSiteInfoLN <- s
   
   # if forcing data is available
   if(stat3) {
@@ -100,10 +127,10 @@ for (s in 1:length(site_list)) {
     write.table(t(cbind(header1,header2)), file=outname, append=TRUE, quote=FALSE, col.names=FALSE, row.names=FALSE, sep=' ') 
 
     # loop over years and write forcing to 'outname'
-    for (year in c(startyear:endyear)) {
+    for (year in c(startYear[s]:lastYear[s])) {
       print(c(site_list[s],year))
       # meteo data
-      fid<-nc_open(paste(ipath1,site_list[s],ipath2,infile_prefix,year,infile_ext,sep=''))
+      fid<-nc_open(paste0(inPath, infile_prefix, year, infile_ext))
        swdown<-ncvar_get(fid,"SWdown")
        lwdown<-ncvar_get(fid,"LWdown")
        tair<-ncvar_get(fid,"Tair")
@@ -114,7 +141,14 @@ for (s in 1:length(site_list)) {
        wind<-ncvar_get(fid,"Wind_N")
       nc_close(fid)
       # N deposition data
-      fid<-nc_open(paste("/Net/Groups/BGI/model/OCN/input/gridded/NDEP/CESM-CAM/ndep_",year,".nc",sep=''))
+      # ndep_YYYY.nc        available 1850-1995
+      # ndep_RCP8.5_YYYY.nc available 1996-2100  # also other RCP available
+      if (year < 1996){
+        nDepFilePref <- "ndep_"
+      }else{
+        nDepFilePref <- "ndep_RCP8.5_"
+      }
+      fid<-nc_open(paste0("/Net/Groups/BGI/model/OCN/input/gridded/NDEP/CESM-CAM/", nDepFilePref, year, ".nc"))
        lonndep<-ncvar_get(fid,'lon')
        latndep<-ncvar_get(fid,'lat')
        lonsite<-allsitelon[allSiteInfoLN]
@@ -131,15 +165,15 @@ for (s in 1:length(site_list)) {
          noy[(1:(dpm[m]*48))+sum(dpm[1:(m-1)])*48]<-rep(noy_dummy[m],dpm[m]*48)
        }
       nc_close(fid)
-      # COR-15N: 15N deposition pulse experiment
-      # add a pulse at three dates in 2007:
-      #  30 Apr 2007,  12PM midday, 120th doy
-      #  31 July 2007, 12PM midday, 212th doy
-      #  30 Oct 2007,  12PM midday, 303th doy
-      # get row number of these dates
-      ##pulse <- c(rep(NA,3))
-      ## works only when we have 15N included in the forcing files, which is currently (20190214) not the case
-      ## ... hence, the 15N pulse is calculated and added in the update_forcing() routine of the QUINCY model 
+        ## COR-15N: 15N deposition pulse experiment ##
+        # add a pulse at three dates in 2007:
+        #  30 Apr 2007,  12PM midday, 120th doy
+        #  31 July 2007, 12PM midday, 212th doy
+        #  30 Oct 2007,  12PM midday, 303th doy
+        # get row number of these dates
+        ##pulse <- c(rep(NA,3))
+        ## works only when we have 15N included in the forcing files, which is currently (20190214) not the case
+        ## ... hence, the 15N pulse is calculated and added in the update_forcing() routine of the QUINCY model 
       # P deposition data
       fid<-nc_open(paste("/Net/Groups/BGI/work_2/QUINCY/SLM/InputDataSources/P-DEP/nitrogenandphosphorus2x2annualdep.nc",sep=''))
        lonpdep<-ncvar_get(fid,'lon')
@@ -171,12 +205,6 @@ for (s in 1:length(site_list)) {
     }
   # if no forcing data is available for this site
   } else {
-    print(paste0(" The ", infile_prefix, " file for the site: ", site_list[s], " is not available."))
-    # stat2<-unlist(strsplit(stat,split=' '))[11]
-    # filestat<-unlist(strsplit(stat2,split="/"))
-    # linktarget<-filestat[length(filestat)-1]
-    # refname=paste(linktarget,"_",startyear,"-",endyear,'.dat',sep='')
-    #    print(c('linking',outname,refname))
-    #    system(paste("ln -s",refname,outname))   
+    print(paste0(" The ", infile_prefix, " file for the site: ", site_list[s], " is not available! No forcing created."))
   }
 }

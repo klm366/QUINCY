@@ -68,7 +68,7 @@ customSiteListFileName=""
 # you can get the Site-ID from the 1st column of the particular site-list info file in /Net/Groups/BGI/data/Model/SLM1/input/point/"forcingDataSet"/
 # examples: [FLUX/3] "DE-Hai" "FI-Hyy" "ZA-Kru"  [CRUN] "BHS_01" "HAI_01" "ILO_05"  
 #           [GLOBAL all/sub] "GLB_007" "GLB_058" "GLB_394"
-#           [FACE] "DK-AMB" "OR-ELE"  [MANIP] "ES-MaG" "ES-MaT"  [FERT] "HAR-CON_4" "HAR-HIG_4" "HAR-LOW_4" "HAR-CON_5"
+#           [FACE] "DK-AMB" "OR-ELE"  [MANIP] "ES-MaG" "ES-MaT"  [FERT] "HAR-CON_4" "HAR-HIG_4" "HAR-LOW_4" "HAR-CON_5" "SDA-CON" "SDA-ADD"
 #           [CRAINE] "CRA_01" "CRA_02" "CRA_18"  [PHOTACC] "ARC_01" "MON_02" "STR_01"  [SPP_1685] "BBR" "LUE" "VES"
 #           [CONFIN] "FI-Hyy" "FI-Ken"
 singleSiteName=""
@@ -977,12 +977,12 @@ else
   "fert")
     if [ $forcingMode == "static" ]
      then
-      siteListFileName="fert_sites_1901-2015_list.dat"
+      siteListFileName="fert_sites_1901-2018_list.dat"
       echo " "
       echo " Note: you are running a static simulation with (a) FERT site(s) using (transient) forcing 1901-2015 by default."
       echo " "
     else
-      siteListFileName="fert_sites_1901-2015_list.dat"
+      siteListFileName="fert_sites_1901-2018_list.dat"
     fi
     ;;
   "craine")
@@ -1213,35 +1213,38 @@ case "$forcingDataSet" in
    then
     forcingModeFileID="_2009"         # ES-MaG_2009-2017.dat & ES-MaT_2009-2017.dat
   else
-    echo " ... set forcing filename ID for manip transient"
+    echo " ... cannot set forcing filename ID for manip transient, no such forcing type available. Use static forcing."
     echo " EXIT1"
     exit 1
     forcingModeFileID="_xxxx"
   fi
   ;;
 "fert")
-  if [ $forcingMode == "static" ]
-   then
-    forcingModeFileID="_1901"
-  else
-    forcingModeFileID="_1901"
-  fi
+  forcingModeFileID="_1901"
+  # if [ $forcingMode == "static" ]
+  #  then
+  #   forcingModeFileID="_1901"
+  # else
+  #   forcingModeFileID="_1901"
+  # fi
   ;;
 "craine")
-  if [ $forcingMode == "static" ]
-   then
-    forcingModeFileID="_1901"
-  else
-    forcingModeFileID="_1901"
-  fi
+  forcingModeFileID="_1901"
+  # if [ $forcingMode == "static" ]
+  #  then
+  #   forcingModeFileID="_1901"
+  # else
+  #   forcingModeFileID="_1901"
+  # fi
   ;;
 "photacc")
-  if [ $forcingMode == "static" ]
-   then
-    forcingModeFileID="_1901"
-  else
-    forcingModeFileID="_1901"
-  fi
+  forcingModeFileID="_1901"
+  # if [ $forcingMode == "static" ]
+  #  then
+  #   forcingModeFileID="_1901"
+  # else
+  #   forcingModeFileID="_1901"
+  # fi
   ;;
 "spp1685")
   if [ $forcingMode == "static" ]
