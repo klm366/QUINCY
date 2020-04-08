@@ -67,9 +67,11 @@ header1<-c('year','doy','hour','swvis_srf_down','lw_srf_down','t_air','q_air','p
            'rain','snow','wind_air','co2_mixing_ratio','co2_dC13','co2DC14','nhx_srf_down','noy_srf_down','p_srf_down')
 header2<-c('-','-','-','Wm-2','Wm-2','K','g/kg','hPa','mm/day','mm/day','m/s','ppm','per-mill','per-mill','mg/m2/day','mg/m2/day','mg/m2/day')
 
-co2y<-read.table('/Net/Groups/BGI/model/OCN/input/gridded/CO2/GCP_co2_global.dat')
-co2y_dC13<-read.table('/Net/Groups/BGI/work_2/QUINCY/SLM/InputDataSources/Atm/delta13C_in_air_input4MIPs_GM_1850-2015_V1.txt')
-co2y_DC14<-read.table('/Net/Groups/BGI/work_2/QUINCY/SLM/InputDataSources/Atm/Delta14C_in_air_input4MIPs_SHTRNH_1850-2015_V1.txt')
+## CO2 data available until 2018
+co2y<-read.table('/Net/Groups/BGI/model/OCN/input/gridded/CO2/GCP2019_co2_global.dat')
+## CO2 isotope data available until 2018, linearly extrapolated from 2012-2015 data (script: co2_isotopes_extrapolate_to_2018.r)
+co2y_dC13<-read.table('/Net/Groups/BGI/work_2/QUINCY/SLM/InputDataSources/Atm/delta13C_in_air_input4MIPs_GM_1850-2018_extrapolated.txt')
+co2y_DC14<-read.table('/Net/Groups/BGI/work_2/QUINCY/SLM/InputDataSources/Atm/Delta14C_in_air_input4MIPs_SHTRNH_1850-2018_extrapolated.txt')
 
 ## loop over site list
 for (s in 1:length(site_list)) {
@@ -135,26 +137,23 @@ for (s in 1:length(site_list)) {
        pdep[]<-p_dummy
       nc_close(fid)
       #CO2
-      co2<-rep(co2y[co2y[,1]==year,2],length(swdown))
-      co2_dC13<-rep(co2y_dC13[(co2y_dC13[,1]-0.5)==year,2],length(swdown))
-      if(latsite>30) C14lat=2
-      if(latsite>-30&latsite<=30) C14lat=3
-      if(latsite<=-30) C14lat=4
-      co2_DC14<-rep(co2y_DC14[(co2y_DC14[,1]-0.5)==year,C14lat],length(swdown))
-      year_out<-rep(year,length(swdown))
+      co2       <-rep(co2y[co2y[,1]==year,2], length(swdown))
+      co2_dC13  <-rep(co2y_dC13[(co2y_dC13[,1]-0.5)==year,2], length(swdown))
+      # define column number 2-4 in co2y_DC14 input file depending on latitude
+      if(latsite >   30) C14lat=2
+      if(latsite >  -30 & latsite <= 30) C14lat=3
+      if(latsite <= -30) C14lat=4
+      co2_DC14  <- rep(co2y_DC14[(co2y_DC14[,1]-0.5) == year, C14lat], length(swdown))
+      year_out  <- rep(year, length(swdown))
       # combine into one object
       forcing<-cbind(year_out,doy,hod,swdown,lwdown,tair,qair,press,rain,snow,wind,co2,co2_dC13,co2_DC14,nhx,noy,pdep)
       # write to file, append=T
       write.table(format(round(forcing,digits=4),nsmall=1),file=outname,append=TRUE,quote=FALSE,col.names=FALSE,
               row.names=FALSE,sep=' ')
     }
+  # if no forcing data is available for this site
   } else {
-    stat2<-unlist(strsplit(stat,split=' '))[11]
-    filestat<-unlist(strsplit(stat2,split="/"))
-    linktarget<-filestat[length(filestat)-1]
-    refname=paste0(linktarget,"_",startyear,"-",endyear,'.dat')
-       print(c('linking',outname,refname))
-       system(paste0("ln -s",refname,outname))   
+    print(paste0(" The ", infile_prefix, " file for the site: ", site_list[s], " is not available! No forcing created."))
   }
 }
 

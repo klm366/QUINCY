@@ -85,10 +85,11 @@ header1<-c('year','doy','hour','swvis_srf_down','lw_srf_down','t_air','q_air','p
            'rain','snow','wind_air','co2_mixing_ratio','co2_dC13','co2DC14','nhx_srf_down','noy_srf_down','p_srf_down')
 header2<-c('-','-','-','Wm-2','Wm-2','K','g/kg','hPa','mm/day','mm/day','m/s','ppm','per-mill','per-mill','mg/m2/day','mg/m2/day','mg/m2/day')
 
-co2y<-read.table('/Net/Groups/BGI/model/OCN/input/gridded/CO2/GCP_co2_global.dat')
-co2y_dC13<-read.table('/Net/Groups/BGI/work_2/QUINCY/SLM/InputDataSources/Atm/delta13C_in_air_input4MIPs_GM_1850-2015_V1.txt')
-co2y_DC14<-read.table('/Net/Groups/BGI/work_2/QUINCY/SLM/InputDataSources/Atm/Delta14C_in_air_input4MIPs_SHTRNH_1850-2015_V1.txt')
-
+## CO2 data available until 2018
+co2y<-read.table('/Net/Groups/BGI/model/OCN/input/gridded/CO2/GCP2019_co2_global.dat')
+## CO2 isotope data available until 2018, linearly extrapolated from 2012-2015 data (script: co2_isotopes_extrapolate_to_2018.r)
+co2y_dC13<-read.table('/Net/Groups/BGI/work_2/QUINCY/SLM/InputDataSources/Atm/delta13C_in_air_input4MIPs_GM_1850-2018_extrapolated.txt')
+co2y_DC14<-read.table('/Net/Groups/BGI/work_2/QUINCY/SLM/InputDataSources/Atm/Delta14C_in_air_input4MIPs_SHTRNH_1850-2018_extrapolated.txt')
 
 ## loop over all FERT sites and create forcing files
 #  the two COR sites use identical forcing, but one gets the name tag "-15N_" instead of "-CON_"
@@ -175,7 +176,7 @@ for (s in 1:length(site_list)) {
         ## works only when we have 15N included in the forcing files, which is currently (20190214) not the case
         ## ... hence, the 15N pulse is calculated and added in the update_forcing() routine of the QUINCY model 
       # P deposition data
-      fid<-nc_open(paste("/Net/Groups/BGI/work_2/QUINCY/SLM/InputDataSources/P-DEP/nitrogenandphosphorus2x2annualdep.nc",sep=''))
+      fid<-nc_open(paste0("/Net/Groups/BGI/work_2/QUINCY/SLM/InputDataSources/P-DEP/nitrogenandphosphorus2x2annualdep.nc"))
        lonpdep<-ncvar_get(fid,'lon')
        latpdep<-ncvar_get(fid,'lat')
        lonsite<-allsitelon[allSiteInfoLN]
