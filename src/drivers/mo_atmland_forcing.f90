@@ -409,13 +409,17 @@ CONTAINS
       wind_10m(:)             = wind_air_r
       press_srf(:)            = press_srf_r
 
+      cos_zenith_angle(:)     = calc_solar_angle(hgrid%lat(1,1), hgrid%lon(1,1), time)
+      swnir_srf_down(:)       = (1._wp - frac_vis_swtot_srf ) * swvis_srf_down_r
+      swvis_srf_down(:)       = frac_vis_swtot_srf * swvis_srf_down_r
+      swpar_srf_down(:)       = frac_par_swvis_srf * swvis_srf_down(:) 
+
       lw_srf_down(:)          = lw_srf_down_r
-      swvis_srf_down(:)       = swvis_srf_down_r
       cos_zenith_angle(:)     = calc_solar_angle(hgrid%lat(1,1), hgrid%lon(1,1), time) 
       swnir_srf_down(:)       = (1._wp - frac_vis_swtot_srf ) * swvis_srf_down_r 
-      swvis_srf_down_r        = frac_vis_swtot_srf * swvis_srf_down_r 
-      swpar_srf_down(:)       = frac_par_swvis_srf * swvis_srf_down_r
-      swpar_fdiffuse(:)       = calc_sw_fdiffuse(swnir_srf_down(:) + swvis_srf_down_r, sw_toa_down(:), cos_zenith_angle(:)) ! elemental function: calc_sw_fdiffuse()
+      swvis_srf_down(:)       = frac_vis_swtot_srf * swvis_srf_down_r 
+      swpar_srf_down(:)       = frac_par_swvis_srf * swvis_srf_down(:)
+      swpar_fdiffuse(:)       = calc_sw_fdiffuse(swnir_srf_down(:) + swvis_srf_down(:), sw_toa_down(:), cos_zenith_angle(:)) ! elemental function: calc_sw_fdiffuse()
       
       !! CO2
       ! save the values of the first timestep 
