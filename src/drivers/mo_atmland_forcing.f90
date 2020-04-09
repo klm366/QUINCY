@@ -409,11 +409,6 @@ CONTAINS
       wind_10m(:)             = wind_air_r
       press_srf(:)            = press_srf_r
 
-      cos_zenith_angle(:)     = calc_solar_angle(hgrid%lat(1,1), hgrid%lon(1,1), time)
-      swnir_srf_down(:)       = (1._wp - frac_vis_swtot_srf ) * swvis_srf_down_r
-      swvis_srf_down(:)       = frac_vis_swtot_srf * swvis_srf_down_r
-      swpar_srf_down(:)       = frac_par_swvis_srf * swvis_srf_down(:) 
-
       lw_srf_down(:)          = lw_srf_down_r
       cos_zenith_angle(:)     = calc_solar_angle(hgrid%lat(1,1), hgrid%lon(1,1), time) 
       swnir_srf_down(:)       = (1._wp - frac_vis_swtot_srf ) * swvis_srf_down_r 
