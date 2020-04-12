@@ -28,7 +28,7 @@
 ## note: allsiteinfo is ./generate_global_all_site_list.dat  (columns: Site-ID lon lat PFT start end)
 ## 
 ## output may be generated per default in:
-##  ./new_gobal_static_met_forcing/
+##  ./new_global_static_met_forcing/
 ##  output file contains "_s_" as identifier for static forcing
 ## 
 #########################################################################################
@@ -38,7 +38,7 @@
 library(ncdf4)
 
 ## create out folder & set in/out path
-localOutDir <- "./new_gobal_static_met_forcing"
+localOutDir <- "./new_global_static_met_forcing"
 dir.create(localOutDir, showWarnings=T, recursive=T)
 ipath1 <- "/Net/Groups/BGI/work_2/QUINCY/SLM/Data/GLOBAL_siteset_data/"
 ipath2 <- "/Weather/"              # relative path within each site folder

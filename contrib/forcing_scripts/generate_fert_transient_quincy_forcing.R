@@ -56,7 +56,7 @@ dir.create(localOutDir, showWarnings=T, recursive=T)
 # input for all but CR2 site
 ipath1  <- "/Net/Groups/BGI/work_2/QUINCY/SLM/Data/CRUNCEP_2017_siteset_data/Results/" # copied 2020-04-07 from /Net/Groups/BGI/people/szaehle/Projects/QUINCY/GenerateCRUForcing_2017
 # input for the CR2 site
-ipath1a <- "/Net/Groups/BGI/work_2/QUINCY/SLM/Data/COR_sitedata_CR2_FERT_siteset_new_20200401"
+ipath1a <- "/Net/Groups/BGI/work_2/QUINCY/SLM/Data/COR_sitedata_CR2_FERT_siteset_new_20200410"
 ipath2  <- "/Weather/"              # relative path within each site folder
 infile_prefix <- 'weather_dump_'
 infile_ext    <- '.nc'
