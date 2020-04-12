@@ -516,7 +516,7 @@ case "$forcingDataSet" in
 "fert")
   allSiteInfoFile="$siteDataDirBase""$siteDataSet"fert_sites_1901-2018_list.dat
   echo " "
-  echo " Note: you are running (a) FERT site(s) using forcing 1901-2015 by default."
+  echo " Note: you are running (a) FERT site(s) using forcing 1901-2015 by default (CR2* site 1901-2018)."
   ;;
 "craine")
   allSiteInfoFile="$siteDataDirBase""$siteDataSet"craine_sites_1901-2015.dat
