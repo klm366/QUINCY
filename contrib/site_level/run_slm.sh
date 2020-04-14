@@ -59,12 +59,12 @@ siteDataFoldForcing=$(sed -n 2p "$simFoldDefaultFiles""config.txt")   # folder a
 slmModel=$(sed -n 3p "$simFoldDefaultFiles""config.txt")
 forcingDataSet=$(sed -n 4p "$simFoldDefaultFiles""config.txt")
 forcingModeFileID=$(sed -n 5p "$simFoldDefaultFiles""config.txt")
-specialFluxnetOutput=$(sed -n 6p "$simFoldDefaultFiles""config.txt")                                  # T/F
+fluxnetDiagnosticsSim=$(sed -n 6p "$simFoldDefaultFiles""config.txt")                                 # T/F (in prep_run_slm.sh it is $specialFluxnetOutput)
 siteDataObsFold=$(sed -n 7p "$simFoldDefaultFiles""config.txt")
 useSiteSpecificAWC=$(sed -n 8p "$simFoldDefaultFiles""config.txt")                                    # T/F
 doParamSensitivitySim=$(sed -n 9p "$simFoldDefaultFiles""config.txt" | awk '{print $1}')              # T/F
 # info: $compareSimCRUNCEPvsGFDB T/F is saved at line 10 but not needed here; only for the cleanup_slm_hpc_run.sh
-fluxnetTransQLand=$(sed -n 11p "$simFoldDefaultFiles""config.txt" | awk '{print $1}')               # T/F
+fluxnetTransSimLand=$(sed -n 11p "$simFoldDefaultFiles""config.txt" | awk '{print $1}')               # T/F
 transient_simulation_start_year=$(sed -n 11p "$simFoldDefaultFiles""config.txt" | awk '{print $2}')   # year at which transient simulation starts (default 1901)
 createSoilForcFlag=$(sed -n 12p "$simFoldDefaultFiles""config.txt")                                   # T/F
 
@@ -167,7 +167,7 @@ cp "$simFoldDefaultFiles""$slmLctlib"   ./
 cp "$simFoldDefaultFiles""$slmBinary"   ./
 cp "$simFoldDefaultFiles""$slmRscript"  ./
 # special fluxnet-output files (only if not used for soil forcing creation)
-if [ $specialFluxnetOutput == "T" ] && [ "$createSoilForcFlag" == "F" ] && [ "$slmModel" == "land" ]; then
+if [ $fluxnetDiagnosticsSim == "T" ] && [ "$createSoilForcFlag" == "F" ] && [ "$slmModel" == "land" ]; then
    cp "$simFoldDefaultFiles""$slmRscript4fluxfile"  ./
    cp "$simFoldDefaultFiles""$slmRscript4fluxdiag"  ./
    cp "$siteDataObsFold""$(awk '{print $1}' <<< "$siteData")"*.nc ./obs.nc
@@ -287,33 +287,44 @@ changeNamelistValue qmax_org_fine_particle  "$(awk '{print $27}' <<< "$siteData"
 if [ $useSiteSpecificAWC == "T" ]; then
    changeNamelistValue soil_awc_prescribe "$(awk '{print $11}' <<< "$siteData")" 
 fi
-# special fluxnet output #
+
+## fluxnet transient simulation (not QUINCY soil) ##
+#  (or fluxnet diagnostics simulation)
+#  start year and last year of static forcing is read from site-info-file
+#  simulation length of transient simulation (after spinup) is set to the "last year of forcing"
 # calc forcing period length for namelist - needed also for soil forcing creation
-if [ $specialFluxnetOutput == "T" ]; then
-  # startyear
-  year1=$(awk '{print $5}' <<< "$siteData")
-  # in case of transient simulations: get startyear from "site-info file for static simulations"
-  if [ $fluxnetTransQLand == "T" ]; then
-    if [ $forcingDataSet == "fluxnet" ]; then
-      year1=$(grep "$forcingSiteFileID" "/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET2/flux_all_sites_1995-2006_list.dat" | awk '{print $5}')
-    elif [ $forcingDataSet == "fluxnet3" ]; then
-      year1=$(grep "$forcingSiteFileID" "/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET3/flux3_all_sites_1991-2014_list.dat" | awk '{print $5}')
-    fi
+if [ $fluxnetTransSimLand == "T" ]; then
+  # start & last forcing year | FLUXNET2/3 site-set
+  if [ $forcingDataSet == "fluxnet" ]; then
+    yearForcStart=$(grep "$forcingSiteFileID" "/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET2/flux_all_sites_1995-2006_list.dat" | awk '{print $5}')
+    yearForcLast=$(grep "$forcingSiteFileID" "/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET2/flux_all_sites_1995-2006_list.dat" | awk '{print $6}')
+  elif [ $forcingDataSet == "fluxnet3" ]; then
+    yearForcStart=$(grep "$forcingSiteFileID" "/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET3/flux3_all_sites_1991-2014_list.dat" | awk '{print $5}')
+    yearForcLast=$(grep "$forcingSiteFileID" "/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET3/flux3_all_sites_1991-2014_list.dat" | awk '{print $6}')
   fi
-  # lastyear
-  year2=$(awk '{print $6}' <<< "$siteData")
-  # period
-  forcingPeriodLength=$(($year2-$year1+1))
-  changeNamelistValue fluxnet_output_length "$forcingPeriodLength"
-fi
-# transient simulations with fluxnet sites (not QUINCY soil model)#
-if [ $fluxnetTransQLand == "T" ]; then
-  lastDataYearSiteSpecific="$(awk '{print $6}' <<< "$siteData")"
-  simulationLengthSiteSpecific=$((lastDataYearSiteSpecific - transient_simulation_start_year + 1))
+  # test if transient simulation starts before or at the year static forcing starts
+  if [ "$transient_simulation_start_year" -gt "$yearForcStart" ]; then
+    echo " The start of the transient simulation was set after the static forcing (last full forcing period) starts. This does not work."
+    echo " Correcting the start of the transient simulation to the latest year possible: ""$yearForcStart"
+    transient_simulation_start_year="$yearForcStart"
+  fi
+  # length of transient simulation
+  # start year of transient simulation usually defaults to 1901 ($transient_simulation_start_year)
+  simulationLengthSiteSpecific=$((yearForcLast - transient_simulation_start_year + 1))
+  # modify namelist (site-specific)
+  # namelist options: static forcing year start & last | transient simulation length [yr] | transient simulation output last year 
+  changeNamelistValue fluxnet_static_forc_start_yr "$yearForcStart"
+  changeNamelistValue fluxnet_static_forc_last_yr "$yearForcLast"
   changeNamelistValue simulation_length_number "$simulationLengthSiteSpecific"
   changeNamelistValue output_end_last_day_year "$simulationLengthSiteSpecific"
+  # output info to the simulation output file created by the queueing system at the cluster
+  echo " ## fluxnet transient simulation ##"
+  echo " Fluxnet diagnostics simulation (with extra output): ""$fluxnetDiagnosticsSim"
+  echo " Start year of transient simulation: ""$transient_simulation_start_year"
+  echo " Transient simulation length (years): ""$simulationLengthSiteSpecific"
+  echo " Start- and Last-Year of the last full forcing period: ""$yearForcStart"" : ""$yearForcLast"
+  echo " "
 fi
-
 
 ## manipulate the parameter_slm.list if parameter sensitivity simulations should be done ##
 if [ $doParamSensitivitySim == "T" ]; then
@@ -411,7 +422,7 @@ Rscript ./"$slmRscript"
 sync
 
 # fluxnet diagnostics simulations finished: run two R scripts for comparing simulation with empirical data
-if [ $specialFluxnetOutput == "T" ] && [ "$createSoilForcFlag" == "F" ] && [ "$slmModel" == "land" ]; then 
+if [ $fluxnetDiagnosticsSim == "T" ] && [ "$createSoilForcFlag" == "F" ] && [ "$slmModel" == "land" ]; then 
    Rscript ./"$slmRscript4fluxfile" $(awk '{print $2}' <<< "$siteData") $(awk '{print $3}' <<< "$siteData") $(awk '{print $5}' <<< "$siteData")
    Rscript ./"$slmRscript4fluxdiag" $(awk '{print $5}' <<< "$siteData") $(awk '{print $6}' <<< "$siteData")
 fi
@@ -421,7 +432,7 @@ rm ./*.dat                  #  forcing file(s) (climate.dat for SLM land)
 rm ./"$slmRscript"          #  R script for postprocessing
 rm ./"$slmBinary"           #  the binary
 # fluxnet diagnostics simulations: remove also the additional R scripts
-if [ $specialFluxnetOutput == "T" ] && [ "$createSoilForcFlag" == "F" ] && [ "$slmModel" == "land" ]; then 
+if [ $fluxnetDiagnosticsSim == "T" ] && [ "$createSoilForcFlag" == "F" ] && [ "$slmModel" == "land" ]; then 
   rm ./"$slmRscript4fluxfile"
   rm ./"$slmRscript4fluxdiag"
 fi
@@ -443,7 +454,7 @@ if [ $doParamSensitivitySim == "T" ]; then
   mv ./"$slmParameterList"  ./input
 fi
 # fluxnet diagnostics simulations: move the additional output/postprocessing files created
-if [ $specialFluxnetOutput == "T" ] && [ "$createSoilForcFlag" == "F" ] && [ "$slmModel" == "land" ]; then 
+if [ $fluxnetDiagnosticsSim == "T" ] && [ "$createSoilForcFlag" == "F" ] && [ "$slmModel" == "land" ]; then 
   mv ./output/summary*      ./postprocessing
   mv ./output/statistics*   ./postprocessing
   mv ./*.nc                 ./output 

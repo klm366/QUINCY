@@ -75,10 +75,10 @@ singleSiteName=""
 
 
 ##>> special runs <<####################################################################################
-##(1) fluxnet/3 diagnostics output 
-# run Fluxnet/3 simulations creating timestep output for the last full forcing period within the simulation runtime 'simulation_length_number'
+##(1) fluxnet/3 diagnostics simulation  (namelist: fluxnet_diagnostics_sim)
+# run a transient Fluxnet/3 simulations creating timestep output for the last full forcing period at the end of the transient simulation
 # in addition output is created at the interval 'output_interval_pool' (must not be "timestep") from 'output_start_...' to 'output_end_...'
-# T (True) or F (False) [large caps]
+# T (True) or F (False)
 # when set to "T" simulations and extra scripts will be run by the run.slm.sh for each of the fluxnet/3 sites you specify above (i.e., all sites, customSiteList, one site: singleSiteName)
 # scripts are: convert_slm2FLUXNET.R & generate_FLUXNET_diagnostics.R
 specialFluxnetOutput="F"
@@ -87,7 +87,7 @@ specialFluxnetOutput="F"
 # compare simulated model results of CRUNCEP sites with Global Forest Data Base data (/Net/Groups/BGI/data/Model/SLM1/evaluation/point/GFDB/global_forest_database_21092016.csv)
 # T (True) or F (False) [large caps]
 # when set to "T" options are set to: paramSensitivitySim="F", specialFluxnetOutput="F"
-# output is created from 'output_start_...' to 'output_end_...' (typically 1986 to 2015), but see the output_interval_*_spinup options
+# output might typically be created for 30 years, 1986 to 2015 ('output_start_...' to 'output_end_...')
 # the output period may be set to output_interval_pool/flux="daily" so that the automatic model-data comparison works
 # the cleanup_slm_hpc_run.sh starts the R scripts: sim_cruncep_vs_gfdb-process_daily.R & sim_cruncep_vs_gfdb-create_figs.R & sim_cruncep_all_vs_gfdb-create_figs.R
 # you can run simulations for the site-sets 'all' and 'cue' CRUNCEPv7, or for only some/one site(s) of it (use customSiteList="F/T"; or singleSiteName="Site-ID")
@@ -102,7 +102,7 @@ spinupLengthGFDB=500
 paramSensitivitySim="F"
 # you can give absolute values ("F") or proportional changes within range [0 < x < 2] ("T")
 paramChangesProportional="F"
-# please provide the Site-ID   (see examples in the three lines above the option "singleSiteName" ~ line 61)
+# please provide the Site-ID   (see examples in the lines above the option "singleSiteName")
 paramSensitivitySiteName="DE-Hai"
 
 
@@ -1125,6 +1125,20 @@ if [ $forcingMode == "transient" ] && [ "$slmModel" != "soil" ]; then
     transient_spinup_end_year=$((transient_spinup_start_year + 29))
     echo " The new (corrected) value of transient_spinup_end_year is ""$transient_spinup_end_year"" setting the period length to the default of 30 years."
   fi
+  ## fluxnet transient simulation (all QUINCY models but soil)
+  #  a transient simulation with fluxnet forcing does always end after the last year of forcing available (which is site specific)
+  #  (in addition to a "simple transient simulation" a "fluxnet diagnostics simulation" creates timestep-output for the last full forcing period
+  #   and runs only with QUINCY land and starts two R scripts per site that compare model results with measured data)
+  #  note: actual simulation length 1901 to x varies with the site, 
+  #        after spinup the simulation starts 1901 and ends after the last year of (static) forcing data available
+  #        this setting is done per site in the run_slm.sh (modifying the namelist)
+  fluxnetTransSimLand="F"
+  if [ $forcingDataSet == "fluxnet" ] || [ $forcingDataSet == "fluxnet3" ]; then
+    echo " You started a transient simulation with QUINCY ""$slmModel"" and fluxnet forcing: ""$forcingDataSet"
+    echo " Note: after spinup the simulation starts 1901 and ends after the last year of (static) forcing data available (which is site specific)."
+    echo " Hence, the actual simulation length may vary with the fluxnet sites."
+    fluxnetTransSimLand="T"
+  fi
 # transient & QUINCY soil model
 elif [ $forcingMode == "transient" ] && [ "$slmModel" == "soil" ]; then
   echo " "
@@ -1141,29 +1155,6 @@ else
   transient_spinup_years=500
   transient_simulation_start_year=1901
 fi
-
-
-## transient forcing and cruncep vs gfdb
-if [ $compareSimCRUNCEPvsGFDB == "T" ] &&  [ $forcingMode == "transient" ]; then
-  let startYearTransOut=transient_simulation_start_year+output_start_first_day_year-1
-  echo " The comparison will be based on daily SLM output of "$(($output_end_last_day_year - $output_start_first_day_year + 1))" years starting in year ""$startYearTransOut"" (transient forcing mode)."  
-fi  
-  
-
-## transient forcing and fluxnet simulation with 
-# note: actual simulation length 1901 to x varies with the site, because the available site data does start at diff years and has different lengths
-#       this is dealt with in run_slm.sh
-fluxnetTransQLand="F"
-if [ $forcingMode == "transient" ] && [ "$slmModel" != "soil" ]; then
-  if [ $forcingDataSet == "fluxnet" ] || [ $forcingDataSet == "fluxnet3" ]; then
-    echo " You started a transient simulation with QUINCY ""$slmModel"" and fluxnet forcing: ""$forcingDataSet"
-    echo " Note: the simulation (starting in 1901 after the spinup) ends with the last year of data available for the particular site."
-    echo " Hence, the actual simulation length may vary with the fluxnet sites."
-    echo " You set the simulation length to: ""$simulation_length_number"" starting in 1901. This may change for most sites."
-    fluxnetTransQLand="T"
-  fi
-fi
-
 
 ## an identifier (additional to siteName) for static and transient forcing files -> passed to run_slm.sh (via config file) ##
 case "$forcingDataSet" in
@@ -1345,6 +1336,11 @@ if [ $specialFluxnetOutput == "T" ]; then
     echo "EXIT! The fluxnet diagnostics simulations should only run with the QUINCY land model, not the ""$slmModel"" model."
     rm -r "$simFold"  # deleting the already created simulation folder
     exit 1
+  fi
+  # check transient simulation
+  if [ "$forcingMode" == "static" ]; then
+    echo " Forcing mode need to be transient for fluxnet diagnostics simulations. Setting it to transient now."
+    forcingMode="transient"
   fi
   # message to screen
   echo " "
@@ -1532,7 +1528,7 @@ cp "$slmNamelist"               "$simFoldDefaultFiles"
 cp "$slmLctlib"                 "$simFoldDefaultFiles"
 cp "$slmRscript"                "$simFoldDefaultFiles"
 cp "$slmDefOutOverviewScript"   "$simFoldDefaultFiles"
-if [ $specialFluxnetOutput == "T" ]; then 
+if [ $specialFluxnetOutput == "T" ]; then  # fluxnet diagnostics simulation
   cp "$slmRscript4fluxfile"       "$simFoldDefaultFiles"
   cp "$slmRscript4fluxdiag"       "$simFoldDefaultFiles"
   cp "$slmRscript4fluxBarPlots"   "$simFoldDefaultFiles"
@@ -1647,9 +1643,9 @@ if [ $flag_sb_prescribe_po4 == T ]
 fi
 if [ "$specialFluxnetOutput" == "T" ]
   then
-    changeNamelistValue fluxnet_output .TRUE.
+    changeNamelistValue fluxnet_diagnostics_sim .TRUE.
   else
-    changeNamelistValue fluxnet_output .FALSE.
+    changeNamelistValue fluxnet_diagnostics_sim .FALSE.
 fi
 if [ $paramSensitivitySim == T ]
   then
@@ -1766,12 +1762,12 @@ echo "$siteDataFoldForcing"                                       >> "$simFoldDe
 echo "$slmModel"                                                  >> "$simFoldDefaultFiles""config.txt"
 echo "$forcingDataSet"                                            >> "$simFoldDefaultFiles""config.txt"
 echo "$forcingModeFileID"                                         >> "$simFoldDefaultFiles""config.txt"   # 5
-echo "$specialFluxnetOutput"                                      >> "$simFoldDefaultFiles""config.txt"
+echo "$specialFluxnetOutput"                                      >> "$simFoldDefaultFiles""config.txt"       # fluxnet diagnostics simulation
 echo "$siteDataObsFold"                                           >> "$simFoldDefaultFiles""config.txt"
 echo "$useSiteSpecificAWC"                                        >> "$simFoldDefaultFiles""config.txt"
 echo "$paramSensitivitySim"" ""$simParamSensiFiles"               >> "$simFoldDefaultFiles""config.txt"
 echo "$compareSimCRUNCEPvsGFDB"                                   >> "$simFoldDefaultFiles""config.txt"   # 10
-echo "$fluxnetTransQLand"" ""$transient_simulation_start_year"    >> "$simFoldDefaultFiles""config.txt"
+echo "$fluxnetTransSimLand"" ""$transient_simulation_start_year"  >> "$simFoldDefaultFiles""config.txt"
 echo "$createSoilForcFlag"                                        >> "$simFoldDefaultFiles""config.txt"
 #echo "$"                                                         >> "$simFoldDefaultFiles""config.txt"
 # pass extra info about parameter sensitivity simulations to folder

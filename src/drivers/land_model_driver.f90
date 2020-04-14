@@ -38,7 +38,7 @@ PROGRAM land_model_driver
   USE mo_jsb_model_init,          ONLY: jsbach_setup_grid, &      ! interface to e.g. setup_grid_standalone
                                         quincy_init, &            ! JSBACH4: jsbach_init
                                         time_day, time_year, ntimestep, itimestep, timestep_prop_day, &
-                                        fluxnet_output_start, fluxnet_output_stop, fluxnet_output_status
+                                        fluxnet_diagnostics_sim_state
   USE mo_jsb_class,               ONLY: get_model
   USE mo_jsb_model_class,         ONLY: t_jsb_model
   USE mo_jsb_base,                ONLY: setup_model_vgrid_procconf, quincy_proc_parameter_init, jsbach_setup_tiles
@@ -65,6 +65,7 @@ PROGRAM land_model_driver
   !! Local variables
   !! 
   LOGICAL       :: l_forcing                          ! IF .TRUE. THEN run forcing routines (e.g. update_forcing(), update_a2l(), update_l2a())
+  INTEGER       :: first_timestep                     ! number of the first timestep simulated in the below DO loop
   INTEGER       :: transient_spinup_itimestep_period  ! count the number of timesteps covering one repeated spinup period
   INTEGER       :: iblk, nproma, ics, ice, nc         !< *slmtmp may be an input from JSBACH4 later in SLM dev
   INTEGER       :: nproca                             ! number of processors for jsbach
@@ -158,6 +159,10 @@ PROGRAM land_model_driver
   TYPE(t_jsb_model)         , POINTER :: model  !< local pointer to model
   CLASS(t_jsb_tile_abstract), POINTER :: tile   !< local data structure for dynamic vegetation and soil variables
                                                 !! in jsbach4 tile is created in mo_jsb_model_usecases
+  PRINT*," "
+  PRINT*,"#########################"
+  PRINT*," Start QUINCY model Init "
+  
   !! 1.1  define default values
   nproca   = 1
   nprocb   = 1
@@ -284,9 +289,10 @@ PROGRAM land_model_driver
   model%config%l_transient_spinup                = .FALSE.
   model%config%l_transient_spinup_rewind_forcing = .FALSE.
   model%config%l_static_forcing_mode             = .FALSE.
-  itimestep                         = 0         ! default start of time loop
+  itimestep                         = 0             ! default start of time loop
+  first_timestep                    = itimestep + 1 ! the first timestep in the below time loop is "itimestep + 1"
   transient_spinup_itimestep_period = 0  
-  transient_spinup_timesteps        = 0         ! is used only during l_transient_spinup
+  transient_spinup_timesteps        = 0             ! is used only during l_transient_spinup
   ! set simulation values
   IF ( TRIM(forcing_options%forcing_mode) == "static" ) THEN
     model%config%l_static_forcing_mode     = .TRUE.
@@ -299,6 +305,7 @@ PROGRAM land_model_driver
     output_interval_pool_act          = output_interval_pool_spinup
     ! number of spinup timesteps
     itimestep                         = itimestep - forcing_options%transient_spinup_timesteps_all
+    first_timestep                    = itimestep + 1             ! the first timestep in the below time loop is "itimestep + 1"
     transient_spinup_timesteps        = itimestep * (-1.0_wp)
     ! init spinup period counter
     transient_spinup_itimestep_period = 0
@@ -338,10 +345,18 @@ PROGRAM land_model_driver
   !! 
   !! Time loop calling the land model interface
   !! 
+  PRINT*," "
+  PRINT*," Start QUINCY model Simulation"
+  PRINT*," timeloop from timestep", itimestep + 1, "to", ntimestep
   DO
-    IF (itimestep .GT. ntimestep) EXIT
-    
-    !! 5.1 advance simulation-timer and check timer for new year (year counter)
+    ! exits the DO loop after completing the timestep with "itimestep == ntimestep"
+    IF (itimestep == ntimestep) EXIT
+
+    !! 5.1 advance timestep of this loop
+    !! init itimestep with 0, the timestep 1 means running from 0 to 1, equally to time_day
+    itimestep = itimestep + 1   ! increment DO loop counter
+        
+    !! 5.2 advance simulation-timer and check timer for new year (year counter)
     !! 
     !! for timing data of the forcing input see forcing_options\%forcing_*
     !!
@@ -355,12 +370,6 @@ PROGRAM land_model_driver
       time_day  = time_day - one_year   ! largest value of time ~ 365; see mo_jsb_math_constants
       time_year = time_year + 1
     END IF
-
-
-    !! 5.2 advance timestep of this loop
-    !! init itimestep with 0, the timestep 1 means running from 0 to 1, equally to time_day (sec 4.1)
-    itimestep = itimestep + 1   ! increment DO loop counter
-
 
     !! 5.3 control for transient forcing_mode
     !! 
@@ -394,29 +403,125 @@ PROGRAM land_model_driver
       END IF
     END IF
 
+    !! 5.4 set orbital parameters and update time-variant forcing
+    !!
+    !! this function also reads the "forcing year & doy & hour" into the forcing_options object \n
+    !! l_forcing is set in init_slm() depending on the specific SLM model
+    !! 
+    IF (l_forcing) THEN
+      CALL update_forcing( &
+        tile      , & ! necessary for soil: veg%litterfall vegsoil%moisture
+        ics       , &
+        ice       , &
+        nc        , &
+        iblk      , &
+        itimestep , &
+        time_day  , & 
+        !! forcing (read from file and passed to a2l memory via the land_model_interface)
+        !! in update_forcing() defined as: REAL(wp), OPTIONAL, INTENT(out) :: VAR(:)  ! assumed shape
+        t_air                   = t_air(:)              , &
+        q_air                   = q_air(:)              , &
+        rain                    = rain(:)               , &
+        snow                    = snow(:)               , &
+        wind_air                = wind_air(:)           , &
+        wind_10m                = wind_10m(:)           , &
+        lw_srf_down             = lw_srf_down(:)        , &
+        swvis_srf_down          = swvis_srf_down(:)     , &
+        swnir_srf_down          = swnir_srf_down(:)     , &
+        swpar_srf_down          = swpar_srf_down(:)     , &
+        swpar_fdiffuse          = swpar_fdiffuse(:)     , &
+        press_srf               = press_srf(:)          , &
+        drag_srf                = drag_srf(:)           , &
+        t_acoef                 = t_acoef(:)            , &
+        t_bcoef                 = t_bcoef(:)            , &
+        q_acoef                 = q_acoef(:)            , &
+        q_bcoef                 = q_bcoef(:)            , &
+        pch                     = pch(:)                , &
+        cos_zenith_angle        = cos_zenith_angle(:)   , &
+        co2_mixing_ratio        = co2_mixing_ratio(:)     , &
+        co2_mixing_ratio_C13    = co2_mixing_ratio_C13(:) , &
+        co2_mixing_ratio_C14    = co2_mixing_ratio_C14(:) , &
+        ga                      = ga(:)                   , &
+        nhx_deposition          = nhx_deposition(:)     , &
+        noy_deposition          = noy_deposition(:)     , &
+        nhx_n15_deposition      = nhx_n15_deposition(:) , &
+        noy_n15_deposition      = noy_n15_deposition(:) , &
+        p_deposition            = p_deposition(:)       , &
+        ! For lakes:
+        albedo_lwtr             = albedo_lwtr(:)        , &
+        drag_wtr                = drag_wtr(:)           , &
+        drag_ice                = drag_ice(:)           , &
+        t_acoef_wtr             = t_acoef_wtr(:)        , &
+        t_bcoef_wtr             = t_bcoef_wtr(:)        , &
+        q_acoef_wtr             = q_acoef_wtr(:)        , &
+        q_bcoef_wtr             = q_bcoef_wtr(:)        , &
+        t_acoef_ice             = t_acoef_ice(:)        , &
+        t_bcoef_ice             = t_bcoef_ice(:)        , &
+        q_acoef_ice             = q_acoef_ice(:)        , &
+        q_bcoef_ice             = q_bcoef_ice(:)          &
+        &  )
+    END IF
 
-    !! 5.4 output control
+    !! 5.5 output forcing & timestep info 
+    !! first timestep of the simulation
+    !! first timestep of transient simulation
+    IF (itimestep == first_timestep) THEN
+      PRINT*," The simulation starts with the timestep", itimestep, " and forcing from [YEAR DOY HOUR]:"
+      PRINT*,forcing_options%forcing_year, forcing_options%forcing_doy, forcing_options%forcing_hour      
+    ENDIF
+    IF (model%config%l_transient_forcing_mode) THEN
+      IF (itimestep == 1) THEN
+        PRINT*," Spinup completed. Starting transient simulation with timestep 1 and forcing [YEAR DOY HOUR]:"
+        PRINT*,forcing_options%forcing_year, forcing_options%forcing_doy, forcing_options%forcing_hour
+      ENDIF
+    ENDIF
+
+    !! 5.6 control of fluxnet-diagnostics simulation timestep-output
+    !!  timestep-output for the "last full forcing period" after spinup has finished, 
+    !!  which is identical to the period static forcing is available 
+    !! 
+    ! if "fluxnet diagnostics simulation" after spinup
+    IF(model%config%fluxnet_diagnostics_sim .AND. .NOT. model%config%l_transient_spinup) THEN
+      ! if first timestep of "start year of static forcing" of this site
+      ! split into the two test "year" & "doy & hour" to check the latter only for one year (reduce CPU time)
+      IF (forcing_options%forcing_year == model%config%fluxnet_static_forc_start_yr) THEN
+        IF (forcing_options%forcing_doy == 1 .AND. forcing_options%forcing_hour < eps4) THEN
+          fluxnet_diagnostics_sim_state = 2               ! update state: now writing timestep-output data
+          CALL close_output_files                         ! close pool & flux output files (opened above)
+          model%config%output_interval_pool   = 'timestep' 
+          model%config%output_interval_flux   = 'timestep' 
+          output_interval_pool                = calc_output_time_interval_pool(model%config%output_interval_pool) ! character ti int
+          output_interval_pool_act            = output_interval_pool
+          CALL open_pool_output_files(tile, iblk, ics, ice, nc, TRIM(model%config%output_interval_pool), '')
+          CALL open_flux_output_files(tile, iblk, ics, ice, nc, TRIM(model%config%output_interval_flux), '')
+          ! print info to default output
+          PRINT*," Fluxnet diagnostics simulation timestep-output starts with forcing [YEAR DOY HOUR]:"
+          PRINT*,forcing_options%forcing_year, forcing_options%forcing_doy, forcing_options%forcing_hour
+        ENDIF
+      ! stop timestep-output at the 1st timestep after the last year of static forcing, i.e., the "last full forcing period" is over
+      ! actually, the QUINCY model should stop before this happend, as the simulation end is reached with the prior timestep
+      ELSE IF (forcing_options%forcing_year == model%config%fluxnet_static_forc_last_yr + 1) THEN
+        IF (forcing_options%forcing_doy == 1 .AND. forcing_options%forcing_hour < eps4) THEN
+          fluxnet_diagnostics_sim_state = 3                       ! status update: writing output data finished
+          ! print info to default output
+          PRINT*," Fluxnet diagnostics simulation timestep-output stopped before simulating the timestep:", itimestep
+          PRINT*," Associated to this timestep is the forcing [YEAR DOY HOUR]:"
+          PRINT*,forcing_options%forcing_year, forcing_options%forcing_doy, forcing_options%forcing_hour
+        ENDIF
+      ENDIF
+    ENDIF
+
+    !! 5.7 output control
     !!  does consider:  static & transient
     !!                  spinup & actual simulation
     !!  
-    l_output                = .FALSE.      ! is generally set to FALSE tested below if TRUE at this timestep
+    l_output = .FALSE.      ! is generally set to FALSE tested below if TRUE at this timestep
     !! static
     IF (model%config%l_static_forcing_mode) THEN
       ! output period
       IF (time_year >= model%config%output_start_first_day_year .AND. time_year <= model%config%output_end_last_day_year) THEN
-        ! might be set back to FALSE if fluxnet_output_status == 3 (i.e. fluxnet diagnostics output finished)
         l_output = .TRUE.
       ENDIF        
-      ! fluxnet diagnostics output
-      IF (model%config%fluxnet_output) THEN
-        ! activate output during the last full forcing period (within 'ntimestep'), independent of the general output 'output_start_..' & 'output_end_...' options
-        IF (fluxnet_output_status < 3.0_wp) THEN
-          l_output = .TRUE.
-        ! set l_output (back) to FALSE if the last full forcing period is finished (after the last full forcing period no further output is created and fluxnet_output_status = 3)
-        ELSE
-          l_output = .FALSE.
-        ENDIF
-      ENDIF
     !! transient
     ELSEIF (model%config%l_transient_forcing_mode) THEN
       ! spinup
@@ -427,15 +532,15 @@ PROGRAM land_model_driver
         ENDIF
       ! actual simulation after spinup
       ELSE
-      ! differ between fluxnet diagnostics output and other transient runs
-      ! fluxnet is special because the last full forcing period (within 'ntimestep') should be written out at timestep interval, and this period differs across sites
+        ! differ between fluxnet diagnostics simulation and other transient runs
+        ! fluxnet is special because the last full forcing period of the transient simulation (after spinup)is written out at timestep interval (site specific)
         ! fluxnet diagnostics - after spinup output is always created but at different intervals 
-        IF (model%config%fluxnet_output) THEN
+        IF (model%config%fluxnet_diagnostics_sim) THEN
           ! if active and not finished yet (finished == after the last full forcing period no further output is created)
-          IF (fluxnet_output_status < 3.0_wp) THEN
+          IF (fluxnet_diagnostics_sim_state < 3.0_wp) THEN
             l_output = .TRUE.
           ENDIF
-        ! any other than fluxnet diagnostics, create output for a given start/end output period
+        ! any other than "fluxnet diagnostics simulation", create output only for a given start/end output period
         ELSE
           ! output period
           IF (time_year >= model%config%output_start_first_day_year .AND. time_year <= model%config%output_end_last_day_year) THEN
@@ -466,73 +571,14 @@ PROGRAM land_model_driver
         ENDIF
       ENDIF
     ENDIF
-
     
-    !! 5.5 set orbital parameters and update time-variant forcing
-    !! 
-    !! l_forcing is set in init_slm() depending on the specific SLM model
-    !! 
-    IF (l_forcing) THEN
-      CALL update_forcing(  tile      , & ! necessary for soil: veg%litterfall vegsoil%moisture
-                            ics       , &
-                            ice       , &
-                            nc        , &
-                            iblk      , &
-                            itimestep , &
-                            time_day  , & 
-                                  !! forcing (read from file and passed to a2l memory via the land_model_interface)
-                                  !! in update_forcing() defined as: REAL(wp), OPTIONAL, INTENT(out) :: VAR(:)  ! assumed shape
-                                  t_air                   = t_air(:)              , &
-                                  q_air                   = q_air(:)              , &
-                                  rain                    = rain(:)               , &
-                                  snow                    = snow(:)               , &
-                                  wind_air                = wind_air(:)           , &
-                                  wind_10m                = wind_10m(:)           , &
-                                  lw_srf_down             = lw_srf_down(:)        , &
-                                  swvis_srf_down          = swvis_srf_down(:)     , &
-                                  swnir_srf_down          = swnir_srf_down(:)     , &
-                                  swpar_srf_down          = swpar_srf_down(:)     , &
-                                  swpar_fdiffuse          = swpar_fdiffuse(:)     , &
-                                  press_srf               = press_srf(:)          , &
-                                  drag_srf                = drag_srf(:)           , &
-                                  t_acoef                 = t_acoef(:)            , &
-                                  t_bcoef                 = t_bcoef(:)            , &
-                                  q_acoef                 = q_acoef(:)            , &
-                                  q_bcoef                 = q_bcoef(:)            , &
-                                  pch                     = pch(:)                , &
-                                  cos_zenith_angle        = cos_zenith_angle(:)   , &
-                                  co2_mixing_ratio        = co2_mixing_ratio(:)     , &
-                                  co2_mixing_ratio_C13    = co2_mixing_ratio_C13(:) , &
-                                  co2_mixing_ratio_C14    = co2_mixing_ratio_C14(:) , &
-                                  ga                      = ga(:)                   , &
-                                  nhx_deposition          = nhx_deposition(:)     , &
-                                  noy_deposition          = noy_deposition(:)     , &
-                                  nhx_n15_deposition      = nhx_n15_deposition(:) , &
-                                  noy_n15_deposition      = noy_n15_deposition(:) , &
-                                  p_deposition            = p_deposition(:)       , &
-                                  ! For lakes:
-                                  albedo_lwtr             = albedo_lwtr(:)        , &
-                                  drag_wtr                = drag_wtr(:)           , &
-                                  drag_ice                = drag_ice(:)           , &
-                                  t_acoef_wtr             = t_acoef_wtr(:)        , &
-                                  t_bcoef_wtr             = t_bcoef_wtr(:)        , &
-                                  q_acoef_wtr             = q_acoef_wtr(:)        , &
-                                  q_bcoef_wtr             = q_bcoef_wtr(:)        , &
-                                  t_acoef_ice             = t_acoef_ice(:)        , &
-                                  t_bcoef_ice             = t_bcoef_ice(:)        , &
-                                  q_acoef_ice             = q_acoef_ice(:)        , &
-                                  q_bcoef_ice             = q_bcoef_ice(:)          &
-                                  &  )
-    END IF
-
-    
-    !! 5.6 land model interface
+    !! 5.8 land model interface
     !! 
     CALL land_model_interface(tile, &
                               l_forcing, &
                               l_output, &
                               l_output_interval_match, &
-                              fluxnet_output_status, &
+                              fluxnet_diagnostics_sim_state, &
                               output_interval_pool_act, &  ! used for flux output: output_interval_flux
                               time_day, &
                               time_year, &
@@ -605,44 +651,28 @@ PROGRAM land_model_driver
                                   !! end - variables for passing values from land to atmosphere
                                 &  ) ! land_model_interface()
 
-    !! 5.7 special case: fluxnet output
-    !! 
-    IF(model%config%fluxnet_output) THEN
-      IF (itimestep == fluxnet_output_start) THEN         ! start of fluxnet output (at each timestep)
-          fluxnet_output_status = 2                       ! status update: currently writing output data
-          CALL close_output_files 
-          model%config%output_interval_pool   = 'timestep' 
-          model%config%output_interval_flux   = 'timestep' 
-          output_interval_pool                = calc_output_time_interval_pool(model%config%output_interval_pool)
-          output_interval_pool_act            = output_interval_pool
-          CALL open_pool_output_files(tile, iblk, ics, ice, nc, TRIM(model%config%output_interval_pool), '')
-          CALL open_flux_output_files(tile, iblk, ics, ice, nc, TRIM(model%config%output_interval_flux), '')
-
-      ELSE IF (itimestep == fluxnet_output_stop) THEN     ! stop of fluxnet output; NO output after this timestep anyway
-          fluxnet_output_status = 3                       ! status update: writing output data finished
-          CALL close_output_files
-
-      END IF
-    END IF
-
   END DO  ! end time loop 
-
 
   !! 6.0 -----------------------------------------------------------------------------------------------
   !! 
   !! Close output and forcing files
   !! 
-  IF (fluxnet_output_status == 0) CALL close_output_files
+  PRINT*," Simulation stopped after the timestep", itimestep, "has completed."
+  PRINT*," Forcing data used for this last timestep [YEAR DOY HOUR]:"
+  PRINT*,forcing_options%forcing_year, forcing_options%forcing_doy, forcing_options%forcing_hour
+  CALL close_output_files
   IF (l_forcing) CALL close_forcing_input_file(TRIM(model%config%slm_model_name)) ! only if forcing is enabled at all (land plant canopy soil)
   IF (model%config%flag_generate_soil_forcing_stat .OR. model%config%flag_generate_soil_forcing_trans) THEN
     CALL close_output_files_soil_forcing
   END IF
-
+  PRINT*," All output files were closed."
 
   !! 7.0 -----------------------------------------------------------------------------------------------
   !! 
   !! DEALLOCATE variables
   CALL Deallocate_var_sb_pools_elements_a     ! mo_sb_memory_class
   CALL Deallocate_var_veg_pools_elements_a    ! mo_veg_memory_class
+  PRINT*," End QUINCY model"
+  PRINT*,"#########################"
 
 END PROGRAM land_model_driver

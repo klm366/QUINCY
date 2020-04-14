@@ -50,14 +50,14 @@ CONTAINS
   !!
   !! selection of the model via the namlist.slm - BASE_CTL:slm_model_name
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE land_model_interface(tile                      , &
-                                  l_forcing                 , &
-                                  l_output                  , &
-                                  l_output_interval_match   , &
-                                  fluxnet_output_status     , &
-                                  output_interval_flux      , &
-                                  time_day, time_year       , &
-                                  timestep_prop_day         , &
+  SUBROUTINE land_model_interface(tile                            , &
+                                  l_forcing                       , &
+                                  l_output                        , &
+                                  l_output_interval_match         , &
+                                  fluxnet_diagnostics_sim_state   , &
+                                  output_interval_flux            , &
+                                  time_day, time_year             , &
+                                  timestep_prop_day               , &
                                   !! a2l memory - INTENT(in) - start
                                   t_air              , &
                                   q_air              , &
@@ -155,15 +155,15 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile                     !< one tile with data structure for one lct
-    LOGICAL,                    INTENT(in)        :: l_forcing, &             !< IF .TRUE. THEN update_forcing(), update_a2l(), update_l2a()
-                                                     l_output, &              !< TRUE of output is enabled at all (i.e., fluxes are accumulated)
-                                                     l_output_interval_match  !< TRUE if output may be created at the current timestep
-    INTEGER,                    INTENT(in)        :: fluxnet_output_status    !< possible values: 0, 1, 2, 3; see land_model_driver
-    REAL(wp),                   INTENT(in)        :: output_interval_flux     !< flux output interval
-    REAL(wp),                   INTENT(in)        :: time_day                 !< displays the 'real simulation time' in days; time_day == 1.0 after one day has passed
-    INTEGER,                    INTENT(in)        :: time_year                !< displays the 'real simulation time' in years; the 1st year of a simulation == 1 (not zero)
-    REAL(wp),                   INTENT(in)        :: timestep_prop_day        !< proportion of one day that is simulated with one timestep (dtime/one_day)
+    CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile                           !< one tile with data structure for one lct
+    LOGICAL,                    INTENT(in)        :: l_forcing, &                   !< IF .TRUE. THEN update_forcing(), update_a2l(), update_l2a()
+                                                     l_output, &                    !< TRUE of output is enabled at all (i.e., fluxes are accumulated)
+                                                     l_output_interval_match        !< TRUE if output may be created at the current timestep
+    INTEGER,                    INTENT(in)        :: fluxnet_diagnostics_sim_state  !< possible values: 0, 1, 2, 3; see land_model_driver
+    REAL(wp),                   INTENT(in)        :: output_interval_flux           !< flux output interval
+    REAL(wp),                   INTENT(in)        :: time_day                       !< displays the 'real simulation time' in days; time_day == 1.0 after one day has passed
+    INTEGER,                    INTENT(in)        :: time_year                      !< displays the 'real simulation time' in years; the 1st year of a simulation == 1 (not zero)
+    REAL(wp),                   INTENT(in)        :: timestep_prop_day              !< proportion of one day that is simulated with one timestep (dtime/one_day)
     REAL(wp),                   INTENT(in)        :: &                 !! a2l memory - INTENT(in) - start
                                   t_air(:)              , &
                                   q_air(:)              , &
@@ -353,10 +353,10 @@ CONTAINS
           CALL write_soil_forcing(tile, model%options, time_day)
         ENDIF
       ENDIF
-      !! output litterfall and soilphysics from a transient simulation (fluxnet/3 diagnostics)
+      !! output litterfall and soilphysics from a transient fluxnet/3 diagnostics simulation
       IF (model%config%flag_generate_soil_forcing_trans .AND. l_output) THEN
-        ! write only soil forcing for the last full forcing period of the fluxnet site
-        IF (fluxnet_output_status == 2) THEN
+        ! write soil forcing only for the last full forcing period of the particular fluxnet site (where static forcing is available)
+        IF (fluxnet_diagnostics_sim_state == 2) THEN
           CALL write_soil_forcing(tile, model%options, time_day)
         ENDIF
       ENDIF

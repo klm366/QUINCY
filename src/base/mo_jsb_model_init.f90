@@ -27,20 +27,15 @@ MODULE mo_jsb_model_init
   PUBLIC :: jsbach_setup_grid, quincy_init
 
   PUBLIC :: time_day, time_year, ntimestep, itimestep, timestep_prop_day
-  PUBLIC :: fluxnet_output_start, fluxnet_output_stop, fluxnet_output_status
+  PUBLIC :: fluxnet_diagnostics_sim_state
 
   ! variables used in the land model driver
-  REAL(wp) :: time_day                     !< displays the 'real time' in days; time_day == 1.0 after one day has passed
-  INTEGER  :: time_year                    !< displays the 'real time' in years; the 1st year of a simulation == 1 (not zero)
-  INTEGER  :: ntimestep                    !< number of timesteps the model runs
-  INTEGER  :: itimestep                    !< current timestep i, looping over timesteps ntimestep
-  REAL(wp) :: timestep_prop_day            !< proportion of one day that is simulated with one timestep (dtime/one_day)
-  ! special case: fluxnet output
-  INTEGER  :: fluxnet_output_length        !< number of timesteps data may be written out to file, only for fluxnet sites
-  INTEGER  :: fluxnet_output_start         !< write output at each time step starting with this timestep, only for fluxnet sites
-  INTEGER  :: fluxnet_output_stop          !< write output at each time step stopping with this timestep, only for fluxnet sites
-  INTEGER  :: fluxnet_output_status        !< a simple status var to inform other processes about it
-                                           !! 0: not activiated at all [default], 1: active, 2: currently writing, 3: finished
+  REAL(wp) :: time_day                      !< displays the 'real time' in days; time_day == 1.0 after one day has passed
+  INTEGER  :: time_year                     !< displays the 'real time' in years; the 1st year of a simulation == 1 (not zero)
+  INTEGER  :: ntimestep                     !< number of timesteps the model runs
+  INTEGER  :: itimestep                     !< current timestep i, looping over timesteps ntimestep
+  REAL(wp) :: timestep_prop_day             !< proportion of one day that is simulated with one timestep (dtime/one_day)
+  INTEGER  :: fluxnet_diagnostics_sim_state !< state of the fluxnet diagnostics simulation [0,3], see the below init for details
 
   INTERFACE jsbach_setup_grid
     MODULE PROCEDURE setup_grid_standalone
@@ -100,7 +95,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   !> init quincy model
   !! 
-  !! and init of: forcing, SB_ & VEG_ pools, tiles, time, fluxnet diagnostics
+  !! and init of: forcing, SB_ & VEG_ pools, tiles, time, fluxnet diagnostics simulation state
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE quincy_init(model_id, iblk, nproma, ics, ice, nc, l_forcing)
 
@@ -289,31 +284,19 @@ CONTAINS
     timestep_prop_day = dtime/one_day                                 !! proportion of one day that is simulated with one timestep
 
 
-    !> 6.0 Initialise: output of fluxnet diagnostics simulation
-    !! 
-    !! output is created as defined by the 'output_interval_pool' & 'output_start_..' & 'output_end_...' options \n
-    !! and the last full "forcing period" is written into new output files with half-hourly write-out of values
-    !! 
-    !> 6.1 deactivate per default
-    fluxnet_output_status = 0
-    !> 10.2 activate output and check settings
-    IF (model%config%fluxnet_output) THEN
+    !> 6.0 Init fluxnet diagnostics simulation state
+    !! states: \n
+    !!  0: not a fluxnet diagnostics simulation
+    !!  1: fluxnet diagnostics simulation; spinup or output prior to the "last full forcing period" (static output available)
+    !!  2: fluxnet diagnostics simulation: timestep-output over the "last full forcing period"
+    !!  3: fluxnet diagnostics simulation finished, first timestep after the "last full forcing period", no output at all
+    IF (model%config%fluxnet_diagnostics_sim) THEN
       !! activate fluxnet diagnostics output
-      fluxnet_output_status = 1
-      
-      !! check whether simulation length covers at least one complete fluxnet forcing period (i.e. fluxnet_output_length)
-      fluxnet_output_length = NINT(model%config%fluxnet_output_length * one_year * one_day / model%config%dtime)
-      IF (ntimestep < (fluxnet_output_length * 2.0_wp)) THEN
-        CALL finish(routine,'Simulation length is too short for fluxnet diagnostics output (at least 2 full forcing periods are needed).')
-      END IF
+      fluxnet_diagnostics_sim_state = 1
+    ELSE
+      fluxnet_diagnostics_sim_state = 0
+    ENDIF
 
-      !! calc start and stop timestep
-      ! fluxnet diagnostics output covers the last full forcing period within ntimestep
-      ! calc timestep when fluxnet output starts (get the before last full forcing period that starts within ntimestep)
-      fluxnet_output_start  = fluxnet_output_length * FLOOR( (REAL(ntimestep) / REAL(fluxnet_output_length)) -1.0_wp ) 
-      ! calc timestep when fluxnet output stops
-      fluxnet_output_stop   = fluxnet_output_start + fluxnet_output_length
-    END IF
   END SUBROUTINE quincy_init
 
 #endif

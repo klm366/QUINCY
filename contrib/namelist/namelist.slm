@@ -107,11 +107,12 @@
   output_interval_flux_spinup="yearly"
   output_start_first_day_year=1
   output_end_last_day_year=30
-  ! fluxnet diagnostics
-  ! if fluxnet sites: output per timestep for last forcing period [FALSE TRUE]
-  fluxnet_output=.FALSE.
-  ! length of forcing period [years] provided by data file
-  fluxnet_output_length=2
+  ! fluxnet diagnostics simulation
+  ! timestep-output for last full forcing period of the transient simulation after spinup
+  fluxnet_diagnostics_sim=.FALSE.
+  ! years with static forcing available (site specific)
+  fluxnet_static_forc_start_yr=1500
+  fluxnet_static_forc_last_yr=1500
   ! flags
   ! generate forcing file for the standalone soil model (veg%litterfall pool plus rate modifiers) per timestep [FALSE TRUE]
   flag_generate_soil_forcing_stat=.FALSE.
