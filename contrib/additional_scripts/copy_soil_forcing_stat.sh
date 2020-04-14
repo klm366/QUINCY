@@ -36,7 +36,7 @@ cd "$( dirname "$0" )"
 
 ## message
 echo " "
-echo " Running soil_forcing update for 15 soil layers for all site-sets for which new soil forcing is available."
+echo " Copying new static soil_forcing (15 soil layers) for all site-sets for which new soil forcing is available."
 echo " "
 
 # get current date (yyyy-mm-dd) for renaming folders in user scratch after soil forcing was copied
@@ -77,9 +77,9 @@ soilForceCruncepSppDirBase="soil_forcing_stat_spp_sl15_r"
 # met-forcing years included into the soil-forcing file names for CRUNCEP cue/spp
 sfCruncepYears="1984-2013"
 
-########################################################################################
-## delete old and copy new soil_forcing files, only if new soil forcing was created   ##
-########################################################################################
+#################################################################################################
+## copy new soil_forcing files (delete old of same rev.) only if new soil forcing was created  ##
+#################################################################################################
 
 #############################
 ## FLUXNET2                ##
@@ -470,7 +470,7 @@ fi     # if new soil_forcing was created
 ########################################################################################
 sync
 echo " "
-echo "> New soil_forcing was copied to the ""$mainPathServer""* soil_forcing folders (replacing old data) <"
+echo "> New static soil_forcing was copied to the ""$mainPathServer""* soil_forcing folders (replacing old data with same revision number) <"
 echo " "
 
 ## fin ##

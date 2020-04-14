@@ -21,7 +21,7 @@
 ##  some more detailed docu is presented in the usecase 08 file 08_generate_flux_trans_soil_forcing_def.incl
 ##  considering soil forcing for 15 soil layers only
 ##
-## works only with FLUXNET2/3 site-sets
+## works only with FLUXNET2/3 site-sets (also u08 does work only with FLUXNET2/3)
 ## 
 
 # no need to set any options, just run this script to copy new transient soil forcing available
@@ -33,107 +33,176 @@
 ## change into the directory where this script is located; thus, you can start this script from anywhere (no need to cd into a specific directory) ##
 cd "$( dirname "$0" )"
 
-## get username as needed for the location of the simulation results
-userName="$USER"
-
-## paths to the folders at the server
-mainPathServer="/Net/Groups/BGI/data/Model/SLM1/input/point/"
-pathServerF="$mainPathServer""FLUXNET2/"
-pathServerF3="$mainPathServer""FLUXNET3/"
-
-## source folders - where the simulation results have been stored
-pathSourceBase="/Net/Groups/BGI/scratch/""$userName""/slm/"
+## message
+echo " "
+echo " Copying new transient soil_forcing (15 soil layers) for all site-sets for which new soil forcing is available."
+echo " "
 
 # get current date (yyyy-mm-dd) for renaming folders in user scratch after soil forcing was copied
 currDate=$(date +%F)
 
-#################################################
-## define main variables and create folders    ##
-#################################################
+## get username as needed for the location of the simulation results
+userName="$USER"
 
-## set number of soil layers (15 is the default; currently we use only 15 sl soil-forcing)
-sl=15
-echo " "
-echo " Running soil_forcing update for ""$sl"" soil layers for all site-sets for which new soil forcing is available."
-echo " "
+## model name dir
+modelNameSourceDir="slm"
+modelNameTargetDir="SLM1"
 
-## set the soil_forcing folder for the particular sl number at the server where the soil_forcing files are stored
-#  create this folder in case it is not present, does preserve folders and symlinks to folders present
-soilForce="soil_forcing_sl""$sl""/"
-mkdir -p "$pathServerF""$soilForce"
-mkdir -p "$pathServerF3""$soilForce"
+## source folders - where the simulation results have been stored
+pathSourceBase="/Net/Groups/BGI/scratch/""$userName""/""$modelNameSourceDir""/"
 
-## set the experimentalID folder names in the user scratch/slm/ folder containing the simulation results
-expNameF="exp_create_soil_forc_trans_fluxnet_sl""$sl"
-expNameF3="exp_create_soil_forc_trans_fluxnet3_sl""$sl"
+## define the directory names without revision number (rX) in scratch/user/"$modelNameSourceDir"/ containing the simulation results
+#  revision number is detected per site-set
+expNameF="exp_create_soil_forc_trans_fluxnet_sl15_r"
+expNameF3="exp_create_soil_forc_trans_fluxnet3_sl15_r"
 
-########################################################################################
-## delete old and copy new soil_forcing files, only if new soil forcing was created   ##
-########################################################################################
+## paths to the directories the soil-forcing may be copied to per site-set
+mainPathServer="/Net/Groups/BGI/data/Model/""$modelNameTargetDir""/input/point/"
+pathServerF="$mainPathServer""FLUXNET2/"
+pathServerF3="$mainPathServer""FLUXNET3/"
+
+## set the base-name of the soil_forcing directory valid for all site-sets (differing for CRUNCEP cue/spp)
+soilForceDirBase="soil_forcing_trans_sl15_r"
+
+#################################################################################################
+## copy new soil_forcing files (delete old of same rev.) only if new soil forcing was created  ##
+#################################################################################################
 
 #############################
-## Fluxnet 2               ##
+## FLUXNET2                ##
 #############################
-if [ -d "$pathSourceBase""$expNameF" ]; then # if folder is present, i.e., new transient soil_forcing files were created
-  # removing old transient forcing files
-  echo " Removing old Fluxnet transient soil_forcing from: ""$pathServerF""$soilForce"
-  rm -f "$pathServerF""$soilForce"*_t_*lit.dat
-  rm -f "$pathServerF""$soilForce"*_t_*sph.dat
-  sync && sleep 0.5
-  # copy & rename new transient forcing files
-  echo " Copying Fluxnet transient soil_forcing from :""$pathSourceBase""$expNameF"
-  for site in $(ls -d "$pathSourceBase""$expNameF"/*/)
+siteSet="FLUXNET2"
+expName="$expNameF"
+pathServer="$pathServerF"
+# if directory (with any revision number attached) is present, i.e., new stat soil_forcing was created
+if [ -d "$pathSourceBase""$expName"* ]; then
+  # test  if there is only one "$expName"* directory present (does not work with > 1)
+  numExpDir=$(ls -lA "$pathSourceBase" | grep "$expName" | wc -l)
+  if [ "$numExpDir" -gt 1 ]; then
+    echo " EXIT! There are two or more directories of ""$expName"" - remove the old one and re-run this script."
+    exit 1
+  fi
+  # get revision number the soil_forcing was created with (only the number, i.e., all behind the "sl15_r")
+  # complete the dir name of the soil-forcing created in scratch/user/"$modelNameSourceDir"/
+  revNum=$(ls -lA "$pathSourceBase" | grep "$expName" | awk -F'_sl15_r' '{print $2}')
+  expName="$expName""$revNum"
+  # compile path and dir name for the soil-forcing to be copied to
+  sfTargetPathDir="$pathServer""$soilForceDirBase""$revNum""/"
+  # dir with met-forcing used to create this soil-forcing
+  metForcPathDir="$pathServer""met_forcing/"
+  
+  # delete previously created soil-forcing with this rev number, if present
+  if [ -d "$sfTargetPathDir" ]; then
+    echo " Removing old ""$siteSet"" soil_forcing: ""$sfTargetPathDir"
+    rm -rf "$sfTargetPathDir"
+    sleep 0.5 && sync
+  fi
+  # create new dir for new soil-forcing
+  mkdir -p "$sfTargetPathDir"
+  # create an info dir within and copy of the 1st site namelist & lctlib, and the postprocessing_all_sites.pdf file
+  mkdir -p "$sfTargetPathDir""info"
+  firstSiteDir=$(ls -d "$pathSourceBase""$expName"/*/ | head -n 1)
+  firstSiteDir=$(basename "$firstSiteDir")
+  cp "$pathSourceBase""$expName""/""$firstSiteDir""/input/"*  "$sfTargetPathDir""info""/"
+  if [ -e "$pathSourceBase""$expName""/postprocessing_all_sites.pdf" ]; then
+    cp "$pathSourceBase""$expName""/postprocessing_all_sites.pdf"  "$sfTargetPathDir""info""/"
+  fi
+
+  # copy & rename soil-forcing files
+  echo " Copying ""$siteSet"" soil_forcing from : ""$pathSourceBase""$expName"
+  echo "  to: ""$sfTargetPathDir"
+  for site in $(ls -d "$pathSourceBase""$expName"/*/)
    do
     siteBase=$(basename $site)  # just: DE-Hai, IT-Amp, US-Syv, ...
     if [ $siteBase != "x_binary" ]; then
-      # grep the static met_forcing filename from e.g. "AT-Neu_s_", replace _s_ by _t_ and remove .dat => AT-Neu_t_2002-2012
-      # this provides the correct forcing period written out by u08, i.e., the last full forcing period in 1901-2015
-      filenameBase=$(ls -la "$pathServerF""met_forcing/" | grep "$siteBase""_s_" | awk '{print $9}' | sed "s/_s_/_t_/" | sed "s/.dat//")
+      # get the basic soil-forcing filename from static! met-forcing filename with start- & end-year; DE-Hai_s_2000-2006.dat -> DE-Hai_2000-2006
+      # note: transient soil-forcing was created using transient met-forcing, but covers only the static met-forcing period
+      filenameBase=$(ls -lA "$metForcPathDir" | grep "$siteBase""_s_" | awk '{print $9}' | sed "s/_s//" | sed "s/.dat//")
       echo "  site: "$filenameBase
       # copy new soil_forcing files
-      cp "$pathSourceBase""$expNameF""/""$siteBase"/output/veglitterfall_timestep.txt "$pathServerF""$soilForce""$filenameBase""_lit.dat"
-      cp "$pathSourceBase""$expNameF""/""$siteBase"/output/soilphysics_timestep.txt   "$pathServerF""$soilForce""$filenameBase""_sph.dat"
+      cp "$pathSourceBase""$expName""/""$siteBase"/output/veglitterfall_timestep.txt "$sfTargetPathDir""$filenameBase""_lit.dat"
+      cp "$pathSourceBase""$expName""/""$siteBase"/output/soilphysics_timestep.txt   "$sfTargetPathDir""$filenameBase""_sph.dat"
     fi
     sync
   done # loop over all sites for which soil_forcing was created
-  ## appending current date to simulation results folders at your scratch
-  mv "$pathSourceBase""$expNameF"  "$pathSourceBase""$expNameF"_"$currDate"
-fi  # if new soil_forcing had been created
+  
+  ## appending current date to simulation results folders at scratch/user/"$modelNameSourceDir"/
+  mv "$pathSourceBase""$expName"  "$pathSourceBase""copied_""$expName"_"$currDate"
+else
+  echo " NO new soil-forcing for: ""$siteSet"
+fi     # if new soil_forcing was created
 
 #############################
-## Fluxnet 3               ##
+## FLUXNET3                ##
 #############################
-if [ -d "$pathSourceBase""$expNameF3" ]; then # if folder is present, i.e., new transient soil_forcing files were created
-  # removing old transient forcing files
-  echo " Removing old Fluxnet3 transient soil_forcing from: ""$pathServerF3""$soilForce"
-  rm -f "$pathServerF3""$soilForce"*_t_*lit.dat
-  rm -f "$pathServerF3""$soilForce"*_t_*sph.dat
-  sync && sleep 0.5
-  # copy & rename new transient forcing files
-  echo " Copying Fluxnet3 transient soil_forcing from :""$pathSourceBase""$expNameF3"
-  for site in $(ls -d "$pathSourceBase""$expNameF3"/*/)
+siteSet="FLUXNET3"
+expName="$expNameF3"
+pathServer="$pathServerF3"
+# if directory (with any revision number attached) is present, i.e., new stat soil_forcing was created
+if [ -d "$pathSourceBase""$expName"* ]; then
+  # test  if there is only one "$expName"* directory present (does not work with > 1)
+  numExpDir=$(ls -lA "$pathSourceBase" | grep "$expName" | wc -l)
+  if [ "$numExpDir" -gt 1 ]; then
+    echo " EXIT! There are two or more directories of ""$expName"" - remove the old one and re-run this script."
+    exit 1
+  fi
+  # get revision number the soil_forcing was created with (only the number, i.e., all behind the "sl15_r")
+  # complete the dir name of the soil-forcing created in scratch/user/"$modelNameSourceDir"/
+  revNum=$(ls -lA "$pathSourceBase" | grep "$expName" | awk -F'_sl15_r' '{print $2}')
+  expName="$expName""$revNum"
+  # compile path and dir name for the soil-forcing to be copied to
+  sfTargetPathDir="$pathServer""$soilForceDirBase""$revNum""/"
+  # dir with met-forcing used to create this soil-forcing
+  metForcPathDir="$pathServer""met_forcing/"
+  
+  # delete previously created soil-forcing with this rev number, if present
+  if [ -d "$sfTargetPathDir" ]; then
+    echo " Removing old ""$siteSet"" soil_forcing: ""$sfTargetPathDir"
+    rm -rf "$sfTargetPathDir"
+    sleep 0.5 && sync
+  fi
+  # create new dir for new soil-forcing
+  mkdir -p "$sfTargetPathDir"
+  # create an info dir within and copy of the 1st site namelist & lctlib, and the postprocessing_all_sites.pdf file
+  mkdir -p "$sfTargetPathDir""info"
+  firstSiteDir=$(ls -d "$pathSourceBase""$expName"/*/ | head -n 1)
+  firstSiteDir=$(basename "$firstSiteDir")
+  cp "$pathSourceBase""$expName""/""$firstSiteDir""/input/"*  "$sfTargetPathDir""info""/"
+  if [ -e "$pathSourceBase""$expName""/postprocessing_all_sites.pdf" ]; then
+    cp "$pathSourceBase""$expName""/postprocessing_all_sites.pdf"  "$sfTargetPathDir""info""/"
+  fi
+
+  # copy & rename soil-forcing files
+  echo " Copying ""$siteSet"" soil_forcing from : ""$pathSourceBase""$expName"
+  echo "  to: ""$sfTargetPathDir"
+  for site in $(ls -d "$pathSourceBase""$expName"/*/)
    do
     siteBase=$(basename $site)  # just: DE-Hai, IT-Amp, US-Syv, ...
     if [ $siteBase != "x_binary" ]; then
-      # grep the static met_forcing filename from e.g. "AT-Neu_s_", replace _s_ by _t_ and remove .dat => AT-Neu_t_2002-2012
-      # this provides the correct forcing period written out by u08, i.e., the last full forcing period in 1901-2015
-      filenameBase=$(ls -la "$pathServerF3""met_forcing/" | grep "$siteBase""_s_" | awk '{print $9}' | sed "s/_s_/_t_/" | sed "s/.dat//")
+      # get the basic soil-forcing filename from static! met-forcing filename with start- & end-year; DE-Hai_s_2000-2006.dat -> DE-Hai_2000-2006
+      # note: transient soil-forcing was created using transient met-forcing, but covers only the static met-forcing period
+      filenameBase=$(ls -lA "$metForcPathDir" | grep "$siteBase""_s_" | awk '{print $9}' | sed "s/_s//" | sed "s/.dat//")
       echo "  site: "$filenameBase
       # copy new soil_forcing files
-      cp "$pathSourceBase""$expNameF3""/""$siteBase"/output/veglitterfall_timestep.txt "$pathServerF3""$soilForce""$filenameBase""_lit.dat"
-      cp "$pathSourceBase""$expNameF3""/""$siteBase"/output/soilphysics_timestep.txt   "$pathServerF3""$soilForce""$filenameBase""_sph.dat"
+      cp "$pathSourceBase""$expName""/""$siteBase"/output/veglitterfall_timestep.txt "$sfTargetPathDir""$filenameBase""_lit.dat"
+      cp "$pathSourceBase""$expName""/""$siteBase"/output/soilphysics_timestep.txt   "$sfTargetPathDir""$filenameBase""_sph.dat"
     fi
     sync
   done # loop over all sites for which soil_forcing was created
-  ## appending current date to simulation results folders at your scratch
-  mv "$pathSourceBase""$expNameF3"  "$pathSourceBase""$expNameF3"_"$currDate"
-fi  # if new soil_forcing had been created
+  
+  ## appending current date to simulation results folders at scratch/user/"$modelNameSourceDir"/
+  mv "$pathSourceBase""$expName"  "$pathSourceBase""copied_""$expName"_"$currDate"
+else
+  echo " NO new soil-forcing for: ""$siteSet"
+fi     # if new soil_forcing was created
 
-######################################
-## done message                     ##
-######################################
+
+########################################################################################
+## final sync and message                                                             ##
+########################################################################################
+sync
 echo " "
-echo "> New transient fluxnet/3 soil_forcing was copied to the ""$mainPathServer""* soil_forcing folders (replacing old data) <"
+echo "> New transient soil_forcing was copied to the ""$mainPathServer""* soil_forcing folders (replacing old data with same revision number) <"
 echo " "
 
 ## fin ##

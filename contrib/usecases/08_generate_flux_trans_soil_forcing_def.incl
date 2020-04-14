@@ -27,18 +27,17 @@
 #
 
 echo " "
-echo " quincy model run to create soil_forcing creation from a transient simulation with fluxnet/3 sites:"
+echo " QUINCY land model simulation to create soil_forcing from a transient simulation with fluxnet/3 sites:"
 echo "  usecase='08_generate_flux_trans_soil_forcing_def' using almost identical options as u82"
 echo "  the experimentalID will be created automatically by this usecase"
 echo "  please run the simulations (prep_run_slm.sh -u 08) for: "
 echo "    FLUXNET2"  # site-set "fluxnet"
 echo "    FLUXNET3"  # site-set "fluxnet3"
 echo "  no need to change any else, the namelist-parameter flag_generate_soil_forcing_trans is set to TRUE for u08 automatically"
-echo "    meaning, when usecase number 08 is selected, flag_generate_soil_forcing_trans is set to T"
 echo " "
 echo " after all jobs have finished, please run: additional_scripts/copy_soil_forcing_trans.sh"
-echo "   (this script updates the transient soil forcing for all site-sets new transient soil-forcing was created, "
-echo "    and renames the experimentalID of soil_forcing simulations leaving the renamed folders in your scratch)"
+echo "   (this script copies the transient soil forcing for all site-sets new transient soil-forcing was created) "
+echo "   the new transient soil-forcing is then available via the soilForcTransRevNum option in the prep_run_slm.sh"
 echo " "
 
 # works only with fluxnet/3 site-set
