@@ -55,7 +55,7 @@ globSites="sub"
 # for static and transient soil-forcing (transient only for: fluxnet/3)
 # provide only numbers, e.g., 2174  (not "r2174")
 soilForcStatRevNum=""
-soilForcTransRevNum="2174"
+soilForcTransRevNum="2197"
 # all sites or just some sites: specify a local custom site list if you want only some sites"
 # T (True) or F (False) [large caps]
 customSiteList="F"
@@ -900,12 +900,20 @@ else
         echo " You use u80/81/82. Setting site list file to flux_baseline_sites_1901-2006_list.dat."
       fi
     fi
+    if [ "$slmModel" == "soil" ]; then
+      siteListFileName="flux_all_sites_1995-2006_list.dat"
+      echo " The site list file for static simulations is used always for QUINCY soil: flux_all_sites_1995-2006_list.dat"
+    fi
     ;;
   "fluxnet3")
     if [ $forcingMode == "static" ]; then
       siteListFileName="flux3_all_sites_1991-2014_list.dat"
     else 
       siteListFileName="flux3_all_sites_1901-2014_list.dat"
+    fi
+    if [ "$slmModel" == "soil" ]; then
+      siteListFileName="flux3_all_sites_1991-2014_list.dat"
+      echo " The site list file for static simulations is used always for QUINCY soil: flux3_all_sites_1991-2014_list.dat"
     fi
     ;;
   "global")
@@ -1093,11 +1101,15 @@ fi
 
 ## evaluate options: forcingMode == transient ##
 #  some settings of the transient simulations are affected by the compareSimCRUNCEPvsGFDB simulation settings if compareSimCRUNCEPvsGFDB == "T"
-if [ $forcingMode == "transient" ] && [ "$slmModel" != "soil" ]; then
+# fluxnet diagnostics simulations is per default F
+fluxnetTransSimLand="F"
+# transient soil-model simulations with the fluxnet/3 site-set is per default F
+fluxnetTransSimSoil="F"
+if [ $forcingMode == "transient" ]; then
+  ## options for all QUINCY models
   echo " "
   echo " You use QUINCY ""$slmModel"" and set the forcingMode to transient, with a spinup time of ""$transient_spinup_years"" years that uses forcing input from year ""$transient_spinup_start_year"" to ""$transient_spinup_end_year""."
   echo " The subsequent simulation may cover ""$simulation_length_number"" years, starting with forcing data from year ""$transient_simulation_start_year""."
-
   # spinup length
   if [ $transient_spinup_years -lt 1 ]; then
     echo " Ohh, you set the spinup time to a value less than 1 year, which is not recommended. Re-setting it to 1 now."
@@ -1125,28 +1137,40 @@ if [ $forcingMode == "transient" ] && [ "$slmModel" != "soil" ]; then
     transient_spinup_end_year=$((transient_spinup_start_year + 29))
     echo " The new (corrected) value of transient_spinup_end_year is ""$transient_spinup_end_year"" setting the period length to the default of 30 years."
   fi
-  ## fluxnet transient simulation (all QUINCY models but soil)
-  #  a transient simulation with fluxnet forcing does always end after the last year of forcing available (which is site specific)
-  #  (in addition to a "simple transient simulation" a "fluxnet diagnostics simulation" creates timestep-output for the last full forcing period
-  #   and runs only with QUINCY land and starts two R scripts per site that compare model results with measured data)
-  #  note: actual simulation length 1901 to x varies with the site, 
-  #        after spinup the simulation starts 1901 and ends after the last year of (static) forcing data available
-  #        this setting is done per site in the run_slm.sh (modifying the namelist)
-  fluxnetTransSimLand="F"
-  if [ $forcingDataSet == "fluxnet" ] || [ $forcingDataSet == "fluxnet3" ]; then
-    echo " You started a transient simulation with QUINCY ""$slmModel"" and fluxnet forcing: ""$forcingDataSet"
-    echo " Note: after spinup the simulation starts 1901 and ends after the last year of (static) forcing data available (which is site specific)."
-    echo " Hence, the actual simulation length may vary with the fluxnet sites."
-    fluxnetTransSimLand="T"
+  # land & plant model  ("normal" or "fluxnet" transient)
+  if [ "$slmModel" == "land" ] || [ "$slmModel" == "plant" ]; then  
+    ## check: fluxnet transient simulation (all QUINCY models but soil)
+    #  a transient simulation with fluxnet forcing does always end after the last year of forcing available (which is site specific)
+    #  (in addition to a "simple transient simulation" a "fluxnet diagnostics simulation" creates timestep-output for the last full forcing period
+    #   and runs only with QUINCY land and starts two R scripts per site that compare model results with measured data)
+    #  note: actual simulation length 1901 to x varies with the site, 
+    #        after spinup the simulation starts 1901 and ends after the last year of (static) forcing data available
+    #        this setting is done per site in the run_slm.sh (modifying the namelist)
+    if [ "$forcingDataSet" == "fluxnet" ] || [ "$forcingDataSet" == "fluxnet3" ]; then
+      echo " You started a transient simulation with QUINCY ""$slmModel"" and fluxnet forcing: ""$forcingDataSet"
+      echo " Note: after spinup the simulation starts 1901 and ends after the last year of (static) forcing data available (which is site specific)."
+      echo " Hence, the actual simulation length may vary with the fluxnet sites."
+      fluxnetTransSimLand="T"
+    fi
   fi
-# transient & QUINCY soil model
-elif [ $forcingMode == "transient" ] && [ "$slmModel" == "soil" ]; then
-  echo " "
-  echo " You use QUINCY ""$slmModel"" and set the forcingMode to transient, with a spinup time of ""$transient_spinup_years"" years."
-  echo " The transient simulation (after) spinup) may cover one full forcing period, which is a site-specific parameter (fluxnet/3 site-sets )."  
-  echo " EXIT! not yet implemented"
-  exit 1
-# TODO  add code for soil transient simulations here, and to the run_slm.sh !
+  # canopy model
+  if [ "$slmModel" == "canopy" ]; then  
+    echo " Running a transient simulations with the canopy model is not available."
+    echo " EXIT!"
+    exit 1
+  fi
+  # soil model (simple_0d, simple_1d, jsm)
+  if [ "$slmModel" == "soil" ]; then
+    if [ "$forcingDataSet" == "fluxnet" ] || [ "$forcingDataSet" == "fluxnet3" ]; then
+      echo " Running a transient simulation with the QUINCY soil model ""$sb_model_scheme""."
+      echo " After the spinup, the transient simulation may run for one full forcing period (site-specific static forcing)."
+      fluxnetTransSimSoil="T"
+    else
+      echo " Running a transient simulation with the QUINCY soil model is not possible for the site-set: ""$forcingDataSet"  
+      echo " EXIT!"
+      exit 1    
+    fi
+  fi
 # forcingMode == "static"
 else  
   # set transient* parameters to default values, to avoid potentially quirky values here, but do not want do do checking either
@@ -1768,9 +1792,10 @@ echo "$useSiteSpecificAWC"                                        >> "$simFoldDe
 echo "$paramSensitivitySim"" ""$simParamSensiFiles"               >> "$simFoldDefaultFiles""config.txt"
 echo "$compareSimCRUNCEPvsGFDB"                                   >> "$simFoldDefaultFiles""config.txt"   # 10
 echo "$fluxnetTransSimLand"" ""$transient_simulation_start_year"  >> "$simFoldDefaultFiles""config.txt"
-echo "$createSoilForcFlag"                                        >> "$simFoldDefaultFiles""config.txt"
+echo "$fluxnetTransSimSoil"" ""$transient_simulation_start_year"  >> "$simFoldDefaultFiles""config.txt"
+echo "$createSoilForcFlag"                                        >> "$simFoldDefaultFiles""config.txt"   # 13
 #echo "$"                                                         >> "$simFoldDefaultFiles""config.txt"
-# pass extra info about parameter sensitivity simulations to folder
+# parameter sensitivity simulation: pass extra info to "param_config.txt" in the directory "$simFoldParamSensiFiles"
 if [ $paramSensitivitySim == "T" ]; then
   echo "$paramSensitivitySiteLineNumber"         >  "$simFoldParamSensiFiles""param_config.txt"
   echo "$slmParamListRunFilename"               >>  "$simFoldParamSensiFiles""param_config.txt"

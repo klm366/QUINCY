@@ -15,28 +15,28 @@
 ##    You should have received a copy of the GNU General Public License
 ##    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
 
-# default QUINCY usecase: 40_jsm_transient_fluxnet3_diagn_CNP_def.incl
+# default QUINCY usecase: 40_jsm_transient_fluxnet3_CNP_def.incl
 # 
-# transient "fluxnet3 diagnostics" simulation with quincy-jsm standalone soil-model
+# transient simulation with quincy-jsm standalone soil-model
 #  sites:   all fluxnet3 sites
-#  runtime: 500 yr spinup + transient simulation
-#  output:  yearly spinup, monthly transient, timestep of last full forcing period
-#           note, simulation length after spinup (1901 to ...) differs across sites
+#  runtime: 500 yr spinup + transient simulation (one full forcing period - site specific static forcing)
+#  output:  yearly spinup, weekly transient
+#           note, transient simulation length after spinup differs across sites
 # 
 
 
-experimentalID="40_jsm_trans_flux3_diagn_CNP"
+experimentalID="40_jsm_trans_flux3_CNP"
 slmModel="soil"
 
 forcingDataSet="fluxnet3"
 forcingMode="transient"
-soilForcTransRevNum="2174"
+soilForcTransRevNum="2197"
 customSiteList="F"
 customSiteListFileName=""
 singleSiteName=""
 paramSensitivitySim="F"
 
-specialFluxnetOutput="T"
+specialFluxnetOutput="F"
 compareSimCRUNCEPvsGFDB="F"
 
 
@@ -62,15 +62,16 @@ flag_sb_jsm_transport="F"         # ..
 flag_sb_jsm_litter_input="F"      # ..
 flag_sb_jsm_OM_sorption="F"       # ..
 
-# ECA and P cycle
-sb_adsorp_scheme="eca_full"       # eca_full; eca_part (only uptake, not for adsorption); eca_none
-
+# ECA (Equilibrium Chemistry Approximation)
+sb_adsorp_scheme="eca_part"       # eca_part (default): vmax of ECA prescribed from experiment/literature
+                                  # eca_full: vmax of ECA is calculated (by enzyme abundance and catalytic capacity) | eca_none: conventional MM kinetics 
 # simulation length & output
-simulation_length_number=115     # default years for forcingMode: static = 30 | transient = 115 [transient: 01.01.1901 -> 31.12.2015 without spinup!]
-output_interval_pool="monthly"   # timestep daily weekly monthly yearly
-output_interval_flux="monthly"   # timestep daily weekly monthly yearly
+# QUINCY soil transient: simulation length and output (after spinup) is site-specific and set by the run_slm.sh script
+simulation_length_number=30      # default years for forcingMode: static = 30 | transient = 115 [transient: 01.01.1901 -> 31.12.2015 without spinup!]
+output_interval_pool="weekly"    # timestep daily weekly monthly yearly
+output_interval_flux="weekly"    # timestep daily weekly monthly yearly
 output_start_first_day_year=1    # 1 to ... [must be lower than or equal with option: output_end_last_day_year]
-output_end_last_day_year=115     # equal with or larger than option: output_start_first_day_year
+output_end_last_day_year=30      # equal with or larger than option: output_start_first_day_year
 
 # options for the forcingMode transient (only evaluated if forcingMode == transient)
 transient_spinup_start_year=1901      # default 1901; start year of spinup period
