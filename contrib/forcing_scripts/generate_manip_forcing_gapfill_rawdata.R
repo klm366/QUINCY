@@ -81,11 +81,22 @@ dfnew2<-dfnew[dfnew[,2]<366,]
 dfnew3<-as.data.frame(array(NA,c(nYears*365*48,17)))   # nYears * days * 48 (1/2 h timestep)
 colnames(dfnew3)<-colnames(dfnew2)
 dfnew3[1:length(dfnew2[,1]),]<-dfnew2
+
 # calc the number of timesteps (1/2 h) missing
 nmiss<-nrow(dfnew3) - nrow(dfnew2)
 
+## gapfill missing days - can only deal with "full days" consisting of 48 timesteps
+##                        this gapfill cannot deal with individual timesteps missing
 ## if nmiss > 0
 if (nmiss > 0){
+  # check if nmiss is a multiple of 48 (modulo), if not stop the script
+  if ( nmiss%%48 != 0 ){
+    print(" Attempt to gapfill missing days failed because individual timesteps are missing.")
+    print(" This script can only deal with missing <full days> each consisting of 48 timesteps.")
+    print(paste0(" Number of timesteps that are missing is: ", nmiss))
+    stop("gapfilling days failed")
+  }
+
   # get the sequence of days of the year that are missing
   doy_miss<-seq(365-nmiss/48+1,365,1)
   
