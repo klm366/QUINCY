@@ -51,9 +51,10 @@ MODULE mo_veg_memory_class
   INTEGER, PARAMETER :: max_no_of_vars      = 250  !> TYPE t_jsb_var
 
   !-----------------------------------------------------------------------------------------------------
-  !> Type definition for veg pools
+  !> Type definition for veg_elements_pool
   !!
-  !! 
+  !! pool with only variables
+  !! last pool in line
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_pool) :: t_veg_elements_pool
     TYPE(t_jsb_var_real2d), POINTER :: carbon
@@ -72,9 +73,16 @@ MODULE mo_veg_memory_class
 
 
 
+  !-----------------------------------------------------------------------------------------------------
+  !> Type definition for t_veg_main_pool
+  !!
+  !! pool-structure containing pools and fluxes
+  !! 1st pool in line
+  !! added directly into the t_veg_memory as "CLASS(t_jsb_pool), POINTER :: pools"
+  !-----------------------------------------------------------------------------------------------------
+  TYPE, EXTENDS(t_veg_elements_pool) :: t_veg_main_pool
 
-
-
+  END TYPE t_veg_main_pool
 
   !> element_id 
   !! 
@@ -93,6 +101,13 @@ MODULE mo_veg_memory_class
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_memory) :: t_veg_memory
 
+    !> pools & fluxes
+    !! 
+    ! the veg_main_pool does contain all other pools & fluxes 
+    TYPE(t_veg_main_pool), POINTER :: veg_main_pool
+
+    !> 2D & 3D variables
+    !! 
       ! basic plant 2D
       TYPE(t_jsb_var_real2d)          :: &   
                                     height            , &            !< plant height [m]
@@ -182,17 +197,13 @@ MODULE mo_veg_memory_class
                                     veg_pool_leaf_phosphorus      , &
                                     veg_growth_leaf_carbon        , &
                                     veg_litterfall_leaf_carbon
-
   CONTAINS
     PROCEDURE :: Init => Init_veg_memory
   END TYPE t_veg_memory
 
-
   CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_memory_class'
 
-
 CONTAINS
-
 
   !-----------------------------------------------------------------------------------------------------
   !> helper function for t_veg_elements_pool
@@ -221,7 +232,6 @@ CONTAINS
     END SELECT
 
   END FUNCTION t_veg_elements_pool_get_element_name_by_id
-
 
   !-----------------------------------------------------------------------------------------------------
   !> routine for initializing the VEG_ elements pool
@@ -353,11 +363,13 @@ CONTAINS
     INTEGER,              INTENT(in)             :: lct_ids(:)      !> vector of land cover type IDs
     INTEGER,              INTENT(in)             :: model_id        !> model ID model\%id
     ! ---------------------------
-    TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
-    TYPE(t_jsb_vgrid), POINTER :: vgrid_surface                ! Vertical grid
-    TYPE(t_jsb_vgrid), POINTER :: vgrid_canopy                 ! Vertical grid
-    INTEGER                    :: table
+    TYPE(t_jsb_model),  POINTER :: model
+    TYPE(t_jsb_grid),   POINTER :: hgrid                        ! Horizontal grid
+    TYPE(t_jsb_vgrid),  POINTER :: vgrid_surface                ! Vertical grid
+    TYPE(t_jsb_vgrid),  POINTER :: vgrid_canopy                 ! Vertical grid
+    TYPE(t_pools),      POINTER :: pools
+    TYPE(t_plant_pool), POINTER :: plant_pool
+    INTEGER                     :: table
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_veg_memory'
     ! ---------------------------
     model         => Get_model(model_id)
@@ -366,17 +378,38 @@ CONTAINS
     vgrid_surface => Get_vgrid('surface')
     vgrid_canopy  => Get_vgrid('canopy_layer_q_')
 
-    !> populate all_elements(:) with the element_id of all elements
-    !! QUINCY is using always all elements
-    IF (.NOT. ALLOCATED(all_elements)) THEN
-      ALLOCATE(all_elements(6))
-      all_elements(:) = [carbon_, nitrogen_, phosphorus_, carbon13_, carbon14_, nitrogen15_]
-    END IF
-
-    !> add 2D & 3D variables
+    !> add memory only for LAND & PFT tiles
     !!
     IF ( One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. &
        & One_of(VEG_TYPE,  lct_ids(:)) > 0) THEN
+      
+      !=============================================================================================================================
+      !> pools & fluxes
+      !=============================================================================================================================
+
+      !------------------------------------------------------------------------
+      !> populate all_elements(:) with the element_id of all elements
+      !! QUINCY is using always all of the below six elements
+      IF (.NOT. ALLOCATED(all_elements)) THEN
+        ALLOCATE(all_elements(6))
+        all_elements(:) = [carbon_, nitrogen_, phosphorus_, carbon13_, carbon14_, nitrogen15_]
+      END IF
+
+      !------------------------------------------------------------------------
+      !> create and populate the main pool structure
+      !! 
+      ALLOCATE(veg_main_pool :: mem%pools)
+      CALL mem%pools%Init(name='vegetation main pool', shortname='veg_main_pool', l_elements=.FALSE.)
+
+      SELECT TYPE (selected => mem%pools)
+      CLASS IS (veg_main_pool)
+        mem%my_pools => selected
+      END SELECT
+
+
+      !=============================================================================================================================
+      !> 2D & 3D variables
+      !=============================================================================================================================
 
       CALL mem%Add_var('height', mem%height, &
             hgrid, vgrid_surface, &
