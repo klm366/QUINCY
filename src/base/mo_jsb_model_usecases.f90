@@ -18,7 +18,8 @@ MODULE mo_jsb_model_usecases
   USE mo_exception,           ONLY: message, finish
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model
-  USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, FUEL_
+  USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, &
+    &                               DISTURB_, FUEL_, DYNVEG_
   USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, AGGREGATE_ !, ON_SUBTREE_
   USE mo_jsb_tile,            ONLY: t_jsb_tile
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
@@ -125,7 +126,8 @@ CONTAINS
 
     INTEGER :: i
 
-    INTEGER, PARAMETER :: npft = 11
+    INTEGER, PARAMETER :: npft = 11 ! R: we should add this line either to the model part of the memory structure under t_jsb_model, or    
+                                    !    to the HSM part under t_jsb_tile_abstract (where we could not reach it so easy from here).
 
     CHARACTER(len=5), PARAMETER :: pft_shortnames(npft) = [character(len=5) ::  &
       & 'pft01', 'pft02', 'pft03', 'pft04', 'pft05', 'pft06', &
@@ -187,8 +189,8 @@ CONTAINS
         END IF
 
           veg_tile => t_jsb_tile('veg', 'Veg tile', &
-            & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_   /), &
-            & process_actions = (/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
+            & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_,    DYNVEG_  /), &
+            & process_actions = (/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_TILE_ /), &
             & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
             & fract_varname='fract_veg')
 
