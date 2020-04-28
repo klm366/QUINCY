@@ -44,7 +44,7 @@ MODULE mo_veg_memory_class
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: t_veg_memory, max_no_of_vars
-  PUBLIC :: t_veg_elements_pool
+  PUBLIC :: t_veg_main_pool, t_veg_elements_pool
   PUBLIC :: t_jsb_pool
   PUBLIC :: carbon_, nitrogen_, phosphorus_, carbon13_, carbon14_, nitrogen15_
  
@@ -367,8 +367,6 @@ CONTAINS
     TYPE(t_jsb_grid),   POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid),  POINTER :: vgrid_surface                ! Vertical grid
     TYPE(t_jsb_vgrid),  POINTER :: vgrid_canopy                 ! Vertical grid
-    TYPE(t_pools),      POINTER :: pools
-    TYPE(t_plant_pool), POINTER :: plant_pool
     INTEGER                     :: table
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_veg_memory'
     ! ---------------------------
@@ -398,12 +396,12 @@ CONTAINS
       !------------------------------------------------------------------------
       !> create and populate the main pool structure
       !! 
-      ALLOCATE(veg_main_pool :: mem%pools)
+      ALLOCATE(t_veg_main_pool :: mem%pools)
       CALL mem%pools%Init(name='vegetation main pool', shortname='veg_main_pool', l_elements=.FALSE.)
 
       SELECT TYPE (selected => mem%pools)
-      CLASS IS (veg_main_pool)
-        mem%my_pools => selected
+      CLASS IS (t_veg_main_pool)
+        mem%veg_main_pool => selected
       END SELECT
 
 
