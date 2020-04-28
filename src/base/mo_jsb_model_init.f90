@@ -285,6 +285,9 @@ CONTAINS
       CALL model%Queue_task(RAD_,    "surface_radiation")
       CALL model%Queue_task(PHENO_,  "phenology_q_")                !! quincy
       CALL model%Queue_task(PHENO_,  "foliage_projected_cover")
+        ! quincy testbed for pools: empty task - all science removed
+        CALL model%Queue_task(VEG_,  "update_veg_dynamics")
+        ! -------------------------
       CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")      ! may be called two times
       CALL model%Queue_task(HYDRO_,  "soil_properties")
       CALL model%Queue_task(SEB_,    "surface_energy")
