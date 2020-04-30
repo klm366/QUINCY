@@ -44,7 +44,7 @@ MODULE mo_veg_memory_class
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: t_veg_memory, max_no_of_vars
-  PUBLIC :: t_veg_main_pool, t_veg_elements_pool
+  PUBLIC :: t_veg_main_pool, t_veg_tissues_pool, t_veg_elements_pool
   PUBLIC :: t_jsb_pool
   PUBLIC :: carbon_, nitrogen_, phosphorus_, carbon13_, carbon14_, nitrogen15_
  
@@ -52,7 +52,6 @@ MODULE mo_veg_memory_class
 
   !-----------------------------------------------------------------------------------------------------
   !> Type definition for veg_elements_pool
-  !!
   !! pool with only variables
   !! last pool in line
   !-----------------------------------------------------------------------------------------------------
@@ -68,20 +67,36 @@ MODULE mo_veg_memory_class
     PROCEDURE :: Get_element_name_by_id => t_veg_elements_pool_get_element_name_by_id
   END TYPE t_veg_elements_pool
 
-
-
-
-
+  !-----------------------------------------------------------------------------------------------------
+  !> Type definition for t_veg_tissues_pool
+  !! vegetation pool of tissues
+  !-----------------------------------------------------------------------------------------------------
+  TYPE, EXTENDS(t_veg_elements_pool) :: t_veg_tissues_pool
+    TYPE(t_veg_elements_pool), POINTER :: leaf             !< elements of leaf
+    ! TYPE(t_veg_elements_pool), POINTER :: fine_root        !< elements of fine_root
+    ! TYPE(t_veg_elements_pool), POINTER :: coarse_root      !< elements of coarse_root
+    ! TYPE(t_veg_elements_pool), POINTER :: sap_wood         !< elements of sap_wood
+    ! TYPE(t_veg_elements_pool), POINTER :: heart_wood       !< elements of heart_wood
+    ! TYPE(t_veg_elements_pool), POINTER :: labile           !< elements of labile
+    ! TYPE(t_veg_elements_pool), POINTER :: reserve          !< elements of reserve
+    ! TYPE(t_veg_elements_pool), POINTER :: fruit            !< elements of fruit
+    ! TYPE(t_veg_elements_pool), POINTER :: seed_bed         !< elements of seed_bed
+  END TYPE t_veg_tissues_pool
 
   !-----------------------------------------------------------------------------------------------------
   !> Type definition for t_veg_main_pool
-  !!
   !! pool-structure containing pools and fluxes
   !! 1st pool in line
   !! added directly into the t_veg_memory as "CLASS(t_jsb_pool), POINTER :: pools"
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_veg_elements_pool) :: t_veg_main_pool
-
+    ! pools
+    TYPE(t_veg_tissues_pool),   POINTER :: veg_pool
+    ! fluxes
+    ! TYPE(t_veg_tissues_pool),   POINTER :: veg_growth    
+    ! TYPE(t_veg_tissues_pool),   POINTER :: veg_litterfall
+    ! TYPE(t_veg_tissues_pool),   POINTER :: veg_falloc    
+    ! TYPE(t_veg_tissues_pool),   POINTER :: veg_total_flux
   END TYPE t_veg_main_pool
 
   !> element_id 
@@ -235,7 +250,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> routine for initializing the VEG_ elements pool
-  !!
+  !! adding element-variables to the pool of type t_veg_elements_pool
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE t_veg_elements_pool_init(this, name, shortname, l_elements, element_list, element_unit)
 
@@ -243,13 +258,12 @@ CONTAINS
     CHARACTER(LEN=*),           INTENT(in)    :: name               ! pool name       (No spaces !)
     CHARACTER(LEN=*),           INTENT(in)    :: shortname          ! pool short name (No spaces !)
     LOGICAL,          OPTIONAL, INTENT(in)    :: l_elements         ! IF pool has elements 
-    INTEGER,          OPTIONAL, INTENT(in)    :: element_list(:)    ! list of elements, if only selected elements may be added
+    INTEGER,          OPTIONAL, INTENT(in)    :: element_list(:)    ! list of elements; use if only selected elements should be added
     CHARACTER(LEN=*), OPTIONAL, INTENT(in)    :: element_unit       ! unit of elements
 
-    LOGICAL :: l_add_elements
-    INTEGER, ALLOCATABLE :: element_list_loc(:)
-    INTEGER :: i
-
+    LOGICAL                     :: l_add_elements
+    INTEGER, ALLOCATABLE        :: element_list_loc(:)
+    INTEGER                     :: i
     CHARACTER(len=*), PARAMETER :: routine = modname//':t_veg_elements_pool_init'
 
     !--------------------------------------------
@@ -258,7 +272,6 @@ CONTAINS
 
     l_add_elements = .TRUE.
     IF (PRESENT(l_elements)) l_add_elements = l_elements
-
     IF (.NOT. l_add_elements) RETURN
 
     IF (.NOT. PRESENT(element_unit)) CALL finish(routine, 'Missing unit for elements')
@@ -339,6 +352,27 @@ CONTAINS
   END SUBROUTINE t_veg_elements_pool_init
 
 
+  FUNCTION Create_veg_tissues_pool(name, shortname, unit, element_list) RESULT(veg_tissues_pool)
+
+    CHARACTER(LEN=*),           INTENT(in) :: name
+    CHARACTER(LEN=*),           INTENT(in) :: shortname
+    CHARACTER(LEN=*),           INTENT(in) :: unit
+    INTEGER, OPTIONAL,          INTENT(in) :: element_list(:)   ! list of elements; use if only selected elements should be added
+    TYPE(t_veg_tissues_pool),   POINTER    :: veg_tissues_pool
+
+    TYPE(t_veg_elements_pool),  POINTER    :: veg_elements_pool
+
+    ALLOCATE(veg_tissues_pool)
+    CALL veg_tissues_pool%Init(name=name, shortname=shortname, l_elements=.TRUE., element_unit=unit, element_list=element_list)
+
+    ALLOCATE(veg_elements_pool)
+    CALL veg_elements_pool%Init(name='leaf_pool', shortname='leaf', &
+      &                         l_elements=.TRUE., element_unit=unit, element_list=element_list)
+    CALL veg_tissues_pool%Add_pool(veg_elements_pool)
+    veg_tissues_pool%leaf => veg_elements_pool
+    NULLIFY(veg_elements_pool)
+
+  END FUNCTION Create_veg_tissues_pool
 
 
 
@@ -363,12 +397,13 @@ CONTAINS
     INTEGER,              INTENT(in)             :: lct_ids(:)      !> vector of land cover type IDs
     INTEGER,              INTENT(in)             :: model_id        !> model ID model\%id
     ! ---------------------------
-    TYPE(t_jsb_model),  POINTER :: model
-    TYPE(t_jsb_grid),   POINTER :: hgrid                        ! Horizontal grid
-    TYPE(t_jsb_vgrid),  POINTER :: vgrid_surface                ! Vertical grid
-    TYPE(t_jsb_vgrid),  POINTER :: vgrid_canopy                 ! Vertical grid
-    INTEGER                     :: table
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_veg_memory'
+    TYPE(t_jsb_model),        POINTER :: model
+    TYPE(t_jsb_grid),         POINTER :: hgrid                        ! Horizontal grid
+    TYPE(t_jsb_vgrid),        POINTER :: vgrid_surface                ! Vertical grid
+    TYPE(t_jsb_vgrid),        POINTER :: vgrid_canopy                 ! Vertical grid
+    TYPE(t_veg_tissues_pool), POINTER :: veg_tissues_pool             ! pools /fluxes like veg_pool & veg_growth
+    INTEGER                           :: table
+    CHARACTER(len=*), PARAMETER       :: routine = TRIM(modname)//':Init_veg_memory'
     ! ---------------------------
     model         => Get_model(model_id)
     table         =  tables(1)
@@ -385,7 +420,7 @@ CONTAINS
       !> pools & fluxes
       !=============================================================================================================================
 
-      !------------------------------------------------------------------------
+      !-----------------------------------------------------------------------------------------------------------------------------
       !> populate all_elements(:) with the element_id of all elements
       !! QUINCY is using always all of the below six elements
       IF (.NOT. ALLOCATED(all_elements)) THEN
@@ -393,16 +428,33 @@ CONTAINS
         all_elements(:) = [carbon_, nitrogen_, phosphorus_, carbon13_, carbon14_, nitrogen15_]
       END IF
 
-      !------------------------------------------------------------------------
+      !-----------------------------------------------------------------------------------------------------------------------------
       !> create and populate the main pool structure
-      !! 
+      !! note: no spaces in 'name' and/or 'short name'
       ALLOCATE(t_veg_main_pool :: mem%pools)
-      CALL mem%pools%Init(name='vegetation main pool', shortname='veg_main_pool', l_elements=.FALSE.)
+      CALL mem%pools%Init(name='vegetation_main_pool', shortname='veg_main_pool', l_elements=.FALSE.)
 
       SELECT TYPE (selected => mem%pools)
       CLASS IS (t_veg_main_pool)
         mem%veg_main_pool => selected
       END SELECT
+
+      !-----------------------------------------------------------------------------------------------------------------------------
+      !> create the vegetation tissue pools & fluxes (veg_tissues_pool) 
+      !! veg_pool / veg_growth / ...
+      ! create pools 
+      veg_tissues_pool => Create_veg_tissues_pool('vegetation_pool', 'veg_pool', unit='mol m-2') ! l_elements=.TRUE. by default
+      CALL mem%veg_main_pool%Add_pool(veg_tissues_pool)
+      mem%veg_main_pool%veg_pool => veg_tissues_pool
+      NULLIFY(veg_tissues_pool)
+      ! set paths
+      CALL mem%pools%Set_paths()
+      ! create variables in the veg_tissues_pool itself
+      CALL mem%Add_var(mem%veg_main_pool%veg_pool, &
+        & hgrid, vgrid_surface, vgrid_canopy,                                                                      &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+        & prefix, suffix,                                                                              &
+        & lrestart=.TRUE., initval_r=0.0_wp )
 
 
       !=============================================================================================================================

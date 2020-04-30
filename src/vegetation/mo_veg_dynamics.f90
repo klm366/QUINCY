@@ -60,6 +60,10 @@ CONTAINS
     ! USE mo_jsb4_forcing,          ONLY: forcing_options
     ! USE mo_veg_constants,         ONLY: itree
 
+    ! Use of pools
+    dsl4jsb_Use_pools(VEG_) t_veg_main_pool, t_veg_tissues_pool, t_veg_elements_pool
+    dsl4jsb_Use_elements(VEG_) carbon_, nitrogen_, phosphorus_, carbon13_, carbon14_, nitrogen15_
+
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(ASSIMI_)
     dsl4jsb_Use_config(VEG_)
@@ -93,6 +97,8 @@ CONTAINS
     ! dsl4jsb_Def_memory(RAD_)                              ! TYPE(t_rad_memory),      POINTER :: rad__mem
     ! dsl4jsb_Def_memory(PHENO_)                            ! TYPE(t_pheno_memory),    POINTER :: pheno__mem
     ! dsl4jsb_Def_memory(SSE_)                             ! TYPE(t_sse_memory),     POINTER :: sse__mem
+    dsl4jsb_Def_pool(t_veg_tissues_pool) :: veg_pool
+    dsl4jsb_Def_pool(t_veg_elements_pool) :: veg_pool_leaf
     ! ! Declare pointers to variables in memory
     ! ! RAD_
     ! dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg
@@ -133,6 +139,8 @@ CONTAINS
 !     dsl4jsb_Get_memory(RAD_)
 !     dsl4jsb_Get_memory(PHENO_)
 !     dsl4jsb_Get_memory(SSE_)
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_pool,      veg_pool)
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_pool%leaf, veg_pool_leaf)
 !     ! Get process variables (Set pointers to variables in memory)
 !     dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg) ! in
 !     ! ---------------------------
@@ -167,8 +175,8 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
 
     !! tested for VEG_ pools & fluxes !!
-
-
+    veg_pool%leaf%carbon = 10.0_wp
+    veg_pool_leaf%carbon = 20.0_wp
 
   END SUBROUTINE update_veg_dynamics
 
