@@ -97,8 +97,12 @@ CONTAINS
     ! dsl4jsb_Def_memory(RAD_)                              ! TYPE(t_rad_memory),      POINTER :: rad__mem
     ! dsl4jsb_Def_memory(PHENO_)                            ! TYPE(t_pheno_memory),    POINTER :: pheno__mem
     ! dsl4jsb_Def_memory(SSE_)                             ! TYPE(t_sse_memory),     POINTER :: sse__mem
-    dsl4jsb_Def_pool(t_veg_tissues_pool) :: veg_pool
+    dsl4jsb_Def_pool(t_veg_tissues_pool)  :: veg_pool
     dsl4jsb_Def_pool(t_veg_elements_pool) :: veg_pool_leaf
+    dsl4jsb_Def_pool(t_veg_tissues_pool)  :: veg_growth
+    dsl4jsb_Def_pool(t_veg_tissues_pool)  :: veg_litterfall
+    dsl4jsb_Def_pool(t_veg_tissues_pool)  :: veg_falloc
+    dsl4jsb_Def_pool(t_veg_tissues_pool)  :: veg_total_flux
     ! ! Declare pointers to variables in memory
     ! ! RAD_
     ! dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg
@@ -139,8 +143,12 @@ CONTAINS
 !     dsl4jsb_Get_memory(RAD_)
 !     dsl4jsb_Get_memory(PHENO_)
 !     dsl4jsb_Get_memory(SSE_)
-    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_pool,      veg_pool)
-    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_pool%leaf, veg_pool_leaf)
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_pool,        veg_pool)
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_pool%leaf,   veg_pool_leaf)
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_growth,      veg_growth)
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_litterfall,  veg_litterfall)
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_falloc,      veg_falloc)
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_total_flux,  veg_total_flux)
 !     ! Get process variables (Set pointers to variables in memory)
 !     dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg) ! in
 !     ! ---------------------------
@@ -175,8 +183,38 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
 
     !! tested for VEG_ pools & fluxes !!
-    veg_pool%leaf%carbon = 10.0_wp
-    veg_pool_leaf%carbon = 20.0_wp
+    veg_pool%leaf%carbon%ptrm1(:) = 20.0_wp
+    veg_pool_leaf%carbon%ptrm1(:) = 10.0_wp
+    
+    veg_pool%fine_root%carbon   = 10.0_wp
+    veg_pool%coarse_root%carbon = 10.0_wp
+    veg_pool%sap_wood%carbon    = 10.0_wp
+    veg_pool%heart_wood%carbon  = 10.0_wp
+    veg_pool%labile%carbon      = 10.0_wp
+    veg_pool%reserve%carbon     = 10.0_wp
+    veg_pool%fruit%carbon       = 10.0_wp
+    veg_pool%seed_bed%carbon    = 10.0_wp
+
+    veg_pool%leaf%nitrogen        = 15.0_wp
+    veg_pool%fine_root%nitrogen   = 15.0_wp
+    veg_pool%coarse_root%nitrogen = 15.0_wp
+    veg_pool%sap_wood%nitrogen    = 15.0_wp
+    veg_pool%heart_wood%nitrogen  = 15.0_wp
+    veg_pool%labile%nitrogen      = 15.0_wp
+    veg_pool%reserve%nitrogen     = 15.0_wp
+    veg_pool%fruit%nitrogen       = 15.0_wp
+    veg_pool%seed_bed%nitrogen    = 15.0_wp
+
+    veg_pool%labile%carbon    = $veg_pool%labile%carbon$ + $veg_pool%fine_root%carbon$
+    ! veg_pool%labile%carbon    = $veg_pool%labile%carbon$ + &
+    !   & $veg_pool%fine_root%carbon$ + $veg_pool%coarse_root%carbon$ - $veg_pool%reserve%carbon$
+    ! veg_pool%labile%nitrogen  = veg_pool%labile%nitrogen + &
+    !   & $veg_pool%fine_root%nitrogen$ + $veg_pool%coarse_root%nitrogen$ - $veg_pool%reserve%nitrogen$
+
+    veg_growth%leaf%carbon      = 20.0_wp
+    veg_litterfall%leaf%carbon  = 20.0_wp
+    veg_falloc%leaf%carbon      = 20.0_wp
+    veg_total_flux%leaf%carbon  = $veg_growth%leaf%carbon$ + $veg_litterfall%leaf%carbon$ + $veg_falloc%leaf%carbon$
 
   END SUBROUTINE update_veg_dynamics
 

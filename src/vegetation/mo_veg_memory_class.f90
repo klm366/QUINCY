@@ -48,7 +48,7 @@ MODULE mo_veg_memory_class
   PUBLIC :: t_jsb_pool
   PUBLIC :: carbon_, nitrogen_, phosphorus_, carbon13_, carbon14_, nitrogen15_
  
-  INTEGER, PARAMETER :: max_no_of_vars      = 250  !> TYPE t_jsb_var
+  INTEGER, PARAMETER :: max_no_of_vars = 530    !> TYPE t_jsb_var | 'normal' var: ~ 220 | 5 pools: 270 var | 4 tissues: 24
 
   !-----------------------------------------------------------------------------------------------------
   !> Type definition for veg_elements_pool
@@ -73,14 +73,14 @@ MODULE mo_veg_memory_class
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_veg_elements_pool) :: t_veg_tissues_pool
     TYPE(t_veg_elements_pool), POINTER :: leaf             !< elements of leaf
-    ! TYPE(t_veg_elements_pool), POINTER :: fine_root        !< elements of fine_root
-    ! TYPE(t_veg_elements_pool), POINTER :: coarse_root      !< elements of coarse_root
-    ! TYPE(t_veg_elements_pool), POINTER :: sap_wood         !< elements of sap_wood
-    ! TYPE(t_veg_elements_pool), POINTER :: heart_wood       !< elements of heart_wood
-    ! TYPE(t_veg_elements_pool), POINTER :: labile           !< elements of labile
-    ! TYPE(t_veg_elements_pool), POINTER :: reserve          !< elements of reserve
-    ! TYPE(t_veg_elements_pool), POINTER :: fruit            !< elements of fruit
-    ! TYPE(t_veg_elements_pool), POINTER :: seed_bed         !< elements of seed_bed
+    TYPE(t_veg_elements_pool), POINTER :: fine_root        !< elements of fine_root
+    TYPE(t_veg_elements_pool), POINTER :: coarse_root      !< elements of coarse_root
+    TYPE(t_veg_elements_pool), POINTER :: sap_wood         !< elements of sap_wood
+    TYPE(t_veg_elements_pool), POINTER :: heart_wood       !< elements of heart_wood
+    TYPE(t_veg_elements_pool), POINTER :: labile           !< elements of labile
+    TYPE(t_veg_elements_pool), POINTER :: reserve          !< elements of reserve
+    TYPE(t_veg_elements_pool), POINTER :: fruit            !< elements of fruit
+    TYPE(t_veg_elements_pool), POINTER :: seed_bed         !< elements of seed_bed
   END TYPE t_veg_tissues_pool
 
   !-----------------------------------------------------------------------------------------------------
@@ -93,10 +93,10 @@ MODULE mo_veg_memory_class
     ! pools
     TYPE(t_veg_tissues_pool),   POINTER :: veg_pool
     ! fluxes
-    ! TYPE(t_veg_tissues_pool),   POINTER :: veg_growth    
-    ! TYPE(t_veg_tissues_pool),   POINTER :: veg_litterfall
-    ! TYPE(t_veg_tissues_pool),   POINTER :: veg_falloc    
-    ! TYPE(t_veg_tissues_pool),   POINTER :: veg_total_flux
+    TYPE(t_veg_tissues_pool),   POINTER :: veg_growth    
+    TYPE(t_veg_tissues_pool),   POINTER :: veg_litterfall
+    TYPE(t_veg_tissues_pool),   POINTER :: veg_falloc    
+    TYPE(t_veg_tissues_pool),   POINTER :: veg_total_flux
   END TYPE t_veg_main_pool
 
   !> element_id 
@@ -362,14 +362,72 @@ CONTAINS
 
     TYPE(t_veg_elements_pool),  POINTER    :: veg_elements_pool
 
+    ! tissue pool init
     ALLOCATE(veg_tissues_pool)
     CALL veg_tissues_pool%Init(name=name, shortname=shortname, l_elements=.TRUE., element_unit=unit, element_list=element_list)
-
+    ! element pools init and add to tissue pool
+    ! leaf
     ALLOCATE(veg_elements_pool)
     CALL veg_elements_pool%Init(name='leaf_pool', shortname='leaf', &
       &                         l_elements=.TRUE., element_unit=unit, element_list=element_list)
     CALL veg_tissues_pool%Add_pool(veg_elements_pool)
     veg_tissues_pool%leaf => veg_elements_pool
+    NULLIFY(veg_elements_pool)
+    ! fine_root
+    ALLOCATE(veg_elements_pool)
+    CALL veg_elements_pool%Init(name='fine_root_pool', shortname='fine_root', &
+      &                         l_elements=.TRUE., element_unit=unit, element_list=element_list)
+    CALL veg_tissues_pool%Add_pool(veg_elements_pool)
+    veg_tissues_pool%fine_root => veg_elements_pool
+    NULLIFY(veg_elements_pool)
+    ! coarse_root
+    ALLOCATE(veg_elements_pool)
+    CALL veg_elements_pool%Init(name='coarse_root_pool', shortname='coarse_root', &
+      &                         l_elements=.TRUE., element_unit=unit, element_list=element_list)
+    CALL veg_tissues_pool%Add_pool(veg_elements_pool)
+    veg_tissues_pool%coarse_root => veg_elements_pool
+    NULLIFY(veg_elements_pool)
+    ! sap_wood
+    ALLOCATE(veg_elements_pool)
+    CALL veg_elements_pool%Init(name='sap_wood_pool', shortname='sap_wood', &
+      &                         l_elements=.TRUE., element_unit=unit, element_list=element_list)
+    CALL veg_tissues_pool%Add_pool(veg_elements_pool)
+    veg_tissues_pool%sap_wood => veg_elements_pool
+    NULLIFY(veg_elements_pool)
+    ! heart_wood
+    ALLOCATE(veg_elements_pool)
+    CALL veg_elements_pool%Init(name='heart_wood_pool', shortname='heart_wood', &
+      &                         l_elements=.TRUE., element_unit=unit, element_list=element_list)
+    CALL veg_tissues_pool%Add_pool(veg_elements_pool)
+    veg_tissues_pool%heart_wood => veg_elements_pool
+    NULLIFY(veg_elements_pool)
+    ! labile
+    ALLOCATE(veg_elements_pool)
+    CALL veg_elements_pool%Init(name='labile_pool', shortname='labile', &
+      &                         l_elements=.TRUE., element_unit=unit, element_list=element_list)
+    CALL veg_tissues_pool%Add_pool(veg_elements_pool)
+    veg_tissues_pool%labile => veg_elements_pool
+    NULLIFY(veg_elements_pool)
+    ! reserve
+    ALLOCATE(veg_elements_pool)
+    CALL veg_elements_pool%Init(name='reserve_pool', shortname='reserve', &
+      &                         l_elements=.TRUE., element_unit=unit, element_list=element_list)
+    CALL veg_tissues_pool%Add_pool(veg_elements_pool)
+    veg_tissues_pool%reserve => veg_elements_pool
+    NULLIFY(veg_elements_pool)
+    ! fruit
+    ALLOCATE(veg_elements_pool)
+    CALL veg_elements_pool%Init(name='fruit_pool', shortname='fruit', &
+      &                         l_elements=.TRUE., element_unit=unit, element_list=element_list)
+    CALL veg_tissues_pool%Add_pool(veg_elements_pool)
+    veg_tissues_pool%fruit => veg_elements_pool
+    NULLIFY(veg_elements_pool)
+    ! seed_bed
+    ALLOCATE(veg_elements_pool)
+    CALL veg_elements_pool%Init(name='seed_bed_pool', shortname='seed_bed', &
+      &                         l_elements=.TRUE., element_unit=unit, element_list=element_list)
+    CALL veg_tissues_pool%Add_pool(veg_elements_pool)
+    veg_tissues_pool%seed_bed => veg_elements_pool
     NULLIFY(veg_elements_pool)
 
   END FUNCTION Create_veg_tissues_pool
@@ -442,20 +500,60 @@ CONTAINS
       !-----------------------------------------------------------------------------------------------------------------------------
       !> create the vegetation tissue pools & fluxes (veg_tissues_pool) 
       !! veg_pool / veg_growth / ...
-      ! create pools 
+      ! create pools & fluxes
+      ! veg_pool
       veg_tissues_pool => Create_veg_tissues_pool('vegetation_pool', 'veg_pool', unit='mol m-2') ! l_elements=.TRUE. by default
       CALL mem%veg_main_pool%Add_pool(veg_tissues_pool)
       mem%veg_main_pool%veg_pool => veg_tissues_pool
+      NULLIFY(veg_tissues_pool)
+      ! veg_growth
+      veg_tissues_pool => Create_veg_tissues_pool('veg_growth_flux', 'veg_growth', unit='mol m-2') ! l_elements=.TRUE. by default
+      CALL mem%veg_main_pool%Add_pool(veg_tissues_pool)
+      mem%veg_main_pool%veg_growth => veg_tissues_pool
+      NULLIFY(veg_tissues_pool)
+      ! veg_litterfall
+      veg_tissues_pool => Create_veg_tissues_pool('veg_litterfall_flux', 'veg_litterfall', unit='mol m-2') ! l_elements=.TRUE. by default
+      CALL mem%veg_main_pool%Add_pool(veg_tissues_pool)
+      mem%veg_main_pool%veg_litterfall => veg_tissues_pool
+      NULLIFY(veg_tissues_pool)
+      ! veg_falloc
+      veg_tissues_pool => Create_veg_tissues_pool('veg_allocation_fraction_flux', 'veg_falloc', unit='mol m-2') ! l_elements=.TRUE. by default
+      CALL mem%veg_main_pool%Add_pool(veg_tissues_pool)
+      mem%veg_main_pool%veg_falloc => veg_tissues_pool
+      NULLIFY(veg_tissues_pool)
+      ! veg_total_flux
+      veg_tissues_pool => Create_veg_tissues_pool('vegetation_total_flux', 'veg_total_flux', unit='mol m-2') ! l_elements=.TRUE. by default
+      CALL mem%veg_main_pool%Add_pool(veg_tissues_pool)
+      mem%veg_main_pool%veg_total_flux => veg_tissues_pool
       NULLIFY(veg_tissues_pool)
       ! set paths
       CALL mem%pools%Set_paths()
       ! create variables in the veg_tissues_pool itself
       CALL mem%Add_var(mem%veg_main_pool%veg_pool, &
-        & hgrid, vgrid_surface, vgrid_canopy,                                                                      &
+        & hgrid, vgrid_surface, vgrid_canopy,                                                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & lrestart=.TRUE., initval_r=0.0_wp )
-
+      CALL mem%Add_var(mem%veg_main_pool%veg_growth, &
+        & hgrid, vgrid_surface, vgrid_canopy,                                                          &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+        & prefix, suffix,                                                                              &
+        & lrestart=.TRUE., initval_r=0.0_wp )
+      CALL mem%Add_var(mem%veg_main_pool%veg_litterfall, &
+        & hgrid, vgrid_surface, vgrid_canopy,                                                          &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+        & prefix, suffix,                                                                              &
+        & lrestart=.TRUE., initval_r=0.0_wp )
+      CALL mem%Add_var(mem%veg_main_pool%veg_falloc, &
+        & hgrid, vgrid_surface, vgrid_canopy,                                                          &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+        & prefix, suffix,                                                                              &
+        & lrestart=.TRUE., initval_r=0.0_wp )
+      CALL mem%Add_var(mem%veg_main_pool%veg_total_flux, &
+        & hgrid, vgrid_surface, vgrid_canopy,                                                          &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+        & prefix, suffix,                                                                              &
+        & lrestart=.TRUE., initval_r=0.0_wp )
 
       !=============================================================================================================================
       !> 2D & 3D variables
