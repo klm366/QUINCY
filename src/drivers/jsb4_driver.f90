@@ -377,8 +377,8 @@ PROGRAM jsb4_driver
   CALL jsbach_init_after_restart(model_id)
 
   CALL init_output
-  ! CALL open_output_streams
-  ! CALL mvstream_update_cache
+  CALL open_output_streams
+  CALL mvstream_update_cache
 
 #ifdef HAVE_CDIPIO
   ! change from I/O STAGE_DEFINITION to STAGE_TIMELOOP
@@ -402,7 +402,8 @@ PROGRAM jsb4_driver
     !IF (l_trigfiles .AND. .NOT. is_time_experiment_start(current_datetime_ptr)) THEN
     IF (l_trigfiles) THEN
       CALL message('INFO','Closing and re-opening output streams')
-      IF (.NOT. is_time_experiment_start(current_datetime_ptr)) CALL close_output_streams
+      ! IF (.NOT. is_time_experiment_start(current_datetime_ptr)) CALL close_output_streams
+      CALL close_output_streams
       CALL open_output_streams
     ENDIF
 
