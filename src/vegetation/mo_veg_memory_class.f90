@@ -92,11 +92,15 @@ MODULE mo_veg_memory_class
   TYPE, EXTENDS(t_veg_elements_pool) :: t_veg_main_pool
     ! pools
     TYPE(t_veg_tissues_pool),   POINTER :: veg_pool
+    TYPE(t_veg_elements_pool),  POINTER :: veg_total_biomass
     ! fluxes
     TYPE(t_veg_tissues_pool),   POINTER :: veg_growth    
     TYPE(t_veg_tissues_pool),   POINTER :: veg_litterfall
     TYPE(t_veg_tissues_pool),   POINTER :: veg_falloc    
     TYPE(t_veg_tissues_pool),   POINTER :: veg_total_flux
+    TYPE(t_veg_elements_pool),  POINTER :: veg_exudation    
+    TYPE(t_veg_elements_pool),  POINTER :: veg_establishment
+    TYPE(t_veg_elements_pool),  POINTER :: veg_reserve_use  
   END TYPE t_veg_main_pool
 
   !> element_id 
@@ -455,13 +459,14 @@ CONTAINS
     INTEGER,              INTENT(in)             :: lct_ids(:)      !> vector of land cover type IDs
     INTEGER,              INTENT(in)             :: model_id        !> model ID model\%id
     ! ---------------------------
-    TYPE(t_jsb_model),        POINTER :: model
-    TYPE(t_jsb_grid),         POINTER :: hgrid                        ! Horizontal grid
-    TYPE(t_jsb_vgrid),        POINTER :: vgrid_surface                ! Vertical grid
-    TYPE(t_jsb_vgrid),        POINTER :: vgrid_canopy                 ! Vertical grid
-    TYPE(t_veg_tissues_pool), POINTER :: veg_tissues_pool             ! pools /fluxes like veg_pool & veg_growth
-    INTEGER                           :: table
-    CHARACTER(len=*), PARAMETER       :: routine = TRIM(modname)//':Init_veg_memory'
+    TYPE(t_jsb_model),          POINTER :: model
+    TYPE(t_jsb_grid),           POINTER :: hgrid                        ! Horizontal grid
+    TYPE(t_jsb_vgrid),          POINTER :: vgrid_surface                ! Vertical grid
+    TYPE(t_jsb_vgrid),          POINTER :: vgrid_canopy                 ! Vertical grid
+    TYPE(t_veg_elements_pool),  POINTER :: veg_elements_pool            ! pools /fluxes like veg_exudation & veg_total_biomass
+    TYPE(t_veg_tissues_pool),   POINTER :: veg_tissues_pool             ! pools /fluxes like veg_pool & veg_growth
+    INTEGER                             :: table
+    CHARACTER(len=*), PARAMETER         :: routine = TRIM(modname)//':Init_veg_memory'
     ! ---------------------------
     model         => Get_model(model_id)
     table         =  tables(1)
@@ -526,9 +531,40 @@ CONTAINS
       CALL mem%veg_main_pool%Add_pool(veg_tissues_pool)
       mem%veg_main_pool%veg_total_flux => veg_tissues_pool
       NULLIFY(veg_tissues_pool)
+      ! add element pools to the veg_main_pool, i.e., to the same level as the above veg_tissues_pool veg_pool / veg_growth / ...
+      ! veg_total_biomass
+      ALLOCATE(veg_elements_pool)
+      CALL veg_elements_pool%Init(name='vegetation_total_biomass', shortname='veg_total_biomass', &
+        &                         l_elements=.TRUE., element_unit='mol m-2')
+      CALL mem%veg_main_pool%Add_pool(veg_elements_pool)
+      mem%veg_main_pool%veg_total_biomass => veg_elements_pool
+      NULLIFY(veg_elements_pool)
+      ! veg_exudation
+      ALLOCATE(veg_elements_pool)
+      CALL veg_elements_pool%Init(name='veg_exudation', shortname='veg_exudation', &
+        &                         l_elements=.TRUE., element_unit='mol m-2')
+      CALL mem%veg_main_pool%Add_pool(veg_elements_pool)
+      mem%veg_main_pool%veg_exudation => veg_elements_pool
+      NULLIFY(veg_elements_pool)
+      ! veg_establishment
+      ALLOCATE(veg_elements_pool)
+      CALL veg_elements_pool%Init(name='veg_establishment', shortname='veg_establishment', &
+        &                         l_elements=.TRUE., element_unit='mol m-2')
+      CALL mem%veg_main_pool%Add_pool(veg_elements_pool)
+      mem%veg_main_pool%veg_establishment => veg_elements_pool
+      NULLIFY(veg_elements_pool)
+      ! veg_reserve_use
+      ALLOCATE(veg_elements_pool)
+      CALL veg_elements_pool%Init(name='veg_reserve_use', shortname='veg_reserve_use', &
+        &                         l_elements=.TRUE., element_unit='mol m-2')
+      CALL mem%veg_main_pool%Add_pool(veg_elements_pool)
+      mem%veg_main_pool%veg_reserve_use => veg_elements_pool
+      NULLIFY(veg_elements_pool)
+
       ! set paths
       CALL mem%pools%Set_paths()
-      ! create variables in the veg_tissues_pool itself
+
+      ! add all variables in the veg_tissues_pool to the VEG_ memory
       CALL mem%Add_var(mem%veg_main_pool%veg_pool, &
         & hgrid, vgrid_surface, vgrid_canopy,                                                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
@@ -550,6 +586,27 @@ CONTAINS
         & prefix, suffix,                                                                              &
         & lrestart=.TRUE., initval_r=0.0_wp )
       CALL mem%Add_var(mem%veg_main_pool%veg_total_flux, &
+        & hgrid, vgrid_surface, vgrid_canopy,                                                          &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+        & prefix, suffix,                                                                              &
+        & lrestart=.TRUE., initval_r=0.0_wp )
+      ! add all variables in the veg_elements_pool to the VEG_ memory
+      CALL mem%Add_var(mem%veg_main_pool%veg_total_biomass, &
+        & hgrid, vgrid_surface, vgrid_canopy,                                                          &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+        & prefix, suffix,                                                                              &
+        & lrestart=.TRUE., initval_r=0.0_wp )
+      CALL mem%Add_var(mem%veg_main_pool%veg_exudation, &
+        & hgrid, vgrid_surface, vgrid_canopy,                                                          &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+        & prefix, suffix,                                                                              &
+        & lrestart=.TRUE., initval_r=0.0_wp )
+      CALL mem%Add_var(mem%veg_main_pool%veg_establishment, &
+        & hgrid, vgrid_surface, vgrid_canopy,                                                          &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+        & prefix, suffix,                                                                              &
+        & lrestart=.TRUE., initval_r=0.0_wp )
+      CALL mem%Add_var(mem%veg_main_pool%veg_reserve_use, &
         & hgrid, vgrid_surface, vgrid_canopy,                                                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
