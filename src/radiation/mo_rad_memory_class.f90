@@ -304,7 +304,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
       & prefix, suffix,                                                    &
       & output_level=MEDIUM,                                               &
-      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+      & loutput=.FALSE., lrestart=.TRUE., initval_r=0.0_wp)
 
     CALL jsb_add_var( mem, 'alb_nir_snow', mem%alb_nir_snow,               &
       & hgrid, surface,                                                    &
@@ -312,7 +312,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
       & prefix, suffix,                                                    &
       & output_level=MEDIUM,                                               &
-      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+      & loutput=.FALSE., lrestart=.TRUE., initval_r=0.0_wp)
 
     ! Additional variables for land tiles
     IF ( (One_of(BARE_TYPE, lct_ids(:)) > 0 .OR. One_of(VEG_TYPE, lct_ids(:)) > 0           &

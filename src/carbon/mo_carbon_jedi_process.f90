@@ -477,7 +477,7 @@ CONTAINS
     IF ( ff_grow_T     .ge.  EndGrowTemp   ) THEN
             Flg_grow_T = 1.0_wp
     ELSE IF ( ff_grow_T     .gt.  CritiGrowTemp  .and.  ff_grow_T     .le.  EndGrowTemp  ) THEN
-        IF ( ff_dTdt .gt. 0._wp  ) THEN
+        IF ( ff_dTdt .ge. 0._wp  ) THEN
             Flg_grow_T = 1.0_wp
         ELSE
             Flg_grow_T = 0.0_wp

@@ -785,7 +785,7 @@ CONTAINS
           & hgrid, surface,                                                    &
           & t_cf('canopy_conductance_limited', '', ''),                        &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix,    loutput=.TRUE.,                        &
+          & prefix, suffix,    loutput=.FALSE.,                        &
           & initval_r=0.0_wp )
       END IF
 
