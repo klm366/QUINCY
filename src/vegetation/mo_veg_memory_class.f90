@@ -253,8 +253,8 @@ CONTAINS
   END FUNCTION t_veg_elements_pool_get_element_name_by_id
 
   !-----------------------------------------------------------------------------------------------------
-  !> routine for initializing the VEG_ elements pool
-  !! adding element-variables to the pool of type t_veg_elements_pool
+  !> initializing an object of the VEG_ elements pool "t_veg_elements_pool"
+  !! "pool_object%Init()"
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE t_veg_elements_pool_init(this, name, shortname, l_elements, element_list, element_unit)
 
@@ -355,94 +355,99 @@ CONTAINS
 
   END SUBROUTINE t_veg_elements_pool_init
 
+  !-----------------------------------------------------------------------------------------------------
+  !> create and init an object of the VEG_ tissues pool "t_veg_tissues_pool"
+  !! init and add all its objects of the "t_veg_elements_pool" with "pool_object%Init()"
+  !! "object => Create_veg_tissues_pool()"
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Create_veg_tissues_pool(name, shortname, unit, lct_ids, pool_prefix, pool_suffix) RESULT(veg_tissues_pool)
 
-  FUNCTION Create_veg_tissues_pool(name, shortname, unit, element_list) RESULT(veg_tissues_pool)
+    CHARACTER(LEN=*),           INTENT(in)  :: name
+    CHARACTER(LEN=*),           INTENT(in)  :: shortname
+    CHARACTER(LEN=*),           INTENT(in)  :: unit
+    INTEGER,                    INTENT(in)  :: lct_ids(:)
+    CHARACTER(LEN=*), OPTIONAL, INTENT(in)  :: pool_prefix
+    CHARACTER(LEN=*), OPTIONAL, INTENT(in)  :: pool_suffix
+    TYPE(t_veg_tissues_pool),   POINTER     :: veg_tissues_pool
 
-    CHARACTER(LEN=*),           INTENT(in) :: name
-    CHARACTER(LEN=*),           INTENT(in) :: shortname
-    CHARACTER(LEN=*),           INTENT(in) :: unit
-    INTEGER, OPTIONAL,          INTENT(in) :: element_list(:)   ! list of elements; use if only selected elements should be added
-    TYPE(t_veg_tissues_pool),   POINTER    :: veg_tissues_pool
+    TYPE(t_veg_elements_pool),  POINTER     :: veg_elements_pool
+    CHARACTER(LEN=:),           ALLOCATABLE :: prefix_loc, suffix_loc
 
-    TYPE(t_veg_elements_pool),  POINTER    :: veg_elements_pool
+    prefix_loc = ''
+    suffix_loc = ''
+    CALL assign_if_present_allocatable(prefix_loc, pool_prefix)
+    CALL assign_if_present_allocatable(suffix_loc, pool_suffix)
+    IF (prefix_loc /= '') prefix_loc = prefix_loc // '_'
+    IF (suffix_loc /= '') suffix_loc = '_' // suffix_loc
 
     ! tissue pool init
     ALLOCATE(veg_tissues_pool)
-    CALL veg_tissues_pool%Init(name=name, shortname=shortname, l_elements=.TRUE., element_unit=unit, element_list=element_list)
-    ! element pools init and add to tissue pool
+    CALL veg_tissues_pool%Init(name, shortname, l_elements=.TRUE., element_unit=unit)
+    
+    ! element pools allocate & init & add to tissue pool
+    ! "shortname" is used for model output
+    ! "element_list" is optional and can be used to select specific elements (not needed when all elements may be added)
     ! leaf
     ALLOCATE(veg_elements_pool)
-    CALL veg_elements_pool%Init(name='leaf_pool', shortname='leaf', &
-      &                         l_elements=.TRUE., element_unit=unit, element_list=element_list)
+    CALL veg_elements_pool%Init(name='leaf_pool'//suffix_loc, shortname='leaf', l_elements=.TRUE., element_unit=unit)
     CALL veg_tissues_pool%Add_pool(veg_elements_pool)
     veg_tissues_pool%leaf => veg_elements_pool
     NULLIFY(veg_elements_pool)
     ! fine_root
     ALLOCATE(veg_elements_pool)
-    CALL veg_elements_pool%Init(name='fine_root_pool', shortname='fine_root', &
-      &                         l_elements=.TRUE., element_unit=unit, element_list=element_list)
+    CALL veg_elements_pool%Init(name='fine_root_pool'//suffix_loc, shortname='fine_root', l_elements=.TRUE., element_unit=unit)
     CALL veg_tissues_pool%Add_pool(veg_elements_pool)
     veg_tissues_pool%fine_root => veg_elements_pool
     NULLIFY(veg_elements_pool)
     ! coarse_root
     ALLOCATE(veg_elements_pool)
-    CALL veg_elements_pool%Init(name='coarse_root_pool', shortname='coarse_root', &
-      &                         l_elements=.TRUE., element_unit=unit, element_list=element_list)
+    CALL veg_elements_pool%Init(name='coarse_root_pool'//suffix_loc, shortname='coarse_root', l_elements=.TRUE., element_unit=unit)
     CALL veg_tissues_pool%Add_pool(veg_elements_pool)
     veg_tissues_pool%coarse_root => veg_elements_pool
     NULLIFY(veg_elements_pool)
     ! sap_wood
     ALLOCATE(veg_elements_pool)
-    CALL veg_elements_pool%Init(name='sap_wood_pool', shortname='sap_wood', &
-      &                         l_elements=.TRUE., element_unit=unit, element_list=element_list)
+    CALL veg_elements_pool%Init(name='sap_wood_pool'//suffix_loc, shortname='sap_wood', l_elements=.TRUE., element_unit=unit)
     CALL veg_tissues_pool%Add_pool(veg_elements_pool)
     veg_tissues_pool%sap_wood => veg_elements_pool
     NULLIFY(veg_elements_pool)
     ! heart_wood
     ALLOCATE(veg_elements_pool)
-    CALL veg_elements_pool%Init(name='heart_wood_pool', shortname='heart_wood', &
-      &                         l_elements=.TRUE., element_unit=unit, element_list=element_list)
+    CALL veg_elements_pool%Init(name='heart_wood_pool'//suffix_loc, shortname='heart_wood', l_elements=.TRUE., element_unit=unit)
     CALL veg_tissues_pool%Add_pool(veg_elements_pool)
     veg_tissues_pool%heart_wood => veg_elements_pool
     NULLIFY(veg_elements_pool)
     ! labile
     ALLOCATE(veg_elements_pool)
-    CALL veg_elements_pool%Init(name='labile_pool', shortname='labile', &
-      &                         l_elements=.TRUE., element_unit=unit, element_list=element_list)
+    CALL veg_elements_pool%Init(name='labile_pool'//suffix_loc, shortname='labile', l_elements=.TRUE., element_unit=unit)
     CALL veg_tissues_pool%Add_pool(veg_elements_pool)
     veg_tissues_pool%labile => veg_elements_pool
     NULLIFY(veg_elements_pool)
     ! reserve
     ALLOCATE(veg_elements_pool)
-    CALL veg_elements_pool%Init(name='reserve_pool', shortname='reserve', &
-      &                         l_elements=.TRUE., element_unit=unit, element_list=element_list)
+    CALL veg_elements_pool%Init(name='reserve_pool'//suffix_loc, shortname='reserve', l_elements=.TRUE., element_unit=unit)
     CALL veg_tissues_pool%Add_pool(veg_elements_pool)
     veg_tissues_pool%reserve => veg_elements_pool
     NULLIFY(veg_elements_pool)
     ! fruit
     ALLOCATE(veg_elements_pool)
-    CALL veg_elements_pool%Init(name='fruit_pool', shortname='fruit', &
-      &                         l_elements=.TRUE., element_unit=unit, element_list=element_list)
+    CALL veg_elements_pool%Init(name='fruit_pool'//suffix_loc, shortname='fruit', l_elements=.TRUE., element_unit=unit)
     CALL veg_tissues_pool%Add_pool(veg_elements_pool)
     veg_tissues_pool%fruit => veg_elements_pool
     NULLIFY(veg_elements_pool)
     ! seed_bed
     ALLOCATE(veg_elements_pool)
-    CALL veg_elements_pool%Init(name='seed_bed_pool', shortname='seed_bed', &
-      &                         l_elements=.TRUE., element_unit=unit, element_list=element_list)
+    CALL veg_elements_pool%Init(name='seed_bed_pool'//suffix_loc, shortname='seed_bed', l_elements=.TRUE., element_unit=unit)
     CALL veg_tissues_pool%Add_pool(veg_elements_pool)
     veg_tissues_pool%seed_bed => veg_elements_pool
     NULLIFY(veg_elements_pool)
 
   END FUNCTION Create_veg_tissues_pool
 
-
-
-
   !-----------------------------------------------------------------------------------------------------
   !> initialize memory for the VEG_ process
-  !!
-  !!  
+  !! pools and 
+  !! 2d/3d variables
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_veg_memory(mem, prefix, suffix, lct_ids, model_id)
 
@@ -492,7 +497,7 @@ CONTAINS
       END IF
 
       !-----------------------------------------------------------------------------------------------------------------------------
-      !> create and populate the main pool structure
+      !> create and populate the main pool structure mem%pools that contains all other pools
       !! note: no spaces in 'name' and/or 'short name'
       ALLOCATE(t_veg_main_pool :: mem%pools)
       CALL mem%pools%Init(name='vegetation_main_pool', shortname='veg_main_pool', l_elements=.FALSE.)
@@ -506,32 +511,37 @@ CONTAINS
       !> create the vegetation tissue pools & fluxes (veg_tissues_pool) 
       !! veg_pool / veg_growth / ...
       ! create pools & fluxes
+      ! "shortname" is used for model output names
       ! veg_pool
-      veg_tissues_pool => Create_veg_tissues_pool('vegetation_pool', 'veg_pool', unit='mol m-2') ! l_elements=.TRUE. by default
+      veg_tissues_pool => Create_veg_tissues_pool(name='vegetation_pool', shortname='veg_pool', unit='mol m-2', &
+        & lct_ids=lct_ids, pool_suffix='vegpool') ! l_elements=.TRUE. by default
       CALL mem%veg_main_pool%Add_pool(veg_tissues_pool)
       mem%veg_main_pool%veg_pool => veg_tissues_pool
-      NULLIFY(veg_tissues_pool)
       ! veg_growth
-      veg_tissues_pool => Create_veg_tissues_pool('veg_growth_flux', 'veg_growth', unit='mol m-2') ! l_elements=.TRUE. by default
+      veg_tissues_pool => Create_veg_tissues_pool(name='veg_growth_flux', shortname='veg_growth', unit='mol m-2', &
+        & lct_ids=lct_ids, pool_suffix='groflux') ! l_elements=.TRUE. by default
       CALL mem%veg_main_pool%Add_pool(veg_tissues_pool)
       mem%veg_main_pool%veg_growth => veg_tissues_pool
-      NULLIFY(veg_tissues_pool)
       ! veg_litterfall
-      veg_tissues_pool => Create_veg_tissues_pool('veg_litterfall_flux', 'veg_litterfall', unit='mol m-2') ! l_elements=.TRUE. by default
+      veg_tissues_pool => Create_veg_tissues_pool(name='veg_litterfall_flux', shortname='veg_litterfall', unit='mol m-2', &
+        & lct_ids=lct_ids, pool_suffix='litflux') ! l_elements=.TRUE. by default
       CALL mem%veg_main_pool%Add_pool(veg_tissues_pool)
       mem%veg_main_pool%veg_litterfall => veg_tissues_pool
-      NULLIFY(veg_tissues_pool)
       ! veg_falloc
-      veg_tissues_pool => Create_veg_tissues_pool('veg_allocation_fraction_flux', 'veg_falloc', unit='mol m-2') ! l_elements=.TRUE. by default
+      veg_tissues_pool => Create_veg_tissues_pool(name='veg_allocation_fraction_flux', shortname='veg_falloc', unit='mol m-2', &
+        & lct_ids=lct_ids, pool_suffix='falflux') ! l_elements=.TRUE. by default
       CALL mem%veg_main_pool%Add_pool(veg_tissues_pool)
       mem%veg_main_pool%veg_falloc => veg_tissues_pool
-      NULLIFY(veg_tissues_pool)
       ! veg_total_flux
-      veg_tissues_pool => Create_veg_tissues_pool('vegetation_total_flux', 'veg_total_flux', unit='mol m-2') ! l_elements=.TRUE. by default
+      veg_tissues_pool => Create_veg_tissues_pool(name='vegetation_total_flux', shortname='veg_total_flux', unit='mol m-2', &
+        & lct_ids=lct_ids, pool_suffix='totflux') ! l_elements=.TRUE. by default
       CALL mem%veg_main_pool%Add_pool(veg_tissues_pool)
       mem%veg_main_pool%veg_total_flux => veg_tissues_pool
       NULLIFY(veg_tissues_pool)
-      ! add element pools to the veg_main_pool, i.e., to the same level as the above veg_tissues_pool veg_pool / veg_growth / ...
+      
+      ! init and add element pools to the veg_main_pool
+      ! (i.e., add them at the same level as the above veg_tissues_pool veg_pool / veg_growth / ...)
+      ! "shortname" is used for model output names
       ! veg_total_biomass
       ALLOCATE(veg_elements_pool)
       CALL veg_elements_pool%Init(name='vegetation_total_biomass', shortname='veg_total_biomass', &
@@ -561,7 +571,7 @@ CONTAINS
       mem%veg_main_pool%veg_reserve_use => veg_elements_pool
       NULLIFY(veg_elements_pool)
 
-      ! set paths
+      ! set paths of all above initialized & added pools (type-bound procedure of t_jsb_pool)
       CALL mem%pools%Set_paths()
 
       ! add all variables in the veg_tissues_pool to the VEG_ memory
@@ -595,6 +605,7 @@ CONTAINS
         & prefix, suffix,                                                                              &
         & loutput=.TRUE.,                                                                              &
         & lrestart=.TRUE., initval_r=0.0_wp )
+
       ! add all variables in the veg_elements_pool to the VEG_ memory
       CALL mem%Add_var(mem%veg_main_pool%veg_total_biomass, &
         & hgrid, vgrid_surface, vgrid_canopy,                                                          &
@@ -620,6 +631,13 @@ CONTAINS
         & prefix, suffix,                                                                              &
         & loutput=.TRUE.,                                                                              &
         & lrestart=.TRUE., initval_r=0.0_wp )
+
+      ! output to logfile all pools & their variables at model-init 
+      ! (maybe use for debugging; its quite a long list)
+      !IF (.NOT. ASSOCIATED(mem%parent)) THEN
+      !  CALL mem%veg_main_pool%Print()
+      !  ! CALL mem%veg_main_pool%veg_pool%Print()
+      !END IF
 
       !=============================================================================================================================
       !> 2D & 3D variables
