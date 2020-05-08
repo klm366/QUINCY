@@ -257,7 +257,7 @@ CONTAINS
     IF (model%config%use_glacier) NULLIFY(glacier_tile)
     IF (model%config%use_lakes) NULLIFY(lake_tile)
 
-    CALL test_pools()
+    ! CALL test_pools()
 
   END SUBROUTINE init_usecase_pfts
 
