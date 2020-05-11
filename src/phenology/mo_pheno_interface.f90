@@ -1059,7 +1059,7 @@ CONTAINS
     nc      = options%nc
 
     IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
-
+    IF (tile%lcts(1)%lib_id == 0)             RETURN  ! only if the present tile is a pft (identical to update_phenology_q_)
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     !model         => Get_model(tile%owner_model_id)
