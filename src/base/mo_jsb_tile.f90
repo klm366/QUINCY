@@ -295,12 +295,6 @@ CONTAINS
 
       process_name = Get_process_name(iproc)
 
-      IF (get_no_of_models() > 1) THEN
-        varlist_name_loc = TRIM(varlist_name)//'_'//TRIM(process_name)//'_'//model_id_suffix
-      ELSE
-        varlist_name_loc = TRIM(varlist_name)//'_'//TRIM(process_name)
-      END IF
-
       IF (this%process_action(iproc) == INHERIT_) THEN
         this%mem(iproc)%p => this%parent_tile%mem(iproc)%p
         this%mem(iproc)%p%in_var_groups = in_var_groups
@@ -317,7 +311,14 @@ CONTAINS
         this%mem(iproc)%p => tmp_ptr
         __acc_attach(this%mem(iproc)%p)
         this%mem(iproc)%p%id = iproc
+
+        IF (get_no_of_models() > 1) THEN
+          varlist_name_loc = TRIM(varlist_name)//'_'//TRIM(process_name)//'_'//model_id_suffix
+        ELSE
+          varlist_name_loc = TRIM(varlist_name)//'_'//TRIM(process_name)
+        END IF
         this%mem(iproc)%p%varlist_name = TRIM(varlist_name_loc)
+  
         this%mem(iproc)%p%grid_id = this%grid_id
         this%mem(iproc)%p%owner_model_id = this%owner_model_id
         this%mem(iproc)%p%owner_proc_id = iproc
