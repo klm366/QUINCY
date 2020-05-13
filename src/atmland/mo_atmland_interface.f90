@@ -84,6 +84,8 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout)             :: tile
     TYPE(t_jsb_task_options),   INTENT(in)                :: options
+    ! TODO This line doesn't work with intel on mistral and standalone JSBACH with ECHAM infrastructure ... why?
+    ! REAL(wp), OPTIONAL, DIMENSION(options%nc), INTENT(in) ::                                                       &
     REAL(wp), OPTIONAL, DIMENSION(:), INTENT(in) ::                                                                &
       & t_air, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, &
       & fract_par_diffuse, press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle,         &
