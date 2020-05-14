@@ -602,7 +602,7 @@ CONTAINS
 
   END SUBROUTINE t_jsb_memory_add_pool_var_r2d
 
-  FUNCTION Get_var_real2d(this, name) RESULT(var_ptr)
+  FUNCTION Get_var(this, name) RESULT(var_ptr)
 
     CLASS(t_jsb_memory),     INTENT(in) :: this
     CHARACTER(len=*),        INTENT(in) :: name
