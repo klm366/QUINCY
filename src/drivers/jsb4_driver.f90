@@ -44,10 +44,10 @@ PROGRAM jsb4_driver
   USE mo_jsb_test,           ONLY: read_interface_vars, read_interface_variables
 
   ! Seems to be available in both ICON and ECHAM
-  USE mo_exception,        ONLY: message, message_text
-  USE mo_kind,             ONLY: wp
-  USE mo_math_constants,   ONLY: pi
-  USE mo_orbit,            ONLY: orbit_kepler, orbit_vsop87
+  USE mo_exception,          ONLY: message, message_text
+  USE mo_kind,               ONLY: wp
+  USE mo_jsb_math_constants, ONLY: deg2rad
+  USE mo_orbit,              ONLY: orbit_kepler, orbit_vsop87
 
 !>>> TODO? echam:
   ! parallelisation
@@ -94,7 +94,8 @@ PROGRAM jsb4_driver
 
   LOGICAL :: l_rad_call = .FALSE.  ! TODO? echam -- orbit calculation
   REAL(wp) :: time_of_day, orbit_date, rasc_sun, decl_sun, dist_sun, flx_ratio
-  REAL(wp), ALLOCATABLE :: lon(:,:), lat(:,:), coslon(:,:), coslat(:,:), sinlon(:,:), sinlat(:,:)
+  REAL(wp), POINTER     :: lon(:,:), lat(:,:)
+  REAL(wp), ALLOCATABLE :: coslon(:,:), coslat(:,:), sinlon(:,:), sinlat(:,:)
   REAL(wp), ALLOCATABLE :: daylght_frc(:,:)
 
   TYPE(t_jsb_model), POINTER :: model
@@ -275,19 +276,21 @@ PROGRAM jsb4_driver
   IF (.NOT. read_interface_vars) THEN
     CALL init_forcing(model_id)
 
-    ALLOCATE(lon(nproma,nblks))
-    ALLOCATE(lat(nproma,nblks))
-
     !TODO: get from grid? but how to name such a function get_lon_from_grid?
     !      and if, shouldn't then also get_nproma should be called get_nproma_from_grid?
-    lon = get_lon(local_decomposition)
-    lat = get_lat(local_decomposition)
+    lon => get_lon(local_decomposition)
+    lat => get_lat(local_decomposition)
 
     ALLOCATE(coslon(nproma,nblks))
     ALLOCATE(coslat(nproma,nblks))
     ALLOCATE(sinlon(nproma,nblks))
     ALLOCATE(sinlat(nproma,nblks))
     ALLOCATE(daylght_frc(nproma, nblks))
+
+    coslon = COS(deg2rad * lon)
+    sinlon = SIN(deg2rad * lon)
+    coslat = COS(deg2rad * lat)
+    sinlat = SIN(deg2rad * lat)
 
     !init for first timestep/day (according to jsb3: mo_jsbalone: init_driving)
     t_srf_proc = 273._wp
@@ -363,11 +366,6 @@ PROGRAM jsb4_driver
       ELSE
          CALL orbit_kepler (orbit_date, rasc_sun, decl_sun, dist_sun)
       END IF
-
-      coslon = COS(pi * lon / 180._wp)
-      sinlon = SIN(pi * lon / 180._wp)
-      coslat = COS(pi * lat / 180._wp)
-      sinlat = SIN(pi * lat / 180._wp)
 
       CALL solar_parameters(decl_sun, dist_sun, time_of_day, sinlon, sinlat, coslon, coslat, &
         & flx_ratio, cos_zenith_angle, daylght_frc)
