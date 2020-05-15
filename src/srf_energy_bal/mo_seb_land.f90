@@ -17,9 +17,10 @@ MODULE mo_seb_land
 #ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp
-  USE mo_exception, ONLY: message
+  USE mo_exception, ONLY: message, message_text, finish
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
+  USE mo_jsb_grid_class,     ONLY: t_jsb_grid
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
@@ -57,6 +58,7 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, tpfac2, tpfac3
     USE mo_sse_constants,          ONLY: snow_depth_min
     USE mo_jsb_time,               ONLY: is_newday, timesteps_per_day ! get_asselin_coef, timeStep_in_days
+    USE mo_jsb_grid,               ONLY: Get_grid
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -145,6 +147,7 @@ CONTAINS
     INTEGER  :: ilct
 
     TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_grid),  POINTER :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_energy_land'
 
@@ -157,6 +160,7 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
+    grid => Get_grid(model%grid_id)
 
     l_is_newday = is_newday(options%current_datetime, options%dtime)
     tmp_timesteps_per_day = timesteps_per_day(options%dtime)
@@ -415,6 +419,14 @@ CONTAINS
     END IF
 
     ! 'Effective temperature' used in radheat of the atmosphere model (see Eq. 6.3 in ECHAM5 manual)
+#ifndef _OPENACC
+    IF (ANY(4._wp * t_star(:) - 3._wp * t_old(:) <= 0._wp)) THEN
+       i = MINLOC(4._wp * t_star(:) - 3._wp * t_old(:), DIM=1)
+       WRITE (message_text,*) 'Instability: Extreme temperature difference from one time step to the next at ',     &
+            & '(', grid%lon(i,iblk), ';', grid%lat(i,iblk), '): t_star: ', t_star(i), 'K,  t_old: ' , t_old(i), 'K'
+       CALL finish(TRIM(routine), message_text)
+    END IF
+#endif
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_10 tile_name=tile%name
     t_eff(:) = (t_old(:)**3 * (4._wp * t_star(:) - 3._wp * t_old(:))) ** 0.25_wp
 
