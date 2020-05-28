@@ -216,6 +216,8 @@ MODULE mo_carbon_memory_class
       NPP_act_yDayMean_ta,           & ! mean value of actual NPP-Rate yesterday, i.e. after N-limitation.
                                        ! Actual NPP (after N-limitation and) excess carbon drop.
                                        ! [mol(CO2)/(m^2(tile area) s)]
+      mean_5year_NPP,                & ! mean value of actual NPP-Rateaveraged over the last 5 years
+                                       ! [mol(CO2)/(m^2(tile area) day)]
       GPP_yDayMean_ta,               & !
       root_exudates_ta,              & ! Total root exudates entering to the litter green pools [mol(C)/m^2(tile area) s]
       cflux_c_green_2_herb_ta,            & ! Total carbon flux from C pool green to herbivory.
@@ -1105,6 +1107,15 @@ CONTAINS
       & prefix, suffix,                                                                             &
       & output_level=BASIC,                                                                                &
       & lrestart=.FALSE., initval_r=1.0E-13_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3. Initializing to zero would result
+                                                  ! in a zero divide in the first time step of an initialized run.
+
+    CALL jsb_add_var( mem, 'mean_5year_npp_act', mem%mean_5year_NPP,                                 &
+      & hgrid, surface,                                                                              &
+      & t_cf('mean_5year_NPP', 'mol(C) m-2 yr-1', 'Actual NPP Rate averaged over the last 5 years.'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+      & prefix, suffix,                                                                              &
+      & output_level=BASIC,                                                                          &
+      & lrestart=.TRUE., initval_r=1.0E-13_wp, l_aggregate_all=.TRUE. ) 
                                                   ! in a zero divide in the first time step of an initialized run.
 
     CALL jsb_add_var( mem, 'gpp_ydaymean_ta', mem%GPP_yDayMean_ta,                       &

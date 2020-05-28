@@ -73,6 +73,8 @@ MODULE mo_pheno_memory_class
 
                                           !! JN: variables required when l_forestRegrowth = true, i.e. when the
                                           !      maxLAI is derived from biomass via allometric relationships
+      & mean_dark_NPP,                 & ! minimum NPP required to lower ground albedo litter albedo (half deciduous trees
+                                         ! and half rain green bush shrub litter) in [mol(CO2)/(m^2 yr)]
       & number_of_individuals,          & ! Number of individuals in last calculation [trees ha-1]
       & biomass_per_individual,         & ! Biomass per individual according to allometric relationships [kg/tree]
 
@@ -271,6 +273,14 @@ CONTAINS
           & t_cf('yday_NPP_pot_rate_ca', 'prev day NPP_pot_rate_ca', ''),            &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
           & prefix, suffix,                                                          &
+          & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp )
+
+        CALL jsb_add_var( mem,'mean_dark_npp_act', mem%mean_dark_NPP,                     &
+          & hgrid, surface,                                                          &
+          & t_cf('mean_dark_NPP', '', ''),                                           &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
+          & prefix, suffix,                                                          &
+          & output_level=BASIC,                                                      &
           & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp )
 
         ! CALL jsb_add_var( mem,'laimax_dyn', mem%laiMax_dyn,                    &

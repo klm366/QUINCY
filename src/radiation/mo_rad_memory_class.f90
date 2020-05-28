@@ -68,6 +68,9 @@ MODULE mo_rad_memory_class
                                 !            JSBACH3 documentation 4.1.1 or ask Thomas Raddatz).
       & alb_nir_soil,         & ! Same as alb_vis_soil but for NIR.
       ! R: Albedo of mineral soil is needed when Freya scheme is used. Not in the bc_lnd_phy.nc file yet!
+      & alb_vis_soil_npp,     & ! Albedo in VIS range of soil
+                                ! Soil allbedo dependent on NPP 
+      & alb_nir_soil_npp,     & ! Same as alb_vis_soil but for NIR.
       & alb_vis_mineralsoil,  & !< Albedo of soil without carbon or litter.
                                 !! from bc_land_phys.nc file, necessary when use_albedo_soil_scheme = .TRUE.
                                 !! for SOC-dependend albedo calculation
@@ -358,6 +361,22 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & output_level=MEDIUM,                                               &
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
+
+      CALL jsb_add_var( mem, 'alb_vis_soil_npp', mem%alb_vis_soil_npp,       &
+        & hgrid, surface,                                                    &
+        & t_cf('npp_dependent_soil_albedo_with_carbon_and_litter', '', ''),  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & output_level=BASIC,                                               &
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
+
+      CALL jsb_add_var( mem, 'alb_nir_soil_npp', mem%alb_nir_soil_npp,       &
+        & hgrid, surface,                                                    &
+        & t_cf('npp_dependent_soil_albedo_with_carbon_and_litter', '', ''),  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & output_level=BASIC,                                               &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'alb_vis_mineralsoil', mem%alb_vis_mineralsoil, &

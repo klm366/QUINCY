@@ -736,6 +736,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, cflux_soilresp_2_atm_ta,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, cflux_herb_2_atm_ta,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, cflux_npp_2_atm_yday_ta,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, mean_5year_NPP,           weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -903,6 +904,7 @@ CONTAINS
 
     USE mo_carbon_process,    ONLY: get_per_tile
     !USE mo_carbon_constants,  ONLY: molarMassCO2_kg
+    USE mo_jsb_time,          ONLY: is_newday
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout), TARGET :: tile
@@ -952,6 +954,7 @@ CONTAINS
     ! Local variables
     CHARACTER(len=*), PARAMETER     :: routine = modname//':recalc_per_tile_vars'
     INTEGER                         :: ics, ice, iblk
+    REAL(wp)                        :: dtime
 
     dsl4jsb_Real2D_onChunk ::  c_green_ta
     dsl4jsb_Real2D_onChunk ::  c_reserve_ta
@@ -991,6 +994,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  cflux_c_green_2_herb_ta
     dsl4jsb_Real2D_onChunk ::  cflux_herb_2_atm_ta
     dsl4jsb_Real2D_onChunk ::  C_sum_natural_ta
+    dsl4jsb_Real2D_onChunk ::  mean_5year_NPP
 
     dsl4jsb_Real2D_onChunk ::  veg_fract_correction
     dsl4jsb_Real2D_onChunk ::  fract_fpc_max
@@ -1039,6 +1043,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  root_exudates_ta )             ! opt out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_c_green_2_herb_ta )      ! opt out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_herb_2_atm_ta )          ! opt out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  mean_5year_NPP )               ! opt out
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  C_sum_natural_ta )           ! out
 
@@ -1115,6 +1120,12 @@ CONTAINS
       & cflux_herb_2_atm(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(cflux_c_green_2_herb)) CALL get_per_tile(cflux_c_green_2_herb_ta(:), &
       & cflux_c_green_2_herb(:), veg_fract_correction(:), fract_fpc_max(:))
+
+    IF( is_newday(options%current_datetime, options%dtime) ) THEN ! only update at the end of each day
+    ! calculate 5 year mean NPP [ mol(C)/(m^2(tile area) * day) ]
+      mean_5year_NPP(:) = (NPP_act_yDayMean_ta(:)*86400._wp) / (365.25_wp*5._wp) + &
+                         &  mean_5year_NPP(:) * (1._wp - 1._wp/(365.25_wp*5._wp) )
+    END IF
 
   END SUBROUTINE recalc_per_tile_vars
 
