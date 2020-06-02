@@ -313,6 +313,9 @@ CONTAINS
           ENDDO
         CASE ("MIT")
           DO ichunk=1,nc
+            bulk_dens_sl(ichunk,1:nsoil_sb)   = (/1000._wp,1000._wp,1000._wp,1000._wp,1050._wp, &
+                                                 1050._wp,1100._wp,1100._wp,1400._wp,1450._wp, &
+                                                 1450._wp, 1500._wp, 1550._wp, 1600._wp, 1650._wp/)
             sand_sl(ichunk,1:nsoil_sb)   = (/0.447_wp,0.5115_wp,0.5102_wp,0.52_wp,0.5642_wp, &
                                              0.57_wp,0.56_wp,0.5681_wp,0.60_wp,0.62_wp, &
                                              0.64_wp,0.65_wp,0.70_wp,0.70_wp,0.70_wp/)
@@ -322,6 +325,9 @@ CONTAINS
           ENDDO
         CASE ("CON")
           DO ichunk=1,nc
+            bulk_dens_sl(ichunk,1:nsoil_sb)   = (/1000._wp,1000._wp,1000._wp,1000._wp,1560._wp, &
+                                                 1760._wp,1760._wp,1760._wp,1800._wp,2000._wp, &
+                                                 2200._wp, 2200._wp, 2450._wp, 2450._wp, 2450._wp/)
             sand_sl(ichunk,1:nsoil_sb)   = (/0.40_wp,0.3969_wp,0.39_wp,0.40_wp,0.41_wp, &
                                              0.4447_wp,0.4872_wp,0.5159_wp,0.55_wp,0.58_wp, &
                                              0.60_wp,0.62_wp,0.65_wp,0.70_wp,0.70_wp/)

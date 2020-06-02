@@ -270,6 +270,7 @@ MODULE mo_quincy_set_parameters
     REAL(wp)           :: ed_decomposition
     REAL(wp)           :: t_ref_decomposition
     REAL(wp)           :: k1_afps
+    REAL(wp)           :: k2_afps
     REAL(wp)           :: kmr_depolymerisation
     REAL(wp)           :: kmr_mic_uptake
     REAL(wp)           :: kmr_hsc
@@ -288,8 +289,6 @@ MODULE mo_quincy_set_parameters
     REAL(wp)           :: k_desorpt_po4
     REAL(wp)           :: k_adsorpt_f_po4
     REAL(wp)           :: k_desorp_f_po4
-    REAL(wp)           :: k_desorp_s_po4
-    REAL(wp)           :: k_adsorpt_s_po4
     REAL(wp)           :: microbial_cn
     REAL(wp)           :: microbial_np
     REAL(wp)           :: microbial_nue
@@ -359,6 +358,12 @@ MODULE mo_quincy_set_parameters
     REAL(wp)           :: k_plant_uptake_po4
     REAL(wp)           :: f_mic_carrier_po4
     REAL(wp)           :: f_plant_carrier_po4
+    REAL(wp)           :: vmax_nitrification_nh4
+    REAL(wp)           :: km_nitrification_nh4
+    REAL(wp)           :: f_nit_carrier_nh4
+    REAL(wp)           :: vmax_denitrification_no3
+    REAL(wp)           :: km_denit_no3
+    REAL(wp)           :: f_denit_carrier_no3
     REAL(wp)           :: qmax_po4_mineral
     REAL(wp)           :: km_adsorpt_mineral_po4
     REAL(wp)           :: km_adsorpt_OM_po4
@@ -750,6 +755,7 @@ CONTAINS
     REAL(wp)           :: ed_decomposition
     REAL(wp)           :: t_ref_decomposition
     REAL(wp)           :: k1_afps
+    REAL(wp)           :: k2_afps
     REAL(wp)           :: kmr_depolymerisation
     REAL(wp)           :: kmr_mic_uptake
     REAL(wp)           :: kmr_hsc
@@ -768,8 +774,6 @@ CONTAINS
     REAL(wp)           :: k_desorpt_po4
     REAL(wp)           :: k_adsorpt_f_po4
     REAL(wp)           :: k_desorp_f_po4
-    REAL(wp)           :: k_desorp_s_po4
-    REAL(wp)           :: k_adsorpt_s_po4
     REAL(wp)           :: microbial_cn
     REAL(wp)           :: microbial_np
     REAL(wp)           :: microbial_nue
@@ -839,6 +843,12 @@ CONTAINS
     REAL(wp)           :: k_plant_uptake_po4
     REAL(wp)           :: f_mic_carrier_po4
     REAL(wp)           :: f_plant_carrier_po4
+    REAL(wp)           :: vmax_nitrification_nh4
+    REAL(wp)           :: km_nitrification_nh4
+    REAL(wp)           :: f_nit_carrier_nh4
+    REAL(wp)           :: vmax_denitrification_no3
+    REAL(wp)           :: km_denit_no3
+    REAL(wp)           :: f_denit_carrier_no3
     REAL(wp)           :: qmax_po4_mineral
     REAL(wp)           :: km_adsorpt_mineral_po4
     REAL(wp)           :: km_adsorpt_OM_po4
@@ -1132,6 +1142,7 @@ CONTAINS
         ed_decomposition              , &
         t_ref_decomposition           , &
         k1_afps                       , &
+        k2_afps                       , &
         kmr_depolymerisation          , &
         kmr_mic_uptake                , &
         kmr_hsc                       , &
@@ -1150,8 +1161,6 @@ CONTAINS
         k_desorpt_po4                 , &
         k_adsorpt_f_po4               , &
         k_desorp_f_po4                , &
-        k_desorp_s_po4                , &
-        k_adsorpt_s_po4               , &
         microbial_cn                  , &
         microbial_np                  , &
         microbial_nue                 , &
@@ -1221,6 +1230,12 @@ CONTAINS
         k_plant_uptake_po4            , &
         f_mic_carrier_po4             , &
         f_plant_carrier_po4           , &
+        vmax_nitrification_nh4        , &
+        km_nitrification_nh4          , &
+        f_nit_carrier_nh4             , &
+        vmax_denitrification_no3      , &
+        km_denit_no3                  , &
+        f_denit_carrier_no3           , &
         qmax_po4_mineral              , &
         km_adsorpt_mineral_po4        , &
         km_adsorpt_OM_po4             , &
@@ -1513,6 +1528,7 @@ CONTAINS
     ed_decomposition              = missval
     t_ref_decomposition           = missval
     k1_afps                       = missval
+    k2_afps                       = missval
     kmr_depolymerisation          = missval
     kmr_mic_uptake                = missval
     kmr_hsc                       = missval
@@ -1531,8 +1547,6 @@ CONTAINS
     k_desorpt_po4                 = missval
     k_adsorpt_f_po4               = missval
     k_desorp_f_po4                = missval
-    k_desorp_s_po4                = missval
-    k_adsorpt_s_po4               = missval
     microbial_cn                  = missval
     microbial_np                  = missval
     microbial_nue                 = missval
@@ -1602,6 +1616,12 @@ CONTAINS
     k_plant_uptake_po4            = missval
     f_mic_carrier_po4             = missval
     f_plant_carrier_po4           = missval
+    vmax_nitrification_nh4        = missval
+    km_nitrification_nh4          = missval
+    f_nit_carrier_nh4             = missval
+    vmax_denitrification_no3      = missval
+    km_denit_no3                  = missval
+    f_denit_carrier_no3           = missval
     qmax_po4_mineral              = missval
     km_adsorpt_mineral_po4        = missval
     km_adsorpt_OM_po4             = missval
@@ -1925,6 +1945,7 @@ CONTAINS
     this%ed_decomposition              = ed_decomposition
     this%t_ref_decomposition           = t_ref_decomposition
     this%k1_afps                       = k1_afps
+    this%k2_afps                       = k2_afps
     this%kmr_depolymerisation          = kmr_depolymerisation
     this%kmr_mic_uptake                = kmr_mic_uptake
     this%kmr_hsc                       = kmr_hsc
@@ -1943,8 +1964,6 @@ CONTAINS
     this%k_desorpt_po4                 = k_desorpt_po4
     this%k_adsorpt_f_po4               = k_adsorpt_f_po4
     this%k_desorp_f_po4                = k_desorp_f_po4
-    this%k_desorp_s_po4                = k_desorp_s_po4
-    this%k_adsorpt_s_po4               = k_adsorpt_s_po4
     this%microbial_cn                  = microbial_cn
     this%microbial_np                  = microbial_np
     this%microbial_nue                 = microbial_nue
@@ -2014,6 +2033,12 @@ CONTAINS
     this%k_plant_uptake_po4            = k_plant_uptake_po4
     this%f_mic_carrier_po4             = f_mic_carrier_po4
     this%f_plant_carrier_po4           = f_plant_carrier_po4
+    this%vmax_nitrification_nh4        = vmax_nitrification_nh4
+    this%km_nitrification_nh4          = km_nitrification_nh4
+    this%f_nit_carrier_nh4             = f_nit_carrier_nh4
+    this%vmax_denitrification_no3      = vmax_denitrification_no3
+    this%km_denit_no3                  = km_denit_no3
+    this%f_denit_carrier_no3           = f_denit_carrier_no3
     this%qmax_po4_mineral              = qmax_po4_mineral
     this%km_adsorpt_mineral_po4        = km_adsorpt_mineral_po4
     this%km_adsorpt_OM_po4             = km_adsorpt_OM_po4
@@ -3252,6 +3277,11 @@ CONTAINS
                                     this%k1_afps, &
                                     "k1_afps", proportional_parameter_changes, &
                                     k1_afps)
+
+    CALL Set_quincy_parameter_value(this%k2_afps, &
+                                    this%k2_afps, &
+                                    "k2_afps", proportional_parameter_changes, &
+                                    k2_afps)
     
     CALL Set_quincy_parameter_value(this%kmr_depolymerisation, &
                                     this%kmr_depolymerisation, &
@@ -3318,7 +3348,7 @@ CONTAINS
                                     "k_adsorpt_nh4", proportional_parameter_changes, &
                                     k_adsorpt_nh4)
 
-    CALL Set_quincy_parameter_value(this%k_desorpt_nh4, &
+    CALL Set_quincy_parameter_value(this%k_desorpt_nh4 / 30.0_wp / one_day, &
                                     this%k_desorpt_nh4, &
                                     "k_desorpt_nh4", proportional_parameter_changes, &
                                     k_desorpt_nh4)
@@ -3342,16 +3372,6 @@ CONTAINS
                                     this%k_desorp_f_po4, &
                                     "k_desorp_f_po4", proportional_parameter_changes, &
                                     k_desorp_f_po4)
-
-    CALL Set_quincy_parameter_value(this%k_desorp_s_po4, &
-                                    this%k_desorp_s_po4, &
-                                    "k_desorp_s_po4", proportional_parameter_changes, &
-                                    k_desorp_s_po4)
-    
-    CALL Set_quincy_parameter_value(this%k_adsorpt_s_po4, &
-                                    this%k_adsorpt_s_po4, &
-                                    "k_adsorpt_s_po4", proportional_parameter_changes, &
-                                    k_adsorpt_s_po4)
 
     CALL Set_quincy_parameter_value(this%microbial_cn * molar_mass_N / molar_mass_C, &
                                     this%microbial_cn, &
@@ -3697,6 +3717,36 @@ CONTAINS
                                     this%f_plant_carrier_po4, &
                                     "f_plant_carrier_po4", proportional_parameter_changes, &
                                     f_plant_carrier_po4)
+
+    CALL Set_quincy_parameter_value(this%vmax_nitrification_nh4 / molar_mass_N / one_day * molar_mass_C, &
+                                    this%vmax_nitrification_nh4, &
+                                    "vmax_nitrification_nh4", proportional_parameter_changes, &
+                                    vmax_nitrification_nh4)
+
+    CALL Set_quincy_parameter_value(this%vmax_denitrification_no3 / molar_mass_N / one_day * molar_mass_C, &
+                                    this%vmax_denitrification_no3, &
+                                    "vmax_denitrification_no3", proportional_parameter_changes, &
+                                    vmax_denitrification_no3)
+
+    CALL Set_quincy_parameter_value(this%km_nitrification_nh4 / molar_mass_N, &
+                                    this%km_nitrification_nh4, &
+                                    "km_nitrification_nh4", proportional_parameter_changes, &
+                                    km_nitrification_nh4)
+
+    CALL Set_quincy_parameter_value(this%km_denit_no3 / molar_mass_N, &
+                                    this%km_denit_no3, &
+                                    "km_denit_no3", proportional_parameter_changes, &
+                                    km_denit_no3)
+
+    CALL Set_quincy_parameter_value(this%f_nit_carrier_nh4 / 10000.0_wp, &
+                                    this%f_nit_carrier_nh4, &
+                                    "f_nit_carrier_nh4", proportional_parameter_changes, &
+                                    f_nit_carrier_nh4)
+
+    CALL Set_quincy_parameter_value(this%f_denit_carrier_no3 / 10000.0_wp, &
+                                    this%f_denit_carrier_no3, &
+                                    "f_denit_carrier_no3", proportional_parameter_changes, &
+                                    f_denit_carrier_no3)
     
     CALL Set_quincy_parameter_value(this%qmax_po4_mineral / molar_mass_P, &
                                     this%qmax_po4_mineral, &

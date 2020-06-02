@@ -136,8 +136,9 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: occlusion_po4
     dsl4jsb_Real3D_onChunk :: slow_exchange_po4
     dsl4jsb_Real3D_onChunk :: fast_exchange_po4
-    dsl4jsb_Real3D_onChunk :: fast_desorp_po4
+    dsl4jsb_Real3D_onChunk :: fast_exchange_nh4
     dsl4jsb_Real3D_onChunk :: fast_adsorpt_po4
+    dsl4jsb_Real3D_onChunk :: fast_adsorpt_nh4
     dsl4jsb_Real3D_onChunk :: biochem_mineralisation_po4
     dsl4jsb_Real3D_onChunk :: gross_mineralisation_po4
     dsl4jsb_Real3D_onChunk :: transport_nh4_solute 
@@ -227,8 +228,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       occlusion_po4)               ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       slow_exchange_po4)           ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       fast_exchange_po4)           ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       fast_desorp_po4)             ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       fast_exchange_nh4)           ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       fast_adsorpt_po4)            ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       fast_adsorpt_nh4)            ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       biochem_mineralisation_po4)  ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       gross_mineralisation_po4)    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       microbial_uptake_nh4_sl)     ! out
@@ -351,8 +353,9 @@ CONTAINS
     occlusion_po4(:,:)                = zero
     slow_exchange_po4(:,:)            = zero
     fast_exchange_po4(:,:)            = zero
-    fast_desorp_po4(:,:)              = zero
+    fast_exchange_nh4(:,:)            = zero
     fast_adsorpt_po4(:,:)             = zero
+    fast_adsorpt_nh4(:,:)             = zero
     biochem_mineralisation_po4(:,:)   = zero
     gross_mineralisation_po4(:,:)     = zero
     mycorrhiza_uptake_nh4_sl(:,:)     = zero

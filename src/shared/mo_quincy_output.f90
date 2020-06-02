@@ -333,7 +333,7 @@ CONTAINS
                            ' FastC FastN FastP SlowC SlowN SlowP MycC MycN MycP'
          lun=lun+1
          ! soilpoolInOrg [mol / m2]
-         WRITE(lun,'(a)') 'Time MineralNH4 MineralNO3 MineralP NOY N2O N2'
+         WRITE(lun,'(a)') 'Time MineralAssocNH4 MineralNH4 MineralNO3 MineralP NOY N2O N2'
          lun=lun+1
          ! ecopoolCNP [mol / m2]
          WRITE(lun,'(a)') 'Time TotalSoilOrgC TotalSoilOrgN TotalSoilInOrgN EcoC EcoN EcoP EcoN15'
@@ -341,7 +341,7 @@ CONTAINS
          ! soilpooldC13DC14dN15
          WRITE(lun,'(3a)') 'Time MetLitterdC13 StrLitterdC13 WodLitterdC13 FastdC13 SlowdC13 MycdC13 MetLitterDC14 StrLitterDC14',& 
                            ' WodLitterDC14 FastDC14 SlowDC14 MycDC14',&
-                           ' MetLitterdN15 StrLitterdN15 WodLitterN15 FastdN15 SlowdN15 MineralNH4_dN15 MineralNO3_dN15'
+                           ' MetLitterdN15 StrLitterdN15 WodLitterN15 FastdN15 SlowdN15 MineralAssocNH4_dN15 MineralNH4_dN15 MineralNO3_dN15'
          lun=lun+1
          ! veg_diagnostics [???]
          WRITE(lun,'(2a)') 'Time Height Diameter LAI ind_density La2Sa L2R S2C BCF CN_target dNPP dNup cn_plant allometry_npp', & 
@@ -962,6 +962,7 @@ CONTAINS
               lun=lun+1
               ! soilpoolInOrg
               write(lun,'(30F16.6)') time_d, &
+                                     SUM(nh4_assoc(ipoi,:)*soil_depth_sl(ipoi,:))                       , & 
                                      SUM(nh4_solute(ipoi,:)*soil_depth_sl(ipoi,:))                       , & 
                                      SUM(no3_solute(ipoi,:)*soil_depth_sl(ipoi,:))                       , & 
                                      SUM(po4_solute(ipoi,:)*soil_depth_sl(ipoi,:))                       , &
@@ -984,6 +985,7 @@ CONTAINS
                                       SUM(sb_pool%residue%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:))            + & 
                                       SUM(sb_pool%mycorrhiza%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:))         , &
                                      SUM(nh4_solute(ipoi,:)*soil_depth_sl(ipoi,:))                                + & 
+                                     SUM(nh4_assoc(ipoi,:)*soil_depth_sl(ipoi,:))                                + & 
                                       SUM(no3_solute(ipoi,:)*soil_depth_sl(ipoi,:))                                + & 
                                       SUM(noy(ipoi,:)*soil_depth_sl(ipoi,:))                                       + &
                                       SUM(n2o(ipoi,:)*soil_depth_sl(ipoi,:))                                       + &
@@ -1002,6 +1004,7 @@ CONTAINS
                                       SUM(sb_pool%residue%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:))            + & 
                                       SUM(sb_pool%mycorrhiza%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:))         + &
                                       SUM(nh4_solute(ipoi,:)*soil_depth_sl(ipoi,:))                                + & 
+                                      SUM(nh4_assoc(ipoi,:)*soil_depth_sl(ipoi,:))                                + & 
                                       SUM(no3_solute(ipoi,:)*soil_depth_sl(ipoi,:))                                + &
                                       SUM(noy(ipoi,:)*soil_depth_sl(ipoi,:))                                       + &
                                       SUM(n2o(ipoi,:)*soil_depth_sl(ipoi,:))                                       + &
@@ -1025,6 +1028,7 @@ CONTAINS
                                       SUM(sb_pool%microbial%nitrogen15(ipoi,:)*soil_depth_sl(ipoi,:))          + &
                                       SUM(sb_pool%residue%nitrogen15(ipoi,:)*soil_depth_sl(ipoi,:))            + & 
                                       SUM(sb_pool%mycorrhiza%nitrogen15(ipoi,:)*soil_depth_sl(ipoi,:))         + &
+                                      SUM(nh4_n15_assoc(ipoi,:)*soil_depth_sl(ipoi,:))                                + & 
                                       SUM(nh4_n15_solute(ipoi,:)*soil_depth_sl(ipoi,:))                                + & 
                                       SUM(no3_n15_solute(ipoi,:)*soil_depth_sl(ipoi,:))                                + &
                                       SUM(noy_n15(ipoi,:)*soil_depth_sl(ipoi,:))                                       + &
@@ -1051,7 +1055,7 @@ CONTAINS
               dC13mycorrhiza(ipoi,1)       = calc_delta_C13(SUM(sb_pool%mycorrhiza%carbon(ipoi,:)*&
                                               soil_depth_sl(ipoi,:)), &
                                               SUM(sb_pool%mycorrhiza%carbon13(ipoi,:)*soil_depth_sl(ipoi,:)))
-              write(lun,'(20F14.6)') time_d, &
+              write(lun,'(21F14.6)') time_d, &
                 dC13soluable_litter(ipoi,1), &
                 dC13polymeric_litter(ipoi,1), &
                 dC13woody_litter(ipoi,1), &
@@ -1073,15 +1077,22 @@ CONTAINS
                                SUM(sb_pool%residue%carbon14(ipoi,:)*soil_depth_sl(ipoi,:)), dC13residue(ipoi,1)), &
                 calc_delta_C14(SUM(sb_pool%mycorrhiza%carbon(ipoi,:)*soil_depth_sl(ipoi,:)), &
                                SUM(sb_pool%mycorrhiza%carbon14(ipoi,:)*soil_depth_sl(ipoi,:)),dC13mycorrhiza(ipoi,1)), &
-                calc_delta_N15(sb_pool%soluable_litter%nitrogen(ipoi,1),&
-                                sb_pool%soluable_litter%nitrogen15(ipoi,1)), &
-                calc_delta_N15(sb_pool%polymeric_litter%nitrogen(ipoi,1),&
-                                sb_pool%polymeric_litter%nitrogen15(ipoi,1)), &
-                calc_delta_N15(sb_pool%woody_litter%nitrogen(ipoi,1),sb_pool%woody_litter%nitrogen15(ipoi,1)), &
-                calc_delta_N15(sb_pool%microbial%nitrogen(ipoi,1),sb_pool%microbial%nitrogen15(ipoi,1)), &
-                calc_delta_N15(sb_pool%residue%nitrogen(ipoi,1),sb_pool%residue%nitrogen15(ipoi,1)), &
-                calc_delta_N15(nh4_solute(ipoi,1),nh4_n15_solute(ipoi,1)), &
-                calc_delta_N15(no3_solute(ipoi,1),no3_n15_solute(ipoi,1))
+                calc_delta_N15(SUM(sb_pool%soluable_litter%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:)),&
+                               SUM(sb_pool%soluable_litter%nitrogen15(ipoi,:)*soil_depth_sl(ipoi,:))), &
+                calc_delta_N15(SUM(sb_pool%polymeric_litter%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:)),&
+                               SUM(sb_pool%polymeric_litter%nitrogen15(ipoi,:)*soil_depth_sl(ipoi,:))), &
+                calc_delta_N15(SUM(sb_pool%woody_litter%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:)), & 
+                               SUM(sb_pool%woody_litter%nitrogen15(ipoi,:)*soil_depth_sl(ipoi,:))), &
+                calc_delta_N15(SUM(sb_pool%microbial%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:)), &
+                               SUM(sb_pool%microbial%nitrogen15(ipoi,:)*soil_depth_sl(ipoi,:))), &
+                calc_delta_N15(SUM(sb_pool%residue%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:)), &
+                               SUM(sb_pool%residue%nitrogen15(ipoi,:)*soil_depth_sl(ipoi,:))), &
+                calc_delta_N15(SUM(nh4_assoc(ipoi,:)*soil_depth_sl(ipoi,:)), &
+                               SUM(nh4_n15_assoc(ipoi,:)*soil_depth_sl(ipoi,:))), &
+                calc_delta_N15(SUM(nh4_solute(ipoi,:)*soil_depth_sl(ipoi,:)), &
+                               SUM(nh4_n15_solute(ipoi,:)*soil_depth_sl(ipoi,:))), &
+                calc_delta_N15(SUM(no3_solute(ipoi,:)*soil_depth_sl(ipoi,:)), &
+                               SUM(no3_n15_solute(ipoi,:)*soil_depth_sl(ipoi,:)))
               lun=lun+1
               ! veg_diagnostics
               IF(lctlib%growthform == itree) THEN 
@@ -1578,7 +1589,7 @@ CONTAINS
         WRITE(lun,'(4a)') 'Time Litterfall_N ', &
                           'NDeposition Nfix_asymb NetMinNH4 NetMinNO3 Nitrification Denitrification Emission_NOY ', &
                           'Emission_N2O Emission_N2 PlantUptakeNH4 PlantUptakeNO3 LeachingNH4 LeachingNO3 LeachingDOM_N ', &
-                          'MycUptake_NH4 MycUptake_NO3 MycUptake_NOrg' 
+                          'Fast_exchange_nh4 MycUptake_NH4 MycUptake_NO3 MycUptake_NOrg' 
         lun=lun+1
         ! soilfluxP [mol P /m2 /interval]
         WRITE(lun,'(3a)') 'Time Litterfall_P ', &
@@ -1629,6 +1640,9 @@ CONTAINS
             p12str=''
             p13str=''
             p14str=''
+            p15str=''
+            p16str=''
+            p17str=''
             DO isoil = 1, nsoil_sb
               IF(isoil<10) THEN 
                 WRITE(layerstr,'(I1)') isoil
@@ -1649,17 +1663,20 @@ CONTAINS
               WRITE(p12str,'(a)') TRIM(p12str)//' Transport_no3_L'//TRIM(layerstr)
               WRITE(p13str,'(a)') TRIM(p13str)//' Transport_DON_L'//TRIM(layerstr)
               WRITE(p14str,'(a)') TRIM(p14str)//' MycUptake_norg_L'//TRIM(layerstr)
+              WRITE(p15str,'(a)') TRIM(p15str)//' Adsorpt_nh4_L'//TRIM(layerstr)
+              WRITE(p16str,'(a)') TRIM(p16str)//' Nitrification_no3_L'//TRIM(layerstr)
+              WRITE(p17str,'(a)') TRIM(p17str)//' Denitrification_n2_L'//TRIM(layerstr)
             END DO
-            WRITE(lun,'(15a)') 'Time ', TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str), &
+            WRITE(lun,'(18a)') 'Time ', TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str), &
                                         TRIM(p6str),TRIM(p7str),TRIM(p8str),TRIM(p9str),TRIM(p10str), &
-                                        TRIM(p11str),TRIM(p12str),TRIM(p13str),TRIM(p14str)
+                                        TRIM(p11str),TRIM(p12str),TRIM(p13str),TRIM(p14str),TRIM(p15str), &
+                                        TRIM(p16str),TRIM(p17str)
             lun=lun+1
             ! soilfluxP_lay  [mol P /m3 /interval]
             p1str=''
             p2str=''
             p3str=''
             p4str=''
-            p5str=''
             p6str=''
             p7str=''
             p8str=''
@@ -1682,7 +1699,6 @@ CONTAINS
               WRITE(p2str,'(a)') TRIM(p2str)//' Ocl_L'//TRIM(layerstr)
               WRITE(p3str,'(a)') TRIM(p3str)//' Exchange_fast_L'//TRIM(layerstr)
               WRITE(p4str,'(a)') TRIM(p4str)//' Exchange_slow_L'//TRIM(layerstr)
-              WRITE(p5str,'(a)') TRIM(p5str)//' Desorp_fast_L'//TRIM(layerstr)
               WRITE(p6str,'(a)') TRIM(p6str)//' Adsorpt_fast_L'//TRIM(layerstr)
 
               WRITE(p7str,'(a)')  TRIM(p7str)//' NetMin_L'//TRIM(layerstr)
@@ -1698,7 +1714,7 @@ CONTAINS
               WRITE(p16str,'(a)') TRIM(p16str)//' Transport_primary_L'//TRIM(layerstr)
               WRITE(p17str,'(a)') TRIM(p17str)//' Transport_DOP_L'//TRIM(layerstr)
             END DO
-            WRITE(lun,'(18a)') 'Time ', TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str), &
+            WRITE(lun,'(17a)') 'Time ', TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str), &
                                         TRIM(p6str),TRIM(p7str),TRIM(p8str),TRIM(p9str),TRIM(p10str), &
                                         TRIM(p11str),TRIM(p12str),TRIM(p13str),TRIM(p14str),TRIM(p15str), &
                                         TRIM(p16str),TRIM(p17str)
@@ -1842,6 +1858,7 @@ CONTAINS
     REAL(wp), SAVE                        :: net_min_po4_acc     = 0.0_wp
     REAL(wp), SAVE                        :: nitrification_acc   = 0.0_wp
     REAL(wp), SAVE                        :: denitrification_acc = 0.0_wp
+    REAL(wp), SAVE                        :: fast_exchange_nh4_acc  = 0.0_wp
     REAL(wp), SAVE                        :: emission_noy_n15_acc = 0.0_wp
     REAL(wp), SAVE                        :: emission_noy_acc    = 0.0_wp
     REAL(wp), SAVE                        :: emission_n2o_acc    = 0.0_wp
@@ -1918,9 +1935,11 @@ CONTAINS
                                              transport_nh4_assoc_acc = 0.0_wp       , &
                                              transport_solute_no3_acc = 0.0_wp      , &
                                              transport_DON_lay_acc = 0.0_wp         , &
+                                             f_adsorp_nh4_lay_acc = 0.0_wp          , &  
+                                             nitrification_lay_acc = 0.0_wp         , &  
+                                             denitrification_lay_acc = 0.0_wp       , &  
                                              ! P
                                              f_exchange_po4_acc = 0.0_wp        , &  
-                                             f_desorp_po4_acc = 0.0_wp          , & 
                                              f_adsorpt_po4_acc = 0.0_wp         , & 
                                              net_min_po4_lay_acc = 0.0_wp       , &
                                              ocl_po4_acc = 0.0_wp               , &
@@ -2065,8 +2084,9 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: occlusion_po4
     dsl4jsb_Real3D_onChunk      :: slow_exchange_po4
     dsl4jsb_Real3D_onChunk      :: fast_exchange_po4
-    dsl4jsb_Real3D_onChunk      :: fast_desorp_po4
     dsl4jsb_Real3D_onChunk      :: fast_adsorpt_po4
+    dsl4jsb_Real3D_onChunk      :: fast_adsorpt_nh4
+    dsl4jsb_Real3D_onChunk      :: fast_exchange_nh4
     dsl4jsb_Real3D_onChunk      :: biochem_mineralisation_po4
     dsl4jsb_Real3D_onChunk      :: plant_uptake_nh4_sl
     dsl4jsb_Real3D_onChunk      :: plant_uptake_no3_sl
@@ -2219,8 +2239,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,  asymb_n_fixation_n15)
     dsl4jsb_Get_var3D_onChunk(SB_,  slow_exchange_po4)
     dsl4jsb_Get_var3D_onChunk(SB_,  fast_exchange_po4)
-    dsl4jsb_Get_var3D_onChunk(SB_,  fast_desorp_po4)
     dsl4jsb_Get_var3D_onChunk(SB_,  fast_adsorpt_po4)
+    dsl4jsb_Get_var3D_onChunk(SB_,  fast_adsorpt_nh4)
+    dsl4jsb_Get_var3D_onChunk(SB_,  fast_exchange_nh4)
     dsl4jsb_Get_var3D_onChunk(SB_,  weathering_po4)
     dsl4jsb_Get_var3D_onChunk(SB_,  occlusion_po4)
     dsl4jsb_Get_var3D_onChunk(SB_,  biochem_mineralisation_po4)
@@ -2657,6 +2678,8 @@ CONTAINS
         asymb_n_fixation_acc =  asymb_n_fixation_acc + SUM(asymb_n_fixation(ipoi,:)*soil_depth_sl(ipoi,:)) * dtime_one
         asymb_n_fixation_n15_acc =  asymb_n_fixation_n15_acc + SUM(asymb_n_fixation_n15(ipoi,:)*soil_depth_sl(ipoi,:)) * &
                                     dtime_one
+        fast_exchange_nh4_acc  = fast_exchange_nh4_acc + &
+                                   SUM(fast_exchange_nh4(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
         myc_uptake_nh4_acc  = myc_uptake_nh4_acc  + SUM(mycorrhiza_uptake_nh4_sl(ipoi,:)  * soil_depth_sl(ipoi,:)) * dtime_one
         myc_uptake_no3_acc  = myc_uptake_no3_acc  + SUM(mycorrhiza_uptake_no3_sl(ipoi,:)  * soil_depth_sl(ipoi,:)) * dtime_one
         myc_uptake_norg_acc = myc_uptake_norg_acc + SUM(mycorrhiza_uptake_norg_sl(ipoi,:) * soil_depth_sl(ipoi,:)) * dtime_one
@@ -2711,10 +2734,10 @@ CONTAINS
              calc_delta_C14(leachingCorg_acc,leachingC14org_acc,dC13leaching)
           lun = lun + 1
           ! soilfluxN
-          write(lun,'(20F20.12)') time_d,litterfallN_acc,n_deposition_acc,asymb_n_fixation_acc,net_min_nh4_acc, net_min_no3_acc, &
+          write(lun,'(21F20.12)') time_d,litterfallN_acc,n_deposition_acc,asymb_n_fixation_acc,net_min_nh4_acc, net_min_no3_acc, &
                                 nitrification_acc,denitrification_acc,emission_noy_acc,emission_n2o_acc,emission_n2_acc,& 
                                 plant_uptake_nh4_acc,plant_uptake_no3_acc,leaching_nh4_acc,leaching_no3_acc,leachingNorg_acc, &
-                                myc_uptake_nh4_acc, myc_uptake_no3_acc, myc_uptake_norg_acc
+                                fast_exchange_nh4_acc, myc_uptake_nh4_acc, myc_uptake_no3_acc, myc_uptake_norg_acc
           lun=lun+1
           ! soilfluxP
           write(lun,'(20F20.12)') time_d, litterfallP_acc, p_deposition_acc, leaching_po4_acc, leachingPorg_acc, &
@@ -2760,6 +2783,7 @@ CONTAINS
           myc_uptake_nh4_acc             = 0.0_wp
           myc_uptake_no3_acc             = 0.0_wp
           myc_uptake_norg_acc            = 0.0_wp
+          fast_exchange_nh4_acc          = 0.0_wp
           emission_noy_acc               = 0.0_wp
           emission_noy_n15_acc           = 0.0_wp
           emission_n2o_acc               = 0.0_wp
@@ -2843,11 +2867,17 @@ CONTAINS
                                                     1000000.0_wp * dtime_one/dtime
           myc_uptake_norg_lay_acc(1:nsoil_sb)     = myc_uptake_norg_lay_acc(1:nsoil_sb) + &
                                                     mycorrhiza_uptake_norg_sl(ipoi,:) * dtime_one
+          f_adsorp_nh4_lay_acc(1:nsoil_sb)        = f_adsorp_nh4_lay_acc(1:nsoil_sb) + &
+                                                    fast_adsorpt_nh4(ipoi,:) * dtime_one
+          nitrification_lay_acc(1:nsoil_sb)       = nitrification_lay_acc(1:nsoil_sb) + &
+                                                    (nitrification_no3(ipoi,:) + nitrification_noy(ipoi,:) + &
+                                                     nitrification_n2o(ipoi,:)) * dtime_one
+          denitrification_lay_acc(1:nsoil_sb)     = denitrification_lay_acc(1:nsoil_sb) + &
+                                                    (denitrification_n2(ipoi,:) + denitrification_noy(ipoi,:) + &
+                                                     denitrification_n2o(ipoi,:)) * dtime_one
           ! P
           f_exchange_po4_acc(1:nsoil_sb)       = f_exchange_po4_acc(1:nsoil_sb) + &
                                                  fast_exchange_po4(ipoi,:) * dtime_one
-          f_desorp_po4_acc(1:nsoil_sb)         = f_desorp_po4_acc(1:nsoil_sb) + &
-                                                 fast_desorp_po4(ipoi,:) * dtime_one
           f_adsorpt_po4_acc(1:nsoil_sb)        = f_adsorpt_po4_acc(1:nsoil_sb) + &
                                                  fast_adsorpt_po4(ipoi,:) * dtime_one
           net_min_po4_lay_acc(1:nsoil_sb)      = net_min_po4_lay_acc(1:nsoil_sb) + &
@@ -2891,7 +2921,7 @@ CONTAINS
               transport_DOC_lay_acc(1:nsoil_sb)
             lun = lun + 1
             ! soilfluxN_lay
-            write(lun,'(281F20.10)') time_d, &
+            write(lun,'(341F20.10)') time_d, &
               net_mineral_nh4_lay_acc(1:nsoil_sb),   plant_uptake_nh4_lay_acc(1:nsoil_sb), &
               microbial_upt_nh4_lay_acc(1:nsoil_sb), myc_uptake_nh4_lay_acc(1:nsoil_sb), &
               transport_solute_nh4_acc(1:nsoil_sb),  transport_nh4_assoc_acc(1:nsoil_sb), &
@@ -2899,13 +2929,14 @@ CONTAINS
               net_mineral_no3_lay_acc(1:nsoil_sb),   plant_uptake_no3_lay_acc(1:nsoil_sb), &
               microbial_upt_no3_lay_acc(1:nsoil_sb), myc_uptake_no3_lay_acc(1:nsoil_sb), &
               transport_solute_no3_acc(1:nsoil_sb),  transport_DON_lay_acc(1:nsoil_sb), &
-              myc_uptake_norg_lay_acc(1:nsoil_sb)
+              myc_uptake_norg_lay_acc(1:nsoil_sb), f_adsorp_nh4_lay_acc(1:nsoil_sb), &
+              nitrification_lay_acc(1:nsoil_sb), denitrification_lay_acc(1:nsoil_sb)
             lun = lun + 1
             ! soilfluxP_lay
             write(lun,'(341F20.10)') time_d, &
               weath_po4_acc(1:nsoil_sb), ocl_po4_acc(1:nsoil_sb), &
               f_exchange_po4_acc(1:nsoil_sb), s_exchange_po4_acc(1:nsoil_sb), &
-              f_desorp_po4_acc(1:nsoil_sb), f_adsorpt_po4_acc(1:nsoil_sb), &
+              f_adsorpt_po4_acc(1:nsoil_sb), &
 
               net_min_po4_lay_acc(1:nsoil_sb), biochem_min_po4_acc(1:nsoil_sb), &
               microbial_upt_po4_acc(1:nsoil_sb), plant_upt_po4_acc(1:nsoil_sb), &
@@ -2937,9 +2968,11 @@ CONTAINS
             transport_solute_no3_acc(1:nsoil_sb)    = 0.0_wp
             transport_DON_lay_acc(1:nsoil_sb)       = 0.0_wp
             myc_uptake_norg_lay_acc(1:nsoil_sb)     = 0.0_wp
+            f_adsorp_nh4_lay_acc(1:nsoil_sb)        = 0.0_wp
+            nitrification_lay_acc(1:nsoil_sb)       = 0.0_wp
+            denitrification_lay_acc(1:nsoil_sb)     = 0.0_wp
             ! P
             f_exchange_po4_acc(1:nsoil_sb)            = 0.0_wp
-            f_desorp_po4_acc(1:nsoil_sb)              = 0.0_wp
             f_adsorpt_po4_acc(1:nsoil_sb)             = 0.0_wp
             weath_po4_acc(1:nsoil_sb)                 = 0.0_wp
             ocl_po4_acc(1:nsoil_sb)                   = 0.0_wp

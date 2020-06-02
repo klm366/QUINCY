@@ -128,8 +128,9 @@ MODULE mo_sse_memory_class
                                     clay_sl             , &  !< soil clay proportion of mineral soil(re-calculated as: clay = 1.0 -sand -silt)
                                     volume_min_sl       , &  !< soil mineral volumetric fraction
                                     qmax_org_min_sl     , &  !< maximum OM sorption capacity of mineral soil, [mol C kg-1 mineral soil]
-                                    qmax_po4_min_sl     , &  !< maximum po4 sorption capacity of SOM, [mol P kg-1 SOM]
-                                    qmax_po4_om_sl           !< maximum po4 sorption capacity of mineral soil, [mol P kg-1 mineral soil]
+                                    qmax_po4_min_sl     , &  !< maximum po4 sorption capacity of mineral soil, [mol P kg-1 mineral soil]
+                                    qmax_nh4_min_sl     , &  !< maximum nh4 sorption capacity of mineral soil, [mol N kg-1 mineral soil]
+                                    qmax_po4_om_sl           !< maximum po4 sorption capacity of SOM, [mol P kg-1 SOM]
 
                                     
 
@@ -538,7 +539,15 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'qmax_po4_min_sl', mem%qmax_po4_min_sl, &
             hgrid, vgrid_soil_sb, &
-            t_cf('qmax_po4_min_sl', 'mol P kg-1 SOM', 'maximum po4 sorption capacity of SOM'), &
+            t_cf('qmax_po4_min_sl', 'mol P kg-1 mineral soil', 'maximum po4 sorption capacity of mineral soil'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'qmax_nh4_min_sl', mem%qmax_nh4_min_sl, &
+            hgrid, vgrid_soil_sb, &
+            t_cf('qmax_nh4_min_sl', 'mol N kg-1 mineral soil', 'maximum po4 sorption capacity of mineral soil'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -546,7 +555,7 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'qmax_po4_om_sl', mem%qmax_po4_om_sl, &
             hgrid, vgrid_soil_sb, &
-            t_cf('qmax_po4_om_sl', 'mol P kg-1 mineral soil', 'maximum po4 sorption capacity of mineral soil'), &
+            t_cf('qmax_po4_om_sl', 'mol P kg-1 SOM', 'maximum po4 sorption capacity of SOM'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &

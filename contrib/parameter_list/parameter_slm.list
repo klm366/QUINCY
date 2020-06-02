@@ -248,6 +248,7 @@
   ed_decomposition=NAN
   t_ref_decomposition=NAN
   k1_afps=NAN
+  k2_afps=NAN
   kmr_depolymerisation=NAN
   kmr_mic_uptake=NAN
   kmr_hsc=NAN
@@ -266,8 +267,6 @@
   k_desorpt_po4=NAN
   k_adsorpt_f_po4=NAN
   k_desorp_f_po4=NAN
-  k_desorp_s_po4=NAN
-  k_adsorpt_s_po4=NAN
   microbial_cn=NAN
   microbial_np=NAN
   microbial_nue=NAN
@@ -341,6 +340,12 @@
   k_plant_uptake_po4=NAN
   f_mic_carrier_po4=NAN
   f_plant_carrier_po4=NAN
+  vmax_nitrification_nh4=NAN
+  km_nitrification_nh4=NAN
+  f_nit_carrier_nh4=NAN
+  vmax_denitrification_no3=NAN
+  km_denit_no3=NAN
+  f_denit_carrier_no3=NAN
   qmax_po4_mineral=NAN
   km_adsorpt_mineral_po4=NAN
   km_adsorpt_OM_po4=NAN

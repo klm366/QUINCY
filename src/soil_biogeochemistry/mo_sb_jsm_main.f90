@@ -65,13 +65,14 @@ CONTAINS
     USE mo_isotope_util,          ONLY: calc_fractionation
     USE mo_sb_constants
     USE mo_sb_litter_processes,   ONLY: calc_litter_partitioning
-    USE mo_sb_jsm_processes,      ONLY: calc_inorganic_uptake, calc_sinking_flux_po4, calc_litter_turnover, &
+    USE mo_sb_jsm_processes,      ONLY: calc_inorganic_uptake, calc_sinking_flux, calc_litter_turnover, &
                                         calc_microbial_growth, calc_sourcing_flux_po4, &
                                         calc_microbial_turnover, calc_om_sorption, &
-                                        calc_depolymerisation, calc_depolymerisation_SESAM
+                                        calc_depolymerisation, calc_depolymerisation_SESAM, &
+                                        calc_nitri_denitri_partitioning_rate
     USE mo_sb_jsm_transport,      ONLY: calc_liquid_phase_transport_wrapper, calc_bioturbation_transport_wrapper, &
                                         calc_bioturbation_rate, calc_particle_fluxrate, calc_particle_transport_wrapper
-
+    USE mo_sb_simple_model,       ONLY: calc_sb_inorganic_n15_fluxes, calc_asymbiontic_n_fixation
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(SB_)
 
@@ -98,9 +99,10 @@ CONTAINS
     INTEGER                               :: nsoil_sb             !< number of soil layers as used/defined by the SB_ process
     INTEGER                               :: i, isoil
     INTEGER                               :: iblk, ics, ice, nc
+    REAL(wp)                              :: hlp1
     REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: fine_root_carbon_sl, p_deposition_sl, & 
-                                             km1_uptake_po4_act, km2_uptake_po4_act, &
-                                             arr_hlp1
+                                             km1_uptake_act, km2_uptake_act, &
+                                             arr_hlp1, arr_hlp2, arr_hlp3
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_jsm'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -133,7 +135,14 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: leaching_po4_solute
     dsl4jsb_Real2D_onChunk :: leaching_nh4_n15_solute
     dsl4jsb_Real2D_onChunk :: leaching_no3_n15_solute
+    dsl4jsb_Real2D_onChunk :: emission_noy
+    dsl4jsb_Real2D_onChunk :: emission_n2o
+    dsl4jsb_Real2D_onChunk :: emission_n2
+    dsl4jsb_Real2D_onChunk :: emission_noy_n15
+    dsl4jsb_Real2D_onChunk :: emission_n2o_n15
+    dsl4jsb_Real2D_onChunk :: emission_n2_n15
     ! SB_ 3D
+    dsl4jsb_Real3D_onChunk :: rtm_decomposition 
     dsl4jsb_Real3D_onChunk :: rtm_depolymerisation 
     dsl4jsb_Real3D_onChunk :: rtm_mic_uptake
     dsl4jsb_Real3D_onChunk :: rtm_sorption
@@ -146,6 +155,12 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: rmm_desorption
     dsl4jsb_Real3D_onChunk :: rmm_hsc
     dsl4jsb_Real3D_onChunk :: rmm_plant_uptake
+    dsl4jsb_Real3D_onChunk :: rtm_nitrification
+    dsl4jsb_Real3D_onChunk :: rmm_nitrification
+    dsl4jsb_Real3D_onChunk :: rtm_denitrification
+    dsl4jsb_Real3D_onChunk :: rtm_gasdiffusion
+    dsl4jsb_Real3D_onChunk :: rmm_gasdiffusion
+    dsl4jsb_Real3D_onChunk :: anaerobic_volume_fraction_sl
     dsl4jsb_Real3D_onChunk :: het_respiration
     dsl4jsb_Real3D_onChunk :: het_respiration_c13
     dsl4jsb_Real3D_onChunk :: het_respiration_c14
@@ -154,6 +169,13 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: net_mineralisation_no3
     dsl4jsb_Real3D_onChunk :: net_mineralisation_no3_n15
     dsl4jsb_Real3D_onChunk :: net_mineralisation_po4
+    dsl4jsb_Real3D_onChunk :: nitrification_no3
+    dsl4jsb_Real3D_onChunk :: nitrification_noy 
+    dsl4jsb_Real3D_onChunk :: nitrification_n2o
+    dsl4jsb_Real3D_onChunk :: denitrification_noy 
+    dsl4jsb_Real3D_onChunk :: denitrification_n2o 
+    dsl4jsb_Real3D_onChunk :: denitrification_n2 
+    dsl4jsb_Real3D_onChunk :: volatilisation_nh4
     dsl4jsb_Real3D_onChunk :: asymb_n_fixation 
     dsl4jsb_Real3D_onChunk :: plant_uptake_nh4_sl
     dsl4jsb_Real3D_onChunk :: plant_uptake_nh4_n15_sl
@@ -165,6 +187,11 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: microbial_uptake_no3_sl
     dsl4jsb_Real3D_onChunk :: microbial_uptake_no3_n15_sl
     dsl4jsb_Real3D_onChunk :: microbial_uptake_po4_sl
+    dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_nh4_sl
+    dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_no3_sl
+    dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_norg_sl
+    dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_norg_n15_sl
+    dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_po4_sl
     dsl4jsb_Real3D_onChunk :: microbial_cue_eff
     dsl4jsb_Real3D_onChunk :: microbial_nue_eff
     dsl4jsb_Real3D_onChunk :: microbial_pue_eff
@@ -174,9 +201,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: weathering_po4
     dsl4jsb_Real3D_onChunk :: occlusion_po4
     dsl4jsb_Real3D_onChunk :: slow_exchange_po4
-    dsl4jsb_Real3D_onChunk :: fast_exchange_po4
-    dsl4jsb_Real3D_onChunk :: fast_desorp_po4
     dsl4jsb_Real3D_onChunk :: fast_adsorpt_po4
+    dsl4jsb_Real3D_onChunk :: fast_adsorpt_nh4
     dsl4jsb_Real3D_onChunk :: biochem_mineralisation_po4
     dsl4jsb_Real3D_onChunk :: gross_mineralisation_po4
     dsl4jsb_Real3D_onChunk :: nh4_solute 
@@ -187,9 +213,18 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: po4_assoc_slow
     dsl4jsb_Real3D_onChunk :: po4_occluded
     dsl4jsb_Real3D_onChunk :: po4_primary
+    dsl4jsb_Real3D_onChunk :: transport_noy
+    dsl4jsb_Real3D_onChunk :: transport_n2o
+    dsl4jsb_Real3D_onChunk :: transport_n2 
+    dsl4jsb_Real3D_onChunk :: noy
+    dsl4jsb_Real3D_onChunk :: n2o
+    dsl4jsb_Real3D_onChunk :: n2 
     dsl4jsb_Real3D_onChunk :: nh4_n15_solute 
     dsl4jsb_Real3D_onChunk :: nh4_n15_assoc 
     dsl4jsb_Real3D_onChunk :: no3_n15_solute 
+    dsl4jsb_Real3D_onChunk :: noy_n15
+    dsl4jsb_Real3D_onChunk :: n2o_n15
+    dsl4jsb_Real3D_onChunk :: n2_n15 
     dsl4jsb_Real3D_onChunk :: transport_nh4_solute 
     dsl4jsb_Real3D_onChunk :: transport_nh4_assoc 
     dsl4jsb_Real3D_onChunk :: transport_no3_solute
@@ -201,10 +236,25 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: transport_nh4_n15_solute 
     dsl4jsb_Real3D_onChunk :: transport_nh4_n15_assoc 
     dsl4jsb_Real3D_onChunk :: transport_no3_n15_solute 
+    dsl4jsb_Real3D_onChunk :: transport_noy_n15
+    dsl4jsb_Real3D_onChunk :: transport_n2o_n15
+    dsl4jsb_Real3D_onChunk :: transport_n2_n15 
+    dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_nh4_n15_sl
+    dsl4jsb_Real3D_onChunk :: mycorrhiza_uptake_no3_n15_sl
+    dsl4jsb_Real3D_onChunk :: volatilisation_nh4_n15
+    dsl4jsb_Real3D_onChunk :: nitrification_no3_n15 
+    dsl4jsb_Real3D_onChunk :: nitrification_noy_n15 
+    dsl4jsb_Real3D_onChunk :: nitrification_n2o_n15
+    dsl4jsb_Real3D_onChunk :: denitrification_noy_n15 
+    dsl4jsb_Real3D_onChunk :: denitrification_n2o_n15 
+    dsl4jsb_Real3D_onChunk :: denitrification_n2_n15 
+    dsl4jsb_Real3D_onChunk :: asymb_n_fixation_n15 
     dsl4jsb_Real3D_onChunk :: k_bioturb 
     dsl4jsb_Real3D_onChunk :: qmax_org 
     dsl4jsb_Real3D_onChunk :: qmax_po4
+    dsl4jsb_Real3D_onChunk :: qmax_nh4
     dsl4jsb_Real3D_onChunk :: km_adsorpt_po4_sl
+    dsl4jsb_Real3D_onChunk :: km_adsorpt_nh4_sl
     dsl4jsb_Real3D_onChunk :: bulk_dens_corr_sl 
     dsl4jsb_Real3D_onChunk :: vmax_weath_mineral_sl
     dsl4jsb_Real3D_onChunk :: particle_fluxrate 
@@ -241,9 +291,11 @@ CONTAINS
     ! Allocate local allocatable variables (deallocate below at the end of this routine)    
     ALLOCATE(fine_root_carbon_sl(nc, nsoil_sb))
     ALLOCATE(p_deposition_sl(nc, nsoil_sb))
-    ALLOCATE(km1_uptake_po4_act(nc, nsoil_sb))
-    ALLOCATE(km2_uptake_po4_act(nc, nsoil_sb))
+    ALLOCATE(km1_uptake_act(nc, nsoil_sb))
+    ALLOCATE(km2_uptake_act(nc, nsoil_sb))
     ALLOCATE(arr_hlp1(nc, nsoil_sb))
+    ALLOCATE(arr_hlp2(nc, nsoil_sb))
+    ALLOCATE(arr_hlp3(nc, nsoil_sb))
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(A2L_,      p_deposition)                ! in
     ! ---------------------------
@@ -266,6 +318,14 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SB_,       leaching_po4_solute)         ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_n15_solute)     ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       leaching_no3_n15_solute)     ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_noy)          
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2o)         
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2)         
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_noy_n15)          
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2o_n15)         
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2_n15)
+    ! --------------------------
+    dsl4jsb_Get_var3D_onChunk(SB_,       rtm_decomposition)           ! soil: in
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_depolymerisation)        ! soil: in
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_mic_uptake)              ! soil: in
     dsl4jsb_Get_var3D_onChunk(SB_,       rtm_sorption)                ! soil: in
@@ -278,6 +338,12 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_desorption)              ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_hsc)                     ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_plant_uptake)            ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       rtm_nitrification)           ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       rmm_nitrification)           ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       rtm_denitrification)         ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       rtm_gasdiffusion)
+    dsl4jsb_Get_var3D_onChunk(SB_,       rmm_gasdiffusion)
+    dsl4jsb_Get_var3D_onChunk(SB_,       anaerobic_volume_fraction_sl)! in
     dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration)             ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c13)         ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c14)         ! out
@@ -286,6 +352,13 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_no3)      ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_no3_n15)  ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_po4)      ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification_no3)           ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification_noy)           ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification_n2o)           ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_noy)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_n2o)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_n2)          ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       volatilisation_nh4)          ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       asymb_n_fixation)            ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_nh4_sl)         ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_nh4_n15_sl)     ! out
@@ -297,6 +370,11 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       microbial_uptake_no3_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       microbial_uptake_no3_n15_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       microbial_uptake_po4_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_nh4_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_no3_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_norg_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_norg_n15_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_po4_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       microbial_cue_eff)
     dsl4jsb_Get_var3D_onChunk(SB_,       microbial_nue_eff)
     dsl4jsb_Get_var3D_onChunk(SB_,       microbial_pue_eff)
@@ -306,9 +384,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       weathering_po4)              ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       occlusion_po4)               ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       slow_exchange_po4)           ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       fast_exchange_po4)           ! out
-    dsl4jsb_Get_var3D_onChunk(SB_,       fast_desorp_po4)             ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       fast_adsorpt_po4)            ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       fast_adsorpt_nh4)            ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       biochem_mineralisation_po4)  ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       gross_mineralisation_po4)    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       nh4_solute)                  ! inout
@@ -322,6 +399,28 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       nh4_n15_solute)              ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       nh4_n15_assoc)               ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       no3_n15_solute)              ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       noy_n15) 
+    dsl4jsb_Get_var3D_onChunk(SB_,       n2o_n15) 
+    dsl4jsb_Get_var3D_onChunk(SB_,       n2_n15) 
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_noy) 
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2o) 
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2) 
+    dsl4jsb_Get_var3D_onChunk(SB_,       noy) 
+    dsl4jsb_Get_var3D_onChunk(SB_,       n2o) 
+    dsl4jsb_Get_var3D_onChunk(SB_,       n2) 
+    dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_nh4_n15_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_no3_n15_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification_no3_n15)
+    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification_noy_n15)
+    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification_n2o_n15)
+    dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_noy_n15)
+    dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_n2o_n15)
+    dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_n2_n15)
+    dsl4jsb_Get_var3D_onChunk(SB_,       volatilisation_nh4_n15)
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_noy_n15) 
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2o_n15) 
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2_n15) 
+    dsl4jsb_Get_var3D_onChunk(SB_,       asymb_n_fixation_n15)
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_solute)        ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_assoc)         ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       transport_no3_solute)        ! out
@@ -336,7 +435,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       k_bioturb)                   ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_org)                    ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_po4)                    ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       qmax_nh4)                    ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       km_adsorpt_po4_sl)           ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       km_adsorpt_nh4_sl)           ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_dens_corr_sl)           ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       vmax_weath_mineral_sl)       ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       particle_fluxrate)           ! out
@@ -399,15 +500,17 @@ CONTAINS
                             sb_pool%dom%carbon(:,:), sb_pool%dom%nitrogen(:,:), sb_pool%dom%phosphorus(:,:), &
                             rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), &
                             rtm_sorption(:,:), rmm_sorption(:,:), rtm_desorption(:,:), rmm_desorption(:,:), &
-                            sb_pool%dom_assoc%phosphorus(:,:), sb_pool%residue_assoc%phosphorus(:,:), sb_pool%residue%phosphorus(:,:), &
+                            sb_pool%dom_assoc%phosphorus(:,:), sb_pool%residue_assoc%phosphorus(:,:), &
+                            sb_pool%residue%phosphorus(:,:), &
                             sb_pool%dom_assoc%carbon(:,:), sb_pool%residue_assoc%carbon(:,:), sb_pool%residue%carbon(:,:), &
-                            sb_loss%dom_assoc%phosphorus(:,:), sb_loss%residue_assoc%phosphorus(:,:), sb_loss%residue%phosphorus(:,:), & 
+                            sb_loss%dom_assoc%phosphorus(:,:), sb_loss%residue_assoc%phosphorus(:,:), &
+                            sb_loss%residue%phosphorus(:,:), & 
                             po4_solute(:,:), nh4_solute(:,:), no3_solute(:,:), & 
                             po4_assoc_fast(:,:), po4_assoc_slow(:,:), po4_primary(:,:), &
                             bulk_dens_corr_sl(:,:), volume_min_sl(:,:), fine_root_carbon_sl(:,:), vmax_weath_mineral_sl, &
                             biochem_mineralisation_po4(:,:), gross_mineralisation_po4(:,:), weathering_po4(:,:), &
                             microbial_uptake_nh4_sl(:,:), microbial_uptake_no3_sl(:,:), microbial_uptake_po4_sl(:,:), &
-                            fast_desorp_po4(:,:), occlusion_po4(:,:), slow_exchange_po4(:,:))
+                            occlusion_po4(:,:), slow_exchange_po4(:,:))
     !> 2.2 NH4
     !!
     CALL calc_inorganic_uptake(lctlib%vmax_uptake_n, &
@@ -417,10 +520,7 @@ CONTAINS
                                rtm_plant_uptake(:,:), rmm_plant_uptake(:,:), km1_up_nh4, km2_up_nh4, &
                                vmax_mic_uptake_nh4, km_mic_uptake_nh4, vmax_plant_uptake_nh4, km_plant_uptake_nh4, & 
                                k_mic_uptake_nh4, k_plant_uptake_nh4, microbial_uptake_nh4_sl(:,:), plant_uptake_nh4_sl(:,:))
-    microbial_uptake_nh4_n15_sl(:,:)  = microbial_uptake_nh4_sl(:,:) * &
-                                          calc_fractionation(nh4_solute(:,:), nh4_n15_solute(:,:), eta_mic_uptake_nh4)
-    plant_uptake_nh4_n15_sl(:,:)      = plant_uptake_nh4_sl(:,:) * &
-                                          calc_fractionation(nh4_solute(:,:) ,nh4_n15_solute(:,:) ,eta_plant_uptake_nh4)
+
 
     !> 2.3 NO3
     !!
@@ -431,10 +531,21 @@ CONTAINS
                                rtm_plant_uptake(:,:), rmm_plant_uptake(:,:), km1_up_no3, km2_up_no3, &
                                vmax_mic_uptake_no3, km_mic_uptake_no3, vmax_plant_uptake_no3, km_plant_uptake_no3, & 
                                k_mic_uptake_no3, k_plant_uptake_no3, microbial_uptake_no3_sl(:,:), plant_uptake_no3_sl(:,:))
-    microbial_uptake_no3_n15_sl(:,:)  = microbial_uptake_no3_sl(:,:) * &
-                                          calc_fractionation(no3_solute(:,:), no3_n15_solute(:,:), eta_mic_uptake_no3)
-    plant_uptake_no3_n15_sl(:,:)      = plant_uptake_no3_sl(:,:) * &
-                                          calc_fractionation(no3_solute(:,:), no3_n15_solute(:,:), eta_plant_uptake_no3)
+
+
+    !> 2.4 Add asymbiontic N fixation to NH4 pool 
+    !! 
+    CALL calc_asymbiontic_n_fixation(nc, nsoil_sb, &
+                                     lctlib%bnf_base, &
+                                     TRIM(dsl4jsb_Config(SB_)%sb_bnf_scheme), & 
+                                     soil_depth_sl(:,:), &
+                                     rtm_decomposition(:,:), &
+                                     nh4_solute(:,:), &
+                                     no3_solute(:,:), &
+                                     sb_pool%microbial%carbon(:,:), &
+                                     root_fraction_sl(:,:), &
+                                     asymb_n_fixation(:,:), &
+                                     asymb_n_fixation_n15(:,:))
 
     !> 3.0 Litter-related fluxes  
     !!
@@ -468,17 +579,22 @@ CONTAINS
     !!
     !> 5.1 liquid phase transport
     !!
-    CALL calc_liquid_phase_transport_wrapper(nc, nsoil_sb, & 
+    CALL calc_liquid_phase_transport_wrapper(nc, nsoil_sb, rtm_gasdiffusion(:,:), rmm_gasdiffusion(:,:), & 
                                    percolation_sl(:,:), soil_depth_sl(:,:), &
                                    sb_pool%dom, nh4_solute(:,:), no3_solute(:,:), po4_solute(:,:), & 
                                    nh4_n15_solute(:,:), no3_n15_solute(:,:), & 
-                                   sb_transport%dom, transport_nh4_solute(:,:), & 
+                                   noy(:,:), noy_n15(:,:), n2o(:,:), n2o_n15(:,:), n2(:,:), n2_n15(:,:), &            ! in
+                                   sb_transport%dom, transport_nh4_solute(:,:), &                                     ! inout
                                    transport_no3_solute(:,:),transport_po4_solute(:,:), & 
                                    transport_nh4_n15_solute(:,:),transport_no3_n15_solute(:,:), &
                                    leaching_dom_carbon(:), leaching_dom_nitrogen(:), leaching_dom_phosphorus(:), & 
                                    leaching_dom_carbon13(:), leaching_dom_carbon14(:), leaching_dom_nitrogen15(:), &
                                    leaching_nh4_solute(:), leaching_no3_solute(:), leaching_po4_solute(:), &
-                                   leaching_nh4_n15_solute(:), leaching_no3_n15_solute(:))
+                                   leaching_nh4_n15_solute(:), leaching_no3_n15_solute(:), &                          ! inout
+                                   transport_noy(:,:), transport_noy_n15(:,:), transport_n2o(:,:), &                  ! out
+                                   transport_n2o_n15(:,:), transport_n2(:,:), transport_n2_n15(:,:), & 
+                                   emission_noy(:), emission_noy_n15(:), emission_n2o(:), &    
+                                   emission_n2o_n15(:), emission_n2(:), emission_n2_n15(:))
 
     !> 5.2 transport due to bioturbation
     !!
@@ -496,19 +612,55 @@ CONTAINS
 
     !> 6.0 Microbial and plant P uptake
     !!
-    arr_hlp1(:,:) = (po4_solute(:,:)+ transport_po4_solute(:,:))/ dtime * 1.e6_wp
-    km1_uptake_po4_act(:,:) = km1_up_po4 / (rtm_hsc(:,:) * rmm_hsc(:,:)) / 1000._wp / (w_soil_sl(:,:) / soil_depth_sl(:,:))
-    km2_uptake_po4_act(:,:) = km2_up_po4 * rtm_hsc(:,:) * rmm_hsc(:,:) * 1000._wp * (w_soil_sl(:,:) / soil_depth_sl(:,:))
-    CALL calc_sinking_flux_po4(lctlib%vmax_uptake_p, TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &
+    hlp1          = 0._wp
+    arr_hlp1(:,:) = po4_solute(:,:) + po4_assoc_fast(:,:)
+    arr_hlp2(:,:) = 1._wp
+    km1_uptake_act(:,:) = km1_up_po4 / (rtm_hsc(:,:) * rmm_hsc(:,:)) / 1000._wp / (w_soil_sl(:,:) / soil_depth_sl(:,:))
+    km2_uptake_act(:,:) = km2_up_po4 * rtm_hsc(:,:) * rmm_hsc(:,:) * 1000._wp * (w_soil_sl(:,:) / soil_depth_sl(:,:))
+    CALL calc_sinking_flux(lctlib%vmax_uptake_p, hlp1, "po4", TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &
                                 sb_pool%microbial%carbon(:,:), fine_root_carbon_sl(:,:), po4_solute(:,:), &
                                 rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), &
-                                rtm_plant_uptake(:,:), rmm_plant_uptake(:,:), km1_uptake_po4_act(:,:), km2_uptake_po4_act(:,:), &
-                                qmax_po4(:,:), km_adsorpt_po4_sl(:,:), po4_assoc_fast(:,:), microbial_uptake_po4_sl(:,:), &
-                                plant_uptake_po4_sl(:,:), fast_desorp_po4(:,:), fast_adsorpt_po4(:,:), arr_hlp1(:,:))
+                                rtm_plant_uptake(:,:), rmm_plant_uptake(:,:), km1_uptake_act(:,:), km2_uptake_act(:,:), &
+                                km_denitrification_c, km_denitrification_no3, rtm_nitrification(:,:), rmm_nitrification(:,:), &
+                                arr_hlp2(:,:), km_adsorpt_po4_sl(:,:), &
+                                MAX(0._wp, qmax_po4(:,:) - po4_assoc_fast(:,:)), &                      ! in
+                                arr_hlp1(:,:), microbial_uptake_po4_sl(:,:), &                          ! inout
+                                plant_uptake_po4_sl(:,:), arr_hlp3(:,:), fast_adsorpt_po4(:,:))         ! out
+
+    !> 6.1 Microbial and plant N uptake, nitrification/denitrification 
+    !! nh4 
+    arr_hlp1(:,:) = nh4_solute(:,:)+ nh4_assoc(:,:)
+    arr_hlp2(:,:) = 1._wp - anaerobic_volume_fraction_sl(:,:)
+    km1_uptake_act(:,:) = km1_up_nh4 / (rtm_hsc(:,:) * rmm_hsc(:,:)) / 1000._wp / (w_soil_sl(:,:) / soil_depth_sl(:,:))
+    km2_uptake_act(:,:) = km2_up_nh4 * rtm_hsc(:,:) * rmm_hsc(:,:) * 1000._wp * (w_soil_sl(:,:) / soil_depth_sl(:,:))
+    CALL calc_sinking_flux(lctlib%vmax_uptake_n, vmax_nitrification, "nh4", TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &
+                                sb_pool%microbial%carbon(:,:), fine_root_carbon_sl(:,:), nh4_solute(:,:), &
+                                rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), &
+                                rtm_plant_uptake(:,:), rmm_plant_uptake(:,:), km1_uptake_act(:,:), km2_uptake_act(:,:), &
+                                km_denitrification_c, km_denitrification_no3, rtm_nitrification(:,:), rmm_nitrification(:,:), &
+                                arr_hlp2(:,:), km_adsorpt_nh4_sl(:,:), &
+                                MAX(0._wp, qmax_nh4(:,:) - nh4_assoc(:,:)), &                               ! in
+                                arr_hlp1(:,:), microbial_uptake_nh4_sl(:,:), &                              ! inout
+                                plant_uptake_nh4_sl(:,:), nitrification_no3(:,:), fast_adsorpt_nh4(:,:), &  ! out
+                                solute_alt=no3_solute(:,:))                                                 ! OPTIONAL(in)
+
+    !! no3
+    arr_hlp1(:,:) = 1._wp
+    km1_uptake_act(:,:) = km1_up_no3 / (rtm_hsc(:,:) * rmm_hsc(:,:)) / 1000._wp / (w_soil_sl(:,:) / soil_depth_sl(:,:))
+    km2_uptake_act(:,:) = km2_up_no3 * rtm_hsc(:,:) * rmm_hsc(:,:) * 1000._wp * (w_soil_sl(:,:) / soil_depth_sl(:,:))
+    CALL calc_sinking_flux(lctlib%vmax_uptake_n, vmax_denitrification, "no3", TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &
+                                sb_pool%microbial%carbon(:,:), fine_root_carbon_sl(:,:), no3_solute(:,:),&
+                                rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), &
+                                rtm_plant_uptake(:,:), rmm_plant_uptake(:,:), km1_uptake_act(:,:), km2_uptake_act(:,:), &
+                                km_denitrification_c, km_denitrification_no3, rtm_denitrification(:,:), arr_hlp1(:,:), &
+                                anaerobic_volume_fraction_sl(:,:), arr_hlp1(:,:), &
+                                arr_hlp1(:,:), &                                                          ! in
+                                no3_solute(:,:), microbial_uptake_no3_sl(:,:), &                          ! inout
+                                plant_uptake_no3_sl(:,:), denitrification_n2(:,:), arr_hlp2(:,:), &       ! out
+                                solute_alt=nh4_solute(:,:))                                               ! OPTIONAL(in)
 
     !> 7.0 co-metabolisation of polymeric litter & residues
     !!
-
     CALL calc_depolymerisation_SESAM(nc, nsoil_sb, rtm_hsc(:,:),rmm_hsc(:,:), &
                                     rtm_depolymerisation(:,:),rmm_depolymerisation(:,:), &
                                     sb_pool%microbial%carbon(:,:), microbial_cue_eff_tmic_mavg(:,:), &
@@ -518,7 +670,6 @@ CONTAINS
                                     sb_pool%residue,sb_loss%residue,sb_formation%dom, &
                                     enzyme_frac_poly_c, enzyme_frac_poly_n, enzyme_frac_poly_p,&
                                     enzyme_frac_poly_c_mavg, enzyme_frac_poly_n_mavg, enzyme_frac_poly_p_mavg)
-
 
     !> 8.0 microbial death
     !! determine mortality rate, constrained by to avoiding a complete death of the community
@@ -548,13 +699,81 @@ CONTAINS
                                net_mineralisation_po4(:,:),microbial_cue_eff(:,:), &
                                microbial_nue_eff(:,:), microbial_pue_eff(:,:), asymb_n_fixation(:,:))
 
+    !> 11.0 partition nitrification and denitrication rate
+    !! 
+    CALL calc_nitri_denitri_partitioning_rate(nc, nsoil_sb, soil_depth_sl(:,:), &
+                                              TRIM(dsl4jsb_Config(SB_)%sb_nloss_scheme), &
+                                              rtm_denitrification(:,:), &
+                                              nitrification_no3(:,:), &
+                                              denitrification_n2(:,:), &
+                                              nitrification_noy(:,:), &
+                                              nitrification_n2o(:,:), &
+                                              denitrification_noy(:,:), &
+                                              denitrification_n2o(:,:), &
+                                              net_mineralisation_nh4(:,:), & 
+                                              net_mineralisation_nh4_n15(:,:), & 
+                                              nitrification_no3_n15(:,:), &
+                                              volatilisation_nh4(:,:), &
+                                              volatilisation_nh4_n15(:,:), &
+                                              emission_n2(:), &
+                                              emission_n2_n15(:))
+
+    !> 11.1 update n15 for inorganic fluxes 
+    !!
+    CALL calc_sb_inorganic_n15_fluxes(nc, nsoil_sb, & 
+                                          nh4_solute(:,:), &
+                                          nh4_n15_solute(:,:), &
+                                          no3_solute(:,:), &
+                                          no3_n15_solute(:,:), &
+                                          plant_uptake_nh4_sl(:,:) * dtime / 1.e6_wp, & 
+                                          plant_uptake_no3_sl(:,:) * dtime / 1.e6_wp, &      
+                                          mycorrhiza_uptake_nh4_sl(:,:) * dtime / 1.e6_wp, & 
+                                          mycorrhiza_uptake_no3_sl(:,:) * dtime / 1.e6_wp, & 
+                                          microbial_uptake_nh4_sl(:,:) * dtime / 1.e6_wp, &        
+                                          microbial_uptake_no3_sl(:,:) * dtime / 1.e6_wp, &        
+                                          nitrification_no3(:,:) * dtime / 1.e6_wp, &        
+                                          nitrification_noy(:,:) * dtime / 1.e6_wp, &        
+                                          nitrification_n2o(:,:) * dtime / 1.e6_wp, &        
+                                          denitrification_noy(:,:) * dtime / 1.e6_wp, &      
+                                          denitrification_n2o(:,:) * dtime / 1.e6_wp, &      
+                                          denitrification_n2(:,:) * dtime / 1.e6_wp, &       
+                                          transport_nh4_n15_solute(:,:), & 
+                                          transport_no3_n15_solute(:,:), &    
+                                          plant_uptake_nh4_n15_sl(:,:), &      
+                                          plant_uptake_no3_n15_sl(:,:), &      
+                                          mycorrhiza_uptake_nh4_n15_sl(:,:), & 
+                                          mycorrhiza_uptake_no3_n15_sl(:,:), & 
+                                          microbial_uptake_nh4_n15_sl(:,:), &        
+                                          microbial_uptake_no3_n15_sl(:,:), &        
+                                          nitrification_no3_n15(:,:), &        
+                                          nitrification_noy_n15(:,:), &        
+                                          nitrification_n2o_n15(:,:), &        
+                                          denitrification_noy_n15(:,:), &      
+                                          denitrification_n2o_n15(:,:), &      
+                                          denitrification_n2_n15(:,:)) 
+
+    !! unit conversion after the subroutine [mol/m3/timestep] -> [µmol/m3/s]
+    plant_uptake_nh4_n15_sl(:,:)      = plant_uptake_nh4_n15_sl(:,:)      / dtime * 1.e6_wp
+    plant_uptake_no3_n15_sl(:,:)      = plant_uptake_no3_n15_sl(:,:)      / dtime * 1.e6_wp
+    mycorrhiza_uptake_nh4_n15_sl(:,:) = mycorrhiza_uptake_nh4_n15_sl(:,:) / dtime * 1.e6_wp
+    mycorrhiza_uptake_no3_n15_sl(:,:) = mycorrhiza_uptake_no3_n15_sl(:,:) / dtime * 1.e6_wp
+    microbial_uptake_nh4_n15_sl(:,:)  = microbial_uptake_nh4_n15_sl(:,:)  / dtime * 1.e6_wp
+    microbial_uptake_no3_n15_sl(:,:)  = microbial_uptake_no3_n15_sl(:,:)  / dtime * 1.e6_wp
+    nitrification_no3_n15(:,:)        = nitrification_no3_n15(:,:)        / dtime * 1.e6_wp
+    nitrification_noy_n15(:,:)        = nitrification_noy_n15(:,:)        / dtime * 1.e6_wp
+    nitrification_n2o_n15(:,:)        = nitrification_n2o_n15(:,:)        / dtime * 1.e6_wp
+    denitrification_noy_n15(:,:)      = denitrification_noy_n15(:,:)      / dtime * 1.e6_wp
+    denitrification_n2o_n15(:,:)      = denitrification_n2o_n15(:,:)      / dtime * 1.e6_wp
+    denitrification_n2_n15(:,:)       = denitrification_n2_n15(:,:)       / dtime * 1.e6_wp
 
   ! Deallocate local allocatable variables
   DEALLOCATE(fine_root_carbon_sl)
   DEALLOCATE(p_deposition_sl)
-  DEALLOCATE(km1_uptake_po4_act)
-  DEALLOCATE(km2_uptake_po4_act)
+  DEALLOCATE(km1_uptake_act)
+  DEALLOCATE(km2_uptake_act)
   DEALLOCATE(arr_hlp1)
+  DEALLOCATE(arr_hlp2)
+  DEALLOCATE(arr_hlp3)
 
 
 ! Pass back values to process memory

@@ -31,7 +31,7 @@ MODULE mo_sb_jsm_transport
 
   USE mo_kind,                  ONLY: wp
   USE mo_exception,             ONLY: message, finish
-  USE mo_jsb_math_constants,    ONLY: dtime
+  USE mo_jsb_math_constants,    ONLY: one_day, dtime
 
 
   IMPLICIT NONE
@@ -56,14 +56,20 @@ CONTAINS
   !!
   !! Output: vertical transport rate (mol/m2/timestep) 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_liquid_phase_transport_wrapper(nc, nsoil_sb, percolation_sl,soil_depth_sl, &
+  SUBROUTINE calc_liquid_phase_transport_wrapper(nc, nsoil_sb, rtm_gasdiffusion_act, &
+                                         rmm_gasdiffusion_act, percolation_sl, soil_depth_sl, &
                                          pool_dom, nh4_solute, no3_solute, po4_solute, nh4_n15_solute, no3_n15_solute, & 
-                                         transport_dom, transport_nh4_solute, transport_no3_solute, & 
+                                         noy, noy_n15, n2o, n2o_n15, n2, n2_n15, &                                        ! in                                         
+                                         transport_dom, transport_nh4_solute, transport_no3_solute, &                     ! inout
                                          transport_po4_solute, transport_nh4_n15_solute, transport_no3_n15_solute, &
                                          leaching_dom_carbon, leaching_dom_nitrogen, leaching_dom_phosphorus, & 
                                          leaching_dom_carbon13, leaching_dom_carbon14, leaching_dom_nitrogen15, &
                                          leaching_nh4_solute, leaching_no3_solute, leaching_po4_solute, &
-                                         leaching_nh4_n15_solute, leaching_no3_n15_solute)
+                                         leaching_nh4_n15_solute, leaching_no3_n15_solute, &                              ! inout
+                                         transport_noy, transport_noy_n15, transport_n2o, &                               ! out
+                                         transport_n2o_n15, transport_n2, transport_n2_n15, & 
+                                         emission_noy, emission_noy_n15, emission_n2o, &    
+                                         emission_n2o_n15, emission_n2, emission_n2_n15)
                                          
     dsl4slm_Use_memory_a_sb
                                          
@@ -72,6 +78,8 @@ CONTAINS
     ! 0.1 InOut
     INTEGER,                                          INTENT(in)    :: nc, &                  !< dimensions
                                                                        nsoil_sb
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: rtm_gasdiffusion_act   !< temperature modifier for gas diffusion
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: rmm_gasdiffusion_act   !< moisture modifier for gas diffusion   
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: percolation_sl         !< fraction of pool transported up or down per second
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: soil_depth_sl          !< depth of each soil layer [m] 
     TYPE(t_sb_element_a),                             INTENT(in)    :: pool_dom               !< DOM pool [mol/m3]
@@ -80,6 +88,12 @@ CONTAINS
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: po4_solute             !< PO4 pool [mol/m3]
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: nh4_n15_solute         !< N15H4 pool [mol/m3]
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: no3_n15_solute         !< N15O3 pool [mol/m3]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: noy                      !< NOy concentration [mol / m3]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: noy_n15                  !< 15NOy concentration [mol / m3]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: n2o                      !< N2O concentration [mol / m3]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: n2o_n15                  !< 15N2O concentration [mol / m3]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: n2                       !< N2 concentration [mol / m3]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: n2_n15                   !< 15N2 concentration [mol / m3]
     TYPE(t_sb_element_a),                             INTENT(inout) :: transport_dom          !< rate of DOM transport [mol/m3/timestep]
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: transport_nh4_solute   !< rate of NH4 transport [mol/m3/timestep]
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: transport_no3_solute   !< rate of NO3 transport [mol/m3/timestep]
@@ -97,6 +111,18 @@ CONTAINS
     REAL(wp), DIMENSION(nc),                          INTENT(inout) :: leaching_po4_solute      !< rate of PO4 leaching [µmol/m2/s]
     REAL(wp), DIMENSION(nc),                          INTENT(inout) :: leaching_nh4_n15_solute  !< rate of 14NH4 leaching [µmol/m2/s]
     REAL(wp), DIMENSION(nc),                          INTENT(inout) :: leaching_no3_n15_solute  !< rate of 15NO3 leaching [µmol/m2/s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(out)   :: transport_noy            !< vertical transport of NOy [µmol/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(out)   :: transport_noy_n15        !< vertical transport of 15NOy [µmol/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(out)   :: transport_n2o            !< vertical transport of N2O [µmol/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(out)   :: transport_n2o_n15        !< vertical transport of 15N2O [µmol/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(out)   :: transport_n2             !< vertical transport of N2 [µmol/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(out)   :: transport_n2_n15         !< vertical transport of 15N2 [µmol/m3/s]
+    REAL(wp), DIMENSION(nc),                          INTENT(out)   :: emission_noy             !< soil efflux of NOy [µmol/m2/s]
+    REAL(wp), DIMENSION(nc),                          INTENT(out)   :: emission_noy_n15         !< soil efflux of 15NOy [µmol/m2/s]
+    REAL(wp), DIMENSION(nc),                          INTENT(out)   :: emission_n2o             !< soil efflux of N2O [µmol/m2/s]
+    REAL(wp), DIMENSION(nc),                          INTENT(out)   :: emission_n2o_n15         !< soil efflux of 15N2O [µmol/m2/s]
+    REAL(wp), DIMENSION(nc),                          INTENT(out)   :: emission_n2              !< soil efflux of N2 [µmol/m2/s]
+    REAL(wp), DIMENSION(nc),                          INTENT(out)   :: emission_n2_n15          !< soil efflux of 15N2 [µmol/m2/s]
     ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_liquid_phase_transport_wrapper'
@@ -147,6 +173,24 @@ CONTAINS
     CALL calc_liquid_phase_transport(nc, nsoil_sb, percolation_sl(:,:), soil_depth_sl(:,:), &
                                         no3_n15_solute(:,:),transport_no3_n15_solute(:,:), & 
                                         leaching_no3_n15_solute(:)) 
+
+    !> 3.0 gaseous loss of NOy, N2O, and N2, for now following Xu-Ri and Prentice 2008, 
+    !!thus ignoring any actual gas-transport and instead assume that from each layer a certain fraction excapes directly to the atmosphere.
+    !! [mol m-3 timestep-1] 
+    transport_noy(:,:)     = - rtm_gasdiffusion_act(:,:) * rmm_gasdiffusion_act(:,:) * noy(:,:)     / one_day * 1.e6_wp
+    transport_noy_n15(:,:) = - rtm_gasdiffusion_act(:,:) * rmm_gasdiffusion_act(:,:) * noy_n15(:,:) / one_day * 1.e6_wp
+    transport_n2o(:,:)     = - rtm_gasdiffusion_act(:,:) * rmm_gasdiffusion_act(:,:) * n2o(:,:)     / one_day * 1.e6_wp
+    transport_n2o_n15(:,:) = - rtm_gasdiffusion_act(:,:) * rmm_gasdiffusion_act(:,:) * n2o_n15(:,:) / one_day * 1.e6_wp
+    transport_n2(:,:)      = - rtm_gasdiffusion_act(:,:) * rmm_gasdiffusion_act(:,:) * n2(:,:)      / one_day * 1.e6_wp
+    transport_n2_n15(:,:)  = - rtm_gasdiffusion_act(:,:) * rmm_gasdiffusion_act(:,:) * n2_n15(:,:)  / one_day * 1.e6_wp
+
+    ! emission rates as positive flux to the atmosphere, integrated over the soil column [mol m-2 timestep-1]
+    emission_noy(:)     = SUM(-transport_noy(:,:)     * soil_depth_sl(:,:), DIM=2)
+    emission_n2o(:)     = SUM(-transport_n2o(:,:)     * soil_depth_sl(:,:), DIM=2)
+    emission_n2(:)      = SUM(-transport_n2(:,:)      * soil_depth_sl(:,:), DIM=2)
+    emission_noy_n15(:) = SUM(-transport_noy_n15(:,:) * soil_depth_sl(:,:), DIM=2)
+    emission_n2o_n15(:) = SUM(-transport_n2o_n15(:,:) * soil_depth_sl(:,:), DIM=2)
+    emission_n2_n15(:)  = SUM(-transport_n2_n15(:,:)  * soil_depth_sl(:,:), DIM=2)
 
   END SUBROUTINE calc_liquid_phase_transport_wrapper
 
@@ -409,7 +453,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_particle_transport_wrapper(nc, nsoil_sb, particle_fluxrate, soil_depth_sl, &
                                           sb_pool, nh4_solute, nh4_assoc, no3_solute, po4_solute, po4_assoc_fast, & 
-                                          po4_assoc_slow, po4_occluded, po4_primary, nh4_n15_solute, nh4_n15_assoc, no3_n15_solute, & 
+                                          po4_assoc_slow, po4_occluded, po4_primary, nh4_n15_solute, nh4_n15_assoc, no3_n15_solute,& 
                                           sb_transport, transport_nh4_solute, transport_nh4_assoc, transport_no3_solute, & 
                                           transport_po4_solute, transport_po4_assoc_fast, transport_po4_assoc_slow, & 
                                           transport_po4_occluded, transport_po4_primary, transport_nh4_n15_solute, &

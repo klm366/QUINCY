@@ -317,8 +317,9 @@ MODULE mo_sb_memory_class
                                     occlusion_po4, &                 !< phosphorus occlusion rate, assoc_slow --> occluded [µmol P m-3 s-1]
                                     slow_exchange_po4, &             !< phosphorus slow exchange rate, assoc_fast <--> assoc_slow [µmol P m-3 s-1]
                                     fast_exchange_po4, &             !< phosphorus fast exchange rate, solute <--> assoc_fast [µmol P m-3 s-1]
+                                    fast_exchange_nh4, &             !< nh4 fast exchange rate, solute <--> nh4_assoc [µmol N m-3 s-1]
                                     fast_adsorpt_po4, &              !< phosphorus fast exchange rate, solute <--> assoc_fast [µmol P m-3 s-1]
-                                    fast_desorp_po4, &               !< phosphorus fast exchange rate, solute <--> assoc_fast [µmol P m-3 s-1]
+                                    fast_adsorpt_nh4, &              !< nh4 fast adsorption rate, solute --> nh4_assoc [µmol P m-3 s-1]
                                     biochem_mineralisation_po4, &    !< phosphorus biochemical mineralization rate [µmol P m-3 s-1]
                                     gross_mineralisation_po4         !< phosphorus gross (biological) mineralization rate [µmol P m-3 s-1]
 
@@ -348,7 +349,9 @@ MODULE mo_sb_memory_class
     TYPE(t_jsb_var_real3d)          :: &
                                     qmax_org, &                       !< sorption capacity of dom of mineral soil [kg C kg-1 mineral soil]
                                     qmax_po4, &                       !< sorption capacity of po4 of mineral soil [mol P m-3 soil]
+                                    qmax_nh4, &                       !< sorption capacity of nh4 of mineral soil [mol N m-3 soil]
                                     km_adsorpt_po4_sl, &              !< half saturation of po4 sorption isotherm [mol P m-3 soil]
+                                    km_adsorpt_nh4_sl, &              !< half saturation of nh4 sorption isotherm [mol N m-3 soil]
                                     k_bioturb, &                      !< diffusion rate resulting from bioturbation
                                     bulk_dens_corr_sl, &              !< organic fraction corrected bulk-density of the soil [kg m-3]
                                     bulk_soil_carbon_sl, &            !< bulk soil density of carbon [kg m-3] 
@@ -1391,7 +1394,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
-  
+
       CALL jsb_add_var(mem, 'nh4_assoc', mem%nh4_assoc, &
             hgrid, vgrid_soil_sb, &
             t_cf('nh4_assoc', 'mol m-3', 'minerally associated ammonium'), &
@@ -2192,6 +2195,14 @@ CONTAINS
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
+      CALL jsb_add_var(mem, 'fast_exchange_nh4', mem%fast_exchange_nh4, &
+            hgrid, vgrid_soil_sb, &
+            t_cf('fast_exchange_nh4', 'µmol N m-3 s-1', 'nh4 fast exchange rate, solute <--> nh4_assoc'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
       CALL jsb_add_var(mem, 'fast_adsorpt_po4', mem%fast_adsorpt_po4, &
             hgrid, vgrid_soil_sb, &
             t_cf('fast_adsorpt_po4', 'µmol P m-3 s-1', 'phosphorus fast exchange rate, solute <--> assoc_fast'), &
@@ -2200,9 +2211,9 @@ CONTAINS
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
 
-      CALL jsb_add_var(mem, 'fast_desorp_po4', mem%fast_desorp_po4, &
+      CALL jsb_add_var(mem, 'fast_adsorpt_nh4', mem%fast_adsorpt_nh4, &
             hgrid, vgrid_soil_sb, &
-            t_cf('fast_desorp_po4', 'µmol P m-3 s-1', 'phosphorus fast exchange rate, solute <--> assoc_fast'), &
+            t_cf('fast_adsorpt_nh4', 'µmol N m-3 s-1', 'nh4 fast adsorption rate, solute --> nh4_assoc'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
@@ -2396,6 +2407,22 @@ CONTAINS
       CALL jsb_add_var(mem, 'km_adsorpt_po4_sl', mem%km_adsorpt_po4_sl, &
             hgrid, vgrid_soil_sb, &
             t_cf('km_adsorpt_po4_sl', 'mol P m-3 soil', 'half saturation of po4 sorption isotherm'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'qmax_nh4', mem%qmax_nh4, &
+            hgrid, vgrid_soil_sb, &
+            t_cf('qmax_nh4', 'mol N m-3 soil', 'sorption capacity of nh4 of mineral soil'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'km_adsorpt_nh4_sl', mem%km_adsorpt_nh4_sl, &
+            hgrid, vgrid_soil_sb, &
+            t_cf('km_adsorpt_nh4_sl', 'mol N m-3 soil', 'half saturation of nh4 sorption isotherm'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &

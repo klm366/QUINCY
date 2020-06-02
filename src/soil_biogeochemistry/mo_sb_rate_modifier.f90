@@ -404,6 +404,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   ELEMENTAL FUNCTION calc_substrate_rate_modifier(w_soil_sl,w_soil_fc_sl,param) RESULT(rate_modifier)
 
+    USE mo_sb_constants,        ONLY: k2_afps
     USE mo_jsb_math_constants,  ONLY: eps8
 
     IMPLICIT NONE
@@ -419,7 +420,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_substrate_rate_modifier'
 
     IF(param>eps8.AND.w_soil_fc_sl > eps8) THEN
-       hlp1 = (w_soil_sl / w_soil_fc_sl)**3._wp
+       hlp1 = (w_soil_sl / w_soil_fc_sl) ** k2_afps
        IF(hlp1 > param) THEN
           rate_modifier = 1._wp / hlp1 
        ELSE 

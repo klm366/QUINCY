@@ -54,6 +54,7 @@ MODULE mo_sb_constants
       ea_decomposition, &     !< activation energy for decomposition [J mol-1]
       ed_decomposition, &     !< de-activation energy for decomposition [J mol-1]
       k1_afps, &              !< scaling factor in the air-filled pore space to modifier response
+      k2_afps, &              !< scaling factor in the substrate modifier response
       kmr_depolymerisation, & !< scaling factor for the sensitivity of depolymerisation to oxygen limitation 
       kmr_mic_uptake, &       !< scaling factor for the sensitivity of microbial uptake to oxygen limitation 
       kmr_hsc, &              !< scaling factor for the sensitivity of half-saturation constant to moisture limitation
@@ -69,14 +70,12 @@ MODULE mo_sb_constants
       k_desorpt_dom, &              !< 
       k_adsorpt_det, &              !< 
       k_desorpt_det, &              !< 
-      k_adsorpt_nh4, &              !< 
-      k_desorpt_nh4, &              !< 
-      k_desorpt_po4, &              !< Slow desorption rate (between sorbed Pi and labile Pi) of PO4, [mol kg-1 soil s-1], simple model
-      k_adsorpt_po4, &              !< Slow adsorption rate (between sorbed Pi and labile Pi) of PO4, [mol kg-1 soil s-1], simple model
+      k_adsorpt_nh4, &              !< slow adsorption rate (from soluble Pi to sorbed Pi) of PO4, [[kg soil mol-1 P s-1]]
+      k_desorpt_nh4, &              !< fast desorption rate (from NH4assoc to NH4solute) of nh4, [s-1]
+      k_desorpt_po4, &              !< Slow desorption rate (between sorbed Pi and labile Pi) of PO4, [s-1], simple model
+      k_adsorpt_po4, &              !< Slow adsorption rate (between sorbed Pi and labile Pi) of PO4, [s-1], simple model
       k_adsorpt_f_po4, &            !< fast adsorption rate (from soluble Pi to labile Pi) of PO4, [[kg soil mol-1 P s-1]]
-      k_desorp_f_po4, &             !< fast desorption rate (from labile Pi to soluble Pi) of PO4, [s-1]
-      k_adsorpt_s_po4, &            !< slow adsorption rate (from soluble Pi to sorbed Pi) of PO4, [[kg soil mol-1 P s-1]]
-      k_desorp_s_po4                !< slow desorption rate (from sorbed Pi to soluble Pi) of PO4, [s-1]
+      k_desorp_f_po4                !< fast desorption rate (from labile Pi to soluble Pi) of PO4, [s-1]
 
    ! microbial parameters
    REAL(wp), SAVE :: &
@@ -164,10 +163,10 @@ MODULE mo_sb_constants
    REAL(wp), SAVE :: & 
       km1_up_nh4, &             !< low-affinity parameter for plant and mycorrhizal uptake [m3/mol]
       km1_up_no3, &             !< low-affinity parameter for plant and mycorrhizal uptake [m3/mol]
-      km1_up_po4, &             !< low-affinity parameter for plant and mycorrhizal uptake [m3/mol]  unit correct ?
+      km1_up_po4, &             !< low-affinity parameter for plant and mycorrhizal uptake [L/mol]  unit correct ?
       km2_up_nh4, &             !< high-affinity parameter for plant and mycorrhizal uptake [mol/m3]
       km2_up_no3, &             !< high-affinity parameter for plant and mycorrhizal uptake [mol/m3]
-      km2_up_po4                !< high-affinity parameter for plant and mycorrhizal uptake [mol/m3] unit correct ?
+      km2_up_po4                !< high-affinity parameter for plant and mycorrhizal uptake [mol/L] unit correct ?
 
    ! nutrient uptake kinetics & ECA approach: additional jsm parameters
    REAL(wp), SAVE :: &
@@ -181,6 +180,11 @@ MODULE mo_sb_constants
       vmax_plant_uptake_no3, &   !< maximum NO3 uptake capacity of fine roots (mol N / mol biomass C / s)
       km_plant_uptake_no3, &     !< half-saturation concentration (mol N / m3)
       f_plant_carrier_n, &       !< ratio between plant N transport and fine root biomass, []
+      vmax_nitrification_nh4, &  !< maximum nitrification capacity of nitrifiers (mol N / mol biomass C / s)
+      vmax_denitrification_no3, &!< maximum nitrification capacity of denitrifiers (mol N / mol biomass C / s)
+      km_nitrification_nh4, &    !< half-saturation concentration of nitrification (mol N / m3)
+      km_denit_no3, &            !< half-saturation concentration of denitrification (mol N / m3)     
+      k_nit_carrier_n, &         !< ratio between N de/nitrifiers and microial biomass, [-]
       vmax_mic_uptake_po4, &     !< maximum PO4 uptake capacity of microbes (mol PO4 / mol biomass C / s)
       km_mic_uptake_po4, &       !< half-saturation concentration for decomposing microbe PO4 immobilization [mol PO4 m-3]
       vmax_plant_uptake_po4, &   !< maximum PO4 uptake capacity of fine roots (mol PO4 / mol biomass C / s)
@@ -193,6 +197,11 @@ MODULE mo_sb_constants
       k_plant_uptake_po4, &      !< Reaction rate of plant PO4 carrier enzyme [s-1], ECA specific
       f_mic_carrier_po4, &       !< ratio between microbial P transport and microbial biomass, []
       f_plant_carrier_po4, &     !< ratio between plant P transport and fine root biomass, []
+      f_nit_carrier_nh4, &       !<  
+      f_denit_carrier_no3, &     !<
+      qmax_nh4_clay, &           !< Maximum NH4 sorption capacity of clay [mol P kg-1 clay], ECA and Langmuir
+      km_adsorpt_mineral_nh4, &  !< Half-saturation concentration for NH4 adsorption to mineral soil [mol P kg-1 fine mineral soil], ECA and Langmuir
+      km_adsorpt_OM_nh4, &       !< Half-saturation concentration for NH4 adsorption to OM, [mol N kg-1 OM], ECA and Langmuir
       qmax_po4_mineral, &        !< Maximum PO4 sorption capacity of mineral soil [mol P kg-1 soil], ECA and Langmuir
       km_adsorpt_mineral_po4, &  !< Half-saturation concentration for PO4 adsorption to mineral soil [mol P kg-1 fine mineral soil], ECA and Langmuir
       km_adsorpt_OM_po4          !< Half-saturation concentration for PO4 adsorption to OM, [mol P kg-1 OM], ECA and Langmuir
@@ -206,8 +215,8 @@ MODULE mo_sb_constants
       ea_gasdiffusion, &         !< activation energy for gas diffusion [J mol-1]
       lambda_anvf, &             !< lambda in the Weibull function relating soil moisture to the anaerobic volume fraction
       k_anvf, &                  !< k in the Weibull function relating soil moisture to the anaerobic volume fraction
-      vmax_nitrification, &      !< maximum nitrification rate [µmol mol-1 s-1] 
-      vmax_denitrification, &    !< maximum denitrification rate [µmol mol-1 s-1]
+      vmax_nitrification, &      !< maximum nitrification rate [µmol N mol-1 N s-1] 
+      vmax_denitrification, &    !< maximum denitrification rate [µmol m-3 s-1] 
       km_denitrification_c, &    !< half-saturation constant for carbon-limited (de-)nitrification [mol C m-3]
       km_denitrification_no3, &  !< half-saturation constant for nitrate-limited denitrifcation [mol N m-3]
       f_nit_noy, &               !< fraction of nitrification lost as NOy [--]
@@ -296,6 +305,7 @@ CONTAINS
     ed_decomposition      = 100000.0_wp   !
     t_ref_decomposition   = 313.15_wp     !
     k1_afps               = 4._wp / 3._wp ! B. Ahrens, pers. comm. 2016
+    k2_afps               = 3._wp         ! B. Ahrens, pers. comm. 2016
     kmr_depolymerisation  = 0.001_wp      ! 
     kmr_mic_uptake        = 0.001_wp      ! 
     kmr_hsc               = 0.001_wp      ! 
@@ -304,21 +314,19 @@ CONTAINS
 
     ! transport and sorption parameters (all B. Ahrens, pers. comm. 2016)
     k_diff_org                = 0.15_wp / one_year / one_day                                ! [m2 (kg m-3) s-1]
-    rho_bulk_org              = 150.3935_wp                                                 ! 
+    rho_bulk_org              = 150.3935_wp                                                 ! textbook knowledge, or from field measurement
     carbon_per_dryweight_SOM  = 0.4271_wp                                                   !! COMISSION for Hainich
     k_adsorpt_dom             = 59.9610_wp / one_year / one_day * molar_mass_C  / 1000._wp  ! conversion to m3 / mol C / s, Bernhard 20180913
     k_desorpt_dom             = 508.2151_wp / one_year / one_day / 1000._wp                 ! Bernhard 20180913
     k_adsorpt_det             = 0.31012_wp / one_year / one_day * molar_mass_C / 1000._wp   ! conversion to m3 / mol C / s, Bernhard 20180913
     k_desorpt_det             = 153.957_wp / one_year / one_day / 1000._wp                  ! Bernhard 20180913
-    k_adsorpt_nh4             = 0.0_wp                                                      !  
-    k_desorpt_nh4             = 0.0_wp                                                      !  
+    k_adsorpt_nh4             = 0.0_wp                                                      ! not activated yet
+    k_desorpt_nh4             = 0.022_wp / 30.0_wp / one_day                                ! assumed to be the same as po4 desorption rate
     k_adsorpt_po4             = 0.022_wp * 8._wp / 9._wp / 30.0_wp / one_day                ! [s-1], simple model, Yang et al. 2014, corrected for the global average,
                                                                                             ! assuming labile and slow P in equilibrium (Yang et al. 2013)
     k_desorpt_po4             = 0.022_wp / 30.0_wp / one_day                                ! [s-1], simple model, Yang et al. 2014 * 100
     k_adsorpt_f_po4           = 12.9_wp / 3600._wp                                          ! [m3 mol-1 P s-1], based on Van der Zee et al. 1989
     k_desorp_f_po4            = 0.14_wp / 3600._wp / 10._wp                                 ! [s-1], Van der Zee et al. 1989
-    k_desorp_s_po4            = 0.0_wp                                                      ! [kg soil mol-1 P s-1], McGechan and Lewis 2002
-    k_adsorpt_s_po4           = 0.0_wp                                                      ! [s-1], McGechan and Lewis 2002
 
     ! microbial parameters
     microbial_cn            = 13._wp * molar_mass_N / molar_mass_C   ! textbook knowledge
@@ -353,10 +361,10 @@ CONTAINS
     min_mic_biomass               = 0.01_wp    
     min_enzyme_fraction           = 0.01_wp                                ! 
     vmax_mic_uptake               = 3495.18053_wp / one_year / one_day * 1000000._wp * 10._wp
-    km_mic_uptake                 = 1.02404788_wp / molar_mass_C * 1000._wp            ! conversion to mol C / m3
-    vmax_depolymerisation_residue = 0.2316605_wp / one_year / one_day                 !  1.21_wp 0.2316605_wp
-    vmax_depolymerisation_litter  = 0.3698_wp / one_year / one_day / 2._wp            !   0.3698_wp
-    km_depolymerisation           = 0.08876_wp / 2._wp / molar_mass_C * 1000._wp               ! conversion to mol C / m3                                                     ! estimated
+    km_mic_uptake                 = 1.02404788_wp / molar_mass_C * 1000._wp           !  COMISSION, Ahrens et al. 2015
+    vmax_depolymerisation_residue = 0.2316605_wp / one_year / one_day                 !  calibrated, from Yu et al. 2020
+    vmax_depolymerisation_litter  = 0.3698_wp / one_year / one_day / 2._wp            !  calibrated, from Yu et al. 2020
+    km_depolymerisation           = 0.08876_wp / 2._wp / molar_mass_C * 1000._wp      !  calibrated, from Yu et al. 2020
     fc_p_res2dom                  = 0.8_wp
     fc_n_res2dom                  = 0.0_wp
 
@@ -415,6 +423,11 @@ CONTAINS
     vmax_plant_uptake_no3   = 18.2_wp / 3600._wp * molar_mass_C           ! µmol / mol / s from Zhu et al. 2017, and references therein
     km_plant_uptake_no3     = 1.8_wp / molar_mass_N                       ! mol / m3 from Zhu et al. 2017, and references therein
     f_plant_carrier_n       = 1.25_wp / 10000._wp                         ! assuming 30% of the microbial enzymes are P transporter, based on Zhu et al. 2016
+    vmax_nitrification_nh4  = 636._wp / molar_mass_N / one_day * molar_mass_C ! µmol / mol / s , Kemp and Dodds 2002
+    vmax_denitrification_no3= 54._wp / molar_mass_N / one_day * molar_mass_C  ! µmol / mol / s , Kemp and Dodds 2002
+    km_nitrification_nh4    = 0.019_wp / molar_mass_N                     ! mol / m3 , Kemp and Dodds 2002
+    km_denit_no3            = 0.3_wp / molar_mass_N                       ! mol / m3 , Kemp and Dodds 2002  
+    k_nit_carrier_n         = 0.001_wp / 1000._wp                         ! estimated
     vmax_mic_uptake_po4     = 15.72_wp / 3600._wp * molar_mass_C          ! µmol / mol / s, based on Zhu et al. 2016, and references therein
     km_mic_uptake_po4       = 0.02_wp / molar_mass_P                      ! mol / m3, Zhu et al. 2016
     vmax_plant_uptake_po4   = 0.0222 / 60._wp * molar_mass_C              ! µmol / mol / s, Kavka and Polle 2016
@@ -427,8 +440,14 @@ CONTAINS
     k_plant_uptake_po4      = 12._wp / one_day                            ! [s-1], Zhu et al. 2016, and references therein
     f_mic_carrier_po4       = 0.05_wp / 100._wp                           ! assuming 30% of the microbial enzymes are P transporter, based on Zhu et al. 2016
     f_plant_carrier_po4     = 1.25_wp / 10000._wp                         ! assuming 10% of the plant enzymes are P transporter, based on Zhu et al. 2016
+    f_nit_carrier_nh4       = 0.05_wp / 10000._wp                         ! estimated
+    f_denit_carrier_no3     = 0.05_wp / 10000._wp                         ! estimated
+    qmax_nh4_clay           = 7.105 / molar_mass_N                        ! [mol N kg-1 clay], Nieder et al. 2011
+    km_adsorpt_mineral_nh4  = 2.602 / 1000._wp / molar_mass_N             ! [mol N kg-1 fine mineral soil], based on 12.3 [mg N L-1 soil solution]  2.602_wp
+                                                                          ! from literature data analysis, with .33 m wc and 1560 kg/m3 bulk density
+    km_adsorpt_OM_nh4       = 26.02 / 1000._wp / molar_mass_N             ! [mol N kg-1 fine mineral soil], 10 times of mineral km
     qmax_po4_mineral        = 1.2_wp / molar_mass_P                       ! [mol P kg-1 soil], Olander and Vitousek 2005
-    km_adsorpt_mineral_po4  = 0.070_wp / 1000._wp / molar_mass_P          ! [mol P kg-1 fine mineral soil], based on 0.332 [mol P L-1 soil solution]  
+    km_adsorpt_mineral_po4  = 0.070_wp / 1000._wp / molar_mass_P          ! [mol P kg-1 fine mineral soil], based on 0.332 [mg P L-1 soil solution]  
                                                                           ! from literature data analysis, with .33 m wc and 1560 kg/m3 bulk density
     km_adsorpt_OM_po4       = 14._wp / 1000._wp / molar_mass_P            ! 200 times of km_adsorpt_mineral_po4, from literature data analysis
 
@@ -477,12 +496,12 @@ CONTAINS
     km_mic_biochem_po4    = 5._wp / molar_mass_C                                  ! [mol C m-3] ! random number, equals to the usual microbe biomass (0.1 g C m-3)
     km_dip_biochem_po4    = 0.001_wp                                              ! estimated
     km_pc_biochem_po4     = 0.001_wp                                              ! estimated
-    km_rootc_biochem_po4  = 20._wp                                                ! 
-    km_rootc_weath_po4    = 10._wp                                                ! 10._wp for simple_1d
+    km_rootc_biochem_po4  = 20._wp                                                ! estimated
+    km_rootc_weath_po4    = 10._wp                                                ! estimated
     km_root_enzyme_weath_po4 = 1._wp / molar_mass_C                               ! estimated
     biomin_thres_pc       = 1._wp / 5000._wp
     !! BLARPP only temporarily, mol / m2 !!
-    nh4_solute_prescribe = 0.1_wp
+    nh4_solute_prescribe = 0.05_wp
     no3_solute_prescribe = 0.1_wp
     po4_solute_prescribe = 0.05_wp
 

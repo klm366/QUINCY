@@ -71,8 +71,10 @@ flag_sb_jsm_transport="F"       # ..
 flag_sb_jsm_litter_input="F"    # ..
 flag_sb_jsm_OM_sorption="F"     # ..
 
-# ECA and P cycle  (currently not available in the prep_run_slm.sh; defaults are: T/T/eca_full)
-sb_adsorp_scheme="eca_full"     # eca_full; eca_part (only uptake, not for adsorption); eca_none
+# ECA for JSM (Equilibrium Chemistry Approximation)
+sb_adsorp_scheme="eca_part"       # eca_full (vmax of ECA is calc by enzyme abundance and catalytic capacity)
+                                  # eca_part [default] (vmax of ECA prescribed from experiment/literature)
+                                  # eca_none (conventional MM kinetics)
 
 # simulation length & output
 simulation_length_number=20     # 1 to ...500 ? [simulation_length_unit defaults to "y" == years]
