@@ -37,7 +37,7 @@ MODULE mo_turb_interface
   dsl4jsb_Use_processes TURB_, SEB_, HYDRO_, PHENO_, ASSIMI_, SSE_, A2L_
 
   ! Use process configurations
-  !dsl4jsb_Use_config(TURB_)
+  dsl4jsb_Use_config(TURB_)
   dsl4jsb_Use_config(HYDRO_)
   dsl4jsb_Use_config(SEB_)
 
