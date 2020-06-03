@@ -371,7 +371,7 @@ CONTAINS
               & cover_fract_pot(:),                         & ! in
               & prev_day_max_wind_10m(:),                   & ! in
               & max_wind_10m(:),                            & ! in
-              & damaged_fract(:)                            & ! out
+              & damaged_fract(:)                            & ! inout
               & )
           CASE DEFAULT
             CALL finish('disturbed_frac','Unknown windbreak algorithm')
