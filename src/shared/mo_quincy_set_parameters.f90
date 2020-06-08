@@ -288,7 +288,7 @@ MODULE mo_quincy_set_parameters
     REAL(wp)           :: k_adsorpt_po4
     REAL(wp)           :: k_desorpt_po4
     REAL(wp)           :: k_adsorpt_f_po4
-    REAL(wp)           :: k_desorp_f_po4
+    REAL(wp)           :: k_desorpt_f_po4
     REAL(wp)           :: microbial_cn
     REAL(wp)           :: microbial_np
     REAL(wp)           :: microbial_nue
@@ -773,7 +773,7 @@ CONTAINS
     REAL(wp)           :: k_adsorpt_po4
     REAL(wp)           :: k_desorpt_po4
     REAL(wp)           :: k_adsorpt_f_po4
-    REAL(wp)           :: k_desorp_f_po4
+    REAL(wp)           :: k_desorpt_f_po4
     REAL(wp)           :: microbial_cn
     REAL(wp)           :: microbial_np
     REAL(wp)           :: microbial_nue
@@ -1160,7 +1160,7 @@ CONTAINS
         k_adsorpt_po4                 , &
         k_desorpt_po4                 , &
         k_adsorpt_f_po4               , &
-        k_desorp_f_po4                , &
+        k_desorpt_f_po4               , &
         microbial_cn                  , &
         microbial_np                  , &
         microbial_nue                 , &
@@ -1546,7 +1546,7 @@ CONTAINS
     k_adsorpt_po4                 = missval
     k_desorpt_po4                 = missval
     k_adsorpt_f_po4               = missval
-    k_desorp_f_po4                = missval
+    k_desorpt_f_po4               = missval
     microbial_cn                  = missval
     microbial_np                  = missval
     microbial_nue                 = missval
@@ -1963,7 +1963,7 @@ CONTAINS
     this%k_adsorpt_po4                 = k_adsorpt_po4
     this%k_desorpt_po4                 = k_desorpt_po4
     this%k_adsorpt_f_po4               = k_adsorpt_f_po4
-    this%k_desorp_f_po4                = k_desorp_f_po4
+    this%k_desorpt_f_po4               = k_desorpt_f_po4
     this%microbial_cn                  = microbial_cn
     this%microbial_np                  = microbial_np
     this%microbial_nue                 = microbial_nue
@@ -3368,10 +3368,10 @@ CONTAINS
                                     "k_adsorpt_f_po4", proportional_parameter_changes, &
                                     k_adsorpt_f_po4)
     
-    CALL Set_quincy_parameter_value(this%k_desorp_f_po4 / 3600._wp / 10._wp, &
-                                    this%k_desorp_f_po4, &
-                                    "k_desorp_f_po4", proportional_parameter_changes, &
-                                    k_desorp_f_po4)
+    CALL Set_quincy_parameter_value(this%k_desorpt_f_po4 / 3600._wp / 10._wp, &
+                                    this%k_desorpt_f_po4, &
+                                    "k_desorpt_f_po4", proportional_parameter_changes, &
+                                    k_desorpt_f_po4)
 
     CALL Set_quincy_parameter_value(this%microbial_cn * molar_mass_N / molar_mass_C, &
                                     this%microbial_cn, &

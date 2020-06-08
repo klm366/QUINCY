@@ -1875,8 +1875,6 @@ CONTAINS
     REAL(wp), SAVE                        :: occlusion_po4_acc    = 0.0_wp
     REAL(wp), SAVE                        :: slow_exchange_po4_acc    = 0.0_wp
     REAL(wp), SAVE                        :: fast_exchange_po4_acc  = 0.0_wp
-    REAL(wp), SAVE                        :: fast_desorp_po4_acc  = 0.0_wp
-    REAL(wp), SAVE                        :: fast_adsorpt_po4_acc  = 0.0_wp
     REAL(wp), SAVE                        :: biochem_mineralisation_po4_acc  = 0.0_wp
     REAL(wp), SAVE                        :: asymb_n_fixation_acc = 0.0_wp
     REAL(wp), SAVE                        :: asymb_n_fixation_n15_acc = 0.0_wp
@@ -1935,7 +1933,7 @@ CONTAINS
                                              transport_nh4_assoc_acc = 0.0_wp       , &
                                              transport_solute_no3_acc = 0.0_wp      , &
                                              transport_DON_lay_acc = 0.0_wp         , &
-                                             f_adsorp_nh4_lay_acc = 0.0_wp          , &  
+                                             f_adsorpt_nh4_lay_acc = 0.0_wp         , &  
                                              nitrification_lay_acc = 0.0_wp         , &  
                                              denitrification_lay_acc = 0.0_wp       , &  
                                              ! P
@@ -2867,7 +2865,7 @@ CONTAINS
                                                     1000000.0_wp * dtime_one/dtime
           myc_uptake_norg_lay_acc(1:nsoil_sb)     = myc_uptake_norg_lay_acc(1:nsoil_sb) + &
                                                     mycorrhiza_uptake_norg_sl(ipoi,:) * dtime_one
-          f_adsorp_nh4_lay_acc(1:nsoil_sb)        = f_adsorp_nh4_lay_acc(1:nsoil_sb) + &
+          f_adsorpt_nh4_lay_acc(1:nsoil_sb)       = f_adsorpt_nh4_lay_acc(1:nsoil_sb) + &
                                                     fast_adsorpt_nh4(ipoi,:) * dtime_one
           nitrification_lay_acc(1:nsoil_sb)       = nitrification_lay_acc(1:nsoil_sb) + &
                                                     (nitrification_no3(ipoi,:) + nitrification_noy(ipoi,:) + &
@@ -2929,7 +2927,7 @@ CONTAINS
               net_mineral_no3_lay_acc(1:nsoil_sb),   plant_uptake_no3_lay_acc(1:nsoil_sb), &
               microbial_upt_no3_lay_acc(1:nsoil_sb), myc_uptake_no3_lay_acc(1:nsoil_sb), &
               transport_solute_no3_acc(1:nsoil_sb),  transport_DON_lay_acc(1:nsoil_sb), &
-              myc_uptake_norg_lay_acc(1:nsoil_sb), f_adsorp_nh4_lay_acc(1:nsoil_sb), &
+              myc_uptake_norg_lay_acc(1:nsoil_sb), f_adsorpt_nh4_lay_acc(1:nsoil_sb), &
               nitrification_lay_acc(1:nsoil_sb), denitrification_lay_acc(1:nsoil_sb)
             lun = lun + 1
             ! soilfluxP_lay
@@ -2968,7 +2966,7 @@ CONTAINS
             transport_solute_no3_acc(1:nsoil_sb)    = 0.0_wp
             transport_DON_lay_acc(1:nsoil_sb)       = 0.0_wp
             myc_uptake_norg_lay_acc(1:nsoil_sb)     = 0.0_wp
-            f_adsorp_nh4_lay_acc(1:nsoil_sb)        = 0.0_wp
+            f_adsorpt_nh4_lay_acc(1:nsoil_sb)       = 0.0_wp
             nitrification_lay_acc(1:nsoil_sb)       = 0.0_wp
             denitrification_lay_acc(1:nsoil_sb)     = 0.0_wp
             ! P

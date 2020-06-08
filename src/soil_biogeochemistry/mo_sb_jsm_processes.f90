@@ -477,7 +477,7 @@ CONTAINS
     REAL(wp)                        :: f_mic_carrier, km1_mic_uptake, km2_mic_uptake, &
                                        f_plant_carrier, km_plant_uptake, km1_plant_uptake, &
                                        k_mic_uptake, k_plant_uptake, vmax_mic_uptake_sub, vmax_plant_uptake, &
-                                       k_desorp_f, vmax_nit_denit, km_nit_denit, & 
+                                       k_desorpt_f, vmax_nit_denit, km_nit_denit, & 
                                        k_nit_denit, f_nit_carrier, reaction_volume
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_sinking_flux'
     ! ---------------------------
@@ -493,7 +493,7 @@ CONTAINS
         k_plant_uptake    = k_plant_uptake_po4
         vmax_mic_uptake_sub = vmax_mic_uptake_po4
         vmax_plant_uptake = vmax_plant_uptake_po4
-        k_desorp_f        = k_desorp_f_po4
+        k_desorpt_f       = k_desorpt_f_po4
         km_nit_denit      = 0._wp
         k_nit_denit       = 0._wp
         f_nit_carrier     = 0._wp
@@ -510,7 +510,7 @@ CONTAINS
         k_plant_uptake    = k_plant_uptake_nh4
         vmax_mic_uptake_sub   = vmax_mic_uptake_nh4
         vmax_plant_uptake = vmax_plant_uptake_nh4
-        k_desorp_f        = k_desorpt_nh4
+        k_desorpt_f       = k_desorpt_nh4
         vmax_nit_denit    = vmax_nitrification_nh4
         km_nit_denit      = km_nitrification_nh4
         f_nit_carrier     = f_nit_carrier_nh4
@@ -527,7 +527,7 @@ CONTAINS
         k_plant_uptake    = k_plant_uptake_no3
         vmax_mic_uptake_sub   = vmax_mic_uptake_no3
         vmax_plant_uptake = vmax_plant_uptake_no3
-        k_desorp_f        = 0._wp
+        k_desorpt_f       = 0._wp
         vmax_nit_denit    = vmax_denitrification_no3
         km_nit_denit      = km_denit_no3
         f_nit_carrier     = f_denit_carrier_no3
@@ -570,7 +570,7 @@ CONTAINS
                            km_adsorpt_sl / km_nit_denit * f_nit_carrier * microbial_carbon
             nitri_hlp    = nitri_hlp + &
                            km_nit_denit / km_adsorpt_sl * avail_sorption_sites
-            hlp1         = k_desorp_f / km_adsorpt_sl * solute 
+            hlp1         = k_desorpt_f / km_adsorpt_sl * solute 
             fast_adsorpt = MIN(1._wp / dtime, hlp1 * solute_ava / mineral_hlp) * avail_sorption_sites * 1.e6_wp
           ELSE
             mineral_hlp  = 0._wp
@@ -581,7 +581,7 @@ CONTAINS
                          km1_mic_uptake / km_adsorpt_sl * avail_sorption_sites 
           plant_hlp    = plant_hlp + &
                          km_plant_uptake / km_adsorpt_sl * avail_sorption_sites 
-          hlp1         = k_desorp_f / km_adsorpt_sl * solute 
+          hlp1         = k_desorpt_f / km_adsorpt_sl * solute 
           fast_adsorpt = MIN(1._wp / dtime, hlp1 * solute_ava / mineral_hlp) * avail_sorption_sites * 1.e6_wp
         ENDIF
 
