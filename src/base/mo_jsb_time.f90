@@ -21,7 +21,8 @@ MODULE mo_jsb_time
                                get_date_components, get_time_start, &
                                get_time_dt, is_time_experiment_start, is_time_restart, &
                                get_year_length, get_month_length, get_day_length, get_year_day,   &
-                               is_time_ltrig_rad_m1, get_time_interpolation_weights, get_asselin_coef
+                               is_time_ltrig_rad_m1, get_time_interpolation_weights, get_asselin_coef, &
+                               get_lon_local_noon
 
   IMPLICIT NONE
   PRIVATE
@@ -32,7 +33,7 @@ MODULE mo_jsb_time
   PUBLIC :: t_datetime, deallocateDatetime
   PUBLIC :: get_date_components, get_time_start, get_time_dt, &
             is_time_experiment_start, is_time_restart, &
-            get_year_length, get_month_length, get_day_length, get_year_day
+            get_year_length, get_month_length, get_day_length, get_year_day, get_lon_local_noon
   PUBLIC :: is_newday, is_newmonth, is_newyear, get_year_at_model_start, is_time_ltrig_rad_m1, &
             get_year, get_month, &
             get_day, get_secs_of_day

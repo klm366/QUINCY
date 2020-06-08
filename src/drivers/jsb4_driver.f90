@@ -40,7 +40,7 @@ PROGRAM jsb4_driver
   USE mo_jsb_grid_iface,     ONLY: get_lat, get_lon
   USE mo_jsb_namelist_iface, ONLY: POSITIONED, open_nml, position_nml
   USE mo_jsb_parallel,       ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel, &
-    &                              init_mpi_communicators, init_parallel_iface, mpi_comm, p_pe
+    &                              init_mpi_communicators, init_parallel_iface, mpi_comm
   USE mo_jsb_test,           ONLY: read_interface_vars, read_interface_variables
 
   ! Seems to be available in both ICON and ECHAM
