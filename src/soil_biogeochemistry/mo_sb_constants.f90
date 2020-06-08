@@ -247,17 +247,17 @@ MODULE mo_sb_constants
 
    ! soil Pi fluxes
    REAL(wp), SAVE :: &
-      k_weath_mineral, &          !< Weathering coefficient of mineral soil [mol P m-3 s-1]
-      eq_sorp_mineral_po4, &      !< Slow Pi sorption equilibrium content of mineral soil [mol P kg-1 mineral soil]
-      k_occlude_po4, &            !< Occlusion coefficient of sorbed PO4, [s-1]
-      vmax_biochem_po4, &         !< Maximum PO4 biochemical mineralization rate [s-1], MM kinetics (potentially also for ECA)
-      km_mic_biochem_po4, &       !< Half-saturation microbial biomass for PO4 biochemical mineralization [mol C m-3], MM kinetics (potentially also for ECA)
-      km_dip_biochem_po4, &       !< Half-saturation solute P concentration for PO4 biochemical mineralization [mol C m-3], MM kinetics-alike
-      km_pc_biochem_po4, &        !< Half-saturation SOM P:C ratio for PO4 biochemical mineralization, MM kinetics-alike
-      km_rootc_biochem_po4, &     !< Half-saturation root C biomass for PO4 biochemical mineralization [mol C m-3], MM kinetics-alike
-      km_rootc_weath_po4, &       !< Half-saturation root C biomass for PO4 weathering [mol C m-3], simple-1d
-      km_root_enzyme_weath_po4, & !< Half-saturation root enzyme C for PO4 weathering [mol C m-3], jsm
-      biomin_thres_pc             !< Threshold P:C ratio for biomineralisation
+      k_weath_mineral, &         !< Weathering coefficient of mineral soil [mol P kg-1 s-1]
+      eq_sorp_mineral_po4, &     !< Slow Pi sorption equilibrium content of mineral soil [mol P kg-1 mineral soil]
+      k_occlude_po4, &           !< Occlusion coefficient of sorbed PO4, [s-1]
+      vmax_biochem_po4, &        !< Maximum PO4 biochemical mineralization rate [s-1], MM kinetics (potentially also for ECA)
+      km_mic_biochem_po4, &      !< Half-saturation microbial biomass for PO4 biochemical mineralization [mol C m-3], MM kinetics (potentially also for ECA)
+      km_dip_biochem_po4, &      !< Half-saturation solute P concentration for PO4 biochemical mineralization [mol C m-3], MM kinetics-alike
+      km_pc_biochem_po4, &       !< Half-saturation SOM P:C ratio for PO4 biochemical mineralization, MM kinetics-alike
+      km_rootc_biochem_po4, &    !< Half-saturation root C biomass for PO4 biochemical mineralization [mol C m-3], MM kinetics-alike
+      km_rootc_weath_po4, &      !< Half-saturation root C biomass for PO4 weathering [mol C m-3], simple-1d
+      km_root_enzyme_weath_po4, &!< Half-saturation root enzyme C for PO4 weathering [mol C m-3], jsm
+      biomin_thres_pc            !< Threshold P:C ratio for biomineralisation
 
    !! only temporarily, mol / m2 !!
    REAL(wp), SAVE :: & 
@@ -283,12 +283,12 @@ CONTAINS
 
     ! turnover times
     tau_soluable_litter   = 30._wp * one_day                ! 30 days 
-    tau_metabolic_litter  = 0.033_wp * one_year * one_day   ! 
-    tau_structural_litter = 0.124_wp * one_year * one_day   ! 
-    tau_woody_litter      = 2.5_wp * one_year * one_day     ! 
-    tau_fast              = 2._wp * one_year * one_day      ! 
-    tau_slow              = 100._wp * one_year * one_day    ! 
-    tau_biomineralisation = 5._wp * one_year * one_day      ! 
+    tau_metabolic_litter  = 0.033_wp * one_year * one_day   ! Parton et al. 1993, GBC
+    tau_structural_litter = 0.124_wp * one_year * one_day   ! Parton et al. 1993, GBC
+    tau_woody_litter      = 2.5_wp * one_year * one_day     ! Thum et al. 2019, GMD
+    tau_fast              = 2._wp * one_year * one_day      ! Thum et al. 2019, GMD
+    tau_slow              = 100._wp * one_year * one_day    ! Thum et al. 2019, GMD
+    tau_biomineralisation = 5._wp * one_year * one_day      ! Thum et al. 2019, GMD
 
     ! temperature and moisture rate modifiers 
     t_ref_tresponse       = 293.15_wp     ! Wang, G., et al. 2012., Soil Biology and Biochemistry 48, 28-38.
@@ -297,19 +297,19 @@ CONTAINS
     ea_sorption           = 5000._wp      ! B. Ahrens, pers. comm. 2016
     ea_desorption         = 20000._wp     ! B. Ahrens, pers. comm. 2016
     ea_hsc                = 30000._wp     ! B. Ahrens, pers. comm. 2016
-    ea_decomposition      = 53000._wp     !
-    ed_decomposition      = 100000.0_wp   !
-    t_ref_decomposition   = 313.15_wp     !
+    ea_decomposition      = 53000._wp     ! Ahrens et al. 2015, SBB
+    ed_decomposition      = 100000.0_wp   ! Ahrens et al. 2015, SBB
+    t_ref_decomposition   = 313.15_wp     ! Thum et al. 2019, GMD
     k1_afps               = 4._wp / 3._wp ! B. Ahrens, pers. comm. 2016
     k2_afps               = 3._wp         ! B. Ahrens, pers. comm. 2016
-    kmr_depolymerisation  = 0.001_wp      ! 
-    kmr_mic_uptake        = 0.001_wp      ! 
-    kmr_hsc               = 0.001_wp      ! 
-    kmr_sorption          = 0.001_wp      ! 
-    kmr_decomposition     = -2.0_wp       !
+    kmr_depolymerisation  = 0.001_wp      ! Thum et al. 2019, GMD ???
+    kmr_mic_uptake        = 0.001_wp      ! Thum et al. 2019, GMD ???
+    kmr_hsc               = 0.001_wp      ! Davidson et al. 2012, GCB
+    kmr_sorption          = 0.001_wp      ! Thum et al. 2019, GMD ???
+    kmr_decomposition     = -2.0_wp       ! Thum et al. 2019, GMD
 
     ! transport and sorption parameters (all B. Ahrens, pers. comm. 2016)
-    k_diff_org                = 0.15_wp / one_year / one_day                                ! 
+    k_diff_org                = 0.15_wp / one_year / one_day                                ! Koven et al. 2013, BG [m2 (kg m-3) s-1]
     rho_bulk_org              = 150.3935_wp                                                 ! textbook knowledge, or from field measurement
     carbon_per_dryweight_SOM  = 0.4271_wp                                                   ! COMISSION for Hainich
     k_adsorpt_dom             = 59.9610_wp / one_year / one_day * molar_mass_C  / 1000._wp  ! conversion to m3 / mol C / s, Bernhard 20180913
@@ -340,49 +340,48 @@ CONTAINS
     k_slow_som_cn           = 9._wp * molar_mass_N / molar_mass_C    ! textbook knowledge
     k_fast_som_np           = 14._wp * molar_mass_P / molar_mass_N   ! textbook knowledge
     k_slow_som_np           = 14._wp * molar_mass_P / molar_mass_N   ! textbook knowledge
-    frac_woody2dec_litter   = 0.3_wp                                 ! 
-    frac_litter2fast_som    = 0.45_wp                                ! 
-    frac_fast2slow_som      = 0.15_wp                                ! 
-    frac_slow2fast_som      = 0.3_wp                                 ! 
+    frac_woody2dec_litter   = 0.3_wp                                 ! ???
+    frac_litter2fast_som    = 0.45_wp                                ! Parton et al. 1993, GBC
+    frac_fast2slow_som      = 0.15_wp                                ! Parton et al. 1993, GBC
+    frac_slow2fast_som      = 0.3_wp                                 ! Parton et al. 1993, GBC
 
     ! other parameters for initialisation
-    k_init_soluable_litter_cn    = 25._wp * molar_mass_N / molar_mass_C           ! 
-    k_init_polymeric_litter_cn   = 100._wp * molar_mass_N / molar_mass_C          ! 
-    k_init_woody_litter_cn       = 260._wp * molar_mass_N / molar_mass_C          ! 
-    k_init_litter_np             = 18._wp * molar_mass_P / molar_mass_N           ! 
+    k_init_soluable_litter_cn    = 25._wp * molar_mass_N / molar_mass_C    ! Thum et al. 2019, GMD ???
+    k_init_polymeric_litter_cn   = 100._wp * molar_mass_N / molar_mass_C   ! Thum et al. 2019, GMD ???
+    k_init_woody_litter_cn       = 260._wp * molar_mass_N / molar_mass_C   ! Thum et al. 2019, GMD ???
+    k_init_litter_np             = 18._wp * molar_mass_P / molar_mass_N    ! Thum et al. 2019, GMD ???
    
     ! additional microbial parameters for JSM implementation
-    fc_woody2polymeric            = 0.3_wp                                        ! 
-    fc_soluable2dom               = 0.7_wp                                        ! 
-    k_mort_microbial              = 7.48_wp * 1.e-8_wp                            ! 
-    min_mic_biomass               = 0.01_wp                                       ! 
-    min_enzyme_fraction           = 0.01_wp                                       ! 
-    vmax_mic_uptake               = 3495.18053_wp / & 
-                                    one_year / one_day * 1000000._wp * 10._wp     ! 
-    km_mic_uptake                 = 1.02404788_wp / molar_mass_C * 1000._wp       !  COMISSION, Ahrens et al. 2015
-    vmax_depolymerisation_residue = 0.2316605_wp / one_year / one_day             !  calibrated, from Yu et al. 2020
-    vmax_depolymerisation_litter  = 0.3698_wp / one_year / one_day / 2._wp        !  calibrated, from Yu et al. 2020
-    km_depolymerisation           = 0.08876_wp / 2._wp / molar_mass_C * 1000._wp  !  calibrated, from Yu et al. 2020
-    fc_p_res2dom                  = 0.8_wp
-    fc_n_res2dom                  = 0.0_wp
+    fc_woody2polymeric            = 0.3_wp                                 ! Yu et al. 2020, GMD
+    fc_soluable2dom               = 0.7_wp                                 ! Yu et al. 2020, GMD
+    k_mort_microbial              = 7.48_wp * 1.e-8_wp                     ! COMISSION, Ahrens et al. 2015
+    min_mic_biomass               = 0.01_wp                                ! Yu et al. 2020, GMD
+    min_enzyme_fraction           = 0.01_wp                                ! Yu et al. 2020, GMD
+    vmax_mic_uptake               = 3495.18053_wp / one_year / one_day * 1000000._wp * 10._wp
+    km_mic_uptake                 = 1.02404788_wp / molar_mass_C * 1000._wp           ! COMISSION, Ahrens et al. 2015
+    vmax_depolymerisation_residue = 0.2316605_wp / one_year / one_day                 ! calibrated, from Yu et al. 2020
+    vmax_depolymerisation_litter  = 0.3698_wp / one_year / one_day / 2._wp            ! calibrated, from Yu et al. 2020
+    km_depolymerisation           = 0.08876_wp / 2._wp / molar_mass_C * 1000._wp      ! calibrated, from Yu et al. 2020
+    fc_p_res2dom                  = 0.8_wp                                 ! Yu et al. 2020, GMD
+    fc_n_res2dom                  = 0.0_wp                                 ! Yu et al. 2020, GMD
 
     ! parameters controlling litter partitioning
-    f_soluable_residue   = 0.172_wp                                   ! 
-    f_soluable_leaf      = 0.5_wp                                     ! 
-    f_soluable_fine_root = 0.5_wp                                     ! 
-    f_soluable_fruit     = 0.5_wp                                     ! 
-    f_soluable_seed_bed  = 0.5_wp                                     ! 
-    fc_soluable_max      = 0.85_wp                                    ! Century
-    k_fc_soluable        = 0.018_wp                                   ! Century
-    k_fn_soluable        = 5.0_wp                                     ! Century
-    k_fp_soluable        = 5.0_wp                                     ! Century
-    lc_leaf_max          = 0.295_wp / molar_mass_C * molar_mass_N     ! 
-    lc_leaf2sla          = -0.3712_wp / molar_mass_C * molar_mass_N   ! 
-    lc_fine_root         = 0.22_wp / molar_mass_C * molar_mass_N      ! 
-    lc_coarse_root       = 0.7_wp / molar_mass_C * molar_mass_N       ! 
-    lc_woody_litter      = 0.7_wp / molar_mass_C * molar_mass_N       ! 
-    lc_fruit             = 0.22_wp / molar_mass_C * molar_mass_N      ! 
-    lc_seed_bed          = 0.22_wp / molar_mass_C * molar_mass_N      ! 
+    f_soluable_residue   = 0.172_wp                                   ! COMISSION, Ahrens et al. 2015
+    f_soluable_leaf      = 0.5_wp                                     ! Not used
+    f_soluable_fine_root = 0.5_wp                                     ! Not used
+    f_soluable_fruit     = 0.5_wp                                     ! Not used
+    f_soluable_seed_bed  = 0.5_wp                                     ! Not used
+    fc_soluable_max      = 0.85_wp                                    ! Century, Parton et al. 1993
+    k_fc_soluable        = 0.018_wp                                   ! Century, Parton et al. 1993
+    k_fn_soluable        = 5.0_wp                                     ! Century, Parton et al. 1993
+    k_fp_soluable        = 5.0_wp                                     ! Century, Parton et al. 1993
+    lc_leaf_max          = 0.295_wp / molar_mass_C * molar_mass_N     ! White et al. 2000
+    lc_leaf2sla          = -0.3712_wp / molar_mass_C * molar_mass_N   ! White et al. 2000
+    lc_fine_root         = 0.22_wp / molar_mass_C * molar_mass_N      ! White et al. 2000
+    lc_coarse_root       = 0.7_wp / molar_mass_C * molar_mass_N       ! assuming woody values
+    lc_woody_litter      = 0.7_wp / molar_mass_C * molar_mass_N       ! White et al. 2000
+    lc_fruit             = 0.22_wp / molar_mass_C * molar_mass_N      ! assuming fine roots values
+    lc_seed_bed          = 0.22_wp / molar_mass_C * molar_mass_N      ! assuming fine roots values
 
     ! mycorrhizal parameters
     mycorrhiza_cue          = 0.7_wp                                  ! 
@@ -402,10 +401,10 @@ CONTAINS
     f_tau_myc               = 3.0_wp                                  ! 
 
    ! nutrient uptake kinetics & ECA approach: simple model
-    km1_up_nh4 = 0.0416_wp                 ! 
-    km2_up_nh4 = 1.0_wp                    ! 
-    km1_up_no3 = 0.0416_wp                 ! 
-    km2_up_no3 = 1.0_wp                    ! 
+    km1_up_nh4 = 0.0416_wp                 ! Kronzucker et al. 1996, Plant Physiology
+    km2_up_nh4 = 1.0_wp                    ! Kronzucker et al. 1996, Plant Physiology
+    km1_up_no3 = 0.0416_wp                 ! Kronzucker et al. 1996, Plant Physiology
+    km2_up_no3 = 1.0_wp                    ! Kronzucker et al. 1996, Plant Physiology
     km1_up_po4 = 0.0689_wp / 0.0003_wp     ! l/mol, corrected low affinity half-saturation, estimated based on Kavka and Polle 2016, 
                                            ! assuming Km for low-affinity transporter is 300 µmol/l
     km2_up_po4 = 22.0_wp / 1000000._wp     ! mol/l, Kavka and Polle 2016
@@ -469,16 +468,13 @@ CONTAINS
     k_anvf                    = 3.0_wp                                  ! fitted from Zaehle et al. 2011, NatGeo
 
     ! Simple-model fixed loss and simple leaching parameterisation
-    floss_nmin                = 0.05_wp                                 ! 
-    fnit_nmin                 = 0.1_wp                                  ! 
-
+    floss_nmin            = 0.05_wp                           ! ???
+    fnit_nmin             = 0.1_wp                            ! ???
     ! simple leaching
-    fleach_nh4                = 0.1_wp                                  ! 
-    fleach_po4                = 0.001_wp                                ! 
-    soil_n_threshold_bnf      = 0.05_wp                                 ! 
-    standard_bnf_max_rate     = 2.5_wp / &
-                                molar_mass_N / one_year / one_day * &
-                                1000000.0_wp                            !
+    fleach_nh4            = 0.1_wp                            ! ???
+    fleach_po4            = 0.001_wp                          ! ???
+    soil_n_threshold_bnf  = 0.05_wp                           ! 
+    standard_bnf_max_rate = 2.5_wp / molar_mass_N / one_year / one_day * 1000000.0_wp ! Zaehle and Friend 2010, Nature Geoscience
 
     ! Isoptope stuff
     eta_mic_uptake_nh4        = 17._wp                           ! Robinson 2001, TREE

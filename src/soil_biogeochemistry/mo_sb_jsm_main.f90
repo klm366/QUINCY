@@ -100,7 +100,7 @@ CONTAINS
     INTEGER                               :: i, isoil
     INTEGER                               :: iblk, ics, ice, nc
     REAL(wp)                              :: hlp1
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: fine_root_carbon_sl, p_deposition_sl, & 
+    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: fine_root_carbon_sl, & 
                                              km1_uptake_act, km2_uptake_act, &
                                              arr_hlp1, arr_hlp2, arr_hlp3
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_jsm'
@@ -290,7 +290,6 @@ CONTAINS
     dsl4jsb_Get_memory(A2L_)
     ! Allocate local allocatable variables (deallocate below at the end of this routine)    
     ALLOCATE(fine_root_carbon_sl(nc, nsoil_sb))
-    ALLOCATE(p_deposition_sl(nc, nsoil_sb))
     ALLOCATE(km1_uptake_act(nc, nsoil_sb))
     ALLOCATE(km2_uptake_act(nc, nsoil_sb))
     ALLOCATE(arr_hlp1(nc, nsoil_sb))
@@ -486,8 +485,6 @@ CONTAINS
          fine_root_carbon_sl(:,isoil) = 0.0_wp
        ENDWHERE
     ENDDO
-    p_deposition_sl(:,:) = 0._wp
-    p_deposition_sl(:,1) = p_deposition(:) / soil_depth_sl(:,1) !µmol P / m3 / s
 
     !> 2.0 Inorganic N assimilation
     !!
@@ -768,7 +765,6 @@ CONTAINS
 
   ! Deallocate local allocatable variables
   DEALLOCATE(fine_root_carbon_sl)
-  DEALLOCATE(p_deposition_sl)
   DEALLOCATE(km1_uptake_act)
   DEALLOCATE(km2_uptake_act)
   DEALLOCATE(arr_hlp1)
