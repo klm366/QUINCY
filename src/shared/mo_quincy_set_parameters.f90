@@ -3458,7 +3458,7 @@ CONTAINS
                                     "km_mic_uptake", proportional_parameter_changes, &
                                     km_mic_uptake)
 
-    CALL Set_quincy_parameter_value(this%km_depolymerisation / molar_mass_C, &
+    CALL Set_quincy_parameter_value(this%km_depolymerisation / 2._wp / molar_mass_C * 1000._wp, &
                                     this%km_depolymerisation, &
                                     "km_depolymerisation", proportional_parameter_changes, &
                                     km_depolymerisation)

@@ -467,16 +467,7 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
-!BLARPP
-!percolation_sl(:,nsoil_sb) = 0.0_wp
-! rmm_mic_uptake = 1.0_wp
-! rmm_depolymerisation = 1.0_wp
-! rmm_hsc = 1.0_wp
-! rmm_sorption = 1.0_wp
-! rmm_desorption = 1.0_wp
-
-
-    !> 1.0 
+    !> 1.0 calc fine root carbon, used for N & P calculations below
     !!
     DO isoil = 1,nsoil_sb
        WHERE(soil_depth_sl(:,isoil) > eps8)
@@ -562,21 +553,18 @@ CONTAINS
 
     !> 4.0 Update soil litter pools with litter fall
     !!
-    CALL calc_litter_partitioning(nc                      , &
-                                  nsoil_sb                , &
-                                  lctlib%sla              , &
-                                  lctlib%growthform       , &
+    CALL calc_litter_partitioning(nc, nsoil_sb, &                               ! in
+                                  lctlib%sla, lctlib%growthform, &
                                   TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
-                                  soil_depth_sl(:,:)      , &
-                                  root_fraction_sl(:,:)   , &
-                                  veg_litterfall          , &
-                                  sb_formation            )
+                                  soil_depth_sl(:,:), root_fraction_sl(:,:), &
+                                  veg_litterfall, &                             ! in
+                                  sb_formation)                                 ! inout
 
     !> 5.0 vertical transport
     !!
     !> 5.1 liquid phase transport
     !!
-    CALL calc_liquid_phase_transport_wrapper(nc, nsoil_sb, rtm_gasdiffusion(:,:), rmm_gasdiffusion(:,:), & 
+    CALL calc_liquid_phase_transport_wrapper(nc, nsoil_sb, rtm_gasdiffusion(:,:), rmm_gasdiffusion(:,:), &            ! in
                                    percolation_sl(:,:), soil_depth_sl(:,:), &
                                    sb_pool%dom, nh4_solute(:,:), no3_solute(:,:), po4_solute(:,:), & 
                                    nh4_n15_solute(:,:), no3_n15_solute(:,:), & 
@@ -614,15 +602,15 @@ CONTAINS
     arr_hlp2(:,:) = 1._wp
     km1_uptake_act(:,:) = km1_up_po4 / (rtm_hsc(:,:) * rmm_hsc(:,:)) / 1000._wp / (w_soil_sl(:,:) / soil_depth_sl(:,:))
     km2_uptake_act(:,:) = km2_up_po4 * rtm_hsc(:,:) * rmm_hsc(:,:) * 1000._wp * (w_soil_sl(:,:) / soil_depth_sl(:,:))
-    CALL calc_sinking_flux(lctlib%vmax_uptake_p, hlp1, "po4", TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &
-                                sb_pool%microbial%carbon(:,:), fine_root_carbon_sl(:,:), po4_solute(:,:), &
-                                rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), &
-                                rtm_plant_uptake(:,:), rmm_plant_uptake(:,:), km1_uptake_act(:,:), km2_uptake_act(:,:), &
-                                km_denitrification_c, km_denitrification_no3, rtm_nitrification(:,:), rmm_nitrification(:,:), &
-                                arr_hlp2(:,:), km_adsorpt_po4_sl(:,:), &
-                                MAX(0._wp, qmax_po4(:,:) - po4_assoc_fast(:,:)), &                      ! in
-                                arr_hlp1(:,:), microbial_uptake_po4_sl(:,:), &                          ! inout
-                                plant_uptake_po4_sl(:,:), arr_hlp3(:,:), fast_adsorpt_po4(:,:))         ! out
+    CALL calc_sinking_flux(lctlib%vmax_uptake_p, hlp1, "po4", TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &                 ! in
+                           sb_pool%microbial%carbon(:,:), fine_root_carbon_sl(:,:), po4_solute(:,:), &
+                           rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), &
+                           rtm_plant_uptake(:,:), rmm_plant_uptake(:,:), km1_uptake_act(:,:), km2_uptake_act(:,:), &
+                           km_denitrification_c, km_denitrification_no3, rtm_nitrification(:,:), rmm_nitrification(:,:), &
+                           arr_hlp2(:,:), km_adsorpt_po4_sl(:,:), &
+                           MAX(0._wp, qmax_po4(:,:) - po4_assoc_fast(:,:)), &                                               ! in
+                           arr_hlp1(:,:), microbial_uptake_po4_sl(:,:), &                                                   ! inout
+                           plant_uptake_po4_sl(:,:), arr_hlp3(:,:), fast_adsorpt_po4(:,:))                                  ! out
 
     !> 6.1 Microbial and plant N uptake, nitrification/denitrification 
     !! nh4 
@@ -630,31 +618,31 @@ CONTAINS
     arr_hlp2(:,:) = 1._wp - anaerobic_volume_fraction_sl(:,:)
     km1_uptake_act(:,:) = km1_up_nh4 / (rtm_hsc(:,:) * rmm_hsc(:,:)) / 1000._wp / (w_soil_sl(:,:) / soil_depth_sl(:,:))
     km2_uptake_act(:,:) = km2_up_nh4 * rtm_hsc(:,:) * rmm_hsc(:,:) * 1000._wp * (w_soil_sl(:,:) / soil_depth_sl(:,:))
-    CALL calc_sinking_flux(lctlib%vmax_uptake_n, vmax_nitrification, "nh4", TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &
-                                sb_pool%microbial%carbon(:,:), fine_root_carbon_sl(:,:), nh4_solute(:,:), &
-                                rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), &
-                                rtm_plant_uptake(:,:), rmm_plant_uptake(:,:), km1_uptake_act(:,:), km2_uptake_act(:,:), &
-                                km_denitrification_c, km_denitrification_no3, rtm_nitrification(:,:), rmm_nitrification(:,:), &
-                                arr_hlp2(:,:), km_adsorpt_nh4_sl(:,:), &
-                                MAX(0._wp, qmax_nh4(:,:) - nh4_assoc(:,:)), &                               ! in
-                                arr_hlp1(:,:), microbial_uptake_nh4_sl(:,:), &                              ! inout
-                                plant_uptake_nh4_sl(:,:), nitrification_no3(:,:), fast_adsorpt_nh4(:,:), &  ! out
-                                solute_alt=no3_solute(:,:))                                                 ! OPTIONAL(in)
+    CALL calc_sinking_flux(lctlib%vmax_uptake_n, vmax_nitrification, "nh4", TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &   ! in
+                           sb_pool%microbial%carbon(:,:), fine_root_carbon_sl(:,:), nh4_solute(:,:), &
+                           rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), &
+                           rtm_plant_uptake(:,:), rmm_plant_uptake(:,:), km1_uptake_act(:,:), km2_uptake_act(:,:), &
+                           km_denitrification_c, km_denitrification_no3, rtm_nitrification(:,:), rmm_nitrification(:,:), &
+                           arr_hlp2(:,:), km_adsorpt_nh4_sl(:,:), &
+                           MAX(0._wp, qmax_nh4(:,:) - nh4_assoc(:,:)), &                                                    ! in
+                           arr_hlp1(:,:), microbial_uptake_nh4_sl(:,:), &                                                   ! inout
+                           plant_uptake_nh4_sl(:,:), nitrification_no3(:,:), fast_adsorpt_nh4(:,:), &                       ! out
+                           solute_alt=no3_solute(:,:))                                                                      ! OPTIONAL(in)
 
     !! no3
     arr_hlp1(:,:) = 1._wp
     km1_uptake_act(:,:) = km1_up_no3 / (rtm_hsc(:,:) * rmm_hsc(:,:)) / 1000._wp / (w_soil_sl(:,:) / soil_depth_sl(:,:))
     km2_uptake_act(:,:) = km2_up_no3 * rtm_hsc(:,:) * rmm_hsc(:,:) * 1000._wp * (w_soil_sl(:,:) / soil_depth_sl(:,:))
-    CALL calc_sinking_flux(lctlib%vmax_uptake_n, vmax_denitrification, "no3", TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &
-                                sb_pool%microbial%carbon(:,:), fine_root_carbon_sl(:,:), no3_solute(:,:),&
-                                rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), &
-                                rtm_plant_uptake(:,:), rmm_plant_uptake(:,:), km1_uptake_act(:,:), km2_uptake_act(:,:), &
-                                km_denitrification_c, km_denitrification_no3, rtm_denitrification(:,:), arr_hlp1(:,:), &
-                                anaerobic_volume_fraction_sl(:,:), arr_hlp1(:,:), &
-                                arr_hlp1(:,:), &                                                          ! in
-                                no3_solute(:,:), microbial_uptake_no3_sl(:,:), &                          ! inout
-                                plant_uptake_no3_sl(:,:), denitrification_n2(:,:), arr_hlp2(:,:), &       ! out
-                                solute_alt=nh4_solute(:,:))                                               ! OPTIONAL(in)
+    CALL calc_sinking_flux(lctlib%vmax_uptake_n, vmax_denitrification, "no3", TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), & ! in
+                           sb_pool%microbial%carbon(:,:), fine_root_carbon_sl(:,:), no3_solute(:,:),&
+                           rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), &
+                           rtm_plant_uptake(:,:), rmm_plant_uptake(:,:), km1_uptake_act(:,:), km2_uptake_act(:,:), &
+                           km_denitrification_c, km_denitrification_no3, rtm_denitrification(:,:), arr_hlp1(:,:), &
+                           anaerobic_volume_fraction_sl(:,:), arr_hlp1(:,:), &
+                           arr_hlp1(:,:), &                                                                                 ! in
+                           no3_solute(:,:), microbial_uptake_no3_sl(:,:), &                                                 ! inout
+                           plant_uptake_no3_sl(:,:), denitrification_n2(:,:), arr_hlp2(:,:), &                              ! out
+                           solute_alt=nh4_solute(:,:))                                                                      ! OPTIONAL(in)
 
     !> 7.0 co-metabolisation of polymeric litter & residues
     !!
@@ -716,52 +704,40 @@ CONTAINS
                                               emission_n2_n15(:))
 
     !> 11.1 update n15 for inorganic fluxes 
-    !!
+    !! here the function is called for JSM: flux rates in [µmol/m3/s] (unit conversion is applied within the routine)
+    !! (simple_1d is using the same function but uses flux rates in [mol/m3/timestep])
     CALL calc_sb_inorganic_n15_fluxes(nc, nsoil_sb, & 
-                                          nh4_solute(:,:), &
-                                          nh4_n15_solute(:,:), &
-                                          no3_solute(:,:), &
-                                          no3_n15_solute(:,:), &
-                                          plant_uptake_nh4_sl(:,:) * dtime / 1.e6_wp, & 
-                                          plant_uptake_no3_sl(:,:) * dtime / 1.e6_wp, &      
-                                          mycorrhiza_uptake_nh4_sl(:,:) * dtime / 1.e6_wp, & 
-                                          mycorrhiza_uptake_no3_sl(:,:) * dtime / 1.e6_wp, & 
-                                          microbial_uptake_nh4_sl(:,:) * dtime / 1.e6_wp, &        
-                                          microbial_uptake_no3_sl(:,:) * dtime / 1.e6_wp, &        
-                                          nitrification_no3(:,:) * dtime / 1.e6_wp, &        
-                                          nitrification_noy(:,:) * dtime / 1.e6_wp, &        
-                                          nitrification_n2o(:,:) * dtime / 1.e6_wp, &        
-                                          denitrification_noy(:,:) * dtime / 1.e6_wp, &      
-                                          denitrification_n2o(:,:) * dtime / 1.e6_wp, &      
-                                          denitrification_n2(:,:) * dtime / 1.e6_wp, &       
-                                          transport_nh4_n15_solute(:,:), & 
-                                          transport_no3_n15_solute(:,:), &    
-                                          plant_uptake_nh4_n15_sl(:,:), &      
-                                          plant_uptake_no3_n15_sl(:,:), &      
-                                          mycorrhiza_uptake_nh4_n15_sl(:,:), & 
-                                          mycorrhiza_uptake_no3_n15_sl(:,:), & 
-                                          microbial_uptake_nh4_n15_sl(:,:), &        
-                                          microbial_uptake_no3_n15_sl(:,:), &        
-                                          nitrification_no3_n15(:,:), &        
-                                          nitrification_noy_n15(:,:), &        
-                                          nitrification_n2o_n15(:,:), &        
-                                          denitrification_noy_n15(:,:), &      
-                                          denitrification_n2o_n15(:,:), &      
-                                          denitrification_n2_n15(:,:)) 
-
-    !! unit conversion after the subroutine [mol/m3/timestep] -> [µmol/m3/s]
-    plant_uptake_nh4_n15_sl(:,:)      = plant_uptake_nh4_n15_sl(:,:)      / dtime * 1.e6_wp
-    plant_uptake_no3_n15_sl(:,:)      = plant_uptake_no3_n15_sl(:,:)      / dtime * 1.e6_wp
-    mycorrhiza_uptake_nh4_n15_sl(:,:) = mycorrhiza_uptake_nh4_n15_sl(:,:) / dtime * 1.e6_wp
-    mycorrhiza_uptake_no3_n15_sl(:,:) = mycorrhiza_uptake_no3_n15_sl(:,:) / dtime * 1.e6_wp
-    microbial_uptake_nh4_n15_sl(:,:)  = microbial_uptake_nh4_n15_sl(:,:)  / dtime * 1.e6_wp
-    microbial_uptake_no3_n15_sl(:,:)  = microbial_uptake_no3_n15_sl(:,:)  / dtime * 1.e6_wp
-    nitrification_no3_n15(:,:)        = nitrification_no3_n15(:,:)        / dtime * 1.e6_wp
-    nitrification_noy_n15(:,:)        = nitrification_noy_n15(:,:)        / dtime * 1.e6_wp
-    nitrification_n2o_n15(:,:)        = nitrification_n2o_n15(:,:)        / dtime * 1.e6_wp
-    denitrification_noy_n15(:,:)      = denitrification_noy_n15(:,:)      / dtime * 1.e6_wp
-    denitrification_n2o_n15(:,:)      = denitrification_n2o_n15(:,:)      / dtime * 1.e6_wp
-    denitrification_n2_n15(:,:)       = denitrification_n2_n15(:,:)       / dtime * 1.e6_wp
+                                      TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
+                                      nh4_solute(:,:), &
+                                      nh4_n15_solute(:,:), &
+                                      no3_solute(:,:), &
+                                      no3_n15_solute(:,:), &
+                                      plant_uptake_nh4_sl(:,:), &           ! input flux rates that get unit coverted
+                                      plant_uptake_no3_sl(:,:), &           ! input flux rates that get unit coverted
+                                      mycorrhiza_uptake_nh4_sl(:,:), &      ! input flux rates that get unit coverted
+                                      mycorrhiza_uptake_no3_sl(:,:), &      ! input flux rates that get unit coverted
+                                      microbial_uptake_nh4_sl(:,:), &       ! input flux rates that get unit coverted
+                                      microbial_uptake_no3_sl(:,:), &       ! input flux rates that get unit coverted
+                                      nitrification_no3(:,:), &             ! input flux rates that get unit coverted
+                                      nitrification_noy(:,:), &             ! input flux rates that get unit coverted
+                                      nitrification_n2o(:,:), &             ! input flux rates that get unit coverted
+                                      denitrification_noy(:,:), &           ! input flux rates that get unit coverted
+                                      denitrification_n2o(:,:), &           ! input flux rates that get unit coverted
+                                      denitrification_n2(:,:), &            ! input flux rates that get unit coverted
+                                      transport_nh4_n15_solute(:,:), &      ! in
+                                      transport_no3_n15_solute(:,:), &      ! in   
+                                      plant_uptake_nh4_n15_sl(:,:), &       ! output var that get unit coverted
+                                      plant_uptake_no3_n15_sl(:,:), &       ! output var that get unit coverted
+                                      mycorrhiza_uptake_nh4_n15_sl(:,:), &  ! output var that get unit coverted
+                                      mycorrhiza_uptake_no3_n15_sl(:,:), &  ! output var that get unit coverted
+                                      microbial_uptake_nh4_n15_sl(:,:), &   ! output var that get unit coverted
+                                      microbial_uptake_no3_n15_sl(:,:), &   ! output var that get unit coverted
+                                      nitrification_no3_n15(:,:), &         ! output var that get unit coverted
+                                      nitrification_noy_n15(:,:), &         ! output var that get unit coverted
+                                      nitrification_n2o_n15(:,:), &         ! output var that get unit coverted
+                                      denitrification_noy_n15(:,:), &       ! output var that get unit coverted
+                                      denitrification_n2o_n15(:,:), &       ! output var that get unit coverted
+                                      denitrification_n2_n15(:,:))          ! output var that get unit coverted
 
   ! Deallocate local allocatable variables
   DEALLOCATE(fine_root_carbon_sl)

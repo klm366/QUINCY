@@ -260,7 +260,11 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
-    !>   C3 / C4 plants
+
+    !> 1.0 all soil models
+    !! 
+
+    !> 1.1 calc frac_c13 & frac_c14 for C3 / C4 plants
     !! 
     IF(lctlib%ps_pathway == ic3phot)THEN
        hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
@@ -277,11 +281,13 @@ CONTAINS
     frac_c14 = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14-hlp1)
 
 
-    !> 1.0 all soil models
+    !> 1.2 init soil properties
     !! 
     ph_sl(:,:)              = dsl4jsb_Config(SB_)%soil_ph
     lithology_class_sl(:,:) = dsl4jsb_Config(SB_)%lithology_class
-    ! SPP site-set
+
+    !> 1.3 init SPP site-set and get site ID
+    !! 
     IF (flag_spp1685) THEN
         DO isoil = 1,nsoil_sb
           IF (isoil == 1) THEN
@@ -679,7 +685,7 @@ CONTAINS
         ! initialise diffusion by bioturbation
         k_bioturb(:,:) = calc_bioturbation_rate(nc, nsoil_sb,bulk_dens_corr_sl(:,:), root_fraction_sl(:,:), soil_depth_sl(:,:)) 
         
-        ! enzyme allocation initialise 
+        ! initialisation of fractional enzyme allocation (range [0,1]) 
         enzyme_frac_poly(:,:)     = 0.5_wp 
         enzyme_frac_residue(:,:)  = 0.5_wp 
         enzyme_frac_poly_c(:,:)   = 0.5_wp 
