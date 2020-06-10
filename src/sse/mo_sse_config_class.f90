@@ -235,7 +235,8 @@ CONTAINS
 
     !< Create vertical axis (vgrid)
     !! 
-    !! these are "infrastructure" values, ubounds and dz may be corrected/limited by site-specific bedrock depth "soil_depth" \n
+    !! these are "infrastructure" values, ubounds and dz must be corrected/limited by site-specific bedrock depth "soil_depth" !
+    !! 
     !! site-specific soil-layer thickness values are stored in soil_depth_sl (and calc in sse_init) \n
     !! the function new_vgrid() does: (a) check for 'dz(:) <= zero', and (b) calc levels & lbounds from ubounds and dz \n
     !! levels is defined as the depth at the center of the layer: levels(:) = 0.5_wp * (lbounds(:) + ubounds(:))

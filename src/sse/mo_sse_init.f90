@@ -116,6 +116,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk    :: w_soil_root_theta
     dsl4jsb_Real2D_onChunk    :: w_soil_root_pot
     dsl4jsb_Real3D_onChunk    :: soil_depth_sl
+    dsl4jsb_Real3D_onChunk    :: soil_lay_depth_center_sl
     dsl4jsb_Real3D_onChunk    :: bulk_dens_sl
     dsl4jsb_Real3D_onChunk    :: heat_capa_sl
     dsl4jsb_Real3D_onChunk    :: therm_cond_sl
@@ -175,7 +176,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_fc)
     dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_theta)
     dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_pot)
-    dsl4jsb_Get_var3D_onChunk(SSE_, soil_depth_sl)
+    dsl4jsb_Get_var3D_onChunk(SSE_, soil_depth_sl)              ! out
+    dsl4jsb_Get_var3D_onChunk(SSE_, soil_lay_depth_center_sl)   ! out
     dsl4jsb_Get_var3D_onChunk(SSE_, bulk_dens_sl)
     dsl4jsb_Get_var3D_onChunk(SSE_, heat_capa_sl)
     dsl4jsb_Get_var3D_onChunk(SSE_, therm_cond_sl)
@@ -200,20 +202,33 @@ CONTAINS
 
 
     !> 1.0 Total soil depth until bedrock
-    !!  code from jsbach4 (hydro init)
-    soil_depth(:)                             = dsl4jsb_Config(SSE_)%soil_depth ! SLM code *slmtemp
+    ! QUINCY soil_depth for one site (read from namelist)
+    soil_depth(:)                             = dsl4jsb_Config(SSE_)%soil_depth
+    ! code from jsbach4 (hydro init)
+    ! for all points of the domain soil_depth(:,:) is at least 0.1
     dsl4jsb_var2D_onDomain(SSE_, soil_depth)  = MAX(0.1_wp, &
                                                     MERGE(dsl4jsb_var2D_onDomain(SSE_, soil_depth), 0._wp, &
                                                           dsl4jsb_var2D_onDomain(SSE_, soil_depth) >= 0._wp))
 
-    !> 2.0 Compute actual soil layer depths based on the fixed layer thicknesses from namelist and the bedrock depth
+    !> 2.0 calc actual soil layer depths based on the fixed layer thicknesses from namelist and the bedrock depth
     !!  note, soil_depth_to_layers_2d() returns an actual 3D variable
     dsl4jsb_var3D_onDomain(SSE_, soil_depth_sl) = soil_depth_to_layers_2d( &
                                                     dsl4jsb_var2D_onDomain(SSE_, soil_depth), &   ! Total soil depth until bedrock (from textures), 2D variable
                                                     vgrid_soil_sb%dz(:))                          ! Soil layer thicknesses from namelist
 
+    !> 2.1 calc more metrics of the soil layers
+    !! i)  depth at the center of each layer
+    !! ii) upper & lower boundary
+    ! @TODO sse_init must init variables onDomain for jsbach4, write a function similar to soil_depth_to_layers_2d()
+    ! soil_layer depth center
+    soil_lay_depth_center_sl(:,1) = soil_depth_sl(:,1) / 2._wp
+    DO isoil = 2,nsoil_sb
+      soil_lay_depth_center_sl(:,isoil) = soil_lay_depth_center_sl(:,isoil-1) + &
+                                          (soil_depth_sl(:,isoil) + soil_depth_sl(:,isoil-1)) / 2._wp 
+    ENDDO
+
     !> 3.0 check if last soil layer has a thickness larger zero
-    !! 
+    !! QUINCY specific code: for jsb4 it would need to work on the domain
     DO ichunk  = 1,nc
       IF (soil_depth_sl(ichunk,nsoil_sb) < eps8) THEN
         WRITE(message_text,*) 'The last soil layer has a thickness < eps8. Increase soil_depth from ', soil_depth, &
@@ -237,7 +252,10 @@ CONTAINS
     t_srf_old(:)        = 273.15_wp
     volume_min_sl(:,:)  = 1._wp
 
-    !> 4.2 init with site-specific and soil-layer specific texture (sand silt clay) information
+    !------------------------------------------------------------------------------------------------------------------------------
+    ! SPP site-set
+    !
+    !> 4.1.1 init with site-specific and soil-layer specific texture (sand silt clay) information
     !! 
     !! works only with the SPP_1685 site-set (namelist flag flag_spp1685 is set depending on the site-set); 
     !! met-forcing was created with the usual scripts; 
@@ -344,9 +362,9 @@ CONTAINS
         clay_sl(:,:) = clay_sl(:,:) - (sand_sl(:,:) + silt_sl(:,:))
       ENDIF  ! simple_1d / jsm
     ENDIF   ! flag_spp1685
+    !------------------------------------------------------------------------------------------------------------------------------
 
-
-    !> 4.3 ensure a certain minimum proportion for sand, clay and silt
+    !> 4.2 ensure a certain minimum proportion for sand, clay and silt
     !! this is to ensure applying the empirical functions by Saxton within the range of the texture they were designed for \n
     !! avoiding ranges where calculation would return negative theta_pwp_sl or relatively large kdiff_sat_sl values
     !! 
@@ -358,13 +376,11 @@ CONTAINS
     sand_sse_init_sl(:,:) = sand_sl(:,:)
     clay_sse_init_sl(:,:) = clay_sl(:,:)
     silt_sse_init_sl(:,:) = silt_sl(:,:)
-
     CALL calc_soil_texture_saxton_compatible(nc, &
                                              nsoil_sb, &
                                              sand_sse_init_sl(:,:), &
                                              silt_sse_init_sl(:,:), &
                                              clay_sse_init_sl(:,:))
-
     
     !> 5.0 soil hydraulic properties, based on Saxton and Rawls 2006, SSSA
     !! 

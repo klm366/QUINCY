@@ -60,7 +60,8 @@ MODULE mo_sse_memory_class
 
     ! JSBACH SOIL
     TYPE(t_jsb_var_real3d)          :: &
-                                    soil_depth_sl       !< Depth of each soil layer that can be saturated with water (until bedrock) [m]
+                                    soil_depth_sl, &          !< Width ! of each soil layer that can be saturated with water (until bedrock) [m]
+                                    soil_lay_depth_center_sl  !< depth at the center of each soil layer that can be saturated with water (until bedrock) [m]
 
     ! JSBACH HYDRO MEMORY (temporary here to get rid of vegsoil construct)
     TYPE(t_jsb_var_real2d)          :: &
@@ -227,7 +228,15 @@ CONTAINS
 
       CALL jsb_add_var(mem, 'soil_depth_sl', mem%soil_depth_sl, &
             hgrid, vgrid_soil_sb, &
-            t_cf('soil_depth_sl', 'm', 'Depth of each soil layer that can be saturated with water, until bedrock'), &
+            t_cf('soil_depth_sl', 'm', 'Width of each soil layer that can be saturated with water, until bedrock'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+            
+      CALL jsb_add_var(mem, 'soil_lay_depth_center_sl', mem%soil_lay_depth_center_sl, &
+            hgrid, vgrid_soil_sb, &
+            t_cf('soil_lay_depth_center_sl', 'm', 'Depth at the center of each soil layer, until bedrock'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
