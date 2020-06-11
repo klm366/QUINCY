@@ -77,8 +77,8 @@ MODULE mo_sb_constants
       k_adsorpt_f_po4, &            !< fast adsorption rate (from soluble Pi to labile Pi) of PO4, [kg soil mol-1 P s-1]
       k_desorpt_f_po4               !< fast desorption rate (from labile Pi to soluble Pi) of PO4, [s-1]
 
-   ! microbial parameters
-   REAL(wp), SAVE :: &
+  ! microbial parameters
+  REAL(wp), SAVE :: &
       microbial_cn, &            !< molar ratio of C:N in microbes (testing only!)
       microbial_np, &            !< molar ratio of N:P in microbes (testing only!)
       microbial_nue, &           !< microbial nitrogen use efficiency
@@ -87,8 +87,8 @@ MODULE mo_sb_constants
       microbial_cue_max, &       !< maximum microbial carbon-use efficiency
       microbial_cue_min          !< minimum microbial carbon-use efficiency
 
-   ! fast and slow parameters for simple SB model
-   REAL(wp), SAVE :: &
+  ! fast and slow parameters for simple SB model
+  REAL(wp), SAVE :: &
       k_fast_som_cn_max, &       !< maximum microbial C:N [mol/mol]
       k_fast_som_cn_min, &       !< minimum microbial C:N [mol/mol]
       f_fast_som_cn, &           !< slope of microbial C:N to soil NH4 [kg/mol] 
@@ -100,12 +100,13 @@ MODULE mo_sb_constants
       frac_fast2slow_som, &      !< fraction of fast SOM transformed into slow SOM
       frac_slow2fast_som         !< fraction of slow SOM transformed into fast SOM
 
-   ! other parameters for initialisation 
-   REAL(wp), SAVE :: &
+  ! other parameters for initialisation 
+  REAL(wp), SAVE :: &
       k_init_soluable_litter_cn, &    !< initial soluable litter C:N [mol/mol]   
       k_init_polymeric_litter_cn, &   !< initial polymeric C:N [mol/mol]
       k_init_woody_litter_cn, &       !< initial woody litter C:N [mol/mol]
-      k_init_litter_np                !< initial litter N:P [mol/mol]
+      k_init_litter_np, &             !< initial litter N:P [mol/mol]
+      frac_prod_not_root              !< fraction of production not roots
 
   ! additional microbial parameters for JSM implementation
   REAL(wp), SAVE :: & 
@@ -122,8 +123,8 @@ MODULE mo_sb_constants
       fc_p_res2dom, &                   !< fraction of residue P retranslocated to dom
       fc_n_res2dom                      !< fraction of residue n retranslocated to dom
 
-   ! parameters controlling litter partitioning
-   REAL(wp), SAVE :: & 
+  ! parameters controlling litter partitioning
+  REAL(wp), SAVE :: & 
       f_soluable_residue, &      !< fraction of microbial residue entering the DOM pool
       f_soluable_leaf, &         !< fraction of leaf litter that becomes DOM
       f_soluable_fine_root, &    !< fraction of fine root litter that becomes DOM
@@ -141,8 +142,8 @@ MODULE mo_sb_constants
       lc_fruit, &                !< lignin content of fruits [1/mol]
       lc_seed_bed                !< lignin content of seed bed [1/mol]
 
-   ! mycorrhizal parameters
-   REAL(wp), SAVE :: & 
+  ! mycorrhizal parameters
+  REAL(wp), SAVE :: & 
       mycorrhiza_cue, &          !< mycorrhizal carbon-use efficiency
       mycorrhiza_cn, &           !< molar ratio of C:N of mycorrhizal fungi
       mycorrhiza_np, &           !< molar ratio of N:P of mycorrhizal fungi
@@ -159,8 +160,8 @@ MODULE mo_sb_constants
       organic_cn, &              !< molar ratio of C:N of mycorrhizal export to plants (amino acids)
       f_tau_myc                  !< increase of tau_slow in case of saprotrophic/priming macorrhizae to get similar tau_slow
 
-   ! nutrient uptake kinetics & ECA approach: simple model
-   REAL(wp), SAVE :: & 
+  ! nutrient uptake kinetics & ECA approach: simple model
+  REAL(wp), SAVE :: & 
       km1_up_nh4, &             !< low-affinity parameter for plant and mycorrhizal uptake [m3/mol]
       km1_up_no3, &             !< low-affinity parameter for plant and mycorrhizal uptake [m3/mol]
       km1_up_po4, &             !< low-affinity parameter for plant and mycorrhizal uptake [l/mol]  unit correct ?
@@ -168,8 +169,8 @@ MODULE mo_sb_constants
       km2_up_no3, &             !< high-affinity parameter for plant and mycorrhizal uptake [mol/m3]
       km2_up_po4                !< high-affinity parameter for plant and mycorrhizal uptake [mol/l] unit correct ?
 
-   ! nutrient uptake kinetics & ECA approach: additional jsm parameters
-   REAL(wp), SAVE :: &
+  ! nutrient uptake kinetics & ECA approach: additional jsm parameters
+  REAL(wp), SAVE :: &
       vmax_mic_uptake_nh4, &      !< maximum NH4 uptake capacity of microbes [mol N / mol biomass C / s]
       km_mic_uptake_nh4, &        !< half-saturation concentration [mol N / m3]
       vmax_mic_uptake_no3, &      !< maximum NO3 uptake capacity of microbes [mol N / mol biomass C / s]
@@ -204,10 +205,13 @@ MODULE mo_sb_constants
       km_adsorpt_OM_nh4, &        !< Half-saturation concentration for NH4 adsorption to OM, [mol N kg-1 OM], ECA and Langmuir
       qmax_po4_mineral, &         !< Maximum PO4 sorption capacity of mineral soil [mol P kg-1 soil], ECA and Langmuir
       km_adsorpt_mineral_po4, &   !< Half-saturation concentration for PO4 adsorption to mineral soil [mol P kg-1 fine mineral soil], ECA and Langmuir
-      km_adsorpt_OM_po4           !< Half-saturation concentration for PO4 adsorption to OM, [mol P kg-1 OM], ECA and Langmuir
+      km_adsorpt_OM_po4, &        !< Half-saturation concentration for PO4 adsorption to OM, [mol P kg-1 OM], ECA and Langmuir
+      k_deep_soil_moc_corr, &     !< numerical coefficient for correction of deep soil initialised with very low MOC, assuming the P sorption capacity of OM is one-tenth of mineral soil
+      f1_repartition_om_init, &   !< re-partition factor when OM got over-saturation in intialisation
+      f2_repartition_om_init      !< re-partition factor when OM got over-saturation in intialisation
 
-   ! nitrification, denitrification parameters (sb_nloss_scheme = dynamic)
-   REAL(wp), SAVE :: & 
+  ! nitrification, denitrification parameters (sb_nloss_scheme = dynamic)
+  REAL(wp), SAVE :: & 
       ea_nitrification, &        !< activation energy for nitrification [J mol-1] 
       ed_nitrification, &        !< deactivation energy for nitrification [J mol-1]
       t_opt_nitrification, &     !< optimum temperature for nitrification [K]
@@ -224,8 +228,8 @@ MODULE mo_sb_constants
       f_denit_noy, &             !< fraction of denitrification lost as NOy [--]
       f_denit_n2o                !< fraction of denitrification lost as N2O [--]
 
-   ! Simple-model fixed loss and simple leaching parameterisation
-   REAL(wp), SAVE :: &
+  ! Simple-model fixed loss and simple leaching parameterisation
+  REAL(wp), SAVE :: &
       floss_nmin, &              !< fractional loss of N per unit N mineralisation 
       fnit_nmin, &               !< fractional nitrification per unit N mineralisation 
       fleach_nh4, &              !< fraction of NH4 amenable to leaching
@@ -233,8 +237,8 @@ MODULE mo_sb_constants
       soil_n_threshold_bnf, &    !< maximum soil N at which BNF occurs in standard scheme [mol N / m2]
       standard_bnf_max_rate      !< global maximum rate for standard BNF scheme [mol N / m2 / s]
 
-   ! Isoptope stuff
-   REAL(wp), SAVE :: & 
+  ! Isoptope stuff
+  REAL(wp), SAVE :: & 
       eta_mic_uptake_nh4, &      !< fractionation of N15 due to microbial NH4 assimilation [per mill]
       eta_mic_uptake_no3, &      !< fractionation of N15 due to microbial NO3 assimilation [per mill]
       eta_plant_uptake_nh4, &    !< fractionation of N15 due to plant NH4 assimilation [per mill]
@@ -245,8 +249,8 @@ MODULE mo_sb_constants
       eta_ammonification, &      !< fractionation of N15 due to microbial ammonification [per mill]
       eta_volatilisation_nh3     !< fractionation of N15 due to NH3 volatilisation [per mill]
 
-   ! soil Pi fluxes
-   REAL(wp), SAVE :: &
+  ! soil P fluxes
+  REAL(wp), SAVE :: &
       k_weath_mineral, &            !< Weathering coefficient of mineral soil [mol P kg-1 s-1]
       eq_sorp_mineral_po4, &        !< Slow Pi sorption equilibrium content of mineral soil [mol P kg-1 mineral soil]
       k_occlude_po4, &              !< Occlusion coefficient of sorbed PO4, [s-1]
@@ -258,6 +262,28 @@ MODULE mo_sb_constants
       km_rootc_weath_po4, &         !< Half-saturation root C biomass for PO4 weathering [mol C m-3], simple-1d
       km_root_enzyme_weath_po4, &   !< Half-saturation root enzyme C for PO4 weathering [mol C m-3], jsm
       biomin_thres_pc               !< Threshold P:C ratio for biomineralisation
+
+  ! soil P pool
+  REAL(wp), SAVE :: &
+    k1_p_pool_depth_corr, &               !< denominator coefficient for P pool depth correction  [unitless ?]
+    k2_p_pool_depth_corr, &               !< numerical coefficient for P pool depth correction  [unitless ?]
+    k3_p_pool_depth_corr, &               !< numerical coefficient for P pool depth correction  [unitless ?]
+    k4_p_pool_depth_corr, &               !< numerical coefficient for P pool depth correction  [unitless ?]
+    k_p_pool_depth_corr_min_occlud, &     !< numerical coefficient of minimum occluded P for P pool depth correction  [unitless ?]
+    p_labile_slow_global_avg, &           !< global average value of labile_P/(labile_P + slow_P)  [unitless ?]
+    k_sb_pool_dom_assoc_c_corr            !< numerical coefficient for correction for sb_pool%dom_assoc%carbon init
+
+  ! sb_pool default init values
+  REAL(wp), SAVE :: &
+    def_sb_pool_metabol_litter       , &      ! metabolic litter
+    def_sb_pool_simple_struct_litter , &      ! structural litter, simple_0d and simple_1d soil model
+    def_sb_pool_jsm_struct_litter    , &      ! structural litter, JSM
+    def_sb_pool_woody_litter         , &      ! woody litter
+    def_sb_pool_fast_som             , &      ! fast SOM
+    def_sb_pool_slow_som             , &      ! slow SOM
+    def_sb_pool_microbial_biomass    , &      ! microbial biomass
+    def_sb_pool_microbial_necromass  , &      ! microbial necromass
+    def_sb_pool_dom                           ! DOM
 
    !! only temporarily, mol / m2 !! @TODO
    REAL(wp), SAVE :: & 
@@ -350,6 +376,7 @@ CONTAINS
     k_init_polymeric_litter_cn   = 100._wp * molar_mass_N / molar_mass_C   ! Thum et al. 2019, GMD ???
     k_init_woody_litter_cn       = 260._wp * molar_mass_N / molar_mass_C   ! Thum et al. 2019, GMD ???
     k_init_litter_np             = 18._wp * molar_mass_P / molar_mass_N    ! Thum et al. 2019, GMD ???
+    frac_prod_not_root           = 0.6_wp                                  ! ???
    
     ! additional microbial parameters for JSM implementation
     fc_woody2polymeric            = 0.3_wp                                        ! Yu et al. 2020, GMD
@@ -450,6 +477,9 @@ CONTAINS
     km_adsorpt_mineral_po4    = 0.070_wp / 1000._wp / molar_mass_P      ! [mol P kg-1 fine mineral soil], based on 0.332 [mg P l-1 soil solution]  
                                                                         ! from literature data analysis, with .33 m wc and 1560 kg/m3 bulk density
     km_adsorpt_OM_po4         = 14._wp / 1000._wp / molar_mass_P        ! 200 times of km_adsorpt_mineral_po4, from literature data analysis
+    k_deep_soil_moc_corr      = 0.1_wp                                  ! ???
+    f1_repartition_om_init    = 1.0_wp / 3.0_wp                         ! ???
+    f2_repartition_om_init    = 1.0_wp / 11.0_wp                        ! ???
 
     ! nitrification, denitrification parameters (sb_nloss_scheme = dynamic)
     ea_nitrification          = 80000._wp                               ! Xu-Ri & Prentice, 2008, to fit their function
@@ -490,7 +520,7 @@ CONTAINS
     eta_ammonification        = 2.5_wp                           ! Robinson 2001, TREE
     eta_volatilisation_nh3    = 50._wp                           ! Robinson 2001, TREE
 
-   ! soil Pi fluxes
+    ! soil P fluxes
     k_weath_mineral           = 0.1_wp / &                                    ! [mol P kg-1 s-1], Wang et al. 2010 combining with BBR soil weight of 1m
                                 molar_mass_P / 1254._wp / one_year / one_day 
     eq_sorp_mineral_po4       = 80._wp / molar_mass_P                         ! [mol P m-3] ! random guess based on init value of assoc_slow
@@ -503,6 +533,26 @@ CONTAINS
     km_rootc_weath_po4        = 10._wp                                        ! estimated
     km_root_enzyme_weath_po4  = 1._wp / molar_mass_C                          ! estimated
     biomin_thres_pc           = 1._wp / 5000._wp                              ! ???
+
+    ! soil P pool
+    k1_p_pool_depth_corr              = 3.5_wp          ! ???
+    k2_p_pool_depth_corr              = 2._wp           ! ???
+    k3_p_pool_depth_corr              = 0.8_wp          ! ???
+    k4_p_pool_depth_corr              = 0.5_wp          ! ???
+    k_p_pool_depth_corr_min_occlud    = 0.1_wp          ! ???
+    p_labile_slow_global_avg          = 9._wp / 17._wp  ! ???
+    k_sb_pool_dom_assoc_c_corr        = 5.0_wp          ! ???
+
+    ! sb_pool default init values
+    def_sb_pool_metabol_litter        = 100.0_wp        ! ???
+    def_sb_pool_simple_struct_litter  = 100.0_wp        ! ???
+    def_sb_pool_jsm_struct_litter     = 1000.0_wp       ! ???
+    def_sb_pool_woody_litter          = 1000.0_wp       ! ???
+    def_sb_pool_fast_som              = 1500.0_wp       ! ???
+    def_sb_pool_slow_som              = 10000.0_wp      ! ???
+    def_sb_pool_microbial_biomass     = 30.0_wp         ! ???
+    def_sb_pool_microbial_necromass   = 150.0_wp        ! ???
+    def_sb_pool_dom                   = 1.0_wp          ! ???
 
     !! BLARPP only temporarily, mol / m2 !!  @TODO
     nh4_solute_prescribe = 0.05_wp

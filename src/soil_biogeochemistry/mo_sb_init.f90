@@ -98,11 +98,9 @@ CONTAINS
     CHARACTER(len=3)                             :: site_ID_spp1685
     INTEGER                                      :: isoil, ichunk
     INTEGER                                      :: iblk, ics, ice, nc
-    REAL(wp)                                     :: hlp1, hlp2, hlp3, hlp4, hlp5, &
-                                                    hlp7, hlp8, hlp9, hlp10, hlp11, &
-                                                    polyLit_cn_ratio, woodyLit_cn_ratio
-    REAL(wp)                                     :: frac_prod_not_root
-    REAL(wp)                                     :: frac_c13,frac_c14
+    REAL(wp)                                     :: hlp1
+    REAL(wp)                                     :: polyLit_cn_ratio, woodyLit_cn_ratio
+    REAL(wp)                                     :: frac_c13, frac_c14
     REAL(wp), ALLOCATABLE, DIMENSION(:)          :: arr_hlp6, root_depth_avg          ! dim: nc
     REAL(wp), ALLOCATABLE, DIMENSION(:)          :: soil_depth_acc_sl
     REAL(wp), ALLOCATABLE, DIMENSION(:,:)        :: arr_hlp7, arr_hlp8, arr_hlp9
@@ -318,29 +316,21 @@ CONTAINS
     !> 2.0 soil model init
     !! i)  simple_0d & simple_1d
     !! ii) JSM
-    frac_prod_not_root = 0.6_wp   ! fraction of production not roots 
     SELECT CASE(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
        !!==========================================================================================================================
        !> simple_0d & simple_1d soil models
        !! a four pool soil biogeochemical model
        CASE("simple_0d", "simple_1d")
-
-          hlp1 = 100._wp ! g C m-2 metabolic litter
-          hlp2 = 100._wp ! g C m-2 structural litter
-          hlp3 = 1000._wp ! g C m-2 woody litter
-          hlp4 = 1500._wp ! g C m-2 fast SOM
-          hlp5 = 10000._wp ! g C m-2 slow SOM
-
           !> simple_0d
           !! 
           IF(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_0d") THEN
-             sb_pool%soluable_litter%carbon(:,1)  = hlp1 / molar_mass_C / vgrid_soil_sb%dz(1)
-             sb_pool%polymeric_litter%carbon(:,1) = hlp2 / molar_mass_C / vgrid_soil_sb%dz(1)
+             sb_pool%soluable_litter%carbon(:,1)  = def_sb_pool_metabol_litter / molar_mass_C / vgrid_soil_sb%dz(1)
+             sb_pool%polymeric_litter%carbon(:,1) = def_sb_pool_simple_struct_litter / molar_mass_C / vgrid_soil_sb%dz(1)
              IF(lctlib%growthform==itree) THEN
-                sb_pool%woody_litter%carbon(:,1) = hlp3 / molar_mass_C / vgrid_soil_sb%dz(1)
+                sb_pool%woody_litter%carbon(:,1) = def_sb_pool_woody_litter / molar_mass_C / vgrid_soil_sb%dz(1)
              ENDIF
-             sb_pool%microbial%carbon(:,1) = hlp4 / molar_mass_C / vgrid_soil_sb%dz(1)
-             sb_pool%residue%carbon(:,1)   = hlp5 / molar_mass_C / vgrid_soil_sb%dz(1)
+             sb_pool%microbial%carbon(:,1) = def_sb_pool_fast_som / molar_mass_C / vgrid_soil_sb%dz(1)
+             sb_pool%residue%carbon(:,1)   = def_sb_pool_slow_som / molar_mass_C / vgrid_soil_sb%dz(1)
 
              nh4_solute(:,1) = nh4_solute_prescribe / vgrid_soil_sb%dz(1)
              no3_solute(:,1) = no3_solute_prescribe / vgrid_soil_sb%dz(1)
@@ -390,25 +380,27 @@ CONTAINS
           !> simple_1d
           !!
           ELSE 
-             sb_pool%soluable_litter%carbon(:,1)  = hlp1 /  molar_mass_C / vgrid_soil_sb%dz(1) * &
+             sb_pool%soluable_litter%carbon(:,1)  = def_sb_pool_metabol_litter /  molar_mass_C / vgrid_soil_sb%dz(1) * &
                                                     (frac_prod_not_root + (1.0_wp - frac_prod_not_root) * root_fraction_sl(:,1)) 
-             sb_pool%polymeric_litter%carbon(:,1) = hlp2 / molar_mass_C / vgrid_soil_sb%dz(1) * &
+             sb_pool%polymeric_litter%carbon(:,1) = def_sb_pool_simple_struct_litter / molar_mass_C / vgrid_soil_sb%dz(1) * &
                                                     (frac_prod_not_root + (1.0_wp - frac_prod_not_root) * root_fraction_sl(:,1)) 
              IF(lctlib%growthform==itree) THEN
-               sb_pool%woody_litter%carbon(:,1) = hlp3 / molar_mass_C / vgrid_soil_sb%dz(1)
+               sb_pool%woody_litter%carbon(:,1) = def_sb_pool_woody_litter / molar_mass_C / vgrid_soil_sb%dz(1)
              ENDIF
-             sb_pool%microbial%carbon(:,1) = hlp4 / molar_mass_C / vgrid_soil_sb%dz(1) * &
+             sb_pool%microbial%carbon(:,1) = def_sb_pool_fast_som / molar_mass_C / vgrid_soil_sb%dz(1) * &
                                              (frac_prod_not_root + (1.0_wp - frac_prod_not_root) * root_fraction_sl(:,1)) 
-             sb_pool%residue%carbon(:,1)   = hlp5 / molar_mass_C / vgrid_soil_sb%dz(1) * & 
+             sb_pool%residue%carbon(:,1)   = def_sb_pool_slow_som / molar_mass_C / vgrid_soil_sb%dz(1) * & 
                                              (frac_prod_not_root + (1.0_wp - frac_prod_not_root) * root_fraction_sl(:,1)) 
              DO isoil=2,nsoil_sb
-                sb_pool%soluable_litter%carbon(:,isoil)  = hlp1 /  molar_mass_C / vgrid_soil_sb%dz(isoil) * &
+                sb_pool%soluable_litter%carbon(:,isoil)  = def_sb_pool_metabol_litter /  molar_mass_C / &
+                                                           vgrid_soil_sb%dz(isoil) * &
                                                            (1.0_wp - frac_prod_not_root) * root_fraction_sl(:,isoil) 
-                sb_pool%polymeric_litter%carbon(:,isoil) = hlp2 / molar_mass_C / vgrid_soil_sb%dz(isoil) * &
+                sb_pool%polymeric_litter%carbon(:,isoil) = def_sb_pool_simple_struct_litter / molar_mass_C / &
+                                                           vgrid_soil_sb%dz(isoil) * &
                                                            (1.0_wp - frac_prod_not_root) * root_fraction_sl(:,isoil) 
-                sb_pool%microbial%carbon(:,isoil)        = hlp4 / molar_mass_C / vgrid_soil_sb%dz(isoil) * &
+                sb_pool%microbial%carbon(:,isoil)        = def_sb_pool_fast_som / molar_mass_C / vgrid_soil_sb%dz(isoil) * &
                                                            (1.0_wp - frac_prod_not_root) * root_fraction_sl(:,isoil) 
-                sb_pool%residue%carbon(:,isoil)          = hlp5 / molar_mass_C / vgrid_soil_sb%dz(isoil) * & 
+                sb_pool%residue%carbon(:,isoil)          = def_sb_pool_slow_som / molar_mass_C / vgrid_soil_sb%dz(isoil) * & 
                                                            (1.0_wp - frac_prod_not_root) * root_fraction_sl(:,isoil)
              ENDDO
              ! note: this differs on purpose from the calculation in mo_sb_update_pools for the prescribed option
@@ -424,24 +416,21 @@ CONTAINS
              bulk_dens_corr_sl(:,:) = calc_bulk_density_correction(bulk_soil_carbon_sl(:,:),soil_litter_carbon_sl(:,:), &
                                                                    bulk_dens_sl(:,:))      
              !> po4 adsorption parameter intialisation 
-             qmax_po4_min_sl(:,:) = calc_qmax_texture(qmax_po4_mineral, 0.0_wp, 1._wp)
-             qmax_po4_om_sl(:,:)  = qmax_po4_min_sl(:,:) / 100._wp
-             qmax_po4(:,:) = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:), volume_min_sl(:,:),bulk_dens_sl(:,:), & 
-                                                               qmax_po4_om_sl(:,:),qmax_po4_min_sl(:,:))
-             qmax_po4(:,:) = qmax_po4(:,:) * w_soil_sl(:,:) / soil_depth_sl(:,:)
+             qmax_po4_min_sl(:,:)   = calc_qmax_texture(qmax_po4_mineral, 0.0_wp, 1._wp)
+             qmax_po4_om_sl(:,:)    = qmax_po4_min_sl(:,:) / 100._wp
+             qmax_po4(:,:)          = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:), volume_min_sl(:,:), &
+                                      bulk_dens_sl(:,:), qmax_po4_om_sl(:,:), qmax_po4_min_sl(:,:))
+             qmax_po4(:,:)          = qmax_po4(:,:) * w_soil_sl(:,:) / soil_depth_sl(:,:)
              km_adsorpt_po4_sl(:,:) = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:), volume_min_sl(:,:), &
-                                                                        bulk_dens_sl(:,:), &
-                                                                        km_adsorpt_OM_po4,km_adsorpt_mineral_po4)
+                                      bulk_dens_sl(:,:), km_adsorpt_OM_po4, km_adsorpt_mineral_po4)
 
              !> nh4 adsorption parameter intialisation 
              qmax_nh4_min_sl(:,:)     = calc_qmax_texture(qmax_nh4_clay, 0.0_wp, clay_sl(:,:))
              qmax_nh4(:,:)            = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:), volume_min_sl(:,:), &
-                                                                          bulk_dens_sl(:,:), &
-                                                                          0.0_wp,qmax_nh4_min_sl(:,:))
+                                        bulk_dens_sl(:,:), 0.0_wp,qmax_nh4_min_sl(:,:))
              qmax_nh4(:,:)            = qmax_nh4(:,:) * w_soil_sl(:,:) / soil_depth_sl(:,:)
              km_adsorpt_nh4_sl(:,:)   = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:), volume_min_sl(:,:), &
-                                                                          bulk_dens_sl(:,:), &
-                                                                          km_adsorpt_OM_nh4,km_adsorpt_mineral_nh4)
+                                        bulk_dens_sl(:,:), km_adsorpt_OM_nh4,km_adsorpt_mineral_nh4)
              nh4_assoc(:,:)           = qmax_nh4(:,:) * nh4_solute (:,:) / (nh4_solute(:,:) + km_adsorpt_nh4_sl(:,:))
              nh4_n15_assoc(:,:)       = nh4_assoc(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
           ENDIF
@@ -532,43 +521,31 @@ CONTAINS
        !> JSM (Jena Soil Model)
        !! published with: https://doi.org/10.5194/gmd-13-783-2020
        CASE('jsm')
-
-          hlp1 = 100._wp   ! g C m-2 metabolic litter
-          hlp2 = 1000._wp  ! g C m-2 structural litter
-          hlp3 = 1000._wp  ! g C m-2 woody litter
-          hlp4 = 30._wp    ! g C m-2 microbial biomass, 30
-          hlp5 = 150._wp   ! g C m-2 microbial necromass, 150
-          hlp7 = 1._wp     ! g C m-2 DOM, 1
-
-          hlp8 = 0.1_wp           ! numerical coefficient for correction; assuming the P sorption capacity of OM is one-tenth of mineral soil
-          hlp9 = 5._wp            ! numerical coefficient for correction, 5._wp
-          hlp10 = 1._wp / 3._wp   ! re-partition factor when OM got over-saturation in intialisation
-          hlp11 = 1._wp / 11._wp  ! re-partition factor when OM got over-saturation in intialisation
-
-          sb_pool%soluable_litter%carbon(:,1)  = hlp1 /  molar_mass_C / vgrid_soil_sb%dz(1) * &
-                                                 ( frac_prod_not_root + (1.0_wp - frac_prod_not_root) * root_fraction_sl(:,1)) 
-          sb_pool%polymeric_litter%carbon(:,1) = hlp2 / molar_mass_C / vgrid_soil_sb%dz(1) * &
-                                                 ( frac_prod_not_root + (1.0_wp - frac_prod_not_root) * root_fraction_sl(:,1)) 
+          sb_pool%soluable_litter%carbon(:,1)  = def_sb_pool_metabol_litter /  molar_mass_C / vgrid_soil_sb%dz(1) * &
+                                                 (frac_prod_not_root + (1.0_wp - frac_prod_not_root) * root_fraction_sl(:,1)) 
+          sb_pool%polymeric_litter%carbon(:,1) = def_sb_pool_jsm_struct_litter / molar_mass_C / vgrid_soil_sb%dz(1) * &
+                                                 (frac_prod_not_root + (1.0_wp - frac_prod_not_root) * root_fraction_sl(:,1)) 
          IF(lctlib%growthform==itree) THEN
-           sb_pool%woody_litter%carbon(:,1)  = hlp3 / molar_mass_C / vgrid_soil_sb%dz(1)
+           sb_pool%woody_litter%carbon(:,1)  = def_sb_pool_woody_litter / molar_mass_C / vgrid_soil_sb%dz(1)
          ENDIF
          DO isoil=2,nsoil_sb
-             sb_pool%soluable_litter%carbon(:,isoil)  = hlp1 /  molar_mass_C / vgrid_soil_sb%dz(isoil) * &
+             sb_pool%soluable_litter%carbon(:,isoil)  = def_sb_pool_metabol_litter /  molar_mass_C / vgrid_soil_sb%dz(isoil) * &
                                                         (1.0_wp - frac_prod_not_root) * root_fraction_sl(:,isoil) 
-             sb_pool%polymeric_litter%carbon(:,isoil) = hlp2 / molar_mass_C / vgrid_soil_sb%dz(isoil) * &
+             sb_pool%polymeric_litter%carbon(:,isoil) = def_sb_pool_jsm_struct_litter / molar_mass_C / vgrid_soil_sb%dz(isoil) * &
                                                         (1.0_wp - frac_prod_not_root) * root_fraction_sl(:,isoil) 
          ENDDO
 
          DO isoil=1,nsoil_sb
-             sb_pool%microbial%carbon(:,isoil)  = MAX(hlp4 / vgrid_soil_sb%dz(isoil) * root_fraction_sl(:,isoil), &
-                                                      min_mic_biomass)
-             sb_pool%dom%carbon(:,isoil)        = hlp7 / vgrid_soil_sb%dz(isoil) * root_fraction_sl(:,isoil)
-             sb_pool%dom_assoc%carbon(:,isoil)  = hlp9 * sb_pool%dom%carbon(:,isoil)
-             sb_pool%residue%carbon(:,isoil)    = hlp5 / vgrid_soil_sb%dz(isoil) * root_fraction_sl(:,isoil)
+             sb_pool%microbial%carbon(:,isoil)  = MAX(def_sb_pool_microbial_biomass / vgrid_soil_sb%dz(isoil) * &
+                                                      root_fraction_sl(:,isoil), min_mic_biomass)
+             sb_pool%dom%carbon(:,isoil)        = def_sb_pool_dom / vgrid_soil_sb%dz(isoil) * root_fraction_sl(:,isoil)
+             sb_pool%dom_assoc%carbon(:,isoil)  = k_sb_pool_dom_assoc_c_corr * sb_pool%dom%carbon(:,isoil)
+             sb_pool%residue%carbon(:,isoil)    = def_sb_pool_microbial_necromass / vgrid_soil_sb%dz(isoil) * &
+                                                  root_fraction_sl(:,isoil)
              frac_prod_not_root                 = 1._wp / isoil
-             ! deep soil is initialised with very low MOC, corrected by hlp8
-             IF (frac_prod_not_root < hlp8) THEN 
-               frac_prod_not_root = frac_prod_not_root * hlp8
+             ! deep soil is initialised with very low MOC, corrected by k_deep_soil_moc_corr
+             IF (frac_prod_not_root < k_deep_soil_moc_corr) THEN 
+               frac_prod_not_root = frac_prod_not_root * k_deep_soil_moc_corr
              ENDIF
              sb_pool%residue_assoc%carbon(:,isoil) = dsl4jsb_Config(SB_)%qmax_org_fine_particle * &
                                                      (clay_sl(:,isoil) + silt_sl(:,isoil)) * & 
@@ -598,9 +575,10 @@ CONTAINS
                 sb_pool%residue%carbon(:,isoil)          = 0._wp
                 sb_pool%residue_assoc%carbon(:,isoil)    = 0._wp
              ELSEWHERE ((arr_hlp7(:,isoil) + arr_hlp8(:,isoil)) > 1._wp )
-                arr_hlp9(:,isoil) = (1._wp - arr_hlp7(:,isoil)) * hlp10 * dsl4jsb_Config(SB_)%qmax_org_fine_particle * &
+                arr_hlp9(:,isoil) = (1._wp - arr_hlp7(:,isoil)) * f1_repartition_om_init * &
+                                    dsl4jsb_Config(SB_)%qmax_org_fine_particle * &
                                     (clay_sl(:,isoil) + silt_sl(:,isoil)) * bulk_dens_sl(:,isoil)
-                arr_hlp8(:,isoil) = (1._wp - arr_hlp7(:,isoil)) * (1._wp - hlp10) * &
+                arr_hlp8(:,isoil) = (1._wp - arr_hlp7(:,isoil)) * (1._wp - f1_repartition_om_init) * &
                                     rho_bulk_org * 1000._wp * carbon_per_dryweight_SOM / molar_mass_C
                 sb_pool%residue_assoc%carbon(:,isoil) = calc_fast_po4(arr_hlp8(:,isoil), arr_hlp9(:,isoil), &
                                                                       k_desorpt_det / k_adsorpt_det)
@@ -611,9 +589,9 @@ CONTAINS
                 arr_hlp8(:,isoil) = (sb_pool%residue%carbon(:,isoil) + sb_pool%residue_assoc%carbon(:,isoil))
                 WHERE (arr_hlp8(:,isoil) > arr_hlp9(:,isoil))
                   sb_pool%soluable_litter%carbon(:,isoil) = sb_pool%soluable_litter%carbon(:,isoil) + &
-                                                            (arr_hlp8(:,isoil)-arr_hlp9(:,isoil)) * hlp11
+                                                            (arr_hlp8(:,isoil)-arr_hlp9(:,isoil)) * f2_repartition_om_init
                   sb_pool%polymeric_litter%carbon(:,isoil)= sb_pool%polymeric_litter%carbon(:,isoil) + &
-                                                            (arr_hlp8(:,isoil)-arr_hlp9(:,isoil)) * (1._wp - hlp11)
+                                                            (arr_hlp8(:,isoil)-arr_hlp9(:,isoil)) * (1._wp - f2_repartition_om_init)
                   arr_hlp8(:,isoil) = arr_hlp9(:,isoil)
                 ENDWHERE
                 sb_pool%residue_assoc%carbon(:,isoil) = calc_fast_po4(arr_hlp8(:,isoil), arr_hlp9(:,isoil), &
@@ -636,7 +614,7 @@ CONTAINS
          !> po4/OC adsorption parameter intialisation 
          qmax_org_min_sl(:,:)   = calc_qmax_texture(dsl4jsb_Config(SB_)%qmax_org_fine_particle, silt_sl(:,:), clay_sl(:,:))
          qmax_po4_min_sl(:,:)   = calc_qmax_texture(qmax_po4_mineral, 0.0_wp, 1._wp)
-         qmax_po4_om_sl(:,:)    = qmax_po4_min_sl(:,:) * hlp8 
+         qmax_po4_om_sl(:,:)    = qmax_po4_min_sl(:,:) * k_deep_soil_moc_corr 
          qmax_org(:,:)          = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:), volume_min_sl(:,:), &
                                                                     bulk_dens_sl(:,:), 0._wp, qmax_org_min_sl(:,:))
 
@@ -799,7 +777,8 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                qmax_po4,km)
 
     USE mo_jsb_phys_constants,    ONLY: molar_mass_P
-    USE mo_sb_constants
+    USE mo_sb_constants           ! e.g.: k1_p_pool_depth_corr, k2_p_pool_depth_corr, k3_p_pool_depth_corr, &
+                                  !       k4_p_pool_depth_corr, k_p_pool_depth_corr_min_occlud, p_labile_slow_global_avg
     USE mo_sb_jsm_processes,      ONLY: calc_fast_po4, convert_s1d_to_s0d_var_soilproperty
 
     IMPLICIT NONE
@@ -826,7 +805,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                         po4_primary           !< primary PO4 pool per soil layer, [mol m-3]
 
     INTEGER                                          :: i
-    REAL(wp)                                         :: rhlp1,rhlp2,rhlp3,rhlp4,rhlp5,rhlp6                           !< logical helper for input Pi density calculation
+    REAL(wp)                                         :: rhlp1
     REAL(wp), DIMENSION(nc)                          :: soil_p_weight, soil_weight_0d, &  !< total soil weight up to the soil_p_depth/soil_depth_0d, [kg]
                                                         soil_p_layer                      !< up to soil_p_layer keep the P init map info
     REAL(wp), DIMENSION(nc)                          :: hlp1, hlp2, hlp3, hlp4
@@ -847,19 +826,19 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
 
     !> 1.0 calculate the total soil weight up to the soil_p_depth,
     !! and the soil weight per soil layer
-    hlp1(:) = 0._wp
-    hlp2(:) = 0._wp
+    hlp1(:)  = 0._wp
+    hlp2(:)  = 0._wp
     aflag(:) = .TRUE.
-    rhlp1 = soil_p_slow + soil_p_labile + soil_p_occluded + soil_p_primary
-    DO i=1,nsoil_sb
+    rhlp1    = soil_p_slow + soil_p_labile + soil_p_occluded + soil_p_primary
+    DO i = 1,nsoil_sb
       soil_weight_sl(:,i) = soil_depth_sl(:,i) * bulk_dens_sl(:,i)
       WHERE (aflag) 
         hlp1(:) = hlp1(:) + soil_depth_sl(:,i)
         hlp2(:) = hlp2(:) + soil_weight_sl(:,i)
         WHERE (hlp1(:) > soil_p_depth)
           soil_p_weight(:) = hlp2(:) - soil_weight_sl(:,i) * (hlp1(:) - soil_p_depth) / soil_depth_sl(:,i)
-          aflag(:) = .FALSE.
-          soil_p_layer(:) = i
+          aflag(:)         = .FALSE.
+          soil_p_layer(:)  = i
         ENDWHERE
       ENDWHERE
     END DO
@@ -870,15 +849,13 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     !! the depth correction of initial P pool distributions are fitted against the observed pattern of a young cambisol soil 
     !! with basalt as parent material (BBR, Lang et al. 2017) that, 
     !! the proportion of: labile+sorbed P decreases with increasing depth, and primary P increases with increasing depth (Yu et al., 2020)
-    rhlp2 = 3.5_wp            ! denominator coefficient for P pool depth correction
-    rhlp3 = 2._wp             ! numerical coefficient for P pool depth correction
-    rhlp4 = 0.1_wp            ! numerical coefficient of minimum occluded P for P pool depth correction
-    rhlp5 = 0.8_wp            ! numerical coefficient for P pool depth correction
-    rhlp6 = 9._wp / 17._wp   ! global average value of labile_P/(labile_P + slow_P)
     DO i=1,nsoil_sb
-      hlp1(:)             = MIN(rhlp3 * soil_lay_depth_center_sl(:,i) ** 0.5_wp, (rhlp2 - rhlp4)) / rhlp2 ! primary P, corrected with depth, [g P] 
-      hlp2(:)             = rhlp5 ** (rhlp3 * soil_lay_depth_center_sl(:,i)) / rhlp2
-      hlp3(:)             = MAX((1.0_wp - hlp1(:) - hlp2(:)), rhlp4 / rhlp2) ! occluded P, corrected with depth
+      ! primary P, corrected with depth, [g P] 
+      hlp1(:) = MIN(k2_p_pool_depth_corr * soil_lay_depth_center_sl(:,i) ** k4_p_pool_depth_corr, &
+                    (k1_p_pool_depth_corr - k_p_pool_depth_corr_min_occlud)) / k1_p_pool_depth_corr
+      hlp2(:) = k3_p_pool_depth_corr ** (k2_p_pool_depth_corr * soil_lay_depth_center_sl(:,i)) / k1_p_pool_depth_corr
+      ! occluded P, corrected with depth
+      hlp3(:) = MAX((1.0_wp - hlp1(:) - hlp2(:)), k_p_pool_depth_corr_min_occlud / k1_p_pool_depth_corr) 
 
       WHERE ((hlp1(:) + hlp2(:) + hlp3(:)) > 1._wp)
         hlp1(:) = hlp1(:) / (hlp1(:) + hlp2(:) + hlp3(:))
@@ -886,15 +863,17 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
         hlp3(:) = hlp3(:) / (hlp1(:) + hlp2(:) + hlp3(:))
       ENDWHERE
       WHERE (soil_p_layer(:) > i) 
-        po4_assoc_slow(:,i) = bulk_dens_sl(:,i) * hlp4(:) * (soil_p_slow + soil_p_labile) / rhlp1 / molar_mass_P * (1._wp - rhlp6)
+        po4_assoc_slow(:,i) = bulk_dens_sl(:,i) * hlp4(:) * (soil_p_slow + soil_p_labile) / rhlp1 / molar_mass_P * &
+                              (1._wp - p_labile_slow_global_avg)
         po4_occluded(:,i)   = bulk_dens_sl(:,i) * hlp4(:) * soil_p_occluded               / rhlp1 / molar_mass_P
         po4_primary(:,i)    = bulk_dens_sl(:,i) * hlp4(:) * soil_p_primary                / rhlp1 / molar_mass_P
-        arr_hlp1(:,i)       = bulk_dens_sl(:,i) * hlp4(:) * (soil_p_slow + soil_p_labile) / rhlp1 / molar_mass_P * rhlp6 !p_labile_sl in the follwing Eqn, [mol / m3]
+        arr_hlp1(:,i)       = bulk_dens_sl(:,i) * hlp4(:) * (soil_p_slow + soil_p_labile) / rhlp1 / molar_mass_P * &
+                              p_labile_slow_global_avg 
       ELSEWHERE
-        po4_assoc_slow(:,i) = bulk_dens_sl(:,i) * hlp4(:) * hlp2(:) / molar_mass_P * (1._wp - rhlp6)
+        po4_assoc_slow(:,i) = bulk_dens_sl(:,i) * hlp4(:) * hlp2(:) / molar_mass_P * (1._wp - p_labile_slow_global_avg)
         po4_occluded(:,i)   = bulk_dens_sl(:,i) * hlp4(:) * hlp3(:) / molar_mass_P
         po4_primary(:,i)    = bulk_dens_sl(:,i) * hlp4(:) * hlp1(:) / molar_mass_P
-        arr_hlp1(:,i)       = bulk_dens_sl(:,i) * hlp4(:) * hlp2(:) / molar_mass_P * rhlp6 !p_labile_sl in the follwing Eqn, [mol / m3]
+        arr_hlp1(:,i)       = bulk_dens_sl(:,i) * hlp4(:) * hlp2(:) / molar_mass_P * p_labile_slow_global_avg 
       ENDWHERE
     END DO
 
@@ -962,68 +941,74 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
       CASE("BBR")
         arr_hlp5(:) = (/9.24_wp,36.92_wp,39.44_wp,40.36_wp,42.75_wp, &	
                        45.72_wp,32.45_wp,95.89_wp,124.14_wp,133.93_wp, &
-                       100._wp,126._wp,122.18_wp,145._wp,90._wp/) ! SIP, mol P m-3
-        hlp1 = soil_p_labile     !labile_P from Yang et al. 2013, g/m2
-        hlp2 = soil_p_slow       !slow_P from Yang et al. 2013, g/m2
-        hlp3 = soil_p_primary    !occluded_P from Yang et al. 2013, g/m2
-        hlp4 = soil_p_occluded   !primary_P from Yang et al. 2013, g/m2
-        soil_p_layer(:) = 6._wp 
+                       100._wp,126._wp,122.18_wp,145._wp,90._wp/)       ! ??? ; SIP, mol P m-3
+        hlp1            = soil_p_labile     ! labile_P from Yang et al. 2013, g/m2
+        hlp2            = soil_p_slow       ! slow_P from Yang et al. 2013, g/m2
+        hlp3            = soil_p_primary    ! occluded_P from Yang et al. 2013, g/m2
+        hlp4            = soil_p_occluded   ! primary_P from Yang et al. 2013, g/m2
+        soil_p_layer(:) = 6._wp             ! ???
         ! alternative: use [mg P/kg soil] measurement to upscale the data from Yang et al. 2013
-        hlp5        = 1750._wp / 1000._wp ! g P / kg soil
+        !hlp5        = 1750._wp / 1000._wp ! g P / kg soil
+        !arr_hlp5(:) = hlp5 * bulk_dens_corr_sl(1,:) / molar_mass_P ! SIP, mol P m-3
       CASE("LUE")
         arr_hlp5(:) = (/0.8867_wp,3.187_wp,2.662_wp,4.887_wp,4.792_wp, &	
                        2.987_wp,3.313_wp,6.0616_wp,7.56_wp,5.787_wp, &
-                       5.932_wp,6.845_wp,8.294_wp,8.413_wp,8.532_wp/) !,1.676_wp
-        hlp1 = soil_p_labile     !labile_P from Yang et al. 2013, g/m2
-        hlp2 = soil_p_slow       !slow_P from Yang et al. 2013, g/m2
-        hlp3 = soil_p_occluded   !occluded_P from Yang et al. 2013, g/m2
-        hlp4 = soil_p_primary	   !primary_P from Yang et al. 2013, g/m2
-        soil_p_layer(:) = 6._wp 
+                       5.932_wp,6.845_wp,8.294_wp,8.413_wp,8.532_wp/)   ! ??? ; SIP, mol P m-3
+        hlp1            = soil_p_labile     ! labile_P from Yang et al. 2013, g/m2
+        hlp2            = soil_p_slow       ! slow_P from Yang et al. 2013, g/m2
+        hlp3            = soil_p_occluded   ! occluded_P from Yang et al. 2013, g/m2
+        hlp4            = soil_p_primary	  ! primary_P from Yang et al. 2013, g/m2
+        soil_p_layer(:) = 6._wp             ! ???
         ! alternative: use [mg P/kg soil] measurement to upscale the data from Yang et al. 2013
-        hlp5        = 120._wp / 1000._wp ! g P / kg soil
+        !hlp5        = 120._wp / 1000._wp ! g P / kg soil
+        !arr_hlp5(:) = hlp5 * bulk_dens_corr_sl(1,:) / molar_mass_P ! SIP, mol P m-3
       CASE("VES")
         arr_hlp5(:) = (/2.388_wp,8.509_wp,9.033_wp,10.811_wp,15.365_wp, &	
                        20.661_wp,22.721_wp,29.321_wp,30.952_wp,32.821_wp, &
-                       40.673_wp,41.880_wp,41.111_wp,48.438_wp,54._wp/) !,6.760_wp
-        hlp1 = soil_p_labile     !labile_P from Yang et al. 2013, g/m2
-        hlp2 = soil_p_slow       !slow_P from Yang et al. 2013, g/m2
-        hlp3 = soil_p_primary    !occluded_P from Yang et al. 2013, g/m2
-        hlp4 = soil_p_occluded   !primary_P from Yang et al. 2013, g/m2
-        soil_p_layer(:) = 6._wp 
+                       40.673_wp,41.880_wp,41.111_wp,48.438_wp,54._wp/)   ! ??? ; SIP, mol P m-3
+        hlp1            = soil_p_labile     ! labile_P from Yang et al. 2013, g/m2
+        hlp2            = soil_p_slow       ! slow_P from Yang et al. 2013, g/m2
+        hlp3            = soil_p_primary    ! occluded_P from Yang et al. 2013, g/m2
+        hlp4            = soil_p_occluded   ! primary_P from Yang et al. 2013, g/m2
+        soil_p_layer(:) = 6._wp             ! ???
         ! alternative: use [mg P/kg soil] measurement to upscale the data from Yang et al. 2013
-        hlp5        = 900._wp / 1000._wp ! g P / kg soil
+        !hlp5        = 900._wp / 1000._wp ! g P / kg soil
+        !arr_hlp5(:) = hlp5 * bulk_dens_corr_sl(1,:) / molar_mass_P ! SIP, mol P m-3
       CASE("MIT")
         arr_hlp5(:) = (/3.723_wp,6.272_wp,7.556_wp,8.292_wp,6.93_wp, &	
                        13.731_wp,13.296_wp,16.511_wp,12.890_wp,15._wp, &
-                       16.667_wp,16.875_wp,17.5_wp,15.104_wp,15.625_wp/) !,6.760_wp
-        hlp1 = soil_p_labile     !labile_P from Yang et al. 2013, g/m2
-        hlp2 = soil_p_slow       !slow_P from Yang et al. 2013, g/m2
-        hlp3 = soil_p_primary    !occluded_P from Yang et al. 2013, g/m2
-        hlp4 = soil_p_occluded   !primary_P from Yang et al. 2013, g/m2
-        soil_p_layer(:) = 9._wp 
+                       16.667_wp,16.875_wp,17.5_wp,15.104_wp,15.625_wp/)  ! ??? ; SIP, mol P m-3
+        hlp1            = soil_p_labile     ! labile_P from Yang et al. 2013, g/m2
+        hlp2            = soil_p_slow       ! slow_P from Yang et al. 2013, g/m2
+        hlp3            = soil_p_primary    ! occluded_P from Yang et al. 2013, g/m2
+        hlp4            = soil_p_occluded   ! primary_P from Yang et al. 2013, g/m2
+        soil_p_layer(:) = 9._wp             ! ???
         ! alternative: use [mg P/kg soil] measurement to upscale the data from Yang et al. 2013
-        hlp5        = 900._wp / 1000._wp ! g P / kg soil
-        ! arr_hlp5(:) = hlp5 * bulk_dens_corr_sl(1,:) / molar_mass_P ! SIP, mol P m-3
+        !hlp5        = 900._wp / 1000._wp ! g P / kg soil
+        !arr_hlp5(:) = hlp5 * bulk_dens_corr_sl(1,:) / molar_mass_P ! SIP, mol P m-3
       CASE("CON")
         arr_hlp5(:) = (/1.862_wp,2.924_wp,4.027_wp,4.048_wp,4.069_wp, &	
                        7.167_wp,10.855_wp,7.719_wp,18.75_wp,18.33_wp, &
-                       23.44_wp,25._wp,21.093_wp,21.875_wp,15.104_wp/) !,6.760_wp
-        hlp1 = soil_p_labile     !labile_P from Yang et al. 2013, g/m2
-        hlp2 = soil_p_slow       !slow_P from Yang et al. 2013, g/m2
-        hlp3 = soil_p_primary    !occluded_P from Yang et al. 2013, g/m2
-        hlp4 = soil_p_occluded   !primary_P from Yang et al. 2013, g/m2
-        soil_p_layer(:) = 9._wp 
+                       23.44_wp,25._wp,21.093_wp,21.875_wp,15.104_wp/)   ! ??? ; SIP, mol P m-3
+        hlp1            = soil_p_labile     ! labile_P from Yang et al. 2013, g/m2
+        hlp2            = soil_p_slow       ! slow_P from Yang et al. 2013, g/m2
+        hlp3            = soil_p_primary    ! occluded_P from Yang et al. 2013, g/m2
+        hlp4            = soil_p_occluded   ! primary_P from Yang et al. 2013, g/m2
+        soil_p_layer(:) = 9._wp             ! ???
         ! alternative: use [mg P/kg soil] measurement to upscale the data from Yang et al. 2013
-        hlp5        = 900._wp / 1000._wp ! g P / kg soil
-        ! arr_hlp5(:) = hlp5 * bulk_dens_corr_sl(1,:) / molar_mass_P ! SIP, mol P m-3
+        !hlp5        = 900._wp / 1000._wp ! g P / kg soil
+        !arr_hlp5(:) = hlp5 * bulk_dens_corr_sl(1,:) / molar_mass_P ! SIP, mol P m-3
     END SELECT
 
     !> 2.0 run calculations of soil-properties for all sites, i.e, all points of the chunk
     !! @TODO this is inconsistent with section 1.0 of this routine, as section 1.0 does not work for multiple points in a chunk
     DO isoil = 1, nsoil_sb
-      arr_hlp4(:) = MIN(2._wp * soil_lay_depth_center_sl(:,isoil) ** 0.5_wp, 3.4_wp) / 3.5_wp ! primary corrected for depth, [g P] 
-      arr_hlp2(:) = 0.8_wp ** (2._wp * soil_lay_depth_center_sl(:,isoil)) / 3.5_wp ! labile + slow
-      arr_hlp3(:) = MAX((1.0_wp - arr_hlp4(:) - arr_hlp2(:)), 0.2_wp / 3.5_wp) ! occluded corrected for depth
+      ! primary corrected for depth, [g P] 
+      arr_hlp4(:) = MIN(2._wp * soil_lay_depth_center_sl(:,isoil) ** 0.5_wp, 3.4_wp) / 3.5_wp ! ???
+      ! labile + slow
+      arr_hlp2(:) = 0.8_wp ** (2._wp * soil_lay_depth_center_sl(:,isoil)) / 3.5_wp ! ???
+      ! occluded corrected for depth
+      arr_hlp3(:) = MAX((1.0_wp - arr_hlp4(:) - arr_hlp2(:)), 0.2_wp / 3.5_wp) ! ???
 
       WHERE ((arr_hlp4(:) + arr_hlp2(:) + arr_hlp3(:)) > 1._wp)
         arr_hlp4(:) = arr_hlp4(:) / (arr_hlp4(:) + arr_hlp2(:) + arr_hlp3(:))
@@ -1032,15 +1017,15 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
       ENDWHERE
       
       WHERE (isoil < soil_p_layer(:)) 
-        po4_assoc_slow(:,isoil) = arr_hlp5(isoil) * (hlp1 + hlp2) / (hlp1 + hlp2 + hlp3 + hlp4) * 8._wp / 17._wp
+        po4_assoc_slow(:,isoil) = arr_hlp5(isoil) * (hlp1 + hlp2) / (hlp1 + hlp2 + hlp3 + hlp4) * 8._wp / 17._wp ! ???
         po4_occluded(:,isoil)   = arr_hlp5(isoil) * hlp3 / (hlp1 + hlp2 + hlp3 + hlp4)
         po4_primary(:,isoil)    = arr_hlp5(isoil) * hlp4 / (hlp1 + hlp2 + hlp3 + hlp4)
-        labile_P(:,isoil)       = arr_hlp5(isoil) * (hlp1 + hlp2) / (hlp1 + hlp2 + hlp3 + hlp4) * 9._wp / 17._wp !p_labile_sl in the follwing Eqn, [mol / m3]
+        labile_P(:,isoil)       = arr_hlp5(isoil) * (hlp1 + hlp2) / (hlp1 + hlp2 + hlp3 + hlp4) * 9._wp / 17._wp ! ???
       ELSEWHERE
-        po4_assoc_slow(:,isoil) = arr_hlp5(isoil) * arr_hlp2(:) * 8._wp / 17._wp
+        po4_assoc_slow(:,isoil) = arr_hlp5(isoil) * arr_hlp2(:) * 8._wp / 17._wp ! ???
         po4_occluded(:,isoil)   = arr_hlp5(isoil) * arr_hlp3(:)
         po4_primary(:,isoil)    = arr_hlp5(isoil) * arr_hlp4(:)
-        labile_P(:,isoil)       = arr_hlp5(isoil) * arr_hlp2(:) * 9._wp / 17._wp !p_labile_sl in the follwing Eqn, [mol / m3]
+        labile_P(:,isoil)       = arr_hlp5(isoil) * arr_hlp2(:) * 9._wp / 17._wp ! ???
       ENDWHERE
     ENDDO
 
