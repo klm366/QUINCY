@@ -703,7 +703,7 @@ CONTAINS
                                               emission_n2(:), &
                                               emission_n2_n15(:))
 
-    !> 11.1 update n15 for inorganic fluxes 
+    !> 11.1 update n15 for inorganic fluxes, subroutine called from simple model, requiring flux rates in [mol/m3/timestep]
     !! here the function is called for JSM: flux rates in [µmol/m3/s] (unit conversion is applied within the routine)
     !! (simple_1d is using the same function but uses flux rates in [mol/m3/timestep])
     CALL calc_sb_inorganic_n15_fluxes(nc, nsoil_sb, & 

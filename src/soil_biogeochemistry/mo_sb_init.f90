@@ -941,74 +941,79 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
       CASE("BBR")
         arr_hlp5(:) = (/9.24_wp,36.92_wp,39.44_wp,40.36_wp,42.75_wp, &	
                        45.72_wp,32.45_wp,95.89_wp,124.14_wp,133.93_wp, &
-                       100._wp,126._wp,122.18_wp,145._wp,90._wp/)       ! ??? ; SIP, mol P m-3
+                       100._wp,126._wp,122.18_wp,145._wp,90._wp/)       ! observed total SIP, mol P m-3
         hlp1            = soil_p_labile     ! labile_P from Yang et al. 2013, g/m2
         hlp2            = soil_p_slow       ! slow_P from Yang et al. 2013, g/m2
         hlp3            = soil_p_primary    ! occluded_P from Yang et al. 2013, g/m2
         hlp4            = soil_p_occluded   ! primary_P from Yang et al. 2013, g/m2
-        soil_p_layer(:) = 6._wp             ! ???
+        soil_p_layer(:) = 6._wp             ! field measurement depth corresponded model soil layers
         ! alternative: use [mg P/kg soil] measurement to upscale the data from Yang et al. 2013
         !hlp5        = 1750._wp / 1000._wp ! g P / kg soil
         !arr_hlp5(:) = hlp5 * bulk_dens_corr_sl(1,:) / molar_mass_P ! SIP, mol P m-3
       CASE("LUE")
         arr_hlp5(:) = (/0.8867_wp,3.187_wp,2.662_wp,4.887_wp,4.792_wp, &	
                        2.987_wp,3.313_wp,6.0616_wp,7.56_wp,5.787_wp, &
-                       5.932_wp,6.845_wp,8.294_wp,8.413_wp,8.532_wp/)   ! ??? ; SIP, mol P m-3
+                       5.932_wp,6.845_wp,8.294_wp,8.413_wp,8.532_wp/)   ! observed total SIP, mol P m-3
         hlp1            = soil_p_labile     ! labile_P from Yang et al. 2013, g/m2
         hlp2            = soil_p_slow       ! slow_P from Yang et al. 2013, g/m2
         hlp3            = soil_p_occluded   ! occluded_P from Yang et al. 2013, g/m2
-        hlp4            = soil_p_primary	  ! primary_P from Yang et al. 2013, g/m2
-        soil_p_layer(:) = 6._wp             ! ???
+        hlp4            = soil_p_primary	! primary_P from Yang et al. 2013, g/m2
+        soil_p_layer(:) = 6._wp             ! field measurement depth corresponded model soil layers
         ! alternative: use [mg P/kg soil] measurement to upscale the data from Yang et al. 2013
         !hlp5        = 120._wp / 1000._wp ! g P / kg soil
         !arr_hlp5(:) = hlp5 * bulk_dens_corr_sl(1,:) / molar_mass_P ! SIP, mol P m-3
       CASE("VES")
         arr_hlp5(:) = (/2.388_wp,8.509_wp,9.033_wp,10.811_wp,15.365_wp, &	
                        20.661_wp,22.721_wp,29.321_wp,30.952_wp,32.821_wp, &
-                       40.673_wp,41.880_wp,41.111_wp,48.438_wp,54._wp/)   ! ??? ; SIP, mol P m-3
+                       40.673_wp,41.880_wp,41.111_wp,48.438_wp,54._wp/)   ! observed total SIP, mol P m-3
         hlp1            = soil_p_labile     ! labile_P from Yang et al. 2013, g/m2
         hlp2            = soil_p_slow       ! slow_P from Yang et al. 2013, g/m2
         hlp3            = soil_p_primary    ! occluded_P from Yang et al. 2013, g/m2
         hlp4            = soil_p_occluded   ! primary_P from Yang et al. 2013, g/m2
-        soil_p_layer(:) = 6._wp             ! ???
+        soil_p_layer(:) = 6._wp             ! field measurement depth corresponded model soil layers
         ! alternative: use [mg P/kg soil] measurement to upscale the data from Yang et al. 2013
         !hlp5        = 900._wp / 1000._wp ! g P / kg soil
         !arr_hlp5(:) = hlp5 * bulk_dens_corr_sl(1,:) / molar_mass_P ! SIP, mol P m-3
       CASE("MIT")
         arr_hlp5(:) = (/3.723_wp,6.272_wp,7.556_wp,8.292_wp,6.93_wp, &	
                        13.731_wp,13.296_wp,16.511_wp,12.890_wp,15._wp, &
-                       16.667_wp,16.875_wp,17.5_wp,15.104_wp,15.625_wp/)  ! ??? ; SIP, mol P m-3
+                       16.667_wp,16.875_wp,17.5_wp,15.104_wp,15.625_wp/)  ! observed total SIP, mol P m-3
         hlp1            = soil_p_labile     ! labile_P from Yang et al. 2013, g/m2
         hlp2            = soil_p_slow       ! slow_P from Yang et al. 2013, g/m2
         hlp3            = soil_p_primary    ! occluded_P from Yang et al. 2013, g/m2
         hlp4            = soil_p_occluded   ! primary_P from Yang et al. 2013, g/m2
-        soil_p_layer(:) = 9._wp             ! ???
+        soil_p_layer(:) = 9._wp             ! field measurement depth corresponded model soil layers
         ! alternative: use [mg P/kg soil] measurement to upscale the data from Yang et al. 2013
         !hlp5        = 900._wp / 1000._wp ! g P / kg soil
         !arr_hlp5(:) = hlp5 * bulk_dens_corr_sl(1,:) / molar_mass_P ! SIP, mol P m-3
       CASE("CON")
         arr_hlp5(:) = (/1.862_wp,2.924_wp,4.027_wp,4.048_wp,4.069_wp, &	
                        7.167_wp,10.855_wp,7.719_wp,18.75_wp,18.33_wp, &
-                       23.44_wp,25._wp,21.093_wp,21.875_wp,15.104_wp/)   ! ??? ; SIP, mol P m-3
+                       23.44_wp,25._wp,21.093_wp,21.875_wp,15.104_wp/)   ! observed total SIP, mol P m-3
         hlp1            = soil_p_labile     ! labile_P from Yang et al. 2013, g/m2
         hlp2            = soil_p_slow       ! slow_P from Yang et al. 2013, g/m2
         hlp3            = soil_p_primary    ! occluded_P from Yang et al. 2013, g/m2
         hlp4            = soil_p_occluded   ! primary_P from Yang et al. 2013, g/m2
-        soil_p_layer(:) = 9._wp             ! ???
+        soil_p_layer(:) = 9._wp             ! field measurement depth corresponded model soil layers
         ! alternative: use [mg P/kg soil] measurement to upscale the data from Yang et al. 2013
         !hlp5        = 900._wp / 1000._wp ! g P / kg soil
         !arr_hlp5(:) = hlp5 * bulk_dens_corr_sl(1,:) / molar_mass_P ! SIP, mol P m-3
     END SELECT
 
-    !> 2.0 run calculations of soil-properties for all sites, i.e, all points of the chunk
+    !> 2.0 calculate the initial slow P, occluded P, primary P pool, and labile_P
     !! @TODO this is inconsistent with section 1.0 of this routine, as section 1.0 does not work for multiple points in a chunk
+    !! based on the assumption that soil P pool are linearly corrected with soil weight
+    !! the depth correction of initial P pool distributions are fitted against the observed pattern of a young cambisol soil 
+    !! with basalt as parent material (BBR, Lang et al. 2017) that, 
+    !! the proportion of: labile+sorbed P decreases with increasing depth, and primary P increases with increasing depth (Yu et al., 2020)
     DO isoil = 1, nsoil_sb
       ! primary corrected for depth, [g P] 
-      arr_hlp4(:) = MIN(2._wp * soil_lay_depth_center_sl(:,isoil) ** 0.5_wp, 3.4_wp) / 3.5_wp ! ???
+      arr_hlp4(:) = MIN(k2_p_pool_depth_corr * soil_lay_depth_center_sl(:,isoil) ** k4_p_pool_depth_corr, &
+                    (k1_p_pool_depth_corr - k_p_pool_depth_corr_min_occlud)) / k1_p_pool_depth_corr
       ! labile + slow
-      arr_hlp2(:) = 0.8_wp ** (2._wp * soil_lay_depth_center_sl(:,isoil)) / 3.5_wp ! ???
+      arr_hlp2(:) = k3_p_pool_depth_corr ** (k2_p_pool_depth_corr * soil_lay_depth_center_sl(:,isoil)) / k1_p_pool_depth_corr
       ! occluded corrected for depth
-      arr_hlp3(:) = MAX((1.0_wp - arr_hlp4(:) - arr_hlp2(:)), 0.2_wp / 3.5_wp) ! ???
+      arr_hlp3(:) = MAX((1.0_wp - arr_hlp4(:) - arr_hlp2(:)), k_p_pool_depth_corr_min_occlud / k1_p_pool_depth_corr) 
 
       WHERE ((arr_hlp4(:) + arr_hlp2(:) + arr_hlp3(:)) > 1._wp)
         arr_hlp4(:) = arr_hlp4(:) / (arr_hlp4(:) + arr_hlp2(:) + arr_hlp3(:))
@@ -1017,15 +1022,15 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
       ENDWHERE
       
       WHERE (isoil < soil_p_layer(:)) 
-        po4_assoc_slow(:,isoil) = arr_hlp5(isoil) * (hlp1 + hlp2) / (hlp1 + hlp2 + hlp3 + hlp4) * 8._wp / 17._wp ! ???
+        po4_assoc_slow(:,isoil) = arr_hlp5(isoil) * (hlp1 + hlp2) / (hlp1 + hlp2 + hlp3 + hlp4) * (1._wp - p_labile_slow_global_avg)
         po4_occluded(:,isoil)   = arr_hlp5(isoil) * hlp3 / (hlp1 + hlp2 + hlp3 + hlp4)
         po4_primary(:,isoil)    = arr_hlp5(isoil) * hlp4 / (hlp1 + hlp2 + hlp3 + hlp4)
-        labile_P(:,isoil)       = arr_hlp5(isoil) * (hlp1 + hlp2) / (hlp1 + hlp2 + hlp3 + hlp4) * 9._wp / 17._wp ! ???
+        labile_P(:,isoil)       = arr_hlp5(isoil) * (hlp1 + hlp2) / (hlp1 + hlp2 + hlp3 + hlp4) * p_labile_slow_global_avg
       ELSEWHERE
-        po4_assoc_slow(:,isoil) = arr_hlp5(isoil) * arr_hlp2(:) * 8._wp / 17._wp ! ???
+        po4_assoc_slow(:,isoil) = arr_hlp5(isoil) * arr_hlp2(:) * (1._wp - p_labile_slow_global_avg)
         po4_occluded(:,isoil)   = arr_hlp5(isoil) * arr_hlp3(:)
         po4_primary(:,isoil)    = arr_hlp5(isoil) * arr_hlp4(:)
-        labile_P(:,isoil)       = arr_hlp5(isoil) * arr_hlp2(:) * 9._wp / 17._wp ! ???
+        labile_P(:,isoil)       = arr_hlp5(isoil) * arr_hlp2(:) * p_labile_slow_global_avg
       ENDWHERE
     ENDDO
 

@@ -532,27 +532,27 @@ CONTAINS
     km_rootc_biochem_po4      = 20._wp                                        ! estimated
     km_rootc_weath_po4        = 10._wp                                        ! estimated
     km_root_enzyme_weath_po4  = 1._wp / molar_mass_C                          ! estimated
-    biomin_thres_pc           = 1._wp / 5000._wp                              ! ???
+    biomin_thres_pc           = 1._wp / 5000._wp                              ! estimated
 
     ! soil P pool
-    k1_p_pool_depth_corr              = 3.5_wp          ! ???
-    k2_p_pool_depth_corr              = 2._wp           ! ???
-    k3_p_pool_depth_corr              = 0.8_wp          ! ???
-    k4_p_pool_depth_corr              = 0.5_wp          ! ???
-    k_p_pool_depth_corr_min_occlud    = 0.1_wp          ! ???
-    p_labile_slow_global_avg          = 9._wp / 17._wp  ! ???
-    k_sb_pool_dom_assoc_c_corr        = 5.0_wp          ! ???
+    k1_p_pool_depth_corr              = 3.5_wp          ! calibrated
+    k2_p_pool_depth_corr              = 2._wp           ! calibrated
+    k3_p_pool_depth_corr              = 0.8_wp          ! calibrated
+    k4_p_pool_depth_corr              = 0.5_wp          ! calibrated
+    k_p_pool_depth_corr_min_occlud    = 0.1_wp          ! calibrated
+    p_labile_slow_global_avg          = 9._wp / 17._wp  ! Yang et al. 2013
+    k_sb_pool_dom_assoc_c_corr        = 5.0_wp          ! calibrated
 
     ! sb_pool default init values
-    def_sb_pool_metabol_litter        = 100.0_wp        ! ???
-    def_sb_pool_simple_struct_litter  = 100.0_wp        ! ???
-    def_sb_pool_jsm_struct_litter     = 1000.0_wp       ! ???
-    def_sb_pool_woody_litter          = 1000.0_wp       ! ???
-    def_sb_pool_fast_som              = 1500.0_wp       ! ???
-    def_sb_pool_slow_som              = 10000.0_wp      ! ???
-    def_sb_pool_microbial_biomass     = 30.0_wp         ! ???
-    def_sb_pool_microbial_necromass   = 150.0_wp        ! ???
-    def_sb_pool_dom                   = 1.0_wp          ! ???
+    def_sb_pool_metabol_litter        = 100.0_wp        ! Thum et al. 2019, GMD
+    def_sb_pool_simple_struct_litter  = 100.0_wp        ! Thum et al. 2019, GMD
+    def_sb_pool_jsm_struct_litter     = 1000.0_wp       ! Yu et al. 2020, GMD
+    def_sb_pool_woody_litter          = 1000.0_wp       ! Thum et al. 2019, GMD
+    def_sb_pool_fast_som              = 1500.0_wp       ! Thum et al. 2019, GMD
+    def_sb_pool_slow_som              = 10000.0_wp      ! Thum et al. 2019, GMD
+    def_sb_pool_microbial_biomass     = 30.0_wp         ! Yu et al. 2020, GMD
+    def_sb_pool_microbial_necromass   = 150.0_wp        ! Yu et al. 2020, GMD
+    def_sb_pool_dom                   = 1.0_wp          ! Yu et al. 2020, GMD
 
     !! BLARPP only temporarily, mol / m2 !!  @TODO
     nh4_solute_prescribe = 0.05_wp
