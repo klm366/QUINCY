@@ -40,7 +40,7 @@ PROGRAM jsb4_driver
   USE mo_jsb_grid_iface,     ONLY: get_lat, get_lon
   USE mo_jsb_namelist_iface, ONLY: POSITIONED, open_nml, position_nml
   USE mo_jsb_parallel,       ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel, &
-    &                              init_mpi_communicators, init_parallel_iface, mpi_comm, p_pe
+    &                              init_mpi_communicators, init_parallel_iface, mpi_comm
   USE mo_jsb_test,           ONLY: read_interface_vars, read_interface_variables
 
   ! Seems to be available in both ICON and ECHAM
@@ -58,7 +58,7 @@ PROGRAM jsb4_driver
 
   ! io
   USE mo_io,               ONLY: write_streams, IO_read_streams
-  USE mo_filename,         ONLY: out_filetype
+  USE mo_filename,         ONLY: out_filetype, rerun_filetype
   USE mo_netcdf,           ONLY: nf_check, nf_close, add_dim, SURFACE
   USE mo_memory_base,      ONLY: default_output, NETCDF, NETCDF2,  NETCDF4
   USE mo_output,           ONLY: open_output_streams, close_output_streams, out_streams, init_output
@@ -177,6 +177,7 @@ PROGRAM jsb4_driver
   model_id = 1
   default_output = .TRUE.
   out_filetype = NETCDF4
+  rerun_filetype = NETCDF4
   lyaxt_transposition = .FALSE.
 
   ! Start MPI
@@ -376,8 +377,8 @@ PROGRAM jsb4_driver
   CALL jsbach_init_after_restart(model_id)
 
   CALL init_output
-  ! CALL open_output_streams
-  ! CALL mvstream_update_cache
+  CALL open_output_streams
+  CALL mvstream_update_cache
 
 #ifdef HAVE_CDIPIO
   ! change from I/O STAGE_DEFINITION to STAGE_TIMELOOP
@@ -401,7 +402,8 @@ PROGRAM jsb4_driver
     !IF (l_trigfiles .AND. .NOT. is_time_experiment_start(current_datetime_ptr)) THEN
     IF (l_trigfiles) THEN
       CALL message('INFO','Closing and re-opening output streams')
-      IF (.NOT. is_time_experiment_start(current_datetime_ptr)) CALL close_output_streams
+      ! IF (.NOT. is_time_experiment_start(current_datetime_ptr)) CALL close_output_streams
+      CALL close_output_streams
       CALL open_output_streams
     ENDIF
 

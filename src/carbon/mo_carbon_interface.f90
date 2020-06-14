@@ -626,12 +626,12 @@ CONTAINS
       one_counter = 0._wp           
     END IF     !  PHS: initial carbon
     
-    IF (  is_time_experiment_start(options%current_datetime)  )  THEN
+ !   IF (  is_time_experiment_start(options%current_datetime)  )  THEN
       seed_depth_sl = jedi_soil_depth_to_layers_1d(  SPREAD(0.05_wp, NCOPIES=nc, DIM=1)  , soil_w%dz(:))         ! Jedi assumes germination of seed depends on the first 0.5 m of soil wetness
       CALL get_water_in_root_zone(vol_field_cap_sl(:,:) * soil_depth_sl(:,:), &
         &                         soil_depth_sl(:,:), seed_depth_sl(:,:),     &
         &                         seed_maxmoist(:))
-    END IF
+  !  END IF
     
     CALL get_water_in_root_zone(vol_field_cap_sl(:,:) * soil_depth_sl(:,:), &
       &                         soil_depth_sl(:,:), root_depth_sl(:,:), root_maxmoist(:))

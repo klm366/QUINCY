@@ -619,7 +619,7 @@ CONTAINS
       & t_cf('ff_grow_T', 'Growing condition respect to air temperature.'),    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
-      & output_level=BASIC,loutput=.TRUE.,                                                      &
+      & output_level=BASIC,loutput=.FALSE.,                                                      &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.FALSE. ) 
         
     CALL jsb_add_var( mem, 'ff_grow_G', mem%ff_grow_G,                                      &
@@ -627,7 +627,7 @@ CONTAINS
       & t_cf('ff_grow_G', 'Germination condition'),    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
-      & output_level=BASIC,loutput=.TRUE.,                                                      &
+      & output_level=BASIC,loutput=.FALSE.,                                                      &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.FALSE. )  
       
     CALL jsb_add_var( mem, 'ff_grow_W', mem%ff_grow_W,                                      &
@@ -635,7 +635,7 @@ CONTAINS
       & t_cf('ff_grow_W', 'Growing condition respect to soil wetness.'),    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
-      & output_level=BASIC,loutput=.TRUE.,                                                      &
+      & output_level=BASIC,loutput=.FALSE.,                                                      &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.FALSE. )  
     
     CALL jsb_add_var( mem, 'ff_npp', mem%ff_npp,                                              &
@@ -643,7 +643,7 @@ CONTAINS
       & t_cf('ff_npp', 'Senescence condition respect to net primary production.'),           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
-      & output_level=BASIC,loutput=.TRUE.,                                                      &
+      & output_level=BASIC,loutput=.FALSE.,                                                      &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.FALSE. )  
     
     CALL jsb_add_var( mem, 'flx_germ', mem%flx_germ,                              &
@@ -830,7 +830,7 @@ CONTAINS
       & t_cf('ff_dTdt', 'trend of the temperature change'),           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
-      & output_level=BASIC,loutput=.TRUE.,                                                      &
+      & output_level=BASIC,loutput=.FALSE.,                                                      &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.FALSE. )   
       
     CALL jsb_add_var( mem, 'ff_grow_T_yDayMean', mem%ff_grow_T_yDayMean,                              &
@@ -1528,7 +1528,7 @@ CONTAINS
       & t_cf('NPP_act_yDayMean_ta', 'mol(C) m-2 s-1', 'Actual NPP Rate of the previous day.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                          &
       & prefix, suffix,                                                                             &
-      & output_level=BASIC,                                                                                &
+      & output_level=BASIC,  loutput=.TRUE.,                                                        &
       & lrestart=.FALSE., initval_r=1.0E-13_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3. Initializing to zero would result
                                                   ! in a zero divide in the first time step of an initialized run.
 
@@ -1537,7 +1537,7 @@ CONTAINS
       & t_cf('GPP_yDayMean_ta', 'mol(C) m-2 s-1', 'Mean GPP Rate of the previous day.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
       & prefix, suffix,                                                                  &
-      & output_level=BASIC,                                                                                &
+      & output_level=BASIC,  loutput=.TRUE.,                                             &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
 
@@ -1647,7 +1647,7 @@ CONTAINS
         & 'Test for c conservation on allocation and respiration.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
       & prefix, suffix,                                                           &
-      & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      & loutput = .FALSE.,lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
       CALL jsb_add_var( mem,'max_green', mem%current_max_green,      &
