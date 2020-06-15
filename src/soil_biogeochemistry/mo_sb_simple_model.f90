@@ -2352,11 +2352,6 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
         ENDWHERE
       ENDWHERE
     ENDWHERE
-
-    !> 3.2 Limit biomineralisation to the actual rate of biomineralisation required to meet microbial and plant demands
-    !!      and substract from slow=residue pool 
-    ! sb_loss%residue%phosphorus(:,:) = sb_loss%residue%phosphorus(:,:) + & 
-                                                     ! biochem_mineralisation_po4(:,:)
   
   END SUBROUTINE calc_actual_flux_rates
   

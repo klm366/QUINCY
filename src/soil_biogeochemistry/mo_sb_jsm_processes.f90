@@ -414,11 +414,13 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   !> calculate sinks of the bio-available inorganic po4 and nh4 and no3 pools 
   !! ECA approach (Equilibrium Chemistry Approximation) modified based on \n
-  !! Zhu et al. (2016) and Zhu et al. (2017), fast equilibrium based on Van der Zee et al. 1989
+  !! Zhu et al. (2016) and Zhu et al. (2017), fast exchange of po4 and nh4 based on Van der Zee et al. (1989)
   !!
-  !! Input: Pi solute concentration, microbial biomass, fine root biomass, sorption capacity, soil Pi pools, rate modifiers
-  !!
-  !! Output: microbial and plant inorganic uptake rates, fast adsorption and desorption rates
+  !! Input: solute concentration, microbial biomass, fine root biomass, rate modifiers, km values, \n
+  !!        sorption capacity and available sorption sites (po4, nh4)
+  !! 
+  !! Output: microbial and plant inorganic uptake rates, fast adsorption rates (po4, nh4), \n
+  !!         nitrification/denitrification rates (nh4/no3)
   !-----------------------------------------------------------------------------------------------------
   ELEMENTAL SUBROUTINE calc_sinking_flux(lctlib_vmax_uptake, vmax_nitri_denitri, substrate,sb_adsorp_scheme, &
                                              microbial_carbon, fine_root_carbon, solute, &
@@ -483,7 +485,7 @@ CONTAINS
     SELECT CASE (substrate)
       CASE ("po4")
         f_mic_carrier     = f_mic_carrier_po4
-        km1_mic_uptake     = km_mic_uptake_po4
+        km1_mic_uptake    = km_mic_uptake_po4
         km_plant_uptake   = km_plant_uptake_po4
         f_plant_carrier   = f_plant_carrier_po4
         k_mic_uptake      = k_mic_uptake_po4
@@ -498,7 +500,7 @@ CONTAINS
         reaction_volume   = 0._wp
       CASE ("nh4")
         f_mic_carrier     = f_mic_carrier_n
-        km1_mic_uptake     = km_mic_uptake_nh4
+        km1_mic_uptake    = km_mic_uptake_nh4
         km2_mic_uptake    = km_mic_uptake_no3
         km_plant_uptake   = km_plant_uptake_nh4
         km1_plant_uptake  = km_plant_uptake_no3
@@ -515,7 +517,7 @@ CONTAINS
         reaction_volume   = 1._wp - anaerobic_volume_fraction
       CASE ("no3")
         f_mic_carrier     = f_mic_carrier_n
-        km1_mic_uptake     = km_mic_uptake_no3
+        km1_mic_uptake    = km_mic_uptake_no3
         km2_mic_uptake    = km_mic_uptake_nh4
         km_plant_uptake   = km_plant_uptake_no3
         km1_plant_uptake  = km_plant_uptake_nh4
@@ -613,7 +615,7 @@ CONTAINS
     END SELECT
 
     !> 2.0 
-    !! check the availability of soluable po4 considering all sourcing fluxes
+    !! check the availability of solute considering all sourcing fluxes
     hlp1 = microbial_uptake + plant_uptake + fast_adsorpt + nitri_denitri_fication
     hlp2 = solute_ava / dtime * 1.e6_wp
     IF (hlp1 > hlp2 .AND. hlp1 > 0._wp)THEN
