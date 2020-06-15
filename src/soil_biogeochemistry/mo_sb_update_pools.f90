@@ -763,9 +763,9 @@ CONTAINS
       qmax_nh4_mineral_act(:,:) = qmax_nh4(:,:)
     ENDIF
 
-    !> 10.2 update NH4 pools
+    !> 10.2 update NH4 pools if not prescribed
     !! 
-    IF(.NOT.dsl4jsb_Config(SB_)%flag_sb_prescribe_nh4)THEN
+    IF(.NOT. dsl4jsb_Config(SB_)%flag_sb_prescribe_nh4) THEN
       hlp1(:,:) = (net_mineralisation_nh4(:,:) + asymb_n_fixation(:,:) + transport_nh4_solute(:,:) - & 
                    plant_uptake_nh4_sl(:,:) - mycorrhiza_uptake_nh4_sl(:,:) - & 
                    nitrification_no3(:,:) - nitrification_noy(:,:) - nitrification_n2o(:,:) - &
@@ -791,7 +791,7 @@ CONTAINS
       hlp2(:,1) = hlp2(:,1) + nhx_n15_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
 
       WHERE ((nh4_n15_solute(:,:) + nh4_n15_assoc(:,:)) < -hlp2(:,:))
-        hlp2(:,:) = - (nh4_n15_solute(:,:) + nh4_n15_assoc(:,:))
+        hlp2(:,:) = -(nh4_n15_solute(:,:) + nh4_n15_assoc(:,:))
       ENDWHERE 
       WHERE (nh4_solute(:,:) + nh4_assoc(:,:) > eps8)
         partition_coef(:,:) = nh4_solute(:,:) / (nh4_solute(:,:) + nh4_assoc(:,:))
@@ -801,11 +801,10 @@ CONTAINS
       nh4_n15_assoc(:,:)  = (1._wp - partition_coef(:,:)) * (nh4_n15_solute(:,:) + nh4_n15_assoc(:,:) + hlp2(:,:))
     ENDIF
 
-    !> 10.3 update mineral P pools
+    !> 10.3 update mineral P pools if not prescibed
     !! 
     IF(.NOT. dsl4jsb_Config(SB_)%flag_sb_prescribe_po4) THEN
-      CALL calc_pinorg_dynamics(nc, nsoil_sb, &
-                                       dtime, &
+      CALL calc_p_inorg_dynamics(nc, nsoil_sb, &
                                        TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
                                        TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &
                                        po4_solute(:,:), &
@@ -830,9 +829,10 @@ CONTAINS
                                        slow_exchange_po4(:,:), &
                                        fast_exchange_po4(:,:))
 
-      !! not update the primary and the occlusion pool during transient-forcing spinup (i.e., before the actual transient simulation)
       po4_assoc_slow(:,:)   = po4_assoc_slow(:,:) + &
                               (slow_exchange_po4(:,:) - occlusion_po4(:,:) + transport_po4_assoc_slow(:,:)) * dtime / 1.e6_wp
+
+      !! not update the primary and the occlusion pool during transient-forcing spinup (i.e., before the actual transient simulation)
       IF (model%config%l_transient_spinup) THEN
         po4_occluded(:,:)   = po4_occluded(:,:)   + transport_po4_occluded(:,:) * dtime / 1.e6_wp
         po4_primary(:,:)    = po4_primary(:,:)    + transport_po4_primary(:,:)  * dtime / 1.e6_wp
@@ -1047,42 +1047,39 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
   !> Subroutine to calculate fast_exchange_po4 based on Langmuir equilibrium(Yang et al. 2014)
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_pinorg_dynamics(nc, nsoil_sb, &
-                                  dtime, &
-                                  sb_model_scheme, &
-                                  sb_adsorp_scheme, &
-                                  po4_solute, &
-                                  po4_assoc_fast, &
-                                  po4_assoc_slow, &
-                                  qmax_po4_mineral_act, &
-                                  km_adsorpt_po4_act, &
-                                  k_adsorpt_po4_act, &
-                                  k_desorpt_po4_act, &
-                                  p_deposition_sl, &
-                                  biochem_mineralisation_po4, &
-                                  mycorrhiza_uptake_po4_sl, &
-                                  plant_uptake_po4_sl, &
-                                  microbial_uptake_po4_sl, &
-                                  gross_mineralisation_po4, &
-                                  net_mineralisation_po4, &
-                                  transport_po4_solute, &
-                                  transport_po4_assoc_fast, &
-                                  transport_po4_assoc_slow, &
-                                  weathering_po4, &
-                                  occlusion_po4, &
-                                  slow_exchange_po4, &
-                                  fast_exchange_po4)
+  SUBROUTINE calc_p_inorg_dynamics(nc, nsoil_sb, &
+                                   sb_model_scheme, &
+                                   sb_adsorp_scheme, &
+                                   po4_solute, &
+                                   po4_assoc_fast, &
+                                   po4_assoc_slow, &
+                                   qmax_po4_mineral_act, &
+                                   km_adsorpt_po4_act, &
+                                   k_adsorpt_po4_act, &
+                                   k_desorpt_po4_act, &
+                                   p_deposition_sl, &
+                                   biochem_mineralisation_po4, &
+                                   mycorrhiza_uptake_po4_sl, &
+                                   plant_uptake_po4_sl, &
+                                   microbial_uptake_po4_sl, &
+                                   gross_mineralisation_po4, &
+                                   net_mineralisation_po4, &
+                                   transport_po4_solute, &
+                                   transport_po4_assoc_fast, &
+                                   transport_po4_assoc_slow, &
+                                   weathering_po4, &
+                                   occlusion_po4, &
+                                   slow_exchange_po4, &
+                                   fast_exchange_po4)
 
     USE mo_sb_constants
     USE mo_sb_jsm_processes,    ONLY: calc_fast_po4
-    USE mo_jsb_math_constants,  ONLY: eps8
+    USE mo_jsb_math_constants,  ONLY: eps8, dtime
 
     IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
+
     INTEGER,                                          INTENT(in)    :: nc, &                         !< dimensions
                                                                        nsoil_sb
-    REAL(wp),                                         INTENT(in)    :: dtime                         !< length of one time step in seconds
     CHARACTER(len=*),                                 INTENT(in)    :: sb_model_scheme               !< from sb config
     CHARACTER(len=*),                                 INTENT(in)    :: sb_adsorp_scheme              !< eca_full or eca_none
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: po4_assoc_slow, &             !< slow minerally associated PO4 pool [mol/m3]
@@ -1106,20 +1103,14 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                                        occlusion_po4, &              !< phosphorus occlusion rate [mol P / m3 / timestep]
                                                                        slow_exchange_po4             !< phosphorus desorption rate, assoc_fast --> assoc_slow [mol P / m3 / timestep]
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(out)   :: fast_exchange_po4             !< phosphorus adsorption rate, solute --> assoc_fast [mol P / m3 / timestep]
-    ! ---------------------------
-    ! 0.2 Local
-    REAL(wp), DIMENSION(nc, nsoil_sb)                :: hlp1, hlp2, hlp3, hlp4, hlp5, partition_coef
 
-    INTEGER                                          :: isoil                !< loop over nsoil_sb     
-    CHARACTER(len=*), PARAMETER                 :: routine = TRIM(modname)//':calc_pinorg_dynamics'
-
-
+    REAL(wp), DIMENSION(nc, nsoil_sb)           :: hlp1, hlp2, hlp3, hlp4, hlp5, partition_coef
+    INTEGER                                     :: isoil                !< loop over nsoil_sb     
+    CHARACTER(len=*), PARAMETER                 :: routine = TRIM(modname)//':calc_p_inorg_dynamics'
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
-    
-
 
     !> 1.0 limit to possible assoc_slow, simple_0d model
     !!
@@ -1212,11 +1203,11 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                          km_adsorpt_po4_act(:,:), qmax_po4_mineral_act(:,:))
         po4_solute(:,:)        = po4_solute(:,:) + partition_coef(:,:) * hlp1(:,:)
         po4_assoc_fast(:,:)    = po4_assoc_fast(:,:)  + (1._wp - partition_coef(:,:)) * hlp1(:,:) 
-        fast_exchange_po4(:,:) = ((1._wp - partition_coef(:,:)) * hlp1(:,:)+hlp2(:,:)) * 1.e6_wp / dtime
+        fast_exchange_po4(:,:) = ((1._wp - partition_coef(:,:)) * hlp1(:,:) + hlp2(:,:)) * 1.e6_wp / dtime
       ENDIF
     ENDIF
 
-  END SUBROUTINE calc_pinorg_dynamics
+  END SUBROUTINE calc_p_inorg_dynamics
 
 
   !-----------------------------------------------------------------------------------------------------

@@ -38,7 +38,7 @@ MODULE mo_sb_jsm_processes
 
   PRIVATE
   PUBLIC :: calc_litter_turnover, calc_depolymerisation, & 
-            calc_microbial_turnover,calc_microbial_growth, &
+            calc_microbial_turnover, calc_microbial_growth, &
             calc_bulk_soil_carbon, calc_bulk_density_correction, calc_qmax_bulk_density_correction, &
             calc_om_sorption, calc_depolymerisation_SESAM, &
             calc_inorganic_uptake, calc_sinking_flux, calc_sourcing_flux_po4, &
@@ -239,29 +239,26 @@ CONTAINS
   !! Input: rate modifiers and source pools
   !!
   !! Output: biochemical P mineralization rate and loss of source pools, gross P mineralization, 
-  !!         weathering, occlusion and (slow) desorption
+  !!         weathering, occlusion and (slow) desorption, microbial uptake
   !-----------------------------------------------------------------------------------------------------
-  ELEMENTAL SUBROUTINE calc_sourcing_flux_po4(flag_sb_prescribe_po4, microbial_carbon, & 
+  ELEMENTAL SUBROUTINE calc_sourcing_flux_po4(flag_sb_prescribe_po4, microbial_carbon, &                            ! in
                                             dom_carbon, dom_nitrogen, dom_phosphorus, &
                                             rtm_mic_uptake, rmm_mic_uptake, rtm_hsc, rmm_hsc, &
                                             rtm_sorption, rmm_sorption, rtm_desorption, rmm_desorption, &
                                             dom_assoc_po4, residue_assoc_po4, residue_po4, &
                                             dom_assoc_carbon, residue_assoc_carbon, residue_carbon, &
-                                            loss_dom_assoc_po4, loss_residue_assoc_po4, loss_residue_po4, & 
                                             solute_po4, solute_nh4, solute_no3, &
                                             assoc_fast, assoc_slow, po4_primary, & 
-                                            bulk_dens_sl, volume_min_sl, root_carbon_sl, vmax_weath_mineral_sl, &
-                                            biochem_min_po4, gross_mineralisation_po4, weathering_po4, &
+                                            bulk_dens_sl, volume_min_sl, root_carbon_sl, vmax_weath_mineral_sl, &   ! in
+                                            loss_dom_assoc_po4, loss_residue_assoc_po4, loss_residue_po4, &         ! inout                                            
+                                            biochem_min_po4, gross_mineralisation_po4, weathering_po4, &            ! out
                                             mic_upt_nh4, mic_upt_no3, mic_upt_po4, &
                                             occlusion_po4, slow_exchange_po4)
-
 
     USE mo_sb_constants
 
     IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
-    ! @TODO sequence of variable definition does NOT correspond with sequence of subroutine arguments !
+
     LOGICAL,  INTENT(in)            :: flag_sb_prescribe_po4     !< whether PO4 is prescribed or not
     REAL(wp), INTENT(in)            :: microbial_carbon          !< microbial carbon density (mol / m3)
     REAL(wp), INTENT(in)            :: dom_carbon                !< dom carbon density (mol / m3)
@@ -297,24 +294,20 @@ CONTAINS
     REAL(wp), INTENT(out)           :: biochem_min_po4           !< phosphorus biochemical mineralization rate, [µmol P /m3 /s]
     REAL(wp), INTENT(out)           :: gross_mineralisation_po4  !< phosphorus gross(biological) mineralization rate, [µmol P /m3 /s]
     REAL(wp), INTENT(out)           :: weathering_po4            !< phosphorus weathering rate [µmol P / m3 / s]
-    REAL(wp), INTENT(out)           :: occlusion_po4             !< phosphorus occlusion rate, assoc_slow --> occluded [µmol P / m3 / s]
-    REAL(wp), INTENT(out)           :: slow_exchange_po4         !< phosphorus desorption rate, assoc_fast --> assoc_slow [µmol P / m3 / s]
     REAL(wp), INTENT(out)           :: mic_upt_nh4               !< microbial nh4 uptake rate [µmol N / m3 / s], for eca_none only
     REAL(wp), INTENT(out)           :: mic_upt_no3               !< microbial no3 uptake rate [µmol N / m3 / s], for eca_none only
     REAL(wp), INTENT(out)           :: mic_upt_po4               !< microbial po4 uptake rate [µmol P / m3 / s], for eca_none only
-    ! ---------------------------    
-    ! 0.2 Local
+    REAL(wp), INTENT(out)           :: occlusion_po4             !< phosphorus occlusion rate, assoc_slow --> occluded [µmol P / m3 / s]
+    REAL(wp), INTENT(out)           :: slow_exchange_po4         !< phosphorus desorption rate, assoc_fast --> assoc_slow [µmol P / m3 / s]
+
     REAL(wp)                        :: hlp1, hlp2, hlp3, hlp4, hlp5, hlp6, hlp7, &
                                        uptake_c, f_uptake, uptake_n, uptake_p, mic_upt_n, &
-                                       SOM_PC
+                                       som_pc
     CHARACTER(len=*), PARAMETER     :: routine = TRIM(modname)//':calc_sourcing_flux_po4'
-    ! ---------------------------
-
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
-
 
     !> 1.0 Calculates the biochemical P mineralization, and the loss of the contributing pools.
     !! P is assumed to clevage out from dom associated, residue and residue associated 
@@ -333,11 +326,11 @@ CONTAINS
           IF (dom_assoc_carbon <eps8) THEN
             hlp5 = 0.0_wp
           ELSE
-            SOM_PC = dom_assoc_po4 / dom_assoc_carbon
-            IF (SOM_PC < biomin_thres_pc) THEN
+            som_pc = dom_assoc_po4 / dom_assoc_carbon
+            IF (som_pc < biomin_thres_pc) THEN
               hlp5 = 0.0_wp
             ELSE 
-              hlp5 = SOM_PC / ( km_pc_biochem_po4 + SOM_PC)
+              hlp5 = som_pc / ( km_pc_biochem_po4 + som_pc)
             ENDIF 
           ENDIF
           loss_dom_assoc_po4     = loss_dom_assoc_po4     + biochem_min_po4 * dom_assoc_po4 * hlp5 * dtime
@@ -346,11 +339,11 @@ CONTAINS
           IF (residue_assoc_carbon <eps8) THEN
             hlp6 = 0.0_wp
           ELSE
-            SOM_PC = residue_assoc_po4 / residue_assoc_carbon
-            IF (SOM_PC < biomin_thres_pc) THEN
+            som_pc = residue_assoc_po4 / residue_assoc_carbon
+            IF (som_pc < biomin_thres_pc) THEN
               hlp6 = 0.0_wp
             ELSE 
-              hlp6 = SOM_PC / ( km_pc_biochem_po4 + SOM_PC)
+              hlp6 = som_pc / ( km_pc_biochem_po4 + som_pc)
             ENDIF 
           ENDIF
           loss_residue_assoc_po4 = loss_residue_assoc_po4 + biochem_min_po4 * residue_assoc_po4 * hlp6 * dtime
@@ -359,11 +352,11 @@ CONTAINS
           IF (residue_carbon <eps8) THEN
             hlp7 = 0._wp
           ELSE
-            SOM_PC = residue_po4 / residue_carbon
-            IF (SOM_PC < biomin_thres_pc) THEN
+            som_pc = residue_po4 / residue_carbon
+            IF (som_pc < biomin_thres_pc) THEN
               hlp7 = 0.0_wp
             ELSE 
-              hlp7 = SOM_PC / ( km_pc_biochem_po4 + SOM_PC)
+              hlp7 = som_pc / ( km_pc_biochem_po4 + som_pc)
             ENDIF
           ENDIF
 
@@ -416,11 +409,12 @@ CONTAINS
   END SUBROUTINE calc_sourcing_flux_po4
 
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task called from update_sb_pools
+  ! Sub Task called from update_sb_jsm for: po4, nh4, no3
   !
   !-----------------------------------------------------------------------------------------------------
-  !> calculate sinks of the bio-available inorganic po4 pools
-  !! ECA approach modified based on Zhu et al. (2016) and Zhu et al. (2017), fast equilibrium based on Van der Zee et al. 1989
+  !> calculate sinks of the bio-available inorganic po4 and nh4 and no3 pools 
+  !! ECA approach (Equilibrium Chemistry Approximation) modified based on \n
+  !! Zhu et al. (2016) and Zhu et al. (2017), fast equilibrium based on Van der Zee et al. 1989
   !!
   !! Input: Pi solute concentration, microbial biomass, fine root biomass, sorption capacity, soil Pi pools, rate modifiers
   !!
@@ -441,8 +435,7 @@ CONTAINS
     USE mo_sb_constants
 
     IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
+
     REAL(wp)          , INTENT(in)    :: lctlib_vmax_uptake        !< lctlib uptake paramter, for eca_none
     REAL(wp)          , INTENT(in)    :: vmax_nitri_denitri        !< maximum nitrification/denitrification rate, for eca_none
     CHARACTER(len=*)  , INTENT(in)    :: substrate                 !< po4, nh4, no3, determine the specific ECA paramaters
@@ -471,7 +464,7 @@ CONTAINS
     REAL(wp)          , INTENT(out)   :: nitri_denitri_fication    !< nitrification or denitrification flux (µmol / m3 / s)
     REAL(wp)          , INTENT(out)   :: fast_adsorpt              !< fast adsorption flux (µmol / m3 / s)
     REAL(wp),OPTIONAL , INTENT(in)    :: solute_alt                !< concentration of the alternative solvent to be taken up by plant (mol / m3)
-    ! 0.2 Local
+
     REAL(wp)                        :: mic_hlp, plant_hlp, mineral_hlp, nitri_hlp, &
                                        hlp1, hlp2, hlp3
     REAL(wp)                        :: f_mic_carrier, km1_mic_uptake, km2_mic_uptake, &
@@ -480,9 +473,13 @@ CONTAINS
                                        k_desorpt_f, vmax_nit_denit, km_nit_denit, & 
                                        k_nit_denit, f_nit_carrier, reaction_volume
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_sinking_flux'
-    ! ---------------------------
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
 
     ! 0.9 assign ECA specific parameter values based on substrate
+    !
     SELECT CASE (substrate)
       CASE ("po4")
         f_mic_carrier     = f_mic_carrier_po4
@@ -553,14 +550,15 @@ CONTAINS
         nitri_hlp   = km_nit_denit + solute_ava + f_nit_carrier * microbial_carbon + &
                       km_nit_denit / km1_mic_uptake * f_mic_carrier * microbial_carbon + &
                       km_nit_denit / km_plant_uptake * f_plant_carrier_po4 * fine_root_carbon
-        IF (substrate/="po4") THEN
+        ! nh4 & no3
+        IF (substrate == "nh4" .OR. substrate == "no3") THEN
           plant_hlp = plant_hlp + &
-                      km_plant_uptake / km1_plant_uptake * solute_alt+ &
+                      km_plant_uptake / km1_plant_uptake * solute_alt + &
                       km_plant_uptake / km_nit_denit * f_nit_carrier * microbial_carbon
           mic_hlp   = mic_hlp + &
-                      km1_mic_uptake / km2_mic_uptake * solute_alt+ &
+                      km1_mic_uptake / km2_mic_uptake * solute_alt + &
                       km1_mic_uptake / km_nit_denit * f_nit_carrier * microbial_carbon
-
+          ! nh4
           IF (substrate=="nh4") THEN
             mic_hlp      = mic_hlp + &
                            km1_mic_uptake / km_adsorpt_sl * avail_sorption_sites 
@@ -572,10 +570,12 @@ CONTAINS
                            km_nit_denit / km_adsorpt_sl * avail_sorption_sites
             hlp1         = k_desorpt_f / km_adsorpt_sl * solute 
             fast_adsorpt = MIN(1._wp / dtime, hlp1 * solute_ava / mineral_hlp) * avail_sorption_sites * 1.e6_wp
+          ! no3
           ELSE
             mineral_hlp  = 0._wp
             fast_adsorpt = 0._wp
           ENDIF
+        ! po4
         ELSE
           mic_hlp      = mic_hlp + &
                          km1_mic_uptake / km_adsorpt_sl * avail_sorption_sites 
@@ -585,14 +585,13 @@ CONTAINS
           fast_adsorpt = MIN(1._wp / dtime, hlp1 * solute_ava / mineral_hlp) * avail_sorption_sites * 1.e6_wp
         ENDIF
 
-
         microbial_uptake       = MIN(rtm_mic_uptake * rmm_mic_uptake * k_mic_uptake * solute_ava * f_mic_carrier * &
                                  microbial_carbon / mic_hlp, microbial_uptake)
         plant_uptake           = rtm_plant_uptake * rmm_plant_uptake * k_plant_uptake * solute_ava * f_plant_carrier_po4 * &
                                  fine_root_carbon / plant_hlp 
         nitri_denitri_fication = rtm_nit_denit_fication * rmm_nit_denit_fication * reaction_volume * k_nit_denit * solute_ava * f_nit_carrier * &
                                  microbial_carbon / nitri_hlp
-        IF (sb_adsorp_scheme=="eca_part") THEN
+        IF (sb_adsorp_scheme == "eca_part") THEN
           microbial_uptake       = rtm_mic_uptake * rmm_mic_uptake * vmax_mic_uptake_sub * solute_ava * &
                                    microbial_carbon / mic_hlp
           plant_uptake           = rtm_plant_uptake * rmm_plant_uptake * vmax_plant_uptake * solute_ava * &
@@ -728,22 +727,20 @@ CONTAINS
   !!
   !! Output: transfer of microbial biomass to its sink pools (soluable -> DOM; polymeric -> residue)
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_microbial_turnover(nc, nsoil_sb, pool_microbial,loss_microbial,formation_dom,formation_residue)
+  SUBROUTINE calc_microbial_turnover(nc, nsoil_sb, pool_microbial, loss_microbial, formation_dom, formation_residue)
 
     USE mo_sb_constants,          ONLY: k_mort_microbial, min_mic_biomass, f_soluable_residue, fc_p_res2dom, fc_n_res2dom
     dsl4slm_Use_memory_a_sb
 
     IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
+
     INTEGER,                        INTENT(in)    :: nc, &              !< dimensions
                                                      nsoil_sb
     TYPE(t_sb_element_a),           INTENT(in)    :: pool_microbial     !< microbial biomass [mol/m3]
     TYPE(t_sb_element_a),           INTENT(inout) :: loss_microbial     !< microbial death [mol/m3/timestep]
     TYPE(t_sb_element_a),           INTENT(inout) :: formation_dom      !< DOM formation from microbial death [mol/m3/timestep]
     TYPE(t_sb_element_a),           INTENT(inout) :: formation_residue  !< residue formation from microbial death [mol/m3/timestep]
-    ! ---------------------------
-    ! 0.2 Local
+
     REAL(wp), DIMENSION(nc, nsoil_sb)                :: hlp1, &
                                                         p_res2dom, &
                                                         n_res2dom, &
@@ -751,16 +748,10 @@ CONTAINS
     REAL(wp)                                         :: hlp2, hlp3
     INTEGER                                          :: isoil
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_microbial_turnover'
-    ! ---------------------------
-    ! 0.3 Declare Memory
-    ! ...
-
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
-
-
 
     !> 0.9 init local variables
     !! assuming that p is preferably recycled to dom in top soils, while n is not
@@ -842,15 +833,16 @@ CONTAINS
   !!
   !! Output: DOM consumption, microbial growth, hetertrophic respiration and net mineralisation
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_microbial_growth(nc, nsoil_sb, sb_bnf_scheme,pool_dom,pool_microbial, & 
-                                   rtm_mic_uptake,rmm_mic_uptake,rtm_hsc,rmm_hsc,microbial_cue_eff_mavg, &
-                                   microbial_uptake_nh4_sl,microbial_uptake_nh4_n15_sl, &
-                                   microbial_uptake_no3_sl,microbial_uptake_no3_n15_sl,microbial_uptake_po4_sl, &
-                                   loss_dom,formation_microbial, &
-                                   het_respiration,het_respiration_c13,het_respiration_c14, &
-                                   net_mineralisation_nh4,net_mineralisation_nh4_n15, &
-                                   net_mineralisation_no3,net_mineralisation_no3_n15,net_mineralisation_po4, &
-                                   microbial_cue_eff,microbial_nue_eff,microbial_pue_eff,asymb_n_fixation)
+  SUBROUTINE calc_microbial_growth(nc, nsoil_sb, sb_bnf_scheme, & 
+                                   rtm_mic_uptake, rmm_mic_uptake, rtm_hsc, rmm_hsc, microbial_cue_eff_mavg, &
+                                   pool_dom, pool_microbial, &
+                                   microbial_uptake_nh4_sl, microbial_uptake_nh4_n15_sl, &
+                                   microbial_uptake_no3_sl, microbial_uptake_no3_n15_sl, microbial_uptake_po4_sl, &
+                                   het_respiration, het_respiration_c13, het_respiration_c14, &
+                                   net_mineralisation_nh4, net_mineralisation_nh4_n15, &
+                                   net_mineralisation_no3, net_mineralisation_no3_n15, net_mineralisation_po4, &
+                                   microbial_cue_eff, microbial_nue_eff, microbial_pue_eff, asymb_n_fixation, &
+                                   loss_dom, formation_microbial)
 
     USE mo_isotope_util,          ONLY: calc_fractionation
     USE mo_sb_constants,          ONLY: vmax_mic_uptake,km_mic_uptake,microbial_cue,microbial_nue,microbial_pue, & 
@@ -859,39 +851,37 @@ CONTAINS
     dsl4slm_Use_memory_a_sb
 
     IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
-    INTEGER,                                          INTENT(in)    :: nc, &               !< dimensions
+
+    INTEGER,                                          INTENT(in)    :: nc, &                        !< dimensions
                                                                        nsoil_sb
-    CHARACTER(len=*),                                 INTENT(in)    :: sb_bnf_scheme       !< veg n fixation scheme  
-    TYPE(t_sb_element_a),                             INTENT(in)    :: pool_dom            !< DOM [mol/m3]
-    TYPE(t_sb_element_a),                             INTENT(in)    :: pool_microbial      !< microbial biomass [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: rtm_mic_uptake      !< temperature rate modifier [-]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: rmm_mic_uptake      !< moisture rate modifier [-]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: rtm_hsc             !< temperature rate modifier [-]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: rmm_hsc             !< moisture rate modifier [-]
+    CHARACTER(len=*),                                 INTENT(in)    :: sb_bnf_scheme                !< veg n fixation scheme  
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: rtm_mic_uptake               !< temperature rate modifier [-]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: rmm_mic_uptake               !< moisture rate modifier [-]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: rtm_hsc                      !< temperature rate modifier [-]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: rmm_hsc                      !< moisture rate modifier [-]
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: microbial_cue_eff_mavg       !< microbial effective CUE given NP constraints
+    TYPE(t_sb_element_a),                             INTENT(in)    :: pool_dom                     !< DOM [mol/m3]
+    TYPE(t_sb_element_a),                             INTENT(in)    :: pool_microbial               !< microbial biomass [mol/m3]
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: microbial_uptake_nh4_sl      !< microbial uptake rate [µmol N/m3/s]
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: microbial_uptake_nh4_n15_sl  !< microbial uptake rate [µmol 15N/m3/s]
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: microbial_uptake_no3_sl      !< microbial uptake rate [µmol N/m3/s]
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: microbial_uptake_no3_n15_sl  !< microbial uptake rate [µmol 15N/m3/s]
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: microbial_uptake_po4_sl      !< microbial uptake rate [µmol P/m3/s]
-    TYPE(t_sb_element_a),                             INTENT(inout) :: loss_dom            !< microbial consumption of DOM [mol/m3/timestep]
-    TYPE(t_sb_element_a),                             INTENT(inout) :: formation_microbial !< microbial growth on DOM [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: het_respiration     !< respiration rate [µmol C/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: het_respiration_c13 !< respiration rate [µmol 13C/m3/s] 
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: het_respiration_c14 !< respiration rate [µmol 14C/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: net_mineralisation_nh4     !< net mineralisation rate [µmol N/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: net_mineralisation_nh4_n15 !< net mineralisation rate [µmol 15N/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: net_mineralisation_no3     !< net mineralisation rate [µmol N/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: net_mineralisation_no3_n15 !< net mineralisation rate [µmol 15N/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: net_mineralisation_po4     !< net mineralisation rate [µmol P/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: microbial_cue_eff          !< current effective CUE given NP constraints 
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: microbial_nue_eff          !< current effective NUE given NP constraints 
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: microbial_pue_eff          !< current effective PUE given NP constraints 
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: asymb_n_fixation           !< current effective CUE given NP constraints 
-    ! ---------------------------
-    ! 0.2 Local 
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: het_respiration              !< respiration rate [µmol C/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: het_respiration_c13          !< respiration rate [µmol 13C/m3/s] 
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: het_respiration_c14          !< respiration rate [µmol 14C/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: net_mineralisation_nh4       !< net mineralisation rate [µmol N/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: net_mineralisation_nh4_n15   !< net mineralisation rate [µmol 15N/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: net_mineralisation_no3       !< net mineralisation rate [µmol N/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: net_mineralisation_no3_n15   !< net mineralisation rate [µmol 15N/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: net_mineralisation_po4       !< net mineralisation rate [µmol P/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: microbial_cue_eff            !< current effective CUE given NP constraints 
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: microbial_nue_eff            !< current effective NUE given NP constraints 
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: microbial_pue_eff            !< current effective PUE given NP constraints 
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: asymb_n_fixation             !< current effective CUE given NP constraints 
+    TYPE(t_sb_element_a),                             INTENT(inout) :: loss_dom                     !< microbial consumption of DOM [mol/m3/timestep]
+    TYPE(t_sb_element_a),                             INTENT(inout) :: formation_microbial          !< microbial growth on DOM [mol/m3/timestep]
+
     REAL(wp), DIMENSION(nc, nsoil_sb)                :: hlp1, hlp2, hlp3, &
                                                         f_uptake, &
                                                         uptake_dom  
@@ -1195,10 +1185,11 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_depolymerisation_SESAM(nc, nsoil_sb,rtm_hsc,rmm_hsc,rtm_depolymerisation,rmm_depolymerisation, &
                                          microbial_carbon, microbial_cue_mavg, microbial_nue_mavg, microbial_pue_mavg, &
+                                         pool_polymeric, pool_residue, &
                                          enzyme_frac_poly, enzyme_frac_residue, & 
-                                         pool_polymeric,loss_polymeric,pool_residue,loss_residue,formation_dom, &
                                          enzyme_frac_poly_c, enzyme_frac_poly_n, enzyme_frac_poly_p, &
-                                         enzyme_frac_poly_c_mavg, enzyme_frac_poly_n_mavg, enzyme_frac_poly_p_mavg)
+                                         enzyme_frac_poly_c_mavg, enzyme_frac_poly_n_mavg, enzyme_frac_poly_p_mavg, &
+                                         loss_polymeric, loss_residue, formation_dom)
 
     USE mo_sb_constants
     USE mo_jsb_math_constants,              ONLY: dtime, one_day
@@ -1206,8 +1197,7 @@ CONTAINS
     dsl4slm_Use_memory_a_sb
 
     IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
+
     INTEGER,                                          INTENT(in)    :: nc, &                    !< dimensions
                                                                        nsoil_sb
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: rtm_hsc                  !< temperature rate modifier for half-saturation constants
@@ -1218,21 +1208,20 @@ CONTAINS
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: microbial_cue_mavg       !< microbial cue moving average
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: microbial_nue_mavg       !< microbial nue moving average
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: microbial_pue_mavg       !< microbial pue moving average
+    TYPE(t_sb_element_a),                             INTENT(in)    :: pool_polymeric           !< polymeric pool [mol/m3]
+    TYPE(t_sb_element_a),                             INTENT(in)    :: pool_residue             !< residue pool [mol/m3]
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: enzyme_frac_poly         !< fraction of enzyme for poly litter depolymerisation
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: enzyme_frac_residue      !< fraction of enzyme for microbial residue depolymerisation
-    TYPE(t_sb_element_a),                             INTENT(in)    :: pool_polymeric           !< polymeric pool [mol/m3]
-    TYPE(t_sb_element_a),                             INTENT(inout) :: loss_polymeric           !< loss of polymeric pool [mol/m3/timestep]
-    TYPE(t_sb_element_a),                             INTENT(in)    :: pool_residue             !< residue pool [mol/m3]
-    TYPE(t_sb_element_a),                             INTENT(inout) :: loss_residue             !< loss of residue pool [mol/m3/timestep]
-    TYPE(t_sb_element_a),                             INTENT(inout) :: formation_dom            !< formation of DOM [mol/m3/timestep]
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: enzyme_frac_poly_c       !< temporal fraction of enzyme for poly litter depolymerisation, C
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: enzyme_frac_poly_n       !< temporal fraction of enzyme for poly litter depolymerisation, N
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: enzyme_frac_poly_p       !< temporal fraction of enzyme for poly litter depolymerisation, P
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: enzyme_frac_poly_c_mavg  !< mavg of enzyme for poly litter depolymerisation, C
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: enzyme_frac_poly_n_mavg  !< mavg of enzyme for poly litter depolymerisation, N
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: enzyme_frac_poly_p_mavg  !< mavg of enzyme for poly litter depolymerisation, P
-    ! ---------------------------
-    ! 0.2 Local 
+    TYPE(t_sb_element_a),                             INTENT(inout) :: loss_polymeric           !< loss of polymeric pool [mol/m3/timestep]
+    TYPE(t_sb_element_a),                             INTENT(inout) :: loss_residue             !< loss of residue pool [mol/m3/timestep]
+    TYPE(t_sb_element_a),                             INTENT(inout) :: formation_dom            !< formation of DOM [mol/m3/timestep]
+
     REAL(wp), DIMENSION(nc, nsoil_sb)                :: hlp1, hlp2, hlp3, &
                                                         poly_depolymerisation_rate, &
                                                         residue_depolymerisation_rate, &
@@ -1240,11 +1229,10 @@ CONTAINS
     LOGICAL, DIMENSION(nsoil_sb)                     :: tmp1,tmp2,tmp3
     INTEGER                                          :: isoil
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_depolymerisation_SESAM'
-    ! ---------------------------
-    ! 0.3 Declare Memory
-    ! ...
-    
 
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
 
     !> 0.9 init local variables
     !!
@@ -1643,12 +1631,12 @@ CONTAINS
   !!
   !! Output: sorption and desorption rate (mol/m2/timestep) 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_om_sorption(nc, nsoil_sb, qmax_org,rtm_sorption,rmm_sorption,rtm_desorption, &
-                              rmm_desorption,pool_dom,pool_dom_assoc,pool_residue, & 
-                              pool_residue_assoc,formation_dom,formation_dom_assoc,formation_residue, &
-                              formation_residue_assoc,loss_dom,loss_dom_assoc,loss_residue,loss_residue_assoc)
+  SUBROUTINE calc_om_sorption(nc, nsoil_sb, qmax_org, rtm_sorption, rmm_sorption, rtm_desorption, &
+                              rmm_desorption, pool_dom, pool_dom_assoc, pool_residue, pool_residue_assoc, &
+                              formation_dom, formation_dom_assoc, formation_residue, &
+                              formation_residue_assoc, loss_dom, loss_dom_assoc, loss_residue, loss_residue_assoc)
 
-    USE mo_sb_constants,          ONLY: k_adsorpt_dom,k_desorpt_dom,k_adsorpt_det,k_desorpt_det 
+    USE mo_sb_constants,          ONLY: k_adsorpt_dom, k_desorpt_dom, k_adsorpt_det, k_desorpt_det 
     dsl4slm_Use_memory_a_sb
 
     IMPLICIT NONE

@@ -47,7 +47,7 @@ MODULE mo_sb_jsm_transport
 CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task called from update_sb_pools 
+  ! Sub Task called from update_sb_jsm
   !
   !-----------------------------------------------------------------------------------------------------
   !> Interface to the liquid transport routine, owing to the lack of a suitable operator overload 
@@ -177,12 +177,12 @@ CONTAINS
     !> 3.0 gaseous loss of NOy, N2O, and N2, for now following Xu-Ri and Prentice 2008, 
     !!thus ignoring any actual gas-transport and instead assume that from each layer a certain fraction excapes directly to the atmosphere.
     !! [mol m-3 timestep-1] 
-    transport_noy(:,:)     = - rtm_gasdiffusion_act(:,:) * rmm_gasdiffusion_act(:,:) * noy(:,:)     / one_day * 1.e6_wp
-    transport_noy_n15(:,:) = - rtm_gasdiffusion_act(:,:) * rmm_gasdiffusion_act(:,:) * noy_n15(:,:) / one_day * 1.e6_wp
-    transport_n2o(:,:)     = - rtm_gasdiffusion_act(:,:) * rmm_gasdiffusion_act(:,:) * n2o(:,:)     / one_day * 1.e6_wp
-    transport_n2o_n15(:,:) = - rtm_gasdiffusion_act(:,:) * rmm_gasdiffusion_act(:,:) * n2o_n15(:,:) / one_day * 1.e6_wp
-    transport_n2(:,:)      = - rtm_gasdiffusion_act(:,:) * rmm_gasdiffusion_act(:,:) * n2(:,:)      / one_day * 1.e6_wp
-    transport_n2_n15(:,:)  = - rtm_gasdiffusion_act(:,:) * rmm_gasdiffusion_act(:,:) * n2_n15(:,:)  / one_day * 1.e6_wp
+    transport_noy(:,:)     = -rtm_gasdiffusion_act(:,:) * rmm_gasdiffusion_act(:,:) * noy(:,:)     / one_day * 1.e6_wp
+    transport_noy_n15(:,:) = -rtm_gasdiffusion_act(:,:) * rmm_gasdiffusion_act(:,:) * noy_n15(:,:) / one_day * 1.e6_wp
+    transport_n2o(:,:)     = -rtm_gasdiffusion_act(:,:) * rmm_gasdiffusion_act(:,:) * n2o(:,:)     / one_day * 1.e6_wp
+    transport_n2o_n15(:,:) = -rtm_gasdiffusion_act(:,:) * rmm_gasdiffusion_act(:,:) * n2o_n15(:,:) / one_day * 1.e6_wp
+    transport_n2(:,:)      = -rtm_gasdiffusion_act(:,:) * rmm_gasdiffusion_act(:,:) * n2(:,:)      / one_day * 1.e6_wp
+    transport_n2_n15(:,:)  = -rtm_gasdiffusion_act(:,:) * rmm_gasdiffusion_act(:,:) * n2_n15(:,:)  / one_day * 1.e6_wp
 
     ! emission rates as positive flux to the atmosphere, integrated over the soil column [mol m-2 timestep-1]
     emission_noy(:)     = SUM(-transport_noy(:,:)     * soil_depth_sl(:,:), DIM=2)
@@ -196,7 +196,7 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task called from update_sb_pools 
+  ! Sub Task called from update_sb_simple_model and update_sb_jsm
   !
   !-----------------------------------------------------------------------------------------------------
   !> calculates matter transport by bioturbation, by calling calc_bioturbation_transport
@@ -221,8 +221,7 @@ CONTAINS
     dsl4slm_Use_memory_a_sb
 
     IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
+
     INTEGER,                                          INTENT(in)    :: nc, &                  !< dimensions
                                                                        nsoil_sb
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: k_bioturb              !< diffusion factor for bioturbation 
@@ -249,18 +248,12 @@ CONTAINS
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: transport_po4_assoc_slow   !< rate of slow associated PO4 transport [mol/m3/timestep]
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: transport_po4_occluded     !< rate of occluded PO4 transport [mol/m3/timestep]
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: transport_nh4_n15_assoc    !< rate of N15H4 transport [mol/m3/timestep]
-    ! ---------------------------
-    ! 0.2 Local
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_bioturbation_transport_wrapper'
-    ! ---------------------------
-    ! 0.3 Declare Memory
-    ! ...
 
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_bioturbation_transport_wrapper'
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
-
 
     !> 1.0 transport of organic pools
     !! 
@@ -359,7 +352,7 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task called from update_sb_pools 
+  ! Sub Task called from update_sb_pools and update_sb_jsm
   !
   !-----------------------------------------------------------------------------------------------------
   !> calculates particile flux rate given the change in organic pools through formation 
@@ -370,7 +363,7 @@ CONTAINS
   !!
   !! Output: omega_transport_term 
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION calc_particle_fluxrate(nc, nsoil_sb, soil_depth_sl,bulk_dens_corr_sl,sb_formation,sb_loss) RESULT (particle_fluxrate)
+  FUNCTION calc_particle_fluxrate(nc, nsoil_sb, soil_depth_sl, bulk_dens_corr_sl, sb_formation, sb_loss) RESULT (particle_fluxrate)
 
     USE mo_sb_constants,          ONLY: carbon_per_dryweight_SOM, rho_bulk_org
     USE mo_jsb_phys_constants,    ONLY: molar_mass_C
@@ -378,8 +371,7 @@ CONTAINS
     dsl4slm_Use_memory_a_sb
 
     IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
+
     INTEGER,                                          INTENT(in) :: nc, &                  !< dimensions
                                                                     nsoil_sb
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in) :: soil_depth_sl          !< depth of soil layer [m] 
@@ -387,19 +379,13 @@ CONTAINS
     TYPE(t_sb_pool_a),                                INTENT(in) :: sb_formation           !< formation of pools [mol/m3/timestep]
     TYPE(t_sb_pool_a),                                INTENT(in) :: sb_loss                !< loss from pools [mol/m3/timestep]
     REAL(wp), DIMENSION(nc, nsoil_sb)                            :: particle_fluxrate      !< m/timestep
-    ! ---------------------------
-    ! 0.2 Local
+
     INTEGER                     :: isoil
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_particle_fluxrate'
-    ! ---------------------------
-    ! 0.3 Declare Memory
-    ! ...
-
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
-
 
     !> 1.0 calculate net change of organic matter cummulative down the profile (kg/m2/dtime)
     !! note the omission of woody litter in the first layer, which is assumed not to be part of the profile
@@ -441,7 +427,7 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task called from update_sb_pools 
+  ! Sub Task called from update_sb_pools and update_sb_jsm
   !
   !-----------------------------------------------------------------------------------------------------
   !> calculates matter transport due to particle flux, by calling calc_particle_transport
@@ -453,7 +439,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_particle_transport_wrapper(nc, nsoil_sb, particle_fluxrate, soil_depth_sl, &
                                           sb_pool, nh4_solute, nh4_assoc, no3_solute, po4_solute, po4_assoc_fast, & 
-                                          po4_assoc_slow, po4_occluded, po4_primary, nh4_n15_solute, nh4_n15_assoc, no3_n15_solute,& 
+                                          po4_assoc_slow, po4_occluded, po4_primary, &
+                                          nh4_n15_solute, nh4_n15_assoc, no3_n15_solute, & 
                                           sb_transport, transport_nh4_solute, transport_nh4_assoc, transport_no3_solute, & 
                                           transport_po4_solute, transport_po4_assoc_fast, transport_po4_assoc_slow, & 
                                           transport_po4_occluded, transport_po4_primary, transport_nh4_n15_solute, &
@@ -462,8 +449,7 @@ CONTAINS
     dsl4slm_Use_memory_a_sb
 
     IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
+
     INTEGER,                                          INTENT(in)    :: nc, &                      !< dimensions
                                                                        nsoil_sb
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: particle_fluxrate          !< particle fluxrate (m/timestep) 
@@ -492,20 +478,14 @@ CONTAINS
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: transport_nh4_n15_solute   !< rate of solute N15H4 transport [mol/m3/timestep]
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: transport_no3_n15_solute   !< rate of solute N15O3 transport [mol/m3/timestep]
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: transport_nh4_n15_assoc    !< rate of associated N15H4 transport [mol/m3/timestep]
-    ! ---------------------------
-    ! 0.2 Local
+
     INTEGER                                          :: isoil
     REAL(wp), DIMENSION(nc, nsoil_sb)                :: particle_fluxrate_woody
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_particle_transport_wrapper'
-    ! ---------------------------
-    ! 0.3 Declare Memory
-    ! ...
-
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
-
 
     !> 1.0 transport of organic pools
     !! 
@@ -851,7 +831,6 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_bioturbation_rate'
 
 
-
     !> 1.0 calculate root density relative to top-soil root density  
     !!
     WHERE(soil_depth_sl(:,:) > eps8)
@@ -879,7 +858,7 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task called from calc_bioturbation_transport 
+  ! Sub Task called from calc_bioturbation_transport_wrapper 
   !
   !-----------------------------------------------------------------------------------------------------
   !> calculates matter transport by bioturbation, by calling calc_bioturbation_transport
@@ -889,7 +868,7 @@ CONTAINS
   !!
   !! Output: vertical transport rate (mol/m2/timestep) 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_bioturbation_transport(nc, nsoil_sb,  k_bioturb, soil_depth_sl, pool,transport)
+  SUBROUTINE calc_bioturbation_transport(nc, nsoil_sb,  k_bioturb, soil_depth_sl, pool, transport)
 
     USE mo_jsb_math_constants,    ONLY: eps8
 
