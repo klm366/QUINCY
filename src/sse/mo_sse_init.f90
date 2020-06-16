@@ -115,8 +115,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk    :: w_soil_root_fc
     dsl4jsb_Real2D_onChunk    :: w_soil_root_theta
     dsl4jsb_Real2D_onChunk    :: w_soil_root_pot
-    dsl4jsb_Real3D_onChunk    :: soil_depth_sl
+    dsl4jsb_Real3D_onChunk    :: soil_depth_sl          ! (soil_depth_sl == soil_lay_width_sl)
+    dsl4jsb_Real3D_onChunk    :: soil_lay_width_sl
     dsl4jsb_Real3D_onChunk    :: soil_lay_depth_center_sl
+    dsl4jsb_Real3D_onChunk    :: soil_lay_depth_ubound_sl
+    dsl4jsb_Real3D_onChunk    :: soil_lay_depth_lbound_sl
     dsl4jsb_Real3D_onChunk    :: bulk_dens_sl
     dsl4jsb_Real3D_onChunk    :: heat_capa_sl
     dsl4jsb_Real3D_onChunk    :: therm_cond_sl
@@ -176,8 +179,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_fc)
     dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_theta)
     dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_pot)
-    dsl4jsb_Get_var3D_onChunk(SSE_, soil_depth_sl)              ! out
+    dsl4jsb_Get_var3D_onChunk(SSE_, soil_depth_sl)              ! out   (soil_depth_sl == soil_lay_width_sl)
+    dsl4jsb_Get_var3D_onChunk(SSE_, soil_lay_width_sl)          ! out
     dsl4jsb_Get_var3D_onChunk(SSE_, soil_lay_depth_center_sl)   ! out
+    dsl4jsb_Get_var3D_onChunk(SSE_, soil_lay_depth_ubound_sl)   ! out
+    dsl4jsb_Get_var3D_onChunk(SSE_, soil_lay_depth_lbound_sl)   ! out
     dsl4jsb_Get_var3D_onChunk(SSE_, bulk_dens_sl)
     dsl4jsb_Get_var3D_onChunk(SSE_, heat_capa_sl)
     dsl4jsb_Get_var3D_onChunk(SSE_, therm_cond_sl)
@@ -200,7 +206,6 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
-
     !> 1.0 Total soil depth until bedrock
     ! QUINCY soil_depth for one site (read from namelist)
     soil_depth(:)                             = dsl4jsb_Config(SSE_)%soil_depth
@@ -215,16 +220,24 @@ CONTAINS
     dsl4jsb_var3D_onDomain(SSE_, soil_depth_sl) = soil_depth_to_layers_2d( &
                                                     dsl4jsb_var2D_onDomain(SSE_, soil_depth), &   ! Total soil depth until bedrock (from textures), 2D variable
                                                     vgrid_soil_sb%dz(:))                          ! Soil layer thicknesses from namelist
+    ! pass these values to a SSE_ variable with a correct name
+    dsl4jsb_var3D_onDomain(SSE_, soil_lay_width_sl) = dsl4jsb_var3D_onDomain(SSE_, soil_depth_sl)
 
     !> 2.1 calc more metrics of the soil layers
-    !! i)  depth at the center of each layer
-    !! ii) upper & lower boundary
+    !! i)  lower & upper boundary
+    !! ii) depth at the center of each layer
     ! @TODO sse_init must init variables onDomain for jsbach4, write a function similar to soil_depth_to_layers_2d()
-    ! soil_layer depth center
-    soil_lay_depth_center_sl(:,1) = soil_depth_sl(:,1) / 2._wp
-    DO isoil = 2,nsoil_sb
-      soil_lay_depth_center_sl(:,isoil) = soil_lay_depth_center_sl(:,isoil-1) + &
-                                          (soil_depth_sl(:,isoil) + soil_depth_sl(:,isoil-1)) / 2._wp 
+    DO isoil = 1,nsoil_sb
+      ! lower & upper boundary
+      IF (isoil == 1) THEN
+        soil_lay_depth_lbound_sl(:,isoil) = 0.0_wp
+        soil_lay_depth_ubound_sl(:,isoil) = soil_lay_width_sl(:,isoil)
+      ELSE
+        soil_lay_depth_lbound_sl(:,isoil) = soil_lay_depth_lbound_sl(:,isoil-1) + soil_lay_width_sl(:,isoil-1)
+        soil_lay_depth_ubound_sl(:,isoil) = soil_lay_depth_ubound_sl(:,isoil-1) + soil_lay_width_sl(:,isoil)
+      ENDIF                                
+      ! soil-layer center
+      soil_lay_depth_center_sl(:,isoil)   = (soil_lay_depth_lbound_sl(:,isoil) + soil_lay_depth_ubound_sl(:,isoil)) * 0.5_wp 
     ENDDO
 
     !> 3.0 check if last soil layer has a thickness larger zero
@@ -232,8 +245,8 @@ CONTAINS
     DO ichunk  = 1,nc
       IF (soil_depth_sl(ichunk,nsoil_sb) < eps8) THEN
         WRITE(message_text,*) 'The last soil layer has a thickness < eps8. Increase soil_depth from ', soil_depth, &
-                              ' to at least ', SUM(vgrid_soil_sb%dz(1:nsoil_sb-1)), ' but better ', &
-                              SUM(vgrid_soil_sb%dz(1:nsoil_sb)), ' and re-start the simulation.'
+                              ' to at least ', SUM(soil_lay_width_sl(ics,1:nsoil_sb-1)), ' but better ', &
+                              SUM(soil_lay_width_sl(ics,1:nsoil_sb)), ' and re-start the simulation.'
         CALL finish(TRIM(routine), message_text)
       END IF  
     END DO
@@ -431,12 +444,12 @@ CONTAINS
     w_soil_root_fc(:)   = 0._wp
     root_depth(:)       = 0._wp
     DO isoil=1,nsoil_sb
-      hlp1(:,isoil)     = vgrid_soil_sb%dz(isoil) * (theta_fc_sl(:,isoil) - theta_pwp_sl(:,isoil))
+      hlp1(:,isoil)     = soil_lay_width_sl(:,isoil) * (theta_fc_sl(:,isoil) - theta_pwp_sl(:,isoil))
       soil_awc(:)       = soil_awc(:) + hlp1(:,isoil)
       WHERE (soil_awc(:) < (dsl4jsb_Config(SSE_)%soil_awc_prescribe / 1000._wp)) 
-        root_depth(:)       = root_depth(:) + vgrid_soil_sb%dz(isoil)
-        w_soil_root_pwp(:)  = w_soil_root_pwp(:) + theta_pwp_sl(:,isoil) * vgrid_soil_sb%dz(isoil)
-        w_soil_root_fc(:)   = w_soil_root_fc(:) + theta_fc_sl(:,isoil) * vgrid_soil_sb%dz(isoil)
+        root_depth(:)       = root_depth(:) + soil_lay_width_sl(:,isoil)
+        w_soil_root_pwp(:)  = w_soil_root_pwp(:) + theta_pwp_sl(:,isoil) * soil_lay_width_sl(:,isoil)
+        w_soil_root_fc(:)   = w_soil_root_fc(:) + theta_fc_sl(:,isoil) * soil_lay_width_sl(:,isoil)
       ELSEWHERE
         hlp2(:)             = MAX(0._wp, dsl4jsb_Config(SSE_)%soil_awc_prescribe / 1000._wp - soil_awc(:) + hlp1(:,isoil))
         root_depth(:)       = root_depth(:) + hlp2(:) / (theta_fc_sl(:,isoil) - theta_pwp_sl(:,isoil))
@@ -468,17 +481,17 @@ CONTAINS
     !! note: upper bound is the larger value compared to lower bound !
     !! 
     ! layer 1 (vgrid_soil_sb)
-    root_fraction_sl(:,1) = (1._wp - exp(-lctlib%k_root_dist * vgrid_soil_sb%ubounds(1))) / &
+    root_fraction_sl(:,1) = (1._wp - exp(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(:,1))) / &
                             (1._wp - exp(-lctlib%k_root_dist * root_depth(:)))
     ! layer 2 (vgrid_soil_sb)
     DO isoil=2,nsoil_sb
-       WHERE(root_depth(:) > vgrid_soil_sb%ubounds(isoil-1))
-          WHERE(root_depth(:) > vgrid_soil_sb%ubounds(isoil))
-             root_fraction_sl(:,isoil) = (exp(-lctlib%k_root_dist * vgrid_soil_sb%ubounds(isoil-1)) - &
-                                          exp(-lctlib%k_root_dist * vgrid_soil_sb%ubounds(isoil))) / & 
+       WHERE(root_depth(:) > soil_lay_depth_ubound_sl(:,isoil-1))
+          WHERE(root_depth(:) > soil_lay_depth_ubound_sl(:,isoil))
+             root_fraction_sl(:,isoil) = (exp(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(:,isoil-1)) - &
+                                          exp(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(:,isoil))) / & 
                                          (1._wp - exp(-lctlib%k_root_dist * root_depth(:)))
           ELSEWHERE
-             root_fraction_sl(:,isoil) = (exp(-lctlib%k_root_dist * vgrid_soil_sb%ubounds(isoil-1)) - &
+             root_fraction_sl(:,isoil) = (exp(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(:,isoil-1)) - &
                                           exp(-lctlib%k_root_dist * root_depth(:))) / & 
                                          (1._wp - exp(-lctlib%k_root_dist * root_depth(:)))
           ENDWHERE

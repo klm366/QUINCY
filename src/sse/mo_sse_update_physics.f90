@@ -135,6 +135,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: sensible_heat_flx
     ! SSE_ 3D        
     dsl4jsb_Real3D_onChunk                :: soil_depth_sl
+    dsl4jsb_Real3D_onChunk                :: soil_lay_depth_ubound_sl
     dsl4jsb_Real3D_onChunk                :: bulk_dens_sl
     dsl4jsb_Real3D_onChunk                :: heat_capa_sl
     dsl4jsb_Real3D_onChunk                :: therm_cond_sl
@@ -223,22 +224,23 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SSE_, latent_heat_flx)      ! inout
     dsl4jsb_Get_var2D_onChunk(SSE_, sensible_heat_flx)    ! inout
     ! SSE_ 3D
-    dsl4jsb_Get_var3D_onChunk(SSE_, soil_depth_sl)        ! in
-    dsl4jsb_Get_var3D_onChunk(SSE_, bulk_dens_sl)         ! in
-    dsl4jsb_Get_var3D_onChunk(SSE_, heat_capa_sl)         ! in
-    dsl4jsb_Get_var3D_onChunk(SSE_, therm_cond_sl)        ! in
-    dsl4jsb_Get_var3D_onChunk(SSE_, w_soil_pwp_sl)        ! in
-    dsl4jsb_Get_var3D_onChunk(SSE_, w_soil_fc_sl)         ! in
-    dsl4jsb_Get_var3D_onChunk(SSE_, w_soil_sat_sl)        ! in
-    dsl4jsb_Get_var3D_onChunk(SSE_, saxtonA)              ! in
-    dsl4jsb_Get_var3D_onChunk(SSE_, saxtonB)              ! in
-    dsl4jsb_Get_var3D_onChunk(SSE_, saxtonC)              ! in
-    dsl4jsb_Get_var3D_onChunk(SSE_, kdiff_sat_sl)         ! in
-    dsl4jsb_Get_var3D_onChunk(SSE_, w_soil_sl)            ! inout
-    dsl4jsb_Get_var3D_onChunk(SSE_, w_soil_pot_sl)        ! inout
-    dsl4jsb_Get_var3D_onChunk(SSE_, percolation_sl)       ! inout
-    dsl4jsb_Get_var3D_onChunk(SSE_, drainage_sl)          ! inout
-    dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)            ! inout
+    dsl4jsb_Get_var3D_onChunk(SSE_, soil_depth_sl)            ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, soil_lay_depth_ubound_sl) ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, bulk_dens_sl)             ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, heat_capa_sl)             ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, therm_cond_sl)            ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, w_soil_pwp_sl)            ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, w_soil_fc_sl)             ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, w_soil_sat_sl)            ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, saxtonA)                  ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, saxtonB)                  ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, saxtonC)                  ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, kdiff_sat_sl)             ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, w_soil_sl)                ! inout
+    dsl4jsb_Get_var3D_onChunk(SSE_, w_soil_pot_sl)            ! inout
+    dsl4jsb_Get_var3D_onChunk(SSE_, percolation_sl)           ! inout
+    dsl4jsb_Get_var3D_onChunk(SSE_, drainage_sl)              ! inout
+    dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)                ! inout
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, canopy_cond)       ! in
     ! ---------------------------
@@ -277,7 +279,7 @@ CONTAINS
     !> 3.0 Calculate soil hydrology processes
     !!
     CALL calc_soil_hydrology(nc, nsoil_sb, &
-                             vgrid_soil_sb%ubounds(:), &                                              ! (upper bound > lower bound !)
+                             soil_lay_depth_ubound_sl(:,:), &                                         ! (upper bound > lower bound !)
                              lctlib%phi_leaf_min, &
                              rain(:),snow(:),interception(:),evaporation(:),transpiration(:), & 
                              w_soil_root_fc(:),w_soil_root_pwp(:),lai(:),root_depth(:), & 
@@ -589,7 +591,7 @@ CONTAINS
     ! 0.1 InOut 
     INTEGER,                                          INTENT(in)    :: nc, &                   !< dimensions
                                                                        nsoil_sb
-    REAL(wp), DIMENSION(nsoil_sb),                    INTENT(in)    :: soil_layer_w_ubounds    !< upper bound of soil layers water (upper bound > lower bound !)
+    REAL(wp), DIMENSION(nc,nsoil_sb),                 INTENT(in)    :: soil_layer_w_ubounds    !< upper bound of soil layers water (upper bound > lower bound !)
     REAL(wp),                                         INTENT(in)    :: lctlib_phi_leaf_min     !< lctlib paramter
     REAL(wp), DIMENSION(nc),                          INTENT(in)    :: rain, &                 !< rainfall [kg / m2 / s ]
                                                                        snow, &                 !< snowfall [kg / m2 / s ]
@@ -800,13 +802,13 @@ CONTAINS
     !! 
     w_soil_root(:) = w_soil_sl(:,1) 
     DO isoil = 2,nsoil_sb
-       WHERE(root_depth(:) > soil_layer_w_ubounds(isoil-1))
-          WHERE(root_depth(:) >= soil_layer_w_ubounds(isoil))
+       WHERE(root_depth(:) > soil_layer_w_ubounds(:,isoil-1))
+          WHERE(root_depth(:) >= soil_layer_w_ubounds(:,isoil))
             w_soil_root(:) = w_soil_root(:) + w_soil_sl(:,isoil) 
           ELSEWHERE
             ! fraction of the layer that has roots
-            hlp1(:) = (root_depth(:) - soil_layer_w_ubounds(isoil-1)) / &
-                      (soil_layer_w_ubounds(isoil) - soil_layer_w_ubounds(isoil-1))
+            hlp1(:) = (root_depth(:) - soil_layer_w_ubounds(:,isoil-1)) / &
+                      (soil_layer_w_ubounds(:,isoil) - soil_layer_w_ubounds(:,isoil-1))
 
             w_soil_root(:) = w_soil_root(:) + w_soil_fc_sl(:,isoil) * hlp1(:) - &
                              MIN((w_soil_fc_sl(:,isoil) - w_soil_sl(:,isoil)), w_soil_pwp_sl(:,isoil) * hlp1(:))
