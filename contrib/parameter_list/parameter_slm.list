@@ -347,6 +347,7 @@
   km_denit_no3=NAN
   f_denit_carrier_no3=NAN
   qmax_po4_mineral=NAN
+  qmax_nh4_clay=NAN
   km_adsorpt_mineral_po4=NAN
   km_adsorpt_OM_po4=NAN
   ea_nitrification=NAN

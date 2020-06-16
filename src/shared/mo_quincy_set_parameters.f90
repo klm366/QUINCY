@@ -365,6 +365,7 @@ MODULE mo_quincy_set_parameters
     REAL(wp)           :: km_denit_no3
     REAL(wp)           :: f_denit_carrier_no3
     REAL(wp)           :: qmax_po4_mineral
+    REAL(wp)           :: qmax_nh4_clay
     REAL(wp)           :: km_adsorpt_mineral_po4
     REAL(wp)           :: km_adsorpt_OM_po4
     REAL(wp)           :: ea_nitrification
@@ -850,6 +851,7 @@ CONTAINS
     REAL(wp)           :: km_denit_no3
     REAL(wp)           :: f_denit_carrier_no3
     REAL(wp)           :: qmax_po4_mineral
+    REAL(wp)           :: qmax_nh4_clay
     REAL(wp)           :: km_adsorpt_mineral_po4
     REAL(wp)           :: km_adsorpt_OM_po4
     REAL(wp)           :: ea_nitrification
@@ -1237,6 +1239,7 @@ CONTAINS
         km_denit_no3                  , &
         f_denit_carrier_no3           , &
         qmax_po4_mineral              , &
+        qmax_nh4_clay                 , &
         km_adsorpt_mineral_po4        , &
         km_adsorpt_OM_po4             , &
         ea_nitrification              , &
@@ -1623,6 +1626,7 @@ CONTAINS
     km_denit_no3                  = missval
     f_denit_carrier_no3           = missval
     qmax_po4_mineral              = missval
+    qmax_nh4_clay                 = missval
     km_adsorpt_mineral_po4        = missval
     km_adsorpt_OM_po4             = missval
     ea_nitrification              = missval
@@ -2040,6 +2044,7 @@ CONTAINS
     this%km_denit_no3                  = km_denit_no3
     this%f_denit_carrier_no3           = f_denit_carrier_no3
     this%qmax_po4_mineral              = qmax_po4_mineral
+    this%qmax_nh4_clay                 = qmax_nh4_clay
     this%km_adsorpt_mineral_po4        = km_adsorpt_mineral_po4
     this%km_adsorpt_OM_po4             = km_adsorpt_OM_po4
     this%ea_nitrification              = ea_nitrification
@@ -3752,6 +3757,11 @@ CONTAINS
                                     this%qmax_po4_mineral, &
                                     "qmax_po4_mineral", proportional_parameter_changes, &
                                     qmax_po4_mineral)
+
+    CALL Set_quincy_parameter_value(this%qmax_nh4_clay / molar_mass_N, &
+                                    this%qmax_nh4_clay, &
+                                    "qmax_nh4_clay", proportional_parameter_changes, &
+                                    qmax_nh4_clay)
 
     CALL Set_quincy_parameter_value(this%km_adsorpt_mineral_po4 / 1000._wp / molar_mass_P, &
                                     this%km_adsorpt_mineral_po4, &
