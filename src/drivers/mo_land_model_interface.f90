@@ -461,7 +461,7 @@ CONTAINS
         !!  output is written when the interval is a match with current timestep
         !! 
         CALL write_output_flux(tile, model%options, time_day, output_interval_flux, &
-                              l_flux_output_interval=l_output_interval_match)
+                              l_flux_output_interval=l_output_interval_match, l_zero_acc_variables=.FALSE.)
 
       END SELECT  ! select SLM model !
     ENDIF                            

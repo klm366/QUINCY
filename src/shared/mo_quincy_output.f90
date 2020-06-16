@@ -1345,7 +1345,7 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    CLASS(t_jsb_tile_abstract), INTENT(in)      :: tile           !< one tile with data structure for one lct
+    CLASS(t_jsb_tile_abstract), INTENT(inout)   :: tile           !< one tile with data structure for one lct
     INTEGER,INTENT(in)                          :: iblk, &        !< iBlock, start point of chunk, end point of chunk, number of points in the chunk
                                                    ics, &
                                                    ice, &
@@ -1481,8 +1481,16 @@ CONTAINS
 
     !> 2.0 write column headers into output files
     !! 
-    !! 
     CALL init_output_writing_flux(dsl4jsb_Config(SB_)%sb_model_scheme, TRIM(model%config%slm_model_name))
+
+    !> 3.0 set all flux-output *_acc variables to zero, but do not produce output
+    !! that is needed when, e.g., switching between diff. output periods (fluxnet diagnostics monthly -> timestep) 
+    !!   to delete/set zero these *_acc variables that might contain data from previous output period & output file
+    CALL write_output_flux(tile, model%options, &
+                           time_d=0.0_wp, &
+                           output_interval_flux=0.0_wp, &
+                           l_flux_output_interval=.FALSE., & 
+                           l_zero_acc_variables=.TRUE.)
 
   END SUBROUTINE open_flux_output_files
 
@@ -1730,7 +1738,7 @@ CONTAINS
   !! 
   !! write-interval accordingly to namelist
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE write_output_flux(tile, options, time_d, output_interval_flux, l_flux_output_interval)
+  SUBROUTINE write_output_flux(tile, options, time_d, output_interval_flux, l_flux_output_interval, l_zero_acc_variables)
 
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_model_class,       ONLY: t_jsb_model
@@ -1763,17 +1771,15 @@ CONTAINS
     dsl4jsb_Use_memory(SSE_)        !  USE mo_sse_memory_class,     ONLY: t_sse_memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
 
-
     IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
+
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile                     !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)    :: options                  !< model options
     REAL(wp),                   INTENT(in)    :: time_d, &                !< time in days
-                                                 output_interval_flux
-    LOGICAL,                    INTENT(in)    :: l_flux_output_interval
-    ! ---------------------------
-    ! 0.2 Local
+                                                 output_interval_flux     !< output interval in days (1.0 == one day exactly)
+    LOGICAL,                    INTENT(in)    :: l_flux_output_interval   !< logical: output at current timestep TRUE/FALSE
+    LOGICAL,                    INTENT(in)    :: l_zero_acc_variables     !< if TRUE, then run this routine but only set all *_acc variables to zero 
+
     TYPE(t_jsb_model),      POINTER       :: model                    !< model
     TYPE(t_lctlib_element), POINTER       :: lctlib                   !< land-cover-type library - parameter across pft's
     TYPE(t_jsb_vgrid), POINTER            :: vgrid_soil_sb            !< Vertical grid
@@ -2278,13 +2284,9 @@ CONTAINS
 #undef Get_sb_mycorrhiza_export
 #undef Get_sb_delta_pools
 
-    
-
-
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
-
 
     !< 1.0 modify 'dtime_one' factor accordingly to output interval
     !! 
@@ -2297,14 +2299,17 @@ CONTAINS
       dtime_one = dtime / 1000000.0_wp   ! interval > one timestep
     END IF
 
-
     !< 2.0  output
     !! 
     !! land/plant/canopy
     !! land/soil  (simple_0d/simple_1d/jsm  &  simple_1d/jsm)
     !! 
     ! set accumulation to TRUE always, because this routine is called only if it is TRUE
+    ! unless this routine is called only to "set to zero all the *_acc variables"
     l_flux_calc_acc_output = .TRUE.
+    IF (l_zero_acc_variables) THEN
+      l_flux_calc_acc_output = .FALSE.
+    ENDIF
     ! set starting-lun for write
     lun = 100 + 30
     SELECT CASE(TRIM(model%config%slm_model_name))
@@ -2524,82 +2529,85 @@ CONTAINS
                                           calc_delta_C14(co2_mixing_ratio_acc, co2_mixing_ratio_C14_acc, dC13atm)
                    lun=lun+1
                END SELECT  ! select land/plant & canopy
-
-
-               !! set all acc variables zero
-               !! 
-               ndat_acc                   = 0.0_wp
-               gpp_acc                    = 0.0_wp
-               growth_resp_acc            = 0.0_wp
-               maint_resp_acc             = 0.0_wp
-               n_transform_resp_acc       = 0.0_wp
-               n_fixation_resp_acc        = 0.0_wp
-               exudationC_acc             = 0.0_wp
-               npp_acc                    = 0.0_wp
-               res_use_c_acc              = 0.0_wp
-               growth_c_acc               = 0.0_wp
-               growth_wood_c_acc          = 0.0_wp
-               growth_wood_c13_acc        = 0.0_wp
-               growth_wood_c14_acc        = 0.0_wp
-               gpp_C13_acc                = 0.0_wp
-               growth_resp_C13_acc        = 0.0_wp
-               maint_resp_C13_acc         = 0.0_wp
-               gpp_C14_acc                = 0.0_wp
-               growth_resp_C14_acc        = 0.0_wp
-               maint_resp_C14_acc         = 0.0_wp
-               recycling_n_acc            = 0.0_wp
-               res_use_n_acc              = 0.0_wp
-               growth_n_acc               = 0.0_wp
-               growth_wood_n_acc          = 0.0_wp
-               growth_wood_n15_acc        = 0.0_wp
-               n_fixation_acc             = 0.0_wp
-               n_fixation_n15_acc         = 0.0_wp
-               uptake_po4_acc             = 0.0_wp
-               recycling_p_acc            = 0.0_wp
-               res_use_p_acc              = 0.0_wp
-               growth_p_acc               = 0.0_wp
-               growth_wood_p_acc          = 0.0_wp
-               precip_acc                 = 0.0_wp
-               evaporation_acc            = 0.0_wp
-               interception_acc           = 0.0_wp
-               pet_acc                    = 0.0_wp
-               transpiration_acc          = 0.0_wp
-               drainage_acc               = 0.0_wp
-               runoff_acc                 = 0.0_wp
-               gc_acc                     = 0.0_wp
-               ga_acc                     = 0.0_wp
-               ppfd_acc                   = 0.0_wp
-               rnet_acc                   = 0.0_wp
-               qh_acc                     = 0.0_wp
-               qle_acc                    = 0.0_wp
-               qg_acc                     = 0.0_wp
-               albedo_acc                 = 0.0_wp
-               appfd_acc                  = 0.0_wp
-               uptake_no3_acc             = 0.0_wp
-               uptake_no3_n15_acc         = 0.0_wp
-               uptake_nh4_acc             = 0.0_wp
-               uptake_nh4_n15_acc         = 0.0_wp
-               myc_export_c_acc           = 0.0_wp
-               myc_export_n_acc           = 0.0_wp
-               myc_export_p_acc           = 0.0_wp
-               myc_export_c13_acc         = 0.0_wp
-               myc_export_c14_acc         = 0.0_wp
-               myc_export_n15_acc         = 0.0_wp
-               myc_respiration_c_acc      = 0.0_wp
-               f_cm_som_acc               = 0.0_wp
-               ! atmospheric forcing (precip_acc is already considered above, see vegfluxH2O)
-               t_air_acc                  = 0.0_wp
-               wind_air_acc               = 0.0_wp
-               swvis_srf_down_acc         = 0.0_wp
-               lw_srf_down_acc            = 0.0_wp
-               vpd_acc                    = 0.0_wp
-               co2_mixing_ratio_acc       = 0.0_wp
-               co2_mixing_ratio_C13_acc   = 0.0_wp
-               co2_mixing_ratio_C14_acc   = 0.0_wp
              END IF ! l_flux_output_interval
            END IF   ! l_flux_calc_acc_output
+           
+           !! set all acc variables zero
+           !! either if:
+           !!   a) flux-output variables were written out, and thus need to be zero'ed
+           !!   b) this routine is called only to zero the *_acc (flux-output variables) because, e.g., 
+           !!        the output interval is changed and new output files are created (to delete potential prev. accumulated values)
+           IF (l_flux_output_interval .OR. l_zero_acc_variables) THEN
+             ndat_acc                   = 0.0_wp
+             gpp_acc                    = 0.0_wp
+             growth_resp_acc            = 0.0_wp
+             maint_resp_acc             = 0.0_wp
+             n_transform_resp_acc       = 0.0_wp
+             n_fixation_resp_acc        = 0.0_wp
+             exudationC_acc             = 0.0_wp
+             npp_acc                    = 0.0_wp
+             res_use_c_acc              = 0.0_wp
+             growth_c_acc               = 0.0_wp
+             growth_wood_c_acc          = 0.0_wp
+             growth_wood_c13_acc        = 0.0_wp
+             growth_wood_c14_acc        = 0.0_wp
+             gpp_C13_acc                = 0.0_wp
+             growth_resp_C13_acc        = 0.0_wp
+             maint_resp_C13_acc         = 0.0_wp
+             gpp_C14_acc                = 0.0_wp
+             growth_resp_C14_acc        = 0.0_wp
+             maint_resp_C14_acc         = 0.0_wp
+             recycling_n_acc            = 0.0_wp
+             res_use_n_acc              = 0.0_wp
+             growth_n_acc               = 0.0_wp
+             growth_wood_n_acc          = 0.0_wp
+             growth_wood_n15_acc        = 0.0_wp
+             n_fixation_acc             = 0.0_wp
+             n_fixation_n15_acc         = 0.0_wp
+             uptake_po4_acc             = 0.0_wp
+             recycling_p_acc            = 0.0_wp
+             res_use_p_acc              = 0.0_wp
+             growth_p_acc               = 0.0_wp
+             growth_wood_p_acc          = 0.0_wp
+             precip_acc                 = 0.0_wp
+             evaporation_acc            = 0.0_wp
+             interception_acc           = 0.0_wp
+             pet_acc                    = 0.0_wp
+             transpiration_acc          = 0.0_wp
+             drainage_acc               = 0.0_wp
+             runoff_acc                 = 0.0_wp
+             gc_acc                     = 0.0_wp
+             ga_acc                     = 0.0_wp
+             ppfd_acc                   = 0.0_wp
+             rnet_acc                   = 0.0_wp
+             qh_acc                     = 0.0_wp
+             qle_acc                    = 0.0_wp
+             qg_acc                     = 0.0_wp
+             albedo_acc                 = 0.0_wp
+             appfd_acc                  = 0.0_wp
+             uptake_no3_acc             = 0.0_wp
+             uptake_no3_n15_acc         = 0.0_wp
+             uptake_nh4_acc             = 0.0_wp
+             uptake_nh4_n15_acc         = 0.0_wp
+             myc_export_c_acc           = 0.0_wp
+             myc_export_n_acc           = 0.0_wp
+             myc_export_p_acc           = 0.0_wp
+             myc_export_c13_acc         = 0.0_wp
+             myc_export_c14_acc         = 0.0_wp
+             myc_export_n15_acc         = 0.0_wp
+             myc_respiration_c_acc      = 0.0_wp
+             f_cm_som_acc               = 0.0_wp
+             ! atmospheric forcing (precip_acc is already considered above, see vegfluxH2O)
+             t_air_acc                  = 0.0_wp
+             wind_air_acc               = 0.0_wp
+             swvis_srf_down_acc         = 0.0_wp
+             lw_srf_down_acc            = 0.0_wp
+             vpd_acc                    = 0.0_wp
+             co2_mixing_ratio_acc       = 0.0_wp
+             co2_mixing_ratio_C13_acc   = 0.0_wp
+             co2_mixing_ratio_C14_acc   = 0.0_wp
+           ENDIF    ! IF (l_flux_output_interval .OR. l_zero_acc_variables)
     END SELECT      ! land/plant/canopy
-
 
     !! land/soil
     !!  simple_0d and simple_1d and jsm
@@ -2760,65 +2768,8 @@ CONTAINS
                                   sb_total_flux_carbon13_acc, sb_total_flux_carbon14_acc, sb_total_flux_nitrogen15_acc
           lun=lun+1
 
-          !! set acc variables to zero      
-          litterfallC_acc                = 0.0_wp
-          het_respC_acc                  = 0.0_wp
-          leachingCorg_acc               = 0.0_wp
-          litterfallC13_acc              = 0.0_wp
-          het_respC13_acc                = 0.0_wp
-          leachingC13org_acc             = 0.0_wp
-          litterfallC14_acc              = 0.0_wp
-          het_respC14_acc                = 0.0_wp
-          leachingC14org_acc             = 0.0_wp
-          nitrification_acc              = 0.0_wp
-          denitrification_acc            = 0.0_wp
-          litterfallN_acc                = 0.0_wp
-          net_min_nh4_acc                = 0.0_wp
-          net_min_no3_acc                = 0.0_wp
-          plant_uptake_nh4_acc           = 0.0_wp
-          plant_uptake_no3_acc           = 0.0_wp
-          leachingNorg_acc               = 0.0_wp
-          myc_uptake_nh4_acc             = 0.0_wp
-          myc_uptake_no3_acc             = 0.0_wp
-          myc_uptake_norg_acc            = 0.0_wp
-          fast_exchange_nh4_acc          = 0.0_wp
-          emission_noy_acc               = 0.0_wp
-          emission_noy_n15_acc           = 0.0_wp
-          emission_n2o_acc               = 0.0_wp
-          emission_n2o_n15_acc           = 0.0_wp
-          emission_n2_acc                = 0.0_wp
-          emission_n2_n15_acc            = 0.0_wp
-          leaching_nh4_acc               = 0.0_wp
-          leaching_nh4_n15_acc           = 0.0_wp
-          leaching_no3_acc               = 0.0_wp
-          leaching_no3_n15_acc           = 0.0_wp
-          asymb_n_fixation_acc           = 0.0_wp
-          asymb_n_fixation_n15_acc       = 0.0_wp
-          litterfallP_acc                = 0.0_wp
-          leachingPorg_acc               = 0.0_wp
-          p_deposition_acc               = 0.0_wp
-          n_deposition_acc               = 0.0_wp
-          n_deposition_n15_acc           = 0.0_wp
-          leaching_po4_acc               = 0.0_wp
-          net_min_po4_acc                = 0.0_wp
-          plant_uptake_po4_acc           = 0.0_wp
-          weathering_po4_acc             = 0.0_wp
-          occlusion_po4_acc              = 0.0_wp
-          slow_exchange_po4_acc          = 0.0_wp
-          fast_exchange_po4_acc          = 0.0_wp
-          biochem_mineralisation_po4_acc = 0.0_wp
-          sb_delta_pools_carbon_acc      = 0.0_wp
-          sb_delta_pools_nitrogen_acc    = 0.0_wp
-          sb_delta_pools_phosphorus_acc  = 0.0_wp
-          sb_delta_pools_carbon13_acc    = 0.0_wp
-          sb_delta_pools_carbon14_acc    = 0.0_wp
-          sb_delta_pools_nitrogen15_acc  = 0.0_wp
-          sb_total_flux_carbon_acc       = 0.0_wp
-          sb_total_flux_nitrogen_acc     = 0.0_wp
-          sb_total_flux_phosphorus_acc   = 0.0_wp
-          sb_total_flux_carbon13_acc     = 0.0_wp
-          sb_total_flux_carbon14_acc     = 0.0_wp
-          sb_total_flux_nitrogen15_acc   = 0.0_wp
+          !! set acc variables to zero  
+          !! ==> see below at "IF (l_flux_output_interval .OR. l_zero_acc_variables) THEN"
         END IF
 
         !! simple_1d & jsm layer-data
@@ -2946,52 +2897,120 @@ CONTAINS
             lun = lun + 1
 
             !! set acc variables to zero
-            ! C
-            het_respiration_lay_acc(1:nsoil_sb)     = 0.0_wp
-            het_respiration_c13_lay_acc(1:nsoil_sb) = 0.0_wp
-            het_respiration_c14_lay_acc(1:nsoil_sb) = 0.0_wp
-            transport_DOC_lay_acc(1:nsoil_sb)       = 0.0_wp
-            ! N
-            net_mineral_nh4_lay_acc(1:nsoil_sb)     = 0.0_wp
-            plant_uptake_nh4_lay_acc(1:nsoil_sb)    = 0.0_wp
-            microbial_upt_nh4_lay_acc(1:nsoil_sb)   = 0.0_wp
-            microbial_upt_no3_lay_acc(1:nsoil_sb)   = 0.0_wp
-            myc_uptake_nh4_lay_acc(1:nsoil_sb)      = 0.0_wp
-            asymb_n_fixation_lay_acc(1:nsoil_sb)    = 0.0_wp
-            net_mineral_no3_lay_acc(1:nsoil_sb)     = 0.0_wp
-            plant_uptake_no3_lay_acc(1:nsoil_sb)    = 0.0_wp
-            myc_uptake_no3_lay_acc(1:nsoil_sb)      = 0.0_wp
-            transport_solute_nh4_acc(1:nsoil_sb)    = 0.0_wp
-            transport_nh4_assoc_acc(1:nsoil_sb)     = 0.0_wp
-            transport_solute_no3_acc(1:nsoil_sb)    = 0.0_wp
-            transport_DON_lay_acc(1:nsoil_sb)       = 0.0_wp
-            myc_uptake_norg_lay_acc(1:nsoil_sb)     = 0.0_wp
-            f_adsorpt_nh4_lay_acc(1:nsoil_sb)       = 0.0_wp
-            nitrification_lay_acc(1:nsoil_sb)       = 0.0_wp
-            denitrification_lay_acc(1:nsoil_sb)     = 0.0_wp
-            ! P
-            f_exchange_po4_acc(1:nsoil_sb)            = 0.0_wp
-            f_adsorpt_po4_acc(1:nsoil_sb)             = 0.0_wp
-            weath_po4_acc(1:nsoil_sb)                 = 0.0_wp
-            ocl_po4_acc(1:nsoil_sb)                   = 0.0_wp
-            s_exchange_po4_acc(1:nsoil_sb)            = 0.0_wp
-            net_min_po4_lay_acc(1:nsoil_sb)           = 0.0_wp
-            biochem_min_po4_acc(1:nsoil_sb)           = 0.0_wp
-            microbial_upt_po4_acc(1:nsoil_sb)         = 0.0_wp
-            plant_upt_po4_acc(1:nsoil_sb)             = 0.0_wp 
-            myc_upt_po4_acc(1:nsoil_sb)               = 0.0_wp  
-            transport_solute_po4_acc(1:nsoil_sb)      = 0.0_wp
-            transport_assoc_fast_po4_acc(1:nsoil_sb)  = 0.0_wp
-            transport_assoc_slow_po4_acc(1:nsoil_sb)  = 0.0_wp
-            transport_occluded_po4_acc(1:nsoil_sb)    = 0.0_wp
-            transport_primary_po4_acc(1:nsoil_sb)     = 0.0_wp
-            transport_DOP_lay_acc(1:nsoil_sb)         = 0.0_wp
+            !! see below
           END IF      ! l_flux_output_interval
         END SELECT    ! simple_1d/jsm
       END IF          ! l_flux_calc_acc_output
+      
+      !! set all acc variables zero
+      !! either if:
+      !!   a) flux-output variables were written out, and thus need to be zero'ed
+      !!   b) this routine is called only to zero the *_acc (flux-output variables) because, e.g., 
+      !!        the output interval is changed and new output files are created (to delete potential prev. accumulated values)
+      IF (l_flux_output_interval .OR. l_zero_acc_variables) THEN
+        !! land & soil model
+        litterfallC_acc                   = 0.0_wp
+        het_respC_acc                     = 0.0_wp
+        leachingCorg_acc                  = 0.0_wp
+        litterfallC13_acc                 = 0.0_wp
+        het_respC13_acc                   = 0.0_wp
+        leachingC13org_acc                = 0.0_wp
+        litterfallC14_acc                 = 0.0_wp
+        het_respC14_acc                   = 0.0_wp
+        leachingC14org_acc                = 0.0_wp
+        nitrification_acc                 = 0.0_wp
+        denitrification_acc               = 0.0_wp
+        litterfallN_acc                   = 0.0_wp
+        net_min_nh4_acc                   = 0.0_wp
+        net_min_no3_acc                   = 0.0_wp
+        plant_uptake_nh4_acc              = 0.0_wp
+        plant_uptake_no3_acc              = 0.0_wp
+        leachingNorg_acc                  = 0.0_wp
+        myc_uptake_nh4_acc                = 0.0_wp
+        myc_uptake_no3_acc                = 0.0_wp
+        myc_uptake_norg_acc               = 0.0_wp
+        fast_exchange_nh4_acc             = 0.0_wp
+        emission_noy_acc                  = 0.0_wp
+        emission_noy_n15_acc              = 0.0_wp
+        emission_n2o_acc                  = 0.0_wp
+        emission_n2o_n15_acc              = 0.0_wp
+        emission_n2_acc                   = 0.0_wp
+        emission_n2_n15_acc               = 0.0_wp
+        leaching_nh4_acc                  = 0.0_wp
+        leaching_nh4_n15_acc              = 0.0_wp
+        leaching_no3_acc                  = 0.0_wp
+        leaching_no3_n15_acc              = 0.0_wp
+        asymb_n_fixation_acc              = 0.0_wp
+        asymb_n_fixation_n15_acc          = 0.0_wp
+        litterfallP_acc                   = 0.0_wp
+        leachingPorg_acc                  = 0.0_wp
+        p_deposition_acc                  = 0.0_wp
+        n_deposition_acc                  = 0.0_wp
+        n_deposition_n15_acc              = 0.0_wp
+        leaching_po4_acc                  = 0.0_wp
+        net_min_po4_acc                   = 0.0_wp
+        plant_uptake_po4_acc              = 0.0_wp
+        weathering_po4_acc                = 0.0_wp
+        occlusion_po4_acc                 = 0.0_wp
+        slow_exchange_po4_acc             = 0.0_wp
+        fast_exchange_po4_acc             = 0.0_wp
+        biochem_mineralisation_po4_acc    = 0.0_wp
+        sb_delta_pools_carbon_acc         = 0.0_wp
+        sb_delta_pools_nitrogen_acc       = 0.0_wp
+        sb_delta_pools_phosphorus_acc     = 0.0_wp
+        sb_delta_pools_carbon13_acc       = 0.0_wp
+        sb_delta_pools_carbon14_acc       = 0.0_wp
+        sb_delta_pools_nitrogen15_acc     = 0.0_wp
+        sb_total_flux_carbon_acc          = 0.0_wp
+        sb_total_flux_nitrogen_acc        = 0.0_wp
+        sb_total_flux_phosphorus_acc      = 0.0_wp
+        sb_total_flux_carbon13_acc        = 0.0_wp
+        sb_total_flux_carbon14_acc        = 0.0_wp
+        sb_total_flux_nitrogen15_acc      = 0.0_wp
+
+        !! simple_1d & jsm
+        ! C
+        het_respiration_lay_acc(1:nsoil_sb)         = 0.0_wp
+        het_respiration_c13_lay_acc(1:nsoil_sb)     = 0.0_wp
+        het_respiration_c14_lay_acc(1:nsoil_sb)     = 0.0_wp
+        transport_DOC_lay_acc(1:nsoil_sb)           = 0.0_wp
+        ! N
+        net_mineral_nh4_lay_acc(1:nsoil_sb)         = 0.0_wp
+        plant_uptake_nh4_lay_acc(1:nsoil_sb)        = 0.0_wp
+        microbial_upt_nh4_lay_acc(1:nsoil_sb)       = 0.0_wp
+        microbial_upt_no3_lay_acc(1:nsoil_sb)       = 0.0_wp
+        myc_uptake_nh4_lay_acc(1:nsoil_sb)          = 0.0_wp
+        asymb_n_fixation_lay_acc(1:nsoil_sb)        = 0.0_wp
+        net_mineral_no3_lay_acc(1:nsoil_sb)         = 0.0_wp
+        plant_uptake_no3_lay_acc(1:nsoil_sb)        = 0.0_wp
+        myc_uptake_no3_lay_acc(1:nsoil_sb)          = 0.0_wp
+        transport_solute_nh4_acc(1:nsoil_sb)        = 0.0_wp
+        transport_nh4_assoc_acc(1:nsoil_sb)         = 0.0_wp
+        transport_solute_no3_acc(1:nsoil_sb)        = 0.0_wp
+        transport_DON_lay_acc(1:nsoil_sb)           = 0.0_wp
+        myc_uptake_norg_lay_acc(1:nsoil_sb)         = 0.0_wp
+        f_adsorpt_nh4_lay_acc(1:nsoil_sb)           = 0.0_wp
+        nitrification_lay_acc(1:nsoil_sb)           = 0.0_wp
+        denitrification_lay_acc(1:nsoil_sb)         = 0.0_wp
+        ! P
+        f_exchange_po4_acc(1:nsoil_sb)              = 0.0_wp
+        f_adsorpt_po4_acc(1:nsoil_sb)               = 0.0_wp
+        weath_po4_acc(1:nsoil_sb)                   = 0.0_wp
+        ocl_po4_acc(1:nsoil_sb)                     = 0.0_wp
+        s_exchange_po4_acc(1:nsoil_sb)              = 0.0_wp
+        net_min_po4_lay_acc(1:nsoil_sb)             = 0.0_wp
+        biochem_min_po4_acc(1:nsoil_sb)             = 0.0_wp
+        microbial_upt_po4_acc(1:nsoil_sb)           = 0.0_wp
+        plant_upt_po4_acc(1:nsoil_sb)               = 0.0_wp 
+        myc_upt_po4_acc(1:nsoil_sb)                 = 0.0_wp  
+        transport_solute_po4_acc(1:nsoil_sb)        = 0.0_wp
+        transport_assoc_fast_po4_acc(1:nsoil_sb)    = 0.0_wp
+        transport_assoc_slow_po4_acc(1:nsoil_sb)    = 0.0_wp
+        transport_occluded_po4_acc(1:nsoil_sb)      = 0.0_wp
+        transport_primary_po4_acc(1:nsoil_sb)       = 0.0_wp
+        transport_DOP_lay_acc(1:nsoil_sb)           = 0.0_wp      
+      ENDIF           ! IF (l_flux_output_interval .OR. l_zero_acc_variables) THEN
     END SELECT        ! land/soil
-
-
 
 
 ! Pass back values to process memory
