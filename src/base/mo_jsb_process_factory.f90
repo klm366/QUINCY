@@ -31,6 +31,7 @@ MODULE mo_jsb_process_factory
   USE mo_disturb_memory_class, ONLY: t_disturb_memory
   USE mo_fuel_memory_class,    ONLY: t_fuel_memory
   USE mo_veg_memory_class,     ONLY: t_veg_memory
+  USE mo_sb_memory_class,      ONLY: t_sb_memory
 #ifndef __NO_JSBACH_HD__
   USE mo_hd_memory_class,      ONLY: t_hd_memory
 #endif
@@ -60,9 +61,11 @@ MODULE mo_jsb_process_factory
   USE mo_fuel_config_class,     ONLY: t_fuel_config
   USE mo_veg_interface,         ONLY: Register_veg_tasks
   USE mo_veg_config_class,      ONLY: t_veg_config
+  USE mo_sb_interface,          ONLY: Register_sb_tasks
+  USE mo_sb_config_class,       ONLY: t_sb_config
 
   USE mo_jsb_process_class, ONLY: &
-    & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, VEG_
+    & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, VEG_, SB_
 
   IMPLICIT NONE
   PRIVATE
@@ -128,6 +131,9 @@ CONTAINS
     CASE (VEG_)
       CALL Register_veg_tasks(return_ptr, model_id)
       ALLOCATE(t_veg_config::return_ptr%config)
+    CASE (SB_)
+      CALL Register_sb_tasks(return_ptr, model_id)
+      ALLOCATE(t_sb_config::return_ptr%config)
     CASE DEFAULT
       return_ptr => NULL()
     END SELECT
@@ -153,6 +159,7 @@ CONTAINS
     USE mo_disturb_memory_class, ONLY: max_no_of_disturb_vars => max_no_of_vars
     USE mo_fuel_memory_class,    ONLY: max_no_of_fuel_vars => max_no_of_vars
     USE mo_veg_memory_class,     ONLY: max_no_of_veg_vars => max_no_of_vars
+    USE mo_sb_memory_class,      ONLY: max_no_of_sb_vars => max_no_of_vars
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_memory_class,      ONLY: max_no_of_hd_vars => max_no_of_vars
 #endif
@@ -205,6 +212,9 @@ CONTAINS
     CASE (VEG_)
       ALLOCATE(t_veg_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_veg_vars
+    CASE (SB_)
+      ALLOCATE(t_sb_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_sb_vars
     END SELECT
 
     !$acc enter data create(return_ptr)

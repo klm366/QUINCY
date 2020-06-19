@@ -16,7 +16,7 @@
 MODULE mo_jsb_model_init
 #ifndef __NO_JSBACH__
 
-  dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, FUEL_, A2L_, VEG_
+  dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, FUEL_, A2L_, VEG_, SB_
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
 
@@ -151,6 +151,7 @@ CONTAINS
     USE mo_assimi_init,         ONLY: assimi_init
     USE mo_pheno_init,          ONLY: pheno_init
     USE mo_veg_init,            ONLY: veg_init
+    USE mo_sb_init,             ONLY: sb_init
     USE mo_carbon_init,         ONLY: carbon_init
     USE mo_fuel_init,           ONLY: fuel_init
     !USE mo_disturb_init,        ONLY: disturb_init
@@ -268,6 +269,7 @@ CONTAINS
       !!
       CALL model%Queue_task(ASSIMI_, "reset_assimi_fluxes")         !! quincy
       CALL model%Queue_task(VEG_,    "reset_veg_fluxes")            !! quincy
+      CALL model%Queue_task(SB_,     "reset_sb_fluxes")             !! quincy
       
       !!------------------------ tasks that can change area (e.g. disturbance & fuel)
       !! 
@@ -308,6 +310,8 @@ CONTAINS
       CALL model%Queue_task(RAD_,    "albedo")
       CALL model%Queue_task(HYDRO_,  "water_balance")
       CALL model%Queue_task(SEB_,    "asselin_filter")              ! Should always be the last task
+      
+      CALL model%Queue_task(SB_,     "update_sb_pools")             !! quincy
       
       ! averaging variables in time at the end of the timestep
       CALL model%Queue_task(PHENO_,  "time_average_phenology")      !! quincy
@@ -373,6 +377,11 @@ CONTAINS
 
       IF (one_of(tile%process_action(SSE_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
         CALL sse_init(tile)
+      END IF
+
+      ! Initialize SSE_ before SB_
+      IF (one_of(tile%process_action(SB_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        CALL sb_init(tile)
       END IF
 
       IF (one_of(tile%process_action(A2L_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
