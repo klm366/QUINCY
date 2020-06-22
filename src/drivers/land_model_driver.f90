@@ -337,7 +337,7 @@ PROGRAM land_model_driver
         CALL open_output_files_soil_forcing(tile, iblk, ics, ice, nc)
       ENDIF
     CASE('test_canopy','test_radiation')
-      ntimestep = 0     ! simulation starts with zero, and loop asks for 'IF (itimestep .GT. ntimestep) EXIT'
+      ntimestep = 1     ! simulation starts with one, and loop asks for 'IF (itimestep .GT. ntimestep) EXIT'
   END SELECT
 
 
