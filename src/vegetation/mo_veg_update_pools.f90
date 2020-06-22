@@ -104,8 +104,9 @@ CONTAINS
     TYPE(t_jsb_vgrid),        POINTER               :: vgrid_soil_sb    !< Vertical grid
     INTEGER                                         :: ncanopy          !< number of canopy layers
     INTEGER                                         :: nsoil_sb         !< number of soil layers as used/defined by the SB_ process
-    REAL(wp),                 DIMENSION(options%nc) :: hlp1             !< dummy variable
+    REAL(wp), DIMENSION(options%nc)                 :: hlp1             !< dummy variable
     REAL(wp), ALLOCATABLE                           :: canopy_layer_depth(:)  !< thickness of each single canopy layer [m2 m-2 LAI]
+    REAL(wp)                                        :: lctlib_g1              !< set to g1_medlyn or g1_bberry depending on canopy_conductance_scheme
     INTEGER                                         :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_pools'
     ! ---------------------------
@@ -319,6 +320,14 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
+    !> 0.9 set g1 according to canopy_conductance_scheme
+    !! 
+    SELECT CASE(TRIM(dsl4jsb_Config(ASSIMI_)%canopy_conductance_scheme))
+      CASE ("medlyn")
+        lctlib_g1 = lctlib%g1_medlyn
+      CASE ("ballberry")
+        lctlib_g1 = lctlib%g1_bberry
+    END SELECT
 
     !> 1.0 for plant and land model, update vegetation pools with fluxes
     !! 
@@ -528,21 +537,22 @@ CONTAINS
     !> 4.0 Given current vegetation pools, update canopy layers 
     !!
     !!
-    CALL calc_canopy_layers( nc                                             , & ! in
-                             ncanopy                                        , &
-                             vgrid_canopy%dz(:)                             , &
-                             vgrid_canopy%lbounds(:)                        , &
-                             vgrid_canopy%ubounds(:)                        , &
-                             lctlib%ps_pathway                              , &
-                             lctlib%k0_fn_struc                             , &
-                             lctlib%fn_oth_min                              , &
-                             lctlib%sla                                     , &
-                             lctlib%np_leaf                                 , &
-                             lctlib%gmin                                    , &
-                             lctlib%g0                                      , &
-                             lctlib%g1                                      , &
-                             lctlib%t_jmax_omega                            , &
-                             dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
+    CALL calc_canopy_layers( nc                                                     , & ! in
+                             ncanopy                                                , &
+                             vgrid_canopy%dz(:)                                     , &
+                             vgrid_canopy%lbounds(:)                                , &
+                             vgrid_canopy%ubounds(:)                                , &
+                             lctlib%ps_pathway                                      , &
+                             lctlib%k0_fn_struc                                     , &
+                             lctlib%fn_oth_min                                      , &
+                             lctlib%sla                                             , &
+                             lctlib%np_leaf                                         , &
+                             lctlib%gmin                                            , &
+                             lctlib%g0                                              , &
+                             lctlib_g1                                              , &
+                             lctlib%t_jmax_omega                                    , &
+                             dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction         , &
+                             TRIM(dsl4jsb_Config(ASSIMI_)%canopy_conductance_scheme), & ! ASSIMI_ config (medlyn/ballberry)
                              canopy_layer_depth(:)                          , &
                              veg_pool%leaf%nitrogen(:)                      , &
                              lai(:)                                         , &

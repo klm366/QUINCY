@@ -135,6 +135,7 @@ CONTAINS
     REAL(wp),ALLOCATABLE    :: canopy_layer_depth(:)  ! thickness of each single canopy layer [m2 m-2 LAI]
     INTEGER                 :: ipoi, ichunk           ! number of the chunk: ipoi 1:nc / ichunk ics:ice
     INTEGER                 :: iblk, ics, ice, nc
+    REAL(wp)                :: lctlib_g1              !< set to g1_medlyn or g1_bberry depending on canopy_conductance_scheme
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':run_test_canopy_model'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -236,7 +237,16 @@ CONTAINS
     !> 1.0 Init
     !!
 
-    !> 1.1 Initalisation of met-forcing which is assumed constant
+    !> 1.1 set g1 according to canopy_conductance_scheme
+    !! 
+    SELECT CASE(TRIM(dsl4jsb_Config(ASSIMI_)%canopy_conductance_scheme))
+      CASE ("medlyn")
+        lctlib_g1 = lctlib%g1_medlyn
+      CASE ("ballberry")
+        lctlib_g1 = lctlib%g1_bberry
+    END SELECT
+
+    !> 1.2 Initalisation of met-forcing which is assumed constant
     !!
     !!
     t_air(:)            = ref_t_air + TZero
@@ -304,11 +314,12 @@ CONTAINS
                             lctlib%np_leaf                                 , &
                             lctlib%gmin                                    , &
                             lctlib%g0                                      , &
-                            lctlib%g1                                      , &
+                            lctlib_g1                                      , &
                             lctlib%t_jmax_omega                            , &
                             dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
-                            canopy_layer_depth(:)                          , &
-                            leaf_nitrogen       = veg__mem%pool%leaf%nitrogen%ptr(:,iblk)      , &
+                            TRIM(dsl4jsb_Config(ASSIMI_)%canopy_conductance_scheme)       , & ! ASSIMI_ config
+                            canopy_layer_depth(:)                                         , &
+                            leaf_nitrogen       = veg__mem%pool%leaf%nitrogen%ptr(:,iblk) , &
                             lai                 = lai(:)                          , &
                             ppfd_sunlit_cl      = ppfd_sunlit_tfrac_mavg_cl(:,:)  , &
                             ppfd_shaded_cl      = ppfd_shaded_tfrac_mavg_cl(:,:)  , & 
@@ -510,11 +521,12 @@ CONTAINS
                               lctlib%np_leaf                                 , &
                               lctlib%gmin                                    , &
                               lctlib%g0                                      , &
-                              lctlib%g1                                      , &
+                              lctlib_g1                                      , &
                               lctlib%t_jmax_omega                            , &
                               dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
-                              canopy_layer_depth(:)                          , &
-                              leaf_nitrogen       = veg__mem%pool%leaf%nitrogen%ptr(:,iblk)      , &
+                              TRIM(dsl4jsb_Config(ASSIMI_)%canopy_conductance_scheme)       , & ! ASSIMI_ config
+                              canopy_layer_depth(:)                                         , &
+                              leaf_nitrogen       = veg__mem%pool%leaf%nitrogen%ptr(:,iblk) , &
                               lai                 = lai(:)                          , &
                               ppfd_sunlit_cl      = ppfd_sunlit_tfrac_mavg_cl(:,:)  , &
                               ppfd_shaded_cl      = ppfd_shaded_tfrac_mavg_cl(:,:)  , & 
@@ -562,11 +574,12 @@ CONTAINS
                               lctlib%np_leaf                                 , &
                               lctlib%gmin                                    , &
                               lctlib%g0                                      , &
-                              lctlib%g1                                      , &
+                              lctlib_g1                                      , &
                               lctlib%t_jmax_omega                            , &
                               dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
-                              canopy_layer_depth(:)                          , &
-                              leaf_nitrogen       = veg__mem%pool%leaf%nitrogen%ptr(:,iblk)      , &
+                              TRIM(dsl4jsb_Config(ASSIMI_)%canopy_conductance_scheme)       , & ! ASSIMI_ config
+                              canopy_layer_depth(:)                                         , &
+                              leaf_nitrogen       = veg__mem%pool%leaf%nitrogen%ptr(:,iblk) , &
                               lai                 = lai(:)                          , &
                               ppfd_sunlit_cl      = ppfd_sunlit_tfrac_mavg_cl(:,:)  , &
                               ppfd_shaded_cl      = ppfd_shaded_tfrac_mavg_cl(:,:)  , & 
@@ -618,11 +631,12 @@ CONTAINS
                               lctlib%np_leaf                                 , &
                               lctlib%gmin                                    , &
                               lctlib%g0                                      , &
-                              lctlib%g1                                      , &
+                              lctlib_g1                                      , &
                               lctlib%t_jmax_omega                            , &
                               dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
-                              canopy_layer_depth(:)                          , &
-                              leaf_nitrogen       = veg__mem%pool%leaf%nitrogen%ptr(:,iblk)      , &
+                              TRIM(dsl4jsb_Config(ASSIMI_)%canopy_conductance_scheme)       , & ! ASSIMI_ config
+                              canopy_layer_depth(:)                                         , &
+                              leaf_nitrogen       = veg__mem%pool%leaf%nitrogen%ptr(:,iblk) , &
                               lai                 = lai(:)                          , &
                               ppfd_sunlit_cl      = ppfd_sunlit_tfrac_mavg_cl(:,:)  , &
                               ppfd_shaded_cl      = ppfd_shaded_tfrac_mavg_cl(:,:)  , & 

@@ -36,6 +36,8 @@
   ncanopy=20
   ! canopy layer depth calculation [standard = 0.5, fapar]
   canopy_layer_scheme="standard"
+  ! calculation of gs_cl following Medlyn [default] or Ball/Berry
+  canopy_conductance_scheme="medlyn"
 /
 &PHENOLOGY_CTL
   ! LAI at the site, used to set pheno:lai_max

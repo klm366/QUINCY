@@ -55,6 +55,7 @@ MODULE mo_assimi_config_class
     LOGICAL                 :: flag_t_resp_acclimation    !< whether or not to use the respiration temperature acclimation factor
     LOGICAL                 :: flag_t_jmax_acclimation    !< acclimation of optimum temperature for Jmax 
     CHARACTER(15)           :: canopy_layer_scheme        !< select scheme to calculate canopy layer thicknesses [standard|fapar]
+    CHARACTER(15)           :: canopy_conductance_scheme  !< select scheme to calculate canopy conductance [medlyn|ballberry]
   CONTAINS
     PROCEDURE :: Init => Init_assimi_config
   END type t_assimi_config
@@ -92,6 +93,7 @@ CONTAINS
                                    flag_t_resp_acclimation    , &
                                    flag_t_jmax_acclimation
     CHARACTER(15)               :: canopy_layer_scheme
+    CHARACTER(15)               :: canopy_conductance_scheme
     INTEGER                     :: ncanopy    , &
                                    icanopy
     REAL(wp)                    :: dAPAR
@@ -107,7 +109,8 @@ CONTAINS
         flag_t_resp_acclimation,   &
         flag_t_jmax_acclimation,   &
         ncanopy,                   &
-        canopy_layer_scheme
+        canopy_layer_scheme,       &
+        canopy_conductance_scheme
 
     ! variables for reading model-options from namelist
     INTEGER  :: nml_handler, nml_unit, istat
@@ -126,6 +129,7 @@ CONTAINS
     flag_t_jmax_acclimation        = .FALSE.      ! .TRUE. .FALSE.
     ncanopy                        = 20           ! (default for FAPAR based canopy layers would be 10)
     canopy_layer_scheme            = "standard"   ! 
+    canopy_conductance_scheme      = "medlyn"
 
     ! read the namelist
     ! &ASSIMILATION_CTL
@@ -144,6 +148,7 @@ CONTAINS
     config%flag_t_resp_acclimation       = flag_t_resp_acclimation
     config%flag_t_jmax_acclimation       = flag_t_jmax_acclimation
     config%canopy_layer_scheme           = TRIM(canopy_layer_scheme)
+    config%canopy_conductance_scheme     = TRIM(canopy_conductance_scheme)
 
 
     !< canopy layer depth calculation
@@ -170,6 +175,22 @@ CONTAINS
 
       CASE DEFAULT
         WRITE(message_text,'(2a)') 'invalid canopy_layer_scheme',canopy_layer_scheme
+        CALL finish(routine, message_text) 
+    END SELECT
+
+    !< check canopy-conductance scheme
+    !! 
+    SELECT CASE(TRIM(config%canopy_conductance_scheme))
+      CASE ("medlyn")
+        print*, TRIM(routine)
+        print*, '  using the canopy_conductance_scheme: ', TRIM(config%canopy_conductance_scheme), &
+                '  the local lctlib_g1 variable is set to lctlib%g1_medlyn'
+      CASE ("ballberry")
+        print*, TRIM(routine)
+        print*, '  using the canopy_conductance_scheme: ', TRIM(config%canopy_conductance_scheme), &
+                '  the local lctlib_g1 variable is set to lctlib%g1_bberry'
+      CASE DEFAULT
+        WRITE(message_text,'(2a)') 'invalid canopy_conductance_scheme: ', TRIM(config%canopy_conductance_scheme)
         CALL finish(routine, message_text) 
     END SELECT
 

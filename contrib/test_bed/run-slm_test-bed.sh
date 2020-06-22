@@ -51,25 +51,26 @@ flag_mycorrhiza_prim="F"        # present mycorrhiza enhance decomposition of re
 flag_t_resp_acclimation="T"
 flag_t_jmax_acclimation="T"
 flag_optimal_Nfraction="F"
-ncanopy=10                      # number of canopy layers
-canopy_layer_scheme="fapar"     # canopy layer depth calculation options: standard fapar
+ncanopy=10                        # number of canopy layers
+canopy_layer_scheme="fapar"       # canopy layer depth calculation options: standard fapar
+canopyConductanceScheme="medlyn"  # calculation of gs_cl following Medlyn [default] or Ball/Berry: medlyn ballberry
 
 # plant growth model options
-biomass_alloc_scheme="fixed"    # fixed dynamic optimal
-leaf_stoichom_scheme="fixed"    # fixed dynamic optimal
+biomass_alloc_scheme="fixed"      # fixed dynamic optimal
+leaf_stoichom_scheme="fixed"      # fixed dynamic optimal
 # vegetation dynamics options
 veg_dynamics_scheme="population"  # none population cohort
 cohort_harvest_interval=80        # number of years after which the cohort is harvested and re-planted, is used with veg_dynamics_scheme="cohort"
 
 # soil model options
-soil_depth=5.7                  # meter (5.7 to 9.5)
-nsoil_layer=5                   # number of soil layers (default for QUINCY land: 5 | for QUINCY soil only available forcing: 15 | generally: min 5 & max 20)
-soilForcStatRevNum=""           # only numbers - revision number (e.g., 2174) of the code (svn repo trunk) the soil forcing was created with - see site-set dir
+soil_depth=5.7                    # meter (5.7 to 9.5)
+nsoil_layer=5                     # number of soil layers (default for QUINCY land: 5 | for QUINCY soil only available forcing: 15 | generally: min 5 & max 20)
+soilForcStatRevNum=""             # only numbers - revision number (e.g., 2174) of the code (svn repo trunk) the soil forcing was created with - see site-set dir
 
 # JSM
-flag_sb_jsm_transport="F"       # ..
-flag_sb_jsm_litter_input="F"    # ..
-flag_sb_jsm_OM_sorption="F"     # ..
+flag_sb_jsm_transport="F"         # ..
+flag_sb_jsm_litter_input="F"      # ..
+flag_sb_jsm_OM_sorption="F"       # ..
 
 # ECA for JSM (Equilibrium Chemistry Approximation)
 sb_adsorp_scheme="eca_part"       # eca_full (vmax of ECA is calc by enzyme abundance and catalytic capacity)
@@ -339,6 +340,7 @@ validateMycScheme="no am ecm"
 validateNDepositionScheme="none constant dynamic"
 validatePDepositionScheme="none constant dynamic"
 validateCanopyLayerScheme="standard fapar"
+validateCanopyConductanceScheme="medlyn ballberry"
 validateSBModelScheme="simple_0d simple_1d jsm"
 validateSBNLossScheme="none fixed dynamic"
 validateBiomassAllocScheme="fixed dynamic optimal"
@@ -364,6 +366,7 @@ validateUserConfigValues "$p_deposition_scheme" "$validatePDepositionScheme" "p_
 validateUserConfigValues "$n_deposition_scheme" "$validateNDepositionScheme" "n_deposition_scheme"
 validateUserConfigValues "$p_deposition_scheme" "$validatePDepositionScheme" "p_deposition_scheme"
 validateUserConfigValues "$canopy_layer_scheme" "$validateCanopyLayerScheme" "canopy_layer_scheme"
+validateUserConfigValues "$canopyConductanceScheme" "$validateCanopyConductanceScheme" "canopyConductanceScheme"
 validateUserConfigValues "$sb_model_scheme" "$validateSBModelScheme" "sb_model_scheme"
 validateUserConfigValues "$sb_nloss_scheme" "$validateSBNLossScheme" "sb_nloss_scheme"
 validateUserConfigValues "$veg_dynamics_scheme" "$validateVegDynamicsScheme" "veg_dynamics_scheme"
@@ -736,6 +739,7 @@ changeNamelistValue n_deposition_scheme "$n_deposition_scheme"
 changeNamelistValue p_deposition_scheme "$p_deposition_scheme"
 changeNamelistValue ncanopy "$ncanopy"
 changeNamelistValue canopy_layer_scheme "$canopy_layer_scheme"
+changeNamelistValue canopy_conductance_scheme "$canopyConductanceScheme" 
 changeNamelistValue veg_dynamics_scheme "$veg_dynamics_scheme"
 changeNamelistValue biomass_alloc_scheme "$biomass_alloc_scheme"
 changeNamelistValue leaf_stoichom_scheme "$leaf_stoichom_scheme"

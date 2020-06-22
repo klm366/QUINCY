@@ -68,6 +68,7 @@ CONTAINS
                                 lctlib_g1             , &
                                 lctlib_t_jmax_omega   , &
                                 flag_optimal_Nfraction, &
+                                canopy_cond_scheme    , & ! ASSIMI_ config
                                 canopy_layer_depth, &
                                 leaf_nitrogen     , &
                                 lai               , &
@@ -120,6 +121,7 @@ CONTAINS
     REAL(wp),                               INTENT(in)              :: lctlib_g1             !< lctlib parameter
     REAL(wp),                               INTENT(in)              :: lctlib_t_jmax_omega   !< lctlib parameter  
     LOGICAL,                                INTENT(in)              :: flag_optimal_Nfraction!< on/off optimise leaf internal N allocation
+    CHARACTER(len=*),                       INTENT(IN)              :: canopy_cond_scheme    !< canopy_conductance_scheme: medlyn / ballberry
     REAL(wp),DIMENSION(ncanopy),            INTENT(in)              :: canopy_layer_depth    !< thickness of each single canopy layer [m2 m-2 LAI]
     REAL(wp),DIMENSION(nc),                 INTENT(in)              :: leaf_nitrogen         !< total canopy N (mol/m2)
     REAL(wp),DIMENSION(nc),                 INTENT(in)              :: lai                   !< total leaf area index
@@ -409,6 +411,7 @@ CONTAINS
                                                lctlib_g1                  , &
                                                lctlib_t_jmax_omega        , &
                                                lctlib_ps_pathway          , & ! lctlib
+                                               canopy_cond_scheme         , & ! ASSIMI_ config
                                                lai_cl(:,icanopy)          , & ! in
                                                leaf_nitrogen_cl(:,icanopy), &
                                                ppfd_sunlit_cl(:,icanopy)  , &
@@ -450,7 +453,8 @@ CONTAINS
                                     g0                        , &
                                     g1                        , &
                                     t_jmax_omega              , &
-                                    ps_pathway                , &
+                                    ps_pathway                , &   ! lctlib
+                                    canopy_cond_scheme        , &   ! ASSIMI_ config
                                     lai_cl                    , &
                                     leaf_nitrogen_cl          , &
                                     ppfd_sunlit_cl            , &
@@ -485,6 +489,7 @@ CONTAINS
                                                g1              , &    !< land-cover-type library parameter
                                                t_jmax_omega           !< land-cover-type library parameter
     INTEGER,                  INTENT(in)    :: ps_pathway             !< land-cover-type library parameter
+    CHARACTER(len=*),         INTENT(IN)    :: canopy_cond_scheme     !< canopy_conductance_scheme: medlyn / ballberry
     REAL(wp),                 INTENT(in)    :: lai_cl
     REAL(wp),                 INTENT(in)    :: leaf_nitrogen_cl, &    !< total canopy N content
                                                ppfd_sunlit_cl,   &    !< Photosynthetically Active Photon Flux Density
@@ -549,6 +554,7 @@ CONTAINS
                                  g1                            , &
                                  t_jmax_omega                  , &
                                  ps_pathway                    , &  ! lctlib
+                                 canopy_cond_scheme            , &  ! ASSIMI_ config (medlyn/ballberry)
                                  t_air                         , &  ! in
                                  press_srf                     , &
                                  co2_mixing_ratio              , &
@@ -596,6 +602,7 @@ CONTAINS
       ! re-calculate photosynthesis
       CALL calc_photosynthesis( &
                gmin, g0, g1, t_jmax_omega, ps_pathway, &
+               canopy_cond_scheme, &  ! ASSIMI_ config (medlyn/ballberry)
                t_air,press_srf,co2_mixing_ratio,ga,t_acclim, &
                ppfd_sunlit_cl,ppfd_shaded_cl,fleaf_sunlit_cl, &
                beta_air,beta_soa,beta_soil_ps,beta_sinklim_ps,beta_soil_gs, &
@@ -630,6 +637,7 @@ CONTAINS
         ! re-calculate photosynthesis
         CALL calc_photosynthesis( &
                  gmin, g0, g1, t_jmax_omega, ps_pathway, &
+                 canopy_cond_scheme, &  ! ASSIMI_ config (medlyn/ballberry)
                  t_air,press_srf,co2_mixing_ratio,ga,t_acclim, &
                  ppfd_sunlit_cl,ppfd_shaded_cl,fleaf_sunlit_cl,&
                  beta_air,beta_soa,beta_soil_ps,beta_sinklim_ps,beta_soil_gs, &
@@ -857,6 +865,7 @@ CONTAINS
                                                   lctlib_t_jmax_omega     , &
                                                   lctlib_sigma_vis        , &
                                                   flag_optimal_Nfraction  , &
+                                                  canopy_cond_scheme      , & ! ASSIMI_ config
                                                   canopy_layer_depth      , &
                                                   t_air                   , &
                                                   press_srf               , &
@@ -914,6 +923,7 @@ CONTAINS
     REAL(wp),                               INTENT(in) :: lctlib_t_jmax_omega           !< lctlib parameter
     REAL(wp),                               INTENT(in) :: lctlib_sigma_vis              !< lctlib parameter
     LOGICAL,                                INTENT(in) :: flag_optimal_Nfraction        !< on/off optimise leaf internal N allocation
+    CHARACTER(len=*),                       INTENT(IN) :: canopy_cond_scheme            !< canopy_conductance_scheme: medlyn / ballberry
     REAL(wp),DIMENSION(ncanopy),            INTENT(in) :: canopy_layer_depth            !< thickness of each single canopy layer [m2 m-2 LAI]
     REAL(wp),DIMENSION(nc),                 INTENT(in) :: t_air                   , &   !< air temperature (K)
                                                           press_srf               , &   !< air pressure (Pa)
@@ -1028,6 +1038,7 @@ CONTAINS
                             lctlib_g1               = lctlib_g1                   , &
                             lctlib_t_jmax_omega     = lctlib_t_jmax_omega         , &
                             flag_optimal_Nfraction  = flag_optimal_Nfraction      , &
+                            canopy_cond_scheme      = canopy_cond_scheme          , & ! ASSIMI_ config
                             canopy_layer_depth      = canopy_layer_depth(:)       , &
                             leaf_nitrogen           = leaf_nitrogen_new(:)        , &
                             lai                     = lai_new(:)                  , &
@@ -1060,6 +1071,7 @@ CONTAINS
                                     lctlib_g1                       , &
                                     lctlib_t_jmax_omega             , &
                                     lctlib_ps_pathway               , &
+                                    canopy_cond_scheme              , & ! ASSIMI_ config (medlyn/ballberry)
                                     t_air(:)                        , & ! in
                                     press_srf(:)                    , &
                                     co2_mixing_ratio(:)             , &
@@ -1142,6 +1154,7 @@ CONTAINS
                                         lctlib_t_jmax_omega           , &
                                         lctlib_tau_leaf               , &
                                         flag_optimal_Nfraction        , &
+                                        canopy_cond_scheme            , &  ! ASSIMI_ config (medlyn/ballberry)
                                         canopy_layer_depth            , &
                                         growing_season                , &
                                         veg_pool_leaf_carbon          , & 
@@ -1201,6 +1214,7 @@ CONTAINS
     REAL(wp),                               INTENT(in)    :: lctlib_t_jmax_omega            !< lctlib parameter
     REAL(wp),                               INTENT(in)    :: lctlib_tau_leaf                !< lctlib parameter
     LOGICAL,                                INTENT(in)    :: flag_optimal_Nfraction         !< on/off optimise leaf internal N allocation
+    CHARACTER(len=*),                       INTENT(IN)    :: canopy_cond_scheme             !< canopy_conductance_scheme: medlyn / ballberry
     REAL(wp),DIMENSION(ncanopy),            INTENT(in)    :: canopy_layer_depth             !< thickness of each single canopy layer [m2 m-2 LAI]
     REAL(wp),DIMENSION(nc),                 INTENT(in)    :: growing_season                 !< growing season
     REAL(wp),DIMENSION(nc),                 INTENT(in)    :: veg_pool_leaf_carbon       , &
@@ -1318,6 +1332,7 @@ CONTAINS
                           lctlib_g1               = lctlib_g1                               , &
                           lctlib_t_jmax_omega     = lctlib_t_jmax_omega                     , &
                           flag_optimal_Nfraction  = flag_optimal_Nfraction                  , &
+                          canopy_cond_scheme      = canopy_cond_scheme                      , & ! ASSIMI_ config
                           canopy_layer_depth      = canopy_layer_depth(:)                   , &
                           leaf_nitrogen           = leaf_nitrogen_new(ipoint)               , &
                           lai                     = lai(ipoint)                             , &
@@ -1358,6 +1373,7 @@ CONTAINS
                        lctlib_g1                                     , &
                        lctlib_t_jmax_omega                           , &
                        lctlib_ps_pathway                             , &
+                       canopy_cond_scheme                            , &  ! ASSIMI_ config (medlyn/ballberry)
                        t_air_tcnl_mavg(ipoint)                       , &  ! in
                        press_srf_tcnl_mavg(ipoint)                   , &
                        co2_mixing_ratio_tcnl_mavg(ipoint)            , &

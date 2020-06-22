@@ -129,23 +129,24 @@ flag_mycorrhiza_org="F"         # allows mycorrhiza to access the organic/residu
 flag_mycorrhiza_prim="F"        # present mycorrhiza enhance decomposition of residual pool (priming)
 
 # canopy model options
-flag_t_resp_acclimation="T"     # use the respiration temperature acclimation factor
-flag_t_jmax_acclimation="T"     # acclimation of optimum temperature for Jmax
-flag_optimal_Nfraction="F"      # optimal N fraction
-ncanopy=10                      # number of canopy layers
-canopy_layer_scheme="fapar"     # canopy layer depth calculation options: standard fapar
+flag_t_resp_acclimation="T"       # use the respiration temperature acclimation factor
+flag_t_jmax_acclimation="T"       # acclimation of optimum temperature for Jmax
+flag_optimal_Nfraction="F"        # optimal N fraction
+ncanopy=10                        # number of canopy layers
+canopy_layer_scheme="fapar"       # canopy layer depth calculation options: standard fapar
+canopyConductanceScheme="medlyn"  # calculation of gs_cl following Medlyn [default] or Ball/Berry: medlyn ballberry
 
 # plant growth model options
-biomass_alloc_scheme="fixed"    # fixed dynamic optimal
-leaf_stoichom_scheme="fixed"    # fixed dynamic optimal
+biomass_alloc_scheme="fixed"      # fixed dynamic optimal
+leaf_stoichom_scheme="fixed"      # fixed dynamic optimal
 # vegetation dynamics options
 veg_dynamics_scheme="population"  # none population cohort
 cohort_harvest_interval=80        # number of years after which the cohort is harvested and re-planted, is used with veg_dynamics_scheme="cohort"
 flag_stand_harvest="F"            # if TRUE: l_do_stand_replacing_harvest is set to TRUE in SLM on the 1st timestep of the 1st day of the year "PlantYear" in the site_list file (or never, if that was before 1901)
 
 # soil model options
-soil_depth=5.7                  # meter (5.7 to 9.5)
-nsoil_layer=5                   # number of soil layers (default for SLM land: 5 | for SLM soil only available forcing: 15 | generally: min 5 & max 20)
+soil_depth=5.7                    # meter (5.7 to 9.5)
+nsoil_layer=5                     # number of soil layers (default for SLM land: 5 | for SLM soil only available forcing: 15 | generally: min 5 & max 20)
 
 # JSM
 flag_sb_jsm_transport="F"         # ..
@@ -532,6 +533,7 @@ validateMycScheme="no am ecm"
 validateNDepositionScheme="none constant dynamic"
 validatePDepositionScheme="none constant dynamic"
 validateCanopyLayerScheme="standard fapar"
+validateCanopyConductanceScheme="medlyn ballberry"
 validateSBNLossScheme="none fixed dynamic"
 validateBiomassAllocScheme="fixed dynamic optimal"
 validateLeafStoichomScheme="fixed dynamic optimal"
@@ -647,6 +649,7 @@ validateUserConfigValues "$flag_mycorrhiza_prim" "$validateFlags" "flag_mycorrhi
 validateUserConfigValues "$n_deposition_scheme" "$validateNDepositionScheme" "n_deposition_scheme"
 validateUserConfigValues "$p_deposition_scheme" "$validatePDepositionScheme" "p_deposition_scheme"
 validateUserConfigValues "$canopy_layer_scheme" "$validateCanopyLayerScheme" "canopy_layer_scheme"
+validateUserConfigValues "$canopyConductanceScheme" "$validateCanopyConductanceScheme" "canopyConductanceScheme"
 validateUserConfigValues "$sb_model_scheme" "$validateSBModelScheme" "sd_model_scheme"
 validateUserConfigValues "$sb_nloss_scheme" "$validateSBNLossScheme" "sb_nloss_scheme"
 validateUserConfigValues "$veg_dynamics_scheme" "$validateVegDynamicsScheme" "veg_dynamics_scheme"
@@ -1617,6 +1620,7 @@ changeNamelistValue n_deposition_scheme "$n_deposition_scheme"
 changeNamelistValue p_deposition_scheme "$p_deposition_scheme"
 changeNamelistValue ncanopy "$ncanopy"
 changeNamelistValue canopy_layer_scheme "$canopy_layer_scheme" 
+changeNamelistValue canopy_conductance_scheme "$canopyConductanceScheme" 
 changeNamelistValue sb_model_scheme "$sb_model_scheme" 
 changeNamelistValue sb_nloss_scheme "$sb_nloss_scheme"
 changeNamelistValue sb_bnf_scheme "$bnf_scheme" 

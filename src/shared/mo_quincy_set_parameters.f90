@@ -455,7 +455,8 @@ MODULE mo_quincy_set_parameters
     REAL(wp)            :: t_jmax_opt
     REAL(wp)            :: t_jmax_omega
     REAL(wp)            :: g0
-    REAL(wp)            :: g1
+    REAL(wp)            :: g1_medlyn
+    REAL(wp)            :: g1_bberry
     REAL(wp)            :: gmin
     ! turnover times
     REAL(wp)            :: tau_leaf
@@ -4088,7 +4089,8 @@ CONTAINS
     REAL(wp)            :: t_jmax_opt_p1
     REAL(wp)            :: t_jmax_omega_p1
     REAL(wp)            :: g0_p1
-    REAL(wp)            :: g1_p1
+    REAL(wp)            :: g1_medlyn_p1
+    REAL(wp)            :: g1_bberry_p1
     REAL(wp)            :: gmin_p1
     REAL(wp)            :: tau_leaf_p1
     REAL(wp)            :: tau_fine_root_p1
@@ -4142,7 +4144,8 @@ CONTAINS
     REAL(wp)            :: t_jmax_opt_p2
     REAL(wp)            :: t_jmax_omega_p2
     REAL(wp)            :: g0_p2
-    REAL(wp)            :: g1_p2
+    REAL(wp)            :: g1_medlyn_p2
+    REAL(wp)            :: g1_bberry_p2
     REAL(wp)            :: gmin_p2
     REAL(wp)            :: tau_leaf_p2
     REAL(wp)            :: tau_fine_root_p2
@@ -4196,7 +4199,8 @@ CONTAINS
     REAL(wp)            :: t_jmax_opt_p3
     REAL(wp)            :: t_jmax_omega_p3
     REAL(wp)            :: g0_p3
-    REAL(wp)            :: g1_p3
+    REAL(wp)            :: g1_medlyn_p3
+    REAL(wp)            :: g1_bberry_p3
     REAL(wp)            :: gmin_p3
     REAL(wp)            :: tau_leaf_p3
     REAL(wp)            :: tau_fine_root_p3
@@ -4250,7 +4254,8 @@ CONTAINS
     REAL(wp)            :: t_jmax_opt_p4
     REAL(wp)            :: t_jmax_omega_p4
     REAL(wp)            :: g0_p4
-    REAL(wp)            :: g1_p4
+    REAL(wp)            :: g1_medlyn_p4
+    REAL(wp)            :: g1_bberry_p4
     REAL(wp)            :: gmin_p4
     REAL(wp)            :: tau_leaf_p4
     REAL(wp)            :: tau_fine_root_p4
@@ -4304,7 +4309,8 @@ CONTAINS
     REAL(wp)            :: t_jmax_opt_p5
     REAL(wp)            :: t_jmax_omega_p5
     REAL(wp)            :: g0_p5
-    REAL(wp)            :: g1_p5
+    REAL(wp)            :: g1_medlyn_p5
+    REAL(wp)            :: g1_bberry_p5
     REAL(wp)            :: gmin_p5
     REAL(wp)            :: tau_leaf_p5
     REAL(wp)            :: tau_fine_root_p5
@@ -4358,7 +4364,8 @@ CONTAINS
     REAL(wp)            :: t_jmax_opt_p6
     REAL(wp)            :: t_jmax_omega_p6
     REAL(wp)            :: g0_p6
-    REAL(wp)            :: g1_p6
+    REAL(wp)            :: g1_medlyn_p6
+    REAL(wp)            :: g1_bberry_p6
     REAL(wp)            :: gmin_p6
     REAL(wp)            :: tau_leaf_p6
     REAL(wp)            :: tau_fine_root_p6
@@ -4412,7 +4419,8 @@ CONTAINS
     REAL(wp)            :: t_jmax_opt_p7
     REAL(wp)            :: t_jmax_omega_p7
     REAL(wp)            :: g0_p7
-    REAL(wp)            :: g1_p7
+    REAL(wp)            :: g1_medlyn_p7
+    REAL(wp)            :: g1_bberry_p7
     REAL(wp)            :: gmin_p7
     REAL(wp)            :: tau_leaf_p7
     REAL(wp)            :: tau_fine_root_p7
@@ -4466,7 +4474,8 @@ CONTAINS
     REAL(wp)            :: t_jmax_opt_p8
     REAL(wp)            :: t_jmax_omega_p8
     REAL(wp)            :: g0_p8
-    REAL(wp)            :: g1_p8
+    REAL(wp)            :: g1_medlyn_p8
+    REAL(wp)            :: g1_bberry_p8
     REAL(wp)            :: gmin_p8
     REAL(wp)            :: tau_leaf_p8
     REAL(wp)            :: tau_fine_root_p8
@@ -4526,7 +4535,8 @@ CONTAINS
           t_jmax_opt_p1, &
           t_jmax_omega_p1, &
           g0_p1, &
-          g1_p1, &
+          g1_medlyn_p1, &
+          g1_bberry_p1, &
           gmin_p1, &
           tau_leaf_p1, &
           tau_fine_root_p1, &
@@ -4581,7 +4591,8 @@ CONTAINS
           t_jmax_opt_p2, &
           t_jmax_omega_p2, &
           g0_p2, &
-          g1_p2, &
+          g1_medlyn_p2, &
+          g1_bberry_p2, &
           gmin_p2, &
           tau_leaf_p2, &
           tau_fine_root_p2, &
@@ -4636,7 +4647,8 @@ CONTAINS
           t_jmax_opt_p3, &
           t_jmax_omega_p3, &
           g0_p3, &
-          g1_p3, &
+          g1_medlyn_p3, &
+          g1_bberry_p3, &
           gmin_p3, &
           tau_leaf_p3, &
           tau_fine_root_p3, &
@@ -4691,7 +4703,8 @@ CONTAINS
           t_jmax_opt_p4, &
           t_jmax_omega_p4, &
           g0_p4, &
-          g1_p4, &
+          g1_medlyn_p4, &
+          g1_bberry_p4, &
           gmin_p4, &
           tau_leaf_p4, &
           tau_fine_root_p4, &
@@ -4746,7 +4759,8 @@ CONTAINS
           t_jmax_opt_p5, &
           t_jmax_omega_p5, &
           g0_p5, &
-          g1_p5, &
+          g1_medlyn_p5, &
+          g1_bberry_p5, &
           gmin_p5, &
           tau_leaf_p5, &
           tau_fine_root_p5, &
@@ -4801,7 +4815,8 @@ CONTAINS
           t_jmax_opt_p6, &
           t_jmax_omega_p6, &
           g0_p6, &
-          g1_p6, &
+          g1_medlyn_p6, &
+          g1_bberry_p6, &
           gmin_p6, &
           tau_leaf_p6, &
           tau_fine_root_p6, &
@@ -4856,7 +4871,8 @@ CONTAINS
           t_jmax_opt_p7, &
           t_jmax_omega_p7, &
           g0_p7, &
-          g1_p7, &
+          g1_medlyn_p7, &
+          g1_bberry_p7, &
           gmin_p7, &
           tau_leaf_p7, &
           tau_fine_root_p7, &
@@ -4911,7 +4927,8 @@ CONTAINS
           t_jmax_opt_p8, &
           t_jmax_omega_p8, &
           g0_p8, &
-          g1_p8, &
+          g1_medlyn_p8, &
+          g1_bberry_p8, &
           gmin_p8, &
           tau_leaf_p8, &
           tau_fine_root_p8, &
@@ -4975,7 +4992,8 @@ CONTAINS
     t_jmax_opt_p1      = missval
     t_jmax_omega_p1      = missval
     g0_p1      = missval
-    g1_p1      = missval
+    g1_medlyn_p1      = missval
+    g1_bberry_p1      = missval
     gmin_p1      = missval
     tau_leaf_p1      = missval
     tau_fine_root_p1      = missval
@@ -5029,7 +5047,8 @@ CONTAINS
     t_jmax_opt_p2      = missval
     t_jmax_omega_p2      = missval
     g0_p2      = missval
-    g1_p2      = missval
+    g1_medlyn_p2      = missval
+    g1_bberry_p2      = missval
     gmin_p2      = missval
     tau_leaf_p2      = missval
     tau_fine_root_p2      = missval
@@ -5083,7 +5102,8 @@ CONTAINS
     t_jmax_opt_p3      = missval
     t_jmax_omega_p3      = missval
     g0_p3      = missval
-    g1_p3      = missval
+    g1_medlyn_p3      = missval
+    g1_bberry_p3      = missval
     gmin_p3      = missval
     tau_leaf_p3      = missval
     tau_fine_root_p3      = missval
@@ -5137,7 +5157,8 @@ CONTAINS
     t_jmax_opt_p4      = missval
     t_jmax_omega_p4      = missval
     g0_p4      = missval
-    g1_p4      = missval
+    g1_medlyn_p4      = missval
+    g1_bberry_p4      = missval
     gmin_p4      = missval
     tau_leaf_p4      = missval
     tau_fine_root_p4      = missval
@@ -5191,7 +5212,8 @@ CONTAINS
     t_jmax_opt_p5      = missval
     t_jmax_omega_p5      = missval
     g0_p5      = missval
-    g1_p5      = missval
+    g1_medlyn_p5      = missval
+    g1_bberry_p5      = missval
     gmin_p5      = missval
     tau_leaf_p5      = missval
     tau_fine_root_p5      = missval
@@ -5245,7 +5267,8 @@ CONTAINS
     t_jmax_opt_p6      = missval
     t_jmax_omega_p6      = missval
     g0_p6      = missval
-    g1_p6      = missval
+    g1_medlyn_p6      = missval
+    g1_bberry_p6      = missval
     gmin_p6      = missval
     tau_leaf_p6      = missval
     tau_fine_root_p6      = missval
@@ -5299,7 +5322,8 @@ CONTAINS
     t_jmax_opt_p7      = missval
     t_jmax_omega_p7      = missval
     g0_p7      = missval
-    g1_p7      = missval
+    g1_medlyn_p7      = missval
+    g1_bberry_p7      = missval
     gmin_p7      = missval
     tau_leaf_p7      = missval
     tau_fine_root_p7      = missval
@@ -5353,7 +5377,8 @@ CONTAINS
     t_jmax_opt_p8      = missval
     t_jmax_omega_p8      = missval
     g0_p8      = missval
-    g1_p8      = missval
+    g1_medlyn_p8      = missval
+    g1_bberry_p8      = missval
     gmin_p8      = missval
     tau_leaf_p8      = missval
     tau_fine_root_p8      = missval
@@ -5455,7 +5480,8 @@ CONTAINS
     param_pft1_from_file%t_jmax_opt   = t_jmax_opt_p1
     param_pft1_from_file%t_jmax_omega   = t_jmax_omega_p1
     param_pft1_from_file%g0   = g0_p1
-    param_pft1_from_file%g1   = g1_p1
+    param_pft1_from_file%g1_medlyn   = g1_medlyn_p1
+    param_pft1_from_file%g1_bberry   = g1_bberry_p1
     param_pft1_from_file%gmin   = gmin_p1
     param_pft1_from_file%tau_leaf   = tau_leaf_p1
     param_pft1_from_file%tau_fine_root   = tau_fine_root_p1
@@ -5509,7 +5535,8 @@ CONTAINS
     param_pft2_from_file%t_jmax_opt   = t_jmax_opt_p2
     param_pft2_from_file%t_jmax_omega   = t_jmax_omega_p2
     param_pft2_from_file%g0   = g0_p2
-    param_pft2_from_file%g1   = g1_p2
+    param_pft2_from_file%g1_medlyn   = g1_medlyn_p2
+    param_pft2_from_file%g1_bberry   = g1_bberry_p2
     param_pft2_from_file%gmin   = gmin_p2
     param_pft2_from_file%tau_leaf   = tau_leaf_p2
     param_pft2_from_file%tau_fine_root   = tau_fine_root_p2
@@ -5563,7 +5590,8 @@ CONTAINS
     param_pft3_from_file%t_jmax_opt   = t_jmax_opt_p3
     param_pft3_from_file%t_jmax_omega   = t_jmax_omega_p3
     param_pft3_from_file%g0   = g0_p3
-    param_pft3_from_file%g1   = g1_p3
+    param_pft3_from_file%g1_medlyn   = g1_medlyn_p3
+    param_pft3_from_file%g1_bberry   = g1_bberry_p3
     param_pft3_from_file%gmin   = gmin_p3
     param_pft3_from_file%tau_leaf   = tau_leaf_p3
     param_pft3_from_file%tau_fine_root   = tau_fine_root_p3
@@ -5617,7 +5645,8 @@ CONTAINS
     param_pft4_from_file%t_jmax_opt   = t_jmax_opt_p4
     param_pft4_from_file%t_jmax_omega   = t_jmax_omega_p4
     param_pft4_from_file%g0   = g0_p4
-    param_pft4_from_file%g1   = g1_p4
+    param_pft4_from_file%g1_medlyn   = g1_medlyn_p4
+    param_pft4_from_file%g1_bberry   = g1_bberry_p4
     param_pft4_from_file%gmin   = gmin_p4
     param_pft4_from_file%tau_leaf   = tau_leaf_p4
     param_pft4_from_file%tau_fine_root   = tau_fine_root_p4
@@ -5671,7 +5700,8 @@ CONTAINS
     param_pft5_from_file%t_jmax_opt   = t_jmax_opt_p5
     param_pft5_from_file%t_jmax_omega   = t_jmax_omega_p5
     param_pft5_from_file%g0   = g0_p5
-    param_pft5_from_file%g1   = g1_p5
+    param_pft5_from_file%g1_medlyn   = g1_medlyn_p5
+    param_pft5_from_file%g1_bberry   = g1_bberry_p5
     param_pft5_from_file%gmin   = gmin_p5
     param_pft5_from_file%tau_leaf   = tau_leaf_p5
     param_pft5_from_file%tau_fine_root   = tau_fine_root_p5
@@ -5725,7 +5755,8 @@ CONTAINS
     param_pft6_from_file%t_jmax_opt   = t_jmax_opt_p6
     param_pft6_from_file%t_jmax_omega   = t_jmax_omega_p6
     param_pft6_from_file%g0   = g0_p6
-    param_pft6_from_file%g1   = g1_p6
+    param_pft6_from_file%g1_medlyn   = g1_medlyn_p6
+    param_pft6_from_file%g1_bberry   = g1_bberry_p6
     param_pft6_from_file%gmin   = gmin_p6
     param_pft6_from_file%tau_leaf   = tau_leaf_p6
     param_pft6_from_file%tau_fine_root   = tau_fine_root_p6
@@ -5779,7 +5810,8 @@ CONTAINS
     param_pft7_from_file%t_jmax_opt   = t_jmax_opt_p7
     param_pft7_from_file%t_jmax_omega   = t_jmax_omega_p7
     param_pft7_from_file%g0   = g0_p7
-    param_pft7_from_file%g1   = g1_p7
+    param_pft7_from_file%g1_medlyn   = g1_medlyn_p7
+    param_pft7_from_file%g1_bberry   = g1_bberry_p7
     param_pft7_from_file%gmin   = gmin_p7
     param_pft7_from_file%tau_leaf   = tau_leaf_p7
     param_pft7_from_file%tau_fine_root   = tau_fine_root_p7
@@ -5833,7 +5865,8 @@ CONTAINS
     param_pft8_from_file%t_jmax_opt   = t_jmax_opt_p8
     param_pft8_from_file%t_jmax_omega   = t_jmax_omega_p8
     param_pft8_from_file%g0   = g0_p8
-    param_pft8_from_file%g1   = g1_p8
+    param_pft8_from_file%g1_medlyn   = g1_medlyn_p8
+    param_pft8_from_file%g1_bberry   = g1_bberry_p8
     param_pft8_from_file%gmin   = gmin_p8
     param_pft8_from_file%tau_leaf   = tau_leaf_p8
     param_pft8_from_file%tau_fine_root   = tau_fine_root_p8
@@ -6079,10 +6112,15 @@ CONTAINS
                                     "lctlib_g0", proportional_parameter_changes, &
                                     lctlib%g0)
 
-    CALL Set_quincy_parameter_value(param_pft_from_file%g1, &
-                                    param_pft_from_file%g1, &
-                                    "lctlib_g1", proportional_parameter_changes, &
-                                    lctlib%g1)
+    CALL Set_quincy_parameter_value(param_pft_from_file%g1_medlyn, &
+                                    param_pft_from_file%g1_medlyn, &
+                                    "lctlib_g1_medlyn", proportional_parameter_changes, &
+                                    lctlib%g1_medlyn)
+
+    CALL Set_quincy_parameter_value(param_pft_from_file%g1_bberry, &
+                                    param_pft_from_file%g1_bberry, &
+                                    "lctlib_g1_bberry", proportional_parameter_changes, &
+                                    lctlib%g1_bberry)
     
     CALL Set_quincy_parameter_value(param_pft_from_file%gmin, &
                                     param_pft_from_file%gmin, &

@@ -62,7 +62,8 @@ MODULE mo_jsb_lctlib_class
     REAL(wp) :: t_jmax_opt
     REAL(wp) :: t_jmax_omega
     REAL(wp) :: g0
-    REAL(wp) :: g1
+    REAL(wp) :: g1_medlyn
+    REAL(wp) :: g1_bberry
     REAL(wp) :: gmin
 
 ! turnover times
@@ -306,8 +307,10 @@ CONTAINS
             READ(line(pos:length),*) lctlib(1:nlct)%t_jmax_omega
           CASE ('g0')
             READ(line(pos:length),*) lctlib(1:nlct)%g0
-          CASE ('g1')
-            READ(line(pos:length),*) lctlib(1:nlct)%g1
+          CASE ('g1_medlyn')
+            READ(line(pos:length),*) lctlib(1:nlct)%g1_medlyn
+          CASE ('g1_bberry')
+            READ(line(pos:length),*) lctlib(1:nlct)%g1_bberry
           CASE ('gmin')
             READ(line(pos:length),*) lctlib(1:nlct)%gmin
 

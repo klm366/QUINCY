@@ -93,6 +93,7 @@ CONTAINS
     TYPE(t_jsb_vgrid),      POINTER       :: vgrid_canopy ! Vertical grid
     INTEGER                               :: ncanopy      ! number of canopy layers
     INTEGER                               :: icanopy      ! for looping across ncanopy layers
+    REAL(wp)                              :: lctlib_g1    !< set to g1_medlyn or g1_bberry depending on canopy_conductance_scheme
     REAL(wp),DIMENSION(options%nc)        :: ga,hlp1      ! dummy variable
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_canopy_fluxes'
@@ -233,14 +234,24 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
-    !> 0.9 set output to zero
+    !> 0.9.1 set output to zero
     !! 
     canopy_cond(:)            = 0.0_wp
     co2_conc_leaf(:)          = 0.0_wp
 
+    !> 0.9.2 set g1 according to canopy_conductance_scheme
+    !! 
+    SELECT CASE(TRIM(dsl4jsb_Config(ASSIMI_)%canopy_conductance_scheme))
+      CASE ("medlyn")
+        lctlib_g1 = lctlib%g1_medlyn
+      CASE ("ballberry")
+        lctlib_g1 = lctlib%g1_bberry
+    END SELECT
+
     !> 1.0 calculate the moisture scaling factor for photosynthesis
     !!
-    beta_air(:)     = calc_atm_moisture_stress(t_air(:), q_air(:), press_srf(:))
+    beta_air(:)     = calc_atm_moisture_stress(TRIM(dsl4jsb_Config(ASSIMI_)%canopy_conductance_scheme), &
+                                               t_air(:), q_air(:), press_srf(:))
     beta_soil_ps(:) = calc_soil_moisture_stress(w_soil_root_pot(:)     , &
                                                lctlib%phi_leaf_min    )
     ! catch beta_soil_ps getting zero
@@ -256,11 +267,12 @@ CONTAINS
     !> 2.0 calculate photosynthesis per layer
     !!
     DO icanopy = 1,ncanopy
-      CALL calc_photosynthesis(  lctlib%gmin                           , & ! lctlib
-                                 lctlib%g0                             , &
-                                 lctlib%g1                             , &
-                                 lctlib%t_jmax_omega                   , &
-                                 lctlib%ps_pathway                     , &
+      CALL calc_photosynthesis(  lctlib%gmin                                            , & ! lctlib
+                                 lctlib%g0                                              , &
+                                 lctlib_g1                                              , &
+                                 lctlib%t_jmax_omega                                    , &
+                                 lctlib%ps_pathway                                      , &
+                                 TRIM(dsl4jsb_Config(ASSIMI_)%canopy_conductance_scheme), & ! ASSIMI_ config
                                  t_air(:)                              , & ! in
                                  press_srf(:)                          , &
                                  co2_mixing_ratio(:)                   , &
@@ -364,6 +376,7 @@ CONTAINS
                                             g1                  , &
                                             t_jmax_omega        , &
                                             ps_pathway          , &
+                                            canopy_cond_scheme  , &   ! ASSIMI_ config
                                             temp                , &   ! in
                                             press_srf           , &
                                             co2_mixing_ratio    , &
@@ -408,6 +421,7 @@ CONTAINS
                                           g1              , &     !< land-cover-type library parameter
                                           t_jmax_omega            !< land-cover-type library parameter
   INTEGER,                  INTENT(IN) :: ps_pathway              !< land-cover-type library parameter
+  CHARACTER(len=*),         INTENT(IN) :: canopy_cond_scheme      !< canopy_conductance_scheme: medlyn / ballberry
   REAL(wp),                 INTENT(IN) :: temp                    !< temperature used for photosynthesis calculation (K)
   REAL(wp),                 INTENT(IN) :: press_srf               !< air pressure (Pa)
   REAL(wp),                 INTENT(IN) :: ga                      !< aerodynamic conductance (m s-1)
@@ -618,11 +632,15 @@ CONTAINS
         !> Net layer photosynthesis (umol[CO2]/m2/s)
         an_cl = ag_cl - maint_resp_cl
 
-        !> calculate canopy conductance (m/s) following Ball & Berry
-        gs_cl = MAX(gmin, g0 + g1 * an_cl * beta_air * beta_soil_gs / ( co2_mixing_ratio )) * &
-              rtck / press_srf
-        !> calculate canopy conductance (m/s) following Medlyn et al. 2011
-        !! gs_cl = MAX(g0, 1.6_wp * ( 1._wp + g1 * beta_air * beta_soil_gs ) * an_cl / ( co2_mixing_ratio )) * rtck / press_srf
+        !> calculate canopy conductance (m/s)
+        SELECT CASE(canopy_cond_scheme)
+          CASE ("medlyn")
+            !following Medlyn et al. 2011 [default]
+            gs_cl = MAX(g0, 1.6_wp * ( 1._wp + g1 * beta_air * beta_soil_gs ) * an_cl / ( co2_mixing_ratio )) * rtck / press_srf
+          CASE ("ballberry")
+            ! following Ball & Berry
+            gs_cl = MAX(gmin, g0 + g1 * an_cl * beta_air * beta_soil_gs / ( co2_mixing_ratio )) * rtck / press_srf
+        END SELECT
 
         !> New internal CO2 from balance of supply and demand
         !!
@@ -680,7 +698,7 @@ CONTAINS
   !! Ball & Berry: beta = q_air/q_sat \n
   !! NOT used, Medlyn et al. 2011: beta = MIN(5._wp,1._wp / SQRT(vpd + eps8))
   !-----------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL FUNCTION calc_atm_moisture_stress(temp,q_air,press_srf) RESULT(beta)
+  PURE ELEMENTAL FUNCTION calc_atm_moisture_stress(canopy_cond_scheme, temp, q_air, press_srf) RESULT(beta)
 
     USE mo_atmland_constants,  ONLY: eps_vpd
     USE mo_atmland_util,       ONLY: calc_spec_humidity_sat
@@ -688,10 +706,11 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    REAL(wp),INTENT(in) :: temp               !< temperature in K
-    REAL(wp),INTENT(in) :: q_air              !< specific air humidity (g g-1)
-    REAL(wp),INTENT(in) :: press_srf          !< air pressure (Pa)
-    REAL(wp)            :: beta               !< atmospheric moisture scalar for use in conductance calculation
+    CHARACTER(len=*), INTENT(IN)  :: canopy_cond_scheme     !< canopy_conductance_scheme: medlyn / ballberry
+    REAL(wp),INTENT(in)           :: temp                   !< temperature in K
+    REAL(wp),INTENT(in)           :: q_air                  !< specific air humidity (g g-1)
+    REAL(wp),INTENT(in)           :: press_srf              !< air pressure (Pa)
+    REAL(wp)                      :: beta                   !< atmospheric moisture scalar for use in conductance calculation
     ! ---------------------------
     ! 0.2 Local
     REAL(wp) :: q_sat                         ! saturating specific humidity
@@ -709,8 +728,14 @@ CONTAINS
 
     !> 1.2 scalar for atmospheric humidity as relative humidity (fractions)
     !! 
-    beta = q_air/q_sat ! Ball & Berry
-    !beta = MIN(5._wp,1._wp / SQRT(vpd + eps8)) ! Medlyn et al. 2011
+    SELECT CASE(canopy_cond_scheme)
+      CASE ("medlyn")
+        !following Medlyn et al. 2011 [default]
+        beta = MIN(5._wp, 1._wp / SQRT(vpd + eps8))
+      CASE ("ballberry")
+        ! following Ball & Berry
+        beta = q_air / q_sat
+    END SELECT
   END FUNCTION calc_atm_moisture_stress
 
 

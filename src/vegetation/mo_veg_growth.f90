@@ -101,6 +101,7 @@ CONTAINS
                                                target_labile_pool_phosphorus, target_reserve_pool_carbon, &
                                                target_reserve_pool_nitrogen, target_reserve_pool_phosphorus
     REAL(wp), DIMENSION(options%nc)         :: hlp1
+    REAL(wp)                                :: lctlib_g1              !< set to g1_medlyn or g1_bberry depending on canopy_conductance_scheme
     REAL(wp), ALLOCATABLE                   :: canopy_layer_depth(:)  !< thickness of each single canopy layer [m2 m-2 LAI]
     INTEGER                                 :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_growth'
@@ -460,6 +461,14 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
+    !> 0.9 set g1 according to canopy_conductance_scheme
+    !! 
+    SELECT CASE(TRIM(dsl4jsb_Config(ASSIMI_)%canopy_conductance_scheme))
+      CASE ("medlyn")
+        lctlib_g1 = lctlib%g1_medlyn
+      CASE ("ballberry")
+        lctlib_g1 = lctlib%g1_bberry
+    END SELECT
 
     !> 1.0 calculate potential growth rate relative to labile pool size
     !! 
@@ -549,22 +558,23 @@ CONTAINS
     !!   canopy layers:   DO icanopy =1, ncanopy
     !! 
     IF (TRIM(dsl4jsb_Config(VEG_)%leaf_stoichom_scheme) == "optimal") THEN
-      CALL calc_dir_optimal_cn_leaf(    nc                                             , & ! in
-                                        ncanopy                                        , &
-                                        vgrid_canopy%dz(:)                             , &
-                                        vgrid_canopy%lbounds(:)                        , &
-                                        vgrid_canopy%ubounds(:)                        , &
-                                        lctlib%ps_pathway                              , &
-                                        lctlib%k0_fn_struc                             , &
-                                        lctlib%fn_oth_min                              , &
-                                        lctlib%sla                                     , &
-                                        lctlib%np_leaf                                 , &
-                                        lctlib%gmin                                    , &
-                                        lctlib%g0                                      , &
-                                        lctlib%g1                                      , &
-                                        lctlib%t_jmax_omega                            , &
-                                        lctlib%tau_leaf                                , &
-                                        dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction , &
+      CALL calc_dir_optimal_cn_leaf(    nc                                                      , & ! in
+                                        ncanopy                                                 , &
+                                        vgrid_canopy%dz(:)                                      , &
+                                        vgrid_canopy%lbounds(:)                                 , &
+                                        vgrid_canopy%ubounds(:)                                 , &
+                                        lctlib%ps_pathway                                       , &
+                                        lctlib%k0_fn_struc                                      , &
+                                        lctlib%fn_oth_min                                       , &
+                                        lctlib%sla                                              , &
+                                        lctlib%np_leaf                                          , &
+                                        lctlib%gmin                                             , &
+                                        lctlib%g0                                               , &
+                                        lctlib_g1                                               , &
+                                        lctlib%t_jmax_omega                                     , &
+                                        lctlib%tau_leaf                                         , &
+                                        dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction          , &
+                                        TRIM(dsl4jsb_Config(ASSIMI_)%canopy_conductance_scheme) , & ! ASSIMI_ config
                                         canopy_layer_depth(:)                          , &
                                         growing_season(:)                              , &
                                         veg_pool%leaf%carbon(:)                        , &  
@@ -636,23 +646,24 @@ CONTAINS
     !! 
     !> 3.1 calculate marginal NPP increment per unit C growth, needed for optimal allocation scheme
     !!
-    CALL calc_marginal_canopy_flux_increment( nc                                              , & ! in
-                                              ncanopy                                         , &
-                                              vgrid_canopy%dz(:)                              , &
-                                              vgrid_canopy%lbounds(:)                         , &
-                                              vgrid_canopy%ubounds(:)                         , &
-                                              lctlib%ps_pathway                               , &
-                                              lctlib%sla                                      , &
-                                              lctlib%k0_fn_struc                              , &
-                                              lctlib%fn_oth_min                               , &
-                                              lctlib%np_leaf                                  , &
-                                              lctlib%cn_leaf                                  , &
-                                              lctlib%gmin                                     , &
-                                              lctlib%g0                                       , &
-                                              lctlib%g1                                       , &
-                                              lctlib%t_jmax_omega                             , &
-                                              lctlib%sigma_vis                                , &
-                                              dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction  , &
+    CALL calc_marginal_canopy_flux_increment( nc                                                      , & ! in
+                                              ncanopy                                                 , &
+                                              vgrid_canopy%dz(:)                                      , &
+                                              vgrid_canopy%lbounds(:)                                 , &
+                                              vgrid_canopy%ubounds(:)                                 , &
+                                              lctlib%ps_pathway                                       , &
+                                              lctlib%sla                                              , &
+                                              lctlib%k0_fn_struc                                      , &
+                                              lctlib%fn_oth_min                                       , &
+                                              lctlib%np_leaf                                          , &
+                                              lctlib%cn_leaf                                          , &
+                                              lctlib%gmin                                             , &
+                                              lctlib%g0                                               , &
+                                              lctlib_g1                                               , &
+                                              lctlib%t_jmax_omega                                     , &
+                                              lctlib%sigma_vis                                        , &
+                                              dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction          , &
+                                              TRIM(dsl4jsb_Config(ASSIMI_)%canopy_conductance_scheme) , & ! ASSIMI_ config
                                               canopy_layer_depth(:)                           , &
                                               t_air(:)                                        , &
                                               press_srf(:)                                    , &
