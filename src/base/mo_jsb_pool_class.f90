@@ -14,6 +14,7 @@ MODULE mo_jsb_pool_class
 
   ! PUBLIC :: t_element, t_element_2d, t_element_3d, t_jsb_pool, t_jsb_pool_p
   PUBLIC :: t_jsb_pool, t_jsb_pool_p
+  PUBLIC :: carbon_, nitrogen_, phosphorus_, carbon13_, carbon14_, nitrogen15_  ! element_id (element enumerator) for QUINCY model processes)
 
   ! TYPE, ABSTRACT, EXTENDS(t_jsb_var) :: t_element
   !   CHARACTER(len=:), ALLOCATABLE :: element_name
@@ -99,6 +100,12 @@ MODULE mo_jsb_pool_class
       CHARACTER(LEN=:), ALLOCATABLE :: name
     END FUNCTION get_el_name_iface_id
   END INTERFACE
+
+  !> element_id (element enumerator) for QUINCY model processes
+  !! 
+  ENUM, BIND(C)
+    ENUMERATOR :: carbon_=1, nitrogen_, phosphorus_, carbon13_, carbon14_, nitrogen15_
+  END ENUM
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_pool_class'
 

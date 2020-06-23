@@ -57,12 +57,12 @@ CONTAINS
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     ! USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb_process_class,     ONLY: ASSIMI_, VEG_
+    USE mo_jsb_pool_class,        ONLY: carbon_, nitrogen_, phosphorus_, carbon13_, carbon14_, nitrogen15_  ! element_id of QUINCY elements 
     ! USE mo_jsb4_forcing,          ONLY: forcing_options
     ! USE mo_veg_constants,         ONLY: itree
 
     ! Use of pools
     dsl4jsb_Use_pools(VEG_) t_veg_main_pool, t_veg_tissues_pool, t_veg_elements_pool
-    dsl4jsb_Use_elements(VEG_) carbon_, nitrogen_, phosphorus_, carbon13_, carbon14_, nitrogen15_
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(ASSIMI_)

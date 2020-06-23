@@ -37,7 +37,7 @@ MODULE mo_veg_memory_class
   USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d
-  USE mo_jsb_pool_class,         ONLY: t_jsb_pool
+  USE mo_jsb_pool_class,         ONLY: t_jsb_pool, carbon_, nitrogen_, phosphorus_, carbon13_, carbon14_, nitrogen15_
   USE mo_jsb_lct_class,          ONLY: LAND_TYPE, VEG_TYPE
 
 
@@ -45,8 +45,7 @@ MODULE mo_veg_memory_class
   PRIVATE
   PUBLIC :: t_veg_memory, max_no_of_vars
   PUBLIC :: t_veg_main_pool, t_veg_tissues_pool, t_veg_elements_pool
-  PUBLIC :: t_jsb_pool
-  PUBLIC :: carbon_, nitrogen_, phosphorus_, carbon13_, carbon14_, nitrogen15_
+!  PUBLIC :: t_jsb_pool
  
   INTEGER, PARAMETER :: max_no_of_vars = 530    !> TYPE t_jsb_var | 'normal' var: ~ 220 | 5 pools: 270 var | 4 tissues: 24
 
@@ -102,12 +101,6 @@ MODULE mo_veg_memory_class
     TYPE(t_veg_elements_pool),  POINTER :: veg_establishment
     TYPE(t_veg_elements_pool),  POINTER :: veg_reserve_use  
   END TYPE t_veg_main_pool
-
-  !> element_id 
-  !! 
-  ENUM, BIND(C)
-    ENUMERATOR :: carbon_=1, nitrogen_, phosphorus_, carbon13_, carbon14_, nitrogen15_
-  END ENUM
 
   !> list with the element_id of all elements as defined above
   !! is allocated in Init_PROC_memory
