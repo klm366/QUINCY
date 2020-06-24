@@ -25,7 +25,7 @@
 slmModel="land"
 
 forcingDataSet="cruncep"
-siteSelection="cue"
+crunSites="cue"
 forcingMode="static"
 customSiteList="F"
 singleSiteName=""

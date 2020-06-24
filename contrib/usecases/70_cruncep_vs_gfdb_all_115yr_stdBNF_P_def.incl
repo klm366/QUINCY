@@ -29,7 +29,7 @@ experimentalID="70_cruncep_vs_gfdb_all_115yr_stdBNF_P"
 slmModel="land"
 
 forcingDataSet="cruncep"
-siteSelection="all"
+crunSites="all"
 forcingMode="transient"
 customSiteList="F"
 customSiteListFileName=""

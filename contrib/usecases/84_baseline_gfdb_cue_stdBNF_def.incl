@@ -29,7 +29,7 @@ experimentalID="84_baseline_gfdb_cue_stdBNF"
 slmModel="land"
 
 forcingDataSet="cruncep"
-siteSelection="cue"
+crunSites="cue"
 forcingMode="transient"
 customSiteList="F"
 customSiteListFileName=""
@@ -37,7 +37,7 @@ singleSiteName=""
 paramSensitivitySim="F"
 
 specialFluxnetOutput="F"
-compareSimCRUNCEPvsGFDB="T"    # in case "T" the siteSelection="cue" is set automatically by the prep_run_slm.sh
+compareSimCRUNCEPvsGFDB="T"
 spinupLengthGFDB=500
 
 ##>> namelist.slm options <<############################################################################
