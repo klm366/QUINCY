@@ -37,7 +37,7 @@ MODULE mo_sb_memory_class
   USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d
-  USE mo_jsb_pool_class,         ONLY: t_jsb_pool
+  USE mo_jsb_pool_class,         ONLY: t_jsb_pool, ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15
   USE mo_jsb_lct_class,          ONLY: LAND_TYPE, VEG_TYPE
   
 

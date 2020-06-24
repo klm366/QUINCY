@@ -37,7 +37,7 @@ MODULE mo_veg_memory_class
   USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d
-  USE mo_jsb_pool_class,         ONLY: t_jsb_pool, carbon_, nitrogen_, phosphorus_, carbon13_, carbon14_, nitrogen15_
+  USE mo_jsb_pool_class,         ONLY: t_jsb_pool, ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15
   USE mo_jsb_lct_class,          ONLY: LAND_TYPE, VEG_TYPE
 
 
@@ -45,7 +45,6 @@ MODULE mo_veg_memory_class
   PRIVATE
   PUBLIC :: t_veg_memory, max_no_of_vars
   PUBLIC :: t_veg_main_pool, t_veg_tissues_pool, t_veg_elements_pool
-!  PUBLIC :: t_jsb_pool
  
   INTEGER, PARAMETER :: max_no_of_vars = 530    !> TYPE t_jsb_var | 'normal' var: ~ 220 | 5 pools: 270 var | 4 tissues: 24
 
@@ -229,17 +228,17 @@ CONTAINS
 
     ! name may be consistent with the "name" provided to "CALL this%Add_element()"
     SELECT CASE (id)
-    CASE (carbon_)
+    CASE (ELEM_C)
       name='carbon'
-    CASE (nitrogen_)
+    CASE (ELEM_N)
       name='nitrogen'
-    CASE (phosphorus_)
+    CASE (ELEM_P)
       name='phosphorus'
-    CASE (carbon13_)
+    CASE (ELEM_C13)
       name='carbon13'
-    CASE (carbon14_)
+    CASE (ELEM_C14)
       name='carbon14'
-    CASE (nitrogen15_)
+    CASE (ELEM_N15)
       name='nitrogen15'
     END SELECT
 
@@ -280,9 +279,9 @@ CONTAINS
     this%element_unit = element_unit
   
     !> carbon
-    IF (One_of(carbon_, element_list_loc) > 0) THEN
-      CALL this%Add_element('carbon', 'C', carbon_, dim=2)
-      i = this%Find_element_position(carbon_)
+    IF (One_of(ELEM_C, element_list_loc) > 0) THEN
+      CALL this%Add_element('carbon', 'C', ELEM_C, dim=2)
+      i = this%Find_element_position(ELEM_C)
       IF (i > 0) THEN
         SELECT TYPE (selector => this%element_list(i)%p)
         CLASS IS (t_jsb_var_real2d)
@@ -291,9 +290,9 @@ CONTAINS
       END IF
     END IF
     !> nitrogen
-    IF (One_of(nitrogen_, element_list_loc) > 0) THEN
-      CALL this%Add_element('nitrogen', 'N', nitrogen_, dim=2)
-      i = this%Find_element_position(nitrogen_)
+    IF (One_of(ELEM_N, element_list_loc) > 0) THEN
+      CALL this%Add_element('nitrogen', 'N', ELEM_N, dim=2)
+      i = this%Find_element_position(ELEM_N)
       IF (i > 0) THEN
         SELECT TYPE (selector => this%element_list(i)%p)
         CLASS IS (t_jsb_var_real2d)
@@ -302,9 +301,9 @@ CONTAINS
       END IF
     END IF
     !> phosphorus
-    IF (One_of(phosphorus_, element_list_loc) > 0) THEN
-      CALL this%Add_element('phosphorus', 'P', phosphorus_, dim=2)
-      i = this%Find_element_position(phosphorus_)
+    IF (One_of(ELEM_P, element_list_loc) > 0) THEN
+      CALL this%Add_element('phosphorus', 'P', ELEM_P, dim=2)
+      i = this%Find_element_position(ELEM_P)
       IF (i > 0) THEN
         SELECT TYPE (selector => this%element_list(i)%p)
         CLASS IS (t_jsb_var_real2d)
@@ -313,9 +312,9 @@ CONTAINS
       END IF
     END IF
     !> carbon13
-    IF (One_of(carbon13_, element_list_loc) > 0) THEN
-      CALL this%Add_element('carbon13', 'C13', carbon13_, dim=2)
-      i = this%Find_element_position(carbon13_)
+    IF (One_of(ELEM_C13, element_list_loc) > 0) THEN
+      CALL this%Add_element('carbon13', 'C13', ELEM_C13, dim=2)
+      i = this%Find_element_position(ELEM_C13)
       IF (i > 0) THEN
         SELECT TYPE (selector => this%element_list(i)%p)
         CLASS IS (t_jsb_var_real2d)
@@ -324,9 +323,9 @@ CONTAINS
       END IF
     END IF
     !> carbon14
-    IF (One_of(carbon14_, element_list_loc) > 0) THEN
-      CALL this%Add_element('carbon14', 'C14', carbon14_, dim=2)
-      i = this%Find_element_position(carbon14_)
+    IF (One_of(ELEM_C14, element_list_loc) > 0) THEN
+      CALL this%Add_element('carbon14', 'C14', ELEM_C14, dim=2)
+      i = this%Find_element_position(ELEM_C14)
       IF (i > 0) THEN
         SELECT TYPE (selector => this%element_list(i)%p)
         CLASS IS (t_jsb_var_real2d)
@@ -335,9 +334,9 @@ CONTAINS
       END IF
     END IF
     !> nitrogen15
-    IF (One_of(nitrogen15_, element_list_loc) > 0) THEN
-      CALL this%Add_element('nitrogen15', 'N15', nitrogen15_, dim=2)
-      i = this%Find_element_position(nitrogen15_)
+    IF (One_of(ELEM_N15, element_list_loc) > 0) THEN
+      CALL this%Add_element('nitrogen15', 'N15', ELEM_N15, dim=2)
+      i = this%Find_element_position(ELEM_N15)
       IF (i > 0) THEN
         SELECT TYPE (selector => this%element_list(i)%p)
         CLASS IS (t_jsb_var_real2d)
@@ -486,7 +485,7 @@ CONTAINS
       !! QUINCY is using always all of the below six elements
       IF (.NOT. ALLOCATED(all_elements)) THEN
         ALLOCATE(all_elements(6))
-        all_elements(:) = [carbon_, nitrogen_, phosphorus_, carbon13_, carbon14_, nitrogen15_]
+        all_elements(:) = [ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15]
       END IF
 
       !-----------------------------------------------------------------------------------------------------------------------------

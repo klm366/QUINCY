@@ -57,7 +57,7 @@ CONTAINS
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     ! USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb_process_class,     ONLY: ASSIMI_, VEG_
-    USE mo_jsb_pool_class,        ONLY: carbon_, nitrogen_, phosphorus_, carbon13_, carbon14_, nitrogen15_  ! element_id of QUINCY elements 
+    USE mo_jsb_pool_class,        ONLY: ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15 
     ! USE mo_jsb4_forcing,          ONLY: forcing_options
     ! USE mo_veg_constants,         ONLY: itree
 
