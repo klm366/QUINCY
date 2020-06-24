@@ -36,21 +36,24 @@ MODULE mo_veg_constants
   ! Respiration parameters
   REAL(wp), SAVE :: & 
       ! growth respiration per unit new biomass
-      fresp_growth      , &   !< growth respiration per unit new biomass 
+      fresp_growth          , &   !< growth respiration per unit new biomass 
       ! N-specific foliar maintenance respiration rate (µmol CO2 / mol N / s)
       ! Taken from Sprugel et al. Respiration from the organ level to the stand. 
       ! In: Smith WK, Hinckley, T.M., editor. Physiological Ecology of Coniferous Forests.
       ! San Diego, CA, USA: Academic Press; 1996.
       ! Note converted from 7.4 e-7 to 1.25 e-6 to account for the different values of the Lloyd&Taylor equation
       ! such that the applied rates a comparable at 15-20°C
-      fmaint_rate_base  , &   !< N-specific maintenance respiration rate for roots and leaves (µmol CO2 / mmol N / s) 
-      fmaint_rate_wood  , &   !< N-specific maintenance respiration rate for wood (µmol CO2 / mmol N / s) 
+      fmaint_rate_base      , &   !< N-specific maintenance respiration rate for roots and leaves (µmol CO2 / mmol N / s) 
+      fmaint_rate_wood      , &   !< N-specific maintenance respiration rate for wood (µmol CO2 / mmol N / s) 
       ! parameters in the Lloyd and Taylor temperature response function (Lloyd & Taylor, 1996, Funct. Ecol.) 
-      t_maint_k1        , &   !< Coefficient in the equation for temperature sensitivity of foliar respiration
-      t_maint_k2        , &   !< Coefficient in the equation for temperature sensitivity of foliar respiration
-      t_maint_k3        , &   !< Coefficient in the equation for temperature sensitivity of foliar respiration
-      f_resp_acclim     , &   !< respiration temperature acclimation factor 
-      t_acclim_zero           !< base temperature for respiration acclimation 
+      t_maint_k1            , &   !< Coefficient in the equation for temperature sensitivity of foliar respiration
+      t_maint_k2            , &   !< Coefficient in the equation for temperature sensitivity of foliar respiration
+      t_maint_k3            , &   !< Coefficient in the equation for temperature sensitivity of foliar respiration
+      ! 
+      f_resp_acclim         , &   !< respiration temperature acclimation factor 
+      t_acclim_zero         , &   !< base temperature for respiration acclimation 
+      k_resp_suppress_grass , &   !< reduce maintentance respiration of grasses (during dry periods)
+      k_resp_suppress_tree        !< reduce maintentance respiration of trees (during dry periods)
 
   ! Parameters describing the PS ~ An relationship (describing photosynthetic activity )
   REAL(wp), SAVE :: &      
@@ -229,6 +232,8 @@ CONTAINS
       t_maint_k3                  = 227.13_wp 
       f_resp_acclim               = -0.008_wp
       t_acclim_zero               = 283.15_wp 
+      k_resp_suppress_grass       = 0.1_wp
+      k_resp_suppress_tree        = 0.5_wp
 
   ! Parameters describing the PS ~ An relationship (describing photosynthetic activity )
       k0_fn_pepc_C3               = 0.0_wp 
