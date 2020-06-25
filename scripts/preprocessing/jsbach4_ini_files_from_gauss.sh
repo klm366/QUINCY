@@ -70,7 +70,7 @@ year=1976
 # Note: glac must be at beginning of varlist
 varlist="glac lake init_moist snow roughness_length albedo elevation
 fao forest_fract maxmoist lai_clim veg_fract surf_temp veg_ratio_max 
-albedo_veg_vis albedo_veg_nir albedo_soil_vis albedo_soil_nir roughness_length_oro
+albedo_veg_vis albedo_veg_nir albedo_soil_vis albedo_soil_nir
 soil_depth soil_porosity pore_size_index soil_field_cap heat_capacity heat_conductivity 
 moisture_pot hyd_cond_sat wilting_point bclapp root_depth layer_moist
 oromea orostd orosig orogam orothe oropic oroval"
@@ -369,7 +369,7 @@ function remap_var {
       rm ${grid_name}_${var}_remap.nc
       ${cdo} merge cfract??.nc ${grid_name}_${var}_remap.nc
       ;;
-    roughness_length | roughness_length_oro )
+    roughness_length )
       echo "Remapping $var ..."
       [[ "${var}" == "roughness_length" ]] && oce_rough=0.001 || oce_rough=0.0
       temp=$(mktemp -u --tmpdir=.)
@@ -574,7 +574,6 @@ function generate_output_files {
       ${grid_name}_lai_clim_remap.nc \
       ${grid_name}_veg_fract_remap.nc \
       ${grid_name}_roughness_length_remap.nc \
-      ${grid_name}_roughness_length_oro_remap.nc \
       ${grid_name}_albedo_remap.nc \
       ${grid_name}_albedo_veg_vis_remap.nc \
       ${grid_name}_albedo_veg_nir_remap.nc \
