@@ -93,7 +93,7 @@ CONTAINS
     IF (debug_on()) CALL message(TRIM(routine), &
          'Initializing turb memory for tile '//TRIM(tile%name)//' from '//TRIM(dsl4jsb_Config(TURB_)%bc_filename))
 
-    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(TURB_)%bc_filename), model%grid_id)
+    ! input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(TURB_)%bc_filename), model%grid_id)
 
     ! Surface roughness length
     ! ptr_2D => input_file%Read_2d(         &
@@ -102,17 +102,9 @@ CONTAINS
     ! dsl4jsb_var2D_onDomain(TURB_,rough_m) = &
     !   MERGE(dsl4jsb_var2D_onDomain(TURB_,rough_m), 1._wp, dsl4jsb_var2D_onDomain(TURB_,rough_m) > 0._wp)
 
-    ! Surface roughness length
-    ptr_2D => input_file%Read_2d(         &
-      & variable_name='roughness_length_oro',         &
-      & fill_array = dsl4jsb_var_ptr(TURB_,rough_oro))
-    dsl4jsb_var2D_onDomain(TURB_,rough_oro) = &
-      MERGE(dsl4jsb_var2D_onDomain(TURB_,rough_oro), 1._wp, dsl4jsb_var2D_onDomain(TURB_,rough_oro) > 0._wp)
+    ! !$acc update device(dsl4jsb_var2D_onDomain(TURB_,rough_m))
 
-    ! !$acc update device(dsl4jsb_var2D_onDomain(TURB_,rough_m), dsl4jsb_var2D_onDomain(TURB_,rough_oro))
-    !$acc update device(dsl4jsb_var2D_onDomain(TURB_,rough_oro))
-
-    CALL input_file%Close()
+    ! CALL input_file%Close()
 
     ! avoid compiler warnings about pointers not being dereferenced
     IF (ASSOCIATED(ptr_2D)) CONTINUE

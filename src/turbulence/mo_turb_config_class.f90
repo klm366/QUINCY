@@ -36,11 +36,10 @@ MODULE mo_turb_config_class
       & roughness_bare,              & !< Roughness length of bare land surfaces [m]
       & roughness_water,             & !< Roughness length of lake open water [m]
       & roughness_lai_saturation,    & !< factor in roughness length dependence on LAI (should be between 0.1 and 1)
-      & roughness_max_oro_to_heat,   & !< maximal value of roughness due to orography contributing to roughness for heat
       & roughness_momentum_to_heat     !< factor by which roughness for heat is smaller than roughness for momentum
     LOGICAL :: &
-      & l_roughness_lai, &  !< Calculation of roughness length depends on LAI
-      & l_roughness_oro     !< Calculation of roughness length depends on orography
+      & l_roughness_lai  !< true:  calculation of roughness length depends on LAI
+                         !  false: PFT-specific values from lctlib are used
    CONTAINS
      PROCEDURE :: Init => Init_turb_config
   END type t_turb_config
@@ -63,8 +62,8 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     REAL(wp) :: &
       & blending_height, roughness_snow, roughness_bare, roughness_water, &
-      & roughness_lai_saturation, roughness_max_oro_to_heat, roughness_momentum_to_heat
-    LOGICAL :: l_roughness_lai, l_roughness_oro
+      & roughness_lai_saturation, roughness_momentum_to_heat
+    LOGICAL :: l_roughness_lai
 
     NAMELIST /jsb_turb_nml/           &
       &   active,                     &
@@ -75,10 +74,8 @@ CONTAINS
       &   roughness_bare,             &
       &   roughness_water,            &
       &   roughness_lai_saturation,   &
-      &   roughness_max_oro_to_heat,  &
       &   roughness_momentum_to_heat, &
-      &   l_roughness_lai,            &
-      &   l_roughness_oro
+      &   l_roughness_lai
 
     INTEGER :: nml_handler, nml_unit, istat
 
@@ -95,9 +92,7 @@ CONTAINS
     roughness_bare             = 0.005_wp
     roughness_water            = 0.0002_wp   ! Claussen, 1991: Estimation of areally-averaged surface fluxes
     roughness_lai_saturation   = 0.4_wp
-    roughness_max_oro_to_heat  = 0.5_wp
     roughness_momentum_to_heat = 3._wp
-    l_roughness_oro            = .TRUE.
     l_roughness_lai            = .TRUE.
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
@@ -115,10 +110,8 @@ CONTAINS
     config%roughness_bare             = roughness_bare
     config%roughness_water            = roughness_water
     config%roughness_lai_saturation   = roughness_lai_saturation
-    config%roughness_max_oro_to_heat  = roughness_max_oro_to_heat
     config%roughness_momentum_to_heat = roughness_momentum_to_heat
     config%l_roughness_lai            = l_roughness_lai
-    config%l_roughness_oro            = l_roughness_oro
 
   END SUBROUTINE Init_turb_config
 
