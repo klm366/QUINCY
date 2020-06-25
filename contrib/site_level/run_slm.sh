@@ -307,6 +307,9 @@ if [ "$fluxnetTransSimLand" == "T" ]; then
   elif [ "$forcingDataSet" == "fluxnet3" ]; then
     yearForcStart=$(grep "$forcingSiteFileID" "/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET3/flux3_all_sites_1991-2014_list.dat" | awk '{print $5}')
     yearForcLast=$(grep "$forcingSiteFileID" "/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET3/flux3_all_sites_1991-2014_list.dat" | awk '{print $6}')
+  elif [ "$forcingDataSet" == "mocabors" ]; then
+    yearForcStart=$(grep "$forcingSiteFileID" "/Net/Groups/BGI/data/Model/SLM1/input/point/MOCABORS/mocab_all_sites_1991-2012_list.dat" | awk '{print $5}')
+    yearForcLast=$(grep "$forcingSiteFileID" "/Net/Groups/BGI/data/Model/SLM1/input/point/MOCABORS/mocab_all_sites_1991-2012_list.dat" | awk '{print $6}')
   fi
   # test if transient simulation starts before or at the year static forcing starts
   if [ "$transient_simulation_start_year" -gt "$yearForcStart" ]; then
@@ -341,6 +344,9 @@ if [ "$fluxnetTransSimSoil" == "T" ]; then
   elif [ "$forcingDataSet" == "fluxnet3" ]; then
     yearForcStart=$(grep "$forcingSiteFileID" "/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET3/flux3_all_sites_1991-2014_list.dat" | awk '{print $5}')
     yearForcLast=$(grep "$forcingSiteFileID" "/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET3/flux3_all_sites_1991-2014_list.dat" | awk '{print $6}')
+  elif [ "$forcingDataSet" == "mocabors" ]; then
+    yearForcStart=$(grep "$forcingSiteFileID" "/Net/Groups/BGI/data/Model/SLM1/input/point/MOCABORS/mocab_all_sites_1991-2012_list.dat" | awk '{print $5}')
+    yearForcLast=$(grep "$forcingSiteFileID" "/Net/Groups/BGI/data/Model/SLM1/input/point/MOCABORS/mocab_all_sites_1991-2012_list.dat" | awk '{print $6}')
   fi
   # length of transient simulation - one full forcing period
   # for this soil-model simulation the years, like 1901, do not matter, its just a "transient simulation" after spinup

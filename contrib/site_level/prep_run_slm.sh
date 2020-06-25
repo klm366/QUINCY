@@ -40,7 +40,7 @@ slmModel="land"
 ##>> sites <<###########################################################################################
 ## select the site-set:
 # forcing data and site info *list.dat for all site-sets: /Net/Groups/BGI/data/Model/SLM1/input/point/ 
-# options: fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin
+# options: fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin mocabors
 forcingDataSet="fluxnet"
 # forcing with or without a transient (like spinup) phase before the actual simulation starts
 # options: static transient
@@ -70,7 +70,7 @@ customSiteListFileName=""
 #           [GLOBAL all/sub] "GLB_007" "GLB_058" "GLB_394"
 #           [FACE] "DK-AMB" "OR-ELE"  [MANIP] "ES-MaG" "ES-MaT"  [FERT] "HAR-CON_4" "HAR-HIG_4" "HAR-LOW_4" "HAR-CON_5" "SDA-CON" "SDA-ADD"
 #           [CRAINE] "CRA_01" "CRA_02" "CRA_18"  [PHOTACC] "ARC_01" "MON_02" "STR_01"  [SPP_1685] "BBR" "LUE" "VES"
-#           [CONFIN] "FI-Hyy" "FI-Ken"
+#           [CONFIN] "FI-Hyy" "FI-Ken"  [MOCABORS] "US-Ha1"
 singleSiteName=""
 
 
@@ -257,6 +257,10 @@ while getopts ":e:f:c:m:s:r:y:b:z:n:u:h" opt; do
       echo "   forcingDataSet=confin"
       forcingDataSet="confin"
       ;;
+    "mo")
+      echo "   forcingDataSet=mocabors"
+      forcingDataSet="mocabors"
+      ;;
     esac
     ;;
   "c")
@@ -381,6 +385,7 @@ while getopts ":e:f:c:m:s:r:y:b:z:n:u:h" opt; do
     echo "       ph: PHOTACC sites (phot acclimation)"
     echo "       sp: SPP_1685 sites (for jsm simulations)"
     echo "       co: CONFIN (four finnish sites with conifers)"
+    echo "       mo: MOCABORS (JSM soil moisture development)"
     echo " -c set the customSiteList"
     echo "    Arguments to -c:"
     echo "       T: using the custom site list"
@@ -523,7 +528,7 @@ fi
 return 0
 }
 # lists to validate against
-validateForcingDataSet="fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin"
+validateForcingDataSet="fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin mocabors"
 validateForcingMode="static transient"
 validateCrunSites="all cue spp"
 validateGlobSites="all sub"
@@ -736,6 +741,10 @@ case "$forcingDataSet" in
   ;;
 "confin")
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/CONFIN/"
+  siteDataObsFold="no such evaluation data"  # but this variable must contain something
+  ;;
+"mocabors")
+  siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/MOCABORS/"
   siteDataObsFold="no such evaluation data"  # but this variable must contain something
   ;;
 esac
@@ -1036,6 +1045,17 @@ else
       siteListFileName="confin_sites_1901-2014_list.dat"
     fi
     ;;
+  "mocabors")
+    if [ $forcingMode == "static" ]; then
+      siteListFileName="mocab_all_sites_1991-2012_list.dat"
+    else 
+      siteListFileName="mocab_all_sites_1901-2012_list.dat"
+    fi
+    if [ "$slmModel" == "soil" ]; then
+      siteListFileName="mocab_all_sites_1991-2012_list.dat"
+      echo " The site list file for static simulations is used always for QUINCY soil: mocab_all_sites_1991-2012_list.dat"
+    fi
+    ;;
   esac
   siteList="$siteDataFold""$siteListFileName"
 fi
@@ -1151,7 +1171,7 @@ if [ $forcingMode == "transient" ]; then
     #  note: actual simulation length 1901 to x varies with the site, 
     #        after spinup the simulation starts 1901 and ends after the last year of (static) forcing data available
     #        this setting is done per site in the run_slm.sh (modifying the namelist)
-    if [ "$forcingDataSet" == "fluxnet" ] || [ "$forcingDataSet" == "fluxnet3" ]; then
+    if [ "$forcingDataSet" == "fluxnet" ] || [ "$forcingDataSet" == "fluxnet3" ] || [ "$forcingDataSet" == "mocabors" ]; then
       echo " You started a transient simulation with QUINCY ""$slmModel"" and fluxnet forcing: ""$forcingDataSet"
       echo " Note: after spinup the simulation starts 1901 and ends after the last year of (static) forcing data available (which is site specific)."
       echo " Hence, the actual simulation length may vary with the fluxnet sites."
@@ -1166,7 +1186,7 @@ if [ $forcingMode == "transient" ]; then
   fi
   # soil model (simple_0d, simple_1d, jsm)
   if [ "$slmModel" == "soil" ]; then
-    if [ "$forcingDataSet" == "fluxnet" ] || [ "$forcingDataSet" == "fluxnet3" ]; then
+    if [ "$forcingDataSet" == "fluxnet" ] || [ "$forcingDataSet" == "fluxnet3" ] || [ "$forcingDataSet" == "mocabors" ]; then
       echo " Running a transient simulation with the QUINCY soil model ""$sb_model_scheme""."
       echo " After the spinup, the transient simulation may run for one full forcing period (site-specific static forcing)."
       fluxnetTransSimSoil="T"
@@ -1281,6 +1301,15 @@ case "$forcingDataSet" in
   else
     forcingModeFileID="_t_"
   fi
+  ;;
+"mocabors")
+  if [ $forcingMode == "static" ]; then
+    forcingModeFileID="_s_"
+  else  # valid for land & soil
+    forcingModeFileID="_t_"
+  fi
+  # QUINCY soil model: no specific forcing-file indentifier needed; static & transient soil-forcing are stored in individual dirs
+  if [ "$slmModel" == "soil" ]; then forcingModeFileID="_"; fi
   ;;
 esac
 

@@ -90,7 +90,7 @@ plant_functional_type_id=5      # 1 - 8
 
 # forcing input
 flag_oneYearForcing="F"         # T (True) or F (False): whether to use (repeatedly) only the 1st year of the climate forcing input file
-forcingDataSet="fluxnet3"       # options: fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin none (for 'none' provide: test_bed/climate.dat [land plant canopy] or soil_forcing_litterfall.dat & soil_forcing_soilphysics.dat [soil])
+forcingDataSet="fluxnet3"       # options: fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin mocabors none (for 'none' provide: test_bed/climate.dat [land plant canopy] or soil_forcing_litterfall.dat & soil_forcing_soilphysics.dat [soil])
 crunSites="cue"                 # cue or spp  [spp: BBR_01 | LUE_01 | VES_01 | MTF_01 | CON_01]
 siteName="DE-Hai"               # get the Site-ID from the 1st column of the particular "site list .dat"
                                 # examples: [FLUX/3] "DE-Hai" "FI-Hyy" "ZA-Kru"  [CRUN] "BHS_01" "HAI_01" "ILO_05" "BBR_01" 
@@ -177,6 +177,10 @@ while getopts ":p:m:i:f:s:y:b:z:h" opt; do
     "co")
       echo "   forcingDataSet=confin"
       forcingDataSet="confin"
+      ;;
+    "mo")
+      echo "   forcingDataSet=mocabors"
+      forcingDataSet="mocabors"
       ;;
     "no")
       echo "   forcingDataSet=none"
@@ -269,7 +273,7 @@ while getopts ":p:m:i:f:s:y:b:z:h" opt; do
     echo "       land plant soil canopy test_canopy test_radiation"
     echo " -i set siteName, i.e., siteID"
     echo "    Arguments to -i:"
-    echo "       a valid siteName, e.g., [FLUX/3] DE-Hai  [GLOBAL] GLB_001  [CRUN] BHS_01  [FACE] DK-AMB  [MANIP] ES-MaG  [FERT] HAR-CON_4  [CRAINE] CRA_01  [PHOTACC] MON_02  [SPP_1685] BBR"
+    echo "       a valid siteName, e.g., [FLUX/3] DE-Hai  [GLOBAL] GLB_001  [CRUN] BHS_01  [FACE] DK-AMB  [MANIP] ES-MaG  [FERT] HAR-CON_4  [CRAINE] CRA_01  [PHOTACC] MON_02  [SPP_1685] BBR  [MOCABORS] US-Ha1"
     echo " -f set the forcingDataSet"
     echo "    Arguments to -f:"
     echo "       fl: FLUXNET"
@@ -283,6 +287,7 @@ while getopts ":p:m:i:f:s:y:b:z:h" opt; do
     echo "       ph: PHOTACC sites (phot acclimation)"
     echo "       sp: SPP_1685 sites (for jsm simulations)"
     echo "       co: CONFIN (four finnish sites with conifers)"
+    echo "       mo: MOCABORS (JSM soil moisture development)"
     echo "       no: none; using climate.dat file in test_bed folder"
     echo " -s set the soil model"
     echo "    Arguments to -s:"
@@ -351,7 +356,7 @@ validateOutputInterval="timestep daily weekly monthly yearly"
 validatePlantFunctionalTypeID="1 2 3 4 5 6 7 8"
 validateOptionForcing="constant generate readfile"
 validateSetPFTAutomatically="yes no"
-validateForcingDataSet="fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin none"
+validateForcingDataSet="fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin mocabors none"
 validateCrunSites="cue spp"
 validateSb_adsorp_scheme="eca_full eca_part eca_none"
 
@@ -442,6 +447,9 @@ case "$forcingDataSet" in
   ;;
 "confin")
   siteDataSet="CONFIN/"
+  ;;
+"mocabors")
+  siteDataSet="MOCABORS/"
   ;;
 esac
 
@@ -539,6 +547,9 @@ case "$forcingDataSet" in
 "confin")
   allSiteInfoFile="$siteDataDirBase""$siteDataSet"confin_sites_1997-2014_list.dat
   ;;
+"mocabors")
+  allSiteInfoFile="$siteDataDirBase""$siteDataSet"mocab_all_sites_1991-2012_list.dat
+  ;;
 esac
 
 
@@ -597,6 +608,9 @@ case "$forcingDataSet" in
   ;;
 "confin")
   siteNameStatMetForc="$siteName""_s_"                # e.g.: FI-Hyy  ->  FI-Hyy_s_*.dat  ->  FI-Hyy_s_1997-2014.dat  -> climate.dat
+  ;;
+"mocabors")
+  siteNameStatMetForc="$siteName""_s_"                # e.g.: US-Ha1  ->  US-Ha1_s_*.dat  ->  US-Ha1_s_1991-2012.dat  -> climate.dat
   ;;
 esac
 
@@ -665,7 +679,7 @@ if [ $slmModel != "test_canopy" ] && [ $slmModel != "test_radiation" ]; then    
       else # land plant canopy
         cp ./"$forceLandMetFile"    ./"$slmModel"/"$forceLandMetFile"
       fi 
-    ## forcingDataSet  (fluxnet / fluxnet3 / global / cruncep / face / manip / fert / craine / photacc / spp1685 / confin)
+    ## forcingDataSet  (fluxnet / fluxnet3 / global / cruncep / face / manip / fert / craine / photacc / spp1685 / confin / mocabors)
     else 
       # soil
       if [ $slmModel == "soil" ]; then
