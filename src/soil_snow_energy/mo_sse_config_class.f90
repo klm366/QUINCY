@@ -84,6 +84,7 @@ CONTAINS
     INTEGER :: nsoil
 
     TYPE(t_jsb_vgrid), POINTER :: soil_vgrid, snow_vgrid
+    TYPE(t_jsb_vgrid), POINTER :: vgrid_soil_sb             ! quincy (using values from jsb4 soil_vgrid)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_sse_config'
 
@@ -219,6 +220,23 @@ CONTAINS
       DEALLOCATE(depths, mids)
     END IF
 
+    !< Create vertical axis (vgrid) quincy
+    !! 
+    !! these are "infrastructure" values, ubounds and dz must be corrected/limited by site-specific bedrock depth "soil_depth" !
+    !! 
+    !! use values from JSBACH4 soil_vgrid init above
+    !! 
+    !vgrid_soil_sb => new_vgrid('soil_layer_sb', ZAXIS_GENERIC, nsoil_water, &
+    vgrid_soil_sb => new_vgrid('soil_layer_sb', ZAXIS_GENERIC, nsoil, &
+                      longname='Soil (water) layers from SSE_ QUINCY', &
+                      units='m', &
+                      ! levels=  , &      ! is calculated from ubounds and dz
+                      ! lbounds=  , &     ! is calculated from ubounds and dz
+                      !ubounds=ubounds_soil_lay_water(:), & 
+                      ubounds=soil_vgrid%ubounds(:), & 
+                      !dz=dz_water(:))
+                      dz=soil_vgrid%dz(:))
+    CALL register_vgrid(vgrid_soil_sb)
 
   END SUBROUTINE Init_sse_config
 

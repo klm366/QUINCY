@@ -55,11 +55,13 @@ CONTAINS
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
-    USE mo_jsb_task_class,        ONLY: t_jsb_task_options
-    ! USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
-    USE mo_jsb_process_class,     ONLY: SB_
+    USE mo_jsb_process_class,     ONLY: SB_   ! A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
+    USE mo_jsb_pool_class,        ONLY: ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15 
     USE mo_jsb_math_constants,    ONLY: dtime, eps8
 
+    ! Use of pools
+    dsl4jsb_Use_pools(SB_) t_sb_main_pool, t_sb_tissues_pool, t_sb_elements_pool
+    
     ! Use of process configurations and memory
     dsl4jsb_Use_config(SB_)
     dsl4jsb_Use_memory(SB_)
@@ -74,9 +76,15 @@ CONTAINS
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_pools'
 
-    ! Declare process configuration and memory Pointers
+    ! Declare process configuration, memory, and pool-structure Pointers
     dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(SB_)
+    dsl4jsb_Def_pool(t_sb_tissues_pool)  :: sb_pool
+    dsl4jsb_Def_pool(t_sb_tissues_pool)  :: sb_formation
+    dsl4jsb_Def_pool(t_sb_tissues_pool)  :: sb_loss
+    dsl4jsb_Def_pool(t_sb_tissues_pool)  :: sb_transport
+    dsl4jsb_Def_pool(t_sb_elements_pool) :: sb_delta_pools
+    dsl4jsb_Def_pool(t_sb_elements_pool) :: sb_mycorrhiza_export
 
     ! Declare pointers to variables in memory
     ! SB_ 2D
@@ -100,6 +108,12 @@ CONTAINS
 
     dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_memory(SB_)
+    dsl4jsb_Get_pool(SB_, sb_main_pool%sb_pool,               sb_pool)
+    dsl4jsb_Get_pool(SB_, sb_main_pool%sb_formation,          sb_formation)
+    dsl4jsb_Get_pool(SB_, sb_main_pool%sb_loss,               sb_loss)
+    dsl4jsb_Get_pool(SB_, sb_main_pool%sb_transport,          sb_transport)
+    dsl4jsb_Get_pool(SB_, sb_main_pool%sb_delta_pools,        sb_delta_pools)
+    dsl4jsb_Get_pool(SB_, sb_main_pool%sb_mycorrhiza_export,  sb_mycorrhiza_export)
 
     dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_carbon)           ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_nitrogen)         ! out
@@ -112,12 +126,80 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
+!!! playground for testing !!!
+
     total_flux_carbon     = 0.5_wp
     total_flux_nitrogen   = 0.5_wp
     total_flux_phosphorus = 0.5_wp
     total_flux_carbon13   = 0.5_wp
     total_flux_carbon14   = 0.5_wp
     total_flux_nitrogen15 = 0.5_wp
+
+    sb_pool%dom%carbon%ptrm1(:,:)                 = 17.0_wp
+    sb_pool%dom_assoc%carbon%ptrm1(:,:)           = 17.0_wp
+    sb_pool%soluable_litter%carbon%ptrm1(:,:)     = 17.0_wp
+    sb_pool%polymeric_litter%carbon%ptrm1(:,:)    = 17.0_wp
+    sb_pool%woody_litter%carbon%ptrm1(:,:)        = 17.0_wp
+    sb_pool%fungi%carbon%ptrm1(:,:)               = 17.0_wp
+    sb_pool%mycorrhiza%carbon%ptrm1(:,:)          = 17.0_wp
+    sb_pool%microbial%carbon%ptrm1(:,:)           = 17.0_wp
+    sb_pool%residue%carbon%ptrm1(:,:)             = 17.0_wp
+    sb_pool%residue_assoc%carbon%ptrm1(:,:)       = 17.0_wp
+
+    sb_pool%dom%nitrogen%ptrm1(:,:)               = 4.0_wp
+    sb_pool%dom_assoc%nitrogen%ptrm1(:,:)         = 4.0_wp
+    sb_pool%soluable_litter%nitrogen%ptrm1(:,:)   = 4.0_wp
+    sb_pool%polymeric_litter%nitrogen%ptrm1(:,:)  = 4.0_wp
+    sb_pool%woody_litter%nitrogen%ptrm1(:,:)      = 4.0_wp
+    sb_pool%fungi%nitrogen%ptrm1(:,:)             = 4.0_wp
+    sb_pool%mycorrhiza%nitrogen%ptrm1(:,:)        = 4.0_wp
+    sb_pool%microbial%nitrogen%ptrm1(:,:)         = 4.0_wp
+    sb_pool%residue%nitrogen%ptrm1(:,:)           = 4.0_wp
+    sb_pool%residue_assoc%nitrogen%ptrm1(:,:)     = 4.0_wp
+
+    sb_formation%dom%carbon%ptrm1(:,:)                  = 15.0_wp
+    sb_formation%dom_assoc%carbon%ptrm1(:,:)            = 15.0_wp
+    sb_formation%soluable_litter%carbon%ptrm1(:,:)      = 15.0_wp
+    sb_formation%polymeric_litter%carbon%ptrm1(:,:)     = 15.0_wp
+    sb_formation%woody_litter%carbon%ptrm1(:,:)         = 15.0_wp
+    sb_formation%fungi%carbon%ptrm1(:,:)                = 15.0_wp
+    sb_formation%mycorrhiza%carbon%ptrm1(:,:)           = 15.0_wp
+    sb_formation%microbial%carbon%ptrm1(:,:)            = 15.0_wp
+    sb_formation%residue%carbon%ptrm1(:,:)              = 15.0_wp
+    sb_formation%residue_assoc%carbon%ptrm1(:,:)        = 15.0_wp
+
+    sb_formation%dom%nitrogen%ptrm1(:,:)                = 2.0_wp
+    sb_formation%dom_assoc%nitrogen%ptrm1(:,:)          = 2.0_wp
+    sb_formation%soluable_litter%nitrogen%ptrm1(:,:)    = 2.0_wp
+    sb_formation%polymeric_litter%nitrogen%ptrm1(:,:)   = 2.0_wp
+    sb_formation%woody_litter%nitrogen%ptrm1(:,:)       = 2.0_wp
+    sb_formation%fungi%nitrogen%ptrm1(:,:)              = 2.0_wp
+    sb_formation%mycorrhiza%nitrogen%ptrm1(:,:)         = 2.0_wp
+    sb_formation%microbial%nitrogen%ptrm1(:,:)          = 2.0_wp
+    sb_formation%residue%nitrogen%ptrm1(:,:)            = 2.0_wp
+    sb_formation%residue_assoc%nitrogen%ptrm1(:,:)      = 2.0_wp
+
+    sb_delta_pools%carbon%ptrm1(:,:)                  = 20.0_wp
+    sb_delta_pools%nitrogen%ptrm1(:,:)                = 18.0_wp
+    sb_mycorrhiza_export%carbon%ptrm1(:,:)            = 30.0_wp
+    sb_mycorrhiza_export%nitrogen%ptrm1(:,:)          = 28.0_wp
+
+    ! assignment (var3d <- field) is overloaded, so that values are added to the correct chunk
+      !! the below does not work, is translated to:
+      ! sb_pool%dom%carbon    = sb_pool%dom%carbon%ptrm1   + sb_pool%dom_assoc%carbon%ptrm1
+      ! sb_pool%dom%nitrogen  = sb_pool%dom%nitrogen%ptrm1 + sb_pool%dom_assoc%nitrogen%ptrm1
+      !! compiler error:
+      !  Left-hand-side of intrinsic assignment statement is scalar but right-hand-side is an array of rank 2
+      ! sb_pool%dom%carbon    = $sb_pool%dom%carbon$   + $sb_pool%dom_assoc%carbon$
+      ! sb_pool%dom%nitrogen  = $sb_pool%dom%nitrogen$ + $sb_pool%dom_assoc%nitrogen$
+    sb_pool%dom%carbon%ptrm1(:,:)    = sb_pool%dom%carbon%ptrm1(:,:)   + sb_pool%dom_assoc%carbon%ptrm1(:,:)
+    sb_pool%dom%nitrogen%ptrm1(:,:)  = sb_pool%dom%nitrogen%ptrm1(:,:) + sb_pool%dom_assoc%nitrogen%ptrm1(:,:)
+
+    ! assignment (var3d <- field) is overloaded, so that values are added to the correct chunk
+    ! sb_formation%fungi%carbon   = $sb_formation%fungi%carbon$ + $sb_formation%mycorrhiza%carbon$ + &
+    !                               $sb_formation%residue%carbon$
+    ! sb_formation%fungi%nitrogen = $sb_formation%fungi%nitrogen$ + $sb_formation%mycorrhiza%nitrogen$ + &
+    !                               $sb_formation%residue%nitrogen$
 
   END SUBROUTINE update_sb_pools
 
