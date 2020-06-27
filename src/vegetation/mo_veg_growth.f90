@@ -1929,7 +1929,7 @@ CONTAINS
 
 
     USE mo_jsb_math_constants,    ONLY: one_day, eps8
-    USE mo_veg_constants,         ONLY: tau_labile, fresp_growth, resorp_fract_leaf, igrass, &
+    USE mo_veg_constants,         ONLY: tau_labile, fresp_growth, resorp_fract_leaf, igrass, itree, &
                                         fstore_leaf_max, fstore_fine_root_max, fstore_sap_wood_max, &
                                         k_resp_suppress_grass, k_resp_suppress_tree
     dsl4slm_Use_memory_a_veg
@@ -1981,16 +1981,17 @@ CONTAINS
     !!  scaled to the default turnover time of the labile pool
     !!  for grasses after leaf termination this is reduced to a tenth of respiration to account 
     !!  for reduced fine root respiration in dormant roots
-    !  note, in the below WHERE() the 'lctlib_growthform==igrass' is vectorized automatically, 
-    !  so for all itree the ELSEWHERE statement is executed, and for igrass the WHERE statement if 'veg_pool_leaf_carbon(:) < eps8'
-    WHERE(lctlib_growthform==igrass .AND. veg_pool_leaf_carbon(:) < eps8)
-       target_labile_pool_carbon(:)  = k_resp_suppress_grass * maint_respiration_mavg(:) * &
-                                       one_day / 1.e6_wp * tau_labile 
-    ELSEWHERE 
-       target_labile_pool_carbon(:)  = MAX( gpp_mavg(:) , k_resp_suppress_tree * maint_respiration_mavg(:) ) * &
-                                       one_day / 1.e6_wp * tau_labile
+    ! grass & trees
+    target_labile_pool_carbon(:) = MAX(gpp_mavg(:) , maint_respiration_mavg(:)) * one_day / 1.e6_wp * tau_labile
+    ! grass 
+    WHERE(lctlib_growthform == igrass .AND. veg_pool_leaf_carbon(:) < eps8)
+       target_labile_pool_carbon(:) = k_resp_suppress_grass * maint_respiration_mavg(:) * one_day / 1.e6_wp * tau_labile 
     ENDWHERE
-    !! 
+    ! trees
+    WHERE(lctlib_growthform == itree .AND. veg_pool_leaf_carbon(:) < eps8)
+       target_labile_pool_carbon(:) = k_resp_suppress_tree * maint_respiration_mavg(:) * one_day / 1.e6_wp * tau_labile
+    ENDWHERE
+
     !! for N and P this corresponds to the current growth C:N:P in the target labile pool 
     target_labile_pool_nitrogen(:)   = target_labile_pool_carbon(:)    * growth_req_n_mavg(:)
     target_labile_pool_phosphorus(:) = target_labile_pool_nitrogen(:)  * growth_req_p_mavg(:)
