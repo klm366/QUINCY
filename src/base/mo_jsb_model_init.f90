@@ -35,7 +35,7 @@ MODULE mo_jsb_model_init
   PUBLIC :: jsbach_setup_grid, jsbach_init, jsbach_init_after_restart
 
   INTERFACE jsbach_setup_grid
-    MODULE PROCEDURE setup_grid_standalone
+    !MODULE PROCEDURE setup_grid_standalone ! R: nur für ECHAM JS4 Driver, daher auskommentiert
     MODULE PROCEDURE setup_grid_patch
   END INTERFACE jsbach_setup_grid
 
@@ -221,7 +221,7 @@ CONTAINS
       IF (model%processes(ASSIMI_)%p%config%active) THEN
         CALL model%Queue_task(RAD_,    "radiation_par")
       END IF
-      CALL model%Queue_task(HYDRO_,  "surface_hydrology")
+      CALL model%Queue_task(HYDRO_,  "surface_hydrology") 
       CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
       CALL model%Queue_task(SSE_,    "soil_and_snow_properties")
       CALL model%Queue_task(SSE_,    "soil_and_snow_temperature")

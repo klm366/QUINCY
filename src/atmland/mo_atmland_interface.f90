@@ -48,6 +48,7 @@ CONTAINS
 
   SUBROUTINE update_atm2land( &
     & tile, options,          &
+ & DEBUG_VAR, &
     & t_air,                  &
     & q_air,                  &
     & rain,                   &
@@ -58,7 +59,7 @@ CONTAINS
     & swvis_srf_down,         &
     & swnir_srf_down,         &
     & swpar_srf_down,         &
-    & fract_par_diffuse,       &
+    & fract_par_diffuse,      &
     & press_srf,              &
     & drag_srf,               &
     & t_acoef,                &
@@ -68,6 +69,7 @@ CONTAINS
     & pch,                    &
     & cos_zenith_angle,       &
     & CO2_air,                &
+    ! For lakes:
     & drag_wtr,               &
     & drag_ice,               &
     & t_acoef_wtr,            &
@@ -77,7 +79,11 @@ CONTAINS
     & t_acoef_ice,            &
     & t_bcoef_ice,            &
     & q_acoef_ice,            &
-    & q_bcoef_ice             &
+    & q_bcoef_ice,            &
+    ! For standalone ICON driver
+    & trig_rad_m1,             & ! in, optional
+    & newday_Merker,           & ! in, optional
+    & l_day_reminder           & ! in, optional
     & )
 
     USE mo_jsb_physical_constants, ONLY: molarMassDryAir, molarMassCO2
@@ -87,22 +93,26 @@ CONTAINS
     ! TODO This line doesn't work with intel on mistral and standalone JSBACH with ECHAM infrastructure ... why?
     ! REAL(wp), OPTIONAL, DIMENSION(options%nc), INTENT(in) ::                                                       &
     REAL(wp), OPTIONAL, DIMENSION(:), INTENT(in) ::                                                                &
-      & t_air, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, &
+      & DEBUG_VAR, t_air, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, &
       & fract_par_diffuse, press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle,         &
       & CO2_air, drag_wtr, drag_ice,                                                                               &
       & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,                                                        &
       & t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice
+
+    REAL(wp), INTENT(in), OPTIONAL :: trig_rad_m1(:), newday_Merker(:)
+    REAL(wp), INTENT(in),  OPTIONAL :: l_day_reminder(:)
 
     dsl4jsb_Def_memory(A2L_)
 
     INTEGER ::  iblk, ics, ice, nc, i
     TYPE(t_jsb_model), POINTER :: model
     LOGICAL :: use_quincy
-    LOGICAL ::  tile_contains_lake
+    LOGICAL :: tile_contains_lake
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_atm2land'
 
     dsl4jsb_Real2D_onChunk ::  &
+      & DEBUG_VAR_ptr,         &
       & t_air_ptr,             &
       & q_air_ptr,             &
       & rain_ptr,              &
@@ -134,7 +144,10 @@ CONTAINS
       & t_acoef_ice_ptr,       &
       & t_bcoef_ice_ptr,       &
       & q_acoef_ice_ptr,       &
-      & q_bcoef_ice_ptr
+      & q_bcoef_ice_ptr,       &
+      & trig_rad_m1_ptr,       &
+      & newday_Merker_ptr,     &
+      & l_day_reminder_ptr
 
     IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
 
@@ -152,6 +165,9 @@ CONTAINS
     IF (nc /= SIZE(t_air,1)) CALL finish(TRIM(routine), 'Wrong dimensions')
 
     dsl4jsb_Get_memory(A2L_)
+    IF (PRESENT(DEBUG_VAR)) THEN
+      DEBUG_VAR_ptr             => dsl4jsb_var2D_onChunk(A2L_, DEBUG_VAR)
+    END IF
 
     IF (PRESENT(t_air)) THEN
       t_air_ptr             => dsl4jsb_var2D_onChunk(A2L_, t_air)
@@ -215,6 +231,18 @@ CONTAINS
       CO2_air_mol_ptr       => dsl4jsb_var2D_onChunk(A2L_, CO2_air_mol)
       IF (use_quincy) CO2_mixing_ratio_ptr  => dsl4jsb_var2D_onChunk(A2L_, CO2_mixing_ratio)
     END IF
+
+    IF (PRESENT(trig_rad_m1)) THEN
+      trig_rad_m1_ptr  => dsl4jsb_var2D_onChunk(A2L_, trig_rad_m1)
+    END IF
+    IF (PRESENT(newday_Merker)) THEN
+      newday_Merker_ptr  => dsl4jsb_var2D_onChunk(A2L_, newday_Merker)
+    END IF
+    IF (PRESENT(l_day_reminder)) THEN
+      l_day_reminder_ptr  => dsl4jsb_var2D_onChunk(A2L_, l_day_reminder)
+    END IF
+
+
     IF (PRESENT(drag_wtr)) THEN
       drag_wtr_ptr          => dsl4jsb_var2D_onChunk(A2L_, drag_wtr)
     END IF
@@ -247,6 +275,12 @@ CONTAINS
     END IF
 
     !$acc parallel default(present)
+    IF (PRESENT(DEBUG_VAR)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        DEBUG_VAR_ptr(i) = DEBUG_VAR(i)
+      END DO
+    END IF
 
     IF (PRESENT(t_air)) THEN
       !$acc loop gang vector
@@ -372,6 +406,26 @@ CONTAINS
         IF (use_quincy) CO2_mixing_ratio_ptr(i) = CO2_air_mol_ptr(i) * 1000000._wp
       END DO
     END IF
+
+    IF (PRESENT(trig_rad_m1)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        trig_rad_m1_ptr(i) = trig_rad_m1(i)
+      END DO
+    END IF
+    IF (PRESENT(newday_Merker)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        newday_Merker_ptr(i) = newday_Merker(i)
+      END DO
+    END IF
+    IF (PRESENT(l_day_reminder)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        l_day_reminder_ptr(i) = l_day_reminder(i)
+      END DO
+    END IF
+
 
     IF (tile_contains_lake) THEN
 
@@ -549,7 +603,11 @@ CONTAINS
       dsl4jsb_Get_memory(CARBON_)
     END IF
 
+
     IF (tile%contains_lake .AND. .NOT. jsbach_runs_standalone()) THEN
+      WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   land2atmos: lakes und nicht standalone. D.h. gekoppelter Lauf mit lakes.'
+
+
       ! With lakes, re-scale _lnd, _lice and _lwtr fluxes given back to the atmosphere so that they are relative to the whole grid
       ! box. This is necessary because, in the atmosphere, they are weighted with the fractions of lake/nolake in the whole
       ! grid box, while on the root tile of JSBACH they are relative to the land fraction of the grid box including lakes.
@@ -956,6 +1014,7 @@ CONTAINS
 
     ELSE
 
+      WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   land2atmos: keine lakes oder ein standalone Lauf!'
       IF (PRESENT(t_srf)) THEN
         t_filt_ptr => dsl4jsb_var2D_onChunk(SEB_,   t_filt)
         !$acc data present(t_filt_ptr, t_srf)

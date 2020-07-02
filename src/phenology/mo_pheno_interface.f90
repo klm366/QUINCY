@@ -291,12 +291,14 @@ CONTAINS
     USE mo_pheno_process,        ONLY: calc_summergreen_phenology, calc_evergreen_phenology, &
       &                                calc_crop_phenology, calc_raingreen_phenology, calc_grass_phenology,         &
       &                                track_max_green_pool, derive_maxlai_according_to_allometric_relationships
-    USE mo_jsb_time_iface,       ONLY: get_year_day
+    USE mo_jsb_time_iface,       ONLY: get_year_day, t_datetime
     USE mo_jsb_time,             ONLY: is_newyear, is_newday, timestep_in_days
     USE mo_pheno_constants,      ONLY: PhenoParam
     USE mo_jsb_grid_class,       ONLY: t_jsb_grid
     USE mo_jsb_grid,             ONLY: Get_grid
     USE mo_physical_constants,   ONLY: tmelt
+    USE mo_jsb_control, ONLY: jsbach_runs_standalone
+  USE mo_jsb_time,   ONLY: jstep
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -305,6 +307,9 @@ CONTAINS
     ! Local variables
     TYPE(t_jsb_model), POINTER :: model
     INTEGER                    :: iblk, ics, ice
+
+   REAL(wp)                   :: dtime, lat(16)
+   TYPE(t_datetime) :: current
 
     INTEGER :: day_of_year
 
@@ -336,7 +341,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: t_air
     dsl4jsb_Real2D_onChunk :: NPP_pot_rate_ca
     dsl4jsb_Real2D_onChunk :: w_soil_rel
-    dsl4jsb_Real2D_onChunk :: lat
+      ! R: debug dsl4jsb_Real2D_onChunk :: lat
     dsl4jsb_Real2D_onChunk :: heat_sum_SG
     dsl4jsb_Real2D_onChunk :: heat_sum_EG
     dsl4jsb_Real2D_onChunk :: heat_sum_CRP
@@ -370,6 +375,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: veg_fract_correction
 
     dsl4jsb_Real2D_onChunk :: cconservation_allom
+    dsl4jsb_Real2D_onChunk :: newday_Merker
 
     ! Local variables
     LOGICAL :: l_newday
@@ -385,6 +391,7 @@ CONTAINS
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
+    dtime   = options%dtime
 
     ! If process is not active on this tile, do nothing
     IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
@@ -408,6 +415,8 @@ CONTAINS
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(ASSIMI_)
+
+    dsl4jsb_Get_var2D_onChunk(A2L_, newday_Merker) ! inout
 
     !ncanopy =  dsl4jsb_Config(ASSIMI_)%ncanopy
 
@@ -479,6 +488,33 @@ CONTAINS
 
     ! Initialization of local variables
     l_newday = is_newday(options%current_datetime, options%dtime)
+
+
+! This is because we do not want to change the behaviour of the ECHAM Standalone driver
+IF (jsbach_runs_standalone()) THEN
+#ifdef __ICON__
+    !write(*,*) 'RRRRRRRRRRRR hier sollte der standalone lauf ankommen!!!' ! R: tut er auch und zwar ausschließlich
+    dsl4jsb_Get_var2D_onChunk(A2L_, newday_Merker)      ! in
+    IF (newday_Merker(1) == 1) THEN
+      l_newday=.TRUE.
+    ELSE
+      l_newday=.FALSE.
+    END IF
+   write(*,*) 'RRRRRRRRRRRR hier sollte er nur im Driver ankommen 2 !!!', l_newday 
+#else
+    write(*,*) 'RRRRRRRRRRRR hier sollte er nie ankommen 2 !!!'  
+#endif
+ELSE
+    !write(*,*) 'RRRRRRRRRRRR hier sollte der forcing lauf ankommen!!!' ! R: tut er auch und zwar ausschließlich
+    ! Update albedo only at experiment start or if model runs standalone or one time step before the radiation time step
+    ! Return if it is not experiment start AND AT THE SAME TIME we are not one time step before the radiation time step AND AT THE SAME TIME the model not runs standalone => wenn Standalone geht er hier IMMER rein!
+    IF (l_newday) THEN
+      newday_Merker = 1
+    ELSE
+      newday_Merker = 0
+    END IF
+END IF
+
     timestep = timestep_in_days(options%dtime)
 
     !$claw expand parallel update

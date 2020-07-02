@@ -778,14 +778,14 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, pore_size_index)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, vol_field_cap)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, vol_p_wilt)
-    IF (dsl4jsb_Config(HYDRO_)%l_organic) dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, hyd_cond_sat_sl)
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl)
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, bclapp_sl)
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, matrix_pot_sl)
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, pore_size_index_sl)
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_field_cap_sl)
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_p_wilt_sl)
+    IF (dsl4jsb_Config(HYDRO_)%l_organic) dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl) ! R: .FALSE.
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, hyd_cond_sat_sl) ! out
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl) ! out
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, bclapp_sl) ! out
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, matrix_pot_sl) ! out
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, pore_size_index_sl) ! out
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_field_cap_sl) ! out
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_p_wilt_sl) ! out
 
     DO i=1,nsoil
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_soil_properties_expand_0 tile_name=tile%name soil=i

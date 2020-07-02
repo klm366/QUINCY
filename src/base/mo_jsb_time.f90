@@ -38,15 +38,15 @@ MODULE mo_jsb_time
             get_day, get_secs_of_day
   PUBLIC :: get_time_interpolation_weights
   PUBLIC :: get_asselin_coef
-  PUBLIC :: timestep_in_days, timesteps_per_day
+  PUBLIC :: timestep_in_days, timesteps_per_day, jstep ! R debugg: jstep wieder löschen hier
 
   TYPE(t_datetime), POINTER, SAVE :: start_date
   TYPE(t_datetime), POINTER, SAVE :: final_date
 
   LOGICAL, SAVE :: time_initialized = .FALSE.
-
+  INTEGER, SAVE :: counter = 0
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_time'
-
+  INTEGER, SAVE                             :: jstep ! R: debug wieder in driver in Zeile 282 , brauch ich hier zum debuggen mit save
 CONTAINS
 
   SUBROUTINE init_time(namelist_filename, model_shortname, restart_jsbach)
@@ -120,8 +120,8 @@ CONTAINS
 
     INTEGER, INTENT(in) :: istep
     LOGICAL, INTENT(in) :: is_standalone
-
-    IF (is_standalone) CALL start_timestep(istep)
+    !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR Beginloop'
+    !R: DEBUG IF (is_standalone) CALL start_timestep(istep)
 
   END SUBROUTINE update_time_at_beginloop
 
@@ -131,8 +131,8 @@ CONTAINS
 
     INTEGER, INTENT(in) :: istep
     LOGICAL, INTENT(in) :: is_standalone
-
-    IF (is_standalone) CALL finish_timestep(istep)
+    !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR Endloop'
+    !R: DEBUG IF (is_standalone) CALL finish_timestep(istep)
 
   END SUBROUTINE update_time_at_endloop
 
