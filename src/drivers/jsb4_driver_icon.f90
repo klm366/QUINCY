@@ -215,10 +215,8 @@ PROGRAM jsb4_driver
 
   ! mtime_current is for the first forcing file one model_time_step ahead of mtime_forcing!
   ! In mo_jsb_forcing the naming is shifted as compared to the model/js4-driver.
-  TYPE(datetime), SAVE, TARGET  :: current_date_target
-  TYPE(datetime), POINTER       :: mtime_forcing => current_date_target 
-  !TYPE(datetime), SAVE, TARGET  :: next_date_target
-  TYPE(datetime), POINTER       :: mtime_current !=> next_date_target 
+  TYPE(datetime), POINTER       :: mtime_forcing
+  TYPE(datetime), POINTER       :: mtime_current
 
 
   ! Technical stuff
@@ -554,8 +552,8 @@ PROGRAM jsb4_driver
                                                                                 ! of processes that are split off the
                                                                                 ! MPI_Communicator to serve as 
                                                                                 ! dedicated restart processes.
-  CALL set_mpi_work_communicators(p_test_run, l_test_openmp, num_io_procs, dedicatedRestartProcs,     & ! inout
-    &                             num_prefetch_proc, num_test_pe, pio_type, opt_comp_id=atmo_process)   ! in, optinal
+  CALL set_mpi_work_communicators(p_test_run, l_test_openmp, num_io_procs, dedicatedRestartProcs, atmo_process, & ! inout
+    &                             num_prefetch_proc, num_test_pe, pio_type)                                       ! in, optional
 
   ! Initialize various timers
   ! ltimer switches  on/off  the  output  of  some performance  related  information  (run time)
@@ -1254,10 +1252,11 @@ PROGRAM jsb4_driver
 
     ! update model date and time mtime based
     IF (l_first_forcing_file) THEN
-      mtime_forcing = mtime_current ! mtime_current is here the init time step before the model calculations.
-                                    ! The forcing input is at exp start one step before the calculation step
+      mtime_forcing => newDatetime(mtime_current) ! mtime_current is here the init time step before the model calculations.
+                                                  ! The forcing input is at exp start one step before the calculation step
     ELSE
-      mtime_forcing = mtime_current + model_time_step ! Changed this for debugging the synchron. now it is synchron!
+      mtime_forcing => newDatetime(mtime_current)
+      mtime_forcing = mtime_forcing + model_time_step ! Changed this for debugging the synchron. now it is synchron!
     END IF
     mtime_old_jsb = mtime_current
     mtime_current = mtime_current + model_time_step
@@ -1792,19 +1791,19 @@ PROGRAM jsb4_driver
         IF ( is_newday(mtime_old_jsb, dtime) ) THEN ! mtime_current
           mtime_forcing_ptr => mtime_forcing
 
-          CALL get_orbit_times(mtime_forcing_ptr, lyr_perp, yr_perp, & ! in
-            &                  time_of_day, orbit_date)            ! out. 
-
-          ! Find out time_of_day_rt and orbit_date_rt of the radiation transfer of the current time step
-          CALL get_orbit_times(mtime_forcing_ptr, lyr_perp, yr_perp, & ! in
-            &                  time_of_day_rt, orbit_date_rt)      ! out
-          
-          ! Find out decl_sun and dist_sun
           l_orbvsop87   => echam_rad_config(jg)% l_orbvsop87 ! Default: .TRUE.
           cecc          => echam_rad_config(jg)% cecc
           cobld         => echam_rad_config(jg)% cobld
           clonp         => echam_rad_config(jg)% clonp
 
+          CALL get_orbit_times(l_orbvsop87, mtime_forcing_ptr, lyr_perp, yr_perp, & ! in
+            &                  time_of_day, orbit_date)            ! out. 
+
+          ! Find out time_of_day_rt and orbit_date_rt of the radiation transfer of the current time step
+          CALL get_orbit_times(l_orbvsop87, mtime_forcing_ptr, lyr_perp, yr_perp, & ! in
+            &                  time_of_day_rt, orbit_date_rt)      ! out
+          
+          ! Find out decl_sun and dist_sun
           IF (l_orbvsop87) THEN
             CALL orbit_vsop87(orbit_date_rt, rasc_sun, decl_sun, dist_sun) ! in, out, out, out
           ELSE
@@ -2330,6 +2329,7 @@ PROGRAM jsb4_driver
     IF (error_status /= SUCCESS)  CALL finish (routine, 'DEALLOCATE failed!')
   ENDIF
 
+  CALL deallocateDatetime(mtime_forcing)
   CALL deallocateDatetime(mtime_old)
   CALL deallocateDatetime(mtime_old_jsb)
   DO jg=1,n_dom

@@ -34,14 +34,14 @@ MODULE mo_jsb4_forcing
     & nf_inq_dimid, nf_inq_dimlen, nf_inq_varid, & ! from netcdf.inc
     & NF_MAX_NAME, nf_get_att_text, NF_NOERR       ! from netcdf.inc
 
-  #ifndef __ICON__
+#ifndef __ICON__
   USE mo_time_control,           ONLY: next_date, lresume, delta_time, time_step_len, get_year_day                    
   USE mo_time_conversion,        ONLY: IMerge_HMS2Sec, day_in_year, time_days
-  #else
+#else
   USE mo_jsb_time_iface,         ONLY: get_year_day
   USE mo_jsb_control,            ONLY: jsbach_is_restarted
   !USE mo_jsb_echam_iface !,      ONLY: next_date, current_date, lresume, delta_time, time_step_len, IMerge_HMS2Sec, day_in_year, time_days
-  #endif
+#endif
 
   ! Apparently in echam and icon
   USE mo_math_constants,         ONLY: pi

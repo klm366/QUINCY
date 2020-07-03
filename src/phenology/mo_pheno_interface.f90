@@ -308,9 +308,6 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     INTEGER                    :: iblk, ics, ice
 
-   REAL(wp)                   :: dtime, lat(16)
-   TYPE(t_datetime) :: current
-
     INTEGER :: day_of_year
 
     REAL(wp), DIMENSION(options%nc) :: &
@@ -341,7 +338,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: t_air
     dsl4jsb_Real2D_onChunk :: NPP_pot_rate_ca
     dsl4jsb_Real2D_onChunk :: w_soil_rel
-      ! R: debug dsl4jsb_Real2D_onChunk :: lat
+    dsl4jsb_Real2D_onChunk :: lat
     dsl4jsb_Real2D_onChunk :: heat_sum_SG
     dsl4jsb_Real2D_onChunk :: heat_sum_EG
     dsl4jsb_Real2D_onChunk :: heat_sum_CRP
@@ -391,7 +388,6 @@ CONTAINS
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-    dtime   = options%dtime
 
     ! If process is not active on this tile, do nothing
     IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
