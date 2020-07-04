@@ -1399,31 +1399,32 @@ PROGRAM jsb4_driver
     !     !nlev= patch%nlev
     !  WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR  DRIVER jbs' , jbs !  1
     !  WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR  DRIVER jbe:', jbe !im std-gekoppelten-Lauf ist: jbe immer =39 , hier ist es aber 61
-!$OMP PARALLEL DO PRIVATE(jb,jcs,jce)
-    nblks=0
-    DO jb = jbs,jbe ! loop über den block index
-      nblks = nblks + 1
-      IF (jb == 1)  THEN        ! R: we want only jce max
-        CALL get_indices_c(patch,  & ! in 
-            &                   jb,  & ! in  index of block loop
-            &                   jbs, & ! in  start indice of block loop
-            &                   jbe, & ! in  end   indice of block loop
-            &                   jcs, & ! out start indice of columns loop
-            &                   jce, & ! out end   indice of columns loop
-            &                   rls, & ! in  row limit start
-            &                   rle)   ! in  row limit end
-        nproma = jce
-        !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   nproma', nproma, 'jce', jce ! beides immer 16!
-      END IF
-    END DO
-!$OMP END PARALLEL DO
+
+! !$OMP PARALLEL DO PRIVATE(jb,jcs,jce)
+!     nblks=0
+!     DO jb = jbs,jbe ! loop über den block index
+!       nblks = nblks + 1
+!       IF (jb == 1)  THEN        ! R: we want only jce max
+!         CALL get_indices_c(patch,  & ! in 
+!             &                   jb,  & ! in  index of block loop
+!             &                   jbs, & ! in  start indice of block loop
+!             &                   jbe, & ! in  end   indice of block loop
+!             &                   jcs, & ! out start indice of columns loop
+!             &                   jce, & ! out end   indice of columns loop
+!             &                   rls, & ! in  row limit start
+!             &                   rle)   ! in  row limit end
+!         nproma = jce
+!         !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   nproma', nproma, 'jce', jce ! beides immer 16!
+!       END IF
+!     END DO
+! !$OMP END PARALLEL DO
     !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   nproma', nproma, 'jce', jce ! 
     ! RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR   ALLOCATEN muß nach der Ermittlung von nblks gemacht werden!!!
     !call model%Get_top_tile(tile)
     !hgrid => Get_grid(model%grid_id)
     !jsb_nproma = hgrid%nproma
     !nblks  = hgrid%nblks is the same as nblks  = get_nblks (hgrid)
-    !nblks  = p_patch(1)%nblks_c ! R: ich nehme es direkt aus dem Hauptpatch ist wohl für jeden Prozessor unterschiedlich
+    nblks  = p_patch(1)%nblks_c ! R: ich nehme es direkt aus dem Hauptpatch ist wohl für jeden Prozessor unterschiedlich
     ! nblks wird nicht direkt hier oben bestimmt, muß ich woanderst her holen:
     !   nblks  = hgrid%nblks
     !nblks  = p_patch(1)%cell%nblks_c
@@ -2130,17 +2131,18 @@ PROGRAM jsb4_driver
         & newday_Merker     = forcing_in_modeltyp%newday_Merker%data_read (jcs:nproma, jb, step_for_synchron),  &  !
         & l_day_reminder    = forcing_in_modeltyp%l_day_reminder%data_read (jcs:nproma, jb, step_for_synchron)  &  !
         & )
-    END DO
 
-    ! Only for observations as input to calculate vapour_pressure_from_evapor
-    IF ( l_forcing_observations ) THEN
-      ! TODO: if really required (only ERA-interim forcing data):
-      ! To ensure restart identity, the daily evapo_act_sum and evapo_pot_sum would need to be calculated in jsbach!
-      ! => for now the instantaneous values are used instead of the daily sums, to ensure restart identity
-      evapo_act2pot_fromJS4generated(:, jb) = MIN(evapotrans(:, jb),-EPSILON(1._wp)) / MIN(evapopot(:, jb),  -EPSILON(1._wp))
-      ! evapo_act_sum_fromJS4(:,jb) = evapo_act_sum(:,jb) + MIN(evapotrans(:),-EPSILON(1._wp))
-      ! evapo_pot_sum_fromJS4(:,jb) = evapo_pot_sum(:,jb) + MIN(evapopot(:),  -EPSILON(1._wp))
-    ENDIF
+      ! Only for observations as input to calculate vapour_pressure_from_evapor
+      IF ( l_forcing_observations ) THEN
+        ! TODO: if really required (only ERA-interim forcing data):
+        ! To ensure restart identity, the daily evapo_act_sum and evapo_pot_sum would need to be calculated in jsbach!
+        ! => for now the instantaneous values are used instead of the daily sums, to ensure restart identity
+        evapo_act2pot_fromJS4generated(:, jb) = MIN(evapotrans(:, jb),-EPSILON(1._wp)) / MIN(evapopot(:, jb),  -EPSILON(1._wp))
+        ! evapo_act_sum_fromJS4(:,jb) = evapo_act_sum(:,jb) + MIN(evapotrans(:),-EPSILON(1._wp))
+        ! evapo_pot_sum_fromJS4(:,jb) = evapo_pot_sum(:,jb) + MIN(evapopot(:),  -EPSILON(1._wp))
+      ENDIF
+
+    END DO
 
 !$OMP END PARALLEL DO
 
