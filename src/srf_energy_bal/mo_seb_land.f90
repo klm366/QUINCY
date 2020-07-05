@@ -292,6 +292,8 @@ CONTAINS
     ! t_old(:)        = MAX(MIN(t(:),        380._wp), 100._wp)
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_1_1 tile_name=tile%name
     qsat_srf_old(:) = qsat(t_old(:), press_srf(:))
+    ! R: Debug
+    DEBUG_VAR(:)=qsat_srf_old
 
     ! The heat capacity of the surface layer is currently taken as the heat capacity of the upper soil layer
     heat_cap(:) = hcap_grnd(:)
@@ -324,13 +326,13 @@ CONTAINS
     ELSE
       !$claw sca forward update savepoint=ser_jsb_seb_land_surface_temp_implicit_1 tile_name=tile%name
       CALL surface_temp_implicit( nc, steplen, & ! in
-        t2s_conv(:), &  ! in
+        t2s_conv(:),                           & ! in
         t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), &  ! in
-        s_old(:), qsat_srf_old(:), dQdT(:), &  ! in
-        rad_srf_net(:), forc_hflx(:), heat_tcoef(:), &  ! in
-        fact_q_air(:), fact_qsat_srf(:), &  ! in
-        fract_snow(:), heat_cap(:), & ! in
-        & s_star(:)) ! out
+        s_old(:), qsat_srf_old(:), dQdT(:),    & ! in
+        rad_srf_net(:), forc_hflx(:), heat_tcoef(:),    &  ! in
+        fact_q_air(:), fact_qsat_srf(:),       & ! in
+        fract_snow(:), heat_cap(:),            & ! in
+        & s_star(:))                             ! out
     END IF
 
     ! @todo - hack for oceans boxes (land tile is direct child of root tile)
@@ -662,7 +664,7 @@ CONTAINS
     heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen) ! R: drag_srf vom forcing
 ! R: debug:
 !  WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRR steplen:' , steplen
-  DEBUG_VAR(:)=heat_tcoef(:)
+  !DEBUG_VAR(:)=heat_tcoef(:)
 
     ! Compute sensible heat flux
     !

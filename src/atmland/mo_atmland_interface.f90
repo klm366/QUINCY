@@ -1014,7 +1014,6 @@ CONTAINS
 
     ELSE
 
-      WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   land2atmos: keine lakes oder ein standalone Lauf!'
       IF (PRESENT(t_srf)) THEN
         t_filt_ptr => dsl4jsb_var2D_onChunk(SEB_,   t_filt)
         !$acc data present(t_filt_ptr, t_srf)

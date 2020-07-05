@@ -25,14 +25,14 @@ PROGRAM jsb4_driver
     ! &                                     iqc, iqt,                                               &
     ! &                                     ico2, io3,                                              &
     ! &                                     number_of_grid_used,                                    &
-    ! &                                     grid_generatingCenter,                                  & ! grid generating center     R: nur zum Debuggen
-    ! &                                     grid_generatingSubcenter                                  ! grid generating subcenter  R: nur zum Debuggen
-  USE mo_nonhydrostatic_config,     ONLY: configure_nonhydrostatic ! R: sonst fehler in time loop wg substepping
-  !USE mo_atm_phy_nwp_config,        ONLY: atm_phy_nwp_config ! R: nur zum debuggen
+    ! &                                     grid_generatingCenter,                                  & ! grid generating center     R: only for debugging
+    ! &                                     grid_generatingSubcenter                                  ! grid generating subcenter  R: only for debugging
+  USE mo_nonhydrostatic_config,     ONLY: configure_nonhydrostatic ! R: keep this to avoid error in timeloop because of substepping
+  !USE mo_atm_phy_nwp_config,        ONLY: atm_phy_nwp_config  ! R: only for debugging
   USE mo_initicon_config,           ONLY: configure_initicon
   USE mo_dynamics_config,           ONLY: iequations, nnow_rcf
   USE mo_upatmo_config,             ONLY: upatmo_config
-  USE mo_impl_constants,            ONLY: inh_atmosphere, & ! kind of atmosphere. R: sonst fehler in time loop wg substepping
+  USE mo_impl_constants,            ONLY: inh_atmosphere, & ! kind of atmosphere. R: keep this to avoid error in timeloop because of substepping
     &                                     max_dom
 
   ! Parallelisation and decomposition
@@ -52,8 +52,7 @@ PROGRAM jsb4_driver
     !&                                     end_time, dynamics_grid_filename
   USE mo_gridref_config,            ONLY: configure_gridref
   USE mo_interpol_config,           ONLY: configure_interpolation
-  USE mo_nonhydrostatic_config,     ONLY: ivctype  ! R: nur damit parse_variable_groups keinen Abbruch erzeugt.
-                                                  !    Wird normalerweise über die nonhydrostatic_nml eingelesen und ist 1 oder 2. Default ist 2.
+  USE mo_nonhydrostatic_config,     ONLY: ivctype  ! R: 1 or 2. Only to get parse_variable_groups to work. Default is 2.
   !USE mo_extpar_config,             ONLY: itopo ! event. necessary for correct building of vaxis
   USE mo_model_domain,              ONLY: p_patch, p_patch_local_parent
   USE mo_alloc_patches,             ONLY: destruct_patches, destruct_comm_patterns
@@ -61,8 +60,7 @@ PROGRAM jsb4_driver
   USE mo_intp_lonlat,               ONLY: compute_lonlat_intp_coeffs
   USE mo_grf_intp_state,            ONLY: construct_2d_gridref_state
   USE mo_intp_data_strc,            ONLY: p_int_state_local_parent, &
-    &                                     p_int_state              ! R: wg. ivctype, ! p_int_state wird bei unserem call unten nur von der Subroutine verwendet wenn ivctype=2 (SLEVE). 
-                                                                !    Was der Fall ist, ansonsten könnte ich das nur Platzhalter ungefüllt verwenden!!!
+    &                                     p_int_state ! R: for ivctype
   USE mo_grf_intp_data_strc,        ONLY: p_grf_state, p_grf_state_local_parent
   USE mo_grf_intp_state,            ONLY: transfer_grf_state, create_grf_index_lists
   USE mo_intp_state,                ONLY: construct_2d_interpol_state, &
@@ -73,9 +71,9 @@ PROGRAM jsb4_driver
 
   ! Vertical grids
   USE mo_vertical_coord_table,      ONLY: vct_a, vct_b, vct, allocate_vct_atmo !, &
-    !&                                     apzero ! R: wg. ivctype
-  USE mo_util_vgrid,                ONLY: construct_vertical_grid                      ! R: wg. ivctype
-  USE mo_init_vgrid,                ONLY: nflatlev                                     ! R: wg. ivctype
+    !&                                     apzero  ! R: for ivctype
+  USE mo_util_vgrid,                ONLY: construct_vertical_grid  ! R: for ivctype
+  USE mo_init_vgrid,                ONLY: nflatlev                 ! R: for ivctype
   USE mo_zaxis_type,                ONLY: zaxisTypeList, t_zaxisTypeList
   USE mo_nh_pzlev_config,           ONLY: configure_nh_pzlev
                             
@@ -112,8 +110,7 @@ PROGRAM jsb4_driver
   USE mo_level_selection,           ONLY: create_mipz_level_selections
   !USE mo_var_list,                  ONLY: nvar_lists, var_lists, print_var_list ! only for printing varlists
   USE mo_derived_variable_handling, ONLY: update_statistics, reset_statistics ! R: this is necessary and not only for debugging
-  USE mo_nonhydro_state,            ONLY: p_nh_state, p_nh_state_lists ! R: wird beides nicht benötigt nur zum Debuggen von deallocate fehler
-                                                                      !    Doch wird für zeitlichen Durchschnitt wohl benötigt
+  USE mo_nonhydro_state,            ONLY: p_nh_state, p_nh_state_lists
   USE mo_initicon_utils,            ONLY: reinit_average_first_guess
 
   ! Timer for model performance
@@ -131,7 +128,7 @@ PROGRAM jsb4_driver
     &                                     MAX_MTIME_ERROR_STR_LEN, MAX_DATETIME_STR_LEN, max_timedelta_str_len,              &
     &                                     mtime_strerror, timedeltaToString, deallocateDatetime, timedelta,                  &
     &                                     getPTStringFromSeconds, newTimedelta, deallocateTimedelta
-    !&                                     getTotalSecondsTimedelta                                                    &
+    !&                                     getTotalSecondsTimedelta                                                           &
     !&                                     OPERATOR(-), OPERATOR(*),                                                          &
     !&                                     ASSIGNMENT(=), OPERATOR(>=), OPERATOR(/=),                                         &
     !&                                     MAX_TIMEDELTA_STR_LEN,                                                             &
@@ -142,9 +139,8 @@ PROGRAM jsb4_driver
   USE mo_event_manager,             ONLY: addEventGroup, getEventGroup, printEventGroup
   USE mo_action,                    ONLY: reset_act
   USE mo_jsb4_forcing,              ONLY: delta_time, time_step_len
-                                        !next_date_echamfmt    => next_date,    &
-                                        !current_date_echamfmt => current_date, & !Do not confuse with ICON-A: USE mtime, ONLY: datetime  ;   TYPE(datetime) :: current_date
-  USE mo_jsb_control,               ONLY: jsbach_is_restarted
+                                        !current_date_echamfmt => current_date, & !Do not confuse with ICON-A:
+                                        !                      USE mtime, ONLY: datetime  ;   TYPE(datetime) :: current_date
 
   !USE mo_datetime,                 ONLY: t_datetime, print_datetime
 
@@ -161,12 +157,17 @@ PROGRAM jsb4_driver
   USE mo_psrad_solar_parameters,    ONLY: solar_parameters
   USE mo_echam_rad_config,          ONLY: echam_rad_config
   USE mo_math_constants,            ONLY: pi
+  USE mo_echam_phy_bcs,             ONLY: echam_phy_bcs
 
   ! External data, physics
   USE mo_ext_data_state,            ONLY: ext_data, destruct_ext_data
   USE mo_ext_data_init,             ONLY: init_ext_data
   USE mo_echam_phy_cleanup,         ONLY: cleanup_echam_phy
-  USE mo_echam_phy_config,          ONLY: eval_echam_phy_config, eval_echam_phy_tc, print_echam_phy_config
+  USE mo_echam_phy_config,          ONLY: eval_echam_phy_config, eval_echam_phy_tc, print_echam_phy_config !, &
+    !&                                     echam_phy_tc, dt_zero
+  USE mo_psrad_forcing_memory,      ONLY: destruct_psrad_forcing_list
+  USE mo_echam_phy_memory,          ONLY: destruct_echam_phy_state
+  USE mo_echam_convect_tables,      ONLY: init_convect_tables
 
   ! JSBACH4
   USE mo_lnd_nwp_config,            ONLY: nlev_soil, nlev_snow !, sstice_mode
@@ -188,7 +189,7 @@ PROGRAM jsb4_driver
   USE mo_jsb_driver_iface,          ONLY: read_atmo_namelists_for_jsb_standalone, &
     &                                     read_atm_forcing_for_jsb_stdalone_from_modelout, forcing_in_modeltyp
   USE mo_jsb_control,               ONLY: forcing_synchron_factor, forcing_steps_per_file, l_forcing_observations, &
-    &                                     jsbach_runs_standalone !, jsbach_is_restarted
+    &                                     delta_time_observations, jsbach_runs_standalone, jsbach_is_restarted
 
   USE mo_jsb_parallel,              ONLY: my_process_is_stdio, p_bcast, my_process_is_mpi_parallel !, mpi_comm , p_io
   !USE mo_jsb_time_iface,            ONLY: get_time_dt !, get_time_current
@@ -199,8 +200,7 @@ PROGRAM jsb4_driver
   USE mo_jsb_time,                  ONLY: is_newday, jstep
 
   USE mo_jsb4_forcing,              ONLY: read_atm_forcing_for_jsb_stdalone_from_observ => get_interface_variables_from_external_forcing, init_forcing
-  !USE mo_jsb_echam_iface,           ONLY: mtime_forcing  ! always one model timestep after mtime_current
-                                                                          
+  !USE mo_jsb_echam_iface,           ONLY: mtime_forcing                                                                          
   !USE mo_jsb4_forcing,              ONLY: mtime_current => next_date
 
   ! R: used only for debugging:
@@ -214,7 +214,6 @@ PROGRAM jsb4_driver
   IMPLICIT NONE
 
   ! mtime_current is for the first forcing file one model_time_step ahead of mtime_forcing!
-  ! In mo_jsb_forcing the naming is shifted as compared to the model/js4-driver.
   TYPE(datetime), POINTER       :: mtime_forcing
   TYPE(datetime), POINTER       :: mtime_current
 
@@ -240,12 +239,12 @@ PROGRAM jsb4_driver
 
   ! Time and event management
   REAL(wp)                               :: zwtime
-  REAL(wp)                               :: sim_time          !< elapsed simulation time
+  REAL(wp)                               :: sim_time          ! elapsed simulation time
   REAL(wp), ALLOCATABLE                  :: elapsedTime(:)    ! time elapsed since last call of NWP physics routines. For restart purposes.
   TYPE(datetime), POINTER                :: mtime_forcing_ptr ! 
   CHARACTER(len=32)                      :: mtime_forcing_char
-  TYPE(datetime), POINTER                :: mtime_old         ! copy of current datetime (mtime)
-  TYPE(datetime), POINTER                :: mtime_old_jsb     ! copy of current datetime (mtime)
+  TYPE(datetime), POINTER                :: mtime_old
+  TYPE(datetime), POINTER                :: mtime_old_jsb
   TYPE(datetime), POINTER                :: eventStartDate    => NULL(), &
     &                                       eventEndDate      => NULL()
   TYPE(datetime), POINTER                :: checkpointRefDate => NULL(), &
@@ -271,7 +270,8 @@ PROGRAM jsb4_driver
     !&                                      jsubstep
   INTEGER                                :: jstep0, jstep_shift, jgp, step_in_forcing_file !, loop_step ! counters for time loop
 
-  LOGICAL                                :: l_first_forcing_file = .TRUE. , l_shift_one_timestep = .TRUE.
+  LOGICAL                                :: l_first_forcing_file = .TRUE. , l_shift_one_timestep = .TRUE. , &
+    &                                       l_first_step_in_restart = .FALSE.
   ! Parallelisation and decomposition
   INTEGER                                :: iblk, nblks, model_id, ics, ice, nc !, no_omp_thread
   INTEGER                                :: nblks_c !, nblks_c_max
@@ -279,7 +279,7 @@ PROGRAM jsb4_driver
   INTEGER, PARAMETER                     :: atmo_process = 1 ! to set_mpi_work_communicators: root_buffer(1)
 
   ! Vertical grids
-  TYPE(t_jsb_grid),  POINTER             :: hgrid    ! Horizontal grid
+  TYPE(t_jsb_grid),  POINTER             :: hgrid       ! Horizontal grid
   ! infos from the patch used for jsbach
   TYPE(t_patch)                          :: patch
   INTEGER                                :: jg          !< grid index / domain
@@ -314,8 +314,6 @@ PROGRAM jsb4_driver
   dsl4jsb_Def_memory(TURB_)
   dsl4jsb_Def_memory(HYDRO_)
   INTEGER, ALLOCATABLE                  :: output_jfile(:) ! number of output file
-  INTEGER                               :: remain, step_for_synchron
-  REAL(wp)                              :: synchr_ratio 
   !TYPE(t_latbc_data)                   :: latbc !< data structure for async latbc prefetching
 
   ! JSB4 interface variables
@@ -346,27 +344,27 @@ PROGRAM jsb4_driver
 
   REAL(WP), ALLOCATABLE ::  l_day_reminder   (:,:)
 
-  ! out vars, for standalone only dummy use but necessary!
-  REAL(wp), ALLOCATABLE :: t_srf_fromJS4        (:,:), &
-    &                      t_eff_srf         (:,:),   &
-    &                      qsat_srf          (:,:),   &
-    &                      s_srf             (:,:),   &
-    &                      fact_q_air_fromJS4   (:,:), &
-    &                      fact_qsat_srf_fromJS4(:,:), &
-    &                      evapotrans        (:,:),   &
-    &                      evapopot          (:,:),   & 
-    &                      latent_hflx       (:,:),   &
-    &                      sensible_hflx     (:,:),   &
-    &                      grnd_hflx         (:,:),   &
-    &                      grnd_hcap         (:,:),   &
-    &                      rough_h_srf_fromJS4  (:,:), &
-    &                      rough_m_srf_fromJS4  (:,:), &
-    &                      q_snocpymlt       (:,:), &
-    &                      alb_vis_dir       (:,:), &
-    &                      alb_nir_dir       (:,:), &
-    &                      alb_vis_dif       (:,:), &
-    &                      alb_nir_dif       (:,:), &
-    &                      CO2_flux          (:,:)
+  ! out vars, for standalone. Only dummy use but necessary!
+  REAL(wp), ALLOCATABLE :: t_srf_fromJS4         (:,:), &
+    &                      t_eff_srf             (:,:), &
+    &                      qsat_srf              (:,:), &
+    &                      s_srf                 (:,:), &
+    &                      fact_q_air_fromJS4    (:,:), &
+    &                      fact_qsat_srf_fromJS4 (:,:), &
+    &                      evapotrans            (:,:), &
+    &                      evapopot              (:,:), & 
+    &                      latent_hflx           (:,:), &
+    &                      sensible_hflx         (:,:), &
+    &                      grnd_hflx             (:,:), &
+    &                      grnd_hcap             (:,:), &
+    &                      rough_h_srf_fromJS4   (:,:), &
+    &                      rough_m_srf_fromJS4   (:,:), &
+    &                      q_snocpymlt           (:,:), &
+    &                      alb_vis_dir           (:,:), &
+    &                      alb_nir_dir           (:,:), &
+    &                      alb_vis_dif           (:,:), &
+    &                      alb_nir_dif           (:,:), &
+    &                      CO2_flux              (:,:)
 
   ! in vars for lakes, optional
   REAL(wp), ALLOCATABLE :: drag_wtr         (:,:), &
@@ -397,34 +395,17 @@ PROGRAM jsb4_driver
     &                      albedo_lice      (:,:), &
     &                      ice_fract_lake   (:,:)
 
-  ! perhaps we want to use later
-  ! LOGICAL, ALLOCATABLE :: linit_dyn (:) ! Determines whether dynamics must be initialized on given patch.
-                                          ! Only used when jg ==1 and l_limited_area is .true.
-
-
-  !     Nicht in JULIAS VERSION:
-  !         ! For lakes (optional):
-  !         & drag_wtr, drag_ice,                                               & !< in
-  !         & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,               & !< in
-  !         & t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice,               & !< in
-  !         & t_lwtr, qsat_lwtr, s_lwtr,                                        &
-  !         & evapo_wtr, latent_hflx_wtr, sensible_hflx_wtr, & !< out
-  !         & albedo_lwtr,                         INTEGER                      :: counter                               & !< out
-  !         & t_lice, qsat_lice, s_lice,                                        &
-  !         & evapo_ice, latent_hflx_ice, sensible_hflx_ice, & !< out
-  !         & albedo_lice,                                                      & !< out
-  !         & ice_fract_lake,                                                   & !< out
-  !         
-  ! Reste:
+  ! JSB4: driver vars
   REAL(wp), ALLOCATABLE :: evapo_act2pot_fromJS4generated(:,:) !Observations: evapo_act2pot.
   !  REAL(wp), ALLOCATABLE :: CO2_concentration(:,:)  ! Observations: CO2_air in jsb_interface. Nicht mehr benötigt ist jetzt auch in mo_forcing CO2_air!
   !  REAL(wp), ALLOCATABLE :: t_air(:,:)            ! Observations: model-interface: t_air
   !  REAL(wp), ALLOCATABLE :: evapo_act_sum_fromJS4(:,:)
   !  REAL(wp), ALLOCATABLE :: evapo_pot_sum_fromJS4(:,:)
 
-
-  ! R: used only for debugging:
-  INTEGER                      :: counter
+  INTEGER               :: remain, step_for_synchron
+  !REAL(wp)              :: synchr_ratio 
+  INTEGER               :: ic, counter_for_synch
+  LOGICAL               :: l_jsbach_is_restarted
 
   ! -------------------------------------------------------------------
   ! Go
@@ -488,8 +469,7 @@ PROGRAM jsb4_driver
 !$OMP END PARALLEL
  
   ! Read basic namelists for initial setup of the model
-  ! Reads master namelists of ICON (for JS4 standalone case): 
-  ! master_nml, master_time_control_nml, master_model_nml
+  ! Reads master namelists of ICON (for JS4 standalone case): master_nml, master_time_control_nml, master_model_nml
   master_namelist_status = read_master_namelist('NAMELIST_JS4-standalone_master')
 
   ! Initialize global registry of lon-lat grids
@@ -524,7 +504,7 @@ PROGRAM jsb4_driver
   CALL initEventManager(time_config%tc_exp_refdate)
 
   ! Check if compiled with JSBACH and if in echam_phy_config llake=true but JSBACH is false
-  CALL land_crosscheck() ! wieder rein nehmen nur zum debuggen raus genommen
+  CALL land_crosscheck() ! necessary!
 
   ! Finish filling the run_config state.
   CALL configure_run( )
@@ -533,7 +513,6 @@ PROGRAM jsb4_driver
   ! We want to avoid configure_upatmo in the driver. As icon forces us we do it like this.
   ALLOCATE(upatmo_config(n_dom_start:n_dom), STAT=error_status)
   IF (error_status /= SUCCESS) CALL finish(TRIM(routine), "Allocation of upatmo_config failed.")
-
 
   ! Complete init icon config-state e.g. mtime
   CALL configure_initicon()
@@ -735,34 +714,17 @@ PROGRAM jsb4_driver
     CALL finish(routine, 'allocation for ext_data failed')
   ENDIF
   ! allocate memory for atmospheric/oceanic external data and optionally read those data from netCDF file.
-  CALL init_ext_data (p_patch(1:), p_int_state(1:), ext_data) ! inout, in, inout. Note, p_int_state is used only for iforcing == inwp. 
-                                                              ! ext_data
+  CALL init_ext_data (p_patch(1:), p_int_state(1:), ext_data) ! inout, in, inout.  
+                                                              ! Note, p_int_state is used only for iforcing == inwp.
   ! Import vertical grid/ define vertical coordinate
   CALL allocate_vct_atmo(p_patch(1)%nlevp1)
   DO jg = 1, n_dom
     ext_data(jg)%atm%topography_c(1:nproma,1:p_patch(jg)%nblks_c) = 0.0_wp
   ENDDO
 
-  ! R: wäre eigentlich effizienter so: 
-  ! initicon%const%topography_c => topography_c !< topographic height at cell centers [m], index1=1,nproma, index2=1,nblks_c
-  ! ALLOCATE(dummy_target_topo(n_dom, nproma, nblks_c_max))
-  ! dummy_target_topo(:, :,:) = 1
-  ! DO jg = 1,n_dom
-  !   nblks_c   = p_patch(jg)%nblks_c
-  !   !ext_data(jg)%atm%topography_c => dummy_target_topo(jg, :,1:nblks_c) ! R: Dummy Wert setzten
-  !   ext_data(jg)%atm%topography_c => dummy_target_topo(:,1:nblks_c) ! R: Dummy Wert setzten
-        ! R: Problem: Pointer zeigt ins leere weil SUBROUTINE construct_atmo_nonhydrostatic nicht 
-        !    aufgerufen wurde und dadurch SUBROUTINE init_icon nicht aufgerufen wurde.
-        !    und dadurch wurde dies nicht ausgeführt: 
-        !    DO jg = 1, n_dom
-        !         initicon(jg)%const => initicon_const(jg)
-        !         CALL construct_initicon(initicon(jg), p_patch(jg), ext_data(jg)%atm%topography_c, p_nh_state(jg)%metrics)
-        !    END DO
-        !    Die macht wiederum nur initicon%const%topography_c => topography_c
-  ! END DO
 
-  ! This is only necessary because the namelist output needs a atmospheric zaxis
-  ! (would not be necessary for this driver and could only be changed in ICON)
+  ! R: This is only necessary because the namelist output needs a atmospheric zaxis
+  !    (would not be necessary for this driver and could only be changed in ICON)
   CALL construct_vertical_grid(p_patch(1:),       & ! inout
                               & p_int_state(1:),  & ! in
                               & ext_data,         & ! inout, is needed for CALL init_vert_coord to provide ext_data(jg)%atm%topography_c
@@ -790,39 +752,29 @@ PROGRAM jsb4_driver
   ENDDO
   ! ENDIF
 
-  ! R: hier die ALLOCATES raus und nach unten geschoben
-  ! Außerdem wurden die JSBACH4 Teile nach unten verschoben
+  ! R: Anfang: wird beides nicht benötigt only for debugging von deallocate fehler:
+  ALLOCATE (p_nh_state(n_dom), STAT=error_status)
+  IF (error_status /= SUCCESS) THEN
+    CALL finish(TRIM(routine),'allocation for p_nh_state failed')
+  ENDIF
 
-    !   IF (.NOT. read_interface_vars) THEN ! R: forcing data not from ICON => das wird bereits vom JS4-driver für ECHAM6 erledigt!
-    !    ...
-    !   ENDIF
-
-  !!! SUBROUTINE construct_atmo_nonhydrostatic:
-
-  ! R: Anfang: wird beides nicht benötigt nur zum Debuggen von deallocate fehler:
-    ALLOCATE (p_nh_state(n_dom), STAT=error_status)
-    IF (error_status /= SUCCESS) THEN
-      CALL finish(TRIM(routine),'allocation for p_nh_state failed')
-    ENDIF
-
-    ALLOCATE (p_nh_state_lists(n_dom), STAT=error_status)
-    IF (error_status /= SUCCESS) THEN
-      CALL finish(TRIM(routine),'allocation for p_nh_state_lists failed')
-    ENDIF
+  ALLOCATE (p_nh_state_lists(n_dom), STAT=error_status)
+  IF (error_status /= SUCCESS) THEN
+    CALL finish(TRIM(routine),'allocation for p_nh_state_lists failed')
+  ENDIF
   ! R: Ende: wird beides nicht benötigt nur zum Debuggen von deallocate fehler
 
-  !R: Das hier ist wohl nötig um echam_phy_nml nicht nur zu lesen so wie dies in mo_jsb_driver_interface.f90: CALL process_echam_phy_nml  getan wird sondern auch bereit zu stellen:
-  ! drivers/mo_atmo_nonhydrostatic.f90: SUBROUTINE construct_atmo_nonhydrostatic(latbc): Darin: CALL init_echam_phy_params       ( p_patch(1:) ) und darin:
+  CALL init_convect_tables ! necessary for FUNCTION qsat
 
-    ! ECHAM physics time control
-    ! --------------------------
-    ! Evaluate the ECHAM physics configuration variables echam_phy_config(:)
-    ! and the derived time control variables echam_phy_tc(:) on all grids
-    ! and for all controled processes.
-    !
-    CALL eval_echam_phy_config
-    CALL eval_echam_phy_tc
-    CALL print_echam_phy_config
+  ! ECHAM physics time control
+  ! --------------------------
+  ! Evaluate the ECHAM physics configuration variables echam_phy_config(:)
+  ! and the derived time control variables echam_phy_tc(:) on all grids
+  ! and for all controled processes.
+  !  
+  CALL eval_echam_phy_config
+  CALL eval_echam_phy_tc
+  CALL print_echam_phy_config
 
 
 
@@ -845,36 +797,18 @@ PROGRAM jsb4_driver
   ! Print out informations
   CALL jsbach_label_run(jsbach_runs_standalone())
 
-    ! Now we know the decomposition and we can allocate the interface variables
-    ! R: diesen Block muß ich sobald ich die folgenden ALLOCATE los bin nach X1!
-    jg = 1 ! R: wir haben nur ein Modell aber im weiteren Verlauf wird dennoch immer ein looü über jg gemacht, wir können die zeile hier also wieder löschen
-    model_id = jg ! R: das mußte ich hinzufügen da dies normalerweise über CALL jsbach_interface ( jg, nblock, jcs, kproma, pdtime, pdtime,...) durchgeführt würde was hier im driver weg fällt
+  ! Now we know the decomposition and we can allocate the interface variables
+  ! R: diesen Block muß ich sobald ich die folgenden ALLOCATE los bin nach X1!
+  jg = 1
+  model_id = jg
 
 
 
   ! Read restart file
 
-  !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   IF Restart'
-
-  IF (jsbach_is_restarted()) THEN ! isRestart() verwenden?
+  IF (jsbach_is_restarted()) THEN ! R: jsbach_is_restarted() kann nicht beliebig mit isRestart() ausgetauscht werden!
+    l_first_forcing_file= .FALSE.
     l_shift_one_timestep = .FALSE.
-    ! Brauch ich wohl nicht:
-    ! CALL get_restart_attribute("sim_time_DOM01", sim_time)
-    !IF (is_restart_run() .AND. .NOT. time_config%is_relative_time) THEN
-    !    ! get start counter for time loop from restart file:
-    !    CALL get_restart_attribute("jstep", jstep0)
-    ! END IF
-
-
-    !     ! init LES
-    !     DO jg = 1 , n_dom
-    !       IF(atm_phy_nwp_config(jg)%is_les_phy) THEN
-    !         CALL init_les_phy_interface(jg, p_patch(jg)       ,&  ! R: das macht nur: CALL init_vertical_grid_for_les(jg, p_patch, p_int_state, p_metrics)   weiß nicht ob ich das wirklich brauche.
-    !            &                        p_int_state(jg)       ,&
-    !            &                        p_nh_state(jg)%metrics)
-    !       END IF
-    !     END DO
-
 
     !DO jg = 1,n_dom
     !  IF (p_patch(jg)%ldom_active) THEN
@@ -882,7 +816,7 @@ PROGRAM jsb4_driver
     !  END IF
     !END DO
     CALL read_restart_files( p_patch(jg), n_dom) ! n_dom = 1, from CALL init_grid_configuration() in read_atmo_namelists_for_jsb_standalone
-
+! R: time_config%tc_current_date nicht im Restart File! tc_startdate = "1979-03-20T00:00:00.000" ist drin. Kommt aus nml!!!
     WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   Restart'
     !DO jg = 1,n_dom
     !  IF (.NOT. p_patch(jg)%ldom_active) CYCLE
@@ -891,18 +825,10 @@ PROGRAM jsb4_driver
     !  END IF
     !END DO
     CALL jsbach_init_after_restart(model_id)
-
-    ! R: gibts nicht in ICON  CALL init_output
-    ! R: gibts nicht in ICON  CALL open_output_streams
-
   ELSE
     WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   kein Restart'
     l_shift_one_timestep=.TRUE.
   ENDIF
-  WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR  num_prefetch_proc:', num_prefetch_proc
-  !IF ((num_prefetch_proc == 1) .AND. (latbc_config%itype_latbc > 0)) THEN ! itype_latbc=1: time-dependent lateral boundary conditions; setting for limited area mode
-  !  CALL init_prefetch(latbc) ! R: ich glaube hier wird latbc ALLOCATET und mit Werten gefüllt! TYPE(t_latbc_data) :: latbc !< data structure for async latbc prefetching
-  !ENDIF
 
   !------------------------------------------------------------------
   ! Prepare output file
@@ -925,7 +851,6 @@ PROGRAM jsb4_driver
   IF (output_mode%l_nml) THEN
     CALL parse_variable_groups()
   END IF
-  WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver L'
 
   ! if output on z and/or p-levels is required do some config
   !
@@ -934,9 +859,7 @@ PROGRAM jsb4_driver
   ! "pp_scheduler_init"
   IF (output_mode%l_nml) THEN
     CALL collect_requested_ipz_levels()
-    WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver L2'
     DO jg = 1, n_dom
-      WRITE(*,*) jg, nproma, p_patch(jg)%npromz_c,  p_patch(jg)%nblks_c
       CALL configure_nh_pzlev(jg, nproma, p_patch(jg)%npromz_c,  &
         &                     p_patch(jg)%nblks_c)
     ENDDO
@@ -948,7 +871,7 @@ PROGRAM jsb4_driver
     CALL datetimeToString(time_config%tc_exp_stopdate, sim_step_info%sim_end)
     CALL datetimeToString(time_config%tc_startdate, sim_step_info%run_start)
     CALL datetimeToString(time_config%tc_stopdate, sim_step_info%restart_time)
-    !WRITE(*,*) time_config%tc_exp_startdate, sim_step_info%sim_start
+
     sim_step_info%dtime  = dtime
     jstep0 = 0
 
@@ -960,9 +883,7 @@ PROGRAM jsb4_driver
 
     sim_step_info%jstep0    = jstep0
     CALL init_statistics_streams ! R: sonst Abbruch
-    !delete WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver L5B jstep0', jstep0
     CALL init_name_list_output(sim_step_info)
-    !delete WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver L6'
     CALL create_mipz_level_selections(output_file)
     CALL create_vertical_axes(output_file)
   END IF
@@ -971,7 +892,7 @@ PROGRAM jsb4_driver
   !for LES simulation
   !DO jg = 1 , n_dom
   !  atm_phy_nwp_config(jg)%lcalc_moist_integral_avg  = atm_phy_nwp_config(jg)%lcalc_moist_integral_avg &
-  !       .OR. atm_phy_nwp_config(jg)%is_les_phy
+  !       .OR. atm_phy_nwp_config(jg)%is_les_phy !>TRUE is turbulence is 3D  !>FALSE otherwise
   !END DO
 
   !----------------------!
@@ -981,14 +902,8 @@ PROGRAM jsb4_driver
   ! Initialize reset-Action, i.e. assign variables to action object
   !CALL reset_act%initialize(ACTION_RESET)
 
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! aus perform_nh_stepping
-  !LOGICAL :: is_les_phy          !>TRUE is turbulence is 3D 
-  !                               !>FALSE otherwise
-  ! --------------------
-  ! AUS    CALL perform_nh_stepping( time_config%tc_current_date, latbc )
   ! R: in Namelist run_nml in runskript ist iforcing = 2. Das ist für JSBACH4 Vorraussetzung und die anderen Fälle brauche ich nicht berücksichtigen!
 
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !   AUS    CALL allocate_nh_stepping (mtime_current):
   ALLOCATE(jstep_adv(n_dom), STAT=error_status )
   IF (error_status /= SUCCESS) THEN
@@ -1023,10 +938,8 @@ PROGRAM jsb4_driver
   !  CALL prepare_latbc_data(p_patch(1), p_int_state(1), p_nh_state(1), ext_data(1))
   !ENDIF
 
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! wieder aus    CALL perform_nh_stepping
   ! Compute diagnostics for output if necessary
   CALL diag_for_output_dyn () ! R: nur debuggen
-
 
   !  DO jg=1, n_dom
   !     CALL compute_airmass(p_patch(jg),                  &
@@ -1042,7 +955,7 @@ PROGRAM jsb4_driver
   !  get and write out some of the initial values
   !------------------------------------------------------------------
   mtime_current => time_config%tc_current_date ! R: außschließlich in atm_phy_psrad/mo_ps_radiation_model.f90:130
-  IF (.NOT.isRestart() .AND. (mtime_current >= time_config%tc_exp_startdate)) THEN
+  IF (.NOT. isRestart() .AND. (mtime_current >= time_config%tc_exp_startdate)) THEN
 
     !     !--------------------------------------------------------------------------
     !     ! loop over the list of internal post-processing tasks, e.g.
@@ -1074,33 +987,6 @@ PROGRAM jsb4_driver
    
     CALL reset_statistics
 
-    !     ! sample meteogram output
-    !     DO jg = 1, n_dom
-    !       IF (.NOT. output_mode%l_none .AND. &    ! meteogram output is not initialized for output=none
-    !         & p_patch(jg)%ldom_active  .AND. &
-    !         & meteogram_is_sample_step( meteogram_output_config(jg), 0 ) ) THEN
-    !         CALL meteogram_sample_vars(jg, 0, time_config%tc_startdate)
-    !       END IF
-    !     END DO
-    ! 
-    !     !AD: Also output special diagnostics for LES on torus
-    !     IF (atm_phy_nwp_config(1)%is_les_phy &
-    !       .AND. sampl_freq_step>0)THEN
-    !       CALL calculate_turbulent_diagnostics(                      &
-    !                              & p_patch(1),                       & !in
-    !                              & p_nh_state(1)%prog(nnow(1)),      &
-    !                              & p_nh_state(1)%prog(nnow_rcf(1)),  & !in
-    !                              & p_nh_state(1)%diag,                   & !in
-    !                              & p_lnd_state(1)%prog_lnd(nnow_rcf(1)), &
-    !                              & p_lnd_state(1)%diag_lnd,              &
-    !                              & prm_nwp_tend(1),                      &
-    !                              & prm_diag(1)                )     !inout
-    ! 
-    !       !write out time series
-    !       CALL write_time_series(prm_diag(1)%turb_diag_0dvar, mtime_current)
-    !       CALL write_vertical_profiles(prm_diag(1)%turb_diag_1dvar, mtime_current, 1)
-    !       prm_diag(1)%turb_diag_1dvar = 0._wp
-    !     END IF
   END IF ! not isRestart()
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! aus CALL perform_nh_timeloop (mtime_current, latbc)
@@ -1117,21 +1003,8 @@ PROGRAM jsb4_driver
     IF (error_status /= SUCCESS)  CALL finish (routine, 'ALLOCATE failed!')
   ENDIF
  
-  ! output_file ist allocatet hier!
-  
-  WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver P'
-
+  ! set time vars
   jstep_shift = 0  ! 0 is default. R: only different from 0 if Incremental Analysis Update (IAU)
-  !   IF (timeshift%dt_shift < 0._wp  .AND. .NOT. isRestart()) THEN
-  !     jstep_shift = NINT(timeshift%dt_shift/dtime)
-  !     WRITE(message_text,'(a,i6,a)') 'Model start shifted backwards by ', ABS(jstep_shift),' time steps'
-  !     CALL message(TRIM(routine),message_text)
-  !     !atm_phy_nwp_config(:)%lcalc_acc_avg = .FALSE.
-  !   ELSE
-  !     jstep_shift = 0
-  !   ENDIF
-
-  WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver Q '
   mtime_old     => newDatetime(mtime_current) ! in
   mtime_old_jsb => newDatetime(mtime_current) ! in
   DO jg=1, n_dom
@@ -1139,17 +1012,15 @@ PROGRAM jsb4_driver
   END DO
 
   restartDescriptor => createRestartDescriptor("atm")
-  !delete WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver R'
-
-  ! R. get jstep0: Das wird oben schon 2 mal gemacht. ist das wirklich notwendig???
   jstep0 = 0
   restartAttributes => getAttributesForRestarting()
   IF (isRestart()) THEN
     ! get start counter for time loop from restart file:
     jstep0 = restartAttributes%getInteger("jstep")
+    l_first_step_in_restart=.TRUE.
   END IF
 
-  ! R: gibt viel Output:
+  ! R: a lot of output
   !  DO i = 1, nvar_lists
   !    CALL print_var_list(var_lists(i), .FALSE.) ! .TRUE: for short varlist printing; .FALSE. for long varlist printing
   !  ENDDO
@@ -1224,45 +1095,52 @@ PROGRAM jsb4_driver
 
   jstep = jstep0+jstep_shift+1
 
-  WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver U jstep0', jstep0
-  WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver U jstep', jstep
-
-  counter = 0 ! R: NUR ZUM DEBUGGEN
+  ic = 0
+  counter_for_synch = 0
+  step_for_synchron = 1
 
   ! -------------------------------------------------------------------------------------------------------------------------------
   ! Time loop
   ! -------------------------------------------------------------------------------------------------------------------------------
-  !loop_step = 0 ! R: timestep counter within the loop
-  TIME_LOOP: DO ! atm_dyn_icoham/mo_ha_stepping.f90: SUBROUTINE perform_nh_timeloop (mtime_current, latbc): Zeile 699 vor integrate_nh
-    !loop_step = loop_step + 1
-    !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver U1 jstep in loop', jstep ! geht z.B. von 1 bis 72 sollte forcing_steps_per_file entsprechen????
-    WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver U1 mtime_current at start loop', mtime_current     ! z.B. für jstep 72:  1979           1           2           0           0    0           0
-    ! WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver U1 model_time_step in loop', model_time_step ! z.B. für jstep 72:     1 +  0           0           0           0          20        0           0
-    ! optional memory loggin
-    !CALL memory_log_add
+  TIME_LOOP: DO ! atm_dyn_icoham/mo_ha_stepping.f90: SUBROUTINE perform_nh_timeloop (mtime_current, latbc): Linenumber 699 before integrate_nh
 
-    ! Check if a nested domain needs to be turned off
-    !DO jg=2, n_dom
-    !  IF (p_patch(jg)%ldom_active .AND. (sim_time >= end_time(jg))) THEN
-    !    p_patch(jg)%ldom_active = .FALSE.
-    !    WRITE(message_text,'(a,i2,a,f12.2)') 'domain ',jg,' stopped at time ',sim_time
-    !    CALL message('in TIME_LOOP', TRIM(message_text))
-    !  ENDIF
-    !ENDDO
+    !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver U1 jstep in loop', jstep ! geht z.B. von 1 bis 72 sollte forcing_steps_per_file entsprechen????
+    !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver U1 mtime_current at start loop', mtime_current 
+    !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver U1 model_time_step in loop', model_time_step 
+    !WRITE(*,*) '================================================================================================================='
+  
+    !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR  l_first_forcing_file' , l_first_forcing_file , 'l_first_step_in_restart:' , l_first_step_in_restart
 
     ! update model date and time mtime based
+    mtime_forcing => newDatetime(mtime_current)
     IF (l_first_forcing_file) THEN
-      mtime_forcing => newDatetime(mtime_current) ! mtime_current is here the init time step before the model calculations.
-                                                  ! The forcing input is at exp start one step before the calculation step
+      IF (forcing_steps_per_file == 1  .AND. .NOT. l_forcing_observations ) THEN
+        DO ic=1,forcing_synchron_factor
+          mtime_forcing = mtime_forcing + model_time_step ! gehe zum nächten Zeitschritt des nächsten Files
+        END DO
+       END IF
     ELSE
-      mtime_forcing => newDatetime(mtime_current)
-      mtime_forcing = mtime_forcing + model_time_step ! Changed this for debugging the synchron. now it is synchron!
+      IF (.NOT. l_first_step_in_restart  .AND. .NOT. l_forcing_observations) THEN !  .AND. .NOT. l_forcing_observations
+        ! R: debug:
+        ! IF ( jstep /= 73 ) THEN ! R: debug:
+        mtime_forcing = mtime_current + model_time_step
+        i = 0
+        ! END IF ! R: debug:
+      END IF
     END IF
     mtime_old_jsb = mtime_current
+    ! R: debug remain-Änderung: Ändert nichts obwohl nun
+    !IF ( jstep == 72 ) THEN
+    !    DO ic=1,forcing_synchron_factor
+    !       mtime_current = mtime_current + model_time_step ! gehe zum nächten Zeitschritt des nächsten Files
+    !  jstep = 73
+    !END DO
+    !END IF
+    ! R: debug remain-Änderung
     mtime_current = mtime_current + model_time_step
     WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver U1 mtime_current after update at begin of loop', mtime_current
     WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver U1 mtime_forcing after update at begin of loop', mtime_forcing
-    !delete WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver U3'
+
     ! store state of output files for restarting purposes
     IF (output_mode%l_nml .AND. jstep>=0 ) THEN
       DO i=1,SIZE(output_file)
@@ -1270,9 +1148,6 @@ PROGRAM jsb4_driver
       END DO
     ENDIF
  
-    ! turn on calculation of averaged and accumulated quantities at the first regular time step
-    !delete    IF (jstep-jstep0 == 1) atm_phy_nwp_config(:)%lcalc_acc_avg = .TRUE.
-
     ! R: Nur für limited area
     ! read boundary data if necessary
     !IF (l_limited_area .AND. latbc_config%itype_latbc > 0 .AND. num_prefetch_proc == 0) &
@@ -1289,33 +1164,10 @@ PROGRAM jsb4_driver
               &             mtime_current%time%minute, ':', mtime_current%time%second
       CALL message('',message_text)
     ENDIF
+    ! END IF  ! IF ( jstep /= 73 ) THEN R: debug
 
-    !delete WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver V'
     ! set namelist output flag
     l_nml_output = output_mode%l_nml .AND. jstep >= 0 .AND. istime4name_list_output(jstep)
-    ! Computation of diagnostic quantities may also be necessary for
-    ! meteogram sampling:
-    !DR Note that this may be incorrect for meteograms in case that
-    !DR meteogram_output_config is not the same for all domains.
-    !l_compute_diagnostic_quants = l_nml_output
-    !DO jg = 1, n_dom
-    !  l_compute_diagnostic_quants = l_compute_diagnostic_quants .OR. &
-    !    &          meteogram_is_sample_step(meteogram_output_config(jg), jstep )
-    !END DO
-    !l_compute_diagnostic_quants = jstep >= 0 .AND. l_compute_diagnostic_quants .AND. &
-    !  &                           .NOT. output_mode%l_none
-
-    ! Calculations for enhanced sound-wave and gravity-wave damping during the spinup phase
-    ! if mixed second-order/fourth-order divergence damping (divdamp_order=24) is chosen.
-    ! Includes increased vertical wind off-centering during the first 2 hours of integration.
-    !IF (divdamp_order==24 .AND. .NOT. isRestart()) THEN
-    !  elapsed_time_global = (REAL(jstep,wp)-0.5_wp)*dtime
-    !  IF (elapsed_time_global <= 7200._wp+0.5_wp*dtime .AND. .NOT. ltestcase) THEN
-    !    CALL update_spinup_damping(elapsed_time_global)
-    !  ENDIF
-    !ELSE IF (divdamp_order==24) THEN
-    !  divdamp_fac_o2 = 0._wp
-    !ENDIF
 
     !--------------------------------------------------------------------------
     !
@@ -1326,15 +1178,11 @@ PROGRAM jsb4_driver
     !    In Runskript run_nml: ltimer = .FALSE. . Timer for monitoring the runtime of specific routines
     !CALL integrate_nh(datetime_current, 1, jstep-jstep_shift, iau_iter, dtime, model_time_step, 1, latbc) ! R: iau_iter=0 wenn iterate_iau = FALSE in initicon_nml, default ist false
 
-    !!!!!!!!!!!!!!!!!!!!! integrate_nh START !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! calculate elapsed simulation time in seconds (local time for
     ! this domain!)
     datetime_local = datetime_current ! R: because we do not have nested domains now. , wird so in ICON übergeben
     sim_time = getElapsedSimTimeInSeconds(datetime_local(jg)%ptr) 
 
-    ! R: Normalerweise wäre hier irgendwo in ICON-A eine model loop, da wir aber immer nur ein Modell verwenden fällt das weg
-
-    !R: Wozu brauche ich jpg überhaut?
     ! Determine parent domain ID
     jg    = 1 ! ist im SRC Code für den 1. globalen aufruf so fixiert. Da sich integrat_nh aber rekursiv aufruft würde sich dies für jedes Childgitter ändern!
     IF ( jg > 1) THEN
@@ -1353,39 +1201,11 @@ PROGRAM jsb4_driver
     jstep_adv(jg)%marchuk_order = jstep_adv(jg)%marchuk_order + 1
     !p_patch(jg)%n_childdom=1 ! R: ist 0. parallel_infrastructure/mo_setup_subdivision.f90:1565:      wrk_p_patch%n_childdom         = wrk_p_patch_pre%n_childdom
 
-    ! Hier wird interface_iconam_echam gecallt!
-    !!!!!! Ab hier: SUBROUTINE interface_iconam_echam
-    !TYPE(datetime)          , POINTER    :: datetime_old      !< date and time at the beginning of this time step
-    
-    !datetime_local(jg)%ptr = datetime_local(jg)%ptr + mtime_dt_loc
-    !CALL interface_iconam_echam( dt_loc ,datetime_local(jg)%ptr...) wird an datetime_new übergeben...
-    !datetime_old      => newDatetime(datetime_new)
-    !datetime_old      =  datetime_new + neg_dt_loc_mtime
-    ! Berechungen des Orbits:
-    !patch=p_patch(jg) ! R: wenn child domains dann ist das keine 1 hier mehr. Das muß rein wg. xdec, was ich bisher fixiert habe!
-    !CALL echam_phy_bcs( patch        ,&! in
-    !  &                 datetime_old ,&! in
-    !  &                 dt_loc       ) ! in
+    CALL jsbach_start_timestep(jg, mtime_old_jsb, dtime) ! mtime_current ! CALL model%Set_options(current_datetime=current_datetime, dtime=dtime)
 
-
-    
-    CALL jsbach_start_timestep(jg, mtime_old_jsb, dtime) ! mtime_current
-    !delete WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver X'
-
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! R: Das Folgende ist aus echam_phy_main
-    !...
-    ! R: Das Folgende ist aus echam_phy_main und dort aus CALL omp_loop_cell_prog(patch, interface_echam_vdf      ,&
-    !            &                  is_in_sd_ed_interval, is_active ,&
-    !            &                  datetime_old, pdtime            )
-
-    ! START ALLOCATE BLOCK SOLL AUS TIMELOOP RAUS
-
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Block loop 1 um nblks zu ermitteln (corresponding to SUBROUTINE omp_loop_cell_prog)
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
+    ! Block loop 1
     ! Get necessary informations from the patch of the actual thread for jsbach 
+    ! Get nblks (corresponding to SUBROUTINE omp_loop_cell_prog)!
     patch=p_patch(1) ! R: Die Einträge in Patch können für jeden Prozessor unterschiedlich sein!
     jg  = patch%id ! see above R: kann wohl wieder raus
 
@@ -1393,12 +1213,8 @@ PROGRAM jsb4_driver
     rle = min_rlcell_int
 
     ncd = MAX(1,patch%n_childdom)
-    jbs = patch%cells%start_blk(rls,  1) ! R: jbs ist immer =1
-    jbe = patch%cells%  end_blk(rle,ncd) ! R: jbe ist unterschiedlich. Z.B. 244744400, 251860448, 176309936, -2013259902 (und das bei 20480 Gitterpunkten!)
-
-    !     !nlev= patch%nlev
-    !  WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR  DRIVER jbs' , jbs !  1
-    !  WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR  DRIVER jbe:', jbe !im std-gekoppelten-Lauf ist: jbe immer =39 , hier ist es aber 61
+    jbs = patch%cells%start_blk(rls,  1) ! R: jbs is always =1
+    jbe = patch%cells%  end_blk(rle,ncd) ! R: jbe differs. e.g. 244744400, 251860448, 176309936, -2013259902
 
 ! !$OMP PARALLEL DO PRIVATE(jb,jcs,jce)
 !     nblks=0
@@ -1414,27 +1230,21 @@ PROGRAM jsb4_driver
 !             &                   rls, & ! in  row limit start
 !             &                   rle)   ! in  row limit end
 !         nproma = jce
-!         !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   nproma', nproma, 'jce', jce ! beides immer 16!
 !       END IF
 !     END DO
 ! !$OMP END PARALLEL DO
-    !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   nproma', nproma, 'jce', jce ! 
-    ! RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR   ALLOCATEN muß nach der Ermittlung von nblks gemacht werden!!!
+    ! alternative nblks:
     !call model%Get_top_tile(tile)
     !hgrid => Get_grid(model%grid_id)
     !jsb_nproma = hgrid%nproma
     !nblks  = hgrid%nblks is the same as nblks  = get_nblks (hgrid)
     nblks  = p_patch(1)%nblks_c ! R: ich nehme es direkt aus dem Hauptpatch ist wohl für jeden Prozessor unterschiedlich
-    ! nblks wird nicht direkt hier oben bestimmt, muß ich woanderst her holen:
-    !   nblks  = hgrid%nblks
+    !R: nblks wird nicht direkt hier oben bestimmt, muß ich woanders her holen:
     !nblks  = p_patch(1)%cell%nblks_c
     !nblks=20480
     ! R: 20480 Gitterpunkt bei R2B4. aproma = 16, es sollte also 1280 Blocks global geben. Auf 32 Prozessoren aufgeteilt wären das 40 Blocks pro Prozessor!
 
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Block loop 1 um nblks zu ermitteln (corresponding to SUBROUTINE omp_loop_cell_prog)
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
+    ! Now as we have nblks we can allocate
     IF (.NOT.(ALLOCATED(t_air))) THEN
       ! R: brauche ich wahrscheinlich nicht als lokale Variablen hier da sie von jsbach_init -> call tile%init angelegt werden. !!!!!
       ! Vars used in interface_full
@@ -1461,8 +1271,8 @@ PROGRAM jsb4_driver
       ALLOCATE(cos_zenith_angle   (nproma, nblks))
       ALLOCATE(CO2_air            (nproma, nblks)) ! so far not used in jsb4
       ALLOCATE(trig_rad_m1        (nproma, nblks))
-      ALLOCATE(newday_Merker        (nproma, nblks))
-      ALLOCATE(l_day_reminder       (nproma, nblks))
+      ALLOCATE(newday_Merker      (nproma, nblks))
+      ALLOCATE(l_day_reminder     (nproma, nblks))
       ! out vars, necessary for standalone:
       ALLOCATE(t_srf_fromJS4         (nproma, nblks))
       ALLOCATE(t_eff_srf    (nproma, nblks))
@@ -1519,29 +1329,29 @@ PROGRAM jsb4_driver
 
       !Set dummy values.   RRR Kann ich die zum Allocaten hoch schieben??? RRRRRR
       ! in vars: not necessary, set these dummy values only for testing purpose:
-!       t_air             = 290        ! Kelvin
-!       q_air             = 0.1        ! kg kg-1
-!       rain              = 0.00004    ! kg/m2/s
-!       snow              = 0.000001   ! kg/m2/s
-!       wind_air          = 0.1        ! air_wind_speed, m/s
-!       wind_10m          = 0.2        ! air_wind_speed, m/s
-!       lw_srf_down       = 340        ! W/m2   
-!       swvis_srf_down    = 120        ! W/m2
-!       swnir_srf_down    = 100        ! W/m2
-!       swpar_srf_down    = 60         ! fictional only for testing purpuses
-!       fract_par_diffuse = 0.5        ! fictional only for testing purpuses
-!       press_srf         = 101325.0   ! N/m2 =Pa
-!       drag_srf          = 0          ! fictional only for testing purpuses
-!       t_acoef           = 0.0000     ! fictional only for testing purpuses
-!       t_bcoef           = 0.0000     ! fictional only for testing purpuses
-!       q_acoef           = 0.0000     ! fictional only for testing purpuses
-!       q_bcoef           = 0.0000     ! fictional only for testing purpuses
-!       pch               = 0.0000     ! fictional only for testing purpuses
-!       cos_zenith_angle  = 0.5        ! fictional only for testing purpuses
-!       CO2_air           = 0.00052868 ! this is in mol: 0.00034800
-!       trig_rad_m1       = 0          !
-!       newday_Merker       = 4          !
-!       l_day_reminder = 
+      t_air             = 290        ! Kelvin
+      q_air             = 0.1        ! kg kg-1
+      rain              = 0.00004    ! kg/m2/s
+      snow              = 0.000001   ! kg/m2/s
+      wind_air          = 0.1        ! air_wind_speed, m/s
+      wind_10m          = 0.2        ! air_wind_speed, m/s
+      lw_srf_down       = 340        ! W/m2   
+      swvis_srf_down    = 120        ! W/m2
+      swnir_srf_down    = 100        ! W/m2
+      swpar_srf_down    = 60         ! fictional only for testing purpuses
+      fract_par_diffuse = 0.5        ! fictional only for testing purpuses
+      press_srf         = 101325.0   ! N/m2 =Pa
+      drag_srf          = 0          ! fictional only for testing purpuses
+      t_acoef           = 0.0000     ! fictional only for testing purpuses
+      t_bcoef           = 0.0000     ! fictional only for testing purpuses
+      q_acoef           = 0.0000     ! fictional only for testing purpuses
+      q_bcoef           = 0.0000     ! fictional only for testing purpuses
+      pch               = 0.0000     ! fictional only for testing purpuses
+      cos_zenith_angle  = 0.5        ! fictional only for testing purpuses
+      CO2_air           = 0.00052868 ! this is in mol: 0.00034800
+      trig_rad_m1       = 0          !
+      newday_Merker       = 1          !
+      l_day_reminder = .true.
       ! out vars, necessary but only dummy values for standalone:
       t_srf_fromJS4         = 0   ! fictional
       t_eff_srf          = 0   ! fictional
@@ -1591,17 +1401,13 @@ PROGRAM jsb4_driver
       ice_fract_lake    =  0.0000  ! fictional
       evapopot          =  0.0000  ! fictional ! R: land2atmo Umrechung
 
-      ! WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver t_air:'       , forcing_in_modeltyp%t_air%data_read       (:, iblk, step_in_forcing_file), 'step_in_forcing_file', step_in_forcing_file, 'iblk', iblk
-      ! WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver q_acoef_ice:' ,  forcing_in_modeltyp%q_acoef_ice%data_read(:, iblk, step_in_forcing_file)
-      ! WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver q_bcoef_ice:' ,  forcing_in_modeltyp%q_bcoef_ice%data_read(:, iblk, step_in_forcing_file)
-
       IF ( l_forcing_observations ) THEN
-        !IF ( model_time_step ) THEN
+        !IF ( model_time_step > 86400 sec. ) THEN
         !  CALL finish('The time step of the model must not be larger than one day if l_forcing_observations is true.')
         !END IF
 
         CALL init_forcing(model_id)
-        write(*,*) 'CCCCCCCCCCCCCCCCCCCCCCCCCCCC'
+
         ALLOCATE(lon(nproma,nblks))
         ALLOCATE(lat(nproma,nblks))
 
@@ -1612,7 +1418,7 @@ PROGRAM jsb4_driver
         ALLOCATE(daylight_frc(nproma, nblks))
 
         !ALLOCATE(CO2_concentration (nproma, nblks)) ! Observations: CO2_air in jsb_interface. Nicht mehr benötigt ist jetzt auch in mo_forcing CO2_air!
-        ALLOCATE(evapo_act2pot_fromJS4generated (nproma, nblks)) ! für Obsevations
+        ALLOCATE(evapo_act2pot_fromJS4generated (nproma, nblks)) ! for observation forcing run
         !ALLOCATE(t_air (nproma, nblks))
 
         !init for first timestep/day (according to jsb3: mo_jsbalone: init_driving)
@@ -1627,7 +1433,7 @@ PROGRAM jsb4_driver
         ! evapo_pot_sum_fromJS4 = 0._wp
       ENDIF
 
-    END IF
+    END IF ! ALLOCATED(t_air)
     
     ! Allocate the forcing input vars
     IF (.NOT.(ALLOCATED(forcing_in_modeltyp%t_air%data_read))) THEN
@@ -1701,217 +1507,251 @@ PROGRAM jsb4_driver
 !      forcing_in_modeltyp%q_bcoef_ice%data_read(:,:,:) = SPREAD ( q_bcoef_ice , DIM=3, NCOPIES=forcing_steps_per_file) 
     END IF
 
-! END ALLOCATE BLOCK SOLL AUS TIMELOOP RAUS
-
     !IF (my_process_is_stdio()) THEN ! führt dazu daß der output ewig geschrieben wird. Eigentlich sollte io prozess hier nie ankommen sondern oben schon abgetrennt werden.
     model => get_model(model_id)
 
-    ! Read vars that are input for observations and are taken dynamically from the JS4 output
+    ! Read vars that are input for observations and are taken from the JS4 output during the run.
     ! Therefore we have to read them after the restart and after the var allocation.
     ! And we have to get them from the JS4 memory!
     IF ( l_forcing_observations ) THEN
-      IF(jsbach_is_restarted()) THEN
+      IF (jsbach_is_restarted()) THEN ! isRestart() jsbach_is_restarted()  l_first_step_in_restart
         CALL model%Get_top_tile(tile)
-
-        WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR Einlesen fuer Observations1...'
+        ! WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR Einlesen fuer Observations1...'
         dsl4jsb_Get_memory(SEB_) ! R: in SEB ist nur dann etwas drin wenn es aus Restart File gelesen wurde ansonsten sind die init Werte drin.
         dsl4jsb_Get_memory(TURB_)
         dsl4jsb_Get_memory(HYDRO_)
-        !R: Debugg: Die Felder hier passen nicht zusammen, muß korrigiert werden!
-        CALL model%Set_options(iblk=jb, ics=jcs, ice=jce)
-        t_srf_fromJS4(:,jb)           = dsl4jsb_var2D_onChunk(SEB_, t)
-        fact_q_air_fromJS4(:,jb)      = dsl4jsb_var2D_onChunk(TURB_, fact_q_air)
-        fact_qsat_srf_fromJS4(:,jb)   = dsl4jsb_var2D_onChunk(TURB_, fact_qsat_srf)
-        rough_h_srf_fromJS4(:,jb)     = dsl4jsb_var2D_onChunk(TURB_, rough_h)
-        rough_m_srf_fromJS4(:,jb)     = dsl4jsb_var2D_onChunk(TURB_, rough_m)
-        evapotrans(:,jb)              = dsl4jsb_var2D_onChunk(HYDRO_, evapotrans)
-        evapopot(:,jb)                = dsl4jsb_var2D_onChunk(HYDRO_, evapopot)
+        t_srf_fromJS4(:,:)           = dsl4jsb_var2D_onDomain(SEB_, t)
+        fact_q_air_fromJS4(:,:)      = dsl4jsb_var2D_onDomain(TURB_, fact_q_air)
+        fact_qsat_srf_fromJS4(:,:)   = dsl4jsb_var2D_onDomain(TURB_, fact_qsat_srf)
+        rough_h_srf_fromJS4(:,:)     = dsl4jsb_var2D_onDomain(TURB_, rough_h)
+        rough_m_srf_fromJS4(:,:)     = dsl4jsb_var2D_onDomain(TURB_, rough_m)
+        evapotrans(:,:)              = dsl4jsb_var2D_onDomain(HYDRO_, evapotrans)
+        evapopot(:,:)                = dsl4jsb_var2D_onDomain(HYDRO_, evapopot)
         ! TODO: if really required calculate daily sums of evapotrans and evapopot in jsbach and get them here (see comment below)
-        evapo_act2pot_fromJS4generated(:,jb) =  MIN(evapotrans(:,jb),-EPSILON(1._wp)) & ! wird nur für IF (.NOT. read_interface_vars) THEN bei Julia gebraucht!
-          &                                     / MIN(evapopot(:,jb),  -EPSILON(1._wp))
-        WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR Einlesen fuer Observations 2...'
+        evapo_act2pot_fromJS4generated(:,:) =  MIN(evapotrans(:,:),-EPSILON(1._wp)) & ! wird nur für IF (.NOT. read_interface_vars) THEN bei Julia gebraucht!
+          &                                     / MIN(evapopot(:,:),  -EPSILON(1._wp))
+        !   & SIZE(t_srf_fromJS4(jcs:jce,jb))  , SIZE(dsl4jsb_var2D_onChunk(SEB_, t)) ,  SIZE(t_srf_fromJS4(jcs:nproma,jb)) ! 64 , 1 ,64
+
+        ! R: only for debugging:
+        !         t_srf_fromJS4 = 273._wp
+        !         fact_q_air_fromJS4 = 0.5_wp
+        !         fact_qsat_srf_fromJS4 = 0.5_wp
+        !         rough_h_srf_fromJS4 = 1._wp
+        !         rough_m_srf_fromJS4 = 1._wp
+        !         evapo_act2pot_fromJS4generated = 1._wp
+        !         evapopot = 1._wp
+        !         evapotrans = 0._wp
       ENDIF
     ENDIF
  
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! FORCING lesen mit dem oben ermittelten nblks
-    remain = mod((jstep),( forcing_steps_per_file * forcing_synchron_factor ) )
-    IF (  jstep == 1 .OR.  remain == 0  ) THEN  ! Check if jstep is the first time step or a mulible of the time steps * forcing_synchron_factor to read the forcing
-      step_in_forcing_file = 1
+    IF ( l_forcing_observations ) THEN
+      remain = mod((jstep - 1),( forcing_steps_per_file * forcing_synchron_factor ))
+    ELSE
+      remain = mod((jstep),( forcing_steps_per_file * forcing_synchron_factor ) )
+    END IF
+    WRITE(*,*) 'RRRRRRRRRRRRRRRRRRR remain:' , remain, 'isRestart()' , isRestart(), 'l_first_step_in_restart', l_first_step_in_restart, & 
+      & 'forcing_synchron_factor', forcing_synchron_factor
+    !WRITE (*,*)                                                 &
+    !  &                     mtime_forcing%date%year,mtime_forcing%date%month,mtime_forcing%date%day, 'T',   &
+    !  &                     mtime_forcing%time%hour,mtime_forcing%time%minute,mtime_forcing%time%second, 'Z'
 
-      WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver jstep:' , jstep, 'remain', remain, 'forcing_synchron_factor', forcing_synchron_factor
+    IF (  jstep == 1 .OR.  remain == 0 .OR. l_first_step_in_restart ) THEN  ! Read in the forcing file (with the known nblks from above)
+                                                                            ! Check if jstep is the first time step or a mulible of the 
+                                                                            ! time steps * forcing_synchron_factor 
+      !step_in_forcing_file = 1
+
       WRITE (mtime_forcing_char,'(i4.4,2(i2.2),a,3(i2.2),a)')                                                 &
-      &                     mtime_forcing%date%year,mtime_forcing%date%month,mtime_forcing%date%day, 'T',   &
-      &                     mtime_forcing%time%hour,mtime_forcing%time%minute,mtime_forcing%time%second, 'Z'
-      WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Drivermtime_forcing_char:' , mtime_forcing_char ! 19790101T002000Z
+        &                     mtime_forcing%date%year,mtime_forcing%date%month,mtime_forcing%date%day, 'T',   &
+        &                     mtime_forcing%time%hour,mtime_forcing%time%minute,mtime_forcing%time%second, 'Z'
+      ! WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Drivermtime_forcing_char:' , mtime_forcing_char ! 19790101T002000Z
 
-
-      IF ( l_forcing_observations ) THEN
-        write(*,*) 'RRRRRRRRRRRRRRRRRRR l_forcing_observations', l_forcing_observations
-        !----------------Julias treiber
-        !Wenn modellforcing benutzt wird:  liest den current timestep für jeden timestep in der loop ein!!!
-        !Wenn observations  benutzt wird:  liest aus dem forcing file das maximal wohl 1 Tag enthalten darf (routine only implemented for constant, daily or timestep frequency.)
-        !                                  alle Zeitschritte bis zum aktuellen Zeitschritt in der time loop ein
-        !                                     get_interface_variables_from_external_forcing ruft (für jeden Timestep in loop) die SUBROUTINE get_data_and_update_field auf.
-        !                                     Darin: 
-        !                                           Schleife die currentTimeStep hochzählt: currentTimeStep = currentTimeStep + 1. Diese Schleife vergleicht in jeder Iteration, ob 
-        !                                           currentTimeStep noch kleiner gleich der Anzahl der Zeitschritte im forcing file entspricht.
-        !                                           Wenn das ydate (integer aus year+month+day, also der Tagesangabe) von mo_time_control: next_date entspricht,
-        !                                             dann wird thisDayEnd = currentTimeStep gesetzt.
-        !                                             ansonsten wird die schleife verlassen.
-        !                                           Die Schleife wird also so lange hoch gezählt bis entweder der Zeitschritt im File zuende ist oder der next_date Tag im File erreicht wird.
-        !                                           Außerdem wir in der Schleife thisDayStart immer auf 1 d.h. den ersten currentTimeStep festgelegt.
-        !                                           Erst nach dieser Schleife wird das File eingelesen mit: 
-        !                                              return_pointer => input_file%Read_2d_time(forcing_input_variable%variable_name, &
-        !                                                & start_time_step=thisDayStart, end_time_step=thisDayEnd, fill_array=forcing_input_variable%data_read)
-        !
-        !                                           => Es wird also immer genau 1 Tag (mit beliebig vielen Zeitschritten darin) eingelesen.
-        !                                              Würde die Routine öfters gecallt würde das dennoch funktionieren, dann wird der Tag eben nochmal eingelesen.
-        !                                              Forcing Files sind bei Climate_dCRUNCEP_T63_1975.nc jährliche Files mit täglichen Zeitschritten.
-        !                                              Mein Driver kann auch Zeitschritte kleiner als einen Tag haben.
-        !
-        ! Meine Organisation ist freier: es wird im Runskipt festgelegt: 
-        ! forcing_filename_base="forcing365_interface_vars_for_JS4-standalone_ml"                         => Climate_dCRUNCEP_R2B4 
-        ! forcing_start_date="1979-01-01T00:00:00Z" # ISO 8601, in the format "1979-01-01T00:00:00Z"      => 1979-01-01T12:00:00Z
-        !                                           # It is assumed that the first forcing file name starts with this date and uses a format specification like "19790101T000000Z"
-        ! forcing_end_date="1980-01-01T00:00:00Z"   # The last forcing file name not necessarily uses this date, but the file has to include this date.    => 1980-01-01T00:00:00Z
-        ! forcing_modelTimeStep="P1T" # e.g. PT20M only necessary to calclulate the date for the name of the forcing input files => einen Tag verwenden
-        ! forcing_steps_per_file="72" # z.B. 72 um bei einem Modellzeitschritt von 20 Minuten 24 Stunden in einem File zusammen zu packen     => 365 um Tagesschritte für ein Jahr zu erhalten
-        ! forcing_synchron_factor="1"     #  => erst mal 1 beibehalten und forcing_modelTimeStep dafür auf einen Tag setzen
-        !
-
+      WRITE(*,*) 'RRRRRRRRRRRRRRRRRRR l_forcing_observations', l_forcing_observations
+      IF ( l_forcing_observations ) THEN ! Note, mo_jsb4_forcing.f90 recommends that the forcing file includes max. 1 day!
+                                         ! It reads always one day independent of the time steps within it.
+                                         ! Climate_dCRUNCEP_T63_1975.nc forcing files are yearly files with daily timesteps.
         ! Find out time_of_day and orbit_date of the current time step
         ! Note: In contrast to ECHAM5 orbit_date is not used anymore in ICON-A!
         !       Instead orbit_date_rt is used for both subsequent calls to find 
         !       out decl_sun and dist_sun. However, we need time_of_day because
         !       this is differentiated from time_of_day_rt when we call solar_parameters.
 
-        ! Read in forcing file once an day
-        ! We could read it more but not less frequent
+        ! Read in forcing file once an day. We could read it more but not less frequent
+        !IF ( is_newday(mtime_old_jsb, dtime) ) THEN ! normally: mtime_old_jsb
+        mtime_forcing_ptr => mtime_forcing
 
-        exit ! R: debug!!
-        IF ( is_newday(mtime_old_jsb, dtime) ) THEN ! mtime_current
-          mtime_forcing_ptr => mtime_forcing
+        l_orbvsop87   => echam_rad_config(jg)% l_orbvsop87 ! Default: .TRUE.
+        cecc          => echam_rad_config(jg)% cecc
+        cobld         => echam_rad_config(jg)% cobld
+        clonp         => echam_rad_config(jg)% clonp
 
-          l_orbvsop87   => echam_rad_config(jg)% l_orbvsop87 ! Default: .TRUE.
-          cecc          => echam_rad_config(jg)% cecc
-          cobld         => echam_rad_config(jg)% cobld
-          clonp         => echam_rad_config(jg)% clonp
+        CALL get_orbit_times(l_orbvsop87, mtime_forcing_ptr, lyr_perp, yr_perp, & ! in
+          &                  time_of_day, orbit_date)            ! out. 
+        !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRRRR time_of_day:' ,time_of_day, 'orbit_date:', orbit_date
 
-          CALL get_orbit_times(l_orbvsop87, mtime_forcing_ptr, lyr_perp, yr_perp, & ! in
-            &                  time_of_day, orbit_date)            ! out. 
+        ! Find out time_of_day_rt and orbit_date_rt of the radiation transfer of the current time step
+        CALL get_orbit_times(l_orbvsop87, mtime_forcing_ptr, lyr_perp, yr_perp, & ! in
+          &                  time_of_day_rt, orbit_date_rt)      ! out
+        !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRRRR time_of_day_rt:' ,time_of_day_rt,'orbit_date_rt:', orbit_date_rt
 
-          ! Find out time_of_day_rt and orbit_date_rt of the radiation transfer of the current time step
-          CALL get_orbit_times(l_orbvsop87, mtime_forcing_ptr, lyr_perp, yr_perp, & ! in
-            &                  time_of_day_rt, orbit_date_rt)      ! out
-          
-          ! Find out decl_sun and dist_sun
-          IF (l_orbvsop87) THEN
-            CALL orbit_vsop87(orbit_date_rt, rasc_sun, decl_sun, dist_sun) ! in, out, out, out
-          ELSE
-            CALL orbit_kepler(cecc, cobld, clonp, orbit_date_rt, & ! in 
-              &               rasc_sun, decl_sun, dist_sun)        ! out
-          END IF
+        ! Find out decl_sun and dist_sun
+        !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRRRR  l_orbvsop87:' , l_orbvsop87 ! T
+        IF (l_orbvsop87) THEN
+          CALL orbit_vsop87(orbit_date_rt, rasc_sun, decl_sun, dist_sun) ! in, out, out, out
+        ELSE
+          CALL orbit_kepler(cecc, cobld, clonp, orbit_date_rt, & ! in 
+            &               rasc_sun, decl_sun, dist_sun)        ! out
+        END IF
+        !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRRRR  decl_sun:' , decl_sun ! decl_sun: -0.396146538758411 
 
-          ! Get the solar angels
-          !TODO: get from jsb grid? but how to name such a function get_lon_from_grid?
-          !      and if, shouldn't then also get_nproma should be called get_nproma_from_grid?
-          ! Note, this can be done here because we get lon lat for the whole horizontal grid!
-          lon = get_lon(patch)
-          lat = get_lat(patch)
-          coslon = COS(pi * lon / 180._wp)
-          sinlon = SIN(pi * lon / 180._wp)
-          coslat = COS(pi * lat / 180._wp)
-          sinlat = SIN(pi * lat / 180._wp)
+        ! R: debug:
+        decl_sun= 0.006918_wp       ! in assimilation fixiert: declination = 0.006918_wp
 
-          ! With the informations above we can determine the cos_zenith_angle of the current time step
-          icosmu0        => echam_rad_config(jg)% icosmu0        ! defines if and how cosmu0 is defined for extended sunlit areas
-          ldiur          => echam_rad_config(jg)% ldiur          ! .TRUE.
-          l_sph_symm_irr => echam_rad_config(jg)% l_sph_symm_irr ! .FALSE.
-          dt_ext         = 0.0_wp                                ! time interval over which the insolated area is extended, for us =0
+        ! R: debug
+        !   IF ( jstep /= 73 ) THEN
 
-          CALL solar_parameters(decl_sun,         time_of_day,     & ! in
-            &                   icosmu0,          dt_ext,          & ! in
-            &                   ldiur,            l_sph_symm_irr,  & ! in
-            &                   patch,                             & ! in 
-            &                   cos_zenith_angle, daylight_frc)      ! out
+        ! Get the solar angels
+        !TODO: get from jsb grid? but how to name such a function get_lon_from_grid?
+        !      and if, shouldn't then also get_nproma should be called get_nproma_from_grid?
+        ! Note, this can be done here because we get lon lat for the whole horizontal grid!
+        lon = get_lon(patch)
+        lat = get_lat(patch)
+        ! coslon = COS(pi * lon / 180._wp)
+        ! sinlon = SIN(pi * lon / 180._wp)
+        coslat = COS(pi * lat / 180._wp)
+        sinlat = SIN(pi * lat / 180._wp)
 
-          ! We first need to set values for the variables USEd in mo_jsb_forcing that do not exist in ICON-A except for mo_jsb_forcing.
-          ! We have to transfer these values from ICON-A/this driver.
+        !   END IF ! R: debug
+        ! With the informations above we can determine the cos_zenith_angle of the current time step
+        icosmu0        => echam_rad_config(jg)% icosmu0        ! defines if and how cosmu0 is defined for extended sunlit areas
+        ldiur          => echam_rad_config(jg)% ldiur          ! .TRUE.
+        l_sph_symm_irr => echam_rad_config(jg)% l_sph_symm_irr ! .FALSE.
+        dt_ext         = 0.0_wp                                ! time interval over which the insolated area is extended, for us =0
 
-          delta_time    = dtime
-          time_step_len = dtime
+        CALL solar_parameters(decl_sun,         time_of_day,     & ! in
+          &                   icosmu0,          dt_ext,          & ! in
+          &                   ldiur,            l_sph_symm_irr,  & ! in
+          &                   patch,                             & ! in 
+          &                   cos_zenith_angle, daylight_frc)      ! out
+        ! Now, as we have the cos_zenith_angle we will be abel to calculate swvis_srf_down and we can compile the forcing
+        ! R: debug: 
+        cos_zenith_angle  = 0.5        ! fictional only for testing purpuses
 
-          ! Now, as we have the cos_zenith_angle we will be abel to calculate swvis_srf_down and we can compile the forcing
-          ! ToDo diese Variablen entweder gleich mit       forcing_in_modeltyp%t_air%data_read(jcs:nproma, jb, step_for_synchron)   usw. ersetzten oder
-          ! nach dem call explizit übergeben!
-          ! Dabei beachten: t_air_K entspricht t_air beim Model-forcing. Da im mo_forcing aber beide namen auftauchen kann man es dort nicht einfach ersetzen! Daher müßte es beim Einlesen der observations beibehalten werden.
-          !                 Es müßte dann vor dem Aufruf von jsb_interface an t_air übergeben werden! Das möchte ich aber so nicht machen. 
-          !                 => habe es in mo_forcing so geändert, daß es statt t_air ein t_air_C gibt und dort das neue t_air =t_air_K ist.
-          ! Dabei beachten: CO2_air im jsb_interface wird von model-forcing bei mir so bereit gestellt, bei observations entspricht es CO2_concentration, was von mo_forcing als out geliefert wird! 
-          !                 Dieses wird in mo_forcing aber zunächst aus foring files als mol eingelesen und wird erst dort in die vom jsb_interface und dem model-forcing verwendeten Einheit umgerechnet.
-          !                 Man benötigt es in mo_forcing aber nicht mit diesem Namen weil es nicht mit diesen Variablennamen einlesen wird! 
-          !                 Wahrscheinlich hat sie die Benennung von mo_forcing übernommen weil sie diese Variable beim model-forcing nicht einliest! Sie hat sich auch nicht mit Werten gefüllt weil sie damals wohl nicht
-          !                 von JS4 verwendet wurde. => habe sie in mo_forcing umbenannt!
-          !                 
-          CALL read_atm_forcing_for_jsb_stdalone_from_observ(1, 1, nproma, nblks, mtime_forcing, mtime_current, sinlat, coslat, lon, evapo_act2pot_fromJS4generated, &
-          & t_srf_fromJS4, fact_q_air_fromJS4, fact_qsat_srf_fromJS4, rough_h_srf_fromJS4, rough_m_srf_fromJS4, cos_zenith_angle,       &
-          & CO2_air, t_air, q_air, rain, snow, wind_air, wind_10m,                                           &
-          & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, fract_par_diffuse,                              &
+        ! We first need to set values for the variables USEd in mo_jsb_forcing that do not exist in ICON-A except for mo_jsb_forcing.
+        ! We have to transfer these values from ICON-A/this driver.
+
+        delta_time    = delta_time_observations ! default: 86400._wp ! nicht dtime
+        time_step_len = dtime
+
+        WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRRRR  OBSERVATIONS: mtime_forcing:' , mtime_forcing, 'mtime_current:', mtime_current, 'jstep:' , jstep ! &
+          ! & , 't_srf_fromJS4:', t_srf_fromJS4
+
+        CALL read_atm_forcing_for_jsb_stdalone_from_observ(1, 1, nproma, nblks, mtime_forcing, mtime_forcing, sinlat, coslat, lon,  &
+          & evapo_act2pot_fromJS4generated,                                                                                           &
+          & t_srf_fromJS4, fact_q_air_fromJS4, fact_qsat_srf_fromJS4, rough_h_srf_fromJS4, rough_m_srf_fromJS4, cos_zenith_angle,     &
+          & CO2_air, t_air, q_air, rain, snow, wind_air, wind_10m,                                                                    &
+          & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, fract_par_diffuse,                                           &
           & press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch)
 
-          ! R: Put results in forcing data structure
-          forcing_in_modeltyp%t_air%data_read             (jcs:nproma, jb, step_for_synchron) =   t_air            (jcs:nproma, jb) ! R: jb mit nblks ersetzen
-          forcing_in_modeltyp%q_air%data_read             (jcs:nproma, jb, step_for_synchron) =   q_air            (jcs:nproma, jb) 
-          forcing_in_modeltyp%rain%data_read              (jcs:nproma, jb, step_for_synchron) =   rain             (jcs:nproma, jb) 
-          forcing_in_modeltyp%snow%data_read              (jcs:nproma, jb, step_for_synchron) =   snow             (jcs:nproma, jb) 
-          forcing_in_modeltyp%wind_air%data_read          (jcs:nproma, jb, step_for_synchron) =   wind_air         (jcs:nproma, jb) 
-          forcing_in_modeltyp%wind_10m%data_read          (jcs:nproma, jb, step_for_synchron) =   wind_10m         (jcs:nproma, jb) 
-          forcing_in_modeltyp%lw_srf_down%data_read       (jcs:nproma, jb, step_for_synchron) =   lw_srf_down      (jcs:nproma, jb) 
-          forcing_in_modeltyp%swvis_srf_down%data_read    (jcs:nproma, jb, step_for_synchron) =   swvis_srf_down   (jcs:nproma, jb) 
-          forcing_in_modeltyp%swnir_srf_down%data_read    (jcs:nproma, jb, step_for_synchron) =   swnir_srf_down   (jcs:nproma, jb) 
-          forcing_in_modeltyp%swpar_srf_down%data_read    (jcs:nproma, jb, step_for_synchron) =   swpar_srf_down   (jcs:nproma, jb) 
-          forcing_in_modeltyp%fract_par_diffuse%data_read (jcs:nproma, jb, step_for_synchron) =   fract_par_diffuse(jcs:nproma, jb) 
-          forcing_in_modeltyp%press_srf%data_read         (jcs:nproma, jb, step_for_synchron) =   press_srf        (jcs:nproma, jb) 
-          forcing_in_modeltyp%drag_srf%data_read          (jcs:nproma, jb, step_for_synchron) =   drag_srf         (jcs:nproma, jb) 
-          forcing_in_modeltyp%t_acoef%data_read           (jcs:nproma, jb, step_for_synchron) =   t_acoef          (jcs:nproma, jb) 
-          forcing_in_modeltyp%t_bcoef%data_read           (jcs:nproma, jb, step_for_synchron) =   t_bcoef          (jcs:nproma, jb) 
-          forcing_in_modeltyp%q_acoef%data_read           (jcs:nproma, jb, step_for_synchron) =   q_acoef          (jcs:nproma, jb) 
-          forcing_in_modeltyp%q_bcoef%data_read           (jcs:nproma, jb, step_for_synchron) =   q_bcoef          (jcs:nproma, jb) 
-          forcing_in_modeltyp%pch%data_read               (jcs:nproma, jb, step_for_synchron) =   pch              (jcs:nproma, jb) 
-          forcing_in_modeltyp%cos_zenith_angle%data_read  (jcs:nproma, jb, step_for_synchron) =   cos_zenith_angle (jcs:nproma, jb) 
-          forcing_in_modeltyp%CO2_air%data_read           (jcs:nproma, jb, step_for_synchron) =   CO2_air          (jcs:nproma, jb) 
-! Not present in the observational forcing
-!             IF (model%config%use_lakes) THEN
-!               forcing_in_modeltyp%drag_wtr%data_read          (jcs:nproma, jb, step_for_synchron) =   drag_wtr         (jcs:nproma, jb) 
-!               forcing_in_modeltyp%drag_ice%data_read          (jcs:nproma, jb, step_for_synchron) =   drag_ice         (jcs:nproma, jb) 
-!               forcing_in_modeltyp%t_acoef_wtr%data_read       (jcs:nproma, jb, step_for_synchron) =   t_acoef_wtr      (jcs:nproma, jb) 
-!               forcing_in_modeltyp%t_bcoef_wtr%data_read       (jcs:nproma, jb, step_for_synchron) =   t_bcoef_wtr      (jcs:nproma, jb) 
-!               forcing_in_modeltyp%q_acoef_wtr%data_read       (jcs:nproma, jb, step_for_synchron) =   q_acoef_wtr      (jcs:nproma, jb) 
-!               forcing_in_modeltyp%q_bcoef_wtr%data_read       (jcs:nproma, jb, step_for_synchron) =   q_bcoef_wtr      (jcs:nproma, jb) 
-!               forcing_in_modeltyp%t_acoef_ice%data_read       (jcs:nproma, jb, step_for_synchron) =   t_acoef_ice      (jcs:nproma, jb) 
-!               forcing_in_modeltyp%t_bcoef_ice%data_read       (jcs:nproma, jb, step_for_synchron) =   t_bcoef_ice      (jcs:nproma, jb) 
-!               forcing_in_modeltyp%q_acoef_ice%data_read       (jcs:nproma, jb, step_for_synchron) =   q_acoef_ice      (jcs:nproma, jb) 
-!               forcing_in_modeltyp%q_bcoef_ice%data_read       (jcs:nproma, jb, step_for_synchron) =   q_bcoef_ice      (jcs:nproma, jb) 
-!             END IF
-        END IF ! is_newday
-      ELSE
-        counter = counter + 1
-        ! IF (counter < 2) THEN ! R: NUR ZUM DEBUGGEN
+        ! R: Put results in forcing data structure
+        ! R: Actually we read in each timestep. It is always 1 day/record
+
+        ! WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR Uebergabe Observations zu forcing_in_modeltyp...' , &
+        !   & SIZE(forcing_in_modeltyp%t_air%data_read(jcs:nproma, jb, forcing_steps_per_file) ) & 64
+        !   & , SIZE(t_air(jcs:nproma, jb)) ,  SIZE(t_srf_fromJS4(jcs:nproma,jb)) ! 64, 64
+        !WRITE(*,*) 'jstep:', jstep, 'step_for_synchron:', step_for_synchron, 'forcing_steps_per_file', forcing_steps_per_file
+
+        ! früher: jcs:nproma, jb  ! R: jb mit nblks ersetzen
+        forcing_in_modeltyp%t_air%data_read             (:,:, forcing_steps_per_file) =   t_air            (:,:)
+        forcing_in_modeltyp%q_air%data_read             (:,:, forcing_steps_per_file) =   q_air            (:,:) 
+        forcing_in_modeltyp%rain%data_read              (:,:, forcing_steps_per_file) =   rain             (:,:) 
+        forcing_in_modeltyp%snow%data_read              (:,:, forcing_steps_per_file) =   snow             (:,:) 
+        forcing_in_modeltyp%wind_air%data_read          (:,:, forcing_steps_per_file) =   wind_air         (:,:) 
+        forcing_in_modeltyp%wind_10m%data_read          (:,:, forcing_steps_per_file) =   wind_10m         (:,:) 
+        forcing_in_modeltyp%lw_srf_down%data_read       (:,:, forcing_steps_per_file) =   lw_srf_down      (:,:) 
+        forcing_in_modeltyp%swvis_srf_down%data_read    (:,:, forcing_steps_per_file) =   swvis_srf_down   (:,:) 
+        forcing_in_modeltyp%swnir_srf_down%data_read    (:,:, forcing_steps_per_file) =   swnir_srf_down   (:,:) 
+        forcing_in_modeltyp%swpar_srf_down%data_read    (:,:, forcing_steps_per_file) =   swpar_srf_down   (:,:) 
+        forcing_in_modeltyp%fract_par_diffuse%data_read (:,:, forcing_steps_per_file) =   fract_par_diffuse(:,:) 
+        forcing_in_modeltyp%press_srf%data_read         (:,:, forcing_steps_per_file) =   press_srf        (:,:) 
+        forcing_in_modeltyp%drag_srf%data_read          (:,:, forcing_steps_per_file) =   drag_srf         (:,:) 
+        forcing_in_modeltyp%t_acoef%data_read           (:,:, forcing_steps_per_file) =   t_acoef          (:,:) 
+        forcing_in_modeltyp%t_bcoef%data_read           (:,:, forcing_steps_per_file) =   t_bcoef          (:,:) 
+        forcing_in_modeltyp%q_acoef%data_read           (:,:, forcing_steps_per_file) =   q_acoef          (:,:) 
+        forcing_in_modeltyp%q_bcoef%data_read           (:,:, forcing_steps_per_file) =   q_bcoef          (:,:) 
+        forcing_in_modeltyp%pch%data_read               (:,:, forcing_steps_per_file) =   pch              (:,:) 
+        forcing_in_modeltyp%cos_zenith_angle%data_read  (:,:, forcing_steps_per_file) =   cos_zenith_angle (:,:) 
+        forcing_in_modeltyp%CO2_air%data_read           (:,:, forcing_steps_per_file) =   CO2_air          (:,:)
+        ! Not present in the observational forcing:
+        !           IF (model%config%use_lakes) THEN
+        !             forcing_in_modeltyp%drag_wtr%data_read          (:,:, forcing_steps_per_file) =   drag_wtr         (:,:) 
+        !             forcing_in_modeltyp%drag_ice%data_read          (:,:, forcing_steps_per_file) =   drag_ice         (:,:) 
+        !             forcing_in_modeltyp%t_acoef_wtr%data_read       (:,:, forcing_steps_per_file) =   t_acoef_wtr      (:,:) 
+        !             forcing_in_modeltyp%t_bcoef_wtr%data_read       (:,:, forcing_steps_per_file) =   t_bcoef_wtr      (:,:) 
+        !             forcing_in_modeltyp%q_acoef_wtr%data_read       (:,:, forcing_steps_per_file) =   q_acoef_wtr      (:,:) 
+        !             forcing_in_modeltyp%q_bcoef_wtr%data_read       (:,:, forcing_steps_per_file) =   q_bcoef_wtr      (:,:) 
+        !             forcing_in_modeltyp%t_acoef_ice%data_read       (:,:, forcing_steps_per_file) =   t_acoef_ice      (:,:) 
+        !             forcing_in_modeltyp%t_bcoef_ice%data_read       (:,:, forcing_steps_per_file) =   t_bcoef_ice      (:,:) 
+        !             forcing_in_modeltyp%q_acoef_ice%data_read       (:,:, forcing_steps_per_file) =   q_acoef_ice      (:,:) 
+        !             forcing_in_modeltyp%q_bcoef_ice%data_read       (:,:, forcing_steps_per_file) =   q_bcoef_ice      (:,:) 
+        !           END IF
+        ! Set dummy values in case use_lakes is set to .TRUE.
+        forcing_in_modeltyp%drag_wtr%data_read          (:,:, forcing_steps_per_file) =  0.0000  ! fictional only for testing purpuses
+        forcing_in_modeltyp%drag_ice%data_read          (:,:, forcing_steps_per_file) =  0.0000  ! fictional only for testing purpuses
+        forcing_in_modeltyp%t_acoef_wtr%data_read       (:,:, forcing_steps_per_file) =  0.0000  ! fictional only for testing purpuses
+        forcing_in_modeltyp%t_bcoef_wtr%data_read       (:,:, forcing_steps_per_file) =  0.0000  ! fictional only for testing purpuses
+        forcing_in_modeltyp%q_acoef_wtr%data_read       (:,:, forcing_steps_per_file) =  0.0000  ! fictional only for testing purpuses
+        forcing_in_modeltyp%q_bcoef_wtr%data_read       (:,:, forcing_steps_per_file) =  0.0000  ! fictional only for testing purpuses
+        forcing_in_modeltyp%t_acoef_ice%data_read       (:,:, forcing_steps_per_file) =  0.0000  ! fictional only for testing purpuses
+        forcing_in_modeltyp%t_bcoef_ice%data_read       (:,:, forcing_steps_per_file) =  0.0000  ! fictional only for testing purpuses
+        forcing_in_modeltyp%q_acoef_ice%data_read       (:,:, forcing_steps_per_file) =  0.0000  ! fictional only for testing purpuses
+        forcing_in_modeltyp%q_bcoef_ice%data_read       (:,:, forcing_steps_per_file) =  0.0000  ! fictional only for testing purpuses
+
+        step_for_synchron = 1
+        counter_for_synch = 0
+        !END IF ! is_newday
+      ELSE ! l_forcing_observations is false
+
+        !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRRRR  MODEL:mtime_forcing:' , mtime_forcing, 'mtime_current:', mtime_current, 'jstep:' , jstep
         CALL read_atm_forcing_for_jsb_stdalone_from_modelout(model%config%use_lakes, forcing_synchron_factor, forcing_steps_per_file, mtime_forcing_char, nblks, nproma, model%grid_id) ! ICON-A forcing einlesen
-        ! END IF 
+        step_for_synchron = 1
+        counter_for_synch = 0
       END IF ! l_forcing_observations
-    ! ELSE
+
       !'forcing_steps_per_file', forcing_steps_per_file, 'forcing_synchron_factor', forcing_synchron_factor
-      IF (.NOT. l_first_forcing_file) THEN
+      IF ( l_first_forcing_file .AND. .NOT. forcing_steps_per_file == 1  .AND. .NOT. l_forcing_observations) THEN
+        l_shift_one_timestep = .TRUE.
+      ELSE
         l_shift_one_timestep = .FALSE.
       END IF
+
       l_first_forcing_file= .FALSE.
-      WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver: jstep:' , jstep, 'remain:', remain, 'counter:', counter, 'l_shift_one_timestep:', l_shift_one_timestep
-    END IF  ! remain
-    !END IF
+    END IF  ! of read in the forcing file
+
+    WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRRRR  ZEIT: mtime_forcing:' , mtime_forcing, 'mtime_current:', mtime_current, 'jstep:' , jstep
+
+    !synchr_ratio = step_in_forcing_file / forcing_synchron_factor
+
+    ! Associate the read forcing to the correct timestep of the model (step_for_synchron)
+    counter_for_synch = counter_for_synch + 1
+    IF (counter_for_synch .GT. forcing_synchron_factor) THEN
+      counter_for_synch = 1  
+      !step_for_synchron = 1
+      step_for_synchron = step_for_synchron + 1
+    END IF
+    IF (l_first_step_in_restart) THEN
+      counter_for_synch = 1
+      step_for_synchron = step_for_synchron + 1
+    END IF
+    IF (l_shift_one_timestep) THEN
+      !counter_for_synch = counter_for_synch + 1
+      counter_for_synch = 1 
+      step_for_synchron = step_for_synchron + 1
+      l_shift_one_timestep = .FALSE.
+    END IF
+    l_first_step_in_restart = .FALSE.
+    WRITE(*,*) 'jstep:', jstep, 'step_for_synchron:', step_for_synchron !, 'counter_for_synch' , counter_for_synch ! 0
 
     !Block loop 2
-
 !$OMP PARALLEL DO PRIVATE(jb,jcs,jce)
     DO jb = jbs,jbe ! loop über den block index
       CALL get_indices_c(patch,  & ! in 
@@ -1924,92 +1764,11 @@ PROGRAM jsb4_driver
         &                   rle)   ! in  row limit end
       ! WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR in loop   jbs', jbs, 'jbe', jbe
       IF (jcs>jce) CYCLE
-      !write(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR jg:', jg, 'jb:', jb, 'jcs:', jcs, 'jce:', jce
-      !counter=jb + 1
-      !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR  DRIVER jb:' ,   jb, 'counter' , counter ! im std-gekoppelten-Lauf ist: jb max 39 , counter max 40, d.h. von 2 bis 40 =39
-                                                                              !                    hier ist: jb start 1 , counter start 2, d.h. von 2 bis 2 =1
-      ! CALL routine(jg,jb,jcs,jce        ,& ! R: das würde nun SUBROUTINE interface_echam_vdf callen
-      !   &       nproma,nlev,ntracer  ,&
-      !   &       is_in_sd_ed_interval ,&
-      !   &       is_active            ,&
-      !   &       datetime_old         ,&
-      !   &       pdtime               )
+      !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR jg:', jg, 'jb:', jb, 'jcs:', jcs, 'jce:', jce
+      !i=jb + 1
 
-      ! Anstatt die ganzen Prozeduren aufzurufen hier die direkte Übergabe zu den entsprechendne interface_full variablen:
-      !iblk= jb
-      !ics = jcs
-      !ice = jce
-      !nc =  jce - jcs + 1
-      !CALL model%Set_options(iblk=jb, ics=jcs, ice=jce, nc=nc, dtime=dtime, steplen=dtime) ! wird in interface_full gemacht.
-
-      !IF ( ics /= 1)      write(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRRRR ics:', ics ! should be 1
-      !IF ( ice /= nproma) write(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRRRR ice:', ice ! should be e.g. 16
-
-      !no_omp_thread = Get_omp_thread()
-      !iblk = model%options(no_omp_thread)%iblk
-      !ics = model%options(no_omp_thread)%ics
-      !ice = model%options(no_omp_thread)%ice
-      !dtime = model%options(no_omp_thread)%dtime
-
-      !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver model%options(no_omp_thread)%iblk:', model%options(no_omp_thread)%iblk , 'model%options(no_omp_thread)%ics:'  , model%options(no_omp_thread)%ics , 'model%options(no_omp_thread)%ice' , model%options(no_omp_thread)%ice , 'model%options(no_omp_thread)%dtime' , model%options(no_omp_thread)%dtime
-
-      synchr_ratio = step_in_forcing_file / forcing_synchron_factor
-      step_for_synchron =nint(synchr_ratio)
-      IF (l_shift_one_timestep) THEN
-        step_for_synchron = step_for_synchron + 1
-      END IF
-      ! R: used only for debugging
-      !  t_air            (jcs:nproma, jb) = forcing_in_modeltyp%t_air%data_read             (jcs:nproma, jb, step_for_synchron)
-      !  q_air            (jcs:nproma, jb) = forcing_in_modeltyp%q_air%data_read             (jcs:nproma, jb, step_for_synchron)
-      !  rain             (jcs:nproma, jb) = forcing_in_modeltyp%rain%data_read              (jcs:nproma, jb, step_for_synchron)
-      !  snow             (jcs:nproma, jb) = forcing_in_modeltyp%snow%data_read              (jcs:nproma, jb, step_for_synchron)
-      !  wind_air         (jcs:nproma, jb) = forcing_in_modeltyp%wind_air%data_read          (jcs:nproma, jb, step_for_synchron)
-      !  wind_10m         (jcs:nproma, jb) = forcing_in_modeltyp%wind_10m%data_read          (jcs:nproma, jb, step_for_synchron)
-      !  lw_srf_down      (jcs:nproma, jb) = forcing_in_modeltyp%lw_srf_down%data_read       (jcs:nproma, jb, step_for_synchron)
-      !  swvis_srf_down   (jcs:nproma, jb) = forcing_in_modeltyp%swvis_srf_down%data_read    (jcs:nproma, jb, step_for_synchron)
-      !  swnir_srf_down   (jcs:nproma, jb) = forcing_in_modeltyp%swnir_srf_down%data_read    (jcs:nproma, jb, step_for_synchron)
-      !  swpar_srf_down   (jcs:nproma, jb) = forcing_in_modeltyp%swpar_srf_down%data_read    (jcs:nproma, jb, step_for_synchron)
-      !  fract_par_diffuse(jcs:nproma, jb) = forcing_in_modeltyp%fract_par_diffuse%data_read (jcs:nproma, jb, step_for_synchron)
-      !  press_srf        (jcs:nproma, jb) = forcing_in_modeltyp%press_srf%data_read         (jcs:nproma, jb, step_for_synchron)
-      !  drag_srf         (jcs:nproma, jb) = forcing_in_modeltyp%drag_srf%data_read          (jcs:nproma, jb, step_for_synchron)
-      !  t_acoef          (jcs:nproma, jb) = forcing_in_modeltyp%t_acoef%data_read           (jcs:nproma, jb, step_for_synchron)
-      !  t_bcoef          (jcs:nproma, jb) = forcing_in_modeltyp%t_bcoef%data_read           (jcs:nproma, jb, step_for_synchron)
-      !  q_acoef          (jcs:nproma, jb) = forcing_in_modeltyp%q_acoef%data_read           (jcs:nproma, jb, step_for_synchron)
-      !  q_bcoef          (jcs:nproma, jb) = forcing_in_modeltyp%q_bcoef%data_read           (jcs:nproma, jb, step_for_synchron)
-      !  pch              (jcs:nproma, jb) = forcing_in_modeltyp%pch%data_read               (jcs:nproma, jb, step_for_synchron)
-      !  cos_zenith_angle (jcs:nproma, jb) = forcing_in_modeltyp%cos_zenith_angle%data_read  (jcs:nproma, jb, step_for_synchron)
-      !  CO2_air          (jcs:nproma, jb) = forcing_in_modeltyp%CO2_air%data_read           (jcs:nproma, jb, step_for_synchron)
-      !  trig_rad_m1      (jcs:nproma, jb) = forcing_in_modeltyp%trig_rad_m1%data_read       (jcs:nproma, jb, step_for_synchron)
-      ! optional
-      !  drag_wtr         (jcs:nproma, jb) = forcing_in_modeltyp%drag_wtr%data_read          (jcs:nproma, jb, step_for_synchron) 
-      !  drag_ice         (jcs:nproma, jb) = forcing_in_modeltyp%drag_ice%data_read          (jcs:nproma, jb, step_for_synchron)
-      !  t_acoef_wtr      (jcs:nproma, jb) = forcing_in_modeltyp%t_acoef_wtr%data_read       (jcs:nproma, jb, step_for_synchron)
-      !  t_bcoef_wtr      (jcs:nproma, jb) = forcing_in_modeltyp%t_bcoef_wtr%data_read       (jcs:nproma, jb, step_for_synchron)
-      !  q_acoef_wtr      (jcs:nproma, jb) = forcing_in_modeltyp%q_acoef_wtr%data_read       (jcs:nproma, jb, step_for_synchron)
-      !  q_bcoef_wtr      (jcs:nproma, jb) = forcing_in_modeltyp%q_bcoef_wtr%data_read       (jcs:nproma, jb, step_for_synchron)
-      !  t_acoef_ice      (jcs:nproma, jb) = forcing_in_modeltyp%t_acoef_ice%data_read       (jcs:nproma, jb, step_for_synchron)
-      !  t_bcoef_ice      (jcs:nproma, jb) = forcing_in_modeltyp%t_bcoef_ice%data_read       (jcs:nproma, jb, step_for_synchron)
-      !  q_acoef_ice      (jcs:nproma, jb) = forcing_in_modeltyp%q_acoef_ice%data_read       (jcs:nproma, jb, step_for_synchron)
-      !  q_bcoef_ice      (jcs:nproma, jb) = forcing_in_modeltyp%q_bcoef_ice%data_read       (jcs:nproma, jb, step_for_synchron)
-
-      IF (jb == 1) THEN
-        WRITE(*,*) 'jcs, nproma, jb:' , jcs, nproma, jb, 'step_for_synchron:', step_for_synchron,  'jstep:', jstep
-      END IF
-      ! R: to check if data from forcing that arrives here is the same as in the forcing file
-      ! DEBUG_VAR(jcs:nproma,jb) = forcing_in_modeltyp%snow%data_read(jcs:nproma, jb, step_for_synchron) ! - lw_srf_down(jcs:nproma,jb)
-
-      !t_air     (jcs:nproma,jb) = forcing_in_modeltyp%t_air%data_read            (jcs:nproma, jb, step_for_synchron)
-      !lw_srf_down(jcs:nproma,jb) = forcing_in_modeltyp%lw_srf_down%data_read      (jcs:nproma, jb, step_for_synchron)
-      !lw_srf_down       = 103.265228271484        ! W/m2
-      !forcing_in_modeltyp%lw_srf_down%data_read(jcs:nproma, jb, step_for_synchron) = lw_srf_down (jcs:nproma,jb)
-      !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver local t_air MIN:',   MINVAL(t_air(jcs:nproma, jb)), 'MAX:' , MAXVAL(t_air(jcs:nproma, jb))
-      !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver forcing_in_modeltyp%t_air%data_read(jcs:nproma, jb, step_for_synchron) MIN:',  &
-      !  & MINVAL(forcing_in_modeltyp%t_air%data_read(jcs:nproma, jb, step_for_synchron)), &
-      !  & 'MAX:' , MAXVAL(forcing_in_modeltyp%t_air%data_read(jcs:nproma, jb, step_for_synchron))
-
-      ! R: work around forcing data problem
-  ! R: debugging: set values AFTER they are set from observational or model forcing to keep the model running to get DEBUG_VAR. Delete later
-  !      !if (step_for_synchron < 5) then
+      !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver model%options(no_omp_thread)%iblk:', model%options(no_omp_thread)%iblk , 'model%options(no_omp_thread)%ics:'  , model%options(no_omp_thread)%ics , 'model%options(no_omp_thread)%ice' , model%options(no_omp_thread)%ice , 'model%options(no_omp_thread)%dtime' , model%options(no_omp_thread)%dtime      +!     R: debugging: set values AFTER they are set from observational or model forcing to keep the model running to get DEBUG_VAR. Delete later
+      !     !if (step_for_synchron < 5) then
   !         forcing_in_modeltyp%t_air%data_read             (jcs:nproma, jb, step_for_synchron) =   t_air            (jcs:nproma, jb)
   !         forcing_in_modeltyp%q_air%data_read             (jcs:nproma, jb, step_for_synchron) =   q_air            (jcs:nproma, jb) 
   !         forcing_in_modeltyp%rain%data_read              (jcs:nproma, jb, step_for_synchron) =   rain             (jcs:nproma, jb) 
@@ -2044,17 +1803,16 @@ PROGRAM jsb4_driver
   !         forcing_in_modeltyp%q_acoef_ice%data_read       (jcs:nproma, jb, step_for_synchron) =   q_acoef_ice      (jcs:nproma, jb) 
   !         forcing_in_modeltyp%q_bcoef_ice%data_read       (jcs:nproma, jb, step_for_synchron) =   q_bcoef_ice      (jcs:nproma, jb) 
 
-
-      !WRITE(*,*) 'RRRRRRRRRRRR: Rein geht forcing_in_modeltyp%newday_Merker%data_read (jcs, jb, step_for_synchron)' , forcing_in_modeltyp%newday_Merker%data_read (jcs, jb, step_for_synchron)
-      !  WRITE(*,*) 'RRRRRRRRRRRR: Interface wird aufgerufen'
-
+      !WRITE(*,*) 'RRRRRRRRRRRR: Interface wird aufgerufen: mtime_old_jsb:', mtime_old_jsb, 'mtime_current:', mtime_current
       CALL jsbach_interface (            &
         ! kontext:
         & 1,                             & ! model_id
-        & jb, jcs, nproma, &
-        & mtime_old_jsb, & ! mtime_old
-        & dtime, dtime, & ! R: Note, the first dtime corresponds to delta_time and the second dtime corresponds to time_step_len (time_step_len = 2.0_dp*delta_time) when js4 runs with echam.
-                                            !    Note, normally nproma should be ice in this call! Because ice can be smaller than nproma on a block/jb/iblks. However, the nml Output can not be written with ice.
+        & jb, jcs, nproma,               &
+        & mtime_old_jsb,                 & ! mtime_old
+        & dtime, dtime,                  & ! R: Note, the first dtime corresponds to delta_time and the second dtime corresponds 
+                                           ! to time_step_len (time_step_len = 2.0_dp*delta_time) when js4 runs with echam.
+                                           ! Note, normally nproma should be ice in this call! Because ice can be smaller than nproma 
+                                           ! on a block/jb/iblks. However, the nml Output can not be written with ice.
         ! in vars:
         & forcing_in_modeltyp%t_air%data_read            (jcs:nproma, jb, step_for_synchron), &  ! kg kg-1
         & forcing_in_modeltyp%q_air%data_read            (jcs:nproma, jb, step_for_synchron), &  ! kg kg-1
@@ -2077,19 +1835,19 @@ PROGRAM jsb4_driver
         & forcing_in_modeltyp%cos_zenith_angle%data_read (jcs:nproma, jb, step_for_synchron), &  ! 
         & forcing_in_modeltyp%CO2_air%data_read          (jcs:nproma, jb, step_for_synchron), &  ! mol: 0.00034800
         ! out vars, only dummy use for standalone:
-        & t_srf_fromJS4        (jcs:nproma, jb),   & !
+        & t_srf_fromJS4        (jcs:nproma, jb),     & !
         & t_eff_srf    (jcs:nproma, jb),             & !
         & qsat_srf     (jcs:nproma, jb),             & !
         & s_srf        (jcs:nproma, jb),             & !
-        & fact_q_air_fromJS4   (jcs:nproma, jb),   & !
-        & fact_qsat_srf_fromJS4(jcs:nproma, jb),   & !
+        & fact_q_air_fromJS4   (jcs:nproma, jb),     & !
+        & fact_qsat_srf_fromJS4(jcs:nproma, jb),     & !
         & evapotrans   (jcs:nproma, jb),             & !
         & latent_hflx  (jcs:nproma, jb),             & !
         & sensible_hflx(jcs:nproma, jb),             & !
         & grnd_hflx    (jcs:nproma, jb),             & !
         & grnd_hcap    (jcs:nproma, jb),             & !
-        & rough_h_srf_fromJS4  (jcs:nproma, jb),   & !
-        & rough_m_srf_fromJS4  (jcs:nproma, jb),   & !
+        & rough_h_srf_fromJS4  (jcs:nproma, jb),     & !
+        & rough_m_srf_fromJS4  (jcs:nproma, jb),     & !
         & q_snocpymlt  (jcs:nproma, jb),             & !
         & alb_vis_dir  (jcs:nproma, jb),             & !
         & alb_nir_dir  (jcs:nproma, jb),             & !
@@ -2142,19 +1900,11 @@ PROGRAM jsb4_driver
         ! evapo_pot_sum_fromJS4(:,jb) = evapo_pot_sum(:,jb) + MIN(evapopot(:),  -EPSILON(1._wp))
       ENDIF
 
-    END DO
+    END DO ! block loop
 
 !$OMP END PARALLEL DO
 
-! R:echam_phy_main ENDE
-
-    WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver Y'
     CALL jsbach_finish_timestep(jg, mtime_old_jsb, dtime) ! all in  mtime_current
-    !!!!!! ENDE: SUBROUTINE interface_iconam_echam
-
-    !!!!!!!!!!!!!!!!!!!!! integrate_nh ENDE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-    ! END DO ! für jsubstep = 1, num_steps, hab ich hier her gesetzt muß evtl. woanderst hin...  -------------------------------------------------------------------------------
 
     ! Compute diagnostics for output if necessary
     !delete    !IF (l_compute_diagnostic_quants .OR. iforcing==iecham .OR. iforcing==inoforcing) THEN
@@ -2193,6 +1943,7 @@ PROGRAM jsb4_driver
     IF (l_nml_output) THEN
       CALL write_name_list_output(jstep)
     ENDIF
+    !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver ZA'
 
     CALL reset_statistics  ! R: nur zum deallocate debuggen
     WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver Z'
@@ -2211,7 +1962,7 @@ PROGRAM jsb4_driver
 ! #ifdef NOMPI
 !       IF (my_process_is_mpi_all_seq()) &
 ! #endif
-!         CALL supervise_total_integrals_nh( kstep, p_patch(1:), p_nh_state, p_int_state(1:), &
+!       CALL supervise_total_integrals_nh( kstep, p_patch(1:), p_nh_state, p_int_state(1:), &
 !         &                                  nnow(1:n_dom), nnow_rcf(1:n_dom), jstep == (nsteps+jstep0))
 !     ENDIF
 
@@ -2232,7 +1983,7 @@ PROGRAM jsb4_driver
     ! Write restart file
     !--------------------------------------------------------------------------
     ! check whether time has come for writing restart file
-    WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver Z1'
+
     CALL message('','')
     !
     ! default is to assume we do not write a checkpoint/restart file
@@ -2243,13 +1994,13 @@ PROGRAM jsb4_driver
 
       l_isStartdate    = (time_config%tc_startdate == mtime_current)
       l_isExpStopdate  = (time_config%tc_exp_stopdate == mtime_current)
-      ! jsbach_is_restarted      = isCurrentEventActive(restartEvent, mtime_current) ! now from mo_jsb_control
+      l_jsbach_is_restarted      = isCurrentEventActive(restartEvent, mtime_current)
       l_isCheckpoint   = isCurrentEventActive(checkpointEvent, mtime_current)
       l_doWriteRestart = time_config%tc_write_restart
 
       IF ( &
             !  if normal checkpoint or restart cycle has been reached, i.e. checkpoint+model stop
-            &         (jsbach_is_restarted() .OR. l_isCheckpoint)                     &
+            &         (jsbach_is_restarted() .OR. l_isCheckpoint)           & ! isRestart() jsbach_is_restarted()
             &  .AND.                                                        &
             !  and the current date differs from the start date
             &        .NOT. l_isStartdate                                    &
@@ -2260,10 +2011,8 @@ PROGRAM jsb4_driver
         lwrite_checkpoint = .TRUE.
       END IF
     END IF
-    WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver Z2'
 
     IF (lwrite_checkpoint) THEN
-      WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver Z3'
       ! apply nest boundary filling; this has no impact on the correctness (in the sense of reproducibility)
       ! of the restart but facilitates debugging
       CALL diag_for_output_dyn () ! R: Textoutput des Outputs als Tabelle
@@ -2282,11 +2031,9 @@ PROGRAM jsb4_driver
           & opt_ndom                   = n_dom)
 
       ENDDO
-      WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver Z4'
       ! finally write restart file
       CALL restartDescriptor%writeRestart(mtime_current, jstep, opt_output_jfile = output_jfile)
 
-      WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver Z5'
       IF (ALLOCATED(elapsedTime)) THEN
         DEALLOCATE(elapsedTime, STAT=error_status)
         IF (error_status /= SUCCESS)  CALL finish (routine, 'DEALLOCATE failed!')
@@ -2299,8 +2046,7 @@ PROGRAM jsb4_driver
     END IF
 
     jstep = jstep + 1
-    step_in_forcing_file = step_in_forcing_file + 1
-    WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver Z6'
+    ! step_in_forcing_file = step_in_forcing_file + 1
     sim_time = getElapsedSimTimeInSeconds(mtime_current) 
 
   END DO TIME_LOOP
@@ -2320,7 +2066,7 @@ PROGRAM jsb4_driver
 
   ! clean-up routine for mo_nh_supervise module (eg. closing of files)
   !CALL finalize_supervise_nh()
-  WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver Z7'
+
   CALL deleteRestartDescriptor(restartDescriptor)
 
   !IF (ltimer) CALL timer_stop(timer_total)
@@ -2394,7 +2140,7 @@ PROGRAM jsb4_driver
 
   ! Delete state variables
 
-  !     CALL destruct_nh_state( p_nh_state, p_nh_state_lists )  ! R: wird beides nicht benötigt nur zum Debuggen von deallocate fehler
+  !     CALL destruct_nh_state( p_nh_state, p_nh_state_lists )  ! R: wird beides nicht benötigt only for debugging von deallocate fehler
   !      DEALLOCATE (p_nh_state, STAT=error_status)
   !      IF (error_status /= SUCCESS) THEN
   !        CALL finish(TRIM(routine),'deallocation for p_nh_state failed')
@@ -2404,9 +2150,24 @@ PROGRAM jsb4_driver
   !        CALL finish(TRIM(routine),'deallocation for p_nh_state_lists failed')
   !      ENDIF
 
-  CALL cleanup_echam_phy
+  ! Aus: CALL cleanup_echam_phy
+  !lany=.FALSE.
+  !DO jg = 1,n_dom
+  !   lany = lany .OR. (echam_phy_tc(jg)%dt_cnv > dt_zero)
+  !END DO
+  !IF (lany) CALL dealloc_echam_cnv_config  ! deallocate array "cevapcu"
+
+  !lany=.FALSE.
+  !DO jg = 1,n_dom
+  !   lany = lany .OR. (echam_phy_tc(jg)%dt_rad > dt_zero)
+  !END DO
+  !IF (lany) CALL destruct_psrad_forcing_list
+
+  !CALL destruct_echam_phy_state
+
   ! CALL SLEEP(240) ! R: 4 Minuten warten um output klarer zeitlich zu trennen!
-  WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver 0000000000000000000000000000000000000000000000000000000000000000000000'
+  ! WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver 0000000000000000000000000000000000000000000000000000000000000000000000'
+ 
   ! Delete output variable lists
   IF (output_mode%l_nml) THEN
     CALL close_name_list_output  ! R: In ICON-A this would be done independent of the io type synch/asynch. 
@@ -2417,17 +2178,7 @@ PROGRAM jsb4_driver
     CALL finish_statistics_streams
   END IF
 
-!     ! finalize meteogram output
-!     IF (output_mode%l_nml) THEN
-!       DO jg = 1, n_dom
-!         IF (meteogram_output_config(jg)%lenabled) THEN
-!           CALL meteogram_finalize(jg)
-!         END IF
-!       END DO
-!       DO jg = 1, max_dom
-!         DEALLOCATE(meteogram_output_config(jg)%station_list)
-!       END DO
-!     END IF
+
 
    !Close LES diag files
    
@@ -2442,44 +2193,26 @@ PROGRAM jsb4_driver
 
   CALL message(TRIM(routine),'clean-up destruct_atmo_nonhydrostatic finished')
 
- ! --------------------
- ! WIEDER ZURÜCK: AUS    CALL atmo_model
-  ! print performance timers:
- !    IF (ltimer) CALL print_timer
-
   ! 13. Integration finished. Carry out the shared clean-up processes
   !---------------------------------------------------------------------
   !Aus mo_atmo_model: CALL destruct_atmo_model ():
   CALL destruct_ext_data
 
-  WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver 11111111111111111111111111'
   CALL lonlat_grids%finalize() !USE mo_intp_lonlat_types,       ONLY: lonlat_grids    CALL lonlat_grids%init()
 
-  !  WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver 22222222222222222222222222'
-  CALL destruct_comm_patterns( p_patch, p_patch_local_parent ) ! USE mo_model_domain,        ONLY: t_patch, t_grid_cells, p_patch_local_parent, p_patch
-  !     ! Deallocate grid patches
-  !  WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver 33333333333333333333333333'
+  CALL destruct_comm_patterns( p_patch, p_patch_local_parent )
+  ! Deallocate grid patches
   CALL destruct_patches( p_patch )
 
-  !  WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver 44444444444444444444444444'
   CALL destruct_patches( p_patch_local_parent )
 
-  !  WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver 55555555555555555555555555'
   ! !    CALL message('','destruct_patches is done')
   CALL destruct_icon_communication()
 
-  !  WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver 66666666666666666666666666'
   CALL jsbach_finalize()
-
-  WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver 77777777777777777777777777'
-
-  ! --------------------
-  ! WIEDER ZURÜCK: AUS   PROGRAM icon
 
   IF (ASSOCIATED(time_config%tc_exp_stopdate) .AND. ASSOCIATED(time_config%tc_stopdate)) THEN
     ! write the control.status file
-
-    WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver 88888888888888888888888888'
 
     IF (my_process_is_global_root()) THEN
       OPEN (500, FILE="finish.status")
@@ -2492,12 +2225,9 @@ PROGRAM jsb4_driver
     END IF
   END IF
 
-  WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver 999999999999999999999999999999'
-
   ! Shut down MPI
   CALL stop_mpi
   !STOP
-  WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver 1010110101010101010101010101010'
 
 #if defined (__INTEL_COMPILER) || defined (__PGI) || defined (NAGFOR)
 #ifdef VARLIST_INITIZIALIZE_WITH_NAN
@@ -2505,8 +2235,6 @@ PROGRAM jsb4_driver
   CALL ieee_set_status(saved_fpscr)
 #endif
 #endif
-
-  WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver ffffffffffffffffffffffffffffffff'
 
 #endif
 END PROGRAM jsb4_driver

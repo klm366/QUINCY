@@ -34,7 +34,7 @@ MODULE mo_jsb_control
   PUBLIC :: t_jsb_model_nml, jsb_models_nml, get_no_of_models
   PUBLIC :: timer_jsbach, timer_aggregate, timer_integrate, timer_process_task, timer_process_msg
   PUBLIC :: max_no_of_models
-  PUBLIC :: l_forcing_observations
+  PUBLIC :: l_forcing_observations, delta_time_observations
   PUBLIC :: forcing_synchron_factor      
   PUBLIC :: forcing_steps_per_file
 
@@ -47,6 +47,7 @@ MODULE mo_jsb_control
   INTEGER,           SAVE :: debug_memory_level
   INTEGER,           SAVE :: timer_level
   LOGICAL :: l_forcing_observations
+  REAL    :: delta_time_observations
   INTEGER :: forcing_synchron_factor      
   INTEGER :: forcing_steps_per_file
 
@@ -153,6 +154,7 @@ CONTAINS
       debug_memory_level,      &
       write_standalone_forcing, &
       l_forcing_observations,   &
+      delta_time_observations,  &      
       forcing_synchron_factor,  &
       forcing_steps_per_file
 
@@ -173,10 +175,10 @@ CONTAINS
     debug_memory_level = 0
     write_standalone_forcing = .FALSE.
     l_forcing_observations   = .FALSE.
+    delta_time_observations  = 86400
     forcing_synchron_factor  = 1  ! Factor defines how many time steps the JS4 driver performs for
                                   ! each atmospheric forcing time step that is read in
     forcing_steps_per_file   = 72 ! The number of time steps included by the used forcing file(s), e.g. 72
-    ! write(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR namelist: l_forcing_observations:', l_forcing_observations
 
     nml_handler = open_nml(TRIM(namelist_filename))
 

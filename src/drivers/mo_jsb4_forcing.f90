@@ -34,6 +34,7 @@ MODULE mo_jsb4_forcing
     & nf_inq_dimid, nf_inq_dimlen, nf_inq_varid, & ! from netcdf.inc
     & NF_MAX_NAME, nf_get_att_text, NF_NOERR       ! from netcdf.inc
 
+
 #ifndef __ICON__
   USE mo_time_control,           ONLY: next_date, lresume, delta_time, time_step_len, get_year_day                    
   USE mo_time_conversion,        ONLY: IMerge_HMS2Sec, day_in_year, time_days
@@ -51,7 +52,11 @@ MODULE mo_jsb4_forcing
   USE mo_physical_constants,     ONLY: tmelt, p0sl_bg, rd, amco2, amd, cpd, vtmpc1, vtmpc2, rdv
   USE mo_jsb_physical_constants, ONLY: cvdifts, grav ! at the end grav comes from mo_physical_constants, however like this it is consistent with JSBACH
   USE mo_echam_convect_tables,   ONLY: tlucua, jptlucu1, jptlucu2
-  USE mo_orbit,                  ONLY: inquire_declination
+#ifdef __ICON__
+    USE mo_psrad_orbit,       ONLY: inquire_declination
+#else
+    USE mo_orbit,             ONLY: inquire_declination
+#endif
 
   ! jsb4
   USE mo_jsb_base,               ONLY: jsbach
@@ -102,7 +107,7 @@ MODULE mo_jsb4_forcing
   REAL(wp), PARAMETER :: gamma = 6.0E-3_wp  ! copied from jsbach3 - mo_jsbalone_forcing
                                             ! fixed temperature gradient of atmosphere [K/m] (see Knorr, p. 31). Note that
                                             ! for the standard ICAO-atmosphere this value is different, namely 6.5E-3 !!!
-  REAL(wp), PARAMETER :: solar_const =  1361.371_wp               ! default solar constant (AMIP) [W/m2]
+  REAL(wp), PARAMETER :: solar_const =  1361.371_wp      ! default solar constant (AMIP) [W/m2]
   REAL(wp), PARAMETER :: conv_prec_day = 1._wp/86400._wp ! copied from jsbach3 - mo_jsbalone_forcing
                                                          ! Conversion factor for precipitation in [mm/day] to [kg/m^2/s]:
                                                          ! 1 mm/day is equivalent to 1 kg /86400 s / m^2
@@ -259,7 +264,8 @@ CONTAINS
   !! @par History
   !! Used parts of jsbach3 mo_jsbalone_forcing: read_forcing / update_forcing and mo_jsbalone: update_driving  by Julia Nabel
   !!
-  SUBROUTINE get_interface_variables_from_external_forcing(model_id, ics, ice, nblks, current_datetime, next_date, & ! R: not if we handel next_date differently it get even more ugly! Overall the best solution is to add next_date to the echam calling routine.
+  ! R: Note, if we handel next_date differently it get even more ugly! Overall the best solution is to add next_date to the echam calling routine.
+  SUBROUTINE get_interface_variables_from_external_forcing(model_id, ics, ice, nblks, current_datetime, next_date, & 
     & sinlat, coslat, lon, evapo_act2pot_proc, &
     & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, cos_zenith_angle, CO2_air, &
     & t_air, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down, &
@@ -754,7 +760,7 @@ CONTAINS
     LOGICAL ::  new_year_forcing     ! jsb3: defined comparing current_date with next_date, because with stepwise forcing
     LOGICAL ::  new_day_forcing      ! the dates in the forcing file shall correspond to the dates of stepwise output.
 
-    INTEGER           :: year, month, day, hour, minute, second, ydate, time_steps_per_day, current_year, current_day
+    INTEGER           :: year, month, day, hour, minute, second, ydate, time_steps_per_day, current_year, current_day, datum
     INTEGER           :: frequency, currentTimeStep, thisDayStart, thisDayEnd, ith_timestep, index_time, nc_var_id
     CHARACTER(len=8)  :: year_label
     CHARACTER(len=NF_MAX_NAME)  :: readUnit
@@ -794,7 +800,6 @@ CONTAINS
         IF(my_process_is_stdio()) THEN
           ! in case of ghg_scenario the forcing_input_variable%file_name_prefix is expected to contain the whole filename
           input_file = jsb_netcdf_open_input(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)), model%grid_id)
-          write(*,*) 'RRRRRRRRRR input_file%file_id:', input_file%file_id
           CALL get_time_dimension(input_file, forcing_input_variable)
           ! Assert: test that the netcdf file unit for this variable is the expected unit or at least equals unspecified_exp_unit
 !          CALL test_unit(input_file%file_id, TRIM(forcing_input_variable%variable_name), &
@@ -883,7 +888,7 @@ CONTAINS
           & .OR. (( currentTimeStep .EQ. 1) .AND. ( ydate .NE. INT(forcing_input_variable%timevalues(1)))))  THEN
           WRITE (message_text,*) 'The forcing file "'&
             &//trim(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) // TRIM(ADJUSTL(year_label)) // '.nc') &
-            &//'" does not contain the required input date ',ydate,' for the variable "'&
+            &//'" does not contain the required input date ',ydate, datum, ' for the variable "' &
             &//TRIM(forcing_input_variable%variable_name)//'".'
           CALL finish(TRIM(routine), message_text)
         ENDIF
@@ -1027,12 +1032,21 @@ CONTAINS
   !! TODO: via mo_jsb_io_netcdf_iface / mo_jsb_io_netcdf functions / mo_input?
   !!
   SUBROUTINE get_time_dimension(input_file, forcing_input_variable)
+    !INCLUDE 'netcdf.inc'
+
+    !USE mo_netcdf_parallel, ONLY: p_nf_get_vara_double_
+    USE  mo_read_interface, ONLY:  read_1D !, read_1D_extdim_time, read_1D_extdim_extdim_time !, read_2D, &
+      !& read_bcast_REAL_2D, read_2D_int, read_2D_time, read_2D_1time, read_2D_1lev_1time, read_3D, &
+      !& read_bcast_REAL_3D, read_3D_1time, read_3D_time, read_2D_extdim, read_2D_extdim_int, read_3D_extdim, &
+      !& nf
+
 
     TYPE(t_input_file), INTENT(INOUT)        :: input_file
     TYPE(input_variable_type), INTENT(INOUT) :: forcing_input_variable
 
     !INTEGER                                 :: file_id
     INTEGER                                  :: nc_dim_id, nc_var_id
+    REAL(wp), POINTER                        :: return_pointer_2(:)     !temporary pointer
     REAL(wp), POINTER                        :: return_pointer(:,:,:) !temporary pointer
     CHARACTER(LEN=*), PARAMETER              :: routine = modname//"::get_time_dimension"
 
@@ -1041,9 +1055,13 @@ CONTAINS
     CALL nf(nf_inq_dimlen(input_file%file_id, nc_dim_id, forcing_input_variable%length_time_series), routine)
     IF(ASSOCIATED(forcing_input_variable%timevalues)) DEALLOCATE(forcing_input_variable%timevalues)
     ALLOCATE(forcing_input_variable%timevalues(forcing_input_variable%length_time_series))
-    !CALL nf(nf_inq_varid(file_id, 'time', nc_var_id))
-    !CALL nf(nf_get_vara_double(file_id,                  nc_var_id,      (/ 1 /), &
+
+    ! We need the timevalues for get_data_and_update_field
+    CALL nf(nf_inq_varid(input_file%file_id, 'time', nc_var_id), routine)
+    !CALL nf(nf_get_vara_double(input_file%file_id,                  nc_var_id,      (/ 1 /), &
     !  & (/ forcing_input_variable%length_time_series /), forcing_input_variable%timevalues))
+
+    CALL read_1D(input_file%file_id, 'time',  forcing_input_variable%timevalues, return_pointer_2)
 
     return_pointer => input_file%Read_2d_time(forcing_input_variable%variable_name,               &
     &                 start_time_step=1, end_time_step=forcing_input_variable%length_time_series, &
@@ -1672,6 +1690,10 @@ CONTAINS
     INTEGER    :: i, j
 
     CALL inquire_declination(declination)
+
+    ! R: debug:
+    declination  =  0.006918_wp
+
 
     year_instant=get_year_day(date)            ! conversion of current time step from day-seconds to yearday-dayfraction format
     yearday = INT(year_instant)                ! number of day of the current time step since the beginning of the current year

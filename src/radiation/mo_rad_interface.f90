@@ -694,8 +694,7 @@ CONTAINS
       & calc_sky_view_fractions, calc_snow_albedo, Merge_albedos_of_vegtile, &
       & Has_minimal_radiation
     USE mo_jsb_time,          ONLY: is_time_experiment_start, is_time_ltrig_rad_m1
-    USE mo_jsb_control,       ONLY: jsbach_runs_standalone, write_stdalone_forcing
-
+    USE mo_jsb_control,       ONLY: jsbach_runs_standalone, write_stdalone_forcing, l_forcing_observations
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -795,8 +794,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,   DEBUG_VAR)
 
 
-! This is because we do not want to change the behaviour of the ECHAM Standalone driver
-IF (jsbach_runs_standalone()) THEN
+  ! This is because we do not want to change the behaviour of the ECHAM Standalone driver
+  IF (jsbach_runs_standalone() .AND. .NOT. l_forcing_observations) THEN
 #ifdef __ICON__
     !write(*,*) 'RRRRRRRRRRRR hier sollte der standalone lauf ankommen!!!' ! R: tut er auch und zwar ausschließlich
 
@@ -805,9 +804,7 @@ IF (jsbach_runs_standalone()) THEN
     ELSE
       l_trig_rad_m1=.FALSE.
     END IF
-    write(*,*) 'RRRRRRRRRRRRRRR ICON definiert und standalone. trigrad gelesen'
     ! R: current_datetime ist einen Zeitstep voraus im Driver, daher nie experiment start 0 true
-    WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRRRR  options%current_datetime:' , options%current_datetime
     IF (.NOT. is_time_experiment_start(options%current_datetime) .AND. .NOT. l_trig_rad_m1) RETURN
 
 !#else
@@ -817,8 +814,7 @@ IF (jsbach_runs_standalone()) THEN
     ! Update albedo only at experiment start, if model runs standalone or one time step before the radiation time step
     ! never RETURN !
 #endif
-ELSE
-    write(*,*) 'RRRRRRRRRRRRRRR Nicht standalone.'
+  ELSE
     !write(*,*) 'RRRRRRRRRRRR hier sollte der forcing lauf ankommen!!!' ! R: tut er auch und zwar ausschließlich
     ! Update albedo only at experiment start or if model runs standalone or one time step before the radiation time step
     ! Return if it is not experiment start AND AT THE SAME TIME we are not one time step before the radiation time step AND AT THE SAME TIME the model not runs standalone => wenn Standalone geht er hier IMMER rein!
@@ -834,9 +830,8 @@ ELSE
     
     ! Update albedo only at experiment start, if model runs standalone or one time step before the radiation time step
     IF (.NOT. is_time_experiment_start(options%current_datetime) .AND. &
-      & .NOT. is_time_ltrig_rad_m1(options%current_datetime, options%dtime, model%id) ) RETURN ! R: diese Zeile löschen
-END IF
-    write(*,*) 'RRRRRRRRRRRRRRR update albedo laeuft weiter nach trigrad beruecksichtigt.'
+      & .NOT. l_trig_rad_m1 ) RETURN ! R: diese Zeile löschen
+  END IF
 
 
 
@@ -925,7 +920,7 @@ END IF
 
     !> 0.9  Set day-or-night-switch
 
-    IF (jsbach_runs_standalone()) THEN
+    IF (jsbach_runs_standalone() .AND. .NOT. l_forcing_observations) THEN
 #ifdef __ICON__
       ! Use l_day from forcing
       WHERE (l_day_reminder(:) > 0.5_wp)
@@ -933,7 +928,6 @@ END IF
       ELSEWHERE
         l_day(:) = .FALSE.
       END WHERE
-      write(*,*) 'RRRRRRRRRRRRRRR ICON definiert und standalone. l_day_reminder gelesen'
 ! #elif
 !       ! Standalone with ECHAM
 !       !$claw expand parallel update savepoint=ser_jsb_rad_has_minimal_radiation_1 tile_name=tile%name
@@ -1275,32 +1269,29 @@ END IF
     dsl4jsb_Get_var2D_onChunk(A2L_, trig_rad_m1) ! in
 
     ! Update albedo only at experiment start, if model runs standalone or one time step before the radiation time step
-IF (jsbach_runs_standalone()) THEN
+    IF (jsbach_runs_standalone()) THEN
 ! We do not want to change the behaviour of the ECHAM Standalone driver:
 #ifdef __ICON__
-    dsl4jsb_Get_var2D_onChunk(A2L_, trig_rad_m1)      ! in
-    IF (trig_rad_m1(1) > 0.5_wp) THEN
-      l_trig_rad_m1=.TRUE.
-    ELSE
-      l_trig_rad_m1=.FALSE.
-    END IF
+      dsl4jsb_Get_var2D_onChunk(A2L_, trig_rad_m1)      ! in
+      IF (trig_rad_m1(1) > 0.5_wp) THEN
+        l_trig_rad_m1=.TRUE.
+      ELSE
+        l_trig_rad_m1=.FALSE.
+      END IF
 
-    IF (.NOT. is_time_experiment_start(options%current_datetime) .AND. .NOT. l_trig_rad_m1) RETURN
+      IF (.NOT. is_time_experiment_start(options%current_datetime) .AND. .NOT. l_trig_rad_m1) RETURN
 ! #else
 !     ! Update albedo only at experiment start, if model runs standalone or one time step before the radiation time step
 !     IF (.NOT. is_time_experiment_start(options%current_datetime) .AND. &
 !       & .NOT. is_time_ltrig_rad_m1(options%current_datetime, options%dtime, model%id) .AND. &
 !       & .NOT. jsbach_runs_standalone()) RETURN ! R: alle Zeilen kann man raus werfen, stdalone immer true und somit immer False
 #endif
-ELSE
-    ! Update albedo only at experiment start, if model runs standalone or one time step before the radiation time step
-    IF (.NOT. is_time_experiment_start(options%current_datetime) .AND. &
-      & .NOT. is_time_ltrig_rad_m1(options%current_datetime, options%dtime, model%id) .AND. &
-      & .NOT. jsbach_runs_standalone()) RETURN  ! R: Zeile kann man raus werfen, stdalone immer false und somit immer true
-END IF
-
-
-
+    ELSE
+      ! Update albedo only at experiment start, if model runs standalone or one time step before the radiation time step
+      IF (.NOT. is_time_experiment_start(options%current_datetime) .AND. &
+        & .NOT. is_time_ltrig_rad_m1(options%current_datetime, options%dtime, model%id) .AND. &
+        & .NOT. jsbach_runs_standalone()) RETURN  ! R: Zeile kann man raus werfen, stdalone immer false und somit immer true
+    END IF
 
     dsl4jsb_Get_memory(RAD_)
 

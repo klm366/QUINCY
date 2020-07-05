@@ -297,7 +297,7 @@ CONTAINS
     USE mo_jsb_grid_class,       ONLY: t_jsb_grid
     USE mo_jsb_grid,             ONLY: Get_grid
     USE mo_physical_constants,   ONLY: tmelt
-    USE mo_jsb_control, ONLY: jsbach_runs_standalone
+    USE mo_jsb_control,          ONLY: jsbach_runs_standalone, l_forcing_observations
   USE mo_jsb_time,   ONLY: jstep
 
     ! Arguments
@@ -486,30 +486,27 @@ CONTAINS
     l_newday = is_newday(options%current_datetime, options%dtime)
 
 
-! This is because we do not want to change the behaviour of the ECHAM Standalone driver
-IF (jsbach_runs_standalone()) THEN
+    ! This is because we do not want to change the behaviour of the ECHAM Standalone driver
+    IF (jsbach_runs_standalone().AND. .NOT. l_forcing_observations) THEN
 #ifdef __ICON__
-    !write(*,*) 'RRRRRRRRRRRR hier sollte der standalone lauf ankommen!!!' ! R: tut er auch und zwar ausschließlich
-    dsl4jsb_Get_var2D_onChunk(A2L_, newday_Merker)      ! in
-    IF (newday_Merker(1) == 1) THEN
-      l_newday=.TRUE.
-    ELSE
-      l_newday=.FALSE.
-    END IF
-   write(*,*) 'RRRRRRRRRRRR hier sollte er nur im Driver ankommen 2 !!!', l_newday 
-#else
-    write(*,*) 'RRRRRRRRRRRR hier sollte er nie ankommen 2 !!!'  
+      !write(*,*) 'RRRRRRRRRRRR hier sollte der standalone lauf ankommen!!!' ! R: tut er auch und zwar ausschließlich
+      dsl4jsb_Get_var2D_onChunk(A2L_, newday_Merker)      ! in
+      IF (newday_Merker(1) == 1) THEN
+        l_newday=.TRUE.
+      ELSE
+        l_newday=.FALSE.
+      END IF
 #endif
-ELSE
-    !write(*,*) 'RRRRRRRRRRRR hier sollte der forcing lauf ankommen!!!' ! R: tut er auch und zwar ausschließlich
-    ! Update albedo only at experiment start or if model runs standalone or one time step before the radiation time step
-    ! Return if it is not experiment start AND AT THE SAME TIME we are not one time step before the radiation time step AND AT THE SAME TIME the model not runs standalone => wenn Standalone geht er hier IMMER rein!
-    IF (l_newday) THEN
-      newday_Merker = 1
     ELSE
-      newday_Merker = 0
+      !write(*,*) 'RRRRRRRRRRRR hier sollte der forcing lauf ankommen!!!' ! R: tut er auch und zwar ausschließlich
+      ! Update albedo only at experiment start or if model runs standalone or one time step before the radiation time step
+      ! Return if it is not experiment start AND AT THE SAME TIME we are not one time step before the radiation time step AND AT THE SAME TIME the model not runs standalone => wenn Standalone geht er hier IMMER rein!
+      IF (l_newday) THEN
+        newday_Merker = 1
+      ELSE
+        newday_Merker = 0
+      END IF
     END IF
-END IF
 
     timestep = timestep_in_days(options%dtime)
 
