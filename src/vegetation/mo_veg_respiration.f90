@@ -86,7 +86,8 @@ CONTAINS
   !!
   !! Output: maintenance respiration 
   !-----------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL FUNCTION calc_maintenance_respiration( t_wood                , &
+  PURE ELEMENTAL FUNCTION calc_maintenance_respiration( leaf_carbon           , &
+                                                        t_wood                , &
                                                         t_wood_mavg           , &
                                                         t_root                , &
                                                         t_root_mavg           , &
@@ -96,11 +97,12 @@ CONTAINS
                                                         RESULT(maint_respiration)
 
     USE mo_kind,                    ONLY: wp
-    USE mo_veg_constants,           ONLY: fmaint_rate_base, fmaint_rate_wood
+    USE mo_jsb_math_constants,      ONLY: eps8
+    USE mo_veg_constants,           ONLY: fmaint_rate_base, fmaint_rate_wood, k_maint_resp_suppress
 
     IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
+
+    REAL(wp), INTENT(in) :: leaf_carbon              !< carbon content of leafs (veg_pool)
     REAL(wp), INTENT(in) :: t_wood                   !< temperature of the stem (K) 
     REAL(wp), INTENT(in) :: t_wood_mavg              !< average temperature for acclimation (K) 
     REAL(wp), INTENT(in) :: t_root                   !< temperature of the roots (K)
@@ -110,15 +112,20 @@ CONTAINS
     REAL(wp), INTENT(in) :: fine_root_nitrogen       !< nitrogen content of sapwood (mol N / m2)
                                                      ! (calculated in photosynthesis; µmol C / m2 / s)
     REAL(wp)             :: maint_respiration        !< maintenance respiration (µmol C / m2 / s)
-    ! ---------------------------
-    ! 0.2 Local
+
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_maintenance_respiration'
 
-
+    !> 1.0 calculate maintenance respiration
     maint_respiration = temperature_response_respiration(t_wood, t_wood_mavg) * & 
                         fmaint_rate_wood * sap_wood_nitrogen + &
                         temperature_response_respiration(t_root, t_root_mavg) * & 
                         fmaint_rate_base * ( coarse_root_nitrogen + fine_root_nitrogen ) 
+
+    !> 2.0 reduce maintenance respiration if there are no leafs
+    !! 
+    IF (leaf_carbon < eps8) THEN
+      maint_respiration = maint_respiration * k_maint_resp_suppress
+    ENDIF
      
   END FUNCTION calc_maintenance_respiration
 

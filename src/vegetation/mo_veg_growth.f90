@@ -478,12 +478,14 @@ CONTAINS
     !> 1.1 calculate N-based maintenance respiration rate (as potential maitenance rate) and 
     !!     update N-specific maintenance respiration rate 
     !!
-    maint_respiration_pot(:) = calc_maintenance_respiration(t_air(:), t_air_tacclim_mavg(:)             , & 
-                                                            t_soil_root(:), t_soil_root_tacclim_mavg(:) , &  
-                                                            veg_pool%sap_wood%nitrogen(:)               , & 
-                                                            veg_pool%fine_root%nitrogen(:)              , &
-                                                            veg_pool%coarse_root%nitrogen(:)            ) + & 
-                               maint_respiration_leaf(:) 
+    maint_respiration_pot(:) = maint_respiration_leaf(:) + calc_maintenance_respiration( &
+                               veg_pool%leaf%carbon(:)                     , &
+                               t_air(:), t_air_tacclim_mavg(:)             , & 
+                               t_soil_root(:), t_soil_root_tacclim_mavg(:) , &  
+                               veg_pool%sap_wood%nitrogen(:)               , & 
+                               veg_pool%fine_root%nitrogen(:)              , &
+                               veg_pool%coarse_root%nitrogen(:)            )
+                                
     fmaint_rate_root(:) = fmaint_rate_base * temperature_response_respiration(t_soil_root(:), t_soil_root_tacclim_mavg(:))
 
     !> 1.2 calculate utrient demand scalars
@@ -1930,8 +1932,7 @@ CONTAINS
 
     USE mo_jsb_math_constants,    ONLY: one_day, eps8
     USE mo_veg_constants,         ONLY: tau_labile, fresp_growth, resorp_fract_leaf, igrass, itree, &
-                                        fstore_leaf_max, fstore_fine_root_max, fstore_sap_wood_max, &
-                                        k_resp_suppress_grass, k_resp_suppress_tree
+                                        fstore_leaf_max, fstore_fine_root_max, fstore_sap_wood_max
     dsl4slm_Use_memory_a_veg
 
     IMPLICIT NONE
@@ -1977,20 +1978,9 @@ CONTAINS
     
     !> 1.0 target size of labile pool
     !! 
-    !! This is taken as the average idaily input or maintenance requirements of the last week 
+    !! This is taken as the average daily input or maintenance requirements of the last week 
     !!  scaled to the default turnover time of the labile pool
-    !!  for grasses after leaf termination this is reduced to a tenth of respiration to account 
-    !!  for reduced fine root respiration in dormant roots
-    ! grass & trees
     target_labile_pool_carbon(:) = MAX(gpp_mavg(:) , maint_respiration_mavg(:)) * one_day / 1.e6_wp * tau_labile
-    ! grass 
-    WHERE(lctlib_growthform == igrass .AND. veg_pool_leaf_carbon(:) < eps8)
-       target_labile_pool_carbon(:) = k_resp_suppress_grass * maint_respiration_mavg(:) * one_day / 1.e6_wp * tau_labile 
-    ENDWHERE
-    ! trees
-    WHERE(lctlib_growthform == itree .AND. veg_pool_leaf_carbon(:) < eps8)
-       target_labile_pool_carbon(:) = k_resp_suppress_tree * maint_respiration_mavg(:) * one_day / 1.e6_wp * tau_labile
-    ENDWHERE
 
     !! for N and P this corresponds to the current growth C:N:P in the target labile pool 
     target_labile_pool_nitrogen(:)   = target_labile_pool_carbon(:)    * growth_req_n_mavg(:)
