@@ -152,7 +152,7 @@ CONTAINS
       & initval_r=283.15_wp )  ! R: I just invented a value to start with...
 
 
-  CALL jsb_add_var( mem, 'DEBUG_VAR', mem%DEBUG_VAR,       &
+    CALL jsb_add_var( mem, 'DEBUG_VAR', mem%DEBUG_VAR,       &
       & hgrid, surface,                                                      &
       & t_cf('DEBUG_VAR', 'K', ''),                                    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &

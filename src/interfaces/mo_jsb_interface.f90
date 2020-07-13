@@ -90,8 +90,8 @@ CONTAINS
     & alb_vis_dif,      &
     & alb_nir_dif,      &
     & CO2_flux,         &
+    & DEBUG_VAR,        &
     ! For lakes (optional):
-  & DEBUG_VAR, &
     & drag_wtr, drag_ice,                                               & !< in
     & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,               & !< in
     & t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice,               & !< in
@@ -151,7 +151,7 @@ CONTAINS
       & CO2_air           (:)
     ! For lakes:
     REAL(wp), INTENT(in), OPTIONAL ::    &
-   & DEBUG_VAR             (:), &
+      & DEBUG_VAR         (:), &
       & drag_wtr          (:), &
       & drag_ice          (:), &
       & t_acoef_wtr       (:), &
@@ -252,7 +252,6 @@ CONTAINS
     CALL update_atm2land(                           &
       & tile,                                       &
       & model%options(no_omp_thread),               &
-    & DEBUG_VAR            = DEBUG_VAR(:),              &
       & t_air              = t_air(:),              &
       & q_air              = q_air(:),              &
       & rain               = rain(:),               &
@@ -273,6 +272,7 @@ CONTAINS
       & pch                = pch(:),                &
       & cos_zenith_angle   = cos_zenith_angle(:),   &
       & CO2_air            = CO2_air(:),            &
+      & DEBUG_VAR          = DEBUG_VAR,             &
       ! For lakes:
       & drag_wtr           = drag_wtr,              &
       & drag_ice           = drag_ice,              &

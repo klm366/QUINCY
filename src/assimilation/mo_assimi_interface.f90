@@ -367,12 +367,6 @@ CONTAINS
     ! Go
 
     CALL inquire_declination(declination) ! out
-                                          ! R: do not put this in elemental procedure as it would not be pure...
-                                          ! e.g. declination = 0.006918_wp
-
-    ! R: only to debug the js4 driver:
-    declination = 0.006918_wp
-
 
     IF (dsl4jsb_Lctlib_param(NitrogenScalingFlag)) THEN
       DO i=1,ncanopy

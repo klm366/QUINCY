@@ -84,7 +84,7 @@ PROGRAM jsb4_driver
 
   ! Namelists
   USE mo_master_nml,                ONLY: read_master_namelist
-  USE mo_master_config,             ONLY: isRestart !, setRestart
+  USE mo_master_config,             ONLY: master_component_models, isRestart !, setRestart
   USE mo_nml_crosscheck,            ONLY: atm_crosscheck
   USE mo_nml_crosscheck,            ONLY: land_crosscheck
 
@@ -295,7 +295,8 @@ PROGRAM jsb4_driver
   INTEGER                                :: yr_perp  = -99999  ! Year if (lyr_perp == .TRUE.). We need it as a dummy.
   REAL(wp)                               :: time_of_day, time_of_day_rt, orbit_date, orbit_date_rt, &
     &                                       rasc_sun, decl_sun, dist_sun, flx_ratio
-  REAL(wp), ALLOCATABLE                  :: lon(:,:), lat(:,:), coslon(:,:), coslat(:,:), sinlon(:,:), sinlat(:,:)
+  REAL(wp), POINTER                      :: lon(:,:), lat(:,:)
+  REAL(wp), ALLOCATABLE                  :: coslat(:,:), sinlat(:,:)
   REAL(wp), ALLOCATABLE                  :: daylight_frc(:,:) ! daylight fraction (0 or 1) with diurnal cycle
   REAL(wp), POINTER                      :: cecc, cobld, clonp
   INTEGER , POINTER                      :: icosmu0
@@ -470,7 +471,7 @@ PROGRAM jsb4_driver
  
   ! Read basic namelists for initial setup of the model
   ! Reads master namelists of ICON (for JS4 standalone case): master_nml, master_time_control_nml, master_model_nml
-  master_namelist_status = read_master_namelist('NAMELIST_JS4-standalone_master')
+  master_namelist_status = read_master_namelist('icon_master.namelist')
 
   ! Initialize global registry of lon-lat grids
   CALL lonlat_grids%init()
@@ -482,13 +483,14 @@ PROGRAM jsb4_driver
     ! Reads attributes and namelists for all available domains from restart file.
     ! These namelist values will overwrite the model default, and will later be overwritten if the user has
     ! specified something different for this integration.
-    CALL read_restart_header("atm") ! atm is the modelType
+    CALL read_restart_header("jsbach") ! atm is the modelType
     ENDIF
 
   ! Reads master namelists of ICON (for JS4 standalone case): time_nml
   ! Reads ICON-A atmo namelists (for JS4 standalone case): 
   ! parallel_nml, run_nml, io_nml, output_nml, grid_nml, gridref_nml and calls init_grid_configuration
-  CALL read_atmo_namelists_for_jsb_standalone('NAMELIST_JS4-standalone_master')
+    ! CALL read_atmo_namelists_for_jsb_standalone('NAMELIST_JS4-standalone_jsbach', 'icon_master.namelist')
+    CALL read_atmo_namelists_for_jsb_standalone(TRIM(master_component_models(1)%model_namelist_filename), 'icon_master.namelist')
 
   ! We want to avoid reading the whole dynamics_nml, but we need iequations in compute_restart_settings
   iequations = 3 ! 0: shallow water model
@@ -500,7 +502,7 @@ PROGRAM jsb4_driver
   ! Set times and events
   CALL compute_timestep_settings()
   CALL compute_restart_settings()
-  CALL compute_date_settings("atm", dt_restart, nsteps)
+  CALL compute_date_settings("jsbach", dt_restart, nsteps)
   CALL initEventManager(time_config%tc_exp_refdate)
 
   ! Check if compiled with JSBACH and if in echam_phy_config llake=true but JSBACH is false
@@ -551,7 +553,7 @@ PROGRAM jsb4_driver
 
   ! Reads master   namelists of JSBACH4: jsb_control_nml, jsb_model_nml.
   ! Reads inferior namelists of JSBACH4: NAMELIST_JS4-standalone_jsbach: jsb_model_nml and the process_nmls.
-  CALL jsbach_setup_models('NAMELIST_JS4-standalone_master')
+  CALL jsbach_setup_models('icon_master.namelist')
 
 
   ! -------------------------------------------------------------------------------------------------------------------------------
@@ -620,7 +622,7 @@ PROGRAM jsb4_driver
 
   ! Import patches, perform domain decomposition and define vertical coordinates
   CALL build_decomposition(num_lev, nshift, is_ocean_decomposition = .false.) ! all in
-
+print*,'EEE ',SIZE(p_patch), p_patch(1)%nblks_c, nproma, p_patch(1)%nlev,p_patch(1)%nlevp1
 
   !-------------------------------------------------------------------------------------------------------------------------------------
   ! 5. Construct horizontal and vertical grid interpolation state, compute interpolation coefficients.
@@ -716,23 +718,25 @@ PROGRAM jsb4_driver
   ! allocate memory for atmospheric/oceanic external data and optionally read those data from netCDF file.
   CALL init_ext_data (p_patch(1:), p_int_state(1:), ext_data) ! inout, in, inout.  
                                                               ! Note, p_int_state is used only for iforcing == inwp.
+  print*,'XXX 1'
   ! Import vertical grid/ define vertical coordinate
   CALL allocate_vct_atmo(p_patch(1)%nlevp1)
   DO jg = 1, n_dom
     ext_data(jg)%atm%topography_c(1:nproma,1:p_patch(jg)%nblks_c) = 0.0_wp
   ENDDO
-
+  print*,'XXX 2 '
 
   ! R: This is only necessary because the namelist output needs a atmospheric zaxis
   !    (would not be necessary for this driver and could only be changed in ICON)
-  CALL construct_vertical_grid(p_patch(1:),       & ! inout
-                              & p_int_state(1:),  & ! in
-                              & ext_data,         & ! inout, is needed for CALL init_vert_coord to provide ext_data(jg)%atm%topography_c
-                              & vct_a,            & ! inout, hight of atmo level in m.
-                              & vct_b,            & ! inout
-                              & vct,              & ! inout
-                              & nflatlev)           ! inout, nflatlev = 0 even when num_lev=1 or =31
+  ! CALL construct_vertical_grid(p_patch(1:),       & ! inout
+  !                             & p_int_state(1:),  & ! in
+  !                             & ext_data,         & ! inout, is needed for CALL init_vert_coord to provide ext_data(jg)%atm%topography_c
+  !                             & vct_a,            & ! inout, hight of atmo level in m.
+  !                             & vct_b,            & ! inout
+  !                             & vct,              & ! inout
+  !                             & nflatlev)           ! inout, nflatlev = 0 even when num_lev=1 or =31
 
+  print*,'XXX 3'
 
   !-------------------------------------------------------------------------------------------------------------------------------------
   ! 9. Horizontal and vertical grid(s) are now defined. Assign values to derived variables in the configuration states
@@ -817,7 +821,7 @@ PROGRAM jsb4_driver
     !END DO
     CALL read_restart_files( p_patch(jg), n_dom) ! n_dom = 1, from CALL init_grid_configuration() in read_atmo_namelists_for_jsb_standalone
 ! R: time_config%tc_current_date nicht im Restart File! tc_startdate = "1979-03-20T00:00:00.000" ist drin. Kommt aus nml!!!
-    WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   Restart'
+    ! WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   Restart'
     !DO jg = 1,n_dom
     !  IF (.NOT. p_patch(jg)%ldom_active) CYCLE
     !    IF (echam_phy_config(jg)%ljsb) THEN
@@ -826,7 +830,7 @@ PROGRAM jsb4_driver
     !END DO
     CALL jsbach_init_after_restart(model_id)
   ELSE
-    WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   kein Restart'
+    ! WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   kein Restart'
     l_shift_one_timestep=.TRUE.
   ENDIF
 
@@ -1011,7 +1015,7 @@ PROGRAM jsb4_driver
     datetime_current(jg)%ptr => newDatetime(mtime_current) ! R: für jedes Modell datetime_current setzen
   END DO
 
-  restartDescriptor => createRestartDescriptor("atm")
+  restartDescriptor => createRestartDescriptor("jsbach")
   jstep0 = 0
   restartAttributes => getAttributesForRestarting()
   IF (isRestart()) THEN
@@ -1138,8 +1142,8 @@ PROGRAM jsb4_driver
     !END IF
     ! R: debug remain-Änderung
     mtime_current = mtime_current + model_time_step
-    WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver U1 mtime_current after update at begin of loop', mtime_current
-    WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver U1 mtime_forcing after update at begin of loop', mtime_forcing
+    ! WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver U1 mtime_current after update at begin of loop', mtime_current
+    ! WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver U1 mtime_forcing after update at begin of loop', mtime_forcing
 
     ! store state of output files for restarting purposes
     IF (output_mode%l_nml .AND. jstep>=0 ) THEN
@@ -1217,21 +1221,21 @@ PROGRAM jsb4_driver
     jbe = patch%cells%  end_blk(rle,ncd) ! R: jbe differs. e.g. 244744400, 251860448, 176309936, -2013259902
 
 ! !$OMP PARALLEL DO PRIVATE(jb,jcs,jce)
-!     nblks=0
-!     DO jb = jbs,jbe ! loop über den block index
-!       nblks = nblks + 1
-!       IF (jb == 1)  THEN        ! R: we want only jce max
-!         CALL get_indices_c(patch,  & ! in 
-!             &                   jb,  & ! in  index of block loop
-!             &                   jbs, & ! in  start indice of block loop
-!             &                   jbe, & ! in  end   indice of block loop
-!             &                   jcs, & ! out start indice of columns loop
-!             &                   jce, & ! out end   indice of columns loop
-!             &                   rls, & ! in  row limit start
-!             &                   rle)   ! in  row limit end
-!         nproma = jce
-!       END IF
-!     END DO
+    ! nblks=0
+    ! DO jb = jbs,jbe ! loop über den block index
+    !   nblks = nblks + 1
+    !   IF (jb == 1)  THEN        ! R: we want only jce max
+    !     CALL get_indices_c(patch,  & ! in 
+    !         &                   jb,  & ! in  index of block loop
+    !         &                   jbs, & ! in  start indice of block loop
+    !         &                   jbe, & ! in  end   indice of block loop
+    !         &                   jcs, & ! out start indice of columns loop
+    !         &                   jce, & ! out end   indice of columns loop
+    !         &                   rls, & ! in  row limit start
+    !         &                   rle)   ! in  row limit end
+    !     nproma = jce
+    !   END IF
+    ! END DO
 ! !$OMP END PARALLEL DO
     ! alternative nblks:
     !call model%Get_top_tile(tile)
@@ -1242,14 +1246,15 @@ PROGRAM jsb4_driver
     !R: nblks wird nicht direkt hier oben bestimmt, muß ich woanders her holen:
     !nblks  = p_patch(1)%cell%nblks_c
     !nblks=20480
-    ! R: 20480 Gitterpunkt bei R2B4. aproma = 16, es sollte also 1280 Blocks global geben. Auf 32 Prozessoren aufgeteilt wären das 40 Blocks pro Prozessor!
+    ! R: 20480 Gitterpunkt bei R2B4. nproma = 16, es sollte also 1280 Blocks global geben. Auf 32 Prozessoren aufgeteilt wären das 40 Blocks pro Prozessor!
+    print*,'AAA nproma,nblks = ',nproma,nblks
 
     ! Now as we have nblks we can allocate
     IF (.NOT.(ALLOCATED(t_air))) THEN
       ! R: brauche ich wahrscheinlich nicht als lokale Variablen hier da sie von jsbach_init -> call tile%init angelegt werden. !!!!!
       ! Vars used in interface_full
       ! in vars (forcing) not necessary:
-      ALLOCATE(DEBUG_VAR (nproma, nblks))
+      ALLOCATE(DEBUG_VAR          (nproma, nblks))
       ALLOCATE(t_air              (nproma, nblks)) ! R: e.g. (16, 50)
       ALLOCATE(q_air              (nproma, nblks))
       ALLOCATE(rain               (nproma, nblks))
@@ -1329,49 +1334,49 @@ PROGRAM jsb4_driver
 
       !Set dummy values.   RRR Kann ich die zum Allocaten hoch schieben??? RRRRRR
       ! in vars: not necessary, set these dummy values only for testing purpose:
-      t_air             = 290        ! Kelvin
-      q_air             = 0.1        ! kg kg-1
-      rain              = 0.00004    ! kg/m2/s
-      snow              = 0.000001   ! kg/m2/s
-      wind_air          = 0.1        ! air_wind_speed, m/s
-      wind_10m          = 0.2        ! air_wind_speed, m/s
-      lw_srf_down       = 340        ! W/m2   
-      swvis_srf_down    = 120        ! W/m2
-      swnir_srf_down    = 100        ! W/m2
-      swpar_srf_down    = 60         ! fictional only for testing purpuses
-      fract_par_diffuse = 0.5        ! fictional only for testing purpuses
-      press_srf         = 101325.0   ! N/m2 =Pa
-      drag_srf          = 0          ! fictional only for testing purpuses
-      t_acoef           = 0.0000     ! fictional only for testing purpuses
-      t_bcoef           = 0.0000     ! fictional only for testing purpuses
-      q_acoef           = 0.0000     ! fictional only for testing purpuses
-      q_bcoef           = 0.0000     ! fictional only for testing purpuses
-      pch               = 0.0000     ! fictional only for testing purpuses
-      cos_zenith_angle  = 0.5        ! fictional only for testing purpuses
-      CO2_air           = 0.00052868 ! this is in mol: 0.00034800
-      trig_rad_m1       = 0          !
-      newday_Merker       = 1          !
+      t_air             = 290._wp        ! Kelvin
+      q_air             = 0.1_wp        ! kg kg-1
+      rain              = 0.00004_wp    ! kg/m2/s
+      snow              = 0.000001_wp   ! kg/m2/s
+      wind_air          = 0.1_wp        ! air_wind_speed, m/s
+      wind_10m          = 0.2_wp        ! air_wind_speed, m/s
+      lw_srf_down       = 340._wp        ! W/m2   
+      swvis_srf_down    = 120._wp        ! W/m2
+      swnir_srf_down    = 100._wp        ! W/m2
+      swpar_srf_down    = 60._wp         ! fictional only for testing purpuses
+      fract_par_diffuse = 0.5_wp        ! fictional only for testing purpuses
+      press_srf         = 101325.0_wp   ! N/m2 =Pa
+      drag_srf          = 0._wp          ! fictional only for testing purpuses
+      t_acoef           = 0.0000_wp     ! fictional only for testing purpuses
+      t_bcoef           = 0.0000_wp     ! fictional only for testing purpuses
+      q_acoef           = 0.0000_wp     ! fictional only for testing purpuses
+      q_bcoef           = 0.0000_wp     ! fictional only for testing purpuses
+      pch               = 0.0000_wp     ! fictional only for testing purpuses
+      cos_zenith_angle  = 0.5_wp        ! fictional only for testing purpuses
+      CO2_air           = 0.00052868_wp ! this is in mol: 0.00034800
+      trig_rad_m1       = 0._wp          !
+      newday_Merker       = 1._wp          !
       l_day_reminder = .true.
       ! out vars, necessary but only dummy values for standalone:
-      t_srf_fromJS4         = 0   ! fictional
-      t_eff_srf          = 0   ! fictional
-      qsat_srf           = 0   ! fictional
-      s_srf              = 0   ! fictional
-      fact_q_air_fromJS4    = 0   ! fictional
-      fact_qsat_srf_fromJS4 = 0   ! fictional
-      evapotrans         = 0   ! fictional! R: land2atmo Umrechung
-      latent_hflx        = 0   ! fictional! R: land2atmo Umrechung
-      sensible_hflx      = 0   ! fictional! R: land2atmo Umrechung
-      grnd_hflx          = 0   ! fictional
-      grnd_hcap          = 0   ! fictional
-      rough_h_srf_fromJS4   = 0   ! fictional
-      rough_m_srf_fromJS4   = 0   ! fictional
-      q_snocpymlt        = 0   ! fictional! R: land2atmo Umrechung
-      alb_vis_dir        = 0   ! fictional
-      alb_nir_dir        = 0   ! fictional
-      alb_vis_dif        = 0   ! fictional
-      alb_nir_dif        = 0   ! fictional
-      CO2_flux           = 0   ! fictional! R: land2atmo Umrechung
+      t_srf_fromJS4         = 0._wp   ! fictional
+      t_eff_srf          = 0._wp   ! fictional
+      qsat_srf           = 0._wp   ! fictional
+      s_srf              = 0._wp   ! fictional
+      fact_q_air_fromJS4    = 0._wp   ! fictional
+      fact_qsat_srf_fromJS4 = 0._wp   ! fictional
+      evapotrans         = 0._wp   ! fictional! R: land2atmo Umrechung
+      latent_hflx        = 0._wp   ! fictional! R: land2atmo Umrechung
+      sensible_hflx      = 0._wp   ! fictional! R: land2atmo Umrechung
+      grnd_hflx          = 0._wp   ! fictional
+      grnd_hcap          = 0._wp   ! fictional
+      rough_h_srf_fromJS4   = 0._wp   ! fictional
+      rough_m_srf_fromJS4   = 0._wp   ! fictional
+      q_snocpymlt        = 0._wp   ! fictional! R: land2atmo Umrechung
+      alb_vis_dir        = 0._wp   ! fictional
+      alb_nir_dir        = 0._wp   ! fictional
+      alb_vis_dif        = 0._wp   ! fictional
+      alb_nir_dif        = 0._wp   ! fictional
+      CO2_flux           = 0._wp   ! fictional! R: land2atmo Umrechung
       ! in vars for lakes, optional: Not necessary only for testing purpose:
 !       drag_wtr          =  0.0000  ! fictional only for testing purpuses
 !       drag_ice          =  0.0000  ! fictional only for testing purpuses
@@ -1384,22 +1389,22 @@ PROGRAM jsb4_driver
 !       q_acoef_ice       =  0.0000  ! fictional only for testing purpuses
 !       q_bcoef_ice       =  0.0000  ! fictional only for testing purpuses
       ! out vars for lakes, necessary for standalone, but only dummy values, optional:
-      t_lwtr            =  0.0000  ! fictional
-      qsat_lwtr         =  0.0000  ! fictional
-      s_lwtr            =  0.0000  ! fictional
-      evapo_wtr         =  0.0000  ! fictional! R: land2atmo Umrechung
-      latent_hflx_wtr   =  0.0000  ! fictional! R: land2atmo Umrechung
-      sensible_hflx_wtr =  0.0000  ! fictional! R: land2atmo Umrechung
-      albedo_lwtr       =  0.0000  ! fictional
-      t_lice            =  0.0000  ! fictional
-      qsat_lice         =  0.0000  ! fictional
-      s_lice            =  0.0000  ! fictional
-      evapo_ice         =  0.0000  ! fictional
-      latent_hflx_ice   =  0.0000  ! fictional! R: land2atmo Umrechung
-      sensible_hflx_ice =  0.0000  ! fictional ! R: land2atmo Umrechung
-      albedo_lice       =  0.0000  ! fictional
-      ice_fract_lake    =  0.0000  ! fictional
-      evapopot          =  0.0000  ! fictional ! R: land2atmo Umrechung
+      t_lwtr            =  0.0000_wp  ! fictional
+      qsat_lwtr         =  0.0000_wp  ! fictional
+      s_lwtr            =  0.0000_wp  ! fictional
+      evapo_wtr         =  0.0000_wp  ! fictional! R: land2atmo Umrechung
+      latent_hflx_wtr   =  0.0000_wp  ! fictional! R: land2atmo Umrechung
+      sensible_hflx_wtr =  0.0000_wp  ! fictional! R: land2atmo Umrechung
+      albedo_lwtr       =  0.0000_wp  ! fictional
+      t_lice            =  0.0000_wp  ! fictional
+      qsat_lice         =  0.0000_wp  ! fictional
+      s_lice            =  0.0000_wp  ! fictional
+      evapo_ice         =  0.0000_wp  ! fictional
+      latent_hflx_ice   =  0.0000_wp  ! fictional! R: land2atmo Umrechung
+      sensible_hflx_ice =  0.0000_wp  ! fictional ! R: land2atmo Umrechung
+      albedo_lice       =  0.0000_wp  ! fictional
+      ice_fract_lake    =  0.0000_wp  ! fictional
+      evapopot          =  0.0000_wp  ! fictional ! R: land2atmo Umrechung
 
       IF ( l_forcing_observations ) THEN
         !IF ( model_time_step > 86400 sec. ) THEN
@@ -1408,12 +1413,7 @@ PROGRAM jsb4_driver
 
         CALL init_forcing(model_id)
 
-        ALLOCATE(lon(nproma,nblks))
-        ALLOCATE(lat(nproma,nblks))
-
-        ALLOCATE(coslon(nproma,nblks))
         ALLOCATE(coslat(nproma,nblks))
-        ALLOCATE(sinlon(nproma,nblks))
         ALLOCATE(sinlat(nproma,nblks))
         ALLOCATE(daylight_frc(nproma, nblks))
 
@@ -1542,20 +1542,83 @@ PROGRAM jsb4_driver
         !         evapopot = 1._wp
         !         evapotrans = 0._wp
       ENDIF
-    ENDIF
  
-    IF ( l_forcing_observations ) THEN
       remain = mod((jstep - 1),( forcing_steps_per_file * forcing_synchron_factor ))
+
+      ! Find out time_of_day and orbit_date of the current time step
+      ! Note: In contrast to ECHAM5 orbit_date is not used anymore in ICON-A!
+      !       Instead orbit_date_rt is used for both subsequent calls to find 
+      !       out decl_sun and dist_sun. However, we need time_of_day because
+      !       this is differentiated from time_of_day_rt when we call solar_parameters.
+
+      ! Read in forcing file once an day. We could read it more but not less frequent
+      !IF ( is_newday(mtime_old_jsb, dtime) ) THEN ! normally: mtime_old_jsb
+      mtime_forcing_ptr => mtime_forcing
+
+      l_orbvsop87   => echam_rad_config(jg)% l_orbvsop87 ! Default: .TRUE.
+      cecc          => echam_rad_config(jg)% cecc
+      cobld         => echam_rad_config(jg)% cobld
+      clonp         => echam_rad_config(jg)% clonp
+
+      CALL get_orbit_times(l_orbvsop87, mtime_forcing_ptr, lyr_perp, yr_perp, & ! in
+        &                  time_of_day, orbit_date)            ! out. 
+      !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRRRR time_of_day:' ,time_of_day, 'orbit_date:', orbit_date
+
+      ! Find out time_of_day_rt and orbit_date_rt of the radiation transfer of the current time step
+      CALL get_orbit_times(l_orbvsop87, mtime_forcing_ptr, lyr_perp, yr_perp, & ! in
+        &                  time_of_day_rt, orbit_date_rt)      ! out
+      !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRRRR time_of_day_rt:' ,time_of_day_rt,'orbit_date_rt:', orbit_date_rt
+
+      ! Find out decl_sun and dist_sun
+      !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRRRR  l_orbvsop87:' , l_orbvsop87 ! T
+      IF (l_orbvsop87) THEN
+        CALL orbit_vsop87(orbit_date_rt, rasc_sun, decl_sun, dist_sun) ! in, out, out, out
+      ELSE
+        CALL orbit_kepler(cecc, cobld, clonp, orbit_date_rt, & ! in 
+          &               rasc_sun, decl_sun, dist_sun)        ! out
+      END IF
+      !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRRRR  decl_sun:' , decl_sun ! decl_sun: -0.396146538758411 
+
+      ! R: debug
+      !   IF ( jstep /= 73 ) THEN
+
+      ! Get the solar zenith angle
+
+      !TODO: get from jsb grid? but how to name such a function get_lon_from_grid?
+      !      and if, shouldn't then also get_nproma should be called get_nproma_from_grid?
+      ! Note, this can be done here because we get lon lat for the whole horizontal grid!
+      lon => get_lon(patch)
+      lat => get_lat(patch)
+      coslat(:,:) = COS(pi * lat(:,:) / 180._wp)
+      sinlat(:,:) = SIN(pi * lat(:,:) / 180._wp)
+
+      !   END IF ! R: debug
+      ! With the informations above we can determine the cos_zenith_angle of the current time step
+      icosmu0        => echam_rad_config(jg)% icosmu0        ! defines if and how cosmu0 is defined for extended sunlit areas
+      ldiur          => echam_rad_config(jg)% ldiur          ! .TRUE.
+      l_sph_symm_irr => echam_rad_config(jg)% l_sph_symm_irr ! .FALSE.
+      dt_ext         = 0.0_wp                                ! time interval over which the insolated area is extended, for us =0
+
+      CALL solar_parameters(decl_sun,         time_of_day,     & ! in
+        &                   icosmu0,          dt_ext,          & ! in
+        &                   ldiur,            l_sph_symm_irr,  & ! in
+        &                   patch,                             & ! in 
+        &                   cos_zenith_angle, daylight_frc)      ! out
+
+      cos_zenith_angle(:,:) = cos_zenith_angle(:,:) * daylight_frc(:,:)
+
+      ! WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRRRR ORBIT: mtime_forcing: ',mtime_forcing, 'time_of_day: ',time_of_day
+
     ELSE
       remain = mod((jstep),( forcing_steps_per_file * forcing_synchron_factor ) )
     END IF
-    WRITE(*,*) 'RRRRRRRRRRRRRRRRRRR remain:' , remain, 'isRestart()' , isRestart(), 'l_first_step_in_restart', l_first_step_in_restart, & 
-      & 'forcing_synchron_factor', forcing_synchron_factor
+    ! WRITE(*,*) 'RRRRRRRRRRRRRRRRRRR remain:' , remain, 'isRestart()' , isRestart(), 'l_first_step_in_restart', l_first_step_in_restart, & 
+    !   & 'forcing_synchron_factor', forcing_synchron_factor
     !WRITE (*,*)                                                 &
     !  &                     mtime_forcing%date%year,mtime_forcing%date%month,mtime_forcing%date%day, 'T',   &
     !  &                     mtime_forcing%time%hour,mtime_forcing%time%minute,mtime_forcing%time%second, 'Z'
 
-    IF (  jstep == 1 .OR.  remain == 0 .OR. l_first_step_in_restart ) THEN  ! Read in the forcing file (with the known nblks from above)
+    ! IF (  jstep == 1 .OR.  remain == 0 .OR. l_first_step_in_restart ) THEN  ! Read in the forcing file (with the known nblks from above)
                                                                             ! Check if jstep is the first time step or a mulible of the 
                                                                             ! time steps * forcing_synchron_factor 
       !step_in_forcing_file = 1
@@ -1565,84 +1628,18 @@ PROGRAM jsb4_driver
         &                     mtime_forcing%time%hour,mtime_forcing%time%minute,mtime_forcing%time%second, 'Z'
       ! WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Drivermtime_forcing_char:' , mtime_forcing_char ! 19790101T002000Z
 
-      WRITE(*,*) 'RRRRRRRRRRRRRRRRRRR l_forcing_observations', l_forcing_observations
+      ! WRITE(*,*) 'RRRRRRRRRRRRRRRRRRR l_forcing_observations', l_forcing_observations
       IF ( l_forcing_observations ) THEN ! Note, mo_jsb4_forcing.f90 recommends that the forcing file includes max. 1 day!
                                          ! It reads always one day independent of the time steps within it.
                                          ! Climate_dCRUNCEP_T63_1975.nc forcing files are yearly files with daily timesteps.
-        ! Find out time_of_day and orbit_date of the current time step
-        ! Note: In contrast to ECHAM5 orbit_date is not used anymore in ICON-A!
-        !       Instead orbit_date_rt is used for both subsequent calls to find 
-        !       out decl_sun and dist_sun. However, we need time_of_day because
-        !       this is differentiated from time_of_day_rt when we call solar_parameters.
-
-        ! Read in forcing file once an day. We could read it more but not less frequent
-        !IF ( is_newday(mtime_old_jsb, dtime) ) THEN ! normally: mtime_old_jsb
-        mtime_forcing_ptr => mtime_forcing
-
-        l_orbvsop87   => echam_rad_config(jg)% l_orbvsop87 ! Default: .TRUE.
-        cecc          => echam_rad_config(jg)% cecc
-        cobld         => echam_rad_config(jg)% cobld
-        clonp         => echam_rad_config(jg)% clonp
-
-        CALL get_orbit_times(l_orbvsop87, mtime_forcing_ptr, lyr_perp, yr_perp, & ! in
-          &                  time_of_day, orbit_date)            ! out. 
-        !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRRRR time_of_day:' ,time_of_day, 'orbit_date:', orbit_date
-
-        ! Find out time_of_day_rt and orbit_date_rt of the radiation transfer of the current time step
-        CALL get_orbit_times(l_orbvsop87, mtime_forcing_ptr, lyr_perp, yr_perp, & ! in
-          &                  time_of_day_rt, orbit_date_rt)      ! out
-        !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRRRR time_of_day_rt:' ,time_of_day_rt,'orbit_date_rt:', orbit_date_rt
-
-        ! Find out decl_sun and dist_sun
-        !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRRRR  l_orbvsop87:' , l_orbvsop87 ! T
-        IF (l_orbvsop87) THEN
-          CALL orbit_vsop87(orbit_date_rt, rasc_sun, decl_sun, dist_sun) ! in, out, out, out
-        ELSE
-          CALL orbit_kepler(cecc, cobld, clonp, orbit_date_rt, & ! in 
-            &               rasc_sun, decl_sun, dist_sun)        ! out
-        END IF
-        !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRRRR  decl_sun:' , decl_sun ! decl_sun: -0.396146538758411 
-
-        ! R: debug:
-        decl_sun= 0.006918_wp       ! in assimilation fixiert: declination = 0.006918_wp
-
-        ! R: debug
-        !   IF ( jstep /= 73 ) THEN
-
-        ! Get the solar angels
-        !TODO: get from jsb grid? but how to name such a function get_lon_from_grid?
-        !      and if, shouldn't then also get_nproma should be called get_nproma_from_grid?
-        ! Note, this can be done here because we get lon lat for the whole horizontal grid!
-        lon = get_lon(patch)
-        lat = get_lat(patch)
-        ! coslon = COS(pi * lon / 180._wp)
-        ! sinlon = SIN(pi * lon / 180._wp)
-        coslat = COS(pi * lat / 180._wp)
-        sinlat = SIN(pi * lat / 180._wp)
-
-        !   END IF ! R: debug
-        ! With the informations above we can determine the cos_zenith_angle of the current time step
-        icosmu0        => echam_rad_config(jg)% icosmu0        ! defines if and how cosmu0 is defined for extended sunlit areas
-        ldiur          => echam_rad_config(jg)% ldiur          ! .TRUE.
-        l_sph_symm_irr => echam_rad_config(jg)% l_sph_symm_irr ! .FALSE.
-        dt_ext         = 0.0_wp                                ! time interval over which the insolated area is extended, for us =0
-
-        CALL solar_parameters(decl_sun,         time_of_day,     & ! in
-          &                   icosmu0,          dt_ext,          & ! in
-          &                   ldiur,            l_sph_symm_irr,  & ! in
-          &                   patch,                             & ! in 
-          &                   cos_zenith_angle, daylight_frc)      ! out
-        ! Now, as we have the cos_zenith_angle we will be abel to calculate swvis_srf_down and we can compile the forcing
-        ! R: debug: 
-        cos_zenith_angle  = 0.5        ! fictional only for testing purpuses
 
         ! We first need to set values for the variables USEd in mo_jsb_forcing that do not exist in ICON-A except for mo_jsb_forcing.
         ! We have to transfer these values from ICON-A/this driver.
 
-        delta_time    = delta_time_observations ! default: 86400._wp ! nicht dtime
+        delta_time    = dtime
         time_step_len = dtime
 
-        WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRRRR  OBSERVATIONS: mtime_forcing:' , mtime_forcing, 'mtime_current:', mtime_current, 'jstep:' , jstep ! &
+        WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRRRR  OBSERVATIONS: mtime_forcing:' , mtime_forcing, 'mtime_current:', mtime_current, 'jstep:' , jstep !&
           ! & , 't_srf_fromJS4:', t_srf_fromJS4
 
         CALL read_atm_forcing_for_jsb_stdalone_from_observ(1, 1, nproma, nblks, mtime_forcing, mtime_forcing, sinlat, coslat, lon,  &
@@ -1658,7 +1655,7 @@ PROGRAM jsb4_driver
         ! WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR Uebergabe Observations zu forcing_in_modeltyp...' , &
         !   & SIZE(forcing_in_modeltyp%t_air%data_read(jcs:nproma, jb, forcing_steps_per_file) ) & 64
         !   & , SIZE(t_air(jcs:nproma, jb)) ,  SIZE(t_srf_fromJS4(jcs:nproma,jb)) ! 64, 64
-        !WRITE(*,*) 'jstep:', jstep, 'step_for_synchron:', step_for_synchron, 'forcing_steps_per_file', forcing_steps_per_file
+        WRITE(*,*) 'jstep:', jstep, 'step_for_synchron:', step_for_synchron, 'forcing_steps_per_file', forcing_steps_per_file
 
         ! früher: jcs:nproma, jb  ! R: jb mit nblks ersetzen
         forcing_in_modeltyp%t_air%data_read             (:,:, forcing_steps_per_file) =   t_air            (:,:)
@@ -1725,9 +1722,9 @@ PROGRAM jsb4_driver
       END IF
 
       l_first_forcing_file= .FALSE.
-    END IF  ! of read in the forcing file
+    ! END IF  ! of read in the forcing file
 
-    WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRRRR  ZEIT: mtime_forcing:' , mtime_forcing, 'mtime_current:', mtime_current, 'jstep:' , jstep
+    ! WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRRRR  ZEIT: mtime_forcing:' , mtime_forcing, 'mtime_current:', mtime_current, 'jstep:' , jstep
 
     !synchr_ratio = step_in_forcing_file / forcing_synchron_factor
 
@@ -1749,7 +1746,7 @@ PROGRAM jsb4_driver
       l_shift_one_timestep = .FALSE.
     END IF
     l_first_step_in_restart = .FALSE.
-    WRITE(*,*) 'jstep:', jstep, 'step_for_synchron:', step_for_synchron !, 'counter_for_synch' , counter_for_synch ! 0
+    ! WRITE(*,*) 'jstep:', jstep, 'step_for_synchron:', step_for_synchron !, 'counter_for_synch' , counter_for_synch ! 0
 
     !Block loop 2
 !$OMP PARALLEL DO PRIVATE(jb,jcs,jce)
@@ -1763,11 +1760,14 @@ PROGRAM jsb4_driver
         &                   rls, & ! in  row limit start
         &                   rle)   ! in  row limit end
       ! WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR in loop   jbs', jbs, 'jbe', jbe
+        print*,'BBB ',nproma,nblks,jcs,jce,jb
       IF (jcs>jce) CYCLE
       !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR jg:', jg, 'jb:', jb, 'jcs:', jcs, 'jce:', jce
       !i=jb + 1
 
-      !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver model%options(no_omp_thread)%iblk:', model%options(no_omp_thread)%iblk , 'model%options(no_omp_thread)%ics:'  , model%options(no_omp_thread)%ics , 'model%options(no_omp_thread)%ice' , model%options(no_omp_thread)%ice , 'model%options(no_omp_thread)%dtime' , model%options(no_omp_thread)%dtime      +!     R: debugging: set values AFTER they are set from observational or model forcing to keep the model running to get DEBUG_VAR. Delete later
+      !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver model%options(no_omp_thread)%iblk:', model%options(no_omp_thread)%iblk , &
+      !  & 'model%options(no_omp_thread)%ics:'  , model%options(no_omp_thread)%ics , 'model%options(no_omp_thread)%ice' , model%options(no_omp_thread)%ice , 'model%options(no_omp_thread)%dtime' , model%options(no_omp_thread)%dtime 
+      !     R: debugging: set values AFTER they are set from observational or model forcing to keep the model running to get DEBUG_VAR. Delete later
       !     !if (step_for_synchron < 5) then
   !         forcing_in_modeltyp%t_air%data_read             (jcs:nproma, jb, step_for_synchron) =   t_air            (jcs:nproma, jb)
   !         forcing_in_modeltyp%q_air%data_read             (jcs:nproma, jb, step_for_synchron) =   q_air            (jcs:nproma, jb) 
@@ -1855,7 +1855,7 @@ PROGRAM jsb4_driver
         & alb_nir_dif  (jcs:nproma, jb),             & !
         & CO2_flux     (jcs:nproma, jb),             & !
         ! in vars for lakes, optional:
-        & DEBUG_VAR   = DEBUG_VAR (jcs:nproma, jb),  &  
+        ! & DEBUG_VAR   = DEBUG_VAR (jcs:nproma, jb),  &  
         & drag_wtr          =  forcing_in_modeltyp%drag_wtr%data_read    (jcs:nproma, jb, step_for_synchron),   &
         & drag_ice          =  forcing_in_modeltyp%drag_ice%data_read    (jcs:nproma, jb, step_for_synchron),   &
         & t_acoef_wtr       =  forcing_in_modeltyp%t_acoef_wtr%data_read (jcs:nproma, jb, step_for_synchron),   &
@@ -1943,10 +1943,10 @@ PROGRAM jsb4_driver
     IF (l_nml_output) THEN
       CALL write_name_list_output(jstep)
     ENDIF
-    !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver ZA'
+    ! WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver ZA'
 
     CALL reset_statistics  ! R: nur zum deallocate debuggen
-    WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver Z'
+    ! WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver Z'
 
     ! Diagnostics: computation of total integrals
     !
@@ -1984,7 +1984,6 @@ PROGRAM jsb4_driver
     !--------------------------------------------------------------------------
     ! check whether time has come for writing restart file
 
-    CALL message('','')
     !
     ! default is to assume we do not write a checkpoint/restart file
     lwrite_checkpoint = .FALSE.
@@ -2000,7 +1999,7 @@ PROGRAM jsb4_driver
 
       IF ( &
             !  if normal checkpoint or restart cycle has been reached, i.e. checkpoint+model stop
-            &         (jsbach_is_restarted() .OR. l_isCheckpoint)           & ! isRestart() jsbach_is_restarted()
+            &         (l_jsbach_is_restarted .OR. l_isCheckpoint)           & ! isRestart() jsbach_is_restarted()
             &  .AND.                                                        &
             !  and the current date differs from the start date
             &        .NOT. l_isStartdate                                    &
@@ -2084,6 +2083,10 @@ PROGRAM jsb4_driver
     IF (ASSOCIATED(datetime_current(jg)%ptr)) &
       &  CALL deallocateDatetime(datetime_current(jg)%ptr)
   END DO
+
+  IF ( l_forcing_observations ) THEN
+    DEALLOCATE(lon, lat, coslat, sinlat)
+  END IF
 
   ! --------------------
   ! WIEDER ZURÜCK: AUS    CALL perform_nh_timeloop
@@ -2231,7 +2234,7 @@ PROGRAM jsb4_driver
 
 #if defined (__INTEL_COMPILER) || defined (__PGI) || defined (NAGFOR)
 #ifdef VARLIST_INITIZIALIZE_WITH_NAN
-  WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver 11 11 11 11 11 11' ! R: hier kommt er nicht rein
+  ! WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR   JS4-Driver 11 11 11 11 11 11' ! R: hier kommt er nicht rein
   CALL ieee_set_status(saved_fpscr)
 #endif
 #endif

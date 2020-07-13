@@ -293,7 +293,7 @@ CONTAINS
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_1_1 tile_name=tile%name
     qsat_srf_old(:) = qsat(t_old(:), press_srf(:))
     ! R: Debug
-    DEBUG_VAR(:)=qsat_srf_old
+    ! DEBUG_VAR(:)=qsat_srf_old
 
     ! The heat capacity of the surface layer is currently taken as the heat capacity of the upper soil layer
     heat_cap(:) = hcap_grnd(:)
@@ -426,6 +426,16 @@ CONTAINS
     END IF
 
     ! 'Effective temperature' used in radheat of the atmosphere model (see Eq. 6.3 in ECHAM5 manual)
+
+    !R: debug:
+    ! Negative(:) = (4._wp * t_star(:) - 3._wp * t_old(:))
+    ! WHERE (Negative(:) <= 0)
+    !   DEBUG_VAR(:) = -1._wp
+    ! ELSE WHERE
+    !   DEBUG_VAR(:) =  1._wp
+    ! END WHERE 
+    DEALLOCATE(Negative)
+
 #ifndef _OPENACC
     IF (ANY(4._wp * t_star(:) - 3._wp * t_old(:) <= 0._wp)) THEN
        i = MINLOC(4._wp * t_star(:) - 3._wp * t_old(:), DIM=1)
@@ -436,13 +446,6 @@ CONTAINS
 #endif
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_10 tile_name=tile%name
     t_eff(:) = (t_old(:)**3 * (4._wp * t_star(:) - 3._wp * t_old(:))) ** 0.25_wp
-
-  !R: debug:
-!   Negative(:) = (4._wp * t_star(:) - 3._wp * t_old(:))
-!   WHERE (Negative(:) < 0)
-!     DEBUG_VAR(:)=777.777777_wp
-!   END WHERE 
-!   DEALLOCATE(Negative)
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 

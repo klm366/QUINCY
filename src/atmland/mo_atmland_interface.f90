@@ -48,7 +48,6 @@ CONTAINS
 
   SUBROUTINE update_atm2land( &
     & tile, options,          &
- & DEBUG_VAR, &
     & t_air,                  &
     & q_air,                  &
     & rain,                   &
@@ -69,6 +68,7 @@ CONTAINS
     & pch,                    &
     & cos_zenith_angle,       &
     & CO2_air,                &
+    & DEBUG_VAR,              &     
     ! For lakes:
     & drag_wtr,               &
     & drag_ice,               &
@@ -93,9 +93,9 @@ CONTAINS
     ! TODO This line doesn't work with intel on mistral and standalone JSBACH with ECHAM infrastructure ... why?
     ! REAL(wp), OPTIONAL, DIMENSION(options%nc), INTENT(in) ::                                                       &
     REAL(wp), OPTIONAL, DIMENSION(:), INTENT(in) ::                                                                &
-      & DEBUG_VAR, t_air, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, &
+      & t_air, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, &
       & fract_par_diffuse, press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle,         &
-      & CO2_air, drag_wtr, drag_ice,                                                                               &
+      & CO2_air, DEBUG_VAR, drag_wtr, drag_ice,                                                                    &
       & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,                                                        &
       & t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice
 
@@ -112,7 +112,6 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_atm2land'
 
     dsl4jsb_Real2D_onChunk ::  &
-      & DEBUG_VAR_ptr,         &
       & t_air_ptr,             &
       & q_air_ptr,             &
       & rain_ptr,              &
@@ -135,6 +134,7 @@ CONTAINS
       & CO2_air_ptr,           &
       & CO2_air_mol_ptr,       &
       & CO2_mixing_ratio_ptr,  &
+      & DEBUG_VAR_ptr,         &
       & drag_wtr_ptr,          &
       & drag_ice_ptr,          &
       & t_acoef_wtr_ptr,       &

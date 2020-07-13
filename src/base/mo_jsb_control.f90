@@ -15,6 +15,7 @@
 MODULE mo_jsb_control
 #ifndef __NO_JSBACH__
 
+  USE mo_kind,      ONLY: wp
   USE mo_io_units,  ONLY: filename_max
   USE mo_exception, ONLY: finish
   USE mo_util,      ONLY: int2string
@@ -46,10 +47,10 @@ MODULE mo_jsb_control
   INTEGER,           SAVE :: debug_io
   INTEGER,           SAVE :: debug_memory_level
   INTEGER,           SAVE :: timer_level
-  LOGICAL :: l_forcing_observations
-  REAL    :: delta_time_observations
-  INTEGER :: forcing_synchron_factor      
-  INTEGER :: forcing_steps_per_file
+  LOGICAL  :: l_forcing_observations
+  REAL(wp) :: delta_time_observations
+  INTEGER  :: forcing_synchron_factor      
+  INTEGER  :: forcing_steps_per_file
 
   TYPE t_jsb_model_nml
     INTEGER            :: model_id = 0
@@ -175,7 +176,7 @@ CONTAINS
     debug_memory_level = 0
     write_standalone_forcing = .FALSE.
     l_forcing_observations   = .FALSE.
-    delta_time_observations  = 86400
+    delta_time_observations  = 86400._wp
     forcing_synchron_factor  = 1  ! Factor defines how many time steps the JS4 driver performs for
                                   ! each atmospheric forcing time step that is read in
     forcing_steps_per_file   = 72 ! The number of time steps included by the used forcing file(s), e.g. 72

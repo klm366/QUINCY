@@ -109,9 +109,7 @@ CONTAINS
        CALL message('     ', '... Using tile fractions from: '//TRIM(model%config%fract_filename))
 
        IF (jsbach_runs_standalone()) THEN
-         ! R: take out only for debugging and replace with CALL init_time():
-         ! CALL init_time(TRIM(model%namelist_filename), TRIM(model%shortname), jsbach_is_restarted())
-         CALL init_time()
+         CALL init_time(TRIM(model%namelist_filename), TRIM(model%shortname), jsbach_is_restarted())
        ELSE
          CALL init_time()
        END IF

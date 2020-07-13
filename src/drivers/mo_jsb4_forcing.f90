@@ -40,8 +40,7 @@ MODULE mo_jsb4_forcing
   USE mo_time_conversion,        ONLY: IMerge_HMS2Sec, day_in_year, time_days
 #else
   USE mo_jsb_time_iface,         ONLY: get_year_day
-  USE mo_jsb_control,            ONLY: jsbach_is_restarted
-  !USE mo_jsb_echam_iface !,      ONLY: next_date, current_date, lresume, delta_time, time_step_len, IMerge_HMS2Sec, day_in_year, time_days
+  USE mo_jsb_time_iface,         ONLY: is_time_restart
 #endif
 
   ! Apparently in echam and icon
@@ -67,8 +66,9 @@ MODULE mo_jsb4_forcing
   USE mo_jsb_time,               ONLY: get_date_components
   USE mo_jsb_class,              ONLY: get_model
 
-  dsl4jsb_Use_processes HYDRO_
+  dsl4jsb_Use_processes HYDRO_, A2L_
   dsl4jsb_Use_memory(HYDRO_)
+  dsl4jsb_Use_memory(A2L_)
 
   IMPLICIT NONE
   PRIVATE
@@ -286,8 +286,6 @@ CONTAINS
     REAL(wp), INTENT(IN)  :: cos_zenith_angle(:,:)
 
     REAL(wp), INTENT(OUT) :: CO2_air(:,:)
-    REAL(wp), INTENT(OUT) :: fract_par_diffuse(:,:)
-
     REAL(wp), INTENT(OUT) :: t_air(:,:)
     REAL(wp), INTENT(OUT) :: q_air(:,:)
     REAL(wp), INTENT(OUT) :: rain(:,:)
@@ -298,6 +296,7 @@ CONTAINS
     REAL(wp), INTENT(OUT) :: swvis_srf_down(:,:)
     REAL(wp), INTENT(OUT) :: swnir_srf_down(:,:)
     REAL(wp), INTENT(OUT) :: swpar_srf_down(:,:)
+    REAL(wp), INTENT(OUT) :: fract_par_diffuse(:,:)
     REAL(wp), INTENT(OUT) :: press_srf(:,:)
     REAL(wp), INTENT(OUT) :: drag_srf(:,:)
     REAL(wp), INTENT(OUT) :: t_acoef(:,:)
@@ -313,6 +312,8 @@ CONTAINS
 
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Real2D_onChunk :: elevation
+    dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Real2D_onDomain :: DEBUG_VAR
 
     REAL(wp) :: hlp_r
     INTEGER  :: iblk
@@ -324,18 +325,23 @@ CONTAINS
     ! TODO: help1 is rad_sw_down, help2 is rad_sw_down_pot, but these are (currently?) not required - remove?
     REAL(wp), ALLOCATABLE :: help1(:,:), help2(:,:)
 
+    print*,'CCC ',nblks,ics,ice
 #ifdef __ICON__
     !LOGICAL :: lresume
-    lresume = jsbach_is_restarted()
+    lresume = is_time_restart(current_datetime)
     !current_date => current_date_target
     !next_date    => next_date_target
 #endif
 
+print*,'DDD ',lresume
     !---------------------------------------------------------------------------------
     ALLOCATE(help1(ice, nblks))
     ALLOCATE(help2(ice, nblks))
 
     ALLOCATE(temporary_data1(ice, nblks))
+
+    model => get_model(model_id)
+    CALL model%Get_top_tile(tile)
 
     ! --- temperature
     ! for temperature the variables used depend on the forcing frequency: tmin&tmax for daily data; t_air_C for timestep
@@ -349,10 +355,14 @@ CONTAINS
       CALL get_data_and_update_field(nblks, ics, ice, current_datetime, next_date, model_id, forcing_input%air_temp_min, tmin_data)
       CALL get_data_and_update_field(nblks, ics, ice, current_datetime, next_date, model_id, forcing_input%air_temp_max, tmax_data)
       ! estimate temperature at time step from daily temperature maximum and temperature minimum
-      CALL instantly_from_daily_temp_2(nblks, ice, lon, sinlat, coslat, tmin_data, tmax_data, next_date, t_air)
+      CALL instantly_from_daily_temp_2(nblks, ice, lon, sinlat, coslat, tmin_data, tmax_data, next_date, t_air_C)
     ENDIF
+    ! print*,'BBB ',t_air_C
     ! convert degC to Kelvin
-    t_air = t_air_C + tmelt
+    t_air(:,:) = t_air_C(:,:) + tmelt
+    ! dsl4jsb_Get_memory(A2L_)
+    ! dsl4jsb_Get_var2D_onDomain(A2L_,   DEBUG_VAR)
+    ! DEBUG_VAR(:,:) = t_air(:,:)
 
     ! --- precipitation
     CALL get_data_and_update_field(nblks, ics, ice, current_datetime, next_date, model_id, forcing_input%precipitation, temporary_data1)
@@ -374,8 +384,6 @@ CONTAINS
     ENDIF
 
     ! --- compute bottom pressure
-    model => get_model(model_id)
-    CALL model%Get_top_tile(tile)
     dsl4jsb_Get_memory(HYDRO_)
     DO iblk = 1, nblks
       ! get elevation
@@ -447,17 +455,27 @@ CONTAINS
     day_of_year=day_in_year(next_date)
     ALLOCATE(rad_uv_down(ice, nblks))
     CALL get_data_and_update_field(nblks, ics, ice, current_datetime, next_date, model_id, forcing_input%shortwave, temporary_data1)
-    CALL shortwave_from_direct_shortwave(day_of_year, cos_zenith_angle, coslat, sinlat, press_srf, & ! all in
-      &  temporary_data1,   & ! out rad_sw_in
-      &  rad_uv_down,       & ! out rad_UV
-      &  swpar_srf_down,    & ! out rad_PAR
-      &  swnir_srf_down,    & ! out rad_NIR
-      &  fract_par_diffuse, & ! out fract_PAR_diffuse
-      &  help1,             & ! out rad_sw
-      &  help2)               ! out rad_sw_pot
-    ! jsb3 standalone: swvis_srf_down = rad_uv_down + rad_par_down (& rad_par_down = swpar_srf_down)
+    CALL shortwave_from_direct_shortwave( &
+      ! in
+      & day_of_year,            &
+      & cos_zenith_angle (:,:), &
+      & coslat           (:,:), &
+      & sinlat           (:,:), &
+      & press_srf        (:,:), &
+      & temporary_data1  (:,:), &
+      ! out
+      & rad_uv_down      (:,:), & ! rad_UV
+      & swpar_srf_down   (:,:), & ! rad_PAR
+      & swnir_srf_down   (:,:), & ! rad_NIR
+      & fract_par_diffuse(:,:), & ! fract_PAR_diffuse
+      & help1            (:,:), & ! rad_sw
+      & help2            (:,:))   ! rad_sw_pot
+
     swvis_srf_down(:,:) = rad_uv_down(:,:) + swpar_srf_down(:,:)
     DEALLOCATE(rad_uv_down)
+    dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_var2D_onDomain(A2L_,   DEBUG_VAR)
+    DEBUG_VAR(:,:) = help1(:,:)
 
     ! --- compute longwave radiation
     IF (forcing_input%longwave%frequency .EQ. TIMESTEP_) THEN
@@ -588,7 +606,8 @@ CONTAINS
       ! ----- read the namelist
       model => get_model(model_id)
 
-      nml_handler = open_nml ('NAMELIST_JS4-standalone_master')
+      ! nml_handler = open_nml ('NAMELIST_JS4-standalone_master')
+      nml_handler = open_nml (TRIM(model%namelist_filename))
       f_unit = position_nml ('jsb_forcing_nml', nml_handler, status=read_status)
       IF (read_status .EQ. POSITIONED) READ(f_unit, jsb_forcing_nml)
 
@@ -870,6 +889,8 @@ CONTAINS
           & TRIM(forcing_input_variable%expectedUnit), TRIM(readUnit))
         ! TODO: further assertions? e.g. that lon lat are correct?
 
+        CALL input_file%Close()
+
         currentTimeStep = 1
         thisDayStart = 0
         thisDayEnd = 0
@@ -905,7 +926,11 @@ CONTAINS
       ENDIF
 
       IF(ASSOCIATED(forcing_input_variable%data_read)) DEALLOCATE(forcing_input_variable%data_read)
-      ALLOCATE(forcing_input_variable%data_read(ice, nblks, time_steps_per_day))
+      IF( frequency .EQ. TIMESTEP_ ) THEN
+        ALLOCATE(forcing_input_variable%data_read(ice, nblks, time_steps_per_day))
+      ELSEIF( frequency .EQ. DAILY_ ) THEN
+        ALLOCATE(forcing_input_variable%data_read(ice, nblks, 1))
+      END IF
 
     ENDIF
 
@@ -1029,28 +1054,17 @@ CONTAINS
   !! @par History
   !! First version by Julia Nabel (2016-02-25)
   !!
-  !! TODO: via mo_jsb_io_netcdf_iface / mo_jsb_io_netcdf functions / mo_input?
-  !!
   SUBROUTINE get_time_dimension(input_file, forcing_input_variable)
-    !INCLUDE 'netcdf.inc'
 
-    !USE mo_netcdf_parallel, ONLY: p_nf_get_vara_double_
-    USE  mo_read_interface, ONLY:  read_1D !, read_1D_extdim_time, read_1D_extdim_extdim_time !, read_2D, &
-      !& read_bcast_REAL_2D, read_2D_int, read_2D_time, read_2D_1time, read_2D_1lev_1time, read_3D, &
-      !& read_bcast_REAL_3D, read_3D_1time, read_3D_time, read_2D_extdim, read_2D_extdim_int, read_3D_extdim, &
-      !& nf
-
+    USE  mo_read_interface, ONLY:  read_1D 
 
     TYPE(t_input_file), INTENT(INOUT)        :: input_file
     TYPE(input_variable_type), INTENT(INOUT) :: forcing_input_variable
 
-    !INTEGER                                 :: file_id
     INTEGER                                  :: nc_dim_id, nc_var_id
-    REAL(wp), POINTER                        :: return_pointer_2(:)     !temporary pointer
     REAL(wp), POINTER                        :: return_pointer(:,:,:) !temporary pointer
     CHARACTER(LEN=*), PARAMETER              :: routine = modname//"::get_time_dimension"
 
-     
     CALL nf(nf_inq_dimid(input_file%file_id, 'time', nc_dim_id), routine)
     CALL nf(nf_inq_dimlen(input_file%file_id, nc_dim_id, forcing_input_variable%length_time_series), routine)
     IF(ASSOCIATED(forcing_input_variable%timevalues)) DEALLOCATE(forcing_input_variable%timevalues)
@@ -1058,16 +1072,10 @@ CONTAINS
 
     ! We need the timevalues for get_data_and_update_field
     CALL nf(nf_inq_varid(input_file%file_id, 'time', nc_var_id), routine)
-    !CALL nf(nf_get_vara_double(input_file%file_id,                  nc_var_id,      (/ 1 /), &
-    !  & (/ forcing_input_variable%length_time_series /), forcing_input_variable%timevalues))
 
-    CALL read_1D(input_file%file_id, 'time',  forcing_input_variable%timevalues, return_pointer_2)
+    CALL read_1D(input_file%file_id, 'time',  forcing_input_variable%timevalues)
 
-    return_pointer => input_file%Read_2d_time(forcing_input_variable%variable_name,               &
-    &                 start_time_step=1, end_time_step=forcing_input_variable%length_time_series, &
-    &                 fill_array=forcing_input_variable%data_read)
-
-  END SUBROUTINE
+  END SUBROUTINE get_time_dimension
 
   !>
   !! @brief tests if the read unit equals the expected unit (with some exception tests)
@@ -1219,9 +1227,9 @@ CONTAINS
       ! Computation of Richtmeyr-Morton Coefficients
       ! This follows now Jan Polcher's explicit solution, i.e. atmospheric conditions at t+1 are assumed to be valid
       !---------------------------------------------------------------------------------------------------------------
-      t_acoef = 0.0_wp
+      t_acoef(:,iblk) = 0.0_wp
       t_bcoef(:,iblk) = cpd * (1 + vtmpc2 * qair(:,iblk)) * temp_air(:,iblk) + zgh(:)
-      q_acoef = 0.0_wp
+      q_acoef(:,iblk) = 0.0_wp
       q_bcoef(:,iblk) = qair(:,iblk)
 
     ENDDO
@@ -1651,7 +1659,7 @@ CONTAINS
     REAL(wp), PARAMETER :: pio180 = pi/180._wp ! conversion factor from degrees to radians ("pi over 180")
     REAL(wp), PARAMETER :: rat1=14._wp/24._wp  ! day fraction at which maximum temperature shall occur
     REAL(wp), PARAMETER :: rat2=4._wp/24._wp   ! minimum length of normal day (as fraction of day)
-    REAL(wp), PARAMETER :: rat3=24._wp/24._wp  ! maximum length of normal day (as fraction of day)
+    REAL(wp), PARAMETER :: rat3=20._wp/24._wp  ! maximum length of normal day (as fraction of day)
     REAL(wp), PARAMETER :: rat4=2._wp/24._wp   ! day fraction of dawn times (before sunrise + after sunset), used to set ...
                                                ! ... temperature of a normal day to T_mean at sunrise-rat4/2 and sunset+rat4/2
 
@@ -1690,10 +1698,6 @@ CONTAINS
     INTEGER    :: i, j
 
     CALL inquire_declination(declination)
-
-    ! R: debug:
-    declination  =  0.006918_wp
-
 
     year_instant=get_year_day(date)            ! conversion of current time step from day-seconds to yearday-dayfraction format
     yearday = INT(year_instant)                ! number of day of the current time step since the beginning of the current year
