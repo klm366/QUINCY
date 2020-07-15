@@ -160,7 +160,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: rough_h
     dsl4jsb_Real2D_onChunk :: rough_m_star
     dsl4jsb_Real2D_onChunk :: rough_h_star
-    dsl4jsb_Real2D_onChunk :: rough_oro
     dsl4jsb_Real2D_onChunk :: fract_snow_soil
     dsl4jsb_Real2D_onChunk :: fract_lice
     dsl4jsb_Real2D_onChunk :: lai
@@ -173,8 +172,7 @@ CONTAINS
       & rough_veg_star, rough_bare_star, rough_snow_star
     REAL(wp) :: &
       & config_rough_bare, config_rough_snow, config_rough_water, config_blending_height, config_roughness_lai_saturation, &
-      & config_roughness_max_oro_to_heat, config_roughness_momentum_to_heat, &
-      & lctlib_MinVegRoughness, lctlib_MaxVegRoughness, lctlib_VegRoughness
+      & config_roughness_momentum_to_heat, lctlib_MinVegRoughness, lctlib_MaxVegRoughness, lctlib_VegRoughness
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_roughness'
 
@@ -202,7 +200,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(TURB_,  rough_h)         ! out
     dsl4jsb_Get_var2D_onChunk(TURB_,  rough_m_star)    ! out
     dsl4jsb_Get_var2D_onChunk(TURB_,  rough_h_star)    ! out
-    dsl4jsb_Get_var2D_onChunk(TURB_,  rough_oro)       ! in
 
     config_blending_height = dsl4jsb_Config(TURB_)%blending_height
     config_rough_snow                 = dsl4jsb_Config(TURB_)%roughness_snow
@@ -213,10 +210,8 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_soil) ! in
 
       config_rough_bare                 = dsl4jsb_Config(TURB_)%roughness_bare
-      config_roughness_max_oro_to_heat  = dsl4jsb_Config(TURB_)%roughness_max_oro_to_heat
       config_roughness_momentum_to_heat = dsl4jsb_Config(TURB_)%roughness_momentum_to_heat
   
-
       !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_0 tile_name=tile%name
       rough_bare_star(:) = 1._wp  / LOG(config_blending_height / config_rough_bare)**2
       rough_snow_star(:) = 1._wp  / LOG(config_blending_height / config_rough_snow)**2
@@ -272,17 +267,9 @@ CONTAINS
         rough_h_star(:) = rough_bare_star(:)
       END IF  ! vegetated or bare tile
 
-      IF (dsl4jsb_Config(TURB_)%l_roughness_oro) THEN  ! Use roughness length due to orography
-        !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_9 tile_name=tile%name
-        rough_m(:) = SQRT(  (config_blending_height * EXP(-1._wp / SQRT(rough_m_star(:)))) ** 2 + rough_oro(:) ** 2)
-        rough_h(:) = SQRT(  (config_blending_height * EXP(-1._wp / SQRT(rough_h_star(:)))) ** 2 &
-          &               + MIN(rough_oro(:), config_roughness_max_oro_to_heat) ** 2 &
-          &              ) / config_roughness_momentum_to_heat
-      ELSE ! Don't use roughness length due to orography
-        !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_10 tile_name=tile%name
-        rough_m(:) = config_blending_height * EXP(-1._wp / SQRT(rough_m_star(:)))
-        rough_h(:) = config_blending_height * EXP(-1._wp / SQRT(rough_h_star(:))) / config_roughness_momentum_to_heat
-      END IF
+      !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_10 tile_name=tile%name
+      rough_m(:) = config_blending_height * EXP(-1._wp / SQRT(rough_m_star(:)))
+      rough_h(:) = config_blending_height * EXP(-1._wp / SQRT(rough_h_star(:))) / config_roughness_momentum_to_heat
 
     ELSE IF (tile%contains_lake) THEN
 
@@ -333,9 +320,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: rough_h
     dsl4jsb_Real2D_onChunk :: rough_m_star
     dsl4jsb_Real2D_onChunk :: rough_h_star
-    dsl4jsb_Real2D_onChunk :: rough_oro
 
-    REAL(wp) :: config_blending_height, config_roughness_max_oro_to_heat, config_roughness_momentum_to_heat
+    REAL(wp) :: config_blending_height, config_roughness_momentum_to_heat
 
     TYPE(t_jsb_model),       POINTER :: model
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
@@ -363,26 +349,16 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(TURB_,  rough_h)
     dsl4jsb_Get_var2D_onChunk(TURB_,  rough_m_star)
     dsl4jsb_Get_var2D_onChunk(TURB_,  rough_h_star)
-    dsl4jsb_Get_var2D_onChunk(TURB_,  rough_oro)
 
     dsl4jsb_Aggregate_onChunk(TURB_, rough_m_star,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(TURB_, rough_h_star,   weighted_by_fract)
 
     config_blending_height            = dsl4jsb_Config(TURB_)%blending_height
-    config_roughness_max_oro_to_heat  = dsl4jsb_Config(TURB_)%roughness_max_oro_to_heat
     config_roughness_momentum_to_heat = dsl4jsb_Config(TURB_)%roughness_momentum_to_heat
 
-    IF (dsl4jsb_Config(TURB_)%l_roughness_oro) THEN  ! Use roughness length due to orography
-      !$claw expand parallel update savepoint=ser_jsb_turb_aggregate_roughness_expand_0 tile_name=tile%name
-      rough_m(:) = SQRT(  (config_blending_height * EXP(-1._wp / SQRT(rough_m_star(:)))) ** 2 + rough_oro(:) ** 2)
-      rough_h(:) = SQRT(  (config_blending_height * EXP(-1._wp / SQRT(rough_h_star(:)))) ** 2 &
-        &               + MIN(rough_oro(:), config_roughness_max_oro_to_heat) ** 2 &
-        &              ) / config_roughness_momentum_to_heat
-    ELSE ! Don't use roughness length due to orography
-      !$claw expand parallel update savepoint=ser_jsb_turb_aggregate_roughness_expand_1 tile_name=tile%name
-      rough_m(:) = config_blending_height * EXP(-1._wp / SQRT(rough_m_star(:)))
-      rough_h(:) = config_blending_height * EXP(-1._wp / SQRT(rough_h_star(:))) / config_roughness_momentum_to_heat
-    END IF
+    !$claw expand parallel update savepoint=ser_jsb_turb_aggregate_roughness_expand_1 tile_name=tile%name
+    rough_m(:) = config_blending_height * EXP(-1._wp / SQRT(rough_m_star(:)))
+    rough_h(:) = config_blending_height * EXP(-1._wp / SQRT(rough_h_star(:))) / config_roughness_momentum_to_heat
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

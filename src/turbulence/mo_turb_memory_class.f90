@@ -33,7 +33,6 @@ MODULE mo_turb_memory_class
     !
     ! Parameters
     TYPE(t_jsb_var_real2d) :: &
-      & rough_oro,            & !< Surface roughness length due to orography
       & rough_m,              & !< Surface roughness length for momentum
       & rough_h,              & !< Surface roughness length for heat
       ! The following two variables are transformations of the corresponding roughness length variables
@@ -84,15 +83,6 @@ CONTAINS
     surface => Get_vgrid('surface')
 
     !! !$acc enter data pcreate(mem)
-
-    CALL jsb_add_var( mem, 'rough_oro', mem%rough_oro,                                   &
-      & hgrid, surface,                                                                  &
-      & t_cf('roughness_length_oro', 'm', 'surface roughness length due to orography'),  &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
-      & prefix, suffix,                                                                  &
-      & lrestart=.FALSE.,                                                                &
-      & loutput=.FALSE.,                                                                 &
-      & initval_r=1.0_wp )
 
     CALL jsb_add_var( mem, 'rough_m', mem%rough_m,                                       &
       & hgrid, surface,                                                                  &
