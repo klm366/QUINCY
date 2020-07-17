@@ -624,6 +624,9 @@ CONTAINS
         & cflux_c_green_2_herb = cflux_c_green_2_herb(:), cflux_herb_2_atm = cflux_herb_2_atm(:), &
         & NPP_act_yDayMean = NPP_act_yDayMean(:), NPP_pot_yDayMean = NPP_pot_yDayMean(:), GPP_yDayMean = GPP_yDayMean(:))
 
+      CALL calculate_current_c_ta_state_sum(tile, options, c_sum_natural_ta(:), &
+        & c_sum_litter_ag_ta(:), c_sum_litter_bg_ta(:), c_sum_humus_ta(:))
+
       ! cflux_herb_2_atm and soil_respiration are negative (fluxes away from land)
       ! thus + here instead of - to reduce NPP by these fluxes
       current_fluxes = (NPP_act_yDayMean + cflux_herb_2_atm + soil_respiration) &
