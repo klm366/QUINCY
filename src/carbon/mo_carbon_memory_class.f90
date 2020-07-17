@@ -646,12 +646,12 @@ CONTAINS
       & prefix, suffix,                                                        &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
-    CALL jsb_add_var( mem, 'npp_flux_correction', mem%NPP_flux_correction,                                      &
-      & hgrid, surface,                                                                                         &
-      & t_cf('NPP_flux_correction', 'mol(C) m-2(canopy) s-1', 'Amount by which the NPP rate has to be corrected &
-      &                                                        to avoid a negative reserve pool.'),             &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
-      & prefix, suffix,                                                                                         &
+    CALL jsb_add_var( mem, 'npp_flux_correction', mem%NPP_flux_correction,                           &
+      & hgrid, surface,                                                                              &
+      & t_cf('NPP_flux_correction', 'mol(C) m-2(canopy) s-1',                                        &
+      &      'Amount by which the NPP rate has to be corrected to avoid a negative reserve pool.'),  &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+      & prefix, suffix,                                                                              &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     CALL jsb_add_var( mem, 'excess_npp', mem%excess_NPP,                                                               &
@@ -728,20 +728,20 @@ CONTAINS
       & prefix, suffix,                                                                                         &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
-    CALL jsb_add_var( mem, 'cflux_c_green_2_herb_lg', mem%cflux_herb_2_littergreen,                                         &
-      & hgrid, surface,                                                                                          &
-      & t_cf('cflux_herb_2_littergreen', 'mol(C) m-2(canopy) s-1', 'Carbon flux from cflux_c_green_2_herb into green litter &
-      & (complementary to cflux_herb_2_atm).'),                                                             &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                       &
-      & prefix, suffix,                                                                                          &
+    CALL jsb_add_var( mem, 'cflux_c_green_2_herb_lg', mem%cflux_herb_2_littergreen,                             &
+      & hgrid, surface,                                                                                         &
+      & t_cf('cflux_herb_2_littergreen', 'mol(C) m-2(canopy) s-1',                                              &
+      &      'Carbon flux from cflux_c_green_2_herb into green litter (complementary to cflux_herb_2_atm).'),   &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
+      & prefix, suffix,                                                                                         &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
-    CALL jsb_add_var( mem, 'cflux_herb_2_atm', mem%cflux_herb_2_atm,                                    &
-      & hgrid, surface,                                                                                           &
-      & t_cf('cflux_herb_2_atm', 'mol(C) m-2(canopy) s-1', 'Carbon flux from cflux_c_green_2_herb into atmosphere &
-      &  (complementary to cflux_herb_2_littergreen).'),                                                                &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
-      & prefix, suffix,                                                                                           &
+    CALL jsb_add_var( mem, 'cflux_herb_2_atm', mem%cflux_herb_2_atm,                                            &
+      & hgrid, surface,                                                                                         &
+      & t_cf('cflux_herb_2_atm', 'mol(C) m-2(canopy) s-1',                                                      &
+      &  'Carbon flux from cflux_c_green_2_herb into atmosphere (complementary to cflux_herb_2_littergreen).'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
+      & prefix, suffix,                                                                                         &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     !       CALL jsb_add_var( mem, 'fract_litter_wood_new', mem%fract_litter_wood_new,                     &
@@ -751,22 +751,22 @@ CONTAINS
     !         & prefix, suffix,                                                                          &
     !         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
-    CALL jsb_add_var( mem, 'c2greenlitterpools', mem%cflux_dist_greenreserve_2_soil,                           &
-      & hgrid, surface,                                                                                          &
-      & t_cf('cflux_dist_greenreserve_2_soil', 'mol(C) m-2(canopy) s-1', 'Amount of C relocated by wind damage to the &
-      &  green litter pools.'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                       &
-      & prefix, suffix,                                                                                          &
-      & output_level=MEDIUM,                                                                                     &
+    CALL jsb_add_var( mem, 'c2greenlitterpools', mem%cflux_dist_greenreserve_2_soil,                    &
+      & hgrid, surface,                                                                                 &
+      & t_cf('cflux_dist_greenreserve_2_soil', 'mol(C) m-2(canopy) s-1',                                &
+      &      'Amount of C relocated by wind damage to the green litter pools.'),                        &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
+      & prefix, suffix,                                                                                 &
+      & output_level=MEDIUM,                                                                            &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
-    CALL jsb_add_var( mem, 'c2woodlitterpools', mem%cflux_dist_woods_2_soil,                             &
-      & hgrid, surface,                                                                                          &
-      & t_cf('cflux_dist_woods_2_soil', 'mol(C) m-2(canopy) s-1', 'Amount of C relocated by wind damage to the  &
-      & woody litter pools..'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                       &
-      & prefix, suffix,                                                                                          &
-      & output_level=MEDIUM,                                                                                     &
+    CALL jsb_add_var( mem, 'c2woodlitterpools', mem%cflux_dist_woods_2_soil,                            &
+      & hgrid, surface,                                                                                 &
+      & t_cf('cflux_dist_woods_2_soil', 'mol(C) m-2(canopy) s-1',                                       &
+      &      'Amount of C relocated by wind damage to the woody litter pools..'),                       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
+      & prefix, suffix,                                                                                 &
+      & output_level=MEDIUM,                                                                            &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     CALL jsb_add_var( mem, 'c2atmos', mem%cflux_fire_all_2_atm,                                                  &
@@ -1064,11 +1064,11 @@ CONTAINS
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     CALL jsb_add_var( mem, 'npp_flux_corr_ta', mem%NPP_flux_correction_ta,                           &
-      & hgrid, surface,                                                                                    &
-      & t_cf('NPP_flux_correction_ta', 'mol(C) m-2 s-1', 'Amount by which the NPP rate has to be corrected &
-      &                                                        to avoid a negative reserve pool.'),        &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                 &
-      & prefix, suffix,                                                                                    &
+      & hgrid, surface,                                                                              &
+      & t_cf('NPP_flux_correction_ta', 'mol(C) m-2 s-1',                                             &
+      &      'Amount by which the NPP rate has to be corrected to avoid a negative reserve pool.'),  &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+      & prefix, suffix,                                                                              &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     CALL jsb_add_var( mem, 'excess_npp_ta', mem%excess_NPP_ta,                                                    &
