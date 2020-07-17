@@ -449,8 +449,6 @@ CONTAINS
     INTEGER                                   :: iblk, ics, ice !, nc
     INTEGER                                   :: icanopy
 
-    REAL(wp)                   :: tmp_jedicarboxrate, tmp_etransport
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_canopy_cond_unstressed'
 
     ! Declare process memories
@@ -522,13 +520,10 @@ CONTAINS
     
     IF (TRIM(model%config%usecase) .eq. 'jsbach_jedi' ) THEN
     
-      tmp_jedicarboxrate = dsl4jsb_Lctlib_param(JeDiCarboxRate)
-      ! tmp_etransport = dsl4jsb_Lctlib_param(JeDiCarboxRate) * 1.9_wp
-      tmp_etransport     = 2.718_wp * tmp_jedicarboxrate**0.89_wp ! PHS 18.12.2019 try to scale Jmax from Vcmax with different relationship
       CALL calc_assimilation_waterunlimited( &
         & dsl4jsb_Lctlib_param(C4Flag),      &
-        & tmp_jedicarboxrate,                & ! in
-        & tmp_etransport,                    & ! in
+        & dsl4jsb_Lctlib_param(JeDiCarboxRate),   & ! in
+        & dsl4jsb_Lctlib_param(JeDiETransport),    & ! in
         & t_air(:),                          & ! in
         & press_srf(:),                      & ! in
         & par_down_mol(:),                   & ! in
@@ -774,7 +769,6 @@ CONTAINS
     REAL(wp)                   :: dtime
     INTEGER                    :: icanopy
 
-    REAL(wp)                   :: tmp_jedicarboxrate, tmp_etransport
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_assimilation'
 
@@ -888,14 +882,10 @@ CONTAINS
         !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
         ! Using jedi's Vc,max value to compute photosynthesis
         !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    
-        tmp_jedicarboxrate = dsl4jsb_Lctlib_param(JeDiCarboxRate)
-        ! tmp_etransport = dsl4jsb_Lctlib_param(JeDiCarboxRate) * 1.9_wp
-        tmp_etransport     = 2.718_wp * tmp_jedicarboxrate**0.89_wp ! PHS 18.12.2019 try to scale Jmax from Vcmax with different relationship
         CALL calc_assimilation_waterlimited(    &
-          & dsl4jsb_Lctlib_param(C4Flag),       &
-          & tmp_jedicarboxrate,                 & ! in
-          & tmp_etransport,                     & ! in
+          & dsl4jsb_Lctlib_param(C4Flag),      &
+          & dsl4jsb_Lctlib_param(JeDiCarboxRate),   & ! in
+          & dsl4jsb_Lctlib_param(JeDiETransport),    & ! in
           & t_air(:),                           & ! in
           & press_srf(:),                       & ! in
           & par_down_mol(:),                    & ! in

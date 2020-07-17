@@ -178,7 +178,17 @@ CONTAINS
     faPAR_cl = 0._wp
     apar_per_lai_cl = 0._wp
     lai_cl   = lai * canopy_bound_lai_delta
-    lai_cl   = MAX(lai_cl, LaiMin) ! ensure minimum LAI
+    
+     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
+     ! PHS: Jedi does not need minumum LAI ? Cause every carbon pools of a species should be Zero if it is dead or 
+     !         not activated (to grow) yet. If there is minumum LAI, then there is also minor production so that there is carbon in the 
+     !         storage pool even it is dead.  I commended the constraint of the minimum LAI. 
+     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
+          
+       !lai_cl   = MAX(lai_cl, LaiMin) ! ensure minimum LAI
+    
+     
+     
 
     ! IF (cos_zenith_angle < ZenithMinPar) THEN ! do not calculate PAR for zenith angles below ZenithMinPar (0.001)
     !   RETURN

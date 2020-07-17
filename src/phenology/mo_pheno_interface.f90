@@ -849,17 +849,13 @@ CONTAINS
     inidate => get_time_start()
     iniyear =  get_year(inidate)
     
-   !IF( get_year(options%current_datetime) .GT. iniyear + 10 ) THEN
    
-    CALL calc_jedi_phenology(  &
-                               &  dsl4jsb_Lctlib_param(JeDiSLA),       &  ! in
+   
+    !CALL calc_jedi_phenology(  & dsl4jsb_Lctlib_param(LandcoverClass),  & !in
+    CALL calc_jedi_phenology( &  dsl4jsb_Lctlib_param(JeDiSLA),       &  ! in
                                &  c_leaves,                             &  ! in
                                &  lai                  )  ! inout
-   !ELSE
    
-      !lai = 2._wp
-    
-   !ENDIF 
  
    
 

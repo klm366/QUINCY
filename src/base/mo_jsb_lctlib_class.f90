@@ -174,9 +174,10 @@ MODULE mo_jsb_lctlib_class
     REAL(wp) :: SenesRspdNPP 
     REAL(wp) :: jedi_F_pseudo_npp
     REAL(wp) :: jedi_N_pseudo_npp
-    REAL(wp) :: RelSenesAbgd 
+    REAL(wp) :: Nitro2Vcmax 
     REAL(wp) :: NitroStatus  
     REAL(wp) :: JeDiCarboxRate
+    REAL(wp) :: JeDiETransport
     REAL(wp) :: JeDiSLA
     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=! 
 
@@ -470,7 +471,7 @@ CONTAINS
     LOGICAL            :: exists_TurnoverStruc          = .FALSE.
     LOGICAL            :: exists_TurnoverLeaf           = .FALSE.
     LOGICAL            :: exists_SenesRspdNPP           = .FALSE.
-    LOGICAL            :: exists_RelSenesAbgd           = .FALSE.
+    LOGICAL            :: exists_Nitro2Vcmax           = .FALSE.
     LOGICAL            :: exists_NitroStatus            = .FALSE.
     
     ! local variable for JeDi:
@@ -586,7 +587,7 @@ CONTAINS
           
           fm="(A  ,     (1x,F12.6))"
           write(fm(6:9),'(I4)') nlct
-          write(*,*) fm,key
+       !   write(*,*) fm,key
           IF(TRIM(key) == "nlct") CYCLE ! nlct already read above
 
           SELECT CASE (TRIM(key))
@@ -598,6 +599,9 @@ CONTAINS
             exist_LctName = .TRUE.
           CASE ('landcoverclass')                                    ! Landcover class
             READ(line(pos:length),*) lctlib(1:nlct)%LandcoverClass
+             fm="(A  ,     (1x,I1))"
+             write(fm(6:9),'(I4)') nlct
+            WRITE(35,fm) 'LandcoverClass ',lctlib(1:nlct)%LandcoverClass  !PHS: write out for jedi
             exist_LandcoverClass = .TRUE.
           CASE ('albedosnowvismin')
             READ(line(pos:length),*) lctlib(1:nlct)%AlbedoSnowVisMin
@@ -644,6 +648,9 @@ CONTAINS
               IF (itmp(i) == 1) lctlib(i)%c4flag = .TRUE.
             END DO
             exist_C4flag = .TRUE.
+            fm="(A  ,     (1x,I1))"
+             write(fm(6:9),'(I4)') nlct
+            WRITE(35,fm) 'C4flag ',itmp(1:nlct)  !PHS: write out for jedi            
           CASE ('carboxrate')                                         ! Carbox rate
             READ(line(pos:length),*) lctlib(1:nlct)%CarboxRate
             exist_CarboxRate = .TRUE.
@@ -939,48 +946,33 @@ CONTAINS
                 READ(line(pos:length),*) P13(1:nlct)
                 !lctlib(1:nlct)%SenesRspdNPP = 10._wp ** ( 4.0_wp * P13(1:nlct) - 1.0_wp )
                  !lctlib(1:nlct)%SenesRspdNPP =10._wp ** ( 1.855_wp * P01(1:nlct)  + 1.145_wp )   !PHS:18.06.2019 New sample
-                 lctlib(1:nlct)%SenesRspdNPP =10._wp ** ( 1.1_wp * P13(1:nlct)  + 0.9_wp )    !PHS:09.12.2019 New sample
+                 lctlib(1:nlct)%SenesRspdNPP =10._wp ** ( 1.1_wp * P13(1:nlct)  + 0.99_wp )    !PHS:09.12.2019 New sample
                 exists_SenesRspdNPP   = .TRUE.
                  lctlib(1:nlct)%jedi_F_pseudo_npp = EXP(- get_time_dt(model_id) / (lctlib(1:nlct)%SenesRspdNPP * 86400._wp))
                  lctlib(1:nlct)%jedi_N_pseudo_npp = 1._wp / (1._wp - lctlib(1:nlct)%jedi_F_pseudo_npp )
                 WRITE(35,fm) 'SenesRspdNPP ',lctlib(1:nlct)%SenesRspdNPP  
-             CASE ('relsenesabgd')
+             CASE ('nitro2vcmax')
                 READ(line(pos:length),*) P14(1:nlct)
-                !lctlib(1:nlct)%RelSenesAbgd = 10._wp ** ( 8.0_wp * P14(1:nlct) - 7.0_wp )
-                !lctlib(1:nlct)%RelSenesAbgd =  P14(1:nlct)
-                lctlib(1:nlct)%RelSenesAbgd =  0.5_wp
-                exists_RelSenesAbgd   = .TRUE.
-                WRITE(35,fm) 'RelSenesAbgd ',lctlib(1:nlct)%RelSenesAbgd
+
+                exists_Nitro2Vcmax   = .TRUE.
+                WRITE(35,fm) 'Nitro2Vcmax ',P14(1:nlct)
              CASE ('nitrostatus')
                 READ(line(pos:length),*) P15(1:nlct)
                 !lctlib(1:nlct)%NitroStatus = (0.9_wp * P15(1:nlct) + 0.1_wp) * 8.578_wp * 0.01_wp  ! [NL] molN / molC canopy nitrogen concentration follows Ollinger (2008) (Pavlick thesis P.89)               
-                lctlib(1:nlct)%NitroStatus = (0.64_wp+2.96*P15(1:nlct))/14.0067_wp! 10.12.2019 new sample of leaf nitrogen on area-based!!!!!!  NNN TRY database
+                !lctlib(1:nlct)%NitroStatus = (0.64_wp+2.96*P15(1:nlct))/14.0067_wp! 10.12.2019 new sample of leaf nitrogen on area-based!!!!!!  NNN TRY database
+                !PHS: 10.07.2020 Tree/Grass Nitrogen sample
+                  WHERE (lctlib(1:nlct)%LandcoverClass  .eq. 3 )  
+                 ! for trees
+                         lctlib(1:nlct)%NitroStatus =  (0.64_wp+2.96*P15(1:nlct))/14.0067_wp
+                  ELSEWHERE 
+                  ! for grass
+                         lctlib(1:nlct)%NitroStatus =(0.64_wp +0.5_wp *sqrt(-2._wp*log( P15(1:nlct)  ) ) ) /14.0067_wp
+                   END WHERE 
+                
+                
                 exists_NitroStatus   = .TRUE.
                 WRITE(35,fm) 'NitroStatus ',lctlib(1:nlct)%NitroStatus
-                
-                !PHS: JeDi-BACH uses canopy nitrogen content to scale albedo.  The linear relationship is taken from Hollinger et al. 2010. ( albedo = 0.067 [%N]* 0.48 [gc/DM]* 100 Nitro [gc/gN] +0.02 )
-                !PHS: To adapt this relationship into JeDi-BACH, we simply take the value of albedo + (-) 0.05 for NIR (visible). (a tip from Thomas)
-                !PHS: There is a saturation value for Nitorgen content higher than 3 %N [gN/100g DM] ( 3 / 100 * 12.01 /14.0067 /0.48 ~= 0.05359 mol N/ molc)
-                !PHS: I set a minimum value of albedo to 0.03 (0.22) for visible (NIR). These values are taken from the tropical evergreen in the original lctlib.def. 
-                !PHS: Thereby I obtain the minimum value for nitrogen content ( 0.015997 molN / molc) ~= 0.89 %N )
-                
-              
-              
-              
-                !WHERE (lctlib(1:nlct)%NitroStatus .GE. 0.015997_wp .and. lctlib(1:nlct)%NitroStatus .LE. 0.05359_wp ) 
-                !    lctlib(1:nlct)%AlbedoCanopyVIS =  3.216_wp * 14.0067_wp / 12.01_wp * lctlib(1:nlct)%NitroStatus+0.02_wp - 0.05_wp 
-                !    lctlib(1:nlct)%AlbedoCanopyNIR =  3.216_wp * 14.0067_wp / 12.01_wp * lctlib(1:nlct)%NitroStatus+0.02_wp + 0.05_wp
-                ! ELSEWHERE(lctlib(1:nlct)%NitroStatus .GT. 0.05359_wp)
-                !     lctlib(1:nlct)%AlbedoCanopyVIS = 0.221_wp - 0.05_wp
-                !     lctlib(1:nlct)%AlbedoCanopyNIR = 0.221_wp +0.05_wp
-                ! ELSEWHERE(lctlib(1:nlct)%NitroStatus .LT. 0.015997_wp)
-                !     lctlib(1:nlct)%AlbedoCanopyVIS = 0.03_wp
-                !     lctlib(1:nlct)%AlbedoCanopyNIR = 0.13_wp
-                ! END WHERE   
-                  !  exist_AlbedoCanopyVIS = .TRUE.  
-                  !  exist_AlbedoCanopyNIR = .TRUE.
-                  !  WRITE(35,fm) 'AlbCanopyVIS', lctlib(1:nlct)%AlbedoCanopyVIS
-                  !  WRITE(35,fm) 'AlbCanopyNIR', lctlib(1:nlct)%AlbedoCanopyNIR
+   
           !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
         
           CASE default
@@ -1358,8 +1350,8 @@ CONTAINS
        CALL finish('init_lctlib','No data for TurnoverLeaf found in '//TRIM(lctlib_file_name))
        IF(.NOT. exists_SenesRspdNPP  ) &
        CALL finish('init_lctlib','No data for SenesRspdNPP found in '//TRIM(lctlib_file_name))
-       IF(.NOT. exists_RelSenesAbgd  ) &
-       CALL finish('init_lctlib','No data for RelSenesAbgd found in '//TRIM(lctlib_file_name))
+       IF(.NOT. exists_Nitro2Vcmax  ) &
+       CALL finish('init_lctlib','No data for Nitro2Vcmax found in '//TRIM(lctlib_file_name))
        IF(.NOT. exists_NitroStatus   ) &
        CALL finish('init_lctlib','No data for NitroStatus found in '//TRIM(lctlib_file_name))
        
@@ -1507,15 +1499,38 @@ CONTAINS
        ENDIF
        
        IF (exists_NitroStatus) THEN
- 
-       !lctlib(1:nlct)%JeDiSLA = ( 0.03_wp * ( ( lctlib(1:nlct)%TurnoverLeaf / 365._wp ) ** ( -0.46_wp ) ) ) *  12.01_wp           
+           
        lctlib(1:nlct)%JeDiSLA = ( ( 0.0001_wp * 10._wp**2.43_wp  ) * &
          &                      ( ( lctlib(1:nlct)%TurnoverLeaf / 365._wp ) ** ( -0.46_wp ) ) ) *  12.01_wp           
        !28.8. 2019PHS: original jedi --lctlib(1:nlct)%JeDiCarboxRate = 12.01_wp * ( 10._wp**0.13_wp ) * ( 1.e-09_wp ) * ( lctlib(1:nlct)%NitroStatus * 1000._wp * 14._wp / 12.01_wp)**1.42_wp / lctlib(1:nlct)%JeDiSLA  
        ! lctlib(1:nlct)%JeDiCarboxRate = (   4.19_wp +  14._wp * lctlib(1:nlct)%NitroStatus / lctlib(1:nlct)%JeDiSLA  * (9.3_wp + 20._wp * P08(1:nlct) )   ) * (10._wp**-6._wp )
-       lctlib(1:nlct)%JeDiCarboxRate = (   4.19_wp +  14._wp * lctlib(1:nlct)%NitroStatus  * &
-         &                                            (9.3_wp + 20._wp * P08(1:nlct) )   ) * 1.e-6_wp  !NNN
-       WRITE(35,fm) 'JeDiCarboxRate ', lctlib(1:nlct)%JeDiCarboxRate * 10.e6_wp
+       
+       !PHS: 29.05.2020 C4 photosynthesis parameters
+       WHERE (lctlib(1:nlct)%c4flag) 
+          lctlib(1:nlct)%JeDiCarboxRate = 8._wp * 1.e-06_wp
+          lctlib(1:nlct)%JeDiETransport= 140._wp * 1.e-06_wp
+       ELSEWHERE
+       
+           WHERE (lctlib(1:nlct)%LandcoverClass  .eq. 3 )  ! PHS: 6.7.2020 separate vcmax for grass and tree. 
+           ! for trees
+                   lctlib(1:nlct)%JeDiCarboxRate = (   4.19_wp +  14._wp * lctlib(1:nlct)%NitroStatus  * &
+                 &                                            (9.3_wp + 20._wp * P14(1:nlct) )   ) * 1.e-6_wp  !NNN
+                 
+                    lctlib(1:nlct)%JeDiETransport= 1.9_wp * lctlib(1:nlct)%JeDiCarboxRate 
+                    !lctlib(1:nlct)%JeDiETransport     = 2.718_wp *  lctlib(1:nlct)%JeDiCarboxRate **0.89_wp 
+            ELSEWHERE 
+            ! for C3 grasses  
+                   lctlib(1:nlct)%JeDiCarboxRate = (   6.42_wp +  14._wp * lctlib(1:nlct)%NitroStatus * (  P14(1:nlct) *( 3.21_wp * 2.0_wp) + (40.96_wp - 3.21_wp) )   ) * 1.e-6_wp  !NNN
+                 
+                    lctlib(1:nlct)%JeDiETransport= 1.9_wp * lctlib(1:nlct)%JeDiCarboxRate 
+             END WHERE 
+             
+       END WHERE  
+       
+          
+       
+       WRITE(35,fm) 'JeDiCarboxRate ', lctlib(1:nlct)%JeDiCarboxRate * 1.e6_wp
+       WRITE(35,fm) 'JeDiETransport',lctlib(1:nlct)%JeDiETransport * 1.e6_wp
        WRITE(35,fm) 'JeDiSLA ', lctlib(1:nlct)%JeDiSLA  
        
        
@@ -1839,9 +1854,10 @@ CONTAINS
        CALL p_bcast(lctlib(:)%SenesRspdNPP , p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%jedi_F_pseudo_npp, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%jedi_N_pseudo_npp, p_io, mpi_comm)
-       CALL p_bcast(lctlib(:)%RelSenesAbgd , p_io, mpi_comm)
+       CALL p_bcast(lctlib(:)%Nitro2Vcmax , p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%NitroStatus  , p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%JeDiCarboxRate, p_io, mpi_comm)
+       CALL p_bcast(lctlib(:)%JeDiETransport, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%JeDiSLA       , p_io, mpi_comm)
         !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
        

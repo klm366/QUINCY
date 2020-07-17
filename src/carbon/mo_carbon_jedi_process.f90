@@ -101,13 +101,14 @@ CONTAINS
     & TurnoverStruc,              & ! in
     & TurnoverLeaf ,              & ! in
     & SenesRspdNPP ,              & ! in
-    & RelSenesAbgd ,              & ! in
     & NitroStatus  ,              & ! in
     & JeDiSLA,                     &  ! in
+    & LandcoverClass,          &  !in
     ! JeDi plant trait parameters >>>>>>>>>>
     & iniyear,                    &     ! in
     & currentyear,                & !in
     & time_steps_per_day,         & ! in
+    & faPAR_prev_noon,              & !in
     & one_counter,                      & !inout
     & c_storage,                  & ! inout
     & c_leaves,                   & ! inout
@@ -126,6 +127,7 @@ CONTAINS
     & Flg_senesc,                 & ! out
     & flx_germ,                   & ! out
     & adj_fraction,                &  !out
+    & jedi_light_constraint,         &  !out
     & MaintRes_yDayMean,          & ! inout
     & GrowthResp,                 & ! out
     & AutoRes,                    & ! out
@@ -188,7 +190,7 @@ CONTAINS
     USE mo_carbon_constants,       ONLY : fract_green_aboveGround, fract_wood_aboveGround
     USE mo_jsb_physical_constants, ONLY : tmelt     ! tmelt =273.15_wp
     USE mo_carbon_constants,       ONLY : sec_per_day, days_per_year, sec_per_year
-  
+    USE mo_math_constants,         ONLY: pi
     ! Argument
     
     REAL(wp), INTENT(in)    :: GPP_yDayMean           ! Yesterdays mean GPP rate [mol(C)/m^2 s]
@@ -206,9 +208,9 @@ CONTAINS
     REAL(wp), INTENT(in)     :: TurnoverStruc         ! Jedi parameter -- P11 Turnover time of structural pools           
     REAL(wp), INTENT(in)     :: TurnoverLeaf          ! Jedi parameter -- P12 Turnover time of leaf and fine root pools   
     REAL(wp), INTENT(in)     :: SenesRspdNPP          ! Jedi parameter -- P13 Senescence response time to productivity conditions 
-    REAL(wp), INTENT(in)     :: RelSenesAbgd          ! Jedi parameter -- P14 Relative senescence aboveground            
     REAL(wp), INTENT(in)     :: NitroStatus           ! Jedi parameter -- P15 Plant nitrogen status    
-    REAL(wp), INTENT(in)     :: JeDiSLA                   
+    REAL(wp), INTENT(in)     :: JeDiSLA      
+    INTEGER, INTENT(in)     :: LandcoverClass             
     INTEGER,  INTENT(in)     :: iniyear      
     INTEGER,  INTENT(in)     :: currentyear  
     INTEGER,  INTENT(in)     :: time_steps_per_day
@@ -236,7 +238,9 @@ CONTAINS
     REAL(wp), INTENT(out)   :: flx_germ  
     REAL(wp), INTENT(out)   :: Flg_senesc
     REAL(wp), INTENT(inout) :: Flg_die    
-    REAL(wp), INTENT(out)   :: adj_fraction                                                        
+    REAL(wp), INTENT(out)   :: adj_fraction  
+    REAL(wp), INTENT(in)    :: faPAR_prev_noon    
+    REAL(wp), INTENT(out)   :: jedi_light_constraint                                                  
     !                                                     
     REAL(wp), INTENT(inout) :: c_litter_green_ag  ! Above ground green litter C-pool: updated on output [mol(C)/m^2(canopy)]
     REAL(wp), INTENT(inout) :: c_litter_green_bg  ! Below ground green litter C-pool: updated on output [mol(C)/m^2(canopy)]
@@ -339,6 +343,7 @@ CONTAINS
     REAL(wp), parameter  :: cTiny            = 1.E-8_wp        
     
     REAL(wp), PARAMETER  :: leaf_growth_fract = 0.03_wp   
+    REAL(wp), PARAMETER  :: fapar_max= 0.96_wp
     REAL(wp) :: allo_max_leaves,zAlloc_leaves_tmp
     
     REAL(wp) :: MaintRes
@@ -495,12 +500,7 @@ CONTAINS
     
     IF( Flg_grow_G .GT. 0._wp .AND.  one_counter .lt. 1._wp  )  THEN
            
-      c_storage = 1._wp! 0.01_wp 
-      c_leaves  = c_storage * Allo2Abground *  ( 1._wp -  RelAllo2Abgrd ) * 1.0_wp / (1.0_wp + 0.33_wp)  * TurnoverLeaf  
-      c_stem    = c_storage * Allo2Abground *                  RelAllo2Abgrd  * 1.0_wp / (1.0_wp + 0.25_wp) * TurnoverStruc
-      c_fnroot  = c_storage * Allo2Blground *  ( 1._wp -   RelAllo2Blgrd ) * 1.0_wp / (1.0_wp + 0.33_wp) * TurnoverLeaf 
-      c_csroot  = c_storage * Allo2Blground *                   RelAllo2Blgrd  * 1.0_wp / (1.0_wp + 0.49_wp) * TurnoverStruc
-      c_seed    = c_storage * Allo2Reproduc *  (1.0_wp / (1.0_wp + 0.66_wp)  )  /   (GermFrac   +  1./(c_tau_seed)    )
+      c_storage    = 100
       one_counter =one_counter +1
     
     ENDIF
@@ -546,12 +546,9 @@ CONTAINS
     ! Compute JeDi carbon allocation of different C(tissue) pools
     
     
-      IF ( (   c_storage .gt. 0._wp .and.   currentyear .GE. iniyear+20 )  .or.     (   currentyear .LT. iniyear+20 )    ) THEN  
+      IF (   c_storage .gt. 0._wp ) THEN  
 	    Flg_seed = 0._wp
-	    
-	    
-	
-	    
+    
         IF ( NPP  .gt. 0._wp  ) Flg_seed = 1.0_wp ! OR NPP_yDayMean ???
         
         A_seed    = Flg_grow * Flg_seed * Allo2Reproduc
@@ -575,9 +572,21 @@ CONTAINS
         ELSE
            allo_max_leaves = c_leaves * leaf_growth_fract
         END IF
+        !PHS: 9.6.2020 FAPAR limitation on leaf growth
+           
+         IF ( faPAR_prev_noon .LT. fapar_max ) THEN
+         !PHS: 15.7.2020 try to  use different light constraint for grass 
+          IF         (LandcoverClass .EQ. 3) THEN                    
+           jedi_light_constraint = COS(  0.5_wp *  pi   * (   (faPAR_prev_noon / fapar_max  )**30._wp) )
+           ELSE IF (LandcoverClass .EQ. 4) THEN
+             jedi_light_constraint = COS(  0.5_wp *  pi   * (   (faPAR_prev_noon / 0.83_wp  )**30._wp) )
+          END IF   
+        ELSE
+            jedi_light_constraint = 0._wp
+        END IF
         
-        zAlloc_leaves_tmp = zAlloc * AG_growth * ( 1._wp - AG_struct ) * c_GRes_leaves
-        zAlloc_leaves = MIN( zAlloc_leaves_tmp, allo_max_leaves )
+        zAlloc_leaves_tmp = zAlloc * AG_growth * ( 1._wp - AG_struct ) * c_GRes_leaves  
+        zAlloc_leaves = MIN( zAlloc_leaves_tmp, allo_max_leaves )  
         
         IF (zAlloc_leaves .NE. 0._wp  ) THEN
             adj_fraction  =  zAlloc_leaves / zAlloc_leaves_tmp
@@ -585,16 +594,16 @@ CONTAINS
             adj_fraction  = 1._wp
         END IF
         
+        zAlloc_leaves =  zAlloc_leaves  * jedi_light_constraint
         
         
-        
-        zAlloc_seed   = zAlloc * A_seed                                          * c_GRes_seed     *   adj_fraction
+        zAlloc_seed   = zAlloc * A_seed                                          * c_GRes_seed     *   adj_fraction   * jedi_light_constraint
         !zAlloc_leaves = zAlloc * AG_growth * ( 1._wp - AG_struct ) * c_GRes_leaves
-        zAlloc_stem   = zAlloc * AG_growth * AG_struct                  * c_GRes_wood     *   adj_fraction
-        zAlloc_csroot = zAlloc * BG_growth * BG_struct                  * c_GRes_csroot    *   adj_fraction
-        zAlloc_fnroot = zAlloc * BG_growth * ( 1._wp - BG_struct ) * c_GRes_fnroot     *   adj_fraction
+        zAlloc_stem   = zAlloc * AG_growth * AG_struct                  * c_GRes_wood     *   adj_fraction   * jedi_light_constraint
+        zAlloc_csroot = zAlloc * BG_growth * BG_struct                  * c_GRes_csroot    *   adj_fraction    * jedi_light_constraint
+        zAlloc_fnroot = zAlloc * BG_growth * ( 1._wp - BG_struct ) * c_GRes_fnroot     *   adj_fraction    * jedi_light_constraint
         
-        c_storage = c_storage - ( A_seed + AG_growth + BG_growth ) * zAlloc   *   adj_fraction
+        c_storage = c_storage - ( A_seed + AG_growth + BG_growth ) * zAlloc   *   adj_fraction   * jedi_light_constraint
         
         !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
         !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-! Growth respiration !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-!
@@ -626,8 +635,8 @@ CONTAINS
         
         tau_stem   = TurnoverStruc
         tau_csroot = TurnoverStruc
-        tau_leaves = 1._wp / ( (1._wp / TurnoverLeaf ) + ( 1._wp / TurnoverLeaf ) * Flg_senesc *             RelSenesAbgd )      !PHS 11.12.2019 play around with the senescence process
-        tau_fnroot = 1._wp / ( (1._wp / TurnoverLeaf ) + ( 1._wp / TurnoverLeaf ) * Flg_senesc * ( 1._wp -   RelSenesAbgd) )!PHS 11.12.2019 play around with the senescence process
+        tau_leaves = 1._wp / ( (1._wp / TurnoverLeaf ) + ( 1._wp / TurnoverLeaf ) * Flg_senesc )    ! *             RelSenesAbgd )      !PHS 11.12.2019 play around with the senescence process
+        tau_fnroot = 1._wp / ( (1._wp / TurnoverLeaf ) + ( 1._wp / TurnoverLeaf ) * Flg_senesc  )    ! * ( 1._wp -   RelSenesAbgd) )!PHS 11.12.2019 play around with the senescence process
         
         
         
@@ -666,9 +675,16 @@ CONTAINS
        
          
             NPP_act_yDayMean = ( GPP_yDayMean * sec_per_day  - AutoRes ) / (  sec_per_day )
-                          
-            root_depth = sqrt( c_csroot * 2250._wp*12.01_wp ) * 0.001_wp
-
+                
+            IF         (LandcoverClass .EQ. 3) THEN     
+               
+               root_depth = sqrt( c_csroot * 2250._wp*12.01_wp ) * 0.001_wp
+           
+           ELSE IF (LandcoverClass .EQ. 4) THEN
+ 
+                root_depth = sqrt( c_fnroot * 550._wp*12.01_wp ) * 0.001_wp
+ 
+           END IF
       
       
           GrowthResp = GrowthResp /  sec_per_day 
@@ -685,7 +701,7 @@ CONTAINS
            CUE = MAX ( 0._wp, CUE )
            
           END IF
-        IF   (    currentyear .GE. iniyear+19    ) THEN
+
         
           IF (  c_storage   .le. cTiny )  then 
               
@@ -703,7 +719,7 @@ CONTAINS
             Flg_die   = 1._wp
             
             
-          ENDIF
+    
         
         END IF
  

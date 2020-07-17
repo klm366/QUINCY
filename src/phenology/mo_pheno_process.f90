@@ -106,14 +106,7 @@ MODULE mo_pheno_process
     REAL(wp), INTENT(INOUT) ::   lai
     
     
-           
-       
-       
-       lai = c_leaves * JeDiSLA
-       !lai = lai + 1._wp/365._wp
-      
-  
-
+           lai = c_leaves * JeDiSLA
 
 
   END SUBROUTINE calc_jedi_phenology

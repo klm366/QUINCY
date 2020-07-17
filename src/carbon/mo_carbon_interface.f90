@@ -33,7 +33,7 @@ MODULE mo_carbon_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module (Get_carbon_memory and Get_carbon_config)
-  dsl4jsb_Use_processes CARBON_, ASSIMI_, PHENO_, DISTURB_, A2L_, L2A_,HYDRO_
+  dsl4jsb_Use_processes CARBON_, ASSIMI_, PHENO_, DISTURB_, A2L_, L2A_,HYDRO_,RAD_
 
   ! Use of process configurations
   dsl4jsb_Use_config(PHENO_)
@@ -50,6 +50,7 @@ MODULE mo_carbon_interface
   ! 
   dsl4jsb_Use_config(HYDRO_)
   dsl4jsb_Use_memory(HYDRO_)
+  dsl4jsb_Use_memory(RAD_)
   ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
   
 
@@ -197,6 +198,7 @@ CONTAINS
     ! JeDi needs soil moisture from HYDRO process
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_config(HYDRO_)
+    dsl4jsb_Def_memory(RAD_)
     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
     
     !dsl4jsb_Def_config(A2L_)
@@ -244,6 +246,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::   ff_npp
     dsl4jsb_Real2D_onChunk ::   flx_germ
     dsl4jsb_Real2D_onChunk ::   adj_fraction
+    dsl4jsb_Real2D_onChunk ::   jedi_light_constraint
     dsl4jsb_Real2D_onChunk ::   Flg_die
     dsl4jsb_Real2D_onChunk ::   Flg_senesc
     dsl4jsb_Real2D_onChunk ::   MaintRes
@@ -278,6 +281,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::   ff_T_30d
     dsl4jsb_Real2D_onChunk ::   ff_dTdt                      
     dsl4jsb_Real2D_onChunk ::   ff_grow_T_yDayMean
+    dsl4jsb_Real2D_onChunk ::   faPAR_prev_noon
     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
     
                                                         
@@ -410,6 +414,7 @@ CONTAINS
     ! JeDi needs soil moisture from HYDRO process
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_config(HYDRO_)
+    dsl4jsb_Get_memory(RAD_)
     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
     
     !dsl4jsb_Get_config(A2L_)
@@ -452,6 +457,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_npp            )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   flx_germ          )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   adj_fraction      )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   jedi_light_constraint )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   Flg_die           )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   Flg_senesc        )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   alpha_jedi        )
@@ -489,6 +495,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  ff_dTdt                      )
     dsl4jsb_Get_var2D_onChunk(CARBON_, ff_T_30d                    )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_grow_T_yDayMean) 
+    dsl4jsb_Get_var2D_onChunk(RAD_,        faPAR_prev_noon)
     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
    
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_crop_harvest)         ! inout
@@ -772,13 +779,14 @@ CONTAINS
         & dsl4jsb_Lctlib_param(TurnoverStruc),         & ! in
         & dsl4jsb_Lctlib_param(TurnoverLeaf ),         & ! in
         & dsl4jsb_Lctlib_param(SenesRspdNPP ),         & ! in
-        & dsl4jsb_Lctlib_param(RelSenesAbgd ),         & ! in
         & dsl4jsb_Lctlib_param(NitroStatus  ),         & ! in
         & dsl4jsb_Lctlib_param(JeDiSLA),               &  ! in
+        & dsl4jsb_Lctlib_param(LandcoverClass),   &  ! in
         ! JeDi plant trait parameter comes in now >>>>>>>>>>>
         & iniyear,                                     & !in
         & get_year(options%current_datetime),          & !in
         & timesteps_per_day(dtime),                    & ! in
+        & faPAR_prev_noon,                                  & !in
         & one_counter,                                 & ! inout
         & c_storage,                                   & ! inout
         & c_leaves,                                    & ! inout
@@ -797,6 +805,7 @@ CONTAINS
         & Flg_senesc,                                  & ! out
         & flx_germ,                                    & ! out
         &  adj_fraction,                                  &  !out
+        & jedi_light_constraint,                       &  !out
         & MaintRes_yDayMean,                           & ! inout
         & GrowthResp,                                  & ! out
         & AutoRes,                                     & ! out

@@ -601,7 +601,7 @@ CONTAINS
         & t_cf('evapotrans_soil', 'kg m-2 s-1', 'Evapotranspiration from soil (w/o snow and skin res.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
         & prefix, suffix,                                                                                &
-        & lrestart=.FALSE.,                                                                              &
+        & lrestart=.FALSE.,loutput=.TRUE.,                                                 &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL jsb_add_var( mem, 'evapo_skin', mem%evapo_skin,                          &
@@ -640,7 +640,7 @@ CONTAINS
         & t_cf('Water content in the whole soil column', 'm water equivalent', ''),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
         & prefix, suffix,                                                            &
-        & output_level=BASIC,    loutput=.FALSE.,                                                 &
+        & output_level=BASIC,    loutput=.TRUE.,                                                 &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL jsb_add_var( mem, 'w_soil_sl', mem%w_soil_sl,                     &
