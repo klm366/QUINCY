@@ -79,6 +79,8 @@ MODULE mo_carbon_memory_class
       c_ethanol_bg1,         & ! Yasso below ground litter-pool for ethanol soluble litter [mol(C)/m^2(canopy)]
       c_nonsoluble_bg1,      & ! Yasso below ground litter-pool for non-soluble litter [mol(C)/m^2(canopy)]
       c_humus_1,             & ! Yasso below ground litter-pool for slow C compartment [mol(C)/m^2(canopy)]
+      c_humus_2,             & ! Yasso below ground litter-pool for slow C compartment [mol(C)^2/m(canopy)]
+      c_humus_2,             & ! Yasso below ground litter-pool for slow C compartment [mol(C)^2/m(canopy)]
      !SIZE CLASS 2
       c_acid_ag2,            & ! Yasso above ground litter-pool for acid soluble litter [mol(C)/m^2(canopy)]
       c_water_ag2,           & ! Yasso above ground litter-pool for water soluble litter [mol(C)/m^2(canopy)]
