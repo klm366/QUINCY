@@ -24,7 +24,6 @@ MODULE mo_a2l_memory_class
   USE mo_jsb_memory_class,  ONLY: t_jsb_memory
   USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d
   USE mo_jsb_lct_class,     ONLY: LAKE_TYPE
-  USE mo_jsb_control,       ONLY: jsbach_runs_standalone, write_stdalone_forcing
 
   IMPLICIT NONE
   PRIVATE
@@ -455,17 +454,15 @@ CONTAINS
       & output_level=BASIC,                                                    & ! R: only to debugg, delete this line later
       & initval_r=7.0_wp )
 
-    IF (jsbach_runs_standalone() .OR. write_stdalone_forcing()) THEN
-      CALL jsb_add_var( mem, 'l_day_reminder', mem%l_day_reminder,               &
-        & hgrid, surface,                                                        &
-        & t_cf('To avoid that minimal radiation differences would lead to strong &
-        &       differences in the JS4 driver.', '', ''),                        &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
-        & prefix, suffix,                                                        &
-        & lrestart=.FALSE.,                                                      &
-        & output_level=BASIC,                                                    &
-        & initval_r=0.0_wp )
-    END IF
+    CALL jsb_add_var( mem, 'l_day_reminder', mem%l_day_reminder,               &
+      & hgrid, surface,                                                        &
+      & t_cf('To avoid that minimal radiation differences would lead to strong &
+      &       differences in the JS4 driver.', '', ''),                        &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+      & prefix, suffix,                                                        &
+      & lrestart=.FALSE.,                                                      &
+      & output_level=BASIC,                                                    &
+      & initval_r=0.0_wp )
 
     IF (.NOT. model%config%use_quincy) RETURN
 

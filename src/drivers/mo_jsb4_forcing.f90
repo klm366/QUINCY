@@ -28,11 +28,12 @@
 MODULE mo_jsb4_forcing
 #ifndef __NO_JSBACH__
 
-  USE mo_jsb_time, ONLY: is_time_experiment_start, t_datetime
+  USE mo_jsb_time, ONLY: is_time_experiment_start, t_datetime, is_newyear, is_newday
   USE mo_jsb_io_netcdf_iface, ONLY:              &
-    & nf,                                        & ! former nf_check
+    & nf, nf_get_vara_double,                    & ! former nf_check
     & nf_inq_dimid, nf_inq_dimlen, nf_inq_varid, & ! from netcdf.inc
     & NF_MAX_NAME, nf_get_att_text, NF_NOERR       ! from netcdf.inc
+  USE mo_read_netcdf_broadcast_2, ONLY: netcdf_open_input, netcdf_close
 
 
 #ifndef __ICON__
@@ -73,16 +74,12 @@ MODULE mo_jsb4_forcing
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: get_interface_variables_from_external_forcing, init_forcing, sat_specific_humidity
+  PUBLIC :: get_interface_variables_from_external_forcing, init_forcing, sat_specific_humidity, forcing_options
 
 
 #ifdef __ICON__
-  PUBLIC :: delta_time, time_step_len !, current_date, next_date
+  PUBLIC :: delta_time, time_step_len
 
-  !TYPE(t_datetime), SAVE, TARGET  :: current_date_target ! We need this only as a target for jsb4_driver
-  !TYPE(t_datetime), SAVE, POINTER :: current_date
-  !TYPE(t_datetime), SAVE, TARGET  :: next_date_target
-  !TYPE(t_datetime), SAVE, POINTER :: next_date => next_date_target ! we can not use this from the driver due to circular dependencies.
   REAL(wp), SAVE                  :: delta_time, time_step_len
   LOGICAL, SAVE                   :: lresume
 
@@ -157,64 +154,12 @@ MODULE mo_jsb4_forcing
   INTEGER,PARAMETER :: RH_   = 1         ! relative humidity as forcing data
   INTEGER,PARAMETER :: QAIR_ = 2         ! specific humidity as forcing data
 
-  ! --- Namelist parameters
-  LOGICAL                :: forcing_set_ocean_to_constants   !! Some external forcing is only defined for land cells (= true)
-                                                             !! false: forcing is expected for all variables and cells (e.g. echam)
-  REAL(wp)               :: forcing_height_wind              !! jsb3: Defines lowest layer height-> where measurements are taken // -1: for ECHAM lowest layer values
-  REAL(wp)               :: forcing_height_humidity          !! jsb3: Defines lowest layer height-> where measurements are taken // -1: for ECHAM lowest layer values
-
-                                                             !! ++ as in jsb3: "HeightHumidity and HeightTemperature have to be equal"
-  CHARACTER(NF_MAX_NAME) :: forcing_temp_file_prefix         !! Prefix for files with temperature forcing data
-  CHARACTER(len=128)     :: forcing_temp_frequ               !! Frequency of temperature forcing data (DAILY/CONST/TIMESTEP)
-  REAL(wp)               :: forcing_temp_const_tmin          !! Constant value for minimum daily temperature
-  REAL(wp)               :: forcing_temp_const_tmax          !! Constant value for maximum daily temperature
-  REAL(wp)               :: forcing_temp_ocean               !! Constant value for ocean cells
-  CHARACTER(len=128)     :: forcing_temp_unit                !! Expected unit of temp input
-
-  CHARACTER(NF_MAX_NAME) :: forcing_precip_file_prefix       !! Prefix for files with precipitation forcing data (unit: mm/day
-                                                             !! or kg/m^2/s, depending on 'forcing_precip_in_mm_per_day')
-  CHARACTER(len=128)     :: forcing_precip_frequ             !! Frequency of precipitation forcing (DAILY/CONST/TIMESTEP)
-  REAL(wp)               :: forcing_precip_const_precip      !! Constant value for precipitation
-  REAL(wp)               :: forcing_precip_ocean             !! Constant value for ocean cells
-  LOGICAL                :: forcing_precip_in_mm_per_day     !! Precipitation input in mm/day (true) or kg/m2/s (false)
-  CHARACTER(len=128)     :: forcing_precip_unit              !! Expected unit of precip input
-
-  CHARACTER(NF_MAX_NAME) :: forcing_sw_file_prefix           !! Prefix for files with shortwave radiation data
-  CHARACTER(len=128)     :: forcing_sw_frequ                 !! Frequency of shortwave forcing data (DAILY/CONST/TIMESTEP)
-  REAL(wp)               :: forcing_sw_const_shortwave       !! Constant value for downward shortwave radiation
-  REAL(wp)               :: forcing_sw_ocean                 !! Constant value for ocean cells
-  CHARACTER(len=128)     :: forcing_sw_unit                  !! Expected unit of shortwave input (default: [W/m^2])
-
-  CHARACTER(NF_MAX_NAME) :: forcing_lw_file_prefix           !! Prefix for files with longwave radiation data
-  CHARACTER(len=128)     :: forcing_lw_frequ                 !! Frequency of longwave forcing data (DAILY/CONST/TIMESTEP)
-  REAL(wp)               :: forcing_lw_const_longwave        !! Constant value for downward longwave radiation
-  REAL(wp)               :: forcing_lw_ocean                 !! Constant value for ocean cells
-  CHARACTER(len=128)     :: forcing_lw_unit                  !! Expected unit of longwave input (default: [W/m^2])
-
-  CHARACTER(NF_MAX_NAME) :: forcing_co2_file_prefix          !! Prefix for files with CO2 data (unit: mol(CO2)/mol(air)
-                                                             !! or kg(CO2)/kg(air) or ppmv, depending on 'forcing_co2_unit'
-  CHARACTER(len=128)     :: forcing_co2_frequ                !! Frequency of CO2 forcing data (DAILY/CONST/TIMESTEP/GHG_SCENARIO)
-  REAL(wp)               :: forcing_co2_const_co2            !! Constant value for CO2-concentration (unit: mol(CO2)/mol(air) or
-                                                             !! kg(CO2)/kg(air) or ppmv, depending on 'forcing_co2_unit')
-  REAL(wp)               :: forcing_co2_ocean                !! Constant value for ocean cells
-  CHARACTER(len=128)     :: forcing_co2_unit                 !! Unit of CO2 input (PPMV/MOL_PER_MOL/KG_PER_KG/'')
-
-  CHARACTER(NF_MAX_NAME) :: forcing_wind_file_prefix         !! Prefix for files with windspeed data
-  CHARACTER(len=128)     :: forcing_wind_frequ               !! Frequency of windspeed forcing data (DAILY/CONST/TIMESTEP)
-  REAL(wp)               :: forcing_wind_const_wspeed        !! Constant value for windspeed [m/s]
-  REAL(wp)               :: forcing_wind_ocean               !! Constant value for ocean cells
-  CHARACTER(len=128)     :: forcing_wind_unit                !! Expected unit of wind input (default: [m/s])
-
-  CHARACTER(NF_MAX_NAME) :: forcing_qair_file_prefix         !! Prefix for files with qair data
-  CHARACTER(len=128)     :: forcing_qair_frequ               !! Frequency of qair forcing data (DAILY/CONST)
-  CHARACTER(len=128)     :: forcing_qair_type                !! Type of input data used for forcing by atm. humidity
-  REAL(wp)               :: forcing_qair_const_rh            !! Constant value for relative humidity
-  REAL(wp)               :: forcing_qair_ocean               !! Constant value for ocean cells
-  CHARACTER(len=128)     :: forcing_qair_unit                !! Expected unit of qair input
-
   ! --- Structures for handling input data
   ! options relating forcing read from namelist
   TYPE forcing_options_type
+    REAL(wp) :: delta_time_observations
+    INTEGER  :: forcing_synchron_factor      
+    INTEGER  :: forcing_steps_per_file
     LOGICAL  :: forcing_set_ocean_to_constants !! Specifies if external forcing is only defined for land cells (true)
     LOGICAL  :: air_temperature_as_timestep    !! Specifies if the air temperatures are given per timestep
     INTEGER  :: type_of_qair_forcing           !! Possible values: see 'options controlling atmospheric humidity input data'
@@ -325,15 +270,10 @@ CONTAINS
     ! TODO: help1 is rad_sw_down, help2 is rad_sw_down_pot, but these are (currently?) not required - remove?
     REAL(wp), ALLOCATABLE :: help1(:,:), help2(:,:)
 
-    print*,'CCC ',nblks,ics,ice
 #ifdef __ICON__
-    !LOGICAL :: lresume
     lresume = is_time_restart(current_datetime)
-    !current_date => current_date_target
-    !next_date    => next_date_target
 #endif
 
-print*,'DDD ',lresume
     !---------------------------------------------------------------------------------
     ALLOCATE(help1(ice, nblks))
     ALLOCATE(help2(ice, nblks))
@@ -357,7 +297,6 @@ print*,'DDD ',lresume
       ! estimate temperature at time step from daily temperature maximum and temperature minimum
       CALL instantly_from_daily_temp_2(nblks, ice, lon, sinlat, coslat, tmin_data, tmax_data, next_date, t_air_C)
     ENDIF
-    ! print*,'BBB ',t_air_C
     ! convert degC to Kelvin
     t_air(:,:) = t_air_C(:,:) + tmelt
     ! dsl4jsb_Get_memory(A2L_)
@@ -535,9 +474,69 @@ print*,'DDD ',lresume
 
     INTEGER, INTENT(IN) :: model_id
 
+    ! --- Namelist parameters
+    REAL(wp) :: delta_time_observations
+    INTEGER  :: forcing_synchron_factor ! Factor defines how many time steps the JS4 driver performs for
+                                        ! each atmospheric forcing time step that is read in      
+    INTEGER  :: forcing_steps_per_file  ! The number of time steps included by the used forcing file(s), e.g. 72
+    LOGICAL                :: forcing_set_ocean_to_constants   !! Some external forcing is only defined for land cells (= true)
+    !! false: forcing is expected for all variables and cells (e.g. echam)
+    REAL(wp)               :: forcing_height_wind              !! jsb3: Defines lowest layer height-> where measurements are taken // -1: for ECHAM lowest layer values
+    REAL(wp)               :: forcing_height_humidity          !! jsb3: Defines lowest layer height-> where measurements are taken // -1: for ECHAM lowest layer values
+
+    !! ++ as in jsb3: "HeightHumidity and HeightTemperature have to be equal"
+    CHARACTER(NF_MAX_NAME) :: forcing_temp_file_prefix         !! Prefix for files with temperature forcing data
+    CHARACTER(len=128)     :: forcing_temp_frequ               !! Frequency of temperature forcing data (DAILY/CONST/TIMESTEP)
+    REAL(wp)               :: forcing_temp_const_tmin          !! Constant value for minimum daily temperature
+    REAL(wp)               :: forcing_temp_const_tmax          !! Constant value for maximum daily temperature
+    REAL(wp)               :: forcing_temp_ocean               !! Constant value for ocean cells
+    CHARACTER(len=128)     :: forcing_temp_unit                !! Expected unit of temp input
+
+    CHARACTER(NF_MAX_NAME) :: forcing_precip_file_prefix       !! Prefix for files with precipitation forcing data (unit: mm/day
+    !! or kg/m^2/s, depending on 'forcing_precip_in_mm_per_day')
+    CHARACTER(len=128)     :: forcing_precip_frequ             !! Frequency of precipitation forcing (DAILY/CONST/TIMESTEP)
+    REAL(wp)               :: forcing_precip_const_precip      !! Constant value for precipitation
+    REAL(wp)               :: forcing_precip_ocean             !! Constant value for ocean cells
+    LOGICAL                :: forcing_precip_in_mm_per_day     !! Precipitation input in mm/day (true) or kg/m2/s (false)
+    CHARACTER(len=128)     :: forcing_precip_unit              !! Expected unit of precip input
+
+    CHARACTER(NF_MAX_NAME) :: forcing_sw_file_prefix           !! Prefix for files with shortwave radiation data
+    CHARACTER(len=128)     :: forcing_sw_frequ                 !! Frequency of shortwave forcing data (DAILY/CONST/TIMESTEP)
+    REAL(wp)               :: forcing_sw_const_shortwave       !! Constant value for downward shortwave radiation
+    REAL(wp)               :: forcing_sw_ocean                 !! Constant value for ocean cells
+    CHARACTER(len=128)     :: forcing_sw_unit                  !! Expected unit of shortwave input (default: [W/m^2])
+
+    CHARACTER(NF_MAX_NAME) :: forcing_lw_file_prefix           !! Prefix for files with longwave radiation data
+    CHARACTER(len=128)     :: forcing_lw_frequ                 !! Frequency of longwave forcing data (DAILY/CONST/TIMESTEP)
+    REAL(wp)               :: forcing_lw_const_longwave        !! Constant value for downward longwave radiation
+    REAL(wp)               :: forcing_lw_ocean                 !! Constant value for ocean cells
+    CHARACTER(len=128)     :: forcing_lw_unit                  !! Expected unit of longwave input (default: [W/m^2])
+
+    CHARACTER(NF_MAX_NAME) :: forcing_co2_file_prefix          !! Prefix for files with CO2 data (unit: mol(CO2)/mol(air)
+    !! or kg(CO2)/kg(air) or ppmv, depending on 'forcing_co2_unit'
+    CHARACTER(len=128)     :: forcing_co2_frequ                !! Frequency of CO2 forcing data (DAILY/CONST/TIMESTEP/GHG_SCENARIO)
+    REAL(wp)               :: forcing_co2_const_co2            !! Constant value for CO2-concentration (unit: mol(CO2)/mol(air) or
+    !! kg(CO2)/kg(air) or ppmv, depending on 'forcing_co2_unit')
+    REAL(wp)               :: forcing_co2_ocean                !! Constant value for ocean cells
+    CHARACTER(len=128)     :: forcing_co2_unit                 !! Unit of CO2 input (PPMV/MOL_PER_MOL/KG_PER_KG/'')
+
+    CHARACTER(NF_MAX_NAME) :: forcing_wind_file_prefix         !! Prefix for files with windspeed data
+    CHARACTER(len=128)     :: forcing_wind_frequ               !! Frequency of windspeed forcing data (DAILY/CONST/TIMESTEP)
+    REAL(wp)               :: forcing_wind_const_wspeed        !! Constant value for windspeed [m/s]
+    REAL(wp)               :: forcing_wind_ocean               !! Constant value for ocean cells
+    CHARACTER(len=128)     :: forcing_wind_unit                !! Expected unit of wind input (default: [m/s])
+
+    CHARACTER(NF_MAX_NAME) :: forcing_qair_file_prefix         !! Prefix for files with qair data
+    CHARACTER(len=128)     :: forcing_qair_frequ               !! Frequency of qair forcing data (DAILY/CONST)
+    CHARACTER(len=128)     :: forcing_qair_type                !! Type of input data used for forcing by atm. humidity
+    REAL(wp)               :: forcing_qair_const_rh            !! Constant value for relative humidity
+    REAL(wp)               :: forcing_qair_ocean               !! Constant value for ocean cells
+    CHARACTER(len=128)     :: forcing_qair_unit                !! Expected unit of qair input
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_forcing'
 
-    NAMELIST /jsb_forcing_nml/    forcing_set_ocean_to_constants, forcing_height_wind, forcing_height_humidity,               &
+    NAMELIST /jsb_forcing_nml/ delta_time_observations, forcing_synchron_factor, forcing_steps_per_file,                      &
+      & forcing_set_ocean_to_constants, forcing_height_wind, forcing_height_humidity,                                         &
       & forcing_temp_file_prefix, forcing_temp_frequ, forcing_temp_const_tmin, forcing_temp_const_tmax, forcing_temp_ocean,   &
       & forcing_temp_unit,                                                                                                    &
       & forcing_precip_file_prefix, forcing_precip_frequ, forcing_precip_const_precip,                                        &
@@ -556,6 +555,11 @@ print*,'DDD ',lresume
 
     IF (my_process_is_stdio()) THEN
       ! ----- define default values for jsb_forcing_nml namelist parameters
+      delta_time_observations  = 86400._wp
+      forcing_synchron_factor  = 1  ! Factor defines how many time steps the JS4 driver performs for
+                                    ! each atmospheric forcing time step that is read in
+      forcing_steps_per_file   = 72 ! The number of time steps included by the used forcing file(s), e.g. 72
+  
       forcing_set_ocean_to_constants = .TRUE.
       forcing_height_wind = defHeightWind
       forcing_height_humidity = defHeightHumidity
@@ -610,6 +614,10 @@ print*,'DDD ',lresume
       nml_handler = open_nml (TRIM(model%namelist_filename))
       f_unit = position_nml ('jsb_forcing_nml', nml_handler, status=read_status)
       IF (read_status .EQ. POSITIONED) READ(f_unit, jsb_forcing_nml)
+
+      forcing_options%delta_time_observations = delta_time_observations
+      forcing_options%forcing_synchron_factor = forcing_synchron_factor
+      forcing_options%forcing_steps_per_file  = forcing_steps_per_file
 
       ! ----- derive options - forcing heights: as in jsb3 it is expected that "HeightHumidity and HeightTemperature have to be equal"
       forcing_options%heightWind = forcing_height_wind
@@ -667,6 +675,9 @@ print*,'DDD ',lresume
     ! ----- broadcast information
     IF (my_process_is_mpi_parallel()) THEN
       ! forcing options
+      CALL p_bcast(delta_time_observations, p_io, mpi_comm)
+      CALL p_bcast(forcing_synchron_factor, p_io, mpi_comm)
+      CALL p_bcast(forcing_steps_per_file, p_io, mpi_comm)
       CALL p_bcast(forcing_options%forcing_set_ocean_to_constants, p_io, mpi_comm)
       CALL p_bcast(forcing_options%air_temperature_as_timestep, p_io, mpi_comm)
       CALL p_bcast(forcing_options%precip_in_mm_per_day, p_io, mpi_comm)
@@ -789,6 +800,7 @@ print*,'DDD ',lresume
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_input_file) :: input_file
+    INTEGER :: nc_file_id, nc_stat
 
     model => Get_model(model_id)
 
@@ -805,8 +817,10 @@ print*,'DDD ',lresume
     ! ----- Check times
     CALL get_date_components(next_date, year, month, day, hour, minute, second)
     CALL get_date_components (current_datetime,  year=current_year, day=current_day) ! R: sehe keinen Unterschied zwischen current_date und current_datetime
-    new_year_forcing = (year /= current_year)
-    new_day_forcing = (day /= current_day)
+    ! new_year_forcing = (year /= current_year)
+    ! new_day_forcing = (day /= current_day)
+    new_year_forcing = is_newyear(current_datetime, delta_time)
+    new_day_forcing  = is_newday (current_datetime, delta_time)
     WRITE(year_label,'(i8.4)') year
     !Assertion: delta_time needs to be smaller or equal 86400
     IF ((delta_time .GT. 86400._wp)) CALL finish(TRIM(routine), &
@@ -818,12 +832,12 @@ print*,'DDD ',lresume
       IF(is_time_experiment_start(current_datetime) .OR. lresume) THEN
         IF(my_process_is_stdio()) THEN
           ! in case of ghg_scenario the forcing_input_variable%file_name_prefix is expected to contain the whole filename
-          input_file = jsb_netcdf_open_input(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)), model%grid_id)
-          CALL get_time_dimension(input_file, forcing_input_variable)
+          nc_file_id = netcdf_open_input(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)))
+          CALL get_time_dimension(nc_file_id, forcing_input_variable)
           ! Assert: test that the netcdf file unit for this variable is the expected unit or at least equals unspecified_exp_unit
 !          CALL test_unit(input_file%file_id, TRIM(forcing_input_variable%variable_name), &
 !            & TRIM(forcing_input_variable%expectedUnit), TRIM(readUnit))
-          CALL input_file%Close()
+          nc_stat = netcdf_close(nc_file_id)
         ENDIF
 
         IF(ASSOCIATED(forcing_input_variable%data_read)) DEALLOCATE(forcing_input_variable%data_read)
@@ -880,16 +894,17 @@ print*,'DDD ',lresume
     ! --- if new current run or new file - get the timeseries of the forcing file and the current position in the timeseries
     IF (new_year_forcing .OR. is_time_experiment_start(current_datetime) .OR. lresume) THEN
       IF(my_process_is_stdio()) THEN
-        input_file = jsb_netcdf_open_input( &
-          & trim(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) // TRIM(ADJUSTL(year_label)) // '.nc'), model%grid_id)
+        nc_file_id = netcdf_open_input(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) // TRIM(ADJUSTL(year_label)) // '.nc')
 
-        CALL get_time_dimension(input_file, forcing_input_variable)
+        CALL get_time_dimension(nc_file_id, forcing_input_variable)
+
         ! Assert: test that the netcdf file unit for this variable is the expected unit or at least equals unspecified_exp_unit
-        CALL test_unit(input_file%file_id, TRIM(forcing_input_variable%variable_name), &
+        ! CALL test_unit(input_file%file_id, TRIM(forcing_input_variable%variable_name), &
+        CALL test_unit(nc_file_id, TRIM(forcing_input_variable%variable_name), &
           & TRIM(forcing_input_variable%expectedUnit), TRIM(readUnit))
         ! TODO: further assertions? e.g. that lon lat are correct?
 
-        CALL input_file%Close()
+        nc_stat = netcdf_close(nc_file_id)
 
         currentTimeStep = 1
         thisDayStart = 0
@@ -914,7 +929,6 @@ print*,'DDD ',lresume
           CALL finish(TRIM(routine), message_text)
         ENDIF
 
-        CALL input_file%Close()
         forcing_input_variable%currentDayStart = thisDayStart
         forcing_input_variable%currentDayEnd = thisDayEnd
 
@@ -941,6 +955,10 @@ print*,'DDD ',lresume
     IF (new_day_forcing .OR. is_time_experiment_start(current_datetime) .OR. lresume) THEN
       ! check timeseries
       IF(my_process_is_stdio()) THEN
+        IF (TRIM(forcing_input_variable%variable_name) == 'precip') THEN
+          WRITE(message_text,*) ' Reading forcing for ', ydate
+          CALL message('----- ', message_text)
+        END IF
         !Assertion: currentTimeStep needs to be contained in the file
         IF(thisDayStart > forcing_input_variable%length_time_series) CALL finish(TRIM(routine), &
           & 'Day not found: ' //TRIM(int2string(ydate)))
@@ -1054,26 +1072,23 @@ print*,'DDD ',lresume
   !! @par History
   !! First version by Julia Nabel (2016-02-25)
   !!
-  SUBROUTINE get_time_dimension(input_file, forcing_input_variable)
+  SUBROUTINE get_time_dimension(file_id, forcing_input_variable)
 
-    USE  mo_read_interface, ONLY:  read_1D 
-
-    TYPE(t_input_file), INTENT(INOUT)        :: input_file
+    INTEGER, INTENT(IN)  :: file_id
     TYPE(input_variable_type), INTENT(INOUT) :: forcing_input_variable
 
     INTEGER                                  :: nc_dim_id, nc_var_id
-    REAL(wp), POINTER                        :: return_pointer(:,:,:) !temporary pointer
     CHARACTER(LEN=*), PARAMETER              :: routine = modname//"::get_time_dimension"
 
-    CALL nf(nf_inq_dimid(input_file%file_id, 'time', nc_dim_id), routine)
-    CALL nf(nf_inq_dimlen(input_file%file_id, nc_dim_id, forcing_input_variable%length_time_series), routine)
+    CALL nf(nf_inq_dimid(file_id, 'time', nc_dim_id), routine)
+    CALL nf(nf_inq_dimlen(file_id, nc_dim_id, forcing_input_variable%length_time_series), routine)
     IF(ASSOCIATED(forcing_input_variable%timevalues)) DEALLOCATE(forcing_input_variable%timevalues)
     ALLOCATE(forcing_input_variable%timevalues(forcing_input_variable%length_time_series))
 
     ! We need the timevalues for get_data_and_update_field
-    CALL nf(nf_inq_varid(input_file%file_id, 'time', nc_var_id), routine)
-
-    CALL read_1D(input_file%file_id, 'time',  forcing_input_variable%timevalues)
+    CALL nf(nf_inq_varid(file_id, 'time', nc_var_id), routine)
+    CALL nf(nf_get_vara_double(file_id, nc_var_id, (/ 1 /), &
+      & (/ forcing_input_variable%length_time_series /), forcing_input_variable%timevalues), routine)
 
   END SUBROUTINE get_time_dimension
 

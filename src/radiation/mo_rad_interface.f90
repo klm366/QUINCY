@@ -694,7 +694,7 @@ CONTAINS
       & calc_sky_view_fractions, calc_snow_albedo, Merge_albedos_of_vegtile, &
       & Has_minimal_radiation
     USE mo_jsb_time,          ONLY: is_time_experiment_start, is_time_ltrig_rad_m1
-    USE mo_jsb_control,       ONLY: jsbach_runs_standalone, write_stdalone_forcing, l_forcing_observations
+    USE mo_jsb_control,       ONLY: jsbach_runs_standalone, force_from_observations
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -795,7 +795,7 @@ CONTAINS
 
 
   ! This is because we do not want to change the behaviour of the ECHAM Standalone driver
-  IF (jsbach_runs_standalone() .AND. .NOT. l_forcing_observations) THEN
+  IF (jsbach_runs_standalone() .AND. .NOT. force_from_observations()) THEN
 #ifdef __ICON__
     !write(*,*) 'RRRRRRRRRRRR hier sollte der standalone lauf ankommen!!!' ! R: tut er auch und zwar ausschließlich
 
@@ -892,11 +892,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,   swvis_srf_down)        ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,   swnir_srf_down)        ! in
 
-    IF (jsbach_runs_standalone() .OR. write_stdalone_forcing()) THEN
-!#ifdef __ICON__
-      dsl4jsb_Get_var2D_onChunk(A2L_, l_day_reminder)        ! in
-!#endif
-    END IF
+    dsl4jsb_Get_var2D_onChunk(A2L_, l_day_reminder)          ! in
 
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)              ! in
 
@@ -920,7 +916,7 @@ CONTAINS
 
     !> 0.9  Set day-or-night-switch
 
-    IF (jsbach_runs_standalone() .AND. .NOT. l_forcing_observations) THEN
+    IF (jsbach_runs_standalone() .AND. .NOT. force_from_observations()) THEN
 #ifdef __ICON__
       ! Use l_day from forcing
       WHERE (l_day_reminder(:) > 0.5_wp)
@@ -937,9 +933,7 @@ CONTAINS
       ! Not standalone
       !$claw expand parallel update savepoint=ser_jsb_rad_has_minimal_radiation_1 tile_name=tile%name
       l_day(:) = Has_minimal_radiation(swvis_srf_down(:), swnir_srf_down(:))
-      IF (write_stdalone_forcing()) THEN
-        l_day_reminder(:) = merge(1._wp, 0._wp, l_day(:)) ! convert logical l_day to real
-      END IF
+      l_day_reminder(:) = merge(1._wp, 0._wp, l_day(:)) ! convert logical l_day to real
     END IF
 
 

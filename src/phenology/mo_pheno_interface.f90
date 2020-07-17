@@ -297,8 +297,7 @@ CONTAINS
     USE mo_jsb_grid_class,       ONLY: t_jsb_grid
     USE mo_jsb_grid,             ONLY: Get_grid
     USE mo_physical_constants,   ONLY: tmelt
-    USE mo_jsb_control,          ONLY: jsbach_runs_standalone, l_forcing_observations
-  USE mo_jsb_time,   ONLY: jstep
+    USE mo_jsb_control,          ONLY: jsbach_runs_standalone, force_from_observations
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -487,7 +486,7 @@ CONTAINS
 
 
     ! This is because we do not want to change the behaviour of the ECHAM Standalone driver
-    IF (jsbach_runs_standalone().AND. .NOT. l_forcing_observations) THEN
+    IF (jsbach_runs_standalone().AND. .NOT. force_from_observations()) THEN
 #ifdef __ICON__
       !write(*,*) 'RRRRRRRRRRRR hier sollte der standalone lauf ankommen!!!' ! R: tut er auch und zwar ausschließlich
       dsl4jsb_Get_var2D_onChunk(A2L_, newday_Merker)      ! in

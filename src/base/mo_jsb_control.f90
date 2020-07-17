@@ -28,18 +28,14 @@ MODULE mo_jsb_control
   PRIVATE
 
   PUBLIC :: init_jsb_master_control
-  PUBLIC :: jsbach_runs_standalone, jsbach_is_restarted, write_stdalone_forcing
+  PUBLIC :: jsbach_runs_standalone, jsbach_is_restarted, force_from_observations
   PUBLIC :: debug_on, timer_on, l_timer_host, get_debug_memory_level
   PUBLIC :: model_base_dir
   ! t_jsb_model_nml needs to be public for the NEC compiler
   PUBLIC :: t_jsb_model_nml, jsb_models_nml, get_no_of_models
   PUBLIC :: timer_jsbach, timer_aggregate, timer_integrate, timer_process_task, timer_process_msg
   PUBLIC :: max_no_of_models
-  PUBLIC :: l_forcing_observations, delta_time_observations
-  PUBLIC :: forcing_synchron_factor      
-  PUBLIC :: forcing_steps_per_file
 
-  LOGICAL,           SAVE :: write_standalone_forcing
   LOGICAL,           SAVE :: is_standalone
   LOGICAL,           SAVE :: restart_jsbach
   CHARACTER(len=99), SAVE :: model_base_dir
@@ -47,10 +43,7 @@ MODULE mo_jsb_control
   INTEGER,           SAVE :: debug_io
   INTEGER,           SAVE :: debug_memory_level
   INTEGER,           SAVE :: timer_level
-  LOGICAL  :: l_forcing_observations
-  REAL(wp) :: delta_time_observations
-  INTEGER  :: forcing_synchron_factor      
-  INTEGER  :: forcing_steps_per_file
+  LOGICAL,           SAVE :: l_force_from_obs
 
   TYPE t_jsb_model_nml
     INTEGER            :: model_id = 0
@@ -92,7 +85,7 @@ CONTAINS
 
     CALL init_jsb_io(TRIM(master_namelist_filename))
 
-    IF (jsbach_runs_standalone()) l_timer_host = .FALSE. !< Would be uninitialized otherwise
+    ! IF (jsbach_runs_standalone()) l_timer_host = .FALSE. !< Would be uninitialized otherwise
     IF (timer_on() .OR. l_timer_host) THEN
       IF (no_of_models > 1) THEN
         DO i=1,no_of_models
@@ -153,11 +146,7 @@ CONTAINS
       debug_level,             &
       debug_io,                &
       debug_memory_level,      &
-      write_standalone_forcing, &
-      l_forcing_observations,   &
-      delta_time_observations,  &      
-      forcing_synchron_factor,  &
-      forcing_steps_per_file
+      l_force_from_obs
 
     NAMELIST /jsb_model_nml/   &
       model_id,                &
@@ -174,12 +163,7 @@ CONTAINS
     debug_level        = 0
     debug_io           = 0
     debug_memory_level = 0
-    write_standalone_forcing = .FALSE.
-    l_forcing_observations   = .FALSE.
-    delta_time_observations  = 86400._wp
-    forcing_synchron_factor  = 1  ! Factor defines how many time steps the JS4 driver performs for
-                                  ! each atmospheric forcing time step that is read in
-    forcing_steps_per_file   = 72 ! The number of time steps included by the used forcing file(s), e.g. 72
+    l_force_from_obs   = .TRUE.
 
     nml_handler = open_nml(TRIM(namelist_filename))
 
@@ -246,11 +230,11 @@ CONTAINS
 
   END FUNCTION jsbach_runs_standalone
 
-  LOGICAL FUNCTION write_stdalone_forcing()
+  LOGICAL FUNCTION force_from_observations()
 
-    write_stdalone_forcing = write_standalone_forcing
+    force_from_observations = l_force_from_obs
 
-  END FUNCTION write_stdalone_forcing
+  END FUNCTION force_from_observations
 
   LOGICAL FUNCTION jsbach_is_restarted()
 
