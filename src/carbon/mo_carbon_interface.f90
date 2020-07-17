@@ -155,7 +155,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  topSoilTemp           ! was not cbalance_type
     dsl4jsb_Real2D_onChunk ::  alpha                 ! was not cbalance_type. Relative soil moisture (used for
                                                      ! heterotrophic respiration)
-    dsl4jsb_Real2D_onChunk :: cconservation_calcCpools
+    dsl4jsb_Real2D_onChunk ::  cconservation_calcCpools ! C conservation test: Deviation from conservation
 
     dsl4jsb_Real2D_onChunk ::  cflux_c_greenwood_2_litter           ! Carbon flux from the veget. to the litter pools
                                                      ! [mol(C)/m^2(canopy) s]
@@ -249,6 +249,11 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk ::  root_exudates          ! Total root exudates entering to the litter green pools
                                                       ! [mol(C)/m^2(canopy) s]
+
+    dsl4jsb_Real2D_onChunk ::  c_sum_litter_ag_ta
+    dsl4jsb_Real2D_onChunk ::  c_sum_litter_bg_ta
+    dsl4jsb_Real2D_onChunk ::  c_sum_humus_ta
+    dsl4jsb_Real2D_onChunk ::  c_sum_natural_ta
 
     dsl4jsb_Real2D_onChunk ::  cflux_c_green_2_herb     !
     dsl4jsb_Real2D_onChunk ::  cflux_herb_2_littergreen !
@@ -354,6 +359,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  excess_NPP)                 ! inout
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  root_exudates )             ! inout
+
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_sum_litter_ag_ta )         ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_sum_litter_bg_ta )         ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_sum_humus_ta )             ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_sum_natural_ta )           ! out
+
     dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_c_green_2_herb )           ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_herb_2_littergreen  )       ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_herb_2_atm )     ! inout
@@ -426,6 +437,24 @@ CONTAINS
     pseudo_precip = precip_total * N_pseudo_precip  +  F_pseudo_precip * pseudo_precip
 
     lstart = is_time_experiment_start()
+
+    ! All per tile variables need to be re-calculated in case they are written to output
+    CALL recalc_per_tile_vars(tile, options,                                      &
+      & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:),      &
+      & c_crop_harvest = c_crop_harvest(:),                                       &
+      & c_acid_ag1 = c_acid_ag1(:), c_water_ag1 = c_water_ag1(:),                 &
+      & c_ethanol_ag1 = c_ethanol_ag1(:), c_nonsoluble_ag1 = c_nonsoluble_ag1(:), &
+      & c_acid_ag2 = c_acid_ag2(:), c_water_ag2 = c_water_ag2(:),                 &
+      & c_ethanol_ag2 = c_ethanol_ag2(:), c_nonsoluble_ag2 = c_nonsoluble_ag2(:), &
+      & c_acid_bg1 = c_acid_bg1(:), c_water_bg1 = c_water_bg1(:),                 &
+      & c_ethanol_bg1 = c_ethanol_bg1(:), c_nonsoluble_bg1 = c_nonsoluble_bg1(:), &
+      & c_acid_bg2 = c_acid_bg2(:), c_water_bg2 = c_water_bg2(:),                 &
+      & c_ethanol_bg2 = c_ethanol_bg2(:), c_nonsoluble_bg2 = c_nonsoluble_bg2(:), &
+      & c_humus_1 = c_humus_1(:), c_humus_2 = c_humus_2(:), root_exudates = root_exudates(:),   &
+      & soil_respiration = soil_respiration(:), NPP_flux_correction = NPP_flux_correction(:),   &
+      & cflux_c_greenwood_2_litter = cflux_c_greenwood_2_litter(:),                             &
+      & cflux_c_green_2_herb = cflux_c_green_2_herb(:), cflux_herb_2_atm = cflux_herb_2_atm(:), &
+      & NPP_act_yDayMean = NPP_act_yDayMean(:), NPP_pot_yDayMean = NPP_pot_yDayMean(:), GPP_yDayMean = GPP_yDayMean(:))
 
     IF( .NOT. is_newday() .OR. lstart) THEN ! perform daily sums if WE ARE NOT STARTING A NEW DAY
                                             ! or if we JUST STARTED AN TOTALLY NEW EXPERIMENT
@@ -595,6 +624,9 @@ CONTAINS
         & cflux_c_green_2_herb = cflux_c_green_2_herb(:), cflux_herb_2_atm = cflux_herb_2_atm(:), &
         & NPP_act_yDayMean = NPP_act_yDayMean(:), NPP_pot_yDayMean = NPP_pot_yDayMean(:), GPP_yDayMean = GPP_yDayMean(:))
 
+      CALL calculate_current_c_ta_state_sum(tile, options, c_sum_natural_ta(:), &
+        & c_sum_litter_ag_ta(:), c_sum_litter_bg_ta(:), c_sum_humus_ta(:))
+
       ! cflux_herb_2_atm and soil_respiration are negative (fluxes away from land)
       ! thus + here instead of - to reduce NPP by these fluxes
       current_fluxes = (NPP_act_yDayMean + cflux_herb_2_atm + soil_respiration) &
@@ -698,7 +730,10 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_bg2_ta,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_humus_2_ta,          weighted_by_fract)
     ! sums
-    dsl4jsb_Aggregate_onChunk(CARBON_, C_sum_natural_ta,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_sum_litter_ag_ta,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_sum_litter_bg_ta,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_sum_humus_ta,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_sum_natural_ta,      weighted_by_fract)
 !    dsl4jsb_Aggregate_onChunk(CARBON_, NPP_pot_sum_ta,        weighted_by_fract)
 !    dsl4jsb_Aggregate_onChunk(CARBON_, GPP_sum_ta,            weighted_by_fract)
     ! fluxes
@@ -975,7 +1010,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  root_exudates_ta
     dsl4jsb_Real2D_onChunk ::  cflux_c_green_2_herb_ta
     dsl4jsb_Real2D_onChunk ::  cflux_herb_2_atm_ta
-    dsl4jsb_Real2D_onChunk ::  C_sum_natural_ta
 
     dsl4jsb_Real2D_onChunk ::  veg_fract_correction
     dsl4jsb_Real2D_onChunk ::  fract_fpc_max
@@ -1025,8 +1059,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_c_green_2_herb_ta )      ! opt out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_herb_2_atm_ta )          ! opt out
 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  C_sum_natural_ta )           ! out
-
     dsl4jsb_Get_var2D_onChunk(PHENO_,   veg_fract_correction )       ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max )              ! in
 
@@ -1073,8 +1105,6 @@ CONTAINS
     IF (PRESENT(c_humus_2)) CALL get_per_tile(c_humus_2_ta(:), &
       & c_humus_2(:), veg_fract_correction(:), fract_fpc_max(:))
 
-    CALL calculate_current_c_ta_state_sum(tile, options, C_sum_natural_ta(:))
-
     ! C fluxes
     IF (PRESENT(cflux_dist_greenreserve_2_soil)) CALL get_per_tile(cflux_dist_greenreserve_2_soil_ta(:), &
       & cflux_dist_greenreserve_2_soil(:), veg_fract_correction(:), fract_fpc_max(:))
@@ -1112,14 +1142,18 @@ CONTAINS
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
   !
-  SUBROUTINE calculate_current_c_ta_state_sum(tile, options, current_c_state_sum)
+  SUBROUTINE calculate_current_c_ta_state_sum(tile, options, current_c_state_sum, &
+    & c_sum_litter_ag, c_sum_litter_bg, c_sum_humus)
 
     !USE mo_util,                ONLY: real2string
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(in), TARGET :: tile
     TYPE(t_jsb_task_options),   INTENT(in)         :: options
-    REAL(wp),                   INTENT(inout)      :: current_c_state_sum(:)
+    REAL(wp),                   INTENT(out)        :: current_c_state_sum(:)
+    REAL(wp), OPTIONAL,         INTENT(out)        :: c_sum_litter_ag(:)
+    REAL(wp), OPTIONAL,         INTENT(out)        :: c_sum_litter_bg(:)
+    REAL(wp), OPTIONAL,         INTENT(out)        :: c_sum_humus(:)
 
     dsl4jsb_Def_memory(CARBON_)
 
@@ -1127,7 +1161,6 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':calculate_current_c_ta_state_sum'
     INTEGER                     :: ics, ice, iblk
 
-   
 
     dsl4jsb_Real2D_onChunk ::  c_green_ta
     dsl4jsb_Real2D_onChunk ::  c_reserve_ta
@@ -1192,6 +1225,15 @@ CONTAINS
         & c_acid_bg1_ta(:) + c_water_bg1_ta(:) + c_ethanol_bg1_ta(:) + c_nonsoluble_bg1_ta(:) + &
         & c_acid_bg2_ta(:) + c_water_bg2_ta(:) + c_ethanol_bg2_ta(:) + c_nonsoluble_bg2_ta(:) + &
         & c_humus_1_ta(:)  + c_humus_2_ta(:)
+
+    IF (PRESENT(c_sum_litter_ag)) c_sum_litter_ag(ics:ice) =                                    &
+        & c_acid_ag1_ta(:) + c_water_ag1_ta(:) + c_ethanol_ag1_ta(:) + c_nonsoluble_ag1_ta(:) + &
+        & c_acid_ag2_ta(:) + c_water_ag2_ta(:) + c_ethanol_ag2_ta(:) + c_nonsoluble_ag2_ta(:)
+    IF (PRESENT(c_sum_litter_bg)) c_sum_litter_bg(ics:ice) =                                    &
+        & c_acid_bg1_ta(:) + c_water_bg1_ta(:) + c_ethanol_bg1_ta(:) + c_nonsoluble_bg1_ta(:) + &
+        & c_acid_bg2_ta(:) + c_water_bg2_ta(:) + c_ethanol_bg2_ta(:) + c_nonsoluble_bg2_ta(:)
+    IF (PRESENT(c_sum_humus)) c_sum_humus(ics:ice) = c_humus_1_ta(:)  + c_humus_2_ta(:)
+
   END SUBROUTINE calculate_current_c_ta_state_sum
 
 

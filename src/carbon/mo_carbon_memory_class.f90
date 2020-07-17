@@ -59,7 +59,7 @@ MODULE mo_carbon_memory_class
 
 
     TYPE(t_jsb_var_real2d) ::     &
-      cconservation_calcCpools,   &
+      cconservation_calcCpools,   & ! Carbon conservation test: Deviation from conservation [mol(C)/m^2(grid box)]
       cflux_c_greenwood_2_litter, & ! R: From JS3: cbalance_diag_type. Carbon flux from the vegetation to the litter pools
                                     !    [mol(C)/m^2(canopy) s]
       c_green,                & ! C-pool for leaves, fine roots, vegetative organs and other green (living) parts
@@ -105,9 +105,6 @@ MODULE mo_carbon_memory_class
       c_humus_2,             & ! Yasso below ground litter-pool for slow C compartment [mol(C)^2/m(canopy)]
       c_bg_sum,              & ! Sum of belowground Yasso pools  [mol(C)^2/m(canopy)]
       c_ag_sum_1,            & ! Sum of aboveground green Yasso pools  [mol(C)^2/m(canopy)]
-
-!@todo: why? its not used (i.e. not even caluclated, only the ta variable is calculated)
-!      C_sum_natural,              & ! R: added
       !
       LAI_sum,                    & ! used to accumulate LAI over a day
       NPP_pot_sum,                    & ! used to accumulated NPP-Rate over a day
@@ -192,9 +189,12 @@ MODULE mo_carbon_memory_class
       c_ethanol_bg2_ta,         & ! Yasso below ground litter-pool for ethanol soluble litter [mol(C)/m^2(tile area)]
       c_nonsoluble_bg2_ta,      & ! Yasso below ground litter-pool for non-soluble litter [mol(C)/m^2(tile area)]
       c_humus_2_ta,             & ! Yasso below ground litter-pool for slow C compartment [mol(C)^2/m(tile area)]
-!@todo: why? its not used!
-!      c_bg_sum_ta,              & ! Sum of belowground Yasso pools  [mol(C)^2/m(tile area)]
-      C_sum_natural_ta,              & ! R: added
+      !
+      ! diagnostic carbon sums
+      c_sum_litter_ag_ta,       & ! Sum of all above ground litter carbon pools [mol(C)^2/m(tile area)]
+      c_sum_litter_bg_ta,       & ! Sum of all below ground litter carbon pools [mol(C)^2/m(tile area)]
+      c_sum_humus_ta,           & ! Sum of all soil / humus carbon pools [mol(C)^2/m(tile area)]
+      c_sum_natural_ta,         & ! Sum of all natural carbon pools [mol(C)^2/m(tile area)]
       !
       !@todo: NPP_pot_sum_ta, GPP_sum_ta, LAI_yyDayMean_ta and LAI_yDayMean_ta are never calculated
 !      NPP_pot_sum_ta,                    & ! used to accumulated NPP-Rate over a day
@@ -364,7 +364,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
       & prefix, suffix,                                                                                &
       & output_level=FULL,                                                                             &
-      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     CALL jsb_add_var( mem, 'c_green', mem%c_green,                                     &
       & hgrid, surface,                                                                        &
@@ -602,13 +602,6 @@ CONTAINS
       & output_level=FULL,                                                                     &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-    !      CALL jsb_add_var( mem, 'c_sum_natural', mem%C_sum_natural,                      &
-    !        & hgrid, surface,                                                             &
-    !        & t_cf('C_sum_natural', 'mol(C) m-2(canopy)', 'Sum of all natural C pools.'), &
-    !        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),          &
-    !        & prefix, suffix,                                                             &
-    !        & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
-
     CALL jsb_add_var( mem, 'lai_sum', mem%LAI_sum,                                   &
       & hgrid, surface,                                                              &
       & t_cf('LAI_sum', '-', 'Used to accumulate LAI over a day.'), &
@@ -659,7 +652,7 @@ CONTAINS
       &                                                        to avoid a negative reserve pool.'),             &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       & prefix, suffix,                                                                                         &
-      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     CALL jsb_add_var( mem, 'excess_npp', mem%excess_NPP,                                                               &
       & hgrid, surface,                                                                                                &
@@ -687,7 +680,7 @@ CONTAINS
       & t_cf('NPP_pot_yDayMean', 'mol(C) m-2(canopy) s-1', 'Mean NPP Rate of the previous day.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                        &
       & prefix, suffix,                                                                           &
-      & lrestart=.FALSE., initval_r=1.0E-13_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3. Initializing to zero would result
+      & lrestart=.TRUE., initval_r=1.0E-13_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3. Initializing to zero would result
                                                   ! in a zero divide in the first time step of an initialized run.
 
     CALL jsb_add_var( mem, 'npp_act_ydaymean', mem%NPP_act_yDayMean,                                &
@@ -695,7 +688,7 @@ CONTAINS
       & t_cf('NPP_act_yDayMean', 'mol(C) m-2(canopy) s-1', 'Actual NPP Rate of the previous day.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                          &
       & prefix, suffix,                                                                             &
-      & lrestart=.FALSE., initval_r=1.0E-13_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3. Initializing to zero would result
+      & lrestart=.TRUE., initval_r=1.0E-13_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3. Initializing to zero would result
                                                   ! in a zero divide in the first time step of an initialized run.
 
     CALL jsb_add_var( mem, 'gpp_ydaymean', mem%GPP_yDayMean,                                  &
@@ -703,7 +696,7 @@ CONTAINS
       & t_cf('GPP_yDayMean', 'mol(C) m-2(canopy) s-1', 'Mean GPP Rate of the previous day.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
       & prefix, suffix,                                                                       &
-      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     ! @todo: relict from CBALANCE?
     CALL jsb_add_var( mem, 'topsoiltemp_ydaymean', mem%topSoilTemp_yDayMean,                             &
@@ -749,7 +742,7 @@ CONTAINS
       &  (complementary to cflux_herb_2_littergreen).'),                                                                &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
       & prefix, suffix,                                                                                           &
-      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     !       CALL jsb_add_var( mem, 'fract_litter_wood_new', mem%fract_litter_wood_new,                     &
     !         & hgrid, surface,                                                                          &
@@ -1016,21 +1009,37 @@ CONTAINS
       & output_level=MEDIUM,                                                                                &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
-    !      CALL jsb_add_var( mem, 'c_bg_sum_ta', mem%c_bg_sum_ta,                         &
-    !        & hgrid, surface,                                                            &
-    !        & t_cf('c_bg_sum_ta', 'mol(C) m-2', 'C-Pool of below ground C in Yasso.'),   &
-    !        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
-    !        & prefix, suffix,                                                            &
-    !        & output_level=MEDIUM,                                                       &
-    !        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+    CALL jsb_add_var( mem, 'c_sum_humus_ta', mem%C_sum_humus_ta,               &
+      & hgrid, surface,                                                        &
+      & t_cf('C_sum_humus_ta', 'mol(C) m-2', 'Sum of all humus C pools.'),     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+      & prefix, suffix,                                                        &
+      & output_level=BASIC,                                                    &
+      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL jsb_add_var( mem, 'c_sum_litter_ag_ta', mem%C_sum_litter_ag_ta,                     &
+      & hgrid, surface,                                                                      &
+      & t_cf('C_sum_litter_ag_ta', 'mol(C) m-2', 'Sum of all above ground litter C pools.'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &
+      & prefix, suffix,                                                                      &
+      & output_level=BASIC,                                                                  &
+      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL jsb_add_var( mem, 'c_sum_litter_bg_ta', mem%C_sum_litter_bg_ta,                     &
+      & hgrid, surface,                                                                      &
+      & t_cf('C_sum_litter_ag_ta', 'mol(C) m-2', 'Sum of all below ground litter C pools.'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &
+      & prefix, suffix,                                                                      &
+      & output_level=BASIC,                                                                  &
+      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL jsb_add_var( mem, 'c_sum_natural_ta', mem%C_sum_natural_ta,           &
       & hgrid, surface,                                                        &
       & t_cf('C_sum_natural_ta', 'mol(C) m-2', 'Sum of all natural C pools.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
       & prefix, suffix,                                                        &
-      & output_level=MEDIUM,                                                                                &
-      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+      & output_level=BASIC,                                                    &
+      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     !      CALL jsb_add_var( mem, 'npp_pot_sum_ta', mem%NPP_pot_sum_ta,                        &
     !        & hgrid, surface,                                                                 &
@@ -1051,7 +1060,7 @@ CONTAINS
       & t_cf('soil_respiration_ta', 'mol(C) m-2 s-1', 'Soil respiration.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
       & prefix, suffix,                                                     &
-      & output_level=BASIC,                                                                                &
+      & output_level=BASIC,                                                 &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     CALL jsb_add_var( mem, 'npp_flux_corr_ta', mem%NPP_flux_correction_ta,                           &
@@ -1060,7 +1069,6 @@ CONTAINS
       &                                                        to avoid a negative reserve pool.'),        &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                 &
       & prefix, suffix,                                                                                    &
-      & output_level=BASIC,                                                                                &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     CALL jsb_add_var( mem, 'excess_npp_ta', mem%excess_NPP_ta,                                                    &
@@ -1185,7 +1193,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                           &
       & prefix, suffix,                                                                                              &
       & output_level=BASIC,                                                                                &
-      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     CALL jsb_add_var( mem, 'co2_l2a_resp_ta', mem%cflux_soilresp_2_atm_ta,                                 &
       & hgrid, surface,                                                                                    &
@@ -1210,16 +1218,16 @@ CONTAINS
       & t_cf('cflux_npp_2_atm_yday_ta', 'kg(CO2) m-2 s-1', 'Net daily CO2 flux, only needed for conservation test.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                           &
       & prefix, suffix,                                                                                              &
-      & output_level=BASIC,                                                                                &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
-    CALL jsb_add_var( mem, 'ccons_calccpools', mem%cconservation_calcCpools,              &
+    CALL jsb_add_var( mem, 'ccons_calccpools', mem%cconservation_calcCpools,      &
       & hgrid, surface,                                                           &
-      & t_cf('cconservation_calcCpools', 'mol(C) m-2(canopy)', &
-        & 'Test for c conservation on allocation and respiration.'), &
+      & t_cf('cconservation_calcCpools', 'mol(C) m-2(tile area)',                 &
+      & 'C conservation test: should be zero'),                                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
       & prefix, suffix,                                                           &
-      & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      & output_level=BASIC,                                                       &
+      & loutput = .TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
       CALL jsb_add_var( mem,'max_green', mem%current_max_green,      &
