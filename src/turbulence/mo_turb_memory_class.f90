@@ -27,7 +27,7 @@ MODULE mo_turb_memory_class
 
   PUBLIC :: t_turb_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 5
+  INTEGER, PARAMETER :: max_no_of_vars = 10
 
   TYPE, EXTENDS(t_jsb_memory) :: t_turb_memory
     !
@@ -35,6 +35,14 @@ MODULE mo_turb_memory_class
     TYPE(t_jsb_var_real2d) :: &
       & rough_m,              & !< Surface roughness length for momentum
       & rough_h,              & !< Surface roughness length for heat
+      ! The following two variables are transformations of the corresponding roughness length variables
+      ! and are used in the aggregation of roughness length:
+      !   z0_star = 1 / (ln(blending_height/z0))^2
+      ! For the average over surface types, we have:
+      !   z0_star_avg = sum(f_i * z0_star_i)
+      ! where _i indicates the different surface types
+      & rough_m_star,         &
+      & rough_h_star,         &
       ! For everything but lakes
       & fact_q_air,           & !< Factor for lowest atm. level in formulation of surface fluxes
                                 !! of specific humidity and dry static energy to account for
@@ -93,6 +101,24 @@ CONTAINS
       & lrestart=.TRUE.,                                                         &
       & output_level=BASIC,                                                      &
       & initval_r=1.0_wp )
+
+      CALL jsb_add_var( mem, 'rough_m_star', mem%rough_m_star,                   &
+      & hgrid, surface,                                                          &
+      & t_cf('rough_m_star', '', 'rough_m_star'),                                &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
+      & prefix, suffix,                                                          &
+      & lrestart=.FALSE.,                                                        &
+      & loutput=.FALSE.,                                                         &
+      & initval_r=0.0_wp )
+
+    CALL jsb_add_var( mem, 'rough_h_star', mem%rough_h_star,                     &
+      & hgrid, surface,                                                          &
+      & t_cf('rough_h_star', '', 'rough_h_star'),                                &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
+      & prefix, suffix,                                                          &
+      & lrestart=.FALSE.,                                                        &
+      & loutput=.FALSE.,                                                         &
+      & initval_r=0.0_wp )
 
     ! Additional variables for all lcts except lakes
     IF ( (     One_of(VEG_TYPE,     lct_ids(:)) > 0 &

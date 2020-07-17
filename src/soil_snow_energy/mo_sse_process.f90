@@ -208,7 +208,7 @@ CONTAINS
 
   REAL(wp) ELEMENTAL FUNCTION relative_humidity_soil(ws, fc)
 
-    USE mo_math_constants, ONLY: pi
+    USE mo_jsb_math_constants, ONLY: pi
 
     REAL(wp), INTENT(in) :: &
       & ws,                 & !< moisture content [m], e.g. of uppermost soil layer
@@ -255,7 +255,7 @@ CONTAINS
 
     USE mo_jsb_time,       ONLY: t_datetime, get_time_start, get_year, &
                                  & get_year_length, get_month_length, get_day_length, get_year_day
-    USE mo_math_constants, ONLY: pi
+    USE mo_jsb_math_constants, ONLY: pi
 
     REAL(wp), INTENT(in)  :: cmid(:)     !< Depths of soil layer mid points
     REAL(wp), INTENT(in)  :: tclim(:,:)  !< Climatological monthly surface temperature
@@ -529,15 +529,15 @@ CONTAINS
 
         IF (l_supercool) THEN
           !$claw expand parallel update savepoint=ser_jsb_sse_calc_soil_temperature_expand_0 counter=ser_counter
-          liquid_max(:,:) = Get_liquid_max( &
-            & t_soil(:,:)    , &
-            & ws_max(:,:)    , &
-            & matrix_pot(:,:), &
-            & bclapp(:,:)      &
+          liquid_max(1:nidx,1:nsoil) = Get_liquid_max( &
+            & t_soil    (1:nidx,1:nsoil), &
+            & ws_max    (1:nidx,1:nsoil), &
+            & matrix_pot(1:nidx,1:nsoil), &
+            & bclapp    (1:nidx,1:nsoil)  &
             & )
         ELSE
           !$claw expand parallel update
-          liquid_max(:,:) = 0._wp
+          liquid_max(1:nidx,1:nsoil) = 0._wp
         END IF
 
         !$claw acc data present(frozen,melt,ws,ice,t_soil,heat_cap,liquid_max)
