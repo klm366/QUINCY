@@ -469,7 +469,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-!      & output_level=BASIC,                                                    &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
       CALL jsb_add_var( mem, 'vol_field_cap_sl', mem%vol_field_cap_sl,         &
@@ -478,7 +477,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-!      & output_level=BASIC,                                                    &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'vol_p_wilt', mem%vol_p_wilt,                     &
@@ -487,7 +485,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-!      & output_level=BASIC,                                                    &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
       CALL jsb_add_var( mem, 'vol_p_wilt_sl', mem%vol_p_wilt_sl,               &
@@ -496,7 +493,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-!      & output_level=BASIC,                                                    &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'vol_porosity', mem%vol_porosity,                 &
@@ -505,7 +501,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-!      & output_level=BASIC,                                                    &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
       CALL jsb_add_var( mem, 'vol_porosity_sl', mem%vol_porosity_sl,           &
@@ -514,7 +509,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-!      & output_level=BASIC,                                                    &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'pore_size_index', mem%pore_size_index,           &
@@ -523,7 +517,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-!      & output_level=BASIC,                                                    &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
       CALL jsb_add_var( mem, 'pore_size_index_sl', mem%pore_size_index_sl,     &
@@ -532,7 +525,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-!      & output_level=BASIC,                                                    &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'bclapp', mem%bclapp,                             &
@@ -541,7 +533,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-!      & output_level=BASIC,                                                    &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
       CALL jsb_add_var( mem, 'bclapp_sl', mem%bclapp_sl,                       &
@@ -550,7 +541,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-!      & output_level=BASIC,                                                    & ! keine Abweichungen
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
       CALL jsb_add_var( mem, 'matrix_pot', mem%matrix_pot,                     &
@@ -559,7 +549,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-!      & output_level=BASIC,                                                    &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
       CALL jsb_add_var( mem, 'matrix_pot_sl', mem%matrix_pot_sl,               &
@@ -568,7 +557,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-!      & output_level=BASIC,                                                    &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'hyd_cond_sat', mem%hyd_cond_sat,                 &
@@ -577,7 +565,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-!      & output_level=BASIC,                                                    &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
       CALL jsb_add_var( mem, 'hyd_cond_sat_sl', mem%hyd_cond_sat_sl,           &
@@ -586,7 +573,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-!      & output_level=BASIC,                                                    & ! keine Abweichungen
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
       CALL jsb_add_var( mem, 'w_skin', mem%w_skin,                                                    &
