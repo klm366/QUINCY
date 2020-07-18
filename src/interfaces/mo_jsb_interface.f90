@@ -39,7 +39,6 @@ MODULE mo_jsb_interface
 
   INTERFACE jsbach_interface
     MODULE PROCEDURE interface_full
-    MODULE PROCEDURE interface_standalone
     ! MODULE PROCEDURE interface_inquire
   END INTERFACE jsbach_interface
 
@@ -351,131 +350,6 @@ CONTAINS
     IF (timer_on() .OR. l_timer_host) CALL timer_stop(timer_jsbach(model_id))
 
   END SUBROUTINE interface_full
-
-  SUBROUTINE interface_standalone( &
-    & model_id,         &
-    & iblk, ics, ice,   &
-    & current_datetime, &
-    & dtime, steplen,   &
-    & t_air,            &
-    & q_air,            &
-    & rain,             &
-    & snow,             &
-    & wind_air,         &
-    & wind_10m,         &
-    & lw_srf_down,      &
-    & swvis_srf_down,   &
-    & swnir_srf_down,   &
-    & swpar_srf_down,   &
-    & fract_par_diffuse, &
-    & press_srf,        &
-    & drag_srf,         &
-    & t_acoef,          &
-    & t_bcoef,          &
-    & q_acoef,          &
-    & q_bcoef,          &
-    & pch,              &
-    & cos_zenith_angle, &
-    & CO2_air,          &
-    & DEBUG_VAR,        &
-    ! For standalone jsbach
-    & trig_rad_m1,                                                      & !< in; optional
-    & newday_Merker,                                                    & !< in; optional
-    & l_day_reminder                                                    & !< in; optional
-    & )
-
-#ifndef __ICON__
-    USE mo_jsb_test,          ONLY: write_interface_vars, write_interface_variables
-#endif
-
-    ! INTEGER :: p_pe
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':interface_standalone'
-
-    ! Arguments
-    INTEGER, INTENT(in) :: &
-      & model_id,          &
-      & iblk,              &
-      & ics,               &
-      & ice
-    TYPE(t_datetime), POINTER, INTENT(in) :: &
-      & current_datetime
-    REAL(wp), INTENT(in) :: &
-      & dtime,              &
-      & steplen
-    REAL(wp), INTENT(in) ::    &
-      & t_air             (:), &
-      & q_air             (:), &
-      & rain              (:), &
-      & snow              (:), &
-      & wind_air          (:), &
-      & wind_10m          (:), &
-      & lw_srf_down       (:), &
-      & swvis_srf_down    (:), &
-      & swnir_srf_down    (:), &
-      & swpar_srf_down    (:), &
-      & fract_par_diffuse  (:), &
-      & press_srf         (:), &
-      & drag_srf          (:), &
-      & t_acoef           (:), &
-      & t_bcoef           (:), &
-      & q_acoef           (:), &
-      & q_bcoef           (:), &
-      & pch               (:), &
-      & cos_zenith_angle  (:), &
-      & CO2_air           (:)
-    REAL(wp), INTENT(in), OPTIONAL ::    &
-      & DEBUG_VAR         (:)
-
-    ! For standalone jsbach:
-    REAL(wp), INTENT(in),  OPTIONAL :: trig_rad_m1(:), newday_Merker(:)
-    REAL(wp), INTENT(in),  OPTIONAL :: l_day_reminder(:)
-
-
-    ! Local variables
-    CLASS(t_jsb_model),          POINTER :: model
-    CLASS(t_jsb_tile_abstract),  POINTER :: tile
-
-    INTEGER :: nc
-    INTEGER :: no_omp_thread
-
-    ! ---------------------------
-    ! Go
-
-    IF (timer_on() .OR. l_timer_host) CALL timer_start(timer_jsbach(model_id))
-
-    no_omp_thread = Get_omp_thread()
-
-    nc = ice - ics + 1
-
-    model => Get_model(model_id)
-
-!!$    WRITE(message_text, '(A,I4,A,I6,A,I6)') 'Updating '//TRIM(model%name)// &
-!!$      &                 ' for: block=', iblk, ', ics=', ics, ', ice=', ice
-!!$    CALL message(TRIM(routine), message_text, all_print=.TRUE.)
-!!$    p_pe = get_my_global_mpi_id()
-!!$    CALL message( TRIM(routine), 'Updating '//TRIM(model%name)//' on PE '//int2string(p_pe)// &
-!!$      &                          ', nblk='//int2string(iblk), all_print=.TRUE.)
-    IF (debug_on('basic') .AND. iblk == 1) CALL message( TRIM(routine), 'Updating '//TRIM(model%name))
-
-    ! Update options
-    CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=current_datetime, dtime=dtime, steplen=steplen)
-
-    ! Put atmospheric forcing into the a2l memory.
-
-    ! Run tasks in queue
-    CALL model%Run_tasks(debug_on('hsm') .AND. iblk == 1)
-
-!!$    IF (iblk == 1)                                                              &
-!!$      & CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//          &
-!!$      &                             ' on PE '//int2string(p_pe)//' completed.', &
-!!$      &              all_print=.TRUE.)
-    IF (debug_on('basic') .AND. iblk == 1) &
-      & CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//' completed.')
-
-    IF (timer_on() .OR. l_timer_host) CALL timer_stop(timer_jsbach(model_id))
-
-  END SUBROUTINE interface_standalone
 
   !
   ! Not used currently
