@@ -90,11 +90,12 @@ CONTAINS
     & alb_vis_dif,      &
     & alb_nir_dif,      &
     & CO2_flux,         &
+    & DEBUG_VAR,        &
     ! For lakes (optional):
     & drag_wtr, drag_ice,                                               & !< in
     & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,               & !< in
     & t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice,               & !< in
-    & t_lwtr, qsat_lwtr, s_lwtr,                                        &
+    & t_lwtr, qsat_lwtr, s_lwtr,                                        & !< out
     & evapo_wtr, latent_hflx_wtr, sensible_hflx_wtr,                    & !< out
     & albedo_lwtr,                                                      & !< out
     & t_lice, qsat_lice, s_lice,                                        &
@@ -102,7 +103,10 @@ CONTAINS
     & albedo_lice,                                                      & !< out
     & ice_fract_lake,                                                   & !< out
     ! For standalone jsbach
-    & evapopot                                                          & !< out; optional
+    & evapopot,                                                         & !< out; optional
+    & trig_rad_m1,                                                      & !< in; optional
+    & newday_Merker,                                                    & !< in; optional
+    & l_day_reminder                                                    & !< in; optional
     & )
 
 #ifndef __ICON__
@@ -148,6 +152,7 @@ CONTAINS
       & CO2_air           (:)
     ! For lakes:
     REAL(wp), INTENT(in), OPTIONAL ::    &
+      & DEBUG_VAR         (:), &
       & drag_wtr          (:), &
       & drag_ice          (:), &
       & t_acoef_wtr       (:), &
@@ -197,6 +202,9 @@ CONTAINS
       & ice_fract_lake    (:)
     ! For standalone jsbach:
     REAL(wp), INTENT(out), OPTIONAL :: evapopot(:)
+    REAL(wp), INTENT(in),  OPTIONAL :: trig_rad_m1(:), newday_Merker(:)
+    REAL(wp), INTENT(in),  OPTIONAL :: l_day_reminder(:)
+
 
     ! Local variables
     CLASS(t_jsb_model),          POINTER :: model
@@ -255,7 +263,7 @@ CONTAINS
       & swvis_srf_down     = swvis_srf_down(:),     &
       & swnir_srf_down     = swnir_srf_down(:),     &
       & swpar_srf_down     = swpar_srf_down(:),     &
-      & fract_par_diffuse   = fract_par_diffuse(:),   &
+      & fract_par_diffuse   = fract_par_diffuse(:), &
       & press_srf          = press_srf(:),          &
       & drag_srf           = drag_srf(:),           &
       & t_acoef            = t_acoef(:),            &
@@ -265,6 +273,7 @@ CONTAINS
       & pch                = pch(:),                &
       & cos_zenith_angle   = cos_zenith_angle(:),   &
       & CO2_air            = CO2_air(:),            &
+      & DEBUG_VAR          = DEBUG_VAR,             &
       ! For lakes:
       & drag_wtr           = drag_wtr,              &
       & drag_ice           = drag_ice,              &
@@ -275,7 +284,11 @@ CONTAINS
       & t_acoef_ice        = t_acoef_ice,           &
       & t_bcoef_ice        = t_bcoef_ice,           &
       & q_acoef_ice        = q_acoef_ice,           &
-      & q_bcoef_ice        = q_bcoef_ice            &
+      & q_bcoef_ice        = q_bcoef_ice,           &
+      ! For standalone ICON driver
+      & trig_rad_m1        = trig_rad_m1,          & ! in, optional
+      & newday_Merker      = newday_Merker,        & ! in, optional
+      & l_day_reminder     = l_day_reminder        & ! in, optional
       & )
     NULLIFY(tile)
 

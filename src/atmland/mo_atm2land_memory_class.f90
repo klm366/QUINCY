@@ -34,6 +34,7 @@ MODULE mo_a2l_memory_class
 
   TYPE, EXTENDS(t_jsb_memory) :: t_a2l_memory
     TYPE(t_jsb_var_real2d) :: &
+   DEBUG_VAR, &
       t_air              , &
       q_air              , &
       rain               , &
@@ -65,8 +66,11 @@ MODULE mo_a2l_memory_class
       t_acoef_ice        , &
       t_bcoef_ice        , &
       q_acoef_ice        , &
-      q_bcoef_ice
-    
+      q_bcoef_ice        , &
+      trig_rad_m1        , &  ! necessary for standalone driver
+      newday_Merker      , &  ! necessary for standalone driver
+      l_day_reminder          ! necessary for standalone driver
+
     !! quincy
     !TYPE(t_jsb_var_real2d) :: &
       ! & t_air                 , &  !> 2m air temperature [K] 
@@ -146,6 +150,16 @@ CONTAINS
       & output_level=BASIC,loutput=.TRUE., &
       & initval_r=283.15_wp )  ! R: I just invented a value to start with...
 
+
+    CALL jsb_add_var( mem, 'DEBUG_VAR', mem%DEBUG_VAR,       &
+      & hgrid, surface,                                                      &
+      & t_cf('DEBUG_VAR', 'K', ''),                                    &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
+      & output_level=BASIC, &
+      & initval_r=777.7_wp )
+
     CALL jsb_add_var( mem, 'q_air', mem%q_air,                                            &
       & hgrid, surface,                                                                   &
       & t_cf('air_specific_humidity', 'kg kg-1', 'Specific humidity of air at surface.'), &
@@ -179,6 +193,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
+      & output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'wind_10m', mem%wind_10m,                &
@@ -187,6 +202,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
+      & output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'lw_srf_down', mem%lw_srf_down,          &
@@ -196,7 +212,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & output_level=BASIC, &
-      & initval_r=0.0_wp )
+      & initval_r=300.0_wp )
 
     CALL jsb_add_var( mem, 'swvis_srf_down', mem%swvis_srf_down,             &
       & hgrid, surface,                                                      &
@@ -205,7 +221,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & output_level=BASIC, &
-      & initval_r=0.0_wp )
+      & initval_r=100.0_wp )
 
     CALL jsb_add_var( mem, 'swnir_srf_down', mem%swnir_srf_down,             &
       & hgrid, surface,                                                      &
@@ -214,7 +230,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & output_level=BASIC, &
-      & initval_r=0.0_wp )
+      & initval_r=90.0_wp )
 
     CALL jsb_add_var( mem, 'swpar_srf_down', mem%swpar_srf_down,    &
       & hgrid, surface,                                                      &
@@ -222,6 +238,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
+      & output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'fract_par_diffuse', mem%fract_par_diffuse,&
@@ -230,6 +247,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
+      & output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'press_srf', mem%press_srf,                       &
@@ -238,6 +256,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
+      & output_level=BASIC,                                                  &
       & initval_r=101325.0_wp )  ! R: I just took average atmospheric pressure
                                  !    at sea level as value to start with...
 
@@ -247,6 +266,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
+      & output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 't_acoef', mem%t_acoef,                           &
@@ -255,6 +275,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
+      & output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 't_bcoef', mem%t_bcoef,                           &
@@ -263,6 +284,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
+      & output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'q_acoef', mem%q_acoef,                           &
@@ -271,6 +293,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
+      & output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'q_bcoef', mem%q_bcoef,                           &
@@ -279,6 +302,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
+      & output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'pch', mem%pch,                                   &
@@ -287,6 +311,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
+      & output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'cos_zenith_angle', mem%cos_zenith_angle,         &
@@ -295,6 +320,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
+      & output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'co2_air', mem%CO2_air, &
@@ -323,6 +349,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
+        & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
       CALL  jsb_add_var( mem, 'drag_ice', mem%drag_ice,                &
@@ -331,6 +358,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
+        & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 't_acoef_wtr', mem%t_acoef_wtr,                   &
@@ -339,6 +367,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
+        & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 't_bcoef_wtr', mem%t_bcoef_wtr,                   &
@@ -347,6 +376,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
+        & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'q_acoef_wtr', mem%q_acoef_wtr,                   &
@@ -363,6 +393,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
+        & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 't_acoef_ice', mem%t_acoef_ice,                   &
@@ -371,6 +402,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
+        & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 't_bcoef_ice', mem%t_bcoef_ice,                   &
@@ -379,6 +411,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
+        & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'q_acoef_ice', mem%q_acoef_ice,                   &
@@ -387,6 +420,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
+        & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'q_bcoef_ice', mem%q_bcoef_ice,                   &
@@ -395,9 +429,40 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
+        & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
     END IF
+
+    CALL jsb_add_var( mem, 'trig_rad_m1', mem%trig_rad_m1,                     &
+      & hgrid, surface,                                                        &
+      & t_cf('Are we one time step before rad is calc in atmosph. 0 means no,  &
+      &       1 means yes.', '', ''),                                          &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+      & prefix, suffix,                                                        &
+      & lrestart=.FALSE.,                                                      &
+      & output_level=BASIC,                                                    & ! R: only to debugg, delete this line later
+      & initval_r=0.0_wp )
+
+    CALL jsb_add_var( mem, 'newday_Merker', mem%newday_Merker,                 &
+      & hgrid, surface,                                                        &
+      & t_cf('for debugging to fix lday problem                                &
+      &       1 means yes.', '', ''),                                          &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+      & prefix, suffix,                                                        &
+      & lrestart=.FALSE.,                                                      &
+      & output_level=BASIC,                                                    & ! R: only to debugg, delete this line later
+      & initval_r=7.0_wp )
+
+    CALL jsb_add_var( mem, 'l_day_reminder', mem%l_day_reminder,               &
+      & hgrid, surface,                                                        &
+      & t_cf('To avoid that minimal radiation differences would lead to strong &
+      &       differences in the JS4 driver.', '', ''),                        &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+      & prefix, suffix,                                                        &
+      & lrestart=.FALSE.,                                                      &
+      & output_level=BASIC,                                                    &
+      & initval_r=0.0_wp )
 
     IF (.NOT. model%config%use_quincy) RETURN
 

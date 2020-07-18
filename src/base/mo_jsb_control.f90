@@ -15,6 +15,7 @@
 MODULE mo_jsb_control
 #ifndef __NO_JSBACH__
 
+  USE mo_kind,      ONLY: wp
   USE mo_io_units,  ONLY: filename_max
   USE mo_exception, ONLY: finish
   USE mo_util,      ONLY: int2string
@@ -27,7 +28,7 @@ MODULE mo_jsb_control
   PRIVATE
 
   PUBLIC :: init_jsb_master_control
-  PUBLIC :: jsbach_runs_standalone, jsbach_is_restarted
+  PUBLIC :: jsbach_runs_standalone, jsbach_is_restarted, force_from_observations
   PUBLIC :: debug_on, timer_on, l_timer_host, get_debug_memory_level
   PUBLIC :: model_base_dir
   ! t_jsb_model_nml needs to be public for the NEC compiler
@@ -42,6 +43,7 @@ MODULE mo_jsb_control
   INTEGER,           SAVE :: debug_io
   INTEGER,           SAVE :: debug_memory_level
   INTEGER,           SAVE :: timer_level
+  LOGICAL,           SAVE :: l_force_from_obs
 
   TYPE t_jsb_model_nml
     INTEGER            :: model_id = 0
@@ -66,7 +68,7 @@ CONTAINS
 
   SUBROUTINE init_jsb_master_control(namelist_filename)
 
-    USE mo_jsb_io,      ONLY: init_io
+    USE mo_jsb_io,      ONLY: init_jsb_io
     USE mo_jsb_version, ONLY: jsbach_init_version
 
     CHARACTER(len=*), OPTIONAL, INTENT(in) :: namelist_filename
@@ -81,9 +83,9 @@ CONTAINS
 
     CALL jsbach_init_version(jsbach_runs_standalone())
 
-    CALL init_io(TRIM(master_namelist_filename))
+    CALL init_jsb_io(TRIM(master_namelist_filename))
 
-    IF (jsbach_runs_standalone()) l_timer_host = .FALSE. !< Would be uninitialized otherwise
+    ! IF (jsbach_runs_standalone()) l_timer_host = .FALSE. !< Would be uninitialized otherwise
     IF (timer_on() .OR. l_timer_host) THEN
       IF (no_of_models > 1) THEN
         DO i=1,no_of_models
@@ -143,7 +145,8 @@ CONTAINS
       timer_level,             &
       debug_level,             &
       debug_io,                &
-      debug_memory_level
+      debug_memory_level,      &
+      l_force_from_obs
 
     NAMELIST /jsb_model_nml/   &
       model_id,                &
@@ -160,6 +163,7 @@ CONTAINS
     debug_level        = 0
     debug_io           = 0
     debug_memory_level = 0
+    l_force_from_obs   = .TRUE.
 
     nml_handler = open_nml(TRIM(namelist_filename))
 
@@ -225,6 +229,12 @@ CONTAINS
     jsbach_runs_standalone = is_standalone
 
   END FUNCTION jsbach_runs_standalone
+
+  LOGICAL FUNCTION force_from_observations()
+
+    force_from_observations = l_force_from_obs
+
+  END FUNCTION force_from_observations
 
   LOGICAL FUNCTION jsbach_is_restarted()
 

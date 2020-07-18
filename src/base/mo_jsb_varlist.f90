@@ -17,6 +17,7 @@ MODULE mo_jsb_varlist
 
   USE mo_kind,              ONLY: wp, dp
   USE mo_exception,         ONLY: finish
+  USE mo_jsb_control,       ONLY: jsbach_runs_standalone
   USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
   USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d, t_jsb_var_real3d, REAL2D, REAL3D
   USE mo_jsb_memory_class,  ONLY: t_jsb_memory
@@ -72,6 +73,9 @@ CONTAINS
       CALL jsb_new_var_list(return_ptr, TRIM(name), patch_id, &
         & loutput=.TRUE., &
         & lrestart=.TRUE., table=tables(1))
+
+      IF (jsbach_runs_standalone()) return_ptr%p%model_type = 'jsbach'
+
     END IF
 
   END FUNCTION Get_varlist

@@ -43,9 +43,8 @@ MODULE mo_jsb_time
   TYPE(t_datetime), POINTER, SAVE :: final_date
 
   LOGICAL, SAVE :: time_initialized = .FALSE.
-
+  INTEGER, SAVE :: counter = 0
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_time'
-
 CONTAINS
 
   SUBROUTINE init_time(namelist_filename, model_shortname, restart_jsbach)
@@ -119,8 +118,8 @@ CONTAINS
 
     INTEGER, INTENT(in) :: istep
     LOGICAL, INTENT(in) :: is_standalone
-
-    IF (is_standalone) CALL start_timestep(istep)
+    !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR Beginloop'
+    !R: DEBUG IF (is_standalone) CALL start_timestep(istep)
 
   END SUBROUTINE update_time_at_beginloop
 
@@ -130,8 +129,8 @@ CONTAINS
 
     INTEGER, INTENT(in) :: istep
     LOGICAL, INTENT(in) :: is_standalone
-
-    IF (is_standalone) CALL finish_timestep(istep)
+    !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR Endloop'
+    !R: DEBUG IF (is_standalone) CALL finish_timestep(istep)
 
   END SUBROUTINE update_time_at_endloop
 

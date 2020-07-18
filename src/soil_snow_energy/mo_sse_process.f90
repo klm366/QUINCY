@@ -53,7 +53,7 @@ CONTAINS
     & ) RESULT(vol_heat_cap)
 
     USE mo_sse_constants, ONLY: vol_hcap_water, vol_hcap_ice, vol_hcap_org, vol_hcap_air, vol_hcap_bedrock
-    
+
     REAL(wp), INTENT(in) :: porosity, vol_heat_cap_soil_dry_mineral, fract_organic, fract_water, fract_ice, layer_depth, dz
     REAL(wp)             :: vol_heat_cap
 
@@ -102,7 +102,7 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: dens_soil
     USE mo_sse_constants,          ONLY: hcond_org, hcond_dry_org, hcond_water, hcond_ice, hcond_bedrock
     USE mo_hydro_constants,        ONLY: vol_porosity_org
-   
+
     REAL(wp), INTENT(in) :: heat_cond_soil_mineral, water, ice, porosity, vol_field_cap, fract_organic, layer_depth, dz
     REAL(wp)             :: heat_cond
 
