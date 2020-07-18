@@ -91,11 +91,15 @@ CONTAINS
     USE mo_name_list_output,        ONLY: name_list_io_main_proc, write_name_list_output, close_name_list_output, istime4name_list_output
     USE mo_output_event_handler,    ONLY: get_current_jfile
 #ifdef HAVE_CDI_PIO
+    USE mo_mpi,                     ONLY: mpi_comm_null, p_comm_work_io
     USE mo_name_list_output_init,   ONLY: init_cdipio_cb
     USE mo_name_list_output,        ONLY: write_ready_files_cdipio
     USE yaxt,                       ONLY: xt_initialize, xt_initialized
     USE mo_cdi,                     ONLY: namespacegetactive, namespaceSetActive
-    USE mo_cdi_pio_interface,       ONLY: nml_io_cdi_pio_namespace
+    USE mo_cdi_pio_interface,       ONLY: nml_io_cdi_pio_namespace, &
+      &                                   cdi_base_namespace, &
+      &                                   nml_io_cdi_pio_client_comm, &
+      &                                   nml_io_cdi_pio_conf_handle
 #endif
     USE mo_name_list_output_config, ONLY: use_async_name_list_io
     USE mo_output_event_types,      ONLY: t_sim_step_info
@@ -137,7 +141,11 @@ CONTAINS
     INTEGER :: i
     CHARACTER(len=MAX_MTIME_ERROR_STR_LEN) :: errstring
     INTEGER                                :: error_status
-    
+
+#ifdef HAVE_CDI_PIO
+    INTEGER :: prev_cdi_namespace
+#endif
+
     ! Time and event management
     TYPE(datetime), POINTER       :: mtime_current
     TYPE(datetime), POINTER       :: mtime_old
