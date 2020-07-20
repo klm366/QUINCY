@@ -260,7 +260,8 @@ CONTAINS
       & t_cf('surface_evaporation_potential', 'kg m-2 s-1', 'Potential evaporation from surface'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                         &
       & prefix, suffix,                                                                            &
-      & lrestart=.TRUE.,      loutput=.TRUE.,                              &
+      & lrestart=.TRUE.,      loutput=.TRUE.,                                                      &
+      & output_level=BASIC,                                                                        &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL jsb_add_var( mem, 'evapo_snow', mem%evapo_snow,                       &
@@ -601,7 +602,7 @@ CONTAINS
         & t_cf('evapotrans_soil', 'kg m-2 s-1', 'Evapotranspiration from soil (w/o snow and skin res.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
         & prefix, suffix,                                                                                &
-        & lrestart=.FALSE.,loutput=.TRUE.,                                                 &
+        & lrestart=.FALSE.,loutput=.TRUE., output_level=BASIC,                                           &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL jsb_add_var( mem, 'evapo_skin', mem%evapo_skin,                          &
@@ -617,7 +618,7 @@ CONTAINS
         & t_cf('evaporation_deficit', 'm water equivalent', ''),               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
-        & lrestart=.FALSE.,     loutput=.TRUE.,                       &
+        & lrestart=.FALSE.,     loutput=.TRUE., output_level=BASIC,            &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL jsb_add_var( mem, 'water_excess', mem%water_excess,                   &
@@ -794,7 +795,7 @@ CONTAINS
         & t_cf('surface_transpiration', 'kg m-2 s-1', 'Transpiration from surface'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
         & prefix, suffix,                                                            &
-        & lrestart=.FALSE.,  loutput=.TRUE.,                                  &
+        & lrestart=.FALSE.,  loutput=.TRUE., output_level=BASIC,                     &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     END IF
