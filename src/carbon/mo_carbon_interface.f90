@@ -166,16 +166,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  c_woods           ! C-pool for stems, thick roots and other (dead) structural
                                                      !  material of living plants [mol(C)/m^2(canopy)]
     dsl4jsb_Real2D_onChunk ::  c_crop_harvest    ! C-pool for biomass harvested from crops [mol(C)/m^2(grid box)]
-    dsl4jsb_Real2D_onChunk ::  c_litter_green_ag ! C-pool for above ground non-woody litter especially from leaves
-                                                     !     [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_litter_green_bg ! C-pool for below ground non-woody litter especially from
-                                                     !     fine roots [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_litter_wood_ag  ! C-pool for litter originating from above ground woody parts of the
-                                                     !    plants [mol(C)/m^2(canopy)]
-    dsl4jsb_Real2D_onChunk ::  c_litter_wood_bg  ! C-pool for litter originating from below ground woody parts of the
-                                                     !    plants [mol(C)/m^2(canopy)]
-    !CBAL dsl4jsb_Real2D_onChunk ::  c_slow            ! C-pool for below ground organic material (coming from the litter
-                                                     !     pools) [mol(C)/m^2(canopy)]
+
     !SIZE CLASS 1
     dsl4jsb_Real2D_onChunk ::  c_acid_ag1        ! Yasso above ground litter-pool for acid soluble litter
                                                       !  [mol(C)/m^2(canopy)]
@@ -310,11 +301,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_reserve )             ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_woods )               ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_crop_harvest)         ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_litter_green_ag )     ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_litter_green_bg )     ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_litter_wood_ag  )     ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_litter_wood_bg  )     ! inout
-    !CBAL dsl4jsb_Get_var2D_onChunk(CARBON_,  c_slow            )     ! inout
     !SIZE CLASS 1
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_ag1)            ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag1)           ! inout
@@ -515,11 +501,8 @@ CONTAINS
         &  dsl4jsb_Lctlib_param(fract_NPP_2_exudates),        & ! in
         !
         &  dsl4jsb_Lctlib_param(fract_green_2_herbivory),     & ! in
-        &  dsl4jsb_Lctlib_param(tau_c_litter_leaf),           & ! in
-        &  dsl4jsb_Lctlib_param(tau_c_litter_wood),           & ! in
         &  dsl4jsb_Lctlib_param(tau_c_woods),                 & ! in
         &  dsl4jsb_Lctlib_param(LAI_shed_constant),           & ! in
-        &  dsl4jsb_Lctlib_param(fract_C_litter_green2atmos),  & ! in
         &  dsl4jsb_Lctlib_param(Max_C_content_woods),         & ! in
         &  dsl4jsb_Lctlib_param(specificLeafArea_C),          & ! in
         &  dsl4jsb_Lctlib_param(reserveC2leafC),              & ! in
@@ -529,11 +512,6 @@ CONTAINS
         &  c_woods,                                           & ! inout
         &  c_reserve,                                         & ! inout
         &  c_crop_harvest,                                    & ! inout
-        &  c_litter_green_ag,                                 & ! inout
-        &  c_litter_green_bg,                                 & ! inout
-        &  c_litter_wood_ag,                                  & ! inout
-        &  c_litter_wood_bg,                                  & ! inout
-        ! &  CBAL c_slow,                                       & ! inout
         !
         &  soil_respiration,                                  & ! out
         &  NPP_flux_correction,                               & ! out
@@ -548,40 +526,39 @@ CONTAINS
         !&  fract_litter_wood_new    = fract_litter_wood_new,       & ! inout, optional. Only for spitfire
         !
         ! variables only needed with yasso:
-        ! R: Note, in the moment the procedure is only used with Yasso.
-        &  temp2_30d        =  pseudo_temp_yDay,                      & ! in, optional, necessary with yasso
-        &  precip_30d       =  pseudo_precip_yDay,                    & ! in, optional, necessary with yasso
+        &  temp2_30d        =  pseudo_temp_yDay,                      & ! in
+        &  precip_30d       =  pseudo_precip_yDay,                    & ! in
                              !
-        &  c_acid_ag1       =  c_acid_ag1,                            & ! inout, optional, necessary with yasso
-        &  c_water_ag1      =  c_water_ag1,                           & ! inout, optional, necessary with yasso
-        &  c_ethanol_ag1    =  c_ethanol_ag1,                         & ! inout, optional, necessary with yasso
-        &  c_nonsoluble_ag1 =  c_nonsoluble_ag1,                      & ! inout, optional, necessary with yasso
-        &  c_acid_bg1       =  c_acid_bg1,                            & ! inout, optional, necessary with yasso
-        &  c_water_bg1      =  c_water_bg1,                           & ! inout, optional, necessary with yasso
-        &  c_ethanol_bg1    =  c_ethanol_bg1,                         & ! inout, optional, necessary with yasso
-        &  c_nonsoluble_bg1 =  c_nonsoluble_bg1,                      & ! inout, optional, necessary with yasso
-        &  c_humus_1        =  c_humus_1,                             & ! inout, optional, necessary with yasso
-        &  c_acid_ag2       =  c_acid_ag2,                            & ! inout, optional, necessary with yasso
-        &  c_water_ag2      =  c_water_ag2,                           & ! inout, optional, necessary with yasso
-        &  c_ethanol_ag2    =  c_ethanol_ag2,                         & ! inout, optional, necessary with yasso
-        &  c_nonsoluble_ag2 =  c_nonsoluble_ag2,                      & ! inout, optional, necessary with yasso
-        &  c_acid_bg2       =  c_acid_bg2,                            & ! inout, optional, necessary with yasso
-        &  c_water_bg2      =  c_water_bg2,                           & ! inout, optional, necessary with yasso
-        &  c_ethanol_bg2    =  c_ethanol_bg2,                         & ! inout, optional, necessary with yasso
-        &  c_nonsoluble_bg2 =  c_nonsoluble_bg2,                      & ! inout, optional, necessary with yasso
-        &  c_humus_2        =  c_humus_2,                             & ! inout, optional, necessary with yasso
+        &  c_acid_ag1       =  c_acid_ag1,                            & ! inout
+        &  c_water_ag1      =  c_water_ag1,                           & ! inout
+        &  c_ethanol_ag1    =  c_ethanol_ag1,                         & ! inout
+        &  c_nonsoluble_ag1 =  c_nonsoluble_ag1,                      & ! inout
+        &  c_acid_bg1       =  c_acid_bg1,                            & ! inout
+        &  c_water_bg1      =  c_water_bg1,                           & ! inout
+        &  c_ethanol_bg1    =  c_ethanol_bg1,                         & ! inout
+        &  c_nonsoluble_bg1 =  c_nonsoluble_bg1,                      & ! inout
+        &  c_humus_1        =  c_humus_1,                             & ! inout
+        &  c_acid_ag2       =  c_acid_ag2,                            & ! inout
+        &  c_water_ag2      =  c_water_ag2,                           & ! inout
+        &  c_ethanol_ag2    =  c_ethanol_ag2,                         & ! inout
+        &  c_nonsoluble_ag2 =  c_nonsoluble_ag2,                      & ! inout
+        &  c_acid_bg2       =  c_acid_bg2,                            & ! inout
+        &  c_water_bg2      =  c_water_bg2,                           & ! inout
+        &  c_ethanol_bg2    =  c_ethanol_bg2,                         & ! inout
+        &  c_nonsoluble_bg2 =  c_nonsoluble_bg2,                      & ! inout
+        &  c_humus_2        =  c_humus_2,                             & ! inout
                               !
-        &  LeafLit_coef1    =  dsl4jsb_Lctlib_param(LeafLit_coef(1)), & ! in, optional, necessary with yasso
-        &  LeafLit_coef2    =  dsl4jsb_Lctlib_param(LeafLit_coef(2)), & ! in, optional, necessary with yasso
-        &  LeafLit_coef3    =  dsl4jsb_Lctlib_param(LeafLit_coef(3)), & ! in, optional, necessary with yasso
-        &  LeafLit_coef4    =  dsl4jsb_Lctlib_param(LeafLit_coef(4)), & ! in, optional, necessary with yasso
-        &  LeafLit_coef5    =  dsl4jsb_Lctlib_param(LeafLit_coef(5)), & ! in, optional, necessary with yasso
-        &  WoodLit_coef1    =  dsl4jsb_Lctlib_param(WoodLit_coef(1)), & ! in, optional, necessary with yasso
-        &  WoodLit_coef2    =  dsl4jsb_Lctlib_param(WoodLit_coef(2)), & ! in, optional, necessary with yasso
-        &  WoodLit_coef3    =  dsl4jsb_Lctlib_param(WoodLit_coef(3)), & ! in, optional, necessary with yasso
-        &  WoodLit_coef4    =  dsl4jsb_Lctlib_param(WoodLit_coef(4)), & ! in, optional, necessary with yasso
-        &  WoodLit_coef5    =  dsl4jsb_Lctlib_param(WoodLit_coef(5)), & ! in, optional, necessary with yasso
-        &  WoodLitterSize   =  dsl4jsb_Lctlib_param(WoodLitterSize)   & ! in, optional, necessary with yasso
+        &  LeafLit_coef1    =  dsl4jsb_Lctlib_param(LeafLit_coef(1)), & ! in
+        &  LeafLit_coef2    =  dsl4jsb_Lctlib_param(LeafLit_coef(2)), & ! in
+        &  LeafLit_coef3    =  dsl4jsb_Lctlib_param(LeafLit_coef(3)), & ! in
+        &  LeafLit_coef4    =  dsl4jsb_Lctlib_param(LeafLit_coef(4)), & ! in
+        &  LeafLit_coef5    =  dsl4jsb_Lctlib_param(LeafLit_coef(5)), & ! in
+        &  WoodLit_coef1    =  dsl4jsb_Lctlib_param(WoodLit_coef(1)), & ! in
+        &  WoodLit_coef2    =  dsl4jsb_Lctlib_param(WoodLit_coef(2)), & ! in
+        &  WoodLit_coef3    =  dsl4jsb_Lctlib_param(WoodLit_coef(3)), & ! in
+        &  WoodLit_coef4    =  dsl4jsb_Lctlib_param(WoodLit_coef(4)), & ! in
+        &  WoodLit_coef5    =  dsl4jsb_Lctlib_param(WoodLit_coef(5)), & ! in
+        &  WoodLitterSize   =  dsl4jsb_Lctlib_param(WoodLitterSize)   & ! in
         & )
 
       ! R: In JSBACH3 wurden alle C-pools auf canopy Fläche gezogen gerechnet. Ebenso die C Fluxe.
@@ -698,17 +675,11 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, LAI_yDayMean,          weighted_by_fract)
 
     !@todo Those commented out are currently not calculated
-    ! same for ta variables
     ! non-yasso-pools
     dsl4jsb_Aggregate_onChunk(CARBON_, c_green_ta,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_woods_ta,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_reserve_ta,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_crop_harvest_ta,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_green_ag_ta,  weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_green_bg_ta,  weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_wood_ag_ta,   weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, c_litter_wood_bg_ta,   weighted_by_fract)
-    !CBAL dsl4jsb_Aggregate_onChunk(CARBON_, c_slow_ta,        weighted_by_fract)
     ! ag1 and bg1
     dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_ag1_ta,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_water_ag1_ta,        weighted_by_fract)

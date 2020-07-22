@@ -71,18 +71,6 @@ MODULE mo_carbon_memory_class
 !@todo why is the c_crop_harvest realised as a density and not as a per tile variable in the first place?
 ! ++ only required for crop pfts, or?
       c_crop_harvest,         & ! C-pool for biomass harvested from crops [mol(C)/m^2(grid box)]
-!@todo: the only variable of these which seems to be still required is c_litter_green_ag - rest could be local/removed
-!       (or at least commented out as recently done for c_slow) (including ta variables!)
-      c_litter_green_ag,      & ! C-pool for above ground non-woody litter especially from leaves
-                                    !     [mol(C)/m^2(canopy)]
-      c_litter_green_bg,      & ! C-pool for below ground non-woody litter especially from fine roots
-                                    !     [mol(C)/m^2(canopy)]
-      c_litter_wood_ag,       & ! C-pool for litter originating from above ground woody parts of the plants
-                                    !     [mol(C)/m^2(canopy)]
-      c_litter_wood_bg,       & ! C-pool for litter originating from below ground woody parts of the plants
-                                    !     [mol(C)/m^2(canopy)]
-     !CBAL c_slow,                 & ! C-pool for below ground organic material (coming from the litter pools)
-     !CBAL                              !     [mol(C)/m^2(canopy)]
      !SIZE CLASS 1
       c_acid_ag1,            & ! Yasso above ground litter-pool for acid soluble litter [mol(C)/m^2(canopy)]
       c_water_ag1,           & ! Yasso above ground litter-pool for water soluble litter [mol(C)/m^2(canopy)]
@@ -397,48 +385,6 @@ CONTAINS
       & prefix, suffix,                                                                                &
       & output_level=FULL,                                                                             &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
-
-    CALL jsb_add_var( mem, 'c_litter_green_ag', mem%c_litter_green_ag,                                     &
-      & hgrid, surface,                                                                                            &
-      & t_cf('c_litter_green_ag', 'mol(C) m-2(canopy)', 'C-Pool for above ground non-woody litter (leaves).'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                         &
-      & prefix, suffix,                                                                                            &
-      & output_level=FULL,                                                                             &
-      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval in JSBACH3 is 60.0_wp
-
-    CALL jsb_add_var( mem, 'c_litter_green_bg', mem%c_litter_green_bg,                                         &
-      & hgrid, surface,                                                                                                &
-      & t_cf('c_litter_green_bg', 'mol(C) m-2(canopy)', 'C-Pool for below ground non-woody litter (fine roots).'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                             &
-      & prefix, suffix,                                                                                                &
-      & output_level=FULL,                                                                             &
-      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval in JSBACH3 is 60.0_wp
-
-    CALL jsb_add_var( mem, 'c_litter_wood_ag', mem%c_litter_wood_ag,                         &
-      & hgrid, surface,                                                                              &
-      & t_cf('c_litter_wood_ag', 'mol(C) m-2(canopy)', 'C-Pool for above ground woody litter.'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
-      & prefix, suffix,                                                                              &
-      & output_level=FULL,                                                                             &
-      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval in JSBACH3 is 180.0_wp
-
-    CALL jsb_add_var( mem, 'c_litter_wood_bg', mem%c_litter_wood_bg,                         &
-      & hgrid, surface,                                                                              &
-      & t_cf('c_litter_wood_bg', 'mol(C) m-2(canopy)', 'C-Pool for below ground woody litter.'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
-      & prefix, suffix,                                                                              &
-      & output_level=FULL,                                                                             &
-      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval in JSBACH3 is 180.0_wp
-
-    !CBAL       CALL jsb_add_var( mem, 'c_slow', mem%c_slow,                                                 &
-    !CBAL         & hgrid, surface,                                                                                  &
-    !CBAL         & t_cf('c_slow', 'mol(C) m-2(canopy)', 'C-Pool for slowly respirated soil organic material.'), &
-    !CBAL         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                               &
-    !CBAL         & prefix, suffix,                                                                                  &
-    !CBAL         & output_level=FULL,                                                                             &
-    !CBAL         & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3 from cbalance%c_slow.
-    !CBAL                                               ! Note for cbalone this value would be:
-    !CBAL                                               ! mo_cbalone_memory.f90:247: cbalance%c_slow(:,:) = 0.0_dp
 
     ! Yasso 1
     CALL jsb_add_var( mem, 'c_acid_ag1', mem%c_acid_ag1,                                               &
@@ -820,48 +766,6 @@ CONTAINS
       & prefix, suffix,                                                                           &
       & output_level=BASIC,                                                                            &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
-
-    CALL jsb_add_var( mem, 'c_litter_grn_ag_ta', mem%c_litter_green_ag_ta,                              &
-      & hgrid, surface,                                                                                       &
-      & t_cf('c_litter_green_ag_ta', 'mol(C) m-2', 'C-Pool for above ground non-woody litter (leaves).'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                    &
-      & prefix, suffix,                                                                                       &
-      & output_level=BASIC,                                                                            &
-      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval in JSBACH3 is 60.0_wp
-
-    CALL jsb_add_var( mem, 'c_litter_grn_bg_ta', mem%c_litter_green_bg_ta,                                  &
-      & hgrid, surface,                                                                                           &
-      & t_cf('c_litter_green_bg_ta', 'mol(C) m-2', 'C-Pool for below ground non-woody litter (fine roots).'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
-      & prefix, suffix,                                                                                           &
-      & output_level=BASIC,                                                                            &
-      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval in JSBACH3 is 60.0_wp
-
-    CALL jsb_add_var( mem, 'c_litter_wood_ag_ta', mem%c_litter_wood_ag_ta,                  &
-      & hgrid, surface,                                                                         &
-      & t_cf('c_litter_wood_ag_ta', 'mol(C) m-2', 'C-Pool for above ground woody litter.'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                      &
-      & prefix, suffix,                                                                         &
-      & output_level=BASIC,                                                                            &
-      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval in JSBACH3 is 180.0_wp!
-
-    CALL jsb_add_var( mem, 'c_litter_wood_bg_ta', mem%c_litter_wood_bg_ta,                  &
-      & hgrid, surface,                                                                         &
-      & t_cf('c_litter_wood_bg_ta', 'mol(C) m-2', 'C-Pool for below ground woody litter.'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                      &
-      & prefix, suffix,                                                                         &
-      & output_level=BASIC,                                                                            &
-      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval in JSBACH3 is 180.0_wp
-
-    !CBAL       CALL jsb_add_var( mem, 'c_slow_ta', mem%c_slow_ta,                                          &
-    !CBAL         & hgrid, surface,                                                                             &
-    !CBAL         & t_cf('c_slow_ta', 'mol(C) m-2', 'C-Pool for slowly respirated soil organic material.'), &
-    !CBAL         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                          &
-    !CBAL         & prefix, suffix,                                                                             &
-    !CBAL         & output_level=BASIC,                                                                            &
-    !CBAL         & lrestart=.FALSE., initval_r=2400.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3 from cbalance%c_slow.
-    !CBAL                                                  ! Note for cbalone this value would be:
-    !CBAL                                                  ! mo_cbalone_memory.f90:247: cbalance%c_slow(:,:) = 0.0_dp
 
     ! Yasso 1
     CALL jsb_add_var( mem, 'c_acid_ag1_ta', mem%c_acid_ag1_ta,                                         &
