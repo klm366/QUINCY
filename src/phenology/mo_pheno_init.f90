@@ -21,6 +21,8 @@ MODULE mo_pheno_init
   USE mo_jsb_control,         ONLY: debug_on
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model
+  USE mo_jsb_grid_class,      ONLY: t_jsb_grid
+  USE mo_jsb_grid,            ONLY: Get_grid
   USE mo_jsb_class,           ONLY: get_model
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
   USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input
@@ -33,6 +35,16 @@ MODULE mo_pheno_init
   PRIVATE
 
   PUBLIC :: pheno_init
+
+  TYPE t_pheno_init_vars
+    REAL(wp), POINTER ::  &
+      & lai_mon(:,:,:), &
+      & fract_fpc_mon(:,:,:), &
+      & fract_forest(:,:), &
+      & fract_fpc_max(:,:)
+  END TYPE t_pheno_init_vars
+
+  TYPE(t_pheno_init_vars) :: pheno_init_vars
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_pheno_init'
 
@@ -54,6 +66,10 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
+    IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
+      CALL pheno_read_init_vars(tile)
+    END IF
+
     ! select init routine depending on the "use_quincy" flag
     IF (.NOT. model%config%use_quincy) THEN
       CALL pheno_init_bc(tile)
@@ -62,7 +78,102 @@ CONTAINS
       CALL pheno_init_q_(tile)                 ! contains code parts of jsbach4 pheno init
     END IF
 
+    IF (.NOT. tile%Has_children() .AND. .NOT. ASSOCIATED(tile%next_sibling_tile)) THEN
+      CALL pheno_finalize_init_vars()
+    END IF
+
   END SUBROUTINE pheno_init
+
+  SUBROUTINE pheno_finalize_init_vars
+
+    DEALLOCATE( &
+      & pheno_init_vars%lai_mon,       &
+      & pheno_init_vars%fract_fpc_mon, &
+      & pheno_init_vars%fract_forest,  &
+      & pheno_init_vars%fract_fpc_max  &
+      & )
+
+  END SUBROUTINE pheno_finalize_init_vars
+
+  SUBROUTINE pheno_read_init_vars(tile)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+
+    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_grid),  POINTER :: grid
+
+    dsl4jsb_Def_config(PHENO_)
+
+    REAL(wp), POINTER ::  &
+      & ptr_mon(:,:,:),   &
+      & ptr_2D(:,:)
+    TYPE(t_input_file) :: input_file
+
+    INTEGER :: nproma, nblks
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_read_init_vars'
+
+    model => get_model(tile%owner_model_id)
+    grid   => Get_grid(model%grid_id)
+    nproma = grid%Get_nproma()
+    nblks  = grid%Get_nblks()
+
+    ALLOCATE( &
+      & pheno_init_vars%lai_mon      (nproma, nblks, 0:13), &
+      & pheno_init_vars%fract_fpc_mon(nproma, nblks, 0:13), &
+      & pheno_init_vars%fract_forest (nproma, nblks      ), &
+      & pheno_init_vars%fract_fpc_max(nproma, nblks      )  &
+      & )
+
+    dsl4jsb_Get_config(PHENO_)
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting phenology init vars from ' &
+      &                          //TRIM(dsl4jsb_Config(PHENO_)%bc_filename))
+
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(PHENO_)%bc_filename), model%grid_id)
+
+    ! Leaf area index climatology
+    IF (debug_on()) CALL message(TRIM(routine), 'reading lai_clim ...')
+    ptr_mon => input_file%Read_2d_time(    &
+      & variable_name='lai_clim')
+    ptr_mon(:,:,:) = MERGE(ptr_mon(:,:,:), 0._wp, ptr_mon(:,:,:) > 0._wp)
+    pheno_init_vars%lai_mon(:,:,1:12) = ptr_mon(:,:,1:12)
+    pheno_init_vars%lai_mon(:,:,0   ) = ptr_mon(:,:,12  )
+    pheno_init_vars%lai_mon(:,:,13  ) = ptr_mon(:,:,1   )
+    DEALLOCATE(ptr_mon)
+
+    ! Foliage projected cover climatology
+    IF (debug_on()) CALL message(TRIM(routine), 'reading veg_fract ...')
+    ptr_mon => input_file%Read_2d_time(    &
+      & variable_name='veg_fract')
+    ptr_mon(:,:,:) = MERGE(ptr_mon(:,:,:), 0._wp, ptr_mon(:,:,:) > 0._wp)
+    pheno_init_vars%fract_fpc_mon(:,:,1:12) = ptr_mon(:,:,1:12)
+    pheno_init_vars%fract_fpc_mon(:,:,0   ) = ptr_mon(:,:,12  )
+    pheno_init_vars%fract_fpc_mon(:,:,13  ) = ptr_mon(:,:,1   )
+    DEALLOCATE(ptr_mon)
+
+    ! Forest fraction
+    ! @todo: only used for use_alb_veg_simple=.TRUE. and HYDRO_ init if l_organic=.TRUE.
+    IF (debug_on()) CALL message(TRIM(routine), 'reading forest_fract ...')
+    ptr_2D => input_file%Read_2d(      &
+      & variable_name='forest_fract',  &
+      & fill_array = pheno_init_vars%fract_forest)
+    ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+
+    CALL input_file%Close()
+
+    input_file = jsb_netcdf_open_input(TRIM(model%config%fract_filename), model%grid_id)     ! Temporary
+
+    ! Maximum foliage projected cover
+    IF (debug_on()) CALL message(TRIM(routine), 'reading veg_ratio_max ...')
+    ptr_2D => input_file%Read_2d(      &
+      & variable_name='veg_ratio_max', &
+      & fill_array = pheno_init_vars%fract_fpc_max)
+    ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+
+    CALL input_file%Close()
+
+  END SUBROUTINE pheno_read_init_vars
 
   SUBROUTINE pheno_init_bc(tile)
 
@@ -72,12 +183,6 @@ CONTAINS
 
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_memory(PHENO_)
-
-    REAL(wp), POINTER ::  &
-      & ptr_mon(:,:,:),   &
-      & ptr_2D(:,:)
-
-    TYPE(t_input_file) :: input_file
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_bc'
 
@@ -89,60 +194,28 @@ CONTAINS
     IF (debug_on()) CALL message(TRIM(routine), 'Setting boundary conditions of pheno memory for tile '// &
       &                          TRIM(tile%name)//' from '//TRIM(dsl4jsb_Config(PHENO_)%bc_filename))
 
-    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(PHENO_)%bc_filename), model%grid_id)
-
     ! Leaf area index climatology
-    IF (debug_on()) CALL message(TRIM(routine), 'reading lai_clim ...')
-    ptr_mon => input_file%Read_2d_time(    &
-      & variable_name='lai_clim')
-    ptr_mon(:,:,:) = MERGE(ptr_mon(:,:,:), 0._wp, ptr_mon(:,:,:) > 0._wp)
-    dsl4jsb_memory(PHENO_)%lai_mon(:,:,1:12) = ptr_mon(:,:,1:12)
-    dsl4jsb_memory(PHENO_)%lai_mon(:,:,0   ) = ptr_mon(:,:,12  )
-    dsl4jsb_memory(PHENO_)%lai_mon(:,:,13  ) = ptr_mon(:,:,1   )
-    DEALLOCATE(ptr_mon)
+    IF (debug_on()) CALL message(TRIM(routine), 'setting lai_clim ...')
+
+    dsl4jsb_memory(PHENO_)%lai_mon(:,:,:) = pheno_init_vars%lai_mon(:,:,:)
     !$acc enter data attach(dsl4jsb_memory(PHENO_)%lai_mon)
     !$acc update device(dsl4jsb_memory(PHENO_)%lai_mon)
 
     ! Foliage projected cover climatology
-    IF (debug_on()) CALL message(TRIM(routine), 'reading veg_fract ...')
-    ptr_mon => input_file%Read_2d_time(    &
-      & variable_name='veg_fract')
-    ptr_mon(:,:,:) = MERGE(ptr_mon(:,:,:), 0._wp, ptr_mon(:,:,:) > 0._wp)
-    dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,1:12) = ptr_mon(:,:,1:12)
-    dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,0   ) = ptr_mon(:,:,12  )
-    dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,13  ) = ptr_mon(:,:,1   )
-    DEALLOCATE(ptr_mon)
+    IF (debug_on()) CALL message(TRIM(routine), 'setting veg_fract ...')
+    dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,:) = pheno_init_vars%fract_fpc_mon(:,:,:)
     !$acc update device(dsl4jsb_memory(PHENO_)%fract_fpc_mon)
 
     ! Forest fraction
     ! @todo: only used for use_alb_veg_simple=.TRUE. and HYDRO_ init if l_organic=.TRUE.
-    IF (debug_on()) CALL message(TRIM(routine), 'reading forest_fract ...')
-    ptr_2D => input_file%Read_2d(      &
-      & variable_name='forest_fract',  &
-      & fill_array = dsl4jsb_var_ptr(PHENO_, fract_forest))
-    dsl4jsb_var2D_onDomain(PHENO_, fract_forest) = &
-      MERGE(dsl4jsb_var2D_onDomain(PHENO_, fract_forest), 0._wp, dsl4jsb_var2D_onDomain(PHENO_, fract_forest) >= 0._wp)
+    IF (debug_on()) CALL message(TRIM(routine), 'setting forest_fract ...')
+    dsl4jsb_var2D_onDomain(PHENO_, fract_forest) = pheno_init_vars%fract_forest
     !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, fract_forest))
 
-    CALL input_file%Close()
-
-    input_file = jsb_netcdf_open_input(TRIM(model%config%fract_filename), model%grid_id)     ! Temporary
-
     ! Maximum foliage projected cover
-    IF (debug_on()) CALL message(TRIM(routine), 'reading veg_ratio_max ...')
-    ptr_2D => input_file%Read_2d(      &
-      & variable_name='veg_ratio_max', &
-      & fill_array = dsl4jsb_var_ptr(PHENO_, fract_fpc_max))
-
-    dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max) = &
-      MERGE(dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max), 0._wp, dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max) >= 0._wp)
+    IF (debug_on()) CALL message(TRIM(routine), 'setting veg_ratio_max ...')
+    dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max) = pheno_init_vars%fract_fpc_max
     !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max))
-
-    CALL input_file%Close()
-
-    ! avoid compiler warnings about pointers not being dereferenced
-    IF (ASSOCIATED(ptr_2D)) CONTINUE
-    NULLIFY(ptr_2D)
 
     IF (tile%lcts(1)%lib_id /= 0)  THEN ! only if the present tile is a pft
       !JN 10.01.18: for now: set the maxLai for non forest types to the one from the Lctlib
@@ -267,9 +340,6 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),       POINTER  :: model
-    TYPE(t_input_file)                :: input_file
-    REAL(wp),                POINTER  :: lai_clim(:,:,:)
-    REAL(wp), POINTER                 :: ptr_2D(:,:) 
        
     CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_q_'
     ! ---------------------------
@@ -322,21 +392,14 @@ CONTAINS
       growing_season(:,:) = false
     ENDIF
 
-
     !> 2.0 jsbach4 "pheno init" code copied with minor modifications
     !!
     
-    !> 2.1 get fract_fpc_max from bc file
-    input_file = jsb_netcdf_open_input(TRIM(model%config%fract_filename), model%grid_id)     ! Temporary
+    !> 2.1 get fract_fpc_max
     ! Maximum foliage projected cover
-    IF (debug_on()) CALL message(TRIM(routine), 'reading veg_ratio_max ...')
-    ptr_2D => input_file%Read_2d(      &
-      & variable_name='veg_ratio_max', &
-      & fill_array = dsl4jsb_var_ptr(PHENO_, fract_fpc_max))
-    dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max) = &
-      MERGE(dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max), 0._wp, dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max) >= 0._wp)
+    IF (debug_on()) CALL message(TRIM(routine), 'setting veg_ratio_max ...')
+    dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max) = pheno_init_vars%fract_fpc_max
     !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max))
-    CALL input_file%Close()
     
     !> 2.2 calc initial fract_fpc 
     IF (tile%lcts(1)%lib_id /= 0) THEN ! work with lctlib only if the present tile is a pft
