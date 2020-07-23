@@ -112,7 +112,7 @@ CONTAINS
 
       CALL input_file%Close()
 
-      avoid compiler warnings about pointers not being dereferenced
+      ! avoid compiler warnings about pointers not being dereferenced
       IF (ASSOCIATED(ptr_2D)) CONTINUE
       NULLIFY(ptr_2D)
     END IF
