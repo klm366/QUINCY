@@ -438,9 +438,10 @@ CONTAINS
     ! Map the variable groups given in the output namelist onto the
     ! corresponding variable subsets:
     ! ATTENTION: all add_vars must be finished before calling this routine.
-    IF (output_mode%l_nml) THEN
-      CALL parse_variable_groups()
-    END IF
+    ! TODO Switch off variable groups for now ... takes a long time to initialize
+    ! IF (output_mode%l_nml) THEN
+    !   CALL parse_variable_groups()
+    ! END IF
 
     ! If async IO is in effect, init_name_list_output is a collective call
     ! with the IO procs and effectively starts async IO
