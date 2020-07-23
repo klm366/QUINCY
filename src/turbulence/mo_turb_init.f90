@@ -18,6 +18,8 @@ MODULE mo_turb_init
   USE mo_jsb_model_class,   ONLY: t_jsb_model
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
   USE mo_jsb_class,         ONLY: get_model
+  USE mo_jsb_grid_class,    ONLY: t_jsb_grid
+  USE mo_jsb_grid,          ONLY: Get_grid
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: message
@@ -32,6 +34,13 @@ MODULE mo_turb_init
 
   PUBLIC :: turb_init
 
+  TYPE t_turb_init_vars
+    REAL(wp), POINTER ::  &
+      & rough_m(:,:)
+  END TYPE t_turb_init_vars
+
+  TYPE(t_turb_init_vars) :: turb_init_vars
+
   CHARACTER(len=*), PARAMETER :: modname = 'mo_turb_init'
 
 CONTAINS
@@ -45,10 +54,69 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':turb_init'
 
+    IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
+      CALL turb_read_init_vars(tile)
+    END IF
+
     CALL turb_init_bc(tile)
     CALL turb_init_ic(tile)
 
+    IF (.NOT. tile%Has_children() .AND. .NOT. ASSOCIATED(tile%next_sibling_tile)) THEN
+      CALL turb_finalize_init_vars()
+    END IF
+
   END SUBROUTINE turb_init
+
+  SUBROUTINE turb_finalize_init_vars
+
+    DEALLOCATE( &
+      & turb_init_vars%rough_m &
+      & )
+
+  END SUBROUTINE turb_finalize_init_vars
+
+  SUBROUTINE turb_read_init_vars(tile)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+
+    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_grid),  POINTER :: grid
+
+    dsl4jsb_Def_config(TURB_)
+
+    REAL(wp), POINTER :: ptr_2D(:,:)       !< temporary pointer
+    TYPE(t_input_file) :: input_file
+
+    INTEGER :: nproma, nblks
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':turb_read_init_vars'
+
+    model => get_model(tile%owner_model_id)
+    grid  => get_grid(model%grid_id)
+    nproma = grid%Get_nproma()
+    nblks  = grid%Get_nblks()
+
+    ALLOCATE(turb_init_vars%rough_m(nproma, nblks))
+
+    ! Get turb config
+    dsl4jsb_Get_config(TURB_)
+
+    IF (.NOT. dsl4jsb_Config(TURB_)%active) RETURN
+
+    IF (debug_on()) CALL message(TRIM(routine), &
+         'Reading turb init vars for tile from '//TRIM(dsl4jsb_Config(TURB_)%bc_filename))
+
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(TURB_)%bc_filename), model%grid_id)
+
+    ! Surface roughness length
+    ptr_2D => input_file%Read_2d(         &
+      & variable_name='roughness_length',         &
+      & fill_array = turb_init_vars%rough_m)
+    ptr_2D = MERGE(ptr_2D, 1._wp, ptr_2D > 0._wp)
+
+    CALL input_file%Close()
+
+  END SUBROUTINE turb_read_init_vars
 
   SUBROUTINE turb_init_bc(tile)
 
@@ -67,14 +135,10 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
-    TYPE(t_jsb_model),        POINTER :: model
+    TYPE(t_jsb_model), POINTER :: model
+
     dsl4jsb_Def_config(TURB_)
     dsl4jsb_Def_memory(TURB_)
-
-    REAL(wp), POINTER :: &
-      & ptr_2D(:,  :)       !< temporary pointer
-
-    TYPE(t_input_file) :: input_file
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':turb_init_ic'
 
@@ -96,25 +160,15 @@ CONTAINS
     ! In the standalone model, these exchange parameters are computed in mo_forcing using rough_m and then
     ! passed to the first call of JSBACH. Therefore, we need rough_m from the ini file for the standalone model.
     IF (jsbach_runs_standalone()) THEN
+
       IF (debug_on()) CALL message(TRIM(routine), &
           'Initializing turb memory for tile '//TRIM(tile%name)//' from '//TRIM(dsl4jsb_Config(TURB_)%bc_filename))
 
-      input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(TURB_)%bc_filename), model%grid_id)
-
       ! Surface roughness length
-      ptr_2D => input_file%Read_2d(         &
-        & variable_name='roughness_length',         &
-        & fill_array = dsl4jsb_var_ptr(TURB_,rough_m))
-      dsl4jsb_var2D_onDomain(TURB_,rough_m) = &
-        MERGE(dsl4jsb_var2D_onDomain(TURB_,rough_m), 1._wp, dsl4jsb_var2D_onDomain(TURB_,rough_m) > 0._wp)
+      dsl4jsb_var2D_onDomain(TURB_,rough_m) = turb_init_vars%rough_m
 
       !$acc update device(dsl4jsb_var2D_onDomain(TURB_,rough_m))
 
-      CALL input_file%Close()
-
-      ! avoid compiler warnings about pointers not being dereferenced
-      IF (ASSOCIATED(ptr_2D)) CONTINUE
-      NULLIFY(ptr_2D)
     END IF
 
   END SUBROUTINE turb_init_ic
