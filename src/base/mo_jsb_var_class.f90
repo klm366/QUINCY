@@ -22,6 +22,9 @@ MODULE mo_jsb_var_class
     ENUMERATOR :: REAL2D=1, REAL3D
   END ENUM
 
+  !================================================================================================================================
+  ! t_jsb_var
+  !================================================================================================================================
   TYPE, ABSTRACT :: t_jsb_var
     REAL(wp), POINTER &
 #ifdef HAVE_FC_ATTRIBUTE_CONTIGUOUS
@@ -59,6 +62,9 @@ MODULE mo_jsb_var_class
 !#pragma GCC diagnostic push
 !#pragma GCC diagnostic ignored "-Wsurprising"
 
+  !================================================================================================================================
+  ! t_jsb_var_real2d
+  !================================================================================================================================
   TYPE, EXTENDS(t_jsb_var) :: t_jsb_var_real2d
     REAL(wp), POINTER &
 #ifdef HAVE_FC_ATTRIBUTE_CONTIGUOUS
@@ -78,33 +84,41 @@ MODULE mo_jsb_var_class
     PROCEDURE :: Assign_field1d_to_var_real2d
     PROCEDURE :: Assign_field2d_to_var_real2d
     PROCEDURE :: Assign_scalar_to_var_real2d
-    GENERIC   :: ASSIGNMENT(=) => Assign_var_to_var_real2d, Assign_field1d_to_var_real2d, Assign_field2d_to_var_real2d, &
+    GENERIC   :: ASSIGNMENT(=) => Assign_var_to_var_real2d, &
+                                  Assign_field1d_to_var_real2d, Assign_field2d_to_var_real2d, &
       &                           Assign_scalar_to_var_real2d
     FINAL     :: finalize_jsb_var_real2d
   END TYPE t_jsb_var_real2d
 
+  !================================================================================================================================
+  ! t_jsb_var_real3d
+  !================================================================================================================================
   TYPE, EXTENDS(t_jsb_var) :: t_jsb_var_real3d
     REAL(wp), POINTER :: ptr(:,:,:) => NULL()
     REAL(wp), POINTER :: ptrm1(:,:) => NULL()
   CONTAINS
     PROCEDURE :: Associate_pointers => t_jsb_var_real3d_associate_pointers
-    PROCEDURE :: Add_real3d
-    PROCEDURE :: Add_real3d_and_scalar            ! Add varialbe of type t_jsb_var_real3d with REAL scalar
-    PROCEDURE :: Add_real3d_and_field             ! Add varialbe of type t_jsb_var_real3d with REAL 3d-field
+    PROCEDURE :: Add_real3d                       ! Add two variables of type t_jsb_var_real3d
+    PROCEDURE :: Add_real3d_and_scalar            ! Add variable of type t_jsb_var_real3d with REAL scalar
+    PROCEDURE :: Add_real3d_and_field             ! Add variable of type t_jsb_var_real3d with REAL 3d-field
     GENERIC   :: OPERATOR(+) => Add_real3d, Add_real3d_and_scalar, Add_real3d_and_field
     PROCEDURE :: Multiply_real3d_with_field       ! Multiply varialbe of type t_jsb_var_real3d with REAL 3-d field
     GENERIC   :: OPERATOR(*) => Multiply_real3d_with_field
-    PROCEDURE :: Assign_var_to_var_real3d
-    ! PROCEDURE :: Assign_field1d_to_var_real2d
-    PROCEDURE :: Assign_field3d_to_var_real3d
-    PROCEDURE :: Assign_scalar_to_var_real3d
-    GENERIC   :: ASSIGNMENT(=) => Assign_var_to_var_real3d, Assign_field3d_to_var_real3d, &
+    PROCEDURE :: Assign_var_to_var_real3d         ! %ptr3d = %ptr3d
+    PROCEDURE :: Assign_field2d_to_var_real3d     ! %ptr3d = real3d%ptrm1   ! ON_CHUNK
+    PROCEDURE :: Assign_field3d_to_var_real3d     ! %ptr3d = (:,:,:)        ! ON_DOMAIN
+    PROCEDURE :: Assign_scalar_to_var_real3d      ! %ptr3d = scalar
+    GENERIC   :: ASSIGNMENT(=) => Assign_var_to_var_real3d, &
+                                  Assign_field2d_to_var_real3d, Assign_field3d_to_var_real3d, &
       &                           Assign_scalar_to_var_real3d
     FINAL     :: finalize_jsb_var_real3d
   END TYPE t_jsb_var_real3d
 
 !#pragma GCC diagnostic pop
 
+  !================================================================================================================================
+  ! t_jsb_var_p
+  !================================================================================================================================
   TYPE t_jsb_var_p
     CLASS(t_jsb_var), POINTER :: p => NULL()
   END TYPE t_jsb_var_p
@@ -161,6 +175,9 @@ CONTAINS
 
   END SUBROUTINE t_jsb_var_real3d_associate_pointers
 
+  !================================================================================================================================
+  ! force finalization
+  !================================================================================================================================
   SUBROUTINE t_jsb_var_force_finalization(this)
 
     CLASS(t_jsb_var), INTENT(inout) :: this
@@ -223,6 +240,9 @@ CONTAINS
 !!$
 !!$  END FUNCTION Create_jsb_var
 
+  !================================================================================================================================
+  ! assign
+  !================================================================================================================================
   SUBROUTINE Assign_var_to_var_real2d(lhs, rhs)
 
     CLASS(t_jsb_var_real2d), INTENT(inout) :: lhs
@@ -329,6 +349,27 @@ CONTAINS
 
   END SUBROUTINE Assign_scalar_to_var_real2d
 
+  SUBROUTINE Assign_field2d_to_var_real3d(lhs, rhs)
+
+    CLASS(t_jsb_var_real3d), INTENT(inout) :: lhs
+    REAL(wp),                INTENT(in)    :: rhs(:,:)
+
+    TYPE(t_subset) :: sub
+    INTEGER        :: ics, ice, iblk, nb, nc
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Assign_field2d_to_var_real3d'
+
+    sub = lhs%Get_subset()
+
+    IF (sub%type == ON_CHUNK) THEN
+      ics = sub%ics ; ice = sub%ice ; iblk = sub%iblk ; nb = sub%nb ; nc = sub%nc
+      lhs%ptr3d(ics:ice,:,iblk) = rhs(:,:)
+    ELSE
+      CALL finish(routine, 'Cannot assign 2d-field to jsb_var on domain')
+    END IF
+
+  END SUBROUTINE Assign_field2d_to_var_real3d
+
   SUBROUTINE Assign_field3d_to_var_real3d(lhs, rhs)
 
     CLASS(t_jsb_var_real3d), INTENT(inout) :: lhs
@@ -372,6 +413,9 @@ CONTAINS
 
   END SUBROUTINE Assign_scalar_to_var_real3d
 
+  !================================================================================================================================
+  ! add
+  !================================================================================================================================
   ! FUNCTION Add_real2d(var1, var2) RESULT(res)
 
   !   CLASS(t_jsb_var_real2d), INTENT(in) :: var1, var2
@@ -485,6 +529,9 @@ CONTAINS
 
   END FUNCTION Add_real3d_and_field
 
+  !================================================================================================================================
+  ! multiply
+  !================================================================================================================================
   FUNCTION Multiply_real2d_with_field(var1, field) RESULT(var3)
 
     CLASS(t_jsb_var_real2d), INTENT(in) :: var1

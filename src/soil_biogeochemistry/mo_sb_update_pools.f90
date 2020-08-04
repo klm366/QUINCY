@@ -184,22 +184,15 @@ CONTAINS
     sb_mycorrhiza_export%carbon%ptrm1(:,:)            = 30.0_wp
     sb_mycorrhiza_export%nitrogen%ptrm1(:,:)          = 28.0_wp
 
-    ! assignment (var3d <- field) is overloaded, so that values are added to the correct chunk
-      !! the below does not work, is translated to:
-      ! sb_pool%dom%carbon    = sb_pool%dom%carbon%ptrm1   + sb_pool%dom_assoc%carbon%ptrm1
-      ! sb_pool%dom%nitrogen  = sb_pool%dom%nitrogen%ptrm1 + sb_pool%dom_assoc%nitrogen%ptrm1
-      !! compiler error:
-      !  Left-hand-side of intrinsic assignment statement is scalar but right-hand-side is an array of rank 2
-      ! sb_pool%dom%carbon    = $sb_pool%dom%carbon$   + $sb_pool%dom_assoc%carbon$
-      ! sb_pool%dom%nitrogen  = $sb_pool%dom%nitrogen$ + $sb_pool%dom_assoc%nitrogen$
-    sb_pool%dom%carbon%ptrm1(:,:)    = sb_pool%dom%carbon%ptrm1(:,:)   + sb_pool%dom_assoc%carbon%ptrm1(:,:)
-    sb_pool%dom%nitrogen%ptrm1(:,:)  = sb_pool%dom%nitrogen%ptrm1(:,:) + sb_pool%dom_assoc%nitrogen%ptrm1(:,:)
+    ! assignment (var3d <- 2d field) is overloaded, so that values are added to the correct chunk
+    sb_pool%dom%carbon    = $sb_pool%dom%carbon$   + $sb_pool%dom_assoc%carbon$
+    sb_pool%dom%nitrogen  = $sb_pool%dom%nitrogen$ + $sb_pool%dom_assoc%nitrogen$
 
     ! assignment (var3d <- field) is overloaded, so that values are added to the correct chunk
-    ! sb_formation%fungi%carbon   = $sb_formation%fungi%carbon$ + $sb_formation%mycorrhiza%carbon$ + &
-    !                               $sb_formation%residue%carbon$
-    ! sb_formation%fungi%nitrogen = $sb_formation%fungi%nitrogen$ + $sb_formation%mycorrhiza%nitrogen$ + &
-    !                               $sb_formation%residue%nitrogen$
+    sb_formation%fungi%carbon   = $sb_formation%fungi%carbon$ + $sb_formation%mycorrhiza%carbon$ + &
+                                  $sb_formation%residue%carbon$
+    sb_formation%fungi%nitrogen = $sb_formation%fungi%nitrogen$ + $sb_formation%mycorrhiza%nitrogen$ + &
+                                  $sb_formation%residue%nitrogen$
 
   END SUBROUTINE update_sb_pools
 
