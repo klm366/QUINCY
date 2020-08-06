@@ -237,7 +237,7 @@ CONTAINS
     veg_growth%leaf                     = 25.0_wp
     veg_growth%fruit                    = veg_growth%leaf%carbon%ptrm1(:)
     veg_growth%fine_root                = veg_growth%fruit    
-    ! veg_growth%coarse_root              = veg_growth%leaf + veg_growth%fine_root
+    veg_growth%coarse_root              = veg_growth%leaf + veg_growth%fine_root
 
   END SUBROUTINE update_veg_dynamics
 

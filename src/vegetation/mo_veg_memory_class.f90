@@ -69,16 +69,32 @@ MODULE mo_veg_memory_class
     ! + addition
     ! PROCEDURE         :: Add_element_a                      ! 
     ! PROCEDURE         :: Add_element_a_and_scalar           ! 
-    ! PROCEDURE         :: Add_veg_elem_p_to_veg_elem_p       ! field1d(:) = pool%elements + pool%elements
-    ! GENERIC, PUBLIC   :: OPERATOR(+) => Add_veg_elem_p_to_veg_elem_p
+    PROCEDURE         :: Add_veg_elem_p_to_veg_elem_p       ! pool%elements + pool%elements
+    GENERIC, PUBLIC   :: OPERATOR(+) => Add_veg_elem_p_to_veg_elem_p
     ! = assign
-    PROCEDURE         :: Assign_scalar_to_veg_elem_p        ! pool%elements = scalar
-    PROCEDURE         :: Assign_field1d_to_veg_elem_p       ! pool%elements = var(:)
-    PROCEDURE         :: Assign_veg_elem_p_to_veg_elem_p    ! pool%elements = pool%elements  ! only numeric values of elements are assigned
+    PROCEDURE         :: Assign_scalar_to_veg_elem_p          ! pool%elements = scalar
+    PROCEDURE         :: Assign_field1d_to_veg_elem_p         ! pool%elements = var(:)
+    PROCEDURE         :: Assign_veg_elem_p_hlp_to_veg_elem_p  ! pool%elements = t_veg_elements_pool_hlp
+    PROCEDURE         :: Assign_veg_elem_p_to_veg_elem_p      ! pool%elements = pool%elements  ! only numeric values of elements are assigned
     GENERIC, PUBLIC   :: ASSIGNMENT(=) => Assign_scalar_to_veg_elem_p, &
                                           Assign_field1d_to_veg_elem_p, &
+                                          Assign_veg_elem_p_hlp_to_veg_elem_p, &
                                           Assign_veg_elem_p_to_veg_elem_p
   END TYPE t_veg_elements_pool
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Simple veg_elements_pool TYPE for temporary objects with operator overload
+  !! 
+  !! 2D is needed in the context of ON_DOMAIN
+  !-----------------------------------------------------------------------------------------------------
+  TYPE t_veg_elements_pool_hlp
+    REAL(wp), ALLOCATABLE :: carbon(:,:)      ! dimension of variable in memory is var(ics:ice,iblk)
+    REAL(wp), ALLOCATABLE :: nitrogen(:,:)
+    REAL(wp), ALLOCATABLE :: phosphorus(:,:)
+    REAL(wp), ALLOCATABLE :: carbon13(:,:)
+    REAL(wp), ALLOCATABLE :: carbon14(:,:)
+    REAL(wp), ALLOCATABLE :: nitrogen15(:,:)
+  END TYPE t_veg_elements_pool_hlp
 
   !-----------------------------------------------------------------------------------------------------
   !> Type definition for t_veg_tissues_pool
@@ -966,6 +982,22 @@ CONTAINS
   
   END SUBROUTINE Assign_field1d_to_veg_elem_p
 
+  SUBROUTINE Assign_veg_elem_p_hlp_to_veg_elem_p(lhs, rhs)
+  
+    CLASS(t_veg_elements_pool),     INTENT(inout) :: lhs
+    TYPE(t_veg_elements_pool_hlp ), INTENT(in)    :: rhs
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Assign_veg_elem_p_hlp_to_veg_elem_p'
+
+    lhs%carbon     = rhs%carbon(:,:)
+    lhs%nitrogen   = rhs%nitrogen(:,:)
+    lhs%phosphorus = rhs%phosphorus(:,:)
+    lhs%carbon13   = rhs%carbon13(:,:)
+    lhs%carbon14   = rhs%carbon14(:,:)
+    lhs%nitrogen15 = rhs%nitrogen15(:,:)
+  
+  END SUBROUTINE Assign_veg_elem_p_hlp_to_veg_elem_p
+
   SUBROUTINE Assign_veg_elem_p_to_veg_elem_p(lhs, rhs)
 
     CLASS(t_veg_elements_pool), INTENT(inout) :: lhs
@@ -985,7 +1017,50 @@ CONTAINS
   !--------------------------------------------------------------------------------------------------------------------------------
   ! + addition
   !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Add_veg_elem_p_to_veg_elem_p(struct1, struct2) RESULT(res)
   
+    USE mo_jsb_subset,        ONLY: t_subset, ON_DOMAIN, ON_CHUNK
+  
+    CLASS(t_veg_elements_pool),     INTENT(in)  :: struct1, struct2
+    TYPE(t_veg_elements_pool_hlp)               :: res
+
+    TYPE(t_subset) :: sub
+    INTEGER        :: ics, ice, iblk, nb, nc
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Add_veg_elem_p_to_veg_elem_p'
+  
+    sub = struct1%carbon%Get_subset()
+    ics = sub%ics ; ice = sub%ice ; iblk = sub%iblk ; nb = sub%nb ; nc = sub%nc
+      
+    IF (sub%type == ON_CHUNK) THEN
+      ALLOCATE(res%carbon(nc,1))
+      ALLOCATE(res%nitrogen(nc,1))
+      ALLOCATE(res%phosphorus(nc,1))
+      ALLOCATE(res%carbon13(nc,1))
+      ALLOCATE(res%carbon14(nc,1))
+      ALLOCATE(res%nitrogen15(nc,1))
+      res%carbon(:,:)     = struct1%carbon      + struct2%carbon
+      res%nitrogen(:,:)   = struct1%nitrogen    + struct2%nitrogen  
+      res%phosphorus(:,:) = struct1%phosphorus  + struct2%phosphorus
+      res%carbon13(:,:)   = struct1%carbon13    + struct2%carbon13  
+      res%carbon14(:,:)   = struct1%carbon14    + struct2%carbon14  
+      res%nitrogen15(:,:) = struct1%nitrogen15  + struct2%nitrogen15
+    ELSE
+      ALLOCATE(res%carbon(nc,nb))
+      ALLOCATE(res%nitrogen(nc,nb))
+      ALLOCATE(res%phosphorus(nc,nb))
+      ALLOCATE(res%carbon13(nc,nb))
+      ALLOCATE(res%carbon14(nc,nb))
+      ALLOCATE(res%nitrogen15(nc,nb))
+      res%carbon(:,:)     = struct1%carbon      + struct2%carbon
+      res%nitrogen(:,:)   = struct1%nitrogen    + struct2%nitrogen  
+      res%phosphorus(:,:) = struct1%phosphorus  + struct2%phosphorus
+      res%carbon13(:,:)   = struct1%carbon13    + struct2%carbon13  
+      res%carbon14(:,:)   = struct1%carbon14    + struct2%carbon14  
+      res%nitrogen15(:,:) = struct1%nitrogen15  + struct2%nitrogen15
+    ENDIF
+  
+  END FUNCTION Add_veg_elem_p_to_veg_elem_p  
     
 
   !--------------------------------------------------------------------------------------------------------------------------------
