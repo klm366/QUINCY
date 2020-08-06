@@ -232,6 +232,13 @@ CONTAINS
     veg_establishment%carbon%ptrm1(:)   = 23.0_wp
     veg_reserve_use%carbon%ptrm1(:)     = 23.0_wp
 
+    ! testing
+    ! assign: scalar field1d t_veg_elements_pool
+    veg_growth%leaf                     = 25.0_wp
+    veg_growth%fruit                    = veg_growth%leaf%carbon%ptrm1(:)
+    veg_growth%fine_root                = veg_growth%fruit    
+    ! veg_growth%coarse_root              = veg_growth%leaf + veg_growth%fine_root
+
   END SUBROUTINE update_veg_dynamics
 
 

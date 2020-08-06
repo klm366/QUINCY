@@ -417,24 +417,24 @@ CONTAINS
   ! add
   !================================================================================================================================
   ! FUNCTION Add_real2d(var1, var2) RESULT(res)
-
+  ! 
   !   CLASS(t_jsb_var_real2d), INTENT(in) :: var1, var2
   !   REAL(wp), ALLOCATABLE :: res(:,:)
-
+  ! 
   !   TYPE(t_subset) :: sub
   !   INTEGER        :: ics, ice, iblk, nb, nc
-
+  ! 
   !   sub = var1%Get_subset()
   !   ics = sub%ics ; ice = sub%ice ; iblk = sub%iblk ; nb = sub%nb ; nc = sub%nc
-
+  ! 
   !   IF (sub%type == ON_CHUNK) THEN
   !     ALLOCATE(res(nc,1))
-  !     res(:,1) = var1%field(ics:ice,iblk,1,1,1) + var2%field(ics:ice,iblk,1,1,1)
+  !     res(:,iblk) = var1%ptr2d(ics:ice,iblk) + var2%ptr2d(ics:ice,iblk)
   !   ELSE
   !     ALLOCATE(res(nc,nb))
-  !     res(:,:) = var1%field(:,:,1,1,1) + var2%field(:,:,1,1,1)
+  !     res(:,:) = var1%ptr2d(:,:) + var2%ptr2d(:,:)
   !   END IF
-
+  ! 
   ! END FUNCTION Add_real2d
 
   FUNCTION Add_real2d(var1, var2) RESULT(res)

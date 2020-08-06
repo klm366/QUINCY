@@ -61,8 +61,23 @@ MODULE mo_veg_memory_class
     TYPE(t_jsb_var_real2d), POINTER :: carbon14
     TYPE(t_jsb_var_real2d), POINTER :: nitrogen15
   CONTAINS
-    PROCEDURE :: Init => t_veg_elements_pool_init
+    PRIVATE
+    ! infrastructure
+    PROCEDURE :: Init                   => t_veg_elements_pool_init
     PROCEDURE :: Get_element_name_by_id => t_veg_elements_pool_get_element_name_by_id
+    ! operator overload
+    ! + addition
+    ! PROCEDURE         :: Add_element_a                      ! 
+    ! PROCEDURE         :: Add_element_a_and_scalar           ! 
+    ! PROCEDURE         :: Add_veg_elem_p_to_veg_elem_p       ! field1d(:) = pool%elements + pool%elements
+    ! GENERIC, PUBLIC   :: OPERATOR(+) => Add_veg_elem_p_to_veg_elem_p
+    ! = assign
+    PROCEDURE         :: Assign_scalar_to_veg_elem_p        ! pool%elements = scalar
+    PROCEDURE         :: Assign_field1d_to_veg_elem_p       ! pool%elements = var(:)
+    PROCEDURE         :: Assign_veg_elem_p_to_veg_elem_p    ! pool%elements = pool%elements  ! only numeric values of elements are assigned
+    GENERIC, PUBLIC   :: ASSIGNMENT(=) => Assign_scalar_to_veg_elem_p, &
+                                          Assign_field1d_to_veg_elem_p, &
+                                          Assign_veg_elem_p_to_veg_elem_p
   END TYPE t_veg_elements_pool
 
   !-----------------------------------------------------------------------------------------------------
@@ -909,5 +924,75 @@ CONTAINS
     ENDIF  ! IF One_of(LAND_TYPE  OR VEG_TYPE, lct_ids)
 
   END SUBROUTINE Init_veg_memory
+
+  !--------------------------------------------------------------------------------------------------------------------------------
+  !> operator overload and assignment routines for pools
+  !!  TYPE t_veg_elements_pool
+  !! 
+  !--------------------------------------------------------------------------------------------------------------------------------
+  
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! assign
+  !--------------------------------------------------------------------------------------------------------------------------------
+  SUBROUTINE Assign_scalar_to_veg_elem_p(lhs, rhs)
+
+    CLASS(t_veg_elements_pool), INTENT(inout) :: lhs
+    REAL(wp),                   INTENT(in)    :: rhs
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Assign_scalar_to_veg_elem_p'
+
+    lhs%carbon     = rhs
+    lhs%nitrogen   = rhs
+    lhs%phosphorus = rhs
+    lhs%carbon13   = rhs
+    lhs%carbon14   = rhs
+    lhs%nitrogen15 = rhs
+
+  END SUBROUTINE Assign_scalar_to_veg_elem_p
+
+  SUBROUTINE Assign_field1d_to_veg_elem_p(lhs, rhs)
+  
+    CLASS(t_veg_elements_pool), INTENT(inout) :: lhs
+    REAL(wp),                   INTENT(in)    :: rhs(:)
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Assign_field1d_to_veg_elem_p'
+
+    lhs%carbon     = rhs(:)
+    lhs%nitrogen   = rhs(:)
+    lhs%phosphorus = rhs(:)
+    lhs%carbon13   = rhs(:)
+    lhs%carbon14   = rhs(:)
+    lhs%nitrogen15 = rhs(:)
+  
+  END SUBROUTINE Assign_field1d_to_veg_elem_p
+
+  SUBROUTINE Assign_veg_elem_p_to_veg_elem_p(lhs, rhs)
+
+    CLASS(t_veg_elements_pool), INTENT(inout) :: lhs
+    CLASS(t_veg_elements_pool), INTENT(in)    :: rhs
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Assign_veg_elem_p_to_veg_elem_p'
+
+    lhs%carbon     = rhs%carbon    
+    lhs%nitrogen   = rhs%nitrogen  
+    lhs%phosphorus = rhs%phosphorus
+    lhs%carbon13   = rhs%carbon13  
+    lhs%carbon14   = rhs%carbon14  
+    lhs%nitrogen15 = rhs%nitrogen15
+
+  END SUBROUTINE Assign_veg_elem_p_to_veg_elem_p
+
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! + addition
+  !--------------------------------------------------------------------------------------------------------------------------------
+  
+    
+
+  !--------------------------------------------------------------------------------------------------------------------------------
+  !> operator overload and assignment routines for pools
+  !!  TYPE t_veg_tissues_pool
+  !! 
+  !--------------------------------------------------------------------------------------------------------------------------------
+
 
 END MODULE mo_veg_memory_class
