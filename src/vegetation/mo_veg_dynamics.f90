@@ -233,6 +233,9 @@ CONTAINS
     veg_reserve_use%carbon%ptrm1(:)     = 23.0_wp
 
     ! testing
+    ! assign scalar and add scalar
+    veg_reserve_use%nitrogen            = 40.0_wp
+    veg_reserve_use%carbon              = veg_reserve_use%nitrogen + 40.0_wp
     ! assign: scalar field1d t_veg_elements_pool
     veg_growth%leaf                     = 25.0_wp
     veg_growth%fruit                    = veg_growth%leaf%carbon%ptrm1(:)

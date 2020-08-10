@@ -76,7 +76,7 @@ MODULE mo_jsb_var_class
     PROCEDURE :: Associate_pointers => t_jsb_var_real2d_associate_pointers
     !! operator overload
     ! +
-    PROCEDURE :: Add_real2d_and_scalar            ! !! @TODO var_real2d + scalar  = var(:,:)  | ON_CHUNK & ON_DOMAIN
+    PROCEDURE :: Add_real2d_and_scalar            ! var_real2d + scalar  = var(:,:)  | ON_CHUNK & ON_DOMAIN
     PROCEDURE :: Add_real2d_and_field2d           ! !! @TODO var_real2d + field2d = var(:,:)  | ON_CHUNK & ON_DOMAIN
     PROCEDURE :: Add_real2d_and_real2d            ! var_real2d + var_real2d = var(:,:) | ON_CHUNK & ON_DOMAIN
     GENERIC   :: OPERATOR(+) => Add_real2d_and_scalar, Add_real2d_and_field2d, &
@@ -471,42 +471,30 @@ CONTAINS
   !================================================================================================================================
   ! add
   !================================================================================================================================
-!!  !-----------------------------------------------------------------------------------------------------
-!!  ! var_real2d + scalar = var(:,:) | ON_CHUNK & ON_DOMAIN
-!!  !-----------------------------------------------------------------------------------------------------
-  ! FUNCTION Add_real2d_and_scalar(var1, scalar) RESULT(res)
-  FUNCTION Add_real2d_and_scalar(var1, scalar) RESULT(var3)
+  !-----------------------------------------------------------------------------------------------------
+  ! var_real2d + scalar = var(:,:) | ON_CHUNK & ON_DOMAIN
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Add_real2d_and_scalar(var1, scalar) RESULT(res)
 
-    ! CLASS(t_jsb_var_real2d), INTENT(in) :: var1
-    ! REAL(wp),                INTENT(in) :: scalar
-    ! REAL(wp), ALLOCATABLE               :: res(:,:)
-    ! 
-    ! TYPE(t_subset) :: sub
-    ! INTEGER        :: ics, ice, iblk, nb, nc
-    ! 
-    ! CHARACTER(len=*), PARAMETER :: routine = modname//':Add_real2d_and_scalar'
-    ! 
-    ! sub = var1%Get_subset()
-    ! ics = sub%ics ; ice = sub%ice ; iblk = sub%iblk ; nb = sub%nb ; nc = sub%nc
-    ! 
-    ! IF (sub%type == ON_CHUNK) THEN
-    !   ALLOCATE(res(nc,1))
-    !   res(:,1) = var1%ptr(ics:ice,iblk) + scalar
-    ! ELSE
-    !   ALLOCATE(res(nc,nb))
-    !   res(:,:) = var1%ptr(:,:) + scalar
-    ! END IF
     CLASS(t_jsb_var_real2d), INTENT(in) :: var1
     REAL(wp),                INTENT(in) :: scalar
-    TYPE(t_jsb_var_real2d), TARGET              :: var3
+    REAL(wp), ALLOCATABLE               :: res(:,:)
     
-    var3%name = var1%name
-    var3%full_name = var1%full_name
-    var3%owner_proc_id = var1%owner_proc_id
-    var3%owner_tile_path = var1%owner_tile_path
-    var3%missval = var1%missval
-    var3%ptr2d = var1%ptr2d + scalar
-    var3%ptr => var3%ptr2d(:,:)
+    TYPE(t_subset) :: sub
+    INTEGER        :: ics, ice, iblk, nb, nc
+    
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Add_real2d_and_scalar'
+    
+    sub = var1%Get_subset()
+    ics = sub%ics ; ice = sub%ice ; iblk = sub%iblk ; nb = sub%nb ; nc = sub%nc
+    
+    IF (sub%type == ON_CHUNK) THEN
+      ALLOCATE(res(nc,1))
+      res(:,1) = var1%ptr(ics:ice,iblk) + scalar
+    ELSE
+      ALLOCATE(res(nc,nb))
+      res(:,:) = var1%ptr(:,:) + scalar
+    END IF
 
   END FUNCTION Add_real2d_and_scalar
 !!  ! -----------------------------------------------------------------------------------------------------
