@@ -213,34 +213,27 @@ CONTAINS
     veg_pool%fruit%nitrogen%ptrm1(:)       = 15.0_wp
     veg_pool%seed_bed%nitrogen%ptrm1(:)    = 15.0_wp
 
-    ! assignment (var2d <- field) is overloaded, so that values are added to the correct chunk
-    veg_pool%labile%carbon    = $veg_pool%labile%carbon$ + $veg_pool%fine_root%carbon$
-    ! veg_pool%labile%carbon    = $veg_pool%labile%carbon$ + &
-    !   & $veg_pool%fine_root%carbon$ + $veg_pool%coarse_root%carbon$ - $veg_pool%reserve%carbon$
-    ! veg_pool%labile%nitrogen  = veg_pool%labile%nitrogen + &
-    !   & $veg_pool%fine_root%nitrogen$ + $veg_pool%coarse_root%nitrogen$ - $veg_pool%reserve%nitrogen$
 
-    veg_growth%leaf%carbon%ptrm1(:)      = 20.0_wp
-    veg_litterfall%leaf%carbon%ptrm1(:)  = 20.0_wp
-    veg_falloc%leaf%carbon%ptrm1(:)      = 20.0_wp
-    ! assignment (var2d <- field) is overloaded, so that values are added to the correct chunk
-    veg_total_flux%leaf%carbon  = $veg_growth%leaf%carbon$ + $veg_litterfall%leaf%carbon$ + $veg_falloc%leaf%carbon$
+    veg_pool%leaf%carbon      = veg_pool%leaf%carbon   + veg_pool%labile%carbon   + veg_pool%fine_root%carbon   + 10.0_wp
+    veg_pool%leaf%nitrogen    = veg_pool%leaf%nitrogen + veg_pool%labile%nitrogen + veg_pool%fine_root%nitrogen + 10.0_wp
 
-    ! element pools
-    veg_total_biomass%carbon%ptrm1(:)   = 23.0_wp
-    veg_exudation%carbon%ptrm1(:)       = 23.0_wp
-    veg_establishment%carbon%ptrm1(:)   = 23.0_wp
-    veg_reserve_use%carbon%ptrm1(:)     = 23.0_wp
+    veg_pool%leaf%carbon13    = veg_pool%leaf%carbon   * 2.0_wp
+    veg_pool%leaf%nitrogen15  = veg_pool%leaf%nitrogen * 2.0_wp
+
+    veg_pool%leaf%carbon14    = veg_pool%labile%carbon * veg_pool%reserve%carbon 
+    veg_pool%leaf%phosphorus  = veg_pool%labile%carbon * veg_pool%reserve%carbon + veg_pool%reserve%nitrogen
 
     ! testing
-    ! assign scalar and add scalar
-    veg_reserve_use%nitrogen            = 40.0_wp
-    veg_reserve_use%carbon              = veg_reserve_use%nitrogen + 40.0_wp
-    ! assign: scalar field1d t_veg_elements_pool
-    veg_growth%leaf                     = 25.0_wp
-    veg_growth%fruit                    = veg_growth%leaf%carbon%ptrm1(:)
-    veg_growth%fine_root                = veg_growth%fruit    
-    veg_growth%coarse_root              = veg_growth%leaf + veg_growth%fine_root
+    ! ! assign scalar and add scalar
+    ! veg_reserve_use%nitrogen            = 40.0_wp
+    ! veg_reserve_use%carbon              = veg_reserve_use%nitrogen + 40.0_wp
+    ! veg_reserve_use%phosphorus          = veg_reserve_use%carbon + veg_reserve_use%nitrogen + 20.0_wp
+    ! veg_reserve_use%carbon13            = veg_reserve_use%phosphorus + veg_reserve_use%carbon !+ veg_reserve_use%nitrogen 
+    ! ! assign: scalar field1d t_veg_elements_pool
+    ! veg_growth%leaf                     = 25.0_wp
+    ! veg_growth%fruit                    = veg_growth%leaf%carbon%ptrm1(:)
+    ! veg_growth%fine_root                = veg_growth%fruit    
+    ! veg_growth%coarse_root              = veg_growth%leaf + veg_growth%fine_root
 
   END SUBROUTINE update_veg_dynamics
 

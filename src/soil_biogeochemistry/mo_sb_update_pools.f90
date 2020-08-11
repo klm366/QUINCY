@@ -128,71 +128,32 @@ CONTAINS
 
 !!! playground for testing !!!
 
-    total_flux_carbon     = 0.5_wp
-    total_flux_nitrogen   = 0.5_wp
-    total_flux_phosphorus = 0.5_wp
-    total_flux_carbon13   = 0.5_wp
-    total_flux_carbon14   = 0.5_wp
-    total_flux_nitrogen15 = 0.5_wp
+!! variables
+    ! real2d variables
+    total_flux_carbon           = 0.5_wp
+    total_flux_nitrogen         = 0.5_wp
+    total_flux_phosphorus       = 0.5_wp
+    total_flux_carbon13         = 0.5_wp
+    total_flux_carbon14         = 0.5_wp
+    total_flux_nitrogen15       = 0.5_wp
 
-    sb_pool%dom%carbon%ptrm1(:,:)                 = 17.0_wp
-    sb_pool%dom_assoc%carbon%ptrm1(:,:)           = 17.0_wp
-    sb_pool%soluable_litter%carbon%ptrm1(:,:)     = 17.0_wp
-    sb_pool%polymeric_litter%carbon%ptrm1(:,:)    = 17.0_wp
-    sb_pool%woody_litter%carbon%ptrm1(:,:)        = 17.0_wp
-    sb_pool%fungi%carbon%ptrm1(:,:)               = 17.0_wp
-    sb_pool%mycorrhiza%carbon%ptrm1(:,:)          = 17.0_wp
-    sb_pool%microbial%carbon%ptrm1(:,:)           = 17.0_wp
-    sb_pool%residue%carbon%ptrm1(:,:)             = 17.0_wp
-    sb_pool%residue_assoc%carbon%ptrm1(:,:)       = 17.0_wp
+!! pools
+    sb_pool%dom%carbon          = 5.0_wp
+    sb_pool%fungi%carbon        = 5.0_wp
+    sb_pool%residue%carbon      = 5.0_wp
 
-    sb_pool%dom%nitrogen%ptrm1(:,:)               = 4.0_wp
-    sb_pool%dom_assoc%nitrogen%ptrm1(:,:)         = 4.0_wp
-    sb_pool%soluable_litter%nitrogen%ptrm1(:,:)   = 4.0_wp
-    sb_pool%polymeric_litter%nitrogen%ptrm1(:,:)  = 4.0_wp
-    sb_pool%woody_litter%nitrogen%ptrm1(:,:)      = 4.0_wp
-    sb_pool%fungi%nitrogen%ptrm1(:,:)             = 4.0_wp
-    sb_pool%mycorrhiza%nitrogen%ptrm1(:,:)        = 4.0_wp
-    sb_pool%microbial%nitrogen%ptrm1(:,:)         = 4.0_wp
-    sb_pool%residue%nitrogen%ptrm1(:,:)           = 4.0_wp
-    sb_pool%residue_assoc%nitrogen%ptrm1(:,:)     = 4.0_wp
+    sb_pool%dom%nitrogen        = 6.0_wp
+    sb_pool%fungi%nitrogen      = 6.0_wp
+    sb_pool%residue%nitrogen    = 6.0_wp
 
-    sb_formation%dom%carbon%ptrm1(:,:)                  = 15.0_wp
-    sb_formation%dom_assoc%carbon%ptrm1(:,:)            = 15.0_wp
-    sb_formation%soluable_litter%carbon%ptrm1(:,:)      = 15.0_wp
-    sb_formation%polymeric_litter%carbon%ptrm1(:,:)     = 15.0_wp
-    sb_formation%woody_litter%carbon%ptrm1(:,:)         = 15.0_wp
-    sb_formation%fungi%carbon%ptrm1(:,:)                = 15.0_wp
-    sb_formation%mycorrhiza%carbon%ptrm1(:,:)           = 15.0_wp
-    sb_formation%microbial%carbon%ptrm1(:,:)            = 15.0_wp
-    sb_formation%residue%carbon%ptrm1(:,:)              = 15.0_wp
-    sb_formation%residue_assoc%carbon%ptrm1(:,:)        = 15.0_wp
+    sb_pool%dom%carbon          = sb_pool%dom%carbon   + sb_pool%fungi%carbon   + sb_pool%residue%carbon   + 10.0_wp
+    sb_pool%dom%nitrogen        = sb_pool%dom%nitrogen + sb_pool%fungi%nitrogen + sb_pool%residue%nitrogen + 10.0_wp
 
-    sb_formation%dom%nitrogen%ptrm1(:,:)                = 2.0_wp
-    sb_formation%dom_assoc%nitrogen%ptrm1(:,:)          = 2.0_wp
-    sb_formation%soluable_litter%nitrogen%ptrm1(:,:)    = 2.0_wp
-    sb_formation%polymeric_litter%nitrogen%ptrm1(:,:)   = 2.0_wp
-    sb_formation%woody_litter%nitrogen%ptrm1(:,:)       = 2.0_wp
-    sb_formation%fungi%nitrogen%ptrm1(:,:)              = 2.0_wp
-    sb_formation%mycorrhiza%nitrogen%ptrm1(:,:)         = 2.0_wp
-    sb_formation%microbial%nitrogen%ptrm1(:,:)          = 2.0_wp
-    sb_formation%residue%nitrogen%ptrm1(:,:)            = 2.0_wp
-    sb_formation%residue_assoc%nitrogen%ptrm1(:,:)      = 2.0_wp
+    sb_pool%dom%carbon13        = sb_pool%dom%carbon   * 2.0_wp
+    sb_pool%dom%nitrogen15      = sb_pool%dom%nitrogen * 2.0_wp
 
-    sb_delta_pools%carbon%ptrm1(:,:)                  = 20.0_wp
-    sb_delta_pools%nitrogen%ptrm1(:,:)                = 18.0_wp
-    sb_mycorrhiza_export%carbon%ptrm1(:,:)            = 30.0_wp
-    sb_mycorrhiza_export%nitrogen%ptrm1(:,:)          = 28.0_wp
-
-    ! assignment (var3d <- 2d field) is overloaded, so that values are added to the correct chunk
-    sb_pool%dom%carbon    = $sb_pool%dom%carbon$   + $sb_pool%dom_assoc%carbon$
-    sb_pool%dom%nitrogen  = $sb_pool%dom%nitrogen$ + $sb_pool%dom_assoc%nitrogen$
-
-    ! assignment (var3d <- field) is overloaded, so that values are added to the correct chunk
-    sb_formation%fungi%carbon   = $sb_formation%fungi%carbon$ + $sb_formation%mycorrhiza%carbon$ + &
-                                  $sb_formation%residue%carbon$
-    sb_formation%fungi%nitrogen = $sb_formation%fungi%nitrogen$ + $sb_formation%mycorrhiza%nitrogen$ + &
-                                  $sb_formation%residue%nitrogen$
+    sb_pool%dom%carbon14        = sb_pool%fungi%carbon * sb_pool%residue%carbon 
+    sb_pool%dom%phosphorus      = sb_pool%fungi%carbon * sb_pool%residue%carbon + sb_pool%residue%nitrogen
 
   END SUBROUTINE update_sb_pools
 

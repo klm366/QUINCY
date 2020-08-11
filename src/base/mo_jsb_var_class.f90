@@ -76,14 +76,17 @@ MODULE mo_jsb_var_class
     PROCEDURE :: Associate_pointers => t_jsb_var_real2d_associate_pointers
     !! operator overload
     ! +
-    PROCEDURE :: Add_real2d_and_scalar            ! var_real2d + scalar  = var(:,:)  | ON_CHUNK & ON_DOMAIN
-    PROCEDURE :: Add_real2d_and_field2d           ! !! @TODO var_real2d + field2d = var(:,:)  | ON_CHUNK & ON_DOMAIN
-    PROCEDURE :: Add_real2d_and_real2d            ! var_real2d + var_real2d = var(:,:) | ON_CHUNK & ON_DOMAIN
+    PROCEDURE :: Add_real2d_and_scalar            ! var_real2d = var_real2d + scalar     | ON_CHUNK & ON_DOMAIN
+    PROCEDURE :: Add_real2d_and_field2d           ! var_real2d = var_real2d + field2d    | ON_CHUNK & ON_DOMAIN
+    PROCEDURE :: Add_real2d_and_real2d            ! var_real2d = var_real2d + var_real2d | ON_CHUNK & ON_DOMAIN
     GENERIC   :: OPERATOR(+) => Add_real2d_and_scalar, Add_real2d_and_field2d, &
                                 Add_real2d_and_real2d
     ! *
-    PROCEDURE :: Multiply_real2d_with_field2d     ! !! @TODO var_real2d * field2d = var(:,:) | ON_CHUNK & ON_DOMAIN
-    GENERIC   :: OPERATOR(*) => Multiply_real2d_with_field2d
+    PROCEDURE :: Multiply_real2d_with_scalar      ! var_real2d = var_real2d * scalar     | ON_CHUNK & ON_DOMAIN
+    PROCEDURE :: Multiply_real2d_with_field2d     ! var_real2d = var_real2d * field2d    | ON_CHUNK & ON_DOMAIN
+    PROCEDURE :: Multiply_real2d_with_real2d      ! var_real2d = var_real2d * var_real2d | ON_CHUNK & ON_DOMAIN
+    GENERIC   :: OPERATOR(*) => Multiply_real2d_with_scalar, Multiply_real2d_with_field2d, &
+                                Multiply_real2d_with_real2d
     ! =
     PROCEDURE :: Assign_scalar_to_var_real2d      ! var_real2d = scalar       | ON_CHUNK & ON_DOMAIN
     PROCEDURE :: Assign_field1d_to_var_real2d     ! var_real2d = field1d(:)   | ON_CHUNK field1d(:)   | ON_DOMAIN / finish /
@@ -105,16 +108,18 @@ MODULE mo_jsb_var_class
   CONTAINS
     PROCEDURE :: Associate_pointers => t_jsb_var_real3d_associate_pointers
     !! operator overload
-    !! note: the 2nd dimension is always the vgrid (e.g., field2d & field3d)
     ! +
-    PROCEDURE :: Add_real3d_and_scalar            ! !! @TODO var_real3d + scalar     = var(:,:,:) | ON_CHUNK & ON_DOMAIN
-    PROCEDURE :: Add_real3d_and_field3d           ! !! @TODO var_real3d + field3d    = var(:,:,:) | ON_CHUNK & ON_DOMAIN
-    PROCEDURE :: Add_real3d_and_real3d            ! !! @TODO var_real3d + var_real3d = var(:,:,:) | ON_CHUNK & ON_DOMAIN
+    PROCEDURE :: Add_real3d_and_scalar            ! var_real3d = var_real3d + scalar     | ON_CHUNK & ON_DOMAIN
+    PROCEDURE :: Add_real3d_and_field3d           ! var_real3d = var_real3d + field3d    | ON_CHUNK & ON_DOMAIN
+    PROCEDURE :: Add_real3d_and_real3d            ! var_real3d = var_real3d + var_real3d | ON_CHUNK & ON_DOMAIN
     GENERIC   :: OPERATOR(+) => Add_real3d_and_scalar, Add_real3d_and_field3d, &
                                 Add_real3d_and_real3d
     ! *
-    PROCEDURE :: Multiply_real3d_with_field3d     ! !! @TODO var_real3d * field3d = var(:,:,:) | ON_CHUNK & ON_DOMAIN
-    GENERIC   :: OPERATOR(*) => Multiply_real3d_with_field3d
+    PROCEDURE :: Multiply_real3d_with_scalar      ! var_real3d = var_real3d * scalar     | ON_CHUNK & ON_DOMAIN
+    PROCEDURE :: Multiply_real3d_with_field3d     ! var_real3d = var_real3d * field3d    | ON_CHUNK & ON_DOMAIN
+    PROCEDURE :: Multiply_real3d_with_real3d      ! var_real3d = var_real3d * var_real3d | ON_CHUNK & ON_DOMAIN
+    GENERIC   :: OPERATOR(*) => Multiply_real3d_with_scalar, Multiply_real3d_with_field3d, &
+                                Multiply_real3d_with_real3d
     ! =
     PROCEDURE :: Assign_scalar_to_var_real3d      ! var_real3d = scalar         | ON_CHUNK & ON_DOMAIN
     PROCEDURE :: Assign_field2d_to_var_real3d     ! var_real3d = field2d(:,:)   | ON_CHUNK field2d(:,:)   | ON_DOMAIN / finish /
@@ -218,7 +223,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':finalize_jsb_var_real2d'
 
-    CALL message(routine, 'Finalizing '//TRIM(this%name))
+    !CALL message(routine, 'Finalizing '//TRIM(this%name))
 
     IF (ALLOCATED(this%owner_tile_path)) DEALLOCATE(this%owner_tile_path)
     IF (ALLOCATED(this%child_idx)) DEALLOCATE(this%child_idx)
@@ -242,6 +247,10 @@ CONTAINS
 
   END SUBROUTINE finalize_jsb_var_real3d
 
+  !================================================================================================================================
+  ! create var_real2d/3d
+  ! used as temporary variable for operator overload functions ?
+  !================================================================================================================================
 !!$  FUNCTION Create_jsb_var(i_shape, i_type) RESULT(return_ptr)
 !!$
 !!$    INTEGER, INTENT(in) :: i_shape(2)
@@ -269,6 +278,8 @@ CONTAINS
   !================================================================================================================================
   ! assign
   !================================================================================================================================
+  !-----------------------------------------------------------------------------------------------------
+  ! 2D
   !-----------------------------------------------------------------------------------------------------
   ! var_real2d = scalar | ON_CHUNK & ON_DOMAIN
   !-----------------------------------------------------------------------------------------------------
@@ -367,6 +378,8 @@ CONTAINS
 
   END SUBROUTINE Assign_var_real2d_to_var_real2d
 
+  !-----------------------------------------------------------------------------------------------------
+  ! 3D
   !-----------------------------------------------------------------------------------------------------
   ! var_real3d = scalar | ON_CHUNK & ON_DOMAIN
   !-----------------------------------------------------------------------------------------------------
@@ -472,62 +485,86 @@ CONTAINS
   ! add
   !================================================================================================================================
   !-----------------------------------------------------------------------------------------------------
-  ! var_real2d + scalar = var(:,:) | ON_CHUNK & ON_DOMAIN
+  ! 2D
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION Add_real2d_and_scalar(var1, scalar) RESULT(res)
+  ! var_real2d(:,:) = var_real2d + scalar | ON_CHUNK & ON_DOMAIN
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Add_real2d_and_scalar(var1, scalar) RESULT(var3)
 
     CLASS(t_jsb_var_real2d), INTENT(in) :: var1
     REAL(wp),                INTENT(in) :: scalar
-    REAL(wp), ALLOCATABLE               :: res(:,:)
-    
+    TYPE(t_jsb_var_real2d),  TARGET     :: var3
+
     TYPE(t_subset) :: sub
     INTEGER        :: ics, ice, iblk, nb, nc
-    
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_real2d_and_scalar'
-    
+
     sub = var1%Get_subset()
     ics = sub%ics ; ice = sub%ice ; iblk = sub%iblk ; nb = sub%nb ; nc = sub%nc
-    
+
+    var3%name             = var1%name
+    var3%full_name        = var1%full_name
+    var3%owner_proc_id    = var1%owner_proc_id
+    var3%owner_model_id   = var1%owner_model_id
+    var3%owner_tile_path  = var1%owner_tile_path
+    var3%missval          = var1%missval
+    ALLOCATE(var3%ptr2d, source=var1%ptr2d)
+
     IF (sub%type == ON_CHUNK) THEN
-      ALLOCATE(res(nc,1))
-      res(:,1) = var1%ptr(ics:ice,iblk) + scalar
+      var3%ptr2d(ics:ice,iblk) = var1%ptr2d(ics:ice,iblk) + scalar
     ELSE
-      ALLOCATE(res(nc,nb))
-      res(:,:) = var1%ptr(:,:) + scalar
+      var3%ptr2d(:,:)          = var1%ptr2d(:,:) + scalar
     END IF
 
+    var3%ptr => var3%ptr2d(:,:)
+
   END FUNCTION Add_real2d_and_scalar
-!!  ! -----------------------------------------------------------------------------------------------------
-!!  ! var_real2d + field2d = var(:,:) | ON_CHUNK & ON_DOMAIN
-!!  ! -----------------------------------------------------------------------------------------------------
-  FUNCTION Add_real2d_and_field2d(var1, field) RESULT(var3)
+  ! -----------------------------------------------------------------------------------------------------
+  ! var_real2d(:,:) = var_real2d + field2d
+  !   ON_CHUNK   field2d(:,1)
+  !   ON_DOMAIN  field2d(:,:)
+  ! -----------------------------------------------------------------------------------------------------
+  FUNCTION Add_real2d_and_field2d(var1, field2d) RESULT(var3)
 
     CLASS(t_jsb_var_real2d), INTENT(in) :: var1
-    REAL(wp),                INTENT(in) :: field(:,:)
+    REAL(wp),                INTENT(in) :: field2d(:,:)
     TYPE(t_jsb_var_real2d),  TARGET     :: var3
+
+    TYPE(t_subset) :: sub
+    INTEGER        :: ics, ice, iblk, nb, nc
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_real2d_and_field2d'
 
-    IF (SIZE(field,1) /= SIZE(var1%ptr,1) .OR. SIZE(field,2) /= SIZE(var1%ptr,2)) &
-      & CALL finish(TRIM(routine), 'Dimension mismatch')
+    sub = var1%Get_subset()
+    ics = sub%ics ; ice = sub%ice ; iblk = sub%iblk ; nb = sub%nb ; nc = sub%nc
 
-    var3%name = var1%name
-    var3%full_name = var1%full_name
-    var3%owner_proc_id = var1%owner_proc_id
-    var3%owner_tile_path = var1%owner_tile_path
-    var3%missval = var1%missval
-    var3%ptr2d = var1%ptr2d + field
+    var3%name             = var1%name
+    var3%full_name        = var1%full_name
+    var3%owner_proc_id    = var1%owner_proc_id
+    var3%owner_model_id   = var1%owner_model_id
+    var3%owner_tile_path  = var1%owner_tile_path
+    var3%missval          = var1%missval
+    ALLOCATE(var3%ptr2d, source=var1%ptr2d)
+
+    IF (sub%type == ON_CHUNK) THEN
+      IF (SIZE(field2d,2) > 1) CALL finish(routine, 'Dimension mismatch, field with nblks > 1, op-ov jsb_var real2d on chunk')
+      var3%ptr2d(ics:ice,iblk) = var1%ptr2d(ics:ice,iblk) + field2d(:,1)
+    ELSE
+      var3%ptr2d(:,:)          = var1%ptr2d(:,:) + field2d(:,:)
+    END IF
+
     var3%ptr => var3%ptr2d(:,:)
-
+    
   END FUNCTION Add_real2d_and_field2d
   !-----------------------------------------------------------------------------------------------------
-  ! var_real2d + var_real2d = var(:,:) | ON_CHUNK & ON_DOMAIN
+  ! var_real2d(:,:) = var_real2d + var_real2d | ON_CHUNK & ON_DOMAIN
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION Add_real2d_and_real2d(var1, var2) RESULT(res)
+  FUNCTION Add_real2d_and_real2d(var1, var2) RESULT(var3)
   
     CLASS(t_jsb_var_real2d), INTENT(in) :: var1, var2
-    REAL(wp), ALLOCATABLE               :: res(:,:)
-  
+    TYPE(t_jsb_var_real2d),  TARGET     :: var3
+
     TYPE(t_subset) :: sub
     INTEGER        :: ics, ice, iblk, nb, nc
 
@@ -536,119 +573,354 @@ CONTAINS
     sub = var1%Get_subset()
     ics = sub%ics ; ice = sub%ice ; iblk = sub%iblk ; nb = sub%nb ; nc = sub%nc
 
+    var3%name             = var1%name
+    var3%full_name        = var1%full_name
+    var3%owner_proc_id    = var1%owner_proc_id
+    var3%owner_model_id   = var1%owner_model_id
+    var3%owner_tile_path  = var1%owner_tile_path
+    var3%missval          = var1%missval
+    ALLOCATE(var3%ptr2d, source=var1%ptr2d)
+
     IF (sub%type == ON_CHUNK) THEN
-      ALLOCATE(res(nc,1))
-      res(:,1) = var1%ptr(ics:ice,iblk) + var2%ptr(ics:ice,iblk)
+      var3%ptr2d(ics:ice,iblk) = var1%ptr2d(ics:ice,iblk) + var2%ptr2d(ics:ice,iblk)
     ELSE
-      ALLOCATE(res(nc,nb))
-      res(:,:) = var1%ptr(:,:) + var2%ptr(:,:)
+      var3%ptr2d(:,:)          = var1%ptr2d(:,:) + var2%ptr2d(:,:)
     END IF
+
+    var3%ptr => var3%ptr2d(:,:)
   
   END FUNCTION Add_real2d_and_real2d
 
-!!  !-----------------------------------------------------------------------------------------------------
-!!  ! var_real3d + scalar = var(:,:,:) | ON_CHUNK & ON_DOMAIN
-!!  !-----------------------------------------------------------------------------------------------------
+  !-----------------------------------------------------------------------------------------------------
+  ! 3D
+  !-----------------------------------------------------------------------------------------------------
+  ! var_real3d(:,:,:) = var_real3d + scalar | ON_CHUNK & ON_DOMAIN
+  !-----------------------------------------------------------------------------------------------------
   FUNCTION Add_real3d_and_scalar(var1, scalar) RESULT(var3)
 
     CLASS(t_jsb_var_real3d), INTENT(in) :: var1
     REAL(wp),                INTENT(in) :: scalar
     TYPE(t_jsb_var_real3d),  TARGET     :: var3
 
-    var3%name = var1%name
-    var3%full_name = var1%full_name
-    var3%owner_proc_id = var1%owner_proc_id
-    var3%owner_tile_path = var1%owner_tile_path
-    var3%missval = var1%missval
-    var3%ptr3d = var1%ptr3d + scalar
+    TYPE(t_subset) :: sub
+    INTEGER        :: ics, ice, iblk, nb, nc
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Add_real3d_and_scalar'
+
+    sub = var1%Get_subset()
+    ics = sub%ics ; ice = sub%ice ; iblk = sub%iblk ; nb = sub%nb ; nc = sub%nc
+
+    var3%name             = var1%name
+    var3%full_name        = var1%full_name
+    var3%owner_proc_id    = var1%owner_proc_id
+    var3%owner_model_id   = var1%owner_model_id
+    var3%owner_tile_path  = var1%owner_tile_path
+    var3%missval          = var1%missval
+    ALLOCATE(var3%ptr3d, source=var1%ptr3d)
+
+    IF (sub%type == ON_CHUNK) THEN
+      var3%ptr3d(ics:ice,:,iblk) = var1%ptr3d(ics:ice,:,iblk) + scalar
+    ELSE
+      var3%ptr3d(:,:,:)          = var1%ptr3d(:,:,:) + scalar
+    END IF
+
     var3%ptr => var3%ptr3d(:,:,:)
 
   END FUNCTION Add_real3d_and_scalar
-!!  ! -----------------------------------------------------------------------------------------------------
-!!  ! var_real3d + field3d = var(:,:,:) | ON_CHUNK & ON_DOMAIN
-!!  ! -----------------------------------------------------------------------------------------------------
-  FUNCTION Add_real3d_and_field3d(var1, field) RESULT(var3)
+  ! -----------------------------------------------------------------------------------------------------
+  ! var_real3d(:,:,:) = var_real3d + field3d | ON_CHUNK & ON_DOMAIN
+  !   ON_CHUNK   field3d(nc,:,1)
+  !   ON_DOMAIN  field3d(: ,:,:)
+  ! -----------------------------------------------------------------------------------------------------
+  FUNCTION Add_real3d_and_field3d(var1, field3d) RESULT(var3)
 
     CLASS(t_jsb_var_real3d), INTENT(in) :: var1
-    REAL(wp),                INTENT(in) :: field(:,:,:)
+    REAL(wp),                INTENT(in) :: field3d(:,:,:)
     TYPE(t_jsb_var_real3d),  TARGET     :: var3
+
+    TYPE(t_subset) :: sub
+    INTEGER        :: ics, ice, iblk, nb, nc
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_real3d_and_field3d'
 
-    IF (SIZE(field,1) /= SIZE(var1%ptr,1) .OR. SIZE(field,2) /= SIZE(var1%ptr,2) .OR. SIZE(field,3) /= SIZE(var1%ptr,3)) &
-      & CALL finish(TRIM(routine), 'Dimension mismatch')
+    sub = var1%Get_subset()
+    ics = sub%ics ; ice = sub%ice ; iblk = sub%iblk ; nb = sub%nb ; nc = sub%nc
 
-    var3%name = var1%name
-    var3%full_name = var1%full_name
-    var3%owner_proc_id = var1%owner_proc_id
-    var3%owner_tile_path = var1%owner_tile_path
-    var3%missval = var1%missval
-    var3%ptr3d = var1%ptr3d + field
+    var3%name             = var1%name
+    var3%full_name        = var1%full_name
+    var3%owner_proc_id    = var1%owner_proc_id
+    var3%owner_model_id   = var1%owner_model_id
+    var3%owner_tile_path  = var1%owner_tile_path
+    var3%missval          = var1%missval
+    ALLOCATE(var3%ptr3d, source=var1%ptr3d)
+
+    IF (sub%type == ON_CHUNK) THEN
+      IF (SIZE(field3d,1) /= SIZE(var1%ptr,1) .OR. SIZE(field3d,2) /= SIZE(var1%ptr,2) .OR. SIZE(field3d,3) /= SIZE(var1%ptr,3)) &
+        & CALL finish(TRIM(routine), 'Dimension mismatch')
+      var3%ptr3d(ics:ice,:,iblk) = var1%ptr3d(ics:ice,:,iblk) + field3d(:,:,1)
+    ELSE
+      IF (SIZE(field3d,1) /= SIZE(var1%ptr,1) .OR. SIZE(field3d,2) /= SIZE(var1%ptr,2) .OR. SIZE(field3d,3) /= SIZE(var1%ptr,3)) &
+        & CALL finish(TRIM(routine), 'Dimension mismatch')
+      var3%ptr3d(:,:,:)          = var1%ptr3d(:,:,:) + field3d(:,:,:)
+    END IF
+
     var3%ptr => var3%ptr3d(:,:,:)
 
   END FUNCTION Add_real3d_and_field3d
-!!  !-----------------------------------------------------------------------------------------------------
-!!  ! var_real3d + var_real3d = var(:,:,:) | ON_CHUNK & ON_DOMAIN
-!!  !-----------------------------------------------------------------------------------------------------
-  FUNCTION Add_real3d_and_real3d(var1, var2) RESULT(res)
+  !-----------------------------------------------------------------------------------------------------
+  ! var_real3d(:,:,:) = var_real3d + var_real3d | ON_CHUNK & ON_DOMAIN
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Add_real3d_and_real3d(var1, var2) RESULT(var3)
 
     CLASS(t_jsb_var_real3d), INTENT(in) :: var1, var2
-    REAL(wp) :: res(SIZE(var1%ptr,1),SIZE(var1%ptr,2),SIZE(var1%ptr,3))
+    TYPE(t_jsb_var_real3d),  TARGET     :: var3
 
-    res(:,:,:) = var1%ptr(:,:,:) + var2%ptr(:,:,:)
+    TYPE(t_subset) :: sub
+    INTEGER        :: ics, ice, iblk, nb, nc
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Add_real3d_and_real3d'
+
+    sub = var1%Get_subset()
+    ics = sub%ics ; ice = sub%ice ; iblk = sub%iblk ; nb = sub%nb ; nc = sub%nc
+
+    var3%name             = var1%name
+    var3%full_name        = var1%full_name
+    var3%owner_proc_id    = var1%owner_proc_id
+    var3%owner_model_id   = var1%owner_model_id
+    var3%owner_tile_path  = var1%owner_tile_path
+    var3%missval          = var1%missval
+    ALLOCATE(var3%ptr3d, source=var1%ptr3d)
+
+    IF (sub%type == ON_CHUNK) THEN
+      var3%ptr3d(ics:ice,:,iblk) = var1%ptr3d(ics:ice,:,iblk) + var2%ptr3d(ics:ice,:,iblk)
+    ELSE
+      var3%ptr3d(:,:,:)          = var1%ptr3d(:,:,:) + var2%ptr3d(:,:,:)
+    END IF
+
+    var3%ptr => var3%ptr3d(:,:,:)
 
   END FUNCTION Add_real3d_and_real3d
 
   !================================================================================================================================
   ! multiply
   !================================================================================================================================
-!!  !-----------------------------------------------------------------------------------------------------
-!!  ! var_real2d * field2d = var(:,:) | ON_CHUNK & ON_DOMAIN
-!!  !-----------------------------------------------------------------------------------------------------
-  FUNCTION Multiply_real2d_with_field2d(var1, field) RESULT(var3)
+  !-----------------------------------------------------------------------------------------------------
+  ! 2D
+  !-----------------------------------------------------------------------------------------------------
+  ! var_real2d(:,:) = var_real2d * scalar | ON_CHUNK & ON_DOMAIN
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Multiply_real2d_with_scalar(var1, scalar) RESULT(var3)
 
     CLASS(t_jsb_var_real2d), INTENT(in) :: var1
-    REAL(wp),                INTENT(in) :: field(:,:)
+    REAL(wp),                INTENT(in) :: scalar
     TYPE(t_jsb_var_real2d),  TARGET     :: var3
+
+    TYPE(t_subset) :: sub
+    INTEGER        :: ics, ice, iblk, nb, nc
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_real2d_with_scalar'
+
+    sub = var1%Get_subset()
+    ics = sub%ics ; ice = sub%ice ; iblk = sub%iblk ; nb = sub%nb ; nc = sub%nc
+
+    var3%name             = var1%name
+    var3%full_name        = var1%full_name
+    var3%owner_proc_id    = var1%owner_proc_id
+    var3%owner_model_id   = var1%owner_model_id
+    var3%owner_tile_path  = var1%owner_tile_path
+    var3%missval          = var1%missval
+    ALLOCATE(var3%ptr2d, source=var1%ptr2d)
+
+    IF (sub%type == ON_CHUNK) THEN
+      var3%ptr2d(ics:ice,iblk) = var1%ptr2d(ics:ice,iblk) * scalar
+    ELSE
+      var3%ptr2d(:,:)          = var1%ptr2d(:,:) * scalar
+    END IF
+
+    var3%ptr => var3%ptr2d(:,:)
+
+  END FUNCTION Multiply_real2d_with_scalar
+  ! -----------------------------------------------------------------------------------------------------
+  ! var_real2d(:,:) = var_real2d + field2d
+  !   ON_CHUNK   field2d(:,1)
+  !   ON_DOMAIN  field2d(:,:)
+  ! -----------------------------------------------------------------------------------------------------
+  FUNCTION Multiply_real2d_with_field2d(var1, field2d) RESULT(var3)
+
+    CLASS(t_jsb_var_real2d), INTENT(in) :: var1
+    REAL(wp),                INTENT(in) :: field2d(:,:)
+    TYPE(t_jsb_var_real2d),  TARGET     :: var3
+
+    TYPE(t_subset) :: sub
+    INTEGER        :: ics, ice, iblk, nb, nc
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_real2d_with_field2d'
 
-    IF (SIZE(field,1) /= SIZE(var1%ptr,1) .OR. SIZE(field,2) /= SIZE(var1%ptr,2)) &
-      & CALL finish(TRIM(routine), 'Dimension mismatch')
+    sub = var1%Get_subset()
+    ics = sub%ics ; ice = sub%ice ; iblk = sub%iblk ; nb = sub%nb ; nc = sub%nc
 
-    var3%name = var1%name
-    var3%full_name = var1%full_name
-    var3%owner_proc_id = var1%owner_proc_id
-    var3%owner_tile_path = var1%owner_tile_path
-    var3%missval = var1%missval
-    var3%ptr2d = var1%ptr2d * field
+    var3%name             = var1%name
+    var3%full_name        = var1%full_name
+    var3%owner_proc_id    = var1%owner_proc_id
+    var3%owner_model_id   = var1%owner_model_id
+    var3%owner_tile_path  = var1%owner_tile_path
+    var3%missval          = var1%missval
+    ALLOCATE(var3%ptr2d, source=var1%ptr2d)
+
+    IF (sub%type == ON_CHUNK) THEN
+      IF (SIZE(field2d,2) > 1) CALL finish(routine, 'Dimension mismatch, field with nblks > 1, op-ov jsb_var real2d on chunk')
+      var3%ptr2d(ics:ice,iblk) = var1%ptr2d(ics:ice,iblk) * field2d(:,1)
+    ELSE
+      var3%ptr2d(:,:)          = var1%ptr2d(:,:) * field2d(:,:)
+    END IF
+
     var3%ptr => var3%ptr2d(:,:)
-
+    
   END FUNCTION Multiply_real2d_with_field2d
+  !-----------------------------------------------------------------------------------------------------
+  ! var_real2d(:,:) = var_real2d + var_real2d | ON_CHUNK & ON_DOMAIN
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Multiply_real2d_with_real2d(var1, var2) RESULT(var3)
+  
+    CLASS(t_jsb_var_real2d), INTENT(in) :: var1, var2
+    TYPE(t_jsb_var_real2d),  TARGET     :: var3
 
-!!  !-----------------------------------------------------------------------------------------------------
-!!  ! var_real3d * field3d = var(:,:,:) | ON_CHUNK & ON_DOMAIN
-!!  !-----------------------------------------------------------------------------------------------------
-  FUNCTION Multiply_real3d_with_field3d(var1, field) RESULT(var3)
+    TYPE(t_subset) :: sub
+    INTEGER        :: ics, ice, iblk, nb, nc
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_real2d_with_real2d'
+
+    sub = var1%Get_subset()
+    ics = sub%ics ; ice = sub%ice ; iblk = sub%iblk ; nb = sub%nb ; nc = sub%nc
+
+    var3%name             = var1%name
+    var3%full_name        = var1%full_name
+    var3%owner_proc_id    = var1%owner_proc_id
+    var3%owner_model_id   = var1%owner_model_id
+    var3%owner_tile_path  = var1%owner_tile_path
+    var3%missval          = var1%missval
+    ALLOCATE(var3%ptr2d, source=var1%ptr2d)
+
+    IF (sub%type == ON_CHUNK) THEN
+      var3%ptr2d(ics:ice,iblk) = var1%ptr2d(ics:ice,iblk) * var2%ptr2d(ics:ice,iblk)
+    ELSE
+      var3%ptr2d(:,:)          = var1%ptr2d(:,:) * var2%ptr2d(:,:)
+    END IF
+
+    var3%ptr => var3%ptr2d(:,:)
+  
+  END FUNCTION Multiply_real2d_with_real2d
+
+  !-----------------------------------------------------------------------------------------------------
+  ! 3D
+  ! -----------------------------------------------------------------------------------------------------
+  ! var_real3d(:,:,:) = var_real3d * scalar | ON_CHUNK & ON_DOMAIN
+  ! -----------------------------------------------------------------------------------------------------
+  FUNCTION Multiply_real3d_with_scalar(var1, scalar) RESULT(var3)
 
     CLASS(t_jsb_var_real3d), INTENT(in) :: var1
-    REAL(wp),                INTENT(in) :: field(:,:,:)
+    REAL(wp),                INTENT(in) :: scalar
     TYPE(t_jsb_var_real3d),  TARGET     :: var3
+
+    TYPE(t_subset) :: sub
+    INTEGER        :: ics, ice, iblk, nb, nc
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_real3d_with_scalar'
+
+    sub = var1%Get_subset()
+    ics = sub%ics ; ice = sub%ice ; iblk = sub%iblk ; nb = sub%nb ; nc = sub%nc
+
+    var3%name             = var1%name
+    var3%full_name        = var1%full_name
+    var3%owner_proc_id    = var1%owner_proc_id
+    var3%owner_model_id   = var1%owner_model_id
+    var3%owner_tile_path  = var1%owner_tile_path
+    var3%missval          = var1%missval
+    ALLOCATE(var3%ptr3d, source=var1%ptr3d)
+
+    IF (sub%type == ON_CHUNK) THEN
+      var3%ptr3d(ics:ice,:,iblk) = var1%ptr3d(ics:ice,:,iblk) * scalar
+    ELSE
+      var3%ptr3d(:,:,:)          = var1%ptr3d(:,:,:) * scalar
+    END IF
+
+    var3%ptr => var3%ptr3d(:,:,:)
+
+  END FUNCTION Multiply_real3d_with_scalar
+  ! -----------------------------------------------------------------------------------------------------
+  ! var_real3d(:,:,:) = var_real3d * field3d | ON_CHUNK & ON_DOMAIN
+  !   ON_CHUNK   field3d(nc,:,1)
+  !   ON_DOMAIN  field3d(: ,:,:)
+  ! -----------------------------------------------------------------------------------------------------
+  FUNCTION Multiply_real3d_with_field3d(var1, field3d) RESULT(var3)
+
+    CLASS(t_jsb_var_real3d), INTENT(in) :: var1
+    REAL(wp),                INTENT(in) :: field3d(:,:,:)
+    TYPE(t_jsb_var_real3d),  TARGET     :: var3
+
+    TYPE(t_subset) :: sub
+    INTEGER        :: ics, ice, iblk, nb, nc
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_real3d_with_field3d'
 
-    IF (SIZE(field,1) /= SIZE(var1%ptr,1) .OR. SIZE(field,2) /= SIZE(var1%ptr,2) .OR. SIZE(field,3) /= SIZE(var1%ptr,3)) &
-      & CALL finish(TRIM(routine), 'Dimension mismatch')
+    sub = var1%Get_subset()
+    ics = sub%ics ; ice = sub%ice ; iblk = sub%iblk ; nb = sub%nb ; nc = sub%nc
 
-    var3%name = var1%name
-    var3%full_name = var1%full_name
-    var3%owner_proc_id = var1%owner_proc_id
-    var3%owner_tile_path = var1%owner_tile_path
-    var3%missval = var1%missval
-    var3%ptr3d = var1%ptr3d + field
+    var3%name             = var1%name
+    var3%full_name        = var1%full_name
+    var3%owner_proc_id    = var1%owner_proc_id
+    var3%owner_model_id   = var1%owner_model_id
+    var3%owner_tile_path  = var1%owner_tile_path
+    var3%missval          = var1%missval
+    ALLOCATE(var3%ptr3d, source=var1%ptr3d)
+
+    IF (sub%type == ON_CHUNK) THEN
+      IF (SIZE(field3d,1) /= SIZE(var1%ptr,1) .OR. SIZE(field3d,2) /= SIZE(var1%ptr,2) .OR. SIZE(field3d,3) /= SIZE(var1%ptr,3)) &
+        & CALL finish(TRIM(routine), 'Dimension mismatch')
+      var3%ptr3d(ics:ice,:,iblk) = var1%ptr3d(ics:ice,:,iblk) * field3d(:,:,1)
+    ELSE
+      IF (SIZE(field3d,1) /= SIZE(var1%ptr,1) .OR. SIZE(field3d,2) /= SIZE(var1%ptr,2) .OR. SIZE(field3d,3) /= SIZE(var1%ptr,3)) &
+        & CALL finish(TRIM(routine), 'Dimension mismatch')
+      var3%ptr3d(:,:,:)          = var1%ptr3d(:,:,:) * field3d(:,:,:)
+    END IF
+
     var3%ptr => var3%ptr3d(:,:,:)
 
   END FUNCTION Multiply_real3d_with_field3d
+  !-----------------------------------------------------------------------------------------------------
+  ! var_real3d(:,:,:) = var_real3d * var_real3d | ON_CHUNK & ON_DOMAIN
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Multiply_real3d_with_real3d(var1, var2) RESULT(var3)
 
+    CLASS(t_jsb_var_real3d), INTENT(in) :: var1, var2
+    TYPE(t_jsb_var_real3d),  TARGET     :: var3
+
+    TYPE(t_subset) :: sub
+    INTEGER        :: ics, ice, iblk, nb, nc
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_real3d_with_real3d'
+
+    sub = var1%Get_subset()
+    ics = sub%ics ; ice = sub%ice ; iblk = sub%iblk ; nb = sub%nb ; nc = sub%nc
+
+    var3%name             = var1%name
+    var3%full_name        = var1%full_name
+    var3%owner_proc_id    = var1%owner_proc_id
+    var3%owner_model_id   = var1%owner_model_id
+    var3%owner_tile_path  = var1%owner_tile_path
+    var3%missval          = var1%missval
+    ALLOCATE(var3%ptr3d, source=var1%ptr3d)
+
+    IF (sub%type == ON_CHUNK) THEN
+      var3%ptr3d(ics:ice,:,iblk) = var1%ptr3d(ics:ice,:,iblk) * var2%ptr3d(ics:ice,:,iblk)
+    ELSE
+      var3%ptr3d(:,:,:)          = var1%ptr3d(:,:,:) * var2%ptr3d(:,:,:)
+    END IF
+
+    var3%ptr => var3%ptr3d(:,:,:)
+
+  END FUNCTION Multiply_real3d_with_real3d
+  
+  
 #endif
 END MODULE mo_jsb_var_class

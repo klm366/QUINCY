@@ -69,8 +69,8 @@ MODULE mo_veg_memory_class
     ! + addition
     ! PROCEDURE         :: Add_element_a                      ! 
     ! PROCEDURE         :: Add_element_a_and_scalar           ! 
-    PROCEDURE         :: Add_veg_elem_p_to_veg_elem_p       ! pool%elements + pool%elements
-    GENERIC, PUBLIC   :: OPERATOR(+) => Add_veg_elem_p_to_veg_elem_p
+    ! PROCEDURE         :: Add_veg_elem_p_to_veg_elem_p       ! pool%elements + pool%elements
+    ! GENERIC, PUBLIC   :: OPERATOR(+) => Add_veg_elem_p_to_veg_elem_p
     ! = assign
     PROCEDURE         :: Assign_scalar_to_veg_elem_p          ! pool%elements = scalar
     PROCEDURE         :: Assign_field1d_to_veg_elem_p         ! pool%elements = var(:)
@@ -1017,50 +1017,50 @@ CONTAINS
   !--------------------------------------------------------------------------------------------------------------------------------
   ! + addition
   !--------------------------------------------------------------------------------------------------------------------------------
-  FUNCTION Add_veg_elem_p_to_veg_elem_p(struct1, struct2) RESULT(res)
-  
-    USE mo_jsb_subset,        ONLY: t_subset, ON_DOMAIN, ON_CHUNK
-  
-    CLASS(t_veg_elements_pool),     INTENT(in)  :: struct1, struct2
-    TYPE(t_veg_elements_pool_hlp)               :: res
-
-    TYPE(t_subset) :: sub
-    INTEGER        :: ics, ice, iblk, nb, nc
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Add_veg_elem_p_to_veg_elem_p'
-  
-    sub = struct1%carbon%Get_subset()
-    ics = sub%ics ; ice = sub%ice ; iblk = sub%iblk ; nb = sub%nb ; nc = sub%nc
-      
-    IF (sub%type == ON_CHUNK) THEN
-      ALLOCATE(res%carbon(nc,1))
-      ALLOCATE(res%nitrogen(nc,1))
-      ALLOCATE(res%phosphorus(nc,1))
-      ALLOCATE(res%carbon13(nc,1))
-      ALLOCATE(res%carbon14(nc,1))
-      ALLOCATE(res%nitrogen15(nc,1))
-      res%carbon(:,:)     = struct1%carbon      + struct2%carbon
-      res%nitrogen(:,:)   = struct1%nitrogen    + struct2%nitrogen  
-      res%phosphorus(:,:) = struct1%phosphorus  + struct2%phosphorus
-      res%carbon13(:,:)   = struct1%carbon13    + struct2%carbon13  
-      res%carbon14(:,:)   = struct1%carbon14    + struct2%carbon14  
-      res%nitrogen15(:,:) = struct1%nitrogen15  + struct2%nitrogen15
-    ELSE
-      ALLOCATE(res%carbon(nc,nb))
-      ALLOCATE(res%nitrogen(nc,nb))
-      ALLOCATE(res%phosphorus(nc,nb))
-      ALLOCATE(res%carbon13(nc,nb))
-      ALLOCATE(res%carbon14(nc,nb))
-      ALLOCATE(res%nitrogen15(nc,nb))
-      res%carbon(:,:)     = struct1%carbon      + struct2%carbon
-      res%nitrogen(:,:)   = struct1%nitrogen    + struct2%nitrogen  
-      res%phosphorus(:,:) = struct1%phosphorus  + struct2%phosphorus
-      res%carbon13(:,:)   = struct1%carbon13    + struct2%carbon13  
-      res%carbon14(:,:)   = struct1%carbon14    + struct2%carbon14  
-      res%nitrogen15(:,:) = struct1%nitrogen15  + struct2%nitrogen15
-    ENDIF
-  
-  END FUNCTION Add_veg_elem_p_to_veg_elem_p  
+  ! FUNCTION Add_veg_elem_p_to_veg_elem_p(struct1, struct2) RESULT(res)
+  ! 
+  !   USE mo_jsb_subset,        ONLY: t_subset, ON_DOMAIN, ON_CHUNK
+  ! 
+  !   CLASS(t_veg_elements_pool),     INTENT(in)  :: struct1, struct2
+  !   TYPE(t_veg_elements_pool_hlp)               :: res
+  ! 
+  !   TYPE(t_subset) :: sub
+  !   INTEGER        :: ics, ice, iblk, nb, nc
+  ! 
+  !   CHARACTER(len=*), PARAMETER :: routine = modname//':Add_veg_elem_p_to_veg_elem_p'
+  ! 
+  !   sub = struct1%carbon%Get_subset()
+  !   ics = sub%ics ; ice = sub%ice ; iblk = sub%iblk ; nb = sub%nb ; nc = sub%nc
+  ! 
+  !   IF (sub%type == ON_CHUNK) THEN
+  !     ALLOCATE(res%carbon(nc,1))
+  !     ALLOCATE(res%nitrogen(nc,1))
+  !     ALLOCATE(res%phosphorus(nc,1))
+  !     ALLOCATE(res%carbon13(nc,1))
+  !     ALLOCATE(res%carbon14(nc,1))
+  !     ALLOCATE(res%nitrogen15(nc,1))
+  !     res%carbon(:,:)     = struct1%carbon      + struct2%carbon
+  !     res%nitrogen(:,:)   = struct1%nitrogen    + struct2%nitrogen  
+  !     res%phosphorus(:,:) = struct1%phosphorus  + struct2%phosphorus
+  !     res%carbon13(:,:)   = struct1%carbon13    + struct2%carbon13  
+  !     res%carbon14(:,:)   = struct1%carbon14    + struct2%carbon14  
+  !     res%nitrogen15(:,:) = struct1%nitrogen15  + struct2%nitrogen15
+  !   ELSE
+  !     ALLOCATE(res%carbon(nc,nb))
+  !     ALLOCATE(res%nitrogen(nc,nb))
+  !     ALLOCATE(res%phosphorus(nc,nb))
+  !     ALLOCATE(res%carbon13(nc,nb))
+  !     ALLOCATE(res%carbon14(nc,nb))
+  !     ALLOCATE(res%nitrogen15(nc,nb))
+  !     res%carbon(:,:)     = struct1%carbon      + struct2%carbon
+  !     res%nitrogen(:,:)   = struct1%nitrogen    + struct2%nitrogen  
+  !     res%phosphorus(:,:) = struct1%phosphorus  + struct2%phosphorus
+  !     res%carbon13(:,:)   = struct1%carbon13    + struct2%carbon13  
+  !     res%carbon14(:,:)   = struct1%carbon14    + struct2%carbon14  
+  !     res%nitrogen15(:,:) = struct1%nitrogen15  + struct2%nitrogen15
+  !   ENDIF
+  ! 
+  ! END FUNCTION Add_veg_elem_p_to_veg_elem_p  
     
 
   !--------------------------------------------------------------------------------------------------------------------------------
