@@ -44,7 +44,7 @@ MODULE mo_sb_memory_class
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: t_sb_memory, max_no_of_vars
-  PUBLIC :: t_sb_main_pool, t_sb_tissues_pool, t_sb_elements_pool
+  PUBLIC :: t_sb_main_pool, t_sb_components_pool, t_sb_elements_pool
 
   INTEGER, PARAMETER :: max_no_of_vars      = 480  !> TYPE t_jsb_var | 'normal' var: ~ 200 | 4 pools: 240 var | 2 tissues: 12
 
@@ -66,10 +66,10 @@ MODULE mo_sb_memory_class
   END TYPE t_sb_elements_pool
 
   !-----------------------------------------------------------------------------------------------------
-  !> Type definition for t_sb_tissues_pool
+  !> Type definition for t_sb_components_pool
   !! vegetation pool of tissues
   !-----------------------------------------------------------------------------------------------------
-  TYPE, EXTENDS(t_sb_elements_pool) :: t_sb_tissues_pool
+  TYPE, EXTENDS(t_sb_elements_pool) :: t_sb_components_pool
     TYPE(t_sb_elements_pool), POINTER :: dom                 !< elements of dissolved organic matter
     TYPE(t_sb_elements_pool), POINTER :: dom_assoc           !< elements of minerally associated disolved organic matter
     TYPE(t_sb_elements_pool), POINTER :: soluable_litter     !< elements of metabolic litter (sugars, cellulose etc.)
@@ -80,7 +80,7 @@ MODULE mo_sb_memory_class
     TYPE(t_sb_elements_pool), POINTER :: microbial           !< elements of microbial biomass (bacteria!)
     TYPE(t_sb_elements_pool), POINTER :: residue             !< elements of necromass of fungi, microbial and mycorrhiza
     TYPE(t_sb_elements_pool), POINTER :: residue_assoc       !< elements of minerally associated microbial necromass 
-  END TYPE t_sb_tissues_pool
+  END TYPE t_sb_components_pool
 
   !-----------------------------------------------------------------------------------------------------
   !> Type definition for t_sb_main_pool
@@ -90,13 +90,13 @@ MODULE mo_sb_memory_class
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_sb_elements_pool) :: t_sb_main_pool
     ! pools
-    TYPE(t_sb_tissues_pool),   POINTER :: sb_pool               !< 
-    TYPE(t_sb_elements_pool),  POINTER :: sb_delta_pools        !< 
+    TYPE(t_sb_components_pool),   POINTER :: sb_pool               !< 
+    TYPE(t_sb_elements_pool),     POINTER :: sb_delta_pools        !< 
     ! fluxes
-    TYPE(t_sb_tissues_pool),   POINTER :: sb_formation          !< 
-    TYPE(t_sb_tissues_pool),   POINTER :: sb_loss               !< 
-    TYPE(t_sb_tissues_pool),   POINTER :: sb_transport          !< 
-    TYPE(t_sb_elements_pool),  POINTER :: sb_mycorrhiza_export  !< 
+    TYPE(t_sb_components_pool),   POINTER :: sb_formation          !< 
+    TYPE(t_sb_components_pool),   POINTER :: sb_loss               !< 
+    TYPE(t_sb_components_pool),   POINTER :: sb_transport          !< 
+    TYPE(t_sb_elements_pool),     POINTER :: sb_mycorrhiza_export  !< 
   END TYPE t_sb_main_pool
 
   !-----------------------------------------------------------------------------------------------------
@@ -270,11 +270,11 @@ CONTAINS
   END SUBROUTINE t_sb_elements_pool_init
 
   !-----------------------------------------------------------------------------------------------------
-  !> create and init an object of the SB_ tissues pool "t_sb_tissues_pool"
+  !> create and init an object of the SB_ tissues pool "t_sb_components_pool"
   !! init and add all its objects of the "t_sb_elements_pool" with "pool_object%Init()"
-  !! "object => Create_sb_tissues_pool()"
+  !! "object => Create_sb_components_pool()"
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION Create_sb_tissues_pool(name, shortname, unit, lct_ids, pool_prefix, pool_suffix) RESULT(sb_tissues_pool)
+  FUNCTION Create_sb_components_pool(name, shortname, unit, lct_ids, pool_prefix, pool_suffix) RESULT(sb_components_pool)
 
     CHARACTER(LEN=*),           INTENT(in)  :: name
     CHARACTER(LEN=*),           INTENT(in)  :: shortname
@@ -282,7 +282,7 @@ CONTAINS
     INTEGER,                    INTENT(in)  :: lct_ids(:)
     CHARACTER(LEN=*), OPTIONAL, INTENT(in)  :: pool_prefix
     CHARACTER(LEN=*), OPTIONAL, INTENT(in)  :: pool_suffix
-    TYPE(t_sb_tissues_pool),    POINTER     :: sb_tissues_pool
+    TYPE(t_sb_components_pool), POINTER     :: sb_components_pool
 
     TYPE(t_sb_elements_pool),   POINTER     :: sb_elements_pool
     CHARACTER(LEN=:),           ALLOCATABLE :: prefix_loc, suffix_loc
@@ -295,8 +295,8 @@ CONTAINS
     IF (suffix_loc /= '') suffix_loc = '_' // suffix_loc
 
     ! tissue pool init
-    ALLOCATE(sb_tissues_pool)
-    CALL sb_tissues_pool%Init(name, shortname, l_elements=.TRUE., element_unit=unit)
+    ALLOCATE(sb_components_pool)
+    CALL sb_components_pool%Init(name, shortname, l_elements=.TRUE., element_unit=unit)
     
     ! element pools allocate & init & add to tissue pool
     ! "shortname" is used for model output
@@ -304,68 +304,68 @@ CONTAINS
     ! dom
     ALLOCATE(sb_elements_pool)
     CALL sb_elements_pool%Init(name='dom_pool'//suffix_loc, shortname='dom', l_elements=.TRUE., element_unit=unit)
-    CALL sb_tissues_pool%Add_pool(sb_elements_pool)
-    sb_tissues_pool%dom => sb_elements_pool
+    CALL sb_components_pool%Add_pool(sb_elements_pool)
+    sb_components_pool%dom => sb_elements_pool
     NULLIFY(sb_elements_pool)
     ! dom_assoc
     ALLOCATE(sb_elements_pool)
     CALL sb_elements_pool%Init(name='dom_assoc_pool'//suffix_loc, shortname='dom_assoc', l_elements=.TRUE., element_unit=unit)
-    CALL sb_tissues_pool%Add_pool(sb_elements_pool)
-    sb_tissues_pool%dom_assoc => sb_elements_pool
+    CALL sb_components_pool%Add_pool(sb_elements_pool)
+    sb_components_pool%dom_assoc => sb_elements_pool
     NULLIFY(sb_elements_pool)
     ! soluable_litter
     ALLOCATE(sb_elements_pool)
     CALL sb_elements_pool%Init(name='soluable_litter_pool'//suffix_loc, shortname='sol_litter', l_elements=.TRUE., &
                                element_unit=unit)
-    CALL sb_tissues_pool%Add_pool(sb_elements_pool)
-    sb_tissues_pool%soluable_litter => sb_elements_pool
+    CALL sb_components_pool%Add_pool(sb_elements_pool)
+    sb_components_pool%soluable_litter => sb_elements_pool
     NULLIFY(sb_elements_pool)
     ! polymeric_litter
     ALLOCATE(sb_elements_pool)
     CALL sb_elements_pool%Init(name='polymeric_litter_pool'//suffix_loc, shortname='pol_litter', l_elements=.TRUE., &
                                element_unit=unit)
-    CALL sb_tissues_pool%Add_pool(sb_elements_pool)
-    sb_tissues_pool%polymeric_litter => sb_elements_pool
+    CALL sb_components_pool%Add_pool(sb_elements_pool)
+    sb_components_pool%polymeric_litter => sb_elements_pool
     NULLIFY(sb_elements_pool)
     ! woody_litter
     ALLOCATE(sb_elements_pool)
     CALL sb_elements_pool%Init(name='woody_litter_pool'//suffix_loc, shortname='woo_litter', l_elements=.TRUE., element_unit=unit)
-    CALL sb_tissues_pool%Add_pool(sb_elements_pool)
-    sb_tissues_pool%woody_litter => sb_elements_pool
+    CALL sb_components_pool%Add_pool(sb_elements_pool)
+    sb_components_pool%woody_litter => sb_elements_pool
     NULLIFY(sb_elements_pool)
     ! fungi
     ALLOCATE(sb_elements_pool)
     CALL sb_elements_pool%Init(name='fungi_pool'//suffix_loc, shortname='fungi', l_elements=.TRUE., element_unit=unit)
-    CALL sb_tissues_pool%Add_pool(sb_elements_pool)
-    sb_tissues_pool%fungi => sb_elements_pool
+    CALL sb_components_pool%Add_pool(sb_elements_pool)
+    sb_components_pool%fungi => sb_elements_pool
     NULLIFY(sb_elements_pool)
     ! mycorrhiza
     ALLOCATE(sb_elements_pool)
     CALL sb_elements_pool%Init(name='mycorrhiza_pool'//suffix_loc, shortname='mycorrhiza', l_elements=.TRUE., element_unit=unit)
-    CALL sb_tissues_pool%Add_pool(sb_elements_pool)
-    sb_tissues_pool%mycorrhiza => sb_elements_pool
+    CALL sb_components_pool%Add_pool(sb_elements_pool)
+    sb_components_pool%mycorrhiza => sb_elements_pool
     NULLIFY(sb_elements_pool)
     ! microbial
     ALLOCATE(sb_elements_pool)
     CALL sb_elements_pool%Init(name='microbial_pool'//suffix_loc, shortname='microbial', l_elements=.TRUE., element_unit=unit)
-    CALL sb_tissues_pool%Add_pool(sb_elements_pool)
-    sb_tissues_pool%microbial => sb_elements_pool
+    CALL sb_components_pool%Add_pool(sb_elements_pool)
+    sb_components_pool%microbial => sb_elements_pool
     NULLIFY(sb_elements_pool)
     ! residue
     ALLOCATE(sb_elements_pool)
     CALL sb_elements_pool%Init(name='residue_pool'//suffix_loc, shortname='residue', l_elements=.TRUE., element_unit=unit)
-    CALL sb_tissues_pool%Add_pool(sb_elements_pool)
-    sb_tissues_pool%residue => sb_elements_pool
+    CALL sb_components_pool%Add_pool(sb_elements_pool)
+    sb_components_pool%residue => sb_elements_pool
     NULLIFY(sb_elements_pool)
     ! residue_assoc
     ALLOCATE(sb_elements_pool)
     CALL sb_elements_pool%Init(name='residue_assoc_pool'//suffix_loc, shortname='residue_assoc', l_elements=.TRUE., &
                                element_unit=unit)
-    CALL sb_tissues_pool%Add_pool(sb_elements_pool)
-    sb_tissues_pool%residue_assoc => sb_elements_pool
+    CALL sb_components_pool%Add_pool(sb_elements_pool)
+    sb_components_pool%residue_assoc => sb_elements_pool
     NULLIFY(sb_elements_pool)
 
-  END FUNCTION Create_sb_tissues_pool
+  END FUNCTION Create_sb_components_pool
 
   !-----------------------------------------------------------------------------------------------------
   !> initialize memory for the SB_ process
@@ -392,7 +392,7 @@ CONTAINS
     TYPE(t_jsb_vgrid),          POINTER :: vgrid_surface            ! Vertical grid
     TYPE(t_jsb_vgrid),          POINTER :: vgrid_soil_sb            ! Vertical grid
     TYPE(t_sb_elements_pool),   POINTER :: sb_elements_pool         ! pools/fluxes like sb_delta_pools & sb_mycorrhiza_export
-    TYPE(t_sb_tissues_pool),    POINTER :: sb_tissues_pool          ! pools/fluxes like sb_pool & sb_formation
+    TYPE(t_sb_components_pool), POINTER :: sb_components_pool       ! pools/fluxes like sb_pool & sb_formation
     INTEGER                     :: table
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_sb_memory'
     ! ---------------------------
@@ -432,31 +432,31 @@ CONTAINS
       END SELECT
 
       !-----------------------------------------------------------------------------------------------------------------------------
-      !> create the vegetation tissue pools & fluxes (sb_tissues_pool) 
+      !> create the vegetation tissue pools & fluxes (sb_components_pool) 
       !! sb_pool / sb_formation / ...
       ! create pools & fluxes
       ! "shortname" is used for model output names
       ! sb_pool
-      sb_tissues_pool => Create_sb_tissues_pool(name='soil_biogeochemistry_pool', shortname='sb_pool', unit='mol m-3', &
+      sb_components_pool => Create_sb_components_pool(name='soil_biogeochemistry_pool', shortname='sb_pool', unit='mol m-3', &
         & lct_ids=lct_ids, pool_suffix='sbpool') ! l_elements=.TRUE. by default
-      CALL mem%sb_main_pool%Add_pool(sb_tissues_pool)
-      mem%sb_main_pool%sb_pool => sb_tissues_pool
+      CALL mem%sb_main_pool%Add_pool(sb_components_pool)
+      mem%sb_main_pool%sb_pool => sb_components_pool
       ! sb_formation
-      sb_tissues_pool => Create_sb_tissues_pool(name='sb_formation_flux', shortname='sb_formation', unit='mol m-3', &
+      sb_components_pool => Create_sb_components_pool(name='sb_formation_flux', shortname='sb_formation', unit='mol m-3', &
         & lct_ids=lct_ids, pool_suffix='sbform') ! l_elements=.TRUE. by default
-      CALL mem%sb_main_pool%Add_pool(sb_tissues_pool)
-      mem%sb_main_pool%sb_formation => sb_tissues_pool
+      CALL mem%sb_main_pool%Add_pool(sb_components_pool)
+      mem%sb_main_pool%sb_formation => sb_components_pool
       ! sb_loss
-      sb_tissues_pool => Create_sb_tissues_pool(name='sb_loss_flux', shortname='sb_loss', unit='mol m-3', &
+      sb_components_pool => Create_sb_components_pool(name='sb_loss_flux', shortname='sb_loss', unit='mol m-3', &
         & lct_ids=lct_ids, pool_suffix='sbloss') ! l_elements=.TRUE. by default
-      CALL mem%sb_main_pool%Add_pool(sb_tissues_pool)
-      mem%sb_main_pool%sb_loss => sb_tissues_pool
+      CALL mem%sb_main_pool%Add_pool(sb_components_pool)
+      mem%sb_main_pool%sb_loss => sb_components_pool
       ! sb_transport
-      sb_tissues_pool => Create_sb_tissues_pool(name='sb_transport_flux', shortname='sb_transport', unit='mol m-3', &
+      sb_components_pool => Create_sb_components_pool(name='sb_transport_flux', shortname='sb_transport', unit='mol m-3', &
         & lct_ids=lct_ids, pool_suffix='sbtran') ! l_elements=.TRUE. by default
-      CALL mem%sb_main_pool%Add_pool(sb_tissues_pool)
-      mem%sb_main_pool%sb_transport => sb_tissues_pool
-      NULLIFY(sb_tissues_pool)
+      CALL mem%sb_main_pool%Add_pool(sb_components_pool)
+      mem%sb_main_pool%sb_transport => sb_components_pool
+      NULLIFY(sb_components_pool)
 
       ! init and add element pools to the veg_main_pool
       ! (i.e., add them at the same level as the above veg_tissues_pool veg_pool / veg_growth / ...)
@@ -479,7 +479,7 @@ CONTAINS
       ! set paths of all above initialized & added pools (type-bound procedure of t_jsb_pool)
       CALL mem%pools%Set_paths()
 
-      ! add all variables in the sb_tissues_pool to the SB_ memory
+      ! add all variables in the sb_components_pool to the SB_ memory
       CALL mem%Add_var(mem%sb_main_pool%sb_pool, &
         & hgrid, vgrid_surface, vgrid_soil_sb,                                                         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &

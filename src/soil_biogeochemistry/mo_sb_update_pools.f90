@@ -60,7 +60,7 @@ CONTAINS
     USE mo_jsb_math_constants,    ONLY: dtime, eps8
 
     ! Use of pools
-    dsl4jsb_Use_pools(SB_) t_sb_main_pool, t_sb_tissues_pool, t_sb_elements_pool
+    dsl4jsb_Use_pools(SB_) t_sb_main_pool, t_sb_components_pool, t_sb_elements_pool
     
     ! Use of process configurations and memory
     dsl4jsb_Use_config(SB_)
@@ -79,10 +79,10 @@ CONTAINS
     ! Declare process configuration, memory, and pool-structure Pointers
     dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(SB_)
-    dsl4jsb_Def_pool(t_sb_tissues_pool)  :: sb_pool
-    dsl4jsb_Def_pool(t_sb_tissues_pool)  :: sb_formation
-    dsl4jsb_Def_pool(t_sb_tissues_pool)  :: sb_loss
-    dsl4jsb_Def_pool(t_sb_tissues_pool)  :: sb_transport
+    dsl4jsb_Def_pool(t_sb_components_pool)  :: sb_pool
+    dsl4jsb_Def_pool(t_sb_components_pool)  :: sb_formation
+    dsl4jsb_Def_pool(t_sb_components_pool)  :: sb_loss
+    dsl4jsb_Def_pool(t_sb_components_pool)  :: sb_transport
     dsl4jsb_Def_pool(t_sb_elements_pool) :: sb_delta_pools
     dsl4jsb_Def_pool(t_sb_elements_pool) :: sb_mycorrhiza_export
 
