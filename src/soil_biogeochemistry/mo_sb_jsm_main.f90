@@ -71,7 +71,7 @@ CONTAINS
                                         calc_depolymerisation, calc_depolymerisation_SESAM, &
                                         calc_nitri_denitri_partitioning_rate
     USE mo_sb_jsm_transport,      ONLY: calc_liquid_phase_transport_wrapper, calc_bioturbation_transport_wrapper, &
-                                        calc_bioturbation_rate, calc_particle_fluxrate, calc_particle_transport_wrapper
+                                        calc_bioturbation_rate
     USE mo_sb_simple_model,       ONLY: calc_sb_inorganic_n15_fluxes, calc_asymbiontic_n_fixation
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(SB_)

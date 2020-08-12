@@ -618,52 +618,62 @@ CONTAINS
     sb_loss%mycorrhiza%nitrogen15(:,:) = sb_loss%mycorrhiza%nitrogen15(:,:) + sb_mycorrhiza_export%nitrogen15(:,:)
 
 
-    !> 5.0 update of organic pools
+    !> 5.0 update of the organic pool: simple_0d / simple_1d
     !!
-    !! updates all SB pools given the JSM equations for formation, loss and transport
-    !! Output: updated pool sizes
-    sb_last_timestep = sb_pool
-    sb_pool          = sb_pool + sb_formation - sb_loss + sb_transport 
+    !! update all components of the sb_pool applying the JSM equation for formation, loss and transport
+    !! 
+    SELECT CASE (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
+      CASE ("simple_0d", "simple_1d")
+        sb_pool = sb_pool + sb_formation - sb_loss + sb_transport 
+    END SELECT
 
-
-    !> 6.0 update diagnostics and other state variables due to particle transport 
+    !> 6.0 JSM: 
+    !!  a) update of the organic pool
+    !!  b) update particle transport related diagnostics and state variables
     !!
+    !! docu: 
+    !!  a) sb_last_timestep pool is used only for calc_particle_fluxrate() to calc (pseudo code):
+    !!     particle_fluxrate = sb_pool - sb_last_timestep  (i.e., current timestep - previous timestep)
+    !!  b) par_transport pool is used only as hlp to collect the output of calc_particle_transport() 
+    !!     within calc_particle_transport_wrapper() and apply these temporary values to sb_transport & sb_pool
     IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme)=="jsm") THEN
-      !> 6.1 particle transport
+      !> 6.1 update all components of the sb_pool applying the JSM equation for formation, loss and transport
       !!
-      par_transport = sb_transport * 0._wp
+      sb_last_timestep = sb_pool
+      sb_pool          = sb_pool + sb_formation - sb_loss + sb_transport 
+      !> 6.2 particle transport
+      !!
+      par_transport          = sb_transport * 0._wp
       particle_fluxrate(:,:) = calc_particle_fluxrate(nc, nsoil_sb, & 
                                   soil_depth_sl(:,:), bulk_dens_corr_sl(:,:), & 
                                   sb_pool, sb_last_timestep) 
-      CALL calc_particle_transport_wrapper(nc, nsoil_sb, particle_fluxrate(:,:), soil_depth_sl(:,:), &
+      CALL calc_particle_transport_wrapper(nc, nsoil_sb, particle_fluxrate(:,:), soil_depth_sl(:,:), &                        ! in
                                   sb_pool, nh4_solute(:,:), nh4_assoc(:,:), no3_solute(:,:), po4_solute(:,:), & 
                                   po4_assoc_fast(:,:), po4_assoc_slow(:,:), po4_occluded(:,:), po4_primary(:,:), & 
                                   nh4_n15_solute(:,:), nh4_n15_assoc(:,:), no3_n15_solute(:,:), & 
-                                  par_transport, transport_nh4_solute(:,:), transport_nh4_assoc(:,:), & 
+                                  par_transport, transport_nh4_solute(:,:), transport_nh4_assoc(:,:), &                       ! inout
                                   transport_no3_solute(:,:), transport_po4_solute(:,:), & 
                                   transport_po4_assoc_fast(:,:), transport_po4_assoc_slow(:,:), transport_po4_occluded(:,:), &
                                   transport_po4_primary(:,:), & 
                                   transport_nh4_n15_solute(:,:), transport_nh4_n15_assoc(:,:), transport_no3_n15_solute(:,:))
       sb_transport = sb_transport + par_transport
-      sb_pool      = sb_pool + par_transport 
+      sb_pool      = sb_pool      + par_transport 
       dom_cn(:,:)  = sb_pool%dom%carbon(:,:) / sb_pool%dom%nitrogen(:,:)
       dom_cp(:,:)  = sb_pool%dom%carbon(:,:) / sb_pool%dom%phosphorus(:,:)
-
-      !> 6.2 convert inorganic transport fluxes to µmol m3 s-1
+      !! convert inorganic transport fluxes to µmol m3 s-1 (for compatibility with simple_0d & simple_1d)
       !!
-      transport_nh4_solute(:,:)     = transport_nh4_solute(:,:) * 1.e6_wp / dtime
-      transport_nh4_assoc(:,:)      = transport_nh4_assoc(:,:) * 1.e6_wp / dtime
-      transport_no3_solute(:,:)     = transport_no3_solute(:,:) * 1.e6_wp / dtime
-      transport_po4_solute(:,:)     = transport_po4_solute(:,:) * 1.e6_wp / dtime
+      transport_nh4_solute(:,:)     = transport_nh4_solute(:,:)     * 1.e6_wp / dtime
+      transport_nh4_assoc(:,:)      = transport_nh4_assoc(:,:)      * 1.e6_wp / dtime
+      transport_no3_solute(:,:)     = transport_no3_solute(:,:)     * 1.e6_wp / dtime
+      transport_po4_solute(:,:)     = transport_po4_solute(:,:)     * 1.e6_wp / dtime
       transport_po4_assoc_fast(:,:) = transport_po4_assoc_fast(:,:) * 1.e6_wp / dtime
       transport_po4_assoc_slow(:,:) = transport_po4_assoc_slow(:,:) * 1.e6_wp / dtime
-      transport_po4_occluded(:,:)   = transport_po4_occluded(:,:) * 1.e6_wp / dtime
-      transport_po4_primary(:,:)    = transport_po4_primary(:,:) * 1.e6_wp / dtime
+      transport_po4_occluded(:,:)   = transport_po4_occluded(:,:)   * 1.e6_wp / dtime
+      transport_po4_primary(:,:)    = transport_po4_primary(:,:)    * 1.e6_wp / dtime
       transport_nh4_n15_solute(:,:) = transport_nh4_n15_solute(:,:) * 1.e6_wp / dtime
-      transport_nh4_n15_assoc(:,:)  = transport_nh4_n15_assoc(:,:) * 1.e6_wp / dtime
-      transport_no3_n15_solute(:,:) = transport_no3_n15_solute(:,:)  * 1.e6_wp / dtime
+      transport_nh4_n15_assoc(:,:)  = transport_nh4_n15_assoc(:,:)  * 1.e6_wp / dtime
+      transport_no3_n15_solute(:,:) = transport_no3_n15_solute(:,:) * 1.e6_wp / dtime
     ENDIF
-
 
     !> 7.0 update of inorganic pools
     !!
@@ -1044,7 +1054,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
   ! Sub Task to update_sb_pools
   !
   !-----------------------------------------------------------------------------------------------------
-  !> Subroutine to calculate fast_exchange_po4 based on Langmuir equilibrium(Yang et al. 2014)
+  !> Subroutine to calculate fast_exchange_po4 based on Langmuir equilibrium (Yang et al. 2014)
   !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_p_inorg_dynamics(nc, nsoil_sb, &
