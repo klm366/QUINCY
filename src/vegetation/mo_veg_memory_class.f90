@@ -28,7 +28,7 @@
 MODULE mo_veg_memory_class
 
   USE mo_kind,                   ONLY: wp
-  USE mo_exception,              ONLY: finish
+  USE mo_exception,              ONLY: finish, message
   USE mo_util,                   ONLY: One_of
   USE mo_jsb_utils_iface,        ONLY: assign_if_present_allocatable
   USE mo_jsb_impl_constants,     ONLY: false
@@ -61,40 +61,25 @@ MODULE mo_veg_memory_class
     TYPE(t_jsb_var_real2d), POINTER :: carbon14
     TYPE(t_jsb_var_real2d), POINTER :: nitrogen15
   CONTAINS
-    PRIVATE
     ! infrastructure
     PROCEDURE :: Init                   => t_veg_elements_pool_init
     PROCEDURE :: Get_element_name_by_id => t_veg_elements_pool_get_element_name_by_id
     ! operator overload
     ! + addition
-    ! PROCEDURE         :: Add_element_a                      ! 
-    ! PROCEDURE         :: Add_element_a_and_scalar           ! 
-    ! PROCEDURE         :: Add_veg_elem_p_to_veg_elem_p       ! pool%elements + pool%elements
-    ! GENERIC, PUBLIC   :: OPERATOR(+) => Add_veg_elem_p_to_veg_elem_p
+    ! PROCEDURE :: Add_element_a                      ! 
+    ! PROCEDURE :: Add_element_a_and_scalar           ! 
+    PROCEDURE :: Add_veg_elem_p_to_veg_elem_p       ! pool%elements + pool%elements
+    GENERIC   :: OPERATOR(+) => Add_veg_elem_p_to_veg_elem_p
     ! = assign
-    PROCEDURE         :: Assign_scalar_to_veg_elem_p          ! pool%elements = scalar
-    PROCEDURE         :: Assign_field1d_to_veg_elem_p         ! pool%elements = var(:)
-    PROCEDURE         :: Assign_veg_elem_p_hlp_to_veg_elem_p  ! pool%elements = t_veg_elements_pool_hlp
-    PROCEDURE         :: Assign_veg_elem_p_to_veg_elem_p      ! pool%elements = pool%elements  ! only numeric values of elements are assigned
-    GENERIC, PUBLIC   :: ASSIGNMENT(=) => Assign_scalar_to_veg_elem_p, &
-                                          Assign_field1d_to_veg_elem_p, &
-                                          Assign_veg_elem_p_hlp_to_veg_elem_p, &
-                                          Assign_veg_elem_p_to_veg_elem_p
+    PROCEDURE :: Assign_scalar_to_veg_elem_p          ! pool%elements = scalar
+    PROCEDURE :: Assign_field1d_to_veg_elem_p         ! pool%elements = var(:)
+    PROCEDURE :: Assign_veg_elem_p_to_veg_elem_p      ! pool%elements = pool%elements  ! only numeric values of elements are assigned
+    GENERIC   :: ASSIGNMENT(=) => Assign_scalar_to_veg_elem_p, &
+                                  Assign_field1d_to_veg_elem_p, &
+                                  Assign_veg_elem_p_to_veg_elem_p
+    ! finalize
+    FINAL     :: finalize_veg_elements_pool
   END TYPE t_veg_elements_pool
-
-  !-----------------------------------------------------------------------------------------------------
-  !> Simple veg_elements_pool TYPE for temporary objects with operator overload
-  !! 
-  !! 2D is needed in the context of ON_DOMAIN
-  !-----------------------------------------------------------------------------------------------------
-  TYPE t_veg_elements_pool_hlp
-    REAL(wp), ALLOCATABLE :: carbon(:,:)      ! dimension of variable in memory is var(ics:ice,iblk)
-    REAL(wp), ALLOCATABLE :: nitrogen(:,:)
-    REAL(wp), ALLOCATABLE :: phosphorus(:,:)
-    REAL(wp), ALLOCATABLE :: carbon13(:,:)
-    REAL(wp), ALLOCATABLE :: carbon14(:,:)
-    REAL(wp), ALLOCATABLE :: nitrogen15(:,:)
-  END TYPE t_veg_elements_pool_hlp
 
   !-----------------------------------------------------------------------------------------------------
   !> Type definition for t_veg_tissues_pool
@@ -946,6 +931,75 @@ CONTAINS
   !!  TYPE t_veg_elements_pool
   !! 
   !--------------------------------------------------------------------------------------------------------------------------------
+
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! finalize after operator overload
+  ! var_real2d & var_real3d
+  !--------------------------------------------------------------------------------------------------------------------------------
+  SUBROUTINE finalize_veg_elements_pool(this)
+
+    TYPE(t_veg_elements_pool) :: this
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':finalize_veg_elements_pool'
+
+    ! CALL message(routine, 'Finalizing '//TRIM(this%name))
+
+    ! DEALLOCATE  
+    !   not allocated: this%carbon%child_idx & this%path; tested 20200814
+    !   no need to dealloc: this%ELEM%ptr2d
+    ! variables of the pool
+    IF (ALLOCATED(this%carbon%owner_tile_path))   DEALLOCATE(this%carbon%owner_tile_path)
+    IF (ALLOCATED(this%carbon%child_idx))         DEALLOCATE(this%carbon%child_idx)
+    IF (ALLOCATED(this%carbon%element_name))      DEALLOCATE(this%carbon%element_name)
+    IF (ALLOCATED(this%carbon%element_shortname)) DEALLOCATE(this%carbon%element_shortname)
+    IF (ASSOCIATED(this%carbon%ptr))              DEALLOCATE(this%carbon%ptr)
+    IF (ASSOCIATED(this%carbon))                  DEALLOCATE(this%carbon)
+    
+    IF (ALLOCATED(this%nitrogen%owner_tile_path))   DEALLOCATE(this%nitrogen%owner_tile_path)
+    IF (ALLOCATED(this%nitrogen%child_idx))         DEALLOCATE(this%nitrogen%child_idx)
+    IF (ALLOCATED(this%nitrogen%element_name))      DEALLOCATE(this%nitrogen%element_name)
+    IF (ALLOCATED(this%nitrogen%element_shortname)) DEALLOCATE(this%nitrogen%element_shortname)
+    IF (ASSOCIATED(this%nitrogen%ptr))              DEALLOCATE(this%nitrogen%ptr)
+    IF (ASSOCIATED(this%nitrogen))                  DEALLOCATE(this%nitrogen)
+    
+    IF (ALLOCATED(this%phosphorus%owner_tile_path))   DEALLOCATE(this%phosphorus%owner_tile_path)
+    IF (ALLOCATED(this%phosphorus%child_idx))         DEALLOCATE(this%phosphorus%child_idx)
+    IF (ALLOCATED(this%phosphorus%element_name))      DEALLOCATE(this%phosphorus%element_name)
+    IF (ALLOCATED(this%phosphorus%element_shortname)) DEALLOCATE(this%phosphorus%element_shortname)
+    IF (ASSOCIATED(this%phosphorus%ptr))              DEALLOCATE(this%phosphorus%ptr)
+    IF (ASSOCIATED(this%phosphorus))                  DEALLOCATE(this%phosphorus)
+    
+    IF (ALLOCATED(this%carbon13%owner_tile_path))   DEALLOCATE(this%carbon13%owner_tile_path)
+    IF (ALLOCATED(this%carbon13%child_idx))         DEALLOCATE(this%carbon13%child_idx)
+    IF (ALLOCATED(this%carbon13%element_name))      DEALLOCATE(this%carbon13%element_name)
+    IF (ALLOCATED(this%carbon13%element_shortname)) DEALLOCATE(this%carbon13%element_shortname)
+    IF (ASSOCIATED(this%carbon13%ptr))              DEALLOCATE(this%carbon13%ptr)
+    IF (ASSOCIATED(this%carbon13))                  DEALLOCATE(this%carbon13)
+    
+    IF (ALLOCATED(this%carbon14%owner_tile_path))   DEALLOCATE(this%carbon14%owner_tile_path)
+    IF (ALLOCATED(this%carbon14%child_idx))         DEALLOCATE(this%carbon14%child_idx)
+    IF (ALLOCATED(this%carbon14%element_name))      DEALLOCATE(this%carbon14%element_name)
+    IF (ALLOCATED(this%carbon14%element_shortname)) DEALLOCATE(this%carbon14%element_shortname)
+    IF (ASSOCIATED(this%carbon14%ptr))              DEALLOCATE(this%carbon14%ptr)
+    IF (ASSOCIATED(this%carbon14))                  DEALLOCATE(this%carbon14)
+    
+    IF (ALLOCATED(this%nitrogen15%owner_tile_path))   DEALLOCATE(this%nitrogen15%owner_tile_path)
+    IF (ALLOCATED(this%nitrogen15%child_idx))         DEALLOCATE(this%nitrogen15%child_idx)
+    IF (ALLOCATED(this%nitrogen15%element_name))      DEALLOCATE(this%nitrogen15%element_name)
+    IF (ALLOCATED(this%nitrogen15%element_shortname)) DEALLOCATE(this%nitrogen15%element_shortname)
+    IF (ASSOCIATED(this%nitrogen15%ptr))              DEALLOCATE(this%nitrogen15%ptr)
+    IF (ASSOCIATED(this%nitrogen15))                  DEALLOCATE(this%nitrogen15)
+    
+    ! t_veg_elements_pool
+    IF (ALLOCATED(this%shortname))    DEALLOCATE(this%shortname)
+    IF (ALLOCATED(this%name))         DEALLOCATE(this%name)
+    IF (ALLOCATED(this%element_unit)) DEALLOCATE(this%element_unit)
+    IF (ALLOCATED(this%element_list)) DEALLOCATE(this%element_list)
+    IF (ALLOCATED(this%var_list))     DEALLOCATE(this%var_list)
+    IF (ASSOCIATED(this%pool_list))   DEALLOCATE(this%pool_list)
+    IF (ASSOCIATED(this%leaf_list))   DEALLOCATE(this%leaf_list)
+   
+  END SUBROUTINE finalize_veg_elements_pool
   
   !--------------------------------------------------------------------------------------------------------------------------------
   ! assign
@@ -982,22 +1036,6 @@ CONTAINS
   
   END SUBROUTINE Assign_field1d_to_veg_elem_p
 
-  SUBROUTINE Assign_veg_elem_p_hlp_to_veg_elem_p(lhs, rhs)
-  
-    CLASS(t_veg_elements_pool),     INTENT(inout) :: lhs
-    TYPE(t_veg_elements_pool_hlp ), INTENT(in)    :: rhs
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Assign_veg_elem_p_hlp_to_veg_elem_p'
-
-    lhs%carbon     = rhs%carbon(:,:)
-    lhs%nitrogen   = rhs%nitrogen(:,:)
-    lhs%phosphorus = rhs%phosphorus(:,:)
-    lhs%carbon13   = rhs%carbon13(:,:)
-    lhs%carbon14   = rhs%carbon14(:,:)
-    lhs%nitrogen15 = rhs%nitrogen15(:,:)
-  
-  END SUBROUTINE Assign_veg_elem_p_hlp_to_veg_elem_p
-
   SUBROUTINE Assign_veg_elem_p_to_veg_elem_p(lhs, rhs)
 
     CLASS(t_veg_elements_pool), INTENT(inout) :: lhs
@@ -1017,50 +1055,60 @@ CONTAINS
   !--------------------------------------------------------------------------------------------------------------------------------
   ! + addition
   !--------------------------------------------------------------------------------------------------------------------------------
-  ! FUNCTION Add_veg_elem_p_to_veg_elem_p(struct1, struct2) RESULT(res)
-  ! 
-  !   USE mo_jsb_subset,        ONLY: t_subset, ON_DOMAIN, ON_CHUNK
-  ! 
-  !   CLASS(t_veg_elements_pool),     INTENT(in)  :: struct1, struct2
-  !   TYPE(t_veg_elements_pool_hlp)               :: res
-  ! 
-  !   TYPE(t_subset) :: sub
-  !   INTEGER        :: ics, ice, iblk, nb, nc
-  ! 
-  !   CHARACTER(len=*), PARAMETER :: routine = modname//':Add_veg_elem_p_to_veg_elem_p'
-  ! 
-  !   sub = struct1%carbon%Get_subset()
-  !   ics = sub%ics ; ice = sub%ice ; iblk = sub%iblk ; nb = sub%nb ; nc = sub%nc
-  ! 
-  !   IF (sub%type == ON_CHUNK) THEN
-  !     ALLOCATE(res%carbon(nc,1))
-  !     ALLOCATE(res%nitrogen(nc,1))
-  !     ALLOCATE(res%phosphorus(nc,1))
-  !     ALLOCATE(res%carbon13(nc,1))
-  !     ALLOCATE(res%carbon14(nc,1))
-  !     ALLOCATE(res%nitrogen15(nc,1))
-  !     res%carbon(:,:)     = struct1%carbon      + struct2%carbon
-  !     res%nitrogen(:,:)   = struct1%nitrogen    + struct2%nitrogen  
-  !     res%phosphorus(:,:) = struct1%phosphorus  + struct2%phosphorus
-  !     res%carbon13(:,:)   = struct1%carbon13    + struct2%carbon13  
-  !     res%carbon14(:,:)   = struct1%carbon14    + struct2%carbon14  
-  !     res%nitrogen15(:,:) = struct1%nitrogen15  + struct2%nitrogen15
-  !   ELSE
-  !     ALLOCATE(res%carbon(nc,nb))
-  !     ALLOCATE(res%nitrogen(nc,nb))
-  !     ALLOCATE(res%phosphorus(nc,nb))
-  !     ALLOCATE(res%carbon13(nc,nb))
-  !     ALLOCATE(res%carbon14(nc,nb))
-  !     ALLOCATE(res%nitrogen15(nc,nb))
-  !     res%carbon(:,:)     = struct1%carbon      + struct2%carbon
-  !     res%nitrogen(:,:)   = struct1%nitrogen    + struct2%nitrogen  
-  !     res%phosphorus(:,:) = struct1%phosphorus  + struct2%phosphorus
-  !     res%carbon13(:,:)   = struct1%carbon13    + struct2%carbon13  
-  !     res%carbon14(:,:)   = struct1%carbon14    + struct2%carbon14  
-  !     res%nitrogen15(:,:) = struct1%nitrogen15  + struct2%nitrogen15
-  !   ENDIF
-  ! 
-  ! END FUNCTION Add_veg_elem_p_to_veg_elem_p  
+  FUNCTION Add_veg_elem_p_to_veg_elem_p(struct1, struct2) RESULT(struct3)
+  
+    CLASS(t_veg_elements_pool),     INTENT(in)  :: struct1, struct2
+    ! TYPE(t_veg_elements_pool),      POINTER     :: struct3
+    TYPE(t_veg_elements_pool),      TARGET      :: struct3
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Add_veg_elem_p_to_veg_elem_p'
+  
+    ! init temporary pool struct3
+    ! ALLOCATE(struct3)
+    CALL struct3%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    struct3%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    struct3%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    struct3%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(struct3%carbon%ptr2d,     source=struct1%carbon%ptr2d)
+    struct3%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    struct3%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    struct3%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(struct3%nitrogen%ptr2d,   source=struct1%nitrogen%ptr2d)
+    struct3%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    struct3%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    struct3%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(struct3%phosphorus%ptr2d, source=struct1%phosphorus%ptr2d)
+    struct3%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    struct3%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    struct3%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(struct3%carbon13%ptr2d,   source=struct1%carbon13%ptr2d)
+    struct3%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    struct3%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    struct3%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(struct3%carbon14%ptr2d,   source=struct1%carbon14%ptr2d)
+    struct3%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    struct3%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    struct3%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(struct3%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
+
+    ! run calculation
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    struct3%carbon     = struct1%carbon      + struct2%carbon
+    struct3%nitrogen   = struct1%nitrogen    + struct2%nitrogen  
+    struct3%phosphorus = struct1%phosphorus  + struct2%phosphorus
+    struct3%carbon13   = struct1%carbon13    + struct2%carbon13  
+    struct3%carbon14   = struct1%carbon14    + struct2%carbon14  
+    struct3%nitrogen15 = struct1%nitrogen15  + struct2%nitrogen15
+
+    ! is this needed here too
+    struct3%carbon%ptr      => struct3%carbon%ptr2d(:,:)
+    struct3%nitrogen%ptr    => struct3%nitrogen%ptr2d(:,:)
+    struct3%phosphorus%ptr  => struct3%phosphorus%ptr2d(:,:)
+    struct3%carbon13%ptr    => struct3%carbon13%ptr2d(:,:)
+    struct3%carbon14%ptr    => struct3%carbon14%ptr2d(:,:)
+    struct3%nitrogen15%ptr  => struct3%nitrogen15%ptr2d(:,:)
+  
+  END FUNCTION Add_veg_elem_p_to_veg_elem_p  
     
 
   !--------------------------------------------------------------------------------------------------------------------------------
