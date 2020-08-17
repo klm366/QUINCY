@@ -944,60 +944,21 @@ CONTAINS
 
     ! CALL message(routine, 'Finalizing '//TRIM(this%name))
 
-    ! DEALLOCATE  
-    !   not allocated: this%carbon%child_idx & this%path; tested 20200814
-    !   no need to dealloc: this%ELEM%ptr2d
-    ! variables of the pool
-    IF (ALLOCATED(this%carbon%owner_tile_path))   DEALLOCATE(this%carbon%owner_tile_path)
-    IF (ALLOCATED(this%carbon%child_idx))         DEALLOCATE(this%carbon%child_idx)
-    IF (ALLOCATED(this%carbon%element_name))      DEALLOCATE(this%carbon%element_name)
-    IF (ALLOCATED(this%carbon%element_shortname)) DEALLOCATE(this%carbon%element_shortname)
-    IF (ASSOCIATED(this%carbon%ptr))              DEALLOCATE(this%carbon%ptr)
-    IF (ASSOCIATED(this%carbon))                  DEALLOCATE(this%carbon)
-    
-    IF (ALLOCATED(this%nitrogen%owner_tile_path))   DEALLOCATE(this%nitrogen%owner_tile_path)
-    IF (ALLOCATED(this%nitrogen%child_idx))         DEALLOCATE(this%nitrogen%child_idx)
-    IF (ALLOCATED(this%nitrogen%element_name))      DEALLOCATE(this%nitrogen%element_name)
-    IF (ALLOCATED(this%nitrogen%element_shortname)) DEALLOCATE(this%nitrogen%element_shortname)
-    IF (ASSOCIATED(this%nitrogen%ptr))              DEALLOCATE(this%nitrogen%ptr)
-    IF (ASSOCIATED(this%nitrogen))                  DEALLOCATE(this%nitrogen)
-    
-    IF (ALLOCATED(this%phosphorus%owner_tile_path))   DEALLOCATE(this%phosphorus%owner_tile_path)
-    IF (ALLOCATED(this%phosphorus%child_idx))         DEALLOCATE(this%phosphorus%child_idx)
-    IF (ALLOCATED(this%phosphorus%element_name))      DEALLOCATE(this%phosphorus%element_name)
-    IF (ALLOCATED(this%phosphorus%element_shortname)) DEALLOCATE(this%phosphorus%element_shortname)
-    IF (ASSOCIATED(this%phosphorus%ptr))              DEALLOCATE(this%phosphorus%ptr)
-    IF (ASSOCIATED(this%phosphorus))                  DEALLOCATE(this%phosphorus)
-    
-    IF (ALLOCATED(this%carbon13%owner_tile_path))   DEALLOCATE(this%carbon13%owner_tile_path)
-    IF (ALLOCATED(this%carbon13%child_idx))         DEALLOCATE(this%carbon13%child_idx)
-    IF (ALLOCATED(this%carbon13%element_name))      DEALLOCATE(this%carbon13%element_name)
-    IF (ALLOCATED(this%carbon13%element_shortname)) DEALLOCATE(this%carbon13%element_shortname)
-    IF (ASSOCIATED(this%carbon13%ptr))              DEALLOCATE(this%carbon13%ptr)
-    IF (ASSOCIATED(this%carbon13))                  DEALLOCATE(this%carbon13)
-    
-    IF (ALLOCATED(this%carbon14%owner_tile_path))   DEALLOCATE(this%carbon14%owner_tile_path)
-    IF (ALLOCATED(this%carbon14%child_idx))         DEALLOCATE(this%carbon14%child_idx)
-    IF (ALLOCATED(this%carbon14%element_name))      DEALLOCATE(this%carbon14%element_name)
-    IF (ALLOCATED(this%carbon14%element_shortname)) DEALLOCATE(this%carbon14%element_shortname)
-    IF (ASSOCIATED(this%carbon14%ptr))              DEALLOCATE(this%carbon14%ptr)
-    IF (ASSOCIATED(this%carbon14))                  DEALLOCATE(this%carbon14)
-    
-    IF (ALLOCATED(this%nitrogen15%owner_tile_path))   DEALLOCATE(this%nitrogen15%owner_tile_path)
-    IF (ALLOCATED(this%nitrogen15%child_idx))         DEALLOCATE(this%nitrogen15%child_idx)
-    IF (ALLOCATED(this%nitrogen15%element_name))      DEALLOCATE(this%nitrogen15%element_name)
-    IF (ALLOCATED(this%nitrogen15%element_shortname)) DEALLOCATE(this%nitrogen15%element_shortname)
-    IF (ASSOCIATED(this%nitrogen15%ptr))              DEALLOCATE(this%nitrogen15%ptr)
-    IF (ASSOCIATED(this%nitrogen15))                  DEALLOCATE(this%nitrogen15)
-    
-    ! t_veg_elements_pool
-    IF (ALLOCATED(this%shortname))    DEALLOCATE(this%shortname)
-    IF (ALLOCATED(this%name))         DEALLOCATE(this%name)
-    IF (ALLOCATED(this%element_unit)) DEALLOCATE(this%element_unit)
-    IF (ALLOCATED(this%element_list)) DEALLOCATE(this%element_list)
-    IF (ALLOCATED(this%var_list))     DEALLOCATE(this%var_list)
-    IF (ASSOCIATED(this%pool_list))   DEALLOCATE(this%pool_list)
-    IF (ASSOCIATED(this%leaf_list))   DEALLOCATE(this%leaf_list)
+    ! not allocated: this%path
+    ! no need to dealloc the variables 'this%ELEM%VAR' because these are dealloc by the FINAL routine of var_real2d & var_real3d
+    IF (ASSOCIATED(this%carbon))        DEALLOCATE(this%carbon)
+    IF (ASSOCIATED(this%nitrogen))      DEALLOCATE(this%nitrogen)
+    IF (ASSOCIATED(this%phosphorus))    DEALLOCATE(this%phosphorus)
+    IF (ASSOCIATED(this%carbon13))      DEALLOCATE(this%carbon13)
+    IF (ASSOCIATED(this%carbon14))      DEALLOCATE(this%carbon14)
+    IF (ASSOCIATED(this%nitrogen15))    DEALLOCATE(this%nitrogen15)
+    IF (ALLOCATED(this%shortname))      DEALLOCATE(this%shortname)
+    IF (ALLOCATED(this%name))           DEALLOCATE(this%name)
+    IF (ALLOCATED(this%element_unit))   DEALLOCATE(this%element_unit)
+    IF (ALLOCATED(this%element_list))   DEALLOCATE(this%element_list)
+    IF (ALLOCATED(this%var_list))       DEALLOCATE(this%var_list)
+    IF (ASSOCIATED(this%pool_list))     DEALLOCATE(this%pool_list)
+    IF (ASSOCIATED(this%leaf_list))     DEALLOCATE(this%leaf_list)
    
   END SUBROUTINE finalize_veg_elements_pool
   

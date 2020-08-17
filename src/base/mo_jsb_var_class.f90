@@ -228,7 +228,8 @@ CONTAINS
     IF (ALLOCATED(this%owner_tile_path)) DEALLOCATE(this%owner_tile_path)
     IF (ALLOCATED(this%child_idx)) DEALLOCATE(this%child_idx)
 
-    IF (ASSOCIATED(this%ptr)) DEALLOCATE(this%ptr)
+    IF (ASSOCIATED(this%ptr))   NULLIFY(this%ptr)
+    IF (ASSOCIATED(this%ptr2d)) DEALLOCATE(this%ptr2d)
 
   END SUBROUTINE finalize_jsb_var_real2d
 
@@ -243,7 +244,8 @@ CONTAINS
     IF (ALLOCATED(this%owner_tile_path)) DEALLOCATE(this%owner_tile_path)
     IF (ALLOCATED(this%child_idx)) DEALLOCATE(this%child_idx)
 
-    IF (ASSOCIATED(this%ptr)) DEALLOCATE(this%ptr)
+    IF (ASSOCIATED(this%ptr))   NULLIFY(this%ptr)
+    IF (ASSOCIATED(this%ptr3d)) DEALLOCATE(this%ptr3d)
 
   END SUBROUTINE finalize_jsb_var_real3d
 
