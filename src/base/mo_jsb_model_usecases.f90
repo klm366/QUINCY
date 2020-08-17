@@ -151,14 +151,14 @@ CONTAINS
       & 'C3 crops'                    ]
 
     CHARACTER(len=30), PARAMETER :: wft_longnames(nwft) = [character(len=30) :: &
-      & 'Raingreen shrubs',             &
+      & 'C3 grass',                     &
       & 'C4 grass'                    ]
 
 
     ! Index of PFT into lctlib columns
     ! id is one less than in lctlib file because the first column (glacier) has been thrown away
     INTEGER, PARAMETER :: pft_ids(npft) = (/ 1,2,3,4,9,10,11,12,14,15,19 /)
-    INTEGER, PARAMETER :: wft_ids(nwft) = (/ 9,12 /) !(/ 9,12 /)
+    INTEGER, PARAMETER :: wft_ids(nwft) = (/ 11,12 /) !(/ 9,12 /)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_usecase_pfts'
 
