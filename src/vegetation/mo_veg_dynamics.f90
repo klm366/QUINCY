@@ -192,27 +192,27 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
 
     !! tested for VEG_ pools & fluxes !!
-    veg_pool%leaf%carbon%ptrm1(:) = 20.0_wp
-    veg_pool_leaf%carbon%ptrm1(:) = 10.0_wp
+    veg_pool%leaf%carbon          = 20.0_wp
+    veg_pool_leaf%carbon          = 10.0_wp
     
-    veg_pool%fine_root%carbon%ptrm1(:)   = 10.0_wp
-    veg_pool%coarse_root%carbon%ptrm1(:) = 10.0_wp
-    veg_pool%sap_wood%carbon%ptrm1(:)    = 10.0_wp
-    veg_pool%heart_wood%carbon%ptrm1(:)  = 10.0_wp
-    veg_pool%labile%carbon%ptrm1(:)      = 10.0_wp
-    veg_pool%reserve%carbon%ptrm1(:)     = 10.0_wp
-    veg_pool%fruit%carbon%ptrm1(:)       = 10.0_wp
-    veg_pool%seed_bed%carbon%ptrm1(:)    = 10.0_wp
+    veg_pool%fine_root%carbon     = 10.0_wp
+    veg_pool%coarse_root%carbon   = 10.0_wp
+    veg_pool%sap_wood%carbon      = 10.0_wp
+    veg_pool%heart_wood%carbon    = 10.0_wp
+    veg_pool%labile%carbon        = 10.0_wp
+    veg_pool%reserve%carbon       = 10.0_wp
+    veg_pool%fruit%carbon         = 10.0_wp
+    veg_pool%seed_bed%carbon      = 10.0_wp
 
-    veg_pool%leaf%nitrogen%ptrm1(:)        = 15.0_wp
-    veg_pool%fine_root%nitrogen%ptrm1(:)   = 15.0_wp
-    veg_pool%coarse_root%nitrogen%ptrm1(:) = 15.0_wp
-    veg_pool%sap_wood%nitrogen%ptrm1(:)    = 15.0_wp
-    veg_pool%heart_wood%nitrogen%ptrm1(:)  = 15.0_wp
-    veg_pool%labile%nitrogen%ptrm1(:)      = 15.0_wp
-    veg_pool%reserve%nitrogen%ptrm1(:)     = 15.0_wp
-    veg_pool%fruit%nitrogen%ptrm1(:)       = 15.0_wp
-    veg_pool%seed_bed%nitrogen%ptrm1(:)    = 15.0_wp
+    veg_pool%leaf%nitrogen          = 15.0_wp
+    veg_pool%fine_root%nitrogen     = 15.0_wp
+    veg_pool%coarse_root%nitrogen   = 15.0_wp
+    veg_pool%sap_wood%nitrogen      = 15.0_wp
+    veg_pool%heart_wood%nitrogen    = 15.0_wp
+    veg_pool%labile%nitrogen        = 15.0_wp
+    veg_pool%reserve%nitrogen       = 15.0_wp
+    veg_pool%fruit%nitrogen         = 15.0_wp
+    veg_pool%seed_bed%nitrogen      = 15.0_wp
 
 
     veg_pool%leaf%carbon      = veg_pool%leaf%carbon   + veg_pool%labile%carbon   + veg_pool%fine_root%carbon   + 10.0_wp

@@ -204,11 +204,8 @@ def replace_dollar_function(match):
             subset = 'sub'
             process = 'local'
         else:
-            print('quickfix for QUINCY process modules, using: sub and local')
-            subset = 'sub'
-            process = 'local'
-            # print('subset unspecified and no default')
-            # sys.exit()
+            print('subset unspecified and no default')
+            sys.exit()
     variable = match.group(2)
     if variable.find('(') > 0:
         var, index, dummy = re.split('(\(.*\))', variable)
