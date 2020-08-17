@@ -26,7 +26,7 @@
 MODULE mo_jsb4_forcing
 #ifndef __NO_JSBACH__
 
-  USE mo_jsb_time, ONLY: is_time_experiment_start
+  USE mo_jsb_time, ONLY: is_time_experiment_start, t_datetime
 
 #ifndef __ICON__
 
@@ -38,7 +38,7 @@ MODULE mo_jsb4_forcing
   !<<<
 
   ! Apparently in echam and icon
-  USE mo_math_constants,       ONLY: pi
+  USE mo_jsb_math_constants,   ONLY: pi
   USE mo_kind,                 ONLY: wp
   USE mo_exception,            ONLY: message, message_text, finish
   USE mo_util_string,          ONLY: tolower, int2string
@@ -229,12 +229,14 @@ CONTAINS
   !! @par History
   !! Used parts of jsbach3 mo_jsbalone_forcing: read_forcing / update_forcing and mo_jsbalone: update_driving  by Julia Nabel
   !!
-  SUBROUTINE get_interface_variables_from_external_forcing(model_id, ics, ice, nblks, sinlat, coslat, lon, evapo_act2pot_proc, &
+  SUBROUTINE get_interface_variables_from_external_forcing(model_id, ics, ice, nblks, current_datetime, &
+    & sinlat, coslat, lon, evapo_act2pot_proc, &
     & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, cos_zenith_angle, CO2_concentration, &
     & t_air_K, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down, &
     & swnir_srf_down, swpar_srf_down, fract_par_diffuse, press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch )
 
     INTEGER,  INTENT(IN)  :: model_id, ics, ice, nblks
+    TYPE(t_datetime), POINTER :: current_datetime
     REAL(wp), INTENT(IN)  :: sinlat(:,:)
     REAL(wp), INTENT(IN)  :: coslat(:,:)
     REAL(wp), INTENT(IN)  :: lon(:,:)
@@ -295,13 +297,13 @@ CONTAINS
     ! for temperature the variables used depend on the forcing frequency: tmin&tmax for daily data; t_air for timestep
     ALLOCATE(t_air(ice, nblks))
     IF(forcing_options%air_temperature_as_timestep) THEN
-      CALL get_data_and_update_field(nblks, ics, ice, model_id, forcing_input%air_temp, t_air)
+      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%air_temp, t_air)
     ELSE
       ALLOCATE(tmin_data(ice, nblks))
       ALLOCATE(tmax_data(ice, nblks))
 
-      CALL get_data_and_update_field(nblks, ics, ice, model_id, forcing_input%air_temp_min, tmin_data)
-      CALL get_data_and_update_field(nblks, ics, ice, model_id, forcing_input%air_temp_max, tmax_data)
+      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%air_temp_min, tmin_data)
+      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%air_temp_max, tmax_data)
       ! estimate temperature at time step from daily temperature maximum and temperature minimum
       CALL instantly_from_daily_temp_2(nblks, ice, lon, sinlat, coslat, tmin_data, tmax_data, next_date, t_air)
     ENDIF
@@ -309,7 +311,7 @@ CONTAINS
     t_air_K = t_air + tmelt
 
     ! --- precipitation
-    CALL get_data_and_update_field(nblks, ics, ice, model_id, forcing_input%precipitation, temporary_data1)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%precipitation, temporary_data1)
     ! convert if required
     IF(forcing_options%precip_in_mm_per_day) temporary_data1 = temporary_data1 * conv_prec_day
     ! compute rain and snow
@@ -329,7 +331,7 @@ CONTAINS
 
     ! --- compute bottom pressure
     model => get_model(model_id)
-    tile => model%Get_top_tile()
+    CALL model%Get_top_tile(tile)
     dsl4jsb_Get_memory(HYDRO_)
     DO iblk = 1, nblks
       ! get elevation
@@ -353,7 +355,7 @@ CONTAINS
 
     CASE(RH_)
       ALLOCATE(rel_humidity(ice, nblks))
-      CALL get_data_and_update_field(nblks, ics, ice, model_id, forcing_input%rel_humidity, rel_humidity)
+      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%rel_humidity, rel_humidity)
       ! check data
       hlp_r = MAXVAL(MAXVAL(rel_humidity,DIM=2))
       IF(hlp_r < 1._wp) THEN
@@ -388,7 +390,7 @@ CONTAINS
       ENDIF
       DEALLOCATE(rel_humidity)
     CASE(QAIR_)
-      CALL get_data_and_update_field(nblks, ics, ice, model_id, forcing_input%qair, q_air(:,:))
+      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%qair, q_air(:,:))
       ! constrain specific humidity to be lower than or equal to the saturation spec. humidity
       DO iblk = 1, nblks
         CALL sat_specific_humidity(ice, t_air_K(:,iblk), press_srf(:,iblk), sat_spec_humidity(:,iblk))
@@ -400,7 +402,7 @@ CONTAINS
     ! --- compute shortwave radiation
     day_of_year=day_in_year(next_date)
     ALLOCATE(rad_uv_down(ice, nblks))
-    CALL get_data_and_update_field(nblks, ics, ice, model_id, forcing_input%shortwave, temporary_data1)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%shortwave, temporary_data1)
     CALL shortwave_from_direct_shortwave(day_of_year, cos_zenith_angle, coslat, sinlat, press_srf, &
       & temporary_data1, rad_uv_down, swpar_srf_down, swnir_srf_down, fract_par_diffuse, help1, help2)
     ! jsb3 standalone: swvis_srf_down = rad_uv_down + rad_par_down (& rad_par_down = swpar_srf_down)
@@ -409,13 +411,13 @@ CONTAINS
 
     ! --- compute longwave radiation
     IF (forcing_input%longwave%frequency .EQ. TIMESTEP_) THEN
-      CALL get_data_and_update_field(nblks, ics, ice, model_id, forcing_input%longwave, lw_srf_down)
+      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%longwave, lw_srf_down)
     ELSE
       ! jsbach3 driver: diurnal longwave downward radiation is generated such that the average radiation matches the
       ! observations but the diurnal cycle follows temperature to help calculation of a correct
       ! net radiation flux. Note that reduces biases resulting from assuming a constant flux, but
       ! this introduces uncertainty due to biases in the assumed dial course of temperature
-      CALL get_data_and_update_field(nblks, ics, ice, model_id, forcing_input%longwave, temporary_data1)
+      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%longwave, temporary_data1)
 
       IF (forcing_options%air_temperature_as_timestep) THEN
         lw_srf_down = longwave_from_daily_longwave(temporary_data1(:,:), MINVAL(forcing_input%air_temp%data_read(:,:,:),DIM=3), &
@@ -426,11 +428,11 @@ CONTAINS
     ENDIF
 
     ! --- wind
-    CALL get_data_and_update_field(nblks, ics, ice, model_id, forcing_input%wind_speed, wind_air)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%wind_speed, wind_air)
     wind_10m = wind_air
 
     ! --- CO2 concentration
-    CALL get_data_and_update_field(nblks, ics, ice, model_id, forcing_input%CO2_concentr, CO2_concentration)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%CO2_concentr, CO2_concentration)
     ! and convert to correct unit
     CO2_concentration = CO2_concentration * forcing_options%conv_CO2_2_MassRatio
 
@@ -695,9 +697,10 @@ CONTAINS
   !! @par History
   !! First version by Julia Nabel (14.01.16)
   !!
-  SUBROUTINE get_data_and_update_field(nblks, ics, ice, model_id, forcing_input_variable, current_forcing_array)
+  SUBROUTINE get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input_variable, current_forcing_array)
 
     INTEGER,                   INTENT(IN)    :: nblks, ics, ice, model_id
+    TYPE(t_datetime), POINTER, INTENT(in)    :: current_datetime
     TYPE(input_variable_type), INTENT(INOUT) :: forcing_input_variable
     REAL(wp),                  INTENT(OUT)   :: current_forcing_array(:,:)
 
@@ -742,7 +745,7 @@ CONTAINS
 
     ! ----- CO2 ghg_scenario exception: in case of ghg_scenario a single file is used, which contains one CO2 value per year
     IF ((TRIM(forcing_input_variable%variable_name) .EQ. CO2_varname) .AND. (frequency .EQ. GHG_SCENARIO_)) THEN
-      IF(is_time_experiment_start() .OR. lresume) THEN
+      IF(is_time_experiment_start(current_datetime) .OR. lresume) THEN
         IF(my_process_is_stdio()) THEN
           ! in case of ghg_scenario the forcing_input_variable%file_name_prefix is expected to contain the whole filename
           input_file = jsb_netcdf_open_input(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)), model%grid_id)
@@ -757,7 +760,7 @@ CONTAINS
         ALLOCATE(forcing_input_variable%data_read(ice, nblks, time_steps_per_day))
       ENDIF
 
-      IF(new_year_forcing .OR. is_time_experiment_start() .OR. lresume) THEN
+      IF(new_year_forcing .OR. is_time_experiment_start(current_datetime) .OR. lresume) THEN
         IF(my_process_is_stdio()) THEN
           ! find current year in the timevalues
           currentTimeStep = 1
@@ -801,7 +804,7 @@ CONTAINS
     ! TODO: test in case of lresume
 
     ! --- if new current run or new file - get the timeseries of the forcing file and the current position in the timeseries
-    IF (new_year_forcing .OR. is_time_experiment_start() .OR. lresume) THEN
+    IF (new_year_forcing .OR. is_time_experiment_start(current_datetime) .OR. lresume) THEN
       IF(my_process_is_stdio()) THEN
         input_file = jsb_netcdf_open_input( &
           & trim(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) // TRIM(ADJUSTL(year_label)) // '.nc'), model%grid_id)
@@ -855,7 +858,7 @@ CONTAINS
     thisDayEnd = forcing_input_variable%currentDayEnd
 
     ! --- if its a new day or new run - read the data
-    IF (new_day_forcing .OR. is_time_experiment_start() .OR. lresume) THEN
+    IF (new_day_forcing .OR. is_time_experiment_start(current_datetime) .OR. lresume) THEN
       ! check timeseries
       IF(my_process_is_stdio()) THEN
         !Assertion: currentTimeStep needs to be contained in the file
@@ -1525,7 +1528,7 @@ CONTAINS
     IF (.NOT. forcing_options%forcing_set_ocean_to_constants) RETURN
 
     model => Get_model(model_id)
-    tile => model%Get_top_tile()
+    CALL model%Get_top_tile(tile)
 
     DO iblk = 1, nblks
       CALL tile%Get_fraction(ics, ice, iblk, fract=fract(:))

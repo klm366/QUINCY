@@ -16,7 +16,7 @@
 MODULE mo_jsb_model_init
 #ifndef __NO_JSBACH__
 
-  dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, FUEL_
+  dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, FUEL_, A2L_, VEG_
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
 
@@ -27,7 +27,7 @@ MODULE mo_jsb_model_init
   USE mo_kind,             ONLY: wp
   USE mo_exception,        ONLY: finish
   USE mo_jsb_parallel,     ONLY: Get_omp_thread, Is_omp_inside_serial
-  USE mo_jsb_time,         ONLY: is_time_restart
+  USE mo_jsb_time,         ONLY: is_time_restart, get_time_start
 
   IMPLICIT NONE
   PRIVATE
@@ -147,8 +147,10 @@ CONTAINS
     USE mo_sse_init,            ONLY: sse_init
     USE mo_hydro_init,          ONLY: hydro_init
     USE mo_rad_init,            ONLY: rad_init
-    !USE mo_assimi_init,         ONLY: assimi_init
+    USE mo_atm2land_init,       ONLY: atm2land_init
+    USE mo_assimi_init,         ONLY: assimi_init
     USE mo_pheno_init,          ONLY: pheno_init
+    USE mo_veg_init,            ONLY: veg_init
     USE mo_carbon_init,         ONLY: carbon_init
     USE mo_fuel_init,           ONLY: fuel_init
     !USE mo_disturb_init,        ONLY: disturb_init
@@ -182,72 +184,134 @@ CONTAINS
 
     dsl4jsb_Get_config(PHENO_)
 
-    !NOTE: JN changed the order of the processes
-    !- processes potentially changing the area of a tile are conducted first in the timestep.
-    !- PHENO processes were moved up: need to happen before C_NPP_pot_allocation for allometric considerations
-
-    !------------------------ tasks that can change area
-    !Disturbances happen on a daily basis and can lead to area changes when running with cohorts
-    IF (model%processes(FUEL_)%p%config%active) THEN
-      CALL model%Queue_task(FUEL_, "fuel")
-    END IF
-    IF (model%processes(DISTURB_)%p%config%active) THEN
-       CALL model%Queue_task(DISTURB_, "natural_disturbances")
-    END IF
-
-    !------------------------ tasks that do not change area
-    ! Temporary for testing ... should be in separate subroutine
-    CALL model%Queue_task(RAD_,    "surface_radiation")
-    CALL model%Queue_task(PHENO_,  "phenology")           ! JN moved phenology up - for allom it needs to happen
-                                                          ! before C_NPP_pot_allocation
-                                                          ! and with area changes it should happen before assimi
-                      ! --- before it was between humidity_scaling and foliage_projected_cover
-                      ! + prev comment: can be placed between the task "surface_radiation" and "asselin_filter"
-    CALL model%Queue_task(PHENO_,  "foliage_projected_cover")
-
-    CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
-    CALL model%Queue_task(HYDRO_,  "soil_properties")
-    CALL model%Queue_task(SEB_,    "surface_energy")
-    CALL model%Queue_task(HYDRO_,  "evaporation")
-    CALL model%Queue_task(SEB_,    "surface_fluxes")
-    IF (model%processes(ASSIMI_)%p%config%active) THEN
-      CALL model%Queue_task(RAD_,    "radiation_par")
-    END IF
-    CALL model%Queue_task(HYDRO_,  "surface_hydrology")
-    CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
-    CALL model%Queue_task(SSE_,    "soil_and_snow_properties")
-    CALL model%Queue_task(SSE_,    "soil_and_snow_temperature")
-    CALL model%Queue_task(HYDRO_,  "soil_hydrology")
+    !!---------------------------------------------------------------------------------------------
+    !! Define Task Queue 
+    !!   (Temporary for testing ... should be in separate subroutine !!)
+    !! 
+    !! Two Queues: default jsb4 & quincy
+    IF (.NOT. model%config%use_quincy) THEN
+      !NOTE: JN changed the order of the processes
+      !- processes potentially changing the area of a tile are conducted first in the timestep.
+      !- PHENO processes were moved up: need to happen before C_NPP_pot_allocation for allometric considerations
+  
+      !!------------------------ tasks that can change area
+      !! 
+      !Disturbances happen on a daily basis and can lead to area changes when running with cohorts
+      IF (model%processes(FUEL_)%p%config%active) THEN
+        CALL model%Queue_task(FUEL_, "fuel")
+      END IF
+      IF (model%processes(DISTURB_)%p%config%active) THEN
+         CALL model%Queue_task(DISTURB_, "natural_disturbances")
+      END IF
+  
+      !!------------------------ tasks that do not change area
+      !!
+      CALL model%Queue_task(RAD_,    "surface_radiation")
+      CALL model%Queue_task(PHENO_,  "phenology")           ! JN moved phenology up - for allom it needs to happen
+                                                            ! before C_NPP_pot_allocation
+                                                            ! and with area changes it should happen before assimi
+                        ! --- before it was between humidity_scaling and foliage_projected_cover
+                        ! + prev comment: can be placed between the task "surface_radiation" and "asselin_filter"
+      CALL model%Queue_task(PHENO_,  "foliage_projected_cover")
+      CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
+      CALL model%Queue_task(HYDRO_,  "soil_properties")
+      CALL model%Queue_task(SEB_,    "surface_energy")
+      CALL model%Queue_task(HYDRO_,  "evaporation")
+      CALL model%Queue_task(SEB_,    "surface_fluxes")
+      IF (model%processes(ASSIMI_)%p%config%active) THEN
+        CALL model%Queue_task(RAD_,    "radiation_par")
+      END IF
+      CALL model%Queue_task(HYDRO_,  "surface_hydrology")
+      CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
+      CALL model%Queue_task(SSE_,    "soil_and_snow_properties")
+      CALL model%Queue_task(SSE_,    "soil_and_snow_temperature")
+      CALL model%Queue_task(HYDRO_,  "soil_hydrology")
 #ifndef __NO_JSBACH_HD__
-    CALL model%Queue_task(HD_,     "hd_local_outflow")
+      CALL model%Queue_task(HD_,     "hd_local_outflow")
 #endif
-    CALL model%Queue_task(SEB_,    "snowmelt_correction")
-    IF (model%processes(ASSIMI_)%p%config%active) THEN
-      ! Normally called before update_canopy_cond_unstressed and update_assimilation
-      CALL model%Queue_task(ASSIMI_, "assimilation_scaling_factors")
-    END IF
-    IF (model%processes(ASSIMI_)%p%config%active) THEN
-      CALL model%Queue_task(ASSIMI_, "canopy_cond_unstressed")
-    ELSE
-      CALL model%Queue_task(HYDRO_,  "canopy_cond_unstressed")
-    END IF
-    CALL model%Queue_task(HYDRO_, "water_stress")
-    IF (model%processes(ASSIMI_)%p%config%active) THEN
-      CALL model%Queue_task(ASSIMI_, "canopy_cond_stressed")
-      CALL model%Queue_task(ASSIMI_, "assimilation")
-    ELSE
-      CALL model%Queue_task(HYDRO_,  "canopy_cond_stressed")
-    END IF
-    ! CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
-    IF (model%processes(CARBON_)%p%config%active) THEN
-       CALL model%Queue_task(CARBON_, "C_NPP_pot_allocation")
-    END IF
-    CALL model%Queue_task(TURB_,   "humidity_scaling")
-    CALL model%Queue_task(TURB_,   "surface_roughness")
-    ! Note: albedo is updated at the end of the time step, one time step before the radiation is updated in the atmosphere
-    CALL model%Queue_task(RAD_,    "albedo")
-    CALL model%Queue_task(HYDRO_,  "water_balance")
-    CALL model%Queue_task(SEB_,    "asselin_filter")      ! Should always be the last task
+      CALL model%Queue_task(SEB_,    "snowmelt_correction")
+      IF (model%processes(ASSIMI_)%p%config%active) THEN
+        ! Normally called before update_canopy_cond_unstressed and update_assimilation
+        CALL model%Queue_task(ASSIMI_, "assimilation_scaling_factors")
+      END IF
+      IF (model%processes(ASSIMI_)%p%config%active) THEN
+        CALL model%Queue_task(ASSIMI_, "canopy_cond_unstressed")
+      ELSE
+        CALL model%Queue_task(HYDRO_,  "canopy_cond_unstressed")
+      END IF
+      CALL model%Queue_task(HYDRO_, "water_stress")
+      IF (model%processes(ASSIMI_)%p%config%active) THEN
+        CALL model%Queue_task(ASSIMI_, "canopy_cond_stressed")
+        CALL model%Queue_task(ASSIMI_, "assimilation")
+      ELSE
+        CALL model%Queue_task(HYDRO_,  "canopy_cond_stressed")
+      END IF
+      ! CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
+      IF (model%processes(CARBON_)%p%config%active) THEN
+         CALL model%Queue_task(CARBON_, "C_NPP_pot_allocation")
+      END IF
+      CALL model%Queue_task(TURB_,   "humidity_scaling")
+      CALL model%Queue_task(TURB_,   "surface_roughness")
+      ! Note: albedo is updated at the end of the time step, one time step before the radiation is updated in the atmosphere
+      CALL model%Queue_task(RAD_,    "albedo")
+      CALL model%Queue_task(HYDRO_,  "water_balance")
+      CALL model%Queue_task(SEB_,    "asselin_filter")      ! Should always be the last task
+    
+    !!---------------------------------------------------------------------------------------------
+    !! quincy
+    !!  usecase must be set to: "jsbach_pfts" (which assumes ASSIMI_ to be active)      (this is not tested)
+    !!  CARBON_ may be active                                                           (this is not tested)
+    !!  l_forestRegrowth is assumed to be .FALSE.                                       (this is not tested)
+    ELSE IF (model%config%use_quincy) THEN
+      !!------------------------ tasks that simply set fluxes back to zero at the beginning of each timestep
+      !!
+      CALL model%Queue_task(ASSIMI_, "reset_assimi_fluxes")         !! quincy
+      CALL model%Queue_task(VEG_,    "reset_veg_fluxes")            !! quincy
+      
+      !!------------------------ tasks that can change area (e.g. disturbance & fuel)
+      !! 
+      ! !Disturbances happen on a daily basis and can lead to area changes when running with cohorts
+      ! IF (model%processes(FUEL_)%p%config%active) THEN
+      !   CALL model%Queue_task(FUEL_, "fuel")
+      ! END IF
+      ! IF (model%processes(DISTURB_)%p%config%active) THEN
+      !    CALL model%Queue_task(DISTURB_, "natural_disturbances")
+      ! END IF
+  
+      !!------------------------ tasks that do not change area
+      !!
+      CALL model%Queue_task(RAD_,    "sw_radiation_q_")             !! quincy (sw radiation and albedo)
+      CALL model%Queue_task(RAD_,    "surface_radiation")
+      CALL model%Queue_task(PHENO_,  "phenology_q_")                !! quincy
+      CALL model%Queue_task(PHENO_,  "foliage_projected_cover")
+      CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")      ! may be called two times
+      CALL model%Queue_task(HYDRO_,  "soil_properties")
+      CALL model%Queue_task(SEB_,    "surface_energy")
+      CALL model%Queue_task(HYDRO_,  "evaporation")
+      CALL model%Queue_task(SEB_,    "surface_fluxes")
+      CALL model%Queue_task(HYDRO_,  "surface_hydrology")
+      CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")      ! may be called two times
+      CALL model%Queue_task(SSE_,    "soil_and_snow_properties")
+      CALL model%Queue_task(SSE_,    "soil_and_snow_temperature")
+      CALL model%Queue_task(HYDRO_,  "soil_hydrology")
+      CALL model%Queue_task(SEB_,    "snowmelt_correction")
+      CALL model%Queue_task(HYDRO_,  "water_stress")
+      CALL model%Queue_task(ASSIMI_, "update_canopy_fluxes")        !! quincy
+      CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
+      CALL model%Queue_task(TURB_,   "humidity_scaling")
+      CALL model%Queue_task(TURB_,   "surface_roughness")
+      ! Note: albedo is updated at the end of the time step, one time step before the radiation is updated in the atmosphere
+      CALL model%Queue_task(RAD_,    "albedo")
+      CALL model%Queue_task(HYDRO_,  "water_balance")
+      CALL model%Queue_task(SEB_,    "asselin_filter")              ! Should always be the last task
+      
+      ! averaging variables in time at the end of the timestep
+      CALL model%Queue_task(PHENO_,  "time_average_phenology")      !! quincy
+    ENDIF
+    !! Task Queue created
+    !!---------------------------------------------------------------------------------------------    
+    
+    ! debug message after creating task queue
     IF (debug_on()) THEN
       CALL print_model(model)
       CALL model%Print_actions()
@@ -289,9 +353,13 @@ CONTAINS
         CALL turb_init(tile)
       END IF
 
-      ! Initialize PHENO_ before HYDRO_
+      ! Initialize PHENO_ before HYDRO_ and VEG_
       IF (one_of(tile%process_action(PHENO_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
         CALL pheno_init(tile)
+      END IF
+
+      IF (one_of(tile%process_action(VEG_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        CALL veg_init(tile)
       END IF
 
       ! HYDRO_ needs to be initialized before SSE_
@@ -303,10 +371,15 @@ CONTAINS
         CALL sse_init(tile)
       END IF
 
-      ! IF (one_of(tile%process_action(ASSIMI_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
-      !   CALL assimi_init_bc(tile)
-      !   CALL assimi_init_ic(tile)
-      ! END IF
+      IF (one_of(tile%process_action(A2L_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        CALL atm2land_init(tile)
+      END IF
+      
+      IF (one_of(tile%process_action(ASSIMI_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        CALL assimi_init(tile)
+        ! CALL assimi_init_bc(tile)
+        ! CALL assimi_init_ic(tile)
+      END IF
 
       IF (one_of(tile%process_action(CARBON_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
         CALL carbon_init(tile)
@@ -452,7 +525,7 @@ CONTAINS
     END IF
 
 !#ifdef _OPENACC
-!    IF (.NOT. is_time_restart()) CALL model%cpu_to_gpu()
+!    IF (.NOT. is_time_restart(get_time_start())) CALL model%cpu_to_gpu()
 !#endif
 
   END SUBROUTINE jsbach_init
