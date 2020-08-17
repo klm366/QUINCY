@@ -259,14 +259,15 @@ CONTAINS
 
     ! Iterate over tiles and call initialization if necessary
     CALL model%Reset_tiles()
-    tile => model%Get_top_tile()
+    CALL model%Get_top_tile(tile)
+
     IF (.NOT. ASSOCIATED(tile)) &
       & CALL finish(TRIM(routine), 'Top tile not set')
 
     DO WHILE (ASSOCIATED(tile))
 
       IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
-        tile => model%Goto_next_tile()
+        CALL model%Goto_next_tile(tile)
         CYCLE
       END IF
 
@@ -327,13 +328,13 @@ CONTAINS
       END IF
 #endif
 
-      tile => model%Goto_next_tile()
-
+      CALL model%Goto_next_tile(tile)
     END DO
 
     ! Iterate over tiles again and set lct fractions (after ALL tile fractions have been set above)
     CALL model%Reset_tiles()
-    tile => model%Get_top_tile()
+    CALL model%Get_top_tile(tile)
+
     IF (.NOT. ASSOCIATED(tile)) &
       & CALL finish(TRIM(routine), 'Top tile not set')
 
@@ -342,7 +343,7 @@ CONTAINS
     DO WHILE (ASSOCIATED(tile))
 
       IF (.NOT. tile%visited(no_omp_thread) .AND. tile%Has_children()) THEN
-        tile => model%Goto_next_tile()
+        CALL model%Goto_next_tile(tile)
         CYCLE
       END IF
 
@@ -371,9 +372,10 @@ CONTAINS
           IF (ilct > 1) CALL finish(TRIM(routine), 'Leave tiles should only have one LCT')
           tile%lcts(1)%fract(:,:) = 1._wp        ! Leaves have only one LCT
         END IF
+        !$acc update device(tile%lcts(ilct)%fract)
       END DO
 
-      tile => model%Goto_next_tile()
+      CALL model%Goto_next_tile(tile)
 
     END DO
 
@@ -381,33 +383,34 @@ CONTAINS
 
     ! Iterate over tiles again and initialize hierarchical structure for memories and variables
     CALL model%Reset_tiles()
-    tile => model%Get_top_tile()
+    CALL model%Get_top_tile(tile)
     IF (.NOT. ASSOCIATED(tile)) &
       & CALL finish(TRIM(routine), 'Top tile not set')
 
     DO WHILE (ASSOCIATED(tile))
 
       IF (.NOT. tile%visited(no_omp_thread) .AND. tile%Has_children()) THEN
-        tile => model%Goto_next_tile()
+        CALL model%Goto_next_tile(tile)
         CYCLE
       END IF
 
       CALL tile%Init_vars()
+      CALL tile%Cache_GPU_pointers()
 
-      tile => model%Goto_next_tile()
+      CALL model%Goto_next_tile(tile)
 
     END DO
 
     ! Iterate over tiles and crossckeck tile structure
     CALL model%Reset_tiles()
-    tile => model%Get_top_tile()
+    CALL model%Get_top_tile(tile)
     IF (.NOT. ASSOCIATED(tile)) &
       & CALL finish(TRIM(routine), 'Top tile not set')
 
     DO WHILE (ASSOCIATED(tile))
 
       IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
-        tile => model%Goto_next_tile()
+        CALL model%Goto_next_tile(tile)
         CYCLE
       END IF
 
@@ -419,35 +422,38 @@ CONTAINS
             & CALL finish(TRIM(routine), 'Must use phenology climatology on general, non-PFT VEG tile '//TRIM(tile%name))
       END IF
 
-      tile => model%Goto_next_tile()
+      CALL model%Goto_next_tile(tile)
 
     END DO
     !
     !
     IF (debug_on()) THEN
+
       ! Iterate over tiles again and print tile information (after ALL tiles have been initialized above)
       CALL model%Reset_tiles()
-      tile => model%Get_top_tile()
+
+      CALL model%Get_top_tile(tile)
+
       IF (.NOT. ASSOCIATED(tile)) &
         & CALL finish(TRIM(routine), 'Top tile not set')
 
       DO WHILE (ASSOCIATED(tile))
 
         IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
-          tile => model%Goto_next_tile()
+          CALL model%Goto_next_tile(tile)
           CYCLE
         END IF
 
         CALL tile%Print()
 
-        tile => model%Goto_next_tile()
+        CALL model%Goto_next_tile(tile)
 
       END DO
     END IF
 
-#ifdef _OPENACC
-    IF (.NOT. is_time_restart()) CALL model%cpu_to_gpu()
-#endif
+!#ifdef _OPENACC
+!    IF (.NOT. is_time_restart()) CALL model%cpu_to_gpu()
+!#endif
 
   END SUBROUTINE jsbach_init
 
@@ -480,14 +486,14 @@ CONTAINS
 
     ! Iterate over tiles and call initialization if necessary
     CALL model%Reset_tiles()
-    tile => model%Get_top_tile()
+    CALL model%Get_top_tile(tile)
     IF (.NOT. ASSOCIATED(tile)) &
       & CALL finish(TRIM(routine), 'Top tile not set')
 
     DO WHILE (ASSOCIATED(tile))
 
       IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
-        tile => model%Goto_next_tile()
+        call model%Goto_next_tile(tile)
         CYCLE
       END IF
 
@@ -496,7 +502,7 @@ CONTAINS
         IF (dsl4jsb_Config(CARBON_)%read_cpools) CALL carbon_read_cpools(tile)
       END IF
 
-      tile => model%Goto_next_tile()
+      CALL model%Goto_next_tile(tile)
 
     END DO
 

@@ -1,0 +1,222 @@
+!
+! This file was automatically generated from JSBACH source file:
+!    src/radiation/mo_rad_init.f90
+! with md5 hash: 5ea8ba3d0ee35fd23497c3079db1f471
+!
+!>
+!! @brief Initialization of the the radiation memory.
+!!
+!! @author
+!!  Rainer Schneck, MPI-M Hamburg
+!!
+!! @par Revision History
+!! First version by Rainer Schneck (2015-10-09)
+!!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
+MODULE mo_rad_init
+#ifndef __NO_JSBACH__
+
+  USE mo_kind,              ONLY: wp
+  USE mo_exception,         ONLY: message
+  USE mo_jsb_control,       ONLY: debug_on
+
+  USE mo_jsb_model_class,   ONLY: t_jsb_model
+  USE mo_jsb_class,         ONLY: Get_model
+  USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
+  USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
+
+  USE mo_jsb_process_class, ONLY: rad_
+  USE mo_rad_config_class, ONLY: t_rad_config
+  USE mo_rad_memory_class, ONLY: t_rad_memory
+
+  IMPLICIT NONE
+  PRIVATE
+
+  PUBLIC :: rad_init
+
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_rad_init'
+
+CONTAINS
+
+  !
+  !> Intialize radiation process (after memory has been set up)
+  !
+  SUBROUTINE rad_init(tile)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':rad_init'
+
+    CALL rad_init_bc(tile)
+    CALL rad_init_ic(tile)
+
+  END SUBROUTINE rad_init
+
+  SUBROUTINE rad_init_bc(tile)
+    !-----------------------------------------------------------------------
+    !  ARGUMENTS
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+
+    !-----------------------------------------------------------------------
+    !  LOCAL VARIABLES
+    !TYPE(t_jsb_model),       POINTER :: model
+    TYPE(t_rad_memory), POINTER :: rad__mem
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':rad_init_bc'
+
+    !model => get_model(tile%owner_model_id)
+
+    !-----------------------------------------------------------------------
+    ! CONTENT
+
+    ! Get radiation memory of the tile
+    SELECT TYPE (mm => tile%mem(rad_)%p); TYPE IS (t_rad_memory); rad__mem => mm ; END SELECT
+
+    IF (.NOT. ASSOCIATED(rad__mem)) RETURN
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Setting  radiation boundary conditions for tile '//TRIM(tile%name))
+
+    ! R: nothing to do in the moment ...
+
+  END SUBROUTINE rad_init_bc
+
+  RECURSIVE SUBROUTINE rad_init_ic(tile)
+
+    USE mo_rad_constants,  ONLY: AlbedoCanopySnow_age, AlbedoCanopySnow_temp, AlbedoVisInitial, AlbedoNirInitial, &
+      &                          AlbedoGlacierVisMax, AlbedoGlacierNirMax, AlbedoLakeWater
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+
+    TYPE(t_jsb_model),         POINTER :: model
+    TYPE(t_rad_config), POINTER :: rad__conf
+    TYPE(t_rad_memory), POINTER :: rad__mem
+
+    REAL(wp), POINTER ::         &
+      & return_pointer  (:,  :) !, & !< temporary pointer
+      !& return_pointer3d(:,:,:)
+    REAL(WP) :: &
+      albedo_age_weight
+
+    TYPE(t_input_file) :: input_file
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':rad_init_ic'
+
+    model => get_model(tile%owner_model_id)
+
+    ! Get radiation memory of the tile
+    SELECT TYPE (mm => tile%mem(rad_)%p); TYPE IS (t_rad_memory); rad__mem => mm ; END SELECT
+
+    ! Get radiation config
+    SELECT TYPE (cc => model%processes(rad_)%p%config); TYPE IS (t_rad_config) ; rad__conf => cc ; END SELECT
+
+    IF (.NOT. rad__conf%active) RETURN
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Initializing radiation memory for tile '//TRIM(tile%name))
+
+    ! Initialize physical state
+    !
+    input_file = jsb_netcdf_open_input(TRIM(rad__conf%bc_filename), model%grid_id)
+
+    ! TBD: adapt names of variables in input files to names in memory
+
+    ! background albedo (without snow or canopy)
+    return_pointer => input_file%Read_2d( &
+      & variable_name='albedo',           &
+      & fill_array = rad__mem%alb_background%ptr)
+    rad__mem%alb_background%ptr(:,:) = &
+      MERGE(rad__mem%alb_background%ptr(:,:), 0._wp, rad__mem%alb_background%ptr(:,:) >= 0._wp)
+
+    IF (tile%is_lake) THEN
+      rad__mem%alb_vis%ptr(:,:) = AlbedoLakeWater
+      rad__mem%alb_nir%ptr(:,:) = AlbedoLakeWater
+    ELSE IF (tile%is_glacier) THEN
+      rad__mem%alb_vis%ptr(:,:)     = AlbedoGlacierVisMax
+      rad__mem%alb_nir%ptr(:,:)     = AlbedoGlacierNirMax
+      rad__mem%alb_vis_lnd%ptr(:,:) = AlbedoGlacierVisMax
+      rad__mem%alb_nir_lnd%ptr(:,:) = AlbedoGlacierNirMax
+    ELSE
+      rad__mem%alb_vis%ptr(:,:)     = AlbedoVisInitial
+      rad__mem%alb_nir%ptr(:,:)     = AlbedoNirInitial
+      rad__mem%alb_vis_lnd%ptr(:,:) = AlbedoVisInitial
+      rad__mem%alb_nir_lnd%ptr(:,:) = AlbedoNirInitial
+    END IF
+
+    !$acc update device(rad__mem%alb_vis%ptr(:,:), &
+    !$acc rad__mem%alb_nir%ptr(:,:), &
+    !$acc rad__mem%alb_vis_lnd%ptr(:,:), &
+    !$acc rad__mem%alb_nir_lnd%ptr(:,:), &
+    !$acc rad__mem%alb_background%ptr(:,:))
+
+    ! soil albedo
+    IF (tile%contains_soil) THEN
+      return_pointer => input_file%Read_2d( &
+        & variable_name='albedo_soil_vis',  &
+        & fill_array = rad__mem%alb_vis_soil%ptr)
+      rad__mem%alb_vis_soil%ptr(:,:) = &
+        MERGE(rad__mem%alb_vis_soil%ptr(:,:), 0._wp, rad__mem%alb_vis_soil%ptr(:,:) >= 0._wp)
+
+      return_pointer => input_file%Read_2d( &
+        & variable_name='albedo_soil_nir',  &
+        & fill_array = rad__mem%alb_nir_soil%ptr)
+      rad__mem%alb_nir_soil%ptr(:,:) = &
+        MERGE(rad__mem%alb_nir_soil%ptr(:,:), 0._wp, rad__mem%alb_nir_soil%ptr(:,:) >= 0._wp)
+      !$acc update device(rad__mem%alb_nir_soil%ptr(:,:), rad__mem%alb_vis_soil%ptr(:,:))
+    END IF
+
+    ! Note: If use_alb_canopy=FALSE and PFTs are used, alb_vis_can and alb_nir_can will be different on the tiles
+    !       where the rad process runs (PFTs => values from lctlib) and the parent tiles (values from ini file). These
+    !       two variables are not aggregated at the moment and should therefore only be used on the tiles where the
+    !       rad process runs! (TODO)
+    IF (tile%contains_vegetation) THEN
+      ! Get canopy albedo
+      IF (rad__conf%use_alb_canopy .OR. tile%lcts(1)%lib_id == 0) THEN
+        return_pointer => input_file%Read_2d( &
+          & variable_name='albedo_veg_vis',   &
+          & fill_array = rad__mem%alb_vis_can%ptr)
+        rad__mem%alb_vis_can%ptr(:,:) = &
+          & MERGE(rad__mem%alb_vis_can%ptr(:,:), 0._wp, rad__mem%alb_vis_can%ptr(:,:) >= 0._wp)
+      ELSE
+        rad__mem%alb_vis_can%ptr(:,:) = model%lctlib(tile%lcts(1)%lib_id)%AlbedoCanopyVIS
+      END IF
+      IF (rad__conf%use_alb_canopy .OR. tile%lcts(1)%lib_id == 0) THEN
+        return_pointer => input_file%Read_2d( &
+          & variable_name='albedo_veg_nir',   &
+          & fill_array = rad__mem%alb_nir_can%ptr)
+        rad__mem%alb_nir_can%ptr(:,:) = &
+          & MERGE(rad__mem%alb_nir_can%ptr(:,:), 0._wp, rad__mem%alb_nir_can%ptr(:,:) >= 0._wp)
+      ELSE
+        rad__mem%alb_nir_can%ptr(:,:) = model%lctlib(tile%lcts(1)%lib_id)%AlbedoCanopyNIR
+      END IF
+      !$acc update device(rad__mem%alb_nir_can%ptr(:,:), rad__mem%alb_vis_can%ptr(:,:))
+
+      ! The albedo of snow on canopy:
+      ! R: In the model the albedo of snow is weighted with albedo_age_weight between two albedo schemes (age and temperature).
+      !    For snow on soil this is done with calculations of snow age and temperature and with differentiation between vis and nir
+      !    (see mo_rad_process in subroutine calc_snow_albedo).
+      !    However, for snow ON CANOPY the albedo from the age scheme and the albedo from the temperature scheme are simply assumed
+      !    to be constant (see the following lines).
+      !    Therefore as all inputs to this equation are constants, it was not necessary to calculate it for each time step and block
+      !    again (as it was in JSBACH3 in mo_land_surface: update_albedo_snowage_temp). Therefore it put it here and not in
+      !    merge_albedos_of_vegtile.
+      albedo_age_weight = rad__conf%albedo_age_weight
+
+      ! Weight between age and temperature impact on snow albedo for snow on canopy
+      rad__conf%AlbedoCanopySnow = &
+        & albedo_age_weight * AlbedoCanopySnow_age + (1._wp - albedo_age_weight) * AlbedoCanopySnow_temp
+
+    END IF
+
+    CALL input_file%Close()
+
+    ! avoid compiler warnings about pointers not being dereferenced
+    IF (ASSOCIATED(return_pointer)) CONTINUE
+    NULLIFY(return_pointer)
+
+  END SUBROUTINE rad_init_ic
+
+#endif
+END MODULE mo_rad_init

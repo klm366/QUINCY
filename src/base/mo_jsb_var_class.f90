@@ -42,6 +42,7 @@ MODULE mo_jsb_var_class
     REAL(dp)                   :: missval
     LOGICAL                    :: l_aggregate_all = .FALSE. ! When aggregating, consider fractions of all child tiles even
                                                             ! of those where variable doesn't exist
+    LOGICAL                    :: is_in_output  = .FALSE.   ! Whether variable is requested to be written to output
     LOGICAL                    :: is_in_restart = .FALSE.   ! Whether variable is requested to be written to restart file
   END TYPE t_jsb_var
 
@@ -79,7 +80,7 @@ MODULE mo_jsb_var_class
 !#pragma GCC diagnostic pop
 
   TYPE t_jsb_var_p
-    CLASS(t_jsb_var), POINTER :: p
+    CLASS(t_jsb_var), POINTER :: p => NULL()
   END TYPE t_jsb_var_p
 
 !!$  INTERFACE t_jsb_var

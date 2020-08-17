@@ -113,8 +113,6 @@ CONTAINS
 
     !dsl4jsb_Get_config(HD_)
 
-    IF (ASSOCIATED(mem%hd_mask%ptr)) RETURN
-
     CALL jsb_add_var( mem, 'hd_mask', mem%hd_mask,     &
       & hgrid, surface,                                                                    &
       & t_cf('hd_mask', '', 'HD_ mask: -1 ocean, 0 ocean inflow, 1 land, 2 internal drainage'),                  &

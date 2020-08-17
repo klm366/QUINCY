@@ -36,8 +36,8 @@ MODULE mo_jsb_memory_class
     INTEGER :: owner_model_id = 0
     INTEGER :: owner_proc_id = 0
     INTEGER :: no_of_children = 0
-    CLASS(t_jsb_memory_p), POINTER :: children(:) => NULL()
-    CLASS(t_jsb_memory)  , POINTER :: parent => NULL()
+    TYPE(t_jsb_memory_p), POINTER :: children(:) => NULL()
+    CLASS(t_jsb_memory) , POINTER :: parent => NULL()
     INTEGER, ALLOCATABLE :: owner_tile_path(:)
     CHARACTER(len=10)    :: owner_tile_name
     INTEGER :: max_no_of_vars = 0
@@ -48,8 +48,7 @@ MODULE mo_jsb_memory_class
     LOGICAL :: in_var_groups = .FALSE.
   CONTAINS
     PROCEDURE (Init_memory), DEFERRED, PASS(mem) :: Init
-    PROCEDURE                                    :: Get_var_real2d
-    PROCEDURE                                    :: Get_var_real3d
+    PROCEDURE                                    :: Get_var
     PROCEDURE                                    :: Get_var_position
     PROCEDURE                                    :: Collect_var_real2d  ! Collect var from its child tiles
                                                                         ! R: Note, we do not want to keep a "var collection" in the memory
@@ -83,7 +82,7 @@ MODULE mo_jsb_memory_class
 
 CONTAINS
 
-  FUNCTION Get_var_real2d(this, name) RESULT(var_ptr)
+  FUNCTION Get_var(this, name) RESULT(var_ptr)
 
     CLASS(t_jsb_memory),     INTENT(in) :: this
     CHARACTER(len=*),        INTENT(in) :: name
@@ -91,13 +90,12 @@ CONTAINS
 
     INTEGER :: i
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Get_var_real2d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Get_var'
 
     IF (.NOT. ASSOCIATED(this%vars(1)%p)) CALL finish(TRIM(routine), 'Invalid vector of vars')
 
     var_ptr => NULL()
     DO i=1,this%no_of_vars
-      IF (this%vars(i)%p%type /= REAL2D) CYCLE
       IF (TRIM(this%vars(i)%p%name) == TRIM(name)) THEN
         var_ptr => this%vars(i)%p
         EXIT
@@ -110,34 +108,7 @@ CONTAINS
     !IF (.NOT. ASSOCIATED(var_ptr)) &
     !  & CALL finish(TRIM(routine), 'Variable '//TRIM(name)//' on tile '//TRIM(this%owner_tile_name)//' not found')
 
-  END FUNCTION Get_var_real2d
-
-  FUNCTION Get_var_real3d(this, name) RESULT(var_ptr)
-
-    CLASS(t_jsb_memory),     INTENT(in) :: this
-    CHARACTER(len=*),        INTENT(in) :: name
-    CLASS(t_jsb_var),        POINTER    :: var_ptr
-
-    INTEGER :: i
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Get_var_real3d'
-
-    var_ptr => NULL()
-    DO i=1,this%no_of_vars
-      IF (this%vars(i)%p%type /= REAL3D) CYCLE
-      IF (TRIM(this%vars(i)%p%name) == TRIM(name)) THEN
-        var_ptr => this%vars(i)%p
-        EXIT
-      END IF
-    END DO
-
-    ! Note: Not finding the variable in this memory, i.e. returning NULL(), should only happen because
-    !       the variable belongs to an LCT that's not handled by this tile.
-
-    !IF (.NOT. ASSOCIATED(var_ptr)) &
-    !  & CALL finish(TRIM(routine), 'Variable '//TRIM(name)//' on tile '//TRIM(this%owner_tile_name)//' not found')
-
-  END FUNCTION Get_var_real3d
+  END FUNCTION Get_var
 
   FUNCTION Get_var_position(this, name) RESULT(pos)
 
@@ -166,7 +137,6 @@ CONTAINS
     !  & CALL finish(TRIM(routine), 'Variable '//TRIM(name)//' on tile '//TRIM(this%owner_tile_name)//' not found')
 
   END FUNCTION Get_var_position
-
 
   FUNCTION Collect_var_real2d(this, ics, ice, iblk, no_children,  var) RESULT(var_collected)
 
@@ -247,6 +217,7 @@ CONTAINS
     REAL(wp), allocatable               :: var_collected(:,:)
     CHARACTER(len=*), PARAMETER :: routine = modname//':Average_over_children'
 
+    ALLOCATE(var_collected(ice-ics+1,no_children))
     ! Collect corresponding vars of subtiles
     DO i=1,no_children
       IF ( .NOT. ASSOCIATED(this%children(i)%p%vars(var%child_idx(i))%p) ) THEN
@@ -256,6 +227,7 @@ CONTAINS
     END DO
     ! Note, this works because the fract_st sum over DIM=2 is always = 1 !
     var_averaged(:) = SUM( var_collected(:,:) * fract_st(:,:) , DIM=2)
+    DEALLOCATE(var_collected)
 
   END FUNCTION Average_over_children_real2d
 
