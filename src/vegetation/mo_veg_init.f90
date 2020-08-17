@@ -53,7 +53,11 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_jsb_process_class,     ONLY: VEG_, PHENO_
+    USE mo_jsb_pool_class,        ONLY: ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15 
     USE mo_veg_constants,         ONLY: itree
+
+    ! Use of pools
+    dsl4jsb_Use_pools(VEG_) t_veg_main_pool, t_veg_tissues_pool, t_veg_elements_pool
 
     ! Use of process memories
     dsl4jsb_Use_memory(PHENO_)
@@ -74,6 +78,8 @@ CONTAINS
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(VEG_)
+    dsl4jsb_Def_pool(t_veg_tissues_pool)  :: veg_growth
+    dsl4jsb_Def_pool(t_veg_tissues_pool)  :: veg_litterfall
     ! Declare pointers to variables in memory
     ! PHENO_
     dsl4jsb_Real2D_onDomain    :: lai
@@ -111,6 +117,9 @@ CONTAINS
     ! Get process memories
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(VEG_)
+    ! Get pools
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_growth,        veg_growth)
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_litterfall,    veg_litterfall)
     ! Get process variables (Set pointers to variables in memory)
     ! PHENO_
     dsl4jsb_Get_var2D_onDomain(PHENO_, lai)                           ! in
@@ -172,6 +181,21 @@ CONTAINS
          height(:,:)                = 1.0_wp
       ENDIF
     ENDIF
+
+    ! -------------------------------------------------------------------------
+    ! testing pools
+    veg_growth%leaf           = 30.0_wp
+    veg_growth%fine_root      = 30.0_wp
+    veg_growth%coarse_root    = 30.0_wp
+    veg_growth%sap_wood       = 30.0_wp
+    veg_growth%heart_wood     = 30.0_wp
+    veg_growth%labile         = 30.0_wp
+    veg_growth%reserve        = 30.0_wp
+    veg_growth%fruit          = 30.0_wp
+    veg_growth%seed_bed       = 30.0_wp
+    
+    veg_growth%seed_bed       = veg_growth%labile + veg_growth%sap_wood + veg_growth%heart_wood
+    veg_growth%heart_wood     = veg_growth%heart_wood + veg_growth%heart_wood
 
   END SUBROUTINE veg_init
 

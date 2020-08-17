@@ -147,6 +147,7 @@ CONTAINS
 !     dsl4jsb_Get_memory(RAD_)
 !     dsl4jsb_Get_memory(PHENO_)
 !     dsl4jsb_Get_memory(SSE_)
+    ! Get pools
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_pool,          veg_pool)
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_growth,        veg_growth)
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_litterfall,    veg_litterfall)
@@ -228,13 +229,22 @@ CONTAINS
     veg_establishment                   = 3.0_wp
     veg_reserve_use                     = 5.0_wp
     veg_growth%leaf                     = 25.0_wp
+    IF (iblk == 3) THEN
+      veg_exudation                     = 4.0_wp
+      veg_establishment                 = 6.0_wp
+      veg_reserve_use                   = 10.0_wp
+      veg_growth%leaf                   = 20.0_wp
+    ENDIF
+
     veg_growth%fruit                    = veg_growth%leaf
     veg_growth%reserve                  = veg_growth%fruit
 
     veg_exudation                       = veg_exudation + veg_establishment + veg_reserve_use
     veg_growth%fine_root                = veg_growth%leaf + veg_growth%fruit + veg_growth%reserve
 
-
+    IF (iblk /= 3) THEN
+      veg_growth%heart_wood             = REAL(iblk, wp)    ! is initiated with 60
+    ENDIF
 
   END SUBROUTINE update_veg_dynamics
 
