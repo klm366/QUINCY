@@ -192,6 +192,7 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
 
     !! tested for VEG_ pools & fluxes !!
+    ! variables
     veg_pool%leaf%carbon          = 20.0_wp
     veg_pool_leaf%carbon          = 10.0_wp
     
@@ -214,7 +215,6 @@ CONTAINS
     veg_pool%fruit%nitrogen         = 15.0_wp
     veg_pool%seed_bed%nitrogen      = 15.0_wp
 
-
     veg_pool%leaf%carbon      = veg_pool%leaf%carbon   + veg_pool%labile%carbon   + veg_pool%fine_root%carbon   + 10.0_wp
     veg_pool%leaf%nitrogen    = veg_pool%leaf%nitrogen + veg_pool%labile%nitrogen + veg_pool%fine_root%nitrogen + 10.0_wp
 
@@ -223,6 +223,10 @@ CONTAINS
 
     veg_pool%leaf%carbon14    = veg_pool%labile%carbon * veg_pool%reserve%carbon 
     veg_pool%leaf%phosphorus  = veg_pool%labile%carbon * veg_pool%reserve%carbon + veg_pool%reserve%nitrogen
+
+    veg_pool%fruit%phosphorus = veg_pool%fruit%carbon * veg_pool%fruit%nitrogen - veg_pool%fruit%nitrogen * 2.0_wp
+    veg_pool%fruit%carbon13   = veg_pool%fruit%nitrogen / veg_pool%fruit%carbon + veg_pool%fruit%carbon + 10.0_wp
+
 
     ! pools
     veg_exudation                       = 2.0_wp
