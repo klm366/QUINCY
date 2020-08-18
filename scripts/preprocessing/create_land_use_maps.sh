@@ -85,7 +85,7 @@ BC_LAND_FRAC_SOURCE_FILE="/pool/data/ICON/grids/private/mpim/icon_preprocessing/
                          # Nevertheless, this file should use the grid defined under NEW_GRID_FILE below
                          # coupled ocean:   e.g. /pool/data/ICON/coupled_input_temp/aloy_pre04.ff/Land/r0002/bc_land_frac_11pfts_1976.nc 
                          # uncoupled ocean: e.g. /pool/data/ICON/grids/private/mpim/icon_preprocessing/source/preliminary_land/r0002/R02B04_G/land/bc_land_frac_11pfts_1976.nc
-T255_DEBUG_FILES="no"    # yes = t255grid files for debugging are created. You can use them to regard the fields with ncview. Time-consuming. 
+T255_DEBUG_FILES="no"    # yes = t255grid files for debugging are created. You can use them to view the fields with ncview. Time-consuming. 
                          # Note, differences may also occur from the remapping!
 SOURCE_GRID="${INFILES_GRID}grid"   # For remapping: Name of the Grid of the LUH2 Map-Infiles
 NEW_GRID_FILE="/pool/data/ICON/grids/private/mpim/icon_preprocessing/source/grids/icon_grid_0005_R02B04_G.nc"                       # for AMIP
@@ -191,13 +191,20 @@ for INFILE_NAME in ${LIST_INFILE_NAME} ; do
 
      # Create new fraction file in a JS4 readable format
      if [ "${SEPARATE_CROPS}" == "yes" ] ; then
-        ${CDO}  -merge  MAPS_PFT01_FRACT.nc    MAPS_L_renamed_000002_cover_fract  MAPS_L_renamed_000003_cover_fract  MAPS_L_renamed_000004_cover_fract  MAPS_L_renamed_000005_cover_fract  MAPS_L_renamed_000006_cover_fract  MAPS_L_renamed_000007_cover_fract  MAPS_L_renamed_000008_cover_fract  MAPS_L_renamed_000009_cover_fract  MAPS_L_renamed_000010_cover_fract    CROP-C3_FRACT.nc  CROP-C4_FRACT.nc  MAPS_GLACIER_FRACT.nc        MAPS_${INFILE_NAME_BASE}_JS4-format.nc
+        ${CDO}  -merge  MAPS_PFT01_FRACT.nc \
+                        MAPS_L_renamed_000002_cover_fract  MAPS_L_renamed_000003_cover_fract  MAPS_L_renamed_000004_cover_fract  MAPS_L_renamed_000005_cover_fract  MAPS_L_renamed_000006_cover_fract \
+                        MAPS_L_renamed_000007_cover_fract  MAPS_L_renamed_000008_cover_fract  MAPS_L_renamed_000009_cover_fract  MAPS_L_renamed_000010_cover_fract \
+                        CROP-C3_FRACT.nc  CROP-C4_FRACT.nc  MAPS_GLACIER_FRACT.nc        MAPS_${INFILE_NAME_BASE}_JS4-format.nc
      else
-        ${CDO}  -merge  MAPS_PFT01_FRACT.nc  MAPS_L_renamed_000002_cover_fract  MAPS_L_renamed_000003_cover_fract  MAPS_L_renamed_000004_cover_fract  MAPS_L_renamed_000005_cover_fract  MAPS_L_renamed_000006_cover_fract  MAPS_L_renamed_000007_cover_fract  MAPS_L_renamed_000008_cover_fract  MAPS_L_renamed_000009_cover_fract  MAPS_L_renamed_000010_cover_fract  MAPS_L_renamed_000011_cover_fract   MAPS_GLACIER_FRACT.nc     MAPS_${INFILE_NAME_BASE}_JS4-format.nc
+        ${CDO}  -merge  MAPS_PFT01_FRACT.nc  \
+                        MAPS_L_renamed_000002_cover_fract  MAPS_L_renamed_000003_cover_fract  MAPS_L_renamed_000004_cover_fract  MAPS_L_renamed_000005_cover_fract  MAPS_L_renamed_000006_cover_fract \
+                        MAPS_L_renamed_000007_cover_fract  MAPS_L_renamed_000008_cover_fract  MAPS_L_renamed_000009_cover_fract  MAPS_L_renamed_000010_cover_fract  MAPS_L_renamed_000011_cover_fract  \
+                        MAPS_GLACIER_FRACT.nc     MAPS_${INFILE_NAME_BASE}_JS4-format.nc
      fi
 
      # Sum all tiles up. Used later as land mask and also as a control file (should be 1 on each land grid box).
-     ${CDO}  -expr,'summe=fract_pft01+fract_pft02+fract_pft03+fract_pft04+fract_pft05+fract_pft06+fract_pft07+fract_pft08+fract_pft09+fract_pft10+fract_pft11+fract_glac'    MAPS_${INFILE_NAME_BASE}_JS4-format.nc     MAPS_${INFILE_NAME_BASE}_JS4-FORMAT_SUM.nc
+     ${CDO}  -expr,'summe=fract_pft01+fract_pft02+fract_pft03+fract_pft04+fract_pft05+fract_pft06+fract_pft07+fract_pft08+fract_pft09+fract_pft10+fract_pft11+fract_glac' \
+             MAPS_${INFILE_NAME_BASE}_JS4-format.nc     MAPS_${INFILE_NAME_BASE}_JS4-FORMAT_SUM.nc
 
      # Clean up
      mv   INFILE_MAPS.nc  ZWERG1  ZWERG2  MAPS_L_*  MAPS_GLACIER_FRACT.nc   MAPS_PFT01_FRACT.nc   MAPS_NOTSEA.nc    tempfiles/
