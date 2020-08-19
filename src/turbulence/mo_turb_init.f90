@@ -191,4 +191,3 @@ CONTAINS
   END SUBROUTINE turb_init_ic
 
 #endif
-END MODULE mo_turb_init
