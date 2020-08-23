@@ -86,6 +86,7 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER         :: model
     TYPE(t_lctlib_element), POINTER         :: lctlib           !< land-cover-type library - parameter across pft's
     ! REAL(wp), DIMENSION(options%nc)         :: fpc              !< current foliage projective cover
+    REAL(wp), DIMENSION(options%nc)         :: hlp1
     INTEGER                                 :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_dynamics'
     ! ---------------------------
@@ -227,6 +228,17 @@ CONTAINS
     veg_pool%fruit%phosphorus = veg_pool%fruit%carbon * veg_pool%fruit%nitrogen - veg_pool%fruit%nitrogen * 2.0_wp
     veg_pool%fruit%carbon13   = veg_pool%fruit%nitrogen / veg_pool%fruit%carbon + veg_pool%fruit%carbon + 10.0_wp
 
+    veg_pool%reserve%carbon   = veg_pool%reserve%carbon + 5.0_wp + veg_pool%reserve%nitrogen
+
+    veg_pool%fine_root%carbon   = 3.0_wp * veg_pool%fine_root%nitrogen * 2.0_wp
+    hlp1(:)                     = 2.0_wp
+    veg_pool%fine_root%nitrogen = veg_pool%fine_root%nitrogen + hlp1(:)
+    veg_pool%fine_root%nitrogen = hlp1(:) + veg_pool%fine_root%nitrogen
+    veg_pool%fine_root%nitrogen = veg_pool%fine_root%nitrogen * hlp1(:)
+    hlp1(:)                     = 8.0_wp
+    veg_pool%fine_root%nitrogen = veg_pool%fine_root%nitrogen - hlp1(:)
+    hlp1(:)                     = 5.0_wp
+    veg_pool%fine_root%nitrogen = veg_pool%fine_root%nitrogen / hlp1(:)
 
     ! pools
     veg_exudation                       = 2.0_wp
