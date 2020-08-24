@@ -54,7 +54,9 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
+    USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
+    USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,              ONLY: Get_vgrid
     USE mo_jsb_process_class,     ONLY: SB_   ! A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
     USE mo_jsb_pool_class,        ONLY: ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15 
     USE mo_jsb_math_constants,    ONLY: dtime, eps8
@@ -73,7 +75,10 @@ CONTAINS
 
     TYPE(t_jsb_model),      POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib               !< land-cover-type library - parameter across pft's
+    TYPE(t_jsb_vgrid),      POINTER       :: vgrid_soil_sb        !< Vertical grid
+    INTEGER                               :: nsoil_sb             !< number of soil layers as used by the SB_ process (see SSE_ config)
     INTEGER                               :: iblk, ics, ice, nc
+    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: hlp1
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_pools'
 
     ! Declare process configuration, memory, and pool-structure Pointers
@@ -105,6 +110,10 @@ CONTAINS
 
     model         => Get_model(tile%owner_model_id)
     lctlib        => model%lctlib(tile%lcts(1)%lib_id)
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+    nsoil_sb      =  vgrid_soil_sb%n_levels
+
+    ALLOCATE(hlp1(nc, nsoil_sb))
 
     dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_memory(SB_)
@@ -138,13 +147,16 @@ CONTAINS
     total_flux_nitrogen15       = 0.5_wp
 
 !! pools
+    hlp1(:,:)                   = 2.0_wp
     sb_pool%dom%carbon          = 5.0_wp
     sb_pool%fungi%carbon        = 5.0_wp
     sb_pool%residue%carbon      = 5.0_wp
+    sb_pool%microbial%carbon    = 0.0_wp
 
     sb_pool%dom%nitrogen        = 6.0_wp
     sb_pool%fungi%nitrogen      = 6.0_wp
     sb_pool%residue%nitrogen    = 6.0_wp
+    sb_pool%microbial%nitrogen  = 10.0_wp
 
     sb_pool%dom%carbon          = sb_pool%dom%carbon   + sb_pool%fungi%carbon   + sb_pool%residue%carbon   + 10.0_wp
     sb_pool%dom%nitrogen        = sb_pool%dom%nitrogen + sb_pool%fungi%nitrogen + sb_pool%residue%nitrogen + 10.0_wp
@@ -154,6 +166,12 @@ CONTAINS
 
     sb_pool%dom%carbon14        = sb_pool%fungi%carbon * sb_pool%residue%carbon 
     sb_pool%dom%phosphorus      = sb_pool%fungi%carbon * sb_pool%residue%carbon + sb_pool%residue%nitrogen
+    
+    sb_pool%microbial%carbon    = hlp1(:,:) * sb_pool%microbial%nitrogen * 2.0_wp
+    sb_pool%microbial%carbon    = 2.0_wp * sb_pool%microbial%carbon      + hlp1(:,:)
+    sb_pool%microbial%carbon    = (2.0_wp + sb_pool%microbial%carbon)    / hlp1(:,:)
+    sb_pool%microbial%carbon    = sb_pool%microbial%carbon               - hlp1(:,:)  ! == 40
+        
 
   END SUBROUTINE update_sb_pools
 
