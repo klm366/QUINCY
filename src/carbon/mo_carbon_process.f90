@@ -823,9 +823,9 @@ CONTAINS
     & damaged_fract,                  & ! in
     & LeafLit_coef,                   & ! in
     & WoodLit_coef,                   & ! in
-    & c_green,                        & ! inout, optional
-    & c_woods,                        & ! inout, optional
-    & c_reserve,                      & ! inout, optional
+    & c_green,                        & ! inout
+    & c_woods,                        & ! inout
+    & c_reserve,                      & ! inout
     & cflux_dist_greenreserve_2_soil, & ! inout
     & cflux_dist_woods_2_soil,        & ! inout
     & c_acid_ag1,                     & ! inout

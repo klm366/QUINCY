@@ -21,7 +21,7 @@ MODULE mo_turb_init
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: message
-  USE mo_jsb_control,       ONLY: debug_on
+  USE mo_jsb_control,       ONLY: debug_on, jsbach_runs_standalone
 
   dsl4jsb_Use_processes TURB_
   dsl4jsb_Use_config(TURB_)
@@ -90,25 +90,32 @@ CONTAINS
 
     ! Initialize parameters
     !
-    IF (debug_on()) CALL message(TRIM(routine), &
-         'Initializing turb memory for tile '//TRIM(tile%name)//' from '//TRIM(dsl4jsb_Config(TURB_)%bc_filename))
+    ! rough_m from ini file is not used in update_roughness, it's computed there. However, the atmosphere
+    ! also reads this variable from this file and uses it to compute the turbulent exchange parameters for
+    ! the first time step which are then passed to JSBACH.
+    ! In the standalone model, these exchange parameters are computed in mo_forcing using rough_m and then
+    ! passed to the first call of JSBACH. Therefore, we need rough_m from the ini file for the standalone model.
+    IF (jsbach_runs_standalone()) THEN
+      IF (debug_on()) CALL message(TRIM(routine), &
+          'Initializing turb memory for tile '//TRIM(tile%name)//' from '//TRIM(dsl4jsb_Config(TURB_)%bc_filename))
 
-    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(TURB_)%bc_filename), model%grid_id)
+      input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(TURB_)%bc_filename), model%grid_id)
 
-    ! Surface roughness length
-    ptr_2D => input_file%Read_2d(         &
-      & variable_name='roughness_length',         &
-      & fill_array = dsl4jsb_var_ptr(TURB_,rough_m))
-    dsl4jsb_var2D_onDomain(TURB_,rough_m) = &
-      MERGE(dsl4jsb_var2D_onDomain(TURB_,rough_m), 1._wp, dsl4jsb_var2D_onDomain(TURB_,rough_m) > 0._wp)
+      ! Surface roughness length
+      ptr_2D => input_file%Read_2d(         &
+        & variable_name='roughness_length',         &
+        & fill_array = dsl4jsb_var_ptr(TURB_,rough_m))
+      dsl4jsb_var2D_onDomain(TURB_,rough_m) = &
+        MERGE(dsl4jsb_var2D_onDomain(TURB_,rough_m), 1._wp, dsl4jsb_var2D_onDomain(TURB_,rough_m) > 0._wp)
 
-    !$acc update device(dsl4jsb_var2D_onDomain(TURB_,rough_m))
+      !$acc update device(dsl4jsb_var2D_onDomain(TURB_,rough_m))
 
-    CALL input_file%Close()
+      CALL input_file%Close()
 
-    ! avoid compiler warnings about pointers not being dereferenced
-    IF (ASSOCIATED(ptr_2D)) CONTINUE
-    NULLIFY(ptr_2D)
+      avoid compiler warnings about pointers not being dereferenced
+      IF (ASSOCIATED(ptr_2D)) CONTINUE
+      NULLIFY(ptr_2D)
+    END IF
 
   END SUBROUTINE turb_init_ic
 
