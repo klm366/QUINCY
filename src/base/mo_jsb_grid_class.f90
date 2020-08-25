@@ -44,8 +44,8 @@ MODULE mo_jsb_grid_class
     CHARACTER(LEN=filename_max)   :: filename = ''
     INTEGER                       :: ntotal = 0          !< Number of cells on this PE
     INTEGER                       :: nland = 0
-    REAL(wp), POINTER             :: lon(:,:) => NULL()
-    REAL(wp), POINTER             :: lat(:,:) => NULL()
+    REAL(wp), POINTER             :: lon(:,:) => NULL()  !< Longitudes of grid in degrees
+    REAL(wp), POINTER             :: lat(:,:) => NULL()  !< Latitudes of grid in degrees
     REAL(wp), POINTER             :: area(:,:) => NULL()
     LOGICAL,  POINTER             :: lsm(:,:) => NULL()
     REAL(wp), POINTER             :: lsf(:,:) => NULL()
