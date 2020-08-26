@@ -25,7 +25,7 @@ MODULE mo_jsb_process_class
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_jsb_process, t_jsb_process_p, Get_process_name
+  PUBLIC :: t_jsb_process, t_jsb_process_p, Get_process_name, Get_process_id
   PUBLIC :: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, DYNVEG_
   PUBLIC :: SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_, Get_action_name
 
