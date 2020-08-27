@@ -40,7 +40,8 @@ MODULE mo_hydro_config_class
       & scheme_stom_cond     !< Scheme to use for computation of stomatal conductance (echam5 only for now)
     LOGICAL               :: &
       & l_organic,           & !< Use organic component of soil layers
-      & l_glac_in_soil         !< Treat glacier as part of soil, not separate glacier tile
+      & l_glac_in_soil,      & !< Treat glacier as part of soil, not separate glacier tile
+      & read_from_file         !< T: Read boundry condition & initial condition from files, F: use prescribed value
   CONTAINS
     PROCEDURE             :: Init => Init_hydro_config
   END type t_hydro_config
@@ -64,7 +65,7 @@ CONTAINS
     REAL(wp)                    :: w_skin_max
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
     CHARACTER(len=10)           :: scheme_stom_cond
-    LOGICAL                     :: l_organic, l_glac_in_soil
+    LOGICAL                     :: l_organic, l_glac_in_soil, read_from_file
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
@@ -77,7 +78,7 @@ CONTAINS
       & w_soil_wilt_fract,          &
       & scheme_stom_cond,           &
       & l_organic,                  &
-      & l_glac_in_soil
+      & l_glac_in_soil, read_from_file
 
     INTEGER :: nml_handler, nml_unit, istat
     TYPE(t_input_file) :: input_file
@@ -103,6 +104,7 @@ CONTAINS
     scheme_stom_cond  = 'echam5'
     l_organic         = .FALSE.
     l_glac_in_soil    = .FALSE.
+    read_from_file    = .TRUE.
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -113,6 +115,7 @@ CONTAINS
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
     config%bc_sso_filename     = bc_sso_filename
+    config%read_from_file      = read_from_file
 
     config%w_skin_max          = w_skin_max
     CALL message(TRIM(routine), 'Maximum content of soil skin reservoir: '//TRIM(real2string(w_skin_max)))
@@ -137,22 +140,35 @@ CONTAINS
 
     IF (.NOT. active) RETURN
 
-    input_file = jsb_netcdf_open_input(ic_filename)
+    IF ( read_from_file ) THEN
 
-    ptr_1D => input_file%Read_1d(variable_name='soillev')    ! Depth of layer bottom
-    nsoil = SIZE(ptr_1D)
+      input_file = jsb_netcdf_open_input(ic_filename)
 
-    IF (l_organic .AND. nsoil < 3) &
-      & CALL finish(TRIM(routine), 'At least three soil layers required for using organic soil component')
+      ptr_1D => input_file%Read_1d(variable_name='soillev')    ! Depth of layer bottom
+      nsoil = SIZE(ptr_1D)
 
-    ALLOCATE(depths(nsoil+1))
-    ALLOCATE(mids(nsoil))
-    depths(1) = 0._wp
-    depths(2:nsoil+1) = ptr_1D(1:nsoil)
-    mids(1:nsoil) = (depths(1:nsoil) + depths(2:nsoil+1)) / 2._wp
-    DEALLOCATE(ptr_1D)
+      IF (l_organic .AND. nsoil < 3) &
+        & CALL finish(TRIM(routine), 'At least three soil layers required for using organic soil component')
 
-    CALL input_file%Close()
+      ALLOCATE(depths(nsoil+1))
+      ALLOCATE(mids(nsoil))
+      depths(1) = 0._wp
+      depths(2:nsoil+1) = ptr_1D(1:nsoil)
+      mids(1:nsoil) = (depths(1:nsoil) + depths(2:nsoil+1)) / 2._wp
+      DEALLOCATE(ptr_1D)
+
+      CALL input_file%Close()
+
+    ELSE
+
+      nsoil = 5
+      ALLOCATE(depths(nsoil+1))
+      ALLOCATE(mids(nsoil))
+      depths(1) = 0._wp
+      depths(2:nsoil+1) = (/0.065, 0.319, 1.232, 4.134, 9.834/)
+      mids(1:nsoil) = (depths(1:nsoil) + depths(2:nsoil+1)) / 2._wp
+
+    END IF
 
     soil_w  => new_vgrid('soil_depth_water', ZAXIS_DEPTH_BELOW_LAND, nsoil, &
       & levels  = mids                 (1:nsoil  ),                         &

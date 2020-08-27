@@ -45,9 +45,10 @@ MODULE mo_rad_config_class
                                       !   TRUE: soil albedo includes the albedo of the litter cover above it
                                       !   FALSE soil albedo ignores the albedo of the litter cover above it
 
-      & use_alb_canopy                !< Only for vegetation tiles:
+      & use_alb_canopy,            &  !< Only for vegetation tiles:
                                       !   TRUE:  canopy albedo is taken from bc_land_phys.nc file
                                       !   FALSE: canopy albedo is taken from lctlib file
+      & read_from_file                !< T: Read boundry condition & initial condition from files, F: use prescribed value
     CHARACTER(len=10) :: &
       & use_alb_soil_organic_C        !< For vegetation and bare soil tiles:
                                       !   if linear: the albedo of soil without covering litter but with carbon in it
@@ -93,11 +94,13 @@ CONTAINS
     LOGICAL                     :: use_alb_soil_scheme
     LOGICAL                     :: use_alb_canopy
     REAL(wp)                    :: albedo_age_weight
+    LOGICAL                     :: read_from_file
 
     NAMELIST /jsb_rad_nml/            &
          active,                      &
          ic_filename,                 &
          bc_filename,                 &
+         read_from_file,              &
          use_alb_veg_simple,          &
          use_alb_mineralsoil_const,   &
          use_alb_soil_organic_C,      &
@@ -116,6 +119,7 @@ CONTAINS
     active                    = .TRUE.
     bc_filename               = 'bc_land_rad.nc'  !R: gibts im Moment noch nicht
     ic_filename               = 'ic_land_rad.nc'  !R: gibts im Moment noch nicht
+    read_from_file            = .TRUE.
     use_alb_veg_simple        = .FALSE.
     use_alb_mineralsoil_const = .FALSE.
     use_alb_soil_organic_C    = ''
@@ -136,6 +140,7 @@ CONTAINS
     config%active                    = active
     config%ic_filename               = ic_filename
     config%bc_filename               = bc_filename
+    config%read_from_file            = read_from_file
     config%use_alb_veg_simple        = use_alb_veg_simple
     config%use_alb_mineralsoil_const = use_alb_mineralsoil_const
     config%use_alb_soil_organic_C    = use_alb_soil_organic_C

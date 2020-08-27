@@ -29,6 +29,7 @@ MODULE mo_turb_config_class
   PUBLIC :: t_turb_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_turb_config
+     LOGICAL   :: read_from_file !< T: Read boundry condition & initial condition from files, F: use prescribed value
    CONTAINS
      PROCEDURE :: Init => Init_turb_config
   END type t_turb_config
@@ -47,13 +48,14 @@ CONTAINS
 
     CLASS(t_turb_config), INTENT(inout) :: config
 
-    LOGICAL                     :: active
+    LOGICAL                     :: active, read_from_file
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
 
     NAMELIST /jsb_turb_nml/      &
          active,                 &
          ic_filename,            &
-         bc_filename
+         bc_filename,            &
+         read_from_file
 
     INTEGER :: nml_handler, nml_unit, istat
 
@@ -65,6 +67,7 @@ CONTAINS
     active              = .TRUE.
     bc_filename         = 'bc_land_phys.nc'
     ic_filename         = 'ic_land_phys.nc'
+    read_from_file      = .TRUE.
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -76,6 +79,7 @@ CONTAINS
     config%active              = active
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
+    config%read_from_file      = read_from_file
 
   END SUBROUTINE Init_turb_config
 

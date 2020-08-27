@@ -54,6 +54,7 @@ CONTAINS
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init'
 
@@ -103,8 +104,8 @@ CONTAINS
 
     model => get_model(tile%owner_model_id)
     grid   => Get_grid(model%grid_id)
-    nproma = grid%Get_nproma()
-    nblks  = grid%Get_nblks()
+    nproma = grid%nproma
+    nblks  = grid%nblks
 
     ALLOCATE( &
       & pheno_init_vars%lai_mon      (nproma, nblks, 0:13), &
@@ -118,48 +119,70 @@ CONTAINS
     IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting phenology init vars from ' &
       &                          //TRIM(dsl4jsb_Config(PHENO_)%bc_filename))
 
-    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(PHENO_)%bc_filename), model%grid_id)
+    IF ( dsl4jsb_Config(PHENO_)%read_from_file ) THEN
 
-    ! Leaf area index climatology
-    IF (debug_on()) CALL message(TRIM(routine), 'reading lai_clim ...')
-    ptr_mon => input_file%Read_2d_time(    &
-      & variable_name='lai_clim')
-    ptr_mon(:,:,:) = MERGE(ptr_mon(:,:,:), 0._wp, ptr_mon(:,:,:) > 0._wp)
-    pheno_init_vars%lai_mon(:,:,1:12) = ptr_mon(:,:,1:12)
-    pheno_init_vars%lai_mon(:,:,0   ) = ptr_mon(:,:,12  )
-    pheno_init_vars%lai_mon(:,:,13  ) = ptr_mon(:,:,1   )
-    DEALLOCATE(ptr_mon)
+      input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(PHENO_)%bc_filename), model%grid_id)
 
-    ! Foliage projected cover climatology
-    IF (debug_on()) CALL message(TRIM(routine), 'reading veg_fract ...')
-    ptr_mon => input_file%Read_2d_time(    &
-      & variable_name='veg_fract')
-    ptr_mon(:,:,:) = MERGE(ptr_mon(:,:,:), 0._wp, ptr_mon(:,:,:) > 0._wp)
-    pheno_init_vars%fract_fpc_mon(:,:,1:12) = ptr_mon(:,:,1:12)
-    pheno_init_vars%fract_fpc_mon(:,:,0   ) = ptr_mon(:,:,12  )
-    pheno_init_vars%fract_fpc_mon(:,:,13  ) = ptr_mon(:,:,1   )
-    DEALLOCATE(ptr_mon)
+      ! Leaf area index climatology
+      IF (debug_on()) CALL message(TRIM(routine), 'reading lai_clim ...')
+      ptr_mon => input_file%Read_2d_time(    &
+        & variable_name='lai_clim')
+      ptr_mon(:,:,:) = MERGE(ptr_mon(:,:,:), 0._wp, ptr_mon(:,:,:) > 0._wp)
+      pheno_init_vars%lai_mon(:,:,1:12) = ptr_mon(:,:,1:12)
+      pheno_init_vars%lai_mon(:,:,0   ) = ptr_mon(:,:,12  )
+      pheno_init_vars%lai_mon(:,:,13  ) = ptr_mon(:,:,1   )
+      DEALLOCATE(ptr_mon)
 
-    ! Forest fraction
-    ! @todo: only used for use_alb_veg_simple=.TRUE.
-    IF (debug_on()) CALL message(TRIM(routine), 'reading forest_fract ...')
-    ptr_2D => input_file%Read_2d(      &
-      & variable_name='forest_fract',  &
-      & fill_array = pheno_init_vars%fract_forest)
-    ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+      ! Foliage projected cover climatology
+      IF (debug_on()) CALL message(TRIM(routine), 'reading veg_fract ...')
+      ptr_mon => input_file%Read_2d_time(    &
+        & variable_name='veg_fract')
+      ptr_mon(:,:,:) = MERGE(ptr_mon(:,:,:), 0._wp, ptr_mon(:,:,:) > 0._wp)
+      pheno_init_vars%fract_fpc_mon(:,:,1:12) = ptr_mon(:,:,1:12)
+      pheno_init_vars%fract_fpc_mon(:,:,0   ) = ptr_mon(:,:,12  )
+      pheno_init_vars%fract_fpc_mon(:,:,13  ) = ptr_mon(:,:,1   )
+      DEALLOCATE(ptr_mon)
 
-    CALL input_file%Close()
+      ! Forest fraction
+      ! @todo: only used for use_alb_veg_simple=.TRUE.
+      IF (debug_on()) CALL message(TRIM(routine), 'reading forest_fract ...')
+      ptr_2D => input_file%Read_2d(      &
+        & variable_name='forest_fract',  &
+        & fill_array = pheno_init_vars%fract_forest)
+      ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
 
-    input_file = jsb_netcdf_open_input(TRIM(model%config%fract_filename), model%grid_id)     ! Temporary
+      CALL input_file%Close()
 
-    ! Maximum foliage projected cover
-    IF (debug_on()) CALL message(TRIM(routine), 'reading veg_ratio_max ...')
-    ptr_2D => input_file%Read_2d(      &
-      & variable_name='veg_ratio_max', &
-      & fill_array = pheno_init_vars%fract_fpc_max)
-    ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+      input_file = jsb_netcdf_open_input(TRIM(model%config%fract_filename), model%grid_id)     ! Temporary
 
-    CALL input_file%Close()
+      ! Maximum foliage projected cover
+      IF (debug_on()) CALL message(TRIM(routine), 'reading veg_ratio_max ...')
+      ptr_2D => input_file%Read_2d(      &
+        & variable_name='veg_ratio_max', &
+        & fill_array = pheno_init_vars%fract_fpc_max)
+      ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+
+      CALL input_file%Close()
+
+    ELSE
+
+      ! Leaf area index climatology
+      pheno_init_vars%lai_mon(:,:,1:12) = 1._wp
+      pheno_init_vars%lai_mon(:,:,0   ) = 1._wp
+      pheno_init_vars%lai_mon(:,:,13  ) = 1._wp
+
+      ! Foliage projected cover climatology
+      pheno_init_vars%fract_fpc_mon(:,:,1:12) = 1._wp
+      pheno_init_vars%fract_fpc_mon(:,:,0   ) = 1._wp
+      pheno_init_vars%fract_fpc_mon(:,:,13  ) = 1._wp
+
+      ! Forest fraction
+      pheno_init_vars%fract_forest = 0._wp
+
+      ! Maximum foliage projected cover
+      pheno_init_vars%fract_fpc_max = 1.0_wp
+
+    END IF
 
   END SUBROUTINE pheno_read_init_vars
 

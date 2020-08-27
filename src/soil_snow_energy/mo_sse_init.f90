@@ -109,8 +109,8 @@ CONTAINS
 
     model => get_model(tile%owner_model_id)
     grid  => get_grid(model%grid_id)
-    nproma = grid%Get_nproma()
-    nblks  = grid%Get_nblks()
+    nproma = grid%nproma
+    nblks  = grid%nblks
     soil_e => Get_vgrid('soil_depth_energy')
 
     ALLOCATE(                                          &
@@ -127,38 +127,49 @@ CONTAINS
 
     IF (debug_on()) CALL message(TRIM(routine), 'Reading soil energy boundary conditions for tile '//TRIM(tile%name))
 
-    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SSE_)%bc_filename), model%grid_id)
+    IF ( dsl4jsb_Config(SSE_)%read_from_file ) THEN
 
-    ! Thermal diffusivity of soil
-    ptr_2D => input_file%Read_2d(                    &
-      & variable_name='fao')
-    ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
-    sse_init_vars%fao(:,:) = MAX(REAL(LBOUND(fao_thermal_diff,1),wp), MIN(REAL(UBOUND(fao_thermal_diff,1),wp), ptr_2D(:,:)))
+      input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SSE_)%bc_filename), model%grid_id)
 
-    input_file = jsb_netcdf_open_input(dsl4jsb_Config(SSE_)%bc_filename, model%grid_id)
+      ! Thermal diffusivity of soil
+      ptr_2D => input_file%Read_2d(                    &
+        & variable_name='fao')
+      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
+      sse_init_vars%fao(:,:) = MAX(REAL(LBOUND(fao_thermal_diff,1),wp), MIN(REAL(UBOUND(fao_thermal_diff,1),wp), ptr_2D(:,:)))
 
-    ! Volumetric heat capacity of dry soil [J/(m^3*K)]
-    ptr_2D => input_file%Read_2d(         &
-      & variable_name='heat_capacity',            &
-      & fill_array = sse_init_vars%vol_heat_cap)
-    ptr_2D(:,:) = MERGE(ptr_2D(:,:), 2.e6_wp, ptr_2D(:,:) > 0._wp)
+      input_file = jsb_netcdf_open_input(dsl4jsb_Config(SSE_)%bc_filename, model%grid_id)
 
-    ! Heat conductivity of mineral soil
-    ptr_2D => input_file%Read_2d(         &
-      & variable_name='heat_conductivity',         &
-      & fill_array = sse_init_vars%heat_cond)
-    ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0.2_wp, ptr_2D(:,:) > 0._wp)
+      ! Volumetric heat capacity of dry soil [J/(m^3*K)]
+      ptr_2D => input_file%Read_2d(         &
+        & variable_name='heat_capacity',            &
+        & fill_array = sse_init_vars%vol_heat_cap)
+      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 2.e6_wp, ptr_2D(:,:) > 0._wp)
 
-    CALL input_file%Close()
+      ! Heat conductivity of mineral soil
+      ptr_2D => input_file%Read_2d(         &
+        & variable_name='heat_conductivity',         &
+        & fill_array = sse_init_vars%heat_cond)
+      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0.2_wp, ptr_2D(:,:) > 0._wp)
 
-    input_file = jsb_netcdf_open_input(dsl4jsb_Config(SSE_)%ic_filename, model%grid_id)
+      CALL input_file%Close()
 
-    ! Read climatological surface temperature
-    ptr_3D => input_file%Read_2d_time( &
-      & variable_name='surf_temp')
-    sse_init_vars%t_srf_mon(:,:,:) = MERGE(ptr_3D, 280._wp, ptr_3D > 0._wp)
+      input_file = jsb_netcdf_open_input(dsl4jsb_Config(SSE_)%ic_filename, model%grid_id)
 
-    CALL input_file%Close()
+      ! Read climatological surface temperature
+      ptr_3D => input_file%Read_2d_time( &
+        & variable_name='surf_temp')
+      sse_init_vars%t_srf_mon(:,:,:) = MERGE(ptr_3D, 280._wp, ptr_3D > 0._wp)
+
+      CALL input_file%Close()
+
+    ELSE
+
+      sse_init_vars%fao = 3._wp
+      sse_init_vars%vol_heat_cap = 2239573.0_wp
+      sse_init_vars%heat_cond    = 6.246_wp
+      sse_init_vars%t_srf_mon    = 300._wp
+
+    END IF
 
   END SUBROUTINE sse_read_init_vars
 

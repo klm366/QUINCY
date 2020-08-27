@@ -28,6 +28,7 @@ MODULE mo_pheno_config_class
 
   TYPE, EXTENDS(t_jsb_config) :: t_pheno_config
     LOGICAL :: l_forestRegrowth ! If TRUE, the maxLAI is derived from biomass via allometric relationships
+    LOGICAL :: read_from_file     !< T: Read boundry condition & initial condition from files, F: use prescribed value
     CHARACTER(len=15) :: scheme   !< Phenology scheme to use ('logrop', 'climatology')
      !LOGICAL :: first_call_phenology_this_day  ! TRUE marks if a new day has just started and update_phenology is called for the top tile
     CONTAINS
@@ -44,7 +45,7 @@ CONTAINS
 
     CLASS(t_pheno_config), INTENT(inout) :: config
 
-    LOGICAL :: active, l_forestRegrowth
+    LOGICAL :: active, l_forestRegrowth, read_from_file
     CHARACTER(len=15) :: scheme
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
 
@@ -53,7 +54,8 @@ CONTAINS
       & l_forestRegrowth,     &
       & scheme,               &
       & ic_filename,          &
-      & bc_filename
+      & bc_filename,          &
+      & read_from_file 
 
     INTEGER :: nml_handler, nml_unit, istat
 
@@ -67,6 +69,7 @@ CONTAINS
     scheme              = 'logrop'
     bc_filename         = 'bc_land_phenology.nc'
     ic_filename         = 'ic_land_phenology.nc'
+    read_from_file      = .TRUE.
     !first_call_phenology_this_day = .FALSE.
 
     ! Read namelist
@@ -81,6 +84,7 @@ CONTAINS
     config%scheme              = TRIM(scheme)
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
+    config%read_from_file      = read_from_file
 
     CALL close_nml(nml_handler)
 

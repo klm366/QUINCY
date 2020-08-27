@@ -92,6 +92,7 @@ MODULE mo_jsb_tile_class
                                                                    !! must be either "fract[_max]_"//tile%name, or specified by
                                                                    !! fract_varname.
     CHARACTER(LEN=20)                      :: fract_varname        !< Name of variable containing fractions for this tile
+    LOGICAL                                :: read_from_file
     LOGICAL,                ALLOCATABLE    :: l_fract_children_changed(:,:)
     TYPE(t_jsb_aggregator_p), ALLOCATABLE  :: aggregators(:)
     !CLASS(t_jsb_param_p),       POINTER    :: param(:)

@@ -101,8 +101,8 @@ CONTAINS
 
     model => get_model(tile%owner_model_id)
     grid  => get_grid(model%grid_id)
-    nproma = grid%Get_nproma()
-    nblks  = grid%Get_nblks()
+    nproma = grid%nproma
+    nblks  = grid%nblks
 
 
     ALLOCATE( &
@@ -121,51 +121,72 @@ CONTAINS
 
     ! TODO: adapt names of variables in input files to names in memory
 
-    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(RAD_)%bc_filename), model%grid_id)
+    IF ( dsl4jsb_Config(RAD_)%read_from_file ) THEN
 
-    ! background albedo (without snow or canopy)
-    ptr_2D => input_file%Read_2d( &
-      & variable_name='albedo',           &
-      & fill_array = rad_init_vars%alb_background)
-    ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+      input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(RAD_)%bc_filename), model%grid_id)
 
-    ! soil albedo
-    IF (tile%contains_soil) THEN
+      ! background albedo (without snow or canopy)
       ptr_2D => input_file%Read_2d( &
-        & variable_name='albedo_soil_vis',  &
-        & fill_array = rad_init_vars%alb_vis_soil)
+        & variable_name='albedo',           &
+        & fill_array = rad_init_vars%alb_background)
       ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
 
-      ptr_2D => input_file%Read_2d( &
-        & variable_name='albedo_soil_nir',  &
-        & fill_array = rad_init_vars%alb_nir_soil)
-      ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
-    END IF
+      ! soil albedo
+      IF (tile%contains_soil) THEN
+        ptr_2D => input_file%Read_2d( &
+          & variable_name='albedo_soil_vis',  &
+          & fill_array = rad_init_vars%alb_vis_soil)
+        ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
 
-    IF (tile%contains_vegetation) THEN
-      ! Get canopy albedo
-      IF (dsl4jsb_Config(RAD_)%use_alb_canopy .OR. tile%lcts(1)%lib_id == 0) THEN
         ptr_2D => input_file%Read_2d( &
-          & variable_name='albedo_veg_vis',   &
-          & fill_array = rad_init_vars%alb_vis_can)
+          & variable_name='albedo_soil_nir',  &
+          & fill_array = rad_init_vars%alb_nir_soil)
         ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
-      ELSE
-        rad_init_vars%alb_vis_can = dsl4jsb_Lctlib_param(AlbedoCanopyVIS)
-      END IF
-      IF (dsl4jsb_Config(RAD_)%use_alb_canopy .OR. tile%lcts(1)%lib_id == 0) THEN
-        ptr_2D => input_file%Read_2d( &
-          & variable_name='albedo_veg_nir',   &
-          & fill_array = rad_init_vars%alb_nir_can)
-        ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
-      ELSE
-        rad_init_vars%alb_nir_can = dsl4jsb_Lctlib_param(AlbedoCanopyNIR)
       END IF
 
+      IF (tile%contains_vegetation) THEN
+        ! Get canopy albedo
+        IF (dsl4jsb_Config(RAD_)%use_alb_canopy .OR. tile%lcts(1)%lib_id == 0) THEN
+          ptr_2D => input_file%Read_2d( &
+            & variable_name='albedo_veg_vis',   &
+            & fill_array = rad_init_vars%alb_vis_can)
+          ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+        ELSE
+          rad_init_vars%alb_vis_can = dsl4jsb_Lctlib_param(AlbedoCanopyVIS)
+        END IF
+        IF (dsl4jsb_Config(RAD_)%use_alb_canopy .OR. tile%lcts(1)%lib_id == 0) THEN
+          ptr_2D => input_file%Read_2d( &
+            & variable_name='albedo_veg_nir',   &
+            & fill_array = rad_init_vars%alb_nir_can)
+          ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+        ELSE
+          rad_init_vars%alb_nir_can = dsl4jsb_Lctlib_param(AlbedoCanopyNIR)
+        END IF
+
+      END IF
+
+      CALL input_file%Close()
+
+      NULLIFY(ptr_2D)
+
+    ELSE
+
+      ! background albedo (without snow or canopy)
+      rad_init_vars%alb_background = 0.178_wp
+
+      ! soil albedo
+      IF (tile%contains_soil) THEN
+        rad_init_vars%alb_vis_soil = 0.142_wp
+        rad_init_vars%alb_nir_soil = 0.244_wp
+      END IF
+
+      IF (tile%contains_vegetation) THEN
+        ! Get canopy albedo
+        rad_init_vars%alb_vis_can = 0.074
+        rad_init_vars%alb_nir_can = 0.305
+      END IF
+
     END IF
-
-    CALL input_file%Close()
-
-    NULLIFY(ptr_2D)
 
   END SUBROUTINE rad_read_init_vars
 
