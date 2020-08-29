@@ -955,7 +955,7 @@ CONTAINS
       current_year  = INT(get_year(options%current_datetime))
       IF (current_year < 10000) THEN
         ! The filename is fixed in JS3. In JS4 we could read it from namelist, if worth it.
-        WRITE(filename_maps,'(a,I4.4,a)') "cover_fract_T63_11tiles_", current_year, "_JS4-format.nc"
+        WRITE(filename_maps,'(a,I4.4,a)') "bc_land_frac_11pfts_", current_year, ".nc"
       ELSE
         CALL finish('read_landcover_fractions from map file','Only years between 0 and 9999 supported currently')
       END IF
