@@ -494,7 +494,7 @@ CONTAINS
       & fract(:,:),        &
       & fract_old(:,:)
 
-    ! INTEGER :: ilct
+    INTEGER :: ilct
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Set_fraction_2d'
 
