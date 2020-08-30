@@ -118,7 +118,9 @@ CONTAINS
     INTEGER           :: ldims(2), gdims(2)
     INTEGER           :: pos_of_var
     CHARACTER(len=VARNAME_LEN), ALLOCATABLE :: groups(:)     ! groups to which this variable belongs to
-    CHARACTER(len=:), ALLOCATABLE :: output_level_name
+    INTEGER           :: no_groups                           ! number of additional groups this variable belongs to
+    INTEGER           :: out_level, igroup                   ! loop variables
+    CHARACTER(len=:), ALLOCATABLE :: out_level_name          ! loop variable
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsb_add_var_list_element_r2d'
 
@@ -143,17 +145,26 @@ CONTAINS
 
     this_list => Get_varlist(TRIM(mem%varlist_name), hgrid%host_patch_id)
 
+    IF (PRESENT(output_level)) THEN
+      no_groups = 2 * (4 - output_level)
+    ELSE
+      no_groups = 0
+    END IF
     IF (mem%in_var_groups) THEN                                  ! Should this tile memory be part of any var groups?
-      ALLOCATE(groups(3+MERGE(2, 0, PRESENT(output_level))))
+      ALLOCATE(groups(3 + no_groups))
       ! All variables are put into these three catch-all groups
       groups(1) = 'ALL'
       groups(2) = 'jsb_all'
       ! var group jsb_<process>_all
       groups(3) = 'jsb_'//Get_process_name(mem%owner_proc_id)//'_all'
       IF (PRESENT(output_level)) THEN                            ! Variable specific setting of output level
-        output_level_name = Get_var_group_name(output_level)
-        groups(4) = 'jsb_all_'//output_level_name ! var group jsb_all_<level>
-        groups(5) = 'jsb_'//Get_process_name(mem%owner_proc_id)//'_'//output_level_name ! var group jsb_<process>_<level>
+        igroup = 4
+        DO out_level=output_level,3
+          out_level_name = Get_var_group_name(out_level)
+          groups(igroup)   = 'jsb_all_'//out_level_name ! var group jsb_all_<level>
+          groups(igroup+1) = 'jsb_'//Get_process_name(mem%owner_proc_id)//'_'//out_level_name ! var group jsb_<process>_<level>
+          igroup = igroup + 2
+        END DO
       END IF
     ELSE
       ALLOCATE(groups(1))
@@ -249,7 +260,9 @@ CONTAINS
     INTEGER           :: ldims(3), gdims(3)
     INTEGER           :: pos_of_var
     CHARACTER(len=VARNAME_LEN), ALLOCATABLE :: groups(:)     ! groups to which this variable belongs to
-    CHARACTER(len=:), ALLOCATABLE :: output_level_name
+    INTEGER           :: no_groups                           ! number of additional groups this variable belongs to
+    INTEGER           :: out_level, igroup                   ! loop variables
+    CHARACTER(len=:), ALLOCATABLE :: out_level_name          ! loop variable
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsb_add_var_list_element_r3d'
 
@@ -290,17 +303,26 @@ CONTAINS
 
     this_list => Get_varlist(TRIM(mem%varlist_name), hgrid%host_patch_id)
 
+    IF (PRESENT(output_level)) THEN
+      no_groups = 2 * (4 - output_level)
+    ELSE
+      no_groups = 0
+    END IF
     IF (mem%in_var_groups) THEN                                  ! Should this tile memory be part of any var groups?
-      ALLOCATE(groups(3+MERGE(2, 0, PRESENT(output_level))))
+      ALLOCATE(groups(3 + no_groups))
       ! All variables are put into these three catch-all groups
       groups(1) = 'ALL'
       groups(2) = 'jsb_all'
       ! var group jsb_<process>_all
       groups(3) = 'jsb_'//Get_process_name(mem%owner_proc_id)//'_all'
       IF (PRESENT(output_level)) THEN                            ! Variable specific setting of output level
-        output_level_name = Get_var_group_name(output_level)
-        groups(4) = 'jsb_all_'//output_level_name ! var group jsb_all_<level>
-        groups(5) = 'jsb_'//Get_process_name(mem%owner_proc_id)//'_'//output_level_name ! var group jsb_<process>_<level>
+        igroup = 4
+        DO out_level=output_level,3
+          out_level_name = Get_var_group_name(out_level)
+          groups(igroup)   = 'jsb_all_'//out_level_name ! var group jsb_all_<level>
+          groups(igroup+1) = 'jsb_'//Get_process_name(mem%owner_proc_id)//'_'//out_level_name ! var group jsb_<process>_<level>
+          igroup = igroup + 2
+        END DO
       END IF
     ELSE
       ALLOCATE(groups(1))
