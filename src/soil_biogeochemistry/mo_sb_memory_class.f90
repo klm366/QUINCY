@@ -61,8 +61,63 @@ MODULE mo_sb_memory_class
     TYPE(t_jsb_var_real3d), POINTER :: carbon14
     TYPE(t_jsb_var_real3d), POINTER :: nitrogen15
   CONTAINS
-    PROCEDURE :: Init => t_sb_elements_pool_init
+    !! infrastructure
+    PROCEDURE :: Init                   => t_sb_elements_pool_init
     PROCEDURE :: Get_element_name_by_id => t_sb_elements_pool_get_element_name_by_id
+    !! operator overload
+    !! [def: field2d(nc,vgrid) | field3d(nc,vgrid,nblks)]
+    ! +
+    PROCEDURE                 :: Add_sb_elem_p_and_scalar            ! pool%elements + scalar        | ON_CHUNK & ON_DOMAIN
+    PROCEDURE, PASS(struct1)  :: Add_scalar_and_sb_elem_p            ! scalar        + pool%elements | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Add_sb_elem_p_and_field2d           ! pool%elements + field2d       | ON_CHUNK
+    PROCEDURE, PASS(struct1)  :: Add_field2d_and_sb_elem_p           ! field2d       + pool%elements | ON_CHUNK
+    PROCEDURE                 :: Add_sb_elem_p_and_field3d           ! pool%elements + field3d       | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Add_sb_elem_p_and_sb_elem_p         ! pool%elements + pool%elements | ON_CHUNK & ON_DOMAIN
+    GENERIC                   :: OPERATOR(+) => Add_sb_elem_p_and_scalar,  Add_scalar_and_sb_elem_p, &
+      &                                         Add_sb_elem_p_and_field2d, Add_field2d_and_sb_elem_p, &
+      &                                         Add_sb_elem_p_and_field3d, &
+      &                                         Add_sb_elem_p_and_sb_elem_p
+    ! -
+    PROCEDURE                 :: Subtract_sb_elem_p_minus_scalar     ! pool%elements - scalar        | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Subtract_sb_elem_p_minus_field2d    ! pool%elements - field2d       | ON_CHUNK
+    PROCEDURE                 :: Subtract_sb_elem_p_minus_field3d    ! pool%elements - field3d       | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Subtract_sb_elem_p_minus_sb_elem_p  ! pool%elements - pool%elements | ON_CHUNK & ON_DOMAIN
+    GENERIC                   :: OPERATOR(-) => Subtract_sb_elem_p_minus_scalar, &
+      &                                         Subtract_sb_elem_p_minus_field2d, &
+      &                                         Subtract_sb_elem_p_minus_field3d, &
+      &                                         Subtract_sb_elem_p_minus_sb_elem_p
+    ! *
+    PROCEDURE                 :: Multiply_sb_elem_p_with_scalar      ! pool%elements * scalar        | ON_CHUNK & ON_DOMAIN
+    PROCEDURE, PASS(struct1)  :: Multiply_scalar_with_sb_elem_p      ! scalar        * pool%elements | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Multiply_sb_elem_p_with_field2d     ! pool%elements * field2d       | ON_CHUNK
+    PROCEDURE, PASS(struct1)  :: Multiply_field2d_with_sb_elem_p     ! field2d       * pool%elements | ON_CHUNK
+    PROCEDURE                 :: Multiply_sb_elem_p_with_field3d     ! pool%elements * field3d       | ON_CHUNK & ON_DOMAIN
+    PROCEDURE, PASS(struct1)  :: Multiply_field3d_with_sb_elem_p     ! field3d       * pool%elements | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Multiply_sb_elem_p_with_sb_elem_p   ! pool%elements * pool%elements | ON_CHUNK & ON_DOMAIN
+    GENERIC                   :: OPERATOR(*) => Multiply_sb_elem_p_with_scalar,  Multiply_scalar_with_sb_elem_p, &
+      &                                         Multiply_sb_elem_p_with_field2d, Multiply_field2d_with_sb_elem_p, &
+      &                                         Multiply_sb_elem_p_with_field3d, Multiply_field3d_with_sb_elem_p, &
+      &                                         Multiply_sb_elem_p_with_sb_elem_p
+    ! /
+    PROCEDURE                 :: Div_sb_elem_p_by_scalar             ! pool%elements / scalar        | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Div_sb_elem_p_by_field2d            ! pool%elements / field2d       | ON_CHUNK
+    PROCEDURE                 :: Div_sb_elem_p_by_field3d            ! pool%elements / field3d       | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Div_sb_elem_p_by_sb_elem_p          ! pool%elements / pool%elements | ON_CHUNK & ON_DOMAIN
+    GENERIC                   :: OPERATOR(/) => Div_sb_elem_p_by_scalar, &
+      &                                         Div_sb_elem_p_by_field2d, &
+      &                                         Div_sb_elem_p_by_field3d, &
+      &                                         Div_sb_elem_p_by_sb_elem_p
+    ! =
+    PROCEDURE                 :: Assign_scalar_to_sb_elem_p          ! pool%elements = scalar        | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Assign_field2d_to_sb_elem_p         ! pool%elements = field2d(:,:)  | ON_CHUNK
+    PROCEDURE                 :: Assign_field3d_to_sb_elem_p         ! pool%elements = field3d(:,:,:)| ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Assign_sb_elem_p_to_sb_elem_p       ! pool%elements = pool%elements | ON_CHUNK & ON_DOMAIN | only numeric values of elements are assigned
+    GENERIC                   :: ASSIGNMENT(=) => Assign_scalar_to_sb_elem_p, &
+      &                                           Assign_field2d_to_sb_elem_p, &
+      &                                           Assign_field3d_to_sb_elem_p, &
+      &                                           Assign_sb_elem_p_to_sb_elem_p
+    !! finalize
+    FINAL     :: finalize_sb_elements_pool
   END TYPE t_sb_elements_pool
 
   !-----------------------------------------------------------------------------------------------------
@@ -595,5 +650,1320 @@ CONTAINS
     ENDIF
 
   END SUBROUTINE Init_sb_memory
+
+  !--------------------------------------------------------------------------------------------------------------------------------
+  !> operator overload and assignment routines for pools
+  !!  TYPE t_sb_elements_pool
+  !! 
+  !--------------------------------------------------------------------------------------------------------------------------------
+
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! finalize after operator overload
+  ! var_real2d & var_real3d
+  !--------------------------------------------------------------------------------------------------------------------------------
+  SUBROUTINE finalize_sb_elements_pool(this)
+
+    TYPE(t_sb_elements_pool) :: this
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':finalize_sb_elements_pool'
+
+    ! CALL message(routine, 'Finalizing '//TRIM(this%name))
+
+    ! not allocated: this%path
+    ! no need to dealloc the variables 'this%ELEM%VAR' because these are dealloc by the FINAL routine of var_real2d & var_real3d
+    IF (ASSOCIATED(this%carbon))        DEALLOCATE(this%carbon)
+    IF (ASSOCIATED(this%nitrogen))      DEALLOCATE(this%nitrogen)
+    IF (ASSOCIATED(this%phosphorus))    DEALLOCATE(this%phosphorus)
+    IF (ASSOCIATED(this%carbon13))      DEALLOCATE(this%carbon13)
+    IF (ASSOCIATED(this%carbon14))      DEALLOCATE(this%carbon14)
+    IF (ASSOCIATED(this%nitrogen15))    DEALLOCATE(this%nitrogen15)
+    IF (ALLOCATED(this%shortname))      DEALLOCATE(this%shortname)
+    IF (ALLOCATED(this%name))           DEALLOCATE(this%name)
+    IF (ALLOCATED(this%element_unit))   DEALLOCATE(this%element_unit)
+    IF (ALLOCATED(this%element_list))   DEALLOCATE(this%element_list)
+    IF (ALLOCATED(this%var_list))       DEALLOCATE(this%var_list)
+    IF (ASSOCIATED(this%pool_list))     DEALLOCATE(this%pool_list)
+    IF (ASSOCIATED(this%leaf_list))     DEALLOCATE(this%leaf_list)
+   
+  END SUBROUTINE finalize_sb_elements_pool
+
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! = assign
+  !--------------------------------------------------------------------------------------------------------------------------------
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! t_sb_elements_pool = scalar | ON_CHUNK & ON_DOMAIN
+  !--------------------------------------------------------------------------------------------------------------------------------
+  SUBROUTINE Assign_scalar_to_sb_elem_p(lhs, rhs)
+
+    CLASS(t_sb_elements_pool),  INTENT(inout) :: lhs
+    REAL(wp),                   INTENT(in)    :: rhs
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Assign_scalar_to_sb_elem_p'
+
+    lhs%carbon     = rhs
+    lhs%nitrogen   = rhs
+    lhs%phosphorus = rhs
+    lhs%carbon13   = rhs
+    lhs%carbon14   = rhs
+    lhs%nitrogen15 = rhs
+
+  END SUBROUTINE Assign_scalar_to_sb_elem_p
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! t_sb_elements_pool = field2d(:,:) | ON_CHUNK
+  !--------------------------------------------------------------------------------------------------------------------------------
+  SUBROUTINE Assign_field2d_to_sb_elem_p(lhs, rhs)
+  
+    CLASS(t_sb_elements_pool),  INTENT(inout) :: lhs
+    REAL(wp),                   INTENT(in)    :: rhs(:,:)
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Assign_field2d_to_sb_elem_p'
+
+    lhs%carbon     = rhs(:,:)
+    lhs%nitrogen   = rhs(:,:)
+    lhs%phosphorus = rhs(:,:)
+    lhs%carbon13   = rhs(:,:)
+    lhs%carbon14   = rhs(:,:)
+    lhs%nitrogen15 = rhs(:,:)
+  
+  END SUBROUTINE Assign_field2d_to_sb_elem_p
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! t_sb_elements_pool = field3d(:,:,:) | ON_CHUNK & ON_DOMAIN | field3d(:,:,1) & field3d(:,:,:)
+  !--------------------------------------------------------------------------------------------------------------------------------
+  SUBROUTINE Assign_field3d_to_sb_elem_p(lhs, rhs)
+  
+    CLASS(t_sb_elements_pool),  INTENT(inout) :: lhs
+    REAL(wp),                   INTENT(in)    :: rhs(:,:,:)
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Assign_field3d_to_sb_elem_p'
+
+    lhs%carbon     = rhs(:,:,:)
+    lhs%nitrogen   = rhs(:,:,:)
+    lhs%phosphorus = rhs(:,:,:)
+    lhs%carbon13   = rhs(:,:,:)
+    lhs%carbon14   = rhs(:,:,:)
+    lhs%nitrogen15 = rhs(:,:,:)
+  
+  END SUBROUTINE Assign_field3d_to_sb_elem_p
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! t_sb_elements_pool = t_sb_elements_pool | ON_CHUNK & ON_DOMAIN
+  !--------------------------------------------------------------------------------------------------------------------------------
+  SUBROUTINE Assign_sb_elem_p_to_sb_elem_p(lhs, rhs)
+
+    CLASS(t_sb_elements_pool),  INTENT(inout) :: lhs
+    CLASS(t_sb_elements_pool),  INTENT(in)    :: rhs
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Assign_sb_elem_p_to_sb_elem_p'
+
+    lhs%carbon     = rhs%carbon    
+    lhs%nitrogen   = rhs%nitrogen  
+    lhs%phosphorus = rhs%phosphorus
+    lhs%carbon13   = rhs%carbon13  
+    lhs%carbon14   = rhs%carbon14  
+    lhs%nitrogen15 = rhs%nitrogen15
+
+  END SUBROUTINE Assign_sb_elem_p_to_sb_elem_p
+
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! + addition
+  !--------------------------------------------------------------------------------------------------------------------------------
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! t_sb_elements_pool + scalar        | ON_CHUNK & ON_DOMAIN
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Add_sb_elem_p_and_scalar(struct1, scalar) RESULT(structOut)
+  
+    CLASS(t_sb_elements_pool),      INTENT(in)  :: struct1
+    REAL(wp),                       INTENT(in)  :: scalar
+    TYPE(t_sb_elements_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Add_sb_elem_p_and_scalar'
+  
+    ! init temporary pool structOut
+    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+
+    ! run calculation
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    structOut%carbon          = struct1%carbon      + scalar
+    structOut%nitrogen        = struct1%nitrogen    + scalar
+    structOut%phosphorus      = struct1%phosphorus  + scalar
+    structOut%carbon13        = struct1%carbon13    + scalar
+    structOut%carbon14        = struct1%carbon14    + scalar
+    structOut%nitrogen15      = struct1%nitrogen15  + scalar
+
+    ! is this needed here too (not only with the jsb_var op-ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+  
+  END FUNCTION Add_sb_elem_p_and_scalar
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! scalar + t_sb_elements_pool        | ON_CHUNK & ON_DOMAIN
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Add_scalar_and_sb_elem_p(scalar, struct1) RESULT(structOut)
+  
+    REAL(wp),                       INTENT(in)  :: scalar
+    CLASS(t_sb_elements_pool),      INTENT(in)  :: struct1
+    TYPE(t_sb_elements_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Add_scalar_and_sb_elem_p'
+  
+    ! init temporary pool structOut
+    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+
+    ! run calculation
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    structOut%carbon          = scalar + struct1%carbon    
+    structOut%nitrogen        = scalar + struct1%nitrogen  
+    structOut%phosphorus      = scalar + struct1%phosphorus
+    structOut%carbon13        = scalar + struct1%carbon13  
+    structOut%carbon14        = scalar + struct1%carbon14  
+    structOut%nitrogen15      = scalar + struct1%nitrogen15
+
+    ! is this needed here too (not only with the jsb_var op-ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+  
+  END FUNCTION Add_scalar_and_sb_elem_p
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! t_sb_elements_pool + field2d(:,:)        | ON_CHUNK
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Add_sb_elem_p_and_field2d(struct1, field2d) RESULT(structOut)
+  
+    CLASS(t_sb_elements_pool),      INTENT(in)  :: struct1
+    REAL(wp),                       INTENT(in)  :: field2d(:,:)
+    TYPE(t_sb_elements_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Add_sb_elem_p_and_field2d'
+  
+    ! init temporary pool structOut
+    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+
+    ! run calculation
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    structOut%carbon          = struct1%carbon      + field2d(:,:)
+    structOut%nitrogen        = struct1%nitrogen    + field2d(:,:)
+    structOut%phosphorus      = struct1%phosphorus  + field2d(:,:)
+    structOut%carbon13        = struct1%carbon13    + field2d(:,:)
+    structOut%carbon14        = struct1%carbon14    + field2d(:,:)
+    structOut%nitrogen15      = struct1%nitrogen15  + field2d(:,:)
+
+    ! is this needed here too (not only with the jsb_var op-ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+  
+  END FUNCTION Add_sb_elem_p_and_field2d
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! field2d(:,:) + t_sb_elements_pool        | ON_CHUNK
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Add_field2d_and_sb_elem_p(field2d, struct1) RESULT(structOut)
+  
+    REAL(wp),                       INTENT(in)  :: field2d(:,:)
+    CLASS(t_sb_elements_pool),      INTENT(in)  :: struct1
+    TYPE(t_sb_elements_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Add_field2d_and_sb_elem_p'
+  
+    ! init temporary pool structOut
+    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+
+    ! run calculation
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    structOut%carbon          = field2d(:,:) + struct1%carbon    
+    structOut%nitrogen        = field2d(:,:) + struct1%nitrogen  
+    structOut%phosphorus      = field2d(:,:) + struct1%phosphorus
+    structOut%carbon13        = field2d(:,:) + struct1%carbon13  
+    structOut%carbon14        = field2d(:,:) + struct1%carbon14  
+    structOut%nitrogen15      = field2d(:,:) + struct1%nitrogen15
+
+    ! is this needed here too (not only with the jsb_var op-ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+  
+  END FUNCTION Add_field2d_and_sb_elem_p
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! t_sb_elements_pool + field3d(:,:,:)        | ON_CHUNK & ON_DOMAIN | field3d(:,:,1) & field3d(:,:,:)
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Add_sb_elem_p_and_field3d(struct1, field3d) RESULT(structOut)
+  
+    CLASS(t_sb_elements_pool),      INTENT(in)  :: struct1
+    REAL(wp),                       INTENT(in)  :: field3d(:,:,:)
+    TYPE(t_sb_elements_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Add_sb_elem_p_and_field3d'
+  
+    ! init temporary pool structOut
+    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+
+    ! run calculation
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    structOut%carbon          = struct1%carbon      + field3d(:,:,:)
+    structOut%nitrogen        = struct1%nitrogen    + field3d(:,:,:)
+    structOut%phosphorus      = struct1%phosphorus  + field3d(:,:,:)
+    structOut%carbon13        = struct1%carbon13    + field3d(:,:,:)
+    structOut%carbon14        = struct1%carbon14    + field3d(:,:,:)
+    structOut%nitrogen15      = struct1%nitrogen15  + field3d(:,:,:)
+
+    ! is this needed here too (not only with the jsb_var op-ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+  
+  END FUNCTION Add_sb_elem_p_and_field3d
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! t_sb_elements_pool + t_sb_elements_pool | ON_CHUNK & ON_DOMAIN
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Add_sb_elem_p_and_sb_elem_p(struct1, struct2) RESULT(structOut)
+  
+    CLASS(t_sb_elements_pool),      INTENT(in)  :: struct1, struct2
+    TYPE(t_sb_elements_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Add_sb_elem_p_and_sb_elem_p'
+  
+    ! init temporary pool structOut
+    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+
+    ! run calculation
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    structOut%carbon          = struct1%carbon      + struct2%carbon
+    structOut%nitrogen        = struct1%nitrogen    + struct2%nitrogen  
+    structOut%phosphorus      = struct1%phosphorus  + struct2%phosphorus
+    structOut%carbon13        = struct1%carbon13    + struct2%carbon13  
+    structOut%carbon14        = struct1%carbon14    + struct2%carbon14  
+    structOut%nitrogen15      = struct1%nitrogen15  + struct2%nitrogen15
+
+    ! is this needed here too (not only with the jsb_var op-ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+  
+  END FUNCTION Add_sb_elem_p_and_sb_elem_p
+
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! - minus
+  !--------------------------------------------------------------------------------------------------------------------------------
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! t_sb_elements_pool - scalar        | ON_CHUNK & ON_DOMAIN
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Subtract_sb_elem_p_minus_scalar(struct1, scalar) RESULT(structOut)
+  
+    CLASS(t_sb_elements_pool),      INTENT(in)  :: struct1
+    REAL(wp),                       INTENT(in)  :: scalar
+    TYPE(t_sb_elements_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Subtract_sb_elem_p_minus_scalar'
+  
+    ! init temporary pool structOut
+    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+
+    ! run calculation
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    structOut%carbon          = struct1%carbon      - scalar
+    structOut%nitrogen        = struct1%nitrogen    - scalar
+    structOut%phosphorus      = struct1%phosphorus  - scalar
+    structOut%carbon13        = struct1%carbon13    - scalar
+    structOut%carbon14        = struct1%carbon14    - scalar
+    structOut%nitrogen15      = struct1%nitrogen15  - scalar
+
+    ! is this needed here too (not only with the jsb_var op-ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+  
+  END FUNCTION Subtract_sb_elem_p_minus_scalar
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! t_sb_elements_pool - field2d(:,:)        | ON_CHUNK
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Subtract_sb_elem_p_minus_field2d(struct1, field2d) RESULT(structOut)
+  
+    CLASS(t_sb_elements_pool),      INTENT(in)  :: struct1
+    REAL(wp),                       INTENT(in)  :: field2d(:,:)
+    TYPE(t_sb_elements_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Subtract_sb_elem_p_minus_field2d'
+  
+    ! init temporary pool structOut
+    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+
+    ! run calculation
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    structOut%carbon          = struct1%carbon      - field2d(:,:)
+    structOut%nitrogen        = struct1%nitrogen    - field2d(:,:)
+    structOut%phosphorus      = struct1%phosphorus  - field2d(:,:)
+    structOut%carbon13        = struct1%carbon13    - field2d(:,:)
+    structOut%carbon14        = struct1%carbon14    - field2d(:,:)
+    structOut%nitrogen15      = struct1%nitrogen15  - field2d(:,:)
+
+    ! is this needed here too (not only with the jsb_var op-ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+  
+  END FUNCTION Subtract_sb_elem_p_minus_field2d
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! t_sb_elements_pool - field3d(:,:,:)        | ON_CHUNK & ON_DOMAIN | field3d(:,:,1) & field3d(:,:,:)
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Subtract_sb_elem_p_minus_field3d(struct1, field3d) RESULT(structOut)
+  
+    CLASS(t_sb_elements_pool),      INTENT(in)  :: struct1
+    REAL(wp),                       INTENT(in)  :: field3d(:,:,:)
+    TYPE(t_sb_elements_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Subtract_sb_elem_p_minus_field3d'
+  
+    ! init temporary pool structOut
+    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+
+    ! run calculation
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    structOut%carbon          = struct1%carbon      - field3d(:,:,:)
+    structOut%nitrogen        = struct1%nitrogen    - field3d(:,:,:)
+    structOut%phosphorus      = struct1%phosphorus  - field3d(:,:,:)
+    structOut%carbon13        = struct1%carbon13    - field3d(:,:,:)
+    structOut%carbon14        = struct1%carbon14    - field3d(:,:,:)
+    structOut%nitrogen15      = struct1%nitrogen15  - field3d(:,:,:)
+
+    ! is this needed here too (not only with the jsb_var op-ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+  
+  END FUNCTION Subtract_sb_elem_p_minus_field3d
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! t_sb_elements_pool - t_sb_elements_pool | ON_CHUNK & ON_DOMAIN
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Subtract_sb_elem_p_minus_sb_elem_p(struct1, struct2) RESULT(structOut)
+  
+    CLASS(t_sb_elements_pool),      INTENT(in)  :: struct1, struct2
+    TYPE(t_sb_elements_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Subtract_sb_elem_p_minus_sb_elem_p'
+  
+    ! init temporary pool structOut
+    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+
+    ! run calculation
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    structOut%carbon          = struct1%carbon      - struct2%carbon
+    structOut%nitrogen        = struct1%nitrogen    - struct2%nitrogen  
+    structOut%phosphorus      = struct1%phosphorus  - struct2%phosphorus
+    structOut%carbon13        = struct1%carbon13    - struct2%carbon13  
+    structOut%carbon14        = struct1%carbon14    - struct2%carbon14  
+    structOut%nitrogen15      = struct1%nitrogen15  - struct2%nitrogen15
+
+    ! is this needed here too (not only with the jsb_var op-ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+  
+  END FUNCTION Subtract_sb_elem_p_minus_sb_elem_p
+
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! * multiply
+  !--------------------------------------------------------------------------------------------------------------------------------
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! t_sb_elements_pool * scalar        | ON_CHUNK & ON_DOMAIN
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Multiply_sb_elem_p_with_scalar(struct1, scalar) RESULT(structOut)
+  
+    CLASS(t_sb_elements_pool),      INTENT(in)  :: struct1
+    REAL(wp),                       INTENT(in)  :: scalar
+    TYPE(t_sb_elements_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_sb_elem_p_with_scalar'
+  
+    ! init temporary pool structOut
+    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+
+    ! run calculation
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    structOut%carbon          = struct1%carbon      * scalar
+    structOut%nitrogen        = struct1%nitrogen    * scalar
+    structOut%phosphorus      = struct1%phosphorus  * scalar
+    structOut%carbon13        = struct1%carbon13    * scalar
+    structOut%carbon14        = struct1%carbon14    * scalar
+    structOut%nitrogen15      = struct1%nitrogen15  * scalar
+
+    ! is this needed here too (not only with the jsb_var op-ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+  
+  END FUNCTION Multiply_sb_elem_p_with_scalar
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! scalar * t_sb_elements_pool        | ON_CHUNK & ON_DOMAIN
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Multiply_scalar_with_sb_elem_p(scalar, struct1) RESULT(structOut)
+  
+    REAL(wp),                       INTENT(in)  :: scalar
+    CLASS(t_sb_elements_pool),      INTENT(in)  :: struct1
+    TYPE(t_sb_elements_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_scalar_with_sb_elem_p'
+  
+    ! init temporary pool structOut
+    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+
+    ! run calculation
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    structOut%carbon          = scalar * struct1%carbon    
+    structOut%nitrogen        = scalar * struct1%nitrogen  
+    structOut%phosphorus      = scalar * struct1%phosphorus
+    structOut%carbon13        = scalar * struct1%carbon13  
+    structOut%carbon14        = scalar * struct1%carbon14  
+    structOut%nitrogen15      = scalar * struct1%nitrogen15
+
+    ! is this needed here too (not only with the jsb_var op-ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+  
+  END FUNCTION Multiply_scalar_with_sb_elem_p
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! t_sb_elements_pool * field2d(:,:)        | ON_CHUNK
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Multiply_sb_elem_p_with_field2d(struct1, field2d) RESULT(structOut)
+  
+    CLASS(t_sb_elements_pool),      INTENT(in)  :: struct1
+    REAL(wp),                       INTENT(in)  :: field2d(:,:)
+    TYPE(t_sb_elements_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_sb_elem_p_with_field2d'
+  
+    ! init temporary pool structOut
+    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+
+    ! run calculation
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    structOut%carbon          = struct1%carbon      * field2d(:,:)
+    structOut%nitrogen        = struct1%nitrogen    * field2d(:,:)
+    structOut%phosphorus      = struct1%phosphorus  * field2d(:,:)
+    structOut%carbon13        = struct1%carbon13    * field2d(:,:)
+    structOut%carbon14        = struct1%carbon14    * field2d(:,:)
+    structOut%nitrogen15      = struct1%nitrogen15  * field2d(:,:)
+
+    ! is this needed here too (not only with the jsb_var op-ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+  
+  END FUNCTION Multiply_sb_elem_p_with_field2d
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! field2d(:,:) * t_sb_elements_pool        | ON_CHUNK
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Multiply_field2d_with_sb_elem_p(field2d, struct1) RESULT(structOut)
+  
+    REAL(wp),                       INTENT(in)  :: field2d(:,:)
+    CLASS(t_sb_elements_pool),      INTENT(in)  :: struct1
+    TYPE(t_sb_elements_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_field2d_with_sb_elem_p'
+  
+    ! init temporary pool structOut
+    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+
+    ! run calculation
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    structOut%carbon          = field2d(:,:) * struct1%carbon    
+    structOut%nitrogen        = field2d(:,:) * struct1%nitrogen  
+    structOut%phosphorus      = field2d(:,:) * struct1%phosphorus
+    structOut%carbon13        = field2d(:,:) * struct1%carbon13  
+    structOut%carbon14        = field2d(:,:) * struct1%carbon14  
+    structOut%nitrogen15      = field2d(:,:) * struct1%nitrogen15
+
+    ! is this needed here too (not only with the jsb_var op-ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+  
+  END FUNCTION Multiply_field2d_with_sb_elem_p
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! t_sb_elements_pool * field3d(:,:,:)        | ON_CHUNK & ON_DOMAIN | field3d(:,:,1) & field3d(:,:,:)
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Multiply_sb_elem_p_with_field3d(struct1, field3d) RESULT(structOut)
+  
+    CLASS(t_sb_elements_pool),      INTENT(in)  :: struct1
+    REAL(wp),                       INTENT(in)  :: field3d(:,:,:)
+    TYPE(t_sb_elements_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_sb_elem_p_with_field3d'
+  
+    ! init temporary pool structOut
+    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+
+    ! run calculation
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    structOut%carbon          = struct1%carbon      * field3d(:,:,:)
+    structOut%nitrogen        = struct1%nitrogen    * field3d(:,:,:)
+    structOut%phosphorus      = struct1%phosphorus  * field3d(:,:,:)
+    structOut%carbon13        = struct1%carbon13    * field3d(:,:,:)
+    structOut%carbon14        = struct1%carbon14    * field3d(:,:,:)
+    structOut%nitrogen15      = struct1%nitrogen15  * field3d(:,:,:)
+
+    ! is this needed here too (not only with the jsb_var op-ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+  
+  END FUNCTION Multiply_sb_elem_p_with_field3d
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! field3d(:,:,:) * t_sb_elements_pool        | ON_CHUNK & ON_DOMAIN | field3d(:,:,1) & field3d(:,:,:)
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Multiply_field3d_with_sb_elem_p(field3d, struct1) RESULT(structOut)
+  
+    REAL(wp),                       INTENT(in)  :: field3d(:,:,:)
+    CLASS(t_sb_elements_pool),      INTENT(in)  :: struct1
+    TYPE(t_sb_elements_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_field3d_with_sb_elem_p'
+  
+    ! init temporary pool structOut
+    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+
+    ! run calculation
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    structOut%carbon          = field3d(:,:,:) * struct1%carbon    
+    structOut%nitrogen        = field3d(:,:,:) * struct1%nitrogen  
+    structOut%phosphorus      = field3d(:,:,:) * struct1%phosphorus
+    structOut%carbon13        = field3d(:,:,:) * struct1%carbon13  
+    structOut%carbon14        = field3d(:,:,:) * struct1%carbon14  
+    structOut%nitrogen15      = field3d(:,:,:) * struct1%nitrogen15
+
+    ! is this needed here too (not only with the jsb_var op-ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+  
+  END FUNCTION Multiply_field3d_with_sb_elem_p
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! t_sb_elements_pool * t_sb_elements_pool | ON_CHUNK & ON_DOMAIN
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Multiply_sb_elem_p_with_sb_elem_p(struct1, struct2) RESULT(structOut)
+  
+    CLASS(t_sb_elements_pool),      INTENT(in)  :: struct1, struct2
+    TYPE(t_sb_elements_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_sb_elem_p_with_sb_elem_p'
+  
+    ! init temporary pool structOut
+    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+
+    ! run calculation
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    structOut%carbon          = struct1%carbon      * struct2%carbon
+    structOut%nitrogen        = struct1%nitrogen    * struct2%nitrogen  
+    structOut%phosphorus      = struct1%phosphorus  * struct2%phosphorus
+    structOut%carbon13        = struct1%carbon13    * struct2%carbon13  
+    structOut%carbon14        = struct1%carbon14    * struct2%carbon14  
+    structOut%nitrogen15      = struct1%nitrogen15  * struct2%nitrogen15
+
+    ! is this needed here too (not only with the jsb_var op-ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+  
+  END FUNCTION Multiply_sb_elem_p_with_sb_elem_p
+
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! / divide
+  !--------------------------------------------------------------------------------------------------------------------------------
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! t_sb_elements_pool / scalar        | ON_CHUNK & ON_DOMAIN
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Div_sb_elem_p_by_scalar(struct1, scalar) RESULT(structOut)
+  
+    CLASS(t_sb_elements_pool),      INTENT(in)  :: struct1
+    REAL(wp),                       INTENT(in)  :: scalar
+    TYPE(t_sb_elements_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Div_sb_elem_p_by_scalar'
+  
+    ! init temporary pool structOut
+    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+
+    ! run calculation
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    structOut%carbon          = struct1%carbon      / scalar
+    structOut%nitrogen        = struct1%nitrogen    / scalar
+    structOut%phosphorus      = struct1%phosphorus  / scalar
+    structOut%carbon13        = struct1%carbon13    / scalar
+    structOut%carbon14        = struct1%carbon14    / scalar
+    structOut%nitrogen15      = struct1%nitrogen15  / scalar
+
+    ! is this needed here too (not only with the jsb_var op-ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+  
+  END FUNCTION Div_sb_elem_p_by_scalar
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! t_sb_elements_pool / field2d(:,:)        | ON_CHUNK
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Div_sb_elem_p_by_field2d(struct1, field2d) RESULT(structOut)
+  
+    CLASS(t_sb_elements_pool),      INTENT(in)  :: struct1
+    REAL(wp),                       INTENT(in)  :: field2d(:,:)
+    TYPE(t_sb_elements_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Div_sb_elem_p_by_field2d'
+  
+    ! init temporary pool structOut
+    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+
+    ! run calculation
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    structOut%carbon          = struct1%carbon      / field2d(:,:)
+    structOut%nitrogen        = struct1%nitrogen    / field2d(:,:)
+    structOut%phosphorus      = struct1%phosphorus  / field2d(:,:)
+    structOut%carbon13        = struct1%carbon13    / field2d(:,:)
+    structOut%carbon14        = struct1%carbon14    / field2d(:,:)
+    structOut%nitrogen15      = struct1%nitrogen15  / field2d(:,:)
+
+    ! is this needed here too (not only with the jsb_var op-ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+  
+  END FUNCTION Div_sb_elem_p_by_field2d
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! t_sb_elements_pool / field3d(:,:,:)        | ON_CHUNK & ON_DOMAIN | field3d(:,:,1) & field3d(:,:,:)
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Div_sb_elem_p_by_field3d(struct1, field3d) RESULT(structOut)
+  
+    CLASS(t_sb_elements_pool),      INTENT(in)  :: struct1
+    REAL(wp),                       INTENT(in)  :: field3d(:,:,:)
+    TYPE(t_sb_elements_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Div_sb_elem_p_by_field3d'
+  
+    ! init temporary pool structOut
+    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+
+    ! run calculation
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    structOut%carbon          = struct1%carbon      / field3d(:,:,:)
+    structOut%nitrogen        = struct1%nitrogen    / field3d(:,:,:)
+    structOut%phosphorus      = struct1%phosphorus  / field3d(:,:,:)
+    structOut%carbon13        = struct1%carbon13    / field3d(:,:,:)
+    structOut%carbon14        = struct1%carbon14    / field3d(:,:,:)
+    structOut%nitrogen15      = struct1%nitrogen15  / field3d(:,:,:)
+
+    ! is this needed here too (not only with the jsb_var op-ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+  
+  END FUNCTION Div_sb_elem_p_by_field3d
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! t_sb_elements_pool / t_sb_elements_pool | ON_CHUNK & ON_DOMAIN
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Div_sb_elem_p_by_sb_elem_p(struct1, struct2) RESULT(structOut)
+  
+    CLASS(t_sb_elements_pool),      INTENT(in)  :: struct1, struct2
+    TYPE(t_sb_elements_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Div_sb_elem_p_by_sb_elem_p'
+  
+    ! init temporary pool structOut
+    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+
+    ! run calculation
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    structOut%carbon          = struct1%carbon      / struct2%carbon
+    structOut%nitrogen        = struct1%nitrogen    / struct2%nitrogen  
+    structOut%phosphorus      = struct1%phosphorus  / struct2%phosphorus
+    structOut%carbon13        = struct1%carbon13    / struct2%carbon13  
+    structOut%carbon14        = struct1%carbon14    / struct2%carbon14  
+    structOut%nitrogen15      = struct1%nitrogen15  / struct2%nitrogen15
+
+    ! is this needed here too (not only with the jsb_var op-ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+  
+  END FUNCTION Div_sb_elem_p_by_sb_elem_p
+
+  !--------------------------------------------------------------------------------------------------------------------------------
+  !> operator overload and assignment routines for pools
+  !!  TYPE t_sb_components_pool
+  !! 
+  !--------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
 
 END MODULE mo_sb_memory_class

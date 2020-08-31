@@ -135,9 +135,9 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
-!!! playground for testing !!!
+    !!! playground for testing !!!
 
-!! variables
+    !! variables
     ! real2d variables
     total_flux_carbon           = 0.5_wp
     total_flux_nitrogen         = 0.5_wp
@@ -146,32 +146,14 @@ CONTAINS
     total_flux_carbon14         = 0.5_wp
     total_flux_nitrogen15       = 0.5_wp
 
-!! pools
+    !! pools
     hlp1(:,:)                   = 2.0_wp
-    sb_pool%dom%carbon          = 5.0_wp
-    sb_pool%fungi%carbon        = 5.0_wp
-    sb_pool%residue%carbon      = 5.0_wp
-    sb_pool%microbial%carbon    = 0.0_wp
+    sb_pool%dom                 = hlp1(:,:)
+    sb_pool%fungi               = 5.0_wp
+    sb_pool%residue             = sb_pool%dom + sb_pool%fungi - 1.0_wp                                ! 6.0
+    sb_pool%mycorrhiza          = (sb_pool%residue / hlp1(:,:)) + 17.0_wp - (5.0_wp * sb_pool%fungi)  ! -5.0
 
-    sb_pool%dom%nitrogen        = 6.0_wp
-    sb_pool%fungi%nitrogen      = 6.0_wp
-    sb_pool%residue%nitrogen    = 6.0_wp
-    sb_pool%microbial%nitrogen  = 10.0_wp
 
-    sb_pool%dom%carbon          = sb_pool%dom%carbon   + sb_pool%fungi%carbon   + sb_pool%residue%carbon   + 10.0_wp
-    sb_pool%dom%nitrogen        = sb_pool%dom%nitrogen + sb_pool%fungi%nitrogen + sb_pool%residue%nitrogen + 10.0_wp
-
-    sb_pool%dom%carbon13        = sb_pool%dom%carbon   * 2.0_wp
-    sb_pool%dom%nitrogen15      = sb_pool%dom%nitrogen * 2.0_wp
-
-    sb_pool%dom%carbon14        = sb_pool%fungi%carbon * sb_pool%residue%carbon 
-    sb_pool%dom%phosphorus      = sb_pool%fungi%carbon * sb_pool%residue%carbon + sb_pool%residue%nitrogen
-    
-    sb_pool%microbial%carbon    = hlp1(:,:) * sb_pool%microbial%nitrogen * 2.0_wp
-    sb_pool%microbial%carbon    = 2.0_wp * sb_pool%microbial%carbon      + hlp1(:,:)
-    sb_pool%microbial%carbon    = (2.0_wp + sb_pool%microbial%carbon)    / hlp1(:,:)
-    sb_pool%microbial%carbon    = sb_pool%microbial%carbon               - hlp1(:,:)  ! == 40
-        
 
   END SUBROUTINE update_sb_pools
 

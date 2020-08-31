@@ -64,7 +64,8 @@ MODULE mo_veg_memory_class
     !! infrastructure
     PROCEDURE :: Init                   => t_veg_elements_pool_init
     PROCEDURE :: Get_element_name_by_id => t_veg_elements_pool_get_element_name_by_id
-    !! operator overload
+    !! operator overload  
+    !! [def: field1d(nc) | field2d(nc,nblks)]
     ! +
     PROCEDURE                 :: Add_veg_elem_p_and_scalar            ! pool%elements + scalar        | ON_CHUNK & ON_DOMAIN
     PROCEDURE, PASS(struct1)  :: Add_scalar_and_veg_elem_p            ! scalar        + pool%elements | ON_CHUNK & ON_DOMAIN
