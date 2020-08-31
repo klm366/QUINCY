@@ -103,7 +103,6 @@ CONTAINS
     dsl4jsb_Def_pool(t_veg_tissues_pool)  :: veg_litterfall
     dsl4jsb_Def_pool(t_veg_tissues_pool)  :: veg_falloc
     dsl4jsb_Def_pool(t_veg_tissues_pool)  :: veg_total_flux
-    dsl4jsb_Def_pool(t_veg_elements_pool) :: veg_pool_leaf
     dsl4jsb_Def_pool(t_veg_elements_pool) :: veg_total_biomass
     dsl4jsb_Def_pool(t_veg_elements_pool) :: veg_exudation    
     dsl4jsb_Def_pool(t_veg_elements_pool) :: veg_establishment
@@ -154,7 +153,6 @@ CONTAINS
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_litterfall,    veg_litterfall)
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_falloc,        veg_falloc)
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_total_flux,    veg_total_flux)
-    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_pool%leaf,     veg_pool_leaf)
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_total_biomass, veg_total_biomass)
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_exudation,     veg_exudation    )
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_establishment, veg_establishment)
@@ -193,53 +191,6 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
 
     !! tested for VEG_ pools & fluxes !!
-    ! variables
-    veg_pool%leaf%carbon          = 20.0_wp
-    veg_pool_leaf%carbon          = 10.0_wp
-    
-    veg_pool%fine_root%carbon     = 10.0_wp
-    veg_pool%coarse_root%carbon   = 10.0_wp
-    veg_pool%sap_wood%carbon      = 10.0_wp
-    veg_pool%heart_wood%carbon    = 10.0_wp
-    veg_pool%labile%carbon        = 10.0_wp
-    veg_pool%reserve%carbon       = 10.0_wp
-    veg_pool%fruit%carbon         = 10.0_wp
-    veg_pool%seed_bed%carbon      = 10.0_wp
-
-    veg_pool%leaf%nitrogen          = 15.0_wp
-    veg_pool%fine_root%nitrogen     = 15.0_wp
-    veg_pool%coarse_root%nitrogen   = 15.0_wp
-    veg_pool%sap_wood%nitrogen      = 15.0_wp
-    veg_pool%heart_wood%nitrogen    = 15.0_wp
-    veg_pool%labile%nitrogen        = 15.0_wp
-    veg_pool%reserve%nitrogen       = 15.0_wp
-    veg_pool%fruit%nitrogen         = 15.0_wp
-    veg_pool%seed_bed%nitrogen      = 15.0_wp
-
-    veg_pool%leaf%carbon      = veg_pool%leaf%carbon   + veg_pool%labile%carbon   + veg_pool%fine_root%carbon   + 10.0_wp
-    veg_pool%leaf%nitrogen    = veg_pool%leaf%nitrogen + veg_pool%labile%nitrogen + veg_pool%fine_root%nitrogen + 10.0_wp
-
-    veg_pool%leaf%carbon13    = veg_pool%leaf%carbon   * 2.0_wp
-    veg_pool%leaf%nitrogen15  = veg_pool%leaf%nitrogen * 2.0_wp
-
-    veg_pool%leaf%carbon14    = veg_pool%labile%carbon * veg_pool%reserve%carbon 
-    veg_pool%leaf%phosphorus  = veg_pool%labile%carbon * veg_pool%reserve%carbon + veg_pool%reserve%nitrogen
-
-    veg_pool%fruit%phosphorus = veg_pool%fruit%carbon * veg_pool%fruit%nitrogen - veg_pool%fruit%nitrogen * 2.0_wp
-    veg_pool%fruit%carbon13   = veg_pool%fruit%nitrogen / veg_pool%fruit%carbon + veg_pool%fruit%carbon + 10.0_wp
-
-    veg_pool%reserve%carbon   = veg_pool%reserve%carbon + 5.0_wp + veg_pool%reserve%nitrogen
-
-    veg_pool%fine_root%carbon   = 3.0_wp * veg_pool%fine_root%nitrogen * 2.0_wp
-    hlp1(:)                     = 2.0_wp
-    veg_pool%fine_root%nitrogen = veg_pool%fine_root%nitrogen + hlp1(:)
-    veg_pool%fine_root%nitrogen = hlp1(:) + veg_pool%fine_root%nitrogen
-    veg_pool%fine_root%nitrogen = veg_pool%fine_root%nitrogen * hlp1(:)
-    hlp1(:)                     = 8.0_wp
-    veg_pool%fine_root%nitrogen = veg_pool%fine_root%nitrogen - hlp1(:)
-    hlp1(:)                     = 5.0_wp
-    veg_pool%fine_root%nitrogen = veg_pool%fine_root%nitrogen / hlp1(:)
-
     ! pools
     veg_exudation                       = 2.0_wp
     veg_establishment                   = 3.0_wp
@@ -252,21 +203,17 @@ CONTAINS
       veg_growth%leaf                   = 20.0_wp
     ENDIF
 
-    veg_growth%fruit                    = veg_growth%leaf
-    veg_growth%reserve                  = veg_growth%fruit
-
-    veg_exudation                       = veg_exudation + veg_establishment + veg_reserve_use
-    veg_growth%fine_root                = veg_growth%leaf + veg_growth%fruit + veg_growth%reserve
-
-    veg_falloc%leaf                     = 2.0_wp
-    veg_falloc%fine_root                = 4.0_wp
-    veg_falloc%fine_root                = veg_falloc%leaf + veg_falloc%fine_root + 10._wp + veg_falloc%leaf
-    hlp1(:)                             = 21.0_wp
-    veg_falloc%fine_root                = hlp1(:) + veg_falloc%fine_root + hlp1(:)
-
-    IF (iblk /= 3) THEN
-      veg_growth%heart_wood             = REAL(iblk, wp)    ! is initiated with 60
-    ENDIF
+    hlp1(:)                             = 1.5_wp
+    veg_pool%fruit                      = 4.0_wp
+    veg_pool%leaf                       = hlp1(:) * veg_pool%fruit / 2.0_wp                             ! 3.0
+    veg_pool%labile                     = veg_pool%leaf - 5.0_wp
+    veg_pool%labile                     = ((veg_pool%labile + veg_pool%leaf) + 20.0_wp) / veg_pool%leaf ! 7.0 
+    
+    
+    
+    
+    
+    
 
   END SUBROUTINE update_veg_dynamics
 
