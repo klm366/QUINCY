@@ -258,6 +258,12 @@ CONTAINS
     veg_exudation                       = veg_exudation + veg_establishment + veg_reserve_use
     veg_growth%fine_root                = veg_growth%leaf + veg_growth%fruit + veg_growth%reserve
 
+    veg_falloc%leaf                     = 2.0_wp
+    veg_falloc%fine_root                = 4.0_wp
+    veg_falloc%fine_root                = veg_falloc%leaf + veg_falloc%fine_root + 10._wp + veg_falloc%leaf
+    hlp1(:)                             = 21.0_wp
+    veg_falloc%fine_root                = hlp1(:) + veg_falloc%fine_root + hlp1(:)
+
     IF (iblk /= 3) THEN
       veg_growth%heart_wood             = REAL(iblk, wp)    ! is initiated with 60
     ENDIF

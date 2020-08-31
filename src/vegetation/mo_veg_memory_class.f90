@@ -61,23 +61,31 @@ MODULE mo_veg_memory_class
     TYPE(t_jsb_var_real2d), POINTER :: carbon14
     TYPE(t_jsb_var_real2d), POINTER :: nitrogen15
   CONTAINS
-    ! infrastructure
+    !! infrastructure
     PROCEDURE :: Init                   => t_veg_elements_pool_init
     PROCEDURE :: Get_element_name_by_id => t_veg_elements_pool_get_element_name_by_id
-    ! operator overload
-    ! + addition
-    ! PROCEDURE :: Add_element_a                      ! 
-    ! PROCEDURE :: Add_element_a_and_scalar           ! 
-    PROCEDURE :: Add_veg_elem_p_to_veg_elem_p       ! pool%elements + pool%elements
-    GENERIC   :: OPERATOR(+) => Add_veg_elem_p_to_veg_elem_p
-    ! = assign
-    PROCEDURE :: Assign_scalar_to_veg_elem_p          ! pool%elements = scalar
-    PROCEDURE :: Assign_field1d_to_veg_elem_p         ! pool%elements = var(:)
-    PROCEDURE :: Assign_veg_elem_p_to_veg_elem_p      ! pool%elements = pool%elements  ! only numeric values of elements are assigned
+    !! operator overload
+    ! + 
+    PROCEDURE                 :: Add_veg_elem_p_and_scalar            ! pool%elements + scalar        | ON_CHUNK & ON_DOMAIN
+    PROCEDURE, PASS(struct1)  :: Add_scalar_and_veg_elem_p            ! scalar        + pool%elements | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Add_veg_elem_p_and_field1d           ! pool%elements + field1d       | ON_CHUNK
+    PROCEDURE, PASS(struct1)  :: Add_field1d_and_veg_elem_p           ! field1d       + pool%elements | ON_CHUNK
+    PROCEDURE                 :: Add_veg_elem_p_and_field2d           ! pool%elements + field2d       | ON_CHUNK & ON_DOMAIN | field2d(:,1) & field2d(:,:)
+    PROCEDURE                 :: Add_veg_elem_p_and_veg_elem_p        ! pool%elements + pool%elements | ON_CHUNK & ON_DOMAIN
+    GENERIC                   :: OPERATOR(+) => Add_veg_elem_p_and_scalar,  Add_scalar_and_veg_elem_p, &
+      &                                         Add_veg_elem_p_and_field1d, Add_field1d_and_veg_elem_p, &
+      &                                         Add_veg_elem_p_and_field2d, &
+      &                                         Add_veg_elem_p_and_veg_elem_p
+    ! =
+    PROCEDURE :: Assign_scalar_to_veg_elem_p          ! pool%elements = scalar          | ON_CHUNK & ON_DOMAIN
+    PROCEDURE :: Assign_field1d_to_veg_elem_p         ! pool%elements = field1d(:)      | ON_CHUNK
+    PROCEDURE :: Assign_field2d_to_veg_elem_p         ! pool%elements = field2d(:,:)    | ON_CHUNK & ON_DOMAIN | field2d(:,1) & field2d(:,:)
+    PROCEDURE :: Assign_veg_elem_p_to_veg_elem_p      ! pool%elements = pool%elements   | ON_CHUNK & ON_DOMAIN | only numeric values of elements are assigned
     GENERIC   :: ASSIGNMENT(=) => Assign_scalar_to_veg_elem_p, &
-                                  Assign_field1d_to_veg_elem_p, &
-                                  Assign_veg_elem_p_to_veg_elem_p
-    ! finalize
+      &                           Assign_field1d_to_veg_elem_p, &
+      &                           Assign_field2d_to_veg_elem_p, &
+      &                           Assign_veg_elem_p_to_veg_elem_p
+    !! finalize
     FINAL     :: finalize_veg_elements_pool
   END TYPE t_veg_elements_pool
 
@@ -963,7 +971,10 @@ CONTAINS
   END SUBROUTINE finalize_veg_elements_pool
   
   !--------------------------------------------------------------------------------------------------------------------------------
-  ! assign
+  ! = assign
+  !--------------------------------------------------------------------------------------------------------------------------------
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! t_veg_elements_pool = scalar | ON_CHUNK & ON_DOMAIN
   !--------------------------------------------------------------------------------------------------------------------------------
   SUBROUTINE Assign_scalar_to_veg_elem_p(lhs, rhs)
 
@@ -980,7 +991,9 @@ CONTAINS
     lhs%nitrogen15 = rhs
 
   END SUBROUTINE Assign_scalar_to_veg_elem_p
-
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! t_veg_elements_pool = field1d(:) | ON_CHUNK
+  !--------------------------------------------------------------------------------------------------------------------------------
   SUBROUTINE Assign_field1d_to_veg_elem_p(lhs, rhs)
   
     CLASS(t_veg_elements_pool), INTENT(inout) :: lhs
@@ -996,7 +1009,27 @@ CONTAINS
     lhs%nitrogen15 = rhs(:)
   
   END SUBROUTINE Assign_field1d_to_veg_elem_p
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! t_veg_elements_pool = field2d(:,:) | ON_CHUNK & ON_DOMAIN | field2d(:,1) & field2d(:,:)
+  !--------------------------------------------------------------------------------------------------------------------------------
+  SUBROUTINE Assign_field2d_to_veg_elem_p(lhs, rhs)
+  
+    CLASS(t_veg_elements_pool), INTENT(inout) :: lhs
+    REAL(wp),                   INTENT(in)    :: rhs(:,:)
 
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Assign_field2d_to_veg_elem_p'
+
+    lhs%carbon     = rhs(:,:)
+    lhs%nitrogen   = rhs(:,:)
+    lhs%phosphorus = rhs(:,:)
+    lhs%carbon13   = rhs(:,:)
+    lhs%carbon14   = rhs(:,:)
+    lhs%nitrogen15 = rhs(:,:)
+  
+  END SUBROUTINE Assign_field2d_to_veg_elem_p
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! t_veg_elements_pool = t_veg_elements_pool | ON_CHUNK & ON_DOMAIN
+  !--------------------------------------------------------------------------------------------------------------------------------
   SUBROUTINE Assign_veg_elem_p_to_veg_elem_p(lhs, rhs)
 
     CLASS(t_veg_elements_pool), INTENT(inout) :: lhs
@@ -1016,60 +1049,341 @@ CONTAINS
   !--------------------------------------------------------------------------------------------------------------------------------
   ! + addition
   !--------------------------------------------------------------------------------------------------------------------------------
-  FUNCTION Add_veg_elem_p_to_veg_elem_p(struct1, struct2) RESULT(struct3)
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! t_veg_elements_pool + scalar        | ON_CHUNK & ON_DOMAIN
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Add_veg_elem_p_and_scalar(struct1, scalar) RESULT(structOut)
   
-    CLASS(t_veg_elements_pool),     INTENT(in)  :: struct1, struct2
-    ! TYPE(t_veg_elements_pool),      POINTER     :: struct3
-    TYPE(t_veg_elements_pool),      TARGET      :: struct3
+    CLASS(t_veg_elements_pool),     INTENT(in)  :: struct1
+    REAL(wp),                       INTENT(in)  :: scalar
+    TYPE(t_veg_elements_pool),      TARGET      :: structOut
   
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Add_veg_elem_p_to_veg_elem_p'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Add_veg_elem_p_and_scalar'
   
-    ! init temporary pool struct3
-    ! ALLOCATE(struct3)
-    CALL struct3%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
-    struct3%carbon%owner_model_id      = struct1%carbon%owner_model_id
-    struct3%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
-    struct3%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
-    ALLOCATE(struct3%carbon%ptr2d,     source=struct1%carbon%ptr2d)
-    struct3%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
-    struct3%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
-    struct3%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
-    ALLOCATE(struct3%nitrogen%ptr2d,   source=struct1%nitrogen%ptr2d)
-    struct3%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
-    struct3%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
-    struct3%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
-    ALLOCATE(struct3%phosphorus%ptr2d, source=struct1%phosphorus%ptr2d)
-    struct3%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
-    struct3%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
-    struct3%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
-    ALLOCATE(struct3%carbon13%ptr2d,   source=struct1%carbon13%ptr2d)
-    struct3%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
-    struct3%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
-    struct3%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
-    ALLOCATE(struct3%carbon14%ptr2d,   source=struct1%carbon14%ptr2d)
-    struct3%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
-    struct3%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
-    struct3%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
-    ALLOCATE(struct3%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
+    ! init temporary pool structOut
+    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr2d,     source=struct1%carbon%ptr2d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr2d,   source=struct1%nitrogen%ptr2d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr2d, source=struct1%phosphorus%ptr2d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr2d,   source=struct1%carbon13%ptr2d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr2d,   source=struct1%carbon14%ptr2d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
 
     ! run calculation
     ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
-    struct3%carbon     = struct1%carbon      + struct2%carbon
-    struct3%nitrogen   = struct1%nitrogen    + struct2%nitrogen  
-    struct3%phosphorus = struct1%phosphorus  + struct2%phosphorus
-    struct3%carbon13   = struct1%carbon13    + struct2%carbon13  
-    struct3%carbon14   = struct1%carbon14    + struct2%carbon14  
-    struct3%nitrogen15 = struct1%nitrogen15  + struct2%nitrogen15
+    structOut%carbon          = struct1%carbon      + scalar
+    structOut%nitrogen        = struct1%nitrogen    + scalar
+    structOut%phosphorus      = struct1%phosphorus  + scalar
+    structOut%carbon13        = struct1%carbon13    + scalar
+    structOut%carbon14        = struct1%carbon14    + scalar
+    structOut%nitrogen15      = struct1%nitrogen15  + scalar
 
-    ! is this needed here too
-    struct3%carbon%ptr      => struct3%carbon%ptr2d(:,:)
-    struct3%nitrogen%ptr    => struct3%nitrogen%ptr2d(:,:)
-    struct3%phosphorus%ptr  => struct3%phosphorus%ptr2d(:,:)
-    struct3%carbon13%ptr    => struct3%carbon13%ptr2d(:,:)
-    struct3%carbon14%ptr    => struct3%carbon14%ptr2d(:,:)
-    struct3%nitrogen15%ptr  => struct3%nitrogen15%ptr2d(:,:)
+    ! is this needed here too (not only with the jsb_var op-ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr2d(:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr2d(:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr2d(:,:)
   
-  END FUNCTION Add_veg_elem_p_to_veg_elem_p  
+  END FUNCTION Add_veg_elem_p_and_scalar
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! scalar + t_veg_elements_pool        | ON_CHUNK & ON_DOMAIN
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Add_scalar_and_veg_elem_p(scalar, struct1) RESULT(structOut)
+  
+    REAL(wp),                       INTENT(in)  :: scalar
+    CLASS(t_veg_elements_pool),     INTENT(in)  :: struct1
+    TYPE(t_veg_elements_pool),      TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Add_scalar_and_veg_elem_p'
+  
+    ! init temporary pool structOut
+    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr2d,     source=struct1%carbon%ptr2d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr2d,   source=struct1%nitrogen%ptr2d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr2d, source=struct1%phosphorus%ptr2d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr2d,   source=struct1%carbon13%ptr2d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr2d,   source=struct1%carbon14%ptr2d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
+
+    ! run calculation
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    structOut%carbon          = scalar + struct1%carbon    
+    structOut%nitrogen        = scalar + struct1%nitrogen  
+    structOut%phosphorus      = scalar + struct1%phosphorus
+    structOut%carbon13        = scalar + struct1%carbon13  
+    structOut%carbon14        = scalar + struct1%carbon14  
+    structOut%nitrogen15      = scalar + struct1%nitrogen15
+
+    ! is this needed here too (not only with the jsb_var op-ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr2d(:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr2d(:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr2d(:,:)
+  
+  END FUNCTION Add_scalar_and_veg_elem_p
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! t_veg_elements_pool + field1d(:)        | ON_CHUNK
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Add_veg_elem_p_and_field1d(struct1, field1d) RESULT(structOut)
+  
+    CLASS(t_veg_elements_pool),     INTENT(in)  :: struct1
+    REAL(wp),                       INTENT(in)  :: field1d(:)
+    TYPE(t_veg_elements_pool),      TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Add_veg_elem_p_and_field1d'
+  
+    ! init temporary pool structOut
+    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr2d,     source=struct1%carbon%ptr2d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr2d,   source=struct1%nitrogen%ptr2d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr2d, source=struct1%phosphorus%ptr2d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr2d,   source=struct1%carbon13%ptr2d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr2d,   source=struct1%carbon14%ptr2d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
+
+    ! run calculation
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    structOut%carbon          = struct1%carbon      + field1d(:)
+    structOut%nitrogen        = struct1%nitrogen    + field1d(:)
+    structOut%phosphorus      = struct1%phosphorus  + field1d(:)
+    structOut%carbon13        = struct1%carbon13    + field1d(:)
+    structOut%carbon14        = struct1%carbon14    + field1d(:)
+    structOut%nitrogen15      = struct1%nitrogen15  + field1d(:)
+
+    ! is this needed here too (not only with the jsb_var op-ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr2d(:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr2d(:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr2d(:,:)
+  
+  END FUNCTION Add_veg_elem_p_and_field1d
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! field1d(:) + t_veg_elements_pool        | ON_CHUNK
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Add_field1d_and_veg_elem_p(field1d, struct1) RESULT(structOut)
+  
+    REAL(wp),                       INTENT(in)  :: field1d(:)
+    CLASS(t_veg_elements_pool),     INTENT(in)  :: struct1
+    TYPE(t_veg_elements_pool),      TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Add_field1d_and_veg_elem_p'
+  
+    ! init temporary pool structOut
+    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr2d,     source=struct1%carbon%ptr2d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr2d,   source=struct1%nitrogen%ptr2d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr2d, source=struct1%phosphorus%ptr2d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr2d,   source=struct1%carbon13%ptr2d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr2d,   source=struct1%carbon14%ptr2d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
+
+    ! run calculation
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    structOut%carbon          = field1d(:) + struct1%carbon    
+    structOut%nitrogen        = field1d(:) + struct1%nitrogen  
+    structOut%phosphorus      = field1d(:) + struct1%phosphorus
+    structOut%carbon13        = field1d(:) + struct1%carbon13  
+    structOut%carbon14        = field1d(:) + struct1%carbon14  
+    structOut%nitrogen15      = field1d(:) + struct1%nitrogen15
+
+    ! is this needed here too (not only with the jsb_var op-ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr2d(:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr2d(:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr2d(:,:)
+  
+  END FUNCTION Add_field1d_and_veg_elem_p
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! t_veg_elements_pool + field2d(:,:)        | ON_CHUNK & ON_DOMAIN | field2d(:,1) & field2d(:,:)
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Add_veg_elem_p_and_field2d(struct1, field2d) RESULT(structOut)
+  
+    CLASS(t_veg_elements_pool),     INTENT(in)  :: struct1
+    REAL(wp),                       INTENT(in)  :: field2d(:,:)
+    TYPE(t_veg_elements_pool),      TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Add_veg_elem_p_and_field2d'
+  
+    ! init temporary pool structOut
+    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr2d,     source=struct1%carbon%ptr2d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr2d,   source=struct1%nitrogen%ptr2d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr2d, source=struct1%phosphorus%ptr2d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr2d,   source=struct1%carbon13%ptr2d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr2d,   source=struct1%carbon14%ptr2d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
+
+    ! run calculation
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    structOut%carbon          = struct1%carbon      + field2d(:,:)
+    structOut%nitrogen        = struct1%nitrogen    + field2d(:,:)
+    structOut%phosphorus      = struct1%phosphorus  + field2d(:,:)
+    structOut%carbon13        = struct1%carbon13    + field2d(:,:)
+    structOut%carbon14        = struct1%carbon14    + field2d(:,:)
+    structOut%nitrogen15      = struct1%nitrogen15  + field2d(:,:)
+
+    ! is this needed here too (not only with the jsb_var op-ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr2d(:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr2d(:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr2d(:,:)
+  
+  END FUNCTION Add_veg_elem_p_and_field2d
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! t_veg_elements_pool + t_veg_elements_pool | ON_CHUNK & ON_DOMAIN
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Add_veg_elem_p_and_veg_elem_p(struct1, struct2) RESULT(structOut)
+  
+    CLASS(t_veg_elements_pool),     INTENT(in)  :: struct1, struct2
+    TYPE(t_veg_elements_pool),      TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Add_veg_elem_p_and_veg_elem_p'
+  
+    ! init temporary pool structOut
+    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr2d,     source=struct1%carbon%ptr2d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr2d,   source=struct1%nitrogen%ptr2d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr2d, source=struct1%phosphorus%ptr2d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr2d,   source=struct1%carbon13%ptr2d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr2d,   source=struct1%carbon14%ptr2d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
+
+    ! run calculation
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    structOut%carbon          = struct1%carbon      + struct2%carbon
+    structOut%nitrogen        = struct1%nitrogen    + struct2%nitrogen  
+    structOut%phosphorus      = struct1%phosphorus  + struct2%phosphorus
+    structOut%carbon13        = struct1%carbon13    + struct2%carbon13  
+    structOut%carbon14        = struct1%carbon14    + struct2%carbon14  
+    structOut%nitrogen15      = struct1%nitrogen15  + struct2%nitrogen15
+
+    ! is this needed here too (not only with the jsb_var op-ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr2d(:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr2d(:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr2d(:,:)
+  
+  END FUNCTION Add_veg_elem_p_and_veg_elem_p
     
 
   !--------------------------------------------------------------------------------------------------------------------------------
