@@ -660,11 +660,13 @@ CONTAINS
     ! R: Note, we could shift this to SUBROUTINE jsbach_start_timestep, but I want to keep the code "readable".
 
     ! Read maps once at first day of the year and only in the time step before the radiation time step and only once for the whole grid
-    ! IF (is_newyear() .AND. iblk == 1) read_maps = .TRUE.
-    ! print*,'AAA ',iblk, is_newyear(), is_time_ltrig_rad_m1(model%id), read_maps
-    IF (is_newyear() .AND. is_time_ltrig_rad_m1(model%id) .AND. iblk == 1) THEN
+    IF (is_newyear() .AND. iblk == 1) read_maps = .TRUE.
+
+    IF (read_maps .AND. iblk == 1 .AND. &
+      & is_time_ltrig_rad_m1(model%id) ) THEN
 
       read_maps = .FALSE.
+
       ! Allocate variables
       ALLOCATE(                                                    &
         & d_fract_pfts(hgrid%nproma, hgrid%nblks, npft),           &
