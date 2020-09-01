@@ -1024,7 +1024,7 @@ CONTAINS
     CLASS(t_veg_elements_pool), INTENT(inout) :: lhs
     REAL(wp),                   INTENT(in)    :: rhs
 
-    INTEGER                     :: i
+    ! INTEGER                     :: i  ! loop over pools of type t_veg_elements_pool
     CHARACTER(len=*), PARAMETER :: routine = modname//':Assign_scalar_to_veg_pool'
 
     lhs%carbon     = rhs
@@ -1038,14 +1038,26 @@ CONTAINS
     IF (ASSOCIATED(lhs%pool_list)) THEN
       tiss:SELECT TYPE (lhs)
       CLASS IS (t_veg_tissues_pool)
-        ! loop over pools of type t_veg_elements_pool within the t_veg_tissues_pool (e.g. lhs%leaf)
-        DO i=1,SIZE(lhs%pool_list)
-          elem:SELECT TYPE (veg_p => lhs%pool_list(i)%p)
-          CLASS IS (t_veg_elements_pool)
-            ! actual assignment (which calls again this routine and executes the assignment at the level of jsb_var)
-            veg_p = rhs
-          END SELECT elem
-        ENDDO
+        ! actual assignment (which calls again this routine and executes the assignment at the level of jsb_var)
+        ! NOTE: to minimize using the computationally expensive 'SELECT TYPE' the element pools are not looped 
+        !       (the outcommented loop over t_veg_elements_pool is tested and does work)
+        lhs%leaf        = rhs
+        lhs%fine_root   = rhs
+        lhs%coarse_root = rhs
+        lhs%sap_wood    = rhs
+        lhs%heart_wood  = rhs
+        lhs%labile      = rhs
+        lhs%reserve     = rhs
+        lhs%fruit       = rhs
+        lhs%seed_bed    = rhs
+        ! ! loop over pools of type t_veg_elements_pool within the t_veg_tissues_pool (e.g. lhs%leaf)
+        ! DO i=1,SIZE(lhs%pool_list)
+        !   elem:SELECT TYPE (veg_p => lhs%pool_list(i)%p)
+        !   CLASS IS (t_veg_elements_pool)
+        !     ! actual assignment (which calls again this routine and executes the assignment at the level of jsb_var)
+        !     veg_p = rhs
+        !   END SELECT elem
+        ! ENDDO
       END SELECT tiss
     ENDIF
 
@@ -1058,7 +1070,6 @@ CONTAINS
     CLASS(t_veg_elements_pool), INTENT(inout) :: lhs
     REAL(wp),                   INTENT(in)    :: rhs(:)
 
-    INTEGER                     :: i
     CHARACTER(len=*), PARAMETER :: routine = modname//':Assign_field1d_to_veg_pool'
 
     lhs%carbon     = rhs(:)
@@ -1072,14 +1083,16 @@ CONTAINS
     IF (ASSOCIATED(lhs%pool_list)) THEN
       tiss:SELECT TYPE (lhs)
       CLASS IS (t_veg_tissues_pool)
-        ! loop over pools of type t_veg_elements_pool within the t_veg_tissues_pool (e.g. lhs%leaf)
-        DO i=1,SIZE(lhs%pool_list)
-          elem:SELECT TYPE (veg_p => lhs%pool_list(i)%p)
-          CLASS IS (t_veg_elements_pool)
-            ! actual assignment (which calls again this routine and executes the assignment at the level of jsb_var)
-            veg_p = rhs(:)
-          END SELECT elem
-        ENDDO
+        ! actual assignment (which calls again this routine and executes the assignment at the level of jsb_var)
+        lhs%leaf        = rhs(:)
+        lhs%fine_root   = rhs(:)
+        lhs%coarse_root = rhs(:)
+        lhs%sap_wood    = rhs(:)
+        lhs%heart_wood  = rhs(:)
+        lhs%labile      = rhs(:)
+        lhs%reserve     = rhs(:)
+        lhs%fruit       = rhs(:)
+        lhs%seed_bed    = rhs(:)
       END SELECT tiss
     ENDIF
   
@@ -1092,7 +1105,6 @@ CONTAINS
     CLASS(t_veg_elements_pool), INTENT(inout) :: lhs
     REAL(wp),                   INTENT(in)    :: rhs(:,:)
 
-    INTEGER                     :: i
     CHARACTER(len=*), PARAMETER :: routine = modname//':Assign_field2d_to_veg_pool'
 
     lhs%carbon     = rhs(:,:)
@@ -1106,14 +1118,16 @@ CONTAINS
     IF (ASSOCIATED(lhs%pool_list)) THEN
       tiss:SELECT TYPE (lhs)
       CLASS IS (t_veg_tissues_pool)
-        ! loop over pools of type t_veg_elements_pool within the t_veg_tissues_pool (e.g. lhs%leaf)
-        DO i=1,SIZE(lhs%pool_list)
-          elem:SELECT TYPE (veg_p => lhs%pool_list(i)%p)
-          CLASS IS (t_veg_elements_pool)
-            ! actual assignment (which calls again this routine and executes the assignment at the level of jsb_var)
-            veg_p = rhs(:,:)
-          END SELECT elem
-        ENDDO
+        ! actual assignment (which calls again this routine and executes the assignment at the level of jsb_var)
+        lhs%leaf        = rhs(:,:)
+        lhs%fine_root   = rhs(:,:)
+        lhs%coarse_root = rhs(:,:)
+        lhs%sap_wood    = rhs(:,:)
+        lhs%heart_wood  = rhs(:,:)
+        lhs%labile      = rhs(:,:)
+        lhs%reserve     = rhs(:,:)
+        lhs%fruit       = rhs(:,:)
+        lhs%seed_bed    = rhs(:,:)
       END SELECT tiss
     ENDIF
   
@@ -1126,7 +1140,7 @@ CONTAINS
     CLASS(t_veg_elements_pool), INTENT(inout) :: lhs
     CLASS(t_veg_elements_pool), INTENT(in)    :: rhs
 
-    INTEGER                     :: i
+    ! INTEGER                     :: i  ! loop over pools of type t_veg_elements_pool
     CHARACTER(len=*), PARAMETER :: routine = modname//':Assign_veg_pool_to_veg_pool'
 
     lhs%carbon     = rhs%carbon    
@@ -1142,17 +1156,29 @@ CONTAINS
       CLASS IS (t_veg_tissues_pool)
       tiss_r:SELECT TYPE (rhs)
       CLASS IS (t_veg_tissues_pool)
-        ! loop over pools of type t_veg_elements_pool within the t_veg_tissues_pool (e.g. lhs%leaf)
-        DO i=1,SIZE(lhs%pool_list)
-          elem_l:SELECT TYPE (veg_p_l => lhs%pool_list(i)%p)
-          CLASS IS (t_veg_elements_pool)
-          elem_r:SELECT TYPE (veg_p_r => rhs%pool_list(i)%p)
-          CLASS IS (t_veg_elements_pool)
-            ! actual assignment (which calls again this routine and executes the assignment at the level of jsb_var)
-            veg_p_l = veg_p_r
-          END SELECT elem_r
-          END SELECT elem_l
-        ENDDO
+        ! actual assignment (which calls again this routine and executes the assignment at the level of jsb_var)
+        ! NOTE: to minimize using the computationally expensive 'SELECT TYPE' the element pools are not looped 
+        !       (the outcommented loop over t_veg_elements_pool is tested and does work)
+        lhs%leaf        = rhs%leaf       
+        lhs%fine_root   = rhs%fine_root  
+        lhs%coarse_root = rhs%coarse_root
+        lhs%sap_wood    = rhs%sap_wood   
+        lhs%heart_wood  = rhs%heart_wood 
+        lhs%labile      = rhs%labile     
+        lhs%reserve     = rhs%reserve    
+        lhs%fruit       = rhs%fruit      
+        lhs%seed_bed    = rhs%seed_bed   
+        ! ! loop over pools of type t_veg_elements_pool within the t_veg_tissues_pool (e.g. lhs%leaf)
+        ! DO i=1,SIZE(lhs%pool_list)
+        !   elem_l:SELECT TYPE (veg_p_l => lhs%pool_list(i)%p)
+        !   CLASS IS (t_veg_elements_pool)
+        !   elem_r:SELECT TYPE (veg_p_r => rhs%pool_list(i)%p)
+        !   CLASS IS (t_veg_elements_pool)
+        !     ! actual assignment (which calls again this routine and executes the assignment at the level of jsb_var)
+        !     veg_p_l = veg_p_r
+        !   END SELECT elem_r
+        !   END SELECT elem_l
+        ! ENDDO
       END SELECT tiss_r
       END SELECT tiss_l
     ENDIF
