@@ -12,7 +12,7 @@ MODULE mo_dynveg_config_class
 
   USE mo_exception,         ONLY: message
   USE mo_io_units,          ONLY: filename_max
-!  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: wp
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
   IMPLICIT NONE
@@ -34,8 +34,8 @@ CONTAINS
   SUBROUTINE Init_dynveg_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
-    USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid !, new_vgrid
-!    USE mo_jsb_grid,           ONLY: Register_vgrid
+    USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
+    USE mo_jsb_grid,           ONLY: Register_vgrid
     USE mo_jsb_io,             ONLY: ZAXIS_GENERIC
        
     CLASS(t_dynveg_config), INTENT(inout) :: config
@@ -53,7 +53,7 @@ CONTAINS
                                 ! because we already have yearly files in the pool and can skip merging them.
                                 ! However, we have to rethink this because this is structurally wrong.
 
-    INTEGER :: nml_handler, nml_unit, istat !, npft, i
+    INTEGER :: nml_handler, nml_unit, istat, npft, i
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_dynveg_config'
 
@@ -80,11 +80,11 @@ CONTAINS
 
     CALL close_nml(nml_handler)
 
-!     ! Create vertical axis
-!     npft=11 ! R: here we can not grab it from tile%no_of_children or mem%no_of_children
-!     pft_layer  => new_vgrid('pfts', ZAXIS_GENERIC, npft, &
-!       & levels=(/ (REAL(i,kind=wp),i=1,npft) /), units='')
-!     CALL register_vgrid(pft_layer)
+    ! Create vertical axis
+    npft=11 ! TODO here we can not grab it from tile%no_of_children or mem%no_of_children
+    pft_layer  => new_vgrid('pfts', ZAXIS_GENERIC, npft, &
+      & levels=(/ (REAL(i,kind=wp),i=1,npft) /), units='')
+    CALL register_vgrid(pft_layer)
 
 
   END SUBROUTINE Init_dynveg_config
