@@ -209,9 +209,9 @@ CONTAINS
     veg_pool%labile                     = veg_pool%leaf - 5.0_wp
     veg_pool%labile                     = ((veg_pool%labile + veg_pool%leaf) + 20.0_wp) / veg_pool%leaf ! 7.0 
     
-    
-    
-    
+    veg_litterfall                      = 3.2_wp
+    veg_total_flux                      = hlp1(:)
+    veg_litterfall                      = veg_total_flux
     
     
 
