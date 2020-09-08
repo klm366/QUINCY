@@ -191,7 +191,7 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
 
     !! tested for VEG_ pools & fluxes !!
-    ! pools
+    ! element pools
     veg_exudation                       = 2.0_wp
     veg_establishment                   = 3.0_wp
     veg_reserve_use                     = 5.0_wp
@@ -208,11 +208,12 @@ CONTAINS
     veg_pool%leaf                       = hlp1(:) * veg_pool%fruit / 2.0_wp                             ! 3.0
     veg_pool%labile                     = veg_pool%leaf - 5.0_wp
     veg_pool%labile                     = ((veg_pool%labile + veg_pool%leaf) + 20.0_wp) / veg_pool%leaf ! 7.0 
-    
+
+    ! tissue pools
     veg_litterfall                      = 3.2_wp
-    veg_total_flux                      = hlp1(:)
-    veg_litterfall                      = veg_total_flux
-    
+    veg_total_flux                      = 3.3_wp
+    ! veg_total_flux                      = hlp1(:)
+    veg_total_flux                      = veg_litterfall + veg_total_flux + 1.5_wp 
     
 
   END SUBROUTINE update_veg_dynamics

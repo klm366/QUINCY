@@ -207,8 +207,9 @@ CONTAINS
     veg_growth%reserve        = 30.0_wp
     veg_growth%fruit          = 30.0_wp
     veg_growth%seed_bed       = 30.0_wp
-    hlp1(:,:)                 = 21.0_wp
-    veg_growth                = hlp1(:,:)
+
+    ! hlp1(:,:)                 = 21.0_wp
+    ! veg_growth                = hlp1(:,:)
     
     veg_growth%seed_bed       = veg_growth%labile + veg_growth%sap_wood + veg_growth%heart_wood
     veg_growth%heart_wood     = veg_growth%heart_wood + veg_growth%heart_wood
@@ -217,7 +218,7 @@ CONTAINS
     hlp1(:,:)                 = 7.0_wp
     veg_falloc%fruit          = 13.0_wp
     veg_falloc%labile         = veg_falloc%fruit
-    veg_falloc%labile         = veg_falloc%labile + hlp1(:,:) + veg_falloc%fruit
+    veg_falloc%labile         = veg_falloc%labile + hlp1(:,:) + veg_falloc%fruit    ! 33.0
     
     
 
