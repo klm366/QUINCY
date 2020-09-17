@@ -90,14 +90,14 @@ plant_functional_type_id=5      # 1 - 8
 
 # forcing input
 flag_oneYearForcing="F"         # T (True) or F (False): whether to use (repeatedly) only the 1st year of the climate forcing input file
-forcingDataSet="fluxnet3"       # options: fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin mocabors none (for 'none' provide: test_bed/climate.dat [land plant canopy] or soil_forcing_litterfall.dat & soil_forcing_soilphysics.dat [soil])
+forcingDataSet="fluxnet3"       # options: fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin mocabors mocab2 none (for 'none' provide: test_bed/climate.dat [land plant canopy] or soil_forcing_litterfall.dat & soil_forcing_soilphysics.dat [soil])
 crunSites="cue"                 # cue or spp  [spp: BBR_01 | LUE_01 | VES_01 | MTF_01 | CON_01]
 siteName="DE-Hai"               # get the Site-ID from the 1st column of the particular "site list .dat"
                                 # examples: [FLUX/3] "DE-Hai" "FI-Hyy" "ZA-Kru"  [CRUN] "BHS_01" "HAI_01" "ILO_05" "BBR_01" 
                                 #           [GLOBAL all] "GLB_007" "GLB_058" "GLB_394"
                                 #           [FACE] "DK-AMB" "OR-ELE"  [MANIP] "ES-MaG" "ES-MaT"  [FERT] "HAR-CON_4" "HAR-HIG_4" "HAR-LOW_4" "HAR-CON_5" "SDA-CON" "SDA-ADD"
                                 #           [CRAINE] "CRA_01" "CRA_02" "CRA_18"  [PHOTACC] "ARC_01" "MON_02" "STR_01"  [SPP_1685] "BBR" "LUE" "VES"
-                                #           [CONFIN] "FI-Hyy" "FI-Ken"
+                                #           [CONFIN] "FI-Hyy" "FI-Ken"  [MOCABORS] "US-Ha1"  [MOCAB2] "HUR-FOR" "HUR-GRA"
 soil_awc_prescribe=300.0        # float !
 soil_theta_prescribe=1.0        # float !
 longitude=0.0                   # float !
@@ -181,6 +181,10 @@ while getopts ":p:m:i:f:s:y:b:z:h" opt; do
     "mo")
       echo "   forcingDataSet=mocabors"
       forcingDataSet="mocabors"
+      ;;
+    "m2")
+      echo "   forcingDataSet=mocab2"
+      forcingDataSet="mocab2"
       ;;
     "no")
       echo "   forcingDataSet=none"
@@ -273,7 +277,7 @@ while getopts ":p:m:i:f:s:y:b:z:h" opt; do
     echo "       land plant soil canopy test_canopy test_radiation"
     echo " -i set siteName, i.e., siteID"
     echo "    Arguments to -i:"
-    echo "       a valid siteName, e.g., [FLUX/3] DE-Hai  [GLOBAL] GLB_001  [CRUN] BHS_01  [FACE] DK-AMB  [MANIP] ES-MaG  [FERT] HAR-CON_4  [CRAINE] CRA_01  [PHOTACC] MON_02  [SPP_1685] BBR  [MOCABORS] US-Ha1"
+    echo "       a valid siteName, e.g., [FLUX/3] DE-Hai  [GLOBAL] GLB_001  [CRUN] BHS_01  [FACE] DK-AMB  [MANIP] ES-MaG  [FERT] HAR-CON_4  [CRAINE] CRA_01  [PHOTACC] MON_02  [SPP_1685] BBR  [CONFIN] FI-Ken  [MOCABORS] US-Ha1  [MOCAB2] HUR-FOR"
     echo " -f set the forcingDataSet"
     echo "    Arguments to -f:"
     echo "       fl: FLUXNET"
@@ -287,7 +291,8 @@ while getopts ":p:m:i:f:s:y:b:z:h" opt; do
     echo "       ph: PHOTACC sites (phot acclimation)"
     echo "       sp: SPP_1685 sites (for jsm simulations)"
     echo "       co: CONFIN (four finnish sites with conifers)"
-    echo "       mo: MOCABORS (JSM soil moisture development)"
+    echo "       mo: MOCABORS (JSM soil moisture development fluxnet site)"
+    echo "       m2: MOCAB2 (JSM soil moisture development cruncep site)"
     echo "       no: none; using climate.dat file in test_bed folder"
     echo " -s set the soil model"
     echo "    Arguments to -s:"
@@ -356,7 +361,7 @@ validateOutputInterval="timestep daily weekly monthly yearly"
 validatePlantFunctionalTypeID="1 2 3 4 5 6 7 8"
 validateOptionForcing="constant generate readfile"
 validateSetPFTAutomatically="yes no"
-validateForcingDataSet="fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin mocabors none"
+validateForcingDataSet="fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin mocabors mocab2 none"
 validateCrunSites="cue spp"
 validateSb_adsorp_scheme="eca_full eca_part eca_none"
 
@@ -450,6 +455,9 @@ case "$forcingDataSet" in
   ;;
 "mocabors")
   siteDataSet="MOCABORS/"
+  ;;
+"mocab2")
+  siteDataSet="MOCABORS2/"
   ;;
 esac
 
@@ -550,6 +558,9 @@ case "$forcingDataSet" in
 "mocabors")
   allSiteInfoFile="$siteDataDirBase""$siteDataSet"mocab_all_sites_1991-2012_list.dat
   ;;
+"mocab2")
+  allSiteInfoFile="$siteDataDirBase""$siteDataSet"mocab2_sites_1990-2019_list.dat
+  ;;
 esac
 
 
@@ -611,6 +622,9 @@ case "$forcingDataSet" in
   ;;
 "mocabors")
   siteNameStatMetForc="$siteName""_s_"                # e.g.: US-Ha1  ->  US-Ha1_s_*.dat  ->  US-Ha1_s_1991-2012.dat  -> climate.dat
+  ;;
+"mocab2")
+  siteNameStatMetForc="$siteName""_s_"                # e.g.: HUR-FOR ->  HUR-FOR_s_*.dat ->  HUR-FOR_s_1990-2019.dat -> climate.dat
   ;;
 esac
 
@@ -679,14 +693,14 @@ if [ $slmModel != "test_canopy" ] && [ $slmModel != "test_radiation" ]; then    
       else # land plant canopy
         cp ./"$forceLandMetFile"    ./"$slmModel"/"$forceLandMetFile"
       fi 
-    ## forcingDataSet  (fluxnet / fluxnet3 / global / cruncep / face / manip / fert / craine / photacc / spp1685 / confin / mocabors)
+    ## forcingDataSet  (fluxnet / fluxnet3 / global / cruncep / face / manip / fert / craine / photacc / spp1685 / confin / mocabors / mocab2)
     else 
       # soil
       if [ $slmModel == "soil" ]; then
         # no identifier needed, just the sitename (stat & trans soil-forcing are stored in diff dirs)
         if [ "$forcingDataSet" == "cruncep" ]; then
           siteNameSoilForceID=$(echo "$siteName" | cut -c1-3)   # e.g. ILO_05 -> ILO
-        else # fluxnet / face / manip / fert / craine / photacc
+        else # fluxnet / face / manip / fert / craine / photacc / spp1685 / confin / mocabors / mocab2
           siteNameSoilForceID="$siteName"
         fi
         # copy files
