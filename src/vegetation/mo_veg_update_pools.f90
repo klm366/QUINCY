@@ -462,7 +462,7 @@ CONTAINS
     !! 
     lai(:)      = veg_pool%leaf%carbon(:) * lctlib%sla
     dens_ind(:) = dens_ind(:) + delta_dens_ind(:)
-    WHERE(dens_ind(:) > 0.0_wp .AND. lctlib%growthform == itree)
+    WHERE(dens_ind(:) > eps8 .AND. lctlib%growthform == itree)
        diameter(:)  = calc_diameter_from_woody_biomass(lctlib%allom_k1               , &
                                                        lctlib%allom_k2               , &
                                                        lctlib%wood_density           , &
