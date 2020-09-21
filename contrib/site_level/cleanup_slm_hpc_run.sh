@@ -87,7 +87,8 @@ if [ "$array" == "T" ]
 fi
 
 ## create an md5sum file for all output files, i.e. files in the folder "output"
-md5sum "$simFold"*/output/* > "$simFold"md5sum-output-files.txt
+# feature disabled by default, as it takes quite some time for large files, enable manually if needed
+# md5sum "$simFold"*/output/* > "$simFold"md5sum-output-files.txt
 
 ## save the binary and the parameter table
 mkdir -p "$simFold"x_binary
