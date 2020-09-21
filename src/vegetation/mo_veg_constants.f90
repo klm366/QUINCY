@@ -124,7 +124,6 @@ MODULE mo_veg_constants
       f_nacq_nh4           , &
       vmax_bnf             , & !< maximum rate of N fixation (µmol N / mol C fine root / s )
       k_bnf                , & !< half_saturating cost of the response of N fixation (mol C / mol N) 
-      offset_bnf           , & !< factor for BNF response in resistance approach (mol C / mol N)
       eta_nfixation        , & !< fractionation of N15 due to N fixation (per mill), parameter value from Robinson, Tree 2001
       f_myc_exudation_max  , & !< maximum fraction of current growth allocated to mycorrhiza
       f_mycorrhization_min , & !< minimum root mycorrhization 
@@ -288,12 +287,11 @@ CONTAINS
       transform_cost_org          = 1.0_wp    / (molar_mass_C/molar_mass_N)
       f_nacq_nh4                  = transform_cost_no3 / (transform_cost_no3 + transform_cost_nh4)
       f_nacq_no3                  = transform_cost_nh4 / (transform_cost_no3 + transform_cost_nh4)
-      vmax_bnf                    = 5.0_wp * 0.0225_wp / (molar_mass_N/molar_mass_C) / (one_day*one_year) * 1.e6_wp
-      k_bnf                       = 50.0_wp   / (molar_mass_C/molar_Mass_N)
-      offset_bnf                  = 6.0_wp * (f_nacq_nh4 * transform_cost_nh4 + f_nacq_no3 * transform_cost_no3)
+      vmax_bnf                    = 0.0225_wp / (molar_mass_N/molar_mass_C) / (one_day * one_year) * 1.e6_wp
+      k_bnf                       = 5.0_wp    / (molar_mass_C/molar_Mass_N)
       eta_nfixation               = 3.0_wp                   ! Robinson, Tree 2001
       f_myc_exudation_max         = 0.3_wp
-      f_mycorrhization_min        = 0.01_wp
+      f_mycorrhization_min        = 0.1_wp
       f_mycorrhization_max        = 0.5_wp
 
   ! parameters to describe the varying fraction of N in chlorophyll through the canopy

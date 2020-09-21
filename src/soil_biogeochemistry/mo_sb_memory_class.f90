@@ -297,6 +297,10 @@ MODULE mo_sb_memory_class
                                     mycorrhiza_uptake_norg_sl,    &  !< mycorrhiza uptake of N    [µmol m-3 s-1]
                                     mycorrhiza_uptake_norg_n15_sl,&  !< mycorrhiza uptake of N15  [µmol m-3 s-1] 
                                     mycorrhiza_uptake_po4_sl,   &    !< mycorrhiza uptake of P  [µmol m-3 s-1] 
+                                    myc_export_n_tlabile_mavg_sl, &  !< time averaged export from mycorrhizae to plants of N [mol m-3]
+                                    myc_export_p_tlabile_mavg_sl, &  !< time averaged export from mycorrhizae to plants of P [mol m-3]
+                                    myc_export_c_tmyc_mavg_sl, &     !< time averaged export from mycorrhizae to plants of C [mol m-3]
+                                    myc_export_n_tmyc_mavg_sl, &     !< time averaged export from mycorrhizae to plants of N [mol m-3]
                                     volatilisation_nh4,       &      !< volatilisation of NH4  [µmol m-3 s-1]
                                     volatilisation_nh4_n15, &        !< volatilisation of 15NH4  [µmol m-3 s-1]
                                     nitrification_no3, &             !< nitrification NO3 [µmol m-3 s-1]
@@ -2030,6 +2034,38 @@ CONTAINS
       CALL jsb_add_var(mem, 'mycorrhiza_uptake_po4_sl', mem%mycorrhiza_uptake_po4_sl, &
             hgrid, vgrid_soil_sb, &
             t_cf('mycorrhiza_uptake_po4_sl', 'µmol m-3 s-1', 'mycorrhiza uptake of P'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'myc_export_n_tlabile_mavg_sl', mem%myc_export_n_tlabile_mavg_sl, &
+            hgrid, vgrid_soil_sb, &
+            t_cf('myc_export_n_tlabile_mavg_sl', 'mol m-3', 'time averaged mycorrhizae export of N'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'myc_export_p_tlabile_mavg_sl', mem%myc_export_p_tlabile_mavg_sl, &
+            hgrid, vgrid_soil_sb, &
+            t_cf('myc_export_p_tlabile_mavg_sl', 'mol m-3', 'time averaged mycorrhizae export of P'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'myc_export_c_tmyc_mavg_sl', mem%myc_export_c_tmyc_mavg_sl, &
+            hgrid, vgrid_soil_sb, &
+            t_cf('myc_export_c_tmyc_mavg_sl', 'mol m-3', 'time averaged mycorrhizae export of C'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'myc_export_n_tmyc_mavg_sl', mem%myc_export_n_tmyc_mavg_sl, &
+            hgrid, vgrid_soil_sb, &
+            t_cf('myc_export_n_tmyc_mavg_sl', 'mol m-3', 'time averaged mycorrhizae export of N'), &
             t_grib1(table, 255, grib_bits), &
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &

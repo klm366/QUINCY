@@ -339,7 +339,8 @@ MODULE mo_veg_memory_class
                                     demand_uptake_p_tuptake_mavg   , &  !< scalar of Vmax for root P uptake time-averaged [unitless]
                                     growth_req_n_tuptake_mavg      , &  !< moles N required for a unit of C growth under current allocation fractions time-averaged [mol N m-2 s-1]
                                     growth_req_p_tuptake_mavg      , &  !< moles P required for a unit of N growth under current allocation fractions time-averaged [mol P m-2 s-1]
-                                    cost_n_fixation_tuptake_mavg        !< moving average of N fixation cost [mol C mol-1 N]
+                                    cost_n_fixation_tuptake_mavg   , &  !< moving average of N fixation cost [mol C mol-1 N]
+                                    exudation_c_tmyc_mavg               !< moving average of C allocation to mycorrhizal fungi [mol C]
     ! 1.4 memory of conditions for photosynthesis for the optimisation of foliar N fractions 
     TYPE(t_jsb_var_real3d)          :: &   ! DIMENSION(ncanopy)
                                     fleaf_sunlit_tfrac_mavg_cl          !< fraction of layer which is sunlit time-averaged [unitless]
@@ -2131,7 +2132,15 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
-  
+
+      CALL jsb_add_var(mem, 'exudation_c_tmyc_mavg', mem%exudation_c_tmyc_mavg, &
+            hgrid, vgrid_surface, &
+            t_cf('exudation_c_tmyc_mavg', 'mol C', 'moving average of C allocation to mycorrhizae'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
       CALL jsb_add_var(mem, 'fleaf_sunlit_tfrac_mavg_cl', mem%fleaf_sunlit_tfrac_mavg_cl, &
             hgrid, vgrid_canopy, &
             t_cf('fleaf_sunlit_tfrac_mavg_cl', '', 'fraction of sunlit leaves'), &

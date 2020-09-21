@@ -208,7 +208,6 @@ MODULE mo_quincy_set_parameters
     REAL(wp)           :: f_nacq_no3
     REAL(wp)           :: vmax_bnf
     REAL(wp)           :: k_bnf
-    REAL(wp)           :: offset_bnf
     REAL(wp)           :: eta_nfixation
     REAL(wp)           :: k0_fn_chl_C3
     REAL(wp)           :: k0_fn_chl_C4
@@ -695,7 +694,6 @@ CONTAINS
     REAL(wp)           :: f_nacq_no3
     REAL(wp)           :: vmax_bnf
     REAL(wp)           :: k_bnf
-    REAL(wp)           :: offset_bnf
     REAL(wp)           :: eta_nfixation
     REAL(wp)           :: k0_fn_chl_C3
     REAL(wp)           :: k0_fn_chl_C4
@@ -1082,7 +1080,6 @@ CONTAINS
         f_nacq_no3                , &
         vmax_bnf                  , &
         k_bnf                     , &
-        offset_bnf                , &
         eta_nfixation             , &
         k0_fn_chl_C3              , &
         k0_fn_chl_C4              , &
@@ -1470,7 +1467,6 @@ CONTAINS
     f_nacq_no3                  = missval
     vmax_bnf                    = missval
     k_bnf                       = missval
-    offset_bnf                  = missval
     eta_nfixation               = missval
     k0_fn_chl_C3                = missval
     k0_fn_chl_C4                = missval
@@ -1888,7 +1884,6 @@ CONTAINS
     this%f_nacq_no3                  = f_nacq_no3
     this%vmax_bnf                    = vmax_bnf
     this%k_bnf                       = k_bnf
-    this%offset_bnf                  = offset_bnf
     this%eta_nfixation               = eta_nfixation
     this%k0_fn_chl_C3                = k0_fn_chl_C3
     this%k0_fn_chl_C4                = k0_fn_chl_C4
@@ -2965,7 +2960,7 @@ CONTAINS
                                     "f_nacq_no3", proportional_parameter_changes, &
                                     f_nacq_no3)
     
-    CALL Set_quincy_parameter_value(this%vmax_bnf * 0.0225_wp / (molar_mass_N / molar_mass_C) / (one_day * one_year) * 1.0e6_wp, &
+    CALL Set_quincy_parameter_value(this%vmax_bnf / (molar_mass_N / molar_mass_C) / (one_day * one_year) * 1.0e6_wp, &
                                     this%vmax_bnf, &
                                     "vmax_bnf", proportional_parameter_changes, &
                                     vmax_bnf)
@@ -2975,13 +2970,6 @@ CONTAINS
                                     "k_bnf", proportional_parameter_changes, &
                                     k_bnf)
 
-    ! is always recalculated in case any of its dependencies has changed
-    offset_bnf = 6.0_wp * (f_nacq_nh4 * transform_cost_nh4 + f_nacq_no3 * transform_cost_no3)   ! copied from mo_veg_constants
-    CALL Set_quincy_parameter_value(this%offset_bnf * (f_nacq_nh4 * transform_cost_nh4 + f_nacq_no3 * transform_cost_no3), &
-                                    this%offset_bnf, &
-                                    "offset_bnf", proportional_parameter_changes, &
-                                    offset_bnf)
-    
     CALL Set_quincy_parameter_value(this%eta_nfixation, &
                                     this%eta_nfixation, &
                                     "eta_nfixation", proportional_parameter_changes, &

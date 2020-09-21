@@ -3254,20 +3254,20 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     !> 1.1 uptake of nutrients by mycorrhiza and associated respiration losses to heterotrophic respiration
     !!
     WHERE(sb_pool%mycorrhiza%nitrogen(:,:) > eps8)
-        hlp1(:,:) = sb_pool%mycorrhiza%carbon(:,:) / sb_pool%mycorrhiza%nitrogen(:,:)
-        WHERE(hlp1(:,:) < mycorrhiza_cn)
-            mycorrhiza_uptake_nh4_sl(:,:)     = 0.0_wp
-            mycorrhiza_uptake_nh4_n15_sl(:,:) = 0.0_wp
-            mycorrhiza_uptake_no3_sl(:,:)     = 0.0_wp
-            mycorrhiza_uptake_no3_n15_sl(:,:) = 0.0_wp
-        ENDWHERE
+       hlp1(:,:) = MIN(1.0_wp,MAX(0.0_wp, &
+                           (((sb_pool%mycorrhiza%carbon(:,:) / sb_pool%mycorrhiza%nitrogen(:,:)) - mycorrhiza_cn * f_norg_limit) / &
+                           (mycorrhiza_cn * (1._wp - f_norg_limit)))))
+       mycorrhiza_uptake_nh4_sl(:,:)     = mycorrhiza_uptake_nh4_sl(:,:) * hlp1(:,:) 
+       mycorrhiza_uptake_nh4_n15_sl(:,:) = mycorrhiza_uptake_nh4_n15_sl(:,:) * hlp1(:,:)  
+       mycorrhiza_uptake_no3_sl(:,:)     = mycorrhiza_uptake_no3_sl(:,:) * hlp1(:,:)
+       mycorrhiza_uptake_no3_n15_sl(:,:) = mycorrhiza_uptake_no3_n15_sl(:,:) * hlp1(:,:)
     ENDWHERE
 
     WHERE(sb_pool%mycorrhiza%phosphorus(:,:) > eps8)
-        hlp1(:,:) = sb_pool%mycorrhiza%nitrogen(:,:) / sb_pool%mycorrhiza%phosphorus(:,:)
-        WHERE(hlp1(:,:) < mycorrhiza_np)
-              mycorrhiza_uptake_po4_sl(:,:) = 0.0_wp
-        ENDWHERE
+       hlp1(:,:) = MIN(1.0_wp,MAX(0.0_wp, &
+                           (((sb_pool%mycorrhiza%nitrogen(:,:) / sb_pool%mycorrhiza%phosphorus(:,:)) - mycorrhiza_np * f_norg_limit) / &
+                           (mycorrhiza_np * (1._wp - f_norg_limit)))))
+       mycorrhiza_uptake_po4_sl(:,:) = mycorrhiza_uptake_po4_sl(:,:) * hlp1(:,:) 
     ENDWHERE
 
     ! calculate respiration costs associated with N transformation (mol C / m3 / timestep)
@@ -3296,33 +3296,30 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     IF(flag_mycorrhiza_org)THEN 
 
         ! limit organic uptake when inorganic nitrogen is abundant
-        fvmax(:,:) = 0.5_wp * (2.0_wp - nh4_solute(:,:) / (f_nin2norg * km2_uptake_nh4_act(:,:) + nh4_solute(:,:)) - &
-                                        no3_solute(:,:) / (f_nin2norg * km2_uptake_no3_act(:,:) + no3_solute(:,:)))
+        fvmax(:,:) = MIN(1.0_wp, MAX(0.0_wp, &
+                                     0.5_wp * (2.0_wp - nh4_solute(:,:) / (f_nin2norg * km2_uptake_nh4_act(:,:) + nh4_solute(:,:)) - &
+                                     no3_solute(:,:) / (f_nin2norg * km2_uptake_no3_act(:,:) + no3_solute(:,:)))))
+
+        hlp1(:,:) = fvmax(:,:)
 
         ! limit organic uptake according to accessibility to substrate
         fvmax(:,:) = fvmax(:,:) * sb_pool%residue%nitrogen(:,:) / ( km_uptake_org_act(:,:) + sb_pool%residue%nitrogen(:,:))
 
-        ! limit organic uptake by mycorrhizal N demand
-        WHERE(sb_pool%mycorrhiza%carbon(:,:)>eps8)
-           fvmax(:,:) = fvmax(:,:) * MAX(0.0_wp, MIN(1.0_wp, &
-                        (1.0_wp - (sb_pool%mycorrhiza%nitrogen(:,:) / sb_pool%mycorrhiza%carbon(:,:)) / &
-                        (1._wp/mycorrhiza_cn)) / (1._wp - f_norg_limit)))
-        ELSEWHERE
-           fvmax(:,:) = 0.0_wp
-        ENDWHERE 
-
         mycorrhiza_uptake_norg_sl(:,:) = fvmax(:,:) * vmax_uptake_norg * sb_pool%mycorrhiza%carbon(:,:) * &
                                          dtime / 1000000._wp
 
-       ! reduce organic uptake at low mycorrhiza CN (should be obsolete with above function) 
-       WHERE(sb_pool%mycorrhiza%carbon(:,:) < mycorrhiza_cn * sb_pool%mycorrhiza%nitrogen(:,:)) 
-          mycorrhiza_uptake_norg_sl(:,:) = 0.0_wp 
-       ENDWHERE 
-
-       ! diagnose 15N uptake
        WHERE(sb_pool%residue%nitrogen(:,:) > eps8) 
           mycorrhiza_uptake_norg_n15_sl(:,:) = mycorrhiza_uptake_norg_sl(:,:) * & 
                                                sb_pool%residue%nitrogen15(:,:) / sb_pool%residue%nitrogen(:,:) 
+       ENDWHERE
+
+       ! reduce organic uptake at low mycorrhiza CN (should be obsolete with above function)
+       WHERE(sb_pool%mycorrhiza%nitrogen(:,:) > eps8)
+           hlp1(:,:) = MIN(1.0_wp,MAX(0.0_wp, &
+                           (((sb_pool%mycorrhiza%carbon(:,:) / sb_pool%mycorrhiza%nitrogen(:,:)) - mycorrhiza_cn * f_norg_limit) / &
+                           (mycorrhiza_cn * (1._wp - f_norg_limit)))))
+           mycorrhiza_uptake_norg_sl(:,:) = mycorrhiza_uptake_norg_sl(:,:) * hlp1(:,:)
+           mycorrhiza_uptake_norg_n15_sl(:,:) = mycorrhiza_uptake_norg_n15_sl(:,:) * hlp1(:,:) 
        ENDWHERE
 
        ! calculate N uptake fraction
@@ -3503,6 +3500,9 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
        CASE("standard")
          hlp2(:) = standard_bnf_max_rate / SUM(root_fraction_act_sl(:,:) * soil_depth_sl(:,:), DIM=2)
          hlp2_2d(:,:) = SPREAD(hlp2,2,nsoil_sb) * rtm_fixation_act(:,:) 
+       CASE( "optimal") !small background/asymbiotic fixation rate for adaptive schemes
+         hlp2(:) = 0.1_wp * standard_bnf_max_rate / SUM(root_fraction_act_sl(:,:) * soil_depth_sl(:,:),DIM=2)
+         hlp2_2d(:,:) = SPREAD(hlp2,2,nsoil_sb) * rtm_fixation_act(:,:)
        CASE default
          hlp2_2d(:,:) = 0.0_wp
     END SELECT
@@ -3510,7 +3510,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     !> 1.2 set asymbiontic N fixation to value in lctlib for the fixed and standard schemes
     !!
     SELECT CASE(TRIM(sb_bnf_scheme))
-       CASE("fixed", "standard")
+       CASE("fixed", "standard","optimal")
           WHERE(hlp1_2d(:,:) < soil_n_threshold_bnf .AND. & 
                 sb_pool_microbial_carbon(:,:) > eps4 .AND. & 
                 soil_depth_sl(:,:) > eps8)

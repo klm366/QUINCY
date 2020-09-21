@@ -72,7 +72,7 @@ CONTAINS
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)                ! USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4slm_Use_memory_a_veg                ! USE mo_veg_memory_class,      ONLY: t_veg_element_a, t_veg_pool_a
-    USE mo_veg_memory_class,                ONLY: veg_pool
+    USE mo_veg_memory_class,                ONLY: veg_pool, veg_exudation
 
     IMPLICIT NONE
     ! ---------------------------
@@ -167,6 +167,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: t_air_month_mavg
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt_mavg
     dsl4jsb_Real2D_onChunk      :: w_root_lim_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: exudation_c_tmyc_mavg
     ! VEG_ 3D
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tfrac_mavg_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tcnl_mavg_cl
@@ -264,6 +265,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_month_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, w_root_lim_talloc_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, exudation_c_tmyc_mavg)
     ! 3D
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tcnl_mavg_cl)
@@ -448,6 +450,7 @@ CONTAINS
     reserve_nitrogen_talloc_mavg(:)     = 0.0_wp
     reserve_phosphorus_talloc_mavg(:)   = 0.0_wp
     w_root_lim_talloc_mavg(:)           = w_root_lim_max
+    exudation_c_tmyc_mavg(:)           = 0.0_wp
 
     ! N fraction optimisation
     fleaf_sunlit_tfrac_mavg_cl(:,:)     = 0.5_wp

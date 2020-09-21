@@ -76,7 +76,7 @@ CONTAINS
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(ASSIMI_)    
-    
+    dsl4jsb_Use_config(SB_)        
     ! Use of process memories
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
@@ -86,7 +86,7 @@ CONTAINS
                                       veg_exudation, veg_establishment, veg_reserve_use, veg_total_biomass
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
     dsl4slm_Use_memory_a_sb
-    USE mo_sb_memory_class,     ONLY: sb_mycorrhiza_export
+    USE mo_sb_memory_class,     ONLY: sb_pool, sb_mycorrhiza_export
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
     dsl4jsb_Use_memory(SSE_)       !  USE mo_sse_memory_class,     ONLY: t_sse_memory
 
@@ -113,6 +113,7 @@ CONTAINS
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(ASSIMI_)
+    dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(ASSIMI_)                       ! TYPE(t_assimi_memory),      POINTER :: assimi__mem
     dsl4jsb_Def_memory(PHENO_)                        ! TYPE(t_pheno_memory),       POINTER :: pheno__mem
     dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),         POINTER :: veg__mem
@@ -216,6 +217,7 @@ CONTAINS
     canopy_layer_depth(:) = vgrid_canopy%dz(:)
     ! Get process config
     dsl4jsb_Get_config(ASSIMI_)
+    dsl4jsb_Get_config(SB_)
     ! Get process memories
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(PHENO_)
@@ -296,6 +298,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)                      ! inout
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_oth_cl)                      ! inout
     ! Get process memory pool structures
+
 #define Get_veg_pool
 #define Get_veg_litterfall
 #define Get_veg_growth
@@ -303,6 +306,7 @@ CONTAINS
 #define Get_veg_exudation
 #define Get_veg_total_biomass
 #define Get_veg_reserve_use
+#define Get_sb_pool
 #define Get_sb_mycorrhiza_export
 #include "slm_pools_a_incl.f90"
 #undef Get_veg_pool
@@ -312,6 +316,7 @@ CONTAINS
 #undef Get_veg_exudation
 #undef Get_veg_total_biomass
 #undef Get_veg_reserve_use
+#undef Get_sb_pool
 #undef Get_sb_mycorrhiza_export
 
 
@@ -495,6 +500,10 @@ CONTAINS
         dens_ind(:)                    = 0.1_wp
         veg_pool%reserve%carbon(:)     = 0.1_wp
       ENDIF
+      IF(dsl4jsb_Config(SB_)%flag_mycorrhiza) THEN !save some additional C in case plant has to feed mycorrhizae
+        veg_pool%reserve%carbon(:)   = veg_pool%reserve%carbon * 2.0_wp
+      ENDIF
+
       !! zero
       veg_pool%leaf                  = veg_pool%leaf        * 0.0_wp
       veg_pool%fine_root             = veg_pool%fine_root   * 0.0_wp
@@ -503,6 +512,7 @@ CONTAINS
       veg_pool%heart_wood            = veg_pool%heart_wood  * 0.0_wp
       veg_pool%fruit                 = veg_pool%fruit       * 0.0_wp
       veg_pool%labile                = veg_pool%labile      * 0.0_wp
+      sb_pool%mycorrhiza             = sb_pool%mycorrhiza   * 0.1_wp !assume that some mycorrhizae will survive the harvest. Most will die shortly after harvest caused by turnover
       height(:)                      = 0.0_wp
       diameter(:)                    = 0.0_wp
       lai(:)                         = 0.0_wp
@@ -601,6 +611,7 @@ CONTAINS
 #define Passback_veg_exudation
 #define Passback_veg_total_biomass
 #define Passback_veg_reserve_use
+#define Passback_sb_pool
 #define Passback_sb_mycorrhiza_export
 #include "slm_pools_a_incl.f90"
 #undef Passback_veg_pool
@@ -610,6 +621,7 @@ CONTAINS
 #undef Passback_veg_exudation
 #undef Passback_veg_total_biomass
 #undef Passback_veg_reserve_use
+#undef Passback_sb_pool
 #undef Passback_sb_mycorrhiza_export
 
   END SUBROUTINE update_veg_pools

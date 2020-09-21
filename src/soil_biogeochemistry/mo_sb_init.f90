@@ -751,6 +751,7 @@ CONTAINS
         sb_pool%mycorrhiza%carbon14(:,:)          = sb_pool%mycorrhiza%carbon(:,:) * frac_c14 
         sb_pool%mycorrhiza%nitrogen15(:,:)        = sb_pool%mycorrhiza%nitrogen(:,:) / & 
                                                     (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+
        CASE DEFAULT
          CALL finish(routine,'Invalid setting of sb_model_scheme.')
      END SELECT  ! simple_0d & simple_1d | jsm

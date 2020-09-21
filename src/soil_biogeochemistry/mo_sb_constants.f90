@@ -418,15 +418,15 @@ CONTAINS
     f_maxresp_myc           = 0.5_wp                                  ! 
     f_surface_myc2fineroot  = 40.0_wp                                 ! 
     myc_root_coverage_max   = 0.3_wp                                  ! 
-    vmax_uptake_norg        = 5.0_wp                                  ! 
+    vmax_uptake_norg        = 1.0_wp                                  ! 
     km_up_org               = 400.0_wp                                ! 
     f_nin2norg              = 1.0_wp                                  ! 
-    f_norg_limit            = 0.9_wp                                  ! 
-    vmax_priming            = 2.0_wp                                  ! 
-    km_priming              = 2.0_wp                                  ! 
+    f_norg_limit            = 0.8_wp                                  ! 
+    vmax_priming            = 20.0_wp                                 ! 
+    km_priming              = 1.0_wp                                  ! 
     resp_priming            = 0.05_wp / one_day                       ! 
     organic_cn              = 3.0_wp * molar_mass_N / molar_mass_C    ! 
-    f_tau_myc               = 3.0_wp                                  ! 
+    f_tau_myc               = 5.0_wp                                  ! 
 
    ! nutrient uptake kinetics & ECA approach: simple model
     km1_up_nh4 = 0.0416_wp                 ! Kronzucker et al. 1996, Plant Physiology

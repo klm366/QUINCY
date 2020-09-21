@@ -512,10 +512,12 @@ CONTAINS
     dsl4jsb_Use_memory(A2L_)        !  USE mo_a2l_memory_class,      ONLY: t_a2l_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4slm_Use_memory_a_veg        !  USE mo_veg_memory_class,      ONLY: t_veg_element_a, t_veg_pool_a
-    USE mo_veg_memory_class,        ONLY: veg_pool
+    USE mo_veg_memory_class,        ONLY: veg_pool, veg_exudation
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
+    dsl4slm_Use_memory_a_sb
+    USE mo_sb_memory_class,         ONLY: sb_mycorrhiza_export
     dsl4jsb_Use_memory(SSE_)        !  USE mo_sse_memory_class,      ONLY: t_sse_memory
 
 
@@ -529,7 +531,9 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER         :: model                !< instance of the model
     TYPE(t_lctlib_element), POINTER         :: lctlib               !< land-cover-type library - parameter across pft's
     TYPE(t_jsb_vgrid),      POINTER         :: vgrid_canopy         !< Vertical grid
+    TYPE(t_jsb_vgrid),      POINTER         :: vgrid_soil_sb        !< Vertical grid
     INTEGER                                 :: ncanopy              !< number of canopy layers
+    INTEGER                                 :: nsoil_sb             !< number of soil layers as used/defined by the SB_ process
     REAl(wp),DIMENSION(options%nc)          :: hlp, mavg_period_hlp !< helper
     LOGICAL ,DIMENSION(options%nc)          :: l_growing_season     !< growing_season LOGICAL needed for calc_mavg(), see section 0.9
     INTEGER                                 :: iblk, ics, ice, nc
@@ -675,6 +679,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: growth_respiration
     dsl4jsb_Real2D_onChunk      :: maint_respiration
     dsl4jsb_Real2D_onChunk      :: n_processing_respiration
+    dsl4jsb_Real2D_onChunk      :: exudation_c_tmyc_mavg
     ! VEG_ 3D
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tcnl_mavg_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tfrac_mavg_cl
@@ -697,6 +702,10 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: enzyme_frac_poly_c_mavg
     dsl4jsb_Real3D_onChunk      :: enzyme_frac_poly_n_mavg
     dsl4jsb_Real3D_onChunk      :: enzyme_frac_poly_p_mavg
+    dsl4jsb_Real3D_onChunk      :: myc_export_c_tmyc_mavg_sl
+    dsl4jsb_Real3D_onChunk      :: myc_export_n_tmyc_mavg_sl
+    dsl4jsb_Real3D_onChunk      :: myc_export_n_tlabile_mavg_sl
+    dsl4jsb_Real3D_onChunk      :: myc_export_p_tlabile_mavg_sl
     ! SSE_
     dsl4jsb_Real2D_onChunk      :: transpiration
     dsl4jsb_Real2D_onChunk      :: t_soil_root
@@ -716,7 +725,9 @@ CONTAINS
     model         => Get_model(tile%owner_model_id)
     lctlib        => model%lctlib(tile%lcts%lib_id)
     vgrid_canopy  => Get_vgrid('canopy_layer')
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
     ncanopy       =  vgrid_canopy%n_levels
+    nsoil_sb      =  vgrid_soil_sb%n_levels
     ! Get process config
     dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_config(VEG_)
@@ -857,6 +868,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration)
     dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration)
     dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration)
+    dsl4jsb_Get_var2D_onChunk(VEG_, exudation_c_tmyc_mavg)
     ! 3D
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tcnl_mavg_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl)
@@ -879,6 +891,10 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,  enzyme_frac_poly_c_mavg)
     dsl4jsb_Get_var3D_onChunk(SB_,  enzyme_frac_poly_n_mavg)
     dsl4jsb_Get_var3D_onChunk(SB_,  enzyme_frac_poly_p_mavg)
+    dsl4jsb_Get_var3D_onChunk(SB_,  myc_export_c_tmyc_mavg_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,  myc_export_n_tmyc_mavg_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,  myc_export_n_tlabile_mavg_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,  myc_export_p_tlabile_mavg_sl)
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SSE_, transpiration)
     dsl4jsb_Get_var2D_onChunk(SSE_, t_soil_root)
@@ -886,9 +902,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root)
     ! Get process memory pool structures
 #define Get_veg_pool
+#define Get_veg_exudation
+#define Get_sb_mycorrhiza_export
 #include "slm_pools_a_incl.f90"
 #undef Get_veg_pool
-
+#undef Get_veg_exudation
+#undef Get_sb_mycorrhiza_export
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -1066,7 +1085,17 @@ CONTAINS
     unit_uptake_n_talloc_mavg(:)        = calc_mavg(unit_uptake_n_talloc_mavg(:), unit_uptake_n_pot(:), &
                                                       mavg_period_talloc, do_calc=l_growing_season(:))
     unit_uptake_p_talloc_mavg(:)        = calc_mavg(unit_uptake_p_talloc_mavg(:), unit_uptake_p_pot(:), &
-         mavg_period_talloc, do_calc=l_growing_season(:))
+                                                      mavg_period_talloc, do_calc=l_growing_season(:))
+    myc_export_n_tlabile_mavg_sl(:,:)   = calc_mavg(myc_export_n_tlabile_mavg_sl(:,:), sb_mycorrhiza_export%nitrogen(:,:), & 
+ 	                                                    mavg_period_tlabile) 
+    myc_export_p_tlabile_mavg_sl(:,:)   = calc_mavg(myc_export_p_tlabile_mavg_sl(:,:), sb_mycorrhiza_export%phosphorus(:,:), & 
+ 	                                                    mavg_period_tlabile)
+    myc_export_c_tmyc_mavg_sl(:,:)      = calc_mavg(myc_export_c_tmyc_mavg_sl(:,:), sb_mycorrhiza_export%carbon(:,:), & 
+ 	                                                    lctlib%tau_mycorrhiza, avg_period_unit='year')
+    myc_export_n_tmyc_mavg_sl(:,:)      = calc_mavg(myc_export_n_tmyc_mavg_sl(:,:), sb_mycorrhiza_export%nitrogen(:,:), & 
+ 	                                                    lctlib%tau_mycorrhiza, avg_period_unit='year')
+    exudation_c_tmyc_mavg(:)            = calc_mavg(exudation_c_tmyc_mavg(:), veg_exudation%carbon(:), & 
+ 	                                                    lctlib%tau_mycorrhiza, avg_period_unit='year')
 
     SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%biomass_alloc_scheme))
     CASE ("optimal", "fixed")
@@ -1175,8 +1204,12 @@ CONTAINS
 
 ! Pass back values to process memory
 #define Passback_veg_pool
+#define Passback_veg_exudation
+#define Passback_sb_mycorrhiza_export
 #include "slm_pools_a_incl.f90"
 #undef Passback_veg_pool
+#undef Passback_veg_exudation
+#undef Passback_sb_mycorrhiza_export
 
   END SUBROUTINE calc_moving_averages
 

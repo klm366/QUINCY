@@ -148,6 +148,10 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: plant_uptake_no3_sl
     dsl4jsb_Real3D_onChunk      :: plant_uptake_no3_n15_sl
     dsl4jsb_Real3D_onChunk      :: plant_uptake_po4_sl
+    dsl4jsb_Real3D_onChunk      :: myc_export_n_tlabile_mavg_sl
+    dsl4jsb_Real3D_onChunk      :: myc_export_p_tlabile_mavg_sl
+    dsl4jsb_Real3D_onChunk      :: myc_export_c_tmyc_mavg_sl
+    dsl4jsb_Real3D_onChunk      :: myc_export_n_tmyc_mavg_sl
     ! SSE_ 2D
     dsl4jsb_Real2D_onChunk      :: w_soil_root_theta
     dsl4jsb_Real2D_onChunk      :: t_soil_root
@@ -236,6 +240,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: demand_uptake_n_tuptake_mavg
     dsl4jsb_Real2D_onChunk      :: demand_uptake_p_tuptake_mavg
     dsl4jsb_Real2D_onChunk      :: cost_n_fixation_tuptake_mavg
+    dsl4jsb_Real2D_onChunk      :: exudation_c_tmyc_mavg
     dsl4jsb_Real2D_onChunk      :: uptake_nh4
     dsl4jsb_Real2D_onChunk      :: uptake_nh4_n15
     dsl4jsb_Real2D_onChunk      :: uptake_no3
@@ -324,6 +329,10 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_, plant_uptake_no3_sl)                 ! inout
     dsl4jsb_Get_var3D_onChunk(SB_, plant_uptake_no3_n15_sl)             ! inout
     dsl4jsb_Get_var3D_onChunk(SB_, plant_uptake_po4_sl)                 ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_, myc_export_n_tlabile_mavg_sl)        ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_, myc_export_p_tlabile_mavg_sl)        ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_, myc_export_c_tmyc_mavg_sl)        ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_, myc_export_n_tmyc_mavg_sl)        ! inout
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_theta)                 ! in
     dsl4jsb_Get_var2D_onChunk(SSE_, t_soil_root)                       ! in
@@ -411,6 +420,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, demand_uptake_n_tuptake_mavg)       ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, demand_uptake_p_tuptake_mavg)       ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_fixation_tuptake_mavg)       ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, exudation_c_tmyc_mavg)             ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4)                         ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4_n15)                     ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3)                         ! out
@@ -528,6 +538,7 @@ CONTAINS
                                           unit_npp_troot_mavg(:), &
                                           unit_uptake_n_pot_troot_mavg(:), &
                                           cost_n_fixation_tuptake_mavg(:), &
+                                          exudation_c_tmyc_mavg(:), &
                                           unit_uptake_n_pot(:), &
                                           unit_uptake_p_pot(:), &
                                           plant_uptake_nh4_sl(:,:), &
@@ -536,6 +547,10 @@ CONTAINS
                                           plant_uptake_no3_n15_sl(:,:), &
                                           plant_uptake_po4_sl(:,:), &
                                           sb_mycorrhiza_export, &
+                                          myc_export_n_tlabile_mavg_sl(:,:), &
+                                          myc_export_p_tlabile_mavg_sl(:,:), &
+                                          myc_export_c_tmyc_mavg_sl(:,:), &
+                                          myc_export_n_tmyc_mavg_sl(:,:), &
                                           uptake_nh4(:), &
                                           uptake_nh4_n15(:), &
                                           uptake_no3(:), &
@@ -1042,6 +1057,7 @@ CONTAINS
                                               unit_npp_troot_mavg, &
                                               unit_uptake_n_troot_mavg, &
                                               cost_n_fixation_tuptake_mavg, &
+                                              exudation_c_tmyc_mavg, &
                                               unit_uptake_n_pot, &
                                               unit_uptake_p_pot, &
                                               plant_uptake_nh4_sl, &
@@ -1050,6 +1066,10 @@ CONTAINS
                                               plant_uptake_no3_n15_sl, &
                                               plant_uptake_po4_sl, &
                                               sb_mycorrhiza_export, &
+                                              myc_export_n_tlabile_mavg_sl, &
+                                              myc_export_p_tlabile_mavg_sl, &
+                                              myc_export_c_tmyc_mavg_sl, &
+                                              myc_export_n_tmyc_mavg_sl, &
                                               uptake_nh4, &
                                               uptake_nh4_n15, &
                                               uptake_no3, &
@@ -1069,7 +1089,7 @@ CONTAINS
     USE mo_jsb_phys_constants,      ONLY: Tzero, molar_mass_C, molar_mass_N
     USE mo_isotope_util,            ONLY: calc_mixing_ratio_N15N14
     USE mo_jsb_math_constants,      ONLY: dtime, one_day, one_year, eps8
-    USE mo_veg_constants,           ONLY: vmax_bnf, k_bnf, offset_bnf, eta_nfixation, transform_cost_nh4, transform_cost_no3, &
+    USE mo_veg_constants,           ONLY: vmax_bnf, k_bnf, eta_nfixation, transform_cost_nh4, transform_cost_no3, &
                                           fresp_growth, cost_n_fixation_max, cost_n_fixation_min, & 
                                           k1_temp_bnf, k2_temp_bnf,  k3_temp_bnf,  k4_temp_bnf, tau_labile, &
                                           f_myc_exudation_max, f_mycorrhization_min, f_mycorrhization_max
@@ -1105,13 +1125,18 @@ CONTAINS
     REAL(wp), DIMENSION(nc),              INTENT(in)    :: unit_npp_troot_mavg          !< time-averaged increase of NPP with increased leaf C investment (mol C/mol C)
     REAL(wp), DIMENSION(nc),              INTENT(in)    :: unit_uptake_n_troot_mavg     !< time-averaged increase of root N uptake with increased root C inventment (mol N / mol C)
     REAL(wp), DIMENSION(nc),              INTENT(in)    :: cost_n_fixation_tuptake_mavg !< time-averaged C costs for N fixation (mol C / mol N)
+    REAL(wp), DIMENSION(nc),              INTENT(in)    :: exudation_c_tmyc_mavg       !< time-averaged C allocation to mycorrhizae (mol C / mol N)
     REAL(wp), DIMENSION(nc),              INTENT(in)    :: unit_uptake_n_pot            !< potential N uptake per unit root mass (mu mol N / mol C / s)
     REAL(wp), DIMENSION(nc),              INTENT(in)    :: unit_uptake_p_pot            !< potential P uptake per unit root mass (mu mol P / mol C / s)
     REAL(wp), DIMENSION(nc, nsoil_sb),    INTENT(inout) :: plant_uptake_nh4_sl     , &  !< plant NH4 uptake per soil layer (mu mol N / m3 / s)
                                                            plant_uptake_nh4_n15_sl , &  !< plant NH4-N15 uptake per soil layer (mu mol N / m3 / s)
                                                            plant_uptake_no3_sl     , &  !< plant NO3 uptake per soil layer (mu mol N / m3 / s)
                                                            plant_uptake_no3_n15_sl , &  !< plant NO3-N15 uptake per soil layer (mu mol N / m3 / s)
-                                                           plant_uptake_po4_sl          !< plant PO4 uptake per soil layer (mu mol P / m3 / s)
+                                                           plant_uptake_po4_sl, &       !< plant PO4 uptake per soil layer (mu mol P / m3 / s)
+                                                           myc_export_n_tlabile_mavg_sl  , & !< time averaged N export from myc2plant (mu mol N / m3)
+                                                           myc_export_p_tlabile_mavg_sl  , & !< time averaged P export from myc2plant (mu mol P / m3)
+                                                           myc_export_c_tmyc_mavg_sl  , & !< time averaged C export from myc2plant (mu mol N / m3)
+                                                           myc_export_n_tmyc_mavg_sl  !< time averaged N export from myc2plant (mu mol P / m3)
     TYPE(t_sb_element_a),                 INTENT(inout) :: sb_mycorrhiza_export         !< total plant uptake from mycorrhiza (mol / m2 / timestep)  
     REAL(wp), DIMENSION(nc),              INTENT(out)   :: uptake_nh4                   !< total plant NH4 uptake (mu mol N / m2 / s)  
     REAL(wp), DIMENSION(nc),              INTENT(out)   :: uptake_nh4_n15               !< total plant NH4-N15 uptake (mu mol N / m2 / s)  
@@ -1137,8 +1162,13 @@ CONTAINS
                                        uptake_no3_pot, & ! potential NO3 uptake (mu mol N / m2 /s)
                                        uptake_po4_pot, & ! potential PO4 uptake (mu mol P / m2 /s)
                                        fresp_maint, &    ! fractional cost of maintenance respiration
+                                       vmax_bnf_act, &   ! actual T-dependent vmax_bnf
                                        gain_c, &         ! marginal carbon gain per leaf investment
                                        gain_n, &         ! marginal nitrogen gain per root investment
+                                       gain_mycorrhizae, &
+                                       support, &
+                                       nsup, &
+                                       psup, &
                                        f_exudate_max, &
                                        f_exudate, &
                                        f_myc_opt, &
@@ -1183,15 +1213,8 @@ CONTAINS
    
     !> 1.3 apply demand driven reduction in uptake
     !! 
-    !! this is done differently in the resistance scheme
-    SELECT CASE (bnf_scheme)
-      CASE ("resistance")
-         uptake_nh4(:) = uptake_nh4_pot(:)
-         uptake_no3(:) = uptake_no3_pot(:)
-      CASE DEFAULT
-         uptake_nh4(:) = demand_uptake_n_tuptake_mavg(:) * uptake_nh4_pot(:)
-         uptake_no3(:) = demand_uptake_n_tuptake_mavg(:) * uptake_no3_pot(:)
-    END SELECT
+    uptake_nh4(:) = demand_uptake_n_tuptake_mavg(:) * uptake_nh4_pot(:)
+    uptake_no3(:) = demand_uptake_n_tuptake_mavg(:) * uptake_no3_pot(:)
     uptake_po4(:) = demand_uptake_p_tuptake_mavg(:) * uptake_po4_pot(:)
 
 
@@ -1211,8 +1234,19 @@ CONTAINS
     ELSEWHERE
       fresp_maint(:) = 0.0_wp
     END WHERE
-    gain_n(:) = unit_uptake_n_troot_mavg(:) / (1._wp + fresp_growth + fresp_maint(:)) ! + uptake_norg / veg_exudation%carbon
-    !! @todo !! Idea for coupling BNF and Mycos... Somewhere in the future
+    gain_n(:) = unit_uptake_n_troot_mavg(:) / (1._wp + fresp_growth + fresp_maint(:))
+
+    ! costs for mycorrhizae
+    gain_mycorrhizae(:) = 0.0_wp
+    IF(flag_mycorrhiza) THEN
+      hlp1(:) = exudation_c_tmyc_mavg(:) - SUM(myc_export_c_tmyc_mavg_sl(:,:) * soil_depth_sl(:,:),DIM=2)
+      hlp2(:) = SUM(myc_export_n_tmyc_mavg_sl(:,:) * soil_depth_sl(:,:),DIM=2)
+      WHERE(hlp1(:) > eps8)
+          gain_mycorrhizae(:) = hlp2(:) / hlp1(:)
+      ENDWHERE
+    ENDIF
+
+    gain_n(:) = gain_n(:) + gain_mycorrhizae(:)
  
     ! transformation costs depend on NH4 and NO3 uptake rates   
     WHERE((uptake_nh4(:) + uptake_no3(:)) > eps8)
@@ -1245,32 +1279,17 @@ CONTAINS
       !> 3.1 Case 1: optimal N fixation
       !! BNF calculation with Michaelis Menten function (Rastetter, 2001) (MM)
       CASE ("optimal")
+        hlp1(:)            = 1.0_wp /(k1_temp_bnf * &
+                             exp(k2_temp_bnf + k3_temp_bnf * (t_air(:) - Tzero) * (1.0_wp - (t_air(:) - Tzero) / k4_temp_bnf)))
+        vmax_bnf_act(:)    = vmax_bnf * (0.25_wp + 0.25_wp * hlp1(:))
         WHERE(cost_n_fixation_tuptake_mavg(:) <= cost_n_uptake_root(:))
            dcost(:)      = cost_n_uptake_root(:) - cost_n_fixation_tuptake_mavg(:)
-           n_fixation(:) = fine_root_carbon(:) * vmax_bnf * dcost(:) / (k_bnf + dcost(:))
+           n_fixation(:) = fine_root_carbon(:) * vmax_bnf_act(:) * dcost(:) / (k_bnf + dcost(:))
         ELSEWHERE
            n_fixation(:) = 0.0_wp
         END WHERE
 
-      !> 3.2 Case 2: Ohm's law analogy 
-      !! BNF calculation after FUN2.0 (Brzostek, 2014) (RA)
-      CASE ("resistance")
-        ! current N deficit of growth assuming default labile turnover rate (µmol N / m2 / s)
-!SZ: @todo mo_veg_growth.f90 why is n-demand defined on a static leaf C:N and not the actual growth requirement for N?
-        n_demand(:)   = demand_uptake_n_tuptake_mavg(:) / lctlib_cn_leaf * &
-                       labile_carbon(:) / tau_labile / one_day * 1.e6_wp
-        f_nacq_bnf(:) = MAX((cost_n_uptake_root(:) - offset_bnf) / (cost_n_uptake_root(:) + cost_n_fixation_tuptake_mavg(:)), &
-                           0.0_wp)
-        f_nacq_nup(:) = 1.0_wp - f_nacq_bnf(:)
-        n_fixation(:) = f_nacq_bnf(:) * n_demand(:)
-
-        WHERE((uptake_nh4(:) + uptake_no3(:)) > eps8 .AND. (f_nacq_nup(:) * n_demand(:)) < (uptake_nh4(:) + uptake_no3(:)))
-         scal(:)       = (f_nacq_nup(:) * n_demand(:)) / (uptake_nh4(:) + uptake_no3(:))
-         uptake_nh4(:) = uptake_nh4(:) * scal(:)
-         uptake_no3(:) = uptake_no3(:) * scal(:)
-        END WHERE
-
-      !> 3.3 Case 3: Give enough N to maintain N requirement in the labile pool 
+      !> 3.2 Case 2: Give enough N to maintain N requirement in the labile pool 
       CASE("unlimited")
         ! N fixation in µmol N / m2 / s
         n_fixation(:) = MAX(labile_carbon(:) * growth_req_n_tlabile_mavg(:) - labile_nitrogen(:), 0.0_wp) / & 
@@ -1282,29 +1301,52 @@ CONTAINS
     !! 
     IF(flag_mycorrhiza) THEN
 
-       ! assuming that plants will give max XX% of freshly assimilated carbon to mycorrhiza; scaled with demand
-       f_myc_opt(:) = f_mycorrhization_min + (f_mycorrhization_max - f_mycorrhization_min) * & 
-                                             MAX(demand_uptake_n_tuptake_mavg(:),demand_uptake_p_tuptake_mavg(:)) 
+       ! relative support of N/P acquisition by mycorrhizae
+       ! scaling factor for plant C exudation
+       ! high support = high exudation // low/no support = low exudation
+       !!only sensitive to N at the moment (last line)
+       nsup(:) = 0.0_wp
+       hlp1(:) = SUM(myc_export_n_tlabile_mavg_sl(:,:) * soil_depth_sl(:,:),DIM=2) * 1000000.0_wp !coversion of mols to µmols
+       nsup(:) = hlp1(:) / (hlp1(:) + 0.0001)
+       psup(:) = 0.0_wp
+       hlp1(:) = SUM(myc_export_p_tlabile_mavg_sl(:,:) * soil_depth_sl(:,:),DIM=2) * 1000000.0_wp
+       psup(:) = hlp1(:) / (hlp1(:) + 0.000001)
+       support(:) = nsup(:) !MIN(nsup(:), psup(:))
+
+       ! assuming that plants will give max XX% of freshly assimilated carbon to mycorrhiza
+       ! scaled with demand and support
+       !!only sensitive to N at the moment (last line)
+       f_myc_opt(:) = f_mycorrhization_min + (f_mycorrhization_max - f_mycorrhization_min) * support * &
+                                              demand_uptake_n_tuptake_mavg(:)
+                                             !MAX(demand_uptake_n_tuptake_mavg(:),demand_uptake_p_tuptake_mavg(:)) 
+
        ! exudation rate (mol / m2 / timestep)
-       exudation_carbon(:) = MIN(f_myc_exudation_max * labile_carbon(:) * kstar_labile(:) * dtime / one_day, &
-                               MAX(f_myc_opt(:) * fine_root_carbon(:) - SUM(mycorrhiza_carbon(:,:) * soil_depth_sl(:,:),DIM=2), &
-                                   0.0_wp))
+       hlp1(:) = SUM(mycorrhiza_carbon(:,:) * soil_depth_sl(:,:),DIM=2)
+       hlp2(:) = MIN(f_myc_exudation_max * labile_carbon(:) * tau_labile / one_day, &
+                     MAX(f_myc_opt(:) * fine_root_carbon(:) - hlp1(:),0.0_wp))
+       exudation_carbon(:) = MAX(f_mycorrhization_min * fine_root_carbon(:) - hlp1(:), hlp2(:))
+                      
 
        ! scale down uptake from mycorrhiza according to demand
        DO isoil = 1,nsoil_sb
-          sb_mycorrhiza_export%carbon(:,isoil)     = sb_mycorrhiza_export%carbon(:,isoil)     * demand_uptake_n_tuptake_mavg(:) 
-          sb_mycorrhiza_export%nitrogen(:,isoil)   = sb_mycorrhiza_export%nitrogen(:,isoil)   * demand_uptake_n_tuptake_mavg(:)
-          sb_mycorrhiza_export%phosphorus(:,isoil) = sb_mycorrhiza_export%phosphorus(:,isoil) * demand_uptake_p_tuptake_mavg(:)
-          sb_mycorrhiza_export%carbon13(:,isoil)   = sb_mycorrhiza_export%carbon13(:,isoil)   * demand_uptake_n_tuptake_mavg(:)
-          sb_mycorrhiza_export%carbon14(:,isoil)   = sb_mycorrhiza_export%carbon14(:,isoil)   * demand_uptake_n_tuptake_mavg(:)
-          sb_mycorrhiza_export%nitrogen15(:,isoil) = sb_mycorrhiza_export%nitrogen15(:,isoil) * demand_uptake_n_tuptake_mavg(:)
+
+       ! scale mycorrhizal export with demand
+       ! to avoid DOWN-regulation with demand (between 0 and 1), when demand is high, demand for scaling is intensified by 50%
+       ! limited to 100% potential export
+          sb_mycorrhiza_export%carbon(:,isoil)     = sb_mycorrhiza_export%carbon(:,isoil)     * MIN(demand_uptake_n_tuptake_mavg(:)*1.5_wp, 1.0_wp) 
+          sb_mycorrhiza_export%nitrogen(:,isoil)   = sb_mycorrhiza_export%nitrogen(:,isoil)   * MIN(demand_uptake_n_tuptake_mavg(:)*1.5_wp, 1.0_wp)
+          sb_mycorrhiza_export%phosphorus(:,isoil) = sb_mycorrhiza_export%phosphorus(:,isoil) * MIN(demand_uptake_p_tuptake_mavg(:)*1.5_wp, 1.0_wp)
+          sb_mycorrhiza_export%carbon13(:,isoil)   = sb_mycorrhiza_export%carbon13(:,isoil)   * MIN(demand_uptake_n_tuptake_mavg(:)*1.5_wp, 1.0_wp)
+          sb_mycorrhiza_export%carbon14(:,isoil)   = sb_mycorrhiza_export%carbon14(:,isoil)   * MIN(demand_uptake_n_tuptake_mavg(:)*1.5_wp, 1.0_wp)
+          sb_mycorrhiza_export%nitrogen15(:,isoil) = sb_mycorrhiza_export%nitrogen15(:,isoil) * MIN(demand_uptake_n_tuptake_mavg(:)*1.5_wp, 1.0_wp)
+          exudation_carbon(:)                      = exudation_carbon(:) !+ sb_mycorrhiza_export%carbon(:,isoil)
        END DO
     ENDIF ! flag_mycorrhiza
 
 
     !> 4.0 Determine C use for N uptake, and constrain this to available carbon
     !!
-    IF(bnf_scheme == 'optimal' .OR. bnf_scheme == 'resistance' .OR. bnf_scheme == 'standard') THEN
+    IF(bnf_scheme == 'optimal' .OR. bnf_scheme == 'standard') THEN
       hlp1(:) = uptake_nh4(:) * transform_cost_nh4 + & 
                 uptake_no3(:) * transform_cost_no3 + & 
                 n_fixation(:) * cost_n_fixation(:)
