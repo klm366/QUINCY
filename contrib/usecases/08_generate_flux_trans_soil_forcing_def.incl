@@ -17,7 +17,7 @@
 
 # default QUINCY usecase: 08_generate_flux_trans_soil_forcing_def
 # 
-# generate soil_forcing over from a transient simulation run with fluxnet/3 sites for the stand-alone JSM-QUINCY soil model:
+# generate soil_forcing from a transient simulation run with fluxnet/3 sites for the stand-alone JSM-QUINCY soil model:
 #  soil-forcing output for the last full forcing period of the transient 115 years (1901-2015)
 #  creating: veg litterfall + some soilphysics output used as input by the standalone JSM-QUINCY soil model
 #  options apply specifically to the generation of soil forcing using the QUINCY land model

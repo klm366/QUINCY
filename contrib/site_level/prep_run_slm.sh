@@ -94,7 +94,7 @@ specialFluxnetOutput="F"
 compareSimCRUNCEPvsGFDB="F"
 # years of spin-up (static and transient forcing) before output is saved (all output is used for simulation vs GFDB comparision)
 # forcingMode static:    simulation_length_number is increased and 'output_start_...' & 'output_end_...' are shifted by the years defined as spinup
-# forcingMode transient: transient_spinup_years=spinupLengthGFDB
+# forcingMode transient: transient_spinup_years=spinupLengthGFDB  (only IF $compareSimCRUNCEPvsGFDB == "T")
 spinupLengthGFDB=500
 
 ##(3) parameter sensitivity simulations
@@ -159,7 +159,7 @@ sb_adsorp_scheme="eca_part"       # eca_full (vmax of ECA is calc by enzyme abun
                                   # eca_none (conventional MM kinetics)
 
 # simulation length & output
-simulation_length_number=30       # default years for forcingMode: static = 30 | transient = 115/118 [transient: 01.01.1901 -> 31.12.2015/18 without spinup!]
+simulation_length_number=30       # default years for forcingMode: static = 30 | transient = 115/118/119 [transient: 01.01.1901 -> 31.12.2015/18/19 without spinup!]
 output_interval_pool="weekly"     # timestep daily weekly monthly yearly
 output_interval_flux="weekly"     # timestep daily weekly monthly yearly
 output_start_first_day_year=1     # 1 to ... [must be lower than or equal with option: output_end_last_day_year]
@@ -1829,15 +1829,21 @@ changeNamelistValue transient_spinup_end_year "$transient_spinup_end_year"
 changeNamelistValue transient_spinup_years "$transient_spinup_years"
 changeNamelistValue transient_simulation_start_year "$transient_simulation_start_year"
 ## namelist options for soil forcing creation (BASE_CTL):
-## u01: static, one year, all site-sets | u08: transient, fluxnet-forcing years, fluxnet/3 sites
+## u01: static, one year, all site-sets
 createSoilForcFlag="F"    # default: F | needed for u08 in run_slm.sh
 if [ $usecase == "01" ]; then                                     # usecase file: 01_generate_soil_forcing_def
   changeNamelistValue flag_generate_soil_forcing_stat ".TRUE."    # default is .FALSE.
   createSoilForcFlag="T"                                          # needed only for u08, but set T here anyway
 fi
+## u08: transient, fluxnet-forcing years, fluxnet/3 sites
 if [ $usecase == "08" ]; then                                     # usecase file: 08_generate_flux_trans_soil_forcing_def
   changeNamelistValue flag_generate_soil_forcing_trans ".TRUE."   # default is .FALSE.
   createSoilForcFlag="T"                                          # disable all "fluxnet diagnostics" scripts & stuff in run_slm.sh
+fi 
+## u09: transient, create soil forcing 1901 - ..., cruncep-type site-sets
+if [ $usecase == "09" ]; then                                     # usecase file: 09_generate_crun_trans_soil_forcing_def
+  changeNamelistValue flag_generate_soil_forcing_trans ".TRUE."   # default is .FALSE.
+  createSoilForcFlag="T"                                          # has no effect on the run_slm.sh for cruncep transient simulations
 fi  
 
 #########################################################################################################

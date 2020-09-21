@@ -22,7 +22,7 @@
 #  options apply specifically to the generation of soil forcing using the QUINCY land model
 #
 # prep_run_slm.sh necessary settings:
-#  forcingDataSet fluxnet/fluxnet3/cruncep/face/spp_1685
+#  forcingDataSet fluxnet/fluxnet3/cruncep/face/spp_1685/mocab2
 #  siteSelection  cue/spp (for cruncep)
 #
 
@@ -35,6 +35,7 @@ echo "    FLUXNET3"  # site-set "fluxnet3"
 echo "    CRUNCEP with siteSelection cue & spp"
 echo "    FACE"
 echo "    SPP_1685"
+echo "    MOCABORS2"
 echo "  no need to change any else, the namelist-parameter flag_generate_soil_forcing_stat is set to TRUE for u01 automatically" 
 echo "    meaning, when usecase number 01 is selected, flag_generate_soil_forcing_stat is set to T"
 echo " "

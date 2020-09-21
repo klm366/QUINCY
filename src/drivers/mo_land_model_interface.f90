@@ -360,6 +360,13 @@ CONTAINS
           CALL write_soil_forcing(tile, model%options, time_day)
         ENDIF
       ENDIF
+      !! output litterfall and soilphysics from a transient cruncep-type site-set simulation (for years 1901 to ...)
+      IF (model%config%flag_generate_soil_forcing_trans .AND. l_output) THEN
+        ! write only after spinup and if not a transient fluxnet/3 diagnostics simulation
+        IF (.NOT. model%config%l_transient_spinup .AND. .NOT. model%config%fluxnet_diagnostics_sim) THEN
+          CALL write_soil_forcing(tile, model%options, time_day)
+        ENDIF
+      ENDIF
 
     CASE('plant')
     !! plant --------------------------------------------------------------------------------------
