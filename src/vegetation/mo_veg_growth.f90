@@ -239,7 +239,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: growth_req_n
     dsl4jsb_Real2D_onChunk      :: demand_uptake_n_tuptake_mavg
     dsl4jsb_Real2D_onChunk      :: demand_uptake_p_tuptake_mavg
-    dsl4jsb_Real2D_onChunk      :: cost_n_fixation_tuptake_mavg
+    dsl4jsb_Real2D_onChunk      :: cost_n_fixation_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: exudation_c_tmyc_mavg
     dsl4jsb_Real2D_onChunk      :: uptake_nh4
     dsl4jsb_Real2D_onChunk      :: uptake_nh4_n15
@@ -419,8 +419,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_n)                       !   out
     dsl4jsb_Get_var2D_onChunk(VEG_, demand_uptake_n_tuptake_mavg)       ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, demand_uptake_p_tuptake_mavg)       ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_fixation_tuptake_mavg)       ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, exudation_c_tmyc_mavg)             ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_fixation_talloc_mavg)        ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, exudation_c_tmyc_mavg)              ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4)                         ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4_n15)                     ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3)                         ! out
@@ -537,7 +537,7 @@ CONTAINS
                                           fmaint_rate_troot_mavg(:), &
                                           unit_npp_troot_mavg(:), &
                                           unit_uptake_n_pot_troot_mavg(:), &
-                                          cost_n_fixation_tuptake_mavg(:), &
+                                          cost_n_fixation_talloc_mavg(:), &
                                           exudation_c_tmyc_mavg(:), &
                                           unit_uptake_n_pot(:), &
                                           unit_uptake_p_pot(:), &
@@ -1056,7 +1056,7 @@ CONTAINS
                                               fmaint_rate_troot_mavg, &
                                               unit_npp_troot_mavg, &
                                               unit_uptake_n_troot_mavg, &
-                                              cost_n_fixation_tuptake_mavg, &
+                                              cost_n_fixation_talloc_mavg, &
                                               exudation_c_tmyc_mavg, &
                                               unit_uptake_n_pot, &
                                               unit_uptake_p_pot, &
@@ -1124,8 +1124,8 @@ CONTAINS
     REAL(wp), DIMENSION(nc),              INTENT(in)    :: fmaint_rate_troot_mavg       !< time-averaged N-speficic root maintentance respiration rate (µmol C/mol N / s)
     REAL(wp), DIMENSION(nc),              INTENT(in)    :: unit_npp_troot_mavg          !< time-averaged increase of NPP with increased leaf C investment (mol C/mol C)
     REAL(wp), DIMENSION(nc),              INTENT(in)    :: unit_uptake_n_troot_mavg     !< time-averaged increase of root N uptake with increased root C inventment (mol N / mol C)
-    REAL(wp), DIMENSION(nc),              INTENT(in)    :: cost_n_fixation_tuptake_mavg !< time-averaged C costs for N fixation (mol C / mol N)
-    REAL(wp), DIMENSION(nc),              INTENT(in)    :: exudation_c_tmyc_mavg       !< time-averaged C allocation to mycorrhizae (mol C / mol N)
+    REAL(wp), DIMENSION(nc),              INTENT(in)    :: cost_n_fixation_talloc_mavg  !< time-averaged C costs for N fixation (mol C / mol N)
+    REAL(wp), DIMENSION(nc),              INTENT(in)    :: exudation_c_tmyc_mavg        !< time-averaged C allocation to mycorrhizae (mol C / mol N)
     REAL(wp), DIMENSION(nc),              INTENT(in)    :: unit_uptake_n_pot            !< potential N uptake per unit root mass (mu mol N / mol C / s)
     REAL(wp), DIMENSION(nc),              INTENT(in)    :: unit_uptake_p_pot            !< potential P uptake per unit root mass (mu mol P / mol C / s)
     REAL(wp), DIMENSION(nc, nsoil_sb),    INTENT(inout) :: plant_uptake_nh4_sl     , &  !< plant NH4 uptake per soil layer (mu mol N / m3 / s)
@@ -1282,8 +1282,8 @@ CONTAINS
         hlp1(:)            = 1.0_wp /(k1_temp_bnf * &
                              exp(k2_temp_bnf + k3_temp_bnf * (t_air(:) - Tzero) * (1.0_wp - (t_air(:) - Tzero) / k4_temp_bnf)))
         vmax_bnf_act(:)    = vmax_bnf * (0.25_wp + 0.25_wp * hlp1(:))
-        WHERE(cost_n_fixation_tuptake_mavg(:) <= cost_n_uptake_root(:))
-           dcost(:)      = cost_n_uptake_root(:) - cost_n_fixation_tuptake_mavg(:)
+        WHERE(cost_n_fixation_talloc_mavg(:) <= cost_n_uptake_root(:))
+           dcost(:)      = cost_n_uptake_root(:) - cost_n_fixation_talloc_mavg(:)
            n_fixation(:) = fine_root_carbon(:) * vmax_bnf_act(:) * dcost(:) / (k_bnf + dcost(:))
         ELSEWHERE
            n_fixation(:) = 0.0_wp

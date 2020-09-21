@@ -647,7 +647,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: npp_tuptake_mavg
     dsl4jsb_Real2D_onChunk      :: demand_uptake_n_tuptake_mavg
     dsl4jsb_Real2D_onChunk      :: demand_uptake_p_tuptake_mavg
-    dsl4jsb_Real2D_onChunk      :: cost_n_fixation_tuptake_mavg
+    dsl4jsb_Real2D_onChunk      :: cost_n_fixation_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: growth_req_n_tuptake_mavg
     dsl4jsb_Real2D_onChunk      :: growth_req_p_tuptake_mavg
     dsl4jsb_Real2D_onChunk      :: t_air_tfrac_mavg
@@ -836,7 +836,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, npp_tuptake_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, demand_uptake_n_tuptake_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, demand_uptake_p_tuptake_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_fixation_tuptake_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_fixation_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_n_tuptake_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_p_tuptake_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tfrac_mavg)
@@ -962,8 +962,6 @@ CONTAINS
                                                      mavg_period_tuptake, do_calc=(veg_pool%fine_root%carbon > eps8))
     demand_uptake_p_tuptake_mavg(:)     = calc_mavg(demand_uptake_p_tuptake_mavg(:), f_p_demand(:), &
                                                      mavg_period_tuptake, do_calc=(veg_pool%fine_root%carbon > eps8))
-    cost_n_fixation_tuptake_mavg(:)     = calc_mavg(cost_n_fixation_tuptake_mavg(:), cost_n_fixation(:), &
-                                                     mavg_period_tuptake, do_calc=l_growing_season(:))
     growth_req_n_tuptake_mavg(:)        = calc_mavg(growth_req_n_tuptake_mavg(:), growth_req_n(:), &
                                                      mavg_period_tuptake, do_calc=(growth_req_n(:) > eps8))
     growth_req_p_tuptake_mavg(:)        = calc_mavg(growth_req_p_tuptake_mavg(:), growth_req_p(:), &
@@ -1058,6 +1056,9 @@ CONTAINS
     
     !> 1.6 time-scale of plant allocation calculation (veg process)
     !!
+    cost_n_fixation_talloc_mavg(:)      = calc_mavg(cost_n_fixation_talloc_mavg(:), cost_n_fixation(:), &
+                                                     mavg_period_talloc, do_calc=l_growing_season(:))
+    
     hlp(:)              = gross_assimilation(:) / MAX(eps8, beta_sinklim_ps(:)) - & 
                           growth_respiration(:) - maint_respiration(:) - n_processing_respiration(:) 
     npp_talloc_mavg(:)  = calc_mavg(npp_talloc_mavg(:), hlp(:), mavg_period_talloc, do_calc=l_growing_season(:))

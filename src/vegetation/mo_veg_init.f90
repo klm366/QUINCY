@@ -155,7 +155,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: demand_uptake_p_tuptake_mavg
     dsl4jsb_Real2D_onChunk      :: growth_req_n_tuptake_mavg
     dsl4jsb_Real2D_onChunk      :: growth_req_p_tuptake_mavg
-    dsl4jsb_Real2D_onChunk      :: cost_n_fixation_tuptake_mavg
+    dsl4jsb_Real2D_onChunk      :: cost_n_fixation_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: ga_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: leaf2root_troot_mavg
     dsl4jsb_Real2D_onChunk      :: an_boc_tvegdyn_mavg
@@ -253,7 +253,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, demand_uptake_p_tuptake_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_n_tuptake_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_p_tuptake_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_fixation_tuptake_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_fixation_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, ga_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, leaf2root_troot_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, an_boc_tvegdyn_mavg)
@@ -494,7 +494,7 @@ CONTAINS
     demand_uptake_p_tuptake_mavg(:)     = 0.1_wp
     growth_req_n_tuptake_mavg(:)        = 1._wp / 25._wp
     growth_req_p_tuptake_mavg(:)        = 1._wp / 14._wp
-    cost_n_fixation_tuptake_mavg(:)     = 10.0_wp
+    cost_n_fixation_talloc_mavg(:)      = 10.0_wp
     ga_tcnl_mavg(:)                     = 0.2_wp
     leaf2root_troot_mavg(:)             = 1.0_wp
     an_boc_tvegdyn_mavg(:)              = 5.0_wp
