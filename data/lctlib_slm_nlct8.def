@@ -224,10 +224,10 @@ beta_soil_flush 0.0 0.0 0.98 0.0 0.0 0.0 0.9 0.9
 beta_soil_senescence 0.0 0.0 0.5 0.0 0.0 0.0 0.01 0.01
         
 #gdd_req_max: maximum GDD requirement (degC days) in the absence of chilling        
-gdd_req_max 0.0 0.0 0.0 800.0 0.0 800.0 10.0 10.0
+gdd_req_max 0.0 0.0 0.0 800.0 0.0 800.0 20.0 40.0
         
 #k_gdd_dormance: scaling factor in the GDD to number of dormant days relationship (days -1)        
-k_gdd_dormance 0.0 0.0 0.0 0.007 0.0 0.0098 0.1 0.1
+k_gdd_dormance 0.0 0.0 0.0 0.007 0.0 0.0098 0.0027 0.0027
         
 #t_air_senescence: weekly air temperature threshold inducing senescence of leaves (°C)        
 # converted internally to K        
