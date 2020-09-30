@@ -34,8 +34,10 @@ MODULE mo_hydro_config_class
       & w_soil_limit,      & !< Upper limit for maximum soil moisture content
       & w_soil_crit_fract, & !< Fraction of field capacity at which soil starts to dry,
                              !  i.e. at which water stress starts to be above zero
-      & w_soil_wilt_fract    !< Fraction of field capacity at which soil is at wilting point,
+      & w_soil_wilt_fract, & !< Fraction of field capacity at which soil is at wilting point,
                              !  i.e. when no transpiration occurs anymore
+      & snow_depth_max       !< Limit for snow depth [m water equivalent] to avoid grid cells with
+                             !  infinitely growing snow depth; -1. for no limitation
     CHARACTER(len=10)     :: &
       & scheme_stom_cond     !< Scheme to use for computation of stomatal conductance (echam5 only for now)
     LOGICAL               :: &
@@ -61,7 +63,7 @@ CONTAINS
 
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename, bc_sso_filename
-    REAL(wp)                    :: w_skin_max
+    REAL(wp)                    :: w_skin_max, snow_depth_max
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
     CHARACTER(len=10)           :: scheme_stom_cond
     LOGICAL                     :: l_organic, l_glac_in_soil
@@ -75,6 +77,7 @@ CONTAINS
       & w_soil_limit,               &
       & w_soil_crit_fract,          &
       & w_soil_wilt_fract,          &
+      & snow_depth_max,             &
       & scheme_stom_cond,           &
       & l_organic,                  &
       & l_glac_in_soil
@@ -100,6 +103,7 @@ CONTAINS
     w_soil_limit      = -1.0_wp
     w_soil_crit_fract = 0.75_wp
     w_soil_wilt_fract = 0.35_wp
+    snow_depth_max    = -1.0_wp             ! -1: no limitation
     scheme_stom_cond  = 'echam5'
     l_organic         = .FALSE.
     l_glac_in_soil    = .FALSE.
@@ -125,6 +129,11 @@ CONTAINS
 
     config%w_soil_wilt_fract   = w_soil_wilt_fract
     CALL message(TRIM(routine), 'Fraction of field capacity at permanent wilting point: '//TRIM(real2string(w_soil_wilt_fract)))
+
+    config%snow_depth_max      = snow_depth_max
+    IF (snow_depth_max >= 0._wp) THEN
+      CALL message(TRIM(routine), 'Snow depth limitation: '//TRIM(real2string(snow_depth_max)))
+    END IF
 
     config%scheme_stom_cond    = scheme_stom_cond
 
