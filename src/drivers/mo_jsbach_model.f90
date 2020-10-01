@@ -13,6 +13,7 @@
 !!
 MODULE mo_jsbach_model
 
+#ifdef __ICON__
 #ifndef __NO_JSBACH__
 
   USE mo_exception, ONLY: message, message_text, finish
@@ -1026,5 +1027,6 @@ CONTAINS
 
   END SUBROUTINE perform_jsbach_for_timestep
 
+#endif
 #endif
 END MODULE mo_jsbach_model

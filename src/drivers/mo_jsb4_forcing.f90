@@ -33,11 +33,9 @@ MODULE mo_jsb4_forcing
     & nf, nf_get_vara_double,                    & ! former nf_check
     & nf_inq_dimid, nf_inq_dimlen, nf_inq_varid, & ! from netcdf.inc
     & NF_MAX_NAME, nf_get_att_text, NF_NOERR       ! from netcdf.inc
-  USE mo_read_netcdf_broadcast_2, ONLY: netcdf_open_input, netcdf_close
-
 
 #ifndef __ICON__
-  USE mo_time_control,           ONLY: next_date, lresume, delta_time, time_step_len, get_year_day                    
+  USE mo_time_control,           ONLY: lresume, delta_time, time_step_len, get_year_day                    
   USE mo_time_conversion,        ONLY: IMerge_HMS2Sec, day_in_year, time_days
 #else
   USE mo_jsb_time_iface,         ONLY: get_year_day
@@ -800,7 +798,6 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_input_file) :: input_file
-    INTEGER :: nc_file_id, nc_stat
 
     model => Get_model(model_id)
 
@@ -832,12 +829,12 @@ CONTAINS
       IF(is_time_experiment_start(current_datetime) .OR. lresume) THEN
         IF(my_process_is_stdio()) THEN
           ! in case of ghg_scenario the forcing_input_variable%file_name_prefix is expected to contain the whole filename
-          nc_file_id = netcdf_open_input(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)))
-          CALL get_time_dimension(nc_file_id, forcing_input_variable)
+          input_file = jsb_netcdf_open_input(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)))
+          CALL get_time_dimension(input_file%file_id, forcing_input_variable)
           ! Assert: test that the netcdf file unit for this variable is the expected unit or at least equals unspecified_exp_unit
 !          CALL test_unit(input_file%file_id, TRIM(forcing_input_variable%variable_name), &
 !            & TRIM(forcing_input_variable%expectedUnit), TRIM(readUnit))
-          nc_stat = netcdf_close(nc_file_id)
+          CALL input_file%Close()
         ENDIF
 
         IF(ASSOCIATED(forcing_input_variable%data_read)) DEALLOCATE(forcing_input_variable%data_read)
@@ -894,17 +891,17 @@ CONTAINS
     ! --- if new current run or new file - get the timeseries of the forcing file and the current position in the timeseries
     IF (new_year_forcing .OR. is_time_experiment_start(current_datetime) .OR. lresume) THEN
       IF(my_process_is_stdio()) THEN
-        nc_file_id = netcdf_open_input(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) // TRIM(ADJUSTL(year_label)) // '.nc')
+        input_file = jsb_netcdf_open_input(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) // TRIM(ADJUSTL(year_label)) // '.nc')
 
-        CALL get_time_dimension(nc_file_id, forcing_input_variable)
+        CALL get_time_dimension(input_file%file_id, forcing_input_variable)
 
         ! Assert: test that the netcdf file unit for this variable is the expected unit or at least equals unspecified_exp_unit
         ! CALL test_unit(input_file%file_id, TRIM(forcing_input_variable%variable_name), &
-        CALL test_unit(nc_file_id, TRIM(forcing_input_variable%variable_name), &
+        CALL test_unit(input_file%file_id, TRIM(forcing_input_variable%variable_name), &
           & TRIM(forcing_input_variable%expectedUnit), TRIM(readUnit))
         ! TODO: further assertions? e.g. that lon lat are correct?
 
-        nc_stat = netcdf_close(nc_file_id)
+        CALL input_file%Close()
 
         currentTimeStep = 1
         thisDayStart = 0
@@ -1116,7 +1113,8 @@ CONTAINS
       status = nf_get_att_text(file_id, nc_var_id, name_of_unit_attribute, readUnit)
       IF (status /= NF_NOERR) THEN
         CALL message(TRIM(routine), &
-             & 'WARNING: netcdf error when accessing units attribute of variable '//TRIM(variable_name))
+             & 'WARNING: netcdf error when accessing units attribute of variable '//TRIM(variable_name) &
+             & //'(expected '//TRIM(expectedUnit)//')')
       ELSE
         IF(TRIM(readUnit) .NE. TRIM(expectedUnit)) THEN
           IF(TRIM(readUnit) .EQ. TRIM(unspecified_exp_unit)) THEN

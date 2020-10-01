@@ -64,7 +64,7 @@ PROGRAM jsb4_driver
 
   ! time control and orbit calc
   USE mo_time_control,     ONLY: time_set, time_reset, lstop, l_trigfiles, l_putrerun, delta_time, &
-    &                            time_step_len, get_orbit_times, l_orbvsop87, current_date, write_date, &
+    &                            time_step_len, get_orbit_times, l_orbvsop87, current_date, next_date, write_date, &
     &                            echam_time, manager_state
 
   USE mo_radiation_parameters, ONLY: lyr_perp, nmonth, yr_perp, solar_parameters
@@ -81,8 +81,8 @@ PROGRAM jsb4_driver
   REAL(wp):: zwtime, zutime, zstime, zrtime
 
   INTEGER:: nml_handler, read_status, f_unit, status, iblk, nproma, nblks, ncid, model_id, ice, ics
-  TYPE(t_datetime)          :: current_datetime
-  TYPE(t_datetime), POINTER :: current_datetime_ptr => NULL()
+  TYPE(t_datetime)          :: current_datetime, next_datetime
+  TYPE(t_datetime), POINTER :: current_datetime_ptr => NULL(), next_datetime_ptr => NULL()
 
   !! Variables of namelist jsb_parallel_nml
   INTEGER:: nproca  ! number of processors for jsbach
@@ -346,6 +346,7 @@ PROGRAM jsb4_driver
     CALL time_set   !(echam!)
     CALL manager_state(echam_time, current_datetime)
     ALLOCATE(current_datetime_ptr, source=current_datetime)
+    ALLOCATE(next_datetime_ptr, source=next_date)
     IF(is_newday(current_datetime_ptr, delta_time)) THEN
       CALL write_date(current_date,'Calculate timesteps for day: ')
     ENDIF
@@ -370,7 +371,7 @@ PROGRAM jsb4_driver
       CALL solar_parameters(decl_sun, dist_sun, time_of_day, sinlon, sinlat, coslon, coslat, &
         & flx_ratio, cos_zenith_angle, daylght_frc)
 
-      CALL get_interface_variables_from_external_forcing(1, 1, nproma, nblks, current_datetime_ptr, &
+      CALL get_interface_variables_from_external_forcing(1, 1, nproma, nblks, current_datetime_ptr, next_datetime_ptr, &
         & sinlat, coslat, lon, evapo_act2pot_proc, &
         & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, cos_zenith_angle,      &
         & CO2_concentration, t_air_K, q_air, rain, snow, wind_air, wind_10m,                                          &
@@ -425,6 +426,7 @@ PROGRAM jsb4_driver
 
     CALL jsbach_finish_timestep(model_id, current_datetime_ptr, time_step_len)
     CALL deallocateDatetime(current_datetime_ptr)
+    CALL deallocateDatetime(next_datetime_ptr)
     CALL mvstream_accumulate
     CALL out_streams
 

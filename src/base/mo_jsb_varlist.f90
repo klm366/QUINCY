@@ -74,7 +74,7 @@ CONTAINS
         & loutput=.TRUE., &
         & lrestart=.TRUE., table=tables(1))
 
-      IF (jsbach_runs_standalone()) return_ptr%p%model_type = 'jsbach'
+      ! IF (jsbach_runs_standalone()) return_ptr%p%model_type = 'jsbach'
 
     END IF
 
