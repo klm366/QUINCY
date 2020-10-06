@@ -97,7 +97,7 @@ siteName="DE-Hai"               # get the Site-ID from the 1st column of the par
                                 #           [GLOBAL all] "GLB_007" "GLB_058" "GLB_394"
                                 #           [FACE] "DK-AMB" "OR-ELE"  [MANIP] "ES-MaG" "ES-MaT"  [FERT] "HAR-CON_4" "HAR-HIG_4" "HAR-LOW_4" "HAR-CON_5" "SDA-CON" "SDA-ADD"
                                 #           [CRAINE] "CRA_01" "CRA_02" "CRA_18"  [PHOTACC] "ARC_01" "MON_02" "STR_01"  [SPP_1685] "BBR" "LUE" "VES"
-                                #           [CONFIN] "FI-Hyy" "FI-Ken"  [MOCABORS] "US-Ha1"  [MOCAB2] "HUR-FOR" "HUR-GRA"
+                                #           [CONFIN] "FI-Hyy" "FI-Ken"  [MOCABORS] "US-Ha1"  [MOCAB2] "HUR-FOR" "HUR-GRA"  [SWEDEN] "BER" "STI"
 soil_awc_prescribe=300.0        # float !
 soil_theta_prescribe=1.0        # float !
 longitude=0.0                   # float !
@@ -185,6 +185,10 @@ while getopts ":p:m:i:f:s:y:b:z:h" opt; do
     "m2")
       echo "   forcingDataSet=mocab2"
       forcingDataSet="mocab2"
+      ;;
+    "sw")
+      echo "   forcingDataSet=sweden"
+      forcingDataSet="sweden"
       ;;
     "no")
       echo "   forcingDataSet=none"
@@ -277,7 +281,7 @@ while getopts ":p:m:i:f:s:y:b:z:h" opt; do
     echo "       land plant soil canopy test_canopy test_radiation"
     echo " -i set siteName, i.e., siteID"
     echo "    Arguments to -i:"
-    echo "       a valid siteName, e.g., [FLUX/3] DE-Hai  [GLOBAL] GLB_001  [CRUN] BHS_01  [FACE] DK-AMB  [MANIP] ES-MaG  [FERT] HAR-CON_4  [CRAINE] CRA_01  [PHOTACC] MON_02  [SPP_1685] BBR  [CONFIN] FI-Ken  [MOCABORS] US-Ha1  [MOCAB2] HUR-FOR"
+    echo "       a valid siteName, e.g., [FLUX/3] DE-Hai  [GLOBAL] GLB_001  [CRUN] BHS_01  [FACE] DK-AMB  [MANIP] ES-MaG  [FERT] HAR-CON_4  [CRAINE] CRA_01  [PHOTACC] MON_02  [SPP_1685] BBR  [CONFIN] FI-Ken  [MOCABORS] US-Ha1  [MOCAB2] HUR-FOR  [SWEDEN] BER"
     echo " -f set the forcingDataSet"
     echo "    Arguments to -f:"
     echo "       fl: FLUXNET"
@@ -293,6 +297,7 @@ while getopts ":p:m:i:f:s:y:b:z:h" opt; do
     echo "       co: CONFIN (four finnish sites with conifers)"
     echo "       mo: MOCABORS (JSM soil moisture development fluxnet site)"
     echo "       m2: MOCAB2 (JSM soil moisture development cruncep site)"
+    echo "       sw: SWEDEN (scandinavian sites for research of lyu)"
     echo "       no: none; using climate.dat file in test_bed folder"
     echo " -s set the soil model"
     echo "    Arguments to -s:"
@@ -361,7 +366,7 @@ validateOutputInterval="timestep daily weekly monthly yearly"
 validatePlantFunctionalTypeID="1 2 3 4 5 6 7 8"
 validateOptionForcing="constant generate readfile"
 validateSetPFTAutomatically="yes no"
-validateForcingDataSet="fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin mocabors mocab2 none"
+validateForcingDataSet="fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin mocabors mocab2 sweden none"
 validateCrunSites="cue spp"
 validateSb_adsorp_scheme="eca_full eca_part eca_none"
 
@@ -458,6 +463,9 @@ case "$forcingDataSet" in
   ;;
 "mocab2")
   siteDataSet="MOCABORS2/"
+  ;;
+"sweden")
+  siteDataSet="SWEDEN/"
   ;;
 esac
 
@@ -561,6 +569,9 @@ case "$forcingDataSet" in
 "mocab2")
   allSiteInfoFile="$siteDataDirBase""$siteDataSet"mocab2_sites_1990-2019_list.dat
   ;;
+"sweden")
+  allSiteInfoFile="$siteDataDirBase""$siteDataSet"sweden_sites_1990-2019_list.dat
+  ;;
 esac
 
 
@@ -625,6 +636,9 @@ case "$forcingDataSet" in
   ;;
 "mocab2")
   siteNameStatMetForc="$siteName""_s_"                # e.g.: HUR-FOR ->  HUR-FOR_s_*.dat ->  HUR-FOR_s_1990-2019.dat -> climate.dat
+  ;;
+"sweden")
+  siteNameStatMetForc="$siteName""_s_"                # e.g.: BER     ->  BER_s_*.dat     ->  BER_s_1990-2019.dat     -> climate.dat
   ;;
 esac
 

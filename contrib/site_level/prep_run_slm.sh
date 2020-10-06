@@ -40,7 +40,7 @@ slmModel="land"
 ##>> sites <<###########################################################################################
 ## select the site-set:
 # forcing data and site info *list.dat for all site-sets: /Net/Groups/BGI/data/Model/SLM1/input/point/ 
-# options: fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin mocabors mocab2
+# options: fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin mocabors mocab2 sweden
 forcingDataSet="fluxnet"
 # forcing with or without a transient (like spinup) phase before the actual simulation starts
 # options: static transient
@@ -70,7 +70,7 @@ customSiteListFileName=""
 #           [GLOBAL all/sub] "GLB_007" "GLB_058" "GLB_394"
 #           [FACE] "DK-AMB" "OR-ELE"  [MANIP] "ES-MaG" "ES-MaT"  [FERT] "HAR-CON_4" "HAR-HIG_4" "HAR-LOW_4" "HAR-CON_5" "SDA-CON" "SDA-ADD"
 #           [CRAINE] "CRA_01" "CRA_02" "CRA_18"  [PHOTACC] "ARC_01" "MON_02" "STR_01"  [SPP_1685] "BBR" "LUE" "VES"
-#           [CONFIN] "FI-Hyy" "FI-Ken"  [MOCABORS] "US-Ha1"  [MOCAB2] "HUR-FOR" "HUR-GRA"
+#           [CONFIN] "FI-Hyy" "FI-Ken"  [MOCABORS] "US-Ha1"  [MOCAB2] "HUR-FOR" "HUR-GRA"  [SWEDEN] "BER" "STI"
 singleSiteName=""
 
 
@@ -265,6 +265,10 @@ while getopts ":e:f:c:m:s:r:y:b:z:n:u:h" opt; do
       echo "   forcingDataSet=mocab2"
       forcingDataSet="mocab2"
       ;;
+    "sw")
+      echo "   forcingDataSet=sweden"
+      forcingDataSet="sweden"
+      ;;
     esac
     ;;
   "c")
@@ -391,6 +395,7 @@ while getopts ":e:f:c:m:s:r:y:b:z:n:u:h" opt; do
     echo "       co: CONFIN (four finnish sites with conifers)"
     echo "       mo: MOCABORS (JSM soil moisture development)"
     echo "       m2: MOCAB2 (JSM soil moisture development cruncep site)"
+    echo "       sw: SWEDEN (scandinavian sites for research of lyu)"
     echo " -c set the customSiteList"
     echo "    Arguments to -c:"
     echo "       T: using the custom site list"
@@ -533,7 +538,7 @@ fi
 return 0
 }
 # lists to validate against
-validateForcingDataSet="fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin mocabors mocab2"
+validateForcingDataSet="fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin mocabors mocab2 sweden"
 validateForcingMode="static transient"
 validateCrunSites="all cue spp"
 validateGlobSites="all sub"
@@ -754,6 +759,10 @@ case "$forcingDataSet" in
   ;;
 "mocab2")
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/MOCABORS2/"
+  siteDataObsFold="no such evaluation data"  # but this variable must contain something
+  ;;
+"sweden")
+  siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/SWEDEN/"
   siteDataObsFold="no such evaluation data"  # but this variable must contain something
   ;;
 esac
@@ -1072,6 +1081,13 @@ else
       siteListFileName="mocab2_sites_1901-2019_list.dat"
     fi
     ;;
+  "sweden")
+    if [ $forcingMode == "static" ]; then
+      siteListFileName="sweden_sites_1990-2019_list.dat"
+    else 
+      siteListFileName="sweden_sites_1901-2019_list.dat"
+    fi
+    ;;
   esac
   siteList="$siteDataFold""$siteListFileName"
 fi
@@ -1339,6 +1355,13 @@ case "$forcingDataSet" in
   # soil model: no specific forcing-file indentifier needed; static & transient soil-forcing are stored in individual dirs
   if [ "$slmModel" == "soil" ]; then forcingModeFileID="_"; fi
   ;;
+"sweden")
+  # land/plant
+  if [ $forcingMode == "static" ]; then
+    forcingModeFileID="_s_"
+  else
+    forcingModeFileID="_t_"
+  fi
 esac
 
 
