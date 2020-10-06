@@ -49,6 +49,12 @@ lon_orig        <- dat$lon
 lat_orig        <- dat$lat
 plantyear       <- c(rep(-9999,siteNum))
 
+# output file info
+siteParamNum      <- 27
+startYearTrans    <- 1901
+startYearStatic   <- 1990
+lastYear          <- 2019
+
 ## feedback
 print(paste0(" Start creating the site_list info file for ",siteNum," sites of the MOCABORS2 siteset."))
 
@@ -285,15 +291,11 @@ qmaxorg_site[is.na(qmaxorg_site)] <- round(median(qmaxorg_site, na.rm=T),4)
 #  for transient and static
 #  static forcing period-length is defined accordingly to CRUNCEPv7 set-set: 30 years (1989-2018)
 
-# output file info & creation of empty object
-siteParamNum      <- 27
-siteinfo          <- array(NA,c(siteNum, siteParamNum))
-startYearTrans    <- 1901
-startYearStatic   <- 1989
-lastYear          <- 2018
-
 # feedback
 print(" All data are gathered. Start creating output files.")
+
+# output file: creation of empty object
+siteinfo          <- array(NA,c(siteNum, siteParamNum))
 
 # loop over all GLOBAL sites
 for (i in 1:siteNum) {
