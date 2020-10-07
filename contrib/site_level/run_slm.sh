@@ -67,6 +67,7 @@ useSiteSpecificAWC=$(sed -n 8p "$simFoldDefaultFiles""config.txt")              
 doParamSensitivitySim=$(sed -n 9p "$simFoldDefaultFiles""config.txt" | awk '{print $1}')              # T/F
 # 10
 # info: $compareSimCRUNCEPvsGFDB T/F is saved at line 10 but not needed here; only for the cleanup_slm_hpc_run.sh
+# 11
 fluxnetTransSimLand=$(sed -n 11p "$simFoldDefaultFiles""config.txt" | awk '{print $1}')               # T/F
 transient_simulation_start_year=$(sed -n 11p "$simFoldDefaultFiles""config.txt" | awk '{print $2}')   # year at which transient simulation starts (default 1901)
 fluxnetTransSimSoil=$(sed -n 12p "$simFoldDefaultFiles""config.txt" | awk '{print $1}')               # T/F

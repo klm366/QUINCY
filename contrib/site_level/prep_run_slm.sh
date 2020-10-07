@@ -19,9 +19,9 @@
 
 ## 
 ##
-## > prepare and start run_slm.sh script to run SLM simulations across multiple sites
+## > prepare and start run_slm.sh script to run QUINCY simulations across multiple sites
 ## > the prep_run_slm.sh & run_slm-sh should be located in trunk/contrib/site_level/ (same for any branch)
-## > you can run this script from any folder, i.e. you have not to cd into contrib/site_level/ 
+## > you can run this script from any folder, i.e. you not need to cd into contrib/site_level/ 
 ##   (this is because this script knows about its location, due to the command: 'cd "$( dirname "$0" )"')
 ## 
 
@@ -32,7 +32,7 @@
 ## folder name where data will be stored is: /Net/Groups/BGI/scratch/USER/slm/exp_'experimentalID'
 # set something useful for you (allowed only: alphanumeric _ -); if empty ( experimentalID="" ) current date is used
 experimentalID=""
-## specify SLM model -> the parameter 'slm_model_name' in the namelist.slm is changed accordingly (so, no need to manually change it in the namelist)
+## specify QUINCY model -> the parameter 'slm_model_name' in the namelist.slm is changed accordingly (so, no need to manually change it in the namelist)
 # land (plant+soil), plant (necessary soil parts prescribed), soil (uses soil-forcing generated from land), canopy
 slmModel="land"
 
@@ -52,10 +52,10 @@ crunSites="cue"
 globSites="sub"
 # soil-forcing revision number
 # revision of the trunk the soil-forcing was created with (to see whats avilable, check /Net/Groups/BGI/data/Model/SLM1/input/point/"forcingDataSet"/ )
-# for static and transient soil-forcing (transient only for: fluxnet/3)
-# provide only numbers, e.g., 2174  (not "r2174")
+# for static and transient soil-forcing
+# provide only numbers, such as, "2174" but not "r2174"
 soilForcStatRevNum=""
-soilForcTransRevNum="2197"
+soilForcTransRevNum=""
 # all sites or just some sites: specify a local custom site list if you want only some sites"
 # T (True) or F (False) [large caps]
 customSiteList="F"
@@ -94,7 +94,7 @@ specialFluxnetOutput="F"
 compareSimCRUNCEPvsGFDB="F"
 # years of spin-up (static and transient forcing) before output is saved (all output is used for simulation vs GFDB comparision)
 # forcingMode static:    simulation_length_number is increased and 'output_start_...' & 'output_end_...' are shifted by the years defined as spinup
-# forcingMode transient: transient_spinup_years=spinupLengthGFDB  (only IF $compareSimCRUNCEPvsGFDB == "T")
+# forcingMode transient: transient_spinup_years=spinupLengthGFDB  -  does apply only IF $compareSimCRUNCEPvsGFDB == "T"
 spinupLengthGFDB=500
 
 ##(3) parameter sensitivity simulations
@@ -395,7 +395,7 @@ while getopts ":e:f:c:m:s:r:y:b:z:n:u:h" opt; do
     echo "       co: CONFIN (four finnish sites with conifers)"
     echo "       mo: MOCABORS (JSM soil moisture development)"
     echo "       m2: MOCAB2 (JSM soil moisture development cruncep site)"
-    echo "       sw: SWEDEN (scandinavian sites for research of lyu)"
+    echo "       sw: SWEDEN (site data from The Swedish Throughfall Monitoring Network)"
     echo " -c set the customSiteList"
     echo "    Arguments to -c:"
     echo "       T: using the custom site list"
@@ -822,17 +822,19 @@ case "$slmModel" in
   #   current fallback for static soil-forcing: if no revision number is provided, a symlink points to the default soil-forcing
   if [ -z "$soilForcRevNum" ]; then   # if "$soilForcStatRevNum" == ""  (empty)
     if [ "$forcingMode" == "static" ]; then
+      echo " No revision number of static soil forcing (option soilForcStatRevNum) was defined."
       echo " The current default soil forcing is used. See symlink: BGI/data/Model/SLM1/input/point/[site-set]/""$soilForcStatDirBase"
       soilForcingDir="$soilForcDirBase""/"
     else # transient
-      echo " EXIT! when using transient soil-forcing a revision number must be provided"
+      echo " No revision number of transient soil forcing (option soilForcTransRevNum) was defined."
+      echo " EXIT! when using transient soil-forcing a revision number must be provided."
       exit 1
     fi
   else
     soilForcingDir="$soilForcDirBase""_r""$soilForcRevNum""/"
   fi
   siteDataFoldForcing="$siteDataFold""$soilForcingDir"
-  # test if soil forcing is available for this site set
+  # test if the soil forcing, as defined above, is available for this site set
   soilForcingAvailable="T"
   if [ ! -d "$siteDataFoldForcing" ]; then
     soilForcingAvailable="F"    # directory not present
@@ -1094,7 +1096,8 @@ fi
 
 
 ## apply setting for comparing simulated model results of CRUNCEP sites with Global Forest Data Base ##
-# this may overwrite some options specifies above !
+# valid for static and transient simulations
+# this may overwrite some options specified above !
 if [ $compareSimCRUNCEPvsGFDB == "T" ]; then
   if [ "$forcingDataSet" != "cruncep" ]; then
     echo "EXIT!  You want to run a compareSimCRUNCEPvsGFDB simulation with model-data comparison, but the site set is not cruncep."
@@ -1155,7 +1158,6 @@ if [ $compareSimCRUNCEPvsGFDB == "T" ]; then
   fi # check "$dailyOutput" == "T"
 fi
 
-
 ## evaluate options: forcingMode == transient ##
 #  some settings of the transient simulations are affected by the compareSimCRUNCEPvsGFDB simulation settings if compareSimCRUNCEPvsGFDB == "T"
 # fluxnet diagnostics simulations is per default F
@@ -1172,8 +1174,8 @@ if [ $forcingMode == "transient" ]; then
     echo " Ohh, you set the spinup time to a value less than 1 year, which is not recommended. Re-setting it to 1 now."
     transient_spinup_years=1
   fi
-  if [ $transient_spinup_years -lt 50 ]; then
-    echo " Warning: You set the spinup length to ""$transient_spinup_years"" years, which might be to low for sufficient results (default would be 500 years)."
+  if [ $transient_spinup_years -lt 100 ]; then
+    echo " Info: You set the spinup length to ""$transient_spinup_years"" years, which might be to low for sufficient results (default would be 500 years)."
   fi
   # starting year 
   if [ $transient_spinup_start_year != "1901" ]; then
@@ -1196,14 +1198,14 @@ if [ $forcingMode == "transient" ]; then
   fi
   # land & plant model  ("normal" or "fluxnet" transient)
   if [ "$slmModel" == "land" ] || [ "$slmModel" == "plant" ]; then  
-    ## check: fluxnet transient simulation (all QUINCY models but soil)
-    #  a transient simulation with fluxnet forcing does always end after the last year of forcing available (which is site specific)
+    ## check: fluxnet transient simulation (all QUINCY models but soil) - all site-sets with site-specific periods of forcing (a.k.a. fluxnet-type forcing)
+    #  a transient simulation with fluxnet-type forcing does always end after the last year of forcing available (which is site specific)
     #  (in addition to a "simple transient simulation" a "fluxnet diagnostics simulation" creates timestep-output for the last full forcing period
     #   and runs only with QUINCY land and starts two R scripts per site that compare model results with measured data)
     #  note: actual simulation length 1901 to x varies with the site, 
     #        after spinup the simulation starts 1901 and ends after the last year of (static) forcing data available
     #        this setting is done per site in the run_slm.sh (modifying the namelist)
-    if [ "$forcingDataSet" == "fluxnet" ] || [ "$forcingDataSet" == "fluxnet3" ] || [ "$forcingDataSet" == "mocabors" ]; then
+    if [ "$forcingDataSet" == "fluxnet" ] || [ "$forcingDataSet" == "fluxnet3" ] || [ "$forcingDataSet" == "mocabors" ] || [ "$forcingDataSet" == "confin" ]; then
       echo " You started a transient simulation with QUINCY ""$slmModel"" and fluxnet forcing: ""$forcingDataSet"
       echo " Note: after spinup the simulation starts 1901 and ends after the last year of (static) forcing data available (which is site specific)."
       echo " Hence, the actual simulation length may vary with the fluxnet sites."
@@ -1218,20 +1220,20 @@ if [ $forcingMode == "transient" ]; then
   fi
   # soil model (simple_0d, simple_1d, jsm)
   if [ "$slmModel" == "soil" ]; then
-    # fluxnet-type site-sets
+    # fluxnet-type site-sets that provide transient soil-forcing files
     if [ "$forcingDataSet" == "fluxnet" ] || [ "$forcingDataSet" == "fluxnet3" ] || [ "$forcingDataSet" == "mocabors" ]; then
       echo " Running a transient simulation with the QUINCY soil model ""$sb_model_scheme""."
       echo " After the spinup, the transient simulation may run for one full forcing period (site-specific static forcing)."
       fluxnetTransSimSoil="T"
     else
-      echo " Running a transient simulation with the QUINCY soil model is not possible for the site-set: ""$forcingDataSet"  
-      echo " EXIT!"
-      exit 1    
+      # it is already checked above whether there is soil forcing available
+      # hence, no need to check here whether the site-set supports transient soil-model simulations
+      echo " Running a transient simulation with the QUINCY soil model for the site-set: ""$forcingDataSet"  
     fi
   fi
 # forcingMode == "static"
 else  
-  # set transient* parameters to default values, to avoid potentially quirky values here, but do not want do do checking either
+  # set transient* parameters to default values, to avoid potentially quirky values here, but do not want to do checking either
   transient_spinup_start_year=1901
   transient_spinup_end_year=1930
   transient_spinup_years=500
@@ -1513,7 +1515,7 @@ reservedArg="rusage[mem="$memory"]"
 if [ "$queue" == "io_perform" ]
  then
   reservedArg="select[model==INTEL3] rusage[mem="$memory"]"
-  queue="io"      # because there is actually no queue 'io_perform'
+  queue="io"      # there is actually no queue 'io_perform'
 fi
 
 
