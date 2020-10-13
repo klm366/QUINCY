@@ -251,7 +251,7 @@ CONTAINS
      !!
      IF(.NOT.PRESENT(source_isotope2)) THEN 
         ! molar mixing ratio of the source pool
-        IF(source_element - source_isotope > eps8) THEN
+        IF(ABS(source_element - source_isotope) > eps8) THEN
            Rsource = source_isotope / ( source_element - source_isotope )
         ELSE 
            Rsource = 0.0_wp
