@@ -354,6 +354,10 @@ MODULE mo_sb_memory_class
                                     qmax_org, &                       !< sorption capacity of dom of mineral soil [kg C kg-1 mineral soil]
                                     qmax_po4, &                       !< sorption capacity of po4 of mineral soil [mol P m-3 soil]
                                     qmax_nh4, &                       !< sorption capacity of nh4 of mineral soil [mol N m-3 soil]
+                                    qmax_fast_po4, &                  !< sorption capacity of po4 of the Fe/Al pool [mol P m-3 soil]
+                                    qmax_slow_po4, &                  !< sorption capacity of po4 of the clay/silt pool [mol P m-3 soil]
+                                    km_fast_po4, &                    !< half-saturation concentration of po4 for the Fe/Al pool [mol P m-3 soil]
+                                    km_slow_po4, &                    !< half-saturation concentration of po4 for the clay/silt pool [mol P m-3 soil]
                                     km_adsorpt_po4_sl, &              !< half saturation of po4 sorption isotherm [mol P m-3 soil]
                                     km_adsorpt_nh4_sl, &              !< half saturation of nh4 sorption isotherm [mol N m-3 soil]
                                     k_bioturb, &                      !< diffusion rate resulting from bioturbation
@@ -378,6 +382,7 @@ MODULE mo_sb_memory_class
                                     ph_sl, &                          !< ph per soil layer
                                     lithology_class_sl, &             !< ..  [unitless]
                                     vmax_weath_mineral_sl, &          !< weathering coefficient of mineral soil [mol P m-3 s-1]
+                                    Qmax_AlFe_cor, &              !< correlation factor for phosphate qmax due to the unknown Al/Fe content
                                     enzyme_frac_poly, &               !< fraction of depolymerisation enzyme which depolymerises poly litter [unitless]
                                     enzyme_frac_residue, &            !< fraction of depolymerisation enzyme which depolymerises microbial residue [unitless]
                                     enzyme_frac_poly_c, &             !< fraction of depolymerisation enzyme which depolymerises poly litter, determined by C [unitless]
@@ -2463,6 +2468,38 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
+			
+      CALL jsb_add_var(mem, 'qmax_fast_po4', mem%qmax_fast_po4, &
+            hgrid, vgrid_soil_sb, &
+            t_cf('qmax_fast_po4', 'mol P m-3 soil', 'sorption capacity of po4 of the clay(Fe/Al) and SOM pool'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'qmax_slow_po4', mem%qmax_slow_po4, &
+            hgrid, vgrid_soil_sb, &
+            t_cf('qmax_slow_po4', 'mol P m-3 soil', 'sorption capacity of po4 of the silt/sand pool'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'km_fast_po4', mem%km_fast_po4, &
+            hgrid, vgrid_soil_sb, &
+            t_cf('km_fast_po4', 'mol P m-3 soil', 'half-saturation concentration of po4 for the clay(Fe/Al) and SOM pool'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
+
+      CALL jsb_add_var(mem, 'km_slow_po4', mem%km_slow_po4, &
+            hgrid, vgrid_soil_sb, &
+            t_cf('km_slow_po4', 'mol P m-3 soil', 'half-saturation concentration of po4 for the silt/sand pool'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=0.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'vmax_weath_mineral_sl', mem%vmax_weath_mineral_sl, &
             hgrid, vgrid_soil_sb, &
@@ -2615,6 +2652,14 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             initval_r=0.0_wp) ! initvalue
+			
+      CALL jsb_add_var(mem, 'Qmax_AlFe_cor', mem%Qmax_AlFe_cor, &
+            hgrid, vgrid_soil_sb, &
+            t_cf('Qmax_AlFe_cor', '', 'PO4 Qmax correction factor for clay/silt soil'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            initval_r=1.0_wp) ! initvalue
 
       CALL jsb_add_var(mem, 'enzyme_frac_poly', mem%enzyme_frac_poly, &
             hgrid, vgrid_soil_sb, &

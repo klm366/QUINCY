@@ -65,6 +65,7 @@ cohort_harvest_interval=80        # number of years after which the cohort is ha
 # soil model options
 soil_depth=5.7                    # meter (5.7 to 9.5)
 nsoil_layer=5                     # number of soil layers (default for QUINCY land: 5 | for QUINCY soil only available forcing: 15 | generally: min 5 & max 20)
+flag_sb_double_langmuir="F"       # TRUE: use double Langmuir isotherm for adsorption | FALSE: use traditional Langmuir for adsorption
 soilForcStatRevNum=""             # only numbers - revision number (e.g., 2174) of the code (svn repo trunk) the soil forcing was created with - see site-set dir
 
 # JSM
@@ -390,6 +391,7 @@ validateUserConfigValues "$flag_sb_prescribe_no3" "$validateFlags" "flag_sb_pres
 validateUserConfigValues "$flag_sb_prescribe_po4" "$validateFlags" "flag_sb_prescribe_po4"
 validateUserConfigValues "$flag_t_resp_acclimation" "$validateFlags" "flag_t_resp_acclimation"
 validateUserConfigValues "$flag_t_jmax_acclimation" "$validateFlags" "flag_t_jmax_acclimation"
+validateUserConfigValues "$flag_sb_double_langmuir" "$validateFlags" "flag_sb_double_langmuir"
 validateUserConfigValues "$flag_sb_jsm_transport" "$validateFlags" "flag_sb_jsm_transport"
 validateUserConfigValues "$flag_sb_jsm_litter_input" "$validateFlags" "flag_sb_jsm_litter_input"
 validateUserConfigValues "$flag_sb_jsm_OM_sorption" "$validateFlags" "flag_sb_jsm_OM_sorption"
@@ -795,6 +797,12 @@ if [ "$forcingDataSet" == "spp1685" ]
     changeNamelistValue flag_spp1685 ".TRUE."
   else
     changeNamelistValue flag_spp1685 ".FALSE."
+fi
+if [ $flag_sb_double_langmuir == T ]
+  then
+    changeNamelistValue flag_sb_double_langmuir ".TRUE."
+  else
+    changeNamelistValue flag_sb_double_langmuir ".FALSE."
 fi
 if [ $flag_mycorrhiza == T ]
   then

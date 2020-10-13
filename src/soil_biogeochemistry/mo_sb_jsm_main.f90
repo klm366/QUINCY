@@ -100,9 +100,10 @@ CONTAINS
     INTEGER                               :: i, isoil
     INTEGER                               :: iblk, ics, ice, nc
     REAL(wp)                              :: hlp1
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: fine_root_carbon_sl, & 
+    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: fine_root_carbon_sl, &             !< Dimension: (nc, nsoil_sb)
                                              km1_uptake_act, km2_uptake_act, &
-                                             arr_hlp1, arr_hlp2, arr_hlp3
+                                             arr_hlp1, arr_hlp2, arr_hlp3, &
+                                             km_array, sorpsites_array
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_jsm'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -253,6 +254,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: qmax_org 
     dsl4jsb_Real3D_onChunk :: qmax_po4
     dsl4jsb_Real3D_onChunk :: qmax_nh4
+    dsl4jsb_Real3D_onChunk :: qmax_fast_po4
+    dsl4jsb_Real3D_onChunk :: km_fast_po4
     dsl4jsb_Real3D_onChunk :: km_adsorpt_po4_sl
     dsl4jsb_Real3D_onChunk :: km_adsorpt_nh4_sl
     dsl4jsb_Real3D_onChunk :: bulk_dens_corr_sl 
@@ -295,6 +298,8 @@ CONTAINS
     ALLOCATE(arr_hlp1(nc, nsoil_sb))
     ALLOCATE(arr_hlp2(nc, nsoil_sb))
     ALLOCATE(arr_hlp3(nc, nsoil_sb))
+    ALLOCATE(km_array(nc, nsoil_sb))
+    ALLOCATE(sorpsites_array(nc, nsoil_sb))
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(A2L_,      p_deposition)                ! in
     ! ---------------------------
@@ -435,6 +440,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_org)                    ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_po4)                    ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_nh4)                    ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       qmax_fast_po4)
+    dsl4jsb_Get_var3D_onChunk(SB_,       km_fast_po4)
     dsl4jsb_Get_var3D_onChunk(SB_,       km_adsorpt_po4_sl)           ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       km_adsorpt_nh4_sl)           ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_dens_corr_sl)           ! inout
@@ -597,52 +604,63 @@ CONTAINS
 
     !> 6.0 Microbial and plant P uptake
     !!
-    hlp1                = 0._wp
-    arr_hlp1(:,:)       = po4_solute(:,:) + po4_assoc_fast(:,:)
-    arr_hlp2(:,:)       = 1._wp
-    km1_uptake_act(:,:) = km1_up_po4 / (rtm_hsc(:,:) * rmm_hsc(:,:)) / 1000._wp / (w_soil_sl(:,:) / soil_depth_sl(:,:))
-    km2_uptake_act(:,:) = km2_up_po4 * rtm_hsc(:,:) * rmm_hsc(:,:) * 1000._wp * (w_soil_sl(:,:) / soil_depth_sl(:,:))
-    CALL calc_sinking_flux(lctlib%vmax_uptake_p, hlp1, "po4", TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &                 ! in
-                           sb_pool%microbial%carbon(:,:), fine_root_carbon_sl(:,:), po4_solute(:,:), &
-                           rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), &
-                           rtm_plant_uptake(:,:), rmm_plant_uptake(:,:), km1_uptake_act(:,:), km2_uptake_act(:,:), &
-                           km_denitrification_c, km_denitrification_no3, rtm_nitrification(:,:), rmm_nitrification(:,:), &
-                           arr_hlp2(:,:), km_adsorpt_po4_sl(:,:), &
-                           MAX(0._wp, qmax_po4(:,:) - po4_assoc_fast(:,:)), &                                               ! in
-                           arr_hlp1(:,:), microbial_uptake_po4_sl(:,:), &                                                   ! inout
-                           plant_uptake_po4_sl(:,:), arr_hlp3(:,:), fast_adsorpt_po4(:,:))                                  ! out
+    arr_hlp1(:,:)        = po4_solute(:,:) + po4_assoc_fast(:,:)
+    arr_hlp2(:,:)        = 1._wp
+    km1_uptake_act(:,:)  = km1_up_po4 / (rtm_hsc(:,:) * rmm_hsc(:,:)) / 1000._wp / (w_soil_sl(:,:) / soil_depth_sl(:,:))
+    km2_uptake_act(:,:)  = km2_up_po4 *  rtm_hsc(:,:) * rmm_hsc(:,:)  * 1000._wp * (w_soil_sl(:,:) / soil_depth_sl(:,:))
+    km_array(:,:)        = km_adsorpt_po4_sl(:,:)
+    sorpsites_array(:,:) = MAX(0._wp, qmax_po4(:,:) - po4_assoc_fast(:,:))
+    CALL calc_sinking_flux(lctlib%vmax_uptake_p, "po4", TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &                       ! in
+                           sb_pool%microbial%carbon(:,:), fine_root_carbon_sl(:,:), po4_solute(:,:), &                      ! in
+                           rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), &                          ! in
+                           rtm_plant_uptake(:,:), rmm_plant_uptake(:,:), km1_uptake_act(:,:), km2_uptake_act(:,:), &        ! in
+                           km_denitrification_c, km_denitrification_no3, rtm_nitrification(:,:), rmm_nitrification(:,:), &  ! in
+                           arr_hlp2(:,:), km_array(:,:), sorpsites_array(:,:), &                                            ! in
+                           solute_available = arr_hlp1(:,:), &                        ! in
+                           microbial_uptake = microbial_uptake_po4_sl(:,:), &         ! inout
+                           plant_uptake     = plant_uptake_po4_sl(:,:), &             ! out
+                           fast_adsorpt     = fast_adsorpt_po4(:,:))                  ! OPTIONAL (out)
 
     !> 6.1 Microbial and plant N uptake, nitrification/denitrification 
     !! nh4 
-    arr_hlp1(:,:)       = nh4_solute(:,:)+ nh4_assoc(:,:)
-    arr_hlp2(:,:)       = 1._wp - anaerobic_volume_fraction_sl(:,:)
-    km1_uptake_act(:,:) = km1_up_nh4 / (rtm_hsc(:,:) * rmm_hsc(:,:)) / 1000._wp / (w_soil_sl(:,:) / soil_depth_sl(:,:))
-    km2_uptake_act(:,:) = km2_up_nh4 * rtm_hsc(:,:) * rmm_hsc(:,:) * 1000._wp * (w_soil_sl(:,:) / soil_depth_sl(:,:))
-    CALL calc_sinking_flux(lctlib%vmax_uptake_n, vmax_nitrification, "nh4", TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &   ! in
-                           sb_pool%microbial%carbon(:,:), fine_root_carbon_sl(:,:), nh4_solute(:,:), &
-                           rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), &
-                           rtm_plant_uptake(:,:), rmm_plant_uptake(:,:), km1_uptake_act(:,:), km2_uptake_act(:,:), &
-                           km_denitrification_c, km_denitrification_no3, rtm_nitrification(:,:), rmm_nitrification(:,:), &
-                           arr_hlp2(:,:), km_adsorpt_nh4_sl(:,:), &
-                           MAX(0._wp, qmax_nh4(:,:) - nh4_assoc(:,:)), &                                                    ! in
-                           arr_hlp1(:,:), microbial_uptake_nh4_sl(:,:), &                                                   ! inout
-                           plant_uptake_nh4_sl(:,:), nitrification_no3(:,:), fast_adsorpt_nh4(:,:), &                       ! out
-                           solute_alt=no3_solute(:,:))                                                                      ! OPTIONAL(in)
+    arr_hlp1(:,:)        = nh4_solute(:,:) + nh4_assoc(:,:)
+    arr_hlp2(:,:)        = 1._wp - anaerobic_volume_fraction_sl(:,:)
+    km1_uptake_act(:,:)  = km1_up_nh4 / (rtm_hsc(:,:) * rmm_hsc(:,:)) / 1000._wp / (w_soil_sl(:,:) / soil_depth_sl(:,:))
+    km2_uptake_act(:,:)  = km2_up_nh4 *  rtm_hsc(:,:) * rmm_hsc(:,:)  * 1000._wp * (w_soil_sl(:,:) / soil_depth_sl(:,:))
+    km_array(:,:)        = km_adsorpt_nh4_sl(:,:)
+    sorpsites_array(:,:) = MAX(0._wp, qmax_nh4(:,:) - nh4_assoc(:,:))
+    CALL calc_sinking_flux(lctlib%vmax_uptake_n, "nh4", TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &                       ! in
+                           sb_pool%microbial%carbon(:,:), fine_root_carbon_sl(:,:), nh4_solute(:,:), &                      ! in
+                           rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), &                          ! in
+                           rtm_plant_uptake(:,:), rmm_plant_uptake(:,:), km1_uptake_act(:,:), km2_uptake_act(:,:), &        ! in
+                           km_denitrification_c, km_denitrification_no3, rtm_nitrification(:,:), rmm_nitrification(:,:), &  ! in
+                           arr_hlp2(:,:), km_array(:,:), sorpsites_array(:,:), &                                            ! in
+                           solute_available   = arr_hlp1(:,:), &                      ! in
+                           vmax_nitri_denitri = vmax_nitrification, &                 ! OPTIONAL(in)
+                           solute_alternative = no3_solute(:,:), &                    ! OPTIONAL(in)
+                           microbial_uptake   = microbial_uptake_nh4_sl(:,:), &       ! inout
+                           plant_uptake       = plant_uptake_nh4_sl(:,:), &           ! out
+                           fast_adsorpt       = fast_adsorpt_nh4(:,:), &              ! OPTIONAL (out)
+                           flux_nitri_denitri = nitrification_no3(:,:))               ! OPTIONAL (out)
 
     !! no3
-    arr_hlp1(:,:) = 1._wp
-    km1_uptake_act(:,:) = km1_up_no3 / (rtm_hsc(:,:) * rmm_hsc(:,:)) / 1000._wp / (w_soil_sl(:,:) / soil_depth_sl(:,:))
-    km2_uptake_act(:,:) = km2_up_no3 * rtm_hsc(:,:) * rmm_hsc(:,:) * 1000._wp * (w_soil_sl(:,:) / soil_depth_sl(:,:))
-    CALL calc_sinking_flux(lctlib%vmax_uptake_n, vmax_denitrification, "no3", TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), & ! in
-                           sb_pool%microbial%carbon(:,:), fine_root_carbon_sl(:,:), no3_solute(:,:), &
-                           rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), &
-                           rtm_plant_uptake(:,:), rmm_plant_uptake(:,:), km1_uptake_act(:,:), km2_uptake_act(:,:), &
-                           km_denitrification_c, km_denitrification_no3, rtm_denitrification(:,:), arr_hlp1(:,:), &
-                           anaerobic_volume_fraction_sl(:,:), arr_hlp1(:,:), &
-                           arr_hlp1(:,:), &                                                                                 ! in
-                           no3_solute(:,:), microbial_uptake_no3_sl(:,:), &                                                 ! inout
-                           plant_uptake_no3_sl(:,:), denitrification_n2(:,:), arr_hlp2(:,:), &                              ! out
-                           solute_alt=nh4_solute(:,:))                                                                      ! OPTIONAL(in)
+    arr_hlp1(:,:)        = 1._wp
+    km1_uptake_act(:,:)  = km1_up_no3 / (rtm_hsc(:,:) * rmm_hsc(:,:)) / 1000._wp / (w_soil_sl(:,:) / soil_depth_sl(:,:))
+    km2_uptake_act(:,:)  = km2_up_no3 *  rtm_hsc(:,:) * rmm_hsc(:,:)  * 1000._wp * (w_soil_sl(:,:) / soil_depth_sl(:,:))
+    km_array(:,:)        = 1._wp
+    sorpsites_array(:,:) = 1._wp
+    CALL calc_sinking_flux(lctlib%vmax_uptake_n, "no3", TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &                       ! in
+                           sb_pool%microbial%carbon(:,:), fine_root_carbon_sl(:,:), no3_solute(:,:), &                      ! in
+                           rtm_mic_uptake(:,:), rmm_mic_uptake(:,:), rtm_hsc(:,:), rmm_hsc(:,:), &                          ! in
+                           rtm_plant_uptake(:,:), rmm_plant_uptake(:,:), km1_uptake_act(:,:), km2_uptake_act(:,:), &        ! in
+                           km_denitrification_c, km_denitrification_no3, rtm_denitrification(:,:), arr_hlp1(:,:), &         ! in
+                           anaerobic_volume_fraction_sl(:,:), km_array(:,:), sorpsites_array(:,:), &                        ! in
+                           solute_available   = no3_solute(:,:), &                    ! in
+                           vmax_nitri_denitri = vmax_denitrification, &               ! OPTIONAL(in)
+                           solute_alternative = nh4_solute(:,:), &                    ! OPTIONAL(in)
+                           microbial_uptake   = microbial_uptake_no3_sl(:,:), &       ! inout
+                           plant_uptake       = plant_uptake_no3_sl(:,:), &           ! out
+                           flux_nitri_denitri = denitrification_n2(:,:))              ! OPTIONAL (out)
 
     !> 7.0 co-metabolisation of polymeric litter & residues
     !!
@@ -747,6 +765,8 @@ CONTAINS
   DEALLOCATE(arr_hlp1)
   DEALLOCATE(arr_hlp2)
   DEALLOCATE(arr_hlp3)
+  DEALLOCATE(km_array)
+  DEALLOCATE(sorpsites_array)
 
 
 ! Pass back values to process memory

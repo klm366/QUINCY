@@ -38,11 +38,12 @@ MODULE mo_sb_jsm_processes
 
   PRIVATE
   PUBLIC :: calc_litter_turnover, calc_depolymerisation, & 
-            calc_microbial_turnover, calc_microbial_growth, &
+            calc_microbial_turnover, calc_microbial_growth, calc_km_qmax_correction, &
             calc_bulk_soil_carbon, calc_bulk_density_correction, calc_qmax_bulk_density_correction, &
             calc_om_sorption, calc_depolymerisation_SESAM, &
             calc_inorganic_uptake, calc_sinking_flux, calc_sourcing_flux_po4, &
-            calc_fast_po4, calc_nitri_denitri_partitioning_rate, convert_s1d_to_s0d_var_soilproperty
+            calc_fast_po4, calc_nitri_denitri_partitioning_rate, convert_s1d_to_s0d_var_soilproperty, &
+            calc_Psorption_parameter
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sb_jsm_processes'
 
@@ -284,7 +285,7 @@ CONTAINS
     REAL(wp), INTENT(in)            :: assoc_slow                !< slow minerally associated PO4 pool [mol/m3]
     REAL(wp), INTENT(in)            :: assoc_fast                !< fast minerally associated PO4 pool [mol/m3]
     REAL(wp), INTENT(in)            :: po4_primary               !< primary PO4 pool [mol/m3]
-    REAL(wp), INTENT(in)            :: bulk_dens_sl              !< soil bulk density [kg/mol]
+    REAL(wp), INTENT(in)            :: bulk_dens_sl              !< soil bulk density [kg/m3]
     REAL(wp), INTENT(in)            :: volume_min_sl             !< mineral soil volume fraction [m3/m3]
     REAL(wp), INTENT(in)            :: root_carbon_sl            !< carbon of fine roots per soil layer, [mol/m3]
     REAL(wp), INTENT(in)            :: vmax_weath_mineral_sl     !< weathering coefficient of mineral soil [mol P /m3 /s]
@@ -422,24 +423,26 @@ CONTAINS
   !! Output: microbial and plant inorganic uptake rates, fast adsorption rates (po4, nh4), \n
   !!         nitrification/denitrification rates (nh4/no3)
   !-----------------------------------------------------------------------------------------------------
-  ELEMENTAL SUBROUTINE calc_sinking_flux(lctlib_vmax_uptake, vmax_nitri_denitri, substrate,sb_adsorp_scheme, &
-                                             microbial_carbon, fine_root_carbon, solute, &
-                                             rtm_mic_uptake, rmm_mic_uptake, rtm_hsc, rmm_hsc, &
-                                             rtm_plant_uptake, rmm_plant_uptake, km1_upt, km2_upt, &
-                                             km_nitrification, km_denitrification, &
-                                             rtm_nit_denit_fication, rmm_nit_denit_fication, &
-                                             anaerobic_volume_fraction, km_adsorpt_sl, &
-                                             avail_sorption_sites, &                                ! in
-                                             solute_ava, microbial_uptake, &                        ! inout
-                                             plant_uptake, nitri_denitri_fication, fast_adsorpt, &  ! out
-                                             solute_alt)                                            ! OPTIONAL(in)
+  ELEMENTAL SUBROUTINE calc_sinking_flux(lctlib_vmax_uptake, substrate, sb_adsorp_scheme, &           ! in
+                                             microbial_carbon, fine_root_carbon, solute, &            ! in
+                                             rtm_mic_uptake, rmm_mic_uptake, rtm_hsc, rmm_hsc, &      ! in
+                                             rtm_plant_uptake, rmm_plant_uptake, km1_upt, km2_upt, &  ! in
+                                             km_nitrification, km_denitrification, &                  ! in
+                                             rtm_nit_denit_fication, rmm_nit_denit_fication, &        ! in
+                                             anaerobic_volume_fraction, km_adsorpt_sl, &              ! in
+                                             avail_sorption_sites, solute_available, &                ! in
+                                             vmax_nitri_denitri, &      ! OPTIONAL (in)
+                                             solute_alternative, &      ! OPTIONAL (in)
+                                             microbial_uptake, &        ! inout
+                                             plant_uptake, &            ! out
+                                             fast_adsorpt, &            ! OPTIONAL (out)
+                                             flux_nitri_denitri)        ! OPTIONAL (out)
 
     USE mo_sb_constants
 
     IMPLICIT NONE
 
     REAL(wp)          , INTENT(in)    :: lctlib_vmax_uptake        !< lctlib uptake paramter, for eca_none
-    REAL(wp)          , INTENT(in)    :: vmax_nitri_denitri        !< maximum nitrification/denitrification rate, for eca_none
     CHARACTER(len=*)  , INTENT(in)    :: substrate                 !< po4, nh4, no3, determine the specific ECA paramaters
     CHARACTER(len=*)  , INTENT(in)    :: sb_adsorp_scheme          !< eca_full; eca_none; eca_part
     REAL(wp)          , INTENT(in)    :: microbial_carbon          !< microbial carbon density (mol / m3)
@@ -460,12 +463,14 @@ CONTAINS
     REAL(wp)          , INTENT(in)    :: km_adsorpt_sl             !< half-saturation of solute sorption to mineral soil [mol / m3]
     REAL(wp)          , INTENT(in)    :: solute                    !< concentration of the solvent to be taken up (mol / m3)
     REAL(wp)          , INTENT(in)    :: avail_sorption_sites      !< available sorption sites [mol / m3]
-    REAL(wp)          , INTENT(inout) :: solute_ava                !< available solvent for all the sinking processes (mol / m3)
+    REAL(wp)          , INTENT(in)    :: solute_available          !< available solvent for all the sinking processes (mol / m3)
+    REAL(wp), OPTIONAL, INTENT(in)    :: vmax_nitri_denitri        !< maximum nitrification/denitrification rate, for eca_none
+    REAL(wp), OPTIONAL, INTENT(in)    :: solute_alternative        !< concentration of the alternative solvent to be taken up by plant (mol / m3)    
     REAL(wp)          , INTENT(inout) :: microbial_uptake          !< microbial uptake flux (µmol / m3 / s)
     REAL(wp)          , INTENT(out)   :: plant_uptake              !< plant uptake flux (µmol / m3 / s)
-    REAL(wp)          , INTENT(out)   :: nitri_denitri_fication    !< nitrification or denitrification flux (µmol / m3 / s)
-    REAL(wp)          , INTENT(out)   :: fast_adsorpt              !< fast adsorption flux (µmol / m3 / s)
-    REAL(wp),OPTIONAL , INTENT(in)    :: solute_alt                !< concentration of the alternative solvent to be taken up by plant (mol / m3)
+    REAL(wp), OPTIONAL, INTENT(out)   :: fast_adsorpt              !< fast adsorption flux (µmol / m3 / s)
+    REAL(wp), OPTIONAL, INTENT(out)   :: flux_nitri_denitri        !< nitrification or denitrification flux (µmol / m3 / s)
+
 
     REAL(wp)                        :: mic_hlp, plant_hlp, mineral_hlp, nitri_hlp, &
                                        hlp1, hlp2, hlp3
@@ -480,58 +485,58 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
-    ! 0.9 assign ECA specific parameter values based on substrate
-    !
+    !> 0.9 init local variables
+    !! assign ECA specific parameter values based on substrate
     SELECT CASE (substrate)
       CASE ("po4")
-        f_mic_carrier     = f_mic_carrier_po4
-        km1_mic_uptake    = km_mic_uptake_po4
-        km_plant_uptake   = km_plant_uptake_po4
-        f_plant_carrier   = f_plant_carrier_po4
-        k_mic_uptake      = k_mic_uptake_po4
-        k_plant_uptake    = k_plant_uptake_po4
-        vmax_mic_uptake_sub = vmax_mic_uptake_po4
-        vmax_plant_uptake = vmax_plant_uptake_po4
-        k_desorpt_f       = k_desorpt_f_po4
-        km_nit_denit      = 0._wp
-        k_nit_denit       = 0._wp
-        f_nit_carrier     = 0._wp
-        vmax_nit_denit    = 0._wp
-        reaction_volume   = 0._wp
+        f_mic_carrier         = f_mic_carrier_po4
+        km1_mic_uptake        = km_mic_uptake_po4
+        km_plant_uptake       = km_plant_uptake_po4
+        f_plant_carrier       = f_plant_carrier_po4
+        k_mic_uptake          = k_mic_uptake_po4
+        k_plant_uptake        = k_plant_uptake_po4
+        vmax_mic_uptake_sub   = vmax_mic_uptake_po4
+        vmax_plant_uptake     = vmax_plant_uptake_po4
+        k_desorpt_f           = k_desorpt_f_po4
+        km_nit_denit          = 0._wp
+        k_nit_denit           = 0._wp
+        f_nit_carrier         = 0._wp
+        vmax_nit_denit        = 0._wp
+        reaction_volume       = 0._wp
       CASE ("nh4")
-        f_mic_carrier     = f_mic_carrier_n
-        km1_mic_uptake    = km_mic_uptake_nh4
-        km2_mic_uptake    = km_mic_uptake_no3
-        km_plant_uptake   = km_plant_uptake_nh4
-        km1_plant_uptake  = km_plant_uptake_no3
-        f_plant_carrier   = f_plant_carrier_n
-        k_mic_uptake      = k_mic_uptake_nh4
-        k_plant_uptake    = k_plant_uptake_nh4
+        f_mic_carrier         = f_mic_carrier_n
+        km1_mic_uptake        = km_mic_uptake_nh4
+        km2_mic_uptake        = km_mic_uptake_no3
+        km_plant_uptake       = km_plant_uptake_nh4
+        km1_plant_uptake      = km_plant_uptake_no3
+        f_plant_carrier       = f_plant_carrier_n
+        k_mic_uptake          = k_mic_uptake_nh4
+        k_plant_uptake        = k_plant_uptake_nh4
         vmax_mic_uptake_sub   = vmax_mic_uptake_nh4
-        vmax_plant_uptake = vmax_plant_uptake_nh4
-        k_desorpt_f       = k_desorpt_nh4
-        vmax_nit_denit    = vmax_nitrification_nh4
-        km_nit_denit      = km_nitrification_nh4
-        f_nit_carrier     = f_nit_carrier_nh4
-        k_nit_denit       = k_nit_carrier_n
-        reaction_volume   = 1._wp - anaerobic_volume_fraction
+        vmax_plant_uptake     = vmax_plant_uptake_nh4
+        k_desorpt_f           = k_desorpt_nh4
+        vmax_nit_denit        = vmax_nitrification_nh4
+        km_nit_denit          = km_nitrification_nh4
+        f_nit_carrier         = f_nit_carrier_nh4
+        k_nit_denit           = k_nit_carrier_n
+        reaction_volume       = 1._wp - anaerobic_volume_fraction
       CASE ("no3")
-        f_mic_carrier     = f_mic_carrier_n
-        km1_mic_uptake    = km_mic_uptake_no3
-        km2_mic_uptake    = km_mic_uptake_nh4
-        km_plant_uptake   = km_plant_uptake_no3
-        km1_plant_uptake  = km_plant_uptake_nh4
-        f_plant_carrier   = f_plant_carrier_n
-        k_mic_uptake      = k_mic_uptake_no3
-        k_plant_uptake    = k_plant_uptake_no3
+        f_mic_carrier         = f_mic_carrier_n
+        km1_mic_uptake        = km_mic_uptake_no3
+        km2_mic_uptake        = km_mic_uptake_nh4
+        km_plant_uptake       = km_plant_uptake_no3
+        km1_plant_uptake      = km_plant_uptake_nh4
+        f_plant_carrier       = f_plant_carrier_n
+        k_mic_uptake          = k_mic_uptake_no3
+        k_plant_uptake        = k_plant_uptake_no3
         vmax_mic_uptake_sub   = vmax_mic_uptake_no3
-        vmax_plant_uptake = vmax_plant_uptake_no3
-        k_desorpt_f       = 0._wp
-        vmax_nit_denit    = vmax_denitrification_no3
-        km_nit_denit      = km_denit_no3
-        f_nit_carrier     = f_denit_carrier_no3
-        k_nit_denit       = k_nit_carrier_n
-        reaction_volume   = anaerobic_volume_fraction
+        vmax_plant_uptake     = vmax_plant_uptake_no3
+        k_desorpt_f           = 0._wp
+        vmax_nit_denit        = vmax_denitrification_no3
+        km_nit_denit          = km_denit_no3
+        f_nit_carrier         = f_denit_carrier_no3
+        k_nit_denit           = k_nit_carrier_n
+        reaction_volume       = anaerobic_volume_fraction
     END SELECT
 
     !> 1.0 uptake
@@ -542,25 +547,27 @@ CONTAINS
       !> 1.1 ECA approach
       !! 
       CASE("eca_full", "eca_part")
-        mic_hlp     = km1_mic_uptake + solute_ava + f_mic_carrier * microbial_carbon + &
-                      km1_mic_uptake / km_plant_uptake * f_plant_carrier_po4 * fine_root_carbon 
-        plant_hlp   = km_plant_uptake + solute_ava + f_plant_carrier_po4 * fine_root_carbon + &
+        mic_hlp     = km1_mic_uptake + solute_available + f_mic_carrier * microbial_carbon + &
+                      km1_mic_uptake / km_plant_uptake * f_plant_carrier * fine_root_carbon 
+        plant_hlp   = km_plant_uptake + solute_available + f_plant_carrier * fine_root_carbon + &
                       km_plant_uptake / km1_mic_uptake * f_mic_carrier * microbial_carbon 
-        mineral_hlp = km_adsorpt_sl + solute_ava + avail_sorption_sites + &
-                      km_adsorpt_sl / km_plant_uptake * f_plant_carrier_po4 * fine_root_carbon + &
+        mineral_hlp = km_adsorpt_sl + solute_available + avail_sorption_sites + &
+                      km_adsorpt_sl / km_plant_uptake * f_plant_carrier * fine_root_carbon + &
                       km_adsorpt_sl / km1_mic_uptake * f_mic_carrier * microbial_carbon 
-        nitri_hlp   = km_nit_denit + solute_ava + f_nit_carrier * microbial_carbon + &
+        nitri_hlp   = km_nit_denit + solute_available + f_nit_carrier * microbial_carbon + &
                       km_nit_denit / km1_mic_uptake * f_mic_carrier * microbial_carbon + &
-                      km_nit_denit / km_plant_uptake * f_plant_carrier_po4 * fine_root_carbon
+                      km_nit_denit / km_plant_uptake * f_plant_carrier * fine_root_carbon
         ! nh4 & no3
+        !! including the effects of alternative solute and nitrification/denitrification process
         IF (substrate == "nh4" .OR. substrate == "no3") THEN
           plant_hlp = plant_hlp + &
-                      km_plant_uptake / km1_plant_uptake * solute_alt + &
+                      km_plant_uptake / km1_plant_uptake * solute_alternative + &
                       km_plant_uptake / km_nit_denit * f_nit_carrier * microbial_carbon
           mic_hlp   = mic_hlp + &
-                      km1_mic_uptake / km2_mic_uptake * solute_alt + &
+                      km1_mic_uptake / km2_mic_uptake * solute_alternative + &
                       km1_mic_uptake / km_nit_denit * f_nit_carrier * microbial_carbon
           ! nh4
+          !! including the effect of adsorption
           IF (substrate=="nh4") THEN
             mic_hlp      = mic_hlp + &
                            km1_mic_uptake / km_adsorpt_sl * avail_sorption_sites 
@@ -571,63 +578,84 @@ CONTAINS
             nitri_hlp    = nitri_hlp + &
                            km_nit_denit / km_adsorpt_sl * avail_sorption_sites
             hlp1         = k_desorpt_f / km_adsorpt_sl * solute 
-            fast_adsorpt = MIN(1._wp / dtime, hlp1 * solute_ava / mineral_hlp) * avail_sorption_sites * 1.e6_wp
-          ! no3
-          ELSE
-            mineral_hlp  = 0._wp
-            fast_adsorpt = 0._wp
+            fast_adsorpt = MIN(1._wp / dtime, hlp1 * solute_available / mineral_hlp) * avail_sorption_sites * 1.e6_wp
           ENDIF
         ! po4
+        !! including the effect of adsorption
         ELSE
           mic_hlp      = mic_hlp + &
                          km1_mic_uptake / km_adsorpt_sl * avail_sorption_sites 
           plant_hlp    = plant_hlp + &
                          km_plant_uptake / km_adsorpt_sl * avail_sorption_sites 
           hlp1         = k_desorpt_f / km_adsorpt_sl * solute 
-          fast_adsorpt = MIN(1._wp / dtime, hlp1 * solute_ava / mineral_hlp) * avail_sorption_sites * 1.e6_wp
+          fast_adsorpt = MIN(1._wp / dtime, hlp1 * solute_available / mineral_hlp) * avail_sorption_sites * 1.e6_wp
         ENDIF
-
-        microbial_uptake       = MIN(rtm_mic_uptake * rmm_mic_uptake * k_mic_uptake * solute_ava * f_mic_carrier * &
-                                 microbial_carbon / mic_hlp, microbial_uptake)
-        plant_uptake           = rtm_plant_uptake * rmm_plant_uptake * k_plant_uptake * solute_ava * f_plant_carrier_po4 * &
-                                 fine_root_carbon / plant_hlp 
-        nitri_denitri_fication = rtm_nit_denit_fication * rmm_nit_denit_fication * reaction_volume * k_nit_denit * solute_ava * f_nit_carrier * &
-                                 microbial_carbon / nitri_hlp
+        ! eca_full, rates calculation based on enzyme abundance
+        !! Calculate plant uptake, microbial uptake and nitrification/denitrification rates
+        microbial_uptake   = MIN(rtm_mic_uptake * rmm_mic_uptake * k_mic_uptake * solute_available * f_mic_carrier * &
+                             microbial_carbon / mic_hlp, microbial_uptake)
+        plant_uptake       = rtm_plant_uptake * rmm_plant_uptake * k_plant_uptake * solute_available * f_plant_carrier_po4 * &
+                             fine_root_carbon / plant_hlp 
+        IF (substrate == "nh4" .OR. substrate == "no3") THEN
+          flux_nitri_denitri = rtm_nit_denit_fication * rmm_nit_denit_fication * reaction_volume * k_nit_denit * &
+                               solute_available * f_nit_carrier * microbial_carbon / nitri_hlp
+        ENDIF
+        ! eca_part, rates calculation based on vmax (prescribed)
+        !! Calculate plant uptake, microbial uptake and nitrification/denitrification rates
         IF (sb_adsorp_scheme == "eca_part") THEN
-          microbial_uptake       = rtm_mic_uptake * rmm_mic_uptake * vmax_mic_uptake_sub * solute_ava * &
-                                   microbial_carbon / mic_hlp
-          plant_uptake           = rtm_plant_uptake * rmm_plant_uptake * vmax_plant_uptake * solute_ava * &
-                                   fine_root_carbon / plant_hlp
-          nitri_denitri_fication = rtm_nit_denit_fication * rmm_nit_denit_fication * reaction_volume * vmax_nit_denit * solute_ava * &
-                                   microbial_carbon / nitri_hlp
+          microbial_uptake   = rtm_mic_uptake * rmm_mic_uptake * vmax_mic_uptake_sub * &
+                               solute_available * microbial_carbon / mic_hlp
+          plant_uptake       = rtm_plant_uptake * rmm_plant_uptake * vmax_plant_uptake * &
+                               solute_available * fine_root_carbon / plant_hlp
+          IF (substrate == "nh4" .OR. substrate == "no3") THEN
+            flux_nitri_denitri = rtm_nit_denit_fication * rmm_nit_denit_fication * reaction_volume * vmax_nit_denit * & 
+                                 solute_available * microbial_carbon / nitri_hlp
+          ENDIF
         ENDIF
         
       !> 1.2 non-ECA approach
-      !! 
+      !! same as simple_1d model
       CASE("eca_none")
         plant_uptake   = rtm_plant_uptake * rmm_plant_uptake * fine_root_carbon * lctlib_vmax_uptake * &
                          solute * (km1_upt + 1._wp / (km2_upt + solute)) 
-        fast_adsorpt   = 0._wp       
-        nitri_denitri_fication = rtm_nit_denit_fication * rmm_nit_denit_fication * vmax_nitri_denitri * & 
-                                 microbial_carbon/ (km_nitrification + microbial_carbon)  * &
-                                 reaction_volume * solute
-        IF (substrate=="no3") nitri_denitri_fication = nitri_denitri_fication / (km_denitrification + solute)
+        IF (substrate == "po4" .OR. substrate == "nh4") THEN
+          fast_adsorpt   = 0._wp
+        ENDIF
+        IF (substrate == "nh4" .OR. substrate == "no3") THEN
+          flux_nitri_denitri = rtm_nit_denit_fication * rmm_nit_denit_fication * vmax_nitri_denitri * microbial_carbon / &
+                               (km_nitrification + microbial_carbon)  * reaction_volume * solute
+        ENDIF
+        IF (substrate == "no3") THEN
+          flux_nitri_denitri = flux_nitri_denitri / (km_denitrification + solute)
+        ENDIF
     END SELECT
 
     !> 2.0 
-    !! check the availability of solute considering all sourcing fluxes
-    hlp1 = microbial_uptake + plant_uptake + fast_adsorpt + nitri_denitri_fication
-    hlp2 = solute_ava / dtime * 1.e6_wp
+    !! check the availability of solute considering all sinking fluxes
+    hlp2 = solute_available / dtime * 1.e6_wp
+    SELECT CASE (substrate)
+      CASE("po4")
+        hlp1 = microbial_uptake + plant_uptake + fast_adsorpt
+      CASE("nh4")
+        hlp1 = microbial_uptake + plant_uptake + fast_adsorpt + flux_nitri_denitri
+      CASE("no3")
+        hlp1 = microbial_uptake + plant_uptake + flux_nitri_denitri
+    END SELECT
     IF (hlp1 > hlp2 .AND. hlp1 > 0._wp)THEN
-        microbial_uptake       = microbial_uptake * hlp2 / hlp1
-        plant_uptake           = plant_uptake     * hlp2 / hlp1
-        fast_adsorpt           = fast_adsorpt     * hlp2 / hlp1
-        nitri_denitri_fication = nitri_denitri_fication * hlp2 / hlp1
+      microbial_uptake   = microbial_uptake   * hlp2 / hlp1
+      plant_uptake       = plant_uptake       * hlp2 / hlp1
+      SELECT CASE (substrate)
+        CASE("po4")
+          fast_adsorpt       = fast_adsorpt       * hlp2 / hlp1
+        CASE("nh4")
+          fast_adsorpt       = fast_adsorpt       * hlp2 / hlp1
+          flux_nitri_denitri = flux_nitri_denitri * hlp2 / hlp1      
+        CASE("no3")
+          flux_nitri_denitri = flux_nitri_denitri * hlp2 / hlp1
+      END SELECT
     ENDIF
 
   END SUBROUTINE calc_sinking_flux
-
-
 
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task to update_sb_jsm
@@ -1428,30 +1456,27 @@ CONTAINS
   !!
   !! Output: sorption capacity for organic material 
   !-----------------------------------------------------------------------------------------------------
-  ELEMENTAL FUNCTION calc_qmax_bulk_density_correction(bulk_soil_carbon_sl, &
-                                                       volume_min_sl, &
-                                                       bulk_dens_sl, &
-                                                       qmax_om, &
-                                                       qmax_min) &
-                                                       RESULT(qmax)
+  ELEMENTAL SUBROUTINE calc_qmax_bulk_density_correction(bulk_soil_carbon_sl, &
+                                                         volume_min_sl, bulk_dens_sl, &
+                                                         qmax_om, qmax_min, &
+                                                         qmax, qmax1, qmax2)
 
     USE mo_jsb_phys_constants,    ONLY: molar_mass_C
     USE mo_sb_constants,          ONLY: carbon_per_dryweight_SOM, rho_bulk_org
 
     IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
-    REAL(wp), INTENT(in) :: bulk_soil_carbon_sl   !< non-litter organic carbon content of the soil layer [mol C / m3]
-    REAL(wp), INTENT(in) :: volume_min_sl         !< mineral soil volume fraction the soil layer [m3/ m3]
-    REAL(wp), INTENT(in) :: bulk_dens_sl          !< bulk density of the mineral soil [kg / m3]
-    REAL(wp), INTENT(in) :: qmax_om               !< maximium sorption capacity on OM [mol / kg]
-    REAL(wp), INTENT(in) :: qmax_min              !< maximium sorption capacity on  mineral soil [mol / kg]
-    REAL(wp)             :: qmax                  !< maximum sorption capacity of the soil [mol / m3]
-    ! ---------------------------
-    ! 0.2 Local
+
+    REAL(wp),           INTENT(in)  :: bulk_soil_carbon_sl   !< non-litter organic carbon content of the soil layer [mol C / m3]
+    REAL(wp),           INTENT(in)  :: volume_min_sl         !< mineral soil volume fraction the soil layer [m3/ m3]
+    REAL(wp),           INTENT(in)  :: bulk_dens_sl          !< bulk density of the mineral soil [kg / m3]
+    REAL(wp),           INTENT(in)  :: qmax_om               !< maximium sorption capacity on OM [mol / kg]
+    REAL(wp),           INTENT(in)  :: qmax_min              !< maximium sorption capacity on  mineral soil [mol / kg]
+    REAL(wp),           INTENT(out) :: qmax                  !< maximum sorption capacity of the soil [mol / m3]
+    REAL(wp), OPTIONAL, INTENT(out) :: qmax1                 !< maximum sorption capacity of 1st pool [mol / m3]
+    REAL(wp), OPTIONAL, INTENT(out) :: qmax2                 !< maximum sorption capacity of 2nd pool [mol / m3]
+
     REAL(wp)                    :: vol_fraction_om
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_qmax_bulk_density_correction'
-
 
 
     !> 1.0
@@ -1461,12 +1486,73 @@ CONTAINS
                           carbon_per_dryweight_SOM / rho_bulk_org, 1.0_wp)
 
     !> 2.0
-    !! maximum sorption capacity per soil volume as the mix of OM and mineral sorption (mol/m3
+    !! maximum sorption capacity per soil volume as the mix of OM and mineral sorption (mol/m3)
+    IF (PRESENT(qmax1) ) THEN
+      qmax1 = vol_fraction_om  * qmax_om  * rho_bulk_org
+      qmax2 = volume_min_sl    * qmax_min * bulk_dens_sl
+    ENDIF
     qmax = vol_fraction_om  * qmax_om  * rho_bulk_org + & 
            volume_min_sl    * qmax_min * bulk_dens_sl
 
-  END FUNCTION calc_qmax_bulk_density_correction
+  END SUBROUTINE calc_qmax_bulk_density_correction
+  
+  !-----------------------------------------------------------------------------------------------------
+  ! Sub Task called from calc_Psorption_parameter
+  !
+  !-----------------------------------------------------------------------------------------------------
+  !> calculates the km for phosphate of a soil layer
+  !! first version by Lin, 2019-08-26
+  !!
+  !! Input: default km, solute concentration, qmax of different sorption pool (mineral and organic combined) 
+  !!
+  !! Output: km of the combined sorption pool 
+  !-----------------------------------------------------------------------------------------------------
+  ELEMENTAL FUNCTION calc_km_qmax_correction(solute, qmax1, qmax2, km1, km2, w_soil) RESULT(km)
 
+    IMPLICIT NONE
+
+    REAL(wp),           INTENT(in) :: solute          !< po4 concentration of the soil layer [mol P / m3]
+    REAL(wp),           INTENT(in) :: qmax1           !< maximum po4 sorption capacity of the 1st pool [mol P/ m3]
+    REAL(wp),           INTENT(in) :: qmax2           !< maximum po4 sorption capacity of the 2nd pool [mol P/ m3]
+    REAL(wp),           INTENT(in) :: km1             !< km of the 1st pool [mol P/ m3]
+    REAL(wp),           INTENT(in) :: km2             !< km of the 2nd pool [mol P/ m3]
+    REAL(wp), OPTIONAL, INTENT(in) :: w_soil          !< water content of the soil layer [L / m3]
+    REAL(wp)                       :: km              !< km of the combined pool [mol P/ m3]
+
+    REAL(wp)                    :: dq1, dq2, hlp, sol1, sol2
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_km_qmax_correction'
+
+
+    !> 1.0 calculate the change of sorbed P pool given the solute concentration
+    dq1  = qmax1 * km1 / (km1 + solute) / (km1 + solute)
+    dq2  = qmax2 * km2 / (km2 + solute) / (km2 + solute)
+    hlp  = dq1 + dq2
+
+    !> 2.0 calculate km for the combined P pool
+    !! 
+    ! Qmax*km/(km+solute)^2 = dq1 + dq2, hlp = dq1 + dq2
+    ! km = (Qmax/hlp - 2*solute +/- sqrt((Qmax/hlp)^2-4 * Qmax/hlp))/2
+
+    IF (hlp < eps8) THEN
+      km = MAX(km1, km2)
+    ELSEIF ((km1 + solute) < eps8 .OR. (km2 + solute) < eps8) THEN
+      km = MAX(km1, km2)
+    ELSE 
+      hlp  = (qmax1 + qmax2) / hlp
+      sol1 = (hlp - 2._wp * solute + SQRT(hlp * hlp - 4._wp * hlp * solute)) / 2._wp
+      sol2 = (hlp - 2._wp * solute - SQRT(hlp * hlp - 4._wp * hlp * solute)) / 2._wp
+      IF (sol1 /= sol1 .OR. sol2 /= sol2) THEN
+        km = MAX(km1, km2)
+      ELSEIF ((km1 - sol1) * (km2 - sol1) <= 0._wp) THEN
+        km = sol1
+      ELSE
+        km = sol2
+      ENDIF
+    ENDIF
+
+    IF (PRESENT(w_soil)) km = km * w_soil
+
+  END FUNCTION calc_km_qmax_correction
 
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task called from update_sb_pools 
@@ -1542,16 +1628,14 @@ CONTAINS
     ENDIF
 
     !> 2.0 calculate the volume of mineral soil [m3/m3]
-    !!
-    om_dens_sl  = bulk_soil_carbon_sl * molar_mass_C / carbon_per_dryweight_SOM / 1000._wp 
-    lit_dens_sl = soil_litter_carbon_sl * molar_mass_C / carbon_per_dryweight_SOM / 1000._wp 
+    !! assuming the bulk soil is composed of OM, litter and soil mineral
+    om_dens_sl  = bulk_soil_carbon_sl * molar_mass_C / carbon_per_dryweight_SOM / 1000._wp    ! OM density [kg/m3]
+    lit_dens_sl = soil_litter_carbon_sl * molar_mass_C / carbon_per_dryweight_SOM / 1000._wp  ! litter density [kg/m3]
     DO isoil = 1,nsoil_sb
-      volume_min_sl(:,isoil) = MAX(0._wp, 1._wp - om_dens_sl(:,isoil)/rho_bulk_org - lit_dens_sl(:,isoil)/rho_bulk_org)
+      volume_min_sl(:,isoil) = MAX(0._wp, 1._wp - om_dens_sl(:,isoil) / rho_bulk_org - lit_dens_sl(:,isoil) / rho_bulk_org)
     ENDDO
 
-
   END SUBROUTINE calc_bulk_soil_carbon
-
 
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task called from mo_sb_init 
@@ -1564,6 +1648,7 @@ CONTAINS
   !! Output: fast_assoc_po4
   !-----------------------------------------------------------------------------------------------------
   ELEMENTAL FUNCTION calc_fast_po4(Labile_p, Qmax, km) RESULT (fast_po4)
+    
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
@@ -1596,6 +1681,7 @@ CONTAINS
   !! Output: potential enzyme coefficient for C, N, P
   !-----------------------------------------------------------------------------------------------------
   ELEMENTAL FUNCTION calc_enzyme_allocation(dL, dR, km, Cmic) RESULT (alpha)
+    
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
@@ -1612,18 +1698,18 @@ CONTAINS
     !> Solution of the equation:
     !! dL/dR=alpha(km+alpha*Cmic)/((1-alpha)*(km+Cmic*(1-alpha)))
     !! only one of the solution fits in the range [0,1]
-    hlp1  = 4._wp * Cmic**2._wp * dL * dR + &
+    hlp1  = 4._wp * Cmic ** 2._wp * dL * dR + &
             8._wp * Cmic * km * dL * dR + &
-            km**2._wp * dL**2._wp + &
-            2._wp * km**2._wp * dL * dR + &
-            km**2._wp * dR**2._wp
-    alpha = (dL * km + 2._wp * dL * Cmic + dR * km -sqrt(hlp1)) / (2._wp * Cmic * (dL - dR))
+            km ** 2._wp * dL ** 2._wp + &
+            2._wp * km ** 2._wp * dL * dR + &
+            km ** 2._wp * dR ** 2._wp
+    alpha = (dL * km + 2._wp * dL * Cmic + dR * km - sqrt(hlp1)) / (2._wp * Cmic * (dL - dR))
 
   END FUNCTION calc_enzyme_allocation
 
 
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task called from update_sb_pools
+  ! Sub Task called from update_sb_jsm
   !
   !-----------------------------------------------------------------------------------------------------
   !> calculates sorption and desorption of organic material
@@ -1820,6 +1906,140 @@ CONTAINS
     var_1d(:,1) = var_1d(:,1) / soil_depth_sl(:,1)
 
   END SUBROUTINE convert_s1d_to_s0d_var_soilproperty
+  
+  !-----------------------------------------------------------------------------------------------------
+  ! Sub Task called from update_sb_pools & sb_init
+  !
+  !-----------------------------------------------------------------------------------------------------
+  !> calculates P sorption parameters, including both single and double Langmuir
+  !! 
+  !!
+  !! Input: soil texture, soil water content, qmax and km for various soil texture
+  !!
+  !! Output: qmax and km (mol P/m3), Qmax_AlFe_cor
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE calc_Psorption_parameter(nc, nsoil_sb, flag_sb_double_langmuir, &
+                                       clay_sl, silt_sl, soil_water, ph_sl, & 
+                                       bulk_soil_carbon_sl, soil_litter_carbon_sl, woody_litter_carbon_sl, &
+                                       bulk_dens_sl, volume_min_sl, po4_solute, &
+                                       qmax_po4_min_sl, qmax_po4_om_sl, qmax_po4, km_adsorpt_po4_sl, &
+                                       qmax_fast_po4, qmax_slow_po4, km_fast_po4, km_slow_po4, Qmax_AlFe_cor)
 
+    USE mo_sb_constants,   ONLY: qmax_po4_silt, qmax_po4_sand, qmax_po4_clay, qmax_po4_OM, qmax_po4_mineral, &
+                                 km_adsorpt_silt_po4, km_adsorpt_clay_po4, km_adsorpt_sand_po4, km_adsorpt_OM_po4, &
+                                 km_adsorpt_mineral_po4, km_po4_ph, min_fraction_default_sb
+    USE mo_sse_util,       ONLY: calc_qmax_texture
+    
+    
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut   
+    INTEGER,                                          INTENT(in)    :: nc, &                        !< dimensions
+                                                                       nsoil_sb
+    LOGICAL,                                          INTENT(in)    :: flag_sb_double_langmuir      !< conventional or double Langmuir
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: clay_sl                      !< clay content of soil layer [-]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: silt_sl                      !< silt content of soil layer [-]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: soil_water                   !< soil water content of soil layer [L/m3]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: ph_sl                        !< ph of soil layer [-]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: bulk_soil_carbon_sl          !< bulk soil carbon content of soil layer [mol C/m3]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: soil_litter_carbon_sl        !< soil litter carbon content of soil layer [mol C/m3]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: woody_litter_carbon_sl       !< woody litter carbon content of soil layer [mol C/m3]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: bulk_dens_sl                 !< soil bulk density [kg/m3]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: volume_min_sl                !< soil mineral volumetric content [m3/m3]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: po4_solute                   !< soluble P concentration of soil layer [mol P/m3]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: qmax_po4_min_sl              !< maximium po4 sorption capacity for mineral soil [mol P/m3]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: qmax_po4_om_sl               !< maximium po4 sorption capacity for OM soil [mol P/m3]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: qmax_po4                     !< maximium po4 sorption capacity for soil layer [mol P/m3]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: km_adsorpt_po4_sl            !< half-saturation po4 concentration [mol P/m3]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: qmax_fast_po4                !< maximium po4 sorption capacity of fast associated pool [mol P/m3]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: qmax_slow_po4                !< maximium po4 sorption capacity of slow associated pool [mol P/m3]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: km_fast_po4                  !< half-saturation po4 concentration of fast associated pool [mol P/m3]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: km_slow_po4                  !< half-saturation po4 concentration of slow associated pool [mol P/m3]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: Qmax_AlFe_cor                !< qmax correlation factor of Al/Fe content [-]
+
+    REAL(wp), DIMENSION(nc, nsoil_sb)                :: arr_hlp1, arr_hlp2, arr_hlp3, arr_hlp4, sand_sl
+    INTEGER                                          :: i
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_Psorption_parameter'
+    
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
+    !> 0.7 initialize local variable
+    !!
+    sand_sl(:,:) = 1._wp - clay_sl(:,:) - silt_sl(:,:)
+
+    !> 0.8 Correct the first layer Qmax_AlFe_cor with the woody litter
+    !! 
+    Qmax_AlFe_cor(:,1) = Qmax_AlFe_cor(:,1) * 1._wp / ((1._wp - volume_min_sl(:,1)) * &
+                         (bulk_soil_carbon_sl(:,1) + soil_litter_carbon_sl(:,1)  + woody_litter_carbon_sl(:,1)) / &
+                         (bulk_soil_carbon_sl(:,1) + soil_litter_carbon_sl(:,1)) + volume_min_sl(:,1))
+    WHERE (Qmax_AlFe_cor(:,:) < eps8) 
+      Qmax_AlFe_cor(:,:) = 0._wp
+    ENDWHERE
+
+    !> 1.0 double-surface Langmuir
+    !!
+    IF (flag_sb_double_langmuir) THEN
+      !> 1.1 calculate Qmax based on soil texture
+      !! fine soil + sandy soil, mol P /kg soil
+      qmax_po4_min_sl(:,:)       = (calc_qmax_texture(qmax_po4_silt, clay_sl(:,:), silt_sl(:,:)) + & 
+                                    calc_qmax_texture(qmax_po4_sand, 0._wp, sand_sl(:,:))) * &
+                                    Qmax_AlFe_cor 
+      !! soil OM [mol P /kg OM]
+      qmax_po4_om_sl(:,:)        = qmax_po4_OM
+      CALL calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:), volume_min_sl(:,:), bulk_dens_sl(:,:), & 
+                                             qmax_po4_om_sl(:,:), qmax_po4_min_sl(:,:), &
+                                             qmax_po4(:,:), qmax_fast_po4(:,:), qmax_slow_po4(:,:))
+      !! Fe/Al in OM [mol P/m3]
+      arr_hlp1(:,:)              = calc_qmax_texture(qmax_po4_clay, 0._wp, clay_sl(:,:)) * & 
+                                   volume_min_sl(:,:) * bulk_dens_sl(:,:) * Qmax_AlFe_cor
+      !! update qmax_fast_po4 and qmax_po4
+      qmax_fast_po4(:,:)         = qmax_fast_po4(:,:) + arr_hlp1(:,:)
+      qmax_po4(:,:)              = qmax_po4(:,:) + arr_hlp1(:,:)
+
+      !> calculate km based on soil texture
+      !! km for the OM-Fe/Al pool, fast pool
+      arr_hlp2(:,:)    = qmax_fast_po4 - arr_hlp1                         ! qmax for non-adsorbed Fe/Al [mol P/m3]
+      arr_hlp3(:,:)    = km_po4_ph * ph_sl(:,:) * km_adsorpt_clay_po4     ! km for Fe/Al, mol P/m3
+      arr_hlp4(:,:)    = km_po4_ph * ph_sl(:,:) * km_adsorpt_OM_po4       ! km for OM, mol P/m3
+      km_fast_po4(:,:) = calc_km_qmax_correction(po4_solute, arr_hlp1(:,:),arr_hlp2(:,:), &
+                                                 arr_hlp3(:,:), arr_hlp4(:,:),soil_water(:,:))
+
+      !! km for the clay-silt-sand pool, slow pool
+      WHERE (qmax_slow_po4(:,:) < eps8) 
+        qmax_slow_po4(:,:) = 0._wp
+        arr_hlp3(:,:)      = km_po4_ph * ph_sl(:,:) * km_adsorpt_silt_po4    ! km for clay/silt [mol P/L]
+        arr_hlp4(:,:)      = km_po4_ph * ph_sl(:,:) * km_adsorpt_sand_po4    ! km for sand [mol P/L]
+        km_slow_po4(:,:)   = MAX(arr_hlp3(:,:), arr_hlp4(:,:))
+      ELSEWHERE
+        arr_hlp1(:,:)      = qmax_slow_po4 * MIN(calc_qmax_texture(qmax_po4_silt, clay_sl(:,:), silt_sl) * & 
+                             Qmax_AlFe_cor / qmax_po4_min_sl(:,:), (1._wp - min_fraction_default_sb))  ! qmax for clay/silt
+        arr_hlp2(:,:)      = qmax_slow_po4 - arr_hlp1                        ! qmax for sand
+        arr_hlp3(:,:)      = km_po4_ph * ph_sl(:,:) * km_adsorpt_silt_po4    ! km for clay/silt [mol P/L]
+        arr_hlp4(:,:)      = km_po4_ph * ph_sl(:,:) * km_adsorpt_sand_po4    ! km for sand [mol P/L]
+        km_slow_po4(:,:)   = calc_km_qmax_correction(po4_solute, arr_hlp1(:,:),arr_hlp2(:,:), &
+                                                     arr_hlp3(:,:), arr_hlp4(:,:),soil_water(:,:))
+      ENDWHERE
+
+      !! km for the whole soil layer
+      km_adsorpt_po4_sl(:,:) = calc_km_qmax_correction(po4_solute, qmax_fast_po4(:,:),qmax_slow_po4(:,:), &
+                               km_fast_po4(:,:), km_slow_po4(:,:))
+    !> 2.0 single-surface Langmuir
+    !! Qmax and km are based on texture and calculated both as the sum of OM and mineral soil
+    ELSE
+      qmax_po4_min_sl(:,:)   = calc_qmax_texture(qmax_po4_mineral, 0.0_wp, 1._wp)
+      qmax_po4_om_sl(:,:)    = qmax_po4_min_sl(:,:) * min_fraction_default_sb
+      CALL calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:), volume_min_sl(:,:), bulk_dens_sl(:,:), &
+                                             qmax_po4_om_sl(:,:), qmax_po4_min_sl(:,:), qmax_po4(:,:), &
+                                             qmax_fast_po4(:,:), qmax_slow_po4(:,:))
+      qmax_po4(:,:)          = qmax_po4(:,:) * soil_water / 1000._wp ! corrected by water content
+      CALL calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:), volume_min_sl(:,:), bulk_dens_sl(:,:), &
+                                             km_adsorpt_OM_po4, km_adsorpt_mineral_po4, km_adsorpt_po4_sl(:,:), &
+                                             km_fast_po4(:,:), km_slow_po4(:,:))
+    ENDIF
+                                       
+  END SUBROUTINE calc_Psorption_parameter
 
 END MODULE mo_sb_jsm_processes

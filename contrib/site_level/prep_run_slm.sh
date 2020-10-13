@@ -147,6 +147,7 @@ flag_stand_harvest="F"            # if TRUE: l_do_stand_replacing_harvest is set
 # soil model options
 soil_depth=5.7                    # meter (5.7 to 9.5)
 nsoil_layer=5                     # number of soil layers (default for SLM land: 5 | for SLM soil only available forcing: 15 | generally: min 5 & max 20)
+flag_sb_double_langmuir="F"       # TRUE: use double Langmuir isotherm for adsorption | FALSE: use traditional Langmuir for adsorption
 
 # JSM
 flag_sb_jsm_transport="F"         # ..
@@ -674,6 +675,7 @@ validateUserConfigValues "$flag_sb_prescribe_no3" "$validateFlags" "flag_sb_pres
 validateUserConfigValues "$flag_sb_prescribe_po4" "$validateFlags" "flag_sb_prescribe_po4"
 validateUserConfigValues "$flag_t_resp_acclimation" "$validateFlags" "flag_t_resp_acclimation"
 validateUserConfigValues "$flag_t_jmax_acclimation" "$validateFlags" "flag_t_jmax_acclimation"
+validateUserConfigValues "$flag_sb_double_langmuir" "$validateFlags" "flag_sb_double_langmuir"
 validateUserConfigValues "$flag_sb_jsm_transport" "$validateFlags" "flag_sb_jsm_transport"
 validateUserConfigValues "$flag_sb_jsm_litter_input" "$validateFlags" "flag_sb_jsm_litter_input"
 validateUserConfigValues "$flag_sb_jsm_OM_sorption" "$validateFlags" "flag_sb_jsm_OM_sorption"
@@ -693,8 +695,6 @@ validateUserConfigValues "$useSiteSpecificAWC" "$validateFlags" "useSiteSpecific
 validateUserConfigValues "$paramSensitivitySim" "$validateFlags" "paramSensitivitySim"
 validateUserConfigValues "$paramChangesProportional" "$validateFlags" "paramChangesProportional"
 validateUserConfigValues "$compareSimCRUNCEPvsGFDB" "$validateFlags" "compareSimCRUNCEPvsGFDB"
-
-
 
 ## set and create additional basic folders (within the basic simulation folder) ##
 mkdir -p "$simFold"                           # "$bgiScratchUserFold""$jobName""/"  e.g. /Net/Groups/BGI/scratch/""$username""/slm/$jobName/
@@ -1716,6 +1716,12 @@ if [ "$forcingDataSet" == "spp1685" ]
     changeNamelistValue flag_spp1685 ".TRUE."
   else
     changeNamelistValue flag_spp1685 ".FALSE."
+fi
+if [ $flag_sb_double_langmuir == T ]
+  then
+    changeNamelistValue flag_sb_double_langmuir ".TRUE."
+  else
+    changeNamelistValue flag_sb_double_langmuir ".FALSE."
 fi
 if [ $flag_mycorrhiza == T ]
   then

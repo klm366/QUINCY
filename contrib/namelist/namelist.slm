@@ -85,6 +85,8 @@
   flag_sb_jsm_transport=.FALSE.
   flag_sb_jsm_litter_input=.FALSE.
   flag_sb_jsm_OM_sorption=.FALSE.
+  ! soil flags
+  flag_sb_double_langmuir=.FALSE.
   ! parameter values
   usda_taxonomy_class=1
   nwrb_taxonomy_class=1

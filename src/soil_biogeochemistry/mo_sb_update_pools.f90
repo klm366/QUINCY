@@ -67,7 +67,7 @@ CONTAINS
     USE mo_jsb_math_constants,    ONLY: dtime, eps8
     USE mo_jsb_phys_constants,    ONLY: lambda_C14
     USE mo_sb_constants
-    USE mo_sb_jsm_processes,      ONLY: calc_bulk_soil_carbon, calc_bulk_density_correction, &
+    USE mo_sb_jsm_processes,      ONLY: calc_bulk_soil_carbon, calc_bulk_density_correction, calc_Psorption_parameter, &
                                         calc_qmax_bulk_density_correction, calc_fast_po4, convert_s1d_to_s0d_var_soilproperty
     USE mo_sb_jsm_transport,      ONLY: calc_particle_fluxrate, calc_particle_transport_wrapper
     USE mo_isotope_util,          ONLY: calc_mixing_ratio_N15N14
@@ -105,6 +105,8 @@ CONTAINS
                                              f_myc_sl, &
                                              hlp1, hlp2, hlp3
     REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: km_adsorpt_po4_act, qmax_po4_mineral_act, & 
+                                             km_fast_po4_act, qmax_fast_po4_act, & 
+                                             km_slow_po4_act, qmax_slow_po4_act, & 
                                              km_adsorpt_nh4_act, qmax_nh4_mineral_act, & 
                                              k_desorpt_po4_act, k_adsorpt_po4_act, &
                                              rtm_sorption_act, rmm_sorption_act, &
@@ -261,11 +263,17 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: rmm_desorption
     dsl4jsb_Real3D_onChunk :: qmax_org
     dsl4jsb_Real3D_onChunk :: qmax_po4
+    dsl4jsb_Real3D_onChunk :: qmax_fast_po4
+    dsl4jsb_Real3D_onChunk :: qmax_slow_po4
+    dsl4jsb_Real3D_onChunk :: km_fast_po4
+    dsl4jsb_Real3D_onChunk :: km_slow_po4
     dsl4jsb_Real3D_onChunk :: km_adsorpt_po4_sl
     dsl4jsb_Real3D_onChunk :: qmax_nh4
     dsl4jsb_Real3D_onChunk :: km_adsorpt_nh4_sl
     dsl4jsb_Real3D_onChunk :: dom_cn
     dsl4jsb_Real3D_onChunk :: dom_cp
+    dsl4jsb_Real3D_onChunk :: ph_sl
+    dsl4jsb_Real3D_onChunk :: Qmax_AlFe_cor
     dsl4jsb_Real3D_onChunk :: bulk_dens_corr_sl
     dsl4jsb_Real3D_onChunk :: bulk_soil_carbon_sl
     dsl4jsb_Real3D_onChunk :: soil_litter_carbon_sl
@@ -299,6 +307,10 @@ CONTAINS
     ALLOCATE(hlp3(nc, nsoil_sb))
     ALLOCATE(km_adsorpt_po4_act(nc, nsoil_sb))
     ALLOCATE(qmax_po4_mineral_act(nc, nsoil_sb))
+    ALLOCATE(km_fast_po4_act(nc, nsoil_sb))
+    ALLOCATE(qmax_fast_po4_act(nc, nsoil_sb))
+    ALLOCATE(km_slow_po4_act(nc, nsoil_sb))
+    ALLOCATE(qmax_slow_po4_act(nc, nsoil_sb))
     ALLOCATE(km_adsorpt_nh4_act(nc, nsoil_sb))
     ALLOCATE(qmax_nh4_mineral_act(nc, nsoil_sb))
     ALLOCATE(k_desorpt_po4_act(nc, nsoil_sb))
@@ -449,11 +461,17 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       rmm_desorption)              ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_org)                    ! out
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_po4)                    ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       qmax_fast_po4)
+    dsl4jsb_Get_var3D_onChunk(SB_,       qmax_slow_po4)
+    dsl4jsb_Get_var3D_onChunk(SB_,       km_fast_po4)
+    dsl4jsb_Get_var3D_onChunk(SB_,       km_slow_po4)
     dsl4jsb_Get_var3D_onChunk(SB_,       km_adsorpt_po4_sl)           ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_nh4)                    ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       km_adsorpt_nh4_sl)           ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       dom_cn)                      ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       dom_cp)                      ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       ph_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,       Qmax_AlFe_cor)
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_dens_corr_sl)           ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_soil_carbon_sl)         ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       soil_litter_carbon_sl)       ! inout
@@ -702,25 +720,27 @@ CONTAINS
 
 
     !> 8.0 update diagnostics and other state variables depending on organic matter content 
-    !!
+    !! OC
     CALL calc_bulk_soil_carbon(nc, nsoil_sb, sb_pool, bulk_soil_carbon_sl, soil_litter_carbon_sl, &
                                volume_min_sl, TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
     bulk_dens_corr_sl(:,:) = calc_bulk_density_correction(bulk_soil_carbon_sl(:,:), soil_litter_carbon_sl(:,:), bulk_dens_sl(:,:))
     qmax_org_min_sl(:,:)   = calc_qmax_texture(dsl4jsb_Config(SB_)%qmax_org_fine_particle, silt_sl(:,:), clay_sl(:,:))
-    qmax_org(:,:)          = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:), volume_min_sl(:,:), bulk_dens_sl(:,:), &
-                             0._wp, qmax_org_min_sl(:,:))
-    qmax_po4(:,:)          = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:), volume_min_sl(:,:), bulk_dens_sl(:,:), &
-                             qmax_po4_om_sl(:,:), qmax_po4_min_sl(:,:))
-    qmax_po4(:,:)          = qmax_po4(:,:) * rmm_sorption(:,:)
-    km_adsorpt_po4_sl(:,:) = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:), volume_min_sl(:,:),bulk_dens_sl(:,:), &
-                             km_adsorpt_OM_po4,km_adsorpt_mineral_po4)
-    qmax_nh4(:,:)          = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:), volume_min_sl(:,:), &
-                                                               bulk_dens_sl(:,:), &
-                                                               0.0_wp,qmax_nh4_min_sl(:,:))
+    CALL calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:), volume_min_sl(:,:), bulk_dens_sl(:,:), &
+                                           0._wp, qmax_org_min_sl(:,:), qmax_org(:,:))
+    !! po4                         
+    CALL calc_Psorption_parameter(nc, nsoil_sb, dsl4jsb_Config(SB_)%flag_sb_double_langmuir, &
+                                  clay_sl(:,:), silt_sl(:,:), rmm_sorption(:,:) * 1000._wp, ph_sl(:,:), &
+                                  bulk_soil_carbon_sl(:,:), soil_litter_carbon_sl(:,:), sb_pool%woody_litter%carbon(:,:), &
+                                  bulk_dens_sl(:,:), volume_min_sl(:,:), po4_solute(:,:), &
+                                  qmax_po4_min_sl(:,:), qmax_po4_om_sl(:,:), qmax_po4(:,:), km_adsorpt_po4_sl(:,:), &
+                                  qmax_fast_po4(:,:), qmax_slow_po4(:,:), km_fast_po4(:,:), km_slow_po4(:,:), &
+                                  Qmax_AlFe_cor(:,:))
+    !! nh4                              
+    CALL calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:), volume_min_sl(:,:), bulk_dens_sl(:,:), &
+                                           0.0_wp,qmax_nh4_min_sl(:,:), qmax_nh4(:,:))
     qmax_nh4(:,:)          = qmax_nh4(:,:) * rmm_sorption(:,:)
-    km_adsorpt_nh4_sl(:,:) = calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:), volume_min_sl(:,:), &
-                                                               bulk_dens_sl(:,:), &
-                                                               km_adsorpt_OM_nh4,km_adsorpt_mineral_nh4)
+    CALL calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:), volume_min_sl(:,:), bulk_dens_sl(:,:), &
+                                           km_adsorpt_OM_nh4,km_adsorpt_mineral_nh4, km_adsorpt_nh4_sl(:,:))
 
     !> 9.0 atmospheric deposition
     !!
@@ -731,7 +751,7 @@ CONTAINS
     !> 10.0 update of mineral NH4 & P pools
     !!
     p_deposition_sl(:,:) = 0._wp
-    p_deposition_sl(:,1) = p_deposition(:) / soil_depth_sl(:,1) !µmol P / m3 / s
+    p_deposition_sl(:,1) = p_deposition(:) / soil_depth_sl(:,1) ! µmol P / m3 / s
     !> 10.1 init vertical variables
     !! 
     IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme)=="simple_0d") THEN
@@ -743,16 +763,22 @@ CONTAINS
       k_desorpt_po4_act(:,:)    = 0.0_wp
       km_adsorpt_po4_act(:,:)   = 0.0_wp
       qmax_po4_mineral_act(:,:) = 0.0_wp
+      km_fast_po4_act(:,:)      = 0.0_wp
+      qmax_fast_po4_act(:,:)    = 0.0_wp
+      km_slow_po4_act(:,:)      = 0.0_wp
+      qmax_slow_po4_act(:,:)    = 0.0_wp
       km_adsorpt_nh4_act(:,:)   = 0.0_wp
       qmax_nh4_mineral_act(:,:) = 0.0_wp
 
       DO isoil = 1,nsoil_sb
-         rtm_sorption_act(:,1) = rtm_sorption_act(:,1)     + rtm_sorption(:,isoil)      * root_fraction_sl(:,isoil) 
-         rmm_sorption_act(:,1) = rmm_sorption_act(:,1)     + rmm_sorption(:,isoil)      * root_fraction_sl(:,isoil) 
+         rtm_sorption_act(:,1)   = rtm_sorption_act(:,1)   + rtm_sorption(:,isoil)      * root_fraction_sl(:,isoil) 
+         rmm_sorption_act(:,1)   = rmm_sorption_act(:,1)   + rmm_sorption(:,isoil)      * root_fraction_sl(:,isoil) 
          rtm_desorption_act(:,1) = rtm_desorption_act(:,1) + rtm_desorption(:,isoil)    * root_fraction_sl(:,isoil) 
          rmm_desorption_act(:,1) = rmm_desorption_act(:,1) + rmm_desorption(:,isoil)    * root_fraction_sl(:,isoil) 
          km_adsorpt_po4_act(:,1) = km_adsorpt_po4_act(:,1) + km_adsorpt_po4_sl(:,isoil) * root_fraction_sl(:,isoil) 
          km_adsorpt_nh4_act(:,1) = km_adsorpt_nh4_act(:,1) + km_adsorpt_nh4_sl(:,isoil) * root_fraction_sl(:,isoil) 
+         km_fast_po4_act(:,1)    = km_fast_po4_act(:,1)    + km_fast_po4(:,isoil)       * root_fraction_sl(:,isoil) 
+         km_slow_po4_act(:,1)    = km_slow_po4_act(:,1)    + km_slow_po4(:,isoil)       * root_fraction_sl(:,isoil)          
       ENDDO  
 
       root_depth_avg(:)         = SUM(root_fraction_sl(:,:) * soil_depth_sl(:,:), DIM=2)
@@ -761,7 +787,13 @@ CONTAINS
       km_adsorpt_nh4_act(:,1)   = km_adsorpt_nh4_act(:,1) / root_depth_avg(:)
       qmax_po4_mineral_act(:,:) = qmax_po4(:,:)
       CALL convert_s1d_to_s0d_var_soilproperty (nc, nsoil_sb, soil_depth_sl(:,:), qmax_po4_mineral_act(:,:))
+      qmax_fast_po4_act(:,:)    = qmax_fast_po4(:,:)
+      CALL convert_s1d_to_s0d_var_soilproperty (nc, nsoil_sb, soil_depth_sl(:,:), qmax_fast_po4_act(:,:))
+      qmax_slow_po4_act(:,:)    = qmax_slow_po4(:,:)
+      CALL convert_s1d_to_s0d_var_soilproperty (nc, nsoil_sb, soil_depth_sl(:,:), qmax_slow_po4_act(:,:))
       km_adsorpt_po4_act(:,1)   = km_adsorpt_po4_act(:,1) / root_depth_avg(:)
+      km_fast_po4_act(:,1)      = km_fast_po4_act(:,1) / root_depth_avg(:)
+      km_slow_po4_act(:,1)      = km_slow_po4_act(:,1) / root_depth_avg(:)
       k_adsorpt_po4_act(:,1)    = rtm_sorption_act(:,1)   * rmm_sorption_act(:,1)   * k_adsorpt_po4
       k_desorpt_po4_act(:,1)    = rtm_desorption_act(:,1) * rmm_desorption_act(:,1) * k_desorpt_po4
     ELSE
@@ -769,6 +801,10 @@ CONTAINS
       k_desorpt_po4_act(:,:)    = rtm_desorption(:,:) * rmm_desorption(:,:) * k_desorpt_po4
       km_adsorpt_po4_act(:,:)   = km_adsorpt_po4_sl(:,:)
       qmax_po4_mineral_act(:,:) = qmax_po4(:,:)
+      km_fast_po4_act(:,:)      = km_fast_po4(:,:)
+      qmax_fast_po4_act(:,:)    = qmax_fast_po4(:,:)
+      km_slow_po4_act(:,:)      = km_slow_po4(:,:)
+      qmax_slow_po4_act(:,:)    = qmax_slow_po4(:,:)
       km_adsorpt_nh4_act(:,:)   = km_adsorpt_nh4_sl(:,:)
       qmax_nh4_mineral_act(:,:) = qmax_nh4(:,:)
     ENDIF
@@ -784,11 +820,13 @@ CONTAINS
       hlp2(:,:) = -transport_nh4_assoc(:,:) * dtime / 1.e6_wp
       
       IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme)=="simple_0d") THEN
-        partition_coef(:,1) = calc_langmuir_kinetics(hlp1(:,1), nh4_solute(:,1),nh4_assoc(:,1), & 
-                                                     km_adsorpt_nh4_act(:,1), qmax_nh4_mineral_act(:,1))
+        CALL calc_langmuir_kinetics(hlp1(:,1), nh4_solute(:,1),nh4_assoc(:,1), & 
+                                                     km_adsorpt_nh4_act(:,1), qmax_nh4_mineral_act(:,1), &
+                                                     partition_coef(:,1))
       ELSE
-        partition_coef(:,:) = calc_langmuir_kinetics(hlp1(:,:), nh4_solute(:,:),nh4_assoc(:,:), & 
-                                                     km_adsorpt_nh4_act(:,:), qmax_nh4_mineral_act(:,:))
+        CALL calc_langmuir_kinetics(hlp1(:,:), nh4_solute(:,:),nh4_assoc(:,:), & 
+                                                     km_adsorpt_nh4_act(:,:), qmax_nh4_mineral_act(:,:), &
+                                                     partition_coef(:,:))
       ENDIF
       
       nh4_solute(:,:)        = nh4_solute(:,:) + partition_coef(:,:) * hlp1(:,:)
@@ -817,11 +855,16 @@ CONTAINS
       CALL calc_p_inorg_dynamics(nc, nsoil_sb, &
                                        TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
                                        TRIM(dsl4jsb_Config(SB_)%sb_adsorp_scheme), &
+                                       dsl4jsb_Config(SB_)%flag_sb_double_langmuir, &
                                        po4_solute(:,:), &
                                        po4_assoc_fast(:,:), &
                                        po4_assoc_slow(:,:), &
                                        qmax_po4_mineral_act(:,:), &
                                        km_adsorpt_po4_act(:,:), &
+                                       qmax_fast_po4_act(:,:), &
+                                       km_fast_po4_act(:,:), &
+                                       qmax_slow_po4_act(:,:), &
+                                       km_slow_po4_act(:,:), &
                                        k_adsorpt_po4_act(:,:), &
                                        k_desorpt_po4_act(:,:), &
                                        p_deposition_sl(:,:), &
@@ -838,9 +881,6 @@ CONTAINS
                                        occlusion_po4(:,:), &
                                        slow_exchange_po4(:,:), &
                                        fast_exchange_po4(:,:))
-
-      po4_assoc_slow(:,:)   = po4_assoc_slow(:,:) + &
-                              (slow_exchange_po4(:,:) - occlusion_po4(:,:) + transport_po4_assoc_slow(:,:)) * dtime / 1.e6_wp
 
       !! not update the primary and the occlusion pool during transient-forcing spinup (i.e., before the actual transient simulation)
       IF (model%config%l_transient_spinup) THEN
@@ -1017,6 +1057,10 @@ CONTAINS
   DEALLOCATE(hlp3)
   DEALLOCATE(km_adsorpt_po4_act)
   DEALLOCATE(qmax_po4_mineral_act)
+  DEALLOCATE(km_fast_po4_act)
+  DEALLOCATE(qmax_fast_po4_act)
+  DEALLOCATE(km_slow_po4_act)
+  DEALLOCATE(qmax_slow_po4_act)
   DEALLOCATE(k_desorpt_po4_act)
   DEALLOCATE(k_adsorpt_po4_act)
   DEALLOCATE(rtm_sorption_act)
@@ -1060,11 +1104,16 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
   SUBROUTINE calc_p_inorg_dynamics(nc, nsoil_sb, &
                                    sb_model_scheme, &
                                    sb_adsorp_scheme, &
+                                   flag_sb_double_langmuir, &
                                    po4_solute, &
                                    po4_assoc_fast, &
                                    po4_assoc_slow, &
                                    qmax_po4_mineral_act, &
                                    km_adsorpt_po4_act, &
+                                   qmax_fast_po4_act, &
+                                   km_fast_po4_act, &
+                                   qmax_slow_po4_act, &
+                                   km_slow_po4_act, &
                                    k_adsorpt_po4_act, &
                                    k_desorpt_po4_act, &
                                    p_deposition_sl, &
@@ -1084,7 +1133,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
 
     USE mo_sb_constants
     USE mo_sb_jsm_processes,    ONLY: calc_fast_po4
-    USE mo_jsb_math_constants,  ONLY: eps8, dtime
+    USE mo_jsb_math_constants,  ONLY: eps4, eps8, dtime
 
     IMPLICIT NONE
 
@@ -1092,39 +1141,50 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                                        nsoil_sb
     CHARACTER(len=*),                                 INTENT(in)    :: sb_model_scheme               !< from sb config
     CHARACTER(len=*),                                 INTENT(in)    :: sb_adsorp_scheme              !< eca_full or eca_none
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: po4_assoc_slow, &             !< slow minerally associated PO4 pool [mol/m3]
-                                                                       qmax_po4_mineral_act, &       !< maximum sorption capacity of po4, [mol P/ m3]
+    LOGICAL ,                                         INTENT(in)    :: flag_sb_double_langmuir       !< T: double Langmuir; F: traditional Langmuir
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: qmax_po4_mineral_act, &       !< maximum sorption capacity of po4, [mol P/ m3]
                                                                        km_adsorpt_po4_act, &         !< half saturation of po4 sorption capacity, [mol P/ m3]
+                                                                       qmax_fast_po4_act, &          !< maximum sorption capacity of fast_assoc_po4, [mol P/ m3]
+                                                                       km_fast_po4_act, &            !< half saturation of po4 sorption in fast_assoc_po4, [mol P/ m3]
+                                                                       qmax_slow_po4_act, &          !< maximum sorption capacity of slow_assoc_po4, [mol P/ m3]
+                                                                       km_slow_po4_act, &            !< half saturation of po4 sorption in slow_assoc_po4, [mol P/ m3]
                                                                        k_adsorpt_po4_act, &          !< slow adsorption rate of po4, [1 / s]
                                                                        k_desorpt_po4_act, &          !< slow desorption rate of po4, [1 / s]
                                                                        p_deposition_sl, &            !< actual P deposition rate, [µmol P / m3 / s]
-                                                                       biochem_mineralisation_po4, & !< biomineralisation rate [mol / m3 / timestep]
-                                                                       transport_po4_solute, &       !< transport of soluble PO4 [mol / m3 / timestep]
-                                                                       transport_po4_assoc_fast, &   !< transport of fast_assoc_po4 [mol / m3 / timestep]
-                                                                       transport_po4_assoc_slow, &   !< transport of slow_assoc_po4 [mol / m3 / timestep]
-                                                                       weathering_po4, &             !< phosphorus weathering rate [mol P / m3 / timestep]   
-                                                                       mycorrhiza_uptake_po4_sl, &   !< mycorrhizal PO4 uptake [mol / m3 / timestep]
-                                                                       plant_uptake_po4_sl, &        !< plant PO4 uptake [mol / m3 / timestep]
-                                                                       microbial_uptake_po4_sl, &    !< microbial PO4 uptake [mol / m3 / timestep]
-                                                                       gross_mineralisation_po4, &   !< gross mineralisation of PO4 [mol / m3 / timestep]
-                                                                       net_mineralisation_po4        !< net mineralisation of PO4 [mol / m3 / timestep]
+                                                                       biochem_mineralisation_po4, & !< biomineralisation rate [µmol P / m3 / s]
+                                                                       transport_po4_solute, &       !< transport of soluble PO4 [µmol P / m3 / s]
+                                                                       transport_po4_assoc_fast, &   !< transport of fast_assoc_po4 [µmol P / m3 / s]
+                                                                       transport_po4_assoc_slow, &   !< transport of slow_assoc_po4 [µmol P / m3 / s]
+                                                                       weathering_po4, &             !< phosphorus weathering rate [µmol P / m3 / s]   
+                                                                       mycorrhiza_uptake_po4_sl, &   !< mycorrhizal PO4 uptake [µmol P / m3 / s]
+                                                                       plant_uptake_po4_sl, &        !< plant PO4 uptake [µmol P / m3 / s]
+                                                                       microbial_uptake_po4_sl, &    !< microbial PO4 uptake [µmol P / m3 / s]
+                                                                       gross_mineralisation_po4, &   !< gross mineralisation of PO4 [µmol P / m3 / s]
+                                                                       net_mineralisation_po4        !< net mineralisation of PO4 [µmol P / m3 / s]
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: po4_solute, &                 !< PO4 in solution [mol / m3]
                                                                        po4_assoc_fast, &             !< fast minerally associated PO4 pool [mol/m3]
-                                                                       occlusion_po4, &              !< phosphorus occlusion rate [mol P / m3 / timestep]
-                                                                       slow_exchange_po4             !< phosphorus desorption rate, assoc_fast --> assoc_slow [mol P / m3 / timestep]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(out)   :: fast_exchange_po4             !< phosphorus adsorption rate, solute --> assoc_fast [mol P / m3 / timestep]
+                                                                       po4_assoc_slow, &             !< slow minerally associated PO4 pool [mol/m3]
+                                                                       occlusion_po4, &              !< phosphorus occlusion rate [µmol P / m3 / s]
+                                                                       slow_exchange_po4             !< phosphorus desorption rate, assoc_fast --> assoc_slow [µmol P / m3 / s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(out)   :: fast_exchange_po4             !< phosphorus adsorption rate, solute --> assoc_fast [µmol P / m3 / s]
 
-    REAL(wp), DIMENSION(nc, nsoil_sb)           :: hlp1, hlp2, hlp3, hlp4, hlp5, partition_coef
-    INTEGER                                     :: isoil                !< loop over nsoil_sb     
+    REAL(wp), DIMENSION(nc, nsoil_sb)           :: hlp1, hlp2, hlp3, hlp4, hlp5, &
+                                                   partition_coef, & !< partition coefficient to soluble po4
+                                                   partition_coef_1  !< partition coefficient to absorbed po4
+    INTEGER                                     :: isoil, ichunk     !< loop over nsoil_sb and nc
+    LOGICAL , DIMENSION(nc, nsoil_sb)           :: flag_arr          !< logical array helper
     CHARACTER(len=*), PARAMETER                 :: routine = TRIM(modname)//':calc_p_inorg_dynamics'
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
-
+    !> 0.9 initilize local variables
+    partition_coef(:,:)   = 0._wp
+    partition_coef_1(:,:) = 0._wp
+    flag_arr(:,:) = .TRUE.
     !> 1.0 limit to possible assoc_slow, simple_0d model
     !!
-    IF (sb_model_scheme=="simple_0d") THEN
+    IF (sb_model_scheme=="simple_0d") THEN ! if_model
       hlp1(:,1) = k_desorpt_po4_act(:,1) * po4_assoc_slow(:,1) * dtime
       hlp2(:,1) = k_adsorpt_po4_act(:,1) * po4_assoc_fast(:,1) * dtime
       hlp3(:,1) = po4_assoc_slow(:,1) + hlp2(:,1) - hlp1(:,1)  - occlusion_po4(:,1) * dtime / 1000000._wp
@@ -1135,26 +1195,60 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
         occlusion_po4(:,1) = occlusion_po4(:,1) * hlp3(:,1) / hlp4(:,1)
         slow_exchange_po4(:,1) = (hlp2(:,1) - hlp1(:,1)) / dtime * 1000000._wp
       ENDWHERE
-
+      
       !> 1.1 Langmuir equilibrium between soluble P and labile P, 0d model
       !!
       hlp1(:,:) = 0.0_wp
       hlp2(:,:) = 0.0_wp
-      partition_coef(:,:) = 0._wp
-      hlp1(:,1) = (weathering_po4(:,1) + biochem_mineralisation_po4(:,1) + net_mineralisation_po4(:,1) + &
-                  transport_po4_solute(:,1) + p_deposition_sl(:,1) - &
-                  (plant_uptake_po4_sl(:,1) + mycorrhiza_uptake_po4_sl(:,1) + slow_exchange_po4(:,1)) + &
-                  transport_po4_assoc_fast(:,1)) * dtime / 1000000._wp
-      hlp2(:,1) = (slow_exchange_po4(:,1) - transport_po4_assoc_fast(:,1)) * dtime / 1000000._wp
-      partition_coef(:,1) = calc_langmuir_kinetics(hlp1(:,1), & 
-                                                       po4_solute(:,1),po4_assoc_fast(:,1), & 
-                                                       km_adsorpt_po4_act(:,1), qmax_po4_mineral_act(:,1))
-      po4_solute(:,:)        = po4_solute(:,:) + partition_coef(:,:) * hlp1(:,:)
-      po4_assoc_fast(:,:)    = po4_assoc_fast(:,:)  + (1._wp - partition_coef(:,:)) * hlp1(:,:) 
-      fast_exchange_po4(:,:) = ((1._wp-partition_coef(:,:)) * hlp1(:,:)+hlp2(:,:)) * 1.e6_wp / dtime
-    !> 2.0 limit to possible assoc_slow, 1d model
+      !> 1.1.1 traditional Langmuir isotherm
+      !!
+      IF (.NOT. flag_sb_double_langmuir) THEN ! if_iso1
+        hlp1(:,1) = (weathering_po4(:,1) + biochem_mineralisation_po4(:,1) + net_mineralisation_po4(:,1) + &
+                    transport_po4_solute(:,1) + p_deposition_sl(:,1) - &
+                    (plant_uptake_po4_sl(:,1) + mycorrhiza_uptake_po4_sl(:,1) + slow_exchange_po4(:,1)) + &
+                    transport_po4_assoc_fast(:,1)) * dtime / 1000000._wp
+        hlp2(:,1) = (slow_exchange_po4(:,1) - transport_po4_assoc_fast(:,1)) * dtime / 1000000._wp
+        CALL calc_langmuir_kinetics(hlp1(:,1), & 
+                                    po4_solute(:,1),po4_assoc_fast(:,1),  & 
+                                    km_adsorpt_po4_act(:,1), qmax_po4_mineral_act(:,1), &
+                                    partition_coef(:,1))
+
+      !> 1.1.2 double-surface Langmuir isotherm
+      !!
+      ELSE
+        flag_arr(:,1) = ((qmax_slow_po4_act(:,1) - po4_assoc_slow(:,1))<eps4 .AND. po4_assoc_slow(:,1) > eps4)
+        WHERE (flag_arr(:,1))
+          slow_exchange_po4(:,1) = - k_desorpt_po4_act(:,1) * po4_assoc_slow(:,1) * 1000000._wp
+        ELSEWHERE
+          slow_exchange_po4(:,1) = 0._wp
+        ENDWHERE      
+        hlp1(:,1) = (weathering_po4(:,1) + biochem_mineralisation_po4(:,1) + net_mineralisation_po4(:,1) + &
+                      transport_po4_solute(:,1) + p_deposition_sl(:,1) - &
+                      (plant_uptake_po4_sl(:,1) + mycorrhiza_uptake_po4_sl(:,1) + slow_exchange_po4(:,1)) + &
+                      transport_po4_assoc_fast(:,1)) * dtime / 1000000._wp
+        hlp2(:,1) = (- transport_po4_assoc_fast(:,1)) * dtime / 1000000._wp
+        
+        DO ichunk = 1, nc
+          IF (flag_arr(ichunk,1)) THEN
+            CALL calc_langmuir_kinetics(hlp1(:,1), & 
+                                        po4_solute(:,1),po4_assoc_fast(:,1), & 
+                                        km_fast_po4_act(:,1), qmax_fast_po4_act(:,1), &
+                                        partition_coef(:,1))
+          ELSE                            
+            CALL calc_langmuir_kinetics(hlp1(:,1), & 
+                                        po4_solute(:,1),po4_assoc_fast(:,1),  & 
+                                        km_adsorpt_po4_act(:,1), qmax_po4_mineral_act(:,1), &
+                                        partition_coef(:,1), &
+                                        po4_assoc_slow(:,1), &
+                                        km_fast_po4_act(:,1), qmax_fast_po4_act(:,1), &
+                                        km_slow_po4_act(:,1), qmax_slow_po4_act(:,1), &
+                                        partition_coef_1(:,1), slow_exchange_po4(:,1))
+          ENDIF                      
+        ENDDO
+      ENDIF ! if_iso1
+    !> 2.0 limit to possible assoc_slow, 1d model and jsm
     !!
-    ELSE
+    ELSE ! if_model
       hlp1(:,:) = k_desorpt_po4_act(:,:) * po4_assoc_slow(:,:) * dtime
       hlp2(:,:) = k_adsorpt_po4_act(:,:) * po4_assoc_fast(:,:) * dtime
       hlp3(:,:) = po4_assoc_slow(:,:) + hlp2(:,:) - hlp1(:,:) + (transport_po4_assoc_slow(:,:) - occlusion_po4(:,:)) * &
@@ -1162,61 +1256,100 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
       WHERE (hlp3(:,:) < eps8)
         hlp3(:,:) = po4_assoc_slow(:,:) + transport_po4_assoc_slow(:,:) * dtime / 1000000._wp + hlp2(:,:)
         hlp4(:,:) = hlp1(:,:) + occlusion_po4(:,:) * dtime / 1000000._wp
-          WHERE (hlp4(:,:) < eps8)
-            hlp1(:,:) = 0._wp
-            occlusion_po4(:,:) = 0._wp
-          ELSEWHERE
-            hlp1(:,:) = hlp1(:,:) * hlp3(:,:) / hlp4(:,:)
-            occlusion_po4(:,:) = occlusion_po4(:,:) * hlp3(:,:) / hlp4(:,:)            
-          ENDWHERE
+        WHERE (hlp4(:,:) < eps8)
+          hlp1(:,:) = 0._wp
+          occlusion_po4(:,:) = 0._wp
+        ELSEWHERE
+          hlp1(:,:) = hlp1(:,:) * hlp3(:,:) / hlp4(:,:)
+          occlusion_po4(:,:) = occlusion_po4(:,:) * hlp3(:,:) / hlp4(:,:)            
+        ENDWHERE
         slow_exchange_po4(:,:) = (hlp2(:,:) - hlp1(:,:)) / dtime * 1000000._wp
       ENDWHERE
 
       !> 2.1 Langmuir equilibrium between soluble P and labile P, simple_1d and jsm model
       !!
       
-      !> 2.1.1 jsm
-      !!
-      IF (sb_adsorp_scheme /= 'eca_none' .AND. sb_model_scheme == "jsm") THEN
-        hlp2(:,:) = (weathering_po4(:,:) + biochem_mineralisation_po4(:,:) + net_mineralisation_po4(:,:) + &
-                     transport_po4_solute(:,:) + p_deposition_sl(:,:) - &
-                     (plant_uptake_po4_sl(:,:) + mycorrhiza_uptake_po4_sl(:,:) + slow_exchange_po4(:,:)) + &
-                     transport_po4_assoc_fast(:,:)) * dtime / 1000000._wp
-        hlp3(:,:) = (po4_solute(:,:) + po4_assoc_fast(:,:) + hlp2(:,:))
-        hlp5(:,:) = po4_assoc_fast(:,:)
+      ! !> 2.1.1 jsm
+      ! !!
+      ! IF (sb_adsorp_scheme /= 'eca_none' .AND. sb_model_scheme == "jsm") THEN
+        ! hlp2(:,:) = (weathering_po4(:,:) + biochem_mineralisation_po4(:,:) + net_mineralisation_po4(:,:) + &
+                     ! transport_po4_solute(:,:) + p_deposition_sl(:,:) - &
+                     ! (plant_uptake_po4_sl(:,:) + mycorrhiza_uptake_po4_sl(:,:) + slow_exchange_po4(:,:)) + &
+                     ! transport_po4_assoc_fast(:,:)) * dtime / 1000000._wp
+        ! hlp3(:,:) = (po4_solute(:,:) + po4_assoc_fast(:,:) + hlp2(:,:))
+        ! hlp5(:,:) = po4_assoc_fast(:,:)
 
-        !! update pools
-        !! 
-        po4_assoc_fast(:,:)    = calc_fast_po4(hlp3, qmax_po4_mineral_act, km_adsorpt_po4_act)
-        po4_solute(:,:)        = hlp3(:,:) - po4_assoc_fast(:,:)
-        fast_exchange_po4(:,:) = po4_assoc_fast(:,:) - hlp5(:,:) + (slow_exchange_po4(:,:) - transport_po4_assoc_fast(:,:)) * &
-                                 dtime / 1000000._wp
-        fast_exchange_po4(:,:) = fast_exchange_po4(:,:) / dtime * 1000000._wp 
-        WHERE (po4_assoc_fast(:,:) > qmax_po4_mineral_act(:,:))
-          hlp4(:,:)              = po4_assoc_fast(:,:) - qmax_po4_mineral_act(:,:)
-          po4_solute(:,:)        = po4_solute(:,:) + hlp4(:,:)
-          po4_assoc_fast(:,:)    = qmax_po4_mineral_act(:,:)
-          fast_exchange_po4(:,:) = fast_exchange_po4(:,:) - hlp4(:,:)
-        ENDWHERE
+        ! !! update pools
+        ! !! 
+        ! po4_assoc_fast(:,:)    = calc_fast_po4(hlp3, qmax_po4_mineral_act, km_adsorpt_po4_act)
+        ! po4_solute(:,:)        = hlp3(:,:) - po4_assoc_fast(:,:)
+        ! fast_exchange_po4(:,:) = po4_assoc_fast(:,:) - hlp5(:,:) + (slow_exchange_po4(:,:) - transport_po4_assoc_fast(:,:)) * &
+                                 ! dtime / 1000000._wp
+        ! fast_exchange_po4(:,:) = fast_exchange_po4(:,:) / dtime * 1000000._wp 
+        ! WHERE (po4_assoc_fast(:,:) > qmax_po4_mineral_act(:,:))
+          ! hlp4(:,:)              = po4_assoc_fast(:,:) - qmax_po4_mineral_act(:,:)
+          ! po4_solute(:,:)        = po4_solute(:,:) + hlp4(:,:)
+          ! po4_assoc_fast(:,:)    = qmax_po4_mineral_act(:,:)
+          ! fast_exchange_po4(:,:) = fast_exchange_po4(:,:) - hlp4(:,:)
+        ! ENDWHERE
 
-      !> 2.1.2 simple_1d and eca_none in jsm
+      !> 2.1.1 traditional Langmuir isotherm
       !!
-      ELSE
+      IF (.NOT. flag_sb_double_langmuir) THEN ! if_iso2
         hlp1(:,:) = (weathering_po4(:,:) + biochem_mineralisation_po4(:,:) + net_mineralisation_po4(:,:) + &
                      transport_po4_solute(:,:) + p_deposition_sl(:,:) - &
                      (plant_uptake_po4_sl(:,:) + mycorrhiza_uptake_po4_sl(:,:) + slow_exchange_po4(:,:)) + &
                      transport_po4_assoc_fast(:,:)) * dtime / 1000000._wp
         hlp2(:,:) = (slow_exchange_po4(:,:) - transport_po4_assoc_fast(:,:)) * dtime / 1000000._wp
 
-        partition_coef(:,:) = calc_langmuir_kinetics(hlp1(:,:), & 
-                                                         po4_solute(:,:),po4_assoc_fast(:,:), & 
-                                                         km_adsorpt_po4_act(:,:), qmax_po4_mineral_act(:,:))
-        po4_solute(:,:)        = po4_solute(:,:) + partition_coef(:,:) * hlp1(:,:)
-        po4_assoc_fast(:,:)    = po4_assoc_fast(:,:)  + (1._wp - partition_coef(:,:)) * hlp1(:,:) 
-        fast_exchange_po4(:,:) = ((1._wp - partition_coef(:,:)) * hlp1(:,:) + hlp2(:,:)) * 1.e6_wp / dtime
-      ENDIF
-    ENDIF
-
+        CALL calc_langmuir_kinetics(hlp1(:,:), & 
+                                    po4_solute(:,:),po4_assoc_fast(:,:), & 
+                                    km_adsorpt_po4_act(:,:), qmax_po4_mineral_act(:,:), &
+                                    partition_coef(:,:))
+      !> 2.1.2 double-surface Langmuir isotherm
+      !!
+      ELSE
+        flag_arr(:,:) = ((qmax_slow_po4_act(:,:) - po4_assoc_slow(:,:))<eps4 .AND. po4_assoc_slow(:,:) > eps4)
+        WHERE (flag_arr(:,:))
+          slow_exchange_po4(:,:) = - k_desorpt_po4_act * po4_assoc_slow(:,:) * 1000000._wp
+        ELSEWHERE
+          slow_exchange_po4(:,:) = 0._wp
+        ENDWHERE
+        hlp1(:,:) = (weathering_po4(:,:) + biochem_mineralisation_po4(:,:) + net_mineralisation_po4(:,:) + &
+                     transport_po4_solute(:,:) + p_deposition_sl(:,:) - &
+                     (plant_uptake_po4_sl(:,:) + mycorrhiza_uptake_po4_sl(:,:) + slow_exchange_po4(:,:)) + &
+                     transport_po4_assoc_fast(:,:)) * dtime / 1000000._wp
+        hlp2(:,:) = ( - transport_po4_assoc_fast(:,:)) * dtime / 1000000._wp  
+        
+        DO ichunk = 1, nc
+          DO isoil = 1, nsoil_sb
+            IF (flag_arr(ichunk,isoil)) THEN
+              CALL calc_langmuir_kinetics(hlp1(ichunk,isoil), & 
+                                          po4_solute(ichunk,isoil),po4_assoc_fast(ichunk,isoil), & 
+                                          km_fast_po4_act(ichunk,isoil), qmax_fast_po4_act(ichunk,isoil), &
+                                          partition_coef(ichunk,isoil))
+            ELSE                            
+              CALL calc_langmuir_kinetics(hlp1(ichunk,isoil), & 
+                                          po4_solute(ichunk,isoil),po4_assoc_fast(ichunk,isoil), & 
+                                          km_adsorpt_po4_act(ichunk,isoil), qmax_po4_mineral_act(ichunk,isoil), &
+                                          partition_coef(ichunk,isoil), &
+                                          po4_assoc_slow(ichunk,isoil), &
+                                          km_fast_po4_act(ichunk,isoil), qmax_fast_po4_act(ichunk,isoil), &
+                                          km_slow_po4_act(ichunk,isoil), qmax_slow_po4_act(ichunk,isoil), &
+                                          partition_coef_1(ichunk,isoil), slow_exchange_po4(ichunk,isoil))
+            ENDIF
+          ENDDO                     
+        ENDDO
+      ENDIF ! if_iso2
+    ENDIF ! if_model
+    
+    !> 3.0 update po4_solute, fast_assoc_po4, and slow_assoc_po4
+    !!
+    po4_solute(:,:)        = po4_solute(:,:) + partition_coef(:,:) * hlp1(:,:)
+    po4_assoc_fast(:,:)    = po4_assoc_fast(:,:)  + (1._wp - partition_coef(:,:) - partition_coef_1(:,:)) * hlp1(:,:) 
+    fast_exchange_po4(:,:) = ((1._wp-partition_coef(:,:)-partition_coef_1(:,:)) * hlp1(:,:)+hlp2(:,:)) * 1.e6_wp / dtime
+    po4_assoc_slow(:,:)    = po4_assoc_slow(:,:) + &
+                            (slow_exchange_po4(:,:) - occlusion_po4(:,:) + transport_po4_assoc_slow(:,:)) * dtime / 1.e6_wp
   END SUBROUTINE calc_p_inorg_dynamics
 
 
@@ -1227,51 +1360,113 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
   !> Subroutine to calculate Langmuir kinetics (modified from Yang et al. 2014)
   !!
   !-----------------------------------------------------------------------------------------------------
-  ELEMENTAL FUNCTION calc_langmuir_kinetics(solute_flux, solute, assoc_fast, km, qmax) RESULT(solute_partition_coef)
+  ELEMENTAL SUBROUTINE calc_langmuir_kinetics(solute_flux, solute, assoc_fast, & 
+                                              km, qmax, solute_partition_coef, &
+                                              assoc_slow, km_fast, qmax_fast, km_slow, qmax_slow, &
+                                              slow_partition_coef, slow_exchange)
+    USE mo_sb_constants
+    USE mo_jsb_math_constants,  ONLY: eps4, eps8, dtime
 
-    REAL(wp), INTENT(in)            :: solute_flux            !< total solute flux (mol/m3/dtime)
-    REAL(wp), INTENT(in)            :: solute                 !< solute pool (mol/m3)
-    REAL(wp), INTENT(in)            :: assoc_fast             !< adsorbed pool (mol/m3)
-    REAL(wp), INTENT(in)            :: km                     !< half-saturation concentration of Langmuir isotherm (mol/m3)
-    REAL(wp), INTENT(in)            :: qmax                   !< maximum sorption capacity of adsorbed pool (mol/m3)
-    REAL(wp)                        :: solute_partition_coef  !< fast exchange rate (solute-->assoc_fast) (mol/m3/dtime)
+    IMPLICIT NONE
+    ! 0.1 inout
+    REAL(wp)          , INTENT(in)    :: solute_flux            !< total solute flux (mol/m3/dtime)
+    REAL(wp)          , INTENT(in)    :: solute                 !< solute pool (mol/m3)
+    REAL(wp)          , INTENT(in)    :: assoc_fast             !< adsorbed (fast) pool (mol/m3)
+    REAL(wp)          , INTENT(in)    :: km                     !< half-saturation concentration of Langmuir isotherm (mol/m3)
+    REAL(wp)          , INTENT(in)    :: qmax                   !< maximum sorption capacity of adsorbed pool (mol/m3)
+    REAL(wp)          , INTENT(inout) :: solute_partition_coef  !< partition coefficient to soluble pool
+    REAL(wp), OPTIONAL, INTENT(in)    :: assoc_slow             !< absorbed (slow) pool (mol/m3)
+    REAL(wp), OPTIONAL, INTENT(in)    :: km_fast                !< half-saturation concentration of Langmuir isotherm (mol/m3)
+    REAL(wp), OPTIONAL, INTENT(in)    :: qmax_fast              !< maximum sorption capacity of adsorbed pool (mol/m3)
+    REAL(wp), OPTIONAL, INTENT(in)    :: km_slow                !< half-saturation concentration of Langmuir isotherm (mol/m3)
+    REAL(wp), OPTIONAL, INTENT(in)    :: qmax_slow              !< maximum sorption capacity of adsorbed pool (mol/m3)
+    REAL(wp), OPTIONAL, INTENT(inout) :: slow_partition_coef    !< partition coefficient to absorbed pool (po4 only)
+    REAL(wp), OPTIONAL, INTENT(inout) :: slow_exchange          !< slow exchange rate between soluble and absorbed po4 pool [µmol P / m3 / s], double Langmuir only
 
-    REAL(wp)                                    :: hlp1   
-    CHARACTER(len=*), PARAMETER                 :: routine = TRIM(modname)//':calc_langmuir_kinetics'
+    REAL(wp)                          :: hlp1, hlp2, hlp3, hlp4   
+    CHARACTER(len=*), PARAMETER       :: routine = TRIM(modname)//':calc_langmuir_kinetics'
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
+    !> calculate partition coefficient of soluble pool and absorbed pool (po4 double Langmuir only)
+    !!
+    
+    
+    !> 1.0 double Langmuir isotherm (po4 only)
+    !!
+    IF (PRESENT(assoc_slow)) THEN
+      hlp1 = qmax_fast * km_fast / ((solute + km_fast)**2.0_wp )
+      hlp2 = qmax_slow * km_slow / ((solute + km_slow)**2.0_wp )
+      hlp3 = 1._wp
+      IF ((qmax_fast * km_fast) < eps8 .AND. (qmax_slow * km_slow) < eps8) THEN
+        hlp1 = 0._wp
+        hlp2 = 0._wp
+      ELSEIF ((qmax_fast * km_fast) < eps8) THEN
+        hlp1 = 0._wp
+      ELSEIF ((qmax_slow * km_slow) < eps8) THEN
+        hlp2 = 0._wp
+      ELSE
+        IF ( assoc_fast < (-solute_flux) .OR. assoc_slow < (-solute_flux)) THEN
+          hlp1 = assoc_fast / (assoc_fast + assoc_slow + solute)
+          hlp2 = assoc_slow / (assoc_fast + assoc_slow + solute)
+          hlp3 = solute     / (assoc_fast + assoc_slow + solute)
+        ELSEIF ( (solute < po4_solute_min) .AND. solute_flux<0._wp ) THEN
+          hlp3 = 0._wp
+        ENDIF
+      ENDIF
+      solute_partition_coef = hlp3 / (hlp1 + hlp2 + hlp3)
+      slow_partition_coef   = hlp2 / (hlp1 + hlp2 + hlp3)
+      slow_exchange = slow_exchange + &
+                      hlp2 / (hlp1 + hlp2 + hlp3) * solute_flux / dtime * 1000000._wp
 
-    !! calculate partition coefficient of soluble pool
-    IF((km > eps8) .AND. (qmax > eps8)) THEN
-       solute_partition_coef = (solute + km) ** 2.0_wp / &
-                               ((solute + km) ** 2.0_wp + qmax * km)
-    ELSE
-       solute_partition_coef = 1.0_wp
-    ENDIF
-
-
-    !! check fast pool size
-    !! 
-    hlp1 = assoc_fast + (1._wp - solute_partition_coef) * solute_flux
-
-    IF ( (solute + assoc_fast) > eps8 ) THEN 
-       IF (solute_flux < 0._wp) THEN
-         solute_partition_coef = MAX(solute_partition_coef, solute / (solute+assoc_fast))
-       ENDIF
-       IF ((solute < (-solute_flux)) .OR. (assoc_fast < (-solute_flux))) THEN
-         solute_partition_coef = solute/(solute + assoc_fast)
-       ELSEIF ((hlp1 > qmax) .AND. (qmax > eps8)) THEN 
+    !> 1.1 check fast pool size
+      hlp4 = assoc_fast + (1._wp - solute_partition_coef - slow_partition_coef) * solute_flux      
+      IF ((hlp4 > qmax) .AND. (qmax > eps8)) THEN 
          IF (solute_flux < eps8) THEN
            solute_partition_coef = 0._wp
-           solute_partition_coef = MAX(0._wp, MIN(1._wp, solute_partition_coef))
+           slow_partition_coef   = 0._wp
          ELSEIF (solute_flux > eps8) THEN
-           solute_partition_coef = 1._wp
+           solute_partition_coef = solute_partition_coef / (solute_partition_coef + slow_partition_coef)
+           slow_partition_coef   = slow_partition_coef   / (solute_partition_coef + slow_partition_coef)
          ENDIF
-       ENDIF
+      ENDIF
+    
+    !> 2.0 traditional Langmuir isotherm
+    ELSE
+      IF((km > eps8) .AND. (qmax > eps8)) THEN
+        hlp1 = qmax * km / ((solute + km)**2.0_wp )
+        hlp3 = 1._wp
+        IF ( assoc_fast < (-solute_flux) ) THEN
+          hlp1 = assoc_fast / (assoc_fast + solute)
+          hlp3 = solute / (assoc_fast + solute)
+        ELSEIF ( (solute < po4_solute_min) .AND. solute_flux<0._wp ) THEN
+          hlp3 = 0._wp
+        ENDIF
+      ELSE
+        hlp1 = 0._wp
+        hlp3 = 1._wp
+      ENDIF
+      solute_partition_coef = hlp3 / (hlp1 + hlp3)
+      
+    !> 2.1 check fast pool size
+    !! 
+      hlp4 = assoc_fast + (1._wp - solute_partition_coef) * solute_flux    
+      IF ( (solute + assoc_fast) > eps8 ) THEN 
+         IF (solute_flux < 0._wp) THEN
+           solute_partition_coef = MAX(solute_partition_coef, solute / (solute+assoc_fast))
+         ENDIF      
+         IF ((hlp4 > qmax) .AND. (qmax > eps8)) THEN 
+           IF (solute_flux < eps8) THEN
+             solute_partition_coef = 0._wp
+           ELSEIF (solute_flux > eps8) THEN
+             solute_partition_coef = 1._wp
+           ENDIF
+         ENDIF
+      ENDIF
     ENDIF
 
-  END FUNCTION calc_langmuir_kinetics
+
+  END SUBROUTINE calc_langmuir_kinetics
 
 END MODULE mo_sb_update_pools
