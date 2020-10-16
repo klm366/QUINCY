@@ -495,7 +495,7 @@ if [ ! -z "${fastArg// }" ]  # -z test is explicitly for: the length of string i
  then 
   fastOpt="TRUE"
   queue="all"
-  memory=18000    # three jobs per all queue node | potentially 90 SLM jobs can run in parallel
+  memory=15000    # three jobs per all queue node | potentially 90 SLM jobs can run in parallel
   echo "  Info: you opted for the fast mode, simulations are done at the all queue with a max of 3 SLM jobs per node."
   echo " "
 fi
@@ -504,7 +504,7 @@ if [ ! -z "${vfastArg// }" ]  # -z test is explicitly for: the length of string 
  then 
   vfastOpt="TRUE"
   queue="all"
-  memory=28000     # two jobs per all queue node | potentially 60 SLM jobs can run in parallel
+  memory=23000     # two jobs per all queue node | potentially 60 SLM jobs can run in parallel
   echo "  Info: you opted for the veryfast mode, simulations are done at the all queue with a max of 2 SLM jobs per node."
   echo " "
 fi
@@ -513,7 +513,7 @@ if [ ! -z "${efastArg// }" ]  # -z test is explicitly for: the length of string 
  then 
   efastOpt="TRUE"
   queue="all"
-  memory=58000     # one job per all queue node | note: the all queue consists of "only" 30 nodes
+  memory=47000     # one job per all queue node | note: the all queue consists of "only" 30 nodes
   echo "  Info: you opted for the extrafast mode, simulations are done at the all queue with only 1 SLM job per node."
   echo " "
 fi
@@ -1481,7 +1481,7 @@ largestMem=30000   # 30  GB
 # in case of using the "extrafast" option, the max memory allowed is increased, because that's how the "extrafast" option works
 if [ "$efastOpt" == "TRUE" ]
  then
-   largestMem=59500   # 59.5 GB | a node of the all queue has 60 GB memory installed
+   largestMem=48000   # 48 GB | a node of the all queue has 64 GB memory installed, of which up to 16 GB are used by the OS and various caches
 fi
 # test memory empty or containing characters other then digits
 if [ -z $memory ]  # returns TRUE if unset or empty
