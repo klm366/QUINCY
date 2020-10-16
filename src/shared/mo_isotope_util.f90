@@ -64,7 +64,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_delta_C13'
 
 
-    IF(ABS(element-isotope) > eps8) THEN
+    IF(ABS(element - isotope) > eps8 .AND. (element * isotope) > 0._wp) THEN
        delta = ( isotope / (element-isotope) / PDB_STANDARD_C13 - 1.0_wp ) * 1000._wp
     ELSE
        delta = 0.0_wp
@@ -124,7 +124,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_delta_C14'
 
 
-    IF(element > eps8) THEN
+    IF(element > eps8 .AND. (element * isotope) > 0._wp) THEN
        Delta = (AvogadroC_times_lambda_C14 / ( AAB_STANDARD_C14 * molar_mass_C ) * isotope / scale_correction_C14 / element * & 
                (1._wp - (2._wp* (25._wp + delta_C13)) /1000._wp) - 1._wp) * 1000._wp  
     ELSE
@@ -188,7 +188,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_delta_N15'
 
 
-    IF(ABS(element-isotope) > eps8) THEN
+    IF(ABS(element - isotope) > eps8 .AND. (element * isotope) > 0._wp) THEN
        delta = ( isotope / (element-isotope) / ATM_STANDARD_N15 - 1.0_wp ) * 1000._wp
     ELSE
        delta = 0.0_wp
