@@ -192,7 +192,7 @@ CONTAINS
         & t_cf('leaf_area_index', '', ''),                                     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
-        & output_level=BASIC, &
+        & output_level=BASIC,  l_aggregate_all=.TRUE.,&
         & initval_r=0.0_wp,loutput=.TRUE. )
 
       CALL jsb_add_var( mem, 'fract_fpc', mem%fract_fpc,                       &
@@ -225,7 +225,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & output_level=FULL,                                                   &
-        & lrestart=.TRUE.,                                                     &
+        & lrestart=.TRUE.,loutput=.FALSE.,                &
         & initval_r=0.0_wp )
 
       IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'logrop') THEN

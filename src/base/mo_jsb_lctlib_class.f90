@@ -881,15 +881,32 @@ CONTAINS
              
              
              CASE ('growrspdmoist')
-                READ(line(pos:length),*) P01(1:nlct)         
-                lctlib(1:nlct)%GrowRspdMoist = 10._wp ** ( 1.1_wp * P01(1:nlct)  + 0.9_wp )  
+                READ(line(pos:length),*) P01(1:nlct)     
+                !PHS Tree/Grass separation
+                WHERE (lctlib(1:nlct)%LandcoverClass  .eq. 3 )  
+                 ! for trees
+                        lctlib(1:nlct)%GrowRspdMoist = 10._wp ** ( 1.1_wp * P01(1:nlct)  + 0.9_wp )  
+                  ELSEWHERE 
+                  ! for grass
+                         lctlib(1:nlct)%GrowRspdMoist = 10._wp ** ( 0.5_wp * P01(1:nlct)  + 0.75_wp )  
+                   END WHERE 
+                    
+                !lctlib(1:nlct)%GrowRspdMoist = 10._wp ** ( 1.1_wp * P01(1:nlct)  + 0.9_wp )  
                 exists_GrowRspdMoist   = .TRUE.     
                   lctlib(1:nlct)%jedi_F_pseudo_soilM = EXP(- get_time_dt(model_id) / (lctlib(1:nlct)%GrowRspdMoist  * 86400._wp))
                   lctlib(1:nlct)%jedi_N_pseudo_soilM = 1._wp / (1._wp - lctlib(1:nlct)%jedi_F_pseudo_soilM )
                 WRITE(35,fm) 'GrowRspdMoist ',lctlib(1:nlct)%GrowRspdMoist
              CASE ('growrspdtemp')
                 READ(line(pos:length),*) P02(1:nlct)                
-                lctlib(1:nlct)%GrowRspdTemp = 10._wp ** ( 1.1_wp * P02(1:nlct)  + 0.9_wp )
+                !PHS Tree/Grass separation
+                WHERE (lctlib(1:nlct)%LandcoverClass  .eq. 3 )  
+                 ! for trees
+                        lctlib(1:nlct)%GrowRspdTemp = 10._wp ** ( 1.1_wp * P02(1:nlct)  + 0.9_wp )  
+                  ELSEWHERE 
+                  ! for grass
+                         lctlib(1:nlct)%GrowRspdTemp = 10._wp ** ( 0.5_wp * P02(1:nlct)  + 0.75_wp )  
+                   END WHERE 
+               ! lctlib(1:nlct)%GrowRspdTemp = 10._wp ** ( 1.1_wp * P02(1:nlct)  + 0.9_wp )
                 exists_GrowRspdTemp   = .TRUE.
                  lctlib(1:nlct)%jedi_F_pseudo_T = EXP(- get_time_dt(model_id) / (lctlib(1:nlct)%GrowRspdTemp* 86400._wp ))
                  lctlib(1:nlct)%jedi_N_pseudo_T = 1._wp / (1._wp - lctlib(1:nlct)%jedi_F_pseudo_T )
@@ -946,7 +963,14 @@ CONTAINS
                 READ(line(pos:length),*) P13(1:nlct)
                 !lctlib(1:nlct)%SenesRspdNPP = 10._wp ** ( 4.0_wp * P13(1:nlct) - 1.0_wp )
                  !lctlib(1:nlct)%SenesRspdNPP =10._wp ** ( 1.855_wp * P01(1:nlct)  + 1.145_wp )   !PHS:18.06.2019 New sample
-                 lctlib(1:nlct)%SenesRspdNPP =10._wp ** ( 1.1_wp * P13(1:nlct)  + 0.99_wp )    !PHS:09.12.2019 New sample
+                 WHERE (lctlib(1:nlct)%LandcoverClass  .eq. 3 )  
+                 ! for trees
+                        lctlib(1:nlct)%SenesRspdNPP = 10._wp ** ( 1.1_wp * P13(1:nlct)  + 0.9_wp )  
+                  ELSEWHERE 
+                  ! for grass
+                         lctlib(1:nlct)%SenesRspdNPP = 10._wp ** ( 0.5_wp * P13(1:nlct)  + 0.75_wp )  
+                   END WHERE 
+                ! lctlib(1:nlct)%SenesRspdNPP =10._wp ** ( 1.1_wp * P13(1:nlct)  + 0.99_wp )    !PHS:09.12.2019 New sample
                 exists_SenesRspdNPP   = .TRUE.
                  lctlib(1:nlct)%jedi_F_pseudo_npp = EXP(- get_time_dt(model_id) / (lctlib(1:nlct)%SenesRspdNPP * 86400._wp))
                  lctlib(1:nlct)%jedi_N_pseudo_npp = 1._wp / (1._wp - lctlib(1:nlct)%jedi_F_pseudo_npp )

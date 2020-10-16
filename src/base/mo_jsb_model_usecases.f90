@@ -946,7 +946,7 @@ CONTAINS
 
           veg_tile => t_jsb_tile('veg', 'Veg tile', &
             & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_   /), &
-            & process_actions = (/ON_LEAFS_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
+            & process_actions = (/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
             & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
             & fract_varname='fract_veg')
 

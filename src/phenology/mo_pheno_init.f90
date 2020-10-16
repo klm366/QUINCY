@@ -166,7 +166,10 @@ CONTAINS
       !PHS: JeDi does not need this vegetation correction so I set the correction fraction to one.
       !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=        
       IF(TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'jedi_phenology') THEN
-          dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =  1.0_wp 
+   !       dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =  1.0_wp 
+                 dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =   &
+           & 1.0_wp - exp(-dsl4jsb_Lctlib_param(MaxLAI) / dsl4jsb_Lctlib_param(clumpinessFactor))
+   
       ELSE
           dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =   &
            & 1.0_wp - exp(-dsl4jsb_Lctlib_param(MaxLAI) / dsl4jsb_Lctlib_param(clumpinessFactor))

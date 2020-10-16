@@ -77,7 +77,21 @@ MODULE mo_carbon_interface
   INTERFACE tsk_C_NPP_pot_allocation
     PROCEDURE Create_task_C_NPP_pot_allocation        !< Constructor function for task
   END INTERFACE tsk_C_NPP_pot_allocation
+  
+! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
+ !PHS 24.07.2020 Compute water stress in CARBON at PFT level. 
+ !> Type definition for water_stress task
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_water_stress
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_water_stress
+    PROCEDURE, NOPASS :: Aggregate => aggregate_water_stress
+  END TYPE tsk_water_stress
 
+  !> Constructor interface for water_stress task
+  INTERFACE tsk_water_stress
+    PROCEDURE Create_task_water_stress
+  END INTERFACE tsk_water_stress
+! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
 
 CONTAINS
 
@@ -99,6 +113,26 @@ CONTAINS
     CALL return_ptr%Construct(name='C_NPP_pot_allocation', process_id=CARBON_, owner_model_id=model_id)
 
   END FUNCTION Create_task_C_NPP_pot_allocation
+
+
+! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+ !PHS 24.07.2020 Compute water stress in CARBON at PFT level. 
+  ! -------------------------------------------------------------------------------------------------------
+  !> Constructor for water_stress task
+  !!
+  !! @param[in]     model_id     Model id
+  !! @return        return_ptr   Instance of process task "water_stress"
+  !!
+  FUNCTION Create_task_water_stress(model_id) RESULT(return_ptr)
+
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_water_stress::return_ptr)
+    CALL return_ptr%Construct(name='water_stress', process_id=CARBON_, owner_model_id=model_id)
+
+  END FUNCTION Create_task_water_stress
+! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
 
 
   ! -------------------------------------------------------------------------------------------------------
@@ -125,6 +159,13 @@ CONTAINS
 
     IF (.NOT. model%config%use_quincy) THEN
       CALL this%Register_task(tsk_C_NPP_pot_allocation(model_id))
+      ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
+      !PHS 24.07.2020 Compute water stress in CARBON at PFT level. 
+       IF (TRIM(model%config%usecase) .eq. 'jsbach_jedi' ) THEN        
+          CALL this%Register_task( tsk_water_stress           (model_id))
+      END IF 
+      ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
+
     ENDIF
 
   END SUBROUTINE Register_carbon_tasks
@@ -260,9 +301,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  root_maxmoist
     dsl4jsb_Real2D_onChunk ::  seed_maxmoist
     dsl4jsb_Real2D_onChunk ::  jedi_pot_supply_transp
-    dsl4jsb_Real2D_onChunk ::  root_depth
+    dsl4jsb_Real2D_onChunk ::  jedi_root_depth
     dsl4jsb_Real2D_onChunk ::  soil_depth
-    dsl4jsb_Real3D_onChunk ::  root_depth_sl
+    dsl4jsb_Real3D_onChunk ::  jedi_root_depth_sl
     dsl4jsb_Real3D_onChunk ::  vol_field_cap_sl
     dsl4jsb_Real3D_onChunk ::  soil_depth_sl
     dsl4jsb_Real3D_onChunk ::  w_soil_sl
@@ -271,13 +312,12 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::   C_delta
     dsl4jsb_Real2D_onChunk ::   c_total
     dsl4jsb_Real2D_onChunk ::   one_counter
-    ! Taking relative soil moisture from the HYDRO process
-    dsl4jsb_Real2D_onChunk ::   w_soil_rel              
+    ! Taking relative soil moisture from the HYDRO process            
     dsl4jsb_Real2D_onChunk ::   alpha_jedi
     dsl4jsb_Real2D_onChunk ::   alpha_jedi_seed
     dsl4jsb_Real2D_onChunk ::   max_moist
-    dsl4jsb_Real2D_onChunk ::   w_soil_column
     dsl4jsb_Real2D_onChunk ::   w_soil_column_seed
+    dsl4jsb_Real2D_onChunk ::   w_soil_column_jedi
     dsl4jsb_Real2D_onChunk ::   ff_T_30d
     dsl4jsb_Real2D_onChunk ::   ff_dTdt                      
     dsl4jsb_Real2D_onChunk ::   ff_grow_T_yDayMean
@@ -466,17 +506,16 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(CARBON_,   seed_depth_sl)
     dsl4jsb_Get_var2D_onChunk(CARBON_,   seed_maxmoist)
     dsl4jsb_Get_var2D_onChunk(CARBON_,   w_soil_column_seed)
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   w_soil_column_jedi)
     dsl4jsb_Get_var2D_onChunk(CARBON_,  root_maxmoist )
     dsl4jsb_Get_var2D_onChunk(CARBON_,  jedi_pot_supply_transp )
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_rel        ) 
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    max_moist         )
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_column     )
 
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,   root_depth          )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   jedi_root_depth          )
     dsl4jsb_Get_var2D_onChunk(HYDRO_,   soil_depth     )
     ! 3 Dimensional--------------------------------------------------------------------------
     dsl4jsb_Get_var3D_onChunk(HYDRO_,   w_soil_sl                )
-    dsl4jsb_Get_var3D_onChunk(HYDRO_,   root_depth_sl          ) 
+    dsl4jsb_Get_var3D_onChunk(CARBON_,   jedi_root_depth_sl ) 
     dsl4jsb_Get_var3D_onChunk(HYDRO_,   vol_field_cap_sl       ) 
     dsl4jsb_Get_var3D_onChunk(HYDRO_,  soil_depth_sl            )
     ! 3 Dimensional--------------------------------------------------------------------------
@@ -633,30 +672,18 @@ CONTAINS
       one_counter = 0._wp           
     END IF     !  PHS: initial carbon
     
- !   IF (  is_time_experiment_start(options%current_datetime)  )  THEN
-      seed_depth_sl = jedi_soil_depth_to_layers_1d(  SPREAD(0.05_wp, NCOPIES=nc, DIM=1)  , soil_w%dz(:))         ! Jedi assumes germination of seed depends on the first 0.5 m of soil wetness
-      CALL get_water_in_root_zone(vol_field_cap_sl(:,:) * soil_depth_sl(:,:), &
-        &                         soil_depth_sl(:,:), seed_depth_sl(:,:),     &
-        &                         seed_maxmoist(:))
-  !  END IF
-    
-    CALL get_water_in_root_zone(vol_field_cap_sl(:,:) * soil_depth_sl(:,:), &
-      &                         soil_depth_sl(:,:), root_depth_sl(:,:), root_maxmoist(:))
+      seed_depth_sl = jedi_soil_depth_to_layers_1d(  SPREAD(0.05_wp, NCOPIES=nc, DIM=1)  , soil_w%dz(:))         ! Jedi assumes germination of seed depends on the first 50mm of soil wetness
+     CALL get_water_in_root_zone(vol_field_cap_sl(:,:) * soil_depth_sl(:,:),  soil_depth_sl(:,:), seed_depth_sl(:,:),     seed_maxmoist(:))    
+     CALL get_water_in_root_zone(vol_field_cap_sl(:,:) * soil_depth_sl(:,:), soil_depth_sl(:,:), jedi_root_depth_sl(:,:), root_maxmoist(:))
 
-    CALL get_water_in_root_zone(w_soil_sl(:,:), soil_depth_sl(:,:), seed_depth_sl(:,:), w_soil_column_seed(:))
+     CALL get_water_in_root_zone(w_soil_sl(:,:), soil_depth_sl(:,:), seed_depth_sl(:,:), w_soil_column_seed(:))
+     CALL get_water_in_root_zone(w_soil_sl(:,:), soil_depth_sl(:,:), jedi_root_depth_sl(:,:), w_soil_column_jedi(:))
       
-    alpha_jedi(:)      = jedi_water_stress_factor( w_soil_column(:),      root_maxmoist(:),  &
-      &                                             dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract)
-    alpha_jedi_seed(:) = jedi_water_stress_factor( w_soil_column_seed(:), seed_maxmoist(:),  &
-      &                                            dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract)            
+    alpha_jedi(:)          = jedi_water_stress_factor( w_soil_column_jedi(:),      root_maxmoist(:),  dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract)
+    alpha_jedi_seed(:) = jedi_water_stress_factor( w_soil_column_seed(:), seed_maxmoist(:),  dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract)            
     
     ! 2019.11.27 PHS: still at the stage of testing "water stress" 
-    WHERE (c_leaves .gt. 0._wp) 
-      ! 2019.12.4  
-        ! 2019.12.4  
-      ! 2019.12.4  
-        ! 2019.12.4  
-      ! 2019.12.4  
+    WHERE (c_leaves .gt. 0._wp)  
       ! The potential supply rate from soil depends on the root-shoot-ratio. The root-shoot-ratio is the ratio betweem fine-root-carbon and Leaf-area-index.
       !                                                                                                     a(r)=1-exp(- (-log(0.01))/r_optimal   * r  )     a : is a function of root-shoot-ratio  [0...1]
       !                                                                                                                                                                        r : root-shoot-ratio [10^-3  ~  10^3]
@@ -667,7 +694,6 @@ CONTAINS
       jedi_pot_supply_transp =  0._wp
     END WHERE
     
-    !jedi_pot_supply_transp      =  MAX(0._wp,  c_fnroot * (  1000._wp *  0.5_wp *  12.01_wp  *  0.001_wp  / 86400._wp  )  *  alpha_jedi   ) 
   
     ff_grow_T =  ( t_air - tmelt ) / dsl4jsb_Lctlib_param(jedi_N_pseudo_T)      + &
       &          ff_grow_T * dsl4jsb_Lctlib_param(jedi_F_pseudo_T)
@@ -810,7 +836,7 @@ CONTAINS
         & GrowthResp,                                  & ! out
         & AutoRes,                                     & ! out
          & CUE,                          & !out carbon use efficiency
-         & root_depth,                 &  ! out 
+         & jedi_root_depth,                 &  ! out 
         & C_balan,                                     & ! out
         & C_delta,                                     & ! out
         & c_total,                                     & !
@@ -866,11 +892,11 @@ CONTAINS
         &  WoodLitterSize   =  dsl4jsb_Lctlib_param(WoodLitterSize)   & ! in, optional, necessary with yasso
         & )
       END IF  !  PHS: initial carbon
-      root_depth = MAX( root_depth, 0.05_wp)
+      jedi_root_depth = MAX( jedi_root_depth, 0.05_wp)
       
-      root_depth = MIN(root_depth,soil_depth)
+      jedi_root_depth = MIN(jedi_root_depth,soil_depth)
       
-      root_depth_sl = jedi_soil_depth_to_layers_1d(  root_depth, soil_w%dz(:))   
+      jedi_root_depth_sl = jedi_soil_depth_to_layers_1d(  jedi_root_depth, soil_w%dz(:))   
       
       ELSE
       
@@ -1045,6 +1071,90 @@ CONTAINS
 
   END SUBROUTINE update_C_NPP_pot_allocation
 
+! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
+      !PHS 24.07.2020 Compute water stress in CARBON at PFT level. 
+  
+! -------------------------------------------------------------------------------------------------------
+  !>
+  !! @brief Implementation of "update" for task "water_stress"
+  !! Task "update_water_stress" calculates water stress
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  !!
+  SUBROUTINE update_water_stress(tile, options)
+    ! ---------------------------
+    ! Variables
+
+    ! Used variables
+    USE mo_carbon_constants,  ONLY: max_pipe_transpir
+
+    ! Arguments
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    TYPE(t_jsb_model), POINTER :: model
+    dsl4jsb_Def_config(HYDRO_)
+
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(CARBON_)   !PHS
+
+ 
+    dsl4jsb_Real2D_onChunk :: water_stress
+    dsl4jsb_Real2D_onChunk :: evapopot
+    dsl4jsb_Real2D_onChunk :: jedi_pot_supply_transp  !PHS
+    dsl4jsb_Real2D_onChunk :: alpha_jedi   !PHS	
+   
+    INTEGER :: iblk, ics, ice
+    
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_stress'
+
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+
+    IF (.NOT. tile%Is_process_active(CARBON_) .OR. .NOT. tile%is_vegetation) RETURN
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_config(HYDRO_)
+
+    ! Get reference to variables for current block
+    !
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(CARBON_)
+
+  
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    water_stress)        ! out   !PHS
+    
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapopot) !PHS
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   jedi_pot_supply_transp) !PHS	
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  alpha_jedi)!PHS
+
+
+    IF (TRIM(model%config%usecase) .eq. 'jsbach_jedi' ) THEN
+      
+      WHERE (evapopot(:) .GE. 0._wp)  
+        water_stress(:) = 0._wp
+      ELSEWHERE ( evapopot(:) .LT. 0._wp )   
+       
+        water_stress(:) = MIN(1._wp , ABS(evapopot(:)) / max_pipe_transpir  * &
+        &                (1._wp - exp( - jedi_pot_supply_transp(:) / ABS(evapopot(:)) ) ))
+
+      END WHERE
+      
+  
+    END IF 
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE update_water_stress
+! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
+    
+
+
   ! -------------------------------------------------------------------------------------------------------
   !>
   !! Implementation of "aggregate" for task "C_NPP_pot_allocation"
@@ -1102,7 +1212,9 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, MaintRes_yDayMean, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_,  GrowthResp,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_,  AutoRes,                  weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_,  root_maxmoist,        weighted_by_fract)
+    !dsl4jsb_Aggregate_onChunk(CARBON_,  root_maxmoist,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  jedi_root_depth,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_,  jedi_root_depth_sl,        weighted_by_fract)
     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
     
     ! Variavles for JeDi carbon allocation 
@@ -1164,6 +1276,52 @@ CONTAINS
 
   END SUBROUTINE aggregate_C_NPP_pot_allocation
 
+! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
+      !PHS 24.07.2020 Compute water stress in CARBON at PFT level. 
+  
+ ! -------------------------------------------------------------------------------------------------------
+  !>
+  !! Implementation of "aggregate" for task "water_stress"
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  !!
+  SUBROUTINE aggregate_water_stress(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    dsl4jsb_Def_memory(CARBON_)
+    
+    TYPE(t_jsb_model),       POINTER :: model
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_water_stress'
+
+    INTEGER :: iblk, ics, ice
+
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_memory(CARBON_)
+  
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    ! HYDRO_
+    dsl4jsb_Aggregate_onChunk(CARBON_, water_stress,        weighted_by_fract)
+  !?????  dsl4jsb_Aggregate_onChunk(CARBON_, jedi_root_depth,     weighted_by_fract)
+
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE aggregate_water_stress
+! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
+  
 
 !##########################################################################################################################
 ! other subroutines (no further tasks)
