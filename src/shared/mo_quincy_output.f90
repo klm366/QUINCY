@@ -339,13 +339,17 @@ CONTAINS
          WRITE(lun,'(a)') 'Time TotalSoilOrgC TotalSoilOrgN TotalSoilInOrgN EcoC EcoN EcoP EcoN15'
          lun=lun+1
          ! soilpooldC13DC14dN15
-         WRITE(lun,'(3a)') 'Time MetLitterdC13 StrLitterdC13 WodLitterdC13 FastdC13 SlowdC13 MycdC13 MetLitterDC14 StrLitterDC14',& 
+         WRITE(lun,'(4a)') 'Time MetLitterdC13 StrLitterdC13 WodLitterdC13 FastdC13 SlowdC13 MycdC13 MetLitterDC14 StrLitterDC14',& 
                            ' WodLitterDC14 FastDC14 SlowDC14 MycDC14',&
-                           ' MetLitterdN15 StrLitterdN15 WodLitterN15 FastdN15 SlowdN15 MineralAssocNH4_dN15 MineralNH4_dN15 MineralNO3_dN15'
+                           ' MetLitterdN15 StrLitterdN15 WodLitterN15', & 
+                           ' FastdN15 SlowdN15 MineralAssocNH4_dN15 MineralNH4_dN15 MineralNO3_dN15'
          lun=lun+1
          ! veg_diagnostics [???]
-         WRITE(lun,'(2a)') 'Time Height Diameter LAI ind_density La2Sa L2R S2C BCF CN_target dNPP dNup cn_plant allometry_npp', & 
-                           ' growing_season cost_nup cost_bnf unit_transp Ndemand sinklim'
+         WRITE(lun,'(5a)') 'Time Height Diameter LAI ind_density LeafM2RootM', &
+                           ' CN_target allometry_npp', & 
+                           ' growing_season cost_nup', &
+                           ' cost_bnf Ndemand sinklim', &
+                           ' growthReqN_uptMavg growthReqP_uptMavg'
          lun=lun+1
     END SELECT
 
@@ -622,8 +626,7 @@ CONTAINS
                                             l_soil_output             !< write soil       output T/F
     INTEGER                              :: lun                       ! logical unit number
     INTEGER                              :: icanopy                   ! loop over ncanopy
-    REAL(wp)                             :: hlp1                      ! helper variable
-    REAL(wp)                             :: l2r, s2c, bcf             ! helper ratio variables
+    REAL(wp)                             :: leaf_mass_to_root_mass    ! veg_diagnostics output
     REAL(wp)                             :: dC13leaf,dC13fine_root, & ! 
                                             dC13sap_wood,dC13heart_wood,dC13coarse_root, & ! delta C13 in pools 
                                             dC13fruit,dC13labile,dC13reserve,dC13seed_bed
@@ -662,17 +665,15 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: diameter
     dsl4jsb_Real2D_onChunk      :: dens_ind
     dsl4jsb_Real2D_onChunk      :: target_cn_leaf
-    dsl4jsb_Real2D_onChunk      :: unit_npp_talloc_mavg
-    dsl4jsb_Real2D_onChunk      :: unit_uptake_n_talloc_mavg
-    dsl4jsb_Real2D_onChunk      :: growth_cn_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: labile_carbon_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: labile_nitrogen_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: npp_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: cost_n_uptake_root
     dsl4jsb_Real2D_onChunk      :: cost_n_fixation_talloc_mavg
-    dsl4jsb_Real2D_onChunk      :: unit_transpiration_talloc_mavg
     dsl4jsb_Real2D_onChunk      :: demand_uptake_n_tuptake_mavg
     dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps
+    dsl4jsb_Real2D_onChunk      :: growth_req_n_tuptake_mavg
+    dsl4jsb_Real2D_onChunk      :: growth_req_p_tuptake_mavg
     ! VEG_ 3D
     dsl4jsb_Real3D_onChunk      :: fn_et_cl
     dsl4jsb_Real3D_onChunk      :: fn_rub_cl
@@ -775,17 +776,15 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, diameter)
     dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)
     dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_leaf)
-    dsl4jsb_Get_var2D_onChunk(VEG_, unit_npp_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_cn_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, labile_carbon_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, labile_nitrogen_tcnl_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, npp_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_uptake_root)
     dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_fixation_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, unit_transpiration_talloc_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, demand_uptake_n_tuptake_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_n_tuptake_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_p_tuptake_mavg)
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_et_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_rub_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)
@@ -1095,44 +1094,17 @@ CONTAINS
                                SUM(no3_n15_solute(ipoi,:)*soil_depth_sl(ipoi,:)))
               lun=lun+1
               ! veg_diagnostics
-              IF(lctlib%growthform == itree) THEN 
-                 IF (veg_pool%sap_wood%carbon(ipoi) > eps8) THEN
-                    hlp1 = lai(ipoi)/(veg_pool%sap_wood%carbon(ipoi) / height(ipoi) / lctlib%wood_density)
-                 ELSE
-                    hlp1 = 0._wp
-                 ENDIF
-              ELSE
-                 IF (veg_pool%leaf%carbon(ipoi)>eps8) THEN
-                    hlp1 = veg_pool%sap_wood%carbon(ipoi)/veg_pool%leaf%carbon(ipoi)
-                 ELSE
-                    hlp1 = 0._wp
-                 ENDIF
-              ENDIF
               IF (veg_pool%fine_root%carbon(ipoi) > eps8) THEN
-                 l2r = veg_pool%leaf%carbon(ipoi)/veg_pool%fine_root%carbon(ipoi)
+                 leaf_mass_to_root_mass = veg_pool%leaf%carbon(ipoi) / veg_pool%fine_root%carbon(ipoi)
               ELSE
-                 l2r = 0._wp
+                 leaf_mass_to_root_mass = 0._wp
               ENDIF
-              IF (veg_pool%sap_wood%carbon(ipoi)>eps8) THEN
-                 s2c =  veg_pool%coarse_root%carbon(ipoi)/veg_pool%sap_wood%carbon(ipoi)
-              ELSE
-                 s2c = 0._wp
-              ENDIF
-              IF ((veg_pool%leaf%carbon(ipoi)+veg_pool%sap_wood%carbon(ipoi)+veg_pool%heart_wood%carbon(ipoi)+&
-                   veg_pool%fine_root%carbon(ipoi)+veg_pool%coarse_root%carbon(ipoi))>eps8) THEN
-                 bcf =  (veg_pool%fine_root%carbon(ipoi)+veg_pool%coarse_root%carbon(ipoi))/ & 
-                (veg_pool%leaf%carbon(ipoi)+veg_pool%sap_wood%carbon(ipoi)+veg_pool%heart_wood%carbon(ipoi)+&
-                   veg_pool%fine_root%carbon(ipoi)+veg_pool%coarse_root%carbon(ipoi))
-              ELSE
-                 bcf = 0._wp
-              ENDIF
-              write(lun,'(20F20.6)') time_d, height(ipoi), diameter(ipoi), lai(ipoi), dens_ind(ipoi), &
-                hlp1, l2r, s2c, bcf, &
-                target_cn_leaf(ipoi), unit_npp_talloc_mavg(ipoi), unit_uptake_n_talloc_mavg(ipoi),&
-                growth_cn_tcnl_mavg(ipoi), npp_talloc_mavg(ipoi), &
-                growing_season(ipoi), & 
+              write(lun,'(15F24.8)') time_d, &
+                height(ipoi), diameter(ipoi), lai(ipoi), dens_ind(ipoi), leaf_mass_to_root_mass, &
+                target_cn_leaf(ipoi), npp_talloc_mavg(ipoi), growing_season(ipoi), & 
                 cost_n_uptake_root(ipoi), cost_n_fixation_talloc_mavg(ipoi), &
-                unit_transpiration_talloc_mavg(ipoi) * 1.e10_wp, demand_uptake_n_tuptake_mavg(ipoi), beta_sinklim_ps(ipoi)
+                demand_uptake_n_tuptake_mavg(ipoi), beta_sinklim_ps(ipoi), &
+                growth_req_n_tuptake_mavg(ipoi), growth_req_p_tuptake_mavg(ipoi)
               lun=lun+1
            END IF  ! write output T/F (l_land_plant_canopy_out)
     END SELECT  ! select land/plant & canopy
