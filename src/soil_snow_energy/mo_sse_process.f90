@@ -253,7 +253,7 @@ CONTAINS
   !
   SUBROUTINE init_soil_temperature(cmid, tclim, tsoil, tsurf)
 
-    USE mo_jsb_time,       ONLY: t_datetime, get_time_start, get_year, &
+    USE mo_jsb_time,       ONLY: t_datetime, get_time_start, get_year, deallocateDatetime, &
                                  & get_year_length, get_month_length, get_day_length, get_year_day
     USE mo_math_constants, ONLY: pi
 
@@ -288,6 +288,7 @@ CONTAINS
 
     year_len    = REAL(get_year_length(iniyear), wp)
     day_in_year = INT(get_year_day(inidate))
+    CALL deallocateDatetime(inidate)
 
     DO im=1,12
       month_len(im) = REAL(get_month_length(iniyear, im), wp)
