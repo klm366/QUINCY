@@ -189,7 +189,7 @@ CONTAINS
     USE mo_jsb_control,        ONLY:  jsbach_is_restarted
     USE mo_jsb_time,          ONLY: t_datetime,is_newday, is_newyear, timesteps_per_day, &
                                  &  is_time_experiment_start, get_year_at_model_start,     &
-                                 &  get_time_start, get_year
+                                 &  get_time_start, get_year, deallocateDatetime
     USE mo_carbon_constants,  ONLY: molarMassCO2_kg, sec_per_day,max_pipe_transpir
     USE mo_jsb_grid_class,     ONLY:  t_jsb_vgrid !PHS: root_depth
     USE mo_hydro_util,             ONLY: get_water_in_root_zone !PHS: root_depth
@@ -663,6 +663,7 @@ CONTAINS
     
     inidate => get_time_start()
     iniyear = get_year(inidate)
+    CALL deallocateDatetime(inidate)
     lrestart= jsbach_is_restarted()      
     
     IF (get_year(options%current_datetime) .LE. iniyear + 2 ) THEN    !  PHS: initial carbon
