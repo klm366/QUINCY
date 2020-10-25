@@ -2476,7 +2476,7 @@ CONTAINS
 
         ! Note: Aggregate only those vars that are changed here and that are
         !       also aggregated in the processes themselfes!
-        IF (dsl4jsb_Config(CARBON_)%active == .TRUE.) THEN
+        IF (dsl4jsb_Config(CARBON_)%active) THEN
           dsl4jsb_Get_memory(CARBON_)
           dsl4jsb_Aggregate_onChunk(CARBON_,  c_green,           weighted_by_fract)
           dsl4jsb_Aggregate_onChunk(CARBON_,  c_reserve,         weighted_by_fract)
@@ -2585,7 +2585,7 @@ CONTAINS
         END IF ! CARBON is active
 
 
-        IF (dsl4jsb_Config(ASSIMI_)%active == .TRUE.) THEN
+        IF (dsl4jsb_Config(ASSIMI_)%active) THEN
           dsl4jsb_Get_memory(ASSIMI_)
           dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation_ca,    weighted_by_fract)
           dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation,       weighted_by_fract)
@@ -2606,7 +2606,7 @@ CONTAINS
         END IF ! ASSIMI is active
 
 
-        IF (dsl4jsb_Config(DISTURB_)%active == .TRUE.) THEN
+        IF (dsl4jsb_Config(DISTURB_)%active) THEN
             dsl4jsb_Get_memory(DISTURB_)
             !dsl4jsb_Aggregate_onChunk(DISTURB_, cconservation_fire,  weighted_by_fract)
             !dsl4jsb_Aggregate_onChunk(DISTURB_, cconservation_wind,  weighted_by_fract)
@@ -2615,7 +2615,7 @@ CONTAINS
         END IF ! DISTURB is active
 
 
-        IF (dsl4jsb_Config(PHENO_)%active == .TRUE.) THEN
+        IF (dsl4jsb_Config(PHENO_)%active) THEN
             dsl4jsb_Get_memory(PHENO_)
             !dsl4jsb_Aggregate_onChunk(PHENO_, fract_fpc,    weighted_by_fract)
             !dsl4jsb_Aggregate_onChunk(PHENO_, previous_day_NPP_pot_rate_ca,    weighted_by_fract)
@@ -2624,7 +2624,7 @@ CONTAINS
         END IF ! PHENO is active
 
 
-        IF (dsl4jsb_Config(RAD_)%active == .TRUE.) THEN
+        IF (dsl4jsb_Config(RAD_)%active) THEN
           dsl4jsb_Get_memory(RAD_)
           !dsl4jsb_Aggregate_onChunk(RAD_, sw_srf_net,     weighted_by_fract)
           !dsl4jsb_Aggregate_onChunk(RAD_, swvis_srf_net,  weighted_by_fract)

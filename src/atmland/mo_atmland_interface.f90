@@ -1284,4 +1284,3 @@ CONTAINS
   END SUBROUTINE update_land2atm
 
 #endif
-END MODULE mo_atmland_interface
