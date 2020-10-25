@@ -686,6 +686,13 @@ CONTAINS
       END IF
   
       IF (lwrite_checkpoint) THEN
+        
+        ! For multifile restart (restart_write_mode = "joint procs multifile")
+        ! the domain flag must be set to .TRUE. in order to activate the domain,
+        ! even though we have one currently in the ocean. Without this the
+        ! processes won't write out their data into a the patch restart files.
+        p_patch(1)%ldom_active = .TRUE.
+        !
         CALL restartDescriptor%updatePatch(p_patch(1), opt_ndom=1)
   
         ! finally write restart file
