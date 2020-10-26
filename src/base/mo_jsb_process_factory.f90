@@ -31,7 +31,7 @@ MODULE mo_jsb_process_factory
   USE mo_disturb_memory_class, ONLY: t_disturb_memory
   USE mo_fuel_memory_class,    ONLY: t_fuel_memory
   USE mo_veg_memory_class,     ONLY: t_veg_memory
-  USE mo_dynveg_memory_class,  ONLY: t_dynveg_memory
+  USE mo_alcc_memory_class,    ONLY: t_alcc_memory
 #ifndef __NO_JSBACH_HD__
   USE mo_hd_memory_class,      ONLY: t_hd_memory
 #endif
@@ -61,11 +61,11 @@ MODULE mo_jsb_process_factory
   USE mo_fuel_config_class,     ONLY: t_fuel_config
   USE mo_veg_interface,         ONLY: Register_veg_tasks
   USE mo_veg_config_class,      ONLY: t_veg_config
-  USE mo_dynveg_interface,      ONLY: Register_dynveg_tasks
-  USE mo_dynveg_config_class,   ONLY: t_dynveg_config
+  USE mo_alcc_interface,        ONLY: Register_alcc_tasks
+  USE mo_alcc_config_class,     ONLY: t_alcc_config
 
   USE mo_jsb_process_class, ONLY: &
-    & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, DYNVEG_, VEG_
+    & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, ALCC_, VEG_
 
   IMPLICIT NONE
   PRIVATE
@@ -131,9 +131,9 @@ CONTAINS
     CASE (VEG_)
       CALL Register_veg_tasks(return_ptr, model_id)
       ALLOCATE(t_veg_config::return_ptr%config)
-    CASE (DYNVEG_)
-      CALL Register_dynveg_tasks(return_ptr, model_id)
-      ALLOCATE(t_dynveg_config::return_ptr%config)
+    CASE (ALCC_)
+      CALL Register_alcc_tasks(return_ptr, model_id)
+      ALLOCATE(t_alcc_config::return_ptr%config)
     CASE DEFAULT
       return_ptr => NULL()
     END SELECT
@@ -159,7 +159,7 @@ CONTAINS
     USE mo_disturb_memory_class, ONLY: max_no_of_disturb_vars => max_no_of_vars
     USE mo_fuel_memory_class,    ONLY: max_no_of_fuel_vars => max_no_of_vars
     USE mo_veg_memory_class,     ONLY: max_no_of_veg_vars => max_no_of_vars
-    USE mo_dynveg_memory_class,  ONLY: max_no_of_dynveg_vars => max_no_of_vars
+    USE mo_alcc_memory_class,    ONLY: max_no_of_alcc_vars => max_no_of_vars
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_memory_class,      ONLY: max_no_of_hd_vars => max_no_of_vars
 #endif
@@ -212,9 +212,9 @@ CONTAINS
     CASE (VEG_)
       ALLOCATE(t_veg_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_veg_vars
-    CASE (DYNVEG_)
-      ALLOCATE(t_dynveg_memory::return_ptr)
-      return_ptr%max_no_of_vars = max_no_of_dynveg_vars
+    CASE (ALCC_)
+      ALLOCATE(t_alcc_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_alcc_vars
     END SELECT
 
     !$acc enter data create(return_ptr)

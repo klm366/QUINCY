@@ -1,5 +1,5 @@
 !>
-!! @brief Contains the memory class for dynveglogy.
+!! @brief Contains the memory class for anthropogenic land cover change (ALCC).
 !!
 !! @author
 !!  Rainer Schneck, MPI-M Hamburg
@@ -8,7 +8,7 @@
 !! First version by Rainer Schneck (2018-12-03)
 
 
-MODULE mo_dynveg_memory_class
+MODULE mo_alcc_memory_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind, ONLY: wp
@@ -23,36 +23,36 @@ MODULE mo_dynveg_memory_class
   !USE mo_jsb_physical_constants, ONLY: tmelt
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes DYNVEG_
+  dsl4jsb_Use_processes ALCC_
 
   ! Use process configurations
-  dsl4jsb_Use_config(DYNVEG_)
+  dsl4jsb_Use_config(ALCC_)
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_dynveg_memory, max_no_of_vars
+  PUBLIC :: t_alcc_memory, max_no_of_vars
 
   INTEGER, PARAMETER :: max_no_of_vars = 40
 
-  TYPE, EXTENDS(t_jsb_memory) :: t_dynveg_memory
+  TYPE, EXTENDS(t_jsb_memory) :: t_alcc_memory
 
     TYPE(t_jsb_var_real2d) :: C_pools_sum_check
     TYPE(t_jsb_var_real3d)           :: &
       & fract_pfts_currentyear_maps,    &   !< cover fractions for the pfts. These fractions are read in yearly from a map file. [-]
-      & fract_pfts_before_dynvegstep        !< cover fractions for the pfts. These fractions are those before dynveg changed them within
+      & fract_pfts_before_alccstep          !< cover fractions for the pfts. These fractions are those before alcc changed them within
                                             !< this timestep. [-]
 
   CONTAINS
-    PROCEDURE :: Init => Init_dynveg_memory
-  END TYPE t_dynveg_memory
+    PROCEDURE :: Init => Init_alcc_memory
+  END TYPE t_alcc_memory
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_dynveg_memory_class'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_alcc_memory_class'
 
 CONTAINS
 
 
-  SUBROUTINE Init_dynveg_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_alcc_memory(mem, prefix, suffix, lct_ids, model_id)
 
     ! Declarations
     USE mo_jsb_varlist,        ONLY: jsb_add_var
@@ -62,21 +62,21 @@ CONTAINS
     !USE mo_jsb_model_usecases, ONLY: npft ! R: Note, this leads to circular dependency
 
     ! Arguments
-    CLASS(t_dynveg_memory), INTENT(inout), TARGET :: mem
+    CLASS(t_alcc_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),      INTENT(in)             :: prefix
     CHARACTER(len=*),      INTENT(in)             :: suffix
     INTEGER,               INTENT(in)             :: lct_ids(:)
     INTEGER,               INTENT(in)             :: model_id
 
     ! Local variables
-    dsl4jsb_Def_config(DYNVEG_)
+    dsl4jsb_Def_config(ALCC_)
 
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER  :: surface, pft_vgrid           ! Vertical grid
     INTEGER                     :: table, npft
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_dynveg_memory'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_alcc_memory'
 
     ! ---------------------------
     ! Go
@@ -90,11 +90,11 @@ CONTAINS
     surface => Get_vgrid('surface')
     pft_vgrid    => Get_vgrid('pfts')
 
-!    dsl4jsb_Get_config(DYNVEG_)
+!    dsl4jsb_Get_config(ALCC_)
 
     CALL jsb_add_var( mem, 'C_pools_sum_check', mem%C_pools_sum_check,       &
       & hgrid, surface,                                                      &
-      & t_cf('C_pools_sum_check in dynveg', '[-]', ''),                      &
+      & t_cf('C_pools_sum_check in alcc', '[-]', ''),                        &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level=BASIC,                                                  &
@@ -108,7 +108,7 @@ CONTAINS
       & output_level=BASIC,                                                                          &
       & loutput=.TRUE., lrestart=.FALSE., initval_r=-0.1_wp)
       
-    CALL jsb_add_var( mem, 'fract_pfts_before_dynvegstep', mem%fract_pfts_before_dynvegstep,            &
+    CALL jsb_add_var( mem, 'fract_pfts_before_alccstep', mem%fract_pfts_before_alccstep,                &
       & hgrid, pft_vgrid,                                                                               &
       & t_cf('Former cover fractions for the pfts, before read in yearly from a map file.', '[-]', ''), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
@@ -116,8 +116,8 @@ CONTAINS
       & output_level=BASIC,                                                                             &
       & loutput=.TRUE., lrestart=.FALSE., initval_r=-0.1_wp)
       
-  END SUBROUTINE Init_dynveg_memory
+  END SUBROUTINE Init_alcc_memory
 
 
 #endif
-END MODULE mo_dynveg_memory_class
+END MODULE mo_alcc_memory_class

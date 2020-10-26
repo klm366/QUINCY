@@ -1,5 +1,5 @@
 !>
-!! @brief Contains constants for the dynveg processes
+!! @brief Contains constants for the alcc processes
 !!
 !! @author
 !!  Rainer Schneck, MPI-M Hamburg
@@ -7,7 +7,7 @@
 !! @par Revision History
 !! First version by Rainer Schneck (2019-01-08)
 !!
-MODULE mo_dynveg_constants
+MODULE mo_alcc_constants
 #ifndef __NO_JSBACH__
 
   USE mo_kind, ONLY: wp
@@ -18,4 +18,4 @@ MODULE mo_dynveg_constants
 
 
 #endif
-END MODULE mo_dynveg_constants
+END MODULE mo_alcc_constants

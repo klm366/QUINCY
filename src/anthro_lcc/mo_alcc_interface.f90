@@ -1,5 +1,5 @@
 !>
-!! @brief Contains the interfaces to the dynveg process
+!! @brief Contains the interfaces to the alcc process
 !!
 !! @author
 !!  Rainer Schneck, MPI-M Hamburg
@@ -7,7 +7,7 @@
 !! @par Revision History
 !! First version by Rainer Schneck (2018-12-20)
 !!
-MODULE mo_dynveg_interface
+MODULE mo_alcc_interface
 #ifndef __NO_JSBACH__
 
   ! -------------------------------------------------------------------------------------------------------
@@ -28,10 +28,10 @@ MODULE mo_dynveg_interface
 
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes  DYNVEG_, CARBON_, PHENO_, ASSIMI_, DISTURB_, RAD_, TURB_
+  dsl4jsb_Use_processes  ALCC_, CARBON_, PHENO_, ASSIMI_, DISTURB_, RAD_, TURB_
 
   ! Use of process configurations
-  dsl4jsb_Use_config(DYNVEG_)
+  dsl4jsb_Use_config(ALCC_)
   dsl4jsb_Use_config(CARBON_)
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(ASSIMI_)
@@ -40,7 +40,7 @@ MODULE mo_dynveg_interface
   dsl4jsb_Use_config(TURB_)
 
   ! Use of process memories
-  dsl4jsb_Use_memory(DYNVEG_)
+  dsl4jsb_Use_memory(ALCC_)
   dsl4jsb_Use_memory(CARBON_)
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(ASSIMI_)
@@ -53,21 +53,21 @@ MODULE mo_dynveg_interface
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: Register_dynveg_tasks
+  PUBLIC :: Register_alcc_tasks
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_dynveg_interface'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_alcc_interface'
 
-  !> Type definition for update_dynveg task
-  TYPE, EXTENDS(t_jsb_process_task) ::   tsk_dynveg
+  !> Type definition for update_alcc task
+  TYPE, EXTENDS(t_jsb_process_task) ::   tsk_alcc
   CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_dynveg    !< Advances task computation for one timestep
-    PROCEDURE, NOPASS :: Aggregate => aggregate_dynveg !< Aggregates computed task variables
-  END TYPE   tsk_dynveg
+    PROCEDURE, NOPASS :: Integrate => update_alcc    !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Aggregate => aggregate_alcc !< Aggregates computed task variables
+  END TYPE   tsk_alcc
 
-  !> Constructor interface for update_dynveg task
-  INTERFACE   tsk_dynveg
-    PROCEDURE Create_task_dynveg         !< Constructor function for task
-  END INTERFACE   tsk_dynveg
+  !> Constructor interface for update_alcc task
+  INTERFACE tsk_alcc
+    PROCEDURE Create_task_alcc         !< Constructor function for task
+  END INTERFACE tsk_alcc
 
   LOGICAL, SAVE :: read_maps = .FALSE.
   ! LOGICAL, SAVE :: l_newyear = .FALSE.
@@ -76,101 +76,101 @@ CONTAINS
   ! ================================================================================================================================
   !! Constructors for tasks
 
-  !> Constructor for update_dynveg task
+  !> Constructor for update_alcc task
   !!
   !! @param[in]     model_id     Model id
-  !! @return        return_ptr   Instance of process task "update_dynveg"
+  !! @return        return_ptr   Instance of process task "update_alcc"
   !!
-  FUNCTION Create_task_dynveg(model_id) RESULT(return_ptr)
+  FUNCTION Create_task_alcc(model_id) RESULT(return_ptr)
 
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
-    ALLOCATE(tsk_dynveg::return_ptr)
-    CALL return_ptr%Construct(name='dynveg', process_id=DYNVEG_, owner_model_id=model_id)
+    ALLOCATE(tsk_alcc::return_ptr)
+    CALL return_ptr%Construct(name='alcc', process_id=ALCC_, owner_model_id=model_id)
 
-  END FUNCTION Create_task_dynveg
+  END FUNCTION Create_task_alcc
 
 
 
   ! =======================================================================================================
-  !> Register tasks for dynveg process
+  !> Register tasks for alcc process
   !!
-  !! @param[in,out] this      Instance of dynveg process class
+  !! @param[in,out] this      Instance of alcc process class
   !! @param[in]     model_id  Model id
   !!
-  SUBROUTINE Register_dynveg_tasks(this, model_id)
+  SUBROUTINE Register_alcc_tasks(this, model_id)
 
     CLASS(t_jsb_process), INTENT(inout) :: this
     INTEGER,                 INTENT(in) :: model_id
 
-    CALL this%Register_task(tsk_dynveg(model_id))
-  END SUBROUTINE Register_dynveg_tasks
+    CALL this%Register_task(tsk_alcc(model_id))
+  END SUBROUTINE Register_alcc_tasks
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation to update the dynveg state
-  !! Task "dynveg" calculates the dynveg state of plants.
+  !! @brief Implementation to update the alcc state
+  !! Task "alcc" calculates the alcc state of plants.
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
   !
-  SUBROUTINE update_dynveg(tile, options)
+  SUBROUTINE update_alcc(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     TYPE(t_jsb_model), POINTER             :: model
-    dsl4jsb_Def_config(DYNVEG_)
+    dsl4jsb_Def_config(ALCC_)
 
     ! Local variables
     INTEGER                     :: iblk
-    CHARACTER(len=*), PARAMETER :: routine = modname//':update_dynveg'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_alcc'
 
     ! Set local variables from options argument
     iblk    = options%iblk
 
-    IF (.NOT. tile%Is_process_active(DYNVEG_)) RETURN
+    IF (.NOT. tile%Is_process_active(ALCC_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     IF (.NOT. tile%is_vegetation) THEN
-       CALL finish(TRIM(routine), 'Error: JSBACH4 tries to calculate dynveg not on the veg tile!')
+       CALL finish(TRIM(routine), 'Error: JSBACH4 tries to calculate alcc not on the veg tile!')
     END IF
 
     model => Get_model(tile%owner_model_id)
-    dsl4jsb_Get_config(DYNVEG_)
+    dsl4jsb_Get_config(ALCC_)
 
-    SELECT CASE (TRIM(dsl4jsb_Config(DYNVEG_)%scheme))
+    SELECT CASE (TRIM(dsl4jsb_Config(ALCC_)%scheme))
       CASE ('maps')
-        CALL dynveg_based_on_maps(tile, options)
+        CALL alcc_based_on_maps(tile, options)
 !       CASE ('carbon')
 !         CALL finish('Scheme carbon/jedi not ready yet')
-!         CALL dynveg_based_on_carbon(tile, options)
+!         CALL alcc_based_on_carbon(tile, options)
 !       CASE ('jsbach3')
 !         CALL finish('Scheme jsbach3 not ready yet')
-!         CALL dynveg_based_on_jsbach3(tile, options)
+!         CALL alcc_based_on_jsbach3(tile, options)
       CASE DEFAULT
-        CALL finish('Invalid scheme for dynveg')
+        CALL finish('Invalid scheme for alcc')
     END SELECT
 
-  END SUBROUTINE update_dynveg
+  END SUBROUTINE update_alcc
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of 'MAPS' dynveg scheme
+  !! @brief Implementation of 'MAPS' alcc scheme
   !!
   !! @param[in,out] tile    Tile for which routine is executed (only for veg-tile)
   !! @param[in]     options Additional run-time parameters.
   !!
   !
-  SUBROUTINE dynveg_based_on_maps(tile, options)
+  SUBROUTINE alcc_based_on_maps(tile, options)
 
     ! Declarations
     USE mo_jsb_time,           ONLY: is_time_experiment_start, is_newyear, &
       &                              t_datetime, deallocateDatetime, get_time_next
     USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
-    USE mo_dynveg_process,     ONLY: relocate_vars_to_new_pft_fractions
+    USE mo_alcc_process,     ONLY: relocate_vars_to_new_pft_fractions
     USE mo_jsb_grid_class,     ONLY: t_jsb_grid
     USE mo_jsb_grid,           ONLY: Get_grid
     !USE mo_jsb_memory_class,   ONLY: t_jsb_memory
@@ -181,8 +181,8 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)            :: options
 
     ! Declare pointers for process configuration and memory
-    dsl4jsb_Def_config(DYNVEG_)
-    dsl4jsb_Def_memory(DYNVEG_)
+    dsl4jsb_Def_config(ALCC_)
+    dsl4jsb_Def_memory(ALCC_)
     dsl4jsb_Def_config(CARBON_)
     dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_config(PHENO_)
@@ -205,7 +205,7 @@ CONTAINS
     INTEGER                     :: npft, ipft, iarea, i, j, k, ncanopy, icanopy
     TYPE(t_input_file)          :: input_file
     CHARACTER(len=70)           :: filename_maps, varname_within_file
-    CHARACTER(len=*), PARAMETER :: routine = modname//':dynveg_based_on_maps'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':alcc_based_on_maps'
     CHARACTER(len=70)           :: ipftstring
 
     REAL(wp), ALLOCATABLE, DIMENSION(:,:,:) :: &
@@ -219,7 +219,7 @@ CONTAINS
     REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: &
       & fract_lost_sum
 
-    dsl4jsb_Real3D_onDomain :: fract_pfts_before_dynvegstep
+    dsl4jsb_Real3D_onDomain :: fract_pfts_before_alccstep
     dsl4jsb_Real3D_onDomain :: fract_pfts_currentyear_maps
     dsl4jsb_Real2D_onDomain :: C_pools_sum_check
 
@@ -588,7 +588,7 @@ CONTAINS
                           !       used by the subroutine calc_radiation_surface_net to calculate sw_srf_net.
                           !       Thus rescaling the value of sw_srf_net guarantees the same absolute amount on
                           !       the grid box, but does not keep it consistent with/adapts it to the altered
-                          !       surface properties (like albedo)! As we do dynveg directly before the radiation
+                          !       surface properties (like albedo)! As we do alcc directly before the radiation
                           !       time step of the atmos. we want to keep it konsistent with the surface properties!
       !& swvis_srf_net, &
       !& swnir_srf_net, &
@@ -630,8 +630,8 @@ CONTAINS
     nproma = hgrid%nproma
     nblks  = hgrid%nblks
 
-    dsl4jsb_Get_config(DYNVEG_)
-    dsl4jsb_Get_memory(DYNVEG_)
+    dsl4jsb_Get_config(ALCC_)
+    dsl4jsb_Get_memory(ALCC_)
     dsl4jsb_Get_config(CARBON_)
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_config(ASSIMI_)
@@ -639,8 +639,8 @@ CONTAINS
     dsl4jsb_Get_config(RAD_)
     dsl4jsb_Get_config(TURB_)
 
-    dsl4jsb_Get_var3D_onDomain(DYNVEG_, fract_pfts_before_dynvegstep)
-    dsl4jsb_Get_var3D_onDomain(DYNVEG_, fract_pfts_currentyear_maps)
+    dsl4jsb_Get_var3D_onDomain(ALCC_, fract_pfts_before_alccstep)
+    dsl4jsb_Get_var3D_onDomain(ALCC_, fract_pfts_currentyear_maps)
 
     npft    = tile%Get_no_of_children() ! R: Note, we yet have only 11 pfts in the maps input files.
     ncanopy = dsl4jsb_Config(ASSIMI_)%ncanopy
@@ -651,7 +651,7 @@ CONTAINS
 
 
     ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(DYNVEG_)) RETURN
+    IF (.NOT. tile%Is_process_active(ALCC_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
@@ -974,7 +974,7 @@ CONTAINS
         END IF
 
         ! Get old PFT fractions for this PFT
-        CALL ptr_tile%Get_fraction(fract=fract_pfts_before_dynvegstep(:,ipft,:))
+        CALL ptr_tile%Get_fraction(fract=fract_pfts_before_alccstep(:,ipft,:))
 
         ! Read this years pft-fraction from map file
         write(ipftstring , *) ipft
@@ -1011,14 +1011,14 @@ CONTAINS
       ! Recalculate those variables that differ between pfts
 
       ! Calculate needed delta fractions
-      d_fract_pfts(:,:,:)        = fract_pfts_currentyear_maps(:,:,:) - fract_pfts_before_dynvegstep(:,:,:)
+      d_fract_pfts(:,:,:)        = fract_pfts_currentyear_maps(:,:,:) - fract_pfts_before_alccstep(:,:,:)
       d_fract_grow_pfts(:,:,:)   = MAX(0.0_wp, d_fract_pfts(:,:,:))             ! select deltas of pfts which grow (for each gridcell)
       d_fract_shrink_pfts(:,:,:) = MAX(0.0_wp, d_fract_pfts(:,:,:) * (-1._wp))  ! same for the shinking pfts
                                                                                 ! MIN(0.0_wp, d_fract_pfts(:,:)) would be negative!
       ! Calculate often used fraction factors
-      fract_new_grow_pfts(:,:,:)    = fract_pfts_before_dynvegstep(:,:,:) + d_fract_grow_pfts(:,:,:)
+      fract_new_grow_pfts(:,:,:)    = fract_pfts_before_alccstep(:,:,:) + d_fract_grow_pfts(:,:,:)
       fract_lost_sum(:,:)           = SUM(d_fract_shrink_pfts(:,:,:),DIM=2)
-      f_old_to_new_grow_pfts(:,:,:) = fract_pfts_before_dynvegstep(:,:,:) / fract_new_grow_pfts(:,:,:)
+      f_old_to_new_grow_pfts(:,:,:) = fract_pfts_before_alccstep(:,:,:) / fract_new_grow_pfts(:,:,:)
       f_d_to_new_grow_pfts(:,:,:)   = d_fract_grow_pfts(:,:,:)            / fract_new_grow_pfts(:,:,:)
 
 
@@ -1040,7 +1040,7 @@ CONTAINS
 
         IF (debug_on()) CALL message(TRIM(routine), '...starting to recalculate carbon variables according to '//TRIM(filename_maps)//' ...')
 
-        dsl4jsb_Get_var2D_onDomain(DYNVEG_, C_pools_sum_check)
+        dsl4jsb_Get_var2D_onDomain(ALCC_, C_pools_sum_check)
 
         DO iarea=1,2 ! because we want to do the same for _ca and _ta variables!!!
           ! Collect pfts of the variables
@@ -1348,7 +1348,7 @@ CONTAINS
 
           ! Only for carbon conservation check
           C_pools_sum_before(:,:) =                                                             &
-            & SUM( fract_pfts_before_dynvegstep * (                                             &
+            & SUM( fract_pfts_before_alccstep * (                                             &
             & c_green_pfts    + c_woods_pfts     + c_reserve_pfts     + c_crop_harvest_pfts   + &
             & c_acid_ag1_pfts + c_water_ag1_pfts + c_ethanol_ag1_pfts + c_nonsoluble_ag1_pfts + &
             & c_acid_ag2_pfts + c_water_ag2_pfts + c_ethanol_ag2_pfts + c_nonsoluble_ag2_pfts + &
@@ -1463,14 +1463,14 @@ CONTAINS
           ! DO i=1,nproma
           !   DO j=1,nblks
           !       !IF ( ABS(C_pools_sum_check(i,j))  > EPSILON(1._wp) ) THEN
-          !       !  write(*,*) 'C_pools_sum_check of dynveg maps > or < EPSILON(1._wp):' , C_pools_sum_check(i,j)
+          !       !  write(*,*) 'C_pools_sum_check of alcc maps > or < EPSILON(1._wp):' , C_pools_sum_check(i,j)
           !       !END IF
-          !       IF ( ABS(dynveg__mem%C_pools_sum_check%ptr(i,j))  > 2*EPSILON(1._wp) ) THEN
-          !         write(*,*) 'C_pools_sum_check of dynveg maps > or < EPSILON(1._wp):' , dynveg__mem%C_pools_sum_check%ptr(i,j)
+          !       IF ( ABS(alcc__mem%C_pools_sum_check%ptr(i,j))  > 2*EPSILON(1._wp) ) THEN
+          !         write(*,*) 'C_pools_sum_check of alcc maps > or < EPSILON(1._wp):' , alcc__mem%C_pools_sum_check%ptr(i,j)
           !       END IF
           !   END DO ! j
           ! END DO ! i
-          ! IF (debug_on()) CALL message(TRIM(routine), '...C_pools_sum_check of dynveg maps corresponding to '//TRIM(filename_maps)//'finished...')
+          ! IF (debug_on()) CALL message(TRIM(routine), '...C_pools_sum_check of alcc maps corresponding to '//TRIM(filename_maps)//'finished...')
 
 
           ! Hand down the results to child tiles
@@ -2320,7 +2320,7 @@ CONTAINS
 
 
       ! Remember the current pft-fractions for the next year
-      fract_pfts_before_dynvegstep(:,:,:) = fract_pfts_currentyear_maps(:,:,:)
+      fract_pfts_before_alccstep(:,:,:) = fract_pfts_currentyear_maps(:,:,:)
 
 
       ! Deallocate variables
@@ -2398,20 +2398,20 @@ CONTAINS
 
     CALL deallocateDatetime(next_datetime)
 
-    IF (read_maps) CALL aggregate_dynveg(tile, options)
+    IF (read_maps) CALL aggregate_alcc(tile, options)
 
-  END SUBROUTINE dynveg_based_on_maps
+  END SUBROUTINE alcc_based_on_maps
 
 
 
   ! -------------------------------------------------------------------------------------------------------
   !>
-  !! Implementation of "aggregate" for task "dynveg"
+  !! Implementation of "aggregate" for task "alcc"
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
   !!
-   SUBROUTINE aggregate_dynveg(tile, options)
+   SUBROUTINE aggregate_alcc(tile, options)
 
     !  USE mo_jsb_time,             ONLY: is_newyear
 
@@ -2421,8 +2421,8 @@ CONTAINS
      TYPE(t_jsb_model), POINTER                :: model
     !  CLASS(t_jsb_tile_abstract),  POINTER      :: ptr_tile
 
-     dsl4jsb_Def_config(DYNVEG_)
-     dsl4jsb_Def_memory(DYNVEG_)
+     dsl4jsb_Def_config(ALCC_)
+     dsl4jsb_Def_memory(ALCC_)
      dsl4jsb_Def_config(CARBON_)
      dsl4jsb_Def_memory(CARBON_)
      dsl4jsb_Def_config(PHENO_)
@@ -2438,7 +2438,7 @@ CONTAINS
 
      CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
-     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_dynveg'
+     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_alcc'
 
      ! Local variables
      INTEGER  :: iblk, ics, ice
@@ -2452,7 +2452,7 @@ CONTAINS
 
      model => Get_model(tile%owner_model_id)
 
-     !dsl4jsb_Get_config(DYNVEG_)
+     !dsl4jsb_Get_config(ALCC_)
      dsl4jsb_Get_config(CARBON_)
      dsl4jsb_Get_config(PHENO_)
      dsl4jsb_Get_config(ASSIMI_)
@@ -2468,10 +2468,10 @@ CONTAINS
       IF (read_maps) THEN
 
         IF (TRIM(tile%name) /= "veg") THEN
-          dsl4jsb_Get_memory(DYNVEG_)
-          dsl4jsb_Aggregate_onChunk(DYNVEG_, C_pools_sum_check, weighted_by_fract)
-          dsl4jsb_Aggregate_onChunk(DYNVEG_, fract_pfts_before_dynvegstep, weighted_by_fract)
-          dsl4jsb_Aggregate_onChunk(DYNVEG_, fract_pfts_currentyear_maps, weighted_by_fract)
+          dsl4jsb_Get_memory(ALCC_)
+          dsl4jsb_Aggregate_onChunk(ALCC_, C_pools_sum_check, weighted_by_fract)
+          dsl4jsb_Aggregate_onChunk(ALCC_, fract_pfts_before_alccstep, weighted_by_fract)
+          dsl4jsb_Aggregate_onChunk(ALCC_, fract_pfts_currentyear_maps, weighted_by_fract)
         END IF
 
         ! Note: Aggregate only those vars that are changed here and that are
@@ -2673,8 +2673,8 @@ CONTAINS
 
      IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
-   END SUBROUTINE aggregate_dynveg
+   END SUBROUTINE aggregate_alcc
 
 
 #endif
-END MODULE mo_dynveg_interface
+END MODULE mo_alcc_interface
