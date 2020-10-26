@@ -1,5 +1,5 @@
 !>
-!! @brief Contains the routines for the dynveg processes
+!! @brief Contains the routines for the alcc processes
 !!
 !! @author
 !!  Rainer Schneck, MPI-M Hamburg
@@ -7,7 +7,7 @@
 !! @par Revision History
 !! First version by Rainer Schneck (2019-01-08)
 !!
-MODULE mo_dynveg_process
+MODULE mo_alcc_process
 #ifndef __NO_JSBACH__
 
    USE mo_kind,      ONLY: wp
@@ -17,12 +17,12 @@ MODULE mo_dynveg_process
 
    PUBLIC :: relocate_vars_to_new_pft_fractions
 
-   CHARACTER(len=*), PARAMETER :: modname = 'mo_dynveg_process'
+   CHARACTER(len=*), PARAMETER :: modname = 'mo_alcc_process'
 
  CONTAINS
 
 
-  ! Calculations to relocate carbon to new pft fractions from dynveg
+  ! Calculations to relocate carbon to new pft fractions from alcc
   ! R: Note, this must be done for all vars that differ between pfts!
   !    We could also call it for each variable separately instead of naming each variable.
   !    We could also split this Subroutine for each process separately.
@@ -687,4 +687,4 @@ MODULE mo_dynveg_process
   END SUBROUTINE
 
 #endif
-END MODULE mo_dynveg_process
+END MODULE mo_alcc_process
