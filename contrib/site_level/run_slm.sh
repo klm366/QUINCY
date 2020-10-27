@@ -311,6 +311,14 @@ if [ "$fluxnetTransSimLand" == "T" ]; then
   elif [ "$forcingDataSet" == "mocabors" ]; then
     yearForcStart=$(grep "$forcingSiteFileID" "/Net/Groups/BGI/data/Model/SLM1/input/point/MOCABORS/mocab_all_sites_1991-2012_list.dat" | awk '{print $5}')
     yearForcLast=$(grep "$forcingSiteFileID" "/Net/Groups/BGI/data/Model/SLM1/input/point/MOCABORS/mocab_all_sites_1991-2012_list.dat" | awk '{print $6}')
+  elif [ "$forcingDataSet" == "confin" ]; then
+    yearForcStart=$(grep "$forcingSiteFileID" "/Net/Groups/BGI/data/Model/SLM1/input/point/CONFIN/confin_sites_1997-2014_list.dat" | awk '{print $5}')
+    yearForcLast=$(grep "$forcingSiteFileID" "/Net/Groups/BGI/data/Model/SLM1/input/point/CONFIN/confin_sites_1997-2014_list.dat" | awk '{print $6}')
+  else
+    echo " Trying to run a transient simulation with the fluxnet-type site-set: ""$forcingDataSet"", but yearForcStart and yearForcLast are not defined."
+    echo " The site-set may need to be added to the section >fluxnet transient simulation< in the run_slm.sh -> ask Jan or Sönke."
+    echo " EXIT!"
+    exit 1
   fi
   # test if transient simulation starts before or at the year static forcing starts
   if [ "$transient_simulation_start_year" -gt "$yearForcStart" ]; then
@@ -348,6 +356,11 @@ if [ "$fluxnetTransSimSoil" == "T" ]; then
   elif [ "$forcingDataSet" == "mocabors" ]; then
     yearForcStart=$(grep "$forcingSiteFileID" "/Net/Groups/BGI/data/Model/SLM1/input/point/MOCABORS/mocab_all_sites_1991-2012_list.dat" | awk '{print $5}')
     yearForcLast=$(grep "$forcingSiteFileID" "/Net/Groups/BGI/data/Model/SLM1/input/point/MOCABORS/mocab_all_sites_1991-2012_list.dat" | awk '{print $6}')
+  else
+    echo " Trying to run a transient Soil Model simulation with the fluxnet-type site-set: ""$forcingDataSet"", but yearForcStart and yearForcLast are not defined."
+    echo " The site-set may need to be added to the section >transient simulation with QUINCY soil model< in the run_slm.sh -> ask Jan or Sönke."
+    echo " EXIT!"
+    exit 1
   fi
   # length of transient simulation - one full forcing period
   # for this soil-model simulation the years, like 1901, do not matter, its just a "transient simulation" after spinup
