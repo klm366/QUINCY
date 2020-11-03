@@ -63,7 +63,7 @@ yearsSoilForcing=1            # number of years of forcing to be generated and s
 
 customSiteList="F"
 singleSiteName=""
-specialFluxnetOutput="F"
+fluxnetTypeTransientTimestepOutput="F"
 compareSimCRUNCEPvsGFDB="F"
 paramSensitivitySim="F"
 

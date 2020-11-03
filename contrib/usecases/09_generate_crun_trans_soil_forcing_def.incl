@@ -58,7 +58,7 @@ customSiteListFileName=""
 singleSiteName=""
 paramSensitivitySim="F"
 
-specialFluxnetOutput="F"
+fluxnetTypeTransientTimestepOutput="F"
 compareSimCRUNCEPvsGFDB="F"
 
 ##>> namelist options - almost identical with u82 <<###############################################

@@ -21,7 +21,7 @@
 ##  calculating both mean and sd values and saving them in two individual files 
 ## These files will be used to visualize the timestep output data of the last complete forcing period from all fluxnet sites
 
-## Option in prep_run_slm.sh: specialFluxnetOutput="T"
+## Option in prep_run_slm.sh: fluxnetTypeTransientTimestepOutput="T"
 ## 
 ## original author Sönke Zaehle @ MPI-BGC Jena
 #############################################################################################################

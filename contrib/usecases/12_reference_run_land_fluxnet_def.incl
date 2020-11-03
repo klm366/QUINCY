@@ -34,7 +34,7 @@ forcingMode="static"
 customSiteList="F"
 singleSiteName=""
 paramSensitivitySim="F"
-specialFluxnetOutput="F"
+fluxnetTypeTransientTimestepOutput="F"
 compareSimCRUNCEPvsGFDB="F"
 
 sb_model_scheme="simple_1d"     # simple_0d simple_1d jsm 

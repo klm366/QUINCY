@@ -75,18 +75,18 @@ singleSiteName=""
 
 
 ##>> special runs <<####################################################################################
-##(1) fluxnet/3 diagnostics simulation  (namelist: fluxnet_diagnostics_sim)
-# run a transient Fluxnet/3 simulations creating timestep output for the last full forcing period at the end of the transient simulation
-# in addition output is created at the interval 'output_interval_pool' (must not be "timestep") from 'output_start_...' to 'output_end_...'
+##(1) for fluxnet-type site-sets: transient simulation with timestep output (namelist: fluxnet_type_transient_timestep_output)
 # T (True) or F (False)
-# when set to "T" simulations and extra scripts will be run by the run.slm.sh for each of the fluxnet/3 sites you specify above (i.e., all sites, customSiteList, one site: singleSiteName)
-# scripts are: convert_slm2FLUXNET.R & generate_FLUXNET_diagnostics.R
-specialFluxnetOutput="F"
+# create timestep output for the last full forcing period of the transient simulation (after spinup)
+# when set to "T" the option forcingMode is set to "transient" automatically
+# if observation data is available for this site-set (default is: observationData="F") then run model/data comparison scripts in addition (option runFluxTransDiagnosticScripts is set automatically):
+#   currently this is the case only for FLUXNET2 (forcingDataSet="fluxnet"); scripts are: convert_slm2FLUXNET.R & generate_FLUXNET_diagnostics.R
+fluxnetTypeTransientTimestepOutput="F"
 
 ##(2) cruncep vs gfdb comparison
 # compare simulated model results of CRUNCEP sites with Global Forest Data Base data (/Net/Groups/BGI/data/Model/SLM1/evaluation/point/GFDB/global_forest_database_21092016.csv)
-# T (True) or F (False) [large caps]
-# when set to "T" options are set to: paramSensitivitySim="F", specialFluxnetOutput="F"
+# T (True) or F (False)
+# when set to "T" options are set to: paramSensitivitySim="F", fluxnetTypeTransientTimestepOutput="F"
 # output might typically be created for 30 years, 1986 to 2015 ('output_start_...' to 'output_end_...')
 # the output period may be set to output_interval_pool/flux="daily" so that the automatic model-data comparison works
 # the cleanup_slm_hpc_run.sh starts the R scripts: sim_cruncep_vs_gfdb-process_daily.R & sim_cruncep_vs_gfdb-create_figs.R & sim_cruncep_all_vs_gfdb-create_figs.R
@@ -98,7 +98,7 @@ compareSimCRUNCEPvsGFDB="F"
 spinupLengthGFDB=500
 
 ##(3) parameter sensitivity simulations
-# you can run a set of sensitivity simulations for one site; T (True) or F (False) [large caps]
+# you can run a set of sensitivity simulations for one site; T (True) or F (False)
 paramSensitivitySim="F"
 # you can give absolute values ("F") or proportional changes within range [0 < x < 2] ("T")
 paramChangesProportional="F"
@@ -657,7 +657,7 @@ validateUserConfigValues "$customSiteList" "$validateFlags" "customSiteList"
 validateUserConfigValues "$slmModel" "$validateSlmModel" "slmModel"
 validateUserConfigValues "$queue" "$validateQueue" "queue"
 validateUserConfigValues "$emailNotification" "$validateEmailNotification" "emailNotification"
-validateUserConfigValues "$specialFluxnetOutput" "$validateFlags" "specialFluxnetOutput"
+validateUserConfigValues "$fluxnetTypeTransientTimestepOutput" "$validateFlags" "fluxnetTypeTransientTimestepOutput"
 validateUserConfigValues "$bnf_scheme" "$validateBNFScheme" "bnf_scheme"
 validateUserConfigValues "$flag_mycorrhiza" "$validateFlags" "flag_mycorrhiza"
 validateUserConfigValues "$flag_mycorrhiza_org" "$validateFlags" "flag_mycorrhiza_org"
@@ -707,63 +707,59 @@ fi
 
 
 ## site data-set: FLUXNET / GLOBAL / CRUNCEPv7 / FACE / MANIP / ... ##
+# set defaults
+observationData="F"
+siteDataObsFold="no_observation_data_available"  # this variable must contain something
+fluxnetTypeSiteSet="F"
+# set site-set specific values
 case "$forcingDataSet" in
 "fluxnet")
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET2/"
-  #siteDataObsFold="/Net/Groups/BGI/data/Model/SLM1/evaluation/point/FLUXNET2/"
-  siteDataObsFold="/Net/Groups/BGI/data/Model/SLM1/evaluation/point/FLUXNET/"   # evaluation data; 'FLUXNET' is a symlink
+  observationData="T"
+  siteDataObsFold="/Net/Groups/BGI/data/Model/SLM1/evaluation/point/FLUXNET/"   # observation/evaluation data; 'FLUXNET' is a symlink
+  fluxnetTypeSiteSet="T"
   ;;
 "fluxnet3")
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET3/"
-  siteDataObsFold="no such evaluation data"  # but this variable must contain something
+  fluxnetTypeSiteSet="T"
   ;;
 "global")
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/GLOBAL/"
-  siteDataObsFold="no such evaluation data"  # but this variable must contain something
   ;;
 "cruncep")
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/CRUNCEPv7/"
-  siteDataObsFold="no such evaluation data"  # but this variable must contain something
   ;;
 "face")
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/FACE/"
-  siteDataObsFold="no such evaluation data"  # but this variable must contain something
   ;;
 "manip")
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/MANIP/"
-  siteDataObsFold="no such evaluation data"  # but this variable must contain something
   ;;
 "fert")
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/FERT/"
-  siteDataObsFold="no such evaluation data"  # but this variable must contain something
   ;;
 "craine")
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/CRAINE/"
-  siteDataObsFold="no such evaluation data"  # but this variable must contain something
   ;;
 "photacc")
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/PHOTACC/"
-  siteDataObsFold="no such evaluation data"  # but this variable must contain something
   ;;
 "spp1685")
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/SPP_1685/"
-  siteDataObsFold="no such evaluation data"  # but this variable must contain something
   ;;
 "confin")
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/CONFIN/"
-  siteDataObsFold="no such evaluation data"  # but this variable must contain something
+  fluxnetTypeSiteSet="T"
   ;;
 "mocabors")
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/MOCABORS/"
-  siteDataObsFold="no such evaluation data"  # but this variable must contain something
+  fluxnetTypeSiteSet="T"
   ;;
 "mocab2")
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/MOCABORS2/"
-  siteDataObsFold="no such evaluation data"  # but this variable must contain something
   ;;
 "sweden")
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/SWEDEN/"
-  siteDataObsFold="no such evaluation data"  # but this variable must contain something
   ;;
 esac
 
@@ -936,7 +932,7 @@ else
     fi
     if [ "$slmModel" == "soil" ]; then
       siteListFileName="flux_all_sites_1995-2006_list.dat"
-      echo " The site list file for static simulations is used always for QUINCY soil: flux_all_sites_1995-2006_list.dat"
+      echo " The site list file for static simulations is used: flux_all_sites_1995-2006_list.dat"
     fi
     ;;
   "fluxnet3")
@@ -947,7 +943,7 @@ else
     fi
     if [ "$slmModel" == "soil" ]; then
       siteListFileName="flux3_all_sites_1991-2014_list.dat"
-      echo " The site list file for static simulations is used always for QUINCY soil: flux3_all_sites_1991-2014_list.dat"
+      echo " The site list file for static simulations is used: flux3_all_sites_1991-2014_list.dat"
     fi
     ;;
   "global")
@@ -1073,7 +1069,7 @@ else
     fi
     if [ "$slmModel" == "soil" ]; then
       siteListFileName="mocab_all_sites_1991-2012_list.dat"
-      echo " The site list file for static simulations is used always for QUINCY soil: mocab_all_sites_1991-2012_list.dat"
+      echo " The site list file for static simulations is used: mocab_all_sites_1991-2012_list.dat"
     fi
     ;;
   "mocab2")
@@ -1093,7 +1089,6 @@ else
   esac
   siteList="$siteDataFold""$siteListFileName"
 fi
-
 
 ## apply setting for comparing simulated model results of CRUNCEP sites with Global Forest Data Base ##
 # valid for static and transient simulations
@@ -1120,8 +1115,8 @@ if [ $compareSimCRUNCEPvsGFDB == "T" ]; then
   fi
   # disable parameter sensitivity runs
   paramSensitivitySim="F"
-  # disable special fluxnet-output
-  specialFluxnetOutput="F"
+  # disable timestep output for transient simulations with a fluxnet-type site-set
+  fluxnetTypeTransientTimestepOutput="F"
   if [ $forcingMode == "static" ]
    then
     # output starts right after the spinup has finished (output is used for simulation vs GFDB comparision)
@@ -1158,12 +1153,78 @@ if [ $compareSimCRUNCEPvsGFDB == "T" ]; then
   fi # check "$dailyOutput" == "T"
 fi
 
+## transient simulations with fluxnet-type site-sets & timestep output for the last full forcing period specific to each site ##
+## evaluate options linked with fluxnetTypeTransientTimestepOutput
+## forcingMode is set to "transient" here, and the transient options & constraints are validated below in the section "evaluate options: forcingMode == transient"
+#  requires transient forcing available from 1901 to ~2015 !
+#  docu: if e.g. the simulation length is 112 years, the last full forcing period, considering 3 years of met-forcing, would be from year 110 to 112
+# set defaults
+runFluxTransDiagnosticScripts="F"
+if [ $fluxnetTypeTransientTimestepOutput == "T" ]; then
+  # check if site-set if of fluxnet-type
+  if [ $fluxnetTypeSiteSet == "T" ]; then
+    echo " Running a transient simulation with a fluxnet-type site-set & timestep output for the last full forcing-period specific to each site."
+    echo " Site-set: ""$forcingDataSet"
+  else
+    echo "EXIT! You might want to use FLUXNET-type site-set when enabling the option: fluxnetTypeTransientTimestepOutput."
+    exit 1
+  fi
+  # enable the diagnostics script for model/data comparison if such obersavation data is available
+  if [ $observationData == "T" ]; then
+    runFluxTransDiagnosticScripts="T"
+  fi
+  # check QUINCY model
+  if [ "$slmModel" == "land" ]; then
+    echo " Using the QUINCY ""$slmModel"" model."
+  elif [ "$slmModel" == "plant" ]; then
+    echo " Using the QUINCY ""$slmModel"" model."
+  else
+    echo " A transient simulation with timestep output is not yet implemented for the QUINCY ""$slmModel"" model."
+    if [ "$slmModel" == "soil" ]; then
+      echo " The soil-forcing does not contain year/doy/hour information, which is need for this functionality."
+      echo " You could run a normal transient simulation with fluxnetTypeTransientTimestepOutput set to F."
+    fi
+    echo "EXIT!"
+    rm -r "$simFold"  # deleting the already created simulation folder
+    exit 1
+  fi
+  # check transient simulation, enable "transient" if set to "static"
+  if [ "$forcingMode" == "static" ]; then
+    echo " Using transient forcing mode."
+    forcingMode="transient"
+  fi
+  # if $singleSiteName is not empty
+  if [ ! -z "$singleSiteName" ]; then
+    echo " Simulation is done for just one site: ""$singleSiteName"
+  fi
+  # parameter sensitivity simulations
+  if [ $paramSensitivitySim == "T" ]; then
+    echo " Multiple parameter sensitivity simulations are done for the site: ""$paramSensitivitySiteName"
+    # disable running the diagnostics scripts if enabled
+    if [ $runFluxTransDiagnosticScripts == "T" ]; then
+      runFluxTransDiagnosticScripts="F"
+      echo " Disable running the diagnostics scripts!"
+    fi
+  fi
+  # $singleSiteName is empty and no parameter sensitivity simulations
+  if [ -z "$singleSiteName" ] && [ $paramSensitivitySim == "F" ]; then
+     echo " Simulations are done for all sites listed in: ""$siteListFileName"
+  fi
+  # feedback about running diagnostics scripts using the timestep output
+  if [ $runFluxTransDiagnosticScripts == "T" ]; then
+    echo " Running diagnostics scripts using the timestep output over the last full forcing period before the end of the ""$simulation_length_number"" years."
+  fi
+  echo " "
+fi
+
 ## evaluate options: forcingMode == transient ##
-#  some settings of the transient simulations are affected by the compareSimCRUNCEPvsGFDB simulation settings if compareSimCRUNCEPvsGFDB == "T"
-# fluxnet diagnostics simulations is per default F
-fluxnetTransSimLand="F"
-# transient soil-model simulations with the fluxnet/3 site-set is per default F
-fluxnetTransSimSoil="F"
+#  some settings of the transient simulations are affected by the compareSimCRUNCEPvsGFDB, if set to T
+#  a transient simulation is enabled if fluxnetTypeTransientTimestepOutput is set to T
+# fluxnet-type site-set transient simulations are per default F
+# land/plant model
+fluxnetTypeTransSimLand="F"
+# soil model
+fluxnetTypeTransSimSoil="F"
 if [ $forcingMode == "transient" ]; then
   ## options for all QUINCY models
   echo " "
@@ -1177,12 +1238,13 @@ if [ $forcingMode == "transient" ]; then
   if [ $transient_spinup_years -lt 100 ]; then
     echo " Info: You set the spinup length to ""$transient_spinup_years"" years, which might be to low for sufficient results (default would be 500 years)."
   fi
-  # starting year 
+  # starting year spinup
   if [ $transient_spinup_start_year != "1901" ]; then
     echo " You set the transient_spinup_start_year to ""$transient_spinup_start_year"", which is currently not supported. Sorry."
     echo " Setting transient_spinup_start_year=1901."
     transient_spinup_start_year=1901
   fi
+  # starting year transient simulation
   if [ $transient_simulation_start_year != "1901" ]; then
     echo " You set the transient_simulation_start_year to ""$transient_simulation_start_year"", which is currently not supported. Sorry."
     echo " Setting transient_simulation_start_year=1901."
@@ -1196,39 +1258,38 @@ if [ $forcingMode == "transient" ]; then
     transient_spinup_end_year=$((transient_spinup_start_year + 29))
     echo " The new (corrected) value of transient_spinup_end_year is ""$transient_spinup_end_year"" setting the period length to the default of 30 years."
   fi
-  # land & plant model  ("normal" or "fluxnet" transient)
-  if [ "$slmModel" == "land" ] || [ "$slmModel" == "plant" ]; then  
-    ## check: fluxnet transient simulation (all QUINCY models but soil) - all site-sets with site-specific periods of forcing (a.k.a. fluxnet-type forcing)
-    #  a transient simulation with fluxnet-type forcing does always end after the last year of forcing available (which is site specific)
-    #  (in addition to a "simple transient simulation" a "fluxnet diagnostics simulation" creates timestep-output for the last full forcing period
-    #   and runs only with QUINCY land and starts two R scripts per site that compare model results with measured data)
-    #  note: actual simulation length 1901 to x varies with the site, 
-    #        after spinup the simulation starts 1901 and ends after the last year of (static) forcing data available
-    #        this setting is done per site in the run_slm.sh (modifying the namelist)
-    if [ "$forcingDataSet" == "fluxnet" ] || [ "$forcingDataSet" == "fluxnet3" ] || [ "$forcingDataSet" == "mocabors" ] || [ "$forcingDataSet" == "confin" ]; then
-      echo " You started a transient simulation with QUINCY ""$slmModel"" and fluxnet forcing: ""$forcingDataSet"
-      echo " Note: after spinup the simulation starts 1901 and ends after the last year of (static) forcing data available (which is site specific)."
-      echo " Hence, the actual simulation length may vary with the fluxnet sites."
-      fluxnetTransSimLand="T"
-    fi
-  fi
-  # canopy model
-  if [ "$slmModel" == "canopy" ]; then  
-    echo " Running a transient simulations with the canopy model is not available."
-    echo " EXIT!"
-    exit 1
-  fi
-  # soil model (simple_0d, simple_1d, jsm)
-  if [ "$slmModel" == "soil" ]; then
-    # fluxnet-type site-sets that provide transient soil-forcing files
-    if [ "$forcingDataSet" == "fluxnet" ] || [ "$forcingDataSet" == "fluxnet3" ] || [ "$forcingDataSet" == "mocabors" ]; then
-      echo " Running a transient simulation with the QUINCY soil model ""$sb_model_scheme""."
-      echo " After the spinup, the transient simulation may run for one full forcing period (site-specific static forcing)."
-      fluxnetTransSimSoil="T"
-    else
+  ## FLUXNET-type site-sets (available forcing period differs across years)
+  #  in the run_slm.sh the site-specific forcing period is defined
+  if [ $fluxnetTypeSiteSet == "T" ]; then
+    # QUINCY model
+    if [ "$slmModel" == "land" ] || [ "$slmModel" == "plant" ]; then      
+      echo " You started a transient simulation with QUINCY ""$slmModel"" and the fluxnet-type site-set: ""$forcingDataSet"
+      echo " Note: after spinup the simulation starts 1901 and ends after the last year of (static) forcing data available, which is site specific."
+      echo " Hence, the actual simulation length may vary across the individual sites."
+      fluxnetTypeTransSimLand="T"
+    elif [ "$slmModel" == "soil" ]; then
       # it is already checked above whether there is soil forcing available
-      # hence, no need to check here whether the site-set supports transient soil-model simulations
-      echo " Running a transient simulation with the QUINCY soil model for the site-set: ""$forcingDataSet"  
+      echo " Running a transient simulation with the QUINCY soil model ""$sb_model_scheme""."
+      fluxnetTypeTransSimSoil="T"
+    else
+      echo " Transient simulations with a fluxnet-type site-set is not yet implemented for the QUINCY ""$slmModel"" model."
+      echo "EXIT!"
+      rm -r "$simFold"  # deleting the already created simulation folder
+      exit 1
+    fi
+  ## CRUNCEP-type site-sets (forcing is available across the same period for all sites)
+  else
+    # QUINCY model
+    if [ "$slmModel" == "land" ] || [ "$slmModel" == "plant" ]; then      
+      echo " You started a transient simulation with QUINCY ""$slmModel"" and the cruncep-type site-set: ""$forcingDataSet"
+    elif [ "$slmModel" == "soil" ]; then
+      # it is already checked above whether there is soil forcing available
+      echo " Running a transient simulation with the QUINCY soil model ""$sb_model_scheme""."
+    else
+      echo " Transient simulations with a cruncep-type site-set is not yet implemented for the QUINCY ""$slmModel"" model."
+      echo "EXIT!"
+      rm -r "$simFold"  # deleting the already created simulation folder
+      exit 1
     fi
   fi
 # forcingMode == "static"
@@ -1420,61 +1481,6 @@ if [ $flag_mycorrhiza == "F" ]
   flag_mycorrhiza_prim="F"
 fi
 
-
-## validate options linked with specialFluxnetOutput a.k.a. fluxnet diagnostics simulations ##
-#  requires transient forcing from 1901 to ~2015 !
-#  in addition to the normal transient simulation:
-#    the last full forcing period is written out at timestep 
-#    extra R scripts are started per site after the simulation comparing simulation results with empirical data
-if [ $specialFluxnetOutput == "T" ]; then
-  # check site data set
-  if [ $forcingDataSet == "fluxnet" ]; then
-    echo " Running fluxnet diagnostics simulation with site-set: FLUXNET2"
-  elif [ $forcingDataSet == "fluxnet3" ]; then
-    echo " Running fluxnet diagnostics simulation with site-set: FLUXNET3"
-  else
-    echo "EXIT! You might want to use FLUXNET/3 sites when running fluxnet diagnostics simulation :) ."
-    exit 1
-  fi
-  # check QUINCY model (fluxnet/3 site-set already tested above)
-  if [ "$slmModel" == "soil" ]; then
-    echo " You are trying to run the QUINCY soil model with a fluxnet diagnostics simulation setup (uses transient forcing)."
-    echo "EXIT! fluxnet diagnostics simulationa require transient forcing from 1901 to ~2015. Such soil_forcing is not available for now."
-    rm -r "$simFold"  # deleting the already created simulation folder
-    exit 1
-  fi
-  if [ "$slmModel" != "land" ]; then
-    echo "EXIT! The fluxnet diagnostics simulations should only run with the QUINCY land model, not the ""$slmModel"" model."
-    rm -r "$simFold"  # deleting the already created simulation folder
-    exit 1
-  fi
-  # check transient simulation
-  if [ "$forcingMode" == "static" ]; then
-    echo " Forcing mode need to be transient for fluxnet diagnostics simulations. Setting it to transient now."
-    forcingMode="transient"
-  fi
-  # message to screen
-  echo " "
-  echo " You just started simulations to generate FLUXNET/3 diagnostics from the last complete forcing period before the end of the ""$simulation_length_number"" years."
-  # docu: if e.g. the simulation length is 80 years, the last full forcing period, considering 3 years of data, could be from year 76 to 78
-  # if $singleSiteName is not empty
-  if [ ! -z "$singleSiteName" ]; then
-    echo " Simulation is done for one site: ""$singleSiteName"
-    echo " "
-  fi
-  # parameter sensitivity simulations
-  if [ $paramSensitivitySim == "T" ]; then
-    echo " Multiple parameter sensitivity simulations are done for the site: ""$paramSensitivitySiteName"
-    echo " "
-  fi
-  # $singleSiteName is empty and no parameter sensitivity simulations
-  if [ -z "$singleSiteName" ] && [ $paramSensitivitySim == "F" ]; then
-     echo " Simulations are done for all sites listed in: ""$siteListFileName"
-     echo " "
-  fi
-fi
-
-
 ## validate allocated memory ##
 lowestMem=200      # 200 MB
 largestMem=30000   # 30  GB
@@ -1639,10 +1645,12 @@ cp "$slmNamelist"               "$simFoldDefaultFiles"
 cp "$slmLctlib"                 "$simFoldDefaultFiles"
 cp "$slmRscript"                "$simFoldDefaultFiles"
 cp "$slmDefOutOverviewScript"   "$simFoldDefaultFiles"
-if [ $specialFluxnetOutput == "T" ]; then  # fluxnet diagnostics simulation
+if [ $fluxnetTypeTransientTimestepOutput == "T" ]; then   # transient simulations with fluxnet-type site-set and timestep output for last full forcing period
+  cp "$slmRscript4fluxBarPlots"   "$simFoldDefaultFiles"
+fi
+if [ $runFluxTransDiagnosticScripts == "T" ]; then        # run model/data comparison diagnostics scripts (in case $fluxnetTypeTransientTimestepOutput == "T")
   cp "$slmRscript4fluxfile"       "$simFoldDefaultFiles"
   cp "$slmRscript4fluxdiag"       "$simFoldDefaultFiles"
-  cp "$slmRscript4fluxBarPlots"   "$simFoldDefaultFiles"
 fi
 if [ $paramSensitivitySim == "T" ]; then
   cp "$slmParamListRun"       "$simFoldParamSensiFiles"
@@ -1759,11 +1767,11 @@ if [ $flag_sb_prescribe_po4 == T ]
   else
     changeNamelistValue flag_sb_prescribe_po4 ".FALSE."
 fi
-if [ "$specialFluxnetOutput" == "T" ]
+if [ "$fluxnetTypeTransientTimestepOutput" == "T" ]
   then
-    changeNamelistValue fluxnet_diagnostics_sim .TRUE.
+    changeNamelistValue fluxnet_type_transient_timestep_output .TRUE.
   else
-    changeNamelistValue fluxnet_diagnostics_sim .FALSE.
+    changeNamelistValue fluxnet_type_transient_timestep_output .FALSE.
 fi
 if [ $paramSensitivitySim == T ]
   then
@@ -1881,20 +1889,21 @@ fi
 ## pass config info and filenames to run_slm.sh via an extra file ("$simFoldDefaultFiles""config.txt") ##
 #########################################################################################################
 # /Net/Groups/BGI/scratch/""$username""/slm/$jobName/default_files/config.txt
-echo "$siteList"                                                  >  "$simFoldDefaultFiles""config.txt"   # 1
-echo "$siteDataFoldForcing"                                       >> "$simFoldDefaultFiles""config.txt"
-echo "$slmModel"                                                  >> "$simFoldDefaultFiles""config.txt"
-echo "$forcingDataSet"                                            >> "$simFoldDefaultFiles""config.txt"
-echo "$forcingModeFileID"                                         >> "$simFoldDefaultFiles""config.txt"   # 5
-echo "$specialFluxnetOutput"                                      >> "$simFoldDefaultFiles""config.txt"       # fluxnet diagnostics simulation
-echo "$siteDataObsFold"                                           >> "$simFoldDefaultFiles""config.txt"
-echo "$useSiteSpecificAWC"                                        >> "$simFoldDefaultFiles""config.txt"
-echo "$paramSensitivitySim"" ""$simParamSensiFiles"               >> "$simFoldDefaultFiles""config.txt"
-echo "$compareSimCRUNCEPvsGFDB"                                   >> "$simFoldDefaultFiles""config.txt"   # 10
-echo "$fluxnetTransSimLand"" ""$transient_simulation_start_year"  >> "$simFoldDefaultFiles""config.txt"
-echo "$fluxnetTransSimSoil"" ""$transient_simulation_start_year"  >> "$simFoldDefaultFiles""config.txt"
-echo "$createSoilForcFlag"                                        >> "$simFoldDefaultFiles""config.txt"   # 13
-#echo "$"                                                         >> "$simFoldDefaultFiles""config.txt"
+echo "$siteList"                                                       > "$simFoldDefaultFiles""config.txt"   # 1
+echo "$siteDataFoldForcing"                                           >> "$simFoldDefaultFiles""config.txt"
+echo "$slmModel"                                                      >> "$simFoldDefaultFiles""config.txt"
+echo "$forcingDataSet"                                                >> "$simFoldDefaultFiles""config.txt"
+echo "$forcingModeFileID"                                             >> "$simFoldDefaultFiles""config.txt"   # 5
+echo "$fluxnetTypeTransientTimestepOutput"                            >> "$simFoldDefaultFiles""config.txt"   
+echo "$siteDataObsFold"                                               >> "$simFoldDefaultFiles""config.txt"
+echo "$useSiteSpecificAWC"                                            >> "$simFoldDefaultFiles""config.txt"
+echo "$paramSensitivitySim"" ""$simParamSensiFiles"                   >> "$simFoldDefaultFiles""config.txt"
+echo "$compareSimCRUNCEPvsGFDB"                                       >> "$simFoldDefaultFiles""config.txt"   # 10
+echo "$fluxnetTypeTransSimLand"" ""$transient_simulation_start_year"  >> "$simFoldDefaultFiles""config.txt"
+echo "$fluxnetTypeTransSimSoil"" ""$transient_simulation_start_year"  >> "$simFoldDefaultFiles""config.txt"
+echo "$createSoilForcFlag"                                            >> "$simFoldDefaultFiles""config.txt"
+echo "$runFluxTransDiagnosticScripts"                                 >> "$simFoldDefaultFiles""config.txt"   # 14
+#echo "$"                                                             >> "$simFoldDefaultFiles""config.txt"
 # parameter sensitivity simulation: pass extra info to "param_config.txt" in the directory "$simFoldParamSensiFiles"
 if [ $paramSensitivitySim == "T" ]; then
   echo "$paramSensitivitySiteLineNumber"         >  "$simFoldParamSensiFiles""param_config.txt"

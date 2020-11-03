@@ -36,7 +36,7 @@ customSiteListFileName=""
 singleSiteName=""
 paramSensitivitySim="F"
 
-specialFluxnetOutput="F"
+fluxnetTypeTransientTimestepOutput="F"
 compareSimCRUNCEPvsGFDB="T"    # in case "T" the siteSelection="cue" is set automatically by the prep_run_slm.sh
 spinupLengthGFDB=500
 

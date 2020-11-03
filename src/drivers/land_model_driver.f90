@@ -38,7 +38,7 @@ PROGRAM land_model_driver
   USE mo_jsb_model_init,          ONLY: jsbach_setup_grid, &      ! interface to e.g. setup_grid_standalone
                                         quincy_init, &            ! JSBACH4: jsbach_init
                                         time_day, time_year, ntimestep, itimestep, timestep_prop_day, &
-                                        fluxnet_diagnostics_sim_state
+                                        flux_trans_timestep_out_state
   USE mo_jsb_class,               ONLY: get_model
   USE mo_jsb_model_class,         ONLY: t_jsb_model
   USE mo_jsb_base,                ONLY: setup_model_vgrid_procconf, quincy_proc_parameter_init, jsbach_setup_tiles
@@ -476,17 +476,20 @@ PROGRAM land_model_driver
       ENDIF
     ENDIF
 
-    !! 5.6 control of fluxnet-diagnostics simulation timestep-output
+    !! 5.6 control of timestep output (last full forcing period) for a transient simulation with a fluxnet-type site-set
     !!  timestep-output for the "last full forcing period" after spinup has finished, 
     !!  which is identical to the period static forcing is available 
     !! 
-    ! if "fluxnet diagnostics simulation" after spinup
-    IF(model%config%fluxnet_diagnostics_sim .AND. .NOT. model%config%l_transient_spinup) THEN
+    !! this does work only with met-forcing, because the soil-forcing has no year/doy/hour information 
+    !!  (hence, this functionality is disabled in the prep_run_slm.sh see section that evaluates the option: fluxnetTypeTransientTimestepOutput)
+    !! 
+    ! if timestep output for the last full forcing period (of transient simulation) is enabled for a fluxnet-type site-set
+    IF(model%config%fluxnet_type_transient_timestep_output .AND. .NOT. model%config%l_transient_spinup) THEN
       ! if first timestep of "start year of static forcing" of this site
       ! split into the two test "year" & "doy & hour" to check the latter only for one year (reduce CPU time)
       IF (forcing_options%forcing_year == model%config%fluxnet_static_forc_start_yr) THEN
         IF (forcing_options%forcing_doy == 1 .AND. forcing_options%forcing_hour < eps4) THEN
-          fluxnet_diagnostics_sim_state = 2               ! update state: now writing timestep-output data
+          flux_trans_timestep_out_state = 2               ! update state: now writing timestep-output data
           CALL close_output_files                         ! close pool & flux output files (opened above)
           model%config%output_interval_pool   = 'timestep' 
           model%config%output_interval_flux   = 'timestep' 
@@ -495,14 +498,14 @@ PROGRAM land_model_driver
           CALL open_pool_output_files(tile, iblk, ics, ice, nc, TRIM(model%config%output_interval_pool), '')
           CALL open_flux_output_files(tile, iblk, ics, ice, nc, TRIM(model%config%output_interval_flux), '')
           ! print info to default output
-          PRINT*," Fluxnet diagnostics simulation timestep-output starts with forcing [YEAR DOY HOUR]:"
+          PRINT*," Fluxnet-type siteset transient simulation: timestep-output starts with forcing [YEAR DOY HOUR]:"
           PRINT*,forcing_options%forcing_year, forcing_options%forcing_doy, forcing_options%forcing_hour
         ENDIF
       ! stop timestep-output at the 1st timestep after the last year of static forcing, i.e., the "last full forcing period" is over
       ! actually, the QUINCY model should stop before this happend, as the simulation end is reached with the prior timestep
       ELSE IF (forcing_options%forcing_year == model%config%fluxnet_static_forc_last_yr + 1) THEN
         IF (forcing_options%forcing_doy == 1 .AND. forcing_options%forcing_hour < eps4) THEN
-          fluxnet_diagnostics_sim_state = 3                       ! status update: writing output data finished
+          flux_trans_timestep_out_state = 3                       ! status update: writing output data finished
           ! print info to default output
           PRINT*," Fluxnet diagnostics simulation timestep-output stopped before simulating the timestep:", itimestep
           PRINT*," Associated to this timestep is the forcing [YEAR DOY HOUR]:"
@@ -532,15 +535,13 @@ PROGRAM land_model_driver
         ENDIF
       ! actual simulation after spinup
       ELSE
-        ! differ between fluxnet diagnostics simulation and other transient runs
-        ! fluxnet is special because the last full forcing period of the transient simulation (after spinup)is written out at timestep interval (site specific)
-        ! fluxnet diagnostics - after spinup output is always created but at different intervals 
-        IF (model%config%fluxnet_diagnostics_sim) THEN
+        ! differ between a simple transient simulation and one with timestep output for the last full forcing period of the transient simulation
+        IF (model%config%fluxnet_type_transient_timestep_output) THEN
           ! if active and not finished yet (finished == after the last full forcing period no further output is created)
-          IF (fluxnet_diagnostics_sim_state < 3.0_wp) THEN
+          IF (flux_trans_timestep_out_state < 3.0_wp) THEN
             l_output = .TRUE.
           ENDIF
-        ! any other than "fluxnet diagnostics simulation", create output only for a given start/end output period
+        ! a simple transient simulation, create output only for a given start/end output period
         ELSE
           ! output period
           IF (time_year >= model%config%output_start_first_day_year .AND. time_year <= model%config%output_end_last_day_year) THEN
@@ -578,7 +579,7 @@ PROGRAM land_model_driver
                               l_forcing, &
                               l_output, &
                               l_output_interval_match, &
-                              fluxnet_diagnostics_sim_state, &
+                              flux_trans_timestep_out_state, &
                               output_interval_pool_act, &  ! used for flux output: output_interval_flux
                               time_day, &
                               time_year, &

@@ -54,7 +54,7 @@ CONTAINS
                                   l_forcing                       , &
                                   l_output                        , &
                                   l_output_interval_match         , &
-                                  fluxnet_diagnostics_sim_state   , &
+                                  flux_trans_timestep_out_state   , &
                                   output_interval_flux            , &
                                   time_day, time_year             , &
                                   timestep_prop_day               , &
@@ -159,7 +159,7 @@ CONTAINS
     LOGICAL,                    INTENT(in)        :: l_forcing, &                   !< IF .TRUE. THEN update_forcing(), update_a2l(), update_l2a()
                                                      l_output, &                    !< TRUE of output is enabled at all (i.e., fluxes are accumulated)
                                                      l_output_interval_match        !< TRUE if output may be created at the current timestep
-    INTEGER,                    INTENT(in)        :: fluxnet_diagnostics_sim_state  !< possible values: 0, 1, 2, 3; see land_model_driver
+    INTEGER,                    INTENT(in)        :: flux_trans_timestep_out_state  !< possible values: 0, 1, 2, 3; see land_model_driver
     REAL(wp),                   INTENT(in)        :: output_interval_flux           !< flux output interval
     REAL(wp),                   INTENT(in)        :: time_day                       !< displays the 'real simulation time' in days; time_day == 1.0 after one day has passed
     INTEGER,                    INTENT(in)        :: time_year                      !< displays the 'real simulation time' in years; the 1st year of a simulation == 1 (not zero)
@@ -356,14 +356,14 @@ CONTAINS
       !! output litterfall and soilphysics from a transient fluxnet/3 diagnostics simulation
       IF (model%config%flag_generate_soil_forcing_trans .AND. l_output) THEN
         ! write soil forcing only for the last full forcing period of the particular fluxnet site (where static forcing is available)
-        IF (fluxnet_diagnostics_sim_state == 2) THEN
+        IF (flux_trans_timestep_out_state == 2) THEN
           CALL write_soil_forcing(tile, model%options, time_day)
         ENDIF
       ENDIF
       !! output litterfall and soilphysics from a transient cruncep-type site-set simulation (for years 1901 to ...)
       IF (model%config%flag_generate_soil_forcing_trans .AND. l_output) THEN
         ! write only after spinup and if not a transient fluxnet/3 diagnostics simulation
-        IF (.NOT. model%config%l_transient_spinup .AND. .NOT. model%config%fluxnet_diagnostics_sim) THEN
+        IF (.NOT. model%config%l_transient_spinup .AND. .NOT. model%config%fluxnet_type_transient_timestep_output) THEN
           CALL write_soil_forcing(tile, model%options, time_day)
         ENDIF
       ENDIF

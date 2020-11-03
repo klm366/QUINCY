@@ -111,9 +111,9 @@
   output_interval_flux_spinup="yearly"
   output_start_first_day_year=1
   output_end_last_day_year=30
-  ! fluxnet diagnostics simulation
-  ! timestep-output for last full forcing period of the transient simulation after spinup
-  fluxnet_diagnostics_sim=.FALSE.
+  ! transient simulations with a fluxnet-type site-set
+  ! timestep-output for last full forcing period of the transient simulation after spinup, with a fluxnet-type site-set
+  fluxnet_type_transient_timestep_output=.FALSE.
   ! years with static forcing available (site specific)
   fluxnet_static_forc_start_yr=1500
   fluxnet_static_forc_last_yr=1500

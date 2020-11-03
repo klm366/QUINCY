@@ -39,8 +39,8 @@ array=$2                          # was an job array or just one job simulated  
 username=$(whoami)
 bgiScratchUserFold="/Net/Groups/BGI/scratch/""$username""/slm/"
 simFold="$bgiScratchUserFold""$jobName""/"
-slmModel=$(sed -n 3p "$simFold""default_files/config.txt")                                      # SLM model: land plant soil canopy
-specialFluxnetOutput=$(sed -n 6p "$simFold""default_files/config.txt")                          # T/F  -> fluxnet diagnostics from timestep output
+slmModel=$(sed -n 3p "$simFold""default_files/config.txt")                                      # QUINCY model: land plant soil canopy
+fluxnetTypeTransientTimestepOutput=$(sed -n 6p "$simFold""default_files/config.txt")            # T/F
 paramSensitivitySim=$(sed -n 9p "$simFold""default_files/config.txt" | awk '{print $1}')        # T/F  -> parameter sensitivity
 compareSimCRUNCEPvsGFDB=$(sed -n 10p "$simFold""default_files/config.txt" | awk '{print $1}')   # T/F  -> compare with global forest data base
 createSoilForcFlag=$(sed -n 13p "$simFold""default_files/config.txt")                           # T/F
@@ -99,7 +99,7 @@ if [ $paramSensitivitySim == T ]; then
   mv "$simFold"parameter_sensitivity_files/create_parameter_summary_figs.R  "$simFold"parameter_list
 fi
 
-## run two R Scripts for comparing simulated CRUNCEP data with global forest data base data at daily basis
+## comparing simulated CRUNCEP data with global forest data base data at daily basis
 if [ $compareSimCRUNCEPvsGFDB == T ]; then
   echo " starting sim_cruncep_vs_gfdb-process_daily.R"
   Rscript --vanilla "$simFold"default_files/sim_cruncep_vs_gfdb-process_daily.R $simFold    # creates two .csv files
@@ -113,16 +113,18 @@ if [ $compareSimCRUNCEPvsGFDB == T ]; then
   echo " finished cruncep vs gfdb data processing and figure creation"
 fi
 
-## run one R Script for postprocessing the fluxnet diagnostics with barplots
-if [ "$specialFluxnetOutput" == T ] && [ "$createSoilForcFlag" == "F" ] && [ "$slmModel" == "land" ]; then
+## postprocess timestep output from transient simulations with a fluxnet-type site-set
+#  creates: 
+#   slm_site_mean.csv & slm_site_sd.csv
+#   slm_site_barplots.pdf & slm_site_mean_in_gramm_barplots.csv
+if [ "$fluxnetTypeTransientTimestepOutput" == T ]; then
   echo " sim_fluxnet_diagnostics-process_timestep.R"
   Rscript --vanilla "$simFold"default_files/sim_fluxnet_diagnostics-process_timestep.R $simFold  # creates two .csv files
   sleep 2
   echo " finished barplot figure creation of the fluxnet diagnostics"
 fi
 
-
-## create one .pdf file with figs from one output file for all sites, for example, vegpoolC
+## create one .pdf file with figs from a particular output file for all sites, for example, vegpoolC
 cp "$simFold"default_files/postprocessing_site_overview.R  "$simFold"
 cd "$simFold"
 Rscript --vanilla ./postprocessing_site_overview.R

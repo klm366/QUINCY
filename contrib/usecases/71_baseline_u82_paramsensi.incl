@@ -35,7 +35,7 @@ customSiteListFileName=""
 singleSiteName=""
 paramSensitivitySim="F"
 
-specialFluxnetOutput="F"
+fluxnetTypeTransientTimestepOutput="F"
 compareSimCRUNCEPvsGFDB="F"
 
 paramSensitivitySim="T"

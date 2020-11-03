@@ -27,7 +27,7 @@ MODULE mo_jsb_model_init
   PUBLIC :: jsbach_setup_grid, quincy_init
 
   PUBLIC :: time_day, time_year, ntimestep, itimestep, timestep_prop_day
-  PUBLIC :: fluxnet_diagnostics_sim_state
+  PUBLIC :: flux_trans_timestep_out_state
 
   ! variables used in the land model driver
   REAL(wp) :: time_day                      !< displays the 'real time' in days; time_day == 1.0 after one day has passed
@@ -35,7 +35,7 @@ MODULE mo_jsb_model_init
   INTEGER  :: ntimestep                     !< number of timesteps the model runs
   INTEGER  :: itimestep                     !< current timestep i, looping over timesteps ntimestep
   REAL(wp) :: timestep_prop_day             !< proportion of one day that is simulated with one timestep (dtime/one_day)
-  INTEGER  :: fluxnet_diagnostics_sim_state !< state of the fluxnet diagnostics simulation [0,3], see the below init for details
+  INTEGER  :: flux_trans_timestep_out_state !< state of the fluxnet diagnostics simulation [0,3], see the below init for details
 
   INTERFACE jsbach_setup_grid
     MODULE PROCEDURE setup_grid_standalone
@@ -290,11 +290,11 @@ CONTAINS
     !!  1: fluxnet diagnostics simulation; spinup or output prior to the "last full forcing period" (static output available)
     !!  2: fluxnet diagnostics simulation: timestep-output over the "last full forcing period"
     !!  3: fluxnet diagnostics simulation finished, first timestep after the "last full forcing period", no output at all
-    IF (model%config%fluxnet_diagnostics_sim) THEN
+    IF (model%config%fluxnet_type_transient_timestep_output) THEN
       !! activate fluxnet diagnostics output
-      fluxnet_diagnostics_sim_state = 1
+      flux_trans_timestep_out_state = 1
     ELSE
-      fluxnet_diagnostics_sim_state = 0
+      flux_trans_timestep_out_state = 0
     ENDIF
 
   END SUBROUTINE quincy_init

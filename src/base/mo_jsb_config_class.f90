@@ -44,22 +44,22 @@ MODULE mo_jsb_config_class
 
     !! QUINCY added !!
     !! BASE_CTL
-    REAL(wp)          :: dtime                              !< length of one time step in seconds; base_ctl namelist: dtime_step_length_sec
+    REAL(wp)          :: dtime                                    !< length of one time step in seconds; base_ctl namelist: dtime_step_length_sec
     CHARACTER(len=20) :: slm_model_name
-    CHARACTER(8)      :: output_interval_pool, &            !< interval at which output is generated during model runs not including spinup
-                         output_interval_flux               !< interval at which output is generated during model runs not including spinup - the pool value is used
-    CHARACTER(8)      :: output_interval_pool_spinup, &     !< interval at which output is generated during spinup
-                         output_interval_flux_spinup        !< interval at which output is generated during spinup - the pool value is used
-    INTEGER           :: output_start_first_day_year, &     !< output start at the 1st  day of this year
-                         output_end_last_day_year           !< output stop  at the last day of this year
-    LOGICAL           :: fluxnet_diagnostics_sim            !< transient simulation with fluxnet site(s) with timestep-output during the last full forcing period (static forcing)
-    INTEGER           :: fluxnet_static_forc_start_yr       !< fluxnet sites: first year of (static) forcing available
-    INTEGER           :: fluxnet_static_forc_last_yr        !< fluxnet sites: last year with (static) forcing available
-    LOGICAL           :: flag_generate_soil_forcing_stat    !< usecase 01: all litterfall pools + some soilphysics | static simulation
-                                                            !! at period: model%config%output_start_first_day_year .. output_end_last_day_year
-    LOGICAL           :: flag_generate_soil_forcing_trans   !< usecase 08: all litterfall pools + some soilphysics | transient simaulation
-    LOGICAL           :: set_parameter_values_from_file     !< set values of (some) parameters to values given by namelist (parameter_slm_run.list)
-    LOGICAL           :: set_parameter_values_proportional  !< if TRUE: change the default (hardcoded) parameter values by proportion as defined in namelist
+    CHARACTER(8)      :: output_interval_pool, &                  !< interval at which output is generated during model runs not including spinup
+                         output_interval_flux                     !< interval at which output is generated during model runs not including spinup - the pool value is used
+    CHARACTER(8)      :: output_interval_pool_spinup, &           !< interval at which output is generated during spinup
+                         output_interval_flux_spinup              !< interval at which output is generated during spinup - the pool value is used
+    INTEGER           :: output_start_first_day_year, &           !< output start at the 1st  day of this year
+                         output_end_last_day_year                 !< output stop  at the last day of this year
+    LOGICAL           :: fluxnet_type_transient_timestep_output   !< transient simulation with fluxnet-type site-set and timestep-output for the last full forcing period (static forcing)
+    INTEGER           :: fluxnet_static_forc_start_yr             !< fluxnet sites: first year of (static) forcing available
+    INTEGER           :: fluxnet_static_forc_last_yr              !< fluxnet sites: last year with (static) forcing available
+    LOGICAL           :: flag_generate_soil_forcing_stat          !< usecase 01: all litterfall pools + some soilphysics | static simulation
+                                                                  !! at period: model%config%output_start_first_day_year .. output_end_last_day_year
+    LOGICAL           :: flag_generate_soil_forcing_trans         !< usecase 08: all litterfall pools + some soilphysics | transient simaulation
+    LOGICAL           :: set_parameter_values_from_file           !< set values of (some) parameters to values given by namelist (parameter_slm_run.list)
+    LOGICAL           :: set_parameter_values_proportional        !< if TRUE: change the default (hardcoded) parameter values by proportion as defined in namelist
     LOGICAL           :: flag_climate_forcing_one_year
     LOGICAL           :: flag_stand_harvest
     INTEGER           :: stand_replacing_year
@@ -146,7 +146,7 @@ CONTAINS
                                    output_interval_flux_spinup       
     INTEGER                     :: output_start_first_day_year   , &
                                    output_end_last_day_year
-    LOGICAL                     :: fluxnet_diagnostics_sim
+    LOGICAL                     :: fluxnet_type_transient_timestep_output
     INTEGER                     :: fluxnet_static_forc_start_yr
     INTEGER                     :: fluxnet_static_forc_last_yr
     LOGICAL                     :: flag_generate_soil_forcing_stat
@@ -167,25 +167,25 @@ CONTAINS
     CHARACTER(len=10)           :: hsm_mode
     CHARACTER(len=10)           :: output_tiles(99)
 
-    NAMELIST /base_ctl/                         &  
-        dtime_step_length_sec                 , &
-        slm_model_name                        , &
-        output_interval_pool                  , &
-        output_interval_flux                  , &
-        output_interval_pool_spinup           , &
-        output_interval_flux_spinup           , &
-        output_start_first_day_year           , &
-        output_end_last_day_year              , &
-        fluxnet_diagnostics_sim               , &
-        fluxnet_static_forc_start_yr          , &
-        fluxnet_static_forc_last_yr           , &
-        flag_generate_soil_forcing_stat       , &
-        flag_generate_soil_forcing_trans      , &
-        set_parameter_values_from_file        , &
-        set_parameter_values_proportional     , &
-        flag_climate_forcing_one_year         , &
-        flag_stand_harvest                    , &
-        stand_replacing_year                  , &
+    NAMELIST /base_ctl/                           &  
+        dtime_step_length_sec                   , &
+        slm_model_name                          , &
+        output_interval_pool                    , &
+        output_interval_flux                    , &
+        output_interval_pool_spinup             , &
+        output_interval_flux_spinup             , &
+        output_start_first_day_year             , &
+        output_end_last_day_year                , &
+        fluxnet_type_transient_timestep_output  , &
+        fluxnet_static_forc_start_yr            , &
+        fluxnet_static_forc_last_yr             , &
+        flag_generate_soil_forcing_stat         , &
+        flag_generate_soil_forcing_trans        , &
+        set_parameter_values_from_file          , &
+        set_parameter_values_proportional       , &
+        flag_climate_forcing_one_year           , &
+        flag_stand_harvest                      , &
+        stand_replacing_year                    , &
         flag_spp1685                          
                           
     ! NAMELIST /jsb_model_nml/  &
@@ -216,7 +216,7 @@ CONTAINS
     output_interval_flux_spinup             = 'yearly'    ! usually ~500 yrs are covered, so 'yearly' would be reasonable
     output_start_first_day_year             = 1
     output_end_last_day_year                = 10
-    fluxnet_diagnostics_sim                 = .FALSE.     ! .TRUE. .FALSE.
+    fluxnet_type_transient_timestep_output  = .FALSE.     ! .TRUE. .FALSE.
     fluxnet_static_forc_start_yr            = 1500        ! usually a year after 1990
     fluxnet_static_forc_last_yr             = 1500        ! usually a year after 1990
     flag_generate_soil_forcing_stat         = .FALSE.     ! .TRUE. .FALSE.  << is set to T for usecase 01 only
@@ -266,7 +266,7 @@ CONTAINS
     model_config%output_interval_flux_spinup            = output_interval_flux_spinup
     model_config%output_start_first_day_year            = output_start_first_day_year
     model_config%output_end_last_day_year               = output_end_last_day_year
-    model_config%fluxnet_diagnostics_sim                = fluxnet_diagnostics_sim
+    model_config%fluxnet_type_transient_timestep_output = fluxnet_type_transient_timestep_output
     model_config%fluxnet_static_forc_start_yr           = fluxnet_static_forc_start_yr
     model_config%fluxnet_static_forc_last_yr            = fluxnet_static_forc_last_yr
     model_config%flag_generate_soil_forcing_stat        = flag_generate_soil_forcing_stat
