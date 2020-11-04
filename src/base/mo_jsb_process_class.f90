@@ -26,7 +26,7 @@ MODULE mo_jsb_process_class
   PRIVATE
 
   PUBLIC :: t_jsb_process, t_jsb_process_p, Get_process_name, Get_process_id
-  PUBLIC :: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, VEG_, SB_
+  PUBLIC :: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, ALCC_, VEG_, SB_
   PUBLIC :: SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_, Get_action_name
 
   TYPE t_jsb_process
@@ -48,7 +48,7 @@ MODULE mo_jsb_process_class
   END TYPE t_jsb_process_p
 
   ENUM, BIND(C)
-    ENUMERATOR :: A2L_=1, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_,  CARBON_ , DISTURB_, FUEL_, VEG_, SB_
+    ENUMERATOR :: A2L_=1, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_,  CARBON_ , DISTURB_, FUEL_, ALCC_, VEG_, SB_
   END ENUM
 
   ! Process actions
@@ -95,6 +95,8 @@ CONTAINS
       return_value = 'disturb'
     CASE (FUEL_)
       return_value = 'fuel'
+    CASE (ALCC_)
+      return_value = 'alcc'
     CASE (VEG_)
       return_value = 'veg'
     CASE (SB_)
@@ -139,8 +141,12 @@ CONTAINS
       return_value = DISTURB_
     CASE ('fuel')
       return_value = FUEL_
+    CASE ('alcc')
+      return_value = ALCC_
     CASE ('veg')
       return_value = VEG_
+    CASE ('sb')
+      return_value = SB__
     CASE DEFAULT
       return_value = 0
     END SELECT

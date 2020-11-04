@@ -102,7 +102,7 @@ CONTAINS
       & output_level=BASIC,                                                      &
       & initval_r=1.0_wp )
 
-    CALL mem%Add_var( 'rough_m_star', mem%rough_m_star,                    &
+    CALL mem%Add_var( 'rough_m_star', mem%rough_m_star,                          &
       & hgrid, surface,                                                          &
       & t_cf('rough_m_star', '', 'rough_m_star'),                                &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &

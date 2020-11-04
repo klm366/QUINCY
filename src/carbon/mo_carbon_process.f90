@@ -7,7 +7,7 @@
 !! @par Revision History
 !! First version by Rainer Schneck (2015-07-29)
 !! Julia Nabel (2018-01-10): l_forestRegrowth flag -> allow for changing max_LAI
-!!
+
 !! @par Copyright
 !! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
@@ -21,7 +21,8 @@ MODULE mo_carbon_process
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: calc_Cpools, relocate_carbon_fire, relocate_carbon_damage, yasso, get_per_tile
+  PUBLIC :: calc_Cpools, relocate_carbon_fire, relocate_carbon_damage, &
+          & yasso, get_per_tile
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_carbon_process'
 
@@ -811,7 +812,7 @@ CONTAINS
     c_woods(:)   = c_woods(:)   * factor(:)
     c_reserve(:) = c_reserve(:) * factor(:)
 
-  end subroutine relocate_carbon_fire
+  END SUBROUTINE relocate_carbon_fire
 
   ! --- relocate_carbon_damage() ---------------------------------------------------------------------------------------------------
   !
@@ -819,7 +820,7 @@ CONTAINS
   ! It is assumed that for the damaged area the carbon from the living plant pools (c_green_st, c_reserve_st and
   ! c_woods_st) is partly relocated into the litter pools.
   !
-  subroutine relocate_carbon_damage(  &
+  SUBROUTINE relocate_carbon_damage(  &
     & damaged_fract,                  & ! in
     & LeafLit_coef,                   & ! in
     & WoodLit_coef,                   & ! in
@@ -939,9 +940,7 @@ CONTAINS
     c_woods(:)   = c_woods(:)   * factor(:)
     c_reserve(:) = c_reserve(:) * factor(:)
 
-  end subroutine relocate_carbon_damage
-
-
+  END SUBROUTINE relocate_carbon_damage
 
   PURE SUBROUTINE yasso (Yasso_io_pools, Weather, litter, Lit_coefV,WoodLitterSize, Yasso_out, fract_aboveground, &
                          NPP_2_rootExudates, redFact_Nlimit)

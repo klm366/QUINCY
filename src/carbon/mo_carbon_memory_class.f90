@@ -32,7 +32,7 @@ MODULE mo_carbon_memory_class
 
   ! Use process configurations
   dsl4jsb_Use_config(CARBON_)
-  dsl4jsb_Use_config(PHENO_)
+  dsl4jsb_Use_config(PHENO_)    ! needed for l_forestRegrowth
 
   IMPLICIT NONE
   PRIVATE
@@ -165,8 +165,19 @@ MODULE mo_carbon_memory_class
 !@todo why is the c_crop_harvest realised as a density and not as a per tile variable in the first place?
 ! ++ only required for crop pfts, or?
       c_crop_harvest,         & ! C-pool for biomass harvested from crops [mol(C)/m^2(grid box)]
-
-      !SIZE CLASS 1
+!@todo: the only variable of these which seems to be still required is c_litter_green_ag - rest could be local/removed
+!       (or at least commented out as recently done for c_slow) (including ta variables!)
+      c_litter_green_ag,      & ! C-pool for above ground non-woody litter especially from leaves
+                                    !     [mol(C)/m^2(canopy)]
+      c_litter_green_bg,      & ! C-pool for below ground non-woody litter especially from fine roots
+                                    !     [mol(C)/m^2(canopy)]
+      c_litter_wood_ag,       & ! C-pool for litter originating from above ground woody parts of the plants
+                                    !     [mol(C)/m^2(canopy)]
+      c_litter_wood_bg,       & ! C-pool for litter originating from below ground woody parts of the plants
+                                    !     [mol(C)/m^2(canopy)]
+     !CBAL c_slow,                 & ! C-pool for below ground organic material (coming from the litter pools)
+     !CBAL                              !     [mol(C)/m^2(canopy)]
+     !SIZE CLASS 1
       c_acid_ag1,            & ! Yasso above ground litter-pool for acid soluble litter [mol(C)/m^2(canopy)]
       c_water_ag1,           & ! Yasso above ground litter-pool for water soluble litter [mol(C)/m^2(canopy)]
       c_ethanol_ag1,         & ! Yasso above ground litter-pool for ethanol soluble litter [mol(C)/m^2(canopy)]
@@ -245,8 +256,17 @@ MODULE mo_carbon_memory_class
       c_reserve_ta,              & ! C-pool for carbohydrate reserve (sugars, starches) that allows plants to survive
                                        ! .. bad times[mol(C)/m^2(tile area)]
       c_crop_harvest_ta,         & ! C-pool for biomass harvested from crops [mol(C)/m^2(grid box)]
-
-      !SIZE CLASS 1
+      c_litter_green_ag_ta,      & ! C-pool for above ground non-woody litter especially from leaves
+                                       !     [mol(C)/m^2(tile area)]
+      c_litter_green_bg_ta,      & ! C-pool for below ground non-woody litter especially from fine roots
+                                       !     [mol(C)/m^2(tile area)]
+      c_litter_wood_ag_ta,       & ! C-pool for litter originating from above ground woody parts of the plants
+                                       !     [mol(C)/m^2(tile area)]
+      c_litter_wood_bg_ta,       & ! C-pool for litter originating from below ground woody parts of the plants
+                                       !     [mol(C)/m^2(tile area)]
+      !CBAL c_slow_ta,                 & ! C-pool for below ground organic material (coming from the litter pools)
+      !CBAL                              !     [mol(C)/m^2(tile area)]
+     !SIZE CLASS 1
       c_acid_ag1_ta,            & ! Yasso above ground litter-pool for acid soluble litter [mol(C)/m^2(tile area)]
       c_water_ag1_ta,           & ! Yasso above ground litter-pool for water soluble litter [mol(C)/m^2(tile area)]
       c_ethanol_ag1_ta,         & ! Yasso above ground litter-pool for ethanol soluble litter [mol(C)/m^2(tile area)]
@@ -664,7 +684,7 @@ CONTAINS
     INTEGER,             INTENT(in)    :: model_id
 
     dsl4jsb_Def_config(CARBON_)
-    dsl4jsb_Def_config(PHENO_)
+    dsl4jsb_Def_config(PHENO_)    ! needed for l_forestRegrowth
 
     TYPE(t_jsb_model),  POINTER :: model
     TYPE(t_jsb_grid),   POINTER :: hgrid             ! Horizontal grid
