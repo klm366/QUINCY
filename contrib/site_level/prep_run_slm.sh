@@ -1942,12 +1942,12 @@ fi
 ## cleanup temporary files and folders via cleanup_slm_hpc_run.sh               ##
 ##################################################################################
 # this job is pending until the above started $jobName has ended
-# the memory requirement is set to 1GB
+# the memory requirement is set to 5GB
 sleep 1s  # just some waiting time to avoid any interference with the above started job
 cleanupJobName="$jobName""Cleanup"
 cleanQueue="short"
 # start the job
-bsub -w "ended($jobName)" -q "$cleanQueue" -M "1000000" -R "rusage[mem=1000]" -J "$cleanupJobName" -o "$simFold"cleanup.eo "$emailSwitch" "$simFoldDefaultFiles""$slmCleanupScriptFilename" "$jobName" "$array" "$singleSiteName"
+bsub -w "ended($jobName)" -q "$cleanQueue" -M "5000000" -R "rusage[mem=5000]" -J "$cleanupJobName" -o "$simFold"cleanup.eo "$emailSwitch" "$simFoldDefaultFiles""$slmCleanupScriptFilename" "$jobName" "$array" "$singleSiteName"
 
 
 ## end prep_run_slm.sh ##
