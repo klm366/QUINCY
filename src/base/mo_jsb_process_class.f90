@@ -146,7 +146,7 @@ CONTAINS
     CASE ('veg')
       return_value = VEG_
     CASE ('sb')
-      return_value = SB__
+      return_value = SB_
     CASE DEFAULT
       return_value = 0
     END SELECT

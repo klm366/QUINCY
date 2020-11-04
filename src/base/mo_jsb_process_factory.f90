@@ -68,7 +68,7 @@ MODULE mo_jsb_process_factory
   USE mo_sb_config_class,       ONLY: t_sb_config
 
   USE mo_jsb_process_class, ONLY: &
-    & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, VEG_, SB_
+    & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, ALCC_, VEG_, SB_
 
   IMPLICIT NONE
   PRIVATE
