@@ -452,7 +452,7 @@ CONTAINS
       & fract_old(:,:),    &
       & fract_max_old(:,:)
 
-    ! INTEGER :: ilct
+    INTEGER :: ilct
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Set_fraction_2d'
 
@@ -466,22 +466,23 @@ CONTAINS
         this%fract    (:,:) = fract(:,:)
         !$acc update device(this%fract, this%fract_old)
 
-        ! IF (ASSOCIATED(this%parent)) THEN
-        !   SELECT TYPE (parent=>this%parent)
-        !   CLASS IS (t_jsb_tile_abstract)
-        !     WHERE (this%fract(:,:) /= this%fract_old(:,:))
-        !       parent%l_fract_children_changed(:,:) = .TRUE.
-        !     END WHERE
-        !     IF (ANY(parent%l_fract_children_changed(:,:))) THEN
-        !       DO ilct=1,SIZE(parent%lcts)
-        !         IF (this%lcts(1)%id == parent%lcts(ilct)%id) THEN
-        !           parent%lcts(ilct)%fract(:,:) = parent%lcts(ilct)%fract(:,:) - this%fract_old(:,:) + this%fract(:,:)
-        !           EXIT
-        !         END IF
-        !       END DO
-        !     END IF
-        !   END SELECT
-        ! END IF
+        IF (ASSOCIATED(this%parent)) THEN
+          SELECT TYPE (parent=>this%parent)
+          CLASS IS (t_jsb_tile_abstract)
+            WHERE (this%fract(:,:) /= this%fract_old(:,:))
+              parent%l_fract_children_changed(:,:) = .TRUE.
+            END WHERE
+            IF (ANY(parent%l_fract_children_changed(:,:))) THEN
+              DO ilct=1,SIZE(parent%lcts)
+                IF (this%lcts(1)%id == parent%lcts(ilct)%id) THEN
+                  parent%lcts(ilct)%fract(:,:) = parent%lcts(ilct)%fract(:,:) - this%fract_old(:,:) + this%fract(:,:)
+                  EXIT
+                END IF
+              END DO
+            END IF
+          END SELECT
+        END IF
+
       END IF
     END IF
 

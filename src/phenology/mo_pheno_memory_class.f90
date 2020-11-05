@@ -110,8 +110,8 @@ MODULE mo_pheno_memory_class
                                           !          in den JS4 Berechnungen haben, gilt eigentlich dies hier:
                                           ! var (tile area) = veg_fract_correction * var(canopy area)  * fract_fpc_max.
 
-    REAL(wp), POINTER :: lai_mon(:,:,:)       !< Monthly leaf area index (per year or climatology) <nproma x nblks x 14>    !
-    REAL(wp), POINTER :: fract_fpc_mon(:,:,:) !< Monthly fpc (per year or climatology) <nproma x nblks x 14>    !
+    REAL(wp), POINTER :: lai_mon(:,:,:) => NULL()       !< Monthly leaf area index (per year or climatology) <nproma x nblks x 14>    !
+    REAL(wp), POINTER :: fract_fpc_mon(:,:,:) => NULL() !< Monthly fpc (per year or climatology) <nproma x nblks x 14>    !
 
     !! quincy
     ! used as logical: 0 = FALSE / 1 = TRUE
