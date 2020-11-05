@@ -1034,4 +1034,3 @@ CONTAINS
   END SUBROUTINE jsbach_get_var
 
 #endif
-END MODULE mo_jsb_interface

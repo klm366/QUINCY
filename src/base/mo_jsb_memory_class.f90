@@ -966,4 +966,3 @@ CONTAINS
 
   END FUNCTION Average_over_children_real2d
 
-#endif
