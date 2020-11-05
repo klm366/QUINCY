@@ -664,7 +664,7 @@ CONTAINS
 
     ! Read maps once at first day of the year and only in the time step before the radiation time step and only once for the whole grid
     read_maps = is_newyear(next_datetime, options%dtime) .AND. &
-      & is_time_ltrig_rad_m1(options%current_datetime, options%dtime, model%id)
+      &         is_time_ltrig_rad_m1(options%current_datetime, options%dtime, model%id)
     ! IF (is_newyear(options%current_datetime, options%dtime)) l_newyear = .TRUE.
     ! read_maps = l_newyear .AND. &
     !   &         is_time_ltrig_rad_m1(options%current_datetime, options%dtime, model%id)

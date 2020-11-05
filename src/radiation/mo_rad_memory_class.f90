@@ -226,7 +226,7 @@ CONTAINS
 
     !! !$acc enter data pcreate(mem)
 
-    CALL mem%Add_var( 'sw_srf_net', mem%sw_srf_net,                   &
+    CALL mem%Add_var( 'sw_srf_net', mem%sw_srf_net,                        &
       & hgrid, surface,                                                    &
       & t_cf('sw_srf_net', '', 'Net surface shortwave radiation'),         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
@@ -235,7 +235,7 @@ CONTAINS
       & output_level=BASIC,                                                &
       & initval_r=0.0_wp )
 
-    CALL mem%Add_var( 'swvis_srf_net', mem%swvis_srf_net,               &
+    CALL mem%Add_var( 'swvis_srf_net', mem%swvis_srf_net,                    &
       & hgrid, surface,                                                      &
       & t_cf('swvis_srf_net', '', 'Net surface shortwave radiation in VIS'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -244,7 +244,7 @@ CONTAINS
       & output_level=MEDIUM,                                                 &
       & initval_r=0.0_wp )
 
-    CALL mem%Add_var( 'swnir_srf_net', mem%swnir_srf_net,               &
+    CALL mem%Add_var( 'swnir_srf_net', mem%swnir_srf_net,                    &
       & hgrid, surface,                                                      &
       & t_cf('swnir_srf_net', '', 'Net surface shortwave radiation in NIR'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -253,7 +253,7 @@ CONTAINS
       & output_level=MEDIUM,                                                 &
       & initval_r=0.0_wp )
 
-    CALL mem%Add_var( 'lw_srf_net', mem%lw_srf_net,                   &
+    CALL mem%Add_var( 'lw_srf_net', mem%lw_srf_net,                        &
       & hgrid, surface,                                                    &
       & t_cf('lw_srf_net', '', 'Net surface longwave radiation'),          &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
@@ -262,7 +262,7 @@ CONTAINS
       & output_level=BASIC,                                                &
       & initval_r=0.0_wp )
 
-    CALL mem%Add_var( 'rad_srf_net', mem%rad_srf_net,                 &
+    CALL mem%Add_var( 'rad_srf_net', mem%rad_srf_net,                      &
       & hgrid, surface,                                                    &
       & t_cf('rad_srf_net', '', 'Net surface radiation'),                  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
@@ -271,7 +271,7 @@ CONTAINS
       & output_level=BASIC,                                                &
       & initval_r=0.0_wp )
 
-    CALL mem%Add_var( 'alb_background', mem%alb_background,           &
+    CALL mem%Add_var( 'alb_background', mem%alb_background,                &
       & hgrid, surface,                                                    &
       & t_cf('surface_albedo_background', '', ''),                         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
@@ -280,7 +280,7 @@ CONTAINS
       & output_level=MEDIUM,                                               &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-    CALL mem%Add_var( 'alb_vis', mem%alb_vis,                         &
+    CALL mem%Add_var( 'alb_vis', mem%alb_vis,                              &
       & hgrid, surface,                                                    &
       & t_cf('gridcell_surface_albedo_visible', '', ''),                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
@@ -289,7 +289,7 @@ CONTAINS
       & output_level=BASIC,                                                &
       & initval_r=0.0_wp )
 
-    CALL mem%Add_var( 'alb_nir', mem%alb_nir,                         &
+    CALL mem%Add_var( 'alb_nir', mem%alb_nir,                              &
       & hgrid, surface,                                                    &
       & t_cf('gridcell_surface_albedo_nir', '', ''),                       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
@@ -298,7 +298,7 @@ CONTAINS
       & output_level=BASIC,                                                &
       & initval_r=0.0_wp )
 
-    CALL mem%Add_var( 'alb_vis_snow', mem%alb_vis_snow,               &
+    CALL mem%Add_var( 'alb_vis_snow', mem%alb_vis_snow,                    &
       & hgrid, surface,                                                    &
       & t_cf('albedo_vis_snow', '', ''),                                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
@@ -306,7 +306,7 @@ CONTAINS
       & output_level=MEDIUM,                                               &
       & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
-    CALL mem%Add_var( 'alb_nir_snow', mem%alb_nir_snow,               &
+    CALL mem%Add_var( 'alb_nir_snow', mem%alb_nir_snow,                    &
       & hgrid, surface,                                                    &
       & t_cf('albedo_nir_snow', '', ''),                                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
@@ -319,7 +319,7 @@ CONTAINS
       &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. One_of(GLACIER_TYPE, lct_ids(:)) > 0) &
       & ) THEN
 
-      CALL mem%Add_var( 'alb_vis_lnd', mem%alb_vis_lnd,                        &
+      CALL mem%Add_var( 'alb_vis_lnd', mem%alb_vis_lnd,                             &
         & hgrid, surface,                                                           &
         & t_cf('surface_albvis_lnd', '', ''),                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
@@ -328,7 +328,7 @@ CONTAINS
         & output_level=MEDIUM, &
         & initval_r=0.0_wp )
 
-      CALL mem%Add_var( 'alb_nir_lnd', mem%alb_nir_lnd,                        &
+      CALL mem%Add_var( 'alb_nir_lnd', mem%alb_nir_lnd,                             &
         & hgrid, surface,                                                           &
         & t_cf('surface_albnir_lnd', '', ''),                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
@@ -344,7 +344,7 @@ CONTAINS
       &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0)                                 &
       & ) THEN
 
-      CALL mem%Add_var( 'alb_vis_soil', mem%alb_vis_soil,               &
+      CALL mem%Add_var( 'alb_vis_soil', mem%alb_vis_soil,                    &
         & hgrid, surface,                                                    &
         & t_cf('soil_albedo_with_carbon_and_litter', '', ''),                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
@@ -352,7 +352,7 @@ CONTAINS
         & output_level=MEDIUM,                                               &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
 
-      CALL mem%Add_var( 'alb_nir_soil', mem%alb_nir_soil,               &
+      CALL mem%Add_var( 'alb_nir_soil', mem%alb_nir_soil,                    &
         & hgrid, surface,                                                    &
         & t_cf('soil_albedo_with_carbon_and_litter', '', ''),                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
@@ -360,7 +360,7 @@ CONTAINS
         & output_level=MEDIUM,                                               &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
 
-      CALL mem%Add_var( 'alb_vis_mineralsoil', mem%alb_vis_mineralsoil, &
+      CALL mem%Add_var( 'alb_vis_mineralsoil', mem%alb_vis_mineralsoil,      &
         & hgrid, surface,                                                    &
         & t_cf('alb_vis_mineralsoil', '', ''),                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
@@ -368,7 +368,7 @@ CONTAINS
         & output_level=MEDIUM,                                               &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
-      CALL mem%Add_var( 'alb_nir_mineralsoil', mem%alb_nir_mineralsoil, &
+      CALL mem%Add_var( 'alb_nir_mineralsoil', mem%alb_nir_mineralsoil,      &
         & hgrid, surface,                                                    &
         & t_cf('alb_nir_mineralsoil', '', ''),                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
@@ -381,7 +381,7 @@ CONTAINS
     IF ( (One_of(VEG_TYPE, lct_ids(:)) > 0 .OR. One_of(LAND_TYPE, lct_ids(:)) > 0) &
       & ) THEN
 
-      CALL mem%Add_var( 'alb_vis_can', mem%alb_vis_can,                 &
+      CALL mem%Add_var( 'alb_vis_can', mem%alb_vis_can,                      &
         & hgrid, surface,                                                    &
         & t_cf('albedo_vis_canopy', '', ''),                                 &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
@@ -390,7 +390,7 @@ CONTAINS
         & output_level=MEDIUM,                                               &
         & initval_r=0.0_wp )
 
-      CALL mem%Add_var( 'alb_nir_can', mem%alb_nir_can,                 &
+      CALL mem%Add_var( 'alb_nir_can', mem%alb_nir_can,                      &
         & hgrid, surface,                                                    &
         & t_cf('albedo_nir_canpy', '', ''),                                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
@@ -399,28 +399,28 @@ CONTAINS
         & output_level=MEDIUM,                                               &
         & initval_r=0.0_wp )
 
-      CALL mem%Add_var( 'snow_age', mem%snow_age,                       &
+      CALL mem%Add_var( 'snow_age', mem%snow_age,                            &
         & hgrid, surface,                                                    &
         & t_cf('snow_age', '', ''),                                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
 
-      CALL mem%Add_var( 'sky_view_fract', mem%sky_view_fract,           &
+      CALL mem%Add_var( 'sky_view_fract', mem%sky_view_fract,                &
         & hgrid, surface,                                                    &
         & t_cf('sky_view_fract', '', ''),                                    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
-      CALL mem%Add_var( 'sky_view_fract_stem', mem%sky_view_fract_stem, &
+      CALL mem%Add_var( 'sky_view_fract_stem', mem%sky_view_fract_stem,      &
         & hgrid, surface,                                                    &
         & t_cf('sky_view_fract_stem', '', ''),                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
-      CALL mem%Add_var( 'par', mem%par,                                 &
+      CALL mem%Add_var( 'par', mem%par,                                      &
         & hgrid, surface,                                                    &
         & t_cf('Downward PAR flux in [W/m^2]', '', ''),                      &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
@@ -428,7 +428,7 @@ CONTAINS
         & output_level=MEDIUM,                                               &
         & lrestart=.FALSE., initval_r=0.0_wp )
 
-      CALL mem%Add_var( 'par_down_mol', mem%par_down_mol,               &
+      CALL mem%Add_var( 'par_down_mol', mem%par_down_mol,                    &
         & hgrid, surface,                                                    &
         & t_cf('Downward PAR flux in mol (photons)', '', ''),                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
@@ -436,7 +436,7 @@ CONTAINS
         & output_level=MEDIUM,                                               &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! R: initval =0
 
-      CALL mem%Add_var( 'fapar', mem%faPAR,                             &
+      CALL mem%Add_var( 'fapar', mem%faPAR,                                  &
         & hgrid, surface,                                                    &
         & t_cf('Fraction of PAR absorbed by the canopy', '', ''),            &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
@@ -444,14 +444,14 @@ CONTAINS
         & output_level=BASIC,                                                &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      ! CALL mem%Add_var( 'par_down_mol_nacc', mem%par_down_mol_nacc,     &
+      ! CALL mem%Add_var( 'par_down_mol_nacc', mem%par_down_mol_nacc,          &
       !   & hgrid, surface,                                                    &
       !   & t_cf('Incoming PAR accumulated (over output timestep)', '', ''),   &
       !   & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
       !   & prefix, suffix,                                                    &
-      !   & lrestart=.FALSE., initval_r=0.0_wp )
+      !   & lrestart=.TRUE., initval_r=0.0_wp )
 
-      ! CALL mem%Add_var( 'par_down_mol_tavg', mem%par_down_mol_tavg,     &
+      ! CALL mem%Add_var( 'par_down_mol_tavg', mem%par_down_mol_tavg,          &
       !   & hgrid, surface,                                                    &
       !   & t_cf('Incoming PAR (mean value over output timestep)', '', ''),    &
       !   & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &

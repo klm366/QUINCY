@@ -84,7 +84,7 @@ CONTAINS
 
     !! !$acc enter data pcreate(mem)
 
-    CALL mem%Add_var( 'rough_m', mem%rough_m,                                       &
+    CALL mem%Add_var( 'rough_m', mem%rough_m,                                            &
       & hgrid, surface,                                                                  &
       & t_cf('roughness_length_momentum', 'm', 'surface roughness length for momentum'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
@@ -93,7 +93,7 @@ CONTAINS
       & output_level=BASIC,                                                              &
       & initval_r=1.0_wp )
 
-    CALL mem%Add_var( 'rough_h', mem%rough_h,                               &
+    CALL mem%Add_var( 'rough_h', mem%rough_h,                                    &
       & hgrid, surface,                                                          &
       & t_cf('roughness_length_heat', 'm', 'surface roughness length for heat'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
@@ -111,7 +111,7 @@ CONTAINS
       & loutput=.FALSE.,                                                         &
       & initval_r=0.0_wp )
 
-    CALL mem%Add_var( 'rough_h_star', mem%rough_h_star,                     &
+    CALL mem%Add_var( 'rough_h_star', mem%rough_h_star,                          &
       & hgrid, surface,                                                          &
       & t_cf('rough_h_star', '', 'rough_h_star'),                                &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
@@ -127,7 +127,7 @@ CONTAINS
       &   .OR. One_of(GLACIER_TYPE, lct_ids(:)) > 0 &
       &  ) ) THEN
 
-      CALL mem%Add_var( 'fact_q_air', mem%fact_q_air,                   &
+      CALL mem%Add_var( 'fact_q_air', mem%fact_q_air,                        &
         & hgrid, surface,                                                    &
         & t_cf('fact_q_air', '', ''),                                        &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
@@ -135,7 +135,7 @@ CONTAINS
         & output_level=BASIC,                                                &
         & initval_r=0.5_wp )
 
-      CALL mem%Add_var( 'fact_qsat_srf', mem%fact_qsat_srf,             &
+      CALL mem%Add_var( 'fact_qsat_srf', mem%fact_qsat_srf,                  &
         & hgrid, surface,                                                    &
         & t_cf('fact_qsat_srf', '', ''),                                     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
@@ -143,7 +143,7 @@ CONTAINS
         & output_level=BASIC,                                                &
         & initval_r=0.5_wp )
 
-      CALL mem%Add_var( 'fact_qsat_trans_srf', mem%fact_qsat_trans_srf, &
+      CALL mem%Add_var( 'fact_qsat_trans_srf', mem%fact_qsat_trans_srf,      &
         & hgrid, surface,                                                    &
         & t_cf('fact_qsat_trans_srf', '', ''),                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &

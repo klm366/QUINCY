@@ -24,6 +24,7 @@ MODULE mo_hydro_memory_class
   USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
   USE mo_jsb_lct_class,    ONLY: LAND_TYPE, BARE_TYPE, VEG_TYPE, LAKE_TYPE, GLACIER_TYPE
   USE mo_jsb_varlist,      ONLY: BASIC !, MEDIUM, FULL
+  USE mo_jsb_process_class, ONLY: ON_TILE_, AGGREGATE_
 
   ! Use of prcesses in this module
   dsl4jsb_Use_processes HYDRO_, SSE_, SEB_, ASSIMI_
@@ -699,12 +700,12 @@ CONTAINS
         & loutput=.TRUE., &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-        CALL mem%Add_var('w_soil_rel', mem%w_soil_rel,                                &
-          &  hgrid, surface,                                                          &
-          &  t_cf('water_soil_relative', '', ''),                                     &
-          &  t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
-          & prefix, suffix,                                                           &
-          & initval_r=0.0_wp )
+      CALL mem%Add_var('w_soil_rel', mem%w_soil_rel,                                &
+        &  hgrid, surface,                                                          &
+        &  t_cf('water_soil_relative', '', ''),                                     &
+        &  t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
+        & prefix, suffix,                                                           &
+        & initval_r=0.0_wp )
 
     END IF
 
