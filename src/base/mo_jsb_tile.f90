@@ -238,7 +238,7 @@ CONTAINS
     USE mo_jsb_process_class,   ONLY: Get_process_name
     USE mo_jsb_memory_class,    ONLY: t_jsb_memory
     USE mo_jsb_tile_class,      ONLY: t_jsb_aggregator, t_jsb_aggregator_weighted_by_fract
-    USE mo_jsb_varlist,         ONLY: jsb_add_var
+    USE mo_jsb_varlist,         ONLY: jsb_add_var, VARNAME_LEN
     USE mo_jsb_io,              ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables, TSTEP_INSTANT, TSTEP_CONSTANT
     USE mo_jsb_grid_class,      ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,            ONLY: Get_grid, Get_vgrid
@@ -322,6 +322,7 @@ CONTAINS
         this%mem(iproc)%p%grid_id = this%grid_id
         this%mem(iproc)%p%owner_model_id = this%owner_model_id
         this%mem(iproc)%p%owner_proc_id = iproc
+        this%mem(iproc)%p%owner_proc_name = Get_process_name(iproc)
         ALLOCATE(this%mem(iproc)%p%owner_tile_path(SIZE(this%path)))
         this%mem(iproc)%p%owner_tile_path(:) = this%path(:)
         this%mem(iproc)%p%owner_tile_name = TRIM(this%name)
@@ -382,7 +383,7 @@ CONTAINS
       &      'fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                     &
-      & initval_r=0.0_wp, isteptype=isteptype)
+      & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
 
     CALL this%Set_fract_ptr(tmp_fract)
     NULLIFY(tmp_fract)
@@ -393,7 +394,7 @@ CONTAINS
       &      'max fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                      &
-      & initval_r=0.0_wp, isteptype=isteptype)
+      & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
     CALL this%Set_fract_max_ptr(tmp_fract)
     NULLIFY(tmp_fract)
 
@@ -403,7 +404,7 @@ CONTAINS
       &      'old fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                      &
-      & initval_r=0.0_wp, isteptype=isteptype)
+      & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
     CALL this%Set_fract_old_ptr(tmp_fract)
     NULLIFY(tmp_fract)
 
@@ -413,7 +414,7 @@ CONTAINS
       &      'old max fraction of '//TRIM(parent_tile_name)//' covered by tile '//TRIM(this%name)),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                      &
-      & initval_r=0.0_wp, isteptype=isteptype)
+      & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
     CALL this%Set_fract_max_old_ptr(tmp_fract)
     NULLIFY(tmp_fract)
 
@@ -518,7 +519,7 @@ CONTAINS
         &      'fraction of '//TRIM(this%name)//' covered by LCT '//TRIM(this%lcts(ilct)%name)),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
         & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                       &
-        & initval_r=0.0_wp, isteptype=isteptype)
+        & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
       __acc_attach(this%lcts(ilct)%fract)
 
     END DO
