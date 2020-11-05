@@ -1194,9 +1194,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(PHENO_,   veg_fract_correction )       ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max )              ! in
 
-    IF (PRESENT(c_green)) CALL get_per_tile(c_green_ta(:), c_green(:), veg_fract_correction(:), fract_fpc_max(:))
-    IF (PRESENT(c_woods)) CALL get_per_tile(c_woods_ta(:), c_woods(:), veg_fract_correction(:), fract_fpc_max(:))
-    IF (PRESENT(c_reserve)) CALL get_per_tile(c_reserve_ta(:), c_reserve(:), veg_fract_correction(:), fract_fpc_max(:))
+    IF (PRESENT(c_green)) &
+      & CALL get_per_tile(c_green_ta(:), c_green(:), veg_fract_correction(:), fract_fpc_max(:))
+    IF (PRESENT(c_woods)) &
+      & CALL get_per_tile(c_woods_ta(:), c_woods(:), veg_fract_correction(:), fract_fpc_max(:))
+    IF (PRESENT(c_reserve)) &
+      & CALL get_per_tile(c_reserve_ta(:), c_reserve(:), veg_fract_correction(:), fract_fpc_max(:))
 
     IF (PRESENT(c_crop_harvest)) CALL get_per_tile(c_crop_harvest_ta(:), &
       & c_crop_harvest(:), veg_fract_correction(:), fract_fpc_max(:))

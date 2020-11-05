@@ -663,7 +663,8 @@ CONTAINS
     next_datetime => get_time_next(options%current_datetime, options%dtime)
 
     ! Read maps once at first day of the year and only in the time step before the radiation time step and only once for the whole grid
-    read_maps = is_newyear(next_datetime, options%dtime) .AND. is_time_ltrig_rad_m1(options%current_datetime, options%dtime, model%id)
+    read_maps = is_newyear(next_datetime, options%dtime) .AND. &
+      & is_time_ltrig_rad_m1(options%current_datetime, options%dtime, model%id)
     ! IF (is_newyear(options%current_datetime, options%dtime)) l_newyear = .TRUE.
     ! read_maps = l_newyear .AND. &
     !   &         is_time_ltrig_rad_m1(options%current_datetime, options%dtime, model%id)
@@ -1038,7 +1039,8 @@ CONTAINS
 
       IF (dsl4jsb_Config(CARBON_)%active) THEN
 
-        IF (debug_on()) CALL message(TRIM(routine), '...starting to recalculate carbon variables according to '//TRIM(filename_maps)//' ...')
+        IF (debug_on()) &
+          & CALL message(TRIM(routine), '...starting to recalculate carbon variables according to '//TRIM(filename_maps)//' ...')
 
         dsl4jsb_Get_var2D_onDomain(ALCC_, C_pools_sum_check)
 

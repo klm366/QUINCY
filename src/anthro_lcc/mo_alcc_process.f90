@@ -481,9 +481,9 @@ MODULE mo_alcc_process
 
     IF (d_fract_grow_pfts > 0._wp) THEN ! Change only for growing pfts existing values of variable
       ! CARBON
-      IF (PRESENT(c_green_))          c_green_   = c_green_   * f_old_to_new_grow_pfts   +  c_green_lost_avg    * f_d_to_new_grow_pfts
-      IF (PRESENT(c_woods_))          c_woods_   = c_woods_   * f_old_to_new_grow_pfts   +  c_woods_lost_avg    * f_d_to_new_grow_pfts
-      IF (PRESENT(c_reserve_))        c_reserve_ = c_reserve_ * f_old_to_new_grow_pfts   +  c_reserve_lost_avg  * f_d_to_new_grow_pfts
+      IF (PRESENT(c_green_))          c_green_   = c_green_   * f_old_to_new_grow_pfts + c_green_lost_avg   * f_d_to_new_grow_pfts
+      IF (PRESENT(c_woods_))          c_woods_   = c_woods_   * f_old_to_new_grow_pfts + c_woods_lost_avg   * f_d_to_new_grow_pfts
+      IF (PRESENT(c_reserve_))        c_reserve_ = c_reserve_ * f_old_to_new_grow_pfts + c_reserve_lost_avg * f_d_to_new_grow_pfts
 
       IF (PRESENT(c_crop_harvest_))   c_crop_harvest_ = c_crop_harvest_    * f_old_to_new_grow_pfts   &
                                  & +  c_crop_harvest_lost_avg    * f_d_to_new_grow_pfts
@@ -565,8 +565,8 @@ MODULE mo_alcc_process
                                  & +  cflux_herb_2_littergreen_lost_avg * f_d_to_new_grow_pfts
       IF (PRESENT(cflux_herb_2_atm_)) cflux_herb_2_atm_ = cflux_herb_2_atm_  * f_old_to_new_grow_pfts                        &
                                  & +  cflux_herb_2_atm_lost_avg  * f_d_to_new_grow_pfts
-      IF (PRESENT(cflux_dist_greenreserve_2_soil_)) cflux_dist_greenreserve_2_soil_ = cflux_dist_greenreserve_2_soil_ * f_old_to_new_grow_pfts &
-                                 & +  cflux_dist_greenreserve_2_soil_lost_avg * f_d_to_new_grow_pfts
+      IF (PRESENT(cflux_dist_greenreserve_2_soil_)) cflux_dist_greenreserve_2_soil_ = cflux_dist_greenreserve_2_soil_ &
+                                 & * f_old_to_new_grow_pfts +  cflux_dist_greenreserve_2_soil_lost_avg * f_d_to_new_grow_pfts
       IF (PRESENT(cflux_dist_woods_2_soil_)) cflux_dist_woods_2_soil_ = cflux_dist_woods_2_soil_ * f_old_to_new_grow_pfts    &
                                  & +  cflux_dist_woods_2_soil_lost_avg * f_d_to_new_grow_pfts
       IF (PRESENT(cflux_fire_all_2_atm_)) cflux_fire_all_2_atm_ = cflux_fire_all_2_atm_ * f_old_to_new_grow_pfts             &
@@ -625,8 +625,8 @@ MODULE mo_alcc_process
                                       & +  fract_fpc_lost_avg    * f_d_to_new_grow_pfts
       !IF (PRESENT(fract_fpc_max))  fract_fpc_max  = fract_fpc_max    * f_old_to_new_grow_pfts   &
       !                                & +  fract_fpc_max_lost_avg    * f_d_to_new_grow_pfts
-      IF (PRESENT(previous_day_NPP_pot_rate_ca))   previous_day_NPP_pot_rate_ca =  previous_day_NPP_pot_rate_ca   * f_old_to_new_grow_pfts   &
-                                      & +  previous_day_NPP_pot_rate_ca_lost_avg    * f_d_to_new_grow_pfts
+      IF (PRESENT(previous_day_NPP_pot_rate_ca))   previous_day_NPP_pot_rate_ca =  previous_day_NPP_pot_rate_ca  &
+                                      & * f_old_to_new_grow_pfts +  previous_day_NPP_pot_rate_ca_lost_avg * f_d_to_new_grow_pfts
       IF (PRESENT(cconservation_allom))   cconservation_allom = cconservation_allom    * f_old_to_new_grow_pfts   &
                                       & +  cconservation_allom_lost_avg    * f_d_to_new_grow_pfts
       IF (PRESENT(day_NPP_sum))   day_NPP_sum = day_NPP_sum    * f_old_to_new_grow_pfts   &
