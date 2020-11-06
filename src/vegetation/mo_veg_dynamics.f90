@@ -55,6 +55,8 @@ CONTAINS
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     ! USE mo_jsb_math_constants,    ONLY: one_year, one_day, eps4
     USE mo_jsb_model_class,       ONLY: t_jsb_model
+    USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,              ONLY: Get_vgrid
     ! USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb_process_class,     ONLY: ASSIMI_, VEG_
     USE mo_jsb_pool_class,        ONLY: ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15 
@@ -85,9 +87,11 @@ CONTAINS
     ! 0.2 Local 
     TYPE(t_jsb_model),      POINTER         :: model
     TYPE(t_lctlib_element), POINTER         :: lctlib           !< land-cover-type library - parameter across pft's
+    TYPE(t_jsb_vgrid),      POINTER         :: vgrid_canopy     !< Vertical grid
     ! REAL(wp), DIMENSION(options%nc)         :: fpc              !< current foliage projective cover
     REAL(wp), DIMENSION(options%nc)         :: hlp1
-    INTEGER                                 :: iblk, ics, ice, nc
+    REAL(wp), ALLOCATABLE, DIMENSION(:,:)   :: hlp2
+    INTEGER                                 :: iblk, ics, ice, nc, ncanopy
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_dynamics'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -137,8 +141,13 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts(1)%lib_id)
+    model         => Get_model(tile%owner_model_id)
+    lctlib        => model%lctlib(tile%lcts(1)%lib_id)
+    vgrid_canopy  => Get_vgrid('canopy_layer_q_')
+    ncanopy       =  vgrid_canopy%n_levels
+    
+    ALLOCATE(hlp2(nc, ncanopy))
+    
     ! Get process config
     dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_config(VEG_)
@@ -204,6 +213,7 @@ CONTAINS
     ENDIF
 
     hlp1(:)                             = 1.5_wp
+    hlp2(:,:)                           = 2.5_wp
     veg_pool%fruit                      = 4.0_wp
     veg_pool%leaf                       = hlp1(:) * veg_pool%fruit / 2.0_wp                             ! 3.0
     veg_pool%labile                     = veg_pool%leaf - 5.0_wp
@@ -211,10 +221,15 @@ CONTAINS
 
     ! tissue pools
     veg_litterfall                      = 3.2_wp
-    veg_total_flux                      = 3.3_wp
-    ! veg_total_flux                      = hlp1(:)
-    veg_total_flux                      = veg_litterfall + veg_total_flux + 1.5_wp 
-    
+    veg_total_flux                      = hlp1(:) + 1.8         ! 3.3
+    veg_falloc                          = hlp1(:)
+    veg_falloc                          = hlp2(:,1) + 9.7_wp    ! 12.2
+    !! veg_total_flux                      = veg_litterfall + hlp1(:) + veg_total_flux + hlp2(:,:)  <== correctly, creates a runtime error with dimension mismatch
+    veg_total_flux                      = veg_litterfall + hlp1(:) + veg_total_flux + hlp2(:,1)   ! 10.5   <== only value of "canopy layer 1"
+    veg_litterfall                      = veg_total_flux + veg_litterfall + 4.0_wp                ! 17.7
+    veg_falloc                          = veg_total_flux - veg_falloc - 1.5_wp                    ! -3.2
+
+
 
   END SUBROUTINE update_veg_dynamics
 

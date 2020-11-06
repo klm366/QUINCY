@@ -55,12 +55,12 @@ MODULE mo_veg_memory_class
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_pool) :: t_veg_elements_pool
     ! element var
-    TYPE(t_jsb_var_real2d), POINTER :: carbon
-    TYPE(t_jsb_var_real2d), POINTER :: nitrogen
-    TYPE(t_jsb_var_real2d), POINTER :: phosphorus
-    TYPE(t_jsb_var_real2d), POINTER :: carbon13
-    TYPE(t_jsb_var_real2d), POINTER :: carbon14
-    TYPE(t_jsb_var_real2d), POINTER :: nitrogen15
+    TYPE(t_jsb_var_real2d), POINTER :: carbon         ! element
+    TYPE(t_jsb_var_real2d), POINTER :: nitrogen       ! element
+    TYPE(t_jsb_var_real2d), POINTER :: phosphorus     ! element
+    TYPE(t_jsb_var_real2d), POINTER :: carbon13       ! element
+    TYPE(t_jsb_var_real2d), POINTER :: carbon14       ! element
+    TYPE(t_jsb_var_real2d), POINTER :: nitrogen15     ! element
   CONTAINS
     !! infrastructure
     PROCEDURE :: Init                   => t_veg_elements_pool_init
@@ -69,51 +69,51 @@ MODULE mo_veg_memory_class
     !! operator overload  
     !! [def: field1d(nc) | field2d(nc,nblks)]
     ! +
-    PROCEDURE                 :: Add_veg_elem_p_and_scalar            ! pool%elements + scalar        | ON_CHUNK & ON_DOMAIN
-    PROCEDURE, PASS(struct1)  :: Add_scalar_and_veg_elem_p            ! scalar        + pool%elements | ON_CHUNK & ON_DOMAIN
-    PROCEDURE                 :: Add_veg_elem_p_and_field1d           ! pool%elements + field1d       | ON_CHUNK
-    PROCEDURE, PASS(struct1)  :: Add_field1d_and_veg_elem_p           ! field1d       + pool%elements | ON_CHUNK
-    PROCEDURE                 :: Add_veg_elem_p_and_field2d           ! pool%elements + field2d       | ON_CHUNK & ON_DOMAIN | field2d(:,1) & field2d(:,:)
-    PROCEDURE                 :: Add_veg_elem_p_and_veg_elem_p        ! pool%elements + pool%elements | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Add_veg_elem_p_and_scalar            ! elements_pool + scalar        | ON_CHUNK & ON_DOMAIN
+    PROCEDURE, PASS(struct1)  :: Add_scalar_and_veg_elem_p            ! scalar        + elements_pool | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Add_veg_elem_p_and_field1d           ! elements_pool + field1d       | ON_CHUNK
+    PROCEDURE, PASS(struct1)  :: Add_field1d_and_veg_elem_p           ! field1d       + elements_pool | ON_CHUNK
+    PROCEDURE                 :: Add_veg_elem_p_and_field2d           ! elements_pool + field2d       | ON_CHUNK & ON_DOMAIN | field2d(:,1) & field2d(:,:)
+    PROCEDURE                 :: Add_veg_elem_p_and_veg_elem_p        ! elements_pool + elements_pool | ON_CHUNK & ON_DOMAIN
     GENERIC                   :: OPERATOR(+) => Add_veg_elem_p_and_scalar,  Add_scalar_and_veg_elem_p, &
       &                                         Add_veg_elem_p_and_field1d, Add_field1d_and_veg_elem_p, &
       &                                         Add_veg_elem_p_and_field2d, &
       &                                         Add_veg_elem_p_and_veg_elem_p
     ! -
-    PROCEDURE                 :: Subtract_veg_elem_p_minus_scalar     ! pool%elements - scalar        | ON_CHUNK & ON_DOMAIN
-    PROCEDURE                 :: Subtract_veg_elem_p_minus_field1d    ! pool%elements - field1d       | ON_CHUNK
-    PROCEDURE                 :: Subtract_veg_elem_p_minus_field2d    ! pool%elements - field2d       | ON_CHUNK & ON_DOMAIN | field2d(:,1) & field2d(:,:)
-    PROCEDURE                 :: Subtract_veg_elem_p_minus_veg_elem_p ! pool%elements - pool%elements | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Subtract_veg_elem_p_minus_scalar     ! elements_pool - scalar        | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Subtract_veg_elem_p_minus_field1d    ! elements_pool - field1d       | ON_CHUNK
+    PROCEDURE                 :: Subtract_veg_elem_p_minus_field2d    ! elements_pool - field2d       | ON_CHUNK & ON_DOMAIN | field2d(:,1) & field2d(:,:)
+    PROCEDURE                 :: Subtract_veg_elem_p_minus_veg_elem_p ! elements_pool - elements_pool | ON_CHUNK & ON_DOMAIN
     GENERIC                   :: OPERATOR(-) => Subtract_veg_elem_p_minus_scalar, &
       &                                         Subtract_veg_elem_p_minus_field1d, &
       &                                         Subtract_veg_elem_p_minus_field2d, &
       &                                         Subtract_veg_elem_p_minus_veg_elem_p
     ! *
-    PROCEDURE                 :: Multiply_veg_elem_p_with_scalar      ! pool%elements * scalar        | ON_CHUNK & ON_DOMAIN
-    PROCEDURE, PASS(struct1)  :: Multiply_scalar_with_veg_elem_p      ! scalar        * pool%elements | ON_CHUNK & ON_DOMAIN
-    PROCEDURE                 :: Multiply_veg_elem_p_with_field1d     ! pool%elements * field1d       | ON_CHUNK
-    PROCEDURE, PASS(struct1)  :: Multiply_field1d_with_veg_elem_p     ! field1d       * pool%elements | ON_CHUNK
-    PROCEDURE                 :: Multiply_veg_elem_p_with_field2d     ! pool%elements * field2d       | ON_CHUNK & ON_DOMAIN | field2d(:,1) & field2d(:,:)
-    PROCEDURE, PASS(struct1)  :: Multiply_field2d_with_veg_elem_p     ! field2d       * pool%elements | ON_CHUNK & ON_DOMAIN | field2d(:,1) & field2d(:,:)
-    PROCEDURE                 :: Multiply_veg_elem_p_with_veg_elem_p  ! pool%elements * pool%elements | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Multiply_veg_elem_p_with_scalar      ! elements_pool * scalar        | ON_CHUNK & ON_DOMAIN
+    PROCEDURE, PASS(struct1)  :: Multiply_scalar_with_veg_elem_p      ! scalar        * elements_pool | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Multiply_veg_elem_p_with_field1d     ! elements_pool * field1d       | ON_CHUNK
+    PROCEDURE, PASS(struct1)  :: Multiply_field1d_with_veg_elem_p     ! field1d       * elements_pool | ON_CHUNK
+    PROCEDURE                 :: Multiply_veg_elem_p_with_field2d     ! elements_pool * field2d       | ON_CHUNK & ON_DOMAIN | field2d(:,1) & field2d(:,:)
+    PROCEDURE, PASS(struct1)  :: Multiply_field2d_with_veg_elem_p     ! field2d       * elements_pool | ON_CHUNK & ON_DOMAIN | field2d(:,1) & field2d(:,:)
+    PROCEDURE                 :: Multiply_veg_elem_p_with_veg_elem_p  ! elements_pool * elements_pool | ON_CHUNK & ON_DOMAIN
     GENERIC                   :: OPERATOR(*) => Multiply_veg_elem_p_with_scalar,  Multiply_scalar_with_veg_elem_p, &
       &                                         Multiply_veg_elem_p_with_field1d, Multiply_field1d_with_veg_elem_p, &
       &                                         Multiply_veg_elem_p_with_field2d, Multiply_field2d_with_veg_elem_p, &
       &                                         Multiply_veg_elem_p_with_veg_elem_p
     ! /
-    PROCEDURE                 :: Div_veg_elem_p_by_scalar             ! pool%elements / scalar        | ON_CHUNK & ON_DOMAIN
-    PROCEDURE                 :: Div_veg_elem_p_by_field1d            ! pool%elements / field1d       | ON_CHUNK
-    PROCEDURE                 :: Div_veg_elem_p_by_field2d            ! pool%elements / field2d       | ON_CHUNK & ON_DOMAIN | field2d(:,1) & field2d(:,:)
-    PROCEDURE                 :: Div_veg_elem_p_by_veg_elem_p         ! pool%elements / pool%elements | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Div_veg_elem_p_by_scalar             ! elements_pool / scalar        | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Div_veg_elem_p_by_field1d            ! elements_pool / field1d       | ON_CHUNK
+    PROCEDURE                 :: Div_veg_elem_p_by_field2d            ! elements_pool / field2d       | ON_CHUNK & ON_DOMAIN | field2d(:,1) & field2d(:,:)
+    PROCEDURE                 :: Div_veg_elem_p_by_veg_elem_p         ! elements_pool / elements_pool | ON_CHUNK & ON_DOMAIN
     GENERIC                   :: OPERATOR(/) => Div_veg_elem_p_by_scalar, &
       &                                         Div_veg_elem_p_by_field1d, &
       &                                         Div_veg_elem_p_by_field2d, &
       &                                         Div_veg_elem_p_by_veg_elem_p
     ! =
-    PROCEDURE                 :: Assign_scalar_to_veg_elem_p          ! pool%elements = scalar        | ON_CHUNK & ON_DOMAIN
-    PROCEDURE                 :: Assign_field1d_to_veg_elem_p         ! pool%elements = field1d(:)    | ON_CHUNK
-    PROCEDURE                 :: Assign_field2d_to_veg_elem_p         ! pool%elements = field2d(:,:)  | ON_CHUNK & ON_DOMAIN | field2d(:,1) & field2d(:,:)
-    PROCEDURE                 :: Assign_veg_elem_p_to_veg_elem_p      ! pool%elements = pool%elements | ON_CHUNK & ON_DOMAIN | only numeric values of elements are assigned
+    PROCEDURE                 :: Assign_scalar_to_veg_elem_p          ! elements_pool = scalar        | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Assign_field1d_to_veg_elem_p         ! elements_pool = field1d(:)    | ON_CHUNK
+    PROCEDURE                 :: Assign_field2d_to_veg_elem_p         ! elements_pool = field2d(:,:)  | ON_CHUNK & ON_DOMAIN | field2d(:,1) & field2d(:,:)
+    PROCEDURE                 :: Assign_veg_elem_p_to_veg_elem_p      ! elements_pool = elements_pool | ON_CHUNK & ON_DOMAIN | only numeric values of elements are assigned
     GENERIC                   :: ASSIGNMENT(=) => Assign_scalar_to_veg_elem_p, &
       &                                           Assign_field1d_to_veg_elem_p, &
       &                                           Assign_field2d_to_veg_elem_p, &
@@ -135,15 +135,15 @@ MODULE mo_veg_memory_class
     TYPE(t_jsb_var_real2d), POINTER :: carbon14
     TYPE(t_jsb_var_real2d), POINTER :: nitrogen15
     ! element pools
-    TYPE(t_veg_elements_pool), POINTER :: leaf             !< elements of leaf
-    TYPE(t_veg_elements_pool), POINTER :: fine_root        !< elements of fine_root
-    TYPE(t_veg_elements_pool), POINTER :: coarse_root      !< elements of coarse_root
-    TYPE(t_veg_elements_pool), POINTER :: sap_wood         !< elements of sap_wood
-    TYPE(t_veg_elements_pool), POINTER :: heart_wood       !< elements of heart_wood
-    TYPE(t_veg_elements_pool), POINTER :: labile           !< elements of labile
-    TYPE(t_veg_elements_pool), POINTER :: reserve          !< elements of reserve
-    TYPE(t_veg_elements_pool), POINTER :: fruit            !< elements of fruit
-    TYPE(t_veg_elements_pool), POINTER :: seed_bed         !< elements of seed_bed
+    TYPE(t_veg_elements_pool), POINTER :: leaf             !< pool with elements of leaf
+    TYPE(t_veg_elements_pool), POINTER :: fine_root        !< pool with elements of fine_root
+    TYPE(t_veg_elements_pool), POINTER :: coarse_root      !< pool with elements of coarse_root
+    TYPE(t_veg_elements_pool), POINTER :: sap_wood         !< pool with elements of sap_wood
+    TYPE(t_veg_elements_pool), POINTER :: heart_wood       !< pool with elements of heart_wood
+    TYPE(t_veg_elements_pool), POINTER :: labile           !< pool with elements of labile
+    TYPE(t_veg_elements_pool), POINTER :: reserve          !< pool with elements of reserve
+    TYPE(t_veg_elements_pool), POINTER :: fruit            !< pool with elements of fruit
+    TYPE(t_veg_elements_pool), POINTER :: seed_bed         !< pool with elements of seed_bed
   CONTAINS
     !! infrastructure
     PROCEDURE :: Init                     => t_veg_tissues_pool_init
@@ -152,54 +152,54 @@ MODULE mo_veg_memory_class
     !! operator overload  
     !! [def: field1d(nc) | field2d(nc,nblks)]
     ! +
-    PROCEDURE                 :: Add_veg_tiss_p_and_scalar            ! pool%elem_p + scalar        | ON_CHUNK & ON_DOMAIN
-    ! PROCEDURE, PASS(struct1)  :: Add_scalar_and_veg_tiss_p            ! scalar      + pool%elem_p | ON_CHUNK & ON_DOMAIN
-    ! PROCEDURE                 :: Add_veg_tiss_p_and_field1d           ! pool%elem_p + field1d     | ON_CHUNK
-    ! PROCEDURE, PASS(struct1)  :: Add_field1d_and_veg_tiss_p           ! field1d     + pool%elem_p | ON_CHUNK
-    ! PROCEDURE                 :: Add_veg_tiss_p_and_field2d           ! pool%elem_p + field2d     | ON_CHUNK & ON_DOMAIN | field2d(:,1) & field2d(:,:)
-    PROCEDURE                 :: Add_veg_tiss_p_and_veg_tiss_p        ! pool%elem_p + pool%elem_p | ON_CHUNK & ON_DOMAIN
-    GENERIC                   :: OPERATOR(+) => Add_veg_tiss_p_and_scalar, & ! Add_scalar_and_veg_tiss_p, &
-      ! &                                         Add_veg_tiss_p_and_field1d, Add_field1d_and_veg_tiss_p, &
-      ! &                                         Add_veg_tiss_p_and_field2d, &
+    PROCEDURE                 :: Add_veg_tiss_p_and_scalar            ! tissues_pool + scalar       | ON_CHUNK & ON_DOMAIN
+    PROCEDURE, PASS(struct1)  :: Add_scalar_and_veg_tiss_p            ! scalar       + tissues_pool | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Add_veg_tiss_p_and_field1d           ! tissues_pool + field1d      | ON_CHUNK
+    PROCEDURE, PASS(struct1)  :: Add_field1d_and_veg_tiss_p           ! field1d      + tissues_pool | ON_CHUNK
+    PROCEDURE                 :: Add_veg_tiss_p_and_field2d           ! tissues_pool + field2d      | ON_CHUNK & ON_DOMAIN | field2d(:,1) & field2d(:,:)
+    PROCEDURE                 :: Add_veg_tiss_p_and_veg_tiss_p        ! tissues_pool + tissues_pool | ON_CHUNK & ON_DOMAIN
+    GENERIC                   :: OPERATOR(+) => Add_veg_tiss_p_and_scalar,  Add_scalar_and_veg_tiss_p, &
+      &                                         Add_veg_tiss_p_and_field1d, Add_field1d_and_veg_tiss_p, &
+      &                                         Add_veg_tiss_p_and_field2d, &
       &                                         Add_veg_tiss_p_and_veg_tiss_p
     ! -
-    ! PROCEDURE                 :: Subtract_veg_tiss_p_minus_scalar     ! pool%elem_p - scalar        | ON_CHUNK & ON_DOMAIN
-    ! PROCEDURE                 :: Subtract_veg_tiss_p_minus_field1d    ! pool%elem_p - field1d       | ON_CHUNK
-    ! PROCEDURE                 :: Subtract_veg_tiss_p_minus_field2d    ! pool%elem_p - field2d       | ON_CHUNK & ON_DOMAIN | field2d(:,1) & field2d(:,:)
-    ! PROCEDURE                 :: Subtract_veg_tiss_p_minus_veg_tiss_p ! pool%elem_p - pool%elem_p | ON_CHUNK & ON_DOMAIN
-    ! GENERIC                   :: OPERATOR(-) => Subtract_veg_tiss_p_minus_scalar, &
-    !   &                                         Subtract_veg_tiss_p_minus_field1d, &
-    !   &                                         Subtract_veg_tiss_p_minus_field2d, &
-    !   &                                         Subtract_veg_tiss_p_minus_veg_tiss_p
+    PROCEDURE                 :: Subtract_veg_tiss_p_minus_scalar     ! tissues_pool - scalar       | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Subtract_veg_tiss_p_minus_field1d    ! tissues_pool - field1d      | ON_CHUNK
+    PROCEDURE                 :: Subtract_veg_tiss_p_minus_field2d    ! tissues_pool - field2d      | ON_CHUNK & ON_DOMAIN | field2d(:,1) & field2d(:,:)
+    PROCEDURE                 :: Subtract_veg_tiss_p_minus_veg_tiss_p ! tissues_pool - tissues_pool | ON_CHUNK & ON_DOMAIN
+    GENERIC                   :: OPERATOR(-) => Subtract_veg_tiss_p_minus_scalar, &
+      &                                         Subtract_veg_tiss_p_minus_field1d, &
+      &                                         Subtract_veg_tiss_p_minus_field2d, &
+      &                                         Subtract_veg_tiss_p_minus_veg_tiss_p
     ! ! *
-    ! PROCEDURE                 :: Multiply_veg_tiss_p_with_scalar      ! pool%elem_p * scalar      | ON_CHUNK & ON_DOMAIN
-    ! PROCEDURE, PASS(struct1)  :: Multiply_scalar_with_veg_tiss_p      ! scalar      * pool%elem_p | ON_CHUNK & ON_DOMAIN
-    ! PROCEDURE                 :: Multiply_veg_tiss_p_with_field1d     ! pool%elem_p * field1d     | ON_CHUNK
-    ! PROCEDURE, PASS(struct1)  :: Multiply_field1d_with_veg_tiss_p     ! field1d     * pool%elem_p | ON_CHUNK
-    ! PROCEDURE                 :: Multiply_veg_tiss_p_with_field2d     ! pool%elem_p * field2d     | ON_CHUNK & ON_DOMAIN | field2d(:,1) & field2d(:,:)
-    ! PROCEDURE, PASS(struct1)  :: Multiply_field2d_with_veg_tiss_p     ! field2d     * pool%elem_p | ON_CHUNK & ON_DOMAIN | field2d(:,1) & field2d(:,:)
-    ! PROCEDURE                 :: Multiply_veg_tiss_p_with_veg_tiss_p  ! pool%elem_p * pool%elem_p | ON_CHUNK & ON_DOMAIN
+    ! PROCEDURE                 :: Multiply_veg_tiss_p_with_scalar      ! tissues_pool * scalar       | ON_CHUNK & ON_DOMAIN
+    ! PROCEDURE, PASS(struct1)  :: Multiply_scalar_with_veg_tiss_p      ! scalar       * tissues_pool | ON_CHUNK & ON_DOMAIN
+    ! PROCEDURE                 :: Multiply_veg_tiss_p_with_field1d     ! tissues_pool * field1d      | ON_CHUNK
+    ! PROCEDURE, PASS(struct1)  :: Multiply_field1d_with_veg_tiss_p     ! field1d      * tissues_pool | ON_CHUNK
+    ! PROCEDURE                 :: Multiply_veg_tiss_p_with_field2d     ! tissues_pool * field2d      | ON_CHUNK & ON_DOMAIN | field2d(:,1) & field2d(:,:)
+    ! PROCEDURE, PASS(struct1)  :: Multiply_field2d_with_veg_tiss_p     ! field2d      * tissues_pool | ON_CHUNK & ON_DOMAIN | field2d(:,1) & field2d(:,:)
+    ! PROCEDURE                 :: Multiply_veg_tiss_p_with_veg_tiss_p  ! tissues_pool * tissues_pool | ON_CHUNK & ON_DOMAIN
     ! GENERIC                   :: OPERATOR(*) => Multiply_veg_tiss_p_with_scalar,  Multiply_scalar_with_veg_tiss_p, &
     !   &                                         Multiply_veg_tiss_p_with_field1d, Multiply_field1d_with_veg_tiss_p, &
     !   &                                         Multiply_veg_tiss_p_with_field2d, Multiply_field2d_with_veg_tiss_p, &
     !   &                                         Multiply_veg_tiss_p_with_veg_tiss_p
     ! ! /
-    ! PROCEDURE                 :: Div_veg_tiss_p_by_scalar             ! pool%elem_p / scalar        | ON_CHUNK & ON_DOMAIN
-    ! PROCEDURE                 :: Div_veg_tiss_p_by_field1d            ! pool%elem_p / field1d       | ON_CHUNK
-    ! PROCEDURE                 :: Div_veg_tiss_p_by_field2d            ! pool%elem_p / field2d       | ON_CHUNK & ON_DOMAIN | field2d(:,1) & field2d(:,:)
-    ! PROCEDURE                 :: Div_veg_tiss_p_by_veg_tiss_p         ! pool%elem_p / pool%elem_p | ON_CHUNK & ON_DOMAIN
+    ! PROCEDURE                 :: Div_veg_tiss_p_by_scalar             ! tissues_pool / scalar       | ON_CHUNK & ON_DOMAIN
+    ! PROCEDURE                 :: Div_veg_tiss_p_by_field1d            ! tissues_pool / field1d      | ON_CHUNK
+    ! PROCEDURE                 :: Div_veg_tiss_p_by_field2d            ! tissues_pool / field2d      | ON_CHUNK & ON_DOMAIN | field2d(:,1) & field2d(:,:)
+    ! PROCEDURE                 :: Div_veg_tiss_p_by_veg_tiss_p         ! tissues_pool / tissues_pool | ON_CHUNK & ON_DOMAIN
     ! GENERIC                   :: OPERATOR(/) => Div_veg_tiss_p_by_scalar, &
     !   &                                         Div_veg_tiss_p_by_field1d, &
     !   &                                         Div_veg_tiss_p_by_field2d, &
     !   &                                         Div_veg_tiss_p_by_veg_tiss_p
     ! =
-    PROCEDURE                 :: Assign_scalar_to_veg_tiss_p          ! pool%elem_p = scalar        | ON_CHUNK & ON_DOMAIN
-    ! PROCEDURE                 :: Assign_field1d_to_veg_tiss_p         ! pool%elem_p = field1d(:)    | ON_CHUNK
-    ! PROCEDURE                 :: Assign_field2d_to_veg_tiss_p         ! pool%elem_p = field2d(:,:)  | ON_CHUNK & ON_DOMAIN | field2d(:,1) & field2d(:,:)
-    PROCEDURE                 :: Assign_veg_tiss_p_to_veg_tiss_p      ! pool%elem_p = pool%elem_p | ON_CHUNK & ON_DOMAIN | only numeric values of elements are assigned
+    PROCEDURE                 :: Assign_scalar_to_veg_tiss_p          ! tissues_pool = scalar       | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Assign_field1d_to_veg_tiss_p         ! tissues_pool = field1d(:)   | ON_CHUNK
+    PROCEDURE                 :: Assign_field2d_to_veg_tiss_p         ! tissues_pool = field2d(:,:) | ON_CHUNK & ON_DOMAIN | field2d(:,1) & field2d(:,:)
+    PROCEDURE                 :: Assign_veg_tiss_p_to_veg_tiss_p      ! tissues_pool = tissues_pool | ON_CHUNK & ON_DOMAIN | only numeric values of elements are assigned
     GENERIC                   :: ASSIGNMENT(=) => Assign_scalar_to_veg_tiss_p, &
-      ! &                                           Assign_field1d_to_veg_tiss_p, &
-      ! &                                           Assign_field2d_to_veg_tiss_p, &
+      &                                           Assign_field1d_to_veg_tiss_p, &
+      &                                           Assign_field2d_to_veg_tiss_p, &
       &                                           Assign_veg_tiss_p_to_veg_tiss_p
     !! finalize
     FINAL     :: finalize_veg_tissues_pool
@@ -1293,6 +1293,7 @@ CONTAINS
 
   !--------------------------------------------------------------------------------------------------------------------------------
   ! finalize after operator overload
+  ! t_veg_elements_pool
   !--------------------------------------------------------------------------------------------------------------------------------
   SUBROUTINE finalize_veg_elements_pool(this)
 
@@ -1319,6 +1320,10 @@ CONTAINS
     IF (ASSOCIATED(this%leaf_list))     DEALLOCATE(this%leaf_list)
    
   END SUBROUTINE finalize_veg_elements_pool
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! finalize after operator overload
+  ! t_veg_tissues_pool
+  !--------------------------------------------------------------------------------------------------------------------------------
   SUBROUTINE finalize_veg_tissues_pool(this)
 
     TYPE(t_veg_tissues_pool) :: this
@@ -2657,6 +2662,62 @@ CONTAINS
     
   END SUBROUTINE Assign_scalar_to_veg_tiss_p
   !--------------------------------------------------------------------------------------------------------------------------------
+  ! veg_tissues_pool = field1d(:) | ON_CHUNK
+  !--------------------------------------------------------------------------------------------------------------------------------
+  SUBROUTINE Assign_field1d_to_veg_tiss_p(lhs, rhs)
+  
+    CLASS(t_veg_tissues_pool),  INTENT(inout) :: lhs
+    REAL(wp),                   INTENT(in)    :: rhs(:)
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Assign_field1d_to_veg_tiss_p'
+
+    lhs%carbon      = rhs(:)
+    lhs%nitrogen    = rhs(:)
+    lhs%phosphorus  = rhs(:)
+    lhs%carbon13    = rhs(:)
+    lhs%carbon14    = rhs(:)
+    lhs%nitrogen15  = rhs(:)
+
+    lhs%leaf        = rhs(:)
+    lhs%fine_root   = rhs(:)
+    lhs%coarse_root = rhs(:)
+    lhs%sap_wood    = rhs(:)
+    lhs%heart_wood  = rhs(:)
+    lhs%labile      = rhs(:)
+    lhs%reserve     = rhs(:)
+    lhs%fruit       = rhs(:)
+    lhs%seed_bed    = rhs(:)
+    
+  END SUBROUTINE Assign_field1d_to_veg_tiss_p
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! veg_tissues_pool = field2d(:,:) | ON_CHUNK & ON_DOMAIN | field2d(:,1) & field2d(:,:)
+  !--------------------------------------------------------------------------------------------------------------------------------
+  SUBROUTINE Assign_field2d_to_veg_tiss_p(lhs, rhs)
+  
+    CLASS(t_veg_tissues_pool),  INTENT(inout) :: lhs
+    REAL(wp),                   INTENT(in)    :: rhs(:,:)
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Assign_field2d_to_veg_tiss_p'
+
+    lhs%carbon      = rhs(:,:)
+    lhs%nitrogen    = rhs(:,:)
+    lhs%phosphorus  = rhs(:,:)
+    lhs%carbon13    = rhs(:,:)
+    lhs%carbon14    = rhs(:,:)
+    lhs%nitrogen15  = rhs(:,:)
+
+    lhs%leaf        = rhs(:,:)
+    lhs%fine_root   = rhs(:,:)
+    lhs%coarse_root = rhs(:,:)
+    lhs%sap_wood    = rhs(:,:)
+    lhs%heart_wood  = rhs(:,:)
+    lhs%labile      = rhs(:,:)
+    lhs%reserve     = rhs(:,:)
+    lhs%fruit       = rhs(:,:)
+    lhs%seed_bed    = rhs(:,:)
+
+  END SUBROUTINE Assign_field2d_to_veg_tiss_p
+  !--------------------------------------------------------------------------------------------------------------------------------
   ! veg_tissues_pool = veg_tissues_pool | ON_CHUNK & ON_DOMAIN
   !--------------------------------------------------------------------------------------------------------------------------------
   SUBROUTINE Assign_veg_tiss_p_to_veg_tiss_p(lhs, rhs)
@@ -2766,8 +2827,318 @@ CONTAINS
     structOut%seed_bed        = struct1%seed_bed    + scalar
   
   END FUNCTION Add_veg_tiss_p_and_scalar
-
-
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! scalar + veg_tissues_pool        | ON_CHUNK & ON_DOMAIN
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Add_scalar_and_veg_tiss_p(scalar, struct1) RESULT(structOut)
+  
+    REAL(wp),                       INTENT(in)  :: scalar
+    CLASS(t_veg_tissues_pool),      INTENT(in)  :: struct1
+    TYPE(t_veg_tissues_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Add_scalar_and_veg_tiss_p'
+  
+    !> 1.0 init temporary pool structOut
+    !! init tissue pool with element variables
+    CALL structOut%Init_tiss_pool_for_op_ov(name='op_ov_help', shortname='op_ov_help', &
+      & unit=TRIM(struct1%element_unit), pool_suffix='veg_p') ! l_elements=.TRUE. by default
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr2d,     source=struct1%carbon%ptr2d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr2d,   source=struct1%nitrogen%ptr2d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr2d, source=struct1%phosphorus%ptr2d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr2d,   source=struct1%carbon13%ptr2d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr2d,   source=struct1%carbon14%ptr2d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
+    !! init element pools
+    CALL structOut%leaf%Init_elem_var_elem_p(struct1%leaf)
+    CALL structOut%fine_root%Init_elem_var_elem_p(struct1%fine_root)
+    CALL structOut%coarse_root%Init_elem_var_elem_p(struct1%coarse_root)
+    CALL structOut%sap_wood%Init_elem_var_elem_p(struct1%sap_wood)
+    CALL structOut%heart_wood%Init_elem_var_elem_p(struct1%heart_wood)
+    CALL structOut%labile%Init_elem_var_elem_p(struct1%labile)
+    CALL structOut%reserve%Init_elem_var_elem_p(struct1%reserve)
+    CALL structOut%fruit%Init_elem_var_elem_p(struct1%fruit)
+    CALL structOut%seed_bed%Init_elem_var_elem_p(struct1%seed_bed)
+  
+    !> 2.0 run calculation
+    !! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
+    !> 2.1 element variables of the tissue pool itself
+    structOut%carbon          = scalar + struct1%carbon    
+    structOut%nitrogen        = scalar + struct1%nitrogen  
+    structOut%phosphorus      = scalar + struct1%phosphorus
+    structOut%carbon13        = scalar + struct1%carbon13  
+    structOut%carbon14        = scalar + struct1%carbon14  
+    structOut%nitrogen15      = scalar + struct1%nitrogen15
+    ! adding the pointer is this needed here too (not only with the jsb_var op_ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr2d(:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr2d(:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr2d(:,:)
+    !> 2.2 element pools
+    structOut%leaf            = scalar + struct1%leaf       
+    structOut%fine_root       = scalar + struct1%fine_root  
+    structOut%coarse_root     = scalar + struct1%coarse_root
+    structOut%sap_wood        = scalar + struct1%sap_wood   
+    structOut%heart_wood      = scalar + struct1%heart_wood 
+    structOut%labile          = scalar + struct1%labile     
+    structOut%reserve         = scalar + struct1%reserve    
+    structOut%fruit           = scalar + struct1%fruit      
+    structOut%seed_bed        = scalar + struct1%seed_bed   
+  
+  END FUNCTION Add_scalar_and_veg_tiss_p
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! veg_tissues_pool + field1d(:)        | ON_CHUNK
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Add_veg_tiss_p_and_field1d(struct1, field1d) RESULT(structOut)
+  
+    CLASS(t_veg_tissues_pool),      INTENT(in)  :: struct1
+    REAL(wp),                       INTENT(in)  :: field1d(:)
+    TYPE(t_veg_tissues_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Add_veg_tiss_p_and_field1d'
+  
+    !> 1.0 init temporary pool structOut
+    !! init tissue pool with element variables
+    CALL structOut%Init_tiss_pool_for_op_ov(name='op_ov_help', shortname='op_ov_help', &
+      & unit=TRIM(struct1%element_unit), pool_suffix='veg_p') ! l_elements=.TRUE. by default
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr2d,     source=struct1%carbon%ptr2d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr2d,   source=struct1%nitrogen%ptr2d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr2d, source=struct1%phosphorus%ptr2d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr2d,   source=struct1%carbon13%ptr2d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr2d,   source=struct1%carbon14%ptr2d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
+    !! init element pools
+    CALL structOut%leaf%Init_elem_var_elem_p(struct1%leaf)
+    CALL structOut%fine_root%Init_elem_var_elem_p(struct1%fine_root)
+    CALL structOut%coarse_root%Init_elem_var_elem_p(struct1%coarse_root)
+    CALL structOut%sap_wood%Init_elem_var_elem_p(struct1%sap_wood)
+    CALL structOut%heart_wood%Init_elem_var_elem_p(struct1%heart_wood)
+    CALL structOut%labile%Init_elem_var_elem_p(struct1%labile)
+    CALL structOut%reserve%Init_elem_var_elem_p(struct1%reserve)
+    CALL structOut%fruit%Init_elem_var_elem_p(struct1%fruit)
+    CALL structOut%seed_bed%Init_elem_var_elem_p(struct1%seed_bed)
+  
+    !> 2.0 run calculation
+    !! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
+    !> 2.1 element variables of the tissue pool itself
+    structOut%carbon          = struct1%carbon      + field1d(:)
+    structOut%nitrogen        = struct1%nitrogen    + field1d(:)
+    structOut%phosphorus      = struct1%phosphorus  + field1d(:)
+    structOut%carbon13        = struct1%carbon13    + field1d(:)
+    structOut%carbon14        = struct1%carbon14    + field1d(:)
+    structOut%nitrogen15      = struct1%nitrogen15  + field1d(:)
+    ! adding the pointer is this needed here too (not only with the jsb_var op_ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr2d(:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr2d(:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr2d(:,:)
+    !> 2.2 element pools
+    structOut%leaf            = struct1%leaf        + field1d(:)
+    structOut%fine_root       = struct1%fine_root   + field1d(:)
+    structOut%coarse_root     = struct1%coarse_root + field1d(:)
+    structOut%sap_wood        = struct1%sap_wood    + field1d(:)
+    structOut%heart_wood      = struct1%heart_wood  + field1d(:)
+    structOut%labile          = struct1%labile      + field1d(:)
+    structOut%reserve         = struct1%reserve     + field1d(:)
+    structOut%fruit           = struct1%fruit       + field1d(:)
+    structOut%seed_bed        = struct1%seed_bed    + field1d(:)
+  
+  END FUNCTION Add_veg_tiss_p_and_field1d
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! field1d(:) + veg_tissues_pool        | ON_CHUNK
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Add_field1d_and_veg_tiss_p(field1d, struct1) RESULT(structOut)
+  
+    REAL(wp),                       INTENT(in)  :: field1d(:)
+    CLASS(t_veg_tissues_pool),      INTENT(in)  :: struct1
+    TYPE(t_veg_tissues_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Add_field1d_and_veg_tiss_p'
+  
+    !> 1.0 init temporary pool structOut
+    !! init tissue pool with element variables
+    CALL structOut%Init_tiss_pool_for_op_ov(name='op_ov_help', shortname='op_ov_help', &
+      & unit=TRIM(struct1%element_unit), pool_suffix='veg_p') ! l_elements=.TRUE. by default
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr2d,     source=struct1%carbon%ptr2d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr2d,   source=struct1%nitrogen%ptr2d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr2d, source=struct1%phosphorus%ptr2d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr2d,   source=struct1%carbon13%ptr2d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr2d,   source=struct1%carbon14%ptr2d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
+    !! init element pools
+    CALL structOut%leaf%Init_elem_var_elem_p(struct1%leaf)
+    CALL structOut%fine_root%Init_elem_var_elem_p(struct1%fine_root)
+    CALL structOut%coarse_root%Init_elem_var_elem_p(struct1%coarse_root)
+    CALL structOut%sap_wood%Init_elem_var_elem_p(struct1%sap_wood)
+    CALL structOut%heart_wood%Init_elem_var_elem_p(struct1%heart_wood)
+    CALL structOut%labile%Init_elem_var_elem_p(struct1%labile)
+    CALL structOut%reserve%Init_elem_var_elem_p(struct1%reserve)
+    CALL structOut%fruit%Init_elem_var_elem_p(struct1%fruit)
+    CALL structOut%seed_bed%Init_elem_var_elem_p(struct1%seed_bed)
+  
+    !> 2.0 run calculation
+    !! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
+    !> 2.1 element variables of the tissue pool itself
+    structOut%carbon          = field1d(:) + struct1%carbon    
+    structOut%nitrogen        = field1d(:) + struct1%nitrogen  
+    structOut%phosphorus      = field1d(:) + struct1%phosphorus
+    structOut%carbon13        = field1d(:) + struct1%carbon13  
+    structOut%carbon14        = field1d(:) + struct1%carbon14  
+    structOut%nitrogen15      = field1d(:) + struct1%nitrogen15
+    ! adding the pointer is this needed here too (not only with the jsb_var op_ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr2d(:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr2d(:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr2d(:,:)
+    !> 2.2 element pools
+    structOut%leaf            = field1d(:) + struct1%leaf       
+    structOut%fine_root       = field1d(:) + struct1%fine_root  
+    structOut%coarse_root     = field1d(:) + struct1%coarse_root
+    structOut%sap_wood        = field1d(:) + struct1%sap_wood   
+    structOut%heart_wood      = field1d(:) + struct1%heart_wood 
+    structOut%labile          = field1d(:) + struct1%labile     
+    structOut%reserve         = field1d(:) + struct1%reserve    
+    structOut%fruit           = field1d(:) + struct1%fruit      
+    structOut%seed_bed        = field1d(:) + struct1%seed_bed   
+  
+  END FUNCTION Add_field1d_and_veg_tiss_p
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! veg_tissues_pool + field2d(:,:)        | ON_CHUNK & ON_DOMAIN | field2d(:,1) & field2d(:,:)
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Add_veg_tiss_p_and_field2d(struct1, field2d) RESULT(structOut)
+  
+    CLASS(t_veg_tissues_pool),      INTENT(in)  :: struct1
+    REAL(wp),                       INTENT(in)  :: field2d(:,:)
+    TYPE(t_veg_tissues_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Add_veg_tiss_p_and_field2d'
+  
+    !> 1.0 init temporary pool structOut
+    !! init tissue pool with element variables
+    CALL structOut%Init_tiss_pool_for_op_ov(name='op_ov_help', shortname='op_ov_help', &
+      & unit=TRIM(struct1%element_unit), pool_suffix='veg_p') ! l_elements=.TRUE. by default
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr2d,     source=struct1%carbon%ptr2d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr2d,   source=struct1%nitrogen%ptr2d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr2d, source=struct1%phosphorus%ptr2d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr2d,   source=struct1%carbon13%ptr2d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr2d,   source=struct1%carbon14%ptr2d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
+    !! init element pools
+    CALL structOut%leaf%Init_elem_var_elem_p(struct1%leaf)
+    CALL structOut%fine_root%Init_elem_var_elem_p(struct1%fine_root)
+    CALL structOut%coarse_root%Init_elem_var_elem_p(struct1%coarse_root)
+    CALL structOut%sap_wood%Init_elem_var_elem_p(struct1%sap_wood)
+    CALL structOut%heart_wood%Init_elem_var_elem_p(struct1%heart_wood)
+    CALL structOut%labile%Init_elem_var_elem_p(struct1%labile)
+    CALL structOut%reserve%Init_elem_var_elem_p(struct1%reserve)
+    CALL structOut%fruit%Init_elem_var_elem_p(struct1%fruit)
+    CALL structOut%seed_bed%Init_elem_var_elem_p(struct1%seed_bed)
+  
+    !> 2.0 run calculation
+    !! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
+    !> 2.1 element variables of the tissue pool itself
+    structOut%carbon          = struct1%carbon      + field2d(:,:)
+    structOut%nitrogen        = struct1%nitrogen    + field2d(:,:)
+    structOut%phosphorus      = struct1%phosphorus  + field2d(:,:)
+    structOut%carbon13        = struct1%carbon13    + field2d(:,:)
+    structOut%carbon14        = struct1%carbon14    + field2d(:,:)
+    structOut%nitrogen15      = struct1%nitrogen15  + field2d(:,:)
+    ! adding the pointer is this needed here too (not only with the jsb_var op_ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr2d(:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr2d(:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr2d(:,:)
+    !> 2.2 element pools
+    structOut%leaf            = struct1%leaf        + field2d(:,:)
+    structOut%fine_root       = struct1%fine_root   + field2d(:,:)
+    structOut%coarse_root     = struct1%coarse_root + field2d(:,:)
+    structOut%sap_wood        = struct1%sap_wood    + field2d(:,:)
+    structOut%heart_wood      = struct1%heart_wood  + field2d(:,:)
+    structOut%labile          = struct1%labile      + field2d(:,:)
+    structOut%reserve         = struct1%reserve     + field2d(:,:)
+    structOut%fruit           = struct1%fruit       + field2d(:,:)
+    structOut%seed_bed        = struct1%seed_bed    + field2d(:,:)
+  
+  END FUNCTION Add_veg_tiss_p_and_field2d
   !--------------------------------------------------------------------------------------------------------------------------------
   ! veg_tissues_pool + veg_tissues_pool        | ON_CHUNK & ON_DOMAIN
   !--------------------------------------------------------------------------------------------------------------------------------
@@ -2845,6 +3216,322 @@ CONTAINS
     structOut%seed_bed        = struct1%seed_bed    + struct2%seed_bed   
   
   END FUNCTION Add_veg_tiss_p_and_veg_tiss_p
+
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! - minus
+  !--------------------------------------------------------------------------------------------------------------------------------
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! veg_tissues_pool - scalar        | ON_CHUNK & ON_DOMAIN
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Subtract_veg_tiss_p_minus_scalar(struct1, scalar) RESULT(structOut)
+  
+    CLASS(t_veg_tissues_pool),      INTENT(in)  :: struct1
+    REAL(wp),                       INTENT(in)  :: scalar
+    TYPE(t_veg_tissues_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Subtract_veg_tiss_p_minus_scalar'
+  
+    !> 1.0 init temporary pool structOut
+    !! init tissue pool with element variables
+    CALL structOut%Init_tiss_pool_for_op_ov(name='op_ov_help', shortname='op_ov_help', &
+      & unit=TRIM(struct1%element_unit), pool_suffix='veg_p') ! l_elements=.TRUE. by default
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr2d,     source=struct1%carbon%ptr2d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr2d,   source=struct1%nitrogen%ptr2d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr2d, source=struct1%phosphorus%ptr2d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr2d,   source=struct1%carbon13%ptr2d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr2d,   source=struct1%carbon14%ptr2d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
+    !! init element pools
+    CALL structOut%leaf%Init_elem_var_elem_p(struct1%leaf)
+    CALL structOut%fine_root%Init_elem_var_elem_p(struct1%fine_root)
+    CALL structOut%coarse_root%Init_elem_var_elem_p(struct1%coarse_root)
+    CALL structOut%sap_wood%Init_elem_var_elem_p(struct1%sap_wood)
+    CALL structOut%heart_wood%Init_elem_var_elem_p(struct1%heart_wood)
+    CALL structOut%labile%Init_elem_var_elem_p(struct1%labile)
+    CALL structOut%reserve%Init_elem_var_elem_p(struct1%reserve)
+    CALL structOut%fruit%Init_elem_var_elem_p(struct1%fruit)
+    CALL structOut%seed_bed%Init_elem_var_elem_p(struct1%seed_bed)
+  
+    !> 2.0 run calculation
+    !! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
+    !> 2.1 element variables of the tissue pool itself
+    structOut%carbon          = struct1%carbon      - scalar
+    structOut%nitrogen        = struct1%nitrogen    - scalar
+    structOut%phosphorus      = struct1%phosphorus  - scalar
+    structOut%carbon13        = struct1%carbon13    - scalar
+    structOut%carbon14        = struct1%carbon14    - scalar
+    structOut%nitrogen15      = struct1%nitrogen15  - scalar
+    ! adding the pointer is this needed here too (not only with the jsb_var op_ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr2d(:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr2d(:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr2d(:,:)
+    !> 2.2 element pools
+    structOut%leaf            = struct1%leaf        - scalar
+    structOut%fine_root       = struct1%fine_root   - scalar
+    structOut%coarse_root     = struct1%coarse_root - scalar
+    structOut%sap_wood        = struct1%sap_wood    - scalar
+    structOut%heart_wood      = struct1%heart_wood  - scalar
+    structOut%labile          = struct1%labile      - scalar
+    structOut%reserve         = struct1%reserve     - scalar
+    structOut%fruit           = struct1%fruit       - scalar
+    structOut%seed_bed        = struct1%seed_bed    - scalar
+  
+  END FUNCTION Subtract_veg_tiss_p_minus_scalar
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! veg_tissues_pool - field1d(:)        | ON_CHUNK
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Subtract_veg_tiss_p_minus_field1d(struct1, field1d) RESULT(structOut)
+  
+    CLASS(t_veg_tissues_pool),      INTENT(in)  :: struct1
+    REAL(wp),                       INTENT(in)  :: field1d(:)
+    TYPE(t_veg_tissues_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Subtract_veg_tiss_p_minus_field1d'
+  
+    !> 1.0 init temporary pool structOut
+    !! init tissue pool with element variables
+    CALL structOut%Init_tiss_pool_for_op_ov(name='op_ov_help', shortname='op_ov_help', &
+      & unit=TRIM(struct1%element_unit), pool_suffix='veg_p') ! l_elements=.TRUE. by default
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr2d,     source=struct1%carbon%ptr2d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr2d,   source=struct1%nitrogen%ptr2d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr2d, source=struct1%phosphorus%ptr2d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr2d,   source=struct1%carbon13%ptr2d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr2d,   source=struct1%carbon14%ptr2d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
+    !! init element pools
+    CALL structOut%leaf%Init_elem_var_elem_p(struct1%leaf)
+    CALL structOut%fine_root%Init_elem_var_elem_p(struct1%fine_root)
+    CALL structOut%coarse_root%Init_elem_var_elem_p(struct1%coarse_root)
+    CALL structOut%sap_wood%Init_elem_var_elem_p(struct1%sap_wood)
+    CALL structOut%heart_wood%Init_elem_var_elem_p(struct1%heart_wood)
+    CALL structOut%labile%Init_elem_var_elem_p(struct1%labile)
+    CALL structOut%reserve%Init_elem_var_elem_p(struct1%reserve)
+    CALL structOut%fruit%Init_elem_var_elem_p(struct1%fruit)
+    CALL structOut%seed_bed%Init_elem_var_elem_p(struct1%seed_bed)
+  
+    !> 2.0 run calculation
+    !! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
+    !> 2.1 element variables of the tissue pool itself
+    structOut%carbon          = struct1%carbon      - field1d(:)
+    structOut%nitrogen        = struct1%nitrogen    - field1d(:)
+    structOut%phosphorus      = struct1%phosphorus  - field1d(:)
+    structOut%carbon13        = struct1%carbon13    - field1d(:)
+    structOut%carbon14        = struct1%carbon14    - field1d(:)
+    structOut%nitrogen15      = struct1%nitrogen15  - field1d(:)
+    ! adding the pointer is this needed here too (not only with the jsb_var op_ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr2d(:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr2d(:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr2d(:,:)
+    !> 2.2 element pools
+    structOut%leaf            = struct1%leaf        - field1d(:)
+    structOut%fine_root       = struct1%fine_root   - field1d(:)
+    structOut%coarse_root     = struct1%coarse_root - field1d(:)
+    structOut%sap_wood        = struct1%sap_wood    - field1d(:)
+    structOut%heart_wood      = struct1%heart_wood  - field1d(:)
+    structOut%labile          = struct1%labile      - field1d(:)
+    structOut%reserve         = struct1%reserve     - field1d(:)
+    structOut%fruit           = struct1%fruit       - field1d(:)
+    structOut%seed_bed        = struct1%seed_bed    - field1d(:)
+  
+  END FUNCTION Subtract_veg_tiss_p_minus_field1d
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! veg_tissues_pool - field2d(:,:)        | ON_CHUNK & ON_DOMAIN | field2d(:,1) & field2d(:,:)
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Subtract_veg_tiss_p_minus_field2d(struct1, field2d) RESULT(structOut)
+  
+    CLASS(t_veg_tissues_pool),      INTENT(in)  :: struct1
+    REAL(wp),                       INTENT(in)  :: field2d(:,:)
+    TYPE(t_veg_tissues_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Subtract_veg_tiss_p_minus_field2d'
+  
+    !> 1.0 init temporary pool structOut
+    !! init tissue pool with element variables
+    CALL structOut%Init_tiss_pool_for_op_ov(name='op_ov_help', shortname='op_ov_help', &
+      & unit=TRIM(struct1%element_unit), pool_suffix='veg_p') ! l_elements=.TRUE. by default
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr2d,     source=struct1%carbon%ptr2d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr2d,   source=struct1%nitrogen%ptr2d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr2d, source=struct1%phosphorus%ptr2d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr2d,   source=struct1%carbon13%ptr2d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr2d,   source=struct1%carbon14%ptr2d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
+    !! init element pools
+    CALL structOut%leaf%Init_elem_var_elem_p(struct1%leaf)
+    CALL structOut%fine_root%Init_elem_var_elem_p(struct1%fine_root)
+    CALL structOut%coarse_root%Init_elem_var_elem_p(struct1%coarse_root)
+    CALL structOut%sap_wood%Init_elem_var_elem_p(struct1%sap_wood)
+    CALL structOut%heart_wood%Init_elem_var_elem_p(struct1%heart_wood)
+    CALL structOut%labile%Init_elem_var_elem_p(struct1%labile)
+    CALL structOut%reserve%Init_elem_var_elem_p(struct1%reserve)
+    CALL structOut%fruit%Init_elem_var_elem_p(struct1%fruit)
+    CALL structOut%seed_bed%Init_elem_var_elem_p(struct1%seed_bed)
+  
+    !> 2.0 run calculation
+    !! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
+    !> 2.1 element variables of the tissue pool itself
+    structOut%carbon          = struct1%carbon      - field2d(:,:)
+    structOut%nitrogen        = struct1%nitrogen    - field2d(:,:)
+    structOut%phosphorus      = struct1%phosphorus  - field2d(:,:)
+    structOut%carbon13        = struct1%carbon13    - field2d(:,:)
+    structOut%carbon14        = struct1%carbon14    - field2d(:,:)
+    structOut%nitrogen15      = struct1%nitrogen15  - field2d(:,:)
+    ! adding the pointer is this needed here too (not only with the jsb_var op_ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr2d(:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr2d(:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr2d(:,:)
+    !> 2.2 element pools
+    structOut%leaf            = struct1%leaf        - field2d(:,:)
+    structOut%fine_root       = struct1%fine_root   - field2d(:,:)
+    structOut%coarse_root     = struct1%coarse_root - field2d(:,:)
+    structOut%sap_wood        = struct1%sap_wood    - field2d(:,:)
+    structOut%heart_wood      = struct1%heart_wood  - field2d(:,:)
+    structOut%labile          = struct1%labile      - field2d(:,:)
+    structOut%reserve         = struct1%reserve     - field2d(:,:)
+    structOut%fruit           = struct1%fruit       - field2d(:,:)
+    structOut%seed_bed        = struct1%seed_bed    - field2d(:,:)
+  
+  END FUNCTION Subtract_veg_tiss_p_minus_field2d
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! veg_tissues_pool - veg_tissues_pool        | ON_CHUNK & ON_DOMAIN
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Subtract_veg_tiss_p_minus_veg_tiss_p(struct1, struct2) RESULT(structOut)
+  
+    CLASS(t_veg_tissues_pool),      INTENT(in)  :: struct1, struct2
+    TYPE(t_veg_tissues_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Subtract_veg_tiss_p_minus_veg_tiss_p'
+  
+    !> 1.0 init temporary pool structOut
+    !! init tissue pool with element variables
+    CALL structOut%Init_tiss_pool_for_op_ov(name='op_ov_help', shortname='op_ov_help', &
+      & unit=TRIM(struct1%element_unit), pool_suffix='veg_p') ! l_elements=.TRUE. by default
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr2d,     source=struct1%carbon%ptr2d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr2d,   source=struct1%nitrogen%ptr2d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr2d, source=struct1%phosphorus%ptr2d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr2d,   source=struct1%carbon13%ptr2d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr2d,   source=struct1%carbon14%ptr2d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
+    !! init element pools
+    CALL structOut%leaf%Init_elem_var_elem_p(struct1%leaf)
+    CALL structOut%fine_root%Init_elem_var_elem_p(struct1%fine_root)
+    CALL structOut%coarse_root%Init_elem_var_elem_p(struct1%coarse_root)
+    CALL structOut%sap_wood%Init_elem_var_elem_p(struct1%sap_wood)
+    CALL structOut%heart_wood%Init_elem_var_elem_p(struct1%heart_wood)
+    CALL structOut%labile%Init_elem_var_elem_p(struct1%labile)
+    CALL structOut%reserve%Init_elem_var_elem_p(struct1%reserve)
+    CALL structOut%fruit%Init_elem_var_elem_p(struct1%fruit)
+    CALL structOut%seed_bed%Init_elem_var_elem_p(struct1%seed_bed)
+  
+    !> 2.0 run calculation
+    !! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
+    !> 2.1 element variables of the tissue pool itself
+    structOut%carbon          = struct1%carbon      - struct2%carbon    
+    structOut%nitrogen        = struct1%nitrogen    - struct2%nitrogen  
+    structOut%phosphorus      = struct1%phosphorus  - struct2%phosphorus
+    structOut%carbon13        = struct1%carbon13    - struct2%carbon13  
+    structOut%carbon14        = struct1%carbon14    - struct2%carbon14  
+    structOut%nitrogen15      = struct1%nitrogen15  - struct2%nitrogen15
+    ! adding the pointer is this needed here too (not only with the jsb_var op_ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr2d(:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr2d(:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr2d(:,:)
+    !> 2.2 element pools
+    structOut%leaf            = struct1%leaf        - struct2%leaf       
+    structOut%fine_root       = struct1%fine_root   - struct2%fine_root  
+    structOut%coarse_root     = struct1%coarse_root - struct2%coarse_root
+    structOut%sap_wood        = struct1%sap_wood    - struct2%sap_wood   
+    structOut%heart_wood      = struct1%heart_wood  - struct2%heart_wood 
+    structOut%labile          = struct1%labile      - struct2%labile     
+    structOut%reserve         = struct1%reserve     - struct2%reserve    
+    structOut%fruit           = struct1%fruit       - struct2%fruit      
+    structOut%seed_bed        = struct1%seed_bed    - struct2%seed_bed   
+  
+  END FUNCTION Subtract_veg_tiss_p_minus_veg_tiss_p
+
 
 
 END MODULE mo_veg_memory_class
