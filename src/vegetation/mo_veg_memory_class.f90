@@ -65,7 +65,7 @@ MODULE mo_veg_memory_class
     !! infrastructure
     PROCEDURE :: Init                   => t_veg_elements_pool_init
     PROCEDURE :: Get_element_name_by_id => t_veg_elements_pool_get_element_name_by_id
-    PROCEDURE :: Init_elem_var_elem_p   => Init_element_var_veg_elem_pool
+    PROCEDURE :: Init_elem_var_elem_p   => Init_element_var_veg_elements_pool           ! used in t_veg_tissues_pool operator overload routines to init temporary objects
     !! operator overload  
     !! [def: field1d(nc) | field2d(nc,nblks)]
     ! +
@@ -146,10 +146,9 @@ MODULE mo_veg_memory_class
     TYPE(t_veg_elements_pool), POINTER :: seed_bed         !< elements of seed_bed
   CONTAINS
     !! infrastructure
-    PROCEDURE :: Init                   => t_veg_tissues_pool_init
-    PROCEDURE :: Init_tiss_pool         => Create_veg_tissues_pool_hlp
-    ! PROCEDURE :: Init_elem_var_elem_p   => Init_element_var_veg_elem_pool
-    PROCEDURE :: Get_element_name_by_id => t_veg_tissues_pool_get_element_name_by_id
+    PROCEDURE :: Init                     => t_veg_tissues_pool_init
+    PROCEDURE :: Get_element_name_by_id   => t_veg_tissues_pool_get_element_name_by_id
+    PROCEDURE :: Init_tiss_pool_for_op_ov => Create_veg_tissues_pool_temporary_object_for_op_ov    ! create 
     !! operator overload  
     !! [def: field1d(nc) | field2d(nc,nblks)]
     ! +
@@ -607,6 +606,7 @@ CONTAINS
   !> create and init an object of the VEG_ tissues pool "t_veg_tissues_pool"
   !! init and add all its objects of the "t_veg_elements_pool" with "pool_object%Init()"
   !! "object => Create_veg_tissues_pool()"
+  !! used for VEG_ memory init
   !-----------------------------------------------------------------------------------------------------
   FUNCTION Create_veg_tissues_pool(name, shortname, unit, lct_ids, pool_prefix, pool_suffix) RESULT(veg_tissues_pool)
 
@@ -691,8 +691,12 @@ CONTAINS
     NULLIFY(veg_elements_pool)
 
   END FUNCTION Create_veg_tissues_pool
-  !! --------
-  SUBROUTINE Create_veg_tissues_pool_hlp(this, name, shortname, unit, pool_suffix)
+
+  !-----------------------------------------------------------------------------------------------------
+  !> create an elements_pool that is part of a tissue pool
+  !! used for operator overload routines of tissue pools
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE Create_veg_tissues_pool_temporary_object_for_op_ov(this, name, shortname, unit, pool_suffix)
 
     CLASS(t_veg_tissues_pool),  INTENT(inout) :: this
     CHARACTER(LEN=*),           INTENT(in)    :: name
@@ -769,9 +773,13 @@ CONTAINS
     this%seed_bed => veg_elements_pool
     NULLIFY(veg_elements_pool)
 
-  END SUBROUTINE Create_veg_tissues_pool_hlp
+  END SUBROUTINE Create_veg_tissues_pool_temporary_object_for_op_ov
 
-  SUBROUTINE Init_element_var_veg_elem_pool(this, struct1)
+  !-----------------------------------------------------------------------------------------------------
+  !> initialize an elements_pool that is part of a tissue pool
+  !! used for operator overload routines of tissue pools
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE Init_element_var_veg_elements_pool(this, struct1)
 
     CLASS(t_veg_elements_pool),  INTENT(inout)  :: this
     CLASS(t_veg_elements_pool),  INTENT(in)     :: struct1
@@ -801,8 +809,7 @@ CONTAINS
     this%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
     ALLOCATE(this%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
 
-  END SUBROUTINE Init_element_var_veg_elem_pool
-
+  END SUBROUTINE Init_element_var_veg_elements_pool
 
   !-----------------------------------------------------------------------------------------------------
   !> initialize memory for the VEG_ process
@@ -1439,7 +1446,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_veg_elem_p_and_scalar'
   
     ! init temporary pool structOut
-    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    CALL structOut%Init(name='op_ov_help', shortname='op_ov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
     structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
     structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
     structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
@@ -1466,7 +1473,7 @@ CONTAINS
     ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
 
     ! run calculation
-    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
     structOut%carbon          = struct1%carbon      + scalar
     structOut%nitrogen        = struct1%nitrogen    + scalar
     structOut%phosphorus      = struct1%phosphorus  + scalar
@@ -1474,7 +1481,7 @@ CONTAINS
     structOut%carbon14        = struct1%carbon14    + scalar
     structOut%nitrogen15      = struct1%nitrogen15  + scalar
 
-    ! is this needed here too (not only with the jsb_var op-ov)
+    ! is this needed here too (not only with the jsb_var op_ov)
     structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
     structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
     structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
@@ -1495,7 +1502,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_scalar_and_veg_elem_p'
   
     ! init temporary pool structOut
-    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    CALL structOut%Init(name='op_ov_help', shortname='op_ov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
     structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
     structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
     structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
@@ -1522,7 +1529,7 @@ CONTAINS
     ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
 
     ! run calculation
-    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
     structOut%carbon          = scalar + struct1%carbon    
     structOut%nitrogen        = scalar + struct1%nitrogen  
     structOut%phosphorus      = scalar + struct1%phosphorus
@@ -1530,7 +1537,7 @@ CONTAINS
     structOut%carbon14        = scalar + struct1%carbon14  
     structOut%nitrogen15      = scalar + struct1%nitrogen15
 
-    ! is this needed here too (not only with the jsb_var op-ov)
+    ! is this needed here too (not only with the jsb_var op_ov)
     structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
     structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
     structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
@@ -1551,7 +1558,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_veg_elem_p_and_field1d'
   
     ! init temporary pool structOut
-    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    CALL structOut%Init(name='op_ov_help', shortname='op_ov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
     structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
     structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
     structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
@@ -1578,7 +1585,7 @@ CONTAINS
     ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
 
     ! run calculation
-    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
     structOut%carbon          = struct1%carbon      + field1d(:)
     structOut%nitrogen        = struct1%nitrogen    + field1d(:)
     structOut%phosphorus      = struct1%phosphorus  + field1d(:)
@@ -1586,7 +1593,7 @@ CONTAINS
     structOut%carbon14        = struct1%carbon14    + field1d(:)
     structOut%nitrogen15      = struct1%nitrogen15  + field1d(:)
 
-    ! is this needed here too (not only with the jsb_var op-ov)
+    ! is this needed here too (not only with the jsb_var op_ov)
     structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
     structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
     structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
@@ -1607,7 +1614,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_field1d_and_veg_elem_p'
   
     ! init temporary pool structOut
-    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    CALL structOut%Init(name='op_ov_help', shortname='op_ov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
     structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
     structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
     structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
@@ -1634,7 +1641,7 @@ CONTAINS
     ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
 
     ! run calculation
-    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
     structOut%carbon          = field1d(:) + struct1%carbon    
     structOut%nitrogen        = field1d(:) + struct1%nitrogen  
     structOut%phosphorus      = field1d(:) + struct1%phosphorus
@@ -1642,7 +1649,7 @@ CONTAINS
     structOut%carbon14        = field1d(:) + struct1%carbon14  
     structOut%nitrogen15      = field1d(:) + struct1%nitrogen15
 
-    ! is this needed here too (not only with the jsb_var op-ov)
+    ! is this needed here too (not only with the jsb_var op_ov)
     structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
     structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
     structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
@@ -1663,7 +1670,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_veg_elem_p_and_field2d'
   
     ! init temporary pool structOut
-    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    CALL structOut%Init(name='op_ov_help', shortname='op_ov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
     structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
     structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
     structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
@@ -1690,7 +1697,7 @@ CONTAINS
     ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
 
     ! run calculation
-    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
     structOut%carbon          = struct1%carbon      + field2d(:,:)
     structOut%nitrogen        = struct1%nitrogen    + field2d(:,:)
     structOut%phosphorus      = struct1%phosphorus  + field2d(:,:)
@@ -1698,7 +1705,7 @@ CONTAINS
     structOut%carbon14        = struct1%carbon14    + field2d(:,:)
     structOut%nitrogen15      = struct1%nitrogen15  + field2d(:,:)
 
-    ! is this needed here too (not only with the jsb_var op-ov)
+    ! is this needed here too (not only with the jsb_var op_ov)
     structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
     structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
     structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
@@ -1718,7 +1725,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_veg_elem_p_and_veg_elem_p'
   
     ! init temporary pool structOut
-    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    CALL structOut%Init(name='op_ov_help', shortname='op_ov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
     structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
     structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
     structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
@@ -1745,7 +1752,7 @@ CONTAINS
     ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
 
     ! run calculation
-    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
     structOut%carbon          = struct1%carbon      + struct2%carbon
     structOut%nitrogen        = struct1%nitrogen    + struct2%nitrogen  
     structOut%phosphorus      = struct1%phosphorus  + struct2%phosphorus
@@ -1753,7 +1760,7 @@ CONTAINS
     structOut%carbon14        = struct1%carbon14    + struct2%carbon14  
     structOut%nitrogen15      = struct1%nitrogen15  + struct2%nitrogen15
 
-    ! is this needed here too (not only with the jsb_var op-ov)
+    ! is this needed here too (not only with the jsb_var op_ov)
     structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
     structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
     structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
@@ -1778,7 +1785,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Subtract_veg_elem_p_minus_scalar'
   
     ! init temporary pool structOut
-    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    CALL structOut%Init(name='op_ov_help', shortname='op_ov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
     structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
     structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
     structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
@@ -1805,7 +1812,7 @@ CONTAINS
     ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
 
     ! run calculation
-    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
     structOut%carbon          = struct1%carbon      - scalar
     structOut%nitrogen        = struct1%nitrogen    - scalar
     structOut%phosphorus      = struct1%phosphorus  - scalar
@@ -1813,7 +1820,7 @@ CONTAINS
     structOut%carbon14        = struct1%carbon14    - scalar
     structOut%nitrogen15      = struct1%nitrogen15  - scalar
 
-    ! is this needed here too (not only with the jsb_var op-ov)
+    ! is this needed here too (not only with the jsb_var op_ov)
     structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
     structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
     structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
@@ -1834,7 +1841,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Subtract_veg_elem_p_minus_field1d'
   
     ! init temporary pool structOut
-    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    CALL structOut%Init(name='op_ov_help', shortname='op_ov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
     structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
     structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
     structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
@@ -1861,7 +1868,7 @@ CONTAINS
     ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
 
     ! run calculation
-    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
     structOut%carbon          = struct1%carbon      - field1d(:)
     structOut%nitrogen        = struct1%nitrogen    - field1d(:)
     structOut%phosphorus      = struct1%phosphorus  - field1d(:)
@@ -1869,7 +1876,7 @@ CONTAINS
     structOut%carbon14        = struct1%carbon14    - field1d(:)
     structOut%nitrogen15      = struct1%nitrogen15  - field1d(:)
 
-    ! is this needed here too (not only with the jsb_var op-ov)
+    ! is this needed here too (not only with the jsb_var op_ov)
     structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
     structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
     structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
@@ -1890,7 +1897,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Subtract_veg_elem_p_minus_field2d'
   
     ! init temporary pool structOut
-    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    CALL structOut%Init(name='op_ov_help', shortname='op_ov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
     structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
     structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
     structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
@@ -1917,7 +1924,7 @@ CONTAINS
     ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
 
     ! run calculation
-    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
     structOut%carbon          = struct1%carbon      - field2d(:,:)
     structOut%nitrogen        = struct1%nitrogen    - field2d(:,:)
     structOut%phosphorus      = struct1%phosphorus  - field2d(:,:)
@@ -1925,7 +1932,7 @@ CONTAINS
     structOut%carbon14        = struct1%carbon14    - field2d(:,:)
     structOut%nitrogen15      = struct1%nitrogen15  - field2d(:,:)
 
-    ! is this needed here too (not only with the jsb_var op-ov)
+    ! is this needed here too (not only with the jsb_var op_ov)
     structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
     structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
     structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
@@ -1945,7 +1952,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Subtract_veg_elem_p_minus_veg_elem_p'
   
     ! init temporary pool structOut
-    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    CALL structOut%Init(name='op_ov_help', shortname='op_ov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
     structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
     structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
     structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
@@ -1972,7 +1979,7 @@ CONTAINS
     ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
 
     ! run calculation
-    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
     structOut%carbon          = struct1%carbon      - struct2%carbon
     structOut%nitrogen        = struct1%nitrogen    - struct2%nitrogen  
     structOut%phosphorus      = struct1%phosphorus  - struct2%phosphorus
@@ -1980,7 +1987,7 @@ CONTAINS
     structOut%carbon14        = struct1%carbon14    - struct2%carbon14  
     structOut%nitrogen15      = struct1%nitrogen15  - struct2%nitrogen15
 
-    ! is this needed here too (not only with the jsb_var op-ov)
+    ! is this needed here too (not only with the jsb_var op_ov)
     structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
     structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
     structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
@@ -2005,7 +2012,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_veg_elem_p_with_scalar'
   
     ! init temporary pool structOut
-    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    CALL structOut%Init(name='op_ov_help', shortname='op_ov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
     structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
     structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
     structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
@@ -2032,7 +2039,7 @@ CONTAINS
     ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
 
     ! run calculation
-    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
     structOut%carbon          = struct1%carbon      * scalar
     structOut%nitrogen        = struct1%nitrogen    * scalar
     structOut%phosphorus      = struct1%phosphorus  * scalar
@@ -2040,7 +2047,7 @@ CONTAINS
     structOut%carbon14        = struct1%carbon14    * scalar
     structOut%nitrogen15      = struct1%nitrogen15  * scalar
 
-    ! is this needed here too (not only with the jsb_var op-ov)
+    ! is this needed here too (not only with the jsb_var op_ov)
     structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
     structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
     structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
@@ -2061,7 +2068,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_scalar_with_veg_elem_p'
   
     ! init temporary pool structOut
-    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    CALL structOut%Init(name='op_ov_help', shortname='op_ov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
     structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
     structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
     structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
@@ -2088,7 +2095,7 @@ CONTAINS
     ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
 
     ! run calculation
-    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
     structOut%carbon          = scalar * struct1%carbon    
     structOut%nitrogen        = scalar * struct1%nitrogen  
     structOut%phosphorus      = scalar * struct1%phosphorus
@@ -2096,7 +2103,7 @@ CONTAINS
     structOut%carbon14        = scalar * struct1%carbon14  
     structOut%nitrogen15      = scalar * struct1%nitrogen15
 
-    ! is this needed here too (not only with the jsb_var op-ov)
+    ! is this needed here too (not only with the jsb_var op_ov)
     structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
     structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
     structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
@@ -2117,7 +2124,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_veg_elem_p_with_field1d'
   
     ! init temporary pool structOut
-    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    CALL structOut%Init(name='op_ov_help', shortname='op_ov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
     structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
     structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
     structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
@@ -2144,7 +2151,7 @@ CONTAINS
     ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
 
     ! run calculation
-    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
     structOut%carbon          = struct1%carbon      * field1d(:)
     structOut%nitrogen        = struct1%nitrogen    * field1d(:)
     structOut%phosphorus      = struct1%phosphorus  * field1d(:)
@@ -2152,7 +2159,7 @@ CONTAINS
     structOut%carbon14        = struct1%carbon14    * field1d(:)
     structOut%nitrogen15      = struct1%nitrogen15  * field1d(:)
 
-    ! is this needed here too (not only with the jsb_var op-ov)
+    ! is this needed here too (not only with the jsb_var op_ov)
     structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
     structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
     structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
@@ -2173,7 +2180,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_field1d_with_veg_elem_p'
   
     ! init temporary pool structOut
-    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    CALL structOut%Init(name='op_ov_help', shortname='op_ov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
     structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
     structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
     structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
@@ -2200,7 +2207,7 @@ CONTAINS
     ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
 
     ! run calculation
-    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
     structOut%carbon          = field1d(:) * struct1%carbon    
     structOut%nitrogen        = field1d(:) * struct1%nitrogen  
     structOut%phosphorus      = field1d(:) * struct1%phosphorus
@@ -2208,7 +2215,7 @@ CONTAINS
     structOut%carbon14        = field1d(:) * struct1%carbon14  
     structOut%nitrogen15      = field1d(:) * struct1%nitrogen15
 
-    ! is this needed here too (not only with the jsb_var op-ov)
+    ! is this needed here too (not only with the jsb_var op_ov)
     structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
     structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
     structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
@@ -2229,7 +2236,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_veg_elem_p_with_field2d'
   
     ! init temporary pool structOut
-    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    CALL structOut%Init(name='op_ov_help', shortname='op_ov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
     structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
     structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
     structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
@@ -2256,7 +2263,7 @@ CONTAINS
     ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
 
     ! run calculation
-    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
     structOut%carbon          = struct1%carbon      * field2d(:,:)
     structOut%nitrogen        = struct1%nitrogen    * field2d(:,:)
     structOut%phosphorus      = struct1%phosphorus  * field2d(:,:)
@@ -2264,7 +2271,7 @@ CONTAINS
     structOut%carbon14        = struct1%carbon14    * field2d(:,:)
     structOut%nitrogen15      = struct1%nitrogen15  * field2d(:,:)
 
-    ! is this needed here too (not only with the jsb_var op-ov)
+    ! is this needed here too (not only with the jsb_var op_ov)
     structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
     structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
     structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
@@ -2285,7 +2292,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_field2d_with_veg_elem_p'
   
     ! init temporary pool structOut
-    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    CALL structOut%Init(name='op_ov_help', shortname='op_ov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
     structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
     structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
     structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
@@ -2312,7 +2319,7 @@ CONTAINS
     ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
 
     ! run calculation
-    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
     structOut%carbon          = field2d(:,:) * struct1%carbon    
     structOut%nitrogen        = field2d(:,:) * struct1%nitrogen  
     structOut%phosphorus      = field2d(:,:) * struct1%phosphorus
@@ -2320,7 +2327,7 @@ CONTAINS
     structOut%carbon14        = field2d(:,:) * struct1%carbon14  
     structOut%nitrogen15      = field2d(:,:) * struct1%nitrogen15
 
-    ! is this needed here too (not only with the jsb_var op-ov)
+    ! is this needed here too (not only with the jsb_var op_ov)
     structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
     structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
     structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
@@ -2340,7 +2347,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_veg_elem_p_with_veg_elem_p'
   
     ! init temporary pool structOut
-    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    CALL structOut%Init(name='op_ov_help', shortname='op_ov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
     structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
     structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
     structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
@@ -2367,7 +2374,7 @@ CONTAINS
     ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
 
     ! run calculation
-    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
     structOut%carbon          = struct1%carbon      * struct2%carbon
     structOut%nitrogen        = struct1%nitrogen    * struct2%nitrogen  
     structOut%phosphorus      = struct1%phosphorus  * struct2%phosphorus
@@ -2375,7 +2382,7 @@ CONTAINS
     structOut%carbon14        = struct1%carbon14    * struct2%carbon14  
     structOut%nitrogen15      = struct1%nitrogen15  * struct2%nitrogen15
 
-    ! is this needed here too (not only with the jsb_var op-ov)
+    ! is this needed here too (not only with the jsb_var op_ov)
     structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
     structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
     structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
@@ -2400,7 +2407,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Div_veg_elem_p_by_scalar'
   
     ! init temporary pool structOut
-    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    CALL structOut%Init(name='op_ov_help', shortname='op_ov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
     structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
     structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
     structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
@@ -2427,7 +2434,7 @@ CONTAINS
     ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
 
     ! run calculation
-    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
     structOut%carbon          = struct1%carbon      / scalar
     structOut%nitrogen        = struct1%nitrogen    / scalar
     structOut%phosphorus      = struct1%phosphorus  / scalar
@@ -2435,7 +2442,7 @@ CONTAINS
     structOut%carbon14        = struct1%carbon14    / scalar
     structOut%nitrogen15      = struct1%nitrogen15  / scalar
 
-    ! is this needed here too (not only with the jsb_var op-ov)
+    ! is this needed here too (not only with the jsb_var op_ov)
     structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
     structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
     structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
@@ -2456,7 +2463,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Div_veg_elem_p_by_field1d'
   
     ! init temporary pool structOut
-    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    CALL structOut%Init(name='op_ov_help', shortname='op_ov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
     structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
     structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
     structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
@@ -2483,7 +2490,7 @@ CONTAINS
     ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
 
     ! run calculation
-    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
     structOut%carbon          = struct1%carbon      / field1d(:)
     structOut%nitrogen        = struct1%nitrogen    / field1d(:)
     structOut%phosphorus      = struct1%phosphorus  / field1d(:)
@@ -2491,7 +2498,7 @@ CONTAINS
     structOut%carbon14        = struct1%carbon14    / field1d(:)
     structOut%nitrogen15      = struct1%nitrogen15  / field1d(:)
 
-    ! is this needed here too (not only with the jsb_var op-ov)
+    ! is this needed here too (not only with the jsb_var op_ov)
     structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
     structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
     structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
@@ -2512,7 +2519,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Div_veg_elem_p_by_field2d'
   
     ! init temporary pool structOut
-    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    CALL structOut%Init(name='op_ov_help', shortname='op_ov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
     structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
     structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
     structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
@@ -2539,7 +2546,7 @@ CONTAINS
     ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
 
     ! run calculation
-    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
     structOut%carbon          = struct1%carbon      / field2d(:,:)
     structOut%nitrogen        = struct1%nitrogen    / field2d(:,:)
     structOut%phosphorus      = struct1%phosphorus  / field2d(:,:)
@@ -2547,7 +2554,7 @@ CONTAINS
     structOut%carbon14        = struct1%carbon14    / field2d(:,:)
     structOut%nitrogen15      = struct1%nitrogen15  / field2d(:,:)
 
-    ! is this needed here too (not only with the jsb_var op-ov)
+    ! is this needed here too (not only with the jsb_var op_ov)
     structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
     structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
     structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
@@ -2567,7 +2574,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Div_veg_elem_p_by_veg_elem_p'
   
     ! init temporary pool structOut
-    CALL structOut%Init(name='opov_help', shortname='opov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
+    CALL structOut%Init(name='op_ov_help', shortname='op_ov_help', l_elements=.TRUE., element_unit=TRIM(struct1%element_unit))
     structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
     structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
     structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
@@ -2594,7 +2601,7 @@ CONTAINS
     ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
 
     ! run calculation
-    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
     structOut%carbon          = struct1%carbon      / struct2%carbon
     structOut%nitrogen        = struct1%nitrogen    / struct2%nitrogen  
     structOut%phosphorus      = struct1%phosphorus  / struct2%phosphorus
@@ -2602,7 +2609,7 @@ CONTAINS
     structOut%carbon14        = struct1%carbon14    / struct2%carbon14  
     structOut%nitrogen15      = struct1%nitrogen15  / struct2%nitrogen15
 
-    ! is this needed here too (not only with the jsb_var op-ov)
+    ! is this needed here too (not only with the jsb_var op_ov)
     structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
     structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
     structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
@@ -2613,7 +2620,7 @@ CONTAINS
   END FUNCTION Div_veg_elem_p_by_veg_elem_p
 
   !--------------------------------------------------------------------------------------------------------------------------------
-  !> operator overload and assignment routines for pools
+  !> operator overload and assignment routines for tissue pools
   !!  TYPE t_veg_tissues_pool
   !! 
   !--------------------------------------------------------------------------------------------------------------------------------
@@ -2692,8 +2699,10 @@ CONTAINS
   
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_veg_tiss_p_and_scalar'
   
-    ! init temporary pool structOut
-    CALL structOut%Init_tiss_pool(name='opov_help', shortname='opov_help', unit=TRIM(struct1%element_unit), pool_suffix='veg_p') ! l_elements=.TRUE. by default
+    !> 1.0 init temporary pool structOut
+    !! init tissue pool with element variables
+    CALL structOut%Init_tiss_pool_for_op_ov(name='op_ov_help', shortname='op_ov_help', &
+      & unit=TRIM(struct1%element_unit), pool_suffix='veg_p') ! l_elements=.TRUE. by default
     structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
     structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
     structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
@@ -2718,7 +2727,7 @@ CONTAINS
     structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
     structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
     ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
-
+    !! init element pools
     CALL structOut%leaf%Init_elem_var_elem_p(struct1%leaf)
     CALL structOut%fine_root%Init_elem_var_elem_p(struct1%fine_root)
     CALL structOut%coarse_root%Init_elem_var_elem_p(struct1%coarse_root)
@@ -2729,23 +2738,23 @@ CONTAINS
     CALL structOut%fruit%Init_elem_var_elem_p(struct1%fruit)
     CALL structOut%seed_bed%Init_elem_var_elem_p(struct1%seed_bed)
   
-    ! run calculation
-    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    !> 2.0 run calculation
+    !! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
+    !> 2.1 element variables of the tissue pool itself
     structOut%carbon          = struct1%carbon      + scalar
     structOut%nitrogen        = struct1%nitrogen    + scalar
     structOut%phosphorus      = struct1%phosphorus  + scalar
     structOut%carbon13        = struct1%carbon13    + scalar
     structOut%carbon14        = struct1%carbon14    + scalar
     structOut%nitrogen15      = struct1%nitrogen15  + scalar
-
-    ! is this needed here too (not only with the jsb_var op-ov)
+    ! adding the pointer is this needed here too (not only with the jsb_var op_ov)
     structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
     structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
     structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
     structOut%carbon13%ptr    => structOut%carbon13%ptr2d(:,:)
     structOut%carbon14%ptr    => structOut%carbon14%ptr2d(:,:)
     structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr2d(:,:)
-
+    !> 2.2 element pools
     structOut%leaf            = struct1%leaf        + scalar
     structOut%fine_root       = struct1%fine_root   + scalar
     structOut%coarse_root     = struct1%coarse_root + scalar
@@ -2769,8 +2778,10 @@ CONTAINS
   
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_veg_tiss_p_and_veg_tiss_p'
   
-    ! init temporary pool structOut
-    CALL structOut%Init_tiss_pool(name='opov_help', shortname='opov_help', unit=TRIM(struct1%element_unit), pool_suffix='veg_p') ! l_elements=.TRUE. by default
+    !> 1.0 init temporary pool structOut
+    !! init tissue pool with element variables
+    CALL structOut%Init_tiss_pool_for_op_ov(name='op_ov_help', shortname='op_ov_help', &
+      & unit=TRIM(struct1%element_unit), pool_suffix='veg_p') ! l_elements=.TRUE. by default
     structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
     structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
     structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
@@ -2795,7 +2806,7 @@ CONTAINS
     structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
     structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
     ALLOCATE(structOut%nitrogen15%ptr2d, source=struct1%nitrogen15%ptr2d)
-
+    !! init element pools
     CALL structOut%leaf%Init_elem_var_elem_p(struct1%leaf)
     CALL structOut%fine_root%Init_elem_var_elem_p(struct1%fine_root)
     CALL structOut%coarse_root%Init_elem_var_elem_p(struct1%coarse_root)
@@ -2806,23 +2817,23 @@ CONTAINS
     CALL structOut%fruit%Init_elem_var_elem_p(struct1%fruit)
     CALL structOut%seed_bed%Init_elem_var_elem_p(struct1%seed_bed)
   
-    ! run calculation
-    ! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op-ov routines of the jsb_var)
+    !> 2.0 run calculation
+    !! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
+    !> 2.1 element variables of the tissue pool itself
     structOut%carbon          = struct1%carbon      + struct2%carbon    
     structOut%nitrogen        = struct1%nitrogen    + struct2%nitrogen  
     structOut%phosphorus      = struct1%phosphorus  + struct2%phosphorus
     structOut%carbon13        = struct1%carbon13    + struct2%carbon13  
     structOut%carbon14        = struct1%carbon14    + struct2%carbon14  
     structOut%nitrogen15      = struct1%nitrogen15  + struct2%nitrogen15
-
-    ! is this needed here too (not only with the jsb_var op-ov)
+    ! adding the pointer is this needed here too (not only with the jsb_var op_ov)
     structOut%carbon%ptr      => structOut%carbon%ptr2d(:,:)
     structOut%nitrogen%ptr    => structOut%nitrogen%ptr2d(:,:)
     structOut%phosphorus%ptr  => structOut%phosphorus%ptr2d(:,:)
     structOut%carbon13%ptr    => structOut%carbon13%ptr2d(:,:)
     structOut%carbon14%ptr    => structOut%carbon14%ptr2d(:,:)
     structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr2d(:,:)
-
+    !> 2.2 element pools
     structOut%leaf            = struct1%leaf        + struct2%leaf       
     structOut%fine_root       = struct1%fine_root   + struct2%fine_root  
     structOut%coarse_root     = struct1%coarse_root + struct2%coarse_root
