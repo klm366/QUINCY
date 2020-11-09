@@ -228,8 +228,10 @@ CONTAINS
     veg_total_flux                      = veg_litterfall + hlp1(:) + veg_total_flux + hlp2(:,1)   ! 10.5   <== only value of "canopy layer 1"
     veg_litterfall                      = veg_total_flux + veg_litterfall + 4.0_wp                ! 17.7
     veg_falloc                          = veg_total_flux - veg_falloc - 1.5_wp                    ! -3.2
-
-
+    veg_falloc                          = veg_falloc * 2.0_wp + veg_litterfall                    ! -6.4 + 17.7 = 11.3
+    veg_total_flux                      = veg_total_flux - 6.5_wp
+    veg_total_flux                      = veg_total_flux * veg_total_flux                         ! 16.0
+    veg_total_flux                      = veg_falloc / 2.0_wp                                     ! 5.65
 
   END SUBROUTINE update_veg_dynamics
 
