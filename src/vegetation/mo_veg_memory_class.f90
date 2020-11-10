@@ -127,7 +127,7 @@ MODULE mo_veg_memory_class
   !! vegetation pool of tissues
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_pool) :: t_veg_tissues_pool
-    ! element var
+    ! element variables
     TYPE(t_jsb_var_real2d), POINTER :: carbon
     TYPE(t_jsb_var_real2d), POINTER :: nitrogen
     TYPE(t_jsb_var_real2d), POINTER :: phosphorus
@@ -212,14 +212,21 @@ MODULE mo_veg_memory_class
   !! added directly into the t_veg_memory as "CLASS(t_jsb_pool), POINTER :: pools"
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_veg_elements_pool) :: t_veg_main_pool
-    ! pools
+    !> 1.0 element variables
+    !! inherited from t_veg_elements_pool
+    ! TYPE(t_jsb_var_real2d), POINTER :: carbon, nitrogen, phosphorus, carbon13, carbon14, nitrogen15
+    !> 2.0 tissues_pools
+    !! pools
     TYPE(t_veg_tissues_pool),   POINTER :: veg_pool
-    TYPE(t_veg_elements_pool),  POINTER :: veg_total_biomass
-    ! fluxes
+    !! fluxes
     TYPE(t_veg_tissues_pool),   POINTER :: veg_growth    
     TYPE(t_veg_tissues_pool),   POINTER :: veg_litterfall
     TYPE(t_veg_tissues_pool),   POINTER :: veg_falloc    
     TYPE(t_veg_tissues_pool),   POINTER :: veg_total_flux
+    !> 3.0 element_pools
+    !! pools
+    TYPE(t_veg_elements_pool),  POINTER :: veg_total_biomass
+    !! fluxes
     TYPE(t_veg_elements_pool),  POINTER :: veg_exudation    
     TYPE(t_veg_elements_pool),  POINTER :: veg_establishment
     TYPE(t_veg_elements_pool),  POINTER :: veg_reserve_use  
@@ -1286,7 +1293,7 @@ CONTAINS
   END SUBROUTINE Init_veg_memory
 
   !--------------------------------------------------------------------------------------------------------------------------------
-  !> operator overload and assignment routines for pools
+  !> operator overload and assignment routines for element pools
   !!  TYPE t_veg_elements_pool
   !! 
   !--------------------------------------------------------------------------------------------------------------------------------
@@ -1320,45 +1327,6 @@ CONTAINS
     IF (ASSOCIATED(this%leaf_list))     DEALLOCATE(this%leaf_list)
    
   END SUBROUTINE finalize_veg_elements_pool
-  !--------------------------------------------------------------------------------------------------------------------------------
-  ! finalize after operator overload
-  ! t_veg_tissues_pool
-  !--------------------------------------------------------------------------------------------------------------------------------
-  SUBROUTINE finalize_veg_tissues_pool(this)
-
-    TYPE(t_veg_tissues_pool) :: this
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':finalize_veg_tissues_pool'
-
-    ! CALL message(routine, 'Finalizing '//TRIM(this%name))
-
-    ! not allocated: this%path
-    ! no need to dealloc the element_var & element_pools because these are dealloc by their own FINAL routine
-    IF (ASSOCIATED(this%carbon))        DEALLOCATE(this%carbon)
-    IF (ASSOCIATED(this%nitrogen))      DEALLOCATE(this%nitrogen)
-    IF (ASSOCIATED(this%phosphorus))    DEALLOCATE(this%phosphorus)
-    IF (ASSOCIATED(this%carbon13))      DEALLOCATE(this%carbon13)
-    IF (ASSOCIATED(this%carbon14))      DEALLOCATE(this%carbon14)
-    IF (ASSOCIATED(this%nitrogen15))    DEALLOCATE(this%nitrogen15)
-    IF (ALLOCATED(this%shortname))      DEALLOCATE(this%shortname)
-    IF (ALLOCATED(this%name))           DEALLOCATE(this%name)
-    IF (ALLOCATED(this%element_unit))   DEALLOCATE(this%element_unit)
-    IF (ALLOCATED(this%element_list))   DEALLOCATE(this%element_list)
-    IF (ALLOCATED(this%var_list))       DEALLOCATE(this%var_list)
-    IF (ASSOCIATED(this%pool_list))     DEALLOCATE(this%pool_list)
-    IF (ASSOCIATED(this%leaf_list))     DEALLOCATE(this%leaf_list)
-    
-    IF (ASSOCIATED(this%leaf))          DEALLOCATE(this%leaf)
-    IF (ASSOCIATED(this%fine_root))     DEALLOCATE(this%fine_root)
-    IF (ASSOCIATED(this%coarse_root))   DEALLOCATE(this%coarse_root)
-    IF (ASSOCIATED(this%sap_wood))      DEALLOCATE(this%sap_wood)
-    IF (ASSOCIATED(this%heart_wood))    DEALLOCATE(this%heart_wood )
-    IF (ASSOCIATED(this%labile))        DEALLOCATE(this%labile)
-    IF (ASSOCIATED(this%reserve))       DEALLOCATE(this%reserve)
-    IF (ASSOCIATED(this%fruit))         DEALLOCATE(this%fruit)
-    IF (ASSOCIATED(this%seed_bed))      DEALLOCATE(this%seed_bed)
-   
-  END SUBROUTINE finalize_veg_tissues_pool
   
   !--------------------------------------------------------------------------------------------------------------------------------
   ! = assign
@@ -2629,6 +2597,46 @@ CONTAINS
   !!  TYPE t_veg_tissues_pool
   !! 
   !--------------------------------------------------------------------------------------------------------------------------------
+
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! finalize after operator overload
+  ! t_veg_tissues_pool
+  !--------------------------------------------------------------------------------------------------------------------------------
+  SUBROUTINE finalize_veg_tissues_pool(this)
+
+    TYPE(t_veg_tissues_pool) :: this
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':finalize_veg_tissues_pool'
+
+    ! CALL message(routine, 'Finalizing '//TRIM(this%name))
+
+    ! not allocated: this%path
+    ! no need to dealloc the element_var & element_pools because these are dealloc by their own FINAL routine
+    IF (ASSOCIATED(this%carbon))        DEALLOCATE(this%carbon)
+    IF (ASSOCIATED(this%nitrogen))      DEALLOCATE(this%nitrogen)
+    IF (ASSOCIATED(this%phosphorus))    DEALLOCATE(this%phosphorus)
+    IF (ASSOCIATED(this%carbon13))      DEALLOCATE(this%carbon13)
+    IF (ASSOCIATED(this%carbon14))      DEALLOCATE(this%carbon14)
+    IF (ASSOCIATED(this%nitrogen15))    DEALLOCATE(this%nitrogen15)
+    IF (ALLOCATED(this%shortname))      DEALLOCATE(this%shortname)
+    IF (ALLOCATED(this%name))           DEALLOCATE(this%name)
+    IF (ALLOCATED(this%element_unit))   DEALLOCATE(this%element_unit)
+    IF (ALLOCATED(this%element_list))   DEALLOCATE(this%element_list)
+    IF (ALLOCATED(this%var_list))       DEALLOCATE(this%var_list)
+    IF (ASSOCIATED(this%pool_list))     DEALLOCATE(this%pool_list)
+    IF (ASSOCIATED(this%leaf_list))     DEALLOCATE(this%leaf_list)
+    
+    IF (ASSOCIATED(this%leaf))          DEALLOCATE(this%leaf)
+    IF (ASSOCIATED(this%fine_root))     DEALLOCATE(this%fine_root)
+    IF (ASSOCIATED(this%coarse_root))   DEALLOCATE(this%coarse_root)
+    IF (ASSOCIATED(this%sap_wood))      DEALLOCATE(this%sap_wood)
+    IF (ASSOCIATED(this%heart_wood))    DEALLOCATE(this%heart_wood)
+    IF (ASSOCIATED(this%labile))        DEALLOCATE(this%labile)
+    IF (ASSOCIATED(this%reserve))       DEALLOCATE(this%reserve)
+    IF (ASSOCIATED(this%fruit))         DEALLOCATE(this%fruit)
+    IF (ASSOCIATED(this%seed_bed))      DEALLOCATE(this%seed_bed)
+   
+  END SUBROUTINE finalize_veg_tissues_pool
 
   !--------------------------------------------------------------------------------------------------------------------------------
   ! = assign
