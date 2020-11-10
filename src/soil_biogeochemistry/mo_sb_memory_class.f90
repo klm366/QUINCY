@@ -28,7 +28,7 @@
 MODULE mo_sb_memory_class
 
   USE mo_kind,                   ONLY: wp
-  USE mo_exception,              ONLY: finish
+  USE mo_exception,              ONLY: finish, message
   USE mo_util,                   ONLY: One_of
   USE mo_jsb_utils_iface,        ONLY: assign_if_present_allocatable
   USE mo_jsb_impl_constants,     ONLY: false
@@ -64,54 +64,55 @@ MODULE mo_sb_memory_class
     !! infrastructure
     PROCEDURE :: Init                   => t_sb_elements_pool_init
     PROCEDURE :: Get_element_name_by_id => t_sb_elements_pool_get_element_name_by_id
+    PROCEDURE :: Init_elem_var_elem_p   => Init_element_var_sb_elements_pool            ! used in t_sb_components_pool operator overload routines to init temporary objects
     !! operator overload
     !! [def: field2d(nc,vgrid) | field3d(nc,vgrid,nblks)]
     ! +
-    PROCEDURE                 :: Add_sb_elem_p_and_scalar            ! pool%elements + scalar        | ON_CHUNK & ON_DOMAIN
-    PROCEDURE, PASS(struct1)  :: Add_scalar_and_sb_elem_p            ! scalar        + pool%elements | ON_CHUNK & ON_DOMAIN
-    PROCEDURE                 :: Add_sb_elem_p_and_field2d           ! pool%elements + field2d       | ON_CHUNK
-    PROCEDURE, PASS(struct1)  :: Add_field2d_and_sb_elem_p           ! field2d       + pool%elements | ON_CHUNK
-    PROCEDURE                 :: Add_sb_elem_p_and_field3d           ! pool%elements + field3d       | ON_CHUNK & ON_DOMAIN
-    PROCEDURE                 :: Add_sb_elem_p_and_sb_elem_p         ! pool%elements + pool%elements | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Add_sb_elem_p_and_scalar            ! elements_pool + scalar        | ON_CHUNK & ON_DOMAIN
+    PROCEDURE, PASS(struct1)  :: Add_scalar_and_sb_elem_p            ! scalar        + elements_pool | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Add_sb_elem_p_and_field2d           ! elements_pool + field2d       | ON_CHUNK
+    PROCEDURE, PASS(struct1)  :: Add_field2d_and_sb_elem_p           ! field2d       + elements_pool | ON_CHUNK
+    PROCEDURE                 :: Add_sb_elem_p_and_field3d           ! elements_pool + field3d       | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Add_sb_elem_p_and_sb_elem_p         ! elements_pool + elements_pool | ON_CHUNK & ON_DOMAIN
     GENERIC                   :: OPERATOR(+) => Add_sb_elem_p_and_scalar,  Add_scalar_and_sb_elem_p, &
       &                                         Add_sb_elem_p_and_field2d, Add_field2d_and_sb_elem_p, &
       &                                         Add_sb_elem_p_and_field3d, &
       &                                         Add_sb_elem_p_and_sb_elem_p
     ! -
-    PROCEDURE                 :: Subtract_sb_elem_p_minus_scalar     ! pool%elements - scalar        | ON_CHUNK & ON_DOMAIN
-    PROCEDURE                 :: Subtract_sb_elem_p_minus_field2d    ! pool%elements - field2d       | ON_CHUNK
-    PROCEDURE                 :: Subtract_sb_elem_p_minus_field3d    ! pool%elements - field3d       | ON_CHUNK & ON_DOMAIN
-    PROCEDURE                 :: Subtract_sb_elem_p_minus_sb_elem_p  ! pool%elements - pool%elements | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Subtract_sb_elem_p_minus_scalar     ! elements_pool - scalar        | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Subtract_sb_elem_p_minus_field2d    ! elements_pool - field2d       | ON_CHUNK
+    PROCEDURE                 :: Subtract_sb_elem_p_minus_field3d    ! elements_pool - field3d       | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Subtract_sb_elem_p_minus_sb_elem_p  ! elements_pool - elements_pool | ON_CHUNK & ON_DOMAIN
     GENERIC                   :: OPERATOR(-) => Subtract_sb_elem_p_minus_scalar, &
       &                                         Subtract_sb_elem_p_minus_field2d, &
       &                                         Subtract_sb_elem_p_minus_field3d, &
       &                                         Subtract_sb_elem_p_minus_sb_elem_p
     ! *
-    PROCEDURE                 :: Multiply_sb_elem_p_with_scalar      ! pool%elements * scalar        | ON_CHUNK & ON_DOMAIN
-    PROCEDURE, PASS(struct1)  :: Multiply_scalar_with_sb_elem_p      ! scalar        * pool%elements | ON_CHUNK & ON_DOMAIN
-    PROCEDURE                 :: Multiply_sb_elem_p_with_field2d     ! pool%elements * field2d       | ON_CHUNK
-    PROCEDURE, PASS(struct1)  :: Multiply_field2d_with_sb_elem_p     ! field2d       * pool%elements | ON_CHUNK
-    PROCEDURE                 :: Multiply_sb_elem_p_with_field3d     ! pool%elements * field3d       | ON_CHUNK & ON_DOMAIN
-    PROCEDURE, PASS(struct1)  :: Multiply_field3d_with_sb_elem_p     ! field3d       * pool%elements | ON_CHUNK & ON_DOMAIN
-    PROCEDURE                 :: Multiply_sb_elem_p_with_sb_elem_p   ! pool%elements * pool%elements | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Multiply_sb_elem_p_with_scalar      ! elements_pool * scalar        | ON_CHUNK & ON_DOMAIN
+    PROCEDURE, PASS(struct1)  :: Multiply_scalar_with_sb_elem_p      ! scalar        * elements_pool | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Multiply_sb_elem_p_with_field2d     ! elements_pool * field2d       | ON_CHUNK
+    PROCEDURE, PASS(struct1)  :: Multiply_field2d_with_sb_elem_p     ! field2d       * elements_pool | ON_CHUNK
+    PROCEDURE                 :: Multiply_sb_elem_p_with_field3d     ! elements_pool * field3d       | ON_CHUNK & ON_DOMAIN
+    PROCEDURE, PASS(struct1)  :: Multiply_field3d_with_sb_elem_p     ! field3d       * elements_pool | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Multiply_sb_elem_p_with_sb_elem_p   ! elements_pool * elements_pool | ON_CHUNK & ON_DOMAIN
     GENERIC                   :: OPERATOR(*) => Multiply_sb_elem_p_with_scalar,  Multiply_scalar_with_sb_elem_p, &
       &                                         Multiply_sb_elem_p_with_field2d, Multiply_field2d_with_sb_elem_p, &
       &                                         Multiply_sb_elem_p_with_field3d, Multiply_field3d_with_sb_elem_p, &
       &                                         Multiply_sb_elem_p_with_sb_elem_p
     ! /
-    PROCEDURE                 :: Div_sb_elem_p_by_scalar             ! pool%elements / scalar        | ON_CHUNK & ON_DOMAIN
-    PROCEDURE                 :: Div_sb_elem_p_by_field2d            ! pool%elements / field2d       | ON_CHUNK
-    PROCEDURE                 :: Div_sb_elem_p_by_field3d            ! pool%elements / field3d       | ON_CHUNK & ON_DOMAIN
-    PROCEDURE                 :: Div_sb_elem_p_by_sb_elem_p          ! pool%elements / pool%elements | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Div_sb_elem_p_by_scalar             ! elements_pool / scalar        | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Div_sb_elem_p_by_field2d            ! elements_pool / field2d       | ON_CHUNK
+    PROCEDURE                 :: Div_sb_elem_p_by_field3d            ! elements_pool / field3d       | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Div_sb_elem_p_by_sb_elem_p          ! elements_pool / elements_pool | ON_CHUNK & ON_DOMAIN
     GENERIC                   :: OPERATOR(/) => Div_sb_elem_p_by_scalar, &
       &                                         Div_sb_elem_p_by_field2d, &
       &                                         Div_sb_elem_p_by_field3d, &
       &                                         Div_sb_elem_p_by_sb_elem_p
     ! =
-    PROCEDURE                 :: Assign_scalar_to_sb_elem_p          ! pool%elements = scalar        | ON_CHUNK & ON_DOMAIN
-    PROCEDURE                 :: Assign_field2d_to_sb_elem_p         ! pool%elements = field2d(:,:)  | ON_CHUNK
-    PROCEDURE                 :: Assign_field3d_to_sb_elem_p         ! pool%elements = field3d(:,:,:)| ON_CHUNK & ON_DOMAIN
-    PROCEDURE                 :: Assign_sb_elem_p_to_sb_elem_p       ! pool%elements = pool%elements | ON_CHUNK & ON_DOMAIN | only numeric values of elements are assigned
+    PROCEDURE                 :: Assign_scalar_to_sb_elem_p          ! elements_pool = scalar        | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Assign_field2d_to_sb_elem_p         ! elements_pool = field2d(:,:)  | ON_CHUNK
+    PROCEDURE                 :: Assign_field3d_to_sb_elem_p         ! elements_pool = field3d(:,:,:)| ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Assign_sb_elem_p_to_sb_elem_p       ! elements_pool = elements_pool | ON_CHUNK & ON_DOMAIN | only numeric values of elements are assigned
     GENERIC                   :: ASSIGNMENT(=) => Assign_scalar_to_sb_elem_p, &
       &                                           Assign_field2d_to_sb_elem_p, &
       &                                           Assign_field3d_to_sb_elem_p, &
@@ -122,9 +123,17 @@ MODULE mo_sb_memory_class
 
   !-----------------------------------------------------------------------------------------------------
   !> Type definition for t_sb_components_pool
-  !! vegetation pool of tissues
+  !! soil_biogeochemistry pool of components
   !-----------------------------------------------------------------------------------------------------
-  TYPE, EXTENDS(t_sb_elements_pool) :: t_sb_components_pool
+  TYPE, EXTENDS(t_jsb_pool) :: t_sb_components_pool
+    ! element variables
+    TYPE(t_jsb_var_real3d), POINTER :: carbon
+    TYPE(t_jsb_var_real3d), POINTER :: nitrogen
+    TYPE(t_jsb_var_real3d), POINTER :: phosphorus
+    TYPE(t_jsb_var_real3d), POINTER :: carbon13
+    TYPE(t_jsb_var_real3d), POINTER :: carbon14
+    TYPE(t_jsb_var_real3d), POINTER :: nitrogen15
+    ! component pools
     TYPE(t_sb_elements_pool), POINTER :: dom                 !< elements of dissolved organic matter
     TYPE(t_sb_elements_pool), POINTER :: dom_assoc           !< elements of minerally associated disolved organic matter
     TYPE(t_sb_elements_pool), POINTER :: soluable_litter     !< elements of metabolic litter (sugars, cellulose etc.)
@@ -135,6 +144,65 @@ MODULE mo_sb_memory_class
     TYPE(t_sb_elements_pool), POINTER :: microbial           !< elements of microbial biomass (bacteria!)
     TYPE(t_sb_elements_pool), POINTER :: residue             !< elements of necromass of fungi, microbial and mycorrhiza
     TYPE(t_sb_elements_pool), POINTER :: residue_assoc       !< elements of minerally associated microbial necromass 
+  CONTAINS
+    !! infrastructure
+    PROCEDURE :: Init                     => t_sb_components_pool_init
+    PROCEDURE :: Get_element_name_by_id   => t_sb_components_pool_get_element_name_by_id
+    PROCEDURE :: Init_comp_pool_for_op_ov => Create_sb_components_pool_temporary_object_for_op_ov    ! create 
+    !! operator overload
+    !! [def: field2d(nc,vgrid) | field3d(nc,vgrid,nblks)]
+    ! +
+    PROCEDURE                 :: Add_sb_comp_p_and_scalar            ! elements_pool + scalar        | ON_CHUNK & ON_DOMAIN
+    ! PROCEDURE, PASS(struct1)  :: Add_scalar_and_sb_comp_p            ! scalar        + elements_pool | ON_CHUNK & ON_DOMAIN
+    ! PROCEDURE                 :: Add_sb_comp_p_and_field2d           ! elements_pool + field2d       | ON_CHUNK
+    ! PROCEDURE, PASS(struct1)  :: Add_field2d_and_sb_comp_p           ! field2d       + elements_pool | ON_CHUNK
+    ! PROCEDURE                 :: Add_sb_comp_p_and_field3d           ! elements_pool + field3d       | ON_CHUNK & ON_DOMAIN
+    ! PROCEDURE                 :: Add_sb_comp_p_and_sb_comp_p         ! elements_pool + elements_pool | ON_CHUNK & ON_DOMAIN
+    GENERIC                   :: OPERATOR(+) => Add_sb_comp_p_and_scalar !,  Add_scalar_and_sb_comp_p, &
+    !   &                                         Add_sb_comp_p_and_field2d, Add_field2d_and_sb_comp_p, &
+    !   &                                         Add_sb_comp_p_and_field3d, &
+    !   &                                         Add_sb_comp_p_and_sb_comp_p
+    ! ! -
+    ! PROCEDURE                 :: Subtract_sb_comp_p_minus_scalar     ! elements_pool - scalar        | ON_CHUNK & ON_DOMAIN
+    ! PROCEDURE                 :: Subtract_sb_comp_p_minus_field2d    ! elements_pool - field2d       | ON_CHUNK
+    ! PROCEDURE                 :: Subtract_sb_comp_p_minus_field3d    ! elements_pool - field3d       | ON_CHUNK & ON_DOMAIN
+    ! PROCEDURE                 :: Subtract_sb_comp_p_minus_sb_comp_p  ! elements_pool - elements_pool | ON_CHUNK & ON_DOMAIN
+    ! GENERIC                   :: OPERATOR(-) => Subtract_sb_comp_p_minus_scalar, &
+    !   &                                         Subtract_sb_comp_p_minus_field2d, &
+    !   &                                         Subtract_sb_comp_p_minus_field3d, &
+    !   &                                         Subtract_sb_comp_p_minus_sb_comp_p
+    ! ! *
+    ! PROCEDURE                 :: Multiply_sb_comp_p_with_scalar      ! elements_pool * scalar        | ON_CHUNK & ON_DOMAIN
+    ! PROCEDURE, PASS(struct1)  :: Multiply_scalar_with_sb_comp_p      ! scalar        * elements_pool | ON_CHUNK & ON_DOMAIN
+    ! PROCEDURE                 :: Multiply_sb_comp_p_with_field2d     ! elements_pool * field2d       | ON_CHUNK
+    ! PROCEDURE, PASS(struct1)  :: Multiply_field2d_with_sb_comp_p     ! field2d       * elements_pool | ON_CHUNK
+    ! PROCEDURE                 :: Multiply_sb_comp_p_with_field3d     ! elements_pool * field3d       | ON_CHUNK & ON_DOMAIN
+    ! PROCEDURE, PASS(struct1)  :: Multiply_field3d_with_sb_comp_p     ! field3d       * elements_pool | ON_CHUNK & ON_DOMAIN
+    ! PROCEDURE                 :: Multiply_sb_comp_p_with_sb_comp_p   ! elements_pool * elements_pool | ON_CHUNK & ON_DOMAIN
+    ! GENERIC                   :: OPERATOR(*) => Multiply_sb_comp_p_with_scalar,  Multiply_scalar_with_sb_comp_p, &
+    !   &                                         Multiply_sb_comp_p_with_field2d, Multiply_field2d_with_sb_comp_p, &
+    !   &                                         Multiply_sb_comp_p_with_field3d, Multiply_field3d_with_sb_comp_p, &
+    !   &                                         Multiply_sb_comp_p_with_sb_comp_p
+    ! ! /
+    ! PROCEDURE                 :: Div_sb_comp_p_by_scalar             ! elements_pool / scalar        | ON_CHUNK & ON_DOMAIN
+    ! PROCEDURE                 :: Div_sb_comp_p_by_field2d            ! elements_pool / field2d       | ON_CHUNK
+    ! PROCEDURE                 :: Div_sb_comp_p_by_field3d            ! elements_pool / field3d       | ON_CHUNK & ON_DOMAIN
+    ! PROCEDURE                 :: Div_sb_comp_p_by_sb_comp_p          ! elements_pool / elements_pool | ON_CHUNK & ON_DOMAIN
+    ! GENERIC                   :: OPERATOR(/) => Div_sb_comp_p_by_scalar, &
+    !   &                                         Div_sb_comp_p_by_field2d, &
+    !   &                                         Div_sb_comp_p_by_field3d, &
+    !   &                                         Div_sb_comp_p_by_sb_comp_p
+    ! =
+    PROCEDURE                 :: Assign_scalar_to_sb_comp_p          ! elements_pool = scalar        | ON_CHUNK & ON_DOMAIN
+    ! PROCEDURE                 :: Assign_field2d_to_sb_comp_p         ! elements_pool = field2d(:,:)  | ON_CHUNK
+    ! PROCEDURE                 :: Assign_field3d_to_sb_comp_p         ! elements_pool = field3d(:,:,:)| ON_CHUNK & ON_DOMAIN
+    ! PROCEDURE                 :: Assign_sb_comp_p_to_sb_comp_p       ! elements_pool = elements_pool | ON_CHUNK & ON_DOMAIN | only numeric values of elements are assigned
+    GENERIC                   :: ASSIGNMENT(=) => Assign_scalar_to_sb_comp_p !, &
+    !   &                                           Assign_field2d_to_sb_comp_p, &
+    !   &                                           Assign_field3d_to_sb_comp_p, &
+    !   &                                           Assign_sb_comp_p_to_sb_comp_p
+    !! finalize
+    FINAL     :: finalize_sb_components_pool
   END TYPE t_sb_components_pool
 
   !-----------------------------------------------------------------------------------------------------
@@ -144,13 +212,20 @@ MODULE mo_sb_memory_class
   !! added directly into the t_sb_memory as "CLASS(t_jsb_pool), POINTER :: pools"
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_sb_elements_pool) :: t_sb_main_pool
-    ! pools
+    !> 1.0 element variables
+    !! inherited from t_sb_elements_pool
+    ! TYPE(t_jsb_var_real3d), POINTER :: carbon, nitrogen, phosphorus, carbon13, carbon14, nitrogen15
+    !> 2.0 components_pools
+    !! pools
     TYPE(t_sb_components_pool),   POINTER :: sb_pool               !< 
-    TYPE(t_sb_elements_pool),     POINTER :: sb_delta_pools        !< 
-    ! fluxes
+    !! fluxes
     TYPE(t_sb_components_pool),   POINTER :: sb_formation          !< 
     TYPE(t_sb_components_pool),   POINTER :: sb_loss               !< 
     TYPE(t_sb_components_pool),   POINTER :: sb_transport          !< 
+    !> 3.0 element_pools
+    !! pools
+    TYPE(t_sb_elements_pool),     POINTER :: sb_delta_pools        !< 
+    !! fluxes
     TYPE(t_sb_elements_pool),     POINTER :: sb_mycorrhiza_export  !< 
   END TYPE t_sb_main_pool
 
@@ -325,6 +400,137 @@ CONTAINS
   END SUBROUTINE t_sb_elements_pool_init
 
   !-----------------------------------------------------------------------------------------------------
+  !> helper function for t_sb_components_pool
+  !! PROCEDURE :: Get_element_name_by_id => t_sb_components_pool_get_element_name_by_id
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION t_sb_components_pool_get_element_name_by_id(this, id) RESULT(name)
+
+    CLASS(t_sb_components_pool),  INTENT(in)  :: this
+    INTEGER,                      INTENT(in)  :: id
+    CHARACTER(LEN=:),             ALLOCATABLE :: name
+
+    ! name may be consistent with the "name" provided to "CALL this%Add_element()"
+    SELECT CASE (id)
+    CASE (ELEM_C)
+      name='carbon'
+    CASE (ELEM_N)
+      name='nitrogen'
+    CASE (ELEM_P)
+      name='phosphorus'
+    CASE (ELEM_C13)
+      name='carbon13'
+    CASE (ELEM_C14)
+      name='carbon14'
+    CASE (ELEM_N15)
+      name='nitrogen15'
+    END SELECT
+
+  END FUNCTION t_sb_components_pool_get_element_name_by_id
+
+  !-----------------------------------------------------------------------------------------------------
+  !> initializing the element-variables of an object of the SB_ components pool "t_sb_components_pool"
+  !! "pool_object%Init()"
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE t_sb_components_pool_init(this, name, shortname, l_elements, element_list, element_unit)
+
+    CLASS(t_sb_components_pool),  INTENT(inout) :: this               ! object of TYPE t_sb_components_pool
+    CHARACTER(LEN=*),             INTENT(in)    :: name               ! pool name       (No spaces !)
+    CHARACTER(LEN=*),             INTENT(in)    :: shortname          ! pool short name (No spaces !)
+    LOGICAL,          OPTIONAL,   INTENT(in)    :: l_elements         ! IF pool has elements 
+    INTEGER,          OPTIONAL,   INTENT(in)    :: element_list(:)    ! list of elements; use if only selected elements should be added
+    CHARACTER(LEN=*), OPTIONAL,   INTENT(in)    :: element_unit       ! unit of elements
+
+    LOGICAL                     :: l_add_elements
+    INTEGER, ALLOCATABLE        :: element_list_loc(:)
+    INTEGER                     :: i
+    CHARACTER(len=*), PARAMETER :: routine = modname//':t_sb_components_pool_init'
+
+    !--------------------------------------------
+    this%name = name
+    this%shortname = shortname
+
+    l_add_elements = .TRUE.
+    IF (PRESENT(l_elements)) l_add_elements = l_elements
+    IF (.NOT. l_add_elements) RETURN
+
+    IF (.NOT. PRESENT(element_unit)) CALL finish(routine, 'Missing unit for elements')
+
+    ALLOCATE(element_list_loc(SIZE(all_elements)))
+    element_list_loc(:) = all_elements(:)
+    CALL assign_if_present_allocatable(element_list_loc, element_list)  ! selects element_list if available
+  
+    this%element_unit = element_unit
+  
+    !> carbon
+    IF (One_of(ELEM_C, element_list_loc) > 0) THEN
+      CALL this%Add_element('carbon', 'C', ELEM_C, dim=3)
+      i = this%Find_element_position(ELEM_C)
+      IF (i > 0) THEN
+        SELECT TYPE (selector => this%element_list(i)%p)
+        CLASS IS (t_jsb_var_real3d)
+          this%carbon => selector
+        END SELECT
+      END IF
+    END IF
+    !> nitrogen
+    IF (One_of(ELEM_N, element_list_loc) > 0) THEN
+      CALL this%Add_element('nitrogen', 'N', ELEM_N, dim=3)
+      i = this%Find_element_position(ELEM_N)
+      IF (i > 0) THEN
+        SELECT TYPE (selector => this%element_list(i)%p)
+        CLASS IS (t_jsb_var_real3d)
+          this%nitrogen => selector
+        END SELECT
+      END IF
+    END IF
+    !> phosphorus
+    IF (One_of(ELEM_P, element_list_loc) > 0) THEN
+      CALL this%Add_element('phosphorus', 'P', ELEM_P, dim=3)
+      i = this%Find_element_position(ELEM_P)
+      IF (i > 0) THEN
+        SELECT TYPE (selector => this%element_list(i)%p)
+        CLASS IS (t_jsb_var_real3d)
+          this%phosphorus => selector
+        END SELECT
+      END IF
+    END IF
+    !> carbon13
+    IF (One_of(ELEM_C13, element_list_loc) > 0) THEN
+      CALL this%Add_element('carbon13', 'C13', ELEM_C13, dim=3)
+      i = this%Find_element_position(ELEM_C13)
+      IF (i > 0) THEN
+        SELECT TYPE (selector => this%element_list(i)%p)
+        CLASS IS (t_jsb_var_real3d)
+          this%carbon13 => selector
+        END SELECT
+      END IF
+    END IF
+    !> carbon14
+    IF (One_of(ELEM_C14, element_list_loc) > 0) THEN
+      CALL this%Add_element('carbon14', 'C14', ELEM_C14, dim=3)
+      i = this%Find_element_position(ELEM_C14)
+      IF (i > 0) THEN
+        SELECT TYPE (selector => this%element_list(i)%p)
+        CLASS IS (t_jsb_var_real3d)
+          this%carbon14 => selector
+        END SELECT
+      END IF
+    END IF
+    !> nitrogen15
+    IF (One_of(ELEM_N15, element_list_loc) > 0) THEN
+      CALL this%Add_element('nitrogen15', 'N15', ELEM_N15, dim=3)
+      i = this%Find_element_position(ELEM_N15)
+      IF (i > 0) THEN
+        SELECT TYPE (selector => this%element_list(i)%p)
+        CLASS IS (t_jsb_var_real3d)
+          this%nitrogen15 => selector
+        END SELECT
+      END IF
+    END IF
+
+  END SUBROUTINE t_sb_components_pool_init
+
+  !-----------------------------------------------------------------------------------------------------
   !> create and init an object of the SB_ tissues pool "t_sb_components_pool"
   !! init and add all its objects of the "t_sb_elements_pool" with "pool_object%Init()"
   !! "object => Create_sb_components_pool()"
@@ -423,9 +629,137 @@ CONTAINS
   END FUNCTION Create_sb_components_pool
 
   !-----------------------------------------------------------------------------------------------------
+  !> create a components pool (t_sb_components_pool)
+  !! used for operator overload routines of components pools
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE Create_sb_components_pool_temporary_object_for_op_ov(this, name, shortname, unit, pool_suffix)
+
+    CLASS(t_sb_components_pool),  INTENT(inout) :: this
+    CHARACTER(LEN=*),             INTENT(in)    :: name
+    CHARACTER(LEN=*),             INTENT(in)    :: shortname
+    CHARACTER(LEN=*),             INTENT(in)    :: unit
+    CHARACTER(LEN=*), OPTIONAL,   INTENT(in)    :: pool_suffix
+
+    TYPE(t_sb_elements_pool),     POINTER       :: sb_elements_pool
+    CHARACTER(LEN=:),             ALLOCATABLE   :: suffix_loc
+
+    ! pool name suffix
+    suffix_loc = ''
+    CALL assign_if_present_allocatable(suffix_loc, pool_suffix)
+    IF (suffix_loc /= '') suffix_loc = '_' // suffix_loc
+
+    ! components pool init element var
+    CALL this%Init(name, shortname, l_elements=.TRUE., element_unit=unit)
+    
+    ! element pools allocate & init & add to components pool
+    ! "shortname" is used for model output
+    ! "element_list" is optional and can be used to select specific elements (not needed when all elements may be added)
+    ! dom
+    ALLOCATE(sb_elements_pool)
+    CALL sb_elements_pool%Init(name='dom_pool'//suffix_loc, shortname='dom', l_elements=.TRUE., element_unit=unit)
+    CALL this%Add_pool(sb_elements_pool)
+    this%dom => sb_elements_pool
+    NULLIFY(sb_elements_pool)
+    ! dom_assoc
+    ALLOCATE(sb_elements_pool)
+    CALL sb_elements_pool%Init(name='dom_assoc_pool'//suffix_loc, shortname='dom_assoc', l_elements=.TRUE., element_unit=unit)
+    CALL this%Add_pool(sb_elements_pool)
+    this%dom_assoc => sb_elements_pool
+    NULLIFY(sb_elements_pool)
+    ! soluable_litter
+    ALLOCATE(sb_elements_pool)
+    CALL sb_elements_pool%Init(name='soluable_litter_pool'//suffix_loc, shortname='sol_litter', l_elements=.TRUE., &
+                               element_unit=unit)
+    CALL this%Add_pool(sb_elements_pool)
+    this%soluable_litter => sb_elements_pool
+    NULLIFY(sb_elements_pool)
+    ! polymeric_litter
+    ALLOCATE(sb_elements_pool)
+    CALL sb_elements_pool%Init(name='polymeric_litter_pool'//suffix_loc, shortname='pol_litter', l_elements=.TRUE., &
+                               element_unit=unit)
+    CALL this%Add_pool(sb_elements_pool)
+    this%polymeric_litter => sb_elements_pool
+    NULLIFY(sb_elements_pool)
+    ! woody_litter
+    ALLOCATE(sb_elements_pool)
+    CALL sb_elements_pool%Init(name='woody_litter_pool'//suffix_loc, shortname='woo_litter', l_elements=.TRUE., element_unit=unit)
+    CALL this%Add_pool(sb_elements_pool)
+    this%woody_litter => sb_elements_pool
+    NULLIFY(sb_elements_pool)
+    ! fungi
+    ALLOCATE(sb_elements_pool)
+    CALL sb_elements_pool%Init(name='fungi_pool'//suffix_loc, shortname='fungi', l_elements=.TRUE., element_unit=unit)
+    CALL this%Add_pool(sb_elements_pool)
+    this%fungi => sb_elements_pool
+    NULLIFY(sb_elements_pool)
+    ! mycorrhiza
+    ALLOCATE(sb_elements_pool)
+    CALL sb_elements_pool%Init(name='mycorrhiza_pool'//suffix_loc, shortname='mycorrhiza', l_elements=.TRUE., element_unit=unit)
+    CALL this%Add_pool(sb_elements_pool)
+    this%mycorrhiza => sb_elements_pool
+    NULLIFY(sb_elements_pool)
+    ! microbial
+    ALLOCATE(sb_elements_pool)
+    CALL sb_elements_pool%Init(name='microbial_pool'//suffix_loc, shortname='microbial', l_elements=.TRUE., element_unit=unit)
+    CALL this%Add_pool(sb_elements_pool)
+    this%microbial => sb_elements_pool
+    NULLIFY(sb_elements_pool)
+    ! residue
+    ALLOCATE(sb_elements_pool)
+    CALL sb_elements_pool%Init(name='residue_pool'//suffix_loc, shortname='residue', l_elements=.TRUE., element_unit=unit)
+    CALL this%Add_pool(sb_elements_pool)
+    this%residue => sb_elements_pool
+    NULLIFY(sb_elements_pool)
+    ! residue_assoc
+    ALLOCATE(sb_elements_pool)
+    CALL sb_elements_pool%Init(name='residue_assoc_pool'//suffix_loc, shortname='residue_assoc', l_elements=.TRUE., &
+                               element_unit=unit)
+    CALL this%Add_pool(sb_elements_pool)
+    this%residue_assoc => sb_elements_pool
+    NULLIFY(sb_elements_pool)
+
+  END SUBROUTINE Create_sb_components_pool_temporary_object_for_op_ov
+
+  !-----------------------------------------------------------------------------------------------------
+  !> initialize an elements_pool that is part of a components pool
+  !! used for operator overload routines of components pools
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE Init_element_var_sb_elements_pool(this, struct1)
+
+    CLASS(t_sb_elements_pool),  INTENT(inout)  :: this
+    CLASS(t_sb_elements_pool),  INTENT(in)     :: struct1
+
+    this%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    this%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    this%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(this%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    this%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    this%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    this%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(this%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    this%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    this%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    this%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(this%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    this%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    this%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    this%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(this%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    this%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    this%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    this%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(this%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    this%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    this%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    this%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(this%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+
+  END SUBROUTINE Init_element_var_sb_elements_pool
+
+  !-----------------------------------------------------------------------------------------------------
   !> initialize memory for the SB_ process
-  !!
-  !!  
+  !! pools and 
+  !! 2d/3d variables
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_sb_memory(mem, prefix, suffix, lct_ids, model_id)
 
@@ -652,7 +986,7 @@ CONTAINS
   END SUBROUTINE Init_sb_memory
 
   !--------------------------------------------------------------------------------------------------------------------------------
-  !> operator overload and assignment routines for pools
+  !> operator overload and assignment routines for element pools
   !!  TYPE t_sb_elements_pool
   !! 
   !--------------------------------------------------------------------------------------------------------------------------------
@@ -1951,16 +2285,177 @@ CONTAINS
   END FUNCTION Div_sb_elem_p_by_sb_elem_p
 
   !--------------------------------------------------------------------------------------------------------------------------------
-  !> operator overload and assignment routines for pools
+  !> operator overload and assignment routines for components pools
   !!  TYPE t_sb_components_pool
   !! 
   !--------------------------------------------------------------------------------------------------------------------------------
 
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! finalize after operator overload
+  ! t_sb_components_pool
+  !--------------------------------------------------------------------------------------------------------------------------------
+  SUBROUTINE finalize_sb_components_pool(this)
+
+    TYPE(t_sb_components_pool) :: this
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':finalize_sb_components_pool'
+
+    CALL message(routine, 'Finalizing '//TRIM(this%name))
+
+    ! not allocated: this%path
+    ! no need to dealloc the element_var & element_pools because these are dealloc by their own FINAL routine
+    IF (ASSOCIATED(this%carbon))        DEALLOCATE(this%carbon)
+    IF (ASSOCIATED(this%nitrogen))      DEALLOCATE(this%nitrogen)
+    IF (ASSOCIATED(this%phosphorus))    DEALLOCATE(this%phosphorus)
+    IF (ASSOCIATED(this%carbon13))      DEALLOCATE(this%carbon13)
+    IF (ASSOCIATED(this%carbon14))      DEALLOCATE(this%carbon14)
+    IF (ASSOCIATED(this%nitrogen15))    DEALLOCATE(this%nitrogen15)
+    IF (ALLOCATED(this%shortname))      DEALLOCATE(this%shortname)
+    IF (ALLOCATED(this%name))           DEALLOCATE(this%name)
+    IF (ALLOCATED(this%element_unit))   DEALLOCATE(this%element_unit)
+    IF (ALLOCATED(this%element_list))   DEALLOCATE(this%element_list)
+    IF (ALLOCATED(this%var_list))       DEALLOCATE(this%var_list)
+    IF (ASSOCIATED(this%pool_list))     DEALLOCATE(this%pool_list)
+    IF (ASSOCIATED(this%leaf_list))     DEALLOCATE(this%leaf_list)
+    
+    IF (ASSOCIATED(this%dom))               DEALLOCATE(this%dom)
+    IF (ASSOCIATED(this%dom_assoc))         DEALLOCATE(this%dom_assoc)
+    IF (ASSOCIATED(this%soluable_litter))   DEALLOCATE(this%soluable_litter)
+    IF (ASSOCIATED(this%polymeric_litter))  DEALLOCATE(this%polymeric_litter)
+    IF (ASSOCIATED(this%woody_litter))      DEALLOCATE(this%woody_litter)
+    IF (ASSOCIATED(this%fungi))             DEALLOCATE(this%fungi)
+    IF (ASSOCIATED(this%mycorrhiza))        DEALLOCATE(this%mycorrhiza)
+    IF (ASSOCIATED(this%microbial))         DEALLOCATE(this%microbial)
+    IF (ASSOCIATED(this%residue))           DEALLOCATE(this%residue)
+    IF (ASSOCIATED(this%residue_assoc))     DEALLOCATE(this%residue_assoc)
+   
+  END SUBROUTINE finalize_sb_components_pool
+
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! = assign
+  !--------------------------------------------------------------------------------------------------------------------------------
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! sb_components_pool = scalar | ON_CHUNK & ON_DOMAIN
+  !--------------------------------------------------------------------------------------------------------------------------------
+  RECURSIVE SUBROUTINE Assign_scalar_to_sb_comp_p(lhs, rhs)
+
+    CLASS(t_sb_components_pool),  INTENT(inout) :: lhs
+    REAL(wp),                     INTENT(in)    :: rhs
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Assign_scalar_to_sb_comp_p'
+
+    lhs%carbon      = rhs
+    lhs%nitrogen    = rhs
+    lhs%phosphorus  = rhs
+    lhs%carbon13    = rhs
+    lhs%carbon14    = rhs
+    lhs%nitrogen15  = rhs
+    
+    lhs%dom               = rhs
+    lhs%dom_assoc         = rhs
+    lhs%soluable_litter   = rhs
+    lhs%polymeric_litter  = rhs
+    lhs%woody_litter      = rhs
+    lhs%fungi             = rhs
+    lhs%mycorrhiza        = rhs
+    lhs%microbial         = rhs
+    lhs%residue           = rhs
+    lhs%residue_assoc     = rhs
+    
+  END SUBROUTINE Assign_scalar_to_sb_comp_p
+  
 
 
 
 
 
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! + addition
+  !--------------------------------------------------------------------------------------------------------------------------------
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! sb_components_pool + scalar        | ON_CHUNK & ON_DOMAIN
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Add_sb_comp_p_and_scalar(struct1, scalar) RESULT(structOut)
+  
+    CLASS(t_sb_components_pool),      INTENT(in)  :: struct1
+    REAL(wp),                         INTENT(in)  :: scalar
+    TYPE(t_sb_components_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Add_sb_comp_p_and_scalar'
+print*," ####### 1"  
+    !> 1.0 init temporary pool structOut
+    !! init components pool with element variables
+    CALL structOut%Init_comp_pool_for_op_ov(name='comp_op_ov_help', shortname='c_op_ov_help', &
+      & unit=TRIM(struct1%element_unit), pool_suffix='sb_p') ! l_elements=.TRUE. by default
+print*," ####### 2"  
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+    !! init element pools
+print*," ####### 3"  
+    CALL structOut%dom%Init_elem_var_elem_p(struct1%dom)
+    CALL structOut%dom_assoc%Init_elem_var_elem_p(struct1%dom_assoc)
+    CALL structOut%soluable_litter%Init_elem_var_elem_p(struct1%soluable_litter)
+    CALL structOut%polymeric_litter%Init_elem_var_elem_p(struct1%polymeric_litter)
+    CALL structOut%woody_litter%Init_elem_var_elem_p(struct1%woody_litter)
+    CALL structOut%fungi%Init_elem_var_elem_p(struct1%fungi)
+    CALL structOut%mycorrhiza%Init_elem_var_elem_p(struct1%mycorrhiza)
+    CALL structOut%microbial%Init_elem_var_elem_p(struct1%microbial)
+    CALL structOut%residue%Init_elem_var_elem_p(struct1%residue)
+    CALL structOut%residue_assoc%Init_elem_var_elem_p(struct1%residue_assoc)
+print*," ####### 4"  
+    !> 2.0 run calculation
+    !! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
+    !> 2.1 element variables of the components pool itself
+    structOut%carbon          = struct1%carbon      + scalar
+    structOut%nitrogen        = struct1%nitrogen    + scalar
+    structOut%phosphorus      = struct1%phosphorus  + scalar
+    structOut%carbon13        = struct1%carbon13    + scalar
+    structOut%carbon14        = struct1%carbon14    + scalar
+    structOut%nitrogen15      = struct1%nitrogen15  + scalar
+print*," ####### 5"  
+    ! adding the pointer is this needed here too (not only with the jsb_var op_ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+print*," ####### 6"  
+    !> 2.2 element pools
+    structOut%dom               = struct1%dom               + scalar
+    structOut%dom_assoc         = struct1%dom_assoc         + scalar
+    structOut%soluable_litter   = struct1%soluable_litter   + scalar
+    structOut%polymeric_litter  = struct1%polymeric_litter  + scalar
+    structOut%woody_litter      = struct1%woody_litter      + scalar
+    structOut%fungi             = struct1%fungi             + scalar
+    structOut%mycorrhiza        = struct1%mycorrhiza        + scalar
+    structOut%microbial         = struct1%microbial         + scalar
+    structOut%residue           = struct1%residue           + scalar
+    structOut%residue_assoc     = struct1%residue_assoc     + scalar
+print*," ####### 7"  
+  END FUNCTION Add_sb_comp_p_and_scalar
 
 
 
