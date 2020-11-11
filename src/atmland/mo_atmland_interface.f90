@@ -550,29 +550,30 @@ CONTAINS
     END IF
 
     IF (tile%contains_lake .AND. .NOT. jsbach_runs_standalone()) THEN
-      ! With lakes, re-scale _lnd, _lice and _lwtr fluxes given back to the atmosphere so that they are relative to the whole grid
-      ! box. This is necessary because, in the atmosphere, they are weighted with the fractions of lake/nolake in the whole
-      ! grid box, while on the root tile of JSBACH they are relative to the land fraction of the grid box including lakes.
+      ! With lakes, re-scale _lnd, _lice and _lwtr fluxes given back to the atmosphere so that they are relative to the
+      ! jsbach grid box, not/only including lakes (JSBACH grid boxes do not include ocean fractions.). Re-scaling is
+      ! necessary, as in the atmosphere fluxes are regarded as land-only (or lake-only) fluxes, and lake, land and ocean
+      ! fractions are considered separately.
       ! Note that, if lakes are considered, the lake tile must be a direct child of the root tile.
       DO j=1,SIZE(tile%lcts)
-        IF (tile%lcts(j)%id == LAKE_TYPE) EXIT
+        IF (tile%lcts(j)%id == LAKE_TYPE) EXIT         ! We get index j of the lake tile
       END DO
 
       !$acc data pcreate(fact_lake, fact_land, fract_ptr) present(tile%lcts)
-      fract_ptr => tile%lcts(j)%fract(ics:ice,iblk)
+      fract_ptr => tile%lcts(j)%fract(ics:ice,iblk)    ! Lake fraction
       
       !$acc data present(fract_ptr)
       !$acc parallel loop
       DO i=1,nc
-        fact_lake(i) = fract_ptr(i)
-        fact_land(i) = 1._wp - fact_lake(i)
+        fact_lake(i) = fract_ptr(i)                    ! Lake fraction
+        fact_land(i) = 1._wp - fact_lake(i)            ! Land fraction
         IF (fact_lake(i) > 0._wp) THEN
-          fact_lake(i) = 1._wp / fact_lake(i)
+          fact_lake(i) = 1._wp / fact_lake(i)          ! Lake factor: 1/lake_fraction
         ELSE
           fact_lake(i) = 1._wp
         END IF
         IF (fact_land(i) > 0._wp) THEN
-          fact_land(i) = 1._wp / fact_land(i)
+          fact_land(i) = 1._wp / fact_land(i)          ! Land factor: 1/land_fraction
         ELSE
           fact_land(i) = 1._wp
         END IF
