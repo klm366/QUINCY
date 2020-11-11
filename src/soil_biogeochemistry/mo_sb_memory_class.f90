@@ -194,12 +194,12 @@ MODULE mo_sb_memory_class
     !   &                                         Div_sb_comp_p_by_sb_comp_p
     ! =
     PROCEDURE                 :: Assign_scalar_to_sb_comp_p          ! elements_pool = scalar        | ON_CHUNK & ON_DOMAIN
-    ! PROCEDURE                 :: Assign_field2d_to_sb_comp_p         ! elements_pool = field2d(:,:)  | ON_CHUNK
-    ! PROCEDURE                 :: Assign_field3d_to_sb_comp_p         ! elements_pool = field3d(:,:,:)| ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Assign_field2d_to_sb_comp_p         ! elements_pool = field2d(:,:)  | ON_CHUNK
+    PROCEDURE                 :: Assign_field3d_to_sb_comp_p         ! elements_pool = field3d(:,:,:)| ON_CHUNK & ON_DOMAIN
     PROCEDURE                 :: Assign_sb_comp_p_to_sb_comp_p       ! elements_pool = elements_pool | ON_CHUNK & ON_DOMAIN | only numeric values of elements are assigned
     GENERIC                   :: ASSIGNMENT(=) => Assign_scalar_to_sb_comp_p , &
-    !   &                                           Assign_field2d_to_sb_comp_p, &
-    !   &                                           Assign_field3d_to_sb_comp_p, &
+      &                                           Assign_field2d_to_sb_comp_p, &
+      &                                           Assign_field3d_to_sb_comp_p, &
       &                                           Assign_sb_comp_p_to_sb_comp_p
     !! finalize
     FINAL     :: finalize_sb_components_pool
@@ -2363,7 +2363,64 @@ CONTAINS
     lhs%residue_assoc     = rhs
     
   END SUBROUTINE Assign_scalar_to_sb_comp_p
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! sb_components_pool = field2d(:,:) | ON_CHUNK
+  !--------------------------------------------------------------------------------------------------------------------------------
+  SUBROUTINE Assign_field2d_to_sb_comp_p(lhs, rhs)
+  
+    CLASS(t_sb_components_pool),  INTENT(inout) :: lhs
+    REAL(wp),                     INTENT(in)    :: rhs(:,:)
 
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Assign_field2d_to_sb_comp_p'
+
+    lhs%carbon      = rhs(:,:)
+    lhs%nitrogen    = rhs(:,:)
+    lhs%phosphorus  = rhs(:,:)
+    lhs%carbon13    = rhs(:,:)
+    lhs%carbon14    = rhs(:,:)
+    lhs%nitrogen15  = rhs(:,:)
+
+    lhs%dom               = rhs(:,:)
+    lhs%dom_assoc         = rhs(:,:)
+    lhs%soluable_litter   = rhs(:,:)
+    lhs%polymeric_litter  = rhs(:,:)
+    lhs%woody_litter      = rhs(:,:)
+    lhs%fungi             = rhs(:,:)
+    lhs%mycorrhiza        = rhs(:,:)
+    lhs%microbial         = rhs(:,:)
+    lhs%residue           = rhs(:,:)
+    lhs%residue_assoc     = rhs(:,:)
+
+  END SUBROUTINE Assign_field2d_to_sb_comp_p
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! sb_components_pool = field3d(:,:,:) | ON_CHUNK & ON_DOMAIN | field3d(:,:,1) & field3d(:,:,:)
+  !--------------------------------------------------------------------------------------------------------------------------------
+  SUBROUTINE Assign_field3d_to_sb_comp_p(lhs, rhs)
+  
+    CLASS(t_sb_components_pool),  INTENT(inout) :: lhs
+    REAL(wp),                     INTENT(in)    :: rhs(:,:,:)
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Assign_field3d_to_sb_comp_p'
+
+    lhs%carbon      = rhs(:,:,:)
+    lhs%nitrogen    = rhs(:,:,:)
+    lhs%phosphorus  = rhs(:,:,:)
+    lhs%carbon13    = rhs(:,:,:)
+    lhs%carbon14    = rhs(:,:,:)
+    lhs%nitrogen15  = rhs(:,:,:)
+
+    lhs%dom               = rhs(:,:,:)
+    lhs%dom_assoc         = rhs(:,:,:)
+    lhs%soluable_litter   = rhs(:,:,:)
+    lhs%polymeric_litter  = rhs(:,:,:)
+    lhs%woody_litter      = rhs(:,:,:)
+    lhs%fungi             = rhs(:,:,:)
+    lhs%mycorrhiza        = rhs(:,:,:)
+    lhs%microbial         = rhs(:,:,:)
+    lhs%residue           = rhs(:,:,:)
+    lhs%residue_assoc     = rhs(:,:,:)
+    
+  END SUBROUTINE Assign_field3d_to_sb_comp_p
   !--------------------------------------------------------------------------------------------------------------------------------
   ! sb_components_pool = sb_components_pool | ON_CHUNK & ON_DOMAIN
   !--------------------------------------------------------------------------------------------------------------------------------

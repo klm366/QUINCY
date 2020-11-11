@@ -73,12 +73,13 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
 
-    TYPE(t_jsb_model),      POINTER       :: model
-    TYPE(t_lctlib_element), POINTER       :: lctlib               !< land-cover-type library - parameter across pft's
-    TYPE(t_jsb_vgrid),      POINTER       :: vgrid_soil_sb        !< Vertical grid
-    INTEGER                               :: nsoil_sb             !< number of soil layers as used by the SB_ process (see SSE_ config)
-    INTEGER                               :: iblk, ics, ice, nc
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: hlp1
+    TYPE(t_jsb_model),      POINTER         :: model
+    TYPE(t_lctlib_element), POINTER         :: lctlib               !< land-cover-type library - parameter across pft's
+    TYPE(t_jsb_vgrid),      POINTER         :: vgrid_soil_sb        !< Vertical grid
+    INTEGER                                 :: nsoil_sb             !< number of soil layers as used by the SB_ process (see SSE_ config)
+    INTEGER                                 :: iblk, ics, ice, nc
+    REAL(wp), ALLOCATABLE, DIMENSION(:,:)   :: hlp1
+    REAL(wp), ALLOCATABLE, DIMENSION(:,:,:) :: hlp10
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_pools'
 
     ! Declare process configuration, memory, and pool-structure Pointers
@@ -114,6 +115,7 @@ CONTAINS
     nsoil_sb      =  vgrid_soil_sb%n_levels
 
     ALLOCATE(hlp1(nc, nsoil_sb))
+    ALLOCATE(hlp10(nc, nsoil_sb,1))     ! (nc, vgrid, iblk)
 
     dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_memory(SB_)
@@ -148,12 +150,15 @@ CONTAINS
 
     !! pools
     hlp1(:,:)                   = 2.0_wp
+    hlp10(:,:,:)                = 4.0_wp
     sb_pool%dom                 = hlp1(:,:)
     sb_pool%fungi               = 5.0_wp
     sb_pool%residue             = sb_pool%dom + sb_pool%fungi - 1.0_wp                                ! 6.0
     sb_pool%mycorrhiza          = (sb_pool%residue / hlp1(:,:)) + 17.0_wp - (5.0_wp * sb_pool%fungi)  ! -5.0
 
     sb_loss                     = 0.2_wp
+    sb_loss                     = hlp1(:,:)
+    sb_loss                     = hlp10(:,:,1)
     sb_loss                     = sb_loss + 0.9_wp
 
   END SUBROUTINE update_sb_pools
