@@ -153,12 +153,8 @@ CONTAINS
     sb_pool%residue             = sb_pool%dom + sb_pool%fungi - 1.0_wp                                ! 6.0
     sb_pool%mycorrhiza          = (sb_pool%residue / hlp1(:,:)) + 17.0_wp - (5.0_wp * sb_pool%fungi)  ! -5.0
 
-    print*," 00 <<<<<<<<<<<<<"
     sb_loss                     = 0.2_wp
-    print*," 11 <<<<<<<<<<<<<"
     sb_loss                     = sb_loss + 0.9_wp
-    !sb_pool                     = sb_pool + 0.1_wp
-    print*," 22 <<<<<<<<<<<<<"
 
   END SUBROUTINE update_sb_pools
 

@@ -196,11 +196,11 @@ MODULE mo_sb_memory_class
     PROCEDURE                 :: Assign_scalar_to_sb_comp_p          ! elements_pool = scalar        | ON_CHUNK & ON_DOMAIN
     ! PROCEDURE                 :: Assign_field2d_to_sb_comp_p         ! elements_pool = field2d(:,:)  | ON_CHUNK
     ! PROCEDURE                 :: Assign_field3d_to_sb_comp_p         ! elements_pool = field3d(:,:,:)| ON_CHUNK & ON_DOMAIN
-    ! PROCEDURE                 :: Assign_sb_comp_p_to_sb_comp_p       ! elements_pool = elements_pool | ON_CHUNK & ON_DOMAIN | only numeric values of elements are assigned
-    GENERIC                   :: ASSIGNMENT(=) => Assign_scalar_to_sb_comp_p !, &
+    PROCEDURE                 :: Assign_sb_comp_p_to_sb_comp_p       ! elements_pool = elements_pool | ON_CHUNK & ON_DOMAIN | only numeric values of elements are assigned
+    GENERIC                   :: ASSIGNMENT(=) => Assign_scalar_to_sb_comp_p , &
     !   &                                           Assign_field2d_to_sb_comp_p, &
     !   &                                           Assign_field3d_to_sb_comp_p, &
-    !   &                                           Assign_sb_comp_p_to_sb_comp_p
+      &                                           Assign_sb_comp_p_to_sb_comp_p
     !! finalize
     FINAL     :: finalize_sb_components_pool
   END TYPE t_sb_components_pool
@@ -2300,7 +2300,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':finalize_sb_components_pool'
 
-    CALL message(routine, 'Finalizing '//TRIM(this%name))
+    !! CALL message(routine, 'Finalizing '//TRIM(this%name))
 
     ! not allocated: this%path
     ! no need to dealloc the element_var & element_pools because these are dealloc by their own FINAL routine
@@ -2363,7 +2363,36 @@ CONTAINS
     lhs%residue_assoc     = rhs
     
   END SUBROUTINE Assign_scalar_to_sb_comp_p
-  
+
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! sb_components_pool = sb_components_pool | ON_CHUNK & ON_DOMAIN
+  !--------------------------------------------------------------------------------------------------------------------------------
+  SUBROUTINE Assign_sb_comp_p_to_sb_comp_p(lhs, rhs)
+
+    CLASS(t_sb_components_pool), INTENT(inout) :: lhs
+    CLASS(t_sb_components_pool), INTENT(in)    :: rhs
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Assign_sb_comp_p_to_sb_comp_p'
+
+    lhs%carbon      = rhs%carbon    
+    lhs%nitrogen    = rhs%nitrogen  
+    lhs%phosphorus  = rhs%phosphorus
+    lhs%carbon13    = rhs%carbon13  
+    lhs%carbon14    = rhs%carbon14  
+    lhs%nitrogen15  = rhs%nitrogen15
+    
+    lhs%dom               = rhs%dom             
+    lhs%dom_assoc         = rhs%dom_assoc       
+    lhs%soluable_litter   = rhs%soluable_litter 
+    lhs%polymeric_litter  = rhs%polymeric_litter
+    lhs%woody_litter      = rhs%woody_litter    
+    lhs%fungi             = rhs%fungi           
+    lhs%mycorrhiza        = rhs%mycorrhiza      
+    lhs%microbial         = rhs%microbial       
+    lhs%residue           = rhs%residue         
+    lhs%residue_assoc     = rhs%residue_assoc   
+
+  END SUBROUTINE Assign_sb_comp_p_to_sb_comp_p
 
 
 
@@ -2382,12 +2411,11 @@ CONTAINS
     TYPE(t_sb_components_pool),       TARGET      :: structOut
   
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_sb_comp_p_and_scalar'
-print*," ####### 1"  
+
     !> 1.0 init temporary pool structOut
     !! init components pool with element variables
     CALL structOut%Init_comp_pool_for_op_ov(name='comp_op_ov_help', shortname='c_op_ov_help', &
       & unit=TRIM(struct1%element_unit), pool_suffix='sb_p') ! l_elements=.TRUE. by default
-print*," ####### 2"  
     structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
     structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
     structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
@@ -2413,7 +2441,6 @@ print*," ####### 2"
     structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
     ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
     !! init element pools
-print*," ####### 3"  
     CALL structOut%dom%Init_elem_var_elem_p(struct1%dom)
     CALL structOut%dom_assoc%Init_elem_var_elem_p(struct1%dom_assoc)
     CALL structOut%soluable_litter%Init_elem_var_elem_p(struct1%soluable_litter)
@@ -2424,7 +2451,7 @@ print*," ####### 3"
     CALL structOut%microbial%Init_elem_var_elem_p(struct1%microbial)
     CALL structOut%residue%Init_elem_var_elem_p(struct1%residue)
     CALL structOut%residue_assoc%Init_elem_var_elem_p(struct1%residue_assoc)
-print*," ####### 4"  
+
     !> 2.0 run calculation
     !! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
     !> 2.1 element variables of the components pool itself
@@ -2434,7 +2461,6 @@ print*," ####### 4"
     structOut%carbon13        = struct1%carbon13    + scalar
     structOut%carbon14        = struct1%carbon14    + scalar
     structOut%nitrogen15      = struct1%nitrogen15  + scalar
-print*," ####### 5"  
     ! adding the pointer is this needed here too (not only with the jsb_var op_ov)
     structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
     structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
@@ -2442,7 +2468,6 @@ print*," ####### 5"
     structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
     structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
     structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
-print*," ####### 6"  
     !> 2.2 element pools
     structOut%dom               = struct1%dom               + scalar
     structOut%dom_assoc         = struct1%dom_assoc         + scalar
@@ -2454,7 +2479,7 @@ print*," ####### 6"
     structOut%microbial         = struct1%microbial         + scalar
     structOut%residue           = struct1%residue           + scalar
     structOut%residue_assoc     = struct1%residue_assoc     + scalar
-print*," ####### 7"  
+
   END FUNCTION Add_sb_comp_p_and_scalar
 
 
