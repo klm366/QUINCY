@@ -88,13 +88,13 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     ! ---------------------------
     ! 0.2 Local
-    TYPE(t_jsb_model),      POINTER       :: model
-    TYPE(t_lctlib_element), POINTER       :: lctlib       !< land-cover-type library - parameter across pft's
-    TYPE(t_jsb_vgrid),      POINTER       :: vgrid_canopy ! Vertical grid
-    INTEGER                               :: ncanopy      ! number of canopy layers
-    INTEGER                               :: icanopy      ! for looping across ncanopy layers
-    REAL(wp)                              :: lctlib_g1    !< set to g1_medlyn or g1_bberry depending on canopy_conductance_scheme
-    REAL(wp),DIMENSION(options%nc)        :: ga,hlp1      ! dummy variable
+    TYPE(t_jsb_model),      POINTER       :: model                            ! 
+    TYPE(t_lctlib_element), POINTER       :: lctlib                           !< land-cover-type library - parameter across pft's
+    TYPE(t_jsb_vgrid),      POINTER       :: vgrid_canopy                     ! Vertical grid
+    INTEGER                               :: ncanopy                          ! number of canopy layers
+    INTEGER                               :: icanopy                          ! for looping across ncanopy layers
+    REAL(wp)                              :: lctlib_g1                        ! set to g1_medlyn or g1_bberry depending on canopy_conductance_scheme
+    REAL(wp),DIMENSION(options%nc)        :: ga, hlp1, hlp2, hlp3             ! dummy variables
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_canopy_fluxes'
     ! ---------------------------
@@ -298,7 +298,7 @@ CONTAINS
                                  maint_respiration_leaf_cl(:,icanopy)  , &
                                  canopy_cond_cl(:,icanopy)             , &
                                  co2_conc_leaf_cl(:,icanopy)           , &
-                                 hlp1(:), hlp1(:), hlp1(:)             )   ! out
+                                 hlp1(:), hlp2(:), hlp3(:)             )   ! out
 
         gross_assimilation(:) = gross_assimilation(:) + gross_assimilation_cl(:,icanopy) * lai_cl(:,icanopy)
 
