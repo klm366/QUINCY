@@ -80,7 +80,8 @@ CONTAINS
     INTEGER                               :: icanopy                          !  for looping across ncanopy layers
     INTEGER                               :: no_omp_thread                    !  number of open mp thread (for task options)
     LOGICAL, DIMENSION(options%nc)        :: l_day                            !  day/night
-    REAL(wp),DIMENSION(options%nc)        :: ga, hlp1, tmp_steplen_times_wind !  dummy variable
+    REAL(wp),DIMENSION(options%nc)        :: ga, hlp1, hlp2, hlp3, &          !  dummy variables
+                                             tmp_steplen_times_wind           !  dummy variables
     INTEGER                               :: iblk, ics, ice, nc
     REAL(wp)                              :: steplen
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_canopy_fluxes'
@@ -291,7 +292,7 @@ CONTAINS
                                  maint_respiration_leaf_cl(:,icanopy)  , &
                                  canopy_cond_cl(:,icanopy)             , &
                                  co2_conc_leaf_cl(:,icanopy)           , &
-                                 hlp1(:), hlp1(:), hlp1(:)             )   ! out
+                                 hlp1(:), hlp2(:), hlp3(:)             )   ! out
 
         gross_assimilation(:) = gross_assimilation(:) + gross_assimilation_cl(:,icanopy) * lai_cl(:,icanopy)
 
