@@ -50,13 +50,7 @@ MODULE mo_carbon_memory_class
       pseudo_temp,                & ! a proxy for 15-day mean air temperature, [K] needed with yasso
       pseudo_temp_yDay,           & !
       pseudo_precip,              & ! a proxy for 15-day mean preciptation rate [Kg/m^2 s] needed with yasso
-      pseudo_precip_yDay,         & !
-      topSoilTemp,                & ! R: in the moment it is still better to leaf topSoilTemp in the CARBON process as it is
-                                    !    only used here.
-      alpha                         ! R: in the moment it is better to leaf alpha in the CARBON process as it is only used here
-                                    !    However, as we used the term alpha also in mo_assimi_constants.f90 for the efficiency of
-                                    !    photo capture, we should also use another term.
-
+      pseudo_precip_yDay            !
 
     TYPE(t_jsb_var_real2d) ::     &
       cconservation_calcCpools,   & ! Carbon conservation test: Deviation from conservation [mol(C)/m^2(grid box)]
@@ -97,8 +91,6 @@ MODULE mo_carbon_memory_class
       LAI_sum,                    & ! used to accumulate LAI over a day
       NPP_pot_sum,                    & ! used to accumulated NPP-Rate over a day
       GPP_sum,                    & ! used to accumulated GPP-Rate over a day
-      topSoilTemp_sum,            & ! used to accumulated topSoilTemp over a day. R: Nicht notwendig, kommt nur in Output.
-      alpha_sum,                  & ! used to accumulated water stress coefficient alpha over a day
       !runoff_sum,                 & ! used to accumulate runoff over a day.  R: Nicht notwendig in JS4.
       soil_respiration,           & ! mean daily rate of heterotrophic (soil) respiration [mol(CO2)/m^2(canopy)].
                                     ! Without N limitation!
@@ -116,8 +108,6 @@ MODULE mo_carbon_memory_class
                                     ! "yDayMean" because the actual NPP depends on/is calculated from results of the
                                     ! previous day.
       GPP_yDayMean,               & !
-      topSoilTemp_yDayMean,       & !
-      alpha_yDayMean,             & !
       root_exudates,              & ! Total root exudates entering to the litter green pools [mol(C)/m^2(canopy) s]
       cflux_c_green_2_herb,            & ! Total carbon flux from C pool green to herbivory.
       cflux_herb_2_littergreen,         & ! ..part of cflux_c_green_2_herb that goes into green litter
@@ -326,25 +316,6 @@ CONTAINS
       & prefix, suffix,                                                                              &
       & lrestart=.TRUE., initval_r=3.0E-5_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3, arbitary.
 
-    ! @todo: relict from CBALANCE, (currently) not required for YASSO
-    CALL jsb_add_var( mem, 'topsoiltemp', mem%topSoilTemp,                                           &
-      & hgrid, surface,                                                                              &
-      & t_cf('topSoilTemp', 'K', 'Top soil temperature.'),                                           &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
-      & prefix, suffix,                                                                              &
-      & output_level=FULL,                                                                           &
-      & lrestart=.TRUE., initval_r=283.15_wp ) ! I "invented" this initval.
-
-    ! @todo: relict from CBALANCE, (currently) not required for YASSO
-    CALL jsb_add_var( mem, 'alpha', mem%alpha,                                                       &
-      & hgrid, surface,                                                                              &
-      & t_cf('alpha', '-', 'Water Stress Coefficient. Relative soil moisture.'),                     &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
-      & prefix, suffix,                                                                              &
-      & output_level=FULL,                                                                           &
-      & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3's alpha_yDayMean
-
-    ! @todo: relict from CBALANCE?
     ! Carbon variables on canopy area
     CALL jsb_add_var( mem, 'c_greenwood2litter', mem%cflux_c_greenwood_2_litter,                       &
       & hgrid, surface,                                                                                &
@@ -569,22 +540,6 @@ CONTAINS
       & prefix, suffix,                                                                  &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
-    ! @todo: relict from CBALANCE?
-    CALL jsb_add_var( mem, 'topsoiltemp_sum', mem%topSoilTemp_sum,                                    &
-      & hgrid, surface,                                                                               &
-      & t_cf('topSoilTemp_sum', 'K', 'Used to accumulate upper soil layer temperature over a day..'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                            &
-      & prefix, suffix,                                                                               &
-      & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
-
-    ! @todo: relict from CBALANCE?
-    CALL jsb_add_var( mem, 'alpha_sum', mem%alpha_sum,                                     &
-      & hgrid, surface,                                                                    &
-      & t_cf('alpha_sum', '-', 'Used to accumulate water stress coefficient over a day.'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
-      & prefix, suffix,                                                                    &
-      & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
-
     CALL jsb_add_var( mem, 'soil_respiration', mem%soil_respiration,           &
       & hgrid, surface,                                                        &
       & t_cf('soil_respiration', 'mol(C) m-2(canopy) s-1', 'Soil respiration.'), &
@@ -643,22 +598,6 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
       & prefix, suffix,                                                                       &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
-
-    ! @todo: relict from CBALANCE?
-    CALL jsb_add_var( mem, 'topsoiltemp_ydaymean', mem%topSoilTemp_yDayMean,                             &
-      & hgrid, surface,                                                                                  &
-      & t_cf('topSoilTemp_yDayMean', 'K', 'Previous day mean temperature of the uppermost soil layer.'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                               &
-      & prefix, suffix,                                                                                  &
-      & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
-
-    ! @todo: relict from CBALANCE?
-    CALL jsb_add_var( mem, 'alpha_ydaymean', mem%alpha_yDayMean,                             &
-      & hgrid, surface,                                                                      &
-      & t_cf('alpha_yDayMean', '-', 'Previous day mean value of Water Stress Coefficient.'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &
-      & prefix, suffix,                                                                      &
-      & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3.
 
     CALL jsb_add_var( mem, 'root_exudates', mem%root_exudates,             &
       & hgrid, surface,                                                    &

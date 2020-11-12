@@ -33,8 +33,6 @@ CONTAINS
     & LAI_previous,               & ! in
     & max_LAI,                    & ! in
     & NPP_pot_yDayMean,           & ! in
-    & topSoilTemp,                & ! in
-    & alpha_yDayMean,             & ! in
     !
     & fract_npp_2_woodPool,       & ! in
     & fract_npp_2_reservePool,    & ! in
@@ -110,8 +108,6 @@ CONTAINS
     REAL(wp), INTENT(in)    :: LAI_previous           ! The day before yesterdays mean LAI
     REAL(wp), INTENT(in)    :: max_LAI                ! Maximum value of LAI
     REAL(wp), INTENT(in)    :: NPP_pot_yDayMean       ! Yesterdays mean NPP rate [mol(C)/m^2 s]
-    REAL(wp), INTENT(in)    :: topSoilTemp            ! Yesterdays mean temperature of upper soil layer [degree Kelvin]
-    REAL(wp), INTENT(in)    :: alpha_yDayMean         ! Yesterdays mean water stress factor (between 0 and 1)
     REAL(wp), INTENT(in)    :: fract_npp_2_woodPool    ! Fraction of NPP to be put maximally into the green pool
     REAL(wp), INTENT(in)    :: fract_npp_2_reservePool ! Fraction of NPP to be put into the optimally into the reserve pool
     REAL(wp), INTENT(in)    :: fract_npp_2_exudates    ! Fraction of NPP to be put into the optimally into the root exudates
@@ -210,7 +206,6 @@ CONTAINS
     REAL(wp) :: C_2_litter_greenPool, C_2_litter_woodPool
     REAL(wp) :: excess_carbon
     REAL(wp) :: leaf_shedding
-    REAL(wp) :: alpha_mod
 
     REAL(wp) :: c_green_pot, c_woods_pot         !! values of potential carbon pools i.e. before accounting for N-limitation
     REAL(wp) :: c_reserve_pot
@@ -265,10 +260,6 @@ CONTAINS
                                                                     !    sugars) to leaf carbon
     REAL(wp), PARAMETER :: fract_C_faeces2_LG     = 0.3_wp          ! fraction of C from faces put into the litter green pool
     REAL(wp), PARAMETER :: fract_C_crop_harvest   = 0.5_wp          ! fraction of C from ag litter flux put to the crop harvest pool
-    REAL(wp), PARAMETER :: alpha_critical         = 0.35_wp         ! critical value of relative soil moisture below which
-                                                                    !    heterotrophic respiration almost stops
-    REAL(wp), PARAMETER :: alpha_min              = 0.1_wp          ! effective lowest value for soil moisture entering the
-                                                                    !    heterotrophic respiration
     REAL(wp), PARAMETER :: N2O_rate_nitrification = 0.001_wp        ! JSBACH assumes lower bound of estimation in the literture as:
                                                                     !   (0.1%) due to nitrification
     REAL(wp), PARAMETER :: N2O_rate_denitrification = 0.00125_wp    ! 0.0025_wp  ! & (0.2%) due to denitrification
@@ -300,9 +291,6 @@ CONTAINS
     ELSE
        is_crop = .FALSE.
     END IF
-
-    ! modified soil moist. such that heterotrophic respiration is zero below alpha_critical
-    alpha_mod = MAX(alpha_min, (alpha_yDayMean - alpha_critical) / (1._wp - alpha_critical))
 
     ! Initializations
     NPP_flux_correction        = 0.0_wp

@@ -152,9 +152,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  N_pseudo_precip
     dsl4jsb_Real2D_onChunk ::  F_pseudo_precip
 
-    dsl4jsb_Real2D_onChunk ::  topSoilTemp           ! was not cbalance_type
-    dsl4jsb_Real2D_onChunk ::  alpha                 ! was not cbalance_type. Relative soil moisture (used for
-                                                     ! heterotrophic respiration)
     dsl4jsb_Real2D_onChunk ::  cconservation_calcCpools ! C conservation test: Deviation from conservation
 
     dsl4jsb_Real2D_onChunk ::  cflux_c_greenwood_2_litter           ! Carbon flux from the veget. to the litter pools
@@ -212,8 +209,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  LAI_sum                ! used to accumulate LAI over a day. Sum of LAI since Midnight.
     dsl4jsb_Real2D_onChunk ::  NPP_pot_sum            ! used to accumulated NPP-Rate over a day
     dsl4jsb_Real2D_onChunk ::  GPP_sum                ! used to accumulated GPP-Rate over a day
-    dsl4jsb_Real2D_onChunk ::  topSoilTemp_sum        ! used to accumulated topSoilTemp over a day
-    dsl4jsb_Real2D_onChunk ::  alpha_sum              ! used to accumulated water stress coefficient alpha over a day.
     dsl4jsb_Real2D_onChunk ::  LAI_yDayMean           ! previous days mean
     dsl4jsb_Real2D_onChunk ::  LAI_yyDayMean          ! previous previous days mean
     dsl4jsb_Real2D_onChunk ::  NPP_pot_yDayMean       ! mean value of NPP-Rate yesterday (from NPP_pot_sum())
@@ -223,8 +218,6 @@ CONTAINS
                                                       ! Actual NPP after N-limitation and excess carbon drop.
                                                       ! [mol(CO2)/(m^2(canopy) s)]
     dsl4jsb_Real2D_onChunk ::  GPP_yDayMean
-    dsl4jsb_Real2D_onChunk ::  topSoilTemp_yDayMean
-    dsl4jsb_Real2D_onChunk ::  alpha_yDayMean
 
     dsl4jsb_Real2D_onChunk ::  soil_respiration       ! mean daily rate of heterotrophic (soil) respiration
                                                       ! [mol(CO2)/m^2(ground)].
@@ -290,8 +283,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  N_pseudo_precip)            ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  F_pseudo_precip)            ! inout
 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  topSoilTemp)                ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  alpha)                      ! in
     !
     ! This is on canopy area:
     dsl4jsb_Get_var2D_onChunk(CARBON_,  cconservation_calcCpools )  ! out
@@ -329,15 +320,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  LAI_sum )                   ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_pot_sum )               ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  GPP_sum )                   ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  topSoilTemp_sum )           ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  alpha_sum )                 ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  LAI_yDayMean )              ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  LAI_yyDayMean )             ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_pot_yDayMean )          ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_act_yDayMean )          ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  GPP_yDayMean )              ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  topSoilTemp_yDayMean )      ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  alpha_yDayMean )            ! inout
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  soil_respiration )          ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_flux_correction)        ! inout
@@ -448,8 +435,6 @@ CONTAINS
       LAI_sum          = LAI_sum          + LAI
       NPP_pot_sum      = NPP_pot_sum      + NPP_pot_rate_ca
       GPP_sum          = GPP_sum          + gross_assimilation_ca
-      topSoilTemp_sum  = topSoilTemp_sum  + topSoilTemp ! 2d
-      alpha_sum        = alpha_sum        + alpha
 
     ELSE                                    ! A NEW DAY BEGINS and we DID NOT START AN
                                             ! TOTALLY NEW EXPERIMENT ==> perform carbon balance
@@ -460,15 +445,11 @@ CONTAINS
 
       NPP_pot_yDayMean     = NPP_pot_sum/time_steps_per_day()
       GPP_yDayMean         = GPP_sum/time_steps_per_day()
-      topSoilTemp_yDayMean = topSoilTemp_sum/time_steps_per_day() ! 2d
-      alpha_yDayMean       = alpha_sum/time_steps_per_day()
 
       ! Then restart summing of this days values
       LAI_sum             = LAI
       NPP_pot_sum         = NPP_pot_rate_ca
       GPP_sum             = gross_assimilation_ca
-      topSoilTemp_sum     = topSoilTemp ! 2d
-      alpha_sum           = alpha
       !NPP_pot_rate_ca_acc        = NPP_pot_rate_ca/time_steps_per_day() ! s.o.
 
       ! Save other variables (for yasso) as "previous days"
@@ -493,8 +474,6 @@ CONTAINS
         &  LAI_yyDayMean,                                     & ! in
         &  MaxLai,                                            & ! in
         &  NPP_pot_yDayMean,                                  & ! in
-        &  topSoilTemp_yDayMean,                              & ! in
-        &  alpha_yDayMean,                                    & ! in
         !
         &  dsl4jsb_Lctlib_param(fract_npp_2_woodPool),        & ! in
         &  dsl4jsb_Lctlib_param(fract_NPP_2_reservePool),     & ! in
@@ -1380,7 +1359,7 @@ CONTAINS
       ! Do not test as long as carbon_conservation_test still carries the initialisation value
       IF (.NOT. ALL(carbon_conservation_test .EQ. -999.0_wp)) THEN
       
-        !CO2 flux due to npp and respiration
+        !CO2 flux due to npp, respiration and herbivory
         C_flux_yday(ics:ice) = - ((dsl4jsb_var2D_onChunk(CARBON_, cflux_npp_2_atm_yday_ta)     &
           & + dsl4jsb_var2D_onChunk(CARBON_, cflux_soilresp_2_atm_ta)                   &
           & + dsl4jsb_var2D_onChunk(CARBON_, cflux_herb_2_atm_ta)) / molarMassCO2_kg) * sec_per_day
