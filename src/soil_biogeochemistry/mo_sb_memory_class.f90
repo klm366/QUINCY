@@ -153,45 +153,45 @@ MODULE mo_sb_memory_class
     !! [def: field2d(nc,vgrid) | field3d(nc,vgrid,nblks)]
     ! +
     PROCEDURE                 :: Add_sb_comp_p_and_scalar            ! elements_pool + scalar        | ON_CHUNK & ON_DOMAIN
-    ! PROCEDURE, PASS(struct1)  :: Add_scalar_and_sb_comp_p            ! scalar        + elements_pool | ON_CHUNK & ON_DOMAIN
-    ! PROCEDURE                 :: Add_sb_comp_p_and_field2d           ! elements_pool + field2d       | ON_CHUNK
-    ! PROCEDURE, PASS(struct1)  :: Add_field2d_and_sb_comp_p           ! field2d       + elements_pool | ON_CHUNK
-    ! PROCEDURE                 :: Add_sb_comp_p_and_field3d           ! elements_pool + field3d       | ON_CHUNK & ON_DOMAIN
-    ! PROCEDURE                 :: Add_sb_comp_p_and_sb_comp_p         ! elements_pool + elements_pool | ON_CHUNK & ON_DOMAIN
-    GENERIC                   :: OPERATOR(+) => Add_sb_comp_p_and_scalar !,  Add_scalar_and_sb_comp_p, &
-    !   &                                         Add_sb_comp_p_and_field2d, Add_field2d_and_sb_comp_p, &
-    !   &                                         Add_sb_comp_p_and_field3d, &
-    !   &                                         Add_sb_comp_p_and_sb_comp_p
-    ! ! -
-    ! PROCEDURE                 :: Subtract_sb_comp_p_minus_scalar     ! elements_pool - scalar        | ON_CHUNK & ON_DOMAIN
-    ! PROCEDURE                 :: Subtract_sb_comp_p_minus_field2d    ! elements_pool - field2d       | ON_CHUNK
-    ! PROCEDURE                 :: Subtract_sb_comp_p_minus_field3d    ! elements_pool - field3d       | ON_CHUNK & ON_DOMAIN
-    ! PROCEDURE                 :: Subtract_sb_comp_p_minus_sb_comp_p  ! elements_pool - elements_pool | ON_CHUNK & ON_DOMAIN
-    ! GENERIC                   :: OPERATOR(-) => Subtract_sb_comp_p_minus_scalar, &
-    !   &                                         Subtract_sb_comp_p_minus_field2d, &
-    !   &                                         Subtract_sb_comp_p_minus_field3d, &
-    !   &                                         Subtract_sb_comp_p_minus_sb_comp_p
-    ! ! *
-    ! PROCEDURE                 :: Multiply_sb_comp_p_with_scalar      ! elements_pool * scalar        | ON_CHUNK & ON_DOMAIN
-    ! PROCEDURE, PASS(struct1)  :: Multiply_scalar_with_sb_comp_p      ! scalar        * elements_pool | ON_CHUNK & ON_DOMAIN
-    ! PROCEDURE                 :: Multiply_sb_comp_p_with_field2d     ! elements_pool * field2d       | ON_CHUNK
-    ! PROCEDURE, PASS(struct1)  :: Multiply_field2d_with_sb_comp_p     ! field2d       * elements_pool | ON_CHUNK
-    ! PROCEDURE                 :: Multiply_sb_comp_p_with_field3d     ! elements_pool * field3d       | ON_CHUNK & ON_DOMAIN
-    ! PROCEDURE, PASS(struct1)  :: Multiply_field3d_with_sb_comp_p     ! field3d       * elements_pool | ON_CHUNK & ON_DOMAIN
-    ! PROCEDURE                 :: Multiply_sb_comp_p_with_sb_comp_p   ! elements_pool * elements_pool | ON_CHUNK & ON_DOMAIN
-    ! GENERIC                   :: OPERATOR(*) => Multiply_sb_comp_p_with_scalar,  Multiply_scalar_with_sb_comp_p, &
-    !   &                                         Multiply_sb_comp_p_with_field2d, Multiply_field2d_with_sb_comp_p, &
-    !   &                                         Multiply_sb_comp_p_with_field3d, Multiply_field3d_with_sb_comp_p, &
-    !   &                                         Multiply_sb_comp_p_with_sb_comp_p
-    ! ! /
-    ! PROCEDURE                 :: Div_sb_comp_p_by_scalar             ! elements_pool / scalar        | ON_CHUNK & ON_DOMAIN
-    ! PROCEDURE                 :: Div_sb_comp_p_by_field2d            ! elements_pool / field2d       | ON_CHUNK
-    ! PROCEDURE                 :: Div_sb_comp_p_by_field3d            ! elements_pool / field3d       | ON_CHUNK & ON_DOMAIN
-    ! PROCEDURE                 :: Div_sb_comp_p_by_sb_comp_p          ! elements_pool / elements_pool | ON_CHUNK & ON_DOMAIN
-    ! GENERIC                   :: OPERATOR(/) => Div_sb_comp_p_by_scalar, &
-    !   &                                         Div_sb_comp_p_by_field2d, &
-    !   &                                         Div_sb_comp_p_by_field3d, &
-    !   &                                         Div_sb_comp_p_by_sb_comp_p
+    PROCEDURE, PASS(struct1)  :: Add_scalar_and_sb_comp_p            ! scalar        + elements_pool | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Add_sb_comp_p_and_field2d           ! elements_pool + field2d       | ON_CHUNK
+    PROCEDURE, PASS(struct1)  :: Add_field2d_and_sb_comp_p           ! field2d       + elements_pool | ON_CHUNK
+    PROCEDURE                 :: Add_sb_comp_p_and_field3d           ! elements_pool + field3d       | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Add_sb_comp_p_and_sb_comp_p         ! elements_pool + elements_pool | ON_CHUNK & ON_DOMAIN
+    GENERIC                   :: OPERATOR(+) => Add_sb_comp_p_and_scalar , Add_scalar_and_sb_comp_p, &
+      &                                         Add_sb_comp_p_and_field2d, Add_field2d_and_sb_comp_p, &
+      &                                         Add_sb_comp_p_and_field3d, &
+      &                                         Add_sb_comp_p_and_sb_comp_p
+    ! -
+    PROCEDURE                 :: Subtract_sb_comp_p_minus_scalar     ! elements_pool - scalar        | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Subtract_sb_comp_p_minus_field2d    ! elements_pool - field2d       | ON_CHUNK
+    PROCEDURE                 :: Subtract_sb_comp_p_minus_field3d    ! elements_pool - field3d       | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Subtract_sb_comp_p_minus_sb_comp_p  ! elements_pool - elements_pool | ON_CHUNK & ON_DOMAIN
+    GENERIC                   :: OPERATOR(-) => Subtract_sb_comp_p_minus_scalar, &
+      &                                         Subtract_sb_comp_p_minus_field2d, &
+      &                                         Subtract_sb_comp_p_minus_field3d, &
+      &                                         Subtract_sb_comp_p_minus_sb_comp_p
+    ! *
+    PROCEDURE                 :: Multiply_sb_comp_p_with_scalar      ! elements_pool * scalar        | ON_CHUNK & ON_DOMAIN
+    PROCEDURE, PASS(struct1)  :: Multiply_scalar_with_sb_comp_p      ! scalar        * elements_pool | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Multiply_sb_comp_p_with_field2d     ! elements_pool * field2d       | ON_CHUNK
+    PROCEDURE, PASS(struct1)  :: Multiply_field2d_with_sb_comp_p     ! field2d       * elements_pool | ON_CHUNK
+    PROCEDURE                 :: Multiply_sb_comp_p_with_field3d     ! elements_pool * field3d       | ON_CHUNK & ON_DOMAIN
+    PROCEDURE, PASS(struct1)  :: Multiply_field3d_with_sb_comp_p     ! field3d       * elements_pool | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Multiply_sb_comp_p_with_sb_comp_p   ! elements_pool * elements_pool | ON_CHUNK & ON_DOMAIN
+    GENERIC                   :: OPERATOR(*) => Multiply_sb_comp_p_with_scalar,  Multiply_scalar_with_sb_comp_p, &
+      &                                         Multiply_sb_comp_p_with_field2d, Multiply_field2d_with_sb_comp_p, &
+      &                                         Multiply_sb_comp_p_with_field3d, Multiply_field3d_with_sb_comp_p, &
+      &                                         Multiply_sb_comp_p_with_sb_comp_p
+    ! /
+    PROCEDURE                 :: Div_sb_comp_p_by_scalar             ! elements_pool / scalar        | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Div_sb_comp_p_by_field2d            ! elements_pool / field2d       | ON_CHUNK
+    PROCEDURE                 :: Div_sb_comp_p_by_field3d            ! elements_pool / field3d       | ON_CHUNK & ON_DOMAIN
+    PROCEDURE                 :: Div_sb_comp_p_by_sb_comp_p          ! elements_pool / elements_pool | ON_CHUNK & ON_DOMAIN
+    GENERIC                   :: OPERATOR(/) => Div_sb_comp_p_by_scalar, &
+      &                                         Div_sb_comp_p_by_field2d, &
+      &                                         Div_sb_comp_p_by_field3d, &
+      &                                         Div_sb_comp_p_by_sb_comp_p
     ! =
     PROCEDURE                 :: Assign_scalar_to_sb_comp_p          ! elements_pool = scalar        | ON_CHUNK & ON_DOMAIN
     PROCEDURE                 :: Assign_field2d_to_sb_comp_p         ! elements_pool = field2d(:,:)  | ON_CHUNK
@@ -2451,10 +2451,6 @@ CONTAINS
 
   END SUBROUTINE Assign_sb_comp_p_to_sb_comp_p
 
-
-
-
-
   !--------------------------------------------------------------------------------------------------------------------------------
   ! + addition
   !--------------------------------------------------------------------------------------------------------------------------------
@@ -2538,8 +2534,1613 @@ CONTAINS
     structOut%residue_assoc     = struct1%residue_assoc     + scalar
 
   END FUNCTION Add_sb_comp_p_and_scalar
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! scalar + sb_components_pool        | ON_CHUNK & ON_DOMAIN
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Add_scalar_and_sb_comp_p(scalar, struct1) RESULT(structOut)
+  
+    REAL(wp),                         INTENT(in)  :: scalar
+    CLASS(t_sb_components_pool),      INTENT(in)  :: struct1
+    TYPE(t_sb_components_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Add_scalar_and_sb_comp_p'
+  
+    !> 1.0 init temporary pool structOut
+    !! init components pool with element variables
+    CALL structOut%Init_comp_pool_for_op_ov(name='comp_op_ov_help', shortname='c_op_ov_help', &
+      & unit=TRIM(struct1%element_unit), pool_suffix='sb_p') ! l_elements=.TRUE. by default
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+    !! init element pools
+    CALL structOut%dom%Init_elem_var_elem_p(struct1%dom)
+    CALL structOut%dom_assoc%Init_elem_var_elem_p(struct1%dom_assoc)
+    CALL structOut%soluable_litter%Init_elem_var_elem_p(struct1%soluable_litter)
+    CALL structOut%polymeric_litter%Init_elem_var_elem_p(struct1%polymeric_litter)
+    CALL structOut%woody_litter%Init_elem_var_elem_p(struct1%woody_litter)
+    CALL structOut%fungi%Init_elem_var_elem_p(struct1%fungi)
+    CALL structOut%mycorrhiza%Init_elem_var_elem_p(struct1%mycorrhiza)
+    CALL structOut%microbial%Init_elem_var_elem_p(struct1%microbial)
+    CALL structOut%residue%Init_elem_var_elem_p(struct1%residue)
+    CALL structOut%residue_assoc%Init_elem_var_elem_p(struct1%residue_assoc)
+  
+    !> 2.0 run calculation
+    !! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
+    !> 2.1 element variables of the components pool itself
+    structOut%carbon          = scalar + struct1%carbon    
+    structOut%nitrogen        = scalar + struct1%nitrogen  
+    structOut%phosphorus      = scalar + struct1%phosphorus
+    structOut%carbon13        = scalar + struct1%carbon13  
+    structOut%carbon14        = scalar + struct1%carbon14  
+    structOut%nitrogen15      = scalar + struct1%nitrogen15
+    ! adding the pointer is this needed here too (not only with the jsb_var op_ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+    !> 2.2 element pools
+    structOut%dom               = scalar + struct1%dom       
+    structOut%dom_assoc         = scalar + struct1%dom_assoc  
+    structOut%soluable_litter   = scalar + struct1%soluable_litter
+    structOut%polymeric_litter  = scalar + struct1%polymeric_litter   
+    structOut%woody_litter      = scalar + struct1%woody_litter 
+    structOut%fungi             = scalar + struct1%fungi     
+    structOut%mycorrhiza        = scalar + struct1%mycorrhiza    
+    structOut%microbial         = scalar + struct1%microbial      
+    structOut%residue           = scalar + struct1%residue   
+    structOut%residue_assoc     = scalar + struct1%residue_assoc   
+  
+  END FUNCTION Add_scalar_and_sb_comp_p
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! sb_components_pool + field2d(:,:)        | ON_CHUNK
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Add_sb_comp_p_and_field2d(struct1, field2d) RESULT(structOut)
+  
+    CLASS(t_sb_components_pool),      INTENT(in)  :: struct1
+    REAL(wp),                         INTENT(in)  :: field2d(:,:)
+    TYPE(t_sb_components_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Add_sb_comp_p_and_field2d'
+  
+    !> 1.0 init temporary pool structOut
+    !! init components pool with element variables
+    CALL structOut%Init_comp_pool_for_op_ov(name='comp_op_ov_help', shortname='c_op_ov_help', &
+      & unit=TRIM(struct1%element_unit), pool_suffix='sb_p') ! l_elements=.TRUE. by default
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+    !! init element pools
+    CALL structOut%dom%Init_elem_var_elem_p(struct1%dom)
+    CALL structOut%dom_assoc%Init_elem_var_elem_p(struct1%dom_assoc)
+    CALL structOut%soluable_litter%Init_elem_var_elem_p(struct1%soluable_litter)
+    CALL structOut%polymeric_litter%Init_elem_var_elem_p(struct1%polymeric_litter)
+    CALL structOut%woody_litter%Init_elem_var_elem_p(struct1%woody_litter)
+    CALL structOut%fungi%Init_elem_var_elem_p(struct1%fungi)
+    CALL structOut%mycorrhiza%Init_elem_var_elem_p(struct1%mycorrhiza)
+    CALL structOut%microbial%Init_elem_var_elem_p(struct1%microbial)
+    CALL structOut%residue%Init_elem_var_elem_p(struct1%residue)
+    CALL structOut%residue_assoc%Init_elem_var_elem_p(struct1%residue_assoc)
+  
+    !> 2.0 run calculation
+    !! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
+    !> 2.1 element variables of the components pool itself
+    structOut%carbon          = struct1%carbon      + field2d(:,:)
+    structOut%nitrogen        = struct1%nitrogen    + field2d(:,:)
+    structOut%phosphorus      = struct1%phosphorus  + field2d(:,:)
+    structOut%carbon13        = struct1%carbon13    + field2d(:,:)
+    structOut%carbon14        = struct1%carbon14    + field2d(:,:)
+    structOut%nitrogen15      = struct1%nitrogen15  + field2d(:,:)
+    ! adding the pointer is this needed here too (not only with the jsb_var op_ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+    !> 2.2 element pools
+    structOut%dom               = struct1%dom               + field2d(:,:)
+    structOut%dom_assoc         = struct1%dom_assoc         + field2d(:,:)
+    structOut%soluable_litter   = struct1%soluable_litter   + field2d(:,:)
+    structOut%polymeric_litter  = struct1%polymeric_litter  + field2d(:,:)
+    structOut%woody_litter      = struct1%woody_litter      + field2d(:,:)
+    structOut%fungi             = struct1%fungi             + field2d(:,:)
+    structOut%mycorrhiza        = struct1%mycorrhiza        + field2d(:,:)
+    structOut%microbial         = struct1%microbial         + field2d(:,:)
+    structOut%residue           = struct1%residue           + field2d(:,:)
+    structOut%residue_assoc     = struct1%residue_assoc     + field2d(:,:)
+  
+  END FUNCTION Add_sb_comp_p_and_field2d
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! field2d(:,:) + sb_components_pool        | ON_CHUNK
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Add_field2d_and_sb_comp_p(field2d, struct1) RESULT(structOut)
+  
+    REAL(wp),                         INTENT(in)  :: field2d(:,:)
+    CLASS(t_sb_components_pool),      INTENT(in)  :: struct1
+    TYPE(t_sb_components_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Add_field2d_and_sb_comp_p'
+  
+    !> 1.0 init temporary pool structOut
+    !! init components pool with element variables
+    CALL structOut%Init_comp_pool_for_op_ov(name='comp_op_ov_help', shortname='c_op_ov_help', &
+      & unit=TRIM(struct1%element_unit), pool_suffix='sb_p') ! l_elements=.TRUE. by default
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+    !! init element pools
+    CALL structOut%dom%Init_elem_var_elem_p(struct1%dom)
+    CALL structOut%dom_assoc%Init_elem_var_elem_p(struct1%dom_assoc)
+    CALL structOut%soluable_litter%Init_elem_var_elem_p(struct1%soluable_litter)
+    CALL structOut%polymeric_litter%Init_elem_var_elem_p(struct1%polymeric_litter)
+    CALL structOut%woody_litter%Init_elem_var_elem_p(struct1%woody_litter)
+    CALL structOut%fungi%Init_elem_var_elem_p(struct1%fungi)
+    CALL structOut%mycorrhiza%Init_elem_var_elem_p(struct1%mycorrhiza)
+    CALL structOut%microbial%Init_elem_var_elem_p(struct1%microbial)
+    CALL structOut%residue%Init_elem_var_elem_p(struct1%residue)
+    CALL structOut%residue_assoc%Init_elem_var_elem_p(struct1%residue_assoc)
+  
+    !> 2.0 run calculation
+    !! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
+    !> 2.1 element variables of the components pool itself
+    structOut%carbon          = field2d(:,:) + struct1%carbon    
+    structOut%nitrogen        = field2d(:,:) + struct1%nitrogen  
+    structOut%phosphorus      = field2d(:,:) + struct1%phosphorus
+    structOut%carbon13        = field2d(:,:) + struct1%carbon13  
+    structOut%carbon14        = field2d(:,:) + struct1%carbon14  
+    structOut%nitrogen15      = field2d(:,:) + struct1%nitrogen15
+    ! adding the pointer is this needed here too (not only with the jsb_var op_ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+    !> 2.2 element pools
+    structOut%dom               = field2d(:,:) + struct1%dom       
+    structOut%dom_assoc         = field2d(:,:) + struct1%dom_assoc  
+    structOut%soluable_litter   = field2d(:,:) + struct1%soluable_litter
+    structOut%polymeric_litter  = field2d(:,:) + struct1%polymeric_litter   
+    structOut%woody_litter      = field2d(:,:) + struct1%woody_litter 
+    structOut%fungi             = field2d(:,:) + struct1%fungi     
+    structOut%mycorrhiza        = field2d(:,:) + struct1%mycorrhiza    
+    structOut%microbial         = field2d(:,:) + struct1%microbial      
+    structOut%residue           = field2d(:,:) + struct1%residue   
+    structOut%residue_assoc     = field2d(:,:) + struct1%residue_assoc   
+  
+  END FUNCTION Add_field2d_and_sb_comp_p
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! sb_components_pool + field3d(:,:,:)        | ON_CHUNK & ON_DOMAIN | field3d(:,1) & field3d(:,:,:)
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Add_sb_comp_p_and_field3d(struct1, field3d) RESULT(structOut)
+  
+    CLASS(t_sb_components_pool),      INTENT(in)  :: struct1
+    REAL(wp),                         INTENT(in)  :: field3d(:,:,:)
+    TYPE(t_sb_components_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Add_sb_comp_p_and_field3d'
+  
+    !> 1.0 init temporary pool structOut
+    !! init components pool with element variables
+    CALL structOut%Init_comp_pool_for_op_ov(name='comp_op_ov_help', shortname='c_op_ov_help', &
+      & unit=TRIM(struct1%element_unit), pool_suffix='sb_p') ! l_elements=.TRUE. by default
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+    !! init element pools
+    CALL structOut%dom%Init_elem_var_elem_p(struct1%dom)
+    CALL structOut%dom_assoc%Init_elem_var_elem_p(struct1%dom_assoc)
+    CALL structOut%soluable_litter%Init_elem_var_elem_p(struct1%soluable_litter)
+    CALL structOut%polymeric_litter%Init_elem_var_elem_p(struct1%polymeric_litter)
+    CALL structOut%woody_litter%Init_elem_var_elem_p(struct1%woody_litter)
+    CALL structOut%fungi%Init_elem_var_elem_p(struct1%fungi)
+    CALL structOut%mycorrhiza%Init_elem_var_elem_p(struct1%mycorrhiza)
+    CALL structOut%microbial%Init_elem_var_elem_p(struct1%microbial)
+    CALL structOut%residue%Init_elem_var_elem_p(struct1%residue)
+    CALL structOut%residue_assoc%Init_elem_var_elem_p(struct1%residue_assoc)
+  
+    !> 2.0 run calculation
+    !! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
+    !> 2.1 element variables of the components pool itself
+    structOut%carbon          = struct1%carbon      + field3d(:,:,:)
+    structOut%nitrogen        = struct1%nitrogen    + field3d(:,:,:)
+    structOut%phosphorus      = struct1%phosphorus  + field3d(:,:,:)
+    structOut%carbon13        = struct1%carbon13    + field3d(:,:,:)
+    structOut%carbon14        = struct1%carbon14    + field3d(:,:,:)
+    structOut%nitrogen15      = struct1%nitrogen15  + field3d(:,:,:)
+    ! adding the pointer is this needed here too (not only with the jsb_var op_ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+    !> 2.2 element pools
+    structOut%dom               = struct1%dom               + field3d(:,:,:)
+    structOut%dom_assoc         = struct1%dom_assoc         + field3d(:,:,:)
+    structOut%soluable_litter   = struct1%soluable_litter   + field3d(:,:,:)
+    structOut%polymeric_litter  = struct1%polymeric_litter  + field3d(:,:,:)
+    structOut%woody_litter      = struct1%woody_litter      + field3d(:,:,:)
+    structOut%fungi             = struct1%fungi             + field3d(:,:,:)
+    structOut%mycorrhiza        = struct1%mycorrhiza        + field3d(:,:,:)
+    structOut%microbial         = struct1%microbial         + field3d(:,:,:)
+    structOut%residue           = struct1%residue           + field3d(:,:,:)
+    structOut%residue_assoc     = struct1%residue_assoc     + field3d(:,:,:)
+  
+  END FUNCTION Add_sb_comp_p_and_field3d
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! sb_components_pool + sb_components_pool        | ON_CHUNK & ON_DOMAIN
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Add_sb_comp_p_and_sb_comp_p(struct1, struct2) RESULT(structOut)
+  
+    CLASS(t_sb_components_pool),      INTENT(in)  :: struct1, struct2
+    TYPE(t_sb_components_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Add_sb_comp_p_and_sb_comp_p'
+  
+    !> 1.0 init temporary pool structOut
+    !! init components pool with element variables
+    CALL structOut%Init_comp_pool_for_op_ov(name='comp_op_ov_help', shortname='c_op_ov_help', &
+      & unit=TRIM(struct1%element_unit), pool_suffix='sb_p') ! l_elements=.TRUE. by default
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+    !! init element pools
+    CALL structOut%dom%Init_elem_var_elem_p(struct1%dom)
+    CALL structOut%dom_assoc%Init_elem_var_elem_p(struct1%dom_assoc)
+    CALL structOut%soluable_litter%Init_elem_var_elem_p(struct1%soluable_litter)
+    CALL structOut%polymeric_litter%Init_elem_var_elem_p(struct1%polymeric_litter)
+    CALL structOut%woody_litter%Init_elem_var_elem_p(struct1%woody_litter)
+    CALL structOut%fungi%Init_elem_var_elem_p(struct1%fungi)
+    CALL structOut%mycorrhiza%Init_elem_var_elem_p(struct1%mycorrhiza)
+    CALL structOut%microbial%Init_elem_var_elem_p(struct1%microbial)
+    CALL structOut%residue%Init_elem_var_elem_p(struct1%residue)
+    CALL structOut%residue_assoc%Init_elem_var_elem_p(struct1%residue_assoc)
+  
+    !> 2.0 run calculation
+    !! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
+    !> 2.1 element variables of the components pool itself
+    structOut%carbon          = struct1%carbon      + struct2%carbon    
+    structOut%nitrogen        = struct1%nitrogen    + struct2%nitrogen  
+    structOut%phosphorus      = struct1%phosphorus  + struct2%phosphorus
+    structOut%carbon13        = struct1%carbon13    + struct2%carbon13  
+    structOut%carbon14        = struct1%carbon14    + struct2%carbon14  
+    structOut%nitrogen15      = struct1%nitrogen15  + struct2%nitrogen15
+    ! adding the pointer is this needed here too (not only with the jsb_var op_ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+    !> 2.2 element pools
+    structOut%dom               = struct1%dom               + struct2%dom       
+    structOut%dom_assoc         = struct1%dom_assoc         + struct2%dom_assoc  
+    structOut%soluable_litter   = struct1%soluable_litter   + struct2%soluable_litter
+    structOut%polymeric_litter  = struct1%polymeric_litter  + struct2%polymeric_litter   
+    structOut%woody_litter      = struct1%woody_litter      + struct2%woody_litter 
+    structOut%fungi             = struct1%fungi             + struct2%fungi     
+    structOut%mycorrhiza        = struct1%mycorrhiza        + struct2%mycorrhiza    
+    structOut%microbial         = struct1%microbial         + struct2%microbial      
+    structOut%residue           = struct1%residue           + struct2%residue   
+    structOut%residue_assoc     = struct1%residue_assoc     + struct2%residue_assoc   
+  
+  END FUNCTION Add_sb_comp_p_and_sb_comp_p
 
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! - minus
+  !--------------------------------------------------------------------------------------------------------------------------------
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! sb_components_pool - scalar        | ON_CHUNK & ON_DOMAIN
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Subtract_sb_comp_p_minus_scalar(struct1, scalar) RESULT(structOut)
+  
+    CLASS(t_sb_components_pool),      INTENT(in)  :: struct1
+    REAL(wp),                         INTENT(in)  :: scalar
+    TYPE(t_sb_components_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Subtract_sb_comp_p_minus_scalar'
+  
+    !> 1.0 init temporary pool structOut
+    !! init components pool with element variables
+    CALL structOut%Init_comp_pool_for_op_ov(name='comp_op_ov_help', shortname='c_op_ov_help', &
+      & unit=TRIM(struct1%element_unit), pool_suffix='sb_p') ! l_elements=.TRUE. by default
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+    !! init element pools
+    CALL structOut%dom%Init_elem_var_elem_p(struct1%dom)
+    CALL structOut%dom_assoc%Init_elem_var_elem_p(struct1%dom_assoc)
+    CALL structOut%soluable_litter%Init_elem_var_elem_p(struct1%soluable_litter)
+    CALL structOut%polymeric_litter%Init_elem_var_elem_p(struct1%polymeric_litter)
+    CALL structOut%woody_litter%Init_elem_var_elem_p(struct1%woody_litter)
+    CALL structOut%fungi%Init_elem_var_elem_p(struct1%fungi)
+    CALL structOut%mycorrhiza%Init_elem_var_elem_p(struct1%mycorrhiza)
+    CALL structOut%microbial%Init_elem_var_elem_p(struct1%microbial)
+    CALL structOut%residue%Init_elem_var_elem_p(struct1%residue)
+    CALL structOut%residue_assoc%Init_elem_var_elem_p(struct1%residue_assoc)
+  
+    !> 2.0 run calculation
+    !! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
+    !> 2.1 element variables of the components pool itself
+    structOut%carbon          = struct1%carbon      - scalar
+    structOut%nitrogen        = struct1%nitrogen    - scalar
+    structOut%phosphorus      = struct1%phosphorus  - scalar
+    structOut%carbon13        = struct1%carbon13    - scalar
+    structOut%carbon14        = struct1%carbon14    - scalar
+    structOut%nitrogen15      = struct1%nitrogen15  - scalar
+    ! adding the pointer is this needed here too (not only with the jsb_var op_ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+    !> 2.2 element pools
+    structOut%dom               = struct1%dom               - scalar
+    structOut%dom_assoc         = struct1%dom_assoc         - scalar
+    structOut%soluable_litter   = struct1%soluable_litter   - scalar
+    structOut%polymeric_litter  = struct1%polymeric_litter  - scalar
+    structOut%woody_litter      = struct1%woody_litter      - scalar
+    structOut%fungi             = struct1%fungi             - scalar
+    structOut%mycorrhiza        = struct1%mycorrhiza        - scalar
+    structOut%microbial         = struct1%microbial         - scalar
+    structOut%residue           = struct1%residue           - scalar
+    structOut%residue_assoc     = struct1%residue_assoc     - scalar
+  
+  END FUNCTION Subtract_sb_comp_p_minus_scalar
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! sb_components_pool - field2d(:,:)        | ON_CHUNK
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Subtract_sb_comp_p_minus_field2d(struct1, field2d) RESULT(structOut)
+  
+    CLASS(t_sb_components_pool),      INTENT(in)  :: struct1
+    REAL(wp),                         INTENT(in)  :: field2d(:,:)
+    TYPE(t_sb_components_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Subtract_sb_comp_p_minus_field2d'
+  
+    !> 1.0 init temporary pool structOut
+    !! init components pool with element variables
+    CALL structOut%Init_comp_pool_for_op_ov(name='comp_op_ov_help', shortname='c_op_ov_help', &
+      & unit=TRIM(struct1%element_unit), pool_suffix='sb_p') ! l_elements=.TRUE. by default
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+    !! init element pools
+    CALL structOut%dom%Init_elem_var_elem_p(struct1%dom)
+    CALL structOut%dom_assoc%Init_elem_var_elem_p(struct1%dom_assoc)
+    CALL structOut%soluable_litter%Init_elem_var_elem_p(struct1%soluable_litter)
+    CALL structOut%polymeric_litter%Init_elem_var_elem_p(struct1%polymeric_litter)
+    CALL structOut%woody_litter%Init_elem_var_elem_p(struct1%woody_litter)
+    CALL structOut%fungi%Init_elem_var_elem_p(struct1%fungi)
+    CALL structOut%mycorrhiza%Init_elem_var_elem_p(struct1%mycorrhiza)
+    CALL structOut%microbial%Init_elem_var_elem_p(struct1%microbial)
+    CALL structOut%residue%Init_elem_var_elem_p(struct1%residue)
+    CALL structOut%residue_assoc%Init_elem_var_elem_p(struct1%residue_assoc)
+  
+    !> 2.0 run calculation
+    !! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
+    !> 2.1 element variables of the components pool itself
+    structOut%carbon          = struct1%carbon      - field2d(:,:)
+    structOut%nitrogen        = struct1%nitrogen    - field2d(:,:)
+    structOut%phosphorus      = struct1%phosphorus  - field2d(:,:)
+    structOut%carbon13        = struct1%carbon13    - field2d(:,:)
+    structOut%carbon14        = struct1%carbon14    - field2d(:,:)
+    structOut%nitrogen15      = struct1%nitrogen15  - field2d(:,:)
+    ! adding the pointer is this needed here too (not only with the jsb_var op_ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+    !> 2.2 element pools
+    structOut%dom               = struct1%dom               - field2d(:,:)
+    structOut%dom_assoc         = struct1%dom_assoc         - field2d(:,:)
+    structOut%soluable_litter   = struct1%soluable_litter   - field2d(:,:)
+    structOut%polymeric_litter  = struct1%polymeric_litter  - field2d(:,:)
+    structOut%woody_litter      = struct1%woody_litter      - field2d(:,:)
+    structOut%fungi             = struct1%fungi             - field2d(:,:)
+    structOut%mycorrhiza        = struct1%mycorrhiza        - field2d(:,:)
+    structOut%microbial         = struct1%microbial         - field2d(:,:)
+    structOut%residue           = struct1%residue           - field2d(:,:)
+    structOut%residue_assoc     = struct1%residue_assoc     - field2d(:,:)
+  
+  END FUNCTION Subtract_sb_comp_p_minus_field2d
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! sb_components_pool - field3d(:,:,:)        | ON_CHUNK & ON_DOMAIN | field3d(:,1) & field3d(:,:,:)
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Subtract_sb_comp_p_minus_field3d(struct1, field3d) RESULT(structOut)
+  
+    CLASS(t_sb_components_pool),      INTENT(in)  :: struct1
+    REAL(wp),                         INTENT(in)  :: field3d(:,:,:)
+    TYPE(t_sb_components_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Subtract_sb_comp_p_minus_field3d'
+  
+    !> 1.0 init temporary pool structOut
+    !! init components pool with element variables
+    CALL structOut%Init_comp_pool_for_op_ov(name='comp_op_ov_help', shortname='c_op_ov_help', &
+      & unit=TRIM(struct1%element_unit), pool_suffix='sb_p') ! l_elements=.TRUE. by default
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+    !! init element pools
+    CALL structOut%dom%Init_elem_var_elem_p(struct1%dom)
+    CALL structOut%dom_assoc%Init_elem_var_elem_p(struct1%dom_assoc)
+    CALL structOut%soluable_litter%Init_elem_var_elem_p(struct1%soluable_litter)
+    CALL structOut%polymeric_litter%Init_elem_var_elem_p(struct1%polymeric_litter)
+    CALL structOut%woody_litter%Init_elem_var_elem_p(struct1%woody_litter)
+    CALL structOut%fungi%Init_elem_var_elem_p(struct1%fungi)
+    CALL structOut%mycorrhiza%Init_elem_var_elem_p(struct1%mycorrhiza)
+    CALL structOut%microbial%Init_elem_var_elem_p(struct1%microbial)
+    CALL structOut%residue%Init_elem_var_elem_p(struct1%residue)
+    CALL structOut%residue_assoc%Init_elem_var_elem_p(struct1%residue_assoc)
+  
+    !> 2.0 run calculation
+    !! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
+    !> 2.1 element variables of the components pool itself
+    structOut%carbon          = struct1%carbon      - field3d(:,:,:)
+    structOut%nitrogen        = struct1%nitrogen    - field3d(:,:,:)
+    structOut%phosphorus      = struct1%phosphorus  - field3d(:,:,:)
+    structOut%carbon13        = struct1%carbon13    - field3d(:,:,:)
+    structOut%carbon14        = struct1%carbon14    - field3d(:,:,:)
+    structOut%nitrogen15      = struct1%nitrogen15  - field3d(:,:,:)
+    ! adding the pointer is this needed here too (not only with the jsb_var op_ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+    !> 2.2 element pools
+    structOut%dom               = struct1%dom               - field3d(:,:,:)
+    structOut%dom_assoc         = struct1%dom_assoc         - field3d(:,:,:)
+    structOut%soluable_litter   = struct1%soluable_litter   - field3d(:,:,:)
+    structOut%polymeric_litter  = struct1%polymeric_litter  - field3d(:,:,:)
+    structOut%woody_litter      = struct1%woody_litter      - field3d(:,:,:)
+    structOut%fungi             = struct1%fungi             - field3d(:,:,:)
+    structOut%mycorrhiza        = struct1%mycorrhiza        - field3d(:,:,:)
+    structOut%microbial         = struct1%microbial         - field3d(:,:,:)
+    structOut%residue           = struct1%residue           - field3d(:,:,:)
+    structOut%residue_assoc     = struct1%residue_assoc     - field3d(:,:,:)
+  
+  END FUNCTION Subtract_sb_comp_p_minus_field3d
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! sb_components_pool - sb_components_pool        | ON_CHUNK & ON_DOMAIN
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Subtract_sb_comp_p_minus_sb_comp_p(struct1, struct2) RESULT(structOut)
+  
+    CLASS(t_sb_components_pool),      INTENT(in)  :: struct1, struct2
+    TYPE(t_sb_components_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Subtract_sb_comp_p_minus_sb_comp_p'
+  
+    !> 1.0 init temporary pool structOut
+    !! init components pool with element variables
+    CALL structOut%Init_comp_pool_for_op_ov(name='comp_op_ov_help', shortname='c_op_ov_help', &
+      & unit=TRIM(struct1%element_unit), pool_suffix='sb_p') ! l_elements=.TRUE. by default
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+    !! init element pools
+    CALL structOut%dom%Init_elem_var_elem_p(struct1%dom)
+    CALL structOut%dom_assoc%Init_elem_var_elem_p(struct1%dom_assoc)
+    CALL structOut%soluable_litter%Init_elem_var_elem_p(struct1%soluable_litter)
+    CALL structOut%polymeric_litter%Init_elem_var_elem_p(struct1%polymeric_litter)
+    CALL structOut%woody_litter%Init_elem_var_elem_p(struct1%woody_litter)
+    CALL structOut%fungi%Init_elem_var_elem_p(struct1%fungi)
+    CALL structOut%mycorrhiza%Init_elem_var_elem_p(struct1%mycorrhiza)
+    CALL structOut%microbial%Init_elem_var_elem_p(struct1%microbial)
+    CALL structOut%residue%Init_elem_var_elem_p(struct1%residue)
+    CALL structOut%residue_assoc%Init_elem_var_elem_p(struct1%residue_assoc)
+  
+    !> 2.0 run calculation
+    !! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
+    !> 2.1 element variables of the components pool itself
+    structOut%carbon          = struct1%carbon      - struct2%carbon    
+    structOut%nitrogen        = struct1%nitrogen    - struct2%nitrogen  
+    structOut%phosphorus      = struct1%phosphorus  - struct2%phosphorus
+    structOut%carbon13        = struct1%carbon13    - struct2%carbon13  
+    structOut%carbon14        = struct1%carbon14    - struct2%carbon14  
+    structOut%nitrogen15      = struct1%nitrogen15  - struct2%nitrogen15
+    ! adding the pointer is this needed here too (not only with the jsb_var op_ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+    !> 2.2 element pools
+    structOut%dom               = struct1%dom               - struct2%dom       
+    structOut%dom_assoc         = struct1%dom_assoc         - struct2%dom_assoc  
+    structOut%soluable_litter   = struct1%soluable_litter   - struct2%soluable_litter
+    structOut%polymeric_litter  = struct1%polymeric_litter  - struct2%polymeric_litter   
+    structOut%woody_litter      = struct1%woody_litter      - struct2%woody_litter 
+    structOut%fungi             = struct1%fungi             - struct2%fungi     
+    structOut%mycorrhiza        = struct1%mycorrhiza        - struct2%mycorrhiza    
+    structOut%microbial         = struct1%microbial         - struct2%microbial      
+    structOut%residue           = struct1%residue           - struct2%residue   
+    structOut%residue_assoc     = struct1%residue_assoc     - struct2%residue_assoc   
+  
+  END FUNCTION Subtract_sb_comp_p_minus_sb_comp_p
 
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! * multiply
+  !--------------------------------------------------------------------------------------------------------------------------------
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! sb_components_pool * scalar        | ON_CHUNK & ON_DOMAIN
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Multiply_sb_comp_p_with_scalar(struct1, scalar) RESULT(structOut)
+  
+    CLASS(t_sb_components_pool),      INTENT(in)  :: struct1
+    REAL(wp),                         INTENT(in)  :: scalar
+    TYPE(t_sb_components_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_sb_comp_p_with_scalar'
+  
+    !> 1.0 init temporary pool structOut
+    !! init components pool with element variables
+    CALL structOut%Init_comp_pool_for_op_ov(name='comp_op_ov_help', shortname='c_op_ov_help', &
+      & unit=TRIM(struct1%element_unit), pool_suffix='sb_p') ! l_elements=.TRUE. by default
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+    !! init element pools
+    CALL structOut%dom%Init_elem_var_elem_p(struct1%dom)
+    CALL structOut%dom_assoc%Init_elem_var_elem_p(struct1%dom_assoc)
+    CALL structOut%soluable_litter%Init_elem_var_elem_p(struct1%soluable_litter)
+    CALL structOut%polymeric_litter%Init_elem_var_elem_p(struct1%polymeric_litter)
+    CALL structOut%woody_litter%Init_elem_var_elem_p(struct1%woody_litter)
+    CALL structOut%fungi%Init_elem_var_elem_p(struct1%fungi)
+    CALL structOut%mycorrhiza%Init_elem_var_elem_p(struct1%mycorrhiza)
+    CALL structOut%microbial%Init_elem_var_elem_p(struct1%microbial)
+    CALL structOut%residue%Init_elem_var_elem_p(struct1%residue)
+    CALL structOut%residue_assoc%Init_elem_var_elem_p(struct1%residue_assoc)
+  
+    !> 2.0 run calculation
+    !! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
+    !> 2.1 element variables of the components pool itself
+    structOut%carbon          = struct1%carbon      * scalar
+    structOut%nitrogen        = struct1%nitrogen    * scalar
+    structOut%phosphorus      = struct1%phosphorus  * scalar
+    structOut%carbon13        = struct1%carbon13    * scalar
+    structOut%carbon14        = struct1%carbon14    * scalar
+    structOut%nitrogen15      = struct1%nitrogen15  * scalar
+    ! adding the pointer is this needed here too (not only with the jsb_var op_ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+    !> 2.2 element pools
+    structOut%dom               = struct1%dom               * scalar
+    structOut%dom_assoc         = struct1%dom_assoc         * scalar
+    structOut%soluable_litter   = struct1%soluable_litter   * scalar
+    structOut%polymeric_litter  = struct1%polymeric_litter  * scalar
+    structOut%woody_litter      = struct1%woody_litter      * scalar
+    structOut%fungi             = struct1%fungi             * scalar
+    structOut%mycorrhiza        = struct1%mycorrhiza        * scalar
+    structOut%microbial         = struct1%microbial         * scalar
+    structOut%residue           = struct1%residue           * scalar
+    structOut%residue_assoc     = struct1%residue_assoc     * scalar
+  
+  END FUNCTION Multiply_sb_comp_p_with_scalar
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! scalar * sb_components_pool        | ON_CHUNK & ON_DOMAIN
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Multiply_scalar_with_sb_comp_p(scalar, struct1) RESULT(structOut)
+  
+    REAL(wp),                         INTENT(in)  :: scalar
+    CLASS(t_sb_components_pool),      INTENT(in)  :: struct1
+    TYPE(t_sb_components_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_scalar_with_sb_comp_p'
+  
+    !> 1.0 init temporary pool structOut
+    !! init components pool with element variables
+    CALL structOut%Init_comp_pool_for_op_ov(name='comp_op_ov_help', shortname='c_op_ov_help', &
+      & unit=TRIM(struct1%element_unit), pool_suffix='sb_p') ! l_elements=.TRUE. by default
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+    !! init element pools
+    CALL structOut%dom%Init_elem_var_elem_p(struct1%dom)
+    CALL structOut%dom_assoc%Init_elem_var_elem_p(struct1%dom_assoc)
+    CALL structOut%soluable_litter%Init_elem_var_elem_p(struct1%soluable_litter)
+    CALL structOut%polymeric_litter%Init_elem_var_elem_p(struct1%polymeric_litter)
+    CALL structOut%woody_litter%Init_elem_var_elem_p(struct1%woody_litter)
+    CALL structOut%fungi%Init_elem_var_elem_p(struct1%fungi)
+    CALL structOut%mycorrhiza%Init_elem_var_elem_p(struct1%mycorrhiza)
+    CALL structOut%microbial%Init_elem_var_elem_p(struct1%microbial)
+    CALL structOut%residue%Init_elem_var_elem_p(struct1%residue)
+    CALL structOut%residue_assoc%Init_elem_var_elem_p(struct1%residue_assoc)
+  
+    !> 2.0 run calculation
+    !! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
+    !> 2.1 element variables of the components pool itself
+    structOut%carbon          = scalar * struct1%carbon    
+    structOut%nitrogen        = scalar * struct1%nitrogen  
+    structOut%phosphorus      = scalar * struct1%phosphorus
+    structOut%carbon13        = scalar * struct1%carbon13  
+    structOut%carbon14        = scalar * struct1%carbon14  
+    structOut%nitrogen15      = scalar * struct1%nitrogen15
+    ! adding the pointer is this needed here too (not only with the jsb_var op_ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+    !> 2.2 element pools
+    structOut%dom               = scalar * struct1%dom       
+    structOut%dom_assoc         = scalar * struct1%dom_assoc  
+    structOut%soluable_litter   = scalar * struct1%soluable_litter
+    structOut%polymeric_litter  = scalar * struct1%polymeric_litter   
+    structOut%woody_litter      = scalar * struct1%woody_litter 
+    structOut%fungi             = scalar * struct1%fungi     
+    structOut%mycorrhiza        = scalar * struct1%mycorrhiza    
+    structOut%microbial         = scalar * struct1%microbial      
+    structOut%residue           = scalar * struct1%residue   
+    structOut%residue_assoc     = scalar * struct1%residue_assoc   
+  
+  END FUNCTION Multiply_scalar_with_sb_comp_p
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! sb_components_pool * field2d(:,:)        | ON_CHUNK
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Multiply_sb_comp_p_with_field2d(struct1, field2d) RESULT(structOut)
+  
+    CLASS(t_sb_components_pool),      INTENT(in)  :: struct1
+    REAL(wp),                         INTENT(in)  :: field2d(:,:)
+    TYPE(t_sb_components_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_sb_comp_p_with_field2d'
+  
+    !> 1.0 init temporary pool structOut
+    !! init components pool with element variables
+    CALL structOut%Init_comp_pool_for_op_ov(name='comp_op_ov_help', shortname='c_op_ov_help', &
+      & unit=TRIM(struct1%element_unit), pool_suffix='sb_p') ! l_elements=.TRUE. by default
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+    !! init element pools
+    CALL structOut%dom%Init_elem_var_elem_p(struct1%dom)
+    CALL structOut%dom_assoc%Init_elem_var_elem_p(struct1%dom_assoc)
+    CALL structOut%soluable_litter%Init_elem_var_elem_p(struct1%soluable_litter)
+    CALL structOut%polymeric_litter%Init_elem_var_elem_p(struct1%polymeric_litter)
+    CALL structOut%woody_litter%Init_elem_var_elem_p(struct1%woody_litter)
+    CALL structOut%fungi%Init_elem_var_elem_p(struct1%fungi)
+    CALL structOut%mycorrhiza%Init_elem_var_elem_p(struct1%mycorrhiza)
+    CALL structOut%microbial%Init_elem_var_elem_p(struct1%microbial)
+    CALL structOut%residue%Init_elem_var_elem_p(struct1%residue)
+    CALL structOut%residue_assoc%Init_elem_var_elem_p(struct1%residue_assoc)
+  
+    !> 2.0 run calculation
+    !! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
+    !> 2.1 element variables of the components pool itself
+    structOut%carbon          = struct1%carbon      * field2d(:,:)
+    structOut%nitrogen        = struct1%nitrogen    * field2d(:,:)
+    structOut%phosphorus      = struct1%phosphorus  * field2d(:,:)
+    structOut%carbon13        = struct1%carbon13    * field2d(:,:)
+    structOut%carbon14        = struct1%carbon14    * field2d(:,:)
+    structOut%nitrogen15      = struct1%nitrogen15  * field2d(:,:)
+    ! adding the pointer is this needed here too (not only with the jsb_var op_ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+    !> 2.2 element pools
+    structOut%dom               = struct1%dom               * field2d(:,:)
+    structOut%dom_assoc         = struct1%dom_assoc         * field2d(:,:)
+    structOut%soluable_litter   = struct1%soluable_litter   * field2d(:,:)
+    structOut%polymeric_litter  = struct1%polymeric_litter  * field2d(:,:)
+    structOut%woody_litter      = struct1%woody_litter      * field2d(:,:)
+    structOut%fungi             = struct1%fungi             * field2d(:,:)
+    structOut%mycorrhiza        = struct1%mycorrhiza        * field2d(:,:)
+    structOut%microbial         = struct1%microbial         * field2d(:,:)
+    structOut%residue           = struct1%residue           * field2d(:,:)
+    structOut%residue_assoc     = struct1%residue_assoc     * field2d(:,:)
+  
+  END FUNCTION Multiply_sb_comp_p_with_field2d
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! field2d(:,:) * sb_components_pool        | ON_CHUNK
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Multiply_field2d_with_sb_comp_p(field2d, struct1) RESULT(structOut)
+  
+    REAL(wp),                         INTENT(in)  :: field2d(:,:)
+    CLASS(t_sb_components_pool),      INTENT(in)  :: struct1
+    TYPE(t_sb_components_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_field2d_with_sb_comp_p'
+  
+    !> 1.0 init temporary pool structOut
+    !! init components pool with element variables
+    CALL structOut%Init_comp_pool_for_op_ov(name='comp_op_ov_help', shortname='c_op_ov_help', &
+      & unit=TRIM(struct1%element_unit), pool_suffix='sb_p') ! l_elements=.TRUE. by default
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+    !! init element pools
+    CALL structOut%dom%Init_elem_var_elem_p(struct1%dom)
+    CALL structOut%dom_assoc%Init_elem_var_elem_p(struct1%dom_assoc)
+    CALL structOut%soluable_litter%Init_elem_var_elem_p(struct1%soluable_litter)
+    CALL structOut%polymeric_litter%Init_elem_var_elem_p(struct1%polymeric_litter)
+    CALL structOut%woody_litter%Init_elem_var_elem_p(struct1%woody_litter)
+    CALL structOut%fungi%Init_elem_var_elem_p(struct1%fungi)
+    CALL structOut%mycorrhiza%Init_elem_var_elem_p(struct1%mycorrhiza)
+    CALL structOut%microbial%Init_elem_var_elem_p(struct1%microbial)
+    CALL structOut%residue%Init_elem_var_elem_p(struct1%residue)
+    CALL structOut%residue_assoc%Init_elem_var_elem_p(struct1%residue_assoc)
+  
+    !> 2.0 run calculation
+    !! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
+    !> 2.1 element variables of the components pool itself
+    structOut%carbon          = field2d(:,:) * struct1%carbon    
+    structOut%nitrogen        = field2d(:,:) * struct1%nitrogen  
+    structOut%phosphorus      = field2d(:,:) * struct1%phosphorus
+    structOut%carbon13        = field2d(:,:) * struct1%carbon13  
+    structOut%carbon14        = field2d(:,:) * struct1%carbon14  
+    structOut%nitrogen15      = field2d(:,:) * struct1%nitrogen15
+    ! adding the pointer is this needed here too (not only with the jsb_var op_ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+    !> 2.2 element pools
+    structOut%dom               = field2d(:,:) * struct1%dom       
+    structOut%dom_assoc         = field2d(:,:) * struct1%dom_assoc  
+    structOut%soluable_litter   = field2d(:,:) * struct1%soluable_litter
+    structOut%polymeric_litter  = field2d(:,:) * struct1%polymeric_litter   
+    structOut%woody_litter      = field2d(:,:) * struct1%woody_litter 
+    structOut%fungi             = field2d(:,:) * struct1%fungi     
+    structOut%mycorrhiza        = field2d(:,:) * struct1%mycorrhiza    
+    structOut%microbial         = field2d(:,:) * struct1%microbial      
+    structOut%residue           = field2d(:,:) * struct1%residue   
+    structOut%residue_assoc     = field2d(:,:) * struct1%residue_assoc   
+  
+  END FUNCTION Multiply_field2d_with_sb_comp_p
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! sb_components_pool * field3d(:,:,:)        | ON_CHUNK & ON_DOMAIN | field3d(:,1) & field3d(:,:,:)
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Multiply_sb_comp_p_with_field3d(struct1, field3d) RESULT(structOut)
+  
+    CLASS(t_sb_components_pool),      INTENT(in)  :: struct1
+    REAL(wp),                         INTENT(in)  :: field3d(:,:,:)
+    TYPE(t_sb_components_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_sb_comp_p_with_field3d'
+  
+    !> 1.0 init temporary pool structOut
+    !! init components pool with element variables
+    CALL structOut%Init_comp_pool_for_op_ov(name='comp_op_ov_help', shortname='c_op_ov_help', &
+      & unit=TRIM(struct1%element_unit), pool_suffix='sb_p') ! l_elements=.TRUE. by default
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+    !! init element pools
+    CALL structOut%dom%Init_elem_var_elem_p(struct1%dom)
+    CALL structOut%dom_assoc%Init_elem_var_elem_p(struct1%dom_assoc)
+    CALL structOut%soluable_litter%Init_elem_var_elem_p(struct1%soluable_litter)
+    CALL structOut%polymeric_litter%Init_elem_var_elem_p(struct1%polymeric_litter)
+    CALL structOut%woody_litter%Init_elem_var_elem_p(struct1%woody_litter)
+    CALL structOut%fungi%Init_elem_var_elem_p(struct1%fungi)
+    CALL structOut%mycorrhiza%Init_elem_var_elem_p(struct1%mycorrhiza)
+    CALL structOut%microbial%Init_elem_var_elem_p(struct1%microbial)
+    CALL structOut%residue%Init_elem_var_elem_p(struct1%residue)
+    CALL structOut%residue_assoc%Init_elem_var_elem_p(struct1%residue_assoc)
+  
+    !> 2.0 run calculation
+    !! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
+    !> 2.1 element variables of the components pool itself
+    structOut%carbon          = struct1%carbon      * field3d(:,:,:)
+    structOut%nitrogen        = struct1%nitrogen    * field3d(:,:,:)
+    structOut%phosphorus      = struct1%phosphorus  * field3d(:,:,:)
+    structOut%carbon13        = struct1%carbon13    * field3d(:,:,:)
+    structOut%carbon14        = struct1%carbon14    * field3d(:,:,:)
+    structOut%nitrogen15      = struct1%nitrogen15  * field3d(:,:,:)
+    ! adding the pointer is this needed here too (not only with the jsb_var op_ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+    !> 2.2 element pools
+    structOut%dom               = struct1%dom               * field3d(:,:,:)
+    structOut%dom_assoc         = struct1%dom_assoc         * field3d(:,:,:)
+    structOut%soluable_litter   = struct1%soluable_litter   * field3d(:,:,:)
+    structOut%polymeric_litter  = struct1%polymeric_litter  * field3d(:,:,:)
+    structOut%woody_litter      = struct1%woody_litter      * field3d(:,:,:)
+    structOut%fungi             = struct1%fungi             * field3d(:,:,:)
+    structOut%mycorrhiza        = struct1%mycorrhiza        * field3d(:,:,:)
+    structOut%microbial         = struct1%microbial         * field3d(:,:,:)
+    structOut%residue           = struct1%residue           * field3d(:,:,:)
+    structOut%residue_assoc     = struct1%residue_assoc     * field3d(:,:,:)
+  
+  END FUNCTION Multiply_sb_comp_p_with_field3d
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! field3d(:,:,:) * sb_components_pool        | ON_CHUNK & ON_DOMAIN | field3d(:,1) & field3d(:,:,:)
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Multiply_field3d_with_sb_comp_p(field3d, struct1) RESULT(structOut)
+  
+    REAL(wp),                         INTENT(in)  :: field3d(:,:,:)
+    CLASS(t_sb_components_pool),      INTENT(in)  :: struct1
+    TYPE(t_sb_components_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_field3d_with_sb_comp_p'
+  
+    !> 1.0 init temporary pool structOut
+    !! init components pool with element variables
+    CALL structOut%Init_comp_pool_for_op_ov(name='comp_op_ov_help', shortname='c_op_ov_help', &
+      & unit=TRIM(struct1%element_unit), pool_suffix='sb_p') ! l_elements=.TRUE. by default
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+    !! init element pools
+    CALL structOut%dom%Init_elem_var_elem_p(struct1%dom)
+    CALL structOut%dom_assoc%Init_elem_var_elem_p(struct1%dom_assoc)
+    CALL structOut%soluable_litter%Init_elem_var_elem_p(struct1%soluable_litter)
+    CALL structOut%polymeric_litter%Init_elem_var_elem_p(struct1%polymeric_litter)
+    CALL structOut%woody_litter%Init_elem_var_elem_p(struct1%woody_litter)
+    CALL structOut%fungi%Init_elem_var_elem_p(struct1%fungi)
+    CALL structOut%mycorrhiza%Init_elem_var_elem_p(struct1%mycorrhiza)
+    CALL structOut%microbial%Init_elem_var_elem_p(struct1%microbial)
+    CALL structOut%residue%Init_elem_var_elem_p(struct1%residue)
+    CALL structOut%residue_assoc%Init_elem_var_elem_p(struct1%residue_assoc)
+  
+    !> 2.0 run calculation
+    !! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
+    !> 2.1 element variables of the components pool itself
+    structOut%carbon          = field3d(:,:,:) * struct1%carbon    
+    structOut%nitrogen        = field3d(:,:,:) * struct1%nitrogen  
+    structOut%phosphorus      = field3d(:,:,:) * struct1%phosphorus
+    structOut%carbon13        = field3d(:,:,:) * struct1%carbon13  
+    structOut%carbon14        = field3d(:,:,:) * struct1%carbon14  
+    structOut%nitrogen15      = field3d(:,:,:) * struct1%nitrogen15
+    ! adding the pointer is this needed here too (not only with the jsb_var op_ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+    !> 2.2 element pools
+    structOut%dom               = field3d(:,:,:) * struct1%dom       
+    structOut%dom_assoc         = field3d(:,:,:) * struct1%dom_assoc  
+    structOut%soluable_litter   = field3d(:,:,:) * struct1%soluable_litter
+    structOut%polymeric_litter  = field3d(:,:,:) * struct1%polymeric_litter   
+    structOut%woody_litter      = field3d(:,:,:) * struct1%woody_litter 
+    structOut%fungi             = field3d(:,:,:) * struct1%fungi     
+    structOut%mycorrhiza        = field3d(:,:,:) * struct1%mycorrhiza    
+    structOut%microbial         = field3d(:,:,:) * struct1%microbial      
+    structOut%residue           = field3d(:,:,:) * struct1%residue   
+    structOut%residue_assoc     = field3d(:,:,:) * struct1%residue_assoc   
+  
+  END FUNCTION Multiply_field3d_with_sb_comp_p
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! sb_components_pool * sb_components_pool        | ON_CHUNK & ON_DOMAIN
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Multiply_sb_comp_p_with_sb_comp_p(struct1, struct2) RESULT(structOut)
+  
+    CLASS(t_sb_components_pool),      INTENT(in)  :: struct1, struct2
+    TYPE(t_sb_components_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_sb_comp_p_with_sb_comp_p'
+  
+    !> 1.0 init temporary pool structOut
+    !! init components pool with element variables
+    CALL structOut%Init_comp_pool_for_op_ov(name='comp_op_ov_help', shortname='c_op_ov_help', &
+      & unit=TRIM(struct1%element_unit), pool_suffix='sb_p') ! l_elements=.TRUE. by default
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+    !! init element pools
+    CALL structOut%dom%Init_elem_var_elem_p(struct1%dom)
+    CALL structOut%dom_assoc%Init_elem_var_elem_p(struct1%dom_assoc)
+    CALL structOut%soluable_litter%Init_elem_var_elem_p(struct1%soluable_litter)
+    CALL structOut%polymeric_litter%Init_elem_var_elem_p(struct1%polymeric_litter)
+    CALL structOut%woody_litter%Init_elem_var_elem_p(struct1%woody_litter)
+    CALL structOut%fungi%Init_elem_var_elem_p(struct1%fungi)
+    CALL structOut%mycorrhiza%Init_elem_var_elem_p(struct1%mycorrhiza)
+    CALL structOut%microbial%Init_elem_var_elem_p(struct1%microbial)
+    CALL structOut%residue%Init_elem_var_elem_p(struct1%residue)
+    CALL structOut%residue_assoc%Init_elem_var_elem_p(struct1%residue_assoc)
+  
+    !> 2.0 run calculation
+    !! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
+    !> 2.1 element variables of the components pool itself
+    structOut%carbon          = struct1%carbon      * struct2%carbon    
+    structOut%nitrogen        = struct1%nitrogen    * struct2%nitrogen  
+    structOut%phosphorus      = struct1%phosphorus  * struct2%phosphorus
+    structOut%carbon13        = struct1%carbon13    * struct2%carbon13  
+    structOut%carbon14        = struct1%carbon14    * struct2%carbon14  
+    structOut%nitrogen15      = struct1%nitrogen15  * struct2%nitrogen15
+    ! adding the pointer is this needed here too (not only with the jsb_var op_ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+    !> 2.2 element pools
+    structOut%dom               = struct1%dom               * struct2%dom       
+    structOut%dom_assoc         = struct1%dom_assoc         * struct2%dom_assoc  
+    structOut%soluable_litter   = struct1%soluable_litter   * struct2%soluable_litter
+    structOut%polymeric_litter  = struct1%polymeric_litter  * struct2%polymeric_litter   
+    structOut%woody_litter      = struct1%woody_litter      * struct2%woody_litter 
+    structOut%fungi             = struct1%fungi             * struct2%fungi     
+    structOut%mycorrhiza        = struct1%mycorrhiza        * struct2%mycorrhiza    
+    structOut%microbial         = struct1%microbial         * struct2%microbial      
+    structOut%residue           = struct1%residue           * struct2%residue   
+    structOut%residue_assoc     = struct1%residue_assoc     * struct2%residue_assoc   
+  
+  END FUNCTION Multiply_sb_comp_p_with_sb_comp_p
 
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! / divide
+  !--------------------------------------------------------------------------------------------------------------------------------
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! sb_components_pool / scalar        | ON_CHUNK & ON_DOMAIN
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Div_sb_comp_p_by_scalar(struct1, scalar) RESULT(structOut)
+  
+    CLASS(t_sb_components_pool),      INTENT(in)  :: struct1
+    REAL(wp),                         INTENT(in)  :: scalar
+    TYPE(t_sb_components_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Div_sb_comp_p_by_scalar'
+  
+    !> 1.0 init temporary pool structOut
+    !! init components pool with element variables
+    CALL structOut%Init_comp_pool_for_op_ov(name='comp_op_ov_help', shortname='c_op_ov_help', &
+      & unit=TRIM(struct1%element_unit), pool_suffix='sb_p') ! l_elements=.TRUE. by default
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+    !! init element pools
+    CALL structOut%dom%Init_elem_var_elem_p(struct1%dom)
+    CALL structOut%dom_assoc%Init_elem_var_elem_p(struct1%dom_assoc)
+    CALL structOut%soluable_litter%Init_elem_var_elem_p(struct1%soluable_litter)
+    CALL structOut%polymeric_litter%Init_elem_var_elem_p(struct1%polymeric_litter)
+    CALL structOut%woody_litter%Init_elem_var_elem_p(struct1%woody_litter)
+    CALL structOut%fungi%Init_elem_var_elem_p(struct1%fungi)
+    CALL structOut%mycorrhiza%Init_elem_var_elem_p(struct1%mycorrhiza)
+    CALL structOut%microbial%Init_elem_var_elem_p(struct1%microbial)
+    CALL structOut%residue%Init_elem_var_elem_p(struct1%residue)
+    CALL structOut%residue_assoc%Init_elem_var_elem_p(struct1%residue_assoc)
+  
+    !> 2.0 run calculation
+    !! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
+    !> 2.1 element variables of the components pool itself
+    structOut%carbon          = struct1%carbon      / scalar
+    structOut%nitrogen        = struct1%nitrogen    / scalar
+    structOut%phosphorus      = struct1%phosphorus  / scalar
+    structOut%carbon13        = struct1%carbon13    / scalar
+    structOut%carbon14        = struct1%carbon14    / scalar
+    structOut%nitrogen15      = struct1%nitrogen15  / scalar
+    ! adding the pointer is this needed here too (not only with the jsb_var op_ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+    !> 2.2 element pools
+    structOut%dom               = struct1%dom               / scalar
+    structOut%dom_assoc         = struct1%dom_assoc         / scalar
+    structOut%soluable_litter   = struct1%soluable_litter   / scalar
+    structOut%polymeric_litter  = struct1%polymeric_litter  / scalar
+    structOut%woody_litter      = struct1%woody_litter      / scalar
+    structOut%fungi             = struct1%fungi             / scalar
+    structOut%mycorrhiza        = struct1%mycorrhiza        / scalar
+    structOut%microbial         = struct1%microbial         / scalar
+    structOut%residue           = struct1%residue           / scalar
+    structOut%residue_assoc     = struct1%residue_assoc     / scalar
+  
+  END FUNCTION Div_sb_comp_p_by_scalar
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! sb_components_pool / field2d(:,:)        | ON_CHUNK
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Div_sb_comp_p_by_field2d(struct1, field2d) RESULT(structOut)
+  
+    CLASS(t_sb_components_pool),      INTENT(in)  :: struct1
+    REAL(wp),                         INTENT(in)  :: field2d(:,:)
+    TYPE(t_sb_components_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Div_sb_comp_p_by_field2d'
+  
+    !> 1.0 init temporary pool structOut
+    !! init components pool with element variables
+    CALL structOut%Init_comp_pool_for_op_ov(name='comp_op_ov_help', shortname='c_op_ov_help', &
+      & unit=TRIM(struct1%element_unit), pool_suffix='sb_p') ! l_elements=.TRUE. by default
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+    !! init element pools
+    CALL structOut%dom%Init_elem_var_elem_p(struct1%dom)
+    CALL structOut%dom_assoc%Init_elem_var_elem_p(struct1%dom_assoc)
+    CALL structOut%soluable_litter%Init_elem_var_elem_p(struct1%soluable_litter)
+    CALL structOut%polymeric_litter%Init_elem_var_elem_p(struct1%polymeric_litter)
+    CALL structOut%woody_litter%Init_elem_var_elem_p(struct1%woody_litter)
+    CALL structOut%fungi%Init_elem_var_elem_p(struct1%fungi)
+    CALL structOut%mycorrhiza%Init_elem_var_elem_p(struct1%mycorrhiza)
+    CALL structOut%microbial%Init_elem_var_elem_p(struct1%microbial)
+    CALL structOut%residue%Init_elem_var_elem_p(struct1%residue)
+    CALL structOut%residue_assoc%Init_elem_var_elem_p(struct1%residue_assoc)
+  
+    !> 2.0 run calculation
+    !! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
+    !> 2.1 element variables of the components pool itself
+    structOut%carbon          = struct1%carbon      / field2d(:,:)
+    structOut%nitrogen        = struct1%nitrogen    / field2d(:,:)
+    structOut%phosphorus      = struct1%phosphorus  / field2d(:,:)
+    structOut%carbon13        = struct1%carbon13    / field2d(:,:)
+    structOut%carbon14        = struct1%carbon14    / field2d(:,:)
+    structOut%nitrogen15      = struct1%nitrogen15  / field2d(:,:)
+    ! adding the pointer is this needed here too (not only with the jsb_var op_ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+    !> 2.2 element pools
+    structOut%dom               = struct1%dom               / field2d(:,:)
+    structOut%dom_assoc         = struct1%dom_assoc         / field2d(:,:)
+    structOut%soluable_litter   = struct1%soluable_litter   / field2d(:,:)
+    structOut%polymeric_litter  = struct1%polymeric_litter  / field2d(:,:)
+    structOut%woody_litter      = struct1%woody_litter      / field2d(:,:)
+    structOut%fungi             = struct1%fungi             / field2d(:,:)
+    structOut%mycorrhiza        = struct1%mycorrhiza        / field2d(:,:)
+    structOut%microbial         = struct1%microbial         / field2d(:,:)
+    structOut%residue           = struct1%residue           / field2d(:,:)
+    structOut%residue_assoc     = struct1%residue_assoc     / field2d(:,:)
+  
+  END FUNCTION Div_sb_comp_p_by_field2d
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! sb_components_pool / field3d(:,:,:)        | ON_CHUNK & ON_DOMAIN | field3d(:,1) & field3d(:,:,:)
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Div_sb_comp_p_by_field3d(struct1, field3d) RESULT(structOut)
+  
+    CLASS(t_sb_components_pool),      INTENT(in)  :: struct1
+    REAL(wp),                         INTENT(in)  :: field3d(:,:,:)
+    TYPE(t_sb_components_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Div_sb_comp_p_by_field3d'
+  
+    !> 1.0 init temporary pool structOut
+    !! init components pool with element variables
+    CALL structOut%Init_comp_pool_for_op_ov(name='comp_op_ov_help', shortname='c_op_ov_help', &
+      & unit=TRIM(struct1%element_unit), pool_suffix='sb_p') ! l_elements=.TRUE. by default
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+    !! init element pools
+    CALL structOut%dom%Init_elem_var_elem_p(struct1%dom)
+    CALL structOut%dom_assoc%Init_elem_var_elem_p(struct1%dom_assoc)
+    CALL structOut%soluable_litter%Init_elem_var_elem_p(struct1%soluable_litter)
+    CALL structOut%polymeric_litter%Init_elem_var_elem_p(struct1%polymeric_litter)
+    CALL structOut%woody_litter%Init_elem_var_elem_p(struct1%woody_litter)
+    CALL structOut%fungi%Init_elem_var_elem_p(struct1%fungi)
+    CALL structOut%mycorrhiza%Init_elem_var_elem_p(struct1%mycorrhiza)
+    CALL structOut%microbial%Init_elem_var_elem_p(struct1%microbial)
+    CALL structOut%residue%Init_elem_var_elem_p(struct1%residue)
+    CALL structOut%residue_assoc%Init_elem_var_elem_p(struct1%residue_assoc)
+  
+    !> 2.0 run calculation
+    !! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
+    !> 2.1 element variables of the components pool itself
+    structOut%carbon          = struct1%carbon      / field3d(:,:,:)
+    structOut%nitrogen        = struct1%nitrogen    / field3d(:,:,:)
+    structOut%phosphorus      = struct1%phosphorus  / field3d(:,:,:)
+    structOut%carbon13        = struct1%carbon13    / field3d(:,:,:)
+    structOut%carbon14        = struct1%carbon14    / field3d(:,:,:)
+    structOut%nitrogen15      = struct1%nitrogen15  / field3d(:,:,:)
+    ! adding the pointer is this needed here too (not only with the jsb_var op_ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+    !> 2.2 element pools
+    structOut%dom               = struct1%dom               / field3d(:,:,:)
+    structOut%dom_assoc         = struct1%dom_assoc         / field3d(:,:,:)
+    structOut%soluable_litter   = struct1%soluable_litter   / field3d(:,:,:)
+    structOut%polymeric_litter  = struct1%polymeric_litter  / field3d(:,:,:)
+    structOut%woody_litter      = struct1%woody_litter      / field3d(:,:,:)
+    structOut%fungi             = struct1%fungi             / field3d(:,:,:)
+    structOut%mycorrhiza        = struct1%mycorrhiza        / field3d(:,:,:)
+    structOut%microbial         = struct1%microbial         / field3d(:,:,:)
+    structOut%residue           = struct1%residue           / field3d(:,:,:)
+    structOut%residue_assoc     = struct1%residue_assoc     / field3d(:,:,:)
+  
+  END FUNCTION Div_sb_comp_p_by_field3d
+  !--------------------------------------------------------------------------------------------------------------------------------
+  ! sb_components_pool / sb_components_pool        | ON_CHUNK & ON_DOMAIN
+  !--------------------------------------------------------------------------------------------------------------------------------
+  FUNCTION Div_sb_comp_p_by_sb_comp_p(struct1, struct2) RESULT(structOut)
+  
+    CLASS(t_sb_components_pool),      INTENT(in)  :: struct1, struct2
+    TYPE(t_sb_components_pool),       TARGET      :: structOut
+  
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Div_sb_comp_p_by_sb_comp_p'
+  
+    !> 1.0 init temporary pool structOut
+    !! init components pool with element variables
+    CALL structOut%Init_comp_pool_for_op_ov(name='comp_op_ov_help', shortname='c_op_ov_help', &
+      & unit=TRIM(struct1%element_unit), pool_suffix='sb_p') ! l_elements=.TRUE. by default
+    structOut%carbon%owner_model_id      = struct1%carbon%owner_model_id
+    structOut%carbon%owner_proc_id       = struct1%carbon%owner_proc_id
+    structOut%carbon%owner_tile_path     = struct1%carbon%owner_tile_path
+    ALLOCATE(structOut%carbon%ptr3d,     source=struct1%carbon%ptr3d)
+    structOut%nitrogen%owner_model_id    = struct1%nitrogen%owner_model_id
+    structOut%nitrogen%owner_proc_id     = struct1%nitrogen%owner_proc_id
+    structOut%nitrogen%owner_tile_path   = struct1%nitrogen%owner_tile_path
+    ALLOCATE(structOut%nitrogen%ptr3d,   source=struct1%nitrogen%ptr3d)
+    structOut%phosphorus%owner_model_id  = struct1%phosphorus%owner_model_id
+    structOut%phosphorus%owner_proc_id   = struct1%phosphorus%owner_proc_id
+    structOut%phosphorus%owner_tile_path = struct1%phosphorus%owner_tile_path
+    ALLOCATE(structOut%phosphorus%ptr3d, source=struct1%phosphorus%ptr3d)
+    structOut%carbon13%owner_model_id    = struct1%carbon13%owner_model_id
+    structOut%carbon13%owner_proc_id     = struct1%carbon13%owner_proc_id
+    structOut%carbon13%owner_tile_path   = struct1%carbon13%owner_tile_path
+    ALLOCATE(structOut%carbon13%ptr3d,   source=struct1%carbon13%ptr3d)
+    structOut%carbon14%owner_model_id    = struct1%carbon14%owner_model_id
+    structOut%carbon14%owner_proc_id     = struct1%carbon14%owner_proc_id
+    structOut%carbon14%owner_tile_path   = struct1%carbon14%owner_tile_path
+    ALLOCATE(structOut%carbon14%ptr3d,   source=struct1%carbon14%ptr3d)
+    structOut%nitrogen15%owner_model_id  = struct1%nitrogen15%owner_model_id
+    structOut%nitrogen15%owner_proc_id   = struct1%nitrogen15%owner_proc_id
+    structOut%nitrogen15%owner_tile_path = struct1%nitrogen15%owner_tile_path
+    ALLOCATE(structOut%nitrogen15%ptr3d, source=struct1%nitrogen15%ptr3d)
+    !! init element pools
+    CALL structOut%dom%Init_elem_var_elem_p(struct1%dom)
+    CALL structOut%dom_assoc%Init_elem_var_elem_p(struct1%dom_assoc)
+    CALL structOut%soluable_litter%Init_elem_var_elem_p(struct1%soluable_litter)
+    CALL structOut%polymeric_litter%Init_elem_var_elem_p(struct1%polymeric_litter)
+    CALL structOut%woody_litter%Init_elem_var_elem_p(struct1%woody_litter)
+    CALL structOut%fungi%Init_elem_var_elem_p(struct1%fungi)
+    CALL structOut%mycorrhiza%Init_elem_var_elem_p(struct1%mycorrhiza)
+    CALL structOut%microbial%Init_elem_var_elem_p(struct1%microbial)
+    CALL structOut%residue%Init_elem_var_elem_p(struct1%residue)
+    CALL structOut%residue_assoc%Init_elem_var_elem_p(struct1%residue_assoc)
+  
+    !> 2.0 run calculation
+    !! the differentiation between ON_CHUNK/ON_DOMAIN is done at the level of variables (i.e., the op_ov routines of the jsb_var)
+    !> 2.1 element variables of the components pool itself
+    structOut%carbon          = struct1%carbon      / struct2%carbon    
+    structOut%nitrogen        = struct1%nitrogen    / struct2%nitrogen  
+    structOut%phosphorus      = struct1%phosphorus  / struct2%phosphorus
+    structOut%carbon13        = struct1%carbon13    / struct2%carbon13  
+    structOut%carbon14        = struct1%carbon14    / struct2%carbon14  
+    structOut%nitrogen15      = struct1%nitrogen15  / struct2%nitrogen15
+    ! adding the pointer is this needed here too (not only with the jsb_var op_ov)
+    structOut%carbon%ptr      => structOut%carbon%ptr3d(:,:,:)
+    structOut%nitrogen%ptr    => structOut%nitrogen%ptr3d(:,:,:)
+    structOut%phosphorus%ptr  => structOut%phosphorus%ptr3d(:,:,:)
+    structOut%carbon13%ptr    => structOut%carbon13%ptr3d(:,:,:)
+    structOut%carbon14%ptr    => structOut%carbon14%ptr3d(:,:,:)
+    structOut%nitrogen15%ptr  => structOut%nitrogen15%ptr3d(:,:,:)
+    !> 2.2 element pools
+    structOut%dom               = struct1%dom               / struct2%dom       
+    structOut%dom_assoc         = struct1%dom_assoc         / struct2%dom_assoc  
+    structOut%soluable_litter   = struct1%soluable_litter   / struct2%soluable_litter
+    structOut%polymeric_litter  = struct1%polymeric_litter  / struct2%polymeric_litter   
+    structOut%woody_litter      = struct1%woody_litter      / struct2%woody_litter 
+    structOut%fungi             = struct1%fungi             / struct2%fungi     
+    structOut%mycorrhiza        = struct1%mycorrhiza        / struct2%mycorrhiza    
+    structOut%microbial         = struct1%microbial         / struct2%microbial      
+    structOut%residue           = struct1%residue           / struct2%residue   
+    structOut%residue_assoc     = struct1%residue_assoc     / struct2%residue_assoc   
+  
+  END FUNCTION Div_sb_comp_p_by_sb_comp_p
 
 END MODULE mo_sb_memory_class

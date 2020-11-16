@@ -161,6 +161,10 @@ CONTAINS
     sb_loss                     = hlp10(:,:,1)
     sb_loss                     = sb_loss + 0.9_wp
 
+    sb_pool                     = 4.4_wp
+    sb_loss                     = 2.0_wp
+    sb_loss                     = (5.0_wp + sb_loss) - (sb_pool / hlp1(:,:)) * sb_pool - 1.0_wp      ! 7 - 2.2 * 4.4 - 1 == 7 - 9.68 - 1 = -3.68
+
   END SUBROUTINE update_sb_pools
 
 END MODULE mo_sb_update_pools
