@@ -120,7 +120,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: t_bcoef
     dsl4jsb_Real2D_onChunk :: q_acoef
     dsl4jsb_Real2D_onChunk :: q_bcoef
-    
+    dsl4jsb_Real2D_onChunk :: lat
 
     ! Locally allocated vectors
     !
@@ -165,7 +165,8 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
-    grid => Get_grid(model%grid_id)
+    grid  => Get_grid(model%grid_id)
+    lat   => grid%lat(ics:ice, iblk)
 
     l_is_newday = is_newday(options%current_datetime, options%dtime)
     tmp_timesteps_per_day = timesteps_per_day(options%dtime)
@@ -343,6 +344,7 @@ CONTAINS
   			write(555,999) yr,mo,dy, hr,mn,se, 'Rnet', rad_srf_net(1)
         write(555,999) yr,mo,dy, hr,mn,se, 'Gflx', grnd_hflx(1)
         write(555,999) yr,mo,dy, hr,mn,se, 'Ssoi', soil_stor(1)
+        write(555,999) yr,mo,dy, hr,mn,se, 'lati', lat(1)
     END IF
 
     ! @todo - hack for oceans boxes (land tile is direct child of root tile)
