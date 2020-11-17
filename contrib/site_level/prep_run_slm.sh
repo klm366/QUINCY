@@ -439,6 +439,17 @@ while getopts ":e:f:c:m:s:r:y:b:z:n:u:h" opt; do
   esac
 done
 
+## get the current revision number of the local working copy of the trunk/branch that is used for this simulation
+workingCopyRev="00000"
+# check if SVN information is available (exit status == 0), if so add the current revision number to the experimentalID
+svn info ./ >/dev/null 2>&1
+exitSVN=$?
+if [ "$exitSVN" -eq 0 ]; then # if exit status of svn info is zero, i.e., all good
+  workingCopyRev=$(svn info ../../ | grep "Rev:" | awk '{print $4}')
+  echo " The revision number of the local working copy is: ""$workingCopyRev"
+else
+  echo " The revision number of the local working copy could not be identified and is set to ""$workingCopyRev"
+fi
 
 ## include usecase
 if [ ! -z "$usecase" ]            # if $usecase is not empty
@@ -455,18 +466,10 @@ if [ ! -z "$usecase" ]            # if $usecase is not empty
       #         also used for soil-forcing creation (usecases 01 & 08)
       validateExpIDPresent="$(grep -w "experimentalID" "$usecaseFileIncl")"
       if [ ! -z "${validateExpIDPresent// }" ]; then  # -z test is explicitly for: the length of string is zero, here not zero
-        # check if SVN information is available (exit status == 0), if so add the current revision number to the experimentalID
-        svn info ./ >/dev/null 2>&1
-        exitSVN=$?
-        if [ "$exitSVN" == 0 ]; then # if exit status of svn info is zero, i.e., all good
-          workingCopyRev=$(svn info ../../ | grep "Rev:" | awk '{print $4}')
-          experimentalID="$experimentalID""_r""$workingCopyRev"
-          echo " The script could retrieve the revision number of your local working copy."
-          echo " The experimentalID is set to: ""$experimentalID"
-          echo " "
-        else  # if rev number could not be retrieved, append "0000"
-          experimentalID="$experimentalID""_r0000"
-        fi
+        # change experimentalID and give feedback about it
+        experimentalID="$experimentalID""_r""$workingCopyRev"
+        echo " The experimentalID is set to: ""$experimentalID"
+        echo " "
       fi
    else 
      echo " "
@@ -1636,8 +1639,10 @@ if [ $paramSensitivitySim == "T" ]; then
 fi
 
 ############################################################################################################################
-## copy namelist binary R-Scripts to simulation folder: /Net/Groups/BGI/scratch/""$username""/slm/$jobName/default_files/ ##
+## copy namelist binary R-Scripts to simulation folder:                                                                   ##
+## $simFoldDefaultFiles = '/Net/Groups/BGI/scratch/""$username""/slm/$jobName/default_files/'                             ##
 ############################################################################################################################
+echo "local working copy revision number is: ""$workingCopyRev" > "$simFoldDefaultFiles"revision_number.txt    # this file is copied by the cleanup script to the x_binary/ dir
 cp "$slmRunScriptJob"           "$simFoldDefaultFiles"
 cp "$slmCleanupScript"          "$simFoldDefaultFiles"
 cp "$slmBinary"                 "$simFoldDefaultFiles"

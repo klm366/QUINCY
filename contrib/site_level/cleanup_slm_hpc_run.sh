@@ -90,9 +90,10 @@ fi
 # feature disabled by default, as it takes quite some time for large files, enable manually if needed
 # md5sum "$simFold"*/output/* > "$simFold"md5sum-output-files.txt
 
-## save the binary and the parameter table
+## save the binary and file with revision number and the parameter table
 mkdir -p "$simFold"x_binary
-mv "$simFold"default_files/*.x "$simFold"x_binary
+mv "$simFold"default_files/*.x                  "$simFold"x_binary/
+mv "$simFold"default_files/revision_number.txt  "$simFold"x_binary/
 if [ $paramSensitivitySim == T ]; then
   mkdir -p "$simFold"parameter_list
   mv "$simFold"parameter_sensitivity_files/parameter_table.txt              "$simFold"parameter_list
