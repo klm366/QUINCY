@@ -1,0 +1,111 @@
+##    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
+##    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+##    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
+##
+##    This file is part of the QUINCY model.
+##    The QUINCY model is free software: you can redistribute it and/or modify
+##    it under the terms of the GNU General Public License version 3,
+##    as published by the Free Software Foundation.
+##
+##    The QUINCY model is distributed in the hope that it will be useful,
+##    but WITHOUT ANY WARRANTY; without even the implied warranty of
+##    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+##    GNU General Public License for more details.
+##
+##    You should have received a copy of the GNU General Public License
+##    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
+
+# default QUINCY usecase: 01_generate_stat_soil_forcing_def
+# 
+# generate soil_forcing for the stand alone JSM-QUINCY soil model:
+#  creating: veg litterfall + some soilphysics output used as input by the (standalone) soil model
+#  options apply specifically to the generation of soil forcing using the QUINCY land model
+#
+# prep_run_slm.sh necessary settings:
+#  forcingDataSet fluxnet/fluxnet3/cruncep/face/spp_1685/mocab2
+#  siteSelection  cue/spp (for cruncep)
+#
+
+echo " Simulation runs for static soil_forcing creation:"
+echo "  usecase='01_generate_stat_soil_forcing_def' applying special settings to some options"
+echo "  the experimentalID will be created automatically here by this usecase"
+echo "  please run the simulations (prep_run_slm.sh -u 01) for: "
+echo "    FLUXNET2"  # site-set "fluxnet"
+echo "    FLUXNET3"  # site-set "fluxnet3"
+echo "    CRUNCEP with siteSelection cue & spp"
+echo "    FACE"
+echo "    SPP_1685"
+echo "    MOCABORS2"
+echo "  no need to change any else, the namelist-parameter flag_generate_soil_forcing_stat is set to TRUE for u01 automatically" 
+echo "    meaning, when usecase number 01 is selected, flag_generate_soil_forcing_stat is set to T"
+echo " "
+echo " after all jobs have finished, please run additional_scripts/copy_soil_forcing_stat.sh"
+echo "   (this script updates the soil forcing for the site-sets new static soil forcing was created, "
+echo "    and renames the experimentalID of static soil_forcing-creation simulations leaving the renamed folders in your scratch)"
+echo " "
+
+# set experimentalID according to site dataset
+# add cue/spp in case of a cruncep simulation
+experimentalID="create_soil_forc_stat_""$forcingDataSet"  # the copy_soil_forcing.sh refers to this specific experimentalID
+if [ $forcingDataSet == "cruncep" ]
+ then
+  experimentalID="create_soil_forc_stat_""$forcingDataSet""_""$siteSelection"
+fi
+
+# add number of soil layers to experimentalID, only 15 sl since ticket #407
+experimentalID="$experimentalID"_sl15
+
+forcingMode="static"          # ! if changed to "transient" adaptions to the copy_soil_forcing.sh are needed
+slmModel="land"
+
+spinupLengthSoilForcing=300   # years of spin-up before output is generated and saved
+yearsSoilForcing=1            # number of years of forcing to be generated and saved after spin-up
+
+customSiteList="F"
+singleSiteName=""
+fluxnetTypeTransientTimestepOutput="F"
+compareSimCRUNCEPvsGFDB="F"
+paramSensitivitySim="F"
+
+
+sb_model_scheme="simple_1d"     # simple_0d simple_1d jsm 
+sb_nloss_scheme="dynamic"       # none fixed dynamic
+flag_sb_prescribe_nh4="F"       # set nh4solute to a constant value
+flag_sb_prescribe_no3="F"       # set no3solute to a constant value
+flag_sb_prescribe_po4="F"       # set po4solute to a constant value
+
+bnf_scheme="standard"           # none fixed standard optimal resistance unlimited
+flag_mycorrhiza="F"             # TRUE: the other flag_myco* can be used with TRUE | FALSE: the other flag_myco* are set to FALSE by this script
+
+flag_t_resp_acclimation="T"     # use the respiration temperature acclimation factor
+flag_t_jmax_acclimation="T"     # acclimation of optimum temperature for Jmax
+flag_optimal_Nfraction="F"      # optimal N fraction
+ncanopy=10                      # number of canopy layers
+canopy_layer_scheme="fapar"     # canopy layer depth calculation options: standard fapar
+
+biomass_alloc_scheme="dynamic"    # fixed dynamic optimal
+leaf_stoichom_scheme="dynamic"    # fixed dynamic optimal
+veg_dynamics_scheme="population"  # none population cohort
+flag_stand_harvest="F"            # if TRUE: l_do_stand_replacing_harvest is set to TRUE in SLM on the 1st timestep of the 1st day of the year "PlantYear" in the site_list file (or never, if that was before 1901)
+
+soil_depth=9.5                  # meter (5.7 to 9.5)
+nsoil_layer=15                  # number of soil layers (default for SLM land: 5 | for SLM soil only available forcing: 15 | generally: min 5 & max 20)
+
+simulation_length_number=${spinupLengthSoilForcing}
+# the soil forcing is created per timestep independent of the below output_interval_pool/flux settings (i.e., write_soil_forcing() is called each timestep) !
+output_interval_pool="weekly"
+output_interval_flux="weekly"
+let fd=spinupLengthSoilForcing-yearsSoilForcing+1
+output_start_first_day_year=${fd}
+output_end_last_day_year=${spinupLengthSoilForcing}
+
+flag_oneYearForcing="F"
+soil_awc_prescribe=300.0
+useSiteSpecificAWC="T"
+soil_theta_prescribe=1.0
+n_deposition_scheme="dynamic"
+p_deposition_scheme="dynamic"
+flag_read_dC13="T" 
+flag_read_DC14="F"    # should be F to avoid problems with "bomb peak"; should only be set to T for transient simulations (using pre-industrial values to reach equilibrium)
+
+queue="io_perform"

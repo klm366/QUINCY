@@ -1,0 +1,851 @@
+\documentclass[11pt,oneside,openright,a4paper,fleqn]{book}  % twoside,
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2cm]{geometry}    % bindingoffset=1.0cm, --> use only if 'twoside'
+\usepackage{mathtools}
+\usepackage{amsmath}
+%\setlength{\mathindent}{\parindent}
+\usepackage{tabularx}
+%\usepackage{pdflscape}    % enabling single pages to be landscape oriented
+\usepackage{rotating}      % rotates figures tables etc
+%\usepackage{graphicx}
+%\usepackage{tabu}
+\usepackage{cite}        % eventually necessary later
+%\usepackage{showframe}   % enable to get margins, header and footer visualized
+% not available at taiga: \usepackage[ampersand]{easylist}   % create lists the easy way
+\usepackage{fancyhdr}
+\setlength{\headheight}{15pt}
+\pagestyle{fancyplain}
+\fancyhf{}
+%\lhead{ \fancyplain{}{Author Name} }
+\rhead{ \fancyplain{}{\leftmark} }
+\cfoot{ \fancyplain{}{\thepage} }
+
+% inserts from copernicus
+\DeclareRobustCommand*\degree{\ensuremath{^{\circ}}}
+\DeclareRobustCommand*\permil{\ifmmode\text{\textperthousand}\else\textperthousand\fi}
+\DeclareRobustCommand*\chem[1]
+ {\ensuremath{%
+   {\mathcode`\-="0200\mathcode`\=="003D% no space around "-" and "="
+    \ifx\f@series\testbx\mathbf{#1}\else\mathrm{#1}\fi}}}
+\DeclareRobustCommand*\unit[1]
+ {\ensuremath{%
+   {\thinmuskip3mu\relax
+    \def\mu{\text{\textmu}}\def~{\,}%
+    \ifx\f@series\testbx\mathbf{#1}\else\mathrm{#1}\fi}}}
+
+
+
+\renewcommand{\chaptermark}[1]{ \markboth{#1}{} }  % print the actual name of the chapter without converting it to uppercase
+\renewcommand{\sectionmark}[1]{ \markright{#1} }   % print the actual name of the section without converting it to uppercase
+
+\renewcommand{\headrulewidth}{0pt}  % define the thickness of the decorative lines on the header
+\renewcommand{\footrulewidth}{0pt}  % define the thickness of the decorative lines on the footer
+
+\everymath{\displaystyle}  % cause the line to be taller, but will cause exponents and indices to be displayed correctly for some math operators
+
+% ----------- end header ----------- %
+
+% ----------- Title page, 2nd page and TOC ----------- %
+
+\begin{document}
+
+\title{%
+  \textbf{SLM}\\
+  \large Scientific Documentation Parameters}
+\author{QUINCY Team}
+\date{This pdf was compiled: \today}
+\maketitle
+
+
+% 2nd page: empty
+\newpage
+\mbox{}
+
+% 3rd page: TOC
+\tableofcontents
+
+
+
+% ----------- Parameter tables ----------- %
+\chapter{Parameter tables}\label{ch:param}
+
+
+\begin{sidewaystable}
+\section{Radiation Parameters}\label{tab:rad:param}
+
+
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Value & Unit & Equation & Citation \\
+\hline 
+
+\multicolumn{6}{l}{\bf Albedo and fapar calculation}\\
+\hline
+
+$k_{bl,0,vis}$ & extinction coefficient over black leaves in the VIS range & 0.5 & • & \ref{eq:rad:extinction_coef} & \cite{Spitters:1986tv} \\
+$k_{df,0,vis}$ & extinction coefficient for diffuse radiation in the VIS range & 0.8 & • & \ref{eq:rad:extinction_coef} & \cite{Spitters:1986tv} \\
+$k_{bl,0,nir}$ & extinction coefficient over black leaves in the NIR range & 0.5 & • & \ref{eq:rad:extinction_coef} & \cite{Spitters:1986tv} \\
+$k_{df,0,nir}$ & extinction coefficient for diffuse radiation in the NIR range & 0.8 & • & \ref{eq:rad:extinction_coef} & \cite{Spitters:1986tv} \\
+$\rho^{sbeta}$ & scaling factor of solar angle in reflection calculation& 1.6 & • & \ref{eq:rad:leaf_albedo}  & \cite{Spitters:1986tv} \\
+$k_{csf}$ & coefficient in crown-shape correction & 2.2 & • & \ref{eq:rad:omega} & \cite{Campbell:1998vb}, eq 15.35 \\
+• & minimum cosine zenith angle for radiation calculation & 0.1736482 & • & • & corresponding to 10$^{\circ}$ solar elevation \\
+• & default VIS albedo for soil & 0.15 & • & • & Bonan 2008 \\
+• & default NIR albedo for soil & 0.30 & • & • & Bonan 2008 \\
+• & • & 4.6 & $\mu$mol/J & • & Monteith and Unsworth 1995 \\
+• & top of the canopy red:farred ratio & 1.2 & • & • & Kull and Kruij 1998 \\
+• & extinction of red:farred ratio on leaf chlorophyll & -0.0108 & 1/mmol N & • & Kull and Kruij 1998, tuned \\
+
+
+
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+
+\begin{sidewaystable}
+\section{Assimilation Parameters}\label{tab:assimi:param}
+
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|X|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Value & Unit & Equation & Citation \\
+\hline 
+\multicolumn{6}{l}{\bf Parameters describing the PS $\sim$ An relationship (describing photosynthetic activity)}\\
+\hline
+$j_{max}^n$ & electron-transport limited carboxylation rate & 4.4 & per $\mu$mol CO2/ mmol N in ET & \ref{eq:vcmax} & \cite{Niinemets:1997ha} \\
+$vc_{max}^n$ & Rubisco limited carboxylation rate & 1.8 & per $\mu$mol CO2/ mmol N in RUB & \ref{eq:vcmax}  & \cite{Niinemets:1997ha} \\
+$v_{pepc}^n$ & PEP C limited carboxylation rate & 98777.97 & per $\mu$mol CO2/ mmol N in PEP C & \ref{eq:pepc} & \cite{Tazoe:2006hc} \\
+$a_{chl}^n$ & moles chlorophyll per mol of N & 25.12563 & \unit{molmmol^{-1}} & \ref{eq:ps_lightharvesting} & \cite{Evans:1989bg} \\
+• & slope of the fraction of leaf N not associated with PS against leaf N & 0.001000114 & --/mmolN & • & • \\
+
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Value & Unit & Equation & Citation \\
+\hline 
+\multicolumn{6}{l}{\bf Parameters used in the photosynthesis routine (temperature sensitivies of PS processes) part 1/2}\\
+\hline
+$E_0^{kc}$ & Baseline of Michaelis-Menten constant of Rubisco for CO2 & 38.05 & • & \ref{eq:ps_t_sensitivity} & \cite{Bernacchi:2001wv} \\
+$E_1^{kc}$ & Temperature sensitivity of Michaelis-Menten constant of Rubisco for CO2 & 79430.0& \unit{J mol^{-1}} & \ref{eq:ps_t_sensitivity} & \cite{Bernacchi:2001wv} \\
+$E_0^{ko}$ & Baseline of Michealis-Menten Kintetics for Rubisco-oxigination & 20.3 & • & \ref{eq:ps_t_sensitivity} & \cite{Bernacchi:2001wv} \\
+$E_1^{ko}$ & Temperature sensitivity of Michealis-Menten Kintetics for Rubisco-oxigination & 36380.0 & \unit{J mol^{-1}} & \ref{eq:ps_t_sensitivity} & \cite{Bernacchi:2001wv} \\
+$E_0^{\Gamma^{*}}$ & Baseline of photosynthetic compensation point & 19.02 & • & \ref{eq:ps_t_sensitivity} & \cite{Bernacchi:2001wv} \\
+$E_1^{\Gamma^{*}}$ & Temperature sensitivity of photosynthetic compensation point & 37830.0 & \unit{J mol^{-1}} & \ref{eq:ps_t_sensitivity} & \cite{Bernacchi:2001wv} \\
+$E_0^{vcmax}$ & Baseline of Rubisco & 26.35 & • & \ref{eq:ps_t_sensitivity} & \cite{Bernacchi:2001wv} \\
+$E_1^{vcmax}$ & Temperature sensitivity of Rubisco & 65330.0 & \unit{J mol^{-1}} & \ref{eq:ps_t_sensitivity} & \cite{Bernacchi:2001wv} \\
+• & Offset of the Tjmax$\sim$Tair relationship & 17.0 & • & • & • \\
+• & Slope of the Tjmax$\sim$Tair relationship & 0.35 & • & • & • \\
+• & Minimum of optimum Tjmax & 17.0 & • & • & • \\
+• & Maximum of optimum Tjmax & 38.0 & • & • & • \\
+$T_{ref}^{pepc} $  & reference temperature of PePC C4 photosynthesis & 25.0 & $^{\circ}C$ & \ref{eq:pepc_t_sensitivity} & \cite{Friend:2009tf} \\
+$T_{base}^{pepc} $ & base temperature of PePC C4 photosynthesis & 10.0 & $^{\circ}C$ & \ref{eq:pepc_t_sensitivity} & \cite{Friend:2009tf} \\
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Value & Unit & Equation & Citation \\
+\hline 
+\multicolumn{6}{l}{\bf Parameters used in the photosynthesis routine (temperature sensitivies of PS processes) part 2/2}\\
+\hline
+$\alpha_i$ & intrinsic quantum yield (efficiency of the quanta absorption of PS II (or PS I)) & 0.0561 & $\mu$mol CO2/ mol quanta & \ref{eq:ps_lightharvesting} & • \\
+$O_i$ & Partial Pressure of \chem{O_2} & 20.9 & kPa & \ref{eq:vcmax} & • \\
+• & default Ci:Ca for C3 plants & 0.7 & • & \ref{eq:stomatal_coupling} & • \\
+• & default Ci:Ca for C4 plants & 0.4 & • & \ref{eq:stomatal_coupling} & • \\
+• & maximum iteration of PS calculation & 10.0 & • & • & • \\
+$c_{i,max}$ & saturating Ci in C4 plants & 7800.0 & Pa & • & \cite{Friend:2009tf} \\
+$D_{air}^{wv2co2}$ & ratio of diffusion coefficient for H2O and CO2 in air & 1.602649 & • & \ref{eq:stomatal_coupling} & • \\
+$D_{turb}^{wv2co2}$ & ratio of diffusion coefficient for H2O and CO2 in turbulent air & 1.36949 & • & \ref{eq:stomatal_coupling} & • \\
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Value & Unit & Equation & Citation \\
+\hline 
+\multicolumn{6}{l}{\bf Parameters describing the isotopic discrimination of PS (fractionation due to photosynthesis)}\\
+\hline
+$a_{13C}$ & discrimination of C13 due to stomatal diffusion & 4.4 & $\permil$ & \ref{eq:ps_discrimination} & \cite{Drake:2014dl} \\
+$b_{13C}$ & discrimination of C13 due to Rubisco & 27.0 & $\permil$ & \ref{eq:ps_discrimination} & \cite{Drake:2014dl} \\
+$c_{13C}$ & discrimination of C13 due to PEP C & 5.7 & $\permil$ & \ref{eq:ps_discrimination} & \cite{Drake:2014dl} \\
+$a_{14C}$ & discrimination of C13 due to stomatal diffusion & 8.668 & $\permil$ & \ref{eq:ps_discrimination} & \cite{Drake:2014dl} \\
+$b_{14C}$ & discrimination of C13 due to Rubisco & 51.03 & $\permil$ & \ref{eq:ps_discrimination} & \cite{Drake:2014dl} \\
+$c_{14C}$ & discrimination of C13 due to PEP C & 10.773 & $\permil$ & \ref{eq:ps_discrimination} & \cite{Drake:2014dl} \\
+$\phi_{C4}$ & leakage rate of bundle sheath cells & 0.16 & • & \ref{eq:ps_discrimination} & \cite{Drake:2014dl} \\
+
+\hline 
+\multicolumn{6}{l}{\bf Parameters for canopy profile and canopy light extinction (parameters describing the canopy profile of N)}\\
+\hline
+$k_a$ & Extinction coefficient for PAR on chlorophyll & 0.005 & \unit{mol^{-1}} & \ref{eq:ps_lightharvesting} & \cite{Kull:1998cr} \\
+$k_n$ & Extinction coefficient to describe decline of N within the canopy & 0.11 & • & • & • \\
+
+\hline 
+\multicolumn{6}{l}{\bf Phenological parameters for photosynthetic activity}\\
+\hline
+• & min Temperature used to calculate spring recovery period for coniferous forests & -3.0 & degC & • & • \\
+• & max Temperature used to calculate spring recovery period for coniferous forests & 17.0 & degC & • & • \\
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+
+\begin{sidewaystable}
+\section{Vegetation Parameters}\label{tab:veg:param}
+
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Value & Unit & Equation & Citation \\
+\hline 
+
+\multicolumn{6}{l}{\bf Respiration parameters}\\
+\hline
+• & growth respiration per unit new biomass & 0.25 & $mol^{-1}$ & • & needed \\
+• & N-specific maintenance respiration rate for roots and leaves & 1.0 & $\mu$mol CO2/ mmol N/ s & • & Sprugel et al. \\
+• & N-specific maintenance respiration rate for wood & 0.25 & $\mu$mol CO2/ mmol N/ s & • & Sprugel et al. \\
+• & Coefficient in the eq. for temperature sensitivity of foliar respiration & 308.56 & • & • & Lloyd and Taylor 1996 \\ 
+• & Coefficient in the eq. for temperature sensitivity of foliar respiration & 56.02 & • & • & Lloyd and Taylor 1996 \\ 
+• & Coefficient in the eq. for temperature sensitivity of foliar respiration & 227.13 & • & • & Lloyd and Taylor 1996 \\ 
+• & respiration temperature acclimation factor & -0.008 & • & • & Lloyd and Taylor 1996 \\
+• & base temperature for respiration acclimation & 283.15 & K & • & Lloyd and Taylor 1996 \\
+
+\hline
+\end{tabularx}
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Value & Unit & Equation & Citation \\
+\hline
+
+\multicolumn{6}{l}{\bf Parameters describing the PS $\sim$ An relationship (describing photosynthetic activity)}\\
+\hline
+• & fraction of N in PEP and PPKD (C3 plants only) & 0.0 & • & • & • \\
+• & fraction of N in PEP and PPKD (C4 plants only) & 0.045 & • & • & Makino et al. 2003, Tazoe et al. 2006 \\
+• & ratio of Jmax25/Vcmax25 for prescribed leaf N (C3 plants) & 1.92 & • & • & text book \\
+• & ratio of Jmax25/Vcmax25 for prescribed leaf N (C4 plants) & 1.4 & • & • & calibrated to Jmax=vcmax at 25 degC \\
+
+\hline
+\end{tabularx}
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Value & Unit & Equation & Citation \\
+\hline 
+
+\multicolumn{6}{l}{\bf Labile pool parameters}\\
+\hline
+$\tau_{labile}$ & turnover time of the labile carbo-hydrates & 5 & days & • & • \\
+$\lambda^{labile}_{temp}$ & lambda in temperature response function of labile pool & 0.5 & • & \ref{eq:veg:k0_lab} & • \\
+$k^{labile}_{temp}$ & k in temperature response function of labile pool & 2.0 & • & \ref{eq:veg:k0_lab} & • \\
+$\lambda^{labile}_{\theta}$ & lambda in moisture response function of labile pool & 10.0 & • & \ref{eq:veg:k0_lab} & • \\
+$k^{labile}_{\theta}$ & k in moisture response function of labile pool & 2.0 & • & \ref{eq:veg:k0_lab} & • \\
+$\lambda^{\Phi}_{phen}$ & lambda in storage response function to phenology & 1.3 & • & \ref{eq:veg:phiphen} & • \\
+$k^{\Phi}_{phen}$ & k in storage response function to phenology & 8.0 & • & \ref{eq:veg:phiphen} & • \\
+$\lambda^{\Phi}_{maint}$ & lambda in storage response function to maintenance needs & 4.0 & • & \ref{eq:veg:phimaint} & • \\
+$k^{\Phi}_{maint}$ & k in storage response function to maintenance needs & 1.2 & • & \ref{eq:veg:phimaint} & • \\
+• & • & 1.6 & • & • & • \\
+• & • & 3.0 & • & • & • \\
+$\lambda^{\Phi}_{store}$ & lambda in storage response function to storage size & 2.0 & • & \ref{eq:veg:phistore} & • \\
+$k^{\Phi}_{store}$ & k in storage response function to storage size & 3.0 & & \ref{eq:veg:phistore} & • \\
+• & rate at which nutrients can retrieved quicker for growth than carbon & 1.2 & • & • & • \\
+• & lambda in photosynthesis response function to labile pool size & 0.1 & • & • & • \\
+• & k in photosynthesis response function to labile pool size & 2.0 & • & • & • \\
+• & scaling factor to limit PS if labile CNP becomes too wide & 4.0 & • & • & • \\
+• & maximum downacclimation of photosynthetic capacity due to sink limitation & 0.25 & • & • & • \\
+• & maximum reserve storage in leaves relative to leaf mass & 0.02 & • & • & • \\
+• & maximum reserve storage in fine roots relative to fine root mass & 0.2 & • & • & • \\
+• & maximum reserve storage in sap wood relative to sap wood mass & 0.15 & • & • & • \\
+• & value of reserve pull phi\_X at which the inverse reserve pull phi\_Y is reduced & 0.75 & • & • & • \\
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Value & Unit & Equation & Citation \\
+\hline 
+
+\multicolumn{6}{l}{\bf Resorption parameters}\\
+\hline
+$k_{resorb}^{leaf}$ & default fraction of nutrient resorption before leaf shedding & 0.5 & • & • & • \\
+$k_{resorb}^{wood}$ & default fraction of nutrient resorption before wood death & 0.2 & • & • & • \\
+$\chi_{root}^{C:N}$ & relative C:N of fine roots compared to leaves & 0.85 & • & • & \cite{Zaehle:2010cz} \\
+$\chi_{wood}^{C:N}$ & relative C:N of woody biomass compared to leaves & 0.145 & • & • & \cite{Zaehle:2010cz} \\
+$\chi_{root}^{N:P}$ & relative N:P of fine roots compared to leaves & 1.0 & • & • & • \\
+$\chi_{wood}^{N:P}$ & relative N:P of woody biomass compared to leaves & 1.0 & • & • & • \\
+• & time scale of enzyme, RNA etc., turnover (i.e. return to labile pool) & 10.0 & days & • & • \\
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Value & Unit & Equation & Citation \\ 
+\hline 
+
+\multicolumn{6}{l}{\bf Parameters concerning N uptake calculations}\\
+\hline
+• & fraction of maximum labile nitrogen concentration at which uptake is reduced to 50\% & 0.75 & • & • & • \\
+• & fraction of maximum labile phosphorus  concentration at which uptake is reduced to 50\% & 0.9 & • & • & • \\
+• & k in nutrient uptake response funktion to labile nutrient concentration & 2.0 & • & • & • \\
+• & maximum cost of N fixation at low and high temperatures & 20.40812 & mol C $mol^{-1}$ N & • & • \\
+• & mimumum cost of N fixation at 25 degC & 9.329426 & mol C $mol^{-1}$ N & • & • \\
+• & factor in temperature response function of nitrogenase activity & 1.25 & • & • & • \\
+• & factor in temperature response function of nitrogenase activity & -3.62 & • & • & • \\
+• & factor in temperature response function of nitrogenase activity & 0.27 & • & • & • \\
+• & factor in temperature response function of nitrogenase activity & 50.3 & • & • & • \\
+• & N transformation costs of converting NH4 to organic N & 1.982503 & mol C $mol^{-1}$ N & • & • \\
+• & N transformation costs of converting NO3 to organic N & 2.68221 & mol C $mol^{-1}$ N & • & • \\
+• & N transformation costs of converting organic N to organic N & 1.166178 & mol C $mol^{-1}$ N & • & • \\
+• & fraction of NO3 uptake based on transformation costs & 0.575 & • & • & • \\
+• & fraction of NH4 uptake based on transformation costs & 0.425 & • & • & • \\
+• & maximum rate of N fixation & 0.003059011 & $\mu$mol N $mol^{-1}$ C fine root $s^{-1}$ & • & • \\
+• & half\_saturating cost of the response of N & 58.30891 & mol C $mol^{-1}$ N & • & • \\
+• & factor for BNF response in resistance approach & 14.30901 & mol C $mol^{-1}$ N & • & • \\
+• & fractionation of N15 due to N fixation & 3.0 & per mill & • & Robinson, Tree 2001 \\
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Value & Unit & Equation & Citation \\
+\hline 
+
+\multicolumn{6}{l}{\bf Parameters to describe the varying fraction of N in chlorophyll through the canopy}\\
+\hline
+• & describe the varying fraction of N in chlorophyll through the canopy ?? & 6.0 & • & • & • \\
+• & describe the varying fraction of N in chlorophyll through the canopy ?? & 15.0 & • & • & • \\
+• & describe the varying fraction of N in chlorophyll through the canopy ?? & 3.6 & • & • & • \\
+• & describe the varying fraction of N in chlorophyll through the canopy ?? & 4.4 & • & • & • \\
+• & describe the varying fraction of N in chlorophyll through the canopy ?? & 0.7 & • & • & • \\
+\hline 
+
+\multicolumn{6}{l}{\bf Parameters used for phenology calculations}\\
+\hline
+• & minimum LAI beyond which all leaves are shed & 0.1 & • & • & • \\
+• & maximum LAI target for reserve use calculations & 5.0 & • & • & • \\
+• & maximum rate of leaf shedding & 0.05 & days & • & • \\
+• & scaling coefficient for leaf on in the canopy model & 0.1 & • & • & • \\
+
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Value & Unit & Equation & Citation \\
+\hline 
+
+\multicolumn{6}{l}{\bf Vegetation dynamics}\\
+\hline
+• & background mortality rate of trees in static mortality case & 0.01 & • & • & • \\
+• & background mortality rate of grasses in static mortality case & 0.05 & • & • & • \\
+• & controlling self-thinning mortality & 0.15 & • & • & • \\
+• & controlling self-thinning mortality & 4.0 & • & • & • \\
+• & controlling temperature-limited establishment & 0.075 & • & • & • \\
+• & controlling temperature-limited establishment & 4.0 & • & • & • \\
+• & controlling moisture-limited establishment & 10.0 & • & • & • \\
+• & controlling moisture-limited establishment & 2.0 & • & • & • \\
+• & fraction of wood removed from site after harvesting & 0.8 & • & • & • \\
+• & minimum growth efficiency & 1.0 & mol C/ $m^2$ (LAI)/ yr & • & • \\
+• & asymptotic growth efficiency mortality rate & 0.05 & 1/ year & • & • \\
+• & scaling coefficient & 0.3 & • & • & • \\
+• & scaling coefficient in growth efficiency mortality below minimum growth efficiency & 25.0 & • & • & • \\
+• & maximum crown area & 15.0 & $m^2$ & • & • \\
+• & minimum diameter for crown area calculation & 0.01 & m & • & • \\
+• & scaling parameter in crownarea to diameter relationship & 100.0 & • & • & • \\
+• & scaling exponent in crownarea to diameter relationship & 1.6 & • & • & • \\
+• & maximum foliage projective cover & 0.95 & • & • & • \\
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Value & Unit & Equation & Citation \\
+\hline 
+
+\multicolumn{6}{l}{\bf Other parameters}\\
+\hline
+• & carbon mass per unit dry weight of leaves & 0.48 & g C/ g DW & • & • \\
+• & minimum permissable height of an individual & 0.1 & • & • & • \\
+• & stem mass to leaf mass ratio of grasses & 0.05 & • & • & • \\
+• & parameter in the Weibull function controlling fruit growth & 10.0 & • & • & • \\
+• & parameter in the Weibull function controlling fruit growth & 2.0 & • & • & • \\
+• & parameter in the Weibull function controlling fruit growth & 0.1 & $\sim\mu$mol C/ $m^2$/ s & • & • \\
+• & minimum fraction of allocation going to fruit (flowers etc.) & 0.01 & • & • & • \\
+• & value of the root water limitation below which root allocation starts responding & 0.8 & • & • & • \\
+• & minimum leaf to root ratio for dynamic allocation & 0.2 & • & • & • \\
+• & maximum leaf to root ratio for dynamic allocation & 15.0 & • & • & • \\
+\hline 
+Symbol & Parameter long name & Value & Unit & Equation & Citation \\
+\hline 
+\multicolumn{6}{l}{\bf Parameters for changes in canopy N fractions}\\
+\hline
+ • & maximum fractional change for optimal adjustment of photosynthetic N fraction & 0.048 & • & • & • \\
+ • & maximum fractional change for optimal adjustment of canopy N allocation & 0.0048 & • & • & • \\
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+
+\begin{sidewaystable}
+\section{Atmosphere-Land Parameters}\label{tab:atmland:param}
+
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Value & Unit & Equation & Citation \\
+\hline 
+
+\multicolumn{6}{l}{\bf Orbital parameters}\\
+\hline
+• & obliquity of the Earth's orbit & 23.446 & • & • & • \\
+• & perihel of the Earth's orbit & 102.04 & • & • & • \\
+• & eccentricity of the Earth's orbit & 0.016724 & • & • & • \\
+• & day of the year at which solstice occurs & 174.0 & • & • & • \\
+• & solar declination (angle sun at equator) & • & degree & • & not a parameter ? \\
+\hline 
+
+\multicolumn{6}{l}{\bf Solar angle calculation}\\
+\hline
+• & logical to simulate solar angle according to local time or GMT & FALSE & • & • & • \\
+• & reference longitude for GMT correction & 0.0 & • & • & • \\
+• & minimum zenith angle for which PAR is calculated & 0.02 & • & • & • \\
+\hline 
+
+\multicolumn{6}{l}{\bf Solar constant}\\
+\hline
+• & solar shortwave radiation & 1370.0 & W/$m^2$ & • & • \\
+• & fraction of solar shortwave radiation in the VIS band (here: 320-700nm for albedo) & 0.54 & • & • & Monteith and Unsworth 1995 \\
+• & fraction of visible solar shortwave radiation in the PAR band (400-700nm) & 0.9 & • & • & • \\
+\hline 
+
+\multicolumn{6}{l}{\bf Diffuse fraction calculation}\\
+\hline
+• & constants for calculation of diffuse radiation & 1.0045 & • & • & • \\
+• & calculation from transmission as in  ?? & 0.0435 & • & • & • \\
+• & calc\_diffuse\_radiation\_fraction & -3.5227 & • & • & • \\
+• & • & 2.6313 & • & • & • \\
+• & minimum diffuse fraction in shortwave downward flux & 0.1667 & • & • & • \\
+• & atmospheric transmission rate above which the diffuse fraction becomes minimal & 0.75 & • & • & • \\
+\hline 
+
+\multicolumn{6}{l}{\bf Diurnal temperature calculation}\\
+\hline
+• & • & 0.1666667 & • & • & • \\
+• & • & 0.04166667 & • & • & • \\
+• & • & 0.5833333 & • & • & • \\
+
+\hline
+\end{tabularx}
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Value & Unit & Equation & Citation \\
+\hline 
+
+\multicolumn{6}{l}{\bf Wind speed}\\
+\hline
+• & minimum wind speed allowed to prevent total decoupling of the surface & 0.3 & m/s & • & • \\
+• & maximum wind speed allowed to prevent excess cooling of the surface & 5.0 & m/s & • & • \\
+\hline 
+
+\multicolumn{6}{l}{\bf Conversion factors}\\
+\hline
+• & standard pressure & 101300.0 & Pa & • & • \\
+• & used for unit conversion Pa to g $g^{-1}$ & 0.622 & • & • & • \\
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\section{Soil Snow Energy Parameters}\label{tab:sse:param}
+
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Value & Unit & Equation & Citation \\
+\hline
+• & soil heat capacity (temporarily for SLM offline) & 1480.0 & J/kg/K & • & textbook for wet sandy soil \\
+• & soil thermal conductivity & 2.0 & W $m^{-1}$ $K^{-1}$ & • & Text book for wet sandy soil \\
+• & Efficiency of interception of precipitation as rain & 0.25 & • & • & JSBACH4 \\
+• & maximum water storage per unit LAI & 0.0002 & m & • & JSBACH4 \\
+• & preferential flow fraction of infiltrating water per meter soil & 0.01 & • & • & tuned \\
+• & preferential flow fraction of runoff & 0.95 & • & • & set from ORCHIDEE \\
+
+\hline
+\end{tabularx}
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Value & Unit & Equation & Citation \\
+\hline 
+
+\multicolumn{6}{l}{\bf Constants in pedo-transfer functions (part 1/2)}\\
+\hline
+• & water potential at permanent wilitng point & 1500.0 & Pa & • & Saxton and Rawls 2006 \\
+• & water potential at field capacity & 33.0 & Pa & • & Saxton and Rawls 2006 \\
+• & minimum water potential for numerical reasons & -15.0 & MPa & • & Saxton and Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at PWP & 0.031 & • & • & Saxton and Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at PWP & 0.487 & • & • & Saxton and Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at PWP & -0.024 & • & • & Saxton and Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at PWP & 0.068 & • & • & Saxton and Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at PWP & -0.02 & • & • & Saxton and Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at PWP & 0.14 & • & • & Saxton and Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at FC & 0.299 & • & • & Saxton and Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at FC & 0.195 & • & • & Saxton and Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at FC & -0.251 & • & • & Saxton and Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at FC & 0.452 & • & • & Saxton and Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at FC & -0.015 & • & • & Saxton and Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at FC & -0.373 & • & • & Saxton and Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at FC & 1.293 & • & • & Saxton and Rawls 2006 \\
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Value & Unit & Equation & Citation \\
+\hline 
+
+\multicolumn{6}{l}{\bf Constants in pedo-transfer functions (part 2/2)}\\
+\hline
+• & empirical constant in pedo-transfer function to get water content at SAT & 0.078 & • & • & Saxton and Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at SAT & 0.034 & • & • & Saxton and Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at SAT & 0.278 & • & • & Saxton and Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at SAT & -0.584 & • & • & Saxton and Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at SAT & -0.107 & • & • & Saxton and Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at SAT & 0.6360 & • & • & Saxton and Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at SAT & 0.097 & • & • & Saxton and Rawls 2006 \\
+• & empirical constant in pedo-transfer function to get water content at SAT & 0.043 & • & • & Saxton and Rawls 2006 \\
+• & maximum diffusivity of soil at saturation & 0.00053611 & m/s & • & Saxton and Rawls 2006 \\
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\section{Simple soil model parameters}\label{tab:sb:param}
+
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Value & Unit & Equation & Citation \\
+\hline 
+
+\multicolumn{6}{l}{\bf Turnover times}\\
+\hline
+$\tau^{base}_{solt}$ & turnover time of soluable litter & 30.0 & days & • & • \\
+$\tau^{base}_{met}$ & turnover time of metabolic litter & 0.033 & years & \ref{eq:simple_som_turnover}  & \cite{Parton:1993ud}  \\
+$\tau^{base}_{str}$ & turnover time of structural litter & 0.124 & years & \ref{eq:simple_som_turnover}  & \cite{Parton:1993ud} \\
+$\tau^{base}_{wl}$ & turnover time of woody litter &  2.5 & years & \ref{eq:simple_som_turnover} & • \\
+$\tau^{base}_{fast}$ & turnover time of fast SOM pool & 2.0 & years & \ref{eq:simple_som_turnover} & • \\
+$\tau^{base}_{som}$ & turnover time of slow SOM pool & 100.0 & years & \ref{eq:simple_som_turnover} & • \\
+\hline 
+
+\multicolumn{6}{l}{\bf Temperature and moisture rate modifiers}\\
+\hline
+$T^{\tau}_{ref}$ & reference temperature for turnover times & 293.15 & K & \ref{eq:simple_som_turnover}  & Wang et al. 2012 \\
+$E_{a,depolymerisation}$ & activation energy for decay & 53000.0 & \chem{J mol^{-1}} & \ref{eq:simple_som_turnover}  & Ahrens p. com. 2016 \\
+• & activation energy for microbial uptake & 47000.0 & \chem{J mol^{-1}} & • & Ahrens p. com. 2016 \\
+• & activation energy for sorption to mineral surfaces & 5000.0 & \chem{J mol^{-1}} & • & Ahrens p. com. 2016 \\
+• & activation energy for desorption to mineral surfaces & 20000.0 & \chem{J mol^{-1}} & • & Ahrens p. com. 2016 \\
+$Ea,hsc$ & activation energy of half-saturation point & 30000.0 & \unit{J mol^{-1}} & \ref{eq:sb:simple_potential_uptake} & Ahrens p. com. 2016 \\
+• & temperature of peak decomposition rate & 313.15 & deg K & • & • \\
+• & activation energy for decomposition & 53000.0 & \chem{J mol^{-1}} & • & • \\
+• & de-activation energy for decomposition & 100000.0 & \chem{J mol^{-1}} & • & • \\
+• & scaling factor in the air-filled pore space to modifier response & 1.333333 & • & • & Ahrens p. com. 2016 \\
+• & scaling factor for the sensitivity of depolymerisation to oxygen limitation & 0.001 & • & • & • \\
+• & scaling factor for the sensitivity of microbial uptake to oxygen limitation & 0.001 & • & • & • \\
+$k_{hsc}$ & scaling factor for the sensitivity of half-saturation constant to moisture limitation & 0.001 & • & \ref{eq:sb:simple_potential_uptake} & \cite{Davidson:2012dk} \\
+• & scaling factor for the sensitivity of surface adsorption to moisture limitation & 0.001 & • & • & • \\
+• & minimum water potential for decomposition & -2.0 & • & • & • \\
+
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|X|} % textwidth  
+\hline 
+Symbol & Parameter long name & Value & Unit & Equation & Citation \\
+\hline 
+
+\multicolumn{6}{l}{\bf Transport and sorption parameters}\\
+\hline
+• & diffusion coefficient for organic material due to bioturbation ? & 0.15 & $m^{2}$ (kg $m^{-3}$) $yr^{-1}$ & • & Ahrens p. com. 2016 \\
+• & bulk density of organic material & 150.3935 & kg $m^{-3}$ & • & Ahrens p. com. 2016 \\
+• & C per unit dryweight SOM & 0.4271 & g C / g OM & • & Ahrens p. com. 2016, COMISSION for Hainich \\
+• & maximum sorption capacity of po4 to fine soil particle & 0.01613059 & mol P $kg^{-1}$ soil & • & Ahrens p. com. 2016 \\
+• & • & 1.013014 & $m^{3}$ $mol^{-1}$ C $year^{-1}$ & • & Ahrens p. com. 2016 \\
+• & • & 4301.741 & • & • & Ahrens p. com. 2016 \\
+• & • & 8.088154 & $m^{3}$ $mol^{-1}$ C $year^{-1}$ & • & Ahrens p. com. 2016 \\
+• & • & 2065.491 & • & • & Ahrens p. com. 2016 \\
+• & • & 0.0 & • & • & Ahrens p. com. 2016 \\
+• & • & 0.0 & • & • & Ahrens p. com. 2016 \\
+• & slow desorption rate (between sorbed Pi and labile Pi) of PO4 & 0.000733 & mol $kg^{-1}$ soil $s^{-1}$ & • & Yang et al. 2014 *100 \\
+• & slow adsorption rate (between sorbed Pi and labile Pi) of PO4 & 0.0006518519 & mol $kg^{-1}$ soil $s^{-1}$ & • & Yang et al. 2014, corr. for global avrg\\
+• & fast adsorption rate (from soluble Pi to labile Pi) of PO4 & 32.16667 & kg soil $mol^{-1}$ P $s^{-1}$ & • & Van der Zee et al. 1989 \\
+• & fast desorption rate (from labile Pi to soluble Pi) of PO4 & 3.888889 $10^{-5}$ & $s^{-1}$ & • & Van der Zee et al. 1989 \\
+• & slow adsorption rate (from soluble Pi to sorbed Pi) of PO4 & 0.0 & kg soil $mol^{-1}$ P $s^{-1}$ & • & McGechan and Lewis 2002 \\
+• & slow desorption rate (from sorbed Pi to soluble Pi) of PO4 & 0.0 & $s^{-1}$ & • & McGechan and Lewis 2002 \\
+
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|X|} % textwidth  
+\hline 
+Symbol & Parameter long name & Value & Unit & Equation & Citation \\
+\hline 
+
+\multicolumn{6}{l}{\bf Microbial parameters}\\
+\hline
+$\chi_{SOM}^{C:N}$ & C:N ratio of SOM pools & 10.4956 & mol/ mol & \ref{eq:sb:simple_pot_n_immobilisation} & • \\
+$\chi_{SOM}^{N:P}$ & N:P ratio of SOM pools & 30.98107 & mol/ mol & \ref{eq:sb:simple_pot_p_immobilisation} & • \\
+$\eta_{N}$ & microbial nitrogen use efficiency & 0.8 & • & \ref{eq:sb:simple_pot_n_immobilisation} & \cite{Manzoni:2008hw} \\
+$\eta_{P}$ & microbial phosphorus use efficiency & 0.8 & • & \ref{eq:sb:simple_pot_p_immobilisation} & \cite{Manzoni:2008hw} \\
+$\eta_{C}$ & microbial carbon-use efficiency & 0.392 & • & • & COMISSION paper \\
+• & maximum microbial carbon-use efficiency & 0.6 & • & • & \cite{Manzoni:2008hw} \\
+• & minimum microbial carbon-use efficiency & 0.3 & • & • & \cite{Manzoni:2008hw} \\
+$\chi_{SOM,max}^{C:N}$ & C:N ratio of SOM pools & 15.27693 & mol/ mol & \ref{eq:sb:simple_pot_n_immobilisation} & \cite{Manzoni:2008hw} \\
+$\chi_{SOM,min}^{C:N}$ & C:N ratio of SOM pools & 5.830891 & mol/ mol & \ref{eq:sb:simple_pot_n_immobilisation} & \cite{Manzoni:2008hw} \\
+• & slope of microbial C:N to soil & 51000.0 & kg $mol^{-1}$ & • & calibrated to CENTURY, minimum at 2gN $m^{2}$ \\
+$\eta_{C,wl \rightarrow met,str}$ & fraction of woody litter transformed into soluable or polymeric litter & 0.3 & • & • &  \cite{Parton:1993ud} \\
+$\eta_{C,litter \rightarrow fast,str}$ & fraction of litter transformed into fast SOM & 0.45 & • & • & \cite{Parton:1993ud} \\
+$\eta_{C,wl \rightarrow met,str}$ & fraction of fast SOM transformed into slow SOM & 0.15 & • & • & \cite{Parton:1993ud} \\
+$\eta_{C,wl \rightarrow met,str}$ & fraction of slow SOM transformed into fast SOM & 0.3 & • & • & \cite{Parton:1993ud} \\
+
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|X|} % textwidth  
+\hline 
+Symbol & Parameter long name & Value & Unit & Equation & Citation \\
+\hline 
+
+\multicolumn{6}{l}{\bf Parameters controlling litter partitioning}\\
+\hline
+• & fraction of microbial residue entering the DOM pool & 0.172 & • & • & • \\
+• & fraction of leaf litter that becomes DOM & 0.5 & • & • & • \\
+• & fraction of fine root litter that becomes DOM & 0.5 & • & • & • \\
+• & fraction of fruit litter that becomes DOM & 0.5 & • & • & • \\
+• & fraction of seed bed litter that becomes DOM & 0.5 & • & • & • \\
+$f_{met,max,C}$ & maximum fraction of soluable litter formation &  0.85 & • & \ref{eq:sb:simple_litterpartitioning_c} & \cite{Parton:1993ud}\\
+$k_{met,C}$ & slope of soluable fraction with lignin to N ratio &  0.018 & • & \ref{eq:sb:simple_litterpartitioning_c} & \cite{Parton:1993ud}\\
+$k_{met,N}$ & proportionality factor controlling C:N of solubable vs. polymeric pool  & 5.0 & • & \ref{eq:sb:simple_litterpartitioning_np} & \cite{Parton:1993ud}\\
+$k_{met,P}$ & proportionality factor controlling C:P of solubable vs. polymeric pool & 5.0 & • & \ref{eq:sb:simple_litterpartitioning_np} & \cite{Parton:1993ud}\\
+$LC_{leaf,max}$ & maximum lignin content of leaves & 0.3440226 & $mol^{-1}$ &  \ref{eq:sb:simple_leaf_lc} & \cite{White:2000vl}\\
+$k_{leaf2sla}$ & slope of lignin to sla relationship & -0.4328854 & $m^{-2}$ &  \ref{eq:sb:simple_leaf_lc} & \cite{White:2000vl}\\
+$LC_{fine\_root}$ & lignin content of fine root & 0.2565592 & $mol^{-1}$ &  \ref{eq:sb:simple_litterpartitioning_c} & \cite{White:2000vl}\\
+$LC_{coarse\_root}$ & lignin content of coarse roots & 0.8163248 & $mol^{-1}$ &  \ref{eq:sb:simple_litterpartitioning_c} & assuming woody values\\
+$LC_{woody\_litter}$ & lignin content of woody litter & 0.8163248 & $mol^{-1}$ &  \ref{eq:sb:simple_litterpartitioning_c} & \cite{White:2000vl}\\
+$LC_{fruit}$ & lignin content of seed bed & 0.2565592 & $mol^{-1}$ & \ref{eq:sb:simple_litterpartitioning_c} & set to fine-roots\\
+$LC_{seed\_bed}$ & lignin content of fine root & 0.2565592 & $mol^{-1}$ & \ref{eq:sb:simple_litterpartitioning_c} & set to fine-roots\\
+
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Value & Unit & Equation & Citation \\
+\hline 
+
+\multicolumn{6}{l}{\bf Mycorrhizal parameters}\\
+\hline
+• & mycorrhizal carbon-use efficiency & 0.7 & • & • & • \\
+• & molar ratio of C:N of mycorrhizal fung & 11.66178 & • & • & • \\
+• & molar ratio of N:P of mycorrhizal fungi & 30.98107 & • & • & • \\
+• & maximum fraction of mycorrhizal carbon used for N transformation & 0.4 & $day^{-1}$ & • & • \\
+• & ratio of surface to mass relationship between mycorrhizal fungi and fine roots & 10.0 & • & • & • \\
+\hline 
+
+\multicolumn{6}{l}{\bf Nutrient uptake kinetics and ECA approach}\\
+\hline
+$K_{m1,NH_4}$ & low-affinity parameter for plant and mycorrhizal uptake & 0.0416 & $m^3$ $mol^{-1}$ & \ref{eq:sb:simple_potential_uptake} & • \\
+$K_{m1,NO_3}$ & low-affinity parameter for plant and mycorrhizal uptake & 0.0416 & $m^3$ $mol^{-1}$ & \ref{eq:sb:simple_potential_uptake} & • \\
+$K_{m1,PO_4}$ & low-affinity parameter for plant and mycorrhizal uptake & 229.6667 & L $mol^{-1}$ & \ref{eq:sb:simple_potential_uptake} & Kavka and Polle 2016 \\
+$K_{m2,NH_4}$ & high-affinity parameter for plant and mycorrhizal uptake & 1.0 & mol $m^{-3}$ & \ref{eq:sb:simple_potential_uptake} & • \\
+$K_{m2,NO_3}$ & high-affinity parameter for plant and mycorrhizal uptake & 1.0 & mol $m^{-3}$ & \ref{eq:sb:simple_potential_uptake} & • \\
+$K_{m2,PO_4}$ & high-affinity parameter for plant and mycorrhizal uptake & 0.000022 & mol $L^{-1}$ & \ref{eq:sb:simple_potential_uptake} & Kavka and Polle 2016 \\
+
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|X|} % textwidth  
+\hline 
+Symbol & Parameter long name & Value & Unit & Equation & Citation \\
+\hline 
+
+\multicolumn{6}{l}{\bf Nitrification, denitrification parameters (sb\_nloss\_scheme = dynamic)}\\
+\hline
+$E_{a,nit}$ & activation energy of nitrification & 80000 & \unit{J mol^{-1}} & \ref{eq:sb:simple_dynamic_nitrification} & calibrated after \cite{XURI:2008jq} \\
+$E_{d,nit}$ & de-activation energy of nitrification & 200000 & \unit{J mol^{-1}} & \ref{eq:sb:simple_dynamic_nitrification} & calibrated after \cite{XURI:2008jq}\\
+$T_{opt,nit}$ & optimum temperature for nitrification & 311.15 & K & \ref{eq:sb:simple_dynamic_nitrification} & \cite{XURI:2008jq} \\
+$E_{a,denit}$ & activation energy of nitrification & 47000 & \unit{J mol^{-1}} & \ref{eq:sb:simple_dynamic_denitrification} & calibrated after \cite{XURI:2008jq}\\
+$E_{a,gas,diffusion}$ & activation energy of gas diffusion & 47000 & \unit{J mol^{-1}} & \ref{eq:sb:simple_ngasloss} & calibrated after \cite{XURI:2008jq}\\
+$\lambda_{anvf}$ & Weibull function to relate anerobic volume fraction to soil moisture & 1.3 & • & \ref{eq:sb:simple_dynamic_nitrification} & calibrated from \cite{Zaehle:2010cz} \\
+$k_{anvf}$ & Weibull function to relate anerobic volume fraction to soil moisture & 3.0 & • & \ref{eq:sb:simple_dynamic_nitrification} &  calibrated from \cite{Zaehle:2010cz} \\
+$v_{max,nit}$ & maximum nitrification rate & 0.4 & $day^{-1}$ & \ref{eq:sb:simple_dynamic_nitrification} & \cite{XURI:2008jq} \\
+$v_{max,denit}$ & maximum denitrification rate & 0.1 & $day^{-1}$ & \ref{eq:sb:simple_dynamic_denitrification} & \cite{XURI:2008jq} \\
+$km_{denit,mic}$ & half-saturation constant C of denitrification & 20.0 & mol/ m3 &  \ref{eq:sb:simple_dynamic_denitrification_prod}  & \cite{XURI:2008jq} \\
+$km_{denit,NO_3}$ & half-saturation constant \chem{NO_3} of denitrification & 1162.598 & mol/ m3 &  \ref{eq:sb:simple_dynamic_denitrification_prod}  & \cite{XURI:2008jq} \\
+$f_{nit,noy}$ & fraction of nitrification lost to \chem{NO_y} & 0.02 & • & \ref{eq:sb:simple_dynamic_nitrification_prod} & \cite{XURI:2008jq} \\
+$f_{nit,n2o}$ & fraction of nitrification lost to \chem{N_2O} & 0.002 & • & \ref{eq:sb:simple_dynamic_nitrification_prod} & \cite{XURI:2008jq} \\
+$f_{denit,noy}$ & fraction of denitrification lost to \chem{NO_y} & 0.002 & • & \ref{eq:sb:simple_dynamic_denitrification_prod} & \cite{XURI:2008jq} \\
+$f_{denit,n2o}$ & fraction of denitrification lost to \chem{N_2O} & 0.02 & • & \ref{eq:sb:simple_dynamic_denitrification_prod} & \cite{XURI:2008jq} \\
+
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Value & Unit & Equation & Citation \\
+\hline 
+
+\multicolumn{6}{l}{\bf Simple-model fixed loss and simple leaching parameterisation}\\
+\hline
+$f_{nloss}$ & fractional loss of N per unit N mineralisation & 0.05 & • & \ref{eq:sb:simple_fixed_loss} & assumed \\
+$f_{nit}$ & fractional nitrification per unit N mineralisation & 0.1 & • & \ref{eq:sb:simple_fixed_loss} & assumed \\
+• & fraction of NH4 amenable to leaching & 0.1 & • & • & • \\
+• & fraction of PO4 amenable to leaching & 0.001 & • & • & • \\
+• & maximum soil N at which BNF occurs in standard scheme & 0.05 & mol N $m^{-2}$ & • & • \\
+• & global maximum rate for standard BNF scheme & 0.005659552 & mol N $m^{-2}$ $s^{-1}$ & • & • \\
+
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Value & Unit & Equation & Citation \\
+\hline 
+
+\multicolumn{6}{l}{\bf Isoptope}\\
+\hline
+• & fractionation of N15 due to microbial NH4 assimilation & 17.0 & per mill & • & Robinson 2001, TREE \\
+• & fractionation of N15 due to microbial NO3 assimilation & 13.0 & per mill & • & Robinson 2001, TREE \\
+• & fractionation of N15 due to plant NH4 assimilation & 13.5 & per mill & • & Robinson 2001, TREE \\
+• & fractionation of N15 due to plant NO3 assimilation & 9.5 & per mill & • & Robinson 2001, TREE \\
+• & fractionation of N15 due to microbial nitrification to NO and N2O & 47.5 & per mill & • & Robinson 2001, TREE \\
+• & fractionation of N15 due to microbial NO3 production during nitrification & 25.0 & per mill & • & Robinson 2001, TREE \\
+• & fractionation of N15 due to microbial denitrification & 31.0 & per mill & • & Robinson 2001, TREE \\
+• & fractionation of N15 due to microbial ammonification & 2.5 & per mill & • & Robinson 2001, TREE \\
+• & fractionation of N15 due to NH3 volatilisation & 50.0 & per mill & • & Robinson 2001, TREE \\
+
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|X|} % textwidth  
+\hline 
+Symbol & Parameter long name & Value & Unit & Equation & Citation \\
+\hline 
+
+\multicolumn{6}{l}{\bf Soil Pi fluxes}\\
+\hline
+• & Weathering coefficient of mineral soil & 8.16208 $10^{-14}$ & mol P $m^{-3}$ $s^{-1}$ & • & Wang et al. 2010 combining with BBR soil weight of 1m \\
+• & Slow Pi sorption equilibrium content of mineral soil & 2.580895 & mol P $m^{-3}$ & • & random guess based on init value of assoc\_slow \\
+• & Occlusion coefficient of sorbed PO4 & 3.86 $10^{-13}$ & $s^{-1}$ & • & Yang et al. 2014 \\
+• & Maximum PO4 biochemical mineralization rate, MM kinetics & 2.89 $10^{-7}$ & $s^{-1}$ & • & est. from Bunemann et al. 2016, LUS site \\
+• & Half-saturation microbial biomass for PO4 biochemical mineralization, MM kinetics & 0.003226119 & mol C $m^{-3}$ & • & random number, equals to the usual microbe biomass \\
+• & Half-saturation solute P concentration for PO4 biochemical mineralization, MM kinetics-alike & 0.001 & mol C $m^{-3}$ & • & estimated \\
+• & Half-saturation root C biomass for PO4 biochemical mineralization, MM kinetics-alike & 20.0 & mol C $m^{-3}$ & • & • \\
+• & Half-saturation root C biomass for PO4 weathering, MM kinetics-alike & 10.0 & mol C $m^{-3}$ & • & • \\
+
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+%% moving average periods at which processes operate
+\begin{table}
+\caption{Timescale of processes (moving average periods)}
+\begin{tabularx}{\linewidth}{|X|c|c|}
+\hline 
+Description & Value & Unit \\ 
+\hline
+one week & 7 & days \\
+one month & 30 & days \\
+one year & 365 & days \\
+memory time scale for state of acclimation & 2 & days \\
+nutrient uptake processes (demand, BNF)  & 3 & days \\
+labile pool  & 7 & days \\
+phenological processes  & 7 & days \\
+leaf N fractions & 1 & days \\
+leaf stoichiometry  & 20 & days \\
+biomass allocation & 30 & days \\
+biomass allocation for empirical dynamic allocation & 30 & years \\
+respiration acclimation & 30 & days \\
+microbial community acclimation & 30 & days \\
+vegetation growth & 365 & days \\
+vegetation dynamics processes  & 365 & days \\
+\hline 
+\end{tabularx}
+\end{table}
+
+
+
+
+
+
+
+% ----------- References - BibTeX ----------- %
+\bibliography{bibtex/slm-scientific-docu} 
+\bibliographystyle{apalike} 
+
+\end{document}

@@ -1,0 +1,57 @@
+
+  +---------------------------------------------------------------------------
+  |
+  ! The "QUINCY terrestrial biosphere model with coupled carbon, nitrogen, 
+  ! and phosphorus cycles" (QUINCY model) is free software:
+  ! you can redistribute it and/or modify it under the terms of 
+  ! the GNU General Public License version 3 as published by 
+  ! the Free Software Foundation.
+  ! You should have received a copy of the GNU General Public License
+  ! along with the QUINCY model. If not, see <https://www.gnu.org/licenses/>.
+  !
+  ! The QUINCY model contains and depends on licensed third-party software. 
+  ! Where software is supplied by third parties it is indicated in the 
+  ! header of the file. In particular, the QUINCY model can be used only 
+  ! under the conditions of the "MPI-M Software Licence Agreement" in it's 
+  ! most recent form.
+  ! Please see URL http://www.mpimet.mpg.de/en/science/models/license
+  ! Distribution of the full code is dependent on the availability 
+  ! of a valid MPI-M-software license agreement. In the absence of a 
+  ! signed MPI-M-software license agreement, we can only share individual 
+  ! scientific subroutines of the QUINCY model that are GNU-GPL licensed.
+  |
+  !
+  !    You may copy, distribute and modify the GNU GPL licensed part of the 
+  !    QUINCY model as long as you track changes/dates in source files.
+  !    Any modifications of the GNU GPL-licensed code must also be made 
+  !    available under the GNU GPL.
+  !
+  !    The GNU GPL does not require you to release your modified version, or any 
+  !    part of it. You are free to make modifications and use them privately, 
+  !    without ever releasing them. 
+  !    This applies to organizations (including companies), too; an organization 
+  !    can make a modified version and use it internally without ever 
+  !    releasing it outside the organization.
+  !    But if you release the modified version to the public in some way, 
+  !    the GNU GPL requires you to make the modified source code available 
+  !    to the program's users, under the GNU GPL.
+  !
+  !    When distributing a modified version of the QUINCY model,
+  !    keep the existing copyright notice and state significant 
+  !    changes made to the source code.
+  !    When changing the source code of the QUINCY model, 
+  !    you ought to change the documentation to correspond 
+  !    and add scientific explanation of the modified/added code.
+  !
+  +---------------------------------------------------------------------------
+
+
+This model version is tag xxxx, revision xxxx, 
+as published in the git repository https://git.bgc-jena.mpg.de/quincy/quincy-model-releases
+and described in 
+
+publication xxxx
+
+Bug reports/info/comments to:
+QUINCY: szaehle@bgc-jena.mpg.de
+------------------------------------------------------------------------------

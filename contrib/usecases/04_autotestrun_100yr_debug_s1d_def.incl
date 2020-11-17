@@ -1,0 +1,49 @@
+##    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
+##    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+##    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
+##
+##    This file is part of the QUINCY model.
+##    The QUINCY model is free software: you can redistribute it and/or modify
+##    it under the terms of the GNU General Public License version 3,
+##    as published by the Free Software Foundation.
+##
+##    The QUINCY model is distributed in the hope that it will be useful,
+##    but WITHOUT ANY WARRANTY; without even the implied warranty of
+##    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+##    GNU General Public License for more details.
+##
+##    You should have received a copy of the GNU General Public License
+##    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
+
+# default SLM usecase: 04_autotestrun_100yr_debug_s1d_def
+# 
+# used by the script: ./contrib/additional_scripts/automated_slm_testrun.sh
+# for automated test runs of SLM
+# 
+
+slmModel="land"
+forcingDataSet="fluxnet"
+forcingMode="static"
+singleSiteName=""
+
+fluxnetTypeTransientTimestepOutput="F"
+compareSimCRUNCEPvsGFDB="F"
+paramSensitivitySim="F"
+
+sb_model_scheme="simple_1d"
+flag_sb_prescribe_po4="T"
+biomass_alloc_scheme="dynamic"
+leaf_stoichom_scheme="dynamic"
+soil_depth=9.5
+nsoil_layer=15
+
+simulation_length_number=100
+output_interval_pool="weekly"
+output_interval_flux="weekly"
+output_start_first_day_year=1
+output_end_last_day_year=100
+
+useSiteSpecificAWC="T"
+n_deposition_scheme="dynamic"
+p_deposition_scheme="dynamic"
+queue="io_perform"

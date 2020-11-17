@@ -1,0 +1,24 @@
+##    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
+##    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+##    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
+##
+##    This file is part of the QUINCY model.
+##    The QUINCY model is free software: you can redistribute it and/or modify
+##    it under the terms of the GNU General Public License version 3,
+##    as published by the Free Software Foundation.
+##
+##    The QUINCY model is distributed in the hope that it will be useful,
+##    but WITHOUT ANY WARRANTY; without even the implied warranty of
+##    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+##    GNU General Public License for more details.
+##
+##    You should have received a copy of the GNU General Public License
+##    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
+
+# site specific compiler settings
+COMP = x86_64-gfortran
+C_N = /usr/bin/gcc-4.4 
+M_K = make --no-print-directory
+F_C = $(C_N) -c -cpp -ffree-line-length-0
+F_O = -O -I../src/include -I$(MODDIR) -J${MODDIR}
+F_L = $(C_N)

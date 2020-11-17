@@ -1,0 +1,269 @@
+\chapter{Assimilation}\label{ch:assimi}
+
+Assimilation deals with the \chem{CO_2} assimilation by the vegetation canopy. Photosynthesis is calculated according to the photosynthesis scheme by \cite{Kull:1998cr}, extended for C4 photosynthesis by \cite{Friend:2009tf}, and with the temperature response curves as described in \cite{Friend:2010je}. Photosynthesis and stomatal conductance are calculated for the mid-points of each canopy layer and light-quality class (sunlit and shaded; as defined in Sect. \ref{sec:rad:vegetation}). A notable difference to the implementation of \cite{Friend:2010je} is the use of a standard Ball-Berry formulation to simulate the response of stomates to drought \cite{Ball:1987uv, Knauer:2015dh}. 
+
+Temperature acclimation of photosynthesis is taken account as in \cite{Friend:2010je} by letting the optimum temperature of electron transport adjust to the day-time temperature of the last few days (\texttt{flag\_t\_jmax\_acclimation}). Soil moisture deficit is likewise affecting photosynthetic activity under extremely low levels of soil moisture (Rogers:forthcoming). N cycle interactions with photosynthesis occur on the level of acclimating foliar N (\texttt{flag\_optimal\_leafN}) and the fractional allocation of N to photosynthetic processes in each canopy layer (\texttt{flag\_optimal\_n\_fractions}), as described in Sect. \ref{sec:veg:canopy}. Isotopic fractionation of photosynthesis with respect to \chem{^{13}C} and \chem{^{14}C} is calculated according to \cite{Farquhar:1982ks,Drake:2014dl}. If not explicitly explained, model parameters are listed in Tab. \ref{tab:assimi:param}.
+
+\section{Leaf-level net photosynthesis}\label{sec:assimi:leaf_ps}
+
+As defined in Sect. \ref{sec:veg:foliar_N_fractions}, each canopy layer (subscript $cl$) contains a certain amount of foliar N ($N_{leaf,cl}$), split into N allocated to Rubisco ($fn_{rub,cl}$), electron transport ($fn_{et,cl}$), chlorophyll ($fn_{chl,cl}$), and PEP-carboxylase ($fn_{pepc,cl}$) in the case of C4-plants. In the following, the subscript $cl$ is omitted for clarity. 
+
+Unless stated otherwise, temperature sensitivities follow the form
+
+\begin{equation}\label{eq:ps_t_sensitivity}
+f_x(T) = e^{c-\Delta H/(R\times T)} = e^{E_0^x - E_1^x/(R\times T)},
+\end{equation}
+
+where $T$ is the canopy temperature (\unit{K}), $R$ is the universal gas constant (\unit{J mol^{-1} K^{-1}}), and the process-wise $E0_x$ and $E1_x$ are given in Table \ref{tab:assimi:param}, taken from \cite{Bernacchi:2001wv}.
+
+\subsection{Light-saturated photosynthesis; C3-plants}
+
+In light-saturated conditions, gross photosynthesis ($A_g$) in C3 plants is calculated as the minimum of the two potential rates, $A_j$ and $A_v$. The electron transport capacity limited carboxylation ($A_j$) is given by 
+
+\begin{subequations}\label{eq:jmax}
+\begin{align}
+A_j=& J_{max} \times m_1, where \\
+&J_{max} = n_1 \times N_{leaf},  \\
+&n_1 = g_{jmax}(T) \times \beta_{soil}^{ps} \times \beta_{sinklim}^{ps} \times j_{max}^n \times fn_{et}, \\ 
+&m_1=\frac{c_i}{c_i+2\times \Gamma^{*}},  
+\end{align} 
+\end{subequations} 
+
+where $c_i$ is the intercellular partial pressure of \chem{CO_2} (\unit{Pa}), see Sect. \ref{sec:assimi:stomatal_coupling}, and $\Gamma^{*}$ is the \chem{CO_2} compensation point in the absence of dark respiration, with its own temperature sensitivity (see Eq. \ref{eq:ps_t_sensitivity}). Excessive soil moisture constraints are assumed to reduce light-saturated photosynthetic activity by: 
+
+\begin{equation}
+\beta_{soil}^{ps} = e^{-(\lambda^{soil}_{ps}*\Theta)^{k^{soil}_{ps}}},
+\end{equation}
+
+where $\lambda^{soil}_{gs}$ and $k^{soil}_{gs}$ are PFT-specific parameters (see lctlib), and $\Theta$ is the relative available soil moisture, and $\beta_{sinklim}^{ps}$ is a signal for sink limitation as calculated in Eq. \ref{eq:beta_sinklim_ps}
+
+The temperature sensitivity of electron transport is assumed to follow the bell-shaped form described by \cite{June:2004kj}, where $T_{jmax}^{opt}$ is the optimum temperature for $J_{max}$ according to \cite{Friend:2010je}  
+
+\begin{subequations}
+\begin{align}
+g_{jmax}(T) =& e^{-\left({\frac{T-\bar{T}_{jmax}^{opt}}{T_{\Omega}}}\right)^2},\label{eq:t_jmax_opt}\\
+&T_{jmax}^{opt} = k0_{jmax}^{topt} + k1_{jmax}^{topt} \times T; T_{jmax,min}^{opt} < T_{jmax}^{opt} \le T_{jmax,max}^{opt},
+\end{align} 
+\end{subequations} 
+
+where $k0_{jmax}^{topt}$, $k1_{jmax}^{topt}$, and $T_{\Omega}$ are PFT-specific parameters (see lctlib), $T$ is the canopy temperature, and $\bar{T}_{jmax}^{opt}$ in Eq. \ref{eq:t_jmax_opt} is the mean of the daytime $T_{jmax}^{opt}$ over the past few days.
+
+The Rubisco limited rate of photosynthesis ($A_c$) is given by 
+
+\begin{subequations}\label{eq:vcmax}
+\begin{align}
+A_c=& V_{cmax} \times m_2, where \\
+&V_{cmax} = n_2 \times N_{leaf} \\
+&n_2 =  f_{vcmax}(T) \times \beta_{soil}^{ps} \times \beta_{sinklim}^{ps} \times v_{cmax}^n \times fn_{rub}, \\
+&m_2 = \frac{c_i}{c_i + k_c (1+O_i/k_o)},
+\end{align} 
+\end{subequations} 
+
+where $O_i$ is the intercellular partial pressure of \chem{O_2}, and $k_c$ and $k_o$ are the Michaelis-Menten constants for \chem{CO_2} and \chem{O_2} respectively, each with their own temperature sensitivity (see Table \ref{tab:assimi:param}). 
+
+The N-specific light-saturated rate of C3 photosynthesis can then be calculated as 
+
+\begin{equation}
+m_{sat} = min(n_1 \times m_1, n_2 \times m_2)
+\end{equation}
+
+\subsection{Light-saturated photosynthesis; C4-plants}
+
+\cite{Friend:2009tf} adjusted the scheme by \cite{Kull:1998cr} using the Collatz formulation of C4 photosynthesis \cite{Collatz:1992us}. The simplified assumption is that $A_j$ and $A_c$ can be calculated as above, but at saturating $c_i$ ($c_{i,max}$). Bundle-sheath transport limitation is then further limiting C4 photosynthesis, given by
+
+\begin{subequations}\label{eq:pepc}
+\begin{align}
+A_p=& V_{pmax} \times m_3, where \\
+&V_{pmax} = n_3 \times N_{leaf} \\
+&n_3 =  g_{pepc}(T) \times v_{pepc}^n \times fn_{pepc}, \\
+&m_3 = \frac{c_i}{p},
+\end{align} 
+\end{subequations} 
+
+where the temperature response is 
+
+\begin{equation}\label{eq:pepc_t_sensitivity}
+g_{pepc}(T) = 2^{(T - T_{ref}^{pepc})/ T_{base}^{pepc}}
+\end{equation}
+
+The N-specific light-saturated rate of C4 photosynthesis can be calculated as 
+
+\begin{equation}
+m_{sat} = min(n_1 \times m_1, n_2 \times m_2, n_3 \times m_3)
+\end{equation}
+
+\subsection{Light-harvesting limited rate of photosynthesis; both C3 and C4 photosynthesis}
+
+The light-harvesting limited rate of carboxylation can be written as 
+
+\begin{subequations}
+\begin{align}\label{eq:ps_lightharvesting}
+A_h =&  m_1 \times \alpha_i \times I_a,\\
+&I_a = I_0 (1-e^{-k_a \times C_{chl}}), where\\
+&C_{chl} = a_{chl}^n \times f_{chl} \times  N_{leaf}
+\end{align} 
+\end{subequations} 
+
+where $\alpha_i$ is the intrinsic quantum efficiency for \chem{CO_2} uptake, $I_0$ is the  incident photosynthetic photon flux density (PPFD) penetrating sunlit or diffuse foliage (Sect. \ref{sec:rad:vegetation}), and $k_a$ as well as $a_{chl}^n$ are parameters specified in Table \ref{tab:assimi:param}.
+
+Note that currently $I_{0}$ is not calculated based on the chlorophyll extinction, but on the parameters in the radiation routine. This may need fixing, but this there is not an evident solution.
+
+\subsection{Leaf-level gross photosynthesis}
+
+As \cite{Kull:1998cr} show, this system of equations (Eq. \ref{eq:jmax}-\ref{eq:ps_lightharvesting}) can be solved to yield gross photosynthesis for one canopy layer and light-class as 
+
+\begin{subequations}
+\begin{align}
+A _g = (1-\frac{\Gamma^{*}}{c_i}) &[m_{sat}N_{sat}+\alpha_i I (e^{-k_a n_3 N_{sat}}-e^{-k_a n_3 N_{leaf}}), where\\
+N_{lim} &=  - \frac{ln(m_{sat}/[\alpha_i I k_a n_3 m_1])}{k_a n_3}, and \\
+&N_{lim} < 0: N_{sat}=0\\
+&N_{lim} < N_{leaf}: N_{sat}=N_{lim}\\
+&N_{lim} \ge N_{leaf}: N_{sat}=N_{leaf}
+\end{align} 
+\end{subequations} 
+
+\section{Stomatal coupling}\label{sec:assimi:stomatal_coupling}     
+
+Different to \cite{Friend:2010je}, the combination of leaf-level net photosynthesis ($A_{n,cl}$), stomatal conductance ($g_{s,cl}$), and leaf internal \chem{CO_2} concentration ($c_{i,cl}$) satisfying Eq. \ref{eq:stomatal_coupling} is sought iteratively for each canopy layer, given the supplementary constraints given by Sect. \ref{sec:assimi:leaf_ps}.
+
+\begin{subequations}\label{eq:stomatal_coupling}
+\begin{align}
+A_n &= (A_{g,sunlit} * f_{sunlit} + A_{g,shaded} * (1- f_{sunlit})) - R_l\\
+g_s &= [g_0 + g_1 \frac{A_n\beta_{air}\beta_{soil}^{gs}}{c_a}] \times R  \times T / p\\
+c_i &= c_1 \times c_a - c_2 \times A_n \times ( \frac{D_{air}^{wv2co2}}{g_s} + \frac{D_{turb}^{wv2co2}}{g_a} ) \times R \times T 
+\end{align} 
+\end{subequations} 
+
+where $f_{sunlit}$ is the fraction of sunlit leaves in a canopy layer (see Chap \ref{ch:rad}), $R_l$ is the maintenance respiration of leaves (see Sect. \ref{sec:veg:MaintResp}), $g_0$ and $g_1$ are PFT-specific parameters (see lctlib), $R$ is the molar gas constant, $T$ is canopy temperature (K), $p$ air pressure (Pa), $c_1$ converts \chem{CO_2} concentration from ppm to Pa, $c_2$ converts $\mu$\unit{mol m^{-2} s^{-1}} to \unit{mol m^{-2} s^{-1}}, $g_a$ is the aerodynamic conductance, and the $D$'s are the diffusion coefficient corrections for \chem{CO_2} and water.
+
+$\beta_{air}$ is taken as relative humidity \cite{Ball:1987uv, Knauer:2015dh} and $\beta_{soil}^{gs}$ is the stomatal response to soil moisture, described by 
+
+\begin{equation}
+\beta_{soil}^{gs} = e^{-(\lambda^{soil}_{gs}*\Theta)^{k^{soil}_{gs}}},
+\end{equation}
+
+where $\lambda^{soil}_{gs}$ and $k^{soil}_{gs}$ are PFT-specific parameters (see lctlib), and $\Theta$ is the relative available soil moisture.
+
+\section{Photosynthetic discrimination}
+
+Isotopic discrimination is modelled according to the general equation derived by \cite{ Drake:2014dl}
+
+\begin{equation}\label{eq:ps_discrimination}
+D_x = a_x + ( c_x + \phi_{C4} \times b_x - a_x )  \frac{c_i}{c_a}
+\end{equation}
+
+where $a_x$, and $b_x$ are isotope (\chem{^{13}C} and \chem{^{14}C}, respectively) specific constants (see Table \ref{tab:assimi:param}). $c_x$ and $\phi_D$ adjust these equation to C4 plants, and are 0 and 1 respectively for C3 plants. Flows of \chem{^{13}C} and \chem{^{14}C} are calculated by the routines in \texttt{mo\_shared\_isotope}.
+
+\section{Canopy integration}
+
+Canopy-level fluxes are derived by summing the product of layer-level fluxes or state-variables and the depth of the layer
+
+\begin{equation}
+F = \sum_{i=1}^{ncanopy} F_{cl} \times LAI_{cl},
+\end{equation}
+
+where F is the canopy-level equivalent of a leaf-level variable $F_{cl}$ (per unit leaf-area), such as $A_g$, $A_n$, and $g_s$, and $LAI_{cl}$ is the leaf area index of the canopy layer. 
+
+
+% ----------------------- TABLES with PARAMETERS ----------------------- %
+
+\begin{sidewaystable}
+\section{Parameters}\label{tab:assimi:param}
+
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|X|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline 
+\multicolumn{6}{l}{\bf Parameters describing the PS $\sim$ An relationship (describing photosynthetic activity)}\\
+\hline
+$j_{max}^n$ & electron-transport limited carboxylation rate & \texttt{jmax2n} & per $\mu$mol CO2/ mmol N in ET & \ref{eq:vcmax} & 17.6/4.0 & \cite{Niinemets:1997ha} \\
+$vc_{max}^n$ & Rubisco limited carboxylation rate & \texttt{vcmax2n} & per $\mu$mol CO2/ mmol N in RUB & \ref{eq:vcmax}  & 1.8 & \cite{Niinemets:1997ha} \\ 
+$v_{pepc}^n$ & PEP C limited carboxylation rate & \texttt{pepc2n} & per $\mu$mol CO2/ mmol N in PEP C & \ref{eq:pepc} & 98777.97 & \cite{Tazoe:2006hc} \\ 
+$a_{chl}^n$ & moles chlorophyll per mol of N & \texttt{chl2n} & \unit{molmmol^{-1}} & \ref{eq:ps_lightharvesting} & $1000.0/39.8$ & \cite{Evans:1989bg} \\ 
+• & slope of the fraction of leaf N not associated with PS against leaf N & \texttt{k1\_fn\_struc} & --/mmolN & • & $\frac{71.4 * N_{molar mass}}{1000000.0}$ & • \\ 
+%• & • & \texttt{•} & • & • & • & • \\
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline 
+\multicolumn{6}{l}{\bf Parameters used in the photosynthesis routine (temperature sensitivies of PS processes) part 1/2}\\
+\hline
+$E_0^{kc}$ & Baseline of Michaelis-Menten constant of Rubisco for CO2 & \texttt{E0kc} & • & \ref{eq:ps_t_sensitivity} & 38.05 & \cite{Bernacchi:2001wv} \\
+$E_1^{kc}$ & Temperature sensitivity of Michaelis-Menten constant of Rubisco for CO2 & \texttt{E1kc} & \unit{J mol^{-1}} & \ref{eq:ps_t_sensitivity} & 79430.0& \cite{Bernacchi:2001wv} \\ 
+$E_0^{ko}$ & Baseline of Michealis-Menten Kintetics for Rubisco-oxigination & \texttt{E0ko} & • & \ref{eq:ps_t_sensitivity} & 20.3 & \cite{Bernacchi:2001wv} \\  
+$E_1^{ko}$ & Temperature sensitivity of Michealis-Menten Kintetics for Rubisco-oxigination & \texttt{E1ko} & \unit{J mol^{-1}} & \ref{eq:ps_t_sensitivity} & 36380.0 & \cite{Bernacchi:2001wv} \\  
+$E_0^{\Gamma^{*}}$ & Baseline of photosynthetic compensation point & \texttt{E0pcp} & • & \ref{eq:ps_t_sensitivity} & 19.02 & \cite{Bernacchi:2001wv} \\  
+$E_1^{\Gamma^{*}}$ & Temperature sensitivity of photosynthetic compensation point & \texttt{E1pcp} & \unit{J mol^{-1}} & \ref{eq:ps_t_sensitivity} & 37830.0 & \cite{Bernacchi:2001wv} \\  
+$E_0^{vcmax}$ & Baseline of Rubisco & \texttt{E0v} & • & \ref{eq:ps_t_sensitivity} & 26.35 & \cite{Bernacchi:2001wv} \\  
+$E_1^{vcmax}$ & Temperature sensitivity of Rubisco & \texttt{E1v} & \unit{J mol^{-1}} & \ref{eq:ps_t_sensitivity} & 65330.0 & \cite{Bernacchi:2001wv} \\  
+• & Offset of the Tjmax$\sim$Tair relationship & \texttt{t\_jmax\_offset} & • & • & 17.0 & • \\
+• & Slope of the Tjmax$\sim$Tair relationship & \texttt{t\_jmax\_slope} & • & • & 0.35 & • \\
+• & Minimum of optimum Tjmax & \texttt{t\_jmax\_opt\_min} & • & • & \texttt{t\_jmax\_offset} & • \\
+• & Maximum of optimum Tjmax & \texttt{t\_jmax\_opt\_max} & • & • & 38.0 & • \\
+$T_{ref}^{pepc} $  & reference temperature of PePC C4 photosynthesis & \texttt{Tref\_pepc} & $^{\circ}C$ & \ref{eq:pepc_t_sensitivity} & 25.0 & \cite{Friend:2009tf} \\  
+$T_{base}^{pepc} $ & base temperature of PePC C4 photosynthesis & \texttt{Tbase\_pepc} & $^{\circ}C$ & \ref{eq:pepc_t_sensitivity} & 10.0 & \cite{Friend:2009tf} \\  
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline 
+\multicolumn{6}{l}{\bf Parameters used in the photosynthesis routine (temperature sensitivies of PS processes) part 2/2}\\
+\hline
+$\alpha_i$ & intrinsic quantum yield (efficiency of the quanta absorption of PS II (or PS I)) & \texttt{alpha\_i} & $\mu$mol CO2/ mol quanta & \ref{eq:ps_lightharvesting} & $0.85 * 0.066$ & • \\  
+$O_i$ & Partial Pressure of \chem{O_2} & \texttt{pO2} & kPa & \ref{eq:vcmax} & 20.9 & • \\  
+• & default Ci:Ca for C3 plants & \texttt{CiCa\_default\_C3} & • & \ref{eq:stomatal_coupling} & 0.7 & • \\  
+• & default Ci:Ca for C4 plants & \texttt{CiCa\_default\_C4} & • & \ref{eq:stomatal_coupling} & 0.4 & • \\  
+• & maximum iteration of PS calculation & \texttt{ps\_it\_max} & • & • & 10.0 & • \\  
+$c_{i,max}$ & saturating Ci in C4 plants & \texttt{ci\_max} & Pa & • & 7800.0 & \cite{Friend:2009tf} \\  
+$D_{air}^{wv2co2}$ & ratio of diffusion coefficient for H2O and CO2 in air & \texttt{Dwv2co2\_air} & • & \ref{eq:stomatal_coupling} & $Dwv / Dco2$ & • \\  
+$D_{turb}^{wv2co2}$ & ratio of diffusion coefficient for H2O and CO2 in turbulent air & \texttt{Dwv2co2\_turb} & • & \ref{eq:stomatal_coupling} & $(Dwv/Dco2)^{(2.0/3.0)}$ & • \\
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline 
+\multicolumn{6}{l}{\bf Parameters describing the isotopic discrimination of PS (fractionation due to photosynthesis)}\\
+\hline
+$a_{13C}$ & discrimination of C13 due to stomatal diffusion & \texttt{discr\_ps\_a\_C13} & $\permil$ & \ref{eq:ps_discrimination} & 4.4 & \cite{Drake:2014dl} \\  
+$b_{13C}$ & discrimination of C13 due to Rubisco & \texttt{discr\_ps\_b\_C13} & $\permil$ & \ref{eq:ps_discrimination} & 27.0 & \cite{Drake:2014dl} \\
+$c_{13C}$ & discrimination of C13 due to PEP C & \texttt{discr\_ps\_c\_C13} & $\permil$ & \ref{eq:ps_discrimination} & 5.7 & \cite{Drake:2014dl} \\  
+$a_{14C}$ & discrimination of C13 due to stomatal diffusion & \texttt{discr\_ps\_a\_C14} & $\permil$ & \ref{eq:ps_discrimination} & $a_{13C} * 1.97$ & \cite{Drake:2014dl} \\    
+$b_{14C}$ & discrimination of C13 due to Rubisco & \texttt{discr\_ps\_b\_C14} & $\permil$ & \ref{eq:ps_discrimination} & $b_{13C} * 1.89$ & \cite{Drake:2014dl} \\  
+$c_{14C}$ & discrimination of C13 due to PEP C & \texttt{discr\_ps\_c\_C14} & $\permil$ & \ref{eq:ps_discrimination} & $c_{13C} * 1.89$ & \cite{Drake:2014dl} \\    
+$\phi_{C4}$ & leakage rate of bundle sheath cells & \texttt{discr\_ps\_phi} & • & \ref{eq:ps_discrimination} & 0.16 & \cite{Drake:2014dl} \\  
+
+\hline 
+\multicolumn{6}{l}{\bf Parameters for canopy profile and canopy light extinction (parameters describing the canopy profile of N)}\\
+\hline
+$k_a$ & Extinction coefficient for PAR on chlorophyll & \texttt{ka} & \unit{mol^{-1}} & \ref{eq:ps_lightharvesting} & 0.005 & \cite{Kull:1998cr} \\  
+$k_n$ & Extinction coefficient to describe decline of N within the canopy & \texttt{kn} & • & • & 0.11 & • \\  
+
+\hline 
+\multicolumn{6}{l}{\bf Phenological parameters for photosynthetic activity}\\
+\hline
+• & min Temperature used to calculate spring recovery period for coniferous forests & \texttt{soa\_min\_temp} & degC & • & -3.0 & • \\
+• & max Temperature used to calculate spring recovery period for coniferous forests & \texttt{soa\_max\_temp} & degC & • & 17.0 & • \\
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+\pagebreak
+
+\newpage

@@ -1,0 +1,146 @@
+\chapter{Soil Snow Energy}\label{ch:sse}
+
+The representation of the surface energy balance including the turbulent momentum and heat exchanges, surface, and soil temperature calculations follows largely JSBACH 3, as described by \cite{Roeckner:2003wc}. As the focus of model development is currently the biogeochemical cycling, the implementation has been simplified, specifically the representation of freeze-thaw processes has been omitted. These will be added in a later release when the full JSBACH surface physics will be employed.
+
+The soil is discretised to layers (default 15 layers) with increasing layer thickness described by ($dz$) up to a depth of 9.5 m. Soil physical properties (volumetric heat capacity ($C_{s,l}$ and conductivity, water content at saturation ($\Theta_{sat}$), field capacity ($\Theta_{fc}$), and wilting points ($\Theta_{wilt}$), as well as parameters describing the soil water retention curve are derived from soil texture according to \cite{Saxton:2006jb}. 
+
+\subsection{Surface energy balance}
+
+The surface energy balance can be written as
+\begin{equation}\label{eq:sse_surface_energy_balance}
+C_{s,l} \frac{\partial T_s}{\partial t} = R_{net} + LE + H + G
+\end{equation}
+where $C_{s,l}$ is the heat capacity of the surface layer, $H$ is the sensible heat flux, $LE$ the latent heat flux, composed of interception loss ($E_i$, soil evaporation $E_s$ and transpiration $E_v$, as described in Section \ref{sec:sse_surface_hydrology}), $G$ is the ground heat flux and $R_{net}$ the net radiation consisting of the following components,
+
+\begin{equation}
+R_{net} = (1 - \alpha_s ) R_{sd} + R_{ld} - \epsilon \sigma {T_s}^4
+\end{equation} 
+
+where $\alpha_s$ R\_{sd} is the net surface shortwave balance, denoted as $I_{net}$ in Eq. \ref{eq:rad:canopy_absorbed_radiation_components2}, $R_{ld}$ the downwelling longwave radiation, $\epsilon$ the surface emissivity, and $\sigma$ the Stefan-Boltzmann constant. 
+
+The ground heat flux $G$ is obtained from the solution of the thermal diffusion equation, which is used to diagnose the temperature profile within the soil 
+\begin{equation}
+C_s\frac{\partial T}{\partial t}=-\frac{\partial G}{\partial z}=-\frac{\partial}{\partial z}\left(-\lambda_s\frac{\partial T}{\partial z}\right)
+\end{equation}
+
+where $C_s$ is as above the volumetric heat capacity of the soil, $G$ is the thermal heat flux (positive downward), $\lambda_s=C_s \kappa_s$ is the thermal conductivity [W\,m$^{-1}$K$^{-1}$], $\kappa_s$ the thermal diffusivity [m$^2$s$^{-1}$] and $z$ the depth [m]. This equation is solved down to a prescribed depth assuming zero flux conditions at the bottom and surface temperature $T_s$ at the top as obtained from Eq. \label{eq:sse_surface_energy_balance}. 
+
+The sensible heat flux $H$ is obtained from the temperature gradient according to
+\begin{equation}
+H=\rho C_p\frac{T_a-T_s}{r_a}\label{eq:sensibleHeatFlux}
+\end{equation}
+where $\rho$ and $C_p$ are density and heat capacity of the in the lowest level of the atmosphere, and $T_a$ and $T_s$ are air and surface temperature. $r_a$ is the aerodynamic resistance 
+
+\begin{equation}
+r_{a}=(C_{h}\left|v_{h}\right|)^{-1}\label{eq:aerodynResistance}
+\end{equation}
+and depends on the transfer coefficient for heat $C_{h}$ \cite{Roeckner:2003wc}. and the absolute value of horizontal velocity $v_{h}$.
+
+\subsection{Surface hydrology}\label{sec:sse_surface_hydrology}
+
+To allow for a better coupling of biogeochemical processes with soil hydrology, the soil hydrology code of JSBACH has been updated as follows. Since the focus of the current model is on the simulation of biogeochemical cycles, the treatment of soil hydrology has been deliberately kept simple. The mid-term model development plan is to incorporate soil freezing and snow dynamics of JSBACH 3. The soil model keeps track of water in terms of amount of water ($W_{skin|soil}$; m), which in the soil can be converted to the layers fractional water content ($\Theta$) as 
+
+\begin{equation}
+\Theta_{soil,l} = \frac{W_{soil,l}}{dz_l}
+\end{equation}
+
+\begin{equation}
+\Psi_{soil,l} = k_A \Theta_{soil,l}^{k_B}
+\end{equation}
+
+Precipitation $P$ becomes partially intercepted by the canopy before reaching the soil
+
+\begin{equation}\label{eq:sse_rain_interception}
+F_{inter} = MIN( k_{eff,inter} * P , \frac{w_{skin,max} * LAI - W_{skin}}{dt})
+\end{equation}
+
+The remaining throughfall is partitioned in the first soil layer into infiltration ($F_{inf}$), within the limits of its field capacity ($\Theta_{fc}$), surface runoff ($F_{runoff}$), and a fraction that is leaked to the next lower layer along preferential flow pathways ($F_{pref}$):
+
+\begin{subequations}
+\begin{align}
+F_{input} &= MIN(P - F_{inter} ,\frac{W_{fc,l=1} - W_{act,l=1}}{dt}),  \\
+F_{inf} &= (1 - \frac{k_{pref}}{dz_l}) F_{input}\\
+F_{runoff} &= (1 - k_{pref,runoff}) (F_{through} - F_{input}), and \\
+F_{pref,l=1} &= \frac{k_{pref}}{dz_l} F_{inf} + k_{pref,runoff} (F_{through} - F_{input})
+\end{align}
+\end{subequations}
+
+The diffusive flux between two layers of depth $dz$ is given by the Richards-equation
+\begin{subequations}
+\begin{align}
+F_{diff,l-1 \rightarrow l} &= \frac{\bar{K}_{diff,l-1 \rightarrow l}}{0.5*(dz_{l-1}+dz_{l})} (\Psi_{soil,l} - \Psi_{soil,l-1}), where \\
+\bar{K}_{diff,l-1 \rightarrow l} &= \frac{dz_{l-1} K_{diff,sat,l-1} (\frac{\Theta_{act,l-1}}{\Theta_{sat,l-1}})^{k_{C,l}} + dz_l K_{diff,sat,l} (\frac{\Theta_{act,l}}{\Theta_{sat,l}})^{k_{C,l}} }{dz_{l-1} + dz_l}
+\end{align}
+\end{subequations}
+where $K_{diff,sat,l}$ and ${k_{C,l}}$ are derived from soil texture according to \cite{Saxton:2006jb}.
+
+Interception loss is calculated as 
+\begin{equation}
+E_{i}=\rho\frac{q_{a}-q_{s}(T_{s},p_{s})}{r_{a}} \frac{W_{skin}}{w_{skin,max} * LAI},
+\end{equation}
+where $\rho$ is air density, $q_{a}$ specific humidity in lowest atmospheric level, $q_{s}$ saturation specific humidity at surface temperature $T_{s}$ and pressure $p_{s}$, and ratio of the size of the canopy water storage ($W_{skin}$) and the maximum size of this reservoir, where $w_{skin,max}$ is a parameter, and $LAI$ is the current leaf area index of the vegetation. 
+
+Evaporation from soil is calculated as 
+\begin{equation}
+E_{s}=\rho\frac{q_{a}-q_{s}(T_{s},p_{s})}{r^*_{a}} \Theta_{soil,1} (1-exp(k_{beer}*LAI))
+\end{equation}
+where $\rho$ is air density, $q_{a}$ specific humidity in lowest atmospheric level, $q_{s}$ saturation specific humidity at surface temperature $T_{s}$ and pressure $p_{s}$, and $\Theta_{soil,1}$ the fractional soil water content of the first soil layer, and the term $(1-exp(k_{beer}*LAI))$ accounts for the reduced energy available for evaporation underneath a closed canopy. 
+
+Transpiration from the dry vegetation is
+\begin{equation}
+E_{v}=\rho\frac{q_{a}-q_{s}(T_{s},p_{s})}{r_{a}+r}
+\end{equation}
+where stomatal resistance $r$ of the canopy is the inverse of the stomatal conductance of the canopy (see Eq. \ref{eq:stomatal_coupling}).
+
+
+The partitioning of the transpiration flux across soil layers $f_{trans,l}$ is calculated based on the layered soil water potential ($\Psi_{soil,l}$, the fractional root distribution ($f_{root,l}$), as well as a PFT-specific minimum soil water potential
+ 
+\begin{subequations}
+\begin{align}
+f_{trans,l} &= \frac{f_{root,l} * \beta_{gs,soil,l}}{ \sum\limits_{i=1}^n f_{root,i} * \beta_{gs,soil,i}} , where \\
+ \beta_{gs,soil,l} &= \Psi_{soil,l} / \Psi_{soil,min}
+\end{align}
+\end{subequations}
+
+Based on these fluxes, the water budget can be described as follows
+\begin{subequations}
+\begin{align}
+\frac{W_{skin}}{dt} &= F_{inter} - E_{i} \\
+\frac{W_{soil,l=1}}{dt} &= F_{inf} - E_{a} - f_{frans,l=1} E_{v} - F_{diff,l=1 \rightarrow l=2} \\
+\frac{W_{soil,l=2,n}}{dt} &= (1 - \frac{k_{pref}}{dz_l}) F_{pref,l-1} - f_{frans,l} F_{trans} + F_{diff,l-1 \rightarrow l} - F_{diff,l \rightarrow l+1} \\
+\end{align}
+\end{subequations}
+
+Saturation of a soil layer leads to increased percolation to the next lower layer. The lower boundary layer is modelled as a zero gradient boundary, i.e. only percolation flow leads to drainage from the soil column. The net water transport between layers is used as input to the vertical flow of soluable biogeochemical pools.
+
+
+% ----------------------- TABLES with PARAMETERS ----------------------- %
+
+%\newpage
+\begin{sidewaystable}
+\section{Parameters}\label{tab:sse:param}
+
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline
+• & soil heat capacity (temporarily for SLM offline) & \texttt{soil\_heat\_cap} & J $kg^{-1}$ $K^{-1}$ & • & 1480.0 & • \\
+• & soil thermal conductivity & \texttt{soil\_therm\_cond} & W $m^{-1}$ $K^{-1}$ & • & 2.0 & • \\
+$k_{eff,inter}$ & Efficiency of interception of precipitation as rain & \texttt{InterceptionEfficiency} &  & eq:sse\_rain\_interception & 0.25 & • \\
+• & maximum water storage per unit LAI & \texttt{w\_skin\_max} & m & • & 0.0002 & • \\
+• & preferential flow fraction of infiltrating water per meter soil & \texttt{drain\_frac} & • & • & 0.01 & • \\
+• & preferential flow fraction of runoff & \texttt{fdrain\_runoff} & • & • & 0.95 & \cite{krinneral05} \\
+%• & • & \texttt{•} & • & • & • & • \\
+\hline
+\end{tabularx}
+\end{sidewaystable}
+
+
+
+
+
+
+\pagebreak
+
+\newpage
+% PARAMETER LIST - End %

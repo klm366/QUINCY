@@ -1,0 +1,36 @@
+##    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
+##    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+##    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
+##
+##    This file is part of the QUINCY model.
+##    The QUINCY model is free software: you can redistribute it and/or modify
+##    it under the terms of the GNU General Public License version 3,
+##    as published by the Free Software Foundation.
+##
+##    The QUINCY model is distributed in the hope that it will be useful,
+##    but WITHOUT ANY WARRANTY; without even the implied warranty of
+##    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+##    GNU General Public License for more details.
+##
+##    You should have received a copy of the GNU General Public License
+##    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
+
+# default SLM usecase: 20_land_300yr_fluxnet_all_def
+# 
+# very basic usecase for running SLM land over 300 years
+#  sites: all fluxnet sites
+#  output: monthly over 300 years
+#
+
+slmModel="land"
+
+forcingDataSet="fluxnet"
+forcingMode="static"
+customSiteList="F"
+singleSiteName=""
+
+simulation_length_number=300
+output_interval_pool="monthly"
+output_interval_flux="monthly"
+output_start_first_day_year=1
+output_end_last_day_year=300

@@ -1,0 +1,81 @@
+##    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
+##    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+##    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
+##
+##    This file is part of the QUINCY model.
+##    The QUINCY model is free software: you can redistribute it and/or modify
+##    it under the terms of the GNU General Public License version 3,
+##    as published by the Free Software Foundation.
+##
+##    The QUINCY model is distributed in the hope that it will be useful,
+##    but WITHOUT ANY WARRANTY; without even the implied warranty of
+##    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+##    GNU General Public License for more details.
+##
+##    You should have received a copy of the GNU General Public License
+##    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
+
+Site,PFTname,PFTnum
+AT-Neu,TeH,7
+AU-Fog,TeH,7
+AU-How,TeBE,2
+AU-Tum,TeBE,2
+AU-Wac,TeBE,2
+BE-Bra,TeNE,5
+BR-Ma2,TrBE,1
+BW-Ma1,TeBE,2
+CA-Man,BNE,5
+CA-Mer,TeBS,4
+CA-Qcu,BNE,5
+CA-Qfo,BNE,5
+CA-SF1,BNE,5
+CA-SF2,BNE,5
+CA-SF3,BNE,5
+CH-Oe1,TeH,7
+DE-Bay,TeNE,5
+DE-Hai,TeBS,4
+DE-Meh,TeH,7
+DE-Tha,TeNE,5
+DK-Lva,TeH,7
+DK-Sor,TeBS,4
+ES-ES1,TeNE,5
+ES-LMa,TrH,8
+FI-Hyy,BNE,5
+FR-Hes,TeBS,4
+FR-LBr,TeNE,5
+FR-Pue,TeBE,2
+ID-Pag,TrBE,1
+IL-Yat,TeNE,5
+IT-Amp,TrH,8
+IT-Cpz,TeBE,2
+IT-Lav,TeNE,5
+IT-MBo,TeH,7
+IT-PT1,TeBS,4
+IT-Ro1,TeBS,4
+IT-Ro2,TeBS,4
+IT-SRo,TeNE,5
+NL-Ca1,TeH,7
+NL-Hor,TeH,7
+NL-Loo,TeNE,5
+PT-Esp,TeBE,2
+PT-Mi1,TeBE,2
+PT-Mi2,TrH,8
+SE-Fla,BNE,5
+SE-Nor,BNE,5
+US-Blo,TeNE,5
+US-FPe,TrH,8
+US-Goo,TrH,8
+US-Ha1,TeBS,4
+US-Ho1,TeNE,5
+US-Los,TeBS,4
+US-Me4,TeNE,5
+US-MMS,TeBS,4
+US-MOz,TeBS,4
+US-PFa,TeNE,5
+US-SRM,TeBE,2
+US-Syv,TeNE,5
+US-Ton,TeBE,2
+US-Var,TrH,8
+US-WCr,TeBS,4
+VU-Coc,TrBE,1
+ZA-Kru,TrBR,3

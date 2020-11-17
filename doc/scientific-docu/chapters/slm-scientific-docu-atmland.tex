@@ -1,0 +1,105 @@
+\chapter{Atmosphere-Land}\label{ch:atmland}
+
+
+
+% ----------------------- TABLES with PARAMETERS ----------------------- %
+
+%\newpage
+\begin{sidewaystable}
+\section{Parameters}\label{tab:atmland:param}
+
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline 
+
+\multicolumn{6}{l}{\bf Orbital parameters}\\
+\hline
+• & obliquity of the Earth's orbit & \texttt{obliquity} & • & • & 23.446 & • \\
+• & perihel of the Earth's orbit & \texttt{perihel} & • & • & 102.04 & • \\
+• & eccentricity of the Earth's orbit & \texttt{eccentricity} & • & • & 0.016724 & • \\
+• & day of the year at which solstice occurs & \texttt{solstice} & • & • & 174.0 & • \\
+• & solar declination (angle sun at equator) & \texttt{declination} & degree & • & • & not a parameter ? \\
+\hline 
+
+\multicolumn{6}{l}{\bf Solar angle calculation}\\
+\hline
+• & logical to simulate solar angle according to local time or GMT & \texttt{angle\_at\_GMT} & • & • & FALSE & • \\
+• & reference longitude for GMT correction & \texttt{reference\_longitude\_GMT} & • & • & 0.0 & • \\
+• & minimum zenith angle for which PAR is calculated & \texttt{min\_cos\_zenith\_angle} & • & • & 0.02 & • \\
+\hline 
+
+\multicolumn{6}{l}{\bf Solar constant}\\
+\hline
+• & solar shortwave radiation & \texttt{solar\_constant} & W/$m^2$ & • & 1370.0 & • \\
+• & fraction of solar shortwave radiation in the VIS band (here: 320-700nm for albedo) & \texttt{frac\_vis\_swtot\_srf} & • & • & 0.54 & Monteith \& Unsworth 1995 \\
+• & fraction of visible solar shortwave radiation in the PAR band (400-700nm) & \texttt{frac\_par\_swvis\_srf} & • & • & 0.9 & • \\
+\hline 
+
+\multicolumn{6}{l}{\bf Diffuse fraction calculation}\\
+\hline
+• & constants for calculation of diffuse radiation & \texttt{k1\_fdiff} & • & • & 1.0045 & • \\
+• & calculation from transmission as in  ?? & \texttt{k2\_fdiff} & • & • & 0.0435 & • \\
+• & calc\_diffuse\_radiation\_fraction & \texttt{k3\_fdiff} & • & • & -3.5227 & • \\
+• & • & \texttt{k4\_fdiff} & • & • & 2.6313 & • \\
+• & minimum diffuse fraction in shortwave downward flux & \texttt{min\_sw\_fdiffuse} & • & • & 0.1667 & • \\
+• & atmospheric transmission rate above which the diffuse fraction becomes minimal & \texttt{max\_transmission\_fdiff} & • & • & 0.75 & • \\
+\hline 
+
+\multicolumn{6}{l}{\bf Diurnal temperature calculation}\\
+\hline
+• & • & \texttt{min\_daylength} & • & • & 4.0/ 24.0 & • \\
+• & • & \texttt{dusk\_time} & • & • & 1.0/ 24.0 & • \\
+• & • & \texttt{tmp\_peak\_time} & • & • & 14.0/ 24.0 & • \\
+%• & • & \texttt{•} & • & • & • & • \\
+\hline
+\end{tabularx}
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline 
+
+\multicolumn{6}{l}{\bf Wind speed}\\
+\hline
+• & minimum wind speed allowed to prevent total decoupling of the surface & \texttt{min\_wind} & m/s & • & 0.3 & • \\
+• & maximum wind speed allowed to prevent excess cooling of the surface & \texttt{max\_wind} & m/s & • & 5.0 & • \\
+\hline 
+
+\multicolumn{6}{l}{\bf Conversion factors}\\
+\hline
+• & standard pressure & \texttt{standard\_press\_srf} & Pa & • & 101300.0 & • \\
+• & used for unit conversion Pa to g $g^{-1}$ & \texttt{eps\_vpd} & • & • & 0.622 & • \\
+\hline 
+
+\multicolumn{6}{l}{\bf Default values of model forcing for model testing}\\
+\hline
+• & temperature & \texttt{def\_t\_air} & deg K & • & 298.15 & • \\
+• & vpd & \texttt{def\_vpd} & Pa & • & 1000.0 & • \\
+• & relative humidity in fractions & \texttt{def\_rh} & • & • & 0.8 & • \\
+• & PAR & \texttt{def\_swdown} & W/$m^2$ & • & 652.173913 & • \\
+• & diffuse fraction & \texttt{def\_fdiffuse} & • & • & 0.2 & • \\
+• & cosine of zenith angle & \texttt{def\_cos\_angle} & • & • & 1.0 & • \\
+• & atmospheric CO2 & \texttt{def\_co2\_mixing\_ratio} & ppm & • & 380.0 & • \\
+• & atmospheric 13CO2 & \texttt{def\_co2\_mixing\_ratio\_C13} & ppm & • & calc from CO2 mix ratio & • \\
+• & atmospheric 14CO2 & \texttt{def\_co2\_mixing\_ratio\_C14} & • & • & calc from CO2 mix ratio & • \\
+• & molar mixing ratio of 13C/ 12C of atmospheric CO2 & \texttt{def\_co2\_deltaC13} & • & • & 7.5 & • \\
+• & molar mixing ratio of 14C/ 12C of atmospheric CO2 & \texttt{def\_co2\_deltaC14} & • & • & -14.9 & • \\
+• & wind & \texttt{def\_wind} & m/s & • & 1.0 & • \\
+• & default deposition of N & \texttt{def\_n\_deposition} & mg/$m^2$/day & • & 0.8 & • \\
+• & default deposition of P & \texttt{def\_p\_deposition} & mg/$m^2$/day & • & 0.015 & • \\
+%• & • & \texttt{•} & • & • & • & • \\
+\hline
+\end{tabularx}
+\end{sidewaystable}
+
+
+
+
+\pagebreak
+
+\newpage
+% PARAMETER LIST - End %

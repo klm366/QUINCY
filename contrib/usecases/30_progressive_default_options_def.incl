@@ -1,0 +1,41 @@
+##    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
+##    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+##    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
+##
+##    This file is part of the QUINCY model.
+##    The QUINCY model is free software: you can redistribute it and/or modify
+##    it under the terms of the GNU General Public License version 3,
+##    as published by the Free Software Foundation.
+##
+##    The QUINCY model is distributed in the hope that it will be useful,
+##    but WITHOUT ANY WARRANTY; without even the implied warranty of
+##    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+##    GNU General Public License for more details.
+##
+##    You should have received a copy of the GNU General Public License
+##    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
+
+# default QUINCY usecase: 30_progressive_default_options_def.incl
+# 
+# enable all modern features of QUINCY which 
+#  are tested and stable
+#  and are considered improvements of the default model, i.e., the default settings for the options in the prep_run_slm.sh
+# 
+# the options included here are only the ones that are modified compared to the current default prep_run_slm.sh 
+# 
+
+
+sb_model_scheme="simple_1d"     # simple_0d simple_1d jsm 
+flag_sb_prescribe_po4="F"       # set po4solute to a constant value
+
+biomass_alloc_scheme="dynamic"    # fixed dynamic optimal
+leaf_stoichom_scheme="dynamic"    # fixed dynamic optimal
+
+soil_depth=9.5                  # meter (5.7 to 9.5)
+nsoil_layer=15                   # number of soil layers (default for SLM land: 5 | for SLM soil only available forcing: 15 | generally: min 5 & max 20)
+
+useSiteSpecificAWC="T"          # T (True) or F (False) [large caps] -> set "T" to use AWC as in site-list file (soil_awc_prescribe is used otherwise)
+flag_read_dC13="T"              # either use forcing dC13 or the prescribed default value
+flag_read_DC14="T"              # either use forcing DC14 or the prescribed default value
+n_deposition_scheme="dynamic"      # options: none constant dynamic (nhx_srf_down & noy_srf_down)
+p_deposition_scheme="dynamic"      # options: none constant dynamic (p_srf_down)

@@ -1,0 +1,499 @@
+\chapter{Vegetation}\label{ch:veg}
+
+The vegetation is represented by a range of structural pools (leaves, sapwood, heartwood, coarse roots, fine roots, and fruits), a fast overturning, respiring non-structural hydrocarbon pool (labile), as well as a seasonal, non-respiring, and non-structural hydrocarbon storage pool (reserve). Each of these pools contains carbon (C), nitrogen (N) and phosphorus (P), as well as (in the isotope enabled version) \chem{^{13}C}, \chem{^{14}C}, and \chem{^{15}N}. The unit of the pools is \unit{mol X m^{-2}}, where $X$ represents any of these elements. Note that for numerical precision, \chem{^{14}C} is stored as \unit{picomol X m^{-2}} 
+ 
+Tree vegetation types are furthermore characterised by their height (m), diameter (m), and stand density (\unit{m^{-2}}). 
+
+\section{Growth}
+
+\subsection{Labile Pool Dynamics}
+
+Growth in SLM is driven by source processes (GPP, nutrient uptake), and the potential of the plant to create sinks (new biomass tissue, respiration, exudation). The growth of a plant is dependent on the partitioning of its labile resource to new tissue growth, storage, as well as -- in the case of carbon and its isotopes -- respiration for maintenance and resource uptake (subroutine \texttt{mo\_veg\_growth:calc\_partitioning}): 
+
+\begin{subequations}
+\begin{align}
+\frac{dC_{labile}}{dt} &= GPP + \Delta S_C - R_m - R_r - (1 + f_{resp,growth}) \times G_C \\
+\frac{dN_{labile}}{dt} &= U_{root,N} + U_{fix} + \Delta S_N  - G_N  \\
+\frac{dP_{labile}}{dt} &= U_{root,P} + \Delta S_P - G_P 
+\end{align} 
+\end{subequations}
+  
+where $GPP$ is gross assimilation (Chapt. \ref{ch:assimi}), $R_m$ is maintenance respiration  (Sect. \ref{sec:veg:MaintResp}), $R_r$ is resource uptake respiration (Sect. \ref{sec:ResUptake}), $\Delta S_X$ is the net exchange between the labile and reserve pool (Sect. \ref{sec:Reserve}), $f_{resp,growth}$ is the constant fraction of respiration associated with growth, $G_X$ are the growth rates to build new tissues (Sect. \ref{sec:GrowthRate}), and $U_{root,X}$ and $U_{fix}$ are root uptake and fixation, respectively (Sect. \ref{sec:ResUptake}). Isotopes of C and N follow their main isotope, assuming that tissue construction, storage formation and respiration do not fractionate \cite{Bruggemann:2011co}.  
+
+\subsection{Growth Rate}\label{sec:GrowthRate}
+
+The potential, source-limited growth rate is given by the product of the maximum turnover rate of the labile pool ($1/\tau_{labile}$) and the labile pool size ($X_{labile}$). Three sink limitation processes operate, which control the down-regulation of this potential growth rate to the actual growth rates ($G_X$): 
+
+\begin{itemize}
+\item the temperature and moisture sensitivity of the meristem; 
+\item the requirement for maintenance respiration, which takes priority over new growth; and 
+\item the co-limitation of growth by the nutrients required to grow specific pools. 
+\end{itemize}
+
+Meristem control is represented by a reduction of the maximum turnover rate at low temperatures and low soil moisture conditions (function \texttt{mo\_veg\_growth:meristem\_activity}).
+
+\begin{equation}
+k^{*}_{labile} = \frac{1}{\tau_{labile}} \times e^{-(\lambda^{labile}_{temp}*T)^{k^{labile}_{temp}}} \times e^{-(\lambda^{labile}_{\Theta}*\Theta)^{k^{labile}_{\Theta}}}\label{eq:veg:k0_lab}
+\end{equation}
+
+where $T$ is air temperature in degrees Celsius, $\Theta$ is the fractional soil moisture content, and the $\lambda$ and $k$ are parameters (see Table \ref{TabVegParam}). $k^{*}_{labile}$ is set to zero outside the growing season (see Sect. \ref{veg:sec:phen}).
+
+Respiration is assumed to have priority over growth (subroutine \texttt{mo\_veg\_growth:calc\_partitioning}). However, under severe C deficit, the meristem activity also down-regulates maintenance and resource uptake respiration (see Sect. \ref{sec:veg:MaintResp}). To ensure that carbon growth ($G_C$) does not exceed the size of the labile carbon pool, the turnover rate of the labile pool to growth is corrected by the current respiration rate, and constrained to positive solutions:
+
+\begin{equation}\label{eq:growth_c}
+G^{*}_C = k^{*}_{labile} \times C_{labile} \times dt - R_m - R_r; G_C \ge 0
+\end{equation}
+
+Given $G^{*}_C$, and the stoichiometric requirements for biomass growth ($req^{growth}_{NC}$, and $req^{growth}_{PN}$, respectively) 
+
+\begin{equation}
+req^{growth}_{XY} = \sum^{pools}_{i}{f^{i}_{alloc} \times \frac{X_i}{Y_i}}
+\end{equation}
+
+where $f^{i}_{alloc}$ are the allocation fractions (Sect. \ref{sec:Allocation}), and $\frac{X_i}{Y_i}$ are the target stoichiometries of C:N:P (Sect. \ref{sec:Stoichem}) of the leaf, fine root, coarse root, sapwood, and fruits pools, respectively, the actual growth rate can be calculated as
+
+\begin{subequations}\label{eq:growth_rate}
+\begin{align}
+G_P &= req^{growth}_{NP} \times G_N = req^{growth}_{PN} \times req^{growth}_{NC} \times G_C \label{eq:growth_rate_x} \\
+&G_C \le G^{*}_C \\
+&G_N \le \frac{1}{\tau_{labile}} \times N_{labile} \times dt \\
+&G_P \le \frac{1}{\tau_{labile}} \times P_{labile} \times dt,
+\end{align} 
+\end{subequations}
+
+and only the minimum of the three rates in eq. \ref{eq:growth_rate_x} can actually be realised. The other two growth rates are adjusted, implying a relative accumulation of these elements in the labile pool. The use of $\frac{1}{\tau_{labile}}$ for the growth rate of nutrients compared to carbon implies a stronger mobilisation capacity for nutrients than for carbon growth. The assumption behind this is that the temperature and moisture control of the meristem is already accounted for by $G_C$, and that plant is able to mobilise the required nutrients from the labile pool to support this growth.
+
+\subsection{Non-structural pool dynamics}\label{sec:Reserve}
+
+The flow of compounds between the labile and reserve pools is described by a set of pull and push mechanisms attempting to simulate the signalling related to the beginning of the growing season (phenological pull, $\Phi_{phen}$), the need for maintenance (maintenance pull, $\Phi_{maint}$), as well as the safe-guarding behaviour to provide resources for the next growing season (reserve push, $\Phi_{reserve}$). These pulls and pushes are calculated relative to target sizes of the leaf, labile, and reserve pools ($X^{target}_{leaf}$, $X^{target}_{labile}$, $X^{target}_{reserve}$, respectively). 
+
+The target leaf carbon pool ($C^{target}_{leaf}$) is determined by the current allometry, and corresponds to the leaf area index implied by current sapwood area (see Sect. \ref{sec:Allocation}).
+
+The target labile carbon pool size buffers short term fluctuations in GPP, and is assumed to correspond to the maximum of the cumulated $GPP$ or $R_m$ over the turnover time of the labile pool, while the target of the labile nitrogen and phosphorus pool corresponds to the average stoichiometric growth requirement over the turnover time of the labile pool:
+
+\begin{subequations}
+\begin{align}
+C^{target}_{labile} &= max(\int_{t=-{\tau^{0}_{labile}}}^{t=0} GPP \times dt, \int_{t=-{\tau^{0}_{labile}}}^{t=0} R_m\times dt) \\
+N^{target}_{labile} &= req^{growth}_{NC} \times C^{target}_{labile}  \\
+P^{target}_{labile} &= req^{growth}_{PN} \times N^{target}_{labile} 
+\end{align} 
+\end{subequations}
+
+The target reserve carbon pool size corresponds to the C required to build one year's worth of leaves and fine roots, within the limits of the maximum storage capacity ($f_{store,max}$) of the C storing plant organs (leaves, fine roots and sap wood), i.e. 
+
+\begin{equation}
+C^{target}_{reserve} = min(C^{target}_{leaf} \times ( min(1,\frac{1}{\tau_{leaf}}) + \frac{1}{\tau_{fine\_root} * k_{ltor}} )  \times (1+f_{resp,growth}), \sum_{i=l,f,s} f_{store,max,i} * C_{i})
+\end{equation}
+
+where $k_{ltor}$ is the leaf to fine root ratio (see eq. \ref{kltor})  The N and P target pools are defined accordingly, respecting the current stoichiometries of leaves and fine roots (Sect. \ref{sec:Stoichem}).
+ 
+The net exchange of between the labile and reserve pool is calculated as 
+
+\begin{subequations}
+\begin{align}
+\Delta S_X &= \frac{1}{\tau_{labile}} \times (\Phi^{X}_{maint} \times X_{reserve} - \Phi^{X}_{reserve} \times X_{labile}) \times dt; with \\
+&\Phi^{X}_{maint} = e^{-(\lambda^{\Phi}_{maint} \times \frac{X_{labile}}{X^{target}_{labile}})^{k^{\Phi}_{maint}}}, and \label{eq:veg:phimaint} \\
+&\Phi^{X}_{store} = 1 - e^{-(\lambda^{\Phi}_{store} \times \frac{X_{reserve}}{X^{target}_{reserve}})^{k^{\Phi}_{store}}}\label{eq:veg:phistore}
+\end{align}
+\end{subequations}
+
+with the notable extension that $\Phi^{C}_{reserve}$, i.e. the built up of carbon reserves, is reduced if the labile pool falls to low relative to its target, taken as a $\Phi^{C}_{maint}$ larger than $k_{phi,interact}$. Conversely, for N and P, the built up of labile nutrient from reserves ($\Phi^{X}_{maint}$) is reduced, if the reserve pool falls too low, taken as a $\Phi^{X}_{storage}$ larger than $k_{phi,interact}$. 
+
+To support leaf and fine-root growth at the beginning of the growing season, $\Delta S_X$ is further modified by the phenological pull ($\Phi^{X}_{phen}$) during the growing season.
+
+\begin{subequations}
+\begin{align}
+\Delta S_X  &= \Delta S_X + k^{*}_{labile} \times \Phi^{X}_{phen} \times X_{reserve} \times dt, with \\
+&\Phi^{X}_{phen} = e^{-(\lambda^{\Phi}_{phen} \times \frac{X_{leaf}}{X^{target}_{leaf}})^{k^{\Phi}_{phen}}}; \Phi^{N,P}_{phen} = 0 \label{eq:veg:phiphen}
+\end{align}
+\end{subequations}
+
+is only applied to the carbon pool, as the other elements follow with little delay through the maintenance pull. 
+
+Should the labile carbon pools exceed its target size strongly, or should the N and P concentration fall strongly due to a lack of nutrients to support growth, this provides a signal to the photosynthesis routine to downacclimate the activity of Rubisco and the electron-transport chain, by reducing $n1$ and $n2$ in eq. \ref{eq:jmax} and \ref{eq:vcmax}, respectively, by a factor $\beta_{sinklim}^{ps}$, defined as 
+
+\begin{equation}\label{eq:beta_sinklim_ps}
+\beta_{sinklim}^{ps} = MIN(e^{-(\lambda_{sinklim}^{ps} \times \frac{C_{labile}}{C^{target}_{labile}})^{k_{sinklim}^{ps}}}, 
+                           \frac{\frac{N_{labile}}{C_{labile}}}{\frac{N^{target}_{labile}}{k_{cnp,sinklim} \times C^{target}_{labile}}}, 
+                           \frac{\frac{P_{labile}}{N_{labile}}}{\frac{P^{target}_{labile}}{k_{cnp,sinklim} \times N^{target}_{labile}}}) 
+\end{equation}
+
+\subsection{Allocation (\texttt{mo\_veg\_growth:calc\_allocation\_fractions})}\label{sec:Allocation}
+
+The biomass partitioned to growth is first split into reproductive (fruit pool) and structural (leaves, fine and coarse roots and sap wood) growth. The latter is then further subdivided following a functional balance relationship between the structural pools \cite{Zaehle:2010cz}. 
+
+The fraction of carbon growth allocated to fruits depends on the ability of the plant to build reserves (i.e. $\Delta S_C + k3^{fruit}_{alloc} > 0$), implying that fruit growth is suppressed during phases of rapid leaf growth (beginning of the growing season), as well as periods of C starvation (e.g. severe drought). 
+
+\begin{equation}
+f^{fruit}_{alloc,C} = k1^{fruit}_{alloc} + (k2^{fruit}_{alloc} - k1^{fruit}_{alloc}) \times exp^{-(\lambda^{fruit}_{alloc}\times (\Delta S_C+k3^{fruit}_{alloc}))^{k4^{fruit}_{alloc}}} \label{eq:veg:falloc_fruit}
+\end{equation}
+
+The allocation of the remaining growth ($(1-f^{fruit}_{alloc,C}) \times G_C$) to the structural pools leaves, fine root, coarse roots, and sapwood follows a set of following allometric relationships \cite{Zaehle:2010cz}.
+
+Fine root and leaves are assumed to be in homeostatic balance requiring 
+
+\begin{equation}\label{kltor}
+C_{leaf} =  k_{ltor} \times C_{fine\_root}
+\end{equation}
+
+In grasses, halms, for simplicity called sap wood in the code, albeit non-lignified and with different turnover times, are assumed to be a constant proportion of leaf mass, and no height restrictions apply. 
+
+\begin{equation}
+C_{leaf} =  k_{ltos} \times C_{sap\_wood}
+\end{equation}
+
+In trees and shrubs, leaf and woody biomass are linked through the pipe-model hypothesis (requiring a constant ratio of leaf area, $LA$, to sapwood area, $SA$)
+
+\begin{equation}
+C_{leaf} = \frac{k_{latosa} \times C_{sap\_wood}}{sla \times wood\_density \times H} <=> LA = k_{latosa} \times SA,
+\end{equation}
+
+where $sla$ is the PFT-specific specific leaf area, and $wood\_density$ is the PFT-specific wood density. $H$ is the mean vegetation height, and calculated according to 
+
+\begin{equation}
+H = k1_{allom} \times D^{k2_{allom}},
+\end{equation}
+
+where the diameter at breast height ($D$) is determined from woody biomass, assuming that the entire trunk was a cylinder. As an extension to the pipe-model theory below-ground, coarse root biomass is assumed to be proportional to sap wood mass. 
+
+\begin{equation}
+C_{coarse\_root} = k_{ctos} \times C_{sap\_wood}
+\end{equation}
+
+This scheme does account for the seasonal shifts in allocation linked to green-up and brown-down of deciduous vegetation. It does not account for time-varying changes in the allocation fractions due to water and nutrient constraints. See Chapt. \ref{ch:optimality} for an extension of the allocation scheme to account for changes in the allocation patters due to nutrient or water constraints. 
+
+\subsection{CanopyNAllocation}\label{sec:veg:foliar_N_fractions}\label{sec:veg:canopy}
+
+\subsection{Stoichiometry (\texttt{mo\_veg\_growth:calc\_stoichiometry})}\label{sec:Stoichem}
+
+Stoichiometry of leaves is currently prescribed to a PFT-specific value. The C:N:P ratios of the other pools are calculated based on their relative distance to leaves. See Chapt. \ref{ch:optimality} for an extension of the stoichiometry scheme to account for changes in the stoichiometry patters due to nutrient or water constraints. 
+
+Note: For comparison purposes, it would be desirable to mimick OCN-style flexibility?
+\subsection{Maintenance Respiration}\label{sec:veg:MaintResp}
+
+\section{Nutrient Uptake}\label{sec:ResUptake}
+
+\section{Turnover (\texttt{mo\_veg\_turnover})}\label{veg:sec:turnover}
+
+Turnover is considered at two levels: i) the breakdown of enzymes (nitrogen) and associated RNA (phosphorous) from tissue, and their ensuing replacement from the labile pool (recycling); and ii) the senescence of entire tissues and their conversion to litter, including the resorption of nutrients from foliage. 
+
+The breakdown of leaf and fine-root nutrients occurs at the time-scale of $\tau_{{nutrient}\_{recycling}}$. The freed nutrients enter the labile pool and are replaced by new nutrients of the labile pool according to the current target C:N:P of the respective pool. 
+
+\begin{equation}
+\frac{X_{pool}}{dt} = (Y_{pool} \frac{X_{pool}^{target}}{Y_{pool}^{target}} - X_{pool}) \times 1/\tau_{{nutrient}\_{recycling}},
+\end{equation}
+
+where $X$ is either nitrogen or phosphorus, and $Y$ carbon or nitrogen, respectively. The flux from the labile pool is limited by the turnover rate and size of the labile pool to ascertain that the latter cannot be exhausted.  
+
+The turnover time of most tissue types (fine and coarse roots, sap wood, and fruits) is assumed constant for each PFT ($\tau_{fine\_root}$, $\tau_{coarse\_root}$, $\tau_{sap\_wood}$, and $\tau_{fruit}$, respectively). While roots and fruits turn directly into litter, only a small fraction of sap wood is turned to litter, assuming it is lost as branches ($\tau_{branches}$), whereas the predominant fraction of sap-wood turns into non-respiring heartwood at the timescale of $\tau_{sap\_wood}$. In evergreen trees, foliar turnover to litter is assumed to be constant ($\tau_{leaves}$). The turnover of leaves in deciduous species (and grasses) is determined by the phenology. During the growing season, only minor turnover happens ($\tau_{leaves}$), but once the growing season has ended, foliar turnover is set to a high constant value ($max\_{leaf}\_{shedding}\_{rate}$), until the LAI reaches a minimum value ($LAI_{min}$), beyond which all leaves are shed. 
+
+Only nutrients of tissues prepared for senescence are assumed to retranslocate nutrients. Therefore, only foliage turnover and heartwood formation in the canopy are assumed to be resorbed at a constant rate of $k_{resorb}^{X}$, which are returned to the labile pool.
+
+\begin{subequations}
+\begin{align}
+&fLitter_{pool} = \frac{1}{\tau_{pool}} \times (1-k_{resorb}^{X}) \times X_{pool} \times dt, and \\
+&fRetrans_{pool} = \frac{1}{\tau_{pool}} \times k_{resorb}^{X} \times X_{pool} \times dt,
+\end{align}
+\end{subequations}
+
+where $fLitter_{pool}$ is the litter fall from any one pool, and $fRetrans_{pool}$ the retranslocated flux into the labile pool.
+
+\section{Vegetation Dynamics}
+
+Within each tile, vegetation is represented by an average individual representation of the PFT. For a tree or shrub, this average individual is described by its height, diameter and individual density ($dens_{ind}$), whereas grasses do not have these attributes. The module \texttt{mo\_veg\_dynamics} describes the within-tile vegetation dynamics through density dependent establishment and mortality, as well as a dynamic background mortality related to the overall health of the plant (the latter is not yet implemented). The module has the option to be switched off with the flag \texttt{flag\_tile\_veg\_dynamics}, in which case a prescribed background mortality is used to estimate litter fall from mortality.  
+
+\subsection{Mortality}
+
+Background mortality $f_{mort,background}$ is currently treated as a PFT-specific constant. 
+
+Self-thinning mortality considers the fact that even though the model only considers an average individual, this population will be composed of smaller and larger individuals. Self-thinning therefore considers the efficiency of growth for those individuals at the bottom of the canopy by looking at the lowest canopy layer net carbon gain ($C_{gain,boc}$) defined as 
+
+\begin{equation}
+C_{gain,boc} = A_{n,boc} -  \frac{(1 + f_{resp,growth})}{sla} * \frac{1}{\tau_{leaf}} 
+\end{equation}
+ 
+ where $A_{n,boc}$ is the running average of net photosynthesis of the lowest layer, and the remainder described the annual construction costs for this layer. $C_{gain,boc}$ is turned into an annual mortality rate using a Weibull function
+ 
+\begin{equation}
+f_{mort.thinning} = 1 - exp^{-(\lambda_{mort,light}*C_{gain,boc} )^{k_{mort,light}}}
+\end{equation}
+
+Total mortality is then simply the sum of the two terms.
+
+\begin{equation}
+f_{mort} =  f_{mort,background} + f_{mort.thinning}
+\end{equation}
+
+Litter fall from vegetation dynamics is then the product of the current pool size and $f_mort$. For trees, the appropriate number of individuals are also removed. This does not affect the size of trees, as woody biomass and individuum density are modified proportionally.
+
+ \subsection{Establishment}
+ 
+The establishment of a PFT is dependent on the size of the seed bed and the average seed bed turnover time ($\tau_{seed,est}$), which are modified by light, weekly temperature and top-soil moisture conditions at the forest floor using Weibull functions. Light limitation of establishment is calculated from the Red:Farred ratio at the forest floor, which is calculated from \cite{Kull:1998cr} as
+ 
+ \begin{equation}
+rfr_{ratio} = rfr_{ratio,toc} * exp ^{k_{r2fr_ch} * chlorophyll_{canopy}} 
+\end{equation}
+   
+where $rfr_{ratio,toc}$ is the average Red:FarRed ratio of ambient light (1.2), and $chlorophyll_{canopy}$ is the total canopy chlorophyll content (mmol N m-2).  
+  
+The actual, annual establishment flux is then
+
+\begin{equation}
+flux_{est} = flim_{light} * flim_{temp} * flim_{moist} * \frac{1}{\tau_{seed,est}} * seed\_bed
+\end{equation}
+  
+from with the number of new individuals can be calculated using a PFT-specific seed size:
+
+\begin{equation}
+ind_{est} = flux_{est} / seed\_size
+\end{equation}
+
+
+% ----------------------- TABLES with PARAMETERS ----------------------- %
+
+%\newpage
+\begin{sidewaystable}
+\section{Parameters}\label{TabVegParam}
+
+%\resizebox{\textwidth}{!}{  % to resize table to fit the page, needs \usepackage{graphicx}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline 
+
+\multicolumn{6}{l}{\bf Respiration parameters}\\
+\hline
+• & growth respiration per unit new biomass & \texttt{fresp\_growth} & $mol^{-1}$ & • & 0.25 & needed \\ 
+• & N-specific maintenance respiration rate for roots and leaves & \texttt{fmaint\_rate\_base} & $\mu$mol CO2/ mmol N/ s & • & 1.0 & Sprugel et al. \\ 
+• & N-specific maintenance respiration rate for wood & \texttt{fmaint\_rate\_wood} & $\mu$mol CO2/ mmol N/ s & • & \texttt{fmaint\_rate\_base} * 0.25 & Sprugel et al. \\ 
+• & Coefficient in the eq. for temperature sensitivity of foliar respiration & \texttt{t\_maint\_k1} & • & • & 308.56 & Lloyd \& Taylor 1996 \\ 
+• & Coefficient in the eq. for temperature sensitivity of foliar respiration & \texttt{t\_maint\_k2} & • & • & 56.02 & Lloyd \& Taylor 1996 \\ 
+• & Coefficient in the eq. for temperature sensitivity of foliar respiration & \texttt{t\_maint\_k3} & • & • & 227.13 & Lloyd \& Taylor 1996 \\ 
+• & respiration temperature acclimation factor & \texttt{f\_resp\_acclim} & • & • & -0.008 & Lloyd \& Taylor 1996 \\
+• & base temperature for respiration acclimation & \texttt{t\_acclim\_zero} & K & • & 283.15 & Lloyd \& Taylor 1996 \\
+%• & • & \texttt{•} & • & • & • & • \\
+\hline
+\end{tabularx}
+%}  % end \resizebox
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline
+
+\multicolumn{6}{l}{\bf Parameters describing the PS $\sim$ An relationship (describing photosynthetic activity)}\\
+\hline
+• & fraction of N in PEP and PPKD (C3 plants only) & \texttt{k0\_fn\_pepc\_C3} & • & • & 0.0 & • \\ 
+• & fraction of N in PEP and PPKD (C4 plants only) & \texttt{k0\_fn\_pepc\_C4} & • & • & 0.045 & Makino et al. 2003, Tazoe et al. 2006 \\ 
+• & ratio of Jmax25/Vcmax25 for prescribed leaf N (C3 plants) & \texttt{jmax2vcmax\_C3} & • & • & 1.92 & text book \\ 
+• & ratio of Jmax25/Vcmax25 for prescribed leaf N (C4 plants) & \texttt{jmax2vcmax\_C4} & • & • & 1.4 & calibrated to Jmax=vcmax at 25 degC \\
+%• & • & \texttt{•} & • & • & • & • \\
+\hline
+\end{tabularx}
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline 
+
+\multicolumn{6}{l}{\bf Labile pool parameters}\\
+\hline
+$\tau_{labile}$ & turnover time of the labile carbo-hydrates & \texttt{tau\_labile} & days & • & 5 & • \\ 
+$\lambda^{labile}_{temp}$ & lambda in temperature response function of labile pool & \texttt{lambda\_labile\_temp} & • & \ref{eq:veg:k0_lab} & 0.5 & • \\ 
+$k^{labile}_{temp}$ & k in temperature response function of labile pool & \texttt{k\_labile\_temp} & • & \ref{eq:veg:k0_lab} & 2.0 & • \\ 
+$\lambda^{labile}_{\theta}$ & lambda in moisture response function of labile pool & \texttt{lambda\_labile\_theta} & • & \ref{eq:veg:k0_lab} & 10.0 & • \\ 
+$k^{labile}_{\theta}$ & k in moisture response function of labile pool & \texttt{k\_labile\_theta} & • & \ref{eq:veg:k0_lab} & 2.0 & • \\ 
+$\lambda^{\Phi}_{phen}$ & lambda in storage response function to phenology & \texttt{lambda\_phiphen} & • & \ref{eq:veg:phiphen} & 1.3 & • \\ 
+$k^{\Phi}_{phen}$ & k in storage response function to phenology & \texttt{k\_phiphen} & • & \ref{eq:veg:phiphen} & 8.0 & • \\ 
+$\lambda^{\Phi}_{maint}$ & lambda in storage response function to maintenance needs & \texttt{lambda\_phimaint} & • & \ref{eq:veg:phimaint} & 4.0 & • \\ 
+$k^{\Phi}_{maint}$ & k in storage response function to maintenance needs & \texttt{k\_phimaint} & • & \ref{eq:veg:phimaint} & 1.2 & • \\ 
+• & • & \texttt{lambda\_phimaint\_nut} & • & • & 1.6 & • \\ 
+• & • & \texttt{k\_phimaint\_nut} & • & • & 3.0 & • \\ 
+$\lambda^{\Phi}_{store}$ & lambda in storage response function to storage size & \texttt{lambda\_phistore} & • & \ref{eq:veg:phistore} & 2.0 & • \\ 
+$k^{\Phi}_{store}$ & k in storage response function to storage size & \texttt{k\_phistore} & & \ref{eq:veg:phistore} & 3.0 & • \\ 
+• & rate at which nutrients can retrieved quicker for growth than carbon & \texttt{knut\_labile} & • & • & 1.2 & • \\
+• & lambda in photosynthesis response function to labile pool size & \texttt{lambda\_sinklim\_ps} & • & • & 0.1 & • \\
+• & k in photosynthesis response function to labile pool size & \texttt{k\_sinklim\_ps} & • & • & 2.0 & • \\
+• & scaling factor to limit PS if labile CNP becomes too wide & \texttt{k\_cnp\_sinklim\_ps} & • & • & 4.0 & • \\
+• & maximum downacclimation of photosynthetic capacity due to sink limitation & \texttt{beta\_sinklim\_ps\_min} & • & • & 0.25 & • \\
+• & maximum reserve storage in leaves relative to leaf mass & \texttt{fstore\_leaf\_max} & • & • & 0.02 & • \\
+• & maximum reserve storage in fine roots relative to fine root mass & \texttt{fstore\_fine\_root\_max} & • & • & 0.2 & • \\
+• & maximum reserve storage in sap wood relative to sap wood mass & \texttt{fstore\_sap\_wood\_max} & • & • & 0.15 & • \\
+• & value of reserve pull phi\_X at which the inverse reserve pull phi\_Y is reduced & \texttt{k\_phi\_interact} & • & • & 0.75 & • \\
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline 
+
+\multicolumn{6}{l}{\bf Resorption parameters}\\
+\hline
+$k_{resorb}^{leaf}$ & default fraction of nutrient resorption before leaf shedding & \texttt{resorp\_fract\_leaf} & • & • & 0.5 & • \\ 
+$k_{resorb}^{wood}$ & default fraction of nutrient resorption before wood death & \texttt{resorp\_fract\_wood} & • & • & 0.2 & • \\ 
+$\chi_{root}^{C:N}$ & relative C:N of fine roots compared to leaves & \texttt{root2leaf\_cn} & • & • & 0.85 & \cite{Zaehle:2010cz} \\ 
+$\chi_{wood}^{C:N}$ & relative C:N of woody biomass compared to leaves & \texttt{wood2leaf\_cn} & • & • & 0.145 & \cite{Zaehle:2010cz} \\ 
+$\chi_{root}^{N:P}$ & relative N:P of fine roots compared to leaves & \texttt{root2leaf\_np} & • & • & 1.0 & • \\ 
+$\chi_{wood}^{N:P}$ & relative N:P of woody biomass compared to leaves & \texttt{wood2leaf\_np} & • & • & 1.0 & • \\ 
+• & time scale of enzyme, RNA etc., turnover (i.e. return to labile pool) & \texttt{tau\_nutrient\_recycling} & days & • & 10.0 & • \\
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline 
+
+\multicolumn{6}{l}{\bf Parameters concerning N uptake calculations (part 1/2)}\\
+\hline
+• & fraction of maximum labile nitrogen concentration at which uptake is reduced to 50\% & \texttt{kappa\_f\_demand\_nc} & • & • & 0.75 & • \\
+• & fraction of maximum labile phosphorus  concentration at which uptake is reduced to 50\% & \texttt{kappa\_f\_demand\_pn} & • & • & 0.9 & • \\
+• & k in nutrient uptake response funktion to labile nutrient concentration & \texttt{k\_f\_demand} & • & • & 2.0 & • \\
+• & maximum cost of N fixation at low and high temperatures & \texttt{cost\_n\_fixation\_max} & mol C $mol^{-1}$ N & • & 20.40812 & • \\
+• & mimumum cost of N fixation at 25 degC & \texttt{cost\_n\_fixation\_min} & mol C $mol^{-1}$ N & • & 9.329426 & • \\
+• & factor in temperature response function of nitrogenase activity & \texttt{k1\_temp\_bnf} & • & • & 1.25 & • \\
+• & factor in temperature response function of nitrogenase activity & \texttt{k2\_temp\_bnf} & • & • & -3.62 & • \\
+• & factor in temperature response function of nitrogenase activity & \texttt{k3\_temp\_bnf} & • & • & 0.27 & • \\
+• & factor in temperature response function of nitrogenase activity & \texttt{k4\_temp\_bnf} & • & • & 50.3 & • \\
+• & N transformation costs of converting NH4 to organic N & \texttt{transform\_cost\_nh4} & mol C $mol^{-1}$ N & • & 1.982503 & • \\
+• & N transformation costs of converting NO3 to organic N & \texttt{transform\_cost\_no3} & mol C $mol^{-1}$ N & • & 2.68221 & • \\
+• & N transformation costs of converting organic N to organic N & \texttt{transform\_cost\_org} & mol C $mol^{-1}$ N & • & 1.166178 & • \\
+%• & • & \texttt{•} & • & • & • & • \\
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|X|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline 
+
+\multicolumn{6}{l}{\bf Parameters concerning N uptake calculations (part 2/2)}\\
+\hline
+• & fraction of NO3 uptake based on transformation costs & \texttt{f\_nacq\_no3} & • & • & 0.575 & • \\
+• & fraction of NH4 uptake based on transformation costs & \texttt{f\_nacq\_nh4} & • & • & 0.425 & • \\
+• & maximum rate of N fixation & \texttt{vmax\_bnf} & $\mu$mol N $mol^{-1}$ C fine root $s^{-1}$ & • & 0.003059011 & • \\
+• & half\_saturating cost of the response of N & \texttt{k\_bnf} & mol C $mol^{-1}$ N & • & 58.30891 & • \\
+• & factor for BNF response in resistance approach & \texttt{offset\_bnf} & mol C $mol^{-1}$ N & • & 14.30901 & • \\
+• & fractionation of N15 due to N fixation & \texttt{eta\_nfixation} & per mill & • & 3.0 & Robinson, Tree 2001 \\
+%• & • & \texttt{•} & • & • & • & • \\
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline 
+
+\multicolumn{6}{l}{\bf Parameters to describe the varying fraction of N in chlorophyll through the canopy}\\
+\hline
+• & describe the varying fraction of N in chlorophyll through the canopy ?? & \texttt{k0\_fn\_chl\_C3} & • & • & 6.0 & • \\  
+• & describe the varying fraction of N in chlorophyll through the canopy ?? & \texttt{k0\_fn\_chl\_C4} & • & • & 15.0 & • \\    
+• & describe the varying fraction of N in chlorophyll through the canopy ?? & \texttt{k1\_fn\_chl\_C3} & • & • & 3.6 & • \\  
+• & describe the varying fraction of N in chlorophyll through the canopy ?? & \texttt{k1\_fn\_chl\_C4} & • & • & 4.4 & • \\    
+• & describe the varying fraction of N in chlorophyll through the canopy ?? & \texttt{kfn\_chl} & • & • & 0.7 & • \\  
+\hline 
+
+\multicolumn{6}{l}{\bf Parameters used for phenology calculations}\\
+\hline
+• & minimum LAI beyond which all leaves are shed & \texttt{min\_lai} & • & • & 0.1 & • \\    
+• & maximum LAI target for reserve use calculations & \texttt{target\_lai\_max} & • & • & 5.0 & • \\  
+• & maximum rate of leaf shedding & \texttt{max\_leaf\_shedding\_rate} & days & • & 0.05 & • \\  
+• & scaling coefficient for leaf on in the canopy model & \texttt{k\_leafon\_canopy} & • & • & 0.1 & • \\
+%• & • & \texttt{•} & • & • & • & • \\
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline 
+
+\multicolumn{6}{l}{\bf Vegetation dynamics}\\
+\hline
+• & background mortality rate of trees in static mortality case & \texttt{background\_mort\_rate\_tree} & • & • & 0.01 & • \\  
+• & background mortality rate of grasses in static mortality case & \texttt{background\_mort\_rate\_grass} & • & • & 0.05 & • \\
+• & controlling self-thinning mortality & \texttt{lambda\_mort\_light} & • & • & 0.15 & • \\
+• & controlling self-thinning mortality & \texttt{k\_mort\_light} & • & • & 4.0 & • \\
+• & controlling temperature-limited establishment & \texttt{lambda\_est\_temp} & • & • & 0.075 & • \\
+• & controlling temperature-limited establishment & \texttt{k\_est\_temp} & • & • & 4.0 & • \\
+• & controlling moisture-limited establishment & \texttt{lambda\_est\_moist} & • & • & 10.0 & • \\
+• & controlling moisture-limited establishment & \texttt{k\_est\_moist} & • & • & 2.0 & • \\
+• & fraction of wood removed from site after harvesting & \texttt{wood\_extraction\_rate} & • & • & 0.8 & • \\
+• & minimum growth efficiency & \texttt{min\_greff} & mol C/ $m^2$ (LAI)/ yr & • & 1.0 & • \\
+• & asymptotic growth efficiency mortality rate & \texttt{k1\_mort\_greff} & 1/ year & • & 0.05 & • \\
+• & scaling coefficient & \texttt{k2\_mort\_greff} & • & • & 0.3 & • \\
+• & scaling coefficient in growth efficiency mortality below minimum growth efficiency & \texttt{k3\_mort\_greff} & • & • & 25.0 & • \\
+• & maximum crown area & \texttt{max\_crown\_area} & $m^2$ & • & 15.0 & • \\
+• & minimum diameter for crown area calculation & \texttt{min\_diameter} & m & • & 0.01 & • \\
+• & scaling parameter in crownarea to diameter relationship & \texttt{k\_crown\_area} & • & • & 100.0 & • \\
+• & scaling exponent in crownarea to diameter relationship & \texttt{k\_rp} & • & • & 1.6 & • \\
+• & • & \texttt{k\_fpc} & • & • & 0.5 & • \\
+• & maximum foliage projective cover & \texttt{fpc\_max} & • & • & 0.95 & • \\
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+
+\begin{sidewaystable}
+\begin{tabularx}{\linewidth}{|c|X|l|l|c|l|c|} % textwidth  
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline 
+
+\multicolumn{6}{l}{\bf Other parameters}\\
+\hline
+• & carbon mass per unit dry weight of leaves & \texttt{carbon\_per\_dryweight\_leaf} & g C/ g DW & • & 0.48 & • \\    
+• & minimum permissable height of an individual & \texttt{min\_height} & • & • & 0.1 & • \\  
+• & stem mass to leaf mass ratio of grasses & \texttt{sm2lm\_grass} & • & • & 0.05 & • \\
+• & parameter in the Weibull function controlling fruit growth & \texttt{lambda\_fruit\_alloc} & • & • & 10.0 & • \\
+• & parameter in the Weibull function controlling fruit growth & \texttt{k4\_fruit\_alloc} & • & • & 2.0 & • \\
+• & parameter in the Weibull function controlling fruit growth & \texttt{k3\_fruit\_alloc} & $\sim\mu$mol C/ $m^2$/ s & • & 0.1 & • \\
+• & minimum fraction of allocation going to fruit (flowers etc.) & \texttt{k1\_fruit\_alloc} & • & • & 0.01 & • \\
+• & value of the root water limitation below which root allocation starts responding & \texttt{w\_root\_lim\_max} & • & • & 0.8 & • \\
+• & minimum leaf to root ratio for dynamic allocation & \texttt{leaf2root\_min\_ratio} & • & • & 0.2 & • \\
+• & maximum leaf to root ratio for dynamic allocation & \texttt{leaf2root\_max\_ratio} & • & • & 15.0 & • \\
+\hline 
+Symbol & Parameter long name & Name in code & Unit & Equation & Value & Citation \\ 
+\hline 
+\multicolumn{6}{l}{\bf Parameters for changes in canopy N fractions}\\
+\hline
+ • & maximum fractional change for optimal adjustment of photosynthetic N fraction & \texttt{delta\_n\_fraction} & • & • & 0.048 & • \\ 
+ • & maximum fractional change for optimal adjustment of canopy N allocation & \texttt{delta\_n\_leaf} & • & • & 0.0048 & • \\ 
+\hline 
+\end{tabularx}
+\end{sidewaystable}
+
+
+
+\pagebreak
+
+\newpage
+% PARAMETER LIST - End %
+
+
+
+
+

@@ -1,0 +1,210 @@
+##    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
+##    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+##    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
+##
+##    This file is part of the QUINCY model.
+##    The QUINCY model is free software: you can redistribute it and/or modify
+##    it under the terms of the GNU General Public License version 3,
+##    as published by the Free Software Foundation.
+##
+##    The QUINCY model is distributed in the hope that it will be useful,
+##    but WITHOUT ANY WARRANTY; without even the implied warranty of
+##    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+##    GNU General Public License for more details.
+##
+##    You should have received a copy of the GNU General Public License
+##    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
+
+mo_sb_interface.o: \
+  mo_kind.o \
+  mo_jsb_control.o \
+  mo_exception.o \
+  mo_jsb_class.o \
+  mo_jsb_model_class.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
+  mo_jsb_process_class.o \
+  mo_sb_util.o \
+  mo_sb_rate_modifier.o \
+  mo_sb_simple_model.o \
+  mo_sb_jsm_main.o \
+  mo_sb_update_pools.o \
+  mo_sb_config_class.o \
+  mo_sb_memory_class.o
+
+mo_sb_constants.o: \
+  mo_kind.o \
+  mo_jsb_math_constants.o \
+  mo_jsb_phys_constants.o
+
+mo_sb_litter_processes.o: \
+  mo_kind.o \
+  mo_jsb_math_constants.o \
+  mo_sb_constants.o \
+  mo_sb_memory_class.o \
+  mo_veg_constants.o \
+  mo_veg_memory_class.o
+
+mo_sb_memory_class.o: \
+  mo_kind.o \
+  mo_exception.o \
+  mo_jsb_io.o \
+  mo_jsb_grid.o \
+  mo_jsb_grid_class.o \
+  mo_jsb_model_class.o \
+  mo_jsb_class.o \
+  mo_jsb_memory_class.o \
+  mo_jsb_var_class.o \
+  mo_slm_varlist.o
+
+mo_sb_config_class.o: \
+  mo_kind.o \
+  mo_namelist.o \
+  mo_exception.o \
+  mo_io_units.o \
+  mo_jsb_config_class.o
+
+mo_sb_init.o: \
+  mo_kind.o \
+  mo_jsb_control.o \
+  mo_exception.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
+  mo_jsb_model_class.o \
+  mo_jsb_class.o \
+  mo_jsb_lctlib_class.o \
+  mo_jsb_process_class.o \
+  mo_jsb_grid_class.o \
+  mo_jsb_grid.o \
+  mo_isotope_util.o \
+  mo_jsb_phys_constants.o \
+  mo_jsb_math_constants.o \
+  mo_assimi_constants.o \
+  mo_assimi_update_canopy_fluxes.o \
+  mo_sb_constants.o \
+  mo_sb_config_class.o \
+  mo_sb_jsm_processes.o \
+  mo_sb_jsm_transport.o \
+  mo_sb_memory_class.o \
+  mo_veg_memory_class.o
+
+mo_sb_jsm_main.o: \
+  mo_kind.o \
+  mo_jsb_control.o \
+  mo_exception.o \
+  mo_jsb_class.o \
+  mo_jsb_process_class.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
+  mo_jsb_model_class.o \
+  mo_jsb_lctlib_class.o \
+  mo_jsb_grid_class.o \
+  mo_jsb_grid.o \
+  mo_jsb_math_constants.o \
+  mo_isotope_util.o \
+  mo_sb_constants.o \
+  mo_sb_config_class.o \
+  mo_sb_litter_processes.o \
+  mo_sb_jsm_processes.o \
+  mo_sb_jsm_transport.o \
+  mo_veg_memory_class.o \
+  mo_sse_memory_class.o \
+  mo_sb_memory_class.o
+
+mo_sb_update_pools.o: \
+  mo_kind.o \
+  mo_jsb_control.o \
+  mo_exception.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
+  mo_jsb_model_class.o \
+  mo_jsb_class.o \
+  mo_jsb_lctlib_class.o \
+  mo_jsb_process_class.o \
+  mo_jsb_grid_class.o \
+  mo_jsb_grid.o \
+  mo_jsb_math_constants.o \
+  mo_jsb_phys_constants.o \
+  mo_isotope_util.o \
+  mo_a2l_memory_class.o \
+  mo_veg_memory_class.o \
+  mo_sse_memory_class.o \
+  mo_sb_constants.o \
+  mo_sb_config_class.o \
+  mo_sb_jsm_processes.o \
+  mo_sb_memory_class.o 
+
+mo_sb_rate_modifier.o: \
+  mo_kind.o \
+  mo_jsb_control.o \
+  mo_exception.o \
+  mo_jsb_class.o \
+  mo_jsb_process_class.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
+  mo_jsb_model_class.o \
+  mo_jsb_lctlib_class.o \
+  mo_jsb_math_constants.o \
+  mo_jsb_phys_constants.o \
+  mo_sse_memory_class.o \
+  mo_sb_memory_class.o \
+  mo_sb_constants.o
+
+mo_sb_jsm_processes.o: \
+  mo_kind.o \
+  mo_exception.o \
+  mo_quincy_update_time_averages.o \
+  mo_jsb_math_constants.o \
+  mo_jsb_phys_constants.o \
+  mo_sb_constants.o \
+  mo_sb_config_class.o \
+  mo_sb_jsm_transport.o \
+  mo_sb_memory_class.o \
+  mo_isotope_util.o
+
+mo_sb_jsm_transport.o: \
+  mo_kind.o \
+  mo_exception.o \
+  mo_jsb_math_constants.o \
+  mo_jsb_phys_constants.o \
+  mo_sb_constants.o \
+  mo_sb_config_class.o \
+  mo_sb_memory_class.o
+
+mo_sb_simple_model.o: \
+  mo_kind.o \
+  mo_jsb_control.o \
+  mo_exception.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
+  mo_jsb_model_class.o \
+  mo_jsb_class.o \
+  mo_jsb_model_class.o \
+  mo_jsb_lctlib_class.o \
+  mo_jsb_process_class.o \
+  mo_jsb_grid_class.o \
+  mo_jsb_grid.o \
+  mo_sse_memory_class.o \
+  mo_jsb_math_constants.o \
+  mo_jsb_phys_constants.o \
+  mo_veg_constants.o \
+  mo_veg_memory_class.o \
+  mo_sb_constants.o \
+  mo_sb_litter_processes.o \
+  mo_sb_jsm_transport.o \
+  mo_sb_config_class.o \
+  mo_sb_memory_class.o \
+  mo_isotope_util.o
+
+mo_sb_util.o: \
+  mo_kind.o \
+  mo_exception.o \
+  mo_jsb_control.o \
+  mo_exception.o \
+  mo_jsb_tile_class.o \
+  mo_jsb_task_class.o \
+  mo_jsb_model_class.o \
+  mo_jsb_class.o \
+  mo_jsb_process_class.o \
+  mo_jsb_math_constants.o \
+  mo_sb_memory_class.o

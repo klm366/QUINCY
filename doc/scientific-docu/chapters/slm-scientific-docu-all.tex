@@ -1,0 +1,125 @@
+\chapter{All}\label{ch:all_base_driver}
+
+
+\section{Isotopes}\label{sec:isotopes}
+
+
+isotopes text
+
+
+\section{Base}\label{sec:base}
+
+
+base text
+
+
+\section{Shared}\label{sec:shared}
+
+
+shared text
+
+
+\section{Echam}\label{sec:echam}
+
+
+echam text
+
+
+\newpage
+\section{Land Model Driver}\label{sec:land_model_driver}
+The model driver (drivers/land{\_}model{\_}driver.f90) is the top-level file of SLM controlling the model and providing an interface to other mdoels (e.g. atmosphere).
+~\\
+
+\textbf{Basic info about structure and functionality:}
+\begin{itemize}
+\item declaration of some local variables such as ics, ice, nc, as well as all A2L and L2A variables with dimension nc
+\item declaration of model and tile objects
+\item calling init\_base() and model\_init()
+\item run the time loop, i.e. loop over all time steps
+\begin{itemize}
+\item call update forcing (drivers/mo{\_}atmland{\_}forcing)
+\item call land model interface (section \ref{sec:land_model_interface})
+\end{itemize}
+\end{itemize}
+
+
+\newpage
+\section{Land Model Interface}\label{sec:land_model_interface}
+
+The interface (drivers/mo{\_}land{\_}model{\_}interface.f90) runs SLM (land, plant, soil, canopy, test{\_}canopy) for one time step.
+~\\
+
+\textbf{Basic info about structure and functionality:}
+\begin{itemize}
+\item pass atmland variables from forcing input (driver) to A2L
+\item select the SLM model (model\%config\%slm{\_}model{\_}name) and run the tasks (\texttt{update\_*} routines) accordingly including "reset fluxes" routines, the update\_time\_averages() routine and the write-output routines
+\begin{itemize}
+\item land (plant + soil)
+\item plant (standalone)
+\item soil (standalone)
+\item canopy
+\item test{\_}canopy: \texttt{CALL run\_test\_canopy\_model  (tile, model\%options)} (this routine is defined in mo{\_}test{\_}canopy{\_}model)
+\end{itemize}
+\item pass atmland variables from L2A memory back to the driver
+\end{itemize}
+~\\
+
+
+
+\newpage
+\section{Model Init}\label{sec:model_init}
+The model init (base/mo{\_}jsb{\_}model{\_}init.f90) is run one time at model start called in the model driver interface (section \ref{sec:land_model_driver}) initializing all objects and variables needed by calling multiple subroutines.
+~\\
+
+\textbf{Basic info about structure and functionality:}
+\begin{itemize}
+\item the model init consists of two main routines
+\item \texttt{init\_model\_standalone()} the standalone model init (i.e. not running couped with e.g. ICON)
+\begin{itemize}
+	\item creates the model (\texttt{model => jsbach\%models(model\_id)\%m})
+	\item creates the grid (currently for only one point)
+	\item run run model init and config (see routine below)
+\end{itemize}
+\item \texttt{init\_model\_common()} may be called from the above routine
+\begin{itemize}
+	\item config of model, processes and forcing
+	\item init of model, grid and process constants
+	\item init of VEG\_ and SB\_ pool infrastructure
+	\item init and read lctlib
+	\item init the tile(s)
+	\item init the processes
+	\item init time
+	\item init fluxnet specific simulation output (if fluxnet diagnostics simulation is selected)
+\end{itemize}
+\end{itemize}
+~\\
+
+
+\newpage
+\section{Process memory}\label{sec:memory_structure_usage}
+
+\subsection{Basic info about the memory infrastructure}\label{subsec:basic_memory_structure}
+~\\
+
+\textbf{Process memory:}
+
+Each process has its own memory named \texttt{mo{\_}PROCESS{\_}memory{\_}class} containing two important parts: 
+\begin{itemize}
+\item a) the memory Type \texttt{t{\_}PROCESS{\_}memory}, which is a \texttt{TYPE} that extends \texttt{t{\_}jsb{\_}memory}, and 
+\item b) the routine that initializes the memory object \texttt{Init{\_}PROCESS{\_}memory} using the \texttt{slm{\_}add{\_}var} Function to allocate and init each single variable of the memory.
+\end{itemize}
+To create a new variable it needs to be inserted into the process memory and a \texttt{slm{\_}add{\_}var} Function with the variable needs to be created in the init routine. The init value in \texttt{slm{\_}add{\_}var} should always be 0.0{\_}wp; if a different start value is necessary use the \texttt{PROC{\_}init} routine to init the variables with this value. \\
+
+A variable as used in the process memories is NOT a standard Fortran variable type such as REAL or INTEGER. Instead it is a TYPE covering much more information than only the value, such as, variable name, the process ID and a variable type identifier (see base/mo{\_}jsb{\_}var{\_}class for the definitions of the variables). The types of variables in the \texttt{t{\_}PROCESS{\_}memory} can be one of these:
+\begin{itemize}
+	\item \texttt{t{\_}jsb{\_}var{\_}real2d}
+	\item \texttt{t{\_}jsb{\_}var{\_}real3d}
+\end{itemize}
+From this list you can see that only REAL variables are supported but not CHARACTER or INTEGER or LOGICAL. Anyway, if you need the functionality of a LOGICAL use a REAL representing FALSE by 0.0\_wp and TRUE by 1.0\_wp, see the variable \texttt{growing\_season} (from PHENO\_ memory) as an example for that.\\
+
+\textbf{Dimensionality of variables:}
+
+Variables in SLM (according to JSBACH4) have a dimension (2D or 3D) covering the position at the grid used for global simulations. Thus, the variable itself manages its values across the grid cells. The 2D variables have a x and y dimension at this grid var(x,y), where x is a vector of multiple small areas at this grid (chunk) and y is the block within which the chunks are located: var(ics:ice,iblk) meaning number of the chunk at start and end of the vector and the number of the block. The 3D variables have a x and z and y dimension at this grid var(x,z,y) covering also a vertical dimension z, i.e., soil layer and canopy layer: var(ics:ice,layer,iblk). The name of each 3D variable should always be appended by either a \texttt{{\_}sl} or a \texttt{{\_}cl}.
+
+SLM (and JSBACH4) operates at one specific block only. So the y in var(x,y) and var(x,z,y) is a fixed number (predefined by the atmosphere model to which SLM is coupled such as ECHAM or ICON). Accordingly, the dimensionality of variables as used throughout the scientific routines is reduced by one dimension, that is, 2D -> 1D (var(x,y) -> var(x)) and 3D -> 2D (var(x,z,y) -> var(x,z)).
+
