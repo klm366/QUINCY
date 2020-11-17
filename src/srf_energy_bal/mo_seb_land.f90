@@ -55,10 +55,12 @@ CONTAINS
     !USE mo_seb_process,            ONLY: calc_previous_day_variables, calc_pseudo_soil_temp
     USE mo_sse_process,            ONLY: Get_liquid_max
     USE mo_phy_schemes,            ONLY: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef
-    USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, tpfac2, tpfac3
+    USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, tpfac2, tpfac3, cvdifts
     USE mo_sse_constants,          ONLY: snow_depth_min
-    USE mo_jsb_time,               ONLY: is_newday, timesteps_per_day ! get_asselin_coef, timeStep_in_days
+    USE mo_jsb_time,               ONLY: is_newday, timesteps_per_day, get_date_components ! get_asselin_coef, timeStep_in_days
     USE mo_jsb_grid,               ONLY: Get_grid
+    USE mo_time_control,           ONLY: current_date
+
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -118,6 +120,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: t_bcoef
     dsl4jsb_Real2D_onChunk :: q_acoef
     dsl4jsb_Real2D_onChunk :: q_bcoef
+    
 
     ! Locally allocated vectors
     !
@@ -130,7 +133,8 @@ CONTAINS
      & heat_tcoef,                      & !< Heat transfer coefficient (rho*C_h*|v|)
      & t_star,                          &
      & liquid_max,                      &
-     & t_air_in_Celcius
+     & t_air_in_Celcius,                &
+     & soil_stor
 
     LOGICAL, DIMENSION(options%nc) :: &
      & is_glacier,                    &
@@ -145,6 +149,7 @@ CONTAINS
     INTEGER  :: tmp_timesteps_per_day
     LOGICAL  :: l_is_newday
     INTEGER  :: ilct
+    INTEGER  :: yr, mo, dy, hr, mn, se
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
@@ -223,7 +228,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SSE_,   hcap_grnd)      ! IN
 
     !$claw acc data create(fract,qsat_srf_old,s_old,dQdT,t2s_conv,heat_tcoef, &
-    !$claw acc t_star,liquid_max,t_air_in_Celcius,is_glacier,has_snow_layer,  & 
+    !$claw acc t_star,liquid_max,t_air_in_Celcius,is_glacier,has_snow_layer,  &
     !$claw acc soil_depth_sl_vol_porosity_sl_tmp)
 
     ! @todo: currently, fraction of glacier has to be either zero or one!
@@ -238,7 +243,7 @@ CONTAINS
     ELSE
       is_glacier(:) = .FALSE.
     END IF
-    !$claw acc update device(is_glacier) ! 
+    !$claw acc update device(is_glacier) !
     !$claw acc end data
 
     IF (is_time_experiment_start(options%current_datetime)) THEN            ! Start of experiment
@@ -254,7 +259,7 @@ CONTAINS
     ! necessary for the phenology process
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_0 tile_name=tile%name
     t_air_in_Celcius(:) = t_air(:) - tmelt  ! convert Kelvin in Celcius
-    
+
     ! Sum up of the previous day temperatures
     !$claw sca forward update savepoint=ser_jsb_seb_land_calc_previous_day_variables_1 tile_name=tile%name
     CALL calc_previous_day_variables(l_is_newday,               & ! Input
@@ -312,6 +317,10 @@ CONTAINS
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_2_1 tile_name=tile%name
     t2s_conv(:) = s_old(:) / t_old(:)  !
 
+    open(555, file='output.txt')
+    CALL get_date_components (current_date, yr, mo, dy, hr, mn, se)
+    999 FORMAT(I0.2, I0.2, I0.2, 1X,  I0.2, I0.2, I0.2, 1X, A4, 1X, ES15.7E3)
+
     ! Compute new surface temperature and saturation humidity
     IF (lstart) THEN
       !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_3 tile_name=tile%name
@@ -326,6 +335,14 @@ CONTAINS
         fact_q_air(:), fact_qsat_srf(:), &
         fract_snow(:), heat_cap(:), &
         & s_star(:))
+    END IF
+
+    soil_stor(:)  = heat_cap(:) / t2s_conv(:)*(s_star(:) - s_old(:)) / (steplen*cvdifts)
+
+    IF (.NOT. lstart) THEN
+  			write(555,999) yr,mo,dy, hr,mn,se, 'Rnet', rad_srf_net(1)
+        write(555,999) yr,mo,dy, hr,mn,se, 'Gflx', grnd_hflx(1)
+        write(555,999) yr,mo,dy, hr,mn,se, 'Ssoi', soil_stor(1)
     END IF
 
     ! @todo - hack for oceans boxes (land tile is direct child of root tile)
@@ -391,7 +408,7 @@ CONTAINS
 
       !$claw acc data present(has_snow_layer,is_glacier,w_soil_sl,liquid_max,t_star,w_ice_sl)
       !$claw acc parallel loop gang vector
-      DO i=1,size(t_star, dim=1)  
+      DO i=1,size(t_star, dim=1)
         IF (.NOT. has_snow_layer(i) .AND. .NOT. is_glacier(i)) THEN
           IF (w_soil_sl(i,1) > MAX(liquid_max(i), w_soil_critical_tmp)) THEN
             ! Freezing of water in uppermost soil layer where no snow layers above surface and considerable amount of moisture
@@ -434,7 +451,7 @@ CONTAINS
 
     !$claw acc end data
 
-  END SUBROUTINE update_surface_energy_land 
+  END SUBROUTINE update_surface_energy_land
 
   SUBROUTINE surface_temp_implicit(klon, steplen,             &
     &            pcp,                                         &
@@ -468,7 +485,7 @@ CONTAINS
     INTEGER :: i
     !REAL(wp) :: pc16
 
-    !$claw acc data & 
+    !$claw acc data &
     !$claw acc create(zcolin,zcohfl,zcoind,zicp,zca,zcs)
     pdt     = cvdifts * steplen
     !pc16    = cpd * cpvd1
@@ -500,7 +517,8 @@ CONTAINS
   !
   SUBROUTINE update_asselin_land(tile, options)
 
-    USE mo_jsb_time,               ONLY: get_asselin_coef
+    USE mo_jsb_time,               ONLY: get_asselin_coef, get_date_components
+    USE mo_time_control,           ONLY: current_date
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -521,6 +539,7 @@ CONTAINS
     ! Locally allocated variables
     !
     INTEGER :: iblk, ics, ice
+    INTEGER :: yr, mo, dy, hr, mn, se
     REAL(wp) :: eps
 
     !TYPE(t_jsb_model), POINTER :: model
@@ -556,6 +575,14 @@ CONTAINS
       t_filt(:) = t_unfilt(:)
     END IF
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_asselin_land_expand_2 tile_name=tile%name
+
+    CALL get_date_components (current_date, yr, mo, dy, hr, mn, se)
+    999 FORMAT(I0.2, I0.2, I0.2, 1X,  I0.2, I0.2, I0.2, 1X, A4, 1X, ES15.7E3)
+
+    IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
+  			write(555,999) yr,mo,dy, hr,mn,se, 'Tsfc', t_filt(1)
+    END IF
+
     t(:) = t_filt(:)
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
@@ -566,6 +593,8 @@ CONTAINS
 
     USE mo_phy_schemes,            ONLY: heat_transfer_coef
     USE mo_jsb_physical_constants, ONLY: alv, als
+    USE mo_jsb_time,               ONLY: get_date_components
+    USE mo_time_control,           ONLY: current_date
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -599,6 +628,7 @@ CONTAINS
       & heat_tcoef     (:)     !< Heat transfer coefficient (rho*C_h*|v|)
 
     INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: yr, mo, dy, hr, mn, se
     REAL(wp) :: steplen
 
     !TYPE(t_jsb_model), POINTER :: model
@@ -656,6 +686,14 @@ CONTAINS
     ! Compute latent heat flux
     !
     latent_hflx(:) = alv * evapotrans(:) + (als - alv) * fract_snow(:) * evapopot(:)
+
+    CALL get_date_components (current_date, yr, mo, dy, hr, mn, se)
+    999 FORMAT(I0.2, I0.2, I0.2, 1X,  I0.2, I0.2, I0.2, 1X, A4, 1X, ES15.7E3)
+
+    IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
+  			write(555,999) yr,mo,dy, hr,mn,se, 'Lflx', latent_hflx(1)
+        write(555,999) yr,mo,dy, hr,mn,se, 'Hflx', sensible_hflx(1)
+    END IF
 
     ! These two variables are not aggregated together with lake and are the fluxes given back to the atmosphere
     sensible_hflx_lnd(:) = sensible_hflx(:)
@@ -722,7 +760,7 @@ CONTAINS
     ! Note that updating is done globally at the same time step, i.e. for different longitudes the updating happens at different
     ! local times.
 
-    !$claw sca                            
+    !$claw sca
 
     IF (.NOT. l_start .AND. is_newday) THEN  ! day has changed --> recompute mean, min, max day temperature of previous day
                                              ! and reinitialize day_temp_sum(), day_temp_min(), day_temp_max()
