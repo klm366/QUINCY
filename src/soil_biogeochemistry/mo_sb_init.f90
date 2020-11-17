@@ -63,7 +63,6 @@ CONTAINS
 
     TYPE(t_jsb_model),      POINTER              :: model
     TYPE(t_lctlib_element), POINTER              :: lctlib        !< land-cover-type library - parameter across pft's
-    REAL(wp)                                     :: hlp1
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':sb_init'
 
     dsl4jsb_Def_config(SB_)
@@ -89,8 +88,6 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
-
-    hlp1 = 0.5_wp
 
 
   END SUBROUTINE sb_init

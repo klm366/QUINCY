@@ -89,8 +89,6 @@ CONTAINS
     TYPE(t_lctlib_element), POINTER         :: lctlib           !< land-cover-type library - parameter across pft's
     TYPE(t_jsb_vgrid),      POINTER         :: vgrid_canopy     !< Vertical grid
     ! REAL(wp), DIMENSION(options%nc)         :: fpc              !< current foliage projective cover
-    REAL(wp), DIMENSION(options%nc)         :: hlp1
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:)   :: hlp2
     INTEGER                                 :: iblk, ics, ice, nc, ncanopy
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_dynamics'
     ! ---------------------------
@@ -103,14 +101,8 @@ CONTAINS
     ! dsl4jsb_Def_memory(PHENO_)                            ! TYPE(t_pheno_memory),    POINTER :: pheno__mem
     ! dsl4jsb_Def_memory(SSE_)                             ! TYPE(t_sse_memory),     POINTER :: sse__mem
     dsl4jsb_Def_pool(t_veg_tissues_pool)  :: veg_pool
-    dsl4jsb_Def_pool(t_veg_tissues_pool)  :: veg_growth
     dsl4jsb_Def_pool(t_veg_tissues_pool)  :: veg_litterfall
-    dsl4jsb_Def_pool(t_veg_tissues_pool)  :: veg_falloc
-    dsl4jsb_Def_pool(t_veg_tissues_pool)  :: veg_total_flux
-    dsl4jsb_Def_pool(t_veg_elements_pool) :: veg_total_biomass
-    dsl4jsb_Def_pool(t_veg_elements_pool) :: veg_exudation    
     dsl4jsb_Def_pool(t_veg_elements_pool) :: veg_establishment
-    dsl4jsb_Def_pool(t_veg_elements_pool) :: veg_reserve_use  
     ! ! Declare pointers to variables in memory
     ! ! RAD_
     ! dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg
@@ -146,8 +138,6 @@ CONTAINS
     vgrid_canopy  => Get_vgrid('canopy_layer_q_')
     ncanopy       =  vgrid_canopy%n_levels
     
-    ALLOCATE(hlp2(nc, ncanopy))
-    
     ! Get process config
     dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_config(VEG_)
@@ -158,14 +148,8 @@ CONTAINS
 !     dsl4jsb_Get_memory(SSE_)
     ! Get pools
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_pool,          veg_pool)
-    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_growth,        veg_growth)
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_litterfall,    veg_litterfall)
-    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_falloc,        veg_falloc)
-    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_total_flux,    veg_total_flux)
-    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_total_biomass, veg_total_biomass)
-    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_exudation,     veg_exudation    )
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_establishment, veg_establishment)
-    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_reserve_use,   veg_reserve_use  )
 !     ! Get process variables (Set pointers to variables in memory)
 !     dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg) ! in
 !     ! ---------------------------
@@ -184,54 +168,12 @@ CONTAINS
 !     dsl4jsb_Get_var2D_onChunk(VEG_, an_boc_tvegdyn_mavg)    ! in
 !     dsl4jsb_Get_var2D_onChunk(VEG_, net_growth_tvegdyn_mavg)! in
 !     dsl4jsb_Get_var2D_onChunk(VEG_, lai_tvegdyn_mavg)       ! in
-!     ! Get process memory pool structures
-! #define Get_veg_pool
-! #define Get_veg_litterfall
-! #define Get_veg_establishment
-! #include "slm_pools_a_incl.f90"
-! #undef Get_veg_pool
-! #undef Get_veg_litterfall
-! #undef Get_veg_establishment
-
-
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
-    !! tested for VEG_ pools & fluxes !!
-    ! element pools
-    veg_exudation                       = 2.0_wp
-    veg_establishment                   = 3.0_wp
-    veg_reserve_use                     = 5.0_wp
-    veg_growth%leaf                     = 25.0_wp
-    IF (iblk == 3) THEN
-      veg_exudation                     = 4.0_wp
-      veg_establishment                 = 6.0_wp
-      veg_reserve_use                   = 10.0_wp
-      veg_growth%leaf                   = 20.0_wp
-    ENDIF
 
-    hlp1(:)                             = 1.5_wp
-    hlp2(:,:)                           = 2.5_wp
-    veg_pool%fruit                      = 4.0_wp
-    veg_pool%leaf                       = hlp1(:) * veg_pool%fruit / 2.0_wp                             ! 3.0
-    veg_pool%labile                     = veg_pool%leaf - 5.0_wp
-    veg_pool%labile                     = ((veg_pool%labile + veg_pool%leaf) + 20.0_wp) / veg_pool%leaf ! 7.0 
-
-    ! tissue pools
-    veg_litterfall                      = 3.2_wp
-    veg_total_flux                      = hlp1(:) + 1.8         ! 3.3
-    veg_falloc                          = hlp1(:)
-    veg_falloc                          = hlp2(:,1) + 9.7_wp    ! 12.2
-    !! veg_total_flux                      = veg_litterfall + hlp1(:) + veg_total_flux + hlp2(:,:)  <== correctly, creates a runtime error with dimension mismatch
-    veg_total_flux                      = veg_litterfall + hlp1(:) + veg_total_flux + hlp2(:,1)   ! 10.5   <== only value of "canopy layer 1"
-    veg_litterfall                      = veg_total_flux + veg_litterfall + 4.0_wp                ! 17.7
-    veg_falloc                          = veg_total_flux - veg_falloc - 1.5_wp                    ! -3.2
-    veg_falloc                          = veg_falloc * 2.0_wp + veg_litterfall                    ! -6.4 + 17.7 = 11.3
-    veg_total_flux                      = veg_total_flux - 6.5_wp
-    veg_total_flux                      = veg_total_flux * veg_total_flux                         ! 16.0
-    veg_total_flux                      = veg_falloc / 2.0_wp                                     ! 5.65
 
   END SUBROUTINE update_veg_dynamics
 

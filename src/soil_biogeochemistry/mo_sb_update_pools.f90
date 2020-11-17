@@ -78,8 +78,6 @@ CONTAINS
     TYPE(t_jsb_vgrid),      POINTER         :: vgrid_soil_sb        !< Vertical grid
     INTEGER                                 :: nsoil_sb             !< number of soil layers as used by the SB_ process (see SSE_ config)
     INTEGER                                 :: iblk, ics, ice, nc
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:)   :: hlp1
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:,:) :: hlp10
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_pools'
 
     ! Declare process configuration, memory, and pool-structure Pointers
@@ -89,8 +87,8 @@ CONTAINS
     dsl4jsb_Def_pool(t_sb_components_pool)  :: sb_formation
     dsl4jsb_Def_pool(t_sb_components_pool)  :: sb_loss
     dsl4jsb_Def_pool(t_sb_components_pool)  :: sb_transport
-    dsl4jsb_Def_pool(t_sb_elements_pool) :: sb_delta_pools
-    dsl4jsb_Def_pool(t_sb_elements_pool) :: sb_mycorrhiza_export
+    dsl4jsb_Def_pool(t_sb_elements_pool)    :: sb_delta_pools
+    dsl4jsb_Def_pool(t_sb_elements_pool)    :: sb_mycorrhiza_export
 
     ! Declare pointers to variables in memory
     ! SB_ 2D
@@ -114,9 +112,6 @@ CONTAINS
     vgrid_soil_sb => Get_vgrid('soil_layer_sb')
     nsoil_sb      =  vgrid_soil_sb%n_levels
 
-    ALLOCATE(hlp1(nc, nsoil_sb))
-    ALLOCATE(hlp10(nc, nsoil_sb,1))     ! (nc, vgrid, iblk)
-
     dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_pool(SB_, sb_main_pool%sb_pool,               sb_pool)
@@ -137,33 +132,6 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
-    !!! playground for testing !!!
-
-    !! variables
-    ! real2d variables
-    total_flux_carbon           = 0.5_wp
-    total_flux_nitrogen         = 0.5_wp
-    total_flux_phosphorus       = 0.5_wp
-    total_flux_carbon13         = 0.5_wp
-    total_flux_carbon14         = 0.5_wp
-    total_flux_nitrogen15       = 0.5_wp
-
-    !! pools
-    hlp1(:,:)                   = 2.0_wp
-    hlp10(:,:,:)                = 4.0_wp
-    sb_pool%dom                 = hlp1(:,:)
-    sb_pool%fungi               = 5.0_wp
-    sb_pool%residue             = sb_pool%dom + sb_pool%fungi - 1.0_wp                                ! 6.0
-    sb_pool%mycorrhiza          = (sb_pool%residue / hlp1(:,:)) + 17.0_wp - (5.0_wp * sb_pool%fungi)  ! -5.0
-
-    sb_loss                     = 0.2_wp
-    sb_loss                     = hlp1(:,:)
-    sb_loss                     = hlp10(:,:,1)
-    sb_loss                     = sb_loss + 0.9_wp
-
-    sb_pool                     = 4.4_wp
-    sb_loss                     = 2.0_wp
-    sb_loss                     = (5.0_wp + sb_loss) - (sb_pool / hlp1(:,:)) * sb_pool - 1.0_wp      ! 7 - 2.2 * 4.4 - 1 == 7 - 9.68 - 1 = -3.68
 
   END SUBROUTINE update_sb_pools
 
