@@ -322,6 +322,7 @@ CONTAINS
     CALL get_date_components (current_date, yr, mo, dy, hr, mn, se)
     999 FORMAT(I0.2, I0.2, I0.2, 1X,  I0.2, I0.2, I0.2, 1X, A4, 1X, ES15.7E3)
 
+
     ! Compute new surface temperature and saturation humidity
     IF (lstart) THEN
       !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_3 tile_name=tile%name
@@ -340,12 +341,16 @@ CONTAINS
 
     soil_stor(:)  = heat_cap(:) / t2s_conv(:)*(s_star(:) - s_old(:)) / (steplen*cvdifts)
 
-    IF (.NOT. lstart) THEN
-  			write(555,999) yr,mo,dy, hr,mn,se, 'Rnet', rad_srf_net(1)
-        write(555,999) yr,mo,dy, hr,mn,se, 'Gflx', grnd_hflx(1)
-        write(555,999) yr,mo,dy, hr,mn,se, 'Ssoi', soil_stor(1)
-        write(555,999) yr,mo,dy, hr,mn,se, 'lati', lat(1)
-    END IF
+      IF (yr == 1999  .AND. mo == 10 .AND. (dy == 23 .OR. dy == 24 .OR. dy == 25 .OR. dy == 26)) THEN
+        DO i=1,size(rad_srf_net, dim=1)
+          IF (lat(i) > 38._wp) THEN
+  			    write(555,999) yr,mo,dy, hr,mn,se, 'Rnet', rad_srf_net(i)
+            write(555,999) yr,mo,dy, hr,mn,se, 'Gflx', grnd_hflx(i)
+            write(555,999) yr,mo,dy, hr,mn,se, 'Ssoi', soil_stor(i)
+            write(555,999) yr,mo,dy, hr,mn,se, 'lati', lat(i)
+          END IF
+        END DO
+      END IF
 
     ! @todo - hack for oceans boxes (land tile is direct child of root tile)
     !$claw acc data present(fract)
@@ -521,6 +526,7 @@ CONTAINS
 
     USE mo_jsb_time,               ONLY: get_asselin_coef, get_date_components
     USE mo_time_control,           ONLY: current_date
+    USE mo_jsb_grid,               ONLY: Get_grid
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -536,15 +542,18 @@ CONTAINS
       & t_filt,      &
       & t_old,       &
       & t_unfilt,    &
-      & t_unfilt_old
+      & t_unfilt_old, &
+      & lat
+
 
     ! Locally allocated variables
     !
-    INTEGER :: iblk, ics, ice
+    INTEGER :: iblk, ics, ice, i
     INTEGER :: yr, mo, dy, hr, mn, se
     REAL(wp) :: eps
 
-    !TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_grid),  POINTER :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_asselin_land'
 
@@ -567,6 +576,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SEB_,      t_unfilt)       ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,      t_unfilt_old)   ! in
 
+    model => Get_model(tile%owner_model_id)
+    grid  => Get_grid(model%grid_id)
+    lat   => grid%lat(ics:ice, iblk)
+
     ! Asselin time filter, if applicable
     eps = get_asselin_coef()
     IF (eps > 0._wp) THEN
@@ -581,9 +594,13 @@ CONTAINS
     CALL get_date_components (current_date, yr, mo, dy, hr, mn, se)
     999 FORMAT(I0.2, I0.2, I0.2, 1X,  I0.2, I0.2, I0.2, 1X, A4, 1X, ES15.7E3)
 
-    IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
-  			write(555,999) yr,mo,dy, hr,mn,se, 'Tsfc', t_filt(1)
-    END IF
+      IF (yr == 1999  .AND. mo == 10 .AND. (dy == 23 .OR. dy == 24 .OR. dy == 25 .OR. dy == 26)) THEN
+        DO i=1,size(t_filt, dim=1)
+          IF (lat(i) > 38._wp) THEN
+            write(555,999) yr,mo,dy, hr,mn,se, 'Tsfc', t_filt(i)
+          END IF
+        END DO
+      END IF
 
     t(:) = t_filt(:)
 
@@ -597,6 +614,7 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: alv, als
     USE mo_jsb_time,               ONLY: get_date_components
     USE mo_time_control,           ONLY: current_date
+    USE mo_jsb_grid,               ONLY: Get_grid
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -619,6 +637,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: evapopot
     dsl4jsb_Real2D_onChunk :: evapotrans
     dsl4jsb_Real2D_onChunk :: fract_snow
+    dsl4jsb_Real2D_onChunk :: lat
 
     ! Locally allocated vectors
     !
@@ -629,11 +648,12 @@ CONTAINS
       & s_air          (:), &  !< Dry static energy at lowest atmospheric level
       & heat_tcoef     (:)     !< Heat transfer coefficient (rho*C_h*|v|)
 
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice, nc, i
     INTEGER  :: yr, mo, dy, hr, mn, se
     REAL(wp) :: steplen
 
-    !TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_grid),  POINTER :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_fluxes_land'
 
@@ -675,6 +695,10 @@ CONTAINS
     ALLOCATE(s_air(nc), heat_tcoef(nc))
     !$claw acc enter data create(s_air, heat_tcoef)
 
+    model => Get_model(tile%owner_model_id)
+    grid  => Get_grid(model%grid_id)
+    lat   => grid%lat(ics:ice, iblk)
+
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_fluxes_land_expand_0 tile_name=tile%name
     s_air(:) = t_acoef(:) * s_star   (:) + t_bcoef(:)
 
@@ -692,10 +716,15 @@ CONTAINS
     CALL get_date_components (current_date, yr, mo, dy, hr, mn, se)
     999 FORMAT(I0.2, I0.2, I0.2, 1X,  I0.2, I0.2, I0.2, 1X, A4, 1X, ES15.7E3)
 
-    IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
-  			write(555,999) yr,mo,dy, hr,mn,se, 'Lflx', latent_hflx(1)
-        write(555,999) yr,mo,dy, hr,mn,se, 'Hflx', sensible_hflx(1)
-    END IF
+      IF (yr == 1999  .AND. mo == 10 .AND. (dy == 23 .OR. dy == 24 .OR. dy == 25 .OR. dy == 26)) THEN
+        DO i=1,size(latent_hflx, dim=1)
+          IF (lat(i) > 38._wp) THEN
+            write(555,999) yr,mo,dy, hr,mn,se, 'Lflx', latent_hflx(i)
+            write(555,999) yr,mo,dy, hr,mn,se, 'Hflx', sensible_hflx(i)
+          END IF
+        END DO
+
+      END IF
 
     ! These two variables are not aggregated together with lake and are the fluxes given back to the atmosphere
     sensible_hflx_lnd(:) = sensible_hflx(:)
