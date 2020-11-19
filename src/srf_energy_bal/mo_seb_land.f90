@@ -343,7 +343,7 @@ CONTAINS
 
       IF (yr == 1999  .AND. mo == 10 .AND. (dy == 23 .OR. dy == 24 .OR. dy == 25 .OR. dy == 26)) THEN
         DO i=1,size(rad_srf_net, dim=1)
-          IF (lat(i) > 38._wp) THEN
+          IF (lat(i) > 37._wp) THEN
   			    write(555,999) yr,mo,dy, hr,mn,se, 'Rnet', rad_srf_net(i)
             write(555,999) yr,mo,dy, hr,mn,se, 'Gflx', grnd_hflx(i)
             write(555,999) yr,mo,dy, hr,mn,se, 'Ssoi', soil_stor(i)
@@ -596,7 +596,7 @@ CONTAINS
 
       IF (yr == 1999  .AND. mo == 10 .AND. (dy == 23 .OR. dy == 24 .OR. dy == 25 .OR. dy == 26)) THEN
         DO i=1,size(t_filt, dim=1)
-          IF (lat(i) > 38._wp) THEN
+          IF (lat(i) > 37._wp) THEN
             write(555,999) yr,mo,dy, hr,mn,se, 'Tsfc', t_filt(i)
           END IF
         END DO
@@ -718,7 +718,7 @@ CONTAINS
 
       IF (yr == 1999  .AND. mo == 10 .AND. (dy == 23 .OR. dy == 24 .OR. dy == 25 .OR. dy == 26)) THEN
         DO i=1,size(latent_hflx, dim=1)
-          IF (lat(i) > 38._wp) THEN
+          IF (lat(i) > 37._wp) THEN
             write(555,999) yr,mo,dy, hr,mn,se, 'Lflx', latent_hflx(i)
             write(555,999) yr,mo,dy, hr,mn,se, 'Hflx', sensible_hflx(i)
           END IF
