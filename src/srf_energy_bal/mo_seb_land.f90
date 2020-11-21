@@ -148,6 +148,8 @@ CONTAINS
     REAL(wp) :: steplen
     INTEGER  :: tmp_timesteps_per_day
     LOGICAL  :: l_is_newday
+    LOGICAL  :: l_is_clas
+    LOGICAL  :: l_is_skin
     INTEGER  :: ilct
     INTEGER  :: yr, mo, dy, hr, mn, se
 
@@ -171,7 +173,7 @@ CONTAINS
     l_is_newday = is_newday(options%current_datetime, options%dtime)
     tmp_timesteps_per_day = timesteps_per_day(options%dtime)
 
-    !dsl4jsb_Get_config(SEB_)
+    dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_config(SSE_)
 
     ! Get reference to variables for current block
@@ -231,6 +233,11 @@ CONTAINS
     !$claw acc data create(fract,qsat_srf_old,s_old,dQdT,t2s_conv,heat_tcoef, &
     !$claw acc t_star,liquid_max,t_air_in_Celcius,is_glacier,has_snow_layer,  &
     !$claw acc soil_depth_sl_vol_porosity_sl_tmp)
+
+
+    l_is_clas = dsl4jsb_Config(SEB_)%l_scheme_canopy_clas
+    l_is_skin = dsl4jsb_Config(SEB_)%l_scheme_canopy_skin
+
 
     ! @todo: currently, fraction of glacier has to be either zero or one!
     !$claw acc data present(is_glacier)
@@ -320,7 +327,8 @@ CONTAINS
 
     open(555, file='output.txt')
     CALL get_date_components (current_date, yr, mo, dy, hr, mn, se)
-    999 FORMAT(I0.2, I0.2, I0.2, 1X,  I0.2, I0.2, I0.2, 1X, A4, 1X, ES15.7E3)
+    999 FORMAT(I0.2, I0.2, I0.2, 1X, I0.2, I0.2, I0.2, 1X, A4, 1X, ES15.7E3)
+    997 FORMAT(I0.2, I0.2, I0.2, 1X, I0.2, I0.2, I0.2, 1X, A4, 1X, L1)
 
 
     ! Compute new surface temperature and saturation humidity
@@ -348,6 +356,8 @@ CONTAINS
             write(555,999) yr,mo,dy, hr,mn,se, 'Gflx', grnd_hflx(i)
             write(555,999) yr,mo,dy, hr,mn,se, 'Ssoi', soil_stor(i)
             write(555,999) yr,mo,dy, hr,mn,se, 'lati', lat(i)
+            write(555,997) yr,mo,dy, hr,mn,se, 'Clas', l_is_clas
+            write(555,997) yr,mo,dy, hr,mn,se, 'Skin', l_is_skin
           END IF
         END DO
       END IF

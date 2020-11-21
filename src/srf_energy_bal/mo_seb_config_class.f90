@@ -31,6 +31,9 @@ MODULE mo_seb_config_class
      REAL(wp)                    :: lake_mixed_layer_depth !< Depth of lake mixed layer                             [m]
      REAL(wp)                    :: lake_min_ice_depth     !< Minimum ice thickness to start ice formation on lakes [m]
      LOGICAL                     :: l_ice_on_lakes         !< Whether to use ice on lakes
+     LOGICAL                     :: l_scheme_canopy_clas   !< Whether to use the classic canopy scheme
+     LOGICAL                     :: l_scheme_canopy_skin   !< Whether to use the SkIn+ canopy scheme
+     LOGICAL                     :: l_scheme_canopy_ceba   !< Whether to use the CEBa canopy scheme
    CONTAINS
      PROCEDURE :: Init => Init_seb_config
   END type t_seb_config
@@ -48,6 +51,7 @@ CONTAINS
     LOGICAL  :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     CHARACTER(len=10)           :: scheme_albedo
+    CHARACTER(len=10)           :: scheme_canopy ! Scheme to use for canopy energy balance: classic, skin or ceba (ceba not implemented yet)
     REAL(wp)                    :: lake_mixed_layer_depth, lake_min_ice_depth
     LOGICAL                     :: l_ice_on_lakes
 
@@ -55,6 +59,7 @@ CONTAINS
       active,                      &
       ic_filename, bc_filename,    &
       scheme_albedo,               &
+      scheme_canopy,               &
       lake_mixed_layer_depth,      &
       lake_min_ice_depth,          &
       l_ice_on_lakes
@@ -70,6 +75,7 @@ CONTAINS
     ic_filename     = 'ic_land_srf.nc'
     bc_filename     = 'bc_land_srf.nc'
     scheme_albedo   = 'echam5'
+    scheme_canopy   = 'classic'
     lake_mixed_layer_depth = 10._wp
     lake_min_ice_depth     = 0.05_wp
     l_ice_on_lakes  = .TRUE.
@@ -86,6 +92,26 @@ CONTAINS
     config%lake_mixed_layer_depth    = lake_mixed_layer_depth
     config%lake_min_ice_depth        = lake_min_ice_depth
     config%l_ice_on_lakes            = l_ice_on_lakes
+
+
+    config%l_scheme_canopy_clas = .FALSE.
+    config%l_scheme_canopy_skin = .FALSE.
+    config%l_scheme_canopy_ceba = .FALSE.
+
+    SELECT CASE(TRIM(scheme_canopy))
+       CASE ('classic')
+          config%l_scheme_canopy_clas = .TRUE.
+          CALL message(TRIM(routine), 'Classic big leaf approach')
+       CASE ('skin')
+          config%l_scheme_canopy_skin = .TRUE.
+          CALL message(TRIM(routine), 'Skin temperature scheme plus canopy heat storage (SkIn+)')
+       CASE ('ceba')
+          config%l_scheme_canopy_ceba = .TRUE.
+          CALL message(TRIM(routine), 'Dual Source Canopy layer energy balance scheme (CEBa)')
+       CASE default
+          CALL finish(TRIM(routine), 'Unknown canopy scheme (choose between: classic, skin or ceba)')
+    END SELECT
+
 
     CALL close_nml(nml_handler)
 
