@@ -349,16 +349,39 @@ CONTAINS
           & s_star(:))
       END IF
 
-      IF (l_is_skin) then
+      IF (l_is_skin) THEN
 
-        CALL surface_temp_implicit_skin( nc, steplen, &
-          t2s_conv(:), &
-          t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), &
-          s_old(:), qsat_srf_old(:), dQdT(:), &
-          rad_srf_net(:), forc_hflx(:), heat_tcoef(:), &
-          fact_q_air(:), fact_qsat_srf(:), &
-          fract_snow(:), heat_cap(:), &
-          & s_star(:))
+        CALL surface_temp_implicit_skin( &
+
+          ! Input
+            nc               &  ! Number of land grid points
+          , steplen          &  ! Length of timestep (2 * delta t)
+          , t2s_conv(:)      &  ! Conversion factor for humidity from dry static energy
+          , t_acoef(:)       &  ! Linear   Richtmyer Morton coefficient for dry static energy (As)
+          , t_bcoef(:)       &  ! Additive Richtmyer Morton coefficient for dry static energy (Bs)
+          , q_acoef(:)       &  ! Linear   Richtmyer Morton coefficient for humidity (Aq)
+          , q_bcoef(:)       &  ! Additive Richtmyer Morton coefficient for humidity (Bq)
+          , s_old(:)         &  ! Dry static energy of the surface (old timestep)
+          , qsat_srf_old(:)  &  ! Saturated specific humidity of the surface (old timestep)
+          , dQdT(:)          &  ! Sensitivity of surface saturation specific humidity to temperature
+          , rad_srf_net(:)   &  ! Net radiation
+          , forc_hflx(:)     &  ! Ground heat flux
+          , heat_tcoef(:)    &  ! Drag coefficient for heat
+          , fact_q_air(:)    &  ! See (*)
+          , fact_qsat_srf(:) &  ! Similar to fact_q_air (formerly c_sat)
+          , fract_snow(:)    &  ! Snow fraction
+          , heat_cap(:)      &  ! Heat capacity of uppermost soil layer (only diagnostic for SkIn+)
+          , press_srf(:)     &  ! Surface pressure
+
+
+        ! Output
+          , s_star(:)        )
+
+        ! (*) Dimensionless factor for lowest atm. level in formulation of surface fluxes of specific humidity and
+        ! dry static energy to account for evapotranspiration including snow, wetskin and vegetation cover fractions,
+        ! stomatal and atmospheric resistance, as well as the specific humidity of air and the saturated specific humidity
+        ! of the surface (formerly c_air)
+
       END IF
 
 
@@ -554,21 +577,39 @@ CONTAINS
 
 
 
-
-
-
-
-
   !
   ! ================================================================================================================================
   !
-  SUBROUTINE surface_temp_implicit_skin(klon, steplen,             &
-    &            pcp,                                         &
-    &            pescoe, pfscoe, peqcoe, pfqcoe,              &
-    &            psold, pqsold, pdqsold,                      &
-    &            pnetrad, pgrdfl,                             &
-    &            pcfh, pcair, pcsat, pfracsu, pgrdcap,        &
-    &            psnew)
+  SUBROUTINE surface_temp_implicit_skin( &
+
+    ! Input
+      nc            &  ! Number of land grid points
+    , steplen       &  ! Length of timestep (2 * delta t)
+    , t2s_conv      &  ! Conversion factor for humidity from dry static energy
+    , t_acoef       &  ! Linear   Richtmyer Morton coefficient for dry static energy (As)
+    , t_bcoef       &  ! Additive Richtmyer Morton coefficient for dry static energy (Bs)
+    , q_acoef       &  ! Linear   Richtmyer Morton coefficient for humidity (Aq)
+    , q_bcoef       &  ! Additive Richtmyer Morton coefficient for humidity (Bq)
+    , s_old         &  ! Dry static energy of the surface (old timestep)
+    , qsat_srf_old  &  ! Saturated specific humidity of the surface (old timestep)
+    , dQdT          &  ! Sensitivity of surface saturation specific humidity to temperature
+    , rad_srf_net   &  ! Net radiation
+    , forc_hflx     &  ! Ground heat flux
+    , heat_tcoef    &  ! Drag coefficient for heat
+    , fact_q_air    &  ! See (*)
+    , fact_qsat_srf &  ! Similar to fact_q_air (formerly c_sat)
+    , fract_snow    &  ! Snow fraction
+    , heat_cap      &  ! Heat capacity of uppermost soil layer (only diagnostic for SkIn+)
+    , press_srf     &  ! Surface pressure
+
+
+  ! Output
+    , s_star        )
+
+  ! (*) Dimensionless factor for lowest atm. level in formulation of surface fluxes of specific humidity and
+  ! dry static energy to account for evapotranspiration including snow, wetskin and vegetation cover fractions,
+  ! stomatal and atmospheric resistance, as well as the specific humidity of air and the saturated specific humidity
+  ! of the surface (formerly c_air)
 
     USE mo_phy_schemes,            ONLY: qsat
     USE mo_jsb_physical_constants, ONLY: &
@@ -581,22 +622,31 @@ CONTAINS
       & cvdifts
 
 
-    INTEGER,  INTENT(in)    :: klon
+    INTEGER,  INTENT(in)    :: nc
     REAL(wp), INTENT(in)    :: steplen
-    REAL(wp), INTENT(in)    :: pcp(klon), pfscoe(klon), pescoe(klon), pfqcoe(klon), peqcoe(klon)
-    REAL(wp), INTENT(in)    :: psold(klon), pqsold(klon), pdqsold(klon)
-    REAL(wp), INTENT(inout)    :: pnetrad(klon), pgrdfl(klon)
-    REAL(wp), INTENT(in)    :: pcfh(klon), pcair(klon), pcsat(klon), pfracsu(klon)
-    REAL(wp), INTENT(in)    :: pgrdcap(klon)
-    REAL(wp), INTENT(out)   :: psnew(klon)
+    REAL(wp), INTENT(in)    :: t2s_conv(nc)
+    REAL(wp), INTENT(in)    :: t_bcoef(nc)
+    REAL(wp), INTENT(in)    :: t_acoef(nc)
+    REAL(wp), INTENT(in)    :: q_bcoef(nc)
+    REAL(wp), INTENT(in)    :: q_acoef(nc)
+    REAL(wp), INTENT(in)    :: s_old(nc)
+    REAL(wp), INTENT(in)    :: qsat_srf_old(nc)
+    REAL(wp), INTENT(in)    :: dQdT(nc)
+    REAL(wp), INTENT(in)    :: rad_srf_net(nc)
+    REAL(wp), INTENT(inout) :: forc_hflx(nc)
+    REAL(wp), INTENT(in)    :: heat_tcoef(nc)
+    REAL(wp), INTENT(in)    :: fact_q_air(nc)
+    REAL(wp), INTENT(in)    :: fact_qsat_srf(nc)
+    REAL(wp), INTENT(in)    :: fract_snow(nc)
+    REAL(wp), INTENT(in)    :: heat_cap(nc)
+    REAL(wp), INTENT(in)    :: press_srf(nc)
+    REAL(wp), INTENT(out)   :: s_star(nc)
     !
-    REAL(wp) :: zdt ! time step
-   !REAL(wp) :: pc16
-    INTEGER :: i
-
+    REAL(wp) :: zdt ! time step (later needed for CanoStor in SkIn+)
+    INTEGER  :: i
 
     ! Old local variables needed for classic SEB
-    REAL(wp), DIMENSION(klon) :: &
+    REAL(wp), DIMENSION(nc) :: &
         zcolin			&	! factors of linearized terms in energy balance
       , zcohfl			&	! factors from sensible and ground heat flux in energy balance
       , zcoind			&	! factors of independent terms in energy balance
@@ -605,15 +655,15 @@ CONTAINS
       , zcs					  ! csat, snow fraction, Lv and Lsub
 
     ! Iteration variables
-    REAL(wp), DIMENSION(klon) :: &
+    REAL(wp), DIMENSION(nc) :: &
         zsend			  &	! final dry static energy
     	, zTdiffend		&	! final temperature difference between two iteration steps (for potential diag.)
     	, zsdiffend		&	! final dry static energy difference between two iteration steps (for potential diag.)
       , zTdiff			&	! temperature difference between two iteration steps (for potential diag.)
       , zsdiff				! dry static energy difference between two iteration steps
 
-    REAL(wp), DIMENSION(klon) :: &
-    	  pTold			  &	! surface temperature (old time step)
+    REAL(wp), DIMENSION(nc) :: &
+    	  T_old			  &	! surface temperature (old time step)
       , zTold			  &	! surface temperature (old iteration step)
     	, zTnew			  &	! new surface temperature
       , zsold			  &	! surface dry static energy (old iteration step)
@@ -621,7 +671,7 @@ CONTAINS
   	  , zdqsold			&	! derivative saturated surface specific humidity (old iteration step)
   	  , znetrad			&	! net radiation (iteration)
       , zradcon			&	! constant part of net radiation (SWnet + LWdown)
-      , zhtc				  ! stable/unstable heat transfer coefficient
+      , zhtc				  ! stable/unstable heat transfer coefficient (skin conductivity)
 
 
 
@@ -643,9 +693,9 @@ CONTAINS
       , zlamdec			&	! decrease of iteration weighting factor
       , zsdelta				! stop criterium
 
-    INTEGER,  DIMENSION(klon) :: &
+    INTEGER,  DIMENSION(nc) :: &
         zfinaloop	    ! maximal number of iterations
-    LOGICAL,  DIMENSION(klon) :: &
+    LOGICAL,  DIMENSION(nc) :: &
         literate		  ! grid points which have to be iterated
 
     INTEGER ::			&
@@ -654,14 +704,14 @@ CONTAINS
     	, zlamfreq			! number of iteration loops per decrease of iteration weighting factor
 
     ! Input/Output Variables needed for SkIn are set to dummy values in a first approach
-    REAL(wp), DIMENSION(klon) :: &
+    REAL(wp), DIMENSION(nc) :: &
     	  pspress     &
       , pTsoil
 
 
     ! Input/Output Variables needed for SkIn are set to dummy values in a first approach
       pspress(:) = 101300._wp
-      pTsoil(:)  = psold(:) * zicp(:)
+      pTsoil(:)  = s_old(:) * zicp(:)
 
 
 
@@ -705,34 +755,32 @@ CONTAINS
       !$claw acc create(zcolin,zcohfl,zcoind,zicp,zca,zcs)
       ! Overimplicit time stepping: cvdifts = 3/2, steplen = 2 * delta_time
         zdt     = cvdifts * steplen
-      !pc16    = cpd * cpvd1
 
       !
       !$claw expand parallel update savepoint=ser_jsb_seb_land_surface_temp_implicit_skin_1
 
       ! Inverse specific heat capacity 1/cp
-        zicp(:)     = 1._wp / pcp(:)
+        zicp(:)     = 1._wp / t2s_conv(:)
 
       ! Factors used for latent heat flux (including atmospheric/stomatal resistance in cair/csat
-        zca(:)      = als*pfracsu(:) +  alv*( pcair(:) - pfracsu(:) )
-        zcs(:)      = als*pfracsu(:) +  alv*( pcsat(:) - pfracsu(:) )
+        zca(:)      = als*fract_snow(:) +  alv*( fact_q_air(:) - fract_snow(:) )
+        zcs(:)      = als*fract_snow(:) +  alv*( fact_qsat_srf(:) - fract_snow(:) )
 
 
       ! Surface temperature (old time step)
-        pTold(:)    = psold(:) * zicp(:)
+        T_old(:)    = s_old(:) * zicp(:)
 
 
       ! Net radiation without upward longwave radiation (SWnet + LWdown) so that it is
       ! independent from surface temperature (dry static energy)
-        zradcon(:)  = pnetrad(:) + zemiss_def * stbo * pTold(:)**4
+        zradcon(:)  = rad_srf_net(:) + zemiss_def * stbo * T_old(:)**4
 
       ! Old time step values as starting points for iteration
-        zTold(:)    = pTold(:)
-        zsold(:)    = psold(:)
-        zqsold(:)   = pqsold(:)
-        zdqsold(:)  = pdqsold(:)
-        znetrad(:)  = pnetrad(:)
-
+        zTold(:)    = T_old(:)
+        zsold(:)    = s_old(:)
+        zqsold(:)   = qsat_srf_old(:)
+        zdqsold(:)  = dQdT(:)
+        znetrad(:)  = rad_srf_net(:)
 
 
     !----------------------------------------------------------------------------------------
@@ -749,7 +797,7 @@ CONTAINS
 
     	  IF (zloop > 1) THEN
     	  ! Update dry static energy, temperature, humidity and net radiation
-    	  	zsold(:)   = psnew(:)
+    	  	zsold(:)   = s_star(:)
     	  	zTold(:)   = zsold(:) * zicp(:)
     	  	zqsold(:)  = qsat(zTold(:), pspress(:))
     	  	zdqsold(:) = ( qsat(zTold(:)+zTeps, pspress(:)) - zqsold(:) ) / zTeps
@@ -767,27 +815,26 @@ CONTAINS
 
 
 
-    	  zcohfl(:)     = zhtc(:)*zicp(:) - pcfh(:) * (pescoe(:) - 1._wp)
+    	  zcohfl(:)     = zhtc(:)*zicp(:) - heat_tcoef(:) * (t_acoef(:) - 1._wp)
 
     	  zcolin(:)     = 4._wp * zicp(:) * zemiss_def * stbo * ( (zTold(:))**3 )  &
-    					        - pcfh(:) * ( zca(:)*peqcoe(:) - zcs(:) )                  &
+    					        - heat_tcoef(:) * ( zca(:)*q_acoef(:) - zcs(:) )                  &
                       * zicp(:) * zdqsold(:)
 
 
     	  zcoind(:)     = znetrad(:) + zhtc(:) * pTsoil(:)    &
-    	  			        + pcfh(:)*( pfscoe(:) + (zca(:) * peqcoe(:) - zcs(:)) * zqsold(:) + zca(:) * pfqcoe(:) )
+    	  			        + heat_tcoef(:)*( t_bcoef(:) + (zca(:) * q_acoef(:) - zcs(:)) * zqsold(:) + zca(:) * q_bcoef(:) )
 
-    	  psnew(:)      = (zcolin(:) * zsold(:) + zcoind(:)) / (zcolin(:) + zcohfl(:))
+    	  s_star(:)      = (zcolin(:) * zsold(:) + zcoind(:)) / (zcolin(:) + zcohfl(:))
 
     	! Iteration filter
-    	  psnew(:)      = zsold(:) + zlam * (psnew(:) - zsold(:))
+    	  s_star(:)      = zsold(:) + zlam * (s_star(:) - zsold(:))
 
 
-    	  zTnew(:)      = psnew(:) * zicp(:)
+    	  zTnew(:)      = s_star(:) * zicp(:)
 
-    	  zsdiff(:)     = ABS(psnew(:) - zsold(:))
+    	  zsdiff(:)     = ABS(s_star(:) - zsold(:))
     	  zTdiff(:)     = ABS(zTnew(:) - zTold(:))
-
 
 
     	!------------------------------------------------------------------------------------
@@ -797,7 +844,7 @@ CONTAINS
     	! Check which grid points are already converged and save their final values
     	  WHERE (zsdiff(:) < zsdelta .AND. literate(:))
     		literate(:)  = .FALSE.
-    		zsend(:)     = psnew(:)
+    		zsend(:)     = s_star(:)
     		zTdiffend(:) = zTdiff(:)
     		zsdiffend(:) = zsdiff(:)
     		zfinaloop(:) = zloop
@@ -813,7 +860,7 @@ CONTAINS
     		WRITE(*,*) 'Iteration did not converge after ', zloop ,' loops'
     		WHERE( literate(:) )
     		  literate(:)  = .FALSE.
-    		  zsend(:)     = psnew(:)
+    		  zsend(:)     = s_star(:)
     		  zTdiffend(:) = zTdiff(:)
     		  zsdiffend(:) = zsdiff(:)
     		  zfinaloop(:) = zloop
@@ -831,12 +878,12 @@ CONTAINS
     !-----------------------------------------------------------------------------------------
 
     ! Rewrite output variable with saved final values
-      psnew(:)   = zsend(:)
-      zTnew(:)   = psnew(:) * zicp(:)
+      s_star(:)   = zsend(:)
+      zTnew(:)   = s_star(:) * zicp(:)
 
 
     ! Ground heat flux
-      pgrdfl(:)  = zhtc(:)*(pTsoil(:) - zTnew(:))
+      forc_hflx(:)  = zhtc(:)*(pTsoil(:) - zTnew(:))
 
 
 
