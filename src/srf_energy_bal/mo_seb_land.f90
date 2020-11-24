@@ -116,6 +116,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: vol_porosity_sl
     dsl4jsb_Real3D_onChunk :: matrix_pot_sl
     dsl4jsb_Real3D_onChunk :: bclapp_sl
+    dsl4jsb_Real3D_onChunk :: t_soil
     dsl4jsb_Real2D_onChunk :: t_acoef
     dsl4jsb_Real2D_onChunk :: t_bcoef
     dsl4jsb_Real2D_onChunk :: q_acoef
@@ -133,8 +134,11 @@ CONTAINS
      & heat_tcoef,                      & !< Heat transfer coefficient (rho*C_h*|v|)
      & t_star,                          &
      & liquid_max,                      &
-     & t_air_in_Celcius,                &
-     & soil_stor
+     & t_air_in_Celcius
+
+    REAL(wp), DIMENSION(options%nc)  :: &
+     & soil_stor,                       &
+     & t_soil_top
 
     LOGICAL, DIMENSION(options%nc) :: &
      & is_glacier,                    &
@@ -226,6 +230,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl) ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, matrix_pot_sl)  ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, bclapp_sl)      ! in
+
+    dsl4jsb_Get_var3D_onChunk(SSE_,   t_soil)      ! in
 
     dsl4jsb_Get_var2D_onChunk(SSE_,   grnd_hflx)      ! IN
     dsl4jsb_Get_var2D_onChunk(SSE_,   hcap_grnd)      ! IN
@@ -330,6 +336,7 @@ CONTAINS
     999 FORMAT(I0.2, I0.2, I0.2, 1X, I0.2, I0.2, I0.2, 1X, A4, 1X, ES15.7E3)
     997 FORMAT(I0.2, I0.2, I0.2, 1X, I0.2, I0.2, I0.2, 1X, A4, 1X, L1)
 
+    t_soil_top(:) = t_soil(:,1)
 
     ! Compute new surface temperature and saturation humidity
     IF (lstart) THEN
@@ -351,6 +358,7 @@ CONTAINS
 
       IF (l_is_skin) THEN
 
+
         CALL surface_temp_implicit_skin( &
 
           ! Input
@@ -365,17 +373,18 @@ CONTAINS
           , qsat_srf_old(:)  &  ! Saturated specific humidity of the surface (old timestep)
           , dQdT(:)          &  ! Sensitivity of surface saturation specific humidity to temperature
           , rad_srf_net(:)   &  ! Net radiation
-          , forc_hflx(:)     &  ! Ground heat flux
           , heat_tcoef(:)    &  ! Drag coefficient for heat
           , fact_q_air(:)    &  ! See (*)
           , fact_qsat_srf(:) &  ! Similar to fact_q_air (formerly c_sat)
           , fract_snow(:)    &  ! Snow fraction
           , heat_cap(:)      &  ! Heat capacity of uppermost soil layer (only diagnostic for SkIn+)
           , press_srf(:)     &  ! Surface pressure
+          , t_soil_top(:)    &  ! Soil temperature of top/uppermost soil layer
 
 
         ! Output
-          , s_star(:)        )
+          , forc_hflx(:)     &  ! Ground heat flux
+          , s_star(:)        )  ! Dry static energy of the surface (new timestep)
 
         ! (*) Dimensionless factor for lowest atm. level in formulation of surface fluxes of specific humidity and
         ! dry static energy to account for evapotranspiration including snow, wetskin and vegetation cover fractions,
@@ -395,9 +404,11 @@ CONTAINS
   			    write(555,999) yr,mo,dy, hr,mn,se, 'Rnet', rad_srf_net(i)
             write(555,999) yr,mo,dy, hr,mn,se, 'Gflx', grnd_hflx(i)
             write(555,999) yr,mo,dy, hr,mn,se, 'Ssoi', soil_stor(i)
+            write(555,999) yr,mo,dy, hr,mn,se, 'Tsoi', t_soil_top(i)
             write(555,999) yr,mo,dy, hr,mn,se, 'lati', lat(i)
             write(555,997) yr,mo,dy, hr,mn,se, 'Clas', l_is_clas
             write(555,997) yr,mo,dy, hr,mn,se, 'Skin', l_is_skin
+
           END IF
         END DO
       END IF
@@ -594,17 +605,19 @@ CONTAINS
     , qsat_srf_old  &  ! Saturated specific humidity of the surface (old timestep)
     , dQdT          &  ! Sensitivity of surface saturation specific humidity to temperature
     , rad_srf_net   &  ! Net radiation
-    , forc_hflx     &  ! Ground heat flux
     , heat_tcoef    &  ! Drag coefficient for heat
     , fact_q_air    &  ! See (*)
     , fact_qsat_srf &  ! Similar to fact_q_air (formerly c_sat)
     , fract_snow    &  ! Snow fraction
     , heat_cap      &  ! Heat capacity of uppermost soil layer (only diagnostic for SkIn+)
     , press_srf     &  ! Surface pressure
+    , t_soil_top    &  ! Soil temperature of top/uppermost soil layer
+
 
 
   ! Output
-    , s_star        )
+    , forc_hflx     &  ! Ground heat flux
+    , s_star        )  ! Dry static energy of the surface (new timestep)
 
   ! (*) Dimensionless factor for lowest atm. level in formulation of surface fluxes of specific humidity and
   ! dry static energy to account for evapotranspiration including snow, wetskin and vegetation cover fractions,
@@ -621,7 +634,7 @@ CONTAINS
       & als,  &
       & cvdifts
 
-
+  ! Input
     INTEGER,  INTENT(in)    :: nc
     REAL(wp), INTENT(in)    :: steplen
     REAL(wp), INTENT(in)    :: t2s_conv(nc)
@@ -633,15 +646,19 @@ CONTAINS
     REAL(wp), INTENT(in)    :: qsat_srf_old(nc)
     REAL(wp), INTENT(in)    :: dQdT(nc)
     REAL(wp), INTENT(in)    :: rad_srf_net(nc)
-    REAL(wp), INTENT(inout) :: forc_hflx(nc)
     REAL(wp), INTENT(in)    :: heat_tcoef(nc)
     REAL(wp), INTENT(in)    :: fact_q_air(nc)
     REAL(wp), INTENT(in)    :: fact_qsat_srf(nc)
     REAL(wp), INTENT(in)    :: fract_snow(nc)
     REAL(wp), INTENT(in)    :: heat_cap(nc)
     REAL(wp), INTENT(in)    :: press_srf(nc)
+    REAL(wp), INTENT(in)    :: t_soil_top(nc)
+  ! Output
+    REAL(wp), INTENT(out)   :: forc_hflx(nc)
     REAL(wp), INTENT(out)   :: s_star(nc)
-    !
+
+
+
     REAL(wp) :: zdt ! time step (later needed for CanoStor in SkIn+)
     INTEGER  :: i
 
@@ -672,8 +689,6 @@ CONTAINS
   	  , znetrad			&	! net radiation (iteration)
       , zradcon			&	! constant part of net radiation (SWnet + LWdown)
       , zhtc				  ! stable/unstable heat transfer coefficient (skin conductivity)
-
-
 
 
     ! Parameters needed for heat transfer coefficient
