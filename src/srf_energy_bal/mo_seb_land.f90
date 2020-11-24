@@ -29,7 +29,7 @@ MODULE mo_seb_land
   USE mo_jsb_time,           ONLY: is_time_experiment_start
 
   dsl4jsb_Use_processes SEB_, RAD_, TURB_, A2L_, SSE_, HYDRO_
-  !dsl4jsb_Use_config(SEB_)
+  dsl4jsb_Use_config(SEB_)
   dsl4jsb_Use_config(SSE_)
 
   dsl4jsb_Use_memory(A2L_)
@@ -67,7 +67,7 @@ CONTAINS
 
     ! Local variables
     !
-    !dsl4jsb_Def_config(SEB_)
+    dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(RAD_)
@@ -336,15 +336,32 @@ CONTAINS
       !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_3 tile_name=tile%name
       s_star(:) = s_old(:)
     ELSE
-      !$claw sca forward update savepoint=ser_jsb_seb_land_surface_temp_implicit_1 tile_name=tile%name
-      CALL surface_temp_implicit( nc, steplen, &
-        t2s_conv(:), &
-        t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), &
-        s_old(:), qsat_srf_old(:), dQdT(:), &
-        rad_srf_net(:), forc_hflx(:), heat_tcoef(:), &
-        fact_q_air(:), fact_qsat_srf(:), &
-        fract_snow(:), heat_cap(:), &
-        & s_star(:))
+
+      IF (l_is_clas) THEN
+        !$claw sca forward update savepoint=ser_jsb_seb_land_surface_temp_implicit_1 tile_name=tile%name
+        CALL surface_temp_implicit( nc, steplen, &
+          t2s_conv(:), &
+          t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), &
+          s_old(:), qsat_srf_old(:), dQdT(:), &
+          rad_srf_net(:), forc_hflx(:), heat_tcoef(:), &
+          fact_q_air(:), fact_qsat_srf(:), &
+          fract_snow(:), heat_cap(:), &
+          & s_star(:))
+      END IF
+
+      IF (l_is_skin) then
+
+        CALL surface_temp_implicit_skin( nc, steplen, &
+          t2s_conv(:), &
+          t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), &
+          s_old(:), qsat_srf_old(:), dQdT(:), &
+          rad_srf_net(:), forc_hflx(:), heat_tcoef(:), &
+          fact_q_air(:), fact_qsat_srf(:), &
+          fract_snow(:), heat_cap(:), &
+          & s_star(:))
+      END IF
+
+
     END IF
 
     soil_stor(:)  = heat_cap(:) / t2s_conv(:)*(s_star(:) - s_old(:)) / (steplen*cvdifts)
@@ -469,7 +486,9 @@ CONTAINS
     !$claw acc end data
 
   END SUBROUTINE update_surface_energy_land
-
+  !
+  ! ================================================================================================================================
+  !
   SUBROUTINE surface_temp_implicit(klon, steplen,             &
     &            pcp,                                         &
     &            pescoe, pfscoe, peqcoe, pfqcoe,              &
@@ -529,6 +548,303 @@ CONTAINS
 
     !$claw acc end data
   END SUBROUTINE surface_temp_implicit
+
+
+
+
+
+
+
+
+
+
+
+  !
+  ! ================================================================================================================================
+  !
+  SUBROUTINE surface_temp_implicit_skin(klon, steplen,             &
+    &            pcp,                                         &
+    &            pescoe, pfscoe, peqcoe, pfqcoe,              &
+    &            psold, pqsold, pdqsold,                      &
+    &            pnetrad, pgrdfl,                             &
+    &            pcfh, pcair, pcsat, pfracsu, pgrdcap,        &
+    &            psnew)
+
+    USE mo_phy_schemes,            ONLY: qsat
+    USE mo_jsb_physical_constants, ONLY: &
+      !& cpd, &
+      !& cpvd1, &
+      & zemiss_def, &
+      & stbo, &
+      & alv,  &
+      & als,  &
+      & cvdifts
+
+
+    INTEGER,  INTENT(in)    :: klon
+    REAL(wp), INTENT(in)    :: steplen
+    REAL(wp), INTENT(in)    :: pcp(klon), pfscoe(klon), pescoe(klon), pfqcoe(klon), peqcoe(klon)
+    REAL(wp), INTENT(in)    :: psold(klon), pqsold(klon), pdqsold(klon)
+    REAL(wp), INTENT(inout)    :: pnetrad(klon), pgrdfl(klon)
+    REAL(wp), INTENT(in)    :: pcfh(klon), pcair(klon), pcsat(klon), pfracsu(klon)
+    REAL(wp), INTENT(in)    :: pgrdcap(klon)
+    REAL(wp), INTENT(out)   :: psnew(klon)
+    !
+    REAL(wp) :: zdt ! time step
+   !REAL(wp) :: pc16
+    INTEGER :: i
+
+
+    ! Old local variables needed for classic SEB
+    REAL(wp), DIMENSION(klon) :: &
+        zcolin			&	! factors of linearized terms in energy balance
+      , zcohfl			&	! factors from sensible and ground heat flux in energy balance
+      , zcoind			&	! factors of independent terms in energy balance
+      , zicp			  &	! inverse specific heat capacity of humid air
+      , zca				  &	! cair, snow fraction, Lv and Lsub
+      , zcs					  ! csat, snow fraction, Lv and Lsub
+
+    ! Iteration variables
+    REAL(wp), DIMENSION(klon) :: &
+        zsend			  &	! final dry static energy
+    	, zTdiffend		&	! final temperature difference between two iteration steps (for potential diag.)
+    	, zsdiffend		&	! final dry static energy difference between two iteration steps (for potential diag.)
+      , zTdiff			&	! temperature difference between two iteration steps (for potential diag.)
+      , zsdiff				! dry static energy difference between two iteration steps
+
+    REAL(wp), DIMENSION(klon) :: &
+    	  pTold			  &	! surface temperature (old time step)
+      , zTold			  &	! surface temperature (old iteration step)
+    	, zTnew			  &	! new surface temperature
+      , zsold			  &	! surface dry static energy (old iteration step)
+  	  , zqsold			&	! saturated surface specific humidity (old iteration step)
+  	  , zdqsold			&	! derivative saturated surface specific humidity (old iteration step)
+  	  , znetrad			&	! net radiation (iteration)
+      , zradcon			&	! constant part of net radiation (SWnet + LWdown)
+      , zhtc				  ! stable/unstable heat transfer coefficient
+
+
+
+
+    ! Parameters needed for heat transfer coefficient
+    REAL(wp) :: 		&
+    	  zslope			&	! slope of hyberbolic tangent
+    	, zaxSym				! axial symmetry of hyberbolic tangent
+
+    !
+    REAL(wp) :: 		&
+        zTeps			  & ! Small temperature difference used for derivative of saturated specific humidity
+      , zpressfrac    ! Fraction between surface and lowest atmospheric level pressure (should be read dynamically)
+
+    ! Iteration parameters
+    REAL(wp) :: 		&
+        zlam			  &	! iteration weighting factor
+      , zlammin			&	! minimal iteration weighting factor
+      , zlamdec			&	! decrease of iteration weighting factor
+      , zsdelta				! stop criterium
+
+    INTEGER,  DIMENSION(klon) :: &
+        zfinaloop	    ! maximal number of iterations
+    LOGICAL,  DIMENSION(klon) :: &
+        literate		  ! grid points which have to be iterated
+
+    INTEGER ::			&
+    	  zloop			  &	! iteration loop
+    	, zendloop		&	! final iteration loop
+    	, zlamfreq			! number of iteration loops per decrease of iteration weighting factor
+
+    ! Input/Output Variables needed for SkIn are set to dummy values in a first approach
+    REAL(wp), DIMENSION(klon) :: &
+    	  pspress     &
+      , pTsoil
+
+
+    ! Input/Output Variables needed for SkIn are set to dummy values in a first approach
+      pspress(:) = 101300._wp
+      pTsoil(:)  = psold(:) * zicp(:)
+
+
+
+    ! Heat transfer coefficient (Skin conductivity from ECMWF Part IV
+    ! Physical Processes, Chapter 8 Surface Parametrization)
+      zhtc(:) = 35._wp 		! [W/m^2/K]
+      zslope  = -2._wp	 	! slope of hyperbolic tangent transition (this value can be adjusted)
+      zaxSym  =  0.5_wp  	! axial symmetry of hyperbolic tangent (this value has to be 0.5)
+
+    ! Small temperature difference used for derivative of saturated specific humidity
+      zTeps   = 0.001_wp
+
+    ! Fraction between surface and lowest atmospheric level pressure (should be read dynamically)
+      zpressfrac   = 0.99615_wp
+
+    ! Iteration options
+      zloop       = 0
+      zendloop    = 50
+      zsdelta  	  = 100._wp
+      literate(:) = .TRUE.
+
+    ! Weighting factor to ensure convergence of iteration
+      zlam       = 2._wp/3._wp
+      zlammin    = 0.001_wp
+      zlamdec    = 0.5_wp
+      zlamfreq   = 10
+
+    ! Starting/Missing values of iteration
+      zsend(:)     = 0._wp
+      zTdiffend(:) = 9999._wp
+      zfinaloop(:) = 9999
+
+
+
+
+      !-----------------------------------------------------------------------------------------
+      ! Update SurfaceTemp (no iteration)
+      !-----------------------------------------------------------------------------------------
+
+      !$claw acc data &
+      !$claw acc create(zcolin,zcohfl,zcoind,zicp,zca,zcs)
+      ! Overimplicit time stepping: cvdifts = 3/2, steplen = 2 * delta_time
+        zdt     = cvdifts * steplen
+      !pc16    = cpd * cpvd1
+
+      !
+      !$claw expand parallel update savepoint=ser_jsb_seb_land_surface_temp_implicit_skin_1
+
+      ! Inverse specific heat capacity 1/cp
+        zicp(:)     = 1._wp / pcp(:)
+
+      ! Factors used for latent heat flux (including atmospheric/stomatal resistance in cair/csat
+        zca(:)      = als*pfracsu(:) +  alv*( pcair(:) - pfracsu(:) )
+        zcs(:)      = als*pfracsu(:) +  alv*( pcsat(:) - pfracsu(:) )
+
+
+      ! Surface temperature (old time step)
+        pTold(:)    = psold(:) * zicp(:)
+
+
+      ! Net radiation without upward longwave radiation (SWnet + LWdown) so that it is
+      ! independent from surface temperature (dry static energy)
+        zradcon(:)  = pnetrad(:) + zemiss_def * stbo * pTold(:)**4
+
+      ! Old time step values as starting points for iteration
+        zTold(:)    = pTold(:)
+        zsold(:)    = psold(:)
+        zqsold(:)   = pqsold(:)
+        zdqsold(:)  = pdqsold(:)
+        znetrad(:)  = pnetrad(:)
+
+
+
+    !----------------------------------------------------------------------------------------
+    ! While loop
+    !-----------------------------------------------------------------------------------------
+
+      DO WHILE ( zloop <= zendloop)
+
+    	  zloop = zloop + 1
+
+    	!------------------------------------------------------------------------------------
+    	! Update temperature dependent variables
+    	!------------------------------------------------------------------------------------
+
+    	  IF (zloop > 1) THEN
+    	  ! Update dry static energy, temperature, humidity and net radiation
+    	  	zsold(:)   = psnew(:)
+    	  	zTold(:)   = zsold(:) * zicp(:)
+    	  	zqsold(:)  = qsat(zTold(:), pspress(:))
+    	  	zdqsold(:) = ( qsat(zTold(:)+zTeps, pspress(:)) - zqsold(:) ) / zTeps
+    	  	znetrad(:) = zradcon(:) - zemiss_def * stbo * zTold(:)**4
+    	  END IF
+
+    	! Heat Transfer Coefficient (Hyperbolic tangent ensures smooth transition from stable to unstable)
+    	  !zhtc(:) = zaxSym*(phtcu(:) - phtcs(:)) * tanh(-zslope*zril(:)) + zaxSym*(phtcu(:) + phtcs(:))
+
+
+    	!------------------------------------------------------------------------------------
+    	! Update surface temperature (iteration)
+    	!------------------------------------------------------------------------------------
+
+
+
+
+    	  zcohfl(:)     = zhtc(:)*zicp(:) - pcfh(:) * (pescoe(:) - 1._wp)
+
+    	  zcolin(:)     = 4._wp * zicp(:) * zemiss_def * stbo * ( (zTold(:))**3 )  &
+    					        - pcfh(:) * ( zca(:)*peqcoe(:) - zcs(:) )                  &
+                      * zicp(:) * zdqsold(:)
+
+
+    	  zcoind(:)     = znetrad(:) + zhtc(:) * pTsoil(:)    &
+    	  			        + pcfh(:)*( pfscoe(:) + (zca(:) * peqcoe(:) - zcs(:)) * zqsold(:) + zca(:) * pfqcoe(:) )
+
+    	  psnew(:)      = (zcolin(:) * zsold(:) + zcoind(:)) / (zcolin(:) + zcohfl(:))
+
+    	! Iteration filter
+    	  psnew(:)      = zsold(:) + zlam * (psnew(:) - zsold(:))
+
+
+    	  zTnew(:)      = psnew(:) * zicp(:)
+
+    	  zsdiff(:)     = ABS(psnew(:) - zsold(:))
+    	  zTdiff(:)     = ABS(zTnew(:) - zTold(:))
+
+
+
+    	!------------------------------------------------------------------------------------
+    	! Check iteration criteria
+    	!------------------------------------------------------------------------------------
+
+    	! Check which grid points are already converged and save their final values
+    	  WHERE (zsdiff(:) < zsdelta .AND. literate(:))
+    		literate(:)  = .FALSE.
+    		zsend(:)     = psnew(:)
+    		zTdiffend(:) = zTdiff(:)
+    		zsdiffend(:) = zsdiff(:)
+    		zfinaloop(:) = zloop
+    	  END WHERE
+
+    	! Decrease iteration weighting factor at certain iteration steps
+    	  IF(MOD(zloop,zlamfreq) == 0) THEN
+    		zlam = MAX(zlamdec * zlam, zlammin)
+    	  END IF
+
+    	! If the maximal number of iteration loops is reached, save the current values
+    	  IF(zloop == zendloop) THEN
+    		WRITE(*,*) 'Iteration did not converge after ', zloop ,' loops'
+    		WHERE( literate(:) )
+    		  literate(:)  = .FALSE.
+    		  zsend(:)     = psnew(:)
+    		  zTdiffend(:) = zTdiff(:)
+    		  zsdiffend(:) = zsdiff(:)
+    		  zfinaloop(:) = zloop
+    		END WHERE
+    	  END IF
+
+      	! End iteration prematurely if all points are converged
+    	  IF ( .NOT. ANY(literate(:)) ) THEN
+    		EXIT
+    	  END IF
+
+      END DO
+    !----------------------------------------------------------------------------------------
+    ! End of while loop
+    !-----------------------------------------------------------------------------------------
+
+    ! Rewrite output variable with saved final values
+      psnew(:)   = zsend(:)
+      zTnew(:)   = psnew(:) * zicp(:)
+
+
+    ! Ground heat flux
+      pgrdfl(:)  = zhtc(:)*(pTsoil(:) - zTnew(:))
+
+
+
+    !$claw end expand
+
+    !$claw acc end data
+
+  END SUBROUTINE surface_temp_implicit_skin
   !
   ! ================================================================================================================================
   !
