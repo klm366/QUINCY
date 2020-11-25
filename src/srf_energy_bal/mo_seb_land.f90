@@ -103,6 +103,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: q_air
     dsl4jsb_Real2D_onChunk :: fact_qsat_srf
     dsl4jsb_Real2D_onChunk :: fact_q_air
+    dsl4jsb_Real2D_onChunk :: htc_stable      !< heat transfer coefficient (skin conuctivity) for stable   conditions (Ri > 0)
+    dsl4jsb_Real2D_onChunk :: htc_unstable    !< heat transfer coefficient (skin conuctivity) for unstable conditions (Ri < 0)
     dsl4jsb_Real2D_onChunk :: drag_srf
     dsl4jsb_Real2D_onChunk :: rad_srf_net
     dsl4jsb_Real2D_onChunk :: grnd_hflx
@@ -137,8 +139,9 @@ CONTAINS
      & t_air_in_Celcius
 
     REAL(wp), DIMENSION(options%nc)  :: &
-     & soil_stor,                       &
-     & t_soil_top
+     & soil_stor,                       & !< soil heat storage depending on capacity of the top soil layer C_soil * dT/dt
+     & t_soil_top                         !< uppermost soil layer
+
 
     LOGICAL, DIMENSION(options%nc) :: &
      & is_glacier,                    &
@@ -218,6 +221,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SEB_,   s_star)         ! OUT
     dsl4jsb_Get_var2D_onChunk(SEB_,   heat_cap)       ! OUT
     dsl4jsb_Get_var2D_onChunk(SEB_,   forc_hflx)      ! OUT
+    dsl4jsb_Get_var2D_onChunk(TURB_,  htc_stable)     ! in
+    dsl4jsb_Get_var2D_onChunk(TURB_,  htc_unstable)   ! in
     dsl4jsb_Get_var2D_onChunk(TURB_,  fact_q_air)     ! in
     dsl4jsb_Get_var2D_onChunk(TURB_,  fact_qsat_srf)  ! in
     dsl4jsb_Get_var2D_onChunk(RAD_,   rad_srf_net)    ! in
@@ -336,7 +341,7 @@ CONTAINS
     999 FORMAT(I0.2, I0.2, I0.2, 1X, I0.2, I0.2, I0.2, 1X, A4, 1X, ES15.7E3)
     997 FORMAT(I0.2, I0.2, I0.2, 1X, I0.2, I0.2, I0.2, 1X, A4, 1X, L1)
 
-    t_soil_top(:) = t_soil(:,1)
+    t_soil_top(:)   = t_soil(:,1)
 
     ! Compute new surface temperature and saturation humidity
     IF (lstart) THEN
@@ -380,6 +385,8 @@ CONTAINS
           , heat_cap(:)      &  ! Heat capacity of uppermost soil layer (only diagnostic for SkIn+)
           , press_srf(:)     &  ! Surface pressure
           , t_soil_top(:)    &  ! Soil temperature of top/uppermost soil layer
+          , htc_stable(:)    &  ! Heat transfer coefficient (skin conuctivity) for stable   conditions (Ri > 0)
+          , htc_unstable(:)  &  ! Heat transfer coefficient (skin conuctivity) for unstable conditions (Ri < 0)
           , lat(:)           &  ! Latitude (needed for site experiments)
 
 
@@ -623,6 +630,8 @@ CONTAINS
     , heat_cap      &  ! Heat capacity of uppermost soil layer (only diagnostic for SkIn+)
     , press_srf     &  ! Surface pressure
     , t_soil_top    &  ! Soil temperature of top/uppermost soil layer
+    , htc_stable    &  ! Heat transfer coefficient (skin conuctivity) for stable   conditions (Ri > 0)
+    , htc_unstable  &  ! Heat transfer coefficient (skin conuctivity) for unstable conditions (Ri < 0)
     , lat           &  ! Latitude (needed for site experiments)
 
 
@@ -666,6 +675,8 @@ CONTAINS
     REAL(wp), INTENT(in)    :: heat_cap(nc)
     REAL(wp), INTENT(in)    :: press_srf(nc)
     REAL(wp), INTENT(in)    :: t_soil_top(nc)
+    REAL(wp), INTENT(in)    :: htc_stable(nc)
+    REAL(wp), INTENT(in)    :: htc_unstable(nc)
     REAL(wp), INTENT(in)    :: lat(nc)
   ! Output
     REAL(wp), INTENT(out)   :: forc_hflx(nc)
@@ -737,7 +748,7 @@ CONTAINS
 
     ! Heat transfer coefficient (Skin conductivity from ECMWF Part IV
     ! Physical Processes, Chapter 8 Surface Parametrization)
-      zhtc(:) = 35._wp 		! [W/m^2/K]
+      zhtc(:) = 0.5_wp * ( htc_stable(:) + htc_unstable(:) ) ! arithmetic mean [W/m^2/K]
       zslope  = -2._wp	 	! slope of hyperbolic tangent transition (this value can be adjusted)
       zaxSym  =  0.5_wp  	! axial symmetry of hyperbolic tangent (this value has to be 0.5)
 
@@ -914,6 +925,7 @@ CONTAINS
           DO i=1,size(zTnew, dim=1)
             IF (lat(i) > 37._wp) THEN
               write(555,999) yr,mo,dy, hr,mn,se, 'Tnew', zTnew(i)
+              write(555,999) yr,mo,dy, hr,mn,se, 'zhtc', zhtc(i)
               write(555,998) yr,mo,dy, hr,mn,se, 'loop', zfinaloop(i)
             END IF
           END DO

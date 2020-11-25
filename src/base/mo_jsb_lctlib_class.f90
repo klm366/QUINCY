@@ -63,6 +63,8 @@ MODULE mo_jsb_lctlib_class
                                                   !! ... (Table 2.6 in Knorr)
     REAL(wp) :: ETransport            !! Maximum electron transport rate at 25 degrees Celsius [1.E-6 * Mol/m^2/s] ...
                                                   !! ... (Table 2.6 in Knorr)
+    REAL(wp) :: HeatTransCoeffStable  !! Heat Transfer Coefficient (Stable) [W(m^2K)]
+    REAL(wp) :: HeatTransCoeffUnstable!! Heat Transfer Coefficient (Stable) [W(m^2K)]
     REAL(wp) :: VegHeight             !! Typical height of the vegetation classes [m]
     REAL(wp) :: VegRoughness          !! Roughness length of the vegetation classes [m]
     REAL(wp) :: MinVegRoughness       !! Minimal roughness length of the vegetation classes (LAI = 0) [m]
@@ -149,20 +151,20 @@ MODULE mo_jsb_lctlib_class
     REAL(wp) :: CanopyResistanceMin  !! Minimum canopy resistance (optional, only used in VIC scheme
                                                  !! and if BETHY is not used)
     REAL(wp) :: StemArea             !! Area of stems and branches of woody plants
-    
+
     ! --- QUINCY model parameters (MPI-BGC Jena) ---------------------------------------------------------------------------------
-    INTEGER  :: growthform 
+    INTEGER  :: growthform
     INTEGER  :: ps_pathway
     INTEGER  :: phenology_type
-    REAL(wp) :: sla                 
-    REAL(wp) :: sigma_vis 
-    REAL(wp) :: sigma_nir 
-    REAL(wp) :: omega_clumping 
-    REAL(wp) :: crown_shape_factor 
-    REAL(wp) :: cn_leaf             
+    REAL(wp) :: sla
+    REAL(wp) :: sigma_vis
+    REAL(wp) :: sigma_nir
+    REAL(wp) :: omega_clumping
+    REAL(wp) :: crown_shape_factor
+    REAL(wp) :: cn_leaf
     REAL(wp) :: cn_leaf_min
     REAL(wp) :: cn_leaf_max
-    REAL(wp) :: np_leaf  
+    REAL(wp) :: np_leaf
     REAL(wp) :: np_leaf_min
     REAL(wp) :: np_leaf_max
     REAL(wp) :: k0_fn_struc
@@ -184,7 +186,7 @@ MODULE mo_jsb_lctlib_class
                 tau_seed_est      , &
                 tau_mycorrhiza
 
-    ! N uptake parameters    
+    ! N uptake parameters
     REAL(wp) :: vmax_uptake_n     , &
                 vmax_uptake_p     , &
                 bnf_base
@@ -218,9 +220,9 @@ MODULE mo_jsb_lctlib_class
                 fstore_target
 
     ! Soil
-    REAL(wp) :: k_root_dist    
+    REAL(wp) :: k_root_dist
     ! --- END QUINCY model parameters (MPI-BGC Jena) -----------------------------------------------------------------------------
-    
+
   END TYPE t_lctlib_element
 
 CONTAINS
@@ -266,7 +268,7 @@ CONTAINS
 
     ! USE statements necessary for modifying QUINCY model input values of lctlib parameters
     USE mo_jsb_math_constants,      ONLY: one_day, one_year
-    USE mo_jsb_physical_constants,  ONLY: molar_mass_C, molar_mass_N, molar_mass_P, Dwv, Dco2, tmelt 
+    USE mo_jsb_physical_constants,  ONLY: molar_mass_C, molar_mass_N, molar_mass_P, Dwv, Dco2, tmelt
     USE mo_veg_constants,           ONLY: carbon_per_dryweight_leaf, sm2lm_grass, igrass, itree
 
     CHARACTER(len=*), INTENT(in) :: lctlib_file_name
@@ -302,6 +304,8 @@ CONTAINS
     LOGICAL            :: exist_C4flag                 = .FALSE.
     LOGICAL            :: exist_CarboxRate             = .FALSE.
     LOGICAL            :: exist_ETransport             = .FALSE.
+    LOGICAL            :: exist_HeatTransCoeffStable   = .FALSE.
+    LOGICAL            :: exist_HeatTransCoeffUnstable = .FALSE.
     LOGICAL            :: exist_VegHeight              = .FALSE.
     LOGICAL            :: exist_VegRoughness           = .FALSE.
     LOGICAL            :: exist_MinVegRoughness        = .FALSE.
@@ -417,7 +421,7 @@ CONTAINS
     LOGICAL            :: exists_c0_allom = .FALSE.
     LOGICAL            :: exists_fstore_target = .FALSE.
     LOGICAL            :: exists_k_root_dist = .FALSE.
-    
+
     !! quincy end
     INTEGER            :: i
 
@@ -563,6 +567,12 @@ CONTAINS
           CASE ('etransport')                                         ! E-transport
              READ(line(pos:length),*) lctLib(1:nlct)%ETransport
            exist_ETransport = .TRUE.
+         CASE ('heattranscoeffstable')                               ! typical stable heat transfer coefficient
+            READ(line(pos:length),*) lctLib(1:nlct)%HeatTransCoeffStable
+            exist_HeatTransCoeffStable = .TRUE.
+          CASE ('heattranscoeffunstable')							                ! typical unstable heat transfer coefficient
+            READ(line(pos:length),*) lctLib(1:nlct)%HeatTransCoeffUnstable
+            exist_HeatTransCoeffUnstable = .TRUE.
           CASE ('vegheight')                                          ! typical vegetation height
              READ(line(pos:length),*) lctLib(1:nlct)%VegHeight
              exist_VegHeight = .TRUE.
@@ -959,7 +969,7 @@ CONTAINS
               exists_fstore_target = .TRUE.
 
             CASE ('k_root_dist')
-              READ(line(pos:length),*) lctlib(1:nlct)%k_root_dist          
+              READ(line(pos:length),*) lctlib(1:nlct)%k_root_dist
               exists_k_root_dist = .TRUE.
             CASE default
               ! nothing to do
@@ -1006,6 +1016,10 @@ CONTAINS
             CALL finish('init_lctLib','No data for CarboxRate found in '//TRIM(lctLib_file_name))
        IF(.NOT. exist_ETransport) &
             CALL finish('init_lctLib','No data for ETransport found in '//TRIM(lctLib_file_name))
+       IF(.NOT. exist_HeatTransCoeffStable) &
+            CALL finish('init_lctLib','No data for HeatTransCoeffStable found in '//TRIM(lctLib_file_name))
+       IF(.NOT. exist_HeatTransCoeffUnstable) &
+            CALL finish('init_lctLib','No data for HeatTransCoeffUnstable found in '//TRIM(lctLib_file_name))
        IF(.NOT. exist_VegHeight) &
             CALL finish('init_lctLib','No data for VegHeight found in '//TRIM(lctLib_file_name))
        IF(.NOT. exist_VegRoughness) &
@@ -1324,7 +1338,7 @@ CONTAINS
         DO i=2,nlct
            IF(lctlib(i)%growthform /= igrass) THEN
               lctlib(i)%k_rtos = 1.75_wp * (lctlib(4)%sla * lctlib(i)%wood_density) / lctlib(i)%k_latosa
-              !lctlib(i)%k_rtos = SQRT(lctlib(i)%k_root / lctlib(i)%k_sapwood * & 
+              !lctlib(i)%k_rtos = SQRT(lctlib(i)%k_root / lctlib(i)%k_sapwood * &
               !     lctlib(i)%tau_sap_wood / lctlib(i)%tau_fine_root * lctlib(i)%wood_density)
            ELSE
               lctlib(i)%k_rtos = 0.5_wp / sm2lm_grass
@@ -1333,8 +1347,8 @@ CONTAINS
        !! c0_allom
          DO i=2,nlct
            IF(lctlib(i)%growthform == itree) THEN
-             lctlib(i)%c0_allom = SQRT(lctlib(i)%k_root / lctlib(i)%k_sapwood * & 
-                                       lctlib(i)%tau_sap_wood / lctlib(i)%tau_fine_root * lctlib(i)%wood_density) * & 
+             lctlib(i)%c0_allom = SQRT(lctlib(i)%k_root / lctlib(i)%k_sapwood * &
+                                       lctlib(i)%tau_sap_wood / lctlib(i)%tau_fine_root * lctlib(i)%wood_density) * &
                                   lctlib(i)%tau_fine_root / lctlib(i)%tau_sap_wood
            ELSE
              lctlib(i)%c0_allom = 0.0_wp
@@ -1452,6 +1466,8 @@ CONTAINS
        CALL p_bcast(lctlib(:)%C4flag, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%CarboxRate, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%ETransport, p_io, mpi_comm)
+       CALL p_bcast(lctlib(:)%HeatTransCoeffUnstable, p_io, mpi_comm)
+       CALL p_bcast(lctlib(:)%HeatTransCoeffStable, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%VegHeight, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%VegRoughness, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%MinVegRoughness, p_io, mpi_comm)

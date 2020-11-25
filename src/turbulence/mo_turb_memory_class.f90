@@ -33,6 +33,8 @@ MODULE mo_turb_memory_class
     !
     ! Parameters
     TYPE(t_jsb_var_real2d) :: &
+      & htc_stable,           & !< Stable heat transfer coefficient
+      & htc_unstable,         & !< Unstable heat transfer coefficient
       & rough_m,              & !< Surface roughness length for momentum
       & rough_h,              & !< Surface roughness length for heat
       ! The following two variables are transformations of the corresponding roughness length variables
@@ -102,7 +104,25 @@ CONTAINS
       & output_level=BASIC,                                                      &
       & initval_r=1.0_wp )
 
-    CALL jsb_add_var( mem, 'rough_m_star', mem%rough_m_star,                   &
+    CALL jsb_add_var( mem, 'htc_stable', mem%htc_stable,                       &
+        & hgrid, surface,                                                          &
+        & t_cf('htc_stable', 'W/m2/K', 'stable heat tranfer coefficient'),           &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
+        & prefix, suffix,                                                          &
+        & lrestart=.FALSE.,                                                        &
+        & loutput=.FALSE.,                                                         &
+        & initval_r=35.0_wp )
+
+    CALL jsb_add_var( mem, 'htc_unstable', mem%htc_unstable,                       &
+        & hgrid, surface,                                                          &
+        & t_cf('htc_unstable', 'W/m2/K', 'unstable heat tranfer coefficient'),           &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
+        & prefix, suffix,                                                          &
+        & lrestart=.FALSE.,                                                        &
+        & loutput=.FALSE.,                                                         &
+        & initval_r=35.0_wp )
+
+    CALL jsb_add_var( mem, 'rough_m_star', mem%rough_m_star,                     &
       & hgrid, surface,                                                          &
       & t_cf('rough_m_star', '', 'rough_m_star'),                                &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &

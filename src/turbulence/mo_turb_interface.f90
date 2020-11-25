@@ -156,6 +156,8 @@ CONTAINS
     dsl4jsb_Def_memory(SEB_)
 
     ! Declare pointers to variables in memory
+    dsl4jsb_Real2D_onChunk :: htc_stable
+    dsl4jsb_Real2D_onChunk :: htc_unstable
     dsl4jsb_Real2D_onChunk :: rough_m
     dsl4jsb_Real2D_onChunk :: rough_h
     dsl4jsb_Real2D_onChunk :: rough_m_star
@@ -172,7 +174,8 @@ CONTAINS
       & rough_veg_star, rough_bare_star, rough_snow_star
     REAL(wp) :: &
       & config_rough_bare, config_rough_snow, config_rough_water, config_blending_height, config_roughness_lai_saturation, &
-      & config_roughness_momentum_to_heat, lctlib_MinVegRoughness, lctlib_MaxVegRoughness, lctlib_VegRoughness
+      & config_roughness_momentum_to_heat, lctlib_MinVegRoughness, lctlib_MaxVegRoughness, lctlib_VegRoughness,            &
+      & lctlib_HeatTransCoeffStable, lctlib_HeatTransCoeffUnstable
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_roughness'
 
@@ -196,6 +199,8 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
 
     ! Get process variables
+    dsl4jsb_Get_var2D_onChunk(TURB_,  htc_stable)      ! out
+    dsl4jsb_Get_var2D_onChunk(TURB_,  htc_unstable)    ! out
     dsl4jsb_Get_var2D_onChunk(TURB_,  rough_m)         ! out
     dsl4jsb_Get_var2D_onChunk(TURB_,  rough_h)         ! out
     dsl4jsb_Get_var2D_onChunk(TURB_,  rough_m_star)    ! out
@@ -205,13 +210,19 @@ CONTAINS
     config_rough_snow                 = dsl4jsb_Config(TURB_)%roughness_snow
     config_rough_water                = dsl4jsb_Config(TURB_)%roughness_water
 
+    lctlib_HeatTransCoeffStable   = dsl4jsb_Lctlib_param(HeatTransCoeffStable)
+    lctlib_HeatTransCoeffUnstable = dsl4jsb_Lctlib_param(HeatTransCoeffUnstable)
+
+    htc_stable(:)   = lctlib_HeatTransCoeffStable
+    htc_unstable(:) = lctlib_HeatTransCoeffUnstable
+
     IF (tile%Is_process_active(SSE_)) THEN  ! Should catch all vegetated, bare and glacier tiles
 
       dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_soil) ! in
 
       config_rough_bare                 = dsl4jsb_Config(TURB_)%roughness_bare
       config_roughness_momentum_to_heat = dsl4jsb_Config(TURB_)%roughness_momentum_to_heat
-  
+
       !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_0 tile_name=tile%name
       rough_bare_star(:) = 1._wp  / LOG(config_blending_height / config_rough_bare)**2
       rough_snow_star(:) = 1._wp  / LOG(config_blending_height / config_rough_snow)**2
@@ -245,7 +256,7 @@ CONTAINS
 
         !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_3 tile_name=tile%name
         rough_m_star(:) = (1._wp - fract_fpc_max(:)) * rough_bare_star(:) + fract_fpc_max(:) * rough_veg_star(:)
-  
+
         ! Modify roughness length heat for non-vegetated part by snow cover
         !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_4 tile_name=tile%name
         rough_bare_star(:) = (1._wp - fract_snow_soil(:)) * rough_bare_star(:) + fract_snow_soil(:) * rough_snow_star(:)
@@ -257,7 +268,7 @@ CONTAINS
 
         !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_6 tile_name=tile%name
         rough_h_star(:) = (1._wp - fract_fpc_max(:)) * rough_bare_star(:) + fract_fpc_max(:) * rough_veg_star(:)
-  
+
       ELSE  ! bare tile
         !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_7 tile_name=tile%name
         rough_m_star(:) = rough_bare_star(:)
@@ -316,6 +327,8 @@ CONTAINS
     dsl4jsb_Def_config(TURB_)
     dsl4jsb_Def_memory(TURB_)
 
+    dsl4jsb_Real2D_onChunk :: htc_stable
+    dsl4jsb_Real2D_onChunk :: htc_unstable
     dsl4jsb_Real2D_onChunk :: rough_m
     dsl4jsb_Real2D_onChunk :: rough_h
     dsl4jsb_Real2D_onChunk :: rough_m_star
@@ -352,6 +365,9 @@ CONTAINS
 
     dsl4jsb_Aggregate_onChunk(TURB_, rough_m_star,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(TURB_, rough_h_star,   weighted_by_fract)
+
+    dsl4jsb_Aggregate_onChunk(TURB_, htc_stable,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, htc_unstable,   weighted_by_fract)
 
     config_blending_height            = dsl4jsb_Config(TURB_)%blending_height
     config_roughness_momentum_to_heat = dsl4jsb_Config(TURB_)%roughness_momentum_to_heat
@@ -443,7 +459,7 @@ CONTAINS
 
     dsl4jsb_Get_config(HYDRO_)
 
-    !$claw acc data create(fact_qsat_veg,fact_qsat_trans,fact_qsat_soil, & 
+    !$claw acc data create(fact_qsat_veg,fact_qsat_trans,fact_qsat_soil, &
     !$claw acc fact_qair_veg,fact_qair_soil,rel_hum,zfract_fpc,mask)
 
     ! Get pointers to process configs and memory
@@ -506,7 +522,7 @@ CONTAINS
           fact_qsat_trans(i) = (1._wp - fract_snow(i)) * &
             & (1._wp - fract_water(i)) /                  &
             & (1._wp + pch(i) * MAX(1._wp, wind_air(i)) / MAX(1.E-20_wp, canopy_cond_limited(i)))
-        ELSE 
+        ELSE
           fact_qsat_veg(i)   = fract_snow(i) + (1._wp - fract_snow(i)) * fract_water(i)
           fact_qsat_trans(i) = 0._wp
         END IF
