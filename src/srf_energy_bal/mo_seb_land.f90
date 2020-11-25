@@ -380,6 +380,7 @@ CONTAINS
           , heat_cap(:)      &  ! Heat capacity of uppermost soil layer (only diagnostic for SkIn+)
           , press_srf(:)     &  ! Surface pressure
           , t_soil_top(:)    &  ! Soil temperature of top/uppermost soil layer
+          , lat(:)           &  ! Latitude (needed for site experiments)
 
 
         ! Output
@@ -406,8 +407,18 @@ CONTAINS
             write(555,999) yr,mo,dy, hr,mn,se, 'Ssoi', soil_stor(i)
             write(555,999) yr,mo,dy, hr,mn,se, 'Tsoi', t_soil_top(i)
             write(555,999) yr,mo,dy, hr,mn,se, 'lati', lat(i)
-            write(555,997) yr,mo,dy, hr,mn,se, 'Clas', l_is_clas
-            write(555,997) yr,mo,dy, hr,mn,se, 'Skin', l_is_skin
+            IF (l_is_clas) THEN
+              write(555,999) yr,mo,dy, hr,mn,se, 'Clas', 1._wp
+            ELSE
+              write(555,999) yr,mo,dy, hr,mn,se, 'Clas', 0._wp
+            END IF
+            IF (l_is_skin) THEN
+              write(555,999) yr,mo,dy, hr,mn,se, 'Skin', 1._wp
+            ELSE
+              write(555,999) yr,mo,dy, hr,mn,se, 'Skin', 0._wp
+            END IF
+
+
 
           END IF
         END DO
@@ -612,7 +623,7 @@ CONTAINS
     , heat_cap      &  ! Heat capacity of uppermost soil layer (only diagnostic for SkIn+)
     , press_srf     &  ! Surface pressure
     , t_soil_top    &  ! Soil temperature of top/uppermost soil layer
-
+    , lat           &  ! Latitude (needed for site experiments)
 
 
   ! Output
@@ -624,6 +635,8 @@ CONTAINS
   ! stomatal and atmospheric resistance, as well as the specific humidity of air and the saturated specific humidity
   ! of the surface (formerly c_air)
 
+    USE mo_jsb_time,               ONLY: get_date_components
+    USE mo_time_control,           ONLY: current_date
     USE mo_phy_schemes,            ONLY: qsat
     USE mo_jsb_physical_constants, ONLY: &
       !& cpd, &
@@ -653,6 +666,7 @@ CONTAINS
     REAL(wp), INTENT(in)    :: heat_cap(nc)
     REAL(wp), INTENT(in)    :: press_srf(nc)
     REAL(wp), INTENT(in)    :: t_soil_top(nc)
+    REAL(wp), INTENT(in)    :: lat(nc)
   ! Output
     REAL(wp), INTENT(out)   :: forc_hflx(nc)
     REAL(wp), INTENT(out)   :: s_star(nc)
@@ -660,7 +674,7 @@ CONTAINS
 
 
     REAL(wp) :: zdt ! time step (later needed for CanoStor in SkIn+)
-    INTEGER  :: i
+    INTEGER :: yr, mo, dy, hr, mn, se, i
 
     ! Old local variables needed for classic SEB
     REAL(wp), DIMENSION(nc) :: &
@@ -718,15 +732,6 @@ CONTAINS
     	, zendloop		&	! final iteration loop
     	, zlamfreq			! number of iteration loops per decrease of iteration weighting factor
 
-    ! Input/Output Variables needed for SkIn are set to dummy values in a first approach
-    REAL(wp), DIMENSION(nc) :: &
-    	  pspress     &
-      , pTsoil
-
-
-    ! Input/Output Variables needed for SkIn are set to dummy values in a first approach
-      pspress(:) = 101300._wp
-      pTsoil(:)  = s_old(:) * zicp(:)
 
 
 
@@ -814,8 +819,8 @@ CONTAINS
     	  ! Update dry static energy, temperature, humidity and net radiation
     	  	zsold(:)   = s_star(:)
     	  	zTold(:)   = zsold(:) * zicp(:)
-    	  	zqsold(:)  = qsat(zTold(:), pspress(:))
-    	  	zdqsold(:) = ( qsat(zTold(:)+zTeps, pspress(:)) - zqsold(:) ) / zTeps
+    	  	zqsold(:)  = qsat(zTold(:), press_srf(:))
+    	  	zdqsold(:) = ( qsat(zTold(:)+zTeps, press_srf(:)) - zqsold(:) ) / zTeps
     	  	znetrad(:) = zradcon(:) - zemiss_def * stbo * zTold(:)**4
     	  END IF
 
@@ -837,7 +842,7 @@ CONTAINS
                       * zicp(:) * zdqsold(:)
 
 
-    	  zcoind(:)     = znetrad(:) + zhtc(:) * pTsoil(:)    &
+    	  zcoind(:)     = znetrad(:) + zhtc(:) * t_soil_top(:)    &
     	  			        + heat_tcoef(:)*( t_bcoef(:) + (zca(:) * q_acoef(:) - zcs(:)) * zqsold(:) + zca(:) * q_bcoef(:) )
 
     	  s_star(:)      = (zcolin(:) * zsold(:) + zcoind(:)) / (zcolin(:) + zcohfl(:))
@@ -893,12 +898,26 @@ CONTAINS
     !-----------------------------------------------------------------------------------------
 
     ! Rewrite output variable with saved final values
-      s_star(:)   = zsend(:)
-      zTnew(:)   = s_star(:) * zicp(:)
+      s_star(:)    = zsend(:)
+      zTnew(:)     = s_star(:) * zicp(:)
 
 
     ! Ground heat flux
-      forc_hflx(:)  = zhtc(:)*(pTsoil(:) - zTnew(:))
+      forc_hflx(:) = zhtc(:)*(t_soil_top(:) - zTnew(:))
+
+
+      CALL get_date_components (current_date, yr, mo, dy, hr, mn, se)
+      999 FORMAT(I0.2, I0.2, I0.2, 1X,  I0.2, I0.2, I0.2, 1X, A4, 1X, ES15.7E3)
+      998 FORMAT(I0.2, I0.2, I0.2, 1X,  I0.2, I0.2, I0.2, 1X, A4, 1X, I0.3)
+
+        IF (yr == 1999  .AND. mo == 10 .AND. (dy == 23 .OR. dy == 24 .OR. dy == 25 .OR. dy == 26)) THEN
+          DO i=1,size(zTnew, dim=1)
+            IF (lat(i) > 37._wp) THEN
+              write(555,999) yr,mo,dy, hr,mn,se, 'Tnew', zTnew(i)
+              write(555,998) yr,mo,dy, hr,mn,se, 'loop', zfinaloop(i)
+            END IF
+          END DO
+        END IF
 
 
 
