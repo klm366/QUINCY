@@ -1121,8 +1121,8 @@ CONTAINS
 
         IF (use_alb_soil_npp) THEN
             WHERE ( lat(:) > 10._wp  .AND.  lat(:) < 35._wp  .AND.  lon(:) > -20._wp  .AND.  lon(:) < 35._wp )
-              alb_vis_soil_npp(:) = MIN(0.6_wp, MAX(0.05_wp, alb_vis_soil(:) - (alb_vis_soil(:) - 0.13_wp) * MIN( MAX((mean_5year_NPP(:)*365.25_wp)/mean_dark_NPP(:), 0.0_wp), 1._wp)))
-              alb_nir_soil_npp(:) = MIN(0.6_wp, MAX(0.05_wp, alb_nir_soil(:) - (alb_nir_soil(:) - 0.22_wp) * MIN( MAX((mean_5year_NPP(:)*365.25_wp)/mean_dark_NPP(:), 0.0_wp), 1._wp)))
+              alb_vis_soil_npp(:) = MIN(0.6_wp,   MAX(0.05_wp, alb_vis_soil(:) - (alb_vis_soil(:) - 0.13_wp)   *   MIN( MAX(   1 - EXP((mean_5year_NPP(:)*365.25_wp)/mean_dark_NPP(:)),   0.0_wp),   1._wp) ))
+              alb_nir_soil_npp(:) = MIN(0.6_wp,   MAX(0.05_wp, alb_nir_soil(:) - (alb_nir_soil(:) - 0.22_wp)   *   MIN( MAX(   1 - EXP((mean_5year_NPP(:)*365.25_wp)/mean_dark_NPP(:)),   0.0_wp),   1._wp) ))
             ELSEWHERE
               alb_vis_soil_npp(:) = alb_vis_soil(:)
               alb_nir_soil_npp(:) = alb_nir_soil(:)
