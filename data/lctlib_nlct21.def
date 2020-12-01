@@ -371,9 +371,10 @@ g0 0.03 0.01 0.01 0.01 0.01 0.01 0.01 0.01 0.01 0.01 0.01 0.03 0.03 0.03 0.03 0.
         
 #g1:         
 # g1 in kPa^0.5 as in Lin et al. 2015, Nat CC. OBS: no values for Larches - assigned broad leaved value!        
-#  3.77 3.37 2.98 4.64 2.35 4.64 4.16 1.62        
-# g1 in Ball & Berry relationship, tuned to get similar Amax/N values as with Lin et al. g1         
-g1 9.3 9.3 7 8.3 10.9 8.3 10.9 5.5 7 7 10.9 9.3 2 9.3 9.3 2 10.9 9.3 9.3 9.3 2
+# g1 values used with the canopy_conductance_scheme=medlyn [default scheme]        
+g1_medlyn 4.16 3.77 2.98 3.37 4.64 3.37 4.64 2.35 4.64 2.98 4.64 4.16 1.62 4.16 4.16 1.62 4.64 4.16 4.16 4.16 1.62
+# g1 in Ball & Berry relationship, tuned to get similar Amax/N values as with Lin et al. g1, canopy_conductance_scheme=ballberry        
+g1_bberry 9.3 9.3 7.0 8.3 10.9 8.3 10.9 5.5 7.0 7.0 10.9 9.3 2.0 9.3 9.3 2.0 10.9 9.3 9.3 9.3 2.0
         
 #gmin: minimum stomatal conductance (m/s)        
 gmin 0.00006 0.00006 0.00006 0.00006 0.00006 0.00006 0.00006 0.00003 0.00003 0.00006 0.00006 0.00006 0.00006 0.00006 0.00006 0.00006 0.00006 0.00006 0.00006 0.00006 0.00006

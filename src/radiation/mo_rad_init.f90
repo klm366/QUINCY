@@ -54,7 +54,7 @@ CONTAINS
     CALL rad_init_ic(tile)
     !! quincy
     IF (model%config%use_quincy .AND. tile%contains_vegetation) THEN
-      CALL rad_init_q_ic(tile)
+      CALL rad_init_ic_q_(tile)
     ENDIF
 
   END SUBROUTINE rad_init
@@ -226,7 +226,7 @@ CONTAINS
   !> Intialize radiation process (after memory has been set up)
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE rad_init_q_ic(tile)
+  SUBROUTINE rad_init_ic_q_(tile)
 
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
@@ -237,7 +237,7 @@ CONTAINS
 
     !TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':rad_init_q_ic'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':rad_init_ic_q_'
 
     dsl4jsb_Def_memory(RAD_)
 
@@ -279,7 +279,7 @@ CONTAINS
     ppfd_shaded_tfrac_mavg_cl(:,:,:)    = 10.0_wp
     ppfd_shaded_tcnl_mavg_cl(:,:,:)     = 10.0_wp
 
-  END SUBROUTINE rad_init_q_ic
+  END SUBROUTINE rad_init_ic_q_
 
 #endif
 END MODULE mo_rad_init

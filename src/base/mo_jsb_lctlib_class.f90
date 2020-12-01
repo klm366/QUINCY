@@ -171,7 +171,8 @@ MODULE mo_jsb_lctlib_class
     REAL(wp) :: t_jmax_opt
     REAL(wp) :: t_jmax_omega
     REAL(wp) :: g0
-    REAL(wp) :: g1
+    REAL(wp) :: g1_medlyn
+    REAL(wp) :: g1_bberry
     REAL(wp) :: gmin
 
     ! turnover times
@@ -382,7 +383,8 @@ CONTAINS
     LOGICAL            :: exists_t_jmax_opt = .FALSE.
     LOGICAL            :: exists_t_jmax_omega = .FALSE.
     LOGICAL            :: exists_g0 = .FALSE.
-    LOGICAL            :: exists_g1 = .FALSE.
+    LOGICAL            :: exists_g1_medlyn = .FALSE.
+    LOGICAL            :: exists_g1_bberry = .FALSE.
     LOGICAL            :: exists_gmin = .FALSE.
     LOGICAL            :: exists_tau_leaf = .FALSE.
     LOGICAL            :: exists_tau_fine_root = .FALSE.
@@ -849,9 +851,12 @@ CONTAINS
             CASE ('g0')
               READ(line(pos:length),*) lctlib(1:nlct)%g0
               exists_g0 = .TRUE.
-            CASE ('g1')
-              READ(line(pos:length),*) lctlib(1:nlct)%g1
-              exists_g1 = .TRUE.
+            CASE ('g1_medlyn')
+              READ(line(pos:length),*) lctlib(1:nlct)%g1_medlyn
+              exists_g1_medlyn = .TRUE.
+            CASE ('g1_bberry')
+              READ(line(pos:length),*) lctlib(1:nlct)%g1_bberry
+              exists_g1_bberry = .TRUE.
             CASE ('gmin')
               READ(line(pos:length),*) lctlib(1:nlct)%gmin
               exists_gmin = .TRUE.
@@ -1173,8 +1178,10 @@ CONTAINS
           CALL finish('init_lctlib','No data for t_jmax_omega found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_g0) &
           CALL finish('init_lctlib','No data for g0 found in '//TRIM(lctlib_file_name))
-        IF(.NOT. exists_g1) &
-          CALL finish('init_lctlib','No data for g1 found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_g1_medlyn) &
+          CALL finish('init_lctlib','No data for g1_medlyn found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_g1_bberry) &
+          CALL finish('init_lctlib','No data for g1_bberry found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_gmin) &
           CALL finish('init_lctlib','No data for gmin found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_tau_leaf) &
@@ -1541,7 +1548,8 @@ CONTAINS
         CALL p_bcast(lctlib(:)%t_jmax_opt, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%t_jmax_omega, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%g0, p_io, mpi_comm)
-        CALL p_bcast(lctlib(:)%g1, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%g1_medlyn, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%g1_bberry, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%gmin, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%tau_leaf, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%tau_fine_root, p_io, mpi_comm)

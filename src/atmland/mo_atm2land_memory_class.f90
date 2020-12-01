@@ -30,7 +30,7 @@ MODULE mo_a2l_memory_class
 
   PUBLIC :: t_a2l_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 35
+  INTEGER, PARAMETER :: max_no_of_vars = 50
 
   TYPE, EXTENDS(t_jsb_memory) :: t_a2l_memory
     TYPE(t_jsb_var_real2d) :: &
@@ -97,7 +97,14 @@ MODULE mo_a2l_memory_class
       & CO2_mixing_ratio      , &  !> surface air CO2 mixing ratio [ppmv]   >> mo_atmland_interface: CO2_mixing_ratio = CO2_air_mol * 1000000._wp
       & CO2_mixing_ratio_C13  , &  !> surface air 13CO2 mixing ratio [ppmv]
       & CO2_mixing_ratio_C14       !> surface air 14CO2 mixing ratio [scaled]
-    
+
+    ! Deposition
+    TYPE(t_jsb_var_real2d) :: &                                                            
+                              nhx_deposition        , &  !> surface downward reduced nitrogen deposition velocity [mumol m-2 sec-1]
+                              noy_deposition        , &  !> surface downward oxidised nitrogen deposition velocity [mumol m-2 sec-1]
+                              nhx_n15_deposition    , &  !> surface downward reduced nitrogen-15 deposition velocity [mumol m-2 sec-1]
+                              noy_n15_deposition    , &  !> surface downward oxidised nitrogen-15 deposition velocity [mumol m-2 sec-1]
+                              p_deposition               !> surface downward reduced phosphoruns deposition velocity [mumol m-2 sec-1]    
     
   CONTAINS
     PROCEDURE :: Init => Init_a2l_memory
@@ -398,9 +405,9 @@ CONTAINS
 
     END IF
 
+    !! quincy
     IF (.NOT. model%config%use_quincy) RETURN
 
-    !! quincy
     ! CALL mem%Add_var('swpar_fdiffuse', mem%swpar_fdiffuse, &
     !  & hgrid, surface, &
     !  & t_cf('swpar_fdiffuse', 'fraction', 'fraction of shortwave surface downward flux that is diffuse'), &
@@ -436,6 +443,51 @@ CONTAINS
       & prefix, suffix,                                                           &
       & loutput=.TRUE., lrestart=.TRUE.,                                          &
       & initval_r=0.0_wp)
+
+    CALL mem%Add_var( mem, 'nhx_deposition', mem%nhx_deposition, &
+            hgrid, surface, &
+            t_cf('nhx_deposition', 'mumol m-2 sec-1', 'surface downward reduced nitrogen deposition velocity'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            loutput=.TRUE., lrestart=.TRUE., &
+            initval_r=0.0_wp )
+
+    CALL mem%Add_var( mem, 'noy_deposition', mem%noy_deposition, &
+            hgrid, surface, &
+            t_cf('noy_deposition', 'mumol m-2 sec-1', 'surface downward oxidised nitrogen deposition velocity'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            loutput=.TRUE., lrestart=.TRUE., &
+            initval_r=0.0_wp )
+
+    CALL mem%Add_var( mem, 'nhx_n15_deposition', mem%nhx_n15_deposition, &
+            hgrid, surface, &
+            t_cf('nhx_n15_deposition', 'mumol m-2 sec-1', 'surface downward reduced nitrogen-15 deposition velocity'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            loutput=.TRUE., lrestart=.TRUE., &
+            initval_r=0.0_wp )
+
+    CALL mem%Add_var( mem, 'noy_n15_deposition', mem%noy_n15_deposition, &
+            hgrid, surface, &
+            t_cf('noy_n15_deposition', 'mumol m-2 sec-1', 'surface downward oxidised nitrogen-15 deposition velocity'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            loutput=.TRUE., lrestart=.TRUE., &
+            initval_r=0.0_wp )
+
+    CALL mem%Add_var( mem, 'p_deposition', mem%p_deposition, &
+            hgrid, surface, &
+            t_cf('p_deposition', 'mumol m-2 sec-1', 'surface downward reduced phosphoruns deposition velocity'), &
+            t_grib1(table, 255, grib_bits), &
+            t_grib2(255, 255, 255, grib_bits), &
+            prefix, suffix, &
+            loutput=.TRUE., lrestart=.TRUE., &
+            initval_r=0.0_wp )
 
   END SUBROUTINE Init_a2l_memory
 

@@ -45,7 +45,7 @@ CONTAINS
     USE mo_atmland_constants,   ONLY: init_atmland_constants
     USE mo_assimi_constants,    ONLY: init_assimi_constants
     USE mo_veg_constants,       ONLY: init_veg_constants
-    ! USE mo_sse_constants,       ONLY: init_sse_constants
+    USE mo_sse_constants,       ONLY: init_sse_constants
     ! USE mo_sb_constants,        ONLY: init_sb_constants
     USE mo_pheno_constants,     ONLY: init_pheno_constants
 
@@ -199,7 +199,7 @@ CONTAINS
       CALL init_atmland_constants  
       CALL init_assimi_constants   
       CALL init_veg_constants      
-      ! CALL init_sse_constants
+      CALL init_sse_constants
       ! CALL init_sb_constants
       CALL init_pheno_constants    
       IF (debug_on()) CALL message(TRIM(routine), 'initialized quincy constants)')

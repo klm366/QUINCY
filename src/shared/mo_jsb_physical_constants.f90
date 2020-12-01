@@ -17,7 +17,7 @@ MODULE mo_jsb_physical_constants
 
   USE mo_kind, ONLY: wp
 
-  USE mo_physical_constants_iface
+  USE mo_physical_constants_iface     ! ECHAM constants | see echam/src/echam/jsbach4_util_mods.f90 
 
   IMPLICIT NONE
   PUBLIC
@@ -42,7 +42,13 @@ MODULE mo_jsb_physical_constants
     r_gas_vapour = 461.51_wp        ,  &      !< specific gas constant for water vapour (J / kg / K) 
     Dwv          = 0.0000242_wp     ,  &      !< diffusion coefficient for water vapour in air (m2 s-1) 
     Dco2         = 0.0000151_wp               !< diffusion coefficient for CO2 in air (m2 s-1) 
-    ! Tzero == tmelt -> used from ECHAM echam/src/echam/jsbach4_util_mods.f90 via mo_physical_constants_iface
+    ! most ECHAM constants are defined in: echam/src/echam/jsbach4_util_mods.f90 mo_physical_constants_iface 
+    ! Tzero (QUINCY) == tmelt (ECHAM(jsbach4)
+    ! ckap & zkappa are defined in drivers/mo_jsb4_forcing
+    LatentHeatVaporization = 2.5008e6_wp
+    LatentHeatSublimation  = 2.8345e6_wp
+    cpvd1                  = cpv / cpd - 1.0_wp                    ! using ECHAM constants for calculation 
+    vtmpc1                 = r_gas_vapour / r_gas_dryair - 1.0_wp  ! see also comment in drivers/mo_jsb4_forcing.f90 
   ! molar masses
   REAL(wp), PARAMETER :: &
     molar_mass_C    = 12.0112_wp    ,  &      !< g C / mol C

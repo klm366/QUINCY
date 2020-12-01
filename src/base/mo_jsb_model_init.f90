@@ -282,6 +282,7 @@ CONTAINS
       !!
       CALL model%Queue_task(ASSIMI_, "reset_assimi_fluxes")         !! quincy
       CALL model%Queue_task(VEG_,    "reset_veg_fluxes")            !! quincy
+      CALL model%Queue_task(SSE_,    "reset_sse_fluxes")            !! quincy - plant model
       CALL model%Queue_task(SB_,     "reset_sb_fluxes")             !! quincy
       
       !!------------------------ tasks that can change area (e.g. disturbance & fuel)
@@ -296,13 +297,12 @@ CONTAINS
   
       !!------------------------ tasks that do not change area
       !!
+      CALL model%Queue_task(SSE_,    "soil_turbulence")             !! quincy - plant model
       CALL model%Queue_task(RAD_,    "sw_radiation_q_")             !! quincy (sw radiation and albedo)
       CALL model%Queue_task(RAD_,    "surface_radiation")
+      CALL model%Queue_task(SSE_,    "sse_physics")                 !! quincy - plant model
       CALL model%Queue_task(PHENO_,  "phenology_q_")                !! quincy
       CALL model%Queue_task(PHENO_,  "foliage_projected_cover")
-        ! quincy testbed for pools: empty task - all science removed
-        CALL model%Queue_task(VEG_,  "update_veg_dynamics")
-        ! -------------------------
       CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")      ! may be called two times
       CALL model%Queue_task(HYDRO_,  "soil_properties")
       CALL model%Queue_task(SEB_,    "surface_energy")
@@ -323,8 +323,12 @@ CONTAINS
       CALL model%Queue_task(RAD_,    "albedo")
       CALL model%Queue_task(HYDRO_,  "water_balance")
       CALL model%Queue_task(SEB_,    "asselin_filter")              ! Should always be the last task
-      
-      CALL model%Queue_task(SB_,     "update_sb_pools")             !! quincy
+
+      CALL model%Queue_task(VEG_,    "update_veg_turnover")         !! quincy - plant model
+      CALL model%Queue_task(VEG_,    "update_veg_dynamics")         !! quincy - plant model
+      CALL model%Queue_task(VEG_,    "update_veg_growth")           !! quincy - plant model
+      CALL model%Queue_task(VEG_,    "update_veg_pools")            !! quincy - plant model
+      CALL model%Queue_task(SB_,     "update_sb_pools")             !! quincy - land/soil model
       
       ! averaging variables in time at the end of the timestep
       CALL model%Queue_task(PHENO_,  "time_average_phenology")      !! quincy

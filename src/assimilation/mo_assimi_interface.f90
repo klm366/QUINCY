@@ -958,7 +958,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_reset_assimi_fluxes(tile, options)
 
-    USE mo_assimi_util, ONLY: reset_assimi_fluxes  
+    USE mo_assimi_util, ONLY: real_reset_assimi_fluxes => reset_assimi_fluxes  
   
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -973,7 +973,7 @@ CONTAINS
 
     IF (debug_on()) CALL message(routine, 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    CALL reset_assimi_fluxes(tile, options)
+    CALL real_reset_assimi_fluxes(tile, options)
 
     IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
 
@@ -1017,7 +1017,7 @@ CONTAINS
   END SUBROUTINE aggregate_reset_assimi_fluxes
   
   !-----------------------------------------------------------------------------------------------------
-  !> Implementation of "aggregate": canopy_fluxes task
+  !> Implementation of "update": canopy_fluxes task
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_canopy_fluxes(tile, options)
 
