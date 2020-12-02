@@ -1084,31 +1084,41 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & loutput=.TRUE.,                                                                              &
-        & lrestart=.TRUE., initval_r=0.0_wp )
+        & lrestart=.TRUE.,                                                                             &
+        & output_level=BASIC,                                                                          &
+        & initval_r=0.0_wp )
       CALL mem%Add_var(mem%veg_main_pool%veg_growth, &
         & hgrid, vgrid_surface, vgrid_canopy,                                                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & loutput=.TRUE.,                                                                              &
-        & lrestart=.TRUE., initval_r=0.0_wp )
+        & lrestart=.TRUE.,                                                                             &
+        & output_level=FULL,                                                                           &
+        & initval_r=0.0_wp )
       CALL mem%Add_var(mem%veg_main_pool%veg_litterfall, &
         & hgrid, vgrid_surface, vgrid_canopy,                                                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & loutput=.TRUE.,                                                                              &
-        & lrestart=.TRUE., initval_r=0.0_wp )
+        & lrestart=.TRUE.,                                                                             &
+        & output_level=FULL,                                                                           &
+        & initval_r=0.0_wp )
       CALL mem%Add_var(mem%veg_main_pool%veg_falloc, &
         & hgrid, vgrid_surface, vgrid_canopy,                                                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & loutput=.TRUE.,                                                                              &
-        & lrestart=.TRUE., initval_r=0.0_wp )
+        & lrestart=.TRUE.,                                                                             &
+        & output_level=FULL,                                                                           &
+        & initval_r=0.0_wp )
       CALL mem%Add_var(mem%veg_main_pool%veg_total_flux, &
         & hgrid, vgrid_surface, vgrid_canopy,                                                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & loutput=.TRUE.,                                                                              &
-        & lrestart=.TRUE., initval_r=0.0_wp )
+        & lrestart=.TRUE.,                                                                             &
+        & output_level=FULL,                                                                           &
+        & initval_r=0.0_wp )
 
       ! add all variables in the veg_elements_pool to the VEG_ memory
       CALL mem%Add_var(mem%veg_main_pool%veg_total_biomass, &
@@ -1116,25 +1126,33 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & loutput=.TRUE.,                                                                              &
-        & lrestart=.TRUE., initval_r=0.0_wp )
+        & lrestart=.TRUE.,                                                                             &
+        & output_level=FULL,                                                                           &
+        & initval_r=0.0_wp )
       CALL mem%Add_var(mem%veg_main_pool%veg_exudation, &
         & hgrid, vgrid_surface, vgrid_canopy,                                                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & loutput=.TRUE.,                                                                              &
-        & lrestart=.TRUE., initval_r=0.0_wp )
+        & lrestart=.TRUE.,                                                                             &
+        & output_level=FULL,                                                                           &
+        & initval_r=0.0_wp )
       CALL mem%Add_var(mem%veg_main_pool%veg_establishment, &
         & hgrid, vgrid_surface, vgrid_canopy,                                                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & loutput=.TRUE.,                                                                              &
-        & lrestart=.TRUE., initval_r=0.0_wp )
+        & lrestart=.TRUE.,                                                                             &
+        & output_level=FULL,                                                                           &
+        & initval_r=0.0_wp )
       CALL mem%Add_var(mem%veg_main_pool%veg_reserve_use, &
         & hgrid, vgrid_surface, vgrid_canopy,                                                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & loutput=.TRUE.,                                                                              &
-        & lrestart=.TRUE., initval_r=0.0_wp )
+        & lrestart=.TRUE.,                                                                             &
+        & output_level=FULL,                                                                           &
+        & initval_r=0.0_wp )
 
       ! output to logfile all pools & their variables at model-init 
       ! (maybe use for debugging; its quite a long list)
@@ -1154,6 +1172,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'diameter', mem%diameter, &
@@ -1163,6 +1182,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'dens_ind', mem%dens_ind, &
@@ -1172,6 +1192,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'lai', mem%lai, &
@@ -1181,6 +1202,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'target_cn_leaf', mem%target_cn_leaf, &
@@ -1190,6 +1212,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'target_np_leaf', mem%target_np_leaf, &
@@ -1199,6 +1222,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'mean_leaf_age', mem%mean_leaf_age, &
@@ -1208,6 +1232,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'cohort_age', mem%cohort_age, &
@@ -1217,6 +1242,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'f_n_demand', mem%f_n_demand, &
@@ -1226,6 +1252,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'f_p_demand', mem%f_p_demand, &
@@ -1235,6 +1262,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'beta_sinklim_ps', mem%beta_sinklim_ps, &
@@ -1244,6 +1272,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'dphi', mem%dphi, &
@@ -1253,6 +1282,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'growth_req_n', mem%growth_req_n, &
@@ -1262,6 +1292,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'growth_req_p', mem%growth_req_p, &
@@ -1271,6 +1302,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'leaf_cn_direction', mem%leaf_cn_direction, &
@@ -1280,6 +1312,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'target_lai', mem%target_lai, &
@@ -1289,6 +1322,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'kstar_labile', mem%kstar_labile, &
@@ -1298,6 +1332,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
 
       CALL mem%Add_var(mem, 'do_cohort_harvest', mem%do_cohort_harvest, &
@@ -1307,6 +1342,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=false) ! initvalue
 
       CALL mem%Add_var(mem, 'root_fraction_sl', mem%root_fraction_sl, &
@@ -1316,6 +1352,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
 
       CALL mem%Add_var(mem, 'target_cn_fine_root', mem%target_cn_fine_root, &
@@ -1325,6 +1362,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'target_cn_coarse_root', mem%target_cn_coarse_root, &
@@ -1334,6 +1372,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'target_cn_sap_wood', mem%target_cn_sap_wood, &
@@ -1343,6 +1382,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'target_cn_fruit', mem%target_cn_fruit, &
@@ -1352,6 +1392,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'target_np_fine_root', mem%target_np_fine_root, &
@@ -1361,6 +1402,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'target_np_coarse_root', mem%target_np_coarse_root, &
@@ -1370,6 +1412,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'target_np_sap_wood', mem%target_np_sap_wood, &
@@ -1379,6 +1422,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'target_np_fruit', mem%target_np_fruit, &
@@ -1388,6 +1432,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'leaf_nitrogen_cl', mem%leaf_nitrogen_cl, &
@@ -1397,6 +1442,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'fn_chl_cl', mem%fn_chl_cl, &
@@ -1406,6 +1452,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'fn_et_cl', mem%fn_et_cl, &
@@ -1415,6 +1462,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'fn_rub_cl', mem%fn_rub_cl, &
@@ -1424,6 +1472,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'fn_pepc_cl', mem%fn_pepc_cl, &
@@ -1433,6 +1482,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'fn_oth_cl', mem%fn_oth_cl, &
@@ -1442,6 +1492,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'fleaf_sunlit_cl', mem%fleaf_sunlit_cl, &
@@ -1451,6 +1502,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'lai_cl', mem%lai_cl, &
@@ -1460,6 +1512,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'cumm_lai_cl', mem%cumm_lai_cl, &
@@ -1469,6 +1522,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'maint_respiration_pot', mem%maint_respiration_pot, &
@@ -1478,6 +1532,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'maint_respiration', mem%maint_respiration, &
@@ -1487,6 +1542,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'maint_respiration_c13', mem%maint_respiration_c13, &
@@ -1496,6 +1552,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'maint_respiration_c14', mem%maint_respiration_c14, &
@@ -1505,6 +1562,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'growth_respiration', mem%growth_respiration, &
@@ -1514,6 +1572,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'growth_respiration_c13', mem%growth_respiration_c13, &
@@ -1523,6 +1582,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'growth_respiration_c14', mem%growth_respiration_c14, &
@@ -1532,6 +1592,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'n_transform_respiration', mem%n_transform_respiration, &
@@ -1541,6 +1602,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'n_fixation_respiration', mem%n_fixation_respiration, &
@@ -1550,6 +1612,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'n_processing_respiration', mem%n_processing_respiration, &
@@ -1559,6 +1622,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'n_processing_respiration_c13', mem%n_processing_respiration_c13, &
@@ -1568,6 +1632,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'n_processing_respiration_c14', mem%n_processing_respiration_c14, &
@@ -1577,6 +1642,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'npp', mem%npp, &
@@ -1586,6 +1652,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'npp_c13', mem%npp_c13, &
@@ -1595,6 +1662,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'npp_c14', mem%npp_c14, &
@@ -1604,6 +1672,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'uptake_nh4', mem%uptake_nh4, &
@@ -1613,6 +1682,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'uptake_nh4_n15', mem%uptake_nh4_n15, &
@@ -1622,6 +1692,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'uptake_no3', mem%uptake_no3, &
@@ -1631,6 +1702,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'uptake_no3_n15', mem%uptake_no3_n15, &
@@ -1640,6 +1712,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
 
       CALL mem%Add_var(mem, 'uptake_po4', mem%uptake_po4, &
@@ -1649,6 +1722,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'n_fixation', mem%n_fixation, &
@@ -1658,6 +1732,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'n_fixation_n15', mem%n_fixation_n15, &
@@ -1667,6 +1742,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'recycling_leaf_n', mem%recycling_leaf_n, &
@@ -1676,6 +1752,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'recycling_leaf_n15', mem%recycling_leaf_n15, &
@@ -1685,6 +1762,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'recycling_leaf_p', mem%recycling_leaf_p, &
@@ -1694,6 +1772,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'recycling_fine_root_n', mem%recycling_fine_root_n, &
@@ -1703,6 +1782,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'recycling_fine_root_n15', mem%recycling_fine_root_n15, &
@@ -1712,6 +1792,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'recycling_fine_root_p', mem%recycling_fine_root_p, &
@@ -1721,6 +1802,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'recycling_heart_wood_n', mem%recycling_heart_wood_n, &
@@ -1730,6 +1812,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'recycling_heart_wood_n15', mem%recycling_heart_wood_n15, &
@@ -1739,6 +1822,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'recycling_heart_wood_p', mem%recycling_heart_wood_p, &
@@ -1748,6 +1832,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'net_growth', mem%net_growth, &
@@ -1757,6 +1842,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'fmaint_rate_root', mem%fmaint_rate_root, &
@@ -1766,6 +1852,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'unit_npp', mem%unit_npp, &
@@ -1775,6 +1862,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'unit_transpiration', mem%unit_transpiration, &
@@ -1784,6 +1872,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'unit_uptake_n_pot', mem%unit_uptake_n_pot, &
@@ -1793,6 +1882,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'unit_uptake_p_pot', mem%unit_uptake_p_pot, &
@@ -1802,6 +1892,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'unit_uptake_n_act', mem%unit_uptake_n_act, &
@@ -1811,6 +1902,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'unit_uptake_p_act', mem%unit_uptake_p_act, &
@@ -1820,6 +1912,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'delta_dens_ind', mem%delta_dens_ind, &
@@ -1829,6 +1922,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'cost_n_uptake_root', mem%cost_n_uptake_root, &
@@ -1838,6 +1932,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'cost_n_fixation', mem%cost_n_fixation, &
@@ -1847,6 +1942,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'mortality_rate', mem%mortality_rate, &
@@ -1856,6 +1952,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'k1_opt', mem%k1_opt, &
@@ -1865,6 +1962,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'k2_opt', mem%k2_opt, &
@@ -1874,6 +1972,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'leaf2sapwood_mass_ratio', mem%leaf2sapwood_mass_ratio, &
@@ -1883,6 +1982,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'leaf2root_mass_ratio', mem%leaf2root_mass_ratio, &
@@ -1892,6 +1992,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'fleaf_sunlit_daytime_cl', mem%fleaf_sunlit_daytime_cl, &
@@ -1901,6 +2002,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 't_air_daytime', mem%t_air_daytime, &
@@ -1910,6 +2012,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'press_srf_daytime', mem%press_srf_daytime, &
@@ -1919,6 +2022,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'co2_mixing_ratio_daytime', mem%co2_mixing_ratio_daytime, &
@@ -1928,6 +2032,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'ga_daytime', mem%ga_daytime, &
@@ -1937,6 +2042,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'beta_sinklim_ps_daytime', mem%beta_sinklim_ps_daytime, &
@@ -1946,6 +2052,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 't_jmax_opt_daytime', mem%t_jmax_opt_daytime, &
@@ -1955,6 +2062,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'fleaf_sunlit_daytime_dacc_cl', mem%fleaf_sunlit_daytime_dacc_cl, &
@@ -1964,6 +2072,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 't_air_daytime_dacc', mem%t_air_daytime_dacc, &
@@ -1973,6 +2082,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'press_srf_daytime_dacc', mem%press_srf_daytime_dacc, &
@@ -1982,6 +2092,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'co2_mixing_ratio_daytime_dacc', mem%co2_mixing_ratio_daytime_dacc, &
@@ -1991,6 +2102,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'ga_daytime_dacc', mem%ga_daytime_dacc, &
@@ -2000,6 +2112,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'beta_sinklim_ps_daytime_dacc', mem%beta_sinklim_ps_daytime_dacc, &
@@ -2009,6 +2122,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 't_jmax_opt_daytime_dacc', mem%t_jmax_opt_daytime_dacc, &
@@ -2018,6 +2132,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'daytime_counter', mem%daytime_counter, &
@@ -2027,6 +2142,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'gpp_tlabile_mavg', mem%gpp_tlabile_mavg, &
@@ -2036,6 +2152,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'maint_respiration_tlabile_mavg', mem%maint_respiration_tlabile_mavg, &
@@ -2045,6 +2162,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'growth_req_n_tlabile_mavg', mem%growth_req_n_tlabile_mavg, &
@@ -2054,6 +2172,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'growth_req_p_tlabile_mavg', mem%growth_req_p_tlabile_mavg, &
@@ -2063,6 +2182,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 't_air_tphen_mavg', mem%t_air_tphen_mavg, &
@@ -2072,6 +2192,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'npp_tuptake_mavg', mem%npp_tuptake_mavg, &
@@ -2081,6 +2202,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'demand_uptake_n_tuptake_mavg', mem%demand_uptake_n_tuptake_mavg, &
@@ -2090,6 +2212,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'demand_uptake_p_tuptake_mavg', mem%demand_uptake_p_tuptake_mavg, &
@@ -2099,6 +2222,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'growth_req_n_tuptake_mavg', mem%growth_req_n_tuptake_mavg, &
@@ -2108,6 +2232,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'growth_req_p_tuptake_mavg', mem%growth_req_p_tuptake_mavg, &
@@ -2117,6 +2242,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'cost_n_fixation_talloc_mavg', mem%cost_n_fixation_talloc_mavg, &
@@ -2126,6 +2252,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
 
       CALL mem%Add_var(mem, 'exudation_c_tmyc_mavg', mem%exudation_c_tmyc_mavg, &
@@ -2135,6 +2262,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
 
       CALL mem%Add_var(mem, 'fleaf_sunlit_tfrac_mavg_cl', mem%fleaf_sunlit_tfrac_mavg_cl, &
@@ -2144,6 +2272,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 't_air_tfrac_mavg', mem%t_air_tfrac_mavg, &
@@ -2153,6 +2282,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'press_srf_tfrac_mavg', mem%press_srf_tfrac_mavg, &
@@ -2162,6 +2292,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'co2_mixing_ratio_tfrac_mavg', mem%co2_mixing_ratio_tfrac_mavg, &
@@ -2171,6 +2302,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'ga_tfrac_mavg', mem%ga_tfrac_mavg, &
@@ -2180,6 +2312,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'beta_sinklim_ps_tfrac_mavg', mem%beta_sinklim_ps_tfrac_mavg, &
@@ -2189,6 +2322,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'fleaf_sunlit_tcnl_mavg_cl', mem%fleaf_sunlit_tcnl_mavg_cl, &
@@ -2198,6 +2332,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 't_air_tcnl_mavg', mem%t_air_tcnl_mavg, &
@@ -2207,6 +2342,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'press_srf_tcnl_mavg', mem%press_srf_tcnl_mavg, &
@@ -2216,6 +2352,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'co2_mixing_ratio_tcnl_mavg', mem%co2_mixing_ratio_tcnl_mavg, &
@@ -2225,6 +2362,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'ga_tcnl_mavg', mem%ga_tcnl_mavg, &
@@ -2234,6 +2372,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'beta_sinklim_ps_tcnl_mavg', mem%beta_sinklim_ps_tcnl_mavg, &
@@ -2243,6 +2382,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
 
       CALL mem%Add_var(mem, 'uptake_n_tcnl_mavg', mem%uptake_n_tcnl_mavg, &
@@ -2252,6 +2392,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
 
       CALL mem%Add_var(mem, 'growth_cn_tcnl_mavg', mem%growth_cn_tcnl_mavg, &
@@ -2261,6 +2402,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
 
       CALL mem%Add_var(mem, 'growth_np_tcnl_mavg', mem%growth_np_tcnl_mavg, &
@@ -2270,6 +2412,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
 
       CALL mem%Add_var(mem, 'npp_tcnl_mavg', mem%npp_tcnl_mavg, &
@@ -2279,6 +2422,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
 
       CALL mem%Add_var(mem, 'fmaint_rate_tcnl_mavg', mem%fmaint_rate_tcnl_mavg, &
@@ -2288,6 +2432,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
 
       CALL mem%Add_var(mem, 'labile_nitrogen_tcnl_mavg', mem%labile_nitrogen_tcnl_mavg, &
@@ -2297,6 +2442,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
 
       CALL mem%Add_var(mem, 'labile_carbon_tcnl_mavg', mem%labile_carbon_tcnl_mavg, &
@@ -2306,6 +2452,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
 
       CALL mem%Add_var(mem, 'labile_phosphorus_tcnl_mavg', mem%labile_phosphorus_tcnl_mavg, &
@@ -2315,6 +2462,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
   
@@ -2325,6 +2473,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
 
       CALL mem%Add_var(mem, 'n_fixation_talloc_mavg', mem%n_fixation_talloc_mavg, &
@@ -2334,6 +2483,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'transpiration_talloc_mavg', mem%transpiration_talloc_mavg, &
@@ -2343,6 +2493,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'unit_npp_talloc_mavg', mem%unit_npp_talloc_mavg, &
@@ -2352,6 +2503,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'unit_transpiration_talloc_mavg', mem%unit_transpiration_talloc_mavg, &
@@ -2361,6 +2513,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'unit_uptake_n_talloc_mavg', mem%unit_uptake_n_talloc_mavg, &
@@ -2370,6 +2523,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'unit_uptake_p_talloc_mavg', mem%unit_uptake_p_talloc_mavg, &
@@ -2379,6 +2533,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'dphi_talloc_mavg', mem%dphi_talloc_mavg, &
@@ -2388,6 +2543,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'growth_cn_talloc_mavg', mem%growth_cn_talloc_mavg, &
@@ -2397,6 +2553,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'growth_cp_talloc_mavg', mem%growth_cp_talloc_mavg, &
@@ -2406,6 +2563,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
 
       CALL mem%Add_var(mem, 'growth_np_talloc_mavg', mem%growth_np_talloc_mavg, &
@@ -2415,6 +2573,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'labile_carbon_talloc_mavg', mem%labile_carbon_talloc_mavg, &
@@ -2424,6 +2583,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'labile_nitrogen_talloc_mavg', mem%labile_nitrogen_talloc_mavg, &
@@ -2433,6 +2593,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
 
       CALL mem%Add_var(mem, 'labile_phosphorus_talloc_mavg', mem%labile_phosphorus_talloc_mavg, &
@@ -2442,6 +2603,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
 
       CALL mem%Add_var(mem, 'reserve_carbon_talloc_mavg', mem%reserve_carbon_talloc_mavg, &
@@ -2451,6 +2613,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
 
       CALL mem%Add_var(mem, 'reserve_nitrogen_talloc_mavg', mem%reserve_nitrogen_talloc_mavg, &
@@ -2460,6 +2623,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
 
       CALL mem%Add_var(mem, 'reserve_phosphorus_talloc_mavg', mem%reserve_phosphorus_talloc_mavg, &
@@ -2469,6 +2633,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'w_root_lim_talloc_mavg', mem%w_root_lim_talloc_mavg, &
@@ -2478,6 +2643,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=1.0_wp) ! initvalue
       
       CALL mem%Add_var(mem, 'leaf2root_troot_mavg', mem%leaf2root_troot_mavg, &
@@ -2487,6 +2653,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'unit_npp_troot_mavg', mem%unit_npp_troot_mavg, &
@@ -2496,6 +2663,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'unit_uptake_n_pot_troot_mavg', mem%unit_uptake_n_pot_troot_mavg, &
@@ -2505,6 +2673,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'unit_uptake_p_pot_troot_mavg', mem%unit_uptake_p_pot_troot_mavg, &
@@ -2514,6 +2683,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'fmaint_rate_troot_mavg', mem%fmaint_rate_troot_mavg, &
@@ -2523,6 +2693,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'an_boc_tvegdyn_mavg', mem%an_boc_tvegdyn_mavg, &
@@ -2532,6 +2703,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'net_growth_tvegdyn_mavg', mem%net_growth_tvegdyn_mavg, &
@@ -2541,6 +2713,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 'lai_tvegdyn_mavg', mem%lai_tvegdyn_mavg, &
@@ -2550,6 +2723,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 't_air_tacclim_mavg', mem%t_air_tacclim_mavg, &
@@ -2559,6 +2733,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 't_soil_root_tacclim_mavg', mem%t_soil_root_tacclim_mavg, &
@@ -2568,6 +2743,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 't_air_week_mavg', mem%t_air_week_mavg, &
@@ -2577,6 +2753,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 't_air_month_mavg', mem%t_air_month_mavg, &
@@ -2586,6 +2763,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
   
       CALL mem%Add_var(mem, 't_jmax_opt_mavg', mem%t_jmax_opt_mavg, &
@@ -2595,6 +2773,7 @@ CONTAINS
             t_grib2(255, 255, 255, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
+            output_level=FULL, &
             initval_r=0.0_wp) ! initvalue
 
     ENDIF  ! IF One_of(LAND_TYPE  OR VEG_TYPE, lct_ids)
