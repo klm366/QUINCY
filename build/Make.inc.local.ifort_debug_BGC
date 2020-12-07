@@ -19,6 +19,6 @@
 COMP = x86_64-intel 
 C_N = ifort 
 M_K = gmake --no-print-directory 
-F_C = $(C_N) -c -g -cpp -traceback -fpe0 -check bounds -check all -fp-model strict -fp-speculation=off -check noarg_temp_created
+F_C = $(C_N) -c -g -cpp -traceback -fpe0 -check bounds -check all -fp-model strict -fp-speculation=off -check noarg_temp_created -D __QUINCY_NO_JSB__ 
 F_O = -O0 -I../src/include -I$(MODDIR) -module ${MODDIR}
 F_L = $(C_N)
