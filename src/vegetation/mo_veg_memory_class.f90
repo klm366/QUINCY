@@ -434,17 +434,17 @@ MODULE mo_veg_memory_class
   END TYPE t_veg_memory
 
 
-  ! definition of veg_ pool and element structures with ALLOCATABLE variables
+  ! definition of veg_ pool and element structures with ALLOCATABLE variables (need to be TARGET to enable POINTER to individual variables)
   ! allocation of variables done with Init_veg_pools_elements_a during model init in init_slm()
-  TYPE(t_veg_pool_a)      :: veg_pool           , &
-                             veg_growth         , &
-                             veg_litterfall     , &
-                             veg_falloc         , &
-                             veg_total_flux
-  TYPE(t_veg_element_a)   :: veg_exudation      , &
-                             veg_establishment  , &
-                             veg_reserve_use    , &
-                             veg_total_biomass
+  TYPE(t_veg_pool_a), TARGET     :: veg_pool           , &
+                                    veg_growth         , &
+                                    veg_litterfall     , &
+                                    veg_falloc         , &
+                                    veg_total_flux
+  TYPE(t_veg_element_a), TARGET  :: veg_exudation      , &
+                                    veg_establishment  , &
+                                    veg_reserve_use    , &
+                                    veg_total_biomass
 
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_memory_class'
