@@ -1359,16 +1359,6 @@ CONTAINS
                                  + Cflx_from_water_bg      * W_2_N  &
                                  + Cflx_from_ethanol_bg    * E_2_N)
 
-    Cflx_2_humus          = ABS(Cflx_from_acid_ag                &
-                              + Cflx_from_water_ag               &
-                              + Cflx_from_ethanol_ag             &
-                              + Cflx_from_nonsoluble_ag          &
-                              + Cflx_from_acid_bg                &
-                              + Cflx_from_water_bg               &
-                              + Cflx_from_ethanol_bg             &
-                              + Cflx_from_nonsoluble_bg          &
-                              ) * AWEN_2_H
-
     Cflx_2_humusAG        = ABS(Cflx_from_acid_ag                &
                               + Cflx_from_water_ag               &
                               + Cflx_from_ethanol_ag             &
@@ -1380,6 +1370,8 @@ CONTAINS
                               + Cflx_from_ethanol_bg             &
                               + Cflx_from_nonsoluble_bg          &
                               ) * AWEN_2_H
+
+    Cflx_2_humus          = Cflx_2_humusAG + Cflx_2_humusBG
 
     ! the remaining fractions of the loss fluxes enter the atmosphere as respiration
     soilResp_rateYasso    =  (Cflx_from_acid_ag + Cflx_from_acid_bg)               &
