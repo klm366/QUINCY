@@ -246,6 +246,15 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  c_into_humus_2_sum    ! Annual sum of cflux into humus in YASSO (wood)
                                                       !  [mol(C)/m^2(canopy)]
 
+    dsl4jsb_Real2D_onChunk ::  c_decomp_humus_1_sum  ! Annual sum of humus decomposed in YASSO (leaf)
+                                                      !  [mol(C)^2/m(canopy)]
+    dsl4jsb_Real2D_onChunk ::  c_decomp_humus_2_sum  ! Annual sum of humus decomposed in YASSO (wood)
+                                                      !  [mol(C)^2/m(canopy)]
+    dsl4jsb_Real2D_onChunk ::  c_into_humus_1_sum    ! Annual sum of cflux into humus in YASSO (leaf)
+                                                      !  [mol(C)^2/m(canopy)]
+    dsl4jsb_Real2D_onChunk ::  c_into_humus_2_sum    ! Annual sum of cflux into humus in YASSO (wood)
+                                                      !  [mol(C)^2/m(canopy)]
+
     dsl4jsb_Real2D_onChunk ::  gross_assimilation_ca  ! Gross assimilation of all canopy layers together
     dsl4jsb_Real2D_onChunk ::  NPP_pot_rate_ca        ! The instantaneous (potential) NPP rate [mol(C)/m^2(canopy) s]
     !dsl4jsb_Real2D_onChunk ::  NPP_pot_Rate_acc      ! averaged NPP rate over one day [mol(C)/m^2(canopy) s]
@@ -435,6 +444,13 @@ CONTAINS
     co2flux_herb_2_atm_ta = 0._wp
 
     IF( new_year .OR. lstart) THEN ! reset annual sums if newyear or if just started exp
+      c_decomp_humus_1_sum =  0._wp
+      c_decomp_humus_2_sum =  0._wp
+      c_into_humus_1_sum =  0._wp
+      c_into_humus_2_sum =  0._wp
+    ENDIF
+
+    IF( is_newyear(options%current_datetime,dtime) .OR. lstart) THEN ! reset annual sums if newyear or if just started exp
       c_decomp_humus_1_sum =  0._wp
       c_decomp_humus_2_sum =  0._wp
       c_into_humus_1_sum =  0._wp
