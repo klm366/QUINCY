@@ -830,7 +830,7 @@ CONTAINS
         IF(my_process_is_stdio()) THEN
           ! in case of ghg_scenario the forcing_input_variable%file_name_prefix is expected to contain the whole filename
           input_file = jsb_netcdf_open_input(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)))
-          CALL get_time_dimension(input_file%file_id, forcing_input_variable)
+          CALL get_time_dimension(input_file, forcing_input_variable)
           ! Assert: test that the netcdf file unit for this variable is the expected unit or at least equals unspecified_exp_unit
 !          CALL test_unit(input_file%file_id, TRIM(forcing_input_variable%variable_name), &
 !            & TRIM(forcing_input_variable%expectedUnit), TRIM(readUnit))
@@ -891,9 +891,10 @@ CONTAINS
     ! --- if new current run or new file - get the timeseries of the forcing file and the current position in the timeseries
     IF (new_year_forcing .OR. is_time_experiment_start(current_datetime) .OR. lresume) THEN
       IF(my_process_is_stdio()) THEN
-        input_file = jsb_netcdf_open_input(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) // TRIM(ADJUSTL(year_label)) // '.nc')
+        input_file = jsb_netcdf_open_input( &
+          & TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) // TRIM(ADJUSTL(year_label)) // '.nc')
 
-        CALL get_time_dimension(input_file%file_id, forcing_input_variable)
+        CALL get_time_dimension(input_file, forcing_input_variable)
 
         ! Assert: test that the netcdf file unit for this variable is the expected unit or at least equals unspecified_exp_unit
         ! CALL test_unit(input_file%file_id, TRIM(forcing_input_variable%variable_name), &
@@ -1069,22 +1070,23 @@ CONTAINS
   !! @par History
   !! First version by Julia Nabel (2016-02-25)
   !!
-  SUBROUTINE get_time_dimension(file_id, forcing_input_variable)
+  SUBROUTINE get_time_dimension(input_file, forcing_input_variable)
 
-    INTEGER, INTENT(IN)  :: file_id
+    TYPE(t_input_file),        INTENT(IN)    :: input_file
     TYPE(input_variable_type), INTENT(INOUT) :: forcing_input_variable
 
     INTEGER                                  :: nc_dim_id, nc_var_id
+
     CHARACTER(LEN=*), PARAMETER              :: routine = modname//"::get_time_dimension"
 
-    CALL nf(nf_inq_dimid(file_id, 'time', nc_dim_id), routine)
-    CALL nf(nf_inq_dimlen(file_id, nc_dim_id, forcing_input_variable%length_time_series), routine)
+    CALL nf(nf_inq_dimid(input_file%file_id, 'time', nc_dim_id), routine)
+    CALL nf(nf_inq_dimlen(input_file%file_id, nc_dim_id, forcing_input_variable%length_time_series), routine)
     IF(ASSOCIATED(forcing_input_variable%timevalues)) DEALLOCATE(forcing_input_variable%timevalues)
     ALLOCATE(forcing_input_variable%timevalues(forcing_input_variable%length_time_series))
 
     ! We need the timevalues for get_data_and_update_field
-    CALL nf(nf_inq_varid(file_id, 'time', nc_var_id), routine)
-    CALL nf(nf_get_vara_double(file_id, nc_var_id, (/ 1 /), &
+    CALL nf(nf_inq_varid(input_file%file_id, 'time', nc_var_id), routine)
+    CALL nf(nf_get_vara_double(input_file%file_id, nc_var_id, (/ 1 /), &
       & (/ forcing_input_variable%length_time_series /), forcing_input_variable%timevalues), routine)
 
   END SUBROUTINE get_time_dimension

@@ -35,7 +35,7 @@ MODULE mo_jsb_model_init
   PUBLIC :: jsbach_setup_grid, jsbach_init, jsbach_init_after_restart
 
   INTERFACE jsbach_setup_grid
-    MODULE PROCEDURE setup_grid_standalone ! R: nur für ECHAM JS4 Driver, daher auskommentiert
+    MODULE PROCEDURE setup_grid_standalone
     MODULE PROCEDURE setup_grid_patch
   END INTERFACE jsbach_setup_grid
 
