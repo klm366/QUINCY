@@ -394,6 +394,13 @@ CONTAINS
 
     !$acc parallel default(present)
 
+    IF (PRESENT(DEBUG_VAR)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        DEBUG_VAR_ptr(i) = DEBUG_VAR(i)
+      END DO
+    END IF
+
     IF (PRESENT(t_air)) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO i=1,nc

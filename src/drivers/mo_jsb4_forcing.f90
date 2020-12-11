@@ -665,6 +665,9 @@ CONTAINS
     !$ACC WAIT(1)
     !$ACC EXIT DATA DELETE(rad_uv_down)
     DEALLOCATE(rad_uv_down)
+    dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_var2D_onDomain(A2L_,   DEBUG_VAR)
+    DEBUG_VAR(:,:) = help1(:,:)
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 6.0 Compute longwave radiation
@@ -907,6 +910,65 @@ CONTAINS
     REAL(wp)               :: forcing_noy_dep_const            !! Constant value for NOy deposition
     REAL(wp)               :: forcing_p_dep_const              !! Constant value for P deposition
     CHARACTER(len=128)     :: forcing_dep_unit                 !! Expected unit of deposition input
+
+    ! --- Namelist parameters
+    REAL(wp) :: delta_time_observations
+    INTEGER  :: forcing_synchron_factor ! Factor defines how many time steps the JS4 driver performs for
+                                        ! each atmospheric forcing time step that is read in      
+    INTEGER  :: forcing_steps_per_file  ! The number of time steps included by the used forcing file(s), e.g. 72
+    LOGICAL                :: forcing_set_ocean_to_constants   !! Some external forcing is only defined for land cells (= true)
+    !! false: forcing is expected for all variables and cells (e.g. echam)
+    REAL(wp)               :: forcing_height_wind              !! jsb3: Defines lowest layer height-> where measurements are taken // -1: for ECHAM lowest layer values
+    REAL(wp)               :: forcing_height_humidity          !! jsb3: Defines lowest layer height-> where measurements are taken // -1: for ECHAM lowest layer values
+
+    !! ++ as in jsb3: "HeightHumidity and HeightTemperature have to be equal"
+    CHARACTER(NF_MAX_NAME) :: forcing_temp_file_prefix         !! Prefix for files with temperature forcing data
+    CHARACTER(len=128)     :: forcing_temp_frequ               !! Frequency of temperature forcing data (DAILY/CONST/TIMESTEP)
+    REAL(wp)               :: forcing_temp_const_tmin          !! Constant value for minimum daily temperature
+    REAL(wp)               :: forcing_temp_const_tmax          !! Constant value for maximum daily temperature
+    REAL(wp)               :: forcing_temp_ocean               !! Constant value for ocean cells
+    CHARACTER(len=128)     :: forcing_temp_unit                !! Expected unit of temp input
+
+    CHARACTER(NF_MAX_NAME) :: forcing_precip_file_prefix       !! Prefix for files with precipitation forcing data (unit: mm/day
+    !! or kg/m^2/s, depending on 'forcing_precip_in_mm_per_day')
+    CHARACTER(len=128)     :: forcing_precip_frequ             !! Frequency of precipitation forcing (DAILY/CONST/TIMESTEP)
+    REAL(wp)               :: forcing_precip_const_precip      !! Constant value for precipitation
+    REAL(wp)               :: forcing_precip_ocean             !! Constant value for ocean cells
+    LOGICAL                :: forcing_precip_in_mm_per_day     !! Precipitation input in mm/day (true) or kg/m2/s (false)
+    CHARACTER(len=128)     :: forcing_precip_unit              !! Expected unit of precip input
+
+    CHARACTER(NF_MAX_NAME) :: forcing_sw_file_prefix           !! Prefix for files with shortwave radiation data
+    CHARACTER(len=128)     :: forcing_sw_frequ                 !! Frequency of shortwave forcing data (DAILY/CONST/TIMESTEP)
+    REAL(wp)               :: forcing_sw_const_shortwave       !! Constant value for downward shortwave radiation
+    REAL(wp)               :: forcing_sw_ocean                 !! Constant value for ocean cells
+    CHARACTER(len=128)     :: forcing_sw_unit                  !! Expected unit of shortwave input (default: [W/m^2])
+
+    CHARACTER(NF_MAX_NAME) :: forcing_lw_file_prefix           !! Prefix for files with longwave radiation data
+    CHARACTER(len=128)     :: forcing_lw_frequ                 !! Frequency of longwave forcing data (DAILY/CONST/TIMESTEP)
+    REAL(wp)               :: forcing_lw_const_longwave        !! Constant value for downward longwave radiation
+    REAL(wp)               :: forcing_lw_ocean                 !! Constant value for ocean cells
+    CHARACTER(len=128)     :: forcing_lw_unit                  !! Expected unit of longwave input (default: [W/m^2])
+
+    CHARACTER(NF_MAX_NAME) :: forcing_co2_file_prefix          !! Prefix for files with CO2 data (unit: mol(CO2)/mol(air)
+    !! or kg(CO2)/kg(air) or ppmv, depending on 'forcing_co2_unit'
+    CHARACTER(len=128)     :: forcing_co2_frequ                !! Frequency of CO2 forcing data (DAILY/CONST/TIMESTEP/GHG_SCENARIO)
+    REAL(wp)               :: forcing_co2_const_co2            !! Constant value for CO2-concentration (unit: mol(CO2)/mol(air) or
+    !! kg(CO2)/kg(air) or ppmv, depending on 'forcing_co2_unit')
+    REAL(wp)               :: forcing_co2_ocean                !! Constant value for ocean cells
+    CHARACTER(len=128)     :: forcing_co2_unit                 !! Unit of CO2 input (PPMV/MOL_PER_MOL/KG_PER_KG/'')
+
+    CHARACTER(NF_MAX_NAME) :: forcing_wind_file_prefix         !! Prefix for files with windspeed data
+    CHARACTER(len=128)     :: forcing_wind_frequ               !! Frequency of windspeed forcing data (DAILY/CONST/TIMESTEP)
+    REAL(wp)               :: forcing_wind_const_wspeed        !! Constant value for windspeed [m/s]
+    REAL(wp)               :: forcing_wind_ocean               !! Constant value for ocean cells
+    CHARACTER(len=128)     :: forcing_wind_unit                !! Expected unit of wind input (default: [m/s])
+
+    CHARACTER(NF_MAX_NAME) :: forcing_qair_file_prefix         !! Prefix for files with qair data
+    CHARACTER(len=128)     :: forcing_qair_frequ               !! Frequency of qair forcing data (DAILY/CONST)
+    CHARACTER(len=128)     :: forcing_qair_type                !! Type of input data used for forcing by atm. humidity
+    REAL(wp)               :: forcing_qair_const_rh            !! Constant value for relative humidity
+    REAL(wp)               :: forcing_qair_ocean               !! Constant value for ocean cells
+    CHARACTER(len=128)     :: forcing_qair_unit                !! Expected unit of qair input
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_forcing'
 
@@ -1223,6 +1285,7 @@ CONTAINS
 
     INTEGER,                   INTENT(IN)    :: startblk, endblk, startidx(:), endidx(:), model_id
     TYPE(t_datetime), POINTER, INTENT(in)    :: current_datetime
+    TYPE(t_datetime), POINTER, INTENT(in)    :: next_date
     TYPE(input_variable_type), INTENT(INOUT) :: forcing_input_variable
     REAL(wp),                  INTENT(OUT)   :: current_forcing_array(:,:)
 
@@ -1336,6 +1399,7 @@ CONTAINS
             & (/1,1,currentTimeStep/), (/1,1,1/)), routine)
           CALL forcing_input_variable%input_file%Close()
         ENDIF
+        hlp_r(1) =forcing_input_variable%data_read(1,1,1)
 
         IF(my_process_is_mpi_parallel()) THEN
           CALL p_bcast(hlp_r, p_io, mpi_comm)
@@ -1378,6 +1442,8 @@ CONTAINS
             & forcing_input_variable%missval)
         ENDIF
         ! TODO: further assertions? e.g. that lon lat are correct?
+
+        CALL input_file%Close()
 
         currentTimeStep = 1
         thisDayStart = 0
@@ -2731,4 +2797,5 @@ CONTAINS
   END FUNCTION day_in_year
 
 #endif
+
 END MODULE mo_jsb4_forcing

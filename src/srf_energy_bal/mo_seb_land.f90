@@ -1074,4 +1074,3 @@ CONTAINS
   END SUBROUTINE calc_pseudo_soil_temp
 
 #endif
-END MODULE mo_seb_land

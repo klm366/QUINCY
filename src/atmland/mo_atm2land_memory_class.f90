@@ -46,6 +46,7 @@ MODULE mo_a2l_memory_class
 #endif
 
     TYPE(t_jsb_var_real2d) :: &
+      DEBUG_VAR          , &
       t_air              , &
       q_air              , &
       press_air          , &
@@ -218,6 +219,15 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 #endif
+
+    CALL mem%Add_var( 'DEBUG_VAR', mem%DEBUG_VAR,                            &
+      & hgrid, surface,                                                      &
+      & t_cf('DEBUG_VAR', '', ''),                                           &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
+      & output_level=BASIC, &
+      & initval_r=777.7_wp )
 
     CALL mem%Add_var( 't_air', mem%t_air,                                    &
       & hgrid, surface,                                                      &
