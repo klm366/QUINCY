@@ -123,6 +123,26 @@ MODULE mo_hydro_init
 
   TYPE(t_hydro_init_vars) :: hydro_init_vars
 
+  TYPE t_hydro_init_vars
+    REAL(wp), POINTER ::  &
+      & elevation(:,:),       &
+      & oro_stddev(:,:),      &
+      & soil_depth(:,:),      &
+      & max_moist(:,:),       &
+      & vol_porosity(:,:),    &
+      & hyd_cond_sat(:,:),    &
+      & matrix_pot(:,:),      &
+      & bclapp(:,:),          &
+      & pore_size_index(:,:), &
+      & vol_field_cap(:,:),   &
+      & vol_p_wilt(:,:),      &
+      & root_depth(:,:),      &
+      & w_snow_soil(:,:),     &
+      & w_soil_sl(:,:,:)
+  END TYPE t_hydro_init_vars
+
+  TYPE(t_hydro_init_vars) :: hydro_init_vars
+
   CHARACTER(len=*), PARAMETER :: modname = 'mo_hydro_init'
 
 CONTAINS
@@ -330,9 +350,6 @@ CONTAINS
       END IF
     END IF
 
-
-    !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_,elevation), &
-    !$acc dsl4jsb_var2D_onDomain(HYDRO_,oro_stddev))
     CALL input_file%Close()
 
     IF (tile%contains_soil) THEN
@@ -706,6 +723,137 @@ CONTAINS
 
       ! Matric potential
       dsl4jsb_var_ptr(HYDRO_, matric_pot) = hydro_init_vars%matric_pot
+
+      ! Exponent B in Clapp and Hornberger
+      dsl4jsb_var_ptr(HYDRO_, bclapp) = hydro_init_vars%bclapp
+
+      ! Pore size distribution index
+      dsl4jsb_var_ptr(HYDRO_, pore_size_index) = hydro_init_vars%pore_size_index
+
+      ! Volumetric field capacity [m/m]
+      dsl4jsb_var_ptr(HYDRO_, vol_field_cap) = hydro_init_vars%vol_field_cap
+
+      ! Volumetric permanent wilting point
+      ! @todo: Do we need this for bare soil tiles?
+      ptr_2D => input_file%Read_2d(                                 &
+        & variable_name='wilting_point',                            &
+        & fill_array=hydro_init_vars%vol_p_wilt)
+      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
+
+      CALL input_file%Close()
+
+    END IF
+
+    IF (tile%contains_vegetation) THEN
+
+      input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HYDRO_)%bc_filename), model%grid_id)
+
+      ptr_2D => input_file%Read_2d(   &
+        & variable_name='root_depth', &
+        & fill_array = hydro_init_vars%root_depth)
+      hydro_init_vars%root_depth = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+      hydro_init_vars%root_depth = MIN(hydro_init_vars%root_depth, hydro_init_vars%soil_depth)  ! Temporary fix (root depth sometimes larger then soil depth)
+
+      CALL input_file%Close()
+
+    END IF
+
+    IF (tile%contains_soil) THEN
+
+      ! Initialize hydrology variables from ic file
+
+      input_file = jsb_netcdf_open_input(dsl4jsb_Config(HYDRO_)%ic_filename, model%grid_id)
+
+      ! Initial snow depth
+      IF (input_file%Has_var('snow')) THEN
+        ptr_2D => input_file%Read_2d( &
+          & variable_name='snow',     &
+          & fill_array = hydro_init_vars%w_snow_soil)
+        hydro_init_vars%w_snow_soil = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+      ELSE
+        hydro_init_vars%w_snow_soil = 0._wp
+        CALL message(TRIM(routine), 'Initializing snow to zero')
+      END IF
+
+      DO isoil=1,nsoil
+        ptr_3D => input_file%Read_2d_extdim( &
+          & variable_name='layer_moist',     &
+          & start_extdim=isoil, end_extdim=isoil, extdim_name='soillev')
+        hydro_init_vars%w_soil_sl(:,isoil,:) = MERGE(ptr_3D(:,:,1), 0._wp, ptr_3D(:,:,1) >= 0._wp)
+      END DO
+
+      CALL input_file%Close()
+
+    END IF
+
+  END SUBROUTINE hydro_read_init_vars
+
+  SUBROUTINE hydro_init_bc(tile)
+
+    USE mo_util,    ONLY: soil_depth_to_layers_2d
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+
+    dsl4jsb_Def_config(HYDRO_)
+    dsl4jsb_Def_memory(HYDRO_)
+
+    TYPE(t_jsb_vgrid), POINTER :: soil_w
+    INTEGER :: i, nsoil
+
+    TYPE(t_jsb_model),       POINTER :: model
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init_bc'
+
+    IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
+
+    IF (debug_on()) CALL message(routine, 'Setting  hydrology boundary conditions for tile '//TRIM(tile%name))
+
+    model => Get_model(tile%owner_model_id)
+
+    soil_w => Get_vgrid('soil_depth_water')
+    nsoil = soil_w%n_levels
+
+    ! Get hydrology config
+    dsl4jsb_Get_config(HYDRO_)
+
+    ! Get hydrology memory of the tile
+    dsl4jsb_Get_memory(HYDRO_)
+
+    !----------
+
+    ! Orography ...
+    dsl4jsb_var2D_onDomain(HYDRO_,elevation) = hydro_init_vars%elevation
+
+    dsl4jsb_var2D_onDomain(HYDRO_,oro_stddev) = hydro_init_vars%oro_stddev
+
+    !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_,elevation), &
+    !$acc dsl4jsb_var2D_onDomain(HYDRO_,oro_stddev))
+
+    IF (tile%contains_soil) THEN
+
+      ! Initialize hydrology variables from bc file
+
+      ! Total soil depth until bedrock
+      dsl4jsb_var2D_onDomain(HYDRO_, soil_depth) = hydro_init_vars%soil_depth
+
+      ! Compute actual soil layer depths based on the fixed layer thicknesses from input file and
+      ! the bedrock depth just read in.
+      dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl) = soil_depth_to_layers_2d( &
+        & dsl4jsb_var2D_onDomain(HYDRO_, soil_depth),                          & ! Total soil depth until bedrock (from textures)
+        & soil_w%dz(:))                                                          ! Soil layer thicknesses
+
+      ! Maximum root zone soil moisture
+      ! max_moist is zero over glaciers ... but since we do this only for tiles with soil, we set max_moist to 0.2 over glaciers
+      dsl4jsb_var2D_onDomain(HYDRO_, max_moist) = hydro_init_vars%max_moist
+
+      ! Volumetric soil porosity
+      dsl4jsb_var_ptr(HYDRO_, vol_porosity) = hydro_init_vars%vol_porosity
+
+      ! Saturated hydraulic conductivity
+      dsl4jsb_var_ptr(HYDRO_, hyd_cond_sat) = hydro_init_vars%hyd_cond_sat
+
+      ! Matrix potential
+      dsl4jsb_var_ptr(HYDRO_, matrix_pot) = hydro_init_vars%matrix_pot
 
       ! Exponent B in Clapp and Hornberger
       dsl4jsb_var_ptr(HYDRO_, bclapp) = hydro_init_vars%bclapp

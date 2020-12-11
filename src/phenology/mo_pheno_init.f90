@@ -71,6 +71,10 @@ CONTAINS
       CALL pheno_finalize_init_vars()
     END IF
 
+    IF (.NOT. tile%Has_children() .AND. .NOT. ASSOCIATED(tile%next_sibling_tile)) THEN
+      CALL pheno_finalize_init_vars()
+    END IF
+
   END SUBROUTINE pheno_init
 
   SUBROUTINE pheno_finalize_init_vars
@@ -135,8 +139,6 @@ CONTAINS
     pheno_init_vars%lai_mon(:,:,0   ) = ptr_mon(:,:,12  )
     pheno_init_vars%lai_mon(:,:,13  ) = ptr_mon(:,:,1   )
     DEALLOCATE(ptr_mon)
-    !$acc enter data attach(dsl4jsb_memory(PHENO_)%lai_mon)
-    !$acc update device(dsl4jsb_memory(PHENO_)%lai_mon)
 
     ! Foliage projected cover climatology
     IF (debug_on()) CALL message(TRIM(routine), 'reading veg_fract ...')
@@ -147,7 +149,6 @@ CONTAINS
     pheno_init_vars%fract_fpc_mon(:,:,0   ) = ptr_mon(:,:,12  )
     pheno_init_vars%fract_fpc_mon(:,:,13  ) = ptr_mon(:,:,1   )
     DEALLOCATE(ptr_mon)
-    !$acc update device(dsl4jsb_memory(PHENO_)%fract_fpc_mon)
 
     ! Forest fraction
     ! @todo: only used for use_alb_veg_simple=.TRUE. and HYDRO_ init if l_organic=.TRUE.
@@ -375,9 +376,6 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),       POINTER  :: model
-    TYPE(t_input_file)                :: input_file
-    REAL(wp),                POINTER  :: lai_clim(:,:,:)
-    REAL(wp), POINTER                 :: ptr_2D(:,:) 
        
     CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_q_'
     ! ---------------------------
@@ -430,21 +428,14 @@ CONTAINS
       growing_season(:,:) = false
     ENDIF
 
-
     !> 2.0 jsbach4 "pheno init" code copied with minor modifications
     !!
     
-    !> 2.1 get fract_fpc_max from bc file
-    input_file = jsb_netcdf_open_input(TRIM(model%config%fract_filename), model%grid_id)     ! Temporary
+    !> 2.1 get fract_fpc_max
     ! Maximum foliage projected cover
-    IF (debug_on()) CALL message(TRIM(routine), 'reading veg_ratio_max ...')
-    ptr_2D => input_file%Read_2d(      &
-      & variable_name='veg_ratio_max', &
-      & fill_array = dsl4jsb_var_ptr(PHENO_, fract_fpc_max))
-    dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max) = &
-      MERGE(dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max), 0._wp, dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max) >= 0._wp)
+    IF (debug_on()) CALL message(TRIM(routine), 'setting veg_ratio_max ...')
+    dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max) = pheno_init_vars%fract_fpc_max
     !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max))
-    CALL input_file%Close()
     
     !> 2.2 calc initial fract_fpc 
     IF (tile%lcts(1)%lib_id /= 0) THEN ! work with lctlib only if the present tile is a pft
