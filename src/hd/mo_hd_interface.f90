@@ -24,7 +24,6 @@ MODULE mo_hd_interface
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid
   USE mo_jsb_grid,           ONLY: Get_grid
-  USE mo_jsb_domain_iface,   ONLY: get_blk_start, get_blk_end, get_col_start, get_col_end
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_control,        ONLY: debug_on
   USE mo_jsb_process_class,  ONLY: t_jsb_process
@@ -364,11 +363,11 @@ CONTAINS
 
       global_outflow        = global_sum_array((outflow_runoff(:,:)+outflow_drainage(:,:)+outflow_rivers(:,:))*in_domain(:,:))
 
-      blks = get_blk_start(grid%patch)
-      blke = get_blk_end(grid%patch)
+      blks = grid%get_blk_start()
+      blke = grid%get_blk_end()
       DO blk = blks, blke
-        jcs = get_col_start(blk, grid%patch)
-        jce = get_col_end(blk, grid%patch)
+        jcs = grid%get_col_start(blk)
+        jce = grid%get_col_end(blk)
         DO jc = jcs, jce
           ! inflow from grid cells upstream: outflow from runnoff, drainage and riverflow
           DO n = 1, hd__mem%nneigh

@@ -318,14 +318,14 @@ CONTAINS
       s_star(:) = s_old(:)
     ELSE
       !$claw sca forward update savepoint=ser_jsb_seb_land_surface_temp_implicit_1 tile_name=tile%name
-      CALL surface_temp_implicit( nc, steplen, &
-        t2s_conv(:), &
-        t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), &
-        s_old(:), qsat_srf_old(:), dQdT(:), &
-        rad_srf_net(:), forc_hflx(:), heat_tcoef(:), &
-        fact_q_air(:), fact_qsat_srf(:), &
-        fract_snow(:), heat_cap(:), &
-        & s_star(:))
+      CALL surface_temp_implicit( nc, steplen, & ! in
+        t2s_conv(:),                           & ! in
+        t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), &  ! in
+        s_old(:), qsat_srf_old(:), dQdT(:),    & ! in
+        rad_srf_net(:), forc_hflx(:), heat_tcoef(:),    &  ! in
+        fact_q_air(:), fact_qsat_srf(:),       & ! in
+        fract_snow(:), heat_cap(:),            & ! in
+        & s_star(:))                             ! out
     END IF
 
     ! @todo - hack for oceans boxes (land tile is direct child of root tile)

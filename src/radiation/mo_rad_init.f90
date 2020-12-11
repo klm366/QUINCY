@@ -238,7 +238,7 @@ CONTAINS
 
     IF (.NOT. dsl4jsb_Config(RAD_)%active) RETURN
 
-    IF (debug_on()) CALL message(routine, 'Initializing radiation memory for tile '//TRIM(tile%name))
+    IF (debug_on()) CALL message(TRIM(routine), 'Initializing radiation memory for tile '//TRIM(tile%name))
 
     ! Initialize physical state
     !

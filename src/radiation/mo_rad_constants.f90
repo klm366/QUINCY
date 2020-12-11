@@ -50,7 +50,7 @@ MODULE mo_rad_constants
    & AlbedoSnowNirMax_age   = 0.60_wp,     & ! Maximum albedo of fresh snow in the NIR range
    & AlbedoSnowVisAge       = 0.15_wp,     & ! Maximal rel. reduction of snow albedo by aging in the visible range
    & AlbedoSnowNirAge       = 0.5_wp,      & ! Maximal rel. reduction of snow albedo by aging in the NIR range
-   & AlbedoCanopySnow_age   = 0.20_wp,     &  ! Albedo of snow covered canopy for snow age scheme (BATS)
+   & AlbedoCanopySnow_age   = 0.20_wp,     & ! Albedo of snow covered canopy for snow age scheme (BATS)
    & AlbedoSnowAngle        = 0.4_wp,      & ! Maximal rel. reduction of snow absorption by large solar zenith angle
                                 !
                                 ! Parameters of snow temperature scheme albedo

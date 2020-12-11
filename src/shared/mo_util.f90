@@ -102,11 +102,26 @@ CONTAINS
     CHARACTER(len=*), INTENT(IN)           :: in_str    ! input string
     CHARACTER(len=*), INTENT(IN)           :: arg(:)
     ! local variables:
-    INTEGER :: i
+    INTEGER :: i, ipos, len_in_str
 
+    len_in_str = LEN_TRIM(in_str)
     one_of_str = -1
     DO i=1,SIZE(arg)
-      IF (toupper(TRIM(in_str)) == toupper(TRIM(arg(i))))  one_of_str=i
+      ipos = SCAN(arg(i), '*')
+      IF (ipos == 0) THEN
+        ipos = LEN_TRIM(arg(i))
+      ELSE
+        ipos = ipos - 1
+      END IF
+      IF (ipos > 0) THEN
+        IF ( ADJUSTL(toupper(in_str(1:MIN(ipos,len_in_str)))) == ADJUSTL(toupper(arg(i)(1:ipos))) ) THEN
+          one_of_str=i
+          EXIT
+        END IF
+      ELSE
+        one_of_str=i
+        EXIT
+      END IF
     END DO
   END FUNCTION one_of_str
 
@@ -119,7 +134,10 @@ CONTAINS
 
     one_of_int = -1
     DO i=1,SIZE(arg)
-      IF (in_int == arg(i))  one_of_int=i
+      IF (in_int == arg(i)) THEN
+        one_of_int=i
+        EXIT
+      END IF
     END DO
   END FUNCTION one_of_int
 
