@@ -62,6 +62,7 @@ CONTAINS
     CLASS(t_hydro_config), INTENT(inout) :: config
 
     LOGICAL                     :: active
+    LOGICAL                     :: single_tile_output
     CHARACTER(len=filename_max) :: ic_filename, bc_filename, bc_sso_filename
     REAL(wp)                    :: w_skin_max, snow_depth_max
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
@@ -70,6 +71,7 @@ CONTAINS
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
+      & single_tile_output,         &
       & ic_filename,                &
       & bc_filename,                &
       & bc_sso_filename,            &
@@ -96,6 +98,7 @@ CONTAINS
 
     ! Set defaults
     active            = .TRUE.
+    single_tile_output = .TRUE.
     bc_filename       = 'bc_land_hydro.nc'  !R: gibts im Moment noch nicht
     ic_filename       = 'ic_land_hydro.nc'  !R: gibts im Moment noch nicht
     bc_sso_filename   = 'bc_land_sso.nc'
@@ -114,6 +117,7 @@ CONTAINS
     IF (istat == POSITIONED) READ(nml_unit, jsb_hydro_nml)
 
     config%active              = active
+    config%single_tile_output  = single_tile_output
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
     config%bc_sso_filename     = bc_sso_filename

@@ -32,6 +32,17 @@ MODULE mo_jsb_var_class
       , CONTIGUOUS &
 #endif
       :: ptr3d(:,:,:) => NULL()
+    REAL(wp), POINTER &
+#ifdef HAVE_FC_ATTRIBUTE_CONTIGUOUS
+      , CONTIGUOUS &
+#endif
+      :: ptr2d_t(:,:,:) => NULL()
+    REAL(wp), POINTER &
+#ifdef HAVE_FC_ATTRIBUTE_CONTIGUOUS
+      , CONTIGUOUS &
+#endif
+      :: ptr3d_t(:,:,:,:) => NULL()
+    !
     CHARACTER(len=VARNAME_LEN) :: name                      ! Name of variable
     CHARACTER(len=VARNAME_LEN) :: full_name                 ! Full name of variable in varlist, including prefix and suffix
     INTEGER                    :: type                      ! REAL2D / REAL3D
@@ -39,6 +50,7 @@ MODULE mo_jsb_var_class
     INTEGER, ALLOCATABLE       :: owner_tile_path(:)
     INTEGER, ALLOCATABLE       :: child_idx(:)              ! Position-numbers of same variable for for the child tiles 
                                                             ! (according to mem%vars(:)).
+    INTEGER                    :: pos_in_leaves = 0
     REAL(dp)                   :: missval
     LOGICAL                    :: l_aggregate_all = .FALSE. ! When aggregating, consider fractions of all child tiles even
                                                             ! of those where variable doesn't exist
@@ -51,10 +63,11 @@ MODULE mo_jsb_var_class
 
   TYPE, EXTENDS(t_jsb_var) :: t_jsb_var_real2d
     REAL(wp), POINTER &
-#ifdef HAVE_FC_ATTRIBUTE_CONTIGUOUS
-     , CONTIGUOUS &
-#endif
-      :: ptr(:,:) => NULL()
+! #ifdef HAVE_FC_ATTRIBUTE_CONTIGUOUS
+!      , CONTIGUOUS &
+! #endif
+      :: ptr(:,:) => NULL(), &
+      &  ptr_t(:,:,:) => NULL() ! associated with ptr2d_t(:,:,:)
   CONTAINS
     ! PROCEDURE :: Add_real2d                       ! Add two variables of type t_jsb_var_real2d
     ! PROCEDURE :: Add_real2d_and_scalar            ! Add varialbe of type t_jsb_var_real2d with REAL scalar
@@ -66,7 +79,8 @@ MODULE mo_jsb_var_class
   END TYPE t_jsb_var_real2d
 
   TYPE, EXTENDS(t_jsb_var) :: t_jsb_var_real3d
-    REAL(wp), POINTER :: ptr(:,:,:) => NULL()
+    REAL(wp), POINTER :: ptr(:,:,:) => NULL(), &
+      &  ptr_t(:,:,:,:) => NULL() ! associated with ptr3d_t(:,:,:)
   CONTAINS
     ! PROCEDURE :: Add_real3d
     ! PROCEDURE :: Add_real3d_and_scalar            ! Add varialbe of type t_jsb_var_real3d with REAL scalar

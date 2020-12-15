@@ -82,6 +82,7 @@ CONTAINS
     ! 0.2 Local
     ! variables for reading from namlist, identical to variable-name in namelist
     LOGICAL                     :: active
+    LOGICAL                     :: single_tile_output
     CHARACTER(len=filename_max) :: ic_filename,   &
                                    bc_filename
     ! INTEGER                     :: plant_functional_type_id
@@ -94,6 +95,7 @@ CONTAINS
 
     NAMELIST /jsb_veg_nml/       & 
       active,                       &
+      single_tile_output,           &
       bc_filename,                  &
       ic_filename!,                  &
       ! plant_functional_type_id,     &
@@ -110,6 +112,7 @@ CONTAINS
 
     ! Set defaults
     active                         = .TRUE.
+    single_tile_output             = .TRUE.
     bc_filename                    = 'bc_land_vegetation.nc'
     ic_filename                    = 'ic_land_vegetation.nc'
     ! plant_functional_type_id       = 1
@@ -130,6 +133,7 @@ CONTAINS
 
     ! pass values as read from file
     config%active                        = active
+    config%single_tile_output            = single_tile_output
     config%bc_filename                   = bc_filename
     config%ic_filename                   = ic_filename
     ! config%pft_id                        = plant_functional_type_id

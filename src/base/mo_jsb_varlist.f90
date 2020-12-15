@@ -16,10 +16,10 @@ MODULE mo_jsb_varlist
 #ifndef __NO_JSBACH__
 
   USE mo_kind,              ONLY: wp, dp
-  USE mo_exception,         ONLY: finish
+  USE mo_exception,         ONLY: message, finish
   USE mo_jsb_control,       ONLY: jsbach_runs_standalone
   USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
-  USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d, t_jsb_var_real3d, REAL2D, REAL3D
+  USE mo_jsb_var_class,     ONLY: t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d, REAL2D, REAL3D
   USE mo_jsb_memory_class,  ONLY: t_jsb_memory
   USE mo_jsb_varlist_iface, ONLY: t_jsb_varlist => t_var_list,      &
                                   jsb_get_var_list => get_var_list, &
@@ -113,23 +113,27 @@ CONTAINS
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
 
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
-    CHARACTER(len=50) :: name_loc
+    CHARACTER(len=50) :: name_loc, name_loc_t
     LOGICAL           :: loutput_loc
     TYPE(t_cf_var)    :: cf_loc
     TYPE(t_grib2_var) :: grib2_loc
     LOGICAL           :: lmiss_loc
     REAL(dp)          :: missval_r_loc
-    INTEGER           :: ldims(2), gdims(2)
+    INTEGER           :: ldims(2), gdims(2), ldims_t(3), gdims_t(3)
     INTEGER           :: pos_of_var
     CHARACTER(len=VARNAME_LEN), ALLOCATABLE :: groups(:)     ! groups to which this variable belongs to
     INTEGER           :: no_groups                           ! number of additional groups this variable belongs to
     INTEGER           :: out_level, igroup                   ! loop variables
     CHARACTER(len=:), ALLOCATABLE :: out_level_name          ! loop variable
+    CLASS(t_jsb_var), POINTER :: var_in_parent => NULL()
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsb_add_var_list_element_r2d'
 
+    IF (vgrid%n_levels /= 1) CALL finish(routine, 'Only one vertical level in vgrid allowed!')
+
     name_loc = TRIM(name)
     IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
+    name_loc_t = TRIM(name_loc)//'_t'
     IF (suffix /= '') name_loc = TRIM(name_loc)//'_'//TRIM(suffix)
 
     loutput_loc = .TRUE.
@@ -175,17 +179,65 @@ CONTAINS
       groups(1) = 'ALL'
     END IF
 
-    CALL add_var_list_element_r2d( &
-      this_list, TRIM(name_loc), var%ptr2d, GRID_UNSTRUCTURED_CELL, vgrid%ZaxisID, &
-      cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table, &
-      ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx, &
-      loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
-      initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
-      ! lmiss=lmiss_loc, missval_r=missval_r_loc)
-      lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups, &
-      verbose=verbose)
+    IF (mem%single_tile_output .OR. ASSOCIATED(mem%children) .OR. mem%pos_in_leaves == 0) THEN
 
-    var%ptr => var%ptr2d
+      CALL add_var_list_element_r2d( &
+        this_list, TRIM(name_loc), var%ptr2d, GRID_UNSTRUCTURED_CELL, vgrid%ZaxisID, &
+        cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table, &
+        ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx, &
+        loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
+        initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
+        ! lmiss=lmiss_loc, missval_r=missval_r_loc)
+        lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups, &
+        verbose=verbose)
+      __acc_attach(var%ptr2d)
+      !$acc update device(var%ptr2d)
+      var%ptr => var%ptr2d
+      __acc_attach(var%ptr)
+      ! CALL message(routine, 'Added var '//TRIM(name_loc))
+
+    END IF
+
+    IF (.NOT. mem%single_tile_output) THEN
+  
+      IF (.NOT. ASSOCIATED(mem%parent) .AND. mem%no_of_leaves > 1) THEN
+        ldims_t(1) = ldims(1)
+        ldims_t(2) = mem%no_of_leaves
+        ldims_t(3) = ldims(2)
+        ! gdims_t(1) = gdims(1)
+        ! gdims_t(2) = mem%no_of_leaves
+        ! gdims_t(3) = gdims(2)
+        CALL add_var_list_element_r3d( &
+          this_list, TRIM(name_loc_t), var%ptr2d_t, GRID_UNSTRUCTURED_CELL, mem%vgrid_t%ZaxisID, &
+          cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table, &
+          ldims=ldims_t, gdims=gdims_t, levelindx=mem%vgrid_t%echamZaxisIdx, &
+          loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
+          isteptype=isteptype, resetval_r=resetval_r, &
+          ! lmiss=lmiss_loc, missval_r=missval_r_loc)
+          initval_r=missval_r_loc, & ! initval_r=initval_r, 
+          lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups, &
+          verbose=verbose)
+        __acc_attach(var%ptr2d_t)
+        !$acc update device(var%ptr2d_t)
+        var%ptr_t => var%ptr2d_t
+        __acc_attach(var%ptr_t)
+        ! CALL message(routine, 'Added var '//TRIM(name_loc_t)//' for process leaves on box tile')
+      ELSE IF (mem%no_of_leaves > 1) THEN
+        var_in_parent => mem%parent%Get_var(TRIM(name))
+        var%ptr2d_t => var_in_parent%ptr2d_t
+        IF (mem%pos_in_leaves > 0) THEN
+          var%pos_in_leaves = mem%pos_in_leaves
+          var%ptr => var%ptr2d_t(:,mem%pos_in_leaves,:)
+          IF (PRESENT(initval_r)) THEN
+            var%ptr(:,:) = initval_r
+          END IF
+          __acc_attach(var%ptr)
+          ! CALL message(routine, 'Linked var '//TRIM(name_loc)//' to process leaves')
+        END IF
+      END IF
+  
+    END IF
+      
     var%name = TRIM(name)
     var%full_name = TRIM(name_loc)
     var%type = REAL2D
@@ -214,11 +266,6 @@ CONTAINS
       mem%vars(pos_of_var)%p => var
       mem%no_of_vars = pos_of_var
     END IF
-
-    !$acc enter data copyin(var)
-    !$acc update device(var%ptr2d)
-    __acc_attach(var%ptr2d)
-    __acc_attach(var%ptr)
 
   END SUBROUTINE jsb_add_var_list_element_r2d
 

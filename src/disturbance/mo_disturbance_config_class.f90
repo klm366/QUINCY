@@ -64,6 +64,7 @@ CONTAINS
     CLASS(t_disturb_config), INTENT(inout) :: config
 
     LOGICAL                     :: active
+    LOGICAL                     :: single_tile_output
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
 
     INTEGER                     :: fire_algorithm
@@ -84,6 +85,7 @@ CONTAINS
 
     NAMELIST /jsb_disturb_nml/     &
          active,                   &
+         single_tile_output,       &
          ic_filename,              &
          bc_filename,              &
          fire_algorithm,           &
@@ -106,6 +108,7 @@ CONTAINS
 
     ! Set defaults
     active                 = .FALSE.
+    single_tile_output     = .TRUE.
     bc_filename            = 'bc_land_disturb.nc'
     ic_filename            = 'ic_land_disturb.nc'
     fire_algorithm         =  1
@@ -137,6 +140,7 @@ CONTAINS
 
     ! Write resulting values in config memory
     config%active                 = active
+    config%single_tile_output     = single_tile_output
     config%ic_filename            = ic_filename
     config%bc_filename            = bc_filename
     config%fire_algorithm         = fire_algorithm

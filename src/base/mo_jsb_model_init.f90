@@ -167,6 +167,7 @@ CONTAINS
     INTEGER                             :: ilct, jlct, i, no_children
     REAL(wp), ALLOCATABLE               :: fract_tmp(:,:)
     INTEGER                             :: no_omp_thread
+    LOGICAL, ALLOCATABLE                :: single_tile_output(:)
 
     dsl4jsb_Def_config(PHENO_)
 
@@ -333,12 +334,17 @@ CONTAINS
 
     ! We continue with initializing the memory structure and different model processes.
 
+    ALLOCATE(single_tile_output(SIZE(model%processes)))
+    single_tile_output(:) = .TRUE.
+    DO i=1,SIZE(model%processes)
+      IF (ASSOCIATED(model%processes(i)%p)) single_tile_output(i) = model%processes(i)%p%config%single_tile_output
+    END DO
+
     ! Iterate over tiles and call initialization if necessary
     CALL model%Reset_tiles()
     CALL model%Get_top_tile(tile)
 
-    IF (.NOT. ASSOCIATED(tile)) &
-      & CALL finish(TRIM(routine), 'Top tile not set')
+    IF (.NOT. ASSOCIATED(tile)) CALL finish(TRIM(routine), 'Top tile not set')
 
     DO WHILE (ASSOCIATED(tile))
 
@@ -347,9 +353,11 @@ CONTAINS
         CYCLE
       END IF
 
-      ! Initialize tile memory and read tile fractions
+      ! Initialize tile process memories and read tile fractions
       ! @todo: once we have land use change or dynveg, l_fixed_fractions needs to be adapted
       CALL tile%Init(TRIM(model%shortname), '', TRIM(tile%name),                &
+        & grid_id = model%grid_id,                                              &
+        & single_tile_output=single_tile_output(:), no_of_leaves=model%process_no_of_leaves(:), &
         & l_fixed_fractions=.NOT. model%processes(ALCC_)%p%config%active,       &
         & in_var_groups=one_of(TRIM(tile%name), model%config%output_tiles) > 0)
 

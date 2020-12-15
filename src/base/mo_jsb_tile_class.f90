@@ -82,6 +82,7 @@ MODULE mo_jsb_tile_class
     LOGICAL                                :: contains_lake = .FALSE.
     LOGICAL                                :: contains_soil = .FALSE.
     INTEGER,                ALLOCATABLE    :: process_action(:)
+    INTEGER,                ALLOCATABLE    :: process_pos_in_leaves(:)
     ! REAL(wp), PRIVATE,          POINTER    :: fract     (:,:)      !< Fraction of this tile (relative to parent tile)
     REAL(wp),                   POINTER    :: fract     (:,:)      !< Fraction of this tile (relative to parent tile)
     REAL(wp),                   POINTER    :: fract_max (:,:)      !< Maximum potential fraction for this tile (rel. to parent)
@@ -139,12 +140,16 @@ MODULE mo_jsb_tile_class
   END type t_jsb_tile_abstract
 
   ABSTRACT INTERFACE
-    SUBROUTINE Init_interface(this, varlist_name, prefix, suffix, l_fixed_fractions, in_var_groups)
+    SUBROUTINE Init_interface(this, varlist_name, prefix, suffix, grid_id, single_tile_output, no_of_leaves, &
+      &                       l_fixed_fractions, in_var_groups)
       IMPORT :: t_jsb_tile_abstract
       CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
       CHARACTER(len=*),           INTENT(in)    :: varlist_name
       CHARACTER(len=*),           INTENT(in)    :: prefix
       CHARACTER(len=*),           INTENT(in)    :: suffix
+      INTEGER,                    INTENT(in)    :: grid_id
+      LOGICAL,                    INTENT(in)    :: single_tile_output(:)
+      INTEGER,                    INTENT(in)    :: no_of_leaves(:)
       LOGICAL,                    INTENT(in)    :: l_fixed_fractions
       LOGICAL,                    INTENT(in)    :: in_var_groups
     END SUBROUTINE Init_interface
@@ -1067,7 +1072,7 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
 
-    INTEGER :: no_children, nproc, i,j,iproc, maxsize
+    INTEGER :: no_children, nproc, i,j,iproc, maxsize, pos
     INTEGER, ALLOCATABLE :: sizes(:,:)
 
     no_children = this%Get_no_of_children()
@@ -1110,6 +1115,10 @@ CONTAINS
                       this%ptrs2d_cache(i,j,iproc)%p => this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr2d
                       __acc_attach(this%ptrs2d_cache(i,j,iproc)%p)
                     END IF
+                  ELSE IF (ASSOCIATED(this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr2d_t)) THEN
+                    pos = this%mem(iproc)%p%children(i)%p%vars(j)%p%pos_in_leaves
+                    this%ptrs2d_cache(i,j,iproc)%p => this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr2d_t(:,pos,:)
+                    __acc_attach(this%ptrs2d_cache(i,j,iproc)%p)
                   END IF
 
                   IF (ASSOCIATED(this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr3d)) THEN

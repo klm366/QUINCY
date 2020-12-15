@@ -61,6 +61,7 @@ CONTAINS
     CLASS(t_assimi_config), INTENT(inout) :: config
 
     LOGICAL                     :: active
+    LOGICAL                     :: single_tile_output
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     INTEGER                     :: ncanopy, i
     TYPE(t_jsb_vgrid), POINTER  :: canopy_layer
@@ -78,6 +79,7 @@ CONTAINS
 
     NAMELIST /jsb_assimi_nml/  &
      & active,                 &
+     & single_tile_output,     &
      & ic_filename,            &
      & bc_filename,            &
      !! quincy
@@ -99,6 +101,7 @@ CONTAINS
 
     ! Set defaults
     active              = .TRUE.
+    single_tile_output  = .TRUE.
     bc_filename         = 'bc_land_assimi.nc'
     ic_filename         = 'ic_land_assimi.nc'
     ncanopy             = 3
@@ -118,6 +121,7 @@ CONTAINS
     CALL close_nml(nml_handler)
 
     config%active              = active
+    config%single_tile_output  = single_tile_output
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
     config%ncanopy             = ncanopy

@@ -56,6 +56,7 @@ CONTAINS
     CLASS(t_carbon_config), INTENT(inout) :: config
 
     LOGICAL                     :: active
+    LOGICAL                     :: single_tile_output
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     LOGICAL                     :: read_cpools
     REAL(wp)                    :: fire_fract_wood_2_atmos
@@ -63,6 +64,7 @@ CONTAINS
 
     NAMELIST /jsb_carbon_nml/      &
          active,                   &
+         single_tile_output,       &
          ic_filename,              &
          bc_filename,              &
          read_cpools,              &
@@ -76,6 +78,7 @@ CONTAINS
 
     ! Set defaults
     active                 = .FALSE.
+    single_tile_output     = .TRUE.
     bc_filename            = 'bc_land_carbon.nc'
     ic_filename            = 'ic_land_carbon.nc'
     read_cpools            = .FALSE.
@@ -91,6 +94,7 @@ CONTAINS
 
     ! Write resulting values in config memory
     config%active                 = active
+    config%single_tile_output     = single_tile_output
     config%ic_filename            = ic_filename
     config%bc_filename            = bc_filename
     config%read_cpools            = read_cpools

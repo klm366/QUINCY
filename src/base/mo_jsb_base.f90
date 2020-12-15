@@ -231,6 +231,8 @@ CONTAINS
       ! TBD
     END IF
 
+    CALL model%Preprocess_tiles_for_output()
+
   END SUBROUTINE jsbach_setup_tiles
 
 #endif

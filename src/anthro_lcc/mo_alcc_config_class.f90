@@ -41,12 +41,14 @@ CONTAINS
     CLASS(t_alcc_config), INTENT(inout) :: config
 
     LOGICAL :: active
+    LOGICAL :: single_tile_output
     CHARACTER(len=15) :: scheme
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     TYPE(t_jsb_vgrid), POINTER  :: pft_layer
 
     NAMELIST /jsb_alcc_nml/ &
       & active,               &
+      & single_tile_output,   &
       & scheme,               &
       & ic_filename,          &
       & bc_filename             ! this file is NOT used as a (maybe very big) maps file if ALCC_%scheme is set to 'maps'
@@ -61,6 +63,7 @@ CONTAINS
 
     ! Set defaults
     active              = .FALSE.
+    single_tile_output  = .TRUE.
     scheme              = 'maps'
     bc_filename         = 'bc_land_alcc.nc'
     ic_filename         = 'ic_land_alcc.nc'
@@ -74,6 +77,7 @@ CONTAINS
 
     ! Write resulting values in config memory
     config%active              = active
+    config%single_tile_output  = single_tile_output
     config%scheme              = TRIM(scheme)
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename

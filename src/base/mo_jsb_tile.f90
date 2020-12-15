@@ -64,7 +64,7 @@ MODULE mo_jsb_tile
 CONTAINS
 
   FUNCTION Construct_tile(name, description, processes, lct, &
-    & process_actions, parent, model_id, grid_id, fract_filename, fract_varname) RESULT(return_ptr)
+    & process_actions, parent, model_id, fract_filename, fract_varname) RESULT(return_ptr)
 
     USE mo_jsb_class,           ONLY: Get_model
     USE mo_util,                ONLY: one_of
@@ -78,7 +78,6 @@ CONTAINS
     INTEGER,           INTENT(in), OPTIONAL :: process_actions(:)
     CLASS(t_jsb_tile), POINTER,    OPTIONAL :: parent
     INTEGER,           INTENT(in), OPTIONAL :: model_id       !< Only needed if parent is not present
-    INTEGER,           INTENT(in), OPTIONAL :: grid_id        !< Only needed if parent is not present
     CHARACTER(len=*),  INTENT(in), OPTIONAL :: fract_filename !< Name of file with tile fractions
     CHARACTER(len=*),  INTENT(in), OPTIONAL :: fract_varname  !< Name of fraction variable in fract_filename
     CLASS(t_jsb_tile), POINTER              :: return_ptr
@@ -113,7 +112,6 @@ CONTAINS
       SELECT TYPE (parent)
       CLASS IS (t_jsb_tile)
         return_ptr%parent_tile => parent
-        return_ptr%grid_id = parent%grid_id
         return_ptr%owner_model_id = parent%owner_model_id
       END SELECT
     ELSE
@@ -121,11 +119,6 @@ CONTAINS
         return_ptr%owner_model_id = model_id
       ELSE
         CALL finish(TRIM(routine), 'Need model_id')
-      END IF
-      IF (PRESENT(grid_id)) THEN
-        return_ptr%grid_id = grid_id
-      ELSE
-        CALL finish(TRIM(routine), 'Need grid_id')
       END IF
     END IF
 
@@ -232,7 +225,7 @@ CONTAINS
   ! Note: It is important that Init_tile is only called for the tiles after the hierarchical tile tree has
   !       been completely constructed. Therefore, Init_tile is called from init_model_common.
   !
-  SUBROUTINE Init_tile(this, varlist_name, prefix, suffix, l_fixed_fractions, in_var_groups)
+  SUBROUTINE Init_tile(this, varlist_name, prefix, suffix, grid_id, single_tile_output, no_of_leaves,l_fixed_fractions, in_var_groups)
 
     USE mo_jsb_process_factory, ONLY: Create_process_memory
     USE mo_jsb_process_class,   ONLY: Get_process_name
@@ -248,19 +241,23 @@ CONTAINS
     CHARACTER(len=*),  INTENT(in)    :: varlist_name
     CHARACTER(len=*),  INTENT(in)    :: prefix            ! Prefix for variable names
     CHARACTER(len=*),  INTENT(in)    :: suffix
+    INTEGER,           INTENT(in)    :: grid_id
+    LOGICAL,           INTENT(in)    :: single_tile_output(:)
+    INTEGER,           INTENT(in)    :: no_of_leaves(:)
     LOGICAL,           INTENT(in)    :: l_fixed_fractions ! Tile fractions can change or not
     LOGICAL,           INTENT(in)    :: in_var_groups
 
     INTEGER                               :: iproc
     CLASS(t_jsb_memory), POINTER          :: tmp_ptr
-    CLASS(t_jsb_tile_abstract),   POINTER :: tmp_tile
+    CLASS(t_jsb_tile_abstract), POINTER   :: tmp_tile
+    CLASS(t_jsb_tile_abstract), POINTER   :: parent_tile => NULL()
+    CHARACTER(len=10)                     :: parent_tile_name
     CHARACTER(LEN=15)                     :: process_name
 
     TYPE(t_jsb_aggregator_weighted_by_fract), POINTER :: aggregator_weighted_by_fract
     CLASS(t_jsb_aggregator),                  POINTER :: aggregator
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
-    CHARACTER(len=10)          :: parent_tile_name
     INTEGER                    :: table
     TYPE(t_input_file)         :: input_file
     REAL(wp),          POINTER :: return_pointer(:,:), tmp_fract(:,:)
@@ -279,34 +276,35 @@ CONTAINS
 
     WRITE(model_id_suffix, '(A1,I2.2)') 'D', this%owner_model_id
 
+    this%grid_id = grid_id
+
     ! Allocate all memory components for new tile and initialize their data part with NULL()
     ALLOCATE(this%mem(max_no_of_processes))
     !$acc enter data create(this%mem)
 
     ! Loop over all processes and initialize memory for this tile
+    parent_tile => this%parent_tile
     DO iproc=1,max_no_of_processes
 
       this%mem(iproc)%p => NULL()
 
       IF (this%process_action(iproc) == SKIP_) CYCLE
 
-      IF (this%process_action(iproc) == ON_LEAFS_) THEN
-        IF (ASSOCIATED(this%parent_tile)) this%parent_tile%process_action(iproc) = AGGREGATE_
-        IF (.NOT. this%Has_children()) this%process_action(iproc) = ON_TILE_
-      END IF
+      ! IF (this%process_action(iproc) == ON_LEAFS_) THEN
+      !   IF (ASSOCIATED(parent_tile)) parent_tile%process_action(iproc) = AGGREGATE_
+      !   IF (.NOT. this%Has_children()) this%process_action(iproc) = ON_TILE_
+      ! END IF
 
       process_name = Get_process_name(iproc)
 
       IF (this%process_action(iproc) == INHERIT_) THEN
-        this%mem(iproc)%p => this%parent_tile%mem(iproc)%p
+        this%mem(iproc)%p => parent_tile%mem(iproc)%p
         this%mem(iproc)%p%in_var_groups = in_var_groups
         __acc_attach(this%mem(iproc)%p)
         IF (debug_on()) &
           & CALL message(TRIM(routine), 'Linked memory for process '//TRIM(process_name)//&
           &                             ' on tile '//TRIM(this%name)//' to parent')
       ELSE
-        no_of_children = this%Get_no_of_children()
-        child_no = this%path(this%level)
         ! this%param(iproc)%p => t_jsb_param(iproc)
         tmp_ptr => Create_process_memory(iproc)
         __acc_attach(tmp_ptr)
@@ -339,15 +337,23 @@ CONTAINS
         ! END IF
         this%mem(iproc)%p%varlist_name = TRIM(varlist_name_loc)
 
+        IF (ASSOCIATED(parent_tile)) this%mem(iproc)%p%parent => parent_tile%mem(iproc)%p
+
         ! this%mem(iproc)%p%varlist_name = TRIM(varlist_name_loc)//'_'//TRIM(this%name) !-=-=-=-=-=-=-=-=-=-=-=-=-=-=PHS "now each pft has an output file but all processes are in one file"
         this%mem(iproc)%p%grid_id = this%grid_id
         this%mem(iproc)%p%owner_model_id = this%owner_model_id
         this%mem(iproc)%p%owner_proc_id = iproc
+        this%mem(iproc)%p%owner_proc_name = process_name
         ALLOCATE(this%mem(iproc)%p%owner_tile_path(SIZE(this%path)))
         this%mem(iproc)%p%owner_tile_path(:) = this%path(:)
         this%mem(iproc)%p%owner_tile_name = TRIM(this%name)
-        this%mem(iproc)%p%no_of_children = no_of_children
-        this%mem(iproc)%p%in_var_groups = in_var_groups    ! Must be before CALL to %Init !
+        this%mem(iproc)%p%single_tile_output = single_tile_output(iproc) ! Must be before CALL to %Init !
+        this%mem(iproc)%p%no_of_leaves = no_of_leaves(iproc)
+        IF (.NOT. single_tile_output(iproc) .AND. no_of_leaves(iproc) > 1) THEN
+          this%mem(iproc)%p%vgrid_t => Get_vgrid('jsb_t_' // process_name)
+          this%mem(iproc)%p%pos_in_leaves = this%process_pos_in_leaves(iproc)
+        END IF
+        this%mem(iproc)%p%in_var_groups = in_var_groups           ! Must be before CALL to %Init !        
         !$acc update device(this%mem(iproc)%p)
         !$acc enter data create(this%mem(iproc)%p%vars)
         IF (prefix /= '') THEN
@@ -359,14 +365,17 @@ CONTAINS
         IF (debug_on()) &
           & CALL message(TRIM(routine), 'Created memory for process '//TRIM(process_name)//' on tile '//TRIM(this%name))
 
-        IF (ASSOCIATED(this%parent_tile)) THEN
-          IF (.NOT. ASSOCIATED(this%parent_tile%mem(iproc)%p%children) .AND. this%parent_tile%Get_no_of_children() > 0) THEN
-            ALLOCATE(this%parent_tile%mem(iproc)%p%children(this%parent_tile%Get_no_of_children()))
-            !$acc enter data create(this%parent_tile%mem(iproc)%p%children)
+        IF (ASSOCIATED(parent_tile)) THEN
+          no_of_children = parent_tile%Get_no_of_children()
+          IF (.NOT. ASSOCIATED(parent_tile%mem(iproc)%p%children) .AND. no_of_children > 0) THEN
+            parent_tile%mem(iproc)%p%no_of_children = no_of_children
+            ALLOCATE(parent_tile%mem(iproc)%p%children(no_of_children))
+            !$acc enter data create(parent_tile%mem(iproc)%p%children)
           END IF
-          this%parent_tile%mem(iproc)%p%children(child_no)%p => this%mem(iproc)%p
-          !$acc update device(this%parent_tile%mem(iproc)%p%children(child_no)%p)
-          __acc_attach(this%parent_tile%mem(iproc)%p%children(child_no)%p)
+          child_no = this%path(this%level)
+          parent_tile%mem(iproc)%p%children(child_no)%p => this%mem(iproc)%p
+          !$acc update device(parent_tile%mem(iproc)%p%children(child_no)%p)
+          __acc_attach(parent_tile%mem(iproc)%p%children(child_no)%p)
         END IF
 
       END IF

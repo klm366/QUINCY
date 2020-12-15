@@ -35,6 +35,7 @@ MODULE mo_jsb_process_class
     CLASS(t_jsb_config), POINTER :: config => NULL()
     TYPE(t_jsb_process_task_p), ALLOCATABLE :: task_list(:)
     INTEGER                      :: owner_model_id
+    INTEGER                      :: no_of_leaves
   CONTAINS
     PROCEDURE :: Configure => Configure_process
     PROCEDURE :: Register_task

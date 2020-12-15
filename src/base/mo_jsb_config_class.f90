@@ -45,6 +45,7 @@ MODULE mo_jsb_config_class
     CHARACTER(len=filename_max) :: ic_filename
     CHARACTER(len=filename_max) :: bc_filename
     CHARACTER(LEN=filename_max) :: namelist_filename
+    LOGICAL                     :: single_tile_output
     CHARACTER(len=10), ALLOCATABLE :: output_tiles(:)  ! List of tile names for which output should be generated
   CONTAINS
     PROCEDURE (Init_config), DEFERRED, PASS(config) :: Init

@@ -19,6 +19,7 @@ MODULE mo_jsb_memory_class
   USE mo_exception,         ONLY: finish
   USE mo_jsb_config_class,  ONLY: t_jsb_config
   USE mo_jsb_var_class,     ONLY: t_jsb_var_p, t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d, REAL2D, REAL3D
+  USE mo_jsb_grid_class,    ONLY: t_jsb_vgrid
   USE mo_util,              ONLY: int2string
 
   IMPLICIT NONE
@@ -35,6 +36,7 @@ MODULE mo_jsb_memory_class
     INTEGER :: grid_id = 0
     INTEGER :: owner_model_id = 0
     INTEGER :: owner_proc_id = 0
+    CHARACTER(LEN=:), ALLOCATABLE :: owner_proc_name
     INTEGER :: no_of_children = 0
     TYPE(t_jsb_memory_p), POINTER :: children(:) => NULL()
     CLASS(t_jsb_memory) , POINTER :: parent => NULL()
@@ -42,10 +44,14 @@ MODULE mo_jsb_memory_class
     CHARACTER(len=10)    :: owner_tile_name
     INTEGER :: max_no_of_vars = 0
     INTEGER :: no_of_vars = 0
+    INTEGER :: no_of_leaves = 0
+    INTEGER :: pos_in_leaves = 0
     CHARACTER(LEN=:), ALLOCATABLE :: varlist_name
     TYPE(t_jsb_var_p), ALLOCATABLE :: vars(:)
     CLASS(t_jsb_param), POINTER :: param => NULL()
     LOGICAL :: in_var_groups = .FALSE.
+    LOGICAL :: single_tile_output = .TRUE.
+    TYPE(t_jsb_vgrid), POINTER :: vgrid_t       => NULL()         ! "vertical" grid type for tiled output, i.e. single_tile_output=.FALSE.
   CONTAINS
     PROCEDURE (Init_memory), DEFERRED, PASS(mem) :: Init
     PROCEDURE                                    :: Get_var

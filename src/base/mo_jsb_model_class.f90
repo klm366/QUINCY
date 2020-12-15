@@ -56,6 +56,7 @@ MODULE mo_jsb_model_class
     TYPE(t_jsb_task_options),  ALLOCATABLE :: options(:)    !< Options needed by tasks
     INTEGER                            :: grid_id
     TYPE(t_jsb_process_p),     POINTER :: processes(:)
+    INTEGER,                   ALLOCATABLE :: process_no_of_leaves(:)
     TYPE(t_Task_queue),        POINTER :: queue        => NULL()
     TYPE(t_jsb_process_task_p), ALLOCATABLE :: current_task(:)
     TYPE(t_lctlib_element),    POINTER :: lctlib(:)
@@ -84,6 +85,7 @@ MODULE mo_jsb_model_class
 !!$    PROCEDURE :: Process_task
     PROCEDURE :: Run_tasks
     PROCEDURE :: Set_options
+    PROCEDURE :: Preprocess_tiles_for_output
 #ifdef _OPENACC
     PROCEDURE :: gpu_to_cpu => Sync_vars_from_gpu_to_cpu
     PROCEDURE :: cpu_to_gpu => Sync_vars_from_cpu_to_gpu
@@ -433,6 +435,97 @@ CONTAINS
 
   END SUBROUTINE Set_options
 
+  SUBROUTINE Preprocess_tiles_for_output(this)
+
+    USE mo_jsb_process_class,   ONLY: SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_
+    USE mo_jsb_grid_class,      ONLY: t_jsb_vgrid, new_vgrid
+    USE mo_jsb_grid,            ONLY: Register_vgrid
+    USE mo_jsb_io,              ONLY: ZAXIS_GENERIC
+
+    CLASS(t_jsb_model), INTENT(inout) :: this
+
+    CLASS(t_jsb_tile_abstract), POINTER :: tile
+    CHARACTER(LEN=15)                   :: process_name
+    TYPE(t_jsb_vgrid),          POINTER  :: vgrid_tmp
+
+    INTEGER :: no_omp_thread, max_no_of_processes, iproc, n_leaves, i
+    INTEGER, ALLOCATABLE :: pos_in_leaves(:)
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Preprocess_tiles_for_output'
+
+    no_omp_thread = Get_omp_thread()
+
+    IF (.NOT. Is_omp_inside_serial()) THEN
+      CALL finish(TRIM(routine), 'Should not be called within parallel OMP region')
+    END IF
+
+    IF (debug_on()) CALL message(routine, 'Pre-processing tile structure for output')
+
+    CALL this%Reset_tiles()
+    CALL this%Get_top_tile(tile)
+
+    IF (.NOT. ASSOCIATED(tile)) &
+      & CALL finish(TRIM(routine), 'Top tile not set')
+
+    max_no_of_processes = SIZE(tile%process_action)
+    ALLOCATE(this%process_no_of_leaves(max_no_of_processes))
+    this%process_no_of_leaves(:) = 0
+
+    ALLOCATE(pos_in_leaves(max_no_of_processes))
+    pos_in_leaves(:) = 0
+
+    DO WHILE (ASSOCIATED(tile))
+
+      IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
+        CALL this%Goto_next_tile(tile)
+        CYCLE
+      END IF
+
+      ALLOCATE(tile%process_pos_in_leaves(max_no_of_processes))
+      tile%process_pos_in_leaves(:) = 0
+
+      DO iproc=1,max_no_of_processes
+
+        IF (tile%process_action(iproc) == SKIP_) CYCLE
+
+        IF (tile%process_action(iproc) == ON_LEAFS_) THEN
+          IF (ASSOCIATED(tile%parent_tile)) tile%parent_tile%process_action(iproc) = AGGREGATE_
+          IF (tile%Has_children()) THEN
+            tile%process_action(iproc) = AGGREGATE_
+          ELSE
+            tile%process_action(iproc) = ON_TILE_
+          END IF
+        END IF
+  
+        IF (tile%process_action(iproc) == ON_TILE_) THEN
+          this%process_no_of_leaves(iproc) = this%process_no_of_leaves(iproc) + 1
+          pos_in_leaves(iproc) = pos_in_leaves(iproc) + 1
+          tile%process_pos_in_leaves(iproc) = pos_in_leaves(iproc)
+        END IF
+
+      END DO
+
+      CALL this%Goto_next_tile(tile)
+
+    END DO
+
+    DO iproc=1,max_no_of_processes
+
+      IF (.NOT. ASSOCIATED(this%processes(iproc)%p)) CYCLE
+      IF (this%processes(iproc)%p%config%single_tile_output) CYCLE
+
+      process_name = Get_process_name(iproc)
+      n_leaves = this%process_no_of_leaves(iproc)
+      IF (n_leaves > 1) THEN
+        vgrid_tmp => new_vgrid('jsb_t_' // TRIM(process_name), ZAXIS_GENERIC, n_leaves, &
+          &                    levels=(/ (REAL(i,kind=wp),i=1,n_leaves) /), units='')
+        CALL register_vgrid(vgrid_tmp)
+      END IF
+
+    END DO
+
+  END SUBROUTINE Preprocess_tiles_for_output
+  
   !>
   !! Destructor method for model instance.
   !!
