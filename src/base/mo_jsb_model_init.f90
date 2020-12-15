@@ -16,7 +16,7 @@
 MODULE mo_jsb_model_init
 #ifndef __NO_JSBACH__
 
-  dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, FUEL_, A2L_, VEG_
+  dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, FUEL_, ALCC_, A2L_, VEG_
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
 
@@ -252,8 +252,20 @@ CONTAINS
       END IF
       CALL model%Queue_task(TURB_,   "humidity_scaling")
       CALL model%Queue_task(TURB_,   "surface_roughness")
-      ! Note: albedo is updated at the end of the time step, one time step before the radiation is updated in the atmosphere
+      ! Note: the albedo is updated at the end of the time step, one time step before the radiation is updated in the
+      !       atmosphere. Otherwise, in between, the albedo changes would be consindered in the jsbach radiation but where
+      !       not considered in the atmospheric radiation calculations. This would be inconsistent. Furthermore, atmospheric
+      !       cloud changes affect radiation also only at radiation time step and jsbach should be also consistent with this.
+      !       In the albedo update time step the albedo should be updated after the SEB process, sothat also the SEB remains
+      !       consistent within this time step.
       CALL model%Queue_task(RAD_,    "albedo")
+      ! Note: The explanation above for the aldedo accounts also for alcc as it may also changes surface properties
+      !       affecting atmospheric radiation. However, in alcc we do not redistribute the albedos of the pfts because
+      !       they shall not keep their quantity for the gridbox but change with alcc. Therefore, the sequence between the alcc and
+      !       albedo process does not matter.
+      IF (model%processes(ALCC_)%p%config%active) THEN
+        CALL model%Queue_task(ALCC_, "alcc")
+      END IF
       CALL model%Queue_task(HYDRO_,  "water_balance")
       CALL model%Queue_task(SEB_,    "asselin_filter")      ! Should always be the last task
     
@@ -337,7 +349,8 @@ CONTAINS
 
       ! Initialize tile memory and read tile fractions
       ! @todo: once we have land use change or dynveg, l_fixed_fractions needs to be adapted
-      CALL tile%Init(TRIM(model%shortname), '', TRIM(tile%name), l_fixed_fractions=.TRUE., &
+      CALL tile%Init(TRIM(model%shortname), '', TRIM(tile%name),                &
+        & l_fixed_fractions=.NOT. model%processes(ALCC_)%p%config%active,       &
         & in_var_groups=one_of(TRIM(tile%name), model%config%output_tiles) > 0)
 
       ! TBD: Loop over processes instead of explicit

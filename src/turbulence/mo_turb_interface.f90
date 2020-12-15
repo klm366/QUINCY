@@ -281,7 +281,7 @@ CONTAINS
           &               + (1._wp - fract_lice(:)) / (LOG(config_blending_height / config_rough_water) ** 2)
       ELSE
         !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_12 tile_name=tile%name
-        rough_h_star(:) = 1._wp / (LOG(config_blending_height / config_rough_water) ** 2)
+        rough_m_star(:) = 1._wp / (LOG(config_blending_height / config_rough_water) ** 2)
       END IF
       rough_h_star(:) = rough_m_star(:)
 

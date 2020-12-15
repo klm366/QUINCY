@@ -498,6 +498,8 @@ CONTAINS
 
     IF (l_trace_memory) CALL report_memory_usage()
 
+    IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
+
   END SUBROUTINE jsbach_finish_timestep
 
   SUBROUTINE jsbach_get_var(var_name, model_id, ics, ice, iblk, ptr1d, ptr2d, ptr3d)

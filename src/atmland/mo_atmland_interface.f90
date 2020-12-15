@@ -1145,7 +1145,7 @@ CONTAINS
         !$acc data present(q_snocpymlt, q_snocpymlt_ptr)
         !$acc parallel loop
         DO i=1,nc
-          q_snocpymlt(i)      = q_snocpymlt(i)
+          q_snocpymlt(i)      = q_snocpymlt_ptr(i)
         END DO
         !$acc end data
       END IF

@@ -1651,10 +1651,10 @@ CONTAINS
       & output_level=BASIC,                                                                                &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
-    CALL jsb_add_var( mem, 'ccons_calccpools', mem%cconservation_calcCpools,              &
+    CALL jsb_add_var( mem, 'ccons_calccpools', mem%cconservation_calcCpools,      &
       & hgrid, surface,                                                           &
-      & t_cf('cconservation_calcCpools', 'mol(C) m-2(canopy)', &
-        & 'Test for c conservation on allocation and respiration.'), &
+      & t_cf('cconservation_calcCpools', 'mol(C) m-2(canopy)',                    &
+        & 'Test for c conservation on allocation and respiration.'),              &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
       & prefix, suffix,                                                           &
       & loutput = .FALSE.,lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
