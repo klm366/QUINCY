@@ -468,6 +468,41 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     IF (debug_on()) CALL message(TRIM(routine), 'Initializing fractions on tile '//TRIM(this%name))
 
+  END SUBROUTINE Init_tile
+
+  SUBROUTINE Init_fractions_on_tile(this, varlist_name, prefix, suffix, l_fixed_fractions)
+
+    USE mo_jsb_tile_class,      ONLY: t_jsb_aggregator, t_jsb_aggregator_weighted_by_fract
+    USE mo_jsb_varlist,         ONLY: jsb_add_var, VARNAME_LEN
+    USE mo_jsb_io,              ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables, TSTEP_INSTANT, TSTEP_CONSTANT
+    USE mo_jsb_grid_class,      ONLY: t_jsb_grid, t_jsb_vgrid
+    USE mo_jsb_grid,            ONLY: Get_grid, Get_vgrid
+    USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input
+
+    CLASS(t_jsb_tile), INTENT(inout) :: this
+    CHARACTER(len=*),  INTENT(in)    :: varlist_name
+    CHARACTER(len=*),  INTENT(in)    :: prefix            ! Prefix for variable names
+    CHARACTER(len=*),  INTENT(in)    :: suffix
+    LOGICAL,           INTENT(in)    :: l_fixed_fractions ! Tile fractions can change or not
+
+    TYPE(t_jsb_aggregator_weighted_by_fract), POINTER :: aggregator_weighted_by_fract
+    CLASS(t_jsb_aggregator),                  POINTER :: aggregator
+    TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
+    TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
+    INTEGER                    :: table
+    TYPE(t_input_file)         :: input_file
+    REAL(wp),          POINTER :: return_pointer(:,:), tmp_fract(:,:)
+    CHARACTER(len=50)          :: name_loc
+    CHARACTER(len=:), ALLOCATABLE :: varlist_name_loc
+    CHARACTER(len=3)           :: model_id_suffix                    ! Suffix for domain if more than one model
+    CHARACTER(len=10)          :: parent_tile_name
+
+    INTEGER :: isteptype, i, ilct
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_fractions_on_tile'
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Initializing fractions on tile '//TRIM(this%name))
+
     hgrid   => Get_grid(this%grid_id)
     surface => Get_vgrid('surface')
 
