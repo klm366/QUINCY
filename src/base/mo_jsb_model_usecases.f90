@@ -74,7 +74,7 @@ CONTAINS
     box_tile => t_jsb_tile('box', 'Top tile', &
       & processes      =(/A2L_,     L2A_,     RAD_,      HYDRO_,    TURB_    /), &
       & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
-      & model_id=model%id, grid_id=model%grid_id, fract_varname='notsea')
+      & model_id=model%id, fract_varname='notsea')
     model%top => box_tile
 
 #ifndef __NO_JSBACH_HD__
@@ -156,7 +156,7 @@ CONTAINS
     box_tile => t_jsb_tile('box', 'Top tile', &
       & processes      =(/A2L_,     L2A_,     RAD_  ,    TURB_    /), &
       & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
-      & model_id=model%id, grid_id=model%grid_id, fract_varname='notsea')
+      & model_id=model%id, fract_varname='notsea')
     model%top => box_tile
 
 #ifndef __NO_JSBACH_HD__
