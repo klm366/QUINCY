@@ -13,6 +13,7 @@
 !!
 MODULE mo_jsbach_model
 
+#ifdef __ICON__
 #ifndef __NO_JSBACH__
 
   USE mo_exception, ONLY: message, message_text, finish
@@ -53,17 +54,18 @@ CONTAINS
     USE mo_restart_attributes,      ONLY: t_RestartAttributeList, getAttributesForRestarting
   
     USE mo_read_namelists_iface,    ONLY: read_infrastructure_namelists_for_jsbach
+    USE mo_namelist,                ONLY: open_nml_output, close_nml_output
+    USE mo_nml_annotate,            ONLY: log_nml_settings
     USE mo_name_list_output_init,   ONLY: read_name_list_output_namelists, init_name_list_output, parse_variable_groups, &
       &                                   output_file, create_vertical_axes
     USE mo_level_selection,         ONLY: create_mipz_level_selections
-    USE mo_nml_crosscheck,          ONLY: land_crosscheck
 
     USE mo_time_management,          ONLY: compute_timestep_settings,                        &
       &                                    compute_restart_settings,                         &
       &                                    compute_date_settings
     USE mo_time_config,              ONLY: time_config, dt_restart
     USE mo_run_config,               ONLY: configure_run, dtime, nsteps, ltimer, output_mode, &
-      &                                    nshift, num_lev, msg_level
+      &                                    nshift, num_lev, msg_level, grid_generatingCenter, grid_generatingSubcenter
     USE mo_event_manager,            ONLY: initEventManager, addEventGroup, getEventGroup, printEventGroup
 
     USE mo_io_config,               ONLY: restartWritingParameters, configure_io
@@ -74,10 +76,11 @@ CONTAINS
       &                                   set_mpi_work_communicators, process_mpi_io_size
     USE mo_parallel_config,         ONLY: p_test_run, num_test_pe, l_test_openmp,                              &
       &                                   update_nproma_on_device, num_io_procs, pio_type,                     &
-      &                                   num_prefetch_proc, nproma, proc0_offloading
+      &                                   num_prefetch_proc, nproma, proc0_offloading, check_parallel_configuration
 
     USE mo_zaxis_type,              ONLY: zaxisTypeList, t_zaxisTypeList
     USE mo_jsb_base,                ONLY: jsbach_setup_models, jsbach_setup_tiles
+    USE mo_jsb_time,                ONLY: timesteps_per_day
     USE mo_jsb_model_init,          ONLY: jsbach_setup_grid, jsbach_init, jsbach_init_after_restart
     USE mo_jsb_model_final,         ONLY: jsbach_finalize
     USE mo_jsb_version,             ONLY: jsbach_label_run
@@ -103,7 +106,7 @@ CONTAINS
 #endif
     USE mo_name_list_output_config, ONLY: use_async_name_list_io
     USE mo_output_event_types,      ONLY: t_sim_step_info
-    USE mo_impl_constants,          ONLY: SUCCESS, pio_type_async, pio_type_cdipio
+    USE mo_impl_constants,          ONLY: SUCCESS, pio_type_async, pio_type_cdipio, inh_atmosphere
     USE mo_memory_log,              ONLY: memory_log_terminate
     USE mo_util_mtime,              ONLY: getElapsedSimTimeInSeconds, is_event_active
 
@@ -112,21 +115,24 @@ CONTAINS
     USE mo_model_domain,            ONLY: p_patch_local_parent
     USE mo_icon_comm_interface,     ONLY: construct_icon_communication, destruct_icon_communication
     USE mo_complete_subdivision,    ONLY: setup_phys_patches
+    USE mo_gribout_config,          ONLY: configure_gribout
 
+    USE mo_vertical_coord_table,    ONLY: vct_a, vct_b, vct, allocate_vct_atmo
     ! Horizontal interpolation
     USE mo_intp_lonlat_types,       ONLY: lonlat_grids
     USE mo_intp_data_strc,          ONLY: p_int_state, p_int_state_local_parent
     USE mo_interpol_config,         ONLY: configure_interpolation
     USE mo_intp_state,              ONLY: construct_2d_interpol_state,                          &
-      &                                   destruct_2d_interpol_state, transfer_interpol_state
+      &                                   destruct_2d_interpol_state !, transfer_interpol_state
     USE mo_intp_lonlat,             ONLY: compute_lonlat_intp_coeffs
+    USE mo_gridref_config,          ONLY: configure_gridref
 
     USE mo_alloc_patches,           ONLY: destruct_patches, destruct_comm_patterns
     USE mo_action,                  ONLY: ACTION_RESET, reset_act
     USE mo_var_list,                ONLY: print_group_details, nvar_lists, var_lists, print_var_list
 
+    USE mo_dynamics_config,         ONLY: iequations
     USE mo_echam_phy_config,        ONLY: eval_echam_phy_config, eval_echam_phy_tc, print_echam_phy_config
-    USE mo_echam_rad_config,        ONLY: echam_rad_config
     USE mo_echam_convect_tables,    ONLY: init_convect_tables
 
     USE mo_derived_variable_handling, ONLY: init_statistics_streams, finish_statistics_streams, update_statistics, reset_statistics
@@ -173,8 +179,10 @@ CONTAINS
 
     CALL message('======== ', 'Starting the ICON JSBACH standalone model ...')
     CALL message('', '')
-    CALL message('Namelist files', jsb_namelist_filename // ', ' // shr_namelist_filename)
+    CALL message('Namelist files', TRIM(jsb_namelist_filename) // ', ' // TRIM(shr_namelist_filename))
     CALL message('', '')
+
+    iequations = inh_atmosphere
 
     ! Initialize global registry of lon-lat grids
     CALL lonlat_grids%init()
@@ -197,16 +205,27 @@ CONTAINS
     !     corresponding sections of the configuration states.
     !---------------------------------------------------------------------
 
+    ! Create a new file in which all the namelist variables and their
+    ! actual values used in the model run will be stored.
+    IF (my_process_is_stdio()) CALL open_nml_output(TRIM(jsb_namelist_filename)//'_output')
+
     CALL read_infrastructure_namelists_for_jsbach(TRIM(jsb_namelist_filename), TRIM(shr_namelist_filename))
 
     ! The following can't be called from the previous subroutine since it's causing a circular dependency.
     CALL read_name_list_output_namelists (TRIM(jsb_namelist_filename))
 
+    ! Close the file in which all the namelist variables and their
+    ! actual values were stored and write an annotated table of all namelist settings to a text file
+    IF (my_process_is_stdio()) THEN
+      CALL close_nml_output()
+      CALL log_nml_settings(TRIM(jsb_namelist_filename)//".log")
+    END IF
+
     !---------------------------------------------------------------------
     ! 1.2 Cross-check namelist setups
     !---------------------------------------------------------------------
 
-    CALL land_crosscheck
+    CALL check_parallel_configuration()
 
     ! Set times and events
     CALL compute_timestep_settings()
@@ -354,7 +373,7 @@ CONTAINS
     CALL configure_interpolation( n_dom, p_patch(1:)%level, &
                                   p_patch(1:)%geometry_info )
 
-    ! CALL configure_gridref(n_dom, p_patch(1:)%geometry_info%mean_characteristic_length)
+    CALL configure_gridref(n_dom, p_patch(1:)%geometry_info%mean_characteristic_length)
 
 
     ! Allocate array for interpolation state
@@ -372,7 +391,7 @@ CONTAINS
 
     ! Construct interpolation state
     ! Please note that for parallel runs the divided state is constructed here
-    CALL construct_2d_interpol_state(p_patch, p_int_state)
+    ! CALL construct_2d_interpol_state(p_patch, p_int_state)
 
     ! Transfer interpolation state to local parent
     ! jgp = p_patch(1)%parent_id
@@ -389,7 +408,9 @@ CONTAINS
     CALL setup_phys_patches
     
     ! Constructing data for lon-lat interpolation
-    CALL compute_lonlat_intp_coeffs(p_patch(1:), p_int_state(1:)) ! inout, inout
+    ! CALL compute_lonlat_intp_coeffs(p_patch(1:), p_int_state(1:)) ! inout, inout
+
+    CALL allocate_vct_atmo(p_patch(1)%nlevp1)
 
     IF (timers_level > 4) CALL timer_stop(timer_compute_coeffs)
 
@@ -431,17 +452,16 @@ CONTAINS
     !------------------------------------------------------------------
     ! Prepare output
     !------------------------------------------------------------------
-    ! CALL configure_gribout(grid_generatingCenter, grid_generatingSubcenter, n_phys_dom)
+    CALL configure_gribout(grid_generatingCenter, grid_generatingSubcenter, n_dom)
 
     CALL configure_io()
 
     ! Map the variable groups given in the output namelist onto the
     ! corresponding variable subsets:
     ! ATTENTION: all add_vars must be finished before calling this routine.
-    ! TODO Switch off variable groups for now ... takes a long time to initialize
-    ! IF (output_mode%l_nml) THEN
-    !   CALL parse_variable_groups()
-    ! END IF
+    IF (output_mode%l_nml) THEN
+      CALL parse_variable_groups()
+    END IF
 
     ! If async IO is in effect, init_name_list_output is a collective call
     ! with the IO procs and effectively starts async IO
@@ -496,7 +516,6 @@ CONTAINS
   
       CALL update_statistics ! R: notwendig siehe Rechnertext
   
-      ! R: das gibt die initvalus vor der Zeitloop d.h. ohne Berechungen aus!!! Im Driver gibt es aber noch keine Initwerte daher sollte das wieder raus!!!
       IF (output_mode%l_nml) THEN
         CALL write_name_list_output(jstep=0)
       END IF
@@ -619,9 +638,8 @@ CONTAINS
       IF (msg_level > 2) THEN
         lprint_timestep = .TRUE.
       ELSE
-        lprint_timestep = MOD(jstep,25) == 0
+        lprint_timestep = MOD(jstep,timesteps_per_day(dtime,1)) == 0
       ENDIF
-      lprint_timestep = ( msg_level >=8) ! For debugging
       ! always print the first and the last time step
       lprint_timestep = lprint_timestep .OR. (jstep == jstep0+1) .OR. (jstep == jstep0+nsteps)
   
@@ -686,6 +704,13 @@ CONTAINS
       END IF
   
       IF (lwrite_checkpoint) THEN
+        
+        ! For multifile restart (restart_write_mode = "joint procs multifile")
+        ! the domain flag must be set to .TRUE. in order to activate the domain,
+        ! even though we have one currently in the ocean. Without this the
+        ! processes won't write out their data into a the patch restart files.
+        p_patch(1)%ldom_active = .TRUE.
+        !
         CALL restartDescriptor%updatePatch(p_patch(1), opt_ndom=1)
   
         ! finally write restart file
@@ -767,7 +792,7 @@ CONTAINS
   SUBROUTINE perform_jsbach_for_timestep(dtime, datetime_new)
 
     USE mo_jsb_control,               ONLY: jsbach_is_restarted, force_from_observations, &
-      &                                     debug_on, timer_on, l_timer_host, timer_jsbach
+      &                                     debug_on, timer_on, l_timer_host, timer_jsbach, timer_forcing
     USE mo_jsb_time,                  ONLY: is_time_experiment_start, is_time_restart
     USE mo_jsb_model_class,           ONLY: t_jsb_model
     USE mo_jsb_class,                 ONLY: get_model
@@ -811,19 +836,18 @@ CONTAINS
     dsl4jsb_Def_memory(TURB_)
     dsl4jsb_Def_memory(HYDRO_)
   
-    REAL(wp), POINTER                      :: lon(:,:), lat(:,:), coslat(:,:), sinlat(:,:)
-    LOGICAL                                :: lyr_perp = .FALSE. ! This switch has no effect on the results but we need it as a dummmy.
-    INTEGER                                :: yr_perp  = -99999  ! Year if (lyr_perp == .TRUE.). We need it as a dummy.
-    REAL(wp)                               :: time_of_day, orbit_date, &
-      &                                       rasc_sun, decl_sun, dist_sun
-    REAL(wp), ALLOCATABLE                  :: daylight_frc(:,:) ! daylight fraction (0 or 1) with diurnal cycle
-    REAL(wp), POINTER                      :: cecc, cobld, clonp
-    INTEGER , POINTER                      :: icosmu0
-    LOGICAL , POINTER                      :: l_orbvsop87
-    REAL(wp)                               :: dt_ext
-    LOGICAL, POINTER                       :: ldiur, l_sph_symm_irr
+    REAL(wp), POINTER     :: lon(:,:), lat(:,:), coslat(:,:), sinlat(:,:)
+    LOGICAL               :: lyr_perp = .FALSE. ! This switch has no effect on the results but we need it as a dummmy.
+    INTEGER               :: yr_perp  = -99999  ! Year if (lyr_perp == .TRUE.). We need it as a dummy.
+    REAL(wp)              :: time_of_day, orbit_date, rasc_sun, decl_sun, dist_sun
+    REAL(wp), ALLOCATABLE :: daylight_frc(:,:) ! daylight fraction (0 or 1) with diurnal cycle
+    REAL(wp), POINTER     :: cecc, cobld, clonp
+    INTEGER , POINTER     :: icosmu0
+    LOGICAL , POINTER     :: l_orbvsop87
+    REAL(wp)              :: dt_ext
+    LOGICAL, POINTER      :: ldiur, l_sph_symm_irr
   
-    REAL(wp), ALLOCATABLE                  :: evapo_act2pot(:,:)
+    REAL(wp), ALLOCATABLE :: evapo_act2pot(:,:)
 
     LOGICAL :: l_force_from_obs
     LOGICAL :: l_first_forcing_file    = .TRUE.
@@ -937,6 +961,8 @@ CONTAINS
           &                   / MIN(dsl4jsb_var2D_onDomain(HYDRO_, evapopot),  -EPSILON(1._wp))
       END IF
 
+      IF (timer_on() .OR. l_timer_host) CALL timer_start(timer_forcing(model%id))
+
       CALL get_interface_variables_from_external_forcing( &
         ! in
         & 1, 1, nproma, nblks, datetime_old, datetime_new, sinlat, coslat, lon,  &
@@ -967,6 +993,8 @@ CONTAINS
         & dsl4jsb_var2D_onDomain(A2L_, q_acoef),                                     &
         & dsl4jsb_var2D_onDomain(A2L_, q_bcoef),                                     &
         & dsl4jsb_var2D_onDomain(A2L_, pch))
+
+      IF (timer_on() .OR. l_timer_host) CALL timer_stop(timer_forcing(model%id))
 
       ! Convert CO2 mass mixing ratio [kg/kg] to particle mixing ratio [mol/mol]
       dsl4jsb_var2D_onDomain(A2L_, CO2_air_mol) = dsl4jsb_var2D_onDomain(A2L_, CO2_air) * molarMassDryAir / molarMassCO2
@@ -1027,5 +1055,6 @@ CONTAINS
 
   END SUBROUTINE perform_jsbach_for_timestep
 
+#endif
 #endif
 END MODULE mo_jsbach_model

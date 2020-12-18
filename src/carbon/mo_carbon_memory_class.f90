@@ -503,6 +503,7 @@ CONTAINS
     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
     ! Variavles for JeDi carbon allocation 
     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
+    IF (TRIM(model%config%usecase) == 'jsbach_jedi') THEN
     CALL jsb_add_var( mem, 'c_storage', mem%c_storage,                                     &
       & hgrid, surface,                                                                        &
       & t_cf('c_storage', 'mol(C) m-2(canopy)', 'C-Pool for green parts of vegetation.'),    &
@@ -875,6 +876,7 @@ CONTAINS
       & output_level=BASIC,loutput=.TRUE.,                                                      &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.FALSE. )     
                 
+    END IF
         
     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
 

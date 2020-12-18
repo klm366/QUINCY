@@ -103,10 +103,7 @@ CONTAINS
     & albedo_lice,                                                      & !< out
     & ice_fract_lake,                                                   & !< out
     ! For standalone jsbach
-    & evapopot,                                                         & !< out; optional
-    & trig_rad_m1,                                                      & !< in; optional
-    & newday_Merker,                                                    & !< in; optional
-    & l_day_reminder                                                    & !< in; optional
+    & evapopot                                                          & !< out; optional
     & )
 
 #ifndef __ICON__
@@ -202,9 +199,6 @@ CONTAINS
       & ice_fract_lake    (:)
     ! For standalone jsbach:
     REAL(wp), INTENT(out), OPTIONAL :: evapopot(:)
-    REAL(wp), INTENT(in),  OPTIONAL :: trig_rad_m1(:), newday_Merker(:)
-    REAL(wp), INTENT(in),  OPTIONAL :: l_day_reminder(:)
-
 
     ! Local variables
     CLASS(t_jsb_model),          POINTER :: model
@@ -284,11 +278,7 @@ CONTAINS
       & t_acoef_ice        = t_acoef_ice,           &
       & t_bcoef_ice        = t_bcoef_ice,           &
       & q_acoef_ice        = q_acoef_ice,           &
-      & q_bcoef_ice        = q_bcoef_ice,           &
-      ! For standalone ICON driver
-      & trig_rad_m1        = trig_rad_m1,          & ! in, optional
-      & newday_Merker      = newday_Merker,        & ! in, optional
-      & l_day_reminder     = l_day_reminder        & ! in, optional
+      & q_bcoef_ice        = q_bcoef_ice            &
       & )
     NULLIFY(tile)
 

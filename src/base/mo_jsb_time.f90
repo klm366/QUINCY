@@ -28,7 +28,6 @@ MODULE mo_jsb_time
 
 !!$  PUBLIC :: init_jsb_time
   PUBLIC :: init_time
-  PUBLIC :: update_time_at_beginloop, update_time_at_endloop
   PUBLIC :: t_datetime, deallocateDatetime, get_time_next
   PUBLIC :: get_date_components, get_time_start, get_time_dt, &
             is_time_experiment_start, is_time_restart, &
@@ -43,8 +42,9 @@ MODULE mo_jsb_time
   TYPE(t_datetime), POINTER, SAVE :: final_date
 
   LOGICAL, SAVE :: time_initialized = .FALSE.
-  INTEGER, SAVE :: counter = 0
+
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_time'
+
 CONTAINS
 
   SUBROUTINE init_time(namelist_filename, model_shortname, restart_jsbach)
@@ -71,14 +71,15 @@ CONTAINS
     IF (.NOT. time_initialized) THEN
       CALL message(TRIM(routine), 'Initializing JSBACH time')
 
-      ! TBD: remove #ifdef
+      ! TODO: remove #ifdef
 #ifdef __ICON__
       IF (PRESENT(restart_jsbach)) CONTINUE ! avoid compiler warnings about dummy arguments not being used
-      IF (PRESENT(namelist_filename)) THEN
-        CALL read_time_namelist(TRIM(namelist_filename))
-      END IF
+      IF (PRESENT(namelist_filename)) CONTINUE ! avoid compiler warnings about dummy arguments not being used
+      ! IF (PRESENT(namelist_filename)) THEN                   ! present only for standalone model
+      !   CALL read_time_namelist(TRIM(namelist_filename))     ! already done from mo_util_jsbach.f90 in icon
+      ! END IF
 #else
-      IF (PRESENT(namelist_filename) .AND. PRESENT(restart_jsbach)) THEN
+      IF (PRESENT(namelist_filename) .AND. PRESENT(restart_jsbach)) THEN  ! present only for standalone model
         CALL read_time_namelist(TRIM(namelist_filename), restart_jsbach)
       END IF
 #endif
@@ -111,28 +112,6 @@ CONTAINS
     ENDIF
 
   END SUBROUTINE init_time
-
-  SUBROUTINE update_time_at_beginloop(istep, is_standalone)
-
-    USE mo_jsb_time_iface, ONLY: start_timestep
-
-    INTEGER, INTENT(in) :: istep
-    LOGICAL, INTENT(in) :: is_standalone
-    !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR Beginloop'
-    !R: DEBUG IF (is_standalone) CALL start_timestep(istep)
-
-  END SUBROUTINE update_time_at_beginloop
-
-  SUBROUTINE update_time_at_endloop(istep, is_standalone)
-
-    USE mo_jsb_time_iface, ONLY: finish_timestep
-
-    INTEGER, INTENT(in) :: istep
-    LOGICAL, INTENT(in) :: is_standalone
-    !WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRRRRRRRR Endloop'
-    !R: DEBUG IF (is_standalone) CALL finish_timestep(istep)
-
-  END SUBROUTINE update_time_at_endloop
 
   LOGICAL FUNCTION is_newday(current, dt)
 

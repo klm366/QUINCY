@@ -537,20 +537,19 @@ CONTAINS
     
     ELSE  ! Oringinal call for assimilation under water unlimited case in JB4
     
-    write(*,*) "you are in a wrong routine for jedi assimilation computation!!!!!!!!"
-!      !$claw sca forward update savepoint=ser_jsb_assim_calc_assimilation_waterunlimited_1 tile_name=tile%name canopy_lvl=icanopy
-!      CALL calc_assimilation_waterunlimited( &
-!        & dsl4jsb_Lctlib_param(C4Flag),      &
-!        & dsl4jsb_Lctlib_param(CarboxRate),  &
-!        & dsl4jsb_Lctlib_param(ETransport),  &
-!        & t_air(:),                          & ! in
-!        & press_srf(:),                      & ! in
-!        & par_down_mol(:),                   & ! in
-!        & apar_per_lai_cl(:,icanopy),        & ! in
-!        & CO2_air_mol(:),                    & ! in
-!        & assimi_scaling_fact_cl(:,icanopy), & ! in
-!        & canopy_cond_cl(:,icanopy)          & ! out
-!        & )
+      !$claw sca forward update savepoint=ser_jsb_assim_calc_assimilation_waterunlimited_1 tile_name=tile%name canopy_lvl=icanopy
+      CALL calc_assimilation_waterunlimited( &
+        & dsl4jsb_Lctlib_param(C4Flag),      &
+        & dsl4jsb_Lctlib_param(CarboxRate),  &
+        & dsl4jsb_Lctlib_param(ETransport),  &
+        & t_air(:),                          & ! in
+        & press_srf(:),                      & ! in
+        & par_down_mol(:),                   & ! in
+        & apar_per_lai_cl(:,icanopy),        & ! in
+        & CO2_air_mol(:),                    & ! in
+        & assimi_scaling_fact_cl(:,icanopy), & ! in
+        & canopy_cond_cl(:,icanopy)          & ! out
+        & )
         
     ENDIF
     

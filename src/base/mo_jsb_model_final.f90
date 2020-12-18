@@ -19,7 +19,7 @@ MODULE mo_jsb_model_final
   ! USE mo_exception,        ONLY: message, finish
 
   ! USE mo_jsb_class,        ONLY: Get_model
-  USE mo_jsb_control,      ONLY: jsbach_runs_standalone, l_timer_host, timer_on !,get_no_of_models, debug_on
+  USE mo_jsb_control,      ONLY: l_timer_host, timer_on !,get_no_of_models, debug_on
   ! USE mo_jsb_model_class,  ONLY: t_jsb_model
 
   IMPLICIT NONE
@@ -39,7 +39,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_finalize'
 
-    IF ((jsbach_runs_standalone() .OR. .NOT. l_timer_host) .AND. timer_on()) CALL print_timer()
+    IF (.NOT. l_timer_host .AND. timer_on()) CALL print_timer()
 
   END SUBROUTINE jsbach_finalize
 

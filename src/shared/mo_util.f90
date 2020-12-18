@@ -102,8 +102,9 @@ CONTAINS
     CHARACTER(len=*), INTENT(IN)           :: in_str    ! input string
     CHARACTER(len=*), INTENT(IN)           :: arg(:)
     ! local variables:
-    INTEGER :: i, ipos
+    INTEGER :: i, ipos, len_in_str
 
+    len_in_str = LEN_TRIM(in_str)
     one_of_str = -1
     DO i=1,SIZE(arg)
       ipos = SCAN(arg(i), '*')
@@ -113,7 +114,7 @@ CONTAINS
         ipos = ipos - 1
       END IF
       IF (ipos > 0) THEN
-        IF ( ADJUSTL(toupper(in_str(1:ipos))) == ADJUSTL(toupper(arg(i)(1:ipos))) ) THEN
+        IF ( ADJUSTL(toupper(in_str(1:MIN(ipos,len_in_str)))) == ADJUSTL(toupper(arg(i)(1:ipos))) ) THEN
           one_of_str=i
           EXIT
         END IF
@@ -146,41 +147,43 @@ CONTAINS
   ! Copied from ICON module shared/mo_util_string
   !
   FUNCTION int2string(n, opt_fmt)
-    CHARACTER(len=10) :: int2string ! result
+    CHARACTER(len=:), ALLOCATABLE :: int2string ! result
     INTEGER, INTENT(in) :: n
     CHARACTER(len=*), INTENT(in), OPTIONAL :: opt_fmt
     !
-    CHARACTER(len=10) :: fmt
+    CHARACTER(len=:), ALLOCATABLE :: fmt
+    CHARACTER(len=30) :: string
 
     IF (PRESENT(opt_fmt)) THEN
       fmt = opt_fmt
     ELSE
       fmt = '(I10)'
     END IF
-    WRITE(int2string,fmt) n
-    int2string = ADJUSTL(int2string)
+    WRITE(string,fmt) n
+    int2string = TRIM(ADJUSTL(string))
     !
   END FUNCTION int2string
 
   FUNCTION real2string(x, opt_fmt)
-    CHARACTER(len=10) :: real2string ! result
+    CHARACTER(len=:), ALLOCATABLE :: real2string ! result
     REAL(wp), INTENT(in) :: x
     CHARACTER(len=*), INTENT(in), OPTIONAL :: opt_fmt
     !
-    CHARACTER(len=10) :: fmt
+    CHARACTER(len=:), ALLOCATABLE :: fmt
+    CHARACTER(len=30) :: string
 
     IF (PRESENT(opt_fmt)) THEN
       fmt = opt_fmt
     ELSE
       fmt = '(E10.4)'
     END IF
-    WRITE(real2string,fmt) x
-    real2string = ADJUSTL(real2string)
+    WRITE(string,fmt) x
+    real2string = TRIM(ADJUSTL(string))
     !
   END FUNCTION real2string
 
   FUNCTION logical2string(value)
-    CHARACTER(len=7) :: logical2string ! result
+    CHARACTER(len=:), ALLOCATABLE :: logical2string ! result
     LOGICAL, INTENT(in) :: value
     !
     IF (value) THEN

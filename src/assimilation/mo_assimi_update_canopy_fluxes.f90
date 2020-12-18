@@ -55,7 +55,6 @@ CONTAINS
     USE mo_assimi_constants,        ONLY: jmax2n, vcmax2n, E0v, E1v, t_jmax_offset, t_jmax_slope, t_jmax_opt_min, t_jmax_opt_max
     !USE mo_time_averages,           ONLY: calc_time_mavg, mavg_period_tfrac
     USE mo_rad_process,             ONLY: Has_minimal_radiation
-    USE mo_jsb_control,             ONLY: jsbach_runs_standalone
 
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(ASSIMI_)    
@@ -145,8 +144,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: fn_pepc_cl
     dsl4jsb_Real3D_onChunk      :: leaf_nitrogen_cl
 
-    REAL(wp), POINTER, DIMENSION(:) :: l_day_reminder
-
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -223,8 +220,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_pepc_cl)                     ! inout
     dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)               ! in
 
-  dsl4jsb_Get_var2D_onChunk(A2L_, l_day_reminder)        ! in
-
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
@@ -260,24 +255,7 @@ CONTAINS
     !!
     ! get information about day/nigth (same way as in RAD_)
     !$claw expand
-
-    IF (jsbach_runs_standalone()) THEN
-#ifdef __ICON__
-      ! Use l_day from forcing
-      WHERE (l_day_reminder(:) > 0.5_wp)
-        l_day(:) = .TRUE.
-      ELSEWHERE
-        l_day(:) = .FALSE.
-      END WHERE
-      write(*,*) 'RRRRRRRRRRRRRRR ICON definiert und standalone. l_day_reminder gelesen'
-! #elif
-!       ! Standalone with ECHAM
-!       !$claw expand parallel update savepoint=ser_jsb_rad_has_minimal_radiation_1 tile_name=tile%name
-!       l_day(:) = Has_minimal_radiation(swvis_srf_down(:), swnir_srf_down(:))
-#endif
-    ELSE
-      l_day(:) = Has_minimal_radiation(swvis_srf_down(:), swnir_srf_down(:))
-    END IF
+    l_day(:) = Has_minimal_radiation(swvis_srf_down(:), swnir_srf_down(:))
     ! calc PS
     DO icanopy = 1,ncanopy
       CALL calc_photosynthesis(  lctlib%gmin                           , & ! lctlib

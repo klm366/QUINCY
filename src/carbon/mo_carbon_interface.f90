@@ -182,7 +182,7 @@ CONTAINS
                                                                 !   heterotrophic respiration rate. This value is 
                                                                 !   taken from JB4.
     REAL(wp), parameter  :: cTiny            = 1.E-8_wp
-     REAL(wp)                   ::  dTdt
+    REAL(wp)             ::  dTdt
 
   
 
@@ -404,7 +404,9 @@ CONTAINS
     dtime = options%dtime
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
     model => Get_model(tile%owner_model_id)
+
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_memory(PHENO_)
@@ -443,59 +445,61 @@ CONTAINS
     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
     ! Variavles for JeDi carbon allocation 
     !
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   c_storage         )     !     Storage carbon pool 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   c_leaves          )     !      Leaves carbon pool             
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   c_fnroot          )     !   Fine root carbon pool
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   c_csroot          )     ! Coarse root carbon pool
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   c_seed            )     !        Seed carbon pool
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   c_stem            )     !        Stem carbon pool
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_grow_W         )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_grow_T         )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_grow_G         )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   Flg_grow         )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    Flg_grow_G     )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_npp            )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   flx_germ          )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   adj_fraction      )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   jedi_light_constraint )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   Flg_die           )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   Flg_senesc        )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   alpha_jedi        )
-    
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   alpha_jedi_seed)
-    dsl4jsb_Get_var3D_onChunk(CARBON_,   seed_depth_sl)
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   seed_maxmoist)
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   w_soil_column_seed)
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  root_maxmoist )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  jedi_pot_supply_transp )
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_rel        ) 
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    max_moist         )
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_column     )
+    IF (TRIM(model%config%usecase) == 'jsbach_jedi' ) THEN
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   c_storage         )     !     Storage carbon pool 
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   c_leaves          )     !      Leaves carbon pool             
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   c_fnroot          )     !   Fine root carbon pool
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   c_csroot          )     ! Coarse root carbon pool
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   c_seed            )     !        Seed carbon pool
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   c_stem            )     !        Stem carbon pool
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_grow_W         )
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_grow_T         )
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_grow_G         )
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   Flg_grow         )
+      dsl4jsb_Get_var2D_onChunk(CARBON_,    Flg_grow_G     )
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_npp            )
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   flx_germ          )
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   adj_fraction      )
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   jedi_light_constraint )
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   Flg_die           )
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   Flg_senesc        )
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   alpha_jedi        )
+      
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   alpha_jedi_seed)
+      dsl4jsb_Get_var3D_onChunk(CARBON_,   seed_depth_sl)
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   seed_maxmoist)
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   w_soil_column_seed)
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  root_maxmoist )
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  jedi_pot_supply_transp )
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_rel        ) 
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    max_moist         )
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_column     )
 
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,   root_depth          )
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,   soil_depth     )
-    ! 3 Dimensional--------------------------------------------------------------------------
-    dsl4jsb_Get_var3D_onChunk(HYDRO_,   w_soil_sl                )
-    dsl4jsb_Get_var3D_onChunk(HYDRO_,   root_depth_sl          ) 
-    dsl4jsb_Get_var3D_onChunk(HYDRO_,   vol_field_cap_sl       ) 
-    dsl4jsb_Get_var3D_onChunk(HYDRO_,  soil_depth_sl            )
-    ! 3 Dimensional--------------------------------------------------------------------------
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  one_counter        )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   MaintRes          )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   MaintRes_sum      )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   MaintRes_yDayMean )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    temp_sum         )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   temp_yDayMean  )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   GrowthResp        )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   AutoRes           )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    CUE              )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   C_balan           )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   C_delta           )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   c_total           )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  ff_dTdt                      )
-    dsl4jsb_Get_var2D_onChunk(CARBON_, ff_T_30d                    )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_grow_T_yDayMean) 
-    dsl4jsb_Get_var2D_onChunk(RAD_,        faPAR_prev_noon)
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,   root_depth          )
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,   soil_depth     )
+      ! 3 Dimensional--------------------------------------------------------------------------
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,   w_soil_sl                )
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,   root_depth_sl          ) 
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,   vol_field_cap_sl       ) 
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,  soil_depth_sl            )
+      ! 3 Dimensional--------------------------------------------------------------------------
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  one_counter        )
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   MaintRes          )
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   MaintRes_sum      )
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   MaintRes_yDayMean )
+      dsl4jsb_Get_var2D_onChunk(CARBON_,    temp_sum         )
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   temp_yDayMean  )
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   GrowthResp        )
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   AutoRes           )
+      dsl4jsb_Get_var2D_onChunk(CARBON_,    CUE              )
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   C_balan           )
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   C_delta           )
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   c_total           )
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  ff_dTdt                      )
+      dsl4jsb_Get_var2D_onChunk(CARBON_, ff_T_30d                    )
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_grow_T_yDayMean) 
+      dsl4jsb_Get_var2D_onChunk(RAD_,        faPAR_prev_noon)
+    END IF
     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
    
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_crop_harvest)         ! inout
@@ -622,68 +626,70 @@ CONTAINS
     lstart = is_time_experiment_start(options%current_datetime)
     
     
-    inidate => get_time_start()
-    iniyear = get_year(inidate)
-    lrestart= jsbach_is_restarted()      
-    
-    IF (get_year(options%current_datetime) .LE. iniyear + 2 ) THEN    !  PHS: initial carbon
-      ff_npp = 0._wp
-      Flg_senesc = 0._wp
-      Flg_die = 0._wp
-      one_counter = 0._wp           
-    END IF     !  PHS: initial carbon
-    
- !   IF (  is_time_experiment_start(options%current_datetime)  )  THEN
-      seed_depth_sl = jedi_soil_depth_to_layers_1d(  SPREAD(0.05_wp, NCOPIES=nc, DIM=1)  , soil_w%dz(:))         ! Jedi assumes germination of seed depends on the first 0.5 m of soil wetness
-      CALL get_water_in_root_zone(vol_field_cap_sl(:,:) * soil_depth_sl(:,:), &
-        &                         soil_depth_sl(:,:), seed_depth_sl(:,:),     &
-        &                         seed_maxmoist(:))
-  !  END IF
-    
-    CALL get_water_in_root_zone(vol_field_cap_sl(:,:) * soil_depth_sl(:,:), &
-      &                         soil_depth_sl(:,:), root_depth_sl(:,:), root_maxmoist(:))
-
-    CALL get_water_in_root_zone(w_soil_sl(:,:), soil_depth_sl(:,:), seed_depth_sl(:,:), w_soil_column_seed(:))
+    IF (TRIM(model%config%usecase) == 'jsbach_jedi') THEN
+      inidate => get_time_start()
+      iniyear = get_year(inidate)
+      lrestart= jsbach_is_restarted()      
       
-    alpha_jedi(:)      = jedi_water_stress_factor( w_soil_column(:),      root_maxmoist(:),  &
-      &                                             dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract)
-    alpha_jedi_seed(:) = jedi_water_stress_factor( w_soil_column_seed(:), seed_maxmoist(:),  &
-      &                                            dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract)            
-    
-    ! 2019.11.27 PHS: still at the stage of testing "water stress" 
-    WHERE (c_leaves .gt. 0._wp) 
-      ! 2019.12.4  
+      IF (get_year(options%current_datetime) .LE. iniyear + 2 ) THEN    !  PHS: initial carbon
+        ff_npp = 0._wp
+        Flg_senesc = 0._wp
+        Flg_die = 0._wp
+        one_counter = 0._wp           
+      END IF     !  PHS: initial carbon
+      
+  !   IF (  is_time_experiment_start(options%current_datetime)  )  THEN
+        seed_depth_sl = jedi_soil_depth_to_layers_1d(  SPREAD(0.05_wp, NCOPIES=nc, DIM=1)  , soil_w%dz(:))         ! Jedi assumes germination of seed depends on the first 0.5 m of soil wetness
+        CALL get_water_in_root_zone(vol_field_cap_sl(:,:) * soil_depth_sl(:,:), &
+          &                         soil_depth_sl(:,:), seed_depth_sl(:,:),     &
+          &                         seed_maxmoist(:))
+    !  END IF
+      
+      CALL get_water_in_root_zone(vol_field_cap_sl(:,:) * soil_depth_sl(:,:), &
+        &                         soil_depth_sl(:,:), root_depth_sl(:,:), root_maxmoist(:))
+
+      CALL get_water_in_root_zone(w_soil_sl(:,:), soil_depth_sl(:,:), seed_depth_sl(:,:), w_soil_column_seed(:))
+        
+      alpha_jedi(:)      = jedi_water_stress_factor( w_soil_column(:),      root_maxmoist(:),  &
+        &                                             dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract)
+      alpha_jedi_seed(:) = jedi_water_stress_factor( w_soil_column_seed(:), seed_maxmoist(:),  &
+        &                                            dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract)            
+      
+      ! 2019.11.27 PHS: still at the stage of testing "water stress" 
+      WHERE (c_leaves .gt. 0._wp) 
         ! 2019.12.4  
-      ! 2019.12.4  
+          ! 2019.12.4  
         ! 2019.12.4  
-      ! 2019.12.4  
-      ! The potential supply rate from soil depends on the root-shoot-ratio. The root-shoot-ratio is the ratio betweem fine-root-carbon and Leaf-area-index.
-      !                                                                                                     a(r)=1-exp(- (-log(0.01))/r_optimal   * r  )     a : is a function of root-shoot-ratio  [0...1]
-      !                                                                                                                                                                        r : root-shoot-ratio [10^-3  ~  10^3]
-      !                                                                                                                                                                        r_optimal: the median value of the root-shoot-ratio among all PGS
-      jedi_pot_supply_transp = (1._wp - exp( -(- log(0.01))/rootshoot_opt * &
-        &                         (c_fnroot / (c_leaves*dsl4jsb_Lctlib_param(JeDiSLA)) ) )) * max_pipe_transpir * alpha_jedi
-    ELSEWHERE 
-      jedi_pot_supply_transp =  0._wp
-    END WHERE
+          ! 2019.12.4  
+        ! 2019.12.4  
+        ! The potential supply rate from soil depends on the root-shoot-ratio. The root-shoot-ratio is the ratio betweem fine-root-carbon and Leaf-area-index.
+        !                                                                                                     a(r)=1-exp(- (-log(0.01))/r_optimal   * r  )     a : is a function of root-shoot-ratio  [0...1]
+        !                                                                                                                                                                        r : root-shoot-ratio [10^-3  ~  10^3]
+        !                                                                                                                                                                        r_optimal: the median value of the root-shoot-ratio among all PGS
+        jedi_pot_supply_transp = (1._wp - exp( -(- log(0.01))/rootshoot_opt * &
+          &                         (c_fnroot / (c_leaves*dsl4jsb_Lctlib_param(JeDiSLA)) ) )) * max_pipe_transpir * alpha_jedi
+      ELSEWHERE 
+        jedi_pot_supply_transp =  0._wp
+      END WHERE
+      
+      !jedi_pot_supply_transp      =  MAX(0._wp,  c_fnroot * (  1000._wp *  0.5_wp *  12.01_wp  *  0.001_wp  / 86400._wp  )  *  alpha_jedi   ) 
     
-    !jedi_pot_supply_transp      =  MAX(0._wp,  c_fnroot * (  1000._wp *  0.5_wp *  12.01_wp  *  0.001_wp  / 86400._wp  )  *  alpha_jedi   ) 
-  
-    ff_grow_T =  ( t_air - tmelt ) / dsl4jsb_Lctlib_param(jedi_N_pseudo_T)      + &
-      &          ff_grow_T * dsl4jsb_Lctlib_param(jedi_F_pseudo_T)
-    ff_grow_G =  alpha_jedi_seed   / dsl4jsb_Lctlib_param(jedi_N_pseudo_soilM)  + &
-      &          ff_grow_G * dsl4jsb_Lctlib_param(jedi_F_pseudo_soilM)
-    ff_grow_W =  alpha_jedi        / dsl4jsb_Lctlib_param (jedi_N_pseudo_soilM) + &
-      &          ff_grow_W * dsl4jsb_Lctlib_param(jedi_F_pseudo_soilM)
-    ff_npp    =  NPP_act_yDayMean  / dsl4jsb_Lctlib_param(jedi_N_pseudo_npp)    + &
-      &          ff_npp    * dsl4jsb_Lctlib_param(jedi_F_pseudo_npp)
-    
-    ff_T_30d  =  ( t_air - tmelt ) / ( 1._wp / (1._wp-EXP(- dtime / (30._wp* 86400._wp )))) + &
-      &          ff_T_30d * EXP(- dtime / (30._wp* 86400._wp ))
+      ff_grow_T =  ( t_air - tmelt ) / dsl4jsb_Lctlib_param(jedi_N_pseudo_T)      + &
+        &          ff_grow_T * dsl4jsb_Lctlib_param(jedi_F_pseudo_T)
+      ff_grow_G =  alpha_jedi_seed   / dsl4jsb_Lctlib_param(jedi_N_pseudo_soilM)  + &
+        &          ff_grow_G * dsl4jsb_Lctlib_param(jedi_F_pseudo_soilM)
+      ff_grow_W =  alpha_jedi        / dsl4jsb_Lctlib_param (jedi_N_pseudo_soilM) + &
+        &          ff_grow_W * dsl4jsb_Lctlib_param(jedi_F_pseudo_soilM)
+      ff_npp    =  NPP_act_yDayMean  / dsl4jsb_Lctlib_param(jedi_N_pseudo_npp)    + &
+        &          ff_npp    * dsl4jsb_Lctlib_param(jedi_F_pseudo_npp)
+      
+      ff_T_30d  =  ( t_air - tmelt ) / ( 1._wp / (1._wp-EXP(- dtime / (30._wp* 86400._wp )))) + &
+        &          ff_T_30d * EXP(- dtime / (30._wp* 86400._wp ))
+    END IF
 
     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!     
 
-      IF( .NOT. is_newday(options%current_datetime,dtime) .OR. lstart) THEN ! perform daily sums if WE ARE NOT STARTING A NEW DAY
+    IF( .NOT. is_newday(options%current_datetime,dtime) .OR. lstart) THEN ! perform daily sums if WE ARE NOT STARTING A NEW DAY
                                             ! or if we JUST STARTED AN TOTALLY NEW EXPERIMENT
 
       LAI_sum          = LAI_sum          + LAI
@@ -695,7 +701,7 @@ CONTAINS
       ! PHS: Compute Maintenance respration for JeDi. This is computed outside clac_tradeoff to account for 
       !   the average of previous-day value.
       !   MaintRes_sum     = MaintRes_sum + MaintRes
-      temp_sum           = temp_sum + t_air
+      IF (TRIM(model%config%usecase) == 'jsbach_jedi' ) temp_sum = temp_sum + t_air
       !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!     
       
  
@@ -722,23 +728,25 @@ CONTAINS
       !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!     
       ! PHS: Compute Maintenance respration for JeDi. 
       ! PHS try to compute maintenance respiration only once per day 
-       temp_yDayMean  = temp_sum / timesteps_per_day(dtime)
+      IF (TRIM(model%config%usecase) == 'jsbach_jedi' ) THEN
+        temp_yDayMean  = temp_sum / timesteps_per_day(dtime)
        
-       MaintRes = 0._wp
-       MaintRes = c_sapwood * c_CN_woody * ( c_stem + c_csroot ) + &
-         &        dsl4jsb_Lctlib_param(NitroStatus) * dsl4jsb_Lctlib_param(JeDiSLA) * &
-         &             ( c_leaves + c_fnroot )  !NNN
-       MaintRes = MaintRes  * c_Res_N    * ( 1.4_wp ** ( ( temp_yDayMean - tmelt - 20._wp ) / 10._wp) ) ! JeDi uses 1.4 for Q10 value
-    
-       MaintRes = MaintRes / sec_per_day ! The maintanence respiration is daily computed in JeDi.
-       MaintRes_yDayMean   = MaintRes
-       
-       temp_sum = t_air
-       
-       !PHS 05.08.2019 Tend
-       ff_dTdt            = ( ff_T_30d - ff_grow_T_yDayMean ) / ( 1._wp /  ( 1._wp - EXP(- dtime / (30._wp* 86400._wp ))  )) + &
-         &                  EXP(- dtime / (30._wp* 86400._wp ))  * ff_dTdt    
-       ff_grow_T_yDayMean = ff_T_30d
+        MaintRes = 0._wp
+        MaintRes = c_sapwood * c_CN_woody * ( c_stem + c_csroot ) + &
+          &        dsl4jsb_Lctlib_param(NitroStatus) * dsl4jsb_Lctlib_param(JeDiSLA) * &
+          &             ( c_leaves + c_fnroot )  !NNN
+        MaintRes = MaintRes  * c_Res_N    * ( 1.4_wp ** ( ( temp_yDayMean - tmelt - 20._wp ) / 10._wp) ) ! JeDi uses 1.4 for Q10 value
+      
+        MaintRes = MaintRes / sec_per_day ! The maintanence respiration is daily computed in JeDi.
+        MaintRes_yDayMean   = MaintRes
+        
+        temp_sum = t_air
+        
+        !PHS 05.08.2019 Tend
+        ff_dTdt            = ( ff_T_30d - ff_grow_T_yDayMean ) / ( 1._wp /  ( 1._wp - EXP(- dtime / (30._wp* 86400._wp ))  )) + &
+          &                  EXP(- dtime / (30._wp* 86400._wp ))  * ff_dTdt    
+        ff_grow_T_yDayMean = ff_T_30d
+      END IF
        
       ! Save other variables (for yasso) as "previous days"
       pseudo_temp_yDay   = pseudo_temp
@@ -760,202 +768,203 @@ CONTAINS
       IF (TRIM(model%config%usecase) .eq. 'jsbach_jedi' ) THEN
        
        
-       IF (get_year(options%current_datetime) .GT. iniyear + 2 ) THEN     !  PHS: initial carbon
+        IF (get_year(options%current_datetime) .GT. iniyear + 2 ) THEN     !  PHS: initial carbon
        
-        CALL calc_Ctradeoff( &
-        & GPP_yDayMean,                                & ! in
-        ! JeDi plant trait parameter comes in now <<<<<<<<<<<
-        & dsl4jsb_Lctlib_param(GrowRspdMoist),         & ! in
-        & dsl4jsb_Lctlib_param(GrowRspdTemp ),         & ! in
-        & dsl4jsb_Lctlib_param(CritiGrowTemp),         & ! in
-        & dsl4jsb_Lctlib_param(EndGrowTemp),           & ! in
-        & dsl4jsb_Lctlib_param(GermFrac     ),         & ! in
-        & dsl4jsb_Lctlib_param(Allo2Reproduc),         & ! in
-        & dsl4jsb_Lctlib_param(Allo2Abground),         & ! in
-        & dsl4jsb_Lctlib_param(Allo2Blground),         & ! in
-        & dsl4jsb_Lctlib_param(Allo2Storage ),         & ! in
-        & dsl4jsb_Lctlib_param(RelAllo2Abgrd),         & ! in
-        & dsl4jsb_Lctlib_param(RelAllo2Blgrd),         & ! in
-        & dsl4jsb_Lctlib_param(TurnoverStruc),         & ! in
-        & dsl4jsb_Lctlib_param(TurnoverLeaf ),         & ! in
-        & dsl4jsb_Lctlib_param(SenesRspdNPP ),         & ! in
-        & dsl4jsb_Lctlib_param(NitroStatus  ),         & ! in
-        & dsl4jsb_Lctlib_param(JeDiSLA),               &  ! in
-        & dsl4jsb_Lctlib_param(LandcoverClass),   &  ! in
-        ! JeDi plant trait parameter comes in now >>>>>>>>>>>
-        & iniyear,                                     & !in
-        & get_year(options%current_datetime),          & !in
-        & timesteps_per_day(dtime),                    & ! in
-        & faPAR_prev_noon,                                  & !in
-        & one_counter,                                 & ! inout
-        & c_storage,                                   & ! inout
-        & c_leaves,                                    & ! inout
-        & c_fnroot,                                    & ! inout
-        & c_csroot,                                    & ! inout
-        & c_seed,                                      & ! inout
-        & c_stem,                                      & ! inout
-        & ff_grow_W,                               & ! in
-        & ff_grow_T,                                   & ! in
-        & ff_grow_G,                                   & ! in
-        & ff_dTdt,                                       & !in
-        & Flg_grow,                    & ! out
-        & Flg_grow_G ,              & ! out
-        & ff_npp,                                      & ! inout
-        & Flg_die,                                     & ! inout
-        & Flg_senesc,                                  & ! out
-        & flx_germ,                                    & ! out
-        &  adj_fraction,                                  &  !out
-        & jedi_light_constraint,                       &  !out
-        & MaintRes_yDayMean,                           & ! inout
-        & GrowthResp,                                  & ! out
-        & AutoRes,                                     & ! out
-         & CUE,                          & !out carbon use efficiency
-         & root_depth,                 &  ! out 
-        & C_balan,                                     & ! out
-        & C_delta,                                     & ! out
-        & c_total,                                     & !
-        &  c_Res_N,                    & !
-        &  c_CN_woody,               & !
-        &  c_sapwood,                   & ! 
-         &  temp_yDayMean,        & ! in
-  !  
-        & c_litter_green_ag,                           & ! inout
-        & c_litter_green_bg,                           & ! inout
-        & c_litter_wood_ag,                            & ! inout
-        & c_litter_wood_bg,                            & ! inout
- !
-        & soil_respiration,                            & ! out
- !
-        & cflux_c_greenwood_2_litter,                  & ! out
- !
-        & NPP_act_yDayMean,                            & ! out
- !
-    ! Yasso variables
-        &  temp2_30d        =  pseudo_temp_yDay,                      & ! in, optional, necessary with yasso
-        &  precip_30d       =  pseudo_precip_yDay,                    & ! in, optional, necessary with yasso
-                             !
-        &  c_acid_ag1       =  c_acid_ag1,                            & ! inout, optional, necessary with yasso
-        &  c_water_ag1      =  c_water_ag1,                           & ! inout, optional, necessary with yasso
-        &  c_ethanol_ag1    =  c_ethanol_ag1,                         & ! inout, optional, necessary with yasso
-        &  c_nonsoluble_ag1 =  c_nonsoluble_ag1,                      & ! inout, optional, necessary with yasso
-        &  c_acid_bg1       =  c_acid_bg1,                            & ! inout, optional, necessary with yasso
-        &  c_water_bg1      =  c_water_bg1,                           & ! inout, optional, necessary with yasso
-        &  c_ethanol_bg1    =  c_ethanol_bg1,                         & ! inout, optional, necessary with yasso
-        &  c_nonsoluble_bg1 =  c_nonsoluble_bg1,                      & ! inout, optional, necessary with yasso
-        &  c_humus_1        =  c_humus_1,                             & ! inout, optional, necessary with yasso
-        &  c_acid_ag2       =  c_acid_ag2,                            & ! inout, optional, necessary with yasso
-        &  c_water_ag2      =  c_water_ag2,                           & ! inout, optional, necessary with yasso
-        &  c_ethanol_ag2    =  c_ethanol_ag2,                         & ! inout, optional, necessary with yasso
-        &  c_nonsoluble_ag2 =  c_nonsoluble_ag2,                      & ! inout, optional, necessary with yasso
-        &  c_acid_bg2       =  c_acid_bg2,                            & ! inout, optional, necessary with yasso
-        &  c_water_bg2      =  c_water_bg2,                           & ! inout, optional, necessary with yasso
-        &  c_ethanol_bg2    =  c_ethanol_bg2,                         & ! inout, optional, necessary with yasso
-        &  c_nonsoluble_bg2 =  c_nonsoluble_bg2,                      & ! inout, optional, necessary with yasso
-        &  c_humus_2        =  c_humus_2,                             & ! inout, optional, necessary with yasso
-                              !
-        &  LeafLit_coef1    =  dsl4jsb_Lctlib_param(LeafLit_coef(1)), & ! in, optional, necessary with yasso
-        &  LeafLit_coef2    =  dsl4jsb_Lctlib_param(LeafLit_coef(2)), & ! in, optional, necessary with yasso
-        &  LeafLit_coef3    =  dsl4jsb_Lctlib_param(LeafLit_coef(3)), & ! in, optional, necessary with yasso
-        &  LeafLit_coef4    =  dsl4jsb_Lctlib_param(LeafLit_coef(4)), & ! in, optional, necessary with yasso
-        &  LeafLit_coef5    =  dsl4jsb_Lctlib_param(LeafLit_coef(5)), & ! in, optional, necessary with yasso
-        &  WoodLit_coef1    =  dsl4jsb_Lctlib_param(WoodLit_coef(1)), & ! in, optional, necessary with yasso
-        &  WoodLit_coef2    =  dsl4jsb_Lctlib_param(WoodLit_coef(2)), & ! in, optional, necessary with yasso
-        &  WoodLit_coef3    =  dsl4jsb_Lctlib_param(WoodLit_coef(3)), & ! in, optional, necessary with yasso
-        &  WoodLit_coef4    =  dsl4jsb_Lctlib_param(WoodLit_coef(4)), & ! in, optional, necessary with yasso
-        &  WoodLit_coef5    =  dsl4jsb_Lctlib_param(WoodLit_coef(5)), & ! in, optional, necessary with yasso
-        &  WoodLitterSize   =  dsl4jsb_Lctlib_param(WoodLitterSize)   & ! in, optional, necessary with yasso
-        & )
-      END IF  !  PHS: initial carbon
-      root_depth = MAX( root_depth, 0.05_wp)
-      
-      root_depth = MIN(root_depth,soil_depth)
-      
-      root_depth_sl = jedi_soil_depth_to_layers_1d(  root_depth, soil_w%dz(:))   
+          CALL calc_Ctradeoff( &
+            & GPP_yDayMean,                                & ! in
+            ! JeDi plant trait parameter comes in now <<<<<<<<<<<
+            & dsl4jsb_Lctlib_param(GrowRspdMoist),         & ! in
+            & dsl4jsb_Lctlib_param(GrowRspdTemp ),         & ! in
+            & dsl4jsb_Lctlib_param(CritiGrowTemp),         & ! in
+            & dsl4jsb_Lctlib_param(EndGrowTemp),           & ! in
+            & dsl4jsb_Lctlib_param(GermFrac     ),         & ! in
+            & dsl4jsb_Lctlib_param(Allo2Reproduc),         & ! in
+            & dsl4jsb_Lctlib_param(Allo2Abground),         & ! in
+            & dsl4jsb_Lctlib_param(Allo2Blground),         & ! in
+            & dsl4jsb_Lctlib_param(Allo2Storage ),         & ! in
+            & dsl4jsb_Lctlib_param(RelAllo2Abgrd),         & ! in
+            & dsl4jsb_Lctlib_param(RelAllo2Blgrd),         & ! in
+            & dsl4jsb_Lctlib_param(TurnoverStruc),         & ! in
+            & dsl4jsb_Lctlib_param(TurnoverLeaf ),         & ! in
+            & dsl4jsb_Lctlib_param(SenesRspdNPP ),         & ! in
+            & dsl4jsb_Lctlib_param(NitroStatus  ),         & ! in
+            & dsl4jsb_Lctlib_param(JeDiSLA),               &  ! in
+            & dsl4jsb_Lctlib_param(LandcoverClass),   &  ! in
+            ! JeDi plant trait parameter comes in now >>>>>>>>>>>
+            & iniyear,                                     & !in
+            & get_year(options%current_datetime),          & !in
+            & timesteps_per_day(dtime),                    & ! in
+            & faPAR_prev_noon,                                  & !in
+            & one_counter,                                 & ! inout
+            & c_storage,                                   & ! inout
+            & c_leaves,                                    & ! inout
+            & c_fnroot,                                    & ! inout
+            & c_csroot,                                    & ! inout
+            & c_seed,                                      & ! inout
+            & c_stem,                                      & ! inout
+            & ff_grow_W,                               & ! in
+            & ff_grow_T,                                   & ! in
+            & ff_grow_G,                                   & ! in
+            & ff_dTdt,                                       & !in
+            & Flg_grow,                    & ! out
+            & Flg_grow_G ,              & ! out
+            & ff_npp,                                      & ! inout
+            & Flg_die,                                     & ! inout
+            & Flg_senesc,                                  & ! out
+            & flx_germ,                                    & ! out
+            &  adj_fraction,                                  &  !out
+            & jedi_light_constraint,                       &  !out
+            & MaintRes_yDayMean,                           & ! inout
+            & GrowthResp,                                  & ! out
+            & AutoRes,                                     & ! out
+            & CUE,                          & !out carbon use efficiency
+            & root_depth,                 &  ! out 
+            & C_balan,                                     & ! out
+            & C_delta,                                     & ! out
+            & c_total,                                     & !
+            &  c_Res_N,                    & !
+            &  c_CN_woody,               & !
+            &  c_sapwood,                   & ! 
+            &  temp_yDayMean,        & ! in
+            !  
+            & c_litter_green_ag,                           & ! inout
+            & c_litter_green_bg,                           & ! inout
+            & c_litter_wood_ag,                            & ! inout
+            & c_litter_wood_bg,                            & ! inout
+            !
+            & soil_respiration,                            & ! out
+            !
+            & cflux_c_greenwood_2_litter,                  & ! out
+            !
+            & NPP_act_yDayMean,                            & ! out
+            !
+            ! Yasso variables
+            &  temp2_30d        =  pseudo_temp_yDay,                      & ! in, optional, necessary with yasso
+            &  precip_30d       =  pseudo_precip_yDay,                    & ! in, optional, necessary with yasso
+            !
+            &  c_acid_ag1       =  c_acid_ag1,                            & ! inout, optional, necessary with yasso
+            &  c_water_ag1      =  c_water_ag1,                           & ! inout, optional, necessary with yasso
+            &  c_ethanol_ag1    =  c_ethanol_ag1,                         & ! inout, optional, necessary with yasso
+            &  c_nonsoluble_ag1 =  c_nonsoluble_ag1,                      & ! inout, optional, necessary with yasso
+            &  c_acid_bg1       =  c_acid_bg1,                            & ! inout, optional, necessary with yasso
+            &  c_water_bg1      =  c_water_bg1,                           & ! inout, optional, necessary with yasso
+            &  c_ethanol_bg1    =  c_ethanol_bg1,                         & ! inout, optional, necessary with yasso
+            &  c_nonsoluble_bg1 =  c_nonsoluble_bg1,                      & ! inout, optional, necessary with yasso
+            &  c_humus_1        =  c_humus_1,                             & ! inout, optional, necessary with yasso
+            &  c_acid_ag2       =  c_acid_ag2,                            & ! inout, optional, necessary with yasso
+            &  c_water_ag2      =  c_water_ag2,                           & ! inout, optional, necessary with yasso
+            &  c_ethanol_ag2    =  c_ethanol_ag2,                         & ! inout, optional, necessary with yasso
+            &  c_nonsoluble_ag2 =  c_nonsoluble_ag2,                      & ! inout, optional, necessary with yasso
+            &  c_acid_bg2       =  c_acid_bg2,                            & ! inout, optional, necessary with yasso
+            &  c_water_bg2      =  c_water_bg2,                           & ! inout, optional, necessary with yasso
+            &  c_ethanol_bg2    =  c_ethanol_bg2,                         & ! inout, optional, necessary with yasso
+            &  c_nonsoluble_bg2 =  c_nonsoluble_bg2,                      & ! inout, optional, necessary with yasso
+            &  c_humus_2        =  c_humus_2,                             & ! inout, optional, necessary with yasso
+            !
+            &  LeafLit_coef1    =  dsl4jsb_Lctlib_param(LeafLit_coef(1)), & ! in, optional, necessary with yasso
+            &  LeafLit_coef2    =  dsl4jsb_Lctlib_param(LeafLit_coef(2)), & ! in, optional, necessary with yasso
+            &  LeafLit_coef3    =  dsl4jsb_Lctlib_param(LeafLit_coef(3)), & ! in, optional, necessary with yasso
+            &  LeafLit_coef4    =  dsl4jsb_Lctlib_param(LeafLit_coef(4)), & ! in, optional, necessary with yasso
+            &  LeafLit_coef5    =  dsl4jsb_Lctlib_param(LeafLit_coef(5)), & ! in, optional, necessary with yasso
+            &  WoodLit_coef1    =  dsl4jsb_Lctlib_param(WoodLit_coef(1)), & ! in, optional, necessary with yasso
+            &  WoodLit_coef2    =  dsl4jsb_Lctlib_param(WoodLit_coef(2)), & ! in, optional, necessary with yasso
+            &  WoodLit_coef3    =  dsl4jsb_Lctlib_param(WoodLit_coef(3)), & ! in, optional, necessary with yasso
+            &  WoodLit_coef4    =  dsl4jsb_Lctlib_param(WoodLit_coef(4)), & ! in, optional, necessary with yasso
+            &  WoodLit_coef5    =  dsl4jsb_Lctlib_param(WoodLit_coef(5)), & ! in, optional, necessary with yasso
+            &  WoodLitterSize   =  dsl4jsb_Lctlib_param(WoodLitterSize)   & ! in, optional, necessary with yasso
+            & )
+        END IF  !  PHS: initial carbon
+        root_depth = MAX( root_depth, 0.05_wp)
+        
+        root_depth = MIN(root_depth,soil_depth)
+        
+        root_depth_sl = jedi_soil_depth_to_layers_1d(  root_depth, soil_w%dz(:))   
       
       ELSE
-      
+    
         CALL calc_Cpools( &
-        &  LAI_yDayMean,                                      & ! in
-        &  LAI_yyDayMean,                                     & ! in
-        &  MaxLai,                                            & ! in
-        &  NPP_pot_yDayMean,                                  & ! in
-        &  topSoilTemp_yDayMean,                              & ! in
-        &  alpha_yDayMean,                                    & ! in
-        !
-        &  dsl4jsb_Lctlib_param(fract_npp_2_woodPool),        & ! in
-        &  dsl4jsb_Lctlib_param(fract_NPP_2_reservePool),     & ! in
-        &  dsl4jsb_Lctlib_param(fract_NPP_2_exudates),        & ! in
-        !
-        &  dsl4jsb_Lctlib_param(fract_green_2_herbivory),     & ! in
-        &  dsl4jsb_Lctlib_param(tau_c_litter_leaf),           & ! in
-        &  dsl4jsb_Lctlib_param(tau_c_litter_wood),           & ! in
-        &  dsl4jsb_Lctlib_param(tau_c_woods),                 & ! in
-        &  dsl4jsb_Lctlib_param(LAI_shed_constant),           & ! in
-        &  dsl4jsb_Lctlib_param(fract_C_litter_green2atmos),  & ! in
-        &  dsl4jsb_Lctlib_param(Max_C_content_woods),         & ! in
-        &  dsl4jsb_Lctlib_param(specificLeafArea_C),          & ! in
-        &  dsl4jsb_Lctlib_param(reserveC2leafC),              & ! in
-        &  dsl4jsb_Lctlib_param(PhenologyType),               & ! in  R: is it crop? If yes then this is 5!
-        !
-        &  c_green,                                           & ! inout
-        &  c_woods,                                           & ! inout
-        &  c_reserve,                                         & ! inout
-        &  c_crop_harvest,                                    & ! inout
-        &  c_litter_green_ag,                                 & ! inout
-        &  c_litter_green_bg,                                 & ! inout
-        &  c_litter_wood_ag,                                  & ! inout
-        &  c_litter_wood_bg,                                  & ! inout
-        ! &  CBAL c_slow,                                       & ! inout
-        !
-        &  soil_respiration,                                  & ! out
-        &  NPP_flux_correction,                               & ! out
-        &  excess_NPP,                                        & ! out
-        &  root_exudates,                                     & ! out
-        &  cflux_c_greenwood_2_litter,                        & ! out
-        &  cflux_c_green_2_herb,                              & ! out
-        &  cflux_herb_2_littergreen,                          & ! out
-        &  cflux_herb_2_atm,                                  & ! out
-        &  NPP_act_yDayMean,                                  & ! out
-        !
-        !&  fract_litter_wood_new    = fract_litter_wood_new,       & ! inout, optional. Only for spitfire
-        !
-        ! variables only needed with yasso:
-        ! R: Note, in the moment the procedure is only used with Yasso.
-        &  temp2_30d        =  pseudo_temp_yDay,                      & ! in, optional, necessary with yasso
-        &  precip_30d       =  pseudo_precip_yDay,                    & ! in, optional, necessary with yasso
-                             !
-        &  c_acid_ag1       =  c_acid_ag1,                            & ! inout, optional, necessary with yasso
-        &  c_water_ag1      =  c_water_ag1,                           & ! inout, optional, necessary with yasso
-        &  c_ethanol_ag1    =  c_ethanol_ag1,                         & ! inout, optional, necessary with yasso
-        &  c_nonsoluble_ag1 =  c_nonsoluble_ag1,                      & ! inout, optional, necessary with yasso
-        &  c_acid_bg1       =  c_acid_bg1,                            & ! inout, optional, necessary with yasso
-        &  c_water_bg1      =  c_water_bg1,                           & ! inout, optional, necessary with yasso
-        &  c_ethanol_bg1    =  c_ethanol_bg1,                         & ! inout, optional, necessary with yasso
-        &  c_nonsoluble_bg1 =  c_nonsoluble_bg1,                      & ! inout, optional, necessary with yasso
-        &  c_humus_1        =  c_humus_1,                             & ! inout, optional, necessary with yasso
-        &  c_acid_ag2       =  c_acid_ag2,                            & ! inout, optional, necessary with yasso
-        &  c_water_ag2      =  c_water_ag2,                           & ! inout, optional, necessary with yasso
-        &  c_ethanol_ag2    =  c_ethanol_ag2,                         & ! inout, optional, necessary with yasso
-        &  c_nonsoluble_ag2 =  c_nonsoluble_ag2,                      & ! inout, optional, necessary with yasso
-        &  c_acid_bg2       =  c_acid_bg2,                            & ! inout, optional, necessary with yasso
-        &  c_water_bg2      =  c_water_bg2,                           & ! inout, optional, necessary with yasso
-        &  c_ethanol_bg2    =  c_ethanol_bg2,                         & ! inout, optional, necessary with yasso
-        &  c_nonsoluble_bg2 =  c_nonsoluble_bg2,                      & ! inout, optional, necessary with yasso
-        &  c_humus_2        =  c_humus_2,                             & ! inout, optional, necessary with yasso
+          &  LAI_yDayMean,                                      & ! in
+          &  LAI_yyDayMean,                                     & ! in
+          &  MaxLai,                                            & ! in
+          &  NPP_pot_yDayMean,                                  & ! in
+          &  topSoilTemp_yDayMean,                              & ! in
+          &  alpha_yDayMean,                                    & ! in
+          !
+          &  dsl4jsb_Lctlib_param(fract_npp_2_woodPool),        & ! in
+          &  dsl4jsb_Lctlib_param(fract_NPP_2_reservePool),     & ! in
+          &  dsl4jsb_Lctlib_param(fract_NPP_2_exudates),        & ! in
+          !
+          &  dsl4jsb_Lctlib_param(fract_green_2_herbivory),     & ! in
+          &  dsl4jsb_Lctlib_param(tau_c_litter_leaf),           & ! in
+          &  dsl4jsb_Lctlib_param(tau_c_litter_wood),           & ! in
+          &  dsl4jsb_Lctlib_param(tau_c_woods),                 & ! in
+          &  dsl4jsb_Lctlib_param(LAI_shed_constant),           & ! in
+          &  dsl4jsb_Lctlib_param(fract_C_litter_green2atmos),  & ! in
+          &  dsl4jsb_Lctlib_param(Max_C_content_woods),         & ! in
+          &  dsl4jsb_Lctlib_param(specificLeafArea_C),          & ! in
+          &  dsl4jsb_Lctlib_param(reserveC2leafC),              & ! in
+          &  dsl4jsb_Lctlib_param(PhenologyType),               & ! in  R: is it crop? If yes then this is 5!
+          !
+          &  c_green,                                           & ! inout
+          &  c_woods,                                           & ! inout
+          &  c_reserve,                                         & ! inout
+          &  c_crop_harvest,                                    & ! inout
+          &  c_litter_green_ag,                                 & ! inout
+          &  c_litter_green_bg,                                 & ! inout
+          &  c_litter_wood_ag,                                  & ! inout
+          &  c_litter_wood_bg,                                  & ! inout
+          ! &  CBAL c_slow,                                       & ! inout
+          !
+          &  soil_respiration,                                  & ! out
+          &  NPP_flux_correction,                               & ! out
+          &  excess_NPP,                                        & ! out
+          &  root_exudates,                                     & ! out
+          &  cflux_c_greenwood_2_litter,                        & ! out
+          &  cflux_c_green_2_herb,                              & ! out
+          &  cflux_herb_2_littergreen,                          & ! out
+          &  cflux_herb_2_atm,                                  & ! out
+          &  NPP_act_yDayMean,                                  & ! out
+          !
+          !&  fract_litter_wood_new    = fract_litter_wood_new,       & ! inout, optional. Only for spitfire
+          !
+          ! variables only needed with yasso:
+          ! R: Note, in the moment the procedure is only used with Yasso.
+          &  temp2_30d        =  pseudo_temp_yDay,                      & ! in, optional, necessary with yasso
+          &  precip_30d       =  pseudo_precip_yDay,                    & ! in, optional, necessary with yasso
                               !
-        &  LeafLit_coef1    =  dsl4jsb_Lctlib_param(LeafLit_coef(1)), & ! in, optional, necessary with yasso
-        &  LeafLit_coef2    =  dsl4jsb_Lctlib_param(LeafLit_coef(2)), & ! in, optional, necessary with yasso
-        &  LeafLit_coef3    =  dsl4jsb_Lctlib_param(LeafLit_coef(3)), & ! in, optional, necessary with yasso
-        &  LeafLit_coef4    =  dsl4jsb_Lctlib_param(LeafLit_coef(4)), & ! in, optional, necessary with yasso
-        &  LeafLit_coef5    =  dsl4jsb_Lctlib_param(LeafLit_coef(5)), & ! in, optional, necessary with yasso
-        &  WoodLit_coef1    =  dsl4jsb_Lctlib_param(WoodLit_coef(1)), & ! in, optional, necessary with yasso
-        &  WoodLit_coef2    =  dsl4jsb_Lctlib_param(WoodLit_coef(2)), & ! in, optional, necessary with yasso
-        &  WoodLit_coef3    =  dsl4jsb_Lctlib_param(WoodLit_coef(3)), & ! in, optional, necessary with yasso
-        &  WoodLit_coef4    =  dsl4jsb_Lctlib_param(WoodLit_coef(4)), & ! in, optional, necessary with yasso
-        &  WoodLit_coef5    =  dsl4jsb_Lctlib_param(WoodLit_coef(5)), & ! in, optional, necessary with yasso
-        &  WoodLitterSize   =  dsl4jsb_Lctlib_param(WoodLitterSize)   & ! in, optional, necessary with yasso
-        & )
-      END IF
+          &  c_acid_ag1       =  c_acid_ag1,                            & ! inout, optional, necessary with yasso
+          &  c_water_ag1      =  c_water_ag1,                           & ! inout, optional, necessary with yasso
+          &  c_ethanol_ag1    =  c_ethanol_ag1,                         & ! inout, optional, necessary with yasso
+          &  c_nonsoluble_ag1 =  c_nonsoluble_ag1,                      & ! inout, optional, necessary with yasso
+          &  c_acid_bg1       =  c_acid_bg1,                            & ! inout, optional, necessary with yasso
+          &  c_water_bg1      =  c_water_bg1,                           & ! inout, optional, necessary with yasso
+          &  c_ethanol_bg1    =  c_ethanol_bg1,                         & ! inout, optional, necessary with yasso
+          &  c_nonsoluble_bg1 =  c_nonsoluble_bg1,                      & ! inout, optional, necessary with yasso
+          &  c_humus_1        =  c_humus_1,                             & ! inout, optional, necessary with yasso
+          &  c_acid_ag2       =  c_acid_ag2,                            & ! inout, optional, necessary with yasso
+          &  c_water_ag2      =  c_water_ag2,                           & ! inout, optional, necessary with yasso
+          &  c_ethanol_ag2    =  c_ethanol_ag2,                         & ! inout, optional, necessary with yasso
+          &  c_nonsoluble_ag2 =  c_nonsoluble_ag2,                      & ! inout, optional, necessary with yasso
+          &  c_acid_bg2       =  c_acid_bg2,                            & ! inout, optional, necessary with yasso
+          &  c_water_bg2      =  c_water_bg2,                           & ! inout, optional, necessary with yasso
+          &  c_ethanol_bg2    =  c_ethanol_bg2,                         & ! inout, optional, necessary with yasso
+          &  c_nonsoluble_bg2 =  c_nonsoluble_bg2,                      & ! inout, optional, necessary with yasso
+          &  c_humus_2        =  c_humus_2,                             & ! inout, optional, necessary with yasso
+                                !
+          &  LeafLit_coef1    =  dsl4jsb_Lctlib_param(LeafLit_coef(1)), & ! in, optional, necessary with yasso
+          &  LeafLit_coef2    =  dsl4jsb_Lctlib_param(LeafLit_coef(2)), & ! in, optional, necessary with yasso
+          &  LeafLit_coef3    =  dsl4jsb_Lctlib_param(LeafLit_coef(3)), & ! in, optional, necessary with yasso
+          &  LeafLit_coef4    =  dsl4jsb_Lctlib_param(LeafLit_coef(4)), & ! in, optional, necessary with yasso
+          &  LeafLit_coef5    =  dsl4jsb_Lctlib_param(LeafLit_coef(5)), & ! in, optional, necessary with yasso
+          &  WoodLit_coef1    =  dsl4jsb_Lctlib_param(WoodLit_coef(1)), & ! in, optional, necessary with yasso
+          &  WoodLit_coef2    =  dsl4jsb_Lctlib_param(WoodLit_coef(2)), & ! in, optional, necessary with yasso
+          &  WoodLit_coef3    =  dsl4jsb_Lctlib_param(WoodLit_coef(3)), & ! in, optional, necessary with yasso
+          &  WoodLit_coef4    =  dsl4jsb_Lctlib_param(WoodLit_coef(4)), & ! in, optional, necessary with yasso
+          &  WoodLit_coef5    =  dsl4jsb_Lctlib_param(WoodLit_coef(5)), & ! in, optional, necessary with yasso
+          &  WoodLitterSize   =  dsl4jsb_Lctlib_param(WoodLitterSize)   & ! in, optional, necessary with yasso
+          & )
+      END IF ! usecase=jedi
+
       ! R: In JSBACH3 wurden alle C-pools auf canopy Fläche gezogen gerechnet. Ebenso die C Fluxe.
       !    Für den Output wurden alle Variablen auch in grid box umgerechnet und entsprechend doppelt angelegt.
       !    Besser wäre für JSBACH4 eigentlich auf Tile Fläche bezogen zu rechnen um alle variablen von JS4
@@ -1034,14 +1043,7 @@ CONTAINS
                    * (NPP_act_yDayMean))                          ! therefore here additionaly the day mean
 
 
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-
-
-     
-
-
-
-    
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')    
 
   END SUBROUTINE update_C_NPP_pot_allocation
 
@@ -1428,6 +1430,8 @@ CONTAINS
     REAL(wp),                   INTENT(in), OPTIONAL  :: cflux_c_green_2_herb(:)
     REAL(wp),                   INTENT(in), OPTIONAL  :: cflux_herb_2_atm(:)
 
+    TYPE(t_jsb_model), POINTER :: model
+
     dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_memory(PHENO_)
 
@@ -1489,6 +1493,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  veg_fract_correction
     dsl4jsb_Real2D_onChunk ::  fract_fpc_max
 
+    model => Get_model(tile%owner_model_id)
+
     dsl4jsb_Get_memory(CARBON_)
     dsl4jsb_Get_memory(PHENO_)
 
@@ -1504,13 +1510,15 @@ CONTAINS
 ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
     ! Variavles for JeDi carbon allocation 
     
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_leaves_ta  )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_fnroot_ta  )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_csroot_ta  )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_stem_ta    )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_storage_ta )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_seed_ta    )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_total_ta   )
+    IF (TRIM(model%config%usecase) == 'jsbach_jedi') THEN
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  c_leaves_ta  )
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  c_fnroot_ta  )
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  c_csroot_ta  )
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  c_stem_ta    )
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  c_storage_ta )
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  c_seed_ta    )
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  c_total_ta   )
+    END IF
 ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
 
 
@@ -1559,13 +1567,15 @@ CONTAINS
 ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
     ! Variavles for JeDi carbon allocation 
     
-    IF (PRESENT(c_leaves) )  CALL get_per_tile(c_leaves_ta(:) , c_leaves(:) , veg_fract_correction(:), fract_fpc_max(:))    
-    IF (PRESENT(c_stem)   )  CALL get_per_tile(c_stem_ta(:)   , c_stem(:)   , veg_fract_correction(:), fract_fpc_max(:))    
-    IF (PRESENT(c_fnroot) )  CALL get_per_tile(c_fnroot_ta(:) , c_fnroot(:) , veg_fract_correction(:), fract_fpc_max(:))    
-    IF (PRESENT(c_csroot) )  CALL get_per_tile(c_csroot_ta(:) , c_csroot(:) , veg_fract_correction(:), fract_fpc_max(:))
-    IF (PRESENT(c_seed)   )  CALL get_per_tile(c_seed_ta(:)   , c_seed(:)   , veg_fract_correction(:), fract_fpc_max(:))   
-    IF (PRESENT(c_storage))  CALL get_per_tile(c_storage_ta(:), c_storage(:), veg_fract_correction(:), fract_fpc_max(:))
-    IF (PRESENT(c_total)  )  CALL get_per_tile(c_total_ta(:)  , c_total(:)  , veg_fract_correction(:), fract_fpc_max(:))
+    IF (TRIM(model%config%usecase) == 'jsbach_jedi') THEN
+      IF (PRESENT(c_leaves) )  CALL get_per_tile(c_leaves_ta(:) , c_leaves(:) , veg_fract_correction(:), fract_fpc_max(:))    
+      IF (PRESENT(c_stem)   )  CALL get_per_tile(c_stem_ta(:)   , c_stem(:)   , veg_fract_correction(:), fract_fpc_max(:))    
+      IF (PRESENT(c_fnroot) )  CALL get_per_tile(c_fnroot_ta(:) , c_fnroot(:) , veg_fract_correction(:), fract_fpc_max(:))    
+      IF (PRESENT(c_csroot) )  CALL get_per_tile(c_csroot_ta(:) , c_csroot(:) , veg_fract_correction(:), fract_fpc_max(:))
+      IF (PRESENT(c_seed)   )  CALL get_per_tile(c_seed_ta(:)   , c_seed(:)   , veg_fract_correction(:), fract_fpc_max(:))   
+      IF (PRESENT(c_storage))  CALL get_per_tile(c_storage_ta(:), c_storage(:), veg_fract_correction(:), fract_fpc_max(:))
+      IF (PRESENT(c_total)  )  CALL get_per_tile(c_total_ta(:)  , c_total(:)  , veg_fract_correction(:), fract_fpc_max(:))
+    END IF
 ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
 
 
@@ -1969,6 +1979,8 @@ CONTAINS
     INTEGER               :: nblks, nproma
     INTEGER               :: i, no_children
 
+    CHARACTER(len=*), PARAMETER :: routine = modname//':jedi_biomass_to_fract'
+
     dsl4jsb_Get_memory(CARBON_)
 
     model => Get_model(tile%owner_model_id)
@@ -1984,23 +1996,44 @@ CONTAINS
 
     no_children = tile%Get_no_of_children()
 
-    DO i=1,no_children
-      IF (var%child_idx(i) > 0) THEN
-        ASSOCIATE (data_child => dsl4jsb_memory(CARBON_)%children(i)%p%vars(var%child_idx(i))%p%ptr2d(:,:) )
-          c_total_sum(:,:) = c_total_sum(:,:) + data_child(:,:)
-        END ASSOCIATE
-      END IF
-    END DO
+    IF (ASSOCIATED(dsl4jsb_memory(CARBON_)%children(1)%p%vars(var%child_idx(1))%p%ptr2d)) THEN
 
-    child => tile%Get_first_child_tile()
-    DO i=1,no_children
-      ASSOCIATE (data_child => dsl4jsb_memory(CARBON_)%children(i)%p%vars(var%child_idx(i))%p%ptr2d(:,:) )
+      DO i=1,no_children
+        IF (var%child_idx(i) > 0) THEN
+          ASSOCIATE (data_child => dsl4jsb_memory(CARBON_)%children(i)%p%vars(var%child_idx(i))%p%ptr2d(:,:) )
+            c_total_sum(:,:) = c_total_sum(:,:) + data_child(:,:)
+          END ASSOCIATE
+        END IF
+      END DO
+
+      child => tile%Get_first_child_tile()
+      DO i=1,no_children
+        ASSOCIATE (data_child => dsl4jsb_memory(CARBON_)%children(i)%p%vars(var%child_idx(i))%p%ptr2d(:,:) )
+          WHERE (c_total_sum(:,:) > 0._wp)
+            child%fract(:,:) = data_child(:,:) / c_total_sum(:,:)
+          END WHERE
+        END ASSOCIATE
+        child => child%Get_next_sibling_tile()
+      END DO
+
+    ELSE IF (ASSOCIATED(var%ptr2d_t)) THEN
+
+      IF (SIZE(var%ptr_t, 2) /= no_children) CALL finish(routine, 'Dimension mismatch in c_total%ptr_t and no_children')
+
+      c_total_sum(:,:) = SUM(var%ptr2d_t(:,:,:), DIM=2)
+      child => tile%Get_first_child_tile()
+      DO i=1,no_children
         WHERE (c_total_sum(:,:) > 0._wp)
-          child%fract(:,:) = data_child(:,:) / c_total_sum(:,:)
+          child%fract(:,:) = var%ptr2d_t(:,i,:) / c_total_sum(:,:)
         END WHERE
-      END ASSOCIATE
-      child => child%Get_next_sibling_tile()
-    END DO
+        child => child%Get_next_sibling_tile()
+      END DO
+
+    ELSE
+
+      CALL finish(routine, 'Could not get children of variable c_total')
+
+    END IF
     
     tile%l_fract_children_changed(:,:) = .TRUE.
 

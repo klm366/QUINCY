@@ -220,7 +220,7 @@ CONTAINS
 
     model => Get_model(model_id)
 
-    model%lctlib => Read_lctlib('lctlib_nlct21.def', model%id, model%config%use_quincy)
+    model%lctlib => Read_lctlib('lctlib_nlct21.def', model%id, model%config%usecase=='jsbach_jedi', model%config%use_quincy)
     CALL message(TRIM(routine), 'Imported lctlib from '//'lctlib_nlct21.def')
 
     IF (model%config%usecase /= '') THEN

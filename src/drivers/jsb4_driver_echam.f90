@@ -22,8 +22,8 @@ PROGRAM jsb4_driver
   USE mo_jsb_model_init,     ONLY: jsbach_setup_grid, jsbach_init, jsbach_init_after_restart
   USE mo_jsb_model_final,    ONLY: jsbach_finalize
   USE mo_jsb_version,        ONLY: jsbach_init_version, jsbach_label_run
-  USE mo_jsb_control,        ONLY: jsbach_runs_standalone, jsbach_is_restarted
-  USE mo_jsb_time,           ONLY: t_datetime, deallocateDatetime, is_newday, is_time_experiment_start
+  USE mo_jsb_control,        ONLY: jsbach_runs_standalone, jsbach_is_restarted, timer_on, timer_forcing
+  USE mo_jsb_time,           ONLY: t_datetime, deallocateDatetime, is_newday
   USE mo_jsb_class,          ONLY: get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_model_class,    ONLY: t_jsb_model
@@ -70,10 +70,13 @@ PROGRAM jsb4_driver
 
   ! time control and orbit calc
   USE mo_time_control,     ONLY: time_set, time_reset, lstop, l_trigfiles, l_putrerun, delta_time, &
-    &                            time_step_len, get_orbit_times, l_orbvsop87, current_date, write_date, &
+    &                            time_step_len, get_orbit_times, l_orbvsop87, current_date, next_date, write_date, &
     &                            echam_time, manager_state
 
   USE mo_radiation_parameters, ONLY: lyr_perp, nmonth, yr_perp, solar_parameters
+
+  USE mo_timer, ONLY: init_timer, cleanup_timer, timer_start, timer_stop, timer_loop, timer_output, timer_restart
+
   ! ICON would be:
   ! USE mo_psrad_radiation_parameters, ONLY: lyr_perp, nmonth, yr_perp, solar_parameters
 !<<<
@@ -91,8 +94,8 @@ PROGRAM jsb4_driver
   REAL(wp):: zwtime, zutime, zstime, zrtime
 
   INTEGER:: nml_handler, read_status, f_unit, status, iblk, nproma, nblks, ncid, model_id, ice, ics
-  TYPE(t_datetime)          :: current_datetime
-  TYPE(t_datetime), POINTER :: current_datetime_ptr => NULL()
+  TYPE(t_datetime)          :: current_datetime, next_datetime
+  TYPE(t_datetime), POINTER :: current_datetime_ptr => NULL(), next_datetime_ptr => NULL()
 
   !! Variables of namelist jsb_parallel_nml
   ! INTEGER :: nproca  ! number of processors for jsbach
@@ -244,7 +247,7 @@ PROGRAM jsb4_driver
 
   ! - jsbach_init
   CALL jsbach_setup_models('namelist.jsbach')
-  ! Setup grid and decomposition
+  IF (timer_on()) CALL init_timer()
   CALL jsbach_setup_grid(nproca, nprocb, npedim, model_id) ! Only one model implemented for now
 
   IF (nprocio > 0 .OR. lyaxt_transposition) THEN
@@ -264,6 +267,9 @@ PROGRAM jsb4_driver
   nblks = local_decomposition%ngpblks
   !TODO: get nproma/nblks with already existing function? 'get_nproma'
   !  -> hm, for that need to first get the model and then the grid
+  WRITE(message_text, '(A,I5,I5)') 'nproma, nblks = ', nproma, nblks
+  CALL message('jsb4_driver', message_text)
+  CALL message('', '')
 
   ! forcing
   ALLOCATE(t_air_K(nproma, nblks))
@@ -390,22 +396,22 @@ PROGRAM jsb4_driver
   ENDIF
 #endif
 
+  IF (timer_on()) CALL timer_start(timer_loop)
+
   ! - Main loop
   main_loop:DO
 
     CALL time_set   !(echam!)
     CALL manager_state(echam_time, current_datetime)
     ALLOCATE(current_datetime_ptr, source=current_datetime)
+    ALLOCATE(next_datetime_ptr, source=next_date)
     IF(is_newday(current_datetime_ptr, delta_time)) THEN
       CALL write_date(current_date,'Calculate timesteps for day: ')
     ENDIF
 
     CALL jsbach_start_timestep(model_id, current_datetime_ptr, delta_time)
 
-    !IF (l_trigfiles .AND. .NOT. is_time_experiment_start(current_datetime_ptr)) THEN
     IF (l_trigfiles) THEN
-      CALL message('INFO','Closing and re-opening output streams')
-      ! IF (.NOT. is_time_experiment_start(current_datetime_ptr)) CALL close_output_streams
       CALL close_output_streams
       CALL open_output_streams
     ENDIF
@@ -423,12 +429,14 @@ PROGRAM jsb4_driver
       CALL solar_parameters(decl_sun, dist_sun, time_of_day, sinlon, sinlat, coslon, coslat, &
         & flx_ratio, cos_zenith_angle, daylght_frc)
 
-      CALL get_interface_variables_from_external_forcing(1, 1, nproma, nblks, current_datetime_ptr, &
+      IF (timer_on()) CALL timer_start(timer_forcing(1))
+      CALL get_interface_variables_from_external_forcing(1, 1, nproma, nblks, current_datetime_ptr, next_datetime_ptr, &
         & sinlat, coslat, lon, evapo_act2pot_proc, &
         & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, cos_zenith_angle,      &
         & CO2_concentration, t_air_K, q_air, rain, snow, wind_air, wind_10m,                                          &
         & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, fract_par_diffuse,                              &
         & press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch)
+      IF (timer_on()) CALL timer_stop(timer_forcing(1))
     ENDIF
 
     DO iblk = 1, nblks
@@ -443,10 +451,12 @@ PROGRAM jsb4_driver
 !          END IF
 
       IF (read_interface_vars) THEN
+        IF (timer_on()) CALL timer_start(timer_forcing(1))
         CALL read_interface_variables( 1, nproma, iblk, ncid, current_datetime_ptr, t_air_K(:,iblk), q_air(:,iblk), rain(:,iblk), &
           & snow(:,iblk), wind_air(:,iblk), wind_10m(:,iblk), lw_srf_down(:,iblk), swvis_srf_down(:,iblk), &
           & swnir_srf_down(:,iblk), swpar_srf_down(:,iblk), press_srf(:,iblk), drag_srf(:,iblk), &
           & t_acoef(:,iblk), t_bcoef(:,iblk), q_acoef(:,iblk), q_bcoef(:,iblk), pch(:,iblk), cos_zenith_angle(:,iblk))
+        IF (timer_on()) CALL timer_stop(timer_forcing(1))
       ENDIF
 
       CALL jsbach_interface ( 1, iblk, 1, nproma, current_datetime_ptr, delta_time, time_step_len, t_air_K(:,iblk), &
@@ -478,15 +488,24 @@ PROGRAM jsb4_driver
 
     CALL jsbach_finish_timestep(model_id, current_datetime_ptr, time_step_len)
     CALL deallocateDatetime(current_datetime_ptr)
+    CALL deallocateDatetime(next_datetime_ptr)
     CALL mvstream_accumulate
+    IF (timer_on()) CALL timer_start(timer_output)
     CALL out_streams
+    IF (timer_on()) CALL timer_stop(timer_output)
 
-    IF (l_putrerun) CALL write_streams
+    IF (l_putrerun) THEN
+      IF (timer_on()) CALL timer_start(timer_restart)
+      CALL write_streams
+      IF (timer_on()) CALL timer_stop(timer_restart)
+    END IF
 
     CALL time_reset
     IF (lstop) EXIT main_loop
 
   ENDDO main_loop
+
+  IF (timer_on()) CALL timer_stop(timer_loop)
 
   IF (read_interface_vars) THEN
     CALL nf_check(nf_close(ncid))
@@ -510,6 +529,9 @@ PROGRAM jsb4_driver
   ENDIF
 #endif
 
+  IF (timer_on()) CALL cleanup_timer
+
+!$OMP PARALLEL
 !$OMP PARALLEL
 !$OMP MASTER
   status = util_cputime(zutime, zstime)

@@ -33,7 +33,7 @@ MODULE mo_jsb_control
   PUBLIC :: model_base_dir
   ! t_jsb_model_nml needs to be public for the NEC compiler
   PUBLIC :: t_jsb_model_nml, jsb_models_nml, get_no_of_models
-  PUBLIC :: timer_jsbach, timer_aggregate, timer_integrate, timer_process_task, timer_process_msg
+  PUBLIC :: timer_jsbach, timer_aggregate, timer_integrate, timer_process_task, timer_process_msg, timer_forcing
   PUBLIC :: max_no_of_models
 
   LOGICAL,           SAVE :: is_standalone
@@ -58,7 +58,7 @@ MODULE mo_jsb_control
   TYPE(t_jsb_model_nml), SAVE :: jsb_models_nml(max_no_of_models)
 
   INTEGER, SAVE, DIMENSION(max_no_of_models) :: &
-    & timer_jsbach, timer_aggregate, timer_integrate, timer_process_task, timer_process_msg
+    & timer_jsbach, timer_aggregate, timer_integrate, timer_process_task, timer_process_msg, timer_forcing
 
   CHARACTER(len=filename_max) :: master_namelist_filename = 'jsbach_master.namelist'
 
@@ -85,7 +85,6 @@ CONTAINS
 
     CALL init_jsb_io(TRIM(master_namelist_filename))
 
-    ! IF (jsbach_runs_standalone()) l_timer_host = .FALSE. !< Would be uninitialized otherwise
     IF (timer_on() .OR. l_timer_host) THEN
       IF (no_of_models > 1) THEN
         DO i=1,no_of_models
@@ -102,12 +101,14 @@ CONTAINS
           timer_integrate(i)    = new_timer('jsb:integrate_'//int2string(i))
           timer_process_task(i) = new_timer('jsb:process_task_'//int2string(i))
           timer_process_msg(i)  = new_timer('jsb:process_msg_'//int2string(i))
+          timer_forcing(i)      = new_timer('jsb:forcing_'//int2string(i))
         END DO
       ELSE
         timer_aggregate(1)    = new_timer('jsb:aggregate')
         timer_integrate(1)    = new_timer('jsb:integrate')
         timer_process_task(1) = new_timer('jsb:process_task')
-        timer_process_msg(1) = new_timer('jsb:process_msg')
+        timer_process_msg(1)  = new_timer('jsb:process_msg')
+        timer_forcing(1)      = new_timer('jsb:forcing')
       END IF
     END IF
 

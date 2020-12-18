@@ -377,7 +377,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: veg_fract_correction
 
     dsl4jsb_Real2D_onChunk :: cconservation_allom
-    dsl4jsb_Real2D_onChunk :: newday_Merker
 
     ! Local variables
     LOGICAL :: l_newday
@@ -416,8 +415,6 @@ CONTAINS
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(ASSIMI_)
-
-    dsl4jsb_Get_var2D_onChunk(A2L_, newday_Merker) ! inout
 
     !ncanopy =  dsl4jsb_Config(ASSIMI_)%ncanopy
 
@@ -489,29 +486,6 @@ CONTAINS
 
     ! Initialization of local variables
     l_newday = is_newday(options%current_datetime, options%dtime)
-
-
-    ! This is because we do not want to change the behaviour of the ECHAM Standalone driver
-    IF (jsbach_runs_standalone().AND. .NOT. force_from_observations()) THEN
-#ifdef __ICON__
-      !write(*,*) 'RRRRRRRRRRRR hier sollte der standalone lauf ankommen!!!' ! R: tut er auch und zwar ausschließlich
-      dsl4jsb_Get_var2D_onChunk(A2L_, newday_Merker)      ! in
-      IF (newday_Merker(1) == 1) THEN
-        l_newday=.TRUE.
-      ELSE
-        l_newday=.FALSE.
-      END IF
-#endif
-    ELSE
-      !write(*,*) 'RRRRRRRRRRRR hier sollte der forcing lauf ankommen!!!' ! R: tut er auch und zwar ausschließlich
-      ! Update albedo only at experiment start or if model runs standalone or one time step before the radiation time step
-      ! Return if it is not experiment start AND AT THE SAME TIME we are not one time step before the radiation time step AND AT THE SAME TIME the model not runs standalone => wenn Standalone geht er hier IMMER rein!
-      IF (l_newday) THEN
-        newday_Merker = 1
-      ELSE
-        newday_Merker = 0
-      END IF
-    END IF
 
     timestep = timestep_in_days(options%dtime)
 
@@ -880,7 +854,7 @@ CONTAINS
    
    
     !CALL calc_jedi_phenology(  & dsl4jsb_Lctlib_param(LandcoverClass),  & !in
-    CALL calc_jedi_phenology( &  dsl4jsb_Lctlib_param(JeDiSLA),       &  ! in
+    CALL calc_jedi_phenology(  dsl4jsb_Lctlib_param(JeDiSLA),       &  ! in
                                &  c_leaves,                             &  ! in
                                &  lai                  )  ! inout
    

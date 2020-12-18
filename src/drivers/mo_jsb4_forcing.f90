@@ -33,11 +33,9 @@ MODULE mo_jsb4_forcing
     & nf, nf_get_vara_double,                    & ! former nf_check
     & nf_inq_dimid, nf_inq_dimlen, nf_inq_varid, & ! from netcdf.inc
     & NF_MAX_NAME, nf_get_att_text, NF_NOERR       ! from netcdf.inc
-  USE mo_read_netcdf_broadcast_2, ONLY: netcdf_open_input, netcdf_close
-
 
 #ifndef __ICON__
-  USE mo_time_control,           ONLY: next_date, lresume, delta_time, time_step_len, get_year_day                    
+  USE mo_time_control,           ONLY: lresume, delta_time, time_step_len, get_year_day                    
   USE mo_time_conversion,        ONLY: IMerge_HMS2Sec, day_in_year, time_days
 #else
   USE mo_jsb_time_iface,         ONLY: get_year_day
@@ -264,7 +262,8 @@ CONTAINS
     INTEGER  :: iblk
     INTEGER  :: day_of_year
 
-    REAL(wp), ALLOCATABLE :: t_air_C(:,:), tmax_data(:,:), tmin_data(:,:), rad_uv_down(:,:), sat_spec_humidity(:,:), rel_humidity(:,:)
+    REAL(wp), ALLOCATABLE :: t_air_C(:,:), tmax_data(:,:), tmin_data(:,:), rad_uv_down(:,:), &
+      &                      sat_spec_humidity(:,:), rel_humidity(:,:)
     REAL(wp), ALLOCATABLE :: temporary_data1(:,:)
 
     ! TODO: help1 is rad_sw_down, help2 is rad_sw_down_pot, but these are (currently?) not required - remove?
@@ -800,7 +799,6 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_input_file) :: input_file
-    INTEGER :: nc_file_id, nc_stat
 
     model => Get_model(model_id)
 
@@ -832,12 +830,12 @@ CONTAINS
       IF(is_time_experiment_start(current_datetime) .OR. lresume) THEN
         IF(my_process_is_stdio()) THEN
           ! in case of ghg_scenario the forcing_input_variable%file_name_prefix is expected to contain the whole filename
-          nc_file_id = netcdf_open_input(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)))
-          CALL get_time_dimension(nc_file_id, forcing_input_variable)
+          input_file = jsb_netcdf_open_input(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)))
+          CALL get_time_dimension(input_file, forcing_input_variable)
           ! Assert: test that the netcdf file unit for this variable is the expected unit or at least equals unspecified_exp_unit
 !          CALL test_unit(input_file%file_id, TRIM(forcing_input_variable%variable_name), &
 !            & TRIM(forcing_input_variable%expectedUnit), TRIM(readUnit))
-          nc_stat = netcdf_close(nc_file_id)
+          CALL input_file%Close()
         ENDIF
 
         IF(ASSOCIATED(forcing_input_variable%data_read)) DEALLOCATE(forcing_input_variable%data_read)
@@ -894,17 +892,18 @@ CONTAINS
     ! --- if new current run or new file - get the timeseries of the forcing file and the current position in the timeseries
     IF (new_year_forcing .OR. is_time_experiment_start(current_datetime) .OR. lresume) THEN
       IF(my_process_is_stdio()) THEN
-        nc_file_id = netcdf_open_input(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) // TRIM(ADJUSTL(year_label)) // '.nc')
+        input_file = jsb_netcdf_open_input( &
+          & TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) // TRIM(ADJUSTL(year_label)) // '.nc')
 
-        CALL get_time_dimension(nc_file_id, forcing_input_variable)
+        CALL get_time_dimension(input_file, forcing_input_variable)
 
         ! Assert: test that the netcdf file unit for this variable is the expected unit or at least equals unspecified_exp_unit
         ! CALL test_unit(input_file%file_id, TRIM(forcing_input_variable%variable_name), &
-        CALL test_unit(nc_file_id, TRIM(forcing_input_variable%variable_name), &
+        CALL test_unit(input_file%file_id, TRIM(forcing_input_variable%variable_name), &
           & TRIM(forcing_input_variable%expectedUnit), TRIM(readUnit))
         ! TODO: further assertions? e.g. that lon lat are correct?
 
-        nc_stat = netcdf_close(nc_file_id)
+        CALL input_file%Close()
 
         currentTimeStep = 1
         thisDayStart = 0
@@ -990,7 +989,8 @@ CONTAINS
         forcing_input_variable%currentDayStart=forcing_input_variable%currentDayEnd+1
         forcing_input_variable%currentDayEnd=forcing_input_variable%currentDayEnd+time_steps_per_day
       ELSEIF(forcing_input_variable%frequency .EQ. DAILY_) THEN
-        CALL set_ocean_cells(nblks, ics, ice, model_id, forcing_input_variable%ocean_value, forcing_input_variable%data_read(:,:,1))
+        CALL set_ocean_cells(nblks, ics, ice, model_id, forcing_input_variable%ocean_value, &
+          &                  forcing_input_variable%data_read(:,:,1))
         forcing_input_variable%currentDayStart=forcing_input_variable%currentDayStart+1
         forcing_input_variable%currentDayEnd=forcing_input_variable%currentDayEnd+1
       ENDIF
@@ -1072,22 +1072,23 @@ CONTAINS
   !! @par History
   !! First version by Julia Nabel (2016-02-25)
   !!
-  SUBROUTINE get_time_dimension(file_id, forcing_input_variable)
+  SUBROUTINE get_time_dimension(input_file, forcing_input_variable)
 
-    INTEGER, INTENT(IN)  :: file_id
+    TYPE(t_input_file),        INTENT(IN)    :: input_file
     TYPE(input_variable_type), INTENT(INOUT) :: forcing_input_variable
 
     INTEGER                                  :: nc_dim_id, nc_var_id
+
     CHARACTER(LEN=*), PARAMETER              :: routine = modname//"::get_time_dimension"
 
-    CALL nf(nf_inq_dimid(file_id, 'time', nc_dim_id), routine)
-    CALL nf(nf_inq_dimlen(file_id, nc_dim_id, forcing_input_variable%length_time_series), routine)
+    CALL nf(nf_inq_dimid(input_file%file_id, 'time', nc_dim_id), routine)
+    CALL nf(nf_inq_dimlen(input_file%file_id, nc_dim_id, forcing_input_variable%length_time_series), routine)
     IF(ASSOCIATED(forcing_input_variable%timevalues)) DEALLOCATE(forcing_input_variable%timevalues)
     ALLOCATE(forcing_input_variable%timevalues(forcing_input_variable%length_time_series))
 
     ! We need the timevalues for get_data_and_update_field
-    CALL nf(nf_inq_varid(file_id, 'time', nc_var_id), routine)
-    CALL nf(nf_get_vara_double(file_id, nc_var_id, (/ 1 /), &
+    CALL nf(nf_inq_varid(input_file%file_id, 'time', nc_var_id), routine)
+    CALL nf(nf_get_vara_double(input_file%file_id, nc_var_id, (/ 1 /), &
       & (/ forcing_input_variable%length_time_series /), forcing_input_variable%timevalues), routine)
 
   END SUBROUTINE get_time_dimension
@@ -1116,7 +1117,8 @@ CONTAINS
       status = nf_get_att_text(file_id, nc_var_id, name_of_unit_attribute, readUnit)
       IF (status /= NF_NOERR) THEN
         CALL message(TRIM(routine), &
-             & 'WARNING: netcdf error when accessing units attribute of variable '//TRIM(variable_name))
+             & 'WARNING: netcdf error when accessing units attribute of variable '//TRIM(variable_name) &
+             & //'(expected '//TRIM(expectedUnit)//')')
       ELSE
         IF(TRIM(readUnit) .NE. TRIM(expectedUnit)) THEN
           IF(TRIM(readUnit) .EQ. TRIM(unspecified_exp_unit)) THEN

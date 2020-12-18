@@ -26,8 +26,8 @@ MODULE mo_jsb_model_init
 
   USE mo_kind,             ONLY: wp
   USE mo_exception,        ONLY: finish
-  USE mo_jsb_parallel,     ONLY: Get_omp_thread, Is_omp_inside_serial
-  USE mo_jsb_time,         ONLY: is_time_restart, get_time_start
+  USE mo_jsb_parallel,     ONLY: Get_omp_thread, Is_omp_inside_serial, my_process_is_stdio
+  USE mo_jsb_time,         ONLY: is_time_restart, get_time_start, get_time_dt
 
   IMPLICIT NONE
   PRIVATE
@@ -74,7 +74,7 @@ CONTAINS
     ! avoid compiler warnings about dummy arguments not being used
     IF (.FALSE.) WRITE(*,*) nproca, nprocb, npedim, model_id, model_name
 
-    CALL finish(TRIM(routine),'Standalone model currently only works with ECHAM')
+    CALL finish(TRIM(routine),'This subroutine should not be called with ICON')
 #else
     model => Get_model(model_id)
 
@@ -168,6 +168,8 @@ CONTAINS
     REAL(wp), ALLOCATABLE               :: fract_tmp(:,:)
     INTEGER                             :: no_omp_thread
     LOGICAL, ALLOCATABLE                :: single_tile_output(:)
+
+    CHARACTER(len=21)  :: fm 
 
     dsl4jsb_Def_config(PHENO_)
 
@@ -548,6 +550,60 @@ CONTAINS
 !#ifdef _OPENACC
 !    IF (.NOT. is_time_restart(get_time_start())) CALL model%cpu_to_gpu()
 !#endif
+
+    ! Initialize some Jedi lctlib parameters which need time information (therefore not in mo_lctlib_class.f90)
+    IF (TRIM(model%config%usecase) == 'jsbach_jedi') THEN
+
+      model%lctlib(:)%jedi_F_pseudo_soilM = EXP(- get_time_dt(model%id) / (model%lctlib(:)%GrowRspdMoist  * 86400._wp))
+      model%lctlib(:)%jedi_N_pseudo_soilM = 1._wp / (1._wp - model%lctlib(:)%jedi_F_pseudo_soilM )
+      model%lctlib(:)%jedi_F_pseudo_T = EXP(- get_time_dt(model%id) / (model%lctlib(:)%GrowRspdTemp* 86400._wp ))
+      model%lctlib(:)%jedi_N_pseudo_T = 1._wp / (1._wp - model%lctlib(:)%jedi_F_pseudo_T )
+      model%lctlib(:)%jedi_F_pseudo_npp = EXP(- get_time_dt(model_id) / (model%lctlib(:)%SenesRspdNPP * 86400._wp))
+      model%lctlib(:)%jedi_N_pseudo_npp = 1._wp / (1._wp - model%lctlib(:)%jedi_F_pseudo_npp )
+
+      IF (my_process_is_stdio()) THEN
+
+        OPEN(35,file='Jedi_parameter.txt')
+
+        fm="(A  ,     (1x,I1))"
+        write(fm(6:9),'(I4)') SIZE(model%lctlib)
+        WRITE(35,fm) 'LandcoverClass ',model%lctlib(:)%LandcoverClass  !PHS: write out for jedi
+
+        fm="(A  ,     (1x,I1))"
+        write(fm(6:9),'(I4)') SIZE(model%lctlib)
+        WRITE(35,fm) 'C4flag ', MERGE(1, 0, model%lctlib(:)%c4flag)  !PHS: write out for jedi            
+
+        fm="(A  ,     (1x,F12.6))"
+        write(fm(6:9),'(I4)') SIZE(model%lctlib)
+
+        WRITE(35,fm) 'GrowRspdMoist ',model%lctlib(:)%GrowRspdMoist
+        WRITE(35,fm) 'CritiGrowTemp ',model%lctlib(:)%CritiGrowTemp   
+        WRITE(35,fm) 'EndGrowTemp ',model%lctlib(:)%EndGrowTemp
+        WRITE(35,fm) 'GermFrac ',model%lctlib(:)%GermFrac
+        WRITE(35,fm) 'RelAllo2AbStru',model%lctlib(:)%RelAllo2Abgrd
+        WRITE(35,fm) 'RelAllo2BlStru',model%lctlib(:)%RelAllo2Blgrd
+        WRITE(35,fm) 'TurnoverStruc ',model%lctlib(:)%TurnoverStruc
+        WRITE(35,fm) 'TurnoverLeaf ',model%lctlib(:)%TurnoverLeaf  
+        WRITE(35,fm) 'SenesRspdNPP ',model%lctlib(:)%SenesRspdNPP  
+        WRITE(35,fm) 'Nitro2Vcmax ',model%lctlib(:)%Nitro2Vcmax
+        WRITE(35,fm) 'NitroStatus ',model%lctlib(:)%NitroStatus
+        WRITE(35,fm) 'Allo2Reproduc ',model%lctlib(:)%Allo2Reproduc 
+        WRITE(35,fm) 'Allo2Abground ',model%lctlib(:)%Allo2Abground 
+        WRITE(35,fm) 'Allo2Blground ',model%lctlib(:)%Allo2Blground 
+        WRITE(35,fm) 'Allo2Storage  ',model%lctlib(:)%Allo2Storage  
+        
+        WRITE(35,fm) 'JeDiCarboxRate ', model%lctlib(:)%JeDiCarboxRate * 1.e6_wp
+        WRITE(35,fm) 'JeDiETransport',model%lctlib(:)%JeDiETransport * 1.e6_wp
+        WRITE(35,fm) 'JeDiSLA ', model%lctlib(:)%JeDiSLA  
+        WRITE(35,fm) 'AlbCanopyVIS', model%lctlib(:)%AlbedoCanopyVIS
+        WRITE(35,fm) 'AlbCanopyNIR', model%lctlib(:)%AlbedoCanopyNIR
+        WRITE(35,fm) 'GrowRspdTemp ',model%lctlib(:)%GrowRspdTemp     
+
+        CLOSE(35)
+        
+      END IF
+
+    END IF
 
   END SUBROUTINE jsbach_init
 

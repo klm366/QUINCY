@@ -21,7 +21,6 @@ MODULE mo_jsb_lctlib_class
   USE mo_kind,         ONLY: wp
   USE mo_exception,    ONLY: message_text, finish
   USE mo_util,         ONLY: int2string
-  USE mo_jsb_time,     ONLY: get_time_dt
   
   IMPLICIT NONE
   PRIVATE
@@ -256,7 +255,7 @@ MODULE mo_jsb_lctlib_class
 
 CONTAINS
 
-  FUNCTION Read_lctlib(lctlib_file_name, model_id, use_quincy) RESULT(return_value)
+  FUNCTION Read_lctlib(lctlib_file_name, model_id, use_jedi, use_quincy) RESULT(return_value)
     !
     ! Get landcover library, i.e. lookup table for landcover types
     !
@@ -302,6 +301,7 @@ CONTAINS
 
     CHARACTER(len=*), INTENT(in) :: lctlib_file_name
     INTEGER,          INTENT(in) :: model_id
+    LOGICAL,          INTENT(in) :: use_jedi
     LOGICAL,          INTENT(in) :: use_quincy
     TYPE(t_lctlib_element), POINTER    :: return_value(:)
 
@@ -478,7 +478,6 @@ CONTAINS
     
     REAL(wp),ALLOCATABLE :: P01(:),P02(:),P03(:),P04(:),P05(:),P06(:),P07(:),P08(:),P09(:),P10(:)
     REAL(wp),ALLOCATABLE :: P11(:),P12(:),P13(:),P14(:),P15(:),Pdenom(:)
-    CHARACTER(len=21)  :: fm 
     CHARACTER(len=7)  :: fm_jedi_read_line
         
         fm_jedi_read_line = '(A910 )'
@@ -539,7 +538,7 @@ CONTAINS
 
       !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
       !   JeDi plant trait parameter 
-      OPEN(35,file='Jedi_parameter.txt')
+    IF (use_jedi) THEN
       ALLOCATE(P01(nlct))
       ALLOCATE(P02(nlct))
       ALLOCATE(P03(nlct))
@@ -557,6 +556,7 @@ CONTAINS
       ALLOCATE(P15(nlct))
       ALLOCATE(Pdenom(nlct))
        !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
+    END IF
             
        REWIND(unit=lctlib_file_unit) ! Go back to beginning of landcover library file
 
@@ -585,8 +585,6 @@ CONTAINS
           READ(line(1:pos-1),'(A)') key
           key = tolower(key)
           
-          fm="(A  ,     (1x,F12.6))"
-          write(fm(6:9),'(I4)') nlct
        !   write(*,*) fm,key
           IF(TRIM(key) == "nlct") CYCLE ! nlct already read above
 
@@ -599,9 +597,6 @@ CONTAINS
             exist_LctName = .TRUE.
           CASE ('landcoverclass')                                    ! Landcover class
             READ(line(pos:length),*) lctlib(1:nlct)%LandcoverClass
-             fm="(A  ,     (1x,I1))"
-             write(fm(6:9),'(I4)') nlct
-            WRITE(35,fm) 'LandcoverClass ',lctlib(1:nlct)%LandcoverClass  !PHS: write out for jedi
             exist_LandcoverClass = .TRUE.
           CASE ('albedosnowvismin')
             READ(line(pos:length),*) lctlib(1:nlct)%AlbedoSnowVisMin
@@ -648,9 +643,6 @@ CONTAINS
               IF (itmp(i) == 1) lctlib(i)%c4flag = .TRUE.
             END DO
             exist_C4flag = .TRUE.
-            fm="(A  ,     (1x,I1))"
-             write(fm(6:9),'(I4)') nlct
-            WRITE(35,fm) 'C4flag ',itmp(1:nlct)  !PHS: write out for jedi            
           CASE ('carboxrate')                                         ! Carbox rate
             READ(line(pos:length),*) lctlib(1:nlct)%CarboxRate
             exist_CarboxRate = .TRUE.
@@ -875,30 +867,27 @@ CONTAINS
              READ(line(pos:length),*) lctlib(1:nlct)%WoodLitterSize
              exists_woodlittersize_coef = .TRUE.
              
-             
+          CASE default
+            ! nothing to do
+          END SELECT
+               
           !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
           !   JeDi plant trait parameter 
-             
-             
-             CASE ('growrspdmoist')
+                          
+           IF (use_jedi) THEN
+            SELECT CASE (TRIM(key))
+            CASE ('growrspdmoist')
                 READ(line(pos:length),*) P01(1:nlct)         
                 lctlib(1:nlct)%GrowRspdMoist = 10._wp ** ( 1.1_wp * P01(1:nlct)  + 0.9_wp )  
                 exists_GrowRspdMoist   = .TRUE.     
-                  lctlib(1:nlct)%jedi_F_pseudo_soilM = EXP(- get_time_dt(model_id) / (lctlib(1:nlct)%GrowRspdMoist  * 86400._wp))
-                  lctlib(1:nlct)%jedi_N_pseudo_soilM = 1._wp / (1._wp - lctlib(1:nlct)%jedi_F_pseudo_soilM )
-                WRITE(35,fm) 'GrowRspdMoist ',lctlib(1:nlct)%GrowRspdMoist
              CASE ('growrspdtemp')
                 READ(line(pos:length),*) P02(1:nlct)                
                 lctlib(1:nlct)%GrowRspdTemp = 10._wp ** ( 1.1_wp * P02(1:nlct)  + 0.9_wp )
                 exists_GrowRspdTemp   = .TRUE.
-                 lctlib(1:nlct)%jedi_F_pseudo_T = EXP(- get_time_dt(model_id) / (lctlib(1:nlct)%GrowRspdTemp* 86400._wp ))
-                 lctlib(1:nlct)%jedi_N_pseudo_T = 1._wp / (1._wp - lctlib(1:nlct)%jedi_F_pseudo_T )
-                WRITE(35,fm) 'GrowRspdTemp ',lctlib(1:nlct)%GrowRspdTemp     
              CASE ('critigrowtemp')
                 READ(line(pos:length),*) P03(1:nlct)                
                 lctlib(1:nlct)%CritiGrowTemp = -5._wp + P03(1:nlct)    * ( 15.0_wp - ( -5.0_wp ) )      !PHS: 21.06.2019 End of growth season  from -5degC to 0 degC
                 exists_CritiGrowTemp   = .TRUE.
-                WRITE(35,fm) 'CritiGrowTemp ',lctlib(1:nlct)%CritiGrowTemp   
                 do i = 1,nlct         
                      IF ( lctlib(i)%CritiGrowTemp   .LT. 10._wp )    THEN
                             lctlib(i)%EndGrowTemp = 10._wp + P03(i)    * ( 15._wp - 10._wp )
@@ -906,12 +895,10 @@ CONTAINS
                             lctlib(i)%EndGrowTemp =  lctlib(i)%CritiGrowTemp + P03(i)    * ( 15._wp -  lctlib(i)%CritiGrowTemp )
                      END IF
                 end do
-                WRITE(35,fm) 'EndGrowTemp ',lctlib(1:nlct)%EndGrowTemp
              CASE ('germfrac')
                 READ(line(pos:length),*) P04(1:nlct)               
                 lctlib(1:nlct)%GermFrac = 10._wp ** ( 3.0_wp * P04(1:nlct)  - 3.0_wp)                
                 exists_GermFrac   = .TRUE.
-                WRITE(35,fm) 'GermFrac ',lctlib(1:nlct)%GermFrac
              CASE ('allo2reproduc')
                 READ(line(pos:length),*) P05(1:nlct)               
                 exists_Allo2Reproduc   = .TRUE.
@@ -927,35 +914,27 @@ CONTAINS
              CASE ('relallo2abgrd')
                 READ(line(pos:length),*) lctlib(1:nlct)%RelAllo2Abgrd
                 exists_RelAllo2Abgrd   = .TRUE.
-                WRITE(35,fm) 'RelAllo2AbStru',lctlib(1:nlct)%RelAllo2Abgrd
              CASE ('relallo2blgrd')
                 READ(line(pos:length),*) lctlib(1:nlct)%RelAllo2Blgrd
                 exists_RelAllo2Blgrd   = .TRUE.
-                WRITE(35,fm) 'RelAllo2BlStru',lctlib(1:nlct)%RelAllo2Blgrd
              CASE ('turnoverstruc')             
                 READ(line(pos:length),*) P11(1:nlct)
                 lctlib(1:nlct)%TurnoverStruc = 365._wp * (79._wp * P11(1:nlct) + 1._wp )
                 exists_TurnoverStruc   = .TRUE.
-                WRITE(35,fm) 'TurnoverStruc ',lctlib(1:nlct)%TurnoverStruc
              CASE ('turnoverleaf')
                 READ(line(pos:length),*) P12(1:nlct)
                 lctlib(1:nlct)%TurnoverLeaf = ( 365._wp / 12._wp ) * ( 10._wp ** (  (1.48_wp * P12(1:nlct) + 0.3_wp )) ) 
                 exists_TurnoverLeaf   = .TRUE.
-                WRITE(35,fm) 'TurnoverLeaf ',lctlib(1:nlct)%TurnoverLeaf  
              CASE ('senesrspdnpp')
                 READ(line(pos:length),*) P13(1:nlct)
                 !lctlib(1:nlct)%SenesRspdNPP = 10._wp ** ( 4.0_wp * P13(1:nlct) - 1.0_wp )
                  !lctlib(1:nlct)%SenesRspdNPP =10._wp ** ( 1.855_wp * P01(1:nlct)  + 1.145_wp )   !PHS:18.06.2019 New sample
                  lctlib(1:nlct)%SenesRspdNPP =10._wp ** ( 1.1_wp * P13(1:nlct)  + 0.99_wp )    !PHS:09.12.2019 New sample
                 exists_SenesRspdNPP   = .TRUE.
-                 lctlib(1:nlct)%jedi_F_pseudo_npp = EXP(- get_time_dt(model_id) / (lctlib(1:nlct)%SenesRspdNPP * 86400._wp))
-                 lctlib(1:nlct)%jedi_N_pseudo_npp = 1._wp / (1._wp - lctlib(1:nlct)%jedi_F_pseudo_npp )
-                WRITE(35,fm) 'SenesRspdNPP ',lctlib(1:nlct)%SenesRspdNPP  
              CASE ('nitro2vcmax')
                 READ(line(pos:length),*) P14(1:nlct)
-
                 exists_Nitro2Vcmax   = .TRUE.
-                WRITE(35,fm) 'Nitro2Vcmax ',P14(1:nlct)
+                lctlib(1:nlct)%Nitro2Vcmax = P14(1:nlct)
              CASE ('nitrostatus')
                 READ(line(pos:length),*) P15(1:nlct)
                 !lctlib(1:nlct)%NitroStatus = (0.9_wp * P15(1:nlct) + 0.1_wp) * 8.578_wp * 0.01_wp  ! [NL] molN / molC canopy nitrogen concentration follows Ollinger (2008) (Pavlick thesis P.89)               
@@ -971,13 +950,14 @@ CONTAINS
                 
                 
                 exists_NitroStatus   = .TRUE.
-                WRITE(35,fm) 'NitroStatus ',lctlib(1:nlct)%NitroStatus
    
           !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
         
           CASE default
             ! nothing to do
           END SELECT
+
+        END IF ! use_jedi
            !! ------------------------------------------------------------------
           !! quincy
           IF (use_quincy) THEN
@@ -1323,7 +1303,8 @@ CONTAINS
 
        !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
        !   JeDi plant trait parameter 
-       
+     IF (use_jedi) THEN
+      
        IF(.NOT. exists_GrowRspdMoist ) &
        CALL finish('init_lctlib','No data for GrowRspdMoist found in '//TRIM(lctlib_file_name))
        IF(.NOT. exists_GrowRspdTemp  ) &
@@ -1357,6 +1338,7 @@ CONTAINS
        
        !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
        
+     END IF
        
        !! quincy
        IF (use_quincy) THEN
@@ -1482,21 +1464,16 @@ CONTAINS
        ! JeDi parameter for allocation factors
        !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
        
-       IF ( exists_Allo2Reproduc .AND. exists_Allo2Abground .AND. exists_Allo2Blground .AND. exists_Allo2Storage ) THEN
+    IF (use_jedi) THEN
+      IF ( exists_Allo2Reproduc .AND. exists_Allo2Abground .AND. exists_Allo2Blground .AND. exists_Allo2Storage ) THEN
         Pdenom(1:nlct) = P05(1:nlct) + P06(1:nlct) + P07(1:nlct) + P08(1:nlct)
         lctlib(1:nlct)%Allo2Reproduc = P05(1:nlct) / Pdenom(1:nlct)
         lctlib(1:nlct)%Allo2Abground = P06(1:nlct) / Pdenom(1:nlct)
         lctlib(1:nlct)%Allo2Blground = P07(1:nlct) / Pdenom(1:nlct)
         lctlib(1:nlct)%Allo2Storage  = P08(1:nlct) / Pdenom(1:nlct)
-        
-        WRITE(35,fm) 'Allo2Reproduc ',lctlib(1:nlct)%Allo2Reproduc 
-        WRITE(35,fm) 'Allo2Abground ',lctlib(1:nlct)%Allo2Abground 
-        WRITE(35,fm) 'Allo2Blground ',lctlib(1:nlct)%Allo2Blground 
-        WRITE(35,fm) 'Allo2Storage  ',lctlib(1:nlct)%Allo2Storage  
-        
-       ELSE
-         CALL finish('init_lctlib','No data for one of the allocation factor found in '//TRIM(lctlib_file_name))
-       ENDIF
+      ELSE
+        CALL finish('init_lctlib','No data for one of the allocation factor found in '//TRIM(lctlib_file_name))
+      ENDIF
        
        IF (exists_NitroStatus) THEN
            
@@ -1525,14 +1502,7 @@ CONTAINS
                     lctlib(1:nlct)%JeDiETransport= 1.9_wp * lctlib(1:nlct)%JeDiCarboxRate 
              END WHERE 
              
-       END WHERE  
-       
-          
-       
-       WRITE(35,fm) 'JeDiCarboxRate ', lctlib(1:nlct)%JeDiCarboxRate * 1.e6_wp
-       WRITE(35,fm) 'JeDiETransport',lctlib(1:nlct)%JeDiETransport * 1.e6_wp
-       WRITE(35,fm) 'JeDiSLA ', lctlib(1:nlct)%JeDiSLA  
-       
+       END WHERE         
        
       WHERE (lctlib(1:nlct)%NitroStatus*lctlib(1:nlct)%JeDiSLA  >= 0.015997_wp .AND. &
         &    lctlib(1:nlct)%NitroStatus*lctlib(1:nlct)%JeDiSLA  <= 0.05359_wp ) 
@@ -1550,8 +1520,6 @@ CONTAINS
                
       exist_AlbedoCanopyVIS = .TRUE.  
       exist_AlbedoCanopyNIR = .TRUE.
-      WRITE(35,fm) 'AlbCanopyVIS', lctlib(1:nlct)%AlbedoCanopyVIS
-      WRITE(35,fm) 'AlbCanopyNIR', lctlib(1:nlct)%AlbedoCanopyNIR
 
       IF(.NOT. exist_AlbedoCanopyVIS) &
         CALL finish('init_lctlib','No data for AlbedoCanopyVIS found in '//TRIM(lctlib_file_name))
@@ -1559,8 +1527,8 @@ CONTAINS
         CALL finish('init_lctlib','No data for albedoCanopyNIR found in '//TRIM(lctlib_file_name))       
       ENDIF
        
-      CLOSE(35)
        !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
+    END IF
        
 
 
@@ -1834,6 +1802,7 @@ CONTAINS
        CALL p_bcast(lctlib(:)%WoodLitterSize, p_io, mpi_comm)
        !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
        !   JeDi plant trait parameter 
+       IF (use_jedi) THEN
        CALL p_bcast(lctlib(:)%GrowRspdMoist, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%jedi_F_pseudo_soilM, p_io, mpi_comm) 
        CALL p_bcast(lctlib(:)%jedi_N_pseudo_soilM, p_io, mpi_comm)       
@@ -1859,6 +1828,7 @@ CONTAINS
        CALL p_bcast(lctlib(:)%JeDiCarboxRate, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%JeDiETransport, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%JeDiSLA       , p_io, mpi_comm)
+       END IF
         !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
        
        !! quincy

@@ -35,7 +35,6 @@ MODULE mo_jsb_grid_class
 
   PUBLIC :: t_jsb_grid, t_jsb_grid_ptr, t_jsb_vgrid, t_jsb_vgrid_ptr
   PUBLIC :: new_grid, delete_grid, new_vgrid, delete_vgrid
-  PUBLIC :: t_jsb_subset
 
   TYPE t_jsb_grid
     INTEGER                       :: id = 0
@@ -75,12 +74,6 @@ MODULE mo_jsb_grid_class
   TYPE t_jsb_grid_ptr
     TYPE(t_jsb_grid), POINTER :: p => NULL()
   END TYPE t_jsb_grid_ptr
-
-  TYPE t_jsb_subset
-    INTEGER :: block
-    INTEGER :: start_index
-    INTEGER :: end_index
-  END TYPE t_jsb_subset
 
   TYPE t_jsb_vgrid
     INTEGER ::           id           = 0

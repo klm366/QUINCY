@@ -1240,9 +1240,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root_pwp)     ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_stress)        ! out
     
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapopot) !PHS
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   jedi_pot_supply_transp) !PHS	
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  alpha_jedi)!PHS
+    IF (TRIM(model%config%usecase) == 'jsbach_jedi' ) THEN
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapopot) !PHS
+      dsl4jsb_Get_var2D_onChunk(CARBON_,   jedi_pot_supply_transp) !PHS	
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  alpha_jedi)!PHS
+    END IF
     !
     IF (model%config%use_quincy) THEN
       dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs)        ! out   ! quincy
@@ -1264,7 +1266,7 @@ CONTAINS
     ! Calculate water stress factor
     ! @todo: maybe use the distributed permanent wilting point/field cap from above and change get_water_stress_factor function
 
-    IF (TRIM(model%config%usecase) .eq. 'jsbach_jedi' ) THEN
+    IF (TRIM(model%config%usecase) == 'jsbach_jedi' ) THEN
       
       WHERE (evapopot(:) .GE. 0._wp)  
         water_stress(:) = 0._wp

@@ -34,7 +34,7 @@ MODULE mo_a2l_memory_class
 
   TYPE, EXTENDS(t_jsb_memory) :: t_a2l_memory
     TYPE(t_jsb_var_real2d) :: &
-   DEBUG_VAR, &
+      DEBUG_VAR          , &
       t_air              , &
       q_air              , &
       rain               , &
@@ -66,10 +66,7 @@ MODULE mo_a2l_memory_class
       t_acoef_ice        , &
       t_bcoef_ice        , &
       q_acoef_ice        , &
-      q_bcoef_ice        , &
-      trig_rad_m1        , &  ! necessary for standalone driver
-      newday_Merker      , &  ! necessary for standalone driver
-      l_day_reminder          ! necessary for standalone driver
+      q_bcoef_ice
 
     !! quincy
     !TYPE(t_jsb_var_real2d) :: &
@@ -433,36 +430,6 @@ CONTAINS
         & initval_r=0.0_wp )
 
     END IF
-
-    CALL jsb_add_var( mem, 'trig_rad_m1', mem%trig_rad_m1,                     &
-      & hgrid, surface,                                                        &
-      & t_cf('Are we one time step before rad is calc in atmosph. 0 means no,  &
-      &       1 means yes.', '', ''),                                          &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
-      & prefix, suffix,                                                        &
-      & lrestart=.FALSE.,                                                      &
-      & output_level=BASIC,                                                    & ! R: only to debugg, delete this line later
-      & initval_r=0.0_wp )
-
-    CALL jsb_add_var( mem, 'newday_Merker', mem%newday_Merker,                 &
-      & hgrid, surface,                                                        &
-      & t_cf('for debugging to fix lday problem                                &
-      &       1 means yes.', '', ''),                                          &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
-      & prefix, suffix,                                                        &
-      & lrestart=.FALSE.,                                                      &
-      & output_level=BASIC,                                                    & ! R: only to debugg, delete this line later
-      & initval_r=7.0_wp )
-
-    CALL jsb_add_var( mem, 'l_day_reminder', mem%l_day_reminder,               &
-      & hgrid, surface,                                                        &
-      & t_cf('To avoid that minimal radiation differences would lead to strong &
-      &       differences in the JS4 driver.', '', ''),                        &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
-      & prefix, suffix,                                                        &
-      & lrestart=.FALSE.,                                                      &
-      & output_level=BASIC,                                                    &
-      & initval_r=0.0_wp )
 
     IF (.NOT. model%config%use_quincy) RETURN
 
