@@ -109,7 +109,10 @@ MODULE mo_carbon_memory_class
       c_bg_sum,              & ! Sum of belowground Yasso pools  [mol(C)/m^2(canopy)]
       c_ag_sum_1,            & ! Sum of aboveground green Yasso pools  [mol(C)/m^2(canopy)]
 
-  !JN: vars for analytically equilibrating YASSO humus pools outside of jsb4 simulations (compare jsb3 svn ref 9652)
+      max_green_bio,         & ! Annual maximum of C-pool green for DYNVEG [mol(C)/m^2(canopy)]
+      sla,                   & ! specific leave area for DYNVEG [m2(leaf)/mol(C)]
+      
+      !JN: vars for analytically equilibrating YASSO humus pools outside of jsb4 simulations (compare jsb3 svn ref 9652)
       c_decomp_humus_1_sum,      & ! annual cflux sum of humus decomposed in YASSO (leaf) [mol(C)/m^2(canopy)]
       c_decomp_humus_2_sum,      & ! annual cflux sum of humus decomposed in YASSO (wood) [mol(C)/m^2(canopy)]
       c_into_humus_1_sum,        & ! annual cflux sum into humus pool in YASSO (leaf) [mol(C)/m^2(canopy)]
@@ -621,6 +624,22 @@ CONTAINS
       & output_level=FULL,                                                                     &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+    CALL mem%Add_var('max_green_bio', mem%max_green_bio,                                       &
+      & hgrid, surface,                                                                        &
+      & t_cf('max_green_bio', 'mol(C) m-2(canopy)', 'annual maximum content of green C-Pool.'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+      & prefix, suffix,                                                                        &
+      & output_level=FULL,                                                                     &
+      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var('sla', mem%sla,                                                           &
+      & hgrid, surface,                                                                        &
+      & t_cf('sla', 'm2(leave)/mol(C)', 'specific leave area.'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+      & prefix, suffix,                                                                        &
+      & output_level=FULL,                                                                     &
+      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      
     !      CALL mem%Add_var('c_sum_natural', mem%C_sum_natural,                            &
     !        & hgrid, surface,                                                             &
     !        & t_cf('C_sum_natural', 'mol(C) m-2(canopy)', 'Sum of all natural C pools.'), &

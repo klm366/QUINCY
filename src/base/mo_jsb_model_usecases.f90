@@ -19,7 +19,7 @@ MODULE mo_jsb_model_usecases
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model
   USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-                                    FUEL_, ALCC_, VEG_
+                                    FUEL_, ALCC_, VEG_, DYNVEG_
   USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, AGGREGATE_ !, ON_SUBTREE_
   USE mo_jsb_tile,            ONLY: t_jsb_tile
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
@@ -154,8 +154,8 @@ CONTAINS
 
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
-      & processes      =(/A2L_,     L2A_,     RAD_  ,    TURB_    /), &
-      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
+      & processes      =(/A2L_,     L2A_,     RAD_  ,    TURB_    , DYNVEG_/), &
+      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ONTILE_/), &
       & model_id=model%id, fract_varname='notsea')
     model%top => box_tile
 

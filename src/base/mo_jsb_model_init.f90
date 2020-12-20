@@ -16,9 +16,11 @@
 MODULE mo_jsb_model_init
 #ifndef __NO_JSBACH__
 
-  dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, FUEL_, ALCC_, A2L_, VEG_
+  dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, FUEL_
+  dsl4jsb_Use_processes ALCC_, A2L_, VEG_, DYNVEG_
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
+  dsl4jsb_Use_config(DYNVEG_)
 
   USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_control,      ONLY: get_no_of_models, debug_on
@@ -191,10 +193,12 @@ CONTAINS
     !! Two Queues: default jsb4 & quincy
     IF (.NOT. model%config%use_quincy) THEN
       !NOTE: JN changed the order of the processes
-      !- processes potentially changing the area of a tile are conducted first in the timestep.
+      !- processes potentially changing the area of a tile are conducted first in the timestep,
+      !- but the task npp_buffer is performed even before to provide already updated multi annual average NPP to DYNVEG at the beginning of a year
       !- PHENO processes were moved up: need to happen before C_NPP_pot_allocation for allometric considerations
-  
+      CALL model%Queue_task(ASSIMI_, "npp_buffer")
       !!------------------------ tasks that can change area
+      CALL model%Queue_task(DYNVEG_,"dynveg")
       !! 
       !Disturbances happen on a daily basis and can lead to area changes when running with cohorts
       IF (model%processes(FUEL_)%p%config%active) THEN
