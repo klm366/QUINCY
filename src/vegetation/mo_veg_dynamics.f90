@@ -27,6 +27,10 @@
 !!
 MODULE mo_veg_dynamics
 
+#ifdef __QUINCY_NO_JSB__
+#include "dsl_jsbach.inc"
+#endif
+
   USE mo_kind,                 ONLY: wp
   USE mo_jsb_impl_constants,   ONLY: true, false, test_false_true
   USE mo_jsb_control,          ONLY: debug_on
@@ -58,7 +62,6 @@ CONTAINS
     USE mo_jsb_math_constants,    ONLY: one_year, one_day, eps4
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
-    USE mo_jsb_pool_class,        ONLY: ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15 
     USE mo_jsb4_forcing,          ONLY: forcing_options
     USE mo_veg_constants,         ONLY: itree
 
@@ -67,13 +70,16 @@ CONTAINS
     dsl4jsb_Use_config(VEG_)
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
-    dsl4slm_Use_memory_a_veg        !  USE mo_veg_memory_class,      ONLY: t_veg_element_a, t_veg_pool_a
-    USE mo_veg_memory_class,      ONLY: veg_pool, veg_litterfall, veg_establishment
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
     dsl4jsb_Use_memory(SSE_)       !  USE mo_sse_memory_class,     ONLY: t_sse_memory
     ! Use of pools
-    dsl4jsb_Use_pools(VEG_) t_veg_main_pool, t_veg_tissues_pool, t_veg_elements_pool
+#ifdef __QUINCY_NO_JSB__
+    dsl4slm_Use_memory_a_veg        !  USE mo_veg_memory_class,      ONLY: t_veg_element_a, t_veg_pool_a
+    USE mo_veg_memory_class,      ONLY: veg_pool, veg_litterfall, veg_establishment
+#else
+    dsl4jsb_Use_pools(VEG_) t_veg_tissues_pool, t_veg_elements_pool
+#endif
 
     IMPLICIT NONE
     ! ---------------------------
@@ -89,16 +95,19 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_dynamics'
     ! ---------------------------
     ! 0.3 Declare Memory
-    ! Declare process configuration and memory Pointers
+    ! Declare process configuration, process memory and pools
     dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_memory(VEG_)                              ! TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(RAD_)                              ! TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(PHENO_)                            ! TYPE(t_pheno_memory),    POINTER :: pheno__mem
     dsl4jsb_Def_memory(SSE_)                             ! TYPE(t_sse_memory),     POINTER :: sse__mem
+#ifdef __QUINCY_NO_JSB__
+#else
     dsl4jsb_Def_pool(t_veg_tissues_pool)  :: veg_pool
     dsl4jsb_Def_pool(t_veg_tissues_pool)  :: veg_litterfall
     dsl4jsb_Def_pool(t_veg_elements_pool) :: veg_establishment
+#endif
     ! Declare pointers to variables in memory
     ! RAD_
     dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg
@@ -139,10 +148,13 @@ CONTAINS
     dsl4jsb_Get_memory(RAD_)                              ! rad__mem => rad_memory
     dsl4jsb_Get_memory(PHENO_)                            ! pheno__mem => pheno_memory
     dsl4jsb_Get_memory(SSE_)                             ! sse__mem => sse_memory
+#ifdef __QUINCY_NO_JSB__
+#else
     ! Get pools
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_pool,          veg_pool)
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_litterfall,    veg_litterfall)
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_establishment, veg_establishment)
+#endif
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg) ! in
     ! ---------------------------
@@ -161,7 +173,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, an_boc_tvegdyn_mavg)    ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, net_growth_tvegdyn_mavg)! in
     dsl4jsb_Get_var2D_onChunk(VEG_, lai_tvegdyn_mavg)       ! in
-    ! Get process memory pool structures
+#ifdef __QUINCY_NO_JSB__
+    ! Get pools
 #define Get_veg_pool
 #define Get_veg_litterfall
 #define Get_veg_establishment
@@ -169,7 +182,7 @@ CONTAINS
 #undef Get_veg_pool
 #undef Get_veg_litterfall
 #undef Get_veg_establishment
-
+#endif
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -285,6 +298,7 @@ CONTAINS
       ENDIF
     ENDSELECT
 
+#ifdef __QUINCY_NO_JSB__
 ! Pass back values to process memory
 #define Passback_veg_pool
 #define Passback_veg_litterfall
@@ -293,6 +307,7 @@ CONTAINS
 #undef Passback_veg_pool
 #undef Passback_veg_litterfall
 #undef Passback_veg_establishment
+#endif
 
   END SUBROUTINE update_veg_dynamics
 
@@ -377,7 +392,11 @@ CONTAINS
     USE mo_jsb_math_constants,    ONLY: one_day, one_year, dtime, eps8
     USE mo_veg_constants,         ONLY: min_greff, k1_mort_greff, k2_mort_greff, k3_mort_greff, fpc_max, &
                                         itree, igrass, background_mort_rate_tree, background_mort_rate_grass
+#ifdef __QUINCY_NO_JSB__
     dsl4slm_Use_memory_a_veg
+#else
+    dsl4jsb_Use_pools(VEG_) t_veg_tissues_pool
+#endif
 
     IMPLICIT NONE
     ! ---------------------------
@@ -389,8 +408,13 @@ CONTAINS
                                                       net_growth_tvegdyn_mavg, & !< long-term net growth of the plant (µmol / m2 / s) 
                                                       lai_tvegdyn_mavg,        & !< long-term LAI of the plant
                                                       fpc                        !< foliage projective cover
+#ifdef __QUINCY_NO_JSB__
     TYPE(t_veg_pool_a),              INTENT(in)    :: veg_pool                   !< vegetation pool
     TYPE(t_veg_pool_a),              INTENT(inout) :: veg_litterfall             !< vegetation litterfall
+#else
+    TYPE(t_veg_tissues_pool),        INTENT(in)    :: veg_pool                   !< vegetation pool
+    TYPE(t_veg_tissues_pool),        INTENT(inout) :: veg_litterfall             !< vegetation litterfall
+#endif
     REAL(wp), DIMENSION(nc),         INTENT(out)   :: mortality_rate             !< current mortality rate (1/timestep)
     ! ---------------------------
     ! 0.2 Local
@@ -505,14 +529,23 @@ CONTAINS
                               mortality_rate)
 
     USE mo_veg_constants,         ONLY: wood_extraction_rate
+#ifdef __QUINCY_NO_JSB__
     dsl4slm_Use_memory_a_veg
+#else
+    dsl4jsb_Use_pools(VEG_) t_veg_tissues_pool
+#endif
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
     INTEGER,                          INTENT(in)    :: nc                       !< dimensions
+#ifdef __QUINCY_NO_JSB__
     TYPE(t_veg_pool_a),               INTENT(in)    :: veg_pool                 !< vegetation pool
     TYPE(t_veg_pool_a),               INTENT(inout) :: veg_litterfall           !< vegetation litterfall
+#else
+    TYPE(t_veg_tissues_pool),         INTENT(in)    :: veg_pool                 !< vegetation pool
+    TYPE(t_veg_tissues_pool),         INTENT(inout) :: veg_litterfall           !< vegetation litterfall
+#endif
     REAL(wp), DIMENSION(nc),          INTENT(inout) :: mortality_rate           !< background_mort_rate_tree/grass converted to 1/timestep
     ! ---------------------------
     ! 0.2 Local
@@ -562,7 +595,11 @@ CONTAINS
     USE mo_rad_constants,         ONLY: rfr_ratio_toc 
     USE mo_veg_constants,         ONLY: fpc_max, lambda_est_temp, k_est_temp, lambda_est_moist, k_est_moist
     USE mo_jsb_phys_constants,    ONLY: Tzero
+#ifdef __QUINCY_NO_JSB__
     dsl4slm_Use_memory_a_veg
+#else
+    dsl4jsb_Use_pools(VEG_) t_veg_elements_pool
+#endif
 
     IMPLICIT NONE
     ! ---------------------------
@@ -574,8 +611,13 @@ CONTAINS
     REAL(wp), DIMENSION(nc),          INTENT(in)    :: t_air_week_mavg              !< weekly air temperature [K] 
     REAL(wp), DIMENSION(nc),          INTENT(in)    :: fpc                          !<  ...
     REAL(wp), DIMENSION(nc),          INTENT(in)    :: rfr_ratio_boc_tvegdyn_mavg   !< red-farred ratio at the bottom of the canopy 
+#ifdef __QUINCY_NO_JSB__
     TYPE(t_veg_element_a),            INTENT(in)    :: veg_pool_seed_bed            !< seed_bed in vegetation pool
     TYPE(t_veg_element_a),            INTENT(inout) :: veg_establishment            !< vegetation establishment
+#else
+    TYPE(t_veg_elements_pool),        INTENT(in)    :: veg_pool_seed_bed            !< seed_bed in vegetation pool
+    TYPE(t_veg_elements_pool),        INTENT(inout) :: veg_establishment            !< vegetation establishment
+#endif
     ! ---------------------------
     ! 0.2 Local
     REAL(wp), DIMENSION(nc)                         :: establishment_rate , &

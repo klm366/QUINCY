@@ -28,6 +28,10 @@
 !!
 MODULE mo_veg_update_pools
 
+#ifdef __QUINCY_NO_JSB__
+#include "dsl_jsbach.inc"
+#endif
+
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_exception,           ONLY: message
 
@@ -59,6 +63,7 @@ CONTAINS
     USE mo_jsb_process_class,               ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb_grid_class,                  ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                        ONLY: Get_vgrid
+
     USE mo_jsb_phys_constants,              ONLY: lambda_C14, rhoh2o, grav
     USE mo_jsb_math_constants,              ONLY: dtime, one_day, one_year, eps4, eps8
     USE mo_isotope_util,                    ONLY: calc_mixing_ratio_N15N14, calc_fractionation, calc_mixing_ratio_C14C
@@ -69,7 +74,7 @@ CONTAINS
     USE mo_assimi_constants,                ONLY: CiCa_default_C3, CiCa_default_C4, ic3phot, ic4phot
     USE mo_atmland_constants,               ONLY: def_co2_mixing_ratio, def_co2_mixing_ratio_C13, def_co2_mixing_ratio_C14, &
                                                   def_co2_deltaC13, def_co2_deltaC14
-    USE mo_assimi_update_canopy_fluxes,     ONLY: discrimination_ps
+!    USE mo_assimi_update_canopy_fluxes,     ONLY: discrimination_ps
     USE mo_pheno_constants,                 ONLY: ievergreen
 
     ! Use of process configurations (t_PROC_config)
@@ -79,15 +84,20 @@ CONTAINS
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
+    dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
+    dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
+    dsl4jsb_Use_memory(SSE_)       !  USE mo_sse_memory_class,     ONLY: t_sse_memory
+    ! Use of pools
+#ifdef __QUINCY_NO_JSB__
     dsl4slm_Use_memory_a_veg
     USE mo_veg_memory_class,    ONLY: veg_pool, veg_growth, veg_litterfall, &
                                       veg_exudation, veg_establishment, veg_reserve_use, veg_total_biomass
-    dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
     dsl4slm_Use_memory_a_sb
     USE mo_sb_memory_class,     ONLY: sb_pool, sb_mycorrhiza_export
-    dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
-    dsl4jsb_Use_memory(SSE_)       !  USE mo_sse_memory_class,     ONLY: t_sse_memory
-
+#else
+    dsl4jsb_Use_pools(VEG_) t_veg_tissues_pool, t_veg_elements_pool
+    dsl4jsb_Use_pools(SB_)  t_sb_components_pool, t_sb_elements_pool
+#endif
 
     IMPLICIT NONE
     ! ---------------------------
@@ -109,7 +119,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_pools'
     ! ---------------------------
     ! 0.3 Declare Memory
-    ! Declare process configuration and memory Pointers
+    ! Declare process configuration, process memory and pools
     dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(ASSIMI_)                       ! TYPE(t_assimi_memory),      POINTER :: assimi__mem
@@ -118,6 +128,18 @@ CONTAINS
     dsl4jsb_Def_memory(SB_)                           ! TYPE(t_sb_memory),          POINTER :: sb__mem
     dsl4jsb_Def_memory(RAD_)                          ! TYPE(t_rad_memory),         POINTER :: rad__mem
     dsl4jsb_Def_memory(SSE_)                         ! TYPE(t_sse_memory),        POINTER :: sse__mem
+#ifdef __QUINCY_NO_JSB__
+#else
+    dsl4jsb_Def_pool(t_veg_tissues_pool)    :: veg_pool
+    dsl4jsb_Def_pool(t_veg_tissues_pool)    :: veg_growth
+    dsl4jsb_Def_pool(t_veg_tissues_pool)    :: veg_litterfall
+    dsl4jsb_Def_pool(t_veg_elements_pool)   :: veg_exudation
+    dsl4jsb_Def_pool(t_veg_elements_pool)   :: veg_establishment
+    dsl4jsb_Def_pool(t_veg_elements_pool)   :: veg_reserve_use
+    dsl4jsb_Def_pool(t_veg_elements_pool)   :: veg_total_biomass
+    dsl4jsb_Def_pool(t_sb_components_pool)  :: sb_pool
+    dsl4jsb_Def_pool(t_sb_elements_pool)    :: sb_mycorrhiza_export
+#endif
     ! Declare pointers to variables in memory
     ! ASSIMI_
     dsl4jsb_Real2D_onChunk      :: gross_assimilation
@@ -206,9 +228,13 @@ CONTAINS
     ! ---------------------------
     ! 0.5 Get Memory
     model         => Get_model(tile%owner_model_id)
-    lctlib        => model%lctlib(tile%lcts%lib_id)
+    lctlib        => model%lctlib(tile%lcts(1)%lib_id)
+#ifdef __QUINCY_NO_JSB__
     vgrid_canopy  => Get_vgrid('canopy_layer')
-    vgrid_soil_sb => Get_vgrid('soil_layer_sb')    
+#else
+    vgrid_canopy  => Get_vgrid('canopy_layer_q_')
+#endif
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
     ncanopy       =  vgrid_canopy%n_levels
     nsoil_sb      =  vgrid_soil_sb%n_levels           ! needed for sb_mycorrhiza_export
     ALLOCATE(canopy_layer_depth(ncanopy))
@@ -223,6 +249,19 @@ CONTAINS
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SSE_)
+#ifdef __QUINCY_NO_JSB__
+#else
+    ! Get pools
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_pool,            veg_pool)
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_growth,          veg_growth)
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_litterfall,      veg_litterfall)
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_exudation,       veg_exudation)
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_establishment,   veg_establishment)
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_reserve_use,     veg_reserve_use)
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_total_biomass,   veg_total_biomass)
+    dsl4jsb_Get_pool(VEG_, sb_main_pool%sb_pool,              sb_pool)
+    dsl4jsb_Get_pool(SB_,  sb_main_pool%sb_mycorrhiza_export, sb_mycorrhiza_export)
+#endif
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation)          ! in
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation_C13)      ! in
@@ -295,8 +334,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_pepc_cl)                     ! inout
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)                      ! inout
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_oth_cl)                      ! inout
-    ! Get process memory pool structures
-
+#ifdef __QUINCY_NO_JSB__
+    ! Get pools
 #define Get_veg_pool
 #define Get_veg_litterfall
 #define Get_veg_growth
@@ -316,7 +355,7 @@ CONTAINS
 #undef Get_veg_reserve_use
 #undef Get_sb_pool
 #undef Get_sb_mycorrhiza_export
-
+#endif
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -601,6 +640,7 @@ CONTAINS
                           veg_pool%fruit       + &     !< elements of fruit
                           veg_pool%seed_bed            !< elements of seed_bed
 
+#ifdef __QUINCY_NO_JSB__
 ! Pass back values to process memory
 #define Passback_veg_pool
 #define Passback_veg_litterfall
@@ -621,6 +661,7 @@ CONTAINS
 #undef Passback_veg_reserve_use
 #undef Passback_sb_pool
 #undef Passback_sb_mycorrhiza_export
+#endif
 
   END SUBROUTINE update_veg_pools
 

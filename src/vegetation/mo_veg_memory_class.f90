@@ -221,8 +221,9 @@ MODULE mo_veg_memory_class
     !! fluxes
     TYPE(t_veg_tissues_pool),   POINTER :: veg_growth    
     TYPE(t_veg_tissues_pool),   POINTER :: veg_litterfall
-    TYPE(t_veg_tissues_pool),   POINTER :: veg_falloc    
-    TYPE(t_veg_tissues_pool),   POINTER :: veg_total_flux
+    TYPE(t_veg_tissues_pool),   POINTER :: veg_total_flux   ! @TODO currently not used (Dec 2020)
+    !! allocation factors: fractional allocation from growth%labile to growth%tissue_types
+    TYPE(t_veg_tissues_pool),   POINTER :: veg_falloc
     !> 3.0 element_pools
     !! pools
     TYPE(t_veg_elements_pool),  POINTER :: veg_total_biomass
@@ -981,7 +982,11 @@ CONTAINS
     table         =  tables(1)
     hgrid         => Get_grid(model%grid_id)
     vgrid_surface => Get_vgrid('surface')
+#ifdef __QUINCY_NO_JSB__
+    vgrid_canopy  => Get_vgrid('canopy_layer')
+#else
     vgrid_canopy  => Get_vgrid('canopy_layer_q_')
+#endif
 
     !> add memory only for LAND & PFT tiles
     !!
@@ -1031,16 +1036,16 @@ CONTAINS
         & lct_ids=lct_ids, pool_suffix='litflux') ! l_elements=.TRUE. by default
       CALL mem%veg_main_pool%Add_pool(veg_tissues_pool)
       mem%veg_main_pool%veg_litterfall => veg_tissues_pool
-      ! veg_falloc
-      veg_tissues_pool => Create_veg_tissues_pool(name='veg_allocation_fraction_flux', shortname='veg_falloc', unit='mol m-2', &
-        & lct_ids=lct_ids, pool_suffix='falflux') ! l_elements=.TRUE. by default
-      CALL mem%veg_main_pool%Add_pool(veg_tissues_pool)
-      mem%veg_main_pool%veg_falloc => veg_tissues_pool
       ! veg_total_flux
       veg_tissues_pool => Create_veg_tissues_pool(name='vegetation_total_flux', shortname='veg_total_flux', unit='mol m-2', &
         & lct_ids=lct_ids, pool_suffix='totflux') ! l_elements=.TRUE. by default
       CALL mem%veg_main_pool%Add_pool(veg_tissues_pool)
       mem%veg_main_pool%veg_total_flux => veg_tissues_pool
+      ! veg_falloc
+      veg_tissues_pool => Create_veg_tissues_pool(name='veg_allocation_fraction_flux', shortname='veg_falloc', unit='mol m-2', &
+        & lct_ids=lct_ids, pool_suffix='falflux') ! l_elements=.TRUE. by default
+      CALL mem%veg_main_pool%Add_pool(veg_tissues_pool)
+      mem%veg_main_pool%veg_falloc => veg_tissues_pool
       NULLIFY(veg_tissues_pool)
       
       ! init and add element pools to the veg_main_pool
@@ -1103,7 +1108,7 @@ CONTAINS
         & lrestart=.TRUE.,                                                                             &
         & output_level=FULL,                                                                           &
         & initval_r=0.0_wp )
-      CALL mem%Add_var(mem%veg_main_pool%veg_falloc, &
+      CALL mem%Add_var(mem%veg_main_pool%veg_total_flux, &
         & hgrid, vgrid_surface, vgrid_canopy,                                                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
@@ -1111,7 +1116,7 @@ CONTAINS
         & lrestart=.TRUE.,                                                                             &
         & output_level=FULL,                                                                           &
         & initval_r=0.0_wp )
-      CALL mem%Add_var(mem%veg_main_pool%veg_total_flux, &
+      CALL mem%Add_var(mem%veg_main_pool%veg_falloc, &
         & hgrid, vgrid_surface, vgrid_canopy,                                                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &

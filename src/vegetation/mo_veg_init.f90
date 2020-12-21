@@ -28,6 +28,10 @@
 MODULE mo_veg_init
 #ifndef __NO_JSBACH__
 
+#ifdef __QUINCY_NO_JSB__
+#include "dsl_jsbach.inc"
+#endif
+
   USE mo_kind,                    ONLY: wp
   USE mo_exception,               ONLY: message, finish, message_text
   USE mo_jsb_control,             ONLY: debug_on
@@ -53,7 +57,6 @@ CONTAINS
     USE mo_jsb_model_class,                 ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element
     USE mo_jsb_process_class,               ONLY: VEG_, PHENO_
-    USE mo_jsb_pool_class,                  ONLY: ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15 
 
     USE mo_jsb_math_constants,              ONLY: eps8
     USE mo_assimi_constants,                ONLY: CiCa_default_C3, CiCa_default_C4, ic3phot, ic4phot
@@ -70,10 +73,13 @@ CONTAINS
     ! Use of process memories
     dsl4jsb_Use_memory(PHENO_)
     dsl4jsb_Use_memory(VEG_)                ! USE mo_veg_memory_class,      ONLY: t_veg_memory
-    dsl4slm_Use_memory_a_veg                ! USE mo_veg_memory_class,      ONLY: t_veg_element_a, t_veg_pool_a
-    USE mo_veg_memory_class,                ONLY: veg_pool, veg_exudation
     ! Use of pools
-    dsl4jsb_Use_pools(VEG_) t_veg_main_pool, t_veg_tissues_pool, t_veg_elements_pool
+#ifdef __QUINCY_NO_JSB__
+    dsl4slm_Use_memory_a_veg                ! USE mo_veg_memory_class,      ONLY: t_veg_element_a, t_veg_pool_a
+    USE mo_veg_memory_class,                ONLY: veg_pool
+#else
+    dsl4jsb_Use_pools(VEG_) t_veg_tissues_pool
+#endif
 
     IMPLICIT NONE
     ! ---------------------------
@@ -90,11 +96,14 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':veg_init'
     ! ---------------------------
     ! 0.3 Declare Memory
-    ! Declare process configuration and memory Pointers
+    ! Declare process configuration, process memory and pools
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_memory(VEG_)
+#ifdef __QUINCY_NO_JSB__
+#else
     dsl4jsb_Def_pool(t_veg_tissues_pool)  :: veg_pool
+#endif
     ! Declare pointers to variables in memory
     ! PHENO_
     dsl4jsb_Real2D_onDomain    :: lai
@@ -197,14 +206,19 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     IF (tile%lcts(1)%lib_id /= 0) THEN            ! work with lctlib only if the present tile is a pft
       lctlib => model%lctlib(tile%lcts(1)%lib_id)
+    ELSE
+      CALL finish(TRIM(routine), ' Cannot be executed on a non-PFT tile, as the lctlib is needed.')
     ENDIF
     ! Get process config
     dsl4jsb_Get_config(VEG_)
     ! Get process memories
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(VEG_)
+#ifdef __QUINCY_NO_JSB__
+#else
     ! Get pools
-    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_pool,        veg_pool)
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_pool,          veg_pool)
+#endif
     ! Get process variables (Set pointers to variables in memory)
     ! PHENO_
     dsl4jsb_Get_var2D_onDomain(PHENO_, lai)                           ! in
@@ -293,10 +307,12 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_oth_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, lai_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)
-    ! Get process memory pool structures
+#ifdef __QUINCY_NO_JSB__
+    ! Get pools
 #define Get_veg_pool
 #include "slm_pools_a_incl.f90"
 #undef Get_veg_pool
+#endif
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -542,10 +558,12 @@ CONTAINS
     t_air_month_mavg(:)                 = 283.15_wp
     t_jmax_opt_mavg(:)                  = 17.0_wp
 
+#ifdef __QUINCY_NO_JSB__
 ! Pass back values to process memory
 #define Passback_veg_pool
 #include "slm_pools_a_incl.f90"
 #undef Passback_veg_pool
+#endif
 
   END SUBROUTINE veg_init
 

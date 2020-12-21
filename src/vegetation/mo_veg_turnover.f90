@@ -27,6 +27,10 @@
 !!
 MODULE mo_veg_turnover
 
+#ifdef __QUINCY_NO_JSB__
+#include "dsl_jsbach.inc"
+#endif
+
   USE mo_jsb_control, ONLY: debug_on
   USE mo_exception,   ONLY: message
 
@@ -59,9 +63,14 @@ CONTAINS
 
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
+    dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
+    ! Use of pools
+#ifdef __QUINCY_NO_JSB__
     dsl4slm_Use_memory_a_veg        !  USE mo_veg_memory_class,      ONLY: t_veg_element_a, t_veg_pool_a
     USE mo_veg_memory_class,      ONLY: veg_pool, veg_growth, veg_litterfall
-    dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
+#else
+    dsl4jsb_Use_pools(VEG_) t_veg_tissues_pool
+#endif
 
     IMPLICIT NONE
     ! ---------------------------
@@ -76,9 +85,15 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_turnover'
     ! ---------------------------
     ! 0.3 Declare Memory
-    ! Declare process configuration and memory Pointers
+    ! Declare process configuration, process memory and pools
     dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(PHENO_)                        ! TYPE(t_pheno_memory),    POINTER :: pheno__mem
+#ifdef __QUINCY_NO_JSB__
+#else
+    dsl4jsb_Def_pool(t_veg_tissues_pool)  :: veg_pool
+    dsl4jsb_Def_pool(t_veg_tissues_pool)  :: veg_growth
+    dsl4jsb_Def_pool(t_veg_tissues_pool)  :: veg_litterfall
+#endif
     ! Declare pointers to variables in memory
     ! PHENO_
     dsl4jsb_Real2D_onChunk      :: growing_season
@@ -110,15 +125,21 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
+    model  => Get_model(tile%owner_model_id)
+    lctlib => model%lctlib(tile%lcts(1)%lib_id)
     ! Get process config
 !    dsl4jsb_Get_config(PHENO_)
     ! Get process memories
     dsl4jsb_Get_memory(VEG_)                        ! veg__mem => veg_memory
     dsl4jsb_Get_memory(PHENO_)
+#ifdef __QUINCY_NO_JSB__
+#else
+    ! Get pools
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_pool,          veg_pool)
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_growth,        veg_growth)
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_litterfall,    veg_litterfall)
+#endif
     ! Get process variables (Set pointers to variables in memory)
-    model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
-    ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)             ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(VEG_, lai)
@@ -137,7 +158,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n15)
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_p)
     dsl4jsb_Get_var2D_onChunk(VEG_, net_growth)
-    ! Get process memory pool structures
+#ifdef __QUINCY_NO_JSB__
+    ! Get pools
 #define Get_veg_pool
 #define Get_veg_litterfall
 #define Get_veg_growth
@@ -145,6 +167,7 @@ CONTAINS
 #undef Get_veg_pool
 #undef Get_veg_litterfall
 #undef Get_veg_growth
+#endif
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -195,6 +218,7 @@ CONTAINS
                         veg_litterfall                        , &  ! inout
                         net_growth                             )   ! out
 
+#ifdef __QUINCY_NO_JSB__
 ! Pass back values to process memory
 #define Passback_veg_pool
 #define Passback_veg_litterfall
@@ -203,6 +227,7 @@ CONTAINS
 #undef Passback_veg_pool
 #undef Passback_veg_litterfall
 #undef Passback_veg_growth
+#endif
 
   END SUBROUTINE update_veg_turnover
 
@@ -236,7 +261,11 @@ CONTAINS
     USE mo_jsb_impl_constants,    ONLY: test_false_true
     USE mo_jsb_math_constants,    ONLY: dtime, one_day, eps8
     USE mo_veg_constants,         ONLY: tau_nutrient_recycling, tau_labile
+#ifdef __QUINCY_NO_JSB__
     dsl4slm_Use_memory_a_veg
+#else
+    dsl4jsb_Use_pools(VEG_) t_veg_tissues_pool
+#endif
 
     IMPLICIT NONE
     ! ---------------------------
@@ -247,7 +276,11 @@ CONTAINS
                                                        target_cn_leaf                    , &  !< ..
                                                        target_np_leaf                         !< ..
     REAL(wp), DIMENSION(nc),          INTENT(in)    :: growing_season                         !< whether the plant is in the growing season
-    TYPE(t_veg_pool_a),               INTENT(in)    :: veg_pool
+#ifdef __QUINCY_NO_JSB__
+    TYPE(t_veg_pool_a),               INTENT(in)    :: veg_pool                               !< vegetation pool
+#else
+    TYPE(t_veg_tissues_pool),         INTENT(in)    :: veg_pool                               !< vegetation pool
+#endif
     REAL(wp), DIMENSION(nc),          INTENT(inout) :: recycling_leaf_n                  , & 
                                                        recycling_fine_root_n             , & 
                                                        recycling_leaf_p                  , & 
@@ -378,7 +411,11 @@ CONTAINS
     USE mo_jsb_math_constants,    ONLY: dtime, one_day, one_year, eps4
     USE mo_veg_constants,         ONLY: max_leaf_shedding_rate, igrass, itree
     USE mo_pheno_constants,       ONLY: ievergreen, iraingreen, isummergreen, iperennial
+#ifdef __QUINCY_NO_JSB__
     dsl4slm_Use_memory_a_veg
+#else
+    dsl4jsb_Use_pools(VEG_) t_veg_tissues_pool
+#endif
 
     IMPLICIT NONE
     ! ---------------------------
@@ -403,9 +440,15 @@ CONTAINS
                                                       recycling_heart_wood_n   , & !< woody N returning to labile pool 
                                                       recycling_heart_wood_n15 , & !< woody N15 returning to labile pool
                                                       recycling_heart_wood_p       !< woody P returning to labile pool
+#ifdef __QUINCY_NO_JSB__
     TYPE(t_veg_pool_a),              INTENT(in)    :: veg_pool                     !< current state of vegetation pools 
     TYPE(t_veg_pool_a),              INTENT(inout) :: veg_growth                   !< current growth rate of vegetation pools
     TYPE(t_veg_pool_a),              INTENT(inout) :: veg_litterfall               !< current litter fall from vegetation pools
+#else
+    TYPE(t_veg_tissues_pool),        INTENT(in)    :: veg_pool                     !< current state of vegetation pools 
+    TYPE(t_veg_tissues_pool),        INTENT(inout) :: veg_growth                   !< current growth rate of vegetation pools
+    TYPE(t_veg_tissues_pool),        INTENT(inout) :: veg_litterfall               !< current litter fall from vegetation pools
+#endif
     REAL(wp), DIMENSION(nc),         INTENT(out)   :: net_growth                   !< current net growth (µmol C / m2 / s) 
     ! ---------------------------
     ! 0.2 Local

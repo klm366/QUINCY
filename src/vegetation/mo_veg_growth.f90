@@ -27,6 +27,10 @@
 !!
 MODULE mo_veg_growth
 
+#ifdef __QUINCY_NO_JSB__
+#include "dsl_jsbach.inc"
+#endif
+
   USE mo_kind,                  ONLY: wp
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message
@@ -73,14 +77,20 @@ CONTAINS
     dsl4jsb_Use_memory(A2L_)        !  USE mo_a2l_memory_class,      ONLY: t_a2l_memory
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
-    dsl4slm_Use_memory_a_veg
-    USE mo_veg_memory_class,        ONLY: veg_pool, veg_growth, veg_falloc, veg_exudation, veg_reserve_use
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
     dsl4jsb_Use_memory(SSE_)       !  USE mo_sse_memory_class,     ONLY: t_sse_memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
+    ! Use of pools
+#ifdef __QUINCY_NO_JSB__
+    dsl4slm_Use_memory_a_veg
+    USE mo_veg_memory_class,        ONLY: veg_pool, veg_growth, veg_falloc, veg_exudation, veg_reserve_use
     dsl4slm_Use_memory_a_sb
     USE mo_sb_memory_class,         ONLY: sb_pool, sb_mycorrhiza_export
+#else
+    dsl4jsb_Use_pools(VEG_) t_veg_tissues_pool, t_veg_elements_pool
+    dsl4jsb_Use_pools(SB_) t_sb_components_pool, t_sb_elements_pool
+#endif
 
     IMPLICIT NONE
     ! ---------------------------
@@ -105,7 +115,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_growth'
     ! ---------------------------
     ! 0.3 Declare Memory
-    ! Declare process configuration and memory Pointers
+    ! Declare process configuration, process memory and pools
     dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(SB_)
@@ -116,6 +126,16 @@ CONTAINS
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(SSE_)                       !     TYPE(t_sse_memory),     POINTER :: sse__mem
     dsl4jsb_Def_memory(SB_)                         !     TYPE(t_sb_memory),       POINTER :: sb__mem
+#ifdef __QUINCY_NO_JSB__
+#else
+    dsl4jsb_Def_pool(t_veg_tissues_pool)    :: veg_pool
+    dsl4jsb_Def_pool(t_veg_tissues_pool)    :: veg_growth
+    dsl4jsb_Def_pool(t_veg_tissues_pool)    :: veg_falloc
+    dsl4jsb_Def_pool(t_veg_elements_pool)   :: veg_exudation
+    dsl4jsb_Def_pool(t_veg_elements_pool)   :: veg_reserve_use
+    dsl4jsb_Def_pool(t_sb_components_pool)  :: sb_pool
+    dsl4jsb_Def_pool(t_sb_elements_pool)    :: sb_mycorrhiza_export
+#endif
     ! Declare pointers to variables in memory
     ! PHENO_
     dsl4jsb_Real2D_onChunk      :: growing_season
@@ -279,8 +299,12 @@ CONTAINS
     ! ---------------------------
     ! 0.5 Get Memory
     model         => Get_model(tile%owner_model_id)
-    lctlib        => model%lctlib(tile%lcts%lib_id)
+    lctlib        => model%lctlib(tile%lcts(1)%lib_id)
+#ifdef __QUINCY_NO_JSB__
     vgrid_canopy  => Get_vgrid('canopy_layer')
+#else
+    vgrid_canopy  => Get_vgrid('canopy_layer_q_')
+#endif
     vgrid_soil_sb => Get_vgrid('soil_layer_sb')    
     ncanopy       =  vgrid_canopy%n_levels
     nsoil_sb      =  vgrid_soil_sb%n_levels           ! also needed for sb_pool & sb_mycorrhiza_export
@@ -298,6 +322,17 @@ CONTAINS
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(SB_)
+#ifdef __QUINCY_NO_JSB__
+#else
+    ! Get pools
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_pool,            veg_pool)
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_growth,          veg_growth)
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_falloc,          veg_falloc)
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_exudation,       veg_exudation)
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_reserve_use,     veg_reserve_use)
+    dsl4jsb_Get_pool(SB_,  sb_main_pool%sb_pool               sb_pool)
+    dsl4jsb_Get_pool(SB_,  sb_main_pool%sb_mycorrhiza_export  sb_mycorrhiza_export)
+#endif
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)                   ! in
     ! ---------------------------
@@ -446,7 +481,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_oth_cl)                          ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)                    ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tcnl_mavg_cl)          ! in
-    ! Get process memory pool structures
+#ifdef __QUINCY_NO_JSB__
+    ! Get pools
 #define Get_veg_pool
 #define Get_veg_growth
 #define Get_veg_falloc
@@ -462,7 +498,7 @@ CONTAINS
 #undef Get_veg_reserve_use
 #undef Get_sb_pool
 #undef Get_sb_mycorrhiza_export
-
+#endif
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -791,7 +827,7 @@ CONTAINS
 
     !> 4.2 calculate net flux between reserve and labile pool 
     !! 
-    !! Info: veg_reserve_use is of TYPE(t_slm_struct_veg_element / t_veg_element_a)
+    !! Info: veg_reserve_use is a pool structure
     CALL calc_reserve_useage(nc                               , &   ! in
                              growing_season(:)                , &
                              kstar_labile(:)                  , &
@@ -875,6 +911,7 @@ CONTAINS
                            maint_respiration(:)                   , & ! out
                            growth_respiration(:)                  )   ! out
 
+#ifdef __QUINCY_NO_JSB__
 ! Pass back values to process memory
 #define Passback_veg_pool
 #define Passback_veg_growth
@@ -891,6 +928,7 @@ CONTAINS
 #undef Passback_veg_reserve_use
 #undef Passback_sb_pool
 #undef Passback_sb_mycorrhiza_export
+#endif
 
   END SUBROUTINE update_veg_growth 
 
@@ -1044,7 +1082,7 @@ CONTAINS
                                               labile_carbon, & 
                                               labile_nitrogen, & 
                                               labile_phosphorus, & 
-                                              mycorrhiza_carbon, & 
+                                              sb_pool_mycorrhiza_carbon, & 
                                               nh4_solute, & 
                                               no3_solute, & 
                                               soil_depth_sl, &
@@ -1081,7 +1119,7 @@ CONTAINS
                                               n_transform_respiration, &
                                               n_fixation_respiration, &
                                               n_processing_respiration, &
-                                              exudation_carbon)
+                                              veg_exudation_carbon)
                        
     USE mo_kind,                    ONLY: wp
     USE mo_jsb_phys_constants,      ONLY: Tzero, molar_mass_C, molar_mass_N
@@ -1091,7 +1129,11 @@ CONTAINS
                                           fresp_growth, cost_n_fixation_max, cost_n_fixation_min, & 
                                           k1_temp_bnf, k2_temp_bnf,  k3_temp_bnf,  k4_temp_bnf, tau_labile, &
                                           f_myc_exudation_max, f_mycorrhization_min, f_mycorrhization_max
+#ifdef __QUINCY_NO_JSB__
     dsl4slm_Use_memory_a_sb
+#else
+    dsl4jsb_Use_pools(SB_) t_sb_elements_pool
+#endif
 
     IMPLICIT NONE
     ! ---------------------------
@@ -1112,7 +1154,7 @@ CONTAINS
     REAL(wp), DIMENSION(nc),              INTENT(in)    :: labile_carbon                !< labile pool carbon (mol C / m2)
     REAL(wp), DIMENSION(nc),              INTENT(in)    :: labile_nitrogen              !< labile pool nitrogen (mol N / m2)
     REAL(wp), DIMENSION(nc),              INTENT(in)    :: labile_phosphorus            !< labile pool phosphorus (mol P / m2)
-    REAL(wp), DIMENSION(nc, nsoil_sb),    INTENT(in)    :: mycorrhiza_carbon  , &       !< mycorrhiza biomass (mol C /m3)
+    REAL(wp), DIMENSION(nc, nsoil_sb),    INTENT(in)    :: sb_pool_mycorrhiza_carbon, & !< mycorrhiza biomass (mol C /m3)
                                                            nh4_solute         , &       !< soil solution ammonium (mol N /m3)
                                                            no3_solute         , &       !< soil solution nitrate (mol N /m3)
                                                            soil_depth_sl                !< depth of soil layers (m)
@@ -1135,7 +1177,11 @@ CONTAINS
                                                            myc_export_p_tlabile_mavg_sl  , & !< time averaged P export from myc2plant (mu mol P / m3)
                                                            myc_export_c_tmyc_mavg_sl  , & !< time averaged C export from myc2plant (mu mol N / m3)
                                                            myc_export_n_tmyc_mavg_sl  !< time averaged N export from myc2plant (mu mol P / m3)
+#ifdef __QUINCY_NO_JSB__
     TYPE(t_sb_element_a),                 INTENT(inout) :: sb_mycorrhiza_export         !< total plant uptake from mycorrhiza (mol / m2 / timestep)  
+#else
+    TYPE(t_sb_elements_pool),             INTENT(inout) :: sb_mycorrhiza_export         !< total plant uptake from mycorrhiza (mol / m2 / timestep)  
+#endif
     REAL(wp), DIMENSION(nc),              INTENT(out)   :: uptake_nh4                   !< total plant NH4 uptake (mu mol N / m2 / s)  
     REAL(wp), DIMENSION(nc),              INTENT(out)   :: uptake_nh4_n15               !< total plant NH4-N15 uptake (mu mol N / m2 / s)  
     REAL(wp), DIMENSION(nc),              INTENT(out)   :: uptake_no3                   !< total plant NO3 uptake (mu mol N / m2 / s)
@@ -1149,7 +1195,7 @@ CONTAINS
     REAL(wp), DIMENSION(nc),              INTENT(out)   :: n_transform_respiration      !< respiration associated with N transformation (mu mol C / m2 / s)     
     REAL(wp), DIMENSION(nc),              INTENT(out)   :: n_fixation_respiration       !< respiration associated with N fixation (mu mol C / m2 / s)     
     REAL(wp), DIMENSION(nc),              INTENT(out)   :: n_processing_respiration     !< respiration associated with N transformation and fixation (mu mol C / m2 / s)  
-    REAL(wp), DIMENSION(nc),              INTENT(out)   :: exudation_carbon             !< C investment into mycorrhizal fungi (mol C / m2 / timestep) 
+    REAL(wp), DIMENSION(nc),              INTENT(out)   :: veg_exudation_carbon         !< C investment into mycorrhizal fungi (mol C / m2 / timestep) 
     ! --------------------------
     ! 0.2 Local
     REAL(wp), DIMENSION(nc)         :: dcost, &          ! cost_n_uptake_root - cost_n_fixation (mol C / mol N)
@@ -1299,7 +1345,7 @@ CONTAINS
     !! 
     IF(flag_mycorrhiza) THEN
 
-       ! relative support of N/P acquisition by mycorrhizae
+       !> relative support of N/P acquisition by mycorrhizae
        ! scaling factor for plant C exudation
        ! high support = high exudation // low/no support = low exudation
        !!only sensitive to N at the moment (last line)
@@ -1311,38 +1357,41 @@ CONTAINS
        psup(:) = hlp1(:) / (hlp1(:) + 0.000001)
        support(:) = nsup(:) !MIN(nsup(:), psup(:))
 
-       ! assuming that plants will give max XX% of freshly assimilated carbon to mycorrhiza
+       !> assuming that plants will give max XX% of freshly assimilated carbon to mycorrhiza
        ! scaled with demand and support
        !!only sensitive to N at the moment (last line)
        f_myc_opt(:) = f_mycorrhization_min + (f_mycorrhization_max - f_mycorrhization_min) * support * &
                                               demand_uptake_n_tuptake_mavg(:)
                                              !MAX(demand_uptake_n_tuptake_mavg(:),demand_uptake_p_tuptake_mavg(:)) 
 
-       ! exudation rate (mol / m2 / timestep)
-       hlp1(:) = SUM(mycorrhiza_carbon(:,:) * soil_depth_sl(:,:),DIM=2)
+       !> exudation rate (mol / m2 / timestep)
+       hlp1(:) = SUM(sb_pool_mycorrhiza_carbon(:,:) * soil_depth_sl(:,:),DIM=2)
        hlp2(:) = MIN(f_myc_exudation_max * labile_carbon(:) * tau_labile / one_day, &
                      MAX(f_myc_opt(:) * fine_root_carbon(:) - hlp1(:),0.0_wp))
-       exudation_carbon(:) = MAX(f_mycorrhization_min * fine_root_carbon(:) - hlp1(:), hlp2(:))
+       veg_exudation_carbon(:) = MAX(f_mycorrhization_min * fine_root_carbon(:) - hlp1(:), hlp2(:))
                       
 
-       ! scale down uptake from mycorrhiza according to demand
-       DO isoil = 1,nsoil_sb
-
+       !> scale down uptake from mycorrhiza according to demand
        ! scale mycorrhizal export with demand
        ! to avoid DOWN-regulation with demand (between 0 and 1), when demand is high, demand for scaling is intensified by 50%
        ! limited to 100% potential export
-          sb_mycorrhiza_export%carbon(:,isoil)     = sb_mycorrhiza_export%carbon(:,isoil)     * MIN(demand_uptake_n_tuptake_mavg(:)*1.5_wp, 1.0_wp) 
-          sb_mycorrhiza_export%nitrogen(:,isoil)   = sb_mycorrhiza_export%nitrogen(:,isoil)   * MIN(demand_uptake_n_tuptake_mavg(:)*1.5_wp, 1.0_wp)
-          sb_mycorrhiza_export%phosphorus(:,isoil) = sb_mycorrhiza_export%phosphorus(:,isoil) * MIN(demand_uptake_p_tuptake_mavg(:)*1.5_wp, 1.0_wp)
-          sb_mycorrhiza_export%carbon13(:,isoil)   = sb_mycorrhiza_export%carbon13(:,isoil)   * MIN(demand_uptake_n_tuptake_mavg(:)*1.5_wp, 1.0_wp)
-          sb_mycorrhiza_export%carbon14(:,isoil)   = sb_mycorrhiza_export%carbon14(:,isoil)   * MIN(demand_uptake_n_tuptake_mavg(:)*1.5_wp, 1.0_wp)
-          sb_mycorrhiza_export%nitrogen15(:,isoil) = sb_mycorrhiza_export%nitrogen15(:,isoil) * MIN(demand_uptake_n_tuptake_mavg(:)*1.5_wp, 1.0_wp)
-          exudation_carbon(:)                      = exudation_carbon(:) !+ sb_mycorrhiza_export%carbon(:,isoil)
-       END DO
+       sb_mycorrhiza_export%carbon(:,:)     = sb_mycorrhiza_export%carbon(:,:)     * &
+                                              MIN( SPREAD(demand_uptake_n_tuptake_mavg(:), 2, nsoil_sb) * 1.5_wp, 1.0_wp)
+       sb_mycorrhiza_export%nitrogen(:,:)   = sb_mycorrhiza_export%nitrogen(:,:)   * &
+                                              MIN( SPREAD(demand_uptake_n_tuptake_mavg(:), 2, nsoil_sb) * 1.5_wp, 1.0_wp)
+       sb_mycorrhiza_export%phosphorus(:,:) = sb_mycorrhiza_export%phosphorus(:,:) * &
+                                              MIN( SPREAD(demand_uptake_p_tuptake_mavg(:), 2, nsoil_sb) * 1.5_wp, 1.0_wp)
+       sb_mycorrhiza_export%carbon13(:,:)   = sb_mycorrhiza_export%carbon13(:,:)   * &
+                                              MIN( SPREAD(demand_uptake_n_tuptake_mavg(:), 2, nsoil_sb) * 1.5_wp, 1.0_wp)
+       sb_mycorrhiza_export%carbon14(:,:)   = sb_mycorrhiza_export%carbon14(:,:)   * &
+                                              MIN( SPREAD(demand_uptake_n_tuptake_mavg(:), 2, nsoil_sb) * 1.5_wp, 1.0_wp)
+       sb_mycorrhiza_export%nitrogen15(:,:) = sb_mycorrhiza_export%nitrogen15(:,:) * &
+                                              MIN( SPREAD(demand_uptake_n_tuptake_mavg(:), 2, nsoil_sb) * 1.5_wp, 1.0_wp)
+       veg_exudation_carbon(:)              = veg_exudation_carbon(:) !+ SUM(sb_mycorrhiza_export_carbon(:,:), DIM=2)
     ENDIF ! flag_mycorrhiza
 
 
-    !> 4.0 Determine C use for N uptake, and constrain this to available carbon
+    !> 5.0 Determine C use for N uptake, and constrain this to available carbon
     !!
     IF(bnf_scheme == 'optimal' .OR. bnf_scheme == 'standard') THEN
       hlp1(:) = uptake_nh4(:) * transform_cost_nh4 + & 
@@ -1362,9 +1411,9 @@ CONTAINS
     ENDIF
   
 
-    !> 5.0 update diagnostics and soil related variables, as well as N15 fluxes
+    !> 6.0 update diagnostics and soil related variables, as well as N15 fluxes
     !!
-    !> 5.1 Calculate actual N and P uptake per unit fine root carbon (µmol {N/P} / mol C / s)
+    !> 6.1 Calculate actual N and P uptake per unit fine root carbon (µmol {N/P} / mol C / s)
     !!
     WHERE(fine_root_carbon(:) > eps8)
       unit_uptake_n_act(:) = (uptake_nh4(:) + uptake_no3(:)) / fine_root_carbon(:)
@@ -1374,7 +1423,7 @@ CONTAINS
       unit_uptake_p_act(:) = unit_uptake_p_pot(:) * demand_uptake_p_tuptake_mavg(:)
     END WHERE
 
-    !> 5.2 apply actual uptake rates to soil layers
+    !> 6.2 apply actual uptake rates to soil layers
     !!
     DO isoil = 1,nsoil_sb
       WHERE(uptake_nh4_pot(:) > eps8 .AND. uptake_nh4_pot(:) > uptake_nh4(:))
@@ -1390,7 +1439,7 @@ CONTAINS
       ENDWHERE
     END DO
 
-    !> 5.3 calculate actual total plant N15 uptake
+    !> 6.3 calculate actual total plant N15 uptake
     !!
     uptake_nh4_n15(:) = 0.0_wp
     uptake_no3_n15(:) = 0.0_wp 
@@ -2100,7 +2149,11 @@ CONTAINS
                                         lambda_phistore, k_phistore, &
                                         k_phi_interact, &
                                         min_lai, target_lai_max
+#ifdef __QUINCY_NO_JSB__
     dsl4slm_Use_memory_a_veg
+#else
+    dsl4jsb_Use_pools(VEG_) t_veg_elements_pool
+#endif
 
     IMPLICIT NONE
     ! ---------------------------
@@ -2116,10 +2169,17 @@ CONTAINS
                                                        target_reserve_pool_phosphorus, & ! desirable size (mol P/m2) of the reserve pool
                                                        target_lai                    , & !< target LAI 
                                                        lai                               !< current LAI 
+#ifdef __QUINCY_NO_JSB__
     TYPE(t_veg_element_a),            INTENT(in)    :: veg_pool_labile                   !< the plant's labile pool size
     TYPE(t_veg_element_a),            INTENT(in)    :: veg_pool_reserve                  !< the plant's reserve pool size
     TYPE(t_veg_element_a),            INTENT(inout) :: veg_reserve_use                   !< current resource use rate (mol/time step)
                                                                                          !!  (+ve: net flux to labile / -ve: net flux to reserve)
+#else
+    TYPE(t_veg_elements_pool),        INTENT(in)    :: veg_pool_labile                   !< the plant's labile pool size
+    TYPE(t_veg_elements_pool),        INTENT(in)    :: veg_pool_reserve                  !< the plant's reserve pool size
+    TYPE(t_veg_elements_pool),        INTENT(inout) :: veg_reserve_use                   !< current resource use rate (mol/time step)
+                                                                                         !!  (+ve: net flux to labile / -ve: net flux to reserve)
+#endif
     ! ---------------------------
     ! 0.2 Local
     REAL(wp), DIMENSION(nc)                         :: phi_phenology                 , & ! relative pull from reserve due to phenology
@@ -2407,7 +2467,11 @@ CONTAINS
     USE mo_jsb_math_constants,      ONLY: dtime, one_day, eps8
     USE mo_veg_constants,           ONLY: itree, igrass, &
                                           lambda_fruit_alloc, k1_fruit_alloc, k3_fruit_alloc, k4_fruit_alloc
+#ifdef __QUINCY_NO_JSB__
     dsl4slm_Use_memory_a_veg
+#else
+    dsl4jsb_Use_pools(VEG_) t_veg_tissues_pool
+#endif
 
     IMPLICIT NONE
     ! ---------------------------
@@ -2440,7 +2504,11 @@ CONTAINS
                                                        target_np_sap_wood      ,& !< target N:P ratio for tissue type 
                                                        target_np_fruit         ,& !< target N:P ratio for tissue type 
                                                        veg_reserve_use_carbon     !< current reserve usage (mol C / m2 / timestep)
+#ifdef __QUINCY_NO_JSB__
     TYPE(t_veg_pool_a),               INTENT(inout) :: veg_falloc                 !< allocation coefficients 
+#else
+    TYPE(t_veg_tissues_pool),         INTENT(inout) :: veg_falloc                 !< allocation coefficients 
+#endif
     REAL(wp), DIMENSION(nc),          INTENT(out)   :: growth_req_n            ,& !< N requirement for unit growth in C and N
                                                        growth_req_p               !< P requirement for unit growth in C and N
     ! ---------------------------
@@ -2729,7 +2797,11 @@ CONTAINS
     USE mo_kind,                  ONLY: wp
     USE mo_jsb_math_constants,    ONLY: one_day, dtime, eps8
     USE mo_veg_constants,         ONLY: knut_labile, tau_labile, fresp_growth
+#ifdef __QUINCY_NO_JSB__
     dsl4slm_Use_memory_a_veg
+#else
+    dsl4jsb_Use_pools(VEG_) t_veg_tissues_pool, t_veg_elements_pool
+#endif
 
     IMPLICIT NONE
     ! ---------------------------
@@ -2740,8 +2812,13 @@ CONTAINS
                                                        maint_respiration_leaf       , & !< foliar maintenance respiration
                                                        growth_req_p                 , & !< moles P required for a unit of N growth under current allocation fractions
                                                        growth_req_n                     !< moles N required for a unit of C growth under current allocation fractions
+#ifdef __QUINCY_NO_JSB__
     TYPE(t_veg_pool_a),               INTENT(in)    :: veg_falloc                       !< fractional allocation to pools
     TYPE(t_veg_element_a),            INTENT(in)    :: veg_pool_labile                  !< labile pool size of the plant 
+#else
+    TYPE(t_veg_tissues_pool),         INTENT(in)    :: veg_falloc                       !< fractional allocation to pools
+    TYPE(t_veg_elements_pool),        INTENT(in)    :: veg_pool_labile                  !< labile pool size of the plant 
+#endif
     REAL(wp), DIMENSION(nc),          INTENT(inout) :: n_processing_respiration     , & !< respiration associated with N processing
                                                        maint_respiration_c13        , & !< maintenance respiration
                                                        maint_respiration_c14        , & !< maintenance respiration
@@ -2749,8 +2826,13 @@ CONTAINS
                                                        growth_respiration_c14       , & !< growth respiration
                                                        n_processing_respiration_c13 , & !< respiration associated with N processing
                                                        n_processing_respiration_c14     !< respiration associated with N processing
+#ifdef __QUINCY_NO_JSB__
     TYPE(t_veg_pool_a),               INTENT(inout) :: veg_growth                       !< fluxes: growth; see section 4.1: veg_growth%labile is overwriten
     TYPE(t_veg_element_a),            INTENT(inout) :: veg_exudation                    !< vegetation flux to mycorrhiza (mol / m2 / timestep) 
+#else
+    TYPE(t_veg_tissues_pool),         INTENT(inout) :: veg_growth                       !< fluxes: growth; see section 4.1: veg_growth%labile is overwriten
+    TYPE(t_veg_elements_pool),        INTENT(inout) :: veg_exudation                    !< vegetation flux to mycorrhiza (mol / m2 / timestep) 
+#endif
     REAL(wp), DIMENSION(nc),          INTENT(out)   :: maint_respiration            , & !< maintenance respiration (µmol C / m2 / s)
                                                        growth_respiration               !< growth respiration (µmol C / m2 / s)
     ! ---------------------------

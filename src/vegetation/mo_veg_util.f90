@@ -30,6 +30,10 @@
 !!
 MODULE mo_veg_util
 
+#ifdef __QUINCY_NO_JSB__
+#include "dsl_jsbach.inc"
+#endif
+
   USE mo_kind,        ONLY: wp
   USE mo_jsb_control, ONLY: debug_on
   USE mo_exception,   ONLY: message
@@ -58,6 +62,11 @@ CONTAINS
     
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
+    ! Use of pools
+#ifdef __QUINCY_NO_JSB__
+#else
+    dsl4jsb_Use_pools(VEG_) t_veg_tissues_pool, t_veg_elements_pool
+#endif
 
     IMPLICIT NONE
     ! ---------------------------
@@ -71,8 +80,16 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':reset_veg_fluxes'
     ! ---------------------------
     ! 0.3 Declare Memory
-    ! Declare process configuration and memory Pointers
+    ! Declare process configuration, process memory and pools
     dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),      POINTER :: veg__mem
+#ifdef __QUINCY_NO_JSB__
+#else
+    dsl4jsb_Def_pool(t_veg_tissues_pool)  :: veg_growth
+    dsl4jsb_Def_pool(t_veg_tissues_pool)  :: veg_litterfall
+    dsl4jsb_Def_pool(t_veg_elements_pool) :: veg_exudation
+    dsl4jsb_Def_pool(t_veg_elements_pool) :: veg_establishment
+    dsl4jsb_Def_pool(t_veg_elements_pool) :: veg_reserve_use
+#endif
     ! Declare pointers to variables in memory
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk      :: maint_respiration_pot
@@ -120,14 +137,20 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
+    model  => Get_model(tile%owner_model_id)
     ! Get process config
-!    dsl4jsb_Get_config(VEG_)
     ! Get process memories
     dsl4jsb_Get_memory(VEG_)           ! veg__mem => veg_memory
+#ifdef __QUINCY_NO_JSB__
+#else
+    ! Get pools
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_growth,        veg_growth)
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_litterfall,    veg_litterfall)
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_exudation,     veg_exudation)
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_establishment, veg_establishment)
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_reserve_use,   veg_reserve_use)
+#endif
     ! Get process variables (Set pointers to variables in memory)
-    model  => Get_model(tile%owner_model_id)
-    !lctlib => model%lctlib(tile%lcts%lib_id)
-    ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_pot)
     dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration)
     dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_c13)
@@ -167,6 +190,24 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
+
+
+    ! flux pools
+#ifdef __QUINCY_NO_JSB__
+    ! t_slm_struct_veg_pool
+    CALL veg__mem%growth%init(zero)
+    CALL veg__mem%litterfall%init(zero)
+    ! t_slm_struct_veg_element
+    CALL veg__mem%reserve_use%init(zero)
+    CALL veg__mem%establishment%init(zero)
+    CALL veg__mem%exudation%init(zero)
+#else
+    veg_growth        = zero
+    veg_litterfall    = zero
+    veg_exudation     = zero
+    veg_establishment = zero
+    veg_reserve_use   = zero
+#endif
 
     ! flux variables
     maint_respiration_pot(:) = zero          !< maintenance respiration (µmol CO2 m-2 s-1)
