@@ -88,10 +88,12 @@ CONTAINS
     IF (timer_on() .OR. l_timer_host) THEN
       IF (no_of_models > 1) THEN
         DO i=1,no_of_models
-          timer_jsbach(i) = new_timer('jsbach_'//int2string(i))
+          timer_jsbach(i)  = new_timer('jsbach_'//int2string(i))
+          timer_forcing(i) = new_timer('jsb:forcing_'//int2string(i))
         END DO
       ELSE
-        timer_jsbach(1) = new_timer('jsbach')
+        timer_jsbach(1)  = new_timer('jsbach')
+        timer_forcing(1) = new_timer('jsb:forcing')
       END IF
     END IF
     IF (timer_on()) THEN
@@ -101,14 +103,12 @@ CONTAINS
           timer_integrate(i)    = new_timer('jsb:integrate_'//int2string(i))
           timer_process_task(i) = new_timer('jsb:process_task_'//int2string(i))
           timer_process_msg(i)  = new_timer('jsb:process_msg_'//int2string(i))
-          timer_forcing(i)      = new_timer('jsb:forcing_'//int2string(i))
         END DO
       ELSE
         timer_aggregate(1)    = new_timer('jsb:aggregate')
         timer_integrate(1)    = new_timer('jsb:integrate')
         timer_process_task(1) = new_timer('jsb:process_task')
         timer_process_msg(1)  = new_timer('jsb:process_msg')
-        timer_forcing(1)      = new_timer('jsb:forcing')
       END IF
     END IF
 
