@@ -107,7 +107,6 @@ CONTAINS
           timer_integrate(i)    = new_timer('jsb:integrate_'//int2string(i))
           timer_process_task(i) = new_timer('jsb:process_task_'//int2string(i))
           timer_process_msg(i)  = new_timer('jsb:process_msg_'//int2string(i))
-          timer_forcing(i)      = new_timer('jsb:forcing_'//int2string(i))
         END DO
       ELSE
         timer_aggregate(1)    = new_timer('jsb:aggregate')
