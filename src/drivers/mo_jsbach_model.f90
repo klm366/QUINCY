@@ -823,7 +823,7 @@ CONTAINS
     TYPE(datetime)          , POINTER    :: datetime_old_old !< date and time one time step before datetime_old
     TYPE(datetime)          , POINTER    :: datetime_forcing
 
-    INTEGER  :: nproma, nblks
+    INTEGER  :: nproma, npromz, nblks
     INTEGER  :: iblk        !< index of block loop
     INTEGER  :: ibs, ibe    !< start and end indices of block   loop
     INTEGER  :: ics, ice    !< start and end indices of columns loop
@@ -903,6 +903,7 @@ CONTAINS
     model => get_model(1)
     grid  => get_grid(model%grid_id)
     nproma = grid%Get_nproma()
+    npromz = grid%Get_npromz()
     nblks  = grid%Get_nblks()
 
     CALL model%Get_top_tile(tile)
@@ -966,7 +967,7 @@ CONTAINS
 
       CALL get_interface_variables_from_external_forcing( &
         ! in
-        & 1, 1, nproma, nblks, datetime_old, datetime_new, sinlat, coslat, lon,  &
+        & 1, 1, nproma, npromz, nblks, datetime_old, datetime_new, sinlat, coslat, lon,  &
         & evapo_act2pot,                                                             &
         & dsl4jsb_var2D_onDomain(SEB_,  t),                                          &
         & dsl4jsb_var2D_onDomain(TURB_, fact_q_air),                                 &
