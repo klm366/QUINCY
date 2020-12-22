@@ -745,8 +745,7 @@ CONTAINS
       END IF
       var_collected(:,i) = this%children(i)%p%vars(var%child_idx(i))%p%ptr2d(ics:ice, iblk)
     END DO
-    ! Note, this works because the fract_st sum over DIM=2 is always = 1 !
-    var_averaged(:) = SUM( var_collected(:,:) * fract_st(:,:) , DIM=2)
+    var_averaged(:) = SUM(var_collected(:,:) * fract_st(:,:) , DIM=2) / SUM(fract_st(:,:), DIM=2)
     DEALLOCATE(var_collected)
 
   END FUNCTION Average_over_children_real2d

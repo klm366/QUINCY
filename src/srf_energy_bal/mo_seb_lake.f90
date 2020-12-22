@@ -84,7 +84,7 @@ CONTAINS
       & rad_net_lice
 
     ! Local variables
-    REAL(wp) ::                   &
+    REAL(wp) ::                     &
       & hcap_wtr(options%nc),       &
       & zero(options%nc),           &
       & lhflx_tmp(options%nc),      &
@@ -159,7 +159,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(SEB_, hflx_melt_lice)
       dsl4jsb_Get_var2D_onChunk(SEB_, hflx_melt_snow)
 
-      dsl4jsb_Get_var2D_onChunk(SEB_, depth_lice)        ! OUT
+      dsl4jsb_Get_var2D_onChunk(SEB_, depth_lice)        ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_lice) ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow_lice)     ! inout
 

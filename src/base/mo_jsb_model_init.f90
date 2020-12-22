@@ -75,7 +75,7 @@ CONTAINS
     ! avoid compiler warnings about dummy arguments not being used
     IF (.FALSE.) WRITE(*,*) nproca, nprocb, npedim, model_id, model_name
 
-    CALL finish(TRIM(routine),'Standalone model currently only works with ECHAM')
+    CALL finish(TRIM(routine),'This subroutine should not be called with ICON')
 #else
     model => Get_model(model_id)
 
@@ -223,7 +223,7 @@ CONTAINS
       IF (model%processes(ASSIMI_)%p%config%active) THEN
         CALL model%Queue_task(RAD_,    "radiation_par")
       END IF
-      CALL model%Queue_task(HYDRO_,  "surface_hydrology")
+      CALL model%Queue_task(HYDRO_,  "surface_hydrology") 
       CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
       CALL model%Queue_task(SSE_,    "soil_and_snow_properties")
       CALL model%Queue_task(SSE_,    "soil_and_snow_temperature")
@@ -346,8 +346,7 @@ CONTAINS
     CALL model%Reset_tiles()
     CALL model%Get_top_tile(tile)
 
-    IF (.NOT. ASSOCIATED(tile)) &
-      & CALL finish(TRIM(routine), 'Top tile not set')
+    IF (.NOT. ASSOCIATED(tile)) CALL finish(TRIM(routine), 'Top tile not set')
 
     DO WHILE (ASSOCIATED(tile))
 
@@ -356,13 +355,18 @@ CONTAINS
         CYCLE
       END IF
 
-      ! Initialize tile memory and read tile fractions
+      ! Initialize tile process memories and read tile fractions
       ! @todo: once we have land use change or dynveg, l_fixed_fractions needs to be adapted
       CALL tile%Init(TRIM(model%shortname), '', TRIM(tile%name),                &
-        & l_fixed_fractions=.NOT. model%processes(ALCC_)%p%config%active,       &
+        & grid_id = model%grid_id,                                              &
         & in_var_groups=one_of(TRIM(tile%name), model%config%output_tiles) > 0)
 
-      ! TBD: Loop over processes instead of explicit
+      CALL tile%Init_fractions(                                           &
+        & TRIM(model%shortname), '', TRIM(tile%name),                     &
+        & l_fixed_fractions=.NOT. model%processes(ALCC_)%p%config%active, &
+        & l_rel_fractions=model%config%relative_fractions_in_file)
+
+        ! TBD: Loop over processes instead of explicit
       IF (one_of(tile%process_action(RAD_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
         CALL rad_init(tile)
       END IF
@@ -465,6 +469,8 @@ CONTAINS
                   EXIT
                 END IF
               END DO
+              CALL tile%Get_fraction(fract=fract_tmp(:,:))
+              tile%lcts(ilct)%fract(:,:) = MERGE(tile%lcts(ilct)%fract(:,:) / fract_tmp(:,:), 0._wp, fract_tmp(:,:) > 0._wp)
             END IF
             child => child%Get_next_sibling_tile()
           END DO
