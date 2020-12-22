@@ -83,7 +83,7 @@ PROGRAM jsb4_driver
   REAL(wp), EXTERNAL:: util_walltime
   REAL(wp):: zwtime, zutime, zstime, zrtime
 
-  INTEGER:: nml_handler, read_status, f_unit, status, iblk, nproma, nblks, ncid, model_id, ice, ics
+  INTEGER:: nml_handler, read_status, f_unit, status, iblk, nproma, npromz, nblks, ncid, model_id, ice, ics
   TYPE(t_datetime)          :: current_datetime, next_datetime
   TYPE(t_datetime), POINTER :: current_datetime_ptr => NULL(), next_datetime_ptr => NULL()
 
@@ -223,6 +223,7 @@ PROGRAM jsb4_driver
   !     therefore set (and allocated fields) here -- else need to strongly adapt
   !       -> i.e. set and allocate in the iblk loop for just one and change way of reading?!
   nproma = local_decomposition%nproma
+  npromz = local_decomposition%npromz
   nblks = local_decomposition%ngpblks
   !TODO: get nproma/nblks with already existing function? 'get_nproma'
   !  -> hm, for that need to first get the model and then the grid
@@ -381,7 +382,7 @@ PROGRAM jsb4_driver
         & flx_ratio, cos_zenith_angle, daylght_frc)
 
       IF (timer_on()) CALL timer_start(timer_forcing(1))
-      CALL get_interface_variables_from_external_forcing(1, 1, nproma, nblks, current_datetime_ptr, next_datetime_ptr, &
+      CALL get_interface_variables_from_external_forcing(1, 1, nproma, npromz, nblks, current_datetime_ptr, next_datetime_ptr, &
         & sinlat, coslat, lon, evapo_act2pot_proc, &
         & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, cos_zenith_angle,      &
         & CO2_concentration, t_air_K, q_air, rain, snow, wind_air, wind_10m,                                          &
