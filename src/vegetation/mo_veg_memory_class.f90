@@ -20,178 +20,61 @@
 !! @brief Contains the memory class for the vegetation processes
 !!
 !! @author
-!!  Jan Engel, MPI-BGC Jena (based on the JSBACH4 version from Rainer Schneck, MPI-M Hamburg)
+!!  Jan Engel, MPI-BGC Jena
 !!
 !! @par Revision History
-!! First version by Jan Engel (20160830)
+!! First version by Jan Engel (20160830, based on the JSBACH4, MPI-M Hamburg)
 !!
 MODULE mo_veg_memory_class
 
-  USE mo_kind,                   ONLY: wp
-  USE mo_jsb_impl_constants,     ONLY: false
-  USE mo_exception,              ONLY: message
-  USE mo_jsb_class,              ONLY: Get_model
-  USE mo_jsb_memory_class,       ONLY: t_jsb_memory
-  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d         , &           ! *slmjsb4
-                                       t_jsb_struct, t_jsb_n_struct                             ! *slmjsb4
+  USE mo_veg_memory_class_util   ! pools code for quincy & jsb4-quincy 
 
+  USE mo_kind,                   ONLY: wp
+  USE mo_exception,              ONLY: finish, message
+#ifdef __QUINCY_NO_JSB__
+#else
+  USE mo_util,                   ONLY: One_of
+  USE mo_jsb_utils_iface,        ONLY: assign_if_present_allocatable
+#endif
+  USE mo_jsb_impl_constants,     ONLY: false
+
+  USE mo_jsb_memory_class,       ONLY: t_jsb_memory
+  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
+#ifdef __QUINCY_NO_JSB__
+  USE mo_jsb_var_class,          ONLY: t_jsb_struct, t_jsb_n_struct
+#else
+  USE mo_jsb_pool_class,         ONLY: t_jsb_pool, ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15
+  USE mo_jsb_lct_class,          ONLY: LAND_TYPE, VEG_TYPE
+#endif
 
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: t_veg_memory, max_no_of_vars
-  PUBLIC :: max_no_of_structs, max_no_of_n_structs            ! *slmjsb4
-  PUBLIC :: t_veg_element_a, t_veg_pool_a                     ! *slmtemp
-  PUBLIC :: Init_veg_pools_elements_a, &                      ! *slmtemp
-            Deallocate_var_veg_pools_elements_a
-  PUBLIC :: veg_pool, veg_growth, veg_litterfall, veg_falloc, veg_total_flux      ! *slmtemp
-  PUBLIC :: veg_exudation, veg_establishment, veg_reserve_use, veg_total_biomass  ! *slmtemp
-  
-
+#ifdef __QUINCY_NO_JSB__
+  PUBLIC :: max_no_of_structs, max_no_of_n_structs
+  PUBLIC :: t_veg_element_a, t_veg_pool_a                                         ! mo_veg_memory_class_util
+  PUBLIC :: Init_veg_pools_elements_a, &                                          ! mo_veg_memory_class_util
+            Deallocate_var_veg_pools_elements_a                                   ! mo_veg_memory_class_util
+  PUBLIC :: veg_pool, veg_growth, veg_litterfall, veg_falloc, veg_total_flux      ! mo_veg_memory_class_util
+  PUBLIC :: veg_exudation, veg_establishment, veg_reserve_use, veg_total_biomass  ! mo_veg_memory_class_util
   INTEGER, PARAMETER :: max_no_of_vars      = 250  !> TYPE t_jsb_var
-  INTEGER, PARAMETER :: max_no_of_structs   = 20   !> TYPE t_jsb_struct     *slmjsb4
-  INTEGER, PARAMETER :: max_no_of_n_structs = 20   !> TYPE t_jsb_n_struct   *slmjsb4
-
-
-  !-----------------------------------------------------------------------------------------------------
-  !> Type definition for helper elements with ALLOCATABLE variables for elements in veg memory
-  !! 
-  !! 
-  !-----------------------------------------------------------------------------------------------------
-  TYPE t_veg_element_a
-    REAL(wp), ALLOCATABLE :: carbon(:)      ! dimension of variable in memory is var(ics:ice,iblk)
-    REAL(wp), ALLOCATABLE :: nitrogen(:)
-    REAL(wp), ALLOCATABLE :: phosphorus(:)
-    REAL(wp), ALLOCATABLE :: carbon13(:)
-    REAL(wp), ALLOCATABLE :: carbon14(:)
-    REAL(wp), ALLOCATABLE :: nitrogen15(:)
-  CONTAINS
-    PRIVATE
-    !! operator overload
-    ! +
-    PROCEDURE               :: Add_element_a                   ! Add two elements
-    PROCEDURE               :: Add_element_a_and_scalar        ! Add scalar to element
-    PROCEDURE               :: Add_element_a_and_vector       ! Add REAL 1D vector ( var(ics:ice) ) to element
-    GENERIC, PUBLIC         :: OPERATOR(+) => Add_element_a, Add_element_a_and_scalar, Add_element_a_and_vector
-    !! operator overload
-    ! -
-    PROCEDURE               :: Subtract_element_a                   ! Subtract one element from another element
-    PROCEDURE               :: Subtract_element_a_and_scalar        ! Subtract scalar from element
-    PROCEDURE               :: Subtract_element_a_and_vector        ! Subtract vector ( var(ics:ice) ) from element
-    GENERIC, PUBLIC         :: OPERATOR(-) => Subtract_element_a, Subtract_element_a_and_scalar, Subtract_element_a_and_vector
-    !! operator overload
-    ! *
-    PROCEDURE               :: Multiply_element_a                   ! Multiply two elements
-    PROCEDURE               :: Multiply_element_a_and_scalar        ! Multiply element with 
-    PROCEDURE, PASS(this2)  :: Multiply_scalar_and_element_a        ! Multiply scalar with element
-    PROCEDURE               :: Multiply_element_a_and_vector        ! Multiply element with REAL 1D vector ( var(ics:ice) )
-    PROCEDURE, PASS(this2)  :: Multiply_vector_and_element_a        ! Multiply REAL 1D vector ( var(ics:ice) ) with element
-    GENERIC, PUBLIC         :: OPERATOR(*) => Multiply_element_a, Multiply_element_a_and_scalar, Multiply_scalar_and_element_a, &
-                                              Multiply_element_a_and_vector, Multiply_vector_and_element_a
-  END TYPE t_veg_element_a
-
-
-  !-----------------------------------------------------------------------------------------------------
-  !> Type definition for helper pools with ALLOCATABLE variables for pools in veg memory
-  !! 
-  !! 
-  !-----------------------------------------------------------------------------------------------------
-  TYPE t_veg_pool_a
-    TYPE(t_veg_element_a)  :: leaf             !< elements of leaf
-    TYPE(t_veg_element_a)  :: fine_root        !< elements of fine_root
-    TYPE(t_veg_element_a)  :: coarse_root      !< elements of coarse_root
-    TYPE(t_veg_element_a)  :: sap_wood         !< elements of sap_wood
-    TYPE(t_veg_element_a)  :: heart_wood       !< elements of heart_wood
-    TYPE(t_veg_element_a)  :: labile           !< elements of labile
-    TYPE(t_veg_element_a)  :: reserve          !< elements of reserve
-    TYPE(t_veg_element_a)  :: fruit            !< elements of fruit
-    TYPE(t_veg_element_a)  :: seed_bed         !< elements of seed_bed
-  CONTAINS
-    PRIVATE
-    !! operator overload
-    ! +
-    PROCEDURE               :: Add_pool_a                   ! Add two pools
-    PROCEDURE               :: Add_pool_a_and_scalar        ! Add scalar to pool
-    PROCEDURE               :: Add_pool_a_and_vector        ! Add REAL 1D vector ( var(ics:ice) ) to pool
-    GENERIC, PUBLIC         :: OPERATOR(+) => Add_pool_a, Add_pool_a_and_scalar, Add_pool_a_and_vector
-    !! operator overload
-    ! -
-    PROCEDURE               :: Subtract_pool_a                   ! Subtract one pool from another pool
-    PROCEDURE               :: Subtract_pool_a_and_scalar        ! Subtract scalar from pool
-    PROCEDURE               :: Subtract_pool_a_and_vector        ! Subtract vector ( var(ics:ice) ) from pool
-    GENERIC, PUBLIC         :: OPERATOR(-) => Subtract_pool_a, Subtract_pool_a_and_scalar, Subtract_pool_a_and_vector
-    !! operator overload
-    ! *
-    PROCEDURE               :: Multiply_pool_a                   ! Multiply two pools
-    PROCEDURE               :: Multiply_pool_a_and_scalar        ! Multiply pool with scalar
-    PROCEDURE, PASS(this2)  :: Multiply_scalar_and_pool_a        ! Multiply scalar with pool
-    PROCEDURE               :: Multiply_pool_a_and_vector        ! Multiply pool with REAL 1D vector ( var(ics:ice) )
-    PROCEDURE, PASS(this2)  :: Multiply_vector_and_pool_a        ! Multiply REAL 1D vector ( var(ics:ice) ) with pool
-    GENERIC, PUBLIC         :: OPERATOR(*) => Multiply_pool_a, Multiply_pool_a_and_scalar, Multiply_scalar_and_pool_a, &
-                                              Multiply_pool_a_and_vector, Multiply_vector_and_pool_a
-  END TYPE t_veg_pool_a
-
-
-
-  !-----------------------------------------------------------------------------------------------------
-  !> Type definition for elements in veg pool
-  !! 
-  !! elements in veg would be 2D (while they would be 3D in soil)
-  !! 
-  !! *slmtemp 1D -> 2D
-  !-----------------------------------------------------------------------------------------------------
-  TYPE, EXTENDS(t_jsb_struct) :: t_slm_struct_veg_element
-    TYPE(t_jsb_var_real2d)    :: carbon       !< total carbon concentration of pool in mol / m2
-    TYPE(t_jsb_var_real2d)    :: nitrogen     !< totol nitrogen concentration of pool in mol / m2
-    TYPE(t_jsb_var_real2d)    :: phosphorus   !< phosphorus concentration of pool in mol / m2
-    TYPE(t_jsb_var_real2d)    :: carbon13     !< 13carbon concentration of pool in mol / m2
-    TYPE(t_jsb_var_real2d)    :: carbon14     !< 14carbon concentration of pool in pmol / m2
-    TYPE(t_jsb_var_real2d)    :: nitrogen15   !< 15nitrogen concentration of pool in mol / m2
-  CONTAINS
-    PROCEDURE :: Init       => Init_t_slm_struct_veg_element
-    PROCEDURE :: Add_vars   => Add_element_variables_to_memory
-  END TYPE t_slm_struct_veg_element
-
-
-  !-----------------------------------------------------------------------------------------------------
-  !> Type definition for veg pool with nested TYPEs
-  !!
-  !! used for: pool, and fluxes: growth and litterfall
-  !!  
-  !-----------------------------------------------------------------------------------------------------
-  TYPE, EXTENDS(t_jsb_n_struct) :: t_slm_struct_veg_pool
-    TYPE(t_slm_struct_veg_element)  :: leaf             !< elements of leaf
-    TYPE(t_slm_struct_veg_element)  :: fine_root        !< elements of fine_root
-    TYPE(t_slm_struct_veg_element)  :: coarse_root      !< elements of coarse_root
-    TYPE(t_slm_struct_veg_element)  :: sap_wood         !< elements of sap_wood
-    TYPE(t_slm_struct_veg_element)  :: heart_wood       !< elements of heart_wood
-    TYPE(t_slm_struct_veg_element)  :: labile           !< elements of labile
-    TYPE(t_slm_struct_veg_element)  :: reserve          !< elements of reserve
-    TYPE(t_slm_struct_veg_element)  :: fruit            !< elements of fruit
-    TYPE(t_slm_struct_veg_element)  :: seed_bed         !< elements of seed_bed
-  CONTAINS
-    PROCEDURE :: Init           => Init_t_slm_struct_veg_pool
-    PROCEDURE :: Add_elements   => Add_pool_elements_to_memory
-  END TYPE t_slm_struct_veg_pool
-
+  INTEGER, PARAMETER :: max_no_of_structs   = 20   !> TYPE t_jsb_struct
+  INTEGER, PARAMETER :: max_no_of_n_structs = 20   !> TYPE t_jsb_n_struct
+#else
+  PUBLIC :: t_veg_main_pool, t_veg_tissues_pool, t_veg_elements_pool
+  INTEGER, PARAMETER :: max_no_of_vars      = 530    !> TYPE t_jsb_var | 'normal' var: ~ 220 | 5 pools: 270 var | 4 tissues: 24
+#endif
 
   !-----------------------------------------------------------------------------------------------------
   !> Type definition for veg memory
   !!
-  !! @par includes: \n
-  !!    veg variables veg\%VAR \n
-  !!    pool  \n
-  !!    growth flux \n
-  !!    litterfall flux \n
-  !!    moving averagages of variables VAR_mavg   \n
-  !!    daytime averages of variables VAR_daytime \n
   !! 
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_memory) :: t_veg_memory
 
-    !> variables
-    !! 
-    !! 
-    ! basic plant 2D
+    !! ####################################################
+    !> basic plant 2D
+    !!
     TYPE(t_jsb_var_real2d)          :: &   
                                     height            , &            !< plant height [m]
                                     diameter          , &            !< plant diameter [m]
@@ -210,16 +93,16 @@ MODULE mo_veg_memory_class
                                     leaf_cn_direction , &            !< indicates direction of change in leaf CN ratio to maximise NPP [unitless]
                                     target_lai        , &            !< LAI implied from sap wood area [m2 m-2]
                                     kstar_labile                     !< labile pool turnover rate assuming only temperature and moisture constraints, no stoichiometry [day-1]
-
     ! used as logical: 0 = FALSE / 1 = TRUE
     TYPE(t_jsb_var_real2d)          :: &
                                     do_cohort_harvest                !< logical to identify whether the cohort may be harvested, in veg_dynamics_scheme cohort [logical]
-
     ! basic plant 3D 
-    TYPE(t_jsb_var_real3d)          :: &
-                                    root_fraction_sl                 !< fractions of root per layer [unitless]  DIMENSION(soil_layer_sb)
+    TYPE(t_jsb_var_real3d)          :: &    ! DIMENSION(soil_layer_sb)
+                                    root_fraction_sl                 !< fractions of root per layer [unitless]
 
-    ! target C:N and N:P ratios for various non-leaf tissues (mol/mol)
+    !! ####################################################
+    !> target C:N and N:P ratios for various non-leaf tissues (mol/mol)
+    !!
     TYPE(t_jsb_var_real2d)          :: &
                                     target_cn_fine_root       , &   !< 
                                     target_cn_coarse_root     , &   !< 
@@ -230,7 +113,9 @@ MODULE mo_veg_memory_class
                                     target_np_sap_wood        , &   !< 
                                     target_np_fruit                 !< 
 
-    ! canopy layers
+    !! ####################################################
+    !> canopy layer information
+    !!
     TYPE(t_jsb_var_real3d)          :: &   ! DIMENSION(ncanopy)
                                     leaf_nitrogen_cl  , &           !< N in canopy layer [mmol m-2 LAI]
                                     fn_chl_cl         , &           !< fraction of N in chlorophyll, pigments only [unitless]
@@ -242,7 +127,9 @@ MODULE mo_veg_memory_class
                                     lai_cl            , &           !< leaf area in the canopy layer [m2 m-2]
                                     cumm_lai_cl                     !< cummulative leaf area above the mid-point of the canopy layer [m2 m-2]
 
-    ! fluxes
+    !! ####################################################
+    !> fluxes
+    !!
     TYPE(t_jsb_var_real2d)          :: &   
                                     maint_respiration_pot         , & !< potential maintenance respiration [µmol CO2 m-2 s-1]
                                     maint_respiration             , & !< maintenance respiration [µmol CO2 m-2 s-1]
@@ -277,7 +164,9 @@ MODULE mo_veg_memory_class
                                     recycling_heart_wood_p        , & !< net flux of P from sapwood to labile (senescence and maintenance) [mol m-2 timestep-1]
                                     net_growth                        !< npp minus turnover [µmol CO2 m-2 s-1]
 
-    ! everything else 2D
+    !! ####################################################
+    !> everything else
+    !!
     TYPE(t_jsb_var_real2d)          :: &   
                                     fmaint_rate_root          , & !< current N-specific maintentance respiration [~µmol C mol-1 N s-1]
                                     unit_npp                  , & !< incremental change in NPP [µmol CO2 m-2 s-1]
@@ -295,6 +184,7 @@ MODULE mo_veg_memory_class
                                     leaf2sapwood_mass_ratio   , & !< leaf to shoot mass ratio [unitless]
                                     leaf2root_mass_ratio          !< leaf to root mass ratio [unitless]
 
+    !! ####################################################
     !> daytime averages
     !! 
     TYPE(t_jsb_var_real3d)          :: &   ! DIMENSION(ncanopy)
@@ -307,6 +197,7 @@ MODULE mo_veg_memory_class
                                     beta_sinklim_ps_daytime   , &    !< scaling factor to account for soil moisture constraints on photosynthesis average of the previous day [unitless]
                                     t_jmax_opt_daytime               !< optimal temperature for electron transport of photosynthesis average of the previous day [deg C]
 
+    !! ####################################################
     !> accumlated over current daytime
     !! 
     TYPE(t_jsb_var_real3d)          :: &   ! DIMENSION(ncanopy)
@@ -321,15 +212,16 @@ MODULE mo_veg_memory_class
     TYPE(t_jsb_var_real2d)          :: &   
                                     daytime_counter                   !< number of timesteps of current day with light available [#]
 
+    !! ####################################################
     !> moving averages
     !! 
-    ! 1.1 memory of conditions for the labile pool dynamics
+    ! 1.1 conditions for the labile pool dynamics
     TYPE(t_jsb_var_real2d)          :: &   
                                     gpp_tlabile_mavg               , &  !< gpp  [µmol m-2 s-1]
                                     maint_respiration_tlabile_mavg , &  !< maintenance respiration [µmol m-2 s-1]
                                     growth_req_n_tlabile_mavg      , &  !< moles N required for a unit of C growth under current allocation fractions time-averaged [mol N m-2 s-1]
                                     growth_req_p_tlabile_mavg           !< moles P required for a unit of N growth under current allocation fractions time-averaged [mol P m-2 s-1]
-    ! 1.2 memory of conditions for phenology calculations
+    ! 1.2 conditions for phenology calculations
     TYPE(t_jsb_var_real2d)          :: &   
                                     t_air_tphen_mavg                    !< air temperature time-averaged [K]
     ! 1.3 memory for plant uptake (average demand over a couple of days to get rid of diurnal C cycle)
@@ -341,7 +233,7 @@ MODULE mo_veg_memory_class
                                     growth_req_p_tuptake_mavg      , &  !< moles P required for a unit of N growth under current allocation fractions time-averaged [mol P m-2 s-1]
                                     cost_n_fixation_talloc_mavg    , &  !< moving average of N fixation cost [mol C mol-1 N]
                                     exudation_c_tmyc_mavg               !< moving average of C allocation to mycorrhizal fungi [mol C]
-    ! 1.4 memory of conditions for photosynthesis for the optimisation of foliar N fractions 
+    ! 1.4 conditions for photosynthesis for the optimisation of foliar N fractions 
     TYPE(t_jsb_var_real3d)          :: &   ! DIMENSION(ncanopy)
                                     fleaf_sunlit_tfrac_mavg_cl          !< fraction of layer which is sunlit time-averaged [unitless]
     TYPE(t_jsb_var_real2d)          :: &   
@@ -350,7 +242,7 @@ MODULE mo_veg_memory_class
                                     co2_mixing_ratio_tfrac_mavg    , &  !< co2 mixing ratio of the air time-averaged [co2 in ppm]
                                     ga_tfrac_mavg                  , &  !< aerodynamic conductance time-averaged [m s-1]
                                     beta_sinklim_ps_tfrac_mavg          !< scaling factor to account for soil moisture constraints on photosynthesis time-averaged [unitless]
-    ! 1.5 memory of conditions for photosynthesis for the optimisation of foliar N  
+    ! 1.5 conditions for photosynthesis for the optimisation of foliar N  
     TYPE(t_jsb_var_real3d)          :: &   ! DIMENSION(ncanopy)
                                     fleaf_sunlit_tcnl_mavg_cl           !< fraction of layer which is sunlit time-averaged [unitless]
     TYPE(t_jsb_var_real2d)          :: &   
@@ -367,8 +259,7 @@ MODULE mo_veg_memory_class
                                     labile_nitrogen_tcnl_mavg      , &  !< labile nitrogen vegetation pool time-averaged [mol N m-2]
                                     labile_carbon_tcnl_mavg        , &  !< labile carbon vegetation pool time-averaged [mol C m-2]
                                     labile_phosphorus_tcnl_mavg         !< labile phosphorus vegetation pool time-averaged [mol P m-2]
-
-    ! 1.6 memory of conditions for photosynthesis for the optimisation of biomass allocation fractions
+    ! 1.6 conditions for photosynthesis for the optimisation of biomass allocation fractions
     TYPE(t_jsb_var_real2d)          :: &   
                                     npp_talloc_mavg                , &  !< NPP [µmol m-2 s-1]
                                     n_fixation_talloc_mavg         , &  !< N fixation time-averaged [µmol N m-2 s-1]
@@ -388,8 +279,6 @@ MODULE mo_veg_memory_class
                                     reserve_nitrogen_talloc_mavg   , &  !< reserve nitrogen needed for optimal allocation time-averaged [mol N m-2]
                                     reserve_phosphorus_talloc_mavg , &  !< reserve phosphorus needed for optimal allocation time-averaged [mol P m-2]
                                     w_root_lim_talloc_mavg              !< root water limitation below which root allocation starts responding time-averaged
-                                    
-                                    
     ! 1.7 memory over root life time 
     TYPE(t_jsb_var_real2d)          :: &   
                                     leaf2root_troot_mavg           , &  !< leaf to root mass ratio time-averaged [unitless]
@@ -402,805 +291,39 @@ MODULE mo_veg_memory_class
                                     an_boc_tvegdyn_mavg            , &  !< net photosynthesis at bottom of canopy, lowest canopy layer existing time-averaged [µmol m-2 s-1]
                                     net_growth_tvegdyn_mavg        , &  !< net growth, npp minus turnover [µmol C m-2 s-1]
                                     lai_tvegdyn_mavg                    !< lai time-averaged [m2 m-2]
-    ! 1.9 memory of variables for respiration accclimation 
+    ! 1.9 variables for respiration accclimation 
     TYPE(t_jsb_var_real2d)          :: &   
                                     t_air_tacclim_mavg             , &  !< air temperature for respiration acclimation time-averaged [K]
                                     t_soil_root_tacclim_mavg            !< root temperature for respiration acclimation time-averaged [deg K]
-    ! 1.10 memory of certain variables, temperature, ...
+    ! 1.10 certain variables, temperature, ...
     TYPE(t_jsb_var_real2d)          :: &   
                                     t_air_week_mavg                , &  !< air temperature time-averaged [K]
                                     t_air_month_mavg               , &  !< air temperature time-averaged [K]
                                     t_jmax_opt_mavg                     !< optimal temperature for electron transport of photosynthesis time-averaged [deg C]
 
-    !> structures
+    !! ####################################################
+    !> pool structures
     !! 
-    !!
-    TYPE(t_slm_struct_veg_element)  :: &
-                                    exudation       , &   !< flux between fine roots and mycorrhiza (mol m-2 timestep-1)
-                                    establishment   , &   !< flux between seed bed and reserve (mol m-2 timestep-1)
-                                    reserve_use     , &   !< net flux between reserve and labile pool (mol m-2 timestep-1)
-                                    total_biomass         !< per time step sum over veg\%pool\%..
+    TYPE(t_quincy_struct_veg_element) :: &
+                                      exudation       , &   !< flux between fine roots and mycorrhiza (mol m-2 timestep-1)
+                                      establishment   , &   !< flux between seed bed and reserve (mol m-2 timestep-1)
+                                      reserve_use     , &   !< net flux between reserve and labile pool (mol m-2 timestep-1)
+                                      total_biomass         !< per time step sum over veg\%pool\%..
 
-    TYPE(t_slm_struct_veg_pool)     :: &   ! nested pool TYPE t_jsb_n_struct
-                                    pool            , &   !< pools of the plant
-                                    growth          , &   !< fluxes: growth
-                                    litterfall      , &   !< fluxes: litterfall
-                                    falloc          , &   !< mo_veg_growth:calc_allocation_fraction -> fractional allocation to pools
-                                    total_flux            !< for diagnoses of mass conservation: sum of fluxes
-
+    TYPE(t_quincy_struct_veg_pool)    :: &   ! nested pool TYPE t_jsb_n_struct
+                                      pool            , &   !< pools of the plant
+                                      growth          , &   !< fluxes: growth
+                                      litterfall      , &   !< fluxes: litterfall
+                                      falloc          , &   !< mo_veg_growth:calc_allocation_fraction -> fractional allocation to pools
+                                      total_flux            !< for diagnoses of mass conservation: sum of fluxes
 
   CONTAINS
     PROCEDURE :: Init => Init_veg_memory
   END TYPE t_veg_memory
 
-
-  ! definition of veg_ pool and element structures with ALLOCATABLE variables (need to be TARGET to enable POINTER to individual variables)
-  ! allocation of variables done with Init_veg_pools_elements_a during model init in init_slm()
-  TYPE(t_veg_pool_a), TARGET     :: veg_pool           , &
-                                    veg_growth         , &
-                                    veg_litterfall     , &
-                                    veg_falloc         , &
-                                    veg_total_flux
-  TYPE(t_veg_element_a), TARGET  :: veg_exudation      , &
-                                    veg_establishment  , &
-                                    veg_reserve_use    , &
-                                    veg_total_biomass
-
-
   CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_memory_class'
 
-
 CONTAINS
-
-  !-----------------------------------------------------------------------------------------------------!
-  ! t_veg_element_a operator overload                                                                   !
-  !-----------------------------------------------------------------------------------------------------!
-  !-----------------------------------------------------------------------------------------------------
-  !> + (t_veg_element_a + t_veg_element_a)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  PURE FUNCTION Add_element_a(this,element2) RESULT(element3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_veg_element_a), INTENT(in)  :: this, element2
-    TYPE(t_veg_element_a)               :: element3
-    ! 1.0 go
-    ALLOCATE(element3%carbon,     source=this%carbon)       ! note: Function results are automatically deallocated after the result is "used" in the outer scope.
-    ALLOCATE(element3%nitrogen,   source=this%nitrogen)
-    ALLOCATE(element3%phosphorus, source=this%phosphorus)
-    ALLOCATE(element3%carbon13,   source=this%carbon13)
-    ALLOCATE(element3%carbon14,   source=this%carbon14)
-    ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
-    element3%carbon(:)       = this%carbon(:)      + element2%carbon(:)
-    element3%nitrogen(:)     = this%nitrogen(:)    + element2%nitrogen(:)
-    element3%phosphorus(:)   = this%phosphorus(:)  + element2%phosphorus(:)
-    element3%carbon13(:)     = this%carbon13(:)    + element2%carbon13(:)
-    element3%carbon14(:)     = this%carbon14(:)    + element2%carbon14(:)
-    element3%nitrogen15(:)   = this%nitrogen15(:)  + element2%nitrogen15(:)
-  END FUNCTION Add_element_a
-  !-----------------------------------------------------------------------------------------------------
-  !> + (t_veg_element_a + scalar)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  PURE FUNCTION Add_element_a_and_scalar(this,scalar) RESULT(element3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_veg_element_a), INTENT(in)  :: this
-    REAL(wp),               INTENT(in)  :: scalar
-    TYPE(t_veg_element_a)               :: element3
-    ! 1.0 go
-    ALLOCATE(element3%carbon,     source=this%carbon)
-    ALLOCATE(element3%nitrogen,   source=this%nitrogen)
-    ALLOCATE(element3%phosphorus, source=this%phosphorus)
-    ALLOCATE(element3%carbon13,   source=this%carbon13)
-    ALLOCATE(element3%carbon14,   source=this%carbon14)
-    ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
-    element3%carbon(:)       = this%carbon(:)      + scalar
-    element3%nitrogen(:)     = this%nitrogen(:)    + scalar
-    element3%phosphorus(:)   = this%phosphorus(:)  + scalar
-    element3%carbon13(:)     = this%carbon13(:)    + scalar
-    element3%carbon14(:)     = this%carbon14(:)    + scalar
-    element3%nitrogen15(:)   = this%nitrogen15(:)  + scalar
-  END FUNCTION Add_element_a_and_scalar
-  !-----------------------------------------------------------------------------------------------------
-  !> + (t_veg_element_a + 1D vector)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  PURE FUNCTION Add_element_a_and_vector(this,vector) RESULT(element3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_veg_element_a), INTENT(in)  :: this
-    REAL(wp),               INTENT(in)  :: vector(:)
-    TYPE(t_veg_element_a)               :: element3
-    ! 1.0 go
-    ALLOCATE(element3%carbon,     source=this%carbon)
-    ALLOCATE(element3%nitrogen,   source=this%nitrogen)
-    ALLOCATE(element3%phosphorus, source=this%phosphorus)
-    ALLOCATE(element3%carbon13,   source=this%carbon13)
-    ALLOCATE(element3%carbon14,   source=this%carbon14)
-    ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
-    element3%carbon(:)       = this%carbon(:)      + vector(:)
-    element3%nitrogen(:)     = this%nitrogen(:)    + vector(:)
-    element3%phosphorus(:)   = this%phosphorus(:)  + vector(:)
-    element3%carbon13(:)     = this%carbon13(:)    + vector(:)
-    element3%carbon14(:)     = this%carbon14(:)    + vector(:)
-    element3%nitrogen15(:)   = this%nitrogen15(:)  + vector(:)
-  END FUNCTION Add_element_a_and_vector
-  !-----------------------------------------------------------------------------------------------------
-  !> - (t_veg_element_a - t_veg_element_a)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  PURE FUNCTION Subtract_element_a(this,element2) RESULT(element3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_veg_element_a), INTENT(in)  :: this, element2
-    TYPE(t_veg_element_a)               :: element3
-    ! 1.0 go
-    ALLOCATE(element3%carbon,     source=this%carbon)
-    ALLOCATE(element3%nitrogen,   source=this%nitrogen)
-    ALLOCATE(element3%phosphorus, source=this%phosphorus)
-    ALLOCATE(element3%carbon13,   source=this%carbon13)
-    ALLOCATE(element3%carbon14,   source=this%carbon14)
-    ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
-    element3%carbon(:)       = this%carbon(:)      - element2%carbon(:)
-    element3%nitrogen(:)     = this%nitrogen(:)    - element2%nitrogen(:)
-    element3%phosphorus(:)   = this%phosphorus(:)  - element2%phosphorus(:)
-    element3%carbon13(:)     = this%carbon13(:)    - element2%carbon13(:)
-    element3%carbon14(:)     = this%carbon14(:)    - element2%carbon14(:)
-    element3%nitrogen15(:)   = this%nitrogen15(:)  - element2%nitrogen15(:)
-  END FUNCTION Subtract_element_a
-  !-----------------------------------------------------------------------------------------------------
-  !> - (t_veg_element_a - scalar)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  PURE FUNCTION Subtract_element_a_and_scalar(this,scalar) RESULT(element3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_veg_element_a), INTENT(in)  :: this
-    REAL(wp),               INTENT(in)  :: scalar
-    TYPE(t_veg_element_a)               :: element3
-    ! 1.0 go
-    ALLOCATE(element3%carbon,     source=this%carbon)
-    ALLOCATE(element3%nitrogen,   source=this%nitrogen)
-    ALLOCATE(element3%phosphorus, source=this%phosphorus)
-    ALLOCATE(element3%carbon13,   source=this%carbon13)
-    ALLOCATE(element3%carbon14,   source=this%carbon14)
-    ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
-    element3%carbon(:)       = this%carbon(:)      - scalar
-    element3%nitrogen(:)     = this%nitrogen(:)    - scalar
-    element3%phosphorus(:)   = this%phosphorus(:)  - scalar
-    element3%carbon13(:)     = this%carbon13(:)    - scalar
-    element3%carbon14(:)     = this%carbon14(:)    - scalar
-    element3%nitrogen15(:)   = this%nitrogen15(:)  - scalar
-  END FUNCTION Subtract_element_a_and_scalar
-  !-----------------------------------------------------------------------------------------------------
-  !> - (t_veg_element_a - 1D vector)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  PURE FUNCTION Subtract_element_a_and_vector(this,vector) RESULT(element3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_veg_element_a), INTENT(in)  :: this
-    REAL(wp),               INTENT(in)  :: vector(:)
-    TYPE(t_veg_element_a)               :: element3
-    ! 1.0 go
-    ALLOCATE(element3%carbon,     source=this%carbon)
-    ALLOCATE(element3%nitrogen,   source=this%nitrogen)
-    ALLOCATE(element3%phosphorus, source=this%phosphorus)
-    ALLOCATE(element3%carbon13,   source=this%carbon13)
-    ALLOCATE(element3%carbon14,   source=this%carbon14)
-    ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
-    element3%carbon(:)       = this%carbon(:)      - vector(:)
-    element3%nitrogen(:)     = this%nitrogen(:)    - vector(:)
-    element3%phosphorus(:)   = this%phosphorus(:)  - vector(:)
-    element3%carbon13(:)     = this%carbon13(:)    - vector(:)
-    element3%carbon14(:)     = this%carbon14(:)    - vector(:)
-    element3%nitrogen15(:)   = this%nitrogen15(:)  - vector(:)
-  END FUNCTION Subtract_element_a_and_vector
-  !-----------------------------------------------------------------------------------------------------
-  !> * (t_veg_element_a * t_veg_element_a)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  PURE FUNCTION Multiply_element_a(this,element2) RESULT(element3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_veg_element_a), INTENT(in)  :: this, element2
-    TYPE(t_veg_element_a)               :: element3
-    ! 1.0 go
-    ALLOCATE(element3%carbon,     source=this%carbon)
-    ALLOCATE(element3%nitrogen,   source=this%nitrogen)
-    ALLOCATE(element3%phosphorus, source=this%phosphorus)
-    ALLOCATE(element3%carbon13,   source=this%carbon13)
-    ALLOCATE(element3%carbon14,   source=this%carbon14)
-    ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
-    element3%carbon(:)       = this%carbon(:)      * element2%carbon(:)
-    element3%nitrogen(:)     = this%nitrogen(:)    * element2%nitrogen(:)
-    element3%phosphorus(:)   = this%phosphorus(:)  * element2%phosphorus(:)
-    element3%carbon13(:)     = this%carbon13(:)    * element2%carbon13(:)
-    element3%carbon14(:)     = this%carbon14(:)    * element2%carbon14(:)
-    element3%nitrogen15(:)   = this%nitrogen15(:)  * element2%nitrogen15(:)
-  END FUNCTION Multiply_element_a
-  !-----------------------------------------------------------------------------------------------------
-  !> * (t_veg_element_a * scalar)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  PURE FUNCTION Multiply_element_a_and_scalar(this,scalar) RESULT(element3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_veg_element_a), INTENT(in)  :: this
-    REAL(wp),               INTENT(in)  :: scalar
-    TYPE(t_veg_element_a)               :: element3
-    ! 1.0 go
-    ALLOCATE(element3%carbon,     source=this%carbon)
-    ALLOCATE(element3%nitrogen,   source=this%nitrogen)
-    ALLOCATE(element3%phosphorus, source=this%phosphorus)
-    ALLOCATE(element3%carbon13,   source=this%carbon13)
-    ALLOCATE(element3%carbon14,   source=this%carbon14)
-    ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
-    element3%carbon(:)       = this%carbon(:)      * scalar
-    element3%nitrogen(:)     = this%nitrogen(:)    * scalar
-    element3%phosphorus(:)   = this%phosphorus(:)  * scalar
-    element3%carbon13(:)     = this%carbon13(:)    * scalar
-    element3%carbon14(:)     = this%carbon14(:)    * scalar
-    element3%nitrogen15(:)   = this%nitrogen15(:)  * scalar
-  END FUNCTION Multiply_element_a_and_scalar
-  !-----------------------------------------------------------------------------------------------------
-  !> * (scalar * t_veg_element_a)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  PURE FUNCTION Multiply_scalar_and_element_a(scalar,this2) RESULT(element3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    REAL(wp),               INTENT(in)  :: scalar
-    CLASS(t_veg_element_a), INTENT(in)  :: this2
-    TYPE(t_veg_element_a)               :: element3
-    ! 1.0 go
-    ALLOCATE(element3%carbon,     source=this2%carbon)
-    ALLOCATE(element3%nitrogen,   source=this2%nitrogen)
-    ALLOCATE(element3%phosphorus, source=this2%phosphorus)
-    ALLOCATE(element3%carbon13,   source=this2%carbon13)
-    ALLOCATE(element3%carbon14,   source=this2%carbon14)
-    ALLOCATE(element3%nitrogen15, source=this2%nitrogen15)
-    element3%carbon(:)       = scalar * this2%carbon(:)
-    element3%nitrogen(:)     = scalar * this2%nitrogen(:)
-    element3%phosphorus(:)   = scalar * this2%phosphorus(:)
-    element3%carbon13(:)     = scalar * this2%carbon13(:)
-    element3%carbon14(:)     = scalar * this2%carbon14(:)
-    element3%nitrogen15(:)   = scalar * this2%nitrogen15(:)
-  END FUNCTION Multiply_scalar_and_element_a
-  !-----------------------------------------------------------------------------------------------------
-  !> * (t_veg_element_a * 1D vector)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  PURE FUNCTION Multiply_element_a_and_vector(this,vector) RESULT(element3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_veg_element_a), INTENT(in)  :: this
-    REAL(wp),               INTENT(in)  :: vector(:)
-    TYPE(t_veg_element_a)               :: element3
-    ! 1.0 go
-    ALLOCATE(element3%carbon,     source=this%carbon)
-    ALLOCATE(element3%nitrogen,   source=this%nitrogen)
-    ALLOCATE(element3%phosphorus, source=this%phosphorus)
-    ALLOCATE(element3%carbon13,   source=this%carbon13)
-    ALLOCATE(element3%carbon14,   source=this%carbon14)
-    ALLOCATE(element3%nitrogen15, source=this%nitrogen15)
-    element3%carbon(:)       = this%carbon(:)      * vector(:)
-    element3%nitrogen(:)     = this%nitrogen(:)    * vector(:)
-    element3%phosphorus(:)   = this%phosphorus(:)  * vector(:)
-    element3%carbon13(:)     = this%carbon13(:)    * vector(:)
-    element3%carbon14(:)     = this%carbon14(:)    * vector(:)
-    element3%nitrogen15(:)   = this%nitrogen15(:)  * vector(:)
-  END FUNCTION Multiply_element_a_and_vector
-  !-----------------------------------------------------------------------------------------------------
-  !> * (vector * t_veg_element_a)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  PURE FUNCTION Multiply_vector_and_element_a(vector,this2) RESULT(element3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    REAL(wp),               INTENT(in)  :: vector(:)
-    CLASS(t_veg_element_a), INTENT(in)  :: this2
-    TYPE(t_veg_element_a)               :: element3
-    ! 1.0 go
-    ALLOCATE(element3%carbon,     source=this2%carbon)
-    ALLOCATE(element3%nitrogen,   source=this2%nitrogen)
-    ALLOCATE(element3%phosphorus, source=this2%phosphorus)
-    ALLOCATE(element3%carbon13,   source=this2%carbon13)
-    ALLOCATE(element3%carbon14,   source=this2%carbon14)
-    ALLOCATE(element3%nitrogen15, source=this2%nitrogen15)
-    element3%carbon(:)       = vector(:) * this2%carbon(:)
-    element3%nitrogen(:)     = vector(:) * this2%nitrogen(:)
-    element3%phosphorus(:)   = vector(:) * this2%phosphorus(:)
-    element3%carbon13(:)     = vector(:) * this2%carbon13(:)
-    element3%carbon14(:)     = vector(:) * this2%carbon14(:)
-    element3%nitrogen15(:)   = vector(:) * this2%nitrogen15(:)
-  END FUNCTION Multiply_vector_and_element_a
-  
-  
-
-  !-----------------------------------------------------------------------------------------------------!
-  ! t_veg_pool_a operator overload                                                                      !
-  !-----------------------------------------------------------------------------------------------------!
-  !-----------------------------------------------------------------------------------------------------
-  !> + (t_veg_pool_a + t_veg_pool_a)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  PURE FUNCTION Add_pool_a(this,pool2) RESULT(pool3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_veg_pool_a), INTENT(in) :: this, pool2
-    TYPE(t_veg_pool_a)              :: pool3
-    ! 1.0 go
-    pool3%leaf          = this%leaf         + pool2%leaf
-    pool3%fine_root     = this%fine_root    + pool2%fine_root
-    pool3%coarse_root   = this%coarse_root  + pool2%coarse_root
-    pool3%sap_wood      = this%sap_wood     + pool2%sap_wood
-    pool3%heart_wood    = this%heart_wood   + pool2%heart_wood
-    pool3%labile        = this%labile       + pool2%labile
-    pool3%reserve       = this%reserve      + pool2%reserve
-    pool3%fruit         = this%fruit        + pool2%fruit
-    pool3%seed_bed      = this%seed_bed     + pool2%seed_bed
-  END FUNCTION Add_pool_a
-  !-----------------------------------------------------------------------------------------------------
-  !> + (t_veg_pool_a + scalar)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  PURE FUNCTION Add_pool_a_and_scalar(this,scalar) RESULT(pool3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_veg_pool_a), INTENT(in) :: this
-    REAL(wp),            INTENT(in) :: scalar
-    TYPE(t_veg_pool_a)              :: pool3
-    ! 1.0 go
-    pool3%leaf          = this%leaf         + scalar
-    pool3%fine_root     = this%fine_root    + scalar
-    pool3%coarse_root   = this%coarse_root  + scalar
-    pool3%sap_wood      = this%sap_wood     + scalar
-    pool3%heart_wood    = this%heart_wood   + scalar
-    pool3%labile        = this%labile       + scalar
-    pool3%reserve       = this%reserve      + scalar
-    pool3%fruit         = this%fruit        + scalar
-    pool3%seed_bed      = this%seed_bed     + scalar
-  END FUNCTION Add_pool_a_and_scalar
-  !-----------------------------------------------------------------------------------------------------
-  !> + (t_veg_pool_a + 1D vector)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  PURE FUNCTION Add_pool_a_and_vector(this,vector) RESULT(pool3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_veg_pool_a), INTENT(in) :: this
-    REAL(wp),            INTENT(in) :: vector(:)
-    TYPE(t_veg_pool_a)              :: pool3
-    ! 1.0 go
-    pool3%leaf          = this%leaf         + vector(:)
-    pool3%fine_root     = this%fine_root    + vector(:)
-    pool3%coarse_root   = this%coarse_root  + vector(:)
-    pool3%sap_wood      = this%sap_wood     + vector(:)
-    pool3%heart_wood    = this%heart_wood   + vector(:)
-    pool3%labile        = this%labile       + vector(:)
-    pool3%reserve       = this%reserve      + vector(:)
-    pool3%fruit         = this%fruit        + vector(:)
-    pool3%seed_bed      = this%seed_bed     + vector(:)
-  END FUNCTION Add_pool_a_and_vector
-  !-----------------------------------------------------------------------------------------------------
-  !> - (t_veg_pool_a - t_veg_pool_a)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  PURE FUNCTION Subtract_pool_a(this,pool2) RESULT(pool3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_veg_pool_a), INTENT(in) :: this, pool2
-    TYPE(t_veg_pool_a)              :: pool3
-    ! 1.0 go
-    pool3%leaf          = this%leaf         - pool2%leaf
-    pool3%fine_root     = this%fine_root    - pool2%fine_root
-    pool3%coarse_root   = this%coarse_root  - pool2%coarse_root
-    pool3%sap_wood      = this%sap_wood     - pool2%sap_wood
-    pool3%heart_wood    = this%heart_wood   - pool2%heart_wood
-    pool3%labile        = this%labile       - pool2%labile
-    pool3%reserve       = this%reserve      - pool2%reserve
-    pool3%fruit         = this%fruit        - pool2%fruit
-    pool3%seed_bed      = this%seed_bed     - pool2%seed_bed
-  END FUNCTION Subtract_pool_a
-  !-----------------------------------------------------------------------------------------------------
-  !> - (t_veg_pool_a - scalar)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  PURE FUNCTION Subtract_pool_a_and_scalar(this,scalar) RESULT(pool3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_veg_pool_a), INTENT(in) :: this
-    REAL(wp),            INTENT(in) :: scalar
-    TYPE(t_veg_pool_a)              :: pool3
-    ! 1.0 go
-    pool3%leaf          = this%leaf         - scalar
-    pool3%fine_root     = this%fine_root    - scalar
-    pool3%coarse_root   = this%coarse_root  - scalar
-    pool3%sap_wood      = this%sap_wood     - scalar
-    pool3%heart_wood    = this%heart_wood   - scalar
-    pool3%labile        = this%labile       - scalar
-    pool3%reserve       = this%reserve      - scalar
-    pool3%fruit         = this%fruit        - scalar
-    pool3%seed_bed      = this%seed_bed     - scalar
-  END FUNCTION Subtract_pool_a_and_scalar
-  !-----------------------------------------------------------------------------------------------------
-  !> - (t_veg_pool_a - 1D vector)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  PURE FUNCTION Subtract_pool_a_and_vector(this,vector) RESULT(pool3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_veg_pool_a), INTENT(in) :: this
-    REAL(wp),            INTENT(in) :: vector(:)
-    TYPE(t_veg_pool_a)              :: pool3
-    ! 1.0 go
-    pool3%leaf          = this%leaf         - vector(:)
-    pool3%fine_root     = this%fine_root    - vector(:)
-    pool3%coarse_root   = this%coarse_root  - vector(:)
-    pool3%sap_wood      = this%sap_wood     - vector(:)
-    pool3%heart_wood    = this%heart_wood   - vector(:)
-    pool3%labile        = this%labile       - vector(:)
-    pool3%reserve       = this%reserve      - vector(:)
-    pool3%fruit         = this%fruit        - vector(:)
-    pool3%seed_bed      = this%seed_bed     - vector(:)
-  END FUNCTION Subtract_pool_a_and_vector
-  !-----------------------------------------------------------------------------------------------------
-  !> * (t_veg_pool_a * t_veg_pool_a)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  PURE FUNCTION Multiply_pool_a(this,pool2) RESULT(pool3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_veg_pool_a), INTENT(in) :: this, pool2
-    TYPE(t_veg_pool_a)              :: pool3
-    ! 1.0 go
-    pool3%leaf          = this%leaf         * pool2%leaf
-    pool3%fine_root     = this%fine_root    * pool2%fine_root
-    pool3%coarse_root   = this%coarse_root  * pool2%coarse_root
-    pool3%sap_wood      = this%sap_wood     * pool2%sap_wood
-    pool3%heart_wood    = this%heart_wood   * pool2%heart_wood
-    pool3%labile        = this%labile       * pool2%labile
-    pool3%reserve       = this%reserve      * pool2%reserve
-    pool3%fruit         = this%fruit        * pool2%fruit
-    pool3%seed_bed      = this%seed_bed     * pool2%seed_bed
-  END FUNCTION Multiply_pool_a
-  !-----------------------------------------------------------------------------------------------------
-  !> * (t_veg_pool_a * scalar)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  PURE FUNCTION Multiply_pool_a_and_scalar(this,scalar) RESULT(pool3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_veg_pool_a), INTENT(in) :: this
-    REAL(wp),            INTENT(in) :: scalar
-    TYPE(t_veg_pool_a)              :: pool3
-    ! 1.0 go
-    pool3%leaf          = this%leaf         * scalar
-    pool3%fine_root     = this%fine_root    * scalar
-    pool3%coarse_root   = this%coarse_root  * scalar
-    pool3%sap_wood      = this%sap_wood     * scalar
-    pool3%heart_wood    = this%heart_wood   * scalar
-    pool3%labile        = this%labile       * scalar
-    pool3%reserve       = this%reserve      * scalar
-    pool3%fruit         = this%fruit        * scalar
-    pool3%seed_bed      = this%seed_bed     * scalar
-  END FUNCTION Multiply_pool_a_and_scalar
-  !-----------------------------------------------------------------------------------------------------
-  !> * (scalar * t_veg_pool_a)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  PURE FUNCTION Multiply_scalar_and_pool_a(scalar,this2) RESULT(pool3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    REAL(wp),            INTENT(in) :: scalar
-    CLASS(t_veg_pool_a), INTENT(in) :: this2
-    TYPE(t_veg_pool_a)              :: pool3
-    ! 1.0 go
-    pool3%leaf          = scalar * this2%leaf
-    pool3%fine_root     = scalar * this2%fine_root
-    pool3%coarse_root   = scalar * this2%coarse_root
-    pool3%sap_wood      = scalar * this2%sap_wood
-    pool3%heart_wood    = scalar * this2%heart_wood
-    pool3%labile        = scalar * this2%labile
-    pool3%reserve       = scalar * this2%reserve
-    pool3%fruit         = scalar * this2%fruit
-    pool3%seed_bed      = scalar * this2%seed_bed
-  END FUNCTION Multiply_scalar_and_pool_a
-  !-----------------------------------------------------------------------------------------------------
-  !> * (t_veg_pool_a * 1D vector)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  PURE FUNCTION Multiply_pool_a_and_vector(this,vector) RESULT(pool3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_veg_pool_a), INTENT(in) :: this
-    REAL(wp),            INTENT(in) :: vector(:)
-    TYPE(t_veg_pool_a)              :: pool3
-    ! 1.0 go
-    pool3%leaf          = this%leaf         * vector(:)
-    pool3%fine_root     = this%fine_root    * vector(:)
-    pool3%coarse_root   = this%coarse_root  * vector(:)
-    pool3%sap_wood      = this%sap_wood     * vector(:)
-    pool3%heart_wood    = this%heart_wood   * vector(:)
-    pool3%labile        = this%labile       * vector(:)
-    pool3%reserve       = this%reserve      * vector(:)
-    pool3%fruit         = this%fruit        * vector(:)
-    pool3%seed_bed      = this%seed_bed     * vector(:)
-  END FUNCTION Multiply_pool_a_and_vector
-  !-----------------------------------------------------------------------------------------------------
-  !> * (1D vector * t_veg_pool_a)
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  PURE FUNCTION Multiply_vector_and_pool_a(vector,this2) RESULT(pool3)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    REAL(wp),            INTENT(in) :: vector(:)
-    CLASS(t_veg_pool_a), INTENT(in) :: this2
-    TYPE(t_veg_pool_a)              :: pool3
-    ! 1.0 go
-    pool3%leaf          = vector(:) * this2%leaf
-    pool3%fine_root     = vector(:) * this2%fine_root
-    pool3%coarse_root   = vector(:) * this2%coarse_root
-    pool3%sap_wood      = vector(:) * this2%sap_wood
-    pool3%heart_wood    = vector(:) * this2%heart_wood
-    pool3%labile        = vector(:) * this2%labile
-    pool3%reserve       = vector(:) * this2%reserve
-    pool3%fruit         = vector(:) * this2%fruit
-    pool3%seed_bed      = vector(:) * this2%seed_bed
-  END FUNCTION Multiply_vector_and_pool_a
-
-
-  !-----------------------------------------------------------------------------------------------------
-  !> Initialisation t_slm_struct_veg_element with a scalar
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL SUBROUTINE Init_t_slm_struct_veg_element(this,s)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_slm_struct_veg_element),INTENT(inout) :: this 
-    REAL(wp),                       INTENT(in)    :: s
-    ! 1.0 Go
-    this%carbon%ptr(:,:)     = s
-    this%nitrogen%ptr(:,:)   = s
-    this%phosphorus%ptr(:,:) = s
-    this%carbon13%ptr(:,:)   = s
-    this%carbon14%ptr(:,:)   = s
-    this%nitrogen15%ptr(:,:) = s
-  END SUBROUTINE Init_t_slm_struct_veg_element 
-
-  !-----------------------------------------------------------------------------------------------------
-  !> Initialisation t_slm_struct_veg_pool with a scalar
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL SUBROUTINE Init_t_slm_struct_veg_pool(this,s)
-    IMPLICIT NONE
-    ! 0.1 InOut
-    CLASS(t_slm_struct_veg_pool), INTENT(inout) :: this 
-    REAL(wp),                     INTENT(in)    :: s
-    ! 1.0 Go
-    CALL this%leaf%init(s)
-    CALL this%fine_root%init(s)
-    CALL this%coarse_root%init(s)
-    CALL this%sap_wood%init(s)
-    CALL this%heart_wood%init(s)
-    CALL this%labile%init(s)
-    CALL this%reserve%init(s)
-    CALL this%fruit%init(s)
-    CALL this%seed_bed%init(s)
-  END SUBROUTINE Init_t_slm_struct_veg_pool 
-
-  !-----------------------------------------------------------------------------------------------------
-  !> Add all variables of an element TYPE to the process memory
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE Add_element_variables_to_memory(this, prefix, suffix, lct_ids, model_id, unit)
-
-    USE mo_slm_varlist,       ONLY: jsb_add_var
-    USE mo_jsb_io,            ONLY: grib_bits
-    USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2
-    USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
-    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
-    USE mo_jsb_model_class,   ONLY: t_jsb_model
-    
-    IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1.InOut
-    CLASS(t_slm_struct_veg_element), INTENT(inout) :: this 
-    CHARACTER(len=*),                INTENT(in)    :: prefix          !> ?
-    CHARACTER(len=*),                INTENT(in)    :: suffix          !> ?
-    INTEGER,                         INTENT(in)    :: lct_ids !(:)    !> in jsbach4: vector of land cover type IDs
-    INTEGER,                         INTENT(in)    :: model_id        !> model ID model\%id
-    CHARACTER(len=*),                INTENT(in)    :: unit            !> unit of the variables in the elements
-    ! ---------------------------
-    ! 0.2 Local
-    TYPE(t_jsb_model), POINTER  :: model
-    TYPE(t_jsb_grid),  POINTER  :: hgrid                        ! Horizontal grid
-    TYPE(t_jsb_vgrid), POINTER  :: vgrid_surface                ! Vertical grid
-    INTEGER                     :: table
-    CHARACTER(len=50)           :: var_name
-    CHARACTER(len=100)          :: var_name_long
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Add_element_variables_to_memory'
-    ! ---------------------------
-    ! 0.5 Get Memory
-    model         => Get_model(model_id)
-    table         = 1     ! in jsbach4 this line is: table = tables(1)     *slmtemp
-    hgrid         => Get_grid(model%grid_id)
-    vgrid_surface => Get_vgrid('surface')
-
-
-    ! run add_var()
-    var_name      = TRIM(this%name)//'_carbon'
-    var_name_long = 'Carbon in vegetation '//TRIM(this%name)
-    CALL jsb_add_var(this, TRIM(var_name), this%carbon, &
-          hgrid, vgrid_surface, &
-          t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
-          t_grib1(table, 255, grib_bits), &
-          t_grib2(255, 255, 255, grib_bits), &
-          prefix, suffix, &
-          initval_r=0.0_wp)     ! initvalue
-    var_name      = TRIM(this%name)//'_nitrogen'
-    var_name_long = 'Nitrogen in vegetation '//TRIM(this%name)
-    CALL jsb_add_var(this, TRIM(var_name), this%nitrogen, &
-          hgrid, vgrid_surface, &
-          t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
-          t_grib1(table, 255, grib_bits), &
-          t_grib2(255, 255, 255, grib_bits), &
-          prefix, suffix, &
-          initval_r=0.0_wp)     ! initvalue
-    var_name      = TRIM(this%name)//'_phosphorus'
-    var_name_long = 'Phosphorus in vegetation '//TRIM(this%name)
-    CALL jsb_add_var(this, TRIM(var_name), this%phosphorus, &
-          hgrid, vgrid_surface, &
-          t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
-          t_grib1(table, 255, grib_bits), &
-          t_grib2(255, 255, 255, grib_bits), &
-          prefix, suffix, &
-          initval_r=0.0_wp)     ! initvalue
-    var_name      = TRIM(this%name)//'_carbon13'
-    var_name_long = 'Carbon13 in vegetation '//TRIM(this%name)
-    CALL jsb_add_var(this, TRIM(var_name), this%carbon13, &
-          hgrid, vgrid_surface, &
-          t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
-          t_grib1(table, 255, grib_bits), &
-          t_grib2(255, 255, 255, grib_bits), &
-          prefix, suffix, &
-          initval_r=0.0_wp)     ! initvalue
-    var_name      = TRIM(this%name)//'_carbon14'
-    var_name_long = 'Carbon14 in vegetation '//TRIM(this%name)
-    CALL jsb_add_var(this, TRIM(var_name), this%carbon14, &
-          hgrid, vgrid_surface, &
-          t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
-          t_grib1(table, 255, grib_bits), &
-          t_grib2(255, 255, 255, grib_bits), &
-          prefix, suffix, &
-          initval_r=0.0_wp)     ! initvalue
-    var_name      = TRIM(this%name)//'_nitrogen15'
-    var_name_long = 'Nitrogen15 in vegetation '//TRIM(this%name)
-    CALL jsb_add_var(this, TRIM(var_name), this%nitrogen15, &
-          hgrid, vgrid_surface, &
-          t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
-          t_grib1(table, 255, grib_bits), &
-          t_grib2(255, 255, 255, grib_bits), &
-          prefix, suffix, &
-          initval_r=0.0_wp)     ! initvalue
-  END SUBROUTINE Add_element_variables_to_memory
-
-  !-----------------------------------------------------------------------------------------------------
-  !> Add all elements of a pool TYPE to the process memory
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE Add_pool_elements_to_memory(this, prefix, suffix, lct_ids, model_id, unit)
-
-    USE mo_slm_varlist,       ONLY: jsb_add_var
-    USE mo_jsb_io,            ONLY: grib_bits
-    USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2
-    USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
-    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
-    USE mo_jsb_model_class,   ONLY: t_jsb_model
-    
-    IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1.InOut
-    CLASS(t_slm_struct_veg_pool),    INTENT(inout) :: this 
-    CHARACTER(len=*),                INTENT(in)    :: prefix          !> ?
-    CHARACTER(len=*),                INTENT(in)    :: suffix          !> ?
-    INTEGER,                         INTENT(in)    :: lct_ids !(:)    !> in jsbach4: vector of land cover type IDs
-    INTEGER,                         INTENT(in)    :: model_id        !> model ID model\%id
-    CHARACTER(len=*),                INTENT(in)    :: unit            !> unit of the variables in the elements
-    ! ---------------------------
-    ! 0.2 Local
-    TYPE(t_jsb_model), POINTER  :: model
-    TYPE(t_jsb_grid),  POINTER  :: hgrid                        ! Horizontal grid
-    TYPE(t_jsb_vgrid), POINTER  :: vgrid_surface                ! Vertical grid
-    INTEGER                     :: table
-    CHARACTER(len=40)           :: element_name
-    CHARACTER(len=80)           :: element_name_long    
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Add_pool_elements_to_memory'
-    ! ---------------------------
-    ! 0.5 Get Memory
-    model         => Get_model(model_id)
-    table         = 1     ! in jsbach4 this line is: table = tables(1)     *slmtemp
-    hgrid         => Get_grid(model%grid_id)
-    vgrid_surface => Get_vgrid('surface')
-
-
-    ! run add_var()
-    element_name      = TRIM(this%name)//'_leaf'
-    element_name_long = 'Leaf element of vegetation '//TRIM(this%name)
-      CALL jsb_add_var(this, TRIM(element_name), this%leaf, &
-            hgrid, vgrid_surface, &
-            t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
-    element_name      = TRIM(this%name)//'_fine_root'
-    element_name_long = 'Fine_root element of vegetation '//TRIM(this%name)
-      CALL jsb_add_var(this, TRIM(element_name), this%fine_root, &
-            hgrid, vgrid_surface, &
-            t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
-    element_name      = TRIM(this%name)//'_coarse_root'
-    element_name_long = 'Coarse_root element of vegetation '//TRIM(this%name)
-      CALL jsb_add_var(this, TRIM(element_name), this%coarse_root, &
-            hgrid, vgrid_surface, &
-            t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
-    element_name      = TRIM(this%name)//'_sap_wood'
-    element_name_long = 'Sap_wood element of vegetation '//TRIM(this%name)
-      CALL jsb_add_var(this, TRIM(element_name), this%sap_wood, &
-            hgrid, vgrid_surface, &
-            t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
-    element_name      = TRIM(this%name)//'_heart_wood'
-    element_name_long = 'Heart_wood element of vegetation '//TRIM(this%name)
-      CALL jsb_add_var(this, TRIM(element_name), this%heart_wood, &
-            hgrid, vgrid_surface, &
-            t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
-    element_name      = TRIM(this%name)//'_labile'
-    element_name_long = 'Labile element of vegetation '//TRIM(this%name)
-      CALL jsb_add_var(this, TRIM(element_name), this%labile, &
-            hgrid, vgrid_surface, &
-            t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
-    element_name      = TRIM(this%name)//'_reserve'
-    element_name_long = 'Reserve element of vegetation '//TRIM(this%name)
-      CALL jsb_add_var(this, TRIM(element_name), this%reserve, &
-            hgrid, vgrid_surface, &
-            t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
-    element_name      = TRIM(this%name)//'_fruit'
-    element_name_long = 'Fruit element of vegetation '//TRIM(this%name)
-      CALL jsb_add_var(this, TRIM(element_name), this%fruit, &
-            hgrid, vgrid_surface, &
-            t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
-    element_name      = TRIM(this%name)//'_seed_bed'
-    element_name_long = 'Seed_bed element of vegetation '//TRIM(this%name)
-      CALL jsb_add_var(this, TRIM(element_name), this%seed_bed, &
-            hgrid, vgrid_surface, &
-            t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
-  END SUBROUTINE Add_pool_elements_to_memory
-
 
   !-----------------------------------------------------------------------------------------------------
   !> initialize memory for the VEG_ process
@@ -1209,58 +332,67 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_veg_memory(mem, prefix, suffix, lct_ids, model_id)
 
-!    USE mo_jsb_varlist,       ONLY: t_jsb_varlist, jsb_add_var
-    USE mo_slm_varlist,       ONLY: jsb_add_var   ! replace by mo_jsb_varlist later    *slmtemp
-    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2   ! , TSTEP_CONSTANT, tables
+#ifdef __QUINCY_NO_JSB__
+    USE mo_slm_varlist,       ONLY: jsb_add_var
+    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2   ! , tables
+#else
+    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
+    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
+#endif
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
     USE mo_jsb_model_class,   ONLY: t_jsb_model
+    USE mo_jsb_class,         ONLY: Get_model
 
-    IMPLICIT NONE
+    CLASS(t_veg_memory),  INTENT(inout), TARGET  :: mem             !> veg memory
+    CHARACTER(len=*),     INTENT(in)             :: prefix          !> process name
+    CHARACTER(len=*),     INTENT(in)             :: suffix          !> tile name
+    INTEGER,              INTENT(in)             :: lct_ids !(:)      !> vector of land cover type IDs
+    INTEGER,              INTENT(in)             :: model_id        !> model ID model\%id
     ! ---------------------------
-    ! 0.1.InOut
-    CLASS(t_veg_memory),  INTENT(inout), TARGET  :: mem           !> pheno memory
-    CHARACTER(len=*),     INTENT(in)            :: prefix          !> process name
-    CHARACTER(len=*),     INTENT(in)            :: suffix          !> tile name
-    INTEGER,              INTENT(in)            :: lct_ids !(:)    !> in jsbach4: vector of land cover type IDs
-    INTEGER,              INTENT(in)            :: model_id        !> model ID model\%id
+    TYPE(t_jsb_model),          POINTER :: model
+    TYPE(t_jsb_grid),           POINTER :: hgrid                        ! Horizontal grid
+    TYPE(t_jsb_vgrid),          POINTER :: vgrid_surface                ! Vertical grid
+    TYPE(t_jsb_vgrid),          POINTER :: vgrid_canopy                 ! Vertical grid
+    TYPE(t_jsb_vgrid),          POINTER :: vgrid_soil_sb                ! Vertical grid
+#ifdef __QUINCY_NO_JSB__
+    CHARACTER(len=30)                   :: unit_veg_pool
+    CHARACTER(len=30)                   :: unit_veg_flux    
+#else
+    TYPE(t_veg_elements_pool),  POINTER :: veg_elements_pool            ! pools /fluxes like veg_exudation & veg_total_biomass
+    TYPE(t_veg_tissues_pool),   POINTER :: veg_tissues_pool             ! pools /fluxes like veg_pool & veg_growth
+#endif
+    INTEGER                             :: table
+    CHARACTER(len=*), PARAMETER         :: routine = TRIM(modname)//':Init_veg_memory'
     ! ---------------------------
-    ! 0.2 Local
-    TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
-    TYPE(t_jsb_vgrid), POINTER :: vgrid_surface                ! Vertical grid
-    TYPE(t_jsb_vgrid), POINTER :: vgrid_canopy                 ! Vertical grid
-    TYPE(t_jsb_vgrid), POINTER :: vgrid_soil_sb                ! Vertical grid
-    INTEGER                    :: table
-    CHARACTER(len=30)          :: unit_veg_pool
-    CHARACTER(len=30)          :: unit_veg_flux
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_veg_memory'
-    ! ---------------------------
-    ! 0.5 Get Memory
     model         => Get_model(model_id)
-    table         = 1     ! in jsbach4 this line is: table = tables(1)     *slmtemp
+#ifdef __QUINCY_NO_JSB__
+    table         = 1
+#else
+    table         =  tables(1)
+#endif
     hgrid         => Get_grid(model%grid_id)
     vgrid_surface => Get_vgrid('surface')
+#ifdef __QUINCY_NO_JSB__
     vgrid_canopy  => Get_vgrid('canopy_layer')
+#else
+    vgrid_canopy  => Get_vgrid('canopy_layer_q_')
+#endif
     vgrid_soil_sb => Get_vgrid('soil_layer_sb')
 
-
-
+#ifdef __QUINCY_NO_JSB__
     !> 0.9 init local variables
-    ! 
+    !! 
     unit_veg_pool = "mol m-2"
     unit_veg_flux = "mol m-2 timestep-1"
-
+#endif
 
     !> 1.0  init memory
     !! 
     IF (.NOT. ASSOCIATED(mem%height%ptr)) THEN
 
-      !> add variables to veg memory veg\%VAR
+      !> add variables to vegetation memory
       !! 
-      !! jsb_add_var -> jsb_add_var_list_element_r1d    *slmtemp 1D -> 2D
-      !!                jsb_add_var_list_element_l1d
-      !!  
       CALL jsb_add_var(mem, 'height', mem%height, &
             hgrid, vgrid_surface, &
             t_cf('height', 'm', 'plant height'), &
@@ -2696,647 +1828,5 @@ CONTAINS
     END IF
 
   END SUBROUTINE Init_veg_memory
-
-
-  !-----------------------------------------------------------------------------------------------------
-  !> ALLOCATE variables in veg_pool_a and veg_element_a structures
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE Init_veg_pools_elements_a(ics, ice, nc, iblk)
-
-    IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
-    INTEGER, INTENT(in)     :: ics, ice, nc, iblk             !< information about dimensions of variables in memory
-    ! ---------------------------
-    ! 0.2 Local
-    INTEGER                 :: npoints                        !< number of points in the chunk
-
-    ! set dimension to number of points in this chunk
-    npoints = nc
-
-
-    !< 1.0  ALLOCATE variables
-    !! 
-    ALLOCATE(veg_pool%leaf%carbon(npoints))
-    ALLOCATE(veg_pool%leaf%nitrogen(npoints))
-    ALLOCATE(veg_pool%leaf%phosphorus(npoints))
-    ALLOCATE(veg_pool%leaf%carbon13(npoints))
-    ALLOCATE(veg_pool%leaf%carbon14(npoints))
-    ALLOCATE(veg_pool%leaf%nitrogen15(npoints))
-    ALLOCATE(veg_pool%fine_root%carbon(npoints))
-    ALLOCATE(veg_pool%fine_root%nitrogen(npoints))
-    ALLOCATE(veg_pool%fine_root%phosphorus(npoints))
-    ALLOCATE(veg_pool%fine_root%carbon13(npoints))
-    ALLOCATE(veg_pool%fine_root%carbon14(npoints))
-    ALLOCATE(veg_pool%fine_root%nitrogen15(npoints))
-    ALLOCATE(veg_pool%coarse_root%carbon(npoints))
-    ALLOCATE(veg_pool%coarse_root%nitrogen(npoints))
-    ALLOCATE(veg_pool%coarse_root%phosphorus(npoints))
-    ALLOCATE(veg_pool%coarse_root%carbon13(npoints))
-    ALLOCATE(veg_pool%coarse_root%carbon14(npoints))
-    ALLOCATE(veg_pool%coarse_root%nitrogen15(npoints))
-    ALLOCATE(veg_pool%sap_wood%carbon(npoints))
-    ALLOCATE(veg_pool%sap_wood%nitrogen(npoints))
-    ALLOCATE(veg_pool%sap_wood%phosphorus(npoints))
-    ALLOCATE(veg_pool%sap_wood%carbon13(npoints))
-    ALLOCATE(veg_pool%sap_wood%carbon14(npoints))
-    ALLOCATE(veg_pool%sap_wood%nitrogen15(npoints))
-    ALLOCATE(veg_pool%heart_wood%carbon(npoints))
-    ALLOCATE(veg_pool%heart_wood%nitrogen(npoints))
-    ALLOCATE(veg_pool%heart_wood%phosphorus(npoints))
-    ALLOCATE(veg_pool%heart_wood%carbon13(npoints))
-    ALLOCATE(veg_pool%heart_wood%carbon14(npoints))
-    ALLOCATE(veg_pool%heart_wood%nitrogen15(npoints))
-    ALLOCATE(veg_pool%labile%carbon(npoints))
-    ALLOCATE(veg_pool%labile%nitrogen(npoints))
-    ALLOCATE(veg_pool%labile%phosphorus(npoints))
-    ALLOCATE(veg_pool%labile%carbon13(npoints))
-    ALLOCATE(veg_pool%labile%carbon14(npoints))
-    ALLOCATE(veg_pool%labile%nitrogen15(npoints))
-    ALLOCATE(veg_pool%reserve%carbon(npoints))
-    ALLOCATE(veg_pool%reserve%nitrogen(npoints))
-    ALLOCATE(veg_pool%reserve%phosphorus(npoints))
-    ALLOCATE(veg_pool%reserve%carbon13(npoints))
-    ALLOCATE(veg_pool%reserve%carbon14(npoints))
-    ALLOCATE(veg_pool%reserve%nitrogen15(npoints))
-    ALLOCATE(veg_pool%fruit%carbon(npoints))
-    ALLOCATE(veg_pool%fruit%nitrogen(npoints))
-    ALLOCATE(veg_pool%fruit%phosphorus(npoints))
-    ALLOCATE(veg_pool%fruit%carbon13(npoints))
-    ALLOCATE(veg_pool%fruit%carbon14(npoints))
-    ALLOCATE(veg_pool%fruit%nitrogen15(npoints))
-    ALLOCATE(veg_pool%seed_bed%carbon(npoints))
-    ALLOCATE(veg_pool%seed_bed%nitrogen(npoints))
-    ALLOCATE(veg_pool%seed_bed%phosphorus(npoints))
-    ALLOCATE(veg_pool%seed_bed%carbon13(npoints))
-    ALLOCATE(veg_pool%seed_bed%carbon14(npoints))
-    ALLOCATE(veg_pool%seed_bed%nitrogen15(npoints))
-
-    ALLOCATE(veg_growth%leaf%carbon(npoints))
-    ALLOCATE(veg_growth%leaf%nitrogen(npoints))
-    ALLOCATE(veg_growth%leaf%phosphorus(npoints))
-    ALLOCATE(veg_growth%leaf%carbon13(npoints))
-    ALLOCATE(veg_growth%leaf%carbon14(npoints))
-    ALLOCATE(veg_growth%leaf%nitrogen15(npoints))
-    ALLOCATE(veg_growth%fine_root%carbon(npoints))
-    ALLOCATE(veg_growth%fine_root%nitrogen(npoints))
-    ALLOCATE(veg_growth%fine_root%phosphorus(npoints))
-    ALLOCATE(veg_growth%fine_root%carbon13(npoints))
-    ALLOCATE(veg_growth%fine_root%carbon14(npoints))
-    ALLOCATE(veg_growth%fine_root%nitrogen15(npoints))
-    ALLOCATE(veg_growth%coarse_root%carbon(npoints))
-    ALLOCATE(veg_growth%coarse_root%nitrogen(npoints))
-    ALLOCATE(veg_growth%coarse_root%phosphorus(npoints))
-    ALLOCATE(veg_growth%coarse_root%carbon13(npoints))
-    ALLOCATE(veg_growth%coarse_root%carbon14(npoints))
-    ALLOCATE(veg_growth%coarse_root%nitrogen15(npoints))
-    ALLOCATE(veg_growth%sap_wood%carbon(npoints))
-    ALLOCATE(veg_growth%sap_wood%nitrogen(npoints))
-    ALLOCATE(veg_growth%sap_wood%phosphorus(npoints))
-    ALLOCATE(veg_growth%sap_wood%carbon13(npoints))
-    ALLOCATE(veg_growth%sap_wood%carbon14(npoints))
-    ALLOCATE(veg_growth%sap_wood%nitrogen15(npoints))
-    ALLOCATE(veg_growth%heart_wood%carbon(npoints))
-    ALLOCATE(veg_growth%heart_wood%nitrogen(npoints))
-    ALLOCATE(veg_growth%heart_wood%phosphorus(npoints))
-    ALLOCATE(veg_growth%heart_wood%carbon13(npoints))
-    ALLOCATE(veg_growth%heart_wood%carbon14(npoints))
-    ALLOCATE(veg_growth%heart_wood%nitrogen15(npoints))
-    ALLOCATE(veg_growth%labile%carbon(npoints))
-    ALLOCATE(veg_growth%labile%nitrogen(npoints))
-    ALLOCATE(veg_growth%labile%phosphorus(npoints))
-    ALLOCATE(veg_growth%labile%carbon13(npoints))
-    ALLOCATE(veg_growth%labile%carbon14(npoints))
-    ALLOCATE(veg_growth%labile%nitrogen15(npoints))
-    ALLOCATE(veg_growth%reserve%carbon(npoints))
-    ALLOCATE(veg_growth%reserve%nitrogen(npoints))
-    ALLOCATE(veg_growth%reserve%phosphorus(npoints))
-    ALLOCATE(veg_growth%reserve%carbon13(npoints))
-    ALLOCATE(veg_growth%reserve%carbon14(npoints))
-    ALLOCATE(veg_growth%reserve%nitrogen15(npoints))
-    ALLOCATE(veg_growth%fruit%carbon(npoints))
-    ALLOCATE(veg_growth%fruit%nitrogen(npoints))
-    ALLOCATE(veg_growth%fruit%phosphorus(npoints))
-    ALLOCATE(veg_growth%fruit%carbon13(npoints))
-    ALLOCATE(veg_growth%fruit%carbon14(npoints))
-    ALLOCATE(veg_growth%fruit%nitrogen15(npoints))
-    ALLOCATE(veg_growth%seed_bed%carbon(npoints))
-    ALLOCATE(veg_growth%seed_bed%nitrogen(npoints))
-    ALLOCATE(veg_growth%seed_bed%phosphorus(npoints))
-    ALLOCATE(veg_growth%seed_bed%carbon13(npoints))
-    ALLOCATE(veg_growth%seed_bed%carbon14(npoints))
-    ALLOCATE(veg_growth%seed_bed%nitrogen15(npoints))
-
-    ALLOCATE(veg_litterfall%leaf%carbon(npoints))
-    ALLOCATE(veg_litterfall%leaf%nitrogen(npoints))
-    ALLOCATE(veg_litterfall%leaf%phosphorus(npoints))
-    ALLOCATE(veg_litterfall%leaf%carbon13(npoints))
-    ALLOCATE(veg_litterfall%leaf%carbon14(npoints))
-    ALLOCATE(veg_litterfall%leaf%nitrogen15(npoints))
-    ALLOCATE(veg_litterfall%fine_root%carbon(npoints))
-    ALLOCATE(veg_litterfall%fine_root%nitrogen(npoints))
-    ALLOCATE(veg_litterfall%fine_root%phosphorus(npoints))
-    ALLOCATE(veg_litterfall%fine_root%carbon13(npoints))
-    ALLOCATE(veg_litterfall%fine_root%carbon14(npoints))
-    ALLOCATE(veg_litterfall%fine_root%nitrogen15(npoints))
-    ALLOCATE(veg_litterfall%coarse_root%carbon(npoints))
-    ALLOCATE(veg_litterfall%coarse_root%nitrogen(npoints))
-    ALLOCATE(veg_litterfall%coarse_root%phosphorus(npoints))
-    ALLOCATE(veg_litterfall%coarse_root%carbon13(npoints))
-    ALLOCATE(veg_litterfall%coarse_root%carbon14(npoints))
-    ALLOCATE(veg_litterfall%coarse_root%nitrogen15(npoints))
-    ALLOCATE(veg_litterfall%sap_wood%carbon(npoints))
-    ALLOCATE(veg_litterfall%sap_wood%nitrogen(npoints))
-    ALLOCATE(veg_litterfall%sap_wood%phosphorus(npoints))
-    ALLOCATE(veg_litterfall%sap_wood%carbon13(npoints))
-    ALLOCATE(veg_litterfall%sap_wood%carbon14(npoints))
-    ALLOCATE(veg_litterfall%sap_wood%nitrogen15(npoints))
-    ALLOCATE(veg_litterfall%heart_wood%carbon(npoints))
-    ALLOCATE(veg_litterfall%heart_wood%nitrogen(npoints))
-    ALLOCATE(veg_litterfall%heart_wood%phosphorus(npoints))
-    ALLOCATE(veg_litterfall%heart_wood%carbon13(npoints))
-    ALLOCATE(veg_litterfall%heart_wood%carbon14(npoints))
-    ALLOCATE(veg_litterfall%heart_wood%nitrogen15(npoints))
-    ALLOCATE(veg_litterfall%labile%carbon(npoints))
-    ALLOCATE(veg_litterfall%labile%nitrogen(npoints))
-    ALLOCATE(veg_litterfall%labile%phosphorus(npoints))
-    ALLOCATE(veg_litterfall%labile%carbon13(npoints))
-    ALLOCATE(veg_litterfall%labile%carbon14(npoints))
-    ALLOCATE(veg_litterfall%labile%nitrogen15(npoints))
-    ALLOCATE(veg_litterfall%reserve%carbon(npoints))
-    ALLOCATE(veg_litterfall%reserve%nitrogen(npoints))
-    ALLOCATE(veg_litterfall%reserve%phosphorus(npoints))
-    ALLOCATE(veg_litterfall%reserve%carbon13(npoints))
-    ALLOCATE(veg_litterfall%reserve%carbon14(npoints))
-    ALLOCATE(veg_litterfall%reserve%nitrogen15(npoints))
-    ALLOCATE(veg_litterfall%fruit%carbon(npoints))
-    ALLOCATE(veg_litterfall%fruit%nitrogen(npoints))
-    ALLOCATE(veg_litterfall%fruit%phosphorus(npoints))
-    ALLOCATE(veg_litterfall%fruit%carbon13(npoints))
-    ALLOCATE(veg_litterfall%fruit%carbon14(npoints))
-    ALLOCATE(veg_litterfall%fruit%nitrogen15(npoints))
-    ALLOCATE(veg_litterfall%seed_bed%carbon(npoints))
-    ALLOCATE(veg_litterfall%seed_bed%nitrogen(npoints))
-    ALLOCATE(veg_litterfall%seed_bed%phosphorus(npoints))
-    ALLOCATE(veg_litterfall%seed_bed%carbon13(npoints))
-    ALLOCATE(veg_litterfall%seed_bed%carbon14(npoints))
-    ALLOCATE(veg_litterfall%seed_bed%nitrogen15(npoints))
-
-    ALLOCATE(veg_falloc%leaf%carbon(npoints))
-    ALLOCATE(veg_falloc%leaf%nitrogen(npoints))
-    ALLOCATE(veg_falloc%leaf%phosphorus(npoints))
-    ALLOCATE(veg_falloc%leaf%carbon13(npoints))
-    ALLOCATE(veg_falloc%leaf%carbon14(npoints))
-    ALLOCATE(veg_falloc%leaf%nitrogen15(npoints))
-    ALLOCATE(veg_falloc%fine_root%carbon(npoints))
-    ALLOCATE(veg_falloc%fine_root%nitrogen(npoints))
-    ALLOCATE(veg_falloc%fine_root%phosphorus(npoints))
-    ALLOCATE(veg_falloc%fine_root%carbon13(npoints))
-    ALLOCATE(veg_falloc%fine_root%carbon14(npoints))
-    ALLOCATE(veg_falloc%fine_root%nitrogen15(npoints))
-    ALLOCATE(veg_falloc%coarse_root%carbon(npoints))
-    ALLOCATE(veg_falloc%coarse_root%nitrogen(npoints))
-    ALLOCATE(veg_falloc%coarse_root%phosphorus(npoints))
-    ALLOCATE(veg_falloc%coarse_root%carbon13(npoints))
-    ALLOCATE(veg_falloc%coarse_root%carbon14(npoints))
-    ALLOCATE(veg_falloc%coarse_root%nitrogen15(npoints))
-    ALLOCATE(veg_falloc%sap_wood%carbon(npoints))
-    ALLOCATE(veg_falloc%sap_wood%nitrogen(npoints))
-    ALLOCATE(veg_falloc%sap_wood%phosphorus(npoints))
-    ALLOCATE(veg_falloc%sap_wood%carbon13(npoints))
-    ALLOCATE(veg_falloc%sap_wood%carbon14(npoints))
-    ALLOCATE(veg_falloc%sap_wood%nitrogen15(npoints))
-    ALLOCATE(veg_falloc%heart_wood%carbon(npoints))
-    ALLOCATE(veg_falloc%heart_wood%nitrogen(npoints))
-    ALLOCATE(veg_falloc%heart_wood%phosphorus(npoints))
-    ALLOCATE(veg_falloc%heart_wood%carbon13(npoints))
-    ALLOCATE(veg_falloc%heart_wood%carbon14(npoints))
-    ALLOCATE(veg_falloc%heart_wood%nitrogen15(npoints))
-    ALLOCATE(veg_falloc%labile%carbon(npoints))
-    ALLOCATE(veg_falloc%labile%nitrogen(npoints))
-    ALLOCATE(veg_falloc%labile%phosphorus(npoints))
-    ALLOCATE(veg_falloc%labile%carbon13(npoints))
-    ALLOCATE(veg_falloc%labile%carbon14(npoints))
-    ALLOCATE(veg_falloc%labile%nitrogen15(npoints))
-    ALLOCATE(veg_falloc%reserve%carbon(npoints))
-    ALLOCATE(veg_falloc%reserve%nitrogen(npoints))
-    ALLOCATE(veg_falloc%reserve%phosphorus(npoints))
-    ALLOCATE(veg_falloc%reserve%carbon13(npoints))
-    ALLOCATE(veg_falloc%reserve%carbon14(npoints))
-    ALLOCATE(veg_falloc%reserve%nitrogen15(npoints))
-    ALLOCATE(veg_falloc%fruit%carbon(npoints))
-    ALLOCATE(veg_falloc%fruit%nitrogen(npoints))
-    ALLOCATE(veg_falloc%fruit%phosphorus(npoints))
-    ALLOCATE(veg_falloc%fruit%carbon13(npoints))
-    ALLOCATE(veg_falloc%fruit%carbon14(npoints))
-    ALLOCATE(veg_falloc%fruit%nitrogen15(npoints))
-    ALLOCATE(veg_falloc%seed_bed%carbon(npoints))
-    ALLOCATE(veg_falloc%seed_bed%nitrogen(npoints))
-    ALLOCATE(veg_falloc%seed_bed%phosphorus(npoints))
-    ALLOCATE(veg_falloc%seed_bed%carbon13(npoints))
-    ALLOCATE(veg_falloc%seed_bed%carbon14(npoints))
-    ALLOCATE(veg_falloc%seed_bed%nitrogen15(npoints))
-
-    ALLOCATE(veg_total_flux%leaf%carbon(npoints))
-    ALLOCATE(veg_total_flux%leaf%nitrogen(npoints))
-    ALLOCATE(veg_total_flux%leaf%phosphorus(npoints))
-    ALLOCATE(veg_total_flux%leaf%carbon13(npoints))
-    ALLOCATE(veg_total_flux%leaf%carbon14(npoints))
-    ALLOCATE(veg_total_flux%leaf%nitrogen15(npoints))
-    ALLOCATE(veg_total_flux%fine_root%carbon(npoints))
-    ALLOCATE(veg_total_flux%fine_root%nitrogen(npoints))
-    ALLOCATE(veg_total_flux%fine_root%phosphorus(npoints))
-    ALLOCATE(veg_total_flux%fine_root%carbon13(npoints))
-    ALLOCATE(veg_total_flux%fine_root%carbon14(npoints))
-    ALLOCATE(veg_total_flux%fine_root%nitrogen15(npoints))
-    ALLOCATE(veg_total_flux%coarse_root%carbon(npoints))
-    ALLOCATE(veg_total_flux%coarse_root%nitrogen(npoints))
-    ALLOCATE(veg_total_flux%coarse_root%phosphorus(npoints))
-    ALLOCATE(veg_total_flux%coarse_root%carbon13(npoints))
-    ALLOCATE(veg_total_flux%coarse_root%carbon14(npoints))
-    ALLOCATE(veg_total_flux%coarse_root%nitrogen15(npoints))
-    ALLOCATE(veg_total_flux%sap_wood%carbon(npoints))
-    ALLOCATE(veg_total_flux%sap_wood%nitrogen(npoints))
-    ALLOCATE(veg_total_flux%sap_wood%phosphorus(npoints))
-    ALLOCATE(veg_total_flux%sap_wood%carbon13(npoints))
-    ALLOCATE(veg_total_flux%sap_wood%carbon14(npoints))
-    ALLOCATE(veg_total_flux%sap_wood%nitrogen15(npoints))
-    ALLOCATE(veg_total_flux%heart_wood%carbon(npoints))
-    ALLOCATE(veg_total_flux%heart_wood%nitrogen(npoints))
-    ALLOCATE(veg_total_flux%heart_wood%phosphorus(npoints))
-    ALLOCATE(veg_total_flux%heart_wood%carbon13(npoints))
-    ALLOCATE(veg_total_flux%heart_wood%carbon14(npoints))
-    ALLOCATE(veg_total_flux%heart_wood%nitrogen15(npoints))
-    ALLOCATE(veg_total_flux%labile%carbon(npoints))
-    ALLOCATE(veg_total_flux%labile%nitrogen(npoints))
-    ALLOCATE(veg_total_flux%labile%phosphorus(npoints))
-    ALLOCATE(veg_total_flux%labile%carbon13(npoints))
-    ALLOCATE(veg_total_flux%labile%carbon14(npoints))
-    ALLOCATE(veg_total_flux%labile%nitrogen15(npoints))
-    ALLOCATE(veg_total_flux%reserve%carbon(npoints))
-    ALLOCATE(veg_total_flux%reserve%nitrogen(npoints))
-    ALLOCATE(veg_total_flux%reserve%phosphorus(npoints))
-    ALLOCATE(veg_total_flux%reserve%carbon13(npoints))
-    ALLOCATE(veg_total_flux%reserve%carbon14(npoints))
-    ALLOCATE(veg_total_flux%reserve%nitrogen15(npoints))
-    ALLOCATE(veg_total_flux%fruit%carbon(npoints))
-    ALLOCATE(veg_total_flux%fruit%nitrogen(npoints))
-    ALLOCATE(veg_total_flux%fruit%phosphorus(npoints))
-    ALLOCATE(veg_total_flux%fruit%carbon13(npoints))
-    ALLOCATE(veg_total_flux%fruit%carbon14(npoints))
-    ALLOCATE(veg_total_flux%fruit%nitrogen15(npoints))
-    ALLOCATE(veg_total_flux%seed_bed%carbon(npoints))
-    ALLOCATE(veg_total_flux%seed_bed%nitrogen(npoints))
-    ALLOCATE(veg_total_flux%seed_bed%phosphorus(npoints))
-    ALLOCATE(veg_total_flux%seed_bed%carbon13(npoints))
-    ALLOCATE(veg_total_flux%seed_bed%carbon14(npoints))
-    ALLOCATE(veg_total_flux%seed_bed%nitrogen15(npoints))
-
-    ALLOCATE(veg_exudation%carbon(npoints))
-    ALLOCATE(veg_exudation%nitrogen(npoints))
-    ALLOCATE(veg_exudation%phosphorus(npoints))
-    ALLOCATE(veg_exudation%carbon13(npoints))
-    ALLOCATE(veg_exudation%carbon14(npoints))
-    ALLOCATE(veg_exudation%nitrogen15(npoints))
-
-    ALLOCATE(veg_establishment%carbon(npoints))
-    ALLOCATE(veg_establishment%nitrogen(npoints))
-    ALLOCATE(veg_establishment%phosphorus(npoints))
-    ALLOCATE(veg_establishment%carbon13(npoints))
-    ALLOCATE(veg_establishment%carbon14(npoints))
-    ALLOCATE(veg_establishment%nitrogen15(npoints))
-
-    ALLOCATE(veg_reserve_use%carbon(npoints))
-    ALLOCATE(veg_reserve_use%nitrogen(npoints))
-    ALLOCATE(veg_reserve_use%phosphorus(npoints))
-    ALLOCATE(veg_reserve_use%carbon13(npoints))
-    ALLOCATE(veg_reserve_use%carbon14(npoints))
-    ALLOCATE(veg_reserve_use%nitrogen15(npoints))
-
-    ALLOCATE(veg_total_biomass%carbon(npoints))
-    ALLOCATE(veg_total_biomass%nitrogen(npoints))
-    ALLOCATE(veg_total_biomass%phosphorus(npoints))
-    ALLOCATE(veg_total_biomass%carbon13(npoints))
-    ALLOCATE(veg_total_biomass%carbon14(npoints))
-    ALLOCATE(veg_total_biomass%nitrogen15(npoints))
-
-  END SUBROUTINE Init_veg_pools_elements_a
-
-
-  !-----------------------------------------------------------------------------------------------------
-  !> DEALLOCATE variables from veg_pool_a and veg_element_a structures at the program end
-  !!
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE Deallocate_var_veg_pools_elements_a
-
-    IMPLICIT NONE
-
-    !< 1.0  DEALLOCATE variables
-    !! 
-    DEALLOCATE(veg_pool%leaf%carbon)
-    DEALLOCATE(veg_pool%leaf%nitrogen)
-    DEALLOCATE(veg_pool%leaf%phosphorus)
-    DEALLOCATE(veg_pool%leaf%carbon13)
-    DEALLOCATE(veg_pool%leaf%carbon14)
-    DEALLOCATE(veg_pool%leaf%nitrogen15)
-    DEALLOCATE(veg_pool%fine_root%carbon)
-    DEALLOCATE(veg_pool%fine_root%nitrogen)
-    DEALLOCATE(veg_pool%fine_root%phosphorus)
-    DEALLOCATE(veg_pool%fine_root%carbon13)
-    DEALLOCATE(veg_pool%fine_root%carbon14)
-    DEALLOCATE(veg_pool%fine_root%nitrogen15)
-    DEALLOCATE(veg_pool%coarse_root%carbon)
-    DEALLOCATE(veg_pool%coarse_root%nitrogen)
-    DEALLOCATE(veg_pool%coarse_root%phosphorus)
-    DEALLOCATE(veg_pool%coarse_root%carbon13)
-    DEALLOCATE(veg_pool%coarse_root%carbon14)
-    DEALLOCATE(veg_pool%coarse_root%nitrogen15)
-    DEALLOCATE(veg_pool%sap_wood%carbon)
-    DEALLOCATE(veg_pool%sap_wood%nitrogen)
-    DEALLOCATE(veg_pool%sap_wood%phosphorus)
-    DEALLOCATE(veg_pool%sap_wood%carbon13)
-    DEALLOCATE(veg_pool%sap_wood%carbon14)
-    DEALLOCATE(veg_pool%sap_wood%nitrogen15)
-    DEALLOCATE(veg_pool%heart_wood%carbon)
-    DEALLOCATE(veg_pool%heart_wood%nitrogen)
-    DEALLOCATE(veg_pool%heart_wood%phosphorus)
-    DEALLOCATE(veg_pool%heart_wood%carbon13)
-    DEALLOCATE(veg_pool%heart_wood%carbon14)
-    DEALLOCATE(veg_pool%heart_wood%nitrogen15)
-    DEALLOCATE(veg_pool%labile%carbon)
-    DEALLOCATE(veg_pool%labile%nitrogen)
-    DEALLOCATE(veg_pool%labile%phosphorus)
-    DEALLOCATE(veg_pool%labile%carbon13)
-    DEALLOCATE(veg_pool%labile%carbon14)
-    DEALLOCATE(veg_pool%labile%nitrogen15)
-    DEALLOCATE(veg_pool%reserve%carbon)
-    DEALLOCATE(veg_pool%reserve%nitrogen)
-    DEALLOCATE(veg_pool%reserve%phosphorus)
-    DEALLOCATE(veg_pool%reserve%carbon13)
-    DEALLOCATE(veg_pool%reserve%carbon14)
-    DEALLOCATE(veg_pool%reserve%nitrogen15)
-    DEALLOCATE(veg_pool%fruit%carbon)
-    DEALLOCATE(veg_pool%fruit%nitrogen)
-    DEALLOCATE(veg_pool%fruit%phosphorus)
-    DEALLOCATE(veg_pool%fruit%carbon13)
-    DEALLOCATE(veg_pool%fruit%carbon14)
-    DEALLOCATE(veg_pool%fruit%nitrogen15)
-    DEALLOCATE(veg_pool%seed_bed%carbon)
-    DEALLOCATE(veg_pool%seed_bed%nitrogen)
-    DEALLOCATE(veg_pool%seed_bed%phosphorus)
-    DEALLOCATE(veg_pool%seed_bed%carbon13)
-    DEALLOCATE(veg_pool%seed_bed%carbon14)
-    DEALLOCATE(veg_pool%seed_bed%nitrogen15)
-
-    DEALLOCATE(veg_growth%leaf%carbon)
-    DEALLOCATE(veg_growth%leaf%nitrogen)
-    DEALLOCATE(veg_growth%leaf%phosphorus)
-    DEALLOCATE(veg_growth%leaf%carbon13)
-    DEALLOCATE(veg_growth%leaf%carbon14)
-    DEALLOCATE(veg_growth%leaf%nitrogen15)
-    DEALLOCATE(veg_growth%fine_root%carbon)
-    DEALLOCATE(veg_growth%fine_root%nitrogen)
-    DEALLOCATE(veg_growth%fine_root%phosphorus)
-    DEALLOCATE(veg_growth%fine_root%carbon13)
-    DEALLOCATE(veg_growth%fine_root%carbon14)
-    DEALLOCATE(veg_growth%fine_root%nitrogen15)
-    DEALLOCATE(veg_growth%coarse_root%carbon)
-    DEALLOCATE(veg_growth%coarse_root%nitrogen)
-    DEALLOCATE(veg_growth%coarse_root%phosphorus)
-    DEALLOCATE(veg_growth%coarse_root%carbon13)
-    DEALLOCATE(veg_growth%coarse_root%carbon14)
-    DEALLOCATE(veg_growth%coarse_root%nitrogen15)
-    DEALLOCATE(veg_growth%sap_wood%carbon)
-    DEALLOCATE(veg_growth%sap_wood%nitrogen)
-    DEALLOCATE(veg_growth%sap_wood%phosphorus)
-    DEALLOCATE(veg_growth%sap_wood%carbon13)
-    DEALLOCATE(veg_growth%sap_wood%carbon14)
-    DEALLOCATE(veg_growth%sap_wood%nitrogen15)
-    DEALLOCATE(veg_growth%heart_wood%carbon)
-    DEALLOCATE(veg_growth%heart_wood%nitrogen)
-    DEALLOCATE(veg_growth%heart_wood%phosphorus)
-    DEALLOCATE(veg_growth%heart_wood%carbon13)
-    DEALLOCATE(veg_growth%heart_wood%carbon14)
-    DEALLOCATE(veg_growth%heart_wood%nitrogen15)
-    DEALLOCATE(veg_growth%labile%carbon)
-    DEALLOCATE(veg_growth%labile%nitrogen)
-    DEALLOCATE(veg_growth%labile%phosphorus)
-    DEALLOCATE(veg_growth%labile%carbon13)
-    DEALLOCATE(veg_growth%labile%carbon14)
-    DEALLOCATE(veg_growth%labile%nitrogen15)
-    DEALLOCATE(veg_growth%reserve%carbon)
-    DEALLOCATE(veg_growth%reserve%nitrogen)
-    DEALLOCATE(veg_growth%reserve%phosphorus)
-    DEALLOCATE(veg_growth%reserve%carbon13)
-    DEALLOCATE(veg_growth%reserve%carbon14)
-    DEALLOCATE(veg_growth%reserve%nitrogen15)
-    DEALLOCATE(veg_growth%fruit%carbon)
-    DEALLOCATE(veg_growth%fruit%nitrogen)
-    DEALLOCATE(veg_growth%fruit%phosphorus)
-    DEALLOCATE(veg_growth%fruit%carbon13)
-    DEALLOCATE(veg_growth%fruit%carbon14)
-    DEALLOCATE(veg_growth%fruit%nitrogen15)
-    DEALLOCATE(veg_growth%seed_bed%carbon)
-    DEALLOCATE(veg_growth%seed_bed%nitrogen)
-    DEALLOCATE(veg_growth%seed_bed%phosphorus)
-    DEALLOCATE(veg_growth%seed_bed%carbon13)
-    DEALLOCATE(veg_growth%seed_bed%carbon14)
-    DEALLOCATE(veg_growth%seed_bed%nitrogen15)
-
-    DEALLOCATE(veg_litterfall%leaf%carbon)
-    DEALLOCATE(veg_litterfall%leaf%nitrogen)
-    DEALLOCATE(veg_litterfall%leaf%phosphorus)
-    DEALLOCATE(veg_litterfall%leaf%carbon13)
-    DEALLOCATE(veg_litterfall%leaf%carbon14)
-    DEALLOCATE(veg_litterfall%leaf%nitrogen15)
-    DEALLOCATE(veg_litterfall%fine_root%carbon)
-    DEALLOCATE(veg_litterfall%fine_root%nitrogen)
-    DEALLOCATE(veg_litterfall%fine_root%phosphorus)
-    DEALLOCATE(veg_litterfall%fine_root%carbon13)
-    DEALLOCATE(veg_litterfall%fine_root%carbon14)
-    DEALLOCATE(veg_litterfall%fine_root%nitrogen15)
-    DEALLOCATE(veg_litterfall%coarse_root%carbon)
-    DEALLOCATE(veg_litterfall%coarse_root%nitrogen)
-    DEALLOCATE(veg_litterfall%coarse_root%phosphorus)
-    DEALLOCATE(veg_litterfall%coarse_root%carbon13)
-    DEALLOCATE(veg_litterfall%coarse_root%carbon14)
-    DEALLOCATE(veg_litterfall%coarse_root%nitrogen15)
-    DEALLOCATE(veg_litterfall%sap_wood%carbon)
-    DEALLOCATE(veg_litterfall%sap_wood%nitrogen)
-    DEALLOCATE(veg_litterfall%sap_wood%phosphorus)
-    DEALLOCATE(veg_litterfall%sap_wood%carbon13)
-    DEALLOCATE(veg_litterfall%sap_wood%carbon14)
-    DEALLOCATE(veg_litterfall%sap_wood%nitrogen15)
-    DEALLOCATE(veg_litterfall%heart_wood%carbon)
-    DEALLOCATE(veg_litterfall%heart_wood%nitrogen)
-    DEALLOCATE(veg_litterfall%heart_wood%phosphorus)
-    DEALLOCATE(veg_litterfall%heart_wood%carbon13)
-    DEALLOCATE(veg_litterfall%heart_wood%carbon14)
-    DEALLOCATE(veg_litterfall%heart_wood%nitrogen15)
-    DEALLOCATE(veg_litterfall%labile%carbon)
-    DEALLOCATE(veg_litterfall%labile%nitrogen)
-    DEALLOCATE(veg_litterfall%labile%phosphorus)
-    DEALLOCATE(veg_litterfall%labile%carbon13)
-    DEALLOCATE(veg_litterfall%labile%carbon14)
-    DEALLOCATE(veg_litterfall%labile%nitrogen15)
-    DEALLOCATE(veg_litterfall%reserve%carbon)
-    DEALLOCATE(veg_litterfall%reserve%nitrogen)
-    DEALLOCATE(veg_litterfall%reserve%phosphorus)
-    DEALLOCATE(veg_litterfall%reserve%carbon13)
-    DEALLOCATE(veg_litterfall%reserve%carbon14)
-    DEALLOCATE(veg_litterfall%reserve%nitrogen15)
-    DEALLOCATE(veg_litterfall%fruit%carbon)
-    DEALLOCATE(veg_litterfall%fruit%nitrogen)
-    DEALLOCATE(veg_litterfall%fruit%phosphorus)
-    DEALLOCATE(veg_litterfall%fruit%carbon13)
-    DEALLOCATE(veg_litterfall%fruit%carbon14)
-    DEALLOCATE(veg_litterfall%fruit%nitrogen15)
-    DEALLOCATE(veg_litterfall%seed_bed%carbon)
-    DEALLOCATE(veg_litterfall%seed_bed%nitrogen)
-    DEALLOCATE(veg_litterfall%seed_bed%phosphorus)
-    DEALLOCATE(veg_litterfall%seed_bed%carbon13)
-    DEALLOCATE(veg_litterfall%seed_bed%carbon14)
-    DEALLOCATE(veg_litterfall%seed_bed%nitrogen15)
-
-    DEALLOCATE(veg_falloc%leaf%carbon)
-    DEALLOCATE(veg_falloc%leaf%nitrogen)
-    DEALLOCATE(veg_falloc%leaf%phosphorus)
-    DEALLOCATE(veg_falloc%leaf%carbon13)
-    DEALLOCATE(veg_falloc%leaf%carbon14)
-    DEALLOCATE(veg_falloc%leaf%nitrogen15)
-    DEALLOCATE(veg_falloc%fine_root%carbon)
-    DEALLOCATE(veg_falloc%fine_root%nitrogen)
-    DEALLOCATE(veg_falloc%fine_root%phosphorus)
-    DEALLOCATE(veg_falloc%fine_root%carbon13)
-    DEALLOCATE(veg_falloc%fine_root%carbon14)
-    DEALLOCATE(veg_falloc%fine_root%nitrogen15)
-    DEALLOCATE(veg_falloc%coarse_root%carbon)
-    DEALLOCATE(veg_falloc%coarse_root%nitrogen)
-    DEALLOCATE(veg_falloc%coarse_root%phosphorus)
-    DEALLOCATE(veg_falloc%coarse_root%carbon13)
-    DEALLOCATE(veg_falloc%coarse_root%carbon14)
-    DEALLOCATE(veg_falloc%coarse_root%nitrogen15)
-    DEALLOCATE(veg_falloc%sap_wood%carbon)
-    DEALLOCATE(veg_falloc%sap_wood%nitrogen)
-    DEALLOCATE(veg_falloc%sap_wood%phosphorus)
-    DEALLOCATE(veg_falloc%sap_wood%carbon13)
-    DEALLOCATE(veg_falloc%sap_wood%carbon14)
-    DEALLOCATE(veg_falloc%sap_wood%nitrogen15)
-    DEALLOCATE(veg_falloc%heart_wood%carbon)
-    DEALLOCATE(veg_falloc%heart_wood%nitrogen)
-    DEALLOCATE(veg_falloc%heart_wood%phosphorus)
-    DEALLOCATE(veg_falloc%heart_wood%carbon13)
-    DEALLOCATE(veg_falloc%heart_wood%carbon14)
-    DEALLOCATE(veg_falloc%heart_wood%nitrogen15)
-    DEALLOCATE(veg_falloc%labile%carbon)
-    DEALLOCATE(veg_falloc%labile%nitrogen)
-    DEALLOCATE(veg_falloc%labile%phosphorus)
-    DEALLOCATE(veg_falloc%labile%carbon13)
-    DEALLOCATE(veg_falloc%labile%carbon14)
-    DEALLOCATE(veg_falloc%labile%nitrogen15)
-    DEALLOCATE(veg_falloc%reserve%carbon)
-    DEALLOCATE(veg_falloc%reserve%nitrogen)
-    DEALLOCATE(veg_falloc%reserve%phosphorus)
-    DEALLOCATE(veg_falloc%reserve%carbon13)
-    DEALLOCATE(veg_falloc%reserve%carbon14)
-    DEALLOCATE(veg_falloc%reserve%nitrogen15)
-    DEALLOCATE(veg_falloc%fruit%carbon)
-    DEALLOCATE(veg_falloc%fruit%nitrogen)
-    DEALLOCATE(veg_falloc%fruit%phosphorus)
-    DEALLOCATE(veg_falloc%fruit%carbon13)
-    DEALLOCATE(veg_falloc%fruit%carbon14)
-    DEALLOCATE(veg_falloc%fruit%nitrogen15)
-    DEALLOCATE(veg_falloc%seed_bed%carbon)
-    DEALLOCATE(veg_falloc%seed_bed%nitrogen)
-    DEALLOCATE(veg_falloc%seed_bed%phosphorus)
-    DEALLOCATE(veg_falloc%seed_bed%carbon13)
-    DEALLOCATE(veg_falloc%seed_bed%carbon14)
-    DEALLOCATE(veg_falloc%seed_bed%nitrogen15)
-
-    DEALLOCATE(veg_total_flux%leaf%carbon)
-    DEALLOCATE(veg_total_flux%leaf%nitrogen)
-    DEALLOCATE(veg_total_flux%leaf%phosphorus)
-    DEALLOCATE(veg_total_flux%leaf%carbon13)
-    DEALLOCATE(veg_total_flux%leaf%carbon14)
-    DEALLOCATE(veg_total_flux%leaf%nitrogen15)
-    DEALLOCATE(veg_total_flux%fine_root%carbon)
-    DEALLOCATE(veg_total_flux%fine_root%nitrogen)
-    DEALLOCATE(veg_total_flux%fine_root%phosphorus)
-    DEALLOCATE(veg_total_flux%fine_root%carbon13)
-    DEALLOCATE(veg_total_flux%fine_root%carbon14)
-    DEALLOCATE(veg_total_flux%fine_root%nitrogen15)
-    DEALLOCATE(veg_total_flux%coarse_root%carbon)
-    DEALLOCATE(veg_total_flux%coarse_root%nitrogen)
-    DEALLOCATE(veg_total_flux%coarse_root%phosphorus)
-    DEALLOCATE(veg_total_flux%coarse_root%carbon13)
-    DEALLOCATE(veg_total_flux%coarse_root%carbon14)
-    DEALLOCATE(veg_total_flux%coarse_root%nitrogen15)
-    DEALLOCATE(veg_total_flux%sap_wood%carbon)
-    DEALLOCATE(veg_total_flux%sap_wood%nitrogen)
-    DEALLOCATE(veg_total_flux%sap_wood%phosphorus)
-    DEALLOCATE(veg_total_flux%sap_wood%carbon13)
-    DEALLOCATE(veg_total_flux%sap_wood%carbon14)
-    DEALLOCATE(veg_total_flux%sap_wood%nitrogen15)
-    DEALLOCATE(veg_total_flux%heart_wood%carbon)
-    DEALLOCATE(veg_total_flux%heart_wood%nitrogen)
-    DEALLOCATE(veg_total_flux%heart_wood%phosphorus)
-    DEALLOCATE(veg_total_flux%heart_wood%carbon13)
-    DEALLOCATE(veg_total_flux%heart_wood%carbon14)
-    DEALLOCATE(veg_total_flux%heart_wood%nitrogen15)
-    DEALLOCATE(veg_total_flux%labile%carbon)
-    DEALLOCATE(veg_total_flux%labile%nitrogen)
-    DEALLOCATE(veg_total_flux%labile%phosphorus)
-    DEALLOCATE(veg_total_flux%labile%carbon13)
-    DEALLOCATE(veg_total_flux%labile%carbon14)
-    DEALLOCATE(veg_total_flux%labile%nitrogen15)
-    DEALLOCATE(veg_total_flux%reserve%carbon)
-    DEALLOCATE(veg_total_flux%reserve%nitrogen)
-    DEALLOCATE(veg_total_flux%reserve%phosphorus)
-    DEALLOCATE(veg_total_flux%reserve%carbon13)
-    DEALLOCATE(veg_total_flux%reserve%carbon14)
-    DEALLOCATE(veg_total_flux%reserve%nitrogen15)
-    DEALLOCATE(veg_total_flux%fruit%carbon)
-    DEALLOCATE(veg_total_flux%fruit%nitrogen)
-    DEALLOCATE(veg_total_flux%fruit%phosphorus)
-    DEALLOCATE(veg_total_flux%fruit%carbon13)
-    DEALLOCATE(veg_total_flux%fruit%carbon14)
-    DEALLOCATE(veg_total_flux%fruit%nitrogen15)
-    DEALLOCATE(veg_total_flux%seed_bed%carbon)
-    DEALLOCATE(veg_total_flux%seed_bed%nitrogen)
-    DEALLOCATE(veg_total_flux%seed_bed%phosphorus)
-    DEALLOCATE(veg_total_flux%seed_bed%carbon13)
-    DEALLOCATE(veg_total_flux%seed_bed%carbon14)
-    DEALLOCATE(veg_total_flux%seed_bed%nitrogen15)
-
-    DEALLOCATE(veg_exudation%carbon)
-    DEALLOCATE(veg_exudation%nitrogen)
-    DEALLOCATE(veg_exudation%phosphorus)
-    DEALLOCATE(veg_exudation%carbon13)
-    DEALLOCATE(veg_exudation%carbon14)
-    DEALLOCATE(veg_exudation%nitrogen15)
-
-    DEALLOCATE(veg_establishment%carbon)
-    DEALLOCATE(veg_establishment%nitrogen)
-    DEALLOCATE(veg_establishment%phosphorus)
-    DEALLOCATE(veg_establishment%carbon13)
-    DEALLOCATE(veg_establishment%carbon14)
-    DEALLOCATE(veg_establishment%nitrogen15)
-
-    DEALLOCATE(veg_reserve_use%carbon)
-    DEALLOCATE(veg_reserve_use%nitrogen)
-    DEALLOCATE(veg_reserve_use%phosphorus)
-    DEALLOCATE(veg_reserve_use%carbon13)
-    DEALLOCATE(veg_reserve_use%carbon14)
-    DEALLOCATE(veg_reserve_use%nitrogen15)
-
-    DEALLOCATE(veg_total_biomass%carbon)
-    DEALLOCATE(veg_total_biomass%nitrogen)
-    DEALLOCATE(veg_total_biomass%phosphorus)
-    DEALLOCATE(veg_total_biomass%carbon13)
-    DEALLOCATE(veg_total_biomass%carbon14)
-    DEALLOCATE(veg_total_biomass%nitrogen15)
-
-  END SUBROUTINE Deallocate_var_veg_pools_elements_a
 
 END MODULE mo_veg_memory_class
