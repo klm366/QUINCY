@@ -22,7 +22,7 @@ MODULE mo_sse_process
   PRIVATE
 
   PUBLIC :: relative_humidity_soil, init_soil_temperature, &
-    & calc_vol_heat_capacity, calc_thermal_conductivity, calc_soil_temperature, &
+    & calc_vol_heat_capacity, calc_thermal_conductivity, calc_soil_temperature, calc_soil_temperature_skin, &
     & calc_snow_temperature, calc_soiltemp_old, calc_soiltemp_old_skin, Get_liquid_max
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sse_process'
@@ -677,6 +677,345 @@ CONTAINS
     !$claw acc end data
     !$claw verbatim ser_counter = ser_counter + 1
   END SUBROUTINE calc_soil_temperature
+
+
+
+
+
+  SUBROUTINE calc_soil_temperature_skin(       &
+    & nidx, nsoil, dz, mids,              &
+    & delta_time, lstart,                 &
+    & l_freeze, l_supercool,              &
+    & t_srf_unfilt,                       &
+    & vol_heat_cap, heat_cond, grnd_hflx, &
+    & t_soil, t_soil_acoef, t_soil_bcoef, &
+    & hcap_grnd,                          &
+    & thaw_depth,                         &
+    ! optional
+    & ws_max, matrix_pot, bclapp, ws, ice, frozen, melt &
+    & )
+    !
+    !
+    !   AUTHOR:  FREDERIC HOURDIN     30/01/92
+    !
+    !            ADAPTED TO THE LMD-GCM BY JAN POLCHER  26/02/92
+    !            ADAPTED TO THE ECHAM-GCM BY JAN-PETER SCHULZ, MPI  03/02/96
+    !
+    !            J.-P. SCHULZ   MPI - OCTOBER 1997 :
+    !               ROUTINE USED FOR IMPLEMENTATION OF AN IMPLICIT
+    !               COUPLING BETWEEN LAND SURFACE AND ATMOSPHERE IN THE
+    !               ECHAM4 GCM.
+    !            U.SCHLESE DKRZ - NOVEMBER 1999  MODIFIED FOR ECHAM5
+    !            U.Schlese DKRZ - February 2000  new soil temperatures
+    !            L Kornblueh, MPI, January 2003, removed MERGE
+    !
+    !            Adapted to JSBACH by Thomas Raddatz, Mai 2004
+    !
+    !   OBJECTIVE:  COMPUTATION OF:
+    !               THE GROUND TEMPERATURE EVOLUTION
+    !               THE GROUND SPECIFIC HEAT "CAPCAL"
+    !               THE SURFACE DIFFUSIVE FLUX FROM GROUND "F0"
+    !
+    !
+    !   METHOD:  IMPLICIT TIME INTEGRATION
+    !
+    !   CONSECUTIVES GROUND TEMPERATURES ARE RELATED BY:
+    !           T(K+1) = C(K) + D(K)*T(K)  (1)
+    !   THE COEFFICIENTS C (=t_soil_acoef) AND D (=t_soil_bcoef) ARE COMPUTED AT THE
+    !   T-DT TIME-STEP.
+    !   ROUTINE STRUCTURE:
+    !   1)NEW TEMPERATURES ARE COMPUTED  USING (1)
+    !   2)C AND D COEFFICIENTS ARE COMPUTED FROM THE NEW TEMPERATURE
+    !     PROFILE FOR THE T+DT TIME-STEP
+    !   3)THE COEFFICIENTS A AND B ARE COMPUTED WHERE THE DIFFUSIVE
+    !     FLUXES AT THE T+DT TIME-STEP IS GIVEN BY
+    !            FDIFF = A + B TS(T+DT)
+    !     OR     FDIFF = F0 + CAPCAL (TS(T+DT)-TS(T))/DT
+    !            WITH F0 = A + B (TS(T))
+    !                 CAPCAL = B*DT
+    !
+    !
+    !     ------------------------------------------------------------------
+    !
+    !     MODIFIED BY ALTUG EKICI
+    !
+    !     INCLUDED:
+    !     -PHASE CHANGE
+    !     -HEAT TRANSFER PARAMETERS AS A FUNCTION OF SOIL WATER AND ICE
+    !     -SUPERCOOLED WATER EQUATION
+    !     -THAW DEPTH CALCULATION
+    !     -MULTI LAYERED SNOW SCHEME and KEEPING 5 SOIL LAYERS AT ALL TIMES
+    !     -ORGANIC LAYER ABOVE THE SOIL
+    !
+    !----------------------------------------------------------------------------------------------
+
+    USE mo_jsb_physical_constants, ONLY: tmelt, alf, rhoh2o, rhoi
+
+    IMPLICIT NONE
+
+    !-----------------------------------------------------------------------
+    !  arguments
+
+    INTEGER,  INTENT(in)    ::  nidx                     !! length of the vector
+    INTEGER,  INTENT(in)    ::  nsoil                    !! number of soil layers
+    REAL(wp), INTENT(in)    ::  delta_time               !! Time step
+    LOGICAL,  INTENT(in)    ::  lstart                   !! if T, start of experiment
+    LOGICAL,  INTENT(in)    ::  l_freeze, l_supercool
+    REAL(wp), INTENT(in)    ::  dz(:)                    !! soil layer thickness [m]
+    REAL(wp), INTENT(in)    ::  mids(:)                  !! depth of mids of soil layers [m]
+    REAL(wp), INTENT(in)    ::  t_srf_unfilt(:)          !! surface temperature at top of soil [K]
+    REAL(wp), INTENT(in)    ::  vol_heat_cap(:,:)        !! soil heat capacity [J/m^3K]
+    REAL(wp), INTENT(in)    ::  heat_cond(:,:)           !! soil thermal conductivity [J/m/s/K]
+    REAL(wp), INTENT(in)    ::  grnd_hflx(:)             !! ground heat flux [J m-2 s-1]
+
+    REAL(wp), INTENT(inout) ::  t_soil(:,:)              !! soil temperature [K]
+    REAL(wp), INTENT(inout) ::  t_soil_acoef(:,:)        !! soil A coefficient of Richtmyer and Morton scheme
+    REAL(wp), INTENT(inout) ::  t_soil_bcoef(:,:)        !! soil B coefficient of Richtmyer and Morton scheme
+
+    REAL(wp), INTENT(out)   ::  hcap_grnd(:)             !! heat capacity of the ground [J m-2 K-1]
+    REAL(wp), INTENT(out)   ::  thaw_depth(:)            !! Thawing depth [m]
+    REAL(wp), INTENT(in), OPTIONAL    ::  ws_max(:,:)       !! Maximum water storage [m]
+    REAL(wp), INTENT(in), OPTIONAL    ::  matrix_pot(:,:)   !! Matrix potential
+    REAL(wp), INTENT(in), OPTIONAL    ::  bclapp(:,:)       !! Clapp and Hornberger parameter
+    REAL(wp), INTENT(inout), OPTIONAL ::  ws(:,:)           !! Water storage [m]
+    REAL(wp), INTENT(inout), OPTIONAL ::  ice(:,:)          !! Ice storage [m]
+    REAL(wp), INTENT(out), OPTIONAL   ::  frozen(:,:)       !! Water flux from freezing soil water [kg m-2 s-1]
+    REAL(wp), INTENT(out), OPTIONAL   ::  melt(:,:)         !! Water flux from melting soil ice    [kg m-2 s-1]
+
+    !------------------------------------------------------------------
+    !  local Variables
+
+    INTEGER  :: jl, jk
+    REAL(wp) :: z1(nidx,nsoil)
+    REAL(wp) :: zd1(nsoil)
+    REAL(wp) :: zdz1(nidx,nsoil), zdz2(nidx,nsoil)
+    REAL(wp) :: heat_cap(nidx,nsoil), liquid_max(nidx,nsoil) !, freezemelt(nidx,nsoil)
+#if defined(_CLAW) && defined(SERIALIZE)
+    REAL(wp) :: zdz1_sum(nidx), zdz2_sum(nidx), z1_sum(nidx), t_soil_acoef_sum(nidx), t_soil_bcoef_sum(nidx)
+#endif
+
+    !$claw verbatim INTEGER, SAVE :: ser_counter = 1
+
+    !-----------------------------------------------------------------------------------------------
+    !  Computation of useful constants
+
+    !$claw acc data create(z1,zd1,zdz1,zdz2,heat_cap,liquid_max) &
+    !$claw acc present(dz,mids,t_srf_unfilt,vol_heat_cap,heat_cond,t_soil, &
+    !$claw acc t_soil_acoef,t_soil_bcoef,hcap_grnd,grnd_hflx,thaw_depth)
+
+    !$claw acc parallel loop gang vector
+    DO jk = 1,nsoil-1
+       zd1(jk) = 1._wp / (mids(jk+1) - mids(jk))
+    END DO
+
+    !$claw acc parallel loop gang vector collapse(2)
+    DO jl = 1, nidx
+      DO jk = 1, nsoil
+        heat_cap(jl,jk) = dz(jk) * vol_heat_cap(jl,jk)
+      END DO
+    END DO
+
+    !-----------------------------------------------------------------------------------------------
+    !  Computation of soil temperaturs
+    !    from surface temperatur and A and B coefficients computed at the previous time step
+    !-----------------------------------------------------------------------------------------------
+
+    IF (PRESENT(ws)) THEN
+      !$claw expand parallel update
+      frozen(:,:)   = 0._wp
+      melt  (:,:)   = 0._wp
+      !$claw end expand
+    END IF
+    !$claw expand parallel update
+    thaw_depth(:) = 0._wp
+
+    IF (.NOT. lstart) THEN
+
+      !$claw acc parallel default(none) present(t_srf_unfilt,t_soil,t_soil_acoef,t_soil_bcoef)
+
+      ! uppermost layer
+      !$claw acc loop gang vector
+      DO jl=1,nidx
+        t_soil(jl,1) = t_soil_acoef(jl,1) + t_soil_bcoef(jl,1) * t_srf_unfilt(jl)
+      END DO
+
+      ! deeper layers
+      !$claw acc loop seq
+      DO jk = 1, nsoil-1
+        !$claw acc loop gang vector
+        DO jl=1,nidx
+          t_soil(jl,jk+1) = t_soil_acoef(jl,jk+1) + t_soil_bcoef(jl,jk+1) * t_soil(jl,jk)
+        END DO
+      END DO
+
+      !$claw acc end parallel
+
+      ! Phase change calculations
+      IF (l_freeze .AND. PRESENT(ws)) THEN
+
+        IF (l_supercool) THEN
+          !$claw expand parallel update savepoint=ser_jsb_sse_calc_soil_temperature_expand_0 counter=ser_counter
+          liquid_max(1:nidx,1:nsoil) = Get_liquid_max( &
+            & t_soil    (1:nidx,1:nsoil), &
+            & ws_max    (1:nidx,1:nsoil), &
+            & matrix_pot(1:nidx,1:nsoil), &
+            & bclapp    (1:nidx,1:nsoil)  &
+            & )
+        ELSE
+          !$claw expand parallel update
+          liquid_max(1:nidx,1:nsoil) = 0._wp
+        END IF
+
+        !$claw acc data present(frozen,melt,ws,ice,t_soil,heat_cap,liquid_max)
+        !$claw acc parallel loop gang vector collapse(2)
+        DO jl=1,nidx
+          DO jk=1,nsoil
+            IF (t_soil(jl,jk) < tmelt .AND. ws(jl,jk) > liquid_max(jl,jk)) THEN
+              frozen(jl,jk) = MIN(ws(jl,jk) - liquid_max(jl,jk), &
+                &               heat_cap(jl,jk) * (tmelt - t_soil(jl,jk)) / (alf * rhoh2o) &
+                &              )
+              ! ws (jl,jk) = ws (jl,jk) - frozen(jl,jk)
+              ! ice(jl,jk) = ice(jl,jk) + frozen(jl,jk)
+              ! t_soil(jl,jk) = t_soil(jl,jk) + frozen(jl,jk) * alf * rhoh2o / heat_cap(jl,jk)
+            ELSE IF (t_soil(jl,jk) > tmelt .AND. ice(jl,jk) > 0._wp) THEN
+              melt(jl,jk) = MIN(ice(jl,jk), heat_cap(jl,jk) * (t_soil(jl,jk) - tmelt) / (alf * rhoi))
+              ! ws (jl,jk) = ws (jl,jk) + melt(jl,jk)
+              ! ice(jl,jk) = ice(jl,jk) - melt(jl,jk)
+              ! t_soil(jl,jk) = t_soil(jl,jk) - melt(jl,jk) * alf * rhoi / heat_cap(jl,jk)
+            END IF
+          END DO
+        END DO
+        !$claw acc end parallel
+        !$claw acc end data
+
+        ! Note: only either frozen or melt is non-zero at any given point
+        !$claw expand parallel update savepoint=ser_jsb_sse_calc_soil_temperature_expand_1 counter=ser_counter
+        ws(:,:) = ws(:,:) - frozen(:,:) + melt(:,:)
+        ice(:,:) = ice(:,:) + frozen(:,:) - melt(:,:)
+        t_soil(:,:) = t_soil(:,:) + frozen(:,:) * alf * rhoh2o / heat_cap(:,:) - melt(:,:) * alf * rhoi / heat_cap(:,:)
+        !$claw end expand
+
+        !$claw expand parallel update savepoint=ser_jsb_sse_calc_soil_temperature_expand_2 counter=ser_counter
+        frozen(:,:) = frozen(:,:) * rhoh2o / delta_time
+        melt  (:,:) = melt  (:,:) * rhoi   / delta_time
+        !$claw end expand
+      END IF
+
+      ! Thawing depth
+      !$claw acc parallel
+      !$claw acc loop gang vector
+      DO jl=1,nidx
+        thaw_depth(jl) = mids(nsoil)   ! Initialize with maximum thawing depth
+        IF (t_soil(jl,1) <= tmelt) THEN ! Top soil layer is frozen
+          thaw_depth(jl) = 0._wp
+        END IF
+        !$claw acc loop seq
+        DO jk=2,nsoil
+          IF  (       thaw_depth(jl)  == mids(nsoil) & ! still the inital value
+            &   .AND. t_soil(jl,jk-1) >  tmelt &
+            &   .AND. t_soil(jl,jk  ) <= tmelt &
+            & ) THEN
+            thaw_depth(jl) = mids(jk-1) + (mids(jk)-mids(jk-1)) * (t_soil(jl,jk-1) - tmelt) / (t_soil(jl,jk-1) - t_soil(jl,jk))
+          END IF
+        END DO
+      END DO
+      !$claw acc end parallel
+
+    END IF
+
+
+    !------------------------------------------------------------------------------------------------
+    !  Computation of the Richtmyer and Morton A and B coefficients for the next time step
+    !------------------------------------------------------------------------------------------------
+    !$claw acc parallel default(none) present(zdz1,zdz2,zd1,heat_cap,heat_cond)
+    !$claw acc loop gang vector collapse(2)
+    DO jk = 1, nsoil
+      DO jl=1,nidx
+        zdz2(jl,jk) = heat_cap(jl,jk) / delta_time
+      END DO
+    END DO
+    !$claw acc loop gang vector collapse(2)
+    DO jk = 1, nsoil-1
+      DO jl=1,nidx
+        zdz1(jl,jk) = zd1(jk) * heat_cond(jl,jk)
+      END DO
+    END DO
+    !$claw acc end parallel
+
+#if defined(_CLAW) && defined(SERIALIZE)
+    !$claw acc data create(zdz1_sum,zdz2_sum)
+    !$claw expand parallel update savepoint=ser_jsb_sse_calc_soil_temperature_expand_3 counter=ser_counter
+    zdz1_sum(:) = SUM(zdz1(:,1:nsoil-1), DIM=2)
+    zdz2_sum(:) = SUM(zdz2(:,:), DIM=2)
+    !$claw end expand
+    !$claw acc end data
+#endif
+
+    !$claw expand parallel update
+    z1(:,:) = 0._wp
+
+    ! lowest soil layer
+    !$claw acc parallel loop default(none) present(zdz1,zdz2,z1) gang vector
+    DO jl=1,nidx
+      z1(jl,nsoil) = zdz2(jl,nsoil) + zdz1(jl,nsoil-1)
+    END DO
+
+    !$claw expand parallel update savepoint=ser_jsb_sse_calc_soil_temperature_expand_4 counter=ser_counter
+    ! z1(:,nsoil-1) = zdz2(:,nsoil) + zdz1(:,nsoil-1)
+    t_soil_acoef(:,nsoil) = zdz2(:,nsoil) * t_soil(:,nsoil) / z1(:,nsoil)
+    t_soil_bcoef(:,nsoil) = zdz1(:,nsoil-1) / z1(:,nsoil)
+    !$claw end expand
+
+    ! soil layers above
+    !$claw acc data present(z1,zdz1, zdz2,t_soil_acoef,t_soil_bcoef,t_soil)
+    !$claw acc parallel
+    !$claw acc loop gang vector
+    DO jl=1,nidx
+      !$claw acc loop seq
+      DO jk = nsoil-1, 2, -1
+        z1(jl,jk) = 1._wp / (zdz2(jl,jk) + zdz1(jl,jk-1) + zdz1(jl,jk) * (1._wp - t_soil_bcoef(jl,jk+1)))
+        t_soil_acoef(jl,jk) = (t_soil(jl,jk) * zdz2(jl,jk) + zdz1(jl,jk) * t_soil_acoef(jl,jk+1)) * z1(jl,jk)
+        t_soil_bcoef(jl,jk) = zdz1(jl,jk-1) * z1(jl,jk)
+      END DO
+    END DO
+
+    ! top soil layer
+    DO jl=1,nidx
+      !$claw acc loop seq
+      jk = 1
+        z1(jl,jk) = 1._wp / (zdz2(jl,jk) + zdz1(jl,jk) * (1._wp - t_soil_bcoef(jl,jk+1)))
+        t_soil_acoef(jl,jk) = (t_soil(jl,jk) * zdz2(jl,jk) - grnd_hflx(jl) + zdz1(jl,jk) * t_soil_acoef(jl,jk+1)) * z1(jl,jk)
+        t_soil_bcoef(jl,jk) = 0._wp
+    END DO
+
+    !$claw acc end parallel
+    !$claw acc end data
+
+#if defined(_CLAW) && defined(SERIALIZE)
+    !$claw acc data create(z1_sum,t_soil_acoef_sum,t_soil_bcoef_sum)
+    !$claw expand parallel update savepoint=ser_jsb_sse_calc_soil_temperature_expand_5 counter=ser_counter
+    z1_sum(:)           = SUM(z1(:,1:nsoil), DIM=2)
+    t_soil_acoef_sum(:) = SUM(t_soil_acoef(:,1:nsoil), DIM=2)
+    t_soil_bcoef_sum(:) = SUM(t_soil_bcoef(:,1:nsoil), DIM=2)
+    !$claw end expand
+    !$claw acc end data
+#endif
+
+    !------------------------------------------------------------------------------------------------
+    ! Computation of surface diffusive heat flux from the ground and heat capacity of the ground
+    !------------------------------------------------------------------------------------------------
+    !$claw expand parallel update savepoint=ser_jsb_sse_calc_soil_temperature_expand_6 counter=ser_counter
+    !grnd_hflx(:) = zdz1(:,1) * (t_soil_acoef(:,1) + (t_soil_bcoef(:,1) - 1._wp) * t_soil(:,1))
+    hcap_grnd(:) = (zdz2(:,1) * delta_time + delta_time * (1._wp - t_soil_bcoef(:,2)) * zdz1(:,1))
+    !$claw end expand
+
+    !$claw acc end data
+    !$claw verbatim ser_counter = ser_counter + 1
+  END SUBROUTINE calc_soil_temperature_skin
+
+
+
+
 
   SUBROUTINE calc_snow_temperature(       &
     & nidx, nsnow,                        &

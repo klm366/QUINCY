@@ -117,7 +117,7 @@ CONTAINS
 
   SUBROUTINE update_soil_and_snow_temperature(tile, options)
 
-    USE mo_sse_process,            ONLY: calc_soil_temperature
+    USE mo_sse_process,            ONLY: calc_soil_temperature, calc_soil_temperature_skin
     USE mo_sse_process,            ONLY: calc_snow_temperature, calc_soiltemp_old, calc_soiltemp_old_skin
     USE mo_jsb_physical_constants, ONLY: alf, rhoh2o, dens_snow
     USE mo_sse_constants,          ONLY: snow_depth_min
@@ -493,68 +493,140 @@ CONTAINS
       !$claw end expand
     END IF
 
+
+
+    IF(l_is_skin) THEN
+      grnd_hflx_soil(:) = forc_hflx(:)
+    END IF
+
     ! @todo: move water/ice calculations to HYDRO_ process
     IF (tile%is_glacier) THEN
-      CALL calc_soil_temperature( &
-        ! in
-        & nc                                       , &
-        & nsoil                                    , &
-        & soil_e%dz(:)                             , &
-        & soil_e%levels(:)                         , &
-        & dtime                                    , &
-        & lstart                                   , &
-        & dsl4jsb_Config(SSE_)%l_freeze            , &
-        & dsl4jsb_Config(SSE_)%l_supercool         , &
-        & t_soil_top                          (:  ), &
-        & vol_heat_cap_sl                     (:,:), &
-        & heat_cond_sl                        (:,:), &
-        ! inout
-        & t_soil                              (:,:), &
-        & t_soil_acoef                        (:,:), &
-        & t_soil_bcoef                        (:,:), &
-        ! out
-        & hcap_grnd_soil                      (:  ), &
-        & grnd_hflx_soil                      (:  ), &
-        & thaw_depth                          (:  )  &
-        & )
+      IF(l_is_clas) THEN
+        CALL calc_soil_temperature( &
+          ! in
+          & nc                                       , &
+          & nsoil                                    , &
+          & soil_e%dz(:)                             , &
+          & soil_e%levels(:)                         , &
+          & dtime                                    , &
+          & lstart                                   , &
+          & dsl4jsb_Config(SSE_)%l_freeze            , &
+          & dsl4jsb_Config(SSE_)%l_supercool         , &
+          & t_soil_top                          (:  ), &
+          & vol_heat_cap_sl                     (:,:), &
+          & heat_cond_sl                        (:,:), &
+          ! inout
+          & t_soil                              (:,:), &
+          & t_soil_acoef                        (:,:), &
+          & t_soil_bcoef                        (:,:), &
+          ! out
+          & hcap_grnd_soil                      (:  ), &
+          & grnd_hflx_soil                      (:  ), &
+          & thaw_depth                          (:  )  &
+          & )
+      END IF
+      IF(l_is_skin) THEN
+
+          CALL calc_soil_temperature_skin( &
+            ! in
+            & nc                                       , &
+            & nsoil                                    , &
+            & soil_e%dz(:)                             , &
+            & soil_e%levels(:)                         , &
+            & dtime                                    , &
+            & lstart                                   , &
+            & dsl4jsb_Config(SSE_)%l_freeze            , &
+            & dsl4jsb_Config(SSE_)%l_supercool         , &
+            & t_soil_top                          (:)  , &
+            & vol_heat_cap_sl                     (:,:), &
+            & heat_cond_sl                        (:,:), &
+            & grnd_hflx_soil                      (:)  , &
+
+            ! inout
+            & t_soil                              (:,:), &
+            & t_soil_acoef                        (:,:), &
+            & t_soil_bcoef                        (:,:), &
+            ! out
+            & hcap_grnd_soil                      (:)  , &
+            & thaw_depth                          (:)    &
+            & )
+        END IF
     ELSE
       ALLOCATE(ws_max_sl(nc,nsoil))
       !$claw acc enter data create(ws_max_sl)
       !$claw expand parallel update
       ws_max_sl(:,:) = soil_depth_sl(:,:) * vol_porosity_sl(:,:)
 
-      CALL calc_soil_temperature( &
-        ! in
-        & nc                                       , &
-        & nsoil                                    , &
-        & soil_e%dz(:)                             , &
-        & soil_e%levels(:)                         , &
-        & dtime                                    , &
-        & lstart                                   , &
-        & dsl4jsb_Config(SSE_)%l_freeze            , &
-        & dsl4jsb_Config(SSE_)%l_supercool         , &
-        & t_soil_top                          (:  ), &
-        & vol_heat_cap_sl                     (:,:), &
-        & heat_cond_sl                        (:,:), &
-        ! inout
-        & t_soil                              (:,:), &
-        & t_soil_acoef                        (:,:), &
-        & t_soil_bcoef                        (:,:), &
-        ! out
-        & hcap_grnd_soil                      (:  ), &
-        & grnd_hflx_soil                      (:  ), &
-        & thaw_depth                          (:  ), &
-        ! optional, in
-        & ws_max_sl                           (:,:), &
-        & matrix_pot_sl                       (:,:), &
-        & bclapp_sl                           (:,:), &
-        ! optional, inout
-        & w_soil_sl                           (:,:), &
-        & w_ice_sl                            (:,:), &
-        ! optional, out
-        & w_soil_freeze_sl                    (:,:), &
-        & w_ice_melt_sl                       (:,:)  &
-        & )
+      IF(l_is_clas) THEN
+        CALL calc_soil_temperature( &
+          ! in
+          & nc                                       , &
+          & nsoil                                    , &
+          & soil_e%dz(:)                             , &
+          & soil_e%levels(:)                         , &
+          & dtime                                    , &
+          & lstart                                   , &
+          & dsl4jsb_Config(SSE_)%l_freeze            , &
+          & dsl4jsb_Config(SSE_)%l_supercool         , &
+          & t_soil_top                          (:  ), &
+          & vol_heat_cap_sl                     (:,:), &
+          & heat_cond_sl                        (:,:), &
+          ! inout
+          & t_soil                              (:,:), &
+          & t_soil_acoef                        (:,:), &
+          & t_soil_bcoef                        (:,:), &
+          ! out
+          & hcap_grnd_soil                      (:  ), &
+          & grnd_hflx_soil                      (:  ), &
+          & thaw_depth                          (:  ), &
+          ! optional, in
+          & ws_max_sl                           (:,:), &
+          & matrix_pot_sl                       (:,:), &
+          & bclapp_sl                           (:,:), &
+          ! optional, inout
+          & w_soil_sl                           (:,:), &
+          & w_ice_sl                            (:,:), &
+          ! optional, out
+          & w_soil_freeze_sl                    (:,:), &
+          & w_ice_melt_sl                       (:,:)  &
+          & )
+        END IF
+
+      IF(l_is_skin) THEN
+        CALL calc_soil_temperature_skin( &
+          ! in
+          & nc                                       , &
+          & nsoil                                    , &
+          & soil_e%dz(:)                             , &
+          & soil_e%levels(:)                         , &
+          & dtime                                    , &
+          & lstart                                   , &
+          & dsl4jsb_Config(SSE_)%l_freeze            , &
+          & dsl4jsb_Config(SSE_)%l_supercool         , &
+          & t_soil_top                          (:),   &
+          & vol_heat_cap_sl                     (:,:), &
+          & heat_cond_sl                        (:,:), &
+          & grnd_hflx_soil                      (:),   &
+          ! inout
+          & t_soil                              (:,:), &
+          & t_soil_acoef                        (:,:), &
+          & t_soil_bcoef                        (:,:), &
+          ! out
+          & hcap_grnd_soil                      (:),   &
+          & thaw_depth                          (:),   &
+          ! optional, in
+          & ws_max_sl                           (:,:), &
+          & matrix_pot_sl                       (:,:), &
+          & bclapp_sl                           (:,:), &
+          ! optional, inout
+          & w_soil_sl                           (:,:), &
+          & w_ice_sl                            (:,:), &
+          ! optional, out
+          & w_soil_freeze_sl                    (:,:), &
+          & w_ice_melt_sl                       (:,:)  &
+          & )
+        END IF
+
       !$claw acc exit data delete(ws_max_sl)
       DEALLOCATE(ws_max_sl)
     END IF
