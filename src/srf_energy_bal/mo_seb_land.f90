@@ -336,12 +336,43 @@ CONTAINS
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_2_1 tile_name=tile%name
     t2s_conv(:) = s_old(:) / t_old(:)  !
 
+
+    t_soil_top(:)   = t_soil(:,1)
+
     open(555, file='output.txt')
     CALL get_date_components (current_date, yr, mo, dy, hr, mn, se)
     999 FORMAT(I0.2, I0.2, I0.2, 1X, I0.2, I0.2, I0.2, 1X, A4, 1X, ES15.7E3)
+    998 FORMAT(I0.2, I0.2, I0.2, 1X,  I0.2, I0.2, I0.2, 1X, A4, 1X, I0.3)
     997 FORMAT(I0.2, I0.2, I0.2, 1X, I0.2, I0.2, I0.2, 1X, A4, 1X, L1)
 
-    t_soil_top(:)   = t_soil(:,1)
+    IF (yr == 1999  .AND. mo == 10 .AND. (dy == 23 .OR. dy == 24 .OR. dy == 25 .OR. dy == 26)) THEN
+      DO i=1,size(lat, dim=1)
+        IF (lat(i) > 37._wp) THEN
+          write(555,999) yr,mo,dy, hr,mn,se, 'Rnet', rad_srf_net(i)
+          write(555,999) yr,mo,dy, hr,mn,se, 'Gfl1', grnd_hflx(i)
+          write(555,999) yr,mo,dy, hr,mn,se, 'Tsoi', t_soil_top(i)
+          write(555,999) yr,mo,dy, hr,mn,se, 'lati', lat(i)
+          IF (l_is_clas) THEN
+            write(555,999) yr,mo,dy, hr,mn,se, 'Clas', 1._wp
+          ELSE
+            write(555,999) yr,mo,dy, hr,mn,se, 'Clas', 0._wp
+          END IF
+          IF (l_is_skin) THEN
+            write(555,999) yr,mo,dy, hr,mn,se, 'Skin', 1._wp
+            IF (lstart) THEN
+                IF (lat(i) > 37._wp) THEN
+                  write(555,999) yr,mo,dy, hr,mn,se, 'Tnew', t_soil_top(i)
+                  write(555,999) yr,mo,dy, hr,mn,se, 'zhtc', htc_stable(i)
+                  write(555,998) yr,mo,dy, hr,mn,se, 'loop', 0
+                END IF
+            END IF
+          ELSE
+            write(555,999) yr,mo,dy, hr,mn,se, 'Skin', 0._wp
+          END IF
+        END IF
+      END DO
+    END IF
+
 
     ! Compute new surface temperature and saturation humidity
     IF (lstart) THEN
@@ -399,6 +430,7 @@ CONTAINS
         ! stomatal and atmospheric resistance, as well as the specific humidity of air and the saturated specific humidity
         ! of the surface (formerly c_air)
 
+
       END IF
 
 
@@ -407,26 +439,10 @@ CONTAINS
     soil_stor(:)  = heat_cap(:) / t2s_conv(:)*(s_star(:) - s_old(:)) / (steplen*cvdifts)
 
       IF (yr == 1999  .AND. mo == 10 .AND. (dy == 23 .OR. dy == 24 .OR. dy == 25 .OR. dy == 26)) THEN
-        DO i=1,size(rad_srf_net, dim=1)
+        DO i=1,size(lat, dim=1)
           IF (lat(i) > 37._wp) THEN
-  			    write(555,999) yr,mo,dy, hr,mn,se, 'Rnet', rad_srf_net(i)
-            write(555,999) yr,mo,dy, hr,mn,se, 'Gflx', grnd_hflx(i)
+            write(555,999) yr,mo,dy, hr,mn,se, 'Gfl2', forc_hflx(i)
             write(555,999) yr,mo,dy, hr,mn,se, 'Ssoi', soil_stor(i)
-            write(555,999) yr,mo,dy, hr,mn,se, 'Tsoi', t_soil_top(i)
-            write(555,999) yr,mo,dy, hr,mn,se, 'lati', lat(i)
-            IF (l_is_clas) THEN
-              write(555,999) yr,mo,dy, hr,mn,se, 'Clas', 1._wp
-            ELSE
-              write(555,999) yr,mo,dy, hr,mn,se, 'Clas', 0._wp
-            END IF
-            IF (l_is_skin) THEN
-              write(555,999) yr,mo,dy, hr,mn,se, 'Skin', 1._wp
-            ELSE
-              write(555,999) yr,mo,dy, hr,mn,se, 'Skin', 0._wp
-            END IF
-
-
-
           END IF
         END DO
       END IF
@@ -518,7 +534,12 @@ CONTAINS
       qsat_star(:) = qsat_srf_old(:)
     ELSE
       !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_9 tile_name=tile%name
-      qsat_star(:) = qsat_srf_old(:) + dQdT(:) * (s_star(:) - s_old(:)) / t2s_conv(:)
+      IF (l_is_clas) THEN
+        qsat_star(:) = qsat_srf_old(:) + dQdT(:) * (s_star(:) - s_old(:)) / t2s_conv(:)
+      END IF
+      IF (l_is_skin) THEN
+        qsat_star(:) = qsat(s_star(:) / t2s_conv(:), press_srf(:))
+      END IF
     END IF
 
     ! 'Effective temperature' used in radheat of the atmosphere model (see Eq. 6.3 in ECHAM5 manual)
@@ -922,7 +943,7 @@ CONTAINS
       998 FORMAT(I0.2, I0.2, I0.2, 1X,  I0.2, I0.2, I0.2, 1X, A4, 1X, I0.3)
 
         IF (yr == 1999  .AND. mo == 10 .AND. (dy == 23 .OR. dy == 24 .OR. dy == 25 .OR. dy == 26)) THEN
-          DO i=1,size(zTnew, dim=1)
+          DO i=1,size(lat, dim=1)
             IF (lat(i) > 37._wp) THEN
               write(555,999) yr,mo,dy, hr,mn,se, 'Tnew', zTnew(i)
               write(555,999) yr,mo,dy, hr,mn,se, 'zhtc', zhtc(i)
@@ -1136,7 +1157,7 @@ CONTAINS
     999 FORMAT(I0.2, I0.2, I0.2, 1X,  I0.2, I0.2, I0.2, 1X, A4, 1X, ES15.7E3)
 
       IF (yr == 1999  .AND. mo == 10 .AND. (dy == 23 .OR. dy == 24 .OR. dy == 25 .OR. dy == 26)) THEN
-        DO i=1,size(latent_hflx, dim=1)
+        DO i=1,size(lat, dim=1)
           IF (lat(i) > 37._wp) THEN
             write(555,999) yr,mo,dy, hr,mn,se, 'Lflx', latent_hflx(i)
             write(555,999) yr,mo,dy, hr,mn,se, 'Hflx', sensible_hflx(i)

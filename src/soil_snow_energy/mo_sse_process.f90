@@ -22,8 +22,8 @@ MODULE mo_sse_process
   PRIVATE
 
   PUBLIC :: relative_humidity_soil, init_soil_temperature, &
-    & calc_vol_heat_capacity, calc_thermal_conductivity, calc_soil_temperature, calc_snow_temperature, &
-    & calc_soiltemp_old, Get_liquid_max
+    & calc_vol_heat_capacity, calc_thermal_conductivity, calc_soil_temperature, &
+    & calc_snow_temperature, calc_soiltemp_old, calc_soiltemp_old_skin, Get_liquid_max
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sse_process'
 
@@ -53,7 +53,7 @@ CONTAINS
     & ) RESULT(vol_heat_cap)
 
     USE mo_sse_constants, ONLY: vol_hcap_water, vol_hcap_ice, vol_hcap_org, vol_hcap_air, vol_hcap_bedrock
-    
+
     REAL(wp), INTENT(in) :: porosity, vol_heat_cap_soil_dry_mineral, fract_organic, fract_water, fract_ice, layer_depth, dz
     REAL(wp)             :: vol_heat_cap
 
@@ -102,7 +102,7 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: dens_soil
     USE mo_sse_constants,          ONLY: hcond_org, hcond_dry_org, hcond_water, hcond_ice, hcond_bedrock
     USE mo_hydro_constants,        ONLY: vol_porosity_org
-   
+
     REAL(wp), INTENT(in) :: heat_cond_soil_mineral, water, ice, porosity, vol_field_cap, fract_organic, layer_depth, dz
     REAL(wp)             :: heat_cond
 
@@ -131,7 +131,7 @@ CONTAINS
       IF (water + ice <= EPSILON(1._wp)) THEN
         heat_cond = hcond_dry
       ELSE
-        
+
 
         ! Thermal conductivity of soil solids
         hcond_soil = (1._wp - fract_organic) * heat_cond_soil_mineral + fract_organic * hcond_org
@@ -489,7 +489,7 @@ CONTAINS
         heat_cap(jl,jk) = dz(jk) * vol_heat_cap(jl,jk)
       END DO
     END DO
-    
+
     !-----------------------------------------------------------------------------------------------
     !  Computation of soil temperaturs
     !    from surface temperatur and A and B coefficients computed at the previous time step
@@ -509,7 +509,7 @@ CONTAINS
       !$claw acc parallel default(none) present(t_srf_unfilt,t_soil,t_soil_acoef,t_soil_bcoef)
 
       ! uppermost layer
-      !$claw acc loop gang vector 
+      !$claw acc loop gang vector
       DO jl=1,nidx
         t_soil(jl,1) = t_srf_unfilt(jl)
       END DO
@@ -558,7 +558,7 @@ CONTAINS
               ! ice(jl,jk) = ice(jl,jk) - melt(jl,jk)
               ! t_soil(jl,jk) = t_soil(jl,jk) - melt(jl,jk) * alf * rhoi / heat_cap(jl,jk)
             END IF
-          END DO 
+          END DO
         END DO
         !$claw acc end parallel
         !$claw acc end data
@@ -573,7 +573,7 @@ CONTAINS
         !$claw expand parallel update savepoint=ser_jsb_sse_calc_soil_temperature_expand_2 counter=ser_counter
         frozen(:,:) = frozen(:,:) * rhoh2o / delta_time
         melt  (:,:) = melt  (:,:) * rhoi   / delta_time
-        !$claw end expand 
+        !$claw end expand
       END IF
 
       ! Thawing depth
@@ -652,7 +652,7 @@ CONTAINS
         t_soil_acoef(jl,jk-1) = (t_soil(jl,jk) * zdz2(jl,jk) + zdz1(jl,jk) * t_soil_acoef(jl,jk)) * z1(jl,jk-1)
         t_soil_bcoef(jl,jk-1) = zdz1(jl,jk-1) * z1(jl,jk-1)
       END DO
-    END DO  
+    END DO
     !$claw acc end parallel
     !$claw acc end data
 
@@ -785,7 +785,7 @@ CONTAINS
     !$claw acc data create(zmid,z1,zd1,zdz1,zdz2)
 
 
-    !$claw expand parallel update savepoint=ser_jsb_sse_calc_snow_temperature_expand_0 
+    !$claw expand parallel update savepoint=ser_jsb_sse_calc_snow_temperature_expand_0
     grnd_hflx(:) = 0._wp
     hcap_grnd(:) = 0._wp
     t_soil_top(:) = t_srf_unfilt(:)
@@ -826,7 +826,7 @@ CONTAINS
     ! Reset old values accounting for changes in number of snow layers
     !
     !$claw acc data present(itop,t_snow)
-    !$claw acc parallel 
+    !$claw acc parallel
     !$claw acc loop gang vector private(itop_new)
     DO jl=1,nidx
       ! itop_prev = itop_old(jl)
@@ -886,7 +886,7 @@ CONTAINS
           END IF
         END DO
       END DO
-      
+
       !$claw acc parallel loop gang vector
       DO jl=1,nidx
         ! New temperature for top soil layer (t_srf_unfilt where there was or is no snow)
@@ -1175,7 +1175,7 @@ CONTAINS
       END IF
     END DO
   !
-    !$claw acc parallel 
+    !$claw acc parallel
     !$claw acc loop gang vector
     DO i = 1, nidx
       !$claw acc loop seq
@@ -1218,7 +1218,7 @@ CONTAINS
     END DO
   !
 
-    !$claw acc parallel 
+    !$claw acc parallel
     !$claw acc loop gang vector
     DO i = 1, nidx
       !$claw acc loop seq
@@ -1244,6 +1244,275 @@ CONTAINS
     !$claw acc end data
 
   END SUBROUTINE calc_soiltemp_old
+
+
+  SUBROUTINE calc_soiltemp_old_skin( &
+    & nidx,nsoil,cdel,cmid,     &
+    & delta_time,               &
+    & lstart,                   &
+    & pts,                      &
+    & psn,                      &
+    & psocond, prgcgn,          &
+    & pgrndc, pgrndd,           &
+    & ptsoil,                   &
+    & pgrndcapc, pgrndhflx,     &
+    & ldglac                    &
+    & )
+  !
+  !   AUTHOR:  FREDERIC HOURDIN     30/01/92
+  !
+  !            ADAPTED TO THE LMD-GCM BY JAN POLCHER  26/02/92
+  !            ADAPTED TO THE ECHAM-GCM BY JAN-PETER SCHULZ, MPI  03/02/96
+  !
+  !            J.-P. SCHULZ   MPI - OCTOBER 1997 :
+  !               ROUTINE USED FOR IMPLEMENTATION OF AN IMPLICIT
+  !               COUPLING BETWEEN LAND SURFACE AND ATMOSPHERE IN THE
+  !               ECHAM4 GCM.
+  !            U.SCHLESE DKRZ - NOVEMBER 1999  MODIFIED FOR ECHAM5
+  !            U.Schlese DKRZ - February 2000  new soil temperatures
+  !            L Kornblueh, MPI, January 2003, removed MERGE
+  !
+  !            Adapted to JSBACH by Thomas Raddatz, Mai 2004
+  !            Adapted to ICON  by Thomas Raddatz, Sep 2011
+  !   OBJECTIVE:  COMPUTATION OF:
+  !               THE GROUND TEMPERATURE EVOLUTION
+  !               THE GROUND SPECIFIC HEAT "CAPCAL"
+  !               THE SURFACE DIFFUSIVE FLUX FROM GROUND "F0"
+  !
+  !
+  !   METHOD:  IMPLICIT TIME INTEGRATION
+  !
+  !   CONSECUTIVES GROUND TEMPERATURES ARE RELATED BY:
+  !           T(K+1) = C(K) + D(K)*T(K)  (1)
+  !   THE COEFFICIENTS C (=pgrndc) AND D (=pgrndd) ARE COMPUTED AT THE
+  !   T-DT TIME-STEP.
+  !   ROUTINE STRUCTURE:
+  !   1)NEW TEMPERATURES ARE COMPUTED  USING (1)
+  !   2)C AND D COEFFICIENTS ARE COMPUTED FROM THE NEW TEMPERATURE
+  !     PROFILE FOR THE T+DT TIME-STEP
+  !   3)THE COEFFICIENTS A AND B ARE COMPUTED WHERE THE DIFFUSIVE
+  !     FLUXES AT THE T+DT TIME-STEP IS GIVEN BY
+  !            FDIFF = A + B TS(T+DT)
+  !     OR     FDIFF = F0 + CAPCAL (TS(T+DT)-TS(T))/DT
+  !            WITH F0 = A + B (TS(T))
+  !                 CAPCAL = B*DT
+  !
+  !     ------------------------------------------------------------------
+  !
+  !   DECLARATIONS:
+  !
+  !!$ TR USE mo_jsbach_constants   , ONLY: RhoH2O
+  !!$ TR USE mo_time_control       , ONLY: lstart
+  !
+  !-----------------------------------------------------------------------
+  !  ARGUMENTS
+  !
+    INTEGER, Intent(in)  ::  nidx                 !! length of the vector
+    INTEGER, Intent(in)  ::  nsoil                !! number of soil layers (fixed to 5)
+    REAL(wp), Intent(in) ::  cdel(nsoil)
+    REAL(wp), Intent(in) ::  cmid(nsoil)
+    REAL(wp), Intent(in) ::  delta_time           !! time step
+    LOGICAL, INTENT(in)  :: lstart
+    REAL(wp), Intent(in)     ::  pts(nidx)            !! surface temperature at top of soil [K]
+    REAL(wp), Intent(in)     ::  psn(nidx)            !! equivalent snow depth [m water]
+    REAL(wp), Intent(in)     ::  psocond(nidx)        !! soil heat conductivity
+    REAL(wp), Intent(in)     ::  prgcgn(nidx)         !! soil heat capacity [J/m^3K]
+    REAL(wp), Intent(inout)  ::  pgrndc(nidx,nsoil)   !!
+    REAL(wp), Intent(inout)  ::  pgrndd(nidx,nsoil)   !!
+    REAL(wp), Intent(inout)  ::  ptsoil(nidx,nsoil)   !! soil temperature [K]
+    REAL(wp), Intent(out)    ::  pgrndcapc(nidx)      !!
+    REAL(wp), Intent(in)    ::  pgrndhflx(nidx)      !! ground heat flux
+    LOGICAL, Intent(in)  ::  ldglac(nidx)         !! glacier mask
+  !
+  !     ------------------------------------------------------------------
+  !
+  !  local Variables
+  !
+    INTEGER :: jk, i
+    REAL(wp) :: zso_cond(nidx), zso_capa(nidx)
+    REAL(wp) :: z1(nidx)
+    REAL(wp) :: zd1(nsoil)
+    REAL(wp) :: zdz1(nidx,nsoil),   zdz2(nidx,nsoil)
+    REAL(wp) :: zkappa(nidx,nsoil), zcapa(nidx,nsoil)
+    REAL(wp) :: zsnow_h(nidx), zx1(nidx), zx2(nidx)
+    REAL(wp) :: zrici, zdifiz, zsn_cond, zsn_dens, zsn_capa
+  !
+  !     ------------------------------------------------------------------
+  !
+  !*    1.  SPECIFYING THE DEPTHS OF THE TEMPERATURE LEVELS.
+  !
+  !*    1.1 SOME CONSTANTS.
+  !
+    zrici = 2.09e+06_wp                                 !! volumetric heat capacity of ice [j/m**3/k]
+    zdifiz = 12.e-07_wp                                 !! temperature diffusivity of ice  [m**2/s]
+    zsn_cond = 0.31_wp                                  !! snow thermal conductivity [j/s/m/k]
+    zsn_dens = 330.0_wp                                 !! snow density              [kg/m**3]
+    zsn_capa = 634500.0_wp                              !! snow  heat capacity   [j/m**3/k]
+  !
+  !*    1.2 COMPUTING SOME USEFUL CONSTANTS.
+  !
+    !$claw acc data present(cdel,cmid,pts,psn,psocond,prgcgn,pgrndc,pgrndd,ptsoil,pgrndcapc,pgrndhflx,ldglac) &
+    !$claw acc create(zso_cond,zso_capa,z1,zd1,zdz1,zdz2,zkappa,zcapa,zsnow_h,zx1,zx2)
+
+    !$claw acc parallel loop gang vector
+    DO jk = 1,nsoil-1
+       zd1(jk) = 1._wp / (cmid(jk+1) - cmid(jk))
+    END DO
+  !
+  !*    1.3 COMPUTE OF THE SOIL THERMAL CONDUCTIVITY [J/S/M/K] FROM
+  !*        THE SOIL TEMPERATURE DIFFUSIVITY [M**2/S].
+  !
+    !$claw acc parallel loop gang vector
+    DO i = 1, nidx
+      IF (ldglac(i)) THEN
+        zso_capa(i) = zrici
+        zso_cond(i) = zso_capa(i) * zdifiz
+      ELSE
+        zso_capa(i) = prgcgn(i)
+        zso_cond(i) = psocond(i)
+      END IF
+    END DO
+  !
+  !*    1.4 PRE-SET THERMAL CONDUCTIVITY AT ALL LEVELS.
+  !
+    !$claw acc parallel loop gang vector collapse(2)
+    DO i = 1, nidx
+      DO jk = 1,nsoil
+        zkappa(i,jk) = zso_cond(i)
+        zcapa(i,jk)  = zso_capa(i)
+      END DO
+    END DO
+
+  !
+  !   --------------------------------------------------------------
+  !   COMPUTATION OF THE GROUND TEMPERATURES USING THE CGRD AND DGRD
+  !   COEFFICIENTS COMPUTED AT THE PREVIOUS TIME-STEP
+  !   --------------------------------------------------------------
+  !
+  !   Upper layer
+  !
+    IF (.NOT. lstart) THEN
+
+      !$claw acc parallel loop gang vector
+      DO i = 1, nidx
+        ptsoil(i,1) =  pgrndc(i,1) + pgrndd(i,1) * pts(i)
+      END DO
+  !
+  !   Deeper layers
+  !
+
+      !$claw acc parallel loop gang vector collapse(2)
+      DO i = 1, nidx
+        DO jk = 1,nsoil-1
+          ptsoil(i,jk+1) = pgrndc(i,jk+1) + pgrndd(i,jk+1) * ptsoil(i,jk)
+        END DO
+      END DO
+
+    END IF
+  !
+  !   ---------------------------------------------------------------
+  !   COMPUTATION OF THE CGRD AND DGRD COEFFICIENTS FOR THE NEXT STEP
+  !   ---------------------------------------------------------------
+  !
+    !$claw acc parallel loop gang vector
+    DO i = 1, nidx
+      zsnow_h(i) = psn(i) * RhoH2O / zsn_dens
+  !
+  !*       Special treatment for first layer
+  !
+      IF ( zsnow_h(i) > cmid(2) ) THEN
+        zcapa(i,1) = zsn_capa
+        zkappa(i,1) = zsn_cond
+      ELSE IF( zsnow_h(i) > 0.0_wp .AND. zsnow_h(i) <= cmid(2) ) THEN
+        zx1(i) = zsnow_h(i) / cmid(2)
+        zx2(i) = ( cmid(2) - zsnow_h(i)) / cmid(2)
+        zcapa(i,1) = zx1(i) * zsn_capa + zx2(i) * zso_capa(i)
+        zkappa(i,1) = 1._wp / ( zx1(i) / zsn_cond + zx2(i) / zso_cond(i) )
+      ELSE
+        zcapa(i,1) = zso_capa(i)
+        zkappa(i,1) = zso_cond(i)
+      END IF
+    END DO
+  !
+    !$claw acc parallel
+    !$claw acc loop gang vector
+    DO i = 1, nidx
+      !$claw acc loop seq
+      DO jk = 2, nsoil - 2
+        IF ( zsnow_h(i) > cmid(jk+1) ) THEN
+          zcapa(i,jk) = zsn_capa
+          zkappa(i,jk) = zsn_cond
+        ELSE IF ( zsnow_h(i) > cmid(jk) .AND. zsnow_h(i) <= cmid(jk+1) ) THEN
+          zx1(i) = (zsnow_h(i) - cmid(jk)) * zd1(jk)
+          zx2(i) = ( cmid(jk+1) - zsnow_h(i)) * zd1(jk)
+          zcapa(i,jk) = zx1(i) * zsn_capa + zx2(i) * zso_capa(i)
+          zkappa(i,jk) = 1._wp / ( zx1(i) / zsn_cond + zx2(i) / zso_cond(i) )
+        ELSE
+          zcapa(i,jk) = zso_capa(i)
+          zkappa(i,jk) = zso_cond(i)
+        END IF
+      END DO
+    END DO
+    !$claw acc end parallel
+  !
+    !$claw acc parallel loop gang vector collapse(2)
+    DO i = 1, nidx
+      DO jk=1,nsoil
+        zdz2(i,jk) = zcapa(i,jk) * cdel(jk) / delta_time
+      END DO
+    END DO
+  !
+    !$claw acc parallel loop gang vector collapse(2)
+    DO i = 1, nidx
+      DO jk=1,nsoil-1
+        zdz1(i,jk) = zd1(jk) * zkappa(i,jk)
+      END DO
+    END DO
+  !
+    !$claw acc parallel loop gang vector
+    DO i = 1, nidx
+      z1(i) = zdz2(i,nsoil) + zdz1(i,nsoil-1)
+      pgrndc(i,nsoil) = zdz2(i,nsoil) * ptsoil(i,nsoil) / z1(i)
+      pgrndd(i,nsoil) = zdz1(i,nsoil-1) / z1(i)
+    END DO
+  !
+
+    !$claw acc parallel
+    !$claw acc loop gang vector
+    DO i = 1, nidx
+      !$claw acc loop seq
+      DO jk=nsoil-1,2,-1
+        z1(i) = 1._wp / (zdz2(i,jk) + zdz1(i,jk-1) + zdz1(i,jk) * (1._wp - pgrndd(i,jk+1)))
+        pgrndc(i,jk) = (ptsoil(i,jk) * zdz2(i,jk) + zdz1(i,jk) * pgrndc(i,jk+1)) * z1(i)
+        pgrndd(i,jk) = zdz1(i,jk-1) * z1(i)
+      END DO
+    END DO
+
+    DO i = 1, nidx
+      !$claw acc loop seq
+        jk=1
+        z1(i) = 1._wp / (zdz2(i,jk) + zdz1(i,jk) * (1._wp - pgrndd(i,jk+1)))
+        pgrndc(i,jk) = (ptsoil(i,jk) * zdz2(i,jk) - pgrndhflx(i) + zdz1(i,jk) * pgrndc(i,jk+1)) * z1(i)
+        pgrndd(i,jk) = 0._wp
+    END DO
+
+
+    !$claw acc end parallel
+  !
+  !   ---------------------------------------------------------
+  !   COMPUTATION OF THE SURFACE DIFFUSIVE FLUX FROM GROUND AND
+  !   CALORIFIC CAPACITY OF THE GROUND:
+  !   ---------------------------------------------------------
+  !
+    !$claw acc parallel loop gang vector
+    DO i = 1, nidx
+      !pgrndhflx(i) = zdz1(i,1) * (pgrndc(i,1) + (pgrndd(i,1) - 1._wp) * ptsoil(i,1))
+      pgrndcapc(i) = (zdz2(i,1) * delta_time + delta_time * (1._wp - pgrndd(i,2)) * zdz1(i,1))
+    END DO
+
+    !$claw acc end data
+
+  END SUBROUTINE calc_soiltemp_old_skin
 
   PURE ELEMENTAL FUNCTION Get_liquid_max( &
     & temp, w_max, matrix_pot, bclapp     &

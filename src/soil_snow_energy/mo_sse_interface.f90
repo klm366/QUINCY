@@ -23,13 +23,14 @@ MODULE mo_sse_interface
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
-  USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid
+  USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, t_jsb_grid
   USE mo_jsb_grid,           ONLY: Get_vgrid
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
-  dsl4jsb_Use_processes SSE_, SEB_, HYDRO_ 
+  dsl4jsb_Use_processes SSE_, SEB_, HYDRO_
+  dsl4jsb_Use_config(SEB_)
   dsl4jsb_Use_config(SSE_)
   dsl4jsb_Use_config(HYDRO_)
   dsl4jsb_Use_memory(SSE_)
@@ -116,9 +117,13 @@ CONTAINS
 
   SUBROUTINE update_soil_and_snow_temperature(tile, options)
 
-    USE mo_sse_process,            ONLY: calc_soil_temperature, calc_snow_temperature, calc_soiltemp_old
+    USE mo_sse_process,            ONLY: calc_soil_temperature
+    USE mo_sse_process,            ONLY: calc_snow_temperature, calc_soiltemp_old, calc_soiltemp_old_skin
     USE mo_jsb_physical_constants, ONLY: alf, rhoh2o, dens_snow
     USE mo_sse_constants,          ONLY: snow_depth_min
+    USE mo_jsb_time,               ONLY: get_date_components
+    USE mo_time_control,           ONLY: current_date
+    USE mo_jsb_grid,               ONLY: Get_grid
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -126,13 +131,17 @@ CONTAINS
     ! Local variables
     !
     TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_grid),  POINTER :: grid
+
     dsl4jsb_Def_config(SSE_)
+    dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(HYDRO_)
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: t_unfilt
+    dsl4jsb_Real2D_onChunk :: forc_hflx
     dsl4jsb_Real2D_onChunk :: snowmelt
     dsl4jsb_Real3D_onChunk :: t_soil
     dsl4jsb_Real3D_onChunk :: t_soil_acoef
@@ -163,6 +172,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: w_snow_soil
     dsl4jsb_Real2D_onChunk :: snow_soil_dens
     dsl4jsb_Real2D_onChunk :: fract_snow_soil
+    dsl4jsb_Real2D_onChunk :: lat
 
 
     ! Locally allocated vectors
@@ -186,7 +196,10 @@ CONTAINS
     INTEGER :: isnow
 
     LOGICAL  :: lstart
+    LOGICAL  :: l_is_clas
+    LOGICAL  :: l_is_skin
     INTEGER  :: iblk, ics, ice, nc, i
+    INTEGER :: yr, mo, dy, hr, mn, se
     REAL(wp) :: dtime
 
     TYPE(t_jsb_vgrid), POINTER :: soil_e, snow_e
@@ -205,6 +218,10 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_config(SSE_)
+
+    dsl4jsb_Get_config(SEB_)
+    grid  => Get_grid(model%grid_id)
+    lat   => grid%lat(ics:ice, iblk)
 
     soil_e => Get_vgrid('soil_depth_energy')
     nsoil = soil_e%n_levels
@@ -257,8 +274,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SSE_,   vol_heat_cap)
 
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)        ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,   forc_hflx)        ! in
 
     lstart = is_time_experiment_start(options%current_datetime)
+
+    l_is_clas = dsl4jsb_Config(SEB_)%l_scheme_canopy_clas
+    l_is_skin = dsl4jsb_Config(SEB_)%l_scheme_canopy_skin
 
     !$claw acc enter data create(snow_depth,snow_fract,t_unfilt_corrected,t_soil_top,hcap_grnd_snow,hcap_grnd_soil,grnd_hflx_snow,grnd_hflx_soil,ldglac,itop,itop_old)
 
@@ -266,6 +287,10 @@ CONTAINS
     ! The old flux and capacity (which have been used in the implicit calculation of the new surface temperature) are
     ! given back to the atmosphere so that the surface energy balance can be computed there
     !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_0 tile_name=tile%name
+
+    IF(l_is_skin) THEN
+      grnd_hflx(:) = forc_hflx(:)
+    END IF
     grnd_hflx_old(:) = grnd_hflx(:)
     hcap_grnd_old(:) = hcap_grnd(:)
     !$claw end expand
@@ -280,32 +305,74 @@ CONTAINS
       t_unfilt_corrected(:) = t_unfilt(:) - snowmelt(:) * dtime * alf / hcap_grnd(:)
     END IF
 
+		CALL get_date_components (current_date, yr, mo, dy, hr, mn, se)
+		999 FORMAT(I0.2, I0.2, I0.2, 1X,  I0.2, I0.2, I0.2, 1X, A4, 1X, ES15.7E3)
+		996 FORMAT(I0.2, I0.2, I0.2, 1X,  I0.2, I0.2, I0.2, 1X, A4, 1X, A6, 1X, ES15.7E3)
+
+
+		IF (.NOT. tile%is_glacier) THEN
+			IF (yr == 1999  .AND. mo == 10 .AND. (dy == 23 .OR. dy == 24 .OR. dy == 25 .OR. dy == 26)) THEN
+				DO i=1,size(lat, dim=1)
+					IF (lat(i) > 37._wp) THEN
+						write(555,999) yr,mo,dy, hr,mn,se, 'GSSE', grnd_hflx(i)
+						write(555,999) yr,mo,dy, hr,mn,se, 'GSEB', forc_hflx(i)
+					END IF
+				END DO
+			END IF
+		END IF
+
     IF (.NOT. dsl4jsb_Config(SSE_)%l_snow) THEN
       ldglac(:) = SPREAD(tile%is_glacier, DIM=1, ncopies=nc)
       !$claw acc update device(ldglac)
+			IF(l_is_clas) THEN
+	      CALL calc_soiltemp_old(                          &
+	        & nc,                                          &
+	        & nsoil,                                       &
+	        & soil_e%dz(:),                                &
+	        & soil_e%levels(:),                            &
+	        & dtime,                                       &
+	        & lstart,                                      &
+	        & t_unfilt_corrected(:)                     ,  &
+	        & w_snow_soil(:)                            ,  &
+	        & heat_cond(:)                              ,  &
+	        & vol_heat_cap(:)                           ,  &
+	        & t_soil_acoef                          (:,:), &
+	        & t_soil_bcoef                          (:,:), &
+	        & t_soil                                (:,:), &
+	        & hcap_grnd                             (:),   &
+	        & grnd_hflx                             (:),   &
+	        & ldglac                                (:)    &
+	        !& SPREAD(tile%is_glacier, DIM=1, ncopies=nc)   &
+	        & )
+			END IF
 
-      CALL calc_soiltemp_old(                          &
-        & nc,                                          &
-        & nsoil,                                       &
-        & soil_e%dz(:),                                &
-        & soil_e%levels(:),                            &
-        & dtime,                                       &
-        & lstart,                                      &
-        & t_unfilt_corrected(:)                     ,  &
-        & w_snow_soil(:)                            ,  &
-        & heat_cond(:)                              ,  &
-        & vol_heat_cap(:)                           ,  &
-        & t_soil_acoef                          (:,:), &
-        & t_soil_bcoef                          (:,:), &
-        & t_soil                                (:,:), &
-        & hcap_grnd                             (:),   &
-        & grnd_hflx                             (:),   &
-        & ldglac                                (:)    &
-        !& SPREAD(tile%is_glacier, DIM=1, ncopies=nc)   &
-        & )
+			IF(l_is_skin) THEN
 
 
-      !$claw acc exit data delete(snow_depth,snow_fract,t_unfilt_corrected,t_soil_top,hcap_grnd_snow,hcap_grnd_soil,grnd_hflx_snow,grnd_hflx_soil,ldglac,itop,itop_old)  
+
+
+				CALL calc_soiltemp_old_skin(                     &
+					& nc,                                          &
+					& nsoil,                                       &
+					& soil_e%dz(:),                                &
+					& soil_e%levels(:),                            &
+					& dtime,                                       &
+					& lstart,                                      &
+					& t_unfilt_corrected(:)                     ,  &
+					& w_snow_soil(:)                            ,  &
+					& heat_cond(:)                              ,  &
+					& vol_heat_cap(:)                           ,  &
+					& t_soil_acoef                          (:,:), &
+					& t_soil_bcoef                          (:,:), &
+					& t_soil                                (:,:), &
+					& hcap_grnd                             (:),   &
+					& grnd_hflx                             (:),   &
+					& ldglac                                (:)    &
+					!& SPREAD(tile%is_glacier, DIM=1, ncopies=nc)   &
+					& )
+			END IF
+
+      !$claw acc exit data delete(snow_depth,snow_fract,t_unfilt_corrected,t_soil_top,hcap_grnd_snow,hcap_grnd_soil,grnd_hflx_snow,grnd_hflx_soil,ldglac,itop,itop_old)
       RETURN
 
     END IF
