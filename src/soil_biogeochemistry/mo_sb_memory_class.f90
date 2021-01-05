@@ -419,14 +419,14 @@ MODULE mo_sb_memory_class
   END TYPE t_sb_memory
 
 
-  ! definition of sb_ pool and element structures with ALLOCATABLE variables (need to be TARGET to enable POINTER to individual variables)
+  ! definition of sb_ pool and element structures with ALLOCATABLE variables
   ! allocation of variables done with Init_sb_pools_elements_a during model init in init_slm()
-  TYPE(t_sb_pool_a), TARGET      :: sb_pool             , &
-                                    sb_formation        , &
-                                    sb_loss             , &
-                                    sb_transport
-  TYPE(t_sb_element_a), TARGET   :: sb_delta_pools      , &
-                                    sb_mycorrhiza_export
+  TYPE(t_sb_pool_a)       :: sb_pool             , &
+                             sb_formation        , &
+                             sb_loss             , &
+                             sb_transport
+  TYPE(t_sb_element_a)    :: sb_delta_pools      , &
+                             sb_mycorrhiza_export
 
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sb_memory_class'

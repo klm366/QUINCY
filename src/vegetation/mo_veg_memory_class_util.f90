@@ -156,17 +156,17 @@ MODULE mo_veg_memory_class_util
     PROCEDURE :: Add_elements   => Add_pool_elements_to_memory
   END TYPE t_quincy_struct_veg_pool
 
-  ! definition of veg_ pool and element structures with ALLOCATABLE variables (need to be TARGET to enable POINTER to individual variables)
+  ! definition of veg_ pool and element structures with ALLOCATABLE variables
   ! allocation of variables done with Init_veg_pools_elements_a during model init in mo_jsb_model_init:quincy_init
-  TYPE(t_veg_pool_a), TARGET     :: veg_pool           , &
-                                    veg_growth         , &
-                                    veg_litterfall     , &
-                                    veg_falloc         , &
-                                    veg_total_flux
-  TYPE(t_veg_element_a), TARGET  :: veg_exudation      , &
-                                    veg_establishment  , &
-                                    veg_reserve_use    , &
-                                    veg_total_biomass
+  TYPE(t_veg_pool_a)     :: veg_pool           , &
+                            veg_growth         , &
+                            veg_litterfall     , &
+                            veg_falloc         , &
+                            veg_total_flux
+  TYPE(t_veg_element_a)  :: veg_exudation      , &
+                            veg_establishment  , &
+                            veg_reserve_use    , &
+                            veg_total_biomass
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_memory_class_util'
 
