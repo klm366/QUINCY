@@ -722,6 +722,10 @@ CONTAINS
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(CARBON_)
+    ! use_alb_soil_npp < Declare pointers for process configuration and memory of parent tile 
+    TYPE(t_pheno_memory), POINTER :: pheno_parent__mem
+    TYPE(t_carbon_memory), POINTER :: carbon_parent__mem
+    ! use_alb_soil_npp >
 
     ! Declare configuration variables
     CHARACTER(len=:), ALLOCATABLE :: use_alb_soil_organic_C
@@ -815,6 +819,10 @@ CONTAINS
     IF (tile%contains_vegetation) THEN
       dsl4jsb_Get_memory(CARBON_)
       dsl4jsb_Get_memory(PHENO_)
+      ! use_alb_soil_npp <
+      SELECT TYPE (mm => tile%parent_tile%mem(pheno_)%p); TYPE IS (t_pheno_memory); pheno_parent__mem => mm ; END SELECT
+      SELECT TYPE (mm => tile%parent_tile%mem(carbon_)%p); TYPE IS (t_carbon_memory); carbon_parent__mem => mm ; END SELECT
+      ! use_alb_soil_npp >
     END IF
 
     ! Set pointers to variables in config
@@ -1018,11 +1026,14 @@ CONTAINS
 
       dsl4jsb_Get_var2D_onChunk(PHENO_,    lai)                   ! in
       dsl4jsb_Get_var2D_onChunk(PHENO_,    fract_fpc_max)         ! in
-      dsl4jsb_Get_var2D_onChunk(PHENO_,    mean_dark_NPP)         ! in
+      ! use_alb_soil_npp <
+      mean_dark_NPP => pheno_parent__mem%mean_dark_NPP%ptr(ics:ice,iblk)           ! in 
+      mean_5year_NPP => carbon_parent__mem%mean_5year_NPP%ptr(ics:ice,iblk)        ! in
+      ! use_alb_soil_npp >
+
       IF (use_alb_veg_simple) THEN 
         dsl4jsb_Get_var2D_onChunk(PHENO_,    fract_forest)          ! in
       ENDIF
-      dsl4jsb_Get_var2D_onChunk(CARBON_,   mean_5year_NPP)        ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_can)        ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_soil)       ! in
       dsl4jsb_Get_var2D_onChunk(RAD_,      alb_vis_mineralsoil)   ! inout
