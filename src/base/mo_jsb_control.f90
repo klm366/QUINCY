@@ -27,7 +27,7 @@ MODULE mo_jsb_control
   PRIVATE
 
   PUBLIC :: init_jsb_master_control
-  PUBLIC :: jsbach_runs_standalone, jsbach_is_restarted
+  PUBLIC :: jsbach_runs_standalone, jsbach_is_restarted, jedi_is_spinup
   PUBLIC :: debug_on, timer_on, l_timer_host, get_debug_memory_level
   PUBLIC :: model_base_dir
   ! t_jsb_model_nml needs to be public for the NEC compiler
@@ -37,6 +37,7 @@ MODULE mo_jsb_control
 
   LOGICAL,           SAVE :: is_standalone
   LOGICAL,           SAVE :: restart_jsbach
+  LOGICAL,           SAVE :: spinup_jedi
   CHARACTER(len=99), SAVE :: model_base_dir
   INTEGER,           SAVE :: debug_level
   INTEGER,           SAVE :: debug_io
@@ -143,7 +144,8 @@ CONTAINS
       timer_level,             &
       debug_level,             &
       debug_io,                &
-      debug_memory_level
+      debug_memory_level,      &
+      spinup_jedi
 
     NAMELIST /jsb_model_nml/   &
       model_id,                &
@@ -155,6 +157,7 @@ CONTAINS
     ! Namelist defaults
     is_standalone      = .TRUE.
     restart_jsbach     = .FALSE.
+    spinup_jedi        = .FALSE.
     model_base_dir     = '.'
     timer_level        = 0
     debug_level        = 0
@@ -232,6 +235,13 @@ CONTAINS
     jsbach_is_restarted = restart_jsbach
 
   END FUNCTION jsbach_is_restarted
+
+  LOGICAL FUNCTION jedi_is_spinup()
+
+    ! TBD: get this from parent model if not standalone
+  jedi_is_spinup = spinup_jedi
+
+  END FUNCTION jedi_is_spinup
 
   INTEGER FUNCTION get_no_of_models()
 

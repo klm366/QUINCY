@@ -278,19 +278,20 @@ MODULE mo_carbon_memory_class
       C_balan,                       &
       C_delta,                       &
       flx_germ,                      &
-      one_counter,               &
-      ff_dTdt,                            &                     
-      ff_grow_T_yDayMean,       &
-      ff_T_30d,                          &
+      one_counter,                  &
+      ff_dTdt,                      &                     
+      ff_grow_T_yDayMean,           &
+      ff_T_30d,                     &
+      pseudo_c_total,                &
       root_maxmoist,                &
-      jedi_pot_supply_transp,     &
-      jedi_root_depth,                &
-      adj_fraction,                      &
-      jedi_light_constraint,          &
-      seed_maxmoist,               &
-      alpha_jedi_seed,                &
-      w_soil_column_jedi,         &
-      w_soil_column_seed,      &
+      jedi_pot_supply_transp,       &
+      jedi_root_depth,              &
+      adj_fraction,                 &
+      jedi_light_constraint,        &
+      seed_maxmoist,                &
+      alpha_jedi_seed,              &
+      w_soil_column_jedi,           &
+      w_soil_column_seed,           &
       water_stress
          
     TYPE(t_jsb_var_real3d) :: &
@@ -563,6 +564,14 @@ CONTAINS
       & output_level=BASIC,loutput=.FALSE.,                                                      &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )   
 
+    CALL jsb_add_var( mem, 'pseudo_c_total', mem%pseudo_c_total,                              &
+      & hgrid, surface,                                                                        &
+      & t_cf('pseudo_c_total','mol(C) m-2(canopy)' ,'Pseudo total carbon of six pools'),           &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+      & prefix, suffix,                                                                        &
+      & output_level=BASIC,loutput=.TRUE.,                                                      &
+      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )   
+
     CALL jsb_add_var( mem, 'c_storage_ta', mem%c_storage_ta,                                     &
       & hgrid, surface,                                                                        &
       & t_cf('c_storage_ta', 'mol(C) m-2', 'C-Pool for green parts of vegetation.'),    &
@@ -664,7 +673,7 @@ CONTAINS
       & t_cf('adj_fraction', 'Constraint factor for leaf growth '),           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
-      & output_level=BASIC,loutput=.TRUE.,                                                      &
+      & output_level=BASIC,loutput=.FALSE.,                                                      &
       & lrestart=.FALSE., initval_r=1.0_wp, l_aggregate_all=.FALSE. )   
 
     CALL jsb_add_var( mem, 'jedi_light_constraint', mem%jedi_light_constraint,                              &
@@ -672,7 +681,7 @@ CONTAINS
       & t_cf('jedi_light_constraint', 'Light constraint factor for leaf growth '),          &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
-      & output_level=BASIC,loutput=.TRUE.,                                                      &
+      & output_level=BASIC,loutput=.FALSE.,                                                      &
       & lrestart=.FALSE., initval_r=1.0_wp, l_aggregate_all=.FALSE. )   
 
     

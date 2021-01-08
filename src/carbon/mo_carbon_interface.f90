@@ -186,7 +186,7 @@ CONTAINS
     USE mo_carbon_process,    ONLY: calc_Cpools
     USE mo_carbon_jedi_process, ONLY: calc_Ctradeoff,jedi_water_stress_factor,jedi_soil_depth_to_layers_1d!,drop_expensive_tissue
     USE mo_jsb_physical_constants, ONLY : tmelt  
-    USE mo_jsb_control,        ONLY:  jsbach_is_restarted
+    USE mo_jsb_control,        ONLY:  jsbach_is_restarted, jedi_is_spinup
     USE mo_jsb_time,          ONLY: t_datetime,is_newday, is_newyear, timesteps_per_day, &
                                  &  is_time_experiment_start, get_year_at_model_start,     &
                                  &  get_time_start, get_year, deallocateDatetime
@@ -213,6 +213,7 @@ CONTAINS
     TYPE(t_datetime), POINTER    :: inidate
     INTEGER                      :: iniyear
     LOGICAL                      :: lrestart
+    LOGICAL                      :: lspinup_jedi
   
     !REAL(wp), parameter  :: rootshoot_opt     = 3.58462104_wp ! median value of root-shoot ratio 50th percentile
     REAL(wp), parameter  :: rootshoot_opt     = 8.473583644190947_wp ! median value of root-shoot ratio 75th percentile
@@ -319,7 +320,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::   w_soil_column_seed
     dsl4jsb_Real2D_onChunk ::   w_soil_column_jedi
     dsl4jsb_Real2D_onChunk ::   ff_T_30d
-    dsl4jsb_Real2D_onChunk ::   ff_dTdt                      
+    dsl4jsb_Real2D_onChunk ::   ff_dTdt        
+    dsl4jsb_Real2D_onChunk ::   pseudo_c_total              
     dsl4jsb_Real2D_onChunk ::   ff_grow_T_yDayMean
     dsl4jsb_Real2D_onChunk ::   faPAR_prev_noon
     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
@@ -531,8 +533,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,   C_balan           )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   C_delta           )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   c_total           )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  ff_dTdt                      )
-    dsl4jsb_Get_var2D_onChunk(CARBON_, ff_T_30d                    )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_dTdt           )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_T_30d          )
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   pseudo_c_total     )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_grow_T_yDayMean) 
     dsl4jsb_Get_var2D_onChunk(RAD_,        faPAR_prev_noon)
     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
@@ -665,6 +668,7 @@ CONTAINS
     iniyear = get_year(inidate)
     CALL deallocateDatetime(inidate)
     lrestart= jsbach_is_restarted()      
+    lspinup_jedi = jedi_is_spinup()
     
     IF (get_year(options%current_datetime) .LE. iniyear + 2 ) THEN    !  PHS: initial carbon
       ff_npp = 0._wp
@@ -755,7 +759,7 @@ CONTAINS
        MaintRes = c_sapwood * c_CN_woody * ( c_stem + c_csroot ) + &
          &        dsl4jsb_Lctlib_param(NitroStatus) * dsl4jsb_Lctlib_param(JeDiSLA) * &
          &             ( c_leaves + c_fnroot )  !NNN
-       MaintRes = MaintRes  * c_Res_N    * ( 1.4_wp ** ( ( temp_yDayMean - tmelt - 20._wp ) / 10._wp) ) ! JeDi uses 1.4 for Q10 value
+       MaintRes = MaintRes  * c_Res_N    * ( 1.6_wp ** ( ( temp_yDayMean - tmelt - 20._wp ) / 10._wp) ) ! JeDi uses 1.4 for Q10 value
     
        MaintRes = MaintRes / sec_per_day ! The maintanence respiration is daily computed in JeDi.
        MaintRes_yDayMean   = MaintRes
@@ -763,8 +767,11 @@ CONTAINS
        temp_sum = t_air
        
        !PHS 05.08.2019 Tend
-       ff_dTdt            = ( ff_T_30d - ff_grow_T_yDayMean ) / ( 1._wp /  ( 1._wp - EXP(- dtime / (30._wp* 86400._wp ))  )) + &
-         &                  EXP(- dtime / (30._wp* 86400._wp ))  * ff_dTdt    
+       !PHS  I think I made mistake for calculating ff_dTdt 
+       !ff_dTdt            = ( ff_T_30d - ff_grow_T_yDayMean ) / ( 1._wp /  ( 1._wp - EXP(- dtime / (30._wp* 86400._wp ))  )) + &
+       !  &                  EXP(- dtime / (30._wp* 86400._wp ))  * ff_dTdt  
+       ff_dTdt            = ( ff_T_30d - ff_grow_T_yDayMean ) / ( 1._wp /  ( 1._wp - EXP(- 86400._wp / (30._wp* 86400._wp ))  )) + &
+         &                  EXP(- 86400._wp / (30._wp* 86400._wp ))  * ff_dTdt   
        ff_grow_T_yDayMean = ff_T_30d
        
       ! Save other variables (for yasso) as "previous days"
@@ -808,8 +815,9 @@ CONTAINS
         & dsl4jsb_Lctlib_param(SenesRspdNPP ),         & ! in
         & dsl4jsb_Lctlib_param(NitroStatus  ),         & ! in
         & dsl4jsb_Lctlib_param(JeDiSLA),               &  ! in
-        & dsl4jsb_Lctlib_param(LandcoverClass),   &  ! in
+        & dsl4jsb_Lctlib_param(LandcoverClass),        &  ! in
         ! JeDi plant trait parameter comes in now >>>>>>>>>>>
+        & lspinup_jedi,                                & !in 
         & iniyear,                                     & !in
         & get_year(options%current_datetime),          & !in
         & timesteps_per_day(dtime),                    & ! in
@@ -898,6 +906,10 @@ CONTAINS
       jedi_root_depth = MIN(jedi_root_depth,soil_depth)
       
       jedi_root_depth_sl = jedi_soil_depth_to_layers_1d(  jedi_root_depth, soil_w%dz(:))   
+
+      pseudo_c_total  =  c_total / ( 1._wp / (1._wp-EXP(- 86400._wp / (3650._wp* 86400._wp )))) + &
+      &          pseudo_c_total * EXP(- 86400._wp / (3650._wp* 86400._wp ))
+
       
       ELSE
       
@@ -1315,7 +1327,6 @@ CONTAINS
 
     ! HYDRO_
     dsl4jsb_Aggregate_onChunk(CARBON_, water_stress,        weighted_by_fract)
-  !?????  dsl4jsb_Aggregate_onChunk(CARBON_, jedi_root_depth,     weighted_by_fract)
 
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -2117,7 +2128,7 @@ CONTAINS
     TYPE(t_jsb_var_real2d), POINTER :: var
     CLASS(t_jsb_tile_abstract), POINTER :: child
 
-    dsl4jsb_Real2D_onDomain :: c_total
+    dsl4jsb_Real2D_onDomain :: pseudo_c_total
 
     dsl4jsb_Def_memory(CARBON_)
 
@@ -2136,7 +2147,7 @@ CONTAINS
     nblks = grid%nblks
     nproma = grid%nproma
 
-    var => dsl4jsb_memory(CARBON_)%c_total
+    var => dsl4jsb_memory(CARBON_)%pseudo_c_total
 
     ALLOCATE(c_total_sum(nproma,nblks))
     c_total_sum(:,:) = 0._wp

@@ -29,6 +29,7 @@ MODULE mo_jsb_config_class
     CHARACTER(len=filename_max)    :: fract_filename
     CHARACTER(len=30)              :: grid_name
     CHARACTER(len=40)              :: usecase
+    INTEGER                        :: npft
     LOGICAL                        :: use_lakes
     LOGICAL                        :: use_glacier
     LOGICAL                        :: use_quincy
@@ -84,6 +85,7 @@ CONTAINS
     LOGICAL                     :: l_compat401
     CHARACTER(len=filename_max) :: fract_filename
     CHARACTER(len=40)           :: usecase
+    INTEGER                     :: npft
     CHARACTER(len=10)           :: tpe_scheme
     CHARACTER(len=10)           :: hsm_mode
     CHARACTER(len=10)           :: output_tiles(99)
@@ -94,6 +96,7 @@ CONTAINS
       use_quincy, &
       l_compat401, &
       usecase, &
+      npft, &
       tpe_scheme, &
       hsm_mode, &
       fract_filename, &
@@ -115,6 +118,7 @@ CONTAINS
     grid_filename   = ''
     grid_name       = ''
     usecase         = ''
+    npft            = 11
     tpe_scheme      = ''
     hsm_mode        = 'simple'
     fract_filename  = 'bc_land_frac.nc'
@@ -139,6 +143,7 @@ CONTAINS
     model_config%use_quincy     = use_quincy
     model_config%l_compat401    = l_compat401
     model_config%usecase        = usecase
+    model_config%npft           = npft
     model_config%tpe_scheme     = tpe_scheme
     model_config%hsm_mode       = hsm_mode
     model_config%fract_filename = fract_filename

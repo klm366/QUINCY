@@ -987,10 +987,10 @@ CONTAINS
                 !PHS: 10.07.2020 Tree/Grass Nitrogen sample
                   WHERE (lctlib(1:nlct)%LandcoverClass  .eq. 3 )  
                  ! for trees
-                         lctlib(1:nlct)%NitroStatus =  (0.64_wp+2.96*P15(1:nlct))/14.0067_wp
+                         lctlib(1:nlct)%NitroStatus =  (  0.64_wp + 2.96 * P15(1:nlct ) ) / 14.0067_wp
                   ELSEWHERE 
                   ! for grass
-                         lctlib(1:nlct)%NitroStatus =(0.64_wp +0.5_wp *sqrt(-2._wp*log( P15(1:nlct)  ) ) ) /14.0067_wp
+                         lctlib(1:nlct)%NitroStatus =   ( 0.8_wp + 0.68_wp * P15(1:nlct)  ) / 14.0067_wp
                    END WHERE 
                 
                 
@@ -1544,7 +1544,8 @@ CONTAINS
                     !lctlib(1:nlct)%JeDiETransport     = 2.718_wp *  lctlib(1:nlct)%JeDiCarboxRate **0.89_wp 
             ELSEWHERE 
             ! for C3 grasses  
-                   lctlib(1:nlct)%JeDiCarboxRate = (   6.42_wp +  14._wp * lctlib(1:nlct)%NitroStatus * (  P14(1:nlct) *( 3.21_wp * 2.0_wp) + (40.96_wp - 3.21_wp) )   ) * 1.e-6_wp  !NNN
+                   lctlib(1:nlct)%JeDiCarboxRate = (   6.42_wp +  14._wp * lctlib(1:nlct)%NitroStatus * &
+                   &                 (  P14(1:nlct) *  6.42_wp + 34.54_wp )   ) * 1.e-6_wp  !NNN
                  
                     lctlib(1:nlct)%JeDiETransport= 1.9_wp * lctlib(1:nlct)%JeDiCarboxRate 
              END WHERE 

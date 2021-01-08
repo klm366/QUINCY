@@ -102,10 +102,11 @@ CONTAINS
     & TurnoverLeaf ,              & ! in
     & SenesRspdNPP ,              & ! in
     & NitroStatus  ,              & ! in
-    & JeDiSLA,                     &  ! in
-    & LandcoverClass,          &  !in
+    & JeDiSLA,                    & ! in
+    & LandcoverClass,             & !in
     ! JeDi plant trait parameters >>>>>>>>>>
-    & iniyear,                    &     ! in
+    & lspinup_jedi,               & !in 
+    & iniyear,                    & ! in
     & currentyear,                & !in
     & time_steps_per_day,         & ! in
     & faPAR_prev_noon,              & !in
@@ -210,10 +211,11 @@ CONTAINS
     REAL(wp), INTENT(in)     :: SenesRspdNPP          ! Jedi parameter -- P13 Senescence response time to productivity conditions 
     REAL(wp), INTENT(in)     :: NitroStatus           ! Jedi parameter -- P15 Plant nitrogen status    
     REAL(wp), INTENT(in)     :: JeDiSLA      
-    INTEGER, INTENT(in)     :: LandcoverClass             
+    INTEGER,  INTENT(in)     :: LandcoverClass             
     INTEGER,  INTENT(in)     :: iniyear      
     INTEGER,  INTENT(in)     :: currentyear  
     INTEGER,  INTENT(in)     :: time_steps_per_day
+    LOGICAL,  INTENT(IN)     :: lspinup_jedi
     REAL(wp), INTENT(inout) :: one_counter
     !
     ! JeDi carbon allocation 
@@ -499,12 +501,18 @@ CONTAINS
     Flg_grow   = Flg_grow_T * Flg_grow_W 
     Flg_grow_G = Flg_grow_T * Flg_grow_G
     
+   
     IF( Flg_grow_G .GT. 0._wp .AND.  one_counter .lt. 1._wp  )  THEN
-           
-      c_storage    = 3000
-      one_counter =one_counter +1
-    
+      IF ( lspinup_jedi ) THEN        
+        c_storage    = 3000
+        one_counter  = one_counter +1
+      ELSE
+        c_seed       = 0.5_wp
+        one_counter  = one_counter +1
+      END IF
     ENDIF
+     
+      
    
     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-! Germination condition !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-!

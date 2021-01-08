@@ -269,9 +269,9 @@ CONTAINS
 
     INTEGER :: i
 
-    INTEGER, PARAMETER :: npft = 250  ! R: For the implementation of JEDI we use only one PFT/PGS
+    INTEGER :: npft  ! R: For the implementation of JEDI we use only one PFT/PGS
 
-    CHARACTER(len=6), PARAMETER :: pft_shortnames(npft) = [character(len=6) ::  &  
+    CHARACTER(len=6), PARAMETER :: pft_shortnames(250) = [character(len=6) ::  &  
     &'pft001','pft002','pft003','pft004','pft005',&
       &'pft006','pft007','pft008','pft009','pft010',&
       &'pft011','pft012','pft013','pft014','pft015',&
@@ -386,7 +386,7 @@ CONTAINS
       
       
 
-    CHARACTER(len=30), PARAMETER :: pft_longnames(npft) = [character(len=30) :: &
+    CHARACTER(len=30), PARAMETER :: pft_longnames(250) = [character(len=30) :: &
       & 'Plant Growth Strategy 01',                                             &
       & 'Plant Growth Strategy 02',                                             &
       & 'Plant Growth Strategy 03',                                             &
@@ -893,11 +893,16 @@ CONTAINS
 
     ! Index of PFT into lctlib columns
     ! id is one less than in lctlib file because the first column (glacier) has been thrown away
-    INTEGER, PARAMETER :: pft_ids(npft) = (/ (i,i=1,npft) /)
-       
+      INTEGER, ALLOCATABLE :: pft_ids(:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_usecase_pfts'
-
+    
+    npft = model%config%npft
+    IF (npft > 250) CALL finish(routine, 'You have to edit mo_jsb_model_usecases.f90 to use npft > 250')
+    ALLOCATE(pft_ids(npft))
+    DO i=1,npft
+      pft_ids(i) = i
+    END DO
 
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
