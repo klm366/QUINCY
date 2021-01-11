@@ -473,13 +473,42 @@ CONTAINS
         & )
 
       !$claw acc parallel loop default(none) present(snow_depth_sl,snow_fract,t_unfilt_corrected,t_soil_top)
-      DO i = 1, nc
-        IF (snow_depth_sl(i, nsnow) > 0._wp) THEN  ! At least one snow layer above soil
-          t_soil_top(i) = snow_fract(i) * t_soil_top(i) + (1._wp - snow_fract(i)) * t_unfilt_corrected(i)
-        ELSE                                ! No snow
-          t_soil_top(i) = t_unfilt_corrected(i)
-        END IF
-      END DO
+
+
+      IF (.NOT. tile%is_glacier) THEN
+  			IF (yr == 1999  .AND. mo == 10 .AND. (dy == 23 .OR. dy == 24 .OR. dy == 25 .OR. dy == 26)) THEN
+  				DO i=1,size(lat, dim=1)
+  					IF (lat(i) > 37._wp) THEN
+  						write(555,999) yr,mo,dy, hr,mn,se, 'Tunc', t_unfilt_corrected(i)
+  						write(555,999) yr,mo,dy, hr,mn,se, 'Tso1', t_soil(i,1)
+  					END IF
+  				END DO
+  			END IF
+  		END IF
+
+
+      IF (l_is_clas) THEN
+        DO i = 1, nc
+          IF (snow_depth_sl(i, nsnow) > 0._wp) THEN  ! At least one snow layer above soil
+            t_soil_top(i) = snow_fract(i) * t_soil_top(i) + (1._wp - snow_fract(i)) * t_unfilt_corrected(i)
+          ELSE                                ! No snow
+            t_soil_top(i) = t_unfilt_corrected(i)
+          END IF
+        END DO
+      END IF
+
+      IF (l_is_skin) THEN
+        DO i = 1, nc
+          IF (snow_depth_sl(i, nsnow) > 0._wp) THEN  ! At least one snow layer above soil
+            t_soil_top(i) = snow_fract(i) * t_soil_top(i) + (1._wp - snow_fract(i)) * t_soil(i,1)
+          ELSE                                ! No snow
+            t_soil_top(i) = t_soil(i,1)
+          END IF
+        END DO
+      END IF
+
+
+
     ELSE
       !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_8 tile_name=tile%name
       snow_depth_sl(:,:) = 0._wp
@@ -487,7 +516,12 @@ CONTAINS
       !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_9 tile_name=tile%name
       snow_depth(:) = w_snow_soil(:) * rhoh2o / dens_snow
       snow_fract(:) = 0._wp
-      t_soil_top(:) = t_unfilt_corrected(:)
+      !IF (l_is_clas) THEN
+        t_soil_top(:) = t_unfilt_corrected(:)
+      !END IF
+      !IF (l_is_skin) THEN
+      !  t_soil_top(:) = t_soil(i,1)
+      !END IF
       grnd_hflx_snow(:) = 0._wp
       hcap_grnd_snow(:) = 0._wp
       !$claw end expand
@@ -644,7 +678,7 @@ CONTAINS
     END DO
     !$claw acc end data
 
-    !$claw acc exit data delete(snow_depth,snow_fract,t_unfilt_corrected,t_soil_top,hcap_grnd_snow,hcap_grnd_soil,grnd_hflx_snow,grnd_hflx_soil,ldglac,itop,itop_old)  
+    !$claw acc exit data delete(snow_depth,snow_fract,t_unfilt_corrected,t_soil_top,hcap_grnd_snow,hcap_grnd_soil,grnd_hflx_snow,grnd_hflx_soil,ldglac,itop,itop_old)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -727,7 +761,7 @@ CONTAINS
       & soil_depth_sl,        &
       & fract_org_sl,         &
       & vol_heat_cap_sl,      &
-      & heat_cond_sl,         & 
+      & heat_cond_sl,         &
       & w_soil_sl,            &
       & w_ice_sl,             &
       & vol_porosity_sl,      &
@@ -742,8 +776,8 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_vgrid), POINTER :: soil_e
 
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: & 
-      & vol_heat_cap_tmp,                    & 
+    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: &
+      & vol_heat_cap_tmp,                    &
       & soil_e_dz_tmp,                       &
       & heat_cond_tmp
 
@@ -809,7 +843,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_sl)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, w_ice_sl)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl)
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_field_cap_sl)  
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_field_cap_sl)
 
     IF (dsl4jsb_Config(HYDRO_)%l_organic .AND. tile%contains_soil) THEN
       dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)
@@ -845,7 +879,7 @@ CONTAINS
       vol_heat_cap_tmp(:,:) = SPREAD( vol_heat_cap(:), DIM=2, ncopies=nsoil)
       soil_e_dz_tmp(:,:) = SPREAD( soil_e%dz(:), DIM=1, ncopies=nc)
       !$claw acc update device(vol_heat_cap_tmp,soil_e_dz_tmp)
- 
+
       !$claw expand parallel update savepoint=ser_jsb_sse_calc_vol_heat_capacity_1 tile_name=tile%name
       vol_heat_cap_sl (:,:) = calc_vol_heat_capacity( &
         !&                        SPREAD( vol_heat_cap(:),                 DIM=2, ncopies=nsoil)             , &
@@ -858,7 +892,7 @@ CONTAINS
         !&                        SPREAD( soil_e%dz(:),                    DIM=1, ncopies=nc)                  &
         &                                soil_e_dz_tmp(:,:)                                                   &
         & )
-      
+
       !$claw acc exit data delete(fract_water,fract_ice,vol_heat_cap_tmp,soil_e_dz_tmp)
       DEALLOCATE(fract_water, fract_ice, vol_heat_cap_tmp, soil_e_dz_tmp)
     ELSE
@@ -873,7 +907,7 @@ CONTAINS
     ENDIF
 
     IF (dsl4jsb_Config(SSE_)%l_heat_cond_dyn) THEN
-      
+
       ALLOCATE(heat_cond_tmp(nc,nsoil), soil_e_dz_tmp(nc,nsoil))
       !$claw acc enter data pcreate(heat_cond_tmp,soil_e_dz_tmp)
       !$claw acc update host(heat_cond(:))

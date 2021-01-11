@@ -140,7 +140,7 @@ CONTAINS
 
     REAL(wp), DIMENSION(options%nc)  :: &
      & soil_stor,                       & !< soil heat storage depending on capacity of the top soil layer C_soil * dT/dt
-     & t_soil_top                         !< uppermost soil layer
+     & t_soil_upper                       !< uppermost soil layer
 
 
     LOGICAL, DIMENSION(options%nc) :: &
@@ -337,7 +337,7 @@ CONTAINS
     t2s_conv(:) = s_old(:) / t_old(:)  !
 
 
-    t_soil_top(:)   = t_soil(:,1)
+    t_soil_upper(:)   = t_soil(:,1)
 
     open(555, file='output.txt')
     CALL get_date_components (current_date, yr, mo, dy, hr, mn, se)
@@ -350,7 +350,7 @@ CONTAINS
         IF (lat(i) > 37._wp) THEN
           write(555,999) yr,mo,dy, hr,mn,se, 'Rnet', rad_srf_net(i)
           write(555,999) yr,mo,dy, hr,mn,se, 'Gfl1', grnd_hflx(i)
-          write(555,999) yr,mo,dy, hr,mn,se, 'Tsoi', t_soil_top(i)
+          write(555,999) yr,mo,dy, hr,mn,se, 'Tsoi', t_soil_upper(i)
           write(555,999) yr,mo,dy, hr,mn,se, 'lati', lat(i)
           IF (l_is_clas) THEN
             write(555,999) yr,mo,dy, hr,mn,se, 'Clas', 1._wp
@@ -361,7 +361,7 @@ CONTAINS
             write(555,999) yr,mo,dy, hr,mn,se, 'Skin', 1._wp
             IF (lstart) THEN
                 IF (lat(i) > 37._wp) THEN
-                  write(555,999) yr,mo,dy, hr,mn,se, 'Tnew', t_soil_top(i)
+                  write(555,999) yr,mo,dy, hr,mn,se, 'Tnew', t_soil_upper(i)
                   write(555,999) yr,mo,dy, hr,mn,se, 'zhtc', htc_stable(i)
                   write(555,998) yr,mo,dy, hr,mn,se, 'loop', 0
                 END IF
@@ -415,7 +415,7 @@ CONTAINS
           , fract_snow(:)    &  ! Snow fraction
           , heat_cap(:)      &  ! Heat capacity of uppermost soil layer (only diagnostic for SkIn+)
           , press_srf(:)     &  ! Surface pressure
-          , t_soil_top(:)    &  ! Soil temperature of top/uppermost soil layer
+          , t_soil_upper(:)  &  ! Soil temperature of top/uppermost soil layer
           , htc_stable(:)    &  ! Heat transfer coefficient (skin conuctivity) for stable   conditions (Ri > 0)
           , htc_unstable(:)  &  ! Heat transfer coefficient (skin conuctivity) for unstable conditions (Ri < 0)
           , lat(:)           &  ! Latitude (needed for site experiments)
@@ -650,7 +650,7 @@ CONTAINS
     , fract_snow    &  ! Snow fraction
     , heat_cap      &  ! Heat capacity of uppermost soil layer (only diagnostic for SkIn+)
     , press_srf     &  ! Surface pressure
-    , t_soil_top    &  ! Soil temperature of top/uppermost soil layer
+    , t_soil_upper    &  ! Soil temperature of top/uppermost soil layer
     , htc_stable    &  ! Heat transfer coefficient (skin conuctivity) for stable   conditions (Ri > 0)
     , htc_unstable  &  ! Heat transfer coefficient (skin conuctivity) for unstable conditions (Ri < 0)
     , lat           &  ! Latitude (needed for site experiments)
@@ -695,7 +695,7 @@ CONTAINS
     REAL(wp), INTENT(in)    :: fract_snow(nc)
     REAL(wp), INTENT(in)    :: heat_cap(nc)
     REAL(wp), INTENT(in)    :: press_srf(nc)
-    REAL(wp), INTENT(in)    :: t_soil_top(nc)
+    REAL(wp), INTENT(in)    :: t_soil_upper(nc)
     REAL(wp), INTENT(in)    :: htc_stable(nc)
     REAL(wp), INTENT(in)    :: htc_unstable(nc)
     REAL(wp), INTENT(in)    :: lat(nc)
@@ -874,7 +874,7 @@ CONTAINS
                       * zicp(:) * zdqsold(:)
 
 
-    	  zcoind(:)     = znetrad(:) + zhtc(:) * t_soil_top(:)    &
+    	  zcoind(:)     = znetrad(:) + zhtc(:) * t_soil_upper(:)    &
     	  			        + heat_tcoef(:)*( t_bcoef(:) + (zca(:) * q_acoef(:) - zcs(:)) * zqsold(:) + zca(:) * q_bcoef(:) )
 
     	  s_star(:)      = (zcolin(:) * zsold(:) + zcoind(:)) / (zcolin(:) + zcohfl(:))
@@ -935,7 +935,7 @@ CONTAINS
 
 
     ! Ground heat flux
-      forc_hflx(:) = zhtc(:)*(t_soil_top(:) - zTnew(:))
+      forc_hflx(:) = zhtc(:)*(t_soil_upper(:) - zTnew(:))
 
 
       CALL get_date_components (current_date, yr, mo, dy, hr, mn, se)
