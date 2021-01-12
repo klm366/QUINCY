@@ -27,7 +27,10 @@ MODULE mo_carbon_interface
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
-  USE mo_jsb_grid_class,     ONLY: t_jsb_grid
+  ! use_alb_soil_npp <
+  USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
+  USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
+  ! use_alb_soil_npp >
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
@@ -904,7 +907,10 @@ CONTAINS
 
     USE mo_carbon_process,    ONLY: get_per_tile
     !USE mo_carbon_constants,  ONLY: molarMassCO2_kg
-    USE mo_jsb_time,          ONLY: is_newday
+    ! use_alb_soil_npp <
+    USE mo_jsb_time,          ONLY: is_newday, is_newmonth
+    USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
+    ! use_alb_soil_npp >
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout), TARGET :: tile
@@ -951,6 +957,11 @@ CONTAINS
     dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_memory(PHENO_)
 
+    ! use_alb_soil_npp <
+    TYPE(t_jsb_vgrid), POINTER :: mon_5y
+    INTEGER                    :: nmon
+    ! use_alb_soil_npp >
+
     ! Local variables
     CHARACTER(len=*), PARAMETER     :: routine = modname//':recalc_per_tile_vars'
     INTEGER                         :: ics, ice, iblk
@@ -994,7 +1005,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  cflux_c_green_2_herb_ta
     dsl4jsb_Real2D_onChunk ::  cflux_herb_2_atm_ta
     dsl4jsb_Real2D_onChunk ::  C_sum_natural_ta
+    ! use_alb_soil_npp <
+    dsl4jsb_Real2D_onChunk ::  mon_act_NPP
+    dsl4jsb_Real3D_onChunk ::  mon_5year_NPP
     dsl4jsb_Real2D_onChunk ::  mean_5year_NPP
+    ! use_alb_soil_npp >
 
     dsl4jsb_Real2D_onChunk ::  veg_fract_correction
     dsl4jsb_Real2D_onChunk ::  fract_fpc_max
@@ -1005,6 +1020,11 @@ CONTAINS
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
+
+    ! use_alb_soil_npp <
+    mon_5y => Get_vgrid('month_of_last_5years')
+    nmon = mon_5y%n_levels
+    ! use_alb_soil_npp >
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_green_ta )               ! opt out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_reserve_ta )             ! opt out
@@ -1043,7 +1063,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  root_exudates_ta )             ! opt out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_c_green_2_herb_ta )      ! opt out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_herb_2_atm_ta )          ! opt out
+    ! use_alb_soil_npp <
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  mon_act_NPP )                ! opt out
+    dsl4jsb_Get_var3D_onChunk(CARBON_,  mon_5year_NPP )                ! opt out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  mean_5year_NPP )               ! opt out
+    ! use_alb_soil_npp >
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  C_sum_natural_ta )           ! out
 
@@ -1121,11 +1145,23 @@ CONTAINS
     IF (PRESENT(cflux_c_green_2_herb)) CALL get_per_tile(cflux_c_green_2_herb_ta(:), &
       & cflux_c_green_2_herb(:), veg_fract_correction(:), fract_fpc_max(:))
 
-    IF( is_newday(options%current_datetime, options%dtime) ) THEN ! only update at the end of each day
-    ! calculate 5 year mean NPP [ mol(C)/(m^2(tile area) * day) ]
-      mean_5year_NPP(:) = (NPP_act_yDayMean_ta(:)*86400._wp) / (365.25_wp*5._wp) + &
-                         &  mean_5year_NPP(:) * (1._wp - 1._wp/(365.25_wp*5._wp) )
+    ! use_alb_soil_npp <
+    IF (is_newday(options%current_datetime, options%dtime)) THEN
+      IF (is_newmonth(options%current_datetime, options%dtime)) THEN   
+        mon_act_NPP(:)              = mon_act_NPP(:) + NPP_act_yDayMean_ta(:) * 86400._wp
+        mon_5year_NPP(:,1:nmon-1)   = mon_5year_NPP(:,2:nmon)
+        mon_5year_NPP(:,nmon)       = mon_act_NPP(:)
+        mon_act_NPP(:)              = 0._wp
+      ELSE
+        mon_act_NPP(:)            = mon_act_NPP(:) + NPP_act_yDayMean_ta(:) * 86400._wp
+      END IF
     END IF
+
+    IF( is_newmonth(options%current_datetime, options%dtime) ) THEN ! only update at the end of each day
+    ! calculate 5 year mean NPP [ mol(C)/(m^2(tile area) * year) ]
+      mean_5year_NPP(:) = SUM(mon_5year_NPP(:,:), DIM=2) / 5._wp
+    END IF
+    ! use_alb_soil_npp >
 
   END SUBROUTINE recalc_per_tile_vars
 

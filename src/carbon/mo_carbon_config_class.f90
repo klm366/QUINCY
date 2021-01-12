@@ -21,6 +21,9 @@ MODULE mo_carbon_config_class
   USE mo_io_units,          ONLY: filename_max
   USE mo_kind,              ONLY: wp
   USE mo_jsb_config_class,  ONLY: t_jsb_config
+  ! use_alb_soil_npp <
+  USE mo_jsb_grid,          ONLY: Register_vgrid
+  ! use_alb_soil_npp >
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -52,6 +55,10 @@ CONTAINS
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
     USE mo_carbon_constants,   ONLY: FireFracWood2Atmos
+    ! use_alb_soil_npp <
+    USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid         
+    USE mo_jsb_io,             ONLY: ZAXIS_GENERIC
+    ! use_alb_soil_npp >
 
     CLASS(t_carbon_config), INTENT(inout) :: config
 
@@ -68,7 +75,16 @@ CONTAINS
          read_cpools,              &
          fire_fract_wood_2_atmos
 
-    INTEGER :: nml_handler, nml_unit, istat
+    INTEGER               :: nml_handler, nml_unit, istat
+    ! use_alb_soil_npp <
+    REAL(wp), ALLOCATABLE :: mons(:)
+    INTEGER               :: nmon
+    INTEGER               :: i
+    ! use_alb_soil_npp >
+
+    ! use_alb_soil_npp <
+    TYPE(t_jsb_vgrid), POINTER :: mon_5y
+    ! use_alb_soil_npp >
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_carbon_config'
 
@@ -80,6 +96,9 @@ CONTAINS
     ic_filename            = 'ic_land_carbon.nc'
     read_cpools            = .FALSE.
     fire_fract_wood_2_atmos = FireFracWood2Atmos
+    ! use_alb_soil_npp <
+    nmon = 60
+    ! use_alb_soil_npp >
 
     ! Read namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
@@ -95,6 +114,13 @@ CONTAINS
     config%bc_filename            = bc_filename
     config%read_cpools            = read_cpools
     config%fire_fract_wood_2_atmos = fire_fract_wood_2_atmos
+
+    ! use_alb_soil_npp <
+    ALLOCATE(mons(nmon))
+    mons(:) = (/(i, i=1,nmon)/)
+    mon_5y  => new_vgrid('month_of_last_5years', ZAXIS_GENERIC, nmon, levels=mons(1:nmon))
+    CALL register_vgrid(mon_5y)
+    ! use_alb_soil_npp >
 
   END SUBROUTINE Init_carbon_config
 

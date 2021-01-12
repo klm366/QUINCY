@@ -216,8 +216,12 @@ MODULE mo_carbon_memory_class
       NPP_act_yDayMean_ta,           & ! mean value of actual NPP-Rate yesterday, i.e. after N-limitation.
                                        ! Actual NPP (after N-limitation and) excess carbon drop.
                                        ! [mol(CO2)/(m^2(tile area) s)]
+      ! use_alb_soil_npp <
+      mon_act_NPP,                   & ! value of actual NPP-Rateaveraged of the actual month
+                                       ! [mol(CO2)/(m^2(tile area) month)]      
       mean_5year_NPP,                & ! mean value of actual NPP-Rateaveraged over the last 5 years
-                                       ! [mol(CO2)/(m^2(tile area) day)]
+                                       ! [mol(CO2)/(m^2(tile area) year)]
+      ! use_alb_soil_npp >
       GPP_yDayMean_ta,               & !
       root_exudates_ta,              & ! Total root exudates entering to the litter green pools [mol(C)/m^2(tile area) s]
       cflux_c_green_2_herb_ta,            & ! Total carbon flux from C pool green to herbivory.
@@ -237,6 +241,12 @@ MODULE mo_carbon_memory_class
                                        ! .. (positive for emission to atmosphere,
                                        ! ..  negative for absorption by biosphere)
       cflux_npp_2_atm_yday_ta          ! previous day CO2 flux from actual NPP, required for C conservation test
+
+    ! use_alb_soil_npp >
+    TYPE(t_jsb_var_real3d) :: &
+    mon_5year_NPP                      ! monthly value of actual NPP-Rateaveraged of the last 5 years
+                                       ! [mol(CO2)/(m^2(tile area) month)]
+    ! use_alb_soil_npp >
 
 
   CONTAINS
@@ -265,7 +275,10 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid     ! Horizontal grid
-    TYPE(t_jsb_vgrid), POINTER :: surface   ! Vertical grids
+    TYPE(t_jsb_vgrid), POINTER :: surface, &
+    ! use_alb_soil_npp <
+      &                           mon_5y    ! Vertical grids
+    ! use_alb_soil_npp >
     INTEGER :: table
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_carbon_memory'
@@ -277,7 +290,10 @@ CONTAINS
 
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
-    
+    ! use_alb_soil_npp <
+    mon_5y       => Get_vgrid('month_of_last_5years')    
+    ! use_alb_soil_npp >
+
 
     dsl4jsb_Get_config(PHENO_)
 
@@ -1109,6 +1125,25 @@ CONTAINS
       & lrestart=.FALSE., initval_r=1.0E-13_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3. Initializing to zero would result
                                                   ! in a zero divide in the first time step of an initialized run.
 
+    ! use_alb_soil_npp <
+    CALL jsb_add_var( mem, 'mon_act_npp_act', mem%mon_act_NPP,                                 &
+      & hgrid, surface,                                                                              &
+      & t_cf('mon_act_NPP', 'mol(C) m-2 mon-1', 'Actual NPP Rate of the actual month.'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+      & prefix, suffix,                                                                              &
+      & output_level=BASIC,                                                                          &
+      & lrestart=.TRUE., initval_r=1.0E-13_wp, l_aggregate_all=.TRUE. )
+
+
+    CALL jsb_add_var( mem, 'mon_5year_npp_act', mem%mon_5year_NPP,                                 &
+      & hgrid, mon_5y,                                                                              &
+      & t_cf('mon_5year_NPP', 'mol(C) m-2 mon-1', 'Actual monthly NPP Rate of the last 5 years.'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+      & prefix, suffix,                                                                              &
+      & output_level=BASIC,                                                                          &
+      & lrestart=.TRUE., initval_r=1.0E-13_wp, l_aggregate_all=.TRUE. )
+
+
     CALL jsb_add_var( mem, 'mean_5year_npp_act', mem%mean_5year_NPP,                                 &
       & hgrid, surface,                                                                              &
       & t_cf('mean_5year_NPP', 'mol(C) m-2 yr-1', 'Actual NPP Rate averaged over the last 5 years.'), &
@@ -1116,7 +1151,8 @@ CONTAINS
       & prefix, suffix,                                                                              &
       & output_level=BASIC,                                                                          &
       & lrestart=.TRUE., initval_r=1.0E-13_wp, l_aggregate_all=.TRUE. ) 
-                                                  ! in a zero divide in the first time step of an initialized run.
+    ! use_alb_soil_npp > in a zero divide in the first time step of an initialized run.
+
 
     CALL jsb_add_var( mem, 'gpp_ydaymean_ta', mem%GPP_yDayMean_ta,                       &
       & hgrid, surface,                                                                  &
