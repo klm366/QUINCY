@@ -330,7 +330,8 @@ CONTAINS
     ! DEBUG_VAR(:,:) = t_air(:,:)
 
     ! --- precipitation
-    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, next_date, model_id, forcing_input%precipitation, temporary_data1)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, next_date, model_id, &
+      &                            forcing_input%precipitation, temporary_data1)
     ! convert if required
     IF(forcing_options%precip_in_mm_per_day) temporary_data1 = temporary_data1 * conv_prec_day
     ! compute rain and snow
@@ -377,7 +378,8 @@ CONTAINS
 
     CASE(RH_)
       ALLOCATE(rel_humidity(ice, nblks))
-      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, next_date, model_id, forcing_input%rel_humidity, rel_humidity)
+      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, next_date, model_id, &
+        &                            forcing_input%rel_humidity, rel_humidity)
       ! check data
       hlp_r = MAXVAL(MAXVAL(rel_humidity,DIM=2))
       IF(hlp_r < 1._wp) THEN
@@ -475,7 +477,8 @@ CONTAINS
       ! observations but the diurnal cycle follows temperature to help calculation of a correct
       ! net radiation flux. Note that reduces biases resulting from assuming a constant flux, but
       ! this introduces uncertainty due to biases in the assumed dial course of temperature
-      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, next_date, model_id, forcing_input%longwave, temporary_data1)
+      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, next_date, model_id, &
+        &                            forcing_input%longwave, temporary_data1)
 
       IF (forcing_options%air_temperature_as_timestep) THEN
         lw_srf_down = longwave_from_daily_longwave(temporary_data1(:,:), MINVAL(forcing_input%air_temp%data_read(:,:,:),DIM=3), &
@@ -828,7 +831,8 @@ CONTAINS
   !! @par History
   !! First version by Julia Nabel (14.01.16)
   !!
-  SUBROUTINE get_data_and_update_field(nblks, ics, ice, current_datetime, next_date, model_id, forcing_input_variable, current_forcing_array)
+  SUBROUTINE get_data_and_update_field(nblks, ics, ice, current_datetime, next_date, model_id, &
+    &                                  forcing_input_variable, current_forcing_array)
 
     INTEGER,                   INTENT(IN)    :: nblks, ics, ice, model_id
     TYPE(t_datetime), POINTER, INTENT(in)    :: current_datetime
@@ -866,7 +870,7 @@ CONTAINS
 
     ! ----- Check times
     CALL get_date_components(next_date, year, month, day, hour, minute, second)
-    CALL get_date_components (current_datetime,  year=current_year, day=current_day) ! R: sehe keinen Unterschied zwischen current_date und current_datetime
+    CALL get_date_components (current_datetime,  year=current_year, day=current_day)
     ! new_year_forcing = (year /= current_year)
     ! new_day_forcing = (day /= current_day)
     new_year_forcing = is_newyear(current_datetime, delta_time)
@@ -915,8 +919,9 @@ CONTAINS
           !CALL nf(nf_inq_varid(input_file%file_id, CO2_varname, nc_var_id))
           !CALL nf(nf_get_vara_double(input_file%file_id, nc_var_id, (/1,1,currentTimeStep/), (/1,1,1/), hlp_r ))
           ! We could add Read_1d_time. However we would have to add 4 funktions for this call. Its probably not worth it to expand the code.
-          return_pointer => input_file%Read_2d_time(forcing_input_variable%variable_name, & ! variable_name sollte CO2_varname sein
-            &               start_time_step=currentTimeStep, end_time_step=currentTimeStep, fill_array=forcing_input_variable%data_read)
+          return_pointer => input_file%Read_2d_time(forcing_input_variable%variable_name,   & ! variable_name sollte CO2_varname sein
+            &               start_time_step=currentTimeStep, end_time_step=currentTimeStep, &
+            &               fill_array=forcing_input_variable%data_read)
           CALL input_file%Close()
         ENDIF
         hlp_r(1) =forcing_input_variable%data_read(1,1,1)
@@ -1268,7 +1273,8 @@ CONTAINS
       ! virtual potential surface temperature
       CALL sat_specific_humidity(ic, t_srf_proc(1:ic,iblk), pressure(1:ic,iblk), qsat_surf(1:ic))
       ztvs(1:ic) = t_srf_proc(1:ic,iblk) * ( 100000._wp/pressure(1:ic,iblk))**zkappa * &
-        & ( 1._wp + vtmpc1 * ( fact_qsat_srf_proc(1:ic,iblk) * qsat_surf(1:ic) + ( 1._wp - fact_q_air_proc(1:ic,iblk) ) * qair(1:ic,iblk)))
+        & ( 1._wp + vtmpc1 * ( fact_qsat_srf_proc(1:ic,iblk) * qsat_surf(1:ic) + ( 1._wp - fact_q_air_proc(1:ic,iblk) ) &
+        & * qair(1:ic,iblk)))
 
       ! geopotential of the surface layer (see echam's auxhybc.f90 & geopot.f90)
       ! adapted according to jsb3 offline modifications by Marvin, Philipp et al. Jan. 24, 2017 (r8893)
