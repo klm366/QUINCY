@@ -338,20 +338,21 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    dsl4jsb_Get_memory(TURB_)
+
+    dsl4jsb_Aggregate_onChunk(TURB_, rough_m_star,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, rough_h_star,   weighted_by_fract)
+
     model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_config(TURB_)
-    dsl4jsb_Get_memory(TURB_)
-
-    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
     dsl4jsb_Get_var2D_onChunk(TURB_,  rough_m)
     dsl4jsb_Get_var2D_onChunk(TURB_,  rough_h)
     dsl4jsb_Get_var2D_onChunk(TURB_,  rough_m_star)
     dsl4jsb_Get_var2D_onChunk(TURB_,  rough_h_star)
-
-    dsl4jsb_Aggregate_onChunk(TURB_, rough_m_star,   weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(TURB_, rough_h_star,   weighted_by_fract)
 
     config_blending_height            = dsl4jsb_Config(TURB_)%blending_height
     config_roughness_momentum_to_heat = dsl4jsb_Config(TURB_)%roughness_momentum_to_heat
