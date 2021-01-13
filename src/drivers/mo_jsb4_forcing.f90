@@ -1226,6 +1226,8 @@ CONTAINS
     REAL(wp), DIMENSION(ice):: air_pressure, zdu2, ztvd, ztvir, qsat_surf
     REAL(wp), DIMENSION(ice):: ztvs, zg, zgh, zril, zcons, zchnl, zcfnchl, zcfhl, zscfl, zucfhl
 
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_remaining_input_for_jsb4_interface'
+
     ! in jsb3: rd = GasConstantDryAir; cpd = SpecificHeatDryAirConstPressure; grav = Gravity
     zcons9 = 3._wp * cb
     zcons11 = 3._wp * cb * cc
@@ -1270,12 +1272,14 @@ CONTAINS
 
       ! geopotential of the surface layer (see echam's auxhybc.f90 & geopot.f90)
       ! adapted according to jsb3 offline modifications by Marvin, Philipp et al. Jan. 24, 2017 (r8893)
-      IF(forcing_options%heightWind > 0._wp) THEN
+      IF(forcing_options%heightWind > 0._wp .AND. forcing_options%heightHumidity > 0._wp) THEN
         zg(1:ic) = forcing_options%heightWind * grav
         zgh(1:ic) = forcing_options%heightHumidity * grav ! jsb31:ic "HeightHumidity and HeightTemperature have to be equal"
       ELSE
-        zg(1:ic) = ztvir(1:ic) * rd * LOG(1._wp / zsigma)
-        zgh(1:ic) = zg(1:ic)
+        ! TODO Once forcing from model data is implemented this has to be activated again!
+        ! zg(1:ic) = ztvir(1:ic) * rd * LOG(1._wp / zsigma)
+        ! zgh(1:ic) = zg(1:ic)
+        CALL finish(routine, 'forcing_height_wind or forcing_height_humidity not set')
       ENDIF
 
       ! Richardson number (dry, Brinkop & Roeckner 1995, Tellus)
