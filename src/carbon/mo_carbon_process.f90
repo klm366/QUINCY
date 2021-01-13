@@ -225,10 +225,10 @@ CONTAINS
     REAL(wp), OPTIONAL, INTENT(in)    :: WoodLitterSize         ! size of coarse debris
 
     !
-    REAL(wp), OPTIONAL, INTENT(out) :: c_decomp_humus_1_sum   ! annual cflux sum of humus decomposed (leaf) [mol(C)/m^2(canopy)]
-    REAL(wp), OPTIONAL, INTENT(out) :: c_decomp_humus_2_sum   ! annual cflux sum of humus decomposed (wood) [mol(C)/m^2(canopy)]
-    REAL(wp), OPTIONAL, INTENT(out) :: c_into_humus_1_sum     ! annual cflux sum into humus (leaf) [mol(C)/m^2(canopy)]
-    REAL(wp), OPTIONAL, INTENT(out) :: c_into_humus_2_sum     ! annual cflux sum into humus (wood) [mol(C)/m^2(canopy)]
+    REAL(wp), OPTIONAL, INTENT(inout) :: c_decomp_humus_1_sum   ! annual cflux sum of humus decomposed (leaf) [mol(C)/m^2(canopy)]
+    REAL(wp), OPTIONAL, INTENT(inout) :: c_decomp_humus_2_sum   ! annual cflux sum of humus decomposed (wood) [mol(C)/m^2(canopy)]
+    REAL(wp), OPTIONAL, INTENT(inout) :: c_into_humus_1_sum     ! annual cflux sum into humus (leaf) [mol(C)/m^2(canopy)]
+    REAL(wp), OPTIONAL, INTENT(inout) :: c_into_humus_2_sum     ! annual cflux sum into humus (wood) [mol(C)/m^2(canopy)]
 
     ! locals
     LOGICAL  :: is_crop                 ! logical crop mask
