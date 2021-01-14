@@ -305,21 +305,25 @@ CONTAINS
       t_unfilt_corrected(:) = t_unfilt(:) - snowmelt(:) * dtime * alf / hcap_grnd(:)
     END IF
 
-		CALL get_date_components (current_date, yr, mo, dy, hr, mn, se)
-		999 FORMAT(I0.2, I0.2, I0.2, 1X,  I0.2, I0.2, I0.2, 1X, A4, 1X, ES15.7E3)
-		996 FORMAT(I0.2, I0.2, I0.2, 1X,  I0.2, I0.2, I0.2, 1X, A4, 1X, A6, 1X, ES15.7E3)
 
+    IF(size(lat, dim=1) == 2) THEN
 
-		IF (.NOT. tile%is_glacier) THEN
-			IF (yr == 1999  .AND. mo == 10 .AND. (dy == 23 .OR. dy == 24 .OR. dy == 25 .OR. dy == 26)) THEN
-				DO i=1,size(lat, dim=1)
-					IF (lat(i) > 37._wp) THEN
-						write(555,999) yr,mo,dy, hr,mn,se, 'GSSE', grnd_hflx(i)
-						write(555,999) yr,mo,dy, hr,mn,se, 'GSEB', forc_hflx(i)
-					END IF
-				END DO
-			END IF
-		END IF
+  		CALL get_date_components (current_date, yr, mo, dy, hr, mn, se)
+  		999 FORMAT(I0.2, I0.2, I0.2, 1X,  I0.2, I0.2, I0.2, 1X, A4, 1X, ES15.7E3)
+  		996 FORMAT(I0.2, I0.2, I0.2, 1X,  I0.2, I0.2, I0.2, 1X, A4, 1X, A6, 1X, ES15.7E3)
+
+  		IF (.NOT. tile%is_glacier) THEN
+  			IF (yr == 1999  .AND. mo == 10 .AND. (dy == 23 .OR. dy == 24 .OR. dy == 25 .OR. dy == 26)) THEN
+  				DO i=1,size(lat, dim=1)
+  					IF (lat(i) > 37._wp) THEN
+  						write(555,999) yr,mo,dy, hr,mn,se, 'GSSE', grnd_hflx(i)
+  						write(555,999) yr,mo,dy, hr,mn,se, 'GSEB', forc_hflx(i)
+  					END IF
+  				END DO
+  			END IF
+  		END IF
+
+    END IF
 
     IF (.NOT. dsl4jsb_Config(SSE_)%l_snow) THEN
       ldglac(:) = SPREAD(tile%is_glacier, DIM=1, ncopies=nc)
@@ -474,17 +478,20 @@ CONTAINS
 
       !$claw acc parallel loop default(none) present(snow_depth_sl,snow_fract,t_unfilt_corrected,t_soil_top)
 
+      IF(size(lat, dim=1) == 2) THEN
 
-      IF (.NOT. tile%is_glacier) THEN
-  			IF (yr == 1999  .AND. mo == 10 .AND. (dy == 23 .OR. dy == 24 .OR. dy == 25 .OR. dy == 26)) THEN
-  				DO i=1,size(lat, dim=1)
-  					IF (lat(i) > 37._wp) THEN
-  						write(555,999) yr,mo,dy, hr,mn,se, 'Tunc', t_unfilt_corrected(i)
-  						write(555,999) yr,mo,dy, hr,mn,se, 'Tso1', t_soil(i,1)
-  					END IF
-  				END DO
-  			END IF
-  		END IF
+        IF (.NOT. tile%is_glacier) THEN
+    			IF (yr == 1999  .AND. mo == 10 .AND. (dy == 23 .OR. dy == 24 .OR. dy == 25 .OR. dy == 26)) THEN
+    				DO i=1,size(lat, dim=1)
+    					IF (lat(i) > 37._wp) THEN
+    						write(555,999) yr,mo,dy, hr,mn,se, 'Tunc', t_unfilt_corrected(i)
+    						write(555,999) yr,mo,dy, hr,mn,se, 'Tso1', t_soil(i,1)
+    					END IF
+    				END DO
+    			END IF
+    		END IF
+
+      END IF
 
 
       IF (l_is_clas) THEN

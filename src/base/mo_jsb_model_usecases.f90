@@ -190,11 +190,15 @@ CONTAINS
         ! default jsb4: HYDRO_ is active at veg tile only to save runtime
         IF (.NOT. model%config%use_quincy) THEN
           veg_tile => t_jsb_tile('veg', 'Veg tile', &
-            & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_,    ALCC_  /),   &
-            & process_actions = (/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_TILE_ /), &
+            & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_/),    &
+            & process_actions = (/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
             & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
             & fract_varname='fract_veg')
-        ! use_quincy: 
+        IF (model%processes(ALCC_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(ALCC_, ON_TILE_, AGGREGATE_)
+        END IF
+        !
+        ! use_quincy:
         !  HYDRO_ is active at PFT tiles to make all the HYDRO_ variables available to the PFT tiles
         !    note: HYDRO_ results differ only marginally between ON_TILE_ & ON_LEAFS_ (tested by Reiner)
         !  VEG_ is active
@@ -251,7 +255,7 @@ CONTAINS
     ! IF (ASSOCIATED(glacier_tile)) CONTINUE
     ! IF (ASSOCIATED(lake_tile)) CONTINUE
     ! IF (ASSOCIATED(pft_tile)) CONTINUE
-        
+
     NULLIFY(box_tile, land_tile, veg_tile, pft_tile)
     IF (model%config%use_glacier) NULLIFY(glacier_tile)
     IF (model%config%use_lakes) NULLIFY(lake_tile)

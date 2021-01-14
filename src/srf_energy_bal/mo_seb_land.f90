@@ -339,38 +339,43 @@ CONTAINS
 
     t_soil_upper(:)   = t_soil(:,1)
 
-    open(555, file='output.txt')
-    CALL get_date_components (current_date, yr, mo, dy, hr, mn, se)
-    999 FORMAT(I0.2, I0.2, I0.2, 1X, I0.2, I0.2, I0.2, 1X, A4, 1X, ES15.7E3)
-    998 FORMAT(I0.2, I0.2, I0.2, 1X,  I0.2, I0.2, I0.2, 1X, A4, 1X, I0.3)
-    997 FORMAT(I0.2, I0.2, I0.2, 1X, I0.2, I0.2, I0.2, 1X, A4, 1X, L1)
 
-    IF (yr == 1999  .AND. mo == 10 .AND. (dy == 23 .OR. dy == 24 .OR. dy == 25 .OR. dy == 26)) THEN
-      DO i=1,size(lat, dim=1)
-        IF (lat(i) > 37._wp) THEN
-          write(555,999) yr,mo,dy, hr,mn,se, 'Rnet', rad_srf_net(i)
-          write(555,999) yr,mo,dy, hr,mn,se, 'Gfl1', grnd_hflx(i)
-          write(555,999) yr,mo,dy, hr,mn,se, 'Tsoi', t_soil_upper(i)
-          write(555,999) yr,mo,dy, hr,mn,se, 'lati', lat(i)
-          IF (l_is_clas) THEN
-            write(555,999) yr,mo,dy, hr,mn,se, 'Clas', 1._wp
-          ELSE
-            write(555,999) yr,mo,dy, hr,mn,se, 'Clas', 0._wp
-          END IF
-          IF (l_is_skin) THEN
-            write(555,999) yr,mo,dy, hr,mn,se, 'Skin', 1._wp
-            IF (lstart) THEN
-                IF (lat(i) > 37._wp) THEN
-                  write(555,999) yr,mo,dy, hr,mn,se, 'Tnew', t_soil_upper(i)
-                  write(555,999) yr,mo,dy, hr,mn,se, 'zhtc', htc_stable(i)
-                  write(555,998) yr,mo,dy, hr,mn,se, 'loop', 0
-                END IF
+    IF(size(lat, dim=1) == 2) THEN
+
+      open(555, file='output.txt')
+      CALL get_date_components (current_date, yr, mo, dy, hr, mn, se)
+      999 FORMAT(I0.2, I0.2, I0.2, 1X, I0.2, I0.2, I0.2, 1X, A4, 1X, ES15.7E3)
+      998 FORMAT(I0.2, I0.2, I0.2, 1X,  I0.2, I0.2, I0.2, 1X, A4, 1X, I0.3)
+      997 FORMAT(I0.2, I0.2, I0.2, 1X, I0.2, I0.2, I0.2, 1X, A4, 1X, L1)
+
+      IF (yr == 1999  .AND. mo == 10 .AND. (dy == 23 .OR. dy == 24 .OR. dy == 25 .OR. dy == 26)) THEN
+        DO i=1,size(lat, dim=1)
+          IF (lat(i) > 37._wp) THEN
+            write(555,999) yr,mo,dy, hr,mn,se, 'Rnet', rad_srf_net(i)
+            write(555,999) yr,mo,dy, hr,mn,se, 'Gfl1', grnd_hflx(i)
+            write(555,999) yr,mo,dy, hr,mn,se, 'Tsoi', t_soil_upper(i)
+            write(555,999) yr,mo,dy, hr,mn,se, 'lati', lat(i)
+            IF (l_is_clas) THEN
+              write(555,999) yr,mo,dy, hr,mn,se, 'Clas', 1._wp
+            ELSE
+              write(555,999) yr,mo,dy, hr,mn,se, 'Clas', 0._wp
             END IF
-          ELSE
-            write(555,999) yr,mo,dy, hr,mn,se, 'Skin', 0._wp
+            IF (l_is_skin) THEN
+              write(555,999) yr,mo,dy, hr,mn,se, 'Skin', 1._wp
+              IF (lstart) THEN
+                  IF (lat(i) > 37._wp) THEN
+                    write(555,999) yr,mo,dy, hr,mn,se, 'Tnew', t_soil_upper(i)
+                    write(555,999) yr,mo,dy, hr,mn,se, 'zhtc', htc_stable(i)
+                    write(555,998) yr,mo,dy, hr,mn,se, 'loop', 0
+                  END IF
+              END IF
+            ELSE
+              write(555,999) yr,mo,dy, hr,mn,se, 'Skin', 0._wp
+            END IF
           END IF
-        END IF
-      END DO
+        END DO
+      END IF
+
     END IF
 
 
@@ -437,6 +442,7 @@ CONTAINS
     END IF
 
     soil_stor(:)  = heat_cap(:) / t2s_conv(:)*(s_star(:) - s_old(:)) / (steplen*cvdifts)
+    IF(size(lat, dim=1) == 2) THEN
 
       IF (yr == 1999  .AND. mo == 10 .AND. (dy == 23 .OR. dy == 24 .OR. dy == 25 .OR. dy == 26)) THEN
         DO i=1,size(lat, dim=1)
@@ -446,6 +452,8 @@ CONTAINS
           END IF
         END DO
       END IF
+
+    END IF
 
     ! @todo - hack for oceans boxes (land tile is direct child of root tile)
     !$claw acc data present(fract)
@@ -937,10 +945,11 @@ CONTAINS
     ! Ground heat flux
       forc_hflx(:) = zhtc(:)*(t_soil_upper(:) - zTnew(:))
 
+      IF(size(lat, dim=1) == 2) THEN
 
-      CALL get_date_components (current_date, yr, mo, dy, hr, mn, se)
-      999 FORMAT(I0.2, I0.2, I0.2, 1X,  I0.2, I0.2, I0.2, 1X, A4, 1X, ES15.7E3)
-      998 FORMAT(I0.2, I0.2, I0.2, 1X,  I0.2, I0.2, I0.2, 1X, A4, 1X, I0.3)
+        CALL get_date_components (current_date, yr, mo, dy, hr, mn, se)
+        999 FORMAT(I0.2, I0.2, I0.2, 1X,  I0.2, I0.2, I0.2, 1X, A4, 1X, ES15.7E3)
+        998 FORMAT(I0.2, I0.2, I0.2, 1X,  I0.2, I0.2, I0.2, 1X, A4, 1X, I0.3)
 
         IF (yr == 1999  .AND. mo == 10 .AND. (dy == 23 .OR. dy == 24 .OR. dy == 25 .OR. dy == 26)) THEN
           DO i=1,size(lat, dim=1)
@@ -951,6 +960,8 @@ CONTAINS
             END IF
           END DO
         END IF
+
+      END IF
 
 
 
@@ -1031,8 +1042,10 @@ CONTAINS
     END IF
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_asselin_land_expand_2 tile_name=tile%name
 
-    CALL get_date_components (current_date, yr, mo, dy, hr, mn, se)
-    999 FORMAT(I0.2, I0.2, I0.2, 1X,  I0.2, I0.2, I0.2, 1X, A4, 1X, ES15.7E3)
+    IF(size(lat, dim=1) == 2) THEN
+
+      CALL get_date_components (current_date, yr, mo, dy, hr, mn, se)
+      999 FORMAT(I0.2, I0.2, I0.2, 1X,  I0.2, I0.2, I0.2, 1X, A4, 1X, ES15.7E3)
 
       IF (yr == 1999  .AND. mo == 10 .AND. (dy == 23 .OR. dy == 24 .OR. dy == 25 .OR. dy == 26)) THEN
         DO i=1,size(t_filt, dim=1)
@@ -1041,6 +1054,8 @@ CONTAINS
           END IF
         END DO
       END IF
+
+    END IF
 
     t(:) = t_filt(:)
 
@@ -1153,8 +1168,10 @@ CONTAINS
     !
     latent_hflx(:) = alv * evapotrans(:) + (als - alv) * fract_snow(:) * evapopot(:)
 
-    CALL get_date_components (current_date, yr, mo, dy, hr, mn, se)
-    999 FORMAT(I0.2, I0.2, I0.2, 1X,  I0.2, I0.2, I0.2, 1X, A4, 1X, ES15.7E3)
+    IF(size(lat, dim=1) == 2) THEN
+
+      CALL get_date_components (current_date, yr, mo, dy, hr, mn, se)
+      999 FORMAT(I0.2, I0.2, I0.2, 1X,  I0.2, I0.2, I0.2, 1X, A4, 1X, ES15.7E3)
 
       IF (yr == 1999  .AND. mo == 10 .AND. (dy == 23 .OR. dy == 24 .OR. dy == 25 .OR. dy == 26)) THEN
         DO i=1,size(lat, dim=1)
@@ -1165,6 +1182,8 @@ CONTAINS
         END DO
 
       END IF
+
+    END IF
 
     ! These two variables are not aggregated together with lake and are the fluxes given back to the atmosphere
     sensible_hflx_lnd(:) = sensible_hflx(:)
