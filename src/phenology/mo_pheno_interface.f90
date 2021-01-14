@@ -511,11 +511,15 @@ CONTAINS
     IF (l_newday) THEN
       !$claw expand parallel update savepoint=ser_jsb_pheno_day_npp_sum_expand_0 tile_name=tile%name
       previous_day_NPP_pot_rate_ca(:) = day_NPP_sum(:)/86400._wp
-      ! calculate NPP required to cover soil completely
-      mean_dark_NPP(:) = 8._wp/dsl4jsb_Lctlib_param(specificLeafArea_C)
       !$claw expand parallel update savepoint=ser_jsb_pheno_day_npp_sum_expand_1 tile_name=tile%name
       day_NPP_sum(:) = 0._wp
     END IF
+
+    IF (l_newday) THEN
+      ! calculate NPP required to cover soil completely
+      mean_dark_NPP(:) = 4._wp/dsl4jsb_Lctlib_param(specificLeafArea_C)
+    END IF
+
 
     ! JN 10.01.18
     IF ((dsl4jsb_Config(PHENO_)%l_forestRegrowth) .AND. (dsl4jsb_Lctlib_param(ForestFlag))) THEN
