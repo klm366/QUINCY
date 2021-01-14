@@ -665,9 +665,6 @@ CONTAINS
     !$ACC WAIT(1)
     !$ACC EXIT DATA DELETE(rad_uv_down)
     DEALLOCATE(rad_uv_down)
-    dsl4jsb_Get_memory(A2L_)
-    dsl4jsb_Get_var2D_onDomain(A2L_,   DEBUG_VAR)
-    DEBUG_VAR(:,:) = help1(:,:)
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 6.0 Compute longwave radiation
