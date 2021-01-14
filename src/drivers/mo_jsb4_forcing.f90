@@ -254,7 +254,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), POINTER :: tile
 
     dsl4jsb_Def_memory(HYDRO_)
-    dsl4jsb_Real2D_onChunk :: elevation
+    dsl4jsb_Real2D_onDomain :: elevation
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Real2D_onDomain :: DEBUG_VAR
 
@@ -325,9 +325,6 @@ CONTAINS
     ENDIF
     ! convert degC to Kelvin
     t_air(:,:) = t_air_C(:,:) + tmelt
-    ! dsl4jsb_Get_memory(A2L_)
-    ! dsl4jsb_Get_var2D_onDomain(A2L_,   DEBUG_VAR)
-    ! DEBUG_VAR(:,:) = t_air(:,:)
 
     ! --- precipitation
     CALL get_data_and_update_field(nblks, ics, ice, current_datetime, next_date, model_id, &
@@ -349,18 +346,19 @@ CONTAINS
         & 0.5_wp*(tmax_data(:,:) + tmin_data(:,:)))
     ENDIF
 
-    ! --- compute bottom pressure
+    ! get elevation
     dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, elevation)  ! in
+
+    ! --- compute bottom pressure
     DO iblk = 1, nblks
       IF (iblk == nblks) THEN
         ic = icz
       ELSE
         ic = ice
       END IF
-      ! get elevation
-      dsl4jsb_Get_var2D_onChunk(HYDRO_, elevation)  ! in
 
-      press_srf(1:ic,iblk) = bottom_pressure(elevation(1:ic), t_air_C(1:ic,iblk))
+      press_srf(1:ic,iblk) = bottom_pressure(elevation(1:ic,iblk), t_air_C(1:ic,iblk))
     ENDDO
 
     ! --- compute specific humidity
@@ -411,7 +409,7 @@ CONTAINS
             END IF
             CALL spec_humidity_from_rel_humidity(ic, sinlat(1:ic,iblk), coslat(1:ic,iblk), &
               & rel_humidity(1:ic,iblk), MINVAL(forcing_input%air_temp%data_read(1:ic,iblk,:),DIM=2), &
-              & MAXVAL(forcing_input%air_temp%data_read(1:ic,iblk,:),DIM=2), elevation(1:ic), delta_time, q_air(1:ic,iblk))
+              & MAXVAL(forcing_input%air_temp%data_read(1:ic,iblk,:),DIM=2), elevation(1:ic,iblk), delta_time, q_air(1:ic,iblk))
           ENDDO
         ELSE
           DO iblk = 1, nblks
@@ -420,8 +418,9 @@ CONTAINS
             ELSE
               ic = ice
             END IF
-            CALL spec_humidity_from_rel_humidity(ic, sinlat(1:ic,iblk), coslat(1:ic,iblk), &
-              & rel_humidity(1:ic,iblk), tmin_data(1:ic,iblk), tmax_data(1:ic,iblk), elevation(1:ic), delta_time, q_air(1:ic,iblk))
+            CALL spec_humidity_from_rel_humidity( &
+              & ic, sinlat(1:ic,iblk), coslat(1:ic,iblk), rel_humidity(1:ic,iblk), &
+              & tmin_data(1:ic,iblk), tmax_data(1:ic,iblk), elevation(1:ic,iblk), delta_time, q_air(1:ic,iblk))
           ENDDO
         ENDIF
         ! constrain daily specific humidity to be lower than or equal to the saturation spec. humidity
@@ -465,9 +464,6 @@ CONTAINS
 
     swvis_srf_down(:,:) = rad_uv_down(:,:) + swpar_srf_down(:,:)
     DEALLOCATE(rad_uv_down)
-    dsl4jsb_Get_memory(A2L_)
-    dsl4jsb_Get_var2D_onDomain(A2L_,   DEBUG_VAR)
-    DEBUG_VAR(:,:) = help1(:,:)
 
     ! --- compute longwave radiation
     IF (forcing_input%longwave%frequency .EQ. TIMESTEP_) THEN
