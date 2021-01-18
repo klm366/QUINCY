@@ -208,13 +208,13 @@ CONTAINS
   !! Used parts of jsbach3 mo_jsbalone_forcing: read_forcing / update_forcing and mo_jsbalone: update_driving  by Julia Nabel
   !!
   ! R: Note, if we handel next_date differently it get even more ugly! Overall the best solution is to add next_date to the echam calling routine.
-  SUBROUTINE get_interface_variables_from_external_forcing(model_id, ics, ice, nblks, current_datetime, next_date, & 
+  SUBROUTINE get_interface_variables_from_external_forcing(model_id, ics, ice, icz, nblks, current_datetime, next_date, & 
     & sinlat, coslat, lon, evapo_act2pot_proc, &
     & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, cos_zenith_angle, CO2_air, &
     & t_air, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down, &
     & swnir_srf_down, swpar_srf_down, fract_par_diffuse, press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch )
 
-    INTEGER,  INTENT(IN)  :: model_id, ics, ice, nblks
+    INTEGER,  INTENT(IN)  :: model_id, ics, ice, icz, nblks
     TYPE(t_datetime),  INTENT(IN), POINTER :: current_datetime
     TYPE(t_datetime),  INTENT(IN), POINTER :: next_date
     REAL(wp), INTENT(IN)  :: sinlat(:,:)
@@ -254,12 +254,12 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), POINTER :: tile
 
     dsl4jsb_Def_memory(HYDRO_)
-    dsl4jsb_Real2D_onChunk :: elevation
+    dsl4jsb_Real2D_onDomain :: elevation
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Real2D_onDomain :: DEBUG_VAR
 
     REAL(wp) :: hlp_r
-    INTEGER  :: iblk
+    INTEGER  :: ic, iblk
     INTEGER  :: day_of_year
 
     REAL(wp), ALLOCATABLE :: t_air_C(:,:), tmax_data(:,:), tmin_data(:,:), rad_uv_down(:,:), &
@@ -274,6 +274,33 @@ CONTAINS
 #endif
 
     !---------------------------------------------------------------------------------
+
+    IF (iblk == nblks) THEN
+      ic = icz
+    ELSE
+      ic = ice
+    END IF
+
+    CO2_air(:,:)           = 0._wp
+    t_air(:,:)             = 0._wp
+    q_air(:,:)             = 0._wp
+    rain(:,:)              = 0._wp
+    snow(:,:)              = 0._wp
+    wind_air(:,:)          = 0._wp
+    wind_10m(:,:)          = 0._wp
+    lw_srf_down(:,:)       = 0._wp
+    swvis_srf_down(:,:)    = 0._wp
+    swnir_srf_down(:,:)    = 0._wp
+    swpar_srf_down(:,:)    = 0._wp
+    fract_par_diffuse(:,:) = 0._wp
+    press_srf(:,:)         = 0._wp
+    drag_srf(:,:)          = 0._wp
+    t_acoef(:,:)           = 0._wp
+    t_bcoef(:,:)           = 0._wp
+    q_acoef(:,:)           = 0._wp
+    q_bcoef(:,:)           = 0._wp
+    pch(:,:)               = 0._wp
+
     ALLOCATE(help1(ice, nblks))
     ALLOCATE(help2(ice, nblks))
 
@@ -294,13 +321,10 @@ CONTAINS
       CALL get_data_and_update_field(nblks, ics, ice, current_datetime, next_date, model_id, forcing_input%air_temp_min, tmin_data)
       CALL get_data_and_update_field(nblks, ics, ice, current_datetime, next_date, model_id, forcing_input%air_temp_max, tmax_data)
       ! estimate temperature at time step from daily temperature maximum and temperature minimum
-      CALL instantly_from_daily_temp_2(nblks, ice, lon, sinlat, coslat, tmin_data, tmax_data, next_date, t_air_C)
+      CALL instantly_from_daily_temp_2(nblks, ice, icz, lon, sinlat, coslat, tmin_data, tmax_data, next_date, t_air_C)
     ENDIF
     ! convert degC to Kelvin
     t_air(:,:) = t_air_C(:,:) + tmelt
-    ! dsl4jsb_Get_memory(A2L_)
-    ! dsl4jsb_Get_var2D_onDomain(A2L_,   DEBUG_VAR)
-    ! DEBUG_VAR(:,:) = t_air(:,:)
 
     ! --- precipitation
     CALL get_data_and_update_field(nblks, ics, ice, current_datetime, next_date, model_id, &
@@ -322,13 +346,19 @@ CONTAINS
         & 0.5_wp*(tmax_data(:,:) + tmin_data(:,:)))
     ENDIF
 
-    ! --- compute bottom pressure
+    ! get elevation
     dsl4jsb_Get_memory(HYDRO_)
-    DO iblk = 1, nblks
-      ! get elevation
-      dsl4jsb_Get_var2D_onChunk(HYDRO_, elevation)  ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, elevation)  ! in
 
-      press_srf(:,iblk) = bottom_pressure(elevation(:), t_air_C(:,iblk))
+    ! --- compute bottom pressure
+    DO iblk = 1, nblks
+      IF (iblk == nblks) THEN
+        ic = icz
+      ELSE
+        ic = ice
+      END IF
+
+      press_srf(1:ic,iblk) = bottom_pressure(elevation(1:ic,iblk), t_air_C(1:ic,iblk))
     ENDDO
 
     ! --- compute specific humidity
@@ -337,10 +367,10 @@ CONTAINS
     CASE(NONE_)
       ! ratio of actual to potential evapotranspiration from the previous day
       IF (forcing_options%air_temperature_as_timestep) THEN
-        temporary_data1 = vapour_pressure_from_evapor(nblks, ice, evapo_act2pot_proc(:,:), &
+        temporary_data1 = vapour_pressure_from_evapor(nblks, ice, icz, evapo_act2pot_proc(:,:), &
           & MINVAL(forcing_input%air_temp%data_read(:,:,:), DIM=3), t_air_C(:,:))
       ELSE
-        temporary_data1 = vapour_pressure_from_evapor(nblks, ice, evapo_act2pot_proc(:,:), tmin_data(:,:), t_air_C(:,:))
+        temporary_data1 = vapour_pressure_from_evapor(nblks, ice, icz, evapo_act2pot_proc(:,:), tmin_data(:,:), t_air_C(:,:))
       ENDIF
       q_air(:,:) = fun_specific_humidity(temporary_data1(:,:), press_srf(:,:))
 
@@ -359,7 +389,12 @@ CONTAINS
       rel_humidity = rel_humidity/100._wp
       ! Get saturation spec. humidity from air temperature
       DO iblk = 1, nblks
-        CALL sat_specific_humidity(ice, t_air(:,iblk), press_srf(:,iblk), sat_spec_humidity(:,iblk))
+        IF (iblk == nblks) THEN
+          ic = icz
+        ELSE
+          ic = ice
+        END IF
+        CALL sat_specific_humidity(ice, t_air(1:ic,iblk), press_srf(1:ic,iblk), sat_spec_humidity(1:ic,iblk))
       ENDDO
       ! Get specific humidity
       IF (forcing_input%rel_humidity%frequency .EQ. TIMESTEP_) THEN
@@ -367,14 +402,25 @@ CONTAINS
       ELSE
         IF (forcing_options%air_temperature_as_timestep) THEN
           DO iblk = 1, nblks
-            CALL spec_humidity_from_rel_humidity(ice, sinlat(:,iblk), coslat(:,iblk), &
-              & rel_humidity(:,iblk), MINVAL(forcing_input%air_temp%data_read(:,iblk,:),DIM=2), &
-              & MAXVAL(forcing_input%air_temp%data_read(:,iblk,:),DIM=2), elevation(:), delta_time, q_air(:,iblk))
+            IF (iblk == nblks) THEN
+              ic = icz
+            ELSE
+              ic = ice
+            END IF
+            CALL spec_humidity_from_rel_humidity(ic, sinlat(1:ic,iblk), coslat(1:ic,iblk), &
+              & rel_humidity(1:ic,iblk), MINVAL(forcing_input%air_temp%data_read(1:ic,iblk,:),DIM=2), &
+              & MAXVAL(forcing_input%air_temp%data_read(1:ic,iblk,:),DIM=2), elevation(1:ic,iblk), delta_time, q_air(1:ic,iblk))
           ENDDO
         ELSE
           DO iblk = 1, nblks
-            CALL spec_humidity_from_rel_humidity(ice, sinlat(:,iblk), coslat(:,iblk), &
-              & rel_humidity(:,iblk), tmin_data(:,iblk), tmax_data(:,iblk), elevation(:), delta_time, q_air(:,iblk))
+            IF (iblk == nblks) THEN
+              ic = icz
+            ELSE
+              ic = ice
+            END IF
+            CALL spec_humidity_from_rel_humidity( &
+              & ic, sinlat(1:ic,iblk), coslat(1:ic,iblk), rel_humidity(1:ic,iblk), &
+              & tmin_data(1:ic,iblk), tmax_data(1:ic,iblk), elevation(1:ic,iblk), delta_time, q_air(1:ic,iblk))
           ENDDO
         ENDIF
         ! constrain daily specific humidity to be lower than or equal to the saturation spec. humidity
@@ -385,7 +431,12 @@ CONTAINS
       CALL get_data_and_update_field(nblks, ics, ice, current_datetime, next_date, model_id, forcing_input%qair, q_air(:,:))
       ! constrain specific humidity to be lower than or equal to the saturation spec. humidity
       DO iblk = 1, nblks
-        CALL sat_specific_humidity(ice, t_air(:,iblk), press_srf(:,iblk), sat_spec_humidity(:,iblk))
+        IF (iblk == nblks) THEN
+          ic = icz
+        ELSE
+          ic = ice
+        END IF
+        CALL sat_specific_humidity(ic, t_air(1:ic,iblk), press_srf(1:ic,iblk), sat_spec_humidity(1:ic,iblk))
       ENDDO
       q_air(:,:) = MIN(q_air(:,:),sat_spec_humidity(:,:))
     END SELECT
@@ -414,9 +465,6 @@ CONTAINS
 
     swvis_srf_down(:,:) = rad_uv_down(:,:) + swpar_srf_down(:,:)
     DEALLOCATE(rad_uv_down)
-    dsl4jsb_Get_memory(A2L_)
-    dsl4jsb_Get_var2D_onDomain(A2L_,   DEBUG_VAR)
-    DEBUG_VAR(:,:) = help1(:,:)
 
     ! --- compute longwave radiation
     IF (forcing_input%longwave%frequency .EQ. TIMESTEP_) THEN
@@ -447,7 +495,7 @@ CONTAINS
     CO2_air = CO2_air * forcing_options%conv_CO2_2_MassRatio
 
     ! --- compute remaining required input for jsb4 interface
-    CALL get_remaining_input_for_jsb4_interface(nblks, ice, t_air, press_srf, q_air, wind_air, &
+    CALL get_remaining_input_for_jsb4_interface(nblks, ice, icz, t_air, press_srf, q_air, wind_air, &
       & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, &
       & drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch)
 
@@ -819,7 +867,7 @@ CONTAINS
 
     ! ----- Check times
     CALL get_date_components(next_date, year, month, day, hour, minute, second)
-    CALL get_date_components (current_datetime,  year=current_year, day=current_day) ! R: sehe keinen Unterschied zwischen current_date und current_datetime
+    CALL get_date_components (current_datetime,  year=current_year, day=current_day)
     ! new_year_forcing = (year /= current_year)
     ! new_day_forcing = (day /= current_day)
     new_year_forcing = is_newyear(current_datetime, delta_time)
@@ -868,7 +916,7 @@ CONTAINS
           !CALL nf(nf_inq_varid(input_file%file_id, CO2_varname, nc_var_id))
           !CALL nf(nf_get_vara_double(input_file%file_id, nc_var_id, (/1,1,currentTimeStep/), (/1,1,1/), hlp_r ))
           ! We could add Read_1d_time. However we would have to add 4 funktions for this call. Its probably not worth it to expand the code.
-          return_pointer => input_file%Read_2d_time(forcing_input_variable%variable_name, & ! variable_name sollte CO2_varname sein
+          return_pointer => input_file%Read_2d_time(forcing_input_variable%variable_name,   & ! variable_name sollte CO2_varname sein
             &               start_time_step=currentTimeStep, end_time_step=currentTimeStep, &
             &               fill_array=forcing_input_variable%data_read)
           CALL input_file%Close()
@@ -1153,11 +1201,11 @@ CONTAINS
   !! @par History
   !! Copied required parts from jsbach3: mo_jsbalone: update_driving and adapted for jsb4   by Julia Nabel
   !!
-  SUBROUTINE get_remaining_input_for_jsb4_interface(nblks, ice, temp_air, pressure, qair, wind, &
+  SUBROUTINE get_remaining_input_for_jsb4_interface(nblks, ice, icz, temp_air, pressure, qair, wind, &
       & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, &
       & drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch)
 
-    INTEGER,  INTENT(IN)  :: nblks, ice
+    INTEGER,  INTENT(IN)  :: nblks, ice, icz
     REAL(wp), INTENT(IN)  :: temp_air(:,:)
     REAL(wp), INTENT(IN)  :: pressure(:,:)
     REAL(wp), INTENT(IN)  :: qair(:,:)
@@ -1175,10 +1223,12 @@ CONTAINS
     REAL(wp), INTENT(OUT) :: q_bcoef(ice,nblks)
     REAL(wp), INTENT(OUT) :: pch(ice,nblks)
 
-    INTEGER  :: iblk
+    INTEGER  :: ic, iblk
     REAL(wp) :: zcons9, zcons11, zcons12, zkappa, zsigma
     REAL(wp), DIMENSION(ice):: air_pressure, zdu2, ztvd, ztvir, qsat_surf
     REAL(wp), DIMENSION(ice):: ztvs, zg, zgh, zril, zcons, zchnl, zcfnchl, zcfhl, zscfl, zucfhl
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_remaining_input_for_jsb4_interface'
 
     ! in jsb3: rd = GasConstantDryAir; cpd = SpecificHeatDryAirConstPressure; grav = Gravity
     zcons9 = 3._wp * cb
@@ -1186,13 +1236,26 @@ CONTAINS
     zcons12 = cvdifts * time_step_len * grav / rd
     zkappa = rd / cpd
 
+    drag_srf(:,:) = 0._wp
+    t_acoef(:,:)  = 0._wp
+    t_bcoef(:,:)  = 0._wp
+    q_acoef(:,:)  = 0._wp
+    q_bcoef(:,:)  = 0._wp
+    pch(:,:)      = 0._wp
+
     DO iblk = 1,nblks
+
+      IF (iblk == nblks) THEN
+        ic = icz
+      ELSE
+        ic = ice
+      END IF
 
       !------------------------------------------------------------------------------------
       ! Approximation of cdrag
       !------------------------------------------------------------------------------------
       ! squared wind shear ! minimum wind speed square from echam/mo_surface_land.f90:precalc_land
-      zdu2(:) = MAX(wind(:,iblk)**2, 1._wp)
+      zdu2(1:ic) = MAX(wind(1:ic,iblk)**2, 1._wp)
 
       ! virtual potential air temperature (see mo_surface_boundary.f90)
       ! according to Saucier, WJ Principles of Meteoroligical Analyses
@@ -1200,60 +1263,63 @@ CONTAINS
       ! td = t * ( 1000 / p_mb ) ^ R/cdp  ! potential temperature
       ! tvd = tair * (100000/p_pa)^zkappa * 1 + vtmpc1 * qair) ! virtual potential temperature
       zsigma    = 0.99615_wp        ! corresponds to lowest level of 47 layer echam
-      air_pressure(:) = zsigma * pressure(:, iblk)
-      ztvd(:) = ( temp_air(:, iblk) * ( 100000._wp/air_pressure(:))**zkappa ) * ( 1._wp + vtmpc1 * qair(:, iblk))
-      ztvir(:) = temp_air(:, iblk) * ( 1._wp + vtmpc1 * qair(:, iblk) )
+      air_pressure(1:ic) = zsigma * pressure(1:ic, iblk)
+      ztvd(1:ic) = ( temp_air(1:ic, iblk) * ( 100000._wp/air_pressure(1:ic))**zkappa ) * ( 1._wp + vtmpc1 * qair(1:ic, iblk))
+      ztvir(1:ic) = temp_air(1:ic, iblk) * ( 1._wp + vtmpc1 * qair(1:ic, iblk) )
 
       ! virtual potential surface temperature
-      CALL sat_specific_humidity(ice, t_srf_proc(:,iblk), pressure(:,iblk), qsat_surf(:))
-      ztvs(:) = t_srf_proc(:,iblk) * ( 100000._wp/pressure(:,iblk))**zkappa * &
-        & ( 1._wp + vtmpc1 * ( fact_qsat_srf_proc(:,iblk) * qsat_surf(:) + ( 1._wp - fact_q_air_proc(:,iblk) ) * qair(:,iblk)))
+      CALL sat_specific_humidity(ic, t_srf_proc(1:ic,iblk), pressure(1:ic,iblk), qsat_surf(1:ic))
+      ztvs(1:ic) = t_srf_proc(1:ic,iblk) * ( 100000._wp/pressure(1:ic,iblk))**zkappa * &
+        & ( 1._wp + vtmpc1 * ( fact_qsat_srf_proc(1:ic,iblk) * qsat_surf(1:ic) + ( 1._wp - fact_q_air_proc(1:ic,iblk) ) &
+        & * qair(1:ic,iblk)))
 
       ! geopotential of the surface layer (see echam's auxhybc.f90 & geopot.f90)
       ! adapted according to jsb3 offline modifications by Marvin, Philipp et al. Jan. 24, 2017 (r8893)
-      IF(forcing_options%heightWind > 0._wp) THEN
-        zg(:) = forcing_options%heightWind * grav
-        zgh(:) = forcing_options%heightHumidity * grav ! jsb3: "HeightHumidity and HeightTemperature have to be equal"
+      IF(forcing_options%heightWind > 0._wp .AND. forcing_options%heightHumidity > 0._wp) THEN
+        zg(1:ic) = forcing_options%heightWind * grav
+        zgh(1:ic) = forcing_options%heightHumidity * grav ! jsb31:ic "HeightHumidity and HeightTemperature have to be equal"
       ELSE
-        zg(:) = ztvir(:) * rd * LOG(1._wp / zsigma)
-        zgh(:) = zg(:)
+        ! TODO Once forcing from model data is implemented this has to be activated again!
+        ! zg(1:ic) = ztvir(1:ic) * rd * LOG(1._wp / zsigma)
+        ! zgh(1:ic) = zg(1:ic)
+        CALL finish(routine, 'forcing_height_wind or forcing_height_humidity not set')
       ENDIF
 
       ! Richardson number (dry, Brinkop & Roeckner 1995, Tellus)
       ! ztvd, ztvs are now virtual potential temperatures, changed by Thomas Raddatz 07.2014
-      zril(:) = zg(:) * ( ztvd(:) - ztvs(:) ) / ( zdu2(:) * (ztvd(:) + ztvs(:))/2._wp )
+      zril(1:ic) = zg(1:ic) * ( ztvd(1:ic) - ztvs(1:ic) ) / ( zdu2(1:ic) * (ztvd(1:ic) + ztvs(1:ic))/2._wp )
 
       ! Neutral drag coefficient for momentum and heat
-      zchnl(:) = ckap**2 / (LOG(1._wp + zg(:) / (grav * rough_m_srf_proc(:,iblk) )) &
-                * LOG( ( grav * rough_m_srf_proc(:,iblk) + zgh(:) ) / (grav * rough_h_srf_proc(:,iblk) )))
+      zchnl(1:ic) = ckap**2 / (LOG(1._wp + zg(1:ic) / (grav * rough_m_srf_proc(1:ic,iblk) )) &
+                * LOG( ( grav * rough_m_srf_proc(1:ic,iblk) + zgh(1:ic) ) / (grav * rough_h_srf_proc(1:ic,iblk) )))
 
-      ! account for stable/unstable case: helper variables
-      zscfl(:) = SQRT ( 1._wp + 5._wp * ABS(zril(:)))
-      zucfhl(:) = 1._wp / (1._wp + zcons11 * zchnl(:) * SQRT(ABS(zril(:)) * (1._wp &
-        & + zgh(:) / (grav * rough_h_srf_proc(:,iblk)))))
+      ! account for stable/unstable case1:ic helper variables
+      zscfl(1:ic) = SQRT ( 1._wp + 5._wp * ABS(zril(1:ic)))
+      zucfhl(1:ic) = 1._wp / (1._wp + zcons11 * zchnl(1:ic) * SQRT(ABS(zril(1:ic)) * (1._wp &
+        & + zgh(1:ic) / (grav * rough_h_srf_proc(1:ic,iblk)))))
 
       ! ignoring cloud water correction (see mo_surface_land.f90)
-      zcons(:) = zcons12 * pressure(:,iblk) / ( temp_air(:,iblk) * (1._wp + vtmpc1 * qair(:,iblk)))
-      zcfnchl(:)  = zcons(:) * SQRT(zdu2(:)) * zchnl(:)
+      zcons(1:ic) = zcons12 * pressure(1:ic,iblk) / ( temp_air(1:ic,iblk) * (1._wp + vtmpc1 * qair(1:ic,iblk)))
+      zcfnchl(1:ic)  = zcons(1:ic) * SQRT(zdu2(1:ic)) * zchnl(1:ic)
 
       ! Stable / Unstable case
-      WHERE ( zril(:) .GT. 0._wp )
-        zcfhl(:) = zcfnchl(:) / (1._wp + zcons9 * zril(:) * zscfl(:))
+      WHERE ( zril(1:ic) .GT. 0._wp )
+        zcfhl(1:ic) = zcfnchl(1:ic) / (1._wp + zcons9 * zril(1:ic) * zscfl(1:ic))
       ELSEWHERE
-        zcfhl(:) = zcfnchl(:) * (1._wp - zcons9 * zril(:) * zucfhl(:))
+        zcfhl(1:ic) = zcfnchl(1:ic) * (1._wp - zcons9 * zril(1:ic) * zucfhl(1:ic))
       END WHERE
 
-      drag_srf(:,iblk) = zcfhl(:)
-      pch(:,iblk) = zcfhl(:) / zcfnchl(:) * zchnl(:)
+      drag_srf(1:ic,iblk) = zcfhl(1:ic)
+      pch(1:ic,iblk) = zcfhl(1:ic) / zcfnchl(1:ic) * zchnl(1:ic)
 
       !---------------------------------------------------------------------------------------------------------------
       ! Computation of Richtmeyr-Morton Coefficients
       ! This follows now Jan Polcher's explicit solution, i.e. atmospheric conditions at t+1 are assumed to be valid
       !---------------------------------------------------------------------------------------------------------------
-      t_acoef(:,iblk) = 0.0_wp
-      t_bcoef(:,iblk) = cpd * (1 + vtmpc2 * qair(:,iblk)) * temp_air(:,iblk) + zgh(:)
-      q_acoef(:,iblk) = 0.0_wp
-      q_bcoef(:,iblk) = qair(:,iblk)
+      t_acoef(1:ic,iblk) = 0.0_wp
+      t_bcoef(1:ic,iblk) = cpd * (1 + vtmpc2 * qair(1:ic,iblk)) * temp_air(1:ic,iblk) + zgh(1:ic)
+      q_acoef(1:ic,iblk) = 0.0_wp
+      q_bcoef(1:ic,iblk) = qair(1:ic,iblk)
 
     ENDDO
 
@@ -1557,8 +1623,8 @@ CONTAINS
   ! this module. For desert studies it might be good to reduce h0 even further. As the specific humidity does not have a
   ! significant diurnal cycle, h1 is set to 0.
   !vg<<
-  FUNCTION vapour_pressure_from_evapor(nblks, ice, evapo_ratio_mean, Tmin, Tair)
-    INTEGER,  INTENT(IN) :: nblks, ice
+  FUNCTION vapour_pressure_from_evapor(nblks, ice, icz, evapo_ratio_mean, Tmin, Tair)
+    INTEGER,  INTENT(IN) :: nblks, ice, icz
     REAL(wp), INTENT(IN) :: evapo_ratio_mean(:,:)  !! fe(d-1) of Eq. (1)
     REAL(wp), INTENT(IN) :: Tmin(:,:)              !! minimum temperature (= temperature at sunrise)
     REAL(wp), INTENT(IN) :: Tair(:,:)              !! temperature at current time step
@@ -1573,10 +1639,15 @@ CONTAINS
     REAL(wp) :: evapo_sat_min    ! saturation pressure at minimum temperature of day (= at sunrise)
     REAL(wp) :: e0_vap           ! vapor pressure at sunrise
 
-    INTEGER :: i,j
+    INTEGER :: i,j,ic
 
     DO j = 1,nblks
-      DO i = 1,ice
+      IF (j == nblks) THEN
+        ic = icz
+      ELSE
+        ic = ice
+      END IF
+      DO i = 1,ic
         !Assertion: the expected temperature range is indirectly defined by the tlucua bounds -> consistency check
         IF ((Tmin(i,j) .LT. REAL(LBOUND(tlucua,dim=1)/1000._wp)-tmelt) &
             & .OR. (Tmin(i,j) .GT. REAL(UBOUND(tlucua,dim=1)/1000._wp)-tmelt)) THEN
@@ -1675,7 +1746,7 @@ CONTAINS
   !         The mismatch is about 3 days in 10000 years. This affects the computation of daylength in the current routine, and
   !         thus the "phase" of the temperature curve, i.e. that e.g. the time when the temperature starts rising in the morning,
   !         may be somewhat shifted.
-  SUBROUTINE instantly_from_daily_temp_2(nblks, ice, lon, sinlat, coslat, dtmp_min, dtmp_max, date, tmp)
+  SUBROUTINE instantly_from_daily_temp_2(nblks, ice, icz, lon, sinlat, coslat, dtmp_min, dtmp_max, date, tmp)
 
     IMPLICIT NONE
 
@@ -1686,7 +1757,7 @@ CONTAINS
     REAL(wp), PARAMETER :: rat4=2._wp/24._wp   ! day fraction of dawn times (before sunrise + after sunset), used to set ...
                                                ! ... temperature of a normal day to T_mean at sunrise-rat4/2 and sunset+rat4/2
 
-    INTEGER, INTENT(IN) :: nblks, ice
+    INTEGER, INTENT(IN) :: nblks, ice, icz
     REAL(wp), INTENT (IN) :: lon(:,:)       ! minimal temperature at the considered day
     REAL(wp), INTENT (IN) :: sinlat(:,:)    ! maximal range at that day
     REAL(wp), INTENT (IN) :: coslat(:,:)    ! maximal range at that day
@@ -1718,7 +1789,9 @@ CONTAINS
 
     REAL(wp)   :: sd                ! modulation factor for temperature
     REAL(wp)   :: arg
-    INTEGER    :: i, j
+    INTEGER    :: i, j, ic
+
+    tmp(:,:) = 0._wp
 
     CALL inquire_declination(declination)
 
@@ -1727,7 +1800,13 @@ CONTAINS
     fract_timestep=year_instant-REAL(yearday,wp)   ! fractional part of the day of the current time step since midnight in UTC
 
     DO j = 1,nblks
-      DO i = 1,ice
+      IF (j == nblks) THEN
+        ic = icz
+      ELSE
+        ic = ice
+      END IF
+  
+      DO i = 1,ic
         fract_UTC_offset = lon(i,j)/360._wp   ! difference between local time and UTC as fraction of a day
         fract_localtime = MOD(fract_timestep+fract_UTC_offset+2._wp,1._wp) ! local time as fraction of the local day (modulo 1)
         spds = sinlat(i,j)*SIN(declination)  ! sine contribution to solar zenith angle
