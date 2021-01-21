@@ -1435,37 +1435,44 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     !> 2.0 traditional Langmuir isotherm
     ELSE
       IF((km > eps8) .AND. (qmax > eps8)) THEN
-        hlp1 = qmax * km / ((solute + km)**2.0_wp )
+        !! calculate partition coefficient based on derivatives of solute
+        hlp1 = qmax * km / ((solute + km) ** 2.0_wp )
         hlp3 = 1._wp
-        IF ( assoc_fast < (-solute_flux) ) THEN
+        solute_partition_coef = hlp3 / (hlp1 + hlp3)
+        !! check for extreme low concentrations of soluble and adsorbed pools
+        IF (assoc_fast < (-solute_flux)) THEN
           hlp1 = assoc_fast / (assoc_fast + solute)
-          hlp3 = solute / (assoc_fast + solute)
-        ELSEIF ( (solute < po4_solute_min) .AND. solute_flux<0._wp ) THEN
-          hlp3 = 0._wp
+          !! avoid assoc_fast to be lower than po4_solute_min
+          IF ((assoc_fast + hlp1 * solute_flux) < po4_solute_min) THEN
+            hlp1 = MAX(0._wp, (assoc_fast - po4_solute_min)) / (-solute_flux)
+          ENDIF
+          hlp3                  = 1._wp - hlp1
+          solute_partition_coef = hlp3 / (hlp1 + hlp3)
+        ELSEIF ((solute < po4_solute_min) .AND. solute_flux < 0._wp) THEN
+          hlp3                  = 0._wp
+          solute_partition_coef = hlp3 / (hlp1 + hlp3)
+        ELSEIF (solute_flux < (-eps8)) THEN
+          solute_partition_coef = MAX(hlp3 / (hlp1 + hlp3), solute / (solute + assoc_fast))
         ENDIF
       ELSE
-        hlp1 = 0._wp
-        hlp3 = 1._wp
+        hlp1                  = 0._wp
+        hlp3                  = 1._wp
+        solute_partition_coef = hlp3 / (hlp1 + hlp3)
       ENDIF
-      solute_partition_coef = hlp3 / (hlp1 + hlp3)
-      
-    !> 2.1 check fast pool size
-    !! 
+
+      !> 2.1 check fast pool size against Qmax
+      !! 
       hlp4 = assoc_fast + (1._wp - solute_partition_coef) * solute_flux    
-      IF ( (solute + assoc_fast) > eps8 ) THEN 
-         IF (solute_flux < 0._wp) THEN
-           solute_partition_coef = MAX(solute_partition_coef, solute / (solute+assoc_fast))
-         ENDIF      
+      IF ((solute + assoc_fast) > eps8 ) THEN      
          IF ((hlp4 > qmax) .AND. (qmax > eps8)) THEN 
-           IF (solute_flux < eps8) THEN
-             solute_partition_coef = 0._wp
-           ELSEIF (solute_flux > eps8) THEN
+           IF (solute_flux < 0._wp) THEN
+             solute_partition_coef = 1._wp - MIN(1._wp, MAX(0._wp, (qmax-po4_solute_min) / (-solute_flux)))
+           ELSEIF (solute_flux > 0._wp) THEN
              solute_partition_coef = 1._wp
            ENDIF
          ENDIF
       ENDIF
-    ENDIF
-
+    ENDIF  ! IF (PRESENT(assoc_slow))
 
   END SUBROUTINE calc_langmuir_kinetics
 
