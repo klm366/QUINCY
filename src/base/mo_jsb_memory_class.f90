@@ -23,6 +23,7 @@ MODULE mo_jsb_memory_class
     &                             Get_var_group_name, VARNAME_LEN
   USE mo_jsb_varlist_iface, ONLY: is_variable_in_output
   USE mo_jsb_var_class,     ONLY: t_jsb_var_p, t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d, REAL2D, REAL3D
+  USE mo_jsb_process_class, ONLY: Get_process_name
   USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2, GRID_UNSTRUCTURED, GRID_UNSTRUCTURED_CELL, GRID_CELL, missval, tables
   USE mo_jsb_io_iface,      ONLY: t_cf_var, t_grib2_var, grib2_var
   USE mo_util,              ONLY: int2string
