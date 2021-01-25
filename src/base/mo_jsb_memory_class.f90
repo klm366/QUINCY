@@ -965,4 +965,3 @@ CONTAINS
     DEALLOCATE(var_collected)
 
   END FUNCTION Average_over_children_real2d
-
