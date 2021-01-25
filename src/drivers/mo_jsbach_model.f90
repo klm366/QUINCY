@@ -51,7 +51,8 @@ CONTAINS
     USE mo_master_config,           ONLY: isRestart
 
     USE mo_load_restart,            ONLY: read_restart_header, read_restart_files
-    USE mo_restart_attributes,      ONLY: t_RestartAttributeList, getAttributesForRestarting
+    USE mo_restart_nml_and_att,     ONLY: getAttributesForRestarting
+    USE mo_key_value_store,         ONLY: t_key_value_store
   
     USE mo_read_namelists_iface,    ONLY: read_infrastructure_namelists_for_jsbach
     USE mo_namelist,                ONLY: open_nml_output, close_nml_output
@@ -140,7 +141,7 @@ CONTAINS
     CHARACTER(LEN=*), INTENT(in) :: jsb_namelist_filename
     CHARACTER(LEN=*), INTENT(in) :: shr_namelist_filename
 
-    TYPE(t_RestartAttributeList), POINTER :: restartAttributes
+    TYPE(t_key_value_store),      POINTER :: restartAttributes
     CLASS(t_RestartDescriptor),   POINTER :: restartDescriptor
     INTEGER :: jstep0, jstep, dedicatedRestartProcs
     INTEGER :: jg, nblks  !, jgp
@@ -249,7 +250,7 @@ CONTAINS
     CALL set_mpi_work_communicators(p_test_run, l_test_openmp, &
          &                          num_io_procs, dedicatedRestartProcs, &
          &                          jsbach_process, num_prefetch_proc, num_test_pe,      &
-         &                          pio_type) 
+         &                          pio_type, num_dio_procs=0) 
 #ifdef _OPENACC
     CALL update_nproma_on_device( my_process_is_work() )
 #endif
@@ -278,7 +279,7 @@ CONTAINS
     !-------------------------------------------------------------------
 
     ! This won't RETURN on dedicated restart PEs, starting their main loop instead.
-    CALL detachRestartProcs()
+    CALL detachRestartProcs(ltimer)
 
     ! If we belong to the I/O PEs just call xxx_io_main_proc before
     ! reading patches.  This routine will never return
@@ -307,10 +308,10 @@ CONTAINS
           sim_step_info%dtime      = dtime
           jstep0 = 0
 
-          restartAttributes => getAttributesForRestarting()
+          CALL getAttributesForRestarting(restartAttributes)
           IF (ASSOCIATED(restartAttributes)) THEN
             ! get start counter for time loop from restart file:
-            jstep0 = restartAttributes%getInteger("jstep")
+            CALL restartAttributes%get("jstep", jstep0)
           END IF
           sim_step_info%jstep0    = jstep0
           CALL name_list_io_main_proc(sim_step_info)
@@ -475,10 +476,10 @@ CONTAINS
       sim_step_info%dtime      = dtime
       jstep0 = 0
 
-      restartAttributes => getAttributesForRestarting()
+      CALL getAttributesForRestarting(restartAttributes)
       IF (ASSOCIATED(restartAttributes)) THEN
         ! get start counter for time loop from restart file:
-        jstep0 = restartAttributes%getInteger("jstep")
+        CALL restartAttributes%get("jstep", jstep0)
       END IF
       sim_step_info%jstep0    = jstep0
       CALL init_statistics_streams
@@ -539,10 +540,10 @@ CONTAINS
 
     restartDescriptor => createRestartDescriptor("jsbach")
     jstep0 = 0
-    restartAttributes => getAttributesForRestarting()
+    CALL getAttributesForRestarting(restartAttributes)
     IF (isRestart()) THEN
       ! get start counter for time loop from restart file:
-      jstep0 = restartAttributes%getInteger("jstep")
+      CALL restartAttributes%get("jstep", jstep0)
     END IF
   
     ! for debug purposes print var lists: for msg_level >= 13 short and for >= 20 long format
@@ -822,7 +823,7 @@ CONTAINS
     TYPE(datetime)          , POINTER    :: datetime_old_old !< date and time one time step before datetime_old
     TYPE(datetime)          , POINTER    :: datetime_forcing
 
-    INTEGER  :: nproma, nblks
+    INTEGER  :: nproma, npromz, nblks
     INTEGER  :: iblk        !< index of block loop
     INTEGER  :: ibs, ibe    !< start and end indices of block   loop
     INTEGER  :: ics, ice    !< start and end indices of columns loop
@@ -902,6 +903,7 @@ CONTAINS
     model => get_model(1)
     grid  => get_grid(model%grid_id)
     nproma = grid%Get_nproma()
+    npromz = grid%Get_npromz()
     nblks  = grid%Get_nblks()
 
     CALL model%Get_top_tile(tile)
@@ -965,7 +967,7 @@ CONTAINS
 
       CALL get_interface_variables_from_external_forcing( &
         ! in
-        & 1, 1, nproma, nblks, datetime_old, datetime_new, sinlat, coslat, lon,  &
+        & 1, 1, nproma, npromz, nblks, datetime_old, datetime_new, sinlat, coslat, lon,  &
         & evapo_act2pot,                                                             &
         & dsl4jsb_var2D_onDomain(SEB_,  t),                                          &
         & dsl4jsb_var2D_onDomain(TURB_, fact_q_air),                                 &

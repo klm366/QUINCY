@@ -727,7 +727,8 @@ CONTAINS
       & calc_sky_view_fractions, calc_snow_albedo, Merge_albedos_of_vegtile, &
       & Has_minimal_radiation
     USE mo_jsb_time,          ONLY: is_time_experiment_start, is_time_ltrig_rad_m1
-    USE mo_jsb_control,       ONLY: jsbach_runs_standalone, force_from_observations
+    USE mo_jsb_control,       ONLY: jsbach_runs_standalone
+
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -804,9 +805,6 @@ CONTAINS
       & w_snow_lice,           &
       & albedo_lice
 
-
-    dsl4jsb_Real2D_onChunk :: DEBUG_VAR
-
     ! Set local variables from options argument
     iblk  = options%iblk
     ics   = options%ics
@@ -878,7 +876,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,   cos_zenith_angle)      ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,   swvis_srf_down)        ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,   swnir_srf_down)        ! in
-
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)              ! in
 
     !RMS dsl4jsb_Get_var2D_onChunk(CARBON_,   c_slow)            ! in
@@ -900,7 +897,7 @@ CONTAINS
     !$claw acc enter data create(l_day)
 
     !> 0.9  Set day-or-night-switch
-
+    !! 
     !$claw expand parallel update savepoint=ser_jsb_rad_has_minimal_radiation_1 tile_name=tile%name
     l_day(:) = Has_minimal_radiation(swvis_srf_down(:), swnir_srf_down(:))
 
@@ -1205,16 +1202,14 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     dsl4jsb_Def_memory(RAD_)
-    dsl4jsb_Def_memory(A2L_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
     TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_albedo'
-    INTEGER :: iblk, ics, ice
 
-    dsl4jsb_Real2D_onChunk ::  trig_rad_m1
+    INTEGER :: iblk, ics, ice
 
     iblk = options%iblk
     ics  = options%ics

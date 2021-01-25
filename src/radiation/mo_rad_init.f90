@@ -25,6 +25,7 @@ MODULE mo_rad_init
   USE mo_jsb_class,         ONLY: Get_model
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
+  USE mo_jsb_io,            ONLY: missval
 
   dsl4jsb_Use_processes RAD_
   dsl4jsb_Use_config(RAD_)
@@ -121,6 +122,12 @@ CONTAINS
       & rad_init_vars%alb_nir_can   (nproma, nblks)  &
       & )
       
+    rad_init_vars%alb_background(:,:) = missval
+    rad_init_vars%alb_vis_soil  (:,:) = missval
+    rad_init_vars%alb_nir_soil  (:,:) = missval
+    rad_init_vars%alb_vis_can   (:,:) = missval
+    rad_init_vars%alb_nir_can   (:,:) = missval
+
     dsl4jsb_Get_config(RAD_)
 
     IF (.NOT. dsl4jsb_Config(RAD_)%active) RETURN

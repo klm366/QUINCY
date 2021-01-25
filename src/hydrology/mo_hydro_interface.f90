@@ -1243,7 +1243,9 @@ CONTAINS
     ! Get reference to variables for current block
     !
     dsl4jsb_Get_memory(HYDRO_)
-    dsl4jsb_Get_memory(CARBON_)
+    IF (TRIM(model%config%usecase) == 'jsbach_jedi' ) THEN
+      dsl4jsb_Get_memory(CARBON_)
+    END IF
 
     IF (model%config%use_quincy) THEN
       dsl4jsb_Get_memory(ASSIMI_)
@@ -1262,8 +1264,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_stress)        ! out
     
     IF (TRIM(model%config%usecase) == 'jsbach_jedi' ) THEN
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapopot) !PHS
-      dsl4jsb_Get_var2D_onChunk(CARBON_,   jedi_pot_supply_transp) !PHS	
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapopot) !PHS
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  jedi_pot_supply_transp) !PHS	
       dsl4jsb_Get_var2D_onChunk(CARBON_,  alpha_jedi)!PHS
     END IF
     !

@@ -16,7 +16,7 @@ MODULE mo_jsb_tile_class
 #ifndef __NO_JSBACH__
 
   USE mo_jsb_control,         ONLY: debug_on
-  USE mo_kind,                ONLY: wp !, dp
+  USE mo_kind,                ONLY: wp, dp
   USE mo_exception,           ONLY: message, finish
   USE mo_io_units,            ONLY: filename_max
 
@@ -83,9 +83,9 @@ MODULE mo_jsb_tile_class
     LOGICAL                                :: contains_soil = .FALSE.
     INTEGER,                ALLOCATABLE    :: process_action(:)
     INTEGER,                ALLOCATABLE    :: process_pos_in_leaves(:)
-    ! REAL(wp), PRIVATE,          POINTER    :: fract     (:,:)      !< Fraction of this tile (relative to parent tile)
-    REAL(wp),                   POINTER    :: fract     (:,:)      !< Fraction of this tile (relative to parent tile)
-    REAL(wp),                   POINTER    :: fract_max (:,:)      !< Maximum potential fraction for this tile (rel. to parent)
+    ! REAL(wp), PRIVATE,          POINTER    :: fract     (:,:)      !< Fraction of this tile (relative to grid box)
+    REAL(wp),                   POINTER    :: fract     (:,:)      !< Fraction of this tile (relative to grid box)
+    REAL(wp),                   POINTER    :: fract_max (:,:)      !< Maximum potential fraction for this tile (rel. to grid box)
     ! REAL(wp), PRIVATE,          POINTER    :: fract_old     (:,:)  !< Old fract
     REAL(wp),                   POINTER    :: fract_old     (:,:)  !< Old fract
     REAL(wp),                   POINTER    :: fract_max_old (:,:)  !< Old fract_max
@@ -133,15 +133,16 @@ MODULE mo_jsb_tile_class
     !
     PROCEDURE                              :: Cache_GPU_pointers
     !
-    PROCEDURE(Init_interface),      DEFERRED :: Init
-    PROCEDURE(Init_vars_interface), DEFERRED :: Init_vars
-    PROCEDURE(Print_interface),     DEFERRED :: Print
-    PROCEDURE(Handler_interface),   DEFERRED :: Handler
+    PROCEDURE(Init_interface),           DEFERRED :: Init
+    PROCEDURE(Init_vars_interface),      DEFERRED :: Init_vars
+    PROCEDURE(Init_fractions_interface), DEFERRED :: Init_fractions
+    PROCEDURE(Print_interface),          DEFERRED :: Print
+    PROCEDURE(Handler_interface),        DEFERRED :: Handler
   END type t_jsb_tile_abstract
 
   ABSTRACT INTERFACE
     SUBROUTINE Init_interface(this, varlist_name, prefix, suffix, grid_id, single_tile_output, no_of_leaves, &
-      &                       l_fixed_fractions, in_var_groups)
+      &                       in_var_groups)
       IMPORT :: t_jsb_tile_abstract
       CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
       CHARACTER(len=*),           INTENT(in)    :: varlist_name
@@ -150,9 +151,20 @@ MODULE mo_jsb_tile_class
       INTEGER,                    INTENT(in)    :: grid_id
       LOGICAL,                    INTENT(in)    :: single_tile_output(:)
       INTEGER,                    INTENT(in)    :: no_of_leaves(:)
-      LOGICAL,                    INTENT(in)    :: l_fixed_fractions
       LOGICAL,                    INTENT(in)    :: in_var_groups
     END SUBROUTINE Init_interface
+  END INTERFACE
+
+  ABSTRACT INTERFACE
+    SUBROUTINE Init_fractions_interface(this, varlist_name, prefix, suffix, l_fixed_fractions, l_rel_fractions)
+      IMPORT :: t_jsb_tile_abstract
+      CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
+      CHARACTER(len=*),           INTENT(in)    :: varlist_name
+      CHARACTER(len=*),           INTENT(in)    :: prefix
+      CHARACTER(len=*),           INTENT(in)    :: suffix
+      LOGICAL,                    INTENT(in)    :: l_fixed_fractions
+      LOGICAL,                    INTENT(in)    :: l_rel_fractions
+    END SUBROUTINE Init_fractions_interface
   END INTERFACE
 
   ABSTRACT INTERFACE
@@ -789,9 +801,10 @@ CONTAINS
     TYPE(real_2d_p), POINTER :: tile_ptrs2d_cache(:,:,:)
 
     INTEGER :: no_children, i, iproc, j
-    ! REAL(dp) :: missval
 
     CHARACTER(len=256) :: routine
+
+    IF (.NOT. ASSOCIATED(var%ptr)) RETURN
 
     IF (debug_on()) THEN
       routine = modname//':Aggregate_weighted_by_fract_2d'//'(called by '//TRIM(caller)//')'
@@ -799,11 +812,7 @@ CONTAINS
       routine = modname//':Aggregate_weighted_by_fract_2d'
     END IF
 
-    IF (.NOT. ASSOCIATED(var%ptr)) RETURN
-
     CALL this%Set_fractions(tile, ics, ice, iblk)
-
-    ! missval = var%missval
 
     iproc = var%owner_proc_id
     IF (iproc < 0) CALL finish(TRIM(routine), 'Unknown process for variable '//TRIM(var%name)//' on tile '//TRIM(tile%name))
@@ -824,55 +833,54 @@ CONTAINS
 
     !$acc parallel default(none) present(this, tile_ptrs2d_cache, var)
 
-    !$acc loop gang vector
-    DO j = ics, ice
-      this%data_sum (j,iblk) = 0._wp
-      this%fract_sum(j,iblk) = 0._wp
-    END DO
-
-    !$acc loop seq
-    DO i=1,no_children
-      IF ( var%child_idx(i) > 0 ) THEN
-        !$acc loop gang vector
-        DO j = ics, ice
-          this%data_sum(j,iblk) = this%data_sum(j,iblk) &
-            & + this%fractions(j,iblk,i) * tile_ptrs2d_cache(i,var%child_idx(i),iproc)%p(j,iblk) 
-          this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
-        END DO
-      END IF
-    END DO
-    
-    ! print*,'AAA ',ics,ice,MINVAL(this%data_sum(ics:ice)), MAXVAL(this%data_sum(ics:ice)),&
-      ! & MINVAL(this%fract_sum(ics:ice)), MAXVAL(this%fract_sum(ics:ice))
-
-    ! IF (ANY(fract_sum(:) > 1._wp + EPSILON(1._wp))) THEN
-    !   ! print*, fract_sum
-    !   CALL message(TRIM(routine), 'On tile '//TRIM(tile%name)//': fract_sum > 1 - '// &
-    !     &                         real2string(MINVAL(fract_sum(:)))//' - '//real2string(MAXVAL(fract_sum(:))), &
-    !     &          all_print=.TRUE.)
-    !   CALL finish(TRIM(routine),  '    ... this should not happen')
-    ! END IF
-
-    IF (no_children == 1 .AND. .NOT. var%l_aggregate_all) THEN
-      ! Only one tile to aggregate, avoid multiplying and dividing by a potentially small fraction
+    IF (no_children == 1) THEN
       !$acc loop gang vector
       DO j = ics, ice
-        var%ptr(j,iblk) = this%data_sum(j,iblk)
-      END DO
-    ELSE IF (var%l_aggregate_all) THEN              ! Sum of fractions is 1
-      ! For tiles where variable is not defined data(:,tile) is 0
-      !$acc loop gang vector
-      DO j = ics, ice
-        var%ptr(j,iblk) = this%data_sum(j,iblk)
+        var%ptr(j,iblk) = tile_ptrs2d_cache(1,var%child_idx(1),iproc)%p(j,iblk)
       END DO
     ELSE
       !$acc loop gang vector
       DO j = ics, ice
+        this%data_sum (j,iblk) = 0._wp
+        this%fract_sum(j,iblk) = 0._wp
+      END DO
+
+      !$acc loop seq
+      DO i=1,no_children
+        IF ( var%child_idx(i) > 0 ) THEN
+          !$acc loop gang vector
+          DO j = ics, ice
+            this%data_sum(j,iblk) = this%data_sum(j,iblk) &
+              & + this%fractions(j,iblk,i) * tile_ptrs2d_cache(i,var%child_idx(i),iproc)%p(j,iblk) 
+            this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
+          END DO
+        ELSE IF (var%l_aggregate_all) THEN
+          !$acc loop gang vector
+          DO j = ics, ice
+            this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
+          END DO
+        END IF
+      END DO
+      
+      ! print*,'AAA ',ics,ice,MINVAL(this%data_sum(ics:ice)), MAXVAL(this%data_sum(ics:ice)),&
+        ! & MINVAL(this%fract_sum(ics:ice)), MAXVAL(this%fract_sum(ics:ice))
+
+      ! IF (ANY(fract_sum(:) > 1._wp + EPSILON(1._wp))) THEN
+      !   ! print*, fract_sum
+      !   CALL message(TRIM(routine), 'On tile '//TRIM(tile%name)//': fract_sum > 1 - '// &
+      !     &                         real2string(MINVAL(fract_sum(:)))//' - '//real2string(MAXVAL(fract_sum(:))), &
+      !     &          all_print=.TRUE.)
+      !   CALL finish(TRIM(routine),  '    ... this should not happen')
+      ! END IF
+
+      !$acc loop gang vector
+      DO j = ics, ice
         IF (this%fract_sum(j,iblk) > 0._wp) THEN
-        var%ptr(j,iblk) = this%data_sum(j,iblk) / this%fract_sum(j,iblk)
+          var%ptr(j,iblk) = this%data_sum(j,iblk) / this%fract_sum(j,iblk)
         END IF
       END DO
     END IF
+
     !$acc end parallel
 
     IF (var%l_aggregate_all) THEN
@@ -895,9 +903,10 @@ CONTAINS
     TYPE(real_3d_p), POINTER :: tile_ptrs3d_cache(:,:,:)
 
     INTEGER :: no_children, i, iproc, ilev, j
-    ! REAL(dp) :: missval
 
     CHARACTER(len=256) :: routine
+
+    IF (.NOT. ASSOCIATED(var%ptr)) RETURN
 
     IF (debug_on()) THEN
       routine = modname//':Aggregate_weighted_by_fract_3d'//'(called by '//TRIM(caller)//')'
@@ -905,11 +914,7 @@ CONTAINS
       routine = modname//':Aggregate_weighted_by_fract_3d'
     END IF
 
-    IF (.NOT. ASSOCIATED(var%ptr)) RETURN
-
     CALL this%Set_fractions(tile, ics, ice, iblk)
-
-    ! missval = var%missval
 
     iproc = var%owner_proc_id
     IF (iproc < 0) CALL finish(TRIM(routine), 'Unknown process for variable '//TRIM(var%name)//' on tile '//TRIM(tile%name))
@@ -930,47 +935,49 @@ CONTAINS
 
     !$acc parallel default(none) present(this, tile_ptrs3d_cache, var)
 
-    !$acc loop seq
-    DO ilev=1,SIZE(var%ptr,2)
-      !$acc loop gang vector
-      DO j = ics, ice
-        this%fract_sum(j,iblk) = 0._wp
-        this%data_sum (j,iblk) = 0._wp
-      END DO
-
+    IF (no_children == 1) THEN
       !$acc loop seq
-      DO i=1,no_children
-        IF (var%child_idx(i) > 0) THEN
-          !$acc loop gang vector
-          DO j = ics, ice
-            this%data_sum(j,iblk) = this%data_sum(j,iblk) &
-              & + this%fractions(j,iblk,i) * tile_ptrs3d_cache(i,var%child_idx(i),iproc)%p(j,ilev,iblk) 
-            this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
-          END DO
-        END IF
+      DO ilev=1,SIZE(var%ptr,2)
+        !$acc loop gang vector
+        DO j = ics, ice
+          var%ptr(j,ilev,iblk) = tile_ptrs3d_cache(1,var%child_idx(1),iproc)%p(j,ilev,iblk)
+        END DO
       END DO
+    ELSE
+      !$acc loop seq
+      DO ilev=1,SIZE(var%ptr,2)
+        !$acc loop gang vector
+        DO j = ics, ice
+          this%fract_sum(j,iblk) = 0._wp
+          this%data_sum (j,iblk) = 0._wp
+        END DO
 
-      IF (no_children == 1 .AND. .NOT. var%l_aggregate_all) THEN
-        ! Only one tile to aggregate, avoid multiplying and dividing by a potentially small fraction
-        !$acc loop gang vector
-        DO j = ics, ice
-          var%ptr(j,ilev,iblk) = this%data_sum(j,iblk)
+        !$acc loop seq
+        DO i=1,no_children
+          IF (var%child_idx(i) > 0) THEN
+            !$acc loop gang vector
+            DO j = ics, ice
+              this%data_sum(j,iblk) = this%data_sum(j,iblk) &
+                & + this%fractions(j,iblk,i) * tile_ptrs3d_cache(i,var%child_idx(i),iproc)%p(j,ilev,iblk) 
+              this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
+            END DO
+          ELSE IF (var%l_aggregate_all) THEN
+            !$acc loop gang vector
+            DO j = ics, ice
+              this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
+            END DO
+          END IF
         END DO
-      ELSE IF (var%l_aggregate_all) THEN              ! Sum of fractions is 1
-        ! For tiles where variable is not defined data(:,ilev,tile) is 0
-        !$acc loop gang vector
-        DO j = ics, ice
-          var%ptr(j,ilev,iblk) = this%data_sum(j,iblk)
-        END DO
-      ELSE
+
         !$acc loop gang vector
         DO j = ics, ice
           IF (this%fract_sum(j,iblk) > 0._wp) THEN
             var%ptr(j,ilev,iblk) = this%data_sum(j,iblk) / this%fract_sum(j,iblk)
           END IF
         END DO
-      END IF
-    END DO
+      END DO
+    END IF
+
     !$acc end parallel
 
     ! IF (ANY(fract_sum(:) > 1._wp + EPSILON(1._wp))) THEN

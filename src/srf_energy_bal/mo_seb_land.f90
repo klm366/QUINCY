@@ -102,7 +102,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: fact_qsat_srf
     dsl4jsb_Real2D_onChunk :: fact_q_air
     dsl4jsb_Real2D_onChunk :: drag_srf
-    dsl4jsb_Real2D_onChunk :: DEBUG_VAR
     dsl4jsb_Real2D_onChunk :: rad_srf_net
     dsl4jsb_Real2D_onChunk :: grnd_hflx
     dsl4jsb_Real2D_onChunk :: hcap_grnd
@@ -146,7 +145,6 @@ CONTAINS
     INTEGER  :: tmp_timesteps_per_day
     LOGICAL  :: l_is_newday
     INTEGER  :: ilct
-    REAL(wp), ALLOCATABLE :: Negative(:) ! R: debug
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
@@ -160,8 +158,6 @@ CONTAINS
     steplen = options%steplen
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    ALLOCATE(Negative(nc)) ! R: debug
 
     model => Get_model(tile%owner_model_id)
     grid => Get_grid(model%grid_id)
@@ -189,7 +185,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,   press_srf)      ! IN
     dsl4jsb_Get_var2D_onChunk(A2L_,   q_air)          ! IN
     dsl4jsb_Get_var2D_onChunk(A2L_,   drag_srf)       ! IN
-    dsl4jsb_Get_var2D_onChunk(A2L_,   DEBUG_VAR)       ! out
 
     dsl4jsb_Get_var2D_onChunk(SEB_,   previous_day_temp_mean) ! IN
     dsl4jsb_Get_var2D_onChunk(SEB_,   day_temp_sum)           ! INOUT
@@ -292,8 +287,6 @@ CONTAINS
     ! t_old(:)        = MAX(MIN(t(:),        380._wp), 100._wp)
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_1_1 tile_name=tile%name
     qsat_srf_old(:) = qsat(t_old(:), press_srf(:))
-    ! R: Debug
-    ! DEBUG_VAR(:)=qsat_srf_old
 
     ! The heat capacity of the surface layer is currently taken as the heat capacity of the upper soil layer
     heat_cap(:) = hcap_grnd(:)
@@ -426,16 +419,6 @@ CONTAINS
     END IF
 
     ! 'Effective temperature' used in radheat of the atmosphere model (see Eq. 6.3 in ECHAM5 manual)
-
-    !R: debug:
-    ! Negative(:) = (4._wp * t_star(:) - 3._wp * t_old(:))
-    ! WHERE (Negative(:) <= 0)
-    !   DEBUG_VAR(:) = -1._wp
-    ! ELSE WHERE
-    !   DEBUG_VAR(:) =  1._wp
-    ! END WHERE 
-    DEALLOCATE(Negative)
-
 #ifndef _OPENACC
     IF (ANY(4._wp * t_star(:) - 3._wp * t_old(:) <= 0._wp)) THEN
        i = MINLOC(4._wp * t_star(:) - 3._wp * t_old(:), DIM=1)
@@ -605,7 +588,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: evapopot
     dsl4jsb_Real2D_onChunk :: evapotrans
     dsl4jsb_Real2D_onChunk :: fract_snow
-    dsl4jsb_Real2D_onChunk :: DEBUG_VAR
+
     ! Locally allocated vectors
     !
     ! REAL(wp) ::                      &
@@ -653,7 +636,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SEB_,   latent_hflx)         ! out
     dsl4jsb_Get_var2D_onChunk(SEB_,   sensible_hflx_lnd)   ! out
     dsl4jsb_Get_var2D_onChunk(SEB_,   latent_hflx_lnd)     ! out
-    dsl4jsb_Get_var2D_onChunk(A2L_,   DEBUG_VAR)       ! out
+
     ! Compute new dry static energy at lowest atmospheric level by back-substitution
     !
     !$cla$w acc data create(s_air, heat_tcoef)
@@ -661,17 +644,14 @@ CONTAINS
     !$claw acc enter data create(s_air, heat_tcoef)
 
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_fluxes_land_expand_0 tile_name=tile%name
-    s_air(:) = t_acoef(:) * s_star   (:) + t_bcoef(:) ! R: t_acoef und t_bcoef vom forcing
+    s_air(:) = t_acoef(:) * s_star   (:) + t_bcoef(:)
 
     ! Transfer coefficient
-    heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen) ! R: drag_srf vom forcing
-! R: debug:
-!  WRITE(*,*) 'RRRRRRRRRRRRRRRRRRRR steplen:' , steplen
-  !DEBUG_VAR(:)=heat_tcoef(:)
+    heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen)
 
     ! Compute sensible heat flux
     !
-    sensible_hflx(:) = heat_tcoef(:) * (s_air(:) - s_star(:)) ! R: s_star ohne Abweichungen
+    sensible_hflx(:) = heat_tcoef(:) * (s_air(:) - s_star(:))
 
     ! Compute latent heat flux
     !

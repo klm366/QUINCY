@@ -25,6 +25,7 @@ MODULE mo_sse_init
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
   USE mo_jsb_class,         ONLY: get_model
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
+  USE mo_jsb_io,            ONLY: missval
 
   dsl4jsb_Use_processes SSE_, SEB_, HYDRO_
   dsl4jsb_Use_config(SSE_)
@@ -119,6 +120,11 @@ CONTAINS
       & sse_init_vars%heat_cond   (nproma, nblks    ), &
       & sse_init_vars%t_srf_mon   (nproma, nblks, 12)  &
       & )
+
+    sse_init_vars%fao         (:,:)   = missval
+    sse_init_vars%vol_heat_cap(:,:)   = missval
+    sse_init_vars%heat_cond   (:,:)   = missval
+    sse_init_vars%t_srf_mon   (:,:,:) = missval
 
     ! Get soil config
     dsl4jsb_Get_config(SSE_)

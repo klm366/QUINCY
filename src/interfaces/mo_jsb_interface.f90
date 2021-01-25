@@ -26,6 +26,7 @@ MODULE mo_jsb_interface
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
 !  USE mo_jsb_controller,      ONLY: Run_process_task
   USE mo_atmland_interface,   ONLY: update_atm2land, update_land2atm
+  USE mo_jsb_subset,          ONLY: ON_CHUNK
   USE mo_jsb_parallel,        ONLY: Get_omp_thread, Is_omp_inside_serial !, get_my_global_mpi_id
   USE mo_jsb_time,            ONLY: t_datetime
 
@@ -120,8 +121,7 @@ CONTAINS
       & iblk,              &
       & ics,               &
       & ice
-    ! TYPE(t_datetime), POINTER, INTENT(in) :: &
-    TYPE(t_datetime), POINTER :: &
+    TYPE(t_datetime), POINTER, INTENT(in) :: &
       & current_datetime
     REAL(wp), INTENT(in) :: &
       & dtime,              &
@@ -239,6 +239,9 @@ CONTAINS
 
     ! Update options
     CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=current_datetime, dtime=dtime, steplen=steplen)
+    CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
+
+    CALL model%Associate_var_pointers(ics, ice, iblk, iblk)
 
     ! Put atmospheric forcing into the a2l memory.
 
@@ -463,6 +466,8 @@ CONTAINS
         CALL model%Goto_next_tile(tile)
       END DO
       CALL jedi_biomass_to_fract(tile, model%options(no_omp_thread))
+      CALL model%Reset_tiles()
+      CALL model%Get_top_tile(tile)
     END IF
 
 #ifndef __NO_JSBACH_HD__

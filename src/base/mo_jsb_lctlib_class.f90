@@ -255,7 +255,7 @@ MODULE mo_jsb_lctlib_class
 
 CONTAINS
 
-  FUNCTION Read_lctlib(lctlib_file_name, model_id, use_jedi, use_quincy) RESULT(return_value)
+  FUNCTION Read_lctlib(lctlib_file_name, use_jedi, use_quincy) RESULT(return_value)
     !
     ! Get landcover library, i.e. lookup table for landcover types
     !
@@ -300,7 +300,6 @@ CONTAINS
     USE mo_veg_constants,           ONLY: carbon_per_dryweight_leaf, sm2lm_grass, igrass, itree
 
     CHARACTER(len=*), INTENT(in) :: lctlib_file_name
-    INTEGER,          INTENT(in) :: model_id
     LOGICAL,          INTENT(in) :: use_jedi
     LOGICAL,          INTENT(in) :: use_quincy
     TYPE(t_lctlib_element), POINTER    :: return_value(:)

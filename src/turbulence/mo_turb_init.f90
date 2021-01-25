@@ -20,10 +20,11 @@ MODULE mo_turb_init
   USE mo_jsb_class,         ONLY: get_model
   USE mo_jsb_grid_class,    ONLY: t_jsb_grid
   USE mo_jsb_grid,          ONLY: Get_grid
-  USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: message
   USE mo_jsb_control,       ONLY: debug_on, jsbach_runs_standalone
+  USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
+  USE mo_jsb_io,            ONLY: missval
 
   dsl4jsb_Use_processes TURB_
   dsl4jsb_Use_config(TURB_)
@@ -97,6 +98,7 @@ CONTAINS
     nblks  = grid%Get_nblks()
 
     ALLOCATE(turb_init_vars%rough_m(nproma, nblks))
+    turb_init_vars%rough_m(:,:) = missval
 
     ! Get turb config
     dsl4jsb_Get_config(TURB_)

@@ -379,6 +379,15 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  c_humus_2         ! Yasso below ground litter-pool for slow C compartment
                                                       !  [mol(C)^2/m(canopy)]
 
+    dsl4jsb_Real2D_onChunk ::  c_decomp_humus_1_sum  ! Annual sum of humus decomposed in YASSO (leaf)
+                                                      !  [mol(C)^2/m(canopy)]
+    dsl4jsb_Real2D_onChunk ::  c_decomp_humus_2_sum  ! Annual sum of humus decomposed in YASSO (wood)
+                                                      !  [mol(C)^2/m(canopy)]
+    dsl4jsb_Real2D_onChunk ::  c_into_humus_1_sum    ! Annual sum of cflux into humus in YASSO (leaf)
+                                                      !  [mol(C)^2/m(canopy)]
+    dsl4jsb_Real2D_onChunk ::  c_into_humus_2_sum    ! Annual sum of cflux into humus in YASSO (wood)
+                                                      !  [mol(C)^2/m(canopy)]
+
     dsl4jsb_Real2D_onChunk ::  gross_assimilation_ca  ! Gross assimilation of all canopy layers together
     dsl4jsb_Real2D_onChunk ::  NPP_pot_rate_ca        ! The instantaneous (potential) NPP rate [mol(C)/m^2(canopy) s]
     !dsl4jsb_Real2D_onChunk ::  NPP_pot_Rate_acc      ! averaged NPP rate over one day [mol(C)/m^2(canopy) s]
@@ -576,6 +585,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg2)     ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2)            ! inout
     !
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_decomp_humus_1_sum) ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_decomp_humus_2_sum) ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_into_humus_1_sum)   ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_into_humus_2_sum)   ! inout
     ! xx
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,  gross_assimilation_ca )     ! in
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,  NPP_pot_rate_ca )           ! inout
@@ -631,6 +644,13 @@ CONTAINS
     cflux_npp_2_atm_ta       = 0._wp
     cflux_soilresp_2_atm_ta  = 0._wp
     cflux_herb_2_atm_ta = 0._wp
+
+    IF( is_newyear(options%current_datetime,dtime) .OR. lstart) THEN ! reset annual sums if newyear or if just started exp
+      c_decomp_humus_1_sum =  0._wp
+      c_decomp_humus_2_sum =  0._wp
+      c_into_humus_1_sum =  0._wp
+      c_into_humus_2_sum =  0._wp
+    ENDIF
 
     ! R: "IF (read_cpools .AND. (lstart .OR. lresume)) THEN ..." of JS3 is in JS4 now in SUBROUTINE carbon_init_ic(tile)!
 
@@ -1007,7 +1027,13 @@ CONTAINS
           &  WoodLit_coef3    =  dsl4jsb_Lctlib_param(WoodLit_coef(3)), & ! in, optional, necessary with yasso
           &  WoodLit_coef4    =  dsl4jsb_Lctlib_param(WoodLit_coef(4)), & ! in, optional, necessary with yasso
           &  WoodLit_coef5    =  dsl4jsb_Lctlib_param(WoodLit_coef(5)), & ! in, optional, necessary with yasso
-          &  WoodLitterSize   =  dsl4jsb_Lctlib_param(WoodLitterSize)   & ! in, optional, necessary with yasso
+          &  WoodLitterSize   =  dsl4jsb_Lctlib_param(WoodLitterSize),  & ! in, optional, necessary with yasso
+
+          & c_decomp_humus_1_sum  = c_decomp_humus_1_sum,               & ! out, optional, necessary with yasso
+          & c_decomp_humus_2_sum  = c_decomp_humus_2_sum,               & ! out, optional, necessary with yasso
+          & c_into_humus_1_sum    = c_into_humus_1_sum,                 & ! out, optional, necessary with yasso
+          & c_into_humus_2_sum    = c_into_humus_2_sum                  & ! out, optional, necessary with yasso
+
           & )
       END IF ! usecase=jedi
 
@@ -1051,7 +1077,11 @@ CONTAINS
         & c_ethanol_bg1 = c_ethanol_bg1(:), c_nonsoluble_bg1 = c_nonsoluble_bg1(:), &
         & c_acid_bg2 = c_acid_bg2(:), c_water_bg2 = c_water_bg2(:),                 &
         & c_ethanol_bg2 = c_ethanol_bg2(:), c_nonsoluble_bg2 = c_nonsoluble_bg2(:), &
-        & c_humus_1 = c_humus_1(:), c_humus_2 = c_humus_2(:), root_exudates = root_exudates(:),   &
+        & c_humus_1 = c_humus_1(:), c_humus_2 = c_humus_2(:),                       &
+        & c_decomp_humus_1_sum = c_decomp_humus_1_sum(:),                           &
+        & c_decomp_humus_2_sum = c_decomp_humus_2_sum(:),                           &
+        & c_into_humus_1_sum = c_into_humus_1_sum(:),                               &
+        & c_into_humus_2_sum = c_into_humus_2_sum(:), root_exudates = root_exudates(:),           &
         & soil_respiration = soil_respiration(:), NPP_flux_correction = NPP_flux_correction(:),   &
         & cflux_c_greenwood_2_litter = cflux_c_greenwood_2_litter(:),                             &
         & cflux_c_green_2_herb = cflux_c_green_2_herb(:), cflux_herb_2_atm = cflux_herb_2_atm(:), &
@@ -1262,6 +1292,13 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_bg2_ta,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_bg2_ta,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_humus_2_ta,          weighted_by_fract)
+
+    !JN: vars for analytically equilibrating YASSO humus pools outside of jsb4 simulations (compare jsb3 svn ref 9652)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_decomp_humus_1_sum_ta,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_decomp_humus_2_sum_ta,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_into_humus_1_sum_ta,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_into_humus_2_sum_ta,          weighted_by_fract)
+
     ! sums
     dsl4jsb_Aggregate_onChunk(CARBON_, C_sum_natural_ta,      weighted_by_fract)
     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
@@ -1410,6 +1447,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  c_nonsoluble_bg2
     dsl4jsb_Real2D_onChunk ::  c_humus_2
 
+    dsl4jsb_Real2D_onChunk ::  c_decomp_humus_1_sum
+    dsl4jsb_Real2D_onChunk ::  c_decomp_humus_2_sum
+    dsl4jsb_Real2D_onChunk ::  c_into_humus_1_sum
+    dsl4jsb_Real2D_onChunk ::  c_into_humus_2_sum
+
     ! Assertion: 0 < oldRedArea <= 1 and 0 < newRefArea <= 1
     IF ( ANY(oldRefArea .LE. 0) .OR. ANY(oldRefArea .GT. 1) ) THEN
       CALL finish(TRIM(routine), &
@@ -1466,6 +1508,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg2)     ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2)            ! inout
 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_decomp_humus_1_sum) ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_decomp_humus_2_sum) ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_into_humus_1_sum)   ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_into_humus_2_sum)   ! inout            
+
     c_green           = c_green           * (oldRefArea / newRefArea)
     c_woods           = c_woods           * (oldRefArea / newRefArea)
     c_reserve         = c_reserve         * (oldRefArea / newRefArea)
@@ -1503,6 +1550,11 @@ CONTAINS
     c_nonsoluble_bg2 = c_nonsoluble_bg2 * (oldRefArea / newRefArea)
     c_humus_2        = c_humus_2        * (oldRefArea / newRefArea)
 
+    c_decomp_humus_1_sum = c_decomp_humus_1_sum * (oldRefArea / newRefArea)
+    c_decomp_humus_2_sum = c_decomp_humus_2_sum * (oldRefArea / newRefArea)
+    c_into_humus_1_sum   = c_into_humus_1_sum   * (oldRefArea / newRefArea)
+    c_into_humus_2_sum   = c_into_humus_2_sum   * (oldRefArea / newRefArea)
+
     CALL calculate_current_c_ag_1_and_bg_sums(tile, options)
     CALL recalc_per_tile_vars(tile, options, &
       & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:), &
@@ -1521,7 +1573,11 @@ CONTAINS
       & c_ethanol_bg1 = c_ethanol_bg1(:), c_nonsoluble_bg1 = c_nonsoluble_bg1(:), &
       & c_acid_bg2 = c_acid_bg2(:), c_water_bg2 = c_water_bg2(:), &
       & c_ethanol_bg2 = c_ethanol_bg2(:), c_nonsoluble_bg2 = c_nonsoluble_bg2(:), &
-      & c_humus_1 = c_humus_1(:), c_humus_2 = c_humus_2(:))
+      & c_humus_1 = c_humus_1(:), c_humus_2 = c_humus_2(:),                       &
+      & c_decomp_humus_1_sum  = c_decomp_humus_1_sum(:),                          &
+      & c_decomp_humus_2_sum  = c_decomp_humus_2_sum(:),                          &
+      & c_into_humus_1_sum    = c_into_humus_1_sum(:),                            &
+      & c_into_humus_2_sum    = c_into_humus_2_sum(:))
 
   END SUBROUTINE rescale_carbon_upon_reference_area_change
 
@@ -1546,9 +1602,10 @@ CONTAINS
       & c_acid_ag2, c_water_ag2, c_ethanol_ag2, c_nonsoluble_ag2, &
       & c_acid_bg2, c_water_bg2, c_ethanol_bg2, c_nonsoluble_bg2, &
       & c_humus_1, c_humus_2,                                     &
-      & soil_respiration, NPP_flux_correction, NPP_pot_yDayMean, NPP_act_yDayMean,     &
-      & GPP_yDayMean, root_exudates, cflux_c_green_2_herb, cflux_herb_2_atm,           &
-      & cflux_dist_greenreserve_2_soil, cflux_dist_woods_2_soil, cflux_fire_all_2_atm, &
+      & c_decomp_humus_1_sum, c_decomp_humus_2_sum, c_into_humus_1_sum, c_into_humus_2_sum, &
+      & soil_respiration, NPP_flux_correction, NPP_pot_yDayMean, NPP_act_yDayMean,          &
+      & GPP_yDayMean, root_exudates, cflux_c_green_2_herb, cflux_herb_2_atm,                &
+      & cflux_dist_greenreserve_2_soil, cflux_dist_woods_2_soil, cflux_fire_all_2_atm,      &
       & cflux_c_greenwood_2_litter)
 
     USE mo_carbon_process,    ONLY: get_per_tile
@@ -1593,6 +1650,11 @@ CONTAINS
 
     REAL(wp),                   INTENT(in), OPTIONAL  :: c_humus_1(:)
     REAL(wp),                   INTENT(in), OPTIONAL  :: c_humus_2(:)
+
+    REAL(wp),                   INTENT(in), OPTIONAL  :: c_decomp_humus_1_sum(:)
+    REAL(wp),                   INTENT(in), OPTIONAL  :: c_decomp_humus_2_sum(:)
+    REAL(wp),                   INTENT(in), OPTIONAL  :: c_into_humus_1_sum(:)
+    REAL(wp),                   INTENT(in), OPTIONAL  :: c_into_humus_2_sum(:)
 
     REAL(wp),                   INTENT(in), OPTIONAL  :: cflux_dist_greenreserve_2_soil(:)
     REAL(wp),                   INTENT(in), OPTIONAL  :: cflux_dist_woods_2_soil(:)
@@ -1652,6 +1714,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  c_ethanol_bg2_ta
     dsl4jsb_Real2D_onChunk ::  c_nonsoluble_bg2_ta
     dsl4jsb_Real2D_onChunk ::  c_humus_2_ta
+
+    dsl4jsb_Real2D_onChunk ::  c_decomp_humus_1_sum_ta
+    dsl4jsb_Real2D_onChunk ::  c_decomp_humus_2_sum_ta
+    dsl4jsb_Real2D_onChunk ::  c_into_humus_1_sum_ta
+    dsl4jsb_Real2D_onChunk ::  c_into_humus_2_sum_ta
 
     dsl4jsb_Real2D_onChunk ::  cflux_dist_greenreserve_2_soil_ta
     dsl4jsb_Real2D_onChunk ::  cflux_dist_woods_2_soil_ta
@@ -1718,6 +1785,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_bg2_ta)        ! opt out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg2_ta)     ! opt out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2_ta)            ! opt out
+
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_decomp_humus_1_sum_ta)    ! opt out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_decomp_humus_2_sum_ta)    ! opt out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_into_humus_1_sum_ta)      ! opt out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_into_humus_2_sum_ta)      ! opt out
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_dist_greenreserve_2_soil_ta ) ! opt out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_dist_woods_2_soil_ta )   ! opt out
@@ -1794,6 +1866,15 @@ CONTAINS
       & c_nonsoluble_bg2(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(c_humus_2)) CALL get_per_tile(c_humus_2_ta(:), &
       & c_humus_2(:), veg_fract_correction(:), fract_fpc_max(:))
+
+    IF (PRESENT(c_decomp_humus_1_sum)) CALL get_per_tile(c_decomp_humus_1_sum_ta(:), &
+      & c_decomp_humus_1_sum(:), veg_fract_correction(:), fract_fpc_max(:))
+    IF (PRESENT(c_decomp_humus_2_sum)) CALL get_per_tile(c_decomp_humus_2_sum_ta(:), &
+      & c_decomp_humus_2_sum(:), veg_fract_correction(:), fract_fpc_max(:))
+    IF (PRESENT(c_into_humus_1_sum)) CALL get_per_tile(c_into_humus_1_sum_ta(:), &
+      & c_into_humus_1_sum(:), veg_fract_correction(:), fract_fpc_max(:))
+    IF (PRESENT(c_into_humus_2_sum)) CALL get_per_tile(c_into_humus_2_sum_ta(:), &
+      & c_into_humus_2_sum(:), veg_fract_correction(:), fract_fpc_max(:))
 
     CALL calculate_current_c_ta_state_sum(tile, options, C_sum_natural_ta(:))
 
@@ -2152,11 +2233,13 @@ CONTAINS
     TYPE(t_jsb_model), POINTER      :: model
     TYPE(t_jsb_grid),  POINTER      :: grid
 
-    REAL(wp), ALLOCATABLE :: c_total_sum(:,:)
+    REAL(wp), ALLOCATABLE :: c_total_sum(:,:), fract(:,:)
     INTEGER               :: nblks, nproma
     INTEGER               :: i, no_children
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':jedi_biomass_to_fract'
+
+    IF (TRIM(tile%name) /= 'veg') CALL finish(routine, 'should only be called on veg tile')
 
     dsl4jsb_Get_memory(CARBON_)
 
@@ -2171,6 +2254,9 @@ CONTAINS
     ALLOCATE(c_total_sum(nproma,nblks))
     c_total_sum(:,:) = 0._wp
 
+    ALLOCATE(fract(nproma,nblks))
+    CALL tile%Get_fraction(fract=fract(:,:)) ! Fractions of veg tile
+
     no_children = tile%Get_no_of_children()
 
     IF (ASSOCIATED(dsl4jsb_memory(CARBON_)%children(1)%p%vars(var%child_idx(1))%p%ptr2d)) THEN
@@ -2182,6 +2268,7 @@ CONTAINS
           END ASSOCIATE
         END IF
       END DO
+      c_total_sum(:,:) = c_total_sum(:,:) * fract(:,:) ! Fractions of children need to sum up to fraction of parent tile in block below
 
       child => tile%Get_first_child_tile()
       DO i=1,no_children
@@ -2201,7 +2288,7 @@ CONTAINS
       child => tile%Get_first_child_tile()
       DO i=1,no_children
         WHERE (c_total_sum(:,:) > 0._wp)
-          child%fract(:,:) = var%ptr2d_t(:,i,:) / c_total_sum(:,:)
+          child%fract(:,:) = var%ptr2d_t(:,i,:) / c_total_sum(:,:) * fract(:,:) ! Fractions of children need to sum up to fraction of parent tile
         END WHERE
         child => child%Get_next_sibling_tile()
       END DO

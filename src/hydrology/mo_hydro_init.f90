@@ -25,6 +25,7 @@ MODULE mo_hydro_init
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
   USE mo_jsb_class,         ONLY: get_model
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
+  USE mo_jsb_io,            ONLY: missval
 
   dsl4jsb_Use_processes HYDRO_, PHENO_
   dsl4jsb_Use_config(HYDRO_)
@@ -156,6 +157,21 @@ CONTAINS
       & hydro_init_vars%w_snow_soil     (nproma, nblks),       &
       & hydro_init_vars%w_soil_sl       (nproma, nsoil, nblks) &
       & )
+
+      hydro_init_vars%elevation      (:,:)   = missval
+      hydro_init_vars%oro_stddev     (:,:)   = missval
+      hydro_init_vars%soil_depth     (:,:)   = missval
+      hydro_init_vars%max_moist      (:,:)   = missval
+      hydro_init_vars%vol_porosity   (:,:)   = missval
+      hydro_init_vars%hyd_cond_sat   (:,:)   = missval
+      hydro_init_vars%matrix_pot     (:,:)   = missval
+      hydro_init_vars%bclapp         (:,:)   = missval
+      hydro_init_vars%pore_size_index(:,:)   = missval
+      hydro_init_vars%vol_field_cap  (:,:)   = missval
+      hydro_init_vars%vol_p_wilt     (:,:)   = missval
+      hydro_init_vars%root_depth     (:,:)   = missval
+      hydro_init_vars%w_snow_soil    (:,:)   = missval
+      hydro_init_vars%w_soil_sl      (:,:,:) = missval
 
     ! Get hydrology config
     dsl4jsb_Get_config(HYDRO_)

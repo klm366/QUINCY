@@ -64,6 +64,7 @@ MODULE mo_jsb_grid_class
   CONTAINS
     PROCEDURE :: Get_nblks
     PROCEDURE :: Get_nproma
+    PROCEDURE :: Get_npromz
     PROCEDURE :: Get_blk_start
     PROCEDURE :: Get_blk_end
     PROCEDURE :: Get_col_start
@@ -315,6 +316,20 @@ CONTAINS
     get_nproma = self%nproma
 
   END FUNCTION get_nproma
+
+  INTEGER FUNCTION get_npromz(self)
+
+#ifdef HAVE_F2003
+    CLASS(t_jsb_grid), INTENT(in) :: self
+#else
+    CLASS(t_jsb_grid)             :: self
+#endif
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_npromz'
+
+    get_npromz = self%npromz
+
+  END FUNCTION get_npromz
 
   INTEGER FUNCTION get_blk_start(grid)
 

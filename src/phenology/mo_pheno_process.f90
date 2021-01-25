@@ -1028,7 +1028,8 @@ MODULE mo_pheno_process
     !$claw sca routine
 
     slope           = PhenoParam%RG%growthRate / (PhenoParam%RG%bucketFill_critical - PhenoParam%all%wilt_point)
-    shedRate        = PhenoParam%RG%growthRate + PhenoParam%RG%shedRate_aging - slope * (bucket_filling - PhenoParam%all%wilt_point)
+    shedRate        = PhenoParam%RG%growthRate + PhenoParam%RG%shedRate_aging &
+      &               - slope * (bucket_filling - PhenoParam%all%wilt_point)
     get_shedRate_RG = MIN(MAX(PhenoParam%RG%shedRate_aging,shedRate),PhenoParam%RG%growthRate+PhenoParam%RG%shedRate_aging)
 
   END FUNCTION get_shedRate_RG

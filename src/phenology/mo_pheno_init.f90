@@ -26,6 +26,7 @@ MODULE mo_pheno_init
   USE mo_jsb_class,           ONLY: get_model
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
   USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input
+  USE mo_jsb_io,              ONLY: missval
 
   dsl4jsb_Use_processes PHENO_
   dsl4jsb_Use_config(PHENO_)
@@ -124,6 +125,11 @@ CONTAINS
       & pheno_init_vars%fract_forest (nproma, nblks      ), &
       & pheno_init_vars%fract_fpc_max(nproma, nblks      )  &
       & )
+
+    pheno_init_vars%lai_mon      (:,:,:) = missval
+    pheno_init_vars%fract_fpc_mon(:,:,:) = missval
+    pheno_init_vars%fract_forest (:,:)   = missval
+    pheno_init_vars%fract_fpc_max(:,:)   = missval
 
     dsl4jsb_Get_config(PHENO_)
 
@@ -240,7 +246,7 @@ CONTAINS
       !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=        
       IF(TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'jedi_phenology') THEN
    !       dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =  1.0_wp 
-                 dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =   &
+          dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =   &
            & 1.0_wp - exp(-dsl4jsb_Lctlib_param(MaxLAI) / dsl4jsb_Lctlib_param(clumpinessFactor))
    
       ELSE
@@ -250,7 +256,6 @@ CONTAINS
       !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=      
 
       !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction))
-
     END IF
 
   END SUBROUTINE pheno_init_bc
