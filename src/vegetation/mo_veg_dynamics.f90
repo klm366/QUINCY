@@ -233,6 +233,11 @@ CONTAINS
     veg_total_flux                      = veg_total_flux * veg_total_flux                         ! 16.0
     veg_total_flux                      = veg_falloc / 2.0_wp                                     ! 5.65
 
+    !! test element as REAL vector
+    veg_establishment%carbon_(:)    = veg_establishment%carbon_(:)   * 3.0_wp
+    veg_establishment%nitrogen_(:)  = veg_establishment%nitrogen_(:) * 3.0_wp
+
+
   END SUBROUTINE update_veg_dynamics
 
 

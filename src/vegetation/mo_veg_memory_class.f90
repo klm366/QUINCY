@@ -37,7 +37,7 @@ MODULE mo_veg_memory_class
   USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d
-  USE mo_jsb_pool_class,         ONLY: t_jsb_pool, ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15
+  USE mo_jsb_pool_class,         ONLY: t_jsb_pool, t_jsb_pool_elem2d, ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15
   USE mo_jsb_lct_class,          ONLY: LAND_TYPE, VEG_TYPE
 
 
@@ -53,7 +53,7 @@ MODULE mo_veg_memory_class
   !! pool with only variables
   !! last pool in line
   !-----------------------------------------------------------------------------------------------------
-  TYPE, EXTENDS(t_jsb_pool) :: t_veg_elements_pool
+  TYPE, EXTENDS(t_jsb_pool_elem2d) :: t_veg_elements_pool
     ! element var
     TYPE(t_jsb_var_real2d), POINTER :: carbon         ! element
     TYPE(t_jsb_var_real2d), POINTER :: nitrogen       ! element
@@ -126,7 +126,7 @@ MODULE mo_veg_memory_class
   !> Type definition for t_veg_tissues_pool
   !! vegetation pool of tissues
   !-----------------------------------------------------------------------------------------------------
-  TYPE, EXTENDS(t_jsb_pool) :: t_veg_tissues_pool
+  TYPE, EXTENDS(t_jsb_pool_elem2d) :: t_veg_tissues_pool
     ! element variables
     TYPE(t_jsb_var_real2d), POINTER :: carbon
     TYPE(t_jsb_var_real2d), POINTER :: nitrogen
@@ -407,7 +407,8 @@ CONTAINS
     element_list_loc(:) = all_elements(:)
     CALL assign_if_present_allocatable(element_list_loc, element_list)  ! selects element_list if available
   
-    this%element_unit = element_unit
+    this%element_unit               = element_unit
+    this%contains_element_vector_1d = .TRUE.
   
     !> carbon
     IF (One_of(ELEM_C, element_list_loc) > 0) THEN
@@ -417,6 +418,7 @@ CONTAINS
         SELECT TYPE (selector => this%element_list(i)%p)
         CLASS IS (t_jsb_var_real2d)
           this%carbon => selector
+          this%carbon_ => selector%ptrm1
         END SELECT
       END IF
     END IF
@@ -428,6 +430,7 @@ CONTAINS
         SELECT TYPE (selector => this%element_list(i)%p)
         CLASS IS (t_jsb_var_real2d)
           this%nitrogen => selector
+          this%nitrogen_ => selector%ptrm1
         END SELECT
       END IF
     END IF
@@ -439,6 +442,7 @@ CONTAINS
         SELECT TYPE (selector => this%element_list(i)%p)
         CLASS IS (t_jsb_var_real2d)
           this%phosphorus => selector
+          this%phosphorus_ => selector%ptrm1
         END SELECT
       END IF
     END IF
@@ -450,6 +454,7 @@ CONTAINS
         SELECT TYPE (selector => this%element_list(i)%p)
         CLASS IS (t_jsb_var_real2d)
           this%carbon13 => selector
+          this%carbon13_ => selector%ptrm1
         END SELECT
       END IF
     END IF
@@ -461,6 +466,7 @@ CONTAINS
         SELECT TYPE (selector => this%element_list(i)%p)
         CLASS IS (t_jsb_var_real2d)
           this%carbon14 => selector
+          this%carbon14_ => selector%ptrm1
         END SELECT
       END IF
     END IF
@@ -472,6 +478,7 @@ CONTAINS
         SELECT TYPE (selector => this%element_list(i)%p)
         CLASS IS (t_jsb_var_real2d)
           this%nitrogen15 => selector
+          this%nitrogen15_ => selector%ptrm1
         END SELECT
       END IF
     END IF
@@ -538,7 +545,8 @@ CONTAINS
     element_list_loc(:) = all_elements(:)
     CALL assign_if_present_allocatable(element_list_loc, element_list)  ! selects element_list if available
   
-    this%element_unit = element_unit
+    this%element_unit               = element_unit
+    this%contains_element_vector_1d = .TRUE.
   
     !> carbon
     IF (One_of(ELEM_C, element_list_loc) > 0) THEN
@@ -548,6 +556,7 @@ CONTAINS
         SELECT TYPE (selector => this%element_list(i)%p)
         CLASS IS (t_jsb_var_real2d)
           this%carbon => selector
+          this%carbon_ => selector%ptrm1
         END SELECT
       END IF
     END IF
@@ -559,6 +568,7 @@ CONTAINS
         SELECT TYPE (selector => this%element_list(i)%p)
         CLASS IS (t_jsb_var_real2d)
           this%nitrogen => selector
+          this%nitrogen_ => selector%ptrm1
         END SELECT
       END IF
     END IF
@@ -570,6 +580,7 @@ CONTAINS
         SELECT TYPE (selector => this%element_list(i)%p)
         CLASS IS (t_jsb_var_real2d)
           this%phosphorus => selector
+          this%phosphorus_ => selector%ptrm1
         END SELECT
       END IF
     END IF
@@ -581,6 +592,7 @@ CONTAINS
         SELECT TYPE (selector => this%element_list(i)%p)
         CLASS IS (t_jsb_var_real2d)
           this%carbon13 => selector
+          this%carbon13_ => selector%ptrm1
         END SELECT
       END IF
     END IF
@@ -592,6 +604,7 @@ CONTAINS
         SELECT TYPE (selector => this%element_list(i)%p)
         CLASS IS (t_jsb_var_real2d)
           this%carbon14 => selector
+          this%carbon14_ => selector%ptrm1
         END SELECT
       END IF
     END IF
@@ -603,6 +616,7 @@ CONTAINS
         SELECT TYPE (selector => this%element_list(i)%p)
         CLASS IS (t_jsb_var_real2d)
           this%nitrogen15 => selector
+          this%nitrogen15_ => selector%ptrm1
         END SELECT
       END IF
     END IF

@@ -13,7 +13,7 @@ MODULE mo_jsb_pool_class
   PRIVATE
 
   ! PUBLIC :: t_element, t_element_2d, t_element_3d, t_jsb_pool, t_jsb_pool_p
-  PUBLIC :: t_jsb_pool, t_jsb_pool_p
+  PUBLIC :: t_jsb_pool, t_jsb_pool_p, t_jsb_pool_elem2d, t_jsb_pool_elem3d
   PUBLIC :: ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15  ! element_id (element enumerator) for pools
 
   ! TYPE, ABSTRACT, EXTENDS(t_jsb_var) :: t_element
@@ -49,6 +49,8 @@ MODULE mo_jsb_pool_class
     CHARACTER(LEN=:),  ALLOCATABLE :: name               ! No spaces!
     CHARACTER(LEN=:),  ALLOCATABLE :: path
     CHARACTER(LEN=:),  ALLOCATABLE :: element_unit
+    LOGICAL                        :: contains_element_vector_1d = .FALSE.  ! t_jsb_pool_elem2d -> set TRUE in the pool init routines in the PROC_memory_class
+    LOGICAL                        :: contains_element_vector_2d = .FALSE.  ! t_jsb_pool_elem3d -> set TRUE in the pool init routines in the PROC_memory_class
     CLASS(t_jsb_pool_p),   POINTER     :: pool_list(:) => NULL()
     CLASS(t_jsb_pool_p),   POINTER     :: leaf_list(:) => NULL()
     ! TYPE(t_element_p), ALLOCATABLE :: element_list(:)
@@ -100,6 +102,30 @@ MODULE mo_jsb_pool_class
       CHARACTER(LEN=:), ALLOCATABLE :: name
     END FUNCTION get_el_name_iface_id
   END INTERFACE
+
+  TYPE, ABSTRACT, EXTENDS(t_jsb_pool) :: t_jsb_pool_elem2d
+    
+    ! 1D element variables pointing to element%prtm1(:) of t_jsb_var_real2d
+    REAL(wp),               POINTER :: carbon_(:)      => NULL()
+    REAL(wp),               POINTER :: nitrogen_(:)    => NULL()
+    REAL(wp),               POINTER :: phosphorus_(:)  => NULL()
+    REAL(wp),               POINTER :: carbon13_(:)    => NULL()
+    REAL(wp),               POINTER :: carbon14_(:)    => NULL()
+    REAL(wp),               POINTER :: nitrogen15_(:)  => NULL()
+
+  END TYPE t_jsb_pool_elem2d
+  
+  TYPE, ABSTRACT, EXTENDS(t_jsb_pool) :: t_jsb_pool_elem3d
+
+    ! 2D element variables pointing to element%prtm1(:,:) of t_jsb_var_real3d
+    REAL(wp),               POINTER :: carbon_(:,:)      => NULL()
+    REAL(wp),               POINTER :: nitrogen_(:,:)    => NULL()
+    REAL(wp),               POINTER :: phosphorus_(:,:)  => NULL()
+    REAL(wp),               POINTER :: carbon13_(:,:)    => NULL()
+    REAL(wp),               POINTER :: carbon14_(:,:)    => NULL()
+    REAL(wp),               POINTER :: nitrogen15_(:,:)  => NULL()
+
+  END TYPE t_jsb_pool_elem3d
 
   !> element_id (element enumerator) for pools
   !! 
@@ -463,6 +489,32 @@ CONTAINS
         CLASS IS (t_jsb_var_real2d)
           CALL element%Associate_pointers(ic_start, ic_end, iblk_start, iblk_end)
           element%subset_type = itype
+          IF (this%contains_element_vector_1d) THEN
+            SELECT TYPE (pool_elem2d => this)
+            CLASS IS (t_jsb_pool_elem2d)
+              !! set pointer of element variable (REAL vector) to the according part of the domain (ics:ice,iblk) defined by %ptrm1
+              SELECT CASE(element%element_id)
+              CASE (ELEM_C)
+                NULLIFY(pool_elem2d%carbon_)
+                pool_elem2d%carbon_     => element%ptrm1
+              CASE (ELEM_N)
+                NULLIFY(pool_elem2d%nitrogen_)
+                pool_elem2d%nitrogen_   => element%ptrm1
+              CASE (ELEM_P)
+                NULLIFY(pool_elem2d%phosphorus_)
+                pool_elem2d%phosphorus_ => element%ptrm1
+              CASE (ELEM_C13)
+                NULLIFY(pool_elem2d%carbon13_)
+                pool_elem2d%carbon13_   => element%ptrm1
+              CASE (ELEM_C14)
+                NULLIFY(pool_elem2d%carbon14_)
+                pool_elem2d%carbon14_   => element%ptrm1
+              CASE (ELEM_N15)
+                NULLIFY(pool_elem2d%nitrogen15_)
+                pool_elem2d%nitrogen15_ => element%ptrm1
+              END SELECT
+            END SELECT
+          ENDIF
         CLASS IS (t_jsb_var_real3d)
           CALL element%Associate_pointers(ic_start, ic_end, iblk_start, iblk_end)
           element%subset_type = itype
