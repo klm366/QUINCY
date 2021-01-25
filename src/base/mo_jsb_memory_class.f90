@@ -964,4 +964,3 @@ CONTAINS
     var_averaged(:) = SUM(var_collected(:,:) * fract_st(:,:) , DIM=2) / SUM(fract_st(:,:), DIM=2)
     DEALLOCATE(var_collected)
 
-  END FUNCTION Average_over_children_real2d
