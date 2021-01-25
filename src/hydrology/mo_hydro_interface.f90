@@ -875,7 +875,8 @@ CONTAINS
   !! @param[in]     options Additional run-time parameters.
   !!
   SUBROUTINE update_soil_hydrology(tile, options)
-
+    USE mo_util,    ONLY: soil_depth_to_layers_2d
+    USE mo_carbon_jedi_process, ONLY: jedi_soil_depth_to_layers_1d
     USE mo_hydro_process,          ONLY: calc_soil_hydrology
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -886,7 +887,7 @@ CONTAINS
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(HYDRO_)
-
+    dsl4jsb_Def_memory(CARBON_)
     ! Pointers to variables in memory
     dsl4jsb_Real3D_onChunk :: fract_org_sl
     dsl4jsb_Real3D_onChunk :: t_soil
@@ -894,7 +895,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: w_soil_rel
     dsl4jsb_Real2D_onChunk :: w_soil_column
     dsl4jsb_Real2D_onChunk :: max_moist
-
+    dsl4jsb_Real2D_onChunk :: root_depth
+    dsl4jsb_Real3D_onChunk :: root_depth_sl
+    dsl4jsb_Real2D_onChunk :: jedi_root_depth
 
     ! Locally allocated vectors
 
@@ -943,11 +946,17 @@ CONTAINS
 
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
-
+    dsl4jsb_Get_memory(CARBON_)
+    
+    
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_rel)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_column)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, max_moist)
-
+    IF (TRIM(model%config%usecase) .eq. 'jsbach_jedi' ) THEN
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,root_depth)
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,root_depth_sl)
+      dsl4jsb_Get_var2D_onChunk(CARBON_,jedi_root_depth)
+      END IF
     dsl4jsb_Get_var3D_onChunk(SSE_,    t_soil)     ! in
 
     IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
@@ -958,6 +967,18 @@ CONTAINS
       !$claw expand parallel update
       fract_org_sl(:,:) = 0._wp
     END IF
+
+    ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
+      !PHS 24.07.2020 Compute water stress in CARBON at PFT level. 
+      ! As jedi has different rooting depth for each PGS, the root_depth at veg level needed to be recalculated each time. 
+       IF (TRIM(model%config%usecase) .eq. 'jsbach_jedi' ) THEN
+            root_depth     = jedi_root_depth
+            root_depth_sl = jedi_soil_depth_to_layers_1d( root_depth, soil_w%dz(:))       
+      END IF
+      ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
+      
+
+
 
     !$claw acc update device(soil_w%dz) ! TODO move if possible
     !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_1 tile_name=tile%name
@@ -1353,7 +1374,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_fc,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_pwp,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, water_stress,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, root_depth,          weighted_by_fract)
+   !PHS: at some point Pinhsin add this line of aggregation for root depth but the original code has no root_depth aggregation..  
+    !dsl4jsb_Aggregate_onChunk(HYDRO_, root_depth,          weighted_by_fract)
 
     ! ASSIMI_
     IF (model%config%use_quincy) THEN

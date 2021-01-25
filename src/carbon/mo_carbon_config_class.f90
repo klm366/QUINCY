@@ -35,6 +35,7 @@ MODULE mo_carbon_config_class
                             ! ATTENTION: The run script has to take care that read_cpools is set to .FALSE.
                             !            in the experiment jobs following the first one! Or re-set it manually!
     REAL(wp) :: fire_fract_wood_2_atmos
+    LOGICAL  :: l_spinup_jedi
 
    CONTAINS
      PROCEDURE :: Init => Init_carbon_config
@@ -60,6 +61,7 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     LOGICAL                     :: read_cpools
     REAL(wp)                    :: fire_fract_wood_2_atmos
+    LOGICAL                     :: l_spinup_jedi
     ! LOGICAL           :: lemissions
 
     NAMELIST /jsb_carbon_nml/      &
@@ -68,7 +70,8 @@ CONTAINS
          ic_filename,              &
          bc_filename,              &
          read_cpools,              &
-         fire_fract_wood_2_atmos
+         fire_fract_wood_2_atmos,  &
+         l_spinup_jedi
 
     INTEGER :: nml_handler, nml_unit, istat
 
@@ -83,6 +86,7 @@ CONTAINS
     ic_filename            = 'ic_land_carbon.nc'
     read_cpools            = .FALSE.
     fire_fract_wood_2_atmos = FireFracWood2Atmos
+    l_spinup_jedi          = .FALSE.
 
     ! Read namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
@@ -99,6 +103,7 @@ CONTAINS
     config%bc_filename            = bc_filename
     config%read_cpools            = read_cpools
     config%fire_fract_wood_2_atmos = fire_fract_wood_2_atmos
+    config%l_spinup_jedi          = l_spinup_jedi
 
   END SUBROUTINE Init_carbon_config
 

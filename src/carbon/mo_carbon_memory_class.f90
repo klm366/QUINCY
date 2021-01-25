@@ -278,20 +278,25 @@ MODULE mo_carbon_memory_class
       C_balan,                       &
       C_delta,                       &
       flx_germ,                      &
-      one_counter,               &
-      ff_dTdt,                            &                     
-      ff_grow_T_yDayMean,       &
-      ff_T_30d,                          &
+      one_counter,                  &
+      ff_dTdt,                      &                     
+      ff_grow_T_yDayMean,           &
+      ff_T_30d,                     &
+      pseudo_c_total,                &
       root_maxmoist,                &
-      jedi_pot_supply_transp,     &
-      adj_fraction,                      &
-      jedi_light_constraint,          &
-      seed_maxmoist,               &
-      alpha_jedi_seed,                &
-      w_soil_column_seed
+      jedi_pot_supply_transp,       &
+      jedi_root_depth,              &
+      adj_fraction,                 &
+      jedi_light_constraint,        &
+      seed_maxmoist,                &
+      alpha_jedi_seed,              &
+      w_soil_column_jedi,           &
+      w_soil_column_seed,           &
+      water_stress
          
     TYPE(t_jsb_var_real3d) :: &
-      seed_depth_sl           
+      seed_depth_sl,              &
+      jedi_root_depth_sl           
     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
 
 
@@ -560,6 +565,14 @@ CONTAINS
       & output_level=BASIC,loutput=.FALSE.,                                                      &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )   
 
+    CALL jsb_add_var( mem, 'pseudo_c_total', mem%pseudo_c_total,                              &
+      & hgrid, surface,                                                                        &
+      & t_cf('pseudo_c_total','mol(C) m-2(canopy)' ,'Pseudo total carbon of six pools'),           &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+      & prefix, suffix,                                                                        &
+      & output_level=BASIC,loutput=.TRUE.,                                                      &
+      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )   
+
     CALL jsb_add_var( mem, 'c_storage_ta', mem%c_storage_ta,                                     &
       & hgrid, surface,                                                                        &
       & t_cf('c_storage_ta', 'mol(C) m-2', 'C-Pool for green parts of vegetation.'),    &
@@ -661,7 +674,7 @@ CONTAINS
       & t_cf('adj_fraction', 'Constraint factor for leaf growth '),           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
-      & output_level=BASIC,loutput=.TRUE.,                                                      &
+      & output_level=BASIC,loutput=.FALSE.,                                                      &
       & lrestart=.FALSE., initval_r=1.0_wp, l_aggregate_all=.FALSE. )   
 
     CALL jsb_add_var( mem, 'jedi_light_constraint', mem%jedi_light_constraint,                              &
@@ -669,7 +682,7 @@ CONTAINS
       & t_cf('jedi_light_constraint', 'Light constraint factor for leaf growth '),          &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
-      & output_level=BASIC,loutput=.TRUE.,                                                      &
+      & output_level=BASIC,loutput=.FALSE.,                                                      &
       & lrestart=.FALSE., initval_r=1.0_wp, l_aggregate_all=.FALSE. )   
 
     
@@ -707,21 +720,29 @@ CONTAINS
       
     CALL jsb_add_var( mem, 'alpha_jedi', mem%alpha_jedi,                              &
       & hgrid, surface,                                                                        &
-      & t_cf('alpha_jedi', 'relalive soil wetness for JeDi'),           &
+      & t_cf('alpha_jedi', 'relative soil wetness for JeDi'),           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
       & output_level=BASIC,loutput=.TRUE.,                                                      &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.FALSE. )   
       
-      CALL jsb_add_var( mem, 'alpha_jedi_seed', mem%alpha_jedi_seed,                              &
+    CALL jsb_add_var( mem, 'alpha_jedi_seed', mem%alpha_jedi_seed,                              &
       & hgrid, surface,                                                                        &
-      & t_cf('alpha_jedi_seed', 'relalive soil wetness for seed (upper 50mm of the soil)'),           &
+      & t_cf('alpha_jedi_seed', 'relative soil wetness for seed (upper 50mm of the soil)'),           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
       & output_level=BASIC,loutput=.TRUE.,                                                      &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.FALSE. )   
       
-      CALL jsb_add_var( mem, 'seed_maxmoist', mem%seed_maxmoist,                              &
+    CALL jsb_add_var( mem, 'jedi_root_depth', mem%jedi_root_depth,                   &
+      & hgrid, surface,                                                    &
+      & t_cf('jedi_root_depth', 'm', 'Jedi root depth'),                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix,&
+      & output_level=BASIC, loutput=.TRUE.,                                                  &
+      & lrestart=.TRUE.,initval_r=0.0_wp, l_aggregate_all=.FALSE.)!, isteptype=TSTEP_CONSTANT )
+      
+    CALL jsb_add_var( mem, 'seed_maxmoist', mem%seed_maxmoist,                              &
       & hgrid, surface,                                                                        &
       & t_cf('seed_maxmoist','m' ,'Maximum moisture of the top 50 mm soil (used for seed germination)'),           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
@@ -729,17 +750,33 @@ CONTAINS
       & output_level=BASIC,loutput=.FALSE.,                                                      &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.FALSE.)!, isteptype=TSTEP_CONSTANT )
       
-      CALL jsb_add_var( mem, 'w_soil_column_seed', mem%w_soil_column_seed,                              &
+    CALL jsb_add_var( mem, 'w_soil_column_seed', mem%w_soil_column_seed,                              &
       & hgrid, surface,                                                                        &
       & t_cf('w_soil_column_seed', 'm water equivalent' ,'cumulated soil water in the top 50mm'),           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
       & output_level=BASIC,loutput=.FALSE.,                                                      &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.FALSE.)!, isteptype=TSTEP_CONSTANT ) 
+
+    CALL jsb_add_var( mem, 'w_soil_column_jedi', mem%w_soil_column_jedi,                              &
+      & hgrid, surface,                                                                        &
+      & t_cf('w_soil_column_jedi', 'm water equivalent' ,'cumulated soil water in jedi root zone'),           &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+      & prefix, suffix,                                                                        &
+      & output_level=BASIC,loutput=.FALSE.,                                                      &
+      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.FALSE.)!, isteptype=TSTEP_CONSTANT ) 
     
-      CALL jsb_add_var( mem, 'seed_depth_sl', mem%seed_depth_sl,                              &
+    CALL jsb_add_var( mem, 'seed_depth_sl', mem%seed_depth_sl,                              &
       & hgrid, soil_w,                                                                        &
       & t_cf('seed_depth_sl','m', 'depth of the soil layer for the top 50 mm soil '),           &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+      & prefix, suffix,                                                                        &
+      & output_level=BASIC,loutput=.FALSE.,                                                      &
+      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.FALSE.)!, isteptype=TSTEP_CONSTANT )
+      
+    CALL jsb_add_var( mem, 'jedi_root_depth_sl', mem%jedi_root_depth_sl,                              &
+      & hgrid, soil_w,                                                                        &
+      & t_cf('jedi_root_depth_sl','m', ' root depth in each soil layer '),           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
       & output_level=BASIC,loutput=.FALSE.,                                                      &
@@ -865,8 +902,8 @@ CONTAINS
       & t_cf('root_maxmoist', 'jedi root depth max. moist'),           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
-      & output_level=BASIC,loutput=.TRUE.,                                                      &
-      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.FALSE. )    
+      & output_level=BASIC,loutput=.FALSE.,                                                      &
+      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.FALSE. )    
       
     CALL jsb_add_var( mem, 'jedi_pot_supply_transp', mem%jedi_pot_supply_transp,                              &
       & hgrid, surface,                                                                        &
@@ -875,7 +912,14 @@ CONTAINS
       & prefix, suffix,                                                                        &
       & output_level=BASIC,loutput=.TRUE.,                                                      &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.FALSE. )     
-                
+           
+     CALL jsb_add_var( mem, 'water_stress', mem%water_stress,                &
+      & hgrid, surface,                                                     &
+      & t_cf('water_stress', '-', 'water stress for canopy'),                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &        
+      & prefix, suffix,                                                      &
+      & output_level=BASIC,loutput=.TRUE.,                                  &
+      & lrestart=.FALSE., initval_r=0.0_wp )
     END IF
         
     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  

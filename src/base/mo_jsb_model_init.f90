@@ -242,7 +242,12 @@ CONTAINS
       ELSE
         CALL model%Queue_task(HYDRO_,  "canopy_cond_unstressed")
       END IF
+      !24.07.2020 PHS: compute water stress on pft level but soil hydro on veg level
+     IF (TRIM(model%config%usecase) .eq. 'jsbach_jedi' ) THEN        
+      CALL model%Queue_task(CARBON_, "water_stress")
+     ELSE
       CALL model%Queue_task(HYDRO_, "water_stress")
+     END IF
       IF (model%processes(ASSIMI_)%p%config%active) THEN
         CALL model%Queue_task(ASSIMI_, "canopy_cond_stressed")
         CALL model%Queue_task(ASSIMI_, "assimilation")

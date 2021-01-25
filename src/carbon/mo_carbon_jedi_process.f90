@@ -102,10 +102,11 @@ CONTAINS
     & TurnoverLeaf ,              & ! in
     & SenesRspdNPP ,              & ! in
     & NitroStatus  ,              & ! in
-    & JeDiSLA,                     &  ! in
-    & LandcoverClass,          &  !in
+    & JeDiSLA,                    & ! in
+    & LandcoverClass,             & !in
     ! JeDi plant trait parameters >>>>>>>>>>
-    & iniyear,                    &     ! in
+    & lspinup_jedi,               & !in 
+    & iniyear,                    & ! in
     & currentyear,                & !in
     & time_steps_per_day,         & ! in
     & faPAR_prev_noon,              & !in
@@ -210,10 +211,11 @@ CONTAINS
     REAL(wp), INTENT(in)     :: SenesRspdNPP          ! Jedi parameter -- P13 Senescence response time to productivity conditions 
     REAL(wp), INTENT(in)     :: NitroStatus           ! Jedi parameter -- P15 Plant nitrogen status    
     REAL(wp), INTENT(in)     :: JeDiSLA      
-    INTEGER, INTENT(in)     :: LandcoverClass             
+    INTEGER,  INTENT(in)     :: LandcoverClass             
     INTEGER,  INTENT(in)     :: iniyear      
     INTEGER,  INTENT(in)     :: currentyear  
     INTEGER,  INTENT(in)     :: time_steps_per_day
+    LOGICAL,  INTENT(IN)     :: lspinup_jedi
     REAL(wp), INTENT(inout) :: one_counter
     !
     ! JeDi carbon allocation 
@@ -339,7 +341,7 @@ CONTAINS
     REAL(wp), PARAMETER  :: c_GRes_seed      = 1.0_wp / (1.0_wp + 0.66_wp)    
     REAL(wp), PARAMETER  :: c_tau_seed       = 3._wp * 365._wp !  seed decomposition time scale (years), value is taken from JeDi 
     REAL(wp), PARAMETER  :: c_tau_sen        = 10._wp 
-    REAL(wp), PARAMETER  :: c_tau_storage     = 1._wp * 365._wp ! decay of the storage pool (1-year), PHS decided arbitrarily
+    REAL(wp), PARAMETER  :: c_tau_storage     = 10._wp * 365._wp ! decay of the storage pool (1-year), PHS decided arbitrarily
     REAL(wp), parameter  :: cTiny            = 1.E-8_wp        
     
     REAL(wp), PARAMETER  :: leaf_growth_fract = 0.03_wp   
@@ -456,6 +458,7 @@ CONTAINS
     GrowthResp = 0._wp
     zAlloc     = 0._wp
     zLoss_seed = 0._wp
+    zLoss_storage = 0._wp
     !r8_tiny = tiny(r8_tiny)  ! Maybe it is different in our station. This is the smallest positive number in the data type of r8_tiny ?/????
     
      
@@ -498,12 +501,18 @@ CONTAINS
     Flg_grow   = Flg_grow_T * Flg_grow_W 
     Flg_grow_G = Flg_grow_T * Flg_grow_G
     
+   
     IF( Flg_grow_G .GT. 0._wp .AND.  one_counter .lt. 1._wp  )  THEN
-           
-      c_storage    = 100
-      one_counter =one_counter +1
-    
+      IF ( lspinup_jedi ) THEN        
+        c_storage    = 3000
+        one_counter  = one_counter +1
+      ELSE
+        c_seed       = 0.5_wp
+        one_counter  = one_counter +1
+      END IF
     ENDIF
+     
+      
    
     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-! Germination condition !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-!
@@ -552,8 +561,8 @@ CONTAINS
         IF ( NPP  .gt. 0._wp  ) Flg_seed = 1.0_wp ! OR NPP_yDayMean ???
         
         A_seed    = Flg_grow * Flg_seed * Allo2Reproduc
-    
-        IF( c_storage .gt. 0._wp )  zLoss_storage = c_storage / c_tau_storage
+       ! PHS:: 14.08.2020 try without turnover for storage ! 
+        IF((    currentyear .GE. iniyear+50   ) .and. c_storage .gt. 0._wp )  zLoss_storage = c_storage / c_tau_storage 
       
         c_storage = c_storage + NPP - zLoss_storage
         
@@ -567,23 +576,31 @@ CONTAINS
         ! I define the initial amount of carbon that is added to the leaf pool to be 4g C.
         ! Afterwards, the maximal allocation to c_leaves can only be 3% c_leaves of the previous day. (leaf_growth_fract)
         ! Likewise, the other tissues' allocation are constrained by the proportional of the c_leaves allocation.  (adj_fraction)
-        IF ( c_leaves .EQ. 0._wp )  THEN
+        IF ( c_leaves .LE. 4._wp / 12.01_wp )  THEN
            allo_max_leaves = 4._wp / 12.01_wp
         ELSE
            allo_max_leaves = c_leaves * leaf_growth_fract
         END IF
         !PHS: 9.6.2020 FAPAR limitation on leaf growth
            
-         IF ( faPAR_prev_noon .LT. fapar_max ) THEN
+         !IF ( faPAR_prev_noon .LT. fapar_max ) THEN
          !PHS: 15.7.2020 try to  use different light constraint for grass 
-          IF         (LandcoverClass .EQ. 3) THEN                    
-           jedi_light_constraint = COS(  0.5_wp *  pi   * (   (faPAR_prev_noon / fapar_max  )**30._wp) )
-           ELSE IF (LandcoverClass .EQ. 4) THEN
-             jedi_light_constraint = COS(  0.5_wp *  pi   * (   (faPAR_prev_noon / 0.83_wp  )**30._wp) )
-          END IF   
-        ELSE
-            jedi_light_constraint = 0._wp
-        END IF
+       IF         (LandcoverClass .EQ. 3) THEN      
+           IF ( faPAR_prev_noon .LT. fapar_max ) THEN
+                jedi_light_constraint = COS(  0.5_wp *  pi   * (   (faPAR_prev_noon / fapar_max  )**30._wp) )
+           ELSE
+                jedi_light_constraint = 0._wp
+           END IF
+       ELSE IF (LandcoverClass .EQ. 4) THEN
+           IF ( faPAR_prev_noon .LT. 0.83_wp ) THEN 
+                jedi_light_constraint = COS(  0.5_wp *  pi   * (   (faPAR_prev_noon / 0.83_wp  )**30._wp) )
+           ELSE
+                jedi_light_constraint = 0._wp
+            END IF
+       END IF   
+        !ELSE
+            !jedi_light_constraint = 0._wp
+        !END IF
         
         zAlloc_leaves_tmp = zAlloc * AG_growth * ( 1._wp - AG_struct ) * c_GRes_leaves  
         zAlloc_leaves = MIN( zAlloc_leaves_tmp, allo_max_leaves )  
@@ -625,7 +642,7 @@ CONTAINS
         
         
         Flg_senesc = 0._wp
-        IF ( (    currentyear .GE. iniyear+20   ) .and. ff_npp .lt. 0._wp .and. NPP .lt. 0._wp) Flg_senesc  = 1.0_wp - Flg_grow   ! See remarks below.
+        IF ( (    currentyear .GE. iniyear+50   ) .and. ff_npp .lt. 0._wp .and. NPP .lt. 0._wp) Flg_senesc  = 1.0_wp - Flg_grow   ! See remarks below.
         ! No idea why the flag for senescence is using:  1 - flag_grow  
         ! I took the calculation from JeDi.
         ! I guess senescence happens, when: (1) Non-growing condition (2) NPP<0, which may suggest that plants spend many energy respiring
@@ -635,9 +652,13 @@ CONTAINS
         
         tau_stem   = TurnoverStruc
         tau_csroot = TurnoverStruc
-        tau_leaves = 1._wp / ( (1._wp / TurnoverLeaf ) + ( 1._wp / TurnoverLeaf ) * Flg_senesc )    ! *             RelSenesAbgd )      !PHS 11.12.2019 play around with the senescence process
-        tau_fnroot = 1._wp / ( (1._wp / TurnoverLeaf ) + ( 1._wp / TurnoverLeaf ) * Flg_senesc  )    ! * ( 1._wp -   RelSenesAbgd) )!PHS 11.12.2019 play around with the senescence process
-        
+        IF         (LandcoverClass .EQ. 3) THEN     
+          tau_leaves = 1._wp / ( (1._wp / TurnoverLeaf ) + ( 1._wp / TurnoverLeaf ) * Flg_senesc )    ! *             RelSenesAbgd )      !PHS 11.12.2019 play around with the senescence process
+          tau_fnroot = 1._wp / ( (1._wp / TurnoverLeaf ) + ( 1._wp / TurnoverLeaf ) * Flg_senesc  )    ! * ( 1._wp -   RelSenesAbgd) )!PHS 11.12.2019 play around with the senescence process
+        ELSE IF (LandcoverClass .EQ. 4) THEN  
+          tau_leaves = 1._wp / ( (1._wp / TurnoverLeaf ) + ( 1._wp / (TurnoverLeaf/2._wp) ) * Flg_senesc )    ! *             RelSenesAbgd )      !PHS 11.12.2019 play around with the senescence process
+          tau_fnroot = 1._wp / ( (1._wp / TurnoverLeaf ) + ( 1._wp / (TurnoverLeaf/2._wp) ) * Flg_senesc  )    ! * ( 1._wp -   RelSenesAbgd) )!PHS 11.12.2019 play around with the senescence process
+        END IF
         
         
         
@@ -773,8 +794,9 @@ CONTAINS
 
     
 
-
-   c_total = c_storage + c_leaves + c_stem + c_csroot + c_fnroot 
+  ! PHS: test biomass aggregtion without storage   
+   c_total = c_leaves + c_stem + c_csroot + c_fnroot 
+      !c_total = c_storage + c_leaves + c_stem + c_csroot + c_fnroot 
 
    C_delta =  ( c_storage + c_seed + c_leaves + c_stem + c_csroot + c_fnroot ) - c_total_temp  ! this is the difference of assimilated carbon added into c-pools in this timestep
    
