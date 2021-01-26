@@ -420,7 +420,7 @@ CONTAINS
       & t_cf('tile_fraction_max', '',                                                                          &
       &      'max fraction of grid box covered by tile '//TRIM(this%name)),                                    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
-      & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                      &
+      & prefix, suffix, lrestart=.NOT. l_fixed_fractions, loutput=.FALSE.,                                     &
       & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
     CALL this%Set_fract_max_ptr(tmp_fract)
     NULLIFY(tmp_fract)
@@ -430,7 +430,7 @@ CONTAINS
       & t_cf('tile_fraction_old', '',                                                                          &
       &      'old fraction of grid box covered by tile '//TRIM(this%name)),                                    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
-      & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                      &
+      & prefix, suffix, lrestart=.NOT. l_fixed_fractions, loutput=.FALSE.,                                     &
       & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
     CALL this%Set_fract_old_ptr(tmp_fract)
     NULLIFY(tmp_fract)
@@ -440,7 +440,7 @@ CONTAINS
       & t_cf('tile_fraction_max_old', '',                                                                          &
       &      'old max fraction of grid box covered by tile '//TRIM(this%name)),                                &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
-      & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                      &
+      & prefix, suffix, lrestart=.NOT. l_fixed_fractions, loutput=.FALSE.,                                     &
       & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
     CALL this%Set_fract_max_old_ptr(tmp_fract)
     NULLIFY(tmp_fract)
@@ -563,7 +563,7 @@ CONTAINS
         & t_cf('lct_fraction', '',                                                                                &
         &      'fraction of '//TRIM(this%name)//' covered by LCT '//TRIM(this%lcts(ilct)%name)),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
-        & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                       &
+        & prefix, suffix, lrestart=.NOT. l_fixed_fractions, loutput=.FALSE.,                                      &
         & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
       __acc_attach(this%lcts(ilct)%fract)
 
