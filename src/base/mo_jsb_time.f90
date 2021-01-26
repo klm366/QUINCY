@@ -19,7 +19,7 @@ MODULE mo_jsb_time
   USE mo_exception,      ONLY: message, message_text, finish
   USE mo_jsb_time_iface, ONLY: t_datetime, deallocateDatetime, get_time_next, &
                                get_date_components, get_time_start, &
-                               get_time_dt, is_time_experiment_start, is_time_restart, &
+                               get_time_dt, is_time_experiment_start, get_time_experiment_start, is_time_restart, &
                                get_year_length, get_month_length, get_day_length, get_year_day,   &
                                is_time_ltrig_rad_m1, get_time_interpolation_weights, get_asselin_coef
 
@@ -29,7 +29,7 @@ MODULE mo_jsb_time
 !!$  PUBLIC :: init_jsb_time
   PUBLIC :: init_time
   PUBLIC :: t_datetime, deallocateDatetime, get_time_next
-  PUBLIC :: get_date_components, get_time_start, get_time_dt, &
+  PUBLIC :: get_date_components, get_time_start, get_time_experiment_start, get_time_dt, &
             is_time_experiment_start, is_time_restart, &
             get_year_length, get_month_length, get_day_length, get_year_day, get_lon_local_noon
   PUBLIC :: is_newday, is_newmonth, is_newyear, get_year_at_model_start, is_time_ltrig_rad_m1, &

@@ -796,7 +796,7 @@ CONTAINS
      USE mo_pheno_process,        ONLY: calc_jedi_phenology
    !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
    
-     USE mo_jsb_time,          ONLY: t_datetime,is_newday,is_time_experiment_start,get_time_start,get_year
+     USE mo_jsb_time,          ONLY: t_datetime,is_newday,is_time_experiment_start,get_time_experiment_start,get_year
   !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     
     
@@ -848,7 +848,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,   c_leaves)
     
     
-    inidate => get_time_start()
+    inidate => get_time_experiment_start()
     iniyear =  get_year(inidate)
     
    
