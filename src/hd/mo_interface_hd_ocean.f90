@@ -45,10 +45,10 @@ MODULE mo_interface_hd_ocean
 CONTAINS
 
 #ifdef YAC_coupling
-  SUBROUTINE jsb_fdef_hd_fields(comp_id, domain_id, cell_point_ids, cell_mask_ids)
+  SUBROUTINE jsb_fdef_hd_fields(comp_id, domain_id, cell_point_ids)
 
     INTEGER, INTENT(in) :: comp_id, domain_id
-    INTEGER, INTENT(in) :: cell_point_ids(:), cell_mask_ids(:)
+    INTEGER, INTENT(in) :: cell_point_ids(:)
 
     INTEGER :: field_id
 
@@ -57,7 +57,6 @@ CONTAINS
       & comp_id,               &
       & domain_id,             &
       & cell_point_ids,        &
-      & cell_mask_ids,         &
       & 1,                     &
       & field_id )
 
@@ -135,7 +134,7 @@ CONTAINS
     nbr_pointsets   = 1
     nbr_subdomains  = 1
 #ifdef YAC_coupling
-    CALL yac_fput(field_id, nbr_hor_cells, collection_size, nbr_pointsets, nbr_subdomains, buffer, info, ierror)
+    CALL yac_fput(field_id, nbr_hor_cells, collection_size, buffer, info, ierror)
 #endif
     IF ( info > 1 .AND. info < 7 ) write_coupler_restart = .TRUE.
 
