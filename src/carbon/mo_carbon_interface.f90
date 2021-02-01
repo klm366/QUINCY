@@ -1449,7 +1449,6 @@ END SUBROUTINE recalc_carbon_per_tile_vars
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':calculate_current_c_ta_state_sum'
 
-   
 
     dsl4jsb_Real2D_onChunk ::  c_green_ta
     dsl4jsb_Real2D_onChunk ::  c_reserve_ta
