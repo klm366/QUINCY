@@ -51,11 +51,11 @@ MODULE mo_jsb_pool_class
     CHARACTER(LEN=:),  ALLOCATABLE :: element_unit
     LOGICAL                        :: contains_element_vector_1d = .FALSE.  ! t_jsb_pool_elem2d -> set TRUE in the pool init routines in the PROC_memory_class
     LOGICAL                        :: contains_element_vector_2d = .FALSE.  ! t_jsb_pool_elem3d -> set TRUE in the pool init routines in the PROC_memory_class
-    CLASS(t_jsb_pool_p),   POINTER     :: pool_list(:) => NULL()    ! children
-    CLASS(t_jsb_pool_p),   POINTER     :: leaf_list(:) => NULL()    ! leaves
+    CLASS(t_jsb_pool_p),   POINTER :: pool_list(:) => NULL()  ! children
+    CLASS(t_jsb_pool_p),   POINTER :: leaf_list(:) => NULL()  ! leaves
     ! TYPE(t_element_p), ALLOCATABLE :: element_list(:)
-    TYPE(t_jsb_var_p), ALLOCATABLE :: element_list(:)   ! elements of this pool
-    TYPE(t_jsb_var_p), ALLOCATABLE :: var_list(:)       ! other associated variables - currently not used
+    TYPE(t_jsb_var_p), ALLOCATABLE :: element_list(:)         ! elements of this pool (elements might differ across PROC; defined in 'all_elements(:)' in PROC_memory_class)
+    TYPE(t_jsb_var_p), ALLOCATABLE :: var_list(:)             ! other associated variables - currently not used
   CONTAINS
     PROCEDURE(init_iface), DEFERRED :: Init
     PROCEDURE(get_el_name_iface_id), DEFERRED :: Get_element_name_by_id
@@ -112,6 +112,13 @@ MODULE mo_jsb_pool_class
     REAL(wp),               POINTER :: carbon13_(:)    => NULL()
     REAL(wp),               POINTER :: carbon14_(:)    => NULL()
     REAL(wp),               POINTER :: nitrogen15_(:)  => NULL()
+    ! 2D element variables pointing to element%ptr2d(:,:) of t_jsb_var_real2d, i.e., the domain (might be used in PROC_init routines)
+    REAL(wp),               POINTER :: domain_c(:,:)   => NULL()
+    REAL(wp),               POINTER :: domain_n(:,:)   => NULL()
+    REAL(wp),               POINTER :: domain_p(:,:)   => NULL()
+    REAL(wp),               POINTER :: domain_c13(:,:) => NULL()
+    REAL(wp),               POINTER :: domain_c14(:,:) => NULL()
+    REAL(wp),               POINTER :: domain_n15(:,:) => NULL()
 
   END TYPE t_jsb_pool_elem2d
   
@@ -124,10 +131,23 @@ MODULE mo_jsb_pool_class
     REAL(wp),               POINTER :: carbon13_(:,:)    => NULL()
     REAL(wp),               POINTER :: carbon14_(:,:)    => NULL()
     REAL(wp),               POINTER :: nitrogen15_(:,:)  => NULL()
+    ! 3D element variables pointing to element%ptr3d(:,:,:) of t_jsb_var_real3d, i.e., the domain (might be used in PROC_init routines)
+    REAL(wp),               POINTER :: domain_c(:,:,:)   => NULL()
+    REAL(wp),               POINTER :: domain_n(:,:,:)   => NULL()
+    REAL(wp),               POINTER :: domain_p(:,:,:)   => NULL()
+    REAL(wp),               POINTER :: domain_c13(:,:,:) => NULL()
+    REAL(wp),               POINTER :: domain_c14(:,:,:) => NULL()
+    REAL(wp),               POINTER :: domain_n15(:,:,:) => NULL()
 
   END TYPE t_jsb_pool_elem3d
 
-  !> element_id (element enumerator) for pools
+  !> element_id (element enumerator) for pools 
+  !!
+  !! used in the PROC_memory_class for initialization of pools
+  !!
+  !! names of element variables used in JSBACH are:
+  !! (sequence accordingly to the below enumerator) 
+  !!    carbon, nitrogen, phosphorus, carbon13, carbon14, nitrogen15
   !! 
   ENUM, BIND(C)
     ENUMERATOR :: ELEM_C = 1, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15
@@ -492,26 +512,33 @@ CONTAINS
           IF (this%contains_element_vector_1d) THEN
             SELECT TYPE (pool_elem2d => this)
             CLASS IS (t_jsb_pool_elem2d)
-              !! set pointer of element variable (REAL vector) to the according part of the domain (ics:ice,iblk) defined by %ptrm1
+              !! set pointer of element variable (REAL vector) to 
+              !! a) part of the domain (ics:ice,iblk) defined by %ptrm1, and b) the full domain %ptr2d(:,:)
               SELECT CASE(element%element_id)
               CASE (ELEM_C)
-                NULLIFY(pool_elem2d%carbon_)
+                NULLIFY(pool_elem2d%carbon_, pool_elem2d%domain_c)
                 pool_elem2d%carbon_     => element%ptrm1
+                pool_elem2d%domain_c    => element%ptr2d
               CASE (ELEM_N)
-                NULLIFY(pool_elem2d%nitrogen_)
+                NULLIFY(pool_elem2d%nitrogen_, pool_elem2d%domain_n)
                 pool_elem2d%nitrogen_   => element%ptrm1
+                pool_elem2d%domain_n    => element%ptr2d
               CASE (ELEM_P)
-                NULLIFY(pool_elem2d%phosphorus_)
+                NULLIFY(pool_elem2d%phosphorus_, pool_elem2d%domain_p)
                 pool_elem2d%phosphorus_ => element%ptrm1
+                pool_elem2d%domain_p    => element%ptr2d
               CASE (ELEM_C13)
-                NULLIFY(pool_elem2d%carbon13_)
+                NULLIFY(pool_elem2d%carbon13_, pool_elem2d%domain_c13)
                 pool_elem2d%carbon13_   => element%ptrm1
+                pool_elem2d%domain_c13  => element%ptr2d
               CASE (ELEM_C14)
-                NULLIFY(pool_elem2d%carbon14_)
+                NULLIFY(pool_elem2d%carbon14_, pool_elem2d%domain_c14)
                 pool_elem2d%carbon14_   => element%ptrm1
+                pool_elem2d%domain_c14  => element%ptr2d
               CASE (ELEM_N15)
-                NULLIFY(pool_elem2d%nitrogen15_)
+                NULLIFY(pool_elem2d%nitrogen15_, pool_elem2d%domain_n15)
                 pool_elem2d%nitrogen15_ => element%ptrm1
+                pool_elem2d%domain_n15  => element%ptr2d
               END SELECT
             END SELECT
           ENDIF
