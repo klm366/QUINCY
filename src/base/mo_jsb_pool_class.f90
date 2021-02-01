@@ -51,11 +51,11 @@ MODULE mo_jsb_pool_class
     CHARACTER(LEN=:),  ALLOCATABLE :: element_unit
     LOGICAL                        :: contains_element_vector_1d = .FALSE.  ! t_jsb_pool_elem2d -> set TRUE in the pool init routines in the PROC_memory_class
     LOGICAL                        :: contains_element_vector_2d = .FALSE.  ! t_jsb_pool_elem3d -> set TRUE in the pool init routines in the PROC_memory_class
-    CLASS(t_jsb_pool_p),   POINTER     :: pool_list(:) => NULL()
-    CLASS(t_jsb_pool_p),   POINTER     :: leaf_list(:) => NULL()
+    CLASS(t_jsb_pool_p),   POINTER     :: pool_list(:) => NULL()    ! children
+    CLASS(t_jsb_pool_p),   POINTER     :: leaf_list(:) => NULL()    ! leaves
     ! TYPE(t_element_p), ALLOCATABLE :: element_list(:)
-    TYPE(t_jsb_var_p), ALLOCATABLE :: element_list(:)
-    TYPE(t_jsb_var_p), ALLOCATABLE :: var_list(:)
+    TYPE(t_jsb_var_p), ALLOCATABLE :: element_list(:)   ! elements of this pool
+    TYPE(t_jsb_var_p), ALLOCATABLE :: var_list(:)       ! other associated variables - currently not used
   CONTAINS
     PROCEDURE(init_iface), DEFERRED :: Init
     PROCEDURE(get_el_name_iface_id), DEFERRED :: Get_element_name_by_id
