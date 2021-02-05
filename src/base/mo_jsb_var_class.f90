@@ -39,7 +39,7 @@ MODULE mo_jsb_var_class
     CHARACTER(len=VARNAME_LEN)    :: name                      ! Name of variable
     CHARACTER(len=VARNAME_LEN)    :: full_name                 ! Full name of variable in varlist, including prefix and suffix
     INTEGER                       :: type                      ! REAL2D / REAL3D
-    INTEGER                       :: subset_type               ! ON_DOMAIN / ON_CHUNK
+    INTEGER                       :: subset_type               ! ON_DOMAIN / ON_CHUNK  (ENUMERATOR :: ON_DOMAIN=1, ON_CHUNK)
     CHARACTER(len=:), ALLOCATABLE :: element_name              ! 
     CHARACTER(len=:), ALLOCATABLE :: element_shortname         ! Short name of element
     INTEGER                       :: element_id                ! 

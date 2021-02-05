@@ -431,6 +431,8 @@ CONTAINS
     CALL assign_if_present(lrestart_loc, lrestart)
     lrestart_loc = lrestart_loc .AND. .NOT. ASSOCIATED(pool%pool_list)  ! Only elements on leaves are only put into restart file
 
+    pool%owner_model_id = mem%owner_model_id
+
     IF (ALLOCATED(pool%element_list)) THEN
       DO i=1,SIZE(pool%element_list)
         cf = t_cf(prefix//'_'//pool%shortname//pool%element_list(i)%p%element_shortname, pool%element_unit, &

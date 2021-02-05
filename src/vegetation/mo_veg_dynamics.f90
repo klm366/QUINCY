@@ -90,7 +90,6 @@ CONTAINS
     TYPE(t_jsb_vgrid),      POINTER         :: vgrid_canopy     !< Vertical grid
     ! REAL(wp), DIMENSION(options%nc)         :: fpc              !< current foliage projective cover
     REAL(wp), DIMENSION(options%nc)         :: hlp1
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:)   :: hlp2
     INTEGER                                 :: iblk, ics, ice, nc, ncanopy
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_dynamics'
     ! ---------------------------
@@ -146,8 +145,6 @@ CONTAINS
     vgrid_canopy  => Get_vgrid('canopy_layer_q_')
     ncanopy       =  vgrid_canopy%n_levels
     
-    ALLOCATE(hlp2(nc, ncanopy))
-    
     ! Get process config
     dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_config(VEG_)
@@ -199,44 +196,22 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
-    !! tested for VEG_ pools & fluxes !!
-    ! element pools
-    veg_exudation                       = 2.0_wp
-    veg_establishment                   = 3.0_wp
-    veg_reserve_use                     = 5.0_wp
-    veg_growth%leaf                     = 25.0_wp
-    IF (iblk == 3) THEN
-      veg_exudation                     = 4.0_wp
-      veg_establishment                 = 6.0_wp
-      veg_reserve_use                   = 10.0_wp
-      veg_growth%leaf                   = 20.0_wp
-    ENDIF
+    !! testing VEG_ pools
+    veg_exudation           = 2.0_wp
+    veg_establishment       = 3.0_wp
+    veg_reserve_use         = 5.0_wp
+    veg_exudation           = (veg_establishment + 5.0_wp) * veg_reserve_use / 2.0_wp  ! 20
+    veg_exudation           = veg_exudation - veg_reserve_use                          ! 15
+    veg_exudation%carbon    = veg_exudation%carbon * 2.0_wp                            ! 30
+    veg_exudation%nitrogen  = veg_exudation%nitrogen / 3.0_wp                          ! 5
 
-    hlp1(:)                             = 1.5_wp
-    hlp2(:,:)                           = 2.5_wp
-    veg_pool%fruit                      = 4.0_wp
-    veg_pool%leaf                       = hlp1(:) * veg_pool%fruit / 2.0_wp                             ! 3.0
-    veg_pool%labile                     = veg_pool%leaf - 5.0_wp
-    veg_pool%labile                     = ((veg_pool%labile + veg_pool%leaf) + 20.0_wp) / veg_pool%leaf ! 7.0 
-
-    ! tissue pools
-    veg_litterfall                      = 3.2_wp
-    veg_total_flux                      = hlp1(:) + 1.8         ! 3.3
-    veg_falloc                          = hlp1(:)
-    veg_falloc                          = hlp2(:,1) + 9.7_wp    ! 12.2
-    !! veg_total_flux                      = veg_litterfall + hlp1(:) + veg_total_flux + hlp2(:,:)  <== correctly, creates a runtime error with dimension mismatch
-    veg_total_flux                      = veg_litterfall + hlp1(:) + veg_total_flux + hlp2(:,1)   ! 10.5   <== only value of "canopy layer 1"
-    veg_litterfall                      = veg_total_flux + veg_litterfall + 4.0_wp                ! 17.7
-    veg_falloc                          = veg_total_flux - veg_falloc - 1.5_wp                    ! -3.2
-    veg_falloc                          = veg_falloc * 2.0_wp + veg_litterfall                    ! -6.4 + 17.7 = 11.3
-    veg_total_flux                      = veg_total_flux - 6.5_wp
-    veg_total_flux                      = veg_total_flux * veg_total_flux                         ! 16.0
-    veg_total_flux                      = veg_falloc / 2.0_wp                                     ! 5.65
-
-    !! test element as REAL vector
-    veg_establishment%carbon_(:)    = veg_establishment%carbon_(:)   * 3.0_wp
-    veg_establishment%nitrogen_(:)  = veg_establishment%nitrogen_(:) * 3.0_wp
-
+    hlp1(:)                     = 1.5_wp
+    veg_litterfall              = 2.0_wp
+    veg_pool                    = 4.0_wp
+    veg_pool                    = (veg_pool - veg_litterfall) * hlp1(:)         ! 3
+    veg_litterfall              = veg_pool * 10.0_wp - veg_litterfall           ! 28
+    veg_litterfall%fruit        = veg_litterfall%fruit / 2.0_wp                 ! 14
+    veg_litterfall%leaf%carbon  = veg_litterfall%leaf%carbon / 2.0_wp + 1.0_wp  ! 15
 
   END SUBROUTINE update_veg_dynamics
 

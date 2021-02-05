@@ -72,7 +72,6 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER   :: model
     TYPE(t_lctlib_element), POINTER   :: lctlib     !< land-cover-type library - parameter across pft's
     !TYPE(t_input_file)                :: input_file
-    REAL(wp), ALLOCATABLE             :: hlp1(:,:)
     CHARACTER(len=*), PARAMETER :: routine = modname//':veg_init'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -82,6 +81,7 @@ CONTAINS
     dsl4jsb_Def_pool(t_veg_tissues_pool)  :: veg_growth
     dsl4jsb_Def_pool(t_veg_tissues_pool)  :: veg_litterfall
     dsl4jsb_Def_pool(t_veg_tissues_pool)  :: veg_falloc
+    dsl4jsb_Def_pool(t_veg_elements_pool) :: veg_establishment
     ! Declare pointers to variables in memory
     ! PHENO_
     dsl4jsb_Real2D_onDomain    :: lai
@@ -123,6 +123,7 @@ CONTAINS
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_growth,        veg_growth)
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_litterfall,    veg_litterfall)
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_falloc,        veg_falloc)
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_establishment, veg_establishment)
     ! Get process variables (Set pointers to variables in memory)
     ! PHENO_
     dsl4jsb_Get_var2D_onDomain(PHENO_, lai)                           ! in
@@ -185,42 +186,8 @@ CONTAINS
       ENDIF
     ENDIF
 
-    ! -------------------------------------------------------------------------
-    ! testing pools
-    ! litterfall
-    ALLOCATE(hlp1(SIZE(beta_sinklim_ps(:,:),1), SIZE(beta_sinklim_ps(:,:),2)))
-    hlp1(:,:)                 = 3.0_wp
-    veg_litterfall%leaf       = 2.0_wp
-    veg_litterfall%labile     = hlp1(:,:)
-    veg_litterfall%leaf       = veg_litterfall%leaf + veg_litterfall%labile
-    
-    
-    
-    
-    ! growth
-    veg_growth%leaf           = 30.0_wp
-    veg_growth%fine_root      = 30.0_wp
-    veg_growth%coarse_root    = 30.0_wp
-    veg_growth%sap_wood       = 30.0_wp
-    veg_growth%heart_wood     = 30.0_wp
-    veg_growth%labile         = 30.0_wp
-    veg_growth%reserve        = 30.0_wp
-    veg_growth%fruit          = 30.0_wp
-    veg_growth%seed_bed       = 30.0_wp
 
-    ! hlp1(:,:)                 = 21.0_wp
-    ! veg_growth                = hlp1(:,:)
-    
-    veg_growth%seed_bed       = veg_growth%labile + veg_growth%sap_wood + veg_growth%heart_wood
-    veg_growth%heart_wood     = veg_growth%heart_wood + veg_growth%heart_wood
 
-    ! falloc
-    hlp1(:,:)                 = 7.0_wp
-    veg_falloc%fruit          = 13.0_wp
-    veg_falloc%labile         = veg_falloc%fruit
-    veg_falloc%labile         = veg_falloc%labile + hlp1(:,:) + veg_falloc%fruit    ! 33.0
-    
-    
 
   END SUBROUTINE veg_init
 
