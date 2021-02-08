@@ -808,14 +808,15 @@ CONTAINS
       routine = modname//':Aggregate_weighted_by_fract_2d'
     END IF
 
+    no_children = tile%Get_no_of_children()
+    IF (no_children == 0) CALL finish(routine, 'This should never happen!')
+
     CALL this%Set_fractions(tile, ics, ice, iblk)
 
     iproc = var%owner_proc_id
     IF (iproc < 0) CALL finish(TRIM(routine), 'Unknown process for variable '//TRIM(var%name)//' on tile '//TRIM(tile%name))
 
     IF (.NOT. ASSOCIATED(tile%mem(iproc)%p)) RETURN
-
-    no_children = tile%Get_no_of_children()
 
     IF (.NOT. ALLOCATED(var%child_idx)) THEN
       CALL finish(TRIM(routine), 'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' not allocated')
@@ -829,12 +830,12 @@ CONTAINS
 
     !$acc parallel default(none) present(this, tile_ptrs2d_cache, var)
 
-    IF (no_children == 1) THEN
+    IF (no_children == 1 .AND. var%child_idx(1) > 0) THEN
       !$acc loop gang vector
       DO j = ics, ice
         var%ptr(j,iblk) = tile_ptrs2d_cache(1,var%child_idx(1),iproc)%p(j,iblk)
       END DO
-    ELSE
+    ELSE IF (no_children > 1) THEN
       !$acc loop gang vector
       DO j = ics, ice
         this%data_sum (j,iblk) = 0._wp
@@ -910,14 +911,15 @@ CONTAINS
       routine = modname//':Aggregate_weighted_by_fract_3d'
     END IF
 
+    no_children = tile%Get_no_of_children()
+    IF (no_children == 0) CALL finish(routine, 'This should never happen!')
+
     CALL this%Set_fractions(tile, ics, ice, iblk)
 
     iproc = var%owner_proc_id
     IF (iproc < 0) CALL finish(TRIM(routine), 'Unknown process for variable '//TRIM(var%name)//' on tile '//TRIM(tile%name))
 
     IF (.NOT. ASSOCIATED(tile%mem(iproc)%p)) RETURN
-
-    no_children = tile%Get_no_of_children()
 
     IF (.NOT. ALLOCATED(var%child_idx)) THEN
       CALL finish(TRIM(routine), 'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' not allocated')
@@ -931,7 +933,7 @@ CONTAINS
 
     !$acc parallel default(none) present(this, tile_ptrs3d_cache, var)
 
-    IF (no_children == 1) THEN
+    IF (no_children == 1 .AND. var%child_idx(1) > 0) THEN
       !$acc loop seq
       DO ilev=1,SIZE(var%ptr,2)
         !$acc loop gang vector
@@ -939,7 +941,7 @@ CONTAINS
           var%ptr(j,ilev,iblk) = tile_ptrs3d_cache(1,var%child_idx(1),iproc)%p(j,ilev,iblk)
         END DO
       END DO
-    ELSE
+    ELSE IF (no_children > 1) THEN
       !$acc loop seq
       DO ilev=1,SIZE(var%ptr,2)
         !$acc loop gang vector
@@ -1067,8 +1069,8 @@ CONTAINS
   END FUNCTION Get_next_sibling_tile
 
   ! Cache pointers to variables for aggregation (in order to get it to work on GPUs).
-  ! Note: This is called during initialization from model_init for each tile. If var pointers get
-  !       reallocated from time to time, the second part of this routine must be called from 
+  ! Note: This is called during initialization from model_init for each tile that is not a leaf. If var
+  !       pointers get reallocated from time to time, the second part of this routine must be called from 
   !       within the time loop. But be mindful of OpenMP threads ... do this only once on each processor!
   !
   SUBROUTINE Cache_GPU_pointers(this)
@@ -1078,7 +1080,11 @@ CONTAINS
     INTEGER :: no_children, nproc, i,j,iproc, maxsize
     INTEGER, ALLOCATABLE :: sizes(:,:)
 
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Cache_GPU_pointers'
+
     no_children = this%Get_no_of_children()
+    IF (no_children == 0) CALL finish(routine, 'This should not happen')
+
     nproc = SIZE( this%mem )
 
     ALLOCATE(sizes(no_children,nproc))

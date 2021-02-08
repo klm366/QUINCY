@@ -54,7 +54,6 @@ CONTAINS
   SUBROUTINE jsbach_init_version(standalone)
 
 !!$    USE mo_netcdf, ONLY: global_att, put_att
-    USE mo_jsb_parallel, ONLY: my_process_is_stdio, p_io, p_bcast, mpi_comm
 
     LOGICAL, INTENT(in), OPTIONAL :: standalone !< true: offline JSBACH, false: ECHAM/JSBACH
 
@@ -76,13 +75,6 @@ CONTAINS
     !l_standalone = .FALSE.
     !IF (PRESENT(standalone)) l_standalone = standalone
     IF (PRESENT(standalone)) CONTINUE ! to avoid compiler warnings about dummy arguments not being used
-
-    ! Get model name from environment
-    IF (my_process_is_stdio()) THEN
-      CALL get_command_argument(0, executable)
-    END IF
-
-    CALL p_bcast (executable, p_io, comm=mpi_comm)
 
 !!$    IF (l_standalone) THEN
     IF (.NOT. version_printed) THEN
@@ -156,7 +148,8 @@ CONTAINS
   !!
   SUBROUTINE jsbach_label_run(standalone)
 
-    USE mo_util_string,        ONLY: separator
+    USE mo_jsb_parallel, ONLY: my_process_is_stdio, p_io, p_bcast, mpi_comm
+    USE mo_util_string,  ONLY: separator
 
     LOGICAL, INTENT(in), OPTIONAL :: standalone !< true: offline JSBACH, false: ECHAM/JSBACH
 
@@ -167,6 +160,13 @@ CONTAINS
 
     l_standalone = .FALSE.
     IF (PRESENT(standalone)) l_standalone = standalone
+
+    ! Get model name from environment
+    IF (my_process_is_stdio()) THEN
+      CALL get_command_argument(0, executable)
+    END IF
+
+    CALL p_bcast (executable, p_io, comm=mpi_comm)
 
     IF (l_standalone) THEN
       CALL message ('','')

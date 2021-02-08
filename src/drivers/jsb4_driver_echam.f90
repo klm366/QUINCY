@@ -40,7 +40,7 @@ PROGRAM jsb4_driver
   ! Currently from adapter
   USE mo_jsb_grid_iface,     ONLY: get_lat, get_lon
   USE mo_jsb_namelist_iface, ONLY: POSITIONED, open_nml, position_nml
-  USE mo_jsb_parallel,       ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel, mpi_comm
+  USE mo_jsb_parallel,       ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel, mpi_comm, p_global_comm
   USE mo_jsb_test,           ONLY: read_interface_vars, read_interface_variables
 
   ! Seems to be available in both ICON and ECHAM
@@ -196,7 +196,7 @@ PROGRAM jsb4_driver
 
   IF (my_process_is_mpi_parallel()) THEN
     buffer(:) = (/ nproca, nprocb, nprocio, npedim /)
-    CALL p_bcast (buffer, p_io, comm=mpi_comm)
+    CALL p_bcast (buffer, p_io, comm=p_global_comm)
     nproca  = buffer(1)
     nprocb  = buffer(2)
     nprocio = buffer(3)

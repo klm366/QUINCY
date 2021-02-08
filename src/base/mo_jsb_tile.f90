@@ -565,6 +565,7 @@ CONTAINS
 
   END SUBROUTINE Init_fractions_on_tile
 
+  ! This is called during initialization from model_init for each tile that is not a leaf.
   SUBROUTINE Init_vars_on_tile(this)
 
     USE mo_jsb_memory_class,    ONLY: t_jsb_memory
@@ -580,32 +581,32 @@ CONTAINS
 
     IF (debug_on()) CALL message(TRIM(routine), 'Initializing tile structure on vars '//TRIM(this%name))
 
+    no_of_children = this%Get_no_of_children()
+    IF (no_of_children == 0) CALL finish(routine, 'This should not happen')
+
     ! Loop over all processes and initialize memory for this tile
     DO iproc=1,max_no_of_processes
 
-      ! if the current process is not on leafs of current tile exit DO loop
+      ! if the current process is not on leaves of current tile exit DO loop
       SELECT CASE (this%process_action(iproc))
       CASE (SKIP_, ON_TILE_, INHERIT_)
         CYCLE
       END SELECT
 
-      no_of_children = this%Get_no_of_children()
       mem => this%mem(iproc)%p
       DO i=1,mem%no_of_vars
         name = mem%vars(i)%p%name
-        IF (no_of_children > 0) THEN
-          IF (.NOT. ALLOCATED(mem%vars(i)%p%child_idx)) &
-            & ALLOCATE(mem%vars(i)%p%child_idx(no_of_children))
-          DO child_no=1,no_of_children
-            IF (ASSOCIATED(mem%children(child_no)%p)) THEN
-              mem%vars(i)%p%child_idx(child_no) = mem%children(child_no)%p%Get_var_position(TRIM(name))
-            ELSE
-              mem%vars(i)%p%child_idx(child_no) = 0
-            END IF
-          END DO
-          !$acc enter data copyin(mem%vars(i)%p%child_idx)
-          ! __acc_attach(mem%vars(i)%p%child_idx)
-        END IF
+        IF (.NOT. ALLOCATED(mem%vars(i)%p%child_idx)) &
+          & ALLOCATE(mem%vars(i)%p%child_idx(no_of_children))
+        DO child_no=1,no_of_children
+          IF (ASSOCIATED(mem%children(child_no)%p)) THEN
+            mem%vars(i)%p%child_idx(child_no) = mem%children(child_no)%p%Get_var_position(TRIM(name))
+          ELSE
+            mem%vars(i)%p%child_idx(child_no) = 0
+          END IF
+        END DO
+        !$acc enter data copyin(mem%vars(i)%p%child_idx)
+        ! __acc_attach(mem%vars(i)%p%child_idx)
       END DO
 
     END DO
