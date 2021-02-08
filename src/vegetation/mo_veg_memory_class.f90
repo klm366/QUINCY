@@ -74,9 +74,10 @@ MODULE mo_veg_memory_class
     REAL(wp), ALLOCATABLE   :: op_ov_hlp_2d_n15(:,:)
   CONTAINS
     !! infrastructure
-    PROCEDURE :: Get_element_name_by_id => t_veg_elements_pool_get_element_name_by_id
-    PROCEDURE :: Init                   => t_veg_elements_pool_init
-    PROCEDURE :: Init_op_ov_hlp         => t_veg_elements_pool_op_ov_hlp_init             ! init hlp object for operator overload
+    PROCEDURE :: Get_element_name_by_id     => t_veg_elements_pool_get_element_name_by_id
+    PROCEDURE :: Init                       => t_veg_elements_pool_init
+    PROCEDURE :: Init_op_ov_hlp             => t_veg_elements_pool_op_ov_hlp_init             ! init hlp object for operator overload
+    PROCEDURE :: Associate_domain_var_ptr   => t_veg_elements_pool_associate_domain_variable_pointers
     !! operator overload  
     !! [def: field1d(nc) | field2d(nc,nblks)]
     ! +
@@ -170,9 +171,10 @@ MODULE mo_veg_memory_class
     TYPE(t_veg_elements_pool), POINTER :: seed_bed   
   CONTAINS
     !! infrastructure
-    PROCEDURE :: Get_element_name_by_id   => t_veg_tissues_pool_get_element_name_by_id
-    PROCEDURE :: Init                     => t_veg_tissues_pool_init                      ! pool_object created with FUNCTION Create_veg_tissues_pool()
-    PROCEDURE :: Init_op_ov_hlp           => t_veg_tissues_pool_op_ov_hlp_create_init     ! create and init hlp object for operator overload
+    PROCEDURE :: Get_element_name_by_id     => t_veg_tissues_pool_get_element_name_by_id
+    PROCEDURE :: Init                       => t_veg_tissues_pool_init                      ! pool_object created with FUNCTION Create_veg_tissues_pool()
+    PROCEDURE :: Init_op_ov_hlp             => t_veg_tissues_pool_op_ov_hlp_create_init     ! create and init hlp object for operator overload
+    PROCEDURE :: Associate_domain_var_ptr   => t_veg_tissues_pool_associate_domain_variable_pointers
     !! operator overload  
     !! [def: field1d(nc) | field2d(nc,nblks)]
     ! +
@@ -571,6 +573,58 @@ CONTAINS
   END SUBROUTINE t_veg_elements_pool_op_ov_hlp_init
 
   !-----------------------------------------------------------------------------------------------------
+  !> set element-variables pointers to the domain pointer ptr2d(:,:) in the element list this%element_list(i)%p
+  !! t_veg_elements_pool
+  !! this need to be called for the VEG_ pools used in the veg_init() routine
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE t_veg_elements_pool_associate_domain_variable_pointers(this)
+
+    CLASS(t_veg_elements_pool),  INTENT(inout) :: this
+
+    TYPE(t_subset)              :: sub    ! ON_CHUNK / ON_DOMAIN information
+    INTEGER                     :: i      ! looping
+    CHARACTER(len=*), PARAMETER :: routine = modname//':t_veg_elements_pool_associate_domain_variable_pointers'
+
+    sub = this%Get_subset()
+
+    ! test working ON_DOMAIN
+    IF (sub%type == ON_CHUNK) THEN
+      CALL finish(routine, ' May be called only in the process init rouines, i.e., when working ON_DOMAIN.')
+    END IF
+
+    ! loop over elements in element_list(:) of this element pool
+    ! associate REAL element vectors with %ptr2d
+    IF (ALLOCATED(this%element_list)) THEN
+      DO i = 1,SIZE(this%element_list)
+        SELECT TYPE (element => this%element_list(i)%p)
+        CLASS IS (t_jsb_var_real2d)
+          SELECT CASE(element%element_id)
+          CASE (ELEM_C)
+            IF (ASSOCIATED(this%domain_c)) NULLIFY(this%domain_c)
+            this%domain_c    => element%ptr2d
+          CASE (ELEM_N)
+            IF (ASSOCIATED(this%domain_n)) NULLIFY(this%domain_n)
+            this%domain_n    => element%ptr2d
+          CASE (ELEM_P)
+            IF (ASSOCIATED(this%domain_p))   NULLIFY(this%domain_p)
+            this%domain_p    => element%ptr2d
+          CASE (ELEM_C13)
+            IF (ASSOCIATED(this%domain_c13)) NULLIFY(this%domain_c13)
+            this%domain_c13  => element%ptr2d
+          CASE (ELEM_C14)
+            IF (ASSOCIATED(this%domain_c14)) NULLIFY(this%domain_c14)
+            this%domain_c14  => element%ptr2d
+          CASE (ELEM_N15)
+            IF (ASSOCIATED(this%domain_n15)) NULLIFY(this%domain_n15)
+            this%domain_n15  => element%ptr2d
+          END SELECT
+        END SELECT
+      END DO
+    END IF
+
+  END SUBROUTINE t_veg_elements_pool_associate_domain_variable_pointers
+
+  !-----------------------------------------------------------------------------------------------------
   !> helper function for t_veg_tissues_pool
   !! PROCEDURE :: Get_element_name_by_id => t_veg_tissues_pool_get_element_name_by_id
   !-----------------------------------------------------------------------------------------------------
@@ -892,6 +946,69 @@ CONTAINS
     NULLIFY(veg_elements_pool)
 
   END FUNCTION Create_veg_tissues_pool
+
+  !-----------------------------------------------------------------------------------------------------
+  !> set element-variables pointers to the domain pointer ptr2d(:,:) in the element list this%element_list(i)%p
+  !! t_veg_elements_pool
+  !! this need to be called for the VEG_ pools used in the veg_init() routine
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE t_veg_tissues_pool_associate_domain_variable_pointers(this)
+
+    CLASS(t_veg_tissues_pool),   INTENT(inout) :: this
+
+    TYPE(t_subset)              :: sub    ! ON_CHUNK / ON_DOMAIN information
+    INTEGER                     :: i      ! looping
+    CHARACTER(len=*), PARAMETER :: routine = modname//':t_veg_tissues_pool_associate_domain_variable_pointers'
+
+    sub = this%Get_subset()
+
+    ! test working ON_DOMAIN
+    IF (sub%type == ON_CHUNK) THEN
+      CALL finish(routine, ' May be called only in the process init rouines, i.e., when working ON_DOMAIN.')
+    END IF
+
+    ! loop over elements in element_list(:) of this tissue pool
+    ! associate REAL element vectors with %ptr2d
+    IF (ALLOCATED(this%element_list)) THEN
+      DO i = 1,SIZE(this%element_list)
+        SELECT TYPE (element => this%element_list(i)%p)
+        CLASS IS (t_jsb_var_real2d)
+          SELECT CASE(element%element_id)
+          CASE (ELEM_C)
+            IF (ASSOCIATED(this%domain_c)) NULLIFY(this%domain_c)
+            this%domain_c    => element%ptr2d
+          CASE (ELEM_N)
+            IF (ASSOCIATED(this%domain_n)) NULLIFY(this%domain_n)
+            this%domain_n    => element%ptr2d
+          CASE (ELEM_P)
+            IF (ASSOCIATED(this%domain_p))   NULLIFY(this%domain_p)
+            this%domain_p    => element%ptr2d
+          CASE (ELEM_C13)
+            IF (ASSOCIATED(this%domain_c13)) NULLIFY(this%domain_c13)
+            this%domain_c13  => element%ptr2d
+          CASE (ELEM_C14)
+            IF (ASSOCIATED(this%domain_c14)) NULLIFY(this%domain_c14)
+            this%domain_c14  => element%ptr2d
+          CASE (ELEM_N15)
+            IF (ASSOCIATED(this%domain_n15)) NULLIFY(this%domain_n15)
+            this%domain_n15  => element%ptr2d
+          END SELECT
+        END SELECT
+      END DO
+    END IF
+    
+    ! associate pointers for all element pools of this tissue pool
+    CALL this%leaf%Associate_domain_var_ptr()
+    CALL this%fine_root%Associate_domain_var_ptr()
+    CALL this%coarse_root%Associate_domain_var_ptr()
+    CALL this%sap_wood%Associate_domain_var_ptr()
+    CALL this%heart_wood%Associate_domain_var_ptr()
+    CALL this%labile%Associate_domain_var_ptr()
+    CALL this%reserve%Associate_domain_var_ptr()
+    CALL this%fruit%Associate_domain_var_ptr()
+    CALL this%seed_bed%Associate_domain_var_ptr()
+
+  END SUBROUTINE t_veg_tissues_pool_associate_domain_variable_pointers
 
   !-----------------------------------------------------------------------------------------------------
   !> initialize memory for the VEG_ process
@@ -1558,6 +1675,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_veg_elem_p_and_scalar'
 
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit))
 
@@ -1592,6 +1713,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_scalar_and_veg_elem_p'
 
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit))
 
@@ -1626,6 +1751,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_veg_elem_p_and_field1d'
 
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit))
 
@@ -1655,6 +1784,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_field1d_and_veg_elem_p'
 
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit))
 
@@ -1684,6 +1817,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_veg_elem_p_and_field2d'
 
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit))
 
@@ -1718,6 +1855,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_veg_elem_p_and_veg_elem_p'
 
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit))
 
@@ -1756,6 +1897,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Subtract_veg_elem_p_minus_scalar'
 
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit))
 
@@ -1790,6 +1935,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Subtract_veg_elem_p_minus_field1d'
 
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit))
 
@@ -1819,6 +1968,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Subtract_veg_elem_p_minus_field2d'
 
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit))
 
@@ -1853,6 +2006,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Subtract_veg_elem_p_minus_veg_elem_p'
 
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit))
 
@@ -1891,6 +2048,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_veg_elem_p_with_scalar'
 
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit))
 
@@ -1925,6 +2086,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_scalar_with_veg_elem_p'
 
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit))
 
@@ -1959,6 +2124,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_veg_elem_p_with_field1d'
 
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit))
 
@@ -1988,6 +2157,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_field1d_with_veg_elem_p'
 
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit))
 
@@ -2017,6 +2190,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_veg_elem_p_with_field2d'
 
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit))
 
@@ -2052,6 +2229,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_field2d_with_veg_elem_p'
 
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit))
 
@@ -2086,6 +2267,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_veg_elem_p_with_veg_elem_p'
 
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit))
 
@@ -2124,6 +2309,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Div_veg_elem_p_by_scalar'
 
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit))
 
@@ -2158,6 +2347,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Div_veg_elem_p_by_field1d'
 
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit))
 
@@ -2187,6 +2380,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Div_veg_elem_p_by_field2d'
 
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit))
 
@@ -2221,6 +2418,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_veg_elem_p_and_veg_elem_p'
 
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit))
 
@@ -2484,6 +2685,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_veg_tiss_p_and_scalar'
 
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
 
@@ -2528,6 +2733,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_scalar_and_veg_tiss_p'
   
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
 
@@ -2572,6 +2781,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_veg_tiss_p_and_field1d'
   
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
   
@@ -2611,6 +2824,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_field1d_and_veg_tiss_p'
   
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
   
@@ -2650,6 +2867,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_veg_tiss_p_and_field2d'
   
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
   
@@ -2694,6 +2915,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_veg_tiss_p_and_veg_tiss_p'
   
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
   
@@ -2742,6 +2967,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Subtract_veg_tiss_p_minus_scalar'
 
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
 
@@ -2786,6 +3015,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Subtract_veg_tiss_p_minus_field1d'
   
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
   
@@ -2825,6 +3058,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Subtract_veg_tiss_p_minus_field2d'
   
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
   
@@ -2869,6 +3106,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Subtract_veg_tiss_p_minus_veg_tiss_p'
   
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
   
@@ -2917,6 +3158,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_veg_tiss_p_with_scalar'
 
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
 
@@ -2961,6 +3206,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_scalar_with_veg_tiss_p'
   
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
 
@@ -3005,6 +3254,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_veg_tiss_p_with_field1d'
   
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
   
@@ -3044,6 +3297,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_field1d_with_veg_tiss_p'
   
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
   
@@ -3083,6 +3340,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_veg_tiss_p_with_field2d'
   
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
   
@@ -3128,6 +3389,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_field2d_with_veg_tiss_p'
   
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
   
@@ -3172,6 +3437,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_veg_tiss_p_with_veg_tiss_p'
   
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
   
@@ -3220,6 +3489,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Div_veg_tiss_p_by_scalar'
 
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
 
@@ -3264,6 +3537,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Div_veg_tiss_p_by_field1d'
   
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
   
@@ -3303,6 +3580,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Div_veg_tiss_p_by_field2d'
   
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
   
@@ -3347,6 +3628,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Div_veg_tiss_p_by_veg_tiss_p'
   
     sub = struct1%Get_subset()
+    IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
+      sub%nc = SIZE(struct1%domain_c(:,:), 1)
+      sub%nb = SIZE(struct1%domain_c(:,:), 2)
+    ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
   

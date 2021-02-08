@@ -124,6 +124,11 @@ CONTAINS
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_litterfall,    veg_litterfall)
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_falloc,        veg_falloc)
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_establishment, veg_establishment)
+    ! associate domain variables
+    CALL veg_growth%Associate_domain_var_ptr()
+    CALL veg_litterfall%Associate_domain_var_ptr()
+    CALL veg_falloc%Associate_domain_var_ptr()
+    CALL veg_establishment%Associate_domain_var_ptr()
     ! Get process variables (Set pointers to variables in memory)
     ! PHENO_
     dsl4jsb_Get_var2D_onDomain(PHENO_, lai)                           ! in
@@ -187,8 +192,21 @@ CONTAINS
     ENDIF
 
 
-
-
+    !! --------------------------------------------------------------
+    !! test pools
+    !!
+    veg_growth          = 3.0_wp
+    veg_growth          = veg_growth        * 3.0_wp
+    veg_growth%leaf     = veg_growth%leaf   + 1.0_wp    ! 10 
+    veg_growth%labile   = veg_growth%labile + 11.0_wp   ! 20
+    
+    veg_litterfall      = 4.0_wp
+    veg_falloc          = 4.0_wp
+    veg_establishment   = 4.0_wp
+    veg_litterfall      = veg_litterfall    + veg_litterfall    / 2.0_wp
+    veg_falloc          = veg_falloc        + veg_falloc        / 2.0_wp
+    veg_establishment   = veg_establishment + veg_establishment / 2.0_wp
+    
   END SUBROUTINE veg_init
 
 #endif

@@ -197,6 +197,10 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
 
     !! testing VEG_ pools
+    veg_growth = veg_growth * 2.0_wp
+    veg_growth = veg_growth + 1.0_wp
+    veg_growth = veg_growth / 2.0_wp
+    
     veg_exudation           = 2.0_wp
     veg_establishment       = 3.0_wp
     veg_reserve_use         = 5.0_wp
