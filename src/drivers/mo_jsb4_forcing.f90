@@ -363,6 +363,7 @@ CONTAINS
 
     ! --- compute specific humidity
     ALLOCATE(sat_spec_humidity(ice, nblks))
+    sat_spec_humidity(:,:) = 0._wp
     SELECT CASE(forcing_options%type_of_qair_forcing)
     CASE(NONE_)
       ! ratio of actual to potential evapotranspiration from the previous day
