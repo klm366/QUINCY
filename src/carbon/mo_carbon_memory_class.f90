@@ -221,6 +221,8 @@ MODULE mo_carbon_memory_class
                                        ! [mol(CO2)/(m^2(tile area) month)]      
       mean_5year_NPP,                & ! mean value of actual NPP-Rateaveraged over the last 5 years
                                        ! [mol(CO2)/(m^2(tile area) year)]
+      ratio_NPP,                     & ! ratio of 5-year averaged NPP-rate (mean_5year_NPP) and NPP-rate needed to produce an 
+                                       ! leaf area equal to the gird box area (mean_dark_NPP)
       ! use_alb_soil_npp >
       GPP_yDayMean_ta,               & !
       root_exudates_ta,              & ! Total root exudates entering to the litter green pools [mol(C)/m^2(tile area) s]
@@ -1135,7 +1137,7 @@ CONTAINS
       & lrestart=.TRUE., initval_r=1.0E-13_wp, l_aggregate_all=.TRUE. )
 
 
-    CALL jsb_add_var( mem, 'mon_5year_npp_act', mem%mon_5year_NPP,                                 &
+    CALL jsb_add_var( mem, 'mon_5year_npp', mem%mon_5year_NPP,                                 &
       & hgrid, mon_5y,                                                                              &
       & t_cf('mon_5year_NPP', 'mol(C) m-2 mon-1', 'Actual monthly NPP Rate of the last 5 years.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
@@ -1144,7 +1146,7 @@ CONTAINS
       & lrestart=.TRUE., initval_r=1.0E-13_wp, l_aggregate_all=.TRUE. )
 
 
-    CALL jsb_add_var( mem, 'mean_5year_npp_act', mem%mean_5year_NPP,                                 &
+    CALL jsb_add_var( mem, 'mean_5year_npp', mem%mean_5year_NPP,                                 &
       & hgrid, surface,                                                                              &
       & t_cf('mean_5year_NPP', 'mol(C) m-2 yr-1', 'Actual NPP Rate averaged over the last 5 years.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
@@ -1153,6 +1155,14 @@ CONTAINS
       & lrestart=.TRUE., initval_r=1.0E-13_wp, l_aggregate_all=.TRUE. ) 
     ! use_alb_soil_npp > in a zero divide in the first time step of an initialized run.
 
+    CALL jsb_add_var( mem, 'ratio_npp', mem%ratio_NPP,                                 &
+      & hgrid, surface,                                                                              &
+      & t_cf('ratio_NPP', 'none', 'Ratio of 5-year mean NPP rate and mean dark NPP Rate.'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+      & prefix, suffix,                                                                              &
+      & output_level=BASIC,                                                                          &
+      & lrestart=.TRUE., initval_r=1.0E-13_wp, l_aggregate_all=.TRUE. )
+    ! use_alb_soil_npp > in a zero divide in the first time step of an initialized run.
 
     CALL jsb_add_var( mem, 'gpp_ydaymean_ta', mem%GPP_yDayMean_ta,                       &
       & hgrid, surface,                                                                  &

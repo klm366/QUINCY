@@ -739,7 +739,10 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, cflux_soilresp_2_atm_ta,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, cflux_herb_2_atm_ta,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, cflux_npp_2_atm_yday_ta,  weighted_by_fract)
+    ! use_alb_soil_npp <
     dsl4jsb_Aggregate_onChunk(CARBON_, mean_5year_NPP,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, ratio_NPP,                weighted_by_fract)
+    ! use_alb_soil_npp >
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1009,10 +1012,14 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  mon_act_NPP
     dsl4jsb_Real3D_onChunk ::  mon_5year_NPP
     dsl4jsb_Real2D_onChunk ::  mean_5year_NPP
+    dsl4jsb_Real2D_onChunk ::  ratio_NPP
     ! use_alb_soil_npp >
 
     dsl4jsb_Real2D_onChunk ::  veg_fract_correction
     dsl4jsb_Real2D_onChunk ::  fract_fpc_max
+    ! use_alb_soil_npp <
+    dsl4jsb_Real2D_onChunk ::  mean_dark_NPP
+    ! use_alb_soil_npp >
 
     dsl4jsb_Get_memory(CARBON_)
     dsl4jsb_Get_memory(PHENO_)
@@ -1064,15 +1071,19 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_c_green_2_herb_ta )      ! opt out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_herb_2_atm_ta )          ! opt out
     ! use_alb_soil_npp <
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  mon_act_NPP )                ! opt out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  mon_act_NPP )                  ! opt out
     dsl4jsb_Get_var3D_onChunk(CARBON_,  mon_5year_NPP )                ! opt out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  mean_5year_NPP )               ! opt out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  ratio_NPP )                    ! opt out
     ! use_alb_soil_npp >
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  C_sum_natural_ta )           ! out
 
     dsl4jsb_Get_var2D_onChunk(PHENO_,   veg_fract_correction )       ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max )              ! in
+    ! use_alb_soil_npp <
+    dsl4jsb_Get_var2D_onChunk(PHENO_,   mean_dark_NPP)               ! in
+    ! use_alb_soil_npp >
 
     IF (PRESENT(c_green)) CALL get_per_tile(c_green_ta(:), c_green(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(c_woods)) CALL get_per_tile(c_woods_ta(:), c_woods(:), veg_fract_correction(:), fract_fpc_max(:))
@@ -1160,6 +1171,7 @@ CONTAINS
     IF( is_newmonth(options%current_datetime, options%dtime) ) THEN ! only update at the end of each day
     ! calculate 5 year mean NPP [ mol(C)/(m^2(tile area) * year) ]
       mean_5year_NPP(:) = SUM(mon_5year_NPP(:,:), DIM=2) / 5._wp
+      ratio_NPP(:)      = mean_5year_NPP(:)/mean_dark_NPP(:)
     END IF
     ! use_alb_soil_npp >
 

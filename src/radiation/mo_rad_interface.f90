@@ -775,8 +775,9 @@ CONTAINS
       & c_bg_sum,              &
       & swvis_srf_down,        &
       & swnir_srf_down,        &
-      & mean_5year_NPP,        &
-      & mean_dark_NPP
+    ! use_alb_soil_npp <
+      & ratio_NPP
+    ! use_alb_soil_npp >
     ! Lakes
     dsl4jsb_Real2D_onChunk ::  &
       & albedo_lwtr,           &
@@ -1027,8 +1028,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(PHENO_,    lai)                   ! in
       dsl4jsb_Get_var2D_onChunk(PHENO_,    fract_fpc_max)         ! in
       ! use_alb_soil_npp <
-      mean_dark_NPP => pheno_parent__mem%mean_dark_NPP%ptr(ics:ice,iblk)           ! in 
-      mean_5year_NPP => carbon_parent__mem%mean_5year_NPP%ptr(ics:ice,iblk)        ! in
+      ratio_NPP => carbon_parent__mem%ratio_NPP%ptr(ics:ice,iblk)        ! in
       ! use_alb_soil_npp >
 
       IF (use_alb_veg_simple) THEN 
@@ -1132,8 +1132,8 @@ CONTAINS
 
         IF (use_alb_soil_npp) THEN
             WHERE ( lat(:) > 10._wp  .AND.  lat(:) < 35._wp  .AND.  lon(:) > -20._wp  .AND.  lon(:) < 35._wp )
-              alb_vis_soil_npp(:) = MIN(0.4_wp, MAX(0.015_wp, alb_vis_soil(:) - (alb_vis_soil(:) - 0.13_wp) * MIN( MAX( 1 - EXP(-mean_5year_NPP(:)/mean_dark_NPP(:) * 0.35_wp), 0.0_wp), 1._wp) ))
-              alb_nir_soil_npp(:) = MIN(0.675_wp, MAX(0.015_wp, alb_nir_soil(:) - (alb_nir_soil(:) - 0.22_wp) * MIN( MAX( 1 - EXP(-mean_5year_NPP(:)/mean_dark_NPP(:) * 0.35_wp), 0.0_wp), 1._wp) ))
+              alb_vis_soil_npp(:) = alb_vis_soil(:) - (alb_vis_soil(:) - 0.13_wp) * MIN(MAX( ratio_NPP(:) * 0.25_wp, 0._wp),1._wp)
+              alb_nir_soil_npp(:) = alb_nir_soil(:) - (alb_nir_soil(:) - 0.22_wp) * MIN(MAX( ratio_NPP(:) * 0.25_wp, 0._wp),1._wp)
             ELSEWHERE
               alb_vis_soil_npp(:) = alb_vis_soil(:)
               alb_nir_soil_npp(:) = alb_nir_soil(:)
