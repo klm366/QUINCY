@@ -913,6 +913,7 @@ CONTAINS
     ! use_alb_soil_npp <
     USE mo_jsb_time,          ONLY: is_newday, is_newmonth
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
+    USE mo_carbon_constants,  ONLY: molarMassCO2_kg, molarMassC_kg, sec_per_day
     ! use_alb_soil_npp >
 
     ! Arguments
@@ -1159,19 +1160,19 @@ CONTAINS
     ! use_alb_soil_npp <
     IF (is_newday(options%current_datetime, options%dtime)) THEN
       IF (is_newmonth(options%current_datetime, options%dtime)) THEN   
-        mon_act_NPP(:)              = mon_act_NPP(:) + NPP_act_yDayMean_ta(:) * 86400._wp
+        mon_act_NPP(:)              = mon_act_NPP(:) + NPP_act_yDayMean_ta(:) * sec_per_day
         mon_5year_NPP(:,1:nmon-1)   = mon_5year_NPP(:,2:nmon)
         mon_5year_NPP(:,nmon)       = mon_act_NPP(:)
         mon_act_NPP(:)              = 0._wp
       ELSE
-        mon_act_NPP(:)            = mon_act_NPP(:) + NPP_act_yDayMean_ta(:) * 86400._wp
+        mon_act_NPP(:)            = mon_act_NPP(:) + NPP_act_yDayMean_ta(:) * sec_per_day
       END IF
     END IF
 
     IF( is_newmonth(options%current_datetime, options%dtime) ) THEN ! only update at the end of each day
     ! calculate 5 year mean NPP [ mol(C)/(m^2(tile area) * year) ]
       mean_5year_NPP(:) = SUM(mon_5year_NPP(:,:), DIM=2) / 5._wp
-      ratio_NPP(:)      = mean_5year_NPP(:)/mean_dark_NPP(:)
+      ratio_NPP(:)      = (molarMassC_kg/molarMassCO2_kg)*mean_5year_NPP(:)/mean_dark_NPP(:)
     END IF
     ! use_alb_soil_npp >
 
