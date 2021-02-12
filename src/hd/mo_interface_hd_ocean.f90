@@ -49,7 +49,7 @@ CONTAINS
 
     INTEGER, INTENT(in) :: comp_id, domain_id
     INTEGER, INTENT(in) :: cell_point_ids(:)
-    INTEGER, INTENT(in) :: cell_mask_id
+    INTEGER, INTENT(in) :: cell_mask_id(:)
 
     INTEGER :: field_id
 
