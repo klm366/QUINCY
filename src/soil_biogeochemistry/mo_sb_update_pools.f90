@@ -58,7 +58,6 @@ CONTAINS
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
     USE mo_jsb_grid,              ONLY: Get_vgrid
     USE mo_jsb_process_class,     ONLY: SB_   ! A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_
-    USE mo_jsb_pool_class,        ONLY: ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15 
     USE mo_jsb_math_constants,    ONLY: dtime, eps8
 
     ! Use of pools
@@ -89,8 +88,8 @@ CONTAINS
     dsl4jsb_Def_pool(t_sb_components_pool)  :: sb_formation
     dsl4jsb_Def_pool(t_sb_components_pool)  :: sb_loss
     dsl4jsb_Def_pool(t_sb_components_pool)  :: sb_transport
-    dsl4jsb_Def_pool(t_sb_elements_pool) :: sb_delta_pools
-    dsl4jsb_Def_pool(t_sb_elements_pool) :: sb_mycorrhiza_export
+    dsl4jsb_Def_pool(t_sb_elements_pool)    :: sb_delta_pools
+    dsl4jsb_Def_pool(t_sb_elements_pool)    :: sb_mycorrhiza_export
 
     ! Declare pointers to variables in memory
     ! SB_ 2D
@@ -151,19 +150,20 @@ CONTAINS
     !! pools
     hlp1(:,:)                   = 2.0_wp
     hlp10(:,:,:)                = 4.0_wp
+    sb_pool                     = 0.0_wp
     sb_pool%dom                 = hlp1(:,:)
     sb_pool%fungi               = 5.0_wp
     sb_pool%residue             = sb_pool%dom + sb_pool%fungi - 1.0_wp                                ! 6.0
     sb_pool%mycorrhiza          = (sb_pool%residue / hlp1(:,:)) + 17.0_wp - (5.0_wp * sb_pool%fungi)  ! -5.0
 
-    sb_loss                     = 0.2_wp
     sb_loss                     = hlp1(:,:)
     sb_loss                     = hlp10(:,:,1)
-    sb_loss                     = sb_loss + 0.9_wp
+    sb_loss                     = 0.2_wp    
+    sb_loss                     = sb_loss + 0.9_wp    ! 1.1
 
-    sb_pool                     = 4.4_wp
     sb_loss                     = 2.0_wp
-    sb_loss                     = (5.0_wp + sb_loss) - (sb_pool / hlp1(:,:)) * sb_pool - 1.0_wp      ! 7 - 2.2 * 4.4 - 1 == 7 - 9.68 - 1 = -3.68
+    sb_transport                = 4.0_wp
+    sb_formation                = (5.0_wp + sb_loss) - (sb_transport / hlp1(:,:)) * sb_transport - 1.0_wp      ! 7 - 2.0 * 4.0 - 1 == -2.0
 
   END SUBROUTINE update_sb_pools
 
