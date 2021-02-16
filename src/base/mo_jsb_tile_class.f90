@@ -945,6 +945,8 @@ CONTAINS
           DO j = ics, ice
             this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
           END DO
+          icount = icount + 1
+          ichild = i
         END IF
       END DO
 
