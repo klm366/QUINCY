@@ -216,7 +216,9 @@ MODULE mo_jsb_tile_class
     REAL(wp), ALLOCATABLE :: fract_sum(:,:)
     REAL(wp), ALLOCATABLE :: data_sum(:,:)
   CONTAINS
-    PROCEDURE :: Set_fractions => Set_fractions_aggregator
+  PROCEDURE :: Set_fractions_1d => Set_fractions_aggregator_1d
+  PROCEDURE :: Set_fractions_2d => Set_fractions_aggregator_2d
+  GENERIC   :: Set_fractions => Set_fractions_1d, Set_fractions_2d
 !    PROCEDURE :: Aggregate => Aggregate_weighted_by_fract_2d
 !    PROCEDURE :: Aggregate => Aggregate_weighted_by_fract_3d
     PROCEDURE :: Aggregate_2d                  => Aggregate_weighted_by_fract_2d
@@ -741,7 +743,7 @@ CONTAINS
 
   END SUBROUTINE Finalize_aggregator_weighted_by_fract
 
-  SUBROUTINE Set_fractions_aggregator(this, tile, ics, ice, iblk)
+  SUBROUTINE Set_fractions_aggregator_1d(this, tile, ics, ice, iblk)
 
     CLASS(t_jsb_aggregator_weighted_by_fract), INTENT(inout) :: this
     CLASS(t_jsb_tile_abstract),                INTENT(inout) :: tile
@@ -749,9 +751,9 @@ CONTAINS
 
     INTEGER :: no_children, i
     CLASS(t_State), POINTER :: current
-    REAL(wp), ALLOCATABLE :: fract(:), fract_sum(:)
+    ! REAL(wp), ALLOCATABLE :: fract(:), fract_sum(:)
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Set_fractions_aggregator'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Set_fractions_aggregator_1d'
 
     ! Check if child tile fractions have changed and, if necessary, update fractions of aggregator
     ! by looping over children of tile
@@ -783,7 +785,51 @@ CONTAINS
       tile%l_fract_children_changed(ics:ice,iblk) = .FALSE.
     END IF
 
-  END SUBROUTINE Set_fractions_aggregator
+  END SUBROUTINE Set_fractions_aggregator_1d
+
+  SUBROUTINE Set_fractions_aggregator_2d(this, tile)
+
+    CLASS(t_jsb_aggregator_weighted_by_fract), INTENT(inout) :: this
+    CLASS(t_jsb_tile_abstract),                INTENT(inout) :: tile
+
+    INTEGER :: no_children, i
+    CLASS(t_State), POINTER :: current
+    ! REAL(wp), ALLOCATABLE :: fract(:), fract_sum(:)
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Set_fractions_aggregator_2d'
+
+    ! print*,'EEE ',iblk,ics,ice,ANY(tile%l_fract_children_changed(ics:ice,iblk))
+    ! Check if child tile fractions have changed and, if necessary, update fractions of aggregator
+    ! by looping over children of tile
+    IF (ANY(tile%l_fract_children_changed(:,:))) THEN
+      no_children = tile%Get_no_of_children()
+      current => tile%first_child
+      DO i=1,no_children
+        SELECT TYPE (current)
+        CLASS IS (t_jsb_tile_abstract)
+          CALL current%Get_fraction(fract=this%fractions(:,:,i))
+        END SELECT
+        current => current%next_sibling
+      END DO
+
+      !$acc update device( this%fractions(ics:ice,iblk,:) )
+
+      ! ALLOCATE(fract(ice-ics+1))
+      ! ALLOCATE(fract_sum(ice-ics+1))
+      ! fract(:) = tile%fract(ics:ice,iblk)
+      ! fract_sum(:) = SUM(this%fractions(ics:ice,iblk,:), DIM=2)
+      ! ! IF (ASSOCIATED(tile%parent) .AND. ANY( fract_sum(:) < 1._wp - EPSILON(1._wp) .AND. fract(:) > 0._wp)) THEN
+      ! !   CALL message(TRIM(routine), 'Sum of child tile fractions on tile '//TRIM(tile%name)//': '//&
+      ! !     &                         real2string(MINVAL(fract_sum(:)))//' - '//real2string(MAXVAL(fract_sum(:))), &
+      ! !     &          all_print=.TRUE.)
+      ! !   CALL finish(TRIM(routine), 'Sum of tile fractions is not 1 on tile')
+      ! ! END IF
+      ! DEALLOCATE(fract, fract_sum)
+
+      tile%l_fract_children_changed(:,:) = .FALSE.
+    END IF
+
+  END SUBROUTINE Set_fractions_aggregator_2d
 
   SUBROUTINE Aggregate_weighted_by_fract_2d(this, tile, var, ics, ice, iblk, caller)
 
@@ -796,7 +842,7 @@ CONTAINS
     REAL(wp), POINTER :: ptr(:,:)
     TYPE(real_2d_p), POINTER :: tile_ptrs2d_cache(:,:,:)
 
-    INTEGER :: no_children, i, iproc, j
+    INTEGER :: no_children, icount,ichild, i, iproc, j
 
     CHARACTER(len=256) :: routine
 
@@ -842,6 +888,7 @@ CONTAINS
         this%fract_sum(j,iblk) = 0._wp
       END DO
 
+      icount = 0
       !$acc loop seq
       DO i=1,no_children
         IF ( var%child_idx(i) > 0 ) THEN
@@ -851,11 +898,15 @@ CONTAINS
               & + this%fractions(j,iblk,i) * tile_ptrs2d_cache(i,var%child_idx(i),iproc)%p(j,iblk) 
             this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
           END DO
+          icount = icount + 1
+          ichild = i
         ELSE IF (var%l_aggregate_all) THEN
           !$acc loop gang vector
           DO j = ics, ice
             this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
           END DO
+          icount = icount + 1
+          ichild = i
         END IF
       END DO
       
@@ -870,12 +921,26 @@ CONTAINS
       !   CALL finish(TRIM(routine),  '    ... this should not happen')
       ! END IF
 
-      !$acc loop gang vector
-      DO j = ics, ice
-        IF (this%fract_sum(j,iblk) > 0._wp) THEN
-          var%ptr(j,iblk) = this%data_sum(j,iblk) / this%fract_sum(j,iblk)
-        END IF
-      END DO
+      IF (icount == 1) THEN
+        !$acc loop gang vector
+        DO j = ics, ice
+          IF (this%fract_sum(j,iblk) > 0._wp) THEN
+            var%ptr(j,iblk) = tile_ptrs2d_cache(ichild,var%child_idx(ichild),iproc)%p(j,iblk)
+          END IF
+        END DO
+      ELSE IF (icount > 1) THEN
+        !$acc loop gang vector
+        DO j = ics, ice
+          IF (this%fract_sum(j,iblk) > 0._wp) THEN
+            var%ptr(j,iblk) = this%data_sum(j,iblk) / this%fract_sum(j,iblk)
+          ! ELSE
+          !   IF (TRIM(tile%name) == 'box') var%ptr(j,iblk) = -1.e4
+          END IF
+        END DO
+      ELSE
+        CALL finish(routine, 'This should not happen (icount=0)!')
+      END IF
+
     END IF
 
     !$acc end parallel
@@ -899,7 +964,7 @@ CONTAINS
     CLASS(t_jsb_var), POINTER :: ptr
     TYPE(real_3d_p), POINTER :: tile_ptrs3d_cache(:,:,:)
 
-    INTEGER :: no_children, i, iproc, ilev, j
+    INTEGER :: no_children, icount, ichild, i, iproc, ilev, j
 
     CHARACTER(len=256) :: routine
 
@@ -934,6 +999,7 @@ CONTAINS
     !$acc parallel default(none) present(this, tile_ptrs3d_cache, var)
 
     IF (no_children == 1 .AND. var%child_idx(1) > 0) THEN
+
       !$acc loop seq
       DO ilev=1,SIZE(var%ptr,2)
         !$acc loop gang vector
@@ -941,12 +1007,37 @@ CONTAINS
           var%ptr(j,ilev,iblk) = tile_ptrs3d_cache(1,var%child_idx(1),iproc)%p(j,ilev,iblk)
         END DO
       END DO
+
     ELSE IF (no_children > 1) THEN
+
+      !$acc loop gang vector
+      DO j = ics, ice
+        this%fract_sum(j,iblk) = 0._wp
+      END DO
+      icount = 0
+      !$acc loop seq
+      DO i=1,no_children
+        IF (var%child_idx(i) > 0) THEN
+          !$acc loop gang vector
+          DO j = ics, ice
+            this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
+          END DO
+          icount = icount + 1
+          ichild = i
+        ELSE IF (var%l_aggregate_all) THEN
+          !$acc loop gang vector
+          DO j = ics, ice
+            this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
+          END DO
+          icount = icount + 1
+          ichild = i
+        END IF
+      END DO
+
       !$acc loop seq
       DO ilev=1,SIZE(var%ptr,2)
         !$acc loop gang vector
         DO j = ics, ice
-          this%fract_sum(j,iblk) = 0._wp
           this%data_sum (j,iblk) = 0._wp
         END DO
 
@@ -957,23 +1048,29 @@ CONTAINS
             DO j = ics, ice
               this%data_sum(j,iblk) = this%data_sum(j,iblk) &
                 & + this%fractions(j,iblk,i) * tile_ptrs3d_cache(i,var%child_idx(i),iproc)%p(j,ilev,iblk) 
-              this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
-            END DO
-          ELSE IF (var%l_aggregate_all) THEN
-            !$acc loop gang vector
-            DO j = ics, ice
-              this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
             END DO
           END IF
         END DO
 
-        !$acc loop gang vector
-        DO j = ics, ice
-          IF (this%fract_sum(j,iblk) > 0._wp) THEN
-            var%ptr(j,ilev,iblk) = this%data_sum(j,iblk) / this%fract_sum(j,iblk)
-          END IF
-        END DO
+        IF (icount == 1) THEN
+          !$acc loop gang vector
+          DO j = ics, ice
+            IF (this%fract_sum(j,iblk) > 0._wp) THEN
+              var%ptr(j,ilev,iblk) = tile_ptrs3d_cache(ichild,var%child_idx(ichild),iproc)%p(j,ilev,iblk)
+            END IF
+          END DO
+        ELSE IF (icount > 1) THEN
+          !$acc loop gang vector
+          DO j = ics, ice
+            IF (this%fract_sum(j,iblk) > 0._wp) THEN
+              var%ptr(j,ilev,iblk) = this%data_sum(j,iblk) / this%fract_sum(j,iblk)
+            END IF
+          END DO
+        ELSE
+          CALL finish(routine, 'This should not happen (icount=0)!')
+        END IF
       END DO
+
     END IF
 
     !$acc end parallel
