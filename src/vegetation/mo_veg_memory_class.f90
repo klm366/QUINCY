@@ -575,7 +575,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   !> set element-variables pointers to the domain pointer ptr2d(:,:) in the element list this%element_list(i)%p
   !! t_veg_elements_pool
-  !! this need to be called for the VEG_ pools used in the veg_init() routine
+  !! this need to be called for the VEG_ pools used in the veg_init() routine (or any other *_init() where these pools are used)
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE t_veg_elements_pool_associate_domain_variable_pointers(this)
 
@@ -780,7 +780,6 @@ CONTAINS
     CHARACTER(LEN=*),           INTENT(in)            :: element_unit       ! unit of elements
     CHARACTER(LEN=*),           INTENT(in)            :: pool_suffix        ! add to the name of each elements_pool created here
 
-    TYPE(t_veg_elements_pool)   :: veg_elements_pool
     CHARACTER(len=*), PARAMETER :: routine = modname//':t_veg_tissues_pool_op_ov_hlp_create_init'
 
     IF (.NOT. l_elements) THEN
@@ -949,8 +948,8 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> set element-variables pointers to the domain pointer ptr2d(:,:) in the element list this%element_list(i)%p
-  !! t_veg_elements_pool
-  !! this need to be called for the VEG_ pools used in the veg_init() routine
+  !! t_veg_tissues_pool
+  !! this need to be called for the VEG_ pools used in the veg_init() routine (or any other *_init() where these pools are used)
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE t_veg_tissues_pool_associate_domain_variable_pointers(this)
 

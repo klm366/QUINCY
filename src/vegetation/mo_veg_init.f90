@@ -111,9 +111,9 @@ CONTAINS
     ! ---------------------------
     ! 0.5 Get Memory
     model  => Get_model(tile%owner_model_id)
-    IF (tile%lcts(1)%lib_id /= 0) THEN            ! work with lctlib only if the present tile is a pft
-      lctlib => model%lctlib(tile%lcts(1)%lib_id)
-    ENDIF
+    IF (.NOT. model%config%use_quincy) RETURN       ! only with QUINCY model
+    IF (tile%lcts(1)%lib_id == 0) RETURN            ! run this init only if the present tile is a pft
+    lctlib => model%lctlib(tile%lcts(1)%lib_id)
     ! Get process config
     !
     ! Get process memories
