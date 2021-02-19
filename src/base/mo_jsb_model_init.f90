@@ -141,7 +141,7 @@ CONTAINS
 
     USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
     USE mo_jsb_model_class,     ONLY: print_model
-    USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
+    USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract, t_jsb_aggregator, t_jsb_aggregator_weighted_by_fract
     USE mo_jsb_lct_class,       ONLY: Contains_lct
     USE mo_seb_init,            ONLY: seb_init
     USE mo_turb_init,           ONLY: turb_init
@@ -170,6 +170,7 @@ CONTAINS
     REAL(wp), ALLOCATABLE               :: fract_tmp(:,:)
     INTEGER                             :: no_omp_thread
     LOGICAL                             :: l_fixed_fractions
+    CLASS(t_jsb_aggregator), POINTER    :: weighted_by_fract
 
     dsl4jsb_Def_config(PHENO_)
 
@@ -457,6 +458,15 @@ CONTAINS
       IF (.NOT. tile%visited(no_omp_thread) .AND. tile%Has_children()) THEN
         CALL model%Goto_next_tile(tile)
         CYCLE
+      END IF
+
+      ! Set initial tile fractions for 'weighted_by_fract' aggregator
+      IF (tile%Has_children()) THEN  ! tile has children and we're on the way up
+        weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+        SELECT TYPE (weighted_by_fract)
+        TYPE IS (t_jsb_aggregator_weighted_by_fract)
+          CALL weighted_by_fract%Set_fractions(tile)
+        END SELECT
       END IF
 
       ! tile is a leaf or it has children and we're on the way up
