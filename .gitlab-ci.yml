@@ -3,7 +3,7 @@ before_script:
 
 pages:
   script:
-  - echo "working dir: $PWD"
+  - echo "working dir ...  $PWD"
   - bash ./build-doc.sh
   - mv doc/html/ public/
   tags:
