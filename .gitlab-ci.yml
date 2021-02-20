@@ -3,7 +3,8 @@ before_script:
 
 pages:
   script:
-  - ./build-doc.sh
+  - echo "working dir: $PWD"
+  - bash ./build-doc.sh
   - mv doc/html/ public/
   tags:
     - sphinx
