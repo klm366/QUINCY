@@ -9,8 +9,7 @@ pages:
     - sphinx
   only:
     - develop-staging
-  when:
-    - manual
+  when: manual
   artifacts:
     paths:
       - public
