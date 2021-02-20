@@ -1,8 +1,11 @@
 before_script:
-  - pip install ford
+  - pip install --no-cache-dir ford
 
 pages:
   script:
+  - find /usr -name 'python'
+  - echo $PATH
+  - echo $PYTHON_PATH
   - sh ./build-doc.sh
   - mv doc/html/ public/
   tags:
