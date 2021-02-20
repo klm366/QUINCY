@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 
 # Build the documentation using FORD
 
