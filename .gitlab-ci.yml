@@ -3,9 +3,10 @@ before_script:
 
 pages:
   script:
-  - ls -l /usr/share/gcc-10.2.1/python
+  - which pip
+  - ls -l /usr/bin/py* /usr/local/bin/py*
   - 'export PATH="/usr/share/gcc-10.2.1:$PATH"'
-  - echo PATH
+  - echo $PATH
   - sh ./build-doc.sh
   - mv doc/html/ public/
   tags:
