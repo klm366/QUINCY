@@ -3,9 +3,9 @@ before_script:
 
 pages:
   script:
-  - find /usr -name 'python'
-  - echo $PATH
-  - echo $PYTHON_PATH
+  - ls -l /usr/share/gcc-10.2.1/python
+  - 'export PATH="/usr/share/gcc-10.2.1:$PATH"'
+  - echo PATH
   - sh ./build-doc.sh
   - mv doc/html/ public/
   tags:
