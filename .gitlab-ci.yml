@@ -4,7 +4,7 @@ before_script:
 
 pages:
   script:
-  - sh ./build-doc.sh
+  - sh ./build-doc.sh -q
   - mv doc/html/ public/
   tags:
     - sphinx
