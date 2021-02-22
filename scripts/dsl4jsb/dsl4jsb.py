@@ -153,6 +153,7 @@ help_text = """
         -t, --odir=DIR    target directory for output files (must exist)
         -k, --keep-dirs   keep directory tree structure of files in input directory (if -d and -t given)
         -p, --pp-add=STR  add string STR before .suffix in processed files (pp = pre-processed)
+        -n, --no-header   don't create header with hash of source file
     """
 
 __current_file = ""
@@ -231,7 +232,7 @@ def replace_dollar_function(match):
         result = result + index
     return result
 
-def process_file(inputfile, outputfile, verbose=False, verbose_more=False, cwd=None):
+def process_file(inputfile, outputfile, header=True, verbose=False, verbose_more=False, cwd=None):
     # Compute hash value of input file
     hasher = hashlib.md5()
     with io.open(inputfile, 'rb') as infile:
@@ -259,9 +260,10 @@ def process_file(inputfile, outputfile, verbose=False, verbose_more=False, cwd=N
 
     with io.open(inputfile, 'r', encoding="utf-8") as infile:
         with (io.open(outputfile, 'w', encoding="utf-8") if outputfile != '' else sys.stdout) as outfile:
-            outfile.write(u'!\n! This file was automatically generated from JSBACH source file:\n')
-            outfile.write(u'!    ' + re.sub(r'.*/src', 'src', os.path.realpath(os.path.abspath(inputfile))) + u'\n')
-            outfile.write(u'! with md5 hash: ' + hasher.hexdigest() + u'\n!\n')
+            if header:
+                outfile.write(u'!\n! This file was automatically generated from JSBACH source file:\n')
+                outfile.write(u'!    ' + re.sub(r'.*/src', 'src', os.path.realpath(os.path.abspath(inputfile))) + u'\n')
+                outfile.write(u'! with md5 hash: ' + hasher.hexdigest() + u'\n!\n')
             if verbose:
                 if cwd:
                     print('   Pre-processing: ' + os.path.relpath(os.path.realpath(os.path.abspath(inputfile)), cwd) + ' => ' + os.path.relpath(outputfile, cwd))
@@ -324,9 +326,10 @@ def main(argv):
     verbose = False
     verbose_more = False
     keep = False
+    header = True
     pp_add = None
     try:
-        opts, args = getopt.getopt(argv,"hvki:o:d:t:p:",["ifile=","ofile=","idir=","odir=","pp-add="])
+        opts, args = getopt.getopt(argv,"hvkni:o:d:t:p:",["ifile=","ofile=","idir=","odir=","pp-add="])
     except getopt.GetoptError:
         print(help_text)
         sys.exit(2)
@@ -341,6 +344,8 @@ def main(argv):
                 verbose_more = True
         elif opt in ("-k", "--keep-dirs"):
             keep = True
+        elif opt in ("-n", "--no-header"):
+            header = False
         elif opt in ("-p", "--pp-add"):
             pp_add = arg
         elif opt in ("-i", "--ifile"):

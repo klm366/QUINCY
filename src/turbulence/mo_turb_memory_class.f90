@@ -109,7 +109,7 @@ CONTAINS
       & prefix, suffix,                                                          &
       & lrestart=.FALSE.,                                                        &
       & loutput=.FALSE.,                                                         &
-      & initval_r=0.0_wp )
+      & initval_r=1.0_wp )
 
     CALL mem%Add_var( 'rough_h_star', mem%rough_h_star,                          &
       & hgrid, surface,                                                          &
@@ -118,7 +118,7 @@ CONTAINS
       & prefix, suffix,                                                          &
       & lrestart=.FALSE.,                                                        &
       & loutput=.FALSE.,                                                         &
-      & initval_r=0.0_wp )
+      & initval_r=1.0_wp )
 
     ! Additional variables for all lcts except lakes
     IF ( (     One_of(VEG_TYPE,     lct_ids(:)) > 0 &

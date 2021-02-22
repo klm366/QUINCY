@@ -44,10 +44,10 @@ MODULE mo_hydro_constants
     & oro_var_max = 1000._wp,              &
 
     ! Parameters for the computation of canopy conductance/resistance using Eq. 3.3.2.12 in ECHAM3 manual
-    & conductance_k = 0.9_wp,              & !>
-    & conductance_a = 5000._wp,            & !> Jm-3
-    & conductance_b = 10._wp,              & !> Wm-2
-    & conductance_c = 100._wp,             & !> ms-1
+    & conductance_k = 0.9_wp,              & !<
+    & conductance_a = 5000._wp,            & !< Jm-3
+    & conductance_b = 10._wp,              & !< Wm-2
+    & conductance_c = 100._wp,             & !< ms-1
 
     ! Parameters for organic soil component
     & vol_porosity_org    = 0.88_wp,       & !< volumetric porosity of organic part of soil layer [m/m]

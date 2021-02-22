@@ -26,7 +26,7 @@ MODULE mo_jsb_model_init
   USE mo_jsb_model_class,  ONLY: t_jsb_model
 
   USE mo_kind,             ONLY: wp
-  USE mo_exception,        ONLY: finish
+  USE mo_exception,        ONLY: message, finish
   USE mo_jsb_parallel,     ONLY: Get_omp_thread, Is_omp_inside_serial
   USE mo_jsb_time,         ONLY: is_time_restart, get_time_start
 
@@ -75,7 +75,7 @@ CONTAINS
     ! avoid compiler warnings about dummy arguments not being used
     IF (.FALSE.) WRITE(*,*) nproca, nprocb, npedim, model_id, model_name
 
-    CALL finish(TRIM(routine),'Standalone model currently only works with ECHAM')
+    CALL finish(TRIM(routine),'This subroutine should not be called with ICON')
 #else
     model => Get_model(model_id)
 
@@ -141,7 +141,7 @@ CONTAINS
 
     USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
     USE mo_jsb_model_class,     ONLY: print_model
-    USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
+    USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract, t_jsb_aggregator, t_jsb_aggregator_weighted_by_fract
     USE mo_jsb_lct_class,       ONLY: Contains_lct
     USE mo_seb_init,            ONLY: seb_init
     USE mo_turb_init,           ONLY: turb_init
@@ -169,6 +169,8 @@ CONTAINS
     INTEGER                             :: ilct, jlct, i, no_children
     REAL(wp), ALLOCATABLE               :: fract_tmp(:,:)
     INTEGER                             :: no_omp_thread
+    LOGICAL                             :: l_fixed_fractions
+    CLASS(t_jsb_aggregator), POINTER    :: weighted_by_fract
 
     dsl4jsb_Def_config(PHENO_)
 
@@ -223,7 +225,7 @@ CONTAINS
       IF (model%processes(ASSIMI_)%p%config%active) THEN
         CALL model%Queue_task(RAD_,    "radiation_par")
       END IF
-      CALL model%Queue_task(HYDRO_,  "surface_hydrology")
+      CALL model%Queue_task(HYDRO_,  "surface_hydrology") 
       CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
       CALL model%Queue_task(SSE_,    "soil_and_snow_properties")
       CALL model%Queue_task(SSE_,    "soil_and_snow_temperature")
@@ -346,12 +348,18 @@ CONTAINS
 
     ! We continue with initializing the memory structure and different model processes.
 
+    l_fixed_fractions = .NOT. model%processes(ALCC_)%p%config%active
+    IF (l_fixed_fractions) THEN
+      CALL message(routine, 'Tile fractions are fixed over time')
+    ELSE
+      CALL message(routine, 'Tile fractions vary over time')
+    END IF
+
     ! Iterate over tiles and call initialization if necessary
     CALL model%Reset_tiles()
     CALL model%Get_top_tile(tile)
 
-    IF (.NOT. ASSOCIATED(tile)) &
-      & CALL finish(TRIM(routine), 'Top tile not set')
+    IF (.NOT. ASSOCIATED(tile)) CALL finish(TRIM(routine), 'Top tile not set')
 
     DO WHILE (ASSOCIATED(tile))
 
@@ -360,13 +368,18 @@ CONTAINS
         CYCLE
       END IF
 
-      ! Initialize tile memory and read tile fractions
+      ! Initialize tile process memories and read tile fractions
       ! @todo: once we have land use change or dynveg, l_fixed_fractions needs to be adapted
       CALL tile%Init(TRIM(model%shortname), '', TRIM(tile%name),                &
-        & l_fixed_fractions=.NOT. model%processes(ALCC_)%p%config%active,       &
+        & grid_id = model%grid_id,                                              &
         & in_var_groups=one_of(TRIM(tile%name), model%config%output_tiles) > 0)
 
-      ! TBD: Loop over processes instead of explicit
+      CALL tile%Init_fractions(                                           &
+        & TRIM(model%shortname), '', TRIM(tile%name),                     &
+        & l_fixed_fractions=l_fixed_fractions,                            &
+        & l_rel_fractions=model%config%relative_fractions_in_file)
+
+        ! TBD: Loop over processes instead of explicit
       IF (one_of(tile%process_action(RAD_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
         CALL rad_init(tile)
       END IF
@@ -451,6 +464,15 @@ CONTAINS
         CYCLE
       END IF
 
+      ! Set initial tile fractions for 'weighted_by_fract' aggregator
+      IF (tile%Has_children()) THEN  ! tile has children and we're on the way up
+        weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+        SELECT TYPE (weighted_by_fract)
+        TYPE IS (t_jsb_aggregator_weighted_by_fract)
+          CALL weighted_by_fract%Set_fractions(tile)
+        END SELECT
+      END IF
+
       ! tile is a leaf or it has children and we're on the way up
       DO ilct=1,SIZE(tile%lcts)
         IF (tile%Has_children()) THEN
@@ -469,6 +491,8 @@ CONTAINS
                   EXIT
                 END IF
               END DO
+              CALL tile%Get_fraction(fract=fract_tmp(:,:))
+              tile%lcts(ilct)%fract(:,:) = MERGE(tile%lcts(ilct)%fract(:,:) / fract_tmp(:,:), 0._wp, fract_tmp(:,:) > 0._wp)
             END IF
             child => child%Get_next_sibling_tile()
           END DO
@@ -493,11 +517,13 @@ CONTAINS
 
     DO WHILE (ASSOCIATED(tile))
 
-      IF (.NOT. tile%visited(no_omp_thread) .AND. tile%Has_children()) THEN
-        CALL model%Goto_next_tile(tile)
+      ! IF (.NOT. tile%visited(no_omp_thread) .AND. tile%Has_children()) THEN
+      IF (.NOT. tile%visited(no_omp_thread)) THEN
+          CALL model%Goto_next_tile(tile)
         CYCLE
       END IF
 
+      ! tile is not a leaf and we're on the way up
       CALL tile%Init_vars()
       CALL tile%Cache_GPU_pointers()
 

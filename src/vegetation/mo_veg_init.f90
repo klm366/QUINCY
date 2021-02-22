@@ -204,11 +204,9 @@ CONTAINS
     ! ---------------------------
     ! 0.5 Get Memory
     model  => Get_model(tile%owner_model_id)
-    IF (tile%lcts(1)%lib_id /= 0) THEN            ! work with lctlib only if the present tile is a pft
-      lctlib => model%lctlib(tile%lcts(1)%lib_id)
-    ELSE
-      CALL finish(TRIM(routine), ' Cannot be executed on a non-PFT tile, as the lctlib is needed.')
-    ENDIF
+    IF (.NOT. model%config%use_quincy) RETURN       ! only with QUINCY model
+    IF (tile%lcts(1)%lib_id == 0) RETURN            ! run this init only if the present tile is a pft
+    lctlib => model%lctlib(tile%lcts(1)%lib_id)
     ! Get process config
     dsl4jsb_Get_config(VEG_)
     ! Get process memories
@@ -218,6 +216,8 @@ CONTAINS
 #else
     ! Get pools
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_pool,          veg_pool)
+    ! associate domain variables
+    CALL veg_pool%Associate_domain_var_ptr()
 #endif
     ! Get process variables (Set pointers to variables in memory)
     ! PHENO_

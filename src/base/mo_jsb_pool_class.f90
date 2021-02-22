@@ -7,13 +7,14 @@ MODULE mo_jsb_pool_class
   USE mo_util,          ONLY: int2string
   USE mo_hermetic,      ONLY: t_hermetic
   USE mo_jsb_var_class, ONLY: t_jsb_var, t_jsb_var_p, t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_jsb_subset,    ONLY: t_subset, ON_DOMAIN, ON_CHUNK
 
   IMPLICIT NONE
 
   PRIVATE
 
   ! PUBLIC :: t_element, t_element_2d, t_element_3d, t_jsb_pool, t_jsb_pool_p
-  PUBLIC :: t_jsb_pool, t_jsb_pool_p
+  PUBLIC :: t_jsb_pool, t_jsb_pool_p, t_jsb_pool_elem2d, t_jsb_pool_elem3d
   PUBLIC :: ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15  ! element_id (element enumerator) for pools
 
   ! TYPE, ABSTRACT, EXTENDS(t_jsb_var) :: t_element
@@ -45,15 +46,18 @@ MODULE mo_jsb_pool_class
   !   END TYPE
   
   TYPE, ABSTRACT, EXTENDS(t_hermetic) :: t_jsb_pool
-    CHARACTER(LEN=:),  ALLOCATABLE :: shortname          ! No spaces!
-    CHARACTER(LEN=:),  ALLOCATABLE :: name               ! No spaces!
-    CHARACTER(LEN=:),  ALLOCATABLE :: path
-    CHARACTER(LEN=:),  ALLOCATABLE :: element_unit
-    CLASS(t_jsb_pool_p),   POINTER     :: pool_list(:) => NULL()
-    CLASS(t_jsb_pool_p),   POINTER     :: leaf_list(:) => NULL()
+    CHARACTER(LEN=:),  ALLOCATABLE :: shortname                                ! No spaces!
+    CHARACTER(LEN=:),  ALLOCATABLE :: name                                     ! No spaces!
+    CHARACTER(LEN=:),  ALLOCATABLE :: path                                     ! 
+    CHARACTER(LEN=:),  ALLOCATABLE :: element_unit                             ! unit of pool element variables (used for output stream)
+    INTEGER                        :: owner_model_id                = 0        ! ID of the jsbach model this pool is running at
+    LOGICAL                        :: contains_elem_1d_ptr_to_chunk = .FALSE.  ! t_jsb_pool_elem2d -> set TRUE in the pool init routines in the PROC_memory_class
+    LOGICAL                        :: contains_elem_2d_ptr_to_chunk = .FALSE.  ! t_jsb_pool_elem3d -> set TRUE in the pool init routines in the PROC_memory_class
+    CLASS(t_jsb_pool_p),   POINTER :: pool_list(:) => NULL()                   ! children
+    CLASS(t_jsb_pool_p),   POINTER :: leaf_list(:) => NULL()                   ! leaves
     ! TYPE(t_element_p), ALLOCATABLE :: element_list(:)
-    TYPE(t_jsb_var_p), ALLOCATABLE :: element_list(:)
-    TYPE(t_jsb_var_p), ALLOCATABLE :: var_list(:)
+    TYPE(t_jsb_var_p), ALLOCATABLE :: element_list(:)                          ! elements of this pool (elements used in PROC are defined in 'all_elements(:)' in PROC_memory_class)
+    TYPE(t_jsb_var_p), ALLOCATABLE :: var_list(:)                              ! other associated variables - currently not used
   CONTAINS
     PROCEDURE(init_iface), DEFERRED :: Init
     PROCEDURE(get_el_name_iface_id), DEFERRED :: Get_element_name_by_id
@@ -76,6 +80,7 @@ MODULE mo_jsb_pool_class
     PROCEDURE                       :: Associate_var_pointers => t_jsb_pool_associate_var_pointers
     PROCEDURE                       :: Sum_leaves            => t_jsb_pool_sum_leaves
     PROCEDURE                       :: Print                 => t_jsb_pool_print
+    PROCEDURE                       :: Get_subset            => t_jsb_pool_get_subset         ! get chunk and block and type information for the pool and thread
     PROCEDURE                       :: force_finalization    => t_jsb_pool_force_finalization
   END TYPE t_jsb_pool
 
@@ -101,7 +106,51 @@ MODULE mo_jsb_pool_class
     END FUNCTION get_el_name_iface_id
   END INTERFACE
 
-  !> element_id (element enumerator) for pools
+  TYPE, ABSTRACT, EXTENDS(t_jsb_pool) :: t_jsb_pool_elem2d
+    
+    ! 1D element variables pointing to element%prtm1(:) of t_jsb_var_real2d
+    REAL(wp),               POINTER :: carbon(:)       => NULL()
+    REAL(wp),               POINTER :: nitrogen(:)     => NULL()
+    REAL(wp),               POINTER :: phosphorus(:)   => NULL()
+    REAL(wp),               POINTER :: carbon13(:)     => NULL()
+    REAL(wp),               POINTER :: carbon14(:)     => NULL()
+    REAL(wp),               POINTER :: nitrogen15(:)   => NULL()
+    ! 2D element variables pointing to element%ptr2d(:,:) of t_jsb_var_real2d, i.e., the domain (might be used in PROC_init routines)
+    REAL(wp),               POINTER :: domain_c(:,:)   => NULL()
+    REAL(wp),               POINTER :: domain_n(:,:)   => NULL()
+    REAL(wp),               POINTER :: domain_p(:,:)   => NULL()
+    REAL(wp),               POINTER :: domain_c13(:,:) => NULL()
+    REAL(wp),               POINTER :: domain_c14(:,:) => NULL()
+    REAL(wp),               POINTER :: domain_n15(:,:) => NULL()
+
+  END TYPE t_jsb_pool_elem2d
+  
+  TYPE, ABSTRACT, EXTENDS(t_jsb_pool) :: t_jsb_pool_elem3d
+
+    ! 2D element variables pointing to element%prtm1(:,:) of t_jsb_var_real3d
+    REAL(wp),               POINTER :: carbon(:,:)       => NULL()
+    REAL(wp),               POINTER :: nitrogen(:,:)     => NULL()
+    REAL(wp),               POINTER :: phosphorus(:,:)   => NULL()
+    REAL(wp),               POINTER :: carbon13(:,:)     => NULL()
+    REAL(wp),               POINTER :: carbon14(:,:)     => NULL()
+    REAL(wp),               POINTER :: nitrogen15(:,:)   => NULL()
+    ! 3D element variables pointing to element%ptr3d(:,:,:) of t_jsb_var_real3d, i.e., the domain (might be used in PROC_init routines)
+    REAL(wp),               POINTER :: domain_c(:,:,:)   => NULL()
+    REAL(wp),               POINTER :: domain_n(:,:,:)   => NULL()
+    REAL(wp),               POINTER :: domain_p(:,:,:)   => NULL()
+    REAL(wp),               POINTER :: domain_c13(:,:,:) => NULL()
+    REAL(wp),               POINTER :: domain_c14(:,:,:) => NULL()
+    REAL(wp),               POINTER :: domain_n15(:,:,:) => NULL()
+
+  END TYPE t_jsb_pool_elem3d
+
+  !> element_id (element enumerator) for pools 
+  !!
+  !! used in the PROC_memory_class for initialization of pools
+  !!
+  !! names of element variables used in JSBACH are:
+  !! (sequence accordingly to the below enumerator) 
+  !!    carbon, nitrogen, phosphorus, carbon13, carbon14, nitrogen15
   !! 
   ENUM, BIND(C)
     ENUMERATOR :: ELEM_C = 1, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15
@@ -436,6 +485,24 @@ CONTAINS
 
   END SUBROUTINE t_jsb_pool_print
 
+  !================================================================================================================================
+  ! get subset
+  ! chunk and block information per model & thread from mo_jsb_subset:jsbach_subsets(model_id)%sub(thread)
+  !================================================================================================================================
+  FUNCTION t_jsb_pool_get_subset(this) RESULT(subset)
+
+    USE mo_jsb_subset,   ONLY: jsbach_subsets
+    USE mo_jsb_parallel, ONLY: Get_omp_thread
+
+    CLASS(t_jsb_pool), INTENT(in) :: this
+    TYPE(t_subset)                :: subset
+
+    ! print*,'FFF_pool ', TRIM(this%name), this%owner_model_id, Get_omp_thread()
+    subset = jsbach_subsets(this%owner_model_id)%sub(Get_omp_thread())
+    ! print*,'GGG_pool ', subset%type, subset%ics, subset%ice, subset%iblk
+
+  END FUNCTION t_jsb_pool_get_subset
+
   RECURSIVE SUBROUTINE t_jsb_pool_associate_var_pointers(this, ic_start, ic_end, iblk_start, iblk_end)
 
     USE mo_jsb_var_class,  ONLY: t_jsb_var_real2d, t_jsb_var_real3d
@@ -457,15 +524,97 @@ CONTAINS
       itype = ON_DOMAIN
     END IF
 
+    ! loop over elements in element_list(:)
+    !   associate pointer %ptrm1
+    !   set subset_type
+    !   if applicable: associate REAL element vectors with %ptrm1 & %ptr2d/3d
     IF (ALLOCATED(this%element_list)) THEN
       DO i=1,SIZE(this%element_list)
         SELECT TYPE (element => this%element_list(i)%p)
         CLASS IS (t_jsb_var_real2d)
           CALL element%Associate_pointers(ic_start, ic_end, iblk_start, iblk_end)
           element%subset_type = itype
+          IF (this%contains_elem_1d_ptr_to_chunk) THEN
+            SELECT TYPE (pool_elem2d => this)
+            CLASS IS (t_jsb_pool_elem2d)
+              !! set pointer of element variable (REAL vector) to 
+              !! a) part of the domain (ics:ice,iblk) defined by %ptrm1, and b) the full domain %ptr2d(:,:)
+              SELECT CASE(element%element_id)
+              CASE (ELEM_C)
+                IF (ASSOCIATED(pool_elem2d%carbon))   NULLIFY(pool_elem2d%carbon)
+                IF (ASSOCIATED(pool_elem2d%domain_c)) NULLIFY(pool_elem2d%domain_c)
+                pool_elem2d%carbon      => element%ptrm1
+                pool_elem2d%domain_c    => element%ptr2d
+              CASE (ELEM_N)
+                IF (ASSOCIATED(pool_elem2d%nitrogen)) NULLIFY(pool_elem2d%nitrogen)
+                IF (ASSOCIATED(pool_elem2d%domain_n)) NULLIFY(pool_elem2d%domain_n)
+                pool_elem2d%nitrogen    => element%ptrm1
+                pool_elem2d%domain_n    => element%ptr2d
+              CASE (ELEM_P)
+                IF (ASSOCIATED(pool_elem2d%phosphorus)) NULLIFY(pool_elem2d%phosphorus)
+                IF (ASSOCIATED(pool_elem2d%domain_p))   NULLIFY(pool_elem2d%domain_p)
+                pool_elem2d%phosphorus  => element%ptrm1
+                pool_elem2d%domain_p    => element%ptr2d
+              CASE (ELEM_C13)
+                IF (ASSOCIATED(pool_elem2d%carbon13))   NULLIFY(pool_elem2d%carbon13)
+                IF (ASSOCIATED(pool_elem2d%domain_c13)) NULLIFY(pool_elem2d%domain_c13)
+                pool_elem2d%carbon13    => element%ptrm1
+                pool_elem2d%domain_c13  => element%ptr2d
+              CASE (ELEM_C14)
+                IF (ASSOCIATED(pool_elem2d%carbon14))   NULLIFY(pool_elem2d%carbon14)
+                IF (ASSOCIATED(pool_elem2d%domain_c14)) NULLIFY(pool_elem2d%domain_c14)
+                pool_elem2d%carbon14    => element%ptrm1
+                pool_elem2d%domain_c14  => element%ptr2d
+              CASE (ELEM_N15)
+                IF (ASSOCIATED(pool_elem2d%nitrogen15)) NULLIFY(pool_elem2d%nitrogen15)
+                IF (ASSOCIATED(pool_elem2d%domain_n15)) NULLIFY(pool_elem2d%domain_n15)
+                pool_elem2d%nitrogen15  => element%ptrm1
+                pool_elem2d%domain_n15  => element%ptr2d
+              END SELECT
+            END SELECT
+          ENDIF
         CLASS IS (t_jsb_var_real3d)
           CALL element%Associate_pointers(ic_start, ic_end, iblk_start, iblk_end)
           element%subset_type = itype
+          IF (this%contains_elem_2d_ptr_to_chunk) THEN
+            SELECT TYPE (pool_elem3d => this)
+            CLASS IS (t_jsb_pool_elem3d)
+              !! set pointer of element variable (REAL vector) to 
+              !! a) part of the domain (ics:ice,1:vgrid,iblk) defined by %ptrm1, and b) the full domain %ptr3d(:,:,:)
+              SELECT CASE(element%element_id)
+              CASE (ELEM_C)
+                IF (ASSOCIATED(pool_elem3d%carbon))   NULLIFY(pool_elem3d%carbon)
+                IF (ASSOCIATED(pool_elem3d%domain_c)) NULLIFY(pool_elem3d%domain_c)
+                pool_elem3d%carbon      => element%ptrm1
+                pool_elem3d%domain_c    => element%ptr3d
+              CASE (ELEM_N)
+                IF (ASSOCIATED(pool_elem3d%nitrogen)) NULLIFY(pool_elem3d%nitrogen)
+                IF (ASSOCIATED(pool_elem3d%domain_n)) NULLIFY(pool_elem3d%domain_n)
+                pool_elem3d%nitrogen    => element%ptrm1
+                pool_elem3d%domain_n    => element%ptr3d
+              CASE (ELEM_P)
+                IF (ASSOCIATED(pool_elem3d%phosphorus)) NULLIFY(pool_elem3d%phosphorus)
+                IF (ASSOCIATED(pool_elem3d%domain_p))   NULLIFY(pool_elem3d%domain_p)
+                pool_elem3d%phosphorus  => element%ptrm1
+                pool_elem3d%domain_p    => element%ptr3d
+              CASE (ELEM_C13)
+                IF (ASSOCIATED(pool_elem3d%carbon13))   NULLIFY(pool_elem3d%carbon13)
+                IF (ASSOCIATED(pool_elem3d%domain_c13)) NULLIFY(pool_elem3d%domain_c13)
+                pool_elem3d%carbon13    => element%ptrm1
+                pool_elem3d%domain_c13  => element%ptr3d
+              CASE (ELEM_C14)
+                IF (ASSOCIATED(pool_elem3d%carbon14))   NULLIFY(pool_elem3d%carbon14)
+                IF (ASSOCIATED(pool_elem3d%domain_c14)) NULLIFY(pool_elem3d%domain_c14)
+                pool_elem3d%carbon14    => element%ptrm1
+                pool_elem3d%domain_c14  => element%ptr3d
+              CASE (ELEM_N15)
+                IF (ASSOCIATED(pool_elem3d%nitrogen15)) NULLIFY(pool_elem3d%nitrogen15)
+                IF (ASSOCIATED(pool_elem3d%domain_n15)) NULLIFY(pool_elem3d%domain_n15)
+                pool_elem3d%nitrogen15  => element%ptrm1
+                pool_elem3d%domain_n15  => element%ptr3d
+              END SELECT
+            END SELECT
+          ENDIF
         END SELECT
       END DO
     END IF
@@ -537,6 +686,13 @@ CONTAINS
   END SUBROUTINE t_jsb_pool_sum_leaves
 
 END MODULE mo_jsb_pool_class
+
+
+!-----------------------------------------------------------------------------------------------------
+!> Module mo_test_pools
+!!
+!! working with CARBON_ pools
+!-----------------------------------------------------------------------------------------------------
 
 MODULE mo_test_pools
 

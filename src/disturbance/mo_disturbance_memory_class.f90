@@ -84,7 +84,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),              &
       & prefix, suffix,                                                                 &
       & output_level=BASIC,                                                             &
-      & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+      & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
     CALL mem%Add_var( 'damaged_fract', mem%damaged_fract,                                &
       & hgrid, surface,                                                                  &
@@ -92,7 +92,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
       & prefix, suffix,                                                                  &
       & output_level=BASIC,                                                              &
-      & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+      & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
     CALL mem%Add_var( 'q_air_clim', mem%q_rel_air_climbuf,                                            &
       & hgrid, surface,                                                                               &
