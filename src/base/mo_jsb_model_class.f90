@@ -504,7 +504,7 @@ CONTAINS
       itype = ON_DOMAIN
     END IF
 
-    CALL this%Reset_tiles()
+    CALL this%Reset()
     CALL this%Get_top_tile(tile)
     IF (.NOT. ASSOCIATED(tile)) &
       & CALL finish(TRIM(routine), 'Top tile not set')
