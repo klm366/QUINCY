@@ -259,9 +259,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  N_pseudo_precip
     dsl4jsb_Real2D_onChunk ::  F_pseudo_precip
 
-    dsl4jsb_Real2D_onChunk ::  topSoilTemp           ! was not cbalance_type
-    dsl4jsb_Real2D_onChunk ::  alpha                 ! was not cbalance_type. Relative soil moisture (used for
-                                                     ! heterotrophic respiration)
     dsl4jsb_Real2D_onChunk ::  cconservation_calcCpools ! C conservation test: Deviation from conservation
 
     dsl4jsb_Real2D_onChunk ::  cflux_c_greenwood_2_litter           ! Carbon flux from the veget. to the litter pools
@@ -477,9 +474,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  N_pseudo_precip)            ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  F_pseudo_precip)            ! inout
 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  topSoilTemp)                ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  alpha)                      ! in
-    !
     ! This is on canopy area:
     dsl4jsb_Get_var2D_onChunk(CARBON_,  cconservation_calcCpools )  ! out
 
@@ -583,15 +577,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  LAI_sum )                   ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_pot_sum )               ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  GPP_sum )                   ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  topSoilTemp_sum )           ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  alpha_sum )                 ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  LAI_yDayMean )              ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  LAI_yyDayMean )             ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_pot_yDayMean )          ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_act_yDayMean )          ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  GPP_yDayMean )              ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  topSoilTemp_yDayMean )      ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  alpha_yDayMean )            ! inout
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  soil_respiration )          ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_flux_correction)        ! inout

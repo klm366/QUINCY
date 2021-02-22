@@ -141,10 +141,6 @@ CONTAINS
     &  c_CN_woody,               & ! in
     &  c_sapwood,                   & ! in
     &  temp_yDayMean,        & ! in
-    & c_litter_green_ag,          & ! inout
-    & c_litter_green_bg,          & ! inout
-    & c_litter_wood_ag,           & ! inout
-    & c_litter_wood_bg,           & ! inout
  !
     & soilResp_rate,              & ! out
  !
@@ -243,13 +239,7 @@ CONTAINS
     REAL(wp), INTENT(out)   :: adj_fraction  
     REAL(wp), INTENT(in)    :: faPAR_prev_noon    
     REAL(wp), INTENT(out)   :: jedi_light_constraint                                                  
-    !                                                     
-    REAL(wp), INTENT(inout) :: c_litter_green_ag  ! Above ground green litter C-pool: updated on output [mol(C)/m^2(canopy)]
-    REAL(wp), INTENT(inout) :: c_litter_green_bg  ! Below ground green litter C-pool: updated on output [mol(C)/m^2(canopy)]
-    REAL(wp), INTENT(inout) :: c_litter_wood_ag   ! Above ground woody litter C-pool: updated on output [mol(C)/m^2(canopy)]
-    REAL(wp), INTENT(inout) :: c_litter_wood_bg   ! Below ground woody litter C-pool: updated on output [mol(C)/m^2(canopy)]
  
-    !
     REAL(wp), INTENT(out)   ::  soilResp_rate          ! Soil (=heterotrophic) respiration rate  [mol(C)/m^2 s] Note: this is a loss,
                                                      !    therefore negative!
     REAL(wp), INTENT(out)   ::  cflux_c_greenwood_2_litter
