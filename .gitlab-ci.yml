@@ -1,0 +1,18 @@
+before_script:
+  - pip install --no-cache-dir ford
+  - apk add --update --no-cache graphviz ttf-freefont
+
+pages:
+  script:
+  - sh ./build-doc.sh -q
+  - mv doc/html/ public/
+  tags:
+    - sphinx
+  only:
+    - develop-staging
+  when: manual
+  artifacts:
+    paths:
+      - public
+    expire_in: 5min
+

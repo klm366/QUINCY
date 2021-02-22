@@ -95,9 +95,9 @@ MODULE mo_a2l_memory_class
       ! jsbach4 variables, in quincy routines replaced by co2_mixing_ratio  _c13  _c14
       ! & CO2_air               , &  !> molar ratio (mass)
       ! & CO2_air_mol           , &  !> molar ratio (volume)
-      & CO2_mixing_ratio      , &  !> surface air CO2 mixing ratio [ppmv]   >> mo_atmland_interface: CO2_mixing_ratio = CO2_air_mol * 1000000._wp
-      & CO2_mixing_ratio_C13  , &  !> surface air 13CO2 mixing ratio [ppmv]
-      & CO2_mixing_ratio_C14       !> surface air 14CO2 mixing ratio [scaled]
+      & CO2_mixing_ratio      , &  !< surface air CO2 mixing ratio [ppmv]   >> mo_atmland_interface: CO2_mixing_ratio = CO2_air_mol * 1000000._wp
+      & CO2_mixing_ratio_C13  , &  !< surface air 13CO2 mixing ratio [ppmv]
+      & CO2_mixing_ratio_C14       !< surface air 14CO2 mixing ratio [scaled]
     
     
   CONTAINS
