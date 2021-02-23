@@ -1,22 +1,23 @@
-!>
-!! @brief Contains methods for JSBACH initializations.
+!>## Contains methods for JSBACH initializations
 !!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
+!! Copyright (c) 2013-2021 Reiner Schnur  
+!! Copyright (c) 2016 Julia Nabel
 !!
-!! @par Revision History
-!! First version                          by Reiner Schnur (2013-04-04)
-!! Some adaptations for jsb4 standalone   by Julia Nabel (2016-02-20)
+!!### Revision History
+!! First version                                        by Reiner Schnur (2013-04-04)  
+!! Some adaptations for JSBACH4 standalone with ECHAM   by Julia Nabel   (2016-02-20)
 !!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!### License
 !!
-
+!! This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
+!! Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.  
+!! Where software is supplied by third parties, it is indicated in the headers of the routines.
+!!
 MODULE mo_jsb_model_init
 #ifndef __NO_JSBACH__
 
-  dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, FUEL_, ALCC_, A2L_, VEG_
+  dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
+    &                   FUEL_, ALCC_, A2L_, VEG_
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
 
@@ -34,6 +35,8 @@ MODULE mo_jsb_model_init
 
   PUBLIC :: jsbach_setup_grid, jsbach_init, jsbach_init_after_restart
 
+  !> Interface to set up grid of a model instance
+  !
   INTERFACE jsbach_setup_grid
     MODULE PROCEDURE setup_grid_standalone
     MODULE PROCEDURE setup_grid_patch
@@ -41,39 +44,54 @@ MODULE mo_jsb_model_init
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_model_init'
 
+
 CONTAINS
 
-  SUBROUTINE setup_grid_standalone(nproca, nprocb, npedim, model_id, model_name)
 
+  ! ------------------------------------------------------------------------------------------------------ !
+  !> Set up grid for standalone model if using ECHAM infrastructure
+  !
+  SUBROUTINE setup_grid_standalone(nproca, nprocb, npedim, model_id, model_name)
+    ! -------------------------------------------------------------------------------------------------- !
 #ifndef __ICON__
-    !>>> TODO: echam
-    USE mo_gaussgrid,     ONLY : inigau
+    ! >> TODO: echam
+    USE mo_gaussgrid,            ONLY : inigau
     USE mo_echam_convect_tables, ONLY : init_convect_tables
-    USE mo_netCDF,      ONLY: add_dim
-    !<<<
-    USE mo_jsb_grid_iface,   ONLY: get_lons_and_lats_from_file, get_nlon_nlat_from_file
-    USE mo_jsb_domain_iface, ONLY: t_patch, jsbalone_init_decomp
-    USE mo_jsb_grid_class,   ONLY: t_jsb_grid, new_grid
-    USE mo_jsb_grid,         ONLY: Register_grid
+    USE mo_netCDF,               ONLY: add_dim
+    ! <<
+    USE mo_jsb_grid_iface,       ONLY: get_lons_and_lats_from_file, get_nlon_nlat_from_file
+    USE mo_jsb_domain_iface,     ONLY: t_patch, jsbalone_init_decomp
+    USE mo_jsb_grid_class,       ONLY: t_jsb_grid, new_grid
+    USE mo_jsb_grid,             ONLY: Register_grid
 #endif
 
-    INTEGER,                    INTENT(in) :: model_id, nproca, nprocb, npedim
+    ! -------------------------------------------------------------------------------------------------- !
+    INTEGER, INTENT(in) :: nproca
+        !! Number of processors in 1st dimension of 2-d decomposition
+    INTEGER, INTENT(in) :: nprocb
+        !! Number of processors in 2nd dimension of 2-d decomposition
+    INTEGER, INTENT(in) :: npedim
+        !! Size of blocks on each domain
+    INTEGER, INTENT(in) :: model_id
+        !!ID of model instance
     CHARACTER(len=*), OPTIONAL, INTENT(in) :: model_name
+        !! Name of model instance
+    ! -------------------------------------------------------------------------------------------------- !
 
 #ifndef __ICON__
-    TYPE(t_jsb_model),  POINTER  :: model
-    TYPE(t_jsb_grid),   POINTER  :: grid
-    TYPE(t_patch)                :: decomposition
+    TYPE(t_jsb_model), POINTER  :: model
+    TYPE(t_jsb_grid),  POINTER  :: grid
+    TYPE(t_patch)               :: decomposition
 
     INTEGER :: nlon, nlat
 #endif
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':setup_grid_standalone'
+    ! ---------------------------------------------------------------------------------------------------!
 
 #ifdef __ICON__
     ! avoid compiler warnings about dummy arguments not being used
     IF (.FALSE.) WRITE(*,*) nproca, nprocb, npedim, model_id, model_name
-
     CALL finish(TRIM(routine),'This subroutine should not be called with ICON')
 #else
     model => Get_model(model_id)
@@ -92,8 +110,9 @@ CONTAINS
     CALL add_dim("lon", nlon, "longitude", "degrees_east" ) !required to write restart files
     CALL add_dim("lat", nlat, "latitude", "degrees_north")
 
-    !needs to be done after the decomposition is initialised; required for get_lon and get_lat, especially for site-level sims
     CALL get_lons_and_lats_from_file(model%config%grid_filename, decomposition%nproma, decomposition%ngpblks)
+        ! needs to be done after the decomposition is initialised; required for get_lon and get_lat,
+        ! especially for site-level sims
     grid => new_grid(decomposition, type='echam')
 
     CALL register_grid(grid)
@@ -105,24 +124,35 @@ CONTAINS
 #endif
 
   END SUBROUTINE setup_grid_standalone
+  ! ====================================================================================================== !
 
+
+  ! ------------------------------------------------------------------------------------------------------ !
+  !> Set up grid provided by host model (ICON coupled/standalone or ECHAM coupled)
+  !
   SUBROUTINE setup_grid_patch( model_id, patch, type)
-
+    ! -------------------------------------------------------------------------------------------------- !
     USE mo_jsb_domain_iface, ONLY: t_patch
     USE mo_jsb_grid_class,   ONLY: t_jsb_grid, new_grid
     USE mo_jsb_grid,         ONLY: Register_grid
 
-    INTEGER,               INTENT(in) :: model_id
+    ! -------------------------------------------------------------------------------------------------- !
+    INTEGER, INTENT(in) :: model_id
+        !! ID of model instance
     TYPE(t_patch), TARGET, INTENT(in) :: patch
-    CHARACTER(LEN=*),      INTENT(in) :: type
+        !! Grid information provided by host model
+    CHARACTER(LEN=*), INTENT(in) :: type
+        !! Type of host model ('icon' or 'echam')
+    ! -------------------------------------------------------------------------------------------------- !
 
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':setup_grid_patch'
+    ! -------------------------------------------------------------------------------------------------- !
 
     IF (model_id > get_no_of_models()) &
-      CALL finish(routine, 'Host request to more jsbach models than are defined')
+      & CALL finish(routine, 'Host request to more jsbach models than are defined')
 
     model => Get_model(model_id)
 
@@ -135,12 +165,18 @@ CONTAINS
     NULLIFY(model)
 
   END SUBROUTINE setup_grid_patch
+  ! ====================================================================================================== !
 
+
+  ! ------------------------------------------------------------------------------------------------------ !
+  !> Initializes a model instance
+  !
   SUBROUTINE jsbach_init(model_id)
-
+    ! -------------------------------------------------------------------------------------------------- !
     USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
     USE mo_jsb_model_class,     ONLY: print_model
-    USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract, t_jsb_aggregator, t_jsb_aggregator_weighted_by_fract
+    USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract, &
+      &                               t_jsb_aggregator, t_jsb_aggregator_weighted_by_fract
     USE mo_jsb_lct_class,       ONLY: Contains_lct
     USE mo_seb_init,            ONLY: seb_init
     USE mo_turb_init,           ONLY: turb_init
@@ -160,9 +196,12 @@ CONTAINS
     USE mo_jsb_io,              ONLY: cdiDefMissval, missval
     USE mo_util,                ONLY: one_of
 
+    ! -------------------------------------------------------------------------------------------------- !
     INTEGER, INTENT(in) :: model_id
+        !! ID of the model instance to be initialized
 
-    TYPE(t_jsb_model), POINTER  :: model
+    ! -------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model), POINTER          :: model
     CLASS(t_jsb_tile_abstract), POINTER :: tile, child
     INTEGER                             :: ilct, jlct, i, no_children
     REAL(wp), ALLOCATABLE               :: fract_tmp(:,:)
@@ -172,7 +211,8 @@ CONTAINS
 
     dsl4jsb_Def_config(PHENO_)
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_init'
+    CHARACTER(len=*), PARAMETER         :: routine = modname//':jsbach_init'
+    ! -------------------------------------------------------------------------------------------------- !
 
     no_omp_thread = Get_omp_thread()
 
@@ -186,19 +226,22 @@ CONTAINS
 
     dsl4jsb_Get_config(PHENO_)
 
-    !!---------------------------------------------------------------------------------------------
-    !! Define Task Queue 
-    !!   (Temporary for testing ... should be in separate subroutine !!)
-    !! 
-    !! Two Queues: default jsb4 & quincy
+    ! -------------------------------------------------------------------------------------------------- !
+    !> 1. Populate task queue
+    !>
+    ! Define Task Queue 
+    !   (Temporary for testing ... should be in separate subroutine !!)
+    ! 
+    ! Two Queues: default jsb4 & quincy
     IF (.NOT. model%config%use_quincy) THEN
-      !NOTE: JN changed the order of the processes
-      !- processes potentially changing the area of a tile are conducted first in the timestep.
-      !- PHENO processes were moved up: need to happen before C_NPP_pot_allocation for allometric considerations
+      ! Note: JN changed the order of the processes
+      ! - processes potentially changing the area of a tile are conducted first in the timestep.
+      ! - PHENO processes were moved up: need to happen before C_NPP_pot_allocation for allometric
+      !   considerations
   
-      !!------------------------ tasks that can change area
-      !! 
-      !Disturbances happen on a daily basis and can lead to area changes when running with cohorts
+      ! ------------------------ tasks that can change area
+      ! 
+      ! Disturbances happen on a daily basis and can lead to area changes when running with cohorts
       IF (model%processes(FUEL_)%p%config%active) THEN
         CALL model%Queue_task(FUEL_, "fuel")
       END IF
@@ -206,14 +249,14 @@ CONTAINS
          CALL model%Queue_task(DISTURB_, "natural_disturbances")
       END IF
   
-      !!------------------------ tasks that do not change area
-      !!
+      ! ------------------------ tasks that do not change area
+      !
       CALL model%Queue_task(RAD_,    "surface_radiation")
-      CALL model%Queue_task(PHENO_,  "phenology")           ! JN moved phenology up - for allom it needs to happen
-                                                            ! before C_NPP_pot_allocation
-                                                            ! and with area changes it should happen before assimi
-                        ! --- before it was between humidity_scaling and foliage_projected_cover
-                        ! + prev comment: can be placed between the task "surface_radiation" and "asselin_filter"
+      CALL model%Queue_task(PHENO_,  "phenology")
+        ! JN moved phenology up - for allom it needs to happen before C_NPP_pot_allocation and
+        ! with area changes it should happen before assimi
+        ! --- before it was between humidity_scaling and foliage_projected_cover
+        ! + prev comment: can be placed between the task "surface_radiation" and "asselin_filter"
       CALL model%Queue_task(PHENO_,  "foliage_projected_cover")
       CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
       CALL model%Queue_task(HYDRO_,  "soil_properties")
@@ -254,36 +297,38 @@ CONTAINS
       END IF
       CALL model%Queue_task(TURB_,   "humidity_scaling")
       CALL model%Queue_task(TURB_,   "surface_roughness")
-      ! Note: the albedo is updated at the end of the time step, one time step before the radiation is updated in the
-      !       atmosphere. Otherwise, in between, the albedo changes would be consindered in the jsbach radiation but where
-      !       not considered in the atmospheric radiation calculations. This would be inconsistent. Furthermore, atmospheric
-      !       cloud changes affect radiation also only at radiation time step and jsbach should be also consistent with this.
-      !       In the albedo update time step the albedo should be updated after the SEB process, sothat also the SEB remains
-      !       consistent within this time step.
       CALL model%Queue_task(RAD_,    "albedo")
-      ! Note: The explanation above for the aldedo accounts also for alcc as it may also changes surface properties
-      !       affecting atmospheric radiation. However, in alcc we do not redistribute the albedos of the pfts because
-      !       they shall not keep their quantity for the gridbox but change with alcc. Therefore, the sequence between the alcc and
-      !       albedo process does not matter.
+          ! Albedo is updated at the end of the time step, one time step before the radiation is updated in
+          ! the atmosphere. Otherwise, in between, the albedo changes would be consindered in the jsbach
+          ! radiation but where not considered in the atmospheric radiation calculations. This would be
+          ! inconsistent. Furthermore, atmospheric cloud changes affect radiation also only at radiation
+          ! time step and jsbach should be also consistent with this.
+          ! In the albedo update time step the albedo should be updated after the SEB process, so that also
+          ! the SEB remains consistent within this time step.
       IF (model%processes(ALCC_)%p%config%active) THEN
         CALL model%Queue_task(ALCC_, "alcc")
       END IF
+          ! The explanation above for the aldedo accounts also for alcc as it may also changes surface
+          ! properties affecting atmospheric radiation. However, in alcc we do not redistribute the albedos
+          ! of the pfts because they shall not keep their quantity for the gridbox but change with alcc.
+          ! Therefore, the sequence between the alcc and albedo process does not matter.
       CALL model%Queue_task(HYDRO_,  "water_balance")
       CALL model%Queue_task(SEB_,    "asselin_filter")      ! Should always be the last task
     
-    !!---------------------------------------------------------------------------------------------
-    !! quincy
-    !!  usecase must be set to: "jsbach_pfts" (which assumes ASSIMI_ to be active)      (this is not tested)
-    !!  CARBON_ may be active                                                           (this is not tested)
-    !!  l_forestRegrowth is assumed to be .FALSE.                                       (this is not tested)
+    ! -------------------------------------------------------------------------------------------------- !
+    ! quincy
+    !  usecase must be set to: "jsbach_pfts" (which assumes ASSIMI_ to be active)      (this is not tested)
+    !  CARBON_ may be active                                                           (this is not tested)
+    !  l_forestRegrowth is assumed to be .FALSE.                                       (this is not tested)
     ELSE IF (model%config%use_quincy) THEN
-      !!------------------------ tasks that simply set fluxes back to zero at the beginning of each timestep
-      !!
-      CALL model%Queue_task(ASSIMI_, "reset_assimi_fluxes")         !! quincy
-      CALL model%Queue_task(VEG_,    "reset_veg_fluxes")            !! quincy
+
+      !------------------------ tasks that simply set fluxes back to zero at the beginning of each timestep
+      !
+      CALL model%Queue_task(ASSIMI_, "reset_assimi_fluxes")         ! quincy
+      CALL model%Queue_task(VEG_,    "reset_veg_fluxes")            ! quincy
       
-      !!------------------------ tasks that can change area (e.g. disturbance & fuel)
-      !! 
+      !------------------------ tasks that can change area (e.g. disturbance & fuel)
+      ! 
       ! !Disturbances happen on a daily basis and can lead to area changes when running with cohorts
       ! IF (model%processes(FUEL_)%p%config%active) THEN
       !   CALL model%Queue_task(FUEL_, "fuel")
@@ -292,11 +337,11 @@ CONTAINS
       !    CALL model%Queue_task(DISTURB_, "natural_disturbances")
       ! END IF
   
-      !!------------------------ tasks that do not change area
-      !!
-      CALL model%Queue_task(RAD_,    "sw_radiation_q_")             !! quincy (sw radiation and albedo)
+      !------------------------ tasks that do not change area
+      !
+      CALL model%Queue_task(RAD_,    "sw_radiation_q_")             ! quincy (sw radiation and albedo)
       CALL model%Queue_task(RAD_,    "surface_radiation")
-      CALL model%Queue_task(PHENO_,  "phenology_q_")                !! quincy
+      CALL model%Queue_task(PHENO_,  "phenology_q_")                ! quincy
       CALL model%Queue_task(PHENO_,  "foliage_projected_cover")
       CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")      ! may be called two times
       CALL model%Queue_task(HYDRO_,  "soil_properties")
@@ -310,22 +355,23 @@ CONTAINS
       CALL model%Queue_task(HYDRO_,  "soil_hydrology")
       CALL model%Queue_task(SEB_,    "snowmelt_correction")
       CALL model%Queue_task(HYDRO_,  "water_stress")
-      CALL model%Queue_task(ASSIMI_, "update_canopy_fluxes")        !! quincy
+      CALL model%Queue_task(ASSIMI_, "update_canopy_fluxes")        ! quincy
       CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
       CALL model%Queue_task(TURB_,   "humidity_scaling")
       CALL model%Queue_task(TURB_,   "surface_roughness")
-      ! Note: albedo is updated at the end of the time step, one time step before the radiation is updated in the atmosphere
       CALL model%Queue_task(RAD_,    "albedo")
+          ! Note: albedo is updated at the end of the time step, one time step before the radiation is 
+          ! updated in the atmosphere
       CALL model%Queue_task(HYDRO_,  "water_balance")
       CALL model%Queue_task(SEB_,    "asselin_filter")              ! Should always be the last task
       
-      ! averaging variables in time at the end of the timestep
-      CALL model%Queue_task(PHENO_,  "time_average_phenology")      !! quincy
+      CALL model%Queue_task(PHENO_,  "time_average_phenology")      ! quincy
+          ! averaging variables in time at the end of the timestep
     ENDIF
-    !! Task Queue created
-    !!---------------------------------------------------------------------------------------------    
+    ! Task Queue created
+    !--------------------------------------------------------------------------------------------------- !    
     
-    ! debug message after creating task queue
+    ! Debug message after creating task queue
     IF (debug_on()) THEN
       CALL print_model(model)
       CALL model%Print_actions()
@@ -342,7 +388,9 @@ CONTAINS
       CALL message(routine, 'Tile fractions vary over time')
     END IF
 
-    ! Iterate over tiles and call initialization if necessary
+    ! -------------------------------------------------------------------------------------------------- !
+    !> 2. Iterate over tiles and call initialization if necessary
+    !>
     CALL model%Reset_tiles()
     CALL model%Get_top_tile(tile)
 
@@ -355,18 +403,27 @@ CONTAINS
         CYCLE
       END IF
 
+      ! ---------------------------------------------------------------------------------------------- !
+      !>     2.1 Initialize each tile
+      !>
       ! Initialize tile process memories and read tile fractions
-      ! @todo: once we have land use change or dynveg, l_fixed_fractions needs to be adapted
+      ! todo: once we have land use change or dynveg, l_fixed_fractions needs to be adapted
       CALL tile%Init(TRIM(model%shortname), '', TRIM(tile%name),                &
         & grid_id = model%grid_id,                                              &
         & in_var_groups=one_of(TRIM(tile%name), model%config%output_tiles) > 0)
 
+      ! ---------------------------------------------------------------------------------------------- !
+      !>     2.2 Initialize fractions of each tile
+      !>
       CALL tile%Init_fractions(                                           &
         & TRIM(model%shortname), '', TRIM(tile%name),                     &
         & l_fixed_fractions=l_fixed_fractions,                            &
         & l_rel_fractions=model%config%relative_fractions_in_file)
 
-        ! TBD: Loop over processes instead of explicit
+      ! ---------------------------------------------------------------------------------------------- !
+      !>     2.3 Initialize processes on each tile
+      !>
+      ! TBD: Loop over processes instead of explicit
       IF (one_of(tile%process_action(RAD_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
         CALL rad_init(tile)
       END IF
@@ -415,10 +472,10 @@ CONTAINS
         CALL fuel_init(tile)
       END IF
 
-      ! R: in the moment we do not need any initialization for disturbance:
-      !IF (one_of(tile%process_action(DISTURB_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      ! R: at the moment we do not need any initialization for disturbance:
+      ! IF (one_of(tile%process_action(DISTURB_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
       !  CALL disturb_init(tile)
-      !END IF
+      ! END IF
 
 #ifndef __NO_JSBACH_HD__
       IF (one_of(tile%process_action(HD_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
@@ -428,9 +485,18 @@ CONTAINS
 #endif
 
       CALL model%Goto_next_tile(tile)
+      ! ---------------------------------------------------------------------------------------------- !
     END DO
 
-    ! Iterate over tiles again and set lct fractions (after ALL tile fractions have been set above)
+    ! -------------------------------------------------------------------------------------------------- !
+    !> 3. Iterate over tiles again and
+    !>
+    !>     3.1 set initial tile fractions for aggregator(s)
+    !>
+    !>     3.2 set LCT fractions 
+    !>
+    ! It is important to only do this after all tile fractions have been set above
+    !
     CALL model%Reset_tiles()
     CALL model%Get_top_tile(tile)
 
@@ -474,7 +540,8 @@ CONTAINS
                 END IF
               END DO
               CALL tile%Get_fraction(fract=fract_tmp(:,:))
-              tile%lcts(ilct)%fract(:,:) = MERGE(tile%lcts(ilct)%fract(:,:) / fract_tmp(:,:), 0._wp, fract_tmp(:,:) > 0._wp)
+              tile%lcts(ilct)%fract(:,:) = &
+                & MERGE(tile%lcts(ilct)%fract(:,:) / fract_tmp(:,:), 0._wp, fract_tmp(:,:) > 0._wp)
             END IF
             child => child%Get_next_sibling_tile()
           END DO
@@ -491,11 +558,12 @@ CONTAINS
 
     DEALLOCATE(fract_tmp)
 
-    ! Iterate over tiles again and initialize hierarchical structure for memories and variables
+    ! -------------------------------------------------------------------------------------------------- !
+    !> 4. Iterate over tiles again and initialize hierarchical structure for memories and variables
+    !>
     CALL model%Reset_tiles()
     CALL model%Get_top_tile(tile)
-    IF (.NOT. ASSOCIATED(tile)) &
-      & CALL finish(TRIM(routine), 'Top tile not set')
+    IF (.NOT. ASSOCIATED(tile)) CALL finish(TRIM(routine), 'Top tile not set')
 
     DO WHILE (ASSOCIATED(tile))
 
@@ -528,20 +596,20 @@ CONTAINS
 
       IF (one_of(tile%process_action(PHENO_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
         dsl4jsb_Get_config(PHENO_)
-        IF (      tile%is_vegetation &
-          & .AND. TRIM(dsl4jsb_Config(PHENO_)%scheme) /= 'climatology' &
-          & .AND. tile%lcts(1)%lib_id == 0) &
-            & CALL finish(TRIM(routine), 'Must use phenology climatology on general, non-PFT VEG tile '//TRIM(tile%name))
+        IF (        tile%is_vegetation                                   &
+            & .AND. TRIM(dsl4jsb_Config(PHENO_)%scheme) /= 'climatology' &
+            & .AND. tile%lcts(1)%lib_id == 0)                            &
+          & CALL finish(TRIM(routine), &
+          &             'Must use phenology climatology on general, non-PFT VEG tile '//TRIM(tile%name))
       END IF
 
       CALL model%Goto_next_tile(tile)
 
     END DO
-    !
-    !
+    ! -------------------------------------------------------------------------------------------------- !
+    !> 5. Iterate over tiles again and print tile information (if debug is ON)
+    !>
     IF (debug_on()) THEN
-
-      ! Iterate over tiles again and print tile information (after ALL tiles have been initialized above)
       CALL model%Reset_tiles()
 
       CALL model%Get_top_tile(tile)
@@ -568,23 +636,31 @@ CONTAINS
 !#endif
 
   END SUBROUTINE jsbach_init
+  ! ====================================================================================================== !
 
+
+  ! ------------------------------------------------------------------------------------------------------ !
+  !> Do some more initialization after restart files have been read
+  !
   SUBROUTINE jsbach_init_after_restart(model_id)
-
+    ! -------------------------------------------------------------------------------------------------- !
     USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
     USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
     USE mo_carbon_init,         ONLY: carbon_read_cpools
     USE mo_util,                ONLY: one_of
 
-    INTEGER, INTENT(in) :: model_id
+    ! -------------------------------------------------------------------------------------------------- !
+    INTEGER, INTENT(in) :: model_id !! ID of model instance to be initialized
 
-    TYPE(t_jsb_model), POINTER  :: model
+    ! -------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model), POINTER          :: model
     CLASS(t_jsb_tile_abstract), POINTER :: tile
     INTEGER                             :: no_omp_thread
 
     dsl4jsb_Def_config(CARBON_)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_init_after_restart'
+    ! -------------------------------------------------------------------------------------------------- !
 
     no_omp_thread = Get_omp_thread()
 
@@ -623,6 +699,7 @@ CONTAINS
 #endif
 
   END SUBROUTINE jsbach_init_after_restart
+  ! ====================================================================================================== !
 
 #endif
 END MODULE mo_jsb_model_init
