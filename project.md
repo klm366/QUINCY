@@ -9,19 +9,20 @@ src_dir: ./src
 page_dir: ./doc/guide
 media_dir: ./doc/media
 output_dir: ./doc/html
-docmark: !
-docmark_alt: *
+docmark: <
+docmark_alt: #
 predocmark: >
+predocmark_alt: *
 summary: <img src="media/MPIM.png" width="100%" alt="MPI/M Logo">
          <p style="text-align:center;font-weight:bold;font-size:300%;">ICON-Land/JSBACH4 Documentation</p>
 display: public
          protected
          private
 source: true
-proc_internals: true
+proc_internals: false
 search: true
 warn: false
-graph: true
+graph: false
 coloured_edges: true
 md_extensions: markdown.extensions.toc
 ---

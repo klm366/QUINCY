@@ -1,18 +1,18 @@
 !>## Contains methods for JSBACH initializations
-!!
-!! Copyright (c) 2013-2021 Reiner Schnur  
-!! Copyright (c) 2016 Julia Nabel
-!!
-!!### Revision History
-!! First version                                        by Reiner Schnur (2013-04-04)  
-!! Some adaptations for JSBACH4 standalone with ECHAM   by Julia Nabel   (2016-02-20)
-!!
-!!### License
-!!
-!! This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!! Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.  
-!! Where software is supplied by third parties, it is indicated in the headers of the routines.
-!!
+!>
+!> Copyright (c) 2013-2021 Reiner Schnur  
+!> Copyright (c) 2016 Julia Nabel
+!>
+!>### Revision History
+!> First version                                        by Reiner Schnur (2013-04-04)  
+!> Some adaptations for JSBACH4 standalone with ECHAM   by Julia Nabel   (2016-02-20)
+!>
+!>### License
+!>
+!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
+!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.  
+!> Where software is supplied by third parties, it is indicated in the headers of the routines.
+!>
 MODULE mo_jsb_model_init
 #ifndef __NO_JSBACH__
 
@@ -48,11 +48,12 @@ MODULE mo_jsb_model_init
 CONTAINS
 
 
-  ! ------------------------------------------------------------------------------------------------------ !
+  ! ====================================================================================================== !
+  !
   !> Set up grid for standalone model if using ECHAM infrastructure
   !
   SUBROUTINE setup_grid_standalone(nproca, nprocb, npedim, model_id, model_name)
-    ! -------------------------------------------------------------------------------------------------- !
+
 #ifndef __ICON__
     ! >> TODO: echam
     USE mo_gaussgrid,            ONLY : inigau
@@ -66,16 +67,16 @@ CONTAINS
 #endif
 
     ! -------------------------------------------------------------------------------------------------- !
-    INTEGER, INTENT(in) :: nproca
-        !! Number of processors in 1st dimension of 2-d decomposition
-    INTEGER, INTENT(in) :: nprocb
-        !! Number of processors in 2nd dimension of 2-d decomposition
-    INTEGER, INTENT(in) :: npedim
-        !! Size of blocks on each domain
-    INTEGER, INTENT(in) :: model_id
-        !!ID of model instance
+    INTEGER, INTENT(in)                    :: nproca !< Number of processors in 1st dimension 
+                                                     !< of 2-d decomposition
+    INTEGER, INTENT(in)                    :: nprocb
+        !< Number of processors in 2nd dimension of 2-d decomposition
+    INTEGER, INTENT(in)                    :: npedim
+        !< Size of blocks on each domain
+    INTEGER, INTENT(in)                    :: model_id
+        !< ID of model instance
     CHARACTER(len=*), OPTIONAL, INTENT(in) :: model_name
-        !! Name of model instance
+        !< Name of model instance
     ! -------------------------------------------------------------------------------------------------- !
 
 #ifndef __ICON__
@@ -124,27 +125,23 @@ CONTAINS
 #endif
 
   END SUBROUTINE setup_grid_standalone
+
+
   ! ====================================================================================================== !
-
-
-  ! ------------------------------------------------------------------------------------------------------ !
+  !
   !> Set up grid provided by host model (ICON coupled/standalone or ECHAM coupled)
   !
   SUBROUTINE setup_grid_patch( model_id, patch, type)
-    ! -------------------------------------------------------------------------------------------------- !
+
     USE mo_jsb_domain_iface, ONLY: t_patch
     USE mo_jsb_grid_class,   ONLY: t_jsb_grid, new_grid
     USE mo_jsb_grid,         ONLY: Register_grid
 
     ! -------------------------------------------------------------------------------------------------- !
-    INTEGER, INTENT(in) :: model_id
-        !! ID of model instance
-    TYPE(t_patch), TARGET, INTENT(in) :: patch
-        !! Grid information provided by host model
-    CHARACTER(LEN=*), INTENT(in) :: type
-        !! Type of host model ('icon' or 'echam')
+    INTEGER, INTENT(in)               :: model_id !< ID of model instance
+    TYPE(t_patch), TARGET, INTENT(in) :: patch    !< Grid information provided by host model
+    CHARACTER(LEN=*), INTENT(in)      :: type     !< Type of host model ('icon' or 'echam')
     ! -------------------------------------------------------------------------------------------------- !
-
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: grid
 
@@ -165,14 +162,14 @@ CONTAINS
     NULLIFY(model)
 
   END SUBROUTINE setup_grid_patch
+
+
   ! ====================================================================================================== !
-
-
-  ! ------------------------------------------------------------------------------------------------------ !
+  !
   !> Initializes a model instance
   !
   SUBROUTINE jsbach_init(model_id)
-    ! -------------------------------------------------------------------------------------------------- !
+
     USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
     USE mo_jsb_model_class,     ONLY: print_model
     USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract, &
@@ -197,9 +194,7 @@ CONTAINS
     USE mo_util,                ONLY: one_of
 
     ! -------------------------------------------------------------------------------------------------- !
-    INTEGER, INTENT(in) :: model_id
-        !! ID of the model instance to be initialized
-
+    INTEGER, INTENT(in) :: model_id !< ID of the model instance to be initialized
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER          :: model
     CLASS(t_jsb_tile_abstract), POINTER :: tile, child
@@ -227,12 +222,13 @@ CONTAINS
     dsl4jsb_Get_config(PHENO_)
 
     ! -------------------------------------------------------------------------------------------------- !
+    !>
     !> 1. Populate task queue
     !>
-    ! Define Task Queue 
-    !   (Temporary for testing ... should be in separate subroutine !!)
-    ! 
-    ! Two Queues: default jsb4 & quincy
+    !>     @todo Should be in separate subroutine
+    !>
+    !>     Two Queues: default JSBACH4 or QUINCY
+    !>
     IF (.NOT. model%config%use_quincy) THEN
       ! Note: JN changed the order of the processes
       ! - processes potentially changing the area of a tile are conducted first in the timestep.
@@ -316,6 +312,7 @@ CONTAINS
       CALL model%Queue_task(SEB_,    "asselin_filter")      ! Should always be the last task
     
     ! -------------------------------------------------------------------------------------------------- !
+    !
     ! quincy
     !  usecase must be set to: "jsbach_pfts" (which assumes ASSIMI_ to be active)      (this is not tested)
     !  CARBON_ may be active                                                           (this is not tested)
@@ -381,6 +378,10 @@ CONTAINS
 
     ! We continue with initializing the memory structure and different model processes.
 
+    ! -------------------------------------------------------------------------------------------------- !
+    !
+    !> 2. Iterate over tiles and call initialization if necessary
+    !
     l_fixed_fractions = .NOT. model%processes(ALCC_)%p%config%active
     IF (l_fixed_fractions) THEN
       CALL message(routine, 'Tile fractions are fixed over time')
@@ -388,9 +389,6 @@ CONTAINS
       CALL message(routine, 'Tile fractions vary over time')
     END IF
 
-    ! -------------------------------------------------------------------------------------------------- !
-    !> 2. Iterate over tiles and call initialization if necessary
-    !>
     CALL model%Reset_tiles()
     CALL model%Get_top_tile(tile)
 
@@ -404,6 +402,7 @@ CONTAINS
       END IF
 
       ! ---------------------------------------------------------------------------------------------- !
+      !>
       !>     2.1 Initialize each tile
       !>
       ! Initialize tile process memories and read tile fractions
@@ -413,6 +412,7 @@ CONTAINS
         & in_var_groups=one_of(TRIM(tile%name), model%config%output_tiles) > 0)
 
       ! ---------------------------------------------------------------------------------------------- !
+      !>
       !>     2.2 Initialize fractions of each tile
       !>
       CALL tile%Init_fractions(                                           &
@@ -421,6 +421,7 @@ CONTAINS
         & l_rel_fractions=model%config%relative_fractions_in_file)
 
       ! ---------------------------------------------------------------------------------------------- !
+      !>
       !>     2.3 Initialize processes on each tile
       !>
       ! TBD: Loop over processes instead of explicit
@@ -489,6 +490,7 @@ CONTAINS
     END DO
 
     ! -------------------------------------------------------------------------------------------------- !
+    !>
     !> 3. Iterate over tiles again and
     !>
     !>     3.1 set initial tile fractions for aggregator(s)
@@ -559,6 +561,7 @@ CONTAINS
     DEALLOCATE(fract_tmp)
 
     ! -------------------------------------------------------------------------------------------------- !
+    !>
     !> 4. Iterate over tiles again and initialize hierarchical structure for memories and variables
     !>
     CALL model%Reset_tiles()
@@ -606,7 +609,9 @@ CONTAINS
       CALL model%Goto_next_tile(tile)
 
     END DO
+
     ! -------------------------------------------------------------------------------------------------- !
+    !>
     !> 5. Iterate over tiles again and print tile information (if debug is ON)
     !>
     IF (debug_on()) THEN
@@ -631,27 +636,26 @@ CONTAINS
       END DO
     END IF
 
-!#ifdef _OPENACC
-!    IF (.NOT. is_time_restart(get_time_start())) CALL model%cpu_to_gpu()
-!#endif
+! #ifdef _OPENACC
+!     IF (.NOT. is_time_restart(get_time_start())) CALL model%cpu_to_gpu()
+! #endif
 
   END SUBROUTINE jsbach_init
+
+
   ! ====================================================================================================== !
-
-
-  ! ------------------------------------------------------------------------------------------------------ !
+  !
   !> Do some more initialization after restart files have been read
   !
   SUBROUTINE jsbach_init_after_restart(model_id)
-    ! -------------------------------------------------------------------------------------------------- !
+
     USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
     USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
     USE mo_carbon_init,         ONLY: carbon_read_cpools
     USE mo_util,                ONLY: one_of
 
     ! -------------------------------------------------------------------------------------------------- !
-    INTEGER, INTENT(in) :: model_id !! ID of model instance to be initialized
-
+    INTEGER, INTENT(in) :: model_id !< ID of model instance to be initialized
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER          :: model
     CLASS(t_jsb_tile_abstract), POINTER :: tile
