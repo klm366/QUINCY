@@ -53,6 +53,7 @@ CONTAINS
   !! @param [in]     lstart                T: Start of experiment
   !! @param [in]     delta_time            Time step
   !! @param [in]     l_dynsnow             T: Compute density of snow dynamically
+  !! @param [in]     snow_depth_max        Snow depth limit [m water equivalent]; -1. for no limit
   !! @param [in]     t_srf_unfilt          surface tempemperature [K] (unfiltered)
   !! @param [in]     wind_10m              wind speed at 10m height [m/s]
   !! @param [in]     t_air                 lowest layer atmosphere temperature [K]
@@ -80,7 +81,7 @@ CONTAINS
   !! @param [out]    evapo_deficit          Evaporation deficit flux due to inconsistent treatment of snow evap. [m]
   !
   PURE ELEMENTAL SUBROUTINE calc_surface_hydrology_land (          &
-    & lstart, delta_time, l_dynsnow,                               &
+    & lstart, delta_time, l_dynsnow, snow_depth_max,               &
     & t_srf_unfilt, wind_10m, t_air,                               &
     & skinres_canopy_max, skinres_max, sfract_srf, wfract_srf,     &
     & hcap_grnd, evapotrans, evapopot, trans,                      &
@@ -93,7 +94,7 @@ CONTAINS
     USE mo_sse_constants,          ONLY: snow_depth_min
 
     LOGICAL,  INTENT(in) :: lstart, l_dynsnow
-    REAL(wp), INTENT(in) :: delta_time
+    REAL(wp), INTENT(in) :: delta_time, snow_depth_max
     !$claw model-data
     REAL(wp), INTENT(in) ::                                                         &
       & t_srf_unfilt, wind_10m, t_air, skinres_canopy_max, skinres_max,             &
@@ -224,6 +225,12 @@ CONTAINS
     water_to_soil = snow_melt_soil + MAX(0._wp, skinres-skinres_max)     ! Excess water enters the soil, and
     skinres = MIN(skinres_max, skinres)                                  ! skin reservoir is limited to the maximum
     snow_accum = new_snow + evapo_snow_pot_in_m - snow_melt_soil - snow_melt_can
+
+    IF (snow_depth_max >= 0._wp) THEN
+      ! Limit snow depth to avoid grid cells with infinitely growing snow depths in cooler climates
+      water_to_soil = water_to_soil + MAX(0._wp, snow_soil-snow_depth_max)
+      snow_soil = MIN(snow_depth_max, snow_soil)
+    END IF
 
     !-----------------------------------------------------------
     !  Budget of water in skin reservoir (canopy and ground)

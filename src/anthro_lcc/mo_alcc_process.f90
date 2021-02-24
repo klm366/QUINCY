@@ -1,5 +1,5 @@
 !>
-!! @brief Contains the routines for the dynveg processes
+!! @brief Contains the routines for the alcc processes
 !!
 !! @author
 !!  Rainer Schneck, MPI-M Hamburg
@@ -7,7 +7,7 @@
 !! @par Revision History
 !! First version by Rainer Schneck (2019-01-08)
 !!
-MODULE mo_dynveg_process
+MODULE mo_alcc_process
 #ifndef __NO_JSBACH__
 
    USE mo_kind,      ONLY: wp
@@ -17,12 +17,12 @@ MODULE mo_dynveg_process
 
    PUBLIC :: relocate_vars_to_new_pft_fractions
 
-   CHARACTER(len=*), PARAMETER :: modname = 'mo_dynveg_process'
+   CHARACTER(len=*), PARAMETER :: modname = 'mo_alcc_process'
 
  CONTAINS
 
 
-  ! Calculations to relocate carbon to new pft fractions from dynveg
+  ! Calculations to relocate carbon to new pft fractions from alcc
   ! R: Note, this must be done for all vars that differ between pfts!
   !    We could also call it for each variable separately instead of naming each variable.
   !    We could also split this Subroutine for each process separately.
@@ -60,16 +60,9 @@ MODULE mo_dynveg_process
       & c_humus_2_lost_avg,         &
       & c_bg_sum_lost_avg,          &
       & c_ag_sum_1_lost_avg,        &
-      & c_litter_green_ag_lost_avg, &
-      & c_litter_green_bg_lost_avg, &
-      & c_litter_wood_ag_lost_avg,  &
-      & c_litter_wood_bg_lost_avg,  &
       ! rest
       & NPP_pot_sum_lost_avg,          &
       & GPP_sum_lost_avg,              &
-      & alpha_lost_avg,                &
-      & alpha_sum_lost_avg,            &
-      & alpha_yDayMean_lost_avg,       &
       & soil_respiration_lost_avg,     &
       & NPP_flux_correction_lost_avg,  &
       & NPP_pot_yDayMean_lost_avg,     &
@@ -155,14 +148,9 @@ MODULE mo_dynveg_process
       & c_acid_bg2_, c_water_bg2_, c_ethanol_bg2_, c_nonsoluble_bg2_, &
       & c_humus_1_, c_humus_2_,                                       &
       & c_bg_sum_, c_ag_sum_1_,                                       &
-      & c_litter_green_ag_, c_litter_green_bg_,                       &
-      & c_litter_wood_ag_, c_litter_wood_bg_,                         &
       ! rest
       & NPP_pot_sum_,          &
       & GPP_sum_,              &
-      & alpha_,                &
-      & alpha_sum_,            &
-      & alpha_yDayMean_,       &
       & soil_respiration_,     &
       & NPP_flux_correction_,  &
       & NPP_pot_yDayMean_,     &
@@ -277,16 +265,9 @@ MODULE mo_dynveg_process
       & c_humus_2_lost_avg,         &
       & c_bg_sum_lost_avg,          &
       & c_ag_sum_1_lost_avg,        &
-      & c_litter_green_ag_lost_avg, &
-      & c_litter_green_bg_lost_avg, &
-      & c_litter_wood_ag_lost_avg,  &
-      & c_litter_wood_bg_lost_avg,  &
       ! rest
       & NPP_pot_sum_lost_avg,          &
       & GPP_sum_lost_avg,              &
-      & alpha_lost_avg,                &
-      & alpha_sum_lost_avg,            &
-      & alpha_yDayMean_lost_avg,       &
       & soil_respiration_lost_avg,     &
       & NPP_flux_correction_lost_avg,  &
       & NPP_pot_yDayMean_lost_avg,     &
@@ -392,16 +373,9 @@ MODULE mo_dynveg_process
       & c_humus_2_,         &
       & c_bg_sum_,          &
       & c_ag_sum_1_,        &
-      & c_litter_green_ag_, &
-      & c_litter_green_bg_, &
-      & c_litter_wood_ag_,  &
-      & c_litter_wood_bg_,  &
       !
       & NPP_pot_sum_,          &
       & GPP_sum_,              &
-      & alpha_,                &
-      & alpha_sum_,            &
-      & alpha_yDayMean_,       &
       & soil_respiration_,     &
       & NPP_flux_correction_,  &
       & NPP_pot_yDayMean_,     &
@@ -481,9 +455,9 @@ MODULE mo_dynveg_process
 
     IF (d_fract_grow_pfts > 0._wp) THEN ! Change only for growing pfts existing values of variable
       ! CARBON
-      IF (PRESENT(c_green_))          c_green_   = c_green_   * f_old_to_new_grow_pfts   +  c_green_lost_avg    * f_d_to_new_grow_pfts
-      IF (PRESENT(c_woods_))          c_woods_   = c_woods_   * f_old_to_new_grow_pfts   +  c_woods_lost_avg    * f_d_to_new_grow_pfts
-      IF (PRESENT(c_reserve_))        c_reserve_ = c_reserve_ * f_old_to_new_grow_pfts   +  c_reserve_lost_avg  * f_d_to_new_grow_pfts
+      IF (PRESENT(c_green_))   c_green_   = c_green_   * f_old_to_new_grow_pfts   +  c_green_lost_avg    * f_d_to_new_grow_pfts
+      IF (PRESENT(c_woods_))   c_woods_   = c_woods_   * f_old_to_new_grow_pfts   +  c_woods_lost_avg    * f_d_to_new_grow_pfts
+      IF (PRESENT(c_reserve_)) c_reserve_ = c_reserve_ * f_old_to_new_grow_pfts   +  c_reserve_lost_avg  * f_d_to_new_grow_pfts
 
       IF (PRESENT(c_crop_harvest_))   c_crop_harvest_ = c_crop_harvest_    * f_old_to_new_grow_pfts   &
                                  & +  c_crop_harvest_lost_avg    * f_d_to_new_grow_pfts
@@ -527,24 +501,10 @@ MODULE mo_dynveg_process
                                  & +  c_bg_sum_lost_avg          * f_d_to_new_grow_pfts
       IF (PRESENT(c_ag_sum_1_))       c_ag_sum_1_ = c_ag_sum_1_             * f_old_to_new_grow_pfts  &
                                  & +  c_ag_sum_1_lost_avg        * f_d_to_new_grow_pfts
-      IF (PRESENT(c_litter_green_ag_)) c_litter_green_ag_ = c_litter_green_ag_ * f_old_to_new_grow_pfts &
-                                 & +  c_litter_green_ag_lost_avg * f_d_to_new_grow_pfts
-      IF (PRESENT(c_litter_green_bg_)) c_litter_green_bg_ = c_litter_green_bg_ * f_old_to_new_grow_pfts &
-                                 & +  c_litter_green_bg_lost_avg * f_d_to_new_grow_pfts
-      IF (PRESENT(c_litter_wood_ag_)) c_litter_wood_ag_ = c_litter_wood_ag_ * f_old_to_new_grow_pfts  &
-                                 & +  c_litter_wood_ag_lost_avg  * f_d_to_new_grow_pfts
-      IF (PRESENT(c_litter_wood_bg_)) c_litter_wood_bg_ = c_litter_wood_bg_ * f_old_to_new_grow_pfts  &
-                                 & +  c_litter_wood_bg_lost_avg  * f_d_to_new_grow_pfts
       IF (PRESENT(NPP_pot_sum_))     NPP_pot_sum_ = NPP_pot_sum_             * f_old_to_new_grow_pfts &
                                  & +  NPP_pot_sum_lost_avg       * f_d_to_new_grow_pfts
       IF (PRESENT(GPP_sum_))         GPP_sum_ = GPP_sum_                     * f_old_to_new_grow_pfts &
                                  & +  GPP_sum_lost_avg           * f_d_to_new_grow_pfts
-      IF (PRESENT(alpha_))            alpha_ = alpha_                        * f_old_to_new_grow_pfts &
-                                 & +  alpha_lost_avg             * f_d_to_new_grow_pfts
-      IF (PRESENT(alpha_sum_))        alpha_sum_ = alpha_sum_                * f_old_to_new_grow_pfts &
-                                 & +  alpha_sum_lost_avg         * f_d_to_new_grow_pfts
-      IF (PRESENT(alpha_yDayMean_)) alpha_yDayMean_ = alpha_yDayMean_        * f_old_to_new_grow_pfts &
-                                 & +  alpha_yDayMean_lost_avg    * f_d_to_new_grow_pfts
       IF (PRESENT(soil_respiration_)) soil_respiration_ = soil_respiration_  * f_old_to_new_grow_pfts &
                                  & +  soil_respiration_lost_avg  * f_d_to_new_grow_pfts
       IF (PRESENT(NPP_flux_correction_)) NPP_flux_correction_ = NPP_flux_correction_ * f_old_to_new_grow_pfts &
@@ -565,8 +525,9 @@ MODULE mo_dynveg_process
                                  & +  cflux_herb_2_littergreen_lost_avg * f_d_to_new_grow_pfts
       IF (PRESENT(cflux_herb_2_atm_)) cflux_herb_2_atm_ = cflux_herb_2_atm_  * f_old_to_new_grow_pfts                        &
                                  & +  cflux_herb_2_atm_lost_avg  * f_d_to_new_grow_pfts
-      IF (PRESENT(cflux_dist_greenreserve_2_soil_)) cflux_dist_greenreserve_2_soil_ = cflux_dist_greenreserve_2_soil_ * f_old_to_new_grow_pfts &
-                                 & +  cflux_dist_greenreserve_2_soil_lost_avg * f_d_to_new_grow_pfts
+      IF (PRESENT(cflux_dist_greenreserve_2_soil_)) &
+        & cflux_dist_greenreserve_2_soil_ = cflux_dist_greenreserve_2_soil_ * f_old_to_new_grow_pfts &
+        & +  cflux_dist_greenreserve_2_soil_lost_avg * f_d_to_new_grow_pfts
       IF (PRESENT(cflux_dist_woods_2_soil_)) cflux_dist_woods_2_soil_ = cflux_dist_woods_2_soil_ * f_old_to_new_grow_pfts    &
                                  & +  cflux_dist_woods_2_soil_lost_avg * f_d_to_new_grow_pfts
       IF (PRESENT(cflux_fire_all_2_atm_)) cflux_fire_all_2_atm_ = cflux_fire_all_2_atm_ * f_old_to_new_grow_pfts             &
@@ -625,8 +586,9 @@ MODULE mo_dynveg_process
                                       & +  fract_fpc_lost_avg    * f_d_to_new_grow_pfts
       !IF (PRESENT(fract_fpc_max))  fract_fpc_max  = fract_fpc_max    * f_old_to_new_grow_pfts   &
       !                                & +  fract_fpc_max_lost_avg    * f_d_to_new_grow_pfts
-      IF (PRESENT(previous_day_NPP_pot_rate_ca))   previous_day_NPP_pot_rate_ca =  previous_day_NPP_pot_rate_ca   * f_old_to_new_grow_pfts   &
-                                      & +  previous_day_NPP_pot_rate_ca_lost_avg    * f_d_to_new_grow_pfts
+      IF (PRESENT(previous_day_NPP_pot_rate_ca)) &
+        & previous_day_NPP_pot_rate_ca =  previous_day_NPP_pot_rate_ca   * f_old_to_new_grow_pfts   &
+        & +  previous_day_NPP_pot_rate_ca_lost_avg    * f_d_to_new_grow_pfts
       IF (PRESENT(cconservation_allom))   cconservation_allom = cconservation_allom    * f_old_to_new_grow_pfts   &
                                       & +  cconservation_allom_lost_avg    * f_d_to_new_grow_pfts
       IF (PRESENT(day_NPP_sum))   day_NPP_sum = day_NPP_sum    * f_old_to_new_grow_pfts   &
@@ -687,4 +649,4 @@ MODULE mo_dynveg_process
   END SUBROUTINE
 
 #endif
-END MODULE mo_dynveg_process
+END MODULE mo_alcc_process

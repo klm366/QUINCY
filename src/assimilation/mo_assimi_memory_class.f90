@@ -172,7 +172,7 @@ CONTAINS
   !------------------------------------------------------------------------------------------------
   SUBROUTINE Init_assimi_memory(mem, prefix, suffix, lct_ids, model_id)
 
-    USE mo_jsb_varlist,       ONLY: jsb_add_var, BASIC !, MEDIUM, FULL
+    USE mo_jsb_varlist,       ONLY: BASIC !, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables !, TSTEP_CONSTANT
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
@@ -208,7 +208,7 @@ CONTAINS
 
     IF (.NOT. model%config%use_quincy) THEN
 
-      CALL jsb_add_var( mem, 'gross_assimilation_ca', mem%gross_assimilation_ca,     &
+      CALL mem%Add_var('gross_assimilation_ca', mem%gross_assimilation_ca,           &
         & hgrid, surface,                                                            &
         & t_cf('gross_assimilation_ca', 'mol(CO2)/m^2(canopy ground) / s',           &
         &      'Gross photosynthesis on canopy ground area'),                        &
@@ -217,7 +217,7 @@ CONTAINS
         & output_level=BASIC,                                                        &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'gross_assimilation', mem%gross_assimilation,                                          &
+      CALL mem%Add_var('gross_assimilation', mem%gross_assimilation,                                                &
         & hgrid, surface,                                                                                           &
         & t_cf('gross_assimilation', 'mol(CO2)/m^2 (tile area) / s', 'Gross photosynthesis on tile area'),          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
@@ -225,7 +225,7 @@ CONTAINS
         & output_level=BASIC,                                                                                       &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'dark_respiration_ca', mem%dark_respiration_ca,                                        &
+      CALL mem%Add_var('dark_respiration_ca', mem%dark_respiration_ca,                                              &
         & hgrid, surface,                                                                                           &
         & t_cf('dark_respiration_ca', 'mol(CO2)/m^2(canopy ground) / s', 'Dark_respiration on canopy ground area'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
@@ -233,7 +233,7 @@ CONTAINS
         & output_level=BASIC,                                                                                       &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'dark_respiration', mem%dark_respiration,                                              &
+      CALL mem%Add_var('dark_respiration', mem%dark_respiration,                                                    &
         & hgrid, surface,                                                                                           &
         & t_cf('dark_respiration', 'mol(CO2)/m^2 (tile area) / s', 'Dark_respiration on tile area'),                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
@@ -241,7 +241,7 @@ CONTAINS
         & output_level=BASIC,                                                                                       &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'npp_pot_rate_ca', mem%NPP_pot_rate_ca,                        &
+      CALL mem%Add_var('npp_pot_rate_ca', mem%NPP_pot_rate_ca,                              &
         & hgrid, surface,                                                                   &
         & t_cf('NPP_pot_rate_ca', 'mol(CO2)/(m^2 (canopy ground) / s)', 'NPP_pot_rate_ca'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
@@ -249,7 +249,7 @@ CONTAINS
         & output_level=BASIC,                                                               &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      CALL jsb_add_var( mem, 'scaling_fact_cl', mem%assimi_scaling_fact_cl,  &
+      CALL mem%Add_var('scaling_fact_cl', mem%assimi_scaling_fact_cl,        &
         & hgrid, canopy_layer,                                               &
         & t_cf('assimi_scaling_fact_cl', '-',                                &
         'assimilation scaling factors per canopy layer'),                    &
@@ -257,7 +257,7 @@ CONTAINS
         & prefix, suffix,                                                    &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'canopy_cond_cl', mem%canopy_cond_cl,           &
+      CALL mem%Add_var('canopy_cond_cl', mem%canopy_cond_cl,                 &
         & hgrid, canopy_layer,                                               &
         & t_cf('canopy_cond_cl', '-',                                        &
         'Canopy cond. per canopy layer and per leaf area'),                  &
@@ -265,28 +265,28 @@ CONTAINS
         & prefix, suffix,                                                    &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'gross_assimilation_cl', mem%gross_assimilation_cl,                                              &
+      CALL mem%Add_var('gross_assimilation_cl', mem%gross_assimilation_cl,                                                    &
         & hgrid, canopy_layer,                                                                                                &
         & t_cf('gross_assimilation_cl', 'mol(CO2)/m^2(leaf area) / s', 'Gross photosynthesis per canopy layer on leaf area'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                                  &
         & prefix, suffix,                                                                                                     &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE.  )
 
-      CALL jsb_add_var( mem, 'dark_respiration_cl', mem%dark_respiration_cl,                                                   &
+      CALL mem%Add_var('dark_respiration_cl', mem%dark_respiration_cl,                                                         &
         & hgrid, canopy_layer,                                                                                                 &
         & t_cf('dark_respiration_cl', 'mol(CO2)/m^2(leaf area) / s', 'Dark respiration of leaf per canopy layer on leaf area'),&
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                                   &
         & prefix, suffix,                                                                                                      &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE.  )
 
-      CALL jsb_add_var( mem, 'carbox_rate_max_cl', mem%carbox_rate_max_cl,                                          &
+      CALL mem%Add_var('carbox_rate_max_cl', mem%carbox_rate_max_cl,                                                &
         & hgrid, canopy_layer,                                                                                      &
         & t_cf('carbox_rate_max_cl', 'mol(CO2)/m^2(leaf area) / s', 'Maximum carboxylation rate per canopy layer'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
         & prefix, suffix,                                                                                           &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE.  )
 
-      CALL jsb_add_var( mem, 'e_transport_rate_max_cl', mem%e_transport_rate_max_cl, &
+      CALL mem%Add_var('e_transport_rate_max_cl', mem%e_transport_rate_max_cl,       &
         & hgrid, canopy_layer,                                                       &
         & t_cf('e_transport_rate_max_cl', 'dimensionen',                             &
         'Maximum electron transport rate per canopy layer'),                         &
@@ -294,42 +294,42 @@ CONTAINS
         & prefix, suffix,                                                            &
         & lrestart=.FALSE., initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 'carbox_rate_cl', mem%carbox_rate_cl,                                             &
+      CALL mem%Add_var('carbox_rate_cl', mem%carbox_rate_cl,                                                   &
         & hgrid, canopy_layer,                                                                                 &
         & t_cf('carbox_rate_cl', 'mol(CO2)/m^2(leaf area) / s', 'Actual carboxylation rate per canopy layer'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                   &
         & prefix, suffix,                                                                                      &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE.  )
 
-      CALL jsb_add_var( mem, 'e_transport_rate_cl', mem%e_transport_rate_cl,                                             &
+      CALL mem%Add_var('e_transport_rate_cl', mem%e_transport_rate_cl,                                                   &
         & hgrid, canopy_layer,                                                                                           &
         & t_cf('e_transport_rate_cl', 'mol(CO2)/m^2(leaf area) / s', 'Actual electron transport rate per canopy layer'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                             &
         & prefix, suffix,                                                                                                &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE.  )! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'co2_conc_leaf_cl', mem%CO2_conc_leaf_cl,                               &
+      CALL mem%Add_var('co2_conc_leaf_cl', mem%CO2_conc_leaf_cl,                                     &
         & hgrid, canopy_layer,                                                                       &
         & t_cf('CO2_conc_leaf_cl', 'dimensionen', 'CO2 concentration inside leaf per canopy layer'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                         &
         & prefix, suffix,                                                                            &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3 CO2_conc_leaf_acc
 
-      CALL jsb_add_var( mem, 'canopy_cond_unlimited', mem%canopy_cond_unlimited, &
+      CALL mem%Add_var('canopy_cond_unlimited', mem%canopy_cond_unlimited,       &
         & hgrid, surface,                                                        &
         & t_cf('canopy_conductance_unlimited', '', ''),                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
         & initval_r=0.0_wp )
 
-        CALL jsb_add_var( mem, 'canopy_cond_limited', mem%canopy_cond_limited,   &
+      CALL mem%Add_var('canopy_cond_limited', mem%canopy_cond_limited,           &
         & hgrid, surface,                                                        &
         & t_cf('canopy_conductance_limited', '', ''),                            &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
         & initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 'cover_fract_pot', mem%cover_fract_pot,         &
+      CALL mem%Add_var('cover_fract_pot', mem%cover_fract_pot,               &
         & hgrid, surface,                                                    &
         & t_cf('cover_fract_pot', 'fract', ''),                              &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
@@ -346,7 +346,7 @@ CONTAINS
         
 !!! temporary fix until the PHENO & other processes are using only the quincy tasks with use_quincy == TRUE
 !!!  few jsb4 variables are needed by carbon_interface:update_C_NPP_pot_allocation
-        CALL jsb_add_var( mem, 'npp_pot_rate_ca', mem%NPP_pot_rate_ca,                        &
+        CALL mem%Add_var('npp_pot_rate_ca', mem%NPP_pot_rate_ca,                              &
           & hgrid, surface,                                                                   &
           & t_cf('NPP_pot_rate_ca', 'mol(CO2)/(m^2 (canopy ground) / s)', 'NPP_pot_rate_ca'), &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
@@ -354,7 +354,7 @@ CONTAINS
           & output_level=BASIC,                                                               &
           & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-        CALL jsb_add_var( mem, 'gross_assimilation_ca', mem%gross_assimilation_ca,     &
+        CALL mem%Add_var('gross_assimilation_ca', mem%gross_assimilation_ca,           &
           & hgrid, surface,                                                            &
           & t_cf('gross_assimilation_ca', 'mol(CO2)/m^2(canopy ground) / s',           &
           &      'Gross photosynthesis on canopy ground area'),                        &
@@ -364,7 +364,7 @@ CONTAINS
           & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3       
 
           ! NOTE this jsb4 var is identical to what the canopy_cond is in quincy
-          CALL jsb_add_var( mem, 'canopy_cond_limited', mem%canopy_cond_limited,   &
+          CALL mem%Add_var('canopy_cond_limited', mem%canopy_cond_limited,         &
           & hgrid, surface,                                                        &
           & t_cf('canopy_conductance_limited', '', ''),                            &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
@@ -373,7 +373,7 @@ CONTAINS
 
 !!! temp fix end
                 
-        CALL jsb_add_var(mem, 'gross_assimilation', mem%gross_assimilation, &
+        CALL mem%Add_var('gross_assimilation', mem%gross_assimilation, &
               hgrid, surface, &
               t_cf('gross_assimilation', 'µmol CO2 m-2 s-1', 'canopy-integrated gross assimilation rate'), &
               t_grib1(table, 255, grib_bits), &
@@ -382,7 +382,7 @@ CONTAINS
               loutput=.FALSE.,&
               initval_r=0.0_wp) ! initvalue
     
-        CALL jsb_add_var(mem, 'gross_assimilation_C13', mem%gross_assimilation_C13, &
+        CALL mem%Add_var('gross_assimilation_C13', mem%gross_assimilation_C13, &
               hgrid, surface, &
               t_cf('gross_assimilation_C13', 'µmol 13CO2 m-2 s-1', 'canopy-integrated gross assimilation rate'), &
               t_grib1(table, 255, grib_bits), &
@@ -391,7 +391,7 @@ CONTAINS
               loutput=.FALSE.,&
               initval_r=0.0_wp) ! initvalue
     
-        CALL jsb_add_var(mem, 'gross_assimilation_C14', mem%gross_assimilation_C14, &
+        CALL mem%Add_var('gross_assimilation_C14', mem%gross_assimilation_C14, &
               hgrid, surface, &
               t_cf('gross_assimilation_C14', 'µmol 14CO2 m-2 s-1', 'canopy-integrated gross assimilation rate'), &
               t_grib1(table, 255, grib_bits), &
@@ -400,7 +400,7 @@ CONTAINS
               loutput=.FALSE.,&
               initval_r=0.0_wp) ! initvalue
     
-        CALL jsb_add_var(mem, 'net_assimilation', mem%net_assimilation, &
+        CALL mem%Add_var('net_assimilation', mem%net_assimilation, &
               hgrid, surface, &
               t_cf('net_assimilation', 'µmol CO2 m-2 s-1', 'canopy-integrated net assimilation rate'), &
               t_grib1(table, 255, grib_bits), &
@@ -409,7 +409,7 @@ CONTAINS
               loutput=.FALSE.,&
               initval_r=0.0_wp) ! initvalue
     
-        CALL jsb_add_var(mem, 'net_assimilation_boc', mem%net_assimilation_boc, &
+        CALL mem%Add_var('net_assimilation_boc', mem%net_assimilation_boc, &
               hgrid, surface, &
               t_cf('net_assimilation_boc', 'µmol CO2 m-2 s-1', 'net assimilation rate at the bottom of the canopy'), &
               t_grib1(table, 255, grib_bits), &
@@ -418,7 +418,7 @@ CONTAINS
               loutput=.FALSE.,&
               initval_r=0.0_wp) ! initvalue
     
-        CALL jsb_add_var(mem, 'maint_respiration_leaf', mem%maint_respiration_leaf, &
+        CALL mem%Add_var('maint_respiration_leaf', mem%maint_respiration_leaf, &
               hgrid, surface, &
               t_cf('maint_respiration_leaf', 'µmol CO2 m-2 s-1', 'canopy-integrated foliar respiration rate'), &
               t_grib1(table, 255, grib_bits), &
@@ -427,7 +427,7 @@ CONTAINS
               loutput=.FALSE.,&
               initval_r=0.0_wp) ! initvalue
   
-        CALL jsb_add_var(mem, 'gross_assimilation_cl', mem%gross_assimilation_cl, &
+        CALL mem%Add_var('gross_assimilation_cl', mem%gross_assimilation_cl, &
               hgrid, vgrid_canopy, &
               t_cf('gross_assimilation_cl', 'µmol CO2 m-2 s-1', 'gross assimilation rate per canopy layer'), &
               t_grib1(table, 255, grib_bits), &
@@ -436,7 +436,7 @@ CONTAINS
               loutput=.FALSE.,&
               initval_r=0.0_wp) ! initvalue
     
-        CALL jsb_add_var(mem, 'net_assimilation_cl', mem%net_assimilation_cl, &
+        CALL mem%Add_var('net_assimilation_cl', mem%net_assimilation_cl, &
               hgrid, vgrid_canopy, &
               t_cf('net_assimilation_cl', 'µmol CO2 m-2 s-1', 'net assimilation rate per canopy layer'), &
               t_grib1(table, 255, grib_bits), &
@@ -445,7 +445,7 @@ CONTAINS
               loutput=.FALSE.,&
               initval_r=0.0_wp) ! initvalue
     
-        CALL jsb_add_var(mem, 'maint_respiration_leaf_cl', mem%maint_respiration_leaf_cl, &
+        CALL mem%Add_var('maint_respiration_leaf_cl', mem%maint_respiration_leaf_cl, &
               hgrid, vgrid_canopy, &
               t_cf('maint_respiration_leaf_cl', 'µmol CO2 m-2 s-1', 'foliar respiration rate per canopy layer'), &
               t_grib1(table, 255, grib_bits), &
@@ -454,7 +454,7 @@ CONTAINS
               loutput=.FALSE.,&
               initval_r=0.0_wp) ! initvalue
   
-        CALL jsb_add_var(mem, 'beta_air', mem%beta_air, &
+        CALL mem%Add_var('beta_air', mem%beta_air, &
               hgrid, surface, &
               t_cf('beta_air', 'unitless', 'scaling factor to account for air humidity effects on conductance'), &
               t_grib1(table, 255, grib_bits), &
@@ -463,7 +463,7 @@ CONTAINS
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
    
-        CALL jsb_add_var(mem, 'beta_soa', mem%beta_soa, &
+        CALL mem%Add_var('beta_soa', mem%beta_soa, &
               hgrid, surface, &
               t_cf('beta_soa', 'unitless', 'scaling factor to account for spring in coniferous forests'), &
               t_grib1(table, 255, grib_bits), &
@@ -472,7 +472,7 @@ CONTAINS
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
   
-        CALL jsb_add_var(mem, 'beta_soil_ps', mem%beta_soil_ps, &
+        CALL mem%Add_var('beta_soil_ps', mem%beta_soil_ps, &
               hgrid, surface, &
               t_cf('beta_soil_ps', 'unitless', 'scaling factor to account for soil moisture constraints on photosynthesis'), &
               t_grib1(table, 255, grib_bits), &
@@ -481,7 +481,7 @@ CONTAINS
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
     
-        CALL jsb_add_var(mem, 'beta_soil_gs', mem%beta_soil_gs, &
+        CALL mem%Add_var('beta_soil_gs', mem%beta_soil_gs, &
               hgrid, surface, &
               t_cf('beta_soil_gs', 'unitless', 'scaling factor to account for soil moisture constraints on conductance'), &
               t_grib1(table, 255, grib_bits), &
@@ -490,7 +490,7 @@ CONTAINS
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
   
-        CALL jsb_add_var(mem, 'canopy_cond', mem%canopy_cond, &
+        CALL mem%Add_var('canopy_cond', mem%canopy_cond, &
               hgrid, surface, &
               t_cf('canopy_cond', 'm s-1', 'canopy-integrated conductance for water'), &
               t_grib1(table, 255, grib_bits), &
@@ -499,7 +499,7 @@ CONTAINS
               loutput=.FALSE.,&
               initval_r=0.0_wp) ! initvalue
     
-        CALL jsb_add_var(mem, 'co2_conc_leaf', mem%co2_conc_leaf, &
+        CALL mem%Add_var('co2_conc_leaf', mem%co2_conc_leaf, &
               hgrid, surface, &
               t_cf('co2_conc_leaf', 'ppm', 'canopy-integrated internal leaf CO2 concentration'), &
               t_grib1(table, 255, grib_bits), &
@@ -508,7 +508,7 @@ CONTAINS
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
   
-        CALL jsb_add_var(mem, 't_jmax_opt', mem%t_jmax_opt, &
+        CALL mem%Add_var('t_jmax_opt', mem%t_jmax_opt, &
               hgrid, surface, &
               t_cf('t_jmax_opt', 'deg C', 'optimal temperature for electron transport of photosynthesis'), &
               t_grib1(table, 255, grib_bits), &
@@ -517,7 +517,7 @@ CONTAINS
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
    
-        CALL jsb_add_var(mem, 'canopy_cond_cl', mem%canopy_cond_cl, &
+        CALL mem%Add_var('canopy_cond_cl', mem%canopy_cond_cl, &
               hgrid, vgrid_canopy, &
               t_cf('canopy_cond_cl', 'm s-1', 'conductance for water per canopy layer'), &
               t_grib1(table, 255, grib_bits), &
@@ -526,7 +526,7 @@ CONTAINS
               loutput=.FALSE.,&
               initval_r=0.0_wp) ! initvalue
    
-        CALL jsb_add_var(mem, 'co2_conc_leaf_cl', mem%co2_conc_leaf_cl, &
+        CALL mem%Add_var('co2_conc_leaf_cl', mem%co2_conc_leaf_cl, &
               hgrid, vgrid_canopy, &
               t_cf('co2_conc_leaf_cl', 'ppm', 'internal leaf CO2 concentration per canopy layer'), &
               t_grib1(table, 255, grib_bits), &
@@ -535,7 +535,7 @@ CONTAINS
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
    
-        CALL jsb_add_var(mem, 'jmax_cl', mem%jmax_cl, &
+        CALL mem%Add_var('jmax_cl', mem%jmax_cl, &
               hgrid, vgrid_canopy, &
               t_cf('jmax_cl', 'µmol CO2 m-2 s-1', 'maximum rate of electron transport'), &
               t_grib1(table, 255, grib_bits), &
@@ -544,7 +544,7 @@ CONTAINS
               loutput=.FALSE.,&
               initval_r=0.0_wp) ! initvalue
    
-        CALL jsb_add_var(mem, 'vcmax_cl', mem%vcmax_cl, &
+        CALL mem%Add_var('vcmax_cl', mem%vcmax_cl, &
               hgrid, vgrid_canopy, &
               t_cf('vcmax_cl', 'µmol CO2 m-2 s-1', 'maximum rate of carboxylation'), &
               t_grib1(table, 255, grib_bits), &
@@ -553,7 +553,7 @@ CONTAINS
               loutput=.FALSE.,&
               initval_r=0.0_wp) ! initvalue
   
-        CALL jsb_add_var(mem, 'soa_tsoa_mavg', mem%soa_tsoa_mavg, &
+        CALL mem%Add_var('soa_tsoa_mavg', mem%soa_tsoa_mavg, &
               hgrid, surface, &
               t_cf('soa_tsoa_mavg', '', 'state of acclimation, used in calculation of beta_soa time-averaged'), &
               t_grib1(table, 255, grib_bits), &
@@ -562,7 +562,7 @@ CONTAINS
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
   
-        CALL jsb_add_var(mem, 'beta_air_daytime', mem%beta_air_daytime, &
+        CALL mem%Add_var('beta_air_daytime', mem%beta_air_daytime, &
               hgrid, surface, &
               t_cf('beta_air_daytime', 'unitless', 'scaling factor beta_air average of the previous day'), &
               t_grib1(table, 255, grib_bits), &
@@ -571,7 +571,7 @@ CONTAINS
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
     
-        CALL jsb_add_var(mem, 'beta_air_daytime_dacc', mem%beta_air_daytime_dacc, &
+        CALL mem%Add_var('beta_air_daytime_dacc', mem%beta_air_daytime_dacc, &
               hgrid, surface, &
               t_cf('beta_air_daytime_dacc', 'unitless', 'scaling factor beta_air average of the previous day'), &
               t_grib1(table, 255, grib_bits), &
@@ -580,7 +580,7 @@ CONTAINS
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
     
-        CALL jsb_add_var(mem, 'beta_air_tfrac_mavg', mem%beta_air_tfrac_mavg, &
+        CALL mem%Add_var('beta_air_tfrac_mavg', mem%beta_air_tfrac_mavg, &
               hgrid, surface, &
               t_cf('beta_air_tfrac_mavg', 'unitless', 'scaling factor beta_air time-averaged'), &
               t_grib1(table, 255, grib_bits), &
@@ -589,7 +589,7 @@ CONTAINS
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
     
-        CALL jsb_add_var(mem, 'beta_air_tcnl_mavg', mem%beta_air_tcnl_mavg, &
+        CALL mem%Add_var('beta_air_tcnl_mavg', mem%beta_air_tcnl_mavg, &
               hgrid, surface, &
               t_cf('beta_air_tcnl_mavg', 'unitless', 'scaling factor beta_air time-averaged'), &
               t_grib1(table, 255, grib_bits), &
@@ -598,7 +598,7 @@ CONTAINS
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
   
-        CALL jsb_add_var(mem, 'beta_soa_tphen_mavg', mem%beta_soa_tphen_mavg, &
+        CALL mem%Add_var('beta_soa_tphen_mavg', mem%beta_soa_tphen_mavg, &
               hgrid, surface, &
               t_cf('beta_soa_tphen_mavg', 'unitless', 'scaling factor account for spring in coniferous forests time-averaged'), &
               t_grib1(table, 255, grib_bits), &
@@ -607,7 +607,7 @@ CONTAINS
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
   
-        CALL jsb_add_var(mem, 'beta_soil_ps_daytime', mem%beta_soil_ps_daytime, &
+        CALL mem%Add_var('beta_soil_ps_daytime', mem%beta_soil_ps_daytime, &
               hgrid, surface, &
               t_cf('beta_soil_ps_daytime', 'unitless', 'scaling factor beta_soil_ps average of the previous day'), &
               t_grib1(table, 255, grib_bits), &
@@ -616,7 +616,7 @@ CONTAINS
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
     
-        CALL jsb_add_var(mem, 'beta_soil_ps_daytime_dacc', mem%beta_soil_ps_daytime_dacc, &
+        CALL mem%Add_var('beta_soil_ps_daytime_dacc', mem%beta_soil_ps_daytime_dacc, &
               hgrid, surface, &
               t_cf('beta_soil_ps_daytime_dacc', 'unitless', 'scaling factor beta_soil_ps average of the previous day'), &
               t_grib1(table, 255, grib_bits), &
@@ -625,7 +625,7 @@ CONTAINS
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
     
-        CALL jsb_add_var(mem, 'beta_soil_ps_tfrac_mavg', mem%beta_soil_ps_tfrac_mavg, &
+        CALL mem%Add_var('beta_soil_ps_tfrac_mavg', mem%beta_soil_ps_tfrac_mavg, &
               hgrid, surface, &
               t_cf('beta_soil_ps_tfrac_mavg', 'unitless', 'scaling factor beta_soil_ps time-averaged'), &
               t_grib1(table, 255, grib_bits), &
@@ -634,7 +634,7 @@ CONTAINS
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
     
-        CALL jsb_add_var(mem, 'beta_soil_ps_tcnl_mavg', mem%beta_soil_ps_tcnl_mavg, &
+        CALL mem%Add_var('beta_soil_ps_tcnl_mavg', mem%beta_soil_ps_tcnl_mavg, &
               hgrid, surface, &
               t_cf('beta_soil_ps_tcnl_mavg', 'unitless', 'scaling factor beta_soil_ps time-averaged'), &
               t_grib1(table, 255, grib_bits), &
@@ -643,7 +643,7 @@ CONTAINS
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
     
-        CALL jsb_add_var(mem, 'beta_soil_gs_daytime', mem%beta_soil_gs_daytime, &
+        CALL mem%Add_var('beta_soil_gs_daytime', mem%beta_soil_gs_daytime, &
               hgrid, surface, &
               t_cf('beta_soil_gs_daytime', 'unitless', 'scaling factor beta_soil_gs average of the previous day'), &
               t_grib1(table, 255, grib_bits), &
@@ -652,7 +652,7 @@ CONTAINS
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
     
-        CALL jsb_add_var(mem, 'beta_soil_gs_daytime_dacc', mem%beta_soil_gs_daytime_dacc, &
+        CALL mem%Add_var('beta_soil_gs_daytime_dacc', mem%beta_soil_gs_daytime_dacc, &
               hgrid, surface, &
               t_cf('beta_soil_gs_daytime_dacc', 'unitless', 'scaling factor beta_soil_gs average of the previous day'), &
               t_grib1(table, 255, grib_bits), &
@@ -661,7 +661,7 @@ CONTAINS
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
     
-        CALL jsb_add_var(mem, 'beta_soil_gs_tphen_mavg', mem%beta_soil_gs_tphen_mavg, &
+        CALL mem%Add_var('beta_soil_gs_tphen_mavg', mem%beta_soil_gs_tphen_mavg, &
               hgrid, surface, &
               t_cf('beta_soil_gs_tphen_mavg', 'unitless', 'scaling factor beta_soil_gs time-averaged'), &
               t_grib1(table, 255, grib_bits), &
@@ -670,7 +670,7 @@ CONTAINS
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
     
-        CALL jsb_add_var(mem, 'beta_soil_gs_tfrac_mavg', mem%beta_soil_gs_tfrac_mavg, &
+        CALL mem%Add_var('beta_soil_gs_tfrac_mavg', mem%beta_soil_gs_tfrac_mavg, &
               hgrid, surface, &
               t_cf('beta_soil_gs_tfrac_mavg', 'unitless', 'scaling factor beta_soil_gs time-averaged'), &
               t_grib1(table, 255, grib_bits), &
@@ -679,7 +679,7 @@ CONTAINS
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
     
-        CALL jsb_add_var(mem, 'beta_soil_gs_tcnl_mavg', mem%beta_soil_gs_tcnl_mavg, &
+        CALL mem%Add_var('beta_soil_gs_tcnl_mavg', mem%beta_soil_gs_tcnl_mavg, &
               hgrid, surface, &
               t_cf('beta_soil_gs_tcnl_mavg', 'unitless', 'scaling factor beta_soil_gs time-averaged'), &
               t_grib1(table, 255, grib_bits), &

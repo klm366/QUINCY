@@ -53,7 +53,7 @@ CONTAINS
     & ) RESULT(vol_heat_cap)
 
     USE mo_sse_constants, ONLY: vol_hcap_water, vol_hcap_ice, vol_hcap_org, vol_hcap_air, vol_hcap_bedrock
-    
+
     REAL(wp), INTENT(in) :: porosity, vol_heat_cap_soil_dry_mineral, fract_organic, fract_water, fract_ice, layer_depth, dz
     REAL(wp)             :: vol_heat_cap
 
@@ -102,7 +102,7 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: dens_soil
     USE mo_sse_constants,          ONLY: hcond_org, hcond_dry_org, hcond_water, hcond_ice, hcond_bedrock
     USE mo_hydro_constants,        ONLY: vol_porosity_org
-   
+
     REAL(wp), INTENT(in) :: heat_cond_soil_mineral, water, ice, porosity, vol_field_cap, fract_organic, layer_depth, dz
     REAL(wp)             :: heat_cond
 
@@ -253,7 +253,7 @@ CONTAINS
   !
   SUBROUTINE init_soil_temperature(cmid, tclim, tsoil, tsurf)
 
-    USE mo_jsb_time,       ONLY: t_datetime, get_time_start, get_year, &
+    USE mo_jsb_time,       ONLY: t_datetime, get_time_start, get_year, deallocateDatetime, &
                                  & get_year_length, get_month_length, get_day_length, get_year_day
     USE mo_jsb_math_constants, ONLY: pi
 
@@ -288,6 +288,7 @@ CONTAINS
 
     year_len    = REAL(get_year_length(iniyear), wp)
     day_in_year = INT(get_year_day(inidate))
+    CALL deallocateDatetime(inidate)
 
     DO im=1,12
       month_len(im) = REAL(get_month_length(iniyear, im), wp)

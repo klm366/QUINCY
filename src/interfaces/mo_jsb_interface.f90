@@ -26,6 +26,7 @@ MODULE mo_jsb_interface
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
 !  USE mo_jsb_controller,      ONLY: Run_process_task
   USE mo_atmland_interface,   ONLY: update_atm2land, update_land2atm
+  USE mo_jsb_subset,          ONLY: ON_CHUNK
   USE mo_jsb_parallel,        ONLY: Get_omp_thread, Is_omp_inside_serial !, get_my_global_mpi_id
   USE mo_jsb_time,            ONLY: t_datetime
 
@@ -90,11 +91,12 @@ CONTAINS
     & alb_vis_dif,      &
     & alb_nir_dif,      &
     & CO2_flux,         &
+    & DEBUG_VAR,        &
     ! For lakes (optional):
     & drag_wtr, drag_ice,                                               & !< in
     & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,               & !< in
     & t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice,               & !< in
-    & t_lwtr, qsat_lwtr, s_lwtr,                                        &
+    & t_lwtr, qsat_lwtr, s_lwtr,                                        & !< out
     & evapo_wtr, latent_hflx_wtr, sensible_hflx_wtr,                    & !< out
     & albedo_lwtr,                                                      & !< out
     & t_lice, qsat_lice, s_lice,                                        &
@@ -147,6 +149,7 @@ CONTAINS
       & CO2_air           (:)
     ! For lakes:
     REAL(wp), INTENT(in), OPTIONAL ::    &
+      & DEBUG_VAR         (:), &
       & drag_wtr          (:), &
       & drag_ice          (:), &
       & t_acoef_wtr       (:), &
@@ -236,6 +239,9 @@ CONTAINS
 
     ! Update options
     CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=current_datetime, dtime=dtime, steplen=steplen)
+    CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
+
+    CALL model%Associate_var_pointers(ics, ice, iblk, iblk)
 
     ! Put atmospheric forcing into the a2l memory.
 
@@ -254,7 +260,7 @@ CONTAINS
       & swvis_srf_down     = swvis_srf_down(:),     &
       & swnir_srf_down     = swnir_srf_down(:),     &
       & swpar_srf_down     = swpar_srf_down(:),     &
-      & fract_par_diffuse   = fract_par_diffuse(:),   &
+      & fract_par_diffuse   = fract_par_diffuse(:), &
       & press_srf          = press_srf(:),          &
       & drag_srf           = drag_srf(:),           &
       & t_acoef            = t_acoef(:),            &
@@ -264,6 +270,7 @@ CONTAINS
       & pch                = pch(:),                &
       & cos_zenith_angle   = cos_zenith_angle(:),   &
       & CO2_air            = CO2_air(:),            &
+      & DEBUG_VAR          = DEBUG_VAR,             &
       ! For lakes:
       & drag_wtr           = drag_wtr,              &
       & drag_ice           = drag_ice,              &
@@ -468,6 +475,8 @@ CONTAINS
     END SELECT
 
     IF (l_trace_memory) CALL report_memory_usage()
+
+    IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
 
   END SUBROUTINE jsbach_finish_timestep
 

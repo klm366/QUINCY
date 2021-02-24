@@ -37,6 +37,8 @@ MODULE mo_carbon_config_class
                             ! overwritten by values from file).
                             ! ATTENTION: The run script has to take care that read_cpools is set to .FALSE.
                             !            in the experiment jobs following the first one! Or re-set it manually!
+    LOGICAL  :: diag_humus_fluxes ! Activate diagnostic carbon fluxes to and from the yasso humus pools
+                                  ! required for analytical humus pool equilibration (compare jsb3.2 svn rev 9934)
     REAL(wp) :: fire_fract_wood_2_atmos
 
    CONTAINS
@@ -64,7 +66,7 @@ CONTAINS
 
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
-    LOGICAL                     :: read_cpools
+    LOGICAL                     :: read_cpools, diag_humus_fluxes
     REAL(wp)                    :: fire_fract_wood_2_atmos
     ! LOGICAL           :: lemissions
 
@@ -73,6 +75,7 @@ CONTAINS
          ic_filename,              &
          bc_filename,              &
          read_cpools,              &
+         diag_humus_fluxes,        &
          fire_fract_wood_2_atmos
 
     INTEGER               :: nml_handler, nml_unit, istat
@@ -95,6 +98,7 @@ CONTAINS
     bc_filename            = 'bc_land_carbon.nc'
     ic_filename            = 'ic_land_carbon.nc'
     read_cpools            = .FALSE.
+    diag_humus_fluxes      = .FALSE.
     fire_fract_wood_2_atmos = FireFracWood2Atmos
     ! use_alb_soil_npp <
     nmon = 60
@@ -113,6 +117,7 @@ CONTAINS
     config%ic_filename            = ic_filename
     config%bc_filename            = bc_filename
     config%read_cpools            = read_cpools
+    config%diag_humus_fluxes      = diag_humus_fluxes
     config%fire_fract_wood_2_atmos = fire_fract_wood_2_atmos
 
     ! use_alb_soil_npp <

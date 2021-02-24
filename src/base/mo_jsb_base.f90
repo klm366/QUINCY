@@ -32,8 +32,9 @@ CONTAINS
 
     USE mo_jsb_control,         ONLY: jsb_models_nml, get_no_of_models, init_jsb_master_control, &
       &                               jsbach_runs_standalone, jsbach_is_restarted
-    USE mo_jsb_parallel,        ONLY: init_parallel_iface
+    USE mo_jsb_parallel,        ONLY: init_parallel_iface, Get_omp_no_of_threads
     USE mo_jsb_model_class,     ONLY: t_jsb_model, new_model
+    USE mo_jsb_subset,          ONLY: jsbach_subsets
     USE mo_jsb_config_class,    ONLY: new_model_config
     USE mo_jsb_process_factory, ONLY: max_no_of_processes, Create_process
     USE mo_jsb_time,            ONLY: init_time
@@ -85,6 +86,8 @@ CONTAINS
     ALLOCATE(jsbach%models(no_of_models))
     jsbach%no_of_models = no_of_models
 
+    ALLOCATE(jsbach_subsets(no_of_models))
+  
     ! Create models according to master namelist
     DO model_idx=1,no_of_models
       NULLIFY(model)
@@ -94,6 +97,7 @@ CONTAINS
         &                  jsb_models_nml(model_idx)%model_description,       &
         &                  jsb_models_nml(model_idx)%model_namelist_filename)
       jsbach%models(jsb_models_nml(model_idx)%model_id)%m => model
+      ALLOCATE(jsbach_subsets(model_idx)%sub(Get_omp_no_of_threads()))
     END DO
 
     ! Configure models according to model namelist(s)
