@@ -66,7 +66,7 @@ CONTAINS
   !> Set up grid for standalone model if using ECHAM infrastructure
   !
   SUBROUTINE setup_grid_standalone(nproca, nprocb, npedim, model_id, model_name)
-    ! -------------------------------------------------------------------------------------------------- !
+
 #ifndef __ICON__
     ! >> TODO: echam
     USE mo_gaussgrid,            ONLY : inigau
@@ -138,7 +138,6 @@ CONTAINS
 #endif
 
   END SUBROUTINE setup_grid_standalone
-  ! ====================================================================================================== !
 
 
   ! ====================================================================================================== !
@@ -151,7 +150,7 @@ CONTAINS
   !> Set up grid provided by host model (ICON coupled/standalone or ECHAM coupled)
   !
   SUBROUTINE setup_grid_patch( model_id, patch, type)
-    ! -------------------------------------------------------------------------------------------------- !
+
     USE mo_jsb_domain_iface, ONLY: t_patch
     USE mo_jsb_grid_class,   ONLY: new_grid
     USE mo_jsb_grid,         ONLY: Register_grid
@@ -181,7 +180,6 @@ CONTAINS
     NULLIFY(model)
 
   END SUBROUTINE setup_grid_patch
-  ! ====================================================================================================== !
 
 
   ! ====================================================================================================== !
@@ -196,7 +194,7 @@ CONTAINS
   !> Initializes a model instance
   !
   SUBROUTINE jsbach_init(model_id)
-    ! -------------------------------------------------------------------------------------------------- !
+
     USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
     USE mo_jsb_model_class,     ONLY: print_model, MODEL_JSBACH, MODEL_QUINCY
     USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract, &
@@ -875,7 +873,6 @@ CONTAINS
 ! #endif
 
   END SUBROUTINE jsbach_init
-  ! ====================================================================================================== !
 
 
   ! ====================================================================================================== !
@@ -888,7 +885,7 @@ CONTAINS
   !> Do some more initialization after restart files have been read
   !
   SUBROUTINE jsbach_init_after_restart(model_id)
-    ! -------------------------------------------------------------------------------------------------- !
+
     USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
     USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
     USE mo_jsb_model_class,     ONLY: MODEL_JSBACH
