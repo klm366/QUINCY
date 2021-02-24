@@ -379,7 +379,7 @@ CONTAINS
         & output_level=BASIC,                                                &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
 
-      CALL mem%Add_var 'alb_vis_mineralsoil', mem%alb_vis_mineralsoil, &
+      CALL mem%Add_var( 'alb_vis_mineralsoil', mem%alb_vis_mineralsoil,     &
         & hgrid, surface,                                                    &
         & t_cf('alb_vis_mineralsoil', '', ''),                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &

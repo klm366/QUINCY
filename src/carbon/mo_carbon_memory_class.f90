@@ -280,7 +280,7 @@ CONTAINS
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
     ! use_alb_soil_npp <
-    mon_5y       => Get_vgrid('month_of_last_5years')    
+    mon_5y  => Get_vgrid('month_of_last_5years')    
     ! use_alb_soil_npp >
 
 
@@ -999,7 +999,7 @@ CONTAINS
       & lrestart=.TRUE., initval_r=1.0E-13_wp, l_aggregate_all=.TRUE. )
 
 
-    CALL mem%Add_var( mem, 'mon_5year_npp', mem%mon_5year_NPP,                                       &
+    CALL mem%Add_var( 'mon_5year_npp', mem%mon_5year_NPP,                                            &
       & hgrid, mon_5y,                                                                               &
       & t_cf('mon_5year_NPP', 'mol(C) m-2 mon-1', 'Actual monthly NPP Rate of the last 5 years.'),   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
@@ -1008,7 +1008,7 @@ CONTAINS
       & lrestart=.TRUE., initval_r=1.0E-13_wp, l_aggregate_all=.TRUE. )
 
 
-    CALL mem%Add_var( mem, 'mean_5year_npp', mem%mean_5year_NPP,                                      &
+    CALL mem%Add_var( 'mean_5year_npp', mem%mean_5year_NPP,                                           &
       & hgrid, surface,                                                                               &
       & t_cf('mean_5year_NPP', 'mol(C) m-2 yr-1', 'Actual NPP Rate averaged over the last 5 years.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                            &
@@ -1017,7 +1017,7 @@ CONTAINS
       & lrestart=.TRUE., initval_r=1.0E-13_wp, l_aggregate_all=.TRUE. ) 
     ! use_alb_soil_npp > in a zero divide in the first time step of an initialized run.
 
-    CALL mem%Add_var( mem, 'ratio_npp', mem%ratio_NPP,                                               &
+    CALL mem%Add_var( 'ratio_npp', mem%ratio_NPP,                                                    &
       & hgrid, surface,                                                                              &
       & t_cf('ratio_NPP', 'none', 'Ratio of 5-year mean NPP rate and mean dark NPP Rate.'),          &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
@@ -1026,7 +1026,7 @@ CONTAINS
       & lrestart=.TRUE., initval_r=1.0E-13_wp, l_aggregate_all=.TRUE. )
     ! use_alb_soil_npp > in a zero divide in the first time step of an initialized run.
 
-    CALL mem%Add_var( mem, 'gpp_ydaymean_ta', mem%GPP_yDayMean_ta,                       &
+    CALL mem%Add_var( 'gpp_ydaymean_ta', mem%GPP_yDayMean_ta,                            &
       & hgrid, surface,                                                                  &
       & t_cf('GPP_yDayMean_ta', 'mol(C) m-2 s-1', 'Mean GPP Rate of the previous day.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &

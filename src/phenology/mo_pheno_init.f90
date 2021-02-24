@@ -89,10 +89,11 @@ CONTAINS
   SUBROUTINE pheno_finalize_init_vars
 
     DEALLOCATE( &
-      & pheno_init_vars%lai_mon,       &
-      & pheno_init_vars%fract_fpc_mon, &
-      & pheno_init_vars%fract_forest,  &
-      & pheno_init_vars%fract_fpc_max  &
+      & pheno_init_vars%lai_mon,           &
+      & pheno_init_vars%fract_fpc_mon,     &
+      & pheno_init_vars%fract_forest,      &
+      & pheno_init_vars%fract_fpc_max,     &
+      & pheno_init_vars%fract_fpc_max_wet  &
       & )
 
   END SUBROUTINE pheno_finalize_init_vars
@@ -121,16 +122,18 @@ CONTAINS
     nblks  = grid%Get_nblks()
 
     ALLOCATE( &
-      & pheno_init_vars%lai_mon      (nproma, nblks, 0:13), &
-      & pheno_init_vars%fract_fpc_mon(nproma, nblks, 0:13), &
-      & pheno_init_vars%fract_forest (nproma, nblks      ), &
-      & pheno_init_vars%fract_fpc_max(nproma, nblks      )  &
+      & pheno_init_vars%lai_mon          (nproma, nblks, 0:13), &
+      & pheno_init_vars%fract_fpc_mon    (nproma, nblks, 0:13), &
+      & pheno_init_vars%fract_forest     (nproma, nblks      ), &
+      & pheno_init_vars%fract_fpc_max    (nproma, nblks      ), &
+      & pheno_init_vars%fract_fpc_max_wet(nproma, nblks      )  &
       & )
 
-    pheno_init_vars%lai_mon      (:,:,:) = missval
-    pheno_init_vars%fract_fpc_mon(:,:,:) = missval
-    pheno_init_vars%fract_forest (:,:)   = missval
-    pheno_init_vars%fract_fpc_max(:,:)   = missval
+    pheno_init_vars%lai_mon          (:,:,:) = missval
+    pheno_init_vars%fract_fpc_mon    (:,:,:) = missval
+    pheno_init_vars%fract_forest     (:,:)   = missval
+    pheno_init_vars%fract_fpc_max    (:,:)   = missval
+    pheno_init_vars%fract_fpc_max_wet(:,:)   = missval
 
     dsl4jsb_Get_config(PHENO_)
 
@@ -175,13 +178,13 @@ CONTAINS
     IF (debug_on()) CALL message(TRIM(routine), 'reading wet_ratio_max ...')
     ptr_2D => input_file%Read_2d(      &
       & variable_name='wet_ratio_max', &
-      & fill_array = pheno_init_vars%fract_fpc_max_wet))
+      & fill_array = pheno_init_vars%fract_fpc_max_wet)
     ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
 
     IF (debug_on()) CALL message(TRIM(routine), 'reading veg_ratio_max ...')
     ptr_2D => input_file%Read_2d(      &
       & variable_name='veg_ratio_max', &
-      & fill_array = pheno_init_vars%fract_fpc_max))
+      & fill_array = pheno_init_vars%fract_fpc_max)
 
     ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
 
