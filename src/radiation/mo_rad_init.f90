@@ -75,7 +75,7 @@ CONTAINS
       CALL rad_init_q_ic(tile)
     ENDIF
 
-    IF (.NOT. tile%Has_children() .AND. .NOT. ASSOCIATED(tile%next_sibling_tile)) THEN
+    IF (tile%Is_last_process_tile(RAD_)) THEN
       CALL rad_finalize_init_vars()
     END IF
 
