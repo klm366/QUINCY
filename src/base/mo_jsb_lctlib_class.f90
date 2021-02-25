@@ -1656,4 +1656,3 @@ CONTAINS
 
   END FUNCTION Read_lctlib
 
-END MODULE mo_jsb_lctlib_class
