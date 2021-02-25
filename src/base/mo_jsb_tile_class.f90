@@ -139,6 +139,7 @@ MODULE mo_jsb_tile_class
     PROCEDURE(Init_fractions_interface), DEFERRED :: Init_fractions
     PROCEDURE(Print_interface),          DEFERRED :: Print
     PROCEDURE(Handler_interface),        DEFERRED :: Handler
+    PROCEDURE                                     :: Is_last_process_tile
   END type t_jsb_tile_abstract
 
   ABSTRACT INTERFACE
@@ -1172,6 +1173,24 @@ CONTAINS
       & CALL finish(TRIM(routine), 'Could not find next sibling tile')
 
   END FUNCTION Get_next_sibling_tile
+
+  LOGICAL FUNCTION Is_last_process_tile(this, process_id)
+
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: this
+    INTEGER,                    INTENT(in) :: process_id
+
+    Is_last_process_tile = .FALSE.
+
+    IF (this%Has_children()) THEN
+      ! TODO INHERIT_ == 1 ; can't use INHERIT_ from mo_jsb_process_class because of cyclic dependency
+      IF (this%first_child_tile%process_action(process_id) == 1 .AND. .NOT. ASSOCIATED(this%next_sibling)) THEN
+        Is_last_process_tile = .TRUE.
+      END IF
+    ELSE
+      Is_last_process_tile = this%Is_last_leaf()
+    END IF
+
+  END FUNCTION Is_last_process_tile
 
   ! Cache pointers to variables for aggregation (in order to get it to work on GPUs).
   ! Note: This is called during initialization from model_init for each tile that is not a leaf. If var

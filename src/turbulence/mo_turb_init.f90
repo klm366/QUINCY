@@ -62,7 +62,7 @@ CONTAINS
     CALL turb_init_bc(tile)
     CALL turb_init_ic(tile)
 
-    IF (.NOT. tile%Has_children() .AND. .NOT. ASSOCIATED(tile%next_sibling_tile)) THEN
+    IF (tile%Is_last_process_tile(TURB_)) THEN
       CALL turb_finalize_init_vars()
     END IF
 
