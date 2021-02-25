@@ -71,8 +71,8 @@ CONTAINS
       CALL pheno_finalize_init_vars()
     END IF
 
-    IF (.NOT. tile%Has_children() .AND. .NOT. ASSOCIATED(tile%next_sibling_tile)) THEN
-      CALL pheno_finalize_init_vars()
+    IF (tile%Is_last_process_tile(PHENO_)) THEN
+        CALL pheno_finalize_init_vars()
     END IF
 
   END SUBROUTINE pheno_init
