@@ -205,7 +205,6 @@ MODULE mo_carbon_memory_class
       GPP_yDayMean_ta,               & !
       root_exudates_ta,              & ! Total root exudates entering to the litter green pools [mol(C)/m^2(tile area) s]
       cflux_c_green_2_herb_ta,            & ! Total carbon flux from C pool green to herbivory.
-      !cflux_herb_2_littergreen_ta,         & ! ..part of cflux_c_green_2_herb that goes into green litter
       !cflux_herb_2_atm_ta,      & ! ..part of cflux_c_green_2_herb that goes into atmosphere
       cflux_dist_greenreserve_2_soil_ta,  & ! R: should be later renamed to C_2_GreenLitterPools_ta
       cflux_dist_woods_2_soil_ta,   & ! R: should be later renamed to C_2_WoodLitterPools_ta
@@ -1123,13 +1122,6 @@ CONTAINS
       & prefix, suffix,                                                                                         &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
-    !       CALL mem%Add_var('fract_litter_wood_new', mem%fract_litter_wood_new,                         &
-    !         & hgrid, surface,                                                                          &
-    !         & t_cf('fract_litter_wood_new', 'mol(C) m-2(canopy)', 'New fraction in wood litter pool.'), &
-    !         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
-    !         & prefix, suffix,                                                                          &
-    !         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
-
     CALL mem%Add_var('c2greenlitterpools', mem%cflux_dist_greenreserve_2_soil,                          &
       & hgrid, surface,                                                                                 &
       & t_cf('cflux_dist_greenreserve_2_soil', 'mol(C) m-2(canopy) s-1',                                &
@@ -1497,31 +1489,6 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                &
       & prefix, suffix,                                                                                   &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
-
-
-    !       CALL mem%Add_var('cflux_herb_2_littergreen_ta', mem%cflux_herb_2_littergreen_ta,                                   &
-    !         & hgrid, surface,                                                                                          &
-    !         & t_cf('cflux_herb_2_littergreen_ta', 'mol(C) m-2 s-1', 'Carbon flux from cflux_c_green_2_herb into green litter &
-    !         &                                                      (complementary to cflux_herb_2_atm).'),        &
-    !         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                       &
-    !         & prefix, suffix,                                                                                          &
-    !         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
-    !
-    !       CALL mem%Add_var('cflux_herb_2_atm_ta', mem%cflux_herb_2_atm_ta,                              &
-    !         & hgrid, surface,                                                                                           &
-    !         & t_cf('cflux_herb_2_atm_ta', 'mol(C) m-2 s-1', 'Carbon flux from cflux_c_green_2_herb into atmosphere &
-    !         &                                                          (complementary to cflux_herb_2_littergreen).'),        &
-    !         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
-    !         & prefix, suffix,                                                                                           &
-    !         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
-
-
-    !       CALL mem%Add_var('fract_litter_wood_new_ta', mem%fract_litter_wood_new_ta,                     &
-    !         & hgrid, surface,                                                                          &
-    !         & t_cf('fract_litter_wood_new_ta', 'mol(C) m-2', 'New fraction in wood litter pool.'), &
-    !         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
-    !         & prefix, suffix,                                                                          &
-    !         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     ! R: In JSBACH3 the following variables are not written into the output.
     CALL mem%Add_var('co2_l2a_npp_ta', mem%cflux_npp_2_atm_ta,                                                       &

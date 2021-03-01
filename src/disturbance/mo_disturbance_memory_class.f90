@@ -129,7 +129,7 @@ CONTAINS
       & t_cf('max_wind_10m_act', '-', 'This days maximum wind speed.'),     &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
       & prefix, suffix,                                                     &
-      & lrestart=.FALSE., initval_r=0.0_wp )
+      & lrestart=.TRUE., initval_r=0.0_wp )
 
     CALL mem%Add_var( 'cconservation_wind', mem%cconservation_wind,         &
       & hgrid, surface,                                                     &
