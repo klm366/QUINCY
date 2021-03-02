@@ -41,8 +41,8 @@ MODULE mo_atmland_interface
   USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
 
   ! Use of process memories
-  dsl4jsb_Use_memory(A2L_)   !  USE mo_a2l_memory_class, ONLY: t_a2l_memory
-  dsl4jsb_Use_memory(L2A_)   !  USE mo_l2a_memory_class, ONLY: t_l2a_memory
+  dsl4jsb_Use_memory_A2L_ 
+  dsl4jsb_Use_memory_L2A_ 
 
 !!! jsbach4
 !!  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
@@ -53,7 +53,7 @@ MODULE mo_atmland_interface
 !!  USE mo_jsb_lct_class,      ONLY: LAKE_TYPE, Contains_lct
 
 !!  dsl4jsb_Use_processes A2L_, SEB_, TURB_, SSE_, HYDRO_, RAD_
-!!  dsl4jsb_Use_memory(A2L_)
+!!  dsl4jsb_Use_memory_A2L_ 
 !!  dsl4jsb_Use_memory(SEB_)
 !!  dsl4jsb_Use_memory(TURB_)
 !!  dsl4jsb_Use_memory(SSE_)
@@ -62,7 +62,7 @@ MODULE mo_atmland_interface
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: update_a2l, update_l2a
+  PUBLIC :: update_atm2land, update_land2atm
 
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_atmland_interface'
@@ -70,12 +70,12 @@ MODULE mo_atmland_interface
 CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
-  !> pass atmland variables from driver into a2l memory per timestep
+  !> pass atmland variables from driver into atm2land_memory per timestep
   !!
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_a2l( &
-    ! the sequence of input variables is consistent with the sequence of var in t_a2l_memory !
+  SUBROUTINE update_atm2land( &
+    ! the sequence of input variables is consistent with the sequence of var in t_atm2land_memory !
     ! some variables differ compared to the JSBACH4 routine, see comments 
     ! all variables are defined as: real(wp), optional, intent(in)
       tile               , &
@@ -104,7 +104,7 @@ CONTAINS
       co2_mixing_ratio     , &  ! from SLM, replacing CO2_air and CO2_air_mol from jsbach4
       co2_mixing_ratio_C13 , &  ! from SLM, replacing CO2_air and CO2_air_mol from jsbach4
       co2_mixing_ratio_C14 , &  ! from SLM, replacing CO2_air and CO2_air_mol from jsbach4
-      ga                   , &  !> @todo ga in t_a2l_memory: is a variable from SLM, which may be moved elsewhere
+      ga                   , &  !> @todo ga in t_atm2land_memory: is a variable from quincy, which may be moved elsewhere
       nhx_deposition     , &
       noy_deposition     , &
       nhx_n15_deposition , &
@@ -156,7 +156,7 @@ CONTAINS
                                       co2_mixing_ratio(:)     , &  ! from SLM, replacing CO2_air and CO2_air_mol from jsbach4
                                       co2_mixing_ratio_C13(:) , &  ! from SLM, replacing CO2_air and CO2_air_mol from jsbach4
                                       co2_mixing_ratio_C14(:) , &  ! from SLM, replacing CO2_air and CO2_air_mol from jsbach4
-                                      ga(:)                   , &  !> @todo ga in t_a2l_memory: is a variable from SLM, which may be moved elsewhere
+                                      ga(:)                   , &  !> @todo ga in t_atm2land_memory: is a variable from SLM, which may be moved elsewhere
                                       nhx_deposition(:)     , &    ! added with r506
                                       noy_deposition(:)     , &    ! added with r506
                                       nhx_n15_deposition(:) , &    ! added with r702
@@ -177,12 +177,12 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     INTEGER                               :: iblk, ics, ice, nc
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_a2l'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_atm2land'
 !    IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_memory(A2L_)   !     TYPE(t_a2l_memory), POINTER :: a2l__mem
+    dsl4jsb_Def_memory_A2L_ 
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -200,7 +200,7 @@ CONTAINS
     ! Get process config
 !    dsl4jsb_Get_config(A2L_)
     ! Get process memories
-    dsl4jsb_Get_memory(A2L_)       ! a2l__mem => a2l_memory
+    dsl4jsb_Get_memory_A2L_  
 
 
 
@@ -256,7 +256,7 @@ CONTAINS
       IF (PRESENT(albedo_lwtr))     dsl4jsb_var2D_onChunk(A2L_,albedo_lwtr)       = albedo_lwtr       (:)
 !    END IF
 
-  END SUBROUTINE update_a2l
+  END SUBROUTINE update_atm2land
 
 
   !-----------------------------------------------------------------------------------------------------
@@ -264,7 +264,7 @@ CONTAINS
   !!
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_l2a( &
+  SUBROUTINE update_land2atm( &
       tile              ,   &
       options           ,   &
       t_srf             ,   &
@@ -290,7 +290,7 @@ CONTAINS
       sensible_hflx_ice     &
       & )
 
-      dsl4jsb_Use_memory(L2A_)
+      dsl4jsb_Use_memory_L2A_ 
       dsl4jsb_Use_memory(RAD_)
       dsl4jsb_Use_memory(ASSIMI_)
       dsl4jsb_Use_memory(SSE_)
@@ -325,11 +325,11 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     INTEGER                               :: iblk, ics, ice, nc
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_l2a'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_land2atm'
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_memory(L2A_)
+    dsl4jsb_Def_memory_L2A_ 
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(SSE_)
@@ -347,7 +347,7 @@ CONTAINS
     ! Get process config
 !    dsl4jsb_Get_config(PHENO_)
     ! Get process memories
-    dsl4jsb_Get_memory(L2A_)
+    dsl4jsb_Get_memory_L2A_ 
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(SSE_)
@@ -394,7 +394,7 @@ CONTAINS
 !      IF (PRESENT(sensible_hflx_ice))     sensible_hflx_ice(:) = 0.0_wp
 !    END IF
 
-  END SUBROUTINE update_l2a
+  END SUBROUTINE update_land2atm
 
 
 #endif

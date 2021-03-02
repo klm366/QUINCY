@@ -36,12 +36,16 @@ mo_jsb_config_class.o: \
 mo_jsb_var_class.o: \
   mo_kind.o \
   mo_exception.o \
+  mo_jsb_grid_class.o \
+  mo_jsb_io.o \
   mo_jsb_varlist_iface.o
 
 mo_jsb_memory_class.o: \
   mo_kind.o \
   mo_exception.o \
   mo_jsb_config_class.o \
+  mo_jsb_grid_class.o \
+  mo_jsb_io.o \
   mo_jsb_var_class.o
 
 mo_jsb_lctlib_class.o: \
@@ -66,8 +70,8 @@ mo_jsb_process_factory.o: \
   mo_exception.o \
   mo_jsb_process_class.o \
   mo_jsb_memory_class.o \
-  mo_a2l_memory_class.o \
-  mo_l2a_memory_class.o \
+  mo_atm2land_memory_class.o \
+  mo_land2atm_memory_class.o \
   mo_assimi_memory_class.o \
   mo_assimi_config_class.o \
   mo_assimi_interface.o \
@@ -119,18 +123,8 @@ mo_jsb_io.o: \
   mo_jsb_io_iface.o \
   mo_exception.o
 
-mo_slm_varlist.o: \
+mo_jsb_varlist.o: \
   mo_kind.o \
-  mo_exception.o \
-  mo_jsb_class.o \
-  mo_jsb_var_class.o \
-  mo_jsb_model_class.o \
-  mo_assimi_config_class.o \
-  mo_sse_config_class.o \
-  mo_rad_config_class.o \
-  mo_jsb_memory_class.o \
-  mo_jsb_grid_class.o \
-  mo_jsb_io.o
 
 mo_hsm_class.o: \
   mo_exception.o
@@ -207,8 +201,7 @@ mo_jsb_tile.o: \
   mo_jsb_memory_class.o \
   mo_util.o \
   mo_jsb_lct_class.o \
-  mo_jsb_process_class.o \
-  mo_slm_varlist.o
+  mo_jsb_process_class.o
 
 mo_jsb_tile_class.o: \
   mo_jsb_control.o \

@@ -71,7 +71,7 @@ CONTAINS
     ! ..
     
     ! Use of process memories
-    dsl4jsb_Use_memory(A2L_)        !  USE mo_a2l_memory_class, ONLY: t_a2l_memory
+    dsl4jsb_Use_memory_A2L_ 
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class, ONLY: t_rad_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class, ONLY: t_veg_memory
     
@@ -93,7 +93,7 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_memory(A2L_)                        !     TYPE(t_a2l_memory), POINTER :: a2l__mem
+    dsl4jsb_Def_memory_A2L_ 
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory), POINTER :: rad__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory), POINTER :: veg__mem
     ! Declare pointers to variables in memory
@@ -156,7 +156,7 @@ CONTAINS
     ! Get process config
     ! ..
     ! Get process memories
-    dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_memory_A2L_ 
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(VEG_)
     ! Get process variables (Set pointers to variables in memory)

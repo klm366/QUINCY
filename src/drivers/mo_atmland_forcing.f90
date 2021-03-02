@@ -132,7 +132,7 @@ CONTAINS
     INTEGER                   , INTENT(in)    :: ics, ice, nc, iblk             !< info on block, chunk and soil layer number
     INTEGER                   , INTENT(in)    :: timestep                       !< timestep; first timestep of static simulation and simulation after transient spinup is 1
     REAL(wp)                  , INTENT(in)    :: time                           !< current time in days (not timestep !)
-    REAL(wp), OPTIONAL        , INTENT(out)   :: &                 !! these are all variables from a2l memory; with assumed shape VAR(1:nc)
+    REAL(wp), OPTIONAL        , INTENT(out)   :: &                 !! these are all variables from atm2land_memory; with assumed shape VAR(1:nc)
                                       t_air(:)              , &    !< ..
                                       q_air(:)              , &    !< ..
                                       rain(:)               , &    !< ..
@@ -283,7 +283,7 @@ CONTAINS
 
     doy_old = 0.0_wp  ! doy in the previous timestep, used for detecting a new year
 
-    ! give a2l variables a value to avoid compiler warning #6843: A dummy argument with an explicit INTENT(OUT) declaration is not given an explicit value
+    ! give A2L_ variables a value to avoid compiler warning #6843: A dummy argument with an explicit INTENT(OUT) declaration is not given an explicit value
     ! these variables are declared in land_model_driver as: REAL(wp), ALLOCATABLE, DIMENSION(:)
     ! and allocated using 'nc'   ALLOCATE(t_air(nc)) -> i.e. no ics:ice,iblk here !
     t_air(:)           = 0.0_wp

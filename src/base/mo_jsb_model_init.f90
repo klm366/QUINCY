@@ -52,7 +52,7 @@ CONTAINS
   !! 
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE setup_grid_standalone(model_id, grid_name)
+  SUBROUTINE setup_grid_standalone(model_id, grid_name, nproma)
 
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_class,             ONLY: Get_model
@@ -64,6 +64,7 @@ CONTAINS
     ! 0.1 InOut
     INTEGER,                    INTENT(in) :: model_id
     CHARACTER(len=*),           INTENT(in) :: grid_name
+    INTEGER,                    INTENT(in) :: nproma
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),  POINTER   :: model
@@ -81,13 +82,14 @@ CONTAINS
 
     !< 1.0 create horizontal grid
     !! 
-    grid      => new_grid(model%config%lon, model%config%lat) ! calls via an interface: FUNCTION new_grid_from_lonlat(lon, lat) RESULT(grid)
-    grid%id   = 1                                             ! *quincytmp
-    grid%name = grid_name                                     ! *quincytmp
-    CALL register_grid(grid)
-    model%grid_id = grid%id
+    grid        => new_grid(model%config%lon, model%config%lat) ! calls via an interface: FUNCTION new_grid_from_lonlat(lon, lat) RESULT(grid)
+    grid%id     = 1                     ! *quincytmp -> must be identical with the position of this grid in mo_jsb_grid:jsbach_grids(:)
+    grid%name   = grid_name             ! *quincytmp
+    grid%nproma = nproma                ! *quincytmp
+    CALL register_grid(grid)            ! add to mo_jsb_grid:jsbach_grids(:), actuall to jsbach_grids(1)
+    model%grid_id = grid%id             ! tell the model the id of the hgrid, so that one can get the correct hgrid per model
 
-    NULLIFY(model)
+    NULLIFY(model)    ! NULLIFY pointer to model
 
   END SUBROUTINE setup_grid_standalone
 
@@ -130,7 +132,7 @@ CONTAINS
     INTEGER ,INTENT(in)                       :: model_id
     INTEGER ,INTENT(in)                       :: iblk, nproma         !< block number, number of points per chunk   *slmtmp
     INTEGER ,INTENT(in)                       :: ics, ice, nc         !< first & last & number of points in the chunk the model currently works on  *slmtmp
-    LOGICAL ,INTENT(out)                      :: l_forcing            !< IF .TRUE. THEN update_forcing(), update_a2l(), update_l2a()
+    LOGICAL ,INTENT(out)                      :: l_forcing            !< IF .TRUE. THEN update_forcing(), update_atm2land(), update_land2atm()
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model), POINTER                :: model
@@ -156,7 +158,7 @@ CONTAINS
     !> 0.9 init local variables
     !! 
     CALL message(TRIM(routine), 'starting model init')
-    no_omp_thread = 1
+    no_omp_thread = 1     ! no threading with OpenMPI in QUINCY
 
 
     !> 1.0 forcing config
@@ -200,6 +202,7 @@ CONTAINS
       END IF
 
       !> 4.2 Initialize tile memory and read tile fractions
+      !! mo_jsb_tile:Init_tile() -> init process memories
       !! @todo: once we have land use change or dynveg, l_fixed_fractions needs to be adapted <- JSBACH4
       CALL tile%Init(TRIM(model%shortname), '', TRIM(tile%name), l_fixed_fractions=.TRUE.)
 

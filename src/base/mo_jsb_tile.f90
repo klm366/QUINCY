@@ -222,7 +222,6 @@ CONTAINS
     USE mo_jsb_memory_class,    ONLY: t_jsb_memory
     USE mo_jsb_tile_class,      ONLY: t_jsb_aggregator, t_jsb_aggregator_weighted_by_fract
     USE mo_jsb_varlist_iface,   ONLY: VARNAME_LEN
-    USE mo_slm_varlist,         ONLY: jsb_add_var                                    ! *slmtemp
     USE mo_jsb_io,              ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables ! , TSTEP_INSTANT, TSTEP_CONSTANT
 
     CLASS(t_jsb_tile), INTENT(inout) :: this

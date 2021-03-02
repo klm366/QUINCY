@@ -75,7 +75,7 @@ CONTAINS
     dsl4jsb_Use_memory(SSE_)        !  USE mo_sse_memory_class,      ONLY: t_sse_memory
 
     ! Process interfaces:
-    USE mo_atmland_interface                ! update_a2l
+    USE mo_atmland_interface                ! update_atm2land
     USE mo_rad_interface                    ! update_radiation
     USE mo_assimi_interface                 ! update_canopy_fluxes, reset_assimi_fluxes
     ! get parameters defined in init_slm_test_canopy()
@@ -275,7 +275,7 @@ CONTAINS
     !longitude                 = 0.0_wp
 
 
-    CALL update_a2l( &
+    CALL update_atm2land( &
            tile                                            , &
            options                                         , &
            t_air                   = t_air(:)              , &
@@ -351,7 +351,7 @@ CONTAINS
      swpar_srf_down(:) = swpar_srf_down(:) + 100.0_wp / rad2ppfd
      swvis_srf_down(:) = swpar_srf_down(:) / frac_par_swvis_srf
      swnir_srf_down(:) = swvis_srf_down(:) * (1._wp - frac_vis_swtot_srf) / frac_vis_swtot_srf
-     CALL update_a2l(tile, &
+     CALL update_atm2land(tile, &
            options            , &
            swvis_srf_down = swvis_srf_down(:), &
            swnir_srf_down = swnir_srf_down(:), &
@@ -374,7 +374,7 @@ CONTAINS
   swpar_srf_down(:) = ref_swdown
   swvis_srf_down(:) = swpar_srf_down(:) / frac_par_swvis_srf
   swnir_srf_down(:) = swvis_srf_down(:) * (1._wp - frac_vis_swtot_srf) / frac_vis_swtot_srf
-  CALL update_a2l(tile, &
+  CALL update_atm2land(tile, &
            options            , &
            swvis_srf_down = swvis_srf_down, &
            swnir_srf_down = swnir_srf_down, &
@@ -393,7 +393,7 @@ CONTAINS
      t_air(:) = t_air(:) + 1.0_wp
      q_air(:) = 0.8_wp * calc_spec_humidity_sat(t_air(:),press_srf(:))
      t_jmax_opt_mavg(:) = 20._wp+0.35_wp*(t_air(:) - Tzero)
-     CALL update_a2l(tile, &
+     CALL update_atm2land(tile, &
            options            , &
            t_air = t_air, &
            q_air = q_air)
@@ -411,7 +411,7 @@ CONTAINS
   END DO
   t_air(:)    = ref_t_air + Tzero
   q_air(:)    = calc_spec_humidity_sat(t_air(:),press_srf(:)) - ref_vpd / press_srf(:) * eps_vpd
-  CALL update_a2l(tile, &
+  CALL update_atm2land(tile, &
         options            , &
         t_air = t_air, &
         q_air = q_air)
@@ -426,7 +426,7 @@ CONTAINS
   DO i = 1,34
 
      co2_mixing_ratio(:) = co2_mixing_ratio(:) + 25._wp
-     CALL update_a2l(tile, &
+     CALL update_atm2land(tile, &
            options            , &
            co2_mixing_ratio = co2_mixing_ratio)
 
@@ -442,7 +442,7 @@ CONTAINS
 
   END DO
   co2_mixing_ratio(:) = ref_co2_mixing_ratio
-  CALL update_a2l(tile    , &
+  CALL update_atm2land(tile    , &
                        options , &
                        co2_mixing_ratio = co2_mixing_ratio)
 
@@ -453,7 +453,7 @@ CONTAINS
   WRITE(lun,*) 'VPD A GC CI'
   DO i = 1,30
      q_air(:) = calc_spec_humidity_sat(t_air(:),press_srf(:)) - i * 100.0_wp / press_srf(:) * eps_vpd
-     CALL update_a2l(tile    , &
+     CALL update_atm2land(tile    , &
                           options , &
                           q_air = q_air)
 
@@ -472,7 +472,7 @@ CONTAINS
   END DO
   q_air(:) = calc_spec_humidity_sat(t_air(:),press_srf(:)) - ref_vpd / press_srf(:) * eps_vpd
   vpd(:) = ( calc_spec_humidity_sat(t_air(:),press_srf(:)) - q_air(:) ) / eps_vpd * press_srf(:) / 1000.0_wp
-     CALL update_a2l(tile    , &
+     CALL update_atm2land(tile    , &
                           options , &
                           q_air = q_air)
 

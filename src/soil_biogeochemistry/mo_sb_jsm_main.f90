@@ -84,7 +84,7 @@ CONTAINS
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_sse_memory
     dsl4slm_Use_memory_a_veg        !  USE mo_veg_memory_class,      ONLY: t_veg_element_a, t_veg_pool_a
     USE mo_veg_memory_class,      ONLY: veg_pool, veg_litterfall
-    dsl4jsb_Use_memory(A2L_)
+    dsl4jsb_Use_memory_A2L_ 
 
     IMPLICIT NONE
     ! ---------------------------
@@ -112,7 +112,7 @@ CONTAINS
     dsl4jsb_Def_memory(SB_)                               ! TYPE(t_sb_memory),       POINTER :: sb__mem
     dsl4jsb_Def_memory(SSE_)                             ! TYPE(t_sse_memory),     POINTER :: sse__mem
     dsl4jsb_Def_memory(VEG_) 
-    dsl4jsb_Def_memory(A2L_)                              ! TYPE(t_veg_memory),      POINTER :: a2l__mem
+    dsl4jsb_Def_memory_A2L_ 
     ! Declare pointers to variables in memory
     ! SSE_
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
@@ -290,7 +290,7 @@ CONTAINS
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(VEG_)
-    dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_memory_A2L_ 
     ! Allocate local allocatable variables (deallocate below at the end of this routine)    
     ALLOCATE(fine_root_carbon_sl(nc, nsoil_sb))
     ALLOCATE(km1_uptake_act(nc, nsoil_sb))

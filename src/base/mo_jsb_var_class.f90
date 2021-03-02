@@ -16,11 +16,13 @@ MODULE mo_jsb_var_class
   USE mo_kind,                ONLY: wp, dp
   USE mo_exception,           ONLY: finish, message
   USE mo_jsb_varlist_iface,   ONLY: VARNAME_LEN 
+  USE mo_jsb_grid_class,      ONLY: t_jsb_grid, t_jsb_vgrid
+  USE mo_jsb_io,              ONLY: t_cf, t_grib1, t_grib2
 
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var, t_jsb_var_p
-  PUBLIC :: t_jsb_struct, t_jsb_struct_p, t_jsb_n_struct, t_jsb_n_struct_p    ! *slmjsb4
+  PUBLIC :: t_jsb_struct, t_jsb_struct_p, t_jsb_n_struct, t_jsb_n_struct_p    ! quincy
   PUBLIC :: REAL2D, REAL3D
 
 
@@ -81,7 +83,7 @@ MODULE mo_jsb_var_class
     CLASS(t_jsb_var), POINTER :: p
   END TYPE t_jsb_var_p
 
-! *slmjsb4
+! quincy
   !-----------------------------------------------------------------------------------------------------
   !> TYPE that contains multiple variables
   !! 
@@ -92,16 +94,21 @@ MODULE mo_jsb_var_class
   !-----------------------------------------------------------------------------------------------------
   TYPE, ABSTRACT :: t_jsb_struct
     TYPE(t_jsb_var_p), ALLOCATABLE :: vars(:)
-    CHARACTER(len=VARNAME_LEN) :: name                !< Name of variable
-    CHARACTER(len=VARNAME_LEN) :: full_name           !< Full name of variable in varlist, including prefix and suffix
-    INTEGER                    :: owner_proc_id = -1  !< owner process id
-    INTEGER, ALLOCATABLE       :: owner_tile_path(:)  !< owner tile path
-    INTEGER                    :: no_of_vars = 0      !< number of variables the TYPE contains in vars(:)
-    INTEGER                    :: max_no_of_vars = 20 !< ! hard coded limit of max var number - may change later !
-    CHARACTER(LEN=50)          :: varlist_name        !< name of variable list
+    CHARACTER(len=VARNAME_LEN)     :: name                      !< Name of variable
+    CHARACTER(len=VARNAME_LEN)     :: full_name                 !< Full name of variable in varlist, including prefix and suffix
+    INTEGER                        :: owner_proc_id      = -1   !< owner process id
+    INTEGER, ALLOCATABLE           :: owner_tile_path(:)        !< owner tile path
+    INTEGER                        :: no_of_vars         = 0    !< number of variables the TYPE contains in vars(:)
+    INTEGER                        :: max_no_of_vars     = 20   !< ! hard coded limit of max var number - might be changed later !
+    CHARACTER(LEN=50)              :: varlist_name              !< name of variable list
+  CONTAINS
+    PROCEDURE                      :: t_jsb_struct_quincy_add_struct_element_r2d
+    PROCEDURE                      :: t_jsb_struct_quincy_add_struct_element_r3d
+    GENERIC                        :: Add_var => t_jsb_struct_quincy_add_struct_element_r2d, &
+                                                 t_jsb_struct_quincy_add_struct_element_r3d
   END TYPE t_jsb_struct
 
-! *slmjsb4
+! quincy
   !-----------------------------------------------------------------------------------------------------
   !> POINTER to the t_jsb_struct
   !! 
@@ -110,7 +117,7 @@ MODULE mo_jsb_var_class
     CLASS(t_jsb_struct), POINTER :: p
   END TYPE t_jsb_struct_p
 
-! *slmjsb4
+! quincy
   !-----------------------------------------------------------------------------------------------------
   !> TYPE that contains multiple TYPEs of t_jsb_struct
   !! 
@@ -118,17 +125,19 @@ MODULE mo_jsb_var_class
   !! 
   !-----------------------------------------------------------------------------------------------------
   TYPE, ABSTRACT :: t_jsb_n_struct
-    TYPE(t_jsb_struct_p), ALLOCATABLE :: l2_structs(:)
-    CHARACTER(len=VARNAME_LEN) :: name            ! Name of variable
-    CHARACTER(len=VARNAME_LEN) :: full_name       ! Full name of variable in varlist, including prefix and suffix
-    INTEGER                    :: owner_proc_id = -1
-    INTEGER, ALLOCATABLE       :: owner_tile_path(:)
-    INTEGER                    :: no_of_l2_structs = 0
-    INTEGER                    :: max_no_of_l2_structs = 20 !!! hard coded limit - may change later !!!
-    CHARACTER(LEN=50)          :: l2_structlist_name
+    TYPE(t_jsb_struct_p), ALLOCATABLE :: l2_structs(:)              !< 
+    CHARACTER(len=VARNAME_LEN)        :: name                       !< Name of variable
+    CHARACTER(len=VARNAME_LEN)        :: full_name                  !< Full name of variable in varlist, including prefix and suffix
+    INTEGER                           :: owner_proc_id        = -1  !< 
+    INTEGER, ALLOCATABLE              :: owner_tile_path(:)         !< 
+    INTEGER                           :: no_of_l2_structs     = 0   !< 
+    INTEGER                           :: max_no_of_l2_structs = 20  !<  ! hard coded limit - might be changed later !
+    CHARACTER(LEN=50)                 :: l2_structlist_name         !< 
+  CONTAINS
+    PROCEDURE                         :: Add_pool => t_jsb_n_struct_quincy_add_level2_struct   ! mem%nested-struct%level2-struct
   END TYPE t_jsb_n_struct
 
-! *slmjsb4
+! quincy
   !-----------------------------------------------------------------------------------------------------
   !> POINTER to the t_jsb_n_struct
   !! 
@@ -143,9 +152,13 @@ MODULE mo_jsb_var_class
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_var_class'
 
+
 CONTAINS
 
 
+  ! ======================================================================================================= !
+  !>
+  !>
   SUBROUTINE finalize_jsb_var_real2d(this)
 
     TYPE(t_jsb_var_real2d) :: this
@@ -162,6 +175,10 @@ CONTAINS
 
   END SUBROUTINE finalize_jsb_var_real2d
 
+
+  ! ======================================================================================================= !
+  !>
+  !>
   SUBROUTINE finalize_jsb_var_real3d(this)
 
     TYPE(t_jsb_var_real3d) :: this
@@ -178,128 +195,159 @@ CONTAINS
 
   END SUBROUTINE finalize_jsb_var_real3d
 
+  
+  ! ======================================================================================================= !
+  !> add 2D variable to pool structure
+  !>
+  !> mem%pool <- var  or  mem%pool%pool <- var
+  !>
+  SUBROUTINE t_jsb_struct_quincy_add_struct_element_r2d( &
+    struct, name, var, &
+    hgrid, vgrid, cf, grib1, grib2, prefix, suffix, &
+    loutput, lrestart, output_level, &
+    initval_r)
 
-!!$  FUNCTION Create_jsb_var(i_shape, i_type) RESULT(return_ptr)
-!!$
-!!$    INTEGER, INTENT(in) :: i_shape(2)
-!!$    INTEGER, INTENT(in), OPTIONAL :: i_type
-!!$    TYPE(t_jsb_var), POINTER     :: return_ptr
-!!$
-!!$    ALLOCATE(return_ptr)
-!!$
-!!$    IF (SIZE(i_shape) == 2) THEN
-!!$      return_value%type = REAL2D
-!!$      ELSE IF (SIZE(i_shape) == 3) THEN
-!!$        return_value%type = REAL3D
-!!$      END IF
-!!$    END IF
-!!$
-!!$    SELECT CASE (return_value%type)
-!!$    CASE (REAL2D)
-!!$      ALLOCATE(return_value%real2d_ptr(i_shape(1), i_shape(2)))
-!!$    CASE (REAL3D)
-!!$      ALLOCATE(return_value%real3d_ptr(i_shape(1), i_shape(2), i_shape(3)))
-!!$    END SELECT
-!!$
-!!$  END FUNCTION Create_jsb_var
+    CLASS(t_jsb_struct),              INTENT(inout)   :: struct         ! pool structure
+    CHARACTER(len=*),                 INTENT(in)      :: name           ! name of variable
+    TYPE(t_jsb_var_real2d),   TARGET, INTENT(inout)   :: var            ! reference to jsbach var -> newly created plain scalar REAL
+    TYPE(t_jsb_grid),        POINTER, INTENT(in)      :: hgrid          ! horizontal grid type
+    TYPE(t_jsb_vgrid),       POINTER, INTENT(in)      :: vgrid          ! vertical grid type
+    TYPE(t_cf),                       INTENT(in)      :: cf             ! CF related metadata
+    TYPE(t_grib1),                    INTENT(in)      :: grib1          ! GRIB1 related metadata
+    TYPE(t_grib2),                    INTENT(in)      :: grib2          ! GRIB2 related metadata
+    CHARACTER(len=*),                 INTENT(in)      :: prefix         ! Prefix for variable name
+    CHARACTER(len=*),                 INTENT(in)      :: suffix         ! Suffix for variable name
+    LOGICAL,                OPTIONAL, INTENT(in)      :: loutput        ! output flag
+    LOGICAL,                OPTIONAL, INTENT(in)      :: lrestart       ! restart flag
+    INTEGER,                OPTIONAL, INTENT(in)      :: output_level   ! minimum level of output groups this var belongs to
+    REAL(wp),               OPTIONAL, INTENT(in)      :: initval_r      ! value if var not available
 
-!!  FUNCTION Add_real2d(var1, var2) RESULT(var3)
+    INTEGER                     :: pos_of_var
+    INTEGER                     :: ice, ics, nproma, iblk
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':t_jsb_struct_quincy_add_struct_element_r2d'
 
-!!    CLASS(t_jsb_var_real2d), INTENT(in) :: var1, var2
-!!    TYPE(t_jsb_var_real2d)              :: var3
+    ics     = 1              ! is always 1, see land_model_driver
+    ice     = hgrid%nproma   ! number of points in the chunk
+    nproma  = hgrid%nproma   ! number of points in the chunk
+    iblk    = 1              ! is always 1, see land_model_driver
 
-!!    var3%ptr(:,:) = var1%ptr(:,:) + var2%ptr(:,:)
+    ALLOCATE(var%field(nproma,iblk,1,1,1))
+    var%ptr => var%field(:,:,1,1,1)
 
-!!  END FUNCTION Add_real2d
+    var%name          = TRIM(name)
+    var%owner_proc_id = struct%owner_proc_id
 
-!!  FUNCTION Add_real2d_and_scalar(var1, scalar) RESULT(var3)
+    pos_of_var = struct%no_of_vars + 1
+    IF (pos_of_var > struct%max_no_of_vars) THEN
+      CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(struct%varlist_name)//', '//TRIM(name))
+    ELSE
+      struct%vars(pos_of_var)%p => var
+      struct%no_of_vars = pos_of_var
+    END IF
 
-!!    CLASS(t_jsb_var_real2d), INTENT(in) :: var1
-!!    REAL(wp),                INTENT(in) :: scalar
-!!    TYPE(t_jsb_var_real2d)              :: var3
+    ! added for QUINCY compatibility (in JSBACH4 the allocation is done differently)
+    var%ptr(ics:ice,iblk) = initval_r
 
-!!    var3%ptr(:,:) = var1%ptr(:,:) + scalar
+  END SUBROUTINE t_jsb_struct_quincy_add_struct_element_r2d
 
-!!  END FUNCTION Add_real2d_and_scalar
 
-!!  FUNCTION Add_real2d_and_field(var1, field) RESULT(var3)
+  ! ======================================================================================================= !
+  !> add 3D variable to pool structure
+  !>
+  !> mem%pool <- var  or  mem%pool%pool <- var
+  !> 
+  SUBROUTINE t_jsb_struct_quincy_add_struct_element_r3d( &
+    struct, name, var, &
+    hgrid, vgrid, cf, grib1, grib2, prefix, suffix, &
+    loutput, lrestart, output_level, &
+    initval_r)
+  
+    CLASS(t_jsb_struct),              INTENT(inout)   :: struct         ! pool structure
+    CHARACTER(len=*),                 INTENT(in)      :: name           ! name of variable
+    TYPE(t_jsb_var_real3d),   TARGET, INTENT(inout)   :: var            ! reference to jsbach var -> newly created plain scalar REAL
+    TYPE(t_jsb_grid),        POINTER, INTENT(in)      :: hgrid          ! horizontal grid type
+    TYPE(t_jsb_vgrid),       POINTER, INTENT(in)      :: vgrid          ! vertical grid type
+    TYPE(t_cf),                       INTENT(in)      :: cf             ! CF related metadata
+    TYPE(t_grib1),                    INTENT(in)      :: grib1          ! GRIB1 related metadata
+    TYPE(t_grib2),                    INTENT(in)      :: grib2          ! GRIB2 related metadata
+    CHARACTER(len=*),                 INTENT(in)      :: prefix         ! Prefix for variable name
+    CHARACTER(len=*),                 INTENT(in)      :: suffix         ! Suffix for variable name
+    LOGICAL,                OPTIONAL, INTENT(in)      :: loutput        ! output flag
+    LOGICAL,                OPTIONAL, INTENT(in)      :: lrestart       ! restart flag
+    INTEGER,                OPTIONAL, INTENT(in)      :: output_level   ! minimum level of output groups this var belongs to
+    REAL(wp),               OPTIONAL, INTENT(in)      :: initval_r      ! value if var not available
 
-!!    CLASS(t_jsb_var_real2d), INTENT(in) :: var1
-!!    REAL(wp),                INTENT(in) :: field(:,:)
-!!    TYPE(t_jsb_var_real2d)              :: var3
+    INTEGER                     :: pos_of_var
+    INTEGER                     :: ice, ics, nproma, iblk
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':t_jsb_struct_quincy_add_struct_element_r3d'
+  
+    ics     = 1              ! is always 1, see land_model_driver
+    ice     = hgrid%nproma   ! number of points in the chunk
+    nproma  = hgrid%nproma   ! number of points in the chunk
+    iblk    = 1              ! is always 1, see land_model_driver
+  
+    ALLOCATE(var%field(nproma, vgrid%n_levels, iblk, 1, 1))
+    var%ptr => var%field(:,:,:,1,1)
+  
+    var%name          = TRIM(name)
+    var%owner_proc_id = struct%owner_proc_id
+  
+    pos_of_var = struct%no_of_vars + 1
+    IF (pos_of_var > struct%max_no_of_vars) THEN
+      CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(struct%varlist_name)//', '//TRIM(name))
+    ELSE
+      struct%vars(pos_of_var)%p => var
+      struct%no_of_vars = pos_of_var
+    END IF
+  
+    ! added for QUINCY compatibility (in JSBACH4 the allocation is done differently)
+    var%ptr(ics:ice, 1:vgrid%n_levels, iblk) = initval_r
+  
+  END SUBROUTINE t_jsb_struct_quincy_add_struct_element_r3d
 
-!!    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Add_real2d_and_field'
 
-!!    IF (SIZE(field,1) /= SIZE(var1%ptr,1) .OR. SIZE(field,2) /= SIZE(var1%ptr,2)) &
-!!      & CALL finish(TRIM(routine), 'Dimension mismatch')
+  ! ======================================================================================================= !
+  !> add pool to a nested pool structure
+  !>
+  !> mem%pool <- pool  (add a pool that contains only var, but no other pools)
+  !> 
+  SUBROUTINE t_jsb_n_struct_quincy_add_level2_struct( &
+    n_struct, name, l2_struct, &
+    hgrid, vgrid, cf, grib1, grib2, prefix, suffix, &
+    loutput, lrestart, output_level)
 
-!!    var3%ptr(:,:) = var1%ptr(:,:) + field(:,:)
+    CLASS(t_jsb_n_struct),         INTENT(inout) :: n_struct            ! memory structure
+    CHARACTER(len=*),              INTENT(in)    :: name                ! name of variable
+    CLASS(t_jsb_struct),   TARGET, INTENT(inout) :: l2_struct           ! l2_struct
+    TYPE(t_jsb_grid),     POINTER, INTENT(in)    :: hgrid               ! horizontal grid type
+    TYPE(t_jsb_vgrid),    POINTER, INTENT(in)    :: vgrid               ! vertical grid type
+    TYPE(t_cf),                    INTENT(in)    :: cf                  ! CF related metadata
+    TYPE(t_grib1),                 INTENT(in)    :: grib1               ! GRIB1 related metadata
+    TYPE(t_grib2),                 INTENT(in)    :: grib2               ! GRIB2 related metadata
+    CHARACTER(len=*),              INTENT(in)    :: prefix              ! Prefix for variable name
+    CHARACTER(len=*),              INTENT(in)    :: suffix              ! Suffix for variable name
+    LOGICAL,             OPTIONAL, INTENT(in)    :: loutput             ! output flag
+    LOGICAL,             OPTIONAL, INTENT(in)    :: lrestart            ! restart flag
+    INTEGER,             OPTIONAL, INTENT(in)    :: output_level        ! minimum level of output groups this var belongs to
 
-!!  END FUNCTION Add_real2d_and_field
+    INTEGER                     :: pos_of_l2_struct
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':t_jsb_n_struct_quincy_add_level2_struct'
 
-!!  FUNCTION Add_real3d(var1, var2) RESULT(var3)
+    l2_struct%name          = TRIM(name)
+    l2_struct%owner_proc_id = n_struct%owner_proc_id
 
-!!    CLASS(t_jsb_var_real3d), INTENT(in) :: var1, var2
-!!    TYPE(t_jsb_var_real3d)              :: var3
+    pos_of_l2_struct = n_struct%no_of_l2_structs + 1
+    IF (pos_of_l2_struct > n_struct%max_no_of_l2_structs) THEN
+      CALL finish(TRIM(routine), 'Maximum number of l2_structs exceeded: '//TRIM(n_struct%l2_structlist_name)//', '//TRIM(name))
+    ELSE
+      n_struct%l2_structs(pos_of_l2_struct)%p => l2_struct
+      n_struct%no_of_l2_structs = pos_of_l2_struct
+    END IF
 
-!!    var3%ptr(:,:,:) = var1%ptr(:,:,:) + var2%ptr(:,:,:)
+    ALLOCATE(l2_struct%vars(l2_struct%max_no_of_vars))  !!! max_no_of_vars is hardcoded in mo_jsb_var_class:t_jsb_struct
 
-!!  END FUNCTION Add_real3d
+  END SUBROUTINE t_jsb_n_struct_quincy_add_level2_struct
 
-!!  FUNCTION Add_real3d_and_scalar(var1, scalar) RESULT(var3)
-
-!!    CLASS(t_jsb_var_real3d), INTENT(in) :: var1
-!!    REAL(wp),                INTENT(in) :: scalar
-!!    TYPE(t_jsb_var_real3d)              :: var3
-
-!!    var3%ptr(:,:,:) = var1%ptr(:,:,:) + scalar
-
-!!  END FUNCTION Add_real3d_and_scalar
-
-!!  FUNCTION Add_real3d_and_field(var1, field) RESULT(var3)
-
-!!    CLASS(t_jsb_var_real3d), INTENT(in) :: var1
-!!    REAL(wp),                INTENT(in) :: field(:,:,:)
-!!    TYPE(t_jsb_var_real3d)              :: var3
-
-!!    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Add_real3d_and_field'
-
-!!    IF (SIZE(field,1) /= SIZE(var1%ptr,1) .OR. SIZE(field,2) /= SIZE(var1%ptr,2) .OR. SIZE(field,3) /= SIZE(var1%ptr,3)) &
-!!      & CALL finish(TRIM(routine), 'Dimension mismatch')
-
-!!    var3%ptr(:,:,:) = var1%ptr(:,:,:) + field(:,:,:)
-
-!!  END FUNCTION Add_real3d_and_field
-
-!!  FUNCTION Multiply_real2d_with_field(var1, field) RESULT(var3)
-
-!!    CLASS(t_jsb_var_real2d), INTENT(in) :: var1
-!!    REAL(wp),                INTENT(in) :: field(:,:)
-!!    TYPE(t_jsb_var_real2d)              :: var3
-
-!!    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Multiply_real2d_with_field'
-
-!!    IF (SIZE(field,1) /= SIZE(var1%ptr,1) .OR. SIZE(field,2) /= SIZE(var1%ptr,2)) &
-!!      & CALL finish(TRIM(routine), 'Dimension mismatch')
-
-!!    var3%ptr(:,:) = var1%ptr(:,:) * field(:,:)
-
-!!  END FUNCTION Multiply_real2d_with_field
-
-!!  FUNCTION Multiply_real3d_with_field(var1, field) RESULT(var3)
-
-!!    CLASS(t_jsb_var_real3d), INTENT(in) :: var1
-!!    REAL(wp),                INTENT(in) :: field(:,:,:)
-!!    TYPE(t_jsb_var_real3d)              :: var3
-
-!!    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Multiply_real3d_with_field'
-
-!!    IF (SIZE(field,1) /= SIZE(var1%ptr,1) .OR. SIZE(field,2) /= SIZE(var1%ptr,2) .OR. SIZE(field,3) /= SIZE(var1%ptr,3)) &
-!!      & CALL finish(TRIM(routine), 'Dimension mismatch')
-
-!!    var3%ptr(:,:,:) = var1%ptr(:,:,:) + field(:,:,:)
-
-!!  END FUNCTION Multiply_real3d_with_field
 
 #endif
 END MODULE mo_jsb_var_class

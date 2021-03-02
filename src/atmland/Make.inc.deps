@@ -33,14 +33,14 @@ mo_atmland_interface.o: \
   mo_jsb_task_class.o \
   mo_jsb_var_class.o \
   mo_jsb_process_class.o \
-  mo_a2l_memory_class.o \
-  mo_l2a_memory_class.o \
+  mo_atm2land_memory_class.o \
+  mo_land2atm_memory_class.o \
   mo_rad_memory_class.o \
   mo_assimi_memory_class.o \
   mo_sse_memory_class.o \
   mo_jsb_control.o
 
-mo_l2a_memory_class.o: \
+mo_land2atm_memory_class.o: \
   mo_kind.o \
   mo_exception.o \
   mo_jsb_io.o \
@@ -50,9 +50,9 @@ mo_l2a_memory_class.o: \
   mo_jsb_class.o \
   mo_jsb_memory_class.o \
   mo_jsb_var_class.o \
-  mo_slm_varlist.o
+  mo_jsb_varlist.o
 
-mo_a2l_memory_class.o: \
+mo_atm2land_memory_class.o: \
   mo_kind.o \
   mo_exception.o \
   mo_jsb_class.o \
@@ -62,7 +62,7 @@ mo_a2l_memory_class.o: \
   mo_jsb_model_class.o \
   mo_jsb_memory_class.o \
   mo_jsb_var_class.o \
-  mo_slm_varlist.o \
+  mo_jsb_varlist.o \
   mo_isotope_util.o \
   mo_atmland_util.o \
   mo_atmland_constants.o

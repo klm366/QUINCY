@@ -84,7 +84,7 @@ CONTAINS
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_sse_memory
     dsl4slm_Use_memory_a_veg
     USE mo_veg_memory_class,      ONLY: veg_litterfall, veg_exudation, veg_pool
-    dsl4jsb_Use_memory(A2L_)
+    dsl4jsb_Use_memory_A2L_ 
 
     IMPLICIT NONE
     ! ---------------------------
@@ -120,7 +120,7 @@ CONTAINS
     dsl4jsb_Def_memory(SB_)                               ! TYPE(t_sb_memory),       POINTER :: sb__mem
     dsl4jsb_Def_memory(SSE_)                             ! TYPE(t_sse_memory),     POINTER :: sse__mem
     dsl4jsb_Def_memory(VEG_)                              ! TYPE(t_sse_memory),     POINTER :: sse__mem
-    dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory_A2L_ 
     ! Declare pointers to variables in memory
     ! A2L
     dsl4jsb_Real2D_onChunk :: nhx_deposition
@@ -298,7 +298,7 @@ CONTAINS
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(VEG_)
-    dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_memory_A2L_ 
     ! Allocate local allocatable variables (deallocate below at the end of this routine)    
     ALLOCATE(p_deposition_sl(nc, nsoil_sb))
     ALLOCATE(f_myc_sl(nc, nsoil_sb))

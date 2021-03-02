@@ -35,7 +35,7 @@ mo_veg_interface.o: \
 mo_veg_memory_class_util.o: \
   mo_kind.o \
   mo_jsb_var_class.o \
-  mo_slm_varlist.o \
+  mo_jsb_varlist.o \
   mo_jsb_io.o \
   mo_jsb_grid_class.o \
   mo_jsb_grid.o \
@@ -46,10 +46,9 @@ mo_veg_memory_class.o: \
   mo_veg_memory_class_util.o \
   mo_kind.o \
   mo_exception.o \
-  mo_jsb_impl_constants.o \
   mo_jsb_memory_class.o \
   mo_jsb_var_class.o \
-  mo_slm_varlist.o \
+  mo_jsb_varlist.o \
   mo_jsb_io.o \
   mo_jsb_grid_class.o \
   mo_jsb_grid.o \
@@ -71,7 +70,7 @@ mo_veg_growth.o: \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
   mo_isotope_util.o \
-  mo_a2l_memory_class.o \
+  mo_atm2land_memory_class.o \
   mo_assimi_constants.o \
   mo_assimi_config_class.o \
   mo_veg_config_class.o \
