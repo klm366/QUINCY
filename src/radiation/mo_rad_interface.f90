@@ -1132,8 +1132,8 @@ CONTAINS
 
         IF (use_alb_soil_npp) THEN
             WHERE ( lat(:) > 10._wp  .AND.  lat(:) < 35._wp  .AND.  lon(:) > -20._wp  .AND.  lon(:) < 35._wp )
-              alb_vis_soil_npp(:) = alb_vis_soil(:) - (alb_vis_soil(:) - 0.13_wp) * (1-EXP(-MAX(ratio_NPP(:), 0._wp)*3._wp))
-              alb_nir_soil_npp(:) = alb_nir_soil(:) - (alb_nir_soil(:) - 0.25_wp) * (1-EXP(-MAX(ratio_NPP(:), 0._wp)*3._wp))
+              alb_vis_soil_npp(:) = alb_vis_soil(:) - (alb_vis_soil(:) - 0.12_wp) * (1-EXP(MAX(ratio_NPP(:)*1.5, 0._wp)))
+              alb_nir_soil_npp(:) = alb_nir_soil(:) - (alb_nir_soil(:) - 0.24_wp) * (1-EXP(MAX(ratio_NPP(:)*1.5, 0._wp)))
             ELSEWHERE
               alb_vis_soil_npp(:) = alb_vis_soil(:)
               alb_nir_soil_npp(:) = alb_nir_soil(:)
