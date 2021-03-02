@@ -36,7 +36,6 @@ MODULE mo_veg_memory_class
   USE mo_util,                   ONLY: One_of
   USE mo_jsb_utils_iface,        ONLY: assign_if_present_allocatable
 #endif
-  USE mo_jsb_impl_constants,     ONLY: false
 
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
@@ -65,16 +64,37 @@ MODULE mo_veg_memory_class
   INTEGER, PARAMETER :: max_no_of_vars      = 530    !> TYPE t_jsb_var | 'normal' var: ~ 220 | 5 pools: 270 var | 4 tissues: 24
 #endif
 
-  !-----------------------------------------------------------------------------------------------------
-  !> Type definition for veg memory
-  !!
-  !! 
-  !-----------------------------------------------------------------------------------------------------
+  ! ======================================================================================================= !
+  !>Type definition for veg memory
+  !>
   TYPE, EXTENDS(t_jsb_memory) :: t_veg_memory
 
-    !! ####################################################
-    !> basic plant 2D
-    !!
+#ifdef __QUINCY_NO_JSB__
+    !------------------------------------------------------------------------------------------------------ !
+    !>QUINCY element-pool structures
+    !> 
+    TYPE(t_quincy_struct_veg_element) :: &
+                                      exudation       , &   !< flux between fine roots and mycorrhiza (mol m-2 timestep-1)
+                                      establishment   , &   !< flux between seed bed and reserve (mol m-2 timestep-1)
+                                      reserve_use     , &   !< net flux between reserve and labile pool (mol m-2 timestep-1)
+                                      total_biomass         !< per time step sum over veg\%pool\%..
+
+    TYPE(t_quincy_struct_veg_pool)    :: &   ! nested pool TYPE t_jsb_n_struct
+                                      pool            , &   !< pools of the plant
+                                      growth          , &   !< fluxes: growth
+                                      litterfall      , &   !< fluxes: litterfall
+                                      falloc          , &   !< mo_veg_growth:calc_allocation_fraction -> fractional allocation to pools
+                                      total_flux            !< for diagnoses of mass conservation: sum of fluxes
+#else
+    !------------------------------------------------------------------------------------------------------ !
+    !>JSBACH4 element-pool structures
+    !> 
+    
+#endif
+
+    !------------------------------------------------------------------------------------------------------ !
+    !>basic plant 2D
+    !>
     TYPE(t_jsb_var_real2d)          :: &   
                                     height            , &            !< plant height [m]
                                     diameter          , &            !< plant diameter [m]
@@ -100,9 +120,9 @@ MODULE mo_veg_memory_class
     TYPE(t_jsb_var_real3d)          :: &    ! DIMENSION(soil_layer_sb)
                                     root_fraction_sl                 !< fractions of root per layer [unitless]
 
-    !! ####################################################
-    !> target C:N and N:P ratios for various non-leaf tissues (mol/mol)
-    !!
+    !------------------------------------------------------------------------------------------------------ !
+    !>target C:N and N:P ratios for various non-leaf tissues (mol/mol)
+    !>
     TYPE(t_jsb_var_real2d)          :: &
                                     target_cn_fine_root       , &   !< 
                                     target_cn_coarse_root     , &   !< 
@@ -113,9 +133,9 @@ MODULE mo_veg_memory_class
                                     target_np_sap_wood        , &   !< 
                                     target_np_fruit                 !< 
 
-    !! ####################################################
-    !> canopy layer information
-    !!
+    !------------------------------------------------------------------------------------------------------ !
+    !>canopy layer information
+    !>
     TYPE(t_jsb_var_real3d)          :: &   ! DIMENSION(ncanopy)
                                     leaf_nitrogen_cl  , &           !< N in canopy layer [mmol m-2 LAI]
                                     fn_chl_cl         , &           !< fraction of N in chlorophyll, pigments only [unitless]
@@ -127,9 +147,9 @@ MODULE mo_veg_memory_class
                                     lai_cl            , &           !< leaf area in the canopy layer [m2 m-2]
                                     cumm_lai_cl                     !< cummulative leaf area above the mid-point of the canopy layer [m2 m-2]
 
-    !! ####################################################
-    !> fluxes
-    !!
+    !------------------------------------------------------------------------------------------------------ !
+    !>fluxes
+    !>
     TYPE(t_jsb_var_real2d)          :: &   
                                     maint_respiration_pot         , & !< potential maintenance respiration [µmol CO2 m-2 s-1]
                                     maint_respiration             , & !< maintenance respiration [µmol CO2 m-2 s-1]
@@ -164,9 +184,9 @@ MODULE mo_veg_memory_class
                                     recycling_heart_wood_p        , & !< net flux of P from sapwood to labile (senescence and maintenance) [mol m-2 timestep-1]
                                     net_growth                        !< npp minus turnover [µmol CO2 m-2 s-1]
 
-    !! ####################################################
-    !> everything else
-    !!
+    !------------------------------------------------------------------------------------------------------ !
+    !>everything else
+    !>
     TYPE(t_jsb_var_real2d)          :: &   
                                     fmaint_rate_root          , & !< current N-specific maintentance respiration [~µmol C mol-1 N s-1]
                                     unit_npp                  , & !< incremental change in NPP [µmol CO2 m-2 s-1]
@@ -184,9 +204,9 @@ MODULE mo_veg_memory_class
                                     leaf2sapwood_mass_ratio   , & !< leaf to shoot mass ratio [unitless]
                                     leaf2root_mass_ratio          !< leaf to root mass ratio [unitless]
 
-    !! ####################################################
-    !> daytime averages
-    !! 
+    !------------------------------------------------------------------------------------------------------ !
+    !>daytime averages
+    !> 
     TYPE(t_jsb_var_real3d)          :: &   ! DIMENSION(ncanopy)
                                     fleaf_sunlit_daytime_cl          !< fraction of layer which is sunlit average of the previous day [unitless]
     TYPE(t_jsb_var_real2d)          :: &   
@@ -197,9 +217,9 @@ MODULE mo_veg_memory_class
                                     beta_sinklim_ps_daytime   , &    !< scaling factor to account for soil moisture constraints on photosynthesis average of the previous day [unitless]
                                     t_jmax_opt_daytime               !< optimal temperature for electron transport of photosynthesis average of the previous day [deg C]
 
-    !! ####################################################
-    !> accumlated over current daytime
-    !! 
+    !------------------------------------------------------------------------------------------------------ !
+    !>accumlated over current daytime
+    !> 
     TYPE(t_jsb_var_real3d)          :: &   ! DIMENSION(ncanopy)
                                     fleaf_sunlit_daytime_dacc_cl     !< fraction of layer which is sunlit value accumulated over current day [unitless]
     TYPE(t_jsb_var_real2d)          :: &   
@@ -212,9 +232,9 @@ MODULE mo_veg_memory_class
     TYPE(t_jsb_var_real2d)          :: &   
                                     daytime_counter                   !< number of timesteps of current day with light available [#]
 
-    !! ####################################################
-    !> moving averages
-    !! 
+    !------------------------------------------------------------------------------------------------------ !
+    !>moving averages
+    !> 
     ! 1.1 conditions for the labile pool dynamics
     TYPE(t_jsb_var_real2d)          :: &   
                                     gpp_tlabile_mavg               , &  !< gpp  [µmol m-2 s-1]
@@ -272,7 +292,7 @@ MODULE mo_veg_memory_class
                                     growth_cn_talloc_mavg          , &  !< plant growth cn ratio, equivalent to 1/growth_req_n time-averaged [mol C mol-1 N]
                                     growth_cp_talloc_mavg          , &  !< plant growth cp ratio, equivalent to 1/(growthreq_n*growth_req_p) time-averaged [mol C mol-1 P]
                                     growth_np_talloc_mavg          , &  !< plant growth np ratio, equivalent to 1/(growth_req_p) time-averaged [mol N mol-1 P]
-                                    labile_carbon_talloc_mavg      , &  !< labile carbon pool neeeded for allometry calculations time-averaged [mol C m-2]
+                                    labile_carbon_talloc_mavg      , &  !< labile carbon pool needed for allometry calculations time-averaged [mol C m-2]
                                     labile_nitrogen_talloc_mavg    , &  !< labile nitrogen pool neeeded for allometry calculations time-averaged [mol N m-2]
                                     labile_phosphorus_talloc_mavg  , &  !< labile phosphorus pool neeeded for allometry calculations time-averaged [mol P m-2]
                                     reserve_carbon_talloc_mavg     , &  !< reserve carbon needed for optimal allocation time-averaged [mol C m-2]
@@ -301,22 +321,6 @@ MODULE mo_veg_memory_class
                                     t_air_month_mavg               , &  !< air temperature time-averaged [K]
                                     t_jmax_opt_mavg                     !< optimal temperature for electron transport of photosynthesis time-averaged [deg C]
 
-    !! ####################################################
-    !> pool structures
-    !! 
-    TYPE(t_quincy_struct_veg_element) :: &
-                                      exudation       , &   !< flux between fine roots and mycorrhiza (mol m-2 timestep-1)
-                                      establishment   , &   !< flux between seed bed and reserve (mol m-2 timestep-1)
-                                      reserve_use     , &   !< net flux between reserve and labile pool (mol m-2 timestep-1)
-                                      total_biomass         !< per time step sum over veg\%pool\%..
-
-    TYPE(t_quincy_struct_veg_pool)    :: &   ! nested pool TYPE t_jsb_n_struct
-                                      pool            , &   !< pools of the plant
-                                      growth          , &   !< fluxes: growth
-                                      litterfall      , &   !< fluxes: litterfall
-                                      falloc          , &   !< mo_veg_growth:calc_allocation_fraction -> fractional allocation to pools
-                                      total_flux            !< for diagnoses of mass conservation: sum of fluxes
-
   CONTAINS
     PROCEDURE :: Init => Init_veg_memory
   END TYPE t_veg_memory
@@ -332,39 +336,38 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_veg_memory(mem, prefix, suffix, lct_ids, model_id)
 
+    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
 #ifdef __QUINCY_NO_JSB__
-    USE mo_slm_varlist,       ONLY: jsb_add_var
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2   ! , tables
 #else
-    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
 #endif
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
     USE mo_jsb_model_class,   ONLY: t_jsb_model
     USE mo_jsb_class,         ONLY: Get_model
-
+    ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_veg_memory),  INTENT(inout), TARGET  :: mem             !> veg memory
     CHARACTER(len=*),     INTENT(in)             :: prefix          !> process name
     CHARACTER(len=*),     INTENT(in)             :: suffix          !> tile name
     INTEGER,              INTENT(in)             :: lct_ids !(:)      !> vector of land cover type IDs
     INTEGER,              INTENT(in)             :: model_id        !> model ID model\%id
-    ! ---------------------------
+    ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),          POINTER :: model
     TYPE(t_jsb_grid),           POINTER :: hgrid                        ! Horizontal grid
-    TYPE(t_jsb_vgrid),          POINTER :: vgrid_surface                ! Vertical grid
+    TYPE(t_jsb_vgrid),          POINTER :: surface                      ! Vertical grid
     TYPE(t_jsb_vgrid),          POINTER :: vgrid_canopy                 ! Vertical grid
     TYPE(t_jsb_vgrid),          POINTER :: vgrid_soil_sb                ! Vertical grid
 #ifdef __QUINCY_NO_JSB__
     CHARACTER(len=30)                   :: unit_veg_pool
     CHARACTER(len=30)                   :: unit_veg_flux    
 #else
-    TYPE(t_veg_elements_pool),  POINTER :: veg_elements_pool            ! pools /fluxes like veg_exudation & veg_total_biomass
-    TYPE(t_veg_tissues_pool),   POINTER :: veg_tissues_pool             ! pools /fluxes like veg_pool & veg_growth
+    TYPE(t_veg_elements_pool),  POINTER :: veg_elements_pool            ! e.g. veg_exudation & veg_total_biomass
+    TYPE(t_veg_tissues_pool),   POINTER :: veg_tissues_pool             ! e.g. veg_pool & veg_growth
 #endif
     INTEGER                             :: table
     CHARACTER(len=*), PARAMETER         :: routine = TRIM(modname)//':Init_veg_memory'
-    ! ---------------------------
+    ! ----------------------------------------------------------------------------------------------------- !
     model         => Get_model(model_id)
 #ifdef __QUINCY_NO_JSB__
     table         = 1
@@ -372,7 +375,7 @@ CONTAINS
     table         =  tables(1)
 #endif
     hgrid         => Get_grid(model%grid_id)
-    vgrid_surface => Get_vgrid('surface')
+    surface       => Get_vgrid('surface')
 #ifdef __QUINCY_NO_JSB__
     vgrid_canopy  => Get_vgrid('canopy_layer')
 #else
@@ -381,1400 +384,123 @@ CONTAINS
     vgrid_soil_sb => Get_vgrid('soil_layer_sb')
 
 #ifdef __QUINCY_NO_JSB__
-    !> 0.9 init local variables
-    !! 
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! init local variables
     unit_veg_pool = "mol m-2"
     unit_veg_flux = "mol m-2 timestep-1"
 #endif
 
-    !> 1.0  init memory
-    !! 
-    IF (.NOT. ASSOCIATED(mem%height%ptr)) THEN
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! add memory only for LAND & PFT tiles
+    ! IF ( One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. &
+    !    & One_of(VEG_TYPE,  lct_ids(:)) > 0) THEN
 
-      !> add variables to vegetation memory
-      !! 
-      CALL jsb_add_var(mem, 'height', mem%height, &
-            hgrid, vgrid_surface, &
-            t_cf('height', 'm', 'plant height'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'diameter', mem%diameter, &
-            hgrid, vgrid_surface, &
-            t_cf('diameter', 'm', 'plant diameter'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'dens_ind', mem%dens_ind, &
-            hgrid, vgrid_surface, &
-            t_cf('dens_ind', '# m-2', 'density of individuals'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'lai', mem%lai, &
-            hgrid, vgrid_surface, &
-            t_cf('lai', 'm2 m-2', 'actual leaf area index'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'target_cn_leaf', mem%target_cn_leaf, &
-            hgrid, vgrid_surface, &
-            t_cf('target_cn_leaf', '', 'target foliar C:N ratio'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'target_np_leaf', mem%target_np_leaf, &
-            hgrid, vgrid_surface, &
-            t_cf('target_np_leaf', '', 'target foliar N:P ratio '), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'mean_leaf_age', mem%mean_leaf_age, &
-            hgrid, vgrid_surface, &
-            t_cf('mean_leaf_age', '', 'average foliage age in days '), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'cohort_age', mem%cohort_age, &
-            hgrid, vgrid_surface, &
-            t_cf('cohort_age', '', 'age of the cohort in years, used with veg_dynamics_scheme cohort'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'f_n_demand', mem%f_n_demand, &
-            hgrid, vgrid_surface, &
-            t_cf('f_n_demand', '', 'relative plant demand for N'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'f_p_demand', mem%f_p_demand, &
-            hgrid, vgrid_surface, &
-            t_cf('f_p_demand', '', 'relative plant demand for P'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'beta_sinklim_ps', mem%beta_sinklim_ps, &
-            hgrid, vgrid_surface, &
-            t_cf('beta_sinklim_ps', '', 'scaling factor to account for a direct sink limitation contraint on photosynthesis'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'dphi', mem%dphi, &
-            hgrid, vgrid_surface, &
-            t_cf('dphi', 'MPa', 'plant-soil water potential gradient'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'growth_req_n', mem%growth_req_n, &
-            hgrid, vgrid_surface, &
-            t_cf('growth_req_n', '', 'moles N required for a unit of C growth under current allocation fractions '), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'growth_req_p', mem%growth_req_p, &
-            hgrid, vgrid_surface, &
-            t_cf('growth_req_p', '', 'moles P required for a unit of N growth under current allocation fractions '), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'leaf_cn_direction', mem%leaf_cn_direction, &
-            hgrid, vgrid_surface, &
-            t_cf('leaf_cn_direction', '', 'indicates direction of change in leaf CN ratio to maximise NPP'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'target_lai', mem%target_lai, &
-            hgrid, vgrid_surface, &
-            t_cf('target_lai', 'm2 m-2', 'LAI implied from sap wood area'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'kstar_labile', mem%kstar_labile, &
-            hgrid, vgrid_surface, &
-            t_cf('kstar_labile', '', 'labile pool turnover rate assuming only temperature and moisture constraints, no stoichiometry'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
+      ! --------------------------------------------------------------------------------------------------- !
+      !>1.0 element-pool structures
+      !> 
 
-      CALL jsb_add_var(mem, 'do_cohort_harvest', mem%do_cohort_harvest, &
-            hgrid, vgrid_surface, &
-            t_cf('do_cohort_harvest', '', 'logical to identify whether the cohort may be harvested, in veg_dynamics_scheme cohort'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=false) ! initvalue
+#ifdef __QUINCY_NO_JSB__
+      ! --------------------------------------------------------------------------------------------------- !
+      !>  1.1 QUINCY element-pool structures
+      !> 
 
-      CALL jsb_add_var(mem, 'root_fraction_sl', mem%root_fraction_sl, &
-            hgrid, vgrid_soil_sb, &
-            t_cf('root_fraction_sl', '', 'fractions of root per layer'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
+      ! add pools to memory
+      CALL mem%Add_pool('exudation', mem%exudation, &
+        & hgrid, surface, &
+        & t_cf('exudation', TRIM(unit_veg_flux), 'Exudation element in vegetation'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE.)
+        
+      CALL mem%Add_pool('establishment', mem%establishment, &
+        & hgrid, surface, &
+        & t_cf('establishment', TRIM(unit_veg_flux), 'Establishment element in vegetation'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE.)
+        
+      CALL mem%Add_pool('reserve_use', mem%reserve_use, &
+        & hgrid, surface, &
+        & t_cf('reserve_use', TRIM(unit_veg_flux), 'Reserve_use element in vegetation'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE.)
+        
+      CALL mem%Add_pool('total_biomass', mem%total_biomass, &
+        & hgrid, surface, &
+        & t_cf('total_biomass', TRIM(unit_veg_pool), 'Total_biomass element in vegetation'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE.)
 
-      CALL jsb_add_var(mem, 'target_cn_fine_root', mem%target_cn_fine_root, &
-            hgrid, vgrid_surface, &
-            t_cf('target_cn_fine_root', '', ' '), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'target_cn_coarse_root', mem%target_cn_coarse_root, &
-            hgrid, vgrid_surface, &
-            t_cf('target_cn_coarse_root', '', ' '), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'target_cn_sap_wood', mem%target_cn_sap_wood, &
-            hgrid, vgrid_surface, &
-            t_cf('target_cn_sap_wood', '', ' '), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'target_cn_fruit', mem%target_cn_fruit, &
-            hgrid, vgrid_surface, &
-            t_cf('target_cn_fruit', '', ' '), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'target_np_fine_root', mem%target_np_fine_root, &
-            hgrid, vgrid_surface, &
-            t_cf('target_np_fine_root', '', ' '), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'target_np_coarse_root', mem%target_np_coarse_root, &
-            hgrid, vgrid_surface, &
-            t_cf('target_np_coarse_root', '', ' '), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'target_np_sap_wood', mem%target_np_sap_wood, &
-            hgrid, vgrid_surface, &
-            t_cf('target_np_sap_wood', '', ' '), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'target_np_fruit', mem%target_np_fruit, &
-            hgrid, vgrid_surface, &
-            t_cf('target_np_fruit', '', ' '), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'leaf_nitrogen_cl', mem%leaf_nitrogen_cl, &
-            hgrid, vgrid_canopy, &
-            t_cf('leaf_nitrogen_cl', 'mmol m-2 LAI', 'N in canopy layer'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'fn_chl_cl', mem%fn_chl_cl, &
-            hgrid, vgrid_canopy, &
-            t_cf('fn_chl_cl', '', 'fraction of N in chlorophyll, pigments only'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'fn_et_cl', mem%fn_et_cl, &
-            hgrid, vgrid_canopy, &
-            t_cf('fn_et_cl', '', 'fraction of N in electron transport '), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'fn_rub_cl', mem%fn_rub_cl, &
-            hgrid, vgrid_canopy, &
-            t_cf('fn_rub_cl', '', 'fraction of N in Rubisco '), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'fn_pepc_cl', mem%fn_pepc_cl, &
-            hgrid, vgrid_canopy, &
-            t_cf('fn_pepc_cl', '', 'fraction of N in PEP carboylase, C4 plants only'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'fn_oth_cl', mem%fn_oth_cl, &
-            hgrid, vgrid_canopy, &
-            t_cf('fn_oth_cl', '', 'fraction of N not associated with photosynthesis '), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'fleaf_sunlit_cl', mem%fleaf_sunlit_cl, &
-            hgrid, vgrid_canopy, &
-            t_cf('fleaf_sunlit_cl', '', 'fraction of layer which is sunlit'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'lai_cl', mem%lai_cl, &
-            hgrid, vgrid_canopy, &
-            t_cf('lai_cl', 'm2 m-2', 'leaf area in the canopy layer '), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'cumm_lai_cl', mem%cumm_lai_cl, &
-            hgrid, vgrid_canopy, &
-            t_cf('cumm_lai_cl', 'm2 m-2', 'cummulative leaf area above the mid-point of the canopy layer '), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'maint_respiration_pot', mem%maint_respiration_pot, &
-            hgrid, vgrid_surface, &
-            t_cf('maint_respiration_pot', 'µmol CO2 m-2 s-1', 'potential maintenance respiration'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'maint_respiration', mem%maint_respiration, &
-            hgrid, vgrid_surface, &
-            t_cf('maint_respiration', 'µmol CO2 m-2 s-1', 'maintenance respiration'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'maint_respiration_c13', mem%maint_respiration_c13, &
-            hgrid, vgrid_surface, &
-            t_cf('maint_respiration_c13', 'µmol 13CO2 m-2 s-1', 'maintenance respiration'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'maint_respiration_c14', mem%maint_respiration_c14, &
-            hgrid, vgrid_surface, &
-            t_cf('maint_respiration_c14', 'µmol 14CO2 m-2 s-1', 'maintenance respiration'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'growth_respiration', mem%growth_respiration, &
-            hgrid, vgrid_surface, &
-            t_cf('growth_respiration', 'µmol CO2 m-2 s-1', 'growth respiration'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'growth_respiration_c13', mem%growth_respiration_c13, &
-            hgrid, vgrid_surface, &
-            t_cf('growth_respiration_c13', 'µmol 13CO2 m-2 s-1', 'growth respiration'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'growth_respiration_c14', mem%growth_respiration_c14, &
-            hgrid, vgrid_surface, &
-            t_cf('growth_respiration_c14', 'µmol 14CO2 m-2 s-1', 'growth respiration'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'n_transform_respiration', mem%n_transform_respiration, &
-            hgrid, vgrid_surface, &
-            t_cf('n_transform_respiration', 'µmol CO2 m-2 s-1', 'respiration associated with N transformation'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'n_fixation_respiration', mem%n_fixation_respiration, &
-            hgrid, vgrid_surface, &
-            t_cf('n_fixation_respiration', 'µmol CO2 m-2 s-1', 'respiration associated with N fixation'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'n_processing_respiration', mem%n_processing_respiration, &
-            hgrid, vgrid_surface, &
-            t_cf('n_processing_respiration', 'µmol CO2 m-2 s-1', 'respiration associated with N processing'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'n_processing_respiration_c13', mem%n_processing_respiration_c13, &
-            hgrid, vgrid_surface, &
-            t_cf('n_processing_respiration_c13', 'µmol 13CO2 m-2 s-1', 'respiration associated with N processing'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'n_processing_respiration_c14', mem%n_processing_respiration_c14, &
-            hgrid, vgrid_surface, &
-            t_cf('n_processing_respiration_c14', 'µmol 14CO2 m-2 s-1', 'respiration associated with N processing'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'npp', mem%npp, &
-            hgrid, vgrid_surface, &
-            t_cf('npp', 'µmol CO2 m-2 s-1', 'net primary production'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'npp_c13', mem%npp_c13, &
-            hgrid, vgrid_surface, &
-            t_cf('npp_c13', 'µmol 13CO2 m-2 s-1', 'net primary production'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'npp_c14', mem%npp_c14, &
-            hgrid, vgrid_surface, &
-            t_cf('npp_c14', 'µmol 14CO2 m-2 s-1', 'net primary production'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'uptake_nh4', mem%uptake_nh4, &
-            hgrid, vgrid_surface, &
-            t_cf('uptake_nh4', 'µmol N m-2 s-1', 'NH4 uptake from soil'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'uptake_nh4_n15', mem%uptake_nh4_n15, &
-            hgrid, vgrid_surface, &
-            t_cf('uptake_nh4_n15', 'µmol N m-2 s-1', '15NH4 uptake from soil'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'uptake_no3', mem%uptake_no3, &
-            hgrid, vgrid_surface, &
-            t_cf('uptake_no3', 'µmol N m-2 s-1', 'NO3 uptake from soil'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'uptake_no3_n15', mem%uptake_no3_n15, &
-            hgrid, vgrid_surface, &
-            t_cf('uptake_no3_n15', 'µmol N m-2 s-1', '15NO3 uptake from soil'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'uptake_po4', mem%uptake_po4, &
-            hgrid, vgrid_surface, &
-            t_cf('uptake_po4', 'µmol P m-2 s-1', 'PO4 uptake from soil'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'n_fixation', mem%n_fixation, &
-            hgrid, vgrid_surface, &
-            t_cf('n_fixation', 'µmol N m-2 s-1', 'symbiontic N fixation'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'n_fixation_n15', mem%n_fixation_n15, &
-            hgrid, vgrid_surface, &
-            t_cf('n_fixation_n15', 'µmol 15N m-2 s-1', 'symbiontic N fixation'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'recycling_leaf_n', mem%recycling_leaf_n, &
-            hgrid, vgrid_surface, &
-            t_cf('recycling_leaf_n', 'mol m-2 timestep-1', 'net flux of N from leaf to labile (senescence and maintenance)'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'recycling_leaf_n15', mem%recycling_leaf_n15, &
-            hgrid, vgrid_surface, &
-            t_cf('recycling_leaf_n15', 'mol m-2 timestep-1', 'net flux of 15N from leaf to labile (senescence and maintenance)'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'recycling_leaf_p', mem%recycling_leaf_p, &
-            hgrid, vgrid_surface, &
-            t_cf('recycling_leaf_p', 'mol m-2 timestep-1', 'net flux of P from leaf to labile (senescence and maintenance)'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'recycling_fine_root_n', mem%recycling_fine_root_n, &
-            hgrid, vgrid_surface, &
-            t_cf('recycling_fine_root_n', 'mol m-2 timestep-1', 'net flux of N from fine roots to labile (senescence and maintenance)'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'recycling_fine_root_n15', mem%recycling_fine_root_n15, &
-            hgrid, vgrid_surface, &
-            t_cf('recycling_fine_root_n15', 'mol m-2 timestep-1', 'net flux of 15N from fine roots to labile (senescence and maintenance)'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'recycling_fine_root_p', mem%recycling_fine_root_p, &
-            hgrid, vgrid_surface, &
-            t_cf('recycling_fine_root_p', 'mol m-2 timestep-1', 'net flux of P from fine roots to labile (senescence and maintenance)'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'recycling_heart_wood_n', mem%recycling_heart_wood_n, &
-            hgrid, vgrid_surface, &
-            t_cf('recycling_heart_wood_n', 'mol m-2 timestep-1', 'net flux of N from sapwood to labile (senescence and maintenance)'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'recycling_heart_wood_n15', mem%recycling_heart_wood_n15, &
-            hgrid, vgrid_surface, &
-            t_cf('recycling_heart_wood_n15', 'mol m-2 timestep-1', 'net flux of 15N from sapwood to labile (senescence and maintenance)'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'recycling_heart_wood_p', mem%recycling_heart_wood_p, &
-            hgrid, vgrid_surface, &
-            t_cf('recycling_heart_wood_p', 'mol m-2 timestep-1', 'net flux of P from sapwood to labile (senescence and maintenance)'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'net_growth', mem%net_growth, &
-            hgrid, vgrid_surface, &
-            t_cf('net_growth', 'µmol CO2 m-2 s-1', 'npp minus turnover'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'fmaint_rate_root', mem%fmaint_rate_root, &
-            hgrid, vgrid_surface, &
-            t_cf('fmaint_rate_root', '~µmol C mol-1 N s-1', 'current N-specific maintentance respiration'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'unit_npp', mem%unit_npp, &
-            hgrid, vgrid_surface, &
-            t_cf('unit_npp', '', 'incremental change in NPP. Needed for optimal allocation'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'unit_transpiration', mem%unit_transpiration, &
-            hgrid, vgrid_surface, &
-            t_cf('unit_transpiration', '', 'incremental change in transpiration. Needed for optimal allocation'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'unit_uptake_n_pot', mem%unit_uptake_n_pot, &
-            hgrid, vgrid_surface, &
-            t_cf('unit_uptake_n_pot', '', 'incremental change in potential N uptake per unit root carbon, needed for N uptake calculation '), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'unit_uptake_p_pot', mem%unit_uptake_p_pot, &
-            hgrid, vgrid_surface, &
-            t_cf('unit_uptake_p_pot', '', 'incremental change in potential P uptake per unit root carbon, currently unused '), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'unit_uptake_n_act', mem%unit_uptake_n_act, &
-            hgrid, vgrid_surface, &
-            t_cf('unit_uptake_n_act', '', 'incremental change in actual N uptake per unit root carbon, needed for optimal allocation'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'unit_uptake_p_act', mem%unit_uptake_p_act, &
-            hgrid, vgrid_surface, &
-            t_cf('unit_uptake_p_act', '', 'incremental change in actual P uptake per unit root carbon, needed for optimal allocation'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'delta_dens_ind', mem%delta_dens_ind, &
-            hgrid, vgrid_surface, &
-            t_cf('delta_dens_ind', '# m-2 timestep-1', 'change in density of individuals'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'cost_n_uptake_root', mem%cost_n_uptake_root, &
-            hgrid, vgrid_surface, &
-            t_cf('cost_n_uptake_root', 'mol C mol-1 N', 'actual cost for N uptake by roots'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'cost_n_fixation', mem%cost_n_fixation, &
-            hgrid, vgrid_surface, &
-            t_cf('cost_n_fixation', 'mol C mol-1 N', 'actual cost for N uptake through fixation'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'mortality_rate', mem%mortality_rate, &
-            hgrid, vgrid_surface, &
-            t_cf('mortality_rate', 'timestep-1', 'background_mort_rate_tree / grass'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'k1_opt', mem%k1_opt, &
-            hgrid, vgrid_surface, &
-            t_cf('k1_opt', '', 'coefficient for optimal leaf:root ratio'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'k2_opt', mem%k2_opt, &
-            hgrid, vgrid_surface, &
-            t_cf('k2_opt', '', 'coefficient for optimal leaf:root ratio'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'leaf2sapwood_mass_ratio', mem%leaf2sapwood_mass_ratio, &
-            hgrid, vgrid_surface, &
-            t_cf('leaf2sapwood_mass_ratio', '', 'leaf to shoot mass ratio'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'leaf2root_mass_ratio', mem%leaf2root_mass_ratio, &
-            hgrid, vgrid_surface, &
-            t_cf('leaf2root_mass_ratio', '', 'leaf to root mass ratio'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'fleaf_sunlit_daytime_cl', mem%fleaf_sunlit_daytime_cl, &
-            hgrid, vgrid_canopy, &
-            t_cf('fleaf_sunlit_daytime_cl', '', 'average of the previous day'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 't_air_daytime', mem%t_air_daytime, &
-            hgrid, vgrid_surface, &
-            t_cf('t_air_daytime', '', 'average of the previous day'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'press_srf_daytime', mem%press_srf_daytime, &
-            hgrid, vgrid_surface, &
-            t_cf('press_srf_daytime', '', 'average of the previous day'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'co2_mixing_ratio_daytime', mem%co2_mixing_ratio_daytime, &
-            hgrid, vgrid_surface, &
-            t_cf('co2_mixing_ratio_daytime', '', 'average of the previous day'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'ga_daytime', mem%ga_daytime, &
-            hgrid, vgrid_surface, &
-            t_cf('ga_daytime', '', 'average of the previous day'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'beta_sinklim_ps_daytime', mem%beta_sinklim_ps_daytime, &
-            hgrid, vgrid_surface, &
-            t_cf('beta_sinklim_ps_daytime', 'unitless', 'average of the previous day'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 't_jmax_opt_daytime', mem%t_jmax_opt_daytime, &
-            hgrid, vgrid_surface, &
-            t_cf('t_jmax_opt_daytime', '', 'average of the previous day'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'fleaf_sunlit_daytime_dacc_cl', mem%fleaf_sunlit_daytime_dacc_cl, &
-            hgrid, vgrid_canopy, &
-            t_cf('fleaf_sunlit_daytime_dacc_cl', '', 'value accumulated over current day'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 't_air_daytime_dacc', mem%t_air_daytime_dacc, &
-            hgrid, vgrid_surface, &
-            t_cf('t_air_daytime_dacc', '', 'average of the previous day'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'press_srf_daytime_dacc', mem%press_srf_daytime_dacc, &
-            hgrid, vgrid_surface, &
-            t_cf('press_srf_daytime_dacc', '', 'average of the previous day'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'co2_mixing_ratio_daytime_dacc', mem%co2_mixing_ratio_daytime_dacc, &
-            hgrid, vgrid_surface, &
-            t_cf('co2_mixing_ratio_daytime_dacc', '', 'average of the previous day'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'ga_daytime_dacc', mem%ga_daytime_dacc, &
-            hgrid, vgrid_surface, &
-            t_cf('ga_daytime_dacc', '', 'average of the previous day'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'beta_sinklim_ps_daytime_dacc', mem%beta_sinklim_ps_daytime_dacc, &
-            hgrid, vgrid_surface, &
-            t_cf('beta_sinklim_ps_daytime_dacc', '', 'average of the previous day'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 't_jmax_opt_daytime_dacc', mem%t_jmax_opt_daytime_dacc, &
-            hgrid, vgrid_surface, &
-            t_cf('t_jmax_opt_daytime_dacc', '', 'value accumulated over current day '), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'daytime_counter', mem%daytime_counter, &
-            hgrid, vgrid_surface, &
-            t_cf('daytime_counter', '', 'number of timesteps of current day with light available'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'gpp_tlabile_mavg', mem%gpp_tlabile_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('gpp_tlabile_mavg', 'µmol m-2 s-1', 'gpp '), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'maint_respiration_tlabile_mavg', mem%maint_respiration_tlabile_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('maint_respiration_tlabile_mavg', 'µmol m-2 s-1', 'maintenance respiration'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'growth_req_n_tlabile_mavg', mem%growth_req_n_tlabile_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('growth_req_n_tlabile_mavg', '', 'moles N required for a unit of C growth under current allocation fractions'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'growth_req_p_tlabile_mavg', mem%growth_req_p_tlabile_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('growth_req_p_tlabile_mavg', '', 'moles P required for a unit of N growth under current allocation fractions'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 't_air_tphen_mavg', mem%t_air_tphen_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('t_air_tphen_mavg', '', 'air temp mavg for phenology calc'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'npp_tuptake_mavg', mem%npp_tuptake_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('npp_tuptake_mavg', 'µmol m-2 s-1', 'npp of the last week'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'demand_uptake_n_tuptake_mavg', mem%demand_uptake_n_tuptake_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('demand_uptake_n_tuptake_mavg', '', 'scalar of Vmax for root N uptake '), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'demand_uptake_p_tuptake_mavg', mem%demand_uptake_p_tuptake_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('demand_uptake_p_tuptake_mavg', '', 'scalar of Vmax for root P uptake'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'growth_req_n_tuptake_mavg', mem%growth_req_n_tuptake_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('growth_req_n_tuptake_mavg', '', 'moles N required for a unit of C growth under current allocation fractions'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'growth_req_p_tuptake_mavg', mem%growth_req_p_tuptake_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('growth_req_p_tuptake_mavg', '', 'moles P required for a unit of N growth under current allocation fractions'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'cost_n_fixation_talloc_mavg', mem%cost_n_fixation_talloc_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('cost_n_fixation_talloc_mavg', 'mol C mol-1 N', 'moving average of N fixation cost'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'exudation_c_tmyc_mavg', mem%exudation_c_tmyc_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('exudation_c_tmyc_mavg', 'mol C', 'moving average of C allocation to mycorrhizae'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'fleaf_sunlit_tfrac_mavg_cl', mem%fleaf_sunlit_tfrac_mavg_cl, &
-            hgrid, vgrid_canopy, &
-            t_cf('fleaf_sunlit_tfrac_mavg_cl', '', 'fraction of sunlit leaves'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 't_air_tfrac_mavg', mem%t_air_tfrac_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('t_air_tfrac_mavg', '', 'air temp'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'press_srf_tfrac_mavg', mem%press_srf_tfrac_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('press_srf_tfrac_mavg', '', 'air pressure at surface'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'co2_mixing_ratio_tfrac_mavg', mem%co2_mixing_ratio_tfrac_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('co2_mixing_ratio_tfrac_mavg', '', 'co2 mixing ratio of the air'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'ga_tfrac_mavg', mem%ga_tfrac_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('ga_tfrac_mavg', '', 'aerodynamic conductance'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'beta_sinklim_ps_tfrac_mavg', mem%beta_sinklim_ps_tfrac_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('beta_sinklim_ps_tfrac_mavg', '', 'scaling factor to account for soil moisture constraints on photosynthesis '), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'fleaf_sunlit_tcnl_mavg_cl', mem%fleaf_sunlit_tcnl_mavg_cl, &
-            hgrid, vgrid_canopy, &
-            t_cf('fleaf_sunlit_tcnl_mavg_cl', '', 'fraction of sunlit leaves'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 't_air_tcnl_mavg', mem%t_air_tcnl_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('t_air_tcnl_mavg', '', 'air temp'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'press_srf_tcnl_mavg', mem%press_srf_tcnl_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('press_srf_tcnl_mavg', '', 'air pressure at surface'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'co2_mixing_ratio_tcnl_mavg', mem%co2_mixing_ratio_tcnl_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('co2_mixing_ratio_tcnl_mavg', '', 'co2 mixing ratio of the air'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'ga_tcnl_mavg', mem%ga_tcnl_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('ga_tcnl_mavg', '', 'aerodynamic conductance'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'beta_sinklim_ps_tcnl_mavg', mem%beta_sinklim_ps_tcnl_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('beta_sinklim_ps_tcnl_mavg', '', 'scaling factor to account for soil moisture constraints on conductance'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'uptake_n_tcnl_mavg', mem%uptake_n_tcnl_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('uptake_n_tcnl_mavg', '', 'root N uptake'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'growth_cn_tcnl_mavg', mem%growth_cn_tcnl_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('growth_cn_tcnl_mavg', '', 'new growth CN ratio'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'growth_np_tcnl_mavg', mem%growth_np_tcnl_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('growth_np_tcnl_mavg', '', ' '), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'npp_tcnl_mavg', mem%npp_tcnl_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('npp_tcnl_mavg', '', 'NPP'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'fmaint_rate_tcnl_mavg', mem%fmaint_rate_tcnl_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('fmaint_rate_tcnl_mavg', '~µmol C mol-1 N s-1', 'N-specific maintentance respiration for optmal leaf N'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'labile_nitrogen_tcnl_mavg', mem%labile_nitrogen_tcnl_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('labile_nitrogen_tcnl_mavg', '', ' '), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'labile_carbon_tcnl_mavg', mem%labile_carbon_tcnl_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('labile_carbon_tcnl_mavg', '', ' '), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'labile_phosphorus_tcnl_mavg', mem%labile_phosphorus_tcnl_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('labile_phosphorus_tcnl_mavg', '', ' '), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-  
-      CALL jsb_add_var(mem, 'npp_talloc_mavg', mem%npp_talloc_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('npp_talloc_mavg', 'µmol m-2 s-1', 'NPP'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'n_fixation_talloc_mavg', mem%n_fixation_talloc_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('n_fixation_talloc_mavg', '', 'N fixation averaged at the allocation timescale'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'transpiration_talloc_mavg', mem%transpiration_talloc_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('transpiration_talloc_mavg', '', 'average transpiration at allocation time-scale'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'unit_npp_talloc_mavg', mem%unit_npp_talloc_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('unit_npp_talloc_mavg', 'µmol C mol-1', 'rate of change in NPP with  increment in leaf mass'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'unit_transpiration_talloc_mavg', mem%unit_transpiration_talloc_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('unit_transpiration_talloc_mavg', '', 'rate of tranpiration change per unit LAI change?'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'unit_uptake_n_talloc_mavg', mem%unit_uptake_n_talloc_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('unit_uptake_n_talloc_mavg', 'µmol N mol-1', 'actual rate of N uptkae per unit root'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'unit_uptake_p_talloc_mavg', mem%unit_uptake_p_talloc_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('unit_uptake_p_talloc_mavg', 'µmol P mol-1', 'actual rate of P uptake per unit root'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'dphi_talloc_mavg', mem%dphi_talloc_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('dphi_talloc_mavg', 'MPa', 'leaf-soil water potential gradient'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'growth_cn_talloc_mavg', mem%growth_cn_talloc_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('growth_cn_talloc_mavg', '', 'plant growth cn ratio, equivalent to 1/growth_req_n'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'growth_cp_talloc_mavg', mem%growth_cp_talloc_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('growth_cp_talloc_mavg', '', 'plant growth cp ratio, equivalent to 1/(growthreq_n*growth_req_p)'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'growth_np_talloc_mavg', mem%growth_np_talloc_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('growth_np_talloc_mavg', '', 'plant growth hp ratio, equivalent to 1/(growth_req_p)'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'labile_carbon_talloc_mavg', mem%labile_carbon_talloc_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('labile_carbon_talloc_mavg', '', 'moving average of labile carbon pool neeeded for allometry calculations'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'labile_nitrogen_talloc_mavg', mem%labile_nitrogen_talloc_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('labile_nitrogen_talloc_mavg', '', 'moving average of labile nitrogen pool neeeded for allometry calculations'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'labile_phosphorus_talloc_mavg', mem%labile_phosphorus_talloc_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('labile_phosphorus_talloc_mavg', '', 'moving average of labile phosphorus pool neeeded for allometry calculations'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'reserve_carbon_talloc_mavg', mem%reserve_carbon_talloc_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('reserve_carbon_talloc_mavg', '', 'moving average of reserve carbon needed for optimal allocation'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'reserve_nitrogen_talloc_mavg', mem%reserve_nitrogen_talloc_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('reserve_nitrogen_talloc_mavg', '', 'moving average of reserve nitrogen needed for optimal allocation'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-      CALL jsb_add_var(mem, 'reserve_phosphorus_talloc_mavg', mem%reserve_phosphorus_talloc_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('reserve_phosphorus_talloc_mavg', '', 'moving average of reserve phosphorus needed for optimal allocation'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'w_root_lim_talloc_mavg', mem%w_root_lim_talloc_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('w_root_lim_talloc_mavg', '', 'moving average of ...'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=1.0_wp) ! initvalue
-      
-      CALL jsb_add_var(mem, 'leaf2root_troot_mavg', mem%leaf2root_troot_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('leaf2root_troot_mavg', '', 'leaf to root mass ratio'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'unit_npp_troot_mavg', mem%unit_npp_troot_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('unit_npp_troot_mavg', 'µmol C mol-1', 'rate of change in NPP with increment in leaf mass'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'unit_uptake_n_pot_troot_mavg', mem%unit_uptake_n_pot_troot_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('unit_uptake_n_pot_troot_mavg', 'µmol N mol-1', 'rate of N uptkae per unit root'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'unit_uptake_p_pot_troot_mavg', mem%unit_uptake_p_pot_troot_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('unit_uptake_p_pot_troot_mavg', 'µmol P mol-1', 'rate of P uptake per unit root'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'fmaint_rate_troot_mavg', mem%fmaint_rate_troot_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('fmaint_rate_troot_mavg', '~µmol C mol-1 N s-1', 'moving average of N-specific maintentance respiration'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'an_boc_tvegdyn_mavg', mem%an_boc_tvegdyn_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('an_boc_tvegdyn_mavg', '', 'net photosynthesis at bottom of canopy, lowest canopy layer existing'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'net_growth_tvegdyn_mavg', mem%net_growth_tvegdyn_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('net_growth_tvegdyn_mavg', 'µmol C m-2 s-1', 'net growth, npp minus turnover'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 'lai_tvegdyn_mavg', mem%lai_tvegdyn_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('lai_tvegdyn_mavg', 'm2 m-2', 'lai at vegdynamics timescale'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 't_air_tacclim_mavg', mem%t_air_tacclim_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('t_air_tacclim_mavg', '', 'average air temperature for respiration acclimation'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 't_soil_root_tacclim_mavg', mem%t_soil_root_tacclim_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('t_soil_root_tacclim_mavg', '', 'average root temperature for respiration acclimation'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 't_air_week_mavg', mem%t_air_week_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('t_air_week_mavg', '', 'avrg air temperature across 7 days'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 't_air_month_mavg', mem%t_air_month_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('t_air_month_mavg', '', 'avrg air temperature across 30 days'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-  
-      CALL jsb_add_var(mem, 't_jmax_opt_mavg', mem%t_jmax_opt_mavg, &
-            hgrid, vgrid_surface, &
-            t_cf('t_jmax_opt_mavg', '', 'optimim temperature for electron transport of photosynthesis'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix, &
-            initval_r=0.0_wp) ! initvalue
-
-
-      !-----------------------------------------------------------------------------------------------------
-      !> veg elements TYPE (t_jsb_struct)
-      !! 
-      !! jsb_add_var -> slm_add_struct()
-      !! 
-      !-----------------------------------------------------------------------------------------------------
-      CALL jsb_add_var(mem, 'exudation',              mem%exudation, &
-            hgrid, vgrid_surface, &
-            t_cf('exudation', TRIM(unit_veg_flux), 'Exudation element in vegetation'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
-      CALL jsb_add_var(mem, 'establishment',          mem%establishment, &
-            hgrid, vgrid_surface, &
-            t_cf('establishment', TRIM(unit_veg_flux), 'Establishment element in vegetation'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
-      CALL jsb_add_var(mem, 'reserve_use',            mem%reserve_use, &
-            hgrid, vgrid_surface, &
-            t_cf('reserve_use', TRIM(unit_veg_flux), 'Reserve_use element in vegetation'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
-      CALL jsb_add_var(mem, 'total_biomass',          mem%total_biomass, &
-            hgrid, vgrid_surface, &
-            t_cf('total_biomass', TRIM(unit_veg_pool), 'Total_biomass element in vegetation'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
-
-      !> add variables to the elements
-      !! 
-      !! veg\%elements\%VAR
-      !! 
+      ! add variables to pools
       CALL mem%exudation%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
       CALL mem%establishment%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
       CALL mem%reserve_use%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
       CALL mem%total_biomass%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
 
-
-      !-----------------------------------------------------------------------------------------------------
-      !> veg pools (nested) TYPE (t_jsb_n_struct)
-      !! 
-      !! jsb_add_var -> slm_add_n_struct()
-      !! 
-      !-----------------------------------------------------------------------------------------------------
-      CALL jsb_add_var(mem, 'pool'        , mem%pool, &
-            hgrid, vgrid_surface, &
-            t_cf('pool', TRIM(unit_veg_pool), 'Pool vegetation pool'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
-      CALL jsb_add_var(mem, 'growth'      , mem%growth, &
-            hgrid, vgrid_surface, &
-            t_cf('growth', TRIM(unit_veg_flux), 'Growth vegetation flux'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
-      CALL jsb_add_var(mem, 'litterfall'  , mem%litterfall, &
-            hgrid, vgrid_surface, &
-            t_cf('litterfall', TRIM(unit_veg_flux), 'Litterfall vegetation flux'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
-      CALL jsb_add_var(mem, 'falloc'      , mem%falloc, &
-            hgrid, vgrid_surface, &
-            t_cf('falloc', TRIM(unit_veg_flux), 'Falloc vegetation flux'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
-      CALL jsb_add_var(mem, 'total_flux'  , mem%total_flux, &
-            hgrid, vgrid_surface, &
-            t_cf('total_flux', TRIM(unit_veg_flux), 'Total_flux vegetation flux'), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)     ! mass conservation diagnosis
+      ! add pools to memory
+      CALL mem%Add_pool('pool', mem%pool, &
+        & hgrid, surface, &
+        & t_cf('pool', TRIM(unit_veg_pool), 'Pool vegetation pool'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE.)
+        
+      CALL mem%Add_pool('growth', mem%growth, &
+        & hgrid, surface, &
+        & t_cf('growth', TRIM(unit_veg_flux), 'Growth vegetation flux'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE.)
+        
+      CALL mem%Add_pool('litterfall', mem%litterfall, &
+        & hgrid, surface, &
+        & t_cf('litterfall', TRIM(unit_veg_flux), 'Litterfall vegetation flux'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE.)
+        
+      CALL mem%Add_pool('falloc', mem%falloc, &
+        & hgrid, surface, &
+        & t_cf('falloc', TRIM(unit_veg_flux), 'Falloc vegetation flux'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE.)
+        
+      CALL mem%Add_pool('total_flux', mem%total_flux, &
+        & hgrid, surface, &
+        & t_cf('total_flux', TRIM(unit_veg_flux), 'Total_flux vegetation flux'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE.)
             
-      !> add element TYPEs to the pools
-      !! 
-      !! jsb_add_var -> slm_add_l2_struct()
-      !! 
+      ! add pools to pools
       CALL mem%pool%Add_elements(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
       CALL mem%growth%Add_elements(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
       CALL mem%litterfall%Add_elements(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
       CALL mem%falloc%Add_elements(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
       CALL mem%total_flux%Add_elements(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
 
-      !> add variables to the elements in the pools
-      !!
-      !! veg\%pool\%elements\%VAR
-      !! 
+      ! add variables to pools
       CALL mem%pool%leaf%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
       CALL mem%pool%fine_root%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
       CALL mem%pool%coarse_root%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_pool))
@@ -1824,8 +550,1629 @@ CONTAINS
       CALL mem%total_flux%reserve%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
       CALL mem%total_flux%fruit%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
       CALL mem%total_flux%seed_bed%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_veg_flux))
+#else
+      ! --------------------------------------------------------------------------------------------------- !
+      !>  1.2 JSBACH4 element-pool structures
+      !> 
+      
+#endif
 
-    END IF
+      ! --------------------------------------------------------------------------------------------------- !
+      !>2.0 2D & 3D variables
+      !> 
+
+      CALL mem%Add_var('height', mem%height, &
+        & hgrid, surface, &
+        & t_cf('height', 'm', 'plant height'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('diameter', mem%diameter, &
+        & hgrid, surface, &
+        & t_cf('diameter', 'm', 'plant diameter'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('dens_ind', mem%dens_ind, &
+        & hgrid, surface, &
+        & t_cf('dens_ind', '# m-2', 'density of individuals'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('lai', mem%lai, &
+        & hgrid, surface, &
+        & t_cf('lai', 'm2 m-2', 'actual leaf area index'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('target_cn_leaf', mem%target_cn_leaf, &
+        & hgrid, surface, &
+        & t_cf('target_cn_leaf', '', 'target foliar C:N ratio'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('target_np_leaf', mem%target_np_leaf, &
+        & hgrid, surface, &
+        & t_cf('target_np_leaf', '', 'target foliar N:P ratio '), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('mean_leaf_age', mem%mean_leaf_age, &
+        & hgrid, surface, &
+        & t_cf('mean_leaf_age', '', 'average foliage age in days '), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('cohort_age', mem%cohort_age, &
+        & hgrid, surface, &
+        & t_cf('cohort_age', '', 'age of the cohort in years, used with veg_dynamics_scheme cohort'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('f_n_demand', mem%f_n_demand, &
+        & hgrid, surface, &
+        & t_cf('f_n_demand', '', 'relative plant demand for N'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('f_p_demand', mem%f_p_demand, &
+        & hgrid, surface, &
+        & t_cf('f_p_demand', '', 'relative plant demand for P'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('beta_sinklim_ps', mem%beta_sinklim_ps, &
+        & hgrid, surface, &
+        & t_cf('beta_sinklim_ps', '', 'scaling factor to account for a direct sink limitation contraint on photosynthesis'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('dphi', mem%dphi, &
+        & hgrid, surface, &
+        & t_cf('dphi', 'MPa', 'plant-soil water potential gradient'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('growth_req_n', mem%growth_req_n, &
+        & hgrid, surface, &
+        & t_cf('growth_req_n', '', 'moles N required for a unit of C growth under current allocation fractions '), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('growth_req_p', mem%growth_req_p, &
+        & hgrid, surface, &
+        & t_cf('growth_req_p', '', 'moles P required for a unit of N growth under current allocation fractions '), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('leaf_cn_direction', mem%leaf_cn_direction, &
+        & hgrid, surface, &
+        & t_cf('leaf_cn_direction', '', 'indicates direction of change in leaf CN ratio to maximise NPP'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('target_lai', mem%target_lai, &
+        & hgrid, surface, &
+        & t_cf('target_lai', 'm2 m-2', 'LAI implied from sap wood area'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('kstar_labile', mem%kstar_labile, &
+        & hgrid, surface, &
+        & t_cf('kstar_labile', '', 'labile pool turnover rate, only temperature and moisture constraints, no stoichiometry'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('do_cohort_harvest', mem%do_cohort_harvest, &
+        & hgrid, surface, &
+        & t_cf('do_cohort_harvest', '', 'logical: cohort harvest on/off, in veg_dynamics_scheme cohort'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('root_fraction_sl', mem%root_fraction_sl, &
+        & hgrid, vgrid_soil_sb, &
+        & t_cf('root_fraction_sl', '', 'fractions of root per layer'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('target_cn_fine_root', mem%target_cn_fine_root, &
+        & hgrid, surface, &
+        & t_cf('target_cn_fine_root', '', ' '), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('target_cn_coarse_root', mem%target_cn_coarse_root, &
+        & hgrid, surface, &
+        & t_cf('target_cn_coarse_root', '', ' '), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('target_cn_sap_wood', mem%target_cn_sap_wood, &
+        & hgrid, surface, &
+        & t_cf('target_cn_sap_wood', '', ' '), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('target_cn_fruit', mem%target_cn_fruit, &
+        & hgrid, surface, &
+        & t_cf('target_cn_fruit', '', ' '), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('target_np_fine_root', mem%target_np_fine_root, &
+        & hgrid, surface, &
+        & t_cf('target_np_fine_root', '', ' '), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('target_np_coarse_root', mem%target_np_coarse_root, &
+        & hgrid, surface, &
+        & t_cf('target_np_coarse_root', '', ' '), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('target_np_sap_wood', mem%target_np_sap_wood, &
+        & hgrid, surface, &
+        & t_cf('target_np_sap_wood', '', ' '), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('target_np_fruit', mem%target_np_fruit, &
+        & hgrid, surface, &
+        & t_cf('target_np_fruit', '', ' '), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('leaf_nitrogen_cl', mem%leaf_nitrogen_cl, &
+        & hgrid, vgrid_canopy, &
+        & t_cf('leaf_nitrogen_cl', 'mmol m-2 LAI', 'N in canopy layer'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('fn_chl_cl', mem%fn_chl_cl, &
+        & hgrid, vgrid_canopy, &
+        & t_cf('fn_chl_cl', '', 'fraction of N in chlorophyll, pigments only'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('fn_et_cl', mem%fn_et_cl, &
+        & hgrid, vgrid_canopy, &
+        & t_cf('fn_et_cl', '', 'fraction of N in electron transport '), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('fn_rub_cl', mem%fn_rub_cl, &
+        & hgrid, vgrid_canopy, &
+        & t_cf('fn_rub_cl', '', 'fraction of N in Rubisco '), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('fn_pepc_cl', mem%fn_pepc_cl, &
+        & hgrid, vgrid_canopy, &
+        & t_cf('fn_pepc_cl', '', 'fraction of N in PEP carboylase, C4 plants only'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('fn_oth_cl', mem%fn_oth_cl, &
+        & hgrid, vgrid_canopy, &
+        & t_cf('fn_oth_cl', '', 'fraction of N not associated with photosynthesis '), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('fleaf_sunlit_cl', mem%fleaf_sunlit_cl, &
+        & hgrid, vgrid_canopy, &
+        & t_cf('fleaf_sunlit_cl', '', 'fraction of layer which is sunlit'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('lai_cl', mem%lai_cl, &
+        & hgrid, vgrid_canopy, &
+        & t_cf('lai_cl', 'm2 m-2', 'leaf area in the canopy layer '), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('cumm_lai_cl', mem%cumm_lai_cl, &
+        & hgrid, vgrid_canopy, &
+        & t_cf('cumm_lai_cl', 'm2 m-2', 'cummulative leaf area above the mid-point of the canopy layer '), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('maint_respiration_pot', mem%maint_respiration_pot, &
+        & hgrid, surface, &
+        & t_cf('maint_respiration_pot', 'µmol CO2 m-2 s-1', 'potential maintenance respiration'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('maint_respiration', mem%maint_respiration, &
+        & hgrid, surface, &
+        & t_cf('maint_respiration', 'µmol CO2 m-2 s-1', 'maintenance respiration'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('maint_respiration_c13', mem%maint_respiration_c13, &
+        & hgrid, surface, &
+        & t_cf('maint_respiration_c13', 'µmol 13CO2 m-2 s-1', 'maintenance respiration'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('maint_respiration_c14', mem%maint_respiration_c14, &
+        & hgrid, surface, &
+        & t_cf('maint_respiration_c14', 'µmol 14CO2 m-2 s-1', 'maintenance respiration'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('growth_respiration', mem%growth_respiration, &
+        & hgrid, surface, &
+        & t_cf('growth_respiration', 'µmol CO2 m-2 s-1', 'growth respiration'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('growth_respiration_c13', mem%growth_respiration_c13, &
+        & hgrid, surface, &
+        & t_cf('growth_respiration_c13', 'µmol 13CO2 m-2 s-1', 'growth respiration'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('growth_respiration_c14', mem%growth_respiration_c14, &
+        & hgrid, surface, &
+        & t_cf('growth_respiration_c14', 'µmol 14CO2 m-2 s-1', 'growth respiration'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('n_transform_respiration', mem%n_transform_respiration, &
+        & hgrid, surface, &
+        & t_cf('n_transform_respiration', 'µmol CO2 m-2 s-1', 'respiration associated with N transformation'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('n_fixation_respiration', mem%n_fixation_respiration, &
+        & hgrid, surface, &
+        & t_cf('n_fixation_respiration', 'µmol CO2 m-2 s-1', 'respiration associated with N fixation'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('n_processing_respiration', mem%n_processing_respiration, &
+        & hgrid, surface, &
+        & t_cf('n_processing_respiration', 'µmol CO2 m-2 s-1', 'respiration associated with N processing'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('n_processing_respiration_c13', mem%n_processing_respiration_c13, &
+        & hgrid, surface, &
+        & t_cf('n_processing_respiration_c13', 'µmol 13CO2 m-2 s-1', 'respiration associated with N processing'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('n_processing_respiration_c14', mem%n_processing_respiration_c14, &
+        & hgrid, surface, &
+        & t_cf('n_processing_respiration_c14', 'µmol 14CO2 m-2 s-1', 'respiration associated with N processing'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('npp', mem%npp, &
+        & hgrid, surface, &
+        & t_cf('npp', 'µmol CO2 m-2 s-1', 'net primary production'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('npp_c13', mem%npp_c13, &
+        & hgrid, surface, &
+        & t_cf('npp_c13', 'µmol 13CO2 m-2 s-1', 'net primary production'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('npp_c14', mem%npp_c14, &
+        & hgrid, surface, &
+        & t_cf('npp_c14', 'µmol 14CO2 m-2 s-1', 'net primary production'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('uptake_nh4', mem%uptake_nh4, &
+        & hgrid, surface, &
+        & t_cf('uptake_nh4', 'µmol N m-2 s-1', 'NH4 uptake from soil'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('uptake_nh4_n15', mem%uptake_nh4_n15, &
+        & hgrid, surface, &
+        & t_cf('uptake_nh4_n15', 'µmol N m-2 s-1', '15NH4 uptake from soil'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('uptake_no3', mem%uptake_no3, &
+        & hgrid, surface, &
+        & t_cf('uptake_no3', 'µmol N m-2 s-1', 'NO3 uptake from soil'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('uptake_no3_n15', mem%uptake_no3_n15, &
+        & hgrid, surface, &
+        & t_cf('uptake_no3_n15', 'µmol N m-2 s-1', '15NO3 uptake from soil'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('uptake_po4', mem%uptake_po4, &
+        & hgrid, surface, &
+        & t_cf('uptake_po4', 'µmol P m-2 s-1', 'PO4 uptake from soil'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('n_fixation', mem%n_fixation, &
+        & hgrid, surface, &
+        & t_cf('n_fixation', 'µmol N m-2 s-1', 'symbiontic N fixation'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('n_fixation_n15', mem%n_fixation_n15, &
+        & hgrid, surface, &
+        & t_cf('n_fixation_n15', 'µmol 15N m-2 s-1', 'symbiontic N fixation'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('recycling_leaf_n', mem%recycling_leaf_n, &
+        & hgrid, surface, &
+        & t_cf('recycling_leaf_n', 'mol m-2 timestep-1', 'net flux of N from leaf to labile (senescence and maintenance)'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('recycling_leaf_n15', mem%recycling_leaf_n15, &
+        & hgrid, surface, &
+        & t_cf('recycling_leaf_n15', 'mol m-2 timestep-1', 'net flux of 15N from leaf to labile, senescence & maint'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('recycling_leaf_p', mem%recycling_leaf_p, &
+        & hgrid, surface, &
+        & t_cf('recycling_leaf_p', 'mol m-2 timestep-1', 'net flux of P from leaf to labile, senescence & maint'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('recycling_fine_root_n', mem%recycling_fine_root_n, &
+        & hgrid, surface, &
+        & t_cf('recycling_fine_root_n', 'mol m-2 timestep-1', 'net flux of N from fine roots to labile, senescence & maint'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('recycling_fine_root_n15', mem%recycling_fine_root_n15, &
+        & hgrid, surface, &
+        & t_cf('recycling_fine_root_n15', 'mol m-2 timestep-1', 'net flux of 15N from fine roots to labile, senescence & maint'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('recycling_fine_root_p', mem%recycling_fine_root_p, &
+        & hgrid, surface, &
+        & t_cf('recycling_fine_root_p', 'mol m-2 timestep-1', 'net flux of P from fine roots to labile, senescence & maint'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('recycling_heart_wood_n', mem%recycling_heart_wood_n, &
+        & hgrid, surface, &
+        & t_cf('recycling_heart_wood_n', 'mol m-2 timestep-1', 'net flux of N from sapwood to labile, senescence & maint'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('recycling_heart_wood_n15', mem%recycling_heart_wood_n15, &
+        & hgrid, surface, &
+        & t_cf('recycling_heart_wood_n15', 'mol m-2 timestep-1', 'net flux of 15N from sapwood to labile, senescence & maint'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('recycling_heart_wood_p', mem%recycling_heart_wood_p, &
+        & hgrid, surface, &
+        & t_cf('recycling_heart_wood_p', 'mol m-2 timestep-1', 'net flux of P from sapwood to labile, senescence & maint'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('net_growth', mem%net_growth, &
+        & hgrid, surface, &
+        & t_cf('net_growth', 'µmol CO2 m-2 s-1', 'npp minus turnover'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('fmaint_rate_root', mem%fmaint_rate_root, &
+        & hgrid, surface, &
+        & t_cf('fmaint_rate_root', '~µmol C mol-1 N s-1', 'current N-specific maintentance respiration'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('unit_npp', mem%unit_npp, &
+        & hgrid, surface, &
+        & t_cf('unit_npp', '', 'incremental change in NPP. Needed for optimal allocation'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('unit_transpiration', mem%unit_transpiration, &
+        & hgrid, surface, &
+        & t_cf('unit_transpiration', '', 'incremental change in transpiration. Needed for optimal allocation'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('unit_uptake_n_pot', mem%unit_uptake_n_pot, &
+        & hgrid, surface, &
+        & t_cf('unit_uptake_n_pot', '', 'incremental change in potential N uptake per unit root carbon, N uptake calculation '), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('unit_uptake_p_pot', mem%unit_uptake_p_pot, &
+        & hgrid, surface, &
+        & t_cf('unit_uptake_p_pot', '', 'incremental change in potential P uptake per unit root carbon, currently unused '), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('unit_uptake_n_act', mem%unit_uptake_n_act, &
+        & hgrid, surface, &
+        & t_cf('unit_uptake_n_act', '', 'incremental change in actual N uptake per unit root carbon, optimal allocation'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('unit_uptake_p_act', mem%unit_uptake_p_act, &
+        & hgrid, surface, &
+        & t_cf('unit_uptake_p_act', '', 'incremental change in actual P uptake per unit root carbon, optimal allocation'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('delta_dens_ind', mem%delta_dens_ind, &
+        & hgrid, surface, &
+        & t_cf('delta_dens_ind', '# m-2 timestep-1', 'change in density of individuals'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('cost_n_uptake_root', mem%cost_n_uptake_root, &
+        & hgrid, surface, &
+        & t_cf('cost_n_uptake_root', 'mol C mol-1 N', 'actual cost for N uptake by roots'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('cost_n_fixation', mem%cost_n_fixation, &
+        & hgrid, surface, &
+        & t_cf('cost_n_fixation', 'mol C mol-1 N', 'actual cost for N uptake through fixation'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('mortality_rate', mem%mortality_rate, &
+        & hgrid, surface, &
+        & t_cf('mortality_rate', 'timestep-1', 'background_mort_rate_tree / grass'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('k1_opt', mem%k1_opt, &
+        & hgrid, surface, &
+        & t_cf('k1_opt', '', 'coefficient for optimal leaf:root ratio'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('k2_opt', mem%k2_opt, &
+        & hgrid, surface, &
+        & t_cf('k2_opt', '', 'coefficient for optimal leaf:root ratio'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('leaf2sapwood_mass_ratio', mem%leaf2sapwood_mass_ratio, &
+        & hgrid, surface, &
+        & t_cf('leaf2sapwood_mass_ratio', '', 'leaf to shoot mass ratio'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('leaf2root_mass_ratio', mem%leaf2root_mass_ratio, &
+        & hgrid, surface, &
+        & t_cf('leaf2root_mass_ratio', '', 'leaf to root mass ratio'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('fleaf_sunlit_daytime_cl', mem%fleaf_sunlit_daytime_cl, &
+        & hgrid, vgrid_canopy, &
+        & t_cf('fleaf_sunlit_daytime_cl', '', 'average of the previous day'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('t_air_daytime', mem%t_air_daytime, &
+        & hgrid, surface, &
+        & t_cf('t_air_daytime', '', 'average of the previous day'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('press_srf_daytime', mem%press_srf_daytime, &
+        & hgrid, surface, &
+        & t_cf('press_srf_daytime', '', 'average of the previous day'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('co2_mixing_ratio_daytime', mem%co2_mixing_ratio_daytime, &
+        & hgrid, surface, &
+        & t_cf('co2_mixing_ratio_daytime', '', 'average of the previous day'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('ga_daytime', mem%ga_daytime, &
+        & hgrid, surface, &
+        & t_cf('ga_daytime', '', 'average of the previous day'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('beta_sinklim_ps_daytime', mem%beta_sinklim_ps_daytime, &
+        & hgrid, surface, &
+        & t_cf('beta_sinklim_ps_daytime', 'unitless', 'average of the previous day'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('t_jmax_opt_daytime', mem%t_jmax_opt_daytime, &
+        & hgrid, surface, &
+        & t_cf('t_jmax_opt_daytime', '', 'average of the previous day'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('fleaf_sunlit_daytime_dacc_cl', mem%fleaf_sunlit_daytime_dacc_cl, &
+        & hgrid, vgrid_canopy, &
+        & t_cf('fleaf_sunlit_daytime_dacc_cl', '', 'value accumulated over current day'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('t_air_daytime_dacc', mem%t_air_daytime_dacc, &
+        & hgrid, surface, &
+        & t_cf('t_air_daytime_dacc', '', 'average of the previous day'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('press_srf_daytime_dacc', mem%press_srf_daytime_dacc, &
+        & hgrid, surface, &
+        & t_cf('press_srf_daytime_dacc', '', 'average of the previous day'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('co2_mixing_ratio_daytime_dacc', mem%co2_mixing_ratio_daytime_dacc, &
+        & hgrid, surface, &
+        & t_cf('co2_mixing_ratio_daytime_dacc', '', 'average of the previous day'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('ga_daytime_dacc', mem%ga_daytime_dacc, &
+        & hgrid, surface, &
+        & t_cf('ga_daytime_dacc', '', 'average of the previous day'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('beta_sinklim_ps_daytime_dacc', mem%beta_sinklim_ps_daytime_dacc, &
+        & hgrid, surface, &
+        & t_cf('beta_sinklim_ps_daytime_dacc', '', 'average of the previous day'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('t_jmax_opt_daytime_dacc', mem%t_jmax_opt_daytime_dacc, &
+        & hgrid, surface, &
+        & t_cf('t_jmax_opt_daytime_dacc', '', 'value accumulated over current day '), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('daytime_counter', mem%daytime_counter, &
+        & hgrid, surface, &
+        & t_cf('daytime_counter', '', 'number of timesteps of current day with light available'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('gpp_tlabile_mavg', mem%gpp_tlabile_mavg, &
+        & hgrid, surface, &
+        & t_cf('gpp_tlabile_mavg', 'µmol m-2 s-1', 'gpp '), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('maint_respiration_tlabile_mavg', mem%maint_respiration_tlabile_mavg, &
+        & hgrid, surface, &
+        & t_cf('maint_respiration_tlabile_mavg', 'µmol m-2 s-1', 'maintenance respiration'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('growth_req_n_tlabile_mavg', mem%growth_req_n_tlabile_mavg, &
+        & hgrid, surface, &
+        & t_cf('growth_req_n_tlabile_mavg', '', 'moles N required for a unit of C growth under current allocation fractions'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('growth_req_p_tlabile_mavg', mem%growth_req_p_tlabile_mavg, &
+        & hgrid, surface, &
+        & t_cf('growth_req_p_tlabile_mavg', '', 'moles P required for a unit of N growth under current allocation fractions'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('t_air_tphen_mavg', mem%t_air_tphen_mavg, &
+        & hgrid, surface, &
+        & t_cf('t_air_tphen_mavg', '', 'air temp mavg for phenology calc'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('npp_tuptake_mavg', mem%npp_tuptake_mavg, &
+        & hgrid, surface, &
+        & t_cf('npp_tuptake_mavg', 'µmol m-2 s-1', 'npp of the last week'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('demand_uptake_n_tuptake_mavg', mem%demand_uptake_n_tuptake_mavg, &
+        & hgrid, surface, &
+        & t_cf('demand_uptake_n_tuptake_mavg', '', 'scalar of Vmax for root N uptake '), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('demand_uptake_p_tuptake_mavg', mem%demand_uptake_p_tuptake_mavg, &
+        & hgrid, surface, &
+        & t_cf('demand_uptake_p_tuptake_mavg', '', 'scalar of Vmax for root P uptake'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('growth_req_n_tuptake_mavg', mem%growth_req_n_tuptake_mavg, &
+        & hgrid, surface, &
+        & t_cf('growth_req_n_tuptake_mavg', '', 'moles N required for a unit of C growth under current allocation fractions'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('growth_req_p_tuptake_mavg', mem%growth_req_p_tuptake_mavg, &
+        & hgrid, surface, &
+        & t_cf('growth_req_p_tuptake_mavg', '', 'moles P required for a unit of N growth under current allocation fractions'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('cost_n_fixation_talloc_mavg', mem%cost_n_fixation_talloc_mavg, &
+        & hgrid, surface, &
+        & t_cf('cost_n_fixation_talloc_mavg', 'mol C mol-1 N', 'moving average of N fixation cost'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('exudation_c_tmyc_mavg', mem%exudation_c_tmyc_mavg, &
+        & hgrid, surface, &
+        & t_cf('exudation_c_tmyc_mavg', 'mol C', 'moving average of C allocation to mycorrhizae'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('fleaf_sunlit_tfrac_mavg_cl', mem%fleaf_sunlit_tfrac_mavg_cl, &
+        & hgrid, vgrid_canopy, &
+        & t_cf('fleaf_sunlit_tfrac_mavg_cl', '', 'fraction of sunlit leaves'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('t_air_tfrac_mavg', mem%t_air_tfrac_mavg, &
+        & hgrid, surface, &
+        & t_cf('t_air_tfrac_mavg', '', 'air temp'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('press_srf_tfrac_mavg', mem%press_srf_tfrac_mavg, &
+        & hgrid, surface, &
+        & t_cf('press_srf_tfrac_mavg', '', 'air pressure at surface'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('co2_mixing_ratio_tfrac_mavg', mem%co2_mixing_ratio_tfrac_mavg, &
+        & hgrid, surface, &
+        & t_cf('co2_mixing_ratio_tfrac_mavg', '', 'co2 mixing ratio of the air'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('ga_tfrac_mavg', mem%ga_tfrac_mavg, &
+        & hgrid, surface, &
+        & t_cf('ga_tfrac_mavg', '', 'aerodynamic conductance'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('beta_sinklim_ps_tfrac_mavg', mem%beta_sinklim_ps_tfrac_mavg, &
+        & hgrid, surface, &
+        & t_cf('beta_sinklim_ps_tfrac_mavg', '', 'scaling factor to account for soil moisture constraints on photosynthesis '), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('fleaf_sunlit_tcnl_mavg_cl', mem%fleaf_sunlit_tcnl_mavg_cl, &
+        & hgrid, vgrid_canopy, &
+        & t_cf('fleaf_sunlit_tcnl_mavg_cl', '', 'fraction of sunlit leaves'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('t_air_tcnl_mavg', mem%t_air_tcnl_mavg, &
+        & hgrid, surface, &
+        & t_cf('t_air_tcnl_mavg', '', 'air temp'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('press_srf_tcnl_mavg', mem%press_srf_tcnl_mavg, &
+        & hgrid, surface, &
+        & t_cf('press_srf_tcnl_mavg', '', 'air pressure at surface'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('co2_mixing_ratio_tcnl_mavg', mem%co2_mixing_ratio_tcnl_mavg, &
+        & hgrid, surface, &
+        & t_cf('co2_mixing_ratio_tcnl_mavg', '', 'co2 mixing ratio of the air'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('ga_tcnl_mavg', mem%ga_tcnl_mavg, &
+        & hgrid, surface, &
+        & t_cf('ga_tcnl_mavg', '', 'aerodynamic conductance'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('beta_sinklim_ps_tcnl_mavg', mem%beta_sinklim_ps_tcnl_mavg, &
+        & hgrid, surface, &
+        & t_cf('beta_sinklim_ps_tcnl_mavg', '', 'scaling factor to account for soil moisture constraints on conductance'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('uptake_n_tcnl_mavg', mem%uptake_n_tcnl_mavg, &
+        & hgrid, surface, &
+        & t_cf('uptake_n_tcnl_mavg', '', 'root N uptake'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('growth_cn_tcnl_mavg', mem%growth_cn_tcnl_mavg, &
+        & hgrid, surface, &
+        & t_cf('growth_cn_tcnl_mavg', '', 'new growth CN ratio'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('growth_np_tcnl_mavg', mem%growth_np_tcnl_mavg, &
+        & hgrid, surface, &
+        & t_cf('growth_np_tcnl_mavg', '', ' '), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('npp_tcnl_mavg', mem%npp_tcnl_mavg, &
+        & hgrid, surface, &
+        & t_cf('npp_tcnl_mavg', '', 'NPP'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('fmaint_rate_tcnl_mavg', mem%fmaint_rate_tcnl_mavg, &
+        & hgrid, surface, &
+        & t_cf('fmaint_rate_tcnl_mavg', '~µmol C mol-1 N s-1', 'N-specific maintentance respiration for optmal leaf N'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('labile_nitrogen_tcnl_mavg', mem%labile_nitrogen_tcnl_mavg, &
+        & hgrid, surface, &
+        & t_cf('labile_nitrogen_tcnl_mavg', '', ' '), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('labile_carbon_tcnl_mavg', mem%labile_carbon_tcnl_mavg, &
+        & hgrid, surface, &
+        & t_cf('labile_carbon_tcnl_mavg', '', ' '), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('labile_phosphorus_tcnl_mavg', mem%labile_phosphorus_tcnl_mavg, &
+        & hgrid, surface, &
+        & t_cf('labile_phosphorus_tcnl_mavg', '', ' '), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+  
+      CALL mem%Add_var('npp_talloc_mavg', mem%npp_talloc_mavg, &
+        & hgrid, surface, &
+        & t_cf('npp_talloc_mavg', 'µmol m-2 s-1', 'NPP'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('n_fixation_talloc_mavg', mem%n_fixation_talloc_mavg, &
+        & hgrid, surface, &
+        & t_cf('n_fixation_talloc_mavg', '', 'N fixation averaged at the allocation timescale'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('transpiration_talloc_mavg', mem%transpiration_talloc_mavg, &
+        & hgrid, surface, &
+        & t_cf('transpiration_talloc_mavg', '', 'average transpiration at allocation time-scale'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('unit_npp_talloc_mavg', mem%unit_npp_talloc_mavg, &
+        & hgrid, surface, &
+        & t_cf('unit_npp_talloc_mavg', 'µmol C mol-1', 'rate of change in NPP with  increment in leaf mass'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('unit_transpiration_talloc_mavg', mem%unit_transpiration_talloc_mavg, &
+        & hgrid, surface, &
+        & t_cf('unit_transpiration_talloc_mavg', '', 'rate of tranpiration change per unit LAI change?'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('unit_uptake_n_talloc_mavg', mem%unit_uptake_n_talloc_mavg, &
+        & hgrid, surface, &
+        & t_cf('unit_uptake_n_talloc_mavg', 'µmol N mol-1', 'actual rate of N uptkae per unit root'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('unit_uptake_p_talloc_mavg', mem%unit_uptake_p_talloc_mavg, &
+        & hgrid, surface, &
+        & t_cf('unit_uptake_p_talloc_mavg', 'µmol P mol-1', 'actual rate of P uptake per unit root'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('dphi_talloc_mavg', mem%dphi_talloc_mavg, &
+        & hgrid, surface, &
+        & t_cf('dphi_talloc_mavg', 'MPa', 'leaf-soil water potential gradient'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('growth_cn_talloc_mavg', mem%growth_cn_talloc_mavg, &
+        & hgrid, surface, &
+        & t_cf('growth_cn_talloc_mavg', '', 'plant growth cn ratio, equivalent to 1/growth_req_n'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('growth_cp_talloc_mavg', mem%growth_cp_talloc_mavg, &
+        & hgrid, surface, &
+        & t_cf('growth_cp_talloc_mavg', '', 'plant growth cp ratio, equivalent to 1 / (growthreq_n * growth_req_p)'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('growth_np_talloc_mavg', mem%growth_np_talloc_mavg, &
+        & hgrid, surface, &
+        & t_cf('growth_np_talloc_mavg', '', 'plant growth hp ratio, equivalent to 1/(growth_req_p)'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('labile_carbon_talloc_mavg', mem%labile_carbon_talloc_mavg, &
+        & hgrid, surface, &
+        & t_cf('labile_carbon_talloc_mavg', '', 'moving average of labile carbon pool, allometry calculations'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('labile_nitrogen_talloc_mavg', mem%labile_nitrogen_talloc_mavg, &
+        & hgrid, surface, &
+        & t_cf('labile_nitrogen_talloc_mavg', '', 'moving average of labile nitrogen pool, allometry calculations'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('labile_phosphorus_talloc_mavg', mem%labile_phosphorus_talloc_mavg, &
+        & hgrid, surface, &
+        & t_cf('labile_phosphorus_talloc_mavg', '', 'moving average of labile phosphorus pool, allometry calculations'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('reserve_carbon_talloc_mavg', mem%reserve_carbon_talloc_mavg, &
+        & hgrid, surface, &
+        & t_cf('reserve_carbon_talloc_mavg', '', 'moving average of reserve carbon, optimal allocation'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('reserve_nitrogen_talloc_mavg', mem%reserve_nitrogen_talloc_mavg, &
+        & hgrid, surface, &
+        & t_cf('reserve_nitrogen_talloc_mavg', '', 'moving average of reserve nitrogen, optimal allocation'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('reserve_phosphorus_talloc_mavg', mem%reserve_phosphorus_talloc_mavg, &
+        & hgrid, surface, &
+        & t_cf('reserve_phosphorus_talloc_mavg', '', 'moving average of reserve phosphorus, optimal allocation'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('w_root_lim_talloc_mavg', mem%w_root_lim_talloc_mavg, &
+        & hgrid, surface, &
+        & t_cf('w_root_lim_talloc_mavg', '', 'moving average of ...'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+      
+      CALL mem%Add_var('leaf2root_troot_mavg', mem%leaf2root_troot_mavg, &
+        & hgrid, surface, &
+        & t_cf('leaf2root_troot_mavg', '', 'leaf to root mass ratio'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('unit_npp_troot_mavg', mem%unit_npp_troot_mavg, &
+        & hgrid, surface, &
+        & t_cf('unit_npp_troot_mavg', 'µmol C mol-1', 'rate of change in NPP with increment in leaf mass'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('unit_uptake_n_pot_troot_mavg', mem%unit_uptake_n_pot_troot_mavg, &
+        & hgrid, surface, &
+        & t_cf('unit_uptake_n_pot_troot_mavg', 'µmol N mol-1', 'rate of N uptkae per unit root'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('unit_uptake_p_pot_troot_mavg', mem%unit_uptake_p_pot_troot_mavg, &
+        & hgrid, surface, &
+        & t_cf('unit_uptake_p_pot_troot_mavg', 'µmol P mol-1', 'rate of P uptake per unit root'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('fmaint_rate_troot_mavg', mem%fmaint_rate_troot_mavg, &
+        & hgrid, surface, &
+        & t_cf('fmaint_rate_troot_mavg', '~µmol C mol-1 N s-1', 'moving average of N-specific maintentance respiration'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('an_boc_tvegdyn_mavg', mem%an_boc_tvegdyn_mavg, &
+        & hgrid, surface, &
+        & t_cf('an_boc_tvegdyn_mavg', '', 'net photosynthesis at bottom of canopy, lowest canopy layer existing'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('net_growth_tvegdyn_mavg', mem%net_growth_tvegdyn_mavg, &
+        & hgrid, surface, &
+        & t_cf('net_growth_tvegdyn_mavg', 'µmol C m-2 s-1', 'net growth, npp minus turnover'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('lai_tvegdyn_mavg', mem%lai_tvegdyn_mavg, &
+        & hgrid, surface, &
+        & t_cf('lai_tvegdyn_mavg', 'm2 m-2', 'lai at vegdynamics timescale'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('t_air_tacclim_mavg', mem%t_air_tacclim_mavg, &
+        & hgrid, surface, &
+        & t_cf('t_air_tacclim_mavg', '', 'average air temperature for respiration acclimation'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('t_soil_root_tacclim_mavg', mem%t_soil_root_tacclim_mavg, &
+        & hgrid, surface, &
+        & t_cf('t_soil_root_tacclim_mavg', '', 'average root temperature for respiration acclimation'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('t_air_week_mavg', mem%t_air_week_mavg, &
+        & hgrid, surface, &
+        & t_cf('t_air_week_mavg', '', 'avrg air temperature across 7 days'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('t_air_month_mavg', mem%t_air_month_mavg, &
+        & hgrid, surface, &
+        & t_cf('t_air_month_mavg', '', 'avrg air temperature across 30 days'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+  
+      CALL mem%Add_var('t_jmax_opt_mavg', mem%t_jmax_opt_mavg, &
+        & hgrid, surface, &
+        & t_cf('t_jmax_opt_mavg', '', 'optimim temperature for electron transport of photosynthesis'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+    ! ENDIF  ! IF One_of(LAND_TYPE  OR VEG_TYPE, lct_ids)
 
   END SUBROUTINE Init_veg_memory
 

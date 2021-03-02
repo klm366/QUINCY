@@ -706,210 +706,236 @@ CONTAINS
     CALL this%seed_bed%init(s)
   END SUBROUTINE Init_t_quincy_struct_veg_pool 
 
-  !-----------------------------------------------------------------------------------------------------
-  !> Add all variables of an element TYPE to the process memory
-  !!
-  !-----------------------------------------------------------------------------------------------------
+
+  ! ======================================================================================================= !
+  !>Add all variables of an element TYPE to the process memory
+  !>pool%Add_vars()
+  !> 
   SUBROUTINE Add_element_variables_to_memory(this, prefix, suffix, lct_ids, model_id, unit)
 
-    USE mo_slm_varlist,       ONLY: jsb_add_var
+    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
     USE mo_jsb_class,         ONLY: Get_model
     USE mo_jsb_model_class,   ONLY: t_jsb_model
-    
-    ! ---------------------------
-    ! 0.1.InOut
+    ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_quincy_struct_veg_element), INTENT(inout) :: this 
-    CHARACTER(len=*),                   INTENT(in)    :: prefix          !> ?
-    CHARACTER(len=*),                   INTENT(in)    :: suffix          !> ?
+    CHARACTER(len=*),                   INTENT(in)    :: prefix          !> process name
+    CHARACTER(len=*),                   INTENT(in)    :: suffix          !> tile name
     INTEGER,                            INTENT(in)    :: lct_ids !(:)    !> in jsbach4: vector of land cover type IDs
     INTEGER,                            INTENT(in)    :: model_id        !> model ID model\%id
     CHARACTER(len=*),                   INTENT(in)    :: unit            !> unit of the variables in the elements
-    ! ---------------------------
-    ! 0.2 Local
+    ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: hgrid                        ! Horizontal grid
-    TYPE(t_jsb_vgrid), POINTER  :: vgrid_surface                ! Vertical grid
+    TYPE(t_jsb_vgrid), POINTER  :: surface                      ! Vertical grid
     INTEGER                     :: table
     CHARACTER(len=50)           :: var_name
     CHARACTER(len=100)          :: var_name_long
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Add_element_variables_to_memory'
-    ! ---------------------------
-    ! 0.5 Get Memory
+    ! ----------------------------------------------------------------------------------------------------- !
     model         => Get_model(model_id)
     table         = 1     ! in jsbach4 this line is: table = tables(1) 
     hgrid         => Get_grid(model%grid_id)
-    vgrid_surface => Get_vgrid('surface')
+    surface       => Get_vgrid('surface')
 
-    ! run add_var()
+    ! add variables to pool 
     var_name      = TRIM(this%name)//'_carbon'
     var_name_long = 'Carbon in vegetation '//TRIM(this%name)
-    CALL jsb_add_var(this, TRIM(var_name), this%carbon, &
-          hgrid, vgrid_surface, &
-          t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
-          t_grib1(table, 255, grib_bits), &
-          t_grib2(255, 255, 255, grib_bits), &
-          prefix, suffix, &
-          initval_r=0.0_wp)     ! initvalue
+    CALL this%Add_var(TRIM(var_name), this%carbon, &
+      & hgrid, surface, &
+      & t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .TRUE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
     var_name      = TRIM(this%name)//'_nitrogen'
     var_name_long = 'Nitrogen in vegetation '//TRIM(this%name)
-    CALL jsb_add_var(this, TRIM(var_name), this%nitrogen, &
-          hgrid, vgrid_surface, &
-          t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
-          t_grib1(table, 255, grib_bits), &
-          t_grib2(255, 255, 255, grib_bits), &
-          prefix, suffix, &
-          initval_r=0.0_wp)     ! initvalue
+    CALL this%Add_var(TRIM(var_name), this%nitrogen, &
+      & hgrid, surface, &
+      & t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .TRUE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
     var_name      = TRIM(this%name)//'_phosphorus'
     var_name_long = 'Phosphorus in vegetation '//TRIM(this%name)
-    CALL jsb_add_var(this, TRIM(var_name), this%phosphorus, &
-          hgrid, vgrid_surface, &
-          t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
-          t_grib1(table, 255, grib_bits), &
-          t_grib2(255, 255, 255, grib_bits), &
-          prefix, suffix, &
-          initval_r=0.0_wp)     ! initvalue
+    CALL this%Add_var(TRIM(var_name), this%phosphorus, &
+      & hgrid, surface, &
+      & t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .TRUE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
     var_name      = TRIM(this%name)//'_carbon13'
     var_name_long = 'Carbon13 in vegetation '//TRIM(this%name)
-    CALL jsb_add_var(this, TRIM(var_name), this%carbon13, &
-          hgrid, vgrid_surface, &
-          t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
-          t_grib1(table, 255, grib_bits), &
-          t_grib2(255, 255, 255, grib_bits), &
-          prefix, suffix, &
-          initval_r=0.0_wp)     ! initvalue
+    CALL this%Add_var(TRIM(var_name), this%carbon13, &
+      & hgrid, surface, &
+      & t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .TRUE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
     var_name      = TRIM(this%name)//'_carbon14'
     var_name_long = 'Carbon14 in vegetation '//TRIM(this%name)
-    CALL jsb_add_var(this, TRIM(var_name), this%carbon14, &
-          hgrid, vgrid_surface, &
-          t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
-          t_grib1(table, 255, grib_bits), &
-          t_grib2(255, 255, 255, grib_bits), &
-          prefix, suffix, &
-          initval_r=0.0_wp)     ! initvalue
+    CALL this%Add_var(TRIM(var_name), this%carbon14, &
+      & hgrid, surface, &
+      & t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .TRUE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
     var_name      = TRIM(this%name)//'_nitrogen15'
     var_name_long = 'Nitrogen15 in vegetation '//TRIM(this%name)
-    CALL jsb_add_var(this, TRIM(var_name), this%nitrogen15, &
-          hgrid, vgrid_surface, &
-          t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
-          t_grib1(table, 255, grib_bits), &
-          t_grib2(255, 255, 255, grib_bits), &
-          prefix, suffix, &
-          initval_r=0.0_wp)     ! initvalue
+    CALL this%Add_var(TRIM(var_name), this%nitrogen15, &
+      & hgrid, surface, &
+      & t_cf(TRIM(var_name), TRIM(unit), TRIM(var_name_long)), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .TRUE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
+      
   END SUBROUTINE Add_element_variables_to_memory
 
-  !-----------------------------------------------------------------------------------------------------
+
+  ! ======================================================================================================= !
   !> Add all elements of a pool TYPE to the process memory
-  !!
-  !-----------------------------------------------------------------------------------------------------
+  !> pool%Add_elements()
+  !>
   SUBROUTINE Add_pool_elements_to_memory(this, prefix, suffix, lct_ids, model_id, unit)
 
-    USE mo_slm_varlist,       ONLY: jsb_add_var
+    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
     USE mo_jsb_class,         ONLY: Get_model
     USE mo_jsb_model_class,   ONLY: t_jsb_model
-    
-    ! ---------------------------
-    ! 0.1.InOut
+    ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_quincy_struct_veg_pool),  INTENT(inout) :: this 
     CHARACTER(len=*),                 INTENT(in)    :: prefix          !> ?
     CHARACTER(len=*),                 INTENT(in)    :: suffix          !> ?
     INTEGER,                          INTENT(in)    :: lct_ids !(:)    !> in jsbach4: vector of land cover type IDs
     INTEGER,                          INTENT(in)    :: model_id        !> model ID model\%id
     CHARACTER(len=*),                 INTENT(in)    :: unit            !> unit of the variables in the elements
-    ! ---------------------------
-    ! 0.2 Local
+    ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: hgrid                        ! Horizontal grid
-    TYPE(t_jsb_vgrid), POINTER  :: vgrid_surface                ! Vertical grid
+    TYPE(t_jsb_vgrid), POINTER  :: surface                      ! Vertical grid
     INTEGER                     :: table
     CHARACTER(len=40)           :: element_name
     CHARACTER(len=80)           :: element_name_long    
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Add_pool_elements_to_memory'
-    ! ---------------------------
-    ! 0.5 Get Memory
+    ! ----------------------------------------------------------------------------------------------------- !
     model         => Get_model(model_id)
     table         = 1     ! in jsbach4 this line is: table = tables(1) 
     hgrid         => Get_grid(model%grid_id)
-    vgrid_surface => Get_vgrid('surface')
+    surface       => Get_vgrid('surface')
 
-    ! run add_var()
+    !> add element pools
+    !> 
     element_name      = TRIM(this%name)//'_leaf'
     element_name_long = 'Leaf element of vegetation '//TRIM(this%name)
-      CALL jsb_add_var(this, TRIM(element_name), this%leaf, &
-            hgrid, vgrid_surface, &
-            t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
+    CALL this%Add_pool(TRIM(element_name), this%leaf, &
+      & hgrid, surface, &
+      & t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .TRUE., &
+      & lrestart = .TRUE.)
     element_name      = TRIM(this%name)//'_fine_root'
     element_name_long = 'Fine_root element of vegetation '//TRIM(this%name)
-      CALL jsb_add_var(this, TRIM(element_name), this%fine_root, &
-            hgrid, vgrid_surface, &
-            t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
+    CALL this%Add_pool(TRIM(element_name), this%fine_root, &
+      & hgrid, surface, &
+      & t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .TRUE., &
+      & lrestart = .TRUE.)
     element_name      = TRIM(this%name)//'_coarse_root'
     element_name_long = 'Coarse_root element of vegetation '//TRIM(this%name)
-      CALL jsb_add_var(this, TRIM(element_name), this%coarse_root, &
-            hgrid, vgrid_surface, &
-            t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
+    CALL this%Add_pool(TRIM(element_name), this%coarse_root, &
+      & hgrid, surface, &
+      & t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .TRUE., &
+      & lrestart = .TRUE.)
     element_name      = TRIM(this%name)//'_sap_wood'
     element_name_long = 'Sap_wood element of vegetation '//TRIM(this%name)
-      CALL jsb_add_var(this, TRIM(element_name), this%sap_wood, &
-            hgrid, vgrid_surface, &
-            t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
+    CALL this%Add_pool(TRIM(element_name), this%sap_wood, &
+      & hgrid, surface, &
+      & t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .TRUE., &
+      & lrestart = .TRUE.)
     element_name      = TRIM(this%name)//'_heart_wood'
     element_name_long = 'Heart_wood element of vegetation '//TRIM(this%name)
-      CALL jsb_add_var(this, TRIM(element_name), this%heart_wood, &
-            hgrid, vgrid_surface, &
-            t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
+    CALL this%Add_pool(TRIM(element_name), this%heart_wood, &
+      & hgrid, surface, &
+      & t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .TRUE., &
+      & lrestart = .TRUE.)
     element_name      = TRIM(this%name)//'_labile'
     element_name_long = 'Labile element of vegetation '//TRIM(this%name)
-      CALL jsb_add_var(this, TRIM(element_name), this%labile, &
-            hgrid, vgrid_surface, &
-            t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
+    CALL this%Add_pool(TRIM(element_name), this%labile, &
+      & hgrid, surface, &
+      & t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .TRUE., &
+      & lrestart = .TRUE.)
     element_name      = TRIM(this%name)//'_reserve'
     element_name_long = 'Reserve element of vegetation '//TRIM(this%name)
-      CALL jsb_add_var(this, TRIM(element_name), this%reserve, &
-            hgrid, vgrid_surface, &
-            t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
+    CALL this%Add_pool(TRIM(element_name), this%reserve, &
+      & hgrid, surface, &
+      & t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .TRUE., &
+      & lrestart = .TRUE.)
     element_name      = TRIM(this%name)//'_fruit'
     element_name_long = 'Fruit element of vegetation '//TRIM(this%name)
-      CALL jsb_add_var(this, TRIM(element_name), this%fruit, &
-            hgrid, vgrid_surface, &
-            t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
+    CALL this%Add_pool(TRIM(element_name), this%fruit, &
+      & hgrid, surface, &
+      & t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .TRUE., &
+      & lrestart = .TRUE.)
     element_name      = TRIM(this%name)//'_seed_bed'
     element_name_long = 'Seed_bed element of vegetation '//TRIM(this%name)
-      CALL jsb_add_var(this, TRIM(element_name), this%seed_bed, &
-            hgrid, vgrid_surface, &
-            t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
-            t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
-            prefix, suffix)
+    CALL this%Add_pool(TRIM(element_name), this%seed_bed, &
+      & hgrid, surface, &
+      & t_cf(TRIM(element_name), TRIM(unit), TRIM(element_name_long)), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .TRUE., &
+      & lrestart = .TRUE.)
   END SUBROUTINE Add_pool_elements_to_memory
 
   !-----------------------------------------------------------------------------------------------------
