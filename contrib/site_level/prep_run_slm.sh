@@ -40,7 +40,7 @@ slmModel="land"
 ##>> sites <<###########################################################################################
 ## select the site-set:
 # forcing data and site info *list.dat for all site-sets: /Net/Groups/BGI/data/Model/SLM1/input/point/ 
-# options: fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin mocabors mocab2 sweden
+# options: fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin mocabors mocab2 sweden plumber2
 forcingDataSet="fluxnet"
 # forcing with or without a transient (like spinup) phase before the actual simulation starts
 # options: static transient
@@ -70,7 +70,7 @@ customSiteListFileName=""
 #           [GLOBAL all/sub] "GLB_007" "GLB_058" "GLB_394"
 #           [FACE] "DK-AMB" "OR-ELE"  [MANIP] "ES-MaG" "ES-MaT"  [FERT] "HAR-CON_4" "HAR-HIG_4" "HAR-LOW_4" "HAR-CON_5" "SDA-CON" "SDA-ADD"
 #           [CRAINE] "CRA_01" "CRA_02" "CRA_18"  [PHOTACC] "ARC_01" "MON_02" "STR_01"  [SPP_1685] "BBR" "LUE" "VES"
-#           [CONFIN] "FI-Hyy" "FI-Ken"  [MOCABORS] "US-Ha1"  [MOCAB2] "HUR-FOR" "HUR-GRA"  [SWEDEN] "BER" "STI"
+#           [CONFIN] "FI-Hyy" "FI-Ken"  [MOCABORS] "US-Ha1"  [MOCAB2] "HUR-FOR" "HUR-GRA"  [SWEDEN] "BER" "STI"  [PLUMBER2] "DE-Hai" "HU-Bug"
 singleSiteName=""
 
 
@@ -219,7 +219,7 @@ while getopts ":e:f:c:m:s:r:y:b:z:n:u:h" opt; do
       forcingDataSet="fluxnet"
       ;;
     "f3")
-      echo "   forcingDataSet=fluxnet3 (Berkley 2015)"
+      echo "   forcingDataSet=fluxnet3 (Berkley 2015 & OzFlux)"
       forcingDataSet="fluxnet3"
       ;;
     "gl")
@@ -269,6 +269,10 @@ while getopts ":e:f:c:m:s:r:y:b:z:n:u:h" opt; do
     "sw")
       echo "   forcingDataSet=sweden"
       forcingDataSet="sweden"
+      ;;
+    "p2")
+      echo "   forcingDataSet=plumber2"
+      forcingDataSet="plumber2"
       ;;
     esac
     ;;
@@ -397,6 +401,7 @@ while getopts ":e:f:c:m:s:r:y:b:z:n:u:h" opt; do
     echo "       mo: MOCABORS (JSM soil moisture development)"
     echo "       m2: MOCAB2 (JSM soil moisture development cruncep site)"
     echo "       sw: SWEDEN (site data from The Swedish Throughfall Monitoring Network)"
+    echo "       p2: PLUMBER2 (Fluxnet site collection for MIP)"
     echo " -c set the customSiteList"
     echo "    Arguments to -c:"
     echo "       T: using the custom site list"
@@ -542,7 +547,7 @@ fi
 return 0
 }
 # lists to validate against
-validateForcingDataSet="fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin mocabors mocab2 sweden"
+validateForcingDataSet="fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin mocabors mocab2 sweden plumber2"
 validateForcingMode="static transient"
 validateCrunSites="all cue spp"
 validateGlobSites="all sub"
@@ -764,6 +769,11 @@ case "$forcingDataSet" in
 "sweden")
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/SWEDEN/"
   ;;
+"plumber2")
+  echo " Info: the PLUMBER2 forcing data is included in the FLUXNET3/ directory"
+  siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET3/"
+  fluxnetTypeSiteSet="T"
+  ;;
 esac
 
 
@@ -940,13 +950,13 @@ else
     ;;
   "fluxnet3")
     if [ $forcingMode == "static" ]; then
-      siteListFileName="flux3_all_sites_1991-2014_list.dat"
+      siteListFileName="flux3_all_sites_1991-2017_list.dat"
     else 
-      siteListFileName="flux3_all_sites_1901-2014_list.dat"
+      siteListFileName="flux3_all_sites_1901-2017_list.dat"
     fi
     if [ "$slmModel" == "soil" ]; then
-      siteListFileName="flux3_all_sites_1991-2014_list.dat"
-      echo " The site list file for static simulations is used: flux3_all_sites_1991-2014_list.dat"
+      siteListFileName="flux3_all_sites_1991-2017_list.dat"
+      echo " The site list file for static simulations is used: flux3_all_sites_1991-2017_list.dat"
     fi
     ;;
   "global")
@@ -1087,6 +1097,13 @@ else
       siteListFileName="sweden_sites_1990-2019_list.dat"
     else 
       siteListFileName="sweden_sites_1901-2019_list.dat"
+    fi
+    ;;
+  "plumber2")
+    if [ $forcingMode == "static" ]; then
+      siteListFileName="plumber2_all_sites_1991-2018_list.dat"
+    else 
+      siteListFileName="plumber2_all_sites_1901-2018_list.dat"
     fi
     ;;
   esac
@@ -1428,6 +1445,14 @@ case "$forcingDataSet" in
   else
     forcingModeFileID="_t_"
   fi
+  ;;
+"plumber2")
+  if [ $forcingMode == "static" ]; then
+    forcingModeFileID="_s_"
+  else  # valid for land & soil
+    forcingModeFileID="_t_"
+  fi
+  ;;
 esac
 
 

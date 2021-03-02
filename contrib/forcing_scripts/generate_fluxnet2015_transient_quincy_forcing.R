@@ -25,15 +25,20 @@
 ##    * these files contain two points (2x lat) with data for only point one
 ##    * these files contain leap years ! which are 1992 1996 2000 2004 ... each 4 years with the February 29th added (see function testLeapYear())
 ##
+## since PLUMBER2 is available, only a reduced number of sites met-forcing is created for
+##    * most of the sites included into this FLUXNET3 site-set are now created by the generate_plumber2_transient_quincy_forcing.R as part of the PLUMBER2 site-set
+##    * here ZA-Kru is created as ZA-Kr2 from Fluxnet2015 data; a ZA-Kru site is already created by the PLUMBER2 site-set scripts (covering less data years though)
+##
 ## run this script by:
 ##  cd contrib/forcing_scripts/
 ##  Rscript --vanilla ./generate_fluxnet2015_transient_quincy_forcing.R
 ## 
-## note: allsiteinfo is ./generate_fluxnet_site_list.dat 
-##       some swdown values in IL-Yat are corrected manually
+## note: allsiteinfo is ./generate_fluxnet2015_reduced_site_list.dat created manually from  generate_fluxnet_site_list.dat 
+##       (outdated since PLUMBER2 is available: ./generate_fluxnet2015_site_list.dat created manually from  generate_fluxnet_site_list.dat)
 ## 
 ## output may be generated per default in:
-##  ./new_fluxnet2015_transient_met_forcing/
+##  ./new_fluxnet2015_reduced_transient_met_forcing/
+##  (outdated since PLUMBER2 is available: ./new_fluxnet2015_transient_met_forcing/)
 ## 
 #########################################################################################
 
@@ -44,25 +49,24 @@ library(ncdf4)
 ## seed
 set.seed(123)
 
-## create out folder & set in/out path
+## set in/out path & create out folder
 ipath1 <- "/Net/Groups/BGI/work_2/QUINCY/SLM/Data/fluxnet2015_jsbach_input/met_forcing/"
-opath  <- "./new_fluxnet2015_transient_met_forcing/"
+opath  <- "./new_fluxnet2015_reduced_transient_met_forcing/"
 dir.create(opath, showWarnings=T, recursive=T)
 
 ## input file pattern definitions
 infile_ext='.forcing.halfhourly.nc'
 
 ## read site info file (produced using OCN ?)
-allsiteinfo       <- read.table("generate_fluxnet2015_site_list.dat", sep="", header=T, stringsAsFactor=F)  # created manually using generate_fluxnet_site_list.dat
+allsiteinfo       <- read.table("generate_fluxnet2015_reduced_site_list.dat", sep="", header=T, stringsAsFactor=F)  # created manually using generate_fluxnet_site_list.dat
 allsitename       <- allsiteinfo[,1]
 allsitestartyear  <- allsiteinfo[,2]
 allsiteendyear    <- allsiteinfo[,3]
 site_list         <- allsitename
 allsiteDataYears  <- allsiteendyear - allsitestartyear + 1
 
-
 ## create array with random years of the site-forcing for 1901-2005 (105 yrs) per site, to be placed in front of the actual forcing data
-## this range of data is not needed for all sites, but the latest year data of fluxnet2015 sites starts (is available) is 2006 (see generate_fluxnet2015_site_list.dat)
+## this range of data is not needed for all sites, but the latest year data of fluxnet2015 sites starts (is available) is 2006 (see generate_fluxnet2015_reduced_site_list.dat)
 periodForcingYears         <- 105
 randForcingYears           <- array(NA,dim=c(periodForcingYears, length(site_list)))
 colnames(randForcingYears) <- site_list
@@ -70,24 +74,20 @@ for (s in 1:length(site_list)){
   randForcingYears[,s] <- sample(1:allsiteDataYears[s], periodForcingYears, replace=T)
 }
 
-
 ## create day of year and hour of day and dpm (days per month) default values for output met_forcing files (without leap years)
 doy <- ceiling(seq(1/48,365,1/48))
 hod <- rep(seq(0,23.5,0.5),365)
 dpm <- c(31,28,31,30,31,30,31,31,30,31,30,31)  
-
 
 ## define output-file headers
 header1 <- c('year','doy','hour','swvis_srf_down','lw_srf_down','t_air','q_air','press_srf',
              'rain','snow','wind_air','co2_mixing_ratio','co2_dC13','co2DC14','nhx_srf_down','noy_srf_down','p_srf_down')
 header2 <- c('-','-','-','Wm-2','Wm-2','K','g/kg','hPa','mm/day','mm/day','m/s','ppm','per-mill','per-mill','mg/m2/day','mg/m2/day','mg/m2/day')
 
-
 ## CO2 info files
-co2y      <- read.table('/Net/Groups/BGI/model/OCN/input/gridded/CO2/GCP_co2_global.dat')
-co2y_dC13 <- read.table('/Net/Groups/BGI/work_2/QUINCY/SLM/InputDataSources/Atm/delta13C_in_air_input4MIPs_GM_1850-2015_V1.txt')
-co2y_DC14 <- read.table('/Net/Groups/BGI/work_2/QUINCY/SLM/InputDataSources/Atm/Delta14C_in_air_input4MIPs_SHTRNH_1850-2015_V1.txt')
-
+co2y      <- read.table('/Net/Groups/BGI/model/OCN/input/gridded/CO2/GCP2019_co2_global.dat')
+co2y_dC13 <- read.table('/Net/Groups/BGI/work_2/QUINCY/SLM/InputDataSources/Atm/delta13C_in_air_input4MIPs_GM_1850-2018_extrapolated.txt')
+co2y_DC14 <- read.table('/Net/Groups/BGI/work_2/QUINCY/SLM/InputDataSources/Atm/Delta14C_in_air_input4MIPs_SHTRNH_1850-2018_extrapolated.txt')
 
 ## forcing may be created for years 1901 up to 2014 (differs across sites)
 forcing_startyear   <- 1901
@@ -109,6 +109,12 @@ for (s in 1:length(site_list)) {
   
   # check if a site-specific netcdf file exists, e.g., DE-Hai.2000-2006.forcing.halfhourly.nc
   sDataFile <- paste0(ipath1, site_list[s], '.', startyear, '-', endyear, infile_ext)
+  # ZA-Kru is created as ZA-Kr2 from Fluxnet2015 data; a ZA-Kru site is already created by the PLUMBER2 site-set scripts (covering less data years though)
+  if (site_list[s] == "ZA-Kr2"){
+    sDataFile <- paste0(ipath1, 'ZA-Kru', '.', startyear, '-', endyear, infile_ext)
+    print(" ZA-Kr2 == ZA-Kru of the Fluxnet2015 data set")
+    print(paste0(" using for ZA-Kr2 the input file: ", sDataFile))
+  }
   stat3     <- file.exists(sDataFile)
   
   # define output file, e.g., DE-Hai_t_1901-2012.dat  (the '_t_' denotes transient forcing files)
@@ -265,6 +271,8 @@ for (s in 1:length(site_list)) {
   }
 } # loop over sites
 
+print("")
+print(" NOTE: met-forcing was created only for a few sites, all other sites are duplicate with PLUMBER2 and have been create with these scripts.")
 
 
 ## end ##

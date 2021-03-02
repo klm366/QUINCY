@@ -30,7 +30,7 @@ mo_sse_interface.o: \
   mo_sse_config_class.o \
   mo_sse_memory_class.o \
   mo_rad_memory_class.o \
-  mo_a2l_memory_class.o
+  mo_atm2land_memory_class.o
 
 mo_sse_constants.o: \
   mo_kind.o
@@ -45,7 +45,7 @@ mo_sse_memory_class.o: \
   mo_jsb_class.o \
   mo_jsb_memory_class.o \
   mo_jsb_var_class.o \
-  mo_slm_varlist.o
+  mo_jsb_varlist.o
 
 mo_sse_config_class.o: \
   mo_kind.o \
@@ -102,7 +102,7 @@ mo_sse_update_physics.o: \
   mo_jsb_process_class.o \
   mo_jsb_grid_class.o \
   mo_jsb_grid.o \
-  mo_a2l_memory_class.o \
+  mo_atm2land_memory_class.o \
   mo_atmland_constants.o \
   mo_atmland_util.o \
   mo_jsb_phys_constants.o \
@@ -125,7 +125,7 @@ mo_sse_update_turbulence.o: \
   mo_jsb_class.o \
   mo_jsb_lctlib_class.o \
   mo_jsb_process_class.o \
-  mo_a2l_memory_class.o \
+  mo_atm2land_memory_class.o \
   mo_atmland_constants.o \
   mo_atmland_util.o \
   mo_jsb_phys_constants.o \

@@ -307,14 +307,17 @@ if [ "$fluxnetTypeTransSimLand" == "T" ] || [ "$fluxnetTypeTransSimSoil" == "T" 
     yearForcStart=$(grep "$forcingSiteFileID" "/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET2/flux_all_sites_1995-2006_list.dat" | awk '{print $5}')
     yearForcLast=$(grep "$forcingSiteFileID" "/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET2/flux_all_sites_1995-2006_list.dat" | awk '{print $6}')
   elif [ "$forcingDataSet" == "fluxnet3" ]; then
-    yearForcStart=$(grep "$forcingSiteFileID" "/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET3/flux3_all_sites_1991-2014_list.dat" | awk '{print $5}')
-    yearForcLast=$(grep "$forcingSiteFileID" "/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET3/flux3_all_sites_1991-2014_list.dat" | awk '{print $6}')
+    yearForcStart=$(grep "$forcingSiteFileID" "/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET3/flux3_all_sites_1991-2017_list.dat" | awk '{print $5}')
+    yearForcLast=$(grep "$forcingSiteFileID" "/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET3/flux3_all_sites_1991-2017_list.dat" | awk '{print $6}')
   elif [ "$forcingDataSet" == "mocabors" ]; then
     yearForcStart=$(grep "$forcingSiteFileID" "/Net/Groups/BGI/data/Model/SLM1/input/point/MOCABORS/mocab_all_sites_1991-2012_list.dat" | awk '{print $5}')
     yearForcLast=$(grep "$forcingSiteFileID" "/Net/Groups/BGI/data/Model/SLM1/input/point/MOCABORS/mocab_all_sites_1991-2012_list.dat" | awk '{print $6}')
   elif [ "$forcingDataSet" == "confin" ]; then
     yearForcStart=$(grep "$forcingSiteFileID" "/Net/Groups/BGI/data/Model/SLM1/input/point/CONFIN/confin_sites_1997-2014_list.dat" | awk '{print $5}')
     yearForcLast=$(grep "$forcingSiteFileID" "/Net/Groups/BGI/data/Model/SLM1/input/point/CONFIN/confin_sites_1997-2014_list.dat" | awk '{print $6}')
+  elif [ "$forcingDataSet" == "plumber2" ]; then
+    yearForcStart=$(grep "$forcingSiteFileID" "/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET3/plumber2_all_sites_1991-2018_list.dat" | awk '{print $5}')
+    yearForcLast=$(grep "$forcingSiteFileID" "/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET3/plumber2_all_sites_1991-2018_list.dat" | awk '{print $6}')
   else
     echo " Trying to run a transient simulation with the fluxnet-type site-set: ""$forcingDataSet"", but yearForcStart and yearForcLast are not defined."
     echo " The site-set may need to be added to the section >transient simulation with fluxnet-type site-sets< in the run_slm.sh -> ask Jan or Sönke."

@@ -80,7 +80,7 @@ CONTAINS
     USE mo_veg_memory_class,      ONLY: veg_pool, veg_litterfall
     dsl4jsb_Use_memory(SSE_)       !  USE mo_sse_memory_class,     ONLY: t_sse_memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
-    dsl4jsb_Use_memory(A2L_)    
+    dsl4jsb_Use_memory_A2L_     
     dsl4slm_Use_memory_a_sb
     USE mo_sb_memory_class,       ONLY: sb_pool, sb_formation, sb_loss, sb_transport, sb_mycorrhiza_export
 
@@ -138,7 +138,7 @@ CONTAINS
     dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(SSE_)                         ! TYPE(t_sse_memory),     POINTER :: sse__mem
     dsl4jsb_Def_memory(SB_)                           ! TYPE(t_sb_memory),       POINTER :: sb__mem
-    dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory_A2L_ 
     ! Declare pointers to variables in memory
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk :: unit_uptake_n_pot
@@ -294,7 +294,7 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(SB_)
-    dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_memory_A2L_ 
     ! Allocate local allocatable variables (deallocate below at the end of this routine)
     ALLOCATE(apparent_fast_som_cn(nc, nsoil_sb))
     ALLOCATE(root_fraction_act_sl(nc, nsoil_sb))

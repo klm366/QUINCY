@@ -58,7 +58,7 @@ CONTAINS
                                   output_interval_flux            , &
                                   time_day, time_year             , &
                                   timestep_prop_day               , &
-                                  !! a2l memory - INTENT(in) - start
+                                  ! atm2land_memory - INTENT(in) - start
                                   t_air              , &
                                   q_air              , &
                                   rain               , &
@@ -99,7 +99,7 @@ CONTAINS
                                   t_bcoef_ice        , &
                                   q_acoef_ice        , &
                                   q_bcoef_ice        , &
-                                  !! a2l memory - end
+                                  !! atm2land_memory - end
                                   !! start - variables for passing values from land to atmosphere
                                   !! INTENT(out)
                                   t_srf             ,   &
@@ -136,7 +136,7 @@ CONTAINS
     USE mo_hsm_class,                     ONLY: t_Message
     USE mo_jsb4_forcing,                  ONLY: forcing_options
     USE mo_quincy_update_time_averages,   ONLY: update_time_averages  ! includes daytime and moving average
-    USE mo_atmland_interface,             ONLY: update_a2l, update_l2a
+    USE mo_atmland_interface,             ONLY: update_atm2land, update_land2atm
     USE mo_quincy_output,                 ONLY: write_output_pool, write_output_flux, write_soil_forcing
     USE mo_test_canopy_model,             ONLY: run_test_canopy_model
     USE mo_test_radiation_model,          ONLY: run_test_radiation_model
@@ -156,7 +156,7 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile                           !< one tile with data structure for one lct
-    LOGICAL,                    INTENT(in)        :: l_forcing, &                   !< IF .TRUE. THEN update_forcing(), update_a2l(), update_l2a()
+    LOGICAL,                    INTENT(in)        :: l_forcing, &                   !< IF .TRUE. THEN update_forcing(), update_atm2land(), update_land2atm()
                                                      l_output, &                    !< TRUE of output is enabled at all (i.e., fluxes are accumulated)
                                                      l_output_interval_match        !< TRUE if output may be created at the current timestep
     INTEGER,                    INTENT(in)        :: flux_trans_timestep_out_state  !< possible values: 0, 1, 2, 3; see land_model_driver
@@ -164,7 +164,7 @@ CONTAINS
     REAL(wp),                   INTENT(in)        :: time_day                       !< displays the 'real simulation time' in days; time_day == 1.0 after one day has passed
     INTEGER,                    INTENT(in)        :: time_year                      !< displays the 'real simulation time' in years; the 1st year of a simulation == 1 (not zero)
     REAL(wp),                   INTENT(in)        :: timestep_prop_day              !< proportion of one day that is simulated with one timestep (dtime/one_day)
-    REAL(wp),                   INTENT(in)        :: &                 !! a2l memory - INTENT(in) - start
+    REAL(wp),                   INTENT(in)        :: &                 !! atm2land_memory - INTENT(in) - start
                                   t_air(:)              , &
                                   q_air(:)              , &
                                   rain(:)               , &
@@ -205,7 +205,7 @@ CONTAINS
                                   t_bcoef_ice(:)        , &
                                   q_acoef_ice(:)        , &
                                   q_bcoef_ice(:)
-                                                     !! a2l memory - end
+                                                     !! atm2land_memory - end
     REAL(wp),INTENT(out)          :: &                      !! start - variables for passing values from land to atmosphere
                                   t_srf(:)             ,   &
                                   t_eff_srf(:)         ,   &
@@ -251,12 +251,12 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
 
 
-    !> 1.0 pass atmland variables from forcing input (driver) to a2l
+    !> 1.0 pass atmland variables from forcing input (driver) to atm2land
     !!
     !!
     IF (l_forcing) THEN       ! l_forcing is true
-      CALL update_a2l( &
-      ! the sequence of input variables is consistent with the sequence of var in t_a2l_memory & atmland_interface
+      CALL update_atm2land( &
+      ! the sequence of input variables is consistent with the sequence of var in t_atm2land_memory & atmland_interface
       tile                                         , &
       model%options                                , &
       t_air                   = t_air(:)              , &
@@ -476,8 +476,8 @@ CONTAINS
     !> 3.0 variables for passing values from land to atmosphere (via the driver)
     !! 
     !! 
-    IF (l_forcing) THEN       ! l_forcing is true if update_a2l() is called (depends on the SLM model selected)
-      CALL update_l2a( &
+    IF (l_forcing) THEN       ! l_forcing is true if update_atm2land() is called (depends on the SLM model selected)
+      CALL update_land2atm( &
       tile                                              ,   &
       model%options                                     ,   &
       t_srf                   = t_srf(:)             ,   &

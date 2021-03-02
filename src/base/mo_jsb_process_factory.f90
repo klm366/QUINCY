@@ -22,8 +22,8 @@ MODULE mo_jsb_process_factory
   USE mo_jsb_memory_class,     ONLY: t_jsb_memory, t_jsb_memory_p
   USE mo_jsb_config_class,     ONLY: t_jsb_config
   ! 
-  USE mo_a2l_memory_class, ONLY: t_a2l_memory
-  USE mo_l2a_memory_class, ONLY: t_l2a_memory
+  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
+  USE mo_land2atm_memory_class, ONLY: t_land2atm_memory
 !!  USE mo_seb_memory_class,     ONLY: t_seb_memory
 !!  USE mo_turb_memory_class,    ONLY: t_turb_memory
   USE mo_sse_memory_class,    ONLY: t_sse_memory
@@ -130,8 +130,8 @@ CONTAINS
 
   FUNCTION Create_process_memory(iproc) RESULT(return_ptr)
 
-    USE mo_a2l_memory_class, ONLY: max_no_of_a2l_vars => max_no_of_vars
-    USE mo_l2a_memory_class, ONLY: max_no_of_l2a_vars => max_no_of_vars
+    USE mo_atm2land_memory_class, ONLY: max_no_of_a2l_vars => max_no_of_vars
+    USE mo_land2atm_memory_class, ONLY: max_no_of_l2a_vars => max_no_of_vars
 !!    USE mo_seb_memory_class,     ONLY: max_no_of_seb_vars => max_no_of_vars
 !!    USE mo_turb_memory_class,    ONLY: max_no_of_turb_vars => max_no_of_vars
     USE mo_sse_memory_class,    ONLY: max_no_of_sse_vars      => max_no_of_vars
@@ -159,10 +159,10 @@ CONTAINS
 
     SELECT CASE(iproc)
     CASE (A2L_)
-      ALLOCATE(t_a2l_memory::return_ptr)
+      ALLOCATE(t_atm2land_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_a2l_vars
     CASE (L2A_)
-      ALLOCATE(t_l2a_memory::return_ptr)
+      ALLOCATE(t_land2atm_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_l2a_vars
 !!    CASE (SEB_)
 !!      ALLOCATE(t_seb_memory::return_ptr)

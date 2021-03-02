@@ -19,6 +19,6 @@
 COMP = x86_64-intel 
 C_N = ifort 
 M_K = gmake --no-print-directory 
-F_C = $(C_N) -c -cpp -fp-model strict -fp-speculation=off 
+F_C = $(C_N) -c -cpp -fp-model strict -fp-speculation=off -D __QUINCY_NO_JSB__ 
 F_O = -O3 -mkl -static -xAVX -I../src/include -I$(MODDIR) -module ${MODDIR}
 F_L = $(C_N)

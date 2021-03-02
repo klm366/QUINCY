@@ -136,6 +136,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk    :: silt_sl
     dsl4jsb_Real3D_onChunk    :: clay_sl
     dsl4jsb_Real3D_onChunk    :: volume_min_sl
+    dsl4jsb_Real3D_onChunk    :: t_soil_sl
     ! Get local variables from options argument
     iblk      = options%iblk
     ics       = options%ics
@@ -200,6 +201,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SSE_, silt_sl)
     dsl4jsb_Get_var3D_onChunk(SSE_, clay_sl)
     dsl4jsb_Get_var3D_onChunk(SSE_, volume_min_sl)
+    dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -264,6 +266,7 @@ CONTAINS
     clay_sl(:,:)        = dsl4jsb_Config(SSE_)%soil_clay
     t_srf_old(:)        = 273.15_wp
     volume_min_sl(:,:)  = 1._wp
+    t_soil_sl(:,:)      = 273.15_wp
 
     !------------------------------------------------------------------------------------------------------------------------------
     ! SPP site-set

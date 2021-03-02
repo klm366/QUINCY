@@ -64,7 +64,7 @@ PROGRAM land_model_driver
   !! 
   !! Local variables
   !! 
-  LOGICAL       :: l_forcing                          ! IF .TRUE. THEN run forcing routines (e.g. update_forcing(), update_a2l(), update_l2a())
+  LOGICAL       :: l_forcing                          ! IF .TRUE. THEN run forcing routines (e.g. update_forcing(), update_atm2land(), update_land2atm())
   INTEGER       :: first_timestep                     ! number of the first timestep simulated in the below DO loop
   INTEGER       :: transient_spinup_itimestep_period  ! count the number of timesteps covering one repeated spinup period
   INTEGER       :: iblk, nproma, ics, ice, nc         !< *slmtmp may be an input from JSBACH4 later in SLM dev
@@ -82,7 +82,7 @@ PROGRAM land_model_driver
                    output_interval_pool_spinup        ! output interval of pools as a number valid for spinup period
   REAL(wp)      :: transient_spinup_timesteps         ! timesteps of spinup (transient forcing) as positive number, needed for output control
   
-  REAL(wp), ALLOCATABLE, DIMENSION(:)  :: &     !! a2l memory - INTENT(in) - start
+  REAL(wp), ALLOCATABLE, DIMENSION(:)  :: &     !! atm2land_memory - INTENT(in) - start
                                   t_air              , &
                                   q_air              , &
                                   rain               , &
@@ -123,7 +123,7 @@ PROGRAM land_model_driver
                                   t_bcoef_ice        , &
                                   q_acoef_ice        , &
                                   q_bcoef_ice
-                                         !! a2l memory - end
+                                         !! atm2land_memory - end
   !! start - variables for passing values from land to atmosphere
   REAL(wp), ALLOCATABLE, DIMENSION(:)  :: & 
                                   t_srf             ,   &
@@ -164,23 +164,23 @@ PROGRAM land_model_driver
   PRINT*," Start QUINCY model Init "
   
   !! 1.1  define default values
-  nproca   = 1
-  nprocb   = 1
-  nprocio  = 0
-  npedim   = -1
+  nproca   = 1      ! ?
+  nprocb   = 1      ! ?
+  nprocio  = 0      ! ?
+  npedim   = -1     ! ?
   model_id = 1      ! must be consistent with model_idx set in setup_model_vgrid_procconf()
-  iblk     = 1
-  nproma   = 1      ! note: nproma may not be smaller than ice; this is differently in jsbach4, and only a restriction to SLM !
-  ics      = 1      ! 
-  ice      = 1      ! note: ice must be smaller or equal to nproma; this is differently in jsbach4, and only a restriction to SLM !
-  nc       = ice - ics + 1                 ! (end-number - start-number + 1)
+  iblk     = 1                ! must be always 1 in QUINCY (number of chunk in the "2D block of chunks" created from the 1D domain - information provided by ECHAM or ICON to JSBACH/QUINCY)
+  nproma   = 1                ! number of points in the chunk
+  ics      = 1                ! must be 1 in QUINCY (and is also always 1 in "jsb4 standalone with ECHAM") - mo_jsb_memory_class:Add_var calculates ice using nproma & based on the assumption of ics=1 
+  ice      = ics + nproma - 1 ! ice depends on ics and nproma; ics is always 1, hence, ice = nproma always
+  nc       = nproma           ! in QUINCY there is no npromz, so nc = nproma always 
 
   !! 1.2  set up the model with vgrid and process configs (jsbach%models(model_id)%m => model  with 'model' of TYPE(t_jsb_model))
   CALL setup_model_vgrid_procconf("namelist.slm")
   model => get_model(model_id)
 
   !! 1.3 init of horizontal grid
-  CALL jsbach_setup_grid(model%id, "hgrid0")    ! model%id, horizontal grid name
+  CALL jsbach_setup_grid(model%id, "hgrid0", nproma)    ! model%id, horizontal grid name (arbitrary name), number of points
 
   !! 1.4 init process parameters (and modify parameter values for param-sensi)
   CALL quincy_proc_parameter_init(model%id)
@@ -200,7 +200,7 @@ PROGRAM land_model_driver
   !! 
   !! allocate forcing variables (atmland)
   !! 
-  !! a2l memory
+  !! atm2land_memory
   ALLOCATE(t_air(nc))                                           
   ALLOCATE(q_air(nc))                                           
   ALLOCATE(rain(nc))                                            
@@ -241,7 +241,7 @@ PROGRAM land_model_driver
   ALLOCATE(t_bcoef_ice(nc))                                     
   ALLOCATE(q_acoef_ice(nc))                                     
   ALLOCATE(q_bcoef_ice(nc))
-  !! l2a memory
+  !! land2atm_memory
   ALLOCATE(t_srf(nc))                                          
   ALLOCATE(t_eff_srf(nc))                                      
   ALLOCATE(qsat_srf(nc))                                       
@@ -417,7 +417,7 @@ PROGRAM land_model_driver
         iblk      , &
         itimestep , &
         time_day  , & 
-        !! forcing (read from file and passed to a2l memory via the land_model_interface)
+        !! forcing (read from file and passed to atm2land_memory via the land_model_interface)
         !! in update_forcing() defined as: REAL(wp), OPTIONAL, INTENT(out) :: VAR(:)  ! assumed shape
         t_air                   = t_air(:)              , &
         q_air                   = q_air(:)              , &
@@ -584,7 +584,7 @@ PROGRAM land_model_driver
                               time_day, &
                               time_year, &
                               timestep_prop_day, &
-                                  !! a2l memory - INTENT(in) - start
+                                  !! atm2land_memory - INTENT(in) - start
                                   t_air(:)              , &
                                   q_air(:)              , &
                                   rain(:)               , &
@@ -625,7 +625,7 @@ PROGRAM land_model_driver
                                   t_bcoef_ice(:)        , &
                                   q_acoef_ice(:)        , &
                                   q_bcoef_ice(:)        , &
-                                  !! a2l memory - end
+                                  !! atm2land_memory - end
                                   !! start - variables for passing values from land to atmosphere
                                   !! INTENT(out)
                                   t_srf(:)             ,   &

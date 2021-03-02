@@ -36,18 +36,27 @@ library(ncdf4)
 #########################################################################################
 ## site_list.dat containing basic site-level data
 # input path for met-forcing netcdf files (generated using generate_fluxnet2015_icbc_surface_forcing_eval_files_jsbach.R)
-ipath            <- "/Net/Groups/BGI/work_2/QUINCY/SLM/Data/fluxnet2015_jsbach_input/met_forcing/"
-# site list info file
-allsiteinfo      <- read.table("generate_fluxnet2015_site_list.dat", header=T, sep="", stringsAsFactor=F)
-
+ipathF            <- "/Net/Groups/BGI/work_2/QUINCY/SLM/Data/fluxnet2015_jsbach_input/met_forcing/"
+ipathP            <- "/Net/Groups/BGI/work_2/QUINCY/SLM/Data/PLUMBER2_siteset_data/"
 ## input file pattern definitions
-infile_ext='.forcing.halfhourly.nc'
+infile_extF       <- '.forcing.halfhourly.nc'
+infile_extP       <- '_Met.nc'
+# get a list of all files with original met data from the ipath directory
+sitesetFilesF     <- Sys.glob(paste0(ipathF, "*", infile_extF))
+sitesetFilesP     <- Sys.glob(paste0(ipathP, "*", infile_extP))
+# site list info file
+allsiteinfo       <- read.table("generate_fluxnet2015_site_list.dat", header=T, sep="", stringsAsFactor=F)
+# origin ID
+originF           <- "jsbach_fluxnet2015"
+originP           <- "plumber2"
+
 
 ## get site names and start/end years of data
 allsitestartyear <- allsiteinfo$start
 allsiteendyear   <- allsiteinfo$end
 allsitename      <- allsiteinfo$site_id
-site_list        <- allsitename          # "AT-Neu" "AU-Fog" ... "US-WCr" "ZA-Kru"
+datOrigin        <- allsiteinfo$origin    # 'fluxnet3' fluxnet2015_jsbach_input | 'plumber2' PLUMBER2_siteset_data
+site_list        <- allsitename           # "AT-Neu" "AU-Fog" ... "US-WCr" "ZA-Kru"
 
 ## create empty vectors for output
 lon_orig <- numeric(length(site_list))
@@ -75,12 +84,36 @@ for (s in 1:length(site_list)) {
   if(allsitename[s]=='AU-Fog') pft[s]<-"TeH"
   # exception ZA-Kru (#424, change from TrH to TrBR)
   if(allsitename[s]=='ZA-Kru') pft[s]<-"TrBR"
+  # ZA-Kr2 == ZA-Kru
+  if(allsitename[s]=='ZA-Kr2') pft[s]<-"TrBR"
   
-  # get lon/lat from the metforcing.nc of this site (note: this is jsbach compatible forcing with two points, i.e., 2x lat)
-  inSiteForcFile <- paste0(ipath, site_list[s], '.', allsitestartyear[s], '-', allsiteendyear[s], infile_ext)
+  # get lon/lat from the metforcing.nc of this site (note: the fluxnet3 data is jsbach compatible forcing with two points, i.e., 2x lat)
+  # identify the input file-name based on the site_id & differentiate data origin
+  if (datOrigin[s] == originF){  # fluxnet3
+    siteFileNum <- grep(site_list[s], sitesetFilesF)
+    # ZA-Kru is also created as ZA-Kr2 from Fluxnet2015 data; a ZA-Kru site is already created by the PLUMBER2 site-set scripts (covering less data years though)
+    if (site_list[s] == "ZA-Kr2"){
+      siteFileNum   <- grep("ZA-Kru", sitesetFilesF)
+      print(" ZA-Kr2 == ZA-Kru of the Fluxnet2015 data set")
+      print(paste0(" using for ZA-Kr2 the input file: ", sitesetFilesF[siteFileNum]))
+    }
+    inSiteForcFile  <- sitesetFilesF[siteFileNum]
+  }
+  else{  # plumber2
+    siteFileNum     <- grep(site_list[s], sitesetFilesP)
+    inSiteForcFile  <- sitesetFilesP[siteFileNum]
+  }
+  print(site_list[s])
+  print(inSiteForcFile)
   fid <- nc_open(inSiteForcFile)
-    lon_orig[s]<-ncvar_get(fid,"lon")
-    lat_orig[s]<-ncvar_get(fid,"lat")[1]
+    if (datOrigin[s] == originF){  # fluxnet3
+      lon_orig[s] <- ncvar_get(fid,"lon")
+      lat_orig[s] <- ncvar_get(fid,"lat")[1]    # get only the first point
+    }
+    else{  # plumber2
+      lon_orig[s] <- ncvar_get(fid,"longitude")
+      lat_orig[s] <- ncvar_get(fid,"latitude")
+    }
   nc_close(fid)
   # lon (from teh jsbach metforcing files) needs to be converted back to the range [-180,180]
   # it was converted to degrees east in the generate_fluxnet2015_icbc_surface_forcing_eval_files_jsbach.R
@@ -335,33 +368,33 @@ for (s in 1:length(site_list)) {
 siteParam <- 27
 siteinfo  <- array(NA,c(length(site_list),siteParam))
 
-siteinfo[,1]<-site_list
-siteinfo[,2]<-lon_orig
-siteinfo[,3]<-lat_orig
-siteinfo[,4]<-pft
-siteinfo[,5]<-allsitestartyear
-siteinfo[,6]<-allsiteendyear
-siteinfo[,7]<-gmt_ref
-siteinfo[,8]<-clay
-siteinfo[,9]<-silt
-siteinfo[,10]<-sand
-siteinfo[,11]<-awc
-siteinfo[,12]<-bulk_density
-siteinfo[,13]<-ph
-siteinfo[,14]<-taxousda
-siteinfo[,15]<-taxnwrb
-siteinfo[,16]<-glim_class_site
-siteinfo[,17]<-lai
-siteinfo[,18]<-nleaf
-siteinfo[,19]<-sla
-siteinfo[,20]<-height
-siteinfo[,21]<-plantyear
-siteinfo[,22]<-soilP_depth_site
-siteinfo[,23]<-soilP_labile_site
-siteinfo[,24]<-soilP_slow_site
-siteinfo[,25]<-soilP_occlud_site
-siteinfo[,26]<-soilP_primary_site
-siteinfo[,27]<-qmaxorg_site
+siteinfo[,1]  <- site_list
+siteinfo[,2]  <- lon_orig
+siteinfo[,3]  <- lat_orig
+siteinfo[,4]  <- pft
+siteinfo[,5]  <- allsitestartyear
+siteinfo[,6]  <- allsiteendyear
+siteinfo[,7]  <- gmt_ref
+siteinfo[,8]  <- clay
+siteinfo[,9]  <- silt
+siteinfo[,10] <- sand
+siteinfo[,11] <- awc
+siteinfo[,12] <- bulk_density
+siteinfo[,13] <- ph
+siteinfo[,14] <- taxousda
+siteinfo[,15] <- taxnwrb
+siteinfo[,16] <- glim_class_site
+siteinfo[,17] <- lai
+siteinfo[,18] <- nleaf
+siteinfo[,19] <- sla
+siteinfo[,20] <- height
+siteinfo[,21] <- plantyear
+siteinfo[,22] <- soilP_depth_site
+siteinfo[,23] <- soilP_labile_site
+siteinfo[,24] <- soilP_slow_site
+siteinfo[,25] <- soilP_occlud_site
+siteinfo[,26] <- soilP_primary_site
+siteinfo[,27] <- qmaxorg_site
 
 
 ## output
@@ -372,14 +405,14 @@ colnames(siteinfo)<-c('Site-ID','lon','lat','PFT','start','end',
                       'soilP_depth','soilP_labile','soilP_slow','soilP_occluded','soilP_primary',
                       'Qmax_org_fp')
 
-# 1991-2014  (the length of the available forcing data varies across fluxnet sites, but lies within 1991-2014)
-write.table(siteinfo,file=paste0("flux3_all_sites_1991-2014_list",Sys.Date(),".dat"),quote=F,row.names=F,col.names=T)
+# 1991-2017  (the length of the available forcing data varies across fluxnet sites, but lies within 1991-2017)
+write.table(siteinfo,file=paste0("flux3_all_sites_1991-2017_list",Sys.Date(),".dat"),quote=F,row.names=F,col.names=T)
 siteinfo[,5]<-1901
 # 1901-... end year same as above
-write.table(siteinfo,file=paste0("flux3_all_sites_1901-2014_list",Sys.Date(),".dat"),quote=F,row.names=F,col.names=T)
+write.table(siteinfo,file=paste0("flux3_all_sites_1901-2017_list",Sys.Date(),".dat"),quote=F,row.names=F,col.names=T)
 
 
-
+print("")
 print(paste0("Script has finished. The two new flux3_all_sites_list.dat files with ",siteParam," parameters were created."))
 
 

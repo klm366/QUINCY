@@ -75,7 +75,7 @@ CONTAINS
     dsl4jsb_Use_memory(SSE_)              !  USE mo_sse_memory_class,     ONLY: t_sse_memory
 
     ! Process interfaces:
-    USE mo_atmland_interface,             ONLY: update_a2l
+    USE mo_atmland_interface,             ONLY: update_atm2land
 
     IMPLICIT NONE
     ! ---------------------------
@@ -265,7 +265,7 @@ CONTAINS
     !longitude                 = 0.0_wp
 
 
-    CALL update_a2l( &
+    CALL update_atm2land( &
            tile                                            , &
            options                                         , &
            t_air                   = t_air(:)              , &

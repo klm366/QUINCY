@@ -19,6 +19,6 @@
 COMP = x86_64-gfortran
 C_N = gfortran
 M_K = make --no-print-directory
-F_C = $(C_N) -c -cpp -ffree-line-length-0
+F_C = $(C_N) -c -cpp -ffree-line-length-0 -D __QUINCY_NO_JSB__ 
 F_O = -O -I../src/include -I$(MODDIR) -J${MODDIR}
 F_L = $(C_N)
