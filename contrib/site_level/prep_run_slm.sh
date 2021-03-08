@@ -161,8 +161,8 @@ sb_adsorp_scheme="eca_part"       # eca_full (vmax of ECA is calc by enzyme abun
 
 # simulation length & output
 simulation_length_number=30       # default years for forcingMode: static = 30 | transient = 115/118/119 [transient: 01.01.1901 -> 31.12.2015/18/19 without spinup!]
-output_interval_pool="weekly"     # timestep daily weekly monthly yearly
-output_interval_flux="weekly"     # timestep daily weekly monthly yearly
+output_interval_pool="weekly"     # options: timestep daily weekly monthly yearly  (one timestep covers 30 minutes)
+output_interval_flux="weekly"     # options: timestep daily weekly monthly yearly  (one timestep covers 30 minutes)
 output_start_first_day_year=1     # 1 to ... [must be lower than or equal with option: output_end_last_day_year]
 output_end_last_day_year=30       # equal with or larger than option: output_start_first_day_year
 
