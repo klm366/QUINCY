@@ -181,7 +181,7 @@ CONTAINS
     hgrid         => Get_grid(model%grid_id)
     surface       => Get_vgrid('surface')
     vgrid_soil_sb => Get_vgrid('soil_layer_sb')
-    vgrid_snow_e  => Get_vgrid('snow_depth_energy')
+    !vgrid_snow_e  => Get_vgrid('snow_depth_energy')
 
 
     ! ----------------------------------------------------------------------------------------------------- !
