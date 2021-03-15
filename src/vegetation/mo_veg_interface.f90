@@ -292,7 +292,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_time_average_vegetation::return_ptr)
-    CALL return_ptr%Construct(name='tsk_time_average_vegetation', process_id=VEG_, owner_model_id=model_id)
+    CALL return_ptr%Construct(name='time_average_vegetation', process_id=VEG_, owner_model_id=model_id)
     
   END FUNCTION Create_task_update_time_average_vegetation
   
