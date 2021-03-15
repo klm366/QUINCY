@@ -108,6 +108,16 @@ MODULE mo_veg_interface
     PROCEDURE, NOPASS :: Aggregate => aggr_update_veg_pools !< Aggregates computed task variables
   END TYPE tsk_update_veg_pools  
 
+  !-----------------------------------------------------------------------------------------------------
+  !> Type definition: time_average_vegetation task
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_time_average_vegetation
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_time_average_vegetation    !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Aggregate => aggregate_time_average_vegetation !< Aggregates computed task variables
+  END TYPE tsk_time_average_vegetation
+
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor interface: reset_veg_fluxes task
@@ -149,10 +159,19 @@ MODULE mo_veg_interface
     PROCEDURE Create_task_update_veg_pools         !< Constructor function for task
   END INTERFACE tsk_update_veg_pools
 
+  !-----------------------------------------------------------------------------------------------------
+  !> Constructor interface: update_time_average_vegetation task
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  INTERFACE tsk_time_average_vegetation
+    PROCEDURE Create_task_update_time_average_vegetation         !< Constructor function for task
+  END INTERFACE tsk_time_average_vegetation
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_veg_interface'
 
+
 CONTAINS
+
 
   !-----------------------------------------------------------------------------------------------------
   !> Register tasks: VEG_ process
@@ -160,18 +179,15 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Register_veg_tasks(this, model_id)
 
-    IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
     CLASS(t_jsb_process), INTENT(inout) :: this
     INTEGER,              INTENT(in)    :: model_id
-
 
     CALL this%Register_task(tsk_reset_veg_fluxes(model_id))
     CALL this%Register_task(tsk_update_veg_turnover(model_id))
     CALL this%Register_task(tsk_update_veg_dynamics(model_id))
     CALL this%Register_task(tsk_update_veg_growth(model_id))
     CALL this%Register_task(tsk_update_veg_pools(model_id))
+    CALL this%Register_task(tsk_time_average_vegetation(model_id))
 
   END SUBROUTINE Register_veg_tasks
 
@@ -265,6 +281,21 @@ CONTAINS
     CALL return_ptr%Construct(name='update_veg_pools', process_id=VEG_, owner_model_id=model_id)
     
   END FUNCTION Create_task_update_veg_pools
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Constructor: tsk_time_average_vegetation task
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Create_task_update_time_average_vegetation(model_id) RESULT(return_ptr)
+
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_time_average_vegetation::return_ptr)
+    CALL return_ptr%Construct(name='tsk_time_average_vegetation', process_id=VEG_, owner_model_id=model_id)
+    
+  END FUNCTION Create_task_update_time_average_vegetation
+  
 
   !-----------------------------------------------------------------------------------------------------
   !> Implementation of "update": reset_veg_fluxes task
@@ -580,6 +611,73 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggr_update_veg_pools
+
+
+  ! ======================================================================================================= !
+  !> calculate time moving averages and daytime averages for VEG_
+  !>
+  SUBROUTINE update_time_average_vegetation(tile, options)
+
+    USE mo_jsb_control,         ONLY: debug_on
+    USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
+    USE mo_jsb_task_class,      ONLY: t_jsb_task_options
+    USE mo_veg_util,            ONLY: real_update_time_average_vegetation => update_time_average_vegetation
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    ! ----------------------------------------------------------------------------------------------------- !
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_time_average_vegetation'
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (.NOT. tile%Is_process_active(VEG_)) RETURN
+    IF (tile%lcts(1)%lib_id == 0)           RETURN  ! only if the present tile is a pft
+    IF (debug_on() .AND. options%iblk == 1) &
+      & CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+
+    CALL real_update_time_average_vegetation(tile, options)
+    
+    IF (debug_on() .AND. options%iblk==1) CALL message(routine, 'Finished.')
+
+  END SUBROUTINE update_time_average_vegetation
+
+
+  ! ======================================================================================================= !
+  !> Implementation of "aggregate": time_average_vegetation task
+  !>
+  SUBROUTINE aggregate_time_average_vegetation(tile, options)
+
+    USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
+    USE mo_jsb_task_class,     ONLY: t_jsb_task_options
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
+    INTEGER                                   :: iblk, ics, ice
+    CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggregate_time_average_vegetation'
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_memory(ASSIMI_)
+    dsl4jsb_Def_memory(VEG_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_memory(ASSIMI_)
+    dsl4jsb_Get_memory(VEG_)
+  
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    ! dsl4jsb_Aggregate_onChunk(VEG_, t_air_week_mavg                   , weighted_by_fract)
+
+
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE aggregate_time_average_vegetation
 
 #endif
 END MODULE mo_veg_interface
