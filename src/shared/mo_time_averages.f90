@@ -59,7 +59,7 @@ MODULE mo_time_averages
     REAL(wp),SAVE :: mavg_period_tmic              = 30.0_wp              !< microbial community acclimation
     REAL(wp),SAVE :: mavg_period_tgrowth           = 365.0_wp             !< vegetation growth
     REAL(wp),SAVE :: mavg_period_tvegdyn           = 365.0_wp             !< vegetation dynamics processes 
-    REAL(wp),SAVE :: mavg_period_talloc_dynamic    = 30.0_wp * 365.0_wp   !< biomass allocation for empirical dynamic allocation (30 years)
+    REAL(wp),SAVE :: mavg_period_talloc_dynamic    = 365.0_wp * 30.0_wp   !< biomass allocation for empirical dynamic allocation (30 years)
   !!----------------------------------------------------------------------------------------------------
 
 
