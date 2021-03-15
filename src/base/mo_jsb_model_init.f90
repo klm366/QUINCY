@@ -334,6 +334,7 @@ CONTAINS
       
       ! averaging variables in time at the end of the timestep
       CALL model%Queue_task(PHENO_,  "time_average_phenology")      !! quincy
+      CALL model%Queue_task(ASSIMI_, "time_average_assimilation")   !! quincy
       CALL model%Queue_task(VEG_,    "time_average_vegetation")     !! quincy
     ENDIF
     !! Task Queue created

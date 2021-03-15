@@ -138,18 +138,35 @@ MODULE mo_assimi_interface
     PROCEDURE Create_task_update_canopy_fluxes         !< Constructor function for task
   END INTERFACE tsk_update_canopy_fluxes
 
+  ! ======================================================================================================= !
+  !>Type definition: time_average_assimilation task
+  !>
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_time_average_assimilation
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_time_average_assimilation    !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Aggregate => aggregate_time_average_assimilation !< Aggregates computed task variables
+  END TYPE tsk_time_average_assimilation
+
+  ! ======================================================================================================= !
+  !>Constructor interface: time_average_assimilation task
+  !>
+  INTERFACE tsk_time_average_assimilation
+    PROCEDURE Create_task_update_time_average_assimilation         !< Constructor function for task
+  END INTERFACE tsk_time_average_assimilation
+
+  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_assimi_interface'
+
 
 CONTAINS
 
-  ! ================================================================================================================================
-  !! Constructors for tasks
 
-  ! -------------------------------------------------------------------------------------------------------
-  !> Constructor for assimi task
-  !!
-  !! @param[in]     model_id     Model id
-  !! @return        return_ptr   Instance of process task "assimi"
-  !!
+  ! ======================================================================================================= !
+  !>Constructors for tasks
+  !>
+  ! docu: Constructor for assimi task
+  !
+  ! @param[in]     model_id     Model id
+  ! @return        return_ptr   Instance of process task "assimi"
   FUNCTION Create_task_assimilation_scaling_factors(model_id) RESULT(return_ptr)
 
     INTEGER,                   INTENT(in) :: model_id
@@ -244,13 +261,28 @@ CONTAINS
     
   END FUNCTION Create_task_update_canopy_fluxes
 
+  ! ======================================================================================================= !
+  !>Constructor: tsk_time_average_assimilation task
+  !> 
+  FUNCTION Create_task_update_time_average_assimilation(model_id) RESULT(return_ptr)
 
-  ! -------------------------------------------------------------------------------------------------------
-  !> Register tasks for assimi process
-  !!
-  !! @param[in,out] this      Instance of assimi process class
-  !! @param[in]     model_id  Model id
-  !!
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_time_average_assimilation::return_ptr)
+    CALL return_ptr%Construct(name='time_average_assimilation', process_id=ASSIMI_, owner_model_id=model_id)
+    
+  END FUNCTION Create_task_update_time_average_assimilation
+
+
+
+  ! ======================================================================================================= !
+  !>Register tasks for assimi process
+  !>
+  ! docu:
+  !
+  ! @param[in,out] this      Instance of assimi process class
+  ! @param[in]     model_id  Model id
   SUBROUTINE Register_assimi_tasks(this, model_id)
 
     USE mo_jsb_model_class,   ONLY: t_jsb_model
@@ -274,6 +306,7 @@ CONTAINS
     ELSEIF (model%config%use_quincy) THEN    ! quincy
       CALL this%Register_task(tsk_reset_assimi_fluxes(model_id))
       CALL this%Register_task(tsk_update_canopy_fluxes(model_id))
+      CALL this%Register_task(tsk_time_average_assimilation(model_id))
     END IF
 
   END SUBROUTINE Register_assimi_tasks
@@ -1100,6 +1133,121 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
 
   END SUBROUTINE aggregate_canopy_fluxes
+
+
+  ! ======================================================================================================= !
+  !> calculate time moving averages and daytime averages for ASSIMI_
+  !>
+  SUBROUTINE update_time_average_assimilation(tile, options)
+
+    USE mo_jsb_control,         ONLY: debug_on
+    USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
+    USE mo_jsb_task_class,      ONLY: t_jsb_task_options
+    USE mo_assimi_util,         ONLY: real_update_time_average_assimilation => update_time_average_assimilation
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    ! ----------------------------------------------------------------------------------------------------- !
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_time_average_assimilation'
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (.NOT. tile%Is_process_active(ASSIMI_)) RETURN
+    IF (tile%lcts(1)%lib_id == 0)           RETURN  ! only if the present tile is a pft
+    IF (debug_on() .AND. options%iblk == 1) &
+      & CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+
+    CALL real_update_time_average_assimilation(tile, options)
+    
+    IF (debug_on() .AND. options%iblk==1) CALL message(routine, 'Finished.')
+
+  END SUBROUTINE update_time_average_assimilation
+
+
+  ! ======================================================================================================= !
+  !> Implementation of "aggregate": time_average_assimilation task
+  !>
+  SUBROUTINE aggregate_time_average_assimilation(tile, options)
+
+    USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
+    USE mo_jsb_task_class,     ONLY: t_jsb_task_options
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
+    INTEGER                                   :: iblk, ics, ice
+    CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggregate_time_average_assimilation'
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_memory(ASSIMI_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! ASSIMI_ 2D
+    dsl4jsb_Real2D_onChunk      :: daytime_counter
+    dsl4jsb_Real2D_onChunk      :: beta_air_daytime_dacc
+    dsl4jsb_Real2D_onChunk      :: beta_soil_ps_daytime_dacc
+    dsl4jsb_Real2D_onChunk      :: beta_soil_gs_daytime_dacc
+    dsl4jsb_Real2D_onChunk      :: beta_air_daytime
+    dsl4jsb_Real2D_onChunk      :: beta_soil_ps_daytime
+    dsl4jsb_Real2D_onChunk      :: beta_soil_gs_daytime
+    dsl4jsb_Real2D_onChunk      :: beta_soil_gs_tphen_mavg
+    dsl4jsb_Real2D_onChunk      :: beta_soa_tphen_mavg
+    dsl4jsb_Real2D_onChunk      :: soa_tsoa_mavg
+    dsl4jsb_Real2D_onChunk      :: beta_soil_ps_tfrac_mavg
+    dsl4jsb_Real2D_onChunk      :: beta_soil_gs_tfrac_mavg
+    dsl4jsb_Real2D_onChunk      :: beta_air_tfrac_mavg
+    dsl4jsb_Real2D_onChunk      :: beta_soil_ps_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: beta_soil_gs_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: beta_air_tcnl_mavg  
+    ! ----------------------------------------------------------------------------------------------------- !
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_memory(ASSIMI_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! ASSIMI_ 2D
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, daytime_counter)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_daytime_dacc)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_daytime_dacc)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_daytime_dacc)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_daytime)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_daytime)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_daytime)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tphen_mavg)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soa_tphen_mavg)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, soa_tsoa_mavg)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_tfrac_mavg)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tfrac_mavg)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_tfrac_mavg)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tcnl_mavg)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_tcnl_mavg)
+
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, daytime_counter            , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_air_daytime_dacc      , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_ps_daytime_dacc  , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_gs_daytime_dacc  , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_air_daytime           , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_ps_daytime       , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_gs_daytime       , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_gs_tphen_mavg    , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soa_tphen_mavg        , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, soa_tsoa_mavg              , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_ps_tfrac_mavg    , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_gs_tfrac_mavg    , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_air_tfrac_mavg        , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_ps_tcnl_mavg     , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_gs_tcnl_mavg     , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_air_tcnl_mavg         , weighted_by_fract)
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE aggregate_time_average_assimilation
+
 
 #endif
 END MODULE mo_assimi_interface
