@@ -90,30 +90,53 @@ MODULE mo_rad_interface
   END INTERFACE tsk_albedo
   
   !! quincy
-  !> Type definition for sw_radiation_q_
+  ! ======================================================================================================= !
+  !>Type definition for sw_radiation_q_
+  !>
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_sw_radiation_q_
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_sw_radiation_q_
     PROCEDURE, NOPASS :: Aggregate => aggregate_sw_radiation_q_
   END TYPE tsk_sw_radiation_q_
 
+  ! ======================================================================================================= !
+  !>Constructor interface: sw_radiation_q_ task
+  !>
   INTERFACE tsk_sw_radiation_q_
     PROCEDURE Create_task_sw_radiation_q_
   END INTERFACE tsk_sw_radiation_q_
 
+  ! ======================================================================================================= !
+  !>Type definition: time_average_radiation task
+  !>
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_time_average_radiation
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_time_average_radiation    !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Aggregate => aggregate_time_average_radiation !< Aggregates computed task variables
+  END TYPE tsk_time_average_radiation
+
+  ! ======================================================================================================= !
+  !>Constructor interface: time_average_radiation task
+  !>
+  INTERFACE tsk_time_average_radiation
+    PROCEDURE Create_task_update_time_average_radiation         !< Constructor function for task
+  END INTERFACE tsk_time_average_radiation
+
   CHARACTER(len=*), PARAMETER :: modname = 'mo_rad_interface'
+
 
 CONTAINS
 
-  ! ================================================================================================================================
-  !! Constructors for tasks
 
-  ! -------------------------------------------------------------------------------------------------------
-  !> Constructor for surface_radiation task
-  !!
-  !! @param[in]     model_id     Model id
-  !! @return        return_ptr   Instance of process task "radiation"
-  !!
+  ! ------------------------------------------------------------------------------------------------------- !
+  !>Constructors for tasks
+  !>
+  
+  ! ======================================================================================================= !
+  !>Constructor for surface_radiation task
+  !>
+  ! @param[in]     model_id     Model id
+  ! @return        return_ptr   Instance of process task "radiation"
   FUNCTION Create_task_surface_radiation(model_id) RESULT(return_ptr)
 
     INTEGER,                   INTENT(in) :: model_id
@@ -156,12 +179,9 @@ CONTAINS
 
   END FUNCTION Create_task_albedo
 
-  ! -------------------------------------------------------------------------------------------------------
-  !> Constructor for sw_radiation_q_ task
-  !!
-  !! @param[in]     model_id     Model id
-  !! @return        return_ptr   Instance of process task "sw_radiation_q_"
-  !!
+  ! ======================================================================================================= !
+  !>Constructor for sw_radiation_q_ task
+  !>
   FUNCTION Create_task_sw_radiation_q_(model_id) RESULT(return_ptr)
 
     INTEGER,                   INTENT(in) :: model_id
@@ -172,22 +192,33 @@ CONTAINS
 
   END FUNCTION Create_task_sw_radiation_q_
 
+  ! ======================================================================================================= !
+  !>Constructor: tsk_time_average_radiation task
+  !> 
+  FUNCTION Create_task_update_time_average_radiation(model_id) RESULT(return_ptr)
 
-  ! ================================================================================================================================
-  !> Register tasks for radiation process
-  !!
-  !! @param[in,out] this      Instance of <PROCESS_NAME_LOWER_CASE> process class
-  !! @param[in]     model_id  Model id
-  !!
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_time_average_radiation::return_ptr)
+    CALL return_ptr%Construct(name='time_average_radiation', process_id=RAD_, owner_model_id=model_id)
+    
+  END FUNCTION Create_task_update_time_average_radiation
+
+
+  ! ======================================================================================================= !
+  !>Register tasks for radiation process
+  !>
   SUBROUTINE Register_rad_tasks(this, model_id)
 
     CLASS(t_jsb_process), INTENT(inout) :: this
     INTEGER, INTENT(in) :: model_id
 
-    CALL this%Register_task(tsk_surface_radiation(model_id))
-    CALL this%Register_task(tsk_radiation_par    (model_id))
-    CALL this%Register_task(tsk_albedo           (model_id))
-    CALL this%Register_task(tsk_sw_radiation_q_  (model_id))
+    CALL this%Register_task(tsk_surface_radiation     (model_id))
+    CALL this%Register_task(tsk_radiation_par         (model_id))
+    CALL this%Register_task(tsk_albedo                (model_id))
+    CALL this%Register_task(tsk_sw_radiation_q_       (model_id))
+    CALL this%Register_task(tsk_time_average_radiation(model_id))
 
   END SUBROUTINE Register_rad_tasks
 
@@ -1239,7 +1270,7 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: A2L_, RAD_, VEG_, PHENO_, HYDRO_
+    USE mo_jsb_process_class,     ONLY: A2L_, RAD_, VEG_, PHENO_, HYDRO_, SEB_
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
     USE mo_jsb_grid,              ONLY: Get_vgrid
@@ -1544,7 +1575,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE aggregate_sw_radiation_q_(tile, options)
 
-    IMPLICIT NONE
+    dsl4jsb_Use_processes RAD_, VEG_
     ! ---------------------------
     ! 0.1 InOut
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -1623,6 +1654,305 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_sw_radiation_q_
+
+
+  ! ======================================================================================================= !
+  !> calculate time moving averages and daytime averages for RAD_
+  !>
+  SUBROUTINE update_time_average_radiation(tile, options)
+
+#ifdef __QUINCY_NO_JSB__
+#include "dsl_jsbach.inc"
+#endif
+
+    USE mo_kind,                    ONLY: wp
+    USE mo_jsb_math_constants,      ONLY: eps8
+    USE mo_jsb_impl_constants,      ONLY: test_false_true
+    USE mo_jsb_control,             ONLY: debug_on
+    USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
+    USE mo_jsb_task_class,          ONLY: t_jsb_task_options
+    USE mo_jsb_model_class,         ONLY: t_jsb_model
+    USE mo_jsb_class,               ONLY: Get_model
+    USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,                ONLY: Get_vgrid
+    USE mo_time_averages            ! e.g. calc_time_mavg, mavg_period_tphen, mavg_period_weekly
+    dsl4jsb_Use_processes A2L_, VEG_, RAD_, PHENO_
+    dsl4jsb_Use_memory(A2L_)
+    dsl4jsb_Use_memory(VEG_)
+    dsl4jsb_Use_memory(RAD_)
+    dsl4jsb_Use_memory(PHENO_)
+#ifdef __QUINCY_NO_JSB__
+    dsl4slm_Use_memory_a_veg
+    USE mo_veg_memory_class,    ONLY: veg_pool
+#else
+    dsl4jsb_Use_pools(VEG_) t_veg_tissues_pool
+#endif
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_vgrid),      POINTER         :: vgrid_canopy         !< Vertical grid
+    LOGICAL,  DIMENSION(options%nc)         :: l_growing_season     !< growing_season LOGICAL
+    LOGICAL,  ALLOCATABLE(:,:)              :: l_growing_season_cl  !< growing_season LOGICAL, at vgrid_canopy
+    INTEGER                                 :: ipoint               !< looping
+    INTEGER                                 :: icanopy              !< looping
+    INTEGER                                 :: ncanopy              !< number of canopy layers, from vgrid
+    INTEGER                                 :: iblk, ics, ice, nc   !< dimensions
+    CHARACTER(len=*), PARAMETER             :: routine = modname//':update_time_average_radiation'
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory(VEG_)
+    dsl4jsb_Def_memory(RAD_)
+    dsl4jsb_Def_memory(PHENO_)
+#ifdef __QUINCY_NO_JSB__
+#else
+    dsl4jsb_Def_pool(t_veg_tissues_pool)    :: veg_pool
+#endif
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! A2L_
+    dsl4jsb_Real2D_onChunk      :: swpar_srf_down
+    dsl4jsb_Real2D_onChunk      :: cos_zenith_angle
+    dsl4jsb_Real2D_onChunk      :: prev_one_cos_zenith_angle
+    dsl4jsb_Real2D_onChunk      :: prev_two_cos_zenith_angle
+    ! PHENO_
+    dsl4jsb_Real2D_onChunk      :: growing_season
+    ! 2D RAD_
+    dsl4jsb_Real2D_onChunk      :: daytime_counter
+    dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc
+    dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg 
+    ! 3D RAD_
+    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_daytime_cl    
+    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_daytime_cl
+    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_cl
+    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl
+    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_tcnl_mavg_cl
+    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tcnl_mavg_cl
+    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_tfrac_mavg_cl
+    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tfrac_mavg_cl
+    ! ----------------------------------------------------------------------------------------------------- !
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (.NOT. tile%Is_process_active(RAD_)) RETURN
+    IF (tile%lcts(1)%lib_id == 0)           RETURN  ! only if the present tile is a pft
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ----------------------------------------------------------------------------------------------------- !
+#ifdef __QUINCY_NO_JSB__
+    vgrid_canopy  => Get_vgrid('canopy_layer')
+#else
+    vgrid_canopy  => Get_vgrid('canopy_layer_q_')
+#endif
+    ncanopy       =  vgrid_canopy%n_levels
+    dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_memory(VEG_)
+    dsl4jsb_Get_memory(RAD_)
+    dsl4jsb_Get_memory(PHENO_)
+#ifdef __QUINCY_NO_JSB__
+#else
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_pool,            veg_pool)
+#endif
+    ALLOCATE(l_growing_season_cl(nc, ncanopy))
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! A2L_
+    dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)
+    dsl4jsb_Get_var2D_onChunk(A2L_, cos_zenith_angle)
+    dsl4jsb_Get_var2D_onChunk(A2L_, prev_one_cos_zenith_angle)
+    dsl4jsb_Get_var2D_onChunk(A2L_, prev_two_cos_zenith_angle)
+    ! PHENO_
+    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)               ! in
+    ! 2D RAD_
+    dsl4jsb_Get_var2D_onChunk(RAD_, daytime_counter) 
+    dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc) 
+    dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg)
+    ! 3D RAD_
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_daytime_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_daytime_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tcnl_mavg_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tcnl_mavg_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)
+    ! ----------------------------------------------------------------------------------------------------- !
+#ifdef __QUINCY_NO_JSB__
+#define Get_veg_pool
+#include "slm_pools_a_incl.f90"
+#undef Get_veg_pool
+#endif
+
+    !>0.9 transform REAL growing_season(:) into LOGICAL l_growing_season(:)/_cl(:,:)
+    !>
+    DO ipoint = 1, nc
+      IF (growing_season(ipoint) > test_false_true) THEN
+        l_growing_season(ipoint)      = .TRUE.
+        l_growing_season_cl(ipoint,:) = .TRUE.
+      ELSE
+        l_growing_season(ipoint)      = .FALSE.
+        l_growing_season_cl(ipoint,:) = .FALSE.
+      END IF
+    END DO
+
+    ! ----------------------------------------------------------------------------------------------------- !
+    !>1.0 daytime averages
+    !>
+    !>
+
+    ! docu:
+    ! prev_two_cos_zenith_angle and prev_one_cos_zenith_angle are updated in update_atm2land()
+    
+    !>  1.1 accumulate values - if light is available (i.e. daytime)
+    !>
+    DO ipoint = 1, nc
+      IF (swpar_srf_down(ipoint) > eps8) THEN
+        ! count number of daytime values
+        daytime_counter(ipoint) = daytime_counter(ipoint) + 1.0_wp
+        ! add values
+        DO icanopy = 1, ncanopy
+          ppfd_sunlit_daytime_dacc_cl(ipoint,icanopy)  = ppfd_sunlit_daytime_dacc_cl(ipoint,icanopy) + &
+            & ppfd_sunlit_cl(ipoint,icanopy)
+          ppfd_shaded_daytime_dacc_cl(ipoint,icanopy)  = ppfd_shaded_daytime_dacc_cl(ipoint,icanopy) + &
+            & ppfd_shaded_cl(ipoint,icanopy)
+        END DO
+      END IF
+    END DO
+
+    !>  1.2 calc daytime averages - at the timestep after local midnight (1st timestep of the new day)
+    !>
+    !>    calculate the average of the previous day and pass this value to the according variable
+    !> 
+    !>    the timestep right after midnight is identified by the changes in cos_zenith_angle (turning from negative to positive)
+    DO ipoint = 1, nc
+      IF ((cos_zenith_angle(ipoint) - prev_one_cos_zenith_angle(ipoint)) > eps8 .AND. &
+          (prev_one_cos_zenith_angle(ipoint) - prev_two_cos_zenith_angle(ipoint)) <= eps8) THEN
+        ! check if at least one value had been assigned at the current day, avoiding division by zero
+        IF (daytime_counter(ipoint) > eps8) THEN
+          ppfd_sunlit_daytime_cl(ipoint,:) = ppfd_sunlit_daytime_dacc_cl(ipoint,:) / daytime_counter(ipoint)
+          ppfd_shaded_daytime_cl(ipoint,:) = ppfd_shaded_daytime_dacc_cl(ipoint,:) / daytime_counter(ipoint)
+        ELSE
+          ppfd_sunlit_daytime_cl(ipoint,:) = 0.0_wp
+          ppfd_shaded_daytime_cl(ipoint,:) = 0.0_wp
+        END IF
+        ! zero the accumulation variables after daily average has been calculated
+        ppfd_sunlit_daytime_dacc_cl(ipoint,:) = 0.0_wp
+        ppfd_shaded_daytime_dacc_cl(ipoint,:) = 0.0_wp
+        ! zero the counter for number of accumulated values (*_dacc) per day
+        daytime_counter(ipoint) = 0.0_wp
+      END IF
+    END DO
+
+    ! ----------------------------------------------------------------------------------------------------- !
+    !>2.0 moving averages
+    !>
+    !>
+
+    ! docu:
+    ! calc_time_mavg(current average, new value, length of avg_period,  !
+    !                do_calc=LOGICAL, avg_period_unit='day')            ! OPTIONAL
+    !                RETURN(new current average)
+    ! the unit of the averaging period is 'day' by default, but can also be 'week' or 'year'
+    
+    !>  2.1 tfrac (averages at the time-scale of within-leaf N allocation fractions)
+    !> 
+    ppfd_sunlit_tfrac_mavg_cl(:,:) = calc_mavg(ppfd_sunlit_tfrac_mavg_cl(:,:), ppfd_sunlit_daytime_cl(:,:), &
+                                               mavg_period_tfrac, do_calc=l_growing_season_cl(:,:))
+    ppfd_shaded_tfrac_mavg_cl(:,:) = calc_mavg(ppfd_shaded_tfrac_mavg_cl(:,:), ppfd_shaded_daytime_cl(:,:), &
+                                               mavg_period_tfrac, do_calc=l_growing_season_cl(:,:))
+
+    !>  2.2 tcnl (averages at the time-scale of leaf N allocation fractions)
+    !>
+    ppfd_sunlit_tcnl_mavg_cl(:,:) = calc_mavg(ppfd_sunlit_tcnl_mavg_cl(:,:), ppfd_sunlit_cl(:,:), &
+                                               mavg_period_tcnl, do_calc=l_growing_season_cl(:,:))
+    ppfd_shaded_tcnl_mavg_cl(:,:) = calc_mavg(ppfd_shaded_tcnl_mavg_cl(:,:), ppfd_shaded_cl(:,:), &
+                                               mavg_period_tcnl, do_calc=l_growing_season_cl(:,:))
+
+    !>  2.3 tvegdyn (averages at the vegetation dynamics time-scale)
+    !! 
+    rfr_ratio_boc_tvegdyn_mavg(:) = calc_mavg(rfr_ratio_boc_tvegdyn_mavg(:), rfr_ratio_boc(:), &
+                                              mavg_period_tvegdyn, do_calc=(veg_pool%leaf%carbon(:) > eps8))
+
+! not needed, because veg_pool not modified:
+! #ifdef __QUINCY_NO_JSB__
+! #define Passback_veg_pool
+! #include "slm_pools_a_incl.f90"
+! #undef Passback_veg_pool
+! #endif
+
+    IF (debug_on() .AND. options%iblk==1) CALL message(routine, 'Finished.')
+
+  END SUBROUTINE update_time_average_radiation
+
+
+  ! ======================================================================================================= !
+  !> Implementation of "aggregate": time_average_radiation task
+  !>
+  SUBROUTINE aggregate_time_average_radiation(tile, options)
+
+    USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
+    USE mo_jsb_task_class,     ONLY: t_jsb_task_options
+    dsl4jsb_Use_processes RAD_
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
+    INTEGER                                   :: iblk, ics, ice
+    CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggregate_time_average_radiation'
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_memory(RAD_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! RAD_ 2D
+    dsl4jsb_Real2D_onChunk      :: daytime_counter
+    dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg
+    ! RAD_ 3D
+    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_daytime_dacc_cl
+    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_daytime_dacc_cl
+    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_daytime_cl
+    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_daytime_cl
+    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tfrac_mavg_cl
+    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_tfrac_mavg_cl
+    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tcnl_mavg_cl
+    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_tcnl_mavg_cl
+    ! ----------------------------------------------------------------------------------------------------- !
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_memory(RAD_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! RAD_ 2D
+    dsl4jsb_Get_var2D_onChunk(RAD_, daytime_counter)
+    dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg)
+    ! RAD_ 3D
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_daytime_dacc_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_daytime_dacc_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_daytime_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_daytime_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tcnl_mavg_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tcnl_mavg_cl)
+
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    dsl4jsb_Aggregate_onChunk(RAD_, daytime_counter               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg    , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, ppfd_sunlit_daytime_dacc_cl   , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, ppfd_shaded_daytime_dacc_cl   , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, ppfd_sunlit_daytime_cl        , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, ppfd_shaded_daytime_cl        , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl     , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl     , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, ppfd_sunlit_tcnl_mavg_cl      , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, ppfd_shaded_tcnl_mavg_cl      , weighted_by_fract)
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE aggregate_time_average_radiation
 
 
 #endif

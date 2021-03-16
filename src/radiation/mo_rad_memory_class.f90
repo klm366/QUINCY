@@ -186,6 +186,9 @@ MODULE mo_rad_memory_class
       & arad_shaded_nir_cl          , & !< absorbed radiation in NIR band on shaded leaves [W m-2]
       & fleaf_sunlit_nir_cl             !< fraction of leaves that are sunlit in NIR band [unitless]
 
+    TYPE(t_jsb_var_real2d)  :: &   
+      & daytime_counter                 !< number of timesteps of current day with light available [#]
+
     ! 3D Radiative transfer variables (appended by _sp for spectral_bands)
     ! TYPE(t_jsb_var_real3d)  :: &   ! DIMENSION(nspec)
     !                         canopy_reflectance_sp    !< top of the canopy directional reflectance factor [unitless]
@@ -993,6 +996,16 @@ CONTAINS
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
           & loutput = .TRUE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
+
+        CALL mem%Add_var('daytime_counter', mem%daytime_counter, &
+          & hgrid, surface, &
+          & t_cf('daytime_counter', '', 'number of timesteps of current day with light available'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & loutput = .FALSE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
   
