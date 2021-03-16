@@ -333,9 +333,10 @@ CONTAINS
       CALL model%Queue_task(SB_,     "update_sb_pools")             !! quincy - land/soil model
       
       ! averaging variables in time at the end of the timestep
-      CALL model%Queue_task(RAD_,    "time_average_radiation")      !! quincy
-      CALL model%Queue_task(ASSIMI_, "time_average_assimilation")   !! quincy
-      CALL model%Queue_task(VEG_,    "time_average_vegetation")     !! quincy
+      CALL model%Queue_task(RAD_,    "time_average_radiation")            !! quincy
+      CALL model%Queue_task(ASSIMI_, "time_average_assimilation")         !! quincy
+      CALL model%Queue_task(VEG_,    "time_average_vegetation")           !! quincy
+      CALL model%Queue_task(SB_,     "time_average_soilbiogeochemistry")  !! quincy
     ENDIF
     !! Task Queue created
     !!---------------------------------------------------------------------------------------------    
