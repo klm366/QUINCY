@@ -327,6 +327,8 @@ CONTAINS
   !!  actually NOT using this routine, i.e., no var is aggregated here
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE aggregate_reset_veg_fluxes(tile, options)
+
+    dsl4jsb_Use_processes VEG_
   
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -371,7 +373,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE aggr_update_veg_turnover(tile, options)
 
-    IMPLICIT NONE
+    dsl4jsb_Use_processes VEG_
     ! ---------------------------
     ! 0.1 InOut
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -431,7 +433,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE aggr_update_veg_dynamics(tile, options)
 
-    IMPLICIT NONE
+    dsl4jsb_Use_processes VEG_
     ! ---------------------------
     ! 0.1 InOut
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -491,7 +493,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE aggr_update_veg_growth(tile, options)
 
-    IMPLICIT NONE
+    dsl4jsb_Use_processes VEG_
     ! ---------------------------
     ! 0.1 InOut
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -551,7 +553,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE aggr_update_veg_pools(tile, options)
 
-    IMPLICIT NONE
+    dsl4jsb_Use_processes VEG_
     ! ---------------------------
     ! 0.1 InOut
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -622,6 +624,7 @@ CONTAINS
     USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,      ONLY: t_jsb_task_options
     USE mo_veg_util,            ONLY: real_update_time_average_vegetation => update_time_average_vegetation
+    dsl4jsb_Use_processes VEG_
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -648,6 +651,7 @@ CONTAINS
 
     USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
     USE mo_jsb_task_class,     ONLY: t_jsb_task_options
+    dsl4jsb_Use_processes VEG_
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options

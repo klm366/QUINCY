@@ -269,6 +269,7 @@ CONTAINS
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                ONLY: Get_vgrid
     USE mo_time_averages            ! e.g. calc_time_mavg, mavg_period_tphen, mavg_period_weekly
+    dsl4jsb_Use_processes A2L_, VEG_, PHENO_
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(VEG_)
@@ -293,6 +294,7 @@ CONTAINS
     REAl(wp)                                :: mavg_period_hlp      !< helper
     INTEGER                                 :: ipoint               !< looping
     INTEGER                                 :: icanopy              !< looping
+    INTEGER                                 :: ncanopy              !< number of canopy layers, from vgrid
     INTEGER                                 :: iblk, ics, ice, nc   !< dimensions
     CHARACTER(len=*), PARAMETER             :: routine = modname//':update_time_average_vegetation'
     ! ----------------------------------------------------------------------------------------------------- !

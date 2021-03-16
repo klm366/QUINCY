@@ -125,6 +125,7 @@ CONTAINS
     USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_time_averages            ! e.g. calc_time_mavg, mavg_period_tphen, mavg_period_weekly
+    dsl4jsb_Use_processes A2L_, ASSIMI_, PHENO_
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(ASSIMI_)
     dsl4jsb_Use_memory(PHENO_)

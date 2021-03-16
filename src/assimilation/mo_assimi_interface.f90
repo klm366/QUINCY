@@ -160,10 +160,12 @@ MODULE mo_assimi_interface
 CONTAINS
 
 
-  ! ======================================================================================================= !
+  ! ------------------------------------------------------------------------------------------------------- !
   !>Constructors for tasks
   !>
-  ! docu: Constructor for assimi task
+  
+  ! ======================================================================================================= !
+  !>Constructor for assimilation_scaling_factors task
   !
   ! @param[in]     model_id     Model id
   ! @return        return_ptr   Instance of process task "assimi"
@@ -991,7 +993,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_reset_assimi_fluxes(tile, options)
 
-    USE mo_assimi_util, ONLY: real_reset_assimi_fluxes => reset_assimi_fluxes  
+    USE mo_assimi_util, ONLY: real_reset_assimi_fluxes => reset_assimi_fluxes
+    dsl4jsb_Use_processes ASSIMI_
   
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -1017,6 +1020,8 @@ CONTAINS
   !! actually NOT using this routine, i.e., no var is aggregated here
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE aggregate_reset_assimi_fluxes(tile, options)
+
+    dsl4jsb_Use_processes ASSIMI_
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -1055,6 +1060,7 @@ CONTAINS
   SUBROUTINE update_canopy_fluxes(tile, options)
 
     USE mo_assimi_update_canopy_fluxes, ONLY: real_update_canopy_fluxes => update_canopy_fluxes
+    dsl4jsb_Use_processes ASSIMI_
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -1079,6 +1085,8 @@ CONTAINS
   !> Implementation of "aggregate": canopy_fluxes task
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE aggregate_canopy_fluxes(tile, options)
+
+    dsl4jsb_Use_processes ASSIMI_
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -1144,6 +1152,7 @@ CONTAINS
     USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,      ONLY: t_jsb_task_options
     USE mo_assimi_util,         ONLY: real_update_time_average_assimilation => update_time_average_assimilation
+    dsl4jsb_Use_processes ASSIMI_
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -1170,6 +1179,7 @@ CONTAINS
 
     USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
     USE mo_jsb_task_class,     ONLY: t_jsb_task_options
+    dsl4jsb_Use_processes ASSIMI_
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
