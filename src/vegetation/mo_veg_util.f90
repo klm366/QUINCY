@@ -442,7 +442,7 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model         => Get_model(tile%owner_model_id)
-    lctlib        => model%lctlib(tile%lcts%lib_id)
+    lctlib        => model%lctlib(tile%lcts(1)%lib_id)
 #ifdef __QUINCY_NO_JSB__
     vgrid_canopy  => Get_vgrid('canopy_layer')
 #else

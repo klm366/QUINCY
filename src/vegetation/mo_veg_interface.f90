@@ -38,20 +38,17 @@ MODULE mo_veg_interface
   USE mo_jsb_tile_class,              ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_task_class,              ONLY: t_jsb_process_task, t_jsb_task_options
   USE mo_jsb_process_class,           ONLY: t_jsb_process
+
+  ! "Integrate" routines
   USE mo_veg_turnover,                ONLY: update_veg_turnover
   USE mo_veg_dynamics,                ONLY: update_veg_dynamics
   USE mo_veg_growth,                  ONLY: update_veg_growth
   USE mo_veg_update_pools,            ONLY: update_veg_pools
 
-  ! Use of processes in this module (USE mo_jsb_process_class, ONLY: )
+  ! Use of processes in this module
   dsl4jsb_Use_processes VEG_
-
-  ! Use of process configurations (t_PROC_config)
-  dsl4jsb_Use_config(VEG_)
-
-  ! Use of process memories (t_PROC_memory)
+  ! Use of process memories
   dsl4jsb_Use_memory(VEG_)
-  
 
   IMPLICIT NONE
   PRIVATE
