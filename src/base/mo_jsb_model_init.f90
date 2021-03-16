@@ -692,7 +692,7 @@ CONTAINS
         CYCLE
       END IF
 
-      ! Indicate to the aggregators that tile fractions might have changed after restart
+      ! Indicate to the weighted average aggregator that tile fractions might have changed after restart
       tile%l_fract_children_changed(:,:) = model%Do_fractions_change()
 
       ! TBD: Loop over processes instead of explicit
