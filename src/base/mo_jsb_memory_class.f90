@@ -211,6 +211,7 @@ CONTAINS
     __acc_attach(var%ptr)
     var%name = TRIM(name)
     var%full_name = TRIM(name_loc)
+    var%unit = TRIM(cf%units)
     var%type = REAL2D
     var%missval = missval_r_loc
     IF (PRESENT(l_aggregate_all)) var%l_aggregate_all = l_aggregate_all
@@ -368,6 +369,7 @@ CONTAINS
     __acc_attach(var%ptr)
     var%name = TRIM(name)
     var%full_name = TRIM(name_loc)
+    var%unit = TRIM(cf%units)
     var%type = REAL3D
     var%missval = missval_r_loc
     IF (PRESENT(l_aggregate_all)) var%l_aggregate_all = l_aggregate_all

@@ -38,6 +38,7 @@ MODULE mo_jsb_var_class
       :: ptr3d(:,:,:) => NULL()
     CHARACTER(len=VARNAME_LEN)    :: name                      ! Name of variable
     CHARACTER(len=VARNAME_LEN)    :: full_name                 ! Full name of variable in varlist, including prefix and suffix
+    CHARACTER(len=:), ALLOCATABLE :: unit
     INTEGER                       :: type                      ! REAL2D / REAL3D
     INTEGER                       :: subset_type               ! ON_DOMAIN / ON_CHUNK
     CHARACTER(len=:), ALLOCATABLE :: element_name              ! 
