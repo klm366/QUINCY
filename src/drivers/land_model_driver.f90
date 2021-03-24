@@ -64,7 +64,7 @@ PROGRAM land_model_driver
   !! 
   !! Local variables
   !! 
-  LOGICAL       :: l_forcing                          ! IF .TRUE. THEN run forcing routines (e.g. update_forcing(), update_atm2land(), update_land2atm())
+  LOGICAL       :: l_forcing                          ! IF .TRUE. THEN run forcing routines (e.g. update_forcing(), update_a2l(), update_l2a())
   INTEGER       :: first_timestep                     ! number of the first timestep simulated in the below DO loop
   INTEGER       :: transient_spinup_itimestep_period  ! count the number of timesteps covering one repeated spinup period
   INTEGER       :: iblk, nproma, ics, ice, nc         !< *slmtmp may be an input from JSBACH4 later in SLM dev
@@ -82,7 +82,7 @@ PROGRAM land_model_driver
                    output_interval_pool_spinup        ! output interval of pools as a number valid for spinup period
   REAL(wp)      :: transient_spinup_timesteps         ! timesteps of spinup (transient forcing) as positive number, needed for output control
   
-  REAL(wp), ALLOCATABLE, DIMENSION(:)  :: &     !! atm2land_memory - INTENT(in) - start
+  REAL(wp), ALLOCATABLE, DIMENSION(:)  :: &     !! a2l memory - INTENT(in) - start
                                   t_air              , &
                                   q_air              , &
                                   rain               , &
@@ -123,7 +123,7 @@ PROGRAM land_model_driver
                                   t_bcoef_ice        , &
                                   q_acoef_ice        , &
                                   q_bcoef_ice
-                                         !! atm2land_memory - end
+                                         !! a2l memory - end
   !! start - variables for passing values from land to atmosphere
   REAL(wp), ALLOCATABLE, DIMENSION(:)  :: & 
                                   t_srf             ,   &
@@ -200,7 +200,7 @@ PROGRAM land_model_driver
   !! 
   !! allocate forcing variables (atmland)
   !! 
-  !! atm2land_memory
+  !! a2l memory
   ALLOCATE(t_air(nc))                                           
   ALLOCATE(q_air(nc))                                           
   ALLOCATE(rain(nc))                                            
@@ -241,7 +241,7 @@ PROGRAM land_model_driver
   ALLOCATE(t_bcoef_ice(nc))                                     
   ALLOCATE(q_acoef_ice(nc))                                     
   ALLOCATE(q_bcoef_ice(nc))
-  !! land2atm_memory
+  !! l2a memory
   ALLOCATE(t_srf(nc))                                          
   ALLOCATE(t_eff_srf(nc))                                      
   ALLOCATE(qsat_srf(nc))                                       
@@ -417,7 +417,7 @@ PROGRAM land_model_driver
         iblk      , &
         itimestep , &
         time_day  , & 
-        !! forcing (read from file and passed to atm2land_memory via the land_model_interface)
+        !! forcing (read from file and passed to a2l memory via the land_model_interface)
         !! in update_forcing() defined as: REAL(wp), OPTIONAL, INTENT(out) :: VAR(:)  ! assumed shape
         t_air                   = t_air(:)              , &
         q_air                   = q_air(:)              , &
@@ -584,7 +584,7 @@ PROGRAM land_model_driver
                               time_day, &
                               time_year, &
                               timestep_prop_day, &
-                                  !! atm2land_memory - INTENT(in) - start
+                                  !! a2l memory - INTENT(in) - start
                                   t_air(:)              , &
                                   q_air(:)              , &
                                   rain(:)               , &
@@ -625,7 +625,7 @@ PROGRAM land_model_driver
                                   t_bcoef_ice(:)        , &
                                   q_acoef_ice(:)        , &
                                   q_bcoef_ice(:)        , &
-                                  !! atm2land_memory - end
+                                  !! a2l memory - end
                                   !! start - variables for passing values from land to atmosphere
                                   !! INTENT(out)
                                   t_srf(:)             ,   &

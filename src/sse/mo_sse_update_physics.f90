@@ -65,7 +65,7 @@ CONTAINS
     ! ..
 
     ! Use of process memories
-    dsl4jsb_Use_memory_A2L_ 
+    dsl4jsb_Use_memory(A2L_) 
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
     dsl4jsb_Use_memory(SSE_)        !  USE mo_sse_memory_class,      ONLY: t_sse_memory
@@ -90,7 +90,7 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_memory_A2L_ 
+    dsl4jsb_Def_memory(A2L_) 
     dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(SSE_)                       !     TYPE(t_sse_memory),     POINTER :: sse__mem
@@ -180,7 +180,7 @@ CONTAINS
     ! Get process config
     ! ..
     ! Get process memories
-    dsl4jsb_Get_memory_A2L_ 
+    dsl4jsb_Get_memory(A2L_) 
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SSE_)

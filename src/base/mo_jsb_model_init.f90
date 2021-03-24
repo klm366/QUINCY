@@ -132,7 +132,7 @@ CONTAINS
     INTEGER ,INTENT(in)                       :: model_id
     INTEGER ,INTENT(in)                       :: iblk, nproma         !< block number, number of points per chunk   *slmtmp
     INTEGER ,INTENT(in)                       :: ics, ice, nc         !< first & last & number of points in the chunk the model currently works on  *slmtmp
-    LOGICAL ,INTENT(out)                      :: l_forcing            !< IF .TRUE. THEN update_forcing(), update_atm2land(), update_land2atm()
+    LOGICAL ,INTENT(out)                      :: l_forcing            !< IF .TRUE. THEN update_forcing(), update_a2l(), update_l2a()
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model), POINTER                :: model
