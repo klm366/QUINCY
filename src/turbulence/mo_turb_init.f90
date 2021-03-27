@@ -93,8 +93,8 @@ CONTAINS
 
     model => get_model(tile%owner_model_id)
     grid  => get_grid(model%grid_id)
-    nproma = grid%nproma
-    nblks  = grid%nblks
+    nproma = grid%Get_nproma()
+    nblks  = grid%Get_nblks()
 
     ALLOCATE(turb_init_vars%rough_m(nproma, nblks))
 
@@ -106,24 +106,15 @@ CONTAINS
     IF (debug_on()) CALL message(TRIM(routine), &
          'Reading turb init vars for tile from '//TRIM(dsl4jsb_Config(TURB_)%bc_filename))
 
-    IF ( dsl4jsb_Config(TURB_)%read_from_file ) THEN
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(TURB_)%bc_filename), model%grid_id)
 
-      input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(TURB_)%bc_filename), model%grid_id)
+    ! Surface roughness length
+    ptr_2D => input_file%Read_2d(         &
+      & variable_name='roughness_length',         &
+      & fill_array = turb_init_vars%rough_m)
+    ptr_2D = MERGE(ptr_2D, 1._wp, ptr_2D > 0._wp)
 
-      ! Surface roughness length
-      ptr_2D => input_file%Read_2d(         &
-        & variable_name='roughness_length',         &
-        & fill_array = turb_init_vars%rough_m)
-      ptr_2D = MERGE(ptr_2D, 1._wp, ptr_2D > 0._wp)
-
-      CALL input_file%Close()
-
-    ELSE
-
-      ! Surface roughness length
-       turb_init_vars%rough_m = 0.062_wp
-
-    END IF
+    CALL input_file%Close()
 
   END SUBROUTINE turb_read_init_vars
 

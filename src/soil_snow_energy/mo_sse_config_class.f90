@@ -41,7 +41,6 @@ MODULE mo_sse_config_class
     LOGICAL  :: l_supercool     !< T: Allow for supercooled soil water
     REAL(wp) :: w_soil_critical !< Critical water/ice content in upper soil layer for correction of new surface
                                 !! temperature for freezing/melting [m water equivalent]
-    LOGICAL  :: read_from_file  !< T: Read boundry condition & initial condition from files, F: use prescribed value 
 
   CONTAINS
     PROCEDURE :: Init => Init_sse_config
@@ -64,7 +63,7 @@ CONTAINS
 
     CLASS(t_sse_config), INTENT(inout) :: config
 
-    LOGICAL  :: active, l_snow, l_dynsnow, l_heat_cap_dyn, l_heat_cond_dyn, l_heat_cap_map, l_heat_cond_map, l_freeze, l_supercool, read_from_file
+    LOGICAL  :: active, l_snow, l_dynsnow, l_heat_cap_dyn, l_heat_cond_dyn, l_heat_cap_map, l_heat_cond_map, l_freeze, l_supercool
     REAL(wp) :: w_soil_critical
     INTEGER  :: nsnow
     REAL(wp) :: dz_snow(max_snow_layers)
@@ -76,7 +75,7 @@ CONTAINS
       & l_heat_cap_dyn, l_heat_cond_dyn,        &
       & l_heat_cap_map, l_heat_cond_map,        &
       & l_freeze, l_supercool, w_soil_critical, &
-      & ic_filename, bc_filename, read_from_file
+      & ic_filename, bc_filename
 
     INTEGER :: nml_handler, nml_unit, istat, i
     TYPE(t_input_file) :: input_file
@@ -106,7 +105,6 @@ CONTAINS
     w_soil_critical  = 5.85036E-3_wp
     ic_filename      = 'ic_land_soil.nc'
     bc_filename      = 'bc_land_soil.nc'
-    read_from_file   = .TRUE.
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -118,7 +116,6 @@ CONTAINS
     config%active        = active
     config%ic_filename   = ic_filename
     config%bc_filename   = bc_filename
-    config%read_from_file= read_from_file
 
     config%nsnow         = nsnow
     IF (l_snow .AND. nsnow > max_snow_layers) THEN
@@ -163,32 +160,19 @@ CONTAINS
 
     IF (.NOT. active) RETURN
 
-    IF ( read_from_file ) THEN
+    input_file = jsb_netcdf_open_input(ic_filename)
 
-      input_file = jsb_netcdf_open_input(ic_filename)
+    ! @todo: At the moment, the soil layers for the energy calculations are the same as for the hydrology
+    ptr_1D => input_file%Read_1d(variable_name='soillev')    ! Depth of layer bottom
+    nsoil = SIZE(ptr_1D)
+    ALLOCATE(depths(nsoil+1))
+    ALLOCATE(mids(nsoil))
+    depths(1) = 0._wp
+    depths(2:nsoil+1) = ptr_1D(1:nsoil)
+    mids(1:nsoil) = (depths(1:nsoil) + depths(2:nsoil+1)) / 2._wp
+    DEALLOCATE(ptr_1D)
 
-      ! @todo: At the moment, the soil layers for the energy calculations are the same as for the hydrology
-      ptr_1D => input_file%Read_1d(variable_name='soillev')    ! Depth of layer bottom
-      nsoil = SIZE(ptr_1D)
-      ALLOCATE(depths(nsoil+1))
-      ALLOCATE(mids(nsoil))
-      depths(1) = 0._wp
-      depths(2:nsoil+1) = ptr_1D(1:nsoil)
-      mids(1:nsoil) = (depths(1:nsoil) + depths(2:nsoil+1)) / 2._wp
-      DEALLOCATE(ptr_1D)
-
-      CALL input_file%Close()
-
-    ELSE
-
-      nsoil = 5
-      ALLOCATE(depths(nsoil+1))
-      ALLOCATE(mids(nsoil))
-      depths(1) = 0._wp
-      depths(2:nsoil+1) = (/0.065, 0.319, 1.232, 4.134, 9.834/)
-      mids(1:nsoil) = (depths(1:nsoil) + depths(2:nsoil+1)) / 2._wp
-
-    END IF
+    CALL input_file%Close()
 
     soil_vgrid  => new_vgrid('soil_depth_energy', ZAXIS_DEPTH_BELOW_LAND, nsoil, &
       & levels  = mids                 (1:nsoil  ),                              &

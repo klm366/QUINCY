@@ -27,7 +27,6 @@ MODULE mo_jsb_config_class
   TYPE t_jsb_model_config
     CHARACTER(len=filename_max)    :: grid_filename
     CHARACTER(len=filename_max)    :: fract_filename
-    LOGICAL                        :: read_from_file
     CHARACTER(len=30)              :: grid_name
     CHARACTER(len=40)              :: usecase
     LOGICAL                        :: use_lakes
@@ -81,7 +80,6 @@ CONTAINS
     LOGICAL                     :: use_lakes
     LOGICAL                     :: use_glacier
     LOGICAL                     :: l_compat401
-    LOGICAL                     :: read_from_file
     CHARACTER(len=filename_max) :: fract_filename
     CHARACTER(len=40)           :: usecase
     CHARACTER(len=10)           :: tpe_scheme
@@ -96,8 +94,7 @@ CONTAINS
       tpe_scheme, &
       hsm_mode, &
       fract_filename, &
-      output_tiles, &
-      read_from_file
+      output_tiles
 
     INTEGER :: nml_handler, nml_unit, istat, i
 
@@ -117,7 +114,6 @@ CONTAINS
     tpe_scheme      = ''
     hsm_mode        = 'simple'
     fract_filename  = 'bc_land_frac.nc'
-    read_from_file  = .TRUE.
     output_tiles(:) = ''
 
     ! Read namelist
@@ -141,7 +137,6 @@ CONTAINS
     model_config%tpe_scheme     = tpe_scheme
     model_config%hsm_mode       = hsm_mode
     model_config%fract_filename = fract_filename
-    model_config%read_from_file = read_from_file
 
     DO i=1,99
       IF (output_tiles(i) == '') EXIT
