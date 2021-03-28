@@ -40,7 +40,7 @@ slmModel="land"
 ##>> sites <<###########################################################################################
 ## select the site-set:
 # forcing data and site info *list.dat for all site-sets: /Net/Groups/BGI/data/Model/SLM1/input/point/ 
-# options: fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin mocabors mocab2 sweden plumber2
+# options: fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin mocabors mocab2 sweden plumber2 eucface
 forcingDataSet="fluxnet"
 # forcing with or without a transient (like spinup) phase before the actual simulation starts
 # options: static transient
@@ -71,6 +71,7 @@ customSiteListFileName=""
 #           [FACE] "DK-AMB" "OR-ELE"  [MANIP] "ES-MaG" "ES-MaT"  [FERT] "HAR-CON_4" "HAR-HIG_4" "HAR-LOW_4" "HAR-CON_5" "SDA-CON" "SDA-ADD"
 #           [CRAINE] "CRA_01" "CRA_02" "CRA_18"  [PHOTACC] "ARC_01" "MON_02" "STR_01"  [SPP_1685] "BBR" "LUE" "VES"
 #           [CONFIN] "FI-Hyy" "FI-Ken"  [MOCABORS] "US-Ha1"  [MOCAB2] "HUR-FOR" "HUR-GRA"  [SWEDEN] "BER" "STI"  [PLUMBER2] "DE-Hai" "HU-Bug"
+#           [EUCFACE] "EUC_05" "EUC_16"
 singleSiteName=""
 
 
@@ -97,7 +98,16 @@ compareSimCRUNCEPvsGFDB="F"
 # forcingMode transient: transient_spinup_years=spinupLengthGFDB  -  does apply only IF $compareSimCRUNCEPvsGFDB == "T"
 spinupLengthGFDB=500
 
-##(3) parameter sensitivity simulations
+##(3) transient simulation with EucFACE site-set
+# spinup and transient simulation for all 12 sites (i.e., scenarios) of the eucface site-set
+# need settings: 'forcingDataSet="eucface"' and 'forcingMode="static"'
+# output info: spinup -> yearly; transient 1700-2011 -> daily; transient 2012-2069 -> timestep
+# when set to "T": all relevant time and output options are set automatically, and simSiteSetSpecific is set to "eucface_trans" (namelist option sim_siteset_specific)
+transientEucFace="F"
+# number of cycling the spinup (1700-1749) before starting the transient simulation (1700-2069)
+spinupCycleTransEucFace=10
+
+##(4) parameter sensitivity simulations
 # you can run a set of sensitivity simulations for one site; T (True) or F (False)
 paramSensitivitySim="F"
 # you can give absolute values ("F") or proportional changes within range [0 < x < 2] ("T")
@@ -274,6 +284,10 @@ while getopts ":e:f:c:m:s:r:y:b:z:n:u:h" opt; do
       echo "   forcingDataSet=plumber2"
       forcingDataSet="plumber2"
       ;;
+    "ef")
+      echo "   forcingDataSet=eucface"
+      forcingDataSet="eucface"
+      ;;
     esac
     ;;
   "c")
@@ -402,6 +416,7 @@ while getopts ":e:f:c:m:s:r:y:b:z:n:u:h" opt; do
     echo "       m2: MOCAB2 (JSM soil moisture development cruncep site)"
     echo "       sw: SWEDEN (site data from The Swedish Throughfall Monitoring Network)"
     echo "       p2: PLUMBER2 (Fluxnet site collection for MIP)"
+    echo "       ef: EUCFACE (12 scenarios for one EucFACE site covering the yrs 1700-2069)"
     echo " -c set the customSiteList"
     echo "    Arguments to -c:"
     echo "       T: using the custom site list"
@@ -547,7 +562,7 @@ fi
 return 0
 }
 # lists to validate against
-validateForcingDataSet="fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin mocabors mocab2 sweden plumber2"
+validateForcingDataSet="fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin mocabors mocab2 sweden plumber2 eucface"
 validateForcingMode="static transient"
 validateCrunSites="all cue spp"
 validateGlobSites="all sub"
@@ -773,6 +788,9 @@ case "$forcingDataSet" in
   echo " Info: the PLUMBER2 forcing data is included in the FLUXNET3/ directory"
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET3/"
   fluxnetTypeSiteSet="T"
+  ;;
+"eucface")
+  siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/EUCFACE/"
   ;;
 esac
 
@@ -1106,6 +1124,12 @@ else
       siteListFileName="plumber2_all_sites_1901-2018_list.dat"
     fi
     ;;
+  "eucface")
+    siteListFileName="eucface_sites_1700-2069_list.dat"
+    echo " "
+    echo " Note: all simulations with the EUCFACE siteset are using the transient forcing 1700-2069 by default."
+    echo " "
+    ;;
   esac
   siteList="$siteDataFold""$siteListFileName"
 fi
@@ -1321,6 +1345,68 @@ else
   transient_simulation_start_year=1901
 fi
 
+## EucFACE transient simulations
+## this section needs to be below the above "check transient" section as it heavily diverts from the usual transient simulations tested above
+yearTimestepOutStart=0  # for fluxnet diagnostics simulations this variable is set per site in run_slm.sh ("$yearForcStart")
+yearTimestepOutLast=0   # for fluxnet diagnostics simulations this variable is set per site in run_slm.sh ("$yearForcLast")
+if [ "$transientEucFace" == "T" ]; then
+  echo " Applying settings for EucFACE transient simulations."
+  echo " The EucFACE transient simulations will use the infrastructure of the fluxnet diagnostics simulations."
+  # basic tests for consistency
+  if [ "$forcingDataSet" != "eucface" ]; then
+    echo "EXIT! site-set is set to: ""$forcingDataSet"" but needs eucface for EucFACE simulations"
+    exit 1
+  fi
+  if [ "$forcingMode" == "transient" ]; then
+    echo "EXIT!  forcingMode needs to be set to static"
+    exit 1
+  fi
+  if [ "$slmModel" == "soil" ]; then
+    echo "EXIT! does not work with the QUINCY soil model, use QUINCY land instead"
+    exit 1
+  fi
+  if [ "$fluxnetTypeTransientTimestepOutput" == "T" ]; then
+    echo "EXIT! does not work with fluxnetTypeTransientTimestepOutput set to T"
+    exit 1
+  fi
+  if [ "$compareSimCRUNCEPvsGFDB" == "T" ]; then
+    echo "EXIT! does not work with compareSimCRUNCEPvsGFDB set to T"
+    exit 1
+  fi
+  if [ "$simSiteSetSpecific" == "none" ] || [ "$simSiteSetSpecific" == "eucface_trans" ]; then
+    # nothing to do
+    echo -n ""
+  else
+    echo "EXIT! simSiteSetSpecific needs to be set to none or eucface_trans"
+    exit 1
+  fi
+  if [ "$spinupCycleTransEucFace" -lt 1 ]; then
+    echo " The option spinupCycleTransEucFace cannot be lower than 1; setting it to 1 now."
+    spinupCycleTransEucFace=1
+  fi
+  # basic settings
+  simSiteSetSpecific="eucface_trans"
+  forcingMode="transient"
+  # time and output settings
+  # spinup run (1700-1749 repeated x times)
+  transient_spinup_start_year=1700
+  transient_spinup_end_year=1749
+  transient_spinup_years=$((50 * $spinupCycleTransEucFace))
+  transient_simulation_start_year=1700
+  output_interval_pool_spinup="yearly"
+  output_interval_flux_spinup="yearly"
+  # transient simulation (1700-2069; output-period changes from daily to timestep output from 2012 on)
+  simulation_length_number=370
+  output_interval_pool="daily"
+  output_interval_flux="daily"
+  output_start_first_day_year=1
+  output_end_last_day_year=370
+  yearTimestepOutStart=2012   # switching from daily to timestep output at the first timestep of 2012
+  yearTimestepOutLast=2069    # timestep output until the end of 2069
+  echo " Spinup is set to: ""$transient_spinup_years"" years."
+  echo " "
+fi
+
 ## an identifier (additional to siteName) for static and transient forcing files -> passed to run_slm.sh (via config file) ##
 case "$forcingDataSet" in
 "fluxnet")
@@ -1452,6 +1538,10 @@ case "$forcingDataSet" in
   else  # valid for land & soil
     forcingModeFileID="_t_"
   fi
+  ;;
+"eucface")
+  # only transient met-forcing is available (no specific ID)
+  forcingModeFileID="_"
   ;;
 esac
 
