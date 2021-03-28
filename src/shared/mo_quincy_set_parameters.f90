@@ -40,7 +40,7 @@ MODULE mo_quincy_set_parameters
   PUBLIC :: set_parameter_lctlib_values_with_list_values    ! it's a subroutine
 
   !-----------------------------------------------------------------------------------------------------
-  !> SLM process parameter values from file parameter_slm_run.list - replacing the values from mo_PROC_constants
+  !> QUINCY process parameter values from file parameter_slm_run.list - replacing the values from mo_PROC_constants
   !! 
   !-----------------------------------------------------------------------------------------------------
   TYPE t_parameters_slm_from_file
@@ -150,492 +150,10 @@ MODULE mo_quincy_set_parameters
     REAL(wp)           :: k_sat_ct
     REAL(wp)           :: k_sat_dt
     REAL(wp)           :: kdiff_sat_max
-    ! VEGETATION_CTL
-    REAL(wp)           :: fresp_growth
-    REAL(wp)           :: fmaint_rate_base
-    REAL(wp)           :: fmaint_rate_wood
-    REAL(wp)           :: t_maint_k1
-    REAL(wp)           :: t_maint_k2
-    REAL(wp)           :: t_maint_k3
-    REAL(wp)           :: f_resp_acclim
-    REAL(wp)           :: t_acclim_zero
-    REAL(wp)           :: k0_fn_pepc_C3
-    REAL(wp)           :: k0_fn_pepc_C4
-    REAL(wp)           :: jmax2vcmax_C3
-    REAL(wp)           :: jmax2vcmax_C4
-    REAL(wp)           :: tau_labile
-    REAL(wp)           :: lambda_labile_temp
-    REAL(wp)           :: k_labile_temp
-    REAL(wp)           :: lambda_labile_theta
-    REAL(wp)           :: k_labile_theta
-    REAL(wp)           :: lambda_phiphen
-    REAL(wp)           :: k_phiphen
-    REAL(wp)           :: lambda_phimaint
-    REAL(wp)           :: k_phimaint
-    REAL(wp)           :: lambda_phimaint_nut
-    REAL(wp)           :: k_phimaint_nut
-    REAL(wp)           :: lambda_phistore
-    REAL(wp)           :: k_phistore
-    REAL(wp)           :: knut_labile
-    REAL(wp)           :: lambda_sinklim_ps
-    REAL(wp)           :: k_sinklim_ps
-    REAL(wp)           :: k_cnp_sinklim_ps
-    REAL(wp)           :: beta_sinklim_ps_min
-    REAL(wp)           :: fstore_leaf_max
-    REAL(wp)           :: fstore_fine_root_max
-    REAL(wp)           :: fstore_sap_wood_max
-    REAL(wp)           :: k_phi_interact
-    REAL(wp)           :: resorp_fract_leaf
-    REAL(wp)           :: resorp_fract_wood
-    REAL(wp)           :: root2leaf_cn
-    REAL(wp)           :: wood2leaf_cn
-    REAL(wp)           :: root2leaf_np
-    REAL(wp)           :: wood2leaf_np
-    REAL(wp)           :: tau_nutrient_recycling
-    REAL(wp)           :: kappa_f_demand_nc
-    REAL(wp)           :: kappa_f_demand_pn
-    REAL(wp)           :: k_f_demand
-    REAL(wp)           :: cost_n_fixation_max
-    REAL(wp)           :: cost_n_fixation_min
-    REAL(wp)           :: k1_temp_bnf
-    REAL(wp)           :: k2_temp_bnf
-    REAL(wp)           :: k3_temp_bnf
-    REAL(wp)           :: k4_temp_bnf
-    REAL(wp)           :: transform_cost_nh4
-    REAL(wp)           :: transform_cost_no3
-    REAL(wp)           :: transform_cost_org
-    REAL(wp)           :: f_nacq_nh4
-    REAL(wp)           :: f_nacq_no3
-    REAL(wp)           :: vmax_bnf
-    REAL(wp)           :: k_bnf
-    REAL(wp)           :: eta_nfixation
-    REAL(wp)           :: k0_fn_chl_C3
-    REAL(wp)           :: k0_fn_chl_C4
-    REAL(wp)           :: k1_fn_chl_C3
-    REAL(wp)           :: k1_fn_chl_C4
-    REAL(wp)           :: kfn_chl
-    REAL(wp)           :: min_lai
-    REAL(wp)           :: target_lai_max
-    REAL(wp)           :: max_leaf_shedding_rate
-    REAL(wp)           :: k_leafon_canopy
-    REAL(wp)           :: background_mort_rate_tree
-    REAL(wp)           :: background_mort_rate_grass
-    REAL(wp)           :: lambda_mort_light
-    REAL(wp)           :: k_mort_light
-    REAL(wp)           :: lambda_est_temp
-    REAL(wp)           :: k_est_temp
-    REAL(wp)           :: lambda_est_moist
-    REAL(wp)           :: k_est_moist
-    REAL(wp)           :: wood_extraction_rate
-    REAL(wp)           :: k1_mort_greff
-    REAL(wp)           :: k2_mort_greff
-    REAL(wp)           :: k3_mort_greff
-    REAL(wp)           :: min_greff
-    REAL(wp)           :: max_crown_area
-    REAL(wp)           :: min_diameter
-    REAL(wp)           :: k_crown_area
-    REAL(wp)           :: k_rp
-    REAL(wp)           :: k_fpc
-    REAL(wp)           :: fpc_max
-    REAL(wp)           :: carbon_per_dryweight_leaf
-    REAL(wp)           :: min_height
-    REAL(wp)           :: sm2lm_grass
-    REAL(wp)           :: lambda_fruit_alloc
-    REAL(wp)           :: k1_fruit_alloc
-    REAL(wp)           :: k3_fruit_alloc
-    REAL(wp)           :: k4_fruit_alloc
-    REAL(wp)           :: w_root_lim_max
-    REAL(wp)           :: leaf2root_min_ratio
-    REAL(wp)           :: leaf2root_max_ratio
-    REAL(wp)           :: delta_n_fraction
-    REAL(wp)           :: delta_n_leaf
-    REAL(wp)           :: f_myc_exudation_max
-    REAL(wp)           :: f_mycorrhization_max
-    ! SB_CTL
-    REAL(wp)           :: tau_soluable_litter
-    REAL(wp)           :: tau_metabolic_litter
-    REAL(wp)           :: tau_structural_litter
-    REAL(wp)           :: tau_woody_litter
-    REAL(wp)           :: tau_fast
-    REAL(wp)           :: tau_slow
-    REAL(wp)           :: tau_biomineralisation
-    REAL(wp)           :: t_ref_tresponse
-    REAL(wp)           :: ea_depolymerisation
-    REAL(wp)           :: ea_mic_uptake
-    REAL(wp)           :: ea_sorption
-    REAL(wp)           :: ea_desorption
-    REAL(wp)           :: ea_hsc
-    REAL(wp)           :: ea_decomposition
-    REAL(wp)           :: ed_decomposition
-    REAL(wp)           :: t_ref_decomposition
-    REAL(wp)           :: k1_afps
-    REAL(wp)           :: k2_afps
-    REAL(wp)           :: kmr_depolymerisation
-    REAL(wp)           :: kmr_mic_uptake
-    REAL(wp)           :: kmr_hsc
-    REAL(wp)           :: kmr_sorption
-    REAL(wp)           :: kmr_decomposition
-    REAL(wp)           :: k_diff_org
-    REAL(wp)           :: rho_bulk_org
-    REAL(wp)           :: carbon_per_dryweight_SOM
-    REAL(wp)           :: k_adsorpt_dom
-    REAL(wp)           :: k_desorpt_dom
-    REAL(wp)           :: k_adsorpt_det
-    REAL(wp)           :: k_desorpt_det
-    REAL(wp)           :: k_adsorpt_nh4
-    REAL(wp)           :: k_desorpt_nh4
-    REAL(wp)           :: k_adsorpt_po4
-    REAL(wp)           :: k_desorpt_po4
-    REAL(wp)           :: k_adsorpt_f_po4
-    REAL(wp)           :: k_desorpt_f_po4
-    REAL(wp)           :: microbial_cn
-    REAL(wp)           :: microbial_np
-    REAL(wp)           :: microbial_nue
-    REAL(wp)           :: microbial_pue
-    REAL(wp)           :: microbial_cue
-    REAL(wp)           :: microbial_cue_max
-    REAL(wp)           :: microbial_cue_min
-    REAL(wp)           :: frac_woody2dec_litter
-    REAL(wp)           :: frac_litter2fast_som
-    REAL(wp)           :: frac_fast2slow_som
-    REAL(wp)           :: frac_slow2fast_som
-    REAL(wp)           :: fc_woody2polymeric
-    REAL(wp)           :: fc_soluable2dom
-    REAL(wp)           :: k_mort_microbial
-    REAL(wp)           :: min_mic_biomass
-    REAL(wp)           :: vmax_mic_uptake
-    REAL(wp)           :: km_mic_uptake
-    REAL(wp)           :: km_depolymerisation
-    REAL(wp)           :: vmax_depolymerisation_residue
-    REAL(wp)           :: vmax_depolymerisation_litter
-    REAL(wp)           :: f_soluable_residue
-    REAL(wp)           :: f_soluable_leaf
-    REAL(wp)           :: f_soluable_fine_root
-    REAL(wp)           :: f_soluable_fruit
-    REAL(wp)           :: f_soluable_seed_bed
-    REAL(wp)           :: fc_soluable_max
-    REAL(wp)           :: k_fc_soluable
-    REAL(wp)           :: k_fn_soluable
-    REAL(wp)           :: k_fp_soluable
-    REAL(wp)           :: lc_leaf_max
-    REAL(wp)           :: lc_leaf2sla
-    REAL(wp)           :: lc_fine_root
-    REAL(wp)           :: lc_coarse_root
-    REAL(wp)           :: lc_woody_litter
-    REAL(wp)           :: lc_fruit
-    REAL(wp)           :: lc_seed_bed
-    REAL(wp)           :: mycorrhiza_cue
-    REAL(wp)           :: mycorrhiza_cn
-    REAL(wp)           :: mycorrhiza_np
-    REAL(wp)           :: f_maxresp_myc
-    REAL(wp)           :: f_surface_myc2fineroot
-    REAL(wp)           :: km1_up_nh4
-    REAL(wp)           :: km2_up_nh4
-    REAL(wp)           :: km1_up_no3
-    REAL(wp)           :: km2_up_no3
-    REAL(wp)           :: km1_up_po4
-    REAL(wp)           :: km2_up_po4
-    REAL(wp)           :: vmax_mic_uptake_nh4
-    REAL(wp)           :: km_mic_uptake_nh4
-    REAL(wp)           :: vmax_mic_uptake_no3
-    REAL(wp)           :: km_mic_uptake_no3
-    REAL(wp)           :: f_mic_carrier_n
-    REAL(wp)           :: vmax_plant_uptake_nh4
-    REAL(wp)           :: km_plant_uptake_nh4
-    REAL(wp)           :: vmax_plant_uptake_no3
-    REAL(wp)           :: km_plant_uptake_no3
-    REAL(wp)           :: f_plant_carrier_n
-    REAL(wp)           :: vmax_mic_uptake_po4
-    REAL(wp)           :: km_mic_uptake_po4
-    REAL(wp)           :: vmax_plant_uptake_po4
-    REAL(wp)           :: km_plant_uptake_po4
-    REAL(wp)           :: k_mic_uptake_nh4
-    REAL(wp)           :: k_plant_uptake_nh4
-    REAL(wp)           :: k_mic_uptake_no3
-    REAL(wp)           :: k_plant_uptake_no3
-    REAL(wp)           :: k_mic_uptake_po4
-    REAL(wp)           :: k_plant_uptake_po4
-    REAL(wp)           :: f_mic_carrier_po4
-    REAL(wp)           :: f_plant_carrier_po4
-    REAL(wp)           :: vmax_nitrification_nh4
-    REAL(wp)           :: km_nitrification_nh4
-    REAL(wp)           :: f_nit_carrier_nh4
-    REAL(wp)           :: vmax_denitrification_no3
-    REAL(wp)           :: km_denit_no3
-    REAL(wp)           :: f_denit_carrier_no3
-    REAL(wp)           :: qmax_po4_mineral
-    REAL(wp)           :: qmax_nh4_clay
-    REAL(wp)           :: km_adsorpt_mineral_po4
-    REAL(wp)           :: km_adsorpt_OM_po4
-    REAL(wp)           :: ea_nitrification
-    REAL(wp)           :: ed_nitrification
-    REAL(wp)           :: t_opt_nitrification
-    REAL(wp)           :: f_nit_noy
-    REAL(wp)           :: f_nit_n2o
-    REAL(wp)           :: ea_denitrification
-    REAL(wp)           :: vmax_nitrification
-    REAL(wp)           :: vmax_denitrification
-    REAL(wp)           :: km_denitrification_c
-    REAL(wp)           :: km_denitrification_no3
-    REAL(wp)           :: f_denit_noy
-    REAL(wp)           :: f_denit_n2o
-    REAL(wp)           :: ea_gasdiffusion
-    REAL(wp)           :: lambda_anvf
-    REAL(wp)           :: k_anvf
-    REAL(wp)           :: floss_nmin
-    REAL(wp)           :: fnit_nmin
-    REAL(wp)           :: fleach_nh4
-    REAL(wp)           :: fleach_po4
-    REAL(wp)           :: soil_n_threshold_bnf
-    REAL(wp)           :: standard_bnf_max_rate
-    REAL(wp)           :: eta_mic_uptake_nh4
-    REAL(wp)           :: eta_mic_uptake_no3
-    REAL(wp)           :: eta_plant_uptake_nh4
-    REAL(wp)           :: eta_plant_uptake_no3
-    REAL(wp)           :: eta_nitrification
-    REAL(wp)           :: eta_nitrate_production
-    REAL(wp)           :: eta_denitrification
-    REAL(wp)           :: eta_ammonification
-    REAL(wp)           :: eta_volatilisation_nh3
-    REAL(wp)           :: k_weath_mineral
-    REAL(wp)           :: eq_sorp_mineral_po4
-    REAL(wp)           :: k_occlude_po4
-    REAL(wp)           :: vmax_biochem_po4
-    REAL(wp)           :: km_mic_biochem_po4
-    REAL(wp)           :: km_dip_biochem_po4
-    REAL(wp)           :: km_rootc_biochem_po4
-    REAL(wp)           :: km_rootc_weath_po4
-    REAL(wp)           :: km_root_enzyme_weath_po4
-    REAL(wp)           :: biomin_thres_pc
-    REAL(wp)           :: fc_p_res2dom
-    REAL(wp)           :: fc_n_res2dom
-    REAL(wp)           :: f_norg_limit
-    REAL(wp)           :: f_tau_myc
-    REAL(wp)           :: km_priming
-    REAL(wp)           :: km_up_org
-    REAL(wp)           :: myc_root_coverage_max
-    REAL(wp)           :: resp_priming
-    REAL(wp)           :: vmax_uptake_norg
-    REAL(wp)           :: k_fast_som_cn_max
-    REAL(wp)           :: k_fast_som_cn_min
-    REAL(wp)           :: f_fast_som_cn
-    REAL(wp)           :: k_slow_som_cn
-    REAL(wp)           :: k_fast_som_np 
-    REAL(wp)           :: k_slow_som_np 
-  CONTAINS
-    PROCEDURE :: read_param => read_parameter_slm_list
-    PROCEDURE :: set_param  => set_parameter_slm_values_with_list_values
-  END TYPE t_parameters_slm_from_file
-
-  TYPE(t_parameters_slm_from_file), SAVE :: parameters_slm_from_file
-
-
-  !-----------------------------------------------------------------------------------------------------
-  !> lctlib parameter values from file parameter_slm_run.list - replacing the values from lctlib_slm_*.def file
-  !! 
-  !-----------------------------------------------------------------------------------------------------
-  TYPE t_parameters_lctlib_from_file
-    !LOGICAL            :: active   
-    CHARACTER(LEN=30)   :: filename = 'parameter_slm_run.list'                 ! filename 
-
-    REAL(wp)            :: sla
-    REAL(wp)            :: sigma_vis
-    REAL(wp)            :: sigma_nir
-    REAL(wp)            :: omega_clumping
-    REAL(wp)            :: crown_shape_factor
-    REAL(wp)            :: cn_leaf
-    REAL(wp)            :: cn_leaf_min
-    REAL(wp)            :: cn_leaf_max
-    REAL(wp)            :: np_leaf
-    REAL(wp)            :: np_leaf_min
-    REAL(wp)            :: np_leaf_max
-    REAL(wp)            :: k0_fn_struc
-    REAL(wp)            :: fn_oth_min
-    REAL(wp)            :: t_jmax_opt
-    REAL(wp)            :: t_jmax_omega
-    REAL(wp)            :: g0
-    REAL(wp)            :: g1_medlyn
-    REAL(wp)            :: g1_bberry
-    REAL(wp)            :: gmin
-    ! turnover times
-    REAL(wp)            :: tau_leaf
-    REAL(wp)            :: tau_fine_root
-    REAL(wp)            :: tau_coarse_root
-    REAL(wp)            :: tau_branch
-    REAL(wp)            :: tau_sap_wood
-    REAL(wp)            :: tau_fruit
-    REAL(wp)            :: tau_seed_litter
-    REAL(wp)            :: tau_seed_est
-    REAL(wp)            :: tau_mycorrhiza
-    ! N uptake parameters
-    REAL(wp)            :: vmax_uptake_n
-    REAL(wp)            :: vmax_uptake_p
-    REAL(wp)            :: bnf_base
-    ! Vegetation dynamics parameters
-    REAL(wp)            :: lambda_est_light
-    REAL(wp)            :: k_est_light
-    REAL(wp)            :: seed_size
-    ! Phenology parameters
-    REAL(wp)            :: beta_soil_flush
-    REAL(wp)            :: beta_soil_senescence
-    REAL(wp)            :: gdd_req_max
-    REAL(wp)            :: k_gdd_dormance
-    REAL(wp)            :: t_air_senescence
-    REAL(wp)            :: min_leaf_age
-    ! Allocation parameters
-    REAL(wp)            :: frac_sapwood_branch
-    REAL(wp)            :: wood_density
-    REAL(wp)            :: k_latosa
-    REAL(wp)            :: k_crtos
-    REAL(wp)            :: k_rtos
-    REAL(wp)            :: k2_fruit_alloc
-    REAL(wp)            :: allom_k1
-    REAL(wp)            :: allom_k2
-    REAL(wp)            :: phi_leaf_min
-    REAL(wp)            :: k_root
-    REAL(wp)            :: k_sapwood
-    REAL(wp)            :: c0_allom
-    REAL(wp)            :: fstore_target
-    ! Soil
-    REAL(wp)            :: k_root_dist
-
-  END TYPE t_parameters_lctlib_from_file
-
-  TYPE(t_parameters_lctlib_from_file) :: param_pft1_from_file,  &
-                                         param_pft2_from_file,  &
-                                         param_pft3_from_file,  &
-                                         param_pft4_from_file,  &
-                                         param_pft5_from_file,  &
-                                         param_pft6_from_file,  &
-                                         param_pft7_from_file,  &
-                                         param_pft8_from_file
-
-  INTEGER, PARAMETER          :: lun_param_out = 711
-
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_quincy_set_parameters'
-
-CONTAINS
-
-
-  !-----------------------------------------------------------------------------------------------------
-  !> read SLM parameter values from file
-  !! 
-  !! 
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE read_parameter_slm_list(this)
-
-    USE mo_namelist,           ONLY: open_nml, POSITIONED, position_nml, close_nml  ! read model options from file
-
-    IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
-    CLASS(t_parameters_slm_from_file), INTENT(inout) :: this
-    ! ---------------------------
-    ! 0.2 Local
-    ! ASSIMILATION_CTL
-    REAL(wp)           :: jmax2n
-    REAL(wp)           :: vcmax2n
-    REAL(wp)           :: pepc2n
-    REAL(wp)           :: chl2n
-    REAL(wp)           :: k1_fn_struc
-    REAL(wp)           :: E0kc
-    REAL(wp)           :: E1kc
-    REAL(wp)           :: E0ko
-    REAL(wp)           :: E1ko
-    REAL(wp)           :: E0pcp
-    REAL(wp)           :: E1pcp
-    REAL(wp)           :: E0v
-    REAL(wp)           :: E1v
-    REAL(wp)           :: t_jmax_offset
-    REAL(wp)           :: t_jmax_slope
-    REAL(wp)           :: t_jmax_opt_min
-    REAL(wp)           :: t_jmax_opt_max
-    REAL(wp)           :: Tref_pepc
-    REAL(wp)           :: Tbase_pepc
-    REAL(wp)           :: alpha_i
-    REAL(wp)           :: pO2
-    REAL(wp)           :: CiCa_default_C3
-    REAL(wp)           :: CiCa_default_C4
-    REAL(wp)           :: ps_it_max
-    REAL(wp)           :: ci_max
-    REAL(wp)           :: Dwv2co2_air
-    REAL(wp)           :: Dwv2co2_turb
-    REAL(wp)           :: discr_ps_a_C13
-    REAL(wp)           :: discr_ps_b_C13
-    REAL(wp)           :: discr_ps_c_C13
-    REAL(wp)           :: discr_ps_a_C14
-    REAL(wp)           :: discr_ps_b_C14
-    REAL(wp)           :: discr_ps_c_C14
-    REAL(wp)           :: discr_ps_phi
-    REAL(wp)           :: ka
-    REAL(wp)           :: kn
-    REAL(wp)           :: soa_b
-    REAL(wp)           :: soa_t_s
-    ! PHENOLOGY_CTL
-    REAL(wp)           :: gdd_t_air_threshold
-    ! RADIATION_CTL
-    REAL(wp)           :: kbl0_vis
-    REAL(wp)           :: kdf0_vis
-    REAL(wp)           :: kbl0_nir
-    REAL(wp)           :: kdf0_nir
-    REAL(wp)           :: rho2sbeta
-    REAL(wp)           :: k_csf
-    REAL(wp)           :: min_cos_zenith_angle_rad
-    REAL(wp)           :: def_alb_vis_soil
-    REAL(wp)           :: def_alb_nir_soil
-    REAL(wp)           :: rad2ppfd
-    REAL(wp)           :: rfr_ratio_toc
-    REAL(wp)           :: k_r2fr_chl
-    ! SHARED_CTL
-    REAL(wp)           :: mavg_period_weekly
-    REAL(wp)           :: mavg_period_monthly
-    REAL(wp)           :: mavg_period_yearly
-    REAL(wp)           :: mavg_period_tsoa
-    REAL(wp)           :: mavg_period_tuptake
-    REAL(wp)           :: mavg_period_tlabile
-    REAL(wp)           :: mavg_period_tphen
-    REAL(wp)           :: mavg_period_tenzyme
-    REAL(wp)           :: mavg_period_tfrac
-    REAL(wp)           :: mavg_period_tcnl
-    REAL(wp)           :: mavg_period_talloc
-    REAL(wp)           :: mavg_period_talloc_dynamic
-    REAL(wp)           :: mavg_period_tacclim
-    REAL(wp)           :: mavg_period_tmic
-    REAL(wp)           :: mavg_period_tgrowth
-    REAL(wp)           :: mavg_period_tvegdyn
-    ! SSE_CTL
-    REAL(wp)           :: soil_heat_cap
-    REAL(wp)           :: soil_therm_cond
-    REAL(wp)           :: InterceptionEfficiency
-    REAL(wp)           :: w_skin_max
-    REAL(wp)           :: drain_frac
-    REAL(wp)           :: fdrain_runoff
-    REAL(wp)           :: height_wind
-    REAL(wp)           :: wpot_pwp
-    REAL(wp)           :: wpot_fc
-    REAL(wp)           :: wpot_min
-    REAL(wp)           :: k_pwp_a
-    REAL(wp)           :: k_pwp_c
-    REAL(wp)           :: k_pwp_s
-    REAL(wp)           :: k_pwp_sc
-    REAL(wp)           :: k_pwp_at
-    REAL(wp)           :: k_pwp_bt
-    REAL(wp)           :: k_fc_a
-    REAL(wp)           :: k_fc_c
-    REAL(wp)           :: k_fc_s
-    REAL(wp)           :: k_fc_sc
-    REAL(wp)           :: k_fc_at
-    REAL(wp)           :: k_fc_bt
-    REAL(wp)           :: k_fc_ct
-    REAL(wp)           :: k_sat_a
-    REAL(wp)           :: k_sat_c
-    REAL(wp)           :: k_sat_s
-    REAL(wp)           :: k_sat_sc
-    REAL(wp)           :: k_sat_at
-    REAL(wp)           :: k_sat_bt
-    REAL(wp)           :: k_sat_ct
-    REAL(wp)           :: k_sat_dt
-    REAL(wp)           :: kdiff_sat_max
+    REAL(wp)           :: f_psensi_soil_sand
+    REAL(wp)           :: f_psensi_soil_silt
+    REAL(wp)           :: f_psensi_soil_awc_prescribe
+    REAL(wp)           :: f_psensi_bulk_density
     ! VEGETATION_CTL
     REAL(wp)           :: fresp_growth
     REAL(wp)           :: fmaint_rate_base
@@ -908,6 +426,508 @@ CONTAINS
     REAL(wp)           :: k_slow_som_cn
     REAL(wp)           :: k_fast_som_np
     REAL(wp)           :: k_slow_som_np
+    REAL(wp)           :: f_psensi_soil_p_depth
+    REAL(wp)           :: f_psensi_soil_p_labile
+    REAL(wp)           :: f_psensi_soil_p_slow
+    REAL(wp)           :: f_psensi_soil_p_occluded
+    REAL(wp)           :: f_psensi_soil_p_primary
+    REAL(wp)           :: f_psensi_qmax_org_fine_particle
+  CONTAINS
+    PROCEDURE :: read_param => read_parameter_slm_list
+    PROCEDURE :: set_param  => set_parameter_slm_values_with_list_values
+  END TYPE t_parameters_slm_from_file
+
+  TYPE(t_parameters_slm_from_file), SAVE :: parameters_slm_from_file
+
+
+  !-----------------------------------------------------------------------------------------------------
+  !> lctlib parameter values from file parameter_slm_run.list - replacing the values from lctlib_slm_*.def file
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  TYPE t_parameters_lctlib_from_file
+    !LOGICAL            :: active   
+    CHARACTER(LEN=30)   :: filename = 'parameter_slm_run.list'                 ! filename 
+
+    REAL(wp)            :: sla
+    REAL(wp)            :: sigma_vis
+    REAL(wp)            :: sigma_nir
+    REAL(wp)            :: omega_clumping
+    REAL(wp)            :: crown_shape_factor
+    REAL(wp)            :: cn_leaf
+    REAL(wp)            :: cn_leaf_min
+    REAL(wp)            :: cn_leaf_max
+    REAL(wp)            :: np_leaf
+    REAL(wp)            :: np_leaf_min
+    REAL(wp)            :: np_leaf_max
+    REAL(wp)            :: k0_fn_struc
+    REAL(wp)            :: fn_oth_min
+    REAL(wp)            :: t_jmax_opt
+    REAL(wp)            :: t_jmax_omega
+    REAL(wp)            :: g0
+    REAL(wp)            :: g1_medlyn
+    REAL(wp)            :: g1_bberry
+    REAL(wp)            :: gmin
+    ! turnover times
+    REAL(wp)            :: tau_leaf
+    REAL(wp)            :: tau_fine_root
+    REAL(wp)            :: tau_coarse_root
+    REAL(wp)            :: tau_branch
+    REAL(wp)            :: tau_sap_wood
+    REAL(wp)            :: tau_fruit
+    REAL(wp)            :: tau_seed_litter
+    REAL(wp)            :: tau_seed_est
+    REAL(wp)            :: tau_mycorrhiza
+    ! N uptake parameters
+    REAL(wp)            :: vmax_uptake_n
+    REAL(wp)            :: vmax_uptake_p
+    REAL(wp)            :: bnf_base
+    ! Vegetation dynamics parameters
+    REAL(wp)            :: lambda_est_light
+    REAL(wp)            :: k_est_light
+    REAL(wp)            :: seed_size
+    ! Phenology parameters
+    REAL(wp)            :: beta_soil_flush
+    REAL(wp)            :: beta_soil_senescence
+    REAL(wp)            :: gdd_req_max
+    REAL(wp)            :: k_gdd_dormance
+    REAL(wp)            :: t_air_senescence
+    REAL(wp)            :: min_leaf_age
+    ! Allocation parameters
+    REAL(wp)            :: frac_sapwood_branch
+    REAL(wp)            :: wood_density
+    REAL(wp)            :: k_latosa
+    REAL(wp)            :: k_crtos
+    REAL(wp)            :: k_rtos
+    REAL(wp)            :: k2_fruit_alloc
+    REAL(wp)            :: allom_k1
+    REAL(wp)            :: allom_k2
+    REAL(wp)            :: phi_leaf_min
+    REAL(wp)            :: k_root
+    REAL(wp)            :: k_sapwood
+    REAL(wp)            :: c0_allom
+    REAL(wp)            :: fstore_target
+    ! Soil
+    REAL(wp)            :: k_root_dist
+
+  END TYPE t_parameters_lctlib_from_file
+
+  TYPE(t_parameters_lctlib_from_file) :: param_pft1_from_file,  &
+                                         param_pft2_from_file,  &
+                                         param_pft3_from_file,  &
+                                         param_pft4_from_file,  &
+                                         param_pft5_from_file,  &
+                                         param_pft6_from_file,  &
+                                         param_pft7_from_file,  &
+                                         param_pft8_from_file
+
+  INTEGER, PARAMETER          :: lun_param_out = 711
+
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_quincy_set_parameters'
+
+CONTAINS
+
+
+  !-----------------------------------------------------------------------------------------------------
+  !> read SLM parameter values from file
+  !! 
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE read_parameter_slm_list(this)
+
+    USE mo_namelist,           ONLY: open_nml, POSITIONED, position_nml, close_nml  ! read model options from file
+
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut
+    CLASS(t_parameters_slm_from_file), INTENT(inout) :: this
+    ! ---------------------------
+    ! 0.2 Local
+    ! ASSIMILATION_CTL
+    REAL(wp)           :: jmax2n
+    REAL(wp)           :: vcmax2n
+    REAL(wp)           :: pepc2n
+    REAL(wp)           :: chl2n
+    REAL(wp)           :: k1_fn_struc
+    REAL(wp)           :: E0kc
+    REAL(wp)           :: E1kc
+    REAL(wp)           :: E0ko
+    REAL(wp)           :: E1ko
+    REAL(wp)           :: E0pcp
+    REAL(wp)           :: E1pcp
+    REAL(wp)           :: E0v
+    REAL(wp)           :: E1v
+    REAL(wp)           :: t_jmax_offset
+    REAL(wp)           :: t_jmax_slope
+    REAL(wp)           :: t_jmax_opt_min
+    REAL(wp)           :: t_jmax_opt_max
+    REAL(wp)           :: Tref_pepc
+    REAL(wp)           :: Tbase_pepc
+    REAL(wp)           :: alpha_i
+    REAL(wp)           :: pO2
+    REAL(wp)           :: CiCa_default_C3
+    REAL(wp)           :: CiCa_default_C4
+    REAL(wp)           :: ps_it_max
+    REAL(wp)           :: ci_max
+    REAL(wp)           :: Dwv2co2_air
+    REAL(wp)           :: Dwv2co2_turb
+    REAL(wp)           :: discr_ps_a_C13
+    REAL(wp)           :: discr_ps_b_C13
+    REAL(wp)           :: discr_ps_c_C13
+    REAL(wp)           :: discr_ps_a_C14
+    REAL(wp)           :: discr_ps_b_C14
+    REAL(wp)           :: discr_ps_c_C14
+    REAL(wp)           :: discr_ps_phi
+    REAL(wp)           :: ka
+    REAL(wp)           :: kn
+    REAL(wp)           :: soa_b
+    REAL(wp)           :: soa_t_s
+    ! PHENOLOGY_CTL
+    REAL(wp)           :: gdd_t_air_threshold
+    ! RADIATION_CTL
+    REAL(wp)           :: kbl0_vis
+    REAL(wp)           :: kdf0_vis
+    REAL(wp)           :: kbl0_nir
+    REAL(wp)           :: kdf0_nir
+    REAL(wp)           :: rho2sbeta
+    REAL(wp)           :: k_csf
+    REAL(wp)           :: min_cos_zenith_angle_rad
+    REAL(wp)           :: def_alb_vis_soil
+    REAL(wp)           :: def_alb_nir_soil
+    REAL(wp)           :: rad2ppfd
+    REAL(wp)           :: rfr_ratio_toc
+    REAL(wp)           :: k_r2fr_chl
+    ! SHARED_CTL
+    REAL(wp)           :: mavg_period_weekly
+    REAL(wp)           :: mavg_period_monthly
+    REAL(wp)           :: mavg_period_yearly
+    REAL(wp)           :: mavg_period_tsoa
+    REAL(wp)           :: mavg_period_tuptake
+    REAL(wp)           :: mavg_period_tlabile
+    REAL(wp)           :: mavg_period_tphen
+    REAL(wp)           :: mavg_period_tenzyme
+    REAL(wp)           :: mavg_period_tfrac
+    REAL(wp)           :: mavg_period_tcnl
+    REAL(wp)           :: mavg_period_talloc
+    REAL(wp)           :: mavg_period_talloc_dynamic
+    REAL(wp)           :: mavg_period_tacclim
+    REAL(wp)           :: mavg_period_tmic
+    REAL(wp)           :: mavg_period_tgrowth
+    REAL(wp)           :: mavg_period_tvegdyn
+    ! SSE_CTL
+    REAL(wp)           :: soil_heat_cap
+    REAL(wp)           :: soil_therm_cond
+    REAL(wp)           :: InterceptionEfficiency
+    REAL(wp)           :: w_skin_max
+    REAL(wp)           :: drain_frac
+    REAL(wp)           :: fdrain_runoff
+    REAL(wp)           :: height_wind
+    REAL(wp)           :: wpot_pwp
+    REAL(wp)           :: wpot_fc
+    REAL(wp)           :: wpot_min
+    REAL(wp)           :: k_pwp_a
+    REAL(wp)           :: k_pwp_c
+    REAL(wp)           :: k_pwp_s
+    REAL(wp)           :: k_pwp_sc
+    REAL(wp)           :: k_pwp_at
+    REAL(wp)           :: k_pwp_bt
+    REAL(wp)           :: k_fc_a
+    REAL(wp)           :: k_fc_c
+    REAL(wp)           :: k_fc_s
+    REAL(wp)           :: k_fc_sc
+    REAL(wp)           :: k_fc_at
+    REAL(wp)           :: k_fc_bt
+    REAL(wp)           :: k_fc_ct
+    REAL(wp)           :: k_sat_a
+    REAL(wp)           :: k_sat_c
+    REAL(wp)           :: k_sat_s
+    REAL(wp)           :: k_sat_sc
+    REAL(wp)           :: k_sat_at
+    REAL(wp)           :: k_sat_bt
+    REAL(wp)           :: k_sat_ct
+    REAL(wp)           :: k_sat_dt
+    REAL(wp)           :: kdiff_sat_max
+    REAL(wp)           :: f_psensi_soil_sand
+    REAL(wp)           :: f_psensi_soil_silt
+    REAL(wp)           :: f_psensi_soil_awc_prescribe
+    REAL(wp)           :: f_psensi_bulk_density
+    ! VEGETATION_CTL
+    REAL(wp)           :: fresp_growth
+    REAL(wp)           :: fmaint_rate_base
+    REAL(wp)           :: fmaint_rate_wood
+    REAL(wp)           :: t_maint_k1
+    REAL(wp)           :: t_maint_k2
+    REAL(wp)           :: t_maint_k3
+    REAL(wp)           :: f_resp_acclim
+    REAL(wp)           :: t_acclim_zero
+    REAL(wp)           :: k0_fn_pepc_C3
+    REAL(wp)           :: k0_fn_pepc_C4
+    REAL(wp)           :: jmax2vcmax_C3
+    REAL(wp)           :: jmax2vcmax_C4
+    REAL(wp)           :: tau_labile
+    REAL(wp)           :: lambda_labile_temp
+    REAL(wp)           :: k_labile_temp
+    REAL(wp)           :: lambda_labile_theta
+    REAL(wp)           :: k_labile_theta
+    REAL(wp)           :: lambda_phiphen
+    REAL(wp)           :: k_phiphen
+    REAL(wp)           :: lambda_phimaint
+    REAL(wp)           :: k_phimaint
+    REAL(wp)           :: lambda_phimaint_nut
+    REAL(wp)           :: k_phimaint_nut
+    REAL(wp)           :: lambda_phistore
+    REAL(wp)           :: k_phistore
+    REAL(wp)           :: knut_labile
+    REAL(wp)           :: lambda_sinklim_ps
+    REAL(wp)           :: k_sinklim_ps
+    REAL(wp)           :: k_cnp_sinklim_ps
+    REAL(wp)           :: beta_sinklim_ps_min
+    REAL(wp)           :: fstore_leaf_max
+    REAL(wp)           :: fstore_fine_root_max
+    REAL(wp)           :: fstore_sap_wood_max
+    REAL(wp)           :: k_phi_interact
+    REAL(wp)           :: resorp_fract_leaf
+    REAL(wp)           :: resorp_fract_wood
+    REAL(wp)           :: root2leaf_cn
+    REAL(wp)           :: wood2leaf_cn
+    REAL(wp)           :: root2leaf_np
+    REAL(wp)           :: wood2leaf_np
+    REAL(wp)           :: tau_nutrient_recycling
+    REAL(wp)           :: kappa_f_demand_nc
+    REAL(wp)           :: kappa_f_demand_pn
+    REAL(wp)           :: k_f_demand
+    REAL(wp)           :: cost_n_fixation_max
+    REAL(wp)           :: cost_n_fixation_min
+    REAL(wp)           :: k1_temp_bnf
+    REAL(wp)           :: k2_temp_bnf
+    REAL(wp)           :: k3_temp_bnf
+    REAL(wp)           :: k4_temp_bnf
+    REAL(wp)           :: transform_cost_nh4
+    REAL(wp)           :: transform_cost_no3
+    REAL(wp)           :: transform_cost_org
+    REAL(wp)           :: f_nacq_nh4
+    REAL(wp)           :: f_nacq_no3
+    REAL(wp)           :: vmax_bnf
+    REAL(wp)           :: k_bnf
+    REAL(wp)           :: eta_nfixation
+    REAL(wp)           :: k0_fn_chl_C3
+    REAL(wp)           :: k0_fn_chl_C4
+    REAL(wp)           :: k1_fn_chl_C3
+    REAL(wp)           :: k1_fn_chl_C4
+    REAL(wp)           :: kfn_chl
+    REAL(wp)           :: min_lai
+    REAL(wp)           :: target_lai_max
+    REAL(wp)           :: max_leaf_shedding_rate
+    REAL(wp)           :: k_leafon_canopy
+    REAL(wp)           :: background_mort_rate_tree
+    REAL(wp)           :: background_mort_rate_grass
+    REAL(wp)           :: lambda_mort_light
+    REAL(wp)           :: k_mort_light
+    REAL(wp)           :: lambda_est_temp
+    REAL(wp)           :: k_est_temp
+    REAL(wp)           :: lambda_est_moist
+    REAL(wp)           :: k_est_moist
+    REAL(wp)           :: wood_extraction_rate
+    REAL(wp)           :: k1_mort_greff
+    REAL(wp)           :: k2_mort_greff
+    REAL(wp)           :: k3_mort_greff
+    REAL(wp)           :: min_greff
+    REAL(wp)           :: max_crown_area
+    REAL(wp)           :: min_diameter
+    REAL(wp)           :: k_crown_area
+    REAL(wp)           :: k_rp
+    REAL(wp)           :: k_fpc
+    REAL(wp)           :: fpc_max
+    REAL(wp)           :: carbon_per_dryweight_leaf
+    REAL(wp)           :: min_height
+    REAL(wp)           :: sm2lm_grass
+    REAL(wp)           :: lambda_fruit_alloc
+    REAL(wp)           :: k1_fruit_alloc
+    REAL(wp)           :: k3_fruit_alloc
+    REAL(wp)           :: k4_fruit_alloc
+    REAL(wp)           :: w_root_lim_max
+    REAL(wp)           :: leaf2root_min_ratio
+    REAL(wp)           :: leaf2root_max_ratio
+    REAL(wp)           :: delta_n_fraction
+    REAL(wp)           :: delta_n_leaf
+    REAL(wp)           :: f_myc_exudation_max
+    REAL(wp)           :: f_mycorrhization_max
+    ! SB_CTL
+    REAL(wp)           :: tau_soluable_litter
+    REAL(wp)           :: tau_metabolic_litter
+    REAL(wp)           :: tau_structural_litter
+    REAL(wp)           :: tau_woody_litter
+    REAL(wp)           :: tau_fast
+    REAL(wp)           :: tau_slow
+    REAL(wp)           :: tau_biomineralisation
+    REAL(wp)           :: t_ref_tresponse
+    REAL(wp)           :: ea_depolymerisation
+    REAL(wp)           :: ea_mic_uptake
+    REAL(wp)           :: ea_sorption
+    REAL(wp)           :: ea_desorption
+    REAL(wp)           :: ea_hsc
+    REAL(wp)           :: ea_decomposition
+    REAL(wp)           :: ed_decomposition
+    REAL(wp)           :: t_ref_decomposition
+    REAL(wp)           :: k1_afps
+    REAL(wp)           :: k2_afps
+    REAL(wp)           :: kmr_depolymerisation
+    REAL(wp)           :: kmr_mic_uptake
+    REAL(wp)           :: kmr_hsc
+    REAL(wp)           :: kmr_sorption
+    REAL(wp)           :: kmr_decomposition
+    REAL(wp)           :: k_diff_org
+    REAL(wp)           :: rho_bulk_org
+    REAL(wp)           :: carbon_per_dryweight_SOM
+    REAL(wp)           :: k_adsorpt_dom
+    REAL(wp)           :: k_desorpt_dom
+    REAL(wp)           :: k_adsorpt_det
+    REAL(wp)           :: k_desorpt_det
+    REAL(wp)           :: k_adsorpt_nh4
+    REAL(wp)           :: k_desorpt_nh4
+    REAL(wp)           :: k_adsorpt_po4
+    REAL(wp)           :: k_desorpt_po4
+    REAL(wp)           :: k_adsorpt_f_po4
+    REAL(wp)           :: k_desorpt_f_po4
+    REAL(wp)           :: microbial_cn
+    REAL(wp)           :: microbial_np
+    REAL(wp)           :: microbial_nue
+    REAL(wp)           :: microbial_pue
+    REAL(wp)           :: microbial_cue
+    REAL(wp)           :: microbial_cue_max
+    REAL(wp)           :: microbial_cue_min
+    REAL(wp)           :: frac_woody2dec_litter
+    REAL(wp)           :: frac_litter2fast_som
+    REAL(wp)           :: frac_fast2slow_som
+    REAL(wp)           :: frac_slow2fast_som
+    REAL(wp)           :: fc_woody2polymeric
+    REAL(wp)           :: fc_soluable2dom
+    REAL(wp)           :: k_mort_microbial
+    REAL(wp)           :: min_mic_biomass
+    REAL(wp)           :: vmax_mic_uptake
+    REAL(wp)           :: km_mic_uptake
+    REAL(wp)           :: km_depolymerisation
+    REAL(wp)           :: vmax_depolymerisation_residue
+    REAL(wp)           :: vmax_depolymerisation_litter
+    REAL(wp)           :: f_soluable_residue
+    REAL(wp)           :: f_soluable_leaf
+    REAL(wp)           :: f_soluable_fine_root
+    REAL(wp)           :: f_soluable_fruit
+    REAL(wp)           :: f_soluable_seed_bed
+    REAL(wp)           :: fc_soluable_max
+    REAL(wp)           :: k_fc_soluable
+    REAL(wp)           :: k_fn_soluable
+    REAL(wp)           :: k_fp_soluable
+    REAL(wp)           :: lc_leaf_max
+    REAL(wp)           :: lc_leaf2sla
+    REAL(wp)           :: lc_fine_root
+    REAL(wp)           :: lc_coarse_root
+    REAL(wp)           :: lc_woody_litter
+    REAL(wp)           :: lc_fruit
+    REAL(wp)           :: lc_seed_bed
+    REAL(wp)           :: mycorrhiza_cue
+    REAL(wp)           :: mycorrhiza_cn
+    REAL(wp)           :: mycorrhiza_np
+    REAL(wp)           :: f_maxresp_myc
+    REAL(wp)           :: f_surface_myc2fineroot
+    REAL(wp)           :: km1_up_nh4
+    REAL(wp)           :: km2_up_nh4
+    REAL(wp)           :: km1_up_no3
+    REAL(wp)           :: km2_up_no3
+    REAL(wp)           :: km1_up_po4
+    REAL(wp)           :: km2_up_po4
+    REAL(wp)           :: vmax_mic_uptake_nh4
+    REAL(wp)           :: km_mic_uptake_nh4
+    REAL(wp)           :: vmax_mic_uptake_no3
+    REAL(wp)           :: km_mic_uptake_no3
+    REAL(wp)           :: f_mic_carrier_n
+    REAL(wp)           :: vmax_plant_uptake_nh4
+    REAL(wp)           :: km_plant_uptake_nh4
+    REAL(wp)           :: vmax_plant_uptake_no3
+    REAL(wp)           :: km_plant_uptake_no3
+    REAL(wp)           :: f_plant_carrier_n
+    REAL(wp)           :: vmax_mic_uptake_po4
+    REAL(wp)           :: km_mic_uptake_po4
+    REAL(wp)           :: vmax_plant_uptake_po4
+    REAL(wp)           :: km_plant_uptake_po4
+    REAL(wp)           :: k_mic_uptake_nh4
+    REAL(wp)           :: k_plant_uptake_nh4
+    REAL(wp)           :: k_mic_uptake_no3
+    REAL(wp)           :: k_plant_uptake_no3
+    REAL(wp)           :: k_mic_uptake_po4
+    REAL(wp)           :: k_plant_uptake_po4
+    REAL(wp)           :: f_mic_carrier_po4
+    REAL(wp)           :: f_plant_carrier_po4
+    REAL(wp)           :: vmax_nitrification_nh4
+    REAL(wp)           :: km_nitrification_nh4
+    REAL(wp)           :: f_nit_carrier_nh4
+    REAL(wp)           :: vmax_denitrification_no3
+    REAL(wp)           :: km_denit_no3
+    REAL(wp)           :: f_denit_carrier_no3
+    REAL(wp)           :: qmax_po4_mineral
+    REAL(wp)           :: qmax_nh4_clay
+    REAL(wp)           :: km_adsorpt_mineral_po4
+    REAL(wp)           :: km_adsorpt_OM_po4
+    REAL(wp)           :: ea_nitrification
+    REAL(wp)           :: ed_nitrification
+    REAL(wp)           :: t_opt_nitrification
+    REAL(wp)           :: f_nit_noy
+    REAL(wp)           :: f_nit_n2o
+    REAL(wp)           :: ea_denitrification
+    REAL(wp)           :: vmax_nitrification
+    REAL(wp)           :: vmax_denitrification
+    REAL(wp)           :: km_denitrification_c
+    REAL(wp)           :: km_denitrification_no3
+    REAL(wp)           :: f_denit_noy
+    REAL(wp)           :: f_denit_n2o
+    REAL(wp)           :: ea_gasdiffusion
+    REAL(wp)           :: lambda_anvf
+    REAL(wp)           :: k_anvf
+    REAL(wp)           :: floss_nmin
+    REAL(wp)           :: fnit_nmin
+    REAL(wp)           :: fleach_nh4
+    REAL(wp)           :: fleach_po4
+    REAL(wp)           :: soil_n_threshold_bnf
+    REAL(wp)           :: standard_bnf_max_rate
+    REAL(wp)           :: eta_mic_uptake_nh4
+    REAL(wp)           :: eta_mic_uptake_no3
+    REAL(wp)           :: eta_plant_uptake_nh4
+    REAL(wp)           :: eta_plant_uptake_no3
+    REAL(wp)           :: eta_nitrification
+    REAL(wp)           :: eta_nitrate_production
+    REAL(wp)           :: eta_denitrification
+    REAL(wp)           :: eta_ammonification
+    REAL(wp)           :: eta_volatilisation_nh3
+    REAL(wp)           :: k_weath_mineral
+    REAL(wp)           :: eq_sorp_mineral_po4
+    REAL(wp)           :: k_occlude_po4
+    REAL(wp)           :: vmax_biochem_po4
+    REAL(wp)           :: km_mic_biochem_po4
+    REAL(wp)           :: km_dip_biochem_po4
+    REAL(wp)           :: km_rootc_biochem_po4
+    REAL(wp)           :: km_rootc_weath_po4
+    REAL(wp)           :: km_root_enzyme_weath_po4
+    REAL(wp)           :: biomin_thres_pc
+    REAL(wp)           :: fc_p_res2dom
+    REAL(wp)           :: fc_n_res2dom
+    REAL(wp)           :: f_norg_limit
+    REAL(wp)           :: f_tau_myc
+    REAL(wp)           :: km_priming
+    REAL(wp)           :: km_up_org
+    REAL(wp)           :: myc_root_coverage_max
+    REAL(wp)           :: resp_priming
+    REAL(wp)           :: vmax_uptake_norg
+    REAL(wp)           :: k_fast_som_cn_max
+    REAL(wp)           :: k_fast_som_cn_min
+    REAL(wp)           :: f_fast_som_cn
+    REAL(wp)           :: k_slow_som_cn
+    REAL(wp)           :: k_fast_som_np
+    REAL(wp)           :: k_slow_som_np
+    REAL(wp)           :: f_psensi_soil_p_depth
+    REAL(wp)           :: f_psensi_soil_p_labile
+    REAL(wp)           :: f_psensi_soil_p_slow
+    REAL(wp)           :: f_psensi_soil_p_occluded
+    REAL(wp)           :: f_psensi_soil_p_primary
+    REAL(wp)           :: f_psensi_qmax_org_fine_particle
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':read_parameter_slm_list'
 
@@ -1020,7 +1040,11 @@ CONTAINS
         k_sat_bt                  , &
         k_sat_ct                  , &
         k_sat_dt                  , &
-        kdiff_sat_max             
+        kdiff_sat_max             , &
+        f_psensi_soil_sand        , &
+        f_psensi_soil_silt        , &
+        f_psensi_soil_awc_prescribe, &
+        f_psensi_bulk_density     
 
     NAMELIST /vegetation_ctl/     &  
         fresp_growth              , &
@@ -1294,7 +1318,13 @@ CONTAINS
         f_fast_som_cn                 , &
         k_slow_som_cn                 , &
         k_fast_som_np                 , &
-        k_slow_som_np                  
+        k_slow_som_np                 , & 
+        f_psensi_soil_p_depth         , &
+        f_psensi_soil_p_labile        , &
+        f_psensi_soil_p_slow          , &
+        f_psensi_soil_p_occluded      , &
+        f_psensi_soil_p_primary       , &
+        f_psensi_qmax_org_fine_particle 
         
 
     ! variables for reading model-options from namelist
@@ -1409,6 +1439,10 @@ CONTAINS
     k_sat_ct                    = missval
     k_sat_dt                    = missval
     kdiff_sat_max               = missval
+    f_psensi_soil_sand          = missval
+    f_psensi_soil_silt          = missval
+    f_psensi_soil_awc_prescribe = missval
+    f_psensi_bulk_density       = missval
     ! VEGETATION_CTL
     fresp_growth                = missval
     fmaint_rate_base            = missval
@@ -1681,6 +1715,12 @@ CONTAINS
     k_slow_som_cn                 = missval
     k_fast_som_np                 = missval
     k_slow_som_np                 = missval
+    f_psensi_soil_p_depth         = missval
+    f_psensi_soil_p_labile        = missval
+    f_psensi_soil_p_slow          = missval
+    f_psensi_soil_p_occluded      = missval
+    f_psensi_soil_p_primary       = missval
+    f_psensi_qmax_org_fine_particle = missval
 
     ! read the namelist
     ! 
@@ -1826,6 +1866,10 @@ CONTAINS
     this%k_sat_ct                    = k_sat_ct
     this%k_sat_dt                    = k_sat_dt
     this%kdiff_sat_max               = kdiff_sat_max
+    this%f_psensi_soil_sand          = f_psensi_soil_sand
+    this%f_psensi_soil_silt          = f_psensi_soil_silt
+    this%f_psensi_soil_awc_prescribe = f_psensi_soil_awc_prescribe
+    this%f_psensi_bulk_density       = f_psensi_bulk_density
     ! VEGETATION_CTL
     this%fresp_growth                = fresp_growth
     this%fmaint_rate_base            = fmaint_rate_base
@@ -2098,6 +2142,12 @@ CONTAINS
     this%k_slow_som_cn                 = k_slow_som_cn
     this%k_fast_som_np                 = k_fast_som_np
     this%k_slow_som_np                 = k_slow_som_np
+    this%f_psensi_soil_p_depth         = f_psensi_soil_p_depth
+    this%f_psensi_soil_p_labile        = f_psensi_soil_p_labile
+    this%f_psensi_soil_p_slow          = f_psensi_soil_p_slow
+    this%f_psensi_soil_p_occluded      = f_psensi_soil_p_occluded
+    this%f_psensi_soil_p_primary       = f_psensi_soil_p_primary
+    this%f_psensi_qmax_org_fine_particle = f_psensi_qmax_org_fine_particle
 
   END SUBROUTINE read_parameter_slm_list
 
@@ -2107,7 +2157,7 @@ CONTAINS
   !! 
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE set_parameter_slm_values_with_list_values(this, proportional_parameter_changes)
+  SUBROUTINE set_parameter_slm_values_with_list_values(this, model)
 
     USE mo_jsb_math_constants,              ONLY: one_day, one_year, dtime, eps8
     USE mo_assimi_constants
@@ -2119,17 +2169,27 @@ CONTAINS
     USE mo_sse_constants
     USE mo_sb_constants
     USE mo_veg_constants
+    USE mo_jsb_model_class,       ONLY: t_jsb_model
+    USE mo_jsb_process_class,     ONLY: SSE_, SB_
+
+    ! Use of process configurations >> needed for modifications of namelist options (which are stored in the process config)
+    dsl4jsb_Use_config(SSE_)
+    dsl4jsb_Use_config(SB_)
 
     IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
+
     CLASS(t_parameters_slm_from_file), INTENT(inout) :: this
-    LOGICAL                          , INTENT(in)    :: proportional_parameter_changes
-    ! ---------------------------
-    ! 0.2 Local
+    TYPE(t_jsb_model),                 INTENT(inout) :: model
+
     CHARACTER(32)               :: fname                      ! filename
+    LOGICAL                     :: proportional_parameter_changes
+    dsl4jsb_Def_config(SSE_)
+    dsl4jsb_Def_config(SB_)
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':set_parameter_slm_values_with_list_values'
 
+    proportional_parameter_changes = model%config%set_parameter_values_proportional
+    dsl4jsb_Get_config(SSE_)
+    dsl4jsb_Get_config(SB_)
 
 
     !> 1.0 read parameter values from file
@@ -2153,21 +2213,13 @@ CONTAINS
     !!                                    "parameter name", proportional_parameter_changes, &
     !!                                    xyz)                ! the original/default parameter variable as declared in mo_PROC_constants
     !! 
-    ! CALL Set_quincy_parameter_value(this%xyz, &
-    !                                 this%xyz, &
-    !                                 "xyz", proportional_parameter_changes, &
-    !                                 xyz)
-    ! 
-    ! CALL Set_quincy_parameter_value(this%xyz, &
-    !                                 this%xyz, &
-    !                                 "xyz", proportional_parameter_changes, &
-    !                                 xyz)
-    ! 
-    ! CALL Set_quincy_parameter_value(this%xyz, &
-    !                                 this%xyz, &
-    !                                 "xyz", proportional_parameter_changes, &
-    !                                 xyz)
-    !! 
+    !!
+    !! routine: SUBROUTINE Modify_quincy_namelist_parameter(nml_param_factor, param_name, nml_param)
+    !!    CALL Modify_quincy_namelist_parameter(this%f_psensi_nmlp, &       ! factor for multiplication of the namelist parameter defined in the namelist parameter_slm_run.list
+    !!                                          "name of nmlp", &           ! name of the namelist parameter
+    !!                                          dsl4jsb_Config(PROC_)%nmlp) ! namelist parameter from the process config it is stored in
+    !!
+
     ! ASSIMILATION_CTL
     CALL Set_quincy_parameter_value(this%jmax2n / 4.0_wp, &
                                     this%jmax2n, &
@@ -2677,6 +2729,22 @@ CONTAINS
                                     this%kdiff_sat_max, &
                                     "kdiff_sat_max", proportional_parameter_changes, &
                                     kdiff_sat_max)
+                                    
+    CALL Modify_quincy_namelist_parameter(this%f_psensi_soil_sand, &
+                                          "soil_sand", &
+                                          dsl4jsb_Config(SSE_)%soil_sand)
+    
+    CALL Modify_quincy_namelist_parameter(this%f_psensi_soil_silt, &
+                                          "soil_silt", &
+                                          dsl4jsb_Config(SSE_)%soil_silt)
+
+    CALL Modify_quincy_namelist_parameter(this%f_psensi_soil_awc_prescribe, &
+                                          "soil_awc_prescribe", &
+                                          dsl4jsb_Config(SSE_)%soil_awc_prescribe)
+                                          
+    CALL Modify_quincy_namelist_parameter(this%f_psensi_bulk_density, &
+                                          "bulk_density", &
+                                          dsl4jsb_Config(SSE_)%bulk_density)
 
     ! VEGETATION_CTL
     CALL Set_quincy_parameter_value(this%fresp_growth, &
@@ -4037,6 +4105,29 @@ CONTAINS
                                     "k_slow_som_np", proportional_parameter_changes, &
                                     k_slow_som_np)
 
+    CALL Modify_quincy_namelist_parameter(this%f_psensi_soil_p_depth, &
+                                          "soil_p_depth", &
+                                          dsl4jsb_Config(SB_)%soil_p_depth)
+
+    CALL Modify_quincy_namelist_parameter(this%f_psensi_soil_p_labile, &
+                                          "soil_p_labile", &
+                                          dsl4jsb_Config(SB_)%soil_p_labile)
+
+    CALL Modify_quincy_namelist_parameter(this%f_psensi_soil_p_slow, &
+                                          "soil_p_slow", &
+                                          dsl4jsb_Config(SB_)%soil_p_slow)
+
+    CALL Modify_quincy_namelist_parameter(this%f_psensi_soil_p_occluded, &
+                                          "soil_p_occluded", &
+                                          dsl4jsb_Config(SB_)%soil_p_occluded)
+
+    CALL Modify_quincy_namelist_parameter(this%f_psensi_soil_p_primary, &
+                                          "soil_p_primary", &
+                                          dsl4jsb_Config(SB_)%soil_p_primary)
+
+    CALL Modify_quincy_namelist_parameter(this%f_psensi_qmax_org_fine_particle, &
+                                          "qmax_org_fine_particle", &
+                                          dsl4jsb_Config(SB_)%qmax_org_fine_particle)
 
     !> 4.0 close output file for parameter values
     !!     init was done in section 2.0
@@ -6320,8 +6411,6 @@ CONTAINS
 
   END SUBROUTINE change_lctlib_param_values_pft_x
 
-
-
   !-----------------------------------------------------------------------------------------------------
   !> return new QUINCY parameter value as defined by namellist \n
   !!  namelist created from generate_parameter_table.sh: parameter_slm_run.list \n
@@ -6388,5 +6477,48 @@ CONTAINS
     WRITE(lun_param_out,'(A,2F24.12)') TRIM(param_name), REAL(def_val_save, wp), REAL(def_val, wp)
     
   END SUBROUTINE Set_quincy_parameter_value
+  
+  !-----------------------------------------------------------------------------------------------------
+  !> modify QUINCY namelist parameter by multiplication with a factor
+  !!  
+  !!  this factor is associated with the particular namelist parameter and may range [eps4, 10000]
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE Modify_quincy_namelist_parameter(nml_param_factor, param_name, nml_param)
+
+    USE mo_kind,                ONLY: wp
+    USE mo_jsb_math_constants,  ONLY: eps8, eps4
+    USE mo_jsb_io,              ONLY: missval  ! = -9.E+15_wp
+
+    IMPLICIT NONE
+
+    REAL(wp),         INTENT(in)    :: nml_param_factor   !< factor (range [eps4, 10000]) to multiply with the namelist parameter
+    CHARACTER(LEN=*), INTENT(in)    :: param_name         !< name of the namelist parameter for writing the new value to file
+    REAL(wp),         INTENT(inout) :: nml_param          !< original value of the namelist parameter as provided by the namelist 'namelist.slm'
+
+    REAL(wp)                    :: nml_param_save         ! save the original value for output
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Modify_quincy_namelist_parameter'
+
+    !> 0.9 safe the original value for file output
+    !! 
+    nml_param_save = nml_param
+
+    !> 1.0 multiply namelist parameter with factor
+    !! 
+    ! if this namelist parameter should be changed (then the factor may differs from missval)
+    IF (ABS(nml_param_factor - missval) > eps8) THEN
+      !> 1.1 test if factor is within range
+      IF (nml_param_factor < eps4 .OR. nml_param_factor > 10000.0_wp) THEN
+         WRITE(message_text, *) 'Factor is out of range [eps4, 10000] for multiplying the namelist parameter', param_name
+         CALL finish(routine, message_text)
+      ENDIF
+      !> 1.2 modify namelist parameter
+      nml_param = nml_param_factor * nml_param
+    ENDIF
+
+    !> 2.0 write default and new value to file
+    !!
+    WRITE(lun_param_out,'(A,2F24.12)') TRIM(param_name), REAL(nml_param_save, wp), REAL(nml_param, wp)
+    
+  END SUBROUTINE Modify_quincy_namelist_parameter
 
 END MODULE mo_quincy_set_parameters

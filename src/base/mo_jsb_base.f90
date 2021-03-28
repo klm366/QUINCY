@@ -180,7 +180,7 @@ CONTAINS
     !> 2.0 parameter modification for parameter sensitivity analysis
     !! 
     IF (model%config%set_parameter_values_from_file) THEN
-      CALL parameters_slm_from_file%set_param(model%config%set_parameter_values_proportional)
+      CALL parameters_slm_from_file%set_param(model)
     ENDIF
 
   END SUBROUTINE quincy_proc_parameter_init
