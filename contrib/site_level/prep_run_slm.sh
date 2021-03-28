@@ -56,6 +56,10 @@ globSites="sub"
 # provide only numbers, such as, "2174" but not "r2174"
 soilForcStatRevNum=""
 soilForcTransRevNum=""
+# site-set specific simulation set-up
+# currently no need to change anything here
+# default: none; options: eucface_trans
+simSiteSetSpecific="none"
 # all sites or just some sites: specify a local custom site list if you want only some sites"
 # T (True) or F (False) [large caps]
 customSiteList="F"
@@ -107,7 +111,7 @@ transientEucFace="F"
 # number of cycling the spinup (1700-1749) before starting the transient simulation (1700-2069)
 spinupCycleTransEucFace=10
 
-##(4) parameter sensitivity simulations
+##(4) parameter sensitivity simulation
 # you can run a set of sensitivity simulations for one site; T (True) or F (False)
 paramSensitivitySim="F"
 # you can give absolute values ("F") or proportional changes within range [0 < x < 2] ("T")
@@ -566,6 +570,7 @@ validateForcingDataSet="fluxnet fluxnet3 global cruncep face manip fert craine p
 validateForcingMode="static transient"
 validateCrunSites="all cue spp"
 validateGlobSites="all sub"
+validateSimSiteSetSpecific="none eucface_trans"
 validateSlmModel="land plant soil canopy"
 validateBNFScheme="none fixed standard optimal resistance unlimited"
 validateMycScheme="no am ecm"
@@ -676,6 +681,7 @@ validateUserConfigValues "$forcingDataSet" "$validateForcingDataSet" "forcingDat
 validateUserConfigValues "$forcingMode" "$validateForcingMode" "forcingMode"
 validateUserConfigValues "$crunSites" "$validateCrunSites" "crunSites"
 validateUserConfigValues "$globSites" "$validateGlobSites" "globSites"
+validateUserConfigValues "$simSiteSetSpecific" "$validateSimSiteSetSpecific" "simSiteSetSpecific"
 validateUserConfigValues "$customSiteList" "$validateFlags" "customSiteList"
 validateUserConfigValues "$slmModel" "$validateSlmModel" "slmModel"
 validateUserConfigValues "$queue" "$validateQueue" "queue"
@@ -718,6 +724,20 @@ validateUserConfigValues "$useSiteSpecificAWC" "$validateFlags" "useSiteSpecific
 validateUserConfigValues "$paramSensitivitySim" "$validateFlags" "paramSensitivitySim"
 validateUserConfigValues "$paramChangesProportional" "$validateFlags" "paramChangesProportional"
 validateUserConfigValues "$compareSimCRUNCEPvsGFDB" "$validateFlags" "compareSimCRUNCEPvsGFDB"
+
+## validate length of some options
+## (because namelist options might be defined as 'character' in QUINCY with a specific length)
+nChar=$(echo -n "$slmModel" | wc -m)
+if [ "$nChar" -gt 20 ]; then
+  echo "EXIT! the QUINCY model name is too long (max 20 characters), see mo_jsb_config_class."
+  exit 1
+fi
+nChar=$(echo -n "$simSiteSetSpecific" | wc -m)
+if [ "$nChar" -gt 20 ]; then
+  echo "EXIT! the option used for simSiteSetSpecific is too long (max 20 characters), see mo_jsb_config_class."
+  exit 1
+fi
+unset nChar  # delete helper variable
 
 ## set and create additional basic folders (within the basic simulation folder) ##
 mkdir -p "$simFold"                           # "$bgiScratchUserFold""$jobName""/"  e.g. /Net/Groups/BGI/scratch/""$username""/slm/$jobName/
@@ -1546,6 +1566,11 @@ case "$forcingDataSet" in
 esac
 
 
+############################################################################################################################
+## basic settings for simulations to works                                                                                 ##
+## (includes parameter-sensitivity checks and settings)                                                                   ##
+############################################################################################################################
+
 ## validate experimental ID for alphanumeric only ##
 if [ ! -z $(echo $jobName | tr -d "[:alnum:]" | tr -d "_" | tr -d "-") ]  # if removing alphanum _ - from jobName returns an non-empty string" then exit
  then
@@ -1825,6 +1850,7 @@ return 0                                                         # get return va
 # this namelist is used for all sites
 changeNamelistValue slm_model_name "$slmModel"
 changeNamelistValue forcing_mode "$forcingMode"
+changeNamelistValue sim_siteset_specific "$simSiteSetSpecific"
 changeNamelistValue bnf_scheme "$bnf_scheme" 
 changeNamelistValue n_deposition_scheme "$n_deposition_scheme"
 changeNamelistValue p_deposition_scheme "$p_deposition_scheme"
@@ -1987,6 +2013,12 @@ changeNamelistValue transient_spinup_start_year "$transient_spinup_start_year"
 changeNamelistValue transient_spinup_end_year "$transient_spinup_end_year"
 changeNamelistValue transient_spinup_years "$transient_spinup_years"
 changeNamelistValue transient_simulation_start_year "$transient_simulation_start_year"
+## EucFACE transient simulations
+## set the period for timestep output of transient simulations (for fluxnet diagnostics simulations this is set per site in run_slm.sh)
+if [ "$simSiteSetSpecific" == "eucface_trans" ]; then
+  changeNamelistValue fluxnet_static_forc_start_yr "$yearTimestepOutStart"
+  changeNamelistValue fluxnet_static_forc_last_yr "$yearTimestepOutLast"
+fi
 ## namelist options for soil forcing creation (BASE_CTL):
 ## u01: static, one year, all site-sets
 createSoilForcFlag="F"    # default: F | needed for u08 in run_slm.sh

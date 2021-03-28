@@ -287,7 +287,19 @@ CONTAINS
     timestep_prop_day = dtime/one_day                                 !! proportion of one day that is simulated with one timestep
 
 
-    !> 6.0 Init fluxnet diagnostics simulation state
+    !> 6.0 Init a simulation setup specific for a site-set
+    !! 
+
+    !> 6.1 EucFACE transient simulations
+    !! using the fluxnet diagnostics-simulations infrastructure
+    IF (TRIM(model%config%sim_siteset_specific) == "eucface_trans") THEN
+      model%config%fluxnet_type_transient_timestep_output = .TRUE.
+      PRINT*, TRIM(routine), ' Init EucFACE transient simulations.'
+      PRINT*, TRIM(routine), ' Set fluxnet_type_transient_timestep_output=T; use fluxnet diagnostics infrastructure.'
+    ENDIF
+
+    !> 6.2 Fluxnet diagnostics simulation
+    !! set the state to "active"
     !! states: \n
     !!  0: not a fluxnet diagnostics simulation
     !!  1: fluxnet diagnostics simulation; spinup or output prior to the "last full forcing period" (static output available)

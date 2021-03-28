@@ -498,7 +498,11 @@ PROGRAM land_model_driver
           CALL open_pool_output_files(tile, iblk, ics, ice, nc, TRIM(model%config%output_interval_pool), '')
           CALL open_flux_output_files(tile, iblk, ics, ice, nc, TRIM(model%config%output_interval_flux), '')
           ! print info to default output
-          PRINT*," Fluxnet-type siteset transient simulation: timestep-output starts with forcing [YEAR DOY HOUR]:"
+          IF (TRIM(model%config%sim_siteset_specific) == "eucface_trans") THEN
+            PRINT*," EucFACE transient simulation: timestep-output starts with forcing [YEAR DOY HOUR]:"
+          ELSE
+            PRINT*," Fluxnet-type siteset transient simulation: timestep-output starts with forcing [YEAR DOY HOUR]:"
+          ENDIF
           PRINT*,forcing_options%forcing_year, forcing_options%forcing_doy, forcing_options%forcing_hour
         ENDIF
       ! stop timestep-output at the 1st timestep after the last year of static forcing, i.e., the "last full forcing period" is over
@@ -507,7 +511,11 @@ PROGRAM land_model_driver
         IF (forcing_options%forcing_doy == 1 .AND. forcing_options%forcing_hour < eps4) THEN
           flux_trans_timestep_out_state = 3                       ! status update: writing output data finished
           ! print info to default output
-          PRINT*," Fluxnet diagnostics simulation timestep-output stopped before simulating the timestep:", itimestep
+          IF (TRIM(model%config%sim_siteset_specific) == "eucface_trans") THEN
+            PRINT*," EucFACE transient simulation: timestep-output stopped before simulating the timestep:", itimestep
+          ELSE
+            PRINT*," Fluxnet diagnostics simulation: timestep-output stopped before simulating the timestep:", itimestep
+          ENDIF
           PRINT*," Associated to this timestep is the forcing [YEAR DOY HOUR]:"
           PRINT*,forcing_options%forcing_year, forcing_options%forcing_doy, forcing_options%forcing_hour
         ENDIF

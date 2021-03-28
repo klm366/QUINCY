@@ -55,6 +55,7 @@ MODULE mo_jsb_config_class
     LOGICAL           :: fluxnet_type_transient_timestep_output   !< transient simulation with fluxnet-type site-set and timestep-output for the last full forcing period (static forcing)
     INTEGER           :: fluxnet_static_forc_start_yr             !< fluxnet sites: first year of (static) forcing available
     INTEGER           :: fluxnet_static_forc_last_yr              !< fluxnet sites: last year with (static) forcing available
+    CHARACTER(len=20) :: sim_siteset_specific                     !< specific simulation setup for particular site-set, e.g., EucFACE transient simulations
     LOGICAL           :: flag_generate_soil_forcing_stat          !< usecase 01: all litterfall pools + some soilphysics | static simulation
                                                                   !! at period: model%config%output_start_first_day_year .. output_end_last_day_year
     LOGICAL           :: flag_generate_soil_forcing_trans         !< usecase 08: all litterfall pools + some soilphysics | transient simaulation
@@ -149,6 +150,7 @@ CONTAINS
     LOGICAL                     :: fluxnet_type_transient_timestep_output
     INTEGER                     :: fluxnet_static_forc_start_yr
     INTEGER                     :: fluxnet_static_forc_last_yr
+    CHARACTER(len=20)           :: sim_siteset_specific
     LOGICAL                     :: flag_generate_soil_forcing_stat
     LOGICAL                     :: flag_generate_soil_forcing_trans
     LOGICAL                     :: set_parameter_values_from_file
@@ -179,6 +181,7 @@ CONTAINS
         fluxnet_type_transient_timestep_output  , &
         fluxnet_static_forc_start_yr            , &
         fluxnet_static_forc_last_yr             , &
+        sim_siteset_specific                    , &
         flag_generate_soil_forcing_stat         , &
         flag_generate_soil_forcing_trans        , &
         set_parameter_values_from_file          , &
@@ -219,6 +222,7 @@ CONTAINS
     fluxnet_type_transient_timestep_output  = .FALSE.     ! .TRUE. .FALSE.
     fluxnet_static_forc_start_yr            = 1500        ! usually a year after 1990
     fluxnet_static_forc_last_yr             = 1500        ! usually a year after 1990
+    sim_siteset_specific                    = 'none'      ! default is 'none'
     flag_generate_soil_forcing_stat         = .FALSE.     ! .TRUE. .FALSE.  << is set to T for usecase 01 only
     flag_generate_soil_forcing_trans        = .FALSE.     ! .TRUE. .FALSE.  << is set to T for usecase 08 only
     set_parameter_values_from_file          = .FALSE.     ! .TRUE. .FALSE.
@@ -269,6 +273,7 @@ CONTAINS
     model_config%fluxnet_type_transient_timestep_output = fluxnet_type_transient_timestep_output
     model_config%fluxnet_static_forc_start_yr           = fluxnet_static_forc_start_yr
     model_config%fluxnet_static_forc_last_yr            = fluxnet_static_forc_last_yr
+    model_config%sim_siteset_specific                   = sim_siteset_specific
     model_config%flag_generate_soil_forcing_stat        = flag_generate_soil_forcing_stat
     model_config%flag_generate_soil_forcing_trans       = flag_generate_soil_forcing_trans
     model_config%set_parameter_values_from_file         = set_parameter_values_from_file
