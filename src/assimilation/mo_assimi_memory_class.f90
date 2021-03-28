@@ -249,6 +249,9 @@ CONTAINS
       & t_cf('canopy_conductance_unlimited', '', ''),                          &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
       & prefix, suffix,                                                        &
+!$$_Junhong
+      & output_level=BASIC,                                                &
+!$$_Junhong
       & initval_r=0.0_wp )
 
       CALL jsb_add_var( mem, 'canopy_cond_limited', mem%canopy_cond_limited,   &
@@ -256,6 +259,9 @@ CONTAINS
       & t_cf('canopy_conductance_limited', '', ''),                            &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
       & prefix, suffix,                                                        &
+!$$_Junhong
+      & output_level=BASIC,                                                &
+!$$_Junhong
       & initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'cover_fract_pot', mem%cover_fract_pot,         &

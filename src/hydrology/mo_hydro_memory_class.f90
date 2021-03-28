@@ -53,6 +53,12 @@ MODULE mo_hydro_memory_class
       & evapopot,             & !< Potential evaporation                                                [kg m-2 s-1]
       & evapotrans,           & !< Evapotranspiration independent of the type of tile                   [kg m-2 s-1]
                                 !< e.g. for the lake tile it is evapopot and for the land tile it is evapotrans_lnd.
+!_junhong_water_bal_v2
+      & rainsnow_jun,           & !< Total water flux                                                      [m3/s]
+!_junhong_water_bal_v2
+!_junhong_water_bal_v3
+      & awater_con,           & !< Total water contents                                                  [mm]
+!_junhong_water_bal_v3
       & water_flux,           & !< Total water flux                                                      [m3/s]
       & water_content,        & !< Total water content                                                   [m3]
       & water_budget            !< Water budget error                                                    [m3]
@@ -140,6 +146,10 @@ MODULE mo_hydro_memory_class
       & water_stress,         & !< Water stress factor of canopy                        (1: no water stress, 0: infinite stress)
       & canopy_cond_unlimited,& !< Canopy conductance without water limit  [m/s] (mean value)
       & canopy_cond_limited,  & !< Canopy conductance with water limit [m/s] (mean value)
+!_junhong_output
+      & evapodirect,           &
+      & evapobare,           &
+!_junhong_output
       & trans                   !< Transpiration
 
     ! Additional variables for GLACIER lct_type
@@ -313,12 +323,36 @@ CONTAINS
       & lrestart=.FALSE.,                                                  &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+!_junhong_water_bal_v2
+    CALL jsb_add_var( mem, 'rainsnow_jun', mem%rainsnow_jun,                             &
+      & hgrid, surface,                                                              &
+      & t_cf('rainsnow_jun', 'm3 s-1', 'rain flux'),                            &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE.,                                                            &
+      & output_level=BASIC,                                                          &
+      & initval_r=0.0_wp )
+!_junhong_water_bal_v2
+!_junhong_water_bal_v3
+    CALL jsb_add_var( mem, 'awater_con', mem%awater_con,                             &
+      & hgrid, surface,                                                              &
+      & t_cf('awater_con', 'mm', 'water_contents'),                            &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE.,                                                            &
+      & output_level=BASIC,                                                          &
+      & initval_r=0.0_wp )
+!_junhong_water_bal_v3
+
     CALL jsb_add_var( mem, 'water_flux', mem%water_flux,                             &
       & hgrid, surface,                                                              &
       & t_cf('water_flux', 'm3 s-1', 'total water flux'),                            &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
+!_junhong
+      & output_level=BASIC,                                                          &
+!_junhong
       & initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'water_content', mem%water_content,                       &
@@ -326,6 +360,9 @@ CONTAINS
       & t_cf('water_content', 'm3', 'total water content'),                          &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
+!_junhong
+      & output_level=BASIC,                                                          &
+!_junhong
       & initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'water_budget', mem%water_budget,                         &
@@ -334,6 +371,9 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
+!_junhong
+      & output_level=BASIC,                                                          &
+!_junhong
       & initval_r=0.0_wp )
 
     CALL jsb_add_var( mem, 'elevation', mem%elevation,                               &
@@ -596,6 +636,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
         & prefix, suffix,                                                                                &
         & lrestart=.FALSE.,                                                                              &
+!_junhong
+        & output_level=BASIC,                                                          &
+!_junhong
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL jsb_add_var( mem, 'evapo_skin', mem%evapo_skin,                          &
@@ -604,6 +647,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
         & prefix, suffix,                                                         &
         & lrestart=.FALSE.,                                                       &
+!_junhong
+        & output_level=BASIC,                                                          &
+!_junhong
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL jsb_add_var( mem, 'evapo_deficit', mem%evapo_deficit,                 &
@@ -693,6 +739,9 @@ CONTAINS
         &  t_cf('water_soil_relative', '', ''),                                     &
         &  t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
         & prefix, suffix,                                                           &
+!_junhong
+        & output_level=BASIC,                                                          &
+!_junhong
         & initval_r=0.0_wp )
 
     END IF
@@ -738,6 +787,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
         & prefix, suffix,                                                            &
         & lrestart=.FALSE.,                                                          &
+!_junhong
+        & output_level=BASIC,                                                          &
+!_junhong
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL jsb_add_var( mem, 'w_soil_root_fc', mem%w_soil_root_fc,                                    &
@@ -761,6 +813,9 @@ CONTAINS
         & t_cf('Water stress factor of canopy', '-', ''),                     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
         & prefix, suffix,                                                     &
+!_junhong
+        & output_level=BASIC,                                                          &
+!_junhong
         & lrestart=.FALSE., initval_r=0.0_wp )
 
       IF (.NOT. dsl4jsb_Config(ASSIMI_)%active) THEN
@@ -785,7 +840,29 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
         & prefix, suffix,                                                            &
         & lrestart=.FALSE.,                                                          &
+!_junhong
+        & output_level=BASIC,                                                          &
+!_junhong
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+!_Junhong_output
+      CALL jsb_add_var( mem, 'evapodirect', mem%evapodirect,                                     &
+        & hgrid, surface,                                                            &
+        & t_cf('direct evaporation', 'kg m-2 s-1', 'evaporation reservior+canopy leaf evaporation'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
+        & prefix, suffix,                                                            &
+        & lrestart=.FALSE.,                                                          &
+        & output_level=BASIC,                                                        &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      CALL jsb_add_var( mem, 'evapobare', mem%evapobare,                                     &
+        & hgrid, surface,                                                            &
+        & t_cf('bare soil evaporation', 'kg m-2 s-1', 'bare soil evaporation'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
+        & prefix, suffix,                                                            &
+        & lrestart=.FALSE.,                                                          &
+        & output_level=BASIC,                                                        &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+!_Junhong_output
 
     END IF
 

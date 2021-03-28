@@ -54,6 +54,11 @@ CONTAINS
     CASE ('jsbach_pfts')
       CALL init_usecase_pfts(model)
 
+!_junhong
+    CASE ('jsbach_sma')
+      CALL init_usecase_sma(model)
+!_junhong
+
     CASE DEFAULT
       CALL finish(TRIM(routine), 'JSBACH usecase not defined.')
 
@@ -243,6 +248,110 @@ CONTAINS
     IF (model%config%use_lakes) NULLIFY(lake_tile)
 
   END SUBROUTINE init_usecase_pfts
+
+!_junhong
+  SUBROUTINE init_usecase_sma(model)
+
+    TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
+
+    CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, veg_tile, pft_tile
+
+    INTEGER :: i
+
+    INTEGER, PARAMETER :: npft = 1
+
+    CHARACTER(len=5), PARAMETER :: pft_shortnames(npft) = [character(len=5) ::  &
+      & 'pft07' ]
+
+    CHARACTER(len=30), PARAMETER :: pft_longnames(npft) = [character(len=30) :: &
+      & 'C3 grass'                    ]
+
+    ! Index of PFT into lctlib columns
+    ! id is one less than in lctlib file because the first column (glacier) has been thrown away
+    INTEGER, PARAMETER :: pft_ids(npft) = (/ 11 /)
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':init_usecase_sma'
+
+
+    ! Create root of the tile structure representing the whole grid box
+    box_tile => t_jsb_tile('box', 'Top tile', &
+      & processes      =(/A2L_,     L2A_,     RAD_  ,    TURB_    /), &
+      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
+!      & model_id=model%id, grid_id=model%grid_id, fract_varname='notsea')
+      & model_id=model%id, grid_id=model%grid_id, fract_varname='equal')
+    model%top => box_tile
+
+#ifndef __NO_JSBACH_HD__
+    IF (model%processes(HD_)%p%config%active) THEN
+      CALL box_tile%Set_process_action(HD_, ON_TILE_)
+    END IF
+#endif
+
+      land_tile => t_jsb_tile('land', 'Land tile', &
+        & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
+        & lct=t_jsb_lct(LAND_TYPE), parent=box_tile, &
+        & fract_varname='equal')   ! Fraction = 1.
+
+      veg_tile => t_jsb_tile('veg', 'Veg tile', &
+        & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_   /), &
+        & process_actions = (/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
+        & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
+!_junhong
+!        & fract_varname='fract_veg')
+        & fract_varname='equal')
+!_junhong
+
+          ! R: TBD: DISTURB_ ist kein Task von CARBON_,
+          !         da es die cover fractions der pfts verändert und nur als Nebeneffekt auch die C-Pools
+          !         verändert. Er würde im Prinzip auch ablaufen ohne den Prozess CARBON_ und würde auch
+          !         auf alle anderen Stoffpools wirken. Außerdem soll CARBON_ später wie NITROGEN_
+          !         oder andere Stoffpools gehandelt werden. Diese Prozesse haben bis
+          !         auf ihre Fixierung kaum eigene Tasks sondern werden von anderen Prozessen verändert.
+          !         => die Stoffpools sollten langfristig evtl. gar keine Prozesse sein
+          !
+          !         DISTURB_ braucht CARBON,
+          !         da es C-Pools als Input für die Feuerberechnung braucht und sollte diese auch verändern
+          !         wenn der CARBON Prozess existiert. Dies ist ein grundsätzliches Problem: Prozesse benötigen
+          !         - oder sogar verändern - evtl. Variablen, die eigentlich zu einem anderen Prozess gehören.
+          !         Das bedeutet der Speicher des anderen Prozesses muß angelegt werden auch wenn dieser
+          !         Prozess gar nicht abläuft. Dazu müsste wohl am besten eine Prozedur die die Namelist-
+          !         Einträge entwprechend umändert geschrieben werden oder wenn Usecases benutzt werden
+          !         (wie hier) der entsprechende Prozess dennoch definiert werden, auch wenn in der Queue-
+          !         Liste nachher kein Task dieses Prozesses auftaucht.
+          !
+          !         DISTURB_ braucht PHENO wg. veg_fract_correct s.o.
+          !
+          !         CARBON_ braucht DISTURB_ nicht!
+          !
+          !         Manche Prozeduren sollen nur ausgeführt werden wenn beide Prozesse aktiv sind.
+          !         In DISTURB_ z.B. die dazugehörige C-Umverteilung bei Feuer und Winbruch.
+          !         Dies habe ich mit "IF ( tile%Is_process_active(CARBON_) ) THEN" gemacht.
+          !
+          IF (model%processes(CARBON_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(CARBON_, ON_LEAFS_, AGGREGATE_)
+          END IF
+          IF (model%processes(FUEL_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(FUEL_, ON_TILE_, AGGREGATE_)
+          END IF
+          IF (model%processes(DISTURB_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(DISTURB_, ON_LEAFS_, AGGREGATE_)
+          END IF
+
+            DO i=1,npft
+              pft_tile => t_jsb_tile(pft_shortnames(i), TRIM(pft_longnames(i)), &
+               & lct=t_jsb_lct(VEG_TYPE, lib_id=pft_ids(i)), parent=veg_tile)
+            END DO
+
+    ! Next 3 lines only to avoid compiler warnings about pointers not being dereferenced
+    IF (ASSOCIATED(glacier_tile)) CONTINUE
+    IF (ASSOCIATED(lake_tile)) CONTINUE
+    IF (ASSOCIATED(pft_tile)) CONTINUE
+
+    NULLIFY(box_tile, lake_tile, land_tile, glacier_tile, veg_tile, pft_tile)
+
+  END SUBROUTINE init_usecase_sma
+
+!_junhong
 
 #endif
 END MODULE mo_jsb_model_usecases

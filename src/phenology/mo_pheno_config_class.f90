@@ -30,6 +30,11 @@ MODULE mo_pheno_config_class
     LOGICAL :: l_forestRegrowth ! If TRUE, the maxLAI is derived from biomass via allometric relationships
     CHARACTER(len=15) :: scheme   !< Phenology scheme to use ('logrop', 'climatology')
      !LOGICAL :: first_call_phenology_this_day  ! TRUE marks if a new day has just started and update_phenology is called for the top tile
+!_junhong_name
+    REAL    :: lai_init
+    REAL    :: cveg_fix
+    LOGICAL :: lai_fix
+!_junhong_name
     CONTAINS
       PROCEDURE :: Init => Init_pheno_config
   END type t_pheno_config
@@ -47,11 +52,21 @@ CONTAINS
     LOGICAL :: active, l_forestRegrowth
     CHARACTER(len=15) :: scheme
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
+!_junhong_name
+    REAL    :: lai_init
+    REAL    :: cveg_fix
+    LOGICAL :: lai_fix
+!_junhong_name
 
     NAMELIST /jsb_pheno_nml/  &
       & active,               &
       & l_forestRegrowth,     &
       & scheme,               &
+!_junhong_name
+      & lai_init,             &
+      & lai_fix,              &
+      & cveg_fix,             &
+!_junhong_name
       & ic_filename,          &
       & bc_filename
 
@@ -67,6 +82,11 @@ CONTAINS
     scheme              = 'logrop'
     bc_filename         = 'bc_land_phenology.nc'
     ic_filename         = 'ic_land_phenology.nc'
+!_junhong_name
+    lai_init            = 0.4
+    lai_fix             = .FALSE.
+    cveg_fix            = -99.0
+!_junhong_name
     !first_call_phenology_this_day = .FALSE.
 
     ! Read namelist
@@ -81,6 +101,11 @@ CONTAINS
     config%scheme              = TRIM(scheme)
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
+!_junhong_name
+    config%lai_init            = lai_init
+    config%lai_fix             = lai_fix
+    config%cveg_fix            = cveg_fix
+!_junhong_name
 
     CALL close_nml(nml_handler)
 

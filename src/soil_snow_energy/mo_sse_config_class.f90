@@ -98,8 +98,12 @@ CONTAINS
     l_dynsnow        = .TRUE.
     l_heat_cap_dyn   = .TRUE.
     l_heat_cond_dyn  = .TRUE.
-    l_heat_cap_map   = .FALSE.
-    l_heat_cond_map  = .FALSE.
+!_junhong
+!    l_heat_cap_map   = .FALSE.
+!    l_heat_cond_map  = .FALSE.
+    l_heat_cap_map   = .TRUE.
+    l_heat_cond_map  = .TRUE.
+!_junhong
     l_freeze         = .FALSE.
     l_supercool      = .FALSE.
     w_soil_critical  = 5.85036E-3_wp
@@ -160,19 +164,27 @@ CONTAINS
 
     IF (.NOT. active) RETURN
 
-    input_file = jsb_netcdf_open_input(ic_filename)
-
-    ! @todo: At the moment, the soil layers for the energy calculations are the same as for the hydrology
-    ptr_1D => input_file%Read_1d(variable_name='soillev')    ! Depth of layer bottom
-    nsoil = SIZE(ptr_1D)
+!_junhong
+!    input_file = jsb_netcdf_open_input(ic_filename)
+!
+!    ! @todo: At the moment, the soil layers for the energy calculations are the same as for the hydrology
+!    ptr_1D => input_file%Read_1d(variable_name='soillev')    ! Depth of layer bottom
+!    nsoil = SIZE(ptr_1D)
+!    ALLOCATE(depths(nsoil+1))
+!    ALLOCATE(mids(nsoil))
+!    depths(1) = 0._wp
+!    depths(2:nsoil+1) = ptr_1D(1:nsoil)
+!    mids(1:nsoil) = (depths(1:nsoil) + depths(2:nsoil+1)) / 2._wp
+!    DEALLOCATE(ptr_1D)
+!
+!    CALL input_file%Close()
+    nsoil = 1
     ALLOCATE(depths(nsoil+1))
     ALLOCATE(mids(nsoil))
     depths(1) = 0._wp
-    depths(2:nsoil+1) = ptr_1D(1:nsoil)
-    mids(1:nsoil) = (depths(1:nsoil) + depths(2:nsoil+1)) / 2._wp
-    DEALLOCATE(ptr_1D)
-
-    CALL input_file%Close()
+    depths(2:nsoil+1) = (/1.000/)
+    mids(1) = (depths(1) + depths(2)) / 2._wp
+!_junhong
 
     soil_vgrid  => new_vgrid('soil_depth_energy', ZAXIS_DEPTH_BELOW_LAND, nsoil, &
       & levels  = mids                 (1:nsoil  ),                              &

@@ -222,6 +222,11 @@ CONTAINS
     IF (moisture > 0._wp) THEN
       relative_humidity_soil = 0.5_wp * (1._wp - COS(moisture * pi / fc)) ! relative_humidity increases with higher moisture and
                                                                           !  lower fc. Note, fc has to be  >= than moisture!
+!_junhong_drain
+      IF ( ws > fc ) THEN
+        relative_humidity_soil = 1._wp
+      END IF
+!_junhong_drain
     ELSE
       relative_humidity_soil = 0._wp
     END IF

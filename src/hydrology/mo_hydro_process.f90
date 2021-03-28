@@ -586,13 +586,21 @@ CONTAINS
           ws_incl_ice(i) = ws(i) + ice_rootzone(i)                    ! soil water including ice
           IF (water_to_soil(i) > 0._wp .AND. ws_incl_ice(i) > ws_min_drain(i)) THEN ! soilwater content above limit for drainage
 
-            ws_rel(i) = MIN(1._wp, ws_incl_ice(i) / ws_max(i))            !  relative soil moisture
-            zvol   = (1._wp - ws_rel(i))**zbm - water_to_soil(i)/zconw1          ! ???
+!_junhong_no_runoff
+!            ws_rel(i) = MIN(1._wp, ws_incl_ice(i) / ws_max(i))            !  relative soil moisture
+!            zvol   = (1._wp - ws_rel(i))**zbm - water_to_soil(i)/zconw1          ! ???
+!_junhong_no_runoff
 
             runoff(i) = water_to_soil(i) - (ws_max(i)-ws_incl_ice(i)) ! if >0: amount of water exceeding water holding capacity
-            IF (zvol > 0._wp) runoff(i) = runoff(i) + ws_max(i)*zvol**zb1
+!_junhong_no_runoff
+!            IF (zvol > 0._wp) runoff(i) = runoff(i) + ws_max(i)*zvol**zb1
+!_junhong_no_runoff
             runoff(i) = MAX(MIN(runoff(i), water_to_soil(i)), 0._wp)   ! no negative runoff, runoff limited by available water
             infilt(i) = water_to_soil(i) - runoff(i)                   ! water not going into runoff is infiltrated
+!_junhong_no_runoff
+            runoff(i) = 0._wp                                            ! no runoff as soil is too dry
+            infilt(i) = water_to_soil(i)                                ! all water infiltrated
+!_junhong_no_runoff
           ELSE
             runoff(i) = 0._wp                                            ! no runoff as soil is too dry
             infilt(i) = water_to_soil(i)                                ! all water infiltrated
@@ -790,6 +798,8 @@ CONTAINS
       DO i = 1, nsoil-1
         IF (field_cap_l(j,i) > zfcmin .AND. field_cap_l(j,i) > p_wilt_l(j,i)) THEN
           ws_rel(j,i) = MAX(ws_l(j,i) - p_wilt_l(j,i), 0._wp) / (field_cap_l(j,i) - p_wilt_l(j,i))
+!_junhong_drain_comment
+! I don't touch MIN() a line below because eq(2.23) is already awared of that ws_rel can be larger than 1 and despite of this fact, MIN() is used.
           ws_rel(j,i) = MIN(ws_rel(j,i), 1._wp)
           percolation(j,i) =  hyd_cond_sat_l(j,i)*zkredu(i) * SQRT(ws_rel(j,i))                           &
             &                  * (1._wp - (1._wp - ws_rel(j,i)**(1._wp/zmvg_l(j,i)))**zmvg_l(j,i))**2._wp &
@@ -823,15 +833,24 @@ CONTAINS
             IF (field_cap_l(j,i) > p_wilt_l(j,i)) THEN
               ! drain_min = minimum factor * normalized soil moisture
               drain_l(j) = zdrmin * (ws_l(j,i) - p_wilt_l(j,i)) / (field_cap_l(j,i) - p_wilt_l(j,i))
+!_junhong_drain
+              drain_l(j) = 0
+!_junhong_drain
             ELSE
               drain_l(j) = 0._wp
             END IF
             IF (ws_l(j,i) > ws_crit(j)) THEN
               drain_crit(j) = (zdrmax-zdrmin) * ((ws_l(j,i)-ws_crit(j)) / (wsat_l(j,i) - ws_crit(j)))**zdrexp
               drain_l(j) = drain_l(j) + MIN(drain_crit(j), (ws_l(j,i)-ws_crit(j))/delta_time)
+!_junhong_drain
+              drain_l(j) = 0
+!_junhong_drain
             END IF
             ! drainage is limited by the available water of the layer
             drain_l(j) = MIN(drain_l(j), (ws_l(j,i)-p_wilt_l(j,i))/delta_time)
+!_junhong_drain
+            drain_l(j) = 0
+!_junhong_drain
           END IF
           percolation(j,i) = drain_l(j) * delta_time  ! [m/s] -> [m]
 
@@ -851,23 +870,34 @@ CONTAINS
             IF (field_cap_l(j,i) > p_wilt_l(j,i)) THEN
             ! drain_min = minimum factor * normalized soil moisture
               drain_l(j) = zdrmin * (ws_tmp(j) - p_wilt_l(j,i)) / (field_cap_l(j,i)-p_wilt_l(j,i))
+!_junhong_drain
+              drain_l(j) = 0
+!_junhong_drain
             ELSE
               drain_l(j) = 0._wp
             END IF
             IF (ws_tmp(j) > ws_crit(j)) THEN
               drain_crit(j) = (zdrmax-zdrmin) * ((ws_tmp(j) - ws_crit(j)) / (wsat_l(j,i) - ws_crit(j)))**zdrexp
               drain_l(j) = drain_l(j) + MIN(drain_crit(j), (ws_tmp(j) - ws_crit(j))/delta_time)
+!_junhong_drain
+              drain_l(j) = 0
+!_junhong_drain
             END IF
             ! drainage is limited by the soil moisture within the layer
             drain_l(j) = MIN(drain_l(j) * delta_time, (ws_tmp(j) - p_wilt_l(j,i)))
+!_junhong_drain
+            drain_l(j) = 0
+!_junhong_drain
           END IF
         END IF
 
         IF (.NOT. ltpe_closed) THEN
-          IF (dsoil(j,i) > 0._wp .AND. soil_below(j) .AND. ws_tmp(j) > p_wilt_l(j,i)) THEN
-            ws_l(j,i) = ws_l(j,i) - drain_l(j)       ! remove drainage of the layer from soil moisture
-            drainage(j) = drainage(j) + drain_l(j)   ! and add it to the total drainage
-          END IF
+!_junhong_drain
+!          IF (dsoil(j,i) > 0._wp .AND. soil_below(j) .AND. ws_tmp(j) > p_wilt_l(j,i)) THEN
+!            ws_l(j,i) = ws_l(j,i) - drain_l(j)       ! remove drainage of the layer from soil moisture
+!            drainage(j) = drainage(j) + drain_l(j)   ! and add it to the total drainage
+!          END IF
+!_junhong_drain
         END IF                                       ! no drainage for TPE closed case
 
       END DO  ! soil level
@@ -904,6 +934,9 @@ CONTAINS
           diffusivity(j,i) = diffus_l(j,i+1) * diffus_l(j,i) &
             &                 / ((diffus_l(j,i+1)*dsoil(j,i) + diffus_l(j,i)*dsoil(j,i+1))/(dsoil(j,i+1)+dsoil(j,i)))
         END IF
+!_junhong_drain
+      diffusivity(j,i) = 0
+!_junhong_drain
       END DO
 
       ! calculation of diffusion coefficients
@@ -960,7 +993,9 @@ CONTAINS
 
       IF (dsoil(j,1) > 0._wp) THEN
         zdc(j,1) = zda(j,1) + zdb(j,1) + 1._wp
-        ws_l(j,1) = ws_l(j,1) / zdc(j,1)
+!_junhong_drain
+!        ws_l(j,1) = ws_l(j,1) / zdc(j,1)
+!_junhong_drain
       END IF
 
       ! decomposition and forward substitution
@@ -969,17 +1004,21 @@ CONTAINS
         IF (dsoil(j,i) > 0._wp) THEN
           ztri(j,i) = -zda(j,i-1) / zdc(j,i-1)
           zdc(j,i)  = zda(j,i) + zdb(j,i) + 1._wp + zdb(j,i)*ztri(j,i)
-          ws_l(j,i) = (ws_l(j,i) / dsoil(j,i) + zdb(j,i) * ws_l(j,i-1)/dsoil(j,i-1)) / zdc(j,i) * dsoil(j,i)
+!_junhong_drain
+!          ws_l(j,i) = (ws_l(j,i) / dsoil(j,i) + zdb(j,i) * ws_l(j,i-1)/dsoil(j,i-1)) / zdc(j,i) * dsoil(j,i)
+!_junhong_drain
         END IF
       END DO
 
       ! backsubstitution
       !$claw acc loop seq
-      DO i = nsoil-1, 1, -1
-        IF (dsoil(j,i+1) > 0._wp) THEN
-          ws_l(j,i) = ws_l(j,i) - ztri(j,i+1) * ws_l(j,i+1) * (dsoil(j,i)/dsoil(j,i+1))
-        END IF
-      END DO
+!_junhong_drain
+!      DO i = nsoil-1, 1, -1
+!        IF (dsoil(j,i+1) > 0._wp) THEN
+!          ws_l(j,i) = ws_l(j,i) - ztri(j,i+1) * ws_l(j,i+1) * (dsoil(j,i)/dsoil(j,i+1))
+!        END IF
+!      END DO
+!_junhong_drain
 
       ! temporary storage for diagnostic printing
       IF (ilog == 1 .OR. ilog == 3) THEN
@@ -996,8 +1035,10 @@ CONTAINS
         !$claw acc loop seq
         DO i=1,nsoil
           IF (dsoil(j,i) > 0._wp .AND. ws_l(j,i) > field_cap_l(j,i)) THEN
-            drainage(j) = drainage(j) + ws_l(j,i)-field_cap_l(j,i)
-            ws_l(j,i) = field_cap_l(j,i)
+!_junhong_drain
+!            drainage(j) = drainage(j) + ws_l(j,i)-field_cap_l(j,i)
+!            ws_l(j,i) = field_cap_l(j,i)
+!_junhong_drain
           END IF
         END DO
       ELSE
@@ -1008,11 +1049,15 @@ CONTAINS
             IF (ws_l(j,i) > field_cap_l(j,i)) THEN
               ! redirect overflow from drainage to overflow pool
               w_soil_overflow(j) = w_soil_overflow(j) + ws_l(j,i) - field_cap_l(j,i)
-              ws_l(j,i) = field_cap_l(j,i)
+!_junhong_drain
+!              ws_l(j,i) = field_cap_l(j,i)
+!_junhong_drain
             ELSE ! ws_l <= field_cap_l
               ! refill soil moisture from overflow pool
               remoist(j) = MIN(w_soil_overflow(j), field_cap_l(j,i) - ws_l(j,i))
-              ws_l(j,i) = ws_l(j,i) + remoist(j)
+!_junhong_drain
+!              ws_l(j,i) = ws_l(j,i) + remoist(j)
+!_junhong_drain
               w_soil_overflow(j) = w_soil_overflow(j) - remoist(j)
             END IF
           END IF
@@ -1027,7 +1072,9 @@ CONTAINS
           IF (i == nsoil-1 .OR. i == nsoil) THEN
             IF (dsoil(j,i) > 0._wp) THEN
              ! keep the two lowest soil layers always very wet
-             ws_l(j,i) = MAX(ws_l(j,i),field_cap_l(j,i) * 0.9_wp)
+!_junhong_drain
+!             ws_l(j,i) = MAX(ws_l(j,i),field_cap_l(j,i) * 0.9_wp)
+!_junhong_drain
             END IF
           END IF
         END DO
@@ -1056,13 +1103,19 @@ CONTAINS
           ws_min_drain(j) = zwdmin * field_cap_l(j,i)              ! minimum soil moisture for drainage
           IF (ws_l(j,i)-percolation(j,i) < ws_min_drain(j)) THEN   ! more percolation than water available
             IF (ws_l(j,i) > ws_min_drain(j)) THEN                  !   there is water for perculation
-              percolation(j,i) = ws_l(j,i) - ws_min_drain(j)       !   all available water perculates
-              ws_l(j,i) = ws_min_drain(j)                          !   soil moisture is limited to minimum
+!_junhong_drain
+!              percolation(j,i) = ws_l(j,i) - ws_min_drain(j)       !   all available water perculates
+!              ws_l(j,i) = ws_min_drain(j)                          !   soil moisture is limited to minimum
+!_junhong_drain
             ELSE
-              percolation(j,i) = 0._wp
+!_junhong_drain
+!              percolation(j,i) = 0._wp
+!_junhong_drain
             END IF
           ELSE                                                ! there is enough soil water
-            ws_l(j,i) = ws_l(j,i) - percolation(j,i)
+!_junhong_drain
+!            ws_l(j,i) = ws_l(j,i) - percolation(j,i)
+!_junhong_drain
           END IF
         END IF
       END DO
@@ -1072,17 +1125,23 @@ CONTAINS
       !$claw acc loop seq
       DO i = 1, nsoil-1
         IF (dsoil(j,i+1) > 0._wp) THEN
-          ws_l(j,i+1) = ws_l(j,i+1) + percolation(j,i)
+!_junhong_drain
+!          ws_l(j,i+1) = ws_l(j,i+1) + percolation(j,i)
+!_junhong_drain
         END IF
         IF (.NOT. ltpe_closed) THEN
           IF (dsoil(j,i+1) <= 0._wp) THEN      ! bedrock below
-            drainage(j) = drainage(j) + percolation(j,i)
-            percolation(j,i) = 0._wp
+!_junhong_drain
+!            drainage(j) = drainage(j) + percolation(j,i)
+!            percolation(j,i) = 0._wp
+!_junhong_drain
           END IF
         ELSE  ! TPE closed case
           IF (dsoil(j,i+1) <= 0._wp) THEN      ! bedrock below
-            w_soil_overflow(j) = w_soil_overflow(j) + percolation(j,i)
-            percolation(j,i) = 0._wp
+!_junhong_drain
+!            w_soil_overflow(j) = w_soil_overflow(j) + percolation(j,i)
+!            percolation(j,i) = 0._wp
+!_junhong_drain
           END IF
         END IF
       END DO
@@ -1094,14 +1153,18 @@ CONTAINS
         IF (dsoil(j,i) > 0._wp .AND. ws_l(j,i) > field_cap_l(j,i)) THEN
           ! soil moisture above field capacity:
           !   reduce percolation from the above layer by the amount that does not fit into the below layer
-          percolation(j,i-1) = MAX(percolation(j,i-1) - ws_l(j,i) + field_cap_l(j,i), 0._wp)
-          ws_l(j,i-1) = ws_l(j,i-1) + ws_l(j,i) - field_cap_l(j,i)
-          ws_l(j,i) = field_cap_l(j,i)
+!_junhong_drain
+!          percolation(j,i-1) = MAX(percolation(j,i-1) - ws_l(j,i) + field_cap_l(j,i), 0._wp)
+!          ws_l(j,i-1) = ws_l(j,i-1) + ws_l(j,i) - field_cap_l(j,i)
+!          ws_l(j,i) = field_cap_l(j,i)
+!_junhong_drain
         END IF
       END DO
 
       IF (.NOT. ltpe_closed) THEN
-        drainage(j) = drainage(j) + percolation(j,nsoil)
+!_junhong_drain
+!        drainage(j) = drainage(j) + percolation(j,nsoil)
+!_junhong_drain
       ELSE  ! TPE closed case
         ! redirect percolation from drainage to overflow pool
         w_soil_overflow(j) = w_soil_overflow(j) +  percolation(j,nsoil)
@@ -1111,14 +1174,18 @@ CONTAINS
       ! This should not happen, this is just for security.
       IF (.NOT. ltpe_closed) THEN
         IF (ws_l(j,1) > field_cap_l(j,1)) THEN
-          drainage(j) = drainage(j) + ws_l(j,1) - field_cap_l(j,1)
-          ws_l(j,1) = field_cap_l(j,1)
+!_junhong_drain
+!          drainage(j) = drainage(j) + ws_l(j,1) - field_cap_l(j,1)
+!          ws_l(j,1) = field_cap_l(j,1)
+!_junhong_drain
         END IF
       ELSE      ! TPE closed case
         IF (ws_l(j,1) > field_cap_l(j,1)) THEN
           ! redirect overflow to overflow pool
           w_soil_overflow(j) = w_soil_overflow(j) + ws_l(j,1) - field_cap_l(j,1)
-          ws_l(j,1) = field_cap_l(j,1)
+!_junhong_drain
+!          ws_l(j,1) = field_cap_l(j,1)
+!_junhong_drain
         END IF
       END IF
     END DO
@@ -1314,14 +1381,16 @@ CONTAINS
       ! CALL message ('digest_evapotrans', message_text, all_print=.TRUE., level=em_warn)
       ! ws_l(:,:) = MAX(ws_l(:,:), 0._wp)
     END IF
-    IF (ANY(ws_l(:,:) > field_cap_l(:,:) + zfcmin)) THEN
-      max2d(:) = MAXLOC(ws_l(:,:) - field_cap_l(:,:))
-      WRITE (message_text,*) 'liquid water content above field capacity: at ',max2d(:) ,': ws_l: ', ws_l(max2d(1),max2d(2)), &
-         ' field_cap_l: ', field_cap_l(max2d(1),max2d(2))
-      CALL finish ('digest_evapotrans', message_text)
-      ! CALL message ('digest_evapotrans', message_text, all_print=.TRUE., level=em_warn)
-      ! ws_l(:,:) = MIN(ws_l(:,:), field_cap_l(:,:))
-    END IF
+!_junhong_drain
+!    IF (ANY(ws_l(:,:) > field_cap_l(:,:) + zfcmin)) THEN
+!      max2d(:) = MAXLOC(ws_l(:,:) - field_cap_l(:,:))
+!      WRITE (message_text,*) 'liquid water content above field capacity: at ',max2d(:) ,': ws_l: ', ws_l(max2d(1),max2d(2)), &
+!         ' field_cap_l: ', field_cap_l(max2d(1),max2d(2))
+!      CALL finish ('digest_evapotrans', message_text)
+!      ! CALL message ('digest_evapotrans', message_text, all_print=.TRUE., level=em_warn)
+!      ! ws_l(:,:) = MIN(ws_l(:,:), field_cap_l(:,:))
+!    END IF
+!$$_junhong_drain
 #endif
 
   END SUBROUTINE digest_evapotrans
@@ -1377,15 +1446,21 @@ CONTAINS
         ws_l(i,jk) = ws_l(i,jk) + excess(i)
         IF (.NOT. ltpe_closed) THEN
           IF (ws_l(i,jk) > field_cap_l(i,jk)) THEN         ! soil moisture exceeds field capacity
-            excess(i) = ws_l(i,jk) - field_cap_l(i,jk)       !   excess water -> goes into level below
-            ws_l(i,jk) = field_cap_l(i,jk)                   !   limit soil moisture to field capacity
+!_junhong_drain
+!            excess(i) = ws_l(i,jk) - field_cap_l(i,jk)       !   excess water -> goes into level below
+!            ws_l(i,jk) = field_cap_l(i,jk)                   !   limit soil moisture to field capacity
+            excess(i) = 0._wp
+!_junhong_drain
           ELSE
             excess(i) = 0._wp
           END IF
         ELSE  ! TPE closed case
           IF (ws_l(i,jk) > field_cap_l(i,jk)) THEN
-            w_soil_overflow(i) = w_soil_overflow(i) + ws_l(i,jk) - field_cap_l(i,jk)
-            ws_l(i,jk) = field_cap_l(i,jk)
+!_junhong_drain
+!            w_soil_overflow(i) = w_soil_overflow(i) + ws_l(i,jk) - field_cap_l(i,jk)
+!            ws_l(i,jk) = field_cap_l(i,jk)
+            excess(i) = 0._wp
+!_junhong_drain
           END IF
           excess(i) = 0._wp
         END IF

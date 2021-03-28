@@ -30,6 +30,9 @@ MODULE mo_hydro_config_class
   TYPE, EXTENDS(t_jsb_config) :: t_hydro_config
     CHARACTER(len=filename_max) :: bc_sso_filename !< For elevation and oro_stddev
     REAL(wp)            :: &
+!_junhong_name
+      & sm_init,           &
+!_junhong_name
       & w_skin_max,        & !< Water holding capacity of ground skin reservoir [m water equivalent]
       & w_soil_limit,      & !< Upper limit for maximum soil moisture content
       & w_soil_crit_fract, & !< Fraction of field capacity at which soil starts to dry,
@@ -63,6 +66,9 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename, bc_filename, bc_sso_filename
     REAL(wp)                    :: w_skin_max
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
+!_junhong_name
+    REAL(wp)                    :: sm_init
+!_junhong_name
     CHARACTER(len=10)           :: scheme_stom_cond
     LOGICAL                     :: l_organic, l_glac_in_soil
 
@@ -77,6 +83,9 @@ CONTAINS
       & w_soil_wilt_fract,          &
       & scheme_stom_cond,           &
       & l_organic,                  &
+!_junhong_name
+      & sm_init,                    &
+!_junhong_name
       & l_glac_in_soil
 
     INTEGER :: nml_handler, nml_unit, istat
@@ -103,6 +112,9 @@ CONTAINS
     scheme_stom_cond  = 'echam5'
     l_organic         = .FALSE.
     l_glac_in_soil    = .FALSE.
+!_junhong_name
+    sm_init           = -99._wp
+!_junhong_name
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -132,27 +144,38 @@ CONTAINS
     IF (l_organic) CALL message(TRIM(routine), 'Using organic component in soil hydrology')
 
     config%l_glac_in_soil      = l_glac_in_soil
+!_junhong_name
+    config%sm_init             = sm_init
+!_junhong_name
 
     CALL close_nml(nml_handler)
 
     IF (.NOT. active) RETURN
 
-    input_file = jsb_netcdf_open_input(ic_filename)
-
-    ptr_1D => input_file%Read_1d(variable_name='soillev')    ! Depth of layer bottom
-    nsoil = SIZE(ptr_1D)
-
-    IF (l_organic .AND. nsoil < 3) &
-      & CALL finish(TRIM(routine), 'At least three soil layers required for using organic soil component')
-
+!_junhong
+!    input_file = jsb_netcdf_open_input(ic_filename)
+!
+!    ptr_1D => input_file%Read_1d(variable_name='soillev')    ! Depth of layer bottom
+!    nsoil = SIZE(ptr_1D)
+!
+!    IF (l_organic .AND. nsoil < 3) &
+!      & CALL finish(TRIM(routine), 'At least three soil layers required for using organic soil component')
+!
+!    ALLOCATE(depths(nsoil+1))
+!    ALLOCATE(mids(nsoil))
+!    depths(1) = 0._wp
+!    depths(2:nsoil+1) = ptr_1D(1:nsoil)
+!    mids(1:nsoil) = (depths(1:nsoil) + depths(2:nsoil+1)) / 2._wp
+!    DEALLOCATE(ptr_1D)
+!
+!    CALL input_file%Close()
+    nsoil = 1
     ALLOCATE(depths(nsoil+1))
     ALLOCATE(mids(nsoil))
     depths(1) = 0._wp
-    depths(2:nsoil+1) = ptr_1D(1:nsoil)
+    depths(2:nsoil+1) = (/1.000/)
     mids(1:nsoil) = (depths(1:nsoil) + depths(2:nsoil+1)) / 2._wp
-    DEALLOCATE(ptr_1D)
-
-    CALL input_file%Close()
+!_junhong
 
     soil_w  => new_vgrid('soil_depth_water', ZAXIS_DEPTH_BELOW_LAND, nsoil, &
       & levels  = mids                 (1:nsoil  ),                         &

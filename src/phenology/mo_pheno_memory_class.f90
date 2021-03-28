@@ -255,6 +255,9 @@ CONTAINS
           & t_cf('yday_NPP_pot_rate_ca', 'prev day NPP_pot_rate_ca', ''),            &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
           & prefix, suffix,                                                          &
+!_junhong
+          & output_level=BASIC,                                                  &
+!_junhong
           & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp )
 
         ! CALL jsb_add_var( mem,'laimax_dyn', mem%laiMax_dyn,                    &
@@ -276,6 +279,9 @@ CONTAINS
           & t_cf('day_NPP_sum', '', ''),                                       &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
+!_junhong
+          & output_level=BASIC,                                                  &
+!_junhong
           & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp)
 
         CALL jsb_add_var( mem,'heat_sum_eg', mem%heat_sum_EG,                  &

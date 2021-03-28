@@ -22,7 +22,10 @@ MODULE mo_hydro_interface
   USE mo_jsb_control,        ONLY: debug_on
   USE mo_jsb_time,           ONLY: is_time_experiment_start
   USE mo_kind,               ONLY: wp
-  USE mo_exception,          ONLY: message, finish
+!_junhong_print
+!  USE mo_exception,          ONLY: message, finish
+  USE mo_exception,          ONLY: message, finish, message_text
+!_junhong_print
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
@@ -1002,6 +1005,9 @@ CONTAINS
         w_soil_rel(i) = MIN(w_soil_column(i) / max_moist(i), 1._wp)
           ! @todo - in jsbach3, taking the MIN with 1 is not nessecary. Here, w_soil_column can be larger than
           ! max_moist (in some places) ... this should be investigated, maybe it has to do with the interpolated input fields
+!_junhong_comment
+!       w_soil_rel calculated herer is used in phenology to get dLAI/dt. Max_moist have to be same with field capacity.
+!_junhong_comment
       ELSE
         ! max_moist is zero over glaciers
         w_soil_rel(i) = 0._wp
@@ -1447,6 +1453,11 @@ CONTAINS
       & evapo_ice, &
       & evapopot,       &
       & evapotrans, &
+!_junhong_output
+      & evapodirect, &
+      & evapobare, &
+      & fract_water, &
+!_junhong_output
       & trans
 
     ! Locally allocated vectors
@@ -1545,6 +1556,11 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans_lnd)           ! out
       IF (tile%contains_vegetation) THEN
         dsl4jsb_Get_var2D_onChunk(HYDRO_,    trans)               ! out
+!_junhong_output
+        dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapodirect)         ! out
+        dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapobare)           ! out
+        dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_water)         ! out
+!_junhong_output
       END IF
 
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_evaporation_expand_5 tile_name=tile%name
@@ -1563,6 +1579,10 @@ CONTAINS
       IF (tile%contains_vegetation) THEN
         !$claw expand parallel update savepoint=ser_jsb_hydro_update_evaporation_expand_6 tile_name=tile%name
         trans(:)              = fact_qsat_trans_srf(:) * evapopot(:)             ! Transpiration
+!_junhong_output
+        evapodirect(:) =       fract_water(:) * evapopot(:)
+        evapobare(:) =  evapotrans_lnd(:) - trans(:) - evapodirect(:)
+!_junhong_output
       END IF
 
     ELSE
@@ -1616,6 +1636,10 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapotrans, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapopot,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, trans,              weighted_by_fract)
+!_junhong_output
+    dsl4jsb_Aggregate_onChunk(HYDRO_, evapodirect,              weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, evapobare,              weighted_by_fract)
+!_junhong_output
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapotrans_lnd,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_wtr,          weighted_by_fract)
     IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
@@ -1952,6 +1976,12 @@ CONTAINS
       & evapotrans, &
       & w_skin, &
       & w_snow, &
+!_junhong_water_bal_v2
+      & rainsnow_jun, &    ! [m3 s-1]
+!_junhong_water_bal_v2
+!_junhong_water_bal_v3
+      & awater_con, &    ! [m3 s-1]
+!_junhong_water_bal_v3
       & water_flux, &    ! [m3 s-1]
       & water_content, & ! [m3]
       & water_budget     ! [m3]
@@ -2006,6 +2036,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_flux)          ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_content)       ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_budget)        ! out
+!_junhong_water_bal_v2
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    rainsnow_jun)        ! out
+!_junhong_water_bal_v2
+!_junhong_water_bal_v3
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    awater_con)        ! out
+!_junhong_water_bal_v3
 
     !$claw acc data create(tile, tile%fract, tile_fract, water_content_new)
 
@@ -2016,18 +2052,28 @@ CONTAINS
 
     !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_0 tile_name=tile%name
     water_flux(:) = rain(:) + snow(:) + evapotrans(:) - runoff(:) - drainage(:)
-    water_flux(:) = water_flux(:) * tile_fract(:) * area(:) / rhoh2o                    ! kg m-2 s-1 -> m3/s
+!_junhong_water_bal_v2
+!    water_flux(:) = water_flux(:) * tile_fract(:) * area(:) / rhoh2o                    ! kg m-2 s-1 -> m3/s
+    water_flux(:) = water_flux(:) * tile_fract(:) / rhoh2o                    ! kg m-2 s-1 -> m3/s
+    rainsnow_jun(:) = ( rain(:) + snow(:) ) * tile_fract(:)
+!_junhong_water_bal_v2
     !$claw end expand
 
     IF (tile%contains_soil .AND. .NOT. tile%is_glacier) THEN
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_1 tile_name=tile%name
       water_content_new(:) = (  w_skin(:) + w_snow(:)                                   &
         &                     + SUM(w_soil_sl(:,:), DIM=2) + SUM(w_ice_sl(:,:), DIM=2)  &
-        &                    ) * tile_fract(:) * area(:)  ! m -> m^3
+!_junhong_water_bal_v2
+!        &                    ) * tile_fract(:) * area(:)  ! m -> m^3
+        &                    ) * tile_fract(:)  !
+!_junhong_water_bal_v2
     ELSE
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_2 tile_name=tile%name
       water_content_new(:) = 0._wp
     END IF
+!_junhong_water_bal_v3
+    awater_con(:) = water_content_new(:) * 1000._wp
+!_junhong_water_bal_v3
 
     IF (.NOT. is_time_experiment_start()) THEN
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_3 tile_name=tile%name

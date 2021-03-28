@@ -602,6 +602,9 @@ CONTAINS
     IF (dsl4jsb_Lctlib_param(PhenologyType) ==  4) THEN
       IF (debug_on() .AND. iblk == 1) CALL message('     ','... grasses ...')
        !$claw sca forward update savepoint=ser_jsb_pheno_calc_grass_phenology_1 tile_name=tile%name
+!_junhong_lai
+      IF (.NOT. dsl4jsb_Config(PHENO_)%lai_fix) THEN
+!_junhong_name
        CALL calc_grass_phenology(           &
          & t_air_in_Celcius(:),             & ! in
          & timestep,                        & ! in
@@ -610,6 +613,9 @@ CONTAINS
          & previous_day_NPP_pot_rate_ca(:), & ! in
          & lai(:)                           & ! inout
          & )
+!_junhong_name
+      ENDIF
+!_junhong_name
     END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -800,6 +806,12 @@ CONTAINS
       !$claw expand parallel update savepoint=ser_jsb_pheno_update_fpc_expand_3 tile_name=tile%name
       fract_fpc(:) = get_foliage_projected_cover(fract_fpc_max(:), lai(:), ClumpinessFactor)
     END IF
+
+!_junhong_cveg
+    IF ( dsl4jsb_Config(PHENO_)%cveg_fix >= 0. ) THEN
+      fract_fpc = dsl4jsb_Config(PHENO_)%cveg_fix
+    END IF
+!_junhong_cveg
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

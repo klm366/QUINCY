@@ -86,6 +86,9 @@ CONTAINS
     & alb_nir_dir,      &
     & alb_vis_dif,      &
     & alb_nir_dif,      &
+!_junhong_water_bal_v3
+    & awater_con,      &
+!_junhong_water_bal_v3
     & CO2_flux,         &
     ! For lakes (optional):
     & drag_wtr, drag_ice,                                               & !< in
@@ -159,6 +162,9 @@ CONTAINS
       & fact_q_air        (:), &
       & fact_qsat_srf     (:), &
       & evapotrans        (:), &
+!_junhong_water_bal_v3
+      & awater_con        (:), &
+!_junhong_water_bal_v3
       & latent_hflx       (:), &
       & sensible_hflx     (:), &
       & grnd_hflx         (:), &
@@ -257,18 +263,21 @@ CONTAINS
       & q_bcoef            = q_bcoef(:),            &
       & pch                = pch(:),                &
       & cos_zenith_angle   = cos_zenith_angle(:),   &
-      & CO2_air            = CO2_air(:),            &
-      ! For lakes:
-      & drag_wtr           = drag_wtr,              &
-      & drag_ice           = drag_ice,              &
-      & t_acoef_wtr        = t_acoef_wtr,           &
-      & t_bcoef_wtr        = t_bcoef_wtr,           &
-      & q_acoef_wtr        = q_acoef_wtr,           &
-      & q_bcoef_wtr        = q_bcoef_wtr,           &
-      & t_acoef_ice        = t_acoef_ice,           &
-      & t_bcoef_ice        = t_bcoef_ice,           &
-      & q_acoef_ice        = q_acoef_ice,           &
-      & q_bcoef_ice        = q_bcoef_ice            &
+!_junhong
+      & CO2_air            = CO2_air(:)             &
+!      & CO2_air            = CO2_air(:),            &
+!      ! For lakes:
+!      & drag_wtr           = drag_wtr,              &
+!      & drag_ice           = drag_ice,              &
+!      & t_acoef_wtr        = t_acoef_wtr,           &
+!      & t_bcoef_wtr        = t_bcoef_wtr,           &
+!      & q_acoef_wtr        = q_acoef_wtr,           &
+!      & q_bcoef_wtr        = q_bcoef_wtr,           &
+!      & t_acoef_ice        = t_acoef_ice,           &
+!      & t_bcoef_ice        = t_bcoef_ice,           &
+!      & q_acoef_ice        = q_acoef_ice,           &
+!      & q_bcoef_ice        = q_bcoef_ice            &
+!_junhong
       & )
     NULLIFY(tile)
 
@@ -303,6 +312,9 @@ CONTAINS
       & alb_vis_dif        = alb_vis_dif(:),     &
       & alb_nir_dif        = alb_nir_dif(:),     &
       & CO2_flux           = CO2_flux(:),        &
+!_junhong_water_bal_v3
+      & awater_con         = awater_con(:),        &
+!_junhong_water_bal_v3
       & t_lwtr             = t_lwtr,             &
       & qsat_lwtr          = qsat_lwtr,          &
       & s_lwtr             = s_lwtr,             &

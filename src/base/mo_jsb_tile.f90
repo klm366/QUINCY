@@ -431,7 +431,8 @@ CONTAINS
       tmp_fract(:,:) = 1._wp
       CALL this%Set_fraction(fract_max=tmp_fract(:,:))
     ELSE
-      input_file = jsb_netcdf_open_input(TRIM(this%fract_filename), this%owner_model_id)
+!_junhong
+!      input_file = jsb_netcdf_open_input(TRIM(this%fract_filename), this%owner_model_id)
 
       IF (TRIM(this%fract_varname) == '') THEN
         name_loc = 'fract'
@@ -440,31 +441,40 @@ CONTAINS
       ELSE
         name_loc = TRIM(this%fract_varname)
       END IF
-      IF (input_file%Has_var(TRIM(name_loc))) THEN
-        return_pointer => input_file%Read_2d(variable_name=TRIM(name_loc))
-        !
-        ! TODO: For security set all values of the box fractions to 1 that are close to 1 
-        ! (similar to mo_echam_phy_init) in order to account for precision errors
-        IF (TRIM(this%name) == 'box') THEN
-          return_pointer(:,:) = MERGE(1._wp, return_pointer(:,:), return_pointer(:,:) > 1._wp - 10._wp*EPSILON(1._wp))
+!      IF (input_file%Has_var(TRIM(name_loc))) THEN
+!        return_pointer => input_file%Read_2d(variable_name=TRIM(name_loc))
+!        !
+!        ! TODO: For security set all values of the box fractions to 1 that are close to 1 
+!        ! (similar to mo_echam_phy_init) in order to account for precision errors
+!        IF (TRIM(this%name) == 'box') THEN
+!          return_pointer(:,:) = MERGE(1._wp, return_pointer(:,:), return_pointer(:,:) > 1._wp - 10._wp*EPSILON(1._wp))
+!        END IF
+!        !
+!        ! TODO: For security, as a workaround, set lake fractions in coastal points that are 
+!        ! partially land and partially ocean to zero, and corresponding land fraction to one.
+!        IF (TRIM(this%name) == 'lake') THEN
+!          CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
+!          return_pointer(:,:) = MERGE(return_pointer(:,:), 0._wp, tmp_fract(:,:) >= 1._wp)
+!        END IF
+!        IF (TRIM(this%name) == 'land') THEN
+!          CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
+!          return_pointer(:,:) = MERGE(return_pointer(:,:), 1._wp, tmp_fract(:,:) >= 1._wp)
+!        END IF
+!        !
+!        CALL this%Set_fraction(fract=return_pointer(:,:))
+        IF( TRIM(name_loc) == 'notsea'    .or. TRIM(name_loc) == 'fract_land' .or. &
+          & TRIM(name_loc) == 'fract_veg' .or. TRIM(name_loc) == 'fract_pft07'     ) THEN
+!          & TRIM(name_loc) == 'fract_pft07'     ) THEN
+!          & TRIM(name_loc) == 'fract_veg'       ) THEN
+          tmp_fract(:,:) = 1._wp
+        ELSE
+          tmp_fract(:,:) = 0._wp
         END IF
-        !
-        ! TODO: For security, as a workaround, set lake fractions in coastal points that are 
-        ! partially land and partially ocean to zero, and corresponding land fraction to one.
-        IF (TRIM(this%name) == 'lake') THEN
-          CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
-          return_pointer(:,:) = MERGE(return_pointer(:,:), 0._wp, tmp_fract(:,:) >= 1._wp)
-        END IF
-        IF (TRIM(this%name) == 'land') THEN
-          CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
-          return_pointer(:,:) = MERGE(return_pointer(:,:), 1._wp, tmp_fract(:,:) >= 1._wp)
-        END IF
-        !
-        CALL this%Set_fraction(fract=return_pointer(:,:))
-      ELSE
-        CALL finish(TRIM(routine), 'Fraction '//TRIM(name_loc)//' for tile '//TRIM(this%name)// &
-          &                        ' not found in '//TRIM(this%fract_filename))
-      END IF
+        CALL this%Set_fraction(fract=tmp_fract(:,:))
+!      ELSE
+!        CALL finish(TRIM(routine), 'Fraction '//TRIM(name_loc)//' for tile '//TRIM(this%name)// &
+!          &                        ' not found in '//TRIM(this%fract_filename))
+!      END IF
 
       IF (TRIM(this%fract_varname) == '') THEN
         name_loc = 'fract_max'
@@ -473,15 +483,23 @@ CONTAINS
       ELSE
         name_loc = TRIM(this%fract_varname)//'_max'
       END IF
-      IF (input_file%Has_var(TRIM(name_loc))) THEN
-        return_pointer => input_file%Read_2d(variable_name=TRIM(name_loc))
-        CALL this%Set_fraction(fract_max=return_pointer(:,:))
-      ELSE
-        tmp_fract(:,:) = 1._wp
+!      IF (input_file%Has_var(TRIM(name_loc))) THEN
+!        return_pointer => input_file%Read_2d(variable_name=TRIM(name_loc))
+!        CALL this%Set_fraction(fract_max=return_pointer(:,:))
+!      ELSE
+        IF( TRIM(name_loc) == 'notsea_max'    .or. TRIM(name_loc) == 'fract_max_land' .or. &
+          & TRIM(name_loc) == 'fract_veg_max' .or. TRIM(name_loc) == 'fract_max_pft07'     ) THEN
+!          & TRIM(name_loc) == 'fract_max_pft07'     ) THEN
+!          & TRIM(name_loc) == 'fract_veg_max'       ) THEN
+          tmp_fract(:,:) = 1._wp
+        ELSE
+          tmp_fract(:,:) = 0._wp
+        END IF
         CALL this%Set_fraction(fract_max=tmp_fract(:,:))
-      END IF
-
-      CALL input_file%Close()
+!      END IF
+!
+!      CALL input_file%Close()
+!_junhong
 
     END IF
 
