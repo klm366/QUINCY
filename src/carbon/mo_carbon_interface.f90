@@ -1232,7 +1232,7 @@ CONTAINS
     IF( is_newmonth(options%current_datetime, options%dtime) ) THEN ! only update at the end of each day
     ! calculate 5 year mean NPP [ mol(C)/(m^2(tile area) * year) ]
       mean_5year_NPP(:) = SUM(mon_5year_NPP(:,:), DIM=2) / 5._wp
-      ratio_NPP(:)      = (molarMassC_kg/molarMassCO2_kg)*mean_5year_NPP(:)/mean_dark_NPP(:)
+      ratio_NPP(:)      = mean_5year_NPP(:)/mean_dark_NPP(:)
     END IF
     ! use_alb_soil_npp >
 
