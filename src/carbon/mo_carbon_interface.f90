@@ -299,7 +299,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::   temp_yDayMean
     dsl4jsb_Real2D_onChunk ::   GrowthResp    
     dsl4jsb_Real2D_onChunk ::   AutoRes
-    dsl4jsb_Real2D_onChunk ::  CUE
     dsl4jsb_Real2D_onChunk ::  root_maxmoist
     dsl4jsb_Real2D_onChunk ::  seed_maxmoist
     dsl4jsb_Real2D_onChunk ::  jedi_pot_supply_transp
@@ -323,7 +322,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::   ff_T_30d
     dsl4jsb_Real2D_onChunk ::   ff_dTdt        
     dsl4jsb_Real2D_onChunk ::   pseudo_c_total              
-    dsl4jsb_Real2D_onChunk ::   ff_grow_T_yDayMean
+    dsl4jsb_Real2D_onChunk ::   ff_T_30d_yDayMean
     dsl4jsb_Real2D_onChunk ::   faPAR_prev_noon
     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
     
@@ -533,14 +532,13 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,   temp_yDayMean  )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   GrowthResp        )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   AutoRes           )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    CUE              )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   C_balan           )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   C_delta           )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   c_total           )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_dTdt           )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_T_30d          )
     dsl4jsb_Get_var2D_onChunk(CARBON_,   pseudo_c_total     )
-    dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_grow_T_yDayMean) 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,   ff_T_30d_yDayMean) 
     dsl4jsb_Get_var2D_onChunk(RAD_,        faPAR_prev_noon)
 
     END IF
@@ -788,7 +786,7 @@ CONTAINS
        MaintRes = c_sapwood * c_CN_woody * ( c_stem + c_csroot ) + &
          &        dsl4jsb_Lctlib_param(NitroStatus) * dsl4jsb_Lctlib_param(JeDiSLA) * &
          &             ( c_leaves + c_fnroot )  !NNN
-       MaintRes = MaintRes  * c_Res_N    * ( 1.6_wp ** ( ( temp_yDayMean - tmelt - 20._wp ) / 10._wp) ) ! JeDi uses 1.4 for Q10 value
+       MaintRes = MaintRes  * c_Res_N    * ( 1.6_wp ** ( ( temp_yDayMean - tmelt - 20._wp ) / 10._wp) ) ! JeDi-DGM uses 1.6 for Q10 value
     
        MaintRes = MaintRes / sec_per_day ! The maintanence respiration is daily computed in JeDi.
        MaintRes_yDayMean   = MaintRes
@@ -797,11 +795,11 @@ CONTAINS
        
        !PHS 05.08.2019 Tend
        !PHS  I think I made mistake for calculating ff_dTdt 
-       !ff_dTdt            = ( ff_T_30d - ff_grow_T_yDayMean ) / ( 1._wp /  ( 1._wp - EXP(- dtime / (30._wp* 86400._wp ))  )) + &
+       !ff_dTdt            = ( ff_T_30d - ff_T_30d_yDayMean ) / ( 1._wp /  ( 1._wp - EXP(- dtime / (30._wp* 86400._wp ))  )) + &
        !  &                  EXP(- dtime / (30._wp* 86400._wp ))  * ff_dTdt  
-       ff_dTdt            = ( ff_T_30d - ff_grow_T_yDayMean ) / ( 1._wp /  ( 1._wp - EXP(- 86400._wp / (30._wp* 86400._wp ))  )) + &
+       ff_dTdt            = ( ff_T_30d - ff_T_30d_yDayMean ) / ( 1._wp /  ( 1._wp - EXP(- 86400._wp / (30._wp* 86400._wp ))  )) + &
          &                  EXP(- 86400._wp / (30._wp* 86400._wp ))  * ff_dTdt   
-       ff_grow_T_yDayMean = ff_T_30d
+       ff_T_30d_yDayMean = ff_T_30d
 
       END IF
 
@@ -875,7 +873,6 @@ CONTAINS
         & MaintRes_yDayMean,                           & ! inout
         & GrowthResp,                                  & ! out
         & AutoRes,                                     & ! out
-         & CUE,                          & !out carbon use efficiency
          & jedi_root_depth,                 &  ! out 
         & C_balan,                                     & ! out
         & C_delta,                                     & ! out
@@ -1076,7 +1073,7 @@ CONTAINS
       CALL check_carbon_conservation(tile, options, old_c_state_sum(:), &
         & current_fluxes(:), cconservation_calcCpools(:))
 
-    END IF ! new day
+    END IF
 
     ! Compute net CO2 fluxes exchanged with atmosphere at each time step
     !-------------------------------------------------------------------

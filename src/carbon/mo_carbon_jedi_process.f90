@@ -132,7 +132,6 @@ CONTAINS
     & MaintRes_yDayMean,          & ! inout
     & GrowthResp,                 & ! out
     & AutoRes,                    & ! out
-    & CUE,                          & !out carbon use efficiency
     & root_depth,                 & ! out root_depth computed from coarse root carbon
     & C_balan,                    & ! out C_balan = GPP - Mainres - Growthres - litter
     & C_delta,                    & ! out C_delta = New total carbon - old total carbon
@@ -254,7 +253,6 @@ CONTAINS
     REAL(wp), INTENT(out)   ::  C_balan
     REAL(wp), INTENT(out)   ::  C_delta
     REAL(wp), INTENT(out)   ::  c_total
-    REAL(wp), INTENT(out)   ::  CUE
     REAL(wp), INTENT(out)   ::  root_depth
     !
     ! added for thonicke fire algorithm (spitfire) needed to correctly split the carbon pools into the different fuel classes
@@ -702,16 +700,6 @@ CONTAINS
           AutoRes    = AutoRes    /  sec_per_day 
           
     
-          IF (  GPP_yDayMean .LT. 1.E-12_wp ) THEN
-          
-              CUE = 0._wp
-              
-          ELSE
-        
-           CUE =NPP_act_yDayMean /SIGN(MAX(ABS(GPP_yDayMean), 1.E-12_wp), GPP_yDayMean)
-           CUE = MAX ( 0._wp, CUE )
-           
-          END IF
 
         
           IF (  c_storage   .le. cTiny )  then 
@@ -734,7 +722,6 @@ CONTAINS
         
         END IF
  
-         IF (  Flg_grow  .LT.  1._WP) CUE = 0._wp
 
         
         
@@ -769,7 +756,6 @@ CONTAINS
     
 
     ELSE 
-      CUE                          = 0._wp
       GrowthResp                   = 0._wp
       AutoRes                      = 0._wp
       NPP_act_yDayMean             = 0._wp

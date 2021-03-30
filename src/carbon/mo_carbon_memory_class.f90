@@ -259,13 +259,12 @@ MODULE mo_carbon_memory_class
       temp_yDayMean,            &
       GrowthResp,                    &
       AutoRes ,                      &
-      CUE,                             &
       C_balan,                       &
       C_delta,                       &
       flx_germ,                      &
       one_counter,                  &
       ff_dTdt,                      &                     
-      ff_grow_T_yDayMean,           &
+      ff_T_30d_yDayMean,           &
       ff_T_30d,                     &
       pseudo_c_total,               &
       root_maxmoist,                &
@@ -557,7 +556,7 @@ CONTAINS
       
     CALL mem%Add_var( 'ff_grow_T', mem%ff_grow_T,                                      &
       & hgrid, surface,                                                                        &
-      & t_cf('ff_grow_T', '-', 'Growing condition respect to air temperature'),    &
+      & t_cf('ff_grow_T', 'deg C', 'Pseudo air temperature'),    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
       & output_level=BASIC,loutput=.FALSE.,                                                      &
@@ -565,7 +564,7 @@ CONTAINS
         
     CALL mem%Add_var( 'ff_grow_G', mem%ff_grow_G,                                      &
       & hgrid, surface,                                                                        &
-      & t_cf('ff_grow_G', '-', 'Germination condition'),    &
+      & t_cf('ff_grow_G', '-', 'Pseudo top 50mm soil moisture'),    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
       & output_level=BASIC,loutput=.FALSE.,                                                      &
@@ -573,7 +572,7 @@ CONTAINS
       
     CALL mem%Add_var( 'ff_grow_W', mem%ff_grow_W,                                      &
       & hgrid, surface,                                                                        &
-      & t_cf('ff_grow_W', '-', 'Growing condition respect to soil wetness'),    &
+      & t_cf('ff_grow_W', '-', 'Pseudo soil moisture to root-depth'),    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
       & output_level=BASIC,loutput=.FALSE.,                                                      &
@@ -581,7 +580,7 @@ CONTAINS
     
     CALL mem%Add_var( 'ff_npp', mem%ff_npp,                                              &
       & hgrid, surface,                                                                        &
-      & t_cf('ff_npp', '-', 'Senescence condition respect to net primary production'),           &
+      & t_cf('ff_npp', 'mol(C) m-2(canopy) s-1', 'Pseudo net primary production'),           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
       & output_level=BASIC,loutput=.TRUE.,                                                      &
@@ -589,7 +588,7 @@ CONTAINS
     
     CALL mem%Add_var( 'flx_germ', mem%flx_germ,                              &
       & hgrid, surface,                                                                        &
-      & t_cf('flx_germ', '-', 'carbon flux from germination '),           &
+      & t_cf('flx_germ', 'mol(C) m-2(canopy) s-1', 'carbon flux from germination '),           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
       & output_level=BASIC,loutput=.FALSE.,                                                      &
@@ -710,7 +709,7 @@ CONTAINS
 
     CALL mem%Add_var( 'MaintRes', mem%MaintRes,                              &
       & hgrid, surface,                                                                        &
-      & t_cf('MaintRes', '-', 'Maintenance Respiration'),           &
+      & t_cf('MaintRes', 'mol(C) m-2(canopy) s-1', 'Maintenance Respiration'),           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
       & output_level=BASIC,loutput=.False.,                                                      &
@@ -718,7 +717,7 @@ CONTAINS
       
     CALL mem%Add_var( 'MaintRes_sum', mem%MaintRes_sum,                              &
       & hgrid, surface,                                                                        &
-      & t_cf('MaintRes_sum', '-', 'Used to accumulate maintenance Respiration over a day '),           &
+      & t_cf('MaintRes_sum', 'mol(C) m-2(canopy) s-1', 'Used to accumulate maintenance Respiration over a day '),           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
       & output_level=BASIC,loutput=.False.,                                                      &
@@ -726,7 +725,7 @@ CONTAINS
         
     CALL mem%Add_var( 'MaintRes_ydaymean', mem%MaintRes_yDayMean,                              &
       & hgrid, surface,                                                                        &
-      & t_cf('MaintRes_ydaymean', '-', 'Mean maintenance Respiration of previous day'),           &
+      & t_cf('MaintRes_ydaymean', 'mol(C) m-2(canopy) s-1', 'Mean maintenance Respiration of previous day'),           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
       & output_level=BASIC,loutput=.TRUE.,                                                      &
@@ -734,7 +733,7 @@ CONTAINS
     
     CALL mem%Add_var( 'temp_sum', mem%temp_sum,                              &
       & hgrid, surface,                                                                        &
-      & t_cf('temp_sum', '-', 'Used to accumulate temperature over a day. '),           &
+      & t_cf('temp_sum', 'K', 'Used to accumulate temperature over a day. '),           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
       & output_level=BASIC,loutput=.FALSE.,                                                      &
@@ -750,7 +749,7 @@ CONTAINS
           
     CALL mem%Add_var( 'GrowthResp', mem%GrowthResp,                              &
       & hgrid, surface,                                                                        &
-      & t_cf('GrowthResp', '-', 'Growth respiration'),           &
+      & t_cf('GrowthResp', 'mol(C) m-2(canopy) s-1', 'Growth respiration'),           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
       & output_level=BASIC,loutput=.TRUE.,                                                      &
@@ -759,23 +758,16 @@ CONTAINS
     
     CALL mem%Add_var( 'AutoRes', mem%AutoRes,                              &
       & hgrid, surface,                                                                        &
-      & t_cf('AutoRes', '-', 'Autotrophic respiration'),           &
+      & t_cf('AutoRes', 'mol(C) m-2(canopy) s-1', 'Autotrophic respiration'),           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
       & output_level=BASIC,loutput=.TRUE.,                                                      &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.FALSE. )  
       
-    CALL mem%Add_var( 'CUE', mem%CUE,                              &
-      & hgrid, surface,                                                                        &
-      & t_cf('CUE', '-', 'Carbon use efficiency'),           &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
-      & prefix, suffix,                                                                        &
-      & output_level=BASIC,loutput=.TRUE.,                                                      &
-      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.FALSE. )    
       
     CALL mem%Add_var( 'C_balan', mem%C_balan,                              &
       & hgrid, surface,                                                                        &
-      & t_cf('C_balan', '-', 'Carbon balance check'),           &
+      & t_cf('C_balan', 'mol(C) m-2(canopy) s-1', 'Carbon balance check'),           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
       & output_level=BASIC,loutput=.TRUE.,                                                      &
@@ -783,7 +775,7 @@ CONTAINS
       
     CALL mem%Add_var( 'C_delta', mem%C_delta,                              &
       & hgrid, surface,                                                                        &
-      & t_cf('C_delta', '-', 'Carbon delta check'),           &
+      & t_cf('C_delta', 'mol(C) m-2(canopy) s-1', 'Carbon delta check'),           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
       & output_level=BASIC,loutput=.TRUE.,                                                      &
@@ -801,15 +793,15 @@ CONTAINS
       
     CALL mem%Add_var( 'ff_dTdt', mem%ff_dTdt,                              &
       & hgrid, surface,                                                                        &
-      & t_cf('ff_dTdt', '-', 'trend of the temperature change'),           &
+      & t_cf('ff_dTdt', 'deg C', 'Pseudo air temperature change '),           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
       & output_level=BASIC,loutput=.FALSE.,                                                      &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.FALSE. )   
       
-    CALL mem%Add_var( 'ff_grow_T_yDayMean', mem%ff_grow_T_yDayMean,                              &
+    CALL mem%Add_var( 'ff_T_30d_yDayMean', mem%ff_T_30d_yDayMean,                              &
       & hgrid, surface,                                                                        &
-      & t_cf('ff_grow_T_yDayMean', '-', 'yesterday jedi pseudo temperature'),           &
+      & t_cf('ff_T_30d_yDayMean', 'deg C', 'Yesterday mean of pseudo temperature for 30 days'),           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
       & output_level=BASIC,loutput=.FALSE.,                                                      &
@@ -817,7 +809,7 @@ CONTAINS
         
     CALL mem%Add_var( 'ff_T_30d', mem%ff_T_30d,                              &
       & hgrid, surface,                                                                        &
-      & t_cf('ff_T_30d', '-', '30 days running mean of jedi pseudo temperature'),           &
+      & t_cf('ff_T_30d', 'deg C', 'Pseudo temperature for 30 days '),           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
       & output_level=BASIC,loutput=.FALSE.,                                                      &
@@ -825,7 +817,7 @@ CONTAINS
       
     CALL mem%Add_var( 'root_maxmoist', mem%root_maxmoist,                              &
       & hgrid, surface,                                                                        &
-      & t_cf('root_maxmoist', '-', 'jedi root depth max. moist'),           &
+      & t_cf('root_maxmoist', 'm', 'jedi root depth max. moist'),           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
       & output_level=BASIC,loutput=.FALSE.,                                                      &
@@ -833,7 +825,7 @@ CONTAINS
       
     CALL mem%Add_var( 'jedi_pot_supply_transp', mem%jedi_pot_supply_transp,                              &
       & hgrid, surface,                                                                        &
-      & t_cf('jedi_pot_supply_transp', '-', 'fine root potential supply rate for transpiration'),           &
+      & t_cf('jedi_pot_supply_transp', 'kg m-2 s-1', 'fine root potential supply rate for transpiration'),           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
       & output_level=BASIC,loutput=.TRUE.,                                                      &
