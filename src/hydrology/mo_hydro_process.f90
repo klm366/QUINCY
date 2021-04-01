@@ -1390,7 +1390,7 @@ CONTAINS
 !      ! CALL message ('digest_evapotrans', message_text, all_print=.TRUE., level=em_warn)
 !      ! ws_l(:,:) = MIN(ws_l(:,:), field_cap_l(:,:))
 !    END IF
-!$$_junhong_drain
+!_junhong_drain
 #endif
 
   END SUBROUTINE digest_evapotrans

@@ -90,12 +90,12 @@ CONTAINS
     REAL(wp), OPTIONAL, DIMENSION(options%nc), INTENT(in) ::                                                       &
       & t_air, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, &
       & fract_par_diffuse, press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle,         &
-!$$_junhong
+!_junhong
       & CO2_air
 !      & CO2_air, drag_wtr, drag_ice,                                                                               &
 !      & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,                                                        &
 !      & t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice
-!$$_junhong
+!_junhong
 
     dsl4jsb_Def_memory(A2L_)
 
@@ -310,66 +310,68 @@ CONTAINS
 
     IF (tile_contains_lake) THEN
 
-      IF (PRESENT(drag_wtr)) THEN
-      !$acc loop gang vector
-        DO i=1,nc
-          drag_wtr_ptr(i) = drag_wtr(i)
-        END DO
-      END IF
-      IF (PRESENT(drag_ice)) THEN
-      !$acc loop gang vector
-        DO i=1,nc
-          drag_ice_ptr(i) = drag_ice(i)
-        END DO
-      END IF
-      IF (PRESENT(t_acoef_wtr)) THEN
-      !$acc loop gang vector
-        DO i=1,nc
-          t_acoef_wtr_ptr(i) = t_acoef_wtr(i)
-        END DO
-      END IF
-      IF (PRESENT(t_bcoef_wtr)) THEN
-      !$acc loop gang vector
-        DO i=1,nc
-          t_bcoef_wtr_ptr(i) = t_bcoef_wtr(i)
-        END DO
-      END IF
-      IF (PRESENT(q_acoef_wtr)) THEN
-      !$acc loop gang vector
-        DO i=1,nc
-          q_acoef_wtr_ptr(i) = q_acoef_wtr(i)
-        END DO
-      END IF
-      IF (PRESENT(q_bcoef_wtr)) THEN
-      !$acc loop gang vector
-        DO i=1,nc
-          q_bcoef_wtr_ptr(i) = q_bcoef_wtr(i)
-        END DO
-      END IF
-      IF (PRESENT(t_acoef_ice)) THEN
-      !$acc loop gang vector
-        DO i=1,nc
-          t_acoef_ice_ptr(i) = t_acoef_ice(i)
-        END DO
-      END IF
-      IF (PRESENT(t_bcoef_ice)) THEN
-      !$acc loop gang vector
-        DO i=1,nc
-          t_bcoef_ice_ptr(i) = t_bcoef_ice(i)
-        END DO
-      END IF
-      IF (PRESENT(q_acoef_ice)) THEN
-      !$acc loop gang vector
-        DO i=1,nc
-          q_acoef_ice_ptr(i) = q_acoef_ice(i)
-        END DO
-      END IF
-      IF (PRESENT(q_bcoef_ice)) THEN
-      !$acc loop gang vector
-        DO i=1,nc
-          q_bcoef_ice_ptr(i) = q_bcoef_ice(i)
-        END DO
-      END IF
+!_junhong
+!      IF (PRESENT(drag_wtr)) THEN
+!      !$acc loop gang vector
+!        DO i=1,nc
+!          drag_wtr_ptr(i) = drag_wtr(i)
+!        END DO
+!      END IF
+!      IF (PRESENT(drag_ice)) THEN
+!      !$acc loop gang vector
+!        DO i=1,nc
+!          drag_ice_ptr(i) = drag_ice(i)
+!        END DO
+!      END IF
+!      IF (PRESENT(t_acoef_wtr)) THEN
+!      !$acc loop gang vector
+!        DO i=1,nc
+!          t_acoef_wtr_ptr(i) = t_acoef_wtr(i)
+!        END DO
+!      END IF
+!      IF (PRESENT(t_bcoef_wtr)) THEN
+!      !$acc loop gang vector
+!        DO i=1,nc
+!          t_bcoef_wtr_ptr(i) = t_bcoef_wtr(i)
+!        END DO
+!      END IF
+!      IF (PRESENT(q_acoef_wtr)) THEN
+!      !$acc loop gang vector
+!        DO i=1,nc
+!          q_acoef_wtr_ptr(i) = q_acoef_wtr(i)
+!        END DO
+!      END IF
+!      IF (PRESENT(q_bcoef_wtr)) THEN
+!      !$acc loop gang vector
+!        DO i=1,nc
+!          q_bcoef_wtr_ptr(i) = q_bcoef_wtr(i)
+!        END DO
+!      END IF
+!      IF (PRESENT(t_acoef_ice)) THEN
+!      !$acc loop gang vector
+!        DO i=1,nc
+!          t_acoef_ice_ptr(i) = t_acoef_ice(i)
+!        END DO
+!      END IF
+!      IF (PRESENT(t_bcoef_ice)) THEN
+!      !$acc loop gang vector
+!        DO i=1,nc
+!          t_bcoef_ice_ptr(i) = t_bcoef_ice(i)
+!        END DO
+!      END IF
+!      IF (PRESENT(q_acoef_ice)) THEN
+!      !$acc loop gang vector
+!        DO i=1,nc
+!          q_acoef_ice_ptr(i) = q_acoef_ice(i)
+!        END DO
+!      END IF
+!      IF (PRESENT(q_bcoef_ice)) THEN
+!      !$acc loop gang vector
+!        DO i=1,nc
+!          q_bcoef_ice_ptr(i) = q_bcoef_ice(i)
+!        END DO
+!      END IF
+!_junhong
 
     END IF
     !$acc end parallel

@@ -845,7 +845,7 @@ CONTAINS
 !_junhong
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-!_Junhong_output
+!_junhong_output
       CALL jsb_add_var( mem, 'evapodirect', mem%evapodirect,                                     &
         & hgrid, surface,                                                            &
         & t_cf('direct evaporation', 'kg m-2 s-1', 'evaporation reservior+canopy leaf evaporation'), &
@@ -862,7 +862,7 @@ CONTAINS
         & lrestart=.FALSE.,                                                          &
         & output_level=BASIC,                                                        &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-!_Junhong_output
+!_junhong_output
 
     END IF
 
