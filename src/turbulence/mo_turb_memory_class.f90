@@ -27,12 +27,26 @@ MODULE mo_turb_memory_class
 
   PUBLIC :: t_turb_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 5
+!_junhong_EB_out
+!  INTEGER, PARAMETER :: max_no_of_vars = 5
+  INTEGER, PARAMETER :: max_no_of_vars = 14
+!_junhong_EB_out
 
   TYPE, EXTENDS(t_jsb_memory) :: t_turb_memory
     !
     ! Parameters
     TYPE(t_jsb_var_real2d) :: &
+!_junhong_EB_out
+      & fact_qsat_veg_jun,                  &
+      & fact_qsat_trans_jun,                  &
+      & fact_qsat_soil_jun,                  &
+      & fact_qair_soil_jun,                  &
+      & rel_hum_jun,                  &
+      & qsat_star_jun,                  &
+      & q_air_jun,                  &
+      & mask1_jun,                  &
+      & mask2_jun,                  &
+!_junhong_EB_out
       & rough_m,              & !< Surface roughness length for momentum
       & rough_h,              & !< Surface roughness length for heat
       ! For everything but lakes
@@ -124,6 +138,80 @@ CONTAINS
         & prefix, suffix,                                                    &
         & output_level=BASIC,                                                &
         & initval_r=0.5_wp )
+
+!_junhong_EB_out
+      CALL jsb_add_var( mem, 'fact_qsat_veg_jun', mem%fact_qsat_veg_jun, &
+        & hgrid, surface,                                                    &
+        & t_cf('fact_qsat_veg_jun', '', ''),                               &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & output_level=BASIC,                                                &
+        & initval_r=0.5_wp )
+
+      CALL jsb_add_var( mem, 'fact_qsat_trans_jun', mem%fact_qsat_trans_jun, &
+        & hgrid, surface,                                                    &
+        & t_cf('fact_qsat_trans_jun', '', ''),                               &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & output_level=BASIC,                                                &
+        & initval_r=0.5_wp )
+
+      CALL jsb_add_var( mem, 'fact_qsat_soil_jun', mem%fact_qsat_soil_jun, &
+        & hgrid, surface,                                                    &
+        & t_cf('fact_qsat_soil_jun', '', ''),                               &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & output_level=BASIC,                                                &
+        & initval_r=0.5_wp )
+
+      CALL jsb_add_var( mem, 'fact_qair_soil_jun', mem%fact_qair_soil_jun, &
+        & hgrid, surface,                                                    &
+        & t_cf('fact_qair_soil_jun', '', ''),                               &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & output_level=BASIC,                                                &
+        & initval_r=0.5_wp )
+
+      CALL jsb_add_var( mem, 'rel_hum_jun', mem%rel_hum_jun, &
+        & hgrid, surface,                                                    &
+        & t_cf('rel_hum_jun', '', ''),                               &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & output_level=BASIC,                                                &
+        & initval_r=0.5_wp )
+
+      CALL jsb_add_var( mem, 'qsat_star_jun', mem%qsat_star_jun, &
+        & hgrid, surface,                                                    &
+        & t_cf('qsat_star_jun', '', ''),                               &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & output_level=BASIC,                                                &
+        & initval_r=0.5_wp )
+
+      CALL jsb_add_var( mem, 'q_air_jun', mem%q_air_jun, &
+        & hgrid, surface,                                                    &
+        & t_cf('q_air_jun', '', ''),                               &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & output_level=BASIC,                                                &
+        & initval_r=0.5_wp )
+
+      CALL jsb_add_var( mem, 'mask1_jun', mem%mask1_jun, &
+        & hgrid, surface,                                                    &
+        & t_cf('mask1_jun', '', ''),                               &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & output_level=BASIC,                                                &
+        & initval_r=0.5_wp )
+
+      CALL jsb_add_var( mem, 'mask2_jun', mem%mask2_jun, &
+        & hgrid, surface,                                                    &
+        & t_cf('mask2_jun', '', ''),                               &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & output_level=BASIC,                                                &
+        & initval_r=0.5_wp )
+!_junhong_EB_out
 
     END IF
 

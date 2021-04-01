@@ -293,6 +293,17 @@ CONTAINS
       & canopy_cond_limited,  &
       & pch,                  &
       & wind_air,             &
+!_junhong_EB_out
+      & fact_qsat_veg_jun,    &
+      & fact_qsat_trans_jun,  &
+      & fact_qsat_soil_jun,   &
+      & fact_qair_soil_jun,   &
+      & rel_hum_jun,          &
+      & qsat_star_jun,        &
+      & q_air_jun,            &
+      & mask1_jun,            &
+      & mask2_jun,            &
+!_junhong_EB_out
       & q_air
 
     dsl4jsb_Real3D_onChunk :: &
@@ -355,6 +366,17 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(TURB_,  fact_q_air)          ! OUT
     dsl4jsb_Get_var2D_onChunk(TURB_,  fact_qsat_srf)       ! OUT
     dsl4jsb_Get_var2D_onChunk(TURB_,  fact_qsat_trans_srf) ! OUT
+!_junhong_EB_out
+    dsl4jsb_Get_var2D_onChunk(TURB_,  fact_qsat_veg_jun) ! OUT
+    dsl4jsb_Get_var2D_onChunk(TURB_,  fact_qsat_trans_jun) ! OUT
+    dsl4jsb_Get_var2D_onChunk(TURB_,  fact_qsat_soil_jun) ! OUT
+    dsl4jsb_Get_var2D_onChunk(TURB_,  fact_qair_soil_jun) ! OUT
+    dsl4jsb_Get_var2D_onChunk(TURB_,  rel_hum_jun) ! OUT
+    dsl4jsb_Get_var2D_onChunk(TURB_,  qsat_star_jun) ! OUT
+    dsl4jsb_Get_var2D_onChunk(TURB_,  q_air_jun) ! OUT
+    dsl4jsb_Get_var2D_onChunk(TURB_,  mask1_jun) ! OUT
+    dsl4jsb_Get_var2D_onChunk(TURB_,  mask2_jun) ! OUT
+!_junhong_EB_out
     IF (tile%contains_soil) THEN
       dsl4jsb_Get_var2D_onChunk(SEB_,    qsat_star)           ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,  fract_water)         ! in
@@ -395,9 +417,19 @@ CONTAINS
           fact_qsat_trans(i) = (1._wp - fract_snow(i)) * &
             & (1._wp - fract_water(i)) /                  &
             & (1._wp + pch(i) * MAX(1._wp, wind_air(i)) / MAX(1.E-20_wp, canopy_cond_limited(i)))
+!_junhong_EB_out
+          fact_qsat_veg_jun(i) = 1./(1._wp + pch(i) * MAX(1._wp, wind_air(i)) / MAX(1.E-20_wp, canopy_cond_limited(i)))
+          fact_qsat_trans_jun(i) = fact_qsat_veg_jun(i)
+          mask1_jun(i) = 1.
+!_junhong_EB_out
         ELSE 
           fact_qsat_veg(i)   = fract_snow(i) + (1._wp - fract_snow(i)) * fract_water(i)
           fact_qsat_trans(i) = 0._wp
+!_junhong_EB_out
+          fact_qsat_veg_jun(i) = 0.
+          fact_qsat_trans_jun(i) = fact_qsat_veg_jun(i)
+          mask1_jun(i) = 0.
+!_junhong_EB_out
         END IF
       END DO
       !$claw acc end data
@@ -426,16 +458,36 @@ CONTAINS
           fact_qsat_soil(i) = fract_snow(i) + (1._wp - fract_snow(i)) * &
             & (fract_water(i) + (1._wp - fract_water(i)) * rel_hum(i))
           fact_qair_soil(i) = 1._wp
+!_junhong_EB_out
+          fact_qsat_soil_jun(i) = rel_hum(i)
+          fact_qair_soil_jun(i) = 1.
+          mask2_jun(i) = 1.
+!_junhong_EB_out
         ELSE
           fact_qsat_soil(i) = fract_snow(i) + (1._wp - fract_snow(i)) * fract_water(i)
           fact_qair_soil(i) = fact_qsat_soil(i)
+!_junhong_EB_out
+          fact_qsat_soil_jun(i) = 0.
+          fact_qair_soil_jun(i) = 0.
+          mask2_jun(i) = 0.
+!_junhong_EB_out
         END IF
         IF (q_air(i) > qsat_star(i)) THEN
           fact_qsat_soil(i) = 1._wp
           fact_qair_soil(i) = 1._wp
+!_junhong_EB_out
+          fact_qsat_soil_jun(i) = 1.
+          fact_qair_soil_jun(i) = 1.
+          mask2_jun(i) = 2.
+!_junhong_EB_out
         END IF
       END DO
       !$claw acc end data
+!_junhong_EB_out
+      rel_hum_jun(:) = rel_hum(:)
+      qsat_star_jun(:) = qsat_star(:)
+      q_air_jun(:) = q_air(:)
+!_junhong_EB_out
 
     ELSE IF (tile%contains_glacier) THEN
       !$claw expand parallel update savepoint=ser_jsb_turb_update_humidity_scaling_expand_5 tile_name=tile%name
@@ -496,6 +548,17 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(TURB_, fact_q_air,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(TURB_, fact_qsat_srf,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(TURB_, fact_qsat_trans_srf, weighted_by_fract)
+!_junhong_EB_out
+    dsl4jsb_Aggregate_onChunk(TURB_, fact_qsat_veg_jun,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, fact_qsat_trans_jun,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, fact_qsat_soil_jun,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, fact_qair_soil_jun,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, rel_hum_jun,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, qsat_star_jun,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, q_air_jun,            weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, mask1_jun,            weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, mask2_jun,            weighted_by_fract)
+!_junhong_EB_out
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

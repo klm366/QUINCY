@@ -1429,6 +1429,9 @@ CONTAINS
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(TURB_)
+!_junhong_EB_out
+    dsl4jsb_Def_memory(PHENO_)
+!_junhong_EB_out
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: &
@@ -1458,6 +1461,17 @@ CONTAINS
       & evapobare, &
       & fract_water, &
 !_junhong_output
+!_junhong_EB_out
+      & fact_qsat_veg_jun, &
+      & fact_qsat_trans_jun, &
+      & fact_qsat_soil_jun, &
+      & fact_qair_soil_jun, &
+      & fract_fpc, &
+      & netEB, &
+      & netTr, &
+      & EB, &
+      & Tr, &
+!_junhong_EB_out
       & trans
 
     ! Locally allocated vectors
@@ -1503,6 +1517,11 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(TURB_)
+!_junhong_EB_out
+    IF (tile%is_vegetation .OR. tile%is_land) THEN
+      dsl4jsb_Get_memory(PHENO_)
+    END IF
+!_junhong_EB_out
 
     ! Pointers to variables in memory
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapopot)   ! out
@@ -1561,6 +1580,17 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapobare)           ! out
         dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_water)         ! out
 !_junhong_output
+!_junhong_EB_out
+        dsl4jsb_Get_var2D_onChunk(TURB_,    fact_qsat_veg_jun)   !IN
+        dsl4jsb_Get_var2D_onChunk(TURB_,    fact_qsat_trans_jun) !IN
+        dsl4jsb_Get_var2D_onChunk(TURB_,    fact_qsat_soil_jun)  !IN
+        dsl4jsb_Get_var2D_onChunk(TURB_,    fact_qair_soil_jun)  !IN 
+        dsl4jsb_Get_var2D_onChunk(HYDRO_,    netEB)               !out
+        dsl4jsb_Get_var2D_onChunk(HYDRO_,    netTr)               !out
+        dsl4jsb_Get_var2D_onChunk(HYDRO_,    EB)                  !out
+        dsl4jsb_Get_var2D_onChunk(HYDRO_,    Tr)                  !out
+        dsl4jsb_Get_var2D_onChunk(PHENO_,    fract_fpc)           !IN 
+!_junhong_EB_out
       END IF
 
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_evaporation_expand_5 tile_name=tile%name
@@ -1583,6 +1613,12 @@ CONTAINS
         evapodirect(:) =       fract_water(:) * evapopot(:)
         evapobare(:) =  evapotrans_lnd(:) - trans(:) - evapodirect(:)
 !_junhong_output
+!_junhong_EB_out
+        netEb(:) = heat_tcoef(:) * ( q_air(:)*fact_qair_soil_jun(:) - qsat_star(:)*fact_qsat_soil_jun(:) )
+        Eb(:)    = netEb(:)*(1.-fract_fpc(:))*(1-fract_water(:))
+        netTr(:) = heat_tcoef(:) * ( q_air(:)*fact_qsat_veg_jun(:) - qsat_star(:)*fact_qsat_veg_jun(:))
+        Tr(:)    = netTr(:) * (fract_fpc(:))*(1-fract_water(:))
+!_junhong_EB_out
       END IF
 
     ELSE
@@ -1640,6 +1676,12 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapodirect,              weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapobare,              weighted_by_fract)
 !_junhong_output
+!_junhong_EB_out
+    dsl4jsb_Aggregate_onChunk(HYDRO_, netEB,              weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, netTr,              weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, EB,              weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, Tr,              weighted_by_fract)
+!_junhong_EB_out
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapotrans_lnd,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_wtr,          weighted_by_fract)
     IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN

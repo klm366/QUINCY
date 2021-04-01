@@ -150,6 +150,16 @@ MODULE mo_hydro_memory_class
       & evapodirect,           &
       & evapobare,           &
 !_junhong_output
+!_junhong_EB_out
+      & fact_qsat_trans_jun, &
+      & fact_qsat_soil_jun, &
+      & fact_qair_soil_jun, &
+      & fract_fpc, &
+      & netEB, &
+      & netTr, &
+      & EB, &
+      & Tr, &
+!_junhong_EB_out
       & trans                   !< Transpiration
 
     ! Additional variables for GLACIER lct_type
@@ -863,6 +873,40 @@ CONTAINS
         & output_level=BASIC,                                                        &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 !_junhong_output
+!_junhong_EB_out
+      CALL jsb_add_var( mem, 'netEB', mem%netEB,                                     &
+        & hgrid, surface,                                                            &
+        & t_cf('netEB', 'kg m-2 s-1', ''), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
+        & prefix, suffix,                                                            &
+        & lrestart=.FALSE.,                                                          &
+        & output_level=BASIC,                                                        &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      CALL jsb_add_var( mem, 'netTr', mem%netTr,                                     &
+        & hgrid, surface,                                                            &
+        & t_cf('netTr', 'kg m-2 s-1', ''), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
+        & prefix, suffix,                                                            &
+        & lrestart=.FALSE.,                                                          &
+        & output_level=BASIC,                                                        &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      CALL jsb_add_var( mem, 'EB', mem%EB,                                     &
+        & hgrid, surface,                                                            &
+        & t_cf('EB', 'kg m-2 s-1', ''), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
+        & prefix, suffix,                                                            &
+        & lrestart=.FALSE.,                                                          &
+        & output_level=BASIC,                                                        &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      CALL jsb_add_var( mem, 'Tr', mem%Tr,                                     &
+        & hgrid, surface,                                                            &
+        & t_cf('Tr', 'kg m-2 s-1', ''), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
+        & prefix, suffix,                                                            &
+        & lrestart=.FALSE.,                                                          &
+        & output_level=BASIC,                                                        &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+!_junhong_EB_out
 
     END IF
 
