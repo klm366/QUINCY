@@ -53,7 +53,10 @@ MODULE mo_pheno_constants
                            & LAI_negligible =1.0e-05, & ! [-] Below this value an LAI is considered to be zero.
                            & laiSeed = 0.40,          & ! [-] Seed value used for the LAI to have a non-zero starting value
                                                         ! whenever the vegetation starts growing.
-                           & wilt_point = 0.35          ! [-] Critical fraction of soil water bucket level: below this value
+!_junhong_wilting
+!                           & wilt_point = 0.35          ! [-] Critical fraction of soil water bucket level: below this value
+                           & wilt_point = 0.48648648648 ! [-] Critical fraction of soil water bucket level: below this value
+!_junhong_wilting
                                                         !  growth of grasses, raingreens and crops stops (wilting point).
   END TYPE t_GeneralParams
 !  PUBLIC :: t_GeneralParams
