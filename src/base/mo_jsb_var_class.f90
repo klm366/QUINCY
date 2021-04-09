@@ -3744,4 +3744,3 @@ CONTAINS
   END FUNCTION Div_real3d_by_real3d
   
 #endif
-END MODULE mo_jsb_var_class

@@ -237,6 +237,18 @@ MODULE mo_carbon_memory_class
       soil_respiration_gsum
 
 
+    ! Diagnostic global carbon sums e.g. for monitoring (only available with ICON)
+    TYPE(t_jsb_var_real1d) ::        &
+      c_sum_veg_gsum,                & ! Global sum of all vegetation carbon pools [PgC]
+      c_sum_litter_ag_gsum,          & ! Global sum of all above ground litter carbon pools [PgC]
+      c_sum_litter_bg_gsum,          & ! Global sum of all below ground litter carbon pools [PgC]
+      c_sum_humus_gsum,              & ! Global sum of all soil / humus carbon pools [PgC]
+      c_sum_natural_gsum,            & ! Global sum of all natural carbon pools [PgC]
+      NPP_act_yDayMean_gsum,         & ! Global actual NPP rate [PgC/yr]
+      GPP_yDayMean_gsum,             & ! Global GPP rate [PgC/yr]
+      soil_respiration_gsum
+
+
   CONTAINS
     PROCEDURE :: Init => Init_carbon_memory
   END TYPE t_carbon_memory
