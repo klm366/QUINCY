@@ -110,7 +110,7 @@ CONTAINS
     w_soil_crit_fract = 0.75_wp
 !_junhong_wilting
 !    w_soil_wilt_fract = 0.35_wp
-    w_soil_wilt_fract = 0.48648648648_wp
+    w_soil_wilt_fract = 0.50_wp
 !_junhong_wilting
     scheme_stom_cond  = 'echam5'
     l_organic         = .FALSE.

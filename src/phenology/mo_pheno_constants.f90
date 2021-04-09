@@ -55,7 +55,7 @@ MODULE mo_pheno_constants
                                                         ! whenever the vegetation starts growing.
 !_junhong_wilting
 !                           & wilt_point = 0.35          ! [-] Critical fraction of soil water bucket level: below this value
-                           & wilt_point = 0.48648648648 ! [-] Critical fraction of soil water bucket level: below this value
+                           & wilt_point = 0.50          ! [-] Critical fraction of soil water bucket level: below this value
 !_junhong_wilting
                                                         !  growth of grasses, raingreens and crops stops (wilting point).
   END TYPE t_GeneralParams
