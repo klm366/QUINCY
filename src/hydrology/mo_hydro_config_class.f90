@@ -172,13 +172,21 @@ CONTAINS
 !    DEALLOCATE(ptr_1D)
 !
 !    CALL input_file%Close()
-    nsoil = 1
+!    nsoil = 1
+!    ALLOCATE(depths(nsoil+1))
+!    ALLOCATE(mids(nsoil))
+!    depths(1) = 0._wp
+!    depths(2:nsoil+1) = (/1.000/)
+!    mids(1:nsoil) = (depths(1:nsoil) + depths(2:nsoil+1)) / 2._wp
+!_junhong
+!_junhong_aleina
+    nsoil = 2
     ALLOCATE(depths(nsoil+1))
     ALLOCATE(mids(nsoil))
     depths(1) = 0._wp
-    depths(2:nsoil+1) = (/1.000/)
+    depths(2:nsoil+1) = (/0.100, 1.000/)
     mids(1:nsoil) = (depths(1:nsoil) + depths(2:nsoil+1)) / 2._wp
-!_junhong
+!_junhong_aleina
 
     soil_w  => new_vgrid('soil_depth_water', ZAXIS_DEPTH_BELOW_LAND, nsoil, &
       & levels  = mids                 (1:nsoil  ),                         &

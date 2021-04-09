@@ -163,7 +163,10 @@ CONTAINS
      sse_init_vars%fao = 3._wp
      sse_init_vars%heat_cond    = 6.246_wp
      sse_init_vars%t_srf_mon    = 300._wp
-     sse_init_vars%vol_heat_cap = 20000.0_wp ! 20,000 J kg-1 m-2 and soil depth is 1 m.
+!_junhong_aleina
+!     sse_init_vars%vol_heat_cap = 20000.0_wp ! 20,000 J kg-1 m-2 and soil depth is 1 m.
+     sse_init_vars%vol_heat_cap = 200000.0_wp ! 20,000 J kg-1 m-2 and soil depth is 1 m.
+!_junhong_aleina
 !_junhong
 
   END SUBROUTINE sse_read_init_vars

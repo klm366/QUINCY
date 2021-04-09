@@ -300,11 +300,13 @@ CONTAINS
 !        hydro_init_vars%w_soil_sl(:,isoil,:) = MERGE(ptr_3D(:,:,1), 0._wp, ptr_3D(:,:,1) >= 0._wp)
 !      END DO
       hydro_init_vars%w_soil_sl(:,:,:) = 0.475
+!_junhong_aleina
 !_junhong_name
-      IF (dsl4jsb_Config(HYDRO_)%sm_init > 0._wp ) THEN
-        hydro_init_vars%w_soil_sl(:,:,:) = hydro__conf%sm_init
-      END IF
+!      IF (hydro__conf%sm_init > 0._wp ) THEN
+!        hydro_init_vars%w_soil_sl(:,:,:) = hydro__conf%sm_init
+!      END IF
 !_junhong_name
+!_junhong_aleina
 !
 !      CALL input_file%Close()
 !_junhong
@@ -499,6 +501,16 @@ CONTAINS
       dsl4jsb_var2D_onDomain(HYDRO_,w_soil_overflow) = 0._wp
 
       dsl4jsb_var_ptr(HYDRO_,w_soil_sl) (:,:,:) = hydro_init_vars%w_soil_sl(:,:,:)
+
+!_junhong_aleina
+      IF (dsl4jsb_Config(HYDRO_)%sm_init > 0._wp ) THEN
+!        DO i = 1,nsoil
+!          dsl4jsb_var_ptr(HYDRO_,w_soil_sl)(:,i,:) = dsl4jsb_Config(HYDRO_)%sm_init * dsl4jsb_var_ptr(HYDRO_,soil_depth_sl)(:,i,:)
+!        END DO
+        dsl4jsb_var_ptr(HYDRO_,w_soil_sl)(:,1,:) = 1.0e-9
+        dsl4jsb_var_ptr(HYDRO_,w_soil_sl)(:,2,:) = dsl4jsb_Config(HYDRO_)%sm_init 
+      END IF
+!_junhong_aleina
 
       !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_, w_snow),       &
       !$acc               dsl4jsb_var2D_onDomain(HYDRO_, w_snow_soil),  &

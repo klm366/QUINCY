@@ -852,7 +852,11 @@ CONTAINS
             drain_l(j) = 0
 !_junhong_drain
           END IF
-          percolation(j,i) = drain_l(j) * delta_time  ! [m/s] -> [m]
+!_junhong_aleina
+!          percolation(j,i) = drain_l(j) * delta_time  ! [m/s] -> [m]
+          drain_l(j) = 0._wp
+          IF(i==nsoil) percolation(j,i) = 0._wp
+!_junhong_aleina
 
         ELSE IF (dsoil(j,i) > 0._wp) THEN
 
@@ -917,6 +921,9 @@ CONTAINS
           ws_rel(j,i) =  ws_l(j,i) / dsoil(j,i)  &
             &           / (vol_porosity_l(j,i) - (soil_ice(j,i) / dsoil(j,i)))
         END IF
+!_junhong_aleina
+        ws_rel(j,i) = MIN(ws_rel(j,i), 1._wp)
+!_junhong_aleina
 
         diffus_l(j,i) = 0._wp
         IF (ws_rel(j,i) > zfcmin) THEN
@@ -934,9 +941,11 @@ CONTAINS
           diffusivity(j,i) = diffus_l(j,i+1) * diffus_l(j,i) &
             &                 / ((diffus_l(j,i+1)*dsoil(j,i) + diffus_l(j,i)*dsoil(j,i+1))/(dsoil(j,i+1)+dsoil(j,i)))
         END IF
-!_junhong_drain
-      diffusivity(j,i) = 0
-!_junhong_drain
+!_junhong_aleina
+!!_junhong_drain
+!      diffusivity(j,i) = 0
+!!_junhong_drain
+!_junhong_aleina
       END DO
 
       ! calculation of diffusion coefficients
@@ -993,9 +1002,11 @@ CONTAINS
 
       IF (dsoil(j,1) > 0._wp) THEN
         zdc(j,1) = zda(j,1) + zdb(j,1) + 1._wp
+!_junhong_aleina
 !_junhong_drain
-!        ws_l(j,1) = ws_l(j,1) / zdc(j,1)
+        ws_l(j,1) = ws_l(j,1) / zdc(j,1)
 !_junhong_drain
+!_junhong_aleina
       END IF
 
       ! decomposition and forward substitution
@@ -1004,21 +1015,25 @@ CONTAINS
         IF (dsoil(j,i) > 0._wp) THEN
           ztri(j,i) = -zda(j,i-1) / zdc(j,i-1)
           zdc(j,i)  = zda(j,i) + zdb(j,i) + 1._wp + zdb(j,i)*ztri(j,i)
+!_junhong_aleina
 !_junhong_drain
-!          ws_l(j,i) = (ws_l(j,i) / dsoil(j,i) + zdb(j,i) * ws_l(j,i-1)/dsoil(j,i-1)) / zdc(j,i) * dsoil(j,i)
+          ws_l(j,i) = (ws_l(j,i) / dsoil(j,i) + zdb(j,i) * ws_l(j,i-1)/dsoil(j,i-1)) / zdc(j,i) * dsoil(j,i)
 !_junhong_drain
+!_junhong_aleina
         END IF
       END DO
 
       ! backsubstitution
       !$claw acc loop seq
+!_junhong_aleina
 !_junhong_drain
-!      DO i = nsoil-1, 1, -1
-!        IF (dsoil(j,i+1) > 0._wp) THEN
-!          ws_l(j,i) = ws_l(j,i) - ztri(j,i+1) * ws_l(j,i+1) * (dsoil(j,i)/dsoil(j,i+1))
-!        END IF
-!      END DO
+      DO i = nsoil-1, 1, -1
+        IF (dsoil(j,i+1) > 0._wp) THEN
+          ws_l(j,i) = ws_l(j,i) - ztri(j,i+1) * ws_l(j,i+1) * (dsoil(j,i)/dsoil(j,i+1))
+        END IF
+      END DO
 !_junhong_drain
+!_junhong_aleina
 
       ! temporary storage for diagnostic printing
       IF (ilog == 1 .OR. ilog == 3) THEN
@@ -1103,19 +1118,25 @@ CONTAINS
           ws_min_drain(j) = zwdmin * field_cap_l(j,i)              ! minimum soil moisture for drainage
           IF (ws_l(j,i)-percolation(j,i) < ws_min_drain(j)) THEN   ! more percolation than water available
             IF (ws_l(j,i) > ws_min_drain(j)) THEN                  !   there is water for perculation
+!_junhong_aleina
 !_junhong_drain
-!              percolation(j,i) = ws_l(j,i) - ws_min_drain(j)       !   all available water perculates
-!              ws_l(j,i) = ws_min_drain(j)                          !   soil moisture is limited to minimum
+              percolation(j,i) = ws_l(j,i) - ws_min_drain(j)       !   all available water perculates
+              ws_l(j,i) = ws_min_drain(j)                          !   soil moisture is limited to minimum
 !_junhong_drain
+!_junhong_aleina
             ELSE
+!_junhong_aleina
 !_junhong_drain
-!              percolation(j,i) = 0._wp
+              percolation(j,i) = 0._wp
 !_junhong_drain
+!_junhong_aleina
             END IF
           ELSE                                                ! there is enough soil water
+!_junhong_aleina
 !_junhong_drain
-!            ws_l(j,i) = ws_l(j,i) - percolation(j,i)
+            ws_l(j,i) = ws_l(j,i) - percolation(j,i)
 !_junhong_drain
+!_junhong_aleina
           END IF
         END IF
       END DO
@@ -1125,23 +1146,29 @@ CONTAINS
       !$claw acc loop seq
       DO i = 1, nsoil-1
         IF (dsoil(j,i+1) > 0._wp) THEN
+!_junhong_aleina
 !_junhong_drain
-!          ws_l(j,i+1) = ws_l(j,i+1) + percolation(j,i)
+          ws_l(j,i+1) = ws_l(j,i+1) + percolation(j,i)
 !_junhong_drain
+!_junhong_aleina
         END IF
         IF (.NOT. ltpe_closed) THEN
           IF (dsoil(j,i+1) <= 0._wp) THEN      ! bedrock below
+!_junhong_aleina
 !_junhong_drain
 !            drainage(j) = drainage(j) + percolation(j,i)
-!            percolation(j,i) = 0._wp
+            percolation(j,i) = 0._wp
 !_junhong_drain
+!_junhong_aleina
           END IF
         ELSE  ! TPE closed case
           IF (dsoil(j,i+1) <= 0._wp) THEN      ! bedrock below
+!_junhong_aleina
 !_junhong_drain
 !            w_soil_overflow(j) = w_soil_overflow(j) + percolation(j,i)
-!            percolation(j,i) = 0._wp
+            percolation(j,i) = 0._wp
 !_junhong_drain
+!_junhong_aleina
           END IF
         END IF
       END DO
