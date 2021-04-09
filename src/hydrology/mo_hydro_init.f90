@@ -251,6 +251,11 @@ CONTAINS
 !        & fill_array=hydro_init_vars%vol_p_wilt)
 !      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
       hydro_init_vars%vol_p_wilt = 0.185_wp
+!_junhong_aleina
+!_junhong_residual
+      hydro_init_vars%vol_p_wilt = 0.37_wp * 0.1_wp
+!_junhong_residual
+!_junhong_aleina
 
 !      CALL input_file%Close()
 !_junhong
