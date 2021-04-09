@@ -23,7 +23,7 @@ MODULE mo_seb_memory_class
   USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_lct_class,          ONLY: LAND_TYPE, LAKE_TYPE
-  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d
+  USE mo_jsb_var_class,          ONLY: t_jsb_var_real1d, t_jsb_var_real2d
   USE mo_jsb_physical_constants, ONLY: tmelt
 
   dsl4jsb_Use_processes SEB_
@@ -107,6 +107,11 @@ MODULE mo_seb_memory_class
       & hflx_cond_ice,        & !< Conductive heat flux for ice on lakes
       & hflx_melt_lice,       & !< Heat flux from melting ice on lakes
       & hflx_melt_snow          !< Heat flux from melting snow on lake ice
+
+    ! Diagnostic global land mean variables e.g. for monitoring (only available with ICON)
+    TYPE(t_jsb_var_real1d) ::        &
+      t_gmean                   !< Global land mean surface temperature (box tile)                 [K]
+
 
   CONTAINS
     PROCEDURE :: Init => Init_seb_memory
@@ -471,6 +476,22 @@ CONTAINS
         END IF
 
     END IF
+
+#ifdef __ICON__
+    ! Diagnostic global carbon sums for experiment monitoring
+    !       (1d stream variables are not supported with echam)
+    !
+    IF (TRIM(suffix) == 'box') THEN
+
+      CALL mem%Add_var( 't_gmean', mem%t_gmean,                                 &
+        & hgrid, surface,                                                       &
+        & t_cf('t_gmean', 'K', 'Global land mean surface temperature'),         &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
+        & prefix, suffix,                                                       &
+        & lrestart=.FALSE., initval_r=280.0_wp )
+
+    END IF
+#endif
 
   END SUBROUTINE Init_seb_memory
 

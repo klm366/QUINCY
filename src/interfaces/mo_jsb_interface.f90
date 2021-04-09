@@ -409,10 +409,18 @@ CONTAINS
     USE mo_jsb_time,    ONLY: is_newday, is_newmonth, is_time_experiment_start
     USE mo_carbon_interface,  ONLY: yday_carbon_conservation_test
 
+    USE mo_seb_interface,      ONLY: global_seb_diagnostics
+    USE mo_hydro_interface,    ONLY: global_hydrology_diagnostics
+    USE mo_pheno_interface,    ONLY: global_phenology_diagnostics
+    USE mo_carbon_interface,   ONLY: global_carbon_diagnostics
 #ifndef __NO_JSBACH_HD__
     USE mo_interface_hd_ocean, ONLY: interface_hd_ocean
     USE mo_hd_interface,       ONLY: hd_check_water_budget, hd_lateral_flow
 #endif
+
+    dsl4jsb_Use_processes SEB_
+    dsl4jsb_Use_processes HYDRO_
+    dsl4jsb_Use_processes PHENO_
 
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
@@ -461,6 +469,21 @@ CONTAINS
 ! #ifdef _OPENACC
 !    CALL model%gpu_to_cpu()
 ! #endif
+
+    ! Global diagnostics
+    !TODO: go through all processes.
+    IF (model%processes(SEB_)%p%config%active) THEN
+      CALL global_seb_diagnostics(tile)
+    END IF
+    IF (model%processes(HYDRO_)%p%config%active) THEN
+      CALL global_hydrology_diagnostics(tile)
+    END IF
+    IF (model%processes(PHENO_)%p%config%active) THEN
+      CALL global_phenology_diagnostics(tile)
+    END IF
+    IF (model%processes(CARBON_)%p%config%active) THEN
+      CALL global_carbon_diagnostics(tile)
+    END IF
 
     l_trace_memory = .FALSE.
     SELECT CASE (get_debug_memory_level())

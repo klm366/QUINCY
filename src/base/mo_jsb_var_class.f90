@@ -16,16 +16,21 @@ MODULE mo_jsb_var_class
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var, t_jsb_var_p, REAL2D, REAL3D
+  PUBLIC :: t_jsb_var_real1d, t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var, t_jsb_var_p, REAL1D, REAL2D, REAL3D
 
   ENUM, BIND(C)
-    ENUMERATOR :: REAL2D=1, REAL3D
+    ENUMERATOR :: REAL1D=1, REAL2D, REAL3D
   END ENUM
 
   !================================================================================================================================
   ! t_jsb_var
   !================================================================================================================================
   TYPE, ABSTRACT :: t_jsb_var
+    REAL(wp), POINTER &
+#ifdef HAVE_FC_ATTRIBUTE_CONTIGUOUS
+      , CONTIGUOUS &
+#endif
+      :: ptr1d(:) => NULL()
     REAL(wp), POINTER &
 #ifdef HAVE_FC_ATTRIBUTE_CONTIGUOUS
       , CONTIGUOUS &
@@ -39,7 +44,7 @@ MODULE mo_jsb_var_class
     CHARACTER(len=VARNAME_LEN)    :: name                      ! Name of variable
     CHARACTER(len=VARNAME_LEN)    :: full_name                 ! Full name of variable in varlist, including prefix and suffix
     CHARACTER(len=:), ALLOCATABLE :: unit
-    INTEGER                       :: type                      ! REAL2D / REAL3D
+    INTEGER                       :: type                      ! REAL1D / REAL2D / REAL3D
     INTEGER                       :: subset_type               ! ON_DOMAIN / ON_CHUNK
     CHARACTER(len=:), ALLOCATABLE :: element_name              ! 
     CHARACTER(len=:), ALLOCATABLE :: element_shortname         ! Short name of element
@@ -62,6 +67,19 @@ MODULE mo_jsb_var_class
 
 !#pragma GCC diagnostic push
 !#pragma GCC diagnostic ignored "-Wsurprising"
+
+  !================================================================================================================================
+  ! t_jsb_var_real1d
+  !================================================================================================================================
+  TYPE, EXTENDS(t_jsb_var) :: t_jsb_var_real1d
+    REAL(wp), POINTER &
+#ifdef __ICON__
+      :: ptr(:) => NULL()
+#else
+      ! 1d stream elements are not supported with ECHAM
+      :: ptr(:,:) => NULL()
+#endif
+  END TYPE t_jsb_var_real1d
 
   !================================================================================================================================
   ! t_jsb_var_real2d
