@@ -21,7 +21,7 @@ MODULE mo_assimi_update_canopy_fluxes
 
   PRIVATE
   PUBLIC :: update_canopy_fluxes, calc_photosynthesis, calc_soil_moisture_stress
-  !PUBLIC :: discrimination_ps
+  PUBLIC :: discrimination_ps
 
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_assimi_update_canopy_fluxes'
@@ -50,10 +50,9 @@ CONTAINS
     USE mo_jsb_parallel,            ONLY: Get_omp_thread
     USE mo_atmland_constants,       ONLY: min_wind
     USE mo_jsb_physical_constants,  ONLY: r_gas, tmelt
-    !USE mo_isotope_util,            ONLY: calc_fractionation
+    USE mo_isotope_util,            ONLY: calc_fractionation
     USE mo_phy_schemes
     USE mo_assimi_constants,        ONLY: jmax2n, vcmax2n, E0v, E1v, t_jmax_offset, t_jmax_slope, t_jmax_opt_min, t_jmax_opt_max
-    !USE mo_time_averages,           ONLY: calc_time_mavg, mavg_period_tfrac
     USE mo_rad_process,             ONLY: Has_minimal_radiation
 
     ! Use of process configurations (t_PROC_config)
@@ -105,8 +104,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio
     dsl4jsb_Real2D_onChunk      :: swvis_srf_down
     dsl4jsb_Real2D_onChunk      :: swnir_srf_down
-    ! dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_C13
-    ! dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_C14
+    dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_C13
+    dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_C14
     ! ASSIMI_
     dsl4jsb_Real2D_onChunk      :: gross_assimilation
     dsl4jsb_Real2D_onChunk      :: gross_assimilation_C13
@@ -181,8 +180,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio)               ! in     ! calculated from jsb4 co2_air_mol
     dsl4jsb_Get_var2D_onChunk(A2L_, swvis_srf_down)                 ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swnir_srf_down)                 ! in
-    ! dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio_C13)           ! in
-    ! dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio_C14)           ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio_C13)           ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio_C14)           ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation)          ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation_C13)      ! out
@@ -305,28 +304,28 @@ CONTAINS
 
         gross_assimilation(:) = gross_assimilation(:) + gross_assimilation_cl(:,icanopy) * lai_cl(:,icanopy)
 
-        ! WHERE(gross_assimilation_cl(:,icanopy) > eps8)
-        !   ! C13 flux associated with photosynthesis
-        !   hlp1(:)                   = discrimination_ps(co2_conc_leaf_cl(:,icanopy), &
-        !                                                 co2_mixing_ratio(:)        , &
-        !                                                 'C13'                      , &
-        !                                                 lctlib%ps_pathway)
-        !   gross_assimilation_C13(:) = gross_assimilation_C13(:) + &
-        !                               gross_assimilation_cl(:,icanopy) * &
-        !                               lai_cl(:,icanopy) * &
-        !                               calc_fractionation(co2_mixing_ratio(:), co2_mixing_ratio_C13(:), hlp1(:))
-        ! 
-        !   ! C14 flux associated with photosynthesis
-        !   hlp1(:)                   = discrimination_ps(co2_conc_leaf_cl(:,icanopy), &
-        !                                                 co2_mixing_ratio(:)        , &
-        !                                                 'C14'                      , &
-        !                                                 lctlib%ps_pathway)
-        !   gross_assimilation_C14(:) = gross_assimilation_C14(:) + &
-        !                               gross_assimilation_cl(:,icanopy) * &
-        !                               lai_cl(:,icanopy) * & 
-        !                               calc_fractionation(co2_mixing_ratio(:), co2_mixing_ratio_C14(:), &
-        !                                                  hlp1(:), co2_mixing_ratio_C13(:))
-        ! END WHERE
+        WHERE(gross_assimilation_cl(:,icanopy) > eps8)
+          ! C13 flux associated with photosynthesis
+          hlp1(:)                   = discrimination_ps(co2_conc_leaf_cl(:,icanopy), &
+                                                        co2_mixing_ratio(:)        , &
+                                                        'C13'                      , &
+                                                        lctlib%ps_pathway)
+          gross_assimilation_C13(:) = gross_assimilation_C13(:) + &
+                                      gross_assimilation_cl(:,icanopy) * &
+                                      lai_cl(:,icanopy) * &
+                                      calc_fractionation(co2_mixing_ratio(:), co2_mixing_ratio_C13(:), hlp1(:))
+        
+          ! C14 flux associated with photosynthesis
+          hlp1(:)                   = discrimination_ps(co2_conc_leaf_cl(:,icanopy), &
+                                                        co2_mixing_ratio(:)        , &
+                                                        'C14'                      , &
+                                                        lctlib%ps_pathway)
+          gross_assimilation_C14(:) = gross_assimilation_C14(:) + &
+                                      gross_assimilation_cl(:,icanopy) * &
+                                      lai_cl(:,icanopy) * & 
+                                      calc_fractionation(co2_mixing_ratio(:), co2_mixing_ratio_C14(:), &
+                                                         hlp1(:), co2_mixing_ratio_C13(:))
+        END WHERE
 
         net_assimilation(:)       = net_assimilation(:) + net_assimilation_cl(:,icanopy) * lai_cl(:,icanopy)
         maint_respiration_leaf(:) = maint_respiration_leaf(:) + maint_respiration_leaf_cl(:,icanopy) * lai_cl(:,icanopy)
@@ -773,16 +772,12 @@ CONTAINS
 
   END FUNCTION calc_soil_moisture_stress
 
-
-  !-------------------------------------------------------------------------------------------------------
-  ! Sub Task to update_canopy_fluxes
-  !
-  !-------------------------------------------------------------------------------------------------------
-  !> Calculate spring recovery period for coniferous forests
-  !! 
-  !! Based on Mäkelä et al., 2004  \n
-  !! returns beta_soa with a value [0.01,1.0]
-  !-------------------------------------------------------------------------------------------------------
+  ! ======================================================================================================= !
+  !>Calculate spring recovery period for coniferous forests
+  !> 
+  !>  Based on Mäkelä et al., 2004  \n
+  !>  returns beta_soa with a value [0.01,1.0]
+  !>
   PURE ELEMENTAL FUNCTION calc_beta_soa(soa_tsoa_mavg,phenology_type) RESULT(beta_soa)
 
     USE mo_pheno_constants,            ONLY: ievergreen
@@ -808,61 +803,52 @@ CONTAINS
 
   END FUNCTION calc_beta_soa
 
-
-  !! currently commented out, needed when quincy c13/C14 functionality may also run in jsbach4
-  ! !-----------------------------------------------------------------------------------------------------
-  ! ! Sub Task to update_canopy_fluxes
-  ! !
-  ! !-----------------------------------------------------------------------------------------------------
-  ! !> Calculate discrimination of C13 and C14 due to photosynthesis
-  ! !!
-  ! !! Follows the orignial ideas of Farquhar, as described in
-  ! !! Drake (2014), Radiocarbon, 56, 29-38
-  ! !!
-  ! !! Input: leaf-level Ci and Ca, photosynthetic pathway (C3/C4) and name of the isotope
-  ! !!
-  ! !! Output: Discrimination (per mill)
-  ! !-----------------------------------------------------------------------------------------------------
-  ! PURE ELEMENTAL FUNCTION discrimination_ps(ci, ca, isotope_name, ps_pathway) RESULT(discrimination)
-  ! 
-  !   USE mo_assimi_constants,       ONLY: discr_ps_a_C13, discr_ps_b_C13, discr_ps_c_C13, &
-  !                                        discr_ps_a_C14, discr_ps_b_C14, discr_ps_c_C14, &
-  !                                        discr_ps_phi, ic3phot, ic4phot
-  ! 
-  !   IMPLICIT NONE
-  !   ! ---------------------------
-  !   ! 0.1 Inout
-  !   REAL(wp),     INTENT(in) :: ci                     !< leaf internal CO2 concentration (ppm)
-  !   REAL(wp),     INTENT(in) :: ca                     !< atmospheric CO2 concentration (ppm)
-  !   CHARACTER(3), INTENT(in) :: isotope_name           !< isotope C13 or C14
-  !   INTEGER,      INTENT(in) :: ps_pathway             !< photosynthetic pathway (C3 or C4) from lctlib
-  !   REAL(wp)                 :: discrimination         !< isotopic discrimination (per mill)
-  !   ! ---------------------------
-  !   ! 0.2 Local
-  !   CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':discrimination_ps'
-  ! 
-  ! 
-  !   !> SELECT PS pathway C3 C4
-  !   SELECT CASE(ps_pathway)
-  !   CASE (ic3phot)
-  !     !> SELECT isotope C13 C14
-  !     SELECT CASE(isotope_name)
-  !       CASE ('C13')
-  !         discrimination = discr_ps_a_C13 + (discr_ps_b_C13 - discr_ps_a_C13) * ci/ca
-  !       CASE ('C14')
-  !         discrimination = discr_ps_a_C14 + (discr_ps_b_C14 - discr_ps_a_C14) * ci/ca
-  !     END SELECT
-  !   CASE (ic4phot)
-  !     !> SELECT isotope C13 C14
-  !     SELECT CASE(isotope_name)
-  !       CASE ('C13')
-  !         discrimination = discr_ps_a_C13 + (discr_ps_c_C13 + discr_ps_phi * discr_ps_b_C13 - discr_ps_a_C13) * ci/ca
-  !       CASE ('C14')
-  !         discrimination = discr_ps_a_C14 + (discr_ps_c_C14 + discr_ps_phi * discr_ps_b_C14 - discr_ps_a_C14) * ci/ca
-  !     END SELECT
-  !   END SELECT
-  ! 
-  ! END FUNCTION discrimination_ps
+  ! ======================================================================================================= !
+  !>Calculate discrimination of C13 and C14 due to photosynthesis
+  !>
+  !>  Follows the orignial ideas of Farquhar, as described in
+  !>  Drake (2014), Radiocarbon, 56, 29-38
+  !>
+  !>  Input: leaf-level Ci and Ca, photosynthetic pathway (C3/C4) and name of the isotope
+  !>
+  !>  Output: Discrimination (per mill)
+  !>
+  PURE ELEMENTAL FUNCTION discrimination_ps(ci, ca, isotope_name, ps_pathway) RESULT(discrimination)
+  
+    USE mo_assimi_constants,       ONLY: discr_ps_a_C13, discr_ps_b_C13, discr_ps_c_C13, &
+                                         discr_ps_a_C14, discr_ps_b_C14, discr_ps_c_C14, &
+                                         discr_ps_phi, ic3phot, ic4phot
+    !------------------------------------------------------------------------------------------------------ !
+    REAL(wp),     INTENT(in) :: ci                     !< leaf internal CO2 concentration (ppm)
+    REAL(wp),     INTENT(in) :: ca                     !< atmospheric CO2 concentration (ppm)
+    CHARACTER(3), INTENT(in) :: isotope_name           !< isotope C13 or C14
+    INTEGER,      INTENT(in) :: ps_pathway             !< photosynthetic pathway (C3 or C4) from lctlib
+    REAL(wp)                 :: discrimination         !< isotopic discrimination (per mill)
+    !------------------------------------------------------------------------------------------------------ !
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':discrimination_ps'
+  
+  
+    ! SELECT PS pathway C3 C4
+    SELECT CASE(ps_pathway)
+    CASE (ic3phot)
+      ! SELECT isotope C13 C14
+      SELECT CASE(isotope_name)
+        CASE ('C13')
+          discrimination = discr_ps_a_C13 + (discr_ps_b_C13 - discr_ps_a_C13) * ci / ca
+        CASE ('C14')
+          discrimination = discr_ps_a_C14 + (discr_ps_b_C14 - discr_ps_a_C14) * ci / ca
+      END SELECT
+    CASE (ic4phot)
+      ! SELECT isotope C13 C14
+      SELECT CASE(isotope_name)
+        CASE ('C13')
+          discrimination = discr_ps_a_C13 + (discr_ps_c_C13 + discr_ps_phi * discr_ps_b_C13 - discr_ps_a_C13) * ci / ca
+        CASE ('C14')
+          discrimination = discr_ps_a_C14 + (discr_ps_c_C14 + discr_ps_phi * discr_ps_b_C14 - discr_ps_a_C14) * ci / ca
+      END SELECT
+    END SELECT
+  
+  END FUNCTION discrimination_ps
 
 #endif
 END MODULE mo_assimi_update_canopy_fluxes
