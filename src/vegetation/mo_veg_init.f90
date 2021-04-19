@@ -44,16 +44,15 @@ MODULE mo_veg_init
 
 CONTAINS
 
-  !-----------------------------------------------------------------------------------------------------
-  !> Intialize vegetation process (after memory has been set up)
-  !!
-  !! differtiates between the QUINCY models: land, plant, soil, canopy
-  !-----------------------------------------------------------------------------------------------------
+  ! ======================================================================================================= !
+  !>Intialize VEG_ process memory for QUINCY
+  !>
+  !>  differtiates between the QUINCY models: land, plant, soil, canopy
+  !>
   SUBROUTINE veg_init(tile)
 
     USE mo_jsb_class,                       ONLY: Get_model
     USE mo_jsb_tile_class,                  ONLY: t_jsb_tile_abstract
-    USE mo_jsb_task_class,                  ONLY: t_jsb_task_options
     USE mo_jsb_model_class,                 ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element
     USE mo_jsb_process_class,               ONLY: VEG_, PHENO_
@@ -87,7 +86,6 @@ CONTAINS
     REAL(wp), ALLOCATABLE                        :: hlp1(:,:)  !< dummy variable
     REAL(wp)                                     :: ref_lai    !< LAI                                 | for canopy model init
     REAL(wp)                                     :: ref_nleaf  !< N leaf per unit leaf area in gN/m2  | for canopy model init
-    INTEGER                                      :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':veg_init'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(PHENO_)
@@ -187,13 +185,8 @@ CONTAINS
     dsl4jsb_Real3D_onDomain     :: lai_cl
     dsl4jsb_Real3D_onDomain     :: leaf_nitrogen_cl
     ! ----------------------------------------------------------------------------------------------------- !
-    iblk    = options%iblk
-    ics     = options%ics
-    ice     = options%ice
-    nc      = options%nc
-    ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_active(VEG_)) RETURN
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    IF (debug_on()) CALL message(TRIM(routine), 'Initializing QUINCY VEG_ memory for tile '//TRIM(tile%name))
     ! ----------------------------------------------------------------------------------------------------- !
     model  => Get_model(tile%owner_model_id)
     IF (.NOT. model%config%use_quincy) RETURN       ! only with QUINCY model
@@ -300,7 +293,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(VEG_, lai_cl)
     dsl4jsb_Get_var3D_onDomain(VEG_, leaf_nitrogen_cl)
     ! ----------------------------------------------------------------------------------------------------- !
-    ALLOCATE(hlp1(SIZE(lai,1):SIZE(lai,2)))
+    ALLOCATE(hlp1(SIZE(lai,1), SIZE(lai,2)))
     ! ----------------------------------------------------------------------------------------------------- !
 #ifdef __QUINCY_NO_JSB__
 #define Get_veg_pool
