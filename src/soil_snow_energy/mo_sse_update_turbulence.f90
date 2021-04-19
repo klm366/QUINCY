@@ -57,7 +57,6 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
     USE mo_jsb_math_constants,    ONLY: dtime
     USE mo_atmland_constants,     ONLY: min_wind, max_wind 
     USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
@@ -80,7 +79,6 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER       :: model
-    TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
     REAL(wp), DIMENSION(options%nc)       :: ztvd, ztvir, q_sat_surf, ztvs, zg, zgh, zdu2, zril, zcdnl, zchln, & 
                                              zscfl, zucfl, zucfhl, zcons, zcfncl, zcfnchl, zcfml, zcfhl, &
                                              csat, cair, z0m, z0h, zchnl, zlev, wind_air
@@ -126,7 +124,6 @@ CONTAINS
     ! ---------------------------
     ! 0.5 Get Memory
     model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts%lib_id)
     ! Get process config
     dsl4jsb_Get_config(SSE_)
     ! Get process memories
