@@ -306,7 +306,6 @@ CONTAINS
                                         k_fc_s, k_fc_c, k_fc_sc, k_fc_a, k_fc_at, k_fc_bt, k_fc_ct, &
                                         k_sat_s, k_sat_c, k_sat_sc, k_sat_a, k_sat_at, k_sat_bt, k_sat_ct, k_sat_dt, &
                                         wpot_pwp, wpot_fc, wpot_fc
-    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_memory(SSE_)
     dsl4jsb_Use_memory(VEG_)
@@ -322,7 +321,7 @@ CONTAINS
     REAL(wp), ALLOCATABLE, DIMENSION(:,:,:)          :: hlp1
     REAL(wp), ALLOCATABLE, DIMENSION(:,:,:)          :: theta_pwp_sl, theta_fc_sl, theta_sat_sl
     REAL(wp), ALLOCATABLE, DIMENSION(:,:,:)          :: sand_sse_init_sl, silt_sse_init_sl, clay_sse_init_sl
-    INTEGER                                          :: isoil, ichunk, iblk, nblks, nc
+    INTEGER                                          :: isoil, ic, nc, iblk, nblks
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':sse_init_q_'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(SSE_)
@@ -377,6 +376,7 @@ CONTAINS
     dsl4jsb_Get_config(SSE_)
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(VEG_)
+    ! ----------------------------------------------------------------------------------------------------- !
     ! VEG_ 3D
     dsl4jsb_Get_var3D_onDomain(VEG_,  root_fraction_sl)
     ! SSE_ 2D
@@ -415,15 +415,15 @@ CONTAINS
     nc    = SIZE(soil_depth,1)
     nblks = SIZE(soil_depth,2)
     ! ----------------------------------------------------------------------------------------------------- !
-    ALLOCATE(hlp2(SIZE(soil_depth,1), SIZE(soil_depth,2)))
-    ALLOCATE(soil_awc(SIZE(soil_depth,1), SIZE(soil_depth,2)))
-    ALLOCATE(hlp1(SIZE(soil_depth,1), nsoil_sb, SIZE(soil_depth,2)))
-    ALLOCATE(theta_pwp_sl(SIZE(soil_depth,1), nsoil_sb, SIZE(soil_depth,2)))
-    ALLOCATE(theta_fc_sl(SIZE(soil_depth,1), nsoil_sb, SIZE(soil_depth,2)))
-    ALLOCATE(theta_sat_sl(SIZE(soil_depth,1), nsoil_sb, SIZE(soil_depth,2)))
-    ALLOCATE(sand_sse_init_sl(SIZE(soil_depth,1), nsoil_sb, SIZE(soil_depth,2)))
-    ALLOCATE(clay_sse_init_sl(SIZE(soil_depth,1), nsoil_sb, SIZE(soil_depth,2)))
-    ALLOCATE(silt_sse_init_sl(SIZE(soil_depth,1), nsoil_sb, SIZE(soil_depth,2)))
+    ALLOCATE(hlp2(nc, nblks))
+    ALLOCATE(soil_awc(nc, nblks))
+    ALLOCATE(hlp1(nc, nsoil_sb, nblks))
+    ALLOCATE(theta_pwp_sl(nc, nsoil_sb, nblks))
+    ALLOCATE(theta_fc_sl(nc, nsoil_sb, nblks))
+    ALLOCATE(theta_sat_sl(nc, nsoil_sb, nblks))
+    ALLOCATE(sand_sse_init_sl(nc, nsoil_sb, nblks))
+    ALLOCATE(clay_sse_init_sl(nc, nsoil_sb, nblks))
+    ALLOCATE(silt_sse_init_sl(nc, nsoil_sb, nblks))
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
@@ -475,8 +475,8 @@ CONTAINS
     ! !>3.0 check if last soil layer has a thickness larger zero
     ! !>
     ! ! QUINCY specific code
-    ! DO ichunk  = 1,nc
-    !   IF (soil_depth_sl(ichunk,nsoil_sb) < eps8) THEN
+    ! DO ic = 1,nc
+    !   IF (soil_depth_sl(ic,nsoil_sb) < eps8) THEN
     !     WRITE(message_text,*) 'The last soil layer has a thickness < eps8. Increase soil_depth from ', soil_depth, &
     !                           ' to at least ', SUM(soil_lay_width_sl(ics,1:nsoil_sb-1)), ' but better ', &
     !                           SUM(soil_lay_width_sl(ics,1:nsoil_sb)), ' and re-start the simulation.'
