@@ -108,10 +108,7 @@ CONTAINS
     w_skin_max        = 2.E-4_wp
     w_soil_limit      = -1.0_wp
     w_soil_crit_fract = 0.75_wp
-!_junhong_wilting
-!    w_soil_wilt_fract = 0.35_wp
-    w_soil_wilt_fract = 0.50_wp
-!_junhong_wilting
+    w_soil_wilt_fract = 0.35_wp
     scheme_stom_cond  = 'echam5'
     l_organic         = .FALSE.
     l_glac_in_soil    = .FALSE.

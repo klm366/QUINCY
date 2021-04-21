@@ -1287,10 +1287,7 @@ CONTAINS
 
     ! parameters
     ! @todo - take from mo_hydro_constants.f90
-!_junhong_wilting
-!    REAL(wp), PARAMETER :: zwilt  = 0.35_wp
-    REAL(wp), PARAMETER :: zwilt  = 0.50_wp
-!_junhong_wilting
+    REAL(wp), PARAMETER :: zwilt  = 0.35_wp
 
     !----------------------------------------------------------------------------------------------
     !  update soil moisture due to evaporation and transpiration fluxes
