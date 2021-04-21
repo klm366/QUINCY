@@ -253,7 +253,7 @@ CONTAINS
       hydro_init_vars%vol_p_wilt = 0.185_wp
 !_junhong_aleina
 !_junhong_residual
-      hydro_init_vars%vol_p_wilt = 0.37_wp * 0.1_wp
+!      hydro_init_vars%vol_p_wilt = 0.37_wp * 0.1_wp
 !_junhong_residual
 !_junhong_aleina
 
