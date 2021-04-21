@@ -99,10 +99,10 @@ CONTAINS
     l_heat_cap_dyn   = .TRUE.
     l_heat_cond_dyn  = .TRUE.
 !_junhong
-!    l_heat_cap_map   = .FALSE.
-!    l_heat_cond_map  = .FALSE.
-    l_heat_cap_map   = .TRUE.
-    l_heat_cond_map  = .TRUE.
+    l_heat_cap_map   = .FALSE.
+    l_heat_cond_map  = .FALSE.
+!    l_heat_cap_map   = .TRUE.
+!    l_heat_cond_map  = .TRUE.
 !_junhong
     l_freeze         = .FALSE.
     l_supercool      = .FALSE.
