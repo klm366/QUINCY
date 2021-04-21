@@ -153,20 +153,20 @@ CONTAINS
 !          & variable_name='albedo_veg_vis',   &
 !          & fill_array = rad_init_vars%alb_vis_can)
 !        ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
-        rad_init_vars%alb_vis_can = 0.070_wp
+        rad_init_vars%alb_vis_can = 0.080_wp
       ELSE
-!        rad_init_vars%alb_vis_can = dsl4jsb_Lctlib_param(AlbedoCanopyVIS)
-        rad_init_vars%alb_vis_can = 0.070_wp
+        rad_init_vars%alb_vis_can = dsl4jsb_Lctlib_param(AlbedoCanopyVIS)
+!        rad_init_vars%alb_vis_can = 0.070_wp
       END IF
       IF (dsl4jsb_Config(RAD_)%use_alb_canopy .OR. tile%lcts(1)%lib_id == 0) THEN
 !        ptr_2D => input_file%Read_2d( &
 !          & variable_name='albedo_veg_nir',   &
 !          & fill_array = rad_init_vars%alb_nir_can)
 !        ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
-        rad_init_vars%alb_nir_can = 0.300_wp
+        rad_init_vars%alb_nir_can = 0.330_wp
       ELSE
-!        rad_init_vars%alb_nir_can = dsl4jsb_Lctlib_param(AlbedoCanopyNIR)
-        rad_init_vars%alb_nir_can = 0.300_wp
+        rad_init_vars%alb_nir_can = dsl4jsb_Lctlib_param(AlbedoCanopyNIR)
+!        rad_init_vars%alb_nir_can = 0.300_wp
       END IF
 
     END IF
