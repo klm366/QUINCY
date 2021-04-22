@@ -354,7 +354,7 @@ CONTAINS
       IF (ASSOCIATED(model%processes(i)%p)) single_tile_output(i) = model%processes(i)%p%config%single_tile_output
     END DO
 
-    l_fixed_fractions = .NOT. model%processes(ALCC_)%p%config%active .AND. .NOT. TRIM(model%config%usecase)=='jsbach_jedi'
+    l_fixed_fractions = .NOT. model%Do_fractions_change()
     IF (l_fixed_fractions) THEN
       CALL message(routine, 'Tile fractions are fixed over time')
     ELSE
@@ -682,6 +682,9 @@ CONTAINS
         call model%Goto_next_tile(tile)
         CYCLE
       END IF
+
+      ! Indicate to the aggregators that tile fractions might have changed after restart
+      tile%l_fract_children_changed(:,:) = model%Do_fractions_change()
 
       ! TBD: Loop over processes instead of explicit
       IF (one_of(tile%process_action(CARBON_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN

@@ -120,6 +120,7 @@ CONTAINS
       ALLOCATE(t_hd_config::return_ptr%config)
 #endif
     CASE (CARBON_)
+      return_ptr%l_changes_fractions = .TRUE.
       CALL Register_carbon_tasks(return_ptr, model_id)
       ALLOCATE(t_carbon_config::return_ptr%config)
     CASE (DISTURB_)
@@ -129,6 +130,7 @@ CONTAINS
       CALL Register_fuel_tasks(return_ptr, model_id)
       ALLOCATE(t_fuel_config::return_ptr%config)
     CASE (ALCC_)
+      return_ptr%l_changes_fractions = .TRUE.
       CALL Register_alcc_tasks(return_ptr, model_id)
       ALLOCATE(t_alcc_config::return_ptr%config)
     CASE (VEG_)
