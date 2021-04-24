@@ -30,6 +30,7 @@ MODULE mo_jsb_process_factory
   USE mo_carbon_memory_class,  ONLY: t_carbon_memory
   USE mo_disturb_memory_class, ONLY: t_disturb_memory
   USE mo_fuel_memory_class,    ONLY: t_fuel_memory
+  USE mo_jedi_memory_class,    ONLY: t_jedi_memory
   USE mo_alcc_memory_class,    ONLY: t_alcc_memory
   USE mo_veg_memory_class,     ONLY: t_veg_memory
 #ifndef __NO_JSBACH_HD__
@@ -59,13 +60,15 @@ MODULE mo_jsb_process_factory
   USE mo_disturb_config_class,  ONLY: t_disturb_config
   USE mo_fuel_interface,        ONLY: Register_fuel_tasks
   USE mo_fuel_config_class,     ONLY: t_fuel_config
+  USE mo_jedi_interface,        ONLY: Register_jedi_tasks
+  USE mo_jedi_config_class,     ONLY: t_jedi_config
   USE mo_alcc_interface,        ONLY: Register_alcc_tasks
   USE mo_alcc_config_class,     ONLY: t_alcc_config
   USE mo_veg_interface,         ONLY: Register_veg_tasks
   USE mo_veg_config_class,      ONLY: t_veg_config
 
   USE mo_jsb_process_class, ONLY: &
-    & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, ALCC_, VEG_
+    & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, JEDI_, ALCC_, VEG_
 
   IMPLICIT NONE
   PRIVATE
@@ -120,7 +123,6 @@ CONTAINS
       ALLOCATE(t_hd_config::return_ptr%config)
 #endif
     CASE (CARBON_)
-      return_ptr%l_changes_fractions = .TRUE.
       CALL Register_carbon_tasks(return_ptr, model_id)
       ALLOCATE(t_carbon_config::return_ptr%config)
     CASE (DISTURB_)
@@ -129,6 +131,10 @@ CONTAINS
     CASE (FUEL_)
       CALL Register_fuel_tasks(return_ptr, model_id)
       ALLOCATE(t_fuel_config::return_ptr%config)
+    CASE (JEDI_)
+      return_ptr%l_changes_fractions = .TRUE.
+      CALL Register_jedi_tasks(return_ptr, model_id)
+      ALLOCATE(t_jedi_config::return_ptr%config)
     CASE (ALCC_)
       return_ptr%l_changes_fractions = .TRUE.
       CALL Register_alcc_tasks(return_ptr, model_id)
@@ -160,6 +166,7 @@ CONTAINS
     USE mo_carbon_memory_class,  ONLY: max_no_of_carbon_vars => max_no_of_vars
     USE mo_disturb_memory_class, ONLY: max_no_of_disturb_vars => max_no_of_vars
     USE mo_fuel_memory_class,    ONLY: max_no_of_fuel_vars => max_no_of_vars
+    USE mo_jedi_memory_class,    ONLY: max_no_of_jedi_vars => max_no_of_vars
     USE mo_alcc_memory_class,    ONLY: max_no_of_alcc_vars => max_no_of_vars
     USE mo_veg_memory_class,     ONLY: max_no_of_veg_vars => max_no_of_vars
 #ifndef __NO_JSBACH_HD__
@@ -211,6 +218,9 @@ CONTAINS
     CASE (FUEL_)
       ALLOCATE(t_fuel_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_fuel_vars
+    CASE (JEDI_)
+      ALLOCATE(t_jedi_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_carbon_vars
     CASE (ALCC_)
       ALLOCATE(t_alcc_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_alcc_vars

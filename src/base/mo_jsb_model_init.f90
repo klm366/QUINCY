@@ -16,7 +16,7 @@
 MODULE mo_jsb_model_init
 #ifndef __NO_JSBACH__
 
-  dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, FUEL_, ALCC_, A2L_, VEG_
+  dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, FUEL_, ALCC_, JEDI_, A2L_, VEG_
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
 
@@ -246,11 +246,11 @@ CONTAINS
         CALL model%Queue_task(HYDRO_,  "canopy_cond_unstressed")
       END IF
       !24.07.2020 PHS: compute water stress on pft level but soil hydro on veg level
-     IF (TRIM(model%config%usecase) .eq. 'jsbach_jedi' ) THEN        
-      CALL model%Queue_task(CARBON_, "water_stress")
-     ELSE
-      CALL model%Queue_task(HYDRO_, "water_stress")
-     END IF
+      IF (TRIM(model%config%usecase) .eq. 'jsbach_jedi' ) THEN        
+        CALL model%Queue_task(JEDI_, "water_stress")
+      ELSE
+        CALL model%Queue_task(HYDRO_, "water_stress")
+      END IF
       IF (model%processes(ASSIMI_)%p%config%active) THEN
         CALL model%Queue_task(ASSIMI_, "canopy_cond_stressed")
         CALL model%Queue_task(ASSIMI_, "assimilation")
@@ -259,7 +259,10 @@ CONTAINS
       END IF
       ! CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
       IF (model%processes(CARBON_)%p%config%active) THEN
-         CALL model%Queue_task(CARBON_, "C_NPP_pot_allocation")
+        CALL model%Queue_task(CARBON_, "C_NPP_pot_allocation")
+      END IF
+      IF (model%processes(JEDI_)%p%config%active) THEN
+        CALL model%Queue_task(JEDI_, "tradeoff")
       END IF
       CALL model%Queue_task(TURB_,   "humidity_scaling")
       CALL model%Queue_task(TURB_,   "surface_roughness")

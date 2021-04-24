@@ -32,7 +32,7 @@ MODULE mo_assimi_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module (Get_assimi_memory and Get_assimi_config)
-  dsl4jsb_Use_processes ASSIMI_, HYDRO_, PHENO_, RAD_, A2L_, SEB_,CARBON_
+  dsl4jsb_Use_processes ASSIMI_, HYDRO_, PHENO_, RAD_, A2L_, SEB_,JEDI_
 
   ! Use of process configurations (t_assimi_config)
   dsl4jsb_Use_config(ASSIMI_)
@@ -41,7 +41,7 @@ MODULE mo_assimi_interface
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(ASSIMI_)
   dsl4jsb_Use_memory(HYDRO_)
-  dsl4jsb_Use_memory(CARBON_)
+  dsl4jsb_Use_memory(JEDI_)
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(SEB_)
@@ -637,7 +637,7 @@ CONTAINS
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(HYDRO_)
-    dsl4jsb_Def_memory(CARBON_)
+    dsl4jsb_Def_memory(JEDI_)
 
     dsl4jsb_Real2D_onChunk :: canopy_cond_unlimited
     dsl4jsb_Real2D_onChunk :: canopy_cond_limited
@@ -675,7 +675,7 @@ CONTAINS
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(HYDRO_)
-    dsl4jsb_Get_memory(CARBON_)
+    dsl4jsb_Get_memory(JEDI_)
 
     dsl4jsb_Get_var2D_onChunk(A2L_,      q_air)               ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,      press_srf)           ! in
@@ -683,7 +683,7 @@ CONTAINS
     
      !24.07.2020 PHS: compute water stress on pft level but soil hydro on veg level
      IF (TRIM(model%config%usecase) .eq. 'jsbach_jedi' ) THEN        
-       dsl4jsb_Get_var2D_onChunk(CARBON_,    water_stress)        ! in
+       dsl4jsb_Get_var2D_onChunk(JEDI_,    water_stress)        ! in
      ELSE
        dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_stress)        ! in
     end if

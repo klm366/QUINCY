@@ -33,7 +33,7 @@ MODULE mo_hydro_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes SEB_, SSE_, TURB_, PHENO_, A2L_, HYDRO_, CARBON_, ASSIMI_
+  dsl4jsb_Use_processes SEB_, SSE_, TURB_, PHENO_, A2L_, HYDRO_, JEDI_, ASSIMI_
 
   ! Use of process configurations
   dsl4jsb_Use_config(SEB_)
@@ -47,7 +47,7 @@ MODULE mo_hydro_interface
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(TURB_)
   dsl4jsb_Use_memory(PHENO_)
-  dsl4jsb_Use_memory(CARBON_)
+  dsl4jsb_Use_memory(JEDI_)
   dsl4jsb_Use_memory(ASSIMI_)
 
   ! -------------------------------------------------------------------------------------------------------
@@ -875,9 +875,9 @@ CONTAINS
   !! @param[in]     options Additional run-time parameters.
   !!
   SUBROUTINE update_soil_hydrology(tile, options)
-    USE mo_util,    ONLY: soil_depth_to_layers_2d
-    USE mo_carbon_jedi_process, ONLY: jedi_soil_depth_to_layers_1d
-    USE mo_hydro_process,          ONLY: calc_soil_hydrology
+    USE mo_util,          ONLY: soil_depth_to_layers_2d
+    USE mo_jedi_process,  ONLY: jedi_soil_depth_to_layers_1d
+    USE mo_hydro_process, ONLY: calc_soil_hydrology
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -887,7 +887,7 @@ CONTAINS
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(HYDRO_)
-    dsl4jsb_Def_memory(CARBON_)
+    dsl4jsb_Def_memory(JEDI_)
     ! Pointers to variables in memory
     dsl4jsb_Real3D_onChunk :: fract_org_sl
     dsl4jsb_Real3D_onChunk :: t_soil
@@ -945,19 +945,18 @@ CONTAINS
     IF (model%config%tpe_scheme == 'closed') ltpe_closed = .TRUE.
 
     dsl4jsb_Get_memory(HYDRO_)
-    dsl4jsb_Get_memory(SSE_)
-    dsl4jsb_Get_memory(CARBON_)
-    
+    dsl4jsb_Get_memory(SSE_)    
     
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_rel)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_column)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, max_moist)
     IF (TRIM(model%config%usecase) .eq. 'jsbach_jedi' ) THEN
+      dsl4jsb_Get_memory(JEDI_)
       dsl4jsb_Get_var2D_onChunk(HYDRO_,root_depth)
       dsl4jsb_Get_var3D_onChunk(HYDRO_,root_depth_sl)
-      dsl4jsb_Get_var2D_onChunk(CARBON_,jedi_root_depth)
-      END IF
-    dsl4jsb_Get_var3D_onChunk(SSE_,    t_soil)     ! in
+      dsl4jsb_Get_var2D_onChunk(JEDI_,jedi_root_depth)
+    END IF
+    dsl4jsb_Get_var3D_onChunk(SSE_, t_soil)     ! in
 
     IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
       dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)
@@ -971,14 +970,11 @@ CONTAINS
     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
       !PHS 24.07.2020 Compute water stress in CARBON at PFT level. 
       ! As jedi has different rooting depth for each PGS, the root_depth at veg level needed to be recalculated each time. 
-       IF (TRIM(model%config%usecase) .eq. 'jsbach_jedi' ) THEN
-            root_depth     = jedi_root_depth
-            root_depth_sl = jedi_soil_depth_to_layers_1d( root_depth, soil_w%dz(:))       
-      END IF
-      ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
-      
-
-
+    IF (TRIM(model%config%usecase) .eq. 'jsbach_jedi' ) THEN
+      root_depth    = jedi_root_depth
+      root_depth_sl = jedi_soil_depth_to_layers_1d( root_depth, soil_w%dz(:))       
+    END IF
+    ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
 
     !$claw acc update device(soil_w%dz) ! TODO move if possible
     !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_1 tile_name=tile%name
@@ -1193,7 +1189,7 @@ CONTAINS
     USE mo_jsb_math_constants, ONLY: eps8
     USE mo_hydro_process,      ONLY: get_water_stress_factor
     USE mo_hydro_util,         ONLY: get_water_in_root_zone
-    USE mo_carbon_constants,  ONLY: max_pipe_transpir
+    USE mo_jedi_constants,     ONLY: max_pipe_transpir
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -1203,7 +1199,7 @@ CONTAINS
     dsl4jsb_Def_config(HYDRO_)
 
     dsl4jsb_Def_memory(HYDRO_)
-    dsl4jsb_Def_memory(CARBON_)   !PHS
+    dsl4jsb_Def_memory(JEDI_)   !PHS
     dsl4jsb_Def_memory(ASSIMI_)
 
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
@@ -1244,7 +1240,7 @@ CONTAINS
     !
     dsl4jsb_Get_memory(HYDRO_)
     IF (TRIM(model%config%usecase) == 'jsbach_jedi' ) THEN
-      dsl4jsb_Get_memory(CARBON_)
+      dsl4jsb_Get_memory(JEDI_)
     END IF
 
     IF (model%config%use_quincy) THEN
@@ -1264,9 +1260,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_stress)        ! out
     
     IF (TRIM(model%config%usecase) == 'jsbach_jedi' ) THEN
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapopot) !PHS
-      dsl4jsb_Get_var2D_onChunk(CARBON_,  jedi_pot_supply_transp) !PHS	
-      dsl4jsb_Get_var2D_onChunk(CARBON_,  alpha_jedi)!PHS
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, evapopot)               !PHS
+      dsl4jsb_Get_var2D_onChunk(JEDI_,  jedi_pot_supply_transp) !PHS	
+      dsl4jsb_Get_var2D_onChunk(JEDI_,  alpha_jedi)             !PHS
     END IF
     !
     IF (model%config%use_quincy) THEN

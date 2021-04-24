@@ -409,7 +409,7 @@ CONTAINS
     USE mo_jsb_time,    ONLY: is_newday, is_newmonth, is_time_experiment_start
     USE mo_carbon_interface,  ONLY: yday_carbon_conservation_test
 
-    USE mo_carbon_interface, ONLY: jedi_biomass_to_fract
+    USE mo_jedi_interface, ONLY: jedi_biomass_to_fract
 
 #ifndef __NO_JSBACH_HD__
     USE mo_interface_hd_ocean, ONLY: interface_hd_ocean

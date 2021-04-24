@@ -37,7 +37,6 @@ MODULE mo_carbon_config_class
     LOGICAL  :: diag_humus_fluxes ! Activate diagnostic carbon fluxes to and from the yasso humus pools
                                   ! required for analytical humus pool equilibration (compare jsb3.2 svn rev 9934)
     REAL(wp) :: fire_fract_wood_2_atmos
-    LOGICAL  :: l_spinup_jedi
 
    CONTAINS
      PROCEDURE :: Init => Init_carbon_config
@@ -63,7 +62,6 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     LOGICAL                     :: read_cpools, diag_humus_fluxes
     REAL(wp)                    :: fire_fract_wood_2_atmos
-    LOGICAL                     :: l_spinup_jedi
     ! LOGICAL           :: lemissions
 
     NAMELIST /jsb_carbon_nml/      &
@@ -73,8 +71,7 @@ CONTAINS
          bc_filename,              &
          read_cpools,              &
          diag_humus_fluxes,        &
-         fire_fract_wood_2_atmos,  &
-         l_spinup_jedi
+         fire_fract_wood_2_atmos
 
     INTEGER :: nml_handler, nml_unit, istat
 
@@ -90,7 +87,6 @@ CONTAINS
     read_cpools            = .FALSE.
     diag_humus_fluxes      = .FALSE.
     fire_fract_wood_2_atmos = FireFracWood2Atmos
-    l_spinup_jedi          = .FALSE.
 
     ! Read namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
@@ -108,7 +104,6 @@ CONTAINS
     config%read_cpools            = read_cpools
     config%diag_humus_fluxes      = diag_humus_fluxes
     config%fire_fract_wood_2_atmos = fire_fract_wood_2_atmos
-    config%l_spinup_jedi          = l_spinup_jedi
 
   END SUBROUTINE Init_carbon_config
 
