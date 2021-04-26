@@ -215,18 +215,9 @@ CONTAINS
 
   END SUBROUTINE update_phenology
 
-
-  !-----------------------------------------------------------------------------------------------------
-  !> QUINCY phenology 
-  !! 
-  !! determine onset and end of the growing season
-  !! 
-  !! covers temporarily also:     n\
-  !!  update leaf C:N:P pools     n\
-  !!  calc lai                    n\
-  !!  calc_canopy_layers()
-  !!
-  !-----------------------------------------------------------------------------------------------------
+  ! ======================================================================================================= !
+  !>update phenology - QUINCY
+  !>
   SUBROUTINE update_phenology_q_(tile, options)
 
     USE mo_pheno_update_phenology,      ONLY: update_phenology_quincy
@@ -241,15 +232,12 @@ CONTAINS
     IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
     model => Get_model(tile%owner_model_id)
 
-    ! only if the present tile is a pft
-    IF (tile%lcts(1)%lib_id /= 0)  THEN
-      CALL update_phenology_quincy(tile, options)
-    END IF
+    IF (tile%lcts(1)%lib_id == 0)           RETURN  ! run task only if the present tile is a pft
+    CALL update_phenology_quincy(tile, options)
 
   END SUBROUTINE update_phenology_q_
 
-
-  ! ================================================================================================================================
+  ! ======================================================================================================= !
   !>
   !! @brief Implementation of 'LOGROP' phenology scheme
   !!
@@ -810,66 +798,51 @@ CONTAINS
 
   END SUBROUTINE aggregate_phenology
 
-  !-----------------------------------------------------------------------------------------------------
-  !> Implementation of "aggregate": phenology_q_ task
-  !! 
-  !-----------------------------------------------------------------------------------------------------
+  ! ======================================================================================================= !
+  !>Implementation of "aggregate": phenology_q_ task
+  !> 
   SUBROUTINE aggregate_phenology_q_(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
-
-    ! Locals
+    ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER                :: model
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(VEG_)
+    ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
     INTEGER                                   :: iblk, ics, ice
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_phenology_q_'
-
-    ! Get local variables from options argument
+    ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-
+    ! ----------------------------------------------------------------------------------------------------- !
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
+    ! ----------------------------------------------------------------------------------------------------- !
     model => Get_model(tile%owner_model_id)
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(VEG_)
 
-    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    ! PHENO_
     dsl4jsb_Aggregate_onChunk(PHENO_, growing_season              ,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(PHENO_, gdd                         ,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(PHENO_, nd_dormance                 ,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(PHENO_, lai                         ,    weighted_by_fract)
     ! VEG_
     dsl4jsb_Aggregate_onChunk(VEG_, growth_req_n_tlabile_mavg  ,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, growth_req_p_tlabile_mavg  ,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_leaf_carbon       ,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_leaf_nitrogen     ,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_leaf_phosphorus   ,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, veg_growth_leaf_carbon     ,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, veg_litterfall_leaf_carbon ,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, lai_cl                     ,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, cumm_lai_cl                ,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, leaf_nitrogen_cl           ,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, mean_leaf_age              ,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, fn_chl_cl                  ,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, fn_et_cl                   ,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, fn_rub_cl                  ,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, fn_pepc_cl                 ,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, fn_oth_cl                  ,    weighted_by_fract)
-    !dsl4jsb_Aggregate_onChunk(VEG_, ppfd_sunlit_tfrac_mavg_cl  ,    weighted_by_fract)
-    !dsl4jsb_Aggregate_onChunk(VEG_, ppfd_shaded_tfrac_mavg_cl  ,    weighted_by_fract)
-    !dsl4jsb_Aggregate_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl ,    weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_phenology_q_
 
-
+  ! ======================================================================================================= !
+  !>update foliage projected cover
+  !>
   SUBROUTINE update_fpc(tile, options)
 
     USE mo_pheno_process, ONLY: get_foliage_projected_cover
