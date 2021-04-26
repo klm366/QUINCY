@@ -85,7 +85,6 @@ CONTAINS
     TYPE(t_lctlib_element), POINTER              :: lctlib     !< land-cover-type library - parameter across pft's
     REAL(wp), ALLOCATABLE                        :: hlp1(:,:)  !< dummy variable
     REAL(wp)                                     :: ref_lai    !< LAI                                 | for canopy model init
-    REAL(wp)                                     :: ref_nleaf  !< N leaf per unit leaf area in gN/m2  | for canopy model init
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':veg_init'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(PHENO_)
@@ -172,12 +171,6 @@ CONTAINS
     dsl4jsb_Real2D_onDomain     :: t_jmax_opt_mavg
     dsl4jsb_Real2D_onDomain     :: w_root_lim_talloc_mavg
     dsl4jsb_Real2D_onDomain     :: exudation_c_tmyc_mavg
-    ! VEG_ 2D pool helper variables (TODO delete once pools are fully implemented and used)
-    dsl4jsb_Real2D_onDomain     :: veg_pool_leaf_carbon
-    dsl4jsb_Real2D_onDomain     :: veg_growth_leaf_carbon
-    dsl4jsb_Real2D_onDomain     :: veg_litterfall_leaf_carbon
-    dsl4jsb_Real2D_onDomain     :: veg_pool_leaf_nitrogen
-    dsl4jsb_Real2D_onDomain     :: veg_pool_leaf_phosphorus
     ! VEG_ 3D
     dsl4jsb_Real3D_onDomain     :: fleaf_sunlit_tfrac_mavg_cl
     dsl4jsb_Real3D_onDomain     :: fleaf_sunlit_tcnl_mavg_cl
@@ -280,12 +273,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(VEG_, t_jmax_opt_mavg)
     dsl4jsb_Get_var2D_onDomain(VEG_, w_root_lim_talloc_mavg)
     dsl4jsb_Get_var2D_onDomain(VEG_, exudation_c_tmyc_mavg)
-    ! VEG_ 2D pool helper variables
-    dsl4jsb_Get_var2D_onDomain(VEG_, veg_pool_leaf_carbon)
-    dsl4jsb_Get_var2D_onDomain(VEG_, veg_growth_leaf_carbon)
-    dsl4jsb_Get_var2D_onDomain(VEG_, veg_litterfall_leaf_carbon)
-    dsl4jsb_Get_var2D_onDomain(VEG_, veg_pool_leaf_nitrogen)
-    dsl4jsb_Get_var2D_onDomain(VEG_, veg_pool_leaf_phosphorus)
     ! VEG_ 3D
     dsl4jsb_Get_var3D_onDomain(VEG_, fleaf_sunlit_tfrac_mavg_cl)
     dsl4jsb_Get_var3D_onDomain(VEG_, fleaf_sunlit_tcnl_mavg_cl)
@@ -426,43 +413,21 @@ CONTAINS
       !>
       CASE('canopy')
         ! the ref_lai of 6.0 works great for all sites that are not too dry; but use 0.5_wp for dry sites like ZA-Kru
-        ref_lai   = 6.0_wp
-        lai(:,:)  = ref_lai
-        
-        ! leaf_nitrogen
-        ref_nleaf = 2.0_wp
-        IF(dsl4jsb_Config(VEG_)%pft_id == 0) THEN
-          veg_pool%leaf%domain_n(:,:) = ref_nleaf / molar_mass_N * lai(:,:)
-          height(:,:)                 = 10.0_wp
-        ELSE
-          veg_pool%leaf%domain_n(:,:) = lai(:,:) / lctlib%sla / lctlib%cn_leaf
-          veg_pool%leaf%domain_p(:,:) = veg_pool%leaf%domain_n(:,:) / lctlib%np_leaf
-          IF(lctlib%growthform==itree) THEN
-             height(:,:) = 10.0_wp
-          ELSE 
-             height(:,:) = 1.0_wp
-          ENDIF
+        ref_lai       = 6.0_wp
+        lai(:,:)      = ref_lai
+        lai_cl(:,:,:) = 0.0_wp  ! this is intentionally wrong; i.e., it will not work at the 1st timestep (which is probably night anyway)
+
+        ! leaf C
+        veg_pool%leaf%domain_c(:,:) = lai(:,:) / lctlib%sla
+        ! leaf N
+        veg_pool%leaf%domain_n(:,:) = lai(:,:) / lctlib%sla / lctlib%cn_leaf
+        veg_pool%leaf%domain_p(:,:) = veg_pool%leaf%domain_n(:,:) / lctlib%np_leaf
+        IF(lctlib%growthform == itree) THEN
+          height(:,:) = 10.0_wp
+        ELSE 
+          height(:,:) = 1.0_wp
         ENDIF
         leaf_nitrogen_cl(:,:,:) = 0.0_wp  ! this is intentionally wrong; i.e., it will not work at the 1st timestep (which is probably night anyway)
-        lai_cl(:,:,:)           = 0.0_wp  ! this is intentionally wrong; i.e., it will not work at the 1st timestep (which is probably night anyway)
-
- !! TODO jsb4-quincy canopy/plant model
- !! may be deleted soon (see code above)
-        ! code for initial jsb4 canopy-model version
-        ! 2D var used for vegetation Pool/Flux replacement
-        veg_pool_leaf_carbon(:,:)       = 0.0_wp
-        veg_growth_leaf_carbon(:,:)     = 0.0_wp
-        veg_litterfall_leaf_carbon(:,:) = 0.0_wp
-        IF (tile%lcts(1)%lib_id /= 0) THEN      ! work with lctlib only if the present tile is a pft
-          veg_pool_leaf_carbon(:,:)     = lai(:,:) / lctlib%sla
-          veg_pool_leaf_nitrogen(:,:)   = lai(:,:) / lctlib%sla / lctlib%cn_leaf
-          veg_pool_leaf_phosphorus(:,:) = veg_pool_leaf_nitrogen(:,:) / lctlib%np_leaf
-          IF(lctlib%growthform == itree) THEN
-             height(:,:) = 10.0_wp
-          ELSE 
-             height(:,:) = 1.0_wp
-          ENDIF
-        ENDIF
 
       ! --------------------------------------------------------------------------------------------------- !
       !>  1.3 default - error catching in model selection
