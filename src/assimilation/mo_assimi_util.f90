@@ -290,7 +290,7 @@ CONTAINS
 
     !>  2.2 soa time-scale
     !> 
-    hlp(:)                     = t_air(:) - Tzero
+    hlp(:)                     = t_air(:) - Tzero     ! convert from Kelvin to deg Celsius
     soa_tsoa_mavg(:)           = calc_mavg(soa_tsoa_mavg(:), hlp(:), mavg_period_tsoa)
 
     !>  2.3 tfrac (averages at the time-scale of within-leaf N allocation fractions)
