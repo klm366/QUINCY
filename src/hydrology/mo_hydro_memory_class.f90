@@ -122,8 +122,12 @@ MODULE mo_hydro_memory_class
       & w_soil_sat_sl,        & !< Water content of soil layers at saturation (derived from soil porosity)  [m]
       & w_soil_fc_sl,         & !< Water content of soil layers at field capacity
                                 !! (derived from volumetric field capacity)                                 [m]
-      & w_soil_pwp_sl           !< Water content of soil layers at permanent wilting point
+      & w_soil_pwp_sl,        & !< Water content of soil layers at permanent wilting point
                                 !! (derived from vol. perm wilt point)                                      [m]
+!pdv >
+      & w_soil_pot_scool_sl     !! Potentially supercooled water in soil layer                              [m]
+
+!pdv <
 
     ! Additional variables for PFT lct_type
 
@@ -137,6 +141,13 @@ MODULE mo_hydro_memory_class
       & w_soil_root,          & !< Water content in root zone of the soil                                   [m]
       & w_soil_root_fc,       & !< Water content at field capacity in root zone of the soil                 [m]
       & w_soil_root_pwp,      & !< Water content at permanent wilting point in root zone of the soil        [m]
+!pdv >
+      & w_soil_root_ice,       &
+      & w_soil_root_scool_pot, & !< Potentially suppercooled water content in root zone
+      & w_soil_root_scool_act, & !< Suppercooled water content in root zone
+      & w_soil_root_avail,     & !< Plant available water content in root zone
+      & w_soil_root_max,       & !< Maximum plant available water content in root zone
+!pdv <
       & water_stress,         & !< Water stress factor of canopy                        (1: no water stress, 0: infinite stress)
       & canopy_cond_unlimited,& !< Canopy conductance without water limit  [m/s] (mean value)
       & canopy_cond_limited,  & !< Canopy conductance with water limit [m/s] (mean value)
@@ -710,6 +721,15 @@ CONTAINS
         & loutput=.TRUE., &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+!pdv >
+      CALL mem%Add_var( 'w_soil_pot_scool_sl', mem%w_soil_pot_scool_sl,                   &
+        & hgrid, soil_w,                                                                  &
+        & t_cf('Potentially supercooled water on soil layers', 'm water equivalent', ''), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),              &
+        & prefix, suffix,                                                                 &
+        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+!pdv <
+
       CALL mem%Add_var('w_soil_rel', mem%w_soil_rel,                                &
         &  hgrid, surface,                                                          &
         &  t_cf('water_soil_relative', '', ''),                                     &
@@ -782,6 +802,48 @@ CONTAINS
         & lrestart=.FALSE.,                                                                                    &
         & loutput=.TRUE., &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+!pdv >
+      CALL mem%Add_var( 'w_soil_root_ice', mem%w_soil_root_ice,                     &
+        & hgrid, surface,                                                           &
+        & t_cf('Ice content in the root zone', 'm water equivalent', ''),           &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+        & prefix, suffix,                                                           &
+        & lrestart=.FALSE.,                                                         &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'w_soil_root_scool_pot', mem%w_soil_root_scool_pot,                     &
+        & hgrid, surface,                                                                       &
+        & t_cf('Potentially supercooled water content in root zone', 'm water equivalent', ''), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
+        & prefix, suffix,                                                                       &
+        & lrestart=.FALSE.,                                                                     &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'w_soil_root_scool_act', mem%w_soil_root_scool_act,         &
+        & hgrid, surface,                                                           &
+        & t_cf('Supercooled water content in root zone', 'm water equivalent', ''), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+        & prefix, suffix,                                                           &
+        & lrestart=.FALSE.,                                                         &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'w_soil_root_avail', mem%w_soil_root_avail,                     &
+        & hgrid, surface,                                                               &
+        & t_cf('Plant available water content in root zone', 'm water equivalent', ''), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
+        & prefix, suffix,                                                               &
+        & lrestart=.FALSE.,                                                             &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'w_soil_root_max', mem%w_soil_root_max,                                 &
+        & hgrid, surface,                                                                       &
+        & t_cf('Maximum plant available water content in root zone', 'm water equivalent', ''), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
+        & prefix, suffix,                                                                       &
+        & lrestart=.FALSE.,                                                                     &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+!pdv <
 
       CALL mem%Add_var( 'water_stress', mem%water_stress,                     &
         & hgrid, surface,                                                     &

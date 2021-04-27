@@ -398,6 +398,12 @@ CONTAINS
   ! @param [in]      dz                 (Fixed) Thicknesses of soil layers [m]
   ! @param [in]      nlat               (Effective) number of latitudes
   ! @param [in]      delta_time         Time step [s]
+!pdv >
+  ! @param [in]      l_infil_subzero
+  ! @param [in]      l_hyd_ref 
+  ! @param [in]      l_discount_scool 
+  ! @param [in]      l_drain_lat
+!pdv <
   ! @param [in]      soil_depth_l       Thicknesses of soil layers until bedrocj [m]
   ! @param [in]      root_depth_l       Thicknesses of soil layers until rooting depth [m]
   ! @param [in]      fract_org_l        Fractions per soil layer of organic comonent []
@@ -408,6 +414,9 @@ CONTAINS
   ! @param [in]      vol_porosity_l     Soil porosity [m/m]
   ! @param [in]      vol_field_cap_l    Volumetric field capacity [m/m]
   ! @param [in]      vol_p_wilt_l       Volumetric permanent wilting point [m/m]
+!pdv >
+  ! @param [in]      pot_scool_l        Amount of potentially supercooled water [m]
+!pdv <
   ! @param [in]      sfract_srf         Snow cover fraction []
   ! @param [in]      wfract_srf         Wet surface fraction (skin reservoir) []
   ! @param [in]      ws_max_mineral     Maximum water holding capacity of non-organic soil [m]
@@ -418,8 +427,8 @@ CONTAINS
   ! @param [in]      trans              Evapotranspiration [kg m-2 s-1]
   ! @param [in,out]  ws                 Total water content of soil column in rooting zone [m]
   ! @param [in,out]  ws_l               Content un-frozen water of soil layers in rooting zone [m]
-  ! @param [in,out]  soil_ice_l         Content of frozen water os soil layers in rooting zone [m]
-  ! @param [out]     wsat_l             Maximum water storage in each soil layers [m]
+  ! @param [in,out]  soil_ice_l         Content of frozen water of soil layers in rooting zone [m]
+  ! @param [out]     wsat_l             Maximum water storage in each soil layer [m]
   ! @param [out]     field_cap_l        Water content at field capacity in soil layers [m]
   ! @param [out]     p_wilt_l           Water content at permanent wilting point in soil layers [m]
   ! @param [out]     runoff             Runoff
@@ -428,8 +437,14 @@ CONTAINS
   SUBROUTINE calc_soil_hydrology(                                                                                &
     ! in
     & nidx, nsoil, dz, nlat, delta_time, ltpe_closed, ltpe_open,                                                 &
+!pdv >
+    & l_infil_subzero, l_hyd_ref, l_discount_scool, l_drain_lat,                                                 &
+!pdv <
     & soil_depth_l, root_depth_l, fract_org_l,                                                                   &
     & hyd_cond_sat_l, matrix_pot_l, bclapp_l, pore_size_index_l, vol_porosity_l, vol_field_cap_l, vol_p_wilt_l,  &
+!pdv >
+    & pot_scool_l,                                                                                               &
+!pdv <
     !& sfract_srf, wfract_srf,
     & ws_max_mineral, oro_stddev, t_soil, water_to_soil, evapotrans_soil, trans,                                 &
     ! inout
@@ -450,9 +465,15 @@ CONTAINS
       & delta_time
     LOGICAL, INTENT(in) :: ltpe_closed
     LOGICAL, INTENT(in) :: ltpe_open
+!pdv >
+    LOGICAL, INTENT(in) :: l_infil_subzero, l_hyd_ref, l_discount_scool, l_drain_lat
+!pdv <
     REAL(wp), INTENT(in), DIMENSION(:,:) :: &
       & soil_depth_l, root_depth_l, fract_org_l,    &
-      & hyd_cond_sat_l, matrix_pot_l, bclapp_l, pore_size_index_l, vol_porosity_l, vol_field_cap_l, vol_p_wilt_l
+      & hyd_cond_sat_l, matrix_pot_l, bclapp_l, pore_size_index_l, vol_porosity_l, vol_field_cap_l, vol_p_wilt_l &
+!pdv >
+      &, pot_scool_l
+!pdv <
     REAL(wp), INTENT(in), DIMENSION(:) ::               &
       !& sfract_srf, wfract_srf, 
       & ws_max_mineral, oro_stddev, t_soil, water_to_soil, &
@@ -517,21 +538,30 @@ CONTAINS
     !$claw acc end parallel
     !$claw acc end data
 
+!pdv >
+!!!! Careful: ws_max is used inconsistantly -> it is used to calculate the relative saturation of the soil but using water+ice 
+!!!! so at this point the ice should not be deducted (as it is in field_cap_l), or later the saturation should not be calculated by:
+!!!! (w_liq + ice) / ws_max -- see changes below
+!!!! But in any case the question whether or not ice is discounted should not depend on the organic matter content of the soil:
+!pdv <
     !$claw expand parallel update
     vfc_times_sd_l(:,:) = vol_field_cap_l(:,:) * soil_depth_l(:,:)
 
 
-    CALL get_water_in_root_zone(vfc_times_sd_l(:,:), soil_depth_l(:,:), root_depth_l(:,:), ws_max(:))
+!pdv    CALL get_water_in_root_zone(vfc_times_sd_l(:,:), soil_depth_l(:,:), root_depth_l(:,:), ws_max(:))
+!pdv >
+    CALL get_water_in_root_zone(vol_field_cap_l(:,:) * soil_depth_l(:,:), soil_depth_l(:,:), root_depth_l(:,:), ws_max(:))
+!pdv <
 
-    !$claw acc data present(fract_org_l,ws_max,ws_max_mineral)
-    !$claw acc parallel loop gang vector
-    DO i = 1, nidx
-      IF (SUM(fract_org_l(i,:)) <= EPSILON(1._wp)) THEN
-        ws_max(i) = ws_max_mineral(i)
-      END IF
-    END DO
-    !$claw acc end parallel
-    !$claw acc end data
+!pdv    !$claw acc data present(fract_org_l,ws_max,ws_max_mineral)
+!pdv    !$claw acc parallel loop gang vector
+!pdv    DO i = 1, nidx
+!pdv      IF (SUM(fract_org_l(i,:)) <= EPSILON(1._wp)) THEN
+!pdv        ws_max(i) = ws_max_mineral(i)
+!pdv      END IF
+!pdv    END DO
+!pdv    !$claw acc end parallel
+!pdv    !$claw acc end data
 
     CALL get_water_in_root_zone(soil_ice_l(:,:), soil_depth_l(:,:), root_depth_l(:,:), ice_rootzone(:))
     CALL get_water_in_root_zone(ws_l      (:,:), soil_depth_l(:,:), root_depth_l(:,:), ws          (:))
@@ -604,6 +634,35 @@ CONTAINS
             runoff(i) = 0._wp                                            ! no runoff as soil is too dry
             infilt(i) = water_to_soil(i)                                ! all water infiltrated
           END IF
+
+! pdv >
+          !!!! Here ice should not be included in the calculation because ws_max (and ws_min_drain) does not include ice
+        ! ws_incl_ice(jl) = ws(jl) + ice_rootzone(jl)                    ! soil water including ice
+        ! IF (water_to_soil(jl) > 0._wp .AND. ws_incl_ice(jl) > ws_min_drain(jl)) THEN  ! soil water content above limit for drainage
+          IF (water_to_soil(jl) > 0._wp .AND. ws(jl) > ws_min_drain(jl)) THEN  ! soil water content above limit for drainage
+
+          ! ws_rel = MIN(1._wp, ws_incl_ice(jl) / ws_max(jl))            !  relative soil moisture
+            ws_rel = MIN(1._wp, ws(jl) / ws_max(jl))                     !  relative soil moisture
+            zvol   = (1._wp - ws_rel(i))**zbm - water_to_soil(jl)/zconw1          ! ???
+
+          ! runoff(jl) = water_to_soil(jl) - (ws_max(jl)-ws_incl_ice(jl))    ! if >0: amount of water exceeding water holding capacity
+            runoff(jl) = water_to_soil(jl) - (ws_max(jl)-ws(jl))             ! if >0: amount of water exceeding water holding capacity
+            IF (zvol > 0._wp) runoff(jl) = runoff(jl) + ws_max(jl)*zvol**zb1
+            runoff(jl) = MAX(MIN(runoff(jl), water_to_soil(jl)), 0._wp)      ! no negative runoff, runoff limited by available water
+            infilt(jl) = water_to_soil(jl) - runoff(jl)                      ! water not going into runoff is infiltrated
+          ELSE
+            runoff(jl) = 0._wp                                           ! no runoff as soil is too dry
+            infilt(jl) = water_to_soil(jl)                                   ! all water infiltrated
+          END IF
+          IF (.NOT. l_infil_subzero .OR. l_hyd_ref) THEN
+            !!! Temperature dependece should not be included when using the 5-layer snow scheme because:
+            !!! when tsurf == 0.C; T_soil < 0.C -- and all snow melt is going to surfcae runoff 
+            IF (t_soil(jl) < tmelt) THEN
+              runoff(jl) = water_to_soil(jl)       !  no infiltration as uppermost soil layer is frozen -> runoff
+              infilt(jl) = 0._wp
+            END IF
+          END IF
+!pdv <
         END IF
       END IF
     END DO
@@ -623,8 +682,12 @@ CONTAINS
     !$claw acc end data
 
     ! Changes by evaporation fluxes
-    CALL digest_evapotrans(nidx, nsoil, root_depth_l, soil_depth_l, &
-         field_cap_l, trans_in_m, evapo_soil_in_m, ws_l, soil_ice_l)
+    CALL digest_evapotrans(nidx, nsoil,  &
+!pdv >
+      &     l_hyd_ref,                   &
+!pdv <
+      &     root_depth_l, soil_depth_l, &
+      &     field_cap_l, trans_in_m, evapo_soil_in_m, ws_l, soil_ice_l)
 
     ! For numerical reasons, half of the water is infiltrated
     ! before soilhyd and the other half of it afterwards
@@ -643,9 +706,17 @@ CONTAINS
          ws_l, drainage, w_soil_overflow)
 
     ! Drainage calculation with multi-layer soil scheme
-    CALL soilhyd(nidx, nsoil, delta_time, ilog, jllog, ws_l, soil_depth_l, &
+    CALL soilhyd(nidx, nsoil, delta_time, ilog, jllog, &
+!pdv >
+        l_hyd_ref, l_discount_scool, l_drain_lat, &
+!pdv <
+         ws_l, soil_depth_l, &
          wsat_l, field_cap_l, hyd_cond_sat_l, vol_porosity_l, bclapp_l,   &
-         matrix_pot_l, drainage, pore_size_index_l, p_wilt_l, dz,       &
+         matrix_pot_l, &
+!pdv >
+         pot_scool_l, &
+!pdv <
+         drainage, pore_size_index_l, p_wilt_l, dz,       &
          soil_ice_l, w_soil_overflow, ltpe_closed, ltpe_open)
 
     ! update soil moisture according to infiltration
@@ -669,9 +740,16 @@ CONTAINS
   END SUBROUTINE calc_soil_hydrology
 
   !------------------------------------------------------------------------------------------------
-  SUBROUTINE soilhyd(nidx, nsoil, delta_time, ilog, jllog, ws_l, dsoil,              &
+  SUBROUTINE soilhyd(nidx, nsoil, delta_time, ilog, jllog,                           &
+!pdv >
+       l_hyd_ref, l_discount_scool, l_drain_lat,                                     &
+!pdv <
+       ws_l, dsoil,                                                                  &
        wsat_l, field_cap_l, hyd_cond_sat_l, vol_porosity_l, bclapp_l, matrix_pot_l,  &
-       drainage, pore_size_index_l, p_wilt_l, dz, soil_ice, w_soil_overflow, ltpe_closed, ltpe_open)
+!pdv >
+       pot_scool_l, &
+!pdv <
+       drainage, pore_size_index_l, p_wilt_l, dz, soil_ice_l, w_soil_overflow, ltpe_closed, ltpe_open)
 
     !----------------------------------------------------------------------------------------------
     !
@@ -687,6 +765,11 @@ CONTAINS
     REAL(wp), INTENT(IN)            :: delta_time                 ! model time step legth [s]
     INTEGER,  INTENT(IN)            :: ilog                       !
     INTEGER,  INTENT(IN)            :: jllog                      !
+!pdv >
+    LOGICAL,  INTENT(IN)            :: l_hyd_ref
+    LOGICAL,  INTENT(IN)            :: l_discount_scool
+    LOGICAL,  INTENT(IN)            :: l_drain_lat
+!pdv <
     REAL(wp), INTENT(IN)            :: dsoil(:,:)                 ! soil depth until bedrock within each layer [m]
     REAL(wp), INTENT(IN)            :: wsat_l(:,:)                ! Maximum storage in each soil layer (porosity) [m]
     REAL(wp), INTENT(IN)            :: field_cap_l(:,:)           ! field capacity of the soil layer [m]
@@ -694,13 +777,16 @@ CONTAINS
     REAL(wp), INTENT(IN)            :: vol_porosity_l(:,:)        ! volumetric soil porosity [m/m]
     REAL(wp), INTENT(IN)            :: bclapp_l(:,:)              ! exponent B in Clapp and Hornberger
     REAL(wp), INTENT(IN)            :: matrix_pot_l(:,:)          ! matrix potential [m]
+!pdv >
+    REAL(wp), INTENT(IN)            :: pot_scool_l(:,:)           ! potentially supercooled water [m]
+!pdv <
     REAL(wp), INTENT(IN)            :: pore_size_index_l(:,:)     ! soil pore size distribution index used in Van Genuchten
     REAL(wp), INTENT(IN)            :: p_wilt_l(:,:)              ! wilting point of the soil layer
     REAL(wp), INTENT(IN)            :: dz(:)                      ! vertical depth of each soil layer
     REAL(wp), INTENT(INOUT)         :: ws_l(:,:)                  ! soil moisture of each layer [m]
     REAL(wp), INTENT(INOUT)         :: drainage(:)                ! amount of drainage within timestep [m]
     REAL(wp), INTENT(INOUT)         :: w_soil_overflow(:)
-    REAL(wp), INTENT(IN), OPTIONAL  :: soil_ice(:,:)              ! amount of ice in the soil [m]
+    REAL(wp), INTENT(IN), OPTIONAL  :: soil_ice_l(:,:)            ! amount of ice in the soil [m]
 
     LOGICAL, INTENT(IN) :: ltpe_closed
     LOGICAL, INTENT(IN) :: ltpe_open
@@ -730,11 +816,15 @@ CONTAINS
     REAL(wp) :: remoist(nidx)                 ! for TPE
 
     REAL(wp) :: zmvg_l(nidx,nsoil)            ! exponent M in Van Genuchten scheme = pore_size_index / (pore_size_index + 1)
+!pdv >
+    REAL(wp) :: ice_impede(nidx)              ! factor to reduce ksat in the presence of ice (taken from CLM4.5)
+    REAL(wp) :: ws_immo_l(nidx,nsoil)         ! liquid water that can not move through the soil (supercooled or < pwilt)
+!pdv <
 
 
     !$claw acc data &
     !$claw acc present(dsoil, wsat_l, field_cap_l, hyd_cond_sat_l, vol_porosity_l, bclapp_l, matrix_pot_l, &
-    !$claw acc         pore_size_index_l, p_wilt_l, dz, ws_l, drainage, w_soil_overflow, soil_ice)         &
+    !$claw acc         pore_size_index_l, p_wilt_l, dz, ws_l, drainage, w_soil_overflow, soil_ice_l)       &
     !$claw acc pcreate(diffus_l, ws_min_drain, ws_rel, ws_crit, drain_crit, ws_tmp, drain_l, soil_above,   &
     !$claw acc         soil_below, zda, zdb, zdc, ztri, diffusivity, zkredu, zdiflog, remoist, zmvg_l,     &
     !$claw acc         percolation, wslog)
@@ -795,15 +885,48 @@ CONTAINS
       percolation(j,nsoil) = 0._wp
       !$claw acc loop seq
       DO i = 1, nsoil-1
-        IF (field_cap_l(j,i) > zfcmin .AND. field_cap_l(j,i) > p_wilt_l(j,i)) THEN
-          ws_rel(j,i) = MAX(ws_l(j,i) - p_wilt_l(j,i), 0._wp) / (field_cap_l(j,i) - p_wilt_l(j,i))
-          ws_rel(j,i) = MIN(ws_rel(j,i), 1._wp)
-          percolation(j,i) =  hyd_cond_sat_l(j,i)*zkredu(i) * SQRT(ws_rel(j,i))                           &
-            &                  * (1._wp - (1._wp - ws_rel(j,i)**(1._wp/zmvg_l(j,i)))**zmvg_l(j,i))**2._wp &
-            &                  * delta_time     ! [m/s] -> [m]
+!pdv >
+        !!!! When there is supercooled water in the soil, this should not be able to move vertically
+        IF (l_hyd_ref) THEN  !!vg: original code
+
+          ws_immo_l(j,i) = p_wilt_l(j,i)    !!vg: neu von pdev
+
+          IF (field_cap_l(j,i) > zfcmin .AND. field_cap_l(j,i) > ws_immo_l(j,i)) THEN
+            ws_rel(j,i) = MAX(ws_l(j,i) - ws_immo_l(j,i), 0._wp) / (field_cap_l(j,i) - ws_immo_l(j,i))
+            percolation(j,i) = hyd_cond_sat_l(j,i)*zkredu(i) * SQRT(ws_rel(j,i))                           &
+              &                 * (1._wp - (1._wp - ws_rel(j,i)**(1._wp/zmvg_l(j,i)))**zmvg_l(j,i))**2._wp &
+              &                 * delta_time     ! [m/s] -> [m]
+          ELSE
+            percolation(j,i) = 0._wp
+          END IF
         ELSE
-          percolation(j,i) = 0._wp
+          IF (l_discount_scool) THEN
+
+            ws_immo_l(j,i) = MAX(pot_scool_l(j,i), p_wilt_l(j,i))
+          ELSE
+            ws_immo_l(j,i) = p_wilt_l(j,i)
+          END IF
+
+          IF (field_cap_l(j,i) > zfcmin .AND. field_cap_l(j,i) > ws_immo_l(j,i)) THEN
+            ! Additionally, when ice is partly blocking the pore space Ksat should be reduced accordingly 
+            !  (see e.g. CLM dosumentation)
+            ice_impede(j) = 10._wp**(-6._wp * soil_ice_l(j,i) / (field_cap_l(j,i) + soil_ice_l(j,i)))
+            ws_rel(j,i) = MAX(ws_l(j,i) - ws_immo_l(j,i), 0._wp) / (field_cap_l(j,i) - ws_immo_l(j,i))
+            percolation(j,i) = ice_impede(j) * hyd_cond_sat_l(j,i)*zkredu(i) * SQRT(ws_rel(j,i))           &
+              &                 * (1._wp - (1._wp - ws_rel(j,i)**(1._wp/zmvg_l(j,i)))**zmvg_l(j,i))**2._wp &
+              &                 * delta_time     ! [m/s] -> [m]
+            ! Even with ice impedance accounted for, there is still water moevement that can lead to a slow 
+            ! desication of the frozen soil. Therefore, it is assumed that there is no water movement once 
+            ! more than half of the porespace is blocked.
+            IF (soil_ice_l(j,i+1) + MIN(ws_immo_l(j,i+1),ws_l(j,i+1)) > EPSILON(1.0)) THEN
+              IF ((soil_ice_l(j,i+1)+ MIN(ws_immo_l(j,i+1),ws_l(j,i+1))) &
+                &     /(field_cap_l(j,i+1) + soil_ice_l(j,i+1)) > 0.5_wp) THEN
+                percolation(:,i) = 0._wp
+              END IF
+            END IF
+          END IF
         END IF
+! pdv <
       END DO
 
 
@@ -821,55 +944,65 @@ CONTAINS
 
         ws_crit(j) = field_cap_l(j,i) * zwdcri     ! soil moisture above which drainage strongly increases
 
+!pdv >
+        !pdv: The lateral drainage from each soil layer should very much be discussed with Stefan again ...
+        ! I would not include it.
+        ! Furthermore, when there is supercooled water it should not be assumed to move through the soil:
         ! calculate drainage of the lowest layer above bedrock
         IF (dsoil(j,i) > 0._wp .AND. .NOT. soil_below(j)) THEN       ! lowest layer above bedrock
 
-          IF (ws_l(j,i) <= p_wilt_l(j,i)) THEN
+          IF (ws_l(j,i) <= ws_immo_l(j,i)) THEN
             drain_l(j) = 0._wp              ! no drainage below the wilting point
           ELSE
-            IF (field_cap_l(j,i) > p_wilt_l(j,i)) THEN
+            IF (field_cap_l(j,i) > ws_immo_l(j,i)) THEN
               ! drain_min = minimum factor * normalized soil moisture
-              drain_l(j) = zdrmin * (ws_l(j,i) - p_wilt_l(j,i)) / (field_cap_l(j,i) - p_wilt_l(j,i))
+              drain_l(j) = zdrmin * (ws_l(j,i) - ws_immo_l(j,i)) / (field_cap_l(j,i) - ws_immo_l(j,i))
             ELSE
               drain_l(j) = 0._wp
             END IF
-            IF (ws_l(j,i) > ws_crit(j)) THEN
-              drain_crit(j) = (zdrmax-zdrmin) * ((ws_l(j,i)-ws_crit(j)) / (wsat_l(j,i) - ws_crit(j)))**zdrexp
-              drain_l(j) = drain_l(j) + MIN(drain_crit(j), (ws_l(j,i)-ws_crit(j))/delta_time)
+            IF ((ws_l(j,i)-ws_immo_l(j,i)) > ws_crit(j)) THEN
+              drain_crit(j) = (zdrmax-zdrmin) * ((ws_l(j,i)-ws_immo_l(j,i)-ws_crit(j)) &
+                &            / (wsat_l(j,i) - ws_crit(j)))**zdrexp
+              drain_l(j) = drain_l(j) &
+                &         + MIN(drain_crit(j), (ws_l(j,i)-ws_immo_l(j,i)-ws_crit(j))/delta_time)
             END IF
             ! drainage is limited by the available water of the layer
-            drain_l(j) = MIN(drain_l(j), (ws_l(j,i)-p_wilt_l(j,i))/delta_time)
+            drain_l(j) = MIN(drain_l(j), (ws_l(j,i)-ws_immo_l(j,i))/delta_time)
           END IF
           percolation(j,i) = drain_l(j) * delta_time  ! [m/s] -> [m]
+        END IF
+        IF (l_hyd_ref .OR. l_drain_lat) THEN
+          IF (dsoil(j,i) > 0._wp .AND. soil_below(j)) THEN
 
-        ELSE IF (dsoil(j,i) > 0._wp) THEN
+            ! Drainage is calculated with percolation removed from WS_L
+            !   de Vrese --- WS_L corrected for incomming percolation
 
-          ! Drainage is calculated with percolation removed from WS_L
-          !   de Vrese --- WS_L corrected for incomming percolation
-
-          ! Remove percolating water from the corresponding soil layer and add percolation from the above layer
-          IF (.NOT. soil_above(j)) THEN       ! surface layer
-            ws_tmp(j) = ws_l(j,i) - percolation(j,i)
-          ELSE
-            ws_tmp(j) = ws_l(j,i) - percolation(j,i) + percolation(j,i-1)
-          END IF
-
-          IF (ws_tmp(j) > p_wilt_l(j,i)) THEN          ! drainage occurs only above wilting point
-            IF (field_cap_l(j,i) > p_wilt_l(j,i)) THEN
-            ! drain_min = minimum factor * normalized soil moisture
-              drain_l(j) = zdrmin * (ws_tmp(j) - p_wilt_l(j,i)) / (field_cap_l(j,i)-p_wilt_l(j,i))
+            ! Remove percolating water from the corresponding soil layer and add percolation from the above layer
+            IF (.NOT. soil_above(j)) THEN       ! surface layer
+              ws_tmp(j) = ws_l(j,i) - percolation(j,i)
             ELSE
-              drain_l(j) = 0._wp
+              ws_tmp(j) = ws_l(j,i) - percolation(j,i) + percolation(j,i-1)
             END IF
-            IF (ws_tmp(j) > ws_crit(j)) THEN
-              drain_crit(j) = (zdrmax-zdrmin) * ((ws_tmp(j) - ws_crit(j)) / (wsat_l(j,i) - ws_crit(j)))**zdrexp
-              drain_l(j) = drain_l(j) + MIN(drain_crit(j), (ws_tmp(j) - ws_crit(j))/delta_time)
+
+            IF (ws_tmp(j) > ws_immo_l(j,i)) THEN          ! drainage occurs only above wilting point
+              IF (field_cap_l(j,i) > ws_immo_l(j,i)) THEN
+                ! drain_min = minimum factor * normalized soil moisture
+                drain_l(j) = zdrmin * (ws_tmp(j) - ws_immo_l(j,i)) / (field_cap_l(j,i)-ws_immo_l(j,i))
+              ELSE
+                drain_l(j) = 0._wp
+              END IF
+              IF (ws_tmp(j) > ws_crit(j)) THEN
+                drain_crit(j) = (zdrmax-zdrmin) * ((ws_tmp(j) - ws_crit(j)) / (wsat_l(j,i) - ws_crit(j)))**zdrexp
+                drain_l(j) = drain_l(j) + MIN(drain_crit(j), (ws_tmp(j) - ws_crit(j))/delta_time)
+              END IF
+              ! drainage is limited by the soil moisture within the layer
+              drain_l(j) = MIN(drain_l(j) * delta_time, (ws_tmp(j) - ws_immo_l(j,i)))
+              ws_l(j,i) = ws_l(j,i) - drain_l(j)       ! remove drainage of the layer from soil moisture
+              drainage(j) = drainage(j) + drain_l(j)   ! and add it to the total drainage
             END IF
-            ! drainage is limited by the soil moisture within the layer
-            drain_l(j) = MIN(drain_l(j) * delta_time, (ws_tmp(j) - p_wilt_l(j,i)))
           END IF
         END IF
-
+! pdv <
         IF (.NOT. ltpe_closed) THEN
           IF (dsoil(j,i) > 0._wp .AND. soil_below(j) .AND. ws_tmp(j) > p_wilt_l(j,i)) THEN
             ws_l(j,i) = ws_l(j,i) - drain_l(j)       ! remove drainage of the layer from soil moisture
@@ -890,16 +1023,19 @@ CONTAINS
       DO i = 1, nsoil
 
         ws_rel(j,i) = 0._wp
-        IF (ws_l(j,i) > 0._wp) THEN
-          ws_rel(j,i) =  ws_l(j,i) / dsoil(j,i)  &
-            &           / (vol_porosity_l(j,i) - (soil_ice(j,i) / dsoil(j,i)))
+!pdv >
+        IF (ws_l(j,i) > ws_immo_l(j,i) + EPSILON(1.0)               &
+          &  .AND. vol_porosity_l(j,i) > soil_ice_l(j,i) / dsoil(j,i)) THEN
+          ws_rel(j,i) = (ws_l(j,i)-ws_immo_l(j,i)) / dsoil(j,i)                &
+            &            / (vol_porosity_l(j,i) - (soil_ice_l(j,i) / dsoil(j,i)))
         END IF
 
         diffus_l(j,i) = 0._wp
         IF (ws_rel(j,i) > zfcmin) THEN
           diffus_l(j,i) =  bclapp_l(j,i) * hyd_cond_sat_l(j,i) * matrix_pot_l(j,i)  &
-            &               / (ws_l(j,i) / dsoil(j,i)) *  ws_rel(j,i) ** (bclapp_l(j,i)+3._wp)
+            &               / ((ws_l(j,i)-ws_immo_l(j,i)) / dsoil(j,i)) *  ws_rel(j,i) ** (bclapp_l(j,i)+3._wp)
         END IF
+! pdv <
       END DO
 
       ! calculating the diffusivity at the bottom of layer i
@@ -914,7 +1050,7 @@ CONTAINS
       END DO
 
       ! calculation of diffusion coefficients
- 
+
       ! deepest layer
       zda(j,nsoil) = 0._wp
       IF (dsoil(j,nsoil) > 0._wp) THEN
@@ -943,7 +1079,7 @@ CONTAINS
       zdb(j, 1) = 0._wp
       IF (dsoil(j,1) > 0) THEN
         IF (dsoil(j,2) > 0) THEN
-        zda(j,1) = diffusivity(j,1) * delta_time / dsoil(j,1) / (dsoil(j,1)+dsoil(j,2)) * 2._wp
+          zda(j,1) = diffusivity(j,1) * delta_time / dsoil(j,1) / (dsoil(j,1)+dsoil(j,2)) * 2._wp
         ELSE
           zda(j,1) = 0._wp
         END IF
@@ -1149,12 +1285,15 @@ CONTAINS
   SUBROUTINE digest_evapotrans( &
     & nidx,                     &
     & nsoil,                    &
+!pdv >
+    & l_hyd_ref,                &
+!pdv <
     & droot,                    &
     & dsoil,                    &
     & field_cap_l,              &
     & trans_in_m,               &
     & evapo_soil,               &
-    & ws_l, soil_ice            &
+    & ws_l, soil_ice_l          &
     & )
 
     !----------------------------------------------------------------------------------------------
@@ -1173,6 +1312,9 @@ CONTAINS
 
     INTEGER,  INTENT(in)     :: nidx                    ! vector length
     INTEGER,  INTENT(in)     :: nsoil                   ! number of soil layers
+!pdv >
+    LOGICAL,  INTENT(in)     :: l_hyd_ref
+!pdv <
     REAL(wp), INTENT(in)     :: droot(:,:)              ! root depth within layer [m]
     REAL(wp), INTENT(in)     :: dsoil(:,:)              ! soil depth until bedrock within layer [m]
     REAL(wp), INTENT(in)     :: field_cap_l(:,:)        ! field capacity of the layer
@@ -1180,7 +1322,7 @@ CONTAINS
     REAL(wp), INTENT(in)     :: evapo_soil(:)           ! bare soil evaporation [m]
 
     REAL(wp), INTENT(inout)  :: ws_l(:,:)               ! water content of the soil layer [m]
-    REAL(wp), INTENT(inout)  :: soil_ice(:,:)           ! ice content of the soil layer [m]
+    REAL(wp), INTENT(inout)  :: soil_ice_l(:,:)         ! ice content of the soil layer [m]
 
     ! local variables
 
@@ -1195,6 +1337,9 @@ CONTAINS
     REAL(wp) :: ws(nidx)             ! water within all soil layers
     REAL(wp) :: root_depth(nidx)     ! Total depth of rootzone
     REAL(wp) :: reduce_evapo(nidx)
+!pdv >
+    REAL(wp) :: ws_l_new(nidx)
+!pdv <
 
     INTEGER :: max2d(2)
 
@@ -1207,7 +1352,7 @@ CONTAINS
     !----------------------------------------------------------------------------------------------
 
     !$claw acc data present(droot, dsoil, field_cap_l, trans_in_m, evapo_soil, &
-    !$claw acc ws_l, soil_ice) pcreate(deficit_evapo, deficit_trans, deficit_l, &
+    !$claw acc ws_l, soil_ice_l) pcreate(deficit_evapo, deficit_trans, deficit_l, &
     !$claw acc remaining, rootfract, fixed, trans_layer, ws, root_depth, reduce_evapo)
 
     !  bare soil evaporation
@@ -1246,7 +1391,7 @@ CONTAINS
         fixed    (i)   = 0._wp
         trans_layer(i) = 0._wp
         remaining  (i) = 0._wp
- 
+
         ! grid cell not sealed and positive transpiration (not dew)
         !    take water equally from all over the root zone
         IF (root_depth(i) > 0._wp .AND. trans_in_m(i) < 0._wp) THEN
@@ -1290,16 +1435,39 @@ CONTAINS
       ! reduce_evapo is only used for diagnostics. If the therm is not zero, soil moisture must be
       ! changed to close the land surface water balance.
 
-      ws(i) = SUM(ws_l(i,:)) + SUM(soil_ice(i,:))  ! water and ice  within the column
+!pdv >
+      ! Deficit should be taken from layers starting at the surface to accelerate the feedback on evapotranspiration
+      IF (l_hyd_ref) THEN  !!vg: original code version
+        ws(i) = SUM(ws_l(i,:)) + SUM(soil_ice_l(i,:))  ! water and ice  within the column
 
-      !$claw acc loop seq
+        !$claw acc loop seq
+        DO jk=1, nsoil
+          IF (reduce_evapo(i) < 0._wp .AND. ws(i) > 0._wp) THEN
+            ! reduce soil moisture and ice relative to the water content of each layer
+            ws_l(i,jk)     = MAX(0._wp, ws_l(i,jk)     + reduce_evapo(i) * ws_l(i,jk)/ws(i))
+            soil_ice_l(i,jk) = MAX(0._wp, soil_ice_l(i,jk) + reduce_evapo(i) * soil_ice_l(i,jk)/ws(i))
+          END IF
+        END DO
+      ELSE
+      !!vg: Anpassungen wie in original code oben.
       DO jk=1, nsoil
-        IF (reduce_evapo(i) < 0._wp .AND. ws(i) > 0._wp) THEN
+        WHERE (reduce_evapo(:) < 0._wp .AND. ws_l(:,jk)* field_cap_l(:,jk) * zwilt > 0._wp)
           ! reduce soil moisture and ice relative to the water content of each layer
-          ws_l(i,jk)     = MAX(0._wp, ws_l(i,jk)     + reduce_evapo(i) * ws_l(i,jk)/ws(i))
-          soil_ice(i,jk) = MAX(0._wp, soil_ice(i,jk) + reduce_evapo(i) * soil_ice(i,jk)/ws(i))
-        END IF
-      END DO
+        ws_l_new(:)      = MAX(ws_l(:,jk) + reduce_evapo(:), field_cap_l(:,jk) * zwilt)
+        reduce_evapo(:) = reduce_evapo(:) + ws_l(:,jk) - ws_l_new(:)
+        ws_l(:,jk)     = ws_l_new(:)
+      END WHERE
+    END DO
+    ws(:) = SUM(ws_l(:,:), DIM=2) + SUM(soil_ice_l(:,:), DIM=2)  ! water and ice  within the column
+    DO jk=1, nsoil
+      WHERE (reduce_evapo(:) < 0._wp .AND. ws(:) > 0._wp)
+        ! reduce soil moisture and ice relative to the water content of each layer
+        ws_l(:,jk)     = MAX(0._wp, ws_l(:,jk)     + reduce_evapo(:) * ws_l(:,jk)/ws(:))
+        soil_ice_l(:,jk) = MAX(0._wp, soil_ice_l(:,jk) + reduce_evapo(:) * soil_ice_l(:,jk)/ws(:))
+      END WHERE
+    END DO
+    END IF
+!pdv <
     END DO ! i DO statement
 
     !$claw acc end parallel
@@ -1307,11 +1475,11 @@ CONTAINS
 
 #ifndef _OPENACC
     ! make sure there is no negative soil ice
-    IF (ANY(soil_ice(:,:) < 0._wp)) THEN
-      WRITE (message_text,*) 'negative soil ice: ', MINVAL(soil_ice), ' at ', MINLOC(soil_ice)
+    IF (ANY(soil_ice_l(:,:) < 0._wp)) THEN
+      WRITE (message_text,*) 'negative soil ice: ', MINVAL(soil_ice_l), ' at ', MINLOC(soil_ice_l)
       CALL finish ('digest_evapotrans', message_text)
       ! CALL message ('digest_evapotrans', message_text, all_print=.TRUE., level=em_warn)
-      ! soil_ice(:,:) = MAX(soil_ice(:,:), 0._wp)
+      ! soil_ice_l(:,:) = MAX(soil_ice_l(:,:), 0._wp)
     END IF
 
     ! make sure there is no negative soil moisture and soil moisture does not exceed field capacity

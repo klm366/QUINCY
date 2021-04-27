@@ -42,7 +42,14 @@ MODULE mo_hydro_config_class
       & scheme_stom_cond     !< Scheme to use for computation of stomatal conductance (echam5 only for now)
     LOGICAL               :: &
       & l_organic,           & !< Use organic component of soil layers
-      & l_glac_in_soil         !< Treat glacier as part of soil, not separate glacier tile
+      & l_glac_in_soil,      & !< Treat glacier as part of soil, not separate glacier tile
+!pdv >
+      & l_infil_subzero,     & !< Allow infiltration at soil temperatures below 0°C
+      & l_hyd_ref,           &
+      & l_discount_scool,    &
+      & l_drain_lat,         &
+      & l_percolation_theory
+!pdv <
   CONTAINS
     PROCEDURE             :: Init => Init_hydro_config
   END type t_hydro_config
@@ -67,6 +74,9 @@ CONTAINS
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
     CHARACTER(len=10)           :: scheme_stom_cond
     LOGICAL                     :: l_organic, l_glac_in_soil
+!pdv >
+    LOGICAL                     :: l_infil_subzero, l_hyd_ref, l_discount_scool, l_drain_lat, l_percolation_theory
+!pdv <
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
@@ -80,7 +90,14 @@ CONTAINS
       & snow_depth_max,             &
       & scheme_stom_cond,           &
       & l_organic,                  &
-      & l_glac_in_soil
+      & l_glac_in_soil,             &
+!pdv >
+      & l_infil_subzero,            &
+      & l_hyd_ref,                  &
+      & l_discount_scool,           &
+      & l_drain_lat,                &
+      & l_percolation_theory
+!pdv <
 
     INTEGER :: nml_handler, nml_unit, istat
     TYPE(t_input_file) :: input_file
@@ -107,6 +124,13 @@ CONTAINS
     scheme_stom_cond  = 'echam5'
     l_organic         = .FALSE.
     l_glac_in_soil    = .FALSE.
+!pdv >
+    l_infil_subzero   = .FALSE.
+    l_hyd_ref         = .TRUE.
+    l_discount_scool  = .FALSE.
+    l_drain_lat       = .TRUE.
+    l_percolation_theory = .FALSE.
+!pdv <
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -141,6 +165,13 @@ CONTAINS
     IF (l_organic) CALL message(TRIM(routine), 'Using organic component in soil hydrology')
 
     config%l_glac_in_soil      = l_glac_in_soil
+!pdv >
+    config%l_infil_subzero     = l_infil_subzero
+    config%l_hyd_ref           = l_hyd_ref
+    config%l_discount_scool    = l_discount_scool
+    config%l_drain_lat         = l_drain_lat
+    config%l_percolation_theory = l_percolation_theory
+!pdv <
 
     CALL close_nml(nml_handler)
 

@@ -367,7 +367,10 @@ CONTAINS
     & hcap_grnd, grnd_hflx,               &
     & thaw_depth,                         &
     ! optional
-    & ws_max, matrix_pot, bclapp, ws, ice, frozen, melt &
+    & ws_max, matrix_pot, bclapp, ws, ice, frozen, melt, &
+!pdv >
+    & liquid_max &
+!pdv <
     & )
     !
     !
@@ -456,6 +459,10 @@ CONTAINS
     REAL(wp), INTENT(inout), OPTIONAL ::  ice(:,:)          !! Ice storage [m]
     REAL(wp), INTENT(out), OPTIONAL   ::  frozen(:,:)       !! Water flux from freezing soil water [kg m-2 s-1]
     REAL(wp), INTENT(out), OPTIONAL   ::  melt(:,:)         !! Water flux from melting soil ice    [kg m-2 s-1]
+! pdv >
+    REAL(wp), INTENT(out), OPTIONAL   ::  liquid_max(:,:)   !! Water that remains liquid at sub-zero temps [m] 
+! pdv <
+
 
     !------------------------------------------------------------------
     !  local Variables
@@ -464,7 +471,7 @@ CONTAINS
     REAL(wp) :: z1(nidx,nsoil)
     REAL(wp) :: zd1(nsoil)
     REAL(wp) :: zdz1(nidx,nsoil), zdz2(nidx,nsoil)
-    REAL(wp) :: heat_cap(nidx,nsoil), liquid_max(nidx,nsoil) !, freezemelt(nidx,nsoil)
+    REAL(wp) :: heat_cap(nidx,nsoil) !pdv, liquid_max(nidx,nsoil) !, freezemelt(nidx,nsoil)
 #if defined(_CLAW) && defined(SERIALIZE)
     REAL(wp) :: zdz1_sum(nidx), zdz2_sum(nidx), z1_sum(nidx), t_soil_acoef_sum(nidx), t_soil_bcoef_sum(nidx)
 #endif
