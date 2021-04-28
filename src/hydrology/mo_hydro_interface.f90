@@ -1194,9 +1194,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: w_soil_root_pwp     !< Water content in root zone at permanent wilting point
     dsl4jsb_Real2D_onChunk :: max_moist
     dsl4jsb_Real2D_onChunk :: water_stress
-    ! ASSIMI_
-    dsl4jsb_Real2D_onChunk :: beta_soil_gs
-    dsl4jsb_Real2D_onChunk :: beta_soil_ps
 
     INTEGER :: iblk, ics, ice
     REAL(wp) :: config_w_soil_crit_fract, config_w_soil_wilt_fract
@@ -1218,10 +1215,6 @@ CONTAINS
     ! Get reference to variables for current block
     !
     dsl4jsb_Get_memory(HYDRO_)
-
-    IF (model%config%use_quincy) THEN
-      dsl4jsb_Get_memory(ASSIMI_)
-    END IF
     !
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    soil_depth_sl)       ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_sl)           ! in
@@ -1234,11 +1227,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root_fc)      ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root_pwp)     ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_stress)        ! out
-    ! 
-    IF (model%config%use_quincy) THEN
-      dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs)        ! out   ! quincy
-      dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps)        ! out   ! quincy
-    END IF
     
     ! Get water stress
 
@@ -1259,27 +1247,6 @@ CONTAINS
       & get_water_stress_factor(w_soil_column(:), max_moist(:), &
           &                     config_w_soil_crit_fract, config_w_soil_wilt_fract)
     !$claw end expand
-
-
-    !! quincy calculation of beta_soil_*  (soil moisture constraints scaling factor)
-    !!
-    !! the below calc are somewhat preliminary, the original quincy code is kept below, but outcommented
-    IF (model%config%use_quincy) THEN
-      WHERE ((w_soil_root(:) - w_soil_root_pwp(:)) > eps8)
-        beta_soil_gs(:) = MIN( MAX( 0.0_wp, 2.0_wp * (w_soil_root(:) - w_soil_root_pwp(:)) / &
-                                            (w_soil_root_fc(:) - w_soil_root_pwp(:))), 1.0_wp) 
-      ELSEWHERE
-        beta_soil_gs(:) = 0.0_wp
-      END WHERE
-      beta_soil_ps(:) = beta_soil_gs(:)
-          !! original way of calc beta_soil_* in quincy
-          !beta_soil_gs(:) = calc_soil_moisture_stress(w_soil_root_pot(:), lctlib%phi_leaf_min)
-          !beta_soil_ps(:) = calc_soil_moisture_stress(w_soil_root_pot(:), lctlib%phi_leaf_min)
-      ! catch beta_soil_ps getting zero
-      ! this is very neccessary, because with "beta_soil_ps=0" calc_photosynthesis() does get a runtime error, because n1 & n2 
-      !   become zero, and then msat & nco become zero, resulting in an error with the log() operation "nlim = -log(nco/..."
-      WHERE(beta_soil_ps(:) < eps8) beta_soil_ps(:) = eps8
-    END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1316,9 +1283,6 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_memory(HYDRO_)
-    IF (model%config%use_quincy) THEN
-      dsl4jsb_Get_memory(ASSIMI_)
-    END IF
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
@@ -1327,11 +1291,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_fc,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_pwp,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, water_stress,        weighted_by_fract)
-    ! ASSIMI_
-    IF (model%config%use_quincy) THEN
-      dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_gs      , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_ps      , weighted_by_fract)
-    END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
