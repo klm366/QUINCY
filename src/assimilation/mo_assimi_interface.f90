@@ -1054,19 +1054,17 @@ CONTAINS
 
   END SUBROUTINE aggregate_reset_assimi_fluxes
   
-  !-----------------------------------------------------------------------------------------------------
-  !> Implementation of "update": canopy_fluxes task
-  !-----------------------------------------------------------------------------------------------------
+  ! ======================================================================================================= !
+  !>Implementation of "update": canopy_fluxes task - QUINCY
+  !>
   SUBROUTINE update_canopy_fluxes(tile, options)
 
     USE mo_assimi_update_canopy_fluxes, ONLY: real_update_canopy_fluxes => update_canopy_fluxes
-    dsl4jsb_Use_processes ASSIMI_
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     INTEGER :: iblk
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggr_canopy_fluxes'
 
     IF (.NOT. tile%Is_process_active(ASSIMI_)) RETURN
@@ -1081,9 +1079,9 @@ CONTAINS
 
   END SUBROUTINE update_canopy_fluxes
 
-  !-----------------------------------------------------------------------------------------------------
-  !> Implementation of "aggregate": canopy_fluxes task
-  !-----------------------------------------------------------------------------------------------------
+  ! ======================================================================================================= !
+  !>Implementation of "aggregate": canopy_fluxes task
+  !>
   SUBROUTINE aggregate_canopy_fluxes(tile, options)
 
     dsl4jsb_Use_processes ASSIMI_
@@ -1128,7 +1126,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(ASSIMI_, co2_conc_leaf               , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_air                    , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soa                    , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, soa_tsoa_mavg               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_gs                , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_ps                , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, t_jmax_opt                  , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, net_assimilation_cl         , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, gross_assimilation_cl       , weighted_by_fract)
