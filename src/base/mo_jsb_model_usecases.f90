@@ -188,7 +188,7 @@ CONTAINS
             ! & lct=t_jsb_lct(GLACIER_TYPE, lib_id=1), parent=land_tile)
         END IF
 
-        ! default jsb4: HYDRO_ is active at veg tile only to save runtime
+        ! default jsb4: HYDRO_ & SSE_ are active at veg tile only to save runtime
         IF (.NOT. model%config%use_quincy) THEN
           veg_tile => t_jsb_tile('veg', 'Veg tile', &
             & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_/),    &
@@ -198,16 +198,17 @@ CONTAINS
           IF (model%processes(ALCC_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(ALCC_, ON_TILE_, AGGREGATE_)
           END IF
-          !
-          ! use_quincy: 
+        ! use_quincy: 
         !  HYDRO_ is active at PFT tiles to make all the HYDRO_ variables available to the PFT tiles
         !    note: HYDRO_ results differ only marginally between ON_TILE_ & ON_LEAFS_ (tested by Reiner)
+        !  SSE_ runs at PFT tiles instead of VEG tile, which is fine with the jsb4 tasks (info by Reiner)
+        !    and needed by the quincy tasks because the lctlib is used
         !  VEG_ is active
         !  SB_  is active
         ELSE
           veg_tile => t_jsb_tile('veg', 'Veg tile', &
-            & processes       = (/HYDRO_,    SSE_,     ASSIMI_,   PHENO_,    VEG_,      SB_/), &
-            & process_actions = (/ON_LEAFS_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
+            & processes       = (/HYDRO_,    SSE_,      ASSIMI_,   PHENO_,    VEG_,      SB_/), &
+            & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
             & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
             & fract_varname='fract_veg')
         ENDIF
