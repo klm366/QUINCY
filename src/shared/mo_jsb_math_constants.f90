@@ -10,7 +10,6 @@
 MODULE mo_jsb_math_constants
  
   USE mo_kind,                  ONLY: wp
-  USE mo_math_constants
 
   IMPLICIT NONE
   PUBLIC
@@ -21,6 +20,8 @@ MODULE mo_jsb_math_constants
   REAL(wp), PARAMETER   :: one_year  = 365._wp                !< length of one year in days 
   REAL(wp), PARAMETER   :: one_day   = 86400._wp              !< length of one day in seconds
   ! conversion of degree to radians
+  REAL(wp), PARAMETER   :: pi        = 4.0_wp * ATAN(1.0_wp)  !< the number PI
+  REAL(wp), PARAMETER   :: deg2rad   = pi / 180.0_wp          !< conversion of degree to radians
   REAL(wp), PARAMETER   :: degcircle = 360._wp                !< degrees per circle
   REAL(wp), PARAMETER   :: hourday   = 24.0_wp                !< hours per day
   ! QUINCY math helpers
