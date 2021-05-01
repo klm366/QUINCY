@@ -30,7 +30,6 @@ MODULE mo_hd_interface
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
   USE mo_jsb_time,           ONLY: is_time_experiment_start
-  USE mo_jsb_math_constants, ONLY: deg2rad
 
   dsl4jsb_Use_processes HD_, HYDRO_
   dsl4jsb_Use_config(HD_)
@@ -463,7 +462,7 @@ CONTAINS
       global_discharge = global_sum_array(discharge(:,:) * in_domain(:,:))
 
       ALLOCATE(cos_lat(SIZE(is_in_domain,1),SIZE(is_in_domain,2)))
-      cos_lat(:,:) = MERGE(COS(deg2rad * grid%lat(:,:)), 0._wp, coast_ocean(:,:) > 0.5_wp)  ! coast_ocean is either 0. or 1.
+      cos_lat(:,:) = MERGE(COS(grid%lat(:,:)), 0._wp, coast_ocean(:,:) > 0.5_wp)  ! coast_ocean is either 0. or 1.
       sum_weights = global_sum_array(coast_ocean(:,:) * cos_lat(:,:) * in_domain(:,:))
       WHERE (coast_ocean(:,:) > 0.5_wp)
         discharge_ocean(:,:) = global_discharge * cos_lat(:,:) / sum_weights

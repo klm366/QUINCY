@@ -36,8 +36,8 @@ CONTAINS
     & )
 
     ! Declarations
-    USE mo_rad_constants,      ONLY: LaiLimit
-    USE mo_jsb_math_constants, ONLY: deg2rad
+    USE mo_rad_constants,     ONLY: LaiLimit
+    USE mo_math_constants,    ONLY: pi
 
     ! Arguments
     REAL(wp), INTENT(in) :: &
@@ -63,7 +63,7 @@ CONTAINS
     assimi_scaling_fact_cl = 1._wp
 
     ! Cosine of zenith angle at local noon:
-    cos_zenith_noon = COS(declination) * COS(deg2rad * lat) +  SIN(declination) * SIN(deg2rad * lat)
+    cos_zenith_noon = COS(declination) * COS(pi * lat / 180._wp) +  SIN(declination) * SIN(pi * lat / 180._wp)
 
     ! Extinction factor
     k12 = 0.5_wp / MAX(cos_zenith_noon, 1.E-3_wp) ! K = 1 / 2mue , Knorr (119c)
