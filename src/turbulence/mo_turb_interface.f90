@@ -28,12 +28,13 @@ MODULE mo_turb_interface
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
+  USE mo_jsb_control,        ONLY: jsbach_runs_standalone
 
   ! Use of processes in this module
   dsl4jsb_Use_processes TURB_, SEB_, HYDRO_, PHENO_, ASSIMI_, SSE_, A2L_
 
   ! Use process configurations
-  !dsl4jsb_Use_config(TURB_)
+  dsl4jsb_Use_config(TURB_)
   dsl4jsb_Use_config(HYDRO_)
   dsl4jsb_Use_config(SEB_)
 
@@ -142,26 +143,36 @@ CONTAINS
   !!
   SUBROUTINE update_roughness(tile, options)
 
-    USE mo_turb_constants, ONLY: blending_height, roughness_snow
-
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    dsl4jsb_Def_config(TURB_)
     dsl4jsb_Def_config(SEB_)
 
     ! Declare process memories
     dsl4jsb_Def_memory(TURB_)
     dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(PHENO_)
+    dsl4jsb_Def_memory(SEB_)
 
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: rough_m
     dsl4jsb_Real2D_onChunk :: rough_h
+    dsl4jsb_Real2D_onChunk :: rough_m_star
+    dsl4jsb_Real2D_onChunk :: rough_h_star
     dsl4jsb_Real2D_onChunk :: fract_snow_soil
-    dsl4jsb_Real2D_onChunk :: fract_snow_lice
+    dsl4jsb_Real2D_onChunk :: fract_lice
+    dsl4jsb_Real2D_onChunk :: lai
+    dsl4jsb_Real2d_onChunk :: fract_fpc_max
 
     ! Local variables
     TYPE(t_jsb_model), POINTER :: model
     INTEGER  :: iblk, ics, ice
+    REAL(wp), DIMENSION(options%nc) :: &
+      & rough_veg_star, rough_bare_star, rough_snow_star
+    REAL(wp) :: &
+      & config_rough_bare, config_rough_snow, config_rough_water, config_blending_height, config_roughness_lai_saturation, &
+      & config_roughness_momentum_to_heat, lctlib_MinVegRoughness, lctlib_MaxVegRoughness, lctlib_VegRoughness
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_roughness'
 
@@ -177,6 +188,7 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
+    dsl4jsb_Get_config(TURB_)
     dsl4jsb_Get_config(SEB_)
 
     ! Get process memories
@@ -184,32 +196,106 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
 
     ! Get process variables
-    dsl4jsb_Get_var2D_onChunk(TURB_,  rough_m)         ! IN
-    dsl4jsb_Get_var2D_onChunk(TURB_,  rough_h)         ! OUT
+    dsl4jsb_Get_var2D_onChunk(TURB_,  rough_m)         ! out
+    dsl4jsb_Get_var2D_onChunk(TURB_,  rough_h)         ! out
+    dsl4jsb_Get_var2D_onChunk(TURB_,  rough_m_star)    ! out
+    dsl4jsb_Get_var2D_onChunk(TURB_,  rough_h_star)    ! out
 
-    ! RMS TBD: This has to be revised!
-    IF (tile%Is_process_active(SSE_)) THEN
-      dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_soil) ! IN
+    config_blending_height = dsl4jsb_Config(TURB_)%blending_height
+    config_rough_snow                 = dsl4jsb_Config(TURB_)%roughness_snow
+    config_rough_water                = dsl4jsb_Config(TURB_)%roughness_water
+
+    IF (tile%Is_process_active(SSE_)) THEN  ! Should catch all vegetated, bare and glacier tiles
+
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_soil) ! in
+
+      config_rough_bare                 = dsl4jsb_Config(TURB_)%roughness_bare
+      config_roughness_momentum_to_heat = dsl4jsb_Config(TURB_)%roughness_momentum_to_heat
+  
       !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_0 tile_name=tile%name
-      rough_h(:) =          fract_snow_soil(:)  / (LOG(blending_height /        roughness_snow)  ** 2)  &
-        &        + (1._wp - fract_snow_soil(:)) / (LOG(blending_height / MIN(1._wp, rough_m(:))) ** 2)
+      rough_bare_star(:) = 1._wp  / LOG(config_blending_height / config_rough_bare)**2
+      rough_snow_star(:) = 1._wp  / LOG(config_blending_height / config_rough_snow)**2
+
+      IF (tile%contains_vegetation) THEN  ! vegetated tile
+
+        dsl4jsb_Get_memory(PHENO_)
+
+        dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max)   ! in
+
+        IF (dsl4jsb_Config(TURB_)%l_roughness_lai) THEN
+
+          config_roughness_lai_saturation  = dsl4jsb_Config(TURB_)%roughness_lai_saturation
+          lctlib_MinVegRoughness           = dsl4jsb_Lctlib_param(MinVegRoughness)
+          lctlib_MaxVegRoughness           = dsl4jsb_Lctlib_param(MaxVegRoughness)
+
+          dsl4jsb_Get_var2D_onChunk(PHENO_, lai)              ! in
+
+          !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_1 tile_name=tile%name
+          rough_veg_star(:) =                                                                           &
+            & 1._wp / LOG(config_blending_height                                                        &
+            &             / (lctlib_MinVegRoughness + (lctlib_MaxVegRoughness - lctlib_MinVegRoughness) &
+            &                                         * TANH(lai(:) * config_roughness_lai_saturation)) &
+            &            )**2
+
+        ELSE
+          lctlib_VegRoughness = dsl4jsb_Lctlib_param(VegRoughness)
+          !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_2 tile_name=tile%name
+          rough_veg_star(:) = 1._wp / LOG(config_blending_height / lctlib_VegRoughness)**2
+        ENDIF
+
+        !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_3 tile_name=tile%name
+        rough_m_star(:) = (1._wp - fract_fpc_max(:)) * rough_bare_star(:) + fract_fpc_max(:) * rough_veg_star(:)
+  
+        ! Modify roughness length heat for non-vegetated part by snow cover
+        !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_4 tile_name=tile%name
+        rough_bare_star(:) = (1._wp - fract_snow_soil(:)) * rough_bare_star(:) + fract_snow_soil(:) * rough_snow_star(:)
+        ! Modify roughness length heat for vegetation by snow cover if not forest or if standalone
+        IF (.NOT. dsl4jsb_Lctlib_param(ForestFlag) .OR. jsbach_runs_standalone()) THEN
+          !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_5 tile_name=tile%name
+          rough_veg_star(:) = (1._wp - fract_snow_soil(:)) * rough_veg_star(:) + fract_snow_soil(:) * rough_snow_star(:)
+        END IF
+
+        !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_6 tile_name=tile%name
+        rough_h_star(:) = (1._wp - fract_fpc_max(:)) * rough_bare_star(:) + fract_fpc_max(:) * rough_veg_star(:)
+  
+      ELSE  ! bare tile
+        !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_7 tile_name=tile%name
+        rough_m_star(:) = rough_bare_star(:)
+        ! Modify roughness length heat for non-vegetated part by snow cover
+        !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_8 tile_name=tile%name
+        rough_bare_star(:) = (1._wp - fract_snow_soil(:)) * rough_bare_star(:) + fract_snow_soil(:) * rough_snow_star(:)
+        rough_h_star(:) = rough_bare_star(:)
+      END IF  ! vegetated or bare tile
+
+      !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_10 tile_name=tile%name
+      rough_m(:) = config_blending_height * EXP(-1._wp / SQRT(rough_m_star(:)))
+      rough_h(:) = config_blending_height * EXP(-1._wp / SQRT(rough_h_star(:))) / config_roughness_momentum_to_heat
+
     ELSE IF (tile%contains_lake) THEN
+
       IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
-        dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_lice) ! IN
-        !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_1 tile_name=tile%name
-        rough_h(:) =          fract_snow_lice(:)  / (LOG(blending_height /        roughness_snow)  ** 2)  &
-          &        + (1._wp - fract_snow_lice(:)) / (LOG(blending_height / MIN(1._wp, rough_m(:))) ** 2)
+        dsl4jsb_Get_memory(SEB_)
+        dsl4jsb_Get_var2D_onChunk(SEB_, fract_lice) ! IN
+        !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_11 tile_name=tile%name
+        rough_m_star(:) =            fract_lice(:)  / (LOG(config_blending_height / config_rough_snow)  ** 2)  &
+          &               + (1._wp - fract_lice(:)) / (LOG(config_blending_height / config_rough_water) ** 2)
       ELSE
-        !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_2 tile_name=tile%name
-        rough_h(:) = LOG(blending_height / MIN(1._wp, rough_m(:))) ** 2
+        !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_12 tile_name=tile%name
+        rough_m_star(:) = 1._wp / (LOG(config_blending_height / config_rough_water) ** 2)
       END IF
+      rough_h_star(:) = rough_m_star(:)
+
+      !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_13 tile_name=tile%name
+      rough_m(:) = config_blending_height * EXP(-1._wp / SQRT(rough_m_star(:)))
+      rough_h(:) = rough_m(:)
+
     ELSE
       CALL finish(TRIM(routine), 'Don"t know what to do.')
     END IF
 
     ! Limit roughness length for heat by 1 m (see below Eq.5.6 in ECHAM5 manual)
-    !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_3 tile_name=tile%name
-    rough_h(:) = MIN(1._wp, blending_height * EXP(-1._wp / SQRT(rough_h(:))))
+    ! !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_14 tile_name=tile%name
+    ! rough_h(:) = MIN(1._wp, blending_height * EXP(-1._wp / SQRT(rough_h(:))))
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -227,8 +313,17 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    dsl4jsb_Def_config(TURB_)
     dsl4jsb_Def_memory(TURB_)
 
+    dsl4jsb_Real2D_onChunk :: rough_m
+    dsl4jsb_Real2D_onChunk :: rough_h
+    dsl4jsb_Real2D_onChunk :: rough_m_star
+    dsl4jsb_Real2D_onChunk :: rough_h_star
+
+    REAL(wp) :: config_blending_height, config_roughness_momentum_to_heat
+
+    TYPE(t_jsb_model),       POINTER :: model
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_roughness'
@@ -243,11 +338,27 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
+    model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_config(TURB_)
     dsl4jsb_Get_memory(TURB_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(TURB_, rough_h,        weighted_by_fract)
+    dsl4jsb_Get_var2D_onChunk(TURB_,  rough_m)
+    dsl4jsb_Get_var2D_onChunk(TURB_,  rough_h)
+    dsl4jsb_Get_var2D_onChunk(TURB_,  rough_m_star)
+    dsl4jsb_Get_var2D_onChunk(TURB_,  rough_h_star)
+
+    dsl4jsb_Aggregate_onChunk(TURB_, rough_m_star,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, rough_h_star,   weighted_by_fract)
+
+    config_blending_height            = dsl4jsb_Config(TURB_)%blending_height
+    config_roughness_momentum_to_heat = dsl4jsb_Config(TURB_)%roughness_momentum_to_heat
+
+    !$claw expand parallel update savepoint=ser_jsb_turb_aggregate_roughness_expand_1 tile_name=tile%name
+    rough_m(:) = config_blending_height * EXP(-1._wp / SQRT(rough_m_star(:)))
+    rough_h(:) = config_blending_height * EXP(-1._wp / SQRT(rough_h_star(:))) / config_roughness_momentum_to_heat
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
