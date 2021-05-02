@@ -34,7 +34,6 @@ MODULE mo_jsb_interface
   PRIVATE
 
   PUBLIC :: jsbach_interface, jsbach_start_timestep, jsbach_finish_timestep
-  PUBLIC :: jsbach_get_var
 
   INTERFACE jsbach_interface
     MODULE PROCEDURE interface_full
@@ -442,82 +441,6 @@ CONTAINS
 ! #endif
 
   END SUBROUTINE jsbach_finish_timestep
-
-  SUBROUTINE jsbach_get_var(var_name, model_id, ics, ice, iblk, ptr1d, ptr2d, ptr3d)
-
-    USE mo_jsb_var_class,     ONLY: t_jsb_var, REAL2D, REAL3D
-    USE mo_jsb_process_class, ONLY: Get_process_id
-
-    CHARACTER(len=*),  INTENT(in) :: var_name
-    INTEGER,           INTENT(in) :: model_id
-    INTEGER, OPTIONAL, INTENT(in) :: &
-      & iblk,              &
-      & ics,               &
-      & ice
-    REAL(wp), OPTIONAL, POINTER   :: ptr1d(:), ptr2d(:,:), ptr3d(:,:,:)
-
-    TYPE(t_jsb_model),           POINTER :: model
-    CLASS(t_jsb_tile_abstract),  POINTER :: tile
-    CLASS(t_jsb_var),            POINTER :: var_ptr
-    CHARACTER(len=:), ALLOCATABLE :: process_name, variable_name
-    INTEGER :: process_id, pos
-    LOGICAL :: l_on_chunk
-    INTEGER :: no_omp_thread
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_get_var'
-
-    IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
-
-    model => Get_model(model_id)
-    CALL model%Get_top_tile(tile)
-
-    pos = INDEX(var_name, '_')
-    IF (pos < 1) CALL finish(routine, 'var_name must have format <process name>_<variable name>')
-    process_name = var_name(1:pos-1)
-    variable_name = var_name(pos+1:LEN(TRIM(var_name)))
-    process_id = Get_process_id(process_name)
-    var_ptr => tile%mem(process_id)%p%Get_var(variable_name)
-
-    IF (PRESENT(ics) .OR. PRESENT(ice) .OR. PRESENT(iblk)) THEN
-      IF (.NOT. (PRESENT(ics) .AND. PRESENT(ice) .AND. PRESENT(iblk))) THEN
-        CALL finish(routine, 'Must provide either none or all of ics,ice,iblk arguments!')
-      ELSE
-        l_on_chunk = .TRUE.
-        IF (var_ptr%type == REAL2d) THEN
-          IF (.NOT. PRESENT(ptr1d)) CALL finish(routine, 'Must provide argument ptr1d')
-        ELSE
-          IF (.NOT. PRESENT(ptr2d)) CALL finish(routine, 'Must provide argument ptr2d')
-        END IF
-      END IF
-    ELSE
-      IF (.NOT. Is_omp_inside_serial()) THEN
-        CALL finish(TRIM(routine), 'Should not be called inside parallel OMP region')
-      END IF
-      l_on_chunk = .FALSE.
-      IF (var_ptr%type == REAL2d) THEN
-        IF (.NOT. PRESENT(ptr2d)) CALL finish(routine, 'Must provide argument ptr2d')
-      ELSE
-        IF (.NOT. PRESENT(ptr3d)) CALL finish(routine, 'Must provide argument ptr3d')
-      END IF
-    END IF
-
-    IF (l_on_chunk) THEN
-      IF (var_ptr%type == REAL2d) THEN
-        ptr1d => var_ptr%ptr2d(ics:ice,iblk)
-      ELSE
-        ptr2d => var_ptr%ptr3d(ics:ice,:,iblk)
-      END IF
-    ELSE
-      IF (var_ptr%type == REAL2d) THEN
-        ptr2d => var_ptr%ptr2d(:,:)
-      ELSE
-        ptr3d => var_ptr%ptr3d(:,:,:)
-      END IF
-    END IF
-
-    IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
-
-  END SUBROUTINE jsbach_get_var
 
 #endif
 END MODULE mo_jsb_interface
