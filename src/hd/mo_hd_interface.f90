@@ -670,7 +670,7 @@ CONTAINS
       CALL message (TRIM(routine),message_text)
     END IF
 
-    IF (is_time_experiment_start()) RETURN
+    IF (is_time_experiment_start(options%current_datetime)) RETURN
 
     ! water conservation test
     !
