@@ -1266,11 +1266,11 @@ CONTAINS
 
     !TODO-JN-COHORTS: could be done in mo_carbon_process
     !$claw expand parallel update
-    c_bg_sum(ics:ice) = c_acid_bg1(:) + c_water_bg1(:) + c_ethanol_bg1(:) + c_nonsoluble_bg1(:) + &
+    c_bg_sum(:) = c_acid_bg1(:) + c_water_bg1(:) + c_ethanol_bg1(:) + c_nonsoluble_bg1(:) + &
              & c_acid_bg2(:) + c_water_bg2(:) + c_ethanol_bg2(:) + c_nonsoluble_bg2(:) + &
              & c_humus_1(:)  + c_humus_2(:)
 
-    c_ag_sum_1(ics:ice) =  c_acid_ag1(:) + c_water_ag1(:) + c_ethanol_ag1(:) + c_nonsoluble_ag1(:) + c_humus_1(:)
+    c_ag_sum_1(:) =  c_acid_ag1(:) + c_water_ag1(:) + c_ethanol_ag1(:) + c_nonsoluble_ag1(:) + c_humus_1(:)
     !$claw end expand
   END SUBROUTINE calculate_current_c_ag_1_and_bg_sums
 
