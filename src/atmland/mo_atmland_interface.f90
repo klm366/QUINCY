@@ -96,6 +96,8 @@ CONTAINS
     dsl4jsb_Def_memory(A2L_)
 
     INTEGER ::  iblk, ics, ice, nc, i
+    TYPE(t_jsb_model), POINTER :: model
+    LOGICAL :: use_quincy
     LOGICAL ::  tile_contains_lake
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_atm2land'
@@ -122,6 +124,7 @@ CONTAINS
       & cos_zenith_angle_ptr,  &
       & CO2_air_ptr,           &
       & CO2_air_mol_ptr,       &
+      & CO2_mixing_ratio_ptr,  &
       & drag_wtr_ptr,          &
       & drag_ice_ptr,          &
       & t_acoef_wtr_ptr,       &
@@ -139,6 +142,9 @@ CONTAINS
     ics  = options%ics
     ice  = options%ice
     nc   = options%nc
+
+    model => Get_model(tile%owner_model_id)
+    use_quincy = model%config%use_quincy
 
     ! make this logical accessible in the OpenACC code directly
     tile_contains_lake = tile%contains_lake
@@ -207,6 +213,7 @@ CONTAINS
     IF (PRESENT(CO2_air)) THEN
       CO2_air_ptr           => dsl4jsb_var2D_onChunk(A2L_, CO2_air)
       CO2_air_mol_ptr       => dsl4jsb_var2D_onChunk(A2L_, CO2_air_mol)
+      IF (use_quincy) CO2_mixing_ratio_ptr  => dsl4jsb_var2D_onChunk(A2L_, CO2_mixing_ratio)
     END IF
     IF (PRESENT(drag_wtr)) THEN
       drag_wtr_ptr          => dsl4jsb_var2D_onChunk(A2L_, drag_wtr)
@@ -361,6 +368,8 @@ CONTAINS
         CO2_air_ptr(i) = CO2_air(i)
         ! Convert CO2 mass mixing ratio [kg/kg] to particle mixing ratio [mol/mol]
         CO2_air_mol_ptr(i) = CO2_air(i) * molarMassDryAir / molarMassCO2
+        ! convert CO2 from "molar ratio (volume)" to "co2 mixing ratio ppmv" (quincy | used in e.g. update_canopy_fluxes)
+        IF (use_quincy) CO2_mixing_ratio_ptr(i) = CO2_air_mol_ptr(i) * 1000000._wp
       END DO
     END IF
 
