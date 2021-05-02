@@ -16,6 +16,7 @@ MODULE mo_jsb_process_class
 #ifndef __NO_JSBACH__
 
   USE mo_exception,           ONLY: message, finish
+  USE mo_util_string,         ONLY: tolower
   USE mo_jsb_control,         ONLY: debug_on
 
   USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_jsb_process_task_p
@@ -24,7 +25,7 @@ MODULE mo_jsb_process_class
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_jsb_process, t_jsb_process_p, Get_process_name
+  PUBLIC :: t_jsb_process, t_jsb_process_p, Get_process_name, Get_process_id
   PUBLIC :: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_
   PUBLIC :: SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_, Get_action_name
 
@@ -99,6 +100,48 @@ CONTAINS
     END SELECT
 
   END FUNCTION Get_process_name
+
+  FUNCTION Get_process_id(name) RESULT(return_value)
+
+    CHARACTER(len=*), INTENT(in) :: name
+    INTEGER                      :: return_value
+
+    SELECT CASE(tolower(TRIM(name)))
+    CASE ('a2l')
+      return_value = A2L_
+    CASE ('l2a')
+      return_value = L2A_
+    CASE ('seb')
+      return_value = SEB_
+    CASE ('turb')
+      return_value = TURB_
+    CASE ('sse')
+      return_value = SSE_
+    CASE ('hydro')
+      return_value = HYDRO_
+    CASE ('rad')
+      return_value = RAD_
+    CASE ('assimi')
+      return_value = ASSIMI_
+    CASE ('pheno')
+      return_value = PHENO_
+#ifndef __NO_JSBACH_HD__
+    CASE ('hd')
+      return_value = HD_
+#endif
+    CASE ('carbon')
+      return_value = CARBON_
+    CASE ('disturb')
+      return_value = DISTURB_
+    CASE ('fuel')
+      return_value = FUEL_
+    CASE ('veg')
+      return_value = VEG_
+    CASE DEFAULT
+      return_value = 0
+    END SELECT
+
+  END FUNCTION Get_process_id
 
   SUBROUTINE Register_task(this, task)
 
