@@ -514,6 +514,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: soil_reflectivity_par ! Soil reflectivity within the PAR spectrum [-]
     dsl4jsb_Real2D_onChunk :: alb_vis_soil          ! Soil albedo in the visible range
     dsl4jsb_Real2D_onChunk :: lai                   ! Leaf area index [-]
+    dsl4jsb_Real3D_onChunk :: lai_cl                ! Leaf area index of canopy layer
+
     dsl4jsb_Real2D_onChunk :: cos_zenith_angle      ! Angle of incoming radiation [-]
     dsl4jsb_Real2D_onChunk :: fract_par_direct      ! Fraction of direct (in contrast to diffuse) PAR [-]
     dsl4jsb_Real2D_onChunk :: fract_par_diffuse     ! Fraction of diffuse (in contrast to direct) PAR [-]
@@ -523,7 +525,6 @@ CONTAINS
 
     dsl4jsb_Real3D_onChunk :: faPAR_cl              ! Fraction of absorbed PAR per leaf area for each canopy layer
     dsl4jsb_Real3D_onChunk :: apar_per_lai_cl       ! Absorbed PAR of canopy layer
-    dsl4jsb_Real3D_onChunk :: lai_cl                ! Leaf area index of canopy layer
     ! dsl4jsb_Real3D_onChunk :: apar_per_lai_cl_nacc  ! Absorbed PAR accumulated [MOL PHOTONS/M^2 ]
     ! dsl4jsb_Real3D_onChunk :: apar_per_lai_cl_tavg  ! Absorbed PAR [MOL PHOTONS/M^2 S] (time mean value)
 
@@ -559,6 +560,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,   fract_par_diffuse)     ! in (received from the atmosphere)
     dsl4jsb_Get_var2D_onChunk(A2L_,   swpar_srf_down)        ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                   ! in
+    dsl4jsb_Get_var3D_onChunk(PHENO_, lai_cl)                ! inout
     dsl4jsb_Get_var2D_onChunk(RAD_,   fract_par_direct)      ! out
     dsl4jsb_Get_var2D_onChunk(RAD_,   alb_vis_soil)          ! in
     dsl4jsb_Get_var2D_onChunk(RAD_,   par)                   ! in
@@ -569,7 +571,6 @@ CONTAINS
     ! dsl4jsb_Get_var2D_onChunk(RAD_,   par_down_mol_nacc)     ! inout
     ! dsl4jsb_Get_var2D_onChunk(RAD_,   par_down_mol_tavg)     ! inout
     dsl4jsb_Get_var2D_onChunk(RAD_,   soil_reflectivity_par) ! inout
-    dsl4jsb_Get_var3D_onChunk(RAD_,   lai_cl)                ! inout
     dsl4jsb_Get_var3D_onChunk(RAD_,   faPAR_cl)              ! inout
     ! used outside for assimilation:
     dsl4jsb_Get_var3D_onChunk(RAD_,   apar_per_lai_cl)       ! inout

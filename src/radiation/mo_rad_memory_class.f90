@@ -74,10 +74,9 @@ MODULE mo_rad_memory_class
       ! & apar_nacc
 
     TYPE(t_jsb_var_real3d) :: & ! alt: (nland, ncanopy, ntiles)
-      & lai_cl,               & ! LAI per canopy layer; preliminarily, should later be put to another process...
       & faPAR_cl,             & ! Absorbed PAR per canopy layer and per leaf area [fraction of irradiance]
                                 ! As fraction of incoming radiation at the top of the canopy layers (=1).
-      & apar_per_lai_cl         ! Absorbed PAR per canopy layer LAI (lai_cl). Only for current time step/dtime.
+      & apar_per_lai_cl         ! Absorbed PAR per canopy layer LAI (lai_cl, PHENO_). Only for current time step/dtime.
                                 ! [(absorbed photons) / (m^2(leaf area) * s)]
       ! & apar_per_lai_cl_nacc, & ! PAR absorbed by the canopy accumulated (over output timestep) in mol(photons)/m^2
       ! & apar_per_lai_cl_tavg    ! PAR absorbed by the canopy (mean value over output timestep)  in mol(photons)/(m^2 * s)
@@ -390,13 +389,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & loutput=.TRUE., lrestart=.FALSE., initval_r=0.5_wp )
-
-      CALL mem%Add_var('lai_cl', mem%lai_cl,                                 &
-        & hgrid, canopy_layer,                                               &
-        & t_cf('LAI for each canopy layer', '', ''),                         &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & lrestart=.FALSE., initval_r=0.0_wp )
 
       CALL mem%Add_var('fapar_cl', mem%faPAR_cl,                                  &
         & hgrid, canopy_layer,                                                    &

@@ -43,9 +43,7 @@ MODULE mo_pheno_memory_class
     !------------------------------------------------------------------------------------------------------ !
     !>1.0 jsbach4
     !>
-    
     TYPE(t_jsb_var_real2d)           :: &
-      & lai,                            & !< Leaf area index
       & fract_fpc,                      & !< Foliage projected cover of the pft
                                           !  (fraction of ground area occupied by the vertical projection of foliage)
       & fract_fpc_max,                  & !< Maximum fraction of tile that can be covered by leaves (assuming infinite lai)
@@ -110,13 +108,24 @@ MODULE mo_pheno_memory_class
                                           !          in den JS4 Berechnungen haben, gilt eigentlich dies hier:
                                           ! var (tile area) = veg_fract_correction * var(canopy area)  * fract_fpc_max.
 
-    REAL(wp), POINTER :: lai_mon(:,:,:) => NULL()       !< Monthly leaf area index (per year or climatology) <nproma x nblks x 14>    !
-    REAL(wp), POINTER :: fract_fpc_mon(:,:,:) => NULL() !< Monthly fpc (per year or climatology) <nproma x nblks x 14>    !
+    REAL(wp), POINTER :: lai_mon(:,:,:)       => NULL()   !< Monthly leaf area index (per year or climatology) <nproma x nblks x 14> !
+    REAL(wp), POINTER :: fract_fpc_mon(:,:,:) => NULL()   !< Monthly fpc (per year or climatology) <nproma x nblks x 14> !
 
     !------------------------------------------------------------------------------------------------------ !
-    !>2.0 quincy
+    !>2.0 jsbach4 & quincy
+    !>  note: for each of these variables two 'mem%Add_var()' calls exist (one for each jsbach4 & quincy)
+    !>        allowing different settings
+    !>        this may be a temporary solution only @TODO
     !>
+    TYPE(t_jsb_var_real2d)          :: &
+      & lai                                 !< actual leaf area index [m2 m-2]
+      
+    TYPE(t_jsb_var_real3d)          :: &
+      & lai_cl                              !< leaf area index per canopy layer [m2 m-2]
 
+    !------------------------------------------------------------------------------------------------------ !
+    !>3.0 quincy
+    !>
     TYPE(t_jsb_var_real2d)          :: &
                                     growing_season          !< logical to identify whether the plant is in the growing season or not
                                                             !< used as logical: 0 = FALSE / 1 = TRUE
@@ -157,15 +166,22 @@ CONTAINS
     dsl4jsb_Def_config(PHENO_)
     TYPE(t_jsb_model),  POINTER :: model
     TYPE(t_jsb_grid),   POINTER :: hgrid                        ! Horizontal grid
-    TYPE(t_jsb_vgrid),  POINTER :: surface                      ! Vertical grid
+    TYPE(t_jsb_vgrid),  POINTER :: surface, canopy_layer        ! Vertical grid
+    TYPE(t_jsb_vgrid),  POINTER :: vgrid_canopy                 ! Vertical grid
     INTEGER                     :: table
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_pheno_memory'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(PHENO_)
+    model        => Get_model(model_id)
     table        = tables(1)
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
-    model        => Get_model(model_id)
+#ifdef __QUINCY_NO_JSB__
+    vgrid_canopy => Get_vgrid('canopy_layer')
+#else
+    canopy_layer => Get_vgrid('canopy_layer')
+    vgrid_canopy => Get_vgrid('canopy_layer_q_')  !! quincy
+#endif
 
     !! !$acc enter data pcreate(mem)
 
@@ -183,14 +199,6 @@ CONTAINS
         !$acc enter data pcreate(mem%lai_mon,mem%fract_fpc_mon)
         !$acc enter data attach(mem%lai_mon,mem%fract_fpc_mon)
       ! END IF
-
-      CALL mem%Add_var( 'lai', mem%lai,                                        &
-        & hgrid, surface,                                                      &
-        & t_cf('leaf_area_index', '', ''),                                     &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
-        & output_level=BASIC,                                                  &
-        & initval_r=0.0_wp )
 
       CALL mem%Add_var( 'fract_fpc', mem%fract_fpc,                            &
         & hgrid, surface,                                                      &
@@ -370,6 +378,25 @@ CONTAINS
 
         END IF ! l_forestRegrowth
       END IF ! logrop
+      
+      ! --------------------------------------------------------------------------------------------------- !
+      ! variables used with jsbach4 & quincy
+      ! jsbach4 init
+      CALL mem%Add_var( 'lai', mem%lai,                                        &
+        & hgrid, surface,                                                      &
+        & t_cf('leaf_area_index', '', ''),                                     &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & output_level=BASIC,                                                  &
+        & initval_r=0.0_wp )
+        
+      CALL mem%Add_var('lai_cl', mem%lai_cl,                                 &
+        & hgrid, canopy_layer,                                               &
+        & t_cf('LAI for each canopy layer', '', ''),                         &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & lrestart=.FALSE., initval_r=0.0_wp )
+      
     END IF !  VEG / LAND
     END IF !  IF(.NOT. use_quincy)
     
@@ -377,22 +404,13 @@ CONTAINS
 #ifdef __QUINCY_NO_JSB__
 #else
     ! ----------------------------------------------------------------------------------------------------- !
-    ! quincy
+    ! quincy in jsbach4
     !  temporary fix: some jsbach4 variables are needed for quincy simulations
     !  copied from above jsbach4-section, plus some minor modification for output/restart
     IF (model%config%use_quincy) THEN
       IF ( One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. &
          & One_of(VEG_TYPE,  lct_ids(:)) > 0) THEN
 
-        CALL mem%Add_var('lai', mem%lai,                                         &
-          & hgrid, surface,                                                      &
-          & t_cf('leaf_area_index', '', ''),                                     &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-          & prefix, suffix,                                                      &
-          & loutput = .TRUE.,                                                    &
-          & lrestart = .TRUE.,                                                   &
-          & initval_r = 0.0_wp )
-  
         CALL mem%Add_var('fract_fpc', mem%fract_fpc,                             &
           & hgrid, surface,                                                      &
           & t_cf('foliage_projected_cover', '', ''),                             &
@@ -429,7 +447,32 @@ CONTAINS
     IF (model%config%use_quincy) THEN
       IF ( One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. &
          & One_of(VEG_TYPE,  lct_ids(:)) > 0) THEN
-    
+
+        ! ------------------------------------------------------------------------------------------------- !
+        ! variables used with jsbach4 & quincy
+        ! quincy init
+        CALL mem%Add_var('lai', mem%lai, &
+          & hgrid, surface, &
+          & t_cf('lai', 'm2 m-2', 'actual leaf area index'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & loutput = .TRUE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
+
+        CALL mem%Add_var('lai_cl', mem%lai_cl, &
+          & hgrid, vgrid_canopy, &
+          & t_cf('lai_cl', 'm2 m-2', 'leaf area index per canopy layer'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & loutput = .TRUE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
+          
+        ! ------------------------------------------------------------------------------------------------- !
+        ! variables used only with quincy      
         CALL mem%Add_var('growing_season', mem%growing_season, &
           & hgrid, surface, &
           & t_cf('growing_season', 'logical', 'logical to identify whether the plant is in the growing season'), &
