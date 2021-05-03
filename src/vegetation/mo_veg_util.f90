@@ -292,7 +292,7 @@ CONTAINS
     REAl(wp), DIMENSION(options%nc)         :: hlp                  !< helper
     LOGICAL,  DIMENSION(options%nc)         :: l_hlp                !< helper
     REAl(wp)                                :: mavg_period_hlp      !< helper
-    INTEGER                                 :: ipoint               !< looping
+    INTEGER                                 :: ic                   !< looping over chunk
     INTEGER                                 :: icanopy              !< looping
     INTEGER                                 :: ncanopy              !< number of canopy layers, from vgrid
     INTEGER                                 :: iblk, ics, ice, nc   !< dimensions
@@ -613,21 +613,21 @@ CONTAINS
     
     !>  1.1 accumulate values - if light is available (i.e. daytime)
     !>
-    DO ipoint = 1, nc
-      IF (swpar_srf_down(ipoint) > eps8) THEN
+    DO ic = 1, nc
+      IF (swpar_srf_down(ic) > eps8) THEN
         ! count number of daytime values
-        daytime_counter(ipoint) = daytime_counter(ipoint) + 1.0_wp
+        daytime_counter(ic) = daytime_counter(ic) + 1.0_wp
         ! 1D var - add values
-        t_air_daytime_dacc(ipoint)            = t_air_daytime_dacc(ipoint)            + t_air(ipoint)
-        press_srf_daytime_dacc(ipoint)        = press_srf_daytime_dacc(ipoint)        + press_srf(ipoint)
-        co2_mixing_ratio_daytime_dacc(ipoint) = co2_mixing_ratio_daytime_dacc(ipoint) + co2_mixing_ratio(ipoint)
-        ga_daytime_dacc(ipoint)               = ga_daytime_dacc(ipoint)               + ga(ipoint)
-        beta_sinklim_ps_daytime_dacc(ipoint)  = beta_sinklim_ps_daytime_dacc(ipoint)  + beta_sinklim_ps(ipoint)
-        t_jmax_opt_daytime_dacc(ipoint)       = t_jmax_opt_daytime_dacc(ipoint)       + t_jmax_opt(ipoint)
+        t_air_daytime_dacc(ic)            = t_air_daytime_dacc(ic)            + t_air(ic)
+        press_srf_daytime_dacc(ic)        = press_srf_daytime_dacc(ic)        + press_srf(ic)
+        co2_mixing_ratio_daytime_dacc(ic) = co2_mixing_ratio_daytime_dacc(ic) + co2_mixing_ratio(ic)
+        ga_daytime_dacc(ic)               = ga_daytime_dacc(ic)               + ga(ic)
+        beta_sinklim_ps_daytime_dacc(ic)  = beta_sinklim_ps_daytime_dacc(ic)  + beta_sinklim_ps(ic)
+        t_jmax_opt_daytime_dacc(ic)       = t_jmax_opt_daytime_dacc(ic)       + t_jmax_opt(ic)
         ! 2D var - add values
         DO icanopy = 1, ncanopy
-          fleaf_sunlit_daytime_dacc_cl(ipoint,icanopy) = &
-            & fleaf_sunlit_daytime_dacc_cl(ipoint,icanopy) + fleaf_sunlit_cl(ipoint,icanopy)
+          fleaf_sunlit_daytime_dacc_cl(ic,icanopy) = &
+            & fleaf_sunlit_daytime_dacc_cl(ic,icanopy) + fleaf_sunlit_cl(ic,icanopy)
         END DO
       END IF
     END DO
@@ -637,36 +637,36 @@ CONTAINS
     !>    calculate the average of the previous day and pass this value to the according variable
     !> 
     !>    the timestep right after midnight is identified by the changes in cos_zenith_angle (turning from negative to positive)
-    DO ipoint = 1, nc
-      IF ((cos_zenith_angle(ipoint) - prev_one_cos_zenith_angle(ipoint)) > eps8 .AND. &
-          (prev_one_cos_zenith_angle(ipoint) - prev_two_cos_zenith_angle(ipoint)) <= eps8) THEN
+    DO ic = 1, nc
+      IF ((cos_zenith_angle(ic) - prev_one_cos_zenith_angle(ic)) > eps8 .AND. &
+          (prev_one_cos_zenith_angle(ic) - prev_two_cos_zenith_angle(ic)) <= eps8) THEN
         ! check if at least one value had been assigned at the current day, avoiding division by zero
-        IF (daytime_counter(ipoint) > eps8) THEN
+        IF (daytime_counter(ic) > eps8) THEN
           ! 1D
-          t_air_daytime(ipoint)             = t_air_daytime_dacc(ipoint)              / daytime_counter(ipoint)
-          press_srf_daytime(ipoint)         = press_srf_daytime_dacc(ipoint)          / daytime_counter(ipoint)
-          co2_mixing_ratio_daytime(ipoint)  = co2_mixing_ratio_daytime_dacc(ipoint)   / daytime_counter(ipoint)
-          ga_daytime(ipoint)                = ga_daytime_dacc(ipoint)                 / daytime_counter(ipoint)
-          beta_sinklim_ps_daytime(ipoint)   = beta_sinklim_ps_daytime_dacc(ipoint)    / daytime_counter(ipoint)
-          t_jmax_opt_daytime(ipoint)        = t_jmax_opt_daytime_dacc(ipoint)         / daytime_counter(ipoint)
+          t_air_daytime(ic)             = t_air_daytime_dacc(ic)              / daytime_counter(ic)
+          press_srf_daytime(ic)         = press_srf_daytime_dacc(ic)          / daytime_counter(ic)
+          co2_mixing_ratio_daytime(ic)  = co2_mixing_ratio_daytime_dacc(ic)   / daytime_counter(ic)
+          ga_daytime(ic)                = ga_daytime_dacc(ic)                 / daytime_counter(ic)
+          beta_sinklim_ps_daytime(ic)   = beta_sinklim_ps_daytime_dacc(ic)    / daytime_counter(ic)
+          t_jmax_opt_daytime(ic)        = t_jmax_opt_daytime_dacc(ic)         / daytime_counter(ic)
           ! 2D
-          fleaf_sunlit_daytime_cl(ipoint,:) = fleaf_sunlit_daytime_dacc_cl(ipoint,:)  / daytime_counter(ipoint)
+          fleaf_sunlit_daytime_cl(ic,:) = fleaf_sunlit_daytime_dacc_cl(ic,:)  / daytime_counter(ic)
         ELSE
           ! if there was no daylight during the previous day, just leave previous values for most variables
-          fleaf_sunlit_daytime_cl(ipoint,:) = 0.0_wp          
+          fleaf_sunlit_daytime_cl(ic,:) = 0.0_wp          
         END IF
         ! zero the accumulation variables after daily average has been calculated
         ! 1D
-        t_air_daytime_dacc(ipoint)                 = 0.0_wp
-        press_srf_daytime_dacc(ipoint)             = 0.0_wp
-        co2_mixing_ratio_daytime_dacc(ipoint)      = 0.0_wp
-        ga_daytime_dacc(ipoint)                    = 0.0_wp
-        beta_sinklim_ps_daytime_dacc(ipoint)       = 0.0_wp
-        t_jmax_opt_daytime_dacc(ipoint)            = 0.0_wp
+        t_air_daytime_dacc(ic)                 = 0.0_wp
+        press_srf_daytime_dacc(ic)             = 0.0_wp
+        co2_mixing_ratio_daytime_dacc(ic)      = 0.0_wp
+        ga_daytime_dacc(ic)                    = 0.0_wp
+        beta_sinklim_ps_daytime_dacc(ic)       = 0.0_wp
+        t_jmax_opt_daytime_dacc(ic)            = 0.0_wp
         ! 2D
-        fleaf_sunlit_daytime_dacc_cl(ipoint,:)     = 0.0_wp
+        fleaf_sunlit_daytime_dacc_cl(ic,:)     = 0.0_wp
         ! zero the counter for number of accumulated values (*_dacc) per day
-        daytime_counter(ipoint)                    = 0.0_wp
+        daytime_counter(ic)                    = 0.0_wp
       END IF
     END DO
 
@@ -855,16 +855,16 @@ CONTAINS
     !> 
     exudation_c_tmyc_mavg(:) = calc_mavg(exudation_c_tmyc_mavg(:), veg_exudation%carbon(:), & 
  	                                       lctlib%tau_mycorrhiza, avg_period_unit='year')
-    DO ipoint = 1, nc
-      IF (veg_pool%fine_root%carbon(ipoint) > eps8) THEN
-         hlp(ipoint)   = veg_pool%leaf%carbon(ipoint) / veg_pool%fine_root%carbon(ipoint)
+    DO ic = 1, nc
+      IF (veg_pool%fine_root%carbon(ic) > eps8) THEN
+         hlp(ic)   = veg_pool%leaf%carbon(ic) / veg_pool%fine_root%carbon(ic)
       ELSE
-         hlp(ipoint)   = 0._wp
+         hlp(ic)   = 0._wp
       END IF
-      IF ((veg_pool%leaf%carbon(ipoint) > eps8) .AND. (veg_pool%fine_root%carbon(ipoint) > eps8)) THEN
-        l_hlp(ipoint) = .TRUE.
+      IF ((veg_pool%leaf%carbon(ic) > eps8) .AND. (veg_pool%fine_root%carbon(ic) > eps8)) THEN
+        l_hlp(ic) = .TRUE.
       ELSE
-        l_hlp(ipoint) = .FALSE.
+        l_hlp(ic) = .FALSE.
       END IF
     END DO
     leaf2root_troot_mavg(:)          = calc_mavg(leaf2root_troot_mavg(:), hlp(:), lctlib%tau_fine_root, &
@@ -883,11 +883,11 @@ CONTAINS
     an_boc_tvegdyn_mavg(:)     = calc_mavg(an_boc_tvegdyn_mavg(:), net_assimilation_boc(:), mavg_period_monthly, &
                                            do_calc=(veg_pool%leaf%carbon(:) > eps8))
     net_growth_tvegdyn_mavg(:) = calc_mavg(net_growth_tvegdyn_mavg(:), net_growth(:), mavg_period_tvegdyn) 
-    DO ipoint = 1, nc
-      IF (lai(:) > 0.1_wp) THEN
-        l_hlp(ipoint) = .TRUE.
+    DO ic = 1, nc
+      IF (lai(ic) > 0.1_wp) THEN
+        l_hlp(ic) = .TRUE.
       ELSE
-        l_hlp(ipoint) = .FALSE.
+        l_hlp(ic) = .FALSE.
       END IF
     END DO
     lai_tvegdyn_mavg(:) = calc_mavg(lai_tvegdyn_mavg(:), lai(:), mavg_period_tvegdyn, do_calc=l_hlp(:))
