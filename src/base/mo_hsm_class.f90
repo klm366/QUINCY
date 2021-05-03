@@ -1059,12 +1059,13 @@ CONTAINS
 
       !DEALLOCATE(start_msg%action)
       DEALLOCATE(start_msg)
-      IF (ASSOCIATED(new_msg)) THEN
-        !IF (ASSOCIATED(new_msg%action)) DEALLOCATE(new_msg%action)
-        DEALLOCATE(new_msg)
-      END IF
 
     END SELECT
+
+    IF (ASSOCIATED(new_msg)) THEN
+      !IF (ASSOCIATED(new_msg%action)) DEALLOCATE(new_msg%action)
+      DEALLOCATE(new_msg)
+    END IF
 
     IF (l_debug) THEN
       IF (ASSOCIATED(new_msg)) THEN
