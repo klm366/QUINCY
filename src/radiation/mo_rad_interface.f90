@@ -1364,13 +1364,14 @@ CONTAINS
     ! SEB_
     dsl4jsb_Real2D_onChunk :: t_unfilt
     ! VEG_
-    dsl4jsb_Real3D_onChunk :: lai_cl
     dsl4jsb_Real3D_onChunk :: leaf_nitrogen_cl 
     dsl4jsb_Real3D_onChunk :: fn_chl_cl 
-    dsl4jsb_Real3D_onChunk :: cumm_lai_cl
     dsl4jsb_Real3D_onChunk :: fleaf_sunlit_cl
-    ! PHENO_
+    ! PHENO_ 2D
     dsl4jsb_Real2D_onChunk :: lai
+    ! PHENO_ 3D
+    dsl4jsb_Real3D_onChunk :: lai_cl
+    dsl4jsb_Real3D_onChunk :: cumm_lai_cl    
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -1451,15 +1452,14 @@ CONTAINS
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)               ! in
     ! ---------------------------
-    dsl4jsb_Get_var3D_onChunk(VEG_, lai_cl)                ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)      ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)             ! in
-    dsl4jsb_Get_var3D_onChunk(VEG_, cumm_lai_cl)           ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)       ! out
-    ! ---------------------------
+    ! PHENO_ 2D
     dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                    ! in
-
-      
+    ! PHENO_ 3D
+    dsl4jsb_Get_var3D_onChunk(PHENO_, lai_cl)                 ! in
+    dsl4jsb_Get_var3D_onChunk(PHENO_, cumm_lai_cl)            ! in      
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science

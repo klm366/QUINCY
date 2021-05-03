@@ -96,8 +96,10 @@ CONTAINS
     dsl4jsb_Def_pool(t_veg_tissues_pool)  :: veg_pool
 #endif
     ! ----------------------------------------------------------------------------------------------------- !
-    ! PHENO_
+    ! PHENO_ 2D
     dsl4jsb_Real2D_onDomain     :: lai
+    ! PHENO_ 3D
+    dsl4jsb_Real3D_onDomain     :: lai_cl
     ! VEG_ 2D
     dsl4jsb_Real2D_onDomain     :: target_cn_leaf
     dsl4jsb_Real2D_onDomain     :: target_np_leaf
@@ -175,7 +177,6 @@ CONTAINS
     dsl4jsb_Real3D_onDomain     :: fleaf_sunlit_tfrac_mavg_cl
     dsl4jsb_Real3D_onDomain     :: fleaf_sunlit_tcnl_mavg_cl
     dsl4jsb_Real3D_onDomain     :: fn_oth_cl
-    dsl4jsb_Real3D_onDomain     :: lai_cl
     dsl4jsb_Real3D_onDomain     :: leaf_nitrogen_cl
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_active(VEG_)) RETURN
@@ -198,8 +199,10 @@ CONTAINS
     CALL veg_pool%Associate_domain_var_ptr()
 #endif
     ! ----------------------------------------------------------------------------------------------------- !
-    ! PHENO_
+    ! PHENO_ 2D
     dsl4jsb_Get_var2D_onDomain(PHENO_, lai)                           ! in
+    ! PHENO_ 3D
+    dsl4jsb_Get_var2D_onDomain(PHENO_, lai_cl)                        ! in
     ! VEG_ 2D
     dsl4jsb_Get_var2D_onDomain(VEG_, target_cn_leaf)
     dsl4jsb_Get_var2D_onDomain(VEG_, target_np_leaf)
@@ -277,7 +280,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(VEG_, fleaf_sunlit_tfrac_mavg_cl)
     dsl4jsb_Get_var3D_onDomain(VEG_, fleaf_sunlit_tcnl_mavg_cl)
     dsl4jsb_Get_var3D_onDomain(VEG_, fn_oth_cl)
-    dsl4jsb_Get_var3D_onDomain(VEG_, lai_cl)
     dsl4jsb_Get_var3D_onDomain(VEG_, leaf_nitrogen_cl)
     ! ----------------------------------------------------------------------------------------------------- !
     ALLOCATE(hlp1(SIZE(lai,1), SIZE(lai,2)))

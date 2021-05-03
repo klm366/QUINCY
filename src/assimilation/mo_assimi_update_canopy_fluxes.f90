@@ -122,12 +122,13 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: w_soil_root_pot
     ! PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: lai
+    ! PHENO_ 3D
+    dsl4jsb_Real3D_onChunk      :: lai_cl
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt_mavg
     dsl4jsb_Real2D_onChunk      :: t_air_tacclim_mavg
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_cl
-    dsl4jsb_Real3D_onChunk      :: lai_cl
     dsl4jsb_Real3D_onChunk      :: fn_chl_cl
     dsl4jsb_Real3D_onChunk      :: fn_et_cl
     dsl4jsb_Real3D_onChunk      :: fn_rub_cl
@@ -198,13 +199,14 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_pot)                ! in
     ! PHENO_ 2D
     dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                          ! in
+    ! PHENO_ 3D
+    dsl4jsb_Get_var3D_onChunk(PHENO_, lai_cl)                       ! in
     ! VEG_ 2D
     dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps)                ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)                ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tacclim_mavg)             ! in
     ! VEG_ 3D
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)                ! in
-    dsl4jsb_Get_var3D_onChunk(VEG_, lai_cl)                         ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)                      ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_et_cl)                       ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_rub_cl)                      ! in

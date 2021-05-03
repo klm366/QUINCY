@@ -98,7 +98,6 @@ MODULE mo_veg_memory_class
                                     height            , &            !< plant height [m]
                                     diameter          , &            !< plant diameter [m]
                                     dens_ind          , &            !< density of individuals [# m-2]
-                                    lai               , &            !< actual leaf area index [m2 m-2]
                                     target_cn_leaf    , &            !< target foliar C:N ratio [mol C mol-1 N]
                                     target_np_leaf    , &            !< target foliar N:P ratio [mol N mol-1 P]
                                     mean_leaf_age     , &            !< average foliage age in days [days]
@@ -142,9 +141,7 @@ MODULE mo_veg_memory_class
                                     fn_rub_cl         , &           !< fraction of N in Rubisco [unitless]
                                     fn_pepc_cl        , &           !< fraction of N in PEP carboylase, C4 plants only [unitless]
                                     fn_oth_cl         , &           !< fraction of N not associated with photosynthesis [unitless]
-                                    fleaf_sunlit_cl   , &           !< fraction of layer which is sunlit [unitless]
-                                    lai_cl            , &           !< leaf area in the canopy layer [m2 m-2]
-                                    cumm_lai_cl                     !< cummulative leaf area above the mid-point of the canopy layer [m2 m-2]
+                                    fleaf_sunlit_cl                 !< fraction of layer which is sunlit [unitless]
 
     !------------------------------------------------------------------------------------------------------ !
     !>fluxes
@@ -763,16 +760,6 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
-      CALL mem%Add_var('lai', mem%lai, &
-        & hgrid, surface, &
-        & t_cf('lai', 'm2 m-2', 'actual leaf area index'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-  
       CALL mem%Add_var('target_cn_leaf', mem%target_cn_leaf, &
         & hgrid, surface, &
         & t_cf('target_cn_leaf', '', 'target foliar C:N ratio'), &
@@ -1066,26 +1053,6 @@ CONTAINS
       CALL mem%Add_var('fleaf_sunlit_cl', mem%fleaf_sunlit_cl, &
         & hgrid, vgrid_canopy, &
         & t_cf('fleaf_sunlit_cl', '', 'fraction of layer which is sunlit'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-  
-      CALL mem%Add_var('lai_cl', mem%lai_cl, &
-        & hgrid, vgrid_canopy, &
-        & t_cf('lai_cl', 'm2 m-2', 'leaf area in the canopy layer '), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-  
-      CALL mem%Add_var('cumm_lai_cl', mem%cumm_lai_cl, &
-        & hgrid, vgrid_canopy, &
-        & t_cf('cumm_lai_cl', 'm2 m-2', 'cummulative leaf area above the mid-point of the canopy layer '), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

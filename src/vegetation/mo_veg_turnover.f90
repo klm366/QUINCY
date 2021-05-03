@@ -97,8 +97,8 @@ CONTAINS
     ! Declare pointers to variables in memory
     ! PHENO_
     dsl4jsb_Real2D_onChunk      :: growing_season
-    ! VEG_ 2D
     dsl4jsb_Real2D_onChunk      :: lai
+    ! VEG_ 2D
     dsl4jsb_Real2D_onChunk      :: target_lai
     dsl4jsb_Real2D_onChunk      :: target_cn_fine_root
     dsl4jsb_Real2D_onChunk      :: target_np_fine_root
@@ -141,8 +141,8 @@ CONTAINS
 #endif
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)             ! in
+    dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                        ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(VEG_, lai)
     dsl4jsb_Get_var2D_onChunk(VEG_, target_lai)
     dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_fine_root) 
     dsl4jsb_Get_var2D_onChunk(VEG_, target_np_fine_root)

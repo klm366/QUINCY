@@ -55,7 +55,7 @@ CONTAINS
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
-    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,     ONLY: A2L_, ASSIMI_, RAD_, SSE_, VEG_, PHENO_
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
     USE mo_jsb_grid,              ONLY: Get_vgrid
 
@@ -68,6 +68,7 @@ CONTAINS
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
     dsl4jsb_Use_memory(SSE_)        !  USE mo_sse_memory_class,      ONLY: t_sse_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
+    dsl4jsb_Use_memory(PHENO_)
 
     IMPLICIT NONE
     ! ---------------------------
@@ -93,6 +94,7 @@ CONTAINS
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(SSE_)                       !     TYPE(t_sse_memory),     POINTER :: sse__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
+    dsl4jsb_Def_memory(PHENO_)
     ! Declare pointers to variables in memory
     ! A2L_
     dsl4jsb_Real2D_onChunk                :: t_air
@@ -155,10 +157,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: sw_srf_net
     dsl4jsb_Real2D_onChunk                :: net_radiation
     ! VEG_ 2D
-    dsl4jsb_Real2D_onChunk                :: lai 
     dsl4jsb_Real2D_onChunk                :: height
     ! VEG_ 3D
     dsl4jsb_Real3D_onChunk                :: root_fraction_sl
+    ! PHENO_ 2D
+    dsl4jsb_Real2D_onChunk                :: lai 
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -183,6 +186,7 @@ CONTAINS
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(VEG_)
+    dsl4jsb_Get_memory(PHENO_)
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, q_air)                ! in
@@ -245,9 +249,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(RAD_, sw_srf_net)           ! in
     dsl4jsb_Get_var2D_onChunk(RAD_, net_radiation)        ! inout
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(VEG_, lai)                  ! in 
     dsl4jsb_Get_var2D_onChunk(VEG_, height)               ! in 
     dsl4jsb_Get_var3D_onChunk(VEG_, root_fraction_sl)     ! in
+    ! PHENO_ 2D
+    dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                ! in 
 
 
     ! ------------------------------------------------------------------------------------------------------------

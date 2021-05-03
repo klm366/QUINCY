@@ -110,7 +110,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk                :: t_soil_sl
     ! VEG_
     dsl4jsb_Real2D_onChunk                :: height 
-    dsl4jsb_Real2D_onChunk                :: lai 
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics

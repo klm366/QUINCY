@@ -319,8 +319,9 @@ CONTAINS
     ! ASSIMI_
     dsl4jsb_Real2D_onChunk      :: gross_assimilation
     dsl4jsb_Real2D_onChunk      :: net_assimilation_boc
-    ! PHENO_
+    ! PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: growing_season
+    dsl4jsb_Real2D_onChunk      :: lai 
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk      :: n_fixation 
     dsl4jsb_Real2D_onChunk      :: press_srf_daytime
@@ -336,7 +337,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: unit_npp
     dsl4jsb_Real2D_onChunk      :: unit_transpiration
     dsl4jsb_Real2D_onChunk      :: dphi
-    dsl4jsb_Real2D_onChunk      :: lai 
     dsl4jsb_Real2D_onChunk      :: uptake_nh4
     dsl4jsb_Real2D_onChunk      :: uptake_no3
     dsl4jsb_Real2D_onChunk      :: unit_uptake_n_act
@@ -471,8 +471,9 @@ CONTAINS
     ! ASSIMI_
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, net_assimilation_boc)
-    ! PHENO_
+    ! PHENO_ 2D
     dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)               ! in
+    dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                          ! in
     ! VEG_ 2D
     dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation)
     dsl4jsb_Get_var2D_onChunk(VEG_, press_srf_daytime)
@@ -488,7 +489,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_npp)
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_transpiration)
     dsl4jsb_Get_var2D_onChunk(VEG_, dphi)
-    dsl4jsb_Get_var2D_onChunk(VEG_, lai)
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_act)
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_p_act)
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_pot)

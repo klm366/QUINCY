@@ -149,9 +149,13 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: beta_soa_tphen_mavg
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps_tfrac_mavg
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs_tfrac_mavg
-    ! PHENO_
+    ! PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: growing_season 
     dsl4jsb_Real2D_onChunk      :: lai_max
+    dsl4jsb_Real2D_onChunk      :: lai
+    ! PHENO_ 3D
+    dsl4jsb_Real3D_onChunk      :: lai_cl
+    dsl4jsb_Real3D_onChunk      :: cumm_lai_cl
     ! SSE_ 2D
     dsl4jsb_Real2D_onChunk      :: w_soil_root_pot
     ! SSE_ 3D
@@ -163,7 +167,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_tfrac_mavg_cl
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk      :: do_cohort_harvest
-    dsl4jsb_Real2D_onChunk      :: lai
     dsl4jsb_Real2D_onChunk      :: dens_ind
     dsl4jsb_Real2D_onChunk      :: delta_dens_ind
     dsl4jsb_Real2D_onChunk      :: diameter
@@ -208,8 +211,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt_mavg
     ! VEG_ 3D
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tfrac_mavg_cl
-    dsl4jsb_Real3D_onChunk      :: lai_cl
-    dsl4jsb_Real3D_onChunk      :: cumm_lai_cl
     dsl4jsb_Real3D_onChunk      :: leaf_nitrogen_cl
     dsl4jsb_Real3D_onChunk      :: fn_rub_cl
     dsl4jsb_Real3D_onChunk      :: fn_et_cl
@@ -270,9 +271,13 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soa_tphen_mavg)         ! in
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_tfrac_mavg)     ! in
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tfrac_mavg)     ! in
-    ! ---------------------------
+    ! PHENO_ 2D
     dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)               ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_, lai_max)                      ! in
+    dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                          ! out
+    ! PHENO_ 3D
+    dsl4jsb_Get_var3D_onChunk(PHENO_, lai_cl)                       ! out
+    dsl4jsb_Get_var3D_onChunk(PHENO_, cumm_lai_cl)                  ! out
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_pot)                ! in
     dsl4jsb_Get_var3D_onChunk(SSE_, soil_depth_sl)                  ! in
@@ -282,7 +287,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl)      ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(VEG_, do_cohort_harvest)              ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, lai)                            ! CASE "plant" & "land": out / other Cases: in
     dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)                       ! inout
     dsl4jsb_Get_var2D_onChunk(VEG_, delta_dens_ind)                 ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, diameter)                       ! out
@@ -326,8 +330,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_tfrac_mavg)     ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)                ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl)     ! in
-    dsl4jsb_Get_var3D_onChunk(VEG_, lai_cl)                         ! out
-    dsl4jsb_Get_var3D_onChunk(VEG_, cumm_lai_cl)                    ! out
     dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)               ! inout
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_rub_cl)                      ! inout
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_et_cl)                       ! inout

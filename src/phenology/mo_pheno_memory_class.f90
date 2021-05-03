@@ -135,6 +135,9 @@ MODULE mo_pheno_memory_class
                                     nd_dormance         , & !< number of days since last growing season [# days]
                                     lai_max                 !< maximum lai - from site specific lai data [m2 m-2]
 
+    TYPE(t_jsb_var_real3d)          :: &
+                                    cumm_lai_cl             !< cummulative leaf area above the mid-point of the canopy layer [m2 m-2]
+
   CONTAINS
     PROCEDURE :: Init => Init_pheno_memory
   END TYPE t_pheno_memory
@@ -506,6 +509,16 @@ CONTAINS
         CALL mem%Add_var('lai_max', mem%lai_max, &
           & hgrid, surface, &
           & t_cf('lai_max', 'm2 m-2', 'maximum lai (site specific)'), &
+          & t_grib1(table, 255, grib_bits), &
+          & t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix, &
+          & loutput = .TRUE., &
+          & lrestart = .TRUE., &
+          & initval_r = 0.0_wp)
+
+        CALL mem%Add_var('cumm_lai_cl', mem%cumm_lai_cl, &
+          & hgrid, vgrid_canopy, &
+          & t_cf('cumm_lai_cl', 'm2 m-2', 'cummulative leaf area above the mid-point of the canopy layer '), &
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
