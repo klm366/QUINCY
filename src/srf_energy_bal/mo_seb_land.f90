@@ -17,9 +17,10 @@ MODULE mo_seb_land
 #ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp
-  USE mo_exception, ONLY: message
+  USE mo_exception, ONLY: message, message_text, finish
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
+  USE mo_jsb_grid_class,     ONLY: t_jsb_grid
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
@@ -56,7 +57,8 @@ CONTAINS
     USE mo_phy_schemes,            ONLY: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, tpfac2, tpfac3
     USE mo_sse_constants,          ONLY: snow_depth_min
-    USE mo_jsb_time,               ONLY: is_newday, time_steps_per_day ! get_asselin_coef, timeStep_in_days
+    USE mo_jsb_time,               ONLY: is_newday, timesteps_per_day ! get_asselin_coef, timeStep_in_days
+    USE mo_jsb_grid,               ONLY: Get_grid
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -138,11 +140,14 @@ CONTAINS
      & soil_depth_sl_vol_porosity_sl_tmp(size(liquid_max,dim=1))
     REAL(wp) :: w_soil_critical_tmp
 
-    INTEGER :: iblk, ics, ice, nc, i
+    INTEGER  :: iblk, ics, ice, nc, i
     REAL(wp) :: steplen
+    INTEGER  :: tmp_timesteps_per_day
+    LOGICAL  :: l_is_newday
     INTEGER  :: ilct
 
     TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_grid),  POINTER :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_energy_land'
 
@@ -155,6 +160,10 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
+    grid => Get_grid(model%grid_id)
+
+    l_is_newday = is_newday(options%current_datetime, options%dtime)
+    tmp_timesteps_per_day = timesteps_per_day(options%dtime)
 
     !dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_config(SSE_)
@@ -232,6 +241,12 @@ CONTAINS
     !$claw acc update device(is_glacier) ! 
     !$claw acc end data
 
+    IF (is_time_experiment_start(options%current_datetime)) THEN            ! Start of experiment
+      lstart = .TRUE.
+    ELSE
+      lstart = .FALSE.
+    END IF
+
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_0_0 tile_name=tile%name
     soil_depth_sl_vol_porosity_sl_tmp(:) = soil_depth_sl(:,1) * vol_porosity_sl(:,1)
 
@@ -242,10 +257,11 @@ CONTAINS
     
     ! Sum up of the previous day temperatures
     !$claw sca forward update savepoint=ser_jsb_seb_land_calc_previous_day_variables_1 tile_name=tile%name
-    CALL calc_previous_day_variables(is_newday(),               & ! Input
+    CALL calc_previous_day_variables(l_is_newday,               & ! Input
+                                     lstart,                    & ! Input
                                      t_air_in_Celcius(:),       & ! Input
                                      !dtime,                     & ! Input
-                                     time_steps_per_day(),      & ! Input
+                                     tmp_timesteps_per_day,     & ! Input
                                      previous_day_temp_mean(:), & ! InOut (for summer- and evergreen)
                                      day_temp_sum(:),           & ! InOut
                                      previous_day_temp_min(:),  & ! InOut (for crop)
@@ -279,12 +295,6 @@ CONTAINS
     forc_hflx(:) = grnd_hflx(:)
     !$claw end expand
 
-    IF (is_time_experiment_start()) THEN            ! Start of experiment
-      lstart = .TRUE.
-    ELSE
-      lstart = .FALSE.
-    END IF
-
     ! Update surface temperature
     !
     ! 1. Compute sensitivity of surface saturation specific humidity to temperature
@@ -308,14 +318,14 @@ CONTAINS
       s_star(:) = s_old(:)
     ELSE
       !$claw sca forward update savepoint=ser_jsb_seb_land_surface_temp_implicit_1 tile_name=tile%name
-      CALL surface_temp_implicit( nc, steplen, &
-        t2s_conv(:), &
-        t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), &
-        s_old(:), qsat_srf_old(:), dQdT(:), &
-        rad_srf_net(:), forc_hflx(:), heat_tcoef(:), &
-        fact_q_air(:), fact_qsat_srf(:), &
-        fract_snow(:), heat_cap(:), &
-        & s_star(:))
+      CALL surface_temp_implicit( nc, steplen, & ! in
+        t2s_conv(:),                           & ! in
+        t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), &  ! in
+        s_old(:), qsat_srf_old(:), dQdT(:),    & ! in
+        rad_srf_net(:), forc_hflx(:), heat_tcoef(:),    &  ! in
+        fact_q_air(:), fact_qsat_srf(:),       & ! in
+        fract_snow(:), heat_cap(:),            & ! in
+        & s_star(:))                             ! out
     END IF
 
     ! @todo - hack for oceans boxes (land tile is direct child of root tile)
@@ -409,6 +419,14 @@ CONTAINS
     END IF
 
     ! 'Effective temperature' used in radheat of the atmosphere model (see Eq. 6.3 in ECHAM5 manual)
+#ifndef _OPENACC
+    IF (ANY(4._wp * t_star(:) - 3._wp * t_old(:) <= 0._wp)) THEN
+       i = MINLOC(4._wp * t_star(:) - 3._wp * t_old(:), DIM=1)
+       WRITE (message_text,*) 'Instability: Extreme temperature difference from one time step to the next at ',     &
+            & '(', grid%lon(i,iblk), ';', grid%lat(i,iblk), '): t_star: ', t_star(i), 'K,  t_old: ' , t_old(i), 'K'
+       CALL finish(TRIM(routine), message_text)
+    END IF
+#endif
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_10 tile_name=tile%name
     t_eff(:) = (t_old(:)**3 * (4._wp * t_star(:) - 3._wp * t_old(:))) ** 0.25_wp
 
@@ -656,6 +674,7 @@ CONTAINS
   ! (field previous_day_NPP(:,:)
   ELEMENTAL SUBROUTINE calc_previous_day_variables( &
     & is_newday,                                    & ! Input
+    & l_start,                                      & ! Input
     & t_air_in_Celcius,                             & ! Input
     ! & dtime,                                        & ! Input
     & time_steps_per_day,                           & ! Input
@@ -672,6 +691,7 @@ CONTAINS
     !-----------------------------------------------------------------------
     !  ARGUMENTS
     LOGICAL,   intent(in)    :: is_newday
+    LOGICAL,   intent(in)    :: l_start
 
     !$claw model-data
     REAL(wp),  intent(in)    :: t_air_in_Celcius!,  & ! air temperature at current time step in lowest atmospheric layer in Celcius
@@ -704,8 +724,8 @@ CONTAINS
 
     !$claw sca                            
 
-    IF(is_newday) THEN  ! day has changed --> recompute mean, min, max day temperature of previous day
-                        ! and reinitialize day_temp_sum(), day_temp_min(), day_temp_max()
+    IF (.NOT. l_start .AND. is_newday) THEN  ! day has changed --> recompute mean, min, max day temperature of previous day
+                                             ! and reinitialize day_temp_sum(), day_temp_min(), day_temp_max()
        previous_day_temp_mean = day_temp_sum/time_steps_per_day
        day_temp_sum = t_air_in_Celcius
 
@@ -715,7 +735,7 @@ CONTAINS
        previous_day_temp_max = day_temp_max
        day_temp_max = t_air_in_Celcius
 
-    ELSE  ! day has not changed
+    ELSE  ! day has not changed or start of experiment (day_temp_sum is initialized with zero!)
        day_temp_sum = day_temp_sum  + t_air_in_Celcius
 
        IF (day_temp_min > t_air_in_Celcius)   day_temp_min = t_air_in_Celcius

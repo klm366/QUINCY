@@ -32,14 +32,22 @@ CONTAINS
 
     USE mo_jsb_control,         ONLY: jsb_models_nml, get_no_of_models, init_jsb_master_control, &
       &                               jsbach_runs_standalone, jsbach_is_restarted
-    USE mo_jsb_parallel,        ONLY: init_parallel_iface
+    USE mo_jsb_parallel,        ONLY: init_parallel_iface, Get_omp_no_of_threads
     USE mo_jsb_model_class,     ONLY: t_jsb_model, new_model
+    USE mo_jsb_subset,          ONLY: jsbach_subsets
     USE mo_jsb_config_class,    ONLY: new_model_config
     USE mo_jsb_process_factory, ONLY: max_no_of_processes, Create_process
     USE mo_jsb_time,            ONLY: init_time
     USE mo_jsb_grid_class,      ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,            ONLY: Register_vgrid
     USE mo_jsb_io,              ONLY: ZAXIS_SURFACE
+    USE mo_rad_constants,       ONLY: init_rad_constants
+    USE mo_atmland_constants,   ONLY: init_atmland_constants
+    USE mo_assimi_constants,    ONLY: init_assimi_constants
+    USE mo_veg_constants,       ONLY: init_veg_constants
+    ! USE mo_sse_constants,       ONLY: init_sse_constants
+    ! USE mo_sb_constants,        ONLY: init_sb_constants
+    USE mo_pheno_constants,     ONLY: init_pheno_constants
 
     dsl4jsb_Use_processes SSE_, HYDRO_, RAD_, CARBON_, DISTURB_, FUEL_
     dsl4jsb_Use_config(SSE_)
@@ -78,6 +86,8 @@ CONTAINS
     ALLOCATE(jsbach%models(no_of_models))
     jsbach%no_of_models = no_of_models
 
+    ALLOCATE(jsbach_subsets(no_of_models))
+  
     ! Create models according to master namelist
     DO model_idx=1,no_of_models
       NULLIFY(model)
@@ -87,6 +97,7 @@ CONTAINS
         &                  jsb_models_nml(model_idx)%model_description,       &
         &                  jsb_models_nml(model_idx)%model_namelist_filename)
       jsbach%models(jsb_models_nml(model_idx)%model_id)%m => model
+      ALLOCATE(jsbach_subsets(model_idx)%sub(Get_omp_no_of_threads()))
     END DO
 
     ! Configure models according to model namelist(s)
@@ -180,7 +191,21 @@ CONTAINS
 
     END DO
 
-    IF (debug_on()) CALL message(TRIM(routine), 'done basic setup')
+    !> quincy constants init
+    !! assuming the shared/constants/ modules are available here already (impl, math, physical)
+    IF (model%config%use_quincy) THEN
+      CALL message(TRIM(routine), 'Starting init of QUINCY process constants')
+      CALL init_rad_constants      
+      CALL init_atmland_constants  
+      CALL init_assimi_constants   
+      CALL init_veg_constants      
+      ! CALL init_sse_constants
+      ! CALL init_sb_constants
+      CALL init_pheno_constants    
+      IF (debug_on()) CALL message(TRIM(routine), 'initialized quincy constants)')
+    ENDIF
+
+    IF (debug_on()) CALL message(TRIM(routine), 'done basic setup (models, process configs)')
 
   END SUBROUTINE jsbach_setup_models
 
@@ -199,7 +224,7 @@ CONTAINS
 
     model => Get_model(model_id)
 
-    model%lctlib => Read_lctlib('lctlib_nlct21.def')
+    model%lctlib => Read_lctlib('lctlib_nlct21.def', model%config%use_quincy)
     CALL message(TRIM(routine), 'Imported lctlib from '//'lctlib_nlct21.def')
 
     IF (model%config%usecase /= '') THEN

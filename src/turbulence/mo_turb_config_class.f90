@@ -17,6 +17,7 @@ MODULE mo_turb_config_class
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
 
+  USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: message
   USE mo_io_units,          ONLY: filename_max
   USE mo_jsb_control,       ONLY: debug_on
@@ -29,6 +30,16 @@ MODULE mo_turb_config_class
   PUBLIC :: t_turb_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_turb_config
+    REAL(wp) :: &
+      & blending_height,             & !< Blending height [m]
+      & roughness_snow,              & !< Roughness length of snow-covered surfaces [m]
+      & roughness_bare,              & !< Roughness length of bare land surfaces [m]
+      & roughness_water,             & !< Roughness length of lake open water [m]
+      & roughness_lai_saturation,    & !< factor in roughness length dependence on LAI (should be between 0.1 and 1)
+      & roughness_momentum_to_heat     !< factor by which roughness for heat is smaller than roughness for momentum
+    LOGICAL :: &
+      & l_roughness_lai  !< true:  calculation of roughness length depends on LAI
+                         !  false: PFT-specific values from lctlib are used
    CONTAINS
      PROCEDURE :: Init => Init_turb_config
   END type t_turb_config
@@ -49,11 +60,22 @@ CONTAINS
 
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
+    REAL(wp) :: &
+      & blending_height, roughness_snow, roughness_bare, roughness_water, &
+      & roughness_lai_saturation, roughness_momentum_to_heat
+    LOGICAL :: l_roughness_lai
 
-    NAMELIST /jsb_turb_nml/      &
-         active,                 &
-         ic_filename,            &
-         bc_filename
+    NAMELIST /jsb_turb_nml/           &
+      &   active,                     &
+      &   ic_filename,                &
+      &   bc_filename,                &
+      &   blending_height,            &
+      &   roughness_snow,             &
+      &   roughness_bare,             &
+      &   roughness_water,            &
+      &   roughness_lai_saturation,   &
+      &   roughness_momentum_to_heat, &
+      &   l_roughness_lai
 
     INTEGER :: nml_handler, nml_unit, istat
 
@@ -62,9 +84,16 @@ CONTAINS
     IF (debug_on()) CALL message(TRIM(routine), 'Starting turb configuration')
 
     ! Set defaults
-    active              = .TRUE.
-    bc_filename         = 'bc_land_phys.nc'
-    ic_filename         = 'ic_land_phys.nc'
+    active                     = .TRUE.
+    bc_filename                = 'bc_land_phys.nc'
+    ic_filename                = 'ic_land_phys.nc'
+    blending_height            = 100._wp
+    roughness_snow             = 0.001_wp
+    roughness_bare             = 0.005_wp
+    roughness_water            = 0.0002_wp   ! Claussen, 1991: Estimation of areally-averaged surface fluxes
+    roughness_lai_saturation   = 0.4_wp
+    roughness_momentum_to_heat = 3._wp
+    l_roughness_lai            = .TRUE.
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -73,9 +102,16 @@ CONTAINS
 
     CALL close_nml(nml_handler)
 
-    config%active              = active
-    config%ic_filename         = ic_filename
-    config%bc_filename         = bc_filename
+    config%active                     = active
+    config%ic_filename                = ic_filename
+    config%bc_filename                = bc_filename
+    config%blending_height            = blending_height
+    config%roughness_snow             = roughness_snow
+    config%roughness_bare             = roughness_bare
+    config%roughness_water            = roughness_water
+    config%roughness_lai_saturation   = roughness_lai_saturation
+    config%roughness_momentum_to_heat = roughness_momentum_to_heat
+    config%l_roughness_lai            = l_roughness_lai
 
   END SUBROUTINE Init_turb_config
 

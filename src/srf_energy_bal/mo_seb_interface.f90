@@ -46,7 +46,7 @@ MODULE mo_seb_interface
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: Register_seb_tasks !,t_seb_process
+  PUBLIC :: Register_seb_tasks, global_seb_diagnostics
 
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_surface_energy
   CONTAINS
@@ -350,7 +350,7 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_freeze_sl) ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_ice_melt_sl)    ! in
 
-      IF (.NOT. is_time_experiment_start()) THEN
+      IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
         !$claw acc data create(heat_cap)
 
         ! Correction for snowmelt
@@ -578,6 +578,92 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_surface_fluxes
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Calculations of diagnostic global land mean output
+  !!
+  !! The routine is called from jsbach_finish_timestep, after the loop over the nproma blocks.
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE global_seb_diagnostics(tile)
+
+#ifndef __ICON__
+    ! Argument
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
+
+    CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_seb_diagnostics'
+    IF (debug_on()) CALL message(TRIM(routine), 'Global diagnostics only available with ICON')
+#else
+
+    USE mo_sync,                  ONLY: global_sum_array
+    USE mo_jsb_grid,              ONLY: Get_grid
+    USE mo_jsb_grid_class,        ONLY: t_jsb_grid
+
+    ! Argument
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
+
+    ! Local variables
+    !
+    dsl4jsb_Def_memory(SEB_)
+
+    CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_seb_diagnostics'
+
+    ! Pointers to variables in memory
+
+    dsl4jsb_Real2D_onDomain :: t
+
+    REAL(wp), POINTER       :: t_gmean(:)
+
+    TYPE(t_jsb_model), POINTER      :: model
+    TYPE(t_jsb_grid),  POINTER      :: grid
+
+    REAL(wp), POINTER      :: area(:,:)
+    REAL(wp), POINTER      :: notsea(:,:)
+    LOGICAL,  POINTER      :: is_in_domain(:,:) ! T: cell in domain (not halo)
+    REAL(wp), ALLOCATABLE  :: in_domain (:,:)   ! 1: cell in domain, 0: halo cell
+    REAL(wp), ALLOCATABLE  :: scaling (:,:)
+    REAL(wp)               :: global_land_area
+    dsl4jsb_Get_memory(SEB_)
+    dsl4jsb_Get_var2D_onDomain(SEB_,  t)        ! in
+
+    t_gmean        => SEB__mem%t_gmean%ptr(:)   ! out
+
+    model => Get_model(tile%owner_model_id)
+    grid  => Get_grid(model%grid_id)
+    area         => grid%area(:,:)
+    is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
+    notsea       => tile%fract(:,:)   ! fraction of the box tile: notsea
+
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
+
+
+    IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
+
+    IF (SEB__mem%t_gmean%is_in_output) THEN
+
+      ! Domain Mask - to mask all halo cells for global sums (otherwise these
+      ! cells are counted twice)
+      ALLOCATE (in_domain(grid%nproma,grid%nblks))
+      WHERE (is_in_domain(:,:))
+        in_domain = 1._wp
+      ELSEWHERE
+        in_domain = 0._wp
+      END WHERE
+
+      ALLOCATE (scaling(grid%nproma,grid%nblks))
+
+      ! Calculate global land mean seb variables
+      global_land_area = global_sum_array(area(:,:) * notsea(:,:) * in_domain(:,:))
+      scaling(:,:) = notsea(:,:) * area(:,:) * in_domain(:,:)
+      t_gmean      = global_sum_array(t(:,:) * scaling(:,:)) / global_land_area
+
+      DEALLOCATE (scaling, in_domain)
+    END IF
+
+#endif
+  END SUBROUTINE global_seb_diagnostics
+
   !
   ! ================================================================================================================================
   !

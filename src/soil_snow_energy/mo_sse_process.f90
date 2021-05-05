@@ -53,7 +53,7 @@ CONTAINS
     & ) RESULT(vol_heat_cap)
 
     USE mo_sse_constants, ONLY: vol_hcap_water, vol_hcap_ice, vol_hcap_org, vol_hcap_air, vol_hcap_bedrock
-    
+
     REAL(wp), INTENT(in) :: porosity, vol_heat_cap_soil_dry_mineral, fract_organic, fract_water, fract_ice, layer_depth, dz
     REAL(wp)             :: vol_heat_cap
 
@@ -102,7 +102,7 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: dens_soil
     USE mo_sse_constants,          ONLY: hcond_org, hcond_dry_org, hcond_water, hcond_ice, hcond_bedrock
     USE mo_hydro_constants,        ONLY: vol_porosity_org
-   
+
     REAL(wp), INTENT(in) :: heat_cond_soil_mineral, water, ice, porosity, vol_field_cap, fract_organic, layer_depth, dz
     REAL(wp)             :: heat_cond
 
@@ -208,7 +208,7 @@ CONTAINS
 
   REAL(wp) ELEMENTAL FUNCTION relative_humidity_soil(ws, fc)
 
-    USE mo_math_constants, ONLY: pi
+    USE mo_jsb_math_constants, ONLY: pi
 
     REAL(wp), INTENT(in) :: &
       & ws,                 & !< moisture content [m], e.g. of uppermost soil layer
@@ -253,24 +253,24 @@ CONTAINS
   !
   SUBROUTINE init_soil_temperature(cmid, tclim, tsoil, tsurf)
 
-    USE mo_jsb_time,       ONLY: t_datetime, get_time_start, get_year, &
+    USE mo_jsb_time,       ONLY: t_datetime, get_time_start, get_year, deallocateDatetime, &
                                  & get_year_length, get_month_length, get_day_length, get_year_day
-    USE mo_math_constants, ONLY: pi
+    USE mo_jsb_math_constants, ONLY: pi
 
     REAL(wp), INTENT(in)  :: cmid(:)     !< Depths of soil layer mid points
     REAL(wp), INTENT(in)  :: tclim(:,:)  !< Climatological monthly surface temperature
     REAL(wp), INTENT(out) :: tsoil(:,:)  !< Soil temperatures
     REAL(wp), INTENT(out) :: tsurf(:)    !< Surface temperature
 
-    INTEGER               :: nsoil, ndim
-    REAL(wp)              :: zkap, zsqrt
-    REAL(wp), ALLOCATABLE :: zrange(:), zdmax(:)
-    INTEGER,  ALLOCATABLE :: jmax(:)
-    TYPE(t_datetime)      :: inidate
-    INTEGER               :: iniyear
-    INTEGER               :: im, i, jl
-    REAL(wp)              :: year_len, day_in_year
-    REAL(wp)              :: month_len(12), month_mid(12)
+    INTEGER                   :: nsoil, ndim
+    REAL(wp)                  :: zkap, zsqrt
+    REAL(wp), ALLOCATABLE     :: zrange(:), zdmax(:)
+    INTEGER,  ALLOCATABLE     :: jmax(:)
+    TYPE(t_datetime), POINTER :: inidate
+    INTEGER                   :: iniyear
+    INTEGER                   :: im, i, jl
+    REAL(wp)                  :: year_len, day_in_year
+    REAL(wp)                  :: month_len(12), month_mid(12)
 
     REAL(wp), PARAMETER :: cmid_offset = 0.07_wp
 
@@ -283,11 +283,12 @@ CONTAINS
 
     zkap = 7.5e-7_wp
 
-    inidate = get_time_start()
+    inidate => get_time_start()
     iniyear = get_year(inidate)
 
     year_len    = REAL(get_year_length(iniyear), wp)
     day_in_year = INT(get_year_day(inidate))
+    CALL deallocateDatetime(inidate)
 
     DO im=1,12
       month_len(im) = REAL(get_month_length(iniyear, im), wp)
@@ -529,15 +530,15 @@ CONTAINS
 
         IF (l_supercool) THEN
           !$claw expand parallel update savepoint=ser_jsb_sse_calc_soil_temperature_expand_0 counter=ser_counter
-          liquid_max(:,:) = Get_liquid_max( &
-            & t_soil(:,:)    , &
-            & ws_max(:,:)    , &
-            & matrix_pot(:,:), &
-            & bclapp(:,:)      &
+          liquid_max(1:nidx,1:nsoil) = Get_liquid_max( &
+            & t_soil    (1:nidx,1:nsoil), &
+            & ws_max    (1:nidx,1:nsoil), &
+            & matrix_pot(1:nidx,1:nsoil), &
+            & bclapp    (1:nidx,1:nsoil)  &
             & )
         ELSE
           !$claw expand parallel update
-          liquid_max(:,:) = 0._wp
+          liquid_max(1:nidx,1:nsoil) = 0._wp
         END IF
 
         !$claw acc data present(frozen,melt,ws,ice,t_soil,heat_cap,liquid_max)

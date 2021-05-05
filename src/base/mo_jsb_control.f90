@@ -15,30 +15,35 @@
 MODULE mo_jsb_control
 #ifndef __NO_JSBACH__
 
+  USE mo_kind,      ONLY: wp
   USE mo_io_units,  ONLY: filename_max
   USE mo_exception, ONLY: finish
   USE mo_util,      ONLY: int2string
   USE mo_timer,     ONLY: new_timer
 
   USE mo_jsb_time_iface, ONLY: l_timer_host !< timers on in host model?
+  USE mo_jsb_io_iface,   ONLY: ldebugio
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: init_jsb_master_control
-  PUBLIC :: jsbach_runs_standalone, jsbach_is_restarted
-  PUBLIC :: debug_on, timer_on, l_timer_host
+  PUBLIC :: jsbach_runs_standalone, jsbach_is_restarted, force_from_observations
+  PUBLIC :: debug_on, timer_on, l_timer_host, get_debug_memory_level
   PUBLIC :: model_base_dir
   ! t_jsb_model_nml needs to be public for the NEC compiler
   PUBLIC :: t_jsb_model_nml, jsb_models_nml, get_no_of_models
-  PUBLIC :: timer_jsbach, timer_aggregate, timer_integrate, timer_process_task, timer_process_msg
+  PUBLIC :: timer_jsbach, timer_aggregate, timer_integrate, timer_process_task, timer_process_msg, timer_forcing
   PUBLIC :: max_no_of_models
 
-  LOGICAL :: is_standalone
-  LOGICAL :: restart_jsbach
-  CHARACTER(len=99) :: model_base_dir
-  INTEGER :: debug_level
-  INTEGER :: timer_level
+  LOGICAL,           SAVE :: is_standalone
+  LOGICAL,           SAVE :: restart_jsbach
+  CHARACTER(len=99), SAVE :: model_base_dir
+  INTEGER,           SAVE :: debug_level
+  INTEGER,           SAVE :: debug_io
+  INTEGER,           SAVE :: debug_memory_level
+  INTEGER,           SAVE :: timer_level
+  LOGICAL,           SAVE :: l_force_from_obs
 
   TYPE t_jsb_model_nml
     INTEGER            :: model_id = 0
@@ -50,9 +55,10 @@ MODULE mo_jsb_control
 
   INTEGER, PARAMETER    :: max_no_of_models = 10
   INTEGER :: no_of_models = 0
-  TYPE(t_jsb_model_nml) :: jsb_models_nml(max_no_of_models)
+  TYPE(t_jsb_model_nml), SAVE :: jsb_models_nml(max_no_of_models)
 
-  INTEGER, DIMENSION(max_no_of_models) :: timer_jsbach, timer_aggregate, timer_integrate, timer_process_task, timer_process_msg
+  INTEGER, SAVE, DIMENSION(max_no_of_models) :: &
+    & timer_jsbach, timer_aggregate, timer_integrate, timer_process_task, timer_process_msg, timer_forcing
 
   CHARACTER(len=filename_max) :: master_namelist_filename = 'jsbach_master.namelist'
 
@@ -62,7 +68,7 @@ CONTAINS
 
   SUBROUTINE init_jsb_master_control(namelist_filename)
 
-    USE mo_jsb_io,      ONLY: init_io
+    USE mo_jsb_io,      ONLY: init_jsb_io
     USE mo_jsb_version, ONLY: jsbach_init_version
 
     CHARACTER(len=*), OPTIONAL, INTENT(in) :: namelist_filename
@@ -77,16 +83,17 @@ CONTAINS
 
     CALL jsbach_init_version(jsbach_runs_standalone())
 
-    CALL init_io(TRIM(master_namelist_filename))
+    CALL init_jsb_io(TRIM(master_namelist_filename))
 
-    IF (jsbach_runs_standalone()) l_timer_host = .FALSE. !< Would be uninitialized otherwise
     IF (timer_on() .OR. l_timer_host) THEN
       IF (no_of_models > 1) THEN
         DO i=1,no_of_models
-          timer_jsbach(i) = new_timer('jsbach_'//int2string(i))
+          timer_jsbach(i)  = new_timer('jsbach_'//int2string(i))
+          timer_forcing(i) = new_timer('jsb:forcing_'//int2string(i))
         END DO
       ELSE
-        timer_jsbach(1) = new_timer('jsbach')
+        timer_jsbach(1)  = new_timer('jsbach')
+        timer_forcing(1) = new_timer('jsb:forcing')
       END IF
     END IF
     IF (timer_on()) THEN
@@ -101,7 +108,7 @@ CONTAINS
         timer_aggregate(1)    = new_timer('jsb:aggregate')
         timer_integrate(1)    = new_timer('jsb:integrate')
         timer_process_task(1) = new_timer('jsb:process_task')
-        timer_process_msg(1) = new_timer('jsb:process_msg')
+        timer_process_msg(1)  = new_timer('jsb:process_msg')
       END IF
     END IF
 
@@ -137,7 +144,10 @@ CONTAINS
       restart_jsbach,          &
       model_base_dir,          &
       timer_level,             &
-      debug_level
+      debug_level,             &
+      debug_io,                &
+      debug_memory_level,      &
+      l_force_from_obs
 
     NAMELIST /jsb_model_nml/   &
       model_id,                &
@@ -147,11 +157,14 @@ CONTAINS
       model_namelist_filename
 
     ! Namelist defaults
-    is_standalone  = .TRUE.
-    restart_jsbach = .FALSE.
-    model_base_dir = '.'
-    timer_level    = 0
-    debug_level    = 0
+    is_standalone      = .TRUE.
+    restart_jsbach     = .FALSE.
+    model_base_dir     = '.'
+    timer_level        = 0
+    debug_level        = 0
+    debug_io           = 0
+    debug_memory_level = 0
+    l_force_from_obs   = .TRUE.
 
     nml_handler = open_nml(TRIM(namelist_filename))
 
@@ -172,6 +185,8 @@ CONTAINS
     IF (no_of_models > max_no_of_models) THEN
       CALL finish(routine, 'no_of_models > max_no_of_models')
     ENDIF
+
+    ldebugio = debug_io > 0
 
     ! Now read namelists again and set parameters
     ! Note: no_of_models needs to be known here (therfore extra loop above) in order to test for a valid model_id below
@@ -216,6 +231,12 @@ CONTAINS
 
   END FUNCTION jsbach_runs_standalone
 
+  LOGICAL FUNCTION force_from_observations()
+
+    force_from_observations = l_force_from_obs
+
+  END FUNCTION force_from_observations
+
   LOGICAL FUNCTION jsbach_is_restarted()
 
     ! TBD: get this from parent model if not standalone
@@ -251,6 +272,12 @@ CONTAINS
     END IF
 
   END FUNCTION debug_on
+
+  INTEGER FUNCTION get_debug_memory_level()
+
+    get_debug_memory_level = debug_memory_level
+
+  END FUNCTION get_debug_memory_level
 
   LOGICAL FUNCTION timer_on(level)
 

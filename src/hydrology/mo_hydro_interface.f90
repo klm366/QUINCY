@@ -33,7 +33,7 @@ MODULE mo_hydro_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes SEB_, SSE_, TURB_, PHENO_, A2L_, HYDRO_
+  dsl4jsb_Use_processes SEB_, SSE_, TURB_, PHENO_, A2L_, HYDRO_, ASSIMI_
 
   ! Use of process configurations
   dsl4jsb_Use_config(SEB_)
@@ -47,13 +47,14 @@ MODULE mo_hydro_interface
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(TURB_)
   dsl4jsb_Use_memory(PHENO_)
+  dsl4jsb_Use_memory(ASSIMI_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: Register_hydro_tasks !,t_hydro_process
+  PUBLIC :: Register_hydro_tasks, global_hydrology_diagnostics
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_hydro_interface'
 
@@ -495,7 +496,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,   rain)           ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,   snow)           ! in
 
-    dsl4jsb_Get_var2D_onChunk(SSE_,   hcap_grnd)      ! out
+    dsl4jsb_Get_var2D_onChunk(SSE_,   hcap_grnd)      ! in
 
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow)         ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow_soil)    ! out
@@ -509,7 +510,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, runoff)         ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)       ! out
 
-    dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)       ! inout
+    dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)       ! in
 
     IF (tile%is_glacier) THEN
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_glac)        ! inout
@@ -530,7 +531,7 @@ CONTAINS
       END IF
     END IF
 
-    IF (is_time_experiment_start()) THEN          ! Start of experiment
+    IF (is_time_experiment_start(options%current_datetime)) THEN          ! Start of experiment
       lstart = .TRUE.
       w_snow(:) = 0._wp
     ELSE
@@ -779,13 +780,13 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, vol_field_cap)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, vol_p_wilt)
     IF (dsl4jsb_Config(HYDRO_)%l_organic) dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, hyd_cond_sat_sl)
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl)
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, bclapp_sl)
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, matrix_pot_sl)
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, pore_size_index_sl)
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_field_cap_sl)
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_p_wilt_sl)
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, hyd_cond_sat_sl)    ! out
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl)    ! out
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, bclapp_sl)          ! out
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, matrix_pot_sl)      ! out
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, pore_size_index_sl) ! out
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_field_cap_sl)   ! out
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_p_wilt_sl)      ! out
 
     DO i=1,nsoil
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_soil_properties_expand_0 tile_name=tile%name soil=i
@@ -1167,8 +1168,9 @@ CONTAINS
     ! Variables
 
     ! Used variables
-    USE mo_hydro_process, ONLY: get_water_stress_factor
-    USE mo_hydro_util,    ONLY: get_water_in_root_zone
+    USE mo_jsb_math_constants, ONLY: eps8
+    USE mo_hydro_process,      ONLY: get_water_stress_factor
+    USE mo_hydro_util,         ONLY: get_water_in_root_zone
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -1178,7 +1180,9 @@ CONTAINS
     dsl4jsb_Def_config(HYDRO_)
 
     dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(ASSIMI_)
 
+    ! HYDRO_
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: root_depth_sl
     dsl4jsb_Real2D_onChunk :: w_soil_column       !< Water content in soil column
@@ -1190,6 +1194,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: w_soil_root_pwp     !< Water content in root zone at permanent wilting point
     dsl4jsb_Real2D_onChunk :: max_moist
     dsl4jsb_Real2D_onChunk :: water_stress
+    ! ASSIMI_
+    dsl4jsb_Real2D_onChunk :: beta_soil_gs
+    dsl4jsb_Real2D_onChunk :: beta_soil_ps
 
     INTEGER :: iblk, ics, ice
     REAL(wp) :: config_w_soil_crit_fract, config_w_soil_wilt_fract
@@ -1203,12 +1210,19 @@ CONTAINS
     IF (.NOT. tile%Is_process_active(HYDRO_) .OR. .NOT. tile%is_vegetation) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
     model => Get_model(tile%owner_model_id)
+
     dsl4jsb_Get_config(HYDRO_)
 
     ! Get reference to variables for current block
     !
     dsl4jsb_Get_memory(HYDRO_)
+
+    IF (model%config%use_quincy) THEN
+      dsl4jsb_Get_memory(ASSIMI_)
+    END IF
+    !
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    soil_depth_sl)       ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_sl)           ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_fc_sl)        ! in
@@ -1220,7 +1234,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root_fc)      ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root_pwp)     ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_stress)        ! out
-
+    ! 
+    IF (model%config%use_quincy) THEN
+      dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs)        ! out   ! quincy
+      dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps)        ! out   ! quincy
+    END IF
+    
     ! Get water stress
 
     ! Calculate water content and field capacity in the root zone
@@ -1241,6 +1260,27 @@ CONTAINS
           &                     config_w_soil_crit_fract, config_w_soil_wilt_fract)
     !$claw end expand
 
+
+    !! quincy calculation of beta_soil_*  (soil moisture constraints scaling factor)
+    !!
+    !! the below calc are somewhat preliminary, the original quincy code is kept below, but outcommented
+    IF (model%config%use_quincy) THEN
+      WHERE ((w_soil_root(:) - w_soil_root_pwp(:)) > eps8)
+        beta_soil_gs(:) = MIN( MAX( 0.0_wp, 2.0_wp * (w_soil_root(:) - w_soil_root_pwp(:)) / &
+                                            (w_soil_root_fc(:) - w_soil_root_pwp(:))), 1.0_wp) 
+      ELSEWHERE
+        beta_soil_gs(:) = 0.0_wp
+      END WHERE
+      beta_soil_ps(:) = beta_soil_gs(:)
+          !! original way of calc beta_soil_* in quincy
+          !beta_soil_gs(:) = calc_soil_moisture_stress(w_soil_root_pot(:), lctlib%phi_leaf_min)
+          !beta_soil_ps(:) = calc_soil_moisture_stress(w_soil_root_pot(:), lctlib%phi_leaf_min)
+      ! catch beta_soil_ps getting zero
+      ! this is very neccessary, because with "beta_soil_ps=0" calc_photosynthesis() does get a runtime error, because n1 & n2 
+      !   become zero, and then msat & nco become zero, resulting in an error with the log() operation "nlim = -log(nco/..."
+      WHERE(beta_soil_ps(:) < eps8) beta_soil_ps(:) = eps8
+    END IF
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_water_stress
@@ -1258,7 +1298,9 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(ASSIMI_)
 
+    TYPE(t_jsb_model),       POINTER :: model
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_water_stress'
@@ -1271,14 +1313,25 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
+    model => Get_model(tile%owner_model_id)
+
     dsl4jsb_Get_memory(HYDRO_)
+    IF (model%config%use_quincy) THEN
+      dsl4jsb_Get_memory(ASSIMI_)
+    END IF
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    ! HYDRO_
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_fc,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_pwp,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, water_stress,        weighted_by_fract)
+    ! ASSIMI_
+    IF (model%config%use_quincy) THEN
+      dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_gs      , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_ps      , weighted_by_fract)
+    END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -2030,7 +2083,7 @@ CONTAINS
       water_content_new(:) = 0._wp
     END IF
 
-    IF (.NOT. is_time_experiment_start()) THEN
+    IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_3 tile_name=tile%name
       water_budget(:) = water_content(:) + water_flux(:) * dtime - water_content_new(:)
     END IF
@@ -2076,6 +2129,130 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_water_balance
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Global land mean hydrology output
+  !!
+  !! The routine is called from jsbach_finish_timestep, after the loop over the nproma blocks.
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE global_hydrology_diagnostics(tile)
+#ifndef __ICON__
+    ! Argument
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
+
+    CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_hydrology_diagnostics'
+    IF (debug_on()) CALL message(TRIM(routine), 'Global diagnostics only available with ICON')
+#else
+
+    USE mo_sync,                  ONLY: global_sum_array
+    USE mo_jsb_grid,              ONLY: Get_grid
+    USE mo_jsb_grid_class,        ONLY: t_jsb_grid
+
+    ! Argument
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
+
+    ! Local variables
+    !
+    dsl4jsb_Def_memory(HYDRO_)
+
+    CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_hydrology_diagnostics'
+
+    ! Pointers to variables in memory
+
+    dsl4jsb_Real2D_onDomain :: trans
+    dsl4jsb_Real2D_onDomain :: evapotrans
+    dsl4jsb_Real2D_onDomain :: water_content
+    dsl4jsb_Real2D_onDomain :: discharge_ocean
+    dsl4jsb_Real2D_onDomain :: w_soil_rel
+    dsl4jsb_Real2D_onDomain :: fract_snow
+    dsl4jsb_Real2D_onDomain :: w_snow
+
+    REAL(wp), POINTER       :: trans_gmean(:)
+    REAL(wp), POINTER       :: evapotrans_gmean(:)
+    REAL(wp), POINTER       :: water_content_gsum(:)
+    REAL(wp), POINTER       :: discharge_ocean_gsum(:)
+    REAL(wp), POINTER       :: w_soil_rel_gmean(:)
+    REAL(wp), POINTER       :: fract_snow_gsum(:)
+    REAL(wp), POINTER       :: w_snow_gsum(:)
+
+    TYPE(t_jsb_model), POINTER      :: model
+    TYPE(t_jsb_grid),  POINTER      :: grid
+
+    REAL(wp), POINTER      :: area(:,:)
+    REAL(wp), POINTER      :: notsea(:,:)
+    LOGICAL,  POINTER      :: is_in_domain(:,:) ! T: cell in domain (not halo)
+    REAL(wp), ALLOCATABLE  :: in_domain (:,:)   ! 1: cell in domain, 0: halo cell
+    REAL(wp), ALLOCATABLE  :: scaling (:,:)
+    REAL(wp)               :: global_land_area
+
+
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,  trans)                      ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,  evapotrans)                 ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,  water_content)              ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,  discharge_ocean)            ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,  w_soil_rel)                 ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,  fract_snow)                 ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,  w_snow)                     ! in
+
+
+    trans_gmean          => HYDRO__mem%trans_gmean%ptr(:)           ! out
+    evapotrans_gmean     => HYDRO__mem%evapotrans_gmean%ptr(:)      ! out
+    water_content_gsum   => HYDRO__mem%water_content_gsum%ptr(:)    ! out
+    discharge_ocean_gsum => HYDRO__mem%discharge_ocean_gsum%ptr(:)  ! out
+    w_soil_rel_gmean     => HYDRO__mem%w_soil_rel_gmean%ptr(:)      ! out
+    fract_snow_gsum      => HYDRO__mem%fract_snow_gsum%ptr(:)       ! out
+    w_snow_gsum          => HYDRO__mem%w_snow_gsum%ptr(:)           ! out
+
+
+    model => Get_model(tile%owner_model_id)
+    grid  => Get_grid(model%grid_id)
+    area         => grid%area(:,:)
+    is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
+    notsea       => tile%fract(:,:)   ! fraction of the box tile: notsea
+
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
+
+
+    IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
+
+    ! Domain Mask - to mask all halo cells for global sums (otherwise these
+    ! cells are counted twice)
+    ALLOCATE (in_domain(grid%nproma,grid%nblks))
+    WHERE (is_in_domain(:,:))
+      in_domain = 1._wp
+    ELSEWHERE
+      in_domain = 0._wp
+    END WHERE
+
+    ALLOCATE (scaling(grid%nproma,grid%nblks))
+
+    ! Calculate 1d global land variables, if requested for output
+    global_land_area = global_sum_array(area(:,:) * notsea(:,:) * in_domain(:,:))
+    scaling(:,:) = notsea(:,:) * area(:,:) * in_domain(:,:)
+    IF (HYDRO__mem%trans_gmean%is_in_output)           &
+      &  trans_gmean          = global_sum_array(trans(:,:)           * scaling(:,:)) / global_land_area
+    IF (HYDRO__mem%evapotrans_gmean%is_in_output)      &
+      &  evapotrans_gmean     = global_sum_array(evapotrans(:,:)      * scaling(:,:)) / global_land_area
+    ! Unit transformation from [m3] to [km3]: 1.e-9
+    IF (HYDRO__mem%water_content_gsum%is_in_output)    &
+      &  water_content_gsum   = global_sum_array(water_content(:,:)   * notsea(:,:) * in_domain(:,:)) * 1.e-9_wp
+    IF (HYDRO__mem%discharge_ocean_gsum%is_in_output)  &
+      &  discharge_ocean_gsum = global_sum_array(discharge_ocean(:,:) * area(:,:) * in_domain(:,:))
+    IF (HYDRO__mem%w_soil_rel_gmean%is_in_output)      &
+      &  w_soil_rel_gmean     = global_sum_array(w_soil_rel(:,:)      * scaling(:,:)) / global_land_area
+    ! Unit transformation from [m2] to [Mio km2]: 1.e-12
+    IF (HYDRO__mem%fract_snow_gsum%is_in_output)       &
+      &  fract_snow_gsum      = global_sum_array(fract_snow(:,:)      * scaling(:,:)) * 1.e-12_wp
+    ! Unit transformation from [m water equivalent](= [t]) to [Gt]: 1.e-9
+    IF (HYDRO__mem%w_snow_gsum%is_in_output)           &
+      &  w_snow_gsum          = global_sum_array(w_snow(:,:)          * scaling(:,:)) * 1.e-9_wp
+
+    DEALLOCATE (scaling, in_domain)
+#endif
+  END SUBROUTINE global_hydrology_diagnostics
 
 #endif
 END MODULE mo_hydro_interface

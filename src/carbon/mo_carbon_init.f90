@@ -62,11 +62,10 @@ CONTAINS
     dsl4jsb_Get_memory(CARBON_)
     !dsl4jsb_Get_config(CARBON_)
 
-    dtime = get_time_dt()
+    dtime = get_time_dt(tile%owner_model_id)
 
     !CALL carbon_init_ic(tile)
     !CALL carbon_init_bc(tile)
-
 
     ! R: This should stand here because these variables are more technical constants (only depending on dtime)
     !    than a part of the carbon process parametrization. Furthermore they should be calculated only once when a simulation

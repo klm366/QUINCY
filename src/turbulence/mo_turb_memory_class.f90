@@ -27,7 +27,7 @@ MODULE mo_turb_memory_class
 
   PUBLIC :: t_turb_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 5
+  INTEGER, PARAMETER :: max_no_of_vars = 10
 
   TYPE, EXTENDS(t_jsb_memory) :: t_turb_memory
     !
@@ -35,6 +35,14 @@ MODULE mo_turb_memory_class
     TYPE(t_jsb_var_real2d) :: &
       & rough_m,              & !< Surface roughness length for momentum
       & rough_h,              & !< Surface roughness length for heat
+      ! The following two variables are transformations of the corresponding roughness length variables
+      ! and are used in the aggregation of roughness length:
+      !   z0_star = 1 / (ln(blending_height/z0))^2
+      ! For the average over surface types, we have:
+      !   z0_star_avg = sum(f_i * z0_star_i)
+      ! where _i indicates the different surface types
+      & rough_m_star,         &
+      & rough_h_star,         &
       ! For everything but lakes
       & fact_q_air,           & !< Factor for lowest atm. level in formulation of surface fluxes
                                 !! of specific humidity and dry static energy to account for
@@ -52,7 +60,7 @@ CONTAINS
 
   SUBROUTINE Init_turb_memory(mem, prefix, suffix, lct_ids, model_id)
 
-    USE mo_jsb_varlist,       ONLY: jsb_add_var, BASIC !, MEDIUM, FULL
+    USE mo_jsb_varlist,       ONLY: BASIC !, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
@@ -76,7 +84,7 @@ CONTAINS
 
     !! !$acc enter data pcreate(mem)
 
-    CALL jsb_add_var( mem, 'rough_m', mem%rough_m,                                       &
+    CALL mem%Add_var( 'rough_m', mem%rough_m,                                            &
       & hgrid, surface,                                                                  &
       & t_cf('roughness_length_momentum', 'm', 'surface roughness length for momentum'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
@@ -85,13 +93,31 @@ CONTAINS
       & output_level=BASIC,                                                              &
       & initval_r=1.0_wp )
 
-    CALL jsb_add_var( mem, 'rough_h', mem%rough_h,                               &
+    CALL mem%Add_var( 'rough_h', mem%rough_h,                                    &
       & hgrid, surface,                                                          &
       & t_cf('roughness_length_heat', 'm', 'surface roughness length for heat'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
       & prefix, suffix,                                                          &
       & lrestart=.TRUE.,                                                         &
       & output_level=BASIC,                                                      &
+      & initval_r=1.0_wp )
+
+    CALL mem%Add_var( 'rough_m_star', mem%rough_m_star,                          &
+      & hgrid, surface,                                                          &
+      & t_cf('rough_m_star', '', 'rough_m_star'),                                &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
+      & prefix, suffix,                                                          &
+      & lrestart=.FALSE.,                                                        &
+      & loutput=.FALSE.,                                                         &
+      & initval_r=1.0_wp )
+
+    CALL mem%Add_var( 'rough_h_star', mem%rough_h_star,                          &
+      & hgrid, surface,                                                          &
+      & t_cf('rough_h_star', '', 'rough_h_star'),                                &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
+      & prefix, suffix,                                                          &
+      & lrestart=.FALSE.,                                                        &
+      & loutput=.FALSE.,                                                         &
       & initval_r=1.0_wp )
 
     ! Additional variables for all lcts except lakes
@@ -101,7 +127,7 @@ CONTAINS
       &   .OR. One_of(GLACIER_TYPE, lct_ids(:)) > 0 &
       &  ) ) THEN
 
-      CALL jsb_add_var( mem, 'fact_q_air', mem%fact_q_air,                   &
+      CALL mem%Add_var( 'fact_q_air', mem%fact_q_air,                        &
         & hgrid, surface,                                                    &
         & t_cf('fact_q_air', '', ''),                                        &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
@@ -109,7 +135,7 @@ CONTAINS
         & output_level=BASIC,                                                &
         & initval_r=0.5_wp )
 
-      CALL jsb_add_var( mem, 'fact_qsat_srf', mem%fact_qsat_srf,             &
+      CALL mem%Add_var( 'fact_qsat_srf', mem%fact_qsat_srf,                  &
         & hgrid, surface,                                                    &
         & t_cf('fact_qsat_srf', '', ''),                                     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
@@ -117,7 +143,7 @@ CONTAINS
         & output_level=BASIC,                                                &
         & initval_r=0.5_wp )
 
-      CALL jsb_add_var( mem, 'fact_qsat_trans_srf', mem%fact_qsat_trans_srf, &
+      CALL mem%Add_var( 'fact_qsat_trans_srf', mem%fact_qsat_trans_srf,      &
         & hgrid, surface,                                                    &
         & t_cf('fact_qsat_trans_srf', '', ''),                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
