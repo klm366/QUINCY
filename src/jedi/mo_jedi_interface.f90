@@ -177,9 +177,8 @@ CONTAINS
     USE mo_util,                   ONLY: soil_depth_to_layers_2d
     USE mo_jedi_process,           ONLY: calc_Ctradeoff,jedi_water_stress_factor,jedi_soil_depth_to_layers_1d!,drop_expensive_tissue
     USE mo_jsb_physical_constants, ONLY: tmelt  
-    USE mo_jsb_control,            ONLY: jsbach_is_restarted
     USE mo_jsb_time,               ONLY: t_datetime,is_newday, is_newyear, timesteps_per_day, &
-      &  is_time_experiment_start, get_year_at_model_start,     &
+      &  is_time_experiment_start, is_time_restart, get_year_at_model_start,     &
       &  get_time_experiment_start, get_year, deallocateDatetime
     USE mo_jedi_constants,         ONLY: max_pipe_transpir
     USE mo_jsb_grid_class,         ONLY:  t_jsb_vgrid !PHS: root_depth
@@ -191,7 +190,6 @@ CONTAINS
     ! Declare local variables
     TYPE(t_jsb_model), POINTER   :: model
     TYPE(t_jsb_vgrid), POINTER   :: soil_w
-    LOGICAL                      :: lstart
     INTEGER                      :: iblk, ics, ice, nc, i
     REAL(wp)                     :: dtime
 
@@ -202,7 +200,6 @@ CONTAINS
     ! 
     TYPE(t_datetime), POINTER    :: inidate
     INTEGER                      :: iniyear
-    LOGICAL                      :: lrestart
     LOGICAL                      :: lspinup_jedi
   
     !REAL(wp), parameter  :: rootshoot_opt     = 3.58462104_wp ! median value of root-shoot ratio 50th percentile
@@ -407,13 +404,10 @@ CONTAINS
                                                            'update_tradeoff: First time step of new day')
     IF (debug_on() .AND. iblk==1 .AND. is_newyear(options%current_datetime, dtime) ) CALL message(TRIM(routine), &
                                                            'update_tradeoff: First time step of new year')
-
-    lstart = is_time_experiment_start(options%current_datetime)
     
     inidate => get_time_experiment_start()
     iniyear = get_year(inidate)
     CALL deallocateDatetime(inidate)
-    lrestart= jsbach_is_restarted()      
     lspinup_jedi = dsl4jsb_Config(JEDI_)%l_spinup_jedi
     
     IF (get_year(options%current_datetime) .LE. iniyear + 2 ) THEN    !  PHS: initial carbon
@@ -463,51 +457,49 @@ CONTAINS
     CALL recalc_per_tile_vars(tile, options,                                      &
       & NPP_act_yDayMean = NPP_act_yDayMean(:), GPP_yDayMean = GPP_yDayMean(:))
 
-    IF( .NOT. is_newday(options%current_datetime,dtime) .OR. lstart) THEN ! perform daily sums if WE ARE NOT STARTING A NEW DAY
-                                            ! or if we JUST STARTED AN TOTALLY NEW EXPERIMENT
+    ! Perform daily sums if we ...
+    IF ( (            is_time_experiment_start(options%current_datetime) & ! ... just started a totally new experiment
+      &   .AND. .NOT. is_time_restart(options%current_datetime) )        & ! ... that is not a restart
+      & .OR. .NOT. is_newday(options%current_datetime, dtime)            & ! ... or not starting a new day
+      & ) THEN
 
-      GPP_sum          = GPP_sum          + gross_assimilation_ca
-      !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!     
-      ! PHS: Compute Maintenance respration for JeDi. This is computed outside clac_tradeoff to account for 
-      !   the average of previous-day value.
-      !   MaintRes_sum     = MaintRes_sum + MaintRes
-      IF (TRIM(model%config%usecase) == 'jsbach_jedi' ) temp_sum = temp_sum + t_air
-      !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!     
+      GPP_sum  = GPP_sum  + gross_assimilation_ca
+      temp_sum = temp_sum + t_air
 
     ELSE                                    ! A NEW DAY BEGINS and we DID NOT START AN
                                             ! TOTALLY NEW EXPERIMENT ==> perform carbon balance
 
       ! First save as "previous previous days" and "previous days" means
 
-      GPP_yDayMean         = GPP_sum/timesteps_per_day(dtime)
+      GPP_yDayMean = GPP_sum / timesteps_per_day(dtime)
 
       ! Then restart summing of this days values
-      GPP_sum             = gross_assimilation_ca
+      GPP_sum      = gross_assimilation_ca
 
       !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!     
       ! PHS: Compute Maintenance respration for JeDi. 
       ! PHS try to compute maintenance respiration only once per day
 
-       temp_yDayMean  = temp_sum / timesteps_per_day(dtime)
+      temp_yDayMean  = temp_sum / timesteps_per_day(dtime)
        
-       MaintRes = 0._wp
-       MaintRes = c_sapwood * c_CN_woody * ( c_stem + c_csroot ) + &
-         &        dsl4jsb_Lctlib_param(NitroStatus) * dsl4jsb_Lctlib_param(JeDiSLA) * &
-         &             ( c_leaves + c_fnroot )  !NNN
-       MaintRes = MaintRes  * c_Res_N    * ( 1.6_wp ** ( ( temp_yDayMean - tmelt - 20._wp ) / 10._wp) ) ! JeDi-DGM uses 1.6 for Q10 value
+      MaintRes = 0._wp
+      MaintRes = c_sapwood * c_CN_woody * ( c_stem + c_csroot ) + &
+        &        dsl4jsb_Lctlib_param(NitroStatus) * dsl4jsb_Lctlib_param(JeDiSLA) * &
+        &             ( c_leaves + c_fnroot )  !NNN
+      MaintRes = MaintRes  * c_Res_N    * ( 1.6_wp ** ( ( temp_yDayMean - tmelt - 20._wp ) / 10._wp) ) ! JeDi-DGM uses 1.6 for Q10 value
     
-       MaintRes = MaintRes / sec_per_day ! The maintanence respiration is daily computed in JeDi.
-       MaintRes_yDayMean   = MaintRes
+      MaintRes = MaintRes / sec_per_day ! The maintanence respiration is daily computed in JeDi.
+      MaintRes_yDayMean   = MaintRes
        
-       temp_sum = t_air
+      temp_sum = t_air
        
-       !PHS 05.08.2019 Tend
-       !PHS  I think I made mistake for calculating ff_dTdt 
-       !ff_dTdt            = ( ff_T_30d - ff_T_30d_yDayMean ) / ( 1._wp /  ( 1._wp - EXP(- dtime / (30._wp* 86400._wp ))  )) + &
-       !  &                  EXP(- dtime / (30._wp* 86400._wp ))  * ff_dTdt  
-       ff_dTdt            = ( ff_T_30d - ff_T_30d_yDayMean ) / ( 1._wp /  ( 1._wp - EXP(- 86400._wp / (30._wp* 86400._wp ))  )) + &
-         &                  EXP(- 86400._wp / (30._wp* 86400._wp ))  * ff_dTdt   
-       ff_T_30d_yDayMean = ff_T_30d
+      !PHS 05.08.2019 Tend
+      !PHS  I think I made mistake for calculating ff_dTdt 
+      !ff_dTdt            = ( ff_T_30d - ff_T_30d_yDayMean ) / ( 1._wp /  ( 1._wp - EXP(- dtime / (30._wp* 86400._wp ))  )) + &
+      !  &                  EXP(- dtime / (30._wp* 86400._wp ))  * ff_dTdt  
+      ff_dTdt            = ( ff_T_30d - ff_T_30d_yDayMean ) / ( 1._wp /  ( 1._wp - EXP(- 86400._wp / (30._wp* 86400._wp ))  )) + &
+        &                  EXP(- 86400._wp / (30._wp* 86400._wp ))  * ff_dTdt   
+      ff_T_30d_yDayMean = ff_T_30d
 
       IF (get_year(options%current_datetime) .GT. iniyear + 2 ) THEN     ! initial carbon
        
