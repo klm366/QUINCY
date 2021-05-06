@@ -275,8 +275,8 @@ CONTAINS
 
     INTEGER :: npft
 
-    CHARACTER(len=6), PARAMETER :: pft_shortnames(250) = [character(len=6) ::  &  
-    &'pft001','pft002','pft003','pft004','pft005',&
+    CHARACTER(len=6), PARAMETER :: pft_shortnames(600) = [character(len=6) ::  &  
+      &'pft001','pft002','pft003','pft004','pft005',&
       &'pft006','pft007','pft008','pft009','pft010',&
       &'pft011','pft012','pft013','pft014','pft015',&
       &'pft016','pft017','pft018','pft019','pft020',&
@@ -325,58 +325,77 @@ CONTAINS
       &'pft231','pft232','pft233','pft234','pft235',&
       &'pft236','pft237','pft238','pft239','pft240',&
       &'pft241','pft242','pft243','pft244','pft245',&
-      &'pft246','pft247','pft248','pft249','pft250']      
- !     &'pft251','pft252','pft253','pft254','pft255',&
- !     &'pft256','pft257','pft258','pft259','pft260',&
- !     &'pft261','pft262','pft263','pft264','pft265',&
- !     &'pft266','pft267','pft268','pft269','pft270',&
- !     &'pft271','pft272','pft273','pft274','pft275',&
- !     &'pft276','pft277','pft278','pft279','pft280',&
- !     &'pft281','pft282','pft283','pft284','pft285',&
- !     &'pft286','pft287','pft288','pft289','pft290',&
- !     &'pft291','pft292','pft293','pft294','pft295',&
- !     &'pft296','pft297','pft298','pft299','pft300',&
- !     &'pft301','pft302','pft303','pft304','pft305',&
- !     &'pft306','pft307','pft308','pft309','pft310',&
- !     &'pft311','pft312','pft313','pft314','pft315',&
- !     &'pft316','pft317','pft318','pft319','pft320',&
- !     &'pft321','pft322','pft323','pft324','pft325',&
- !     &'pft326','pft327','pft328','pft329','pft330',&
- !     &'pft331','pft332','pft333','pft334','pft335',&
- !     &'pft336','pft337','pft338','pft339','pft340',&
- !     &'pft341','pft342','pft343','pft344','pft345',&
- !     &'pft346','pft347','pft348','pft349','pft350',&
- !     &'pft351','pft352','pft353','pft354','pft355',&
- !     &'pft356','pft357','pft358','pft359','pft360',&
- !     &'pft361','pft362','pft363','pft364','pft365',&
- !     &'pft366','pft367','pft368','pft369','pft370',&
- !     &'pft371','pft372','pft373','pft374','pft375',&
- !     &'pft376','pft377','pft378','pft379','pft380',&
- !     &'pft381','pft382','pft383','pft384','pft385',&
- !     &'pft386','pft387','pft388','pft389','pft390',&
- !     &'pft391','pft392','pft393','pft394','pft395',&
- !     &'pft396','pft397','pft398','pft399','pft400',&
- !     &'pft401','pft402','pft403','pft404','pft405',&
- !     &'pft406','pft407','pft408','pft409','pft410',&
- !     &'pft411','pft412','pft413','pft414','pft415',&
- !     &'pft416','pft417','pft418','pft419','pft420',&
- !     &'pft421','pft422','pft423','pft424','pft425',&
- !     &'pft426','pft427','pft428','pft429','pft430',&
- !     &'pft431','pft432','pft433','pft434','pft435',&
- !     &'pft436','pft437','pft438','pft439','pft440',&
- !     &'pft441','pft442','pft443','pft444','pft445',&
- !     &'pft446','pft447','pft448','pft449','pft450',&
- !     &'pft451','pft452','pft453','pft454','pft455',&
- !     &'pft456','pft457','pft458','pft459','pft460',&
- !     &'pft461','pft462','pft463','pft464','pft465',&
- !     &'pft466','pft467','pft468','pft469','pft470',&
- !     &'pft471','pft472','pft473','pft474','pft475',&
- !     &'pft476','pft477','pft478','pft479','pft480',&
- !     &'pft481','pft482','pft483','pft484','pft485',&
- !     &'pft486','pft487','pft488','pft489','pft490',&
- !     &'pft491','pft492','pft493','pft494','pft495',&
- !     &'pft496','pft497','pft498','pft499','pft500']
-
+      &'pft246','pft247','pft248','pft249','pft250',&      
+      &'pft251','pft252','pft253','pft254','pft255',&
+      &'pft256','pft257','pft258','pft259','pft260',&
+       &'pft261','pft262','pft263','pft264','pft265',&
+       &'pft266','pft267','pft268','pft269','pft270',&
+       &'pft271','pft272','pft273','pft274','pft275',&
+       &'pft276','pft277','pft278','pft279','pft280',&
+       &'pft281','pft282','pft283','pft284','pft285',&
+       &'pft286','pft287','pft288','pft289','pft290',&
+       &'pft291','pft292','pft293','pft294','pft295',&
+       &'pft296','pft297','pft298','pft299','pft300',&
+       &'pft301','pft302','pft303','pft304','pft305',&
+       &'pft306','pft307','pft308','pft309','pft310',&
+       &'pft311','pft312','pft313','pft314','pft315',&
+       &'pft316','pft317','pft318','pft319','pft320',&
+       &'pft321','pft322','pft323','pft324','pft325',&
+       &'pft326','pft327','pft328','pft329','pft330',&
+       &'pft331','pft332','pft333','pft334','pft335',&
+       &'pft336','pft337','pft338','pft339','pft340',&
+       &'pft341','pft342','pft343','pft344','pft345',&
+       &'pft346','pft347','pft348','pft349','pft350',&
+       &'pft351','pft352','pft353','pft354','pft355',&
+       &'pft356','pft357','pft358','pft359','pft360',&
+       &'pft361','pft362','pft363','pft364','pft365',&
+       &'pft366','pft367','pft368','pft369','pft370',&
+       &'pft371','pft372','pft373','pft374','pft375',&
+       &'pft376','pft377','pft378','pft379','pft380',&
+       &'pft381','pft382','pft383','pft384','pft385',&
+       &'pft386','pft387','pft388','pft389','pft390',&
+       &'pft391','pft392','pft393','pft394','pft395',&
+       &'pft396','pft397','pft398','pft399','pft400',&
+       &'pft401','pft402','pft403','pft404','pft405',&
+       &'pft406','pft407','pft408','pft409','pft410',&
+       &'pft411','pft412','pft413','pft414','pft415',&
+       &'pft416','pft417','pft418','pft419','pft420',&
+       &'pft421','pft422','pft423','pft424','pft425',&
+       &'pft426','pft427','pft428','pft429','pft430',&
+       &'pft431','pft432','pft433','pft434','pft435',&
+       &'pft436','pft437','pft438','pft439','pft440',&
+       &'pft441','pft442','pft443','pft444','pft445',&
+       &'pft446','pft447','pft448','pft449','pft450',&
+       &'pft451','pft452','pft453','pft454','pft455',&
+       &'pft456','pft457','pft458','pft459','pft460',&
+       &'pft461','pft462','pft463','pft464','pft465',&
+       &'pft466','pft467','pft468','pft469','pft470',&
+       &'pft471','pft472','pft473','pft474','pft475',&
+       &'pft476','pft477','pft478','pft479','pft480',&
+       &'pft481','pft482','pft483','pft484','pft485',&
+       &'pft486','pft487','pft488','pft489','pft490',&
+       &'pft491','pft492','pft493','pft494','pft495',&
+       &'pft496','pft497','pft498','pft499','pft500',&!]
+       &'pft501','pft502','pft503','pft504','pft505',&
+       &'pft506','pft507','pft508','pft509','pft510',&
+       &'pft511','pft512','pft513','pft514','pft515',&
+       &'pft516','pft517','pft518','pft519','pft520',&
+       &'pft521','pft522','pft523','pft524','pft525',&
+       &'pft526','pft527','pft528','pft529','pft530',&
+       &'pft531','pft532','pft533','pft534','pft535',&
+       &'pft536','pft537','pft538','pft539','pft540',&
+       &'pft541','pft542','pft543','pft544','pft545',&
+       &'pft546','pft547','pft548','pft549','pft550',&
+       &'pft551','pft552','pft553','pft554','pft555',&
+       &'pft556','pft557','pft558','pft559','pft560',&
+       &'pft561','pft562','pft563','pft564','pft565',&
+       &'pft566','pft567','pft568','pft569','pft570',&
+       &'pft571','pft572','pft573','pft574','pft575',&
+       &'pft576','pft577','pft578','pft579','pft580',&
+       &'pft581','pft582','pft583','pft584','pft585',&
+       &'pft586','pft587','pft588','pft589','pft590',&
+       &'pft591','pft592','pft593','pft594','pft595',&
+       &'pft596','pft597','pft598','pft599','pft600']
 
 !       &'pft01', 'pft02', 'pft03', 'pft04', 'pft05',&
 !      &'pft06', 'pft07', 'pft08', 'pft09', 'pft10',&
@@ -390,7 +409,7 @@ CONTAINS
       
       
 
-    CHARACTER(len=30), PARAMETER :: pft_longnames(250) = [character(len=30) :: &
+    CHARACTER(len=30), PARAMETER :: pft_longnames(600) = [character(len=30) :: &
       & 'Plant Growth Strategy 01',                                             &
       & 'Plant Growth Strategy 02',                                             &
       & 'Plant Growth Strategy 03',                                             &
@@ -640,258 +659,357 @@ CONTAINS
       &'Plant Growth Strategy 247',&
       &'Plant Growth Strategy 248',&
       &'Plant Growth Strategy 249',&
-      &'Plant Growth Strategy 250']      
-      !&'Plant Growth Strategy 251',&
-      !&'Plant Growth Strategy 252',&
-      !&'Plant Growth Strategy 253',&
-      !&'Plant Growth Strategy 254',&
-      !&'Plant Growth Strategy 255',&
-      !&'Plant Growth Strategy 256',&
-      !&'Plant Growth Strategy 257',&
-      !&'Plant Growth Strategy 258',&
-      !&'Plant Growth Strategy 259',&
-      !&'Plant Growth Strategy 260',&
-      !&'Plant Growth Strategy 261',&
-      !&'Plant Growth Strategy 262',&
-      !&'Plant Growth Strategy 263',&
-      !&'Plant Growth Strategy 264',&
-      !&'Plant Growth Strategy 265',&
-      !&'Plant Growth Strategy 266',&
-      !&'Plant Growth Strategy 267',&
-      !&'Plant Growth Strategy 268',&
-      !&'Plant Growth Strategy 269',&
-      !&'Plant Growth Strategy 270',&
-      !&'Plant Growth Strategy 271',&
-      !&'Plant Growth Strategy 272',&
-      !&'Plant Growth Strategy 273',&
-      !&'Plant Growth Strategy 274',&
-      !&'Plant Growth Strategy 275',&
-      !&'Plant Growth Strategy 276',&
-      !&'Plant Growth Strategy 277',&
-      !&'Plant Growth Strategy 278',&
-      !&'Plant Growth Strategy 279',&
-      !&'Plant Growth Strategy 280',&
-      !&'Plant Growth Strategy 281',&
-      !&'Plant Growth Strategy 282',&
-      !&'Plant Growth Strategy 283',&
-      !&'Plant Growth Strategy 284',&
-      !&'Plant Growth Strategy 285',&
-      !&'Plant Growth Strategy 286',&
-      !&'Plant Growth Strategy 287',&
-      !&'Plant Growth Strategy 288',&
-      !&'Plant Growth Strategy 289',&
-      !&'Plant Growth Strategy 290',&
-      !&'Plant Growth Strategy 291',&
-      !&'Plant Growth Strategy 292',&
-      !&'Plant Growth Strategy 293',&
-      !&'Plant Growth Strategy 294',&
-      !&'Plant Growth Strategy 295',&
-      !&'Plant Growth Strategy 296',&
-      !&'Plant Growth Strategy 297',&
-      !&'Plant Growth Strategy 298',&
-      !&'Plant Growth Strategy 299',&
-      !&'Plant Growth Strategy 300',&
-      !&'Plant Growth Strategy 301',&
-      !&'Plant Growth Strategy 302',&
-      !&'Plant Growth Strategy 303',&
-      !&'Plant Growth Strategy 304',&
-      !&'Plant Growth Strategy 305',&
-      !&'Plant Growth Strategy 306',&
-      !&'Plant Growth Strategy 307',&
-      !&'Plant Growth Strategy 308',&
-      !&'Plant Growth Strategy 309',&
-      !&'Plant Growth Strategy 310',&
-      !&'Plant Growth Strategy 311',&
-      !&'Plant Growth Strategy 312',&
-      !&'Plant Growth Strategy 313',&
-      !&'Plant Growth Strategy 314',&
-      !&'Plant Growth Strategy 315',&
-      !&'Plant Growth Strategy 316',&
-      !&'Plant Growth Strategy 317',&
-      !&'Plant Growth Strategy 318',&
-      !&'Plant Growth Strategy 319',&
-      !&'Plant Growth Strategy 320',&
-      !&'Plant Growth Strategy 321',&
-      !&'Plant Growth Strategy 322',&
-      !&'Plant Growth Strategy 323',&
-      !&'Plant Growth Strategy 324',&
-      !&'Plant Growth Strategy 325',&
-      !&'Plant Growth Strategy 326',&
-      !&'Plant Growth Strategy 327',&
-      !&'Plant Growth Strategy 328',&
-      !&'Plant Growth Strategy 329',&
-      !&'Plant Growth Strategy 330',&
-      !&'Plant Growth Strategy 331',&
-      !&'Plant Growth Strategy 332',&
-      !&'Plant Growth Strategy 333',&
-      !&'Plant Growth Strategy 334',&
-      !&'Plant Growth Strategy 335',&
-      !&'Plant Growth Strategy 336',&
-      !&'Plant Growth Strategy 337',&
-      !&'Plant Growth Strategy 338',&
-      !&'Plant Growth Strategy 339',&
-      !&'Plant Growth Strategy 340',&
-      !&'Plant Growth Strategy 341',&
-      !&'Plant Growth Strategy 342',&
-      !&'Plant Growth Strategy 343',&
-      !&'Plant Growth Strategy 344',&
-      !&'Plant Growth Strategy 345',&
-      !&'Plant Growth Strategy 346',&
-      !&'Plant Growth Strategy 347',&
-      !&'Plant Growth Strategy 348',&
-      !&'Plant Growth Strategy 349',&
-      !&'Plant Growth Strategy 350',&
-      !&'Plant Growth Strategy 351',&
-      !&'Plant Growth Strategy 352',&
-      !&'Plant Growth Strategy 353',&
-      !&'Plant Growth Strategy 354',&
-      !&'Plant Growth Strategy 355',&
-      !&'Plant Growth Strategy 356',&
-      !&'Plant Growth Strategy 357',&
-      !&'Plant Growth Strategy 358',&
-      !&'Plant Growth Strategy 359',&
-      !&'Plant Growth Strategy 360',&
-      !&'Plant Growth Strategy 361',&
-      !&'Plant Growth Strategy 362',&
-      !&'Plant Growth Strategy 363',&
-      !&'Plant Growth Strategy 364',&
-      !&'Plant Growth Strategy 365',&
-      !&'Plant Growth Strategy 366',&
-      !&'Plant Growth Strategy 367',&
-      !&'Plant Growth Strategy 368',&
-      !&'Plant Growth Strategy 369',&
-      !&'Plant Growth Strategy 370',&
-      !&'Plant Growth Strategy 371',&
-      !&'Plant Growth Strategy 372',&
-      !&'Plant Growth Strategy 373',&
-      !&'Plant Growth Strategy 374',&
-      !&'Plant Growth Strategy 375',&
-      !&'Plant Growth Strategy 376',&
-      !&'Plant Growth Strategy 377',&
-      !&'Plant Growth Strategy 378',&
-      !&'Plant Growth Strategy 379',&
-      !&'Plant Growth Strategy 380',&
-      !&'Plant Growth Strategy 381',&
-      !&'Plant Growth Strategy 382',&
-      !&'Plant Growth Strategy 383',&
-      !&'Plant Growth Strategy 384',&
-      !&'Plant Growth Strategy 385',&
-      !&'Plant Growth Strategy 386',&
-      !&'Plant Growth Strategy 387',&
-      !&'Plant Growth Strategy 388',&
-      !&'Plant Growth Strategy 389',&
-      !&'Plant Growth Strategy 390',&
-      !&'Plant Growth Strategy 391',&
-      !&'Plant Growth Strategy 392',&
-      !&'Plant Growth Strategy 393',&
-      !&'Plant Growth Strategy 394',&
-      !&'Plant Growth Strategy 395',&
-      !&'Plant Growth Strategy 396',&
-      !&'Plant Growth Strategy 397',&
-      !&'Plant Growth Strategy 398',&
-      !&'Plant Growth Strategy 399',&
-      !&'Plant Growth Strategy 400',&
-      !&'Plant Growth Strategy 401',&
-      !&'Plant Growth Strategy 402',&
-      !&'Plant Growth Strategy 403',&
-      !&'Plant Growth Strategy 404',&
-      !&'Plant Growth Strategy 405',&
-      !&'Plant Growth Strategy 406',&
-      !&'Plant Growth Strategy 407',&
-      !&'Plant Growth Strategy 408',&
-      !&'Plant Growth Strategy 409',&
-      !&'Plant Growth Strategy 410',&
-      !&'Plant Growth Strategy 411',&
-      !&'Plant Growth Strategy 412',&
-      !&'Plant Growth Strategy 413',&
-      !&'Plant Growth Strategy 414',&
-      !&'Plant Growth Strategy 415',&
-      !&'Plant Growth Strategy 416',&
-      !&'Plant Growth Strategy 417',&
-      !&'Plant Growth Strategy 418',&
-      !&'Plant Growth Strategy 419',&
-      !&'Plant Growth Strategy 420',&
-      !&'Plant Growth Strategy 421',&
-      !&'Plant Growth Strategy 422',&
-      !&'Plant Growth Strategy 423',&
-      !&'Plant Growth Strategy 424',&
-      !&'Plant Growth Strategy 425',&
-      !&'Plant Growth Strategy 426',&
-      !&'Plant Growth Strategy 427',&
-      !&'Plant Growth Strategy 428',&
-      !&'Plant Growth Strategy 429',&
-      !&'Plant Growth Strategy 430',&
-      !&'Plant Growth Strategy 431',&
-      !&'Plant Growth Strategy 432',&
-      !&'Plant Growth Strategy 433',&
-      !&'Plant Growth Strategy 434',&
-      !&'Plant Growth Strategy 435',&
-      !&'Plant Growth Strategy 436',&
-      !&'Plant Growth Strategy 437',&
-      !&'Plant Growth Strategy 438',&
-      !&'Plant Growth Strategy 439',&
-      !&'Plant Growth Strategy 440',&
-      !&'Plant Growth Strategy 441',&
-      !&'Plant Growth Strategy 442',&
-      !&'Plant Growth Strategy 443',&
-      !&'Plant Growth Strategy 444',&
-      !&'Plant Growth Strategy 445',&
-      !&'Plant Growth Strategy 446',&
-      !&'Plant Growth Strategy 447',&
-      !&'Plant Growth Strategy 448',&
-      !&'Plant Growth Strategy 449',&
-      !&'Plant Growth Strategy 450',&
-      !&'Plant Growth Strategy 451',&
-      !&'Plant Growth Strategy 452',&
-      !&'Plant Growth Strategy 453',&
-      !&'Plant Growth Strategy 454',&
-      !&'Plant Growth Strategy 455',&
-      !&'Plant Growth Strategy 456',&
-      !&'Plant Growth Strategy 457',&
-      !&'Plant Growth Strategy 458',&
-      !&'Plant Growth Strategy 459',&
-      !&'Plant Growth Strategy 460',&
-      !&'Plant Growth Strategy 461',&
-      !&'Plant Growth Strategy 462',&
-      !&'Plant Growth Strategy 463',&
-      !&'Plant Growth Strategy 464',&
-      !&'Plant Growth Strategy 465',&
-      !&'Plant Growth Strategy 466',&
-      !&'Plant Growth Strategy 467',&
-      !&'Plant Growth Strategy 468',&
-      !&'Plant Growth Strategy 469',&
-      !&'Plant Growth Strategy 470',&
-      !&'Plant Growth Strategy 471',&
-      !&'Plant Growth Strategy 472',&
-      !&'Plant Growth Strategy 473',&
-      !&'Plant Growth Strategy 474',&
-      !&'Plant Growth Strategy 475',&
-      !&'Plant Growth Strategy 476',&
-      !&'Plant Growth Strategy 477',&
-      !&'Plant Growth Strategy 478',&
-      !&'Plant Growth Strategy 479',&
-      !&'Plant Growth Strategy 480',&
-      !&'Plant Growth Strategy 481',&
-      !&'Plant Growth Strategy 482',&
-      !&'Plant Growth Strategy 483',&
-      !&'Plant Growth Strategy 484',&
-      !&'Plant Growth Strategy 485',&
-      !&'Plant Growth Strategy 486',&
-      !&'Plant Growth Strategy 487',&
-      !&'Plant Growth Strategy 488',&
-      !&'Plant Growth Strategy 489',&
-      !&'Plant Growth Strategy 490',&
-      !&'Plant Growth Strategy 491',&
-      !&'Plant Growth Strategy 492',&
-      !&'Plant Growth Strategy 493',&
-      !&'Plant Growth Strategy 494',&
-      !&'Plant Growth Strategy 495',&
-      !&'Plant Growth Strategy 496',&
-      !&'Plant Growth Strategy 497',&
-      !&'Plant Growth Strategy 498',&
-      !&'Plant Growth Strategy 499',&
-      !&'Plant Growth Strategy 500']
-
+      &'Plant Growth Strategy 250',&!]      
+      &'Plant Growth Strategy 251',&
+      &'Plant Growth Strategy 252',&
+      &'Plant Growth Strategy 253',&
+      &'Plant Growth Strategy 254',&
+      &'Plant Growth Strategy 255',&
+      &'Plant Growth Strategy 256',&
+      &'Plant Growth Strategy 257',&
+      &'Plant Growth Strategy 258',&
+      &'Plant Growth Strategy 259',&
+      &'Plant Growth Strategy 260',&
+      &'Plant Growth Strategy 261',&
+      &'Plant Growth Strategy 262',&
+      &'Plant Growth Strategy 263',&
+      &'Plant Growth Strategy 264',&
+      &'Plant Growth Strategy 265',&
+      &'Plant Growth Strategy 266',&
+      &'Plant Growth Strategy 267',&
+      &'Plant Growth Strategy 268',&
+      &'Plant Growth Strategy 269',&
+      &'Plant Growth Strategy 270',&
+      &'Plant Growth Strategy 271',&
+      &'Plant Growth Strategy 272',&
+      &'Plant Growth Strategy 273',&
+      &'Plant Growth Strategy 274',&
+      &'Plant Growth Strategy 275',&
+      &'Plant Growth Strategy 276',&
+      &'Plant Growth Strategy 277',&
+      &'Plant Growth Strategy 278',&
+      &'Plant Growth Strategy 279',&
+      &'Plant Growth Strategy 280',&
+      &'Plant Growth Strategy 281',&
+      &'Plant Growth Strategy 282',&
+      &'Plant Growth Strategy 283',&
+      &'Plant Growth Strategy 284',&
+      &'Plant Growth Strategy 285',&
+      &'Plant Growth Strategy 286',&
+      &'Plant Growth Strategy 287',&
+      &'Plant Growth Strategy 288',&
+      &'Plant Growth Strategy 289',&
+      &'Plant Growth Strategy 290',&
+      &'Plant Growth Strategy 291',&
+      &'Plant Growth Strategy 292',&
+      &'Plant Growth Strategy 293',&
+      &'Plant Growth Strategy 294',&
+      &'Plant Growth Strategy 295',&
+      &'Plant Growth Strategy 296',&
+      &'Plant Growth Strategy 297',&
+      &'Plant Growth Strategy 298',&
+      &'Plant Growth Strategy 299',&
+      &'Plant Growth Strategy 300',&
+      &'Plant Growth Strategy 301',&
+      &'Plant Growth Strategy 302',&
+      &'Plant Growth Strategy 303',&
+      &'Plant Growth Strategy 304',&
+      &'Plant Growth Strategy 305',&
+      &'Plant Growth Strategy 306',&
+      &'Plant Growth Strategy 307',&
+      &'Plant Growth Strategy 308',&
+      &'Plant Growth Strategy 309',&
+      &'Plant Growth Strategy 310',&
+      &'Plant Growth Strategy 311',&
+      &'Plant Growth Strategy 312',&
+      &'Plant Growth Strategy 313',&
+      &'Plant Growth Strategy 314',&
+      &'Plant Growth Strategy 315',&
+      &'Plant Growth Strategy 316',&
+      &'Plant Growth Strategy 317',&
+      &'Plant Growth Strategy 318',&
+      &'Plant Growth Strategy 319',&
+      &'Plant Growth Strategy 320',&
+      &'Plant Growth Strategy 321',&
+      &'Plant Growth Strategy 322',&
+      &'Plant Growth Strategy 323',&
+      &'Plant Growth Strategy 324',&
+      &'Plant Growth Strategy 325',&
+      &'Plant Growth Strategy 326',&
+      &'Plant Growth Strategy 327',&
+      &'Plant Growth Strategy 328',&
+      &'Plant Growth Strategy 329',&
+      &'Plant Growth Strategy 330',&
+      &'Plant Growth Strategy 331',&
+      &'Plant Growth Strategy 332',&
+      &'Plant Growth Strategy 333',&
+      &'Plant Growth Strategy 334',&
+      &'Plant Growth Strategy 335',&
+      &'Plant Growth Strategy 336',&
+      &'Plant Growth Strategy 337',&
+      &'Plant Growth Strategy 338',&
+      &'Plant Growth Strategy 339',&
+      &'Plant Growth Strategy 340',&
+      &'Plant Growth Strategy 341',&
+      &'Plant Growth Strategy 342',&
+      &'Plant Growth Strategy 343',&
+      &'Plant Growth Strategy 344',&
+      &'Plant Growth Strategy 345',&
+      &'Plant Growth Strategy 346',&
+      &'Plant Growth Strategy 347',&
+      &'Plant Growth Strategy 348',&
+      &'Plant Growth Strategy 349',&
+      &'Plant Growth Strategy 350',&
+      &'Plant Growth Strategy 351',&
+      &'Plant Growth Strategy 352',&
+      &'Plant Growth Strategy 353',&
+      &'Plant Growth Strategy 354',&
+      &'Plant Growth Strategy 355',&
+      &'Plant Growth Strategy 356',&
+      &'Plant Growth Strategy 357',&
+      &'Plant Growth Strategy 358',&
+      &'Plant Growth Strategy 359',&
+      &'Plant Growth Strategy 360',&
+      &'Plant Growth Strategy 361',&
+      &'Plant Growth Strategy 362',&
+      &'Plant Growth Strategy 363',&
+      &'Plant Growth Strategy 364',&
+      &'Plant Growth Strategy 365',&
+      &'Plant Growth Strategy 366',&
+      &'Plant Growth Strategy 367',&
+      &'Plant Growth Strategy 368',&
+      &'Plant Growth Strategy 369',&
+      &'Plant Growth Strategy 370',&
+      &'Plant Growth Strategy 371',&
+      &'Plant Growth Strategy 372',&
+      &'Plant Growth Strategy 373',&
+      &'Plant Growth Strategy 374',&
+      &'Plant Growth Strategy 375',&
+      &'Plant Growth Strategy 376',&
+      &'Plant Growth Strategy 377',&
+      &'Plant Growth Strategy 378',&
+      &'Plant Growth Strategy 379',&
+      &'Plant Growth Strategy 380',&
+      &'Plant Growth Strategy 381',&
+      &'Plant Growth Strategy 382',&
+      &'Plant Growth Strategy 383',&
+      &'Plant Growth Strategy 384',&
+      &'Plant Growth Strategy 385',&
+      &'Plant Growth Strategy 386',&
+      &'Plant Growth Strategy 387',&
+      &'Plant Growth Strategy 388',&
+      &'Plant Growth Strategy 389',&
+      &'Plant Growth Strategy 390',&
+      &'Plant Growth Strategy 391',&
+      &'Plant Growth Strategy 392',&
+      &'Plant Growth Strategy 393',&
+      &'Plant Growth Strategy 394',&
+      &'Plant Growth Strategy 395',&
+      &'Plant Growth Strategy 396',&
+      &'Plant Growth Strategy 397',&
+      &'Plant Growth Strategy 398',&
+      &'Plant Growth Strategy 399',&
+      &'Plant Growth Strategy 400',&
+      &'Plant Growth Strategy 401',&
+      &'Plant Growth Strategy 402',&
+      &'Plant Growth Strategy 403',&
+      &'Plant Growth Strategy 404',&
+      &'Plant Growth Strategy 405',&
+      &'Plant Growth Strategy 406',&
+      &'Plant Growth Strategy 407',&
+      &'Plant Growth Strategy 408',&
+      &'Plant Growth Strategy 409',&
+      &'Plant Growth Strategy 410',&
+      &'Plant Growth Strategy 411',&
+      &'Plant Growth Strategy 412',&
+      &'Plant Growth Strategy 413',&
+      &'Plant Growth Strategy 414',&
+      &'Plant Growth Strategy 415',&
+      &'Plant Growth Strategy 416',&
+      &'Plant Growth Strategy 417',&
+      &'Plant Growth Strategy 418',&
+      &'Plant Growth Strategy 419',&
+      &'Plant Growth Strategy 420',&
+      &'Plant Growth Strategy 421',&
+      &'Plant Growth Strategy 422',&
+      &'Plant Growth Strategy 423',&
+      &'Plant Growth Strategy 424',&
+      &'Plant Growth Strategy 425',&
+      &'Plant Growth Strategy 426',&
+      &'Plant Growth Strategy 427',&
+      &'Plant Growth Strategy 428',&
+      &'Plant Growth Strategy 429',&
+      &'Plant Growth Strategy 430',&
+      &'Plant Growth Strategy 431',&
+      &'Plant Growth Strategy 432',&
+      &'Plant Growth Strategy 433',&
+      &'Plant Growth Strategy 434',&
+      &'Plant Growth Strategy 435',&
+      &'Plant Growth Strategy 436',&
+      &'Plant Growth Strategy 437',&
+      &'Plant Growth Strategy 438',&
+      &'Plant Growth Strategy 439',&
+      &'Plant Growth Strategy 440',&
+      &'Plant Growth Strategy 441',&
+      &'Plant Growth Strategy 442',&
+      &'Plant Growth Strategy 443',&
+      &'Plant Growth Strategy 444',&
+      &'Plant Growth Strategy 445',&
+      &'Plant Growth Strategy 446',&
+      &'Plant Growth Strategy 447',&
+      &'Plant Growth Strategy 448',&
+      &'Plant Growth Strategy 449',&
+      &'Plant Growth Strategy 450',&
+      &'Plant Growth Strategy 451',&
+      &'Plant Growth Strategy 452',&
+      &'Plant Growth Strategy 453',&
+      &'Plant Growth Strategy 454',&
+      &'Plant Growth Strategy 455',&
+      &'Plant Growth Strategy 456',&
+      &'Plant Growth Strategy 457',&
+      &'Plant Growth Strategy 458',&
+      &'Plant Growth Strategy 459',&
+      &'Plant Growth Strategy 460',&
+      &'Plant Growth Strategy 461',&
+      &'Plant Growth Strategy 462',&
+      &'Plant Growth Strategy 463',&
+      &'Plant Growth Strategy 464',&
+      &'Plant Growth Strategy 465',&
+      &'Plant Growth Strategy 466',&
+      &'Plant Growth Strategy 467',&
+      &'Plant Growth Strategy 468',&
+      &'Plant Growth Strategy 469',&
+      &'Plant Growth Strategy 470',&
+      &'Plant Growth Strategy 471',&
+      &'Plant Growth Strategy 472',&
+      &'Plant Growth Strategy 473',&
+      &'Plant Growth Strategy 474',&
+      &'Plant Growth Strategy 475',&
+      &'Plant Growth Strategy 476',&
+      &'Plant Growth Strategy 477',&
+      &'Plant Growth Strategy 478',&
+      &'Plant Growth Strategy 479',&
+      &'Plant Growth Strategy 480',&
+      &'Plant Growth Strategy 481',&
+      &'Plant Growth Strategy 482',&
+      &'Plant Growth Strategy 483',&
+      &'Plant Growth Strategy 484',&
+      &'Plant Growth Strategy 485',&
+      &'Plant Growth Strategy 486',&
+      &'Plant Growth Strategy 487',&
+      &'Plant Growth Strategy 488',&
+      &'Plant Growth Strategy 489',&
+      &'Plant Growth Strategy 490',&
+      &'Plant Growth Strategy 491',&
+      &'Plant Growth Strategy 492',&
+      &'Plant Growth Strategy 493',&
+      &'Plant Growth Strategy 494',&
+      &'Plant Growth Strategy 495',&
+      &'Plant Growth Strategy 496',&
+      &'Plant Growth Strategy 497',&
+      &'Plant Growth Strategy 498',&
+      &'Plant Growth Strategy 499',&
+      &'Plant Growth Strategy 500',&!]
+      &'Plant Growth Strategy 501',&
+      &'Plant Growth Strategy 502',&
+      &'Plant Growth Strategy 503',&
+      &'Plant Growth Strategy 504',&
+      &'Plant Growth Strategy 505',&
+      &'Plant Growth Strategy 506',&
+      &'Plant Growth Strategy 507',&
+      &'Plant Growth Strategy 508',&
+      &'Plant Growth Strategy 509',&
+      &'Plant Growth Strategy 510',&
+      &'Plant Growth Strategy 511',&
+      &'Plant Growth Strategy 512',&
+      &'Plant Growth Strategy 513',&
+      &'Plant Growth Strategy 514',&
+      &'Plant Growth Strategy 515',&
+      &'Plant Growth Strategy 516',&
+      &'Plant Growth Strategy 517',&
+      &'Plant Growth Strategy 518',&
+      &'Plant Growth Strategy 519',&
+      &'Plant Growth Strategy 520',&
+      &'Plant Growth Strategy 521',&
+      &'Plant Growth Strategy 522',&
+      &'Plant Growth Strategy 523',&
+      &'Plant Growth Strategy 524',&
+      &'Plant Growth Strategy 525',&
+      &'Plant Growth Strategy 526',&
+      &'Plant Growth Strategy 527',&
+      &'Plant Growth Strategy 528',&
+      &'Plant Growth Strategy 529',&
+      &'Plant Growth Strategy 530',&
+      &'Plant Growth Strategy 531',&
+      &'Plant Growth Strategy 532',&
+      &'Plant Growth Strategy 533',&
+      &'Plant Growth Strategy 534',&
+      &'Plant Growth Strategy 535',&
+      &'Plant Growth Strategy 536',&
+      &'Plant Growth Strategy 537',&
+      &'Plant Growth Strategy 538',&
+      &'Plant Growth Strategy 539',&
+      &'Plant Growth Strategy 540',&
+      &'Plant Growth Strategy 541',&
+      &'Plant Growth Strategy 542',&
+      &'Plant Growth Strategy 543',&
+      &'Plant Growth Strategy 544',&
+      &'Plant Growth Strategy 545',&
+      &'Plant Growth Strategy 546',&
+      &'Plant Growth Strategy 547',&
+      &'Plant Growth Strategy 548',&
+      &'Plant Growth Strategy 549',&
+      &'Plant Growth Strategy 550',&
+      &'Plant Growth Strategy 551',&
+      &'Plant Growth Strategy 552',&
+      &'Plant Growth Strategy 553',&
+      &'Plant Growth Strategy 554',&
+      &'Plant Growth Strategy 555',&
+      &'Plant Growth Strategy 556',&
+      &'Plant Growth Strategy 557',&
+      &'Plant Growth Strategy 558',&
+      &'Plant Growth Strategy 559',&
+      &'Plant Growth Strategy 560',&
+      &'Plant Growth Strategy 561',&
+      &'Plant Growth Strategy 562',&
+      &'Plant Growth Strategy 563',&
+      &'Plant Growth Strategy 564',&
+      &'Plant Growth Strategy 565',&
+      &'Plant Growth Strategy 566',&
+      &'Plant Growth Strategy 567',&
+      &'Plant Growth Strategy 568',&
+      &'Plant Growth Strategy 569',&
+      &'Plant Growth Strategy 570',&
+      &'Plant Growth Strategy 571',&
+      &'Plant Growth Strategy 572',&
+      &'Plant Growth Strategy 573',&
+      &'Plant Growth Strategy 574',&
+      &'Plant Growth Strategy 575',&
+      &'Plant Growth Strategy 576',&
+      &'Plant Growth Strategy 577',&
+      &'Plant Growth Strategy 578',&
+      &'Plant Growth Strategy 579',&
+      &'Plant Growth Strategy 580',&
+      &'Plant Growth Strategy 581',&
+      &'Plant Growth Strategy 582',&
+      &'Plant Growth Strategy 583',&
+      &'Plant Growth Strategy 584',&
+      &'Plant Growth Strategy 585',&
+      &'Plant Growth Strategy 586',&
+      &'Plant Growth Strategy 587',&
+      &'Plant Growth Strategy 588',&
+      &'Plant Growth Strategy 589',&
+      &'Plant Growth Strategy 590',&
+      &'Plant Growth Strategy 591',&
+      &'Plant Growth Strategy 592',&
+      &'Plant Growth Strategy 593',&
+      &'Plant Growth Strategy 594',&
+      &'Plant Growth Strategy 595',&
+      &'Plant Growth Strategy 596',&
+      &'Plant Growth Strategy 597',&
+      &'Plant Growth Strategy 598',&
+      &'Plant Growth Strategy 599',&
+      &'Plant Growth Strategy 600']!,&
    
       
 
@@ -902,7 +1020,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_usecase_pfts'
 
     npft = model%config%npft
-    IF (npft > 250) CALL finish(routine, 'You have to edit mo_jsb_model_usecases.f90 to use npft > 250')
+    IF (npft > 600) CALL finish(routine, 'You have to edit mo_jsb_model_usecases.f90 to use npft > 600')
     ALLOCATE(pft_ids(npft))
     DO i=1,npft
       pft_ids(i) = i
