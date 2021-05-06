@@ -981,7 +981,7 @@ CONTAINS
       iniyear = get_year(inidate)
       CALL deallocateDatetime(inidate)
       lspinup_jedi = dsl4jsb_Config(JEDI_)%l_spinup_jedi
-      IF ( ( (get_year(options%current_datetime) .GT. iniyear + 2 ) .and. lspinup_jedi ) .or. ( lspinup_jedi .eqv. .FALSE. ) )THEN    
+      IF ( .NOT. lspinup_jedi .OR. get_year(options%current_datetime) > iniyear + 2 ) THEN
           root_depth     = jedi_root_depth
           root_depth_sl = jedi_soil_depth_to_layers_1d( root_depth, soil_w%dz(:))
       END IF

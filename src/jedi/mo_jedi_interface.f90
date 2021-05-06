@@ -501,8 +501,7 @@ CONTAINS
         &                  EXP(- 86400._wp / (30._wp* 86400._wp ))  * ff_dTdt   
       ff_T_30d_yDayMean = ff_T_30d
 
-      IF ( ( (get_year(options%current_datetime) .GT. iniyear + 2 ) .and. lspinup_jedi ) &
-     &     .or. ( lspinup_jedi .eqv. .FALSE. )                                          ) THEN     !  PHS: initial carbon       
+      IF ( .NOT. lspinup_jedi .OR. get_year(options%current_datetime) > iniyear + 2 ) THEN
         CALL calc_Ctradeoff( &
           & GPP_yDayMean,                                & ! in
           ! JeDi plant trait parameter comes in now <<<<<<<<<<<
