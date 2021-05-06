@@ -39,7 +39,7 @@ MODULE mo_hydro_interface
   dsl4jsb_Use_config(SEB_)
   dsl4jsb_Use_config(SSE_)
   dsl4jsb_Use_config(HYDRO_)
-
+  dsl4jsb_Use_config(JEDI_)
   ! Use of process memories
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(HYDRO_)
@@ -878,7 +878,7 @@ CONTAINS
     USE mo_util,          ONLY: soil_depth_to_layers_2d
     USE mo_jedi_process,  ONLY: jedi_soil_depth_to_layers_1d
     USE mo_hydro_process, ONLY: calc_soil_hydrology
-
+    USE mo_jsb_time,      ONLY: t_datetime,get_year,get_time_experiment_start,deallocateDatetime
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
@@ -888,6 +888,7 @@ CONTAINS
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(JEDI_)
+    dsl4jsb_Def_config(JEDI_) !PHS: GET CONFIG FOR JEDI
     ! Pointers to variables in memory
     dsl4jsb_Real3D_onChunk :: fract_org_sl
     dsl4jsb_Real3D_onChunk :: t_soil
@@ -911,7 +912,12 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc, i
     REAL(wp) :: dtime
     INTEGER  :: nsoil
-
+    !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-!
+    ! PHS: to use prescribed root depth from jsbach at the beginning of 
+    LOGICAL                      :: lspinup_jedi
+    TYPE(t_datetime), POINTER    :: inidate
+    INTEGER                      :: iniyear
+    !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-!
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_hydrology'
 
     iblk  = options%iblk
@@ -938,7 +944,7 @@ CONTAINS
     nsoil = soil_w%n_levels
 
     dsl4jsb_Get_config(HYDRO_)
-
+    dsl4jsb_Get_config(JEDI_) !PHS: GET CONFIG FOR JEDI
     ltpe_open = .FALSE.
     ltpe_closed = .FALSE.
     IF (model%config%tpe_scheme == 'open')   ltpe_open = .TRUE.
@@ -971,8 +977,14 @@ CONTAINS
       !PHS 24.07.2020 Compute water stress in CARBON at PFT level. 
       ! As jedi has different rooting depth for each PGS, the root_depth at veg level needed to be recalculated each time. 
     IF (TRIM(model%config%usecase) .eq. 'jsbach_jedi' ) THEN
-      root_depth    = jedi_root_depth
-      root_depth_sl = jedi_soil_depth_to_layers_1d( root_depth, soil_w%dz(:))       
+      inidate => get_time_experiment_start()
+      iniyear = get_year(inidate)
+      CALL deallocateDatetime(inidate)
+      lspinup_jedi = dsl4jsb_Config(JEDI_)%l_spinup_jedi
+      IF ( ( (get_year(options%current_datetime) .GT. iniyear + 2 ) .and. lspinup_jedi ) .or. ( lspinup_jedi .eqv. .FALSE. ) )THEN    
+          root_depth     = jedi_root_depth
+          root_depth_sl = jedi_soil_depth_to_layers_1d( root_depth, soil_w%dz(:))
+      END IF
     END IF
     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
 
