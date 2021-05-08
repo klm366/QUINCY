@@ -208,7 +208,7 @@ MODULE mo_hydro_memory_class
       trans_gmean,            & !< Global mean transpiration                [kg m-2 s-1]
       evapotrans_gmean,       & !< Global land mean evapotranspiration      [kg m-2 s-1]
       water_content_gsum,     & !< Global land water content                [km3]
-      discharge_ocean_gsum,   & !< Global water discharge to the oceans     [kg s-1]
+      discharge_ocean_gsum,   & !< Global water discharge to the oceans     [Sv]
       w_soil_rel_gmean,       & !< Global mean relative soil moisture       [1]
       fract_snow_gsum,        & !< Global snow area on non-glacier land     [Mio m2]
       w_snow_gsum               !< Global snow amount on non-glacier land   [Gt]
