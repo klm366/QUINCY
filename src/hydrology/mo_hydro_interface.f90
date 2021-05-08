@@ -2239,8 +2239,9 @@ CONTAINS
     ! Unit transformation from [m3] to [km3]: 1.e-9
     IF (HYDRO__mem%water_content_gsum%is_in_output)    &
       &  water_content_gsum   = global_sum_array(water_content(:,:)   * notsea(:,:) * in_domain(:,:)) * 1.e-9_wp
+    ! Unit transformation from [m3/s] to [Sv] (1 Sv = 1.e6 m3/s)
     IF (HYDRO__mem%discharge_ocean_gsum%is_in_output)  &
-      &  discharge_ocean_gsum = global_sum_array(discharge_ocean(:,:) * area(:,:) * in_domain(:,:))
+      &  discharge_ocean_gsum = global_sum_array(discharge_ocean(:,:) * in_domain(:,:)) * 1.e-6_wp
     IF (HYDRO__mem%w_soil_rel_gmean%is_in_output)      &
       &  w_soil_rel_gmean     = global_sum_array(w_soil_rel(:,:)      * scaling(:,:)) / global_land_area
     ! Unit transformation from [m2] to [Mio km2]: 1.e-12
