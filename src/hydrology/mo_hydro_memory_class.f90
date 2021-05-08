@@ -170,7 +170,7 @@ MODULE mo_hydro_memory_class
       trans_gmean,            & !< Global mean transpiration                [kg m-2 s-1]
       evapotrans_gmean,       & !< Global land mean evapotranspiration      [kg m-2 s-1]
       water_content_gsum,     & !< Global land water content                [km3]
-      discharge_ocean_gsum,   & !< Global water discharge to the oceans     [kg s-1]
+      discharge_ocean_gsum,   & !< Global water discharge to the oceans     [Sv]
       w_soil_rel_gmean,       & !< Global mean relative soil moisture       [1]
       fract_snow_gsum,        & !< Global snow area on non-glacier land     [Mio m2]
       w_snow_gsum               !< Global snow amount on non-glacier land   [Gt]
@@ -315,7 +315,7 @@ CONTAINS
 
     CALL mem%Add_var( 'discharge_ocean', mem%discharge_ocean,                &
       & hgrid, surface,                                                      &
-      & t_cf('discharge_ocean', 'kg m-2 s-1', 'discharge to the ocean'),     &
+      & t_cf('discharge_ocean', 'm3 s-1', 'discharge to the ocean'),         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
@@ -936,7 +936,7 @@ CONTAINS
         & lrestart=.FALSE., initval_r=0.0_wp )
       CALL mem%Add_var('discharge_ocean_gsum', mem%discharge_ocean_gsum,                 &
         & hgrid, surface,                                                                &
-        & t_cf('discharge_ocean_gsum', 'kg', 'Global water discharge to the oceans'),    &
+        & t_cf('discharge_ocean_gsum', 'Sv', 'Global water discharge to the oceans'),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
         & lrestart=.FALSE., initval_r=0.0_wp )
