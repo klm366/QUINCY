@@ -41,7 +41,7 @@ MODULE mo_sse_config_class
     LOGICAL  :: l_supercool     !< T: Allow for supercooled soil water
     REAL(wp) :: w_soil_critical !< Critical water/ice content in upper soil layer for correction of new surface
                                 !! temperature for freezing/melting [m water equivalent]
-    !! quincy (in quincy, values can be site-specific and are read from namelist - where some values are modified based on site-level data)
+    !! quincy
     ! INTEGER       :: nsoil_energy         !< number of soil layers for soil energy calculations   ! depreciated feature, but needed for now, see quincy-trac ticket #521
     ! INTEGER       :: nsoil_water          !< number of soil layers for soil moisture calculations ! depreciated feature, but needed for now, see quincy-trac ticket #521
     REAL(wp)      :: soil_depth           !< actual soil and rooting depth

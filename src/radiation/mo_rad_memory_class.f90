@@ -188,10 +188,6 @@ MODULE mo_rad_memory_class
     TYPE(t_jsb_var_real2d)  :: &   
       & daytime_counter                 !< number of timesteps of current day with light available [#]
 
-    ! 3D Radiative transfer variables (appended by _sp for spectral_bands)
-    ! TYPE(t_jsb_var_real3d)  :: &   ! DIMENSION(nspec)
-    !                         canopy_reflectance_sp    !< top of the canopy directional reflectance factor [unitless]
-
   CONTAINS
     PROCEDURE :: Init => Init_rad_memory
   END TYPE t_rad_memory
@@ -1001,16 +997,6 @@ CONTAINS
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
   
-        ! CALL mem%Add_var('canopy_reflectance_sp', mem%canopy_reflectance_sp, &
-        !   & hgrid, vgrid_spectral, &
-        !   & t_cf('canopy_reflectance_sp', 'unitless', 'top of the canopy directional reflectance factor'), &
-        !   & t_grib1(table, 255, grib_bits), &
-        !   & t_grib2(255, 255, 255, grib_bits), &
-        !   & prefix, suffix, &
-        !   & loutput = .TRUE., &
-        !   & lrestart = .TRUE., &
-        !   & initval_r = 0.0_wp)
-
       END IF
     END IF
 

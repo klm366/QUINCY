@@ -67,13 +67,13 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER  :: canopy_layer
     !! quincy
     REAL(wp), ALLOCATABLE       :: canopy_layer_thickness_profile(:)  !< use LAI per layer [m2 m-2], indirectly defining the thickness (i.e., vertical height) of each single canopy layer 
-    LOGICAL                     :: flag_optimal_Nfraction     , &
-                                   flag_t_resp_acclimation    , &
-                                   flag_t_jmax_acclimation
+    LOGICAL                     :: flag_optimal_Nfraction
+    LOGICAL                     :: flag_t_resp_acclimation
+    LOGICAL                     :: flag_t_jmax_acclimation
     CHARACTER(15)               :: canopy_layer_scheme
     CHARACTER(15)               :: canopy_conductance_scheme
-    INTEGER                     :: ncanopy_q_    , &
-                                   icanopy
+    INTEGER                     :: ncanopy_q_
+    INTEGER                     :: icanopy
     REAL(wp)                    :: dAPAR
     REAL(wp)                    :: k_canopy_layer                !< extinction coefficient to calculate canopy layer depth
     TYPE(t_jsb_vgrid), POINTER  :: vgrid_canopy
