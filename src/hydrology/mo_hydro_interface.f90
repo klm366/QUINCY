@@ -2905,4 +2905,3 @@ CONTAINS
   END SUBROUTINE global_hydrology_diagnostics
 
 #endif
-END MODULE mo_hydro_interface
