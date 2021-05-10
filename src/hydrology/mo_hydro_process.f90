@@ -412,7 +412,7 @@ CONTAINS
   ! @param [in]      wfract_srf         Wet surface fraction (skin reservoir) []
   ! @param [in]      ws_max_mineral     Maximum water holding capacity of non-organic soil [m]
   ! @param [in]      oro_stddev         Sub-grid standard deviation of orography [m]
-  ! @param [in]      t_soil_sl          Temperature of soil layers [K]
+  ! @param [in]      t_soil_upper_layer Temperature of the upper soil layer [K]
   ! @param [in]      water_to_soil      Amount of water going into the soil [m]
   ! @param [in]      evapotrans_soil    Evapotranspiration from the soil (w/o snow or canopy) [kg m-2 s-1]
   ! @param [in]      trans              Evapotranspiration [kg m-2 s-1]
@@ -430,9 +430,8 @@ CONTAINS
     & nidx, nsoil, dz, nlat, delta_time, ltpe_closed, ltpe_open,                                                 &
     & soil_depth_l, root_depth_l, fract_org_l,                                                                   &
     & hyd_cond_sat_l, matrix_pot_l, bclapp_l, pore_size_index_l, vol_porosity_l, vol_field_cap_l, vol_p_wilt_l,  &
-    & t_soil_sl,                                                                                                 &
     !& sfract_srf, wfract_srf,
-    & ws_max_mineral, oro_stddev, water_to_soil, evapotrans_soil, trans,                                         &
+    & ws_max_mineral, oro_stddev, t_soil_upper_layer, water_to_soil, evapotrans_soil, trans,                     &
     ! inout
     & ws, ws_l, soil_ice_l, w_soil_overflow,                                                                     &
     ! out
@@ -453,11 +452,10 @@ CONTAINS
     LOGICAL, INTENT(in) :: ltpe_open
     REAL(wp), INTENT(in), DIMENSION(:,:) :: &
       & soil_depth_l, root_depth_l, fract_org_l,    &
-      & hyd_cond_sat_l, matrix_pot_l, bclapp_l, pore_size_index_l, vol_porosity_l, vol_field_cap_l, vol_p_wilt_l, &
-      & t_soil_sl
+      & hyd_cond_sat_l, matrix_pot_l, bclapp_l, pore_size_index_l, vol_porosity_l, vol_field_cap_l, vol_p_wilt_l
     REAL(wp), INTENT(in), DIMENSION(:) ::               &
       !& sfract_srf, wfract_srf, 
-      & ws_max_mineral, oro_stddev, water_to_soil, &
+      & ws_max_mineral, oro_stddev, t_soil_upper_layer, water_to_soil, &
       & evapotrans_soil, trans
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
       & ws, w_soil_overflow
@@ -479,8 +477,7 @@ CONTAINS
       & evapo_soil_in_m(nidx),        & !< evaporation from the soil (without transpiration) [m]
       & trans_in_m(nidx),             & !< transpiration within time step [m]
       & ws_rel(nidx),                 & !< relative soil moisture (0: wilting point, 1: field capacity)
-      & infilt(nidx),                 & !< infiltration [m]
-      & t_soil_upper_layer(nidx)        !< t_soil_sl(:,1)
+      & infilt(nidx)                    !< infiltration [m]
 
     REAL(wp) ::              &
       & ws_max(nidx),        & ! water holding capacity of the soil [m]
@@ -496,8 +493,6 @@ CONTAINS
     INTEGER, PARAMETER :: ilog = 0 ! Switch for debugging output
     INTEGER :: jllog = 0
 
-
-    t_soil_upper_layer(:) = t_soil_sl(:,1)
 
     !$claw acc data pcreate(evapo_soil_in_m,trans_in_m,infilt,ws_max,ws_min_drain,ws_incl_ice,ice_rootzone,vfc_times_sd_l)
     sigma_0   = oro_var_min

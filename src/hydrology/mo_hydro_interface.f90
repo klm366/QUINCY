@@ -978,9 +978,9 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_porosity_sl   ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_field_cap_sl  ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_p_wilt_sl     ), &
-      &                                t_soil_sl     (:,:), &
       & dsl4jsb_var2D_onChunk (HYDRO_, max_moist         ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, oro_stddev        ), &
+      &                                t_soil_sl     (:,1), &
       & dsl4jsb_var2D_onChunk (HYDRO_, water_excess      ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, evapotrans_soil   ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, trans             ), &
