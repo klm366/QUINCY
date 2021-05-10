@@ -320,7 +320,6 @@ CONTAINS
     LOGICAL            :: exist_knorr_k_l              = .FALSE.
     LOGICAL            :: exist_knorr_leaf_growth_rate = .FALSE.
     LOGICAL            :: exist_knorr_max_lai          = .FALSE.
-    LOGICAL            :: exist_greenC2leafC           = .FALSE.
     LOGICAL            :: exist_reserveC2leafC         = .FALSE.
     LOGICAL            :: exist_fract_npp_2_woodPool    = .FALSE.
     LOGICAL            :: exist_fract_npp_2_reservePool = .FALSE.
@@ -621,9 +620,6 @@ CONTAINS
           CASE ('knorr_leaf_growth_rate')                              ! Initial leaf growth rate
              READ(line(pos:length),*) lctlib(1:nlct)%knorr_leaf_growth_rate
              exist_knorr_leaf_growth_rate = .TRUE.
-          CASE ('greenc2leafc')                                        ! ratio of C in green pool to C in leaves
-             READ(line(pos:length),*) lctlib(1:nlct)%greenC2leafC
-             exist_greenC2leafC = .TRUE.
           CASE ('reservec2leafc')                                      ! ratio of C in reserve pool to C in leaves
              READ(line(pos:length),*) lctlib(1:nlct)%reserveC2leafC
              exist_reserveC2leafC = .TRUE.
@@ -1040,8 +1036,6 @@ CONTAINS
       IF(.NOT. exist_knorr_leaf_growth_rate) &
         CALL finish('init_lctlib','No data for leaf_growth_rate found in '//TRIM(lctlib_file_name))
 
-       IF(.NOT. exist_greenC2leafC) &
-            CALL finish('init_lctlib','No data for greenC2leafC found in '//TRIM(lctlib_file_name))
        IF(.NOT. exist_reserveC2leafC) &
             CALL finish('init_lctlib','No data for reserveC2leafC found in '//TRIM(lctlib_file_name))
        IF(.NOT. exist_fract_npp_2_woodPool) &
@@ -1458,7 +1452,6 @@ CONTAINS
        CALL p_bcast(lctlib(:)%knorr_k_l, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%knorr_leaf_growth_rate, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%knorr_max_lai, p_io, mpi_comm)
-       CALL p_bcast(lctlib(:)%greenC2leafC, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%reserveC2leafC, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%fract_npp_2_woodPool, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%fract_npp_2_reservePool, p_io, mpi_comm)

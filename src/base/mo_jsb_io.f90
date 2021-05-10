@@ -8,7 +8,10 @@ MODULE mo_jsb_io
     ZAXIS_SURFACE, ZAXIS_DEPTH_BELOW_LAND, ZAXIS_GENERIC,              &
     FILETYPE_NC2, FILETYPE_NC4, FILETYPE_GRB, FILETYPE_GRB2,           &
     GRID_CELL, GRID_UNSTRUCTURED, GRID_UNSTRUCTURED_CELL,              &
-    GRID_LONLAT, TSTEP_CONSTANT, TSTEP_INSTANT,                        &
+#ifdef __ICON__
+    GRID_LONLAT, &
+#endif
+    TSTEP_CONSTANT, TSTEP_INSTANT,                                     &
     cdiDefMissval, read_jsb_io_namelist
 
   USE mo_exception, ONLY: finish

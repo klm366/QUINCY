@@ -30,7 +30,10 @@ MODULE mo_jsb_memory_class
     &                             REAL1D, REAL2D, REAL3D
   USE mo_jsb_pool_class,    ONLY: t_jsb_pool
   USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2, &
-                                  GRID_LONLAT, GRID_UNSTRUCTURED, GRID_UNSTRUCTURED_CELL, GRID_CELL, missval, tables
+#ifdef __ICON__
+    &                             GRID_LONLAT, &
+#endif
+    &                             GRID_UNSTRUCTURED, GRID_UNSTRUCTURED_CELL, GRID_CELL, missval, tables
   USE mo_jsb_io_iface,      ONLY: t_cf_var, t_grib2_var, grib2_var
   USE mo_util,              ONLY: int2string
   USE mo_jsb_utils_iface,   ONLY: assign_if_present
@@ -77,7 +80,8 @@ MODULE mo_jsb_memory_class
     PROCEDURE                                    :: t_jsb_memory_add_var_r3d
     PROCEDURE                                    :: t_jsb_memory_add_pool
     PROCEDURE                                    :: t_jsb_memory_add_pool_var_r2d
-    GENERIC                                      :: Add_var => t_jsb_memory_add_var_r1d, t_jsb_memory_add_var_r2d, t_jsb_memory_add_var_r3d, &
+    GENERIC                                      :: Add_var => t_jsb_memory_add_var_r1d, t_jsb_memory_add_var_r2d, &
+      &                                                        t_jsb_memory_add_var_r3d, &
       &                                                        t_jsb_memory_add_pool, t_jsb_memory_add_pool_var_r2d
     PROCEDURE                                    :: Get_var_position
     PROCEDURE                                    :: Collect_var_real2d  ! Collect var from its child tiles
