@@ -888,7 +888,7 @@ CONTAINS
 
     ! Pointers to variables in memory
     dsl4jsb_Real3D_onChunk :: fract_org_sl
-    dsl4jsb_Real3D_onChunk :: t_soil
+    dsl4jsb_Real3D_onChunk :: t_soil_sl
 
     dsl4jsb_Real2D_onChunk :: w_soil_rel
     dsl4jsb_Real2D_onChunk :: w_soil_column
@@ -947,7 +947,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_column)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, max_moist)
 
-    dsl4jsb_Get_var3D_onChunk(SSE_,    t_soil)     ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_,    t_soil_sl)     ! in
 
     IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
       dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)
@@ -978,9 +978,9 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_porosity_sl   ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_field_cap_sl  ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_p_wilt_sl     ), &
+      &                                t_soil_sl     (:,:), &
       & dsl4jsb_var2D_onChunk (HYDRO_, max_moist         ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, oro_stddev        ), &
-      &                                t_soil        (:,1), &
       & dsl4jsb_var2D_onChunk (HYDRO_, water_excess      ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, evapotrans_soil   ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, trans             ), &
