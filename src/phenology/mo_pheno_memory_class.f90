@@ -24,7 +24,7 @@ MODULE mo_pheno_memory_class
   USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_lct_class,          ONLY: VEG_TYPE, LAND_TYPE
-  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d
+  USE mo_jsb_var_class,          ONLY: t_jsb_var_real1d, t_jsb_var_real2d
   USE mo_jsb_varlist,            ONLY: BASIC, FULL !, MEDIUM
   !USE mo_jsb_physical_constants, ONLY: tmelt
 
@@ -44,6 +44,7 @@ MODULE mo_pheno_memory_class
   TYPE, EXTENDS(t_jsb_memory) :: t_pheno_memory
     TYPE(t_jsb_var_real2d)           :: &
       & lai,                            & !< Leaf area index
+      & lai_ta,                         & !< Leaf area index relative to the tile area
       & fract_fpc,                      & !< Foliage projected cover of the pft
                                           !  (fraction of ground area occupied by the vertical projection of foliage)
       & fract_fpc_max,                  & !< Maximum fraction of tile that can be covered by leaves (assuming infinite lai)
@@ -122,6 +123,12 @@ MODULE mo_pheno_memory_class
                                     nd_dormance         , & !< number of days since last growing season [# days]
                                     lai_max                 !< maximum lai - from site specific lai data [m2 m-2]
 
+    ! Diagnostic land mean phenology e.g. for monitoring (only available with ICON)
+    TYPE(t_jsb_var_real1d) ::        &
+      lai_ta_gmean,                  & ! Global Land mean LAI (box tile)
+      fract_fpc_gmean                  ! Global Land mean foliage cover (box tile)
+
+
   CONTAINS
     PROCEDURE :: Init => Init_pheno_memory
   END TYPE t_pheno_memory
@@ -194,13 +201,21 @@ CONTAINS
         & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
+      CALL mem%Add_var( 'lai_ta', mem%lai_ta,                                  &
+        & hgrid, surface,                                                      &
+        & t_cf('leaf_area_index', '', ''),                                     &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & output_level=BASIC,                                                  &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
       CALL mem%Add_var( 'fract_fpc', mem%fract_fpc,                            &
         & hgrid, surface,                                                      &
         & t_cf('foliage_projected_cover', '', ''),                             &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & output_level=BASIC,                                                  &
-        & initval_r=0.0_wp )
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'fract_fpc_max', mem%fract_fpc_max,                    &
         & hgrid, surface,                                                      &
@@ -215,7 +230,6 @@ CONTAINS
         & t_cf('forest_fraction', '', ''),                                     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
-        & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
       CALL mem%Add_var( 'veg_fract_correction', mem%veg_fract_correction,      &
@@ -367,6 +381,29 @@ CONTAINS
         END IF
 
       END IF
+
+#ifdef __ICON__
+      ! Diagnostic global carbon sums for experiment monitoring
+      !       (1d stream variables are not supported with echam)
+      !
+      IF (TRIM(suffix) == 'box') THEN
+
+        CALL mem%Add_var( 'lai_ta_gmean', mem%lai_ta_gmean,                           &
+          & hgrid, surface,                                                           &
+          & t_cf('lai_ta_gmean', '1', 'Global land mean leaf_area_index'),            &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+          & prefix, suffix,                                                           &
+          & lrestart=.FALSE., initval_r=0.0_wp )
+
+        CALL mem%Add_var( 'fract_fpc_gmean', mem%fract_fpc_gmean,                     &
+          & hgrid, surface,                                                           &
+          & t_cf('fract_fpc_gmean', '1', 'Global land mean foilage projected cover'), &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+          & prefix, suffix,                                                           &
+          & lrestart=.FALSE., initval_r=0.0_wp )
+
+      END IF
+#endif
 
     END IF  !  VEG / LAND
     END IF  !  IF(.NOT. use_quincy)

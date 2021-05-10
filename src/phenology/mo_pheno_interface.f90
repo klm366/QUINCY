@@ -51,7 +51,7 @@ MODULE mo_pheno_interface
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: Register_pheno_tasks
+  PUBLIC :: Register_pheno_tasks, global_phenology_diagnostics
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_pheno_interface'
 
@@ -351,10 +351,13 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: chill_days_SG
     dsl4jsb_Real2D_onChunk :: chill_days_EG
     dsl4jsb_Real2D_onChunk :: lai
+    dsl4jsb_Real2D_onChunk :: lai_ta
     dsl4jsb_Real2D_onChunk :: day_NPP_sum
     dsl4jsb_Real2D_onChunk :: previous_day_temp_min
     dsl4jsb_Real2D_onChunk :: previous_day_temp_max
     dsl4jsb_Real2D_onChunk :: previous_day_NPP_pot_rate_ca
+    dsl4jsb_Real2D_onChunk :: veg_fract_correction
+    dsl4jsb_Real2D_onChunk :: fract_fpc_max
 
     ! JN 10.01.18 only required with l_forestRegrowth = true
     dsl4jsb_Real2D_onChunk :: c_green
@@ -367,7 +370,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: number_of_individuals
     dsl4jsb_Real2D_onChunk :: biomass_per_individual
     dsl4jsb_Real2D_onChunk :: maxLAI_allom
-    dsl4jsb_Real2D_onChunk :: veg_fract_correction
 
     dsl4jsb_Real2D_onChunk :: cconservation_allom
 
@@ -433,7 +435,6 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(PHENO_,    number_of_individuals)   ! inout
       dsl4jsb_Get_var2D_onChunk(PHENO_,    biomass_per_individual)  ! inout
       dsl4jsb_Get_var2D_onChunk(PHENO_,    maxLAI_allom)            ! inout
-      dsl4jsb_Get_var2D_onChunk(PHENO_,    veg_fract_correction)    ! inout
 
       dsl4jsb_Get_var2D_onChunk(PHENO_,    cconservation_allom)     ! inout
 
@@ -449,7 +450,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SEB_,      previous_day_temp_max)  ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,      pseudo_soil_temp)       ! in
 
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    fract_fpc_max)          ! in
+
     dsl4jsb_Get_var2D_onChunk(PHENO_,    lai)                    ! inout
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    veg_fract_correction)   ! inout
     dsl4jsb_Get_var2D_onChunk(PHENO_,    heat_sum_SG)            ! inout
     dsl4jsb_Get_var2D_onChunk(PHENO_,    heat_sum_EG)            ! inout
     dsl4jsb_Get_var2D_onChunk(PHENO_,    heat_sum_CRP)           ! inout
@@ -467,6 +471,7 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(PHENO_,    day_NPP_sum)            ! inout
     dsl4jsb_Get_var2D_onChunk(PHENO_,    previous_day_NPP_pot_rate_ca) ! out
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    lai_ta)                 ! out
 
     ! ---------------------------
     ! Go
@@ -720,6 +725,10 @@ CONTAINS
          & )
     END IF
 
+    ! Calculated LAI relative to the tile area
+    lai_ta(:) = lai(:) * veg_fract_correction(:) * fract_fpc_max(:)
+
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
     !$claw acc end data
@@ -817,6 +826,7 @@ CONTAINS
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
     dsl4jsb_Aggregate_onChunk(PHENO_, lai,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(PHENO_, lai_ta, weighted_by_fract)
 
     IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
       IF (is_newyear(options%current_datetime, options%dtime)) THEN
@@ -1207,6 +1217,97 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_time_average_phenology
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Calculations of diagnostic global land mean phenology output
+  !!
+  !! The routine is called from jsbach_finish_timestep, after the loop over the nproma blocks.
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE global_phenology_diagnostics(tile)
+
+#ifndef __ICON__
+    ! Argument
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
+
+    CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_phenology_diagnostics'
+    IF (debug_on()) CALL message(TRIM(routine), 'Global diagnostics only available with ICON')
+#else
+
+    USE mo_sync,                  ONLY: global_sum_array
+    USE mo_jsb_grid,              ONLY: Get_grid
+    USE mo_jsb_grid_class,        ONLY: t_jsb_grid
+
+    ! Argument
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
+
+    ! Local variables
+    !
+    dsl4jsb_Def_memory(PHENO_)
+
+    CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_phenology_diagnostics'
+
+    ! Pointers to variables in memory
+
+    dsl4jsb_Real2D_onDomain :: lai_ta
+    dsl4jsb_Real2D_onDomain :: fract_fpc
+
+    REAL(wp), POINTER       :: lai_ta_gmean(:)
+    REAL(wp), POINTER       :: fract_fpc_gmean(:)
+
+    TYPE(t_jsb_model), POINTER      :: model
+    TYPE(t_jsb_grid),  POINTER      :: grid
+
+    REAL(wp), POINTER      :: area(:,:)
+    REAL(wp), POINTER      :: notsea(:,:)
+    LOGICAL,  POINTER      :: is_in_domain(:,:) ! T: cell in domain (not halo)
+    REAL(wp), ALLOCATABLE  :: in_domain (:,:)   ! 1: cell in domain, 0: halo cell
+    REAL(wp), ALLOCATABLE  :: scaling (:,:)
+    REAL(wp)               :: global_land_area
+
+
+    dsl4jsb_Get_memory(PHENO_)
+    dsl4jsb_Get_var2D_onDomain(PHENO_,  lai_ta)             ! in
+    dsl4jsb_Get_var2D_onDomain(PHENO_,  fract_fpc)          ! in
+
+    lai_ta_gmean        => PHENO__mem%lai_ta_gmean%ptr(:)   ! out
+    fract_fpc_gmean  => PHENO__mem%fract_fpc_gmean%ptr(:)   ! out
+
+    model => Get_model(tile%owner_model_id)
+    grid  => Get_grid(model%grid_id)
+    area         => grid%area(:,:)
+    is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
+    notsea       => tile%fract(:,:)   ! fraction of the box tile: notsea
+
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
+
+
+    IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
+
+    ! Domain Mask - to mask all halo cells for global sums (otherwise these
+    ! cells are counted twice)
+    ALLOCATE (in_domain(grid%nproma,grid%nblks))
+    WHERE (is_in_domain(:,:))
+      in_domain = 1._wp
+    ELSEWHERE
+      in_domain = 0._wp
+    END WHERE
+
+    ALLOCATE (scaling(grid%nproma,grid%nblks))
+
+    ! Calculate global land means phenology variables, if requested for output
+    global_land_area = global_sum_array(area(:,:) * notsea(:,:) * in_domain(:,:))
+    scaling(:,:) = notsea(:,:) * area(:,:) * in_domain(:,:)
+    IF (PHENO__mem%lai_ta_gmean%is_in_output)     &
+      &  lai_ta_gmean     = global_sum_array(lai_ta(:,:)    * scaling(:,:)) / global_land_area
+    IF (PHENO__mem%fract_fpc_gmean%is_in_output)  &
+      &  fract_fpc_gmean  = global_sum_array(fract_fpc(:,:) * scaling(:,:)) / global_land_area
+
+    DEALLOCATE (scaling, in_domain)
+
+#endif
+  END SUBROUTINE global_phenology_diagnostics
 
 #endif
 END MODULE mo_pheno_interface

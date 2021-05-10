@@ -641,8 +641,6 @@ CONTAINS
 
     IF (timer_on('detail')) CALL timer_start(timer_process_task(this%owner_model_id))
 
-    ! Gfortran crashes on the next line
-    ! ALLOCATE(msg, source=msg_in)
     ALLOCATE(msg)
     msg%name = msg_in%name
     msg%action = msg_in%action
@@ -743,8 +741,7 @@ CONTAINS
 
     !return_ptr => msg
     IF (ASSOCIATED(msg)) THEN
-      ALLOCATE(return_ptr, source=msg)
-!      return_ptr%action = msg%action
+      return_ptr => msg
     ELSE
       return_ptr => NULL()
     END IF
@@ -773,8 +770,6 @@ CONTAINS
         END IF
       END IF
     END IF
-
-    IF (ASSOCIATED(msg)) DEALLOCATE(msg)
 
     IF (timer_on('detail')) CALL timer_stop(timer_process_task(this%owner_model_id))
 

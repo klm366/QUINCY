@@ -23,7 +23,7 @@ MODULE mo_carbon_memory_class
   USE mo_jsb_model_class,  ONLY: t_jsb_model
   USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_memory_class, ONLY: t_jsb_memory
-  USE mo_jsb_var_class,    ONLY: t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_jsb_var_class,    ONLY: t_jsb_var_real1d, t_jsb_var_real2d, t_jsb_var_real3d
   USE mo_jsb_pool_class,   ONLY: t_jsb_pool
   USE mo_jsb_lct_class,    ONLY: LAND_TYPE, BARE_TYPE, VEG_TYPE
 
@@ -270,6 +270,7 @@ MODULE mo_carbon_memory_class
 
       !
       ! diagnostic carbon sums
+      c_sum_veg_ta,             & ! Sum of all vegetation carbon pools [mol(C)^2/m(tile area)]
       c_sum_litter_ag_ta,       & ! Sum of all above ground litter carbon pools [mol(C)^2/m(tile area)]
       c_sum_litter_bg_ta,       & ! Sum of all below ground litter carbon pools [mol(C)^2/m(tile area)]
       c_sum_humus_ta,           & ! Sum of all soil / humus carbon pools [mol(C)^2/m(tile area)]
@@ -296,7 +297,6 @@ MODULE mo_carbon_memory_class
       GPP_yDayMean_ta,               & !
       root_exudates_ta,              & ! Total root exudates entering to the litter green pools [mol(C)/m^2(tile area) s]
       cflux_c_green_2_herb_ta,            & ! Total carbon flux from C pool green to herbivory.
-      !cflux_herb_2_littergreen_ta,         & ! ..part of cflux_c_green_2_herb that goes into green litter
       !cflux_herb_2_atm_ta,      & ! ..part of cflux_c_green_2_herb that goes into atmosphere
       cflux_dist_greenreserve_2_soil_ta,  & ! R: should be later renamed to C_2_GreenLitterPools_ta
       cflux_dist_woods_2_soil_ta,   & ! R: should be later renamed to C_2_WoodLitterPools_ta
@@ -312,6 +312,18 @@ MODULE mo_carbon_memory_class
                                        ! .. (positive for emission to atmosphere,
                                        ! ..  negative for absorption by biosphere)
       cflux_npp_2_atm_yday_ta          ! previous day CO2 flux from actual NPP, required for C conservation test
+
+
+    ! Diagnostic global carbon sums e.g. for monitoring (only available with ICON)
+    TYPE(t_jsb_var_real1d) ::        &
+      c_sum_veg_gsum,                & ! Global sum of all vegetation carbon pools [PgC]
+      c_sum_litter_ag_gsum,          & ! Global sum of all above ground litter carbon pools [PgC]
+      c_sum_litter_bg_gsum,          & ! Global sum of all below ground litter carbon pools [PgC]
+      c_sum_humus_gsum,              & ! Global sum of all soil / humus carbon pools [PgC]
+      c_sum_natural_gsum,            & ! Global sum of all natural carbon pools [PgC]
+      NPP_act_yDayMean_gsum,         & ! Global actual NPP rate [PgC/yr]
+      GPP_yDayMean_gsum,             & ! Global GPP rate [PgC/yr]
+      soil_respiration_gsum
 
 
   CONTAINS
@@ -1168,13 +1180,6 @@ CONTAINS
       & prefix, suffix,                                                                                         &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
-    !       CALL mem%Add_var('fract_litter_wood_new', mem%fract_litter_wood_new,                         &
-    !         & hgrid, surface,                                                                          &
-    !         & t_cf('fract_litter_wood_new', 'mol(C) m-2(canopy)', 'New fraction in wood litter pool.'), &
-    !         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
-    !         & prefix, suffix,                                                                          &
-    !         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
-
     CALL mem%Add_var('c2greenlitterpools', mem%cflux_dist_greenreserve_2_soil,                          &
       & hgrid, surface,                                                                                 &
       & t_cf('cflux_dist_greenreserve_2_soil', 'mol(C) m-2(canopy) s-1',                                &
@@ -1391,9 +1396,9 @@ CONTAINS
       & loutput = .TRUE., output_level=MEDIUM,                                                                                &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
-    CALL mem%Add_var('c_sum_humus_ta', mem%C_sum_humus_ta,                     &
+    CALL mem%Add_var('c_sum_veg_ta', mem%C_sum_veg_ta,                         &
       & hgrid, surface,                                                        &
-      & t_cf('C_sum_humus_ta', 'mol(C) m-2', 'Sum of all humus C pools.'),     &
+      & t_cf('C_sum_veg_ta', 'mol(C) m-2', 'Sum of all vegetation C pools.'),  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
       & prefix, suffix,                                                        &
       & output_level=BASIC,                                                    &
@@ -1409,10 +1414,18 @@ CONTAINS
 
     CALL mem%Add_var( 'c_sum_litter_bg_ta', mem%C_sum_litter_bg_ta,                          &
       & hgrid, surface,                                                                      &
-      & t_cf('C_sum_litter_ag_ta', 'mol(C) m-2', 'Sum of all below ground litter C pools.'), &
+      & t_cf('C_sum_litter_bg_ta', 'mol(C) m-2', 'Sum of all below ground litter C pools.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &
       & prefix, suffix,                                                                      &
       & output_level=BASIC,                                                                  &
+      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var('c_sum_humus_ta', mem%C_sum_humus_ta,                     &
+      & hgrid, surface,                                                        &
+      & t_cf('C_sum_humus_ta', 'mol(C) m-2', 'Sum of all humus C pools.'),     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+      & prefix, suffix,                                                        &
+      & output_level=BASIC,                                                    &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var('c_sum_natural_ta', mem%C_sum_natural_ta,                 &
@@ -1422,20 +1435,6 @@ CONTAINS
       & prefix, suffix,                                                        &
       & output_level=BASIC,                                                    &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-    !      CALL mem%Add_var('npp_pot_sum_ta', mem%NPP_pot_sum_ta,                              &
-    !        & hgrid, surface,                                                                 &
-    !        & t_cf('NPP_pot_sum_ta', 'mol(C) m-2 s-1', 'Used to accumulate NPP over a day.'), &
-    !        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),              &
-    !        & prefix, suffix,                                                                 &
-    !        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
-
-    !      CALL mem%Add_var('gpp_sum_ta', mem%GPP_sum_ta,                                  &
-    !        & hgrid, surface,                                                             &
-    !        & t_cf('GPP_sum_ta', 'mol(C) m-2 s-1', 'Used to accumulate GPP over a day.'), &
-    !        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),          &
-    !        & prefix, suffix,                                                             &
-    !        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     CALL mem%Add_var('soil_respiration_ta', mem%soil_respiration_ta,        &
       & hgrid, surface,                                                     &
@@ -1543,31 +1542,6 @@ CONTAINS
       & prefix, suffix,                                                                                   &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
-
-    !       CALL mem%Add_var('cflux_herb_2_littergreen_ta', mem%cflux_herb_2_littergreen_ta,                                   &
-    !         & hgrid, surface,                                                                                          &
-    !         & t_cf('cflux_herb_2_littergreen_ta', 'mol(C) m-2 s-1', 'Carbon flux from cflux_c_green_2_herb into green litter &
-    !         &                                                      (complementary to cflux_herb_2_atm).'),        &
-    !         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                       &
-    !         & prefix, suffix,                                                                                          &
-    !         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
-    !
-    !       CALL mem%Add_var('cflux_herb_2_atm_ta', mem%cflux_herb_2_atm_ta,                              &
-    !         & hgrid, surface,                                                                                           &
-    !         & t_cf('cflux_herb_2_atm_ta', 'mol(C) m-2 s-1', 'Carbon flux from cflux_c_green_2_herb into atmosphere &
-    !         &                                                          (complementary to cflux_herb_2_littergreen).'),        &
-    !         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
-    !         & prefix, suffix,                                                                                           &
-    !         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
-
-
-    !       CALL mem%Add_var('fract_litter_wood_new_ta', mem%fract_litter_wood_new_ta,                     &
-    !         & hgrid, surface,                                                                          &
-    !         & t_cf('fract_litter_wood_new_ta', 'mol(C) m-2', 'New fraction in wood litter pool.'), &
-    !         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
-    !         & prefix, suffix,                                                                          &
-    !         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
-
     ! R: In JSBACH3 the following variables are not written into the output.
     CALL mem%Add_var('co2_l2a_npp_ta', mem%cflux_npp_2_atm_ta,                                                       &
       & hgrid, surface,                                                                                              &
@@ -1659,6 +1633,62 @@ CONTAINS
         & prefix, suffix,                                                    &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE.)
     ENDIF
+
+#ifdef __ICON__
+    ! Diagnostic global carbon sums for experiment monitoring 
+    !       (1d stream variables are not supported with echam)
+    !
+    IF ( TRIM(suffix) == 'box' ) THEN
+      CALL mem%Add_var('c_sum_veg_gsum', mem%C_sum_veg_gsum,                                     &
+        & hgrid, surface,                                                                        &
+        & t_cf('C_sum_veg_gsum', 'PgC', 'Global sum of all vegetation C pools.'),                &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+        & prefix, suffix,                                                                        &
+        & lrestart=.FALSE., initval_r=0.0_wp )
+      CALL mem%Add_var('c_sum_litter_ag_gsum', mem%C_sum_litter_ag_gsum,                         &
+        & hgrid, surface,                                                                        &
+        & t_cf('C_sum_litter_ag_gsum', 'PgC', 'Global sum of all above ground litter C pools'),  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+        & prefix, suffix,                                                                        &
+        & lrestart=.FALSE., initval_r=0.0_wp )
+      CALL mem%Add_var('c_sum_litter_bg_gsum', mem%C_sum_litter_bg_gsum,                         &
+        & hgrid, surface,                                                                        &
+        & t_cf('C_sum_litter_bg_gsum', 'PgC', 'Global sum of all below ground litter C pools.'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+        & prefix, suffix,                                                                        &
+        & lrestart=.FALSE., initval_r=0.0_wp )
+      CALL mem%Add_var('c_sum_humus_gsum', mem%C_sum_humus_gsum,                                 &
+        & hgrid, surface,                                                                        &
+        & t_cf('C_sum_humus_gsum', 'PgC', 'Global sum of all humus C pools.'),                   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+        & prefix, suffix,                                                                        &
+        & lrestart=.FALSE., initval_r=0.0_wp )
+      CALL mem%Add_var('c_sum_natural_gsum', mem%C_sum_natural_gsum,                             &
+        & hgrid, surface,                                                                        &
+        & t_cf('C_sum_natural_gsum', 'PgC', 'Global sum of all natural C pools.'),               &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+        & prefix, suffix,                                                                        &
+        & lrestart=.FALSE., initval_r=0.0_wp )
+      CALL mem%Add_var('npp_act_ydaymean_gsum', mem%NPP_act_yDayMean_gsum,                       &
+        & hgrid, surface,                                                                        &
+        & t_cf('NPP_act_yDayMean_gsum', 'PgC yr-1', 'Global actual NPP rate of the previous day'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+        & prefix, suffix,                                                                        &
+        & lrestart=.FALSE., initval_r=0.0_wp )
+      CALL mem%Add_var('gpp_ydaymean_gsum', mem%GPP_yDayMean_gsum,                               &
+        & hgrid, surface,                                                                        &
+        & t_cf('GPP_yDayMean_gsum', 'PgC yr-1', 'Global GPP rate of the previous day'),          &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+        & prefix, suffix,                                                                        &
+        & lrestart=.FALSE., initval_r=0.0_wp )
+      CALL mem%Add_var('soil_respiration_gsum', mem%soil_respiration_gsum,                       &
+        & hgrid, surface,                                                                        &
+        & t_cf('soil_respiration_gsum', 'PgC yr-1', 'Global soil respiration rate'),             &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
+        & prefix, suffix,                                                                        &
+        & lrestart=.FALSE., initval_r=0.0_wp )
+    END IF
+#endif
 
   END SUBROUTINE Init_carbon_memory
 
