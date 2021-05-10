@@ -446,7 +446,8 @@ CONTAINS
     ! --- compute shortwave radiation
     day_of_year=day_in_year(next_date)
     ALLOCATE(rad_uv_down(ice, nblks))
-    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, next_date, model_id, forcing_input%shortwave, temporary_data1)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, next_date, model_id, forcing_input%shortwave, &
+      & temporary_data1)
     CALL shortwave_from_direct_shortwave( &
       ! in
       & day_of_year,            &

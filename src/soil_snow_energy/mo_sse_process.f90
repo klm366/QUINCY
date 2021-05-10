@@ -140,8 +140,8 @@ CONTAINS
         saturation = (water + ice) / layer_depth / porosity  ! fractional volume of water/ice rel. to pore volume
 
         ! ! --- Alternate formulation ---
-        ! ! @todo: in jsbach3, frozen soil is checked by t_soil <= tmelt, however, the computations in calc_soil_temperature
-        ! ! are such that some ice can remain in a layer even if t_soil > tmelt.
+        ! ! @todo: in jsbach3, frozen soil is checked by t_soil_upper_layer <= tmelt, however, the computations in calc_soil_temperature
+        ! ! are such that some ice can remain in a layer even if t_soil_upper_layer > tmelt.
         ! IF (ice > 0._wp) THEN  ! Frozen case
         !   kersten = saturation
         !   fract_water = water / layer_depth
@@ -167,8 +167,8 @@ CONTAINS
         !     &         * hcond_water     ** porosity
         ! END IF
 
-        ! @todo: in jsbach3, frozen soil is checked by t_soil <= tmelt, however, the computations in calc_soil_temperature
-        ! are such that some ice can remain in a layer even if t_soil > tmelt.
+        ! @todo: in jsbach3, frozen soil is checked by t_soil_upper_layer <= tmelt, however, the computations in calc_soil_temperature
+        ! are such that some ice can remain in a layer even if t_soil_upper_layer > tmelt.
         IF (ice > 0._wp) THEN  ! Frozen case
           kersten = saturation
         ELSE                   ! Unfrozen case
@@ -344,7 +344,7 @@ CONTAINS
   ! @param [in]      ws_max
   ! @param [in]      matrix_pot
   ! @param [in]      bclapp
-  ! @param [in,out]  t_soil        The t soil
+  ! @param [in,out]  t_soil_sl     The t soil across layers
   ! @param [in,out]  t_soil_acoef  The t soil acoef
   ! @param [in,out]  t_soil_bcoef  The t soil bcoef
   ! @param [in,out]  ws
@@ -363,7 +363,8 @@ CONTAINS
     & l_freeze, l_supercool,              &
     & t_srf_unfilt,                       &
     & vol_heat_cap, heat_cond,            &
-    & t_soil, t_soil_acoef, t_soil_bcoef, &
+    & t_soil_sl,                          &
+    & t_soil_acoef, t_soil_bcoef,         &
     & hcap_grnd, grnd_hflx,               &
     & thaw_depth,                         &
     ! optional
@@ -442,7 +443,7 @@ CONTAINS
     REAL(wp), INTENT(in)    ::  vol_heat_cap(:,:)        !! soil heat capacity [J/m^3K]
     REAL(wp), INTENT(in)    ::  heat_cond(:,:)           !! soil thermal conductivity [J/m/s/K]
 
-    REAL(wp), INTENT(inout) ::  t_soil(:,:)              !! soil temperature [K]
+    REAL(wp), INTENT(inout) ::  t_soil_sl(:,:)           !! soil temperature [K]
     REAL(wp), INTENT(inout) ::  t_soil_acoef(:,:)        !! soil A coefficient of Richtmyer and Morton scheme
     REAL(wp), INTENT(inout) ::  t_soil_bcoef(:,:)        !! soil B coefficient of Richtmyer and Morton scheme
 
@@ -475,7 +476,7 @@ CONTAINS
     !  Computation of useful constants
 
     !$claw acc data create(z1,zd1,zdz1,zdz2,heat_cap,liquid_max) &
-    !$claw acc present(dz,mids,t_srf_unfilt,vol_heat_cap,heat_cond,t_soil, &
+    !$claw acc present(dz,mids,t_srf_unfilt,vol_heat_cap,heat_cond,t_soil_sl, &
     !$claw acc t_soil_acoef,t_soil_bcoef,hcap_grnd,grnd_hflx,thaw_depth)
 
     !$claw acc parallel loop gang vector
@@ -506,12 +507,12 @@ CONTAINS
 
     IF (.NOT. lstart) THEN
 
-      !$claw acc parallel default(none) present(t_srf_unfilt,t_soil,t_soil_acoef,t_soil_bcoef)
+      !$claw acc parallel default(none) present(t_srf_unfilt,t_soil_sl,t_soil_acoef,t_soil_bcoef)
 
       ! uppermost layer
       !$claw acc loop gang vector 
       DO jl=1,nidx
-        t_soil(jl,1) = t_srf_unfilt(jl)
+        t_soil_sl(jl,1) = t_srf_unfilt(jl)
       END DO
 
       ! deeper layers
@@ -519,7 +520,7 @@ CONTAINS
       DO jk = 1, nsoil-1
         !$claw acc loop gang vector
         DO jl=1,nidx
-          t_soil(jl,jk+1) = t_soil_acoef(jl,jk) + t_soil_bcoef(jl,jk) * t_soil(jl,jk)
+          t_soil_sl(jl,jk+1) = t_soil_acoef(jl,jk) + t_soil_bcoef(jl,jk) * t_soil_sl(jl,jk)
         END DO
       END DO
 
@@ -531,7 +532,7 @@ CONTAINS
         IF (l_supercool) THEN
           !$claw expand parallel update savepoint=ser_jsb_sse_calc_soil_temperature_expand_0 counter=ser_counter
           liquid_max(1:nidx,1:nsoil) = Get_liquid_max( &
-            & t_soil    (1:nidx,1:nsoil), &
+            & t_soil_sl (1:nidx,1:nsoil), &
             & ws_max    (1:nidx,1:nsoil), &
             & matrix_pot(1:nidx,1:nsoil), &
             & bclapp    (1:nidx,1:nsoil)  &
@@ -541,22 +542,22 @@ CONTAINS
           liquid_max(1:nidx,1:nsoil) = 0._wp
         END IF
 
-        !$claw acc data present(frozen,melt,ws,ice,t_soil,heat_cap,liquid_max)
+        !$claw acc data present(frozen,melt,ws,ice,t_soil_sl,heat_cap,liquid_max)
         !$claw acc parallel loop gang vector collapse(2)
         DO jl=1,nidx
           DO jk=1,nsoil
-            IF (t_soil(jl,jk) < tmelt .AND. ws(jl,jk) > liquid_max(jl,jk)) THEN
+            IF (t_soil_sl(jl,jk) < tmelt .AND. ws(jl,jk) > liquid_max(jl,jk)) THEN
               frozen(jl,jk) = MIN(ws(jl,jk) - liquid_max(jl,jk), &
-                &               heat_cap(jl,jk) * (tmelt - t_soil(jl,jk)) / (alf * rhoh2o) &
+                &               heat_cap(jl,jk) * (tmelt - t_soil_sl(jl,jk)) / (alf * rhoh2o) &
                 &              )
               ! ws (jl,jk) = ws (jl,jk) - frozen(jl,jk)
               ! ice(jl,jk) = ice(jl,jk) + frozen(jl,jk)
-              ! t_soil(jl,jk) = t_soil(jl,jk) + frozen(jl,jk) * alf * rhoh2o / heat_cap(jl,jk)
-            ELSE IF (t_soil(jl,jk) > tmelt .AND. ice(jl,jk) > 0._wp) THEN
-              melt(jl,jk) = MIN(ice(jl,jk), heat_cap(jl,jk) * (t_soil(jl,jk) - tmelt) / (alf * rhoi))
+              ! t_soil_sl(jl,jk) = t_soil_sl(jl,jk) + frozen(jl,jk) * alf * rhoh2o / heat_cap(jl,jk)
+            ELSE IF (t_soil_sl(jl,jk) > tmelt .AND. ice(jl,jk) > 0._wp) THEN
+              melt(jl,jk) = MIN(ice(jl,jk), heat_cap(jl,jk) * (t_soil_sl(jl,jk) - tmelt) / (alf * rhoi))
               ! ws (jl,jk) = ws (jl,jk) + melt(jl,jk)
               ! ice(jl,jk) = ice(jl,jk) - melt(jl,jk)
-              ! t_soil(jl,jk) = t_soil(jl,jk) - melt(jl,jk) * alf * rhoi / heat_cap(jl,jk)
+              ! t_soil_sl(jl,jk) = t_soil_sl(jl,jk) - melt(jl,jk) * alf * rhoi / heat_cap(jl,jk)
             END IF
           END DO 
         END DO
@@ -567,7 +568,8 @@ CONTAINS
         !$claw expand parallel update savepoint=ser_jsb_sse_calc_soil_temperature_expand_1 counter=ser_counter
         ws(:,:) = ws(:,:) - frozen(:,:) + melt(:,:)
         ice(:,:) = ice(:,:) + frozen(:,:) - melt(:,:)
-        t_soil(:,:) = t_soil(:,:) + frozen(:,:) * alf * rhoh2o / heat_cap(:,:) - melt(:,:) * alf * rhoi / heat_cap(:,:)
+        t_soil_sl(:,:) = t_soil_sl(:,:) + frozen(:,:) * alf * rhoh2o / heat_cap(:,:) - &
+          & melt(:,:) * alf * rhoi / heat_cap(:,:)
         !$claw end expand
 
         !$claw expand parallel update savepoint=ser_jsb_sse_calc_soil_temperature_expand_2 counter=ser_counter
@@ -581,16 +583,17 @@ CONTAINS
       !$claw acc loop gang vector
       DO jl=1,nidx
         thaw_depth(jl) = mids(nsoil)   ! Initialize with maximum thawing depth
-        IF (t_soil(jl,1) <= tmelt) THEN ! Top soil layer is frozen
+        IF (t_soil_sl(jl,1) <= tmelt) THEN ! Top soil layer is frozen
           thaw_depth(jl) = 0._wp
         END IF
         !$claw acc loop seq
         DO jk=2,nsoil
           IF  (       thaw_depth(jl)  == mids(nsoil) & ! still the inital value
-            &   .AND. t_soil(jl,jk-1) >  tmelt &
-            &   .AND. t_soil(jl,jk  ) <= tmelt &
+            &   .AND. t_soil_sl(jl,jk-1) >  tmelt &
+            &   .AND. t_soil_sl(jl,jk  ) <= tmelt &
             & ) THEN
-            thaw_depth(jl) = mids(jk-1) + (mids(jk)-mids(jk-1)) * (t_soil(jl,jk-1) - tmelt) / (t_soil(jl,jk-1) - t_soil(jl,jk))
+            thaw_depth(jl) = mids(jk-1) + (mids(jk)-mids(jk-1)) * (t_soil_sl(jl,jk-1) - &
+              & tmelt) / (t_soil_sl(jl,jk-1) - t_soil_sl(jl,jk))
           END IF
         END DO
       END DO
@@ -637,19 +640,19 @@ CONTAINS
 
     !$claw expand parallel update savepoint=ser_jsb_sse_calc_soil_temperature_expand_4 counter=ser_counter
     ! z1(:,nsoil-1) = zdz2(:,nsoil) + zdz1(:,nsoil-1)
-    t_soil_acoef(:,nsoil-1) = zdz2(:,nsoil) * t_soil(:,nsoil) / z1(:,nsoil-1)
+    t_soil_acoef(:,nsoil-1) = zdz2(:,nsoil) * t_soil_sl(:,nsoil) / z1(:,nsoil-1)
     t_soil_bcoef(:,nsoil-1) = zdz1(:,nsoil-1) / z1(:,nsoil-1)
     !$claw end expand
 
     ! soil layers above
-    !$claw acc data present(z1,zdz1, zdz2,t_soil_acoef,t_soil_bcoef,t_soil)
+    !$claw acc data present(z1,zdz1, zdz2,t_soil_acoef,t_soil_bcoef,t_soil_sl)
     !$claw acc parallel
     !$claw acc loop gang vector
     DO jl=1,nidx
       !$claw acc loop seq
       DO jk = nsoil-1, 2, -1
         z1(jl,jk-1) = 1._wp / (zdz2(jl,jk) + zdz1(jl,jk-1) + zdz1(jl,jk) * (1._wp - t_soil_bcoef(jl,jk)))
-        t_soil_acoef(jl,jk-1) = (t_soil(jl,jk) * zdz2(jl,jk) + zdz1(jl,jk) * t_soil_acoef(jl,jk)) * z1(jl,jk-1)
+        t_soil_acoef(jl,jk-1) = (t_soil_sl(jl,jk) * zdz2(jl,jk) + zdz1(jl,jk) * t_soil_acoef(jl,jk)) * z1(jl,jk-1)
         t_soil_bcoef(jl,jk-1) = zdz1(jl,jk-1) * z1(jl,jk-1)
       END DO
     END DO  
@@ -670,7 +673,7 @@ CONTAINS
     ! Computation of surface diffusive heat flux from the ground and heat capacity of the ground
     !------------------------------------------------------------------------------------------------
     !$claw expand parallel update savepoint=ser_jsb_sse_calc_soil_temperature_expand_6 counter=ser_counter
-    grnd_hflx(:) = zdz1(:,1) * (t_soil_acoef(:,1) + (t_soil_bcoef(:,1) - 1._wp) * t_soil(:,1))
+    grnd_hflx(:) = zdz1(:,1) * (t_soil_acoef(:,1) + (t_soil_bcoef(:,1) - 1._wp) * t_soil_sl(:,1))
     hcap_grnd(:) = (zdz2(:,1) * delta_time + delta_time * (1._wp - t_soil_bcoef(:,1)) * zdz1(:,1))
     !$claw end expand
 
@@ -686,7 +689,8 @@ CONTAINS
     & t_srf_unfilt,                       &
     & vol_heat_cap, heat_cond,            &
     & vol_heat_cap_soil, heat_cond_soil,  &
-    & t_soil, t_soil_acoef, t_soil_bcoef, &
+    & t_soil_sl,                          &
+    & t_soil_acoef, t_soil_bcoef,         &
     & t_snow, t_snow_acoef, t_snow_bcoef, &
     & t_soil_top, hcap_grnd, grnd_hflx)
     !
@@ -761,7 +765,7 @@ CONTAINS
     REAL(wp), INTENT(in)    :: heat_cond(:)               !! snow thermal conductivity [J/m/s/K]
     REAL(wp), INTENT(in)    :: vol_heat_cap_soil(:)       !! top soil layer volumetric heat capacity
     REAL(wp), INTENT(in)    :: heat_cond_soil(:)          !! top soil layer heat conductivity
-    REAL(wp), INTENT(in)    :: t_soil(:)                  !! top soil layer temperature
+    REAL(wp), INTENT(in)    :: t_soil_sl(:,:)             !! Temperature of soil layers [K]
     REAL(wp), INTENT(in)    :: t_soil_acoef(:)            !! top soil layer A coefficient of Richtmyer and Morton scheme
     REAL(wp), INTENT(in)    :: t_soil_bcoef(:)            !! top soil layer B coefficient of Richtmyer and Morton scheme
 
@@ -781,9 +785,12 @@ CONTAINS
     REAL(wp) :: z1(nidx)
     REAL(wp) :: zd1(nidx,nsnow+1)
     REAL(wp) :: zdz1(nidx,nsnow+1), zdz2(nidx,nsnow+1)
+    REAL(wp) :: t_soil_upper_layer(nidx)                  !< t_soil_sl(:,1)
 
     !$claw acc data create(zmid,z1,zd1,zdz1,zdz2)
 
+
+    t_soil_upper_layer(:) = t_soil_sl(:,1)
 
     !$claw expand parallel update savepoint=ser_jsb_sse_calc_snow_temperature_expand_0 
     grnd_hflx(:) = 0._wp
@@ -841,7 +848,7 @@ CONTAINS
       !     IF (itop_prev == nsnow+1) THEN                       ! No snow layers present in previous time step
       !       t_snow_acoef(jl,jk) = t_soil_acoef(jl)             ! so we use coefficients and old temperature from top soil layer
       !       t_snow_bcoef(jl,jk) = t_soil_bcoef(jl)
-      !       t_snow      (jl,jk) = t_soil      (jl)
+      !       t_snow      (jl,jk) = t_soil_upper_layer(jl)
       !     ELSE                                                 ! Use values from previous top snow layer
       !       t_snow_acoef(jl,jk) = t_snow_acoef(jl,itop_prev)
       !       t_snow_bcoef(jl,jk) = t_snow_bcoef(jl,itop_prev)
@@ -930,7 +937,7 @@ CONTAINS
       END DO
     END DO
 
-    !$claw acc data present(zdz1,zdz2,vol_heat_cap_soil,dz_soil,zd1,heat_cond_soil,z1,t_soil_bcoef,t_snow_acoef,t_snow_bcoef,t_soil,t_soil_acoef)
+    !$claw acc data present(zdz1,zdz2,vol_heat_cap_soil,dz_soil,zd1,heat_cond_soil,z1,t_soil_bcoef,t_snow_acoef,t_snow_bcoef,t_soil_upper_layer,t_soil_acoef)
     !$claw acc parallel loop gang vector
     DO jl=1,nidx
       zdz2(jl,nsnow+1) = vol_heat_cap_soil(jl) * dz_soil(1) / delta_time
@@ -939,7 +946,7 @@ CONTAINS
       ! lowest snow layer
       IF (itop(jl) <= nsnow) THEN  ! Snow present
         z1(jl) = 1._wp / (zdz2(jl,nsnow+1) + zdz1(jl,nsnow) + zdz1(jl,nsnow+1) * (1._wp - t_soil_bcoef(jl)))
-        t_snow_acoef(jl,nsnow) = (t_soil(jl) * zdz2(jl,nsnow+1) + zdz1(jl,nsnow+1) * t_soil_acoef(jl)) * z1(jl)
+        t_snow_acoef(jl,nsnow) = (t_soil_upper_layer(jl) * zdz2(jl,nsnow+1) + zdz1(jl,nsnow+1) * t_soil_acoef(jl)) * z1(jl)
         t_snow_bcoef(jl,nsnow) = zdz1(jl,nsnow) * z1(jl)
       ELSE
         t_snow_acoef(jl,nsnow) = 0._wp
