@@ -562,10 +562,14 @@ CONTAINS
     veg_litterfall%leaf         = veg_litterfall%leaf         + veg_pool%leaf         * rest_mortality_rate(:)
     veg_litterfall%fine_root    = veg_litterfall%fine_root    + veg_pool%fine_root    * rest_mortality_rate(:)
     veg_litterfall%coarse_root  = veg_litterfall%coarse_root  + veg_pool%coarse_root  * rest_mortality_rate(:)
-    veg_litterfall%sap_wood     = veg_litterfall%sap_wood     + veg_pool%sap_wood     * (1._wp - wood_extraction_rate) * rest_mortality_rate(:)
-    veg_litterfall%heart_wood   = veg_litterfall%heart_wood   + veg_pool%heart_wood   * (1._wp - wood_extraction_rate) * rest_mortality_rate(:)
-    veg_litterfall%labile       = veg_litterfall%labile       + veg_pool%labile       * (1._wp - wood_extraction_rate) * rest_mortality_rate(:)
-    veg_litterfall%reserve      = veg_litterfall%reserve      + veg_pool%reserve      * (1._wp - wood_extraction_rate) * rest_mortality_rate(:)
+    veg_litterfall%sap_wood     = veg_litterfall%sap_wood     + veg_pool%sap_wood     * &
+                                  (1._wp - wood_extraction_rate) * rest_mortality_rate(:)
+    veg_litterfall%heart_wood   = veg_litterfall%heart_wood   + veg_pool%heart_wood   * &
+                                  (1._wp - wood_extraction_rate) * rest_mortality_rate(:)
+    veg_litterfall%labile       = veg_litterfall%labile       + veg_pool%labile       * &
+                                  (1._wp - wood_extraction_rate) * rest_mortality_rate(:)
+    veg_litterfall%reserve      = veg_litterfall%reserve      + veg_pool%reserve      * &
+                                  (1._wp - wood_extraction_rate) * rest_mortality_rate(:)
     veg_litterfall%fruit        = veg_litterfall%fruit        + veg_pool%fruit        * rest_mortality_rate(:)
 
     mortality_rate(:)           = 1.0_wp

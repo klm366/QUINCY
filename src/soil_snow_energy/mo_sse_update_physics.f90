@@ -508,8 +508,8 @@ CONTAINS
       ! recalculate time-filtered drag 
       IF(it==1) THEN 
         CALL calc_filtered_drag_coefficient(steplen, &
-                                            t_air(:),q_air(:),wind_air(:),press_srf(:),t_soil_sl(:,1),hlp1(:),&                         
-                                            height(:),zril_old(:),drag_srf(:),pch(:),ga(:))
+          & t_air(:),q_air(:),wind_air(:),press_srf(:),t_soil_sl(:,1),hlp1(:),&                         
+          & height(:),zril_old(:),drag_srf(:),pch(:),ga(:))
       END IF
 
     ENDDO  ! DO it = 1,2

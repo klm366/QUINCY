@@ -1675,7 +1675,8 @@ CONTAINS
 
     USE mo_jsb_math_constants,      ONLY: one_day, one_year, eps4, eps8
     USE mo_jsb_phys_constants,      ONLY: rhoh2o
-    USE mo_veg_constants,           ONLY: min_height, itree, igrass, sm2lm_grass, w_root_lim_max, leaf2root_min_ratio, leaf2root_max_ratio
+    USE mo_veg_constants,           ONLY: min_height, itree, igrass, sm2lm_grass, w_root_lim_max, &
+                                          leaf2root_min_ratio, leaf2root_max_ratio
     USE mo_pheno_constants,         ONLY: ievergreen, iraingreen, isummergreen, iperennial
 
     IMPLICIT NONE
@@ -1769,84 +1770,84 @@ CONTAINS
         leaf2sapwood_mass_ratio = k_latosa / sla / wood_density
 
         SELECT CASE (biomass_alloc_scheme)
+        CASE("optimal")
+          !> Calculate allocation fractions assuming optimal relationship between leaf and root allocation
+          !! potential carbon growth rate = potential nittrogen growth rate * plant cn ratio
+          !! NPP = gN * R * growth_cn
+          !! Or similar relationships for P
+          !! Difference between BNF schemes - for optimal scheme fixation depends on root mass
+          SELECT CASE (bnf_scheme)
           CASE("optimal")
-             !> Calculate allocation fractions assuming optimal relationship between leaf and root allocation
-             !! potential carbon growth rate = potential nittrogen growth rate * plant cn ratio
-             !! NPP = gN * R * growth_cn
-             !! Or similar relationships for P
-             !! Difference between BNF schemes - for optimal scheme fixation depends on root mass
-             SELECT CASE (bnf_scheme)
-             CASE("optimal")
-                k1_opt_n = (npp * tau_leaf * one_year * one_day + (labile_carbon - (labile_nitrogen) * growth_cn) * 1.e6_wp) / & 
-                           MAX((unit_uptake_n + n_fixation) * growth_cn * tau_fine_root * one_year * one_day, eps8)
-                k1_opt_p = (npp * tau_leaf * one_year * one_day + (labile_carbon - (labile_phosphorus) * growth_cp) * 1.e6_wp) / & 
-                           MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
-                IF ( k1_opt_n >= k1_opt_p) THEN 
-                   ! if N is more limiting than P
-                   k1_opt = k1_opt_n 
-                   k2_opt = (unit_npp * tau_leaf * one_year * one_day) / &
-                            MAX((unit_uptake_n + n_fixation) * growth_cn * tau_fine_root * one_year * one_day, eps8)
-                ELSE
-                   k1_opt = k1_opt_p 
-                   k2_opt = (unit_npp * tau_leaf * one_year * one_day) / &
-                            MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
-                ENDIF
-             CASE DEFAULT 
-                k1_opt_n = (npp*tau_leaf*one_year*one_day + &
-                            (labile_carbon - (labile_nitrogen) * growth_cn) * 1.e6_wp - &
-                            n_fixation * growth_cn * tau_fine_root * one_year * one_day) / & 
-                           MAX(unit_uptake_n * growth_cn * tau_fine_root * one_year * one_day, eps8)
-                 
-                k1_opt_p = (npp*tau_leaf*one_year*one_day + &
-                            (labile_carbon - (labile_phosphorus) * growth_cp) * 1.e6_wp) / & 
-                           MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
-                IF ( k1_opt_n >= k1_opt_p) THEN 
-                   ! if N is more limiting than P
-                   k1_opt = k1_opt_n 
-                   k2_opt = (unit_npp * tau_leaf * one_year * one_day) / &
-                            MAX(unit_uptake_n * growth_cn * tau_fine_root * one_year * one_day, eps8)
-                ELSE
-                   k1_opt = k1_opt_p 
-                   k2_opt = (unit_npp * tau_leaf * one_year * one_day) / &
-                            MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
-                ENDIF
-             END SELECT
+            k1_opt_n = (npp * tau_leaf * one_year * one_day + (labile_carbon - (labile_nitrogen) * growth_cn) * 1.e6_wp) / & 
+              & MAX((unit_uptake_n + n_fixation) * growth_cn * tau_fine_root * one_year * one_day, eps8)
+            k1_opt_p = (npp * tau_leaf * one_year * one_day + (labile_carbon - (labile_phosphorus) * growth_cp) * 1.e6_wp) / & 
+              & MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
+            IF ( k1_opt_n >= k1_opt_p) THEN 
+              ! if N is more limiting than P
+              k1_opt = k1_opt_n 
+              k2_opt = (unit_npp * tau_leaf * one_year * one_day) / &
+                & MAX((unit_uptake_n + n_fixation) * growth_cn * tau_fine_root * one_year * one_day, eps8)
+            ELSE
+              k1_opt = k1_opt_p 
+              k2_opt = (unit_npp * tau_leaf * one_year * one_day) / &
+                & MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
+            ENDIF
+          CASE DEFAULT 
+            k1_opt_n = (npp*tau_leaf*one_year*one_day + &
+                        (labile_carbon - (labile_nitrogen) * growth_cn) * 1.e6_wp - &
+                        n_fixation * growth_cn * tau_fine_root * one_year * one_day) / & 
+                       MAX(unit_uptake_n * growth_cn * tau_fine_root * one_year * one_day, eps8)
+             
+            k1_opt_p = (npp*tau_leaf*one_year*one_day + &
+                        (labile_carbon - (labile_phosphorus) * growth_cp) * 1.e6_wp) / & 
+                       MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
+            IF ( k1_opt_n >= k1_opt_p) THEN 
+              ! if N is more limiting than P
+              k1_opt = k1_opt_n 
+              k2_opt = (unit_npp * tau_leaf * one_year * one_day) / &
+                & MAX(unit_uptake_n * growth_cn * tau_fine_root * one_year * one_day, eps8)
+            ELSE
+              k1_opt = k1_opt_p 
+              k2_opt = (unit_npp * tau_leaf * one_year * one_day) / &
+                & MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
+            ENDIF
+          END SELECT
 
-             !> water based optimality, following Magnani 2000 
-             !! R = k1 + k2*dL +k3*dS
-             IF (height > 0.5_wp) THEN
-                k1_opt_w = transpiration      / rhoh2o * (1._wp + c0_allom * height) / (k_root * dphi) 
-                k2_opt_w = unit_transpiration / rhoh2o * (1._wp + c0_allom * height) / (k_root * dphi)
-             ELSE
-                ! all resistance is in the root for small trees
-                k1_opt_w = transpiration      / rhoh2o * (1._wp) / (k_root * dphi) 
-                k2_opt_w = unit_transpiration / rhoh2o * (1._wp) / (k_root * dphi)
-             ENDIF
-               
-             ! Compare root increments for a hypothetical unit of leaf growth 
-             IF (k1_opt + k2_opt < k1_opt_w + k2_opt_w) THEN 
-                ! water is limiting 
-                k1_opt = k1_opt_w 
-                k2_opt = k2_opt_w 
-             ENDIF
-          CASE("dynamic")
-             ! empirical scalling of leaf to root ratio based on nitrogen, phosphorus and water availability
-             n_l2r_scal = growth_cn / MAX(eps8, labile_carbon / MAX(eps8, labile_nitrogen))
-             p_l2r_scal = growth_np / MAX(eps8, labile_nitrogen / MAX(eps8, labile_phosphorus))
-             w_l2r_scal = w_root_lim / w_root_lim_max
-             ! actual ratio is given by the minimum of the three factors
-             leaf2root_mass_ratio = MAX(leaf2root_min_ratio, MIN(leaf2root_max_ratio, &
-                  k_rtos * leaf2sapwood_mass_ratio * MIN(MIN(n_l2r_scal, p_l2r_scal), w_l2r_scal)))
-          CASE("fixed")
-             ! scaling factor for root to leaf mass
-             ! ad 1: derived from hydraulic homeostatis of root and wood hydraulic resistance (Magnani et al. 2000, PCE)
-             ! Note: currently still lacks a moisture response!
-             ! sapwood mass / height =  k_rtos * fine_root_mass
-             ! Cr = Cs / k_rtos / height
-             ! let Cs = Cl / leaf2sapwood_mass_ratio * height
-             ! => Cl = Cr * leaf2sapwood_mass_ratio * k_rtos = Cl = Cr * leaf2root_mass_ratio 
-             ! ad 2: nitrogen/phosphorus sensitivity still needed
-             leaf2root_mass_ratio = k_rtos * leaf2sapwood_mass_ratio
+          !> water based optimality, following Magnani 2000 
+          !! R = k1 + k2*dL +k3*dS
+          IF (height > 0.5_wp) THEN
+            k1_opt_w = transpiration      / rhoh2o * (1._wp + c0_allom * height) / (k_root * dphi) 
+            k2_opt_w = unit_transpiration / rhoh2o * (1._wp + c0_allom * height) / (k_root * dphi)
+          ELSE
+            ! all resistance is in the root for small trees
+            k1_opt_w = transpiration      / rhoh2o * (1._wp) / (k_root * dphi) 
+            k2_opt_w = unit_transpiration / rhoh2o * (1._wp) / (k_root * dphi)
+          ENDIF
+            
+          ! Compare root increments for a hypothetical unit of leaf growth 
+          IF (k1_opt + k2_opt < k1_opt_w + k2_opt_w) THEN 
+            ! water is limiting 
+            k1_opt = k1_opt_w 
+            k2_opt = k2_opt_w 
+          ENDIF
+        CASE("dynamic")
+          ! empirical scalling of leaf to root ratio based on nitrogen, phosphorus and water availability
+          n_l2r_scal = growth_cn / MAX(eps8, labile_carbon / MAX(eps8, labile_nitrogen))
+          p_l2r_scal = growth_np / MAX(eps8, labile_nitrogen / MAX(eps8, labile_phosphorus))
+          w_l2r_scal = w_root_lim / w_root_lim_max
+          ! actual ratio is given by the minimum of the three factors
+          leaf2root_mass_ratio = MAX(leaf2root_min_ratio, MIN(leaf2root_max_ratio, &
+            & k_rtos * leaf2sapwood_mass_ratio * MIN(MIN(n_l2r_scal, p_l2r_scal), w_l2r_scal)))
+        CASE("fixed")
+          ! scaling factor for root to leaf mass
+          ! ad 1: derived from hydraulic homeostatis of root and wood hydraulic resistance (Magnani et al. 2000, PCE)
+          ! Note: currently still lacks a moisture response!
+          ! sapwood mass / height =  k_rtos * fine_root_mass
+          ! Cr = Cs / k_rtos / height
+          ! let Cs = Cl / leaf2sapwood_mass_ratio * height
+          ! => Cl = Cr * leaf2sapwood_mass_ratio * k_rtos = Cl = Cr * leaf2root_mass_ratio 
+          ! ad 2: nitrogen/phosphorus sensitivity still needed
+          leaf2root_mass_ratio = k_rtos * leaf2sapwood_mass_ratio
         END SELECT  ! biomass_alloc_scheme
 
       !> 1.2 grass
@@ -1856,61 +1857,61 @@ CONTAINS
         leaf2sapwood_mass_ratio = 1._wp / sm2lm_grass
         ! leaf:root ratio
         SELECT CASE (biomass_alloc_scheme)
+        CASE("optimal")
+          SELECT CASE (bnf_scheme)
           CASE("optimal")
-            SELECT CASE (bnf_scheme)
-              CASE("optimal")
-                 k1_opt_n = (npp * tau_leaf * one_year * one_day + (labile_carbon - (labile_nitrogen) * growth_cn) * 1.e6_wp) / & 
-                            MAX((unit_uptake_n + n_fixation) * growth_cn * tau_fine_root * one_year * one_day, eps8)
-                 k1_opt_p = (npp * tau_leaf * one_year * one_day + (labile_carbon - (labile_phosphorus) * growth_cp) * 1.e6_wp) / & 
-                            MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
-                 IF ( k1_opt_n >= k1_opt_p) THEN 
-                    ! if N is more limiting than P
-                    k1_opt = k1_opt_n 
-                    k2_opt = (unit_npp * tau_leaf * one_year * one_day) / &
-                             MAX((unit_uptake_n + n_fixation) * growth_cn * tau_fine_root * one_year * one_day, eps8)
-                 ELSE
-                    k1_opt = k1_opt_p 
-                    k2_opt = (unit_npp * tau_leaf * one_year * one_day) / &
-                             MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
-                 ENDIF
-              CASE DEFAULT 
-                 k1_opt_n = (npp * tau_leaf * one_year * one_day + (labile_carbon - (labile_nitrogen) * growth_cn) * 1.e6_wp - &
-                             n_fixation * growth_cn * tau_fine_root * one_year * one_day) / & 
-                            MAX(MAX(unit_uptake_n, 0.05_wp) * growth_cn*tau_fine_root*one_year*one_day, eps8)
-                 k1_opt_p = (npp * tau_leaf * one_year * one_day + (labile_carbon - (labile_phosphorus) * growth_cp) * 1.e6_wp) / & 
-                            MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
-                 IF ( k1_opt_n >= k1_opt_p) THEN 
-                    ! if N is more limiting than P
-                    k1_opt = k1_opt_n 
-                    k2_opt = (unit_npp * tau_leaf * one_year * one_day) / &
-                             MAX(unit_uptake_n * growth_cn * tau_fine_root * one_year * one_day, eps8)
-                 ELSE
-                    k1_opt = k1_opt_p 
-                    k2_opt = (unit_npp * tau_leaf * one_year * one_day) / &
-                             MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
-                 ENDIF
-            END SELECT ! bnf_scheme
+            k1_opt_n = (npp * tau_leaf * one_year * one_day + (labile_carbon - (labile_nitrogen) * growth_cn) * 1.e6_wp) / & 
+              & MAX((unit_uptake_n + n_fixation) * growth_cn * tau_fine_root * one_year * one_day, eps8)
+            k1_opt_p = (npp * tau_leaf * one_year * one_day + (labile_carbon - (labile_phosphorus) * growth_cp) * 1.e6_wp) / & 
+              & MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
+            IF ( k1_opt_n >= k1_opt_p) THEN 
+              ! if N is more limiting than P
+              k1_opt = k1_opt_n 
+              k2_opt = (unit_npp * tau_leaf * one_year * one_day) / &
+                & MAX((unit_uptake_n + n_fixation) * growth_cn * tau_fine_root * one_year * one_day, eps8)
+            ELSE
+              k1_opt = k1_opt_p 
+              k2_opt = (unit_npp * tau_leaf * one_year * one_day) / &
+                & MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
+            ENDIF
+          CASE DEFAULT 
+            k1_opt_n = (npp * tau_leaf * one_year * one_day + (labile_carbon - (labile_nitrogen) * growth_cn) * 1.e6_wp - &
+                        n_fixation * growth_cn * tau_fine_root * one_year * one_day) / & 
+                       MAX(MAX(unit_uptake_n, 0.05_wp) * growth_cn*tau_fine_root*one_year*one_day, eps8)
+            k1_opt_p = (npp * tau_leaf * one_year * one_day + (labile_carbon - (labile_phosphorus) * growth_cp) * 1.e6_wp) / & 
+                       MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
+            IF ( k1_opt_n >= k1_opt_p) THEN 
+              ! if N is more limiting than P
+              k1_opt = k1_opt_n 
+              k2_opt = (unit_npp * tau_leaf * one_year * one_day) / &
+                & MAX(unit_uptake_n * growth_cn * tau_fine_root * one_year * one_day, eps8)
+            ELSE
+              k1_opt = k1_opt_p 
+              k2_opt = (unit_npp * tau_leaf * one_year * one_day) / &
+                & MAX(unit_uptake_p * growth_cp * tau_fine_root * one_year * one_day, eps8)
+            ENDIF
+          END SELECT ! bnf_scheme
 
-            !> water based optimality, following Magnani 2000 
-            k1_opt_w = transpiration      / (k_root * dphi) 
-            k2_opt_w = unit_transpiration / (k_root * dphi) 
+          !> water based optimality, following Magnani 2000 
+          k1_opt_w = transpiration      / (k_root * dphi) 
+          k2_opt_w = unit_transpiration / (k_root * dphi) 
 
-            ! Compare root increments for a hypothetical unit of leaf growth 
-            IF (k1_opt + k2_opt < k1_opt_w + k2_opt_w) THEN 
-              ! water is limiting 
-              k1_opt = k1_opt_w 
-              k2_opt = k2_opt_w 
-            ENDIF 
-         CASE("dynamic")
-              ! empirical scalling of leaf to root ratio based on nitrogen, phosphorus and water availability
-             n_l2r_scal = growth_cn / MAX(eps8, labile_carbon / MAX(eps8, labile_nitrogen))
-             p_l2r_scal = growth_np / MAX(eps8, labile_nitrogen / MAX(eps8, labile_phosphorus))
-             w_l2r_scal = w_root_lim / w_root_lim_max
-             ! actual ratio is given by the minimum of the three factors
-             leaf2root_mass_ratio = MAX(leaf2root_min_ratio, MIN(leaf2root_max_ratio, &
-                  sm2lm_grass * k_rtos * MIN(MIN(n_l2r_scal, p_l2r_scal), w_l2r_scal)))
-          CASE("fixed")
-            leaf2root_mass_ratio = sm2lm_grass * k_rtos 
+          ! Compare root increments for a hypothetical unit of leaf growth 
+          IF (k1_opt + k2_opt < k1_opt_w + k2_opt_w) THEN 
+            ! water is limiting 
+            k1_opt = k1_opt_w 
+            k2_opt = k2_opt_w 
+          ENDIF 
+        CASE("dynamic")
+            ! empirical scalling of leaf to root ratio based on nitrogen, phosphorus and water availability
+           n_l2r_scal = growth_cn / MAX(eps8, labile_carbon / MAX(eps8, labile_nitrogen))
+           p_l2r_scal = growth_np / MAX(eps8, labile_nitrogen / MAX(eps8, labile_phosphorus))
+           w_l2r_scal = w_root_lim / w_root_lim_max
+           ! actual ratio is given by the minimum of the three factors
+           leaf2root_mass_ratio = MAX(leaf2root_min_ratio, MIN(leaf2root_max_ratio, &
+                sm2lm_grass * k_rtos * MIN(MIN(n_l2r_scal, p_l2r_scal), w_l2r_scal)))
+        CASE("fixed")
+          leaf2root_mass_ratio = sm2lm_grass * k_rtos 
         END SELECT ! biomass_alloc_scheme
 
     ENDSELECT ! SELECT CASE (growthform)
