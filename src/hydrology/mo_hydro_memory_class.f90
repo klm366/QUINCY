@@ -21,7 +21,7 @@ MODULE mo_hydro_memory_class
   USE mo_jsb_model_class,  ONLY: t_jsb_model
   USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_memory_class, ONLY: t_jsb_memory
-  USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_jsb_var_class,    ONLY: t_jsb_var_real1d, t_jsb_var_real2d, t_jsb_var_real3d
   USE mo_jsb_lct_class,    ONLY: LAND_TYPE, BARE_TYPE, VEG_TYPE, LAKE_TYPE, GLACIER_TYPE
   USE mo_jsb_varlist,      ONLY: BASIC !, MEDIUM, FULL
   USE mo_jsb_process_class, ONLY: ON_TILE_, AGGREGATE_
@@ -140,7 +140,7 @@ MODULE mo_hydro_memory_class
       & water_stress,         & !< Water stress factor of canopy                        (1: no water stress, 0: infinite stress)
       & canopy_cond_unlimited,& !< Canopy conductance without water limit  [m/s] (mean value)
       & canopy_cond_limited,  & !< Canopy conductance with water limit [m/s] (mean value)
-      & trans                   !< Transpiration
+      & transpiration           !< Transpiration
 
     ! Additional variables for GLACIER lct_type
     TYPE(t_jsb_var_real2d) :: &
@@ -158,6 +158,16 @@ MODULE mo_hydro_memory_class
       & evapo_ice,            & !< Evaporation over lake ice
       & fract_snow_lice,      & !< Fraction of swow on lake ice                                             []
       & w_snow_lice             !< Water content of snow on lake ice                                        [m water equivalent]
+
+    ! Diagnostic global land means/sums e.g. for monitoring (only available with ICON)
+    TYPE(t_jsb_var_real1d) :: &
+      trans_gmean,            & !< Global mean transpiration                [kg m-2 s-1]
+      evapotrans_gmean,       & !< Global land mean evapotranspiration      [kg m-2 s-1]
+      water_content_gsum,     & !< Global land water content                [km3]
+      discharge_ocean_gsum,   & !< Global water discharge to the oceans     [Sv]
+      w_soil_rel_gmean,       & !< Global mean relative soil moisture       [1]
+      fract_snow_gsum,        & !< Global snow area on non-glacier land     [Mio m2]
+      w_snow_gsum               !< Global snow amount on non-glacier land   [Gt]
 
   CONTAINS
     PROCEDURE :: Init => Init_hydro_memory
@@ -299,7 +309,7 @@ CONTAINS
 
     CALL mem%Add_var( 'discharge_ocean', mem%discharge_ocean,                &
       & hgrid, surface,                                                      &
-      & t_cf('discharge_ocean', 'kg m-2 s-1', 'discharge to the ocean'),     &
+      & t_cf('discharge_ocean', 'm3 s-1', 'discharge to the ocean'),         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
@@ -793,7 +803,7 @@ CONTAINS
           & initval_r=0.0_wp )
       END IF
 
-      CALL mem%Add_var( 'trans', mem%trans,                                          &
+      CALL mem%Add_var( 'transpiration', mem%transpiration,                          &
         & hgrid, surface,                                                            &
         & t_cf('surface_transpiration', 'kg m-2 s-1', 'Transpiration from surface'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
@@ -873,6 +883,56 @@ CONTAINS
       END IF
 
     END IF
+
+#ifdef __ICON__
+    ! Diagnostic 1d global land variables for experiment monitoring
+    !       (1d stream variables are not supported with echam)
+    !
+    IF ( TRIM(suffix) == 'box' ) THEN
+      CALL mem%Add_var('trans_gmean', mem%trans_gmean,                                   &
+        & hgrid, surface,                                                                &
+        & t_cf('trans_gmean', 'kg m-2 s-1', 'Global mean transpiration'),                &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+        & prefix, suffix,                                                                &
+        & lrestart=.FALSE., initval_r=0.0_wp )
+      CALL mem%Add_var('evapotrans_gmean', mem%evapotrans_gmean,                         &
+        & hgrid, surface,                                                                &
+        & t_cf('evapotrans_gmean', 'kg m-2 s-1', 'Global land evapotranspiration'),      &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+        & prefix, suffix,                                                                &
+        & lrestart=.FALSE., initval_r=0.0_wp )
+      CALL mem%Add_var('water_content_gsum', mem%water_content_gsum,                     &
+        & hgrid, surface,                                                                &
+        & t_cf('water_content_gsum', 'km3', 'Global land water content'),                &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+        & prefix, suffix,                                                                &
+        & lrestart=.FALSE., initval_r=0.0_wp )
+      CALL mem%Add_var('discharge_ocean_gsum', mem%discharge_ocean_gsum,                 &
+        & hgrid, surface,                                                                &
+        & t_cf('discharge_ocean_gsum', 'Sv', 'Global water discharge to the oceans'),    &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+        & prefix, suffix,                                                                &
+        & lrestart=.FALSE., initval_r=0.0_wp )
+      CALL mem%Add_var('w_soil_rel_gmean', mem%w_soil_rel_gmean,                         &
+        & hgrid, surface,                                                                &
+        & t_cf('w_soil_rel_gmean', '1', 'Global mean relative soil moisture'),           &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+        & prefix, suffix,                                                                &
+        & lrestart=.FALSE., initval_r=0.0_wp )
+      CALL mem%Add_var('fract_snow_gsum', mem%fract_snow_gsum,                           &
+        & hgrid, surface,                                                                &
+        & t_cf('fract_snow_gsum', 'Mio km2', 'Global snow area (including glaciers)'),   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+        & prefix, suffix,                                                                &
+        & lrestart=.FALSE., initval_r=0.0_wp )
+      CALL mem%Add_var('w_snow_gsum', mem%w_snow_gsum,                                   &
+        & hgrid, surface,                                                                &
+        & t_cf('w_snow_gsum', 'Gt', 'Global snow amount on non-glacier land'),           &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+        & prefix, suffix,                                                                &
+        & lrestart=.FALSE., initval_r=0.0_wp )
+    END IF
+#endif
 
     END SUBROUTINE Init_hydro_memory
 #endif

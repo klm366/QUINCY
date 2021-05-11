@@ -54,7 +54,7 @@ MODULE mo_hydro_interface
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: Register_hydro_tasks !,t_hydro_process
+  PUBLIC :: Register_hydro_tasks, global_hydrology_diagnostics
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_hydro_interface'
 
@@ -414,7 +414,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: fract_fpc_max
     dsl4jsb_Real2D_onChunk :: hcap_grnd
     dsl4jsb_Real2D_onChunk :: evapotrans
-    dsl4jsb_Real2D_onChunk :: trans
+    dsl4jsb_Real2D_onChunk :: transpiration
     dsl4jsb_Real2D_onChunk :: evapopot
     dsl4jsb_Real2D_onChunk :: evapo_snow
     dsl4jsb_Real2D_onChunk :: snowmelt
@@ -525,7 +525,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_deficit)   ! out
       IF (tile%is_vegetation .OR. tile%is_land) THEN
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   w_snow_can)    ! inout
-        dsl4jsb_Get_var2D_onChunk(HYDRO_,   trans)         ! in
+        dsl4jsb_Get_var2D_onChunk(HYDRO_,   transpiration) ! in
         dsl4jsb_Get_var2D_onChunk(PHENO_,   lai)           ! in
         dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max) ! in
       END IF
@@ -590,7 +590,7 @@ CONTAINS
     ELSE
       IF (tile%is_vegetation) THEN
         !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_8 tile_name=tile%name
-        trans_tmp(:) = trans(:)
+        trans_tmp(:) = transpiration(:)
       ELSE
         !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_9 tile_name=tile%name
         trans_tmp(:) = 0._wp
@@ -888,7 +888,7 @@ CONTAINS
 
     ! Pointers to variables in memory
     dsl4jsb_Real3D_onChunk :: fract_org_sl
-    dsl4jsb_Real3D_onChunk :: t_soil
+    dsl4jsb_Real3D_onChunk :: t_soil_sl
 
     dsl4jsb_Real2D_onChunk :: w_soil_rel
     dsl4jsb_Real2D_onChunk :: w_soil_column
@@ -947,7 +947,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_column)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, max_moist)
 
-    dsl4jsb_Get_var3D_onChunk(SSE_,    t_soil)     ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_,    t_soil_sl)     ! in
 
     IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
       dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)
@@ -980,10 +980,10 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_p_wilt_sl     ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, max_moist         ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, oro_stddev        ), &
-      &                                t_soil        (:,1), &
+      &                                t_soil_sl     (:,1), &
       & dsl4jsb_var2D_onChunk (HYDRO_, water_excess      ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, evapotrans_soil   ), &
-      & dsl4jsb_var2D_onChunk (HYDRO_, trans             ), &
+      & dsl4jsb_var2D_onChunk (HYDRO_, transpiration     ), &
       ! inout
       & dsl4jsb_var2D_onChunk (HYDRO_, w_soil_column     ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, w_soil_sl         ), &
@@ -1460,7 +1460,7 @@ CONTAINS
       & evapo_ice, &
       & evapopot,       &
       & evapotrans, &
-      & trans
+      & transpiration
 
     ! Locally allocated vectors
     !
@@ -1557,7 +1557,7 @@ CONTAINS
 
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans_lnd)           ! out
       IF (tile%contains_vegetation) THEN
-        dsl4jsb_Get_var2D_onChunk(HYDRO_,    trans)               ! out
+        dsl4jsb_Get_var2D_onChunk(HYDRO_,    transpiration)          ! out
       END IF
 
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_evaporation_expand_5 tile_name=tile%name
@@ -1575,7 +1575,7 @@ CONTAINS
       !$claw end expand
       IF (tile%contains_vegetation) THEN
         !$claw expand parallel update savepoint=ser_jsb_hydro_update_evaporation_expand_6 tile_name=tile%name
-        trans(:)              = fact_qsat_trans_srf(:) * evapopot(:)             ! Transpiration
+        transpiration(:)    = fact_qsat_trans_srf(:) * evapopot(:)             ! Transpiration
       END IF
 
     ELSE
@@ -1628,7 +1628,7 @@ CONTAINS
 
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapotrans, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapopot,           weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, trans,              weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, transpiration,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapotrans_lnd,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_wtr,          weighted_by_fract)
     IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
@@ -2088,6 +2088,131 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_water_balance
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Global land mean hydrology output
+  !!
+  !! The routine is called from jsbach_finish_timestep, after the loop over the nproma blocks.
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE global_hydrology_diagnostics(tile)
+#ifndef __ICON__
+    ! Argument
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
+
+    CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_hydrology_diagnostics'
+    IF (debug_on()) CALL message(TRIM(routine), 'Global diagnostics only available with ICON')
+#else
+
+    USE mo_sync,                  ONLY: global_sum_array
+    USE mo_jsb_grid,              ONLY: Get_grid
+    USE mo_jsb_grid_class,        ONLY: t_jsb_grid
+
+    ! Argument
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
+
+    ! Local variables
+    !
+    dsl4jsb_Def_memory(HYDRO_)
+
+    CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_hydrology_diagnostics'
+
+    ! Pointers to variables in memory
+
+    dsl4jsb_Real2D_onDomain :: transpiration
+    dsl4jsb_Real2D_onDomain :: evapotrans
+    dsl4jsb_Real2D_onDomain :: water_content
+    dsl4jsb_Real2D_onDomain :: discharge_ocean
+    dsl4jsb_Real2D_onDomain :: w_soil_rel
+    dsl4jsb_Real2D_onDomain :: fract_snow
+    dsl4jsb_Real2D_onDomain :: w_snow
+
+    REAL(wp), POINTER       :: trans_gmean(:)
+    REAL(wp), POINTER       :: evapotrans_gmean(:)
+    REAL(wp), POINTER       :: water_content_gsum(:)
+    REAL(wp), POINTER       :: discharge_ocean_gsum(:)
+    REAL(wp), POINTER       :: w_soil_rel_gmean(:)
+    REAL(wp), POINTER       :: fract_snow_gsum(:)
+    REAL(wp), POINTER       :: w_snow_gsum(:)
+
+    TYPE(t_jsb_model), POINTER      :: model
+    TYPE(t_jsb_grid),  POINTER      :: grid
+
+    REAL(wp), POINTER      :: area(:,:)
+    REAL(wp), POINTER      :: notsea(:,:)
+    LOGICAL,  POINTER      :: is_in_domain(:,:) ! T: cell in domain (not halo)
+    REAL(wp), ALLOCATABLE  :: in_domain (:,:)   ! 1: cell in domain, 0: halo cell
+    REAL(wp), ALLOCATABLE  :: scaling (:,:)
+    REAL(wp)               :: global_land_area
+
+
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,  transpiration)              ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,  evapotrans)                 ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,  water_content)              ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,  discharge_ocean)            ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,  w_soil_rel)                 ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,  fract_snow)                 ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,  w_snow)                     ! in
+
+
+    trans_gmean          => HYDRO__mem%trans_gmean%ptr(:)           ! out
+    evapotrans_gmean     => HYDRO__mem%evapotrans_gmean%ptr(:)      ! out
+    water_content_gsum   => HYDRO__mem%water_content_gsum%ptr(:)    ! out
+    discharge_ocean_gsum => HYDRO__mem%discharge_ocean_gsum%ptr(:)  ! out
+    w_soil_rel_gmean     => HYDRO__mem%w_soil_rel_gmean%ptr(:)      ! out
+    fract_snow_gsum      => HYDRO__mem%fract_snow_gsum%ptr(:)       ! out
+    w_snow_gsum          => HYDRO__mem%w_snow_gsum%ptr(:)           ! out
+
+
+    model => Get_model(tile%owner_model_id)
+    grid  => Get_grid(model%grid_id)
+    area         => grid%area(:,:)
+    is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
+    notsea       => tile%fract(:,:)   ! fraction of the box tile: notsea
+
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
+
+
+    IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
+
+    ! Domain Mask - to mask all halo cells for global sums (otherwise these
+    ! cells are counted twice)
+    ALLOCATE (in_domain(grid%nproma,grid%nblks))
+    WHERE (is_in_domain(:,:))
+      in_domain = 1._wp
+    ELSEWHERE
+      in_domain = 0._wp
+    END WHERE
+
+    ALLOCATE (scaling(grid%nproma,grid%nblks))
+
+    ! Calculate 1d global land variables, if requested for output
+    global_land_area = global_sum_array(area(:,:) * notsea(:,:) * in_domain(:,:))
+    scaling(:,:) = notsea(:,:) * area(:,:) * in_domain(:,:)
+    IF (HYDRO__mem%trans_gmean%is_in_output)           &
+      &  trans_gmean          = global_sum_array(transpiration(:,:)   * scaling(:,:)) / global_land_area
+    IF (HYDRO__mem%evapotrans_gmean%is_in_output)      &
+      &  evapotrans_gmean     = global_sum_array(evapotrans(:,:)      * scaling(:,:)) / global_land_area
+    ! Unit transformation from [m3] to [km3]: 1.e-9
+    IF (HYDRO__mem%water_content_gsum%is_in_output)    &
+      &  water_content_gsum   = global_sum_array(water_content(:,:)   * notsea(:,:) * in_domain(:,:)) * 1.e-9_wp
+    ! Unit transformation from [m3/s] to [Sv] (1 Sv = 1.e6 m3/s)
+    IF (HYDRO__mem%discharge_ocean_gsum%is_in_output)  &
+      &  discharge_ocean_gsum = global_sum_array(discharge_ocean(:,:) * in_domain(:,:)) * 1.e-6_wp
+    IF (HYDRO__mem%w_soil_rel_gmean%is_in_output)      &
+      &  w_soil_rel_gmean     = global_sum_array(w_soil_rel(:,:)      * scaling(:,:)) / global_land_area
+    ! Unit transformation from [m2] to [Mio km2]: 1.e-12
+    IF (HYDRO__mem%fract_snow_gsum%is_in_output)       &
+      &  fract_snow_gsum      = global_sum_array(fract_snow(:,:)      * scaling(:,:)) * 1.e-12_wp
+    ! Unit transformation from [m water equivalent](= [t]) to [Gt]: 1.e-9
+    IF (HYDRO__mem%w_snow_gsum%is_in_output)           &
+      &  w_snow_gsum          = global_sum_array(w_snow(:,:)          * scaling(:,:)) * 1.e-9_wp
+
+    DEALLOCATE (scaling, in_domain)
+#endif
+  END SUBROUTINE global_hydrology_diagnostics
 
 #endif
 END MODULE mo_hydro_interface

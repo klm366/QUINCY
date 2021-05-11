@@ -371,9 +371,6 @@ CONTAINS
 
   SUBROUTINE jsbach_start_timestep(model_id, current_datetime, dtime)
 
-    USE mo_jsb_time,          ONLY: is_newday, is_time_experiment_start
-    USE mo_carbon_interface,  ONLY: yday_carbon_conservation_test
-
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
     REAL(wp),                  INTENT(in) :: dtime
@@ -401,16 +398,6 @@ CONTAINS
     ! Reset all tiles at the beginning of the timestep
     CALL model%Reset_tiles()
 
-    ! Carbon conservation test
-
-    CALL model%Get_top_tile(tile)
-
-    IF (model%processes(CARBON_)%p%config%active) THEN
-      IF (is_newday(current_datetime, dtime) .AND. .NOT. is_time_experiment_start(current_datetime)) THEN
-        CALL yday_carbon_conservation_test(tile)
-      END IF
-    END IF
-    
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
 
   END SUBROUTINE jsbach_start_timestep
@@ -419,12 +406,21 @@ CONTAINS
 
     USE mo_util,        ONLY: report_memory_usage
     USE mo_jsb_control, ONLY: get_debug_memory_level
-    USE mo_jsb_time,    ONLY: is_newday, is_newmonth
+    USE mo_jsb_time,    ONLY: is_newday, is_newmonth, is_time_experiment_start
+    USE mo_carbon_interface,  ONLY: yday_carbon_conservation_test
 
+    USE mo_seb_interface,      ONLY: global_seb_diagnostics
+    USE mo_hydro_interface,    ONLY: global_hydrology_diagnostics
+    USE mo_pheno_interface,    ONLY: global_phenology_diagnostics
+    USE mo_carbon_interface,   ONLY: global_carbon_diagnostics
 #ifndef __NO_JSBACH_HD__
     USE mo_interface_hd_ocean, ONLY: interface_hd_ocean
     USE mo_hd_interface,       ONLY: hd_check_water_budget, hd_lateral_flow
 #endif
+
+    dsl4jsb_Use_processes SEB_
+    dsl4jsb_Use_processes HYDRO_
+    dsl4jsb_Use_processes PHENO_
 
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
@@ -435,6 +431,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_finish_timestep'
 
+    REAL(wp) :: dtime
     LOGICAL :: l_trace_memory
     INTEGER :: no_omp_thread
 
@@ -448,12 +445,21 @@ CONTAINS
 
     model => Get_model(model_id)
 
-    CALL model%Get_top_tile(tile)
-
     ! Update options
     CALL model%Set_options(current_datetime=current_datetime, steplen=steplen)
 
+    dtime = model%options(no_omp_thread)%dtime
+
+    ! Carbon conservation test
+    CALL model%Get_top_tile(tile)
+    IF (model%processes(CARBON_)%p%config%active) THEN
+      IF (is_newday(current_datetime, dtime) .AND. .NOT. is_time_experiment_start(current_datetime)) THEN
+        CALL yday_carbon_conservation_test(tile)
+      END IF
+    END IF
+
 #ifndef __NO_JSBACH_HD__
+    CALL model%Get_top_tile(tile)
     CALL hd_lateral_flow(tile, model%options(no_omp_thread))
     CALL hd_check_water_budget(tile, model%options(no_omp_thread))
 
@@ -463,6 +469,21 @@ CONTAINS
 ! #ifdef _OPENACC
 !    CALL model%gpu_to_cpu()
 ! #endif
+
+    ! Global diagnostics
+    !TODO: go through all processes.
+    IF (model%processes(SEB_)%p%config%active) THEN
+      CALL global_seb_diagnostics(tile)
+    END IF
+    IF (model%processes(HYDRO_)%p%config%active) THEN
+      CALL global_hydrology_diagnostics(tile)
+    END IF
+    IF (model%processes(PHENO_)%p%config%active) THEN
+      CALL global_phenology_diagnostics(tile)
+    END IF
+    IF (model%processes(CARBON_)%p%config%active) THEN
+      CALL global_carbon_diagnostics(tile)
+    END IF
 
     l_trace_memory = .FALSE.
     SELECT CASE (get_debug_memory_level())

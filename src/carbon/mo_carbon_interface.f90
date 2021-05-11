@@ -33,6 +33,8 @@ MODULE mo_carbon_interface
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
+  USE mo_carbon_constants,   ONLY: molarMassCO2_kg, sec_per_day
+
   ! Use of processes in this module (Get_carbon_memory and Get_carbon_config)
   dsl4jsb_Use_processes CARBON_, ASSIMI_, PHENO_, DISTURB_, A2L_, L2A_
   dsl4jsb_Use_pools(CARBON_) t_jsb_pool, t_basic_pool, t_my_pools, t_plant_pool, t_soil_pool !t_awenh_pool
@@ -56,7 +58,8 @@ MODULE mo_carbon_interface
   PRIVATE
   PUBLIC ::  Register_carbon_tasks
   PUBLIC ::  recalc_per_tile_vars, calculate_current_c_ag_1_and_bg_sums, rescale_carbon_upon_reference_area_change, &
-    &        calculate_current_c_ta_state_sum, check_carbon_conservation, yday_carbon_conservation_test
+    &        calculate_current_c_ta_state_sum, check_carbon_conservation, yday_carbon_conservation_test,            &
+    &        global_carbon_diagnostics
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_carbon_interface'
 
@@ -280,7 +283,6 @@ CONTAINS
     ! Use declarations
     USE mo_carbon_process,    ONLY: calc_Cpools
     USE mo_jsb_time,          ONLY: is_newday, is_newyear, timesteps_per_day, is_time_experiment_start
-    USE mo_carbon_constants,  ONLY: molarMassCO2_kg, sec_per_day
     USE mo_jsb_subset,        ONLY: t_subset
 
     ! Arguments
@@ -415,6 +417,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  root_exudates          ! Total root exudates entering to the litter green pools
                                                       ! [mol(C)/m^2(canopy) s]
 
+    dsl4jsb_Real2D_onChunk ::  c_sum_veg_ta
     dsl4jsb_Real2D_onChunk ::  c_sum_litter_ag_ta
     dsl4jsb_Real2D_onChunk ::  c_sum_litter_bg_ta
     dsl4jsb_Real2D_onChunk ::  c_sum_humus_ta
@@ -519,6 +522,7 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  root_exudates )             ! inout
 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_sum_veg_ta )               ! out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_sum_litter_ag_ta )         ! out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_sum_litter_bg_ta )         ! out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_sum_humus_ta )             ! out
@@ -567,6 +571,8 @@ CONTAINS
                                                            'update_C_NPP_pot_allocation: First time step of new day')
     IF (debug_on() .AND. iblk==1 .AND. is_newyear(options%current_datetime, dtime) ) CALL message(TRIM(routine), &
                                                            'update_C_NPP_pot_allocation: First time step of new year')
+
+    lstart = is_time_experiment_start(options%current_datetime)
 
     ! Initializations
     cflux_npp_2_atm_yday_ta  = 0._wp
@@ -618,8 +624,6 @@ CONTAINS
     !    in HYDRO and here just load it from there...
     precip_total  = rain + snow  ! Precipitation rate [kg/(m^2 s)]
     pseudo_precip = precip_total * N_pseudo_precip  +  F_pseudo_precip * pseudo_precip
-
-    lstart = is_time_experiment_start(options%current_datetime)
 
     ! All per tile variables need to be re-calculated in case they are written to output
     CALL recalc_per_tile_vars(tile, options,                                      &
@@ -808,7 +812,7 @@ CONTAINS
       CALL check_carbon_conservation(tile, options, old_c_state_sum(:), &
         & current_fluxes(:), cconservation_calcCpools(:))
 
-    END IF
+    END IF ! new day
 
     ! Compute net CO2 fluxes exchanged with atmosphere at each time step
     !-------------------------------------------------------------------
@@ -833,8 +837,8 @@ CONTAINS
                    * (NPP_act_yDayMean))                          ! therefore here additionaly the day mean
 
     ! Calculate diagnostic carbon sums
-    CALL calculate_current_c_ta_state_sum(tile, options, c_sum_natural_ta(:), &
-      & c_sum_litter_ag_ta(:), c_sum_litter_bg_ta(:), c_sum_humus_ta(:))
+    CALL calculate_current_c_ta_state_sum(tile, options, c_sum_natural_ta(:),            &
+      & c_sum_veg_ta(:), c_sum_litter_ag_ta(:), c_sum_litter_bg_ta(:), c_sum_humus_ta(:))
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -908,6 +912,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, c_into_humus_2_sum_ta,          weighted_by_fract)
 
     ! sums
+    dsl4jsb_Aggregate_onChunk(CARBON_, c_sum_veg_ta,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_sum_litter_ag_ta,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_sum_litter_bg_ta,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, c_sum_humus_ta,        weighted_by_fract)
@@ -927,7 +932,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, root_exudates_ta,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, cflux_c_green_2_herb_ta,  weighted_by_fract)
     ! dsl4jsb_Aggregate_onChunk(CARBON_, cflux_herb_2_littergreen_ta, weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(CARBON_, cflux_herb_2_atm_ta, weighted_by_fract)
     ! dsl4jsb_Aggregate_onChunk(CARBON_, fract_litter_wood_new_ta,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, cconservation_calcCpools, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, cflux_npp_2_atm_ta,       weighted_by_fract)
@@ -1368,7 +1372,7 @@ CONTAINS
   !! @param[in]     options Additional run-time parameters.
   !
   SUBROUTINE calculate_current_c_ta_state_sum(tile, options, current_c_state_sum, &
-    & c_sum_litter_ag, c_sum_litter_bg, c_sum_humus)
+    & c_sum_veg, c_sum_litter_ag, c_sum_litter_bg, c_sum_humus)
 
     !USE mo_util,                ONLY: real2string
 
@@ -1376,6 +1380,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(in), TARGET :: tile
     TYPE(t_jsb_task_options),   INTENT(in)         :: options
     REAL(wp),                   INTENT(out)        :: current_c_state_sum(:)
+    REAL(wp), OPTIONAL,         INTENT(out)        :: c_sum_veg(:)
     REAL(wp), OPTIONAL,         INTENT(out)        :: c_sum_litter_ag(:)
     REAL(wp), OPTIONAL,         INTENT(out)        :: c_sum_litter_bg(:)
     REAL(wp), OPTIONAL,         INTENT(out)        :: c_sum_humus(:)
@@ -1450,6 +1455,8 @@ CONTAINS
         & c_acid_bg1_ta(:) + c_water_bg1_ta(:) + c_ethanol_bg1_ta(:) + c_nonsoluble_bg1_ta(:) + &
         & c_acid_bg2_ta(:) + c_water_bg2_ta(:) + c_ethanol_bg2_ta(:) + c_nonsoluble_bg2_ta(:) + &
         & c_humus_1_ta(:)  + c_humus_2_ta(:)
+
+    IF (PRESENT(c_sum_veg)) c_sum_veg(ics:ice) = c_green_ta(:) + c_woods_ta(:) + c_reserve_ta(:)
 
     IF (PRESENT(c_sum_litter_ag)) c_sum_litter_ag(ics:ice) =                                    &
         & c_acid_ag1_ta(:) + c_water_ag1_ta(:) + c_ethanol_ag1_ta(:) + c_nonsoluble_ag1_ta(:) + &
@@ -1561,6 +1568,7 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)         :: options
     REAL(wp),                   INTENT(in)         :: old_c_state_sum(:)
     REAL(wp),                   INTENT(in)         :: cflux(:)
+        ! Note: cflux is not really a flux, but already multiplied with time unit!
     REAL(wp),                   INTENT(inout)      :: Cconserve(:)
 
     !dsl4jsb_Def_memory(CARBON_)
@@ -1585,7 +1593,6 @@ CONTAINS
   !
   SUBROUTINE yday_carbon_conservation_test(tile)
 
-    USE mo_carbon_constants,   ONLY: molarMassCO2_kg, sec_per_day
     USE mo_jsb_grid,           ONLY: Get_grid
 
     ! Arguments
@@ -1658,6 +1665,132 @@ CONTAINS
     DEALLOCATE(C_flux_yday)
 
   END SUBROUTINE yday_carbon_conservation_test
+
+  ! ================================================================================================================================
+  !>
+  !! @brief calculations of diagnostic global sums
+  !!        called from jsbach_finish_timestep, after the loop over the nproma blocks.
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !
+  SUBROUTINE global_carbon_diagnostics(tile)
+
+#ifndef __ICON__
+    ! Argument
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
+
+    CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_carbon_diagnostics'
+    IF (debug_on()) CALL message(TRIM(routine), 'Global diagnostics only available with ICON')
+#else
+
+    USE mo_carbon_constants,      ONLY: molarMassC_kg, sec_per_year
+    USE mo_sync,                  ONLY: global_sum_array
+    USE mo_jsb_grid,              ONLY: Get_grid
+
+    ! Argument
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
+
+    ! Local variables
+    !
+    dsl4jsb_Def_memory(CARBON_)
+
+    CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_carbon_diagnostics'
+
+    ! Pointers to variables in memory
+
+    dsl4jsb_Real2D_onDomain :: C_sum_veg_ta
+    dsl4jsb_Real2D_onDomain :: C_sum_litter_ag_ta
+    dsl4jsb_Real2D_onDomain :: C_sum_litter_bg_ta
+    dsl4jsb_Real2D_onDomain :: C_sum_humus_ta
+    dsl4jsb_Real2D_onDomain :: C_sum_natural_ta
+    dsl4jsb_Real2D_onDomain :: NPP_act_yDayMean_ta
+    dsl4jsb_Real2D_onDomain :: GPP_yDayMean_ta
+    dsl4jsb_Real2D_onDomain :: soil_respiration_ta
+
+    REAL(wp), POINTER       :: C_sum_veg_gsum(:)
+    REAL(wp), POINTER       :: C_sum_litter_ag_gsum(:)
+    REAL(wp), POINTER       :: C_sum_litter_bg_gsum(:)
+    REAL(wp), POINTER       :: C_sum_humus_gsum(:)
+    REAL(wp), POINTER       :: C_sum_natural_gsum(:)
+    REAL(wp), POINTER       :: NPP_act_yDayMean_gsum(:)
+    REAL(wp), POINTER       :: GPP_yDayMean_gsum(:)
+    REAL(wp), POINTER       :: soil_respiration_gsum(:)
+
+    TYPE(t_jsb_model), POINTER      :: model
+    TYPE(t_jsb_grid),  POINTER      :: grid
+
+    REAL(wp), POINTER      :: area(:,:)
+    REAL(wp), POINTER      :: notsea(:,:)
+    LOGICAL,  POINTER      :: is_in_domain(:,:) ! T: cell in domain (not halo)
+    REAL(wp), ALLOCATABLE  :: in_domain (:,:)   ! 1: cell in domain, 0: halo cell
+    REAL(wp), ALLOCATABLE  :: scaling (:,:)
+
+
+    dsl4jsb_Get_memory(CARBON_)
+    dsl4jsb_Get_var2D_onDomain(CARBON_,  C_sum_veg_ta)                ! in
+    dsl4jsb_Get_var2D_onDomain(CARBON_,  C_sum_litter_ag_ta)          ! in
+    dsl4jsb_Get_var2D_onDomain(CARBON_,  C_sum_litter_bg_ta)          ! in
+    dsl4jsb_Get_var2D_onDomain(CARBON_,  C_sum_humus_ta)              ! in
+    dsl4jsb_Get_var2D_onDomain(CARBON_,  C_sum_natural_ta)            ! in
+    dsl4jsb_Get_var2D_onDomain(CARBON_,  NPP_act_yDayMean_ta)         ! in
+    dsl4jsb_Get_var2D_onDomain(CARBON_,  GPP_yDayMean_ta)             ! in
+    dsl4jsb_Get_var2D_onDomain(CARBON_,  soil_respiration_ta)         ! in
+
+    C_sum_veg_gsum        => CARBON__mem%C_sum_veg_gsum%ptr(:)        ! out
+    C_sum_litter_ag_gsum  => CARBON__mem%C_sum_litter_ag_gsum%ptr(:)  ! out
+    C_sum_litter_bg_gsum  => CARBON__mem%C_sum_litter_bg_gsum%ptr(:)  ! out
+    C_sum_humus_gsum      => CARBON__mem%C_sum_humus_gsum%ptr(:)      ! out
+    C_sum_natural_gsum    => CARBON__mem%C_sum_natural_gsum%ptr(:)    ! out
+    NPP_act_yDayMean_gsum => CARBON__mem%NPP_act_yDayMean_gsum%ptr(:) ! out
+    GPP_yDayMean_gsum     => CARBON__mem%GPP_yDayMean_gsum%ptr(:)     ! out
+    soil_respiration_gsum => CARBON__mem%soil_respiration_gsum%ptr(:) ! out
+
+    model => Get_model(tile%owner_model_id)
+    grid  => Get_grid(model%grid_id)
+    area         => grid%area(:,:)
+    is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
+    notsea       => tile%fract(:,:)   ! fraction of the box tile: notsea
+
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
+
+    IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
+
+    ! Domain Mask - to mask all halo cells for global sums (otherwise these
+    ! cells are counted twice)
+    ALLOCATE (in_domain(grid%nproma,grid%nblks))
+    WHERE (is_in_domain(:,:))
+      in_domain = 1._wp
+    ELSEWHERE
+      in_domain = 0._wp
+    END WHERE
+
+    ALLOCATE (scaling(grid%nproma,grid%nblks))
+
+    ! Calculate global carbon inventories, if requested for output
+    !  => Conversion from [mol(CO2)/m^2] to [GtC]
+    !     1 mol CO2 = molarMassC_kg kg C   => 1 mol CO2 = molarMassC_kg * e-12 Gt C
+    scaling(:,:) = molarMassC_kg * 1.e-12_wp * notsea(:,:) * area(:,:) * in_domain(:,:)
+    IF (CARBON__mem%C_sum_veg_gsum%is_in_output)        &
+      &  c_sum_veg_gsum        = global_sum_array(C_sum_veg_ta(:,:)        * scaling(:,:))
+    IF (CARBON__mem%C_sum_litter_ag_gsum%is_in_output)  &
+      &  c_sum_litter_ag_gsum  = global_sum_array(C_sum_litter_ag_ta(:,:)  * scaling(:,:))
+    IF (CARBON__mem%C_sum_litter_bg_gsum%is_in_output)  &
+      &  c_sum_litter_bg_gsum  = global_sum_array(C_sum_litter_bg_ta(:,:)  * scaling(:,:))
+    IF (CARBON__mem%C_sum_humus_gsum%is_in_output)      &
+      &  c_sum_humus_gsum      = global_sum_array(C_sum_humus_ta(:,:)      * scaling(:,:))
+    IF (CARBON__mem%C_sum_natural_gsum%is_in_output)    &
+      &  c_sum_natural_gsum    = global_sum_array(C_sum_natural_ta(:,:)    * scaling(:,:))
+    IF (CARBON__mem%NPP_act_yDayMean_gsum%is_in_output) &
+      &  NPP_act_yDayMean_gsum = global_sum_array(NPP_act_yDayMean_ta(:,:) * scaling(:,:) * sec_per_year)
+    IF (CARBON__mem%GPP_yDayMean_gsum%is_in_output)     &
+      &  GPP_yDayMean_gsum     = global_sum_array(GPP_yDayMean_ta(:,:)     * scaling(:,:) * sec_per_year)
+    IF (CARBON__mem%soil_respiration_gsum%is_in_output) &
+      &  soil_respiration_gsum = global_sum_array(soil_respiration_ta(:,:) * scaling(:,:) * sec_per_year)
+
+    DEALLOCATE (scaling, in_domain)
+
+#endif
+  END SUBROUTINE global_carbon_diagnostics
 
 #endif
 END MODULE mo_carbon_interface

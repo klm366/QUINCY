@@ -86,6 +86,7 @@ MODULE mo_hsm_class
     PROCEDURE :: Has_siblings       => Has_siblings_state
     PROCEDURE :: Is_first_child     => Is_first_child_state
     PROCEDURE :: Is_last_child      => Is_last_child_state
+    PROCEDURE :: Is_last_leaf       => Is_last_leaf_state
     PROCEDURE :: Reset_all          => Reset_all_state
     PROCEDURE :: Print_state
     PROCEDURE :: Is_equal           => Is_equal_state
@@ -344,6 +345,20 @@ CONTAINS
     return_value = .NOT. ASSOCIATED(this%next_sibling)
 
   END FUNCTION Is_last_child_state
+
+  ! TODO This only works if the tree is walked through downwards!
+  FUNCTION Is_last_leaf_state(this) RESULT(return_value)
+
+    CLASS(t_State), INTENT(in) :: this
+    LOGICAL                   :: return_value
+
+    IF (ASSOCIATED(this%parent)) THEN
+      return_value = .NOT. this%Has_children() .AND. this%Is_last_child() .AND. this%parent%Is_last_child()
+    ELSE
+      return_value = .NOT. this%Has_children() .AND. this%Is_last_child()
+    END IF
+
+  END FUNCTION Is_last_leaf_state
 
   FUNCTION Is_first_child_state(this) RESULT(return_value)
 
@@ -1044,12 +1059,13 @@ CONTAINS
 
       !DEALLOCATE(start_msg%action)
       DEALLOCATE(start_msg)
-      IF (ASSOCIATED(new_msg)) THEN
-        !IF (ASSOCIATED(new_msg%action)) DEALLOCATE(new_msg%action)
-        DEALLOCATE(new_msg)
-      END IF
 
     END SELECT
+
+    IF (ASSOCIATED(new_msg)) THEN
+      !IF (ASSOCIATED(new_msg%action)) DEALLOCATE(new_msg%action)
+      DEALLOCATE(new_msg)
+    END IF
 
     IF (l_debug) THEN
       IF (ASSOCIATED(new_msg)) THEN

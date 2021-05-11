@@ -52,7 +52,7 @@ MODULE mo_sse_memory_class
     TYPE(t_jsb_var_real3d) :: &
       & vol_heat_cap_sl,      & !< (dynamic) Volumetric heat capacity of dry soil [J m-3 K-1]
       & heat_cond_sl,         & !< (dynamic) Thermal conductivity of soil [J m-1 s-1 K-1]
-      & t_soil,               & !< Temperature of soil layers [K]
+      & t_soil_sl,            & !< Temperature of soil layers [K]
       & t_soil_acoef,         & !< Soil A coefficient of Richtmeyer and Morton scheme
       & t_soil_bcoef,         & !< Soil B coefficient of Richtmeyer and Morton scheme
       & snow_depth_sl,        & !< Depth of snow layers [m]
@@ -270,7 +270,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-    CALL mem%Add_var( 't_soil', mem%t_soil,                                  &
+    CALL mem%Add_var( 't_soil_sl', mem%t_soil_sl,                            &
       & hgrid, soil_e,                                                       &
       & t_cf('soil_temperature', 'K', ''),                                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &

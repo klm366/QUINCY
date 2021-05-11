@@ -223,7 +223,7 @@ CONTAINS
         & t_cf('carbon_conservation_test', '', 'Carbon conservation test'),            &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
-        & loutput = .TRUE., lrestart=.TRUE.,                                           &
+        & loutput = .TRUE., output_level=BASIC, lrestart=.TRUE.,                       &
         & initval_r=-999.0_wp )
 
       CALL mem%Add_var( 'yday_c_state_sum', mem%yday_c_state_sum,                                  &

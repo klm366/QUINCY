@@ -61,7 +61,7 @@ CONTAINS
     & Cflx_herbivory,             & ! out
     & cflux_herb_2_littergreen,   & ! out
     & cflux_herb_2_atm,           & ! out
-    & NPP_act_yDayMean,           & ! out
+    & NPP_act,                    & ! out
     !
     ! & fract_litter_wood_new,      & ! inout, optional; R: only for spitfire
     ! Yasso variables
@@ -152,7 +152,7 @@ CONTAINS
     REAL(wp), INTENT(out)   :: Cflx_herbivory
     REAL(wp), INTENT(out)   :: cflux_herb_2_littergreen
     REAL(wp), INTENT(out)   :: cflux_herb_2_atm
-    REAL(wp), INTENT(out)   :: NPP_act_yDayMean       ! Actual NPP after N-limitation and excess carbon drop [mol(C)/m^2 s]
+    REAL(wp), INTENT(out)   :: NPP_act               ! Actual NPP after N-limitation and excess carbon drop [mol(C)/m^2 s]
     !
     ! added for thonicke fire algorithm (spitfire) needed to correctly split the carbon pools into the different fuel classes
     !real(wp),optional,intent(inout) :: fract_litter_wood_new   ! new fraction in above ground wood litter pool
@@ -285,7 +285,7 @@ CONTAINS
 
     soilResp_rate            = 0.0_wp
     !soilResp_rate_pot        = 0.0_wp
-    NPP_act_yDayMean         = 0.0_wp
+    NPP_act                  = 0.0_wp
     ! redFact_Nlimitation      = 1.0_wp
 
     ! R: only for spitfire:
@@ -563,11 +563,11 @@ CONTAINS
     !! ============== COMPUTE ACTUAL NPP (is needed outside the routine e.g. to recompute transpiration through stomata) =======
 
     IF (NPP_pot_yDayMean > 0.0_wp) THEN
-      NPP_act_yDayMean = (NPP_2_green_via_mobileN + NPP_2_wood_via_mobileN + NPP_2_rootExudates +               &
-        & redFact_Nlimitation * (Cflx_NPP_2_green_pot + Cflx_NPP_2_wood_pot) + Cflx_NPP_2_reserve_pot &
+      NPP_act = (NPP_2_green_via_mobileN + NPP_2_wood_via_mobileN + NPP_2_rootExudates +               &
+        & redFact_Nlimitation * (Cflx_NPP_2_green_pot + Cflx_NPP_2_wood_pot) + Cflx_NPP_2_reserve_pot  &
         & ) / sec_per_day
     ELSE
-      NPP_act_yDayMean = NPP_pot_yDayMean + NPP_flux_correction  ! NPP_pot_yDayMean is negative: NPP_flux_correction is zero
+      NPP_act = NPP_pot_yDayMean + NPP_flux_correction  ! NPP_pot_yDayMean is negative: NPP_flux_correction is zero
                                                                  ! except c_reserve was < 0.0_wp.
     END IF
 

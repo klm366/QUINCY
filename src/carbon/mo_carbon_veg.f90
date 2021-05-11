@@ -63,7 +63,7 @@ CONTAINS
       & NPP_flux_correction(:)                                !< NPP flux correction [mol(C)/m^2/s]
 
     REAL(wp), DIMENSION(SIZE(LAI)) :: &
-      & c_green_max,c_reserve_optimal, &
+      & c_reserve_optimal, &
       & exess_carbon
 
     INTEGER :: ic
@@ -72,7 +72,6 @@ CONTAINS
     NPP_act(:) = 0._wp
     NPP_flux_correction(:) = 0._wp
 
-    c_green_max(:)       = lctlib%greenC2leafC   * LAI(:)    / lctlib%specificLeafArea_C
     c_reserve_optimal(:) = lctlib%reserveC2leafC * maxLAI(:) / lctlib%specificLeafArea_C
 
     DO ic=1,SIZE(LAI)

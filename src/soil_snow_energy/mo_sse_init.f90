@@ -81,7 +81,7 @@ CONTAINS
     ENDIF
 
     ! TODO This is not correct if sse runs on veg tile!
-    IF (.NOT. tile%Has_children() .AND. .NOT. ASSOCIATED(tile%next_sibling_tile)) THEN
+    IF (tile%Is_last_process_tile(SSE_)) THEN
       CALL sse_finalize_init_vars()
     END IF
 
@@ -269,17 +269,17 @@ CONTAINS
       CALL init_soil_temperature(                   &
         & soil_e%levels(:),                         &
         & sse_init_vars%t_srf_mon(:,iblk,1:12),     &
-        & dsl4jsb_var_ptr(SSE_,t_soil)(:,:,iblk),   &
+        & dsl4jsb_var_ptr(SSE_,t_soil_sl)(:,:,iblk),   &
         & dsl4jsb_var_ptr(SEB_,t)(:,iblk))
     END DO
     dsl4jsb_var2D_onDomain(SEB_,t_unfilt) = dsl4jsb_var2D_onDomain(SEB_,t)
 
     !$acc data present(dsl4jsb_var2D_onDomain(SEB_,t_unfilt), & 
     !$acc dsl4jsb_var2D_onDomain(SEB_,t), &
-    !$acc dsl4jsb_var3D_onDomain(SSE_,t_soil))
+    !$acc dsl4jsb_var3D_onDomain(SSE_,t_soil_sl))
     !$acc update device(dsl4jsb_var2D_onDomain(SEB_,t_unfilt), & 
     !$acc dsl4jsb_var2D_onDomain(SEB_,t), &
-    !$acc dsl4jsb_var3D_onDomain(SSE_,t_soil))
+    !$acc dsl4jsb_var3D_onDomain(SSE_,t_soil_sl))
     !$acc end data
 
     CALL init_soil_properties(tile)
