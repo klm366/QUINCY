@@ -30,10 +30,7 @@ MODULE mo_jsb_memory_class
     &                             REAL1D, REAL2D, REAL3D
   USE mo_jsb_pool_class,    ONLY: t_jsb_pool
   USE mo_jsb_io,            ONLY: t_cf, t_grib1, t_grib2, &
-#ifdef __ICON__
-    &                             GRID_LONLAT, &
-#endif
-    &                             GRID_UNSTRUCTURED, GRID_UNSTRUCTURED_CELL, GRID_CELL, missval, tables
+    &                             GRID_LONLAT,GRID_UNSTRUCTURED, GRID_UNSTRUCTURED_CELL, GRID_CELL, missval, tables
   USE mo_jsb_io_iface,      ONLY: t_cf_var, t_grib2_var, grib2_var
   USE mo_util,              ONLY: int2string
   USE mo_jsb_utils_iface,   ONLY: assign_if_present
