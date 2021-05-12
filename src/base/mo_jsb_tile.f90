@@ -166,6 +166,9 @@ CONTAINS
     ! Loop over all processes and set actions for this tile
     DO i=1,max_no_of_processes
       return_ptr%process_action(i) = SKIP_
+      IF (ASSOCIATED(model%processes(i)%p)) THEN
+        IF (.NOT. model%processes(i)%p%config%active) CYCLE
+      END IF
       iproc = -1
       j = 0
       IF (PRESENT(processes)) THEN
@@ -243,7 +246,7 @@ CONTAINS
     INTEGER                               :: iproc
     CLASS(t_jsb_memory), POINTER          :: tmp_ptr
     CLASS(t_jsb_tile_abstract), POINTER   :: parent_tile => NULL()
-    CHARACTER(LEN=15)                     :: process_name
+    CHARACTER(LEN=:), ALLOCATABLE         :: process_name
 
     CHARACTER(len=:), ALLOCATABLE :: varlist_name_loc
     CHARACTER(len=3)              :: model_id_suffix                    ! Suffix for domain if more than one model
@@ -462,22 +465,23 @@ CONTAINS
       IF (input_file%Has_var(TRIM(name_loc))) THEN
         return_pointer => input_file%Read_2d(variable_name=TRIM(name_loc))
         !
-        ! TODO: For security set all values of the box fractions to 1 that are close to 1 
-        ! (similar to mo_echam_phy_init) in order to account for precision errors
-        IF (TRIM(this%name) == 'box') THEN
-          return_pointer(:,:) = MERGE(1._wp, return_pointer(:,:), return_pointer(:,:) > 1._wp - 10._wp*EPSILON(1._wp))
-        END IF
+        ! TODO: For security set all values of the box fractions to 1 that are close to 1, and all box fractions to 0
+        ! that are close to 0 (similar to mo_echam_phy_init) in order to account for precision errors
+        ! IF (TRIM(this%name) == 'box') THEN
+        !   return_pointer(:,:) = MERGE(1._wp, return_pointer(:,:), return_pointer(:,:) > 1._wp - 10._wp*EPSILON(1._wp))
+        !   return_pointer(:,:) = MERGE(0._wp, return_pointer(:,:), return_pointer(:,:) <         10._wp*EPSILON(1._wp))
+        ! END IF
         !
         ! TODO: For security, as a workaround, set lake fractions in coastal points that are 
         ! partially land and partially ocean to zero, and corresponding land fraction to one.
-        IF (TRIM(this%name) == 'lake') THEN
-          CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
-          return_pointer(:,:) = MERGE(return_pointer(:,:), 0._wp, tmp_fract(:,:) >= 1._wp)
-        END IF
-        IF (TRIM(this%name) == 'land') THEN
-          CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
-          return_pointer(:,:) = MERGE(return_pointer(:,:), 1._wp, tmp_fract(:,:) >= 1._wp)
-        END IF
+        ! IF (TRIM(this%name) == 'lake') THEN
+        !   CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
+        !   return_pointer(:,:) = MERGE(return_pointer(:,:), 0._wp, tmp_fract(:,:) >= 1._wp)
+        ! END IF
+        ! IF (TRIM(this%name) == 'land') THEN
+        !   CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
+        !   return_pointer(:,:) = MERGE(return_pointer(:,:), 1._wp, tmp_fract(:,:) >= 1._wp)
+        ! END IF
       ELSE
         CALL finish(TRIM(routine), 'Fraction '//TRIM(name_loc)//' for tile '//TRIM(this%name)// &
           &                        ' not found in '//TRIM(this%fract_filename))
@@ -562,6 +566,7 @@ CONTAINS
 
   END SUBROUTINE Init_fractions_on_tile
 
+  ! This is called during initialization from model_init for each tile that is not a leaf.
   SUBROUTINE Init_vars_on_tile(this)
 
     USE mo_jsb_memory_class,    ONLY: t_jsb_memory
@@ -577,32 +582,32 @@ CONTAINS
 
     IF (debug_on()) CALL message(TRIM(routine), 'Initializing tile structure on vars '//TRIM(this%name))
 
+    no_of_children = this%Get_no_of_children()
+    IF (no_of_children == 0) CALL finish(routine, 'This should not happen')
+
     ! Loop over all processes and initialize memory for this tile
     DO iproc=1,max_no_of_processes
 
-      ! if the current process is not on leafs of current tile exit DO loop
+      ! if the current process is not on leaves of current tile exit DO loop
       SELECT CASE (this%process_action(iproc))
       CASE (SKIP_, ON_TILE_, INHERIT_)
         CYCLE
       END SELECT
 
-      no_of_children = this%Get_no_of_children()
       mem => this%mem(iproc)%p
       DO i=1,mem%no_of_vars
         name = mem%vars(i)%p%name
-        IF (no_of_children > 0) THEN
-          IF (.NOT. ALLOCATED(mem%vars(i)%p%child_idx)) &
-            & ALLOCATE(mem%vars(i)%p%child_idx(no_of_children))
-          DO child_no=1,no_of_children
-            IF (ASSOCIATED(mem%children(child_no)%p)) THEN
-              mem%vars(i)%p%child_idx(child_no) = mem%children(child_no)%p%Get_var_position(TRIM(name))
-            ELSE
-              mem%vars(i)%p%child_idx(child_no) = 0
-            END IF
-          END DO
-          !$acc enter data copyin(mem%vars(i)%p%child_idx)
-          ! __acc_attach(mem%vars(i)%p%child_idx)
-        END IF
+        IF (.NOT. ALLOCATED(mem%vars(i)%p%child_idx)) &
+          & ALLOCATE(mem%vars(i)%p%child_idx(no_of_children))
+        DO child_no=1,no_of_children
+          IF (ASSOCIATED(mem%children(child_no)%p)) THEN
+            mem%vars(i)%p%child_idx(child_no) = mem%children(child_no)%p%Get_var_position(TRIM(name))
+          ELSE
+            mem%vars(i)%p%child_idx(child_no) = 0
+          END IF
+        END DO
+        !$acc enter data copyin(mem%vars(i)%p%child_idx)
+        ! __acc_attach(mem%vars(i)%p%child_idx)
       END DO
 
     END DO
@@ -636,8 +641,6 @@ CONTAINS
 
     IF (timer_on('detail')) CALL timer_start(timer_process_task(this%owner_model_id))
 
-    ! Gfortran crashes on the next line
-    ! ALLOCATE(msg, source=msg_in)
     ALLOCATE(msg)
     msg%name = msg_in%name
     msg%action = msg_in%action
@@ -738,8 +741,7 @@ CONTAINS
 
     !return_ptr => msg
     IF (ASSOCIATED(msg)) THEN
-      ALLOCATE(return_ptr, source=msg)
-!      return_ptr%action = msg%action
+      return_ptr => msg
     ELSE
       return_ptr => NULL()
     END IF
@@ -768,8 +770,6 @@ CONTAINS
         END IF
       END IF
     END IF
-
-    IF (ASSOCIATED(msg)) DEALLOCATE(msg)
 
     IF (timer_on('detail')) CALL timer_stop(timer_process_task(this%owner_model_id))
 

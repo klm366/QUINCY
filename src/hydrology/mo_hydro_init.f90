@@ -84,7 +84,7 @@ CONTAINS
     IF (model%config%use_quincy) CALL hydro_init_q_ic(tile)
 
     ! TODO This is not correct if hydro runs on veg tile!
-    IF (.NOT. tile%Has_children() .AND. .NOT. ASSOCIATED(tile%next_sibling_tile)) THEN
+    IF (tile%Is_last_process_tile(HYDRO_)) THEN
       CALL hydro_finalize_init_vars()
     END IF
 

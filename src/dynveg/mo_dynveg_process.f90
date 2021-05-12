@@ -581,7 +581,7 @@ CONTAINS
 ! --- fpc_daily ---------------------------------------------------------------------------
 
   SUBROUTINE fpc_daily(nidx, ntiles, accelerate_dynveg, is_woody, is_dynamic, tau_Cpool_woods,    &
-                       npp_ave, bio_exist, pot_fpc, &
+                       npp_ave, bio_exist, burned_fract, damaged_fract, pot_fpc, &
                        act_fpc, bare_fpc, fuel)
 
 ! Calculation of daily FPC for trees, shrubs, and herbaceous plants
@@ -595,6 +595,8 @@ CONTAINS
     REAL(wp),        INTENT(in) :: tau_Cpool_woods(:,:) ! lifetime of Cpool_woods [days]
     REAL(wp),        INTENT(in) :: npp_ave(:,:)
     REAL(wp),        INTENT(in) :: bio_exist(:,:)
+    REAL(wp),        INTENT(in) :: burned_fract(:,:)
+    REAL(wp),        INTENT(in) :: damaged_fract(:,:)
     REAL(wp),        INTENT(in) :: pot_fpc(:,:)
 
 ! inout
@@ -613,23 +615,17 @@ CONTAINS
     REAL(wp), PARAMETER  ::  min_dist_woody = 0.002_wp / 365._wp !! mortality of woody plants (not caused by fire/windthrow, but by other unresolved processes)
     REAL(wp), PARAMETER  ::  grass_mortality = 0.01_wp / 365._wp !! grass mortality (not caused by fire, but by other unresolved processes)
     REAL(wp), PARAMETER  ::  tau_Cpool_woods_to_tau_pft = 1._wp
-    REAL(wp), ALLOCATABLE :: burned_local(:,:)
-    REAL(wp), ALLOCATABLE :: damaged_local(:,:)
   
     ! initialisations
 
     act_fpc_previous_day(:,:) = act_fpc(:,:)
     non_woody_fpc(:) = bare_fpc(:)
-    ALLOCATE(burned_local(nidx,ntiles))
-    ALLOCATE(damaged_local(nidx,ntiles))
-    burned_local(:,:) = 0._wp
-    damaged_local(:,:) = 0._wp
     
     DO itile = 1,ntiles
        DO i = 1,nidx
-          IF (is_dynamic(i,itile) .AND. is_woody(i,itile)) burned_local(i,itile) = 3.e-5_wp
-          IF (is_dynamic(i,itile) .AND. .NOT. is_woody(i,itile)) burned_local(i,itile) = 1.e-4_wp
-          IF (is_dynamic(i,itile) .AND. is_woody(i,itile)) damaged_local(i,itile) = 1.e-5_wp
+!!$ TR          IF (is_dynamic(i,itile) .AND. is_woody(i,itile)) burned_local(i,itile) = 3.e-5_wp
+!!$ TR          IF (is_dynamic(i,itile) .AND. .NOT. is_woody(i,itile)) burned_local(i,itile) = 1.e-4_wp
+!!$ TR          IF (is_dynamic(i,itile) .AND. is_woody(i,itile)) damaged_local(i,itile) = 1.e-5_wp
           IF (.NOT. is_dynamic(i,itile)) act_fpc(i,itile) = 0._wp
           IF (.NOT. is_woody(i,itile)) non_woody_fpc(i) = non_woody_fpc(i) + act_fpc(i,itile)
        END DO
@@ -668,18 +664,18 @@ CONTAINS
         IF (is_dynamic(i,itile) .AND. is_woody(i,itile)) THEN
           veg_inc = veg_inc + MAX(fract_small,act_fpc(i,itile) + accelerate_dynveg * &
           ((pot_fpc(i,itile) - act_fpc(i,itile)) / tau_pft &
-          - (burned_local(i,itile) + damaged_local(i,itile) + min_dist_woody) * act_fpc_previous_day(i,itile))) &
+          - (burned_fract(i,itile) + damaged_fract(i,itile) + min_dist_woody) * act_fpc_previous_day(i,itile))) &
           - act_fpc(i,itile)
         ELSEIF(is_dynamic(i,itile) .AND. .NOT. is_woody(i,itile)) THEN
           IF (bio_exist(i,itile) > 0.5_wp .AND. npp_ave(i,itile) > EPSILON(1._wp)) THEN
             veg_inc = veg_inc + MAX(fract_small,act_fpc(i,itile) - accelerate_dynveg * &
-            (burned_local(i,itile) * act_fpc_previous_day(i,itile) + &
+            (burned_fract(i,itile) * act_fpc_previous_day(i,itile) + &
             grass_mortality * act_fpc(i,itile) - &
             bare_fpc(i) / grass_sum(i) * npp_ave(i,itile) * MAX(act_fpc_min,act_fpc(i,itile)) / tau_pft)) &
             - act_fpc(i,itile)
           ELSE
             veg_inc = veg_inc + MAX(fract_small,act_fpc(i,itile) - accelerate_dynveg * &
-            (burned_local(i,itile) * act_fpc_previous_day(i,itile) + &
+            (burned_fract(i,itile) * act_fpc_previous_day(i,itile) + &
             act_fpc(i,itile) / tau_pft)) &
             - act_fpc(i,itile)
           ENDIF
@@ -692,7 +688,7 @@ CONTAINS
         IF (is_dynamic(i,itile) .AND. is_woody(i,itile)) THEN
           act_fpc(i,itile) = MAX(fract_small,act_fpc(i,itile) + accelerate_dynveg * &
             ((theta * pot_fpc(i,itile) - act_fpc(i,itile)) / tau_pft                &
-            - (burned_local(i,itile) + damaged_local(i,itile) + min_dist_woody) * act_fpc_previous_day(i,itile)))
+            - (burned_fract(i,itile) + damaged_fract(i,itile) + min_dist_woody) * act_fpc_previous_day(i,itile)))
         ENDIF
       ENDDO
     ENDDO
@@ -705,12 +701,12 @@ CONTAINS
         IF (is_dynamic(i,itile) .AND. .NOT. is_woody(i,itile)) THEN
           IF (bio_exist(i,itile) > 0.5_wp .AND. npp_ave(i,itile) > EPSILON(1._wp)) THEN
             act_fpc(i,itile) = MAX(fract_small,act_fpc(i,itile) - accelerate_dynveg * &
-               (burned_local(i,itile) * act_fpc_previous_day(i,itile) + &
+               (burned_fract(i,itile) * act_fpc_previous_day(i,itile) + &
                grass_mortality * act_fpc(i,itile) - &
                bare_fpc(i) / grass_sum(i) * npp_ave(i,itile) * MAX(act_fpc_min,act_fpc(i,itile)) / tau_pft))
           ELSE
             act_fpc(i,itile) = MAX(fract_small,act_fpc(i,itile) - accelerate_dynveg * &
-               (burned_local(i,itile) * act_fpc_previous_day(i,itile) + &
+               (burned_fract(i,itile) * act_fpc_previous_day(i,itile) + &
                act_fpc(i,itile) / tau_pft))
           ENDIF
         ENDIF

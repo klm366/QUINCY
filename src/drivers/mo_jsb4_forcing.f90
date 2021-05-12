@@ -254,7 +254,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), POINTER :: tile
 
     dsl4jsb_Def_memory(HYDRO_)
-    dsl4jsb_Real2D_onChunk :: elevation
+    dsl4jsb_Real2D_onDomain :: elevation
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Real2D_onDomain :: DEBUG_VAR
 
@@ -325,12 +325,10 @@ CONTAINS
     ENDIF
     ! convert degC to Kelvin
     t_air(:,:) = t_air_C(:,:) + tmelt
-    ! dsl4jsb_Get_memory(A2L_)
-    ! dsl4jsb_Get_var2D_onDomain(A2L_,   DEBUG_VAR)
-    ! DEBUG_VAR(:,:) = t_air(:,:)
 
     ! --- precipitation
-    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, next_date, model_id, forcing_input%precipitation, temporary_data1)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, next_date, model_id, &
+      &                            forcing_input%precipitation, temporary_data1)
     ! convert if required
     IF(forcing_options%precip_in_mm_per_day) temporary_data1 = temporary_data1 * conv_prec_day
     ! compute rain and snow
@@ -348,22 +346,24 @@ CONTAINS
         & 0.5_wp*(tmax_data(:,:) + tmin_data(:,:)))
     ENDIF
 
-    ! --- compute bottom pressure
+    ! get elevation
     dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, elevation)  ! in
+
+    ! --- compute bottom pressure
     DO iblk = 1, nblks
       IF (iblk == nblks) THEN
         ic = icz
       ELSE
         ic = ice
       END IF
-      ! get elevation
-      dsl4jsb_Get_var2D_onChunk(HYDRO_, elevation)  ! in
 
-      press_srf(1:ic,iblk) = bottom_pressure(elevation(1:ic), t_air_C(1:ic,iblk))
+      press_srf(1:ic,iblk) = bottom_pressure(elevation(1:ic,iblk), t_air_C(1:ic,iblk))
     ENDDO
 
     ! --- compute specific humidity
     ALLOCATE(sat_spec_humidity(ice, nblks))
+    sat_spec_humidity(:,:) = 0._wp
     SELECT CASE(forcing_options%type_of_qair_forcing)
     CASE(NONE_)
       ! ratio of actual to potential evapotranspiration from the previous day
@@ -377,7 +377,8 @@ CONTAINS
 
     CASE(RH_)
       ALLOCATE(rel_humidity(ice, nblks))
-      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, next_date, model_id, forcing_input%rel_humidity, rel_humidity)
+      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, next_date, model_id, &
+        &                            forcing_input%rel_humidity, rel_humidity)
       ! check data
       hlp_r = MAXVAL(MAXVAL(rel_humidity,DIM=2))
       IF(hlp_r < 1._wp) THEN
@@ -409,7 +410,7 @@ CONTAINS
             END IF
             CALL spec_humidity_from_rel_humidity(ic, sinlat(1:ic,iblk), coslat(1:ic,iblk), &
               & rel_humidity(1:ic,iblk), MINVAL(forcing_input%air_temp%data_read(1:ic,iblk,:),DIM=2), &
-              & MAXVAL(forcing_input%air_temp%data_read(1:ic,iblk,:),DIM=2), elevation(1:ic), delta_time, q_air(1:ic,iblk))
+              & MAXVAL(forcing_input%air_temp%data_read(1:ic,iblk,:),DIM=2), elevation(1:ic,iblk), delta_time, q_air(1:ic,iblk))
           ENDDO
         ELSE
           DO iblk = 1, nblks
@@ -418,8 +419,9 @@ CONTAINS
             ELSE
               ic = ice
             END IF
-            CALL spec_humidity_from_rel_humidity(ic, sinlat(1:ic,iblk), coslat(1:ic,iblk), &
-              & rel_humidity(1:ic,iblk), tmin_data(1:ic,iblk), tmax_data(1:ic,iblk), elevation(1:ic), delta_time, q_air(1:ic,iblk))
+            CALL spec_humidity_from_rel_humidity( &
+              & ic, sinlat(1:ic,iblk), coslat(1:ic,iblk), rel_humidity(1:ic,iblk), &
+              & tmin_data(1:ic,iblk), tmax_data(1:ic,iblk), elevation(1:ic,iblk), delta_time, q_air(1:ic,iblk))
           ENDDO
         ENDIF
         ! constrain daily specific humidity to be lower than or equal to the saturation spec. humidity
@@ -463,9 +465,6 @@ CONTAINS
 
     swvis_srf_down(:,:) = rad_uv_down(:,:) + swpar_srf_down(:,:)
     DEALLOCATE(rad_uv_down)
-    dsl4jsb_Get_memory(A2L_)
-    dsl4jsb_Get_var2D_onDomain(A2L_,   DEBUG_VAR)
-    DEBUG_VAR(:,:) = help1(:,:)
 
     ! --- compute longwave radiation
     IF (forcing_input%longwave%frequency .EQ. TIMESTEP_) THEN
@@ -475,7 +474,8 @@ CONTAINS
       ! observations but the diurnal cycle follows temperature to help calculation of a correct
       ! net radiation flux. Note that reduces biases resulting from assuming a constant flux, but
       ! this introduces uncertainty due to biases in the assumed dial course of temperature
-      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, next_date, model_id, forcing_input%longwave, temporary_data1)
+      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, next_date, model_id, &
+        &                            forcing_input%longwave, temporary_data1)
 
       IF (forcing_options%air_temperature_as_timestep) THEN
         lw_srf_down = longwave_from_daily_longwave(temporary_data1(:,:), MINVAL(forcing_input%air_temp%data_read(:,:,:),DIM=3), &
@@ -828,7 +828,8 @@ CONTAINS
   !! @par History
   !! First version by Julia Nabel (14.01.16)
   !!
-  SUBROUTINE get_data_and_update_field(nblks, ics, ice, current_datetime, next_date, model_id, forcing_input_variable, current_forcing_array)
+  SUBROUTINE get_data_and_update_field(nblks, ics, ice, current_datetime, next_date, model_id, &
+    &                                  forcing_input_variable, current_forcing_array)
 
     INTEGER,                   INTENT(IN)    :: nblks, ics, ice, model_id
     TYPE(t_datetime), POINTER, INTENT(in)    :: current_datetime
@@ -866,7 +867,7 @@ CONTAINS
 
     ! ----- Check times
     CALL get_date_components(next_date, year, month, day, hour, minute, second)
-    CALL get_date_components (current_datetime,  year=current_year, day=current_day) ! R: sehe keinen Unterschied zwischen current_date und current_datetime
+    CALL get_date_components (current_datetime,  year=current_year, day=current_day)
     ! new_year_forcing = (year /= current_year)
     ! new_day_forcing = (day /= current_day)
     new_year_forcing = is_newyear(current_datetime, delta_time)
@@ -915,8 +916,9 @@ CONTAINS
           !CALL nf(nf_inq_varid(input_file%file_id, CO2_varname, nc_var_id))
           !CALL nf(nf_get_vara_double(input_file%file_id, nc_var_id, (/1,1,currentTimeStep/), (/1,1,1/), hlp_r ))
           ! We could add Read_1d_time. However we would have to add 4 funktions for this call. Its probably not worth it to expand the code.
-          return_pointer => input_file%Read_2d_time(forcing_input_variable%variable_name, & ! variable_name sollte CO2_varname sein
-            &               start_time_step=currentTimeStep, end_time_step=currentTimeStep, fill_array=forcing_input_variable%data_read)
+          return_pointer => input_file%Read_2d_time(forcing_input_variable%variable_name,   & ! variable_name sollte CO2_varname sein
+            &               start_time_step=currentTimeStep, end_time_step=currentTimeStep, &
+            &               fill_array=forcing_input_variable%data_read)
           CALL input_file%Close()
         ENDIF
         hlp_r(1) =forcing_input_variable%data_read(1,1,1)
@@ -1226,6 +1228,8 @@ CONTAINS
     REAL(wp), DIMENSION(ice):: air_pressure, zdu2, ztvd, ztvir, qsat_surf
     REAL(wp), DIMENSION(ice):: ztvs, zg, zgh, zril, zcons, zchnl, zcfnchl, zcfhl, zscfl, zucfhl
 
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_remaining_input_for_jsb4_interface'
+
     ! in jsb3: rd = GasConstantDryAir; cpd = SpecificHeatDryAirConstPressure; grav = Gravity
     zcons9 = 3._wp * cb
     zcons11 = 3._wp * cb * cc
@@ -1266,16 +1270,19 @@ CONTAINS
       ! virtual potential surface temperature
       CALL sat_specific_humidity(ic, t_srf_proc(1:ic,iblk), pressure(1:ic,iblk), qsat_surf(1:ic))
       ztvs(1:ic) = t_srf_proc(1:ic,iblk) * ( 100000._wp/pressure(1:ic,iblk))**zkappa * &
-        & ( 1._wp + vtmpc1 * ( fact_qsat_srf_proc(1:ic,iblk) * qsat_surf(1:ic) + ( 1._wp - fact_q_air_proc(1:ic,iblk) ) * qair(1:ic,iblk)))
+        & ( 1._wp + vtmpc1 * ( fact_qsat_srf_proc(1:ic,iblk) * qsat_surf(1:ic) + ( 1._wp - fact_q_air_proc(1:ic,iblk) ) &
+        & * qair(1:ic,iblk)))
 
       ! geopotential of the surface layer (see echam's auxhybc.f90 & geopot.f90)
       ! adapted according to jsb3 offline modifications by Marvin, Philipp et al. Jan. 24, 2017 (r8893)
-      IF(forcing_options%heightWind > 0._wp) THEN
+      IF(forcing_options%heightWind > 0._wp .AND. forcing_options%heightHumidity > 0._wp) THEN
         zg(1:ic) = forcing_options%heightWind * grav
         zgh(1:ic) = forcing_options%heightHumidity * grav ! jsb31:ic "HeightHumidity and HeightTemperature have to be equal"
       ELSE
-        zg(1:ic) = ztvir(1:ic) * rd * LOG(1._wp / zsigma)
-        zgh(1:ic) = zg(1:ic)
+        ! TODO Once forcing from model data is implemented this has to be activated again!
+        ! zg(1:ic) = ztvir(1:ic) * rd * LOG(1._wp / zsigma)
+        ! zgh(1:ic) = zg(1:ic)
+        CALL finish(routine, 'forcing_height_wind or forcing_height_humidity not set')
       ENDIF
 
       ! Richardson number (dry, Brinkop & Roeckner 1995, Tellus)

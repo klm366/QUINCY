@@ -51,7 +51,7 @@ MODULE mo_dynveg_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes A2L_, PHENO_, ASSIMI_, CARBON_, DYNVEG_
+  dsl4jsb_Use_processes A2L_, PHENO_, ASSIMI_, CARBON_, DYNVEG_, DISTURB_
 
   ! Use of process configurations
   dsl4jsb_Use_config(DYNVEG_)
@@ -63,6 +63,7 @@ MODULE mo_dynveg_interface
   dsl4jsb_Use_memory(ASSIMI_)
   dsl4jsb_Use_memory(CARBON_)
   dsl4jsb_Use_memory(DYNVEG_)
+  dsl4jsb_Use_memory(DISTURB_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables 
@@ -171,11 +172,13 @@ CONTAINS
     REAL(wp), POINTER  ::  bclimit_min_gdd(:,:)
     REAL(wp), POINTER  ::  tau_c_woods(:,:)
     REAL(wp), POINTER  ::  NPP_mean_5year(:,:)
+    REAL(wp), POINTER  ::  burned_fract(:,:)
+    REAL(wp), POINTER  ::  damaged_fract(:,:)
     REAL(wp), POINTER  ::  max_green_bio(:,:)
     REAL(wp), POINTER  ::  sla(:,:)
-    REAL(wp), POINTER  ::  cover_fract(:,:)
     REAL(wp), POINTER  ::  cover_fract_pot_previous_year(:,:)
     REAL(wp), PARAMETER  ::  accelerate_dynveg = 1._wp
+    REAL(wp), ALLOCATABLE  :: fract_fpc_max(:,:)
 
     ! Declare process memories
     dsl4jsb_Def_config(DYNVEG_)
@@ -184,6 +187,7 @@ CONTAINS
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(CARBON_)
+    dsl4jsb_Def_memory(DISTURB_)
 
     ! Declare pointers to variables in DYNVEG memory
     dsl4jsb_Real2D_onChunk :: seconds_day
@@ -198,13 +202,14 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: bare_fpc
     dsl4jsb_Real3D_onChunk :: pot_fpc
     dsl4jsb_Real3D_onChunk :: cover_fract_pot
+    dsl4jsb_Real3D_onChunk :: cover_fract
     dsl4jsb_Real3D_onChunk :: bio_exist
     dsl4jsb_Real2D_onChunk :: gdd_sum_year
     dsl4jsb_Real2D_onChunk :: gdd_prev_year
     dsl4jsb_Real2D_onChunk :: sum_green_bio_memory
     dsl4jsb_Real2D_onChunk :: desert_fpc
     ! Declare pointers to variables in foreign memory
-    dsl4jsb_Real2D_onChunk :: fract_fpc_max
+!!$ TR    dsl4jsb_Real2D_onChunk :: fract_fpc_max
     dsl4jsb_Real2D_onChunk :: t_air
 
     ! Local variables
@@ -233,6 +238,7 @@ CONTAINS
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(CARBON_)
+    dsl4jsb_Get_memory(DISTURB_)
 
     ! import lct information from PFT tiles
     !!$ TR collect_var_real2d has to be replaced by appropriate dsl4jsb invocations!
@@ -277,6 +283,10 @@ CONTAINS
     ! import 5 year running average of potential NPP
     NPP_mean_5year => assimi__mem%collect_var_real2d(ics, ice, iblk, no_children, assimi__mem%NPP_mean_5year)
 
+    ! import burned fractions and damaged fractions
+    burned_fract => disturb__mem%collect_var_real2d(ics, ice, iblk, no_children, disturb__mem%burned_fract)
+    damaged_fract => disturb__mem%collect_var_real2d(ics, ice, iblk, no_children, disturb__mem%damaged_fract)
+
     ! Get process variables
     dsl4jsb_Get_var2D_onChunk(DYNVEG_,seconds_day)      ! inout
     dsl4jsb_Get_var2D_onChunk(DYNVEG_,seconds_month)    ! inout
@@ -292,10 +302,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(DYNVEG_,bare_fpc)         ! inout
     dsl4jsb_Get_var3D_onChunk(DYNVEG_,pot_fpc)          ! inout
     dsl4jsb_Get_var3D_onChunk(DYNVEG_,cover_fract_pot)  ! inout
+    dsl4jsb_Get_var3D_onChunk(DYNVEG_,cover_fract)      ! inout
     dsl4jsb_Get_var3D_onChunk(DYNVEG_,bio_exist)        ! inout
     dsl4jsb_Get_var2D_onChunk(DYNVEG_,sum_green_bio_memory) ! inout
     dsl4jsb_Get_var2D_onChunk(DYNVEG_,desert_fpc)       ! inout
-    dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max)    ! out
+!!$ TR    dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max)    ! out
     dsl4jsb_Get_var2D_onChunk(A2L_,   t_air)            ! in
 
     lstart = is_time_experiment_start(options%current_datetime)
@@ -305,7 +316,6 @@ CONTAINS
 
     ! import cover fractions from grid
     grid => Get_grid(model%grid_id)
-    ALLOCATE (cover_fract(nc,no_children))
     DO itile = 1,no_children
       ! Point to the correct pft
       IF (itile == 1) THEN
@@ -380,23 +390,29 @@ CONTAINS
                                act_fpc(:,:), bare_fpc(:),                              &
                                sla(:,:), max_green_bio(:,:),                           &
                                sum_green_bio_memory(:), desert_fpc(:))
-          fract_fpc_max(:) = MAX(1.e-10_wp,1._wp - desert_fpc(:))
+!!$ TR          fract_fpc_max(:) = MAX(1.e-10_wp,1._wp - desert_fpc(:))
+          !  calculate fract_fpc_max and hand it back to child tiles (pft tiles)
+          ALLOCATE(fract_fpc_max(nc,no_children))
+          fract_fpc_max(:,:) = SPREAD(MAX(1.e-10_wp,1._wp - desert_fpc(:)),NCOPIES=no_children, DIM=2)
+          CALL pheno__mem%HandDown_var_real2d(ics, ice, iblk, no_children, pheno__mem%fract_fpc_max, fract_fpc_max)
        ENDIF ! not lstart
     ENDIF ! new_year
    
     ! daily calculations
     IF (new_day) THEN
        CALL fpc_daily(nc, no_children, accelerate_dynveg, is_woody(:,:), is_dynamic(:,:), tau_c_woods(:,:), &
-                      NPP_mean_5year(:,:), bio_exist(:,:), pot_fpc(:,:), &
+                      NPP_mean_5year(:,:), bio_exist(:,:), burned_fract(:,:), damaged_fract(:,:), pot_fpc(:,:), &
                       act_fpc(:,:), bare_fpc(:), fuel(:))
     ENDIF
 
     DEALLOCATE(is_woody, is_grass, is_pasture, is_crop, is_dynamic)
     DEALLOCATE(bclimit_min_cold_mmtemp, bclimit_max_cold_mmtemp, &
                bclimit_max_warm_mmtemp, bclimit_min_temprange, bclimit_min_gdd, tau_c_woods)
+    IF (new_year .AND. .NOT. lstart) DEALLOCATE(fract_fpc_max)
     DEALLOCATE(NPP_mean_5year)
+    DEALLOCATE(burned_fract, damaged_fract)
     DEALLOCATE(max_green_bio, sla)
-    DEALLOCATE(cover_fract, cover_fract_pot_previous_year)
+    DEALLOCATE(cover_fract_pot_previous_year)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
     
