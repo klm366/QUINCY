@@ -512,6 +512,9 @@ CONTAINS
           IF (model%processes(CARBON_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(CARBON_, ON_LEAFS_, AGGREGATE_)
           END IF
+          IF (model%processes(CQ_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(CQ_, ON_LEAFS_, AGGREGATE_)
+          END IF
           IF (model%processes(FUEL_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(FUEL_, ON_TILE_, AGGREGATE_)
           END IF
@@ -674,4 +677,3 @@ CONTAINS
     NULLIFY(box_tile, land_tile, veg_tile, pft_tile)
   END SUBROUTINE init_usecase_quincy_11_pfts
 
-#endif

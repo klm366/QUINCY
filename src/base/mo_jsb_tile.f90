@@ -1305,4 +1305,3 @@ CONTAINS
         ! Print names of processes running on the tile
         CALL message('     Process '//Get_process_name(iproc), 'Action '//Get_action_name(this%process_action(iproc)))
       END IF
-    END DO

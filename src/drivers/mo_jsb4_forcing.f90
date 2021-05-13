@@ -909,7 +909,6 @@ CONTAINS
     CHARACTER(len=128)     :: forcing_dep_unit                 !! Expected unit of deposition input
 
     ! --- Namelist parameters
-    REAL(wp) :: delta_time_observations
     INTEGER  :: forcing_synchron_factor ! Factor defines how many time steps the JS4 driver performs for
                                         ! each atmospheric forcing time step that is read in      
     INTEGER  :: forcing_steps_per_file  ! The number of time steps included by the used forcing file(s), e.g. 72

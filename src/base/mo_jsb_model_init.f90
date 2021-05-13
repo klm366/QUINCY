@@ -333,6 +333,8 @@ CONTAINS
 
       ! ------------------------ tasks that do not change area
       !
+      CALL model%Queue_task(CQ_,    "cq")
+
       CALL model%Queue_task(RAD_,    "surface_radiation")
       CALL model%Queue_task(PHENO_,  "phenology")
         ! JN moved phenology up - for allom it needs to happen before C_NPP_pot_allocation and
@@ -973,4 +975,3 @@ CONTAINS
   END SUBROUTINE jsbach_init_after_restart
   ! ====================================================================================================== !
 
-#endif

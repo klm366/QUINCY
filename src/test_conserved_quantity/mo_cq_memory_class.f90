@@ -1,0 +1,166 @@
+!>
+!! @brief Contains the memory class for the cq process.
+!!
+!! @author
+!!  Julia Nabel, MPI-M Hamburg
+!!
+!! @par Revision History
+!! First version by Julia Nabel (2021-03-09)
+!!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
+MODULE mo_cq_memory_class
+#ifndef __NO_JSBACH__
+
+  USE mo_kind, ONLY: wp
+  USE mo_util, ONLY: One_of
+
+  USE mo_jsb_model_class,        ONLY: t_jsb_model
+  USE mo_jsb_class,              ONLY: Get_model
+  USE mo_jsb_cqt_class,          ONLY: DEAD_CARBON_CQ_TYPE, LIVE_CARBON_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE
+  USE mo_jsb_memory_class,       ONLY: t_jsb_memory
+  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
+
+  dsl4jsb_Use_processes CQ_
+  dsl4jsb_Use_config(CQ_)
+
+  IMPLICIT NONE
+  PRIVATE
+
+  PUBLIC :: t_cq_memory, max_no_of_vars
+
+  INTEGER, PARAMETER :: max_no_of_vars = 10
+
+  !> Type definition for memory
+  TYPE, EXTENDS(t_jsb_memory) :: t_cq_memory
+    TYPE(t_jsb_var_real2d) :: old_sum, conservation_test_field, a_dead_c_cq, another_dead_c_cq, &
+      & a_veg_c_cq, an_implicit_scaling_cq ! some to-be-conserved carbon quantities
+    TYPE(t_jsb_var_real2d) :: a_dead_c_ta_cq, another_dead_c_ta_cq, &
+      & a_veg_c_ta_cq, an_implicit_scaling_ta_cq ! corresponding ta variables
+  CONTAINS
+    PROCEDURE :: Init => Init_cq_memory
+  END TYPE t_cq_memory
+
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_cq_memory_class'
+
+CONTAINS
+
+  SUBROUTINE Init_cq_memory(mem, prefix, suffix, lct_ids, model_id)
+
+    USE mo_jsb_varlist,       ONLY: BASIC, t_jsb_varlist
+    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, TSTEP_CONSTANT, tables
+    USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
+    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
+
+    CLASS(t_cq_memory), INTENT(inout), TARGET :: mem
+    CHARACTER(len=*),    INTENT(in)    :: prefix
+    CHARACTER(len=*),    INTENT(in)    :: suffix
+    INTEGER,             INTENT(in)    :: lct_ids(:)
+    INTEGER,             INTENT(in)    :: model_id
+
+    dsl4jsb_Def_config(CQ_)
+
+    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
+    TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
+    INTEGER :: table
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_cq_memory'
+
+    model => Get_model(model_id)
+
+    table = tables(1)
+
+    hgrid   => Get_grid(mem%grid_id)
+    surface => Get_vgrid('surface')
+
+    dsl4jsb_Get_config(CQ_)
+
+    CALL mem%Add_var('a_veg_c_cq', mem%a_veg_c_cq,                                     &
+      & hgrid, surface,                                                              &
+      & t_cf('a_veg_c_cq', 'mol(C) m-2(canopy)', 'A C-Pool.'),       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix, output_level=BASIC,                                      &
+      & l_conserve_quan=.TRUE., cons_quan_type_id = LIVE_CARBON_CQ_TYPE,     &
+      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) 
+
+    CALL mem%Add_var('a_dead_c_cq', mem%a_dead_c_cq,                                     &
+      & hgrid, surface,                                                              &
+      & t_cf('a_dead_c_cq', 'mol(C) m-2(canopy)', 'A C-Pool.'),       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix, output_level=BASIC,                                           &
+      & l_conserve_quan=.TRUE., cons_quan_type_id = DEAD_CARBON_CQ_TYPE,     &
+      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) 
+
+      CALL mem%Add_var('another_dead_c_cq', mem%another_dead_c_cq,                                     &
+      & hgrid, surface,                                                              &
+      & t_cf('another_dead_c_cq', 'mol(C) m-2(canopy)', 'A C-Pool.'),       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix, output_level=BASIC,                                     &
+      & l_conserve_quan=.TRUE., cons_quan_type_id = DEAD_CARBON_CQ_TYPE,     &
+      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) 
+
+      CALL mem%Add_var('an_implicit_scaling_cq', mem%an_implicit_scaling_cq,                      &
+      & hgrid, surface,                                                              &
+      & t_cf('an_implicit_scaling_cq', 'mol(C) m-2(canopy)', 'A C-Pool.'),       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix, output_level=BASIC,                                                 &
+      & l_conserve_quan=.TRUE., cons_quan_type_id = PRODUCT_CARBON_CQ_TYPE,     &
+      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) 
+
+      CALL mem%Add_var('a_veg_c_ta_cq', mem%a_veg_c_ta_cq,                                     &
+      & hgrid, surface,                                                              &
+      & t_cf('a_veg_c_ta_cq', 'mol(C) m-2', 'A C-Pool.'),       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & output_level=BASIC,      &
+      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) 
+
+      CALL mem%Add_var('a_dead_c_ta_cq', mem%a_dead_c_ta_cq,                                     &
+      & hgrid, surface,                                                              &
+      & t_cf('a_dead_c_ta_cq', 'mol(C) m-2', 'A C-Pool.'),       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & output_level=BASIC,  &
+      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) 
+
+      CALL mem%Add_var('another_dead_c_ta_cq', mem%another_dead_c_ta_cq,                                     &
+      & hgrid, surface,                                                              &
+      & t_cf('another_dead_c_ta_cq', 'mol(C)', 'A C-Pool.'),       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & output_level=BASIC,      &
+      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) 
+
+      CALL mem%Add_var('an_implicit_scaling_ta_cq', mem%an_implicit_scaling_ta_cq,                      &
+      & hgrid, surface,                                                              &
+      & t_cf('an_implicit_scaling_ta_cq', 'mol(C) m-2', 'A C-Pool.'),       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & output_level=BASIC,      &
+      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) 
+
+      CALL mem%Add_var('conservation_test_field', mem%conservation_test_field,                      &
+      & hgrid, surface,                                                              &
+      & t_cf('conservation_test_field', 'mol(C) m-2', 'Neither scaled nor relocated -- cq test.'),       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & output_level=BASIC,      &
+      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp) 
+
+      CALL mem%Add_var('old_sum', mem%old_sum,                      &
+      & hgrid, surface,                                                              &
+      & t_cf('old_sum', 'mol(C) m-2', 'Neither scaled nor relocated C-Pool -- old cq sum'),       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & output_level=BASIC,      &
+      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp) 
+      
+
+  END SUBROUTINE Init_cq_memory
+
+#endif
+END MODULE mo_cq_memory_class
