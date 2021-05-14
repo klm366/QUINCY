@@ -62,4 +62,3 @@ find pp_temp$$ -type f -name '*.f90' -exec \
     '{}' \;
 python3 ./ford.py $no_search $quiet -r "Revision:${rev}${dirty} Branch:${branch}" -d pp_temp$$ ${FORD_MD}
 find $output_dir -type f -name '*.html' -exec sed -i 's/was developed by/is developed by/' '{}' \;
-rm -rf pp_temp$$
