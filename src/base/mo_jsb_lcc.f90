@@ -57,7 +57,6 @@ CONTAINS
     INTEGER,           INTENT(in) :: activeCQTs(:)    !< cqts that are actively relocated by this lcc process
     INTEGER,           INTENT(in) :: passiveCQTs(:)   !< cqts that are passively relocated by this lcc process
     CHARACTER(len=*),  INTENT(in) :: involved_child_tiles(:) !< child tiles involved in this lcc process
-    ! JN-TODO: 10 is len fo tile names in mo_hsm_class => constant?!
     ! JN-TODO: probably not only direct child tiles, i.e. descendants?
     ! -------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_lcc'
@@ -86,7 +85,9 @@ CONTAINS
     nblks  = hgrid%nblks
 
     nr_of_tiles = SIZE(involved_child_tiles(:))
+    !>
     !> Assertion: number of involved child tiles should be larger than one
+    !>
     IF (.NOT. nr_of_tiles > 1) THEN
       CALL finish(TRIM(routine), &
         & 'Violation of assertion: number of tiles involved in a lcc process need to be larger than one! '&
@@ -100,7 +101,9 @@ CONTAINS
     lcc_relocations%name = TRIM(process_name) // "_lcc"
     lcc_relocations%tile_names = involved_child_tiles(:)
 
+    !>
     !> Assertion: active and passive cqts are not allowed to overlap
+    !>
     DO i_cqt = 1,SIZE(activeCQTs(:))
       IF (ANY(activeCQTs(i_cqt) == passiveCQTs(:) )) THEN
           CALL finish(TRIM(routine), &
@@ -229,7 +232,9 @@ CONTAINS
                   EXIT
                 ENDIF
               ENDDO
+              !>
               !> Assertion: all passive and active variables need to exist on all tiles
+              !>
               IF (.NOT. has_searched_var) THEN
                 CALL finish(TRIM(routine), &
                   & 'Violation of assertion: Conceptually each tile needs to contain the same active and passive vars. ' &
@@ -282,7 +287,9 @@ CONTAINS
       child => child%Get_next_sibling_tile()
     ENDDO
 
+    !>
     !> Assertion: all involved tiles are actually child tiles
+    !>
     ! JN-TODO: also allow descendant tiles
     IF (.NOT. ALL(is_child_tile)) THEN
       DO i_tile = 1,nr_of_tiles
@@ -311,7 +318,7 @@ CONTAINS
 
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_lcc_proc),       INTENT(inout) :: lcc_relocations  !< lcc structure of the calling lcc process
-    TYPE(t_jsb_task_options),   INTENT(in) :: options          !< run-time parameters
+    TYPE(t_jsb_task_options),   INTENT(in) :: options             !< run-time parameters
     CLASS(t_jsb_tile_abstract), INTENT(in) :: tile               
         !< tile on which the lcc process is running for which the lcc structure is initialized here
     REAL(wp),                   INTENT(inout) :: initial_area(:,:)  !< current area of involved tiles 
@@ -332,7 +339,9 @@ CONTAINS
 
     nr_of_tiles = lcc_relocations%nr_of_tiles
 
+    !>
     !> Assertion: initial area size and number of tiles need to suit 
+    !>
     IF ((SIZE(initial_area,DIM=1) /= nr_of_tiles) .OR. (SIZE(initial_area,DIM=2) /= nc)) THEN
       CALL finish(TRIM(routine), 'Violation of assertion: Area array has unexpected size. Please check!')
     ENDIF
@@ -391,17 +400,23 @@ CONTAINS
 
     nr_of_tiles = lcc_relocations%nr_of_tiles
 
+    !>
     !> Assertion: dimensions of lost_area and initial_area need to match
+    !>
     IF ((SIZE(lost_area,DIM=1) /= nr_of_tiles) .OR. (SIZE(initial_area,DIM=1) /= nr_of_tiles) &
       & .OR. (SIZE(lost_area,DIM=2) /= nc) .OR. (SIZE(initial_area,DIM=2) /= nc)) THEN
       CALL finish(TRIM(routine), 'Violation of assertion: Area arrays have unexpected size. Please check!')
     ENDIF
+    !>
     !> Assertion: lost area is >= 0.0_wp and <= 1.0_wp
+    !>
     IF (ANY(lost_area < 0.0_wp) .OR. ANY(lost_area > 1.0_wp) &
       & .OR. ANY(initial_area < 0.0_wp) .OR. ANY(initial_area > 1.0_wp)) THEN
       CALL finish(TRIM(routine), 'Violation of assertion: Area arrays have values out of range ([0.0, 1.0]). Please check!')
     ENDIF
+    !>
     !> Assertion: lost area <= initial_area 
+    !>
     ! -> JN-TODO: we might want/need to discuss the concept of the e-10 areas here
     IF (ANY(lost_area > initial_area)) THEN
       CALL finish(TRIM(routine), 'Violation of assertion: Lost area exceeds available area! Please check!')
@@ -442,8 +457,8 @@ CONTAINS
 
   ! ====================================================================================================== !
   !
-  !> End the relocation upon lcc (distribute all to be transferred matter -> passive relocation)
-  !
+  !> End the relocation upon lcc (distribute all to be transferred matter - passive relocation only!)
+  !>
   !> Note: the concept here is that the to be distributed area is collected of ALL shrinking tiles
   !>       i.e. if there are several shrinking tiles in the call
   !>            then there is no directed movement from tile_x -> tile_y
@@ -474,11 +489,15 @@ CONTAINS
     nr_of_tiles = lcc_relocations%nr_of_tiles
     gained_area_sum = SUM(gained_area(:, :), DIM=1)
 
+    !>
     !> Assertion: dimensions of gained_area need to be tiles x nc
+    !>
     IF ((SIZE(gained_area,DIM=1) /= nr_of_tiles) .OR. (SIZE(gained_area,DIM=2) /= nc)) THEN
       CALL finish(TRIM(routine), 'Violation of assertion: Area array has unexpected size. Please check!')
     ENDIF
-    !> Assertion: all active variables are expected to be zero (i.e. relocated before this routine is called)
+    !>
+    !> Assertion: reloc matter of active variables expected to be zero (i.e. relocated before routine is called)
+    !>
     DO i_var = 1,lcc_relocations%nr_of_active_vars
       DO i_tile = 1,nr_of_tiles
         IF(ANY(lcc_relocations%active_vars(i_var)%p%relocate_this(i_tile,1:nc,iblk) /= 0.0_wp)) THEN
@@ -507,7 +526,7 @@ CONTAINS
 
   ! ====================================================================================================== !
   !
-  !> Relocated content of a given active to a given passive var
+  !> Relocates content of a given active to a given passive var
   !
   SUBROUTINE transfer_from_active_to_passive_var(lcc_relocations, options, active_var_name, passive_var_name)
 
@@ -555,12 +574,16 @@ CONTAINS
       ENDIF
     ENDDO
 
+    !>
     !> Assertion source variable needs to be active variable for this lcc process
+    !>
     IF (.NOT. is_active) THEN
       CALL finish(TRIM(routine), 'Violation of assertion: Passed active var ' // TRIM(active_var_name) &
         & // ' is not an active var in lcc structure for ' // lcc_relocations%name )
     ENDIF
+    !>
     !> Assertion sink variable needs to be passive variable for this lcc process
+    !>
     IF (.NOT. is_passive) THEN
       CALL finish(TRIM(routine), 'Violation of assertion: Passed passive var ' // TRIM(passive_var_name) &
         & // ' is not a passive var in lcc structure for ' // lcc_relocations%name )

@@ -1,10 +1,10 @@
-!> Summary: Contains definitions and methods for to-be-conserved quantities
+!> Summary: Contains conserved quantity types, definitions and methods for to-be-conserved quantities
 !>
 !>### Contains conserved quantity types (CQTs) and the type for cqt collection (used on tiles)
 !> NOTE: currently only 2D variables are dealt with -- if also 3D variables need to be conserved,
 !>       these will have to specially be dealt with in the concept and thus need to be 
 !>       identified with an onw cqt e.g. distinguish WATER_2D_CQ_TYPE and WATER_3D_CQ_TYPE?
-!>       Furthermore, integration of pool-structure might need some work.
+!>       Furthermore, integration of pool-structure might need some additional work.
 !>
 !> Copyright (c) 2021 Julia Nabel
 !>

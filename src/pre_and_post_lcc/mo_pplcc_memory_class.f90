@@ -1,18 +1,19 @@
+!> Summary: pplcc (pre- and post lcc) memory class (currently of no use beyond being required by the infrastructure)
 !>
-!! @brief Contains the memory class for the pplcc process.
-!!  -- currently of no use beyond being required by the infrastructure; might change in the future
-!!
-!! @author
-!!  Julia Nabel, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Julia Nabel (2021-02-02)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!>### Could contain memory definitions for pplcc, but currently of no use beyond infrastructural requirements
+!>
+!>
+!> Copyright (c) 2021 Julia Nabel
+!>
+!>#### Revision History
+!> First version and ongoing changes   by Julia Nabel (2021-02-02)
+!>
+!>#### License
+!>
+!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
+!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
+!> Where software is supplied by third parties, it is indicated in the headers of the routines.
+!>
 MODULE mo_pplcc_memory_class
 #ifndef __NO_JSBACH__
 
@@ -49,19 +50,21 @@ CONTAINS
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
 
+    ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_pplcc_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),    INTENT(in)    :: prefix
     CHARACTER(len=*),    INTENT(in)    :: suffix
     INTEGER,             INTENT(in)    :: lct_ids(:)
     INTEGER,             INTENT(in)    :: model_id
-
+    ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
     INTEGER :: table
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_pplcc_memory'
-
+    ! -------------------------------------------------------------------------------------------------- !
+    
     model => Get_model(model_id)
 
     table = tables(1)

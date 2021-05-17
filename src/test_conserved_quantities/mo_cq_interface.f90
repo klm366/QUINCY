@@ -1,24 +1,29 @@
+!> Summary: interface to the cq process (test conserved quantities)
 !>
-!! @brief Contains the interfaces to the cq process which is a small test process containing one cq. 
-!!
-!! @author
-!!  Julia Nabel, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Julia Nabel (2021-03-09)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!>### Contains the interfaces to the cq process which is a small test process containing a couple of conserved quantities 
+!>
+!> Note: 1. This module takes advantage of the handling of the integrate and aggregate routines, which both
+!>          call the same routines in this module (integrate = aggregate). 
+!>          Thereby each tile is processed by the same routine for the tasks of this process.
+!>       2. currently only 2D variables are dealt with -- if also 3D variables need to be conserved,
+!>          these will anyway have to specially be dealt with in the concept and thus need to be 
+!>          identified with an own cqt e.g. distinguish WATER_2D_CQ_TYPE and WATER_3D_CQ_TYPE?
+!>          Also, integration of pool-structure might need some additional work.
+!>
+!> Copyright (c) 2021 Julia Nabel
+!>
+!>#### Revision History
+!> First version and ongoing changes   by Julia Nabel (2021-03-09)
+!>
+!>#### License
+!>
+!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
+!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
+!> Where software is supplied by third parties, it is indicated in the headers of the routines.
+!>
 MODULE mo_cq_interface
 #ifndef __NO_JSBACH__
 
-  ! -------------------------------------------------------------------------------------------------------
-  ! Used variables of module
-  
-  ! Use of basic structures
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, finish
@@ -40,71 +45,64 @@ MODULE mo_cq_interface
   dsl4jsb_Use_memory(cq_)
   dsl4jsb_Use_memory(pheno_)
 
-  ! -------------------------------------------------------------------------------------------------------
-  ! Module variables 
-  
   IMPLICIT NONE
+
   PRIVATE
   PUBLIC :: Register_cq_tasks
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_cq_interface'
   
-  !> Type definition for cq pre task
+  !> Type definition for cq task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_cq
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_cq     !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_cq  !< Aggregates computed task variables
   END TYPE tsk_cq
   
-  !> Constructor interface for cq pre task
+  !> Constructor interface for cq task
   INTERFACE tsk_cq
     PROCEDURE Create_task_cq                        !< Constructor function for task
   END INTERFACE tsk_cq
   
 CONTAINS
 
-  ! ================================================================================================================================
-  !! Constructors for tasks
-  
-  ! -------------------------------------------------------------------------------------------------------
+  ! ====================================================================================================== !
+  !
   !> Constructor for cq task
-  !!
-  !! @param[in]     model_id     Model id
-  !! @return        return_ptr   Instance of process task "cq"
-  !!
+  !
   FUNCTION Create_task_cq(model_id) RESULT(return_ptr)
 
-    INTEGER,                   INTENT(in) :: model_id
-    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+    ! -------------------------------------------------------------------------------------------------- !
+    INTEGER,                   INTENT(in) :: model_id    !< Model id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr  !< Instance of process task "cq"
+    ! -------------------------------------------------------------------------------------------------- !
 
     ALLOCATE(tsk_cq::return_ptr)
     CALL return_ptr%Construct(name='cq', process_id=cq_, owner_model_id=model_id)
 
   END FUNCTION Create_task_cq
     
-  ! -------------------------------------------------------------------------------------------------------
+  ! ====================================================================================================== !
+  !
   !> Register tasks for cq process
-  !!
-  !! @param[in,out] this      Instance of cq process class  
-  !! @param[in]     model_id  Model id  
-  !!
+  !
   SUBROUTINE Register_cq_tasks(this, model_id)
 
-    CLASS(t_jsb_process), INTENT(inout) :: this
-    INTEGER,               INTENT(in)    :: model_id
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_process), INTENT(inout) :: this        !< Instance of cq process class
+    INTEGER,               INTENT(in)   :: model_id    !< Model id
+    ! -------------------------------------------------------------------------------------------------- !
 
     CALL this%Register_task(tsk_cq(model_id))
     
   END SUBROUTINE Register_cq_tasks
 
-  ! ================================================================================================================================
+  ! ====================================================================================================== !
+  !
+  !> Implementation of "update" for task "cq"
   !>
-  !! @brief Implementation of "update" for task "cq"
-  !! Task "cq" currently does nothing at all...
-  !!
-  !! @param[in,out] tile    Tile for which routine is executed.
-  !! @param[in]     options Additional run-time parameters.
-  !!
+  !> Calculates a ta variable for each cq variable
+  !
   SUBROUTINE update_cq(tile, options)
 
     USE mo_jsb_parallel,      ONLY: Get_omp_thread
@@ -112,11 +110,10 @@ CONTAINS
 
     IMPLICIT NONE
 
-    ! Arguments
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-
-    ! Local variables
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile     !< Tile for which routine is executed
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options  !< Additional run-time parameters
+    ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), POINTER :: current_tile
     TYPE(t_jsb_model), POINTER          :: model
 
@@ -124,7 +121,6 @@ CONTAINS
     REAL(wp) :: dtime
     REAL(wp), DIMENSION(options%nc) :: moved_fract, current_fract
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_cq'
-
 
     ! Declare pointers for process configuration and memory
     dsl4jsb_Def_memory(cq_)
@@ -143,6 +139,7 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk ::  veg_fract_correction
     dsl4jsb_Real2D_onChunk ::  fract_fpc_max    
+    ! -------------------------------------------------------------------------------------------------- !
 
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -179,21 +176,20 @@ CONTAINS
     
   END SUBROUTINE update_cq
   
-  ! -------------------------------------------------------------------------------------------------------
+  ! ====================================================================================================== !
+  !
+  !> Implementation of "aggregate" for task "cq"
   !>
-  !! Implementation of "aggregate" for task "cq"
-  !! 
-  !! @param[in,out] tile    Tile for which routine is executed.  
-  !! @param[in]     options Additional run-time parameters.  
-  !!
+  !> Aggregates ta variables associated with the cq variables
+  !
   SUBROUTINE aggregate_cq(tile, options)
 
     USE mo_jsb_time,          ONLY: is_newday
 
-    ! Arguments
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile     !< Tile for which routine is executed
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options  !< Additional run-time parameters
+    ! -------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(CQ_)
     dsl4jsb_Def_memory(CQ_)
 
@@ -212,6 +208,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  another_dead_c_ta_cq
     dsl4jsb_Real2D_onChunk ::  a_veg_c_ta_cq
     dsl4jsb_Real2D_onChunk ::  an_implicit_scaling_ta_cq
+    ! -------------------------------------------------------------------------------------------------- !
 
     ! Get local variables from options argument
     iblk = options%iblk

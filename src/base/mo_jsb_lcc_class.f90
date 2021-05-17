@@ -33,7 +33,7 @@ MODULE mo_jsb_lcc_class
     CHARACTER(len=VARNAME_LEN)    :: name               !< Name of the variable
 !    INTEGER :: type_id = -1     !< one of the CQ_TYPEs ( mo_jsb_cqt_class ) -- JN-TODO: required -> currently in encompassing type...
     TYPE(t_jsb_var_p), ALLOCATABLE :: tile_pointer(:)   !< One pointer per tile involved in the encompassing lcc process
-    REAL(wp), ALLOCATABLE :: relocate_this(:,:,:)       !< One array per tile
+    REAL(wp), ALLOCATABLE :: relocate_this(:,:,:)       !< One array (on domain) per tile
   END TYPE t_jsb_lcc_var
   TYPE :: t_jsb_lcc_var_p
     TYPE(t_jsb_lcc_var), POINTER :: p => NULL()
