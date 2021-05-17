@@ -1,17 +1,19 @@
+!> Summary: tlcc (test lcc) lcc structure initialisation
 !>
-!! @brief Initialization of the tlcc lcc structure.
-!!
-!! @author
-!!  Julia Nabel, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Julia Nabel (2021-04-17)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!>### Initialization of the tlcc lcc structure
+!>
+!>
+!> Copyright (c) 2021 Julia Nabel
+!>
+!>#### Revision History
+!> First version and ongoing changes   by Julia Nabel (2021-04-17)
+!>
+!>#### License
+!>
+!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
+!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
+!> Where software is supplied by third parties, it is indicated in the headers of the routines.
+!>
 MODULE mo_tlcc_init_lcc
 #ifndef __NO_JSBACH__
 
@@ -35,15 +37,20 @@ MODULE mo_tlcc_init_lcc
 
 CONTAINS
 
+  ! ====================================================================================================== !
+  !
+  !> Initialise lcc structure for tlcc (test lcc) process
+  !
   SUBROUTINE tlcc_init_lcc(tile)
 
-    ! Arguments
+    ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    
+    ! -------------------------------------------------------------------------------------------------- !
     INTEGER :: activeCQTs(numberOfActiveCQTs)
     INTEGER :: passiveCQTs(numberOfPassiveCQTs)
     CHARACTER(len=SHORT_NAME_LEN) :: involved_child_tiles(numberOfInvolvedChildTiles)
-
+    ! -------------------------------------------------------------------------------------------------- !
+    
     ! JN-TODO: reconsider what to define here and how
     IF (.NOT. tile%name .EQ. 'veg') RETURN
 

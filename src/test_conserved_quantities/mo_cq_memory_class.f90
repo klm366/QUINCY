@@ -1,17 +1,19 @@
+!> Summary: cq (test conserved quantities) memory class
 !>
-!! @brief Contains the memory class for the cq process.
-!!
-!! @author
-!!  Julia Nabel, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Julia Nabel (2021-03-09)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!>### Contains variables in the memory class of the test conserved quantities process 
+!>
+!>
+!> Copyright (c) 2021 Julia Nabel
+!>
+!>#### Revision History
+!> First version and ongoing changes   by Julia Nabel (2021-03-09)
+!>
+!>#### License
+!>
+!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
+!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
+!> Where software is supplied by third parties, it is indicated in the headers of the routines.
+!>
 MODULE mo_cq_memory_class
 #ifndef __NO_JSBACH__
 
@@ -55,12 +57,13 @@ CONTAINS
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
 
+    ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_cq_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),    INTENT(in)    :: prefix
     CHARACTER(len=*),    INTENT(in)    :: suffix
     INTEGER,             INTENT(in)    :: lct_ids(:)
     INTEGER,             INTENT(in)    :: model_id
-
+    ! -------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(CQ_)
 
     TYPE(t_jsb_model), POINTER :: model
@@ -69,6 +72,7 @@ CONTAINS
     INTEGER :: table
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_cq_memory'
+    ! -------------------------------------------------------------------------------------------------- !
 
     model => Get_model(model_id)
 

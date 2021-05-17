@@ -1,24 +1,23 @@
+!> Summary: interface to the tlcc process (test land cover change)
 !>
-!! @brief Contains the interfaces to the tlcc process which is a small lcc test process moving just a bit of area
-!!
-!! @author
-!!  Julia Nabel, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Julia Nabel (2021-02-02)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
-
+!>### Contains the interfaces to the tlcc process which is a small test land cover change process moving just a bit of area
+!>
+!> Note: this test lcc process can be seen as example for lcc process implementations
+!>
+!> Copyright (c) 2021 Julia Nabel
+!>
+!>#### Revision History
+!> First version and ongoing changes   by Julia Nabel (2021-02-02 - present)
+!>
+!>#### License
+!>
+!> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
+!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
+!> Where software is supplied by third parties, it is indicated in the headers of the routines.
+!>
 MODULE mo_tlcc_interface
 #ifndef __NO_JSBACH__
 
-  ! -------------------------------------------------------------------------------------------------------
-  ! Used variables of module
-  
-  ! Use of basic structures
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, finish
@@ -35,9 +34,6 @@ MODULE mo_tlcc_interface
   ! Use of processes in this module
   dsl4jsb_Use_processes TLCC_, PPLCC_
 
-  ! -------------------------------------------------------------------------------------------------------
-  ! Module variables 
-  
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: Register_tlcc_tasks
@@ -59,48 +55,41 @@ MODULE mo_tlcc_interface
   
 CONTAINS
 
-  ! ================================================================================================================================
-  !! Constructors for tasks
-  
-  ! -------------------------------------------------------------------------------------------------------
+  ! ====================================================================================================== !
+  !
   !> Constructor for tlcc task
-  !!
-  !! @param[in]     model_id     Model id
-  !! @return        return_ptr   Instance of process task "tlcc"
-  !!
+  !
   FUNCTION Create_task_tlcc(model_id) RESULT(return_ptr)
 
-    INTEGER,                   INTENT(in) :: model_id
-    CLASS(t_jsb_process_task), POINTER    :: return_ptr
-
+    ! -------------------------------------------------------------------------------------------------- !
+    INTEGER,                   INTENT(in) :: model_id    !< Model id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr  !< Instance of process task "tlcc"
+    ! -------------------------------------------------------------------------------------------------- !
     ALLOCATE(tsk_tlcc::return_ptr)
     CALL return_ptr%Construct(name=procname, process_id=TLCC_, owner_model_id=model_id)
 
   END FUNCTION Create_task_tlcc
     
-  ! -------------------------------------------------------------------------------------------------------
+  ! ====================================================================================================== !
+  !
   !> Register tasks for tlcc process
-  !!
-  !! @param[in,out] this      Instance of tlcc process class  
-  !! @param[in]     model_id  Model id  
-  !!
+  !
   SUBROUTINE Register_tlcc_tasks(this, model_id)
 
-    CLASS(t_jsb_process), INTENT(inout) :: this
-    INTEGER,               INTENT(in)    :: model_id
-
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_process), INTENT(inout) :: this        !< Instance of tlcc process class
+    INTEGER,               INTENT(in)   :: model_id    !< Model id
+    ! -------------------------------------------------------------------------------------------------- !
     CALL this%Register_task(tsk_tlcc(model_id))
     
   END SUBROUTINE Register_tlcc_tasks
 
-  ! ================================================================================================================================
+  ! ====================================================================================================== !
+  !
+  !> Implementation of "update" for task "tlcc"
   !>
-  !! @brief Implementation of "update" for task "tlcc"
-  !! Task "tlcc" simply shifts a bit of area
-  !!
-  !! @param[in,out] tile    Tile for which routine is executed.
-  !! @param[in]     options Additional run-time parameters.
-  !!
+  !> Task "tlcc" simply shifts a bit of area
+  !
   SUBROUTINE update_tlcc(tile, options)
 
     USE mo_jsb_parallel,      ONLY: Get_omp_thread
@@ -112,11 +101,10 @@ CONTAINS
 
     IMPLICIT NONE
 
-    ! Arguments
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-
-    ! Local variables
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile     !< Tile for which routine is executed
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options  !< Additional run-time parameters
+    ! -------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_tlcc'
     LOGICAL, PARAMETER :: allAtOnce = .FALSE.
 
@@ -133,6 +121,7 @@ CONTAINS
 
     CHARACTER(len=VARNAME_LEN) :: sourceTile(2)
     CHARACTER(len=VARNAME_LEN) :: sinkTile(2)
+    ! -------------------------------------------------------------------------------------------------- !
 
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -144,7 +133,9 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
     process_id = Get_process_id(procname)
 
-    ! Get lcc structure -> JN-TODO: DSL?
+    !>
+    !> 1. Get lcc structure -> JN-TODO: DSL?
+    !>
     lcc_relocations => model%processes(process_id)%p%lcc_relocations
     nr_of_tiles = lcc_relocations%nr_of_tiles
     
@@ -177,11 +168,15 @@ CONTAINS
     lost_area(:,:) = 0.0_wp
     gained_area(:,:) = 0.0_wp
 
-    ! Two possibilities:
-    ! a) make all area movements at once (in that case there is no directed movement of matter
-    !    from one pft to another but only a movement of matter from all shrinking to all extending tiles)
-    ! b) make an outer loop around init, start, end, dealloc and only move area from one pft to another
-    !    [TR: suggested to permute the order of tiles in the loop]
+    !>
+    !> 2. Two possibilities:
+    !>
+    !>     2.a make all area movements at once (in that case there is no directed movement of matter
+    !>         from one pft to another but only a movement of matter from all shrinking to all extending tiles)
+    !>
+    !>     2.b make an outer loop around init, start, end, dealloc and only move area from one pft to another
+    !>         [TR: suggested to permute the order of tiles in the loop]
+    !>
     IF (allAtOnce) THEN
 
       ! Collect inital area of all involved tiles
@@ -193,7 +188,8 @@ CONTAINS
       i_tile = 0
       DO WHILE (ASSOCIATED(current_tile))
 
-        ! Note: Area movements are only possible among child tiles listed in the lcc structure!
+        !> Note: Area movements are only possible among child tiles listed in the lcc structure!
+        !
         IF (ANY(current_tile%name .EQ. lcc_relocations%tile_names)) THEN !JN-TODO: does this work or TRIM and DO loop?
           i_tile = i_tile + 1
 
@@ -233,10 +229,14 @@ CONTAINS
         current_tile => current_tile%next_sibling_tile
       END DO
 
-      ! each lcc process needs to call start lcc to collect to be transfered matter 
+      !>
+      !> 3. each lcc process needs to call start lcc to collect to be transferred matter 
+      !>
       CALL start_lcc_reloc(lcc_relocations, options, lost_area, initial_area)
 
-      ! Afterwards active content needs to be relocated to passive vars by manipulating the arrays in lcc_relocations
+      !>
+      !> 4. Afterwards active content needs to be relocated to passive vars by manipulating the arrays in lcc_relocations
+      !>
       ! e.g. for alcc one would need to call yasso for woody and non woody and 
       ! assert that required yasso pools are part of passive variables and then relocate from active to passive...
       ! Here its simpler, a_veg is simply put in a_dead ...
@@ -244,7 +244,9 @@ CONTAINS
       passive_var_name = 'a_dead_c_cq'
       CALL transfer_from_active_to_passive_var(lcc_relocations, options, active_var_name, passive_var_name)
 
-      ! each lcc process needs to call end lcc to make the passive matter transfer 
+      !>
+      !> 5. each lcc process needs to call end lcc to make the passive matter transfer 
+      !>
       CALL end_lcc_reloc(lcc_relocations, options, gained_area)
 
     ELSE ! not all at once but in a do loop
@@ -314,31 +316,30 @@ CONTAINS
       ENDDO
     ENDIF
 
-    ! Deallocate area vectors
+    !>
+    !> 6. Deallocate area vectors
+    !>
     DEALLOCATE(lost_area, gained_area, initial_area)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
     
   END SUBROUTINE update_tlcc
   
-  ! -------------------------------------------------------------------------------------------------------
-  !>
-  !! Implementation of "aggregate" for task "tlcc"
-  !! 
-  !! @param[in,out] tile    Tile for which routine is executed.  
-  !! @param[in]     options Additional run-time parameters.  
-  !!
+  ! ====================================================================================================== !
+  !
+  !> Implementation of "aggregate" for task "tlcc"
+  !
   SUBROUTINE aggregate_tlcc(tile, options)
 
-    ! Arguments
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-
-    ! Local variables
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile     !< Tile for which routine is executed
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options  !< Additional run-time parameters
+    ! -------------------------------------------------------------------------------------------------- !
     INTEGER  :: iblk, ics, ice, nc
     !X if necessary: REAL(wp) :: dtime, steplen
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_tlcc'
-    
+    ! -------------------------------------------------------------------------------------------------- !
+
     ! Get local variables from options argument
     iblk = options%iblk
     ics  = options%ics
@@ -349,7 +350,7 @@ CONTAINS
     
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     
-    !Currently nothing to do
+    !> Currently nothing to do
     
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
