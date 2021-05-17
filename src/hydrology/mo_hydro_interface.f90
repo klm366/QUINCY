@@ -1169,6 +1169,7 @@ CONTAINS
 
     ! Used variables
     USE mo_jsb_math_constants, ONLY: eps8
+    USE mo_hydro_constants,    ONLY: wpot_min
     USE mo_hydro_process,      ONLY: get_water_stress_factor
     USE mo_hydro_util,         ONLY: get_water_in_root_zone
 
@@ -1194,9 +1195,17 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: w_soil_root_pwp     !< Water content in root zone at permanent wilting point
     dsl4jsb_Real2D_onChunk :: max_moist
     dsl4jsb_Real2D_onChunk :: water_stress
+    ! HYDRO_ 2D
+    dsl4jsb_Real2D_onChunk :: w_soil_root_theta
+    dsl4jsb_Real2D_onChunk :: w_soil_root_pot  
+    dsl4jsb_Real2D_onChunk :: root_depth  
+    ! HYDRO_ 3D
+    dsl4jsb_Real3D_onChunk :: saxtonA
+    dsl4jsb_Real3D_onChunk :: saxtonB
 
     INTEGER :: iblk, ics, ice
     REAL(wp) :: config_w_soil_crit_fract, config_w_soil_wilt_fract
+    REAL(wp), DIMENSION(options%nc) :: hlp1     !< helper variable
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_stress'
 
@@ -1227,6 +1236,13 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root_fc)      ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root_pwp)     ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_stress)        ! out
+    ! HYDRO_ 2D
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root_theta)   ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root_pot)     ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    root_depth)          ! in
+    ! HYDRO_ 3D
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    saxtonA)             ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    saxtonB)             ! in
     
     ! Get water stress
 
@@ -1247,6 +1263,19 @@ CONTAINS
       & get_water_stress_factor(w_soil_column(:), max_moist(:), &
           &                     config_w_soil_crit_fract, config_w_soil_wilt_fract)
     !$claw end expand
+
+    ! quincy
+    ! needed for quincy only (i.e., two variables not used in jsb4 at the moment)
+    ! copy/paste from mo_sse_update_physics:calc_soil_hydrology() 
+    ! calculate plant fractional water availability 
+    w_soil_root_theta(:) = ( w_soil_root(:) - w_soil_root_pwp(:) ) / &
+                           ( w_soil_root_fc(:) - w_soil_root_pwp(:) ) 
+    w_soil_root_theta(:) = MAX(w_soil_root_theta(:), 0.0_wp)
+    ! calculate root zone and layer soil water potential according to Campbell et al 1974 
+    hlp1(:) = MIN(w_soil_root_fc(:), w_soil_root(:)) / root_depth(:)
+    ! for numerical reasons, constrain to minimum water potential 
+    hlp1(:) = MAX(EXP(LOG(wpot_min/saxtonA(:,1))/saxtonB(:,1)),hlp1(:)) 
+    w_soil_root_pot(:) = saxtonA(:,1) * (hlp1(:) ** saxtonB(:,1))
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1291,6 +1320,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_fc,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_pwp,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, water_stress,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_theta,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_pot,     weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

@@ -46,6 +46,7 @@ CONTAINS
     USE mo_assimi_constants,    ONLY: init_assimi_constants
     USE mo_veg_constants,       ONLY: init_veg_constants
     USE mo_sse_constants,       ONLY: init_sse_constants
+    USE mo_hydro_constants,     ONLY: init_hydro_constants
     ! USE mo_sb_constants,        ONLY: init_sb_constants
     USE mo_pheno_constants,     ONLY: init_pheno_constants
 
@@ -191,8 +192,9 @@ CONTAINS
 
     END DO
 
-    !> quincy constants init
-    !! assuming the shared/constants/ modules are available here already (impl, math, physical)
+    !>quincy constants init
+    !>
+    ! assuming the shared/constants/ modules are available here already (impl, math, physical)
     IF (model%config%use_quincy) THEN
       CALL message(TRIM(routine), 'Starting init of QUINCY process constants')
       CALL init_rad_constants      
@@ -204,6 +206,8 @@ CONTAINS
       CALL init_pheno_constants    
       IF (debug_on()) CALL message(TRIM(routine), 'initialized quincy constants)')
     ENDIF
+    ! init quincy constants also for jsb4
+    CALL init_hydro_constants
 
     IF (debug_on()) CALL message(TRIM(routine), 'done basic setup (models, process configs)')
 

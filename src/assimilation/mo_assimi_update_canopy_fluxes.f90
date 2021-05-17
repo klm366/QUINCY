@@ -39,7 +39,7 @@ CONTAINS
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_jsb_process_class,       ONLY: A2L_, ASSIMI_, RAD_, SSE_, PHENO_, VEG_
+    USE mo_jsb_process_class,       ONLY: A2L_, ASSIMI_, RAD_, HYDRO_, PHENO_, VEG_
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                ONLY: Get_vgrid
     USE mo_jsb_parallel,            ONLY: Get_omp_thread
@@ -53,7 +53,7 @@ CONTAINS
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(ASSIMI_)
     dsl4jsb_Use_memory(RAD_)
-    dsl4jsb_Use_memory(SSE_)
+    dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_memory(PHENO_)
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -68,7 +68,7 @@ CONTAINS
     INTEGER                               :: no_omp_thread                    !< number of open mp thread (for task options)
     LOGICAL,  DIMENSION(options%nc)       :: l_day                            !< day/night (calc as in RAD_)
     REAL(wp)                              :: lctlib_g1                        !< set to g1_medlyn or g1_bberry depending on canopy_conductance_scheme
-    REAL(wp), DIMENSION(options%nc)       :: ga, hlp1, hlp2, hlp3, &          !< dummy variables
+    REAL(wp), DIMENSION(options%nc)       :: hlp1, hlp2, hlp3, &          !< dummy variables
                                              tmp_steplen_times_wind           !< dummy variables
     INTEGER                               :: iblk, ics, ice, nc               !< dimensions
     REAL(wp)                              :: steplen                          !< step length
@@ -78,7 +78,7 @@ CONTAINS
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(RAD_)
-    dsl4jsb_Def_memory(SSE_)
+    dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -93,6 +93,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_C14
     dsl4jsb_Real2D_onChunk      :: swvis_srf_down
     dsl4jsb_Real2D_onChunk      :: swnir_srf_down
+    dsl4jsb_Real2D_onChunk      :: ga
     ! ASSIMI_ 2D
     dsl4jsb_Real2D_onChunk      :: gross_assimilation
     dsl4jsb_Real2D_onChunk      :: gross_assimilation_C13
@@ -118,7 +119,7 @@ CONTAINS
     ! RAD_ 3D
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_cl
-    ! SSE_ 2D
+    ! HYDRO_ 2D
     dsl4jsb_Real2D_onChunk      :: w_soil_root_pot
     ! PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: lai
@@ -154,7 +155,7 @@ CONTAINS
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(RAD_)
-    dsl4jsb_Get_memory(SSE_)
+    dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -169,6 +170,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio_C14)           ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swvis_srf_down)                 ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swnir_srf_down)                 ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, ga)                             ! out
     ! ASSIMI_ 2D
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation)          ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation_C13)      ! out
@@ -195,8 +197,8 @@ CONTAINS
     ! RAD_ 3D
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)                 ! in
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)                 ! in
-    ! SSE_ 2D
-    dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_pot)                ! in
+    ! HYDRO_ 2D
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_root_pot)              ! in
     ! PHENO_ 2D
     dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                          ! in
     ! PHENO_ 3D

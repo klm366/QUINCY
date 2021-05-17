@@ -75,10 +75,11 @@ CONTAINS
 
     CALL sse_init_bc(tile)
     CALL sse_init_ic(tile)
-    !! quincy
-    IF (model%config%use_quincy) THEN
-      CALL sse_init_q_(tile)
-    ENDIF
+    ! quincy
+    ! should all be covered by the HYDRO_ init now
+    ! IF (model%config%use_quincy) THEN
+      ! CALL sse_init_q_(tile)
+    ! ENDIF
 
     ! TODO This is not correct if sse runs on veg tile!
     IF (tile%Is_last_process_tile(SSE_)) THEN
@@ -229,6 +230,13 @@ CONTAINS
     !$acc dsl4jsb_var2D_onDomain(SSE_,vol_heat_cap), &
     !$acc dsl4jsb_var2D_onDomain(SSE_,heat_cond))
     !$acc end data
+
+    ! quincy
+    ! soil texture - currently simply using default values, no ic/bc from input files
+    dsl4jsb_var3D_onDomain(SSE_, sand_sl) = dsl4jsb_Config(SSE_)%soil_sand
+    dsl4jsb_var3D_onDomain(SSE_, silt_sl) = dsl4jsb_Config(SSE_)%soil_silt
+    dsl4jsb_var3D_onDomain(SSE_, clay_sl) = dsl4jsb_Config(SSE_)%soil_clay
+    
 
   END SUBROUTINE sse_init_bc
 
@@ -429,9 +437,6 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
-!TODO HYDRO_
-! use soil_depth & soil_depth_sl from HYDRO_
-
     !>1.0 Total soil depth until bedrock
     !>
     ! QUINCY soil_depth for one site (read from namelist)
@@ -484,7 +489,6 @@ CONTAINS
     !   END IF  
     ! END DO
 
-!TODO get namelist values (quincy) from ic/bc input jsb4
     !>4.0 init soil-property variables
     !>
     !>  4.1 init with one site-specific value for all soil layers
@@ -556,7 +560,6 @@ CONTAINS
     kdiff_sat_sl(:,:,:) = kdiff_sat_max * (theta_sat_sl(:,:,:) - theta_fc_sl(:,:,:)) ** (3.0_wp + 1._wp / saxtonB(:,:,:))
     saxtonC(:,:,:)      = 3.0_wp - 2._wp * saxtonB(:,:,:)
 
-!TODO get namelist values (quincy) from ic/bc input jsb4  <- soil_awc_prescribe
     !>6.0 rooting depth given by prescribed AWC
     !>
     !>  soil water in the rooting zone [m] \n
@@ -591,7 +594,6 @@ CONTAINS
     !>
     w_skin(:,:) = 0.0_wp
 
-!TODO get namelist values (quincy) from ic/bc input jsb4  <- soil_theta_prescribe
     !>  6.2 adjust initial water amount to prescribed theta 
     !>
     w_soil_root(:,:)        = w_soil_root_pwp(:,:) + & 
@@ -602,7 +604,6 @@ CONTAINS
         & saxtonB(:,1,iblk) 
     ENDDO
 
-!TODO lctlib ? should SSE_ run on PFT ?
     !>  6.3 root fraction 
     !>
     ! root fractions assuming an exponential distribution of roots \n
@@ -650,7 +651,6 @@ CONTAINS
       ENDDO
     ENDDO
 
-!TODO get namelist values (quincy) from ic/bc input jsb4  <- soil_theta_prescribe    
     !>  7.1 adjust initial water amount to prescribed theta
     !>
     w_soil_sl(:,:,:) = w_soil_pwp_sl(:,:,:) + dsl4jsb_Config(SSE_)%soil_theta_prescribe * &

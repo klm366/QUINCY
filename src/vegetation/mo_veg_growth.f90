@@ -80,6 +80,7 @@ CONTAINS
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
     dsl4jsb_Use_memory(SSE_)       !  USE mo_sse_memory_class,     ONLY: t_sse_memory
+    dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
     ! Use of pools
 #ifdef __QUINCY_NO_JSB__
@@ -125,6 +126,7 @@ CONTAINS
     dsl4jsb_Def_memory(PHENO_)                      !     TYPE(t_pheno_memory),    POINTER :: pheno__mem
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(SSE_)                       !     TYPE(t_sse_memory),     POINTER :: sse__mem
+    dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(SB_)                         !     TYPE(t_sb_memory),       POINTER :: sb__mem
 #ifdef __QUINCY_NO_JSB__
 #else
@@ -172,9 +174,10 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: myc_export_c_tmyc_mavg_sl
     dsl4jsb_Real3D_onChunk      :: myc_export_n_tmyc_mavg_sl
     ! SSE_ 2D
-    dsl4jsb_Real2D_onChunk      :: w_soil_root_theta
     dsl4jsb_Real2D_onChunk      :: t_soil_root
-    ! SSE_ 3D
+    ! HYDRO_ 2D
+    dsl4jsb_Real2D_onChunk      :: w_soil_root_theta
+    ! HYDRO_ 3D
     dsl4jsb_Real3D_onChunk      :: soil_depth_sl 
     ! RAD_
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl
@@ -367,10 +370,12 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_, myc_export_p_tlabile_mavg_sl)        ! inout
     dsl4jsb_Get_var3D_onChunk(SB_, myc_export_c_tmyc_mavg_sl)        ! inout
     dsl4jsb_Get_var3D_onChunk(SB_, myc_export_n_tmyc_mavg_sl)        ! inout
-    ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_theta)                 ! in
-    dsl4jsb_Get_var2D_onChunk(SSE_, t_soil_root)                       ! in
-    dsl4jsb_Get_var3D_onChunk(SSE_, soil_depth_sl)                     ! in
+    ! SSE_ 2D
+    dsl4jsb_Get_var2D_onChunk(SSE_, t_soil_root)                        ! in
+    ! HYDRO_ 2D
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_root_theta)                ! in
+    ! HYDRO_ 3D
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)                    ! in
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)                     ! in
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)                     ! in

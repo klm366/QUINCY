@@ -34,7 +34,7 @@ MODULE mo_sse_interface
   USE mo_sse_update_turbulence,       ONLY: update_soil_turbulence
   USE mo_sse_update_physics,          ONLY: update_sse_physics
 
-  dsl4jsb_Use_processes SSE_, SEB_, HYDRO_, A2L_, RAD_ 
+  dsl4jsb_Use_processes SSE_, SEB_, HYDRO_, A2L_, RAD_, VEG_ 
   dsl4jsb_Use_config(SSE_)
   dsl4jsb_Use_config(HYDRO_)
   dsl4jsb_Use_memory(SSE_)
@@ -42,6 +42,7 @@ MODULE mo_sse_interface
   dsl4jsb_Use_memory(HYDRO_)
   dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(A2L_)
+  dsl4jsb_Use_memory(VEG_)
 
   IMPLICIT NONE
   PRIVATE
@@ -267,6 +268,7 @@ CONTAINS
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(VEG_)
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: t_unfilt
@@ -297,10 +299,13 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: thaw_depth
     dsl4jsb_Real2D_onChunk :: heat_cond
     dsl4jsb_Real2D_onChunk :: vol_heat_cap
+    dsl4jsb_Real2D_onChunk :: t_soil_root
     dsl4jsb_Real2D_onChunk :: w_snow_soil
     dsl4jsb_Real2D_onChunk :: snow_soil_dens
     dsl4jsb_Real2D_onChunk :: fract_snow_soil
-
+    ! quincy
+    ! VEG_ 3D
+    dsl4jsb_Real3D_onChunk :: root_fraction_sl
 
     ! Locally allocated vectors
     !
@@ -355,6 +360,9 @@ CONTAINS
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(HYDRO_)
+    IF (model%config%use_quincy) THEN
+      dsl4jsb_Get_memory(VEG_)
+    END IF
 
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snowmelt)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow_soil)
@@ -392,8 +400,12 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(SSE_,   heat_cond)
     dsl4jsb_Get_var2D_onChunk(SSE_,   vol_heat_cap)
+    dsl4jsb_Get_var2D_onChunk(SSE_,   t_soil_root)          ! out
 
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)        ! in
+    IF (model%config%use_quincy) THEN
+      dsl4jsb_Get_var3D_onChunk(VEG_, root_fraction_sl)     ! in
+    END IF
 
     lstart = is_time_experiment_start(options%current_datetime)
 
@@ -644,6 +656,15 @@ CONTAINS
 
     !$claw acc exit data delete(snow_depth,snow_fract,t_unfilt_corrected,t_soil_top,hcap_grnd_snow,hcap_grnd_soil,grnd_hflx_snow,grnd_hflx_soil,ldglac,itop,itop_old)  
 
+    ! quincy
+    ! diagnose root temperature
+    IF (model%config%use_quincy) THEN
+      t_soil_root(:) = 0.0_wp
+      DO isoil = 1,nsoil_sb
+        t_soil_root(:) = t_soil_root(:) + root_fraction_sl(:,isoil) * t_soil_sl(:,isoil)
+      ENDDO
+    END IF
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_soil_and_snow_temperature
@@ -694,6 +715,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_freeze_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_ice_melt_sl,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   t_soil_root,      weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

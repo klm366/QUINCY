@@ -27,10 +27,11 @@ MODULE mo_hydro_init
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_jsb_io,            ONLY: missval
 
-  dsl4jsb_Use_processes HYDRO_, PHENO_
+  dsl4jsb_Use_processes HYDRO_, PHENO_, SSE_
   dsl4jsb_Use_config(HYDRO_)
   dsl4jsb_Use_memory(HYDRO_)
   dsl4jsb_Use_memory(PHENO_)
+  dsl4jsb_Use_memory(SSE_)
 
   IMPLICIT NONE
   PRIVATE
@@ -304,19 +305,42 @@ CONTAINS
 
   SUBROUTINE hydro_init_bc(tile)
 
-    USE mo_util,    ONLY: soil_depth_to_layers_2d
+    USE mo_util,                  ONLY: soil_depth_to_layers_2d
+    USE mo_hydro_constants,       ONLY: kdiff_sat_max, &
+                                        k_pwp_s, k_pwp_c, k_pwp_sc, k_pwp_a, k_pwp_at, k_pwp_bt, &
+                                        k_fc_s, k_fc_c, k_fc_sc, k_fc_a, k_fc_at, k_fc_bt, k_fc_ct, &
+                                        k_sat_s, k_sat_c, k_sat_sc, k_sat_a, k_sat_at, k_sat_bt, k_sat_ct, k_sat_dt, &
+                                        wpot_pwp, wpot_fc, wpot_fc
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(SSE_)
 
     TYPE(t_jsb_vgrid), POINTER :: soil_w
+    TYPE(t_jsb_vgrid), POINTER :: vgrid_soil_sb !< Vertical grid
     INTEGER :: i, nsoil
+    INTEGER :: nsoil_sb      !< number of soil layers as used/defined by the SB_ process
 
     TYPE(t_jsb_model),       POINTER :: model
-
+    REAL(wp), ALLOCATABLE, DIMENSION(:,:,:)          :: hlp1
+    REAL(wp), ALLOCATABLE, DIMENSION(:,:,:)          :: theta_pwp_sl, theta_fc_sl
+    INTEGER                                          :: isoil, ic, nc, iblk, nblks
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init_bc'
+
+    ! SSE_ 3D
+    dsl4jsb_Real3D_onDomain    :: sand_sl
+    dsl4jsb_Real3D_onDomain    :: silt_sl
+    dsl4jsb_Real3D_onDomain    :: clay_sl
+    dsl4jsb_Real3D_onDomain    :: soil_lay_width_sl
+    dsl4jsb_Real3D_onDomain    :: soil_lay_depth_center_sl
+    dsl4jsb_Real3D_onDomain    :: soil_lay_depth_ubound_sl
+    dsl4jsb_Real3D_onDomain    :: soil_lay_depth_lbound_sl
+    ! HYDRO_ 3D
+    dsl4jsb_Real3D_onDomain    :: saxtonA 
+    dsl4jsb_Real3D_onDomain    :: saxtonB 
+    dsl4jsb_Real3D_onDomain    :: saxtonC 
 
     IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
 
@@ -326,12 +350,35 @@ CONTAINS
 
     soil_w => Get_vgrid('soil_depth_water')
     nsoil = soil_w%n_levels
+    vgrid_soil_sb  => Get_vgrid('soil_layer_sb')
+    nsoil_sb       =  vgrid_soil_sb%n_levels
 
     ! Get hydrology config
     dsl4jsb_Get_config(HYDRO_)
 
     ! Get hydrology memory of the tile
     dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(SSE_)
+
+    ! SSE_ 3D
+    dsl4jsb_Get_var3D_onDomain(SSE_, sand_sl)       ! in
+    dsl4jsb_Get_var3D_onDomain(SSE_, silt_sl)       ! in
+    dsl4jsb_Get_var3D_onDomain(SSE_, clay_sl)       ! in
+    dsl4jsb_Get_var3D_onDomain(SSE_, soil_lay_width_sl)          ! out
+    dsl4jsb_Get_var3D_onDomain(SSE_, soil_lay_depth_center_sl)   ! out
+    dsl4jsb_Get_var3D_onDomain(SSE_, soil_lay_depth_ubound_sl)   ! out
+    dsl4jsb_Get_var3D_onDomain(SSE_, soil_lay_depth_lbound_sl)   ! out
+    ! HYDRO_ 3D
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, saxtonA)     ! out
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, saxtonB)     ! out
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, saxtonC)     ! out
+    ! ----------------------------------------------------------------------------------------------------- !
+    nc    = SIZE(sand_sl,1)
+    nblks = SIZE(sand_sl,3)
+    ! ----------------------------------------------------------------------------------------------------- !
+    ALLOCATE(hlp1(nc, nsoil_sb, nblks))
+    ALLOCATE(theta_pwp_sl(nc, nsoil_sb, nblks))
+    ALLOCATE(theta_fc_sl(nc, nsoil_sb, nblks))
 
     !----------
 
@@ -423,6 +470,64 @@ CONTAINS
       !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_, root_depth), &
       !$acc dsl4jsb_var3D_onDomain(HYDRO_, root_depth_sl))
 
+    END IF
+
+    ! quincy
+    IF (tile%contains_soil) THEN
+      ! from SSE_ init
+      !>soil hydraulic properties, based on Saxton and Rawls 2006, SSSA
+      !> 
+      !>  fractional water holding capacity at permanent wilting point
+      !>
+      ! note: this assumes that the soil hydraulic properties are identical between the layers
+      hlp1(:,:,:)         = k_pwp_s * sand_sl(:,:,:) + & 
+                            k_pwp_c * clay_sl(:,:,:) + &
+                            k_pwp_sc * sand_sl(:,:,:) * clay_sl(:,:,:) + &
+                            k_pwp_a
+      theta_pwp_sl(:,:,:) = k_pwp_at + (1.0_wp + k_pwp_bt) * hlp1(:,:,:) 
+
+      !>  fractional water holding capacity at field capacity 
+      !>
+      hlp1(:,:,:)         = k_fc_s * sand_sl(:,:,:) + &
+                            k_fc_c * clay_sl(:,:,:) + &
+                            k_fc_sc * sand_sl(:,:,:) * clay_sl(:,:,:) + &
+                            k_fc_a
+      theta_fc_sl(:,:,:)  = k_fc_at + (1.0_wp + k_fc_bt) * hlp1(:,:,:) + k_fc_ct * hlp1(:,:,:) ** 2._wp
+      
+      !>parameters describing the moisture-tension curve                 
+      !>
+      ! note that for convenience, B has a negative sign and A is in MPa 
+      saxtonB(:,:,:)      = -(LOG(wpot_pwp) - LOG(wpot_fc)) / (LOG(theta_fc_sl(:,:,:)) - LOG(theta_pwp_sl(:,:,:)))
+      saxtonA(:,:,:)      = -(EXP(LOG(wpot_fc) - saxtonB(:,:,:) * LOG(theta_fc_sl(:,:,:)) )) / 1000.0_wp
+
+      !>parameters describing the moisture-diffusivity curve
+      !>
+      ! kdiff_sat_sl(:,:,:) = kdiff_sat_max * (theta_sat_sl(:,:,:) - theta_fc_sl(:,:,:)) ** (3.0_wp + 1._wp / saxtonB(:,:,:))
+      saxtonC(:,:,:)      = 3.0_wp - 2._wp * saxtonB(:,:,:)
+
+    ! pass soil-layer values to a SSE_ variable with a correct name
+    dsl4jsb_var3D_onDomain(SSE_, soil_lay_width_sl) = dsl4jsb_var3D_onDomain(SSE_, soil_depth_sl)
+
+    !>  2.1 calc more metrics of the soil layers
+    !>
+    !>    i)  lower & upper boundary
+    !>    ii) depth at the center of each layer
+    !>
+    DO iblk = 1,nblks
+      DO isoil = 1,nsoil_sb
+        ! lower & upper boundary
+        IF (isoil == 1) THEN
+          soil_lay_depth_lbound_sl(:,isoil,iblk) = 0.0_wp
+          soil_lay_depth_ubound_sl(:,isoil,iblk) = soil_lay_width_sl(:,isoil,iblk)
+        ELSE
+          soil_lay_depth_lbound_sl(:,isoil,iblk) = soil_lay_depth_lbound_sl(:,isoil-1,iblk) + soil_lay_width_sl(:,isoil-1,iblk)
+          soil_lay_depth_ubound_sl(:,isoil,iblk) = soil_lay_depth_ubound_sl(:,isoil-1,iblk) + soil_lay_width_sl(:,isoil,iblk)
+        ENDIF                                
+        ! soil-layer center
+        soil_lay_depth_center_sl(:,isoil,iblk)   = (soil_lay_depth_lbound_sl(:,isoil,iblk) + &
+          & soil_lay_depth_ubound_sl(:,isoil,iblk)) * 0.5_wp 
+      ENDDO
+    ENDDO
     END IF
 
   END SUBROUTINE hydro_init_bc
