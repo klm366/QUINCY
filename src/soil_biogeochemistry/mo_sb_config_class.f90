@@ -117,6 +117,7 @@ CONTAINS
     LOGICAL                     :: flag_sb_jsm_transport
     LOGICAL                     :: flag_sb_jsm_litter_input
     LOGICAL                     :: flag_sb_jsm_OM_sorption
+    LOGICAL                     :: flag_sb_double_langmuir
     INTEGER                     :: usda_taxonomy_class
     INTEGER                     :: nwrb_taxonomy_class
     INTEGER                     :: lithology_class

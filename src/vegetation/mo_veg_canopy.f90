@@ -896,11 +896,11 @@ CONTAINS
                                                   unit_npp                , &
                                                   unit_transpiration )
 
-    USE mo_jsb_math_constants,    ONLY: eps8
-    USE mo_jsb_phys_constants,    ONLY: r_gas_dryair
-    USE mo_rad_constants,         ONLY: rad2ppfd, kbl0_vis
-    USE mo_assimi_constants,      ONLY: ic3phot, ic4phot
-    USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
+    USE mo_jsb_math_constants,      ONLY: eps8
+    USE mo_jsb_physical_constants,  ONLY: r_gas_dryair
+    USE mo_rad_constants,           ONLY: rad2ppfd, kbl0_vis
+    USE mo_assimi_constants,        ONLY: ic3phot, ic4phot
+    USE mo_atmland_util,            ONLY: calc_spec_humidity_sat
 
     IMPLICIT NONE
     ! ---------------------------

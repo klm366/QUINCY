@@ -76,6 +76,8 @@ CONTAINS
     TYPE(t_lctlib_element), POINTER         :: lctlib               !< land-cover-type library - parameter across pft's
     TYPE(t_jsb_vgrid),      POINTER         :: vgrid_soil_sb        !< Vertical grid
     INTEGER                                 :: nsoil_sb             !< number of soil layers as used by the SB_ process (see SSE_ config)
+    REAL(wp), ALLOCATABLE, DIMENSION(:,:)   :: hlp1
+    REAL(wp), ALLOCATABLE, DIMENSION(:,:,:) :: hlp10
     INTEGER                                 :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_pools'
 
@@ -110,6 +112,9 @@ CONTAINS
     lctlib        => model%lctlib(tile%lcts(1)%lib_id)
     vgrid_soil_sb => Get_vgrid('soil_layer_sb')
     nsoil_sb      =  vgrid_soil_sb%n_levels
+
+    ALLOCATE(hlp1(nc, nsoil_sb))
+    ALLOCATE(hlp10(nc, nsoil_sb, 2))  ! 2 is just an arbitrary number used for the nblks dimensions, see below test-code
 
     dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_memory(SB_)

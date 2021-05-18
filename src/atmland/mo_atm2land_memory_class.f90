@@ -140,13 +140,13 @@ CONTAINS
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
     USE mo_jsb_model_class,   ONLY: t_jsb_model
     USE mo_jsb_class,         ONLY: Get_model
-#ifdef __QUINCY_NO_JSB__
+    ! quincy
+    ! needed for init of variables @TODO move to actual init routine
     USE mo_atmland_constants, ONLY: def_wind, def_co2_deltaC13, def_co2_deltaC14, def_t_air, standard_press_srf, def_vpd, &
                                     eps_vpd, def_co2_mixing_ratio, def_swdown, frac_vis_swtot_srf, frac_par_swvis_srf, &
                                     def_fdiffuse, def_cos_angle
     USE mo_isotope_util,      ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C
     USE mo_atmland_util,      ONLY: calc_spec_humidity_sat
-#endif
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_a2l_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),    INTENT(in)            :: prefix
@@ -159,7 +159,7 @@ CONTAINS
     TYPE(t_jsb_model),  POINTER :: model
     INTEGER                     :: table
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_a2l_memory'
-#ifdef __QUINCY_NO_JSB__
+    ! quincy
     REAL(wp) :: C13C12_mixing_ratio, &
                 C14C_mixing_ratio
     REAL(wp) :: wind_air_init, &
@@ -177,7 +177,6 @@ CONTAINS
                 co2_mixing_ratio_init, &
                 co2_mixing_ratio_c13_init, &
                 co2_mixing_ratio_c14_init
-#endif
     ! ----------------------------------------------------------------------------------------------------- !
     IF (model_id > 0) CONTINUE ! avoid compiler warning about dummy argument not being used
     ! ----------------------------------------------------------------------------------------------------- !
@@ -186,7 +185,6 @@ CONTAINS
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
     ! ----------------------------------------------------------------------------------------------------- !
-#ifdef __QUINCY_NO_JSB__
     ! move to atm2land_init and init a2l variables there  @TODO
     C13C12_mixing_ratio         = calc_mixing_ratio_C13C12(def_co2_deltaC13) 
     C14C_mixing_ratio           = calc_mixing_ratio_C14C(def_co2_deltaC13,def_co2_deltaC14)
@@ -205,7 +203,6 @@ CONTAINS
     co2_mixing_ratio_init       = def_co2_mixing_ratio
     co2_mixing_ratio_c13_init   = co2_mixing_ratio_init / (1._wp + 1._wp / C13C12_mixing_ratio)
     co2_mixing_ratio_c14_init   = C14C_mixing_ratio * co2_mixing_ratio_init 
-#endif
 
 
     !! !$acc enter data create(mem)

@@ -1694,11 +1694,10 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_vgrid),      POINTER         :: vgrid_canopy         !< Vertical grid
     LOGICAL,  DIMENSION(options%nc)         :: l_growing_season     !< growing_season LOGICAL
-    LOGICAL,  ALLOCATABLE(:,:)              :: l_growing_season_cl  !< growing_season LOGICAL, at vgrid_canopy
-    INTEGER                                 :: ipoint               !< looping
+    LOGICAL,  ALLOCATABLE, DIMENSION(:,:)   :: l_growing_season_cl  !< growing_season LOGICAL, at vgrid_canopy
     INTEGER                                 :: icanopy              !< looping
     INTEGER                                 :: ncanopy              !< number of canopy layers, from vgrid
-    INTEGER                                 :: iblk, ics, ice, nc   !< dimensions
+    INTEGER                                 :: iblk, ic, ics, ice, nc   !< dimensions, looping
     CHARACTER(len=*), PARAMETER             :: routine = modname//':update_time_average_radiation'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(A2L_)
@@ -1722,6 +1721,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc
     dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg 
     ! 3D RAD_
+    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_daytime_dacc_cl
+    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_daytime_dacc_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_daytime_cl    
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_daytime_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_cl
@@ -1768,6 +1769,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc) 
     dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg)
     ! 3D RAD_
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_daytime_dacc_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_daytime_dacc_cl)
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_daytime_cl)
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_daytime_cl)
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)
@@ -1785,13 +1788,13 @@ CONTAINS
 
     !>0.9 transform REAL growing_season(:) into LOGICAL l_growing_season(:)/_cl(:,:)
     !>
-    DO ipoint = 1, nc
-      IF (growing_season(ipoint) > test_false_true) THEN
-        l_growing_season(ipoint)      = .TRUE.
-        l_growing_season_cl(ipoint,:) = .TRUE.
+    DO ic = 1, nc
+      IF (growing_season(ic) > test_false_true) THEN
+        l_growing_season(ic)      = .TRUE.
+        l_growing_season_cl(ic,:) = .TRUE.
       ELSE
-        l_growing_season(ipoint)      = .FALSE.
-        l_growing_season_cl(ipoint,:) = .FALSE.
+        l_growing_season(ic)      = .FALSE.
+        l_growing_season_cl(ic,:) = .FALSE.
       END IF
     END DO
 
@@ -1805,16 +1808,16 @@ CONTAINS
     
     !>  1.1 accumulate values - if light is available (i.e. daytime)
     !>
-    DO ipoint = 1, nc
-      IF (swpar_srf_down(ipoint) > eps8) THEN
+    DO ic = 1, nc
+      IF (swpar_srf_down(ic) > eps8) THEN
         ! count number of daytime values
-        daytime_counter(ipoint) = daytime_counter(ipoint) + 1.0_wp
+        daytime_counter(ic) = daytime_counter(ic) + 1.0_wp
         ! add values
         DO icanopy = 1, ncanopy
-          ppfd_sunlit_daytime_dacc_cl(ipoint,icanopy)  = ppfd_sunlit_daytime_dacc_cl(ipoint,icanopy) + &
-            & ppfd_sunlit_cl(ipoint,icanopy)
-          ppfd_shaded_daytime_dacc_cl(ipoint,icanopy)  = ppfd_shaded_daytime_dacc_cl(ipoint,icanopy) + &
-            & ppfd_shaded_cl(ipoint,icanopy)
+          ppfd_sunlit_daytime_dacc_cl(ic,icanopy)  = ppfd_sunlit_daytime_dacc_cl(ic,icanopy) + &
+            & ppfd_sunlit_cl(ic,icanopy)
+          ppfd_shaded_daytime_dacc_cl(ic,icanopy)  = ppfd_shaded_daytime_dacc_cl(ic,icanopy) + &
+            & ppfd_shaded_cl(ic,icanopy)
         END DO
       END IF
     END DO
@@ -1824,22 +1827,22 @@ CONTAINS
     !>    calculate the average of the previous day and pass this value to the according variable
     !> 
     !>    the timestep right after midnight is identified by the changes in cos_zenith_angle (turning from negative to positive)
-    DO ipoint = 1, nc
-      IF ((cos_zenith_angle(ipoint) - prev_one_cos_zenith_angle(ipoint)) > eps8 .AND. &
-          (prev_one_cos_zenith_angle(ipoint) - prev_two_cos_zenith_angle(ipoint)) <= eps8) THEN
+    DO ic = 1, nc
+      IF ((cos_zenith_angle(ic) - prev_one_cos_zenith_angle(ic)) > eps8 .AND. &
+          (prev_one_cos_zenith_angle(ic) - prev_two_cos_zenith_angle(ic)) <= eps8) THEN
         ! check if at least one value had been assigned at the current day, avoiding division by zero
-        IF (daytime_counter(ipoint) > eps8) THEN
-          ppfd_sunlit_daytime_cl(ipoint,:) = ppfd_sunlit_daytime_dacc_cl(ipoint,:) / daytime_counter(ipoint)
-          ppfd_shaded_daytime_cl(ipoint,:) = ppfd_shaded_daytime_dacc_cl(ipoint,:) / daytime_counter(ipoint)
+        IF (daytime_counter(ic) > eps8) THEN
+          ppfd_sunlit_daytime_cl(ic,:) = ppfd_sunlit_daytime_dacc_cl(ic,:) / daytime_counter(ic)
+          ppfd_shaded_daytime_cl(ic,:) = ppfd_shaded_daytime_dacc_cl(ic,:) / daytime_counter(ic)
         ELSE
-          ppfd_sunlit_daytime_cl(ipoint,:) = 0.0_wp
-          ppfd_shaded_daytime_cl(ipoint,:) = 0.0_wp
+          ppfd_sunlit_daytime_cl(ic,:) = 0.0_wp
+          ppfd_shaded_daytime_cl(ic,:) = 0.0_wp
         END IF
         ! zero the accumulation variables after daily average has been calculated
-        ppfd_sunlit_daytime_dacc_cl(ipoint,:) = 0.0_wp
-        ppfd_shaded_daytime_dacc_cl(ipoint,:) = 0.0_wp
+        ppfd_sunlit_daytime_dacc_cl(ic,:) = 0.0_wp
+        ppfd_shaded_daytime_dacc_cl(ic,:) = 0.0_wp
         ! zero the counter for number of accumulated values (*_dacc) per day
-        daytime_counter(ipoint) = 0.0_wp
+        daytime_counter(ic) = 0.0_wp
       END IF
     END DO
 
@@ -1856,22 +1859,22 @@ CONTAINS
     
     !>  2.1 tfrac (averages at the time-scale of within-leaf N allocation fractions)
     !> 
-    ppfd_sunlit_tfrac_mavg_cl(:,:) = calc_mavg(ppfd_sunlit_tfrac_mavg_cl(:,:), ppfd_sunlit_daytime_cl(:,:), &
-                                               mavg_period_tfrac, do_calc=l_growing_season_cl(:,:))
-    ppfd_shaded_tfrac_mavg_cl(:,:) = calc_mavg(ppfd_shaded_tfrac_mavg_cl(:,:), ppfd_shaded_daytime_cl(:,:), &
-                                               mavg_period_tfrac, do_calc=l_growing_season_cl(:,:))
+    ppfd_sunlit_tfrac_mavg_cl(:,:) = calc_time_mavg(ppfd_sunlit_tfrac_mavg_cl(:,:), ppfd_sunlit_daytime_cl(:,:), &
+                                                    mavg_period_tfrac, do_calc=l_growing_season_cl(:,:))
+    ppfd_shaded_tfrac_mavg_cl(:,:) = calc_time_mavg(ppfd_shaded_tfrac_mavg_cl(:,:), ppfd_shaded_daytime_cl(:,:), &
+                                                    mavg_period_tfrac, do_calc=l_growing_season_cl(:,:))
 
     !>  2.2 tcnl (averages at the time-scale of leaf N allocation fractions)
     !>
-    ppfd_sunlit_tcnl_mavg_cl(:,:) = calc_mavg(ppfd_sunlit_tcnl_mavg_cl(:,:), ppfd_sunlit_cl(:,:), &
-                                               mavg_period_tcnl, do_calc=l_growing_season_cl(:,:))
-    ppfd_shaded_tcnl_mavg_cl(:,:) = calc_mavg(ppfd_shaded_tcnl_mavg_cl(:,:), ppfd_shaded_cl(:,:), &
-                                               mavg_period_tcnl, do_calc=l_growing_season_cl(:,:))
+    ppfd_sunlit_tcnl_mavg_cl(:,:) = calc_time_mavg(ppfd_sunlit_tcnl_mavg_cl(:,:), ppfd_sunlit_cl(:,:), &
+                                                    mavg_period_tcnl, do_calc=l_growing_season_cl(:,:))
+    ppfd_shaded_tcnl_mavg_cl(:,:) = calc_time_mavg(ppfd_shaded_tcnl_mavg_cl(:,:), ppfd_shaded_cl(:,:), &
+                                                    mavg_period_tcnl, do_calc=l_growing_season_cl(:,:))
 
     !>  2.3 tvegdyn (averages at the vegetation dynamics time-scale)
     !! 
-    rfr_ratio_boc_tvegdyn_mavg(:) = calc_mavg(rfr_ratio_boc_tvegdyn_mavg(:), rfr_ratio_boc(:), &
-                                              mavg_period_tvegdyn, do_calc=(veg_pool%leaf%carbon(:) > eps8))
+    rfr_ratio_boc_tvegdyn_mavg(:) = calc_time_mavg(rfr_ratio_boc_tvegdyn_mavg(:), rfr_ratio_boc(:), &
+                                                    mavg_period_tvegdyn, do_calc=(veg_pool%leaf%carbon(:) > eps8))
 
 ! not needed, because veg_pool not modified:
 ! #ifdef __QUINCY_NO_JSB__

@@ -100,13 +100,13 @@ MODULE mo_rad_memory_class
       & swvis_srf_net,         & !< net shortwave radiation at surface in visible range [W m-2]
       & swnir_srf_net,         & !< net shortwave radiation at surface in NIR range [W m-2]
       & lw_srf_net,            & !< net longwave radiation at surface [W m-2]
-      & rad_srf_net,           & !< net radiation at surface [W m-2]
+      & rad_srf_net              !< net radiation at surface [W m-2]
 
     TYPE(t_jsb_var_real2d)  :: & 
       & alb_vis,               & !< Albedo of the whole tile in the VIS (visible) range [unitless]
       & alb_nir,               & !< Albedo of the whole tile in the NIR (near-infrared) range [unitless]
       & alb_vis_snow,          & !< Albedo of snow in the VIS range [unitless]
-      & alb_nir_snow,          & !< Albedo of snow in the NIR range [unitless]
+      & alb_nir_snow             !< Albedo of snow in the NIR range [unitless]
     
     ! soil
     TYPE(t_jsb_var_real2d) :: &

@@ -291,8 +291,8 @@ CONTAINS
         & maint_respiration_leaf_cl(:,icanopy)                    , &
         & canopy_cond_cl(:,icanopy)                               , &
         & co2_conc_leaf_cl(:,icanopy)                             , &
-        & hlp1(:),                                                , & 
-        & hlp2(:),                                                , & 
+        & hlp1(:)                                                 , & 
+        & hlp2(:)                                                 , & 
         & hlp3(:)                                                   ) ! out
 
       ! gross_assimilation incl. C13 & C14

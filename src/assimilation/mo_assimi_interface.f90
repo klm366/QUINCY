@@ -154,8 +154,6 @@ MODULE mo_assimi_interface
     PROCEDURE Create_task_update_time_average_assimilation         !< Constructor function for task
   END INTERFACE tsk_time_average_assimilation
 
-  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_assimi_interface'
-
 
 CONTAINS
 

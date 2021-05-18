@@ -644,7 +644,7 @@ CONTAINS
 
       ! add all variables in the veg_tissues_pool to the VEG_ memory
       CALL mem%Add_var(mem%veg_main_pool%veg_pool, &
-        & hgrid, vgrid_surface, vgrid_canopy,                                                          &
+        & hgrid, surface, vgrid_canopy,                                                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & loutput=.TRUE.,                                                                              &
@@ -652,7 +652,7 @@ CONTAINS
         & output_level=BASIC,                                                                          &
         & initval_r=0.0_wp )
       CALL mem%Add_var(mem%veg_main_pool%veg_growth, &
-        & hgrid, vgrid_surface, vgrid_canopy,                                                          &
+        & hgrid, surface, vgrid_canopy,                                                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & loutput=.TRUE.,                                                                              &
@@ -660,7 +660,7 @@ CONTAINS
         & output_level=FULL,                                                                           &
         & initval_r=0.0_wp )
       CALL mem%Add_var(mem%veg_main_pool%veg_litterfall, &
-        & hgrid, vgrid_surface, vgrid_canopy,                                                          &
+        & hgrid, surface, vgrid_canopy,                                                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & loutput=.TRUE.,                                                                              &
@@ -668,7 +668,7 @@ CONTAINS
         & output_level=FULL,                                                                           &
         & initval_r=0.0_wp )
       CALL mem%Add_var(mem%veg_main_pool%veg_total_flux, &
-        & hgrid, vgrid_surface, vgrid_canopy,                                                          &
+        & hgrid, surface, vgrid_canopy,                                                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & loutput=.TRUE.,                                                                              &
@@ -676,7 +676,7 @@ CONTAINS
         & output_level=FULL,                                                                           &
         & initval_r=0.0_wp )
       CALL mem%Add_var(mem%veg_main_pool%veg_falloc, &
-        & hgrid, vgrid_surface, vgrid_canopy,                                                          &
+        & hgrid, surface, vgrid_canopy,                                                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & loutput=.TRUE.,                                                                              &
@@ -686,7 +686,7 @@ CONTAINS
 
       ! add all variables in the veg_elements_pool to the VEG_ memory
       CALL mem%Add_var(mem%veg_main_pool%veg_total_biomass, &
-        & hgrid, vgrid_surface, vgrid_canopy,                                                          &
+        & hgrid, surface, vgrid_canopy,                                                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & loutput=.TRUE.,                                                                              &
@@ -694,7 +694,7 @@ CONTAINS
         & output_level=FULL,                                                                           &
         & initval_r=0.0_wp )
       CALL mem%Add_var(mem%veg_main_pool%veg_exudation, &
-        & hgrid, vgrid_surface, vgrid_canopy,                                                          &
+        & hgrid, surface, vgrid_canopy,                                                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & loutput=.TRUE.,                                                                              &
@@ -702,7 +702,7 @@ CONTAINS
         & output_level=FULL,                                                                           &
         & initval_r=0.0_wp )
       CALL mem%Add_var(mem%veg_main_pool%veg_establishment, &
-        & hgrid, vgrid_surface, vgrid_canopy,                                                          &
+        & hgrid, surface, vgrid_canopy,                                                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & loutput=.TRUE.,                                                                              &
@@ -710,7 +710,7 @@ CONTAINS
         & output_level=FULL,                                                                           &
         & initval_r=0.0_wp )
       CALL mem%Add_var(mem%veg_main_pool%veg_reserve_use, &
-        & hgrid, vgrid_surface, vgrid_canopy,                                                          &
+        & hgrid, surface, vgrid_canopy,                                                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & loutput=.TRUE.,                                                                              &

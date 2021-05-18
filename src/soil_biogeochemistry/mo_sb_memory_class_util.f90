@@ -1661,10 +1661,8 @@ CONTAINS
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: max_no_of_vars, all_elements
+  PUBLIC :: all_elements, Create_sb_components_pool
   PUBLIC :: t_sb_main_pool, t_sb_components_pool, t_sb_elements_pool
-
-  INTEGER, PARAMETER :: max_no_of_vars      = 480  !> TYPE t_jsb_var | 'normal' var: ~ 200 | 4 pools: 240 var | 2 tissues: 12
 
   !-----------------------------------------------------------------------------------------------------
   !> Type definition for sb_elements_pool

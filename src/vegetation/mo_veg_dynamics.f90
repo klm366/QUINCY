@@ -595,10 +595,10 @@ CONTAINS
                                     veg_pool_seed_bed           , &
                                     veg_establishment           )
 
-    USE mo_jsb_math_constants,    ONLY: dtime, one_day, one_year, eps8
-    USE mo_rad_constants,         ONLY: rfr_ratio_toc 
-    USE mo_veg_constants,         ONLY: fpc_max, lambda_est_temp, k_est_temp, lambda_est_moist, k_est_moist
-    USE mo_jsb_phys_constants,    ONLY: Tzero
+    USE mo_jsb_math_constants,      ONLY: dtime, one_day, one_year, eps8
+    USE mo_rad_constants,           ONLY: rfr_ratio_toc 
+    USE mo_veg_constants,           ONLY: fpc_max, lambda_est_temp, k_est_temp, lambda_est_moist, k_est_moist
+    USE mo_jsb_physical_constants,  ONLY: Tzero
 #ifdef __QUINCY_NO_JSB__
     dsl4slm_Use_memory_a_veg
 #else

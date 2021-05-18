@@ -536,41 +536,41 @@ CONTAINS
     
     !>  1.1 tlabile (averages at the timescale of the labile pool)
     !> 
-    myc_export_n_tlabile_mavg_sl(:,:) = calc_mavg(myc_export_n_tlabile_mavg_sl(:,:), &
-                                                  sb_mycorrhiza_export%nitrogen(:,:), mavg_period_tlabile) 
-    myc_export_p_tlabile_mavg_sl(:,:) = calc_mavg(myc_export_p_tlabile_mavg_sl(:,:), &
-                                                  sb_mycorrhiza_export%phosphorus(:,:), mavg_period_tlabile)
+    myc_export_n_tlabile_mavg_sl(:,:) = calc_time_mavg(myc_export_n_tlabile_mavg_sl(:,:), &
+                                                       sb_mycorrhiza_export%nitrogen(:,:), mavg_period_tlabile) 
+    myc_export_p_tlabile_mavg_sl(:,:) = calc_time_mavg(myc_export_p_tlabile_mavg_sl(:,:), &
+                                                       sb_mycorrhiza_export%phosphorus(:,:), mavg_period_tlabile)
 
     !>  1.2 lctlib tau_mycorrhiza
     !>
-    myc_export_c_tmyc_mavg_sl(:,:) = calc_mavg(myc_export_c_tmyc_mavg_sl(:,:), &
-                                               sb_mycorrhiza_export%carbon(:,:), & 
- 	                                             lctlib%tau_mycorrhiza, avg_period_unit='year')
-    myc_export_n_tmyc_mavg_sl(:,:) = calc_mavg(myc_export_n_tmyc_mavg_sl(:,:), &
-                                               sb_mycorrhiza_export%nitrogen(:,:), & 
- 	                                             lctlib%tau_mycorrhiza, avg_period_unit='year')
+    myc_export_c_tmyc_mavg_sl(:,:) = calc_time_mavg(myc_export_c_tmyc_mavg_sl(:,:), &
+                                                    sb_mycorrhiza_export%carbon(:,:), & 
+ 	                                                  lctlib%tau_mycorrhiza, avg_period_unit='year')
+    myc_export_n_tmyc_mavg_sl(:,:) = calc_time_mavg(myc_export_n_tmyc_mavg_sl(:,:), &
+                                                    sb_mycorrhiza_export%nitrogen(:,:), & 
+ 	                                                  lctlib%tau_mycorrhiza, avg_period_unit='year')
 
     !>  1.3 tmic (microbial community acclimation)
     !> 
-    microbial_cue_eff_tmic_mavg(:,:) = calc_mavg(microbial_cue_eff_tmic_mavg(:,:), microbial_cue_eff(:,:), &
-                                                 mavg_period_tmic)
-    microbial_nue_eff_tmic_mavg(:,:) = calc_mavg(microbial_nue_eff_tmic_mavg(:,:), microbial_nue_eff(:,:), &
-                                                 mavg_period_tmic)
-    microbial_pue_eff_tmic_mavg(:,:) = calc_mavg(microbial_pue_eff_tmic_mavg(:,:), microbial_pue_eff(:,:), &
-                                                 mavg_period_tmic)
+    microbial_cue_eff_tmic_mavg(:,:) = calc_time_mavg(microbial_cue_eff_tmic_mavg(:,:), microbial_cue_eff(:,:), &
+                                                      mavg_period_tmic)
+    microbial_nue_eff_tmic_mavg(:,:) = calc_time_mavg(microbial_nue_eff_tmic_mavg(:,:), microbial_nue_eff(:,:), &
+                                                      mavg_period_tmic)
+    microbial_pue_eff_tmic_mavg(:,:) = calc_time_mavg(microbial_pue_eff_tmic_mavg(:,:), microbial_pue_eff(:,:), &
+                                                      mavg_period_tmic)
 
     !>  1.4 tenzyme (memory time-scale for enzyme allocation)
     !> 
-    dom_cn_mavg(:,:)             = calc_mavg(dom_cn_mavg(:,:), dom_cn(:,:), &
-                                             mavg_period_tenzyme)
-    dom_cp_mavg(:,:)             = calc_mavg(dom_cp_mavg(:,:), dom_cp(:,:), &
-                                             mavg_period_tenzyme)
-    enzyme_frac_poly_c_mavg(:,:) = calc_mavg(enzyme_frac_poly_c_mavg(:,:), enzyme_frac_poly_c(:,:), &
-                                             mavg_period_tenzyme)
-    enzyme_frac_poly_n_mavg(:,:) = calc_mavg(enzyme_frac_poly_n_mavg(:,:), enzyme_frac_poly_n(:,:), &
-                                             mavg_period_tenzyme)
-    enzyme_frac_poly_p_mavg(:,:) = calc_mavg(enzyme_frac_poly_p_mavg(:,:), enzyme_frac_poly_p(:,:), &
-                                             mavg_period_tenzyme)
+    dom_cn_mavg(:,:)             = calc_time_mavg(dom_cn_mavg(:,:), dom_cn(:,:), &
+                                                  mavg_period_tenzyme)
+    dom_cp_mavg(:,:)             = calc_time_mavg(dom_cp_mavg(:,:), dom_cp(:,:), &
+                                                  mavg_period_tenzyme)
+    enzyme_frac_poly_c_mavg(:,:) = calc_time_mavg(enzyme_frac_poly_c_mavg(:,:), enzyme_frac_poly_c(:,:), &
+                                                  mavg_period_tenzyme)
+    enzyme_frac_poly_n_mavg(:,:) = calc_time_mavg(enzyme_frac_poly_n_mavg(:,:), enzyme_frac_poly_n(:,:), &
+                                                  mavg_period_tenzyme)
+    enzyme_frac_poly_p_mavg(:,:) = calc_time_mavg(enzyme_frac_poly_p_mavg(:,:), enzyme_frac_poly_p(:,:), &
+                                                  mavg_period_tenzyme)
 
 ! not needed, because veg_pool not modified:
 ! #ifdef __QUINCY_NO_JSB__

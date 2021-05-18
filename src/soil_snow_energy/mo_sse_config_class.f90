@@ -99,7 +99,6 @@ CONTAINS
                                    soil_clay
     REAL(wp)                    :: bulk_density
     INTEGER                     :: isoil   ! looping
-    CHARACTER(len=filename_max) :: ic_filename, bc_filename
     REAL(wp)                    :: k_soil_profile       ! for soil layer calculations
     REAL(wp)                    :: min_layer_depth      ! for soil layer calculations
     CHARACTER(len=filename_max) :: ic_filename, bc_filename

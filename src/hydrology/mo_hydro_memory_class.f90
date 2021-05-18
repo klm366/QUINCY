@@ -212,6 +212,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid            ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface, soil_w  ! Vertical grids
+    TYPE(t_jsb_vgrid), POINTER :: vgrid_soil_sb    ! Vertical grid
     INTEGER :: table
 
     REAL(wp) :: ini_snow_dens
@@ -225,6 +226,7 @@ CONTAINS
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
     soil_w       => Get_vgrid('soil_depth_water')
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
 
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_config(SSE_)

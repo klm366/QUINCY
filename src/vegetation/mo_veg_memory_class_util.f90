@@ -1589,10 +1589,8 @@ CONTAINS
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: max_no_of_vars, all_elements
+  PUBLIC :: all_elements, Create_veg_tissues_pool
   PUBLIC :: t_veg_main_pool, t_veg_tissues_pool, t_veg_elements_pool
- 
-  INTEGER, PARAMETER :: max_no_of_vars = 530    !< TYPE t_jsb_var | 'normal' var: ~ 220 | 5 pools: 270 var | 4 tissues: 24
 
   !-----------------------------------------------------------------------------------------------------
   !> Type definition for veg_elements_pool

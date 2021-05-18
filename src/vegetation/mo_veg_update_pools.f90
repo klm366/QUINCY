@@ -64,7 +64,7 @@ CONTAINS
     USE mo_jsb_grid_class,                  ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                        ONLY: Get_vgrid
 
-    USE mo_jsb_phys_constants,              ONLY: lambda_C14, rhoh2o, grav
+    USE mo_jsb_physical_constants,          ONLY: lambda_C14, rhoh2o, grav
     USE mo_jsb_math_constants,              ONLY: dtime, one_day, one_year, eps4, eps8
     USE mo_isotope_util,                    ONLY: calc_mixing_ratio_N15N14, calc_fractionation, calc_mixing_ratio_C14C
     USE mo_rad_constants,                   ONLY: rfr_ratio_toc 

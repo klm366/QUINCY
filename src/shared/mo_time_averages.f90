@@ -96,14 +96,14 @@ CONTAINS
     REAL(wp), INTENT(in)                      :: new_value          !< new value
     REAL(wp), INTENT(in)                      :: avg_period_length  !< length of the period over which the variable is averaged
     LOGICAL,          OPTIONAL, INTENT(in)    :: do_calc            !< optional, do calculate new_avg from the new_value T/F
-    CHARACTER(LEN=5), OPTIONAL, INTENT(in)    :: avg_period_unit    !< optional, for different units than 'day' for avg_period length
+    CHARACTER(LEN=*), OPTIONAL, INTENT(in)    :: avg_period_unit    !< optional, for different units than 'day' for avg_period length
     REAL(wp)                                  :: new_avg            !< function output: the new average
     ! ---------------------------
     ! 0.2 Local
     REAL(wp)                                  :: new_value_weight   ! weight of the new value
     REAL(wp)                                  :: avg_period2seconds ! for converting the period length (day, week, year) into seconds
     LOGICAL                                   :: l_do_calc          ! True/ False of the Optional variable do_calc present
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_time_mavg'
+    CHARACTER(LEN=*), PARAMETER :: routine = TRIM(modname)//':calc_time_mavg'
 
 
     !> 1.0 deal with the optional arguments

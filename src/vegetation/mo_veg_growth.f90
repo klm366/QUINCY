@@ -951,14 +951,14 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_meristem_activity(t_air,w_soil_root_theta,growing_season) RESULT(kstar_labile)
 
-    USE mo_kind,              ONLY: wp
-    USE mo_jsb_impl_constants,ONLY: test_false_true
-    USE mo_jsb_phys_constants,ONLY: Tzero
-    USE mo_veg_constants,     ONLY: lambda_labile_temp  , &
-                                    lambda_labile_theta , &
-                                    k_labile_temp       , & 
-                                    k_labile_theta      , &
-                                    tau_labile
+    USE mo_kind,                    ONLY: wp
+    USE mo_jsb_impl_constants,      ONLY: test_false_true
+    USE mo_jsb_physical_constants,  ONLY: Tzero
+    USE mo_veg_constants,           ONLY: lambda_labile_temp  , &
+                                          lambda_labile_theta , &
+                                          k_labile_temp       , & 
+                                          k_labile_theta      , &
+                                          tau_labile
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
@@ -1127,7 +1127,7 @@ CONTAINS
                                               veg_exudation_carbon)
                        
     USE mo_kind,                    ONLY: wp
-    USE mo_jsb_phys_constants,      ONLY: Tzero, molar_mass_C, molar_mass_N
+    USE mo_jsb_physical_constants,  ONLY: Tzero, molar_mass_C, molar_mass_N
     USE mo_isotope_util,            ONLY: calc_mixing_ratio_N15N14
     USE mo_jsb_math_constants,      ONLY: dtime, one_day, one_year, eps8
     USE mo_veg_constants,           ONLY: vmax_bnf, k_bnf, eta_nfixation, transform_cost_nh4, transform_cost_no3, &
@@ -1679,7 +1679,7 @@ CONTAINS
                                             k2_opt )                    
 
     USE mo_jsb_math_constants,      ONLY: one_day, one_year, eps4, eps8
-    USE mo_jsb_phys_constants,      ONLY: rhoh2o
+    USE mo_jsb_physical_constants,  ONLY: rhoh2o
     USE mo_veg_constants,           ONLY: min_height, itree, igrass, sm2lm_grass, w_root_lim_max, &
                                           leaf2root_min_ratio, leaf2root_max_ratio
     USE mo_pheno_constants,         ONLY: ievergreen, iraingreen, isummergreen, iperennial

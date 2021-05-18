@@ -626,7 +626,7 @@ CONTAINS
   ! ======================================================================================================= !
   !> Implementation of "aggregate": time_average_assimilation task
   !>
-  SUBROUTINE aggregate_time_average_assimilation(tile, options)
+  SUBROUTINE aggregate_time_average_soilbiogeochemistry(tile, options)
 
     USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
     USE mo_jsb_task_class,     ONLY: t_jsb_task_options
@@ -637,7 +637,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
     INTEGER                                   :: iblk, ics, ice
-    CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggregate_time_average_assimilation'
+    CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggregate_time_average_soilbiogeochemistry'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(SB_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -696,7 +696,7 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
-  END SUBROUTINE aggregate_time_average_assimilation
+  END SUBROUTINE aggregate_time_average_soilbiogeochemistry
 
 #endif
 END MODULE mo_sb_interface

@@ -175,7 +175,7 @@ CONTAINS
     ! ---------------------------
     ! 0.5 Get Memory
     model         => Get_model(tile%owner_model_id)
-    lctlib        => model%lctlib(tile%lcts%lib_id)
+    lctlib        => model%lctlib(tile%lcts(1)%lib_id)
     vgrid_soil_sb => Get_vgrid('soil_layer_sb')
     nsoil_sb      =  vgrid_soil_sb%n_levels
     ! Get process config
@@ -329,7 +329,7 @@ CONTAINS
     USE mo_atmland_util,              ONLY: calc_spec_humidity_sat
     USE mo_sse_constants,             ONLY: w_skin_max
     USE mo_sse_update_turbulence,     ONLY: calc_filtered_drag_coefficient
-    USE mo_jsb_phys_constants,        ONLY: r_gas_dryair, LatentHeatVaporization, stbo, zemiss_def, grav, cvdifts, cpd, cpvd1
+    USE mo_jsb_physical_constants,    ONLY: r_gas_dryair, LatentHeatVaporization, stbo, zemiss_def, grav, cvdifts, cpd, cpvd1
     USE mo_phy_schemes,               ONLY: heat_transfer_coef, surface_dry_static_energy
 
 
@@ -584,7 +584,7 @@ CONTAINS
                                  w_soil_sl,w_soil_pot_sl,drainage_sl,percolation_sl)      ! inout
 
     USE mo_jsb_math_constants,          ONLY: dtime, eps8
-    USE mo_jsb_phys_constants,          ONLY: grav
+    USE mo_jsb_physical_constants,      ONLY: grav
     USE mo_assimi_update_canopy_fluxes, ONLY: calc_soil_moisture_stress
     USE mo_sse_constants,               ONLY: drain_frac, fdrain_runoff, InterceptionEfficiency, w_skin_max, wpot_min
 
@@ -859,8 +859,8 @@ CONTAINS
 !!                                                net_radiation,ground_heat_flx,heat_transfer_coef, & 
 !!                                                cair,csat,snow_cover_fract,heat_capa_srf) RESULT (dry_static_energy_new)
 !!
-!!    USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
-!!    USE mo_jsb_phys_constants,    ONLY: LatentHeatVaporization,LatentHeatSublimation,cvdifts,stbo,zemiss_def
+!!    USE mo_atmland_util,            ONLY: calc_spec_humidity_sat
+!!    USE mo_jsb_physical_constants,  ONLY: LatentHeatVaporization,LatentHeatSublimation,cvdifts,stbo,zemiss_def
 !!
 !!    IMPLICIT NONE
 !!    ! ---------------------------

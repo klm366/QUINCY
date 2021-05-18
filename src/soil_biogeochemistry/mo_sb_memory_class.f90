@@ -567,28 +567,28 @@ CONTAINS
 
       ! add all variables in the sb_components_pool to the SB_ memory
       CALL mem%Add_var(mem%sb_main_pool%sb_pool, &
-        & hgrid, vgrid_surface, vgrid_soil_sb,                                                         &
+        & hgrid, surface, vgrid_soil_sb,                                                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & loutput=.TRUE.,                                                                              &
         & lrestart=.TRUE.,                                                                             &
         & initval_r = 0.0_wp)
       CALL mem%Add_var(mem%sb_main_pool%sb_formation, &
-        & hgrid, vgrid_surface, vgrid_soil_sb,                                                         &
+        & hgrid, surface, vgrid_soil_sb,                                                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & loutput=.TRUE.,                                                                              &
         & lrestart=.FALSE.,                                                                            &
         & initval_r = 0.0_wp)
       CALL mem%Add_var(mem%sb_main_pool%sb_loss, &
-        & hgrid, vgrid_surface, vgrid_soil_sb,                                                         &
+        & hgrid, surface, vgrid_soil_sb,                                                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & loutput=.TRUE.,                                                                              &
         & lrestart=.FALSE.,                                                                            &
         & initval_r = 0.0_wp)
       CALL mem%Add_var(mem%sb_main_pool%sb_transport, &
-        & hgrid, vgrid_surface, vgrid_soil_sb,                                                         &
+        & hgrid, surface, vgrid_soil_sb,                                                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & loutput=.TRUE.,                                                                              &
@@ -597,14 +597,14 @@ CONTAINS
 
       ! add all variables in the sb_elements_pool to the SB_ memory
       CALL mem%Add_var(mem%sb_main_pool%sb_delta_pools, &
-        & hgrid, vgrid_surface, vgrid_soil_sb,                                                         &
+        & hgrid, surface, vgrid_soil_sb,                                                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & loutput=.TRUE.,                                                                              &
         & lrestart=.TRUE.,                                                                             &
         & initval_r = 0.0_wp)
       CALL mem%Add_var(mem%sb_main_pool%sb_mycorrhiza_export, &
-        & hgrid, vgrid_surface, vgrid_soil_sb,                                                         &
+        & hgrid, surface, vgrid_soil_sb,                                                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & loutput=.TRUE.,                                                                              &

@@ -328,11 +328,14 @@ CONTAINS
     INTEGER :: isnow
 
     LOGICAL  :: lstart
+    INTEGER  :: isoil   ! looping
     INTEGER  :: iblk, ics, ice, nc, i
     REAL(wp) :: dtime
 
     TYPE(t_jsb_vgrid), POINTER :: soil_e, snow_e
+    TYPE(t_jsb_vgrid), POINTER :: vgrid_soil_sb                ! Vertical grid
     INTEGER                    :: nsoil, nsnow
+    INTEGER                    :: nsoil_sb
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_and_snow_temperature'
 
@@ -354,6 +357,8 @@ CONTAINS
       snow_e => Get_vgrid('snow_depth_energy')
       nsnow = snow_e%n_levels
     END IF
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+    nsoil_sb      = vgrid_soil_sb%n_levels
 
     ! Get reference to variables for current block
     !
