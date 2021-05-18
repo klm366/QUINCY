@@ -51,12 +51,13 @@ CONTAINS
     USE mo_jsb_lctlib_class,            ONLY: t_lctlib_element
     USE mo_jsb_grid_class,              ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,                    ONLY: Get_grid, Get_vgrid
-    USE mo_jsb_process_class,           ONLY: SB_
+    USE mo_jsb_process_class,           ONLY: SB_, SSE_
 
     USE mo_jsb_math_constants,          ONLY: eps4, eps8
     USE mo_sb_constants,                ONLY: nh4_solute_prescribe, no3_solute_prescribe
     dsl4jsb_Use_config(SB_)
     dsl4jsb_Use_memory(SB_)
+    dsl4jsb_Use_memory(SSE_)
 #ifdef __QUINCY_NO_JSB__
     dsl4slm_Use_memory_a_sb
     USE mo_sb_memory_class,       ONLY: sb_pool
@@ -80,6 +81,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(SB_)
+    dsl4jsb_Def_memory(SSE_)
 #ifdef __QUINCY_NO_JSB__
 #else
     dsl4jsb_Def_pool(t_sb_components_pool)  :: sb_pool
@@ -101,6 +103,7 @@ CONTAINS
     IF (.NOT. model%config%use_quincy) RETURN       ! only with QUINCY model
     IF (tile%lcts(1)%lib_id == 0) RETURN            ! run this init only if the present tile is a pft
     lctlib        => model%lctlib(tile%lcts(1)%lib_id)
+    hgrid         => Get_grid(model%grid_id)
     vgrid_soil_sb => Get_vgrid('soil_layer_sb')
     nsoil_sb      =  vgrid_soil_sb%n_levels
     nproma        =  hgrid%nproma
@@ -108,6 +111,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_memory(SB_)
+    dsl4jsb_Get_memory(SSE_)
 #ifdef __QUINCY_NO_JSB__
 #else
     ! Get pools
@@ -119,7 +123,7 @@ CONTAINS
     ! SB_ 3D
     dsl4jsb_Get_var3D_onDomain(SB_, nh4_solute)
     dsl4jsb_Get_var3D_onDomain(SB_, no3_solute)
-    ! SSE_ 3D  TODO soil_lay_* var may be moved to HYDRO_
+    ! SSE_ 3D  TODO soil_lay_* var might be moved to HYDRO_ ?
     dsl4jsb_Get_var3D_onDomain(SSE_, soil_lay_width_sl)       
     dsl4jsb_Get_var3D_onDomain(SSE_, soil_lay_depth_center_sl)
     dsl4jsb_Get_var3D_onDomain(SSE_, soil_lay_depth_ubound_sl)

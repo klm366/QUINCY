@@ -165,6 +165,11 @@ MODULE mo_jsb4_forcing
     REAL(wp) :: conv_CO2_2_MassRatio           !! Factor for the conversion of CO2 input data to kg(CO2)/kg(dry air)
     REAL(wp) :: heightWind                     !! Reference height for wind speed [m]; -1 for ECHAM lowest layer
     REAL(wp) :: heightHumidity                 !! Reference height for specific humidity [m]; -1 for ECHAM lowest layer
+    ! quincy @TODO  modify the use of the date-information to how this is done with jsbach4
+    INTEGER  :: forcing_year = 0
+    INTEGER  :: forcing_doy  = 0
+    REAL(wp) :: forcing_hour = 0.0_wp
+    ! quincy - end
   END TYPE forcing_options_type
   TYPE(forcing_options_type), SAVE :: forcing_options
 

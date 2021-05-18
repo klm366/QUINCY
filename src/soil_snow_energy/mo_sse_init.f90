@@ -377,7 +377,7 @@ CONTAINS
     model          => Get_model(tile%owner_model_id)
     IF (.NOT. model%config%use_quincy) RETURN       ! only with QUINCY model
     IF (tile%lcts(1)%lib_id == 0) RETURN            ! run this init only if the present tile is a pft
-    lctlib         => model%lctlib(tile%lcts%lib_id)
+    lctlib         => model%lctlib(tile%lcts(1)%lib_id)
     vgrid_soil_sb  => Get_vgrid('soil_layer_sb')
     nsoil_sb       =  vgrid_soil_sb%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
@@ -600,7 +600,7 @@ CONTAINS
                               dsl4jsb_Config(SSE_)%soil_theta_prescribe * (w_soil_root_fc(:,:) - w_soil_root_pwp(:,:)) 
     w_soil_root_theta(:,:)  = dsl4jsb_Config(SSE_)%soil_theta_prescribe
     DO iblk = 1,nblks
-      w_soil_root_pot(:,iblk) = saxtonA(:,1,iblk) * (MIN(w_soil_root_fc,w_soil_root(:,iblk)) / root_depth(:,iblk)) ** &
+      w_soil_root_pot(:,iblk) = saxtonA(:,1,iblk) * (MIN(w_soil_root_fc(:,iblk), w_soil_root(:,iblk)) / root_depth(:,iblk)) ** &
         & saxtonB(:,1,iblk) 
     ENDDO
 
@@ -622,13 +622,13 @@ CONTAINS
       DO isoil=2,nsoil_sb
         WHERE(root_depth(:,iblk) > soil_lay_depth_ubound_sl(:,isoil-1,iblk))
           WHERE(root_depth(:,iblk) > soil_lay_depth_ubound_sl(:,isoil,iblk))
-            root_fraction_sl(:,isoil) = (EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(:,isoil-1,iblk)) - &
-                                         EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(:,isoil,iblk))) / & 
-                                        (1._wp - EXP(-lctlib%k_root_dist * root_depth(:,iblk)))
+            root_fraction_sl(:,isoil,iblk) = (EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(:,isoil-1,iblk)) - &
+                                              EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(:,isoil,iblk))) / & 
+                                             (1._wp - EXP(-lctlib%k_root_dist * root_depth(:,iblk)))
           ELSEWHERE
-            root_fraction_sl(:,isoil) = (EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(:,isoil-1,iblk)) - &
-                                         EXP(-lctlib%k_root_dist * root_depth(:,iblk))) / & 
-                                        (1._wp - EXP(-lctlib%k_root_dist * root_depth(:,iblk)))
+            root_fraction_sl(:,isoil,iblk) = (EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(:,isoil-1,iblk)) - &
+                                              EXP(-lctlib%k_root_dist * root_depth(:,iblk))) / & 
+                                             (1._wp - EXP(-lctlib%k_root_dist * root_depth(:,iblk)))
           ENDWHERE
         ELSEWHERE
           root_fraction_sl(:,isoil,iblk) = 0.0_wp 

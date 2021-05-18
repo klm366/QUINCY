@@ -15,6 +15,7 @@
 MODULE mo_jsb_config_class
 #ifndef __NO_JSBACH__
 
+  USE mo_kind,              ONLY: wp
   USE mo_io_units,          ONLY: filename_max
   USE mo_exception,         ONLY: message
 
@@ -37,6 +38,14 @@ MODULE mo_jsb_config_class
     LOGICAL                        :: l_compat401      ! Use configuration compatible with jsbach 4.01
     CHARACTER(len=10), ALLOCATABLE :: output_tiles(:)  ! List of tile names for which output should be generated
     LOGICAL                        :: relative_fractions_in_file  ! true: tile fractions in fract_filename are relative to parent tile
+    ! quincy @TODO temporary solution for model%config%options
+    REAL(wp)          :: dtime                   !< length of one time step in seconds; defaults to 1800  @TODO
+    CHARACTER(len=20) :: slm_model_name
+    LOGICAL           :: flag_stand_harvest
+    INTEGER           :: stand_replacing_year
+    LOGICAL           :: l_do_stand_replacing_harvest
+    LOGICAL           :: l_transient_spinup
+    ! quincy - end
 
   END TYPE t_jsb_model_config
 
@@ -148,6 +157,14 @@ CONTAINS
     model_config%hsm_mode                   = hsm_mode
     model_config%fract_filename             = fract_filename
     model_config%relative_fractions_in_file = relative_fractions_in_file
+    ! quincy - temporary solution @TODO
+    model_config%dtime                        = 1800.0_wp   ! length of one time step in seconds
+    model_config%slm_model_name               = 'plant'     ! default in quincy is the coupled veg-soil model, a.k.a. land
+    model_config%flag_stand_harvest           = .FALSE.
+    model_config%stand_replacing_year         = 1500
+    model_config%l_do_stand_replacing_harvest = .FALSE.
+    model_config%l_transient_spinup           = .FALSE.
+    ! quincy - end
 
     DO i=1,99
       IF (output_tiles(i) == '') EXIT

@@ -333,8 +333,8 @@ CONTAINS
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_falloc,          veg_falloc)
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_exudation,       veg_exudation)
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_reserve_use,     veg_reserve_use)
-    dsl4jsb_Get_pool(SB_,  sb_main_pool%sb_pool               sb_pool)
-    dsl4jsb_Get_pool(SB_,  sb_main_pool%sb_mycorrhiza_export  sb_mycorrhiza_export)
+    dsl4jsb_Get_pool(SB_,  sb_main_pool%sb_pool,              sb_pool)
+    dsl4jsb_Get_pool(SB_,  sb_main_pool%sb_mycorrhiza_export, sb_mycorrhiza_export)
 #endif
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)                   ! in
@@ -2028,7 +2028,6 @@ CONTAINS
     USE mo_jsb_math_constants,    ONLY: one_day, eps8
     USE mo_veg_constants,         ONLY: tau_labile, fresp_growth, resorp_fract_leaf, igrass, itree, &
                                         fstore_leaf_max, fstore_fine_root_max, fstore_sap_wood_max
-    dsl4slm_Use_memory_a_veg
 
     IMPLICIT NONE
     ! ---------------------------

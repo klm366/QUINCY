@@ -202,7 +202,7 @@ CONTAINS
     ! PHENO_ 2D
     dsl4jsb_Get_var2D_onDomain(PHENO_, lai)                           ! in
     ! PHENO_ 3D
-    dsl4jsb_Get_var2D_onDomain(PHENO_, lai_cl)                        ! in
+    dsl4jsb_Get_var3D_onDomain(PHENO_, lai_cl)                        ! in
     ! VEG_ 2D
     dsl4jsb_Get_var2D_onDomain(VEG_, target_cn_leaf)
     dsl4jsb_Get_var2D_onDomain(VEG_, target_np_leaf)

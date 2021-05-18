@@ -74,7 +74,7 @@ CONTAINS
     USE mo_assimi_constants,                ONLY: CiCa_default_C3, CiCa_default_C4, ic3phot, ic4phot
     USE mo_atmland_constants,               ONLY: def_co2_mixing_ratio, def_co2_mixing_ratio_C13, def_co2_mixing_ratio_C14, &
                                                   def_co2_deltaC13, def_co2_deltaC14
-!    USE mo_assimi_update_canopy_fluxes,     ONLY: discrimination_ps
+    USE mo_assimi_update_canopy_fluxes,     ONLY: discrimination_ps
     USE mo_pheno_constants,                 ONLY: ievergreen
 
     ! Use of process configurations (t_PROC_config)
@@ -260,7 +260,7 @@ CONTAINS
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_establishment,   veg_establishment)
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_reserve_use,     veg_reserve_use)
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_total_biomass,   veg_total_biomass)
-    dsl4jsb_Get_pool(VEG_, sb_main_pool%sb_pool,              sb_pool)
+    dsl4jsb_Get_pool(SB_,  sb_main_pool%sb_pool,              sb_pool)
     dsl4jsb_Get_pool(SB_,  sb_main_pool%sb_mycorrhiza_export, sb_mycorrhiza_export)
 #endif
     ! Get process variables (Set pointers to variables in memory)

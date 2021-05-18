@@ -269,12 +269,15 @@ CONTAINS
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                ONLY: Get_vgrid
     USE mo_time_averages            ! e.g. calc_time_mavg, mavg_period_tphen, mavg_period_weekly
-    dsl4jsb_Use_processes A2L_, ASSIMI_, VEG_, PHENO_, HYDRO_
+    dsl4jsb_Use_processes A2L_, ASSIMI_, VEG_, PHENO_, HYDRO_, SSE_
     dsl4jsb_Use_config(VEG_)
+    dsl4jsb_Use_config(ASSIMI_)
     dsl4jsb_Use_memory(A2L_)
+    dsl4jsb_Use_memory(ASSIMI_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(PHENO_)
     dsl4jsb_Use_memory(HYDRO_)
+    dsl4jsb_Use_memory(SSE_)
 #ifdef __QUINCY_NO_JSB__
     dsl4slm_Use_memory_a_veg
     USE mo_veg_memory_class,    ONLY: veg_pool
@@ -299,14 +302,17 @@ CONTAINS
     INTEGER                                 :: iblk, ics, ice, nc   !< dimensions
     CHARACTER(len=*), PARAMETER             :: routine = modname//':update_time_average_vegetation'
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(SSE_)
 #ifdef __QUINCY_NO_JSB__
 #else
+    dsl4jsb_Def_pool(t_veg_elements_pool)   :: veg_exudation
     dsl4jsb_Def_pool(t_veg_tissues_pool)    :: veg_pool
 #endif
     ! ----------------------------------------------------------------------------------------------------- !
@@ -322,6 +328,7 @@ CONTAINS
     ! ASSIMI_
     dsl4jsb_Real2D_onChunk      :: gross_assimilation
     dsl4jsb_Real2D_onChunk      :: net_assimilation_boc
+    dsl4jsb_Real2D_onChunk      :: t_jmax_opt
     ! PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: growing_season
     dsl4jsb_Real2D_onChunk      :: lai 
@@ -431,10 +438,10 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_daytime_dacc_cl
     ! HYDRO_ 2D
     dsl4jsb_Real2D_onChunk      :: transpiration
-    ! SSE_ 2D
-    dsl4jsb_Real2D_onChunk      :: t_soil_root
     dsl4jsb_Real2D_onChunk      :: w_soil_root
     dsl4jsb_Real2D_onChunk      :: w_soil_root_fc
+    ! SSE_ 2D
+    dsl4jsb_Real2D_onChunk      :: t_soil_root
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -453,14 +460,17 @@ CONTAINS
     vgrid_canopy  => Get_vgrid('canopy_layer_q_')
 #endif
     ncanopy       =  vgrid_canopy%n_levels
+    dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(SSE_)
 #ifdef __QUINCY_NO_JSB__
 #else
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_exudation,       veg_exudation)
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_pool,            veg_pool)
 #endif
     ALLOCATE(l_growing_season_cl(nc, ncanopy))
@@ -477,6 +487,7 @@ CONTAINS
     ! ASSIMI_
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, net_assimilation_boc)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, t_jmax_opt)
     ! PHENO_ 2D
     dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)               ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                          ! in
@@ -586,10 +597,10 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_daytime_dacc_cl)
     ! HYDRO_ 2D
     dsl4jsb_Get_var2D_onChunk(HYDRO_, transpiration)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_root)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_root_fc)
     ! SSE_ 2D
     dsl4jsb_Get_var2D_onChunk(SSE_, t_soil_root)
-    dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root)
-    dsl4jsb_Get_var2D_onChunk(SSE_, w_soil_root_fc)
     ! ----------------------------------------------------------------------------------------------------- !
 #ifdef __QUINCY_NO_JSB__
 #define Get_veg_pool
@@ -602,13 +613,16 @@ CONTAINS
 
     !>0.9 transform REAL growing_season(:) into LOGICAL l_growing_season(:)/_cl(:,:)
     !>
-    WHERE (growing_season(:) > test_false_true)
-      l_growing_season(:)      = .TRUE.
-      l_growing_season_cl(:,:) = .TRUE.
-    ELSEWHERE
-      l_growing_season(:)      = .FALSE.
-      l_growing_season_cl(:,:) = .FALSE.
-    ENDWHERE
+    DO ic = 1, nc
+      IF (growing_season(ic) > test_false_true) THEN
+        l_growing_season(ic)      = .TRUE.
+        l_growing_season_cl(ic,:) = .TRUE.
+      ELSE
+        l_growing_season(ic)      = .FALSE.
+        l_growing_season_cl(ic,:) = .FALSE.
+      END IF
+    END DO
+
 
     ! ----------------------------------------------------------------------------------------------------- !
     !>1.0 daytime averages

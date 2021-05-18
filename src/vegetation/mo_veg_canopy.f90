@@ -547,41 +547,41 @@ CONTAINS
       fn_rub_cl    = fn_rub0_cl
       fn_pepc_cl   = fn_pepc0_cl
 
-      ! calculate photosynthesis with previous fractions
-      CALL calc_photosynthesis(  gmin                          , &  ! lctlib
-                                 g0                            , &
-                                 g1                            , &
-                                 t_jmax_omega                  , &
-                                 ps_pathway                    , &  ! lctlib
-                                 canopy_cond_scheme            , &  ! ASSIMI_ config (medlyn/ballberry)
-                                 t_air                         , &  ! in
-                                 press_srf                     , &
-                                 co2_mixing_ratio              , &
-                                 ga                            , &
-                                 t_acclim                      , &
-                                 ppfd_sunlit_cl                , &
-                                 ppfd_shaded_cl                , &
-                                 fleaf_sunlit_cl               , &
-                                 beta_air                      , &
-                                 beta_soa                      , &
-                                 beta_soil_ps                  , &
-                                 beta_sinklim_ps               , &
-                                 beta_soil_gs                  , &
-                                 fn_chl0_cl*(1._wp-fn_oth_cl)  , &
-                                 fn_et0_cl*(1._wp-fn_oth_cl)   , &
-                                 fn_rub0_cl*(1._wp-fn_oth_cl)  , &
-                                 fn_pepc0_cl*(1._wp-fn_oth_cl) , &
-                                 lai_cl                        , &    ! used for: IF statement whether this routine may run or not
-                                 leaf_nitrogen_cl              , &
-                                 t_jmax_opt                    , &
-                                 ag0_cl                        , &  ! out
-                                 an0_cl                        , &
-                                 r0_cl                         , &
-                                 gs0_cl                        , &
-                                 ci0_cl                        , &
-                                 m_rub                         , &
-                                 m_et                          , &
-                                 m_pepc )
+      ! ! calculate photosynthesis with previous fractions
+      ! CALL calc_photosynthesis(  gmin                          , &  ! lctlib
+      !                            g0                            , &
+      !                            g1                            , &
+      !                            t_jmax_omega                  , &
+      !                            ps_pathway                    , &  ! lctlib
+      !                            canopy_cond_scheme            , &  ! ASSIMI_ config (medlyn/ballberry)
+      !                            t_air                         , &  ! in
+      !                            press_srf                     , &
+      !                            co2_mixing_ratio              , &
+      !                            ga                            , &
+      !                            t_acclim                      , &
+      !                            ppfd_sunlit_cl                , &
+      !                            ppfd_shaded_cl                , &
+      !                            fleaf_sunlit_cl               , &
+      !                            beta_air                      , &
+      !                            beta_soa                      , &
+      !                            beta_soil_ps                  , &
+      !                            beta_sinklim_ps               , &
+      !                            beta_soil_gs                  , &
+      !                            fn_chl0_cl*(1._wp-fn_oth_cl)  , &
+      !                            fn_et0_cl*(1._wp-fn_oth_cl)   , &
+      !                            fn_rub0_cl*(1._wp-fn_oth_cl)  , &
+      !                            fn_pepc0_cl*(1._wp-fn_oth_cl) , &
+      !                            lai_cl                        , &    ! used for: IF statement whether this routine may run or not
+      !                            leaf_nitrogen_cl              , &
+      !                            t_jmax_opt                    , &
+      !                            ag0_cl                        , &  ! out
+      !                            an0_cl                        , &
+      !                            r0_cl                         , &
+      !                            gs0_cl                        , &
+      !                            ci0_cl                        , &
+      !                            m_rub                         , &
+      !                            m_et                          , &
+      !                            m_pepc )
 
       !> 2.0 Attempt to increase PS by increasing the N fraction in chlorophyll
       !!
@@ -598,19 +598,19 @@ CONTAINS
                                    fn_chl_cl, fn_rub_opt_cl, fn_et_opt_cl, fn_pepc_opt_cl, &
                                    fn_rub_cl, fn_et_cl, fn_pepc_cl)
 
-      ! re-calculate photosynthesis
-      CALL calc_photosynthesis( &
-               gmin, g0, g1, t_jmax_omega, ps_pathway, &
-               canopy_cond_scheme, &  ! ASSIMI_ config (medlyn/ballberry)
-               t_air,press_srf,co2_mixing_ratio,ga,t_acclim, &
-               ppfd_sunlit_cl,ppfd_shaded_cl,fleaf_sunlit_cl, &
-               beta_air,beta_soa,beta_soil_ps,beta_sinklim_ps,beta_soil_gs, &
-               fn_chl_cl*(1._wp-fn_oth_cl),fn_et_cl*(1._wp-fn_oth_cl),fn_rub_cl*(1._wp-fn_oth_cl), &
-               fn_pepc_cl*(1._wp-fn_oth_cl),&
-               lai_cl                        , &    ! used for: IF statement whether this routine may run or not
-               leaf_nitrogen_cl, &
-               t_jmax_opt, &
-               ag_cl,an_cl,r_cl,gs_cl,ci_cl,hlp1,hlp2,hlp3)
+      ! ! re-calculate photosynthesis
+      ! CALL calc_photosynthesis( &
+      !          gmin, g0, g1, t_jmax_omega, ps_pathway, &
+      !          canopy_cond_scheme, &  ! ASSIMI_ config (medlyn/ballberry)
+      !          t_air,press_srf,co2_mixing_ratio,ga,t_acclim, &
+      !          ppfd_sunlit_cl,ppfd_shaded_cl,fleaf_sunlit_cl, &
+      !          beta_air,beta_soa,beta_soil_ps,beta_sinklim_ps,beta_soil_gs, &
+      !          fn_chl_cl*(1._wp-fn_oth_cl),fn_et_cl*(1._wp-fn_oth_cl),fn_rub_cl*(1._wp-fn_oth_cl), &
+      !          fn_pepc_cl*(1._wp-fn_oth_cl),&
+      !          lai_cl                        , &    ! used for: IF statement whether this routine may run or not
+      !          leaf_nitrogen_cl, &
+      !          t_jmax_opt, &
+      !          ag_cl,an_cl,r_cl,gs_cl,ci_cl,hlp1,hlp2,hlp3)
 
 
       !> 3.0 check if increased chlorophyll has increased photosynthesis. If not, try decreasing it.
@@ -633,19 +633,19 @@ CONTAINS
                                      fn_chl_cl,fn_rub_opt_cl,fn_et_opt_cl,fn_pepc_opt_cl, &
                                      fn_rub_cl,fn_et_cl,fn_pepc_cl)
 
-        ! re-calculate photosynthesis
-        CALL calc_photosynthesis( &
-                 gmin, g0, g1, t_jmax_omega, ps_pathway, &
-                 canopy_cond_scheme, &  ! ASSIMI_ config (medlyn/ballberry)
-                 t_air,press_srf,co2_mixing_ratio,ga,t_acclim, &
-                 ppfd_sunlit_cl,ppfd_shaded_cl,fleaf_sunlit_cl,&
-                 beta_air,beta_soa,beta_soil_ps,beta_sinklim_ps,beta_soil_gs, &
-                 fn_chl_cl*(1._wp-fn_oth_cl), fn_et_cl*(1._wp-fn_oth_cl), fn_rub_cl*(1._wp-fn_oth_cl), &
-                 fn_pepc_cl*(1._wp-fn_oth_cl),&
-                 lai_cl                        , &    ! used for: IF statement whether this routine may run or not
-                 leaf_nitrogen_cl, &
-                 t_jmax_opt, &
-                 ag_cl,an_cl,r_cl,gs_cl,ci_cl,hlp1,hlp2,hlp3)
+        ! ! re-calculate photosynthesis
+        ! CALL calc_photosynthesis( &
+        !          gmin, g0, g1, t_jmax_omega, ps_pathway, &
+        !          canopy_cond_scheme, &  ! ASSIMI_ config (medlyn/ballberry)
+        !          t_air,press_srf,co2_mixing_ratio,ga,t_acclim, &
+        !          ppfd_sunlit_cl,ppfd_shaded_cl,fleaf_sunlit_cl,&
+        !          beta_air,beta_soa,beta_soil_ps,beta_sinklim_ps,beta_soil_gs, &
+        !          fn_chl_cl*(1._wp-fn_oth_cl), fn_et_cl*(1._wp-fn_oth_cl), fn_rub_cl*(1._wp-fn_oth_cl), &
+        !          fn_pepc_cl*(1._wp-fn_oth_cl),&
+        !          lai_cl                        , &    ! used for: IF statement whether this routine may run or not
+        !          leaf_nitrogen_cl, &
+        !          t_jmax_opt, &
+        !          ag_cl,an_cl,r_cl,gs_cl,ci_cl,hlp1,hlp2,hlp3)
 
         ! if photosyntheis has still not increased, do not change fn_chl_cl
         IF (an_cl < an0_cl) THEN
@@ -1064,45 +1064,45 @@ CONTAINS
     ! calculate photosynthesis by integration over canopy layers containing leaves
     net_assimilation_new(:)  = 0.0_wp
     canopy_cond_new(:)       = 0.0_wp
-    DO icanopy = 1,ncanopy
-      CALL calc_photosynthesis(     lctlib_gmin                     , & ! lctlib
-                                    lctlib_g0                       , &
-                                    lctlib_g1                       , &
-                                    lctlib_t_jmax_omega             , &
-                                    lctlib_ps_pathway               , &
-                                    canopy_cond_scheme              , & ! ASSIMI_ config (medlyn/ballberry)
-                                    t_air(:)                        , & ! in
-                                    press_srf(:)                    , &
-                                    co2_mixing_ratio(:)             , &
-                                    ga(:)                           , &
-                                    t_air_tacclim_mavg(:)           , &
-                                    loc_ppfd_sunlit_cl(:,icanopy)   , &
-                                    loc_ppfd_shaded_cl(:,icanopy)   , &
-                                    loc_fleaf_sunlit_cl(:,icanopy)  , &
-                                    beta_air(:)                     , &
-                                    beta_soa(:)                     , &
-                                    beta_soil_ps(:)                 , &
-                                    beta_sinklim_local(:)           , &
-                                    beta_soil_gs(:)                 , &
-                                    fn_chl_new_cl(:,icanopy)        , &
-                                    fn_et_new_cl(:,icanopy)         , &
-                                    fn_rub_new_cl(:,icanopy)        , &
-                                    fn_pepc_new_cl(:,icanopy)       , &
-                                    lai_new_cl(:,icanopy)           , &   ! used for: IF statement whether this routine may run or not
-                                    leaf_nitrogen_new_cl(:,icanopy) , &
-                                    t_jmax_opt_mavg(:)              , &
-                                    ag(:)                           , & ! out (values per canopy layer)
-                                    an(:)                           , &
-                                    resp(:)                         , &
-                                    gs(:)                           , &
-                                    hlp0(:)                         , &
-                                    hlp1(:)                         , &
-                                    hlp2(:)                         , &
-                                    hlp3(:)                         )
-
-      net_assimilation_new(:) = net_assimilation_new(:) + an(:) * lai_new_cl(:,icanopy)
-      canopy_cond_new(:)      = canopy_cond_new(:)      + gs(:) * lai_new_cl(:,icanopy)
-    ENDDO
+    ! DO icanopy = 1,ncanopy
+    !   CALL calc_photosynthesis(     lctlib_gmin                     , & ! lctlib
+    !                                 lctlib_g0                       , &
+    !                                 lctlib_g1                       , &
+    !                                 lctlib_t_jmax_omega             , &
+    !                                 lctlib_ps_pathway               , &
+    !                                 canopy_cond_scheme              , & ! ASSIMI_ config (medlyn/ballberry)
+    !                                 t_air(:)                        , & ! in
+    !                                 press_srf(:)                    , &
+    !                                 co2_mixing_ratio(:)             , &
+    !                                 ga(:)                           , &
+    !                                 t_air_tacclim_mavg(:)           , &
+    !                                 loc_ppfd_sunlit_cl(:,icanopy)   , &
+    !                                 loc_ppfd_shaded_cl(:,icanopy)   , &
+    !                                 loc_fleaf_sunlit_cl(:,icanopy)  , &
+    !                                 beta_air(:)                     , &
+    !                                 beta_soa(:)                     , &
+    !                                 beta_soil_ps(:)                 , &
+    !                                 beta_sinklim_local(:)           , &
+    !                                 beta_soil_gs(:)                 , &
+    !                                 fn_chl_new_cl(:,icanopy)        , &
+    !                                 fn_et_new_cl(:,icanopy)         , &
+    !                                 fn_rub_new_cl(:,icanopy)        , &
+    !                                 fn_pepc_new_cl(:,icanopy)       , &
+    !                                 lai_new_cl(:,icanopy)           , &   ! used for: IF statement whether this routine may run or not
+    !                                 leaf_nitrogen_new_cl(:,icanopy) , &
+    !                                 t_jmax_opt_mavg(:)              , &
+    !                                 ag(:)                           , & ! out (values per canopy layer)
+    !                                 an(:)                           , &
+    !                                 resp(:)                         , &
+    !                                 gs(:)                           , &
+    !                                 hlp0(:)                         , &
+    !                                 hlp1(:)                         , &
+    !                                 hlp2(:)                         , &
+    !                                 hlp3(:)                         )
+    ! 
+    !   net_assimilation_new(:) = net_assimilation_new(:) + an(:) * lai_new_cl(:,icanopy)
+    !   canopy_cond_new(:)      = canopy_cond_new(:)      + gs(:) * lai_new_cl(:,icanopy)
+    ! ENDDO
 
 
     !> 3.0 Calculate change in canopy fluxes from altered LAI
@@ -1191,7 +1191,7 @@ CONTAINS
 
     USE mo_jsb_math_constants,            ONLY: dtime, one_day, one_year, eps4, eps8
     USE mo_veg_constants,                 ONLY: delta_n_leaf, resorp_fract_leaf
-    USE mo_quincy_update_time_averages,   ONLY: mavg_period_tgrowth
+    USE mo_time_averages,                 ONLY: mavg_period_tgrowth
     USE mo_pheno_constants,               ONLY: ievergreen, iraingreen, isummergreen, iperennial
 
     IMPLICIT NONE
@@ -1364,42 +1364,42 @@ CONTAINS
                    END WHERE
                 END IF
 
-                ! calculate photosynthesis for each layer
-                DO icanopy =1, ncanopy
-                   CALL calc_photosynthesis( &
-                       lctlib_gmin                                   , & ! lctlib
-                       lctlib_g0                                     , &
-                       lctlib_g1                                     , &
-                       lctlib_t_jmax_omega                           , &
-                       lctlib_ps_pathway                             , &
-                       canopy_cond_scheme                            , &  ! ASSIMI_ config (medlyn/ballberry)
-                       t_air_tcnl_mavg(ipoint)                       , &  ! in
-                       press_srf_tcnl_mavg(ipoint)                   , &
-                       co2_mixing_ratio_tcnl_mavg(ipoint)            , &
-                       ga_tcnl_mavg(ipoint)                          , &
-                       t_air_tacclim_mavg(ipoint)                    , &
-                       ppfd_sunlit_tcnl_mavg_cl(ipoint,icanopy)      , &
-                       ppfd_shaded_tcnl_mavg_cl(ipoint,icanopy)      , &
-                       fleaf_sunlit_tcnl_mavg_cl(ipoint,icanopy)     , &
-                       beta_air_tcnl_mavg(ipoint)                    , &
-                       beta_soa_tphen_mavg(ipoint)                   , &
-                       beta_soil_ps_tcnl_mavg(ipoint)                , &
-                       beta_sinklim_ps_local(ipoint)                 , &
-                       beta_soil_gs_tcnl_mavg(ipoint)                , &
-                       fn_chl_new_cl(ipoint,icanopy)                 , &
-                       fn_et_new_cl(ipoint,icanopy)                  , &
-                       fn_rub_new_cl(ipoint,icanopy)                 , &
-                       fn_pepc_new_cl(ipoint,icanopy)                , &
-                       lai_new_cl(ipoint,icanopy)                    , &   ! used for: IF statement whether this routine may run or not
-                       leaf_nitrogen_new_cl(ipoint,icanopy)          , &
-                       t_jmax_opt_mavg(ipoint)                       , &
-                       agl                                           , &
-                       anl                                           , &
-                       rl                                            , &
-                       hlp00, hlp0, hlp1, hlp2, hlp3                 )
-
-                npp_direction(dd) = npp_direction(dd) + anl * lai_new_cl(ipoint,icanopy)
-                ENDDO  ! icanopy =1, ncanopy
+                ! ! calculate photosynthesis for each layer
+                ! DO icanopy =1, ncanopy
+                !    CALL calc_photosynthesis( &
+                !        lctlib_gmin                                   , & ! lctlib
+                !        lctlib_g0                                     , &
+                !        lctlib_g1                                     , &
+                !        lctlib_t_jmax_omega                           , &
+                !        lctlib_ps_pathway                             , &
+                !        canopy_cond_scheme                            , &  ! ASSIMI_ config (medlyn/ballberry)
+                !        t_air_tcnl_mavg(ipoint)                       , &  ! in
+                !        press_srf_tcnl_mavg(ipoint)                   , &
+                !        co2_mixing_ratio_tcnl_mavg(ipoint)            , &
+                !        ga_tcnl_mavg(ipoint)                          , &
+                !        t_air_tacclim_mavg(ipoint)                    , &
+                !        ppfd_sunlit_tcnl_mavg_cl(ipoint,icanopy)      , &
+                !        ppfd_shaded_tcnl_mavg_cl(ipoint,icanopy)      , &
+                !        fleaf_sunlit_tcnl_mavg_cl(ipoint,icanopy)     , &
+                !        beta_air_tcnl_mavg(ipoint)                    , &
+                !        beta_soa_tphen_mavg(ipoint)                   , &
+                !        beta_soil_ps_tcnl_mavg(ipoint)                , &
+                !        beta_sinklim_ps_local(ipoint)                 , &
+                !        beta_soil_gs_tcnl_mavg(ipoint)                , &
+                !        fn_chl_new_cl(ipoint,icanopy)                 , &
+                !        fn_et_new_cl(ipoint,icanopy)                  , &
+                !        fn_rub_new_cl(ipoint,icanopy)                 , &
+                !        fn_pepc_new_cl(ipoint,icanopy)                , &
+                !        lai_new_cl(ipoint,icanopy)                    , &   ! used for: IF statement whether this routine may run or not
+                !        leaf_nitrogen_new_cl(ipoint,icanopy)          , &
+                !        t_jmax_opt_mavg(ipoint)                       , &
+                !        agl                                           , &
+                !        anl                                           , &
+                !        rl                                            , &
+                !        hlp00, hlp0, hlp1, hlp2, hlp3                 )
+                ! 
+                ! npp_direction(dd) = npp_direction(dd) + anl * lai_new_cl(ipoint,icanopy)
+                ! ENDDO  ! icanopy =1, ncanopy
                 
                 ! adjust for change in fine root respiration
                 npp_direction(dd) = npp_direction(dd) - root_nitrogen_new(ipoint) * fmaint_rate(ipoint)

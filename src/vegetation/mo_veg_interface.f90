@@ -336,7 +336,6 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_reset_veg_fluxes'
   
     ! Declare process configuration and memory Pointers
-    !dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_memory(VEG_)
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -352,7 +351,6 @@ CONTAINS
       model => Get_model(tile%owner_model_id)
 
       ! Get process config
-      !dsl4jsb_Get_config(VEG_)
       ! Get process memories
       dsl4jsb_Get_memory(VEG_)
 
@@ -385,7 +383,6 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_memory(VEG_)
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -401,8 +398,6 @@ CONTAINS
     ! 0.5 Get Memory
     ! Get process variables (Set pointers to variables in memory)
     model => Get_model(tile%owner_model_id)
-    ! Get process config
-    dsl4jsb_Get_config(VEG_)
     ! Get process memories
     dsl4jsb_Get_memory(VEG_)
 
@@ -445,7 +440,6 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_memory(VEG_)
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -461,8 +455,6 @@ CONTAINS
     ! 0.5 Get Memory
     ! Get process variables (Set pointers to variables in memory)
     model => Get_model(tile%owner_model_id)
-    ! Get process config
-    dsl4jsb_Get_config(VEG_)
     ! Get process memories
     dsl4jsb_Get_memory(VEG_)
 
@@ -505,7 +497,6 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_memory(VEG_)
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -521,8 +512,6 @@ CONTAINS
     ! 0.5 Get Memory
     ! Get process variables (Set pointers to variables in memory)
     model => Get_model(tile%owner_model_id)
-    ! Get process config
-    dsl4jsb_Get_config(VEG_)
     ! Get process memories
     dsl4jsb_Get_memory(VEG_)
 
@@ -565,7 +554,6 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_memory(VEG_)
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -581,8 +569,6 @@ CONTAINS
     ! 0.5 Get Memory
     ! Get process variables (Set pointers to variables in memory)
     model => Get_model(tile%owner_model_id)
-    ! Get process config
-    dsl4jsb_Get_config(VEG_)
     ! Get process memories
     dsl4jsb_Get_memory(VEG_)
 
