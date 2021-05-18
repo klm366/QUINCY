@@ -125,7 +125,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   REAL(wp) ELEMENTAL FUNCTION lwnet_from_lwdown(lwdown, t_srf)
 
-    USE mo_physical_constants, ONLY: &
+    USE mo_jsb_physical_constants, ONLY: &
       stbo,       &  !< Stefan-Boltzmann constant
       zemiss_def     !< Surface emissivity
 

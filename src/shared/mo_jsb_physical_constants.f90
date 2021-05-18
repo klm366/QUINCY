@@ -34,6 +34,13 @@ MODULE mo_jsb_physical_constants
     molarMassDryAir = amd   * 1.e-3_wp, & ! 28.970e-3_wp. Mass [kg] per amount of substance [mol] of dry air
     molarMassCO2    = amco2 * 1.e-3_wp    ! 44.0095e-3_wp. Mass [kg] per amount of substance [mol] of CO2
 
+
+  ! moved here from mo_jsb4_forcing for consistency
+  REAL(wp), PARAMETER :: ckap = 0.4_wp      !< von Karmann constant for evaporation
+                                            !originally from echam mo_physc2.f90 and in jsb3 initialised with jsbalone_iniphy
+  REAL(wp), PARAMETER :: zkappa = rd / cpd  !< specific gas constant for dry air / dry air specific heat at constant pressure
+
+
   !! quincy - physical constants
   ! most ECHAM constants are defined in: 
   !   echam/src/echam/jsbach4_util_mods.f90 -> mo_physical_constants_iface -> mo_physical_constants.f90

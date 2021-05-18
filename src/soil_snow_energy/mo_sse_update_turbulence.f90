@@ -35,23 +35,11 @@ MODULE mo_sse_update_turbulence
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message
 
-#ifdef __QUINCY_NO_JSB__
-  USE mo_jsb_physical_constants,    ONLY: zkappa, ckap
-#else
-  USE mo_jsb_physical_constants,    ONLY: rd, cpd
-#endif
-
 
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: update_soil_turbulence, calc_filtered_drag_coefficient
 
-#ifdef __QUINCY_NO_JSB__
-#else
-  ! in jsb4 defined & declared in mo_jsb4_forcing, but creates cyclic dependency when used here from this module
-  REAL(wp), PARAMETER :: ckap = 0.4_wp
-  REAL(wp), PARAMETER :: zkappa = rd / cpd
-#endif
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sse_update_turbulence'
 
@@ -76,7 +64,7 @@ CONTAINS
     USE mo_jsb_math_constants,      ONLY: dtime
     USE mo_atmland_constants,       ONLY: min_wind, max_wind 
     USE mo_atmland_util,            ONLY: calc_spec_humidity_sat
-    USE mo_jsb_physical_constants,  ONLY: grav, r_gas_vapour, r_gas_dryair, cpd, cpvd1, cvdifts, vtmpc1
+    USE mo_jsb_physical_constants,  ONLY: grav, r_gas_vapour, r_gas_dryair, cpd, cpvd1, cvdifts, vtmpc1, zkappa
     USE mo_sse_constants,           ONLY: height_wind
   
     ! Use of process configurations (t_PROC_config)
@@ -231,7 +219,7 @@ CONTAINS
                                             height,zril_old,drag_srf,pch,ga)
   
     USE mo_atmland_util,            ONLY: calc_spec_humidity_sat
-    USE mo_jsb_physical_constants,  ONLY: grav, r_gas_vapour, r_gas_dryair, cpd, cpvd1, cvdifts, vtmpc1
+    USE mo_jsb_physical_constants,  ONLY: grav, r_gas_vapour, r_gas_dryair, cpd, cpvd1, cvdifts, vtmpc1, zkappa
     USE mo_sse_constants,           ONLY: height_wind
   
     IMPLICIT NONE
@@ -333,7 +321,7 @@ CONTAINS
                                    drag_srf,pch,ga)            
   
     USE mo_phy_schemes,            ONLY: heat_transfer_coef
-    USE mo_jsb_physical_constants, ONLY: grav, r_gas_vapour, r_gas_dryair, cvdifts, vtmpc1
+    USE mo_jsb_physical_constants, ONLY: grav, r_gas_vapour, r_gas_dryair, cvdifts, vtmpc1, ckap
   
     IMPLICIT NONE
     ! ---------------------------
