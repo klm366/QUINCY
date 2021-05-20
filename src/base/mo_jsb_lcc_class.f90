@@ -41,7 +41,7 @@ MODULE mo_jsb_lcc_class
 
   !> Type used on lcc processes to collect conserved quantities with active and passive relocations
   TYPE :: t_jsb_lcc_proc
-    CHARACTER(len=SHORT_NAME_LEN) :: name !< Name of the structure: process + _lcc 
+    CHARACTER(len=:), ALLOCATABLE :: name !< Name of the structure: process + _lcc 
     CHARACTER(len=SHORT_NAME_LEN), ALLOCATABLE :: tile_names(:) !< Names of the tiles involved with this lcc process
     CHARACTER(len=VARNAME_LEN), ALLOCATABLE :: active_vars_names(:) ! JN-TODO maybe not required?
     CHARACTER(len=VARNAME_LEN), ALLOCATABLE :: passive_vars_names(:) ! JN-TODO maybe not required?

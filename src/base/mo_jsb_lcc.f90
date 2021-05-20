@@ -399,7 +399,6 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'For '//TRIM(lcc_relocations%name)//' ...')
 
     nr_of_tiles = lcc_relocations%nr_of_tiles
-
     !>
     !> Assertion: dimensions of lost_area and initial_area need to match
     !>

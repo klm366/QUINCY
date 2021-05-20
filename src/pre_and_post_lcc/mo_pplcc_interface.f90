@@ -2,9 +2,12 @@
 !>
 !>### Contains the interfaces to the pplcc process which does the pre- and postprocessing for all lcc processes
 !>
-!> Note: 1. This module takes advantage of the handling of the integrate and aggregate routines, which both
+!> Note: 
+!>
+!>       1. This module takes advantage of the handling of the integrate and aggregate routines, which both
 !>          call the same routines in this module (integrate = aggregate). 
 !>          Thereby each tile is processed by the same routine for the tasks of this process.
+!>
 !>       2. currently only 2D variables are dealt with -- if also 3D variables need to be conserved,
 !>          these will anyway have to specially be dealt with in the concept and thus need to be 
 !>          identified with an own cqt e.g. distinguish WATER_2D_CQ_TYPE and WATER_3D_CQ_TYPE?
@@ -129,8 +132,8 @@ CONTAINS
   !
   !> Implementation of "update" for task "pplcc_pre_lcc"
   !>
-  !> Task "pplcc_pre_lcc" prepares lcc processes
-  !> For now: convert all cq vars to per grid cell 
+  !> Task "pplcc_pre_lcc" prepares lcc processes 
+  !> -- for now: convert all cq vars to per grid cell.
   !
   SUBROUTINE update_pplcc_pre_lcc(tile, options)
 
@@ -256,8 +259,8 @@ CONTAINS
   !
   !> Implementation of "update" for task "pplcc_post_lcc"
   !>
-  !> Task "pplcc_post_lcc" does a postprocessing after all lcc processes were executed
-  !> For now: convert all cq vars back to their initial reference area
+  !> Task "pplcc_post_lcc" does a postprocessing after all lcc processes were executed 
+  !> -- for now: convert all cq vars back to their initial reference area.
   !
   SUBROUTINE update_pplcc_post_lcc(tile, options)
 

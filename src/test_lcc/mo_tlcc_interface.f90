@@ -32,7 +32,7 @@ MODULE mo_tlcc_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes TLCC_, PPLCC_
+  dsl4jsb_Use_processes TLCC_, PPLCC_, TCQ_, CARBON_
 
   IMPLICIT NONE
   PRIVATE
@@ -121,6 +121,7 @@ CONTAINS
 
     CHARACTER(len=VARNAME_LEN) :: sourceTile(2)
     CHARACTER(len=VARNAME_LEN) :: sinkTile(2)
+
     ! -------------------------------------------------------------------------------------------------- !
 
     ! Get local variables from options argument
@@ -134,9 +135,9 @@ CONTAINS
     process_id = Get_process_id(procname)
 
     !>
-    !> 1. Get lcc structure -> JN-TODO: DSL?
+    !> 1. Get lcc structure
     !>
-    lcc_relocations => model%processes(process_id)%p%lcc_relocations
+    lcc_relocations => model%processes(process_id)%p%lcc_relocations ! JN-TODO: DSL?
     nr_of_tiles = lcc_relocations%nr_of_tiles
     
     ! If process is not active on this tile, do nothing
@@ -188,8 +189,7 @@ CONTAINS
       i_tile = 0
       DO WHILE (ASSOCIATED(current_tile))
 
-        !> Note: Area movements are only possible among child tiles listed in the lcc structure!
-        !
+        ! Area movements are only possible among child tiles listed in the lcc structure!
         IF (ANY(current_tile%name .EQ. lcc_relocations%tile_names)) THEN !JN-TODO: does this work or TRIM and DO loop?
           i_tile = i_tile + 1
 
@@ -230,22 +230,29 @@ CONTAINS
       END DO
 
       !>
-      !> 3. each lcc process needs to call start lcc to collect to be transferred matter 
+      !> 3. Each lcc process needs to call start lcc to collect to be transferred matter 
       !>
       CALL start_lcc_reloc(lcc_relocations, options, lost_area, initial_area)
 
       !>
       !> 4. Afterwards active content needs to be relocated to passive vars by manipulating the arrays in lcc_relocations
       !>
-      ! e.g. for alcc one would need to call yasso for woody and non woody and 
-      ! assert that required yasso pools are part of passive variables and then relocate from active to passive...
-      ! Here its simpler, a_veg is simply put in a_dead ...
-      active_var_name = 'a_veg_c_cq'
-      passive_var_name = 'a_dead_c_cq'
-      CALL transfer_from_active_to_passive_var(lcc_relocations, options, active_var_name, passive_var_name)
+      current_tile => tile%first_child_tile
+      IF (current_tile%Is_process_active(TCQ_)) THEN
+        ! For the test cq a_veg is simply put in a_dead ...
+        active_var_name = 'a_veg_c_tcq'
+        passive_var_name = 'a_dead_c_tcq'
+        CALL transfer_from_active_to_passive_var(lcc_relocations, options, active_var_name, passive_var_name)
+      ENDIF
+
+      IF (current_tile%Is_process_active(CARBON_)) THEN
+        CALL finish(TRIM(routine), 'So far only tests tcq and not carbon')
+        ! JN-TODO: assert that required yasso pools are part of passive variables and then relocate from active to passive
+        ! call yasso for woody and non woody
+      ENDIF
 
       !>
-      !> 5. each lcc process needs to call end lcc to make the passive matter transfer 
+      !> 5. Each lcc process needs to call end lcc to make the passive matter transfer 
       !>
       CALL end_lcc_reloc(lcc_relocations, options, gained_area)
 
@@ -299,16 +306,23 @@ CONTAINS
           current_tile => current_tile%next_sibling_tile
         END DO
 
-        ! each lcc process needs to call start lcc to collect to be transfered matter 
+        ! each lcc process needs to call start lcc to collect to be transferred matter 
         CALL start_lcc_reloc(lcc_relocations, options, lost_area, initial_area)
 
-        ! Afterwards active content needs to be relocated to passive vars by manipulating the arrays in lcc_relocations
-        ! e.g. for alcc one would need to call yasso for woody and non woody and 
-        ! assert that required yasso pools are part of passive variables and then relocate from active to passive...
-        ! Here its simpler, a_veg is simply put in a_dead ...
-        active_var_name = 'a_veg_c_cq'
-        passive_var_name = 'a_dead_c_cq'
-        CALL transfer_from_active_to_passive_var(lcc_relocations, options, active_var_name, passive_var_name)
+        ! active content needs to be relocated to passive vars by manipulating the arrays in lcc_relocations
+        current_tile => tile%first_child_tile
+        IF (current_tile%Is_process_active(TCQ_)) THEN
+          ! For the test cq a_veg is simply put in a_dead ...
+          active_var_name = 'a_veg_c_tcq'
+          passive_var_name = 'a_dead_c_tcq'
+          CALL transfer_from_active_to_passive_var(lcc_relocations, options, active_var_name, passive_var_name)
+        ENDIF
+  
+        IF (current_tile%Is_process_active(CARBON_)) THEN
+          CALL finish(TRIM(routine), 'So far only tests tcq and not carbon')
+          ! JN-TODO: assert that required yasso pools are part of passive variables and then relocate from active to passive
+          ! call yasso for woody and non woody
+        ENDIF
 
         ! each lcc process needs to call end lcc to make the passive matter transfer 
         CALL end_lcc_reloc(lcc_relocations, options, gained_area)

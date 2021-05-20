@@ -20,7 +20,7 @@ MODULE mo_jsb_model_init
 #ifndef __NO_JSBACH__
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-    &                   FUEL_, PPLCC_, TLCC_, CQ_, ALCC_, A2L_, VEG_
+    &                   FUEL_, PPLCC_, TLCC_, TCQ_, ALCC_, A2L_, VEG_
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
 
@@ -188,7 +188,7 @@ CONTAINS
     USE mo_pheno_init,          ONLY: pheno_init
     USE mo_veg_init,            ONLY: veg_init
     USE mo_carbon_init,         ONLY: carbon_init
-    USE mo_cq_init,             ONLY: cq_init
+    USE mo_tcq_init,            ONLY: tcq_init
     USE mo_fuel_init,           ONLY: fuel_init
     !USE mo_disturb_init,        ONLY: disturb_init
     USE mo_tlcc_init_lcc,       ONLY: tlcc_init_lcc
@@ -266,7 +266,7 @@ CONTAINS
   
       ! ------------------------ tasks that do not change area
       !
-      CALL model%Queue_task(CQ_,    "cq")
+      CALL model%Queue_task(TCQ_,    "tcq")
 
       CALL model%Queue_task(RAD_,    "surface_radiation")
       CALL model%Queue_task(PHENO_,  "phenology")
@@ -490,8 +490,8 @@ CONTAINS
         CALL carbon_init(tile)
       END IF
 
-      IF (one_of(tile%process_action(CQ_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
-        CALL cq_init(tile)
+      IF (one_of(tile%process_action(TCQ_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        CALL tcq_init(tile)
       END IF
 
       IF (one_of(tile%process_action(FUEL_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
