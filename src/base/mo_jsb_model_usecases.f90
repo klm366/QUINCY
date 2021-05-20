@@ -512,8 +512,8 @@ CONTAINS
           IF (model%processes(CARBON_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(CARBON_, ON_LEAFS_, AGGREGATE_)
           END IF
-          IF (model%processes(CQ_)%p%config%active) THEN
-            CALL veg_tile%Set_process_action(CQ_, ON_LEAFS_, AGGREGATE_)
+          IF (model%processes(TCQ_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(TCQ_, ON_LEAFS_, AGGREGATE_)
           END IF
           IF (model%processes(FUEL_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(FUEL_, ON_TILE_, AGGREGATE_)

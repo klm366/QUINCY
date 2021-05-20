@@ -333,7 +333,7 @@ CONTAINS
 
       ! ------------------------ tasks that do not change area
       !
-      CALL model%Queue_task(CQ_,    "cq")
+      CALL model%Queue_task(TCQ_,    "tcq")
 
       CALL model%Queue_task(RAD_,    "surface_radiation")
       CALL model%Queue_task(PHENO_,  "phenology")
