@@ -180,8 +180,8 @@ CONTAINS
     INTEGER                     :: table
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_pheno_memory'
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_config(PHENO_)
     model        => Get_model(model_id)
+    dsl4jsb_Get_config(PHENO_)
     table        = tables(1)
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
@@ -196,8 +196,7 @@ CONTAINS
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! default jsbach4 memory
-    IF (.NOT. model%config%use_quincy) THEN
-    
+    !
     IF ( (     One_of(LAND_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(VEG_TYPE,  lct_ids(:)) > 0 &
       &  ) ) THEN
@@ -421,23 +420,24 @@ CONTAINS
       ! --------------------------------------------------------------------------------------------------- !
       ! variables used with jsbach4 & quincy
       ! jsbach4 init
-      CALL mem%Add_var( 'lai', mem%lai,                                        &
-        & hgrid, surface,                                                      &
-        & t_cf('leaf_area_index', '', ''),                                     &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
-        & output_level=BASIC,                                                  &
-        & initval_r=0.0_wp )
-        
-      CALL mem%Add_var('lai_cl', mem%lai_cl,                                 &
-        & hgrid, canopy_layer,                                               &
-        & t_cf('LAI for each canopy layer', '', ''),                         &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & lrestart=.FALSE., initval_r=0.0_wp )
-      
+      IF (.NOT. model%config%use_quincy) THEN
+        CALL mem%Add_var( 'lai', mem%lai,                                        &
+          & hgrid, surface,                                                      &
+          & t_cf('leaf_area_index', '', ''),                                     &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+          & prefix, suffix,                                                      &
+          & output_level=BASIC,                                                  &
+          & initval_r=0.0_wp )
+          
+        CALL mem%Add_var('lai_cl', mem%lai_cl,                                 &
+          & hgrid, canopy_layer,                                               &
+          & t_cf('LAI for each canopy layer', '', ''),                         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix,                                                    &
+          & lrestart=.FALSE., initval_r=0.0_wp )
+
+      END IF !  IF(.NOT. use_quincy)      
     END IF !  VEG / LAND
-    END IF !  IF(.NOT. use_quincy)
     
 
 #ifdef __QUINCY_NO_JSB__
@@ -445,6 +445,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! quincy in jsbach4
     !  temporary fix: some jsbach4 variables are needed for quincy simulations
+    !                 but might use different Add_var() arguments
     !  copied from above jsbach4-section, plus some minor modification for output/restart
     IF (model%config%use_quincy) THEN
       IF ( One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. &

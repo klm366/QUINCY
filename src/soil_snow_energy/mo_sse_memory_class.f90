@@ -211,8 +211,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     IF (SIZE(lct_ids) < 1) CALL finish(routine, 'lcd_ids not specified')
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_Config(SSE_)
     model         => Get_model(model_id)
+    dsl4jsb_Get_Config(SSE_)
     table         = tables(1)
     hgrid         => Get_grid(mem%grid_id)
     surface       => Get_vgrid('surface')

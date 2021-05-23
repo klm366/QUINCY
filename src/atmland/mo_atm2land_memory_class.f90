@@ -209,8 +209,7 @@ CONTAINS
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! default jsbach4 memory
-    IF (.NOT. model%config%use_quincy) THEN
-
+    !
     CALL mem%Add_var( 'DEBUG_VAR', mem%DEBUG_VAR,                            &
       & hgrid, surface,                                                      &
       & t_cf('DEBUG_VAR', '', ''),                                           &
@@ -250,6 +249,8 @@ CONTAINS
     ! --------------------------------------------------------------------------------------------------- !
     ! variables used with jsbach4 & quincy
     ! jsbach4 init
+    IF (.NOT. model%config%use_quincy) THEN
+    
     CALL mem%Add_var( 't_air', mem%t_air,                                    &
       & hgrid, surface,                                                      &
       & t_cf('air_temperature', 'K', ''),                                    &

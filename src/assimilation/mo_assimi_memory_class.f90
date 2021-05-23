@@ -209,120 +209,112 @@ CONTAINS
     IF (lct_ids(1) > 0)  CONTINUE ! avoid compiler warning about dummy argument not being used
     IF (model_id > 0)    CONTINUE ! avoid compiler warning about dummy argument not being used
     ! ----------------------------------------------------------------------------------------------------- !
+    model        => Get_model(model_id)
     table        = tables(1)
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
+#ifdef __QUINCY_NO_JSB__
+    vgrid_canopy => Get_vgrid('canopy_layer')
+#else
     canopy_layer => Get_vgrid('canopy_layer')
     vgrid_canopy => Get_vgrid('canopy_layer_q_')  !! quincy
-    model        => Get_model(model_id)
+#endif
 
     ! !$acc enter data pcreate(mem)
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! default jsbach4 memory
-    IF (.NOT. model%config%use_quincy) THEN
-
-      CALL mem%Add_var('gross_assimilation_ca', mem%gross_assimilation_ca,           &
-        & hgrid, surface,                                                            &
-        & t_cf('gross_assimilation_ca', 'mol(CO2)/m^2(canopy ground) / s',           &
-        &      'Gross photosynthesis on canopy ground area'),                        &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
-        & prefix, suffix,                                                            &
-        & output_level=BASIC,                                                        &
-        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
-
-      CALL mem%Add_var('dark_respiration_ca', mem%dark_respiration_ca,                                              &
-        & hgrid, surface,                                                                                           &
-        & t_cf('dark_respiration_ca', 'mol(CO2)/m^2(canopy ground) / s', 'Dark_respiration on canopy ground area'), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
-        & prefix, suffix,                                                                                           &
-        & output_level=BASIC,                                                                                       &
-        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
-
-      CALL mem%Add_var('dark_respiration', mem%dark_respiration,                                                    &
-        & hgrid, surface,                                                                                           &
-        & t_cf('dark_respiration', 'mol(CO2)/m^2 (tile area) / s', 'Dark_respiration on tile area'),                &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
-        & prefix, suffix,                                                                                           &
-        & output_level=BASIC,                                                                                       &
-        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
-
-      CALL mem%Add_var('npp_pot_rate_ca', mem%NPP_pot_rate_ca,                              &
-        & hgrid, surface,                                                                   &
-        & t_cf('NPP_pot_rate_ca', 'mol(CO2)/(m^2 (canopy ground) / s)', 'NPP_pot_rate_ca'), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
-        & prefix, suffix,                                                                   &
-        & output_level=BASIC,                                                               &
-        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-      CALL mem%Add_var('scaling_fact_cl', mem%assimi_scaling_fact_cl,        &
-        & hgrid, canopy_layer,                                               &
-        & t_cf('assimi_scaling_fact_cl', '-',                                &
-        'assimilation scaling factors per canopy layer'),                    &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
-
-      CALL mem%Add_var('dark_respiration_cl', mem%dark_respiration_cl,                                                         &
-        & hgrid, canopy_layer,                                                                                                 &
-        & t_cf('dark_respiration_cl', 'mol(CO2)/m^2(leaf area) / s', 'Dark respiration of leaf per canopy layer on leaf area'),&
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                                   &
-        & prefix, suffix,                                                                                                      &
-        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE.  )
-
-      CALL mem%Add_var('carbox_rate_max_cl', mem%carbox_rate_max_cl,                                                &
-        & hgrid, canopy_layer,                                                                                      &
-        & t_cf('carbox_rate_max_cl', 'mol(CO2)/m^2(leaf area) / s', 'Maximum carboxylation rate per canopy layer'), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
-        & prefix, suffix,                                                                                           &
-        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE.  )
-
-      CALL mem%Add_var('e_transport_rate_max_cl', mem%e_transport_rate_max_cl,       &
-        & hgrid, canopy_layer,                                                       &
-        & t_cf('e_transport_rate_max_cl', 'dimensionen',                             &
-        'Maximum electron transport rate per canopy layer'),                         &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
-        & prefix, suffix,                                                            &
-        & lrestart=.FALSE., initval_r=0.0_wp )
-
-      CALL mem%Add_var('carbox_rate_cl', mem%carbox_rate_cl,                                                   &
-        & hgrid, canopy_layer,                                                                                 &
-        & t_cf('carbox_rate_cl', 'mol(CO2)/m^2(leaf area) / s', 'Actual carboxylation rate per canopy layer'), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                   &
-        & prefix, suffix,                                                                                      &
-        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE.  )
-
-      CALL mem%Add_var('e_transport_rate_cl', mem%e_transport_rate_cl,                                                   &
-        & hgrid, canopy_layer,                                                                                           &
-        & t_cf('e_transport_rate_cl', 'mol(CO2)/m^2(leaf area) / s', 'Actual electron transport rate per canopy layer'), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                             &
-        & prefix, suffix,                                                                                                &
-        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE.  )! initval taken from JSBACH3
-
-      CALL mem%Add_var('canopy_cond_unlimited', mem%canopy_cond_unlimited,       &
-        & hgrid, surface,                                                        &
-        & t_cf('canopy_conductance_unlimited', '', ''),                          &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
-        & prefix, suffix,                                                        &
-        & initval_r=0.0_wp )
-
-      CALL mem%Add_var('canopy_cond_limited', mem%canopy_cond_limited,           &
-        & hgrid, surface,                                                        &
-        & t_cf('canopy_conductance_limited', '', ''),                            &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
-        & prefix, suffix,                                                        &
-        & initval_r=0.0_wp )
-
-      CALL mem%Add_var('cover_fract_pot', mem%cover_fract_pot,               &
-        & hgrid, surface,                                                    &
-        & t_cf('cover_fract_pot', 'fract', ''),                              &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & initval_r=0.1_wp ) ! initval choosen freely
+    !
+    CALL mem%Add_var('gross_assimilation_ca', mem%gross_assimilation_ca,           &
+      & hgrid, surface,                                                            &
+      & t_cf('gross_assimilation_ca', 'mol(CO2)/m^2(canopy ground) / s',           &
+      &      'Gross photosynthesis on canopy ground area'),                        &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
+      & prefix, suffix,                                                            &
+      & output_level=BASIC,                                                        &
+      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+    CALL mem%Add_var('dark_respiration_ca', mem%dark_respiration_ca,                                              &
+      & hgrid, surface,                                                                                           &
+      & t_cf('dark_respiration_ca', 'mol(CO2)/m^2(canopy ground) / s', 'Dark_respiration on canopy ground area'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
+      & prefix, suffix,                                                                                           &
+      & output_level=BASIC,                                                                                       &
+      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+    CALL mem%Add_var('dark_respiration', mem%dark_respiration,                                                    &
+      & hgrid, surface,                                                                                           &
+      & t_cf('dark_respiration', 'mol(CO2)/m^2 (tile area) / s', 'Dark_respiration on tile area'),                &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
+      & prefix, suffix,                                                                                           &
+      & output_level=BASIC,                                                                                       &
+      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+    CALL mem%Add_var('npp_pot_rate_ca', mem%NPP_pot_rate_ca,                              &
+      & hgrid, surface,                                                                   &
+      & t_cf('NPP_pot_rate_ca', 'mol(CO2)/(m^2 (canopy ground) / s)', 'NPP_pot_rate_ca'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & output_level=BASIC,                                                               &
+      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+    CALL mem%Add_var('scaling_fact_cl', mem%assimi_scaling_fact_cl,        &
+      & hgrid, canopy_layer,                                               &
+      & t_cf('assimi_scaling_fact_cl', '-',                                &
+      'assimilation scaling factors per canopy layer'),                    &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix,                                                    &
+      & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+    CALL mem%Add_var('dark_respiration_cl', mem%dark_respiration_cl,                                                         &
+      & hgrid, canopy_layer,                                                                                                 &
+      & t_cf('dark_respiration_cl', 'mol(CO2)/m^2(leaf area) / s', 'Dark respiration of leaf per canopy layer on leaf area'),&
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                                   &
+      & prefix, suffix,                                                                                                      &
+      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE.  )
+    CALL mem%Add_var('carbox_rate_max_cl', mem%carbox_rate_max_cl,                                                &
+      & hgrid, canopy_layer,                                                                                      &
+      & t_cf('carbox_rate_max_cl', 'mol(CO2)/m^2(leaf area) / s', 'Maximum carboxylation rate per canopy layer'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
+      & prefix, suffix,                                                                                           &
+      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE.  )
+    CALL mem%Add_var('e_transport_rate_max_cl', mem%e_transport_rate_max_cl,       &
+      & hgrid, canopy_layer,                                                       &
+      & t_cf('e_transport_rate_max_cl', 'dimensionen',                             &
+      'Maximum electron transport rate per canopy layer'),                         &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
+      & prefix, suffix,                                                            &
+      & lrestart=.FALSE., initval_r=0.0_wp )
+    CALL mem%Add_var('carbox_rate_cl', mem%carbox_rate_cl,                                                   &
+      & hgrid, canopy_layer,                                                                                 &
+      & t_cf('carbox_rate_cl', 'mol(CO2)/m^2(leaf area) / s', 'Actual carboxylation rate per canopy layer'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                   &
+      & prefix, suffix,                                                                                      &
+      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE.  )
+    CALL mem%Add_var('e_transport_rate_cl', mem%e_transport_rate_cl,                                                   &
+      & hgrid, canopy_layer,                                                                                           &
+      & t_cf('e_transport_rate_cl', 'mol(CO2)/m^2(leaf area) / s', 'Actual electron transport rate per canopy layer'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                             &
+      & prefix, suffix,                                                                                                &
+      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE.  )! initval taken from JSBACH3
+    CALL mem%Add_var('canopy_cond_unlimited', mem%canopy_cond_unlimited,       &
+      & hgrid, surface,                                                        &
+      & t_cf('canopy_conductance_unlimited', '', ''),                          &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+      & prefix, suffix,                                                        &
+      & initval_r=0.0_wp )
+    CALL mem%Add_var('canopy_cond_limited', mem%canopy_cond_limited,           &
+      & hgrid, surface,                                                        &
+      & t_cf('canopy_conductance_limited', '', ''),                            &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+      & prefix, suffix,                                                        &
+      & initval_r=0.0_wp )
+    CALL mem%Add_var('cover_fract_pot', mem%cover_fract_pot,               &
+      & hgrid, surface,                                                    &
+      & t_cf('cover_fract_pot', 'fract', ''),                              &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix,                                                    &
+      & initval_r=0.1_wp ) ! initval choosen freely
         
-      ! --------------------------------------------------------------------------------------------------- !
-      ! variables used with jsbach4 & quincy
-      ! jsbach4 init (e.g. different vgrid)
+    ! --------------------------------------------------------------------------------------------------- !
+    ! variables used with jsbach4 & quincy
+    ! jsbach4 init (e.g. different vgrid)
+    IF (.NOT. model%config%use_quincy) THEN
       CALL mem%Add_var('gross_assimilation', mem%gross_assimilation,                                                &
         & hgrid, surface,                                                                                           &
         & t_cf('gross_assimilation', 'mol(CO2)/m^2 (tile area) / s', 'Gross photosynthesis on tile area'),          &
