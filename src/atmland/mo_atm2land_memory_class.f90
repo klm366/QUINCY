@@ -108,7 +108,7 @@ MODULE mo_a2l_memory_class
 
 CONTAINS
 
-  SUBROUTINE Init_a2l_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_a2l_memory(mem, prefix, suffix, lct_ids, model_id, l_fixed_fractions)
 
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
@@ -120,6 +120,7 @@ CONTAINS
     CHARACTER(len=*),    INTENT(in)    :: suffix
     INTEGER,             INTENT(in)    :: lct_ids(:)
     INTEGER,             INTENT(in)    :: model_id
+    LOGICAL, OPTIONAL,   INTENT(in)    :: l_fixed_fractions
 
     TYPE(t_jsb_grid),    POINTER :: hgrid
     TYPE(t_jsb_vgrid),   POINTER :: surface

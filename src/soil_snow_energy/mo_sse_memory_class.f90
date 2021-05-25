@@ -71,7 +71,7 @@ MODULE mo_sse_memory_class
 
 CONTAINS
 
-  SUBROUTINE Init_sse_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_sse_memory(mem, prefix, suffix, lct_ids, model_id, l_fixed_fractions)
 
     USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM !, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
@@ -84,6 +84,7 @@ CONTAINS
     CHARACTER(len=*),     INTENT(in)    :: suffix
     INTEGER,              INTENT(in)    :: lct_ids(:)
     INTEGER,              INTENT(in)    :: model_id
+    LOGICAL, OPTIONAL,    INTENT(in)    :: l_fixed_fractions
 
     dsl4jsb_Def_config(SSE_)
 

@@ -380,14 +380,15 @@ CONTAINS
       ! Initialize tile process memories and read tile fractions
       CALL tile%Init(TRIM(model%shortname), '', TRIM(tile%name),                &
         & grid_id = model%grid_id,                                              &
-        & single_tile_output=single_tile_output(:), no_of_leaves=model%process_no_of_leaves(:), &
+        & single_tile_output=single_tile_output(:), no_of_leaves=model%process_no_of_leaves(1:), &
         & in_var_groups=one_of(TRIM(tile%name), model%config%output_tiles) > 0)
 
       ! @todo: once we have land use change or dynveg, l_fixed_fractions needs to be adapted
       CALL tile%Init_fractions(                                              &
         & TRIM(model%shortname), '', TRIM(tile%name),                        &
         & l_fixed_fractions=l_fixed_fractions,                               &
-        & l_rel_fractions=model%config%relative_fractions_in_file)
+        & l_rel_fractions=model%config%relative_fractions_in_file,           &
+        & no_of_leaves=model%process_no_of_leaves(0))
 
         ! TBD: Loop over processes instead of explicit
       IF (one_of(tile%process_action(RAD_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN

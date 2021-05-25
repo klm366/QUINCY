@@ -410,7 +410,7 @@ CONTAINS
     CALL deallocateDatetime(inidate)
     lspinup_jedi = dsl4jsb_Config(JEDI_)%l_spinup_jedi
     
-    IF ((get_year(options%current_datetime) .LE. iniyear + 2 ) .and. lspinup_jedi )THEN    !  PHS: initial carbon
+    IF ((get_year(options%current_datetime) .LE. iniyear + 2 ) .AND. lspinup_jedi ) THEN    !  PHS: initial carbon
       ff_npp = 0._wp
       Flg_senesc = 0._wp
       Flg_die = 0._wp
@@ -877,6 +877,7 @@ CONTAINS
 
     USE mo_jsb_var_class,   ONLY:t_jsb_var_real2d
     USE mo_jsb_grid,           ONLY: Get_grid
+    USE mo_jsb_tile_class,  ONLY: t_fract_memory
 
     CLASS(t_jsb_tile_abstract), INTENT(inout)         :: tile
     TYPE(t_jsb_task_options)  , INTENT(in)         :: options
@@ -930,12 +931,15 @@ CONTAINS
 
       child => tile%Get_first_child_tile()
       DO i=1,no_children
-        ASSOCIATE (data_child => dsl4jsb_memory(JEDI_)%children(i)%p%vars(var%child_idx(i))%p%ptr2d(:,:) )
-          WHERE (c_total_sum(:,:) > 0._wp)
-            child%fract(:,:) = data_child(:,:) / c_total_sum(:,:)
-          END WHERE
-        END ASSOCIATE
-        child => child%Get_next_sibling_tile()
+        SELECT TYPE (child__mem => child%mem(0)%p)
+        TYPE IS (t_fract_memory)
+          ASSOCIATE (data_child => dsl4jsb_memory(JEDI_)%children(i)%p%vars(var%child_idx(i))%p%ptr2d(:,:) )
+            WHERE (c_total_sum(:,:) > 0._wp)
+              child__mem%fract%ptr(:,:) = data_child(:,:) / c_total_sum(:,:)
+            END WHERE
+          END ASSOCIATE
+          child => child%Get_next_sibling_tile()
+        END SELECT
       END DO
 
     ELSE IF (ASSOCIATED(var%ptr2d_t)) THEN
@@ -945,10 +949,13 @@ CONTAINS
       c_total_sum(:,:) = SUM(var%ptr2d_t(:,:,:), DIM=2)
       child => tile%Get_first_child_tile()
       DO i=1,no_children
-        WHERE (c_total_sum(:,:) > 0._wp)
-          child%fract(:,:) = var%ptr2d_t(:,i,:) / c_total_sum(:,:) * fract(:,:) ! Fractions of children need to sum up to fraction of parent tile
-        END WHERE
-        child => child%Get_next_sibling_tile()
+        SELECT TYPE (child__mem => child%mem(0)%p)
+        TYPE IS (t_fract_memory)
+          WHERE (c_total_sum(:,:) > 0._wp)
+            child__mem%fract%ptr(:,:) = var%ptr2d_t(:,i,:) / c_total_sum(:,:) * fract(:,:) ! Fractions of children need to sum up to fraction of parent tile
+          END WHERE
+          child => child%Get_next_sibling_tile()
+        END SELECT
       END DO
 
     ELSE

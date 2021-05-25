@@ -170,7 +170,7 @@ CONTAINS
   !!
   !!  this routine is called for all tiles
   !------------------------------------------------------------------------------------------------
-  SUBROUTINE Init_assimi_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_assimi_memory(mem, prefix, suffix, lct_ids, model_id, l_fixed_fractions)
 
     USE mo_jsb_varlist,       ONLY: BASIC !, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables !, TSTEP_CONSTANT
@@ -184,6 +184,7 @@ CONTAINS
     CHARACTER(len=*),    INTENT(in)    :: suffix
     INTEGER,             INTENT(in)    :: lct_ids(:)
     INTEGER,             INTENT(in)    :: model_id
+    LOGICAL, OPTIONAL,   INTENT(in)    :: l_fixed_fractions
 
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface, canopy_layer        ! Vertical grid

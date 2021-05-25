@@ -263,7 +263,7 @@ CONTAINS
     this%grid_id = grid_id
 
     ! Allocate all memory components for new tile and initialize their data part with NULL()
-    ALLOCATE(this%mem(max_no_of_processes))
+    ALLOCATE(this%mem(0:max_no_of_processes))
     !$acc enter data create(this%mem)
 
     ! Loop over all processes and initialize memory for this tile
@@ -350,9 +350,9 @@ CONTAINS
 
   END SUBROUTINE Init_tile
 
-  SUBROUTINE Init_fractions_on_tile(this, varlist_name, prefix, suffix, l_fixed_fractions, l_rel_fractions)
+  SUBROUTINE Init_fractions_on_tile(this, varlist_name, prefix, suffix, l_fixed_fractions, l_rel_fractions, no_of_leaves)
 
-    USE mo_jsb_tile_class,      ONLY: t_jsb_aggregator, t_jsb_aggregator_weighted_by_fract
+    USE mo_jsb_tile_class,      ONLY: t_fract_memory, t_jsb_aggregator, t_jsb_aggregator_weighted_by_fract
     USE mo_jsb_varlist,         ONLY: jsb_add_var, VARNAME_LEN
     USE mo_jsb_io,              ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables, TSTEP_INSTANT, TSTEP_CONSTANT
     USE mo_jsb_grid_class,      ONLY: t_jsb_grid, t_jsb_vgrid
@@ -365,6 +365,7 @@ CONTAINS
     CHARACTER(len=*),  INTENT(in)    :: suffix
     LOGICAL,           INTENT(in)    :: l_fixed_fractions ! Tile fractions can change or not
     LOGICAL,           INTENT(in)    :: l_rel_fractions    ! Tile fractions in input file are relative wrt parent
+    INTEGER,           INTENT(in)    :: no_of_leaves
 
     TYPE(t_jsb_aggregator_weighted_by_fract), POINTER :: aggregator_weighted_by_fract
     CLASS(t_jsb_aggregator),                  POINTER :: aggregator
@@ -376,8 +377,10 @@ CONTAINS
     CHARACTER(len=50)          :: name_loc
     CHARACTER(len=:), ALLOCATABLE :: varlist_name_loc
     CHARACTER(len=3)           :: model_id_suffix                    ! Suffix for domain if more than one model
+    CLASS(t_jsb_tile_abstract), POINTER   :: parent_tile => NULL()
 
     INTEGER :: isteptype, i, ilct
+    INTEGER :: no_of_children, child_no
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_fractions_on_tile'
 
@@ -394,56 +397,64 @@ CONTAINS
       isteptype = TSTEP_INSTANT
     END IF
 
-    ! Add fraction(s) of this tile to stream
+    ALLOCATE(t_fract_memory::this%mem(0)%p)
+    this%mem(0)%p%id = 0
+    this%mem(0)%p%max_no_of_vars = 4
+    !$acc enter data create(this%mem(0)%p)
+    ALLOCATE(this%mem(0)%p%vars(this%mem(0)%p%max_no_of_vars))
+    !$acc enter data create(this%mem(0)%p%vars)
+
+    parent_tile => this%parent_tile
+    IF (ASSOCIATED(parent_tile)) this%mem(0)%p%parent => parent_tile%mem(0)%p
+
     WRITE(model_id_suffix, '(A1,I2.2)') 'D', this%owner_model_id
     IF (get_no_of_models() > 1) THEN
       varlist_name_loc = TRIM(varlist_name)//'_'//model_id_suffix
     ELSE
       varlist_name_loc = TRIM(varlist_name)
     END IF
+    this%mem(0)%p%varlist_name = varlist_name_loc
 
-    !$acc enter data copyin(this)
+    this%mem(0)%p%grid_id = this%grid_id
+    this%mem(0)%p%owner_model_id = this%owner_model_id
+    this%mem(0)%p%owner_proc_id = 0
+    this%mem(0)%p%owner_proc_name = 'fractions'
+    ALLOCATE(this%mem(0)%p%owner_tile_path(SIZE(this%path)))
+    this%mem(0)%p%owner_tile_path(:) = this%path(:)
+    this%mem(0)%p%owner_tile_name = TRIM(this%name)
+    ! this%mem(0)%p%single_tile_output = single_tile_output(0) ! Must be before CALL to %Init !
+    this%mem(0)%p%single_tile_output = .FALSE.
+    this%mem(0)%p%no_of_leaves = no_of_leaves
+    IF (.NOT. this%mem(0)%p%single_tile_output .AND. no_of_leaves > 1) THEN
+      this%mem(0)%p%vgrid_t => Get_vgrid('jsb_t_fract')
+      this%mem(0)%p%pos_in_leaves = this%process_pos_in_leaves(0)
+    END IF
+    this%mem(0)%p%in_var_groups = .TRUE.
+    !$acc update device(this%mem(0)%p)
+    !$acc enter data create(this%mem(0)%p%vars)
+    IF (prefix /= '') THEN
+      CALL this%mem(0)%p%Init('fractions_'//TRIM(prefix), TRIM(suffix), this%lcts(:)%id, &
+        &                     this%owner_model_id, l_fixed_fractions=l_fixed_fractions)
+    ELSE
+      CALL this%mem(0)%p%Init('fractions', TRIM(suffix), this%lcts(:)%id, &
+        &                     this%owner_model_id, l_fixed_fractions=l_fixed_fractions)
+    END IF
+    !$acc update device(this%mem(0)%p%vars)
+    IF (debug_on()) &
+      & CALL message(TRIM(routine), 'Created memory for fractions on tile '//TRIM(this%name))
 
-    CALL jsb_add_var(varlist_name_loc, 'fract', tmp_fract,                                 &
-      & hgrid, surface,                                                                                         &
-      & t_cf('tile_fraction', '',                                                                          &
-      &      'fraction of grid box covered by tile '//TRIM(this%name)),                                       &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
-      & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                     &
-      & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
-
-    CALL this%Set_fract_ptr(tmp_fract)
-    NULLIFY(tmp_fract)
-
-    CALL jsb_add_var(varlist_name_loc, 'fract_max', tmp_fract,                         &
-      & hgrid, surface,                                                                                         &
-      & t_cf('tile_fraction_max', '',                                                                          &
-      &      'max fraction of grid box covered by tile '//TRIM(this%name)),                                    &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
-      & prefix, suffix, lrestart=.FALSE., loutput=.FALSE.,                                                   &
-      & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
-    CALL this%Set_fract_max_ptr(tmp_fract)
-    NULLIFY(tmp_fract)
-
-    CALL jsb_add_var(varlist_name_loc, 'fract_old', tmp_fract,                                 &
-      & hgrid, surface,                                                                                         &
-      & t_cf('tile_fraction_old', '',                                                                          &
-      &      'old fraction of grid box covered by tile '//TRIM(this%name)),                                    &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
-      & prefix, suffix, lrestart=.FALSE., loutput=.FALSE.,                                     &
-      & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
-    CALL this%Set_fract_old_ptr(tmp_fract)
-    NULLIFY(tmp_fract)
-
-    CALL jsb_add_var(varlist_name_loc, 'fract_max_old', tmp_fract,                         &
-      & hgrid, surface,                                                                                         &
-      & t_cf('tile_fraction_max_old', '',                                                                          &
-      &      'old max fraction of grid box covered by tile '//TRIM(this%name)),                                &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
-      & prefix, suffix, lrestart=.FALSE., loutput=.FALSE.,                                     &
-      & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
-    CALL this%Set_fract_max_old_ptr(tmp_fract)
-    NULLIFY(tmp_fract)
+    IF (ASSOCIATED(parent_tile)) THEN
+      no_of_children = parent_tile%Get_no_of_children()
+      IF (.NOT. ASSOCIATED(parent_tile%mem(0)%p%children) .AND. no_of_children > 0) THEN
+        parent_tile%mem(0)%p%no_of_children = no_of_children
+        ALLOCATE(parent_tile%mem(0)%p%children(no_of_children))
+        !$acc enter data create(parent_tile%mem(0)%p%children)
+      END IF
+      child_no = this%path(this%level)
+      parent_tile%mem(0)%p%children(child_no)%p => this%mem(0)%p
+      !$acc update device(parent_tile%mem(0)%p%children(child_no)%p)
+      __acc_attach(parent_tile%mem(0)%p%children(child_no)%p)
+    END IF
 
     ALLOCATE(this%l_fract_children_changed(hgrid%nproma, hgrid%nblks))
     this%l_fract_children_changed(:,:) = .TRUE.
@@ -554,6 +565,7 @@ CONTAINS
     END IF
 
     ! Loop over lcts of this tile and add variables for fractions for each lct
+    ! Leaves are not written to restart file because lct fraction is always 1.
     !$acc enter data create(this%lcts)
     DO ilct=1,SIZE(this%lcts)
 
@@ -564,9 +576,9 @@ CONTAINS
         &      'fraction of '//TRIM(this%name)//' covered by LCT '//TRIM(this%lcts(ilct)%name)),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
         & prefix, suffix,                                                                                         &
-        & lrestart=.NOT. l_fixed_fractions .AND. this%name(1:3) /= 'pft',                                         & 
+        & lrestart=.NOT. l_fixed_fractions .AND. this%Has_children(),                                             & 
         & loutput=.FALSE.,                                                                                        &
-        & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
+        & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_fractions_all'])
       __acc_attach(this%lcts(ilct)%fract)
 
     END DO
@@ -595,13 +607,15 @@ CONTAINS
     IF (no_of_children == 0) CALL finish(routine, 'This should not happen')
 
     ! Loop over all processes and initialize memory for this tile
-    DO iproc=1,max_no_of_processes
+    DO iproc=0,max_no_of_processes
 
-      ! if the current process is not on leaves of current tile exit DO loop
-      SELECT CASE (this%process_action(iproc))
-      CASE (SKIP_, ON_TILE_, INHERIT_)
-        CYCLE
-      END SELECT
+      IF (iproc > 0) THEN
+        ! if the current process is not on leaves of current tile exit DO loop
+        SELECT CASE (this%process_action(iproc))
+        CASE (SKIP_, ON_TILE_, INHERIT_)
+          CYCLE
+        END SELECT
+      END IF
 
       mem => this%mem(iproc)%p
       DO i=1,mem%no_of_vars

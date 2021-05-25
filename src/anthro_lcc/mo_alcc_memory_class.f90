@@ -52,7 +52,7 @@ MODULE mo_alcc_memory_class
 CONTAINS
 
 
-  SUBROUTINE Init_alcc_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_alcc_memory(mem, prefix, suffix, lct_ids, model_id, l_fixed_fractions)
 
     ! Declarations
     USE mo_jsb_io,             ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
@@ -66,6 +66,7 @@ CONTAINS
     CHARACTER(len=*),      INTENT(in)             :: suffix
     INTEGER,               INTENT(in)             :: lct_ids(:)
     INTEGER,               INTENT(in)             :: model_id
+    LOGICAL, OPTIONAL,     INTENT(in)             :: l_fixed_fractions
 
     ! Local variables
     dsl4jsb_Def_config(ALCC_)

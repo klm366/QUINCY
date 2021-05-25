@@ -275,8 +275,8 @@ CONTAINS
 
     INTEGER :: npft
 
-    CHARACTER(len=6),  ALLOCATABLE :: pft_shortnames(:)
-    CHARACTER(len=25), ALLOCATABLE :: pft_longnames(:)
+    CHARACTER(len=7),  ALLOCATABLE :: pft_shortnames(:)
+    CHARACTER(len=26), ALLOCATABLE :: pft_longnames(:)
 
     ! Index of PFT into lctlib columns
     ! id is one less than in lctlib file because the first column (glacier) has been thrown away

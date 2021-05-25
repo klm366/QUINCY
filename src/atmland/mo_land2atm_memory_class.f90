@@ -61,7 +61,7 @@ MODULE mo_l2a_memory_class
 
 CONTAINS
 
-  SUBROUTINE Init_l2a_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_l2a_memory(mem, prefix, suffix, lct_ids, model_id, l_fixed_fractions)
 
     USE mo_jsb_varlist,       ONLY: BASIC
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
@@ -73,6 +73,7 @@ CONTAINS
     CHARACTER(len=*),         INTENT(in)    :: suffix
     INTEGER,                  INTENT(in)    :: lct_ids(:)
     INTEGER,                  INTENT(in)    :: model_id ! necessary to get modelconfig
+    LOGICAL, OPTIONAL,        INTENT(in)    :: l_fixed_fractions
 
     TYPE(t_jsb_model),       POINTER :: model
     TYPE(t_jsb_grid),        POINTER :: hgrid

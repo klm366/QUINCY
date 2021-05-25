@@ -2045,6 +2045,7 @@ CONTAINS
   SUBROUTINE update_water_balance( tile, options)
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
+    USE mo_jsb_tile_class,         ONLY: t_fract_memory
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -2084,6 +2085,7 @@ CONTAINS
 
     INTEGER  :: iblk, ics, ice, nc, i
     REAL(wp) :: dtime
+    TYPE(t_fract_memory), POINTER :: fract__mem
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_balance'
 
@@ -2097,6 +2099,11 @@ CONTAINS
     ! IF (tile%is_lake) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    SELECT TYPE (mm => tile%mem(0)%p)
+    TYPE IS (t_fract_memory)
+      fract__mem => mm
+    END SELECT
 
     model => Get_model(tile%owner_model_id)
     grid => Get_grid(model%grid_id)
@@ -2121,11 +2128,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_content)       ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_budget)        ! out
 
-    !$claw acc data create(tile, tile%fract, tile_fract, water_content_new)
+    !$claw acc data create(tile, tile_fract, water_content_new)
 
     !$claw acc parallel loop gang vector
     DO i=1,nc
-      tile_fract(i) = tile%fract(ics-1+i,iblk)
+      tile_fract(i) = fract__mem%fract%ptr(ics-1+i,iblk)
     END DO
 
     !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_0 tile_name=tile%name

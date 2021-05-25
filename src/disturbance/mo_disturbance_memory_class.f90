@@ -51,7 +51,7 @@ MODULE mo_disturb_memory_class
 
 CONTAINS
 
-  SUBROUTINE Init_disturb_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_disturb_memory(mem, prefix, suffix, lct_ids, model_id, l_fixed_fractions)
 
     USE mo_jsb_varlist,       ONLY: BASIC !, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
@@ -63,6 +63,7 @@ CONTAINS
     CHARACTER(len=*),    INTENT(in)    :: suffix
     INTEGER,             INTENT(in)    :: lct_ids(:)
     INTEGER,             INTENT(in)    :: model_id
+    LOGICAL, OPTIONAL,   INTENT(in)    :: l_fixed_fractions
 
     TYPE(t_jsb_grid),  POINTER :: hgrid           ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface         ! Vertical grids

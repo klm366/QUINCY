@@ -536,9 +536,11 @@ CONTAINS
         CYCLE
       END IF
 
-      DO iproc=1,SIZE(tile%mem)
+      DO iproc=0,SIZE(tile%mem)-1
         IF (.NOT. ASSOCIATED(tile%mem(iproc)%p)) CYCLE
-        IF (tile%process_action(iproc) == INHERIT_) CYCLE
+        IF (iproc > 0) THEN
+          IF (tile%process_action(iproc) == INHERIT_) CYCLE
+        END IF
         DO ivar=1,tile%mem(iproc)%p%no_of_vars
           SELECT TYPE (var => tile%mem(iproc)%p%vars(ivar)%p)
           CLASS IS (t_jsb_var_real2d)
@@ -591,10 +593,10 @@ CONTAINS
       & CALL finish(TRIM(routine), 'Top tile not set')
 
     max_no_of_processes = SIZE(tile%process_action)
-    ALLOCATE(this%process_no_of_leaves(max_no_of_processes))
+    ALLOCATE(this%process_no_of_leaves(0:max_no_of_processes))
     this%process_no_of_leaves(:) = 0
 
-    ALLOCATE(pos_in_leaves(max_no_of_processes))
+    ALLOCATE(pos_in_leaves(0:max_no_of_processes))
     pos_in_leaves(:) = 0
 
     DO WHILE (ASSOCIATED(tile))
@@ -604,8 +606,14 @@ CONTAINS
         CYCLE
       END IF
 
-      ALLOCATE(tile%process_pos_in_leaves(max_no_of_processes))
+      ALLOCATE(tile%process_pos_in_leaves(0:max_no_of_processes))
       tile%process_pos_in_leaves(:) = 0
+
+      IF (.NOT. tile%Has_children()) THEN
+        this%process_no_of_leaves(0) = this%process_no_of_leaves(0) + 1
+        pos_in_leaves(0) = pos_in_leaves(0) + 1
+        tile%process_pos_in_leaves(0) = pos_in_leaves(0)
+      END IF
 
       DO iproc=1,max_no_of_processes
 
@@ -631,6 +639,13 @@ CONTAINS
       CALL this%Goto_next_tile(tile)
 
     END DO
+
+    n_leaves = this%process_no_of_leaves(0)
+    IF (n_leaves > 1) THEN
+      vgrid_tmp => new_vgrid('jsb_t_fract', ZAXIS_GENERIC, n_leaves, &
+        &                    levels=(/ (REAL(i,kind=wp),i=1,n_leaves) /), units='')
+      CALL register_vgrid(vgrid_tmp)
+    END IF
 
     DO iproc=1,max_no_of_processes
 

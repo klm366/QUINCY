@@ -156,7 +156,7 @@ CONTAINS
   !!
   !!  
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE Init_veg_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_veg_memory(mem, prefix, suffix, lct_ids, model_id, l_fixed_fractions)
 
     USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
@@ -173,6 +173,7 @@ CONTAINS
     CHARACTER(len=*),     INTENT(in)             :: suffix          !> tile name
     INTEGER,              INTENT(in)             :: lct_ids(:)      !> vector of land cover type IDs
     INTEGER,              INTENT(in)             :: model_id        !> model ID model\%id
+    LOGICAL, OPTIONAL,    INTENT(in)             :: l_fixed_fractions
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model), POINTER :: model
