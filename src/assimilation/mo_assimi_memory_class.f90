@@ -347,49 +347,6 @@ CONTAINS
     END IF  !  IF(.NOT. use_quincy)
 
 
-#ifdef __QUINCY_NO_JSB__
-#else
-    ! ----------------------------------------------------------------------------------------------------- !
-    ! quincy
-    ! temporary fix until the PHENO & other processes are using only the quincy tasks with use_quincy == TRUE
-    !  few jsb4 variables are needed by carbon_interface:update_C_NPP_pot_allocation    
-    IF (model%config%use_quincy) THEN
-      IF ( (     One_of(LAND_TYPE, lct_ids(:)) > 0 &
-        &   .OR. One_of(VEG_TYPE,  lct_ids(:)) > 0)) THEN
-        
-        CALL mem%Add_var('npp_pot_rate_ca', mem%NPP_pot_rate_ca,                              &
-          & hgrid, surface,                                                                   &
-          & t_cf('NPP_pot_rate_ca', 'mol(CO2)/(m^2 (canopy ground) / s)', 'NPP_pot_rate_ca'), &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
-          & prefix, suffix,                                                                   &
-          & output_level = BASIC,                                                             &
-          & lrestart = .FALSE.,                                                               &
-          & initval_r = 0.0_wp,                                                               &
-          & l_aggregate_all=.TRUE. )
-
-        CALL mem%Add_var('gross_assimilation_ca', mem%gross_assimilation_ca,           &
-          & hgrid, surface,                                                            &
-          & t_cf('gross_assimilation_ca', 'mol(CO2)/m^2(canopy ground) / s',           &
-          &      'Gross photosynthesis on canopy ground area'),                        &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
-          & prefix, suffix,                                                            &
-          & output_level = BASIC,                                                        &
-          & lrestart = .FALSE.,                                                               &
-          & initval_r = 0.0_wp,                                                               &
-          & l_aggregate_all=.TRUE. )
-
-          ! NOTE this jsb4 var is identical to what the canopy_cond is in quincy
-          CALL mem%Add_var('canopy_cond_limited', mem%canopy_cond_limited,         &
-          & hgrid, surface,                                                        &
-          & t_cf('canopy_conductance_limited', '', ''),                            &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
-          & prefix, suffix,                                                        &
-          & initval_r=0.0_wp )
-
-      END IF
-    END IF
-#endif
-
     ! ----------------------------------------------------------------------------------------------------- !
     ! quincy
     IF (model%config%use_quincy) THEN

@@ -599,8 +599,6 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! quincy
     IF (model%config%use_quincy) THEN
-      IF ( One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. &
-         & One_of(VEG_TYPE,  lct_ids(:)) > 0) THEN
 
         ! ------------------------------------------------------------------------------------------------- !
         ! variables used with jsbach4 & quincy
@@ -695,6 +693,11 @@ CONTAINS
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
 
+      ! Additional variables for soil
+      IF ( (One_of(BARE_TYPE, lct_ids(:)) > 0 .OR. One_of(VEG_TYPE, lct_ids(:)) > 0 &
+        &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0)                                 &
+        & ) THEN
+        
         CALL mem%Add_var('alb_vis_soil', mem%alb_vis_soil, &
           & hgrid, surface, &
           & t_cf('alb_vis_soil', 'unitless', 'Albedo in VIS range of soil'), &
@@ -714,6 +717,12 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
+
+      END IF ! soil
+  
+      ! Additional variables for vegetation
+      IF ( (One_of(VEG_TYPE, lct_ids(:)) > 0 .OR. One_of(LAND_TYPE, lct_ids(:)) > 0) &
+        & ) THEN
 
         CALL mem%Add_var('alb_vis_can', mem%alb_vis_can, &
           & hgrid, surface, &
@@ -735,8 +744,13 @@ CONTAINS
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
 
-        ! ------------------------------------------------------------------------------------------------- !
-        ! variables used only with quincy  
+      END IF ! vegetation
+
+      ! --------------------------------------------------------------------------------------------------- !
+      ! variables used only with quincy  
+      IF ( One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. &
+         & One_of(VEG_TYPE,  lct_ids(:)) > 0) THEN
+         
         CALL mem%Add_var('net_radiation', mem%net_radiation, &
           & hgrid, surface, &
           & t_cf('net_radiation', 'W m-2', 'surface net radiation'), &

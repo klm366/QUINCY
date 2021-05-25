@@ -440,48 +440,6 @@ CONTAINS
     END IF !  VEG / LAND
     
 
-#ifdef __QUINCY_NO_JSB__
-#else
-    ! ----------------------------------------------------------------------------------------------------- !
-    ! quincy in jsbach4
-    !  temporary fix: some jsbach4 variables are needed for quincy simulations
-    !                 but might use different Add_var() arguments
-    !  copied from above jsbach4-section, plus some minor modification for output/restart
-    IF (model%config%use_quincy) THEN
-      IF ( One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. &
-         & One_of(VEG_TYPE,  lct_ids(:)) > 0) THEN
-
-        CALL mem%Add_var('fract_fpc', mem%fract_fpc,                             &
-          & hgrid, surface,                                                      &
-          & t_cf('foliage_projected_cover', '', ''),                             &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-          & prefix, suffix,                                                      &
-          & loutput = .TRUE.,                                                    &
-          & lrestart = .FALSE.,                                                  &
-          & initval_r = 0.0_wp )
-  
-        CALL mem%Add_var('fract_fpc_max', mem%fract_fpc_max,                     &
-          & hgrid, surface,                                                      &
-          & t_cf('maximum_fpc', '', ''),                                         &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-          & prefix, suffix,                                                      &
-          & loutput = .TRUE.,                                                    &
-          & lrestart = .FALSE.,                                                  &
-          & initval_r = 0.0_wp )
-  
-        CALL mem%Add_var('veg_fract_correction', mem%veg_fract_correction,       &
-          & hgrid, surface,                                                      &
-          & t_cf('Correction factor to convert tile to canopy area', '', '') ,   &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-          & prefix, suffix,                                                      &
-          & loutput = .TRUE.,                                                    &
-          & lrestart = .TRUE.,                                                   &
-          & initval_r = 0.0_wp )
-
-      END IF
-    END IF
-#endif
-   
     ! ----------------------------------------------------------------------------------------------------- !
     ! quincy
     IF (model%config%use_quincy) THEN

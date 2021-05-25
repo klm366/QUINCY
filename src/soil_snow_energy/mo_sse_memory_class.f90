@@ -19,7 +19,7 @@ MODULE mo_sse_memory_class
   USE mo_exception,              ONLY: finish
   USE mo_util,                   ONLY: One_of
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
-  USE mo_jsb_lct_class,          ONLY: VEG_TYPE, LAND_TYPE
+  USE mo_jsb_lct_class,          ONLY: VEG_TYPE, LAND_TYPE, BARE_TYPE
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
   ! Use of prcesses in this module
@@ -391,8 +391,9 @@ CONTAINS
     !!---------------------------------------------------------------------------------------------
     !! quincy
     IF (model%config%use_quincy) THEN
-      IF ( (     One_of(LAND_TYPE, lct_ids(:)) > 0 &
-        &   .OR. One_of(VEG_TYPE,  lct_ids(:)) > 0)) THEN
+      ! IF ( (     tile%contains_soil &
+      !   &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 &
+      !   &   .OR. One_of(VEG_TYPE,  lct_ids(:)) > 0)) THEN
         
         CALL mem%Add_var('soil_depth', mem%soil_depth, &
           & hgrid, surface, &
@@ -894,7 +895,7 @@ CONTAINS
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
 
-      ENDIF ! tile: land/veg
+      ! ENDIF ! tile: land/veg
     ENDIF   ! quincy
 
   END SUBROUTINE Init_sse_memory
