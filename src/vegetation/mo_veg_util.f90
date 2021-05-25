@@ -842,7 +842,15 @@ CONTAINS
                                                          mavg_period_hlp, do_calc=l_growing_season(:))
     reserve_phosphorus_talloc_mavg(:)   = calc_time_mavg(reserve_phosphorus_talloc_mavg(:), veg_pool%reserve%phosphorus(:), &
                                                          mavg_period_hlp, do_calc=l_growing_season(:))
-    w_root_lim_talloc_mavg(:)           = calc_time_mavg(w_root_lim_talloc_mavg(:), w_soil_root(:) / w_soil_root_fc(:), &
+    ! avoid division by zero
+    DO ic = 1, nc
+      IF (w_soil_root_fc(ic) > eps8) THEN
+         hlp(ic) = w_soil_root(ic) / w_soil_root_fc(ic)
+      ELSE
+         hlp(ic) = 0._wp
+      END IF
+    END DO
+    w_root_lim_talloc_mavg(:)           = calc_time_mavg(w_root_lim_talloc_mavg(:), hlp(:), &
                                                          mavg_period_hlp, do_calc=l_growing_season(:))
 
     !>  2.8 tgrowth / talloc_dynamic

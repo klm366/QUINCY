@@ -365,7 +365,7 @@ CONTAINS
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(HYDRO_)
-    IF (model%config%use_quincy) THEN
+    IF (model%config%use_quincy .AND. tile%contains_vegetation) THEN
       dsl4jsb_Get_memory(VEG_)
     END IF
 
@@ -408,7 +408,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SSE_,   t_soil_root)          ! out
 
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)        ! in
-    IF (model%config%use_quincy) THEN
+    IF (model%config%use_quincy .AND. tile%contains_vegetation) THEN
       dsl4jsb_Get_var3D_onChunk(VEG_, root_fraction_sl)     ! in
     END IF
 
@@ -663,7 +663,7 @@ CONTAINS
 
     ! quincy
     ! diagnose root temperature
-    IF (model%config%use_quincy) THEN
+    IF (model%config%use_quincy .AND. tile%contains_vegetation) THEN
       t_soil_root(:) = 0.0_wp
       DO isoil = 1,nsoil_sb
         t_soil_root(:) = t_soil_root(:) + root_fraction_sl(:,isoil) * t_soil_sl(:,isoil)

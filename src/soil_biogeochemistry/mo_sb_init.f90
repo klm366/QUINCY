@@ -97,6 +97,10 @@ CONTAINS
     dsl4jsb_Real3D_onDomain :: soil_lay_depth_lbound_sl
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_active(SB_)) RETURN
+    IF (.NOT. tile%contains_soil) THEN
+      IF (debug_on()) CALL message(TRIM(routine), 'Not initializing QUINCY SB_ memory for tile w/o soil: '//TRIM(tile%name))
+      RETURN
+    END IF
     IF (debug_on()) CALL message(TRIM(routine), 'Initializing QUINCY SB_ memory for tile '//TRIM(tile%name))
     ! ----------------------------------------------------------------------------------------------------- !
     model         => Get_model(tile%owner_model_id)

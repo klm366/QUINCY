@@ -324,6 +324,7 @@ CONTAINS
     dsl4jsb_Get_memory(PHENO_)          ! veg__mem => veg_memory
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SSE_)
+    dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SB_)
 #ifdef __QUINCY_NO_JSB__
 #else
@@ -1234,6 +1235,22 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
+    !>0.9 init output variables
+    !>
+    uptake_nh4(:)               = 0.0_wp
+    uptake_nh4_n15(:)           = 0.0_wp
+    uptake_no3(:)               = 0.0_wp
+    uptake_no3_n15(:)           = 0.0_wp
+    uptake_po4(:)               = 0.0_wp
+    n_fixation(:)               = 0.0_wp
+    unit_uptake_n_act(:)        = 0.0_wp
+    unit_uptake_p_act(:)        = 0.0_wp
+    cost_n_uptake_root(:)       = 0.0_wp
+    cost_n_fixation(:)          = 0.0_wp
+    n_transform_respiration(:)  = 0.0_wp
+    n_fixation_respiration(:)   = 0.0_wp
+    n_processing_respiration(:) = 0.0_wp
+    veg_exudation_carbon(:)     = 0.0_wp
 
     !> 1.0 determine root nutrient uptake from soil  
     !!
@@ -2535,6 +2552,10 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
+    !>0.9 init output variables
+    !>
+    growth_req_n(:) = 0.0_wp
+    growth_req_p(:) = 0.0_wp
 
     !> 1.0 Allocation factors for C (this should be calculated based on various principles of plant growth and allometry)
     !! 

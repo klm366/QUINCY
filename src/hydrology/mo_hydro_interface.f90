@@ -1203,7 +1203,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: saxtonA
     dsl4jsb_Real3D_onChunk :: saxtonB
 
-    INTEGER :: iblk, ics, ice
+    INTEGER :: iblk, ics, ice, ic, nc
     REAL(wp) :: config_w_soil_crit_fract, config_w_soil_wilt_fract
     REAL(wp), DIMENSION(options%nc) :: hlp1     !< helper variable
 
@@ -1212,6 +1212,7 @@ CONTAINS
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
+    nc   = options%nc
 
     IF (.NOT. tile%Is_process_active(HYDRO_) .OR. .NOT. tile%is_vegetation) RETURN
 
@@ -1268,14 +1269,27 @@ CONTAINS
     ! needed for quincy only (i.e., two variables not used in jsb4 at the moment)
     ! copy/paste from mo_sse_update_physics:calc_soil_hydrology() 
     ! calculate plant fractional water availability 
-    w_soil_root_theta(:) = ( w_soil_root(:) - w_soil_root_pwp(:) ) / &
-                           ( w_soil_root_fc(:) - w_soil_root_pwp(:) ) 
-    w_soil_root_theta(:) = MAX(w_soil_root_theta(:), 0.0_wp)
-    ! calculate root zone and layer soil water potential according to Campbell et al 1974 
-    hlp1(:) = MIN(w_soil_root_fc(:), w_soil_root(:)) / root_depth(:)
-    ! for numerical reasons, constrain to minimum water potential 
-    hlp1(:) = MAX(EXP(LOG(wpot_min/saxtonA(:,1))/saxtonB(:,1)),hlp1(:)) 
-    w_soil_root_pot(:) = saxtonA(:,1) * (hlp1(:) ** saxtonB(:,1))
+    IF (tile%contains_vegetation) THEN
+      ! catch "no water"
+      DO ic = 1,nc
+        IF ((w_soil_root_fc(ic) - w_soil_root_pwp(ic)) > eps8 .OR. &
+          & (w_soil_root_fc(ic) - w_soil_root_pwp(ic)) < -eps8) THEN
+          w_soil_root_theta(ic) = ( w_soil_root(ic) - w_soil_root_pwp(ic) ) / &
+                                  ( w_soil_root_fc(ic) - w_soil_root_pwp(ic) ) 
+        END IF
+      END DO
+      w_soil_root_theta(:) = MAX(w_soil_root_theta(:), 0.0_wp)
+      ! calculate root zone and layer soil water potential according to Campbell et al 1974 
+      ! catch "no roots"
+      DO ic = 1,nc
+        IF (root_depth(ic) > eps8) THEN
+          hlp1(ic) = MIN(w_soil_root_fc(ic), w_soil_root(ic)) / root_depth(ic)
+          ! for numerical reasons, constrain to minimum water potential 
+          hlp1(ic) = MAX( EXP( LOG(wpot_min / saxtonA(ic,1)) / saxtonB(ic,1)), hlp1(ic)) 
+          w_soil_root_pot(ic) = saxtonA(ic,1) * (hlp1(ic) ** saxtonB(ic,1))
+        END IF
+      END DO
+    END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

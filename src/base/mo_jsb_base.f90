@@ -47,7 +47,7 @@ CONTAINS
     USE mo_veg_constants,       ONLY: init_veg_constants
     USE mo_sse_constants,       ONLY: init_sse_constants
     USE mo_hydro_constants,     ONLY: init_hydro_constants
-    ! USE mo_sb_constants,        ONLY: init_sb_constants
+    USE mo_sb_constants,        ONLY: init_sb_constants
     USE mo_pheno_constants,     ONLY: init_pheno_constants
 
     dsl4jsb_Use_processes SSE_, HYDRO_, RAD_, CARBON_, DISTURB_, FUEL_
@@ -202,7 +202,7 @@ CONTAINS
       CALL init_assimi_constants   
       CALL init_veg_constants      
       CALL init_sse_constants
-      ! CALL init_sb_constants
+      CALL init_sb_constants
       CALL init_pheno_constants    
       IF (debug_on()) CALL message(TRIM(routine), 'initialized quincy constants)')
     ENDIF

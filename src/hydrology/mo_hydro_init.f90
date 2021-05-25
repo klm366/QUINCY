@@ -360,25 +360,27 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
 
-    ! SSE_ 3D
-    dsl4jsb_Get_var3D_onDomain(SSE_, sand_sl)       ! in
-    dsl4jsb_Get_var3D_onDomain(SSE_, silt_sl)       ! in
-    dsl4jsb_Get_var3D_onDomain(SSE_, clay_sl)       ! in
-    dsl4jsb_Get_var3D_onDomain(SSE_, soil_lay_width_sl)          ! out
-    dsl4jsb_Get_var3D_onDomain(SSE_, soil_lay_depth_center_sl)   ! out
-    dsl4jsb_Get_var3D_onDomain(SSE_, soil_lay_depth_ubound_sl)   ! out
-    dsl4jsb_Get_var3D_onDomain(SSE_, soil_lay_depth_lbound_sl)   ! out
-    ! HYDRO_ 3D
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, saxtonA)     ! out
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, saxtonB)     ! out
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, saxtonC)     ! out
-    ! ----------------------------------------------------------------------------------------------------- !
-    nc    = SIZE(sand_sl,1)
-    nblks = SIZE(sand_sl,3)
-    ! ----------------------------------------------------------------------------------------------------- !
-    ALLOCATE(hlp1(nc, nsoil_sb, nblks))
-    ALLOCATE(theta_pwp_sl(nc, nsoil_sb, nblks))
-    ALLOCATE(theta_fc_sl(nc, nsoil_sb, nblks))
+    IF (tile%contains_soil) THEN
+      ! SSE_ 3D
+      dsl4jsb_Get_var3D_onDomain(SSE_, sand_sl)       ! in
+      dsl4jsb_Get_var3D_onDomain(SSE_, silt_sl)       ! in
+      dsl4jsb_Get_var3D_onDomain(SSE_, clay_sl)       ! in
+      dsl4jsb_Get_var3D_onDomain(SSE_, soil_lay_width_sl)          ! out
+      dsl4jsb_Get_var3D_onDomain(SSE_, soil_lay_depth_center_sl)   ! out
+      dsl4jsb_Get_var3D_onDomain(SSE_, soil_lay_depth_ubound_sl)   ! out
+      dsl4jsb_Get_var3D_onDomain(SSE_, soil_lay_depth_lbound_sl)   ! out
+      ! HYDRO_ 3D
+      dsl4jsb_Get_var3D_onDomain(HYDRO_, saxtonA)     ! out
+      dsl4jsb_Get_var3D_onDomain(HYDRO_, saxtonB)     ! out
+      dsl4jsb_Get_var3D_onDomain(HYDRO_, saxtonC)     ! out
+      ! ----------------------------------------------------------------------------------------------------- !
+      nc    = SIZE(sand_sl,1)
+      nblks = SIZE(sand_sl,3)
+      ! ----------------------------------------------------------------------------------------------------- !
+      ALLOCATE(hlp1(nc, nsoil_sb, nblks))
+      ALLOCATE(theta_pwp_sl(nc, nsoil_sb, nblks))
+      ALLOCATE(theta_fc_sl(nc, nsoil_sb, nblks))
+    END IF
 
     !----------
 
@@ -505,30 +507,32 @@ CONTAINS
       ! kdiff_sat_sl(:,:,:) = kdiff_sat_max * (theta_sat_sl(:,:,:) - theta_fc_sl(:,:,:)) ** (3.0_wp + 1._wp / saxtonB(:,:,:))
       saxtonC(:,:,:)      = 3.0_wp - 2._wp * saxtonB(:,:,:)
 
-    ! pass soil-layer values to a SSE_ variable with a correct name
-    dsl4jsb_var3D_onDomain(SSE_, soil_lay_width_sl) = dsl4jsb_var3D_onDomain(SSE_, soil_depth_sl)
+      ! pass soil-layer values to a SSE_ variable with a correct name
+      ! soil_depth_sl is the width of each soil layer until bedrock
+      soil_lay_width_sl(:,:,:) = dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl)
 
-    !>  2.1 calc more metrics of the soil layers
-    !>
-    !>    i)  lower & upper boundary
-    !>    ii) depth at the center of each layer
-    !>
-    DO iblk = 1,nblks
-      DO isoil = 1,nsoil_sb
-        ! lower & upper boundary
-        IF (isoil == 1) THEN
-          soil_lay_depth_lbound_sl(:,isoil,iblk) = 0.0_wp
-          soil_lay_depth_ubound_sl(:,isoil,iblk) = soil_lay_width_sl(:,isoil,iblk)
-        ELSE
-          soil_lay_depth_lbound_sl(:,isoil,iblk) = soil_lay_depth_lbound_sl(:,isoil-1,iblk) + soil_lay_width_sl(:,isoil-1,iblk)
-          soil_lay_depth_ubound_sl(:,isoil,iblk) = soil_lay_depth_ubound_sl(:,isoil-1,iblk) + soil_lay_width_sl(:,isoil,iblk)
-        ENDIF                                
-        ! soil-layer center
-        soil_lay_depth_center_sl(:,isoil,iblk)   = (soil_lay_depth_lbound_sl(:,isoil,iblk) + &
-          & soil_lay_depth_ubound_sl(:,isoil,iblk)) * 0.5_wp 
+      !>  2.1 calc more metrics of the soil layers
+      !>
+      !>    i)  lower & upper boundary
+      !>    ii) depth at the center of each layer
+      !>
+      DO iblk = 1,nblks
+        DO isoil = 1,nsoil_sb
+          ! lower & upper boundary
+          IF (isoil == 1) THEN
+            soil_lay_depth_lbound_sl(:,isoil,iblk) = 0.0_wp
+            soil_lay_depth_ubound_sl(:,isoil,iblk) = soil_lay_width_sl(:,isoil,iblk)
+          ELSE
+            soil_lay_depth_lbound_sl(:,isoil,iblk) = soil_lay_depth_lbound_sl(:,isoil-1,iblk) + soil_lay_width_sl(:,isoil-1,iblk)
+            soil_lay_depth_ubound_sl(:,isoil,iblk) = soil_lay_depth_ubound_sl(:,isoil-1,iblk) + soil_lay_width_sl(:,isoil,iblk)
+          ENDIF                                
+          ! soil-layer center
+          soil_lay_depth_center_sl(:,isoil,iblk)   = (soil_lay_depth_lbound_sl(:,isoil,iblk) + &
+            &                                         soil_lay_width_sl(:,isoil,iblk)) * 0.5_wp 
+        ENDDO
       ENDDO
-    ENDDO
-    END IF
+      
+    END IF  ! tile%contains_soil
 
   END SUBROUTINE hydro_init_bc
 
