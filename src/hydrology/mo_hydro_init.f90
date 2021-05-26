@@ -526,9 +526,9 @@ CONTAINS
             soil_lay_depth_lbound_sl(:,isoil,iblk) = soil_lay_depth_lbound_sl(:,isoil-1,iblk) + soil_lay_width_sl(:,isoil-1,iblk)
             soil_lay_depth_ubound_sl(:,isoil,iblk) = soil_lay_depth_ubound_sl(:,isoil-1,iblk) + soil_lay_width_sl(:,isoil,iblk)
           ENDIF                                
-          ! soil-layer center
+          ! soil-layer center ['(lower_bound + upper_bound) * 0.5']
           soil_lay_depth_center_sl(:,isoil,iblk)   = (soil_lay_depth_lbound_sl(:,isoil,iblk) + &
-            &                                         soil_lay_width_sl(:,isoil,iblk)) * 0.5_wp 
+            &                                         soil_lay_depth_ubound_sl(:,isoil,iblk)) * 0.5_wp 
         ENDDO
       ENDDO
       
