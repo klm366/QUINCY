@@ -664,6 +664,7 @@ CONTAINS
 
     !$cla$w acc end data
     !$claw acc exit data delete(s_air, heat_tcoef)
+    DEALLOCATE(sair, heat_tcoef)
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
