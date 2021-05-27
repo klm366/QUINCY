@@ -795,7 +795,8 @@ CONTAINS
   SUBROUTINE update_phenology_jedi_phenology(tile,options)
   
     USE mo_pheno_process, ONLY: calc_jedi_phenology
-    USE mo_jsb_time,      ONLY: t_datetime,is_newday,is_time_experiment_start,get_time_experiment_start,get_year
+    USE mo_jsb_time,      ONLY: t_datetime, is_newday, is_time_experiment_start
+      ! &                         get_time_experiment_start, deallocateDatetime, get_year
     
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -837,8 +838,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(PHENO_, lai)        ! inout
     dsl4jsb_Get_var2D_onChunk(JEDI_,  c_leaves)
 
-    inidate => get_time_experiment_start()
-    iniyear =  get_year(inidate)
+    ! inidate => get_time_experiment_start()
+    ! iniyear =  get_year(inidate)
+    ! CALL deallocateDatetime(inidate)
 
     !CALL calc_jedi_phenology(  & dsl4jsb_Lctlib_param(LandcoverClass),  & !in
     CALL calc_jedi_phenology(  dsl4jsb_Lctlib_param(JeDiSLA), &  ! in

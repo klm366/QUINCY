@@ -967,6 +967,7 @@ CONTAINS
     tile%l_fract_children_changed(:,:) = .TRUE.
 
     DEALLOCATE(c_total_sum)
+    DEALLOCATE(fract)
 
   END SUBROUTINE jedi_biomass_to_fract
 
