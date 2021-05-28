@@ -127,7 +127,7 @@ CONTAINS
     !                                soil_p_primary
     ! REAL(wp)                    :: qmax_org_fine_particle
 
-    NAMELIST /soil_biogeochemistry_ctl/       & 
+    NAMELIST /jsb_sb_nml/       & 
                       active                    , &
                       bc_filename               , &
                       ic_filename!               , &
@@ -191,11 +191,11 @@ CONTAINS
     ! qmax_org_fine_particle      = 6.5537_wp
 
     ! read the namelist
-    ! &SOIL_BIOGEOCHEMISTRY_CTL
+    ! &jsb_sb_nml
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
-    nml_unit = position_nml('SOIL_BIOGEOCHEMISTRY_CTL', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, soil_biogeochemistry_ctl)
+    nml_unit = position_nml('jsb_sb_nml', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, jsb_sb_nml)
 
     CALL close_nml(nml_handler)
 
