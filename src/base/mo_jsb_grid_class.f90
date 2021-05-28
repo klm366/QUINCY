@@ -29,6 +29,7 @@ MODULE mo_jsb_grid_class
   USE mo_jsb_grid_iface,     ONLY: get_lon_domain           => get_lon,           &
                                    get_lat_domain           => get_lat,           &
                                    get_area_domain          => get_area
+  USE mo_jsb_impl_constants, ONLY: SHORT_NAME_LEN
 
   IMPLICIT NONE
   PRIVATE
@@ -38,7 +39,7 @@ MODULE mo_jsb_grid_class
 
   TYPE t_jsb_grid
     INTEGER                       :: id = 0
-    CHARACTER(LEN=10)             :: name = ''
+    CHARACTER(LEN=SHORT_NAME_LEN) :: name = ''
     CHARACTER(LEN=filename_max)   :: filename = ''
     INTEGER                       :: ntotal = 0          !< Number of cells on this PE
     INTEGER                       :: nland = 0
