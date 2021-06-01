@@ -231,7 +231,7 @@ CONTAINS
         & t_cf('yday_c_state_sum', '', 'yday c state sum required for carbon conservation test'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
         & prefix, suffix,                                                                          &
-        & loutput = .TRUE., lrestart=.TRUE.,                                                       &
+        & output_level=BASIC, loutput = .TRUE., lrestart=.TRUE.,                                   &
         & initval_r=0.0_wp )
         
     END IF

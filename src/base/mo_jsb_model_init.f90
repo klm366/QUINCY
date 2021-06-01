@@ -20,7 +20,7 @@ MODULE mo_jsb_model_init
 #ifndef __NO_JSBACH__
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-    &                   FUEL_, ALCC_, A2L_, VEG_, SB_
+    &                   FUEL_, PPLCC_, TLCC_, TCQ_, ALCC_, A2L_, VEG_, SB_
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
 
@@ -189,8 +189,11 @@ CONTAINS
     USE mo_veg_init,            ONLY: veg_init
     USE mo_sb_init,             ONLY: sb_init
     USE mo_carbon_init,         ONLY: carbon_init
+    USE mo_tcq_init,            ONLY: tcq_init
     USE mo_fuel_init,           ONLY: fuel_init
     !USE mo_disturb_init,        ONLY: disturb_init
+    USE mo_tlcc_init_lcc,       ONLY: tlcc_init_lcc
+
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_init,             ONLY: hd_init_ic, hd_init_bc
 #endif
@@ -240,8 +243,21 @@ CONTAINS
       !   considerations
   
       ! ------------------------ tasks that can change area
-      ! 
-      ! Disturbances happen on a daily basis and can lead to area changes when running with cohorts
+      !
+      IF (model%processes(PPLCC_)%p%config%active) THEN
+        !! Prepare LCC tasks!
+        CALL model%Queue_task(PPLCC_, "pplcc_pre_lcc")
+
+        !***** Add LCC processes between pplcc_pre and pplcc_post *****
+        CALL model%Queue_task(TLCC_, "tlcc")
+
+        !! Do postprocessing after all LCC tasks were executed!
+        CALL model%Queue_task(PPLCC_, "pplcc_post_lcc")
+      END IF
+
+      ! JN-TODO: disturbances need to be adapted to work on per grid-cell variables to be treated 
+      !          alongside the lccs above that change area to enable age-classes to be reintroduced
+      ! Disturbances happen on a daily basis and can lead to area changes when running with age-classes
       IF (model%processes(FUEL_)%p%config%active) THEN
         CALL model%Queue_task(FUEL_, "fuel")
       END IF
@@ -251,6 +267,8 @@ CONTAINS
   
       ! ------------------------ tasks that do not change area
       !
+      CALL model%Queue_task(TCQ_,    "tcq")
+
       CALL model%Queue_task(RAD_,    "surface_radiation")
       CALL model%Queue_task(PHENO_,  "phenology")
         ! JN moved phenology up - for allom it needs to happen before C_NPP_pot_allocation and
@@ -307,7 +325,7 @@ CONTAINS
           ! In the albedo update time step the albedo should be updated after the SEB process, so that also
           ! the SEB remains consistent within this time step.
       IF (model%processes(ALCC_)%p%config%active) THEN
-        CALL model%Queue_task(ALCC_, "alcc")
+        CALL model%Queue_task(ALCC_, "alcc")                ! JN-TODO: this should be moved up to tasks that can change area
       END IF
           ! The explanation above for the aldedo accounts also for alcc as it may also changes surface
           ! properties affecting atmospheric radiation. However, in alcc we do not redistribute the albedos
@@ -491,10 +509,14 @@ CONTAINS
         CALL carbon_init(tile)
       END IF
 
+      IF (one_of(tile%process_action(TCQ_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        CALL tcq_init(tile)
+      END IF
+
       IF (one_of(tile%process_action(FUEL_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
         CALL fuel_init(tile)
       END IF
-
+      
       ! R: at the moment we do not need any initialization for disturbance:
       ! IF (one_of(tile%process_action(DISTURB_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
       !  CALL disturb_init(tile)
@@ -584,7 +606,7 @@ CONTAINS
 
     ! -------------------------------------------------------------------------------------------------- !
     !>
-    !> 4. Iterate over tiles again and initialize hierarchical structure for memories and variables
+    !> 4. Iterate over tiles again and initialize hierarchical structure for memories, variables, cq and lcc
     !>
     CALL model%Reset_tiles()
     CALL model%Get_top_tile(tile)
@@ -606,7 +628,7 @@ CONTAINS
 
     END DO
 
-    ! Iterate over tiles and crossckeck tile structure
+    ! Iterate over tiles, crosscheck tile structure and collect conserved quantities
     CALL model%Reset_tiles()
     CALL model%Get_top_tile(tile)
     IF (.NOT. ASSOCIATED(tile)) &
@@ -628,9 +650,32 @@ CONTAINS
           &             'Must use phenology climatology on general, non-PFT VEG tile '//TRIM(tile%name))
       END IF
 
+      CALL tile%Count_conserved_quantities()
+      CALL tile%Collect_conserved_variables()
+
       CALL model%Goto_next_tile(tile)
 
     END DO
+
+    ! Iterate over tiles, init lcc structures
+    CALL model%Reset_tiles()
+    CALL model%Get_top_tile(tile)
+    IF (.NOT. ASSOCIATED(tile)) &
+      & CALL finish(TRIM(routine), 'Top tile not set')
+
+    DO WHILE (ASSOCIATED(tile))
+
+      IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
+        CALL model%Goto_next_tile(tile)
+        CYCLE
+      END IF
+
+      IF (one_of(tile%process_action(TLCC_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        CALL tlcc_init_lcc(tile)
+      END IF
+
+      CALL model%Goto_next_tile(tile)
+    ENDDO
 
     ! -------------------------------------------------------------------------------------------------- !
     !>

@@ -21,8 +21,9 @@ MODULE mo_jsb_control
   USE mo_util,      ONLY: int2string
   USE mo_timer,     ONLY: new_timer
 
-  USE mo_jsb_time_iface, ONLY: l_timer_host !< timers on in host model?
-  USE mo_jsb_io_iface,   ONLY: ldebugio
+  USE mo_jsb_impl_constants, ONLY: SHORT_NAME_LEN
+  USE mo_jsb_time_iface,     ONLY: l_timer_host !< timers on in host model?
+  USE mo_jsb_io_iface,       ONLY: ldebugio
 
   IMPLICIT NONE
   PRIVATE
@@ -48,7 +49,7 @@ MODULE mo_jsb_control
   TYPE t_jsb_model_nml
     INTEGER            :: model_id = 0
     CHARACTER(len=30)  :: model_name
-    CHARACTER(len=10)  :: model_shortname
+    CHARACTER(len=SHORT_NAME_LEN) :: model_shortname
     CHARACTER(len=132) :: model_description
     CHARACTER(len=filename_max) :: model_namelist_filename
   END TYPE t_jsb_model_nml
@@ -130,7 +131,7 @@ CONTAINS
 
     INTEGER            :: model_id
     CHARACTER(len=30)  :: model_name
-    CHARACTER(len=10)  :: model_shortname
+    CHARACTER(len=SHORT_NAME_LEN) :: model_shortname
     CHARACTER(len=132) :: model_description
     CHARACTER(len=filename_max) :: model_namelist_filename
 

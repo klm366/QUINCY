@@ -155,7 +155,6 @@ MODULE mo_jsb4_forcing
   ! --- Structures for handling input data
   ! options relating forcing read from namelist
   TYPE forcing_options_type
-    REAL(wp) :: delta_time_observations
     INTEGER  :: forcing_synchron_factor      
     INTEGER  :: forcing_steps_per_file
     LOGICAL  :: forcing_set_ocean_to_constants !! Specifies if external forcing is only defined for land cells (true)
@@ -532,7 +531,6 @@ CONTAINS
     INTEGER, INTENT(IN) :: model_id
 
     ! --- Namelist parameters
-    REAL(wp) :: delta_time_observations
     INTEGER  :: forcing_synchron_factor ! Factor defines how many time steps the JS4 driver performs for
                                         ! each atmospheric forcing time step that is read in      
     INTEGER  :: forcing_steps_per_file  ! The number of time steps included by the used forcing file(s), e.g. 72
@@ -592,7 +590,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_forcing'
 
-    NAMELIST /jsb_forcing_nml/ delta_time_observations, forcing_synchron_factor, forcing_steps_per_file,                      &
+    NAMELIST /jsb_forcing_nml/ forcing_synchron_factor, forcing_steps_per_file,                      &
       & forcing_set_ocean_to_constants, forcing_height_wind, forcing_height_humidity,                                         &
       & forcing_temp_file_prefix, forcing_temp_frequ, forcing_temp_const_tmin, forcing_temp_const_tmax, forcing_temp_ocean,   &
       & forcing_temp_unit,                                                                                                    &
@@ -612,7 +610,6 @@ CONTAINS
 
     IF (my_process_is_stdio()) THEN
       ! ----- define default values for jsb_forcing_nml namelist parameters
-      delta_time_observations  = 86400._wp
       forcing_synchron_factor  = 1  ! Factor defines how many time steps the JS4 driver performs for
                                     ! each atmospheric forcing time step that is read in
       forcing_steps_per_file   = 72 ! The number of time steps included by the used forcing file(s), e.g. 72
@@ -672,7 +669,6 @@ CONTAINS
       f_unit = position_nml ('jsb_forcing_nml', nml_handler, status=read_status)
       IF (read_status .EQ. POSITIONED) READ(f_unit, jsb_forcing_nml)
 
-      forcing_options%delta_time_observations = delta_time_observations
       forcing_options%forcing_synchron_factor = forcing_synchron_factor
       forcing_options%forcing_steps_per_file  = forcing_steps_per_file
 
@@ -732,7 +728,6 @@ CONTAINS
     ! ----- broadcast information
     IF (my_process_is_mpi_parallel()) THEN
       ! forcing options
-      CALL p_bcast(delta_time_observations, p_io, mpi_comm)
       CALL p_bcast(forcing_synchron_factor, p_io, mpi_comm)
       CALL p_bcast(forcing_steps_per_file, p_io, mpi_comm)
       CALL p_bcast(forcing_options%forcing_set_ocean_to_constants, p_io, mpi_comm)
@@ -1282,7 +1277,7 @@ CONTAINS
       ! adapted according to jsb3 offline modifications by Marvin, Philipp et al. Jan. 24, 2017 (r8893)
       IF(forcing_options%heightWind > 0._wp .AND. forcing_options%heightHumidity > 0._wp) THEN
         zg(1:ic) = forcing_options%heightWind * grav
-        zgh(1:ic) = forcing_options%heightHumidity * grav ! jsb31:ic "HeightHumidity and HeightTemperature have to be equal"
+        zgh(1:ic) = forcing_options%heightHumidity * grav ! jsb3 "HeightHumidity and HeightTemperature have to be equal"
       ELSE
         ! TODO Once forcing from model data is implemented this has to be activated again!
         ! zg(1:ic) = ztvir(1:ic) * rd * LOG(1._wp / zsigma)
@@ -1298,7 +1293,7 @@ CONTAINS
       zchnl(1:ic) = ckap**2 / (LOG(1._wp + zg(1:ic) / (grav * rough_m_srf_proc(1:ic,iblk) )) &
                 * LOG( ( grav * rough_m_srf_proc(1:ic,iblk) + zgh(1:ic) ) / (grav * rough_h_srf_proc(1:ic,iblk) )))
 
-      ! account for stable/unstable case1:ic helper variables
+      ! account for stable/unstable case: helper variables
       zscfl(1:ic) = SQRT ( 1._wp + 5._wp * ABS(zril(1:ic)))
       zucfhl(1:ic) = 1._wp / (1._wp + zcons11 * zchnl(1:ic) * SQRT(ABS(zril(1:ic)) * (1._wp &
         & + zgh(1:ic) / (grav * rough_h_srf_proc(1:ic,iblk)))))

@@ -15,9 +15,10 @@
 MODULE mo_jsb_config_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp
-  USE mo_io_units,          ONLY: filename_max
-  USE mo_exception,         ONLY: message
+  USE mo_kind,               ONLY: wp
+  USE mo_jsb_impl_constants, ONLY: SHORT_NAME_LEN
+  USE mo_io_units,           ONLY: filename_max
+  USE mo_exception,          ONLY: message
 
   IMPLICIT NONE
   PRIVATE
@@ -33,10 +34,10 @@ MODULE mo_jsb_config_class
     LOGICAL                        :: use_lakes
     LOGICAL                        :: use_glacier
     LOGICAL                        :: use_quincy
-    CHARACTER(len=10)              :: tpe_scheme       ! For terraplanet setup: open/closed
-    CHARACTER(len=10)              :: hsm_mode
+    CHARACTER(len=SHORT_NAME_LEN)  :: tpe_scheme       ! For terraplanet setup: open/closed
+    CHARACTER(len=SHORT_NAME_LEN)  :: hsm_mode
     LOGICAL                        :: l_compat401      ! Use configuration compatible with jsbach 4.01
-    CHARACTER(len=10), ALLOCATABLE :: output_tiles(:)  ! List of tile names for which output should be generated
+    CHARACTER(len=SHORT_NAME_LEN), ALLOCATABLE :: output_tiles(:)  ! List of tile names for which output should be generated
     LOGICAL                        :: relative_fractions_in_file  ! true: tile fractions in fract_filename are relative to parent tile
     ! quincy @TODO temporary solution for model%config%options
     REAL(wp)          :: dtime                   !< length of one time step in seconds; defaults to 1800  @TODO
@@ -55,7 +56,7 @@ MODULE mo_jsb_config_class
     CHARACTER(len=filename_max) :: ic_filename
     CHARACTER(len=filename_max) :: bc_filename
     CHARACTER(LEN=filename_max) :: namelist_filename
-    CHARACTER(len=10), ALLOCATABLE :: output_tiles(:)  ! List of tile names for which output should be generated
+    CHARACTER(len=SHORT_NAME_LEN), ALLOCATABLE :: output_tiles(:)  ! List of tile names for which output should be generated
   CONTAINS
     PROCEDURE (Init_config), DEFERRED, PASS(config) :: Init
   END TYPE t_jsb_config
@@ -89,16 +90,16 @@ CONTAINS
       grid_filename,          &
       grid_name
 
-    LOGICAL                     :: use_lakes
-    LOGICAL                     :: use_glacier
-    LOGICAL                     :: use_quincy
-    LOGICAL                     :: l_compat401
-    CHARACTER(len=filename_max) :: fract_filename
-    CHARACTER(len=40)           :: usecase
-    CHARACTER(len=10)           :: tpe_scheme
-    CHARACTER(len=10)           :: hsm_mode
-    CHARACTER(len=10)           :: output_tiles(99)
-    LOGICAL                     :: relative_fractions_in_file
+    LOGICAL                       :: use_lakes
+    LOGICAL                       :: use_glacier
+    LOGICAL                       :: use_quincy
+    LOGICAL                       :: l_compat401
+    CHARACTER(len=filename_max)   :: fract_filename
+    CHARACTER(len=40)             :: usecase
+    CHARACTER(len=SHORT_NAME_LEN) :: tpe_scheme
+    CHARACTER(len=SHORT_NAME_LEN) :: hsm_mode
+    CHARACTER(len=SHORT_NAME_LEN) :: output_tiles(99)
+    LOGICAL                       :: relative_fractions_in_file
 
     NAMELIST /jsb_model_nml/  &
       use_lakes, &
