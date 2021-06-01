@@ -1073,4 +1073,3 @@ CONTAINS
 
   END SUBROUTINE calc_pseudo_soil_temp
 
-#endif
