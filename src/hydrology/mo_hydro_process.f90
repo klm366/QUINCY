@@ -503,7 +503,7 @@ CONTAINS
     REAL(wp) ::              &
       & ws_max(nidx),        & ! water holding capacity of the soil [m]
       & ws_min_drain(nidx),  & ! minimum soil moisture for drainage
-      & ws_incl_ice(nidx),   & ! soil moisture including ice [m]
+      & ws_keep(nidx),       & ! just used to keep pure liquid soil moisture [m]
       & ice_rootzone(nidx)     ! amount of ice in the rootzone [m]
     
     REAL(wp) ::                    &
@@ -515,7 +515,7 @@ CONTAINS
     INTEGER :: jllog = 0
 
 
-    !$claw acc data pcreate(evapo_soil_in_m,transpiration_in_m,infilt,ws_max,ws_min_drain,ws_incl_ice,ice_rootzone,vfc_times_sd_l)
+    !$claw acc data pcreate(evapo_soil_in_m,transpiration_in_m,infilt,ws_max,ws_min_drain,ws_keep,ice_rootzone,vfc_times_sd_l)
     sigma_0   = oro_var_min
     sigma_max = oro_var_max * 64._wp / REAL(nlat, wp) ! @todo: site level
 
@@ -568,7 +568,7 @@ CONTAINS
 
     !$claw acc data present(evapo_soil_in_m,evapotrans_soil,transpiration_in_m) &
     !$claw acc present(ws_min_drain,ws_max,oro_stddev,runoff,infilt)    &
-    !$claw acc present(water_to_soil,ws_incl_ice,ice_rootzone,drainage,t_soil_upper_layer)
+    !$claw acc present(water_to_soil,ice_rootzone,drainage,t_soil_upper_layer)
     !$claw acc parallel
     !$claw acc loop gang
     DO i = 1, nidx
@@ -616,17 +616,25 @@ CONTAINS
         runoff(i) = 0._wp
         infilt(i) = water_to_soil(i)
       ELSE
-        IF (t_soil_upper_layer(i) < tmelt) THEN
-          runoff(i) = water_to_soil(i)       !  no infiltration as uppermost soil layer is frozen -> runoff
-          infilt(i) = 0._wp
+        IF ((.NOT. l_infil_subzero .OR. l_hyd_ref) .AND. (t_soil_upper_layer(jl) < tmelt)) THEN
+          !pdv: Temperature dependence should not be included when using the 5-layer snow scheme because:
+          !pdv  when tsurf == 0.C; T_soil < 0.C -- and all snow melt is going to surfcae runoff 
+          runoff(jl) = water_to_soil(jl)       !  no infiltration as uppermost soil layer is frozen -> runoff
+          infilt(jl) = 0._wp
         ELSE
-          ws_incl_ice(i) = ws(i) + ice_rootzone(i)                    ! soil water including ice
-          IF (water_to_soil(i) > 0._wp .AND. ws_incl_ice(i) > ws_min_drain(i)) THEN ! soilwater content above limit for drainage
+!pdv >
+          IF (l_hyd_ref) THEN
+            !pdv: ice should not be included in the calculation because ws_max (and ws_min_drain) does not include ice
+            ws_keep = ws(i)
+            ws(i) = ws(i) + ice_rootzone(i)                    ! soil water including ice
+          END IF
+!pdv <
+          IF (water_to_soil(i) > 0._wp .AND. ws(i) > ws_min_drain(i)) THEN ! soilwater content above limit for drainage
 
-            ws_rel(i) = MIN(1._wp, ws_incl_ice(i) / ws_max(i))            !  relative soil moisture
-            zvol   = (1._wp - ws_rel(i))**zbm - water_to_soil(i)/zconw1          ! ???
+            ws_rel(i) = MIN(1._wp, ws(i) / ws_max(i))                      !  relative soil moisture
+            zvol   = (1._wp - ws_rel(i))**zbm - water_to_soil(i)/zconw1    ! ???
 
-            runoff(i) = water_to_soil(i) - (ws_max(i)-ws_incl_ice(i)) ! if >0: amount of water exceeding water holding capacity
+            runoff(i) = water_to_soil(i) - (ws_max(i)-ws(i)) ! if >0: amount of water exceeding water holding capacity
             IF (zvol > 0._wp) runoff(i) = runoff(i) + ws_max(i)*zvol**zb1
             runoff(i) = MAX(MIN(runoff(i), water_to_soil(i)), 0._wp)   ! no negative runoff, runoff limited by available water
             infilt(i) = water_to_soil(i) - runoff(i)                   ! water not going into runoff is infiltrated
@@ -634,33 +642,10 @@ CONTAINS
             runoff(i) = 0._wp                                            ! no runoff as soil is too dry
             infilt(i) = water_to_soil(i)                                ! all water infiltrated
           END IF
-
-! pdv >
-          !!!! Here ice should not be included in the calculation because ws_max (and ws_min_drain) does not include ice
-        ! ws_incl_ice(jl) = ws(jl) + ice_rootzone(jl)                    ! soil water including ice
-        ! IF (water_to_soil(jl) > 0._wp .AND. ws_incl_ice(jl) > ws_min_drain(jl)) THEN  ! soil water content above limit for drainage
-          IF (water_to_soil(jl) > 0._wp .AND. ws(jl) > ws_min_drain(jl)) THEN  ! soil water content above limit for drainage
-
-          ! ws_rel = MIN(1._wp, ws_incl_ice(jl) / ws_max(jl))            !  relative soil moisture
-            ws_rel = MIN(1._wp, ws(jl) / ws_max(jl))                     !  relative soil moisture
-            zvol   = (1._wp - ws_rel(i))**zbm - water_to_soil(jl)/zconw1          ! ???
-
-          ! runoff(jl) = water_to_soil(jl) - (ws_max(jl)-ws_incl_ice(jl))    ! if >0: amount of water exceeding water holding capacity
-            runoff(jl) = water_to_soil(jl) - (ws_max(jl)-ws(jl))             ! if >0: amount of water exceeding water holding capacity
-            IF (zvol > 0._wp) runoff(jl) = runoff(jl) + ws_max(jl)*zvol**zb1
-            runoff(jl) = MAX(MIN(runoff(jl), water_to_soil(jl)), 0._wp)      ! no negative runoff, runoff limited by available water
-            infilt(jl) = water_to_soil(jl) - runoff(jl)                      ! water not going into runoff is infiltrated
-          ELSE
-            runoff(jl) = 0._wp                                           ! no runoff as soil is too dry
-            infilt(jl) = water_to_soil(jl)                                   ! all water infiltrated
-          END IF
-          IF (.NOT. l_infil_subzero .OR. l_hyd_ref) THEN
-            !!! Temperature dependece should not be included when using the 5-layer snow scheme because:
-            !!! when tsurf == 0.C; T_soil < 0.C -- and all snow melt is going to surfcae runoff 
-            IF (t_soil(jl) < tmelt) THEN
-              runoff(jl) = water_to_soil(jl)       !  no infiltration as uppermost soil layer is frozen -> runoff
-              infilt(jl) = 0._wp
-            END IF
+!pdv >
+          IF (l_hyd_ref) THEN
+            !just to have again only the liqued soil water in ws
+            ws(i) = ws_keep(i)
           END IF
 !pdv <
         END IF

@@ -1080,6 +1080,7 @@ CONTAINS
     IF (dsl4jsb_Config(HYDRO_)%l_hyd_ref) THEN
       ! This definition of w_soil_rel is problematic if used for e.g. calculating the water stress of plants,
       ! as the whole soil column is taken into account, even layers below the root zone.
+!pdv<
 
       !$claw acc data present(max_moist, w_soil_rel, w_soil_column)
       !$claw acc parallel loop gang vector
@@ -1095,6 +1096,7 @@ CONTAINS
       END DO
       !$claw acc end data
 
+!pdv >
     ELSE
       ! When assuming that supercooled water is not available for plants, 
       ! w_soil_rel should only account for the water that is available to plants relative to the maximum 
@@ -1393,9 +1395,9 @@ CONTAINS
     CALL get_water_in_root_zone(w_soil_pwp_sl (:,:), soil_depth_sl(:,:), root_depth_sl(:,:), w_soil_root_pwp(:))
 
 !pdv >
-!!!! Needs to be discussed how to handle supercooled water: Is it available to plants? Then: 
-!    w_soil_avail_sl(:,:) = w_soil_sl(:,:)
-!!!! If not then :
+    !!!! Needs to be discussed how to handle supercooled water: Is it available to plants? Then: 
+    !    w_soil_root_avail(:,:) = w_soil_root(:,:)
+    !!!! If not then :
     CALL get_water_in_root_zone(w_soil_pot_scool_sl(:,:),  &
                              &  soil_depth_sl(:,:), root_depth_sl(:,:), w_soil_root_scool_pot(:))
     CALL get_water_in_root_zone(MIN(w_soil_pot_scool_sl(:,:), w_soil_sl(:,:)),  &
@@ -1412,11 +1414,12 @@ CONTAINS
     ! @todo: maybe use the distributed permanent wilting point/field cap from above and change get_water_stress_factor function
 !pdv >
     IF (dsl4jsb_Config(HYDRO_)%l_hyd_ref) THEN
+!pdv <
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_stress_expand_0 tile_name=tile%name
       water_stress(:) = get_water_stress_factor(w_soil_column(:), max_moist(:), &
             &                 config_w_soil_crit_fract, config_w_soil_wilt_fract)
       !$claw end expand
-
+!pdv >
     ELSE
       ! Here also the question is how to treat the potential rootzone soil moisture
       ! Definitly ice should be removed -- otherwise plants suffer constant waterstress in pf-regions:

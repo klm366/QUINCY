@@ -45,10 +45,12 @@ MODULE mo_hydro_config_class
       & l_glac_in_soil,      & !< Treat glacier as part of soil, not separate glacier tile
 !pdv >
       & l_infil_subzero,     & !< Allow infiltration at soil temperatures below 0°C
-      & l_hyd_ref,           &
-      & l_discount_scool,    &
-      & l_drain_lat,         &
-      & l_percolation_theory
+      & l_hyd_ref,           & !< Reference version, i.e. without KoPF changes
+      & l_discount_scool,    & !< supercooled water is neither available to plants nor percolates
+      & l_drain_lat,         & !< Lateral drainage, i.e. drainage from upper to lower soil layers;
+                               !  if false, only the lowest soil level drains.
+      & l_percolation_theory   !< The saturated hydraulic conductivity is calculated following
+                               !  the percolation theory
 !pdv <
   CONTAINS
     PROCEDURE             :: Init => Init_hydro_config

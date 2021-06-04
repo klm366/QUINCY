@@ -253,7 +253,7 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_, w_ice_sl)         ! inout
       dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_freeze_sl) ! out
       dsl4jsb_Get_var3D_onChunk(HYDRO_, w_ice_melt_sl)    ! out
-! pdv >
+!pdv >
       dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_pot_scool_sl)   ! out
 !pdv  <
     END IF
@@ -493,9 +493,9 @@ CONTAINS
         ! optional, out
         & w_soil_freeze_sl                    (:,:), &
         & w_ice_melt_sl                       (:,:), &
-! pdv >
+!pdv >
         & w_soil_pot_scool_sl                 (:,:)  &
-! pdv <
+!pdv <
         & )
       !$claw acc exit data delete(ws_max_sl)
       DEALLOCATE(ws_max_sl)
