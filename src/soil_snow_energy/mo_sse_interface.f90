@@ -134,7 +134,7 @@ CONTAINS
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: t_unfilt
     dsl4jsb_Real2D_onChunk :: snowmelt
-    dsl4jsb_Real3D_onChunk :: t_soil
+    dsl4jsb_Real3D_onChunk :: t_soil_sl
     dsl4jsb_Real3D_onChunk :: t_soil_acoef
     dsl4jsb_Real3D_onChunk :: t_soil_bcoef
     dsl4jsb_Real3D_onChunk :: vol_heat_cap_sl
@@ -227,7 +227,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_soil)
 
-    dsl4jsb_Get_var3D_onChunk(SSE_, t_soil)            ! inout
+    dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)         ! inout
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_acoef)      ! inout
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_bcoef)      ! inout
     dsl4jsb_Get_var3D_onChunk(SSE_, vol_heat_cap_sl)   ! in
@@ -303,7 +303,7 @@ CONTAINS
         & vol_heat_cap(:)                           ,  &
         & t_soil_acoef                          (:,:), &
         & t_soil_bcoef                          (:,:), &
-        & t_soil                                (:,:), &
+        & t_soil_sl                             (:,:), &
         & hcap_grnd                             (:),   &
         & grnd_hflx                             (:),   &
         & ldglac                                (:)    &
@@ -398,7 +398,7 @@ CONTAINS
         & heat_cond_snow     (:), &
         & vol_heat_cap_sl  (:,1), &
         & heat_cond_sl     (:,1), &
-        & t_soil           (:,1), &
+        & t_soil_sl        (:,:), &
         & t_soil_acoef     (:,1), &
         & t_soil_bcoef     (:,1), &
         ! inout
@@ -448,7 +448,7 @@ CONTAINS
         & vol_heat_cap_sl                     (:,:), &
         & heat_cond_sl                        (:,:), &
         ! inout
-        & t_soil                              (:,:), &
+        & t_soil_sl                           (:,:), &
         & t_soil_acoef                        (:,:), &
         & t_soil_bcoef                        (:,:), &
         ! out
@@ -476,7 +476,7 @@ CONTAINS
         & vol_heat_cap_sl                     (:,:), &
         & heat_cond_sl                        (:,:), &
         ! inout
-        & t_soil                              (:,:), &
+        & t_soil_sl                           (:,:), &
         & t_soil_acoef                        (:,:), &
         & t_soil_bcoef                        (:,:), &
         ! out
@@ -552,7 +552,7 @@ CONTAINS
 
     dsl4jsb_Aggregate_onChunk(SSE_,   t_soil_acoef,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   t_soil_bcoef,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SSE_,   t_soil,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   t_soil_sl,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   grnd_hflx,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   grnd_hflx_old,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   hcap_grnd,        weighted_by_fract)

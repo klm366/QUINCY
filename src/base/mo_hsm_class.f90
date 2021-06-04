@@ -14,7 +14,8 @@
 
 MODULE mo_hsm_class
 
-  USE mo_exception, ONLY: message, message_text, finish, em_warn
+  USE mo_jsb_impl_constants, ONLY: SHORT_NAME_LEN
+  USE mo_exception,          ONLY: message, message_text, finish, em_warn
   ! USE mo_util,      ONLY: int2string
 #ifdef _OPENMP
   USE omp_lib,      ONLY: omp_get_max_threads, omp_get_thread_num
@@ -35,7 +36,7 @@ MODULE mo_hsm_class
   END ENUM
 
   TYPE t_Action
-    CHARACTER(len=10) :: name = ""
+    CHARACTER(len=SHORT_NAME_LEN) :: name = ""
   CONTAINS
     PROCEDURE :: Is_equal        => Is_equal_action
     GENERIC   :: OPERATOR(==)    => Is_equal
@@ -61,20 +62,20 @@ MODULE mo_hsm_class
   !! This derived type defines the state class
   !!
   TYPE, ABSTRACT :: t_State
-    CHARACTER(len=10)           :: name
-    CHARACTER(len=50)           :: description
+    CHARACTER(len=SHORT_NAME_LEN) :: name
+    CHARACTER(len=50)             :: description
 !!$    INTEGER                     :: id
-    INTEGER                     :: level = 0                      ! Level in hierarchy (top=1)
-    INTEGER                     :: path(MAX_STATE_NESTING) = -1
-    INTEGER, PRIVATE            :: no_of_children = -1
+    INTEGER                       :: level = 0                      ! Level in hierarchy (top=1)
+    INTEGER                       :: path(MAX_STATE_NESTING) = -1
+    INTEGER, PRIVATE              :: no_of_children = -1
     !
-    LOGICAL,        ALLOCATABLE :: visited(:)
-    CLASS(t_State), POINTER     :: parent       => NULL()
-    CLASS(t_State), POINTER     :: first_child  => NULL()
-    CLASS(t_State), POINTER     :: last_child   => NULL()
+    LOGICAL,        ALLOCATABLE   :: visited(:)
+    CLASS(t_State), POINTER       :: parent       => NULL()
+    CLASS(t_State), POINTER       :: first_child  => NULL()
+    CLASS(t_State), POINTER       :: last_child   => NULL()
     !
-    CLASS(t_State), POINTER     :: next_sibling => NULL()
-    CLASS(t_State), POINTER     :: prev_sibling => NULL()
+    CLASS(t_State), POINTER       :: next_sibling => NULL()
+    CLASS(t_State), POINTER       :: prev_sibling => NULL()
   CONTAINS
     PROCEDURE :: Init_state
     PROCEDURE :: Get_parent         => Get_parent_state
@@ -302,8 +303,8 @@ CONTAINS
 
   FUNCTION Get_parent_name_state(this) RESULT(return_value)
 
-    CLASS(t_State), INTENT(in) :: this
-    CHARACTER(LEN=10)          :: return_value
+    CLASS(t_State), INTENT(in)    :: this
+    CHARACTER(len=SHORT_NAME_LEN) :: return_value
 
     CLASS(*), POINTER :: p
 
@@ -1059,12 +1060,13 @@ CONTAINS
 
       !DEALLOCATE(start_msg%action)
       DEALLOCATE(start_msg)
-      IF (ASSOCIATED(new_msg)) THEN
-        !IF (ASSOCIATED(new_msg%action)) DEALLOCATE(new_msg%action)
-        DEALLOCATE(new_msg)
-      END IF
 
     END SELECT
+
+    IF (ASSOCIATED(new_msg)) THEN
+      !IF (ASSOCIATED(new_msg%action)) DEALLOCATE(new_msg%action)
+      DEALLOCATE(new_msg)
+    END IF
 
     IF (l_debug) THEN
       IF (ASSOCIATED(new_msg)) THEN

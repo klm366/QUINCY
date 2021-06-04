@@ -64,7 +64,7 @@ CONTAINS
   !! @param [in]     hcap_grnd             heat capacity of the uppermost soil layer [J m-2 K-1]
   !! @param [in]     evapotrans            evapotranspiration (including sublimation) [kg m-2 s-1]
   !! @param [in]     evapopot              potential evaporation [kg m-2 s-1]
-  !! @param [in]     trans                 transpiration [kg m-2 s-1]
+  !! @param [in]     transpiration         transpiration [kg m-2 s-1]
   !! @param [in]     rain                  liquid precipitation [kg m-2 s-1]
   !! @param [in]     snow                  solid precipitation [kg m-2 s-1]
   !! @param [in,out] skinres               water content of the skin reservoir (vegetation and bare soil) [m]
@@ -84,7 +84,7 @@ CONTAINS
     & lstart, delta_time, l_dynsnow, snow_depth_max,               &
     & t_srf_unfilt, wind_10m, t_air,                               &
     & skinres_canopy_max, skinres_max, sfract_srf, wfract_srf,     &
-    & hcap_grnd, evapotrans, evapopot, trans,                      &
+    & hcap_grnd, evapotrans, evapopot, transpiration,              &
     & rain, snow, skinres, snow_soil, canopy_snow, snow_soil_dens, &
     & q_snocpymlt, snow_accum, snow_melt_soil,                     &
     & evapotrans_soil, evapo_skin, evapo_snow, water_to_soil, evapo_deficit)
@@ -98,7 +98,7 @@ CONTAINS
     !$claw model-data
     REAL(wp), INTENT(in) ::                                                         &
       & t_srf_unfilt, wind_10m, t_air, skinres_canopy_max, skinres_max,             &
-      & sfract_srf, wfract_srf, hcap_grnd, evapotrans, evapopot, trans, rain, snow
+      & sfract_srf, wfract_srf, hcap_grnd, evapotrans, evapopot, transpiration, rain, snow
     REAL(wp), INTENT(inout) :: &
       & skinres, snow_soil, canopy_snow, snow_soil_dens
     REAL(wp), INTENT(out)   ::                   &
@@ -116,7 +116,7 @@ CONTAINS
       & evapotrans_soil_in_m, & !< amount of evapotranspiration from soil (w/o snow and skin) within time step [m]
       & evapo_soil_in_m,      & !< amount of ground evaporation within time step [m]
       & evapo_skin_in_m,      & !< amount of evaporation from skin reservoir within time step [m]
-      & trans_in_m,           & !< amount of transpiration within time step [m]
+      & transpiration_in_m,   & !< amount of transpiration within time step [m]
       & evapo_snow_in_m,      & !< amount of sublimation from snow within time step [m]
       & snow_melt_can,        & !< snow melt from canopy [m]
       & snow_melt_pot_in_m,   & !< potential amount of snow melt [m]
@@ -154,12 +154,12 @@ CONTAINS
     ! Convert water fluxes to m water equivalent within the time step
     !-----------------------------------------------------------------
 
-    rain_in_m          = rain       * delta_time/rhoh2o
-    new_snow           = snow       * delta_time/rhoh2o   !in_m       ! snow_fall
-    evapotrans_in_m    = evapotrans * delta_time/rhoh2o
-    trans_in_m         = trans      * delta_time/rhoh2o
-    evapo_snow_pot_in_m = sfract_srf * evapopot * delta_time/rhoh2o
-    evapotrans_no_snow = evapotrans_in_m - evapo_snow_pot_in_m
+    rain_in_m           = rain          * delta_time/rhoh2o
+    new_snow            = snow          * delta_time/rhoh2o   !in_m       ! snow_fall
+    evapotrans_in_m     = evapotrans    * delta_time/rhoh2o
+    transpiration_in_m  = transpiration * delta_time/rhoh2o
+    evapo_snow_pot_in_m = sfract_srf    * evapopot * delta_time/rhoh2o
+    evapotrans_no_snow  = evapotrans_in_m - evapo_snow_pot_in_m
     evapo_skin_pot_in_m = (1._wp - sfract_srf) * wfract_srf * evapopot * delta_time/rhoh2o
 
     !---------------------------------------------
@@ -250,12 +250,12 @@ CONTAINS
     IF (evapo_skin_pot_in_m < 0._wp) THEN
       evapo_deficit = evapo_deficit + evapo_skin_pot_in_m - evapo_skin_in_m
     END IF
-    evapo_soil_in_m = evapotrans_soil_in_m - trans_in_m  ! Evaporation from ground
+    evapo_soil_in_m = evapotrans_soil_in_m - transpiration_in_m  ! Evaporation from ground
 
     ! positive values of evaporation and transpiration (dew) are added to water_to_soil
     ! negative fluxes change soil moisture later in calc_soil_hydrology
     IF (evapo_soil_in_m > 0._wp) water_to_soil = water_to_soil + evapo_soil_in_m
-    IF (trans_in_m > 0._wp)     water_to_soil = water_to_soil + trans_in_m
+    IF (transpiration_in_m > 0._wp) water_to_soil = water_to_soil + transpiration_in_m
 
     ! Compute snow density
     IF (l_dynsnow) THEN
@@ -421,10 +421,10 @@ CONTAINS
   ! @param [in]      wfract_srf         Wet surface fraction (skin reservoir) []
   ! @param [in]      ws_max_mineral     Maximum water holding capacity of non-organic soil [m]
   ! @param [in]      oro_stddev         Sub-grid standard deviation of orography [m]
-  ! @param [in]      t_soil             Temperature of the upper soil layer [K]
+  ! @param [in]      t_soil_upper_layer Temperature of the upper soil layer [K]
   ! @param [in]      water_to_soil      Amount of water going into the soil [m]
   ! @param [in]      evapotrans_soil    Evapotranspiration from the soil (w/o snow or canopy) [kg m-2 s-1]
-  ! @param [in]      trans              Evapotranspiration [kg m-2 s-1]
+  ! @param [in]      transpiration      Evapotranspiration [kg m-2 s-1]
   ! @param [in,out]  ws                 Total water content of soil column in rooting zone [m]
   ! @param [in,out]  ws_l               Content un-frozen water of soil layers in rooting zone [m]
   ! @param [in,out]  soil_ice_l         Content of frozen water of soil layers in rooting zone [m]
@@ -446,7 +446,7 @@ CONTAINS
     & pot_scool_l,                                                                                               &
 !pdv <
     !& sfract_srf, wfract_srf,
-    & ws_max_mineral, oro_stddev, t_soil, water_to_soil, evapotrans_soil, trans,                                 &
+    & ws_max_mineral, oro_stddev, t_soil_upper_layer, water_to_soil, evapotrans_soil, transpiration,             &
     ! inout
     & ws, ws_l, soil_ice_l, w_soil_overflow,                                                                     &
     ! out
@@ -476,8 +476,8 @@ CONTAINS
 !pdv <
     REAL(wp), INTENT(in), DIMENSION(:) ::               &
       !& sfract_srf, wfract_srf, 
-      & ws_max_mineral, oro_stddev, t_soil, water_to_soil, &
-      & evapotrans_soil, trans
+      & ws_max_mineral, oro_stddev, t_soil_upper_layer, water_to_soil, &
+      & evapotrans_soil, transpiration
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
       & ws, w_soil_overflow
     REAL(wp), INTENT(inout), DIMENSION(:,:) :: &
@@ -496,7 +496,7 @@ CONTAINS
       & zbws, zb1, zbm, zconw1, zvol, &
       ! Other variables
       & evapo_soil_in_m(nidx),        & !< evaporation from the soil (without transpiration) [m]
-      & trans_in_m(nidx),             & !< transpiration within time step [m]
+      & transpiration_in_m(nidx),     & !< transpiration within time step [m]
       & ws_rel(nidx),                 & !< relative soil moisture (0: wilting point, 1: field capacity)
       & infilt(nidx)                    !< infiltration [m]
 
@@ -515,15 +515,15 @@ CONTAINS
     INTEGER :: jllog = 0
 
 
-    !$claw acc data pcreate(evapo_soil_in_m,trans_in_m,infilt,ws_max,ws_min_drain,ws_incl_ice,ice_rootzone,vfc_times_sd_l)
+    !$claw acc data pcreate(evapo_soil_in_m,transpiration_in_m,infilt,ws_max,ws_min_drain,ws_incl_ice,ice_rootzone,vfc_times_sd_l)
     sigma_0   = oro_var_min
     sigma_max = oro_var_max * 64._wp / REAL(nlat, wp) ! @todo: site level
 
-    !$claw acc data present(trans_in_m,trans,wsat_l,vol_porosity_l,soil_depth_l,soil_ice_l,field_cap_l,vol_field_cap_l,p_wilt_l,vol_p_wilt_l)
+    !$claw acc data present(transpiration_in_m,transpiration,wsat_l,vol_porosity_l,soil_depth_l,soil_ice_l,field_cap_l,vol_field_cap_l,p_wilt_l,vol_p_wilt_l)
     !$claw acc parallel
     !$claw acc loop gang
     DO i = 1, nidx
-      trans_in_m(i) = trans(i)  * delta_time / rhoh2o
+      transpiration_in_m(i) = transpiration(i)  * delta_time / rhoh2o
       !$claw acc loop seq
       DO jl = 1, nsoil
         wsat_l     (i,jl) = MAX(vol_porosity_l (i,jl) * soil_depth_l(i,jl) - soil_ice_l(i,jl), 0._wp)
@@ -566,9 +566,9 @@ CONTAINS
     CALL get_water_in_root_zone(soil_ice_l(:,:), soil_depth_l(:,:), root_depth_l(:,:), ice_rootzone(:))
     CALL get_water_in_root_zone(ws_l      (:,:), soil_depth_l(:,:), root_depth_l(:,:), ws          (:))
 
-    !$claw acc data present(evapo_soil_in_m,evapotrans_soil,trans_in_m) &
+    !$claw acc data present(evapo_soil_in_m,evapotrans_soil,transpiration_in_m) &
     !$claw acc present(ws_min_drain,ws_max,oro_stddev,runoff,infilt)    &
-    !$claw acc present(water_to_soil,ws_incl_ice,ice_rootzone,drainage,t_soil)
+    !$claw acc present(water_to_soil,ws_incl_ice,ice_rootzone,drainage,t_soil_upper_layer)
     !$claw acc parallel
     !$claw acc loop gang
     DO i = 1, nidx
@@ -581,7 +581,7 @@ CONTAINS
   
       ! note: at this point ignoring the amount of dew that exceeds the skinreservoir
       !       as dew is calculated later based on evapo_soil_in_m (f(evapotrans_soil))
-      evapo_soil_in_m(i) = evapotrans_soil(i) * delta_time / rhoh2o - trans_in_m(i)
+      evapo_soil_in_m(i) = evapotrans_soil(i) * delta_time / rhoh2o - transpiration_in_m(i)
   
     END DO
     !$claw acc end parallel
@@ -616,7 +616,7 @@ CONTAINS
         runoff(i) = 0._wp
         infilt(i) = water_to_soil(i)
       ELSE
-        IF (t_soil(i) < tmelt) THEN
+        IF (t_soil_upper_layer(i) < tmelt) THEN
           runoff(i) = water_to_soil(i)       !  no infiltration as uppermost soil layer is frozen -> runoff
           infilt(i) = 0._wp
         ELSE
@@ -687,7 +687,7 @@ CONTAINS
       &     l_hyd_ref,                   &
 !pdv <
       &     root_depth_l, soil_depth_l, &
-      &     field_cap_l, trans_in_m, evapo_soil_in_m, ws_l, soil_ice_l)
+      &     field_cap_l, transpiration_in_m, evapo_soil_in_m, ws_l, soil_ice_l)
 
     ! For numerical reasons, half of the water is infiltrated
     ! before soilhyd and the other half of it afterwards
@@ -1291,7 +1291,7 @@ CONTAINS
     & droot,                    &
     & dsoil,                    &
     & field_cap_l,              &
-    & trans_in_m,               &
+    & transpiration_in_m,       &
     & evapo_soil,               &
     & ws_l, soil_ice_l          &
     & )
@@ -1318,7 +1318,7 @@ CONTAINS
     REAL(wp), INTENT(in)     :: droot(:,:)              ! root depth within layer [m]
     REAL(wp), INTENT(in)     :: dsoil(:,:)              ! soil depth until bedrock within layer [m]
     REAL(wp), INTENT(in)     :: field_cap_l(:,:)        ! field capacity of the layer
-    REAL(wp), INTENT(in)     :: trans_in_m(:)           ! transpiration [m]
+    REAL(wp), INTENT(in)     :: transpiration_in_m(:)   ! transpiration [m]
     REAL(wp), INTENT(in)     :: evapo_soil(:)           ! bare soil evaporation [m]
 
     REAL(wp), INTENT(inout)  :: ws_l(:,:)               ! water content of the soil layer [m]
@@ -1351,7 +1351,7 @@ CONTAINS
     !  update soil moisture due to evaporation and transpiration fluxes
     !----------------------------------------------------------------------------------------------
 
-    !$claw acc data present(droot, dsoil, field_cap_l, trans_in_m, evapo_soil, &
+    !$claw acc data present(droot, dsoil, field_cap_l, transpiration_in_m, evapo_soil, &
     !$claw acc ws_l, soil_ice_l) pcreate(deficit_evapo, deficit_trans, deficit_l, &
     !$claw acc remaining, rootfract, fixed, trans_layer, ws, root_depth, reduce_evapo)
 
@@ -1377,8 +1377,8 @@ CONTAINS
       ! sealed grid cells (rooting_depth zero) and positive transpiration
       !    no water reachable for transpiration, add flux to deficit term
       ! @todo: what does rooting depth=zero for bare soil tile?
-      IF(root_depth(i) <= 0._wp .AND. trans_in_m(i) < 0._wp) THEN
-        deficit_trans(i) = trans_in_m(i)
+      IF(root_depth(i) <= 0._wp .AND. transpiration_in_m(i) < 0._wp) THEN
+        deficit_trans(i) = transpiration_in_m(i)
       ELSE
         deficit_trans(i) = 0._wp
       END IF
@@ -1394,10 +1394,10 @@ CONTAINS
 
         ! grid cell not sealed and positive transpiration (not dew)
         !    take water equally from all over the root zone
-        IF (root_depth(i) > 0._wp .AND. trans_in_m(i) < 0._wp) THEN
+        IF (root_depth(i) > 0._wp .AND. transpiration_in_m(i) < 0._wp) THEN
 
           ! water needed for transpiration from the current layer
-          trans_layer(i) = trans_in_m(i) * droot(i,jk)/root_depth(i)
+          trans_layer(i) = transpiration_in_m(i) * droot(i,jk)/root_depth(i)
 
           IF (droot(i,jk) > 0._wp) THEN
 

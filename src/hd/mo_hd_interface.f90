@@ -1,16 +1,15 @@
+!> Summary: Contains the interfaces to the HD model
 !>
-!! @brief Contains the interfaces to the HD model
-!!
-!! @author
-!!  Veronika Gayler, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Veronika Gayler (2013-04-20)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!> @author
+!>  Veronika Gayler, MPI-M Hamburg
+!>
+!> @par Revision History
+!> First version by Veronika Gayler (2013-04-20)
+!>
+!> @par Copyright
+!> This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!> Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!>
 
 MODULE mo_hd_interface
 !#ifndef __NO_JSBACH__
@@ -400,14 +399,15 @@ CONTAINS
 
       WHERE (hd_mask(:,:) == 0._wp)
         ! ocean inflow cells
-        discharge(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + discharge(:,:)
+        discharge_ocean(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + discharge(:,:)
         outflow_runoff(:,:) = 0._wp
         outflow_drainage(:,:) = 0._wp
-        discharge_ocean(:,:) = discharge(:,:)
         discharge(:,:) = 0._wp
       ELSE WHERE (hd_mask(:,:) == 2._wp)
         ! internal drainage cells
-        internal_drain(:,:) = discharge(:,:)
+        internal_drain(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + discharge(:,:)
+        outflow_runoff(:,:) = 0._wp
+        outflow_drainage(:,:) = 0._wp
         discharge(:,:) = 0._wp
       END WHERE
 

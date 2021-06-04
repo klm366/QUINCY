@@ -1,7 +1,7 @@
 ---
-project: ICON-Land/JSBACH4
+project: ICON-Land
 author: Max Planck Institute for Meteorology, Hamburg, Germany
-author_description: [AUTHORS](page/1-general/2-authors.html)
+author_description: [AUTHORS](page/1-general/02-authors.html)
 website: https://mpimet.mpg.de/en/science/modeling-with-icon/icon-configurations/icon-l/jsbach
 email: reiner.schnur@mpimet.mpg.de
 project_dir: .
@@ -10,11 +10,11 @@ page_dir: ./doc/guide
 media_dir: ./doc/media
 output_dir: ./doc/html
 docmark: <
-docmark_alt: #
+docmark_alt: ^
 predocmark: >
-predocmark_alt: *
+predocmark_alt: |
 summary: <img src="media/MPIM.png" width="100%" alt="MPI/M Logo">
-         <p style="text-align:center;font-weight:bold;font-size:300%;">ICON-Land/JSBACH4 Documentation</p>
+         <p style="text-align:center;font-weight:bold;font-size:300%;">ICON-Land Documentation</p>
 display: public
          protected
          private
@@ -25,6 +25,8 @@ warn: false
 graph: false
 coloured_edges: true
 md_extensions: markdown.extensions.toc
+               markdown.extensions.extra
+               markdown.extensions.footnotes
 ---
 
 ------------------------------
@@ -42,8 +44,9 @@ code documentation (source files, modules, procedures, interfaces, derived types
 To get startet, visit the guide from the top navigation, or jump directly to
 
 - [General Guide](page/1-general/index.html)
-- [User Guide](page/2-user-guide/index.html)
-- [Developer Guide](page/3-developer-guide/index.html)
+- [Science Guide](page/2-science-guide/index.html)
+- [User Guide](page/3-user-guide/index.html)
+- [Developer Guide](page/4-developer-guide/index.html)
 
 ------------------------------
 

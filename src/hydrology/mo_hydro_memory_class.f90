@@ -151,7 +151,7 @@ MODULE mo_hydro_memory_class
       & water_stress,         & !< Water stress factor of canopy                        (1: no water stress, 0: infinite stress)
       & canopy_cond_unlimited,& !< Canopy conductance without water limit  [m/s] (mean value)
       & canopy_cond_limited,  & !< Canopy conductance with water limit [m/s] (mean value)
-      & trans                   !< Transpiration
+      & transpiration           !< Transpiration
 
     ! Additional variables for GLACIER lct_type
     TYPE(t_jsb_var_real2d) :: &
@@ -181,7 +181,7 @@ MODULE mo_hydro_memory_class
       trans_gmean,            & !< Global mean transpiration                [kg m-2 s-1]
       evapotrans_gmean,       & !< Global land mean evapotranspiration      [kg m-2 s-1]
       water_content_gsum,     & !< Global land water content                [km3]
-      discharge_ocean_gsum,   & !< Global water discharge to the oceans     [kg s-1]
+      discharge_ocean_gsum,   & !< Global water discharge to the oceans     [Sv]
       w_soil_rel_gmean,       & !< Global mean relative soil moisture       [1]
       fract_snow_gsum,        & !< Global snow area on non-glacier land     [Mio m2]
       w_snow_gsum               !< Global snow amount on non-glacier land   [Gt]
@@ -326,7 +326,7 @@ CONTAINS
 
     CALL mem%Add_var( 'discharge_ocean', mem%discharge_ocean,                &
       & hgrid, surface,                                                      &
-      & t_cf('discharge_ocean', 'kg m-2 s-1', 'discharge to the ocean'),     &
+      & t_cf('discharge_ocean', 'm3 s-1', 'discharge to the ocean'),         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
@@ -871,7 +871,7 @@ CONTAINS
           & initval_r=0.0_wp )
       END IF
 
-      CALL mem%Add_var( 'trans', mem%trans,                                          &
+      CALL mem%Add_var( 'transpiration', mem%transpiration,                          &
         & hgrid, surface,                                                            &
         & t_cf('surface_transpiration', 'kg m-2 s-1', 'Transpiration from surface'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
@@ -998,7 +998,7 @@ CONTAINS
         & lrestart=.FALSE., initval_r=0.0_wp )
       CALL mem%Add_var('discharge_ocean_gsum', mem%discharge_ocean_gsum,                 &
         & hgrid, surface,                                                                &
-        & t_cf('discharge_ocean_gsum', 'kg', 'Global water discharge to the oceans'),    &
+        & t_cf('discharge_ocean_gsum', 'Sv', 'Global water discharge to the oceans'),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
         & lrestart=.FALSE., initval_r=0.0_wp )

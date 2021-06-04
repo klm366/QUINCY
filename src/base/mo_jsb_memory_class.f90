@@ -25,6 +25,7 @@ MODULE mo_jsb_memory_class
 #endif
     &                             add_var_list_element_r2d, add_var_list_element_r3d, &
     &                             Get_var_group_name, VARNAME_LEN
+  USE mo_jsb_impl_constants,ONLY: SHORT_NAME_LEN
   USE mo_jsb_varlist_iface, ONLY: is_variable_in_output
   USE mo_jsb_var_class,     ONLY: t_jsb_var_p, t_jsb_var, t_jsb_var_real1d, t_jsb_var_real2d, t_jsb_var_real3d, &
     &                             REAL1D, REAL2D, REAL3D
@@ -60,7 +61,7 @@ MODULE mo_jsb_memory_class
     TYPE(t_jsb_memory_p), POINTER :: children(:) => NULL()
     CLASS(t_jsb_memory) , POINTER :: parent => NULL()
     INTEGER, ALLOCATABLE :: owner_tile_path(:)
-    CHARACTER(len=10)    :: owner_tile_name
+    CHARACTER(len=SHORT_NAME_LEN) :: owner_tile_name
     INTEGER :: max_no_of_vars = 0
     INTEGER :: no_of_vars = 0
     CHARACTER(LEN=:), ALLOCATABLE :: varlist_name
@@ -256,7 +257,7 @@ CONTAINS
 
   SUBROUTINE t_jsb_memory_add_var_r2d(mem, name, var,       &
     hgrid, vgrid, cf, grib1, grib2, prefix, suffix,             &
-    loutput, lcontainer,                                        &
+    loutput, lcontainer, l_conserve_quan, cons_quan_type_id,    &
     lrestart, lrestart_cont, initval_r, isteptype,              &
     resetval_r, lmiss, missval_r, l_aggregate_all,              &
     output_level, verbose                                       &
@@ -275,6 +276,8 @@ CONTAINS
     CHARACTER(len=*),     INTENT(in)           :: suffix              ! Suffix for variable name
     LOGICAL,              INTENT(in), OPTIONAL :: loutput             ! output flag
     LOGICAL,              INTENT(in), OPTIONAL :: lcontainer          ! container flag
+    LOGICAL,              INTENT(in), OPTIONAL :: l_conserve_quan     ! if var carries a to-be-conserved quantity
+    INTEGER,              INTENT(in), OPTIONAL :: cons_quan_type_id   ! type id of the conserved quantity (mo_jsb_cqt_class)
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart            ! restart flag
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart_cont       ! continue restart if var not available
     REAL(wp),             INTENT(in), OPTIONAL :: initval_r           ! value if var not available
@@ -380,6 +383,9 @@ CONTAINS
     IF (PRESENT(lrestart)) var%is_in_restart = lrestart
     ! var%is_in_restart = var%is_in_restart .OR. .TRUE.  ! TODO
   
+    IF (PRESENT(l_conserve_quan)) var%is_conserved_quan = l_conserve_quan
+    IF (PRESENT(cons_quan_type_id)) var%cons_quan_type_id = cons_quan_type_id
+
     var%owner_model_id = mem%owner_model_id
     var%owner_proc_id  = mem%owner_proc_id
 
@@ -399,6 +405,7 @@ CONTAINS
   SUBROUTINE t_jsb_memory_add_var_r3d(mem, name, var,        &
     hgrid, vgrid, cf, grib1, grib2, prefix, suffix,              &
     extra_dim_n, loutput, lcontainer,                            &
+    l_conserve_quan, cons_quan_type_id,                          &
     lrestart, lrestart_cont, initval_r, isteptype,               &
     resetval_r, lmiss, missval_r, l_aggregate_all,               &
     output_level, verbose                                        &
@@ -417,6 +424,8 @@ CONTAINS
     INTEGER,              INTENT(in), OPTIONAL :: extra_dim_n         ! Extra (third) dimension (not levels)
     LOGICAL,              INTENT(in), OPTIONAL :: loutput             ! output flag
     LOGICAL,              INTENT(in), OPTIONAL :: lcontainer          ! container flag
+    LOGICAL,              INTENT(in), OPTIONAL :: l_conserve_quan     ! if var carries a to-be-conserved quantity
+    INTEGER,              INTENT(in), OPTIONAL :: cons_quan_type_id   ! type id of the conserved quantity (mo_jsb_cqt_class)
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart            ! restart flag
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart_cont       ! continue restart if var not available
     REAL(wp),             INTENT(in), OPTIONAL :: initval_r           ! value if var not available
@@ -538,6 +547,8 @@ CONTAINS
     IF (PRESENT(lrestart)) var%is_in_restart = lrestart
     ! var%is_in_restart = var%is_in_restart .OR. .TRUE.  ! TODO
 
+    IF (PRESENT(l_conserve_quan)) var%is_conserved_quan = l_conserve_quan
+    IF (PRESENT(cons_quan_type_id)) var%cons_quan_type_id = cons_quan_type_id
 
     var%owner_model_id = mem%owner_model_id
     var%owner_proc_id  = mem%owner_proc_id
