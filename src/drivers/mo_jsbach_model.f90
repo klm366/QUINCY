@@ -273,6 +273,7 @@ CONTAINS
     ! adds its zaxes to zaxisTypeList
     !-------------------------------------------------------------------
     CALL jsbach_setup_models(shr_namelist_filename)
+    CALL jsbach_setup_tiles(1)
 
     !-------------------------------------------------------------------
     ! 3.3 I/O initialization
@@ -428,7 +429,6 @@ CONTAINS
     CALL print_echam_phy_config
   
     CALL jsbach_setup_grid( 1, p_patch(1), type='icon') !< in
-    CALL jsbach_setup_tiles(1)
     CALL jsbach_init(1)
     CALL jsbach_label_run(.TRUE.)
 
