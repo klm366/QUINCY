@@ -40,7 +40,7 @@ slmModel="land"
 ##>> sites <<###########################################################################################
 ## select the site-set:
 # forcing data and site info *list.dat for all site-sets: /Net/Groups/BGI/data/Model/SLM1/input/point/ 
-# options: fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin mocabors mocab2 sweden plumber2 eucface
+# options: fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin mocabors mocab2 sweden plumber2 eucface icpfor cgrass panarc
 forcingDataSet="fluxnet"
 # forcing with or without a transient (like spinup) phase before the actual simulation starts
 # options: static transient
@@ -75,7 +75,7 @@ customSiteListFileName=""
 #           [FACE] "DK-AMB" "OR-ELE"  [MANIP] "ES-MaG" "ES-MaT"  [FERT] "HAR-CON_4" "HAR-HIG_4" "HAR-LOW_4" "HAR-CON_5" "SDA-CON" "SDA-ADD"
 #           [CRAINE] "CRA_01" "CRA_02" "CRA_18"  [PHOTACC] "ARC_01" "MON_02" "STR_01"  [SPP_1685] "BBR" "LUE" "VES"
 #           [CONFIN] "FI-Hyy" "FI-Ken"  [MOCABORS] "US-Ha1"  [MOCAB2] "HUR-FOR" "HUR-GRA"  [SWEDEN] "BER" "STI"  [PLUMBER2] "DE-Hai" "HU-Bug"
-#           [EUCFACE] "EUC_05" "EUC_16"
+#           [EUCFACE] "EUC_05" "EUC_16"  [ICPFOR] "ICP_004" "ICP_005" "ICP_351"  [CGRASS] "CGE_001" "CGE_002"  [PANARC] "CA-BLK" "US-TOL"
 singleSiteName=""
 
 
@@ -292,6 +292,18 @@ while getopts ":e:f:c:m:s:r:y:b:z:n:u:h" opt; do
       echo "   forcingDataSet=eucface"
       forcingDataSet="eucface"
       ;;
+    "ic")
+      echo "   forcingDataSet=icpfor"
+      forcingDataSet="icpfor"
+      ;;
+    "cg")
+      echo "   forcingDataSet=cgrass (CLIMGRASS)"
+      forcingDataSet="cgrass"
+      ;;
+    "pa")
+      echo "   forcingDataSet=panarc (PANARCTIC)"
+      forcingDataSet="panarc"
+      ;;
     esac
     ;;
   "c")
@@ -421,6 +433,9 @@ while getopts ":e:f:c:m:s:r:y:b:z:n:u:h" opt; do
     echo "       sw: SWEDEN (site data from The Swedish Throughfall Monitoring Network)"
     echo "       p2: PLUMBER2 (Fluxnet site collection for MIP)"
     echo "       ef: EUCFACE (12 scenarios for one EucFACE site covering the yrs 1700-2069)"
+    echo "       ic: ICPFOR (International Co-operative Programme on Assessment and Monitoring of Air Pollution Effects on Forests)"
+    echo "       cg: CGRASS (CLIMGRASS, Manipulative experiment in an alpine grassland, looking at increased temperature, CO2 and drought)"
+    echo "       pa: PANARC (PANARCTIC, northern high-latitude sites with continuous permafrost)"
     echo " -c set the customSiteList"
     echo "    Arguments to -c:"
     echo "       T: using the custom site list"
@@ -566,7 +581,7 @@ fi
 return 0
 }
 # lists to validate against
-validateForcingDataSet="fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin mocabors mocab2 sweden plumber2 eucface"
+validateForcingDataSet="fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin mocabors mocab2 sweden plumber2 eucface icpfor cgrass panarc"
 validateForcingMode="static transient"
 validateCrunSites="all cue spp"
 validateGlobSites="all sub"
@@ -811,6 +826,15 @@ case "$forcingDataSet" in
   ;;
 "eucface")
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/EUCFACE/"
+  ;;
+"icpfor")
+  siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/ICPFOR/"
+  ;;
+"cgrass")
+  siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/CLIMGRASS/"
+  ;;
+"panarc")
+  siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/PANARCTIC/"
   ;;
 esac
 
@@ -1149,6 +1173,25 @@ else
     echo " "
     echo " Note: all simulations with the EUCFACE siteset are using the transient forcing 1700-2069 by default."
     echo " "
+    ;;
+  "icpfor")
+    siteListFileName="icp_all_sites_1901-2019_list.dat"
+    echo " "
+    echo " Note: all simulations with the ICPFOR siteset are using the transient forcing 1901-2019 by default."
+    echo " "
+    ;;
+  "cgrass")
+    siteListFileName="climgrass_all_sites_1901-2019.dat"
+    echo " "
+    echo " Note: all simulations with the CLIMGRASS siteset are using the transient forcing 1901-2019 by default."
+    echo " "
+    ;;
+  "panarc")
+    if [ $forcingMode == "static" ]; then
+      siteListFileName="panarctic_sites_1990-2019_list.dat"
+    else 
+      siteListFileName="panarctic_sites_1901-2019_list.dat"
+    fi
     ;;
   esac
   siteList="$siteDataFold""$siteListFileName"
@@ -1562,6 +1605,22 @@ case "$forcingDataSet" in
 "eucface")
   # only transient met-forcing is available (no specific ID)
   forcingModeFileID="_"
+  ;;
+"icpfor")
+  # using only transient met-forcing
+  forcingModeFileID="_t_"
+  ;;
+"cgrass")
+  # using only transient met-forcing
+  forcingModeFileID="_t_"
+  ;;
+"panarc")
+  # land/plant
+  if [ $forcingMode == "static" ]; then
+    forcingModeFileID="_s_"
+  else
+    forcingModeFileID="_t_"
+  fi
   ;;
 esac
 

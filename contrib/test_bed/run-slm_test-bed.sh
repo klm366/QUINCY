@@ -91,7 +91,7 @@ plant_functional_type_id=5      # 1 - 8
 
 # forcing input
 flag_oneYearForcing="F"         # T (True) or F (False): whether to use (repeatedly) only the 1st year of the climate forcing input file
-forcingDataSet="fluxnet3"       # options: fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin mocabors mocab2 plumber2 none (for 'none' provide: test_bed/climate.dat [land plant canopy] or soil_forcing_litterfall.dat & soil_forcing_soilphysics.dat [soil])
+forcingDataSet="fluxnet3"       # options: fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin mocabors mocab2 plumber2 icpfor cgrass panarc none (for 'none' provide: test_bed/climate.dat [land plant canopy] or soil_forcing_litterfall.dat & soil_forcing_soilphysics.dat [soil])
 crunSites="cue"                 # cue or spp  [spp: BBR_01 | LUE_01 | VES_01 | MTF_01 | CON_01]
 siteName="DE-Hai"               # get the Site-ID from the 1st column of the particular "site list .dat"
                                 # examples: [FLUX/3] "DE-Hai" "FI-Hyy" "ZA-Kru"  [CRUN] "BHS_01" "HAI_01" "ILO_05" "BBR_01" 
@@ -99,6 +99,7 @@ siteName="DE-Hai"               # get the Site-ID from the 1st column of the par
                                 #           [FACE] "DK-AMB" "OR-ELE"  [MANIP] "ES-MaG" "ES-MaT"  [FERT] "HAR-CON_4" "HAR-HIG_4" "HAR-LOW_4" "HAR-CON_5" "SDA-CON" "SDA-ADD"
                                 #           [CRAINE] "CRA_01" "CRA_02" "CRA_18"  [PHOTACC] "ARC_01" "MON_02" "STR_01"  [SPP_1685] "BBR" "LUE" "VES"
                                 #           [CONFIN] "FI-Hyy" "FI-Ken"  [MOCABORS] "US-Ha1"  [MOCAB2] "HUR-FOR" "HUR-GRA"  [SWEDEN] "BER" "STI"  [PLUMBER2] "DE-Hai" "HU-Bug"
+                                #           [ICPFOR] "ICP_004" "ICP_005" "ICP_351"  [CGRASS] "CGE_001" "CGE_002"  [PANARC] "CA-BLK" "US-TOL"
 soil_awc_prescribe=300.0        # float !
 soil_theta_prescribe=1.0        # float !
 longitude=0.0                   # float !
@@ -195,6 +196,18 @@ while getopts ":p:m:i:f:s:y:b:z:h" opt; do
       echo "   forcingDataSet=plumber2"
       forcingDataSet="plumber2"
       ;;
+    "ic")
+      echo "   forcingDataSet=icpfor"
+      forcingDataSet="icpfor"
+      ;;
+    "cg")
+      echo "   forcingDataSet=cgrass (CLIMGRASS)"
+      forcingDataSet="cgrass"
+      ;;
+    "pa")
+      echo "   forcingDataSet=panarc (PANARCTIC)"
+      forcingDataSet="panarc"
+      ;;
     "no")
       echo "   forcingDataSet=none"
       forcingDataSet="none"
@@ -287,7 +300,8 @@ while getopts ":p:m:i:f:s:y:b:z:h" opt; do
     echo " -i set siteName, i.e., siteID"
     echo "    Arguments to -i:"
     echo "       a valid siteName, e.g., [FLUX/3] DE-Hai  [GLOBAL] GLB_001  [CRUN] BHS_01  [FACE] DK-AMB  [MANIP] ES-MaG  [FERT] HAR-CON_4  [CRAINE] CRA_01  [PHOTACC] MON_02"
-    echo "                               [SPP_1685] BBR  [CONFIN] FI-Ken  [MOCABORS] US-Ha1  [MOCAB2] HUR-FOR  [SWEDEN] BER  [PLUMBER2] DE-Hai"
+    echo "                               [SPP_1685] BBR  [CONFIN] FI-Ken  [MOCABORS] US-Ha1  [MOCAB2] HUR-FOR  [SWEDEN] BER  [PLUMBER2] DE-Hai  [ICPFOR] ICP_004"
+    echo "                               [CGRASS] CGE_001  [PANARC] CA-BLK"
     echo " -f set the forcingDataSet"
     echo "    Arguments to -f:"
     echo "       fl: FLUXNET"
@@ -305,6 +319,9 @@ while getopts ":p:m:i:f:s:y:b:z:h" opt; do
     echo "       m2: MOCAB2 (JSM soil moisture development cruncep site)"
     echo "       sw: SWEDEN (scandinavian sites for research of lyu)"
     echo "       p2: PLUMBER2 (Fluxnet site collection for MIP)"
+    echo "       ic: ICPFOR (International Co-operative Programme on Assessment and Monitoring of Air Pollution Effects on Forests)"
+    echo "       cg: CGRASS (CLIMGRASS, Manipulative experiment in an alpine grassland, looking at increased temperature, CO2 and drought)"
+    echo "       pa: PANARC (PANARCTIC, northern high-latitude sites with continuous permafrost)"
     echo "       no: none; using climate.dat file in test_bed folder"
     echo " -s set the soil model"
     echo "    Arguments to -s:"
@@ -373,7 +390,7 @@ validateOutputInterval="timestep daily weekly monthly yearly"
 validatePlantFunctionalTypeID="1 2 3 4 5 6 7 8"
 validateOptionForcing="constant generate readfile"
 validateSetPFTAutomatically="yes no"
-validateForcingDataSet="fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin mocabors mocab2 sweden plumber2 none"
+validateForcingDataSet="fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin mocabors mocab2 sweden plumber2 icpfor cgrass panarc none"
 validateCrunSites="cue spp"
 validateSb_adsorp_scheme="eca_full eca_part eca_none"
 
@@ -479,6 +496,15 @@ case "$forcingDataSet" in
   echo " Info: the PLUMBER2 forcing data is included in the FLUXNET3/ directory"
   siteDataSet="FLUXNET3/"
   ;;
+"icpfor")
+  siteDataSet="ICPFOR/"
+  ;;
+"cgrass")
+  siteDataSet="CLIMGRASS/"
+  ;;
+"panarc")
+  siteDataSet="PANARCTIC/"
+  ;;
 esac
 
 
@@ -557,17 +583,17 @@ case "$forcingDataSet" in
 "fert")
   allSiteInfoFile="$siteDataDirBase""$siteDataSet"fert_sites_1901-2018_list.dat
   echo " "
-  echo " Note: you are running (a) FERT site(s) using forcing 1901-2015 by default (CR2* site 1901-2018)."
+  echo " Note: you are running a FERT site using (transient) forcing 1901-2015 by default (CR2* site 1901-2018)."
   ;;
 "craine")
   allSiteInfoFile="$siteDataDirBase""$siteDataSet"craine_sites_1901-2015.dat
   echo " "
-  echo " Note: you are running (a) CRAINE site(s) using forcing 1901-2015 by default."
+  echo " Note: you are running a CRAINE site using (transient) forcing 1901-2015 by default."
   ;;
 "photacc")
   allSiteInfoFile="$siteDataDirBase""$siteDataSet"photacc_sites_1901-2015.dat
   echo " "
-  echo " Note: you are running (a) PHOTACC site(s) using forcing 1901-2015 by default."
+  echo " Note: you are running a PHOTACC site using (transient) forcing 1901-2015 by default."
   ;;
 "spp1685")
   allSiteInfoFile="$siteDataDirBase""$siteDataSet"spp_1685_sites_1984-2013_list.dat
@@ -586,6 +612,19 @@ case "$forcingDataSet" in
   ;;
 "plumber2")
   allSiteInfoFile="$siteDataDirBase""$siteDataSet"plumber2_all_sites_1991-2018_list.dat
+  ;;
+"icpfor")
+  allSiteInfoFile="$siteDataDirBase""$siteDataSet"icp_all_sites_1901-2019_list.dat
+  echo " "
+  echo " Note: you are running a ICPFOR site using (transient) forcing 1901-2019 by default."
+  ;;
+"cgrass")
+  allSiteInfoFile="$siteDataDirBase""$siteDataSet"climgrass_all_sites_1901-2019.dat
+  echo " "
+  echo " Note: you are running a CLIMGRASS site using (transient) forcing 1901-2019 by default."
+  ;;
+"panarc")
+  allSiteInfoFile="$siteDataDirBase""$siteDataSet"panarctic_sites_1990-2019_list.dat
   ;;
 esac
 
@@ -657,6 +696,15 @@ case "$forcingDataSet" in
   ;;
 "plumber2")
   siteNameStatMetForc="$siteName""_s_"                # e.g.: DE-Hai  ->  DE-Hai_s_*.dat  ->  DE-Hai_s_2000-2012.dat  -> climate.dat
+  ;;
+"icpfor")
+  siteNameStatMetForc="$siteName""_t_"                # using transient forcing - e.g.: ICP_001 ->  ICP_001_t_*.dat ->  ICP_001_t_1901-2019.dat -> climate.dat
+  ;;
+"cgrass")
+  siteNameStatMetForc="$siteName""_t_"                # using transient forcing - e.g.: CGE_001 ->  CGE_001_t_*.dat ->  CGE_001_t_1901-2019.dat -> climate.dat
+  ;;
+"panarc")
+  siteNameStatMetForc="$siteName""_s_"
   ;;
 esac
 
