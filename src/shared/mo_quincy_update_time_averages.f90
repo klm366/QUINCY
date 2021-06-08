@@ -536,7 +536,7 @@ CONTAINS
     INTEGER                                 :: nsoil_sb             !< number of soil layers as used/defined by the SB_ process
     REAl(wp),DIMENSION(options%nc)          :: hlp, mavg_period_hlp !< helper
     LOGICAL ,DIMENSION(options%nc)          :: l_growing_season     !< growing_season LOGICAL needed for calc_mavg(), see section 0.9
-    INTEGER                                 :: iblk, ics, ice, nc
+    INTEGER                                 :: iblk, ics, ice, nc, ic
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_moving_averages'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -1117,7 +1117,15 @@ CONTAINS
                                                       mavg_period_hlp, do_calc=l_growing_season(:))
           reserve_phosphorus_talloc_mavg(:)   = calc_mavg(reserve_phosphorus_talloc_mavg(:), veg_pool%reserve%phosphorus, &
                                                       mavg_period_hlp, do_calc=l_growing_season(:))
-          w_root_lim_talloc_mavg(:)           = calc_mavg(w_root_lim_talloc_mavg(:), w_soil_root(:)/w_soil_root_fc(:), &
+          ! avoid division by zero
+          DO ic = 1, nc
+            IF (w_soil_root_fc(ic) > eps8) THEN
+              hlp(ic) = w_soil_root(ic) / w_soil_root_fc(ic)
+            ELSE
+              hlp(ic) = 0._wp
+            END IF
+          END DO
+          w_root_lim_talloc_mavg(:)           = calc_mavg(w_root_lim_talloc_mavg(:), hlp(:), &
                                                       mavg_period_hlp, do_calc=l_growing_season(:))
 
           SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%biomass_alloc_scheme))
