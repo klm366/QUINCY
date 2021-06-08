@@ -927,7 +927,6 @@ CONTAINS
           END ASSOCIATE
         END IF
       END DO
-      c_total_sum(:,:) = c_total_sum(:,:) * fract(:,:) ! Fractions of children need to sum up to fraction of parent tile in block below
 
       child => tile%Get_first_child_tile()
       DO i=1,no_children
@@ -935,7 +934,7 @@ CONTAINS
         TYPE IS (t_fract_memory)
           ASSOCIATE (data_child => dsl4jsb_memory(JEDI_)%children(i)%p%vars(var%child_idx(i))%p%ptr2d(:,:) )
             WHERE (c_total_sum(:,:) > 0._wp)
-              child__mem%fract%ptr(:,:) = data_child(:,:) / c_total_sum(:,:)
+              child__mem%fract%ptr(:,:) = data_child(:,:) / c_total_sum(:,:) * fract(:,:) ! Fractions of children need to sum up to fraction of parent tile
             END WHERE
           END ASSOCIATE
           child => child%Get_next_sibling_tile()
