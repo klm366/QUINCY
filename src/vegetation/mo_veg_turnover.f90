@@ -424,6 +424,9 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
+    !>0.9 init output variable
+    !>
+    net_growth(:) = 0.0_wp
 
     !> 1.0 foliage turnover, including recycling of nutrients 
     !!
