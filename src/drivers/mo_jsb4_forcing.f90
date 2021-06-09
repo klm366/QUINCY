@@ -72,7 +72,8 @@ MODULE mo_jsb4_forcing
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: get_interface_variables_from_external_forcing, init_forcing, sat_specific_humidity, forcing_options
+  PUBLIC :: get_interface_variables_from_external_forcing, init_forcing, finalize_external_forcing, &
+    &       sat_specific_humidity, forcing_options
 
 
 #ifdef __ICON__
@@ -181,6 +182,7 @@ MODULE mo_jsb4_forcing
     INTEGER                  :: length_time_series     !! The number of time steps found in the data (only if my_process_is_stdio())
     REAL(wp), POINTER        :: data_read(:,:,:) => NULL()  !! Pointer to read data
     REAL(wp), POINTER        :: timevalues(:) => NULL()     !! The values of the time variable (only if my_process_is_stdio())
+    TYPE(t_input_file)       :: input_file
   END TYPE input_variable_type
 
   ! All theoretically possible input data, i.e. some are not used. (Input data is controlled by jsb_forcing_nml)
@@ -850,7 +852,6 @@ CONTAINS
     REAL(wp) :: hlp_r(1)
 
     TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_input_file) :: input_file
 
     model => Get_model(model_id)
 
@@ -881,13 +882,14 @@ CONTAINS
     IF ((TRIM(forcing_input_variable%variable_name) .EQ. CO2_varname) .AND. (frequency .EQ. GHG_SCENARIO_)) THEN
       IF(is_time_experiment_start(current_datetime) .OR. lresume) THEN
         IF(my_process_is_stdio()) THEN
-          ! in case of ghg_scenario the forcing_input_variable%file_name_prefix is expected to contain the whole filename
-          input_file = jsb_netcdf_open_input(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)))
-          CALL get_time_dimension(input_file, forcing_input_variable)
+        ! in case of ghg_scenario the forcing_input_variable%file_name_prefix is expected to contain the whole filename
+          IF (.NOT. forcing_input_variable%input_file%is_open) forcing_input_variable%input_file = &
+            &  jsb_netcdf_open_input(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)))
+          CALL get_time_dimension(forcing_input_variable%input_file, forcing_input_variable)
           ! Assert: test that the netcdf file unit for this variable is the expected unit or at least equals unspecified_exp_unit
-!          CALL test_unit(input_file%file_id, TRIM(forcing_input_variable%variable_name), &
+!          CALL test_unit(forcing_input_variable%input_file%file_id, TRIM(forcing_input_variable%variable_name), &
 !            & TRIM(forcing_input_variable%expectedUnit), TRIM(readUnit))
-          CALL input_file%Close()
+          CALL forcing_input_variable%input_file%Close()
         ENDIF
 
         IF(ASSOCIATED(forcing_input_variable%data_read)) DEALLOCATE(forcing_input_variable%data_read)
@@ -911,14 +913,15 @@ CONTAINS
           ENDIF
 
           ! get the data -- TODO: via mo_jsb_io_netcdf_iface / mo_jsb_io_netcdf functions / mo_input?
-          input_file = jsb_netcdf_open_input(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)), model%grid_id)
-          !CALL nf(nf_inq_varid(input_file%file_id, CO2_varname, nc_var_id))
-          !CALL nf(nf_get_vara_double(input_file%file_id, nc_var_id, (/1,1,currentTimeStep/), (/1,1,1/), hlp_r ))
+          forcing_input_variable%input_file = &
+            & jsb_netcdf_open_input(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)), model%grid_id)
+          !CALL nf(nf_inq_varid(forcing_input_variable%input_file%file_id, CO2_varname, nc_var_id))
+          !CALL nf(nf_get_vara_double(forcing_input_variable%input_file%file_id, nc_var_id, (/1,1,currentTimeStep/), (/1,1,1/), hlp_r ))
           ! We could add Read_1d_time. However we would have to add 4 funktions for this call. Its probably not worth it to expand the code.
-          return_pointer => input_file%Read_2d_time(forcing_input_variable%variable_name,   & ! variable_name sollte CO2_varname sein
+          return_pointer => forcing_input_variable%input_file%Read_2d_time(forcing_input_variable%variable_name,   & ! variable_name sollte CO2_varname sein
             &               start_time_step=currentTimeStep, end_time_step=currentTimeStep, &
             &               fill_array=forcing_input_variable%data_read)
-          CALL input_file%Close()
+          CALL forcing_input_variable%input_file%Close()
         ENDIF
         hlp_r(1) =forcing_input_variable%data_read(1,1,1)
 
@@ -944,19 +947,19 @@ CONTAINS
 
     ! --- if new current run or new file - get the timeseries of the forcing file and the current position in the timeseries
     IF (new_year_forcing .OR. is_time_experiment_start(current_datetime) .OR. lresume) THEN
-      IF(my_process_is_stdio()) THEN
-        input_file = jsb_netcdf_open_input( &
-          & TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) // TRIM(ADJUSTL(year_label)) // '.nc')
 
-        CALL get_time_dimension(input_file, forcing_input_variable)
+      IF(my_process_is_stdio()) THEN
+        IF (forcing_input_variable%input_file%is_open) CALL forcing_input_variable%input_file%Close()
+        forcing_input_variable%input_file = jsb_netcdf_open_input( &
+          & TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) // TRIM(ADJUSTL(year_label)) // '.nc')
+  
+        CALL get_time_dimension(forcing_input_variable%input_file, forcing_input_variable)
 
         ! Assert: test that the netcdf file unit for this variable is the expected unit or at least equals unspecified_exp_unit
-        ! CALL test_unit(input_file%file_id, TRIM(forcing_input_variable%variable_name), &
-        CALL test_unit(input_file%file_id, TRIM(forcing_input_variable%variable_name), &
+        ! CALL test_unit(forcing_input_variable%input_file%file_id, TRIM(forcing_input_variable%variable_name), &
+        CALL test_unit(forcing_input_variable%input_file%file_id, TRIM(forcing_input_variable%variable_name), &
           & TRIM(forcing_input_variable%expectedUnit), TRIM(readUnit))
         ! TODO: further assertions? e.g. that lon lat are correct?
-
-        CALL input_file%Close()
 
         currentTimeStep = 1
         thisDayStart = 0
@@ -998,6 +1001,10 @@ CONTAINS
         ALLOCATE(forcing_input_variable%data_read(ice, nblks, 1))
       END IF
 
+      IF (forcing_input_variable%input_file%is_open) CALL forcing_input_variable%input_file%Close()
+      forcing_input_variable%input_file = jsb_netcdf_open_input( &
+        & TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) // TRIM(ADJUSTL(year_label)) // '.nc', model%grid_id)
+
     ENDIF
 
     thisDayStart = forcing_input_variable%currentDayStart
@@ -1027,11 +1034,8 @@ CONTAINS
         ENDIF
       ENDIF
       ! get data
-      input_file = jsb_netcdf_open_input( &
-        & trim(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) // TRIM(ADJUSTL(year_label)) // '.nc'), model%grid_id)
-      return_pointer => input_file%Read_2d_time(forcing_input_variable%variable_name, &
+      return_pointer => forcing_input_variable%input_file%Read_2d_time(forcing_input_variable%variable_name, &
         & start_time_step=thisDayStart, end_time_step=thisDayEnd, fill_array=forcing_input_variable%data_read)
-      CALL input_file%Close()
 
       ! Set the ocean cells of the read data to the constant ocean value and increase the start and end for the next day to be read
       IF(forcing_input_variable%frequency .EQ. TIMESTEP_) THEN
@@ -1193,6 +1197,33 @@ CONTAINS
 
   END SUBROUTINE test_unit
 
+  SUBROUTINE finalize_external_forcing
+
+    IF(forcing_options%air_temperature_as_timestep) THEN
+      IF (forcing_input%air_temp%input_file%is_open) CALL forcing_input%air_temp%input_file%Close()
+    ELSE
+      IF (forcing_input%air_temp_min%input_file%is_open) CALL forcing_input%air_temp_min%input_file%Close()
+      IF (forcing_input%air_temp_max%input_file%is_open) CALL forcing_input%air_temp_max%input_file%Close()
+    END IF
+
+    IF (forcing_input%precipitation%input_file%is_open) CALL forcing_input%precipitation%input_file%Close()
+
+    SELECT CASE(forcing_options%type_of_qair_forcing)
+    CASE(RH_)
+      IF (forcing_input%rel_humidity%input_file%is_open) CALL forcing_input%rel_humidity%input_file%Close()
+    CASE(QAIR_)
+      IF (forcing_input%qair%input_file%is_open) CALL forcing_input%qair%input_file%Close()
+    END SELECT
+
+    IF (forcing_input%shortwave%input_file%is_open) CALL forcing_input%shortwave%input_file%Close()
+
+    IF (forcing_input%longwave%input_file%is_open) CALL forcing_input%longwave%input_file%Close()
+
+    IF (forcing_input%wind_speed%input_file%is_open) CALL forcing_input%wind_speed%input_file%Close()
+
+    IF (forcing_input%CO2_concentr%input_file%is_open) CALL forcing_input%CO2_concentr%input_file%Close()
+
+  END SUBROUTINE finalize_external_forcing
 
   !>
   !! @brief calculates the remaining input required for jsbach4
