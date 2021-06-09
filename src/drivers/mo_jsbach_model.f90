@@ -432,7 +432,7 @@ CONTAINS
     CALL jsbach_init(1)
     CALL jsbach_label_run(.TRUE.)
 
-    IF (force_from_observations()) CALL init_forcing(1)
+    IF (force_from_observations()) CALL init_forcing(1, dtime, dtime)
 
     IF (isRestart()) THEN
       !
@@ -802,7 +802,7 @@ CONTAINS
     USE mo_jsb_grid_class,            ONLY: t_jsb_grid
     USE mo_jsb_tile_class,            ONLY: t_jsb_tile_abstract
     USE mo_jsb_interface,             ONLY: jsbach_start_timestep, jsbach_finish_timestep
-    USE mo_jsb4_forcing,              ONLY: forcing_options, delta_time, time_step_len, get_interface_variables_from_external_forcing
+    USE mo_jsb4_forcing,              ONLY: forcing_options, get_interface_variables_from_external_forcing
     USE mo_psrad_orbit,               ONLY: orbit_kepler, orbit_vsop87, get_orbit_times
     USE mo_psrad_solar_parameters,    ONLY: solar_parameters
     USE mo_echam_rad_config,          ONLY: echam_rad_config
@@ -862,8 +862,6 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':perform_jsbach_for_timestep'
 
     l_force_from_obs = force_from_observations()
-    delta_time    = dtime
-    time_step_len = dtime
 
     IF (jsbach_is_restarted()) THEN
       l_first_forcing_file = .FALSE.

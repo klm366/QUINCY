@@ -35,7 +35,7 @@ PROGRAM jsb4_driver
   dsl4jsb_Use_memory(TURB_)
   dsl4jsb_Use_memory(HYDRO_)
 
-  USE mo_jsb4_forcing,       ONLY: get_interface_variables_from_external_forcing, init_forcing
+  USE mo_jsb4_forcing,       ONLY: get_interface_variables_from_external_forcing, init_forcing, finalize_external_forcing
 
   ! Currently from adapter
   USE mo_jsb_grid_iface,     ONLY: get_lat, get_lon
@@ -324,7 +324,7 @@ PROGRAM jsb4_driver
   ALLOCATE(CO2_flux(nproma))
 
   IF (.NOT. read_interface_vars) THEN
-    CALL init_forcing(model_id)
+    CALL init_forcing(model_id, delta_time, time_step_len)
 
     !TODO: get from grid? but how to name such a function get_lon_from_grid?
     !      and if, shouldn't then also get_nproma should be called get_nproma_from_grid?
@@ -526,6 +526,7 @@ PROGRAM jsb4_driver
   CALL close_output_streams
   CALL message('INFO','Closed output streams')
 
+  CALL finalize_external_forcing()
   CALL jsbach_finalize()
 
 #ifdef HAVE_CDIPIO
