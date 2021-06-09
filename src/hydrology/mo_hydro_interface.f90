@@ -808,8 +808,16 @@ CONTAINS
       vol_field_cap_sl  (:,i) = vol_field_cap(:)
       vol_p_wilt_sl     (:,i) = vol_p_wilt(:)
       !$claw end expand
-    END DO
 
+    ! hyd_cond_sat_sl   (:,:) = SPREAD(hyd_cond_sat   (:), DIM=2, ncopies=nsoil)
+    ! vol_porosity_sl   (:,:) = SPREAD(vol_porosity   (:), DIM=2, ncopies=nsoil)
+    ! bclapp_sl         (:,:) = SPREAD(bclapp         (:), DIM=2, ncopies=nsoil)
+    ! matrix_pot_sl     (:,:) = SPREAD(matrix_pot     (:), DIM=2, ncopies=nsoil)
+    ! pore_size_index_sl(:,:) = SPREAD(pore_size_index(:), DIM=2, ncopies=nsoil)
+    ! vol_field_cap_sl  (:,:) = SPREAD(vol_field_cap  (:), DIM=2, ncopies=nsoil)
+    ! vol_p_wilt_sl     (:,:) = SPREAD(vol_p_wilt     (:), DIM=2, ncopies=nsoil)
+
+    END DO
     IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
 !pdv >
       IF (dsl4jsb_Config(HYDRO_)%l_percolation_theory) THEN
@@ -914,9 +922,9 @@ CONTAINS
   !!
   SUBROUTINE update_soil_hydrology(tile, options)
 
+    USE mo_hydro_process,          ONLY: calc_soil_hydrology
 !pdv >
-    USE mo_hydro_process,      ONLY: calc_soil_hydrology
-    USE mo_hydro_util,         ONLY: get_water_in_root_zone
+    USE mo_hydro_util,             ONLY: get_water_in_root_zone
 !pdv <
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -1013,6 +1021,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_root_fc)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_root_avail)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_root_scool_act)
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, root_depth_sl)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_overflow)
 !pdv <
 
@@ -1043,7 +1052,6 @@ CONTAINS
       & dsl4jsb_Config(HYDRO_)%l_discount_scool,            &
       & dsl4jsb_Config(HYDRO_)%l_drain_lat,                 &
 !pdv <
- 
       & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ), &
       &                                fract_org_sl  (:,:), &
@@ -1151,7 +1159,10 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    TYPE(t_jsb_model), POINTER :: model
+
     dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_config(HYDRO_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
@@ -1165,7 +1176,10 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
+    model => Get_model(tile%owner_model_id)
+
     dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_config(HYDRO_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
@@ -1179,7 +1193,9 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,        weighted_by_fract)
 !pdv >
-    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_pot_scool_sl, weighted_by_fract)
+    IF (dsl4jsb_Config(HYDRO_)%l_discount_scool) THEN
+      dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_pot_scool_sl, weighted_by_fract)
+    END IF
 !pdv <
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -1300,6 +1316,9 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
     dsl4jsb_Def_config(HYDRO_)
+!pdv >
+    dsl4jsb_Def_config(SSE_)
+!pdv <
 
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(ASSIMI_)
@@ -1322,7 +1341,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: w_soil_root_avail    !< Plant available water content in root zone
     dsl4jsb_Real2D_onChunk :: w_soil_root_ice
     dsl4jsb_Real2D_onChunk :: w_soil_root_max      !< Maximum plant available water content in root zone
-    dsl4jsb_Real2D_onChunk :: w_soil_root_pot
     dsl4jsb_Real3D_onChunk :: w_soil_pot_scool_sl
 ! pdv <
     ! ASSIMI_
@@ -1345,6 +1363,9 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_config(HYDRO_)
+!pdv >
+    dsl4jsb_Get_config(SSE_)
+!pdv <
 
     ! Get reference to variables for current block
     !
@@ -1375,7 +1396,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root_avail)    ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root_max)      ! out
 !pdv <
-
     !
     IF (model%config%use_quincy) THEN
       dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs)        ! out   ! quincy
@@ -1395,18 +1415,24 @@ CONTAINS
     CALL get_water_in_root_zone(w_soil_pwp_sl (:,:), soil_depth_sl(:,:), root_depth_sl(:,:), w_soil_root_pwp(:))
 
 !pdv >
-    !!!! Needs to be discussed how to handle supercooled water: Is it available to plants? Then: 
-    !    w_soil_root_avail(:,:) = w_soil_root(:,:)
-    !!!! If not then :
-    CALL get_water_in_root_zone(w_soil_pot_scool_sl(:,:),  &
-                             &  soil_depth_sl(:,:), root_depth_sl(:,:), w_soil_root_scool_pot(:))
-    CALL get_water_in_root_zone(MIN(w_soil_pot_scool_sl(:,:), w_soil_sl(:,:)),  &
-                             &  soil_depth_sl(:,:), root_depth_sl(:,:), w_soil_root_scool_act(:))
+    IF (.NOT. dsl4jsb_Config(HYDRO_)%l_hyd_ref) THEN
+      IF (dsl4jsb_Config(SSE_)%l_freeze .AND. dsl4jsb_Config(SSE_)%l_supercool) THEN
+        !vg: these options are used with the calcuation of w_soil_pot_scool_sl
+        !pdv: Needs to be discussed how to handle supercooled water: Is it available to plants? Then: 
+        !    w_soil_root_avail(:,:) = w_soil_root(:,:)
+        !!!! If not then :
+print*, 'vg: w_soil_pot_scool_sl:', MINVAL(w_soil_pot_scool_sl), MAXVAL(w_soil_pot_scool_sl)
+        CALL get_water_in_root_zone(w_soil_pot_scool_sl(:,:),  &
+                                 &  soil_depth_sl(:,:), root_depth_sl(:,:), w_soil_root_scool_pot(:))
+        CALL get_water_in_root_zone(MIN(w_soil_pot_scool_sl(:,:), w_soil_sl(:,:)),  &
+                                 &  soil_depth_sl(:,:), root_depth_sl(:,:), w_soil_root_scool_act(:))
 
-    IF (dsl4jsb_Config(HYDRO_)%l_discount_scool) THEN
-      w_soil_root_avail(:) = w_soil_root(:) - w_soil_root_scool_act(:)
-    ELSE
-      w_soil_root_avail(:) = w_soil_root(:)
+        IF (dsl4jsb_Config(HYDRO_)%l_discount_scool) THEN
+          w_soil_root_avail(:) = w_soil_root(:) - w_soil_root_scool_act(:)
+        ELSE
+          w_soil_root_avail(:) = w_soil_root(:)
+        END IF
+      END IF
     END IF
 !pdv <
 

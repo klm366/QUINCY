@@ -566,7 +566,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_freeze_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_ice_melt_sl,    weighted_by_fract)
 !pdv >
-    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_pot_scool_sl, weighted_by_fract)
+!vg     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_pot_scool_sl, weighted_by_fract)
 !pdv >
     dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth,       weighted_by_fract)
 
