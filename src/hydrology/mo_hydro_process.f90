@@ -655,6 +655,7 @@ CONTAINS
         END IF
       END IF
     END DO
+
     !$claw acc end parallel
     !---------------------
     ! drainage and runoff
@@ -684,7 +685,6 @@ CONTAINS
     !$claw acc data present(infilt)
     !$claw acc parallel loop gang vector
     DO i = 1, nidx
-!print*, 'vg: ', i, ' infilt: ', infilt(i)
       infilt(i) = infilt(i) / 2._wp
     END DO
     !$claw acc end data
@@ -896,7 +896,7 @@ CONTAINS
 
           ELSE
 ! pdv >
-            ! Additionally, when ice is partly blocking the pore space Ksat should be reduced accordingly 
+            ! Additionally, when ice is partly blocking the pore space Ksat should be reduced accordingly
             !  (see e.g. CLM dosumentation)
             ice_impede(j) = 10._wp**(-6._wp * soil_ice_l(j,i) / (field_cap_l(j,i) + soil_ice_l(j,i)))
             ws_rel(j,i) = MAX(ws_l(j,i) - ws_immo_l(j,i), 0._wp) / (field_cap_l(j,i) - ws_immo_l(j,i))
@@ -905,8 +905,8 @@ CONTAINS
               &                 * (1._wp - (1._wp - ws_rel(j,i)**(1._wp/zmvg_l(j,i)))**zmvg_l(j,i))**2._wp &
               &                 * delta_time     ! [m/s] -> [m]
 
-            ! Even with ice impedance accounted for, there is still water movement that can lead to a slow 
-            ! desiccation of the frozen soil. Therefore, it is assumed that there is no water movement once 
+            ! Even with ice impedance accounted for, there is still water movement that can lead to a slow
+            ! desiccation of the frozen soil. Therefore, it is assumed that there is no water movement once
             ! more than half of the porespace is blocked.
             IF (soil_ice_l(j,i+1) + MIN(ws_immo_l(j,i+1),ws_l(j,i+1)) > EPSILON(1.0)) THEN
               IF ((soil_ice_l(j,i+1)+ MIN(ws_immo_l(j,i+1),ws_l(j,i+1))) &
@@ -939,7 +939,6 @@ CONTAINS
         ! calculate drainage of the lowest layer above bedrock
         IF (dsoil(j,i) > 0._wp .AND. .NOT. soil_below(j)) THEN       ! lowest layer above bedrock
 
-!print*, 'vg: ', i, j, ' ws_l: ', ws_l(j,i), ' ws_immo_l: ', ws_immo_l(j,i)
           IF (ws_l(j,i) <= ws_immo_l(j,i)) THEN
             drain_l(j) = 0._wp              ! no drainage without mobile water
           ELSE
@@ -950,22 +949,22 @@ CONTAINS
               drain_l(j) = 0._wp
             END IF
 !pdv >
-        ! The lateral drainage from each soil layer should very much be discussed with Stefan again ...
-        ! I would not include it.
-        ! Furthermore, when there is supercooled water it should not be assumed to move through the soil
+            ! The lateral drainage from each soil layer should very much be discussed with Stefan again ...
+            ! I would not include it.
+            ! Furthermore, when there is supercooled water it should not be assumed to move through the soil
             IF (l_hyd_ref) THEN
 !pdv <
               IF (ws_l(j,i) > ws_crit(j)) THEN
-                drain_crit(j) = (zdrmax-zdrmin) * ((ws_l(j,i)-ws_immo_l(j,i)) &
-                  &            / (wsat_l(j,i) - ws_crit(j)))**zdrexp
+                drain_crit(j) = (zdrmax-zdrmin)  &
+                  &            * ((ws_l(j,i)-ws_crit(j)) / (wsat_l(j,i) - ws_crit(j)))**zdrexp
                 drain_l(j) = drain_l(j) &
                   &         + MIN(drain_crit(j), (ws_l(j,i)-ws_crit(j))/delta_time)
               END IF
 !pdv >
             ELSE
               IF ((ws_l(j,i)-ws_immo_l(j,i)) > ws_crit(j)) THEN
-                drain_crit(j) = (zdrmax-zdrmin) * ((ws_l(j,i)-ws_immo_l(j,i)-ws_crit(j)) &
-                  &            / (wsat_l(j,i) - ws_crit(j)))**zdrexp
+                drain_crit(j) = (zdrmax-zdrmin)  &
+                  &            * ((ws_l(j,i)-ws_immo_l(j,i)-ws_crit(j)) / (wsat_l(j,i) - ws_crit(j)))**zdrexp
                 drain_l(j) = drain_l(j) &
                   &         + MIN(drain_crit(j), (ws_l(j,i)-ws_immo_l(j,i)-ws_crit(j))/delta_time)
               END IF
@@ -975,7 +974,6 @@ CONTAINS
             drain_l(j) = MIN(drain_l(j), (ws_l(j,i)-ws_immo_l(j,i))/delta_time)
           END IF
           percolation(j,i) = drain_l(j) * delta_time  ! [m/s] -> [m]
-
         END IF
 
 !pdv >
@@ -1006,17 +1004,18 @@ CONTAINS
               END IF
               ! drainage is limited by the soil moisture within the layer
               drain_l(j) = MIN(drain_l(j) * delta_time, (ws_tmp(j) - ws_immo_l(j,i)))
-
-              IF (.NOT. ltpe_closed) THEN  ! not terra planet setup with out runoff
-                ws_l(j,i) = ws_l(j,i) - drain_l(j)       ! remove drainage of the layer from soil moisture
-                drainage(j) = drainage(j) + drain_l(j)   ! and add it to the total drainage
-              END IF
-
-            END IF ! mobile water
+            END IF
           END IF
 !pdv >
         END IF ! lateral drainage
 !pdv <
+        IF (.NOT. ltpe_closed) THEN
+          IF (dsoil(j,i) > 0._wp .AND. soil_below(j) .AND. ws_tmp(j) > ws_immo_l(j,i)) THEN
+            ws_l(j,i) = ws_l(j,i) - drain_l(j)       ! remove drainage of the layer from soil moisture
+            drainage(j) = drainage(j) + drain_l(j)   ! and add it to the total drainage
+          END IF
+        END IF                                       ! no drainage for TPE closed case
+
       END DO  ! soil level
 
       !----------------------------------------------------------------------------------------------

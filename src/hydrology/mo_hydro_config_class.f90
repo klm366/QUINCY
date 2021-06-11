@@ -44,8 +44,8 @@ MODULE mo_hydro_config_class
       & l_organic,           & !< Use organic component of soil layers
       & l_glac_in_soil,      & !< Treat glacier as part of soil, not separate glacier tile
 !pdv >
-      & l_infil_subzero,     & !< Allow infiltration at soil temperatures below 0°C
       & l_hyd_ref,           & !< Reference version, i.e. without KoPF changes
+      & l_infil_subzero,     & !< Allow infiltration at soil temperatures below 0°C
       & l_discount_scool,    & !< supercooled water is neither available to plants nor percolates
       & l_drain_lat,         & !< Lateral drainage, i.e. drainage from upper to lower soil layers;
                                !  if false, only the lowest soil level drains.
@@ -77,7 +77,7 @@ CONTAINS
     CHARACTER(len=10)           :: scheme_stom_cond
     LOGICAL                     :: l_organic, l_glac_in_soil
 !pdv >
-    LOGICAL                     :: l_infil_subzero, l_hyd_ref, l_discount_scool, l_drain_lat, l_percolation_theory
+    LOGICAL                     :: l_hyd_ref, l_infil_subzero, l_discount_scool, l_drain_lat, l_percolation_theory
 !pdv <
 
     NAMELIST /jsb_hydro_nml/        &
@@ -94,8 +94,8 @@ CONTAINS
       & l_organic,                  &
       & l_glac_in_soil,             &
 !pdv >
-      & l_infil_subzero,            &
       & l_hyd_ref,                  &
+      & l_infil_subzero,            &
       & l_discount_scool,           &
       & l_drain_lat,                &
       & l_percolation_theory
@@ -127,10 +127,10 @@ CONTAINS
     l_organic         = .FALSE.
     l_glac_in_soil    = .FALSE.
 !pdv >
-    l_infil_subzero   = .FALSE.
     l_hyd_ref         = .TRUE.
+    l_infil_subzero   = .FALSE.
     l_discount_scool  = .FALSE.
-    l_drain_lat       = .TRUE.
+    l_drain_lat       = .FALSE.
     l_percolation_theory = .FALSE.
 !pdv <
 
@@ -168,8 +168,8 @@ CONTAINS
 
     config%l_glac_in_soil      = l_glac_in_soil
 !pdv >
-    config%l_infil_subzero     = l_infil_subzero
     config%l_hyd_ref           = l_hyd_ref
+    config%l_infil_subzero     = l_infil_subzero
     config%l_discount_scool    = l_discount_scool
     config%l_drain_lat         = l_drain_lat
     config%l_percolation_theory = l_percolation_theory
