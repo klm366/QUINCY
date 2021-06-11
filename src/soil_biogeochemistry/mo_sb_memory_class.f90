@@ -390,8 +390,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE.)
+        & loutput = .FALSE., &
+        & lrestart = .FALSE.)
 
       CALL mem%Add_pool('mycorrhiza_export', mem%mycorrhiza_export, &
         & hgrid, surface, &
@@ -399,8 +399,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE.)
+        & loutput = .FALSE., &
+        & lrestart = .FALSE.)
 
       ! add variables to pools
       CALL mem%delta_pools%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_pool))
@@ -422,8 +422,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE.)
+        & loutput = .FALSE., &
+        & lrestart = .FALSE.)
         
       CALL mem%Add_pool('loss', mem%loss, &
         & hgrid, surface, &
@@ -431,8 +431,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE.)
+        & loutput = .FALSE., &
+        & lrestart = .FALSE.)
         
       CALL mem%Add_pool('transport', mem%transport, &
         & hgrid, surface, &
@@ -440,8 +440,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE.)
+        & loutput = .FALSE., &
+        & lrestart = .FALSE.)
 
       ! add pools to pools
       CALL mem%pool%Add_elements(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_pool))
@@ -577,21 +577,21 @@ CONTAINS
         & hgrid, surface, vgrid_soil_sb,                                                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
-        & loutput=.TRUE.,                                                                              &
+        & loutput=.FALSE.,                                                                             &
         & lrestart=.FALSE.,                                                                            &
         & initval_r = 0.0_wp)
       CALL mem%Add_var(mem%sb_main_pool%sb_loss, &
         & hgrid, surface, vgrid_soil_sb,                                                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
-        & loutput=.TRUE.,                                                                              &
+        & loutput=.FALSE.,                                                                             &
         & lrestart=.FALSE.,                                                                            &
         & initval_r = 0.0_wp)
       CALL mem%Add_var(mem%sb_main_pool%sb_transport, &
         & hgrid, surface, vgrid_soil_sb,                                                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
-        & loutput=.TRUE.,                                                                              &
+        & loutput=.FALSE.,                                                                             &
         & lrestart=.FALSE.,                                                                            &
         & initval_r = 0.0_wp)
 
@@ -601,13 +601,13 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & loutput=.TRUE.,                                                                              &
-        & lrestart=.TRUE.,                                                                             &
+        & lrestart=.FALSE.,                                                                            &
         & initval_r = 0.0_wp)
       CALL mem%Add_var(mem%sb_main_pool%sb_mycorrhiza_export, &
         & hgrid, surface, vgrid_soil_sb,                                                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
-        & loutput=.TRUE.,                                                                              &
+        & loutput=.FALSE.,                                                                             &
         & lrestart=.FALSE.,                                                                            &
         & initval_r = 0.0_wp)
 
@@ -799,8 +799,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('transport_nh4_assoc', mem%transport_nh4_assoc, &
@@ -809,8 +809,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('transport_no3_solute', mem%transport_no3_solute, &
@@ -819,8 +819,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('transport_noy', mem%transport_noy, &
@@ -829,8 +829,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('transport_n2o', mem%transport_n2o, &
@@ -839,8 +839,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('transport_n2', mem%transport_n2, &
@@ -849,8 +849,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('transport_nh4_n15_solute', mem%transport_nh4_n15_solute, &
@@ -859,8 +859,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('transport_nh4_n15_assoc', mem%transport_nh4_n15_assoc, &
@@ -869,8 +869,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('transport_no3_n15_solute', mem%transport_no3_n15_solute, &
@@ -879,8 +879,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('transport_noy_n15', mem%transport_noy_n15, &
@@ -889,8 +889,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('transport_n2o_n15', mem%transport_n2o_n15, &
@@ -899,8 +899,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('transport_n2_n15', mem%transport_n2_n15, &
@@ -909,8 +909,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('transport_po4_assoc_fast', mem%transport_po4_assoc_fast, &
@@ -919,8 +919,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('transport_po4_assoc_slow', mem%transport_po4_assoc_slow, &
@@ -929,8 +929,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('transport_po4_occluded', mem%transport_po4_occluded, &
@@ -939,8 +939,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('transport_po4_primary', mem%transport_po4_primary, &
@@ -949,8 +949,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)  
 
       CALL mem%Add_var('transport_po4_solute', mem%transport_po4_solute, &
@@ -959,8 +959,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('rtm_decomposition', mem%rtm_decomposition, &
@@ -969,8 +969,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('rtm_depolymerisation', mem%rtm_depolymerisation, &
@@ -979,8 +979,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('rtm_mic_uptake', mem%rtm_mic_uptake, &
@@ -989,8 +989,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('rtm_plant_uptake', mem%rtm_plant_uptake, &
@@ -999,8 +999,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('rtm_sorption', mem%rtm_sorption, &
@@ -1009,8 +1009,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('rtm_desorption', mem%rtm_desorption, &
@@ -1019,8 +1019,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('rtm_hsc', mem%rtm_hsc, &
@@ -1029,8 +1029,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('rtm_nitrification', mem%rtm_nitrification, &
@@ -1039,8 +1039,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('rtm_denitrification', mem%rtm_denitrification, &
@@ -1049,8 +1049,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('rtm_gasdiffusion', mem%rtm_gasdiffusion, &
@@ -1059,8 +1059,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('rmm_decomposition', mem%rmm_decomposition, &
@@ -1069,8 +1069,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('rmm_depolymerisation', mem%rmm_depolymerisation, &
@@ -1079,8 +1079,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('rmm_mic_uptake', mem%rmm_mic_uptake, &
@@ -1089,8 +1089,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('rmm_plant_uptake', mem%rmm_plant_uptake, &
@@ -1099,8 +1099,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('rmm_sorption', mem%rmm_sorption, &
@@ -1109,8 +1109,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('rmm_desorption', mem%rmm_desorption, &
@@ -1119,8 +1119,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('rmm_hsc', mem%rmm_hsc, &
@@ -1129,8 +1129,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('rmm_nitrification', mem%rmm_nitrification, &
@@ -1139,8 +1139,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('rmm_gasdiffusion', mem%rmm_gasdiffusion, &
@@ -1149,8 +1149,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('het_respiration', mem%het_respiration, &
@@ -1159,8 +1159,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('het_respiration_c13', mem%het_respiration_c13, &
@@ -1169,8 +1169,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('het_respiration_c14', mem%het_respiration_c14, &
@@ -1179,8 +1179,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('myc_respiration', mem%myc_respiration, &
@@ -1189,8 +1189,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('myc_respiration_c13', mem%myc_respiration_c13, &
@@ -1199,8 +1199,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('myc_respiration_c14', mem%myc_respiration_c14, &
@@ -1209,8 +1209,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('net_mineralisation_nh4', mem%net_mineralisation_nh4, &
@@ -1219,8 +1219,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('net_mineralisation_nh4_n15', mem%net_mineralisation_nh4_n15, &
@@ -1229,8 +1229,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('net_mineralisation_no3', mem%net_mineralisation_no3, &
@@ -1239,8 +1239,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('net_mineralisation_no3_n15', mem%net_mineralisation_no3_n15, &
@@ -1249,8 +1249,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('net_mineralisation_po4', mem%net_mineralisation_po4, &
@@ -1259,8 +1259,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('plant_uptake_nh4_sl', mem%plant_uptake_nh4_sl, &
@@ -1269,8 +1269,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('plant_uptake_nh4_n15_sl', mem%plant_uptake_nh4_n15_sl, &
@@ -1279,8 +1279,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('plant_uptake_no3_sl', mem%plant_uptake_no3_sl, &
@@ -1289,8 +1289,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('plant_uptake_no3_n15_sl', mem%plant_uptake_no3_n15_sl, &
@@ -1299,8 +1299,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('plant_uptake_po4_sl', mem%plant_uptake_po4_sl, &
@@ -1309,8 +1309,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('microbial_uptake_nh4_sl', mem%microbial_uptake_nh4_sl, &
@@ -1319,8 +1319,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('microbial_uptake_nh4_n15_sl', mem%microbial_uptake_nh4_n15_sl, &
@@ -1329,8 +1329,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('microbial_uptake_no3_sl', mem%microbial_uptake_no3_sl, &
@@ -1339,8 +1339,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('microbial_uptake_no3_n15_sl', mem%microbial_uptake_no3_n15_sl, &
@@ -1349,8 +1349,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('microbial_uptake_po4_sl', mem%microbial_uptake_po4_sl, &
@@ -1359,8 +1359,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('mycorrhiza_uptake_nh4_sl', mem%mycorrhiza_uptake_nh4_sl, &
@@ -1369,8 +1369,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('mycorrhiza_uptake_nh4_n15_sl', mem%mycorrhiza_uptake_nh4_n15_sl, &
@@ -1379,8 +1379,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('mycorrhiza_uptake_no3_sl', mem%mycorrhiza_uptake_no3_sl, &
@@ -1389,8 +1389,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('mycorrhiza_uptake_no3_n15_sl', mem%mycorrhiza_uptake_no3_n15_sl, &
@@ -1399,8 +1399,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('mycorrhiza_uptake_norg_sl', mem%mycorrhiza_uptake_norg_sl, &
@@ -1409,8 +1409,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('mycorrhiza_uptake_norg_n15_sl', mem%mycorrhiza_uptake_norg_n15_sl, &
@@ -1419,8 +1419,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('mycorrhiza_uptake_po4_sl', mem%mycorrhiza_uptake_po4_sl, &
@@ -1429,8 +1429,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('myc_export_n_tlabile_mavg_sl', mem%myc_export_n_tlabile_mavg_sl, &
@@ -1439,7 +1439,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -1449,7 +1449,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -1459,7 +1459,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -1469,7 +1469,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -1479,8 +1479,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('volatilisation_nh4_n15', mem%volatilisation_nh4_n15, &
@@ -1489,8 +1489,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('nitrification_no3', mem%nitrification_no3, &
@@ -1499,8 +1499,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('nitrification_no3_n15', mem%nitrification_no3_n15, &
@@ -1509,8 +1509,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('nitrification_noy', mem%nitrification_noy, &
@@ -1519,8 +1519,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('nitrification_noy_n15', mem%nitrification_noy_n15, &
@@ -1529,8 +1529,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('nitrification_n2o', mem%nitrification_n2o, &
@@ -1539,8 +1539,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('nitrification_n2o_n15', mem%nitrification_n2o_n15, &
@@ -1549,8 +1549,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('denitrification_noy', mem%denitrification_noy, &
@@ -1559,8 +1559,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('denitrification_n2o_n15', mem%denitrification_n2o_n15, &
@@ -1569,8 +1569,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('denitrification_n2o', mem%denitrification_n2o, &
@@ -1579,8 +1579,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('denitrification_noy_n15', mem%denitrification_noy_n15, &
@@ -1589,8 +1589,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('denitrification_n2', mem%denitrification_n2, &
@@ -1599,8 +1599,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('denitrification_n2_n15', mem%denitrification_n2_n15, &
@@ -1609,8 +1609,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('asymb_n_fixation', mem%asymb_n_fixation, &
@@ -1619,8 +1619,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('asymb_n_fixation_n15', mem%asymb_n_fixation_n15, &
@@ -1629,8 +1629,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('weathering_po4', mem%weathering_po4, &
@@ -1639,8 +1639,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('occlusion_po4', mem%occlusion_po4, &
@@ -1649,8 +1649,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('slow_exchange_po4', mem%slow_exchange_po4, &
@@ -1659,8 +1659,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('fast_exchange_po4', mem%fast_exchange_po4, &
@@ -1669,8 +1669,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('fast_exchange_nh4', mem%fast_exchange_nh4, &
@@ -1679,8 +1679,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('fast_adsorpt_po4', mem%fast_adsorpt_po4, &
@@ -1689,8 +1689,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('fast_adsorpt_nh4', mem%fast_adsorpt_nh4, &
@@ -1699,8 +1699,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('biochem_mineralisation_po4', mem%biochem_mineralisation_po4, &
@@ -1709,8 +1709,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('gross_mineralisation_po4', mem%gross_mineralisation_po4, &
@@ -1719,8 +1719,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('leaching_dom_carbon', mem%leaching_dom_carbon, &
@@ -1729,8 +1729,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('leaching_dom_nitrogen', mem%leaching_dom_nitrogen, &
@@ -1739,8 +1739,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('leaching_dom_phosphorus', mem%leaching_dom_phosphorus, &
@@ -1749,8 +1749,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('leaching_dom_carbon13', mem%leaching_dom_carbon13, &
@@ -1759,8 +1759,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('leaching_dom_carbon14', mem%leaching_dom_carbon14, &
@@ -1769,8 +1769,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('leaching_dom_nitrogen15', mem%leaching_dom_nitrogen15, &
@@ -1779,8 +1779,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('leaching_nh4_solute', mem%leaching_nh4_solute, &
@@ -1789,8 +1789,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('leaching_no3_solute', mem%leaching_no3_solute, &
@@ -1799,8 +1799,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('leaching_po4_solute', mem%leaching_po4_solute, &
@@ -1809,8 +1809,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('leaching_nh4_n15_solute', mem%leaching_nh4_n15_solute, &
@@ -1819,8 +1819,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('leaching_no3_n15_solute', mem%leaching_no3_n15_solute, &
@@ -1829,8 +1829,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('emission_nh3', mem%emission_nh3, &
@@ -1839,8 +1839,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('emission_noy', mem%emission_noy, &
@@ -1849,8 +1849,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('emission_n2o', mem%emission_n2o, &
@@ -1859,8 +1859,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('emission_n2', mem%emission_n2, &
@@ -1869,8 +1869,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('emission_nh3_n15', mem%emission_nh3_n15, &
@@ -1879,8 +1879,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('emission_noy_n15', mem%emission_noy_n15, &
@@ -1889,8 +1889,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('emission_n2o_n15', mem%emission_n2o_n15, &
@@ -1899,8 +1899,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('emission_n2_n15', mem%emission_n2_n15, &
@@ -1909,8 +1909,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('qmax_org', mem%qmax_org, &
@@ -1919,8 +1919,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('qmax_po4', mem%qmax_po4, &
@@ -1929,8 +1929,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('km_adsorpt_po4_sl', mem%km_adsorpt_po4_sl, &
@@ -1939,8 +1939,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('qmax_nh4', mem%qmax_nh4, &
@@ -1949,8 +1949,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('km_adsorpt_nh4_sl', mem%km_adsorpt_nh4_sl, &
@@ -1959,8 +1959,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 			
       CALL mem%Add_var('qmax_fast_po4', mem%qmax_fast_po4, &
@@ -1969,8 +1969,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('qmax_slow_po4', mem%qmax_slow_po4, &
@@ -1979,8 +1979,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('km_fast_po4', mem%km_fast_po4, &
@@ -1989,8 +1989,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('km_slow_po4', mem%km_slow_po4, &
@@ -1999,8 +1999,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('vmax_weath_mineral_sl', mem%vmax_weath_mineral_sl, &
@@ -2009,8 +2009,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('k_bioturb', mem%k_bioturb, &
@@ -2019,8 +2019,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('bulk_dens_corr_sl', mem%bulk_dens_corr_sl, &
@@ -2059,8 +2059,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('anaerobic_volume_fraction_sl', mem%anaerobic_volume_fraction_sl, &
@@ -2069,8 +2069,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('microbial_cue_eff', mem%microbial_cue_eff, &
@@ -2079,8 +2079,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('microbial_cue_eff_tmic_mavg', mem%microbial_cue_eff_tmic_mavg, &
@@ -2089,7 +2089,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -2099,8 +2099,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('microbial_nue_eff_tmic_mavg', mem%microbial_nue_eff_tmic_mavg, &
@@ -2109,7 +2109,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -2119,8 +2119,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('microbial_pue_eff_tmic_mavg', mem%microbial_pue_eff_tmic_mavg, &
@@ -2129,7 +2129,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -2139,8 +2139,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('dom_cp', mem%dom_cp, &
@@ -2149,8 +2149,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('dom_cn_mavg', mem%dom_cn_mavg, &
@@ -2159,7 +2159,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -2169,7 +2169,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -2259,7 +2259,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -2269,7 +2269,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -2279,7 +2279,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -2290,7 +2290,7 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('total_flux_nitrogen', mem%total_flux_nitrogen, &
@@ -2300,7 +2300,7 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('total_flux_phosphorus', mem%total_flux_phosphorus, &
@@ -2310,7 +2310,7 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('total_flux_carbon13', mem%total_flux_carbon13, &
@@ -2320,7 +2320,7 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('total_flux_carbon14', mem%total_flux_carbon14, &
@@ -2330,7 +2330,7 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('total_flux_nitrogen15', mem%total_flux_nitrogen15, &
@@ -2340,7 +2340,7 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     ENDIF  ! IF One_of(LAND_TYPE  OR VEG_TYPE, lct_ids)
