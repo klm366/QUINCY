@@ -109,6 +109,8 @@ MODULE mo_sb_memory_class
                             po4_occluded              , &  !< occluded phosphate [mol m-3] 
                             po4_primary               , &  !< primary phosphate mineral [mol m-3] 
                             po4_solute                , &  !< phophate in soil solution [mol m-3] 
+                            bulk_dens_corr_sl         , &  !< organic fraction corrected bulk-density of the soil [kg m-3]
+                            bulk_soil_carbon_sl       , &  !< bulk soil density of carbon [kg m-3] 
                             soil_litter_carbon_sl          !< (bulk) soil density of litter carbon [mol C m-3 soil]
 
     !------------------------------------------------------------------------------------------------------ !
@@ -262,8 +264,6 @@ MODULE mo_sb_memory_class
                             km_adsorpt_po4_sl, &                  !< half saturation of po4 sorption isotherm [mol P m-3 soil]
                             km_adsorpt_nh4_sl, &                  !< half saturation of nh4 sorption isotherm [mol N m-3 soil]
                             k_bioturb, &                          !< diffusion rate resulting from bioturbation
-                            bulk_dens_corr_sl, &                  !< organic fraction corrected bulk-density of the soil [kg m-3]
-                            bulk_soil_carbon_sl, &                !< bulk soil density of carbon [kg m-3] 
                             particle_fluxrate, &                  !< burial rate due to organic matter fall and decay [m s-1] 
                             anaerobic_volume_fraction_sl, &       !< anaerobic volume fraction [unitless]
                             microbial_cue_eff, &                  !< instantaneous microbial CUE given NP constraints [unitless]
@@ -786,6 +786,36 @@ CONTAINS
       CALL mem%Add_var('po4_solute', mem%po4_solute, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('po4_solute', 'mol m-3', 'phophate in soil solution'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('bulk_dens_corr_sl', mem%bulk_dens_corr_sl, &
+        & hgrid, vgrid_soil_sb, &
+        & t_cf('bulk_dens_corr_sl', 'kg m-3', 'organic fraction corrected bulk-density of the soil'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('bulk_soil_carbon_sl', mem%bulk_soil_carbon_sl, &
+        & hgrid, vgrid_soil_sb, &
+        & t_cf('bulk_soil_carbon_sl', 'mol m-3', 'bulk soil density of non-litter carbon'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('soil_litter_carbon_sl', mem%soil_litter_carbon_sl, &
+        & hgrid, vgrid_soil_sb, &
+        & t_cf('soil_litter_carbon_sl', 'mol m-3', 'soil density of litter carbon'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -2021,36 +2051,6 @@ CONTAINS
         & prefix, suffix, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('bulk_dens_corr_sl', mem%bulk_dens_corr_sl, &
-        & hgrid, vgrid_soil_sb, &
-        & t_cf('bulk_dens_corr_sl', 'kg m-3', 'organic fraction corrected bulk-density of the soil'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('bulk_soil_carbon_sl', mem%bulk_soil_carbon_sl, &
-        & hgrid, vgrid_soil_sb, &
-        & t_cf('bulk_soil_carbon_sl', 'mol m-3', 'bulk soil density of non-litter carbon'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('soil_litter_carbon_sl', mem%soil_litter_carbon_sl, &
-        & hgrid, vgrid_soil_sb, &
-        & t_cf('soil_litter_carbon_sl', 'mol m-3', 'soil density of litter carbon'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('particle_fluxrate', mem%particle_fluxrate, &
