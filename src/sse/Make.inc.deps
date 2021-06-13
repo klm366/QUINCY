@@ -112,8 +112,7 @@ mo_sse_update_physics.o: \
   mo_rad_memory_class.o \
   mo_sse_memory_class.o \
   mo_sse_constants.o \
-  mo_assimi_memory_class.o \
-  mo_sse_update_turbulence.o
+  mo_assimi_memory_class.o
 
 mo_sse_update_turbulence.o: \
   mo_kind.o \
