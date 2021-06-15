@@ -264,7 +264,8 @@ CONTAINS
       !& outflow_resid,         &
       & discharge,             &
       & discharge_ocean,       &
-      & internal_drain
+      & internal_drain,        &
+      & lake_storage
 
     dsl4jsb_Real3D_onDomain :: &
       & nidx_upstream,         &
@@ -323,6 +324,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HD_, hd_mask)          ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_runoff)   ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_drainage) ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, lake_storage)     ! INOUT
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_rivers)   ! IN
     !dsl4jsb_Get_var2D_onDomain(HD_, outflow_resid)    ! OUT
     dsl4jsb_Get_var3D_onDomain(HD_, nidx_upstream)    ! IN
@@ -400,16 +402,19 @@ CONTAINS
 
       WHERE (hd_mask(:,:) == 0._wp)
         ! ocean inflow cells
-        discharge_ocean(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + discharge(:,:)
+        discharge(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + discharge(:,:)
+        discharge_ocean(:,:) = discharge(:,:)
+        discharge(:,:) = 0._wp
         outflow_runoff(:,:) = 0._wp
         outflow_drainage(:,:) = 0._wp
-        discharge(:,:) = 0._wp
       ELSE WHERE (hd_mask(:,:) == 2._wp)
         ! internal drainage cells
-        internal_drain(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + discharge(:,:)
+        discharge(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + discharge(:,:)
+        internal_drain(:,:) = discharge(:,:)
+        lake_storage(:,:) = lake_storage(:,:) + discharge(:,:) 
+        discharge(:,:) = 0._wp
         outflow_runoff(:,:) = 0._wp
         outflow_drainage(:,:) = 0._wp
-        discharge(:,:) = 0._wp
       END WHERE
 
       ! global integrals

@@ -22,6 +22,7 @@ MODULE mo_hd_memory_class
   !USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_memory_class, ONLY: t_jsb_memory
   USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_jsb_varlist,      ONLY: BASIC !, MEDIUM, FULL
 
   ! Use of prcesses in this module
   !dsl4jsb_Use_processes HD_
@@ -50,6 +51,7 @@ MODULE mo_hd_memory_class
       outflow_runoff  , &  !< grid cell outflow due to runoff
       outflow_drainage, &  !< grid cell outflow due to drainage
       outflow_rivers  , &  !< grid cell outflow due to rivers
+      lake_storage    , &  !< lake water volume storage of endorheic lakes [m^3]
       water_budget    , &
       water_budget_old, &
       water_flux      , &
@@ -195,6 +197,14 @@ CONTAINS
       & t_cf('outflow_rivers', 'm3/s', 'grid cell outflow due to rivers'),                    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
       & prefix, suffix,                                                      &
+      & initval_r=0.0_wp )
+
+     CALL mem%Add_var( 'lake_storage', mem%lake_storage,       &
+      & hgrid, surface,                                                                    &
+      & t_cf('lake_storage', 'm3', 'water content of the endorheic lake'),                 &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
+      & prefix, suffix,                                                                    &
+      & output_level=BASIC,                                                                &
       & initval_r=0.0_wp )
 
     CALL mem%Add_var( 'outflow_resid', mem%outflow_resid,                          &
