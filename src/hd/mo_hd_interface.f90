@@ -265,7 +265,15 @@ CONTAINS
       & discharge,             &
       & discharge_ocean,       &
       & internal_drain,        &
-      & lake_storage
+      & lake_storage,          &
+      & lake_height,           &
+      & lake_area,             &
+      & lake_height_max,       &
+      & lake_area_max,         &
+      & lake_volume_max,       &
+      & alpha,                 &
+      & beta 
+
 
     dsl4jsb_Real3D_onDomain :: &
       & nidx_upstream,         &
@@ -282,9 +290,12 @@ CONTAINS
     INTEGER  ::         &
       & nproma,         &
       & nblks,          &
-      & blks, blke, jcs, jce
+      & blks, blke,     &
+      & jcs, jce
 
     REAL(wp), ALLOCATABLE :: cos_lat(:,:) ! Cosines of latitudes of cell centers
+
+    REAL(wp) :: steplen
 
     LOGICAL, POINTER  ::  &
       & is_in_domain    (:,:) ! T: cell in domain (not halo)
@@ -296,6 +307,10 @@ CONTAINS
       & in_domain       (:,:) ! 1: cell in domain, 0: halo cell
 
     LOGICAL  :: debug_hd
+
+    steplen = options%steplen
+
+
 
     IF (options%nc > 0) CONTINUE ! only to avoid compiler warnings
 
@@ -325,6 +340,13 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_runoff)   ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_drainage) ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, lake_storage)     ! INOUT
+    dsl4jsb_Get_var2D_onDomain(HD_, lake_height)      ! INOUT
+    dsl4jsb_Get_var2D_onDomain(HD_, lake_area)        ! INOUT
+    dsl4jsb_Get_var2D_onDomain(HD_, lake_height_max)  ! INOUT
+    dsl4jsb_Get_var2D_onDomain(HD_, lake_area_max)    ! INOUT
+    dsl4jsb_Get_var2D_onDomain(HD_, lake_volume_max)  ! INOUT
+    dsl4jsb_Get_var2D_onDomain(HD_, alpha)            ! INOUT
+    dsl4jsb_Get_var2D_onDomain(HD_, beta)             ! INOUT
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_rivers)   ! IN
     !dsl4jsb_Get_var2D_onDomain(HD_, outflow_resid)    ! OUT
     dsl4jsb_Get_var3D_onDomain(HD_, nidx_upstream)    ! IN
@@ -411,11 +433,26 @@ CONTAINS
         ! internal drainage cells
         discharge(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + discharge(:,:)
         internal_drain(:,:) = discharge(:,:)
-        lake_storage(:,:) = lake_storage(:,:) + discharge(:,:) 
+        lake_storage(:,:) = lake_storage(:,:) + discharge(:,:) * steplen 
         discharge(:,:) = 0._wp
         outflow_runoff(:,:) = 0._wp
         outflow_drainage(:,:) = 0._wp
       END WHERE
+
+
+      ! update grid cell lake height [m] and area [m3]
+      WHERE (lake_area_max(:,:).GT.0._wp)
+        WHERE (lake_storage(:,:).LE.lake_volume_max(:,:))
+          lake_height(:,:) = lake_height_max(:,:) * ( lake_storage(:,:) / lake_volume_max(:,:) )**alpha(:,:)
+        ELSE WHERE (lake_storage(:,:).GT.lake_volume_max(:,:))
+          lake_height(:,:) = lake_height_max(:,:) + ( lake_storage(:,:) - lake_volume_max(:,:) )/lake_area_max(:,:)
+        END WHERE
+        lake_area(:,:) = lake_area_max(:,:) * MAX( ( lake_storage(:,:) / lake_volume_max(:,:) )**beta(:,:), 1._wp )
+      ELSE WHERE
+        lake_height(:,:) = 0._wp
+        lake_area(:,:) = 0._wp
+      END WHERE
+
 
       ! global integrals
       ! Switch the next two lines for debugging ... but this only works on one (!) processor, i.e. no halos

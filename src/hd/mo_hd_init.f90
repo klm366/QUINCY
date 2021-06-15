@@ -138,6 +138,32 @@ CONTAINS
         & start_extdim=1, end_extdim=nneigh_max,    &
         & extdim_name='nneigh')
 
+      ! maximum grid cell lake height in meter
+      return_pointer => input_file%Read_2d(         &
+        & variable_name='HEIGHT_MAX',                     &
+        & fill_array = dsl4jsb_var_ptr(HD_,lake_height_max))
+
+      ! maximum grid cell lake height in meter
+      return_pointer => input_file%Read_2d(         &
+        & variable_name='VOLUME_MAX',                     &
+        & fill_array = dsl4jsb_var_ptr(HD_,lake_volume_max))
+
+      ! maximum grid cell lake height in meter
+      return_pointer => input_file%Read_2d(         &
+        & variable_name='AREA_MAX',                     &
+        & fill_array = dsl4jsb_var_ptr(HD_,lake_area_max))
+
+      ! maximum grid cell lake height in meter
+      return_pointer => input_file%Read_2d(         &
+        & variable_name='ALPHA',                     &
+        & fill_array = dsl4jsb_var_ptr(HD_,alpha))
+
+      ! maximum grid cell lake height in meter
+      return_pointer => input_file%Read_2d(         &
+        & variable_name='BETA',                     &
+        & fill_array = dsl4jsb_var_ptr(HD_,beta))
+
+
       nproma = grid%nproma
       nblks  = grid%nblks
 
