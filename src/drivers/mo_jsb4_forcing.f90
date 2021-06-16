@@ -994,6 +994,14 @@ CONTAINS
     IF ((delta_time > 86400._wp)) CALL finish(TRIM(routine), &
       & 'Violation of assertion: Reading forcing data not implemented for delta_time > day.')
 
+    delta_time    = dtime
+    time_step_len = steplen
+    time_steps_per_day = 86400/INT(delta_time)
+    ! Assertion: delta_time needs to be smaller or equal 86400
+    IF ((delta_time > 86400._wp)) CALL finish(TRIM(routine), &
+      & 'Violation of assertion: Reading forcing data not implemented for delta_time > day.')
+
+
     IF (my_process_is_stdio()) THEN
       ! ----- define default values for jsb_forcing_nml namelist parameters
       cyclic_nyears = 0             ! No cyclic forcing
@@ -1281,7 +1289,7 @@ CONTAINS
 
     INTEGER,                   INTENT(IN)    :: startblk, endblk, startidx(:), endidx(:), model_id
     TYPE(t_datetime), POINTER, INTENT(in)    :: current_datetime
-    TYPE(t_datetime), POINTER, INTENT(in)    :: next_date
+    TYPE(t_datetime), POINTER, INTENT(in)    :: next_datetime
     TYPE(input_variable_type), INTENT(INOUT) :: forcing_input_variable
     REAL(wp),                  INTENT(OUT)   :: current_forcing_array(:,:)
 
