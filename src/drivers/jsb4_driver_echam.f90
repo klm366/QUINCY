@@ -35,7 +35,7 @@ PROGRAM jsb4_driver
   dsl4jsb_Use_memory(TURB_)
   dsl4jsb_Use_memory(HYDRO_)
 
-  USE mo_jsb4_forcing,       ONLY: get_interface_variables_from_external_forcing, init_forcing
+  USE mo_jsb4_forcing,       ONLY: get_interface_variables_from_external_forcing, init_forcing, finalize_external_forcing
 
   ! Currently from adapter
   USE mo_jsb_grid_iface,     ONLY: get_lat, get_lon
@@ -478,6 +478,7 @@ PROGRAM jsb4_driver
   CALL close_output_streams
   CALL message('INFO','Closed output streams')
 
+  CALL finalize_external_forcing()
   CALL jsbach_finalize()
 
   IF (timer_on()) CALL cleanup_timer

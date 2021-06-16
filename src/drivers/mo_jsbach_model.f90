@@ -86,7 +86,7 @@ CONTAINS
     USE mo_jsb_model_final,         ONLY: jsbach_finalize
     USE mo_jsb_version,             ONLY: jsbach_label_run
     USE mo_jsb_control,             ONLY: force_from_observations
-    USE mo_jsb4_forcing,            ONLY: init_forcing
+    USE mo_jsb4_forcing,            ONLY: init_forcing, finalize_external_forcing
 
     USE mo_build_decomposition,     ONLY: build_decomposition
   
@@ -699,6 +699,7 @@ CONTAINS
 
     CALL destruct_icon_communication()
 
+    CALL finalize_external_forcing()
     CALL jsbach_finalize()
 
     ! Delete variable lists
