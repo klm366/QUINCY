@@ -1085,7 +1085,7 @@ CONTAINS
       & )
 
 !pdv >
-    IF (dsl4jsb_Config(HYDRO_)%l_hyd_ref) THEN
+    IF (dsl4jsb_Config(HYDRO_)%l_stress_from_all_ws) THEN
       ! This definition of w_soil_rel is problematic if used for e.g. calculating the water stress of plants,
       ! as the whole soil column is taken into account, even layers below the root zone.
 !pdv<
@@ -1414,14 +1414,24 @@ CONTAINS
     CALL get_water_in_root_zone(w_soil_fc_sl  (:,:), soil_depth_sl(:,:), root_depth_sl(:,:), w_soil_root_fc(:) )
     CALL get_water_in_root_zone(w_soil_pwp_sl (:,:), soil_depth_sl(:,:), root_depth_sl(:,:), w_soil_root_pwp(:))
 
+    ! Calculate water stress factor
+    ! @todo: maybe use the distributed permanent wilting point/field cap from above and change get_water_stress_factor function
 !pdv >
-    IF (.NOT. dsl4jsb_Config(HYDRO_)%l_hyd_ref) THEN
+    IF (dsl4jsb_Config(HYDRO_)%l_stress_from_all_ws) THEN
+      ! Calculate water stress by taking into account all soil water, including water 
+      ! below the rootzone and supercooled water.
+!pdv <
+      !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_stress_expand_0 tile_name=tile%name
+      water_stress(:) = get_water_stress_factor(w_soil_column(:), max_moist(:), &
+            &                 config_w_soil_crit_fract, config_w_soil_wilt_fract)
+      !$claw end expand
+!pdv >
+    ELSE
       IF (dsl4jsb_Config(SSE_)%l_freeze .AND. dsl4jsb_Config(SSE_)%l_supercool) THEN
         !vg: these options are used with the calcuation of w_soil_pot_scool_sl
-        !pdv: Needs to be discussed how to handle supercooled water: Is it available to plants? Then: 
+        !pdv: Needs to be discussed how to handle supercooled water: Is it available to plants? Then:
         !    w_soil_root_avail(:,:) = w_soil_root(:,:)
         !!!! If not then :
-print*, 'vg: w_soil_pot_scool_sl:', MINVAL(w_soil_pot_scool_sl), MAXVAL(w_soil_pot_scool_sl)
         CALL get_water_in_root_zone(w_soil_pot_scool_sl(:,:),  &
                                  &  soil_depth_sl(:,:), root_depth_sl(:,:), w_soil_root_scool_pot(:))
         CALL get_water_in_root_zone(MIN(w_soil_pot_scool_sl(:,:), w_soil_sl(:,:)),  &
@@ -1433,20 +1443,7 @@ print*, 'vg: w_soil_pot_scool_sl:', MINVAL(w_soil_pot_scool_sl), MAXVAL(w_soil_p
           w_soil_root_avail(:) = w_soil_root(:)
         END IF
       END IF
-    END IF
-!pdv <
 
-    ! Calculate water stress factor
-    ! @todo: maybe use the distributed permanent wilting point/field cap from above and change get_water_stress_factor function
-!pdv >
-    IF (dsl4jsb_Config(HYDRO_)%l_hyd_ref) THEN
-!pdv <
-      !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_stress_expand_0 tile_name=tile%name
-      water_stress(:) = get_water_stress_factor(w_soil_column(:), max_moist(:), &
-            &                 config_w_soil_crit_fract, config_w_soil_wilt_fract)
-      !$claw end expand
-!pdv >
-    ELSE
       ! Here also the question is how to treat the potential rootzone soil moisture
       ! Definitly ice should be removed -- otherwise plants suffer constant waterstress in pf-regions:
       ! But if supercooled water is asssumed to be unavailable for plants then this should also be accounted for in Ws_max

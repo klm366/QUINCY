@@ -45,6 +45,8 @@ MODULE mo_hydro_config_class
       & l_glac_in_soil,      & !< Treat glacier as part of soil, not separate glacier tile
 !pdv >
       & l_hyd_ref,           & !< Reference version, i.e. without KoPF changes
+      & l_stress_from_all_ws, & !< Calculate water stress from all soil water, including water below
+                                !  the root zone and including supercooled water
       & l_infil_subzero,     & !< Allow infiltration at soil temperatures below 0°C
       & l_discount_scool,    & !< supercooled water is neither available to plants nor percolates
       & l_drain_lat,         & !< Lateral drainage, i.e. drainage from upper to lower soil layers;
@@ -77,7 +79,8 @@ CONTAINS
     CHARACTER(len=10)           :: scheme_stom_cond
     LOGICAL                     :: l_organic, l_glac_in_soil
 !pdv >
-    LOGICAL                     :: l_hyd_ref, l_infil_subzero, l_discount_scool, l_drain_lat, l_percolation_theory
+    LOGICAL                     :: l_hyd_ref
+    LOGICAL                     :: l_stress_from_all_ws, l_infil_subzero, l_discount_scool, l_drain_lat, l_percolation_theory
 !pdv <
 
     NAMELIST /jsb_hydro_nml/        &
@@ -95,6 +98,7 @@ CONTAINS
       & l_glac_in_soil,             &
 !pdv >
       & l_hyd_ref,                  &
+      & l_stress_from_all_ws,       &
       & l_infil_subzero,            &
       & l_discount_scool,           &
       & l_drain_lat,                &
@@ -128,6 +132,7 @@ CONTAINS
     l_glac_in_soil    = .FALSE.
 !pdv >
     l_hyd_ref         = .TRUE.
+    l_stress_from_all_ws = .FALSE.
     l_infil_subzero   = .FALSE.
     l_discount_scool  = .FALSE.
     l_drain_lat       = .FALSE.
@@ -169,6 +174,7 @@ CONTAINS
     config%l_glac_in_soil      = l_glac_in_soil
 !pdv >
     config%l_hyd_ref           = l_hyd_ref
+    config%l_stress_from_all_ws = l_stress_from_all_ws
     config%l_infil_subzero     = l_infil_subzero
     config%l_discount_scool    = l_discount_scool
     config%l_drain_lat         = l_drain_lat

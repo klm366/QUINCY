@@ -506,8 +506,8 @@ CONTAINS
       & ws_keep(nidx),       & ! just used to keep pure liquid soil moisture [m]
       & ice_rootzone(nidx)     ! amount of ice in the rootzone [m]
     
-    REAL(wp) ::                    &
-      & vfc_times_sd_l(nidx,nsoil)   ! vol_field_cap_l * soil_depth_l needed to compute ws_max
+!vg     REAL(wp) ::                    &
+!vg       & vfc_times_sd_l(nidx,nsoil)   ! vol_field_cap_l * soil_depth_l needed to compute ws_max
 
     INTEGER :: jl, i
 
@@ -539,9 +539,6 @@ CONTAINS
     !$claw acc end parallel
     !$claw acc end data
 
-    !$claw expand parallel update
-    vfc_times_sd_l(:,:) = vol_field_cap_l(:,:) * soil_depth_l(:,:)
-
 !pdv >
 !!!! Careful: ws_max is used inconsistantly -> it is used to calculate the relative saturation of the soil but using water+ice 
 !!!! so at this point the ice should not be deducted (as it is in field_cap_l), or later the saturation should not be calculated by:
@@ -549,7 +546,11 @@ CONTAINS
 !!!! But in any case the question whether or not ice is discounted should not depend on the organic matter content of the soil
     IF (l_hyd_ref) THEN
 !pdv <
-      CALL get_water_in_root_zone(vfc_times_sd_l(:,:), soil_depth_l(:,:), root_depth_l(:,:), ws_max(:))
+!vg       vfc_times_sd_l(:,:) = vol_field_cap_l(:,:) * soil_depth_l(:,:)
+!vg       CALL get_water_in_root_zone(vfc_times_sd_l(:,:), soil_depth_l(:,:), root_depth_l(:,:), ws_max(:))
+!vg>>
+      CALL get_water_in_root_zone(vol_field_cap_l(:,:) * soil_depth_l(:,:), soil_depth_l(:,:), root_depth_l(:,:), ws_max(:))
+!vg<<
       !$claw acc data present(fract_org_l,ws_max,ws_max_mineral)
       !$claw acc parallel loop gang vector
       DO i = 1, nidx
