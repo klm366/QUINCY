@@ -290,7 +290,7 @@ PROGRAM jsb4_driver
   ALLOCATE(CO2_flux(nproma))
 
   IF (.NOT. read_interface_vars) THEN
-    CALL init_forcing(model_id)
+    CALL init_forcing(model_id, delta_time, time_step_len)
 
     !TODO: get from grid? but how to name such a function get_lon_from_grid?
     !      and if, shouldn't then also get_nproma should be called get_nproma_from_grid?
