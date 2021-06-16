@@ -1439,8 +1439,6 @@ CONTAINS
         ENDIF
         ! TODO: further assertions? e.g. that lon lat are correct?
 
-        CALL input_file%Close()
-
         currentTimeStep = 1
         thisDayStart = 0
         thisDayEnd = 0
@@ -1480,6 +1478,10 @@ CONTAINS
 
       IF(ASSOCIATED(forcing_input_variable%data_read)) DEALLOCATE(forcing_input_variable%data_read)
       ALLOCATE(forcing_input_variable%data_read(nproma, nblks, forcing_options(model_id)%forcing_steps_per_day))
+
+      IF (forcing_input_variable%input_file%is_open) CALL forcing_input_variable%input_file%Close()
+      forcing_input_variable%input_file = jsb_netcdf_open_input( &
+        & TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) // TRIM(ADJUSTL(year_label)) // '.nc', model%grid_id)
 
       IF (forcing_input_variable%input_file%is_open) CALL forcing_input_variable%input_file%Close()
       forcing_input_variable%input_file = jsb_netcdf_open_input( &

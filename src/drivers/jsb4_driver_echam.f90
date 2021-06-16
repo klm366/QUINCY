@@ -517,4 +517,3 @@ PROGRAM jsb4_driver
   ! Stop MPI
   CALL p_stop
 #endif
-#endif
